@@ -203,18 +203,33 @@
 
   function exportSales(rows) {
     if (!ensureXLSX()) return;
-    const H = ['Fecha', 'Folio', 'Cliente', 'Producto', 'Vendedor', 'Monto', 'Método', 'Estado'];
+    const H = ['Fecha', 'Folio', 'Cliente', 'Producto', 'Vendedor', 'Método', 'Monto', 'Comisión', 'Estado'];
     const data = rows.map(r => ({
       'Fecha': r.fecha, 'Folio': r.folio, 'Cliente': r.cliente, 'Producto': r.producto,
-      'Vendedor': r.vendedor, 'Monto': r.monto, 'Método': r.metodo, 'Estado': r.estado,
+      'Vendedor': r.vendedor, 'Método': r.metodo, 'Monto': r.monto, 'Comisión': r.comision, 'Estado': r.estado,
     }));
     const ws = window.XLSX.utils.json_to_sheet(data, { header: H });
-    ws['!cols'] = [{ wch: 16 }, { wch: 10 }, { wch: 22 }, { wch: 26 }, { wch: 20 }, { wch: 12 }, { wch: 13 }, { wch: 14 }];
+    ws['!cols'] = [{ wch: 16 }, { wch: 10 }, { wch: 22 }, { wch: 26 }, { wch: 20 }, { wch: 13 }, { wch: 12 }, { wch: 12 }, { wch: 14 }];
     const wb = window.XLSX.utils.book_new();
     window.XLSX.utils.book_append_sheet(wb, ws, 'Ventas');
     download(wb, `Ventas_Balam_${new Date().toISOString().slice(0, 10)}.xlsx`);
     window.UI.toast(`${rows.length} ventas exportadas`, 'var(--accent)');
   }
 
-  window.XLSXIO = { exportTemplate, exportInventory, exportReturns, exportSales, parseFile, HEADERS };
+  function exportSellers(rows) {
+    if (!ensureXLSX()) return;
+    const H = ['Vendedor', 'Rol', 'Comisión %', 'Ventas del mes', 'Meta', 'Avance %', 'Comisión acumulada', 'Estado'];
+    const data = rows.map(r => ({
+      'Vendedor': r.nombre, 'Rol': r.rol, 'Comisión %': r.pct, 'Ventas del mes': r.ventas,
+      'Meta': r.meta, 'Avance %': r.avance, 'Comisión acumulada': r.comision, 'Estado': r.estado,
+    }));
+    const ws = window.XLSX.utils.json_to_sheet(data, { header: H });
+    ws['!cols'] = [{ wch: 22 }, { wch: 24 }, { wch: 11 }, { wch: 15 }, { wch: 12 }, { wch: 10 }, { wch: 18 }, { wch: 10 }];
+    const wb = window.XLSX.utils.book_new();
+    window.XLSX.utils.book_append_sheet(wb, ws, 'Vendedores');
+    download(wb, `Vendedores_Balam_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    window.UI.toast(`${rows.length} vendedores exportados`, 'var(--accent)');
+  }
+
+  window.XLSXIO = { exportTemplate, exportInventory, exportReturns, exportSales, exportSellers, parseFile, HEADERS };
 })();

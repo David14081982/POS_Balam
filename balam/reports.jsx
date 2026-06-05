@@ -10,7 +10,7 @@
   const CARD = 'bg-surface-container-lowest rounded-xl shadow-e1';
   const SEMANAS = [{ s: 'SEM 1', pct: 40 }, { s: 'SEM 2', pct: 65 }, { s: 'SEM 3', pct: 85 }, { s: 'SEM 4', pct: 55 }];
 
-  function ResumenReport() {
+  function ResumenReport({ onNav }) {
     const [mes, setMes] = useState('Mayo 2026');
 
     // Datos reales
@@ -41,9 +41,9 @@
 
         // Acciones
         h('div', { key: 'act', className: 'flex justify-end gap-3 mb-8' }, [
-          h('button', { key: 'm', className: 'flex items-center gap-2 px-4 py-2 border border-outline-variant rounded-lg hover:bg-surface-container-low transition-all text-body font-semibold', onClick: () => toast('Reporte enviado por correo') }, [h(MS, { key: 'i', name: 'mail', size: 16 }), 'Enviar por correo']),
+          h('button', { key: 'm', className: 'flex items-center gap-2 px-4 py-2 border border-outline-variant rounded-lg hover:bg-surface-container-low transition-all text-body font-semibold', onClick: () => { const subj = encodeURIComponent(`Reporte Balam — ${mes}`); const body = encodeURIComponent(`Resumen ${mes}\n\nVentas brutas: ${fmt(ventasBrutas)}\nUtilidad neta: ${fmt(utilidad)}\nTotal pedidos: ${pedidos}\nTicket promedio: ${fmt(ticketProm)}\nComisiones a liquidar: ${fmt(totalComision)}`); window.location.href = `mailto:?subject=${subj}&body=${body}`; } }, [h(MS, { key: 'i', name: 'mail', size: 16 }), 'Enviar por correo']),
           h('button', { key: 'p', className: 'flex items-center gap-2 px-4 py-2 border border-outline-variant rounded-lg hover:bg-surface-container-low transition-all text-body font-semibold', onClick: () => window.print() }, [h(MS, { key: 'i', name: 'print', size: 16 }), 'Imprimir']),
-          h('button', { key: 'e', className: 'flex items-center gap-2 px-6 py-2 bg-primary text-on-primary rounded-lg hover:opacity-90 transition-all text-body font-semibold shadow-e2', onClick: () => toast('Exportando reporte a PDF…') }, [h(MS, { key: 'i', name: 'download', size: 16 }), 'Exportar PDF']),
+          h('button', { key: 'e', className: 'flex items-center gap-2 px-6 py-2 bg-primary text-on-primary rounded-lg hover:opacity-90 transition-all text-body font-semibold shadow-e2', onClick: () => { toast('Abriendo impresión — elige "Guardar como PDF"'); setTimeout(() => window.print(), 350); } }, [h(MS, { key: 'i', name: 'download', size: 16 }), 'Exportar PDF']),
         ]),
 
         // KPIs
@@ -96,7 +96,7 @@
               ]),
               h('p', { key: 'f', className: 'mt-6 text-body text-on-primary-container font-light' }, ['Faltan ', h('span', { key: 's', className: 'text-gold font-bold' }, fmt(falta).replace('.00', '')), ' para el bono mensual.']),
             ]),
-            h('button', { key: 'b', className: 'w-full py-3 bg-gold text-on-gold rounded-lg font-bold text-body uppercase tracking-wider hover:opacity-90 transition-all', onClick: () => toast('Generando plan de impulso…') }, 'Impulsar ventas'),
+            h('button', { key: 'b', className: 'w-full py-3 bg-gold text-on-gold rounded-lg font-bold text-body uppercase tracking-wider hover:opacity-90 transition-all', onClick: () => onNav && onNav('vendedores') }, 'Impulsar ventas'),
           ]),
         ]),
 
@@ -153,7 +153,7 @@
   }
 
   // ── Shell con pestañas: Resumen | Devoluciones ─────────────────────────────────
-  function ReportsScreen() {
+  function ReportsScreen({ onNav }) {
     const [tab, setTab] = useState('resumen');
     const TABS = [['resumen', 'Resumen', 'chart'], ['ventas', 'Ventas', 'cash'], ['devoluciones', 'Devoluciones', 'undo']];
     return h('div', { className: 'flex-1 overflow-y-auto bg-background font-body text-on-surface' },
@@ -166,7 +166,7 @@
           }, [h(MS, { key: 'i', name: icon, size: 18 }), label]))),
         tab === 'ventas' ? h(SalesReport, { key: 'ven' })
           : tab === 'devoluciones' ? h(ReturnsReport, { key: 'dev' })
-            : h(ResumenReport, { key: 'res' }),
+            : h(ResumenReport, { key: 'res', onNav }),
       ]));
   }
 
@@ -422,7 +422,7 @@
       .map(s => {
         const first = s.lineas && s.lineas[0];
         const prod = first ? D.products.find(p => p.sku === first.sku) : null;
-        return { id: s.folio, fecha: s.fecha, folio: s.folio, cliente: s.cliente, producto: productLabel(s), vendedor: sellerNames(s).join(', ') || '—', monto: Number(s.total) || 0, estado: s.estado, metodo: s.metodo || '—', prod };
+        return { id: s.folio, fecha: s.fecha, folio: s.folio, cliente: s.cliente, producto: productLabel(s), vendedor: sellerNames(s).join(', ') || '—', metodo: s.metodo || '—', monto: Number(s.total) || 0, comision: commOf(s), estado: s.estado, prod };
       });
     const PER = 12, pages = Math.max(1, Math.ceil(rows.length / PER)), pg = Math.min(page, pages);
     const slice = rows.slice((pg - 1) * PER, pg * PER);
@@ -496,7 +496,7 @@
         rows.length
           ? h('div', { key: 'wrap', className: 'overflow-x-auto' }, h('table', { className: 'w-full text-left' }, [
             h('thead', { key: 'thd' }, h('tr', { className: 'bg-surface-container-low border-b border-outline-variant' },
-              ['Fecha', 'Folio', 'Cliente', 'Producto', 'Vendedor', 'Monto', 'Estado'].map((c, i) => h('th', { key: i, className: 'px-5 py-3 text-overline font-semibold text-on-surface-variant uppercase tracking-wider whitespace-nowrap' + (c === 'Monto' ? ' text-right' : '') + (c === 'Estado' ? ' text-right' : '') }, c)))),
+              ['Fecha', 'Folio', 'Cliente', 'Producto', 'Vendedor', 'Método', 'Monto', 'Comisión', 'Estado'].map((c, i) => h('th', { key: i, className: 'px-5 py-3 text-overline font-semibold text-on-surface-variant uppercase tracking-wider whitespace-nowrap' + ((c === 'Monto' || c === 'Comisión' || c === 'Estado') ? ' text-right' : '') }, c)))),
             h('tbody', { key: 'tb', className: 'divide-y divide-outline-variant/40' }, slice.map(r => h('tr', { key: r.id, className: 'hover:bg-surface-container-lowest transition-colors' }, [
               h('td', { key: 'f', className: 'px-5 py-3 text-body whitespace-nowrap' }, String(r.fecha || '').slice(0, 10)),
               h('td', { key: 'fo', className: 'px-5 py-3 font-mono text-caption text-primary whitespace-nowrap' }, r.folio),
@@ -506,7 +506,9 @@
                 h('span', { key: 'n', className: 'text-body' }, r.producto),
               ])),
               h('td', { key: 'v', className: 'px-5 py-3 text-body whitespace-nowrap' }, r.vendedor),
+              h('td', { key: 'mp', className: 'px-5 py-3' }, h('span', { className: 'bg-surface-container px-2 py-1 rounded text-overline font-bold uppercase text-on-surface-variant whitespace-nowrap' }, r.metodo)),
               h('td', { key: 'm', className: 'px-5 py-3 text-right text-body font-semibold text-primary whitespace-nowrap' }, fmt(r.monto).replace('.00', '')),
+              h('td', { key: 'co', className: 'px-5 py-3 text-right text-body font-semibold text-gold-text whitespace-nowrap' }, r.comision > 0 ? fmt(r.comision).replace('.00', '') : '—'),
               h('td', { key: 'e', className: 'px-5 py-3 text-right' }, h(StatusBadge, { estado: r.estado })),
             ]))),
           ]))
