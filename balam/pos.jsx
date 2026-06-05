@@ -49,7 +49,8 @@
     function flashLine(key) { setFlash(key); setTimeout(() => setFlash(k => (k === key ? null : k)), 900); }
     function onScan(e) {
       if (e.key !== 'Enter') return;
-      const raw = query.trim();
+      // Lee el valor real del DOM (más confiable que el estado ante lectores muy rápidos).
+      const raw = String(e.target && e.target.value != null ? e.target.value : query).trim();
       if (!raw) return;
       // 1) ¿Código de barras SKU-TALLA? (lector USB HID o tecleado) → agrega la talla exacta al ticket.
       const hit = window.BARCODES && window.BARCODES.find(raw);
@@ -63,6 +64,36 @@
       const looksCode = window.BARCODES && window.BARCODES.parse(raw);
       toast(looksCode ? ('Código no encontrado: ' + raw.toUpperCase()) : ('Sin coincidencias para "' + raw + '"'), 'var(--danger)');
     }
+
+    // Lector de código de barras USB (HID): captura GLOBAL — funciona aunque el campo de escaneo
+    // no tenga el foco. Distingue lector de tecleo humano por la cadencia entre teclas
+    // (un lector teclea < ~30 ms/carácter; si hay una pausa > 50 ms, se reinicia el búfer).
+    const scanRT = useRef({});
+    scanRT.current = { addToTicket, flashLine, scanEl: scanRef.current, blocked: !!(sizePick || checkout || clientPick || pendingMetodo || success) };
+    useEffect(() => {
+      let buf = '', lt = 0;
+      function onKey(e) {
+        const st = scanRT.current;
+        if (document.activeElement === st.scanEl) return; // si el campo tiene foco, lo maneja onScan
+        if (e.key === 'Enter') {
+          const code = buf; buf = '';
+          if (st.blocked || code.length < 4) return;       // hay un modal abierto o ráfaga muy corta
+          const hit = window.BARCODES && window.BARCODES.find(code);
+          if (!hit) return;                                // no es un código conocido → no intervenir
+          e.preventDefault();
+          st.addToTicket(hit.p, hit.talla);
+          st.flashLine(hit.p.id + '-' + hit.talla);
+          return;
+        }
+        if (e.key && e.key.length === 1) {
+          const now = Date.now();
+          if (now - lt > 50) buf = '';                     // pausa larga → tecleo humano, reinicia
+          buf += e.key; lt = now;
+        }
+      }
+      window.addEventListener('keydown', onKey);
+      return () => window.removeEventListener('keydown', onKey);
+    }, []);
     function openSize(p) { setSizePick(p); }
     const validateStock = () => window.CONFIG.get('pos.validateStock');
     function addToTicket(p, talla) {

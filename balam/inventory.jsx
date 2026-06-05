@@ -398,7 +398,9 @@
 
   // ── Etiquetas de código de barras (impresión 6×4 cm + guardado opcional en Supabase) ──
   function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
-  const LBL_OPTS = { height: 60, fontSize: 13, margin: 4 }; // ajuste del código para la etiqueta
+  const LBL_OPTS = { height: 60, fontSize: 13, margin: 4 }; // ajuste del código para la vista previa
+  // En la etiqueta impresa el código va aparte (.bx-meta), así que el código de barras no repite el texto.
+  const PRINT_OPTS = Object.assign({}, LBL_OPTS, { displayValue: false });
 
   function LabelModal({ products, onClose }) {
     const B = window.BARCODES;
@@ -420,7 +422,7 @@
       const cache = {};
       let html = '';
       specs.forEach(s => {
-        if (cache[s.code] === undefined) cache[s.code] = B.toPNGDataURL(s.code, LBL_OPTS);
+        if (cache[s.code] === undefined) cache[s.code] = B.toPNGDataURL(s.code, PRINT_OPTS);
         const price = withPrice ? `<div class="bx-price">${escapeHtml(fmt(s.p.precio).replace('.00', ''))}</div>` : '';
         const one = `<div class="bx-label"><div class="bx-name">${escapeHtml(s.p.nombre)}</div><img class="bx-img" src="${cache[s.code]}"><div class="bx-meta">${escapeHtml(s.code)}</div>${price}</div>`;
         for (let i = 0; i < copiesOf(s); i++) html += one;
@@ -449,7 +451,7 @@
       for (const s of specs) {
         if (seen[s.code]) continue; seen[s.code] = true;
         try {
-          const blob = await B.toPNGBlob(s.code, LBL_OPTS);
+          const blob = await B.toPNGBlob(s.code, PRINT_OPTS);
           const urlPub = await window.STORE.uploadBarcode(s.code + '.png', blob);
           if (!s.p.barcodeUrls) s.p.barcodeUrls = {};
           s.p.barcodeUrls[s.talla] = urlPub;
