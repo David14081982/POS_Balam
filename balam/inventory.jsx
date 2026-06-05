@@ -1,7 +1,7 @@
 // inventory.jsx — Inventario (Heritage Luxury). Exporta window.InventoryScreen
 (function () {
   const { useState, useMemo, useRef } = React;
-  const { fmt, Modal, toast } = window.UI;
+  const { fmt, Modal, toast, Pager } = window.UI;
   const { MS, ProductImage } = window.HX;
   const D = window.DATA;
   const h = React.createElement;
@@ -32,6 +32,7 @@
     const [editing, setEditing] = useState(null);
     const [products, setProducts] = useState(() => D.products.slice());
     const [importPreview, setImportPreview] = useState(null);
+    const [page, setPage] = useState(1);
     const fileRef = useRef(null);
 
     function refresh() { setProducts(D.products.slice()); }
@@ -82,6 +83,8 @@
         return p.nombre.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q) || p.colorName.toLowerCase().includes(q);
       });
     }, [query, tela, stockFilter, products]);
+    const PER = 10, pages = Math.max(1, Math.ceil(rows.length / PER)), pg = Math.min(page, pages);
+    const slice = rows.slice((pg - 1) * PER, pg * PER);
 
     const lowCount = products.filter(p => { const t = D.totalStock(p); return t > 0 && t <= lowThreshold; }).length;
     const totalUnidades = products.reduce((a, p) => a + D.totalStock(p), 0);
@@ -102,10 +105,10 @@
             h('div', { key: 'l', className: 'flex items-center gap-3 flex-wrap' }, [
               h('div', { key: 's', className: 'relative w-80' }, [
                 h('span', { key: 'i', className: 'absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/50' }, h(MS, { name: 'search', size: 20 })),
-                h('input', { key: 'in', className: 'w-full bg-surface border border-outline-variant rounded-lg pl-10 pr-4 py-2.5 text-body focus:ring-1 focus:ring-primary focus:border-primary transition-all', placeholder: 'Buscar SKU, modelo o color…', value: query, onChange: e => setQuery(e.target.value) }),
+                h('input', { key: 'in', className: 'w-full bg-surface border border-outline-variant rounded-lg pl-10 pr-4 py-2.5 text-body focus:ring-1 focus:ring-primary focus:border-primary transition-all', placeholder: 'Buscar SKU, modelo o color…', value: query, onChange: e => { setQuery(e.target.value); setPage(1); } }),
               ]),
-              h(Segment, { key: 'sg1', value: tela, onChange: setTela, options: [['all', 'Todas']].concat(window.CONFIG.list('fabric').map(f => [f.code, f.label])) }),
-              h(Segment, { key: 'sg2', value: stockFilter, onChange: setStockFilter, options: [['all', 'Todo'], ['low', 'Bajo'], ['out', 'Agotados']] }),
+              h(Segment, { key: 'sg1', value: tela, onChange: v => { setTela(v); setPage(1); }, options: [['all', 'Todas']].concat(window.CONFIG.list('fabric').map(f => [f.code, f.label])) }),
+              h(Segment, { key: 'sg2', value: stockFilter, onChange: v => { setStockFilter(v); setPage(1); }, options: [['all', 'Todo'], ['low', 'Bajo'], ['out', 'Agotados']] }),
             ]),
             h('button', { key: 'add', className: 'flex items-center gap-2 px-6 py-2.5 bg-primary text-on-primary rounded-lg hover:opacity-90 transition-all text-overline font-bold uppercase tracking-wider shadow-e2', onClick: () => setEditing({ mode: 'new', product: blankProduct() }) }, [h(MS, { key: 'i', name: 'plus', size: 18 }), 'Nuevo producto']),
           ]),
@@ -126,7 +129,7 @@
             h('thead', { key: 'h' }, h('tr', { className: 'bg-surface-container/50 border-b border-outline-variant' },
               ['Producto', 'SKU', 'Atributos', 'Color / Orn.', 'Precio', 'Stock', ''].map((c, i) =>
                 h('th', { key: i, className: 'px-4 py-4 text-overline uppercase tracking-wider font-semibold text-on-surface-variant/80' + (i === 0 ? ' pl-6' : '') }, c)))),
-            h('tbody', { key: 'b', className: 'divide-y divide-outline-variant' }, rows.map(p => {
+            h('tbody', { key: 'b', className: 'divide-y divide-outline-variant' }, slice.map(p => {
               const total = D.totalStock(p);
               return h('tr', { key: p.id, className: 'hover:bg-surface-container transition-all group cursor-pointer', onClick: () => setDetail(p) }, [
                 h('td', { key: 'n', className: 'px-6 py-4' }, h('div', { className: 'flex items-center gap-4' }, [
@@ -152,12 +155,8 @@
           ])),
           // Footer
           h('div', { key: 'pg', className: 'px-6 py-4 border-t border-outline-variant flex items-center justify-between bg-surface-container/30' }, [
-            h('span', { key: 'l', className: 'text-overline font-bold text-on-surface-variant uppercase tracking-widest' }, `${rows.length} producto${rows.length === 1 ? '' : 's'}`),
-            h('div', { key: 'p', className: 'flex items-center gap-1' }, [
-              h('button', { key: 'a', className: 'w-8 h-8 flex items-center justify-center rounded-lg border border-outline-variant opacity-30', disabled: true }, h(MS, { name: 'chevLeft', size: 16 })),
-              h('button', { key: '1', className: 'w-8 h-8 rounded-lg bg-primary text-on-primary text-overline font-bold' }, '1'),
-              h('button', { key: 'b', className: 'w-8 h-8 flex items-center justify-center rounded-lg border border-outline-variant opacity-30', disabled: true }, h(MS, { name: 'chevRight', size: 16 })),
-            ]),
+            h('span', { key: 'l', className: 'text-overline font-bold text-on-surface-variant uppercase tracking-widest' }, `${rows.length} producto${rows.length === 1 ? '' : 's'}${pages > 1 ? ` · página ${pg}/${pages}` : ''}`),
+            h(Pager, { key: 'p', page: pg, pages, onPage: setPage }),
           ]),
         ]),
         // Drawer detalle (siempre montado, slide-in)
