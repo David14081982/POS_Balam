@@ -1,7 +1,7 @@
 // reports.jsx — Reportes / Analítica (Heritage Luxury). Exporta window.ReportsScreen
 (function () {
   const { useState } = React;
-  const { fmt, toast } = window.UI;
+  const { fmt, toast, StatusBadge } = window.UI;
   const { MS, ProductImage } = window.HX;
   const D = window.DATA;
   const h = React.createElement;
@@ -155,16 +155,18 @@
   // ── Shell con pestañas: Resumen | Devoluciones ─────────────────────────────────
   function ReportsScreen() {
     const [tab, setTab] = useState('resumen');
-    const TABS = [['resumen', 'Resumen'], ['devoluciones', 'Devoluciones']];
+    const TABS = [['resumen', 'Resumen', 'chart'], ['ventas', 'Ventas', 'cash'], ['devoluciones', 'Devoluciones', 'undo']];
     return h('div', { className: 'flex-1 overflow-y-auto bg-background font-body text-on-surface' },
       h('div', { className: 'p-10 max-w-container-max mx-auto' }, [
-        h('div', { key: 'tabs', className: 'inline-flex items-center gap-1 p-1 bg-surface-container-low rounded-lg mb-8' },
-          TABS.map(([id, label]) => h('button', {
+        h('div', { key: 'tabs', className: 'inline-flex items-center gap-2 p-1.5 mb-8 bg-surface-container-low rounded-xl border border-outline-variant' },
+          TABS.map(([id, label, icon]) => h('button', {
             key: id, onClick: () => setTab(id),
-            className: 'px-5 py-2 rounded-md text-caption font-semibold uppercase tracking-wider transition-colors ' + (tab === id ? 'text-primary shadow-e1' : 'text-on-surface-variant hover:text-primary'),
-            style: tab === id ? { background: '#fff' } : null,
-          }, label))),
-        tab === 'devoluciones' ? h(ReturnsReport, { key: 'dev' }) : h(ResumenReport, { key: 'res' }),
+            className: 'flex items-center gap-2 px-6 py-2.5 rounded-lg text-caption font-bold uppercase tracking-wider transition-all ' +
+              (tab === id ? 'bg-primary text-on-primary shadow-e2' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'),
+          }, [h(MS, { key: 'i', name: icon, size: 18 }), label]))),
+        tab === 'ventas' ? h(SalesReport, { key: 'ven' })
+          : tab === 'devoluciones' ? h(ReturnsReport, { key: 'dev' })
+            : h(ResumenReport, { key: 'res' }),
       ]));
   }
 
@@ -179,10 +181,11 @@
       sub && h('p', { key: 's', className: 'text-caption text-on-surface-variant mt-3' }, sub),
     ]);
   }
-  // En devoluciones, MÁS es peor (rojo) y MENOS es mejor (verde).
-  function deltaChip(pct) {
+  // Variación. betterDown=true (devoluciones): MÁS es peor (rojo). betterDown=false (ventas): MÁS es mejor (verde).
+  function deltaChip(pct, betterDown = true) {
     const flat = pct === 0, up = pct > 0;
-    const cls = flat ? 'text-on-surface-variant' : (up ? 'text-danger' : 'text-success');
+    const good = betterDown ? !up : up;
+    const cls = flat ? 'text-on-surface-variant' : (good ? 'text-success' : 'text-danger');
     const icon = flat ? 'horizontal_rule' : (up ? 'trending_up' : 'trending_down');
     return h('span', { key: 'd', className: 'inline-flex items-center gap-1 text-caption font-bold mb-1 ' + cls }, [h(MS, { key: 'i', name: icon, size: 16 }), (up ? '+' : '') + pct + '%']);
   }
@@ -328,6 +331,188 @@
           : emptyHint('No hay devoluciones que coincidan con los filtros.'),
         filtered.length > PER && h('div', { key: 'pg', className: 'px-6 py-4 bg-surface-container-low flex justify-between items-center' }, [
           h('p', { key: 'i', className: 'text-caption text-on-surface-variant' }, `Mostrando ${(pg - 1) * PER + 1}–${Math.min(pg * PER, filtered.length)} de ${filtered.length}`),
+          h('div', { key: 'n', className: 'flex items-center gap-2' }, [
+            h('button', { key: 'p', disabled: pg <= 1, onClick: () => setPage(pg - 1), className: 'w-8 h-8 grid place-items-center rounded border border-outline-variant hover:bg-white transition-colors disabled:opacity-40' }, h(MS, { name: 'chevLeft', size: 18 })),
+            h('span', { key: 'c', className: 'px-2 text-caption font-bold' }, `${pg} / ${pages}`),
+            h('button', { key: 'x', disabled: pg >= pages, onClick: () => setPage(pg + 1), className: 'w-8 h-8 grid place-items-center rounded border border-outline-variant hover:bg-white transition-colors disabled:opacity-40' }, h(MS, { name: 'chevRight', size: 18 })),
+          ]),
+        ]),
+      ]),
+    ]);
+  }
+
+  // ── Reporte de Ventas (datos en vivo de D.sales) ───────────────────────────────
+  function SalesReport() {
+    const C = window.CONFIG;
+    const sellersList = D.sellers.filter(s => s.active !== false);
+    const statuses = C.list('sale_status');
+    const parse = f => { const d = new Date(String(f || '').replace(' ', 'T')); return isNaN(d) ? null : d; };
+    const isoDay = ms => new Date(ms).toISOString().slice(0, 10);
+    const DEF_FROM = isoDay(Date.now() - 30 * 86400000), DEF_TO = isoDay(Date.now());
+    const [from, setFrom] = useState(DEF_FROM); // desde (YYYY-MM-DD)
+    const [to, setTo] = useState(DEF_TO);       // hasta (YYYY-MM-DD)
+    const [vend, setVend] = useState('');       // filtro por vendedor (id)
+    const [estado, setEstado] = useState('');   // filtro por estado de venta
+    const [page, setPage] = useState(1);
+
+    // Ventana por rango de fechas. El "periodo previo" es la misma longitud justo antes de 'desde'.
+    const fromT = from ? new Date(from + 'T00:00:00').getTime() : null;
+    const toT = to ? new Date(to + 'T23:59:59').getTime() : null;
+    const span = (fromT != null && toT != null) ? (toT - fromT) : null;
+    const inWin = (f, mult = 1) => {
+      const d = parse(f); if (!d) return false;
+      const t = d.getTime();
+      if (mult === 1) return (fromT == null || t >= fromT) && (toT == null || t <= toT);
+      if (fromT == null || span == null) return false;
+      return t >= fromT - span && t < fromT;
+    };
+    const clearFilters = () => { setFrom(DEF_FROM); setTo(DEF_TO); setVend(''); setEstado(''); setPage(1); };
+
+    // Helpers de venta (compatibles con ventas reales y semilla)
+    const sellerNames = (s) => {
+      if (s.vendedores && s.vendedores.length) return s.vendedores.map(id => (D.sellers.find(x => x.id === id) || {}).nombre).filter(Boolean);
+      return (s.vendedor && s.vendedor !== '—') ? [s.vendedor] : [];
+    };
+    const matchesVend = (s) => {
+      if (!vend) return true;
+      const sv = D.sellers.find(x => x.id === vend); if (!sv) return true;
+      if (s.vendedores && s.vendedores.length) return s.vendedores.includes(vend);
+      return s.vendedor === sv.nombre;
+    };
+    const isValid = s => s.estado !== 'Cancelado';
+    const commOf = (s) => {
+      if (!isValid(s)) return 0;
+      if (typeof s.comision === 'number') return s.comision;
+      const ids = (s.vendedores && s.vendedores.length) ? s.vendedores
+        : (() => { const m = D.sellers.find(x => x.nombre === s.vendedor); return m ? [m.id] : []; })();
+      if (!ids.length) return 0;
+      const share = (Number(s.total) || 0) / ids.length;
+      return ids.reduce((a, id) => { const sv = D.sellers.find(x => x.id === id); return a + (sv ? share * (sv.comisionPct || 0) / 100 : 0); }, 0);
+    };
+    const productLabel = (s) => {
+      if (s.lineas && s.lineas.length) return s.lineas[0].nombre + (s.lineas.length > 1 ? ` +${s.lineas.length - 1}` : '');
+      const n = Number(s.items) || 0; return `${n} ${n === 1 ? 'artículo' : 'artículos'}`;
+    };
+
+    const periodSales = D.sales.filter(s => inWin(s.fecha));
+    const prevSales = D.sales.filter(s => inWin(s.fecha, 2));
+    const validPeriod = periodSales.filter(isValid);
+    const validPrev = prevSales.filter(isValid);
+
+    // Métricas del periodo
+    const totalVendido = validPeriod.reduce((a, s) => a + (Number(s.total) || 0), 0);
+    const nVentas = validPeriod.length;
+    const ticketProm = nVentas ? totalVendido / nVentas : 0;
+    const comisiones = validPeriod.reduce((a, s) => a + commOf(s), 0);
+    const prevVendido = validPrev.reduce((a, s) => a + (Number(s.total) || 0), 0);
+    const prevN = validPrev.length;
+    const deltaPct = (cur, prev) => prev > 0 ? Math.round((cur - prev) / prev * 100) : (cur > 0 ? 100 : 0);
+
+    // Distribución: ventas ($) por vendedor
+    const porVend = {};
+    validPeriod.forEach(s => { const ns = sellerNames(s); const share = (Number(s.total) || 0) / Math.max(1, ns.length); ns.forEach(n => { porVend[n] = (porVend[n] || 0) + share; }); });
+    const dist = Object.entries(porVend).map(([nombre, val]) => ({ nombre, val })).sort((a, b) => b.val - a.val);
+    const maxV = dist.reduce((m, x) => Math.max(m, x.val), 0) || 1;
+
+    // Tabla (filtros vendedor/estado + orden + paginación)
+    const rows = periodSales
+      .filter(matchesVend)
+      .filter(s => !estado || s.estado === estado)
+      .sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)))
+      .map(s => {
+        const first = s.lineas && s.lineas[0];
+        const prod = first ? D.products.find(p => p.sku === first.sku) : null;
+        return { id: s.folio, fecha: s.fecha, folio: s.folio, cliente: s.cliente, producto: productLabel(s), vendedor: sellerNames(s).join(', ') || '—', monto: Number(s.total) || 0, estado: s.estado, metodo: s.metodo || '—', prod };
+      });
+    const PER = 12, pages = Math.max(1, Math.ceil(rows.length / PER)), pg = Math.min(page, pages);
+    const slice = rows.slice((pg - 1) * PER, pg * PER);
+
+    const sel = (value, onChange, opts) => h('select', { value, onChange: e => { onChange(e.target.value); setPage(1); }, className: 'bg-surface-container-low border-none rounded-lg text-caption font-semibold px-3 py-2 focus:ring-1 focus:ring-primary' }, opts.map(([v, l]) => h('option', { key: v, value: v }, l)));
+
+    if (!D.sales.length) {
+      return h('div', { className: CARD + ' p-12 text-center' }, [
+        h('div', { key: 'i', className: 'w-14 h-14 mx-auto mb-4 rounded-full grid place-items-center bg-surface-container text-on-surface-variant' }, h(MS, { name: 'cash', size: 28 })),
+        h('h3', { key: 't', className: 'font-headline text-headline-md text-primary mb-1' }, 'Aún no hay ventas'),
+        h('p', { key: 'd', className: 'text-body text-on-surface-variant' }, 'Cuando registres ventas en el Punto de venta, aquí verás las métricas y el historial.'),
+      ]);
+    }
+
+    return h(React.Fragment, null, [
+      // Encabezado + rango + exportar
+      h('div', { key: 'hd', className: 'flex flex-wrap justify-between items-end gap-4 mb-8' }, [
+        h('div', { key: 't' }, [
+          h('h2', { key: 'a', className: 'font-headline text-headline-lg text-primary' }, 'Reporte de ventas'),
+          h('p', { key: 'b', className: 'text-on-surface-variant text-body mt-1 max-w-xl' }, 'Métricas e historial en vivo de las transacciones registradas.'),
+        ]),
+        h('div', { key: 'r', className: 'flex flex-wrap items-center gap-3' }, [
+          h('div', { key: 'dates', className: 'flex items-center gap-2 bg-surface-container-low rounded-lg px-3 py-1.5' }, [
+            h(MS, { key: 'ic', name: 'calendar', size: 16, className: 'text-on-surface-variant' }),
+            h('span', { key: 'l1', className: 'text-caption font-semibold text-on-surface-variant' }, 'Del'),
+            h('input', { key: 'f', type: 'date', value: from, max: to || undefined, onChange: e => { setFrom(e.target.value); setPage(1); }, className: 'bg-transparent border-none text-caption font-semibold text-primary focus:ring-0 p-0' }),
+            h('span', { key: 'l2', className: 'text-caption font-semibold text-on-surface-variant' }, 'al'),
+            h('input', { key: 't', type: 'date', value: to, min: from || undefined, onChange: e => { setTo(e.target.value); setPage(1); }, className: 'bg-transparent border-none text-caption font-semibold text-primary focus:ring-0 p-0' }),
+          ]),
+          h('button', { key: 'clr', onClick: clearFilters, className: 'flex items-center gap-1 px-2 py-2 text-caption font-semibold text-on-surface-variant hover:text-primary transition-colors', title: 'Limpiar filtros' }, [h(MS, { key: 'i', name: 'x', size: 16 }), 'Limpiar']),
+          h('button', { key: 'x', className: 'flex items-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-lg hover:opacity-90 transition text-body font-semibold shadow-e2', onClick: () => { if (!rows.length) { toast('No hay ventas para exportar', 'var(--danger)'); return; } window.XLSXIO.exportSales(rows); } }, [h(MS, { key: 'i', name: 'download', size: 16 }), 'Exportar Excel']),
+        ]),
+      ]),
+
+      // Tarjetas de métrica
+      h('div', { key: 'cards', className: 'grid grid-cols-1 md:grid-cols-4 gap-gutter mb-gutter' }, [
+        h('div', { key: 'tot', className: 'rounded-xl p-6 bg-primary-container text-on-primary' }, [
+          h('p', { key: 'l', className: 'text-caption font-semibold uppercase tracking-wider mb-2 text-on-primary-container' }, 'Total vendido'),
+          h('h3', { key: 'v', className: 'font-headline text-headline-md text-white' }, fmt(totalVendido).replace('.00', '')),
+          h('p', { key: 's', className: 'text-caption mt-3 text-on-primary-container' }, prevVendido > 0 ? `${deltaPct(totalVendido, prevVendido) >= 0 ? '+' : ''}${deltaPct(totalVendido, prevVendido)}% vs periodo anterior` : 'periodo seleccionado'),
+        ]),
+        metricCard('Ventas totales', String(nVentas), 'transacciones procesadas', prevN > 0 && deltaChip(deltaPct(nVentas, prevN), false), true),
+        metricCard('Ticket promedio', fmt(ticketProm).replace('.00', ''), 'por transacción'),
+        metricCard('Comisiones', fmt(comisiones).replace('.00', ''), 'acumulado del periodo'),
+      ]),
+
+      // Ventas por vendedor
+      h('div', { key: 'chart', className: CARD + ' p-8 mb-gutter' }, [
+        h('div', { key: 'h', className: 'flex justify-between items-center mb-8' }, [
+          h('h4', { key: 't', className: 'font-headline text-headline-md text-primary' }, 'Ventas por vendedor'),
+          h('span', { key: 's', className: 'text-caption text-on-surface-variant' }, `${nVentas} ${nVentas === 1 ? 'venta' : 'ventas'}`),
+        ]),
+        dist.length
+          ? h('div', { key: 'bars', className: 'flex items-end justify-around gap-6 px-2 pt-6' }, dist.map(d => h('div', { key: d.nombre, className: 'flex flex-col items-center gap-2 flex-1' }, [
+            h('span', { key: 'n', className: 'text-caption font-bold text-primary whitespace-nowrap' }, fmt(d.val).replace('.00', '')),
+            h('div', { key: 'b', className: 'w-full max-w-[60px] rounded-t-md', style: { height: Math.round(d.val / maxV * 180) + 'px', minHeight: '6px', background: GOLD_GRAD } }),
+            h('span', { key: 'l', className: 'text-overline uppercase text-on-surface-variant text-center leading-tight' }, d.nombre),
+          ])))
+          : emptyHint('Sin ventas en el periodo seleccionado.'),
+      ]),
+
+      // Historial + filtros
+      h('div', { key: 'tbl', className: CARD + ' overflow-hidden' }, [
+        h('div', { key: 'h', className: 'p-6 border-b border-outline-variant flex flex-wrap items-center justify-between gap-4' }, [
+          h('h4', { key: 't', className: 'font-headline text-headline-md text-primary' }, 'Historial de ventas'),
+          h('div', { key: 'f', className: 'flex items-center gap-3' }, [
+            sel(vend, setVend, [['', 'Todos los vendedores']].concat(sellersList.map(s => [s.id, s.nombre]))),
+            sel(estado, setEstado, [['', 'Cualquier estado']].concat(statuses.map(st => [st.code, st.label]))),
+          ]),
+        ]),
+        rows.length
+          ? h('div', { key: 'wrap', className: 'overflow-x-auto' }, h('table', { className: 'w-full text-left' }, [
+            h('thead', { key: 'thd' }, h('tr', { className: 'bg-surface-container-low border-b border-outline-variant' },
+              ['Fecha', 'Folio', 'Cliente', 'Producto', 'Vendedor', 'Monto', 'Estado'].map((c, i) => h('th', { key: i, className: 'px-5 py-3 text-overline font-semibold text-on-surface-variant uppercase tracking-wider whitespace-nowrap' + (c === 'Monto' ? ' text-right' : '') + (c === 'Estado' ? ' text-right' : '') }, c)))),
+            h('tbody', { key: 'tb', className: 'divide-y divide-outline-variant/40' }, slice.map(r => h('tr', { key: r.id, className: 'hover:bg-surface-container-lowest transition-colors' }, [
+              h('td', { key: 'f', className: 'px-5 py-3 text-body whitespace-nowrap' }, String(r.fecha || '').slice(0, 10)),
+              h('td', { key: 'fo', className: 'px-5 py-3 font-mono text-caption text-primary whitespace-nowrap' }, r.folio),
+              h('td', { key: 'c', className: 'px-5 py-3 text-body font-medium whitespace-nowrap' }, r.cliente),
+              h('td', { key: 'p', className: 'px-5 py-3' }, h('div', { className: 'flex items-center gap-3 min-w-[170px]' }, [
+                r.prod ? h(ProductImage, { key: 'i', p: r.prod, className: 'w-9 h-9 rounded shrink-0' }) : h('div', { key: 'i', className: 'w-9 h-9 rounded bg-surface-container shrink-0 grid place-items-center text-on-surface-variant' }, h(MS, { name: 'tag', size: 16 })),
+                h('span', { key: 'n', className: 'text-body' }, r.producto),
+              ])),
+              h('td', { key: 'v', className: 'px-5 py-3 text-body whitespace-nowrap' }, r.vendedor),
+              h('td', { key: 'm', className: 'px-5 py-3 text-right text-body font-semibold text-primary whitespace-nowrap' }, fmt(r.monto).replace('.00', '')),
+              h('td', { key: 'e', className: 'px-5 py-3 text-right' }, h(StatusBadge, { estado: r.estado })),
+            ]))),
+          ]))
+          : emptyHint('No hay ventas que coincidan con los filtros.'),
+        rows.length > PER && h('div', { key: 'pg', className: 'px-6 py-4 bg-surface-container-low flex justify-between items-center' }, [
+          h('p', { key: 'i', className: 'text-caption text-on-surface-variant' }, `Mostrando ${(pg - 1) * PER + 1}–${Math.min(pg * PER, rows.length)} de ${rows.length}`),
           h('div', { key: 'n', className: 'flex items-center gap-2' }, [
             h('button', { key: 'p', disabled: pg <= 1, onClick: () => setPage(pg - 1), className: 'w-8 h-8 grid place-items-center rounded border border-outline-variant hover:bg-white transition-colors disabled:opacity-40' }, h(MS, { name: 'chevLeft', size: 18 })),
             h('span', { key: 'c', className: 'px-2 text-caption font-bold' }, `${pg} / ${pages}`),

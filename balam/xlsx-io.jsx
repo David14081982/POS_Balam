@@ -201,5 +201,20 @@
     window.UI.toast(`${rows.length} renglones exportados`, 'var(--accent)');
   }
 
-  window.XLSXIO = { exportTemplate, exportInventory, exportReturns, parseFile, HEADERS };
+  function exportSales(rows) {
+    if (!ensureXLSX()) return;
+    const H = ['Fecha', 'Folio', 'Cliente', 'Producto', 'Vendedor', 'Monto', 'Método', 'Estado'];
+    const data = rows.map(r => ({
+      'Fecha': r.fecha, 'Folio': r.folio, 'Cliente': r.cliente, 'Producto': r.producto,
+      'Vendedor': r.vendedor, 'Monto': r.monto, 'Método': r.metodo, 'Estado': r.estado,
+    }));
+    const ws = window.XLSX.utils.json_to_sheet(data, { header: H });
+    ws['!cols'] = [{ wch: 16 }, { wch: 10 }, { wch: 22 }, { wch: 26 }, { wch: 20 }, { wch: 12 }, { wch: 13 }, { wch: 14 }];
+    const wb = window.XLSX.utils.book_new();
+    window.XLSX.utils.book_append_sheet(wb, ws, 'Ventas');
+    download(wb, `Ventas_Balam_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    window.UI.toast(`${rows.length} ventas exportadas`, 'var(--accent)');
+  }
+
+  window.XLSXIO = { exportTemplate, exportInventory, exportReturns, exportSales, parseFile, HEADERS };
 })();
