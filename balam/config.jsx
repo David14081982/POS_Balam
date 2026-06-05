@@ -123,6 +123,7 @@
     'commission.monthlyGoal': 200000,
     'commission.bonus': 2000,
     'commission.auto': true,
+    'commission.base': 'neto', // 'neto' (sobre precio sin IVA) | 'bruto' (sobre el total con IVA)
     'report.marginPct': 33,
     'discount.minMarginPct': 45,
     'folio.prefix': 'BG-',

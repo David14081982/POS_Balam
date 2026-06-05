@@ -17,11 +17,27 @@
     return hit ? hit.label : (roles.length ? roles[roles.length - 1].label : '—');
   };
 
+  // Avance de meta con guardia contra meta=0 (evita NaN/Infinity en admin y vendedores sin meta).
+  const metaPct = (s) => (Number(s.metaMes) > 0 ? Math.round((s.ventasMes / s.metaMes) * 100) : 0);
+  const metaHit = (s) => Number(s.metaMes) > 0 && s.ventasMes >= s.metaMes;
+  // Comisión de una venta atribuida: usa el monto guardado al cobrar (refleja la base neto/bruto y el %
+  // vigentes en ese momento); si es una venta vieja/sincronizada sin el dato, la estima con el % actual.
+  const saleComm = (v, s) => (v && v.comision != null ? Number(v.comision) : (Number(v.total) || 0) * (s.comisionPct || 0) / 100);
+
   function SellersScreen() {
     const [detail, setDetail] = useState(null);
     const [view, setView] = useState('grid');
+    const [, bump] = useState(0);
+    const refresh = () => bump(v => v + 1);
     const totalComision = D.sellers.reduce((a, s) => a + s.comisionAcum, 0);
     const totalVentas = D.sellers.reduce((a, s) => a + s.ventasMes, 0);
+
+    function liquidar(s) {
+      if (!window.confirm('¿Liquidar la comisión acumulada de ' + s.nombre + ' (' + fmt(s.comisionAcum) + ')? Quedará en cero.')) return;
+      const monto = D.liquidarComision(s.id);
+      setDetail(null); refresh();
+      toast('Comisión de ' + s.nombre + ' liquidada: ' + fmt(monto || 0), 'var(--accent)');
+    }
 
     return h('div', { className: 'flex-1 overflow-y-auto bg-background font-body text-on-surface' },
       h('div', { className: 'p-10 max-w-container-max mx-auto' }, [
@@ -68,16 +84,16 @@
               [['grid', 'Grid'], ['list', 'Lista']].map(([id, l]) => h('button', { key: id, className: 'px-3 py-1 text-caption uppercase tracking-tighter rounded ' + (view === id ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:bg-surface-container-low'), onClick: () => setView(id) }, l))),
           ]),
           view === 'grid'
-            ? h('div', { key: 'g', className: 'grid grid-cols-1 xl:grid-cols-2 gap-8' }, D.sellers.map(s => h(SellerCard, { key: s.id, s, onOpen: () => setDetail(s) })))
+            ? h('div', { key: 'g', className: 'grid grid-cols-1 xl:grid-cols-2 gap-8' }, D.sellers.map(s => h(SellerCard, { key: s.id, s, onOpen: () => setDetail(s), onLiquidar: () => liquidar(s) })))
             : h(SellerList, { key: 'l', sellers: D.sellers, onOpen: setDetail }),
         ]),
-        detail && h(SellerDetail, { key: 'd', s: detail, onClose: () => setDetail(null) }),
+        detail && h(SellerDetail, { key: 'd', s: detail, onClose: () => setDetail(null), onLiquidar: () => liquidar(detail) }),
       ]));
   }
 
-  function SellerCard({ s, onOpen }) {
-    const pct = Math.round((s.ventasMes / s.metaMes) * 100);
-    const meta = s.ventasMes >= s.metaMes;
+  function SellerCard({ s, onOpen, onLiquidar }) {
+    const pct = metaPct(s);
+    const meta = metaHit(s);
     return h('div', { className: 'bg-surface rounded-lg overflow-hidden transition-all duration-300 hover:-translate-y-0.5 ' + SHADOW + ' ' + SHADOW_HOVER }, [
       h('div', { key: 'b', className: 'p-8 flex items-start gap-8' }, [
         h('div', { key: 'av', className: 'w-24 h-32 flex items-center justify-center border border-outline-variant shrink-0 rounded', style: { background: s.color + '1a' } },
@@ -111,7 +127,7 @@
       ]),
       h('div', { key: 'f', className: 'px-8 py-4 bg-surface-container-low/50 border-t border-outline-variant flex justify-between items-center' }, [
         h('button', { key: 'd', className: 'text-on-surface-variant hover:text-primary text-overline uppercase tracking-[0.2em] flex items-center group', onClick: onOpen }, [h(MS, { key: 'i', name: 'arrowUpRight', size: 16, className: 'mr-2 group-hover:translate-x-0.5 transition-transform' }), 'Detalles de ventas']),
-        h('button', { key: 'l', className: 'text-primary text-overline uppercase tracking-[0.2em] font-bold hover:opacity-70', onClick: () => toast('Comisión de ' + s.nombre + ' liquidada', 'var(--accent)') }, 'Liquidar comisión'),
+        h('button', { key: 'l', className: 'text-primary text-overline uppercase tracking-[0.2em] font-bold hover:opacity-70 disabled:opacity-30 disabled:cursor-not-allowed', disabled: !(s.comisionAcum > 0), onClick: onLiquidar }, 'Liquidar comisión'),
       ]),
     ]);
   }
@@ -122,7 +138,7 @@
         h('thead', { key: 'h' }, h('tr', { className: 'bg-surface-container/50 border-b border-outline-variant' },
           [['Vendedor', ''], ['Comisión', ''], ['Ventas', 'text-right'], ['Meta', 'text-right'], ['', '']].map(([c, al], i) => h('th', { key: i, className: 'px-6 py-4 text-overline uppercase tracking-wider font-semibold text-on-surface-variant/80 ' + al }, c)))),
         h('tbody', { key: 'b', className: 'divide-y divide-outline-variant' }, sellers.map(s => {
-          const pct = Math.round((s.ventasMes / s.metaMes) * 100);
+          const pct = metaPct(s);
           return h('tr', { key: s.id, className: 'hover:bg-surface-container transition-colors cursor-pointer', onClick: () => onOpen(s) }, [
             h('td', { key: 'n', className: 'px-6 py-4' }, h('div', { className: 'flex items-center gap-3' }, [
               h('span', { key: 'a', className: 'w-9 h-9 rounded-full flex items-center justify-center text-overline font-bold text-white', style: { background: s.color } }, s.iniciales),
@@ -130,18 +146,18 @@
             ])),
             h('td', { key: 'c', className: 'px-6 py-4 text-body' }, s.comisionPct + '%'),
             h('td', { key: 'v', className: 'px-6 py-4 text-right font-headline text-base text-primary' }, fmt(s.ventasMes).replace('.00', '')),
-            h('td', { key: 'm', className: 'px-6 py-4 text-right text-body ' + (s.ventasMes >= s.metaMes ? 'text-primary font-semibold' : 'text-on-surface-variant') }, pct + '%'),
+            h('td', { key: 'm', className: 'px-6 py-4 text-right text-body ' + (metaHit(s) ? 'text-primary font-semibold' : 'text-on-surface-variant') }, pct + '%'),
             h('td', { key: 'x', className: 'px-6 py-4 text-right' }, h(MS, { name: 'chevRight', size: 18, className: 'text-on-surface-variant/40' })),
           ]);
         })),
       ]));
   }
 
-  function SellerDetail({ s, onClose }) {
+  function SellerDetail({ s, onClose, onLiquidar }) {
     const ventas = D.sales.filter(v => v.vendedor === s.nombre);
-    const pct = Math.round((s.ventasMes / s.metaMes) * 100);
+    const pct = metaPct(s);
     const footer = [
-      h('button', { key: 'l', className: 'inline-flex items-center gap-2 px-5 h-11 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-lg hover:opacity-90 transition', onClick: () => toast('Comisión de ' + s.nombre + ' liquidada', 'var(--accent)') }, [h(MS, { key: 'i', name: 'cash', size: 16 }), 'Liquidar comisión']),
+      h('button', { key: 'l', className: 'inline-flex items-center gap-2 px-5 h-11 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-lg hover:opacity-90 transition disabled:opacity-30 disabled:cursor-not-allowed', disabled: !(s.comisionAcum > 0), onClick: onLiquidar }, [h(MS, { key: 'i', name: 'cash', size: 16 }), 'Liquidar comisión']),
     ];
     return h(Modal, { title: 'Vendedor', onClose, footer, large: true }, [
       h('div', { key: 'h', className: 'flex items-center gap-4' }, [
@@ -163,7 +179,7 @@
           h('td', { key: 'f', className: 'px-3 py-2 font-medium text-primary' }, v.folio),
           h('td', { key: 'c', className: 'px-3 py-2 text-body' }, v.cliente),
           h('td', { key: 't', className: 'px-3 py-2 text-right font-headline text-body' }, fmt(v.total).replace('.00', '')),
-          h('td', { key: 'k', className: 'px-3 py-2 text-right font-headline text-body text-gold-text' }, fmt(v.total * s.comisionPct / 100).replace('.00', '')),
+          h('td', { key: 'k', className: 'px-3 py-2 text-right font-headline text-body text-gold-text' }, fmt(saleComm(v, s)).replace('.00', '')),
         ]))),
       ])) : h('div', { key: 'e', className: 'text-center text-on-surface-variant py-8' }, 'Sin ventas en el periodo'),
     ]);

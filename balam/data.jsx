@@ -259,16 +259,31 @@
       const c = clients.find(x => x.id === client.id);
       if (c) { c.compras = (c.compras || 0) + 1; c.total = (c.total || 0) + total; c.ultima = fecha.slice(0, 10); saveClients(); }
     }
-    // 3) Vendedores (reparto de venta y comisión)
+    // 3) Vendedores (reparto de venta y comisión).
+    //    Base de comisión configurable (commission.base): 'neto' = sin IVA, 'bruto' = con IVA.
+    //    `total` puede incluir o no IVA según tax.included → lo normalizamos a neto/bruto antes de aplicar el %.
     const ids = (sellerIds && sellerIds.length) ? sellerIds : [];
+    let comisionVenta = 0;
     if (cobrada && ids.length) {
       const share = total / ids.length;
+      const ivaPct = Number(window.CONFIG.get('tax.ivaPct')) || 0;
+      const incl = !!window.CONFIG.get('tax.included');
+      const neto = incl ? share / (1 + ivaPct / 100) : share;
+      const bruto = incl ? share : share * (1 + ivaPct / 100);
+      const base = window.CONFIG.get('commission.base') === 'bruto' ? bruto : neto;
       ids.forEach(id => {
         const s = sellers.find(x => x.id === id);
-        if (s) { s.ventasMes = (s.ventasMes || 0) + share; s.ventasNum = (s.ventasNum || 0) + 1; s.comisionAcum = (s.comisionAcum || 0) + share * (s.comisionPct || 0) / 100; }
+        if (s) {
+          const c = base * (s.comisionPct || 0) / 100;
+          comisionVenta += c;
+          s.ventasMes = (s.ventasMes || 0) + share;
+          s.ventasNum = (s.ventasNum || 0) + 1;
+          s.comisionAcum = (s.comisionAcum || 0) + c;
+        }
       });
       saveSellers();
     }
+    comisionVenta = Math.round(comisionVenta * 100) / 100;
     // 4) Registro de venta (al frente = más reciente). Precio cobrado = con descuentos del POS.
     const primary = ids.map(id => (sellers.find(x => x.id === id) || {}).nombre).filter(Boolean);
     const unitOf = l => (window.PROMOS ? window.PROMOS.lineUnit(l.p, l.talla).unit : (Number(l.p.precio) || 0));
@@ -277,12 +292,24 @@
       folio, fecha, cliente: client ? client.nombre : 'Público en general',
       vendedor: primary[0] || '—', vendedores: ids.slice(),
       items: itemCount, total, metodo, estado, descuento: Math.max(0, subtotalOrig - total),
+      comision: comisionVenta, comisionBase: window.CONFIG.get('commission.base') || 'neto',
       lineas: ticket.map(l => ({ sku: l.p.sku, nombre: l.p.nombre, talla: l.talla, qty: l.qty, precio: unitOf(l), precioOrig: Number(l.p.precio) || 0 })),
     };
     sales.unshift(sale);
     saveSales();
     if (window.STORE && window.STORE.pushSale) { try { window.STORE.pushSale(sale); } catch (e) { /* offline */ } }
     return sale;
+  }
+
+  // Liquida (paga) la comisión acumulada de un vendedor: la pone en cero y persiste/sincroniza.
+  // Devuelve el monto liquidado (para el mensaje), o null si el vendedor no existe.
+  function liquidarComision(id) {
+    const s = sellers.find(x => x.id === id);
+    if (!s) return null;
+    const monto = Number(s.comisionAcum) || 0;
+    s.comisionAcum = 0;
+    saveSellers();
+    return monto;
   }
 
   // ---- Usuarios (= personas en sellers; admin y/o vendedor) ----
@@ -355,7 +382,7 @@
     products, sellers, clients, sales, movements, promos,
     sku, totalStock, hydrate, mkStock, emptyStock,
     saveProducts, saveSellers, saveClients, saveSales, saveMovements, savePromos,
-    recordSale, nextFolio, stockOf, resetProducts, applyRemote,
+    recordSale, nextFolio, stockOf, resetProducts, applyRemote, liquidarComision,
     addUser, updateUser, removeUser,
     addPromo, updatePromo, removePromo, duplicatePromo,
   };

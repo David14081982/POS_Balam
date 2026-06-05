@@ -132,6 +132,22 @@
       }, h('span', { className: 'absolute top-0.5 w-5 h-5 bg-surface rounded-full shadow transition-all ' + (on ? 'left-[22px]' : 'left-0.5') })),
     ]);
   }
+  // Selector segmentado (dos o más opciones excluyentes) ligado a un ajuste de CONFIG.
+  function CfgSeg({ k, title, desc, options }) {
+    const cur = C.get(k);
+    return h('div', { key: k, className: 'py-3 border-t border-outline-variant/40 first:border-t-0' }, [
+      h('div', { key: 't', className: 'text-body font-medium text-primary' }, title),
+      desc && h('div', { key: 'd', className: 'text-caption text-on-surface-variant mt-0.5 mb-2.5' }, desc),
+      h('div', { key: 's', className: 'inline-flex p-1 bg-surface-container-highest rounded-lg gap-1' },
+        options.map(o => h('button', {
+          key: o.value,
+          className: 'px-4 py-1.5 rounded-md text-caption font-semibold uppercase tracking-wider transition-colors ' +
+            (cur === o.value ? 'text-primary shadow-e1' : 'text-on-surface-variant hover:text-primary'),
+          style: cur === o.value ? { background: '#fff' } : null,
+          onClick: () => C.setSetting(k, o.value),
+        }, o.label))),
+    ]);
+  }
 
   // Logotipo de la tienda (compartido: inicio/sidebar + ticket). Se guarda como data URL
   // en CONFIG (store.logo) → persiste local y sincroniza a la nube como ajuste.
@@ -236,6 +252,12 @@
           h(CfgText, { key: 'm', k: 'commission.monthlyGoal', label: 'Meta mensual ($)', type: 'number' }),
           h(CfgText, { key: 'o', k: 'commission.bonus', label: 'Bono al superar meta ($)', type: 'number' }),
         ]),
+        h(CfgSeg, {
+          key: 'base', k: 'commission.base',
+          title: 'Base de cálculo de la comisión',
+          desc: 'Define si el % del vendedor se aplica sobre el precio sin IVA (neto) o sobre el total cobrado con IVA (bruto). Solo afecta ventas nuevas.',
+          options: [{ value: 'neto', label: 'Precio neto (sin IVA)' }, { value: 'bruto', label: 'Precio bruto (con IVA)' }],
+        }),
       ]),
       h(GlassCard, { key: 'rep', className: 'p-6' }, [
         h(SerifHeading, { key: 't', className: 'mb-4', children: 'Reportes' }),
