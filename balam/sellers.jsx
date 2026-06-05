@@ -71,7 +71,7 @@
               h('span', { key: 'l', className: 'text-overline font-bold text-on-surface-variant uppercase tracking-[0.15em]' }, 'Ventas del mes (equipo)'),
               h('h3', { key: 'v', className: 'font-headline text-display text-primary mt-4' }, fmt(totalVentas).replace('.00', '')),
             ]),
-            h('div', { key: 'd', className: 'mt-8 flex items-center text-success' }, [h(MS, { key: 'i', name: 'trending_up', size: 18, className: 'mr-1' }), h('span', { key: 's', className: 'text-body font-medium' }, '+12.5% vs mes anterior')]),
+            h('div', { key: 'd', className: 'mt-8 flex items-center text-on-surface-variant' }, [h(MS, { key: 'i', name: 'calendar', size: 18, className: 'mr-1' }), h('span', { key: 's', className: 'text-body' }, periodoLabel())]),
           ]),
           h('div', { key: 'b', className: 'bg-surface p-8 rounded-lg border-t-2 border-t-gold ' + SHADOW + ' flex flex-col justify-between' }, [
             h('div', { key: 't' }, [
@@ -83,7 +83,7 @@
           h('div', { key: 'c', className: 'bg-surface p-8 rounded-lg ' + SHADOW + ' flex flex-col justify-between' }, [
             h('div', { key: 't' }, [
               h('span', { key: 'l', className: 'text-overline font-bold text-on-surface-variant uppercase tracking-[0.15em]' }, 'Vendedores activos'),
-              h('h3', { key: 'v', className: 'font-headline text-display text-primary mt-4' }, D.sellers.length),
+              h('h3', { key: 'v', className: 'font-headline text-display text-primary mt-4' }, D.sellers.filter(s => s.active !== false).length),
             ]),
             h('div', { key: 'd', className: 'mt-8 flex items-center justify-between' }, [
               h('div', { key: 'av', className: 'flex -space-x-3' }, D.sellers.map(s => h('div', { key: s.id, className: 'w-9 h-9 rounded-full border-2 border-surface flex items-center justify-center text-overline font-bold text-white', style: { background: s.color } }, s.iniciales))),

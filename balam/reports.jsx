@@ -8,49 +8,71 @@
   const GOLD_GRAD = 'linear-gradient(135deg, #92760F 0%, #D4AF38 100%)';
 
   const CARD = 'bg-surface-container-lowest rounded-xl shadow-e1';
-  const SEMANAS = [{ s: 'SEM 1', pct: 40 }, { s: 'SEM 2', pct: 65 }, { s: 'SEM 3', pct: 85 }, { s: 'SEM 4', pct: 55 }];
 
   function ResumenReport({ onNav }) {
-    const [mes, setMes] = useState('Mayo 2026');
+    const marginPct = window.CONFIG.get('report.marginPct') || 33;
+    const parse = f => { const d = new Date(String(f || '').replace(' ', 'T')); return isNaN(d) ? null : d; };
+    const nonCancel = D.sales.filter(s => s.estado !== 'Cancelado');
+    const periodoLbl = new Date().toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
 
-    // Datos reales
-    const ventasBrutas = D.sales.filter(s => s.estado !== 'Cancelado').reduce((a, s) => a + s.total, 0) + 1100000; // + histórico mock
-    const utilidad = Math.round(ventasBrutas * ((window.CONFIG.get('report.marginPct') || 33) / 100));
-    const pedidos = D.sales.length + 300;
-    const ticketProm = Math.round(ventasBrutas / pedidos);
+    // KPIs — 100% reales (sin históricos ni metas inventadas)
+    const ventasBrutas = nonCancel.reduce((a, s) => a + (Number(s.total) || 0), 0);
+    const utilidad = Math.round(ventasBrutas * (marginPct / 100));
+    const pedidos = nonCancel.length;
+    const ticketProm = pedidos ? Math.round(ventasBrutas / pedidos) : 0;
 
-    // Meta global (equipo)
-    const teamVentas = D.sellers.reduce((a, s) => a + s.ventasMes, 0);
-    const teamMeta = D.sellers.reduce((a, s) => a + s.metaMes, 0);
-    const avance = Math.min(100, Math.round(teamVentas / teamMeta * 100));
+    // Variación real: mes calendario actual vs mes anterior (oculta si no hay base previa)
+    const ymOf = d => d.getFullYear() * 12 + d.getMonth();
+    const curYM = ymOf(new Date());
+    const monthAgg = off => nonCancel.reduce((acc, s) => { const d = parse(s.fecha); if (d && ymOf(d) === curYM - off) { acc.tot += Number(s.total) || 0; acc.n += 1; } return acc; }, { tot: 0, n: 0 });
+    const m0 = monthAgg(0), m1 = monthAgg(1);
+    const pctMoM = (cur, prev) => prev > 0 ? Math.round((cur - prev) / prev * 100) : null;
+    const mom = pct => pct == null ? ['', 'text-on-surface-variant', 'trending_up'] : [(pct >= 0 ? '+' : '') + pct + '% vs mes anterior', pct >= 0 ? 'text-success' : 'text-danger', pct >= 0 ? 'trending_up' : 'trending_down'];
+    const [tV, cV, iV] = mom(pctMoM(m0.tot, m1.tot)), [tP, cP, iP] = mom(pctMoM(m0.n, m1.n));
+
+    // Meta global (equipo) — guardas contra meta=0 (evita NaN/Infinity y "100%" falso)
+    const teamVentas = D.sellers.reduce((a, s) => a + (Number(s.ventasMes) || 0), 0);
+    const teamMeta = D.sellers.reduce((a, s) => a + (Number(s.metaMes) || 0), 0);
+    const avance = teamMeta > 0 ? Math.min(100, Math.round(teamVentas / teamMeta * 100)) : 0;
     const falta = Math.max(0, teamMeta - teamVentas);
     const R = 70, CIRC = 2 * Math.PI * R, offset = CIRC * (1 - avance / 100);
 
-    // Top categorías (por valor de inventario, proxy de venta)
+    // Top categorías por VENTAS reales (de las líneas de venta, no proxy de inventario)
     const catRev = {};
-    D.products.forEach(p => { catRev[p.cat] = (catRev[p.cat] || 0) + p.precio * D.totalStock(p); });
+    nonCancel.forEach(s => (s.lineas || []).forEach(l => { const p = D.products.find(x => x.sku === l.sku); if (p) catRev[p.cat] = (catRev[p.cat] || 0) + (Number(l.precio) || 0) * (Number(l.qty) || 0); }));
     const cats = Object.entries(catRev).map(([cat, rev]) => ({ cat, rev, img: D.products.find(x => x.cat === cat) }))
       .sort((a, b) => b.rev - a.rev).slice(0, 3);
     const maxRev = cats.length ? cats[0].rev : 1;
 
-    // Comisiones
+    // Comisiones (reales)
     const topVend = [...D.sellers].sort((a, b) => b.ventasMes - a.ventasMes);
-    const totalComision = D.sellers.reduce((a, s) => a + s.comisionAcum, 0);
+    const totalComision = D.sellers.reduce((a, s) => a + (Number(s.comisionAcum) || 0), 0);
+
+    // Ventas por semana (últimas 6) — reales
+    const nowD = new Date();
+    const weekly = [];
+    for (let i = 5; i >= 0; i--) {
+      const start = new Date(nowD); start.setHours(0, 0, 0, 0); start.setDate(nowD.getDate() - (i * 7 + 6));
+      const end = new Date(nowD); end.setHours(23, 59, 59, 999); end.setDate(nowD.getDate() - i * 7);
+      const tot = nonCancel.reduce((a, s) => { const d = parse(s.fecha); return (d && d >= start && d <= end) ? a + (Number(s.total) || 0) : a; }, 0);
+      weekly.push({ s: 'S' + (6 - i), total: tot });
+    }
+    const maxW = Math.max(1, ...weekly.map(w => w.total));
 
     return h(React.Fragment, null, [
 
         // Acciones
         h('div', { key: 'act', className: 'flex justify-end gap-3 mb-8' }, [
-          h('button', { key: 'm', className: 'flex items-center gap-2 px-4 py-2 border border-outline-variant rounded-lg hover:bg-surface-container-low transition-all text-body font-semibold', onClick: () => { const subj = encodeURIComponent(`Reporte Balam — ${mes}`); const body = encodeURIComponent(`Resumen ${mes}\n\nVentas brutas: ${fmt(ventasBrutas)}\nUtilidad neta: ${fmt(utilidad)}\nTotal pedidos: ${pedidos}\nTicket promedio: ${fmt(ticketProm)}\nComisiones a liquidar: ${fmt(totalComision)}`); window.location.href = `mailto:?subject=${subj}&body=${body}`; } }, [h(MS, { key: 'i', name: 'mail', size: 16 }), 'Enviar por correo']),
+          h('button', { key: 'm', className: 'flex items-center gap-2 px-4 py-2 border border-outline-variant rounded-lg hover:bg-surface-container-low transition-all text-body font-semibold', onClick: () => { const subj = encodeURIComponent(`Reporte Balam — ${periodoLbl}`); const body = encodeURIComponent(`Resumen ${periodoLbl}\n\nVentas brutas: ${fmt(ventasBrutas)}\nUtilidad neta: ${fmt(utilidad)}\nTotal pedidos: ${pedidos}\nTicket promedio: ${fmt(ticketProm)}\nComisiones a liquidar: ${fmt(totalComision)}`); window.location.href = `mailto:?subject=${subj}&body=${body}`; } }, [h(MS, { key: 'i', name: 'mail', size: 16 }), 'Enviar por correo']),
           h('button', { key: 'p', className: 'flex items-center gap-2 px-4 py-2 border border-outline-variant rounded-lg hover:bg-surface-container-low transition-all text-body font-semibold', onClick: () => window.print() }, [h(MS, { key: 'i', name: 'print', size: 16 }), 'Imprimir']),
           h('button', { key: 'e', className: 'flex items-center gap-2 px-6 py-2 bg-primary text-on-primary rounded-lg hover:opacity-90 transition-all text-body font-semibold shadow-e2', onClick: () => { toast('Abriendo impresión — elige "Guardar como PDF"'); setTimeout(() => window.print(), 350); } }, [h(MS, { key: 'i', name: 'download', size: 16 }), 'Exportar PDF']),
         ]),
 
         // KPIs
         h('div', { key: 'kpi', className: 'grid grid-cols-1 md:grid-cols-4 gap-gutter mb-gutter' }, [
-          kpi('Ventas brutas', fmt(ventasBrutas).replace('.00', ''), 'trending_up', '+12.4% vs mes anterior', 'text-success'),
-          kpi('Utilidad neta', fmt(utilidad).replace('.00', ''), 'trending_up', '+8.2% vs mes anterior', 'text-success'),
-          kpi('Total pedidos', String(pedidos), 'chart', 'Meta: 400 pedidos', 'text-on-surface-variant/60'),
+          kpi('Ventas brutas', fmt(ventasBrutas).replace('.00', ''), iV, tV, cV),
+          kpi('Utilidad neta', fmt(utilidad).replace('.00', ''), iV, tV, cV),
+          kpi('Total pedidos', String(pedidos), iP, tP, cP),
           kpi('Ticket promedio', fmt(ticketProm).replace('.00', ''), 'star', '', 'text-gold-text', true),
         ]),
 
@@ -60,22 +82,19 @@
           h('div', { key: 'g', className: CARD + ' lg:col-span-2 p-8 flex flex-col' }, [
             h('div', { key: 'h', className: 'flex justify-between items-start mb-8' }, [
               h('div', { key: 't' }, [
-                h('h4', { key: 'a', className: 'font-headline text-headline-md text-primary' }, 'Rendimiento mensual'),
-                h('p', { key: 'b', className: 'text-on-surface-variant text-body' }, 'Distribución de ingresos por semana'),
+                h('h4', { key: 'a', className: 'font-headline text-headline-md text-primary' }, 'Ventas por semana'),
+                h('p', { key: 'b', className: 'text-on-surface-variant text-body' }, 'Ingresos realizados · últimas 6 semanas'),
               ]),
-              h('select', { key: 's', className: 'bg-surface-container-low border-none rounded-lg text-caption font-bold px-4 py-2 focus:ring-1 focus:ring-primary', value: mes, onChange: e => setMes(e.target.value) },
-                ['Mayo 2026', 'Abril 2026', 'Marzo 2026'].map(m => h('option', { key: m, value: m }, m))),
+              h('span', { key: 's', className: 'text-caption text-on-surface-variant font-semibold' }, fmt(weekly.reduce((a, w) => a + w.total, 0)).replace('.00', '')),
             ]),
             h('div', { key: 'bars', className: 'flex-grow flex items-end justify-between gap-4 h-64 px-4 border-b border-outline-variant mb-4' },
-              SEMANAS.map(x => h('div', { key: x.s, className: 'flex flex-col items-center w-full h-full justify-end gap-2 group' }, [
-                h('div', { key: 'b', className: 'w-full bg-primary-container/10 rounded-t-lg relative overflow-hidden group-hover:bg-primary-container/20 transition-all', style: { height: x.pct + '%' } },
-                  h('div', { className: 'absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity', style: { background: GOLD_GRAD } })),
+              weekly.map(x => h('div', { key: x.s, className: 'flex flex-col items-center w-full h-full justify-end gap-2 group' }, [
+                h('span', { key: 'v', className: 'text-overline text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap' }, fmt(x.total).replace('.00', '')),
+                h('div', { key: 'b', className: 'w-full rounded-t-lg transition-all', style: { height: Math.max(2, Math.round(x.total / maxW * 100)) + '%', background: GOLD_GRAD } }),
                 h('span', { key: 'l', className: 'text-overline text-on-surface-variant font-bold' }, x.s),
               ]))),
-            h('div', { key: 'leg', className: 'flex gap-6' }, [
-              h('div', { key: 'p', className: 'flex items-center gap-2' }, [h('div', { className: 'w-3 h-3 rounded-full bg-primary-container/20' }), h('span', { className: 'text-caption text-on-surface-variant' }, 'Proyectado')]),
-              h('div', { key: 'r', className: 'flex items-center gap-2' }, [h('div', { className: 'w-3 h-3 rounded-full', style: { background: GOLD_GRAD } }), h('span', { className: 'text-caption text-on-surface-variant' }, 'Realizado')]),
-            ]),
+            h('div', { key: 'leg', className: 'flex gap-6' },
+              h('div', { key: 'r', className: 'flex items-center gap-2' }, [h('div', { className: 'w-3 h-3 rounded-full', style: { background: GOLD_GRAD } }), h('span', { className: 'text-caption text-on-surface-variant' }, 'Realizado')])),
           ]),
           // Meta global (navy)
           h('div', { key: 'meta', className: 'border border-outline-variant rounded-xl p-8 bg-primary-container text-on-primary flex flex-col justify-between' }, [
@@ -94,7 +113,9 @@
                   h('span', { key: 'l', className: 'text-overline uppercase tracking-tight text-gold' }, 'Completado'),
                 ]),
               ]),
-              h('p', { key: 'f', className: 'mt-6 text-body text-on-primary-container font-light' }, ['Faltan ', h('span', { key: 's', className: 'text-gold font-bold' }, fmt(falta).replace('.00', '')), ' para el bono mensual.']),
+              h('p', { key: 'f', className: 'mt-6 text-body text-on-primary-container font-light' }, teamMeta > 0
+                ? ['Faltan ', h('span', { key: 's', className: 'text-gold font-bold' }, fmt(falta).replace('.00', '')), ' para la meta del equipo.']
+                : 'Define metas de venta en Vendedores para medir el avance.'),
             ]),
             h('button', { key: 'b', className: 'w-full py-3 bg-gold text-on-gold rounded-lg font-bold text-body uppercase tracking-wider hover:opacity-90 transition-all', onClick: () => onNav && onNav('vendedores') }, 'Impulsar ventas'),
           ]),
@@ -104,7 +125,7 @@
         h('div', { key: 'bot', className: 'grid grid-cols-1 lg:grid-cols-2 gap-gutter mt-gutter' }, [
           h('div', { key: 'cats', className: CARD + ' p-8' }, [
             h('h4', { key: 't', className: 'font-headline text-headline-md text-primary mb-6' }, 'Top categorías'),
-            h('div', { key: 'l', className: 'space-y-6' }, cats.map(c => h('div', { key: c.cat, className: 'flex items-center gap-4' }, [
+            h('div', { key: 'l', className: 'space-y-6' }, cats.length ? cats.map(c => h('div', { key: c.cat, className: 'flex items-center gap-4' }, [
               h(ProductImage, { key: 'i', p: c.img, className: 'w-16 h-16 rounded-lg shrink-0 shadow-e1 border border-outline-variant/30' }),
               h('div', { key: 'd', className: 'flex-grow' }, [
                 h('div', { key: 'r', className: 'flex justify-between items-center mb-1' }, [
@@ -113,7 +134,7 @@
                 ]),
                 h('div', { key: 'b', className: 'w-full bg-surface-container h-1.5 rounded-full' }, h('div', { className: 'bg-primary h-full rounded-full', style: { width: (c.rev / maxRev * 100) + '%' } })),
               ]),
-            ]))),
+            ])) : emptyHint('Sin ventas registradas aún.')),
           ]),
           h('div', { key: 'com', className: CARD + ' p-8 overflow-hidden' }, [
             h('div', { key: 'h', className: 'flex justify-between items-center mb-6' }, [
@@ -347,7 +368,7 @@
     const sellersList = D.sellers.filter(s => s.active !== false);
     const statuses = C.list('sale_status');
     const parse = f => { const d = new Date(String(f || '').replace(' ', 'T')); return isNaN(d) ? null : d; };
-    const isoDay = ms => new Date(ms).toISOString().slice(0, 10);
+    const isoDay = ms => { const d = new Date(ms); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }; // fecha LOCAL (no UTC)
     const DEF_FROM = isoDay(Date.now() - 30 * 86400000), DEF_TO = isoDay(Date.now());
     const [from, setFrom] = useState(DEF_FROM); // desde (YYYY-MM-DD)
     const [to, setTo] = useState(DEF_TO);       // hasta (YYYY-MM-DD)

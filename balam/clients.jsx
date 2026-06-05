@@ -43,7 +43,7 @@
     const slice = rows.slice((pg - 1) * PER, pg * PER);
 
     function saveEditClient(patch) {
-      Object.assign(editC, { nombre: patch.nombre.trim(), tel: patch.tel || '—', email: patch.email, talla: patch.talla, notas: patch.notas });
+      Object.assign(editC, { nombre: patch.nombre.trim(), tel: patch.tel || '—', email: patch.email, talla: patch.talla, notas: patch.notas, nacimiento: patch.nacimiento || '' });
       D.saveClients();
       setEditC(null); setRefreshKey(k => k + 1);
       toast('Cliente actualizado', 'var(--accent)');
@@ -52,8 +52,8 @@
     function saveNewClient(data) {
       D.clients.push({
         id: 'c-' + Date.now(), nombre: data.nombre.trim(), tel: data.tel, compras: 0, total: 0,
-        ultima: new Date().toISOString().slice(0, 10), talla: data.tallaCamisa || '', notas: data.notas,
-        email: data.email, direccion: data.direccion,
+        ultima: '', talla: data.tallaCamisa || '', notas: data.notas,
+        email: data.email, direccion: data.direccion, nacimiento: data.nacimiento || '',
       });
       D.saveClients();
       setAdding(false); setRefreshKey(k => k + 1);
@@ -188,7 +188,7 @@
 
   // Edición rápida de cliente (campos núcleo). Patcha el cliente existente y persiste.
   function ClientEditModal({ c, onClose, onSave }) {
-    const [f, setF] = useState({ nombre: c.nombre || '', tel: c.tel === '—' ? '' : (c.tel || ''), email: c.email || '', talla: c.talla || '', notas: c.notas || '' });
+    const [f, setF] = useState({ nombre: c.nombre || '', tel: c.tel === '—' ? '' : (c.tel || ''), email: c.email || '', talla: c.talla || '', nacimiento: c.nacimiento || '', notas: c.notas || '' });
     const set = (k, v) => setF(p => ({ ...p, [k]: v }));
     const inp = 'w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2.5 text-body focus:ring-1 focus:ring-primary focus:border-primary';
     const field = (label, ctrl) => h('div', { key: label }, [h('label', { key: 'l', className: 'block text-overline uppercase font-bold text-on-surface-variant tracking-widest mb-1.5' }, label), ctrl]);
@@ -204,7 +204,10 @@
           field('Teléfono', h('input', { className: inp, type: 'tel', value: f.tel, onChange: e => set('tel', e.target.value), placeholder: '999 000 0000' })),
           field('Talla', h('input', { className: inp, value: f.talla, onChange: e => set('talla', e.target.value), placeholder: 'M, L, 32…' })),
         ]),
-        field('Correo electrónico', h('input', { className: inp, type: 'email', value: f.email, onChange: e => set('email', e.target.value), placeholder: 'cliente@balam.com' })),
+        h('div', { key: 'row2', className: 'grid grid-cols-2 gap-4' }, [
+          field('Correo electrónico', h('input', { className: inp, type: 'email', value: f.email, onChange: e => set('email', e.target.value), placeholder: 'cliente@balam.com' })),
+          field('Fecha de nacimiento', h('input', { className: inp, type: 'date', value: f.nacimiento, onChange: e => set('nacimiento', e.target.value) })),
+        ]),
         field('Notas', h('textarea', { className: inp + ' resize-none', rows: 3, value: f.notas, onChange: e => set('notas', e.target.value), placeholder: 'Preferencias, observaciones…' })),
       ]),
     ]);
@@ -224,7 +227,7 @@
 
   function NewClientForm({ onCancel, onSave }) {
     const [f, setF] = useState({
-      nombre: '', email: '', cod: '+52', tel: '', calle: '', ciudad: '', estado: '', cp: '', pais: 'México',
+      nombre: '', email: '', cod: '+52', tel: '', nacimiento: '', calle: '', ciudad: '', estado: '', cp: '', pais: 'México',
       tallaCamisa: 'M', tallaPantalon: '32', telas: ['Lino Artesanal'], fit: 'Regular',
     });
     const set = (k, v) => setF(p => ({ ...p, [k]: v }));
@@ -234,7 +237,7 @@
       if (!f.nombre.trim()) { toast('Escribe el nombre del cliente', 'var(--danger)'); return; }
       const direccion = [f.calle, f.ciudad, f.estado, f.cp, f.pais].filter(Boolean).join(', ');
       const notas = `Talla ${f.tallaCamisa} · Pantalón ${f.tallaPantalon} · Fit ${f.fit}` + (f.telas.length ? ` · Telas: ${f.telas.join(', ')}` : '');
-      onSave({ nombre: f.nombre, tel: f.tel ? f.cod + ' ' + f.tel : '—', email: f.email, direccion, notas, tallaCamisa: f.tallaCamisa });
+      onSave({ nombre: f.nombre, tel: f.tel ? f.cod + ' ' + f.tel : '—', email: f.email, direccion, notas, tallaCamisa: f.tallaCamisa, nacimiento: f.nacimiento });
     }
 
     return h('div', { className: 'flex-1 overflow-y-auto bg-background font-body text-on-surface' },
@@ -263,6 +266,7 @@
                 h('select', { key: 's', className: 'bg-transparent border-0 border-b border-outline-variant text-body focus:ring-0 focus:border-primary w-16 py-3', value: f.cod, onChange: e => set('cod', e.target.value) }, window.CONFIG.codes('country_code').map(c => h('option', { key: c, value: c }, c))),
                 h('input', { key: 'i', className: UNDER + ' flex-1', type: 'tel', placeholder: '55 0000 0000', value: f.tel, onChange: e => set('tel', e.target.value) }),
               ])),
+              ffield('Fecha de nacimiento', h('input', { className: UNDER, type: 'date', value: f.nacimiento, onChange: e => set('nacimiento', e.target.value) })),
               h('div', { key: 'dir', className: 'col-span-2 mt-2' }, [
                 h('label', { key: 'l', className: 'block text-overline font-semibold text-on-surface-variant uppercase tracking-widest mb-4' }, 'Dirección de envío'),
                 h('div', { key: 'g', className: 'grid grid-cols-2 gap-x-8 gap-y-6' }, [

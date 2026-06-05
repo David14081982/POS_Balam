@@ -54,10 +54,28 @@
     }
     const SEMANA = chartView === 'mes' ? mesReal() : semanaReal();
     const maxPct = Math.max(1, ...SEMANA.map(x => x.pct));
-    const maxFecha = D.sales.reduce((m, s) => s.fecha.slice(0, 10) > m ? s.fecha.slice(0, 10) : m, '');
-    const hoy = D.sales.filter(s => s.fecha.startsWith(maxFecha) && s.estado !== 'Cancelado');
-    const ventasHoy = hoy.reduce((a, s) => a + s.total, 0);
+    const p2 = n => String(n).padStart(2, '0');
+    const dayKey = d => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+    const hoyD = new Date(), ayerD = new Date(); ayerD.setDate(hoyD.getDate() - 1);
+    const ventasDe = key => D.sales.filter(s => String(s.fecha).startsWith(key) && s.estado !== 'Cancelado');
+    const hoy = ventasDe(dayKey(hoyD)); // ventas del DÍA REAL de hoy (no del último día con ventas)
+    const ventasHoy = hoy.reduce((a, s) => a + (Number(s.total) || 0), 0);
+    const ventasAyer = ventasDe(dayKey(ayerD)).reduce((a, s) => a + (Number(s.total) || 0), 0);
     const promedio = hoy.length ? Math.round(ventasHoy / hoy.length) : 0;
+    const deltaHoy = ventasAyer > 0 ? Math.round((ventasHoy - ventasAyer) / ventasAyer * 100) : null;
+    // Próximos cumpleaños — de clientes con fecha de nacimiento registrada (datos reales)
+    const today0 = new Date(hoyD.getFullYear(), hoyD.getMonth(), hoyD.getDate());
+    const cumples = D.clients.filter(c => !c.generic && c.nacimiento).map(c => {
+      const b = new Date(String(c.nacimiento).replace(' ', 'T')); if (isNaN(b)) return null;
+      let next = new Date(today0.getFullYear(), b.getMonth(), b.getDate());
+      if (next < today0) next = new Date(today0.getFullYear() + 1, b.getMonth(), b.getDate());
+      return { nombre: c.nombre, dias: Math.round((next - today0) / 86400000) };
+    }).filter(Boolean).filter(x => x.dias <= 30).sort((a, b) => a.dias - b.dias).slice(0, 4);
+    const cuandoLbl = d => d === 0 ? 'Hoy' : d === 1 ? 'Mañana' : `En ${d} días`;
+    // Saludo con el nombre real del usuario/administrador (sin nombre fijo)
+    const usr = (window.AUTH && window.AUTH.current && window.AUTH.current()) || D.sellers.find(s => s.role === 'admin');
+    const hh = hoyD.getHours();
+    const saludo = (hh < 12 ? 'Buenos días' : hh < 19 ? 'Buenas tardes' : 'Buenas noches') + (usr && usr.nombre ? ', ' + String(usr.nombre).split(' ')[0] : '');
     const low = window.CONFIG.get('stock.lowThreshold') || 4;
     const estrella = D.products.find(p => p.pop) || D.products[0];
     const criticos = D.products.filter(p => D.totalStock(p) <= low);
@@ -73,12 +91,12 @@
         h('section', { key: 'b', className: 'relative overflow-hidden rounded-xl bg-primary-container p-8 text-on-primary flex justify-between items-center' }, [
           // Imagen decorativa derecha (~40%, full height) — oculta en móvil
           h('div', { key: 'img', className: 'hidden md:block absolute right-0 top-0 h-full w-2/5 pointer-events-none select-none' }, [
-            h('img', { key: 'i', src: (window.__IMG_MAP && window.__IMG_MAP[BANNER_IMG]) || BANNER_IMG, alt: '', 'aria-hidden': true, className: 'w-full h-full object-cover opacity-90' }),
+            h('img', { key: 'i', src: (window.__IMG_MAP && window.__IMG_MAP[BANNER_IMG]) || BANNER_IMG, alt: '', 'aria-hidden': true, className: 'w-full h-full object-cover opacity-90', onError: e => { e.currentTarget.style.display = 'none'; } }),
             h('div', { key: 'g', className: 'absolute inset-0', style: { background: 'linear-gradient(to right, #1E293B 0%, rgba(30,41,59,0.55) 45%, rgba(30,41,59,0) 100%)' } }),
           ]),
           h('div', { key: 'c', className: 'relative z-10 space-y-4 max-w-lg' }, [
             h('div', { key: 't', className: 'space-y-1' }, [
-              h('h2', { key: 'a', className: 'font-headline text-h1' }, 'Buenos días, Juan'),
+              h('h2', { key: 'a', className: 'font-headline text-h1' }, saludo),
               h('p', { key: 'b', className: 'text-body text-on-primary/70' }, [
                 'Hoy tienes ', h('span', { key: 's', className: 'text-on-primary font-semibold' }, `${apartados.length} apartado(s)`),
                 ' y ', h('span', { key: 'c', className: 'text-on-primary font-semibold' }, `${criticos.length} modelo(s)`), ' con stock crítico.',
@@ -93,9 +111,9 @@
 
         // Métricas
         h('div', { key: 'm', className: 'grid grid-cols-1 md:grid-cols-4 gap-6' }, [
-          metric('Ventas hoy', fmt(ventasHoy).replace('.00', ''), 'success', '+12.5%', [h('span', { key: 'd', className: 'w-1.5 h-1.5 rounded-full bg-success' }), 'Actualizado hace 5 min']),
-          metric('Tickets', String(hoy.length), 'neutral', 'Estable', 'Promedio: ' + fmt(promedio).replace('.00', '') + ' / ticket'),
-          metric('Favorito', estrella ? estrella.nombre : '—', 'gold', 'Premium', ventasEstrella + ' vendidas este periodo', true),
+          metric('Ventas hoy', fmt(ventasHoy).replace('.00', ''), deltaHoy == null ? 'neutral' : (deltaHoy >= 0 ? 'success' : 'danger'), deltaHoy == null ? '—' : (deltaHoy >= 0 ? '+' : '') + deltaHoy + '%', deltaHoy == null ? 'Sin ventas ayer para comparar' : 'Comparado con ayer'),
+          metric('Tickets', String(hoy.length), 'neutral', 'Hoy', 'Promedio: ' + fmt(promedio).replace('.00', '') + ' / ticket'),
+          metric('Favorito', estrella ? estrella.nombre : '—', 'gold', 'Destacado', ventasEstrella + ' vendidas este periodo', true),
           metric('Inventario', saludInv + '%', criticos.length ? 'warning' : 'success', criticos.length ? 'Revisar' : 'OK', criticos.length + ' alertas de stock bajo'),
         ]),
 
@@ -129,7 +147,7 @@
                 h(MS, { key: 'i', name: 'cake', size: 20, fill: true, className: 'text-gold-text' }),
                 h('h4', { key: 't', className: 'text-overline text-primary' }, 'Cumpleaños'),
               ]),
-              h('div', { key: 'l', className: 'space-y-4' }, [cumple('Mateo Figueroa', 'Hoy', true), cumple('Elena Rodríguez', 'Mañana', false)]),
+              h('div', { key: 'l', className: 'space-y-4' }, cumples.length ? cumples.map(u => cumple(u.nombre, cuandoLbl(u.dias), u.dias === 0)) : [h('p', { key: 'e', className: 'text-caption text-muted' }, 'Sin cumpleaños próximos.')]),
               h('button', { key: 'b', className: 'mt-6 w-full py-2 text-overline rounded bg-gold-soft text-gold-text hover:opacity-80 transition-opacity' }, 'Enviar felicitación'),
             ]),
             h('div', { key: 'stk', className: CARD + ' p-6 border-l-4 border-l-danger' }, [
