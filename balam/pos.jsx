@@ -17,7 +17,13 @@
     const ticketBottom = layout === 'bottom';
     const [query, setQuery] = useState('');
     const [cat, setCat] = useState('all');
+    const [talla, setTalla] = useState('all');
+    const [color, setColor] = useState('all');
     const [onlyPop, setOnlyPop] = useState(false);
+    // Catálogos administrables para los desplegables de talla y color.
+    const TALLAS_L = window.CONFIG.list('size_letter');
+    const TALLAS_N = window.CONFIG.list('size_number');
+    const COLORS = window.CONFIG.list('color');
     const [ticket, setTicket] = useState([]);
     const [client, setClient] = useState(D.clients.find(c => c.generic));
     const [sizePick, setSizePick] = useState(null);
@@ -32,10 +38,12 @@
       return D.products.filter(p => {
         if (onlyPop && !p.pop) return false;
         if (cat !== 'all' && p.cat !== cat) return false;
+        if (talla !== 'all' && !p.stock.some(v => v.talla === talla && v.stock > 0)) return false;
+        if (color !== 'all' && p.color !== color) return false;
         if (!q) return true;
         return p.nombre.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q) || p.colorName.toLowerCase().includes(q);
       });
-    }, [query, cat, onlyPop]);
+    }, [query, cat, talla, color, onlyPop]);
 
     function onScan(e) {
       if (e.key !== 'Enter') return;
@@ -124,6 +132,20 @@
       ]),
       // Filtros
       h('div', { key: 'fil', className: 'flex items-center gap-2 mb-8 overflow-x-auto pb-1' }, [
+        // Desplegables compactos: primero talla, luego color.
+        h(FilterSelect, {
+          key: 'ft', value: talla, active: talla !== 'all', onChange: e => setTalla(e.target.value),
+        }, [
+          h('option', { key: 'all', value: 'all' }, 'Todas las tallas'),
+          TALLAS_L.length && h('optgroup', { key: 'gl', label: 'Letras' }, TALLAS_L.map(t => h('option', { key: t.code, value: t.code }, t.label))),
+          TALLAS_N.length && h('optgroup', { key: 'gn', label: 'Números' }, TALLAS_N.map(t => h('option', { key: t.code, value: t.code }, t.label))),
+        ]),
+        h(FilterSelect, {
+          key: 'fc', value: color, active: color !== 'all', onChange: e => setColor(e.target.value),
+        }, [
+          h('option', { key: 'all', value: 'all' }, 'Todos los colores'),
+          ...COLORS.map(c => h('option', { key: c.code, value: c.code }, c.label)),
+        ]),
         ...CAT_FILTERS.map(f => h('button', {
           key: f.id,
           className: 'px-5 py-2 text-caption font-semibold uppercase tracking-wider rounded-full whitespace-nowrap border transition-all ' +
@@ -160,6 +182,18 @@
       pendingMetodo && h(SellerPickModal, { key: 'sp', onClose: () => setPendingMetodo(null), onConfirm: onSellerConfirm }),
       success && h(SuccessModal, { key: 'ok', sale: success, onNew: onNewSale }),
       success && h(window.BalamTicket, { key: 'tk', sale: success }),
+    ]);
+  }
+
+  // Desplegable de filtro compacto (talla / color) con estética de "pill".
+  function FilterSelect({ value, active, onChange, children }) {
+    return h('div', { className: 'relative shrink-0' }, [
+      h('select', {
+        key: 's', value, onChange,
+        className: 'h-9 pl-4 pr-9 text-caption font-semibold uppercase tracking-wider rounded-full border appearance-none cursor-pointer transition-all focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary ' +
+          (active ? 'bg-gold text-on-gold border-gold shadow-e1' : 'bg-surface border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary'),
+      }, children),
+      h('span', { key: 'c', className: 'pointer-events-none absolute inset-y-0 right-0 pr-2.5 flex items-center ' + (active ? 'text-on-gold' : 'text-on-surface-variant') }, h(MS, { name: 'chevDown', size: 16 })),
     ]);
   }
 
