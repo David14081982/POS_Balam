@@ -50,11 +50,23 @@ create table if not exists pos.return_items (
 );
 create index if not exists pos_return_items_rid_idx on pos.return_items (return_id);
 
+-- ── (1.6) Historial de liquidaciones de comisión ────────────────────────────
+create table if not exists pos.liquidations (
+  id          text primary key,
+  seller_id   text,
+  seller      text,
+  monto       numeric(10,2) not null default 0,
+  tipo        text not null default 'liquidacion',  -- 'liquidacion' | 'corte'
+  fecha       text,
+  updated_at  timestamptz not null default now()
+);
+create index if not exists liquidations_seller_idx on pos.liquidations (seller_id, fecha desc);
+
 -- ── (2) Seguridad: RLS ON + solo usuarios autenticados ──────────────────────
 do $$
 declare t text;
 begin
-  foreach t in array array['settings','lookup','products','clients','sellers','sales','sale_items','movements','promotions','returns','return_items']
+  foreach t in array array['settings','lookup','products','clients','sellers','sales','sale_items','movements','promotions','returns','return_items','liquidations']
   loop
     execute format('alter table pos.%I enable row level security', t);
     execute format('drop policy if exists auth_all on pos.%I', t);

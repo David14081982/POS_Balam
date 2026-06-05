@@ -170,7 +170,7 @@
 
   function SellerDetail({ s, onClose, onLiquidar }) {
     const ventas = D.sales.filter(v => v.vendedor === s.nombre);
-    const liqs = (D.liquidations || []).filter(l => l.sellerId === s.id);
+    const liqs = (D.liquidations || []).filter(l => l.sellerId === s.id).sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
     const pct = metaPct(s);
     const footer = [
       h('button', { key: 'l', className: 'inline-flex items-center gap-2 px-5 h-11 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-lg hover:opacity-90 transition disabled:opacity-30 disabled:cursor-not-allowed', disabled: !(s.comisionAcum > 0), onClick: onLiquidar }, [h(MS, { key: 'i', name: 'cash', size: 16 }), 'Liquidar comisión']),

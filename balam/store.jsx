@@ -65,6 +65,11 @@
       table: 'returns', conflict: 'id',
       fromRow: r => ({ id: r.id, folio: r.folio, fecha: r.fecha || '', cliente: r.cliente, vendedores: r.vendedores || [], metodo: r.metodo, total: Number(r.total) || 0, notas: r.notas || '', lineas: [] }),
     },
+    liquidations: {
+      table: 'liquidations', conflict: 'id',
+      toRow: l => ({ id: l.id, seller_id: l.sellerId || null, seller: l.seller || null, monto: Number(l.monto) || 0, tipo: l.tipo || 'liquidacion', fecha: l.fecha || null }),
+      fromRow: r => ({ id: r.id, sellerId: r.seller_id || '', seller: r.seller || '', monto: Number(r.monto) || 0, tipo: r.tipo || 'liquidacion', fecha: r.fecha || '' }),
+    },
   };
 
   // ── Cola offline ────────────────────────────────────────────────────────────
@@ -224,7 +229,7 @@
     if (opts.pull) {
       const r = await pull();
       if (window.UI && window.UI.toast) window.UI.toast(r.ok ? 'Configuración sincronizada (nube)' : 'Nube no disponible — modo local', r.ok ? 'var(--accent)' : 'var(--danger)');
-      for (const k of ['products', 'clients', 'sellers', 'sales', 'promotions', 'returns']) { try { await pullDomain(k); } catch (e) { /* tabla ausente */ } }
+      for (const k of ['products', 'clients', 'sellers', 'sales', 'promotions', 'returns', 'liquidations']) { try { await pullDomain(k); } catch (e) { /* tabla ausente */ } }
       try { window.dispatchEvent(new CustomEvent('configchange', { detail: { domain: true } })); } catch (e) { /* */ }
     }
     flushQueue(); // drena lo que quedó pendiente de una sesión offline previa
