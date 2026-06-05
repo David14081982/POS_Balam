@@ -1,0 +1,9 @@
+# Dependencias
+node_modules/
+
+# Temporales del build de Tailwind (build-offline.mjs)
+.tw.config.cjs
+.tw.in.css
+
+# Logs
+*.log

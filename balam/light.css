@@ -1,0 +1,112 @@
+/* ============================================================
+   POS BALAM — Tema de superficies claras
+   Marco oscuro + paneles de datos en blanco (estilo referencia).
+   Todo va gateado bajo .theme-light para poder alternar.
+   ============================================================ */
+
+/* ---------- Paneles de tabla en blanco ---------- */
+.theme-light .card.flush {
+  --text-primary: #1b2027;
+  --text-secondary: #5b6472;
+  --text-muted: #98a2b0;
+  --border: #e6e9ee;
+  --border-subtle: #eef1f4;
+  --bg-hover: #f5f7f9;
+  --bg-input: #ffffff;
+  background: #ffffff;
+  border-color: #e6e9ee;
+  color: #1b2027;
+}
+.theme-light .card.flush .tbl thead th {
+  background: #f4f6f8; color: #5b6472; border-bottom: 1px solid #e6e9ee;
+}
+.theme-light .card.flush .tbl tbody td { border-bottom: 1px solid #eef1f4; }
+.theme-light .card.flush .tbl tbody tr:hover { background: #f5f7f9; }
+.theme-light .card.flush .tbl tbody tr.selected { background: #eef7d6; }
+.theme-light .card.flush .tbl tbody tr.selected td:first-child { box-shadow: inset 3px 0 0 #88b81f; }
+.theme-light .card.flush .sku { color: #98a2b0; }
+.theme-light .card.flush .folio { color: #5b6472; }
+
+/* ---------- Catálogo del POS en claro ---------- */
+.theme-light .pos-catalog {
+  --text-primary: #1b2027;
+  --text-secondary: #5b6472;
+  --text-muted: #98a2b0;
+  --border: #e3e7ec;
+  --border-subtle: #eef1f4;
+  --bg-hover: #eef1f5;
+  --bg-input: #ffffff;
+  --bg-card: #ffffff;
+  background: #eef1f5;
+  color: #1b2027;
+}
+.theme-light .pos-catalog .prod-card { background: #fff; border-color: #e6e9ee; }
+.theme-light .pos-catalog .prod-card:hover:not(:disabled) { background: #fff; border-color: #c7cdd6; }
+.theme-light .pos-catalog .prod-card:active:not(:disabled) { border-color: #88b81f; }
+.theme-light .pos-catalog .prod-card-thumb { background: #f4f6f8; border-bottom-color: #eef1f4; }
+
+/* Miniaturas claras (tablas + catálogo) */
+.theme-light .card.flush .thumb,
+.theme-light .pos-catalog .thumb { background: #f1f3f6; border-color: #e6e9ee; }
+
+/* ---------- Estados activos / pills en superficie clara ---------- */
+.theme-light .pos-catalog .pill.active {
+  background: #e8f5cf; border-color: #9bc34a; color: #46640f;
+}
+.theme-light .pos-catalog .pill:hover { border-color: #c7cdd6; color: #1b2027; }
+
+/* ---------- Badges pastel sobre blanco ---------- */
+.theme-light .card.flush .badge-pagado,
+.theme-light .pos-catalog .badge-pagado { background: #e3f6e9; color: #1a8a4a; }
+.theme-light .card.flush .badge-pendiente,
+.theme-light .pos-catalog .badge-pendiente { background: #fdf0db; color: #b9761a; }
+.theme-light .card.flush .badge-cancelado,
+.theme-light .pos-catalog .badge-cancelado { background: #fde4e4; color: #cf3a3a; }
+.theme-light .card.flush .badge-apartado,
+.theme-light .pos-catalog .badge-apartado { background: #fcefd6; color: #b9761a; }
+.theme-light .card.flush .badge-activo,
+.theme-light .pos-catalog .badge-activo { background: #e8f5cf; color: #46640f; }
+.theme-light .card.flush .badge-info,
+.theme-light .pos-catalog .badge-info { background: #e0edff; color: #1d61c7; }
+.theme-light .card.flush .badge-unsent,
+.theme-light .pos-catalog .badge-unsent { background: #eef1f4; color: #5b6472; }
+
+/* swatch contraste sobre blanco */
+.theme-light .card.flush .swatch,
+.theme-light .pos-catalog .swatch { border-color: rgba(0,0,0,.14); }
+
+/* Botones secundarios en catálogo claro */
+.theme-light .pos-catalog .btn-secondary { background: #fff; border-color: #e3e7ec; color: #1b2027; }
+.theme-light .pos-catalog .btn-secondary:hover { background: #f4f6f8; border-color: #c7cdd6; }
+
+/* Scrollbar clara dentro de paneles blancos */
+.theme-light .card.flush ::-webkit-scrollbar-thumb,
+.theme-light .pos-catalog ::-webkit-scrollbar-thumb { background: #d5dae1; border-color: #fff; }
+
+/* ---------- Tarjetas de dashboard claras (Reportes / Vendedores) ---------- */
+.theme-light .light-cards .card {
+  --text-primary: #1b2027;
+  --text-secondary: #5b6472;
+  --text-muted: #98a2b0;
+  --border: #e6e9ee;
+  --border-subtle: #eef1f4;
+  --bg-hover: #f5f7f9;
+  --bg-input: #ffffff;
+  --accent-dim: #e8f5cf;
+  --accent: #5f9412;
+  background: #ffffff;
+  border-color: #e6e9ee;
+  color: #1b2027;
+}
+/* Pistas de progreso visibles sobre blanco */
+.theme-light .light-cards .card .bar { background: #e9edf2; }
+.theme-light .light-cards .card .month-bar .mb-fill { background: #e9edf2; }
+.theme-light .light-cards .card .month-bar.hot .mb-fill { background: var(--accent); }
+.theme-light .light-cards .card .rank-num { background: #eef1f4; color: #5b6472; }
+.theme-light .light-cards .card .rank-row.top .rank-num { background: #e8f5cf; color: #46640f; }
+.theme-light .light-cards .card .divider { background: #eef1f4; }
+.theme-light .light-cards .card .thumb { background: #f1f3f6; border-color: #e6e9ee; }
+.theme-light .light-cards .card .rule-icon { background: #e8f5cf; color: #46640f; }
+.theme-light .light-cards .card .badge-activo { background: #e8f5cf; color: #46640f; }
+.theme-light .light-cards .card .swatch { border-color: rgba(0,0,0,.14); }
+/* tablas embebidas en tarjetas (no .flush) dentro de modales no se afectan */
