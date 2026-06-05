@@ -61,6 +61,7 @@
             h('div', { key: 'c', className: 'flex-1 min-w-0' }, [
               h('div', { key: 'a', className: 'text-body font-medium text-primary truncate' }, s.cliente || 'Público en general'),
               h('div', { key: 'b', className: 'text-caption text-on-surface-variant' }, `${s.items} art. · ${s.metodo}`),
+              !(s.lineas && s.lineas.length) && h('div', { key: 'd', className: 'flex items-center gap-1 text-overline uppercase text-warning mt-0.5' }, [h(MS, { key: 'i', name: 'alert', size: 13 }), 'Sin detalle de artículos']),
             ]),
             h(StatusBadge, { key: 'st', estado: s.estado }),
             h('div', { key: 't', className: 'w-24 text-right font-headline text-h2 text-primary' }, fmt(s.total).replace('.00', '')),
@@ -157,7 +158,12 @@
           h('div', { key: 'sel', className: 'lg:col-span-2 space-y-6' }, [
             h('section', { key: 'items' }, [
               h(SerifHeading, { key: 't', className: 'mb-4', children: 'Selección de artículos' }),
-              h('div', { key: 'list', className: 'space-y-3' }, rows.map(row => {
+              rows.length === 0 && h('div', { key: 'empty', className: 'bg-surface-container-lowest rounded-lg shadow-e1 p-8 text-center' }, [
+                h('div', { key: 'i', className: 'w-12 h-12 mx-auto mb-3 rounded-full grid place-items-center bg-warning-soft text-warning' }, h(MS, { name: 'alert', size: 24 })),
+                h('div', { key: 't', className: 'font-headline text-h2 text-primary mb-1' }, 'Esta venta no tiene detalle de artículos'),
+                h('p', { key: 'd', className: 'text-caption text-on-surface-variant max-w-sm mx-auto leading-relaxed' }, 'Es una venta histórica o de demostración registrada sin renglones, por lo que no puede procesarse una devolución por pieza. Las ventas hechas en Punto de venta sí incluyen el detalle y se pueden devolver.'),
+              ]),
+              rows.length > 0 && h('div', { key: 'list', className: 'space-y-3' }, rows.map(row => {
                 const st = sel[row.k] || {};
                 const done = row.max <= 0;
                 return h('div', { key: row.k, className: 'bg-surface-container-lowest rounded-lg shadow-e1 p-5 ' + (done ? 'opacity-60' : '') }, [
