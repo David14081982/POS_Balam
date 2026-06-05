@@ -4,7 +4,44 @@
   const D = window.DATA;
   const { useTweaks } = window;
   const { MS } = window.HX;
+  const { fmt } = window.UI;
   const h = React.createElement;
+
+  // Campana de notificaciones: alertas reales (stock crítico, apartados por completar).
+  function NotificationsBell({ go }) {
+    const [open, setOpen] = useState(false);
+    const low = window.CONFIG.get('stock.lowThreshold') || 4;
+    const criticos = D.products.filter(p => D.totalStock(p) <= low);
+    const apartados = D.sales.filter(s => s.estado === 'Apartado');
+    const items = [];
+    if (criticos.length) items.push({ icon: 'alert', tone: '#ba1a1a', title: `${criticos.length} modelo(s) con stock crítico`, sub: criticos.slice(0, 3).map(p => p.nombre).join(', '), page: 'inventario' });
+    apartados.forEach(s => items.push({ icon: 'clock', tone: '#92760F', title: `Apartado por completar · ${s.folio}`, sub: `${s.cliente} · ${fmt(s.total).replace('.00', '')}`, page: 'dashboard' }));
+    const n = items.length;
+    return h('div', { className: 'relative' }, [
+      h('button', { key: 'btn', onClick: () => setOpen(o => !o), className: 'relative w-10 h-10 grid place-items-center text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-colors', title: 'Notificaciones' }, [
+        h(MS, { key: 'i', name: 'bell', size: 20 }),
+        n > 0 && h('span', { key: 'd', className: 'absolute top-1.5 right-1.5 w-2 h-2 rounded-full border border-surface', style: { background: '#ba1a1a' } }),
+      ]),
+      open && h('div', { key: 'bk', className: 'fixed inset-0 z-[65]', onClick: () => setOpen(false) }),
+      open && h('div', { key: 'pop', className: 'absolute right-0 mt-2 w-80 bg-surface rounded-xl shadow-e3 border border-outline-variant z-[70] overflow-hidden' }, [
+        h('div', { key: 'h', className: 'px-4 py-3 border-b border-outline-variant flex items-center justify-between' }, [
+          h('span', { key: 't', className: 'text-overline font-bold uppercase tracking-widest text-primary' }, 'Notificaciones'),
+          n > 0 && h('span', { key: 'n', className: 'text-overline font-bold text-on-surface-variant' }, String(n)),
+        ]),
+        n ? h('div', { key: 'l', className: 'max-h-96 overflow-y-auto divide-y divide-outline-variant' }, items.map((it, i) => h('button', {
+          key: i, onClick: () => { setOpen(false); go(it.page); },
+          className: 'w-full text-left px-4 py-3 hover:bg-surface-container-low transition-colors flex gap-3',
+        }, [
+          h('span', { key: 'i', className: 'mt-0.5 shrink-0', style: { color: it.tone } }, h(MS, { name: it.icon, size: 18 })),
+          h('div', { key: 'd', className: 'min-w-0' }, [
+            h('p', { key: 't', className: 'text-caption font-semibold text-primary truncate' }, it.title),
+            it.sub && h('p', { key: 's', className: 'text-overline text-on-surface-variant truncate' }, it.sub),
+          ]),
+        ])))
+          : h('div', { key: 'e', className: 'px-4 py-10 text-center text-caption text-on-surface-variant' }, 'Sin notificaciones pendientes'),
+      ]),
+    ]);
+  }
 
   const NAV = [
     { id: 'dashboard', label: 'Panel de control', icon: 'dashboard' },
@@ -136,7 +173,7 @@
             key: 'pos', className: 'inline-flex items-center gap-2 px-4 h-10 bg-secondary-container text-on-secondary-container font-label-sm uppercase tracking-widest text-xs rounded-lg hover:opacity-90 transition',
             onClick: () => setPage('pos'),
           }, [h(MS, { key: 'i', name: 'pos', size: 18 }), 'Nueva venta']),
-          h('button', { key: 'b', className: 'w-10 h-10 grid place-items-center text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-colors', title: 'Notificaciones' }, h(MS, { name: 'bell', size: 20 })),
+          h(NotificationsBell, { key: 'b', go }),
           h('div', { key: 'date', className: 'flex items-center gap-1.5 text-xs text-on-surface-variant capitalize' }, [h(MS, { key: 'i', name: 'calendar', size: 16 }), new Date().toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })]),
         ]),
         // Pantalla
@@ -147,7 +184,7 @@
           : page === 'devoluciones' ? h(window.ReturnsScreen, { key: 'dev', onNav: go })
           : page === 'descuentos' ? h(window.DiscountsScreen, { key: 'desc' })
           : page === 'vendedores' ? h(window.SellersScreen, { key: 'ven' })
-          : page === 'reportes' ? h(window.ReportsScreen, { key: 'rep' })
+          : page === 'reportes' ? h(window.ReportsScreen, { key: 'rep', onNav: go })
           : h(window.SettingsScreen, { key: 'cfg' }),
       ]),
       // Toasts

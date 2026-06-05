@@ -27,9 +27,23 @@
     const maxTot = Math.max(1, ...out.map(x => x.total));
     return out.map(x => ({ d: x.d, pct: Math.round(x.total / maxTot * 100) }));
   }
+  // Actividad real: total vendido por mes en los últimos 6 meses.
+  const MES_ABBR = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
+  function mesReal() {
+    const hoy = new Date(), out = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const tot = D.sales.filter(s => String(s.fecha).startsWith(key) && s.estado !== 'Cancelado').reduce((a, s) => a + s.total, 0);
+      out.push({ d: MES_ABBR[d.getMonth()], total: tot });
+    }
+    const maxTot = Math.max(1, ...out.map(x => x.total));
+    return out.map(x => ({ d: x.d, pct: Math.round(x.total / maxTot * 100) }));
+  }
 
   function DashboardScreen({ onNav }) {
     const [, bump] = useState(0);
+    const [chartView, setChartView] = useState('sem'); // 'sem' | 'mes'
     const refresh = () => bump(v => v + 1);
     function completar(folio) {
       const sale = D.sales.find(s => s.folio === folio);
@@ -38,7 +52,7 @@
       refresh();
       toast(r ? 'Apartado ' + folio + ' completado · venta pagada' : 'No se pudo completar', r ? undefined : 'var(--danger)');
     }
-    const SEMANA = semanaReal();
+    const SEMANA = chartView === 'mes' ? mesReal() : semanaReal();
     const maxPct = Math.max(1, ...SEMANA.map(x => x.pct));
     const maxFecha = D.sales.reduce((m, s) => s.fecha.slice(0, 10) > m ? s.fecha.slice(0, 10) : m, '');
     const hoy = D.sales.filter(s => s.fecha.startsWith(maxFecha) && s.estado !== 'Cancelado');
@@ -91,12 +105,14 @@
             h('div', { key: 'h', className: 'flex justify-between items-center mb-10' }, [
               h('div', { key: 't' }, [
                 h('h3', { key: 'a', className: 'text-h2 text-primary' }, 'Actividad de ventas'),
-                h('p', { key: 'b', className: 'text-caption text-on-surface-variant' }, 'Rendimiento semanal del showroom'),
+                h('p', { key: 'b', className: 'text-caption text-on-surface-variant' }, chartView === 'mes' ? 'Rendimiento mensual del showroom' : 'Rendimiento semanal del showroom'),
               ]),
-              h('div', { key: 'sw', className: 'flex border border-outline-variant rounded-md overflow-hidden' }, [
-                h('button', { key: 's', className: 'px-4 py-1.5 bg-surface-container-low text-caption font-semibold text-primary border-r border-outline-variant' }, 'Semanal'),
-                h('button', { key: 'm', className: 'px-4 py-1.5 bg-surface text-caption font-medium text-on-surface-variant hover:bg-surface-container-low transition-colors' }, 'Mensual'),
-              ]),
+              h('div', { key: 'sw', className: 'flex border border-outline-variant rounded-md overflow-hidden' },
+                [['sem', 'Semanal'], ['mes', 'Mensual']].map(([id, label], i) => h('button', {
+                  key: id, onClick: () => setChartView(id),
+                  className: 'px-4 py-1.5 text-caption transition-colors ' + (i === 0 ? 'border-r border-outline-variant ' : '') +
+                    (chartView === id ? 'bg-surface-container-low font-semibold text-primary' : 'bg-surface font-medium text-on-surface-variant hover:bg-surface-container-low'),
+                }, label))),
             ]),
             h('div', { key: 'bars', className: 'h-64 w-full flex items-end gap-6 px-2' },
               SEMANA.map(x => {
@@ -148,7 +164,7 @@
                   h('td', { key: 'm', className: 'px-6 py-4 text-body text-muted' }, s.metodo),
                   h('td', { key: 'e', className: 'px-6 py-4' }, h(StatusBadge, { estado: s.estado })),
                   h('td', { key: 't', className: 'px-6 py-4 text-right text-body-strong text-primary' }, fmt(s.total).replace('.00', '')),
-                  h('td', { key: 'x', className: 'px-6 py-4' }, h('button', { className: 'text-muted hover:text-primary transition-colors' }, h(MS, { name: 'dots', size: 20 }))),
+                  h('td', { key: 'x', className: 'px-6 py-4' }, h('button', { className: 'text-muted hover:text-primary transition-colors', title: 'Ver en reportes', onClick: () => onNav && onNav('reportes') }, h(MS, { name: 'dots', size: 20 }))),
                 ]))),
             ])),
           ]),
