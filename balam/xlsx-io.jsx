@@ -185,5 +185,21 @@
     });
   }
 
-  window.XLSXIO = { exportTemplate, exportInventory, parseFile, HEADERS };
+  // Exporta el historial de devoluciones (a nivel renglón) a un .xlsx descargable.
+  function exportReturns(rows) {
+    if (!ensureXLSX()) return;
+    const H = ['Fecha', 'Folio', 'Cliente', 'Producto', 'SKU', 'Talla', 'Cantidad', 'Motivo', 'Reembolso', 'Método', 'Estatus'];
+    const data = rows.map(r => ({
+      'Fecha': r.fecha, 'Folio': r.folio, 'Cliente': r.cliente, 'Producto': r.nombre, 'SKU': r.sku,
+      'Talla': r.talla, 'Cantidad': r.qty, 'Motivo': r.motivoLabel, 'Reembolso': r.monto, 'Método': r.metodo, 'Estatus': r.estatus,
+    }));
+    const ws = window.XLSX.utils.json_to_sheet(data, { header: H });
+    ws['!cols'] = [{ wch: 16 }, { wch: 10 }, { wch: 22 }, { wch: 26 }, { wch: 20 }, { wch: 7 }, { wch: 9 }, { wch: 18 }, { wch: 12 }, { wch: 13 }, { wch: 13 }];
+    const wb = window.XLSX.utils.book_new();
+    window.XLSX.utils.book_append_sheet(wb, ws, 'Devoluciones');
+    download(wb, `Devoluciones_Balam_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    window.UI.toast(`${rows.length} renglones exportados`, 'var(--accent)');
+  }
+
+  window.XLSXIO = { exportTemplate, exportInventory, exportReturns, parseFile, HEADERS };
 })();
