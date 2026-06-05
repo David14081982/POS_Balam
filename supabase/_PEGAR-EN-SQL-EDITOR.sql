@@ -8,6 +8,9 @@
 -- ── (1) Promociones + costo de producto ─────────────────────────────────────
 alter table pos.products add column if not exists costo numeric(10,2) not null default 0;
 
+-- Fecha de nacimiento del cliente (alimenta la tarjeta de Cumpleaños del Panel de control).
+alter table pos.clients add column if not exists nacimiento date;
+
 create table if not exists pos.promotions (
   id          text primary key,
   nombre      text not null,

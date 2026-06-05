@@ -35,6 +35,7 @@ create table if not exists pos.clients (
   compras    int not null default 0,
   total      numeric(12,2) not null default 0,
   ultima     date,
+  nacimiento date,
   generic    boolean not null default false,
   updated_at timestamptz not null default now()
 );
