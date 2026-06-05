@@ -180,6 +180,29 @@
     { id: 'promo-invierno', nombre: 'Venta Privada Invierno', tipo: 'pct', valor: 25, inicio: '2026-01-01', fin: '2026-02-15', horaInicio: '', horaFin: '', pausado: false, scope: { cats: ['10'] }, creado: 4 },
   ];
 
+  // Devoluciones de ejemplo (semilla). Solo se usan cuando aún no hay devoluciones
+  // reales guardadas; en cuanto se registra una real, estas dejan de mostrarse.
+  // Fechas relativas a jun-2026: 8 en los últimos 30 días + 6 en el periodo previo
+  // (para la variación). motivo: códigos de CONFIG.return_reason.
+  const seedReturns = [
+    // — Periodo actual (últimos 30 días) —
+    { id: 'ret-d1', folio: 'BG-1039', fecha: '2026-06-04 12:10', cliente: 'José Luis Aguilar', vendedores: ['s3'], metodo: 'Transferencia', total: 980, notas: '', lineas: [{ sku: '21-ML-ALG-MZ-128', nombre: 'Tira Red', talla: 'L', qty: 1, motivo: 'Talla', precio: 980 }] },
+    { id: 'ret-d2', folio: 'BG-1038', fecha: '2026-06-03 17:35', cliente: 'María Fernanda Rosado', vendedores: ['s1'], metodo: 'Tarjeta', total: 650, notas: '', lineas: [{ sku: '21-MC-ALG-BL-060', nombre: 'Clásica Lisa', talla: 'M', qty: 1, motivo: 'Talla', precio: 650 }] },
+    { id: 'ret-d3', folio: 'BG-1042', fecha: '2026-06-01 11:48', cliente: 'Carlos Manuel Uc', vendedores: ['s2'], metodo: 'Tarjeta', total: 1290, notas: 'Costura abierta en el cuello.', lineas: [{ sku: '21-ML-POL-AZ-251', nombre: 'Presidencial', talla: '42', qty: 1, motivo: 'Defecto', precio: 1290 }] },
+    { id: 'ret-d4', folio: 'BG-1035', fecha: '2026-05-28 16:20', cliente: 'Roberto Sansores', vendedores: ['s1'], metodo: 'Tarjeta', total: 1520, notas: '', lineas: [{ sku: '21-ML-POL-AZ-221', nombre: 'Hexágonos con Pestañas', talla: 'XL', qty: 2, motivo: 'Talla', precio: 760 }] },
+    { id: 'ret-d5', folio: 'BG-1036', fecha: '2026-05-25 18:40', cliente: 'Gabriela Couoh', vendedores: ['s3'], metodo: 'Efectivo', total: 480, notas: '', lineas: [{ sku: '20-MC-ALG-BL-301', nombre: 'Camisa Manta Lisa', talla: 'S', qty: 1, motivo: 'Cambio', precio: 480 }] },
+    { id: 'ret-d6', folio: 'BG-1041', fecha: '2026-05-20 13:15', cliente: 'Público en general', vendedores: ['s1'], metodo: 'Efectivo', total: 1020, notas: '', lineas: [{ sku: '21-ML-ALG-AZ-129', nombre: 'Panal Tadeo', talla: 'M', qty: 1, motivo: 'Defecto', precio: 1020 }] },
+    { id: 'ret-d7', folio: 'BG-1033', fecha: '2026-05-15 15:05', cliente: 'José Luis Aguilar', vendedores: ['s3'], metodo: 'Transferencia', total: 540, notas: '', lineas: [{ sku: '21-MC-POL-RS-432', nombre: 'Rombitos Rosa', talla: 'L', qty: 1, motivo: 'Equivocado', precio: 540 }] },
+    { id: 'ret-d8', folio: 'BG-1035', fecha: '2026-05-10 17:50', cliente: 'Roberto Sansores', vendedores: ['s1'], metodo: 'Tarjeta', total: 1180, notas: '', lineas: [{ sku: '21-ML-ALG-NE-131', nombre: '3 Tiras Esferas Doradas', talla: '40', qty: 1, motivo: 'Talla', precio: 1180 }] },
+    // — Periodo previo (31–60 días, para la variación %) —
+    { id: 'ret-d9', folio: 'BG-0992', fecha: '2026-05-02 12:00', cliente: 'Ana Patricia Canul', vendedores: ['s2'], metodo: 'Efectivo', total: 650, notas: '', lineas: [{ sku: '21-MC-ALG-BL-060', nombre: 'Clásica Lisa', talla: 'L', qty: 1, motivo: 'Talla', precio: 650 }] },
+    { id: 'ret-d10', folio: 'BG-0988', fecha: '2026-04-28 16:30', cliente: 'Carlos Manuel Uc', vendedores: ['s2'], metodo: 'Tarjeta', total: 760, notas: '', lineas: [{ sku: '21-ML-POL-AZ-221', nombre: 'Hexágonos con Pestañas', talla: 'M', qty: 1, motivo: 'Defecto', precio: 760 }] },
+    { id: 'ret-d11', folio: 'BG-0981', fecha: '2026-04-22 11:20', cliente: 'María Fernanda Rosado', vendedores: ['s1'], metodo: 'Tarjeta', total: 980, notas: '', lineas: [{ sku: '21-ML-ALG-MZ-128', nombre: 'Tira Red', talla: 'M', qty: 1, motivo: 'Talla', precio: 980 }] },
+    { id: 'ret-d12', folio: 'BG-0977', fecha: '2026-04-18 14:45', cliente: 'Roberto Sansores', vendedores: ['s3'], metodo: 'Transferencia', total: 1180, notas: '', lineas: [{ sku: '21-ML-ALG-NE-131', nombre: '3 Tiras Esferas Doradas', talla: 'L', qty: 1, motivo: 'Cambio', precio: 1180 }] },
+    { id: 'ret-d13', folio: 'BG-0970', fecha: '2026-04-12 17:10', cliente: 'Gabriela Couoh', vendedores: ['s1'], metodo: 'Efectivo', total: 540, notas: '', lineas: [{ sku: '21-MC-POL-RS-432', nombre: 'Rombitos Rosa', talla: 'M', qty: 1, motivo: 'Talla', precio: 540 }] },
+    { id: 'ret-d14', folio: 'BG-0964', fecha: '2026-04-08 13:30', cliente: 'José Luis Aguilar', vendedores: ['s3'], metodo: 'Transferencia', total: 1020, notas: '', lineas: [{ sku: '21-ML-ALG-AZ-129', nombre: 'Panal Tadeo', talla: 'L', qty: 1, motivo: 'Garantia', precio: 1020 }] },
+  ];
+
   const LS_SELLERS = 'balam_pos_sellers_v1', LS_CLIENTS = 'balam_pos_clients_v1',
         LS_SALES = 'balam_pos_sales_v1', LS_MOVES = 'balam_pos_moves_v1', LS_FOLIO = 'balam_pos_folio_v1',
         LS_PROMOS = 'balam_pos_promos_v1', LS_LIQ = 'balam_pos_liq_v1', LS_PERIODO = 'balam_pos_periodo_v1',
@@ -190,7 +213,7 @@
   const movements = loadArr(LS_MOVES, seedMovements);
   const promos = loadArr(LS_PROMOS, seedPromos);
   const liquidations = loadArr(LS_LIQ, []); // historial de pagos de comisión (corte/liquidación) — local
-  const returns = loadArr(LS_RETURNS, []); // devoluciones (cabecera + renglones) — sincroniza a pos.returns
+  const returns = loadArr(LS_RETURNS, seedReturns); // devoluciones (cabecera + renglones) — sincroniza a pos.returns
   let periodoInicio = '';
   try { periodoInicio = localStorage.getItem(LS_PERIODO) || ''; } catch (e) { /* sin storage */ }
 
