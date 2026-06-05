@@ -39,8 +39,8 @@
   const MAP = {
     products: {
       table: 'products', conflict: 'id',
-      toRow: p => ({ id: p.id, cat: p.cat, manga: p.manga, tela: p.tela, color: p.color, cuello: p.cuello || 'NOR', modelo: String(p.modelo), nombre: p.nombre, orn: p.orn || '—', orn_colors: p.ornColors || [], precio: Number(p.precio) || 0, costo: Number(p.costo) || 0, pop: !!p.pop, stock: p.stock || [], imagen: p.imagen || null, sku: p.sku }),
-      fromRow: r => ({ id: r.id, cat: r.cat, manga: r.manga, tela: r.tela, color: r.color, cuello: r.cuello, modelo: r.modelo, nombre: r.nombre, orn: r.orn, ornColors: r.orn_colors || [], precio: Number(r.precio) || 0, costo: Number(r.costo) || 0, pop: !!r.pop, stock: r.stock || [], imagen: r.imagen || undefined }),
+      toRow: p => ({ id: p.id, cat: p.cat, manga: p.manga, tela: p.tela, color: p.color, cuello: p.cuello || 'NOR', modelo: String(p.modelo), nombre: p.nombre, orn: p.orn || '—', orn_colors: p.ornColors || [], precio: Number(p.precio) || 0, costo: Number(p.costo) || 0, pop: !!p.pop, stock: p.stock || [], imagen: p.imagen || null, sku: p.sku, barcode_urls: p.barcodeUrls || {} }),
+      fromRow: r => ({ id: r.id, cat: r.cat, manga: r.manga, tela: r.tela, color: r.color, cuello: r.cuello, modelo: r.modelo, nombre: r.nombre, orn: r.orn, ornColors: r.orn_colors || [], precio: Number(r.precio) || 0, costo: Number(r.costo) || 0, pop: !!r.pop, stock: r.stock || [], imagen: r.imagen || undefined, barcodeUrls: r.barcode_urls || {} }),
     },
     clients: {
       table: 'clients', conflict: 'id',
@@ -235,5 +235,17 @@
     flushQueue(); // drena lo que quedó pendiente de una sesión offline previa
   }
 
-  window.STORE = { init, pull, pushConfig, pushRows, pushSale, pushReturn, deleteRow, pullDomain, flushQueue, ensureClient, getClient: ensureClient, hasSession, get enabled() { return enabled; }, get pending() { return loadQ().length; } };
+  // Sube un PNG de código de barras al bucket 'barcodes' (Storage) y devuelve su URL pública.
+  // Requiere sesión (las políticas del bucket exigen usuario autenticado). Lanza si falla.
+  async function uploadBarcode(path, blob) {
+    const c = await ensureClient();
+    if (!c) throw new Error('Sin conexión con la nube');
+    if (!(await hasSession())) throw new Error('Inicia sesión para guardar imágenes en la nube');
+    const { error } = await c.storage.from('barcodes').upload(path, blob, { upsert: true, contentType: 'image/png' });
+    if (error) throw new Error(error.message || 'Error al subir la imagen');
+    const { data } = c.storage.from('barcodes').getPublicUrl(path);
+    return (data && data.publicUrl) || null;
+  }
+
+  window.STORE = { init, pull, pushConfig, pushRows, pushSale, pushReturn, deleteRow, pullDomain, flushQueue, ensureClient, getClient: ensureClient, hasSession, uploadBarcode, get enabled() { return enabled; }, get pending() { return loadQ().length; } };
 })();

@@ -6,7 +6,7 @@
   const D = window.DATA;
   const h = React.createElement;
 
-  function TicketPanel({ ticket, client, subtotal, subtotalOrig, discount, itemCount, grandTotal, onClient, onQty, onRemove, onCobrar, onClear, bottom }) {
+  function TicketPanel({ ticket, client, subtotal, subtotalOrig, discount, itemCount, grandTotal, onClient, onQty, onRemove, onCobrar, onClear, bottom, flashKey }) {
     const subOrig = subtotalOrig != null ? subtotalOrig : subtotal;
     const desc = discount || 0;
     const totalPagar = grandTotal != null ? grandTotal : subtotal; // con IVA sumado si no está incluido
@@ -47,7 +47,7 @@
         : h('div', { key: 'lines', className: 'flex-1 overflow-y-auto no-scrollbar px-6 py-4 space-y-5' },
             ticket.map((l, idx) => [
               idx > 0 && h('div', { key: 'd' + l.key, className: 'h-px bg-outline-variant/60' }),
-              h('div', { key: l.key, className: 'flex gap-4' }, [
+              h('div', { key: l.key, className: 'flex gap-4 rounded-lg transition-all duration-500 ' + (l.key === flashKey ? 'ring-2 ring-success bg-success-soft/50 -mx-2 px-2 py-1' : '') }, [
                 h(ProductImage, { key: 't', p: l.p, className: 'w-16 h-20 shrink-0 rounded-lg ring-1 ring-outline-variant/50' }),
                 h('div', { key: 'i', className: 'flex-1 min-w-0 flex flex-col' }, [
                   h('div', { key: 'top', className: 'flex justify-between items-start mb-1' }, [

@@ -32,6 +32,7 @@
     const [editing, setEditing] = useState(null);
     const [products, setProducts] = useState(() => D.products.slice());
     const [importPreview, setImportPreview] = useState(null);
+    const [labelTargets, setLabelTargets] = useState(null); // productos para imprimir etiquetas
     const [page, setPage] = useState(1);
     const fileRef = useRef(null);
 
@@ -120,6 +121,7 @@
               h('button', { key: 't', className: XLSBTN, onClick: () => window.XLSXIO.exportTemplate() }, [h(MS, { key: 'i', name: 'download', size: 16 }), 'Plantilla']),
               h('button', { key: 'i', className: XLSBTN, onClick: () => fileRef.current && fileRef.current.click() }, [h(MS, { key: 'i', name: 'upload', size: 16 }), 'Importar']),
               h('button', { key: 'e', className: XLSBTN, onClick: () => window.XLSXIO.exportInventory(products) }, [h(MS, { key: 'i', name: 'file_export', size: 16 }), 'Exportar']),
+              h('button', { key: 'bc', className: XLSBTN, onClick: () => { if (!rows.length) { toast('No hay productos para etiquetar', 'var(--danger)'); return; } setLabelTargets(rows.slice()); }, title: 'Imprimir etiquetas de los productos filtrados' }, [h(MS, { key: 'i', name: 'barcode', size: 16 }), 'Etiquetas']),
             ]),
           ]),
         ]),
@@ -160,7 +162,8 @@
           ]),
         ]),
         // Drawer detalle (siempre montado, slide-in)
-        h(DetailDrawer, { key: 'dr', p: detail, onClose: () => setDetail(null), onEdit: () => setEditing({ mode: 'edit', product: detail }), onDelete: () => deleteProduct(detail) }),
+        h(DetailDrawer, { key: 'dr', p: detail, onClose: () => setDetail(null), onEdit: () => setEditing({ mode: 'edit', product: detail }), onDelete: () => deleteProduct(detail), onLabels: (prod) => setLabelTargets([prod]) }),
+        labelTargets && h(LabelModal, { key: 'lbl', products: labelTargets, onClose: () => setLabelTargets(null) }),
         editing && h(ProductForm, { key: 'f-' + editing.mode + '-' + (editing.product.id || 'new'), mode: editing.mode, product: editing.product, onClose: () => setEditing(null), onSave: saveProduct }),
         importPreview && h(ImportModal, { key: 'imp', data: importPreview, onClose: () => setImportPreview(null), onConfirm: confirmImport }),
       ]));
@@ -181,7 +184,7 @@
   }
 
   // ---------- Drawer de detalle ----------
-  function DetailDrawer({ p, onClose, onEdit, onDelete }) {
+  function DetailDrawer({ p, onClose, onEdit, onDelete, onLabels }) {
     const open = !!p;
     return h(React.Fragment, {}, [
       h('div', { key: 'ov', className: 'fixed inset-0 bg-primary-container/40 backdrop-blur-sm z-[55] transition-opacity duration-300 ' + (open ? 'opacity-100' : 'opacity-0 pointer-events-none'), onClick: onClose }),
@@ -224,9 +227,12 @@
                 ])),
               ]),
               // Acciones
-              h('div', { key: 'ac', className: 'pt-4 flex gap-4' }, [
-                h('button', { key: 'e', className: 'flex-grow bg-primary text-on-primary py-3.5 rounded-xl text-overline font-bold uppercase tracking-widest hover:opacity-90 transition-all shadow-e2 active:scale-95 flex items-center justify-center gap-2', onClick: onEdit }, [h(MS, { key: 'i', name: 'edit', size: 18 }), 'Editar producto']),
-                h('button', { key: 'd', className: 'w-14 h-[52px] rounded-xl border border-outline-variant text-danger hover:bg-danger-soft hover:border-danger/30 transition-all flex items-center justify-center', onClick: onDelete, title: 'Eliminar' }, h(MS, { name: 'trash', size: 20 })),
+              h('div', { key: 'ac', className: 'pt-4 space-y-3' }, [
+                h('button', { key: 'lb', className: 'w-full py-3 rounded-xl border border-outline-variant text-primary hover:border-primary hover:bg-surface-container transition-all flex items-center justify-center gap-2 text-overline font-bold uppercase tracking-widest', onClick: () => onLabels && onLabels(p) }, [h(MS, { key: 'i', name: 'barcode', size: 18 }), 'Imprimir etiqueta']),
+                h('div', { key: 'row', className: 'flex gap-4' }, [
+                  h('button', { key: 'e', className: 'flex-grow bg-primary text-on-primary py-3.5 rounded-xl text-overline font-bold uppercase tracking-widest hover:opacity-90 transition-all shadow-e2 active:scale-95 flex items-center justify-center gap-2', onClick: onEdit }, [h(MS, { key: 'i', name: 'edit', size: 18 }), 'Editar producto']),
+                  h('button', { key: 'd', className: 'w-14 h-[52px] rounded-xl border border-outline-variant text-danger hover:bg-danger-soft hover:border-danger/30 transition-all flex items-center justify-center', onClick: onDelete, title: 'Eliminar' }, h(MS, { name: 'trash', size: 20 })),
+                ]),
               ]),
             ]),
           ]),
@@ -387,6 +393,106 @@
     return h('div', { key: label, className: mod === 'wide' ? 'col-span-2 md:col-span-1' : '' }, [
       h('label', { key: 'l', className: 'block text-caption font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5' }, label),
       React.cloneElement(control, { key: 'c' }),
+    ]);
+  }
+
+  // ── Etiquetas de código de barras (impresión 6×4 cm + guardado opcional en Supabase) ──
+  function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+  const LBL_OPTS = { height: 60, fontSize: 13, margin: 4 }; // ajuste del código para la etiqueta
+
+  function LabelModal({ products, onClose }) {
+    const B = window.BARCODES;
+    const [copiesMode, setCopiesMode] = useState('one'); // 'one' | 'stock'
+    const [copies, setCopies] = useState(1);
+    const [withPrice, setWithPrice] = useState(true);
+    const [saving, setSaving] = useState(false);
+
+    const specs = [];
+    (products || []).forEach(p => (p.stock || []).forEach(v => { if (v.stock > 0) specs.push({ p, talla: v.talla, stock: v.stock, code: B.codeOf(p, v.talla) }); }));
+    const copiesOf = s => copiesMode === 'stock' ? s.stock : Math.max(1, Number(copies) || 1);
+    const totalLabels = specs.reduce((a, s) => a + copiesOf(s), 0);
+    const uniqueCount = new Set(specs.map(s => s.code)).size;
+
+    if (!B || !B.ready()) return h(Modal, { title: 'Etiquetas', onClose }, h('p', { className: 'text-body text-on-surface-variant py-6 text-center' }, 'La librería de códigos de barras no cargó. Revisa tu conexión e inténtalo de nuevo.'));
+    if (!specs.length) return h(Modal, { title: 'Etiquetas', onClose }, h('p', { className: 'text-body text-on-surface-variant py-6 text-center' }, 'No hay tallas con existencias para etiquetar.'));
+
+    function printLabels() {
+      const cache = {};
+      let html = '';
+      specs.forEach(s => {
+        if (cache[s.code] === undefined) cache[s.code] = B.toPNGDataURL(s.code, LBL_OPTS);
+        const price = withPrice ? `<div class="bx-price">${escapeHtml(fmt(s.p.precio).replace('.00', ''))}</div>` : '';
+        const one = `<div class="bx-label"><div class="bx-name">${escapeHtml(s.p.nombre)}</div><img class="bx-img" src="${cache[s.code]}"><div class="bx-meta">${escapeHtml(s.code)}</div>${price}</div>`;
+        for (let i = 0; i < copiesOf(s); i++) html += one;
+      });
+      const win = window.open('', '_blank', 'width=520,height=680');
+      if (!win) { toast('Permite las ventanas emergentes para imprimir', 'var(--danger)'); return; }
+      win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Etiquetas Balam</title><style>
+        @page { size: 60mm 40mm; margin: 0; }
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: monospace; }
+        .bx-label { width: 60mm; height: 40mm; padding: 2mm; display: flex; flex-direction: column; align-items: center; justify-content: center; page-break-after: always; overflow: hidden; }
+        .bx-name { font-family: sans-serif; font-size: 9pt; font-weight: 700; text-align: center; line-height: 1.05; max-height: 2.3em; overflow: hidden; margin-bottom: .5mm; }
+        .bx-img { width: 100%; max-height: 18mm; object-fit: contain; }
+        .bx-meta { font-size: 8pt; letter-spacing: .4px; margin-top: .3mm; }
+        .bx-price { font-family: sans-serif; font-size: 12pt; font-weight: 800; margin-top: .3mm; }
+      </style></head><body>${html}<scr` + `ipt>window.onload=function(){window.focus();window.print();setTimeout(function(){window.close();},400);};</scr` + `ipt></body></html>`);
+      win.document.close();
+    }
+
+    async function saveToSupabase() {
+      if (saving) return;
+      if (!window.STORE) { toast('Sincronización con la nube no disponible', 'var(--danger)'); return; }
+      if (!(await window.STORE.hasSession())) { toast('Inicia sesión para guardar imágenes en la nube', 'var(--danger)'); return; }
+      setSaving(true);
+      let okN = 0, failN = 0; const seen = {};
+      for (const s of specs) {
+        if (seen[s.code]) continue; seen[s.code] = true;
+        try {
+          const blob = await B.toPNGBlob(s.code, LBL_OPTS);
+          const urlPub = await window.STORE.uploadBarcode(s.code + '.png', blob);
+          if (!s.p.barcodeUrls) s.p.barcodeUrls = {};
+          s.p.barcodeUrls[s.talla] = urlPub;
+          okN++;
+        } catch (e) { failN++; }
+      }
+      D.saveProducts();
+      setSaving(false);
+      toast(failN ? `Guardadas ${okN}, fallaron ${failN}. Error al guardar imagen del código; intenta regenerarlo.` : `${okN} ${okN === 1 ? 'imagen guardada' : 'imágenes guardadas'} en Supabase`, failN ? 'var(--danger)' : 'var(--accent)');
+    }
+
+    const seg = (val, on, label) => h('button', { key: val, onClick: () => setCopiesMode(val), className: 'px-3 py-1.5 rounded-md text-caption font-semibold transition-colors ' + (on ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:text-primary') }, label);
+    const preview = specs.slice(0, 4);
+    const footer = [
+      h('button', { key: 'sv', disabled: saving, onClick: saveToSupabase, className: 'px-5 py-3 border border-outline-variant rounded-xl text-caption font-bold uppercase tracking-widest text-primary hover:bg-surface-container transition disabled:opacity-50 flex items-center gap-2' }, [h(MS, { key: 'i', name: saving ? 'clock' : 'upload', size: 16 }), saving ? 'Guardando…' : `Guardar en Supabase (${uniqueCount})`]),
+      h('button', { key: 'pr', onClick: printLabels, className: 'px-6 py-3 bg-primary text-on-primary rounded-xl text-caption font-bold uppercase tracking-widest hover:opacity-90 transition flex items-center gap-2' }, [h(MS, { key: 'i', name: 'print', size: 16 }), `Imprimir (${totalLabels})`]),
+    ];
+
+    return h(Modal, { title: 'Etiquetas de código de barras', onClose, footer }, [
+      h('div', { key: 'cfg', className: 'space-y-4 mb-5' }, [
+        h('div', { key: 'r1', className: 'flex items-center justify-between gap-4' }, [
+          h('span', { key: 'l', className: 'text-caption font-semibold text-on-surface-variant' }, 'Copias'),
+          h('div', { key: 's', className: 'inline-flex bg-surface-container-low p-1 rounded-lg' }, [seg('one', copiesMode === 'one', '1 por talla'), seg('stock', copiesMode === 'stock', 'Una por pieza (stock)')]),
+        ]),
+        copiesMode === 'one' && h('div', { key: 'r2', className: 'flex items-center justify-between gap-4' }, [
+          h('span', { key: 'l', className: 'text-caption font-semibold text-on-surface-variant' }, 'Copias por talla'),
+          h('input', { key: 'i', type: 'number', min: 1, value: copies, onChange: e => setCopies(e.target.value), className: 'w-24 bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-body text-right focus:ring-1 focus:ring-primary' }),
+        ]),
+        h('label', { key: 'r3', className: 'flex items-center justify-between gap-4 cursor-pointer' }, [
+          h('span', { key: 'l', className: 'text-caption font-semibold text-on-surface-variant' }, 'Incluir precio en la etiqueta'),
+          h('input', { key: 'i', type: 'checkbox', checked: withPrice, onChange: e => setWithPrice(e.target.checked), className: 'w-5 h-5 rounded border-outline text-primary focus:ring-primary' }),
+        ]),
+        h('p', { key: 'sum', className: 'text-caption text-on-surface-variant' }, `${specs.length} talla(s) con existencias · ${totalLabels} etiqueta(s) a imprimir`),
+      ]),
+      h('div', { key: 'pv', className: 'border-t border-outline-variant pt-4' }, [
+        h('p', { key: 'l', className: 'text-overline uppercase font-bold text-on-surface-variant tracking-widest mb-3' }, 'Vista previa'),
+        h('div', { key: 'g', className: 'flex flex-wrap gap-3' }, preview.map(s => h('div', { key: s.code, className: 'border border-outline-variant rounded-lg p-2 flex flex-col items-center bg-white', style: { width: '150px' } }, [
+          h('div', { key: 'n', className: 'text-overline font-bold text-center text-primary truncate w-full' }, s.p.nombre),
+          h(B.Barcode, { key: 'b', code: s.code, opts: LBL_OPTS, style: { width: '100%', height: '40px' } }),
+          withPrice && h('div', { key: 'p', className: 'text-caption font-bold text-primary' }, fmt(s.p.precio).replace('.00', '')),
+        ]))),
+        specs.length > preview.length && h('p', { key: 'm', className: 'text-caption text-on-surface-variant mt-2' }, `…y ${specs.length - preview.length} más`),
+      ]),
     ]);
   }
 

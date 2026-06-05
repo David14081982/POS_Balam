@@ -11,6 +11,23 @@ alter table pos.products add column if not exists costo numeric(10,2) not null d
 -- Fecha de nacimiento del cliente (alimenta la tarjeta de Cumpleaños del Panel de control).
 alter table pos.clients add column if not exists nacimiento date;
 
+-- ── (1.2) Códigos de barras (opcional): URLs de las imágenes guardadas en Storage ──
+-- Mapa { talla: url } por producto. El código en sí se deriva de SKU+talla, no se guarda.
+alter table pos.products add column if not exists barcode_urls jsonb not null default '{}';
+
+-- Bucket público para los PNG de etiquetas. Lectura pública (bucket public);
+-- escritura solo para usuarios autenticados (la terminal con sesión).
+insert into storage.buckets (id, name, public)
+values ('barcodes', 'barcodes', true)
+on conflict (id) do nothing;
+
+do $$ begin
+  if not exists (select 1 from pg_policies where schemaname = 'storage' and tablename = 'objects' and policyname = 'barcodes_auth_write') then
+    create policy "barcodes_auth_write" on storage.objects for all to authenticated
+      using (bucket_id = 'barcodes') with check (bucket_id = 'barcodes');
+  end if;
+end $$;
+
 create table if not exists pos.promotions (
   id          text primary key,
   nombre      text not null,

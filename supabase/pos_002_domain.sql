@@ -20,6 +20,7 @@ create table if not exists pos.products (
   stock      jsonb not null default '[]',   -- [{talla,escala,stock}] 20 entradas
   imagen     text,
   sku        text,                          -- derivado; índice para búsqueda
+  barcode_urls jsonb not null default '{}', -- { talla: url } de etiquetas guardadas en Storage
   updated_at timestamptz not null default now()
 );
 create index if not exists pos_products_sku_idx on pos.products (sku);

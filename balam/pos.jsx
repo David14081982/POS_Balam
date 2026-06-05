@@ -31,6 +31,7 @@
     const [clientPick, setClientPick] = useState(false);
     const [pendingMetodo, setPendingMetodo] = useState(null); // venta por confirmar vendedor
     const [success, setSuccess] = useState(null);             // venta registrada
+    const [flash, setFlash] = useState(null);                 // línea recién agregada por escáner (destello verde)
     const scanRef = useRef(null);
 
     const filtered = useMemo(() => {
@@ -45,14 +46,22 @@
       });
     }, [query, cat, talla, color, onlyPop]);
 
+    function flashLine(key) { setFlash(key); setTimeout(() => setFlash(k => (k === key ? null : k)), 900); }
     function onScan(e) {
       if (e.key !== 'Enter') return;
-      const q = query.trim().toLowerCase();
-      if (!q) return;
+      const raw = query.trim();
+      if (!raw) return;
+      // 1) ¿Código de barras SKU-TALLA? (lector USB HID o tecleado) → agrega la talla exacta al ticket.
+      const hit = window.BARCODES && window.BARCODES.find(raw);
+      if (hit) { addToTicket(hit.p, hit.talla); setQuery(''); flashLine(hit.p.id + '-' + hit.talla); return; }
+      // 2) Coincidencia exacta por SKU → abre el selector de talla.
+      const q = raw.toLowerCase();
       const exact = D.products.find(p => p.sku.toLowerCase() === q);
       const target = exact || filtered[0];
-      if (target) { openSize(target); setQuery(''); }
-      else toast('Sin coincidencias para "' + query + '"', 'var(--danger)');
+      if (target) { openSize(target); setQuery(''); return; }
+      // 3) Sin resultado: mensaje según parezca código o búsqueda libre.
+      const looksCode = window.BARCODES && window.BARCODES.parse(raw);
+      toast(looksCode ? ('Código no encontrado: ' + raw.toUpperCase()) : ('Sin coincidencias para "' + raw + '"'), 'var(--danger)');
     }
     function openSize(p) { setSizePick(p); }
     const validateStock = () => window.CONFIG.get('pos.validateStock');
@@ -168,7 +177,7 @@
       ticket, client, subtotal, subtotalOrig, discount, itemCount, grandTotal,
       onClient: () => setClientPick(true),
       onQty: setQty, onRemove: removeLine, onCobrar: () => setCheckout(true),
-      onClear: () => setTicket([]), bottom: ticketBottom,
+      onClear: () => setTicket([]), bottom: ticketBottom, flashKey: flash,
     });
 
     return h('div', {
