@@ -30,27 +30,9 @@
   // Devuelve arreglo vacío (todas las tallas en 0) — útil para producto nuevo
   function emptyStock() { return mkStock([], []); }
 
-  // Catálogo base — modelos del inventario.  orn = nombre del ornamento, ornColors = códigos de hilo, cuello = código.
-  const seed = [
-    { id: 'p1', cat: '21', manga: 'ML', tela: 'ALG', color: 'MZ', modelo: '128', nombre: 'Tira Red', orn: 'Bordado Eléctrico', ornColors: ['BL', 'PL'], cuello: 'NOR', precio: 980, stock: mkStock([1, 3, 6, 8, 5, 2]), pop: true },
-    { id: 'p2', cat: '21', manga: 'ML', tela: 'ALG', color: 'AZ', modelo: '129', nombre: 'Panal Tadeo', orn: 'Bordado Eléctrico', ornColors: ['BL'], cuello: 'NOR', precio: 1020, stock: mkStock([0, 2, 5, 7, 4, 1]), pop: true },
-    { id: 'p3', cat: '21', manga: 'ML', tela: 'ALG', color: 'VI', modelo: '130', nombre: 'Tira X Empalmadas', orn: 'Bordado Eléctrico', ornColors: ['OR', 'NE'], cuello: 'MAO', precio: 1050, stock: mkStock([0, 1, 4, 6, 3, 2]) },
-    { id: 'p4', cat: '21', manga: 'ML', tela: 'ALG', color: 'NE', modelo: '131', nombre: '3 Tiras Esferas Doradas', orn: 'Bordado Eléctrico', ornColors: ['OR'], cuello: 'MAO', precio: 1180, stock: mkStock([0, 0, 3, 5, 4, 2, 1]), pop: true },
-    { id: 'p5', cat: '21', manga: 'ML', tela: 'ALG', color: 'HU', modelo: '132', nombre: 'Rombitos y Moñitos', orn: 'Bordado Eléctrico', ornColors: ['CF', 'OR'], cuello: 'NOR', precio: 960, stock: mkStock([2, 4, 7, 9, 6, 3]) },
-    { id: 'p6', cat: '10', manga: 'ML', tela: 'ALG', color: 'NE', modelo: '151', nombre: '2 Alforzas Anchas', orn: 'Alforza', ornColors: [], cuello: 'NOR', precio: 890, stock: mkStock([0, 2, 5, 8, 5, 2]) },
-    { id: 'p7', cat: '10', manga: 'ML', tela: 'ALG', color: 'NE', modelo: '153', nombre: '8 Tira de Alforzas', orn: 'Alforza', ornColors: [], cuello: 'NOR', precio: 910, stock: mkStock([0, 1, 4, 6, 4, 1]) },
-    { id: 'p8', cat: '21', manga: 'ML', tela: 'POL', color: 'AZ', modelo: '221', nombre: 'Hexágonos con Pestañas', orn: 'Bordado Eléctrico', ornColors: ['BL', 'PL'], cuello: 'NOR', precio: 760, stock: mkStock([2, 5, 8, 10, 7, 4]), pop: true },
-    { id: 'p9', cat: '21', manga: 'ML', tela: 'POL', color: 'AZ', modelo: '222', nombre: 'Doble Línea de Nuditos', orn: 'Bordado Eléctrico', ornColors: ['BL'], cuello: 'NOR', precio: 740, stock: mkStock([1, 3, 6, 8, 5, 2]) },
-    { id: 'p10', cat: '21', manga: 'ML', tela: 'POL', color: 'AC', modelo: '224', nombre: 'Líneas Crucecitas', orn: 'Bordado Eléctrico', ornColors: ['HU'], cuello: 'ITA', precio: 720, stock: mkStock([0, 2, 5, 7, 4, 3]) },
-    { id: 'p11', cat: '21', manga: 'ML', tela: 'POL', color: 'AR', modelo: '213', nombre: 'Pirámide y Serpiente', orn: 'Bordado Eléctrico', ornColors: ['CF', 'VE'], cuello: 'MAO', precio: 780, stock: mkStock([0, 0, 2, 4, 3, 1]) },
-    { id: 'p12', cat: '21', manga: 'ML', tela: 'POL', color: 'BE', modelo: '215', nombre: 'Hexágonos con Pestañas', orn: 'Bordado Eléctrico', ornColors: ['CF'], cuello: 'NOR', precio: 760, stock: mkStock([1, 4, 6, 8, 5, 2]) },
-    { id: 'p13', cat: '21', manga: 'ML', tela: 'POL', color: 'CF', modelo: '216', nombre: 'Café Capuchino', orn: 'Bordado Eléctrico', ornColors: ['OR'], cuello: 'ITA', precio: 770, stock: mkStock([0, 3, 5, 6, 4, 2]) },
-    { id: 'p14', cat: '21', manga: 'ML', tela: 'POL', color: 'AZ', modelo: '251', nombre: 'Presidencial', orn: 'Alforza', ornColors: [], cuello: 'ITA', precio: 1290, stock: mkStock([0, 2, 4, 6, 5, 3], [0, 0, 3, 5, 6, 4, 2, 1]), pop: true },
-    { id: 'p15', cat: '21', manga: 'ML', tela: 'POL', color: 'MR', modelo: '252', nombre: 'Presidencial Marino', orn: 'Alforza', ornColors: [], cuello: 'ITA', precio: 1290, stock: mkStock([0, 1, 3, 5, 4, 2], [0, 0, 2, 4, 5, 3, 1]) },
-    { id: 'p16', cat: '21', manga: 'MC', tela: 'ALG', color: 'BL', modelo: '060', nombre: 'Clásica Lisa', orn: 'Alforza', ornColors: [], cuello: 'NOR', precio: 650, stock: mkStock([3, 6, 9, 12, 8, 5]), pop: true },
-    { id: 'p17', cat: '20', manga: 'MC', tela: 'ALG', color: 'BL', modelo: '301', nombre: 'Camisa Manta Lisa', orn: '—', ornColors: [], cuello: 'CER', precio: 480, stock: mkStock([4, 8, 12, 14, 9, 4]) },
-    { id: 'p18', cat: '21', manga: 'MC', tela: 'POL', color: 'RS', modelo: '432', nombre: 'Rombitos Rosa', orn: 'Bordado Eléctrico', ornColors: ['BL', 'VI'], cuello: 'NOR', precio: 540, stock: mkStock([2, 3, 5, 4, 2]) },
-  ];
+  // Catálogo de productos. VACÍO en producción: la tienda captura su inventario
+  // desde Inventario → "Nuevo producto" (o importando un Excel con la plantilla).
+  const seed = [];
 
   function sku(p) { return `${p.cat}-${p.manga}-${p.tela}-${p.color}-${String(p.modelo).padStart(3, '0')}`; }
   function totalStock(p) { return p.stock.reduce((a, v) => a + (v.stock || 0), 0); }
@@ -122,43 +104,19 @@
     if (typeof syncUp === 'function') syncUp('products', products);
   }
 
+  // Solo el administrador. Los vendedores se dan de alta en Configuración → Usuarios.
   const seedSellers = [
-    { id: 's0', nombre: 'Juan Balam', iniciales: 'JB', color: '#131B2E', comisionPct: 0, ventasMes: 0, metaMes: 0, ventasNum: 0, comisionAcum: 0, bono: 'Sin bono', role: 'admin', email: 'admin@balam.com', passwordHash: null, active: true },
-    { id: 's1', nombre: 'Rocío Méndez', iniciales: 'RM', color: '#b8f040', comisionPct: 5, ventasMes: 184500, metaMes: 200000, ventasNum: 142, comisionAcum: 9225, bono: 'Sin bono', role: 'vendedor', active: true },
-    { id: 's2', nombre: 'Iván Castro', iniciales: 'IC', color: '#3b82f6', comisionPct: 5, ventasMes: 213800, metaMes: 200000, ventasNum: 168, comisionAcum: 10690, bono: 'Bono meta +$2,000', role: 'vendedor', active: true },
-    { id: 's3', nombre: 'Diana Pérez', iniciales: 'DP', color: '#f59e0b', comisionPct: 4, ventasMes: 96200, metaMes: 150000, ventasNum: 88, comisionAcum: 3848, bono: 'Sin bono', role: 'vendedor', active: true },
+    { id: 's0', nombre: 'Administrador', iniciales: 'AD', color: '#131B2E', comisionPct: 0, ventasMes: 0, metaMes: 0, ventasNum: 0, comisionAcum: 0, bono: 'Sin bono', role: 'admin', email: 'admin@balam.com', passwordHash: null, active: true },
   ];
 
+  // Solo el cliente genérico de mostrador (requerido por el POS). El resto se da de alta en Clientes.
   const seedClients = [
-    { id: 'c1', nombre: 'José Luis Aguilar', tel: '999 145 2210', compras: 14, total: 18420, ultima: '2026-05-28', talla: 'L', notas: 'Prefiere manga larga, algodón.' },
-    { id: 'c2', nombre: 'María Fernanda Rosado', tel: '999 320 8841', compras: 9, total: 11200, ultima: '2026-05-25', talla: 'M', notas: 'Compra para regalo frecuentemente.' },
-    { id: 'c3', nombre: 'Carlos Manuel Uc', tel: '999 882 1190', compras: 22, total: 27650, ultima: '2026-05-30', talla: 'XL', notas: 'Cliente mayoreo. Restaurante.' },
-    { id: 'c4', nombre: 'Ana Patricia Canul', tel: '998 410 5572', compras: 5, total: 4380, ultima: '2026-04-18', talla: 'S', notas: '' },
-    { id: 'c5', nombre: 'Roberto Sansores', tel: '999 712 0034', compras: 31, total: 39800, ultima: '2026-05-29', talla: 'L', notas: 'Apartados frecuentes. Paga puntual.' },
-    { id: 'c6', nombre: 'Gabriela Couoh', tel: '999 555 7781', compras: 7, total: 6940, ultima: '2026-05-12', talla: 'M', notas: '' },
     { id: 'c7', nombre: 'Público en general', tel: '—', compras: 0, total: 0, ultima: '', talla: '', notas: 'Venta de mostrador sin registro.', generic: true },
   ];
 
-  const seedSales = [
-    { folio: 'BG-1042', fecha: '2026-05-30 14:22', cliente: 'Carlos Manuel Uc', vendedor: 'Iván Castro', items: 4, total: 4180, metodo: 'Tarjeta', estado: 'Pagado' },
-    { folio: 'BG-1041', fecha: '2026-05-30 13:05', cliente: 'Público en general', vendedor: 'Rocío Méndez', items: 1, total: 980, metodo: 'Efectivo', estado: 'Pagado' },
-    { folio: 'BG-1040', fecha: '2026-05-30 12:40', cliente: 'Roberto Sansores', vendedor: 'Iván Castro', items: 2, total: 2310, metodo: 'Mixto', estado: 'Apartado' },
-    { folio: 'BG-1039', fecha: '2026-05-30 11:58', cliente: 'José Luis Aguilar', vendedor: 'Diana Pérez', items: 1, total: 1290, metodo: 'Transferencia', estado: 'Pagado' },
-    { folio: 'BG-1038', fecha: '2026-05-30 11:20', cliente: 'María Fernanda Rosado', vendedor: 'Rocío Méndez', items: 3, total: 2480, metodo: 'Tarjeta', estado: 'Pagado' },
-    { folio: 'BG-1037', fecha: '2026-05-29 19:02', cliente: 'Público en general', vendedor: 'Iván Castro', items: 2, total: 1740, metodo: 'Efectivo', estado: 'Cancelado' },
-    { folio: 'BG-1036', fecha: '2026-05-29 18:15', cliente: 'Gabriela Couoh', vendedor: 'Diana Pérez', items: 1, total: 760, metodo: 'Efectivo', estado: 'Pagado' },
-    { folio: 'BG-1035', fecha: '2026-05-29 17:30', cliente: 'Roberto Sansores', vendedor: 'Rocío Méndez', items: 5, total: 5640, metodo: 'Tarjeta', estado: 'Pagado' },
-    { folio: 'BG-1034', fecha: '2026-05-29 16:48', cliente: 'Ana Patricia Canul', vendedor: 'Iván Castro', items: 1, total: 540, metodo: 'Efectivo', estado: 'Pendiente' },
-    { folio: 'BG-1033', fecha: '2026-05-29 15:12', cliente: 'José Luis Aguilar', vendedor: 'Diana Pérez', items: 2, total: 1700, metodo: 'Transferencia', estado: 'Pagado' },
-  ];
+  const seedSales = []; // sin ventas de ejemplo — se generan al cobrar en el POS
 
-  const seedMovements = [
-    { fecha: '2026-05-30 09:00', tipo: 'Entrada', producto: 'Hexágonos con Pestañas', sku: '21-ML-POL-AZ-221', cant: 24, ref: 'Compra proveedor Mérida' },
-    { fecha: '2026-05-30 14:22', tipo: 'Venta', producto: 'Presidencial', sku: '21-ML-POL-AZ-251', cant: -2, ref: 'BG-1042' },
-    { fecha: '2026-05-29 17:30', tipo: 'Venta', producto: 'Tira Red', sku: '21-ML-ALG-MZ-128', cant: -3, ref: 'BG-1035' },
-    { fecha: '2026-05-29 10:15', tipo: 'Ajuste', producto: 'Clásica Lisa', sku: '21-MC-ALG-BL-060', cant: -1, ref: 'Merma — defecto de fábrica' },
-    { fecha: '2026-05-28 16:40', tipo: 'Transferencia', producto: '3 Tiras Esferas Doradas', sku: '21-ML-ALG-NE-131', cant: -4, ref: 'Sucursal Centro' },
-  ];
+  const seedMovements = []; // sin movimientos de ejemplo — se generan al vender/ajustar inventario
 
   // Carga persistida o semilla (in-place para conservar la referencia del arreglo).
   function loadArr(key, seedArr) {
@@ -173,35 +131,9 @@
   }
   // Promociones/Descuentos (se aplican automáticamente en el POS).
   // scope: dimensión vacía = sin restricción (todas). tipo: 'pct' | 'fijo'.
-  const seedPromos = [
-    { id: 'promo-lino', nombre: 'Temporada de Lino', tipo: 'pct', valor: 15, inicio: '', fin: '', horaInicio: '', horaFin: '', pausado: false, scope: { telas: ['ALG'] }, creado: 1 },
-    { id: 'promo-bienvenida', nombre: 'Bienvenida Heritage', tipo: 'fijo', valor: 100, inicio: '2026-12-01', fin: '', horaInicio: '', horaFin: '', pausado: false, scope: { cats: ['20'] }, creado: 2 },
-    { id: 'promo-verano', nombre: 'Gala de Verano', tipo: 'pct', valor: 20, inicio: '2026-08-01', fin: '2026-08-31', horaInicio: '', horaFin: '', pausado: true, scope: { cats: ['21'], telas: ['POL'] }, creado: 3 },
-    { id: 'promo-invierno', nombre: 'Venta Privada Invierno', tipo: 'pct', valor: 25, inicio: '2026-01-01', fin: '2026-02-15', horaInicio: '', horaFin: '', pausado: false, scope: { cats: ['10'] }, creado: 4 },
-  ];
+  const seedPromos = []; // sin promociones de ejemplo — se crean en Descuentos
 
-  // Devoluciones de ejemplo (semilla). Solo se usan cuando aún no hay devoluciones
-  // reales guardadas; en cuanto se registra una real, estas dejan de mostrarse.
-  // Fechas relativas a jun-2026: 8 en los últimos 30 días + 6 en el periodo previo
-  // (para la variación). motivo: códigos de CONFIG.return_reason.
-  const seedReturns = [
-    // — Periodo actual (últimos 30 días) —
-    { id: 'ret-d1', folio: 'BG-1039', fecha: '2026-06-04 12:10', cliente: 'José Luis Aguilar', vendedores: ['s3'], metodo: 'Transferencia', total: 980, notas: '', lineas: [{ sku: '21-ML-ALG-MZ-128', nombre: 'Tira Red', talla: 'L', qty: 1, motivo: 'Talla', precio: 980 }] },
-    { id: 'ret-d2', folio: 'BG-1038', fecha: '2026-06-03 17:35', cliente: 'María Fernanda Rosado', vendedores: ['s1'], metodo: 'Tarjeta', total: 650, notas: '', lineas: [{ sku: '21-MC-ALG-BL-060', nombre: 'Clásica Lisa', talla: 'M', qty: 1, motivo: 'Talla', precio: 650 }] },
-    { id: 'ret-d3', folio: 'BG-1042', fecha: '2026-06-01 11:48', cliente: 'Carlos Manuel Uc', vendedores: ['s2'], metodo: 'Tarjeta', total: 1290, notas: 'Costura abierta en el cuello.', lineas: [{ sku: '21-ML-POL-AZ-251', nombre: 'Presidencial', talla: '42', qty: 1, motivo: 'Defecto', precio: 1290 }] },
-    { id: 'ret-d4', folio: 'BG-1035', fecha: '2026-05-28 16:20', cliente: 'Roberto Sansores', vendedores: ['s1'], metodo: 'Tarjeta', total: 1520, notas: '', lineas: [{ sku: '21-ML-POL-AZ-221', nombre: 'Hexágonos con Pestañas', talla: 'XL', qty: 2, motivo: 'Talla', precio: 760 }] },
-    { id: 'ret-d5', folio: 'BG-1036', fecha: '2026-05-25 18:40', cliente: 'Gabriela Couoh', vendedores: ['s3'], metodo: 'Efectivo', total: 480, notas: '', lineas: [{ sku: '20-MC-ALG-BL-301', nombre: 'Camisa Manta Lisa', talla: 'S', qty: 1, motivo: 'Cambio', precio: 480 }] },
-    { id: 'ret-d6', folio: 'BG-1041', fecha: '2026-05-20 13:15', cliente: 'Público en general', vendedores: ['s1'], metodo: 'Efectivo', total: 1020, notas: '', lineas: [{ sku: '21-ML-ALG-AZ-129', nombre: 'Panal Tadeo', talla: 'M', qty: 1, motivo: 'Defecto', precio: 1020 }] },
-    { id: 'ret-d7', folio: 'BG-1033', fecha: '2026-05-15 15:05', cliente: 'José Luis Aguilar', vendedores: ['s3'], metodo: 'Transferencia', total: 540, notas: '', lineas: [{ sku: '21-MC-POL-RS-432', nombre: 'Rombitos Rosa', talla: 'L', qty: 1, motivo: 'Equivocado', precio: 540 }] },
-    { id: 'ret-d8', folio: 'BG-1035', fecha: '2026-05-10 17:50', cliente: 'Roberto Sansores', vendedores: ['s1'], metodo: 'Tarjeta', total: 1180, notas: '', lineas: [{ sku: '21-ML-ALG-NE-131', nombre: '3 Tiras Esferas Doradas', talla: '40', qty: 1, motivo: 'Talla', precio: 1180 }] },
-    // — Periodo previo (31–60 días, para la variación %) —
-    { id: 'ret-d9', folio: 'BG-0992', fecha: '2026-05-02 12:00', cliente: 'Ana Patricia Canul', vendedores: ['s2'], metodo: 'Efectivo', total: 650, notas: '', lineas: [{ sku: '21-MC-ALG-BL-060', nombre: 'Clásica Lisa', talla: 'L', qty: 1, motivo: 'Talla', precio: 650 }] },
-    { id: 'ret-d10', folio: 'BG-0988', fecha: '2026-04-28 16:30', cliente: 'Carlos Manuel Uc', vendedores: ['s2'], metodo: 'Tarjeta', total: 760, notas: '', lineas: [{ sku: '21-ML-POL-AZ-221', nombre: 'Hexágonos con Pestañas', talla: 'M', qty: 1, motivo: 'Defecto', precio: 760 }] },
-    { id: 'ret-d11', folio: 'BG-0981', fecha: '2026-04-22 11:20', cliente: 'María Fernanda Rosado', vendedores: ['s1'], metodo: 'Tarjeta', total: 980, notas: '', lineas: [{ sku: '21-ML-ALG-MZ-128', nombre: 'Tira Red', talla: 'M', qty: 1, motivo: 'Talla', precio: 980 }] },
-    { id: 'ret-d12', folio: 'BG-0977', fecha: '2026-04-18 14:45', cliente: 'Roberto Sansores', vendedores: ['s3'], metodo: 'Transferencia', total: 1180, notas: '', lineas: [{ sku: '21-ML-ALG-NE-131', nombre: '3 Tiras Esferas Doradas', talla: 'L', qty: 1, motivo: 'Cambio', precio: 1180 }] },
-    { id: 'ret-d13', folio: 'BG-0970', fecha: '2026-04-12 17:10', cliente: 'Gabriela Couoh', vendedores: ['s1'], metodo: 'Efectivo', total: 540, notas: '', lineas: [{ sku: '21-MC-POL-RS-432', nombre: 'Rombitos Rosa', talla: 'M', qty: 1, motivo: 'Talla', precio: 540 }] },
-    { id: 'ret-d14', folio: 'BG-0964', fecha: '2026-04-08 13:30', cliente: 'José Luis Aguilar', vendedores: ['s3'], metodo: 'Transferencia', total: 1020, notas: '', lineas: [{ sku: '21-ML-ALG-AZ-129', nombre: 'Panal Tadeo', talla: 'L', qty: 1, motivo: 'Garantia', precio: 1020 }] },
-  ];
+  const seedReturns = []; // sin devoluciones de ejemplo — se generan en la pantalla Devoluciones
 
   const LS_SELLERS = 'balam_pos_sellers_v1', LS_CLIENTS = 'balam_pos_clients_v1',
         LS_SALES = 'balam_pos_sales_v1', LS_MOVES = 'balam_pos_moves_v1', LS_FOLIO = 'balam_pos_folio_v1',
@@ -221,7 +153,17 @@
   sellers.forEach(s => { if (!s.role) s.role = 'vendedor'; if (s.active === undefined) s.active = true; });
   if (!sellers.some(s => s.role === 'admin')) sellers.unshift(seedSellers[0]);
 
-  const save = (key, arr) => { try { localStorage.setItem(key, JSON.stringify(arr)); } catch (e) { /* cuota */ } };
+  let quotaWarned = false;
+  const save = (key, arr) => {
+    try { localStorage.setItem(key, JSON.stringify(arr)); }
+    catch (e) {
+      // Cuota de localStorage excedida (típico con muchas imágenes en base64): avisar una vez.
+      if (!quotaWarned) {
+        quotaWarned = true;
+        if (window.UI && window.UI.toast) window.UI.toast('Almacenamiento local lleno. Reduce el peso de las imágenes de productos o inicia sesión para respaldar en la nube; algunos cambios podrían no guardarse en este dispositivo.', 'var(--danger)');
+      }
+    }
+  };
   // Sube cambios a la nube si el seam está activo (no durante aplicación de datos remotos).
   let remoteApplying = false;
   function syncUp(kind, arr) {
@@ -260,7 +202,7 @@
     let seq;
     try { seq = parseInt(localStorage.getItem(LS_FOLIO), 10); } catch (e) { seq = NaN; }
     if (!seq || isNaN(seq)) {
-      seq = sales.reduce((m, s) => { const n = parseInt(String(s.folio).replace(/\D/g, ''), 10); return n > m ? n : m; }, 1042);
+      seq = sales.reduce((m, s) => { const n = parseInt(String(s.folio).replace(/\D/g, ''), 10); return n > m ? n : m; }, 0);
     }
     seq += 1;
     save(LS_FOLIO, seq);
