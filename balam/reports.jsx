@@ -51,7 +51,7 @@
           kpi('Ventas brutas', fmt(ventasBrutas).replace('.00', ''), 'trending_up', '+12.4% vs mes anterior', 'text-success'),
           kpi('Utilidad neta', fmt(utilidad).replace('.00', ''), 'trending_up', '+8.2% vs mes anterior', 'text-success'),
           kpi('Total pedidos', String(pedidos), 'chart', 'Meta: 400 pedidos', 'text-on-surface-variant/60'),
-          kpi('Ticket promedio', fmt(ticketProm).replace('.00', ''), 'star', 'Nivel Luxury Gold', 'text-gold-text', true),
+          kpi('Ticket promedio', fmt(ticketProm).replace('.00', ''), 'star', '', 'text-gold-text', true),
         ]),
 
         // Gráfica + Meta global
@@ -146,7 +146,7 @@
     return h('div', { key: label, className: CARD + ' p-6' + (gold ? ' border-l-4 border-l-secondary' : '') }, [
       h('p', { key: 'l', className: 'text-caption font-semibold text-on-surface-variant uppercase tracking-wider mb-2' }, label),
       h('h3', { key: 'v', className: 'font-headline text-headline-lg text-primary' }, value),
-      h('div', { key: 'd', className: 'mt-4 flex items-center gap-1 text-caption font-bold ' + (deltaCls || 'text-on-surface-variant') }, [
+      delta && h('div', { key: 'd', className: 'mt-4 flex items-center gap-1 text-caption font-bold ' + (deltaCls || 'text-on-surface-variant') }, [
         h(MS, { key: 'i', name: icon, size: 16 }), h('span', { key: 's' }, delta),
       ]),
     ]);
