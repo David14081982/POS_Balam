@@ -100,5 +100,24 @@
       ]));
   }
 
-  window.UI = { fmt, Badge, StatusBadge, StockBadge, ProductThumb, ToastHost, toast, Modal, BADGE_TONE };
+  // Paginador reutilizable (Clientes, Inventario). Muestra ‹ 1 2 3 … › con la página activa.
+  function Pager({ page, pages, onPage }) {
+    if (!pages || pages <= 1) return null;
+    const MS = window.HX.MS;
+    let start = Math.max(1, page - 2), end = Math.min(pages, start + 4);
+    start = Math.max(1, end - 4);
+    const nums = []; for (let i = start; i <= end; i++) nums.push(i);
+    const cell = (key, content, { active, disabled, onClick } = {}) => React.createElement('button', {
+      key, disabled: !!disabled, onClick: onClick || undefined,
+      className: 'w-8 h-8 flex items-center justify-center rounded-lg border text-overline font-bold transition-colors ' +
+        (active ? 'bg-primary text-on-primary border-primary' : 'border-outline-variant ' + (disabled ? 'opacity-30 cursor-not-allowed' : 'hover:bg-surface-container')),
+    }, content);
+    return React.createElement('div', { className: 'flex items-center gap-1' }, [
+      cell('prev', React.createElement(MS, { name: 'chevLeft', size: 16 }), { disabled: page <= 1, onClick: page > 1 ? () => onPage(page - 1) : null }),
+      ...nums.map(n => cell('p' + n, String(n), { active: n === page, onClick: () => onPage(n) })),
+      cell('next', React.createElement(MS, { name: 'chevRight', size: 16 }), { disabled: page >= pages, onClick: page < pages ? () => onPage(page + 1) : null }),
+    ]);
+  }
+
+  window.UI = { fmt, Badge, StatusBadge, StockBadge, ProductThumb, ToastHost, toast, Modal, BADGE_TONE, Pager };
 })();
