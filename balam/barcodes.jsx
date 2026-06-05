@@ -39,11 +39,21 @@
     catch (e) { return false; }
   }
 
-  // Componente React: <svg> con el código de barras ya renderizado.
+  // Componente React: <svg> responsivo (escala al contenedor vía viewBox, no se desborda).
   function Barcode({ code, opts, className, style }) {
     const ref = useRef(null);
-    useEffect(() => { if (ref.current) draw(ref.current, code, opts); }, [code, JSON.stringify(opts || {})]);
-    return h('svg', { ref, className: className || '', style: style || {} });
+    useEffect(() => {
+      const el = ref.current; if (!el) return;
+      if (draw(el, code, opts)) {
+        const w = el.getAttribute('width'), hgt = el.getAttribute('height');
+        if (w && hgt) {
+          el.setAttribute('viewBox', `0 0 ${w} ${hgt}`);
+          el.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+          el.removeAttribute('width'); el.removeAttribute('height');
+        }
+      }
+    }, [code, JSON.stringify(opts || {})]);
+    return h('svg', { ref, className: className || '', style: Object.assign({ display: 'block', width: '100%', height: 'auto' }, style || {}) });
   }
 
   // PNG como data URL (para incrustar <img> en la ventana de impresión). Síncrono; '' si falla.

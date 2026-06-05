@@ -486,9 +486,9 @@
       ]),
       h('div', { key: 'pv', className: 'border-t border-outline-variant pt-4' }, [
         h('p', { key: 'l', className: 'text-overline uppercase font-bold text-on-surface-variant tracking-widest mb-3' }, 'Vista previa'),
-        h('div', { key: 'g', className: 'flex flex-wrap gap-3' }, preview.map(s => h('div', { key: s.code, className: 'border border-outline-variant rounded-lg p-2 flex flex-col items-center bg-white', style: { width: '150px' } }, [
+        h('div', { key: 'g', className: 'grid grid-cols-2 gap-3' }, preview.map(s => h('div', { key: s.code, className: 'border border-outline-variant rounded-lg p-2 flex flex-col items-center gap-1 bg-white overflow-hidden' }, [
           h('div', { key: 'n', className: 'text-overline font-bold text-center text-primary truncate w-full' }, s.p.nombre),
-          h(B.Barcode, { key: 'b', code: s.code, opts: LBL_OPTS, style: { width: '100%', height: '40px' } }),
+          h('div', { key: 'b', className: 'w-full overflow-hidden' }, h(B.Barcode, { code: s.code, opts: LBL_OPTS })),
           withPrice && h('div', { key: 'p', className: 'text-caption font-bold text-primary' }, fmt(s.p.precio).replace('.00', '')),
         ]))),
         specs.length > preview.length && h('p', { key: 'm', className: 'text-caption text-on-surface-variant mt-2' }, `…y ${specs.length - preview.length} más`),
