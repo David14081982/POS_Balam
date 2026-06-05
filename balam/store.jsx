@@ -61,6 +61,10 @@
       toRow: p => ({ id: p.id, nombre: p.nombre, tipo: p.tipo || 'pct', valor: Number(p.valor) || 0, inicio: p.inicio || null, fin: p.fin || null, hora_inicio: p.horaInicio || null, hora_fin: p.horaFin || null, pausado: !!p.pausado, scope: p.scope || {}, creado: p.creado || null }),
       fromRow: r => ({ id: r.id, nombre: r.nombre, tipo: r.tipo || 'pct', valor: Number(r.valor) || 0, inicio: r.inicio || '', fin: r.fin || '', horaInicio: r.hora_inicio || '', horaFin: r.hora_fin || '', pausado: !!r.pausado, scope: r.scope || {}, creado: r.creado || 0 }),
     },
+    returns: {
+      table: 'returns', conflict: 'id',
+      fromRow: r => ({ id: r.id, folio: r.folio, fecha: r.fecha || '', cliente: r.cliente, vendedores: r.vendedores || [], metodo: r.metodo, total: Number(r.total) || 0, notas: r.notas || '', lineas: [] }),
+    },
   };
 
   // ── Cola offline ────────────────────────────────────────────────────────────
@@ -88,6 +92,13 @@
         const s = await c.from('sales').upsert([op.header], { onConflict: 'folio' }); if (s.error) return false;
         if (op.items.length) { await c.from('sale_items').delete().eq('folio', op.folio); const i = await c.from('sale_items').insert(op.items); if (i.error) return false; }
         if (op.moves.length) { await c.from('movements').delete().eq('ref', op.folio).eq('tipo', 'Venta'); const mv = await c.from('movements').insert(op.moves); if (mv.error) return false; }
+        return true;
+      }
+      if (op.type === 'return') {
+        const s = await c.from('returns').upsert([op.header], { onConflict: 'id' }); if (s.error) return false;
+        await c.from('return_items').delete().eq('return_id', op.id);
+        if (op.items.length) { const i = await c.from('return_items').insert(op.items); if (i.error) return false; }
+        if (op.moves && op.moves.length) { await c.from('movements').delete().eq('ref', op.folio).eq('tipo', 'Devolución'); const mv = await c.from('movements').insert(op.moves); if (mv.error) return false; }
         return true;
       }
     } catch (e) { return false; }
@@ -133,6 +144,16 @@
     const items = (sale.lineas || []).map(l => ({ folio: sale.folio, sku: l.sku, nombre: l.nombre, talla: l.talla, qty: l.qty, precio: Number(l.precio) || 0 }));
     const moves = (sale.lineas || []).map(l => ({ fecha: header.fecha, tipo: 'Venta', producto: l.nombre, sku: l.sku, cant: -l.qty, ref: sale.folio }));
     return run({ type: 'sale', folio: sale.folio, header, items, moves });
+  }
+  function pushReturn(ret) {
+    if (!enabled) return;
+    const header = { id: ret.id, folio: ret.folio, fecha: ret.fecha || null, cliente: ret.cliente, vendedores: ret.vendedores || [], metodo: ret.metodo || null, total: Number(ret.total) || 0, notas: ret.notas || null };
+    const items = (ret.lineas || []).map(l => ({ return_id: ret.id, sku: l.sku, nombre: l.nombre, talla: l.talla, qty: l.qty, motivo: l.motivo || null, precio: Number(l.precio) || 0 }));
+    // Reemplaza TODOS los movimientos 'Devolución' del folio (idempotente con devoluciones parciales).
+    const moves = (window.DATA.movements || [])
+      .filter(m => m.tipo === 'Devolución' && m.ref === ret.folio)
+      .map(m => ({ fecha: String(m.fecha || '').replace(' ', 'T'), tipo: 'Devolución', producto: m.producto, sku: m.sku, cant: m.cant, ref: m.ref }));
+    return run({ type: 'return', id: ret.id, folio: ret.folio, header, items, moves });
   }
   let pushTimer = null;
   function pushConfig(state) {
@@ -181,10 +202,18 @@
         });
         window.DATA.applyRemote('sales', rows); return;
       }
+      if (kind === 'returns') {
+        const it = await c.from('return_items').select('*');
+        const byRid = {};
+        (it.data || []).forEach(x => (byRid[x.return_id] || (byRid[x.return_id] = [])).push({ sku: x.sku, nombre: x.nombre, talla: x.talla, qty: x.qty, motivo: x.motivo || '', precio: Number(x.precio) || 0 }));
+        const rows = r.data.map(raw => { const s = m.fromRow(raw); s.lineas = byRid[raw.id] || []; return s; });
+        window.DATA.applyRemote('returns', rows); return;
+      }
       if (m.fromRow) window.DATA.applyRemote(kind, r.data.map(m.fromRow));
     } else if (window.DATA[kind] && window.DATA[kind].length) {
       // Bootstrap: nube vacía + datos locales → súbelos.
       if (kind === 'sales') { for (const s of window.DATA.sales) await pushSale(s); }
+      else if (kind === 'returns') { for (const rr of window.DATA.returns) await pushReturn(rr); }
       else if (m.toRow) await pushRows(kind, window.DATA[kind]);
     }
   }
@@ -195,11 +224,11 @@
     if (opts.pull) {
       const r = await pull();
       if (window.UI && window.UI.toast) window.UI.toast(r.ok ? 'Configuración sincronizada (nube)' : 'Nube no disponible — modo local', r.ok ? 'var(--accent)' : 'var(--danger)');
-      for (const k of ['products', 'clients', 'sellers', 'sales', 'promotions']) { try { await pullDomain(k); } catch (e) { /* tabla ausente */ } }
+      for (const k of ['products', 'clients', 'sellers', 'sales', 'promotions', 'returns']) { try { await pullDomain(k); } catch (e) { /* tabla ausente */ } }
       try { window.dispatchEvent(new CustomEvent('configchange', { detail: { domain: true } })); } catch (e) { /* */ }
     }
     flushQueue(); // drena lo que quedó pendiente de una sesión offline previa
   }
 
-  window.STORE = { init, pull, pushConfig, pushRows, pushSale, deleteRow, pullDomain, flushQueue, ensureClient, getClient: ensureClient, hasSession, get enabled() { return enabled; }, get pending() { return loadQ().length; } };
+  window.STORE = { init, pull, pushConfig, pushRows, pushSale, pushReturn, deleteRow, pullDomain, flushQueue, ensureClient, getClient: ensureClient, hasSession, get enabled() { return enabled; }, get pending() { return loadQ().length; } };
 })();

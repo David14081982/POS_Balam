@@ -13,6 +13,7 @@
     { id: 'negocio', label: 'Negocio', icon: 'gear' },
     { id: 'producto', label: 'Catálogos de producto', icon: 'box' },
     { id: 'ventas', label: 'Ventas y POS', icon: 'pos' },
+    { id: 'devoluciones', label: 'Devoluciones', icon: 'undo' },
     { id: 'vendedores', label: 'Vendedores', icon: 'badge' },
     { id: 'clientes', label: 'Clientes', icon: 'users' },
     { id: 'inventario', label: 'Inventario', icon: 'box' },
@@ -242,6 +243,15 @@
           h(CfgText, { key: 'lo', k: 'stock.lowThreshold', label: 'Stock bajo (≤ piezas)', type: 'number' }),
           h(CfgText, { key: 'rc', k: 'client.recurrentThreshold', label: 'Cliente recurrente (≥ compras)', type: 'number' }),
         ]),
+      ]),
+    ],
+    devoluciones: () => [
+      h('p', { key: 'i', className: 'text-caption text-on-surface-variant' }, 'Catálogo de motivos que el cajero elige al devolver un artículo, y la política de comisiones. Todo se sincroniza a la nube.'),
+      h(CatalogEditor, { key: 'rr', kind: 'return_reason', title: 'Motivos de devolución', codePlaceholder: 'Talla', labelPlaceholder: 'Talla errónea', hint: 'El administrador agrega aquí cualquier motivo adicional; el cajero lo selecciona por artículo en la pantalla de Devoluciones.' }),
+      h(GlassCard, { key: 'pol', className: 'p-6' }, [
+        h(SerifHeading, { key: 't', className: 'mb-2', children: 'Política de devoluciones' }),
+        h(CfgToggle, { key: 'rc', k: 'returns.reverseCommission', title: 'Revertir comisión al devolver', desc: 'Descuenta al vendedor la comisión y las ventas correspondientes a lo devuelto (proporcional, usando la base de la venta). Si lo apagas, las comisiones ya acumuladas no se tocan.' }),
+        h('p', { key: 'n', className: 'text-caption text-on-surface-variant mt-3' }, 'El reingreso de stock es inmediato: al confirmar una devolución, las piezas vuelven al inventario y se asienta un movimiento "Devolución".'),
       ]),
     ],
     vendedores: () => [

@@ -11,6 +11,7 @@
     { id: 'pos', label: 'Punto de venta', icon: 'pos' },
     { id: 'inventario', label: 'Inventario', icon: 'box', liveBadge: true },
     { id: 'clientes', label: 'Clientes', icon: 'users' },
+    { id: 'devoluciones', label: 'Devoluciones', icon: 'undo' },
     { id: 'descuentos', label: 'Descuentos', icon: 'sell', admin: true },
     { id: 'vendedores', label: 'Vendedores', icon: 'badge', admin: true },
     { id: 'reportes', label: 'Reportes', icon: 'chart', admin: true },
@@ -28,7 +29,7 @@
   })();
   const TITLES = {
     dashboard: 'Panel de control', pos: 'Punto de venta', inventario: 'Inventario',
-    clientes: 'Clientes', descuentos: 'Promociones y descuentos', vendedores: 'Vendedores y comisiones', reportes: 'Reportes', config: 'Configuración',
+    clientes: 'Clientes', devoluciones: 'Devoluciones', descuentos: 'Promociones y descuentos', vendedores: 'Vendedores y comisiones', reportes: 'Reportes', config: 'Configuración',
   };
 
   // Solo tweaks que siguen vigentes con Heritage (layout de POS)
@@ -143,6 +144,7 @@
           : page === 'pos' ? h(window.POSScreen, { key: 'pos', layout: t.ticketPos, catalogView: t.catalogView, onNav: go })
           : page === 'inventario' ? h(window.InventoryScreen, { key: 'inv' })
           : page === 'clientes' ? h(window.ClientsScreen, { key: 'cli' })
+          : page === 'devoluciones' ? h(window.ReturnsScreen, { key: 'dev', onNav: go })
           : page === 'descuentos' ? h(window.DiscountsScreen, { key: 'desc' })
           : page === 'vendedores' ? h(window.SellersScreen, { key: 'ven' })
           : page === 'reportes' ? h(window.ReportsScreen, { key: 'rep' })

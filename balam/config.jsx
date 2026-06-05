@@ -74,12 +74,23 @@
       { code: 'Entregado', label: 'Entregado', meta: { tone: 'success' } },
       { code: 'Enviado', label: 'Enviado', meta: { tone: 'info' } },
       { code: 'En Ajuste', label: 'En Ajuste', meta: { tone: 'warning' } },
+      { code: 'Devolución parcial', label: 'Devolución parcial', meta: { tone: 'warning' } },
+      { code: 'Devuelto', label: 'Devuelto', meta: { tone: 'danger' } },
     ],
     movement_type: [
       { code: 'Entrada', label: 'Entrada' },
       { code: 'Venta', label: 'Venta' },
+      { code: 'Devolución', label: 'Devolución' },
       { code: 'Ajuste', label: 'Ajuste' },
       { code: 'Transferencia', label: 'Transferencia' },
+    ],
+    // Motivos de devolución (editables por el admin en Configuración → Devoluciones).
+    return_reason: [
+      { code: 'Talla', label: 'Talla errónea' },
+      { code: 'Defecto', label: 'Defecto de fábrica' },
+      { code: 'Equivocado', label: 'Producto equivocado' },
+      { code: 'Cambio', label: 'Cambio de opinión' },
+      { code: 'Garantia', label: 'Garantía' },
     ],
     seller_role: [
       { code: 'senior', label: 'Heritage Senior Associate', meta: { minPct: 5 } },
@@ -133,6 +144,8 @@
     'pos.allowLayaway': true,
     'pos.sound': true,
     'pos.validateStock': true,
+    'returns.reverseCommission': true, // al devolver: revertir comisión/ventas del vendedor en proporción a lo devuelto
+    'returns.refundMethod': 'Mismo método', // sugerencia por defecto del método de reembolso
     'print.auto': false,
     'print.lowStockAlert': true,
   };
@@ -266,7 +279,12 @@
   // clave que tenga), así las claves nuevas del código no desaparecen tras un pull.
   function load(next) {
     if (!next || !next.catalogs || !next.settings) return;
-    state = { v: next.v || 1, catalogs: next.catalogs, settings: Object.assign({}, deepClone(SEED_SETTINGS), next.settings) };
+    // Backfill de catálogos NUEVOS aún ausentes en la nube (p. ej. return_reason): si la nube no
+    // trae el kind (o viene vacío), conserva la semilla local para que no desaparezca tras el pull.
+    // emit() → pushConfig lo subirá, volviéndolo persistente. Los ajustes ya se fusionan sobre los defaults.
+    const cats = next.catalogs, fresh = seed();
+    Object.keys(fresh.catalogs).forEach(k => { if (!cats[k] || !cats[k].length) cats[k] = fresh.catalogs[k]; });
+    state = { v: next.v || 1, catalogs: cats, settings: Object.assign({}, deepClone(SEED_SETTINGS), next.settings) };
     emit();
   }
 

@@ -23,11 +23,38 @@ create table if not exists pos.promotions (
   updated_at  timestamptz not null default now()
 );
 
+-- ── (1.5) Devoluciones (cabecera + renglones) ───────────────────────────────
+create table if not exists pos.returns (
+  id          text primary key,
+  folio       text,
+  cliente     text,
+  vendedores  jsonb not null default '[]',
+  metodo      text,
+  total       numeric(12,2) not null default 0,
+  notas       text,
+  fecha       text,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+create index if not exists pos_returns_folio_idx on pos.returns (folio);
+
+create table if not exists pos.return_items (
+  id        bigint generated always as identity primary key,
+  return_id text not null references pos.returns(id) on delete cascade,
+  sku       text,
+  nombre    text,
+  talla     text,
+  qty       int not null,
+  motivo    text,
+  precio    numeric(10,2) not null default 0
+);
+create index if not exists pos_return_items_rid_idx on pos.return_items (return_id);
+
 -- ── (2) Seguridad: RLS ON + solo usuarios autenticados ──────────────────────
 do $$
 declare t text;
 begin
-  foreach t in array array['settings','lookup','products','clients','sellers','sales','sale_items','movements','promotions']
+  foreach t in array array['settings','lookup','products','clients','sellers','sales','sale_items','movements','promotions','returns','return_items']
   loop
     execute format('alter table pos.%I enable row level security', t);
     execute format('drop policy if exists auth_all on pos.%I', t);
