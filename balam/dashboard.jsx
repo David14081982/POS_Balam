@@ -1,6 +1,7 @@
 // dashboard.jsx — Panel de control (sistema unificado). Exporta window.DashboardScreen
 (function () {
-  const { fmt, Badge, StatusBadge } = window.UI;
+  const { useState } = React;
+  const { fmt, Badge, StatusBadge, toast } = window.UI;
   const { MS, ProductImage } = window.HX;
   const D = window.DATA;
   const h = React.createElement;
@@ -28,6 +29,15 @@
   }
 
   function DashboardScreen({ onNav }) {
+    const [, bump] = useState(0);
+    const refresh = () => bump(v => v + 1);
+    function completar(folio) {
+      const sale = D.sales.find(s => s.folio === folio);
+      if (!window.confirm('¿Completar el apartado ' + folio + (sale ? ' de ' + sale.cliente : '') + '?\nSe descontará el stock y se acreditará la comisión al vendedor.')) return;
+      const r = D.completarApartado(folio);
+      refresh();
+      toast(r ? 'Apartado ' + folio + ' completado · venta pagada' : 'No se pudo completar', r ? undefined : 'var(--danger)');
+    }
     const SEMANA = semanaReal();
     const maxPct = Math.max(1, ...SEMANA.map(x => x.pct));
     const maxFecha = D.sales.reduce((m, s) => s.fecha.slice(0, 10) > m ? s.fecha.slice(0, 10) : m, '');
@@ -145,6 +155,20 @@
           h('div', { key: 'sa', className: 'col-span-12 lg:col-span-3 space-y-4' }, [
             action('add', 'Nueva venta', 'Checkout rápido', () => onNav && onNav('pos'), true),
             action('user', 'Registrar cliente', 'CRM Heritage', () => onNav && onNav('clientes'), false),
+            apartados.length > 0 && h('div', { key: 'apt', className: CARD + ' p-6 border-l-4 border-l-gold' }, [
+              h('div', { key: 'h', className: 'flex items-center gap-2 mb-3' }, [
+                h(MS, { key: 'i', name: 'clock', size: 20, className: 'text-gold-text' }),
+                h('h4', { key: 't', className: 'text-overline text-primary' }, 'Apartados por completar'),
+                h('span', { key: 'c', className: 'ml-auto text-caption font-bold text-gold-text' }, apartados.length),
+              ]),
+              h('div', { key: 'l', className: 'space-y-3' }, apartados.slice(0, 6).map(s => h('div', { key: s.folio, className: 'flex items-center justify-between gap-2' }, [
+                h('div', { key: 'd', className: 'min-w-0' }, [
+                  h('p', { key: 'n', className: 'text-body-strong text-primary truncate' }, s.cliente),
+                  h('p', { key: 'f', className: 'text-caption text-muted' }, s.folio + ' · ' + fmt(s.total).replace('.00', '')),
+                ]),
+                h('button', { key: 'b', className: 'shrink-0 px-3 py-1.5 text-overline font-bold uppercase tracking-wider rounded bg-primary text-on-primary hover:opacity-90 transition-opacity', onClick: () => completar(s.folio) }, 'Completar'),
+              ]))),
+            ]),
             h('div', { key: 'box', className: 'mt-4 p-6 rounded-lg bg-gold-soft flex flex-col items-center text-center' }, [
               h(MS, { key: 'i', name: 'badge', size: 24, className: 'mb-3 text-gold-text' }),
               h('p', { key: 't', className: 'text-body-strong text-primary mb-1' }, 'Pedidos a medida'),

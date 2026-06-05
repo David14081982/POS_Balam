@@ -23,6 +23,12 @@
   // Comisión de una venta atribuida: usa el monto guardado al cobrar (refleja la base neto/bruto y el %
   // vigentes en ese momento); si es una venta vieja/sincronizada sin el dato, la estima con el % actual.
   const saleComm = (v, s) => (v && v.comision != null ? Number(v.comision) : (Number(v.total) || 0) * (s.comisionPct || 0) / 100);
+  // Etiqueta del periodo de comisiones (desde el último corte de mes).
+  const periodoLabel = () => {
+    const ini = D.getPeriodoInicio && D.getPeriodoInicio();
+    if (!ini) return 'Acumulado histórico';
+    return 'Periodo desde ' + new Date(ini + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
+  };
 
   function SellersScreen() {
     const [detail, setDetail] = useState(null);
@@ -38,6 +44,12 @@
       setDetail(null); refresh();
       toast('Comisión de ' + s.nombre + ' liquidada: ' + fmt(monto || 0), 'var(--accent)');
     }
+    function cerrarMes() {
+      if (!window.confirm('¿Cerrar el periodo?\nSe pagará la comisión pendiente de TODOS los vendedores (' + fmt(totalComision) + ') y se reiniciarán las ventas y comisiones del mes. Las metas no se modifican.')) return;
+      const r = D.cerrarMes();
+      setDetail(null); refresh();
+      toast('Periodo cerrado · ' + fmt(r.total) + ' liquidados a ' + r.vendedores + ' vendedor(es)', 'var(--accent)');
+    }
 
     return h('div', { className: 'flex-1 overflow-y-auto bg-background font-body text-on-surface' },
       h('div', { className: 'p-10 max-w-container-max mx-auto' }, [
@@ -47,7 +59,10 @@
             h('h2', { key: 't', className: 'font-headline text-headline-lg text-primary' }, 'Vendedores y comisiones'),
             h('p', { key: 'd', className: 'text-on-surface-variant mt-2 max-w-2xl text-body' }, 'Visualización de rendimiento individual y métricas del equipo Heritage. Gestiona los incentivos basados en la excelencia del servicio.'),
           ]),
-          h('button', { key: 'r', className: 'flex items-center gap-2 px-6 py-2.5 bg-surface border border-outline-variant text-primary hover:border-primary transition-colors rounded-lg', onClick: () => toast('Exportando reporte mensual…') }, [h(MS, { key: 'i', name: 'download', size: 18 }), h('span', { key: 's', className: 'text-overline font-bold uppercase tracking-widest' }, 'Reporte mensual')]),
+          h('div', { key: 'r', className: 'flex items-center gap-3' }, [
+            h('button', { key: 'rep', className: 'flex items-center gap-2 px-6 py-2.5 bg-surface border border-outline-variant text-primary hover:border-primary transition-colors rounded-lg', onClick: () => toast('Exportando reporte mensual…') }, [h(MS, { key: 'i', name: 'download', size: 18 }), h('span', { key: 's', className: 'text-overline font-bold uppercase tracking-widest' }, 'Reporte mensual')]),
+            h('button', { key: 'cm', className: 'flex items-center gap-2 px-6 py-2.5 bg-primary text-on-primary hover:opacity-90 transition-opacity rounded-lg disabled:opacity-40 disabled:cursor-not-allowed', disabled: !(totalComision > 0), onClick: cerrarMes }, [h(MS, { key: 'i', name: 'cash', size: 18 }), h('span', { key: 's', className: 'text-overline font-bold uppercase tracking-widest' }, 'Cerrar mes')]),
+          ]),
         ]),
         // Resumen
         h('section', { key: 'sum', className: 'grid grid-cols-1 md:grid-cols-3 gap-gutter mb-12' }, [
@@ -63,7 +78,7 @@
               h('span', { key: 'l', className: 'text-overline font-bold text-on-surface-variant uppercase tracking-[0.15em]' }, 'Comisiones por liquidar'),
               h('h3', { key: 'v', className: 'font-headline text-display text-primary mt-4' }, fmt(totalComision).replace('.00', '')),
             ]),
-            h('div', { key: 'd', className: 'mt-8 flex items-center text-on-surface-variant' }, [h(MS, { key: 'i', name: 'calendar', size: 18, className: 'mr-1' }), h('span', { key: 's', className: 'text-body' }, 'Próximo corte: 30 jun')]),
+            h('div', { key: 'd', className: 'mt-8 flex items-center text-on-surface-variant' }, [h(MS, { key: 'i', name: 'calendar', size: 18, className: 'mr-1' }), h('span', { key: 's', className: 'text-body' }, periodoLabel())]),
           ]),
           h('div', { key: 'c', className: 'bg-surface p-8 rounded-lg ' + SHADOW + ' flex flex-col justify-between' }, [
             h('div', { key: 't' }, [
@@ -155,6 +170,7 @@
 
   function SellerDetail({ s, onClose, onLiquidar }) {
     const ventas = D.sales.filter(v => v.vendedor === s.nombre);
+    const liqs = (D.liquidations || []).filter(l => l.sellerId === s.id);
     const pct = metaPct(s);
     const footer = [
       h('button', { key: 'l', className: 'inline-flex items-center gap-2 px-5 h-11 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-lg hover:opacity-90 transition disabled:opacity-30 disabled:cursor-not-allowed', disabled: !(s.comisionAcum > 0), onClick: onLiquidar }, [h(MS, { key: 'i', name: 'cash', size: 16 }), 'Liquidar comisión']),
@@ -182,6 +198,17 @@
           h('td', { key: 'k', className: 'px-3 py-2 text-right font-headline text-body text-gold-text' }, fmt(saleComm(v, s)).replace('.00', '')),
         ]))),
       ])) : h('div', { key: 'e', className: 'text-center text-on-surface-variant py-8' }, 'Sin ventas en el periodo'),
+      liqs.length ? h('div', { key: 'liq', className: 'mt-6' }, [
+        h('div', { key: 'hl', className: 'text-overline font-bold text-on-surface-variant uppercase tracking-widest mb-3' }, 'Liquidaciones recientes'),
+        h('div', { key: 'l', className: 'border border-outline-variant rounded-lg overflow-hidden divide-y divide-outline-variant' }, liqs.slice(0, 6).map(l => h('div', { key: l.id, className: 'flex items-center justify-between px-3 py-2.5' }, [
+          h('div', { key: 'd', className: 'flex items-center gap-2' }, [
+            h(MS, { key: 'i', name: l.tipo === 'corte' ? 'calendar' : 'cash', size: 16, className: 'text-on-surface-variant' }),
+            h('span', { key: 'f', className: 'text-body text-primary' }, l.fecha),
+            h('span', { key: 't', className: 'text-overline uppercase tracking-wider text-on-surface-variant' }, l.tipo === 'corte' ? '· Corte de mes' : '· Liquidación'),
+          ]),
+          h('span', { key: 'm', className: 'font-headline text-body text-gold-text' }, fmt(l.monto).replace('.00', '')),
+        ]))),
+      ]) : null,
     ]);
   }
 

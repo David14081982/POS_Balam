@@ -182,12 +182,15 @@
 
   const LS_SELLERS = 'balam_pos_sellers_v1', LS_CLIENTS = 'balam_pos_clients_v1',
         LS_SALES = 'balam_pos_sales_v1', LS_MOVES = 'balam_pos_moves_v1', LS_FOLIO = 'balam_pos_folio_v1',
-        LS_PROMOS = 'balam_pos_promos_v1';
+        LS_PROMOS = 'balam_pos_promos_v1', LS_LIQ = 'balam_pos_liq_v1', LS_PERIODO = 'balam_pos_periodo_v1';
   const sellers = loadArr(LS_SELLERS, seedSellers);
   const clients = loadArr(LS_CLIENTS, seedClients);
   const sales = loadArr(LS_SALES, seedSales);
   const movements = loadArr(LS_MOVES, seedMovements);
   const promos = loadArr(LS_PROMOS, seedPromos);
+  const liquidations = loadArr(LS_LIQ, []); // historial de pagos de comisión (corte/liquidación) — local
+  let periodoInicio = '';
+  try { periodoInicio = localStorage.getItem(LS_PERIODO) || ''; } catch (e) { /* sin storage */ }
 
   // Normaliza personas guardadas antes de unificar usuarios/vendedores.
   sellers.forEach(s => { if (!s.role) s.role = 'vendedor'; if (s.active === undefined) s.active = true; });
@@ -205,6 +208,7 @@
   function saveSales() { save(LS_SALES, sales); }       // ventas suben vía recordSale → STORE.pushSale
   function saveMovements() { save(LS_MOVES, movements); }
   function savePromos() { save(LS_PROMOS, promos); syncUp('promotions', promos); }
+  function saveLiquidations() { save(LS_LIQ, liquidations); } // historial local (no requiere tabla en nube)
   // Reemplaza un arreglo de dominio con datos de la nube (sin re-empujar).
   function applyRemote(kind, rows) {
     const M = { products: [products, saveProducts, hydrate], clients: [clients, saveClients], sellers: [sellers, saveSellers], sales: [sales, saveSales], movements: [movements, saveMovements], promotions: [promos, savePromos] };
@@ -301,16 +305,76 @@
     return sale;
   }
 
-  // Liquida (paga) la comisión acumulada de un vendedor: la pone en cero y persiste/sincroniza.
-  // Devuelve el monto liquidado (para el mensaje), o null si el vendedor no existe.
+  // Completa un apartado ya cobrado por completo: descuenta stock, acredita comisión/ventas al
+  // vendedor atribuido (base neto/bruto vigente AHORA) y marca la venta como Pagado. No re-agrega
+  // al cliente (los agregados se hicieron al crear el apartado). Idempotente: solo actúa si está Apartado.
+  function completarApartado(folio) {
+    const sale = sales.find(s => s.folio === folio);
+    if (!sale || sale.estado !== 'Apartado') return null;
+    const fecha2 = now();
+    // 1) Stock + movimientos (no se hicieron al apartar)
+    (sale.lineas || []).forEach(l => {
+      const p = products.find(x => x.sku === l.sku);
+      if (p) { const e = (p.stock || []).find(v => v.talla === l.talla); if (e) e.stock = Math.max(0, e.stock - l.qty); }
+      movements.unshift({ fecha: fecha2, tipo: 'Venta', producto: l.nombre, sku: l.sku, cant: -l.qty, ref: folio });
+    });
+    saveProducts(); saveMovements();
+    // 2) Comisión + ventas a los vendedores atribuidos
+    const ids = sale.vendedores || [];
+    let comisionVenta = 0;
+    if (ids.length) {
+      const share = (Number(sale.total) || 0) / ids.length;
+      const ivaPct = Number(window.CONFIG.get('tax.ivaPct')) || 0;
+      const incl = !!window.CONFIG.get('tax.included');
+      const neto = incl ? share / (1 + ivaPct / 100) : share;
+      const bruto = incl ? share : share * (1 + ivaPct / 100);
+      const base = window.CONFIG.get('commission.base') === 'bruto' ? bruto : neto;
+      ids.forEach(id => {
+        const s = sellers.find(x => x.id === id);
+        if (s) { const c = base * (s.comisionPct || 0) / 100; comisionVenta += c; s.ventasMes = (s.ventasMes || 0) + share; s.ventasNum = (s.ventasNum || 0) + 1; s.comisionAcum = (s.comisionAcum || 0) + c; }
+      });
+      saveSellers();
+    }
+    // 3) Marcar pagada y guardar la comisión real
+    sale.estado = 'Pagado';
+    sale.comision = Math.round(comisionVenta * 100) / 100;
+    sale.comisionBase = window.CONFIG.get('commission.base') || 'neto';
+    saveSales();
+    if (window.STORE && window.STORE.pushSale) { try { window.STORE.pushSale(sale); } catch (e) { /* offline */ } }
+    return sale;
+  }
+
+  // Registra un pago de comisión en el historial (local).
+  function addLiquidacion(s, monto, tipo) {
+    liquidations.unshift({ id: 'liq-' + Date.now() + '-' + s.id, fecha: now(), sellerId: s.id, seller: s.nombre, monto: Math.round((Number(monto) || 0) * 100) / 100, tipo });
+    saveLiquidations();
+  }
+  // Liquida (paga) la comisión acumulada de un vendedor: la registra en el historial, la pone en
+  // cero y persiste/sincroniza. Devuelve el monto liquidado, o null si el vendedor no existe.
   function liquidarComision(id) {
     const s = sellers.find(x => x.id === id);
     if (!s) return null;
     const monto = Number(s.comisionAcum) || 0;
+    if (monto > 0) addLiquidacion(s, monto, 'liquidacion');
     s.comisionAcum = 0;
     saveSellers();
     return monto;
   }
+  // Corte de mes: paga la comisión pendiente de TODOS los vendedores y reinicia los acumulados del
+  // periodo (ventasMes, ventasNum, comisionAcum). metaMes NO se toca. Marca el inicio del nuevo periodo.
+  function cerrarMes() {
+    let total = 0, n = 0;
+    sellers.forEach(s => {
+      const pend = Number(s.comisionAcum) || 0;
+      if (pend > 0) { addLiquidacion(s, pend, 'corte'); total += pend; n++; }
+      s.comisionAcum = 0; s.ventasMes = 0; s.ventasNum = 0;
+    });
+    periodoInicio = now().slice(0, 10);
+    try { localStorage.setItem(LS_PERIODO, periodoInicio); } catch (e) { /* sin storage */ }
+    saveSellers();
+    return { total: Math.round(total * 100) / 100, vendedores: n, periodoInicio };
+  }
+  function getPeriodoInicio() { return periodoInicio; }
 
   // ---- Usuarios (= personas en sellers; admin y/o vendedor) ----
   function addUser(u) {
@@ -379,10 +443,11 @@
   }
 
   window.DATA = {
-    products, sellers, clients, sales, movements, promos,
+    products, sellers, clients, sales, movements, promos, liquidations,
     sku, totalStock, hydrate, mkStock, emptyStock,
     saveProducts, saveSellers, saveClients, saveSales, saveMovements, savePromos,
     recordSale, nextFolio, stockOf, resetProducts, applyRemote, liquidarComision,
+    completarApartado, cerrarMes, getPeriodoInicio,
     addUser, updateUser, removeUser,
     addPromo, updatePromo, removePromo, duplicatePromo,
   };
