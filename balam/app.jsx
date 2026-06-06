@@ -79,6 +79,9 @@
     const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
     const [page, setPage] = useState(() => localStorage.getItem('balam-page') || 'dashboard');
     useEffect(() => { localStorage.setItem('balam-page', page); }, [page]);
+    // Sidebar colapsable (mini-variant): persiste entre sesiones.
+    const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem('balam-sidebar') === '1'; } catch (e) { return false; } });
+    useEffect(() => { try { localStorage.setItem('balam-sidebar', collapsed ? '1' : '0'); } catch (e) { /* */ } }, [collapsed]);
     // Auth real (Supabase) + nube. Solo una sesión autenticada sincroniza pos.* (RLS).
     const [, bumpCfg] = useState(0);
     useEffect(() => {
@@ -111,15 +114,19 @@
 
     return h('div', { className: 'flex h-full bg-background font-body text-on-surface' }, [
       // ---------- Sidebar ----------
-      h('aside', { key: 'sb', className: 'w-64 shrink-0 flex flex-col py-4', style: { background: '#131B2E' } }, [
-        h('div', { key: 'br', className: 'px-6 mb-8 mt-2 flex items-center gap-3' }, [
-          h('div', { key: 'm', className: 'w-9 h-9 rounded-lg grid place-items-center shrink-0 overflow-hidden', style: { background: '#1C2437', color: '#FFE088' } },
-            window.CONFIG.get('store.logo') ? h('img', { src: window.CONFIG.get('store.logo'), className: 'w-full h-full object-cover' }) : h(JaguarMark, { size: 22 })),
-          h('div', { key: 'n' }, [
-            h('div', { key: 'a', className: 'font-headline text-[18px] text-white leading-none' }, 'Balam'),
-            h('div', { key: 'b', className: 'text-[10px] uppercase tracking-widest mt-1', style: { color: '#5D637B' } }, 'Artisanal Heritage'),
-          ]),
-        ]),
+      h('aside', { key: 'sb', className: 'shrink-0 flex flex-col py-4 overflow-hidden', style: { background: '#131B2E', width: collapsed ? 64 : 256, transition: 'width .25s ease' } }, [
+        h('div', { key: 'br', className: 'mb-8 mt-2 flex items-center gap-3 ' + (collapsed ? 'px-2 justify-center' : 'px-5') },
+          collapsed
+            ? [h('button', { key: 'tg', onClick: () => setCollapsed(false), title: 'Expandir menú', className: 'w-10 h-10 rounded-lg grid place-items-center shrink-0 transition-colors', style: { color: '#5D637B' }, onMouseEnter: e => e.currentTarget.style.background = '#1C2437', onMouseLeave: e => e.currentTarget.style.background = 'transparent' }, h(MS, { name: 'chevRight', size: 22 }))]
+            : [
+              h('div', { key: 'm', className: 'w-9 h-9 rounded-lg grid place-items-center shrink-0 overflow-hidden', style: { background: '#1C2437', color: '#FFE088' } },
+                window.CONFIG.get('store.logo') ? h('img', { src: window.CONFIG.get('store.logo'), className: 'w-full h-full object-cover' }) : h(JaguarMark, { size: 22 })),
+              h('div', { key: 'n', className: 'flex-1 min-w-0' }, [
+                h('div', { key: 'a', className: 'font-headline text-[18px] text-white leading-none truncate' }, 'Balam'),
+                h('div', { key: 'b', className: 'text-[10px] uppercase tracking-widest mt-1 truncate', style: { color: '#5D637B' } }, 'Artisanal Heritage'),
+              ]),
+              h('button', { key: 'tg', onClick: () => setCollapsed(true), title: 'Colapsar menú', className: 'w-8 h-8 rounded-lg grid place-items-center shrink-0 transition-colors', style: { color: '#5D637B' }, onMouseEnter: e => e.currentTarget.style.background = '#1C2437', onMouseLeave: e => e.currentTarget.style.background = 'transparent' }, h(MS, { name: 'chevLeft', size: 20 })),
+            ]),
         h('nav', { key: 'nav', className: 'flex-1 px-3 flex flex-col gap-1' },
           NAV.map(n => {
             const active = page === n.id;
@@ -127,7 +134,7 @@
             const locked = n.admin && !isAdmin && REQUIRE_AUTH;
             return h('button', {
               key: n.id,
-              className: 'flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors text-left ' + (active ? 'font-semibold' : ''),
+              className: 'flex items-center gap-3 py-2.5 rounded-lg transition-colors text-left ' + (collapsed ? 'justify-center px-0 ' : 'px-4 ') + (active ? 'font-semibold' : ''),
               style: active ? { background: '#1C2437', color: '#FFE088' } : { color: '#5D637B' },
               onMouseEnter: e => { if (!active) e.currentTarget.style.background = '#1C2437'; },
               onMouseLeave: e => { if (!active) e.currentTarget.style.background = 'transparent'; },
@@ -135,32 +142,32 @@
               title: locked ? 'Requiere iniciar sesión como administrador' : n.label,
             }, [
               h(MS, { key: 'i', name: n.icon, size: 20, fill: active }),
-              h('span', { key: 'l', className: 'flex-1 text-sm' }, n.label),
-              locked && h(MS, { key: 'lk', name: 'lock', size: 14, style: { color: '#5D637B' } }),
-              !locked && badge && h('span', { key: 'b', className: 'px-1.5 py-0.5 text-[10px] font-bold rounded', style: { background: '#131B2E', color: active ? '#FFE088' : '#5D637B' } }, badge),
+              !collapsed && h('span', { key: 'l', className: 'flex-1 text-sm' }, n.label),
+              !collapsed && locked && h(MS, { key: 'lk', name: 'lock', size: 14, style: { color: '#5D637B' } }),
+              !collapsed && !locked && badge && h('span', { key: 'b', className: 'px-1.5 py-0.5 text-[10px] font-bold rounded', style: { background: '#131B2E', color: active ? '#FFE088' : '#5D637B' } }, badge),
             ]);
           })),
         h('div', { key: 'cta', className: 'px-3 mt-2' },
           h('button', {
             className: 'w-full flex items-center justify-center gap-2 py-3 font-label-sm uppercase tracking-widest text-xs rounded-lg active:scale-95 transition-all hover:opacity-90',
             style: { background: '#FFE088', color: '#131B2E' },
-            onClick: () => setPage('pos'),
-          }, [h(MS, { key: 'i', name: 'add', size: 18 }), 'Nueva venta'])),
+            onClick: () => setPage('pos'), title: 'Nueva venta',
+          }, collapsed ? [h(MS, { key: 'i', name: 'add', size: 20 })] : [h(MS, { key: 'i', name: 'add', size: 18 }), 'Nueva venta'])),
         h('div', { key: 'foot', className: 'px-3 mt-4 pt-4', style: { borderTop: '1px solid #1C2437' } },
           h('button', {
-            className: 'w-full flex items-center gap-3 px-2 py-1.5 rounded-lg transition-colors',
+            className: 'w-full flex items-center gap-3 py-1.5 rounded-lg transition-colors ' + (collapsed ? 'justify-center px-0' : 'px-2'),
             onMouseEnter: e => { e.currentTarget.style.background = '#1C2437'; },
             onMouseLeave: e => { e.currentTarget.style.background = 'transparent'; },
             onClick: () => { if (isAdmin) window.AUTH.logout(); },
             title: isAdmin ? 'Cerrar sesión' : 'Modo local',
           }, [
-            h('div', { key: 'a', className: 'w-9 h-9 rounded-full grid place-items-center text-xs font-bold', style: { background: isAdmin ? '#FFE088' : '#1C2437', color: isAdmin ? '#131B2E' : '#5D637B' } },
+            h('div', { key: 'a', className: 'w-9 h-9 rounded-full grid place-items-center text-xs font-bold shrink-0', style: { background: isAdmin ? '#FFE088' : '#1C2437', color: isAdmin ? '#131B2E' : '#5D637B' } },
               isAdmin ? (admin.iniciales || 'JB') : h(MS, { name: 'user', size: 18 })),
-            h('div', { key: 'm', className: 'flex-1 text-left min-w-0' }, [
+            !collapsed && h('div', { key: 'm', className: 'flex-1 text-left min-w-0' }, [
               h('div', { key: 'n', className: 'text-sm font-medium text-white truncate' }, isAdmin ? admin.nombre : 'Modo local'),
               h('div', { key: 'r', className: 'text-[10px] uppercase tracking-widest', style: { color: '#5D637B' } }, isAdmin ? 'Administrador' : 'Sin candado'),
             ]),
-            h(MS, { key: 'i', name: isAdmin ? 'logout' : 'arrowUpRight', size: 18, style: { color: '#5D637B' } }),
+            !collapsed && h(MS, { key: 'i', name: isAdmin ? 'logout' : 'arrowUpRight', size: 18, style: { color: '#5D637B' } }),
           ])),
       ]),
       // ---------- Contenido ----------
