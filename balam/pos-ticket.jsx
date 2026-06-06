@@ -159,7 +159,7 @@
           onClick: () => setMetodo(m.id),
         }, [
           h(MS, { key: 'i', name: m.icon, size: 22, fill: metodo === m.id }),
-          h('span', { key: 't', className: 'text-caption uppercase' }, m.id),
+          h('span', { key: 't', className: 'text-[9px] leading-none tracking-tight uppercase w-full text-center truncate', title: m.id }, m.id),
         ]))),
       metodo === 'Efectivo' && h('div', { key: 'efe' }, [
         h('div', { key: 'l', className: lbl }, 'Efectivo recibido'),
