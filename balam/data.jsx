@@ -153,8 +153,9 @@
   sellers.forEach(s => { if (!s.role) s.role = 'vendedor'; if (s.active === undefined) s.active = true; });
   if (!sellers.some(s => s.role === 'admin')) sellers.unshift(seedSellers[0]);
 
-  let quotaWarned = false;
+  let quotaWarned = false, bulkMode = false; // bulkMode: omite escrituras por-llamada durante una generación masiva
   const save = (key, arr) => {
+    if (bulkMode) return; // se persiste todo de una vez al final (ver seedDemo)
     try { localStorage.setItem(key, JSON.stringify(arr)); }
     catch (e) {
       // Cuota de localStorage excedida (típico con muchas imágenes en base64): avisar una vez.
@@ -213,9 +214,9 @@
 
   // Registra una venta: descuenta stock, mueve inventario, actualiza cliente y vendedores.
   // ticket: [{ p, talla, qty }], sellerIds: [id], client: obj, metodo, estado, total, itemCount.
-  function recordSale({ ticket, sellerIds, client, metodo, estado, total, itemCount }) {
+  function recordSale({ ticket, sellerIds, client, metodo, estado, total, itemCount, fecha: fechaIn }) {
     const folio = nextFolio();
-    const fecha = now();
+    const fecha = fechaIn || now(); // permite fecha pasada (simulación)
     const cobrada = estado !== 'Apartado' && estado !== 'Cancelado';
     // 1) Descuento de stock + movimientos (solo si la venta se cobró/entregó)
     if (cobrada) {
@@ -269,7 +270,7 @@
     };
     sales.unshift(sale);
     saveSales();
-    if (window.STORE && window.STORE.pushSale) { try { window.STORE.pushSale(sale); } catch (e) { /* offline */ } }
+    if (!remoteApplying && window.STORE && window.STORE.pushSale) { try { window.STORE.pushSale(sale); } catch (e) { /* offline */ } }
     return sale;
   }
 
@@ -361,7 +362,7 @@
   // del vendedor en proporción a lo devuelto (si returns.reverseCommission), ajusta el total del
   // cliente, marca la venta original (Devuelto / Devolución parcial) y sincroniza.
   // arg: { folio, lineas:[{sku,nombre,talla,qty,motivo,precio}], metodo, notas }
-  function recordReturn({ folio, lineas, metodo, notas }) {
+  function recordReturn({ folio, lineas, metodo, notas, fecha: fechaIn }) {
     const sale = sales.find(s => s.folio === folio);
     if (!sale) return { ok: false, error: 'No se encontró la venta original' };
     if (!isReturnable(sale)) return { ok: false, error: 'Esa venta no admite devolución (apartado, cancelada o ya devuelta)' };
@@ -373,8 +374,8 @@
       const prev = returnedQty(folio, l.sku, l.talla);
       if ((Number(l.qty) || 0) > sold - prev) return { ok: false, error: `Cantidad inválida en ${l.nombre} (talla ${l.talla})` };
     }
-    const fecha = now();
-    const id = 'ret-' + Date.now();
+    const fecha = fechaIn || now(); // permite fecha pasada (simulación)
+    const id = 'ret-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
     // 1) Reingreso de stock + movimiento 'Devolución' (cant positiva)
     items.forEach(l => {
       const p = products.find(x => x.sku === l.sku);
@@ -415,7 +416,7 @@
     });
     sale.estado = allReturned ? 'Devuelto' : 'Devolución parcial';
     saveSales();
-    if (window.STORE && window.STORE.pushSale) { try { window.STORE.pushSale(sale); } catch (e) { /* offline */ } }
+    if (!remoteApplying && window.STORE && window.STORE.pushSale) { try { window.STORE.pushSale(sale); } catch (e) { /* offline */ } }
     // 6) Registro de la devolución (al frente = más reciente) + sincronización
     const ret = {
       id, folio, fecha, cliente: sale.cliente, vendedores: ids.slice(),
@@ -424,7 +425,7 @@
     };
     returns.unshift(ret);
     saveReturns();
-    if (window.STORE && window.STORE.pushReturn) { try { window.STORE.pushReturn(ret); } catch (e) { /* offline */ } }
+    if (!remoteApplying && window.STORE && window.STORE.pushReturn) { try { window.STORE.pushReturn(ret); } catch (e) { /* offline */ } }
     return { ok: true, ret };
   }
 
@@ -494,6 +495,132 @@
     return products;
   }
 
+  // ── Simulación de demostración (LOCAL-ONLY: nunca toca la nube) ─────────────────
+  // Genera catálogo, clientes, vendedores y ~300 ventas (+ devoluciones) PASADAS por el
+  // motor real, así TODO lo calculado (stock, comisiones, totales, reportes) se deriva solo.
+  // Durante toda la operación remoteApplying=true ⇒ no sincroniza nada.
+  const LS_DEMO = 'balam_demo';
+  function demoActive() { try { return localStorage.getItem(LS_DEMO) === '1'; } catch (e) { return false; } }
+  const rawSave = (key, arr) => { try { localStorage.setItem(key, JSON.stringify(arr)); } catch (e) { /* cuota */ } };
+  function persistAllLocal() {
+    rawSave(LS_KEY, products); rawSave(LS_CLIENTS, clients); rawSave(LS_SELLERS, sellers);
+    rawSave(LS_SALES, sales); rawSave(LS_MOVES, movements); rawSave(LS_RETURNS, returns);
+    rawSave(LS_PROMOS, promos); rawSave(LS_LIQ, liquidations);
+  }
+  function clearAllLocal() {
+    products.length = 0; sales.length = 0; movements.length = 0; returns.length = 0;
+    promos.length = 0; liquidations.length = 0;
+    clients.length = 0; seedClients.forEach(c => clients.push(JSON.parse(JSON.stringify(c)))); // solo el genérico
+    sellers.length = 0; seedSellers.forEach(s => sellers.push(JSON.parse(JSON.stringify(s)))); // solo el admin
+    try { localStorage.removeItem(LS_FOLIO); localStorage.removeItem(LS_PERIODO); } catch (e) { /* */ }
+    periodoInicio = '';
+  }
+
+  // Vacía a estado de producción (sin datos). Local-only.
+  function resetEmpty() {
+    remoteApplying = true;
+    try { clearAllLocal(); persistAllLocal(); try { localStorage.removeItem(LS_DEMO); } catch (e) { /* */ } }
+    finally { remoteApplying = false; }
+    return true;
+  }
+
+  function seedDemo() {
+    remoteApplying = true; bulkMode = true; // LOCAL-ONLY y rápido (persiste al final)
+    try {
+      clearAllLocal();
+      const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+      const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+      const C2 = window.CONFIG, p2 = n => String(n).padStart(2, '0');
+      const cats = C2.codes('category'), colors = C2.codes('color'), telas = C2.codes('fabric'),
+        mangas = C2.codes('sleeve'), cuellos = C2.codes('neck'), orns = C2.codes('ornament');
+      const NOMS = ['Tira Red', 'Panal Tadeo', 'Presidencial', 'Clásica Lisa', 'Hexágonos', 'Café Capuchino',
+        'Rombitos', 'Alforza Doble', 'Líneas Cruzadas', 'Pirámide', 'Manta Lisa', 'Esferas Doradas',
+        'Nuditos', 'Pestañas Finas', 'Marino', 'Crucecitas', 'Moñitos', 'Serpiente', 'Capuchino',
+        'Bordado Real', 'Tira X', 'Alforza Ancha', 'Doble Línea', 'Heritage'];
+
+      // 1) Productos (~24) con stock en tallas centrales
+      for (let i = 0; i < 24; i++) {
+        const letras = SIZES_LETRA().map((_, k) => (k >= 1 && k <= 6 ? rnd(0, 14) : 0));
+        const nums = (Math.random() < 0.35) ? SIZES_NUM().map((_, k) => (k >= 2 && k <= 7 ? rnd(0, 10) : 0)) : [];
+        products.push(hydrate({
+          id: 'dp' + i, cat: pick(cats), manga: pick(mangas), tela: pick(telas), color: pick(colors),
+          cuello: pick(cuellos), modelo: String(100 + i), nombre: NOMS[i % NOMS.length],
+          orn: (orns && orns.length ? pick(orns) : '—'), ornColors: [], precio: rnd(8, 28) * 50,
+          pop: Math.random() < 0.25, stock: mkStock(letras, nums),
+        }));
+      }
+
+      // 2) Clientes (8) — el genérico ya está; con fecha de nacimiento (para cumpleaños)
+      const CNOMS = ['José Luis Aguilar', 'María Fernanda Rosado', 'Carlos Manuel Uc', 'Ana Patricia Canul',
+        'Roberto Sansores', 'Gabriela Couoh', 'Luis Ángel Pat', 'Diana Carolina Be'];
+      const TL = SIZES_LETRA();
+      CNOMS.forEach((nombre, i) => {
+        const by = rnd(1975, 2002), bm = rnd(1, 12), bd = rnd(1, 28);
+        clients.push({ id: 'dc' + i, nombre, tel: `999 ${rnd(100, 999)} ${rnd(1000, 9999)}`, compras: 0, total: 0,
+          ultima: '', talla: (TL.length ? pick(TL) : 'M'), notas: '', email: '',
+          nacimiento: `${by}-${p2(bm)}-${p2(bd)}` });
+      });
+
+      // 3) Vendedores (4) — el admin ya está
+      [['Rocío Méndez', '#b8f040'], ['Iván Castro', '#3b82f6'], ['Diana Pérez', '#f59e0b'], ['Mateo Ríos', '#ef4444']]
+        .forEach(([nombre, color], i) => sellers.push({ id: 'ds' + i, nombre, iniciales: iniDe(nombre), color,
+          comisionPct: rnd(4, 6), metaMes: rnd(30, 50) * 5000, ventasMes: 0, ventasNum: 0, comisionAcum: 0,
+          bono: 'Sin bono', role: 'vendedor', email: null, passwordHash: null, active: true }));
+
+      const realClients = clients.filter(c => !c.generic);
+      const realSellers = sellers.filter(s => s.role === 'vendedor');
+      const generico = clients.find(c => c.generic);
+      const metodos = (C2.codes('payment_method') || []).length ? C2.codes('payment_method') : ['Efectivo', 'Tarjeta', 'Transferencia'];
+
+      // 4) ~300 ventas en 90 días — fechas ascendentes (folios alineados a la fecha)
+      const dates = [];
+      for (let i = 0; i < 300; i++) { const d = new Date(); d.setDate(d.getDate() - Math.floor(Math.random() * 90)); d.setHours(rnd(9, 20), rnd(0, 59), 0, 0); dates.push(d); }
+      dates.sort((a, b) => a - b);
+      dates.forEach(d => {
+        const fecha = `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}`;
+        const r = Math.random();
+        const estado = r < 0.05 ? 'Cancelado' : r < 0.13 ? 'Apartado' : 'Pagado';
+        const seller = pick(realSellers);
+        const client = (Math.random() < 0.4 && generico) ? generico : pick(realClients);
+        const ticket = [];
+        for (let k = 0, n = rnd(1, 3); k < n; k++) {
+          const p = pick(products);
+          const avail = (p.stock || []).filter(v => v.stock > 0);
+          if (!avail.length) continue;
+          const v = pick(avail);
+          if (ticket.some(t => t.p.id === p.id && t.talla === v.talla)) continue;
+          ticket.push({ p, talla: v.talla, qty: Math.min(rnd(1, 3), v.stock) });
+        }
+        if (!ticket.length) return;
+        const total = ticket.reduce((a, t) => a + (Number(t.p.precio) || 0) * t.qty, 0);
+        const itemCount = ticket.reduce((a, t) => a + t.qty, 0);
+        recordSale({ ticket, sellerIds: [seller.id], client, metodo: pick(metodos), estado, total, itemCount, fecha });
+      });
+
+      // 5) Devoluciones (~6% de ventas pagadas con líneas)
+      const reasons = (C2.codes('return_reason') || []).length ? C2.codes('return_reason') : ['Talla', 'Defecto'];
+      const pagadas = sales.filter(s => s.estado === 'Pagado' && (s.lineas || []).length);
+      const nRet = Math.round(pagadas.length * 0.06);
+      for (let i = 0; i < nRet && pagadas.length; i++) {
+        const s = pick(pagadas);
+        const linea = pick(s.lineas);
+        const sd = new Date(String(s.fecha).replace(' ', 'T')); sd.setDate(sd.getDate() + rnd(1, 10));
+        if (sd > new Date()) continue;
+        const fecha = `${sd.getFullYear()}-${p2(sd.getMonth() + 1)}-${p2(sd.getDate())} ${p2(rnd(9, 19))}:${p2(rnd(0, 59))}`;
+        recordReturn({ folio: s.folio, lineas: [{ sku: linea.sku, nombre: linea.nombre, talla: linea.talla, qty: 1, motivo: pick(reasons), precio: linea.precio }], metodo: s.metodo, fecha });
+      }
+
+      // 6) Orden por fecha desc para listados + persistir local
+      sales.sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
+      movements.sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
+      returns.sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
+      bulkMode = false;
+      persistAllLocal();
+      try { localStorage.setItem(LS_DEMO, '1'); } catch (e) { /* */ }
+    } finally { remoteApplying = false; bulkMode = false; }
+    return { products: products.length, clients: clients.length, sellers: sellers.length, sales: sales.length, returns: returns.length };
+  }
+
   window.DATA = {
     products, sellers, clients, sales, movements, promos, liquidations, returns,
     sku, totalStock, hydrate, mkStock, emptyStock,
@@ -503,6 +630,7 @@
     recordReturn, returnedQty, returnsForFolio, isReturnable,
     addUser, updateUser, removeUser,
     addPromo, updatePromo, removePromo, duplicatePromo,
+    seedDemo, resetEmpty, demoActive,
   };
   // Catálogos retrocompatibles: D.CAT[code], Object.entries(D.TELA), D.SIZES_LETRA, …
   // ahora se resuelven EN VIVO desde CONFIG en cada acceso (reflejan ediciones del admin).

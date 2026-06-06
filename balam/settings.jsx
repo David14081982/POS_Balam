@@ -19,6 +19,7 @@
     { id: 'inventario', label: 'Inventario', icon: 'box' },
     { id: 'impresion', label: 'Impresión', icon: 'print' },
     { id: 'usuarios', label: 'Usuarios', icon: 'users' },
+    { id: 'demo', label: 'Datos de demostración', icon: 'star' },
   ];
 
   const TONE_OPTS = ['success', 'warning', 'info', 'danger', 'neutral', 'gold'];
@@ -331,7 +332,44 @@
         ]),
       ];
     },
+    demo: () => [h(DemoPanel, { key: 'demo' })],
   };
+
+  // ── Panel: datos de demostración (simulación local para pruebas) ───────────────
+  function DemoPanel() {
+    const [busy, setBusy] = useState(false);
+    const active = D.demoActive();
+    function generar() {
+      if (!window.confirm('¿Generar la SIMULACIÓN de demostración?\n\nReemplaza los datos actuales por ~24 productos, 8 clientes, 4 vendedores y ~300 ventas de los últimos 90 días (con devoluciones). Todo se calcula con el motor real.\n\nEs LOCAL: NO toca tu base en la nube. Úsalo SIN iniciar sesión.')) return;
+      setBusy(true);
+      setTimeout(() => { const r = D.seedDemo(); toast(`Simulación lista: ${r.sales} ventas · ${r.products} productos · ${r.returns} devoluciones`, 'var(--accent)'); setTimeout(() => location.reload(), 700); }, 30);
+    }
+    function limpiar() {
+      if (!window.confirm('¿Limpiar TODO y volver al estado vacío de producción?\n\nBorra productos, clientes, ventas, devoluciones, etc. de este dispositivo. No se puede deshacer.')) return;
+      D.resetEmpty();
+      toast('Datos vaciados — estado de producción', 'var(--accent)');
+      setTimeout(() => location.reload(), 600);
+    }
+    return [
+      active && h('div', { key: 'badge', className: 'inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gold-soft text-gold-text text-overline font-bold uppercase tracking-widest w-fit' }, [h(MS, { key: 'i', name: 'star', size: 14, fill: true }), 'Modo demostración activo']),
+      h(GlassCard, { key: 'c', className: 'p-6' }, [
+        h(SerifHeading, { key: 't', className: 'mb-2', children: 'Simulación de datos' }),
+        h('p', { key: 'd', className: 'text-body text-on-surface-variant leading-relaxed mb-5' }, 'Genera una operación ficticia completa (productos, clientes, vendedores y ~300 ventas de 90 días, con devoluciones) para PROBAR reportes, comisiones, inventario y devoluciones con números REALES — todo se calcula con el motor del sistema, nada está inventado. Ideal para demostraciones.'),
+        h('div', { key: 'b', className: 'flex flex-wrap gap-3' }, [
+          h('button', { key: 'g', disabled: busy, className: 'inline-flex items-center gap-2 px-5 h-11 bg-primary text-on-primary font-label-sm uppercase tracking-widest text-caption rounded-lg hover:opacity-90 transition disabled:opacity-50', onClick: generar }, [h(MS, { key: 'i', name: busy ? 'clock' : 'star', size: 16 }), busy ? 'Generando…' : 'Generar simulación']),
+          h('button', { key: 'r', className: 'inline-flex items-center gap-2 px-5 h-11 border border-outline-variant text-danger font-label-sm uppercase tracking-widest text-caption rounded-lg hover:bg-danger-soft hover:border-danger/30 transition', onClick: limpiar }, [h(MS, { key: 'i', name: 'trash', size: 16 }), 'Limpiar / Resetear a vacío']),
+        ]),
+      ]),
+      h(GlassCard, { key: 'w', className: 'p-5 border-l-4 border-l-gold' }, [
+        h('div', { key: 'h', className: 'flex items-center gap-2 mb-2' }, [h(MS, { key: 'i', name: 'alert', size: 18, className: 'text-gold-text' }), h('span', { key: 't', className: 'text-overline font-bold uppercase tracking-widest text-primary' }, 'Importante')]),
+        h('ul', { key: 'l', className: 'text-caption text-on-surface-variant leading-relaxed list-disc pl-5 space-y-1' }, [
+          h('li', { key: '1' }, 'La simulación es LOCAL: se guarda solo en este navegador y NO se sube a tu Supabase de producción.'),
+          h('li', { key: '2' }, 'Para demos, comparte la app y úsala SIN iniciar sesión (con sesión, la app podría sincronizar y mezclar datos).'),
+          h('li', { key: '3' }, 'Cuando termines de probar, usa “Limpiar / Resetear a vacío” para volver al estado de producción.'),
+        ]),
+      ]),
+    ];
+  }
 
   // ---------- Pantalla: alta/edición de usuario (admin agrega admin o vendedor) ----------
   function NewUserForm({ user, onCancel, onSaved }) {

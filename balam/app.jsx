@@ -168,6 +168,7 @@
         // Topbar
         h('header', { key: 'tb', className: 'h-16 shrink-0 flex items-center gap-4 px-6 bg-surface/80 backdrop-blur-md border-b border-outline-variant' }, [
           h('h1', { key: 't', className: 'font-headline text-headline-md text-primary' }, TITLES[page]),
+          D.demoActive && D.demoActive() && h('span', { key: 'demo', className: 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gold-soft text-gold-text text-overline font-bold uppercase tracking-widest', title: 'Datos de demostración (local, no afecta producción)' }, [h(MS, { key: 'i', name: 'star', size: 13, fill: true }), 'Demo']),
           h('div', { key: 's', className: 'flex-1' }),
           page !== 'pos' && h('button', {
             key: 'pos', className: 'inline-flex items-center gap-2 px-4 h-10 bg-secondary-container text-on-secondary-container font-label-sm uppercase tracking-widest text-xs rounded-lg hover:opacity-90 transition',
