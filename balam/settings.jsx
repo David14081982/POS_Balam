@@ -317,7 +317,9 @@
             h('thead', { key: 'h' }, h('tr', { className: 'text-left border-b border-outline-variant' }, ['Usuario', 'Rol', 'Estado', ''].map((x, i) => h('th', { key: i, className: 'px-5 py-3 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest' }, x)))),
             h('tbody', { key: 'b', className: 'divide-y divide-outline-variant/40' }, D.sellers.map(s => h('tr', { key: s.id, className: s.active === false ? 'opacity-50' : '' }, [
               h('td', { key: 'n', className: 'px-5 py-3' }, h('div', { className: 'flex items-center gap-3' }, [
-                h('span', { key: 'a', className: 'w-8 h-8 rounded-full grid place-items-center text-overline font-bold text-white', style: { background: s.color } }, s.iniciales),
+                s.avatar
+                  ? h('img', { key: 'a', src: s.avatar, className: 'w-8 h-8 rounded-full object-cover shrink-0' })
+                  : h('span', { key: 'a', className: 'w-8 h-8 rounded-full grid place-items-center text-overline font-bold text-white shrink-0', style: { background: s.color } }, s.iniciales),
                 h('div', { key: 'd' }, [h('div', { key: 'nm', className: 'font-medium text-primary' }, s.nombre), s.email && h('div', { key: 'em', className: 'text-overline text-on-surface-variant' }, s.email)]),
               ])),
               h('td', { key: 'r', className: 'px-5 py-3' }, h('span', { className: 'px-2 py-1 text-overline font-bold rounded ' + (s.role === 'admin' ? 'bg-primary-container text-on-primary-container' : 'bg-surface-container text-on-surface-variant') }, roleLabel(s.role))),
