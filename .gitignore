@@ -1,0 +1,21 @@
+# Dependencias
+node_modules/
+
+# Temporales del build de Tailwind (build-offline.mjs)
+.tw.config.cjs
+.tw.in.css
+.tw.out.css
+
+# Logs
+*.log
+
+# Artefactos generados (no versionar)
+repomix-output.xml
+
+# Config local de Claude (no subir al repo)
+.claude/
+
+# Artefactos locales de Windows / respaldos
+.thumbnail
+*.lnk
+*.BACKUP.html
