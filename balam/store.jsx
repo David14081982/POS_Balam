@@ -94,8 +94,21 @@
       if (op.type === 'delete') { const r = await c.from(op.table).delete().eq(op.col, op.val); return !r.error; }
       if (op.type === 'config') {
         const a = await c.from('lookup').upsert(op.lookup, { onConflict: 'kind,code' });
+        if (a.error) return false;
+        // Reconciliar borrados: el upsert NO elimina filas. Quita de pos.lookup lo que ya no está en
+        // local (categorías/atributos/catálogos borrados); sin esto "revivían" en el siguiente pull.
+        // Guard op.lookup.length: nunca vaciar la tabla por un estado vacío accidental.
+        if (op.lookup.length) {
+          const cur = await c.from('lookup').select('kind,code');
+          if (!cur.error && cur.data) {
+            const keep = new Set(op.lookup.map(r => r.kind + ' ' + r.code));
+            for (const r of cur.data) {
+              if (!keep.has(r.kind + ' ' + r.code)) await c.from('lookup').delete().eq('kind', r.kind).eq('code', r.code);
+            }
+          }
+        }
         const b = await c.from('settings').upsert(op.settings, { onConflict: 'key' });
-        return !a.error && !b.error;
+        return !b.error;
       }
       if (op.type === 'sale') {
         const s = await c.from('sales').upsert([op.header], { onConflict: 'folio' }); if (s.error) return false;
