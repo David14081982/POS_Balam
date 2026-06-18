@@ -27,11 +27,14 @@
   const StockPill = ({ n }) => h(window.UI.StockBadge, { n });
 
   function Segment({ value, onChange, options }) {
-    return h('div', { className: 'flex p-1 bg-surface-container rounded-lg border border-outline-variant' },
+    // overflow-x-auto + no-scrollbar: cuando hay muchas opciones (catálogo ilimitado), la fila se
+    // desliza en horizontal en vez de romper el ancho. shrink-0/whitespace-nowrap: los botones
+    // conservan su tamaño (no se comprimen ni parten el texto en 2 líneas).
+    return h('div', { className: 'flex p-1 bg-surface-container rounded-lg border border-outline-variant overflow-x-auto no-scrollbar' },
       options.map(([id, l]) => {
         const on = value === id;
         return h('button', {
-          key: id, className: 'px-4 py-1.5 text-overline uppercase rounded transition-colors ' + (on ? 'bg-gold text-on-gold shadow-e1' : 'text-on-surface-variant hover:text-primary'),
+          key: id, className: 'shrink-0 whitespace-nowrap px-4 py-1.5 text-overline uppercase rounded transition-colors ' + (on ? 'bg-gold text-on-gold shadow-e1' : 'text-on-surface-variant hover:text-primary'),
           onClick: () => onChange(id),
         }, l);
       }));
@@ -129,16 +132,20 @@
                 h('span', { key: 'i', className: 'absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/50' }, h(MS, { name: 'search', size: 20 })),
                 h('input', { key: 'in', className: 'w-full bg-surface border border-outline-variant rounded-lg pl-10 pr-4 py-2.5 text-body focus:ring-1 focus:ring-primary focus:border-primary transition-all', placeholder: 'Buscar SKU, modelo o color…', value: query, onChange: e => { setQuery(e.target.value); setPage(1); } }),
               ]),
-              ...filterableKinds.map(fk => h(Segment, {
-                key: 'f_' + fk,
-                value: filters[fk] || 'all',
-                onChange: v => { setFilters(prev => ({ ...prev, [fk]: v })); setPage(1); },
-                options: [['all', 'Todas']].concat(window.CONFIG.list(fk).map(it => [it.code, it.label])),
-              })),
               h(Segment, { key: 'sg2', value: stockFilter, onChange: v => { setStockFilter(v); setPage(1); }, options: [['all', 'Todo'], ['low', 'Bajo'], ['out', 'Agotados']] }),
             ]),
             h('button', { key: 'add', className: 'flex items-center gap-2 px-6 py-2.5 bg-primary text-on-primary rounded-lg hover:opacity-90 transition-all text-overline font-bold uppercase tracking-wider shadow-e2', onClick: () => setEditing({ mode: 'new', product: blankProduct() }) }, [h(MS, { key: 'i', name: 'plus', size: 18 }), 'Nuevo producto']),
           ]),
+          // Filtros por catálogo (Tela, Categoría…): la lista es ILIMITADA → cada uno en su propia fila
+          // a todo lo ancho con scroll horizontal, así nunca rompe el layout aunque haya 50 materiales.
+          filterableKinds.length ? h('div', { key: 'rf', className: 'flex flex-col gap-2' },
+            filterableKinds.map(fk => h(Segment, {
+              key: 'f_' + fk,
+              value: filters[fk] || 'all',
+              onChange: v => { setFilters(prev => ({ ...prev, [fk]: v })); setPage(1); },
+              options: [['all', 'Todas']].concat(window.CONFIG.list(fk).map(it => [it.code, it.label])),
+            }))
+          ) : null,
           // Excel
           h('div', { key: 'r2', className: 'flex items-center gap-4 py-2 border-y border-outline-variant/60' }, [
             h('span', { key: 'l', className: 'text-overline font-bold text-on-surface-variant uppercase tracking-widest flex items-center gap-2' }, [h(MS, { key: 'i', name: 'box', size: 18 }), 'Excel:']),
