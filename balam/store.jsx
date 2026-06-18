@@ -225,12 +225,11 @@
         window.DATA.applyRemote('returns', rows); return;
       }
       if (m.fromRow) window.DATA.applyRemote(kind, r.data.map(m.fromRow));
-    } else if (window.DATA[kind] && window.DATA[kind].length) {
-      // Bootstrap: nube vacía + datos locales → súbelos.
-      if (kind === 'sales') { for (const s of window.DATA.sales) await pushSale(s); }
-      else if (kind === 'returns') { for (const rr of window.DATA.returns) await pushReturn(rr); }
-      else if (m.toRow) await pushRows(kind, window.DATA[kind]);
     }
+    // Nube vacía: NO auto-subir lo local. (Antes un "bootstrap" re-subía window.DATA[kind] cuando la
+    // nube estaba vacía, lo que hacía IMPOSIBLE vaciarla: cada recarga la repoblaba desde cualquier
+    // equipo con datos locales. El sync local→nube ya ocurre por acciones explícitas (alta/edición,
+    // ventas) vía la cola; un vaciado intencional de la nube ahora SÍ se respeta.)
   }
 
   async function init(opts = {}) {
