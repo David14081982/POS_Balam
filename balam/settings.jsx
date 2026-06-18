@@ -545,6 +545,15 @@
       const online = !!(window.STORE && (await window.STORE.hasSession()));
       if (online) {
         if (!f.email.trim()) { toast('El correo es obligatorio (es su usuario de acceso)', 'var(--danger)'); return; }
+        // Edición de SOLO perfil (no cambia email ni contraseña): se actualiza pos.sellers directo,
+        // SIN la Edge Function admin-users. Así renombrar / cambiar rol / foto funciona aunque la
+        // función no esté desplegada. (Crear usuarios y cambiar email/contraseña sí la requieren, por Auth.)
+        if (editing && !f.password && f.email.trim() === (user.email || '')) {
+          D.updateUser(user.id, { nombre: f.nombre.trim(), role: f.role, avatar: f.avatar || null });
+          toast('Usuario actualizado', 'var(--accent)');
+          onSaved();
+          return;
+        }
         if (!editing && (f.password || '').length < 6) { toast('Contraseña de al menos 6 caracteres', 'var(--danger)'); return; }
         if (editing && f.password && f.password.length < 6) { toast('La nueva contraseña debe tener al menos 6 caracteres', 'var(--danger)'); return; }
         try {
@@ -553,7 +562,11 @@
             ? { action: 'update', id: user.id, email: f.email.trim(), nombre: f.nombre.trim(), role: f.role, avatar: f.avatar || '', password: f.password || undefined }
             : { action: 'create', email: f.email.trim(), password: f.password, nombre: f.nombre.trim(), role: f.role, avatar: f.avatar || '' };
           const { data, error } = await c.functions.invoke('admin-users', { body: payload });
-          if (error || (data && data.error)) { toast((data && data.error) || (error && error.message) || 'No se pudo guardar', 'var(--danger)'); return; }
+          if (error || (data && data.error)) {
+            const msg = (data && data.error) || (error && error.message) || 'No se pudo guardar';
+            const hint = /edge function|not found|failed to send|fetch/i.test(msg) ? ' · Falta desplegar la función "admin-users" en Supabase (necesaria para crear usuarios o cambiar email/contraseña).' : '';
+            toast(msg + hint, 'var(--danger)'); return;
+          }
           await window.STORE.pullDomain('sellers');
           toast(editing ? 'Usuario actualizado' : 'Usuario acreditado', 'var(--accent)');
           onSaved();
