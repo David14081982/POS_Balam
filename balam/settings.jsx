@@ -61,6 +61,8 @@
     const items = C.all(kind);
     const [code, setCode] = useState('');
     const [label, setLabel] = useState('');
+    // Metadatos del catálogo (solo los catálogos de producto los tienen). null = catálogo simple.
+    const cmeta = C.catalogMeta ? C.catalogMeta(kind) : null;
 
     function add() {
       const meta = {};
@@ -72,6 +74,10 @@
     function commitLabel(it, v) { if (v !== it.label) C.updateItem(kind, it.code, { label: v }); }
     function commitMeta(it, key, v) { C.updateItem(kind, it.code, { meta: { [key]: v } }); }
     function del(it) { const r = C.removeItem(kind, it.code); if (!r.ok) toast(r.error, 'var(--danger)'); }
+    function delCatalog() {
+      if (!window.confirm('¿Eliminar el catálogo "' + (cmeta ? cmeta.label : kind) + '" y todos sus elementos? Esta acción no se puede deshacer.')) return;
+      const r = C.removeCatalog(kind); if (!r.ok) toast(r.error, 'var(--danger)'); else toast('Catálogo eliminado', 'var(--danger)');
+    }
 
     const metaInput = (it, f) => {
       const val = (it.meta && it.meta[f.key] != null) ? it.meta[f.key] : '';
@@ -81,11 +87,49 @@
       return h('input', { defaultValue: val, placeholder: f.label, className: 'h-8 px-2 bg-surface-container-low border border-outline-variant rounded text-caption w-28', onBlur: e => commitMeta(it, f.key, e.target.value) });
     };
 
+    const countLabel = `${items.filter(i => i.active !== false).length} activos · ${items.length} total`;
+    // Píldora-interruptor (En alta / En SKU). locked = activo fijo (no se puede apagar).
+    const metaPill = (txt, on, onClick, locked) => h('button', {
+      key: txt, type: 'button', onClick: locked ? undefined : onClick, disabled: !!locked,
+      className: 'inline-flex items-center gap-1 px-2.5 h-7 rounded-full text-overline uppercase font-bold border transition-colors ' +
+        (on ? 'bg-primary text-on-primary border-primary' : 'bg-surface-container text-on-surface-variant border-outline-variant hover:border-primary') +
+        (locked ? ' opacity-70 cursor-default' : ''),
+      title: locked ? txt + ': fijo en este atributo' : (on ? txt + ' activo — clic para desactivar' : txt + ' inactivo — clic para activar'),
+    }, [locked ? h(MS, { key: 'i', name: 'lock', size: 12 }) : null, txt]);
+    // Interruptores según el tipo de catálogo:
+    //   En alta → catálogos select; bloqueado-ON si son estructurales (color: swatch siempre presente).
+    //   En SKU  → cualquier catálogo con código (incluido color); libre.
+    const pills = [];
+    const selectAttr = cmeta && (cmeta.formSelect || cmeta.custom); // se captura como menú en el alta
+    if (cmeta && cmeta.formSelect) pills.push(metaPill('En alta', cmeta.inForm, () => C.setCatalogMeta(kind, { inForm: !cmeta.inForm }), cmeta.struct));
+    if (cmeta && (cmeta.field || cmeta.custom)) pills.push(metaPill('En SKU', cmeta.inSku, () => C.setCatalogMeta(kind, { inSku: !cmeta.inSku })));
+    if (selectAttr) pills.push(metaPill('Obligatorio', !!cmeta.required, () => C.setCatalogMeta(kind, { required: !cmeta.required })));
+    if (selectAttr) pills.push(metaPill('Filtrable', !!cmeta.filterable, () => C.setCatalogMeta(kind, { filterable: !cmeta.filterable })));
+    const structNote = (cmeta && cmeta.struct && !cmeta.field)
+      ? h('span', { key: 'st', className: 'inline-flex items-center gap-1.5 text-overline uppercase text-on-surface-variant/70' }, [h(MS, { key: 'i', name: 'lock', size: 13 }), 'Atributo estructural (matriz de stock)'])
+      : null;
+    // Encabezado: editable + toggles si es catálogo de producto; estático si no.
+    const header = cmeta
+      ? h('div', { key: 'h', className: 'mb-3' }, [
+          h('div', { key: 'tr', className: 'flex items-center justify-between gap-3 mb-2' }, [
+            h('div', { key: 'l', className: 'flex items-center gap-2 flex-1 min-w-0' }, [
+              cmeta.system && h(MS, { key: 'lk', name: 'lock', size: 14, className: 'text-on-surface-variant/60 shrink-0', title: 'Catálogo del sistema: se puede renombrar y editar, pero no borrar.' }),
+              h('input', { key: 'nm', defaultValue: cmeta.label, title: 'Nombre del catálogo', className: 'flex-1 min-w-0 font-headline text-h2 text-primary bg-transparent border-b border-transparent hover:border-outline-variant focus:border-primary focus:ring-0 px-0 py-0.5', onBlur: e => C.setCatalogMeta(kind, { label: e.target.value }) }),
+            ]),
+            h('div', { key: 'c', className: 'flex items-center gap-3 shrink-0' }, [
+              h('span', { key: 'n', className: 'text-overline uppercase text-on-surface-variant' }, countLabel),
+              cmeta.custom && h('button', { key: 'dc', type: 'button', className: 'inline-flex items-center gap-1 text-overline uppercase font-bold text-danger hover:opacity-70 transition-opacity', title: 'Eliminar este catálogo', onClick: delCatalog }, [h(MS, { key: 'i', name: 'trash', size: 14 }), 'Catálogo']),
+            ]),
+          ]),
+          (pills.length || structNote) && h('div', { key: 'tg', className: 'flex items-center gap-2 flex-wrap' }, pills.concat(structNote || [])),
+        ])
+      : h('div', { key: 'h', className: 'flex items-baseline justify-between mb-1' }, [
+          h(SerifHeading, { key: 't', children: title }),
+          h('span', { key: 'c', className: 'text-overline uppercase text-on-surface-variant' }, countLabel),
+        ]);
+
     return h(GlassCard, { key: kind, className: 'p-5' }, [
-      h('div', { key: 'h', className: 'flex items-baseline justify-between mb-1' }, [
-        h(SerifHeading, { key: 't', children: title }),
-        h('span', { key: 'c', className: 'text-overline uppercase text-on-surface-variant' }, `${items.filter(i => i.active !== false).length} activos · ${items.length} total`),
-      ]),
+      header,
       hint && h('p', { key: 'hint', className: 'text-caption text-on-surface-variant mb-3' }, hint),
       // Filas
       h('div', { key: 'rows', className: 'flex flex-col divide-y divide-outline-variant/50 mb-3' }, items.map(it => {
@@ -108,6 +152,70 @@
         h('input', { key: 'c', value: code, placeholder: codePlaceholder, disabled: lockCode, className: 'font-mono w-16 h-9 px-2 bg-surface-container-low border border-outline-variant rounded text-caption disabled:opacity-40', onChange: e => setCode(e.target.value), onKeyDown: e => { if (e.key === 'Enter') add(); } }),
         h('input', { key: 'l', value: label, placeholder: labelPlaceholder, className: 'flex-1 min-w-0 h-9 px-2 bg-surface-container-low border border-outline-variant rounded text-body', onChange: e => setLabel(e.target.value), onKeyDown: e => { if (e.key === 'Enter') add(); } }),
         h('button', { key: 'b', className: 'inline-flex items-center gap-1.5 px-4 h-9 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-lg hover:opacity-90 transition', onClick: add }, [h(MS, { key: 'i', name: 'plus', size: 16 }), 'Agregar']),
+      ]),
+    ]);
+  }
+
+  // ── Constructor de SKU ─────────────────────────────────────────────────────────
+  // Muestra los catálogos con "En SKU" como segmentos ordenables (◀ ▶) + el número de
+  // modelo fijo al final, con vista previa en vivo. Reordena vía CONFIG.moveSkuOrder.
+  function SkuBuilder() {
+    const parts = C.skuParts();
+    function regenerar() {
+      const n = (D.products || []).length;
+      if (!n) { toast('No hay productos que regenerar'); return; }
+      if (!window.confirm('¿Regenerar el SKU de ' + n + ' producto(s) con la receta actual?\n\n⚠ El SKU es el identificador del producto. Las ventas, devoluciones y movimientos YA registrados seguirán apuntando al SKU anterior, por lo que podrían dejar de vincularse con el producto en reportes. Úsalo solo durante la configuración inicial, antes de tener ventas reales.\n\nEsta acción no se puede deshacer.')) return;
+      const r = D.regenerateSkus();
+      toast(r.changed + ' de ' + r.total + ' SKUs actualizados', 'var(--accent)');
+    }
+    const sampleCode = (kind) => { const l = C.list(kind); return l.length ? l[0].code : '??'; };
+    const preview = parts.map(p => sampleCode(p.kind)).concat('128').join('-');
+    const hidden = parts.map(p => C.catalogMeta(p.kind)).filter(m => m && m.formSelect && !m.inForm);
+    const modeloChip = h('div', { key: '__modelo', className: 'inline-flex items-center rounded-lg border border-dashed border-outline-variant bg-surface-container px-3 h-9' },
+      h('span', { className: 'text-caption font-semibold text-on-surface-variant whitespace-nowrap' }, 'N.º Modelo'));
+    const chip = (p, i) => h('div', { key: p.kind, className: 'inline-flex items-center rounded-lg border border-outline-variant bg-surface-container-low overflow-hidden' }, [
+      h('button', { key: 'l', className: 'w-7 h-9 grid place-items-center hover:bg-surface-container text-on-surface-variant disabled:opacity-30', disabled: i === 0, title: 'Mover a la izquierda', onClick: () => C.moveSkuOrder(p.kind, -1) }, h(MS, { name: 'chevRight', size: 14, style: { transform: 'rotate(180deg)' } })),
+      h('span', { key: 't', className: 'px-2 text-caption font-semibold text-primary whitespace-nowrap' }, C.catalogLabel(p.kind)),
+      h('button', { key: 'r', className: 'w-7 h-9 grid place-items-center hover:bg-surface-container text-on-surface-variant disabled:opacity-30', disabled: i === parts.length - 1, title: 'Mover a la derecha', onClick: () => C.moveSkuOrder(p.kind, 1) }, h(MS, { name: 'chevRight', size: 14 })),
+    ]);
+    return h(GlassCard, { key: 'skubuilder', className: 'p-5' }, [
+      h('div', { key: 'h', className: 'flex items-baseline justify-between mb-1' }, [
+        h(SerifHeading, { key: 't', children: 'Constructor de SKU' }),
+        h('span', { key: 'c', className: 'text-overline uppercase text-on-surface-variant' }, parts.length + ' segmentos'),
+      ]),
+      h('p', { key: 'd', className: 'text-caption text-on-surface-variant mb-4' }, 'Activa “En SKU” en cada catálogo para incluirlo y reordena con ◀ ▶. El número de modelo siempre va al final. El SKU se fija al crear el producto: cambiar la receta solo afecta a productos nuevos.'),
+      h('div', { key: 'chips', className: 'flex flex-wrap items-center gap-2 mb-4' }, parts.map(chip).concat(modeloChip)),
+      h('div', { key: 'pv', className: 'flex items-center gap-2 flex-wrap' }, [
+        h('span', { key: 'l', className: 'text-overline uppercase tracking-widest text-on-surface-variant' }, 'Vista previa'),
+        h('span', { key: 'v', className: 'font-mono text-body text-gold-text' }, preview),
+      ]),
+      hidden.length ? h('div', { key: 'w', className: 'mt-3 flex items-start gap-2 text-caption text-on-surface-variant bg-gold/5 border border-gold/30 rounded-lg p-3' }, [
+        h(MS, { key: 'i', name: 'alert', size: 16, className: 'text-gold-text shrink-0 mt-0.5' }),
+        h('span', { key: 't' }, 'En el SKU pero oculto del alta: ' + hidden.map(m => m.label).join(', ') + '. Los productos nuevos no podrán elegir ese valor.'),
+      ]) : null,
+      // Regenerar SKUs de productos existentes (el SKU está congelado al crear).
+      h('div', { key: 'rg', className: 'mt-4 pt-4 border-t border-outline-variant/60 flex items-center justify-between gap-3 flex-wrap' }, [
+        h('p', { key: 't', className: 'text-caption text-on-surface-variant max-w-md' }, 'El SKU se fija al crear cada producto. Si cambiaste la receta y quieres aplicarla a los productos ya existentes, regenéralos (afecta el historial — úsalo en configuración inicial).'),
+        h('button', { key: 'b', type: 'button', className: 'inline-flex items-center gap-2 px-4 h-10 border border-danger/40 text-danger text-caption font-bold uppercase tracking-widest rounded-lg hover:bg-danger-soft transition shrink-0', onClick: regenerar }, [h(MS, { key: 'i', name: 'repeat', size: 16 }), 'Regenerar SKUs']),
+      ]),
+    ]);
+  }
+
+  // ── Crear catálogo nuevo (Fase 2) ───────────────────────────────────────────────
+  function NewCatalogCard() {
+    const [name, setName] = useState('');
+    function create() {
+      const r = C.addCatalog(name);
+      if (!r.ok) { toast(r.error, 'var(--danger)'); return; }
+      setName('');
+      toast('Catálogo creado — agrega sus elementos y actívalo en alta/SKU', 'var(--accent)');
+    }
+    return h(GlassCard, { key: 'newcat', className: 'p-5 border border-dashed border-outline-variant' }, [
+      h(SerifHeading, { key: 't', children: 'Crear catálogo nuevo' }),
+      h('p', { key: 'd', className: 'text-caption text-on-surface-variant mt-1 mb-3' }, 'Crea tu propio catálogo (p. ej. Temporada, Colección, Estilo). Después agrega sus elementos y decide si aparece en el alta de producto y/o forma parte del SKU.'),
+      h('div', { key: 'r', className: 'flex items-center gap-2' }, [
+        h('input', { key: 'i', value: name, placeholder: 'Nombre del catálogo', className: 'flex-1 min-w-0 h-10 px-3 bg-surface-container-low border border-outline-variant rounded-lg text-body', onChange: e => setName(e.target.value), onKeyDown: e => { if (e.key === 'Enter') create(); } }),
+        h('button', { key: 'b', className: 'inline-flex items-center gap-1.5 px-5 h-10 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-lg hover:opacity-90 transition', onClick: create }, [h(MS, { key: 'i', name: 'plus', size: 16 }), 'Crear']),
       ]),
     ]);
   }
@@ -217,15 +325,20 @@
       ]),
     ],
     producto: () => [
-      h('p', { key: 'intro', className: 'text-caption text-on-surface-variant' }, 'Estos catálogos alimentan el SKU, el alta de productos, los filtros y la importación de Excel. El código entra al SKU: si está en uso por productos no podrás borrarlo (desactívalo).'),
-      h(CatalogEditor, { key: 'cat', kind: 'category', title: 'Categorías', codePlaceholder: '21' }),
-      h(CatalogEditor, { key: 'fab', kind: 'fabric', title: 'Telas', codePlaceholder: 'ALG' }),
-      h(CatalogEditor, { key: 'slv', kind: 'sleeve', title: 'Mangas', codePlaceholder: 'ML' }),
-      h(CatalogEditor, { key: 'nck', kind: 'neck', title: 'Cuellos', codePlaceholder: 'NOR' }),
-      h(CatalogEditor, { key: 'col', kind: 'color', title: 'Colores (prenda e hilos)', codePlaceholder: 'AZ', metaFields: [{ key: 'hex', label: 'Color', type: 'color', def: '#cccccc' }] }),
-      h(CatalogEditor, { key: 'orn', kind: 'ornament', title: 'Ornamentos', codePlaceholder: 'Bordado', labelPlaceholder: 'Nombre del ornamento' }),
-      h(CatalogEditor, { key: 'szl', kind: 'size_letter', title: 'Tallas — escala Letra', codePlaceholder: 'M', labelPlaceholder: 'M' }),
-      h(CatalogEditor, { key: 'szn', kind: 'size_number', title: 'Tallas — escala Número', codePlaceholder: '40', labelPlaceholder: '40' }),
+      h('p', { key: 'intro', className: 'text-caption text-on-surface-variant' }, 'Estos catálogos alimentan el SKU, el alta de productos, los filtros y la importación de Excel. Renómbralos, decide cuáles aparecen en el alta y cuáles forman el SKU. El código entra al SKU: si está en uso por productos no podrás borrarlo (desactívalo).'),
+      h(SkuBuilder, { key: 'sku' }),
+      h(CatalogEditor, { key: 'cat', kind: 'category', codePlaceholder: '21' }),
+      h(CatalogEditor, { key: 'fab', kind: 'fabric', codePlaceholder: 'ALG' }),
+      h(CatalogEditor, { key: 'slv', kind: 'sleeve', codePlaceholder: 'ML' }),
+      h(CatalogEditor, { key: 'nck', kind: 'neck', codePlaceholder: 'NOR' }),
+      h(CatalogEditor, { key: 'col', kind: 'color', codePlaceholder: 'AZ', metaFields: [{ key: 'hex', label: 'Color', type: 'color', def: '#cccccc' }] }),
+      h(CatalogEditor, { key: 'orn', kind: 'ornament', codePlaceholder: 'Bordado', labelPlaceholder: 'Nombre del ornamento' }),
+      h(CatalogEditor, { key: 'szl', kind: 'size_letter', codePlaceholder: 'M', labelPlaceholder: 'M' }),
+      h(CatalogEditor, { key: 'szn', kind: 'size_number', codePlaceholder: '40', labelPlaceholder: '40' }),
+      // Catálogos creados por el administrador (Fase 2)
+      ...Object.keys(C.allCatalogMeta ? C.allCatalogMeta() : {}).filter(k => { const m = C.catalogMeta(k); return m && m.custom; })
+        .map(k => h(CatalogEditor, { key: k, kind: k, codePlaceholder: 'CÓD' })),
+      h(NewCatalogCard, { key: 'newcat' }),
     ],
     ventas: () => [
       h(CatalogEditor, { key: 'pm', kind: 'payment_method', title: 'Métodos de pago', codePlaceholder: 'Efectivo', labelPlaceholder: 'Efectivo', metaFields: [{ key: 'icon', label: 'Ícono', type: 'select', options: ICON_OPTS, def: 'cash' }] }),

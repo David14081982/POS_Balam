@@ -18,7 +18,10 @@
     // KPIs — 100% reales (sin históricos ni metas inventadas)
     const ventasBrutas = nonCancel.reduce((a, s) => a + (Number(s.total) || 0), 0);
     const utilidad = Math.round(ventasBrutas * (marginPct / 100));
-    const pedidos = nonCancel.length;
+    // Las cortesías (regalos) no son ventas pagadas: no cuentan como pedidos ni en el ticket promedio.
+    const cortesias = nonCancel.filter(s => s.metodo === 'Cortesía');
+    const regalado = cortesias.reduce((a, s) => a + (Number(s.valorRegalado) || 0), 0);
+    const pedidos = nonCancel.length - cortesias.length;
     const ticketProm = pedidos ? Math.round(ventasBrutas / pedidos) : 0;
 
     // Variación real: mes calendario actual vs mes anterior (oculta si no hay base previa)
@@ -75,6 +78,15 @@
           kpi('Total pedidos', String(pedidos), iP, tP, cP),
           kpi('Ticket promedio', fmt(ticketProm).replace('.00', ''), 'star', '', 'text-gold-text', true),
         ]),
+        // Cortesías (regalos/giveaways): cuántas y el valor regalado. Solo se muestra si hay.
+        cortesias.length ? h('div', { key: 'cor', className: CARD + ' p-5 mb-gutter flex items-center gap-4' }, [
+          h('div', { key: 'i', className: 'w-11 h-11 rounded-xl grid place-items-center bg-gold-soft text-gold-text shrink-0' }, h(MS, { name: 'tag', size: 22 })),
+          h('div', { key: 't', className: 'flex-1 min-w-0' }, [
+            h('div', { key: 'a', className: 'text-overline uppercase text-on-surface-variant' }, 'Cortesías entregadas'),
+            h('div', { key: 'b', className: 'text-body text-on-surface-variant' }, cortesias.length + ' entrega' + (cortesias.length === 1 ? '' : 's') + ' · valor regalado'),
+          ]),
+          h('div', { key: 'v', className: 'font-headline text-h2 text-gold-text' }, fmt(regalado).replace('.00', '')),
+        ]) : null,
 
         // Gráfica + Meta global
         h('div', { key: 'mid', className: 'grid grid-cols-1 lg:grid-cols-3 gap-gutter' }, [

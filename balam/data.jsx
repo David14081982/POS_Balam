@@ -34,7 +34,19 @@
   // desde Inventario → "Nuevo producto" (o importando un Excel con la plantilla).
   const seed = [];
 
-  function sku(p) { return `${p.cat}-${p.manga}-${p.tela}-${p.color}-${String(p.modelo).padStart(3, '0')}`; }
+  // SKU armado desde la receta configurable (CONFIG.skuParts): catálogos con "En SKU"
+  // ordenados, + el número de modelo como token final. Si CONFIG no está disponible,
+  // cae al orden fijo histórico (cat-manga-tela-color).
+  function sku(p) {
+    // Con CONFIG disponible, la receta manda — incluso si queda vacía (SKU = solo el modelo),
+    // así la vista previa del Constructor y el SKU real siempre coinciden. El orden fijo
+    // (cat-manga-tela-color) es solo el respaldo para cuando CONFIG aún no cargó.
+    const parts = (C && typeof C.skuParts === 'function')
+      ? C.skuParts().map(x => x.custom ? (p.attrs || {})[x.kind] : p[x.field])
+      : [p.cat, p.manga, p.tela, p.color];
+    parts.push(String(p.modelo).padStart(3, '0'));
+    return parts.join('-');
+  }
   function totalStock(p) { return p.stock.reduce((a, v) => a + (v.stock || 0), 0); }
 
   // Fotos genéricas curadas (Unsplash). build-offline.mjs las embebe → 100% offline.
@@ -68,6 +80,7 @@
   // Recalcula campos derivados (sku, hex/nombre de color) y normaliza estructura.
   function hydrate(p) {
     p.modelo = String(p.modelo);
+    if (!p.attrs || typeof p.attrs !== 'object') p.attrs = {}; // valores de catálogos custom (Fase 2)
     if (!Array.isArray(p.ornColors)) p.ornColors = [];
     if (!p.cuello) p.cuello = 'NOR';
     // Normaliza stock al modelo de 20 entradas si viniera incompleto
@@ -77,7 +90,9 @@
       p.stock = SIZES_LETRA().map(t => ({ talla: t, escala: 'L', stock: L[t] || 0 }))
         .concat(SIZES_NUM().map(t => ({ talla: t, escala: 'N', stock: N[t] || 0 })));
     }
-    p.sku = sku(p);
+    // SKU congelado: se calcula una sola vez (al crear el producto). Los productos ya
+    // guardados conservan su SKU aunque cambie la receta — el historial los referencia por SKU.
+    if (!p.sku) p.sku = sku(p);
     // Costo del producto (para validar margen en Descuentos). Si falta, estima 45% del precio.
     if (p.costo == null || p.costo === '') p.costo = Math.round((Number(p.precio) || 0) * 0.45);
     p.costo = Number(p.costo) || 0;
@@ -102,6 +117,15 @@
   function saveProducts() {
     try { localStorage.setItem(LS_KEY, JSON.stringify(products)); } catch (e) { /* cuota llena */ }
     if (typeof syncUp === 'function') syncUp('products', products);
+  }
+
+  // Recalcula el SKU de TODOS los productos con la receta vigente (acción explícita del admin).
+  // El SKU normalmente está congelado; esto lo fuerza. Devuelve cuántos cambiaron.
+  function regenerateSkus() {
+    let changed = 0;
+    products.forEach(p => { const n = sku(p); if (n !== p.sku) { p.sku = n; changed++; } });
+    if (changed) saveProducts();
+    return { total: products.length, changed };
   }
 
   // Solo el administrador. Los vendedores se dan de alta en Configuración → Usuarios.
@@ -173,6 +197,17 @@
   }
   function saveSellers() { save(LS_SELLERS, sellers); syncUp('sellers', sellers); }
   function saveClients() { save(LS_CLIENTS, clients); syncUp('clients', clients); }
+  // Alta rápida de cliente (desde el POS): nombre obligatorio, teléfono opcional. Si el teléfono ya
+  // existe en otro cliente, REUSA ese (evita duplicados). Devuelve el cliente (nuevo o existente) o null.
+  function addClient({ nombre, tel }) {
+    const name = String(nombre || '').trim();
+    if (!name) return null;
+    const phone = String(tel || '').trim();
+    if (phone) { const ex = clients.find(c => !c.generic && String(c.tel || '').trim() === phone); if (ex) return ex; }
+    const c = { id: 'cli-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6), nombre: name, tel: phone || '—', compras: 0, total: 0, ultima: '', talla: '', notas: '', generic: false };
+    clients.unshift(c); saveClients();
+    return c;
+  }
   function saveSales() { save(LS_SALES, sales); }       // ventas suben vía recordSale → STORE.pushSale
   function saveMovements() { save(LS_MOVES, movements); }
   function savePromos() { save(LS_PROMOS, promos); syncUp('promotions', promos); }
@@ -218,6 +253,11 @@
     const folio = nextFolio();
     const fecha = fechaIn || now(); // permite fecha pasada (simulación)
     const cobrada = estado !== 'Apartado' && estado !== 'Cancelado';
+    // Cortesía (regalo/giveaway): no se cobra (total $0) y NO genera comisión, pero SÍ descuenta
+    // inventario. Se guarda 'valorRegalado' (lo que se habría cobrado) para reportes de cuánto se regaló.
+    const cortesia = metodo === 'Cortesía';
+    const valorRegalado = cortesia ? (Number(total) || 0) : 0;
+    const totalCobrado = cortesia ? 0 : total;
     // 1) Descuento de stock + movimientos (solo si la venta se cobró/entregó)
     if (cobrada) {
       ticket.forEach(l => {
@@ -227,8 +267,8 @@
       });
       saveProducts(); saveMovements();
     }
-    // 2) Cliente (agregados) — solo registrados
-    if (client && !client.generic) {
+    // 2) Cliente (agregados) — solo registrados y NO en cortesía (no pagó nada).
+    if (client && !client.generic && !cortesia) {
       const c = clients.find(x => x.id === client.id);
       if (c) { c.compras = (c.compras || 0) + 1; c.total = (c.total || 0) + total; c.ultima = fecha.slice(0, 10); saveClients(); }
     }
@@ -237,7 +277,7 @@
     //    `total` puede incluir o no IVA según tax.included → lo normalizamos a neto/bruto antes de aplicar el %.
     const ids = (sellerIds && sellerIds.length) ? sellerIds : [];
     let comisionVenta = 0;
-    if (cobrada && ids.length) {
+    if (cobrada && ids.length && !cortesia) {
       const share = total / ids.length;
       const ivaPct = Number(window.CONFIG.get('tax.ivaPct')) || 0;
       const incl = !!window.CONFIG.get('tax.included');
@@ -264,9 +304,11 @@
     const sale = {
       folio, fecha, cliente: client ? client.nombre : 'Público en general',
       vendedor: primary[0] || '—', vendedores: ids.slice(),
-      items: itemCount, total, metodo, estado, descuento: Math.max(0, subtotalOrig - total),
+      items: itemCount, total: totalCobrado, metodo, estado,
+      descuento: cortesia ? 0 : Math.max(0, subtotalOrig - total), valorRegalado,
       comision: comisionVenta, comisionBase: window.CONFIG.get('commission.base') || 'neto',
-      lineas: ticket.map(l => ({ sku: l.p.sku, nombre: l.p.nombre, talla: l.talla, qty: l.qty, precio: unitOf(l), precioOrig: Number(l.p.precio) || 0 })),
+      // En cortesía cada línea queda en $0 (no se cobró); el valor vive en precioOrig y valorRegalado.
+      lineas: ticket.map(l => ({ sku: l.p.sku, nombre: l.p.nombre, talla: l.talla, qty: l.qty, precio: cortesia ? 0 : unitOf(l), precioOrig: Number(l.p.precio) || 0 })),
     };
     sales.unshift(sale);
     saveSales();
@@ -623,9 +665,9 @@
 
   window.DATA = {
     products, sellers, clients, sales, movements, promos, liquidations, returns,
-    sku, totalStock, hydrate, mkStock, emptyStock,
+    sku, regenerateSkus, totalStock, hydrate, mkStock, emptyStock,
     saveProducts, saveSellers, saveClients, saveSales, saveMovements, savePromos, saveReturns,
-    recordSale, nextFolio, stockOf, resetProducts, applyRemote, liquidarComision,
+    addClient, recordSale, nextFolio, stockOf, resetProducts, applyRemote, liquidarComision,
     completarApartado, cerrarMes, getPeriodoInicio,
     recordReturn, returnedQty, returnsForFolio, isReturnable,
     addUser, updateUser, removeUser,

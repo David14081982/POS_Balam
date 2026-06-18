@@ -39,8 +39,10 @@
   const MAP = {
     products: {
       table: 'products', conflict: 'id',
-      toRow: p => ({ id: p.id, cat: p.cat, manga: p.manga, tela: p.tela, color: p.color, cuello: p.cuello || 'NOR', modelo: String(p.modelo), nombre: p.nombre, orn: p.orn || '—', orn_colors: p.ornColors || [], precio: Number(p.precio) || 0, costo: Number(p.costo) || 0, pop: !!p.pop, stock: p.stock || [], imagen: p.imagen || null, sku: p.sku, barcode_urls: p.barcodeUrls || {} }),
-      fromRow: r => ({ id: r.id, cat: r.cat, manga: r.manga, tela: r.tela, color: r.color, cuello: r.cuello, modelo: r.modelo, nombre: r.nombre, orn: r.orn, ornColors: r.orn_colors || [], precio: Number(r.precio) || 0, costo: Number(r.costo) || 0, pop: !!r.pop, stock: r.stock || [], imagen: r.imagen || undefined, barcodeUrls: r.barcode_urls || {} }),
+      // attrs (Fase 2): valores de catálogos custom. Se envía SOLO si el producto tiene alguno,
+      // así las instalaciones que aún no corrieron la migración pos_008 (columna attrs) no se rompen.
+      toRow: p => { const row = { id: p.id, cat: p.cat, manga: p.manga, tela: p.tela, color: p.color, cuello: p.cuello || 'NOR', modelo: String(p.modelo), nombre: p.nombre, orn: p.orn || '—', orn_colors: p.ornColors || [], precio: Number(p.precio) || 0, costo: Number(p.costo) || 0, pop: !!p.pop, stock: p.stock || [], imagen: p.imagen || null, sku: p.sku, barcode_urls: p.barcodeUrls || {} }; if (p.attrs && Object.keys(p.attrs).length) row.attrs = p.attrs; return row; },
+      fromRow: r => ({ id: r.id, cat: r.cat, manga: r.manga, tela: r.tela, color: r.color, cuello: r.cuello, modelo: r.modelo, nombre: r.nombre, orn: r.orn, ornColors: r.orn_colors || [], precio: Number(r.precio) || 0, costo: Number(r.costo) || 0, pop: !!r.pop, stock: r.stock || [], imagen: r.imagen || undefined, barcodeUrls: r.barcode_urls || {}, attrs: r.attrs || {} }),
     },
     clients: {
       table: 'clients', conflict: 'id',
@@ -54,7 +56,7 @@
     },
     sales: {
       table: 'sales', conflict: 'folio',
-      fromRow: r => ({ folio: r.folio, fecha: String(r.fecha).replace('T', ' ').slice(0, 16), cliente: r.cliente, vendedor: '', vendedores: r.vendedores || [], items: r.items || 0, total: Number(r.total) || 0, metodo: r.metodo, estado: r.estado, lineas: [] }),
+      fromRow: r => ({ folio: r.folio, fecha: String(r.fecha).replace('T', ' ').slice(0, 16), cliente: r.cliente, vendedor: '', vendedores: r.vendedores || [], items: r.items || 0, total: Number(r.total) || 0, metodo: r.metodo, estado: r.estado, valorRegalado: Number(r.valor_regalado) || 0, lineas: [] }),
     },
     promotions: {
       table: 'promotions', conflict: 'id',
@@ -146,6 +148,8 @@
   function pushSale(sale) {
     if (!enabled) return;
     const header = { folio: sale.folio, fecha: (sale.fecha || '').replace(' ', 'T'), cliente: sale.cliente, vendedores: sale.vendedores || [], metodo: sale.metodo, estado: sale.estado, items: sale.items || 0, total: Number(sale.total) || 0 };
+    // valor_regalado (cortesías) solo se envía si aplica, así no rompe instalaciones sin la migración pos_009.
+    if (Number(sale.valorRegalado) > 0) header.valor_regalado = Number(sale.valorRegalado);
     const items = (sale.lineas || []).map(l => ({ folio: sale.folio, sku: l.sku, nombre: l.nombre, talla: l.talla, qty: l.qty, precio: Number(l.precio) || 0 }));
     const moves = (sale.lineas || []).map(l => ({ fecha: header.fecha, tipo: 'Venta', producto: l.nombre, sku: l.sku, cant: -l.qty, ref: sale.folio }));
     return run({ type: 'sale', folio: sale.folio, header, items, moves });
@@ -169,6 +173,9 @@
       Object.keys(state.catalogs).forEach(kind => state.catalogs[kind].forEach((it, i) =>
         lookup.push({ kind, code: it.code, label: it.label, active: it.active !== false, meta: it.meta || {}, sort_order: i, updated_at: new Date().toISOString() })));
       const settings = Object.keys(state.settings).map(key => ({ key, value: state.settings[key], updated_at: new Date().toISOString() }));
+      // Metadatos de catálogo (label / inForm / inSku / orden del SKU) viajan como una fila
+      // reservada de settings (value jsonb), así persisten en la nube sin tocar el esquema.
+      if (state.catalogMeta) settings.push({ key: '_catalogMeta', value: state.catalogMeta, updated_at: new Date().toISOString() });
       run({ type: 'config', lookup, settings });
     }, 600); // debounce de ediciones rápidas
   }
@@ -179,8 +186,9 @@
     (lookup || []).sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)).forEach(r => {
       (catalogs[r.kind] || (catalogs[r.kind] = [])).push({ code: r.code, label: r.label, active: r.active !== false, meta: r.meta || {} });
     });
-    const s = {}; (settings || []).forEach(r => { s[r.key] = r.value; });
-    return { v: 1, catalogs, settings: s };
+    const s = {}; let catalogMeta;
+    (settings || []).forEach(r => { if (r.key === '_catalogMeta') catalogMeta = r.value; else s[r.key] = r.value; });
+    return { v: 1, catalogs, catalogMeta, settings: s };
   }
   async function pull() {
     const c = await ensureClient(); if (!c) return { ok: false, error: 'sin cliente' };

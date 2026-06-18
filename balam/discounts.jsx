@@ -4,8 +4,8 @@
 //   window.DiscountsScreen → pantalla de administración (tabla + modal + vista previa).
 // Modelo de promo: { id, nombre, tipo:'pct'|'fijo', valor, inicio, fin, horaInicio, horaFin,
 //   pausado, scope:{cats,telas,mangas,cuellos,colores,tallas,modelos,orns} }
-// Reglas: descuentos ACUMULABLES (suma de % + suma de $) con tope de margen mínimo
-//   (discount.minMarginPct sobre el costo). Solo las promos 'Activo' se aplican en ventas.
+// Reglas: descuentos ACUMULABLES (suma de % + suma de $) sobre el precio de venta
+//   (IVA incluido). Solo las promos 'Activo' se aplican en ventas.
 (function () {
   const { useState, useEffect, useMemo } = React;
   const { fmt, toast, ToastHost } = window.UI;
@@ -33,10 +33,28 @@
   function active() { return D.promos.filter(p => estado(p) === 'Activo'); }
 
   const inDim = (arr, val) => !arr || !arr.length || arr.indexOf(val) >= 0;
+  // Una dimensión NO filtra cuando está vacía O cuando tiene seleccionadas TODAS sus opciones
+  // (universo). Así "seleccionar todo" = "sin filtro" = aplica a TODAS las prendas, incluidas las
+  // que no tienen valor en ese grupo (sin ornamento, sin un atributo nuevo). getUni es perezoso:
+  // solo se calcula el universo cuando hay selección parcial. Mantiene compatibilidad: vacío = todo.
+  function dimPass(arr, val, getUni) {
+    if (!arr || !arr.length) return true;
+    const uni = getUni() || [];
+    if (uni.length && uni.every(c => arr.indexOf(c) >= 0)) return true;
+    return arr.indexOf(val) >= 0;
+  }
+  function modelUniverse() { const D = window.DATA; return (D && D.products) ? [...new Set(D.products.map(p => String(p.modelo)))] : []; }
   function dimsMatch(s, p) {
-    return inDim(s.cats, p.cat) && inDim(s.telas, p.tela) && inDim(s.mangas, p.manga)
-      && inDim(s.cuellos, p.cuello) && inDim(s.colores, p.color) && inDim(s.orns, p.orn)
-      && inDim(s.modelos, String(p.modelo));
+    if (!dimPass(s.cats, p.cat, () => C.codes('category'))) return false;
+    if (!dimPass(s.telas, p.tela, () => C.codes('fabric'))) return false;
+    if (!dimPass(s.mangas, p.manga, () => C.codes('sleeve'))) return false;
+    if (!dimPass(s.cuellos, p.cuello, () => C.codes('neck'))) return false;
+    if (!dimPass(s.colores, p.color, () => C.codes('color'))) return false;
+    if (!dimPass(s.orns, p.orn, () => C.codes('ornament'))) return false;
+    if (!dimPass(s.modelos, String(p.modelo), modelUniverse)) return false;
+    // Catálogos creados por el admin (Fase 2): scope.attrs = { [kind]: [codes] }.
+    if (s.attrs) { for (const k in s.attrs) { if (!dimPass(s.attrs[k], (p.attrs || {})[k], () => C.codes(k))) return false; } }
+    return true;
   }
   function match(promo, p, talla) {
     const s = promo.scope || {};
@@ -51,43 +69,33 @@
     if (s.tallas && s.tallas.length) return (p.stock || []).some(v => s.tallas.indexOf(v.talla) >= 0);
     return true;
   }
-  function floorPrice(p) {
-    const minM = Number(C.get('discount.minMarginPct')) || 0;
-    const cost = Number(p.costo) || 0;
-    if (cost > 0 && minM > 0 && minM < 100) return cost / (1 - minM / 100);
-    return 0;
-  }
   // Aplica una lista de promos (acumulables) sobre el precio de lista de un producto.
-  function applyStack(orig, list, p) {
+  function applyStack(orig, list) {
     let pct = 0, fijo = 0;
     list.forEach(pr => { if (pr.tipo === 'fijo') fijo += Number(pr.valor) || 0; else pct += Number(pr.valor) || 0; });
     pct = Math.min(pct, 100);
     let unit = orig * (1 - pct / 100) - fijo;
-    const floor = floorPrice(p);
-    let capped = false;
-    if (floor && unit < floor) { unit = floor; capped = true; }
     if (unit < 0) unit = 0;
     unit = Math.round(unit * 100) / 100;
-    return { unit, capped, pct, fijo };
+    return { unit, pct, fijo };
   }
   // Precio unitario efectivo de una línea del ticket (con todas las promos activas).
   function lineUnit(p, talla) {
     const orig = Number(p.precio) || 0;
     const list = active().filter(pr => match(pr, p, talla));
-    if (!list.length) return { unit: orig, orig, off: 0, promos: [], capped: false };
-    const r = applyStack(orig, list, p);
-    return { unit: r.unit, orig, off: Math.max(0, orig - r.unit), promos: list, capped: r.capped };
+    if (!list.length) return { unit: orig, orig, off: 0, promos: [] };
+    const r = applyStack(orig, list);
+    return { unit: r.unit, orig, off: Math.max(0, orig - r.unit), promos: list };
   }
   // Vista previa del efecto de UNA promo (en edición) sobre el catálogo.
   function previewDraft(draft) {
     const affected = D.products.filter(p => productMatch(draft, p));
     const examples = affected.slice(0, 4).map(p => {
       const orig = Number(p.precio) || 0;
-      const r = applyStack(orig, [draft], p);
-      return { p, orig, unit: r.unit, off: Math.max(0, orig - r.unit), capped: r.capped, margin: orig > 0 ? (orig - (Number(p.costo) || 0)) / orig : 0 };
+      const r = applyStack(orig, [draft]);
+      return { p, orig, unit: r.unit, off: Math.max(0, orig - r.unit) };
     });
-    const anyCapped = affected.some(p => applyStack(Number(p.precio) || 0, [draft], p).capped);
-    return { count: affected.length, examples, anyCapped };
+    return { count: affected.length, examples };
   }
 
   window.PROMOS = { estado, active, match, productMatch, lineUnit, previewDraft, applyStack };
@@ -119,6 +127,7 @@
     if (s.tallas && s.tallas.length) parts.push('Tallas ' + s.tallas.join('/'));
     if (s.modelos && s.modelos.length) parts.push('Mod. ' + s.modelos.join('/'));
     if (s.orns && s.orns.length) parts.push(s.orns.join(', '));
+    if (s.attrs) Object.keys(s.attrs).forEach(k => { if (s.attrs[k] && s.attrs[k].length) { const m = C.map(k); parts.push(s.attrs[k].map(c => m[c] || c).join(', ')); } });
     return parts.length ? parts.join(' · ') : 'Todas las prendas';
   }
 
@@ -218,11 +227,39 @@
         return Object.assign({}, prev, { scope: sc });
       });
     }
-
+    // Catálogos custom (Fase 2): alcance anidado en scope.attrs[kind].
+    const isOnAttr = (kind, code) => ((d.scope.attrs || {})[kind] || []).indexOf(code) >= 0;
+    function toggleAttr(kind, code) {
+      setD(prev => {
+        const sc = Object.assign({}, prev.scope);
+        const attrs = Object.assign({}, sc.attrs);
+        const arr = (attrs[kind] || []).slice();
+        const i = arr.indexOf(code);
+        if (i >= 0) arr.splice(i, 1); else arr.push(code);
+        attrs[kind] = arr; sc.attrs = attrs;
+        return Object.assign({}, prev, { scope: sc });
+      });
+    }
+    const codesOf = (items) => items.map(it => it.code);
     const cats = C.list('category'), telas = C.list('fabric'), mangas = C.list('sleeve'), cuellos = C.list('neck'), colores = C.list('color');
+    const ornItems = C.list('ornament');               // incluye "Sin ornamento" (—) → "Todas" cubre todo
     const tallas = C.codes('size_letter').concat(C.codes('size_number'));
+    const customCats = Object.keys(C.allCatalogMeta ? C.allCatalogMeta() : {}).filter(k => { const m = C.catalogMeta(k); return m && m.custom; }).map(k => ({ kind: k, label: C.catalogLabel(k), items: C.list(k) }));
     const modelos = useMemo(() => [...new Set(D.products.map(p => String(p.modelo)))].sort((a, b) => a.localeCompare(b, 'es', { numeric: true })), []);
-    const orns = useMemo(() => [...new Set(D.products.map(p => p.orn).filter(o => o && o !== '—'))], []);
+
+    // "Todas" = interruptor seleccionar/quitar TODO el grupo (con feedback visible en los chips).
+    // En el matching, tanto vacío como "todo seleccionado" = SIN filtro (aplica a todas, incl. sin valor).
+    const uniOf = { cats: codesOf(cats), telas: codesOf(telas), mangas: codesOf(mangas), cuellos: codesOf(cuellos), colores: codesOf(colores), orns: codesOf(ornItems), tallas, modelos };
+    const allOf = (arr, uni) => { const a = arr || []; return !a.length || (uni.length > 0 && uni.every(c => a.indexOf(c) >= 0)); };
+    const isAll = (dim) => allOf(d.scope[dim], uniOf[dim] || []);
+    function toggleAll(dim) {
+      const uni = uniOf[dim] || [];
+      setD(prev => { const sc = Object.assign({}, prev.scope); const a = sc[dim] || []; const full = uni.length > 0 && uni.every(c => a.indexOf(c) >= 0); sc[dim] = full ? [] : uni.slice(); return Object.assign({}, prev, { scope: sc }); });
+    }
+    const isAllAttr = (kind, codes) => allOf((d.scope.attrs || {})[kind], codes || []);
+    function toggleAllAttr(kind, codes) {
+      setD(prev => { const sc = Object.assign({}, prev.scope); const attrs = Object.assign({}, sc.attrs); const a = attrs[kind] || []; const full = codes.length > 0 && codes.every(c => a.indexOf(c) >= 0); attrs[kind] = full ? [] : codes.slice(); sc.attrs = attrs; return Object.assign({}, prev, { scope: sc }); });
+    }
 
     const draftForPreview = Object.assign({}, d, { valor: Number(d.valor) || 0 });
     const preview = useMemo(() => window.PROMOS.previewDraft(draftForPreview), [JSON.stringify(d)]);
@@ -244,11 +281,23 @@
     const lblCls = 'font-label-sm text-on-surface-variant';
     const underline = 'w-full border-b border-outline-variant focus:border-primary border-t-0 border-l-0 border-r-0 bg-transparent px-0 py-2 text-body-md focus:ring-0';
     const sectionTitle = (t) => h('h4', { key: 'st', className: 'text-overline uppercase tracking-widest text-primary mb-5 border-b border-outline-variant/40 pb-2' }, t);
+    // Chip: seleccionado (sólido) o apagado.
     const chip = (k, label, on, onClick) => h('button', {
       key: k, type: 'button', onClick,
       className: 'px-3 py-1 rounded text-xs transition-colors ' + (on ? 'bg-primary text-on-primary' : 'bg-surface-container text-on-surface-variant hover:bg-primary hover:text-on-primary'),
     }, label);
     const chipRow = (dim, items) => h('div', { key: 'cr', className: 'flex flex-wrap gap-2' }, items.map(it => chip(dim + ':' + it.code, it.label, isOn(dim, it.code), () => toggle(dim, it.code))));
+    // Encabezado de grupo: etiqueta + píldora "Todas". Resaltada cuando el grupo aplica a TODO
+    // (vacío o todo seleccionado). Clic = interruptor: selecciona todo / lo quita (feedback visible).
+    const groupLabel = (text, all, onTodas) => h('div', { key: 'l', className: 'flex items-center justify-between gap-2 mb-2' }, [
+      h('label', { key: 't', className: lblCls }, text),
+      h('button', {
+        key: 'a', type: 'button', onClick: onTodas,
+        title: 'Seleccionar / quitar todo el grupo (vacío y todo seleccionado = aplica a todas las prendas)',
+        className: 'px-2.5 h-6 rounded-full text-overline uppercase font-bold border transition-colors ' +
+          (all ? 'bg-primary text-on-primary border-primary' : 'bg-surface-container text-on-surface-variant border-outline-variant hover:border-primary'),
+      }, 'Todas'),
+    ]);
 
     return h('div', {
       className: 'fixed inset-0 z-[60] bg-primary/40 backdrop-blur-sm flex items-center justify-center p-4',
@@ -316,14 +365,19 @@
               h('section', { key: 's3' }, [
                 sectionTitle('Alcance (filtros — vacío = todas las prendas)'),
                 h('div', { key: 'g', className: 'space-y-5' }, [
-                  h('div', { key: 'cat' }, [h('label', { key: 'l', className: lblCls + ' block mb-2' }, 'Categorías'), chipRow('cats', cats)]),
-                  h('div', { key: 'tela' }, [h('label', { key: 'l', className: lblCls + ' block mb-2' }, 'Telas'), chipRow('telas', telas)]),
-                  h('div', { key: 'manga' }, [h('label', { key: 'l', className: lblCls + ' block mb-2' }, 'Manga'), chipRow('mangas', mangas)]),
-                  h('div', { key: 'cuello' }, [h('label', { key: 'l', className: lblCls + ' block mb-2' }, 'Cuello'), chipRow('cuellos', cuellos)]),
-                  h('div', { key: 'color' }, [h('label', { key: 'l', className: lblCls + ' block mb-2' }, 'Colores'), chipRow('colores', colores)]),
-                  h('div', { key: 'talla' }, [h('label', { key: 'l', className: lblCls + ' block mb-2' }, 'Tallas'), h('div', { key: 'c', className: 'flex flex-wrap gap-2' }, tallas.map(t => chip('t:' + t, t, isOn('tallas', t), () => toggle('tallas', t))))]),
-                  orns.length ? h('div', { key: 'orn' }, [h('label', { key: 'l', className: lblCls + ' block mb-2' }, 'Ornamento'), h('div', { key: 'c', className: 'flex flex-wrap gap-2' }, orns.map(o => chip('o:' + o, o, isOn('orns', o), () => toggle('orns', o))))]) : null,
-                  h('div', { key: 'mod' }, [h('label', { key: 'l', className: lblCls + ' block mb-2' }, 'Modelos'), h('div', { key: 'c', className: 'flex flex-wrap gap-2 max-h-28 overflow-y-auto' }, modelos.map(m => chip('m:' + m, '#' + m, isOn('modelos', m), () => toggle('modelos', m))))]),
+                  h('div', { key: 'cat' }, [groupLabel('Categorías', isAll('cats'), () => toggleAll('cats')), chipRow('cats', cats)]),
+                  h('div', { key: 'tela' }, [groupLabel('Telas', isAll('telas'), () => toggleAll('telas')), chipRow('telas', telas)]),
+                  h('div', { key: 'manga' }, [groupLabel('Manga', isAll('mangas'), () => toggleAll('mangas')), chipRow('mangas', mangas)]),
+                  h('div', { key: 'cuello' }, [groupLabel('Cuello', isAll('cuellos'), () => toggleAll('cuellos')), chipRow('cuellos', cuellos)]),
+                  h('div', { key: 'color' }, [groupLabel('Colores', isAll('colores'), () => toggleAll('colores')), chipRow('colores', colores)]),
+                  h('div', { key: 'talla' }, [groupLabel('Tallas', isAll('tallas'), () => toggleAll('tallas')), h('div', { key: 'c', className: 'flex flex-wrap gap-2' }, tallas.map(t => chip('t:' + t, t, isOn('tallas', t), () => toggle('tallas', t))))]),
+                  h('div', { key: 'orn' }, [groupLabel('Ornamento', isAll('orns'), () => toggleAll('orns')), chipRow('orns', ornItems)]),
+                  h('div', { key: 'mod' }, [groupLabel('Modelos', isAll('modelos'), () => toggleAll('modelos')), h('div', { key: 'c', className: 'flex flex-wrap gap-2 max-h-28 overflow-y-auto' }, modelos.map(m => chip('m:' + m, '#' + m, isOn('modelos', m), () => toggle('modelos', m))))]),
+                  // Catálogos creados por el admin (Fase 2)
+                  ...customCats.filter(c => c.items.length).map(c => h('div', { key: 'a_' + c.kind }, [
+                    groupLabel(c.label, isAllAttr(c.kind, codesOf(c.items)), () => toggleAllAttr(c.kind, codesOf(c.items))),
+                    h('div', { key: 'c', className: 'flex flex-wrap gap-2' }, c.items.map(it => chip('a:' + c.kind + ':' + it.code, it.label, isOnAttr(c.kind, it.code), () => toggleAttr(c.kind, it.code)))),
+                  ])),
                 ]),
               ]),
             ]),
@@ -348,16 +402,6 @@
                         h('span', { key: 'u', className: 'text-gold-text font-bold text-sm' }, fmt(ex.unit)),
                       ]),
                     ]))),
-              ]),
-              // Validación de margen
-              h('div', { key: 'v', className: 'p-5 border rounded-xl ' + (preview.anyCapped ? 'border-danger/40 bg-danger-soft' : 'border-gold/40 bg-gold/5') }, [
-                h('h5', { key: 't', className: 'font-label-sm font-bold mb-2 flex items-center gap-2 ' + (preview.anyCapped ? 'text-danger' : 'text-gold-text') }, [
-                  h(MS, { key: 'i', name: preview.anyCapped ? 'alert' : 'check', size: 18 }), 'Validación de margen',
-                ]),
-                h('p', { key: 'd', className: 'text-caption text-on-surface-variant' },
-                  preview.anyCapped
-                    ? 'Algunas prendas alcanzan el margen mínimo (' + (Number(C.get('discount.minMarginPct')) || 0) + '%): el descuento se topó para no vender por debajo del piso de utilidad.'
-                    : 'El descuento respeta el margen mínimo de utilidad (' + (Number(C.get('discount.minMarginPct')) || 0) + '%) configurado.'),
               ]),
             ]),
           ])),

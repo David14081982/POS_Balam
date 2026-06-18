@@ -120,4 +120,7 @@ wrapper = setBlock(wrapper, 'ext_resources', '[]');
 wrapper = setBlock(wrapper, 'template', esc(JSON.stringify(template)));
 
 fs.writeFileSync(OUT, wrapper);
+// index.html = copia exacta del bundle, lista para servir en el VPS (entrada del sitio).
+fs.writeFileSync('index.html', wrapper);
 console.log('\nOK ->', OUT, '·', (wrapper.length / 1e6).toFixed(2) + 'MB ·', Object.keys(manifest).length, 'assets');
+console.log('OK -> index.html (copia para deploy)');

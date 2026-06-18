@@ -28,7 +28,6 @@
     const [client, setClient] = useState(D.clients.find(c => c.generic));
     const [sizePick, setSizePick] = useState(null);
     const [checkout, setCheckout] = useState(false);
-    const [clientPick, setClientPick] = useState(false);
     const [pendingMetodo, setPendingMetodo] = useState(null); // venta por confirmar vendedor
     const [success, setSuccess] = useState(null);             // venta registrada
     const [flash, setFlash] = useState(null);                 // línea recién agregada por escáner (destello verde)
@@ -69,7 +68,7 @@
     // no tenga el foco. Distingue lector de tecleo humano por la cadencia entre teclas
     // (un lector teclea < ~30 ms/carácter; si hay una pausa > 50 ms, se reinicia el búfer).
     const scanRT = useRef({});
-    scanRT.current = { addToTicket, flashLine, scanEl: scanRef.current, blocked: !!(sizePick || checkout || clientPick || pendingMetodo || success) };
+    scanRT.current = { addToTicket, flashLine, scanEl: scanRef.current, blocked: !!(sizePick || checkout || pendingMetodo || success) };
     useEffect(() => {
       let buf = '', lt = 0;
       function onKey(e) {
@@ -151,7 +150,7 @@
     function onNewSale() { setSuccess(null); setTicket([]); setClient(D.clients.find(c => c.generic)); }
 
     // ---- Catálogo ----
-    const catalog = h('section', { key: 'catalog', className: 'flex-1 flex flex-col min-w-0' }, [
+    const catalog = h('section', { key: 'catalog', className: 'pos-cat flex-1 flex flex-col min-w-0' }, [
       // Captura / scan
       h('div', { key: 'cap', className: 'flex gap-3 mb-6' }, [
         h('div', { key: 'scan', className: 'relative flex-1' }, [
@@ -199,14 +198,14 @@
         catalogView === 'list'
           ? h('div', { className: 'flex flex-col divide-y divide-outline-variant bg-surface-container-lowest rounded-xl overflow-hidden shadow-e1' },
               filtered.map(p => h(ProductRow, { key: p.id, p, onAdd: () => openSize(p) })))
-          : h('div', { className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8' },
+          : h('div', { className: 'pos-cat-grid grid gap-8' },
               filtered.map(p => h(ProductCard, { key: p.id, p, onAdd: () => openSize(p) })))),
     ]);
 
     const ticketPanel = h(window.TicketPanel, {
       key: 'ticket',
       ticket, client, subtotal, subtotalOrig, discount, itemCount, grandTotal,
-      onClient: () => setClientPick(true),
+      onPickClient: setClient, onResetClient: () => setClient(D.clients.find(c => c.generic)),
       onQty: setQty, onRemove: removeLine, onCobrar: () => setCheckout(true),
       onClear: () => setTicket([]), bottom: ticketBottom, flashKey: flash,
     });
@@ -218,7 +217,6 @@
       ticketPanel,
       sizePick && h(SizeModal, { key: 'sm', p: sizePick, onClose: () => setSizePick(null), onPick: addToTicket }),
       checkout && h(window.CheckoutModal, { key: 'co', total: grandTotal, itemCount, client, onClose: () => setCheckout(false), onConfirm: onCobrar }),
-      clientPick && h(ClientModal, { key: 'cm', onClose: () => setClientPick(false), onPick: c => { setClient(c); setClientPick(false); } }),
       pendingMetodo && h(SellerPickModal, { key: 'sp', onClose: () => setPendingMetodo(null), onConfirm: onSellerConfirm }),
       success && h(SuccessModal, { key: 'ok', sale: success, onNew: onNewSale }),
       success && h(window.BalamTicket, { key: 'tk', sale: success }),
@@ -356,39 +354,11 @@
               className: 'flex flex-col items-center gap-0.5 min-w-[64px] px-3 py-2.5 border border-outline-variant hover:border-primary hover:bg-surface-container-low transition-colors rounded-lg',
               onClick: () => onPick(p, v.talla),
             }, [
-              h('span', { key: 't', className: 'font-semibold text-body text-primary' }, v.talla),
+              h('span', { key: 't', className: 'font-semibold text-body text-primary' }, (window.CONFIG.map(e === 'N' ? 'size_number' : 'size_letter')[v.talla] || v.talla)),
               h('span', { key: 's', className: 'text-caption text-muted' }, v.stock + ' pz'),
             ]))),
         ]);
       }),
-    ]);
-  }
-
-  // Modal de cliente
-  function ClientModal({ onClose, onPick }) {
-    const [q, setQ] = useState('');
-    const list = D.clients.filter(c => c.nombre.toLowerCase().includes(q.toLowerCase()) || c.tel.includes(q));
-    return h(Modal, { title: 'Asignar cliente', onClose }, [
-      h('div', { key: 's', className: 'relative mb-4' }, [
-        h('span', { key: 'i', className: 'absolute inset-y-0 left-0 pl-3 flex items-center text-on-surface-variant' }, h(MS, { name: 'search', size: 18 })),
-        h('input', {
-          key: 'in', className: 'block w-full pl-10 pr-4 h-11 bg-surface-container-low border border-outline-variant focus:ring-1 focus:ring-primary text-sm rounded-xl',
-          placeholder: 'Buscar por nombre o teléfono…', value: q, onChange: e => setQ(e.target.value), autoFocus: true,
-        }),
-      ]),
-      h('div', { key: 'l', className: 'max-h-80 overflow-y-auto -mx-1' },
-        list.map(c => h('button', {
-          key: c.id, className: 'w-full flex items-center gap-3 p-2.5 hover:bg-surface-container-low transition-colors text-left rounded-lg',
-          onClick: () => onPick(c),
-        }, [
-          h('div', { key: 'a', className: 'w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold ' + (c.generic ? 'bg-surface-container-high text-on-surface-variant' : 'bg-primary text-on-primary') },
-            c.generic ? h(MS, { name: 'person', size: 18 }) : c.nombre.split(' ').map(w => w[0]).slice(0, 2).join('')),
-          h('div', { key: 'i', className: 'flex-1 min-w-0' }, [
-            h('div', { key: 'n', className: 'font-semibold text-body text-primary truncate' }, c.nombre),
-            h('div', { key: 't', className: 'text-on-surface-variant text-caption' }, c.generic ? 'Sin registro' : c.tel + ' · ' + c.compras + ' compras'),
-          ]),
-          h(MS, { key: 'c', name: 'chevRight', size: 18, className: 'text-on-surface-variant' }),
-        ]))),
     ]);
   }
 

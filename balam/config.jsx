@@ -65,6 +65,7 @@
       { code: 'Transferencia', label: 'Transferencia', meta: { icon: 'transfer' } },
       { code: 'Mixto', label: 'Mixto', meta: { icon: 'split' } },
       { code: 'Apartado', label: 'Apartado', meta: { icon: 'clock' } },
+      { code: 'Cortesía', label: 'Cortesía', meta: { icon: 'tag' } },   // regalo/giveaway: total $0
     ],
     sale_status: [
       { code: 'Pagado', label: 'Pagado', meta: { tone: 'success' } },
@@ -118,6 +119,28 @@
     ],
   };
 
+  // ── Metadatos por catálogo (Fase 1: renombrar · En alta · En SKU · orden) ─────
+  // Reproduce EXACTAMENTE el comportamiento fijo actual: el SKU es cat-manga-tela-color
+  // (+ número de modelo al final). Nada cambia hasta que el admin lo edite.
+  //   label   → nombre visible del catálogo (antes hardcodeado como título)
+  //   inForm  → aparece como campo en el alta de producto
+  //   inSku   → su código forma parte del SKU
+  //   skuOrder→ posición dentro del SKU (entre los inSku)
+  //   field   → propiedad del producto que lleva su código (p.cat, p.manga, …)
+  //   system    → catálogo del sistema (no se puede borrar, solo desactivar/renombrar)
+  //   struct    → estructural (swatch / matriz de stock): no se quita del alta ni del SKU por toggle
+  //   formSelect→ se captura como menú desplegable en el alta (lo controla el toggle "En alta")
+  const SEED_CATALOG_META = {
+    category:    { label: 'Categoría',      inForm: true,  inSku: true,  skuOrder: 1, field: 'cat',    system: true, formSelect: true },
+    sleeve:      { label: 'Manga',          inForm: true,  inSku: true,  skuOrder: 2, field: 'manga',  system: true, formSelect: true },
+    fabric:      { label: 'Tela',           inForm: true,  inSku: true,  skuOrder: 3, field: 'tela',   system: true, formSelect: true, filterable: true },
+    color:       { label: 'Color',          inForm: true,  inSku: true,  skuOrder: 4, field: 'color',  system: true, struct: true, formSelect: true },
+    neck:        { label: 'Cuello',         inForm: true,  inSku: false, skuOrder: 5, field: 'cuello', system: true, formSelect: true },
+    ornament:    { label: 'Ornamento',      inForm: false, inSku: false, skuOrder: 6, field: 'orn',    system: true },
+    size_letter: { label: 'Talla (Letra)',  inForm: false, inSku: false, skuOrder: 7, system: true, struct: true },
+    size_number: { label: 'Talla (Número)', inForm: false, inSku: false, skuOrder: 8, system: true, struct: true },
+  };
+
   // ── Semilla de parámetros sueltos ────────────────────────────────────────────
   const SEED_SETTINGS = {
     'store.name': 'Balam Guayaberas',
@@ -160,7 +183,7 @@
         code: it.code, label: it.label, active: true, meta: it.meta ? deepClone(it.meta) : {},
       }));
     });
-    return { v: 1, catalogs, settings: deepClone(SEED_SETTINGS) };
+    return { v: 1, catalogs, catalogMeta: deepClone(SEED_CATALOG_META), settings: deepClone(SEED_SETTINGS) };
   }
 
   let state;
@@ -176,6 +199,12 @@
     let changed = false;
     Object.keys(fresh.catalogs).forEach(k => { if (!state.catalogs[k]) { state.catalogs[k] = fresh.catalogs[k]; changed = true; } });
     Object.keys(fresh.settings).forEach(k => { if (!(k in state.settings)) { state.settings[k] = fresh.settings[k]; changed = true; } });
+    // Metadatos por catálogo: rellena el mapa entero o entradas-por-kind ausentes (estados viejos).
+    if (!state.catalogMeta) { state.catalogMeta = fresh.catalogMeta; changed = true; }
+    else Object.keys(fresh.catalogMeta).forEach(k => { if (!state.catalogMeta[k]) { state.catalogMeta[k] = fresh.catalogMeta[k]; changed = true; } });
+    // Asegura el método 'Cortesía' (regalos/giveaways) en instalaciones que ya tenían payment_method.
+    const pm = state.catalogs.payment_method;
+    if (pm && !pm.some(it => it.code === 'Cortesía')) { pm.push({ code: 'Cortesía', label: 'Cortesía', active: true, meta: { icon: 'tag' } }); changed = true; }
     if (changed) persist();
   })();
 
@@ -214,12 +243,30 @@
   function get(key) { return state.settings[key]; }
   function settings() { return deepClone(state.settings); }
 
+  // ── Metadatos por catálogo (label / inForm / inSku / orden) ───────────────────
+  function catalogMeta(kind) { return state.catalogMeta[kind] || null; }
+  function allCatalogMeta() { return deepClone(state.catalogMeta); }
+  // Etiqueta visible del catálogo (con respaldo si no hubiera meta).
+  function catalogLabel(kind) { const m = state.catalogMeta[kind]; return (m && m.label) || kind; }
+  // Propiedad del producto que lleva el código de un catálogo (p.cat, p.manga, …).
+  function fieldOf(kind) { const m = state.catalogMeta[kind]; return m ? m.field : undefined; }
+  // Partes del SKU: catálogos con inSku, ordenados por skuOrder → [{ kind, field }].
+  function skuParts() {
+    return Object.keys(state.catalogMeta)
+      .map(kind => ({ kind, m: state.catalogMeta[kind] }))
+      .filter(x => x.m && x.m.inSku && (x.m.field || x.m.custom))
+      .sort((a, b) => (a.m.skuOrder || 0) - (b.m.skuOrder || 0))
+      .map(x => ({ kind: x.kind, field: x.m.field, custom: !!x.m.custom }));
+  }
+
   // ── ¿Un code de catálogo está en uso por algún producto? (guarda de borrado) ──
   function inUse(kind, code) {
     const D = window.DATA;
     if (!D || !D.products) return false;
-    const field = { category: 'cat', fabric: 'tela', sleeve: 'manga', neck: 'cuello', color: 'color', ornament: 'orn' }[kind];
-    if (field) {
+    const cm = state.catalogMeta[kind];
+    if (cm && cm.custom) return D.products.some(p => (p.attrs || {})[kind] === code);
+    const field = fieldOf(kind);
+    if (field && kind !== 'size_letter' && kind !== 'size_number') {
       if (D.products.some(p => String(p[field]) === String(code))) return true;
       if (kind === 'color' && D.products.some(p => (p.ornColors || []).includes(code))) return true;
       return false;
@@ -268,6 +315,70 @@
     return { ok: true };
   }
 
+  // ── API de escritura (metadatos de catálogo) ─────────────────────────────────
+  // Renombrar (label) y togglear inForm/inSku. Los 'struct' no se quitan del alta ni del SKU.
+  function setCatalogMeta(kind, patch) {
+    const m = state.catalogMeta[kind];
+    if (!m) return { ok: false, error: 'No existe' };
+    if ('label' in patch) m.label = String(patch.label || '').trim() || m.label;
+    // 'struct' (color, tallas) no se puede OCULTAR del alta (swatch/matriz de stock), pero sí
+    // puede entrar o salir del SKU libremente (el SKU es solo un identificador).
+    if ('inForm' in patch && !m.struct) m.inForm = !!patch.inForm;
+    if ('inSku' in patch) m.inSku = !!patch.inSku;
+    if ('required' in patch) m.required = !!patch.required;     // obligatorio en el alta
+    if ('filterable' in patch) m.filterable = !!patch.filterable; // aparece como filtro en Inventario
+    emit();
+    return { ok: true };
+  }
+  // Reordena un catálogo dentro del SKU intercambiando skuOrder con su vecino inSku.
+  function moveSkuOrder(kind, dir) {
+    const m = state.catalogMeta[kind];
+    if (!m || !m.inSku) return { ok: false };
+    const ordered = Object.keys(state.catalogMeta)
+      .map(k => ({ k, m: state.catalogMeta[k] }))
+      .filter(x => x.m.inSku)
+      .sort((a, b) => (a.m.skuOrder || 0) - (b.m.skuOrder || 0));
+    const i = ordered.findIndex(x => x.k === kind);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= ordered.length) return { ok: false };
+    const a = ordered[i].m, b = ordered[j].m;
+    const t = a.skuOrder; a.skuOrder = b.skuOrder; b.skuOrder = t;
+    emit();
+    return { ok: true };
+  }
+
+  // ── API de escritura (catálogos nuevos — Fase 2) ─────────────────────────────
+  function slugify(s) {
+    return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 32);
+  }
+  // Crea un catálogo "custom" vacío (un kind nuevo). Aparece como tarjeta editable y, si el admin
+  // activa "En alta"/"En SKU", como campo del alta / segmento del SKU. Su valor por producto vive
+  // en p.attrs[kind]. Las definiciones e ítems sincronizan a la nube como cualquier catálogo.
+  function addCatalog(label) {
+    const name = String(label || '').trim();
+    if (!name) return { ok: false, error: 'Escribe el nombre del catálogo' };
+    let base = slugify(name) || 'catalogo', kind = base, n = 2;
+    while (state.catalogMeta[kind] || state.catalogs[kind]) kind = base + '_' + (n++);
+    const orders = Object.keys(state.catalogMeta).map(k => state.catalogMeta[k].skuOrder || 0);
+    state.catalogs[kind] = [];
+    state.catalogMeta[kind] = { label: name, inForm: false, inSku: false, skuOrder: (orders.length ? Math.max.apply(null, orders) : 0) + 1, field: null, custom: true, formSelect: true, system: false };
+    emit();
+    return { ok: true, kind };
+  }
+  // Borra un catálogo custom (los del sistema no se borran). Bloqueado si algún producto lo usa.
+  function removeCatalog(kind) {
+    const m = state.catalogMeta[kind];
+    if (!m) return { ok: false, error: 'No existe' };
+    if (!m.custom) return { ok: false, error: 'Un catálogo del sistema no se puede borrar' };
+    const D = window.DATA;
+    if (D && D.products && D.products.some(p => (p.attrs || {})[kind] != null)) return { ok: false, error: 'En uso por productos — quita el valor antes de borrarlo' };
+    delete state.catalogMeta[kind];
+    delete state.catalogs[kind];
+    emit();
+    return { ok: true };
+  }
+
   // ── API de escritura (ajustes) ────────────────────────────────────────────────
   function setSetting(key, value) { state.settings[key] = value; emit(); }
   function setSettings(obj) { Object.assign(state.settings, obj); emit(); }
@@ -284,13 +395,16 @@
     // emit() → pushConfig lo subirá, volviéndolo persistente. Los ajustes ya se fusionan sobre los defaults.
     const cats = next.catalogs, fresh = seed();
     Object.keys(fresh.catalogs).forEach(k => { if (!cats[k] || !cats[k].length) cats[k] = fresh.catalogs[k]; });
-    state = { v: next.v || 1, catalogs: cats, settings: Object.assign({}, deepClone(SEED_SETTINGS), next.settings) };
+    // Metadatos: fusiona sobre los defaults (la nube gana por kind presente; los kinds nuevos del código no desaparecen).
+    const meta = Object.assign({}, deepClone(SEED_CATALOG_META), next.catalogMeta || {});
+    state = { v: next.v || 1, catalogs: cats, catalogMeta: meta, settings: Object.assign({}, deepClone(SEED_SETTINGS), next.settings) };
     emit();
   }
 
   window.CONFIG = {
     all, list, map, metaMap, codes, find, get, settings, inUse,
-    addItem, updateItem, setActive, removeItem, move, setSetting, setSettings,
+    catalogMeta, allCatalogMeta, catalogLabel, fieldOf, skuParts,
+    addItem, updateItem, setActive, removeItem, move, setCatalogMeta, moveSkuOrder, addCatalog, removeCatalog, setSetting, setSettings,
     reset, snapshot, load,
     get version() { return version; },
     KINDS: Object.keys(SEED_CATALOGS),

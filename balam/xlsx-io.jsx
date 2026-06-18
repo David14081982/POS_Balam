@@ -7,7 +7,13 @@
   // Encabezados de talla. Letras tal cual; números prefijados "T" para no confundir con cantidades.
   const LETRA_H = D.SIZES_LETRA.slice();                  // XS, S, M, …
   const NUM_H = D.SIZES_NUM.map(n => 'T' + n);            // T34, T36, …
-  const HEADERS = BASE.concat(LETRA_H, NUM_H);
+  // Catálogos creados por el admin (Fase 2): una columna extra por catálogo (encabezado = su nombre).
+  function customCols() {
+    const meta = (window.CONFIG && window.CONFIG.allCatalogMeta) ? window.CONFIG.allCatalogMeta() : {};
+    return Object.keys(meta).filter(k => meta[k].custom).map(k => ({ kind: k, label: meta[k].label }));
+  }
+  // Orden de columnas: base · catálogos custom · tallas. Se calcula al vuelo (los custom son dinámicos).
+  function buildHeaders() { return BASE.concat(customCols().map(c => c.label), LETRA_H, NUM_H); }
 
   function ensureXLSX() {
     if (!window.XLSX) { window.UI.toast('No se pudo cargar el motor de Excel', 'var(--danger)'); return false; }
@@ -27,6 +33,10 @@
     Object.entries(D.CUELLO).forEach(([k, v]) => rows.push([k, v]));
     rows.push([], ['COLOR (cols. Color y Colores Orn.)']);
     Object.entries(D.COLOR_NAME).forEach(([k, v]) => rows.push([k, v]));
+    customCols().forEach(c => {
+      rows.push([], [c.label.toUpperCase() + ' (col. ' + c.label + ')']);
+      window.CONFIG.list(c.kind).forEach(it => rows.push([it.code, it.label]));
+    });
     rows.push([], ['NOTAS']);
     rows.push(['• El SKU se arma como: Categoría-Manga-Tela-Color-NoModelo  (ej. 21-MC-ALG-BL-060)']);
     rows.push(['• Si dejas la columna SKU vacía, el sistema lo arma con las columnas de atributos.']);
@@ -48,6 +58,7 @@
       'Color': p.color, 'No. Modelo': p.modelo, 'Ornamento': p.orn,
       'Colores Orn.': (p.ornColors || []).join(', '), 'Cuello': p.cuello || 'NOR', 'Precio': p.precio,
     };
+    customCols().forEach(c => { r[c.label] = (p.attrs || {})[c.kind] || ''; });
     const byKey = {};
     p.stock.forEach(v => { byKey[v.escala + v.talla] = v.stock; });
     D.SIZES_LETRA.forEach((t, i) => { r[LETRA_H[i]] = byKey['L' + t] || 0; });
@@ -60,13 +71,15 @@
     if (h === 'SKU') return 20;
     if (h === 'Ornamento' || h === 'Colores Orn.') return 18;
     if (h === 'Cuello' || h === 'Categoría') return 12;
-    return 7;
+    if (BASE.indexOf(h) >= 0 || LETRA_H.indexOf(h) >= 0 || NUM_H.indexOf(h) >= 0) return 7;
+    return 16; // columnas de catálogos custom
   }
 
   function inventarioSheet(products) {
     const data = products.map(rowFromProduct);
-    const ws = window.XLSX.utils.json_to_sheet(data, { header: HEADERS });
-    ws['!cols'] = HEADERS.map(h => ({ wch: colWidth(h) }));
+    const headers = buildHeaders();
+    const ws = window.XLSX.utils.json_to_sheet(data, { header: headers });
+    ws['!cols'] = headers.map(h => ({ wch: colWidth(h) }));
     return ws;
   }
 
@@ -82,8 +95,9 @@
       orn: 'Bordado Eléctrico', ornColors: ['OR', 'VI'], cuello: 'MAO', precio: 650,
       stock: D.mkStock([2, 4, 6, 9, 12, 8, 5], [0, 0, 3, 5, 6, 4]),
     }));
-    const ws = window.XLSX.utils.json_to_sheet([ejemplo], { header: HEADERS });
-    ws['!cols'] = HEADERS.map(h => ({ wch: colWidth(h) }));
+    const headers = buildHeaders();
+    const ws = window.XLSX.utils.json_to_sheet([ejemplo], { header: headers });
+    ws['!cols'] = headers.map(h => ({ wch: colWidth(h) }));
     const wb = window.XLSX.utils.book_new();
     window.XLSX.utils.book_append_sheet(wb, ws, 'Inventario');
     window.XLSX.utils.book_append_sheet(wb, catalogosSheet(), 'Catálogos');
@@ -128,6 +142,19 @@
     return first || fallback;
   }
 
+  // Valida un valor de catálogo custom (códigos pueden ser mixtos): código exacto → por código
+  // sin distinguir mayúsculas → por nombre. Si no coincide, vacío (los custom son opcionales).
+  function validCustom(kind, raw) {
+    const s = String(raw == null ? '' : raw).trim();
+    if (!s) return '';
+    if (window.CONFIG.find(kind, s)) return s;
+    const items = window.CONFIG.all(kind);
+    const byCode = items.find(it => String(it.code).toLowerCase() === s.toLowerCase());
+    if (byCode) return byCode.code;
+    const byLabel = items.find(it => String(it.label).toLowerCase() === s.toLowerCase());
+    return byLabel ? byLabel.code : '';
+  }
+
   function buildProduct(row, idx) {
     const nombre = String(row['Modelo'] || '').trim();
     const skuRaw = String(row['SKU'] || '').trim().toUpperCase();
@@ -135,7 +162,12 @@
 
     let cat, manga, tela, color, modelo;
     const parts = skuRaw.split('-');
-    if (parts.length === 5) {
+    // Atajo: parsear el SKU posicionalmente SOLO si la receta sigue siendo la de fábrica
+    // (cat-manga-tela-color + modelo). Si el admin reordenó/cambió el SKU, ese orden ya no es
+    // confiable → se usan las columnas explícitas (Categoría/Manga/Tela/Color/No. Modelo).
+    const recipe = (window.CONFIG && window.CONFIG.skuParts) ? window.CONFIG.skuParts().map(x => x.field) : ['cat', 'manga', 'tela', 'color'];
+    const legacyOrder = recipe.length === 4 && recipe[0] === 'cat' && recipe[1] === 'manga' && recipe[2] === 'tela' && recipe[3] === 'color';
+    if (legacyOrder && parts.length === 5) {
       [cat, manga, tela, color, modelo] = parts;
     } else {
       cat = String(row['Categoría'] || '21').trim();
@@ -152,6 +184,8 @@
     modelo = String(modelo).padStart(3, '0');
     const letras = D.SIZES_LETRA.map((t, i) => num(row[LETRA_H[i]]));
     const nums = D.SIZES_NUM.map((t, i) => num(row[NUM_H[i]]));
+    const attrs = {};
+    customCols().forEach(c => { const v = validCustom(c.kind, row[c.label]); if (v) attrs[c.kind] = v; });
     return D.hydrate({
       id: 'imp-' + Date.now() + '-' + idx,
       cat, manga, tela, color, modelo, nombre,
@@ -159,6 +193,7 @@
       ornColors: parseOrnColors(row['Colores Orn.']),
       cuello: parseCuello(row['Cuello']),
       precio: num(row['Precio']),
+      attrs,
       stock: D.mkStock(letras, nums),
       pop: false,
     });
@@ -231,5 +266,5 @@
     window.UI.toast(`${rows.length} vendedores exportados`, 'var(--accent)');
   }
 
-  window.XLSXIO = { exportTemplate, exportInventory, exportReturns, exportSales, exportSellers, parseFile, HEADERS };
+  window.XLSXIO = { exportTemplate, exportInventory, exportReturns, exportSales, exportSellers, parseFile, headers: buildHeaders };
 })();

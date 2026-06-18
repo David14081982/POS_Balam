@@ -15,6 +15,16 @@ alter table pos.clients add column if not exists nacimiento date;
 -- Mapa { talla: url } por producto. El código en sí se deriva de SKU+talla, no se guarda.
 alter table pos.products add column if not exists barcode_urls jsonb not null default '{}';
 
+-- ── (1.3) Atributos de catálogos creados por el admin (Fase 2) ──────────────────
+-- Mapa { kind: code } por producto, p. ej. { temporada: 'VER25', coleccion: 'GALA' }.
+-- Los catálogos del sistema (cat/manga/tela/color/cuello) siguen en sus columnas propias.
+alter table pos.products add column if not exists attrs jsonb not null default '{}';
+
+-- ── (1.4) Cortesías (regalos/giveaways): valor regalado por venta ───────────────
+-- La venta se guarda con total = 0 (no se cobró). Aquí guardamos lo que se habría cobrado
+-- para los reportes de "cuánto se ha regalado". Solo se llena en ventas con método 'Cortesía'.
+alter table pos.sales add column if not exists valor_regalado numeric(12,2) not null default 0;
+
 -- Bucket público para los PNG de etiquetas. Lectura pública (bucket public);
 -- escritura solo para usuarios autenticados (la terminal con sesión).
 insert into storage.buckets (id, name, public)

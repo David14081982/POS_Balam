@@ -7,6 +7,19 @@
   const h = React.createElement;
 
   const ESCALAS = [['L', 'Letras'], ['N', 'Números']];
+  // Nombre visible de una talla según el catálogo (size_letter/size_number). Si se renombró en
+  // Configuración, aquí se refleja; si no existe, cae al código.
+  const tallaLabel = (talla, escala) => {
+    const m = window.CONFIG.map(escala === 'N' ? 'size_number' : 'size_letter');
+    return (m[talla] != null && m[talla] !== '') ? m[talla] : talla;
+  };
+  // Alinea el stock de un producto al catálogo de tallas VIGENTE: conserva cantidades por talla,
+  // agrega las tallas nuevas en 0 y omite las que ya no existen. Misma lógica que D.hydrate.
+  const alignStock = (existing) => {
+    const by = {}; (existing || []).forEach(v => { by[v.escala + v.talla] = v.stock; });
+    return window.DATA.SIZES_LETRA.map(t => ({ talla: t, escala: 'L', stock: by['L' + t] || 0 }))
+      .concat(window.DATA.SIZES_NUM.map(t => ({ talla: t, escala: 'N', stock: by['N' + t] || 0 })));
+  };
   const CARD = 'bg-surface-container-lowest rounded-xl shadow-e1';
   const INPUT = 'w-full bg-surface border border-outline-variant rounded-lg px-3 h-11 text-body focus:ring-1 focus:ring-primary focus:border-primary transition-all';
   const SELECT = INPUT + ' appearance-none';
@@ -26,7 +39,7 @@
 
   function InventoryScreen() {
     const [query, setQuery] = useState('');
-    const [tela, setTela] = useState('all');
+    const [filters, setFilters] = useState({}); // { [kind]: code|'all' } — catálogos "Filtrables"
     const [stockFilter, setStockFilter] = useState('all');
     const [detail, setDetail] = useState(null);
     const [editing, setEditing] = useState(null);
@@ -73,17 +86,26 @@
     }
 
     const lowThreshold = window.CONFIG.get('stock.lowThreshold') || 4;
+    // Catálogos marcados como "Filtrables" (Configuración). Por defecto solo Tela.
+    const filterableKinds = Object.keys(window.CONFIG.allCatalogMeta ? window.CONFIG.allCatalogMeta() : {})
+      .filter(k => { const m = window.CONFIG.catalogMeta(k); return m && m.filterable; });
     const rows = useMemo(() => {
       const q = query.trim().toLowerCase();
       return products.filter(p => {
-        if (tela !== 'all' && p.tela !== tela) return false;
+        for (let i = 0; i < filterableKinds.length; i++) {
+          const fk = filterableKinds[i], selv = filters[fk];
+          if (!selv || selv === 'all') continue;
+          const m = window.CONFIG.catalogMeta(fk);
+          const val = m.custom ? (p.attrs || {})[fk] : p[m.field];
+          if (String(val) !== String(selv)) return false;
+        }
         const total = D.totalStock(p);
         if (stockFilter === 'low' && total > lowThreshold) return false;
         if (stockFilter === 'out' && total !== 0) return false;
         if (!q) return true;
         return p.nombre.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q) || p.colorName.toLowerCase().includes(q);
       });
-    }, [query, tela, stockFilter, products]);
+    }, [query, filters, stockFilter, products]);
     const PER = 10, pages = Math.max(1, Math.ceil(rows.length / PER)), pg = Math.min(page, pages);
     const slice = rows.slice((pg - 1) * PER, pg * PER);
 
@@ -108,7 +130,12 @@
                 h('span', { key: 'i', className: 'absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/50' }, h(MS, { name: 'search', size: 20 })),
                 h('input', { key: 'in', className: 'w-full bg-surface border border-outline-variant rounded-lg pl-10 pr-4 py-2.5 text-body focus:ring-1 focus:ring-primary focus:border-primary transition-all', placeholder: 'Buscar SKU, modelo o color…', value: query, onChange: e => { setQuery(e.target.value); setPage(1); } }),
               ]),
-              h(Segment, { key: 'sg1', value: tela, onChange: v => { setTela(v); setPage(1); }, options: [['all', 'Todas']].concat(window.CONFIG.list('fabric').map(f => [f.code, f.label])) }),
+              ...filterableKinds.map(fk => h(Segment, {
+                key: 'f_' + fk,
+                value: filters[fk] || 'all',
+                onChange: v => { setFilters(prev => ({ ...prev, [fk]: v })); setPage(1); },
+                options: [['all', 'Todas']].concat(window.CONFIG.list(fk).map(it => [it.code, it.label])),
+              })),
               h(Segment, { key: 'sg2', value: stockFilter, onChange: v => { setStockFilter(v); setPage(1); }, options: [['all', 'Todo'], ['low', 'Bajo'], ['out', 'Agotados']] }),
             ]),
             h('button', { key: 'add', className: 'flex items-center gap-2 px-6 py-2.5 bg-primary text-on-primary rounded-lg hover:opacity-90 transition-all text-overline font-bold uppercase tracking-wider shadow-e2', onClick: () => setEditing({ mode: 'new', product: blankProduct() }) }, [h(MS, { key: 'i', name: 'plus', size: 18 }), 'Nuevo producto']),
@@ -180,7 +207,14 @@
   }
 
   function blankProduct() {
-    return { cat: '21', manga: 'ML', tela: 'ALG', color: 'BL', modelo: '', nombre: '', orn: '—', ornColors: [], cuello: 'NOR', precio: 0, stock: D.emptyStock(), pop: false };
+    // Valores por defecto de catálogos custom activos (Fase 2): primer ítem disponible, para que
+    // un atributo nuevo en el SKU no genere segmentos vacíos en productos recién creados.
+    const attrs = {};
+    const meta = window.CONFIG.allCatalogMeta ? window.CONFIG.allCatalogMeta() : {};
+    Object.keys(meta).forEach(k => {
+      if (meta[k].custom && (meta[k].inForm || meta[k].inSku)) { const l = window.CONFIG.list(k); attrs[k] = l.length ? l[0].code : ''; }
+    });
+    return { cat: '21', manga: 'ML', tela: 'ALG', color: 'BL', modelo: '', nombre: '', orn: '—', ornColors: [], cuello: 'NOR', precio: 0, stock: D.emptyStock(), pop: false, attrs };
   }
 
   // ---------- Drawer de detalle ----------
@@ -221,7 +255,7 @@
                   h('div', { key: 'l', className: 'text-overline uppercase tracking-widest text-on-surface-variant/70 mb-2' }, label),
                   h('div', { key: 'g', className: 'flex flex-wrap gap-2' }, p.stock.filter(v => v.escala === e && v.stock > 0).map(v =>
                     h('div', { key: v.talla, className: 'flex flex-col items-center min-w-[48px] px-2 py-1.5 border border-outline-variant rounded' }, [
-                      h('span', { key: 't', className: 'text-caption font-semibold text-primary' }, v.talla),
+                      h('span', { key: 't', className: 'text-caption font-semibold text-primary' }, tallaLabel(v.talla, e)),
                       h('span', { key: 's', className: 'text-overline text-on-surface-variant' }, v.stock + ' pz'),
                     ]))),
                 ])),
@@ -289,9 +323,21 @@
       modelo: product.modelo, nombre: product.nombre, orn: product.orn, ornColors: (product.ornColors || []).slice(),
       cuello: product.cuello, precio: product.precio, costo: product.costo != null ? product.costo : '', pop: !!product.pop,
       imagen: product.imagen || '',
-      stock: product.stock.map(v => ({ talla: v.talla, escala: v.escala, stock: v.stock })),
+      attrs: product.attrs ? { ...product.attrs } : {}, // valores de catálogos custom (Fase 2)
+      stock: alignStock(product.stock),
     }));
     const set = (k, v) => setD(prev => ({ ...prev, [k]: v }));
+    const setAttr = (k, v) => setD(prev => ({ ...prev, attrs: { ...(prev.attrs || {}), [k]: v } }));
+    // Catálogo "Modelo" (custom) que alimenta el desplegable de "Nombre / Modelo". Se ubica por su
+    // slug ('modelo') o, de respaldo, por su nombre. Si no existe, el campo sigue siendo texto libre.
+    const meta = window.CONFIG.allCatalogMeta ? window.CONFIG.allCatalogMeta() : {};
+    const modeloKind = (meta.modelo && meta.modelo.custom) ? 'modelo'
+      : Object.keys(meta).find(k => meta[k].custom && String(meta[k].label || '').trim().toLowerCase() === 'modelo');
+    const modeloItems = modeloKind ? window.CONFIG.list(modeloKind) : [];
+    // El valor elegido del catálogo se guarda como NOMBRE del producto (d.nombre = etiqueta) y, si el
+    // catálogo entra al SKU/filtros, también en d.attrs[modeloKind] = código. Mantiene todo ligado.
+    const setModelo = (code) => { const it = modeloItems.find(x => x.code === code); setD(prev => ({ ...prev, nombre: it ? it.label : '', attrs: { ...(prev.attrs || {}), [modeloKind]: code } })); };
+    const modeloCode = (modeloItems.find(x => x.label === d.nombre) || {}).code || '';
     const setStock = (talla, escala, val) => setD(prev => ({ ...prev, stock: prev.stock.map(v => v.talla === talla && v.escala === escala ? { ...v, stock: Math.max(0, Math.round(Number(val) || 0)) } : v) }));
     const toggleOrn = (c) => setD(prev => ({ ...prev, ornColors: prev.ornColors.includes(c) ? prev.ornColors.filter(x => x !== c) : prev.ornColors.concat(c) }));
     const fileRef = useRef(null);
@@ -317,12 +363,20 @@
       reader.readAsDataURL(file);
     }
     const imgSrc = d.imagen ? ((window.__IMG_MAP && window.__IMG_MAP[d.imagen]) || d.imagen) : '';
-    const skuPrev = `${d.cat}-${d.manga}-${d.tela}-${d.color}-${String(d.modelo || '000').padStart(3, '0')}`;
+    const skuPrev = D.sku({ ...d, modelo: d.modelo || '000' }); // misma receta que el SKU real
     const total = d.stock.reduce((a, v) => a + v.stock, 0);
 
     function submit() {
       if (!d.nombre.trim()) { toast('Escribe el nombre / modelo de la prenda', 'var(--danger)'); return; }
       if (!String(d.modelo).trim()) { toast('Escribe el número de modelo', 'var(--danger)'); return; }
+      // Catálogos marcados "Obligatorio" (y que aparecen en el alta) deben tener valor.
+      const meta = window.CONFIG.allCatalogMeta ? window.CONFIG.allCatalogMeta() : {};
+      const falta = Object.keys(meta).find(k => {
+        const m = meta[k]; if (!m.required || !m.inForm) return false;
+        const val = m.custom ? (d.attrs || {})[k] : d[m.field];
+        return val == null || String(val).trim() === '';
+      });
+      if (falta) { toast('Selecciona ' + meta[falta].label, 'var(--danger)'); return; }
       onSave({ ...d, nombre: d.nombre.trim(), modelo: String(d.modelo).trim(), precio: Number(d.precio) || 0, costo: Number(d.costo) || 0 }, mode);
     }
 
@@ -348,16 +402,30 @@
         ]),
       ]),
       h('div', { key: 'g1', className: 'grid grid-cols-2 md:grid-cols-3 gap-4' }, [
-        field('Nombre / Modelo', h('input', { className: INPUT, value: d.nombre, placeholder: 'Ej. Tira Red', onChange: e => set('nombre', e.target.value) }), 'wide'),
+        field('Nombre / Modelo', modeloKind
+          ? h('select', { className: INPUT, value: modeloCode, onChange: e => setModelo(e.target.value) }, [
+              h('option', { key: '', value: '' }, 'Selecciona…'),
+              ...modeloItems.map(it => h('option', { key: it.code, value: it.code }, it.label)),
+            ])
+          : h('input', { className: INPUT, value: d.nombre, placeholder: 'Ej. Tira Red', onChange: e => set('nombre', e.target.value) }), 'wide'),
         field('No. Modelo', h('input', { className: INPUT, value: d.modelo, placeholder: '128', onChange: e => set('modelo', e.target.value) })),
         field('Precio', h('input', { className: INPUT, type: 'number', min: 0, value: d.precio, onChange: e => set('precio', e.target.value) })),
-        field('Costo', h('input', { className: INPUT, type: 'number', min: 0, value: d.costo, placeholder: 'Para margen', onChange: e => set('costo', e.target.value) })),
-        field('Categoría', sel(d.cat, D.CAT, v => set('cat', v))),
-        field('Manga', sel(d.manga, D.MANGA, v => set('manga', v))),
-        field('Tela', sel(d.tela, D.TELA, v => set('tela', v))),
-        field('Color', sel(d.color, D.COLOR_NAME, v => set('color', v), true)),
-        field('Cuello', sel(d.cuello, D.CUELLO, v => set('cuello', v))),
+        // Atributos select del alta: etiqueta y visibilidad salen de CONFIG.catalogMeta (editable
+        // por el admin en Configuración → Catálogos de producto). Solo se muestran los "En alta".
+        ...[
+          { kind: 'category', field: 'cat', map: D.CAT },
+          { kind: 'sleeve', field: 'manga', map: D.MANGA },
+          { kind: 'fabric', field: 'tela', map: D.TELA },
+          { kind: 'color', field: 'color', map: D.COLOR_NAME, useKeyAsValue: true },
+          { kind: 'neck', field: 'cuello', map: D.CUELLO },
+        ].filter(a => { const m = window.CONFIG.catalogMeta(a.kind); return !m || m.inForm; })
+          .map(a => field(window.CONFIG.catalogLabel(a.kind), sel(d[a.field], a.map, v => set(a.field, v), a.useKeyAsValue))),
         field('Ornamento', h('input', { className: INPUT, value: d.orn, placeholder: 'Bordado / Alforza / —', onChange: e => set('orn', e.target.value) })),
+        // Catálogos creados por el admin (Fase 2): se muestran como select cuando están "En alta".
+        // Su valor se guarda en d.attrs[kind]; entra al SKU si el catálogo está "En SKU".
+        ...Object.keys(window.CONFIG.allCatalogMeta ? window.CONFIG.allCatalogMeta() : {})
+          .filter(k => { const m = window.CONFIG.catalogMeta(k); return m && m.custom && m.inForm && k !== modeloKind; })
+          .map(k => field(window.CONFIG.catalogLabel(k), sel((d.attrs || {})[k] || '', window.CONFIG.map(k), v => setAttr(k, v)))),
       ]),
       h('div', { key: 'oc', className: 'mt-4' }, [
         h('div', { key: 'l', className: 'text-caption font-semibold text-on-surface-variant uppercase tracking-widest mb-2' }, ['Colores Orn. ', h('span', { key: 's', className: 'normal-case tracking-normal text-on-surface-variant/70' }, '(hilos del bordado)')]),
@@ -377,7 +445,7 @@
         ...ESCALAS.map(([e, label]) => h('div', { key: e, className: 'mb-4' }, [
           h('div', { key: 'sl', className: 'text-overline uppercase tracking-widest text-on-surface-variant/70 mb-2' }, label),
           h('div', { key: 'r', className: 'grid grid-cols-5 sm:grid-cols-10 gap-2' }, d.stock.filter(v => v.escala === e).map(v => h('div', { key: v.talla, className: 'flex flex-col items-center gap-1' }, [
-            h('label', { key: 'l', className: 'text-overline uppercase text-on-surface-variant' }, v.talla),
+            h('label', { key: 'l', className: 'text-overline uppercase text-on-surface-variant' }, tallaLabel(v.talla, e)),
             h('input', { key: 'i', type: 'number', min: 0, value: v.stock, className: 'w-full h-9 text-center bg-surface-container border border-outline-variant focus:ring-1 focus:ring-primary text-body rounded font-mono', onChange: ev => setStock(v.talla, e, ev.target.value) }),
           ]))),
         ])),
