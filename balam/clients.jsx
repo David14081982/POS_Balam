@@ -49,6 +49,14 @@
       toast('Cliente actualizado', 'var(--accent)');
     }
 
+    function deleteClient(c) {
+      if (!window.confirm(`¿Eliminar a «${c.nombre}»?\n\nSe quita de este dispositivo y de la nube. Su historial de ventas se conserva. No se puede deshacer.`)) return;
+      const r = D.removeClient(c.id);
+      if (!r.ok) { toast(r.error, 'var(--danger)'); return; }
+      setDetail(null); setRefreshKey(k => k + 1);
+      toast('Cliente eliminado', 'var(--danger)');
+    }
+
     function saveNewClient(data) {
       D.clients.push({
         id: 'c-' + Date.now(), nombre: data.nombre.trim(), tel: data.tel, compras: 0, total: 0,
@@ -113,7 +121,7 @@
           ]),
         ]),
         // Drawer
-        h(ClientDrawer, { key: 'dr', c: detail, onClose: () => setDetail(null), onEdit: (cl) => setEditC(cl) }),
+        h(ClientDrawer, { key: 'dr', c: detail, onClose: () => setDetail(null), onEdit: (cl) => setEditC(cl), onDelete: deleteClient }),
         // Modal de edición
         editC && h(ClientEditModal, { key: 'ed', c: editC, onClose: () => setEditC(null), onSave: saveEditClient }),
       ]));
@@ -129,7 +137,7 @@
     ]);
   }
 
-  function ClientDrawer({ c, onClose, onEdit }) {
+  function ClientDrawer({ c, onClose, onEdit, onDelete }) {
     const open = !!c;
     const historial = c ? D.sales.filter(s => s.cliente === c.nombre) : [];
     return h(React.Fragment, {}, [
@@ -180,6 +188,7 @@
             h('div', { key: 'ac', className: 'pt-2 flex gap-4' }, [
               h('button', { key: 'p', className: 'w-14 h-[52px] rounded-xl border border-outline-variant text-primary hover:bg-surface-container transition-all flex items-center justify-center disabled:opacity-30', disabled: !c.tel || c.tel === '—', onClick: () => { const t = String(c.tel || '').replace(/[^0-9+]/g, ''); if (t) window.location.href = 'tel:' + t; }, title: 'Llamar' }, h(MS, { name: 'phone', size: 20 })),
               h('button', { key: 'e', className: 'flex-grow bg-primary text-on-primary py-3.5 rounded-xl text-overline font-bold uppercase tracking-widest hover:opacity-90 transition-all shadow-e2 active:scale-95 flex items-center justify-center gap-2', onClick: () => onEdit && onEdit(c) }, [h(MS, { key: 'i', name: 'edit', size: 18 }), 'Editar cliente']),
+              h('button', { key: 'd', className: 'w-14 h-[52px] rounded-xl border border-outline-variant text-danger hover:bg-danger-soft hover:border-danger/30 transition-all flex items-center justify-center', onClick: () => onDelete && onDelete(c), title: 'Eliminar cliente' }, h(MS, { name: 'trash', size: 20 })),
             ]),
           ]),
         ]),

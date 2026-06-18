@@ -500,6 +500,17 @@
     if (window.STORE && window.STORE.deleteRow) { try { window.STORE.deleteRow('sellers', id); } catch (e) { /* offline */ } }
     return { ok: true };
   }
+  // Borra un cliente de local Y de la nube (mismo patrón que removeUser/removeProduct). El cliente
+  // genérico de mostrador no se puede borrar (lo requiere el POS).
+  function removeClient(id) {
+    const c = clients.find(x => x.id === id);
+    if (!c) return { ok: false, error: 'No existe' };
+    if (c.generic) return { ok: false, error: 'El cliente genérico no se puede borrar' };
+    const i = clients.findIndex(x => x.id === id);
+    clients.splice(i, 1); saveClients();
+    if (window.STORE && window.STORE.deleteRow) { try { window.STORE.deleteRow('clients', id); } catch (e) { /* offline */ } }
+    return { ok: true };
+  }
   function iniDe(nombre) { return String(nombre || '').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase(); }
 
   // ---- Promociones / Descuentos ----
@@ -683,7 +694,7 @@
     sku, regenerateSkus, totalStock, hydrate, mkStock, emptyStock,
     saveProducts, saveSellers, saveClients, saveSales, saveMovements, savePromos, saveReturns,
     removeProduct,
-    addClient, recordSale, nextFolio, stockOf, resetProducts, applyRemote, liquidarComision,
+    addClient, removeClient, recordSale, nextFolio, stockOf, resetProducts, applyRemote, liquidarComision,
     completarApartado, cerrarMes, getPeriodoInicio,
     recordReturn, returnedQty, returnsForFolio, isReturnable,
     addUser, updateUser, removeUser,
