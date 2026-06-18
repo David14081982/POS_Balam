@@ -454,16 +454,27 @@
   function DemoPanel() {
     const [busy, setBusy] = useState(false);
     const active = D.demoActive();
-    function generar() {
-      if (!window.confirm('¿Generar la SIMULACIÓN de demostración?\n\nReemplaza los datos actuales por ~24 productos, 8 clientes, 4 vendedores y ~300 ventas de los últimos 90 días (con devoluciones). Todo se calcula con el motor real.\n\nEs LOCAL: NO toca tu base en la nube. Úsalo SIN iniciar sesión.')) return;
+    async function generar() {
+      // La simulación es LOCAL. Con sesión iniciada se subiría a Supabase y contaminaría los datos
+      // reales (justo lo que hay que limpiar después). Se bloquea: primero cerrar sesión.
+      if (window.STORE && (await window.STORE.hasSession())) {
+        window.alert('Tienes una sesión iniciada.\n\nLa simulación es LOCAL y, con sesión, se subiría a tu Supabase y contaminaría tus datos reales.\n\nCierra sesión primero y vuelve a intentarlo.');
+        return;
+      }
+      if (!window.confirm('¿Generar la SIMULACIÓN de demostración?\n\nReemplaza los datos actuales por ~24 productos, 8 clientes, 4 vendedores y ~300 ventas de los últimos 90 días (con devoluciones). Todo se calcula con el motor real.\n\nEs LOCAL: NO toca tu base en la nube.')) return;
       setBusy(true);
       setTimeout(() => { const r = D.seedDemo(); toast(`Simulación lista: ${r.sales} ventas · ${r.products} productos · ${r.returns} devoluciones`, 'var(--accent)'); setTimeout(() => location.reload(), 700); }, 30);
     }
-    function limpiar() {
-      if (!window.confirm('¿Limpiar TODO y volver al estado vacío de producción?\n\nBorra productos, clientes, ventas, devoluciones, etc. de este dispositivo. No se puede deshacer.')) return;
+    async function limpiar() {
+      if (!window.confirm('¿Limpiar TODO y volver al estado vacío de producción?\n\nBorra productos, clientes, ventas, devoluciones, etc. de ESTE dispositivo. No se puede deshacer.')) return;
+      const online = !!(window.STORE && (await window.STORE.hasSession()));
       D.resetEmpty();
-      toast('Datos vaciados — estado de producción', 'var(--accent)');
-      setTimeout(() => location.reload(), 600);
+      if (online) {
+        window.alert('Datos locales vaciados.\n\n⚠ Tienes sesión iniciada: tu Supabase TODAVÍA conserva los datos y, al recargar, la app los volverá a descargar (la simulación "revivirá").\n\nPara vaciar la nube, hazlo desde Supabase, o cierra sesión para trabajar solo en local.');
+      } else {
+        toast('Datos vaciados — estado de producción', 'var(--accent)');
+      }
+      setTimeout(() => location.reload(), 800);
     }
     return [
       active && h('div', { key: 'badge', className: 'inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gold-soft text-gold-text text-overline font-bold uppercase tracking-widest w-fit' }, [h(MS, { key: 'i', name: 'star', size: 14, fill: true }), 'Modo demostración activo']),

@@ -558,11 +558,16 @@
     periodoInicio = '';
   }
 
-  // Vacía a estado de producción (sin datos). Local-only.
+  // Vacía a estado de producción (sin datos). Local-only: NO borra la nube. Si hay sesión, el llamador
+  // (DemoPanel) avisa que Supabase conserva los datos y se repoblarán al recargar.
   function resetEmpty() {
     remoteApplying = true;
-    try { clearAllLocal(); persistAllLocal(); try { localStorage.removeItem(LS_DEMO); } catch (e) { /* */ } }
-    finally { remoteApplying = false; }
+    try {
+      clearAllLocal(); persistAllLocal();
+      try { localStorage.removeItem(LS_DEMO); } catch (e) { /* */ }
+      // Descarta lo pendiente de sincronizar para que no se reenvíe nada de la simulación.
+      try { if (window.STORE && window.STORE.clearQueue) window.STORE.clearQueue(); } catch (e) { /* */ }
+    } finally { remoteApplying = false; }
     return true;
   }
 

@@ -77,6 +77,8 @@
   // ── Cola offline ────────────────────────────────────────────────────────────
   function loadQ() { try { return JSON.parse(localStorage.getItem(QKEY)) || []; } catch (e) { return []; } }
   function saveQ(q) { try { localStorage.setItem(QKEY, JSON.stringify(q)); } catch (e) { /* */ } }
+  // Descarta operaciones pendientes sin enviarlas (lo usa el reset de la simulación local).
+  function clearQueue() { try { localStorage.removeItem(QKEY); } catch (e) { /* */ } }
   function enqueue(op) {
     const q = loadQ();
     if (op.type === 'upsert') { const i = q.findIndex(x => x.type === 'upsert' && x.table === op.table); if (i >= 0) q[i] = op; else q.push(op); }
@@ -255,5 +257,5 @@
     return (data && data.publicUrl) || null;
   }
 
-  window.STORE = { init, pull, pushConfig, pushRows, pushSale, pushReturn, deleteRow, pullDomain, flushQueue, ensureClient, getClient: ensureClient, hasSession, uploadBarcode, get enabled() { return enabled; }, get pending() { return loadQ().length; } };
+  window.STORE = { init, pull, pushConfig, pushRows, pushSale, pushReturn, deleteRow, pullDomain, flushQueue, clearQueue, ensureClient, getClient: ensureClient, hasSession, uploadBarcode, get enabled() { return enabled; }, get pending() { return loadQ().length; } };
 })();
