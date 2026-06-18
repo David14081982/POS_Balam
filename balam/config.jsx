@@ -193,20 +193,25 @@
   } catch (e) { state = null; }
   if (!state || !state.catalogs || !state.settings) state = seed();
 
-  // Rellena catálogos/ajustes nuevos que no estuvieran en un estado guardado viejo
-  (function backfill() {
+  // Rellena catálogos/ajustes/ítems nuevos ausentes en un estado (guardado local viejo O traído de la
+  // nube). Muta el estado in situ y devuelve si cambió. Se usa al arrancar (datos locales) y dentro de
+  // load() (datos de Supabase), para que una config vieja en la nube se auto-repare y se vuelva a subir.
+  function backfillState(st) {
     const fresh = seed();
     let changed = false;
-    Object.keys(fresh.catalogs).forEach(k => { if (!state.catalogs[k]) { state.catalogs[k] = fresh.catalogs[k]; changed = true; } });
-    Object.keys(fresh.settings).forEach(k => { if (!(k in state.settings)) { state.settings[k] = fresh.settings[k]; changed = true; } });
+    Object.keys(fresh.catalogs).forEach(k => { if (!st.catalogs[k]) { st.catalogs[k] = fresh.catalogs[k]; changed = true; } });
+    Object.keys(fresh.settings).forEach(k => { if (!(k in st.settings)) { st.settings[k] = fresh.settings[k]; changed = true; } });
     // Metadatos por catálogo: rellena el mapa entero o entradas-por-kind ausentes (estados viejos).
-    if (!state.catalogMeta) { state.catalogMeta = fresh.catalogMeta; changed = true; }
-    else Object.keys(fresh.catalogMeta).forEach(k => { if (!state.catalogMeta[k]) { state.catalogMeta[k] = fresh.catalogMeta[k]; changed = true; } });
-    // Asegura el método 'Cortesía' (regalos/giveaways) en instalaciones que ya tenían payment_method.
-    const pm = state.catalogs.payment_method;
+    if (!st.catalogMeta) { st.catalogMeta = fresh.catalogMeta; changed = true; }
+    else Object.keys(fresh.catalogMeta).forEach(k => { if (!st.catalogMeta[k]) { st.catalogMeta[k] = fresh.catalogMeta[k]; changed = true; } });
+    // Asegura el método 'Cortesía' (regalos/giveaways) aunque payment_method ya exista (local o nube).
+    const pm = st.catalogs.payment_method;
     if (pm && !pm.some(it => it.code === 'Cortesía')) { pm.push({ code: 'Cortesía', label: 'Cortesía', active: true, meta: { icon: 'tag' } }); changed = true; }
-    if (changed) persist();
-  })();
+    return changed;
+  }
+
+  // Rellena catálogos/ajustes nuevos que no estuvieran en un estado guardado viejo (datos locales)
+  if (backfillState(state)) persist();
 
   let version = 0;
   function persist() {
@@ -398,6 +403,9 @@
     // Metadatos: fusiona sobre los defaults (la nube gana por kind presente; los kinds nuevos del código no desaparecen).
     const meta = Object.assign({}, deepClone(SEED_CATALOG_META), next.catalogMeta || {});
     state = { v: next.v || 1, catalogs: cats, catalogMeta: meta, settings: Object.assign({}, deepClone(SEED_SETTINGS), next.settings) };
+    // Inyecta ítems nuevos que la nube no trae (p. ej. el método 'Cortesía' en un payment_method ya
+    // poblado). emit() → pushConfig vuelve a subir la config reparada, volviéndola persistente.
+    backfillState(state);
     emit();
   }
 
