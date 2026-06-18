@@ -79,8 +79,7 @@
       toast(mode === 'edit' ? 'Producto actualizado' : 'Producto agregado al inventario', 'var(--accent)');
     }
     function deleteProduct(p) {
-      const i = D.products.findIndex(x => x.id === p.id);
-      if (i >= 0) { D.products.splice(i, 1); D.saveProducts(); refresh(); }
+      D.removeProduct(p.id); refresh();
       setDetail(null);
       toast('Producto eliminado', 'var(--danger)');
     }

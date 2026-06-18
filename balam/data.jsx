@@ -529,6 +529,16 @@
     return c;
   }
 
+  // Borra un producto de local Y de la nube. Antes solo se hacía splice + saveProducts (upsert),
+  // que NO elimina la fila en Supabase: el producto "revivía" en el siguiente pull. Mismo patrón
+  // que removeUser/removePromo.
+  function removeProduct(id) {
+    const i = products.findIndex(x => x.id === id);
+    if (i < 0) return;
+    products.splice(i, 1); saveProducts();
+    if (window.STORE && window.STORE.deleteRow) { try { window.STORE.deleteRow('products', id); } catch (e) { /* offline */ } }
+  }
+
   // Restaura el catálogo original de fábrica
   function resetProducts() {
     products.length = 0;
@@ -672,6 +682,7 @@
     products, sellers, clients, sales, movements, promos, liquidations, returns,
     sku, regenerateSkus, totalStock, hydrate, mkStock, emptyStock,
     saveProducts, saveSellers, saveClients, saveSales, saveMovements, savePromos, saveReturns,
+    removeProduct,
     addClient, recordSale, nextFolio, stockOf, resetProducts, applyRemote, liquidarComision,
     completarApartado, cerrarMes, getPeriodoInicio,
     recordReturn, returnedQty, returnsForFolio, isReturnable,
