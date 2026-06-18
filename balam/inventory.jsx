@@ -426,7 +426,7 @@
           { kind: 'neck', field: 'cuello', map: D.CUELLO },
         ].filter(a => { const m = window.CONFIG.catalogMeta(a.kind); return !m || m.inForm; })
           .map(a => field(window.CONFIG.catalogLabel(a.kind), sel(d[a.field], a.map, v => set(a.field, v), a.useKeyAsValue))),
-        field('Ornamento', h('input', { className: INPUT, value: d.orn, placeholder: 'Bordado / Alforza / —', onChange: e => set('orn', e.target.value) })),
+        field(window.CONFIG.catalogLabel('ornament'), sel(d.orn || '—', window.CONFIG.map('ornament'), v => set('orn', v))),
         // Catálogos creados por el admin (Fase 2): se muestran como select cuando están "En alta".
         // Su valor se guarda en d.attrs[kind]; entra al SKU si el catálogo está "En SKU".
         ...Object.keys(window.CONFIG.allCatalogMeta ? window.CONFIG.allCatalogMeta() : {})
