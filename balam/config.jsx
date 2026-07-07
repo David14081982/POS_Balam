@@ -379,7 +379,15 @@
     if (!m) return { ok: false, error: 'No existe' };
     if (!m.custom) return { ok: false, error: 'Un catálogo del sistema no se puede borrar' };
     const D = window.DATA;
-    if (D && D.products && D.products.some(p => (p.attrs || {})[kind] != null)) return { ok: false, error: 'En uso por productos — quita el valor antes de borrarlo' };
+    const prods = (D && D.products) || [];
+    // "En uso" solo si algún producto guardó un valor REAL (no vacío). Un valor en blanco ('' o
+    // espacios) es un resto inofensivo del alta y NO debe impedir el borrado.
+    const inUse = prods.some(p => { const v = (p.attrs || {})[kind]; return v != null && String(v).trim() !== ''; });
+    if (inUse) return { ok: false, error: 'En uso por productos — quita el valor antes de borrarlo' };
+    // Limpia los restos en blanco del atributo huérfano para no dejar basura en los productos.
+    let touched = false;
+    prods.forEach(p => { if (p.attrs && (kind in p.attrs)) { delete p.attrs[kind]; touched = true; } });
+    if (touched && D && typeof D.saveProducts === 'function') D.saveProducts();
     delete state.catalogMeta[kind];
     delete state.catalogs[kind];
     emit();
