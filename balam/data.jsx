@@ -127,10 +127,23 @@
 
   // Recalcula el SKU de TODOS los productos con la receta vigente (acción explícita del admin).
   // El SKU normalmente está congelado; esto lo fuerza. Devuelve cuántos cambiaron.
+  // Además NORMALIZA códigos huérfanos (p. ej. cat '21' fósil, cuando el catálogo ya no tiene ese
+  // código): toma el primer elemento activo — el que el alta mostraba seleccionado — para que el
+  // SKU regenerado no arrastre códigos muertos y el detalle vuelva a mostrar la etiqueta.
   function regenerateSkus() {
-    let changed = 0;
-    products.forEach(p => { const n = sku(p); if (n !== p.sku) { p.sku = n; changed++; } });
-    if (changed) saveProducts();
+    const FIX = [['category', 'cat'], ['sleeve', 'manga'], ['fabric', 'tela'], ['color', 'color'], ['neck', 'cuello']];
+    let changed = 0, fixed = 0;
+    products.forEach(p => {
+      FIX.forEach(([kind, field]) => {
+        const l = (C && typeof C.list === 'function') ? C.list(kind) : [];
+        if (l.length && !l.some(x => x.code === String(p[field]))) { p[field] = l[0].code; fixed++; }
+      });
+      p.colorHex = COLOR_HEX()[p.color] || '#8b9099';
+      p.colorName = COLOR_NAME()[p.color] || p.color;
+      const n = sku(p);
+      if (n !== p.sku) { p.sku = n; changed++; }
+    });
+    if (changed || fixed) saveProducts();
     return { total: products.length, changed };
   }
 
