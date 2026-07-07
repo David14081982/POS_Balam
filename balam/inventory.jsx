@@ -340,9 +340,10 @@
     const modeloKind = (meta.modelo && meta.modelo.custom) ? 'modelo'
       : Object.keys(meta).find(k => meta[k].custom && String(meta[k].label || '').trim().toLowerCase() === 'modelo');
     const modeloItems = modeloKind ? window.CONFIG.list(modeloKind) : [];
-    // El valor elegido del catálogo se guarda como NOMBRE del producto (d.nombre = etiqueta) y, si el
-    // catálogo entra al SKU/filtros, también en d.attrs[modeloKind] = código. Mantiene todo ligado.
-    const setModelo = (code) => { const it = modeloItems.find(x => x.code === code); setD(prev => ({ ...prev, nombre: it ? it.label : '', attrs: { ...(prev.attrs || {}), [modeloKind]: code } })); };
+    // El valor elegido del catálogo se guarda como NOMBRE del producto (d.nombre = etiqueta), como
+    // NO. MODELO (d.modelo = código del catálogo: ADR, ARO, …) y, si el catálogo entra al SKU/filtros,
+    // también en d.attrs[modeloKind] = código. El No. Modelo deja de capturarse a mano.
+    const setModelo = (code) => { const it = modeloItems.find(x => x.code === code); setD(prev => ({ ...prev, nombre: it ? it.label : '', modelo: code, attrs: { ...(prev.attrs || {}), [modeloKind]: code } })); };
     const modeloCode = (modeloItems.find(x => x.label === d.nombre) || {}).code || '';
     const setStock = (talla, escala, val) => setD(prev => ({ ...prev, stock: prev.stock.map(v => v.talla === talla && v.escala === escala ? { ...v, stock: Math.max(0, Math.round(Number(val) || 0)) } : v) }));
     const toggleOrn = (c) => setD(prev => ({ ...prev, ornColors: prev.ornColors.includes(c) ? prev.ornColors.filter(x => x !== c) : prev.ornColors.concat(c) }));
@@ -374,7 +375,10 @@
 
     function submit() {
       if (!d.nombre.trim()) { toast('Escribe el nombre / modelo de la prenda', 'var(--danger)'); return; }
-      if (!String(d.modelo).trim()) { toast('Escribe el número de modelo', 'var(--danger)'); return; }
+      // Con catálogo "Modelo", el No. Modelo ES la clave del catálogo (también corrige productos
+      // viejos capturados a mano al reeditarlos). Sin catálogo, se respeta el texto libre.
+      const modeloFinal = (modeloKind && modeloCode) ? modeloCode : String(d.modelo).trim();
+      if (!modeloFinal) { toast(modeloKind ? 'Selecciona el Nombre / Modelo' : 'Escribe el número de modelo', 'var(--danger)'); return; }
       // Catálogos marcados "Obligatorio" (y que aparecen en el alta) deben tener valor.
       const meta = window.CONFIG.allCatalogMeta ? window.CONFIG.allCatalogMeta() : {};
       const falta = Object.keys(meta).find(k => {
@@ -383,7 +387,7 @@
         return val == null || String(val).trim() === '';
       });
       if (falta) { toast('Selecciona ' + meta[falta].label, 'var(--danger)'); return; }
-      onSave({ ...d, nombre: d.nombre.trim(), modelo: String(d.modelo).trim(), precio: Number(d.precio) || 0, costo: Number(d.costo) || 0 }, mode);
+      onSave({ ...d, nombre: d.nombre.trim(), modelo: modeloFinal, precio: Number(d.precio) || 0, costo: Number(d.costo) || 0 }, mode);
     }
 
     const footer = [
@@ -414,7 +418,10 @@
               ...modeloItems.map(it => h('option', { key: it.code, value: it.code }, it.label)),
             ])
           : h('input', { className: INPUT, value: d.nombre, placeholder: 'Ej. Tira Red', onChange: e => set('nombre', e.target.value) }), 'wide'),
-        field('No. Modelo', h('input', { className: INPUT, value: d.modelo, placeholder: '128', onChange: e => set('modelo', e.target.value) })),
+        // Con catálogo "Modelo" presente, la clave viene del catálogo (setModelo) y no se edita a mano.
+        field('No. Modelo', modeloKind
+          ? h('input', { className: INPUT + ' opacity-60 cursor-not-allowed', value: modeloCode || d.modelo, readOnly: true, tabIndex: -1, title: 'Se llena automáticamente con la clave del catálogo Modelo al elegir Nombre / Modelo' })
+          : h('input', { className: INPUT, value: d.modelo, placeholder: '128', onChange: e => set('modelo', e.target.value) })),
         field('Precio', h('input', { className: INPUT, type: 'number', min: 0, value: d.precio, onChange: e => set('precio', e.target.value) })),
         // Atributos select del alta: etiqueta y visibilidad salen de CONFIG.catalogMeta (editable
         // por el admin en Configuración → Catálogos de producto). Solo se muestran los "En alta".

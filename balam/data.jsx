@@ -50,7 +50,9 @@
     const parts = (C && typeof C.skuParts === 'function')
       ? C.skuParts().map(x => x.sizeSlot ? SIZE_MARK : (x.custom ? (p.attrs || {})[x.kind] : p[x.field]))
       : [p.cat, p.manga, p.tela, p.color];
-    parts.push(String(p.modelo).padStart(3, '0'));
+    // Modelo numérico → 3 dígitos (7 → 007, histórico). Clave de catálogo (ADR, ARO) → tal cual.
+    const mod = String(p.modelo);
+    parts.push(/^\d+$/.test(mod) ? mod.padStart(3, '0') : mod);
     return parts.join('-');
   }
   function totalStock(p) { return p.stock.reduce((a, v) => a + (v.stock || 0), 0); }
