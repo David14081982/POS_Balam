@@ -448,7 +448,9 @@
           h('span', { key: 'sp', className: 'flex-1' }),
           h('span', { key: 'tt', className: 'px-2 py-1 text-overline uppercase rounded bg-gold text-on-gold' }, `${total} pz en total`),
         ]),
-        ...ESCALAS.map(([e, label]) => h('div', { key: e, className: 'mb-4' }, [
+        // Solo escalas con tallas activas en el catálogo (o con stock legado > 0): si el admin
+        // desactiva toda una escala (p. ej. Letras), su sección desaparece del alta.
+        ...ESCALAS.filter(([e]) => (e === 'L' ? D.SIZES_LETRA : D.SIZES_NUM).length || d.stock.some(v => v.escala === e && v.stock > 0)).map(([e, label]) => h('div', { key: e, className: 'mb-4' }, [
           h('div', { key: 'sl', className: 'text-overline uppercase tracking-widest text-on-surface-variant/70 mb-2' }, label),
           h('div', { key: 'r', className: 'grid grid-cols-5 sm:grid-cols-10 gap-2' }, d.stock.filter(v => v.escala === e).map(v => h('div', { key: v.talla, className: 'flex flex-col items-center gap-1' }, [
             h('label', { key: 'l', className: 'text-overline uppercase text-on-surface-variant' }, tallaLabel(v.talla, e)),
