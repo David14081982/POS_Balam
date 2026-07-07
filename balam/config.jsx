@@ -405,10 +405,16 @@
   function load(next) {
     if (!next || !next.catalogs || !next.settings) return;
     // Backfill de catálogos NUEVOS aún ausentes en la nube (p. ej. return_reason): si la nube no
-    // trae el kind (o viene vacío), conserva la semilla local para que no desaparezca tras el pull.
-    // emit() → pushConfig lo subirá, volviéndolo persistente. Los ajustes ya se fusionan sobre los defaults.
+    // trae el kind, conserva la semilla local para que no desaparezca tras el pull.
+    // OJO: si el kind SÍ figura en los metadatos de la nube (_catalogMeta) pero llega sin filas,
+    // es que el admin vació el catálogo a propósito (p. ej. Talla Letra) — se respeta vacío en
+    // vez de resucitar la semilla (bug: las tallas "revivían" en cada recarga).
     const cats = next.catalogs, fresh = seed();
-    Object.keys(fresh.catalogs).forEach(k => { if (!cats[k] || !cats[k].length) cats[k] = fresh.catalogs[k]; });
+    Object.keys(fresh.catalogs).forEach(k => {
+      const known = !!(next.catalogMeta && next.catalogMeta[k]);
+      if (!cats[k]) cats[k] = known ? [] : fresh.catalogs[k];
+      else if (!cats[k].length && !known) cats[k] = fresh.catalogs[k];
+    });
     // Metadatos: fusiona sobre los defaults (la nube gana por kind presente; los kinds nuevos del código no desaparecen).
     const meta = Object.assign({}, deepClone(SEED_CATALOG_META), next.catalogMeta || {});
     state = { v: next.v || 1, catalogs: cats, catalogMeta: meta, settings: Object.assign({}, deepClone(SEED_SETTINGS), next.settings) };
