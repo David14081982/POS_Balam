@@ -173,12 +173,10 @@
       if (m && m.sizeSlot) return (window.DATA && window.DATA.SIZE_MARK) || 'T'; // marcador; la etiqueta lo cambia por la talla
       const l = C.list(kind); return l.length ? l[0].code : '??';
     };
-    const preview = parts.map(p => sampleCode(p.kind)).concat('128').join('-');
+    const preview = parts.map(p => sampleCode(p.kind)).join('-');
     const hidden = parts.map(p => C.catalogMeta(p.kind)).filter(m => m && m.formSelect && !m.inForm);
     const sizeMark = (window.DATA && window.DATA.SIZE_MARK) || 'T';
     const hasSize = parts.some(p => { const m = C.catalogMeta(p.kind); return m && m.sizeSlot; });
-    const modeloChip = h('div', { key: '__modelo', className: 'inline-flex items-center rounded-lg border border-dashed border-outline-variant bg-surface-container px-3 h-9' },
-      h('span', { className: 'text-caption font-semibold text-on-surface-variant whitespace-nowrap' }, 'N.º Modelo'));
     const chip = (p, i) => h('div', { key: p.kind, className: 'inline-flex items-center rounded-lg border border-outline-variant bg-surface-container-low overflow-hidden' }, [
       h('button', { key: 'l', className: 'w-7 h-9 grid place-items-center hover:bg-surface-container text-on-surface-variant disabled:opacity-30', disabled: i === 0, title: 'Mover a la izquierda', onClick: () => C.moveSkuOrder(p.kind, -1) }, h(MS, { name: 'chevRight', size: 14, style: { transform: 'rotate(180deg)' } })),
       h('span', { key: 't', className: 'px-2 text-caption font-semibold text-primary whitespace-nowrap' }, C.catalogLabel(p.kind)),
@@ -189,8 +187,8 @@
         h(SerifHeading, { key: 't', children: 'Constructor de SKU' }),
         h('span', { key: 'c', className: 'text-overline uppercase text-on-surface-variant' }, parts.length + ' segmentos'),
       ]),
-      h('p', { key: 'd', className: 'text-caption text-on-surface-variant mb-4' }, 'Activa “En SKU” en cada catálogo para incluirlo y reordena con ◀ ▶. El número de modelo siempre va al final. El SKU se fija al crear el producto: cambiar la receta solo afecta a productos nuevos.'),
-      h('div', { key: 'chips', className: 'flex flex-wrap items-center gap-2 mb-4' }, parts.map(chip).concat(modeloChip)),
+      h('p', { key: 'd', className: 'text-caption text-on-surface-variant mb-4' }, 'Activa “En SKU” en cada catálogo para incluirlo y reordena con ◀ ▶. El SKU se fija al crear el producto: cambiar la receta solo afecta a productos nuevos.'),
+      h('div', { key: 'chips', className: 'flex flex-wrap items-center gap-2 mb-4' }, parts.map(chip)),
       h('div', { key: 'pv', className: 'flex items-center gap-2 flex-wrap' }, [
         h('span', { key: 'l', className: 'text-overline uppercase tracking-widest text-on-surface-variant' }, 'Vista previa'),
         h('span', { key: 'v', className: 'font-mono text-body text-gold-text' }, preview),

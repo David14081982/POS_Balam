@@ -39,21 +39,19 @@
   // por pieza (barcodes.codeOf) lo reemplaza por la talla real. Ver Constructor de SKU.
   const SIZE_MARK = 'T';
 
-  // SKU armado desde la receta configurable (CONFIG.skuParts): catálogos con "En SKU"
-  // ordenados, + el número de modelo como token final. Si CONFIG no está disponible,
-  // cae al orden fijo histórico (cat-manga-tela-color).
+  // SKU armado desde la receta configurable (CONFIG.skuParts): catálogos con "En SKU", ordenados.
+  // El No. Modelo YA NO se agrega como token fijo al final: si el admin quiere la clave del modelo
+  // en el SKU, activa "En SKU" en el catálogo Modelo y elige su posición como cualquier segmento.
   function sku(p) {
-    // Con CONFIG disponible, la receta manda — incluso si queda vacía (SKU = solo el modelo),
-    // así la vista previa del Constructor y el SKU real siempre coinciden. El orden fijo
-    // (cat-manga-tela-color) es solo el respaldo para cuando CONFIG aún no cargó.
-    // El segmento de talla emite el marcador (SIZE_MARK); no lleva un valor por producto.
-    const parts = (C && typeof C.skuParts === 'function')
-      ? C.skuParts().map(x => x.sizeSlot ? SIZE_MARK : (x.custom ? (p.attrs || {})[x.kind] : p[x.field]))
-      : [p.cat, p.manga, p.tela, p.color];
     // Modelo numérico → 3 dígitos (7 → 007, histórico). Clave de catálogo (ADR, ARO) → tal cual.
     const mod = String(p.modelo);
-    parts.push(/^\d+$/.test(mod) ? mod.padStart(3, '0') : mod);
-    return parts.join('-');
+    const modTok = /^\d+$/.test(mod) ? mod.padStart(3, '0') : mod;
+    // Respaldo para cuando CONFIG aún no cargó: orden fijo histórico (con modelo al final).
+    if (!(C && typeof C.skuParts === 'function')) return [p.cat, p.manga, p.tela, p.color, modTok].join('-');
+    // El segmento de talla emite el marcador (SIZE_MARK); no lleva un valor por producto.
+    const parts = C.skuParts().map(x => x.sizeSlot ? SIZE_MARK : (x.custom ? (p.attrs || {})[x.kind] : p[x.field]));
+    // Receta vacía → el modelo como respaldo: el SKU es el identificador y no puede quedar vacío.
+    return parts.length ? parts.join('-') : modTok;
   }
   function totalStock(p) { return p.stock.reduce((a, v) => a + (v.stock || 0), 0); }
 
