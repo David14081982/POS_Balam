@@ -402,6 +402,43 @@
     return { ok: true };
   }
 
+  // ── Importación masiva de catálogos (Excel → Configuración) ──────────────────
+  // map: { kind: [{ code, label, active, meta }] }. Por cada kind presente:
+  //   · upsert por código: label/activo/meta se fusionan sobre el elemento existente
+  //   · el ORDEN del archivo manda (se convierte en el orden del catálogo)
+  //   · códigos existentes que NO vienen en el archivo se conservan al final DESACTIVADOS
+  //     (nunca se borra: productos e historial pueden referenciarlos)
+  //   · kinds desconocidos u hojas vacías se ignoran (no tocan nada)
+  function importCatalogs(map) {
+    let kinds = 0, items = 0;
+    Object.keys(map || {}).forEach(kind => {
+      if (!state.catalogs[kind]) return;
+      const rows = (map[kind] || []).filter(r => r && String(r.code == null ? '' : r.code).trim());
+      if (!rows.length) return;
+      const prev = state.catalogs[kind];
+      const seen = {}; const next = [];
+      rows.forEach(r => {
+        const code = String(r.code).trim();
+        if (seen[code]) return; // duplicado en el archivo → la primera fila gana
+        seen[code] = true;
+        const old = prev.find(it => it.code === code);
+        const label = String(r.label == null ? '' : r.label).trim();
+        next.push({
+          code,
+          label: label || (old ? old.label : code),
+          active: r.active != null ? !!r.active : (old ? old.active !== false : true),
+          meta: Object.assign({}, old ? old.meta : {}, r.meta || {}),
+        });
+        items++;
+      });
+      prev.forEach(it => { if (!seen[it.code]) next.push(Object.assign({}, it, { active: false })); });
+      state.catalogs[kind] = next;
+      kinds++;
+    });
+    if (kinds) emit();
+    return { ok: true, kinds, items };
+  }
+
   // ── API de escritura (ajustes) ────────────────────────────────────────────────
   function setSetting(key, value) { state.settings[key] = value; emit(); }
   function setSettings(obj) { Object.assign(state.settings, obj); emit(); }
@@ -436,7 +473,7 @@
   window.CONFIG = {
     all, list, map, metaMap, codes, find, get, settings, inUse,
     catalogMeta, allCatalogMeta, catalogLabel, fieldOf, skuParts, modeloKind,
-    addItem, updateItem, setActive, removeItem, move, setCatalogMeta, moveSkuOrder, addCatalog, removeCatalog, setSetting, setSettings,
+    addItem, updateItem, setActive, removeItem, move, setCatalogMeta, moveSkuOrder, addCatalog, removeCatalog, importCatalogs, setSetting, setSettings,
     reset, snapshot, load,
     get version() { return version; },
     KINDS: Object.keys(SEED_CATALOGS),

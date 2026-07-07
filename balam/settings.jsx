@@ -2,7 +2,7 @@
 // antes estaba hardcodeado. Lee/escribe en window.CONFIG (balam/config.jsx), local-first.
 // Exporta window.SettingsScreen
 (function () {
-  const { useState, useEffect } = React;
+  const { useState, useEffect, useRef } = React;
   const { toast } = window.UI;
   const { MS, GlassCard, SerifHeading } = window.HX;
   const C = window.CONFIG;
@@ -211,6 +211,84 @@
     ]);
   }
 
+  // ── Exportar / importar TODOS los catálogos de producto como Excel ─────────────
+  // Una hoja por catálogo (nombre visible del catálogo): CÓDIGO · NOMBRE · ACTIVO (+ HEX en color).
+  // Importar aplica cambios masivos vía CONFIG.importCatalogs (upsert por código; el orden del
+  // archivo manda; lo que no venga se desactiva, nunca se borra).
+  function CatalogXlsxCard() {
+    const fileRef = useRef(null);
+    const kinds = () => Object.keys(C.allCatalogMeta ? C.allCatalogMeta() : {});
+    const sheetName = (kind) => String(C.catalogLabel(kind)).replace(/[\\\/\?\*\[\]:]/g, ' ').slice(0, 31).trim();
+    function doExport() {
+      const X = window.XLSX;
+      if (!X) { toast('No se pudo cargar el motor de Excel', 'var(--danger)'); return; }
+      const wb = X.utils.book_new();
+      kinds().forEach(kind => {
+        const rows = C.all(kind).map(it => {
+          const r = { 'CÓDIGO': it.code, 'NOMBRE': it.label, 'ACTIVO': it.active === false ? 'NO' : 'SI' };
+          if (kind === 'color') r['HEX'] = (it.meta && it.meta.hex) || '';
+          return r;
+        });
+        const ws = X.utils.json_to_sheet(rows.length ? rows : [{ 'CÓDIGO': '', 'NOMBRE': '', 'ACTIVO': '' }]);
+        X.utils.book_append_sheet(wb, ws, sheetName(kind));
+      });
+      X.writeFile(wb, 'catalogos-balam.xlsx', { bookType: 'xlsx' });
+      toast('Excel de catálogos descargado', 'var(--accent)');
+    }
+    // 'SI'/'NO' (y variantes) → boolean; celda vacía → null (conserva el estado actual).
+    function parseActive(v) {
+      const s = String(v == null ? '' : v).trim().toLowerCase();
+      if (!s) return null;
+      return !['no', '0', 'false', 'off', 'inactivo'].includes(s);
+    }
+    function doImport(e) {
+      const file = e.target.files && e.target.files[0]; e.target.value = '';
+      if (!file) return;
+      const X = window.XLSX;
+      if (!X) { toast('No se pudo cargar el motor de Excel', 'var(--danger)'); return; }
+      const reader = new FileReader();
+      reader.onload = () => {
+        let wb;
+        try { wb = X.read(reader.result, { type: 'array' }); } catch (err) { toast('No se pudo leer el archivo', 'var(--danger)'); return; }
+        // Hoja → kind: por el nombre visible del catálogo o por su kind interno.
+        const byName = {};
+        kinds().forEach(k => { byName[sheetName(k).toLowerCase()] = k; byName[k.toLowerCase()] = k; });
+        const map = {};
+        wb.SheetNames.forEach(sn => {
+          const kind = byName[String(sn).trim().toLowerCase()];
+          if (!kind) return;
+          map[kind] = X.utils.sheet_to_json(wb.Sheets[sn], { defval: '' }).map(r => {
+            const pick = (...keys) => { for (const k of keys) { if (r[k] != null && String(r[k]).trim() !== '') return r[k]; } return ''; };
+            const row = { code: pick('CÓDIGO', 'CODIGO', 'code'), label: pick('NOMBRE', 'ETIQUETA', 'label') };
+            const act = parseActive(pick('ACTIVO', 'active'));
+            if (act != null) row.active = act;
+            const hex = String(pick('HEX', 'hex')).trim();
+            if (kind === 'color' && hex) row.meta = { hex: hex[0] === '#' ? hex : '#' + hex };
+            return row;
+          });
+        });
+        if (!window.confirm('¿Aplicar el Excel a los catálogos? El orden del archivo manda y los códigos que no vengan en él se DESACTIVAN (no se borran).')) return;
+        const r = C.importCatalogs(map);
+        if (!r.kinds) { toast('El archivo no contiene hojas de catálogos reconocibles', 'var(--danger)'); return; }
+        toast(`Importado: ${r.kinds} catálogo(s), ${r.items} elemento(s)`, 'var(--accent)');
+      };
+      reader.readAsArrayBuffer(file);
+    }
+    return h(GlassCard, { key: 'catxlsx', className: 'p-5' }, [
+      h('div', { key: 'r', className: 'flex items-center justify-between gap-4 flex-wrap' }, [
+        h('div', { key: 't', className: 'flex-1 min-w-[240px]' }, [
+          h(SerifHeading, { key: 'h', children: 'Catálogos en Excel' }),
+          h('p', { key: 'd', className: 'text-caption text-on-surface-variant mt-1' }, 'Exporta todos los catálogos (una hoja por catálogo: código, nombre, activo) para editarlos en bloque y vuelve a importarlos. Al importar, el orden del archivo manda; los códigos que no vengan se desactivan (no se borran).'),
+        ]),
+        h('div', { key: 'b', className: 'flex items-center gap-2 shrink-0' }, [
+          h('button', { key: 'ex', type: 'button', className: 'inline-flex items-center gap-2 px-4 h-10 border border-outline-variant text-primary text-caption font-bold uppercase tracking-widest rounded-lg hover:border-primary hover:bg-surface-container transition', onClick: doExport }, [h(MS, { key: 'i', name: 'download', size: 16 }), 'Exportar']),
+          h('input', { key: 'f', ref: fileRef, type: 'file', accept: '.xlsx,.xls', className: 'hidden', onChange: doImport }),
+          h('button', { key: 'im', type: 'button', className: 'inline-flex items-center gap-2 px-4 h-10 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-lg hover:opacity-90 transition', onClick: () => fileRef.current && fileRef.current.click() }, [h(MS, { key: 'i', name: 'upload', size: 16 }), 'Importar']),
+        ]),
+      ]),
+    ]);
+  }
+
   // ── Crear catálogo nuevo (Fase 2) ───────────────────────────────────────────────
   function NewCatalogCard() {
     const [name, setName] = useState('');
@@ -337,6 +415,7 @@
     producto: () => [
       h('p', { key: 'intro', className: 'text-caption text-on-surface-variant' }, 'Estos catálogos alimentan el SKU, el alta de productos, los filtros y la importación de Excel. Renómbralos, decide cuáles aparecen en el alta y cuáles forman el SKU. El código entra al SKU: si está en uso por productos no podrás borrarlo (desactívalo).'),
       h(SkuBuilder, { key: 'sku' }),
+      h(CatalogXlsxCard, { key: 'catxlsx' }),
       h(CatalogEditor, { key: 'cat', kind: 'category', codePlaceholder: '21' }),
       h(CatalogEditor, { key: 'fab', kind: 'fabric', codePlaceholder: 'ALG' }),
       h(CatalogEditor, { key: 'slv', kind: 'sleeve', codePlaceholder: 'ML' }),
