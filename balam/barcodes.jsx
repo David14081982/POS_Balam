@@ -9,10 +9,20 @@
   // Opciones base Code 128B (legibles para etiqueta térmica).
   const BASE_OPTS = { format: 'CODE128', width: 2, height: 80, displayValue: true, fontSize: 14, margin: 10, font: 'monospace' };
 
-  // String del código: SKU + talla, en mayúsculas. Ej. ("21-ML-ALG-MZ-128","m") → "21-ML-ALG-MZ-128-M"
-  function codeOf(p, talla) { return `${p.sku}-${talla}`.toUpperCase(); }
+  // String del código por pieza: reemplaza el marcador de talla del SKU base (SIZE_MARK, ver
+  // data.jsx / Constructor de SKU) por la talla real, respetando la POSICIÓN que fijó el admin.
+  // Ej. base "21-ML-ALG-T-128" + talla "38" → "21-ML-ALG-38-128".
+  // Respaldo (SKUs viejos sin marcador): la talla se pega al final, como antes.
+  function codeOf(p, talla) {
+    const mark = (D && D.SIZE_MARK) || 'T';
+    const parts = String(p.sku).split('-');
+    const i = parts.findIndex(seg => seg.toUpperCase() === mark.toUpperCase());
+    if (i >= 0) { parts[i] = String(talla); return parts.join('-').toUpperCase(); }
+    return `${p.sku}-${talla}`.toUpperCase();
+  }
 
-  // Parseo robusto: la talla es lo que va DESPUÉS del último guion (el SKU ya contiene guiones).
+  // Parseo heurístico (solo para saber si algo "parece" un código): la talla suele ir después del
+  // último guion. NO se usa para localizar el producto — de eso se encarga find() por coincidencia.
   function parse(code) {
     const s = String(code || '').trim().toUpperCase();
     const i = s.lastIndexOf('-');
@@ -21,13 +31,19 @@
   }
 
   // Encuentra { p, talla } a partir de un código escaneado, buscando en memoria (sin red).
+  // Por COINCIDENCIA: compara el código contra codeOf(p, talla) de cada producto/talla. Así funciona
+  // con la talla en cualquier posición del SKU y sigue leyendo etiquetas viejas (talla al final).
   function find(code) {
-    const pr = parse(code); if (!pr) return null;
-    const p = D.products.find(x => String(x.sku).toUpperCase() === pr.sku);
-    if (!p) return null;
-    const entry = (p.stock || []).find(v => String(v.talla).toUpperCase() === pr.talla);
-    if (!entry) return null;
-    return { p, talla: entry.talla };
+    const s = String(code || '').trim().toUpperCase();
+    if (!s) return null;
+    const prods = D.products || [];
+    for (let a = 0; a < prods.length; a++) {
+      const p = prods[a], st = p.stock || [];
+      for (let b = 0; b < st.length; b++) {
+        if (codeOf(p, st[b].talla) === s) return { p, talla: st[b].talla };
+      }
+    }
+    return null;
   }
 
   const ready = () => typeof window.JsBarcode === 'function';

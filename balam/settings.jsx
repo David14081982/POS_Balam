@@ -102,7 +102,7 @@
     const pills = [];
     const selectAttr = cmeta && (cmeta.formSelect || cmeta.custom); // se captura como menú en el alta
     if (cmeta && cmeta.formSelect) pills.push(metaPill('En alta', cmeta.inForm, () => C.setCatalogMeta(kind, { inForm: !cmeta.inForm }), cmeta.struct));
-    if (cmeta && (cmeta.field || cmeta.custom)) pills.push(metaPill('En SKU', cmeta.inSku, () => C.setCatalogMeta(kind, { inSku: !cmeta.inSku })));
+    if (cmeta && (cmeta.field || cmeta.custom || cmeta.sizeSlot)) pills.push(metaPill('En SKU', cmeta.inSku, () => C.setCatalogMeta(kind, { inSku: !cmeta.inSku })));
     if (selectAttr) pills.push(metaPill('Obligatorio', !!cmeta.required, () => C.setCatalogMeta(kind, { required: !cmeta.required })));
     if (selectAttr) pills.push(metaPill('Filtrable', !!cmeta.filterable, () => C.setCatalogMeta(kind, { filterable: !cmeta.filterable })));
     const structNote = (cmeta && cmeta.struct && !cmeta.field)
@@ -168,9 +168,15 @@
       const r = D.regenerateSkus();
       toast(r.changed + ' de ' + r.total + ' SKUs actualizados', 'var(--accent)');
     }
-    const sampleCode = (kind) => { const l = C.list(kind); return l.length ? l[0].code : '??'; };
+    const sampleCode = (kind) => {
+      const m = C.catalogMeta(kind);
+      if (m && m.sizeSlot) return (window.DATA && window.DATA.SIZE_MARK) || 'T'; // marcador; la etiqueta lo cambia por la talla
+      const l = C.list(kind); return l.length ? l[0].code : '??';
+    };
     const preview = parts.map(p => sampleCode(p.kind)).concat('128').join('-');
     const hidden = parts.map(p => C.catalogMeta(p.kind)).filter(m => m && m.formSelect && !m.inForm);
+    const sizeMark = (window.DATA && window.DATA.SIZE_MARK) || 'T';
+    const hasSize = parts.some(p => { const m = C.catalogMeta(p.kind); return m && m.sizeSlot; });
     const modeloChip = h('div', { key: '__modelo', className: 'inline-flex items-center rounded-lg border border-dashed border-outline-variant bg-surface-container px-3 h-9' },
       h('span', { className: 'text-caption font-semibold text-on-surface-variant whitespace-nowrap' }, 'N.º Modelo'));
     const chip = (p, i) => h('div', { key: p.kind, className: 'inline-flex items-center rounded-lg border border-outline-variant bg-surface-container-low overflow-hidden' }, [
@@ -189,6 +195,10 @@
         h('span', { key: 'l', className: 'text-overline uppercase tracking-widest text-on-surface-variant' }, 'Vista previa'),
         h('span', { key: 'v', className: 'font-mono text-body text-gold-text' }, preview),
       ]),
+      hasSize ? h('div', { key: 'szn', className: 'mt-2 flex items-start gap-2 text-caption text-on-surface-variant' }, [
+        h(MS, { key: 'i', name: 'barcode', size: 15, className: 'text-on-surface-variant/70 shrink-0 mt-0.5' }),
+        h('span', { key: 't' }, `“${sizeMark}” marca la posición de la Talla (Número): el SKU del modelo la muestra así, y cada etiqueta/código de barras la reemplaza por la talla real (p. ej. ${sizeMark}→38).`),
+      ]) : null,
       hidden.length ? h('div', { key: 'w', className: 'mt-3 flex items-start gap-2 text-caption text-on-surface-variant bg-gold/5 border border-gold/30 rounded-lg p-3' }, [
         h(MS, { key: 'i', name: 'alert', size: 16, className: 'text-gold-text shrink-0 mt-0.5' }),
         h('span', { key: 't' }, 'En el SKU pero oculto del alta: ' + hidden.map(m => m.label).join(', ') + '. Los productos nuevos no podrán elegir ese valor.'),

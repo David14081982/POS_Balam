@@ -138,7 +138,7 @@
     neck:        { label: 'Cuello',         inForm: true,  inSku: false, skuOrder: 5, field: 'cuello', system: true, formSelect: true },
     ornament:    { label: 'Ornamento',      inForm: false, inSku: false, skuOrder: 6, field: 'orn',    system: true },
     size_letter: { label: 'Talla (Letra)',  inForm: false, inSku: false, skuOrder: 7, system: true, struct: true },
-    size_number: { label: 'Talla (Número)', inForm: false, inSku: false, skuOrder: 8, system: true, struct: true },
+    size_number: { label: 'Talla (Número)', inForm: false, inSku: false, skuOrder: 8, system: true, struct: true, sizeSlot: true },
   };
 
   // ── Semilla de parámetros sueltos ────────────────────────────────────────────
@@ -204,6 +204,8 @@
     // Metadatos por catálogo: rellena el mapa entero o entradas-por-kind ausentes (estados viejos).
     if (!st.catalogMeta) { st.catalogMeta = fresh.catalogMeta; changed = true; }
     else Object.keys(fresh.catalogMeta).forEach(k => { if (!st.catalogMeta[k]) { st.catalogMeta[k] = fresh.catalogMeta[k]; changed = true; } });
+    // Talla (Número): habilita el segmento de talla en el SKU para estados guardados antes de esta función.
+    if (st.catalogMeta.size_number && !st.catalogMeta.size_number.sizeSlot) { st.catalogMeta.size_number.sizeSlot = true; changed = true; }
     // Asegura el método 'Cortesía' (regalos/giveaways) aunque payment_method ya exista (local o nube).
     const pm = st.catalogs.payment_method;
     if (pm && !pm.some(it => it.code === 'Cortesía')) { pm.push({ code: 'Cortesía', label: 'Cortesía', active: true, meta: { icon: 'tag' } }); changed = true; }
@@ -259,9 +261,9 @@
   function skuParts() {
     return Object.keys(state.catalogMeta)
       .map(kind => ({ kind, m: state.catalogMeta[kind] }))
-      .filter(x => x.m && x.m.inSku && (x.m.field || x.m.custom))
+      .filter(x => x.m && x.m.inSku && (x.m.field || x.m.custom || x.m.sizeSlot))
       .sort((a, b) => (a.m.skuOrder || 0) - (b.m.skuOrder || 0))
-      .map(x => ({ kind: x.kind, field: x.m.field, custom: !!x.m.custom }));
+      .map(x => ({ kind: x.kind, field: x.m.field, custom: !!x.m.custom, sizeSlot: !!x.m.sizeSlot }));
   }
 
   // ── ¿Un code de catálogo está en uso por algún producto? (guarda de borrado) ──

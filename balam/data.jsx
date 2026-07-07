@@ -34,6 +34,11 @@
   // desde Inventario → "Nuevo producto" (o importando un Excel con la plantilla).
   const seed = [];
 
+  // Marcador del segmento de talla (número) dentro del SKU base. El SKU del modelo NO tiene una
+  // talla única (es una matriz), así que reserva este marcador en su posición; la etiqueta/código
+  // por pieza (barcodes.codeOf) lo reemplaza por la talla real. Ver Constructor de SKU.
+  const SIZE_MARK = 'T';
+
   // SKU armado desde la receta configurable (CONFIG.skuParts): catálogos con "En SKU"
   // ordenados, + el número de modelo como token final. Si CONFIG no está disponible,
   // cae al orden fijo histórico (cat-manga-tela-color).
@@ -41,8 +46,9 @@
     // Con CONFIG disponible, la receta manda — incluso si queda vacía (SKU = solo el modelo),
     // así la vista previa del Constructor y el SKU real siempre coinciden. El orden fijo
     // (cat-manga-tela-color) es solo el respaldo para cuando CONFIG aún no cargó.
+    // El segmento de talla emite el marcador (SIZE_MARK); no lleva un valor por producto.
     const parts = (C && typeof C.skuParts === 'function')
-      ? C.skuParts().map(x => x.custom ? (p.attrs || {})[x.kind] : p[x.field])
+      ? C.skuParts().map(x => x.sizeSlot ? SIZE_MARK : (x.custom ? (p.attrs || {})[x.kind] : p[x.field]))
       : [p.cat, p.manga, p.tela, p.color];
     parts.push(String(p.modelo).padStart(3, '0'));
     return parts.join('-');
@@ -691,7 +697,7 @@
 
   window.DATA = {
     products, sellers, clients, sales, movements, promos, liquidations, returns,
-    sku, regenerateSkus, totalStock, hydrate, mkStock, emptyStock,
+    sku, regenerateSkus, totalStock, hydrate, mkStock, emptyStock, SIZE_MARK,
     saveProducts, saveSellers, saveClients, saveSales, saveMovements, savePromos, saveReturns,
     removeProduct,
     addClient, removeClient, recordSale, nextFolio, stockOf, resetProducts, applyRemote, liquidarComision,
