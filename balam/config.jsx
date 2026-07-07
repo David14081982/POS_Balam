@@ -257,6 +257,15 @@
   function catalogLabel(kind) { const m = state.catalogMeta[kind]; return (m && m.label) || kind; }
   // Propiedad del producto que lleva el código de un catálogo (p.cat, p.manga, …).
   function fieldOf(kind) { const m = state.catalogMeta[kind]; return m ? m.field : undefined; }
+  // Kind del catálogo custom que alimenta el campo "Nombre / Modelo" del alta: por slug ('modelo')
+  // o, de respaldo, por su nombre. null si no existe. Lo usan el alta (inventory) y el Constructor
+  // de SKU (settings) — ese catálogo SÍ se captura aunque su "En alta" esté apagado.
+  function modeloKind() {
+    const m = state.catalogMeta;
+    if (m.modelo && m.modelo.custom) return 'modelo';
+    return Object.keys(m).find(k => m[k].custom && String(m[k].label || '').trim().toLowerCase() === 'modelo') || null;
+  }
+
   // Partes del SKU: catálogos con inSku, ordenados por skuOrder → [{ kind, field }].
   function skuParts() {
     return Object.keys(state.catalogMeta)
@@ -426,7 +435,7 @@
 
   window.CONFIG = {
     all, list, map, metaMap, codes, find, get, settings, inUse,
-    catalogMeta, allCatalogMeta, catalogLabel, fieldOf, skuParts,
+    catalogMeta, allCatalogMeta, catalogLabel, fieldOf, skuParts, modeloKind,
     addItem, updateItem, setActive, removeItem, move, setCatalogMeta, moveSkuOrder, addCatalog, removeCatalog, setSetting, setSettings,
     reset, snapshot, load,
     get version() { return version; },

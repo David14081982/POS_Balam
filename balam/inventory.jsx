@@ -334,11 +334,9 @@
     }));
     const set = (k, v) => setD(prev => ({ ...prev, [k]: v }));
     const setAttr = (k, v) => setD(prev => ({ ...prev, attrs: { ...(prev.attrs || {}), [k]: v } }));
-    // Catálogo "Modelo" (custom) que alimenta el desplegable de "Nombre / Modelo". Se ubica por su
-    // slug ('modelo') o, de respaldo, por su nombre. Si no existe, el campo sigue siendo texto libre.
-    const meta = window.CONFIG.allCatalogMeta ? window.CONFIG.allCatalogMeta() : {};
-    const modeloKind = (meta.modelo && meta.modelo.custom) ? 'modelo'
-      : Object.keys(meta).find(k => meta[k].custom && String(meta[k].label || '').trim().toLowerCase() === 'modelo');
+    // Catálogo "Modelo" (custom) que alimenta el desplegable de "Nombre / Modelo" (detección
+    // centralizada en CONFIG.modeloKind). Si no existe, el campo sigue siendo texto libre.
+    const modeloKind = window.CONFIG.modeloKind ? window.CONFIG.modeloKind() : null;
     const modeloItems = modeloKind ? window.CONFIG.list(modeloKind) : [];
     // El valor elegido del catálogo se guarda como NOMBRE del producto (d.nombre = etiqueta), como
     // NO. MODELO (d.modelo = código del catálogo: ADR, ARO, …) y, si el catálogo entra al SKU/filtros,

@@ -174,7 +174,9 @@
       const l = C.list(kind); return l.length ? l[0].code : '??';
     };
     const preview = parts.map(p => sampleCode(p.kind)).join('-');
-    const hidden = parts.map(p => C.catalogMeta(p.kind)).filter(m => m && m.formSelect && !m.inForm);
+    // El catálogo "Modelo" no cuenta como oculto: está cableado al campo Nombre / Modelo del alta.
+    const modeloK = C.modeloKind ? C.modeloKind() : null;
+    const hidden = parts.filter(x => x.kind !== modeloK).map(p => C.catalogMeta(p.kind)).filter(m => m && m.formSelect && !m.inForm);
     const sizeMark = (window.DATA && window.DATA.SIZE_MARK) || 'T';
     const hasSize = parts.some(p => { const m = C.catalogMeta(p.kind); return m && m.sizeSlot; });
     const chip = (p, i) => h('div', { key: p.kind, className: 'inline-flex items-center rounded-lg border border-outline-variant bg-surface-container-low overflow-hidden' }, [
