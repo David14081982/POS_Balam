@@ -220,7 +220,11 @@
     Object.keys(meta).forEach(k => {
       if (meta[k].custom && (meta[k].inForm || meta[k].inSku)) { const l = window.CONFIG.list(k); attrs[k] = l.length ? l[0].code : ''; }
     });
-    return { cat: '21', manga: 'ML', tela: 'ALG', color: 'BL', modelo: '', nombre: '', orn: '—', ornColors: [], cuello: 'NOR', precio: 0, stock: D.emptyStock(), pop: false, attrs };
+    // Defaults de los catálogos del sistema: primer elemento ACTIVO del catálogo (el admin los
+    // edita). Los códigos históricos ('21', 'ML', …) quedan solo como respaldo si está vacío —
+    // un default fósil que ya no existe en el catálogo produce SKUs y atributos huérfanos.
+    const first = (kind, fb) => { const l = window.CONFIG.list(kind); return l.length ? l[0].code : fb; };
+    return { cat: first('category', '21'), manga: first('sleeve', 'ML'), tela: first('fabric', 'ALG'), color: first('color', 'BL'), modelo: '', nombre: '', orn: '—', ornColors: [], cuello: first('neck', 'NOR'), precio: 0, stock: D.emptyStock(), pop: false, attrs };
   }
 
   // ---------- Drawer de detalle ----------
@@ -467,8 +471,12 @@
   }
 
   function sel(value, map, onChange, useKeyAsValue) {
-    return h('select', { className: SELECT, value, onChange: e => onChange(e.target.value) },
-      Object.entries(map).map(([k, v]) => h('option', { key: k, value: k }, useKeyAsValue ? `${v} (${k})` : v)));
+    const opts = Object.entries(map).map(([k, v]) => h('option', { key: k, value: k }, useKeyAsValue ? `${v} (${k})` : v));
+    // Valor huérfano (código guardado que ya no existe en el catálogo): opción visible con aviso.
+    // Sin esto, el <select> muestra la PRIMERA opción aunque el estado conserve el código viejo,
+    // y el capturista guarda sin darse cuenta (SKU/atributos huérfanos, p. ej. cat '21').
+    if (!(value in map)) opts.unshift(h('option', { key: '__orphan', value }, value ? `⚠ ${value} — ya no existe, elige otro` : 'Selecciona…'));
+    return h('select', { className: SELECT, value, onChange: e => onChange(e.target.value) }, opts);
   }
   function field(label, control, mod) {
     return h('div', { key: label, className: mod === 'wide' ? 'col-span-2 md:col-span-1' : '' }, [
