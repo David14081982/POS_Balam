@@ -75,7 +75,7 @@
     function commitMeta(it, key, v) { C.updateItem(kind, it.code, { meta: { [key]: v } }); }
     function del(it) { const r = C.removeItem(kind, it.code); if (!r.ok) toast(r.error, 'var(--danger)'); }
     function delCatalog() {
-      if (!window.confirm('¿Eliminar el catálogo "' + (cmeta ? cmeta.label : kind) + '" y todos sus elementos? Esta acción no se puede deshacer.')) return;
+      if (!window.confirm('¿Eliminar el catálogo "' + (cmeta ? cmeta.label : kind) + '" y todos sus elementos? Si algún producto tiene un valor de este catálogo, se quitará (su SKU ya asignado no cambia). Esta acción no se puede deshacer.')) return;
       const r = C.removeCatalog(kind); if (!r.ok) toast(r.error, 'var(--danger)'); else toast('Catálogo eliminado', 'var(--danger)');
     }
 
