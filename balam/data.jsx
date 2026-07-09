@@ -102,10 +102,18 @@
     // Costo del producto (para validar margen en Descuentos). Si falta, estima 45% del precio.
     if (p.costo == null || p.costo === '') p.costo = Math.round((Number(p.precio) || 0) * 0.45);
     p.costo = Number(p.costo) || 0;
-    p.colorHex = COLOR_HEX()[p.color] || '#8b9099';
-    p.colorName = COLOR_NAME()[p.color] || p.color;
+    colorDisplay(p);
     if (!p.imagen) p.imagen = pickImg(p);
     return p;
+  }
+
+  // Nombre y hex del color para display. Si el código ya no está ACTIVO (p. ej. el catálogo se
+  // re-codificó y el código viejo quedó desactivado — importCatalogs nunca borra), cae al elemento
+  // desactivado: el punto conserva su color real y el nombre en vez de gris + código crudo.
+  function colorDisplay(p) {
+    const it = (C && C.find) ? C.find('color', String(p.color)) : null;
+    p.colorHex = COLOR_HEX()[p.color] || (it && it.meta && it.meta.hex) || '#8b9099';
+    p.colorName = COLOR_NAME()[p.color] || (it && it.label) || p.color;
   }
 
   // ---- Persistencia ----
@@ -125,10 +133,7 @@
   // se queda con puntos grises (#8b9099) y el código crudo en vez del nombre. OJO: solo se
   // recalculan estos dos campos de display — el SKU sigue congelado por diseño.
   window.addEventListener('configchange', () => {
-    products.forEach(p => {
-      p.colorHex = COLOR_HEX()[p.color] || '#8b9099';
-      p.colorName = COLOR_NAME()[p.color] || p.color;
-    });
+    products.forEach(colorDisplay);
   });
 
   function saveProducts() {
@@ -138,19 +143,25 @@
 
   // Recalcula el SKU de TODOS los productos con la receta vigente (acción explícita del admin).
   // El SKU normalmente está congelado; esto lo fuerza. Devuelve cuántos cambiaron.
-  // Además NORMALIZA códigos huérfanos (p. ej. cat '21' fósil, cuando el catálogo ya no tiene ese
-  // código): toma el primer elemento activo — el que el alta mostraba seleccionado — para que el
-  // SKU regenerado no arrastre códigos muertos y el detalle vuelva a mostrar la etiqueta.
+  // Además NORMALIZA códigos huérfanos (el catálogo ya no tiene ese código ACTIVO):
+  //   1) puente por NOMBRE: el código viejo suele seguir en el catálogo desactivado (nunca se
+  //      borra); si su etiqueta coincide con un elemento activo (re-codificación del catálogo,
+  //      p. ej. color '15'→'AMAR' ambos "AZUL MARINO"), remapea a ese código;
+  //   2) si no hay coincidencia, primer elemento activo — el que el alta mostraba seleccionado.
   function regenerateSkus() {
     const FIX = [['category', 'cat'], ['sleeve', 'manga'], ['fabric', 'tela'], ['color', 'color'], ['neck', 'cuello']];
+    const normTxt = (s) => String(s == null ? '' : s).trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     let changed = 0, fixed = 0;
     products.forEach(p => {
       FIX.forEach(([kind, field]) => {
         const l = (C && typeof C.list === 'function') ? C.list(kind) : [];
-        if (l.length && !l.some(x => x.code === String(p[field]))) { p[field] = l[0].code; fixed++; }
+        if (l.length && !l.some(x => x.code === String(p[field]))) {
+          const old = (C && C.find) ? C.find(kind, String(p[field])) : null;
+          const match = old ? l.find(x => normTxt(x.label) === normTxt(old.label)) : null;
+          p[field] = match ? match.code : l[0].code; fixed++;
+        }
       });
-      p.colorHex = COLOR_HEX()[p.color] || '#8b9099';
-      p.colorName = COLOR_NAME()[p.color] || p.color;
+      colorDisplay(p);
       const n = sku(p);
       if (n !== p.sku) { p.sku = n; changed++; }
     });

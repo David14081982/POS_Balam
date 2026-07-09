@@ -328,13 +328,13 @@
 
   // ---------- Formulario de alta / edición ----------
   function ProductForm({ mode, product, onClose, onSave }) {
-    // Códigos huérfanos (el catálogo ya no tiene ese código) → primer elemento activo, la misma
-    // regla que blankProduct() y regenerateSkus(): lo que el select mostraba es lo que se guarda.
-    const fixCode = (kind, val) => { const l = window.CONFIG.list(kind); return (l.length && !l.some(x => x.code === String(val))) ? l[0].code : val; };
+    // Los códigos huérfanos NO se sustituyen al abrir: el select los muestra con aviso (sel() ya
+    // lo maneja). Sustituirlos por el primer elemento activo reescribía el color/atributo real del
+    // producto con solo abrir y guardar. La normalización masiva vive en Regenerar SKUs.
     const [d, setD] = useState(() => ({
-      id: product.id, cat: fixCode('category', product.cat), manga: fixCode('sleeve', product.manga), tela: fixCode('fabric', product.tela), color: fixCode('color', product.color),
+      id: product.id, cat: product.cat, manga: product.manga, tela: product.tela, color: product.color,
       modelo: product.modelo, nombre: product.nombre, orn: product.orn, ornColors: (product.ornColors || []).slice(),
-      cuello: fixCode('neck', product.cuello), precio: product.precio, costo: product.costo != null ? product.costo : '', pop: !!product.pop,
+      cuello: product.cuello, precio: product.precio, costo: product.costo != null ? product.costo : '', pop: !!product.pop,
       imagen: product.imagen || '',
       attrs: product.attrs ? { ...product.attrs } : {}, // valores de catálogos custom (Fase 2)
       stock: alignStock(product.stock),
