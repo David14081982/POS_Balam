@@ -120,6 +120,17 @@
   } catch (e) { /* ignora storage corrupto */ }
   if (!products) products = seed.map(hydrate);
 
+  // colorHex/colorName se congelan al hidratar, pero el catálogo de color puede cambiar DESPUÉS
+  // (pull de la nube tras el login, import de catálogos, edición del hex). Sin esto, el inventario
+  // se queda con puntos grises (#8b9099) y el código crudo en vez del nombre. OJO: solo se
+  // recalculan estos dos campos de display — el SKU sigue congelado por diseño.
+  window.addEventListener('configchange', () => {
+    products.forEach(p => {
+      p.colorHex = COLOR_HEX()[p.color] || '#8b9099';
+      p.colorName = COLOR_NAME()[p.color] || p.color;
+    });
+  });
+
   function saveProducts() {
     try { localStorage.setItem(LS_KEY, JSON.stringify(products)); } catch (e) { /* cuota llena */ }
     if (typeof syncUp === 'function') syncUp('products', products);
