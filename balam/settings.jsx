@@ -272,6 +272,30 @@
             return row;
           });
         });
+        // Plan B: el Excel de INVENTARIO trae una hoja "Catálogos" (guía de códigos por secciones:
+        // "CATEGORÍA (col. Categoría)" → filas código·nombre). Si ninguna hoja coincidió por nombre,
+        // intenta leer los catálogos desde esa guía para que ese archivo también sirva aquí.
+        let guideMode = false;
+        if (!Object.keys(map).length) {
+          const guideSn = wb.SheetNames.find(sn => norm(sn) === 'catalogos');
+          if (guideSn) {
+            // Secciones del sistema con nombre fijo en la guía (aunque el catálogo esté renombrado).
+            const SYS = { categoria: 'category', manga: 'sleeve', tela: 'fabric', cuello: 'neck', color: 'color' };
+            const aoa = X.utils.sheet_to_json(wb.Sheets[guideSn], { header: 1, defval: '' });
+            let cur = null;
+            aoa.forEach(row => {
+              const a = String(row[0] == null ? '' : row[0]).trim();
+              if (!a) return; // fila en blanco entre secciones
+              const hdr = a.match(/^(.+?)\s*\(cols?\.\s*[^)]*\)\s*$/i); // "TELA (col. Tela)" → TELA
+              if (hdr) { const n = norm(hdr[1]); cur = SYS[n] || byName[n] || null; return; }
+              if (norm(a) === 'notas' || norm(a).indexOf('catalogo de codigos') === 0 || a[0] === '•') { cur = null; return; }
+              if (!cur) return;
+              const label = String(row[1] == null ? '' : row[1]).trim();
+              (map[cur] = map[cur] || []).push({ code: a, label: label || a });
+            });
+            guideMode = Object.keys(map).length > 0;
+          }
+        }
         // Diagnóstico: ninguna hoja coincide con un catálogo → explica el porqué en detalle.
         if (!Object.keys(map).length) {
           const expected = kinds().map(sheetName).join(', ');
@@ -294,7 +318,9 @@
           toast('No se pudo importar — revisa el detalle en la tarjeta', 'var(--danger)');
           return;
         }
-        if (!window.confirm('¿Aplicar el Excel a los catálogos? El orden del archivo manda y los códigos que no vengan en él se DESACTIVAN (no se borran).')) return;
+        if (!window.confirm(guideMode
+          ? 'Este es un Excel de INVENTARIO: los catálogos se leerán de su hoja "Catálogos" (guía de códigos). El orden del archivo manda y los códigos que no vengan se DESACTIVAN (no se borran). OJO: esto NO importa productos ni existencias — eso se hace con el botón Importar de la pantalla Inventario. ¿Aplicar?'
+          : '¿Aplicar el Excel a los catálogos? El orden del archivo manda y los códigos que no vengan en él se DESACTIVAN (no se borran).')) return;
         const r = C.importCatalogs(map);
         // Hojas reconocidas pero ninguna fila con CÓDIGO → suele ser un encabezado distinto o filas de título arriba.
         if (!r.kinds) {
@@ -310,7 +336,9 @@
           return;
         }
         setDiag(null);
-        toast(`Importado: ${r.kinds} catálogo(s), ${r.items} elemento(s)` + (ignored.length ? ` — hojas ignoradas: ${ignored.join(', ')}` : ''), 'var(--accent)');
+        toast(guideMode
+          ? `Importado desde la hoja "Catálogos" del Excel de Inventario: ${r.kinds} catálogo(s), ${r.items} elemento(s)`
+          : `Importado: ${r.kinds} catálogo(s), ${r.items} elemento(s)` + (ignored.length ? ` — hojas ignoradas: ${ignored.join(', ')}` : ''), 'var(--accent)');
       };
       reader.readAsArrayBuffer(file);
     }
