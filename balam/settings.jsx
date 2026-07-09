@@ -55,6 +55,50 @@
       ]));
   }
 
+  // ── Campo de color: texto hex/RGB + recuadro selector, sincronizados ───────────
+  // Acepta "#1A2B3C", "1A2B3C", "#ABC", "142,165,251", "142 165 251" o "rgb(142,165,251)".
+  function parseColorInput(s) {
+    s = String(s == null ? '' : s).trim().toLowerCase();
+    let m = s.match(/^#?([0-9a-f]{6})$/);
+    if (m) return '#' + m[1];
+    m = s.match(/^#?([0-9a-f]{3})$/);
+    if (m) return '#' + m[1].split('').map(c => c + c).join('');
+    m = s.match(/^(?:rgb\s*\(\s*)?(\d{1,3})\s*[,; ]\s*(\d{1,3})\s*[,; ]\s*(\d{1,3})\s*\)?$/);
+    if (m) {
+      const r = +m[1], g = +m[2], b = +m[3];
+      if (r > 255 || g > 255 || b > 255) return null;
+      return '#' + [r, g, b].map(n => n.toString(16).padStart(2, '0')).join('');
+    }
+    return null;
+  }
+  function ColorField({ val, title, onCommit }) {
+    const [txt, setTxt] = useState(val || '');
+    useEffect(() => { setTxt(val || ''); }, [val]); // el selector visual (u otro cambio) refresca el texto
+    function apply() {
+      const s = String(txt).trim();
+      if (!s || s === val) { setTxt(val || ''); return; }
+      const hex = parseColorInput(s);
+      if (!hex) { toast('Color no válido — escribe #1A2B3C o 142,165,251', 'var(--danger)'); setTxt(val || ''); return; }
+      setTxt(hex);
+      if (hex !== val) onCommit(hex);
+    }
+    return h('span', { className: 'inline-flex items-center gap-1.5' }, [
+      h('input', {
+        key: 't', value: txt, placeholder: '#HEX o R,G,B', spellCheck: false,
+        className: 'w-28 h-8 px-2 bg-surface-container-low border border-outline-variant rounded text-caption font-mono',
+        title: (title ? title + ' — ' : '') + 'hexadecimal (#1A2B3C) o RGB (142,165,251); Enter para aplicar',
+        onChange: e => setTxt(e.target.value),
+        onKeyDown: e => { if (e.key === 'Enter') e.currentTarget.blur(); },
+        onBlur: apply,
+      }),
+      h('input', {
+        key: 'c', type: 'color', value: /^#[0-9a-f]{6}$/i.test(val || '') ? val : '#cccccc',
+        className: 'w-9 h-8 rounded border border-outline-variant bg-surface cursor-pointer shrink-0',
+        onChange: e => onCommit(e.target.value), title,
+      }),
+    ]);
+  }
+
   // ── Editor genérico de catálogos ───────────────────────────────────────────────
   // metaFields: [{ key, label, type:'text'|'number'|'color'|'select', options? }]
   function CatalogEditor({ kind, title, hint, metaFields = [], codePlaceholder = 'CÓD', labelPlaceholder = 'Nombre visible', lockCode = false }) {
@@ -81,7 +125,7 @@
 
     const metaInput = (it, f) => {
       const val = (it.meta && it.meta[f.key] != null) ? it.meta[f.key] : '';
-      if (f.type === 'color') return h('input', { type: 'color', value: val || '#cccccc', className: 'w-9 h-8 rounded border border-outline-variant bg-surface cursor-pointer', onChange: e => commitMeta(it, f.key, e.target.value), title: f.label });
+      if (f.type === 'color') return h(ColorField, { val, title: f.label, onCommit: v => commitMeta(it, f.key, v) });
       if (f.type === 'select') return h('select', { className: 'h-8 px-2 bg-surface-container-low border border-outline-variant rounded text-caption', value: val, onChange: e => commitMeta(it, f.key, e.target.value), title: f.label }, (f.options || []).map(o => h('option', { key: o, value: o }, o)));
       if (f.type === 'number') return h('input', { type: 'number', defaultValue: val, className: 'w-16 h-8 px-2 bg-surface-container-low border border-outline-variant rounded text-caption text-right', onBlur: e => commitMeta(it, f.key, Number(e.target.value) || 0), title: f.label });
       return h('input', { defaultValue: val, placeholder: f.label, className: 'h-8 px-2 bg-surface-container-low border border-outline-variant rounded text-caption w-28', onBlur: e => commitMeta(it, f.key, e.target.value) });
