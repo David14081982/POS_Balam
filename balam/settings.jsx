@@ -217,8 +217,11 @@
   // archivo manda; lo que no venga se desactiva, nunca se borra).
   function CatalogXlsxCard() {
     const fileRef = useRef(null);
+    const [diag, setDiag] = useState(null); // { title, lines } — diagnóstico cuando el import no procede
     const kinds = () => Object.keys(C.allCatalogMeta ? C.allCatalogMeta() : {});
     const sheetName = (kind) => String(C.catalogLabel(kind)).replace(/[\\\/\?\*\[\]:]/g, ' ').slice(0, 31).trim();
+    // Comparación tolerante: minúsculas y sin acentos ("Categoría" ≡ "categoria" ≡ "CATEGORIA").
+    const norm = (s) => String(s == null ? '' : s).trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     function doExport() {
       const X = window.XLSX;
       if (!X) { toast('No se pudo cargar el motor de Excel', 'var(--danger)'); return; }
@@ -250,27 +253,64 @@
       reader.onload = () => {
         let wb;
         try { wb = X.read(reader.result, { type: 'array' }); } catch (err) { toast('No se pudo leer el archivo', 'var(--danger)'); return; }
-        // Hoja → kind: por el nombre visible del catálogo o por su kind interno.
+        // Hoja → kind: por el nombre visible del catálogo o por su kind interno,
+        // sin distinguir mayúsculas ni acentos ("categoria" también vale).
         const byName = {};
-        kinds().forEach(k => { byName[sheetName(k).toLowerCase()] = k; byName[k.toLowerCase()] = k; });
-        const map = {};
+        kinds().forEach(k => { byName[norm(sheetName(k))] = k; byName[norm(k)] = k; });
+        const map = {}; const ignored = [];
         wb.SheetNames.forEach(sn => {
-          const kind = byName[String(sn).trim().toLowerCase()];
-          if (!kind) return;
+          const kind = byName[norm(sn)];
+          if (!kind) { ignored.push(sn); return; }
           map[kind] = X.utils.sheet_to_json(wb.Sheets[sn], { defval: '' }).map(r => {
-            const pick = (...keys) => { for (const k of keys) { if (r[k] != null && String(r[k]).trim() !== '') return r[k]; } return ''; };
-            const row = { code: pick('CÓDIGO', 'CODIGO', 'code'), label: pick('NOMBRE', 'ETIQUETA', 'label') };
-            const act = parseActive(pick('ACTIVO', 'active'));
+            // Encabezados tolerantes: "CÓDIGO" ≡ "Codigo" ≡ "código", etc.
+            const pick = (...names) => { for (const k of Object.keys(r)) { if (names.includes(norm(k)) && r[k] != null && String(r[k]).trim() !== '') return r[k]; } return ''; };
+            const row = { code: pick('codigo', 'code'), label: pick('nombre', 'etiqueta', 'label') };
+            const act = parseActive(pick('activo', 'active'));
             if (act != null) row.active = act;
-            const hex = String(pick('HEX', 'hex')).trim();
+            const hex = String(pick('hex')).trim();
             if (kind === 'color' && hex) row.meta = { hex: hex[0] === '#' ? hex : '#' + hex };
             return row;
           });
         });
+        // Diagnóstico: ninguna hoja coincide con un catálogo → explica el porqué en detalle.
+        if (!Object.keys(map).length) {
+          const expected = kinds().map(sheetName).join(', ');
+          const isInventario = wb.SheetNames.some(sn => norm(sn) === 'inventario');
+          setDiag(isInventario ? {
+            title: 'Este archivo es un Excel de INVENTARIO, no de catálogos',
+            lines: [
+              `Hojas del archivo: ${wb.SheetNames.join(', ')}. Ese formato lo generan los botones Exportar/Plantilla de la pantalla Inventario (productos y existencias); su hoja "Catálogos" es solo una guía de códigos, no es editable.`,
+              'Si quieres actualizar productos y existencias, impórtalo con el botón Importar de la pantalla Inventario.',
+              `Si quieres editar los catálogos en bloque, usa el botón Exportar de ESTA tarjeta (descarga catalogos-balam.xlsx con una pestaña por catálogo: ${expected}), edítalo sin renombrar pestañas y vuelve a importarlo aquí.`,
+            ],
+          } : {
+            title: 'El archivo no contiene hojas de catálogos reconocibles',
+            lines: [
+              `Hojas encontradas: ${wb.SheetNames.join(', ') || '(ninguna)'}.`,
+              `Se esperaba al menos una hoja con el nombre de un catálogo: ${expected} (mayúsculas y acentos no importan).`,
+              'Usa el botón Exportar de esta tarjeta para descargar el archivo con el formato correcto, edítalo sin renombrar las pestañas y vuelve a importarlo.',
+            ],
+          });
+          toast('No se pudo importar — revisa el detalle en la tarjeta', 'var(--danger)');
+          return;
+        }
         if (!window.confirm('¿Aplicar el Excel a los catálogos? El orden del archivo manda y los códigos que no vengan en él se DESACTIVAN (no se borran).')) return;
         const r = C.importCatalogs(map);
-        if (!r.kinds) { toast('El archivo no contiene hojas de catálogos reconocibles', 'var(--danger)'); return; }
-        toast(`Importado: ${r.kinds} catálogo(s), ${r.items} elemento(s)`, 'var(--accent)');
+        // Hojas reconocidas pero ninguna fila con CÓDIGO → suele ser un encabezado distinto o filas de título arriba.
+        if (!r.kinds) {
+          setDiag({
+            title: 'Se reconocieron las hojas, pero ninguna fila tiene CÓDIGO',
+            lines: [
+              `Hojas reconocidas: ${Object.keys(map).map(sheetName).join(', ')}.`,
+              'La PRIMERA fila de cada hoja debe ser el encabezado, con columnas CÓDIGO y NOMBRE (ACTIVO opcional: SI/NO; HEX solo en Color).',
+              'Revisa que no haya filas de título arriba del encabezado y que la columna CÓDIGO no esté vacía.',
+            ],
+          });
+          toast('No se pudo importar — revisa el detalle en la tarjeta', 'var(--danger)');
+          return;
+        }
+        setDiag(null);
+        toast(`Importado: ${r.kinds} catálogo(s), ${r.items} elemento(s)` + (ignored.length ? ` — hojas ignoradas: ${ignored.join(', ')}` : ''), 'var(--accent)');
       };
       reader.readAsArrayBuffer(file);
     }
@@ -286,6 +326,14 @@
           h('button', { key: 'im', type: 'button', className: 'inline-flex items-center gap-2 px-4 h-10 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-lg hover:opacity-90 transition', onClick: () => fileRef.current && fileRef.current.click() }, [h(MS, { key: 'i', name: 'upload', size: 16 }), 'Importar']),
         ]),
       ]),
+      // Diagnóstico del último intento de importación fallido (persiste hasta cerrarlo o importar bien).
+      diag ? h('div', { key: 'diag', className: 'mt-4 border border-danger/40 bg-danger-soft rounded-lg p-4' }, [
+        h('div', { key: 'h', className: 'flex items-start justify-between gap-3' }, [
+          h('div', { key: 't', className: 'flex items-center gap-2 text-body font-semibold text-danger' }, [h(MS, { key: 'i', name: 'alert', size: 18 }), diag.title]),
+          h('button', { key: 'x', type: 'button', className: 'text-caption font-bold uppercase tracking-widest text-on-surface-variant hover:text-primary shrink-0', onClick: () => setDiag(null) }, 'Cerrar'),
+        ]),
+        h('ul', { key: 'l', className: 'mt-2 space-y-1.5 list-disc pl-5 text-caption text-on-surface-variant' }, diag.lines.map((t, i) => h('li', { key: i }, t))),
+      ]) : null,
     ]);
   }
 
