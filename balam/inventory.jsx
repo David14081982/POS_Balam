@@ -25,18 +25,28 @@
   const SELECT = INPUT + ' appearance-none';
   const XLSBTN = 'flex items-center gap-2 px-3 py-1.5 border border-outline-variant rounded bg-surface hover:bg-surface-container text-overline uppercase transition-colors';
   const StockPill = ({ n }) => h(window.UI.StockBadge, { n });
-  // Punto de color "flotante": esfera sin contorno con brillo superior (efecto perla), sombra de
-  // elevación y un anillo interior sutil — así los colores claros (blanco, hueso) no se pierden
-  // contra el fondo blanco sin necesitar un borde gris duro. Crece un poco al pasar el mouse
-  // por la fila (la <tr> lleva la clase 'group').
-  const ColorDot = ({ hex, size = 18, title }) => h('span', {
+  // Muestras de color flotantes, con semántica de forma:
+  //   · tela  → cuadrito de esquinas redondeadas con TRAMA de tejido (dos tramas diagonales
+  //     cruzadas en CSS), como el recorte de tela de una mercería. Al hover de la fila se
+  //     "levanta" (crece y gira apenas), como cuando tomas la muestra de la mesa.
+  //   · hilo  → esferita con brillo tipo perla (un hilo enrollado es redondo).
+  // Ambas sin contorno duro: sombra de elevación + anillo interior sutil para que los colores
+  // claros (blanco, hueso) no se pierdan contra el fondo blanco. La <tr> lleva la clase 'group'.
+  const ColorDot = ({ hex, size = 18, title, tela }) => h('span', {
     title,
-    className: 'inline-block rounded-full shrink-0 transition-transform duration-200 group-hover:scale-110',
+    className: 'inline-block shrink-0 transition-transform duration-200 ' +
+      (tela ? 'group-hover:scale-110 group-hover:-rotate-6' : 'rounded-full group-hover:scale-110'),
     style: {
       width: size, height: size,
-      background: `radial-gradient(circle at 32% 28%, rgba(255,255,255,.45), rgba(255,255,255,0) 58%), ${hex || '#8b9099'}`,
+      borderRadius: tela ? Math.max(4, Math.round(size * 0.28)) : undefined,
+      background: tela
+        ? `linear-gradient(160deg, rgba(255,255,255,.30), rgba(255,255,255,0) 55%),
+           repeating-linear-gradient(45deg, rgba(255,255,255,.12) 0 1px, rgba(255,255,255,0) 1px 3px),
+           repeating-linear-gradient(-45deg, rgba(15,23,42,.10) 0 1px, rgba(15,23,42,0) 1px 3px),
+           ${hex || '#8b9099'}`
+        : `radial-gradient(circle at 32% 28%, rgba(255,255,255,.45), rgba(255,255,255,0) 58%), ${hex || '#8b9099'}`,
       boxShadow: size >= 14
-        ? '0 2px 6px rgba(15,23,42,.30), 0 1px 2px rgba(15,23,42,.18), inset 0 0 0 1px rgba(15,23,42,.06)'
+        ? '0 2px 6px rgba(15,23,42,.30), 0 1px 2px rgba(15,23,42,.18), inset 0 0 0 1px rgba(15,23,42,.07)'
         : '0 1px 3px rgba(15,23,42,.30), inset 0 0 0 1px rgba(15,23,42,.06)',
     },
   });
@@ -191,10 +201,10 @@
                   [(D.MANGA[p.manga] || p.manga || '—').replace('Manga ', 'M. '), p.orn, D.CUELLO[p.cuello] || p.cuello].map((t, i) => h('span', { key: i, className: 'px-2 py-0.5 bg-surface-container-high rounded text-overline font-bold uppercase text-on-surface-variant' }, t)))),
                 h('td', { key: 'c', className: 'px-4 py-4' }, h('div', { className: 'flex flex-col gap-1.5' }, [
                   h('div', { key: 'm', className: 'flex items-center gap-2.5' }, [
-                    h(ColorDot, { key: 'sw', hex: p.colorHex, size: 18, title: p.colorName }),
+                    h(ColorDot, { key: 'sw', hex: p.colorHex, size: 20, title: p.colorName, tela: true }),
                     h('span', { key: 'n', className: 'text-overline font-medium text-on-surface-variant' }, p.colorName),
                   ]),
-                  p.ornColors && p.ornColors.length ? h('div', { key: 'o', className: 'flex items-center gap-1.5', style: { marginLeft: 28 } },
+                  p.ornColors && p.ornColors.length ? h('div', { key: 'o', className: 'flex items-center gap-1.5', style: { marginLeft: 30 } },
                     p.ornColors.map(c => h(ColorDot, { key: c, hex: D.COLOR_HEX[c], size: 10, title: D.COLOR_NAME[c] }))) : null,
                 ])),
                 h('td', { key: 'p', className: 'px-4 py-4' }, h('span', { className: 'font-headline text-base text-primary' }, fmt(p.precio).replace('.00', ''))),
@@ -308,7 +318,7 @@
     return h('div', { key: label, className: 'bg-surface-container/50 p-3 rounded-xl border border-outline-variant' }, [
       h('span', { key: 'l', className: 'block text-overline uppercase font-bold text-on-surface-variant tracking-widest opacity-60 mb-1.5' }, label),
       h('span', { key: 'v', className: 'flex items-center gap-2 text-caption font-bold text-primary' }, [
-        hex && h(ColorDot, { key: 's', hex, size: 14 }), value,
+        hex && h(ColorDot, { key: 's', hex, size: 16, tela: true }), value,
       ]),
     ]);
   }
