@@ -217,6 +217,41 @@
     return { orphans, duplicates };
   }
 
+  // Diccionario nombre→#hex para "Corregir # por nombre" (Configuración → catálogo Color).
+  // Las frases compuestas van PRIMERO ('azul marino' debe ganar antes que 'azul'); dentro de
+  // los sueltos, los específicos antes que los genéricos. Primer match (por contención sobre el
+  // nombre normalizado) gana. Nombre no reconocido → null (el admin lo ajusta con el selector).
+  const COLOR_DICT = [
+    ['blanco ostion', '#e8ddc8'], ['vino tinto', '#722030'],
+    ['azul marino', '#1e2a44'], ['azul rey', '#1e3fbf'], ['azul cielo', '#7db3e8'], ['azul celeste', '#9cc7f0'],
+    ['azul acero', '#4a6b8a'], ['azul petroleo', '#16404d'], ['azul turquesa', '#2ab5b0'], ['azul mezclilla', '#3a4d6b'],
+    ['verde botella', '#17493b'], ['verde bandera', '#17703f'], ['verde limon', '#9fcf3a'], ['verde militar', '#5f6b3a'],
+    ['verde olivo', '#6b6b3a'], ['verde menta', '#9adbb4'], ['verde esmeralda', '#2e9e6b'], ['verde jade', '#37a47f'], ['verde agua', '#7fd4cf'],
+    ['gris oxford', '#4a4e57'], ['gris perla', '#c9ccd1'],
+    ['rosa mexicano', '#e0218a'], ['rosa pastel', '#f2c4d0'],
+    ['multicolor', '#9e9e9e'], ['mezclilla', '#3a4d6b'], ['denim', '#3a4d6b'], ['turquesa', '#2ab5b0'],
+    ['aguamarina', '#7fd4cf'], ['esmeralda', '#2e9e6b'], ['chocolate', '#4a2f24'], ['mandarina', '#f08a2c'],
+    ['lavanda', '#c3a8e0'], ['durazno', '#f2b48c'], ['mostaza', '#d1a52a'], ['plateado', '#c8ccd2'],
+    ['dorado', '#caa83a'], ['celeste', '#9cc7f0'], ['petroleo', '#16404d'], ['cobalto', '#1f4dbf'],
+    ['militar', '#5f6b3a'], ['marfil', '#f2ead6'], ['ostion', '#e8ddc8'], ['guinda', '#7a1f33'],
+    ['salmon', '#f0937c'], ['fucsia', '#d1258c'], ['fiusha', '#d1258c'], ['violeta', '#7a4bc8'],
+    ['morado', '#6a3d9a'], ['purpura', '#6a3d9a'], ['blanco', '#f6f6f6'], ['hueso', '#efe9dc'],
+    ['crudo', '#ede3cf'], ['beige', '#d8c4a0'], ['arena', '#c9b896'], ['camel', '#b98a52'],
+    ['negro', '#1c1f24'], ['plata', '#c8ccd2'], ['perla', '#c9ccd1'], ['acero', '#4a6b8a'],
+    ['marino', '#1e2a44'], ['cielo', '#7db3e8'], ['gris', '#8b9099'], ['limon', '#9fcf3a'],
+    ['menta', '#9adbb4'], ['olivo', '#6b6b3a'], ['jade', '#37a47f'], ['verde', '#3d8c5a'],
+    ['azul', '#2456a6'], ['rojo', '#b23b3b'], ['tinto', '#722030'], ['vino', '#6b2230'],
+    ['coral', '#e87461'], ['rosa', '#d99bb0'], ['lila', '#b790d4'], ['amarillo', '#f5d327'],
+    ['naranja', '#e8762c'], ['melon', '#e8a06a'], ['cafe', '#5a4334'], ['kaki', '#7a7250'],
+    ['caqui', '#7a7250'], ['khaki', '#7a7250'], ['oro', '#caa83a'],
+  ];
+  function hexForColorName(label) {
+    const n = normBridge(label);
+    if (!n) return null;
+    for (let i = 0; i < COLOR_DICT.length; i++) if (n.indexOf(COLOR_DICT[i][0]) >= 0) return COLOR_DICT[i][1];
+    return null;
+  }
+
   // ---- Persistencia ----
   const LS_KEY = 'balam_pos_products_v2';
   let products;
@@ -838,7 +873,7 @@
     products, sellers, clients, sales, movements, promos, liquidations, returns,
     sku, regenerateSkus, totalStock, hydrate, mkStock, emptyStock, SIZE_MARK,
     saveProducts, saveSellers, saveClients, saveSales, saveMovements, savePromos, saveReturns,
-    removeProduct, remapOrphanCodes, catalogHealthReport, get lastRemap() { return lastRemap; },
+    removeProduct, remapOrphanCodes, catalogHealthReport, hexForColorName, get lastRemap() { return lastRemap; },
     addClient, removeClient, recordSale, nextFolio, stockOf, resetProducts, applyRemote, liquidarComision,
     completarApartado, cerrarMes, getPeriodoInicio,
     recordReturn, returnedQty, returnsForFolio, isReturnable,

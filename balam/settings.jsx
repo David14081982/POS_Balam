@@ -303,6 +303,47 @@
     ]);
   }
 
+  // ── Números de color (#) por nombre ───────────────────────────────────────────
+  // Cuando la columna HEX del Excel llegó desfasada (o una clave heredó el # de otro color),
+  // este botón asigna a cada color ACTIVO el # canónico según su NOMBRE (D.hexForColorName).
+  // Aplica todo en UN solo emit (vía importCatalogs, que fusiona meta por código y conserva
+  // orden y activos); los nombres no reconocidos no se tocan y se listan para ajuste manual.
+  function ColorHexFixCard() {
+    const [unknown, setUnknown] = useState(null); // nombres no reconocidos del último ajuste
+    function run() {
+      const items = C.all('color');
+      if (!items.filter(it => it.active !== false).length) { toast('No hay colores activos', 'var(--danger)'); return; }
+      if (!window.confirm('Se asignará a cada color ACTIVO el # que corresponde a su NOMBRE (se sobrescribe el # actual). Los nombres no reconocidos no se tocan. ¿Aplicar?')) return;
+      let fixed = 0; const un = [];
+      const rows = items.map(it => {
+        const r = { code: it.code, label: it.label, active: it.active !== false };
+        if (it.active !== false) {
+          const hx = D.hexForColorName(it.label);
+          if (hx) { r.meta = { hex: hx }; fixed++; } else un.push(it.label);
+        }
+        return r;
+      });
+      C.importCatalogs({ color: rows });
+      setUnknown(un);
+      toast(`${fixed} color(es) con # corregido por nombre` + (un.length ? ` — ${un.length} sin reconocer` : ''), 'var(--accent)');
+    }
+    return h(GlassCard, { key: 'colhex', className: 'p-5' }, [
+      h('div', { key: 'r', className: 'flex items-center justify-between gap-4 flex-wrap' }, [
+        h('div', { key: 't', className: 'flex-1 min-w-[240px]' }, [
+          h(SerifHeading, { key: 'h', children: 'Números de color (#)' }),
+          h('p', { key: 'd', className: 'text-caption text-on-surface-variant mt-1' }, 'Si los # quedaron desfasados (p. ej. tras importar un Excel), este botón asigna a cada color activo el # que corresponde a su nombre. Los nombres que no se reconozcan se listan para que los ajustes con el selector visual del catálogo de arriba.'),
+        ]),
+        h('button', { key: 'b', type: 'button', className: 'inline-flex items-center gap-2 px-4 h-10 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-lg hover:opacity-90 transition shrink-0', onClick: run }, [h(MS, { key: 'i', name: 'edit', size: 16 }), 'Corregir # por nombre']),
+      ]),
+      unknown && (unknown.length
+        ? h('div', { key: 'un', className: 'mt-3 border border-warning/40 bg-warning-soft rounded-lg p-3' }, [
+            h('p', { key: 't', className: 'text-caption font-bold text-warning uppercase tracking-widest mb-2' }, 'Nombres no reconocidos — ajusta su # a mano con el selector visual'),
+            h('div', { key: 'g', className: 'flex flex-wrap gap-1.5' }, unknown.map((n, i) => h('span', { key: i, className: 'px-2 py-0.5 bg-surface rounded text-caption border border-outline-variant' }, n))),
+          ])
+        : h('p', { key: 'ok', className: 'mt-3 text-caption font-semibold text-success' }, 'Todos los colores activos quedaron con su # correspondiente.')),
+    ]);
+  }
+
   // ── Exportar / importar TODOS los catálogos de producto como Excel ─────────────
   // Una hoja por catálogo (nombre visible del catálogo): CÓDIGO · NOMBRE · ACTIVO (+ HEX en color).
   // Importar aplica cambios masivos vía CONFIG.importCatalogs (upsert por código; el orden del
@@ -596,6 +637,7 @@
       h(CatalogEditor, { key: 'slv', kind: 'sleeve', codePlaceholder: 'ML' }),
       h(CatalogEditor, { key: 'nck', kind: 'neck', codePlaceholder: 'NOR' }),
       h(CatalogEditor, { key: 'col', kind: 'color', codePlaceholder: 'AZ', metaFields: [{ key: 'hex', label: 'Color', type: 'color', def: '#cccccc' }] }),
+      h(ColorHexFixCard, { key: 'colhex' }),
       h(CatalogEditor, { key: 'orn', kind: 'ornament', codePlaceholder: 'Bordado', labelPlaceholder: 'Nombre del ornamento' }),
       h(CatalogEditor, { key: 'szl', kind: 'size_letter', codePlaceholder: 'M', labelPlaceholder: 'M' }),
       h(CatalogEditor, { key: 'szn', kind: 'size_number', codePlaceholder: '40', labelPlaceholder: '40' }),
