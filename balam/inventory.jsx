@@ -25,31 +25,46 @@
   const SELECT = INPUT + ' appearance-none';
   const XLSBTN = 'flex items-center gap-2 px-3 py-1.5 border border-outline-variant rounded bg-surface hover:bg-surface-container text-overline uppercase transition-colors';
   const StockPill = ({ n }) => h(window.UI.StockBadge, { n });
-  // Muestras de color flotantes, con semántica de forma:
-  //   · tela  → cuadrito de esquinas redondeadas con TRAMA de tejido (dos tramas diagonales
-  //     cruzadas en CSS), como el recorte de tela de una mercería. Al hover de la fila se
-  //     "levanta" (crece y gira apenas), como cuando tomas la muestra de la mesa.
+  // Muestras de color con semántica de forma:
+  //   · tela  → ETIQUETA COLGANTE (hang tag): forma de etiqueta con punta y OJAL perforado,
+  //     trama de tejido en CSS y sombra que sigue la silueta (drop-shadow, porque box-shadow
+  //     no respeta clip-path). Al hover de la fila se balancea desde el ojal (transform-origin
+  //     en el ojal + rotate), como una etiqueta colgada de su hilo.
   //   · hilo  → esferita con brillo tipo perla (un hilo enrollado es redondo).
-  // Ambas sin contorno duro: sombra de elevación + anillo interior sutil para que los colores
-  // claros (blanco, hueso) no se pierdan contra el fondo blanco. La <tr> lleva la clase 'group'.
-  const ColorDot = ({ hex, size = 18, title, tela }) => h('span', {
-    title,
-    className: 'inline-block shrink-0 transition-transform duration-200 ' +
-      (tela ? 'group-hover:scale-110 group-hover:-rotate-6' : 'rounded-full group-hover:scale-110'),
-    style: {
-      width: size, height: size,
-      borderRadius: tela ? Math.max(4, Math.round(size * 0.28)) : undefined,
-      background: tela
-        ? `linear-gradient(160deg, rgba(255,255,255,.30), rgba(255,255,255,0) 55%),
-           repeating-linear-gradient(45deg, rgba(255,255,255,.12) 0 1px, rgba(255,255,255,0) 1px 3px),
-           repeating-linear-gradient(-45deg, rgba(15,23,42,.10) 0 1px, rgba(15,23,42,0) 1px 3px),
-           ${hex || '#8b9099'}`
-        : `radial-gradient(circle at 32% 28%, rgba(255,255,255,.45), rgba(255,255,255,0) 58%), ${hex || '#8b9099'}`,
-      boxShadow: size >= 14
-        ? '0 2px 6px rgba(15,23,42,.30), 0 1px 2px rgba(15,23,42,.18), inset 0 0 0 1px rgba(15,23,42,.07)'
-        : '0 1px 3px rgba(15,23,42,.30), inset 0 0 0 1px rgba(15,23,42,.06)',
-    },
-  });
+  // Sin contorno duro: el drop-shadow de 0 desenfoque dibuja un filo sutil siguiendo la punta,
+  // así los colores claros (blanco, hueso) no se pierden contra el fondo blanco.
+  // La <tr> lleva la clase 'group'.
+  const ColorDot = ({ hex, size = 18, title, tela }) => {
+    if (tela) {
+      const w = Math.round(size * 1.25), hole = size * 0.09, ring = size * 0.17;
+      return h('span', {
+        title,
+        className: 'inline-block shrink-0 transition-transform duration-200 group-hover:rotate-6 group-hover:scale-110',
+        style: {
+          width: w, height: size,
+          clipPath: 'polygon(26% 0, 100% 0, 100% 100%, 26% 100%, 0 50%)',
+          transformOrigin: '15% 50%',
+          background: `radial-gradient(circle at 15% 50%, rgba(255,255,255,.95) 0 ${hole}px, rgba(15,23,42,.38) ${hole}px ${ring}px, rgba(0,0,0,0) ${ring}px),
+            linear-gradient(160deg, rgba(255,255,255,.30), rgba(255,255,255,0) 55%),
+            repeating-linear-gradient(45deg, rgba(255,255,255,.12) 0 1px, rgba(255,255,255,0) 1px 3px),
+            repeating-linear-gradient(-45deg, rgba(15,23,42,.10) 0 1px, rgba(15,23,42,0) 1px 3px),
+            ${hex || '#8b9099'}`,
+          filter: 'drop-shadow(0 0 .6px rgba(15,23,42,.45)) drop-shadow(0 2px 3px rgba(15,23,42,.28)) drop-shadow(0 1px 1px rgba(15,23,42,.14))',
+        },
+      });
+    }
+    return h('span', {
+      title,
+      className: 'inline-block rounded-full shrink-0 transition-transform duration-200 group-hover:scale-110',
+      style: {
+        width: size, height: size,
+        background: `radial-gradient(circle at 32% 28%, rgba(255,255,255,.45), rgba(255,255,255,0) 58%), ${hex || '#8b9099'}`,
+        boxShadow: size >= 14
+          ? '0 2px 6px rgba(15,23,42,.30), 0 1px 2px rgba(15,23,42,.18), inset 0 0 0 1px rgba(15,23,42,.06)'
+          : '0 1px 3px rgba(15,23,42,.30), inset 0 0 0 1px rgba(15,23,42,.06)',
+      },
+    });
+  };
 
   function Segment({ value, onChange, options }) {
     // overflow-x-auto + no-scrollbar: cuando hay muchas opciones (catálogo ilimitado), la fila se
@@ -204,7 +219,7 @@
                     h(ColorDot, { key: 'sw', hex: p.colorHex, size: 20, title: p.colorName, tela: true }),
                     h('span', { key: 'n', className: 'text-overline font-medium text-on-surface-variant' }, p.colorName),
                   ]),
-                  p.ornColors && p.ornColors.length ? h('div', { key: 'o', className: 'flex items-center gap-1.5', style: { marginLeft: 30 } },
+                  p.ornColors && p.ornColors.length ? h('div', { key: 'o', className: 'flex items-center gap-1.5', style: { marginLeft: 35 } },
                     p.ornColors.map(c => h(ColorDot, { key: c, hex: D.COLOR_HEX[c], size: 10, title: D.COLOR_NAME[c] }))) : null,
                 ])),
                 h('td', { key: 'p', className: 'px-4 py-4' }, h('span', { className: 'font-headline text-base text-primary' }, fmt(p.precio).replace('.00', ''))),
