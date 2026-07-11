@@ -116,6 +116,74 @@
     p.colorName = COLOR_NAME()[p.color] || (it && it.label) || p.color;
   }
 
+  // ── Re-vinculación por nombre (puente por etiqueta) ──────────────────────────
+  // Un código huérfano (ya no ACTIVO en el catálogo) se remapea al código activo cuya etiqueta
+  // coincide de forma INEQUÍVOCA (única). Nunca cae al primer elemento activo (eso reasignaría
+  // un color/atributo equivocado); sin match confiable devuelve null y el formulario conserva
+  // su aviso ⚠. El código viejo casi siempre sigue en el catálogo desactivado (importCatalogs
+  // nunca borra y removeItem bloquea códigos en uso), así que su etiqueta está disponible.
+  const normBridge = (s) => String(s == null ? '' : s).trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  function bridgeCode(kind, code) {
+    const l = (C && typeof C.list === 'function') ? C.list(kind) : [];
+    if (!l.length) return null;
+    const cur = String(code == null ? '' : code);
+    if (l.some(x => x.code === cur)) return null; // no es huérfano
+    const old = (C && C.find) ? C.find(kind, cur) : null;
+    const wanted = old ? normBridge(old.label) : '';
+    if (!wanted) return null;
+    const matches = l.filter(x => normBridge(x.label) === wanted);
+    return matches.length === 1 ? matches[0].code : null;
+  }
+  const REMAP_FIELDS = [['category', 'cat'], ['sleeve', 'manga'], ['fabric', 'tela'], ['color', 'color'], ['neck', 'cuello']];
+  let lastRemap = { fixed: 0, orphans: 0, detail: [] };
+  // Pase de reparación: re-vincula códigos huérfanos de TODOS los productos (campos del sistema,
+  // hilos del bordado y catálogos custom). No toca el SKU (congelado por diseño: el historial de
+  // ventas referencia por SKU). Idempotente: la segunda pasada no cambia nada.
+  function remapOrphanCodes() {
+    let fixed = 0, orphans = 0; const detail = [];
+    const metaAll = (C && C.allCatalogMeta) ? C.allCatalogMeta() : {};
+    const customKinds = Object.keys(metaAll).filter(k => metaAll[k].custom);
+    products.forEach(p => {
+      REMAP_FIELDS.forEach(([kind, field]) => {
+        const l = (C && typeof C.list === 'function') ? C.list(kind) : [];
+        if (!l.length) return;
+        const cur = String(p[field] == null ? '' : p[field]);
+        if (l.some(x => x.code === cur)) return;
+        const nu = bridgeCode(kind, cur);
+        if (nu) { detail.push({ sku: p.sku, kind, from: cur, to: nu }); p[field] = nu; fixed++; }
+        else orphans++;
+      });
+      if (Array.isArray(p.ornColors) && p.ornColors.length) {
+        const lc = (C && typeof C.list === 'function') ? C.list('color') : [];
+        if (lc.length) {
+          const seen = {};
+          p.ornColors = p.ornColors.map(c => {
+            if (lc.some(x => x.code === c)) return c;
+            const nu = bridgeCode('color', c);
+            if (nu) { detail.push({ sku: p.sku, kind: 'ornColors', from: c, to: nu }); fixed++; return nu; }
+            orphans++; return c;
+          }).filter(c => (seen[c] ? false : (seen[c] = true)));
+        }
+      }
+      customKinds.forEach(k => {
+        const v = (p.attrs || {})[k];
+        if (v == null || v === '') return;
+        const l = C.list(k);
+        if (!l.length || l.some(x => x.code === String(v))) return;
+        const nu = bridgeCode(k, v);
+        if (nu) { detail.push({ sku: p.sku, kind: k, from: v, to: nu }); p.attrs[k] = nu; fixed++; }
+        else orphans++;
+      });
+      colorDisplay(p);
+    });
+    lastRemap = { fixed, orphans, detail };
+    if (fixed) {
+      saveProducts();
+      if (window.UI && window.UI.toast) window.UI.toast(fixed + ' referencia(s) de producto re-vinculadas al catálogo por nombre', 'var(--accent)');
+    }
+    return lastRemap;
+  }
+
   // ---- Persistencia ----
   const LS_KEY = 'balam_pos_products_v2';
   let products;
@@ -134,6 +202,9 @@
   // recalculan estos dos campos de display — el SKU sigue congelado por diseño.
   window.addEventListener('configchange', () => {
     products.forEach(colorDisplay);
+    // Sana referencias huérfanas cuando el catálogo cambió (import de catálogos, edición del
+    // admin, pull de la nube). Guarda: no correr a media aplicación de datos remotos.
+    if (!remoteApplying) { try { remapOrphanCodes(); } catch (e) { /* catálogo a medio cargar */ } }
   });
 
   function saveProducts() {
@@ -734,7 +805,7 @@
     products, sellers, clients, sales, movements, promos, liquidations, returns,
     sku, regenerateSkus, totalStock, hydrate, mkStock, emptyStock, SIZE_MARK,
     saveProducts, saveSellers, saveClients, saveSales, saveMovements, savePromos, saveReturns,
-    removeProduct,
+    removeProduct, remapOrphanCodes, get lastRemap() { return lastRemap; },
     addClient, removeClient, recordSale, nextFolio, stockOf, resetProducts, applyRemote, liquidarComision,
     completarApartado, cerrarMes, getPeriodoInicio,
     recordReturn, returnedQty, returnsForFolio, isReturnable,
@@ -755,4 +826,9 @@
     SIZES_NUM: { enumerable: true, get: SIZES_NUM },
     SIZES: { enumerable: true, get: SIZES_LETRA }, // alias de compatibilidad
   });
+
+  // Sana huérfanos existentes al ARRANCAR (p. ej. daño previo por un import de catálogos que
+  // re-codificó colores). Va al FINAL del módulo: remapOrphanCodes → saveProducts → syncUp lee
+  // 'remoteApplying' (let), que ya debe estar inicializado — llamarlo antes sería TDZ.
+  try { remapOrphanCodes(); } catch (e) { /* mejor arrancar que bloquear */ }
 })();

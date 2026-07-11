@@ -380,9 +380,15 @@
           return;
         }
         setDiag(null);
-        toast(guideMode
+        // El configchange del import ya corrió la re-vinculación por nombre (data.jsx): si el
+        // archivo re-codificó catálogos, los productos se remapearon solos — repórtalo aquí.
+        const rm = (window.DATA && window.DATA.lastRemap) || { fixed: 0, orphans: 0 };
+        const extra = (rm.fixed || rm.orphans)
+          ? ` · productos: ${rm.fixed} re-vinculado(s) por nombre${rm.orphans ? `, ${rm.orphans} sin equivalente (revísalos al editar)` : ''}`
+          : '';
+        toast((guideMode
           ? `Importado desde la hoja "Catálogos" del Excel de Inventario: ${r.kinds} catálogo(s), ${r.items} elemento(s)`
-          : `Importado: ${r.kinds} catálogo(s), ${r.items} elemento(s)` + (ignored.length ? ` — hojas ignoradas: ${ignored.join(', ')}` : ''), 'var(--accent)');
+          : `Importado: ${r.kinds} catálogo(s), ${r.items} elemento(s)` + (ignored.length ? ` — hojas ignoradas: ${ignored.join(', ')}` : '')) + extra, 'var(--accent)');
       };
       reader.readAsArrayBuffer(file);
     }
