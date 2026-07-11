@@ -97,6 +97,11 @@
     .pos-cat-grid { grid-template-columns: 1fr; }
     @container (min-width: 500px) { .pos-cat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     @container (min-width: 760px) { .pos-cat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    /* Etiqueta colgante de tela (Inventario): balanceo continuo, como flotando de su hilo.
+       El transform-origin (el ojal) lo pone el componente; aquí solo el vaivén. */
+    @keyframes tagfloat { 0%, 100% { transform: rotate(-2.5deg); } 50% { transform: rotate(2.5deg); } }
+    .tag-float { animation: tagfloat 3.6s ease-in-out infinite; }
+    @media (prefers-reduced-motion: reduce) { .tag-float { animation: none; } }
     /* Ticket térmico (80mm): oculto fuera de pantalla; al imprimir, solo él es visible. */
     #balam-ticket { position: fixed; left: -99999px; top: 0; width: 80mm; background: #fff; color: #131B2E; }
     @media print {

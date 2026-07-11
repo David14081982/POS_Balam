@@ -36,16 +36,22 @@
   // La <tr> lleva la clase 'group'.
   const ColorDot = ({ hex, size = 18, title, tela }) => {
     if (tela) {
-      // Vertical: punta y ojal ARRIBA (cuelga de su hilo); al hover se balancea hacia un lado
-      // girando alrededor del ojal (transform-origin en el ojal).
+      // Vertical: punta y ojal ARRIBA (cuelga de su hilo). Dos capas de transform que no se
+      // pisan: el span EXTERIOR lleva el hover (giro+escala con transición) y el INTERIOR el
+      // balanceo continuo .tag-float (keyframes en el <style> del shell), ambos con el punto
+      // de giro en el ojal. El delay negativo (derivado del hex) desincroniza cada etiqueta.
       const hgt = Math.round(size * 1.25), hole = hgt * 0.075, ring = hgt * 0.14;
+      const delay = -((parseInt(String(hex || '').replace('#', '').slice(0, 2), 16) || 0) % 9) * 0.4;
       return h('span', {
         title,
         className: 'inline-block shrink-0 transition-transform duration-200 group-hover:rotate-12 group-hover:scale-110',
+        style: { width: size, height: hgt, transformOrigin: '50% 13%' },
+      }, h('span', {
+        className: 'tag-float block w-full h-full',
         style: {
-          width: size, height: hgt,
-          clipPath: 'polygon(50% 0, 100% 22%, 100% 100%, 0 100%, 0 22%)',
+          animationDelay: delay + 's',
           transformOrigin: '50% 13%',
+          clipPath: 'polygon(50% 0, 100% 22%, 100% 100%, 0 100%, 0 22%)',
           background: `radial-gradient(circle at 50% 13%, rgba(255,255,255,.95) 0 ${hole}px, rgba(15,23,42,.38) ${hole}px ${ring}px, rgba(0,0,0,0) ${ring}px),
             linear-gradient(160deg, rgba(255,255,255,.30), rgba(255,255,255,0) 55%),
             repeating-linear-gradient(45deg, rgba(255,255,255,.12) 0 1px, rgba(255,255,255,0) 1px 3px),
@@ -53,7 +59,7 @@
             ${hex || '#8b9099'}`,
           filter: 'drop-shadow(0 0 .6px rgba(15,23,42,.45)) drop-shadow(0 2px 3px rgba(15,23,42,.28)) drop-shadow(0 1px 1px rgba(15,23,42,.14))',
         },
-      });
+      }));
     }
     return h('span', {
       title,
