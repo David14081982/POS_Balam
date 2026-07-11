@@ -25,6 +25,21 @@
   const SELECT = INPUT + ' appearance-none';
   const XLSBTN = 'flex items-center gap-2 px-3 py-1.5 border border-outline-variant rounded bg-surface hover:bg-surface-container text-overline uppercase transition-colors';
   const StockPill = ({ n }) => h(window.UI.StockBadge, { n });
+  // Punto de color "flotante": esfera sin contorno con brillo superior (efecto perla), sombra de
+  // elevación y un anillo interior sutil — así los colores claros (blanco, hueso) no se pierden
+  // contra el fondo blanco sin necesitar un borde gris duro. Crece un poco al pasar el mouse
+  // por la fila (la <tr> lleva la clase 'group').
+  const ColorDot = ({ hex, size = 18, title }) => h('span', {
+    title,
+    className: 'inline-block rounded-full shrink-0 transition-transform duration-200 group-hover:scale-110',
+    style: {
+      width: size, height: size,
+      background: `radial-gradient(circle at 32% 28%, rgba(255,255,255,.45), rgba(255,255,255,0) 58%), ${hex || '#8b9099'}`,
+      boxShadow: size >= 14
+        ? '0 2px 6px rgba(15,23,42,.30), 0 1px 2px rgba(15,23,42,.18), inset 0 0 0 1px rgba(15,23,42,.06)'
+        : '0 1px 3px rgba(15,23,42,.30), inset 0 0 0 1px rgba(15,23,42,.06)',
+    },
+  });
 
   function Segment({ value, onChange, options }) {
     // overflow-x-auto + no-scrollbar: cuando hay muchas opciones (catálogo ilimitado), la fila se
@@ -174,13 +189,13 @@
                 h('td', { key: 's', className: 'px-4 py-4' }, h('span', { className: 'text-overline font-mono text-on-surface-variant' }, p.sku)),
                 h('td', { key: 'a', className: 'px-4 py-4' }, h('div', { className: 'flex flex-wrap gap-1.5' },
                   [(D.MANGA[p.manga] || p.manga || '—').replace('Manga ', 'M. '), p.orn, D.CUELLO[p.cuello] || p.cuello].map((t, i) => h('span', { key: i, className: 'px-2 py-0.5 bg-surface-container-high rounded text-overline font-bold uppercase text-on-surface-variant' }, t)))),
-                h('td', { key: 'c', className: 'px-4 py-4' }, h('div', { className: 'flex flex-col gap-0.5' }, [
-                  h('div', { key: 'm', className: 'flex items-center gap-2' }, [
-                    h('div', { key: 'sw', className: 'w-3 h-3 rounded-full border border-outline-variant', style: { background: p.colorHex } }),
+                h('td', { key: 'c', className: 'px-4 py-4' }, h('div', { className: 'flex flex-col gap-1.5' }, [
+                  h('div', { key: 'm', className: 'flex items-center gap-2.5' }, [
+                    h(ColorDot, { key: 'sw', hex: p.colorHex, size: 18, title: p.colorName }),
                     h('span', { key: 'n', className: 'text-overline font-medium text-on-surface-variant' }, p.colorName),
                   ]),
-                  p.ornColors && p.ornColors.length ? h('div', { key: 'o', className: 'flex gap-1 ml-5' },
-                    p.ornColors.map(c => h('div', { key: c, className: 'w-1.5 h-1.5 rounded-full', title: D.COLOR_NAME[c], style: { background: D.COLOR_HEX[c] } }))) : null,
+                  p.ornColors && p.ornColors.length ? h('div', { key: 'o', className: 'flex items-center gap-1.5', style: { marginLeft: 28 } },
+                    p.ornColors.map(c => h(ColorDot, { key: c, hex: D.COLOR_HEX[c], size: 10, title: D.COLOR_NAME[c] }))) : null,
                 ])),
                 h('td', { key: 'p', className: 'px-4 py-4' }, h('span', { className: 'font-headline text-base text-primary' }, fmt(p.precio).replace('.00', ''))),
                 h('td', { key: 'st', className: 'px-4 py-4' }, h(StockPill, { n: total })),
@@ -292,8 +307,8 @@
   function drawerInfo(label, value, hex) {
     return h('div', { key: label, className: 'bg-surface-container/50 p-3 rounded-xl border border-outline-variant' }, [
       h('span', { key: 'l', className: 'block text-overline uppercase font-bold text-on-surface-variant tracking-widest opacity-60 mb-1.5' }, label),
-      h('span', { key: 'v', className: 'flex items-center gap-1.5 text-caption font-bold text-primary' }, [
-        hex && h('span', { key: 's', className: 'w-3 h-3 rounded-full border border-outline-variant', style: { background: hex } }), value,
+      h('span', { key: 'v', className: 'flex items-center gap-2 text-caption font-bold text-primary' }, [
+        hex && h(ColorDot, { key: 's', hex, size: 14 }), value,
       ]),
     ]);
   }
