@@ -255,6 +255,54 @@
     ]);
   }
 
+  // ── Diagnóstico de catálogos: códigos huérfanos y nombres repetidos ───────────
+  // Radiografía en vivo (se recalcula con cada configchange vía el bump de SettingsScreen):
+  // muestra QUÉ productos apuntan a códigos que ya no existen en el catálogo y POR QUÉ no se
+  // re-vincularon solos (nombre repetido entre dos códigos activos, o sin equivalente).
+  function CatalogHealthCard() {
+    const rep = D.catalogHealthReport();
+    const campoLabel = (o) => o.campo === 'ornColors' ? C.catalogLabel('color') + ' (hilos bordado)' : C.catalogLabel(o.kind);
+    if (!rep.orphans.length && !rep.duplicates.length) {
+      return h(GlassCard, { key: 'health', className: 'p-5' }, h('div', { className: 'flex items-center gap-2' }, [
+        h(MS, { key: 'i', name: 'check', size: 18, className: 'text-success' }),
+        h('span', { key: 't', className: 'text-body font-semibold text-success' }, 'Catálogos sanos: ningún producto con códigos huérfanos ni nombres repetidos.'),
+      ]));
+    }
+    return h(GlassCard, { key: 'health', className: 'p-5 border border-warning/40' }, [
+      h('div', { key: 'h', className: 'flex items-center gap-2 mb-1' }, [
+        h(MS, { key: 'i', name: 'alert', size: 18, className: 'text-warning' }),
+        h(SerifHeading, { key: 't', children: 'Diagnóstico de catálogos' }),
+      ]),
+      h('p', { key: 'd', className: 'text-caption text-on-surface-variant mb-3' }, 'Estos productos apuntan a códigos que ya no existen en el catálogo (el aviso "⚠ ya no existe" al editar). El sistema los reconecta solo cuando encuentra UN nombre igual; aquí se explica qué lo impide y cómo destrabarlo.'),
+      // Nombres repetidos: la causa #1 de que la reconexión automática no proceda.
+      rep.duplicates.length ? h('div', { key: 'dup', className: 'mb-4 border border-danger/40 bg-danger-soft rounded-lg p-3' }, [
+        h('p', { key: 't', className: 'text-caption font-bold text-danger uppercase tracking-widest mb-2' }, 'Nombres repetidos en el catálogo (corrige esto primero)'),
+        ...rep.duplicates.map((d, i) => h('p', { key: i, className: 'text-body text-on-surface mb-1' },
+          `${C.catalogLabel(d.kind)}: "${d.label}" lo tienen ${d.codes.length} códigos (${d.codes.join(', ')}). Renombra o desactiva los que sobren en el catálogo de abajo; al guardar, los productos pendientes se reconectan solos.`)),
+      ]) : null,
+      rep.orphans.length ? h('div', { key: 'orp', className: 'border border-outline-variant rounded-lg overflow-hidden' }, [
+        h('div', { key: 'sc', className: 'overflow-x-auto max-h-96 overflow-y-auto' }, h('table', { className: 'w-full' }, [
+          h('thead', { key: 'h', className: 'sticky top-0 bg-surface' }, h('tr', { className: 'border-b border-outline-variant' },
+            ['Producto', 'Campo', 'Código viejo', 'Nombre que tenía', 'Situación'].map((c, i) =>
+              h('th', { key: i, className: 'px-3 py-2 text-overline font-semibold text-on-surface-variant uppercase tracking-widest text-left' }, c)))),
+          h('tbody', { key: 'b', className: 'divide-y divide-outline-variant' }, rep.orphans.map((o, i) => h('tr', { key: i }, [
+            h('td', { key: 'p', className: 'px-3 py-2 text-body text-primary font-medium' }, o.producto || o.sku),
+            h('td', { key: 'k', className: 'px-3 py-2 text-caption text-on-surface-variant' }, campoLabel(o)),
+            h('td', { key: 'c', className: 'px-3 py-2 text-overline font-mono' }, o.code),
+            h('td', { key: 'n', className: 'px-3 py-2 text-caption' }, o.oldLabel || '(ya no está en el catálogo)'),
+            h('td', { key: 's', className: 'px-3 py-2 text-caption ' + (o.candidates.length > 1 ? 'text-danger' : 'text-on-surface-variant') },
+              o.candidates.length > 1
+                ? `Nombre repetido: ${o.candidates.length} candidatos (${o.candidates.join(', ')}) — corrige el catálogo arriba`
+                : o.candidates.length === 1
+                  ? `Se reconectará solo a ${o.candidates[0]} al guardar cualquier cambio de catálogo`
+                  : 'Sin equivalente por nombre — elige el valor a mano al editar el producto'),
+          ]))),
+        ])),
+        h('p', { key: 'n', className: 'text-overline text-on-surface-variant px-3 py-2 bg-surface-container/40' }, `${rep.orphans.length} referencia(s) pendiente(s) en total`),
+      ]) : null,
+    ]);
+  }
+
   // ── Exportar / importar TODOS los catálogos de producto como Excel ─────────────
   // Una hoja por catálogo (nombre visible del catálogo): CÓDIGO · NOMBRE · ACTIVO (+ HEX en color).
   // Importar aplica cambios masivos vía CONFIG.importCatalogs (upsert por código; el orden del
@@ -541,6 +589,7 @@
     producto: () => [
       h('p', { key: 'intro', className: 'text-caption text-on-surface-variant' }, 'Estos catálogos alimentan el SKU, el alta de productos, los filtros y la importación de Excel. Renómbralos, decide cuáles aparecen en el alta y cuáles forman el SKU. El código entra al SKU: si está en uso por productos no podrás borrarlo (desactívalo).'),
       h(SkuBuilder, { key: 'sku' }),
+      h(CatalogHealthCard, { key: 'health' }),
       h(CatalogXlsxCard, { key: 'catxlsx' }),
       h(CatalogEditor, { key: 'cat', kind: 'category', codePlaceholder: '21' }),
       h(CatalogEditor, { key: 'fab', kind: 'fabric', codePlaceholder: 'ALG' }),

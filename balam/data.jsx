@@ -184,6 +184,39 @@
     return lastRemap;
   }
 
+  // Radiografía de catálogos para el admin (Configuración → Catálogos de producto):
+  //   duplicates → nombres repetidos entre códigos ACTIVOS del mismo catálogo (bloquean la
+  //                re-vinculación automática: con 2 candidatos el puente no adivina);
+  //   orphans    → cada referencia de producto a un código que ya no está activo, con su nombre
+  //                viejo y los candidatos activos por nombre (0 = sin equivalente, 2+ = ambiguo).
+  function catalogHealthReport() {
+    const metaAll = (C && C.allCatalogMeta) ? C.allCatalogMeta() : {};
+    const customKinds = Object.keys(metaAll).filter(k => metaAll[k].custom);
+    const kinds = REMAP_FIELDS.map(x => x[0]).concat(customKinds);
+    const duplicates = [];
+    kinds.forEach(kind => {
+      const by = {};
+      (C.list(kind) || []).forEach(it => { const n = normBridge(it.label); (by[n] = by[n] || []).push(it); });
+      Object.keys(by).forEach(n => { if (n && by[n].length > 1) duplicates.push({ kind, label: by[n][0].label, codes: by[n].map(x => x.code) }); });
+    });
+    const orphans = [];
+    const check = (p, kind, code, campo) => {
+      const l = C.list(kind); if (!l.length) return;
+      const cur = String(code == null ? '' : code);
+      if (l.some(x => x.code === cur)) return;
+      const old = (C && C.find) ? C.find(kind, cur) : null;
+      const wanted = old ? normBridge(old.label) : '';
+      const cands = wanted ? l.filter(x => normBridge(x.label) === wanted).map(x => x.code) : [];
+      orphans.push({ id: p.id, producto: p.nombre, sku: p.sku, kind, campo, code: cur, oldLabel: old ? old.label : '', candidates: cands });
+    };
+    products.forEach(p => {
+      REMAP_FIELDS.forEach(([kind, field]) => check(p, kind, p[field], field));
+      (p.ornColors || []).forEach(c => check(p, 'color', c, 'ornColors'));
+      customKinds.forEach(k => { const v = (p.attrs || {})[k]; if (v != null && v !== '') check(p, k, v, k); });
+    });
+    return { orphans, duplicates };
+  }
+
   // ---- Persistencia ----
   const LS_KEY = 'balam_pos_products_v2';
   let products;
@@ -805,7 +838,7 @@
     products, sellers, clients, sales, movements, promos, liquidations, returns,
     sku, regenerateSkus, totalStock, hydrate, mkStock, emptyStock, SIZE_MARK,
     saveProducts, saveSellers, saveClients, saveSales, saveMovements, savePromos, saveReturns,
-    removeProduct, remapOrphanCodes, get lastRemap() { return lastRemap; },
+    removeProduct, remapOrphanCodes, catalogHealthReport, get lastRemap() { return lastRemap; },
     addClient, removeClient, recordSale, nextFolio, stockOf, resetProducts, applyRemote, liquidarComision,
     completarApartado, cerrarMes, getPeriodoInicio,
     recordReturn, returnedQty, returnsForFolio, isReturnable,
