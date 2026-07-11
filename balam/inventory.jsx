@@ -35,6 +35,15 @@
   // así los colores claros (blanco, hueso) no se pierden contra el fondo blanco.
   // La <tr> lleva la clase 'group'.
   const ColorDot = ({ hex, size = 18, title, tela }) => {
+    // Luminosidad del color (0 oscuro → 1 claro): los CLAROS (blanco, hueso, plata) necesitan
+    // más definición contra el fondo blanco — viñeteado de bordes, trama y filo más marcados.
+    const lum = (() => {
+      const m = String(hex || '').match(/^#([0-9a-f]{6})$/i);
+      if (!m) return 0.5;
+      const v = [0, 2, 4].map(i => parseInt(m[1].substr(i, 2), 16) / 255);
+      return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
+    })();
+    const light = lum > 0.72;
     if (tela) {
       // Vertical: punta y ojal ARRIBA (cuelga de su hilo). Dos capas de transform que no se
       // pisan: el span EXTERIOR lleva el hover (giro+escala con transición) y el INTERIOR el
@@ -52,12 +61,15 @@
           animationDelay: delay + 's',
           transformOrigin: '50% 13%',
           clipPath: 'polygon(50% 0, 100% 22%, 100% 100%, 0 100%, 0 22%)',
-          background: `radial-gradient(circle at 50% 13%, rgba(255,255,255,.95) 0 ${hole}px, rgba(15,23,42,.38) ${hole}px ${ring}px, rgba(0,0,0,0) ${ring}px),
+          background: `radial-gradient(circle at 50% 13%, rgba(255,255,255,.95) 0 ${hole}px, rgba(15,23,42,${light ? '.5' : '.38'}) ${hole}px ${ring}px, rgba(0,0,0,0) ${ring}px),
+            radial-gradient(130% 130% at 50% 42%, rgba(0,0,0,0) ${light ? '55%' : '78%'}, rgba(15,23,42,${light ? '.16' : '.08'}) 100%),
             linear-gradient(160deg, rgba(255,255,255,.30), rgba(255,255,255,0) 55%),
             repeating-linear-gradient(45deg, rgba(255,255,255,.12) 0 1px, rgba(255,255,255,0) 1px 3px),
-            repeating-linear-gradient(-45deg, rgba(15,23,42,.10) 0 1px, rgba(15,23,42,0) 1px 3px),
+            repeating-linear-gradient(-45deg, rgba(15,23,42,${light ? '.16' : '.10'}) 0 1px, rgba(15,23,42,0) 1px 3px),
             ${hex || '#8b9099'}`,
-          filter: 'drop-shadow(0 0 .6px rgba(15,23,42,.45)) drop-shadow(0 2px 3px rgba(15,23,42,.28)) drop-shadow(0 1px 1px rgba(15,23,42,.14))',
+          filter: light
+            ? 'drop-shadow(0 0 1px rgba(15,23,42,.55)) drop-shadow(0 2px 3px rgba(15,23,42,.32)) drop-shadow(0 1px 1px rgba(15,23,42,.16))'
+            : 'drop-shadow(0 0 .6px rgba(15,23,42,.45)) drop-shadow(0 2px 3px rgba(15,23,42,.28)) drop-shadow(0 1px 1px rgba(15,23,42,.14))',
         },
       }));
     }
@@ -66,10 +78,12 @@
       className: 'inline-block rounded-full shrink-0 transition-transform duration-200 group-hover:scale-110',
       style: {
         width: size, height: size,
-        background: `radial-gradient(circle at 32% 28%, rgba(255,255,255,.45), rgba(255,255,255,0) 58%), ${hex || '#8b9099'}`,
+        background: `radial-gradient(circle at 32% 28%, rgba(255,255,255,.45), rgba(255,255,255,0) 58%),
+          radial-gradient(circle at 50% 50%, rgba(0,0,0,0) ${light ? '52%' : '75%'}, rgba(15,23,42,${light ? '.18' : '.08'}) 100%),
+          ${hex || '#8b9099'}`,
         boxShadow: size >= 14
-          ? '0 2px 6px rgba(15,23,42,.30), 0 1px 2px rgba(15,23,42,.18), inset 0 0 0 1px rgba(15,23,42,.06)'
-          : '0 1px 3px rgba(15,23,42,.30), inset 0 0 0 1px rgba(15,23,42,.06)',
+          ? `0 2px 6px rgba(15,23,42,.30), 0 1px 2px rgba(15,23,42,.18), inset 0 0 0 1px rgba(15,23,42,${light ? '.22' : '.06'})`
+          : `0 1px 3px rgba(15,23,42,.30), inset 0 0 0 1px rgba(15,23,42,${light ? '.22' : '.06'})`,
       },
     });
   };
