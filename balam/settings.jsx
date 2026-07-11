@@ -259,7 +259,39 @@
   // Radiografía en vivo (se recalcula con cada configchange vía el bump de SettingsScreen):
   // muestra QUÉ productos apuntan a códigos que ya no existen en el catálogo y POR QUÉ no se
   // re-vincularon solos (nombre repetido entre dos códigos activos, o sin equivalente).
+  // Distancia RGB entre dos #hex (para SUGERIR el color activo más parecido a la muestra vieja).
+  function hexDist(a, b) {
+    const px = (h) => { const m = String(h || '').toLowerCase().match(/^#?([0-9a-f]{6})$/); return m ? [0, 2, 4].map(i => parseInt(m[1].slice(i, i + 2), 16)) : null; };
+    const A = px(a), B = px(b);
+    if (!A || !B) return Infinity;
+    return Math.sqrt(Math.pow(A[0] - B[0], 2) + Math.pow(A[1] - B[1], 2) + Math.pow(A[2] - B[2], 2));
+  }
+  // Selector + Aplicar de una fila pendiente del Diagnóstico. Para color, pre-sugiere el activo
+  // con la muestra más parecida a la del código viejo (el admin confirma; nada se aplica solo).
+  function FixControl({ o, onDone }) {
+    const opts = C.list(o.kind);
+    let best = '';
+    if ((o.kind === 'color') && o.oldHex) {
+      let bd = Infinity;
+      opts.forEach(x => { const d = hexDist(o.oldHex, x.meta && x.meta.hex); if (d < bd) { bd = d; best = x.code; } });
+    }
+    const [sel, setSel] = useState(best);
+    function apply() {
+      const r = D.applyOrphanFix(o.id, o.campo, o.code, sel);
+      if (!r.ok) { toast(r.error, 'var(--danger)'); return; }
+      toast('Producto corregido', 'var(--accent)');
+      onDone();
+    }
+    return h('span', { className: 'inline-flex items-center gap-1.5' }, [
+      h('select', { key: 's', className: 'h-8 px-2 bg-surface-container-low border border-outline-variant rounded text-caption max-w-[180px]', value: sel, onChange: e => setSel(e.target.value), title: best ? 'Sugerido por parecido de la muestra de color' : 'Elige el valor correcto' }, [
+        h('option', { key: '', value: '' }, 'Elige…'),
+        ...opts.map(x => h('option', { key: x.code, value: x.code }, x.label + ' (' + x.code + ')')),
+      ]),
+      h('button', { key: 'b', type: 'button', disabled: !sel, className: 'px-3 h-8 bg-primary text-on-primary text-overline font-bold uppercase tracking-widest rounded disabled:opacity-40 hover:opacity-90 transition', onClick: apply }, 'Aplicar'),
+    ]);
+  }
   function CatalogHealthCard() {
+    const [, setTick] = useState(0); // re-render tras aplicar una corrección (no emite configchange)
     const rep = D.catalogHealthReport();
     const campoLabel = (o) => o.campo === 'ornColors' ? C.catalogLabel('color') + ' (hilos bordado)' : C.catalogLabel(o.kind);
     if (!rep.orphans.length && !rep.duplicates.length) {
@@ -283,19 +315,23 @@
       rep.orphans.length ? h('div', { key: 'orp', className: 'border border-outline-variant rounded-lg overflow-hidden' }, [
         h('div', { key: 'sc', className: 'overflow-x-auto max-h-96 overflow-y-auto' }, h('table', { className: 'w-full' }, [
           h('thead', { key: 'h', className: 'sticky top-0 bg-surface' }, h('tr', { className: 'border-b border-outline-variant' },
-            ['Producto', 'Campo', 'Código viejo', 'Nombre que tenía', 'Situación'].map((c, i) =>
+            ['Producto', 'Campo', 'Código viejo', 'Nombre que tenía', 'Situación', 'Corregir aquí'].map((c, i) =>
               h('th', { key: i, className: 'px-3 py-2 text-overline font-semibold text-on-surface-variant uppercase tracking-widest text-left' }, c)))),
-          h('tbody', { key: 'b', className: 'divide-y divide-outline-variant' }, rep.orphans.map((o, i) => h('tr', { key: i }, [
+          h('tbody', { key: 'b', className: 'divide-y divide-outline-variant' }, rep.orphans.map((o) => h('tr', { key: o.id + '|' + o.campo + '|' + o.code }, [
             h('td', { key: 'p', className: 'px-3 py-2 text-body text-primary font-medium' }, o.producto || o.sku),
             h('td', { key: 'k', className: 'px-3 py-2 text-caption text-on-surface-variant' }, campoLabel(o)),
             h('td', { key: 'c', className: 'px-3 py-2 text-overline font-mono' }, o.code),
-            h('td', { key: 'n', className: 'px-3 py-2 text-caption' }, o.oldLabel || '(ya no está en el catálogo)'),
+            h('td', { key: 'n', className: 'px-3 py-2 text-caption' }, [
+              o.oldHex ? h('span', { key: 'd', className: 'inline-block w-3 h-3 rounded-full border border-outline-variant mr-1.5 align-middle', style: { background: o.oldHex }, title: o.oldHex }) : null,
+              o.oldLabel || (o.oldHex ? '(solo muestra de color)' : '(ya no está en el catálogo)'),
+            ]),
             h('td', { key: 's', className: 'px-3 py-2 text-caption ' + (o.candidates.length > 1 ? 'text-danger' : 'text-on-surface-variant') },
               o.candidates.length > 1
                 ? `Nombre repetido: ${o.candidates.length} candidatos (${o.candidates.join(', ')}) — corrige el catálogo arriba`
                 : o.candidates.length === 1
                   ? `Se reconectará solo a ${o.candidates[0]} al guardar cualquier cambio de catálogo`
-                  : 'Sin equivalente por nombre — elige el valor a mano al editar el producto'),
+                  : 'Sin equivalente automático — usa "Corregir aquí"'),
+            h('td', { key: 'f', className: 'px-3 py-2' }, h(FixControl, { o, onDone: () => setTick(t => t + 1) })),
           ]))),
         ])),
         h('p', { key: 'n', className: 'text-overline text-on-surface-variant px-3 py-2 bg-surface-container/40' }, `${rep.orphans.length} referencia(s) pendiente(s) en total`),

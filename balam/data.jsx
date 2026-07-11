@@ -129,10 +129,23 @@
     const cur = String(code == null ? '' : code);
     if (l.some(x => x.code === cur)) return null; // no es huérfano
     const old = (C && C.find) ? C.find(kind, cur) : null;
-    const wanted = old ? normBridge(old.label) : '';
-    if (!wanted) return null;
-    const matches = l.filter(x => normBridge(x.label) === wanted);
-    return matches.length === 1 ? matches[0].code : null;
+    if (!old) return null;
+    const oldHex = (kind === 'color' && old.meta && old.meta.hex) ? String(old.meta.hex).toLowerCase() : '';
+    // Puente por HEX exacto entre un grupo de candidatos (desempata nombres repetidos o
+    // suple un nombre ausente). Cercano NO basta: vino y guinda casi comparten hex.
+    const byHex = (cands) => {
+      if (!oldHex) return null;
+      const mh = cands.filter(x => x.meta && String(x.meta.hex || '').toLowerCase() === oldHex);
+      return mh.length === 1 ? mh[0].code : null;
+    };
+    const wanted = normBridge(old.label);
+    if (wanted) {
+      const matches = l.filter(x => normBridge(x.label) === wanted);
+      if (matches.length === 1) return matches[0].code;
+      if (matches.length > 1) return byHex(matches); // nombre ambiguo → que decida la muestra exacta
+    }
+    // Sin nombre útil (entrada vieja solo con su muestra de color, p. ej. código '5' sin etiqueta)
+    return byHex(l);
   }
   const REMAP_FIELDS = [['category', 'cat'], ['sleeve', 'manga'], ['fabric', 'tela'], ['color', 'color'], ['neck', 'cuello']];
   let lastRemap = { fixed: 0, orphans: 0, detail: [] };
@@ -207,7 +220,7 @@
       const old = (C && C.find) ? C.find(kind, cur) : null;
       const wanted = old ? normBridge(old.label) : '';
       const cands = wanted ? l.filter(x => normBridge(x.label) === wanted).map(x => x.code) : [];
-      orphans.push({ id: p.id, producto: p.nombre, sku: p.sku, kind, campo, code: cur, oldLabel: old ? old.label : '', candidates: cands });
+      orphans.push({ id: p.id, producto: p.nombre, sku: p.sku, kind, campo, code: cur, oldLabel: old ? old.label : '', oldHex: (old && old.meta && old.meta.hex) || '', candidates: cands });
     };
     products.forEach(p => {
       REMAP_FIELDS.forEach(([kind, field]) => check(p, kind, p[field], field));
@@ -215,6 +228,27 @@
       customKinds.forEach(k => { const v = (p.attrs || {})[k]; if (v != null && v !== '') check(p, k, v, k); });
     });
     return { orphans, duplicates };
+  }
+
+  // Corrección manual puntual desde el Diagnóstico: cambia UNA referencia huérfana de un
+  // producto al código ACTIVO elegido por el admin. No toca el SKU congelado.
+  function applyOrphanFix(id, campo, from, to) {
+    const p = products.find(x => x.id === id);
+    if (!p) return { ok: false, error: 'Producto no encontrado' };
+    const sys = REMAP_FIELDS.find(x => x[1] === campo);
+    const kind = campo === 'ornColors' ? 'color' : (sys ? sys[0] : campo);
+    if (!C.list(kind).some(x => x.code === String(to))) return { ok: false, error: 'Elige un valor del catálogo' };
+    if (campo === 'ornColors') {
+      const seen = {};
+      p.ornColors = (p.ornColors || []).map(c => c === from ? to : c).filter(c => (seen[c] ? false : (seen[c] = true)));
+    } else if (sys) {
+      p[campo] = to;
+    } else {
+      p.attrs = Object.assign({}, p.attrs, { [campo]: to });
+    }
+    colorDisplay(p);
+    saveProducts();
+    return { ok: true };
   }
 
   // Diccionario nombre→#hex para "Corregir # por nombre" (Configuración → catálogo Color).
@@ -873,7 +907,7 @@
     products, sellers, clients, sales, movements, promos, liquidations, returns,
     sku, regenerateSkus, totalStock, hydrate, mkStock, emptyStock, SIZE_MARK,
     saveProducts, saveSellers, saveClients, saveSales, saveMovements, savePromos, saveReturns,
-    removeProduct, remapOrphanCodes, catalogHealthReport, hexForColorName, get lastRemap() { return lastRemap; },
+    removeProduct, remapOrphanCodes, catalogHealthReport, hexForColorName, applyOrphanFix, get lastRemap() { return lastRemap; },
     addClient, removeClient, recordSale, nextFolio, stockOf, resetProducts, applyRemote, liquidarComision,
     completarApartado, cerrarMes, getPeriodoInicio,
     recordReturn, returnedQty, returnsForFolio, isReturnable,
