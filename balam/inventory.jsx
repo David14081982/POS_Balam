@@ -36,15 +36,17 @@
   // La <tr> lleva la clase 'group'.
   const ColorDot = ({ hex, size = 18, title, tela }) => {
     if (tela) {
-      const w = Math.round(size * 1.25), hole = size * 0.09, ring = size * 0.17;
+      // Vertical: punta y ojal ARRIBA (cuelga de su hilo); al hover se balancea hacia un lado
+      // girando alrededor del ojal (transform-origin en el ojal).
+      const hgt = Math.round(size * 1.25), hole = hgt * 0.075, ring = hgt * 0.14;
       return h('span', {
         title,
-        className: 'inline-block shrink-0 transition-transform duration-200 group-hover:rotate-6 group-hover:scale-110',
+        className: 'inline-block shrink-0 transition-transform duration-200 group-hover:rotate-12 group-hover:scale-110',
         style: {
-          width: w, height: size,
-          clipPath: 'polygon(26% 0, 100% 0, 100% 100%, 26% 100%, 0 50%)',
-          transformOrigin: '15% 50%',
-          background: `radial-gradient(circle at 15% 50%, rgba(255,255,255,.95) 0 ${hole}px, rgba(15,23,42,.38) ${hole}px ${ring}px, rgba(0,0,0,0) ${ring}px),
+          width: size, height: hgt,
+          clipPath: 'polygon(50% 0, 100% 22%, 100% 100%, 0 100%, 0 22%)',
+          transformOrigin: '50% 13%',
+          background: `radial-gradient(circle at 50% 13%, rgba(255,255,255,.95) 0 ${hole}px, rgba(15,23,42,.38) ${hole}px ${ring}px, rgba(0,0,0,0) ${ring}px),
             linear-gradient(160deg, rgba(255,255,255,.30), rgba(255,255,255,0) 55%),
             repeating-linear-gradient(45deg, rgba(255,255,255,.12) 0 1px, rgba(255,255,255,0) 1px 3px),
             repeating-linear-gradient(-45deg, rgba(15,23,42,.10) 0 1px, rgba(15,23,42,0) 1px 3px),
@@ -219,7 +221,7 @@
                     h(ColorDot, { key: 'sw', hex: p.colorHex, size: 20, title: p.colorName, tela: true }),
                     h('span', { key: 'n', className: 'text-overline font-medium text-on-surface-variant' }, p.colorName),
                   ]),
-                  p.ornColors && p.ornColors.length ? h('div', { key: 'o', className: 'flex items-center gap-1.5', style: { marginLeft: 35 } },
+                  p.ornColors && p.ornColors.length ? h('div', { key: 'o', className: 'flex items-center gap-1.5', style: { marginLeft: 30 } },
                     p.ornColors.map(c => h(ColorDot, { key: c, hex: D.COLOR_HEX[c], size: 10, title: D.COLOR_NAME[c] }))) : null,
                 ])),
                 h('td', { key: 'p', className: 'px-4 py-4' }, h('span', { className: 'font-headline text-base text-primary' }, fmt(p.precio).replace('.00', ''))),
