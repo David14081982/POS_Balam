@@ -1,5 +1,6 @@
 // build-offline.mjs — Regenera "POS Balam (offline).html" desde el source modular.
-// Embebe módulos balam/*, libs CDN (react/babel/xlsx/tailwind) y fuentes woff2 → 100% offline.
+// Embebe módulos balam/* (JSX PRECOMPILADO en build: el bundle no carga Babel ni compila
+// en el navegador), libs CDN (react production/xlsx/tailwind) y fuentes woff2 → 100% offline.
 // Reusa el loader/skeleton del bundle existente (solo reemplaza manifest + template).
 // Uso: node build-offline.mjs
 import fs from 'fs';
@@ -39,13 +40,55 @@ async function fetchBuf(url) {
 
 let template = fs.readFileSync(SRC, 'utf8');
 
+// 0) Precompilar JSX EN EL BUILD. El bundle deja de cargar Babel (~3MB) y de compilar
+// los ~7800 renglones de JSX en el navegador en cada arranque: aquí se transpilan UNA
+// vez con el MISMO @babel/standalone (misma URL/versión del template → mismo output)
+// y el bundle recibe JavaScript listo para ejecutar. El dev "POS Balam.html" NO cambia
+// (sigue compilando al vuelo para editar cómodo). Si Babel no se puede descargar, el
+// build degrada al comportamiento anterior (Babel en runtime) sin fallar.
+let transpile = null;
+const babelUrl = (template.match(/https:\/\/unpkg\.com\/@babel\/standalone[^"]+/) || [])[0];
+if (babelUrl) {
+  try {
+    const vm = await import('vm');
+    const sandbox = { console };
+    vm.createContext(sandbox);
+    vm.runInContext((await fetchBuf(babelUrl)).toString('utf8'), sandbox);
+    const B = sandbox.Babel;
+    // presets ['react']: el mismo default que transformScriptTags aplica a text/babel.
+    transpile = (src, filename) => B.transform(src, { presets: ['react'], filename }).code;
+    console.log('babel  ', 'precompilando JSX en build (' + babelUrl.slice(29, 55) + ')');
+  } catch (e) { console.warn('  AVISO: no pude precompilar (' + e.message + '); el bundle usará Babel en runtime'); }
+}
+
 // 1) Módulos locales balam/* (scripts .jsx + .css)
 const localPaths = [...new Set([...template.matchAll(/(?:src|href)="(balam\/[^"]+)"/g)].map(m => m[1]))];
 for (const p of localPaths) {
   const ext = p.split('.').pop();
-  const uuid = addBytes(fs.readFileSync(p), MIME[ext] || 'application/octet-stream', true);
+  let buf = fs.readFileSync(p), mime = MIME[ext] || 'application/octet-stream';
+  if (transpile && ext === 'jsx') { buf = Buffer.from(transpile(buf.toString('utf8'), p), 'utf8'); mime = 'text/javascript'; }
+  const uuid = addBytes(buf, mime, true);
   template = template.split('"' + p + '"').join('"' + uuid + '"');
-  console.log('local  ', p);
+  console.log('local  ', p + (transpile && ext === 'jsx' ? ' (precompilado)' : ''));
+}
+
+if (transpile) {
+  // Tags de módulos: text/babel → script clásico. El loader ya los ejecuta en orden
+  // (recrea cada <script> y espera su onload); solo dejan de pasar por Babel.
+  template = template.replace(/<script type="text\/babel" src="/g, '<script src="');
+  // Scripts text/babel INLINE (el boot de ReactDOM al final): transpilar su contenido.
+  // Se ejecuta en orden de documento, después de todos los módulos — mismo efecto que
+  // transformScriptTags. Guard: si un tag inline trajera src, se deja intacto.
+  template = template.replace(/<script type="text\/babel"([^>]*)>([\s\S]*?)<\/script>/g,
+    (m, attrs, code) => /src=/.test(attrs) ? m : '<script>\n' + transpile(code, 'inline-boot.jsx') + '\n</script>');
+  // Babel ya no se necesita en runtime: fuera su <script> (no se descarga ni embebe).
+  template = template.replace(/\s*<script src="https:\/\/unpkg\.com\/@babel\/standalone[^"]*"[^>]*><\/script>/, '');
+  // React de producción (sin verificaciones de desarrollo: más ligero y rápido). Se
+  // quitan integrity/crossorigin de esos tags: el hash SRI era del build development
+  // (el loader los strippea en runtime de todas formas, pero mejor no dejar SRI falso).
+  template = template.replace(/src="(https:\/\/unpkg\.com\/react(?:-dom)?@[^"]*)\.development\.js"[^>]*>/g,
+    (m, base) => 'src="' + base + '.production.min.js">');
+  console.log('babel  ', 'bundle sin Babel runtime · React production');
 }
 
 // 1.5) Tailwind → CSS estático (Play CDN no funciona tras document swap del loader)
