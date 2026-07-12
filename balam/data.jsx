@@ -427,6 +427,24 @@
   function savePromos() { save(LS_PROMOS, promos); syncUp('promotions', promos); }
   function saveLiquidations() { save(LS_LIQ, liquidations); syncUp('liquidations', liquidations); } // historial — sincroniza a pos.liquidations
   function saveReturns() { save(LS_RETURNS, returns); }  // devoluciones suben vía recordReturn → STORE.pushReturn
+  // Fusiona filas de la nube en el arreglo local por clave (upsert: actualiza las que
+  // coinciden, agrega las nuevas, CONSERVA las no incluidas). Para pulls PARCIALES —
+  // el pull de ventas es paginado (ventana reciente + apartados) — reemplazar el
+  // arreglo (applyRemote) borraría el histórico local que Reportes, Clientes y
+  // Devoluciones consultan. La fila de la nube gana en conflicto (es la verdad de ese folio).
+  function mergeRemote(kind, rows, key) {
+    const M = { sales: [sales, saveSales], returns: [returns, saveReturns] };
+    const m = M[kind]; if (!m || !rows || !rows.length) return;
+    remoteApplying = true;
+    try {
+      const arr = m[0];
+      const idx = {}; arr.forEach((x, i) => { idx[x[key]] = i; });
+      rows.forEach(r => { const i = idx[r[key]]; if (i !== undefined) arr[i] = r; else arr.push(r); });
+      arr.sort((a, b) => String(b.fecha || '').localeCompare(String(a.fecha || '')));
+      m[1]();
+    } finally { remoteApplying = false; }
+  }
+
   // Reemplaza un arreglo de dominio con datos de la nube (sin re-empujar).
   function applyRemote(kind, rows) {
     const M = { products: [products, saveProducts, hydrate], clients: [clients, saveClients], sellers: [sellers, saveSellers], sales: [sales, saveSales], movements: [movements, saveMovements], promotions: [promos, savePromos], returns: [returns, saveReturns], liquidations: [liquidations, saveLiquidations] };
@@ -908,7 +926,7 @@
     sku, regenerateSkus, totalStock, hydrate, mkStock, emptyStock, SIZE_MARK,
     saveProducts, saveSellers, saveClients, saveSales, saveMovements, savePromos, saveReturns,
     removeProduct, remapOrphanCodes, catalogHealthReport, hexForColorName, applyOrphanFix, get lastRemap() { return lastRemap; },
-    addClient, removeClient, recordSale, nextFolio, stockOf, resetProducts, applyRemote, liquidarComision,
+    addClient, removeClient, recordSale, nextFolio, stockOf, resetProducts, applyRemote, mergeRemote, liquidarComision,
     completarApartado, cerrarMes, getPeriodoInicio,
     recordReturn, returnedQty, returnsForFolio, isReturnable,
     addUser, updateUser, removeUser,

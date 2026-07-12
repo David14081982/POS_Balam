@@ -21,6 +21,7 @@ const check = (name, cond, extra = '') => { console.log(`${cond ? '✅' : '❌'}
 const b = await chromium.launch({ channel: 'chrome', headless: true });
 const page = await b.newPage();
 page.on('pageerror', e => errs.push(String(e)));
+await page.route(/supabase\.co/, r => r.abort()); // jaula: cero tráfico a la nube real
 await page.goto('http://127.0.0.1:8799/POS%20Balam.html', { waitUntil: 'load' });
 await page.waitForFunction(() => window.DATA && window.DATA.recordReturn && window.CONFIG, null, { timeout: 20000 });
 
@@ -30,10 +31,15 @@ const r = await page.evaluate(() => {
   if (window.STORE) { window.STORE.pushSale = () => {}; window.STORE.pushReturn = () => {}; window.STORE.pushRows = () => {}; }
   const round = n => Math.round(n * 100) / 100;
 
-  // Producto con stock en alguna talla
-  const p = D.products.find(x => (x.stock || []).some(v => v.stock > 1));
+  // Fixtures: producción arranca SIN productos ni vendedores de ejemplo — el test crea
+  // los suyos con el motor real (hydrate normaliza el stock al catálogo vigente). Antes
+  // asumía datos precargados y quedó roto al vaciarse la semilla.
+  const p = D.hydrate({ id: 'ret-test-p1', cat: '21', manga: 'ML', tela: 'ALG', color: 'BL', cuello: 'NOR', modelo: '901', nombre: 'Prueba Devolución', orn: '—', ornColors: [], precio: 400, costo: 150, pop: false, stock: D.mkStock([0, 8], []) });
+  D.products.push(p);
+  const seller = { id: 'vt-ret-1', nombre: 'Vendedor Test', iniciales: 'VT', color: '#334155', comisionPct: 5, metaMes: 0, ventasMes: 0, ventasNum: 0, comisionAcum: 0, bono: 'Sin bono', role: 'vendedor', email: null, passwordHash: null, active: true };
+  D.sellers.push(seller);
+
   const e = p.stock.find(v => v.stock > 1); const talla = e.talla;
-  const seller = D.sellers.find(s => s.comisionPct > 0);
   out.setup = { sku: p.sku, talla, stock0: e.stock, sellerPct: seller.comisionPct };
 
   // 1) Venta de 2 piezas (IVA por defecto). Total = precio REAL cobrado (con promo) * 2,

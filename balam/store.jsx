@@ -252,31 +252,76 @@
     window.CONFIG.load(toConfigState(lk.data, st.data));
     return { ok: true };
   }
+  // Renglones (sale_items/return_items) SOLO de las claves bajadas, en lotes de 100
+  // (antes se bajaba la tabla completa — crecía sin límite con el historial).
+  async function fetchItemsIn(c, table, col, keys) {
+    const out = [];
+    for (let i = 0; i < keys.length; i += 100) {
+      const r = await c.from(table).select('*').in(col, keys.slice(i, i + 100));
+      if (!r.error && r.data) out.push.apply(out, r.data);
+    }
+    return out;
+  }
+  // Filas de venta locales desde filas SQL + sus renglones (compartido: pull y fetch por folio).
+  function saleRowsFrom(raws, itemRows) {
+    const byFolio = {};
+    (itemRows || []).forEach(x => (byFolio[x.folio] || (byFolio[x.folio] = [])).push({ sku: x.sku, nombre: x.nombre, talla: x.talla, qty: x.qty, precio: Number(x.precio) || 0 }));
+    return raws.map(raw => {
+      const s = MAP.sales.fromRow(raw); s.lineas = byFolio[raw.folio] || [];
+      const vid = (raw.vendedores || [])[0];
+      s.vendedor = (window.DATA.sellers.find(x => x.id === vid) || {}).nombre || s.vendedor || '';
+      return s;
+    });
+  }
+  // Ventas: pull PAGINADO — la ventana reciente (sync.salesWindowDays, def. 365 días) más
+  // TODOS los apartados (son pocos y el Panel/Notificaciones los necesitan para completarlos).
+  // El resultado se FUSIONA en lo local (mergeRemote): un equipo con meses de historial lo
+  // CONSERVA para reportes; reemplazar (applyRemote) lo borraría. Folios más viejos que la
+  // ventana se traen bajo demanda con fetchSaleByFolio (pantalla de Devoluciones).
+  async function pullSales(c) {
+    const days = Number(window.CONFIG && window.CONFIG.get && window.CONFIG.get('sync.salesWindowDays')) || 365;
+    const cutoff = new Date(Date.now() - days * 864e5).toISOString();
+    const [rec, apart] = await Promise.all([
+      c.from('sales').select('*').gte('fecha', cutoff),
+      c.from('sales').select('*').eq('estado', 'Apartado'),
+    ]);
+    if (rec.error || apart.error) return; // tabla ausente / sin permiso → modo local
+    const uniq = {};
+    (rec.data || []).concat(apart.data || []).forEach(x => { uniq[x.folio] = x; });
+    const raws = Object.values(uniq);
+    if (!raws.length) return;
+    const items = await fetchItemsIn(c, 'sale_items', 'folio', raws.map(x => x.folio));
+    if (hasPendingFor('sales')) return; // capturaron durante el vuelo: no pisar
+    window.DATA.mergeRemote('sales', saleRowsFrom(raws, items), 'folio');
+  }
+  // Trae UNA venta (con renglones) por folio desde la nube y la fusiona en lo local.
+  // Devuelve la venta o null. Tolerante a minúsculas (reintenta en MAYÚSCULAS).
+  async function fetchSaleByFolio(folio) {
+    const c = await ensureClient(); if (!c) return null;
+    const f = String(folio || '').trim(); if (!f) return null;
+    let r = await c.from('sales').select('*').eq('folio', f);
+    if ((r.error || !(r.data || []).length) && f !== f.toUpperCase()) r = await c.from('sales').select('*').eq('folio', f.toUpperCase());
+    if (r.error || !(r.data || []).length) return null;
+    const items = await fetchItemsIn(c, 'sale_items', 'folio', r.data.map(x => x.folio));
+    const rows = saleRowsFrom(r.data, items);
+    if (!hasPendingFor('sales')) window.DATA.mergeRemote('sales', rows, 'folio');
+    return window.DATA.sales.find(s => s.folio === rows[0].folio) || rows[0];
+  }
+
   async function pullDomain(kind) {
     const m = MAP[kind]; const c = await ensureClient(); if (!c || !m) return;
     // Cambios locales sin subir para esta tabla → NO aplicar la nube (la pisaría con datos
     // viejos). Se re-chequea tras el fetch: el usuario pudo capturar durante el vuelo.
     if (hasPendingFor(m.table)) return;
+    if (kind === 'sales') { await pullSales(c); return; }
     const r = await c.from(m.table).select('*');
     if (r.error) return; // tabla no existe aún → modo local
     if (hasPendingFor(m.table)) return;
     if (r.data && r.data.length) {
-      if (kind === 'sales') {
-        const it = await c.from('sale_items').select('*');
-        const byFolio = {};
-        (it.data || []).forEach(x => (byFolio[x.folio] || (byFolio[x.folio] = [])).push({ sku: x.sku, nombre: x.nombre, talla: x.talla, qty: x.qty, precio: Number(x.precio) || 0 }));
-        const rows = r.data.map(raw => {
-          const s = m.fromRow(raw); s.lineas = byFolio[raw.folio] || [];
-          const vid = (raw.vendedores || [])[0];
-          s.vendedor = (window.DATA.sellers.find(x => x.id === vid) || {}).nombre || s.vendedor || '';
-          return s;
-        });
-        window.DATA.applyRemote('sales', rows); return;
-      }
       if (kind === 'returns') {
-        const it = await c.from('return_items').select('*');
+        const itRows = await fetchItemsIn(c, 'return_items', 'return_id', r.data.map(x => x.id));
         const byRid = {};
-        (it.data || []).forEach(x => (byRid[x.return_id] || (byRid[x.return_id] = [])).push({ sku: x.sku, nombre: x.nombre, talla: x.talla, qty: x.qty, motivo: x.motivo || '', precio: Number(x.precio) || 0 }));
+        itRows.forEach(x => (byRid[x.return_id] || (byRid[x.return_id] = [])).push({ sku: x.sku, nombre: x.nombre, talla: x.talla, qty: x.qty, motivo: x.motivo || '', precio: Number(x.precio) || 0 }));
         const rows = r.data.map(raw => { const s = m.fromRow(raw); s.lineas = byRid[raw.id] || []; return s; });
         window.DATA.applyRemote('returns', rows); return;
       }
@@ -327,5 +372,5 @@
   // El producto guarda solo la URL; la foto deja de viajar incrustada en cada guardado.
   function uploadProductPhoto(path, blob) { return uploadImage('product-photos', path, blob, 'image/jpeg'); }
 
-  window.STORE = { init, pull, pushConfig, pushRows, pushSale, pushReturn, deleteRow, pullDomain, flushQueue, clearQueue, ensureClient, getClient: ensureClient, hasSession, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().length; } };
+  window.STORE = { init, pull, pushConfig, pushRows, pushSale, pushReturn, deleteRow, pullDomain, fetchSaleByFolio, flushQueue, clearQueue, ensureClient, getClient: ensureClient, hasSession, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().length; } };
 })();

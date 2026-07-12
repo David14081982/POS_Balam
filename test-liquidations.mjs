@@ -20,6 +20,7 @@ const check = (n, c, e = '') => { console.log(`${c ? '✅' : '❌'} ${n}${e ? ' 
 const b = await chromium.launch({ channel: 'chrome', headless: true });
 const page = await b.newPage();
 page.on('pageerror', e => errs.push(String(e)));
+await page.route(/supabase\.co/, r => r.abort()); // jaula: cero tráfico a la nube real
 await page.goto('http://127.0.0.1:8802/POS%20Balam.html', { waitUntil: 'load' });
 await page.waitForFunction(() => window.DATA && window.DATA.liquidarComision && window.STORE, null, { timeout: 20000 });
 
@@ -30,9 +31,16 @@ const r = await page.evaluate(() => {
   // Espía pushRows (sin tocar la nube).
   const calls = []; window.STORE.pushRows = (k, a) => { calls.push({ k, n: a.length }); };
 
+  // Fixtures: producción arranca SIN vendedores de ejemplo (solo el admin) — el test
+  // crea los suyos con la forma real. Antes asumía D.sellers[1]/[2] y quedó roto al
+  // vaciarse la semilla.
+  const mkV = (id, nombre) => ({ id, nombre, iniciales: 'VT', color: '#334155', comisionPct: 5, metaMes: 0, ventasMes: 0, ventasNum: 0, comisionAcum: 0, bono: 'Sin bono', role: 'vendedor', email: null, passwordHash: null, active: true });
+  const v1 = mkV('vt-liq-1', 'Vendedor Uno'), v2 = mkV('vt-liq-2', 'Vendedor Dos');
+  D.sellers.push(v1, v2);
+
   // 1) liquidarComision registra + sincroniza
   D.liquidations.length = 0;
-  const s = D.sellers.find(x => x.role !== 'admin') || D.sellers[1];
+  const s = v1;
   s.comisionAcum = 500;
   const monto = D.liquidarComision(s.id);
   const e0 = D.liquidations[0];
@@ -41,7 +49,7 @@ const r = await page.evaluate(() => {
   // 2) cerrarMes liquida pendientes (2 vendedores) → entradas 'corte'
   D.liquidations.length = 0; calls.length = 0;
   D.sellers.forEach(x => { x.comisionAcum = 0; });
-  D.sellers[1].comisionAcum = 100; D.sellers[2].comisionAcum = 200;
+  v1.comisionAcum = 100; v2.comisionAcum = 200;
   const res = D.cerrarMes();
   out.corte = { vendedores: res.vendedores, total: res.total, len: D.liquidations.length, allCorte: D.liquidations.every(l => l.tipo === 'corte'), pushed: calls.some(c => c.k === 'liquidations'), acumReset: D.sellers[1].comisionAcum === 0 && D.sellers[2].comisionAcum === 0 };
 

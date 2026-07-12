@@ -26,14 +26,30 @@
   // ── Paso 1: elegir la venta a devolver + historial de devoluciones ─────────────
   function ReturnPicker({ onPick }) {
     const [q, setQ] = useState('');
+    const [buscando, setBuscando] = useState(false);
+    const [, bump] = useState(0);
     const sales = useMemo(() => {
       const term = q.trim().toLowerCase();
       return D.sales
         .filter(s => D.isReturnable(s))
         .filter(s => !term || String(s.folio).toLowerCase().includes(term) || String(s.cliente || '').toLowerCase().includes(term))
         .slice(0, 40);
-    }, [q, D.sales.length]);
+    }, [q, D.sales.length, buscando]);
     const recent = (D.returns || []).slice(0, 8);
+    // El pull de ventas es paginado (ventana reciente): un folio más viejo puede no estar
+    // en este equipo. Este botón lo trae de la nube y lo fusiona en lo local para devolverlo.
+    async function buscarEnNube() {
+      if (buscando) return;
+      if (!window.STORE || !window.STORE.fetchSaleByFolio) { toast('Sincronización con la nube no disponible', 'var(--danger)'); return; }
+      setBuscando(true);
+      try {
+        const s = await window.STORE.fetchSaleByFolio(q.trim());
+        if (!s) toast('No se encontró ese folio en la nube', 'var(--danger)');
+        else if (!D.isReturnable(s)) toast(`La venta ${s.folio} no admite devolución (${s.estado})`, 'var(--danger)');
+        else toast(`Venta ${s.folio} recuperada del histórico`, 'var(--accent)');
+      } catch (e) { toast('No se pudo consultar la nube', 'var(--danger)'); }
+      setBuscando(false); bump(v => v + 1);
+    }
 
     return h('div', { className: 'flex-1 overflow-y-auto bg-background font-body text-on-surface p-6' },
       h('div', { className: 'max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6' }, [
@@ -66,7 +82,13 @@
             h(StatusBadge, { key: 'st', estado: s.estado }),
             h('div', { key: 't', className: 'w-24 text-right font-headline text-h2 text-primary' }, fmt(s.total).replace('.00', '')),
             h(MS, { key: 'ch', name: 'chevRight', size: 20, className: 'text-on-surface-variant group-hover:text-primary' }),
-          ])) : h('div', { key: 'empty', className: 'text-center text-on-surface-variant py-12 text-body' }, 'No hay ventas que coincidan. Solo se pueden devolver ventas pagadas o entregadas.')),
+          ])) : h('div', { key: 'empty', className: 'text-center text-on-surface-variant py-12 text-body' }, [
+            h('p', { key: 'm' }, 'No hay ventas que coincidan. Solo se pueden devolver ventas pagadas o entregadas.'),
+            q.trim() && h('button', {
+              key: 'nube', disabled: buscando, onClick: buscarEnNube,
+              className: 'mt-4 inline-flex items-center gap-2 px-5 h-11 border border-outline-variant rounded-lg text-caption font-bold uppercase tracking-widest text-primary hover:bg-surface-container transition disabled:opacity-50',
+            }, [h(MS, { key: 'i', name: buscando ? 'clock' : 'search', size: 16 }), buscando ? 'Buscando…' : 'Buscar folio en el histórico (nube)']),
+          ])),
         ]),
         // Columna: devoluciones recientes
         h('div', { key: 'rec', className: 'space-y-4' },
