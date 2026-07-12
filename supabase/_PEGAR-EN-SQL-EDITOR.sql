@@ -38,6 +38,19 @@ do $$ begin
   end if;
 end $$;
 
+-- Bucket de FOTOS DE PRODUCTO (pos_010): las fotos dejan de ir incrustadas (base64)
+-- en pos.products.imagen; se suben una vez aquí y el producto guarda solo su URL.
+insert into storage.buckets (id, name, public)
+values ('product-photos', 'product-photos', true)
+on conflict (id) do nothing;
+
+do $$ begin
+  if not exists (select 1 from pg_policies where schemaname = 'storage' and tablename = 'objects' and policyname = 'product_photos_auth_write') then
+    create policy "product_photos_auth_write" on storage.objects for all to authenticated
+      using (bucket_id = 'product-photos') with check (bucket_id = 'product-photos');
+  end if;
+end $$;
+
 create table if not exists pos.promotions (
   id          text primary key,
   nombre      text not null,

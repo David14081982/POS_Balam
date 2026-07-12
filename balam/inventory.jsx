@@ -423,7 +423,16 @@
     const setStock = (talla, escala, val) => setD(prev => ({ ...prev, stock: prev.stock.map(v => v.talla === talla && v.escala === escala ? { ...v, stock: Math.max(0, Math.round(Number(val) || 0)) } : v) }));
     const toggleOrn = (c) => setD(prev => ({ ...prev, ornColors: prev.ornColors.includes(c) ? prev.ornColors.filter(x => x !== c) : prev.ornColors.concat(c) }));
     const fileRef = useRef(null);
-    // Imagen del producto: redimensiona a 600px (JPEG) y guarda como data URL en d.imagen.
+    // Guardas de la subida en segundo plano: no tocar el estado tras desmontar, y si el
+    // usuario elige otra foto antes de que termine la subida anterior, la vieja se descarta.
+    const alive = useRef(true);
+    useEffect(() => () => { alive.current = false; }, []);
+    const imgSeq = useRef(0);
+    // Imagen del producto: redimensiona a 600px (JPEG) y la muestra al instante como data URL.
+    // Con sesión, la sube a Supabase Storage (bucket product-photos) y d.imagen pasa a ser la
+    // URL — así la foto NO viaja incrustada en cada guardado/pull. Sin sesión o sin red, se
+    // queda el data URL local (comportamiento de siempre); la tarjeta "Fotos de producto" en
+    // Configuración → Inventario la migra después.
     function onPickImg(e) {
       const file = e.target.files && e.target.files[0]; e.target.value = '';
       if (!file) return;
@@ -431,13 +440,22 @@
       const reader = new FileReader();
       reader.onload = () => {
         const img = new Image();
-        img.onload = () => {
+        img.onload = async () => {
           const max = 600, scale = Math.min(1, max / Math.max(img.width, img.height));
           const w = Math.round(img.width * scale), hgt = Math.round(img.height * scale);
           const cv = document.createElement('canvas'); cv.width = w; cv.height = hgt;
           cv.getContext('2d').drawImage(img, 0, 0, w, hgt);
-          set('imagen', cv.toDataURL('image/jpeg', 0.85));
+          const dataUrl = cv.toDataURL('image/jpeg', 0.85);
+          set('imagen', dataUrl); // vista previa inmediata + respaldo si la nube no responde
           toast('Imagen lista', 'var(--accent)');
+          const seq = ++imgSeq.current;
+          try {
+            if (!window.STORE || !window.STORE.uploadProductPhoto || !(await window.STORE.hasSession())) return;
+            const blob = await (await fetch(dataUrl)).blob();
+            const name = 'img-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.jpg';
+            const url = await window.STORE.uploadProductPhoto(name, blob);
+            if (url && alive.current && seq === imgSeq.current) { set('imagen', url); toast('Foto guardada en la nube', 'var(--accent)'); }
+          } catch (err) { /* sin red o sin bucket: se queda el respaldo local (data URL) */ }
         };
         img.onerror = () => toast('No se pudo leer la imagen', 'var(--danger)');
         img.src = reader.result;

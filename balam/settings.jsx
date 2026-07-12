@@ -640,6 +640,59 @@
     ]);
   }
 
+  // ── Migración de fotos de producto a la nube (Storage) ─────────────────────────
+  // Detecta productos cuya foto sigue INCRUSTADA (data URL base64) — el formato viejo que
+  // inflaba localStorage y cada sincronización — y las sube al bucket 'product-photos'
+  // (migración pos_010), dejando en p.imagen solo la URL pública. Idempotente: la ruta es
+  // prod-<id>.jpg con upsert, así un reintento continúa donde se quedó sin duplicar nada.
+  function PhotoMigrationCard() {
+    const [busy, setBusy] = useState(false);
+    const [prog, setProg] = useState(null); // { done, total, fail }
+    const [, setTick] = useState(0);        // re-contar pendientes al terminar
+    const pend = D.products.filter(p => /^data:image\//.test(p.imagen || ''));
+    const pesoMB = pend.reduce((a, p) => a + p.imagen.length * 0.75, 0) / (1024 * 1024);
+    async function migrar() {
+      if (busy) return;
+      if (!window.STORE || !window.STORE.uploadProductPhoto) { toast('Sincronización con la nube no disponible', 'var(--danger)'); return; }
+      if (!(await window.STORE.hasSession())) { toast('Inicia sesión para subir las fotos a la nube', 'var(--danger)'); return; }
+      setBusy(true);
+      const total = pend.length; let ok = 0, fallo = 0;
+      setProg({ done: 0, total, fail: 0 });
+      for (const p of pend) {
+        try {
+          const blob = await (await fetch(p.imagen)).blob();
+          const url = await window.STORE.uploadProductPhoto('prod-' + p.id + '.jpg', blob);
+          if (!url) throw new Error('sin URL');
+          p.imagen = url; ok++;
+          if (ok % 5 === 0) D.saveProducts(); // persistir avance por lotes
+        } catch (e) { fallo++; }
+        setProg({ done: ok, total, fail: fallo });
+      }
+      if (ok) D.saveProducts();
+      setBusy(false); setTick(t => t + 1);
+      toast(fallo
+        ? `Migradas ${ok} de ${total}; fallaron ${fallo}. Verifica conexión y que corriste la migración pos_010 (bucket product-photos); al reintentar continúa donde se quedó.`
+        : (ok ? `${ok} foto(s) migradas a la nube` : 'No había fotos pendientes'), fallo ? 'var(--danger)' : 'var(--accent)');
+    }
+    return h(GlassCard, { className: 'p-6' }, [
+      h(SerifHeading, { key: 't', className: 'mb-2', children: 'Fotos de producto' }),
+      pend.length === 0
+        ? h('p', { key: 'okd', className: 'text-body text-success flex items-center gap-2' }, [h(MS, { key: 'i', name: 'check', size: 18 }), 'Todas las fotos de producto ya viven en la nube (o no hay fotos guardadas).'])
+        : h('p', { key: 'd', className: 'text-body text-on-surface-variant leading-relaxed mb-4' },
+            `${pend.length} producto(s) tienen su foto guardada en formato antiguo (incrustada, ~${pesoMB.toFixed(1)} MB). Migrarlas a la nube acelera el sistema y libera espacio local. Requiere sesión iniciada y conexión; si algo falla puedes repetirlo y continúa donde se quedó.`),
+      pend.length > 0 && h('button', {
+        key: 'b', type: 'button', disabled: busy,
+        className: 'inline-flex items-center gap-2 px-5 h-11 bg-primary text-on-primary font-label-sm uppercase tracking-widest text-caption rounded-lg hover:opacity-90 transition disabled:opacity-50',
+        onClick: migrar,
+      }, [h(MS, { key: 'i', name: busy ? 'clock' : 'upload', size: 16 }), busy ? 'Migrando…' : `Migrar fotos a la nube (${pend.length})`]),
+      busy && prog && h('div', { key: 'pg', className: 'mt-4' }, [
+        h('div', { key: 'bar', className: 'h-2 rounded-full bg-surface-container overflow-hidden' },
+          h('div', { className: 'h-full bg-gold transition-all', style: { width: Math.round(((prog.done + prog.fail) / Math.max(1, prog.total)) * 100) + '%' } })),
+        h('p', { key: 'lbl', className: 'text-caption text-on-surface-variant mt-2' }, `${prog.done} de ${prog.total} migradas${prog.fail ? ` · ${prog.fail} fallidas` : ''}`),
+      ]),
+    ]);
+  }
+
   // ── Paneles por sección ────────────────────────────────────────────────────────
   const PANELS = {
     negocio: () => [
@@ -740,6 +793,7 @@
       h(CatalogEditor, { key: 'cc', kind: 'country_code', title: 'Códigos de país', codePlaceholder: '+52', labelPlaceholder: 'México (+52)' }),
     ],
     inventario: () => [
+      h(PhotoMigrationCard, { key: 'fotos' }),
       h(CatalogEditor, { key: 'mt', kind: 'movement_type', title: 'Tipos de movimiento', codePlaceholder: 'Entrada', labelPlaceholder: 'Entrada' }),
     ],
     impresion: () => [

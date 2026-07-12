@@ -310,17 +310,22 @@
     flushQueue(); // por si algo quedó pendiente (p. ej. un fallo durante el arranque)
   }
 
-  // Sube un PNG de código de barras al bucket 'barcodes' (Storage) y devuelve su URL pública.
-  // Requiere sesión (las políticas del bucket exigen usuario autenticado). Lanza si falla.
-  async function uploadBarcode(path, blob) {
+  // Sube una imagen a un bucket de Storage y devuelve su URL pública.
+  // Requiere sesión (las políticas de los buckets exigen usuario autenticado). Lanza si falla.
+  async function uploadImage(bucket, path, blob, contentType) {
     const c = await ensureClient();
     if (!c) throw new Error('Sin conexión con la nube');
     if (!(await hasSession())) throw new Error('Inicia sesión para guardar imágenes en la nube');
-    const { error } = await c.storage.from('barcodes').upload(path, blob, { upsert: true, contentType: 'image/png' });
+    const { error } = await c.storage.from(bucket).upload(path, blob, { upsert: true, contentType });
     if (error) throw new Error(error.message || 'Error al subir la imagen');
-    const { data } = c.storage.from('barcodes').getPublicUrl(path);
+    const { data } = c.storage.from(bucket).getPublicUrl(path);
     return (data && data.publicUrl) || null;
   }
+  // PNG de etiqueta de código de barras → bucket 'barcodes' (mismo contrato de siempre).
+  function uploadBarcode(path, blob) { return uploadImage('barcodes', path, blob, 'image/png'); }
+  // Foto de producto (JPEG 600px del alta) → bucket 'product-photos' (migración pos_010).
+  // El producto guarda solo la URL; la foto deja de viajar incrustada en cada guardado.
+  function uploadProductPhoto(path, blob) { return uploadImage('product-photos', path, blob, 'image/jpeg'); }
 
-  window.STORE = { init, pull, pushConfig, pushRows, pushSale, pushReturn, deleteRow, pullDomain, flushQueue, clearQueue, ensureClient, getClient: ensureClient, hasSession, uploadBarcode, get enabled() { return enabled; }, get pending() { return loadQ().length; } };
+  window.STORE = { init, pull, pushConfig, pushRows, pushSale, pushReturn, deleteRow, pullDomain, flushQueue, clearQueue, ensureClient, getClient: ensureClient, hasSession, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().length; } };
 })();
