@@ -1,6 +1,6 @@
 // inventory.jsx — Inventario (Heritage Luxury). Exporta window.InventoryScreen
 (function () {
-  const { useState, useMemo, useRef } = React;
+  const { useState, useMemo, useRef, useEffect } = React;
   const { fmt, Modal, toast, Pager } = window.UI;
   const { MS, ProductImage } = window.HX;
   const D = window.DATA;
@@ -115,6 +115,14 @@
     const fileRef = useRef(null);
 
     function refresh() { setProducts(D.products.slice()); }
+    // El pull de la nube reemplaza D.products DESPUÉS de montar esta pantalla (y un import
+    // de catálogos también lo muta); sin esto los KPIs y la tabla se quedaban con la copia
+    // vieja hasta cambiar de pestaña. 'configchange' se dispara al terminar el pull.
+    useEffect(() => {
+      const onCfg = () => setProducts(D.products.slice());
+      window.addEventListener('configchange', onCfg);
+      return () => window.removeEventListener('configchange', onCfg);
+    }, []);
 
     function onPickFile(e) {
       const file = e.target.files && e.target.files[0];

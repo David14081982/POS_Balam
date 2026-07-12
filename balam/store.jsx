@@ -76,15 +76,24 @@
 
   // ── Cola offline ────────────────────────────────────────────────────────────
   function loadQ() { try { return JSON.parse(localStorage.getItem(QKEY)) || []; } catch (e) { return []; } }
-  function saveQ(q) { try { localStorage.setItem(QKEY, JSON.stringify(q)); } catch (e) { /* */ } }
+  // Devuelve si la cola quedó persistida (false = localStorage lleno; el llamador decide el respaldo).
+  function saveQ(q) { try { localStorage.setItem(QKEY, JSON.stringify(q)); return true; } catch (e) { return false; } }
   // Descarta operaciones pendientes sin enviarlas (lo usa el reset de la simulación local).
   function clearQueue() { try { localStorage.removeItem(QKEY); } catch (e) { /* */ } }
+  let opSeq = 0;
+  const newOpId = () => 'op' + Date.now().toString(36) + '-' + (++opSeq) + '-' + Math.random().toString(36).slice(2, 6);
   function enqueue(op) {
     const q = loadQ();
     if (op.type === 'upsert') { const i = q.findIndex(x => x.type === 'upsert' && x.table === op.table); if (i >= 0) q[i] = op; else q.push(op); }
     else if (op.type === 'config') { const i = q.findIndex(x => x.type === 'config'); if (i >= 0) q[i] = op; else q.push(op); }
     else q.push(op); // sale / delete: idempotentes, se conservan en orden
-    saveQ(q);
+    return saveQ(q);
+  }
+  // Ops pendientes que tocan una tabla: la copia LOCAL es más nueva que la nube.
+  function hasPendingFor(table) {
+    return loadQ().some(op => op.table === table
+      || (op.type === 'sale' && table === 'sales')
+      || (op.type === 'return' && table === 'returns'));
   }
 
   // Ejecuta una operación contra Supabase. Devuelve true si quedó persistida.
@@ -127,26 +136,56 @@
     return false;
   }
 
-  // Intenta ahora; si no hay cliente o falla, encola para reintento.
+  // Encola PRIMERO y luego sube vía flushQueue (ejecutor único). Antes se intentaba la
+  // red primero y solo se encolaba al fallar: si la página se recargaba con la subida
+  // en vuelo, la operación moría sin rastro y el pull del siguiente arranque pisaba lo
+  // capturado. Persistida antes de volar, sobrevive al refresh y se reintenta sola.
   async function run(op) {
     if (!enabled) return;
-    const c = await ensureClient();
-    if (c) { const ok = await applyOp(c, op); if (ok) { flushQueue(); return; } }
-    enqueue(op);
+    op.id = newOpId();
+    if (enqueue(op)) { flushQueue(); return; }
+    // Sin espacio en localStorage para respaldar la op: intento directo (mejor esfuerzo).
+    const c = await ensureClient(); if (!c) return;
+    await applyOp(c, op);
   }
 
-  let flushing = false;
+  let flushing = false, flushAgain = false;
   async function flushQueue() {
-    if (flushing) return;
+    if (flushing) { flushAgain = true; return; } // otra pasada al terminar la actual
+    { // migra ops persistidas por una versión anterior (sin id)
+      const q0 = loadQ(); let mig = false;
+      q0.forEach(o => { if (!o.id) { o.id = newOpId(); mig = true; } });
+      if (mig) saveQ(q0);
+    }
     if (!loadQ().length) return;
     const c = await ensureClient(); if (!c) return;
     flushing = true;
+    let recovered = false;
     try {
-      const q = loadQ(); const rest = [];
-      for (const op of q) { const ok = await applyOp(c, op); if (!ok) rest.push(op); }
-      saveQ(rest);
-      if (q.length && !rest.length && window.UI && window.UI.toast) window.UI.toast('Cambios sincronizados con la nube', 'var(--accent)');
-    } finally { flushing = false; }
+      // Una op a la vez, releyendo la cola de storage en cada paso: run() puede encolar
+      // o reemplazar ops mientras una subida está en vuelo, y el viejo "saveQ(rest)"
+      // final las pisaba. El retiro por id nunca borra una op reemplazada (id nuevo).
+      const failed = new Set(); // fallidas en esta pasada: se saltan, quedan para reintento
+      for (;;) {
+        const op = loadQ().find(o => !failed.has(o.id));
+        if (!op) break;
+        const ok = await applyOp(c, op);
+        const cur = loadQ();
+        if (ok) {
+          if (op.retry) recovered = true;
+          saveQ(cur.filter(o => o.id !== op.id));
+        } else {
+          failed.add(op.id);
+          const t = cur.find(o => o.id === op.id);
+          if (t && !t.retry) { t.retry = true; saveQ(cur); }
+        }
+      }
+      // Mismo aviso de siempre, solo cuando se recuperó un pendiente (no en cada guardado).
+      if (recovered && !loadQ().length && window.UI && window.UI.toast) window.UI.toast('Cambios sincronizados con la nube', 'var(--accent)');
+    } finally {
+      flushing = false;
+      if (flushAgain) { flushAgain = false; flushQueue(); }
+    }
   }
 
   // ── API de escritura (encolable) ────────────────────────────────────────────
@@ -215,8 +254,12 @@
   }
   async function pullDomain(kind) {
     const m = MAP[kind]; const c = await ensureClient(); if (!c || !m) return;
+    // Cambios locales sin subir para esta tabla → NO aplicar la nube (la pisaría con datos
+    // viejos). Se re-chequea tras el fetch: el usuario pudo capturar durante el vuelo.
+    if (hasPendingFor(m.table)) return;
     const r = await c.from(m.table).select('*');
     if (r.error) return; // tabla no existe aún → modo local
+    if (hasPendingFor(m.table)) return;
     if (r.data && r.data.length) {
       if (kind === 'sales') {
         const it = await c.from('sale_items').select('*');
@@ -248,13 +291,23 @@
   async function init(opts = {}) {
     enabled = true;
     window.addEventListener('online', flushQueue);
+    // Drenar la cola ANTES del pull: los cambios de la sesión anterior llegan primero a la
+    // nube y el pull ya regresa el estado completo. (Antes el pull corría primero y
+    // reemplazaba lo local, "des-haciendo" capturas cuya subida quedó pendiente.)
+    try { await flushQueue(); } catch (e) { /* offline: la cola queda para el reintento */ }
     if (opts.pull) {
-      const r = await pull();
-      if (window.UI && window.UI.toast) window.UI.toast(r.ok ? 'Configuración sincronizada (nube)' : 'Nube no disponible — modo local', r.ok ? 'var(--accent)' : 'var(--danger)');
-      for (const k of ['products', 'clients', 'sellers', 'sales', 'promotions', 'returns', 'liquidations']) { try { await pullDomain(k); } catch (e) { /* tabla ausente */ } }
+      // Config local sin subir (op 'config' aún en cola): conservarla, no pisarla con la nube.
+      const cfgPending = loadQ().some(op => op.type === 'config');
+      const r = cfgPending ? { ok: true, skipped: true } : await pull();
+      if (window.UI && window.UI.toast) window.UI.toast(r.skipped ? 'Cambios locales pendientes de subir — se conservan' : (r.ok ? 'Configuración sincronizada (nube)' : 'Nube no disponible — modo local'), r.ok ? 'var(--accent)' : 'var(--danger)');
+      // Dominios en PARALELO (antes: 7 round-trips en serie; con red lenta el número de
+      // inventario tardaba en llegar). 'sales' va después: su fromRow resuelve el nombre
+      // del vendedor contra DATA.sellers, que debe estar ya sincronizado.
+      await Promise.all(['products', 'clients', 'sellers', 'promotions', 'returns', 'liquidations'].map(k => pullDomain(k).catch(() => { /* tabla ausente */ })));
+      try { await pullDomain('sales'); } catch (e) { /* tabla ausente */ }
       try { window.dispatchEvent(new CustomEvent('configchange', { detail: { domain: true } })); } catch (e) { /* */ }
     }
-    flushQueue(); // drena lo que quedó pendiente de una sesión offline previa
+    flushQueue(); // por si algo quedó pendiente (p. ej. un fallo durante el arranque)
   }
 
   // Sube un PNG de código de barras al bucket 'barcodes' (Storage) y devuelve su URL pública.
