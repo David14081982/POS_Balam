@@ -12,8 +12,16 @@
     const meta = (window.CONFIG && window.CONFIG.allCatalogMeta) ? window.CONFIG.allCatalogMeta() : {};
     return Object.keys(meta).filter(k => meta[k].custom).map(k => ({ kind: k, label: meta[k].label }));
   }
+  // Catálogos custom que generan columna PROPIA en el Excel. Se excluyen los que se llaman igual
+  // que una columna base — el caso real es un catálogo llamado "Modelo": su encabezado chocaba con
+  // el de BASE y, al armar la fila, su CÓDIGO pisaba el nombre del producto. Por eso la columna
+  // "Modelo" salía abreviada e idéntica a "No. Modelo". Ese valor no se pierde: ya viaja en su
+  // columna base ("No. Modelo") y en el SKU.
+  // La IMPORTACIÓN sigue usando customCols() completo a propósito: validCustom resuelve el valor
+  // por nombre además de por código, así que lee bien la columna aunque traiga el nombre largo.
+  function exportCols() { return customCols().filter(c => BASE.indexOf(c.label) < 0); }
   // Orden de columnas: base · catálogos custom · tallas. Se calcula al vuelo (los custom son dinámicos).
-  function buildHeaders() { return BASE.concat(customCols().map(c => c.label), LETRA_H, NUM_H); }
+  function buildHeaders() { return BASE.concat(exportCols().map(c => c.label), LETRA_H, NUM_H); }
 
   function ensureXLSX() {
     if (!window.XLSX) { window.UI.toast('No se pudo cargar el motor de Excel', 'var(--danger)'); return false; }
@@ -58,7 +66,7 @@
       'Color': p.color, 'No. Modelo': p.modelo, 'Ornamento': p.orn,
       'Colores Orn.': (p.ornColors || []).join(', '), 'Cuello': p.cuello || 'NOR', 'Precio': p.precio,
     };
-    customCols().forEach(c => { r[c.label] = (p.attrs || {})[c.kind] || ''; });
+    exportCols().forEach(c => { r[c.label] = (p.attrs || {})[c.kind] || ''; });
     const byKey = {};
     p.stock.forEach(v => { byKey[v.escala + v.talla] = v.stock; });
     D.SIZES_LETRA.forEach((t, i) => { r[LETRA_H[i]] = byKey['L' + t] || 0; });
