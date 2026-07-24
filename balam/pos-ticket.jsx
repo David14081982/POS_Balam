@@ -120,20 +120,22 @@
           h('div', { key: 'st', className: 'flex justify-between items-center text-caption opacity-70' }, [
             h('span', { key: 'l' }, `Subtotal (${itemCount} artículo${itemCount === 1 ? '' : 's'})`), h('span', { key: 'v', className: 'font-medium' }, fmt(subOrig)),
           ]),
-          desc > 0 ? h('div', { key: 'ds', className: 'flex justify-between items-center text-caption' }, [
-            h('span', { key: 'l', className: 'flex items-center gap-1' }, [h(MS, { key: 'i', name: 'sell', size: 14 }), 'Descuentos']), h('span', { key: 'v', className: 'font-semibold', style: { color: '#FFE088' } }, '− ' + fmt(desc)),
-          ]) : null,
           (() => {
             const ivaPct = window.CONFIG.get('tax.ivaPct') || 0;
             const incl = window.CONFIG.get('tax.included');
             if (!ivaPct) return null;
             // IVA = el contenido en el TOTAL realmente cobrado (después del descuento). El descuento
             // reduce la base gravable, así que el IVA baja proporcionalmente (criterio fiscal SAT/CFDI).
+            // El renglón se muestra ANTES que Descuentos por decisión de presentación; el cálculo NO
+            // depende del orden (siempre parte del subtotal ya descontado).
             const iva = incl ? subtotal - subtotal / (1 + ivaPct / 100) : subtotal * (ivaPct / 100);
             return h('div', { key: 'iva', className: 'flex justify-between items-center text-caption opacity-70' }, [
               h('span', { key: 'l' }, `IVA ${incl ? 'incluido' : ''} (${ivaPct}%)`), h('span', { key: 'v', className: 'font-medium' }, fmt(iva)),
             ]);
           })(),
+          desc > 0 ? h('div', { key: 'ds', className: 'flex justify-between items-center text-caption' }, [
+            h('span', { key: 'l', className: 'flex items-center gap-1' }, [h(MS, { key: 'i', name: 'sell', size: 14 }), 'Descuentos']), h('span', { key: 'v', className: 'font-semibold', style: { color: '#FFE088' } }, '− ' + fmt(desc)),
+          ]) : null,
         ]),
         h('div', { key: 'tot', className: 'flex justify-between items-end mb-3' }, [
           h('span', { key: 'l', className: 'text-overline uppercase opacity-60' }, 'Total a pagar'),
@@ -323,8 +325,8 @@
         h('div', { key: 'tt', className: 'w-full border-t-2 border-primary pt-4 mt-8' }, [
           h('div', { key: 'r', className: 'space-y-1.5 text-on-surface-variant' }, [
             h('div', { key: 'st', className: 'flex justify-between', style: { fontSize: '13px' } }, [h('span', { key: 'l' }, 'Subtotal'), h('span', { key: 'v' }, fmt(subOrig))]),
-            desc > 0 ? h('div', { key: 'ds', className: 'flex justify-between', style: { fontSize: '13px', color: '#9a7b16' } }, [h('span', { key: 'l' }, 'Descuento'), h('span', { key: 'v', className: 'font-semibold' }, '− ' + fmt(desc))]) : null,
             ivaPct ? h('div', { key: 'iva', className: 'flex justify-between', style: { fontSize: '13px' } }, [h('span', { key: 'l' }, `IVA ${incl ? 'incluido ' : ''}(${ivaPct}%)`), h('span', { key: 'v' }, fmt(iva))]) : null,
+            desc > 0 ? h('div', { key: 'ds', className: 'flex justify-between', style: { fontSize: '13px', color: '#9a7b16' } }, [h('span', { key: 'l' }, 'Descuento'), h('span', { key: 'v', className: 'font-semibold' }, '− ' + fmt(desc))]) : null,
           ]),
           h('div', { key: 'g', className: 'flex justify-between items-end border-t border-outline-variant pt-3 mt-3' }, [
             h('span', { key: 'l', className: 'font-headline uppercase text-primary', style: { fontSize: '18px', letterSpacing: '-0.01em' } }, 'Total'),
