@@ -123,7 +123,7 @@
                 window.CONFIG.get('store.logo') ? h('img', { src: window.CONFIG.get('store.logo'), className: 'w-full h-full object-cover' }) : h(JaguarMark, { size: 22 })),
               h('div', { key: 'n', className: 'flex-1 min-w-0' }, [
                 h('div', { key: 'a', className: 'font-headline text-[18px] text-white leading-none truncate' }, 'Balam'),
-                h('div', { key: 'b', className: 'text-[10px] uppercase tracking-widest mt-1 truncate', style: { color: '#5D637B' } }, 'Artisanal Heritage'),
+                h('div', { key: 'b', className: 'text-[10px] uppercase tracking-widest mt-1 truncate', style: { color: '#5D637B' } }, 'Guayaberas'),
               ]),
               h('button', { key: 'tg', onClick: () => setCollapsed(true), title: 'Colapsar menú', className: 'w-8 h-8 rounded-lg grid place-items-center shrink-0 transition-colors', style: { color: '#5D637B' }, onMouseEnter: e => e.currentTarget.style.background = '#1C2437', onMouseLeave: e => e.currentTarget.style.background = 'transparent' }, h(MS, { name: 'chevLeft', size: 20 })),
             ]),

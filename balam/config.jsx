@@ -95,7 +95,7 @@
     ],
     seller_role: [
       { code: 'senior', label: 'Heritage Senior Associate', meta: { minPct: 5 } },
-      { code: 'consultant', label: 'Artisanal Consultant', meta: { minPct: 0 } },
+      { code: 'consultant', label: 'Cargo de vendedor', meta: { minPct: 0 } },
     ],
     user_role: [
       { code: 'admin', label: 'Administrador', meta: { desc: 'Acceso total: inventario global, reportes financieros y control de usuarios.' } },
