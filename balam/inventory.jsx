@@ -132,12 +132,35 @@
         .then(res => { if (!res.products.length) { toast('No se encontraron productos válidos en el archivo', 'var(--danger)'); return; } setImportPreview(res); })
         .catch(() => toast('No se pudo leer el archivo Excel', 'var(--danger)'));
     }
+    // Importar ACTUALIZA por SKU: si el SKU ya existe se modifica ese producto en vez de agregar
+    // otro. (Antes siempre hacía push, así que reimportar el mismo archivo duplicaba el catálogo.)
+    // El SKU es la identidad estable del producto — el historial de ventas y movimientos lo
+    // referencia por SKU, y hydrate lo congela al crearlo.
     function confirmImport() {
-      importPreview.products.forEach(p => D.products.push(p));
+      // Si dos productos comparten SKU (posible: la receta puede no incluir el No. Modelo), se
+      // actualiza SIEMPRE el primero. Determinista y estable entre importaciones.
+      const bySku = {};
+      D.products.forEach(p => { if (p.sku && !bySku[p.sku]) bySku[p.sku] = p; });
+      const F = (window.XLSXIO && window.XLSXIO.IMPORT_FIELDS) || [];
+      let nuevos = 0, actualizados = 0;
+      importPreview.products.forEach(imp => {
+        const target = bySku[imp.sku];
+        if (!target) { D.products.push(imp); bySku[imp.sku] = imp; nuevos++; return; }
+        // Solo los campos que la hoja trae. Se conservan id, costo, destacado y códigos de
+        // barras: el Excel no los lleva y copiarlos borraría lo que ya está capturado.
+        F.forEach(k => { if (k !== 'attrs' && imp[k] !== undefined) target[k] = imp[k]; });
+        // attrs se FUSIONA, no se reemplaza: un catálogo custom sin columna en el archivo
+        // dejaría el valor vacío y se perdería el que ya tenía el producto.
+        target.attrs = Object.assign({}, target.attrs, imp.attrs);
+        // La foto solo se pisa si la hoja trajo una URL real; la genérica que pone hydrate
+        // cuando la celda va vacía nunca reemplaza una foto ya subida.
+        if (imp.imagen && !D.isAutoImg(imp.imagen)) target.imagen = imp.imagen;
+        D.hydrate(target);
+        actualizados++;
+      });
       D.saveProducts(); refresh();
-      const n = importPreview.products.length;
       setImportPreview(null);
-      toast(`${n} productos importados al inventario`, 'var(--accent)');
+      toast(`${nuevos} nuevos · ${actualizados} actualizados`, 'var(--accent)');
     }
     function saveProduct(draft, mode) {
       if (mode === 'edit') {
@@ -370,21 +393,29 @@
 
   // ---------- Previsualización de importación ----------
   function ImportModal({ data, onClose, onConfirm }) {
+    // Qué va a pasar con cada fila: el SKU ya existente se ACTUALIZA, el nuevo se AGREGA.
+    const existentes = new Set(D.products.map(p => p.sku));
+    const esNuevo = (p) => !existentes.has(p.sku);
+    const nuevos = data.products.filter(esNuevo).length;
+    const actualiza = data.products.length - nuevos;
     const footer = [
       h('button', { key: 'c', className: 'px-5 h-11 border border-outline-variant text-on-surface text-caption font-bold uppercase tracking-widest hover:bg-surface-container rounded-lg transition-colors', onClick: onClose }, 'Cancelar'),
       h('button', { key: 'k', className: 'inline-flex items-center gap-2 px-5 h-11 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-lg hover:opacity-90 transition', onClick: onConfirm }, [h(MS, { key: 'i', name: 'check', size: 16 }), `Importar ${data.products.length}`]),
     ];
     return h(Modal, { title: 'Previsualizar importación', onClose, footer, large: true }, [
       h('div', { key: 'sum', className: 'flex items-center gap-2 mb-4 flex-wrap text-caption' }, [
-        h('span', { key: 'a', className: 'px-2 py-1 bg-success-soft text-success font-bold rounded' }, `${data.products.length} válidos`),
+        nuevos > 0 && h('span', { key: 'n', className: 'px-2 py-1 bg-success-soft text-success font-bold rounded' }, `${nuevos} nuevos`),
+        actualiza > 0 && h('span', { key: 'u', className: 'px-2 py-1 bg-gold-soft text-gold-text font-bold rounded' }, `${actualiza} se actualizan`),
         data.skipped > 0 && h('span', { key: 'b', className: 'px-2 py-1 bg-warning-soft text-warning font-bold rounded' }, `${data.skipped} omitidos`),
         h('span', { key: 'c', className: 'text-on-surface-variant' }, `${data.total} filas leídas`),
       ]),
+      actualiza > 0 && h('p', { key: 'nota', className: 'text-caption text-on-surface-variant mb-3' }, 'Los que se actualizan conservan su costo, si están destacados y sus códigos de barras (esta hoja no los lleva). La foto solo cambia si la columna “Foto (URL)” trae un enlace.'),
       h('div', { key: 'tbl', className: 'border border-outline-variant rounded-lg overflow-hidden max-h-80 overflow-y-auto' },
         h('table', { className: 'w-full' }, [
           h('thead', { key: 'h', className: 'sticky top-0 bg-surface' }, h('tr', { className: 'border-b border-outline-variant' },
-            ['Producto', 'SKU', 'Cuello', 'Precio', 'Stock'].map((c, i) => h('th', { key: i, className: 'px-3 py-2 text-overline font-semibold text-on-surface-variant uppercase tracking-widest text-left' + (c === 'Precio' || c === 'Stock' ? ' text-right' : '') }, c)))),
+            ['Acción', 'Producto', 'SKU', 'Cuello', 'Precio', 'Stock'].map((c, i) => h('th', { key: i, className: 'px-3 py-2 text-overline font-semibold text-on-surface-variant uppercase tracking-widest text-left' + (c === 'Precio' || c === 'Stock' ? ' text-right' : '') }, c)))),
           h('tbody', { key: 'b', className: 'divide-y divide-outline-variant' }, data.products.slice(0, 60).map(p => h('tr', { key: p.id }, [
+            h('td', { key: 'a', className: 'px-3 py-2' }, h('span', { className: 'px-2 py-0.5 text-overline font-bold rounded ' + (esNuevo(p) ? 'bg-success-soft text-success' : 'bg-gold-soft text-gold-text') }, esNuevo(p) ? 'Nuevo' : 'Actualiza')),
             h('td', { key: 'n', className: 'px-3 py-2' }, h('div', { className: 'flex items-center gap-2' }, [h(ProductImage, { key: 't', p, className: 'w-8 h-8 rounded' }), h('span', { key: 'x', className: 'text-body text-primary' }, p.nombre)])),
             h('td', { key: 's', className: 'px-3 py-2 text-overline font-mono text-on-surface-variant' }, p.sku),
             h('td', { key: 'cu', className: 'px-3 py-2' }, h('span', { className: 'px-2 py-0.5 bg-surface-container-high text-on-surface-variant text-overline rounded' }, D.CUELLO[p.cuello])),

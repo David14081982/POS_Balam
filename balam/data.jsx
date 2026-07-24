@@ -73,6 +73,11 @@
       'https://images.unsplash.com/photo-1517445312882-bc9910d016b7?w=600&h=750&fit=crop',
     ],
   };
+  // ¿La foto es una de las GENÉRICAS que asigna pickImg (no una que subió el usuario)?
+  // La usa la exportación a Excel para no publicar como "foto del producto" una de relleno,
+  // y la importación para que una genérica nunca pise una foto real ya guardada.
+  const AUTO_IMGS = IMG.white.concat(IMG.blue, IMG.color);
+  function isAutoImg(url) { return AUTO_IMGS.indexOf(String(url || '')) >= 0; }
   function pickImg(p) {
     const blueCols = ['AZ', 'AC', 'MR', 'MZ'];
     const whiteCols = ['BL', 'HU', 'AR', 'PL', 'BE'];
@@ -977,7 +982,7 @@
     sku, regenerateSkus, totalStock, hydrate, mkStock, emptyStock, SIZE_MARK,
     saveProducts, saveSellers, saveClients, saveSales, saveMovements, savePromos, saveReturns,
     removeProduct, remapOrphanCodes, catalogHealthReport, hexForColorName, applyOrphanFix, get lastRemap() { return lastRemap; },
-    addClient, removeClient, recordSale, nextFolio, stockOf, resetProducts, applyRemote, mergeRemote, liquidarComision,
+    addClient, removeClient, recordSale, nextFolio, stockOf, isAutoImg, resetProducts, applyRemote, mergeRemote, liquidarComision,
     completarApartado, cerrarMes, getPeriodoInicio,
     recordReturn, returnedQty, returnsForFolio, isReturnable,
     addUser, updateUser, removeUser,

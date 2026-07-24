@@ -3,7 +3,22 @@
 // Exporta window.XLSXIO
 (function () {
   const D = window.DATA;
-  const BASE = ['SKU', 'Modelo', 'Categoría', 'Manga', 'Tela', 'Color', 'No. Modelo', 'Ornamento', 'Colores Orn.', 'Cuello', 'Precio'];
+  // 'Foto (URL)' va al FINAL de BASE a propósito: las columnas A–K conservan su posición de siempre.
+  const BASE = ['SKU', 'Modelo', 'Categoría', 'Manga', 'Tela', 'Color', 'No. Modelo', 'Ornamento', 'Colores Orn.', 'Cuello', 'Precio', 'Foto (URL)'];
+  // Campos que la hoja de Inventario REALMENTE trae. Al ACTUALIZAR un producto existente solo se
+  // tocan estos: id, costo, destacado y códigos de barras se conservan porque el Excel no los
+  // lleva (reemplazarlos con los valores por defecto de hydrate borraría lo que ya tenías).
+  // 'imagen' NO está en la lista: se trata aparte (solo pisa si la hoja trae una URL real).
+  const IMPORT_FIELDS = ['cat', 'manga', 'tela', 'color', 'cuello', 'modelo', 'nombre', 'orn', 'ornColors', 'precio', 'attrs', 'stock'];
+  // URL de la foto para el Excel: SOLO fotos reales accesibles por enlace.
+  // Se omiten (a) las genéricas de relleno que asigna el sistema y (b) las incrustadas
+  // (data:image/…), que son texto de decenas de miles de caracteres y no caben en una celda
+  // de Excel (tope 32,767). Esas se migran con Configuración → Inventario → "Fotos de producto".
+  function fotoUrl(p) {
+    const u = String(p.imagen || '');
+    if (!/^https?:\/\//i.test(u)) return '';
+    return D.isAutoImg && D.isAutoImg(u) ? '' : u;
+  }
   // Encabezados de talla. Letras tal cual; números prefijados "T" para no confundir con cantidades.
   const LETRA_H = D.SIZES_LETRA.slice();                  // XS, S, M, …
   const NUM_H = D.SIZES_NUM.map(n => 'T' + n);            // T34, T36, …
@@ -53,6 +68,10 @@
     rows.push(['• Tallas LETRA: columnas ' + D.SIZES_LETRA.join(', ') + '.']);
     rows.push(['• Tallas NÚMERO: columnas T34…T52 (la "T" es sólo para distinguirlas; captura la cantidad).']);
     rows.push(['• Una prenda puede llenar ambas escalas. Las tallas que no apliquen se dejan en 0 o vacías.']);
+    rows.push(['• Foto (URL): enlace http(s) a la imagen. Al importar se asigna al producto.']);
+    rows.push(['   Vacío = se conserva la foto que ya tiene (o se le pone una genérica si es nuevo).']);
+    rows.push(['• Al importar, si el SKU YA EXISTE el producto se ACTUALIZA (no se duplica).']);
+    rows.push(['   Se respetan costo, destacado y códigos de barras: esta hoja no los lleva.']);
     rows.push(['• Borra la fila de EJEMPLO antes de importar.']);
     const ws = window.XLSX.utils.aoa_to_sheet(rows);
     ws['!cols'] = [{ wch: 18 }, { wch: 34 }];
@@ -65,6 +84,7 @@
       'SKU': p.sku, 'Modelo': p.nombre, 'Categoría': p.cat, 'Manga': p.manga, 'Tela': p.tela,
       'Color': p.color, 'No. Modelo': p.modelo, 'Ornamento': p.orn,
       'Colores Orn.': (p.ornColors || []).join(', '), 'Cuello': p.cuello || 'NOR', 'Precio': p.precio,
+      'Foto (URL)': fotoUrl(p),
     };
     exportCols().forEach(c => { r[c.label] = (p.attrs || {})[c.kind] || ''; });
     const byKey = {};
@@ -75,6 +95,7 @@
   }
 
   function colWidth(h) {
+    if (h === 'Foto (URL)') return 46;
     if (h === 'Modelo') return 26;
     if (h === 'SKU') return 20;
     if (h === 'Ornamento' || h === 'Colores Orn.') return 18;
@@ -194,9 +215,13 @@
     const nums = D.SIZES_NUM.map((t, i) => num(row[NUM_H[i]]));
     const attrs = {};
     customCols().forEach(c => { const v = validCustom(c.kind, row[c.label]); if (v) attrs[c.kind] = v; });
+    // Foto: solo enlaces http(s). Cualquier otra cosa se ignora y hydrate pone la genérica
+    // (mismo comportamiento que un archivo sin esta columna).
+    const foto = String(row['Foto (URL)'] || '').trim();
+    const imagen = /^https?:\/\//i.test(foto) ? foto : undefined;
     return D.hydrate({
       id: 'imp-' + Date.now() + '-' + idx,
-      cat, manga, tela, color, modelo, nombre,
+      cat, manga, tela, color, modelo, nombre, imagen,
       orn: String(row['Ornamento'] || '—').trim() || '—',
       ornColors: parseOrnColors(row['Colores Orn.']),
       cuello: parseCuello(row['Cuello']),
@@ -274,5 +299,5 @@
     window.UI.toast(`${rows.length} vendedores exportados`, 'var(--accent)');
   }
 
-  window.XLSXIO = { exportTemplate, exportInventory, exportReturns, exportSales, exportSellers, parseFile, headers: buildHeaders };
+  window.XLSXIO = { exportTemplate, exportInventory, exportReturns, exportSales, exportSellers, parseFile, headers: buildHeaders, IMPORT_FIELDS };
 })();
