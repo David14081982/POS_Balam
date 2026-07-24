@@ -229,15 +229,41 @@
             ]),
             h('button', { key: 'add', className: 'flex items-center gap-2 px-6 py-2.5 bg-primary text-on-primary rounded-lg hover:opacity-90 transition-all text-overline font-bold uppercase tracking-wider shadow-e2', onClick: () => setEditing({ mode: 'new', product: blankProduct() }) }, [h(MS, { key: 'i', name: 'plus', size: 18 }), 'Nuevo producto']),
           ]),
-          // Filtros por catálogo (Tela, Categoría…): la lista es ILIMITADA → cada uno en su propia fila
-          // a todo lo ancho con scroll horizontal, así nunca rompe el layout aunque haya 50 materiales.
-          filterableKinds.length ? h('div', { key: 'rf', className: 'flex flex-col gap-2' },
-            filterableKinds.map(fk => h(Segment, {
-              key: 'f_' + fk,
-              value: filters[fk] || 'all',
-              onChange: v => { setFilters(prev => ({ ...prev, [fk]: v })); setPage(1); },
-              options: [['all', 'Todas']].concat(window.CONFIG.list(fk).map(it => [it.code, it.label])),
-            }))
+          // Filtros por catálogo (Tela, Color…): LISTAS DESPLEGABLES. Antes era una franja de
+          // botones por catálogo, a todo lo ancho y con scroll horizontal: con catálogos de 40+
+          // valores había que arrastrar para encontrar uno y ocupaba media pantalla. El desplegable
+          // ocupa lo mismo con 3 que con 300 valores y lleva ETIQUETA (antes no se veía qué filtraba).
+          // El estado `filters` no cambia de forma → la lógica de filtrado sigue igual.
+          filterableKinds.length ? h('div', { key: 'rf', className: 'flex flex-wrap items-end gap-3' },
+            filterableKinds.map(fk => {
+              const val = filters[fk] || 'all';
+              const activo = val !== 'all';
+              const items = window.CONFIG.list(fk);
+              const opts = [h('option', { key: '__all', value: 'all' }, 'Todas')]
+                .concat(items.map(it => h('option', { key: it.code, value: it.code }, it.label)));
+              // Valor huérfano (se filtró por un código que luego se borró/desactivó del catálogo):
+              // sin esta opción el desplegable mostraría "Todas" mientras el filtro sigue activo y
+              // la lista aparecería vacía sin explicación.
+              if (activo && !items.some(it => it.code === val)) {
+                opts.splice(1, 0, h('option', { key: '__orphan', value: val }, `⚠ ${val} — ya no existe`));
+              }
+              return h('div', { key: 'f_' + fk, className: 'flex flex-col gap-1' }, [
+                h('label', { key: 'l', className: 'text-overline font-bold uppercase tracking-widest text-on-surface-variant' }, window.CONFIG.catalogLabel(fk)),
+                h('select', {
+                  key: 's',
+                  className: 'min-w-[11rem] max-w-[16rem] bg-surface border rounded-lg px-3 py-2.5 text-body transition-all focus:ring-1 focus:ring-primary focus:border-primary '
+                    + (activo ? 'border-gold text-primary font-semibold' : 'border-outline-variant'),
+                  value: val,
+                  onChange: e => { setFilters(prev => Object.assign({}, prev, { [fk]: e.target.value })); setPage(1); },
+                }, opts),
+              ]);
+            }).concat(Object.keys(filters).some(k => filters[k] && filters[k] !== 'all')
+              ? [h('button', {
+                key: '__clr',
+                className: 'h-11 px-4 inline-flex items-center gap-2 text-caption font-bold uppercase tracking-widest text-on-surface-variant border border-outline-variant rounded-lg hover:text-primary hover:bg-surface-container transition-colors',
+                onClick: () => { setFilters({}); setPage(1); },
+              }, [h(MS, { key: 'i', name: 'close', size: 16 }), 'Limpiar'])]
+              : [])
           ) : null,
           // Excel
           h('div', { key: 'r2', className: 'flex items-center gap-4 py-2 border-y border-outline-variant/60' }, [
