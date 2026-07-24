@@ -135,7 +135,7 @@
             return h('button', {
               key: n.id,
               className: 'flex items-center gap-3 py-2.5 rounded-lg transition-colors text-left ' + (collapsed ? 'justify-center px-0 ' : 'px-4 ') + (active ? 'font-semibold' : ''),
-              style: active ? { background: '#1C2437', color: '#FFE088' } : { color: '#5D637B' },
+              style: active ? { background: '#1C2437', color: '#FFE088' } : { color: '#FFFFFF' },
               onMouseEnter: e => { if (!active) e.currentTarget.style.background = '#1C2437'; },
               onMouseLeave: e => { if (!active) e.currentTarget.style.background = 'transparent'; },
               onClick: () => go(n.id),
@@ -144,7 +144,7 @@
               h(MS, { key: 'i', name: n.icon, size: 20, fill: active }),
               !collapsed && h('span', { key: 'l', className: 'flex-1 text-sm' }, n.label),
               !collapsed && locked && h(MS, { key: 'lk', name: 'lock', size: 14, style: { color: '#5D637B' } }),
-              !collapsed && !locked && badge && h('span', { key: 'b', className: 'px-1.5 py-0.5 text-[10px] font-bold rounded', style: { background: '#131B2E', color: active ? '#FFE088' : '#5D637B' } }, badge),
+              !collapsed && !locked && badge && h('span', { key: 'b', className: 'px-1.5 py-0.5 text-[10px] font-bold rounded', style: { background: '#131B2E', color: active ? '#FFE088' : '#FFFFFF' } }, badge),
             ]);
           })),
         h('div', { key: 'cta', className: 'px-3 mt-2' },
