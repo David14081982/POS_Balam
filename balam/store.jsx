@@ -9,8 +9,13 @@
   const SUPABASE_KEY = 'sb_publishable_-skU6PI0VrYa91UPHAEaIg_dhsi1l_I'; // publicable (anon), no secreta
   const SCHEMA = 'pos';
   const QKEY = 'balam_sync_queue';
+  // Marca de limpieza de datos de prueba: fila reservada de pos.settings que escribe
+  // supabase/LIMPIAR-PRUEBAS.sql. Cada terminal recuerda en RESET_SEEN la última que aplicó;
+  // si la nube trae una más nueva, se limpia sola (ver applyResetMark).
+  const RESET_MARK_KEY = '_resetMark';
+  const RESET_SEEN = 'balam_reset_seen';
 
-  let sb = null, enabled = false;
+  let sb = null, enabled = false, lastResetMark = null;
 
   async function ensureClient() {
     if (sb) return sb;
@@ -241,7 +246,13 @@
       (catalogs[r.kind] || (catalogs[r.kind] = [])).push({ code: r.code, label: r.label, active: r.active !== false, meta: r.meta || {} });
     });
     const s = {}; let catalogMeta;
-    (settings || []).forEach(r => { if (r.key === '_catalogMeta') catalogMeta = r.value; else s[r.key] = r.value; });
+    // _resetMark queda FUERA de la config: es la marca de limpieza, no un ajuste de la tienda.
+    // Si entrara, pushConfig la reenviaría y una terminal con config vieja podría pisarla,
+    // dejando a las demás sin limpiar.
+    (settings || []).forEach(r => {
+      if (r.key === '_catalogMeta') catalogMeta = r.value;
+      else if (r.key !== RESET_MARK_KEY) s[r.key] = r.value;
+    });
     return { v: 1, catalogs, catalogMeta, settings: s };
   }
   async function pull() {
@@ -249,8 +260,42 @@
     const [lk, st] = await Promise.all([c.from('lookup').select('*'), c.from('settings').select('*')]);
     if (lk.error || st.error) return { ok: false, error: (lk.error || st.error).message };
     if (!lk.data.length && !st.data.length) return { ok: false, error: 'vacío — ¿corriste la migración?' };
+    const mk = (st.data || []).find(r => r.key === RESET_MARK_KEY);
+    lastResetMark = mk ? String(mk.value) : null;
     window.CONFIG.load(toConfigState(lk.data, st.data));
     return { ok: true };
+  }
+  // Registra la marca vigente como YA aplicada en esta terminal (sin limpiar nada). La usa el
+  // botón manual de Configuración: si no, el siguiente arranque volvería a avisar la limpieza.
+  function markResetApplied() {
+    try { if (lastResetMark) localStorage.setItem(RESET_SEEN, lastResetMark); } catch (e) { /* */ }
+  }
+  // Limpieza propagada: si la nube trae una marca que esta terminal no ha aplicado, borra AQUÍ
+  // los datos de prueba y restaura el stock. Sin esto la limpieza no viaja entre equipos —
+  // pullDomain no borra lo local cuando la nube llega vacía (a propósito: una caída de red no
+  // debe vaciar una terminal) y el pull de ventas FUSIONA, nunca quita.
+  // Corre ANTES del pull de dominio y sube lo restaurado antes de bajar nada: si se pulara
+  // primero, esta terminal recibiría el stock viejo y la restauración se perdería o se
+  // aplicaría dos veces.
+  // pendingAtBoot = cuántas ops había en la cola ANTES del flushQueue de este arranque.
+  async function applyResetMark(pendingAtBoot) {
+    if (!lastResetMark) return false;                  // instalación sin marca → nada que hacer
+    let seen = null;
+    try { seen = localStorage.getItem(RESET_SEEN); } catch (e) { return false; } // sin storage: no tocar
+    if (seen === lastResetMark) return false;          // ya aplicada aquí
+    // Había trabajo local sin subir al arrancar = se capturó sin internet. NO se limpia:
+    //   1) resetTestData descarta la cola y esas ventas —que pueden ser REALES— se perderían;
+    //   2) el flushQueue de este arranque ya las subió a la nube recién limpiada, así que
+    //      borrarlas aquí las dejaría vivas allá y volverían en el siguiente pull.
+    // Se pospone al próximo arranque: la cola ya estará vacía y la limpieza se aplicará
+    // entera. Quien quiera forzarla usa el botón de Configuración.
+    if (pendingAtBoot || loadQ().length) return false;
+    if (!(window.DATA && window.DATA.resetTestData)) return false;
+    try { window.DATA.resetTestData(); } catch (e) { return false; }
+    try { localStorage.setItem(RESET_SEEN, lastResetMark); } catch (e) { /* */ }
+    try { await flushQueue(); } catch (e) { /* offline: el stock restaurado queda en cola */ }
+    if (window.UI && window.UI.toast) window.UI.toast('Datos de prueba borrados en esta terminal — inventario intacto', 'var(--accent)');
+    return true;
   }
   // Renglones (sale_items/return_items) SOLO de las claves bajadas, en lotes de 100
   // (antes se bajaba la tabla completa — crecía sin límite con el historial).
@@ -339,12 +384,17 @@
     // Drenar la cola ANTES del pull: los cambios de la sesión anterior llegan primero a la
     // nube y el pull ya regresa el estado completo. (Antes el pull corría primero y
     // reemplazaba lo local, "des-haciendo" capturas cuya subida quedó pendiente.)
+    // Se mide la cola ANTES de drenarla: la limpieza propagada la necesita para saber si
+    // había capturas sin subir (ver applyResetMark); después del flush ya no se distingue.
+    const pendingAtBoot = loadQ().length;
     try { await flushQueue(); } catch (e) { /* offline: la cola queda para el reintento */ }
     if (opts.pull) {
       // Config local sin subir (op 'config' aún en cola): conservarla, no pisarla con la nube.
       const cfgPending = loadQ().some(op => op.type === 'config');
       const r = cfgPending ? { ok: true, skipped: true } : await pull();
       if (window.UI && window.UI.toast) window.UI.toast(r.skipped ? 'Cambios locales pendientes de subir — se conservan' : (r.ok ? 'Configuración sincronizada (nube)' : 'Nube no disponible — modo local'), r.ok ? 'var(--accent)' : 'var(--danger)');
+      // Limpieza pendiente de otra terminal: se aplica AQUÍ antes de bajar el dominio.
+      try { await applyResetMark(pendingAtBoot); } catch (e) { /* nunca bloquear el arranque */ }
       // Dominios en PARALELO (antes: 7 round-trips en serie; con red lenta el número de
       // inventario tardaba en llegar). 'sales' va después: su fromRow resuelve el nombre
       // del vendedor contra DATA.sellers, que debe estar ya sincronizado.
@@ -372,5 +422,5 @@
   // El producto guarda solo la URL; la foto deja de viajar incrustada en cada guardado.
   function uploadProductPhoto(path, blob) { return uploadImage('product-photos', path, blob, 'image/jpeg'); }
 
-  window.STORE = { init, pull, pushConfig, pushRows, pushSale, pushReturn, deleteRow, pullDomain, fetchSaleByFolio, flushQueue, clearQueue, ensureClient, getClient: ensureClient, hasSession, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().length; } };
+  window.STORE = { init, pull, pushConfig, pushRows, pushSale, pushReturn, deleteRow, pullDomain, fetchSaleByFolio, flushQueue, clearQueue, markResetApplied, ensureClient, getClient: ensureClient, hasSession, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().length; } };
 })();

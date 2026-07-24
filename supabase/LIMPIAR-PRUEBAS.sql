@@ -14,13 +14,15 @@
 -- ║    • pos.lookup / pos.settings → catálogos y configuración de la tienda.      ║
 -- ║    • el cliente genérico 'Público en general' (lo requiere el POS).           ║
 -- ║                                                                              ║
--- ║  ⚠ ESTO SOLO LIMPIA LA NUBE. El POS es local-first: cada navegador guarda su  ║
--- ║  propia copia y, cuando la nube llega vacía, la app NO borra lo local (a      ║
--- ║  propósito, ver store.jsx → pullDomain). Después de correr esto, entra al POS ║
--- ║  en CADA dispositivo donde probaste y pulsa:                                  ║
--- ║      Configuración → Simulación → "Borrar datos de prueba"                     ║
--- ║  Ese botón vacía lo local y devuelve al stock las piezas de las ventas de     ║
--- ║  prueba. Sin él, las pruebas reaparecen y pueden re-subirse a la nube.        ║
+-- ║  LAS TERMINALES SE LIMPIAN SOLAS. El POS es local-first: cada navegador guarda ║
+-- ║  su propia copia y, cuando la nube llega vacía, la app NO borra lo local (a    ║
+-- ║  propósito: una caída de red no debe vaciar una terminal). Por eso el paso 7   ║
+-- ║  deja una MARCA con la fecha de este borrado: al abrir el POS, cada equipo la  ║
+-- ║  compara con la última que aplicó y, si es nueva, borra SUS datos de prueba y  ║
+-- ║  restaura su stock — una sola vez y sin que nadie tenga que acordarse.         ║
+-- ║  (Si una terminal tiene ventas capturadas sin internet, NO se limpia: espera a ║
+-- ║  subirlas primero. Se puede forzar en Configuración → Datos de demostración →  ║
+-- ║  "Borrar datos de prueba".)                                                    ║
 -- ║                                                                              ║
 -- ║  Cómo usar: Supabase → SQL Editor → pega TODO esto → Run.                     ║
 -- ║  Es una transacción: o corre completo, o no cambia nada.                      ║
@@ -66,6 +68,15 @@ update pos.sellers
   set ventas_mes    = 0,
       ventas_num    = 0,
       comision_acum = 0;
+
+-- 7) MARCA DE LIMPIEZA. Fila reservada de pos.settings con la fecha/hora de este borrado.
+--    Cada terminal recuerda la última marca que aplicó; al abrir el POS y encontrar una más
+--    nueva, borra SUS datos de prueba y restaura su stock, una sola vez y sola. Es lo que
+--    hace que la limpieza VIAJE a los demás equipos (ver store.jsx → applyResetMark).
+--    No es un ajuste de la tienda: la app la excluye de la configuración a propósito.
+insert into pos.settings (key, value, updated_at)
+values ('_resetMark', to_jsonb(extract(epoch from now())::bigint), now())
+on conflict (key) do update set value = excluded.value, updated_at = now();
 
 commit;
 

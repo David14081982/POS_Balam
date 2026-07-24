@@ -877,7 +877,9 @@
     function limpiarPruebas() {
       if (!window.confirm('¿Borrar los DATOS DE PRUEBA de este dispositivo?\n\nSE BORRA: ventas, devoluciones, descuentos/promociones, liquidaciones de comisión, movimientos de venta y clientes registrados.\n\nSE CONSERVA: tu inventario (productos, precios, fotos y códigos), los usuarios/vendedores y toda la configuración.\n\nEl stock vuelve a como estaba antes de las pruebas. No se puede deshacer.')) return;
       D.resetTestData();
-      window.alert('Datos de prueba borrados en este dispositivo y stock restaurado.\n\nSi usas la nube, corre también el archivo supabase/LIMPIAR-PRUEBAS.sql en Supabase (SQL Editor) para vaciarla, y repite este botón en CADA dispositivo donde hiciste pruebas.');
+      // La marca vigente queda como aplicada: si no, el próximo arranque volvería a avisar.
+      try { if (window.STORE && window.STORE.markResetApplied) window.STORE.markResetApplied(); } catch (e) { /* */ }
+      window.alert('Datos de prueba borrados en este dispositivo y stock restaurado.\n\nSi usas la nube, corre también el archivo supabase/LIMPIAR-PRUEBAS.sql en Supabase (SQL Editor): además de vaciarla, deja una marca para que las DEMÁS terminales se limpien solas la próxima vez que las abran.');
       setTimeout(() => location.reload(), 800);
     }
     return [
