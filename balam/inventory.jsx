@@ -204,67 +204,70 @@
     const PER = 10, pages = Math.max(1, Math.ceil(rows.length / PER)), pg = Math.min(page, pages);
     const slice = rows.slice((pg - 1) * PER, pg * PER);
 
-    const lowCount = products.filter(p => { const t = D.totalStock(p); return t > 0 && t <= lowThreshold; }).length;
-    const totalUnidades = products.reduce((a, p) => a + D.totalStock(p), 0);
-    const valorInventario = products.reduce((a, p) => a + D.totalStock(p) * p.precio, 0);
+    // Filtros por catálogo (Tela, Color…) como desplegables + el botón "Limpiar". Se arman aquí
+    // para poder colocarlos en la MISMA fila del buscador. El estado `filters` no cambia de forma
+    // → la lógica de filtrado de `rows` sigue igual.
+    const catalogFilters = filterableKinds.map(fk => {
+      const val = filters[fk] || 'all';
+      const activo = val !== 'all';
+      const items = window.CONFIG.list(fk);
+      const opts = [h('option', { key: '__all', value: 'all' }, 'Todas')]
+        .concat(items.map(it => h('option', { key: it.code, value: it.code }, it.label)));
+      // Valor huérfano (se filtró por un código que luego se borró/desactivó del catálogo): sin
+      // esta opción el desplegable mostraría "Todas" mientras el filtro sigue activo y la lista
+      // aparecería vacía sin explicación.
+      if (activo && !items.some(it => it.code === val)) {
+        opts.splice(1, 0, h('option', { key: '__orphan', value: val }, `⚠ ${val} — ya no existe`));
+      }
+      return h('div', { key: 'f_' + fk, className: 'flex flex-col gap-1' }, [
+        h('label', { key: 'l', className: 'text-overline font-bold uppercase tracking-widest text-on-surface-variant' }, window.CONFIG.catalogLabel(fk)),
+        h('select', {
+          key: 's',
+          className: 'min-w-[9.5rem] max-w-[14rem] bg-surface border rounded-lg px-3 py-2.5 text-body transition-all focus:ring-1 focus:ring-primary focus:border-primary '
+            + (activo ? 'border-gold text-primary font-semibold' : 'border-outline-variant'),
+          value: val,
+          onChange: e => { setFilters(prev => Object.assign({}, prev, { [fk]: e.target.value })); setPage(1); },
+        }, opts),
+      ]);
+    }).concat(Object.keys(filters).some(k => filters[k] && filters[k] !== 'all')
+      ? [h('button', {
+        key: '__clr',
+        className: 'h-11 px-4 inline-flex items-center gap-2 text-caption font-bold uppercase tracking-widest text-on-surface-variant border border-outline-variant rounded-lg hover:text-primary hover:bg-surface-container transition-colors',
+        onClick: () => { setFilters({}); setPage(1); },
+      }, [h(MS, { key: 'i', name: 'close', size: 16 }), 'Limpiar'])]
+      : []);
+
+    // Los KPIs se calculan sobre `rows` (lo FILTRADO), no sobre el inventario completo. Antes
+    // usaban `products`: al filtrar por una tela, arriba seguía diciendo 242 y el pie de la
+    // tabla 37 — la misma pantalla mostraba dos cifras distintas y se prestaba a leer mal.
+    const lowCount = rows.filter(p => { const t = D.totalStock(p); return t > 0 && t <= lowThreshold; }).length;
+    const totalUnidades = rows.reduce((a, p) => a + D.totalStock(p), 0);
+    const valorInventario = rows.reduce((a, p) => a + D.totalStock(p) * p.precio, 0);
 
     return h('div', { className: 'flex-1 overflow-y-auto bg-background font-body text-on-surface' },
       h('div', { className: 'p-10 max-w-container-max mx-auto' }, [
         // KPIs
         h('div', { key: 'kpi', className: 'grid grid-cols-1 md:grid-cols-4 gap-gutter mb-8' }, [
-          kpi('SKUs activos', products.length),
+          kpi('SKUs activos', rows.length),
           kpi('Unidades en stock', totalUnidades),
           kpi('Stock bajo', lowCount, true),
           kpi('Valor inventario', fmt(valorInventario).replace('.00', ''), false, 'MXN'),
         ]),
-        // Filtros + acciones
+        // Filtros + acciones. UNA sola fila: buscador, Todo/Bajo/Agotados y los desplegables de
+        // catálogo. Antes los de catálogo ocupaban un renglón aparte, una banda más antes de la
+        // tabla. items-end alinea por abajo los controles con etiqueta (los desplegables) con los
+        // que no la llevan (buscador y segmento); flex-wrap los acomoda solos si no caben.
         h('div', { key: 'fl', className: 'flex flex-col gap-4 mb-6' }, [
-          h('div', { key: 'r1', className: 'flex items-center justify-between gap-4 flex-wrap' }, [
-            h('div', { key: 'l', className: 'flex items-center gap-3 flex-wrap' }, [
-              h('div', { key: 's', className: 'relative w-80' }, [
+          h('div', { key: 'r1', className: 'flex items-end justify-between gap-4 flex-wrap' }, [
+            h('div', { key: 'l', className: 'flex items-end gap-3 flex-wrap' }, [
+              h('div', { key: 's', className: 'relative w-72' }, [
                 h('span', { key: 'i', className: 'absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/50' }, h(MS, { name: 'search', size: 20 })),
                 h('input', { key: 'in', className: 'w-full bg-surface border border-outline-variant rounded-lg pl-10 pr-4 py-2.5 text-body focus:ring-1 focus:ring-primary focus:border-primary transition-all', placeholder: 'Buscar SKU, modelo o color…', value: query, onChange: e => { setQuery(e.target.value); setPage(1); } }),
               ]),
               h(Segment, { key: 'sg2', value: stockFilter, onChange: v => { setStockFilter(v); setPage(1); }, options: [['all', 'Todo'], ['low', 'Bajo'], ['out', 'Agotados']] }),
-            ]),
+            ].concat(catalogFilters)),
             h('button', { key: 'add', className: 'flex items-center gap-2 px-6 py-2.5 bg-primary text-on-primary rounded-lg hover:opacity-90 transition-all text-overline font-bold uppercase tracking-wider shadow-e2', onClick: () => setEditing({ mode: 'new', product: blankProduct() }) }, [h(MS, { key: 'i', name: 'plus', size: 18 }), 'Nuevo producto']),
           ]),
-          // Filtros por catálogo (Tela, Color…): LISTAS DESPLEGABLES. Antes era una franja de
-          // botones por catálogo, a todo lo ancho y con scroll horizontal: con catálogos de 40+
-          // valores había que arrastrar para encontrar uno y ocupaba media pantalla. El desplegable
-          // ocupa lo mismo con 3 que con 300 valores y lleva ETIQUETA (antes no se veía qué filtraba).
-          // El estado `filters` no cambia de forma → la lógica de filtrado sigue igual.
-          filterableKinds.length ? h('div', { key: 'rf', className: 'flex flex-wrap items-end gap-3' },
-            filterableKinds.map(fk => {
-              const val = filters[fk] || 'all';
-              const activo = val !== 'all';
-              const items = window.CONFIG.list(fk);
-              const opts = [h('option', { key: '__all', value: 'all' }, 'Todas')]
-                .concat(items.map(it => h('option', { key: it.code, value: it.code }, it.label)));
-              // Valor huérfano (se filtró por un código que luego se borró/desactivó del catálogo):
-              // sin esta opción el desplegable mostraría "Todas" mientras el filtro sigue activo y
-              // la lista aparecería vacía sin explicación.
-              if (activo && !items.some(it => it.code === val)) {
-                opts.splice(1, 0, h('option', { key: '__orphan', value: val }, `⚠ ${val} — ya no existe`));
-              }
-              return h('div', { key: 'f_' + fk, className: 'flex flex-col gap-1' }, [
-                h('label', { key: 'l', className: 'text-overline font-bold uppercase tracking-widest text-on-surface-variant' }, window.CONFIG.catalogLabel(fk)),
-                h('select', {
-                  key: 's',
-                  className: 'min-w-[11rem] max-w-[16rem] bg-surface border rounded-lg px-3 py-2.5 text-body transition-all focus:ring-1 focus:ring-primary focus:border-primary '
-                    + (activo ? 'border-gold text-primary font-semibold' : 'border-outline-variant'),
-                  value: val,
-                  onChange: e => { setFilters(prev => Object.assign({}, prev, { [fk]: e.target.value })); setPage(1); },
-                }, opts),
-              ]);
-            }).concat(Object.keys(filters).some(k => filters[k] && filters[k] !== 'all')
-              ? [h('button', {
-                key: '__clr',
-                className: 'h-11 px-4 inline-flex items-center gap-2 text-caption font-bold uppercase tracking-widest text-on-surface-variant border border-outline-variant rounded-lg hover:text-primary hover:bg-surface-container transition-colors',
-                onClick: () => { setFilters({}); setPage(1); },
-              }, [h(MS, { key: 'i', name: 'close', size: 16 }), 'Limpiar'])]
-              : [])
-          ) : null,
           // Excel
           h('div', { key: 'r2', className: 'flex items-center gap-4 py-2 border-y border-outline-variant/60' }, [
             h('span', { key: 'l', className: 'text-overline font-bold text-on-surface-variant uppercase tracking-widest flex items-center gap-2' }, [h(MS, { key: 'i', name: 'box', size: 18 }), 'Excel:']),

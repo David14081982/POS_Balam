@@ -37,6 +37,14 @@ await page.evaluate(() => {
   D.products.push(mk('f001', 'ALG', 'BL', 'ALGODON UNO'), mk('f002', 'ALG', 'AZ', 'ALGODON DOS'), mk('f003', 'POL', 'MR', 'POLIESTER UNO'));
   D.saveProducts();
 });
+// Lee los 4 KPIs de arriba (SKUs activos, Unidades, Stock bajo, Valor)
+const kpis = () => page.evaluate(() => {
+  // La rejilla de KPIs = el div MÁS PEQUEÑO que contiene las 4 etiquetas.
+  const cand = [...document.querySelectorAll('div')]
+    .filter(d => /SKUS ACTIVOS/i.test(d.innerText) && /VALOR INVENTARIO/i.test(d.innerText))
+    .sort((a, b) => a.innerText.length - b.innerText.length);
+  return ((cand[0] || {}).innerText || '').replace(/\s+/g, ' ').trim();
+});
 await page.evaluate(() => { const b = [...document.querySelectorAll('nav button')].find(x => /Inventario/.test(x.innerText)); if (b) b.click(); });
 await page.waitForTimeout(1200);
 
@@ -59,6 +67,20 @@ check('ya NO quedan franjas de botones de catálogo', await page.evaluate(() => 
 const v0 = await visibles();
 check('sin filtro se ven los 3 productos', v0.length === 3, JSON.stringify(v0));
 
+// Buscador, Todo/Bajo/Agotados y los desplegables deben estar en LA MISMA fila
+const unaFila = await page.evaluate(() => {
+  const inp = document.querySelector('input[placeholder*="Buscar"]');
+  const seg = [...document.querySelectorAll('button')].find(x => x.innerText.trim().toUpperCase() === 'TODO');
+  const sel = [...document.querySelectorAll('select')].find(s => [...s.options].some(o => o.value === 'all'));
+  if (!inp || !seg || !sel) return null;
+  const y = el => Math.round(el.getBoundingClientRect().bottom);
+  return { inp: y(inp), seg: y(seg), sel: y(sel) };
+});
+check('buscador, Todo/Bajo/Agotados y filtros comparten fila', !!unaFila && Math.max(unaFila.inp, unaFila.seg, unaFila.sel) - Math.min(unaFila.inp, unaFila.seg, unaFila.sel) < 14, JSON.stringify(unaFila));
+
+const k0 = await kpis();
+check('KPI sin filtro: 3 SKUs y 15 unidades', /3/.test(k0) && /15/.test(k0), k0);
+
 // Filtrar por ALG
 await page.selectOption('select >> nth=0', 'ALG').catch(async () => {
   await page.evaluate(() => { const s = [...document.querySelectorAll('select')].find(x => [...x.options].some(o => o.value === 'all')); s.value = 'ALG'; s.dispatchEvent(new Event('change', { bubbles: true })); });
@@ -66,6 +88,12 @@ await page.selectOption('select >> nth=0', 'ALG').catch(async () => {
 await page.waitForTimeout(700);
 const v1 = await visibles();
 check('al elegir ALGODÓN filtra a 2 productos', v1.length === 2 && v1.every(t => /ALGODON/.test(t)), JSON.stringify(v1));
+
+// Los KPIs deben seguir al filtro: 2 SKUs, 10 unidades y $10,000 (antes decían 3 / 15 / 15,000)
+const k1 = await kpis();
+check('KPI "SKUs activos" responde al filtro (3 → 2)', /SKUS ACTIVOS 2\b/i.test(k1), k1);
+check('KPI "Unidades en stock" responde al filtro (15 → 10)', /10/.test(k1) && !/\b15\b/.test(k1), k1);
+check('KPI "Valor inventario" responde al filtro ($15,000 → $10,000)', /10,000/.test(k1) && !/15,000/.test(k1), k1);
 check('aparece el botón "Limpiar" con el filtro activo', await page.evaluate(() => [...document.querySelectorAll('button')].some(x => /limpiar/i.test(x.innerText))));
 
 // Limpiar
@@ -74,6 +102,7 @@ await page.waitForTimeout(700);
 const v2 = await visibles();
 check('"Limpiar" regresa a los 3 productos', v2.length === 3, JSON.stringify(v2));
 check('el desplegable vuelve a "Todas"', (await filtros())[0].valor === 'all');
+check('los KPIs también regresan al total', /SKUS ACTIVOS 3\b/i.test(await kpis()), await kpis());
 
 // El buscador sigue funcionando junto al filtro
 await page.fill('input[placeholder*="Buscar"]', 'POLIESTER');
