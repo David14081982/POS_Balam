@@ -872,8 +872,23 @@
       }
       setTimeout(() => location.reload(), 800);
     }
+    // Borra SOLO lo transaccional de prueba (ventas, devoluciones, descuentos, liquidaciones,
+    // clientes) y devuelve al inventario el stock que consumieron. Los productos NO se tocan.
+    function limpiarPruebas() {
+      if (!window.confirm('¿Borrar los DATOS DE PRUEBA de este dispositivo?\n\nSE BORRA: ventas, devoluciones, descuentos/promociones, liquidaciones de comisión, movimientos de venta y clientes registrados.\n\nSE CONSERVA: tu inventario (productos, precios, fotos y códigos), los usuarios/vendedores y toda la configuración.\n\nEl stock vuelve a como estaba antes de las pruebas. No se puede deshacer.')) return;
+      D.resetTestData();
+      window.alert('Datos de prueba borrados en este dispositivo y stock restaurado.\n\nSi usas la nube, corre también el archivo supabase/LIMPIAR-PRUEBAS.sql en Supabase (SQL Editor) para vaciarla, y repite este botón en CADA dispositivo donde hiciste pruebas.');
+      setTimeout(() => location.reload(), 800);
+    }
     return [
       active && h('div', { key: 'badge', className: 'inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gold-soft text-gold-text text-overline font-bold uppercase tracking-widest w-fit' }, [h(MS, { key: 'i', name: 'star', size: 14, fill: true }), 'Modo demostración activo']),
+      h(GlassCard, { key: 'clean', className: 'p-6' }, [
+        h(SerifHeading, { key: 't', className: 'mb-2', children: 'Borrar datos de prueba' }),
+        h('p', { key: 'd', className: 'text-body text-on-surface-variant leading-relaxed mb-5' }, 'Deja el sistema listo para operar de verdad: borra las ventas, devoluciones, descuentos, liquidaciones y clientes que capturaste probando, y devuelve al inventario las piezas que esas ventas descontaron. Tu inventario, tus usuarios y tu configuración NO se tocan.'),
+        h('div', { key: 'b' }, [
+          h('button', { key: 'x', className: 'inline-flex items-center gap-2 px-5 h-11 border border-outline-variant text-danger font-label-sm uppercase tracking-widest text-caption rounded-lg hover:bg-danger-soft hover:border-danger/30 transition', onClick: limpiarPruebas }, [h(MS, { key: 'i', name: 'trash', size: 16 }), 'Borrar datos de prueba (conserva inventario)']),
+        ]),
+      ]),
       h(GlassCard, { key: 'c', className: 'p-6' }, [
         h(SerifHeading, { key: 't', className: 'mb-2', children: 'Simulación de datos' }),
         h('p', { key: 'd', className: 'text-body text-on-surface-variant leading-relaxed mb-5' }, 'Genera una operación ficticia completa (productos, clientes, vendedores y ~300 ventas de 90 días, con devoluciones) para PROBAR reportes, comisiones, inventario y devoluciones con números REALES — todo se calcula con el motor del sistema, nada está inventado. Ideal para demostraciones.'),

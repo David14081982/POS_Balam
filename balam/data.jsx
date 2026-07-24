@@ -824,6 +824,57 @@
     return true;
   }
 
+  // Borra los datos de PRUEBA CONSERVANDO el catálogo de productos (inventario), los
+  // vendedores/usuarios y la configuración. Complemento local de supabase/LIMPIAR-PRUEBAS.sql:
+  // el SQL vacía la nube, esto vacía ESTE dispositivo (la app nunca borra lo local cuando la
+  // nube llega vacía — ver store.jsx pullDomain — y sin esto las pruebas reaparecerían y hasta
+  // se re-subirían, porque savePromos/saveClients suben el arreglo COMPLETO).
+  // El stock vuelve a como estaba antes de probar: se reintegra lo que descontaron las ventas
+  // y se quita lo que reingresaron las devoluciones (mismo criterio que recordSale/recordReturn).
+  function resetTestData() {
+    remoteApplying = true; // vaciado local: que no encole nada a medias
+    try {
+      // 1) Revertir stock. Solo las ventas que SÍ descontaron (recordSale: cobrada =
+      //    estado distinto de Apartado/Cancelado); las devoluciones ya lo habían reingresado.
+      const bySku = {};
+      products.forEach(p => { if (p.sku) bySku[p.sku] = p; });
+      const bump = (sku, talla, delta) => {
+        const p = bySku[sku]; if (!p) return;
+        const e = (p.stock || []).find(v => v.talla === talla); if (!e) return;
+        e.stock = Math.max(0, (Number(e.stock) || 0) + delta);
+      };
+      sales.forEach(s => {
+        if (s.estado === 'Apartado' || s.estado === 'Cancelado') return; // nunca descontaron
+        (s.lineas || []).forEach(l => bump(l.sku, l.talla, Number(l.qty) || 0));
+      });
+      returns.forEach(r => (r.lineas || []).forEach(l => bump(l.sku, l.talla, -(Number(l.qty) || 0))));
+
+      // 2) Vaciar lo transaccional. De movimientos SOLO los de venta/devolución: las
+      //    'Entrada'/'Ajuste'/'Transferencia' son historial de inventario y se conservan.
+      sales.length = 0; returns.length = 0; promos.length = 0; liquidations.length = 0;
+      const keepMoves = movements.filter(m => m.tipo !== 'Venta' && m.tipo !== 'Devolución');
+      movements.length = 0; keepMoves.forEach(m => movements.push(m));
+
+      // 3) Clientes: solo el genérico de mostrador (contadores en cero).
+      clients.length = 0; seedClients.forEach(c => clients.push(JSON.parse(JSON.stringify(c))));
+
+      // 4) Vendedores: se CONSERVAN (usuarios, contraseñas, comisión, meta); solo se ponen
+      //    en cero los acumulados del periodo que generaron las ventas de prueba.
+      sellers.forEach(s => { s.ventasMes = 0; s.ventasNum = 0; s.comisionAcum = 0; });
+
+      // 5) Folio y periodo de comisiones vuelven a empezar.
+      try { localStorage.removeItem(LS_FOLIO); localStorage.removeItem(LS_PERIODO); } catch (e) { /* */ }
+      periodoInicio = '';
+      persistAllLocal();
+      // Descarta lo pendiente de subir: son operaciones de las pruebas.
+      try { if (window.STORE && window.STORE.clearQueue) window.STORE.clearQueue(); } catch (e) { /* */ }
+    } finally { remoteApplying = false; }
+    // 6) Subir lo que el SQL NO puede reconstruir: el stock restaurado y los contadores en
+    //    cero. (Las filas borradas —ventas, devoluciones, promos, clientes— las quita el SQL.)
+    syncUp('products', products); syncUp('sellers', sellers); syncUp('clients', clients);
+    return true;
+  }
+
   function seedDemo() {
     remoteApplying = true; bulkMode = true; // LOCAL-ONLY y rápido (persiste al final)
     try {
@@ -931,7 +982,7 @@
     recordReturn, returnedQty, returnsForFolio, isReturnable,
     addUser, updateUser, removeUser,
     addPromo, updatePromo, removePromo, duplicatePromo,
-    seedDemo, resetEmpty, demoActive,
+    seedDemo, resetEmpty, resetTestData, demoActive,
   };
   // Catálogos retrocompatibles: D.CAT[code], Object.entries(D.TELA), D.SIZES_LETRA, …
   // ahora se resuelven EN VIVO desde CONFIG en cada acceso (reflejan ediciones del admin).
