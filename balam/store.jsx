@@ -380,7 +380,8 @@
 
   async function init(opts = {}) {
     enabled = true;
-    window.addEventListener('online', flushQueue);
+    // Al reconectar: drena la cola y, además, migra fotos incrustadas que hayan quedado.
+    window.addEventListener('online', () => { flushQueue(); autoMigratePhotos().catch(() => { /* */ }); });
     // Drenar la cola ANTES del pull: los cambios de la sesión anterior llegan primero a la
     // nube y el pull ya regresa el estado completo. (Antes el pull corría primero y
     // reemplazaba lo local, "des-haciendo" capturas cuya subida quedó pendiente.)
@@ -401,6 +402,10 @@
       await Promise.all(['products', 'clients', 'sellers', 'promotions', 'returns', 'liquidations'].map(k => pullDomain(k).catch(() => { /* tabla ausente */ })));
       try { await pullDomain('sales'); } catch (e) { /* tabla ausente */ }
       try { window.dispatchEvent(new CustomEvent('configchange', { detail: { domain: true } })); } catch (e) { /* */ }
+      // Migración de fotos incrustadas EN SEGUNDO PLANO (no se espera): sube las que quedaron en
+      // formato viejo sin que el usuario tenga que pulsar nada. Va después del pull para operar
+      // sobre el inventario ya sincronizado.
+      autoMigratePhotos().catch(() => { /* se reintenta al próximo arranque */ });
     }
     flushQueue(); // por si algo quedó pendiente (p. ej. un fallo durante el arranque)
   }
@@ -416,11 +421,44 @@
     const { data } = c.storage.from(bucket).getPublicUrl(path);
     return (data && data.publicUrl) || null;
   }
+  // Migra AUTOMÁTICAMENTE a la nube las fotos que quedaron incrustadas (data:image/…): las que
+  // se subieron antes de esta función o cuando no había sesión/red. Corre solo en segundo plano
+  // al arrancar (y al reconectar), así el usuario ya no tiene que pulsar "Migrar fotos" nunca.
+  // Idempotente y reanudable: ruta prod-<id>.jpg con upsert; una foto ya migrada no se repite y
+  // un fallo se reintenta en el siguiente arranque. No bloquea el arranque ni interrumpe nada.
+  let migratingPhotos = false;
+  async function autoMigratePhotos() {
+    if (migratingPhotos || !enabled) return 0;
+    const D = window.DATA; if (!D || !Array.isArray(D.products)) return 0;
+    const pend = D.products.filter(p => /^data:image\//.test(p.imagen || ''));
+    if (!pend.length) return 0;
+    // Sin cliente o sin sesión no se puede subir a Storage: se deja para un próximo arranque
+    // (el usuario ya está autenticado en la terminal; esto solo salta si abrió sin sesión).
+    const c = await ensureClient(); if (!c) return 0;
+    if (!(await hasSession())) return 0;
+    migratingPhotos = true;
+    let ok = 0;
+    try {
+      for (const p of pend) {
+        try {
+          const blob = await (await fetch(p.imagen)).blob();
+          const url = await uploadProductPhoto('prod-' + p.id + '.jpg', blob);
+          if (!url) continue;
+          p.imagen = url; ok++;
+          if (ok % 5 === 0 && D.saveProducts) D.saveProducts(); // persistir + sincronizar por lotes
+        } catch (e) { /* una foto falló: se reintenta en el próximo arranque */ }
+      }
+      if (ok && D.saveProducts) D.saveProducts();
+      if (ok && window.UI && window.UI.toast) window.UI.toast(`${ok} foto(s) de producto guardadas en la nube`, 'var(--accent)');
+    } finally { migratingPhotos = false; }
+    return ok;
+  }
+
   // PNG de etiqueta de código de barras → bucket 'barcodes' (mismo contrato de siempre).
   function uploadBarcode(path, blob) { return uploadImage('barcodes', path, blob, 'image/png'); }
   // Foto de producto (JPEG 600px del alta) → bucket 'product-photos' (migración pos_010).
   // El producto guarda solo la URL; la foto deja de viajar incrustada en cada guardado.
   function uploadProductPhoto(path, blob) { return uploadImage('product-photos', path, blob, 'image/jpeg'); }
 
-  window.STORE = { init, pull, pushConfig, pushRows, pushSale, pushReturn, deleteRow, pullDomain, fetchSaleByFolio, flushQueue, clearQueue, markResetApplied, ensureClient, getClient: ensureClient, hasSession, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().length; } };
+  window.STORE = { init, pull, pushConfig, pushRows, pushSale, pushReturn, deleteRow, pullDomain, fetchSaleByFolio, flushQueue, clearQueue, markResetApplied, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().length; } };
 })();

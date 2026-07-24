@@ -88,8 +88,8 @@ await page.getByRole('button', { name: 'Configuración' }).click();
 await page.getByRole('button', { name: /^Inventario$/ }).last().click();
 await page.waitForSelector('text=Fotos de producto', { timeout: 10000 });
 const cardTxt = await page.locator('text=formato antiguo').textContent().catch(() => '');
-check('8. la tarjeta detecta la foto incrustada', /1 producto\(s\)/.test(cardTxt || ''));
-await page.getByRole('button', { name: /Migrar fotos a la nube \(1\)/ }).click();
+check('8. la tarjeta detecta la foto incrustada', /Quedan 1 en formato antiguo/.test(cardTxt || ''));
+await page.getByRole('button', { name: /Subir ahora \(1\)/ }).click();
 await page.waitForSelector('text=ya viven en la nube', { timeout: 15000 });
 const after = await page.evaluate(() => ({
   imagen: window.DATA.products.find(p => p.id === 'mig-test-1').imagen,
