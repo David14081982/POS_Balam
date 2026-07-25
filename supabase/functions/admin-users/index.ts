@@ -24,7 +24,10 @@ Deno.serve(async (req) => {
     if (!authHeader) return json({ error: 'No autorizado' }, 401);
 
     // 1) Identifica al llamante por su JWT y confirma que es admin activo.
-    const caller = createClient(URL, ANON, { global: { headers: { Authorization: authHeader } } });
+    const caller = createClient(URL, ANON, {
+      db: { schema: 'pos' },
+      global: { headers: { Authorization: authHeader } },
+    });
     const { data: who } = await caller.auth.getUser();
     const email = who?.user?.email?.toLowerCase();
     if (!email) return json({ error: 'Sesión inválida' }, 401);
@@ -32,14 +35,13 @@ Deno.serve(async (req) => {
     const svc = createClient(URL, SERVICE, { db: { schema: 'pos' } });
     // Coincidencia por correo SIN distinguir mayúsculas/minúsculas (ilike sin comodines
     // = igualdad case-insensitive): evita el 403 si la fila guardó el correo con otra caja.
-    const { data: me, error: meErr } = await svc.from('sellers').select('role,active').ilike('email', email).maybeSingle();
+    const { data: me, error: meErr } = await caller.from('sellers').select('role,active').ilike('email', email).maybeSingle();
     // Distinguimos las 3 causas para no dar siempre el mismo "Solo un administrador":
-    //   a) la consulta FALLÓ (típicamente la SERVICE_ROLE key no es válida en este proyecto,
-    //      p. ej. proyectos con el formato nuevo de llaves) → 500 con el motivo real.
+    //   a) la consulta FALLÓ → 500 con el motivo real.
     //   b) no hay fila para ese correo en pos.sellers → 403 identificando el correo.
     //   c) hay fila pero no es admin / está inactiva → 403 diciendo el rol real.
     if (meErr) {
-      return json({ error: 'No se pudo verificar tu permiso de administrador (base de datos): ' + meErr.message + '. Suele ser la SERVICE_ROLE key de la función.' }, 500);
+      return json({ error: 'No se pudo verificar tu permiso de administrador (base de datos): ' + meErr.message }, 500);
     }
     if (!me) {
       return json({ error: 'Tu cuenta (' + email + ') no aparece en la tabla de usuarios (pos.sellers).' }, 403);
@@ -57,7 +59,7 @@ Deno.serve(async (req) => {
       const { data: created, error } = await svc.auth.admin.createUser({ email: e, password, email_confirm: true });
       if (error) return json({ error: error.message }, 400);
       const id = created.user.id;
-      const { error: pe } = await svc.from('sellers').upsert({
+      const { error: pe } = await caller.from('sellers').upsert({
         id, nombre, email: e, role: role || 'vendedor', iniciales: ini(nombre), color: '#64748b',
         avatar_url: avatar || null, active: true, comision_pct: 0, meta_mes: 0, ventas_mes: 0,
         ventas_num: 0, comision_acum: 0, bono: 'Sin bono',
@@ -79,20 +81,20 @@ Deno.serve(async (req) => {
       if (role != null) patch.role = role;
       if (e != null) patch.email = e;
       if (avatar !== undefined) patch.avatar_url = avatar;
-      if (Object.keys(patch).length) await svc.from('sellers').update(patch).eq('id', id);
+      if (Object.keys(patch).length) await caller.from('sellers').update(patch).eq('id', id);
       return json({ ok: true });
     }
 
     if (action === 'delete') {
       const { id } = body;
       if (!id) return json({ error: 'Falta id' }, 400);
-      const { data: admins } = await svc.from('sellers').select('id').eq('role', 'admin').eq('active', true);
-      const { data: target } = await svc.from('sellers').select('role').eq('id', id).maybeSingle();
+      const { data: admins } = await caller.from('sellers').select('id').eq('role', 'admin').eq('active', true);
+      const { data: target } = await caller.from('sellers').select('role').eq('id', id).maybeSingle();
       if (target?.role === 'admin' && (admins?.length || 0) <= 1) {
         return json({ error: 'Debe existir al menos un administrador' }, 400);
       }
       await svc.auth.admin.deleteUser(id).catch(() => {});
-      await svc.from('sellers').delete().eq('id', id);
+      await caller.from('sellers').delete().eq('id', id);
       return json({ ok: true });
     }
 
