@@ -976,8 +976,18 @@
             : { action: 'create', email: f.email.trim(), password: f.password, nombre: f.nombre.trim(), role: f.role, avatar: f.avatar || '' };
           const { data, error } = await c.functions.invoke('admin-users', { body: payload });
           if (error || (data && data.error)) {
-            const msg = (data && data.error) || (error && error.message) || 'No se pudo guardar';
-            const hint = /edge function|not found|failed to send|fetch/i.test(msg) ? ' · Falta desplegar la función "admin-users" en Supabase (necesaria para crear usuarios o cambiar email/contraseña).' : '';
+            // El MENSAJE REAL de la función viaja en el cuerpo de la respuesta. En un error non-2xx,
+            // supabase-js lo deja en error.context (el Response), no en data — sin leerlo solo se ve
+            // el genérico "returned a non-2xx status code". Lo extraemos para mostrar la causa real
+            // (p. ej. "Solo un administrador…", "correo ya registrado…").
+            let serverMsg = (data && data.error) || '';
+            if (!serverMsg && error && error.context && typeof error.context.text === 'function') {
+              try { const body = JSON.parse(await error.context.text()); serverMsg = body && body.error; } catch (_) { /* cuerpo no-JSON */ }
+            }
+            const msg = serverMsg || (error && error.message) || 'No se pudo guardar';
+            // La pista de "falta desplegar" solo aplica cuando NO se pudo leer un mensaje del servidor
+            // (es decir, la petición no llegó). Si la función respondió con su propio texto, no confunde.
+            const hint = (!serverMsg && /edge function|not found|failed to send|fetch/i.test(msg)) ? ' · Falta desplegar la función "admin-users" en Supabase (necesaria para crear usuarios o cambiar email/contraseña).' : '';
             toast(msg + hint, 'var(--danger)'); return;
           }
           await window.STORE.pullDomain('sellers');
