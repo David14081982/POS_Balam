@@ -1,38 +1,55 @@
 -- ════════════════════════════════════════════════════════════════════════
---  ARREGLAR-ADMIN.sql
---  Hace que la cuenta  admin@balamguayaberas.com  sea ADMINISTRADOR REAL en
---  pos.sellers, para poder crear / editar / borrar usuarios desde el sistema.
---
---  Causa del problema: la fila admin sembrada quedó con el correo antiguo
---  (admin@balam.com), pero tú inicias sesión con admin@balamguayaberas.com.
---  La Edge Function busca por correo exacto y no la encontraba → "Solo un
---  administrador puede gestionar usuarios".
+--  ARREGLAR-ADMIN.sql  (versión 2 — robusta)
+--  Hace admin REAL a tu cuenta de acceso en pos.sellers, tomando el correo
+--  DIRECTO de Supabase Auth (auth.users), sin depender de cómo esté escrito.
 --
 --  CÓMO USARLO:
---    Supabase → (tu proyecto Balam) → SQL Editor → New query →
---    pega TODO esto → botón RUN.
---  Es seguro correrlo varias veces (no duplica ni borra nada).
+--    Supabase → proyecto Balam → SQL Editor → New query →
+--    pega TODO → botón RUN.
+--  Es seguro correrlo varias veces. Solo toca la cuenta admin@balamguayaberas.
+--
+--  IMPORTANTE: copia lo que salga en los bloques (1) y (3) y mándamelo.
 -- ════════════════════════════════════════════════════════════════════════
 
--- 1) Si existe la fila con el correo viejo, cámbiale el correo al real.
-update pos.sellers
-   set email = 'admin@balamguayaberas.com'
- where lower(email) = 'admin@balam.com'
-   and not exists (select 1 from pos.sellers s where lower(s.email) = 'admin@balamguayaberas.com');
+-- ═══ (1) DIAGNÓSTICO — cómo están las cosas AHORA ═══
+--  correo_login  = cuentas que pueden iniciar sesión (Supabase Auth)
+--  correo_sellers= ficha correspondiente en pos.sellers (NULL = no hay match)
+select u.email                                   as correo_login,
+       s.email                                   as correo_sellers,
+       s.role,
+       s.active
+  from auth.users u
+  left join pos.sellers s
+    on lower(btrim(s.email)) = lower(btrim(u.email))
+ order by u.email;
 
--- 2) Si todavía NO hay ninguna fila con el correo real, créala como admin.
+-- ═══ (2) ARREGLO ═══
+-- 2a) Si a tu cuenta de acceso le falta ficha en sellers, se la creamos (admin).
 insert into pos.sellers (id, nombre, iniciales, color, role, email, active)
-select gen_random_uuid()::text, 'Administrador', 'AD', '#131B2E', 'admin', 'admin@balamguayaberas.com', true
- where not exists (select 1 from pos.sellers where lower(email) = 'admin@balamguayaberas.com');
+select gen_random_uuid()::text, 'Administrador', 'AD', '#131B2E', 'admin',
+       lower(btrim(u.email)), true
+  from auth.users u
+ where u.email ilike '%admin@balamguayaberas.com%'
+   and not exists (
+     select 1 from pos.sellers s
+      where lower(btrim(s.email)) = lower(btrim(u.email))
+   );
 
--- 3) Asegura que esa fila esté en minúsculas, con rol admin y activa.
-update pos.sellers
-   set email  = lower(email),
-       role   = 'admin',
-       active = true
- where lower(email) = 'admin@balamguayaberas.com';
+-- 2b) Si ya tiene ficha, la dejamos como admin activa y con el correo limpio.
+update pos.sellers s
+   set role   = 'admin',
+       active = true,
+       email  = lower(btrim(u.email))
+  from auth.users u
+ where u.email ilike '%admin@balamguayaberas.com%'
+   and lower(btrim(s.email)) = lower(btrim(u.email));
 
--- 4) Verificación: debe salir UNA fila con role = admin y active = true.
-select id, nombre, email, role, active
-  from pos.sellers
- where lower(email) = 'admin@balamguayaberas.com';
+-- ═══ (3) VERIFICACIÓN — debe salir UNA fila con role=admin y active=true ═══
+select u.email                                   as correo_login,
+       s.email                                   as correo_sellers,
+       s.role,
+       s.active
+  from auth.users u
+  left join pos.sellers s
+    on lower(btrim(s.email)) = lower(btrim(u.email))
+ where u.email ilike '%admin@balamguayaberas.com%';
