@@ -1,5 +1,10 @@
 # Corrección de autorización en `admin-users`
 
+**Riesgo:** H-05
+**Estado:** RESUELTO
+**Fecha:** 25/07/2026
+**Commit:** `407ce14`
+
 ## Problema
 
 La creación y eliminación de usuarios fallaban durante la validación del
@@ -32,3 +37,8 @@ administrativas de Supabase Auth: crear, actualizar y eliminar cuentas.
   cargar dependencias CDN; no produjeron un fallo dentro del flujo de usuarios.
 - El cambio de contraseña conserva la misma llamada administrativa desplegada,
   pero no se hizo una modificación real de contraseña durante esta corrección.
+
+## Riesgo residual
+
+El cambio de contraseña no se verificó mediante una mutación real durante esta
+corrección. No forma parte del fallo de autorización ya resuelto.

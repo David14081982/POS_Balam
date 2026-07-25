@@ -314,9 +314,9 @@
     if (!remoteApplying) { try { remapOrphanCodes(); } catch (e) { /* catálogo a medio cargar */ } }
   });
 
-  function saveProducts() {
+  function saveProducts(sync = true) {
     try { localStorage.setItem(LS_KEY, JSON.stringify(products)); } catch (e) { /* cuota llena */ }
-    if (typeof syncUp === 'function') syncUp('products', products);
+    if (sync && typeof syncUp === 'function') syncUp('products', products);
   }
 
   // Recalcula el SKU de TODOS los productos con la receta vigente (acción explícita del admin).
@@ -381,7 +381,8 @@
   const LS_SELLERS = 'balam_pos_sellers_v1', LS_CLIENTS = 'balam_pos_clients_v1',
         LS_SALES = 'balam_pos_sales_v1', LS_MOVES = 'balam_pos_moves_v1', LS_FOLIO = 'balam_pos_folio_v1',
         LS_PROMOS = 'balam_pos_promos_v1', LS_LIQ = 'balam_pos_liq_v1', LS_PERIODO = 'balam_pos_periodo_v1',
-        LS_RETURNS = 'balam_pos_returns_v1', LS_PAYMENTS = 'balam_pos_payments_v1';
+        LS_RETURNS = 'balam_pos_returns_v1', LS_PAYMENTS = 'balam_pos_payments_v1',
+        LS_DEVICE = 'balam_device_id';
   const sellers = loadArr(LS_SELLERS, seedSellers);
   const clients = loadArr(LS_CLIENTS, seedClients);
   const sales = loadArr(LS_SALES, seedSales);
@@ -415,8 +416,8 @@
     if (remoteApplying) return;
     if (window.STORE && window.STORE.pushRows) { try { window.STORE.pushRows(kind, arr); } catch (e) { /* offline */ } }
   }
-  function saveSellers() { save(LS_SELLERS, sellers); syncUp('sellers', sellers); }
-  function saveClients() { save(LS_CLIENTS, clients); syncUp('clients', clients); }
+  function saveSellers(sync = true) { save(LS_SELLERS, sellers); if (sync) syncUp('sellers', sellers); }
+  function saveClients(sync = true) { save(LS_CLIENTS, clients); if (sync) syncUp('clients', clients); }
   // Alta rápida de cliente (desde el POS): nombre obligatorio, teléfono opcional. Si el teléfono ya
   // existe en otro cliente, REUSA ese (evita duplicados). Devuelve el cliente (nuevo o existente) o null.
   function addClient({ nombre, tel }) {
@@ -429,11 +430,23 @@
     return c;
   }
   function saveSales() { save(LS_SALES, sales); }       // ventas suben vía recordSale → STORE.pushSale
+  function markSaleSync(folio, status, detail) {
+    const sale = sales.find(s => s.folio === folio);
+    if (!sale) return false;
+    const changed = sale._syncStatus !== status
+      || JSON.stringify(sale._syncDetail || null) !== JSON.stringify(detail || null);
+    sale._syncStatus = status;
+    if (detail) sale._syncDetail = detail;
+    else delete sale._syncDetail;
+    if (status === 'synced' && detail && detail.stockReserved) sale._stockReserved = true;
+    saveSales();
+    return changed;
+  }
   function saveMovements() { save(LS_MOVES, movements); }
   function savePromos() { save(LS_PROMOS, promos); syncUp('promotions', promos); }
   function saveLiquidations() { save(LS_LIQ, liquidations); syncUp('liquidations', liquidations); } // historial — sincroniza a pos.liquidations
   function saveReturns() { save(LS_RETURNS, returns); }  // devoluciones suben vía recordReturn → STORE.pushReturn
-  function savePayments() { save(LS_PAYMENTS, payments); syncUp('payments', payments); }
+  function savePayments(sync = true) { save(LS_PAYMENTS, payments); if (sync) syncUp('payments', payments); }
   // Fusiona filas de la nube en el arreglo local por clave (upsert: actualiza las que
   // coinciden, agrega las nuevas, CONSERVA las no incluidas). Para pulls PARCIALES —
   // el pull de ventas es paginado (ventana reciente + apartados) — reemplazar el
@@ -457,7 +470,11 @@
     const M = { products: [products, saveProducts, hydrate], clients: [clients, saveClients], sellers: [sellers, saveSellers], sales: [sales, saveSales], movements: [movements, saveMovements], promotions: [promos, savePromos], returns: [returns, saveReturns], liquidations: [liquidations, saveLiquidations], payments: [payments, savePayments] };
     const m = M[kind]; if (!m) return;
     remoteApplying = true;
-    try { m[0].length = 0; rows.forEach(r => m[0].push(m[2] ? m[2](r) : r)); m[1](); }
+    try {
+      m[0].length = 0;
+      rows.filter(r => !r._deletedAt).forEach(r => m[0].push(m[2] ? m[2](r) : r));
+      m[1]();
+    }
     finally { remoteApplying = false; }
     // La nube puede no tener admin aún (antes de pos_003). Garantiza uno local y súbelo.
     if (kind === 'sellers' && !sellers.some(s => s.role === 'admin')) {
@@ -471,17 +488,58 @@
     const d = new Date(), p = n => String(n).padStart(2, '0');
     return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
   }
-  // Folio consecutivo persistente. Arranca del máximo existente (o 1042).
-  function nextFolio() {
+  function getDeviceId() {
+    try {
+      let id = localStorage.getItem(LS_DEVICE);
+      if (!id) {
+        id = 'dev-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+        localStorage.setItem(LS_DEVICE, id);
+      }
+      return id;
+    } catch (e) {
+      return 'dev-volatile-' + Math.random().toString(36).slice(2, 10);
+    }
+  }
+  function newOperationId() {
+    try {
+      if (window.crypto && window.crypto.randomUUID) return window.crypto.randomUUID();
+    } catch (e) { /* fallback portable */ }
+    return 'sale-' + getDeviceId() + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
+  }
+  // Representación compacta y estable del ID inmutable. Un UUID completo conserva
+  // sus 128 bits en base 36; el fallback conserva toda su entropía alfanumérica.
+  function operationToken(operationId) {
+    const raw = String(operationId || newOperationId());
+    const hex = raw.replace(/-/g, '');
+    if (/^[0-9a-f]{32}$/i.test(hex) && typeof BigInt !== 'undefined') {
+      return BigInt('0x' + hex).toString(36).toUpperCase().padStart(25, '0');
+    }
+    return raw.replace(/[^a-z0-9]/gi, '').toUpperCase();
+  }
+  function collisionSafeFolio(folio, operationId) {
+    const token = operationToken(operationId);
+    const current = String(folio || '').trim();
+    return current.endsWith('-' + token) ? current : current + '-' + token;
+  }
+  // Consecutivo local legible + identidad inmutable global. Los folios históricos
+  // sin sufijo continúan válidos y sólo aportan su segmento consecutivo.
+  function nextFolio(operationId) {
     const prefix = (window.CONFIG && window.CONFIG.get('folio.prefix')) || 'BG-';
     let seq;
     try { seq = parseInt(localStorage.getItem(LS_FOLIO), 10); } catch (e) { seq = NaN; }
     if (!seq || isNaN(seq)) {
-      seq = sales.reduce((m, s) => { const n = parseInt(String(s.folio).replace(/\D/g, ''), 10); return n > m ? n : m; }, 0);
+      const escaped = String(prefix).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const pattern = new RegExp('^' + escaped + '(\\d+)(?:-|$)');
+      seq = sales.reduce((m, s) => {
+        const match = String(s.folio || '').match(pattern);
+        const n = match ? parseInt(match[1], 10) : 0;
+        return n > m ? n : m;
+      }, 0);
     }
     seq += 1;
     save(LS_FOLIO, seq);
-    return prefix + seq;
+    getDeviceId();
+    return collisionSafeFolio(prefix + seq, operationId || newOperationId());
   }
   // Existencias disponibles de una talla en un producto.
   function stockOf(p, talla) { const e = (p.stock || []).find(v => v.talla === talla); return e ? e.stock : 0; }
@@ -501,7 +559,56 @@
     if (Object.values(parts).some(x => x < 0)) throw new Error('Los componentes del pago no pueden ser negativos');
     return parts;
   }
-  function addSalePayment(sale, { monto, metodo, tipo, detalle, fecha }) {
+  function rekeySaleFolio(operationId, oldFolio, newFolio) {
+    const sale = sales.find(s => s._operationId === operationId && s.folio === oldFolio);
+    if (!sale || sale._syncStatus === 'synced' || !newFolio || newFolio === oldFolio) return false;
+    sale.folio = newFolio;
+    payments.forEach(p => { if (p.folio === oldFolio) p.folio = newFolio; });
+    movements.forEach(m => { if (m.ref === oldFolio) m.ref = newFolio; });
+    returns.forEach(r => { if (r.folio === oldFolio) r.folio = newFolio; });
+    saveSales(); savePayments(false); saveMovements(); saveReturns();
+    return true;
+  }
+
+  // Confirma el resultado devuelto por el servidor versionado. Una versión
+  // expected+1 fue aceptada: conserva cambios locales posteriores y solo avanza
+  // el reloj. Cualquier otra versión significa conflicto y la fila remota gana.
+  function applySyncResult(kind, rows, expected, operation) {
+    const M = {
+      products: [products, saveProducts, hydrate],
+      clients: [clients, saveClients],
+      sellers: [sellers, saveSellers],
+      promotions: [promos, savePromos],
+    };
+    const m = M[kind]; if (!m) return { conflicts: 0 };
+    let conflicts = 0;
+    remoteApplying = true;
+    try {
+      rows.forEach(remote => {
+        const i = m[0].findIndex(x => x.id === remote.id);
+        const base = Number(expected && expected[remote.id]) || 0;
+        const accepted = Number(remote._syncVersion) === base + 1;
+        if (accepted) {
+          if (i >= 0) {
+            m[0][i]._syncVersion = remote._syncVersion;
+            m[0][i]._deletedAt = remote._deletedAt || null;
+          }
+          return;
+        }
+        conflicts++;
+        if (remote._deletedAt) {
+          if (i >= 0) m[0].splice(i, 1);
+        } else if (i >= 0) {
+          m[0][i] = m[2] ? m[2](remote) : remote;
+        } else {
+          m[0].push(m[2] ? m[2](remote) : remote);
+        }
+      });
+      m[1]();
+    } finally { remoteApplying = false; }
+    return { conflicts, operation };
+  }
+  function addSalePayment(sale, { monto, metodo, tipo, detalle, fecha }, sync = true) {
     const amount = money(monto);
     if (!(amount > 0)) return null;
     const parts = paymentParts(metodo, amount, detalle);
@@ -511,7 +618,7 @@
       metodo, monto: amount, ...parts,
     };
     payments.unshift(p);
-    savePayments();
+    savePayments(sync);
     return p;
   }
   function paymentsForSale(folio) { return payments.filter(p => p.folio === folio).reverse().sort((a, b) => String(a.fecha).localeCompare(String(b.fecha))); }
@@ -539,7 +646,8 @@
     const pagoEfectivo = pagoEfectivoIn == null ? (metodo === 'Efectivo' ? total : 0) : money(pagoEfectivoIn);
     const pagoOtro = pagoOtroIn == null ? (metodo === 'Efectivo' || metodo === 'Apartado' ? 0 : total) : money(pagoOtroIn);
     assertSaleAmounts({ ticket, metodo, estado, subtotal, iva, total, anticipo, pagoEfectivo, pagoOtro, ivaIncluded });
-    const folio = nextFolio();
+    const operationId = newOperationId();
+    const folio = nextFolio(operationId);
     const fecha = fechaIn || now(); // permite fecha pasada (simulación)
     const cobrada = estado !== 'Apartado' && estado !== 'Cancelado';
     // Cortesía (regalo/giveaway): no se cobra (total $0) y NO genera comisión, pero SÍ descuenta
@@ -547,6 +655,8 @@
     const cortesia = metodo === 'Cortesía';
     const valorRegalado = cortesia ? (Number(total) || 0) : 0;
     const totalCobrado = cortesia ? 0 : total;
+    let clientEffect = null;
+    const sellerEffects = [];
     // 1) Descuento de stock + movimientos (solo si la venta se cobró/entregó)
     if (cobrada) {
       ticket.forEach(l => {
@@ -554,12 +664,22 @@
         if (e) e.stock = Math.max(0, e.stock - l.qty);
         movements.unshift({ fecha, tipo: 'Venta', producto: l.p.nombre, sku: l.p.sku, cant: -l.qty, ref: folio });
       });
-      saveProducts(); saveMovements();
+      saveProducts(false); saveMovements();
     }
     // 2) Cliente (agregados) — solo registrados y NO en cortesía (no pagó nada).
     if (client && !client.generic && !cortesia) {
       const c = clients.find(x => x.id === client.id);
-      if (c) { c.compras = (c.compras || 0) + 1; c.total = money((c.total || 0) + total); c.ultima = fecha.slice(0, 10); saveClients(); }
+      if (c) {
+        const beforeCompras = Number(c.compras) || 0;
+        const beforeTotal = Number(c.total) || 0;
+        c.compras = beforeCompras + 1; c.total = money(beforeTotal + total); c.ultima = fecha.slice(0, 10);
+        clientEffect = {
+          id: c.id, base_version: Number(c._syncVersion) || 0,
+          compras_delta: 1, total_delta: total, ultima: c.ultima,
+          after_compras: c.compras, after_total: c.total,
+        };
+        saveClients(false);
+      }
     }
     // 3) Vendedores (reparto de venta y comisión).
     //    Base de comisión configurable (commission.base): 'neto' = sin IVA, 'bruto' = con IVA.
@@ -574,14 +694,21 @@
       ids.forEach(id => {
         const s = sellers.find(x => x.id === id);
         if (s) {
+          const baseVersion = Number(s._syncVersion) || 0;
           const c = base * (s.comisionPct || 0) / 100;
           comisionVenta += c;
           s.ventasMes = (s.ventasMes || 0) + share;
           s.ventasNum = (s.ventasNum || 0) + 1;
           s.comisionAcum = (s.comisionAcum || 0) + c;
+          sellerEffects.push({
+            id: s.id, base_version: baseVersion,
+            ventas_mes_delta: share, ventas_num_delta: 1, comision_acum_delta: c,
+            after_ventas_mes: s.ventasMes, after_ventas_num: s.ventasNum,
+            after_comision_acum: s.comisionAcum,
+          });
         }
       });
-      saveSellers();
+      saveSellers(false);
     }
     comisionVenta = Math.round(comisionVenta * 100) / 100;
     // 4) Registro de venta (al frente = más reciente). Precio cobrado = con descuentos del POS.
@@ -590,7 +717,7 @@
     const subtotalOrig = ticket.reduce((a, l) => a + (Number(l.p.precio) || 0) * l.qty, 0);
     const totalConDescuento = ticket.reduce((a, l) => a + unitOf(l) * l.qty, 0);
     const sale = {
-      folio, fecha, cliente: client ? client.nombre : 'Público en general',
+      folio, fecha, clienteId: client && !client.generic ? client.id : undefined, cliente: client ? client.nombre : 'Público en general',
       vendedor: primary[0] || '—', vendedores: ids.slice(),
       items: itemCount, subtotal, iva, total: totalCobrado, ivaPct, ivaIncluded,
       anticipo: cortesia ? 0 : anticipo, saldo: cortesia ? 0 : money(total - anticipo),
@@ -598,16 +725,24 @@
       metodo, estado,
       descuento: cortesia ? 0 : money(Math.max(0, subtotalOrig - totalConDescuento)), valorRegalado,
       comision: comisionVenta, comisionBase: window.CONFIG.get('commission.base') || 'neto',
+      _operationId: operationId, _stockRequired: cobrada, _syncStatus: 'pending',
       // En cortesía cada línea queda en $0 (no se cobró); el valor vive en precioOrig y valorRegalado.
-      lineas: ticket.map(l => ({ sku: l.p.sku, nombre: l.p.nombre, talla: l.talla, qty: l.qty, precio: cortesia ? 0 : money(unitOf(l) * (totalConDescuento > 0 ? total / totalConDescuento : 0)), precioBase: cortesia ? 0 : unitOf(l), precioOrig: Number(l.p.precio) || 0 })),
+      lineas: ticket.map(l => ({ productId: l.p.id, sku: l.p.sku, nombre: l.p.nombre, talla: l.talla, qty: l.qty, precio: cortesia ? 0 : money(unitOf(l) * (totalConDescuento > 0 ? total / totalConDescuento : 0)), precioBase: cortesia ? 0 : unitOf(l), precioOrig: Number(l.p.precio) || 0 })),
     };
     sales.unshift(sale);
     saveSales();
-    if (!remoteApplying && window.STORE && window.STORE.pushSale) { try { window.STORE.pushSale(sale); } catch (e) { /* offline */ } }
     if (!cortesia) {
       const paidNow = estado === 'Apartado' ? anticipo : total;
       const tender = metodoPago || (metodo === 'Apartado' ? 'Efectivo' : metodo);
-      if (paidNow > 0) addSalePayment(sale, { monto: paidNow, metodo: tender, tipo: estado === 'Apartado' ? 'anticipo' : 'venta', detalle: pagoDetalle, fecha });
+      if (paidNow > 0) addSalePayment(sale, { monto: paidNow, metodo: tender, tipo: estado === 'Apartado' ? 'anticipo' : 'venta', detalle: pagoDetalle, fecha }, false);
+    }
+    if (!remoteApplying && window.STORE && window.STORE.pushSale) {
+      try {
+        window.STORE.pushSale(sale, {
+          clientId: client && !client.generic ? client.id : null,
+          clientEffect, sellerEffects, payments: paymentsForSale(sale.folio),
+        });
+      } catch (e) { /* offline */ }
     }
     return sale;
   }
@@ -617,13 +752,14 @@
   // al cliente (los agregados se hicieron al crear el apartado). Idempotente: solo actúa si está Apartado.
   function finalizarApartado(sale) {
     const fecha2 = now();
+    const sellerEffects = [];
     // 1) Stock + movimientos (no se hicieron al apartar)
     (sale.lineas || []).forEach(l => {
       const p = products.find(x => x.sku === l.sku);
       if (p) { const e = (p.stock || []).find(v => v.talla === l.talla); if (e) e.stock = Math.max(0, e.stock - l.qty); }
       movements.unshift({ fecha: fecha2, tipo: 'Venta', producto: l.nombre, sku: l.sku, cant: -l.qty, ref: sale.folio });
     });
-    saveProducts(); saveMovements();
+    saveProducts(false); saveMovements();
     // 2) Comisión + ventas a los vendedores atribuidos
     const ids = sale.vendedores || [];
     let comisionVenta = 0;
@@ -636,9 +772,22 @@
       const base = window.CONFIG.get('commission.base') === 'bruto' ? bruto : neto;
       ids.forEach(id => {
         const s = sellers.find(x => x.id === id);
-        if (s) { const c = base * (s.comisionPct || 0) / 100; comisionVenta += c; s.ventasMes = (s.ventasMes || 0) + share; s.ventasNum = (s.ventasNum || 0) + 1; s.comisionAcum = (s.comisionAcum || 0) + c; }
+        if (s) {
+          const baseVersion = Number(s._syncVersion) || 0;
+          const c = base * (s.comisionPct || 0) / 100;
+          comisionVenta += c;
+          s.ventasMes = (s.ventasMes || 0) + share;
+          s.ventasNum = (s.ventasNum || 0) + 1;
+          s.comisionAcum = (s.comisionAcum || 0) + c;
+          sellerEffects.push({
+            id: s.id, base_version: baseVersion,
+            ventas_mes_delta: share, ventas_num_delta: 1, comision_acum_delta: c,
+            after_ventas_mes: s.ventasMes, after_ventas_num: s.ventasNum,
+            after_comision_acum: s.comisionAcum,
+          });
+        }
       });
-      saveSellers();
+      saveSellers(false);
     }
     // 3) Marcar pagada y guardar la comisión real
     sale.estado = 'Pagado';
@@ -646,9 +795,11 @@
     sale.saldo = 0;
     sale.comision = Math.round(comisionVenta * 100) / 100;
     sale.comisionBase = window.CONFIG.get('commission.base') || 'neto';
+    sale._operationId = sale._operationId || newOperationId();
+    sale._stockRequired = true;
+    sale._syncStatus = 'pending';
     saveSales();
-    if (window.STORE && window.STORE.pushSale) { try { window.STORE.pushSale(sale); } catch (e) { /* offline */ } }
-    return sale;
+    return { sale, sellerEffects };
   }
   function registrarPagoApartado(folio, { monto, metodo, detalle, fecha } = {}) {
     const sale = sales.find(s => s.folio === folio);
@@ -659,16 +810,17 @@
     if (amount > saldo) return { ok: false, error: 'El abono no puede exceder el saldo pendiente' };
     if (!['Efectivo', 'Tarjeta', 'Transferencia', 'Mixto'].includes(metodo)) return { ok: false, error: 'Método de pago inválido para el abono' };
     let payment;
-    try { payment = addSalePayment(sale, { monto: amount, metodo, tipo: amount === saldo ? 'liquidacion' : 'abono', detalle, fecha }); }
+    try { payment = addSalePayment(sale, { monto: amount, metodo, tipo: amount === saldo ? 'liquidacion' : 'abono', detalle, fecha }, false); }
     catch (e) { return { ok: false, error: e.message || 'El desglose del pago no cuadra' }; }
     sale.anticipo = money((Number(sale.anticipo) || 0) + amount);
     sale.saldo = money((Number(sale.total) || 0) - sale.anticipo);
     sale.pagoEfectivo = money((Number(sale.pagoEfectivo) || 0) + payment.efectivo);
     sale.pagoOtro = money((Number(sale.pagoOtro) || 0) + payment.tarjeta + payment.transferencia + payment.otro);
-    if (sale.saldo === 0) finalizarApartado(sale);
-    else {
-      saveSales();
-      if (window.STORE && window.STORE.pushSale) { try { window.STORE.pushSale(sale); } catch (e) { /* offline */ } }
+    let sellerEffects = [];
+    if (sale.saldo === 0) sellerEffects = finalizarApartado(sale).sellerEffects;
+    else saveSales();
+    if (window.STORE && window.STORE.pushSale) {
+      try { window.STORE.pushSale(sale, { sellerEffects, payments: paymentsForSale(sale.folio) }); } catch (e) { /* offline */ }
     }
     return { ok: true, sale, payment, liquidado: sale.saldo === 0 };
   }
@@ -743,13 +895,20 @@
     }
     const fecha = fechaIn || now(); // permite fecha pasada (simulación)
     const id = 'ret-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+    const stockLines = [];
+    const sellerEffects = [];
+    let clientEffect = null;
     // 1) Reingreso de stock + movimiento 'Devolución' (cant positiva)
     items.forEach(l => {
       const p = products.find(x => x.sku === l.sku);
-      if (p) { const e = (p.stock || []).find(v => v.talla === l.talla); if (e) e.stock = (Number(e.stock) || 0) + (Number(l.qty) || 0); }
+      if (p) {
+        const e = (p.stock || []).find(v => v.talla === l.talla);
+        if (e) e.stock = (Number(e.stock) || 0) + (Number(l.qty) || 0);
+        stockLines.push({ product_id: p.id, talla: l.talla, qty: Number(l.qty) || 0 });
+      }
       movements.unshift({ fecha, tipo: 'Devolución', producto: l.nombre, sku: l.sku, cant: Number(l.qty) || 0, ref: folio });
     });
-    saveProducts(); saveMovements();
+    saveProducts(false); saveMovements();
     // 2) Total reembolsado desde el snapshot cobrado, nunca desde la configuración actual
     // ni desde el precio (manipulable) enviado por la interfaz.
     const allReturned = (sale.lineas || []).every(x => {
@@ -774,31 +933,52 @@
       ids.forEach(sid => {
         const s = sellers.find(x => x.id === sid);
         if (s) {
+          const baseVersion = Number(s._syncVersion) || 0;
+          const beforeVentas = Number(s.ventasMes) || 0;
+          const beforeComision = Number(s.comisionAcum) || 0;
           const c = base * (s.comisionPct || 0) / 100;
-          s.comisionAcum = Math.max(0, Math.round(((s.comisionAcum || 0) - c) * 100) / 100);
-          s.ventasMes = Math.max(0, Math.round(((s.ventasMes || 0) - share) * 100) / 100);
+          s.comisionAcum = Math.max(0, Math.round((beforeComision - c) * 100) / 100);
+          s.ventasMes = Math.max(0, Math.round((beforeVentas - share) * 100) / 100);
+          sellerEffects.push({
+            id: s.id, base_version: baseVersion,
+            ventas_mes_delta: s.ventasMes - beforeVentas,
+            comision_acum_delta: s.comisionAcum - beforeComision,
+            after_ventas_mes: s.ventasMes, after_comision_acum: s.comisionAcum,
+          });
         }
       });
-      saveSellers();
+      saveSellers(false);
     }
     // 4) Ajuste del total del cliente (best-effort por nombre; los apartados/genéricos no aplican)
     if (refund > 0 && sale.cliente) {
-      const c = clients.find(x => !x.generic && x.nombre === sale.cliente);
-      if (c) { c.total = Math.max(0, Math.round(((c.total || 0) - refund) * 100) / 100); saveClients(); }
+      const c = clients.find(x => !x.generic && ((sale.clienteId && x.id === sale.clienteId) || (!sale.clienteId && x.nombre === sale.cliente)));
+      if (c) {
+        const beforeTotal = Number(c.total) || 0;
+        c.total = Math.max(0, Math.round((beforeTotal - refund) * 100) / 100);
+        clientEffect = {
+          id: c.id, base_version: Number(c._syncVersion) || 0,
+          total_delta: c.total - beforeTotal, after_total: c.total,
+        };
+        saveClients(false);
+      }
     }
     // 5) Estado de la venta original: total vs parcial
     sale.estado = allReturned ? 'Devuelto' : 'Devolución parcial';
     saveSales();
-    if (!remoteApplying && window.STORE && window.STORE.pushSale) { try { window.STORE.pushSale(sale); } catch (e) { /* offline */ } }
     // 6) Registro de la devolución (al frente = más reciente) + sincronización
     const ret = {
       id, folio, fecha, cliente: sale.cliente, vendedores: ids.slice(),
       metodo: metodo || sale.metodo, total: refund, notas: notas || '',
-      lineas: items.map(l => ({ sku: l.sku, nombre: l.nombre, talla: l.talla, qty: Number(l.qty) || 0, motivo: l.motivo || '', precio: linePrice(l) })),
+      lineas: items.map(l => {
+        const p = products.find(x => x.sku === l.sku);
+        return { productId: p ? p.id : undefined, sku: l.sku, nombre: l.nombre, talla: l.talla, qty: Number(l.qty) || 0, motivo: l.motivo || '', precio: linePrice(l) };
+      }),
     };
     returns.unshift(ret);
     saveReturns();
-    if (!remoteApplying && window.STORE && window.STORE.pushReturn) { try { window.STORE.pushReturn(ret); } catch (e) { /* offline */ } }
+    if (!remoteApplying && window.STORE && window.STORE.pushReturn) {
+      try { window.STORE.pushReturn(ret, { stockLines, clientEffect, sellerEffects }); } catch (e) { /* offline */ }
+    }
     return { ok: true, ret };
   }
 
@@ -826,9 +1006,10 @@
     const s = sellers.find(x => x.id === id);
     if (!s) return { ok: false, error: 'No existe' };
     if (s.role === 'admin' && sellers.filter(x => x.role === 'admin').length <= 1) return { ok: false, error: 'Debe existir al menos un administrador' };
+    const version = Number(s._syncVersion) || 0;
     const i = sellers.findIndex(x => x.id === id);
     sellers.splice(i, 1); saveSellers();
-    if (window.STORE && window.STORE.deleteRow) { try { window.STORE.deleteRow('sellers', id); } catch (e) { /* offline */ } }
+    if (window.STORE && window.STORE.deleteRow) { try { window.STORE.deleteRow('sellers', id, version); } catch (e) { /* offline */ } }
     return { ok: true };
   }
   // Borra un cliente de local Y de la nube (mismo patrón que removeUser/removeProduct). El cliente
@@ -837,9 +1018,10 @@
     const c = clients.find(x => x.id === id);
     if (!c) return { ok: false, error: 'No existe' };
     if (c.generic) return { ok: false, error: 'El cliente genérico no se puede borrar' };
+    const version = Number(c._syncVersion) || 0;
     const i = clients.findIndex(x => x.id === id);
     clients.splice(i, 1); saveClients();
-    if (window.STORE && window.STORE.deleteRow) { try { window.STORE.deleteRow('clients', id); } catch (e) { /* offline */ } }
+    if (window.STORE && window.STORE.deleteRow) { try { window.STORE.deleteRow('clients', id, version); } catch (e) { /* offline */ } }
     return { ok: true };
   }
   function iniDe(nombre) { return String(nombre || '').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase(); }
@@ -859,8 +1041,9 @@
   function removePromo(id) {
     const i = promos.findIndex(x => x.id === id);
     if (i < 0) return;
+    const version = Number(promos[i]._syncVersion) || 0;
     promos.splice(i, 1); savePromos();
-    if (window.STORE && window.STORE.deleteRow) { try { window.STORE.deleteRow('promotions', id); } catch (e) { /* offline */ } }
+    if (window.STORE && window.STORE.deleteRow) { try { window.STORE.deleteRow('promotions', id, version); } catch (e) { /* offline */ } }
   }
   function duplicatePromo(id) {
     const p = promos.find(x => x.id === id);
@@ -877,8 +1060,9 @@
   function removeProduct(id) {
     const i = products.findIndex(x => x.id === id);
     if (i < 0) return;
+    const version = Number(products[i]._syncVersion) || 0;
     products.splice(i, 1); saveProducts();
-    if (window.STORE && window.STORE.deleteRow) { try { window.STORE.deleteRow('products', id); } catch (e) { /* offline */ } }
+    if (window.STORE && window.STORE.deleteRow) { try { window.STORE.deleteRow('products', id, version); } catch (e) { /* offline */ } }
   }
 
   // Restaura el catálogo original de fábrica
@@ -1076,7 +1260,7 @@
     sku, regenerateSkus, totalStock, hydrate, mkStock, emptyStock, SIZE_MARK,
     saveProducts, saveSellers, saveClients, saveSales, saveMovements, savePromos, saveReturns, savePayments,
     removeProduct, remapOrphanCodes, catalogHealthReport, hexForColorName, applyOrphanFix, get lastRemap() { return lastRemap; },
-    addClient, removeClient, recordSale, nextFolio, stockOf, isAutoImg, resetProducts, applyRemote, mergeRemote, liquidarComision,
+    addClient, removeClient, recordSale, nextFolio, collisionSafeFolio, rekeySaleFolio, stockOf, isAutoImg, resetProducts, applyRemote, applySyncResult, mergeRemote, markSaleSync, liquidarComision,
     completarApartado, registrarPagoApartado, paymentsForSale, hasFinancialSnapshot, cerrarMes, getPeriodoInicio,
     recordReturn, returnedQty, returnsForFolio, isReturnable,
     addUser, updateUser, removeUser,

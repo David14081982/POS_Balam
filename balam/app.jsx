@@ -54,7 +54,6 @@
     { id: 'reportes', label: 'Reportes', icon: 'chart', admin: true },
     { id: 'config', label: 'Configuración', icon: 'gear', admin: true },
   ];
-  const ADMIN_PAGES = { descuentos: 1, vendedores: 1, reportes: 1, config: 1 };
   // Exigir login SOLO en dominio real (https). En local (file:// o localhost) la app
   // abre directo para desarrollo; la seguridad real de datos la da RLS en el servidor.
   const REQUIRE_AUTH = (() => {
@@ -99,9 +98,15 @@
       return () => { window.removeEventListener('configchange', onCfg); window.removeEventListener('authchange', onAuth); };
     }, []);
 
-    const admin = window.AUTH.current();
-    const isAdmin = !!admin;
-    function go(id) { setPage(id); }
+    const user = window.AUTH.current();
+    const isAdmin = window.AUTH.isAdmin();
+    const canAccess = id => !REQUIRE_AUTH || window.AUTH.canAccess(id);
+    const defaultPage = user && user.role === 'vendedor' ? 'pos' : 'dashboard';
+    const visiblePage = canAccess(page) ? page : defaultPage;
+    useEffect(() => {
+      if (page !== visiblePage) setPage(visiblePage);
+    }, [page, visiblePage]);
+    function go(id) { if (canAccess(id)) setPage(id); }
 
     // Gate de seguridad SOLO en dominio real: sin sesión no se muestra la app (RLS protege).
     if (REQUIRE_AUTH) {
@@ -110,6 +115,7 @@
           h('div', { className: 'text-sm', style: { color: '#5D637B' } }, 'Cargando…'));
       }
       if (!window.AUTH.hasSession()) return h(LoginScreen, { key: 'login' });
+      if (!user) return h(AccessDeniedScreen, { key: 'denied' });
     }
 
     return h('div', { className: 'flex h-full bg-background font-body text-on-surface' }, [
@@ -128,10 +134,9 @@
               h('button', { key: 'tg', onClick: () => setCollapsed(true), title: 'Colapsar menú', className: 'w-8 h-8 rounded-lg grid place-items-center shrink-0 transition-colors', style: { color: '#5D637B' }, onMouseEnter: e => e.currentTarget.style.background = '#1C2437', onMouseLeave: e => e.currentTarget.style.background = 'transparent' }, h(MS, { name: 'chevLeft', size: 20 })),
             ]),
         h('nav', { key: 'nav', className: 'flex-1 px-3 flex flex-col gap-1' },
-          NAV.map(n => {
-            const active = page === n.id;
+          NAV.filter(n => canAccess(n.id)).map(n => {
+            const active = visiblePage === n.id;
             const badge = n.liveBadge ? String(D.products.length) : n.badge;
-            const locked = n.admin && !isAdmin && REQUIRE_AUTH;
             return h('button', {
               key: n.id,
               className: 'flex items-center gap-3 py-2.5 rounded-lg transition-colors text-left ' + (collapsed ? 'justify-center px-0 ' : 'px-4 ') + (active ? 'font-semibold' : ''),
@@ -139,12 +144,11 @@
               onMouseEnter: e => { if (!active) e.currentTarget.style.background = '#1C2437'; },
               onMouseLeave: e => { if (!active) e.currentTarget.style.background = 'transparent'; },
               onClick: () => go(n.id),
-              title: locked ? 'Requiere iniciar sesión como administrador' : n.label,
+              title: n.label,
             }, [
               h(MS, { key: 'i', name: n.icon, size: 20, fill: active }),
               !collapsed && h('span', { key: 'l', className: 'flex-1 text-sm' }, n.label),
-              !collapsed && locked && h(MS, { key: 'lk', name: 'lock', size: 14, style: { color: '#5D637B' } }),
-              !collapsed && !locked && badge && h('span', { key: 'b', className: 'px-1.5 py-0.5 text-[10px] font-bold rounded', style: { background: '#131B2E', color: active ? '#FFE088' : '#FFFFFF' } }, badge),
+              !collapsed && badge && h('span', { key: 'b', className: 'px-1.5 py-0.5 text-[10px] font-bold rounded', style: { background: '#131B2E', color: active ? '#FFE088' : '#FFFFFF' } }, badge),
             ]);
           })),
         h('div', { key: 'cta', className: 'px-3 mt-2' },
@@ -158,46 +162,62 @@
             className: 'w-full flex items-center gap-3 py-1.5 rounded-lg transition-colors ' + (collapsed ? 'justify-center px-0' : 'px-2'),
             onMouseEnter: e => { e.currentTarget.style.background = '#1C2437'; },
             onMouseLeave: e => { e.currentTarget.style.background = 'transparent'; },
-            onClick: () => { if (isAdmin) window.AUTH.logout(); },
-            title: isAdmin ? 'Cerrar sesión' : 'Modo local',
+            onClick: () => { if (user) window.AUTH.logout(); },
+            title: user ? 'Cerrar sesión' : 'Modo local',
           }, [
-            h('div', { key: 'a', className: 'w-9 h-9 rounded-full grid place-items-center text-xs font-bold shrink-0', style: { background: isAdmin ? '#FFE088' : '#1C2437', color: isAdmin ? '#131B2E' : '#5D637B' } },
-              isAdmin ? (admin.iniciales || 'JB') : h(MS, { name: 'user', size: 18 })),
+            h('div', { key: 'a', className: 'w-9 h-9 rounded-full grid place-items-center text-xs font-bold shrink-0', style: { background: user ? '#FFE088' : '#1C2437', color: user ? '#131B2E' : '#5D637B' } },
+              user ? (user.iniciales || 'US') : h(MS, { name: 'user', size: 18 })),
             !collapsed && h('div', { key: 'm', className: 'flex-1 text-left min-w-0' }, [
-              h('div', { key: 'n', className: 'text-sm font-medium text-white truncate' }, isAdmin ? admin.nombre : 'Modo local'),
-              h('div', { key: 'r', className: 'text-[10px] uppercase tracking-widest', style: { color: '#5D637B' } }, isAdmin ? 'Administrador' : 'Sin candado'),
+              h('div', { key: 'n', className: 'text-sm font-medium text-white truncate' }, user ? user.nombre : 'Modo local'),
+              h('div', { key: 'r', className: 'text-[10px] uppercase tracking-widest', style: { color: '#5D637B' } }, user ? (isAdmin ? 'Administrador' : 'Vendedor') : 'Sin candado'),
             ]),
-            !collapsed && h(MS, { key: 'i', name: isAdmin ? 'logout' : 'arrowUpRight', size: 18, style: { color: '#5D637B' } }),
+            !collapsed && h(MS, { key: 'i', name: user ? 'logout' : 'arrowUpRight', size: 18, style: { color: '#5D637B' } }),
           ])),
       ]),
       // ---------- Contenido ----------
       h('main', { key: 'ct', className: 'flex-1 flex flex-col min-w-0' }, [
         // Topbar
         h('header', { key: 'tb', className: 'h-16 shrink-0 flex items-center gap-4 px-6 bg-surface/80 backdrop-blur-md border-b border-outline-variant' }, [
-          h('h1', { key: 't', className: 'font-headline text-headline-md text-primary' }, TITLES[page]),
+          h('h1', { key: 't', className: 'font-headline text-headline-md text-primary' }, TITLES[visiblePage]),
           D.demoActive && D.demoActive() && h('span', { key: 'demo', className: 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gold-soft text-gold-text text-overline font-bold uppercase tracking-widest', title: 'Datos de demostración (local, no afecta producción)' }, [h(MS, { key: 'i', name: 'star', size: 13, fill: true }), 'Demo']),
           h('div', { key: 's', className: 'flex-1' }),
-          page !== 'pos' && h('button', {
+          visiblePage !== 'pos' && h('button', {
             key: 'pos', className: 'inline-flex items-center gap-2 px-4 h-10 bg-secondary-container text-on-secondary-container font-label-sm uppercase tracking-widest text-xs rounded-lg hover:opacity-90 transition',
             onClick: () => setPage('pos'),
           }, [h(MS, { key: 'i', name: 'pos', size: 18 }), 'Nueva venta']),
-          h(NotificationsBell, { key: 'b', go }),
+          isAdmin && h(NotificationsBell, { key: 'b', go }),
           h('div', { key: 'date', className: 'flex items-center gap-1.5 text-xs text-on-surface-variant capitalize' }, [h(MS, { key: 'i', name: 'calendar', size: 16 }), new Date().toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })]),
         ]),
         // Pantalla
-        page === 'dashboard' ? h(window.DashboardScreen, { key: 'dash', onNav: go })
-          : page === 'pos' ? h(window.POSScreen, { key: 'pos', layout: t.ticketPos, catalogView: t.catalogView, onNav: go })
-          : page === 'inventario' ? h(window.InventoryScreen, { key: 'inv' })
-          : page === 'clientes' ? h(window.ClientsScreen, { key: 'cli' })
-          : page === 'devoluciones' ? h(window.ReturnsScreen, { key: 'dev', onNav: go })
-          : page === 'descuentos' ? h(window.DiscountsScreen, { key: 'desc' })
-          : page === 'vendedores' ? h(window.SellersScreen, { key: 'ven' })
-          : page === 'reportes' ? h(window.ReportsScreen, { key: 'rep', onNav: go })
+        visiblePage === 'dashboard' ? h(window.DashboardScreen, { key: 'dash', onNav: go })
+          : visiblePage === 'pos' ? h(window.POSScreen, { key: 'pos', layout: t.ticketPos, catalogView: t.catalogView, onNav: go })
+          : visiblePage === 'inventario' ? h(window.InventoryScreen, { key: 'inv' })
+          : visiblePage === 'clientes' ? h(window.ClientsScreen, { key: 'cli' })
+          : visiblePage === 'devoluciones' ? h(window.ReturnsScreen, { key: 'dev', onNav: go })
+          : visiblePage === 'descuentos' ? h(window.DiscountsScreen, { key: 'desc' })
+          : visiblePage === 'vendedores' ? h(window.SellersScreen, { key: 'ven' })
+          : visiblePage === 'reportes' ? h(window.ReportsScreen, { key: 'rep', onNav: go })
           : h(window.SettingsScreen, { key: 'cfg' }),
       ]),
       // Toasts
       h(window.UI.ToastHost, { key: 'toast' }),
     ]);
+  }
+
+  function AccessDeniedScreen() {
+    return h('div', { className: 'h-full w-full grid place-items-center p-6', style: { background: '#131B2E' } },
+      h('div', { className: 'w-full max-w-sm rounded-2xl p-8 text-center shadow-2xl', style: { background: '#0E1424' } }, [
+        h('div', { key: 'i', className: 'w-14 h-14 mx-auto rounded-2xl grid place-items-center mb-5', style: { background: '#1C2437', color: '#FFE088' } },
+          h(MS, { name: 'lock', size: 26 })),
+        h('h1', { key: 't', className: 'font-headline text-2xl text-white' }, 'Acceso no disponible'),
+        h('p', { key: 'p', className: 'text-sm mt-3 leading-relaxed', style: { color: '#8C94AA' } },
+          'La cuenta no tiene un perfil activo autorizado. Solicita al administrador que revise tu usuario.'),
+        h('button', {
+          key: 'b', onClick: () => window.AUTH.logout(),
+          className: 'w-full h-11 mt-7 rounded-lg font-label-sm uppercase tracking-widest text-xs',
+          style: { background: '#FFE088', color: '#131B2E' },
+        }, 'Volver al inicio'),
+      ]));
   }
 
   // ---------- Login de la terminal (Supabase Auth, pantalla completa) ----------
@@ -243,7 +263,7 @@
           key: 'go', className: 'w-full h-12 rounded-lg font-label-sm uppercase tracking-widest text-xs flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50',
           style: { background: '#FFE088', color: '#131B2E' }, onClick: submit, disabled: busy,
         }, [h(MS, { key: 'i', name: 'check', size: 18 }), busy ? 'Entrando…' : 'Iniciar sesión']),
-        h('p', { key: 'note', className: 'text-center mt-6 text-[11px]', style: { color: '#5D637B' } }, 'Acceso exclusivo del administrador de la tienda.'),
+        h('p', { key: 'note', className: 'text-center mt-6 text-[11px]', style: { color: '#5D637B' } }, 'El acceso se habilita según el rol asignado a tu cuenta.'),
       ]));
   }
 

@@ -1,4 +1,4 @@
-// test-returns.mjs — e2e con funciones reales (source vía HTTP para que Babel compile los .jsx).
+// test-returns.mjs — e2e con funciones reales del bundle offline generado.
 // Ejercita recordSale → recordReturn: reingreso de stock, reversión de comisión (on/off),
 // movimiento 'Devolución', estado parcial/total, validaciones e idempotencia. Sync neutralizado.
 import { chromium } from 'playwright-core';
@@ -7,7 +7,7 @@ import http from 'http'; import fs from 'fs'; import path from 'path'; import ur
 const ROOT = path.resolve('.');
 const MIME = { '.html': 'text/html', '.jsx': 'text/babel', '.js': 'text/javascript', '.css': 'text/css' };
 const server = http.createServer((req, res) => {
-  let p = decodeURIComponent(req.url.split('?')[0]); if (p === '/') p = '/POS Balam.html';
+  let p = decodeURIComponent(req.url.split('?')[0]); if (p === '/') p = '/index.html';
   const fp = path.join(ROOT, p);
   if (!fp.startsWith(ROOT) || !fs.existsSync(fp)) { res.writeHead(404); res.end('nf'); return; }
   res.writeHead(200, { 'Content-Type': MIME[path.extname(fp)] || 'application/octet-stream' });
@@ -22,13 +22,14 @@ const b = await chromium.launch({ channel: 'chrome', headless: true });
 const page = await b.newPage();
 page.on('pageerror', e => errs.push(String(e)));
 await page.route(/supabase\.co/, r => r.abort()); // jaula: cero tráfico a la nube real
-await page.goto('http://127.0.0.1:8799/POS%20Balam.html', { waitUntil: 'load' });
+await page.goto('http://127.0.0.1:8799/index.html', { waitUntil: 'load' });
 await page.waitForFunction(() => window.DATA && window.DATA.recordReturn && window.CONFIG, null, { timeout: 20000 });
 
 const r = await page.evaluate(() => {
   const D = window.DATA, C = window.CONFIG, out = {};
+  const pushedReturns = [];
   // Neutraliza sincronización con la nube (probamos solo la lógica local).
-  if (window.STORE) { window.STORE.pushSale = () => {}; window.STORE.pushReturn = () => {}; window.STORE.pushRows = () => {}; }
+  if (window.STORE) { window.STORE.pushSale = () => {}; window.STORE.pushReturn = (ret, effects) => pushedReturns.push(JSON.parse(JSON.stringify({ ret, effects: effects || {} }))); window.STORE.pushRows = () => {}; }
   const round = n => Math.round(n * 100) / 100;
 
   // Fixtures: producción arranca SIN productos ni vendedores de ejemplo — el test crea
@@ -82,6 +83,7 @@ const r = await page.evaluate(() => {
   out.reasons = C.codes('return_reason');
   const apart = { folio: 'X', estado: 'Apartado' };
   out.apartadoNoDevolvible = D.isReturnable(apart) === false;
+  out.pushedReturns = pushedReturns;
   return out;
 });
 
@@ -108,6 +110,11 @@ check('returnedQty = 2 tras total', r.return2.returnedQty === 2);
 check('reverseCommission OFF no toca comisión', r.reverseOff.sinCambio === true, `${r.reverseOff.comAntes}→${r.reverseOff.comDespues}`);
 check('Motivos seed presentes (Talla/Defecto)', r.reasons.includes('Talla') && r.reasons.includes('Defecto'));
 check('Apartado no es devolvible', r.apartadoNoDevolvible === true);
+check('H-04 devolución lleva stock y reverso de comisión en un solo push',
+  r.pushedReturns[0]?.effects.stockLines?.length === 1
+  && r.pushedReturns[0]?.effects.sellerEffects?.length === 1);
+check('H-04 reverseCommission OFF conserva el commit sin efecto de vendedor',
+  r.pushedReturns.some(x => x.ret.folio !== r.afterSale.folio && x.effects.sellerEffects?.length === 0));
 check('Sin errores de página (pageerror=0)', errs.length === 0, errs.join(' | '));
 
 await b.close(); server.close();

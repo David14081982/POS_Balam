@@ -15,6 +15,9 @@ repomix-output.xml
 # Config local de Claude (no subir al repo)
 .claude/
 
+# Estado local del proyecto enlazado por Supabase CLI
+supabase/.temp/
+
 # Artefactos locales de Windows / respaldos
 .thumbnail
 *.lnk

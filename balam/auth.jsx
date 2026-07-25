@@ -1,18 +1,67 @@
 // auth.jsx — Sesión de la TERMINAL con Supabase Auth (autenticación REAL).
-// Modelo: el dueño/admin inicia sesión UNA vez (email + contraseña de Supabase Auth);
+// Modelo: cada persona inicia sesión con Supabase Auth y su perfil activo en pos.sellers
+// determina el rol efectivo (administrador o vendedor).
 // la sesión persiste (token en localStorage, auto-refresh) → la terminal queda
-// autenticada entre recargas. Los VENDEDORES no inician sesión (se eligen por venta).
-// Con RLS activo (pos_004), solo la sesión autenticada puede leer/escribir pos.*
+// autenticada entre recargas. El último perfil verificado se conserva para arranque offline.
+// Con RLS activo, cada rol sólo puede leer/escribir las operaciones autorizadas de pos.*
 //   → la llave anon embebida deja de ser un riesgo.
-// La cuenta dueño se crea fuera de banda (Dashboard → Authentication → Add user,
-//   o supabase/create-owner.mjs). La app solo INICIA SESIÓN.
+// Las cuentas se administran mediante la Edge Function admin-users.
 (function () {
   let session = null;
+  let profile = null;
   let ready = false;
   let subscribed = false;
+  let resolveSeq = 0;
+  const PROFILE_KEY = 'balam_auth_profile_v1';
 
   function emit() { try { window.dispatchEvent(new CustomEvent('authchange')); } catch (e) { /* */ } }
   async function client() { return (window.STORE && window.STORE.getClient) ? await window.STORE.getClient() : null; }
+  function cachedProfile(email) {
+    try {
+      const saved = JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null');
+      return saved && String(saved.email || '').toLowerCase() === String(email || '').toLowerCase() ? saved : null;
+    } catch (e) { return null; }
+  }
+  function saveProfile(value) {
+    try {
+      if (value) localStorage.setItem(PROFILE_KEY, JSON.stringify(value));
+      else localStorage.removeItem(PROFILE_KEY);
+    } catch (e) { /* almacenamiento no disponible */ }
+  }
+
+  async function resolveProfile(c, nextSession) {
+    const seq = ++resolveSeq;
+    session = nextSession || null;
+    profile = null;
+    if (session && session.user && session.user.email && c) {
+      try {
+        const email = String(session.user.email).trim();
+        const { data, error } = await c.from('sellers')
+          .select('id,nombre,iniciales,email,role,avatar_url,active,deleted_at')
+          .ilike('email', email)
+          .eq('active', true)
+          .is('deleted_at', null)
+          .maybeSingle();
+        if (!error && data) {
+          profile = {
+            id: data.id, nombre: data.nombre, iniciales: data.iniciales || 'US',
+            email: data.email, role: data.role || 'vendedor',
+            avatar: data.avatar_url || null, active: data.active !== false,
+          };
+          saveProfile(profile);
+        } else if (error) {
+          // Una sesión ya persistida debe poder abrir la caja sin conexión.
+          // Sólo se acepta el último perfil verificado para el mismo correo.
+          profile = cachedProfile(email);
+        } else {
+          saveProfile(null);
+        }
+      } catch (e) { profile = cachedProfile(session.user.email); }
+    }
+    if (seq !== resolveSeq) return;
+    ready = true;
+    emit();
+  }
 
   function traducir(msg) {
     const m = String(msg || '').toLowerCase();
@@ -26,12 +75,13 @@
   async function init() {
     const c = await client();
     if (!c) { ready = true; emit(); return; }
-    try { const { data } = await c.auth.getSession(); session = (data && data.session) || null; } catch (e) { session = null; }
+    let initial = null;
+    try { const { data } = await c.auth.getSession(); initial = (data && data.session) || null; } catch (e) { initial = null; }
     if (!subscribed) {
       subscribed = true;
-      c.auth.onAuthStateChange((_evt, s) => { session = s || null; emit(); });
+      c.auth.onAuthStateChange((_evt, s) => { ready = false; resolveProfile(c, s || null); });
     }
-    ready = true; emit();
+    await resolveProfile(c, initial);
   }
 
   async function login(email, password) {
@@ -40,7 +90,13 @@
     try {
       const { data, error } = await c.auth.signInWithPassword({ email: String(email).trim(), password: String(password) });
       if (error) return { ok: false, error: traducir(error.message) };
-      session = data.session || null; emit();
+      ready = false;
+      await resolveProfile(c, data.session || null);
+      if (!profile) {
+        try { await c.auth.signOut(); } catch (e) { /* */ }
+        session = null; profile = null; ready = true; emit();
+        return { ok: false, error: 'La cuenta no tiene un perfil activo con acceso' };
+      }
       return { ok: true };
     } catch (e) { return { ok: false, error: traducir(e.message) }; }
   }
@@ -48,21 +104,20 @@
   async function logout() {
     const c = await client();
     try { if (c) await c.auth.signOut(); } catch (e) { /* */ }
-    session = null; emit();
+    resolveSeq++; session = null; profile = null; ready = true; emit();
   }
 
   // Identidad para la UI: enlaza con la persona en pos.sellers por email (nombre/iniciales/rol).
-  function current() {
-    if (!session || !session.user) return null;
-    const email = (session.user.email || '').toLowerCase();
-    const s = (window.DATA && window.DATA.sellers || []).find(x => (x.email || '').toLowerCase() === email);
-    return s
-      ? { id: s.id, nombre: s.nombre, iniciales: s.iniciales || 'AD', email: s.email, role: s.role || 'admin', avatar: s.avatar || null }
-      : { id: 'auth', nombre: session.user.email || 'Administrador', iniciales: 'AD', email: session.user.email, role: 'admin', avatar: null };
+  function current() { return profile; }
+  function role() { return profile ? profile.role : null; }
+  function isAdmin() { return role() === 'admin'; }
+  function canAccess(page) {
+    if (!profile) return false;
+    if (profile.role === 'admin') return true;
+    return profile.role === 'vendedor' && page === 'pos';
   }
-  function isAdmin() { return !!session; }
   function hasSession() { return !!session; }
   function isReady() { return ready; }
 
-  window.AUTH = { init, login, logout, current, isAdmin, hasSession, isReady };
+  window.AUTH = { init, login, logout, current, role, isAdmin, canAccess, hasSession, isReady };
 })();

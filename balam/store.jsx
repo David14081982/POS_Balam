@@ -9,6 +9,7 @@
   const SUPABASE_KEY = 'sb_publishable_-skU6PI0VrYa91UPHAEaIg_dhsi1l_I'; // publicable (anon), no secreta
   const SCHEMA = 'pos';
   const QKEY = 'balam_sync_queue';
+  const DEVICE_KEY = 'balam_device_id';
   // Marca de limpieza de datos de prueba: fila reservada de pos.settings que escribe
   // supabase/LIMPIAR-PRUEBAS.sql. Cada terminal recuerda en RESET_SEEN la última que aplicó;
   // si la nube trae una más nueva, se limpia sola (ver applyResetMark).
@@ -16,6 +17,18 @@
   const RESET_SEEN = 'balam_reset_seen';
 
   let sb = null, enabled = false, lastResetMark = null;
+  let deviceId = null;
+  function getDeviceId() {
+    if (deviceId) return deviceId;
+    try {
+      deviceId = localStorage.getItem(DEVICE_KEY);
+      if (!deviceId) {
+        deviceId = 'dev-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+        localStorage.setItem(DEVICE_KEY, deviceId);
+      }
+    } catch (e) { deviceId = 'dev-volatile-' + Math.random().toString(36).slice(2, 10); }
+    return deviceId;
+  }
 
   async function ensureClient() {
     if (sb) return sb;
@@ -43,30 +56,30 @@
   // ── Mappers local↔fila SQL ──────────────────────────────────────────────────
   const MAP = {
     products: {
-      table: 'products', conflict: 'id',
+      table: 'products', conflict: 'id', localKey: 'products',
       // attrs (Fase 2): valores de catálogos custom. Se envía SOLO si el producto tiene alguno,
       // así las instalaciones que aún no corrieron la migración pos_008 (columna attrs) no se rompen.
-      toRow: p => { const row = { id: p.id, cat: p.cat, manga: p.manga, tela: p.tela, color: p.color, cuello: p.cuello || 'NOR', modelo: String(p.modelo), nombre: p.nombre, orn: p.orn || '—', orn_colors: p.ornColors || [], precio: Number(p.precio) || 0, costo: Number(p.costo) || 0, pop: !!p.pop, stock: p.stock || [], imagen: p.imagen || null, sku: p.sku, barcode_urls: p.barcodeUrls || {} }; if (p.attrs && Object.keys(p.attrs).length) row.attrs = p.attrs; return row; },
-      fromRow: r => ({ id: r.id, cat: r.cat, manga: r.manga, tela: r.tela, color: r.color, cuello: r.cuello, modelo: r.modelo, nombre: r.nombre, orn: r.orn, ornColors: r.orn_colors || [], precio: Number(r.precio) || 0, costo: Number(r.costo) || 0, pop: !!r.pop, stock: r.stock || [], imagen: r.imagen || undefined, barcodeUrls: r.barcode_urls || {}, attrs: r.attrs || {} }),
+      toRow: p => { const row = { id: p.id, cat: p.cat, manga: p.manga, tela: p.tela, color: p.color, cuello: p.cuello || 'NOR', modelo: String(p.modelo), nombre: p.nombre, orn: p.orn || '—', orn_colors: p.ornColors || [], precio: Number(p.precio) || 0, costo: Number(p.costo) || 0, pop: !!p.pop, stock: p.stock || [], imagen: p.imagen || null, sku: p.sku, barcode_urls: p.barcodeUrls || {}, sync_base_version: Number(p._syncVersion) || 0, sync_device_id: getDeviceId() }; if (p.attrs && Object.keys(p.attrs).length) row.attrs = p.attrs; return row; },
+      fromRow: r => ({ id: r.id, cat: r.cat, manga: r.manga, tela: r.tela, color: r.color, cuello: r.cuello, modelo: r.modelo, nombre: r.nombre, orn: r.orn, ornColors: r.orn_colors || [], precio: Number(r.precio) || 0, costo: Number(r.costo) || 0, pop: !!r.pop, stock: r.stock || [], imagen: r.imagen || undefined, barcodeUrls: r.barcode_urls || {}, attrs: r.attrs || {}, _syncVersion: Number(r.sync_version) || 0, _deletedAt: r.deleted_at || null }),
     },
     clients: {
-      table: 'clients', conflict: 'id',
-      toRow: c => ({ id: c.id, nombre: c.nombre, tel: c.tel || null, email: c.email || null, direccion: c.direccion || null, talla: c.talla || null, notas: c.notas || null, compras: c.compras || 0, total: Number(c.total) || 0, ultima: c.ultima || null, nacimiento: c.nacimiento || null, generic: !!c.generic }),
-      fromRow: r => ({ id: r.id, nombre: r.nombre, tel: r.tel || '—', email: r.email || undefined, direccion: r.direccion || undefined, talla: r.talla || '', notas: r.notas || '', compras: r.compras || 0, total: Number(r.total) || 0, ultima: r.ultima || '', nacimiento: r.nacimiento || '', generic: !!r.generic }),
+      table: 'clients', conflict: 'id', localKey: 'clients',
+      toRow: c => ({ id: c.id, nombre: c.nombre, tel: c.tel || null, email: c.email || null, direccion: c.direccion || null, talla: c.talla || null, notas: c.notas || null, compras: c.compras || 0, total: Number(c.total) || 0, ultima: c.ultima || null, nacimiento: c.nacimiento || null, generic: !!c.generic, sync_base_version: Number(c._syncVersion) || 0, sync_device_id: getDeviceId() }),
+      fromRow: r => ({ id: r.id, nombre: r.nombre, tel: r.tel || '—', email: r.email || undefined, direccion: r.direccion || undefined, talla: r.talla || '', notas: r.notas || '', compras: r.compras || 0, total: Number(r.total) || 0, ultima: r.ultima || '', nacimiento: r.nacimiento || '', generic: !!r.generic, _syncVersion: Number(r.sync_version) || 0, _deletedAt: r.deleted_at || null }),
     },
     sellers: {
-      table: 'sellers', conflict: 'id',
-      toRow: s => ({ id: s.id, nombre: s.nombre, iniciales: s.iniciales, color: s.color, comision_pct: Number(s.comisionPct) || 0, meta_mes: Number(s.metaMes) || 0, ventas_mes: Number(s.ventasMes) || 0, ventas_num: s.ventasNum || 0, comision_acum: Number(s.comisionAcum) || 0, bono: s.bono || null, email: s.email || null, password_hash: s.passwordHash || null, role: s.role || 'vendedor', avatar_url: s.avatar || null, active: s.active !== false }),
-      fromRow: r => ({ id: r.id, nombre: r.nombre, iniciales: r.iniciales, color: r.color, comisionPct: Number(r.comision_pct) || 0, metaMes: Number(r.meta_mes) || 0, ventasMes: Number(r.ventas_mes) || 0, ventasNum: r.ventas_num || 0, comisionAcum: Number(r.comision_acum) || 0, bono: r.bono || 'Sin bono', email: r.email || undefined, passwordHash: r.password_hash || null, role: r.role || 'vendedor', avatar: r.avatar_url || null, active: r.active !== false }),
+      table: 'sellers', conflict: 'id', localKey: 'sellers',
+      toRow: s => ({ id: s.id, nombre: s.nombre, iniciales: s.iniciales, color: s.color, comision_pct: Number(s.comisionPct) || 0, meta_mes: Number(s.metaMes) || 0, ventas_mes: Number(s.ventasMes) || 0, ventas_num: s.ventasNum || 0, comision_acum: Number(s.comisionAcum) || 0, bono: s.bono || null, email: s.email || null, password_hash: s.passwordHash || null, role: s.role || 'vendedor', avatar_url: s.avatar || null, active: s.active !== false, sync_base_version: Number(s._syncVersion) || 0, sync_device_id: getDeviceId() }),
+      fromRow: r => ({ id: r.id, nombre: r.nombre, iniciales: r.iniciales, color: r.color, comisionPct: Number(r.comision_pct) || 0, metaMes: Number(r.meta_mes) || 0, ventasMes: Number(r.ventas_mes) || 0, ventasNum: r.ventas_num || 0, comisionAcum: Number(r.comision_acum) || 0, bono: r.bono || 'Sin bono', email: r.email || undefined, passwordHash: r.password_hash || null, role: r.role || 'vendedor', avatar: r.avatar_url || null, active: r.active !== false, _syncVersion: Number(r.sync_version) || 0, _deletedAt: r.deleted_at || null }),
     },
     sales: {
       table: 'sales', conflict: 'folio',
-      fromRow: r => ({ folio: r.folio, fecha: String(r.fecha).replace('T', ' ').slice(0, 16), cliente: r.cliente, vendedor: '', vendedores: r.vendedores || [], items: r.items || 0, subtotal: r.subtotal == null ? undefined : Number(r.subtotal), iva: r.iva == null ? undefined : Number(r.iva), total: Number(r.total) || 0, descuento: r.descuento == null ? undefined : Number(r.descuento), ivaPct: r.iva_pct == null ? undefined : Number(r.iva_pct), ivaIncluded: r.iva_included == null ? undefined : !!r.iva_included, anticipo: r.anticipo == null ? undefined : Number(r.anticipo), saldo: r.saldo == null ? undefined : Number(r.saldo), pagoEfectivo: r.pago_efectivo == null ? undefined : Number(r.pago_efectivo), pagoOtro: r.pago_otro == null ? undefined : Number(r.pago_otro), metodo: r.metodo, estado: r.estado, valorRegalado: Number(r.valor_regalado) || 0, lineas: [] }),
+      fromRow: r => ({ folio: r.folio, _operationId: r.operation_id || undefined, _stockReserved: !!r.operation_id && r.estado !== 'Apartado' && r.estado !== 'Cancelado', _syncStatus: 'synced', fecha: String(r.fecha).replace('T', ' ').slice(0, 16), clienteId: r.cliente_id || undefined, cliente: r.cliente, vendedor: '', vendedores: r.vendedores || [], items: r.items || 0, subtotal: r.subtotal == null ? undefined : Number(r.subtotal), iva: r.iva == null ? undefined : Number(r.iva), total: Number(r.total) || 0, descuento: r.descuento == null ? undefined : Number(r.descuento), ivaPct: r.iva_pct == null ? undefined : Number(r.iva_pct), ivaIncluded: r.iva_included == null ? undefined : !!r.iva_included, anticipo: r.anticipo == null ? undefined : Number(r.anticipo), saldo: r.saldo == null ? undefined : Number(r.saldo), pagoEfectivo: r.pago_efectivo == null ? undefined : Number(r.pago_efectivo), pagoOtro: r.pago_otro == null ? undefined : Number(r.pago_otro), metodo: r.metodo, estado: r.estado, valorRegalado: Number(r.valor_regalado) || 0, lineas: [] }),
     },
     promotions: {
-      table: 'promotions', conflict: 'id',
-      toRow: p => ({ id: p.id, nombre: p.nombre, tipo: p.tipo || 'pct', valor: Number(p.valor) || 0, inicio: p.inicio || null, fin: p.fin || null, hora_inicio: p.horaInicio || null, hora_fin: p.horaFin || null, pausado: !!p.pausado, scope: p.scope || {}, creado: p.creado || null }),
-      fromRow: r => ({ id: r.id, nombre: r.nombre, tipo: r.tipo || 'pct', valor: Number(r.valor) || 0, inicio: r.inicio || '', fin: r.fin || '', horaInicio: r.hora_inicio || '', horaFin: r.hora_fin || '', pausado: !!r.pausado, scope: r.scope || {}, creado: r.creado || 0 }),
+      table: 'promotions', conflict: 'id', localKey: 'promos',
+      toRow: p => ({ id: p.id, nombre: p.nombre, tipo: p.tipo || 'pct', valor: Number(p.valor) || 0, inicio: p.inicio || null, fin: p.fin || null, hora_inicio: p.horaInicio || null, hora_fin: p.horaFin || null, pausado: !!p.pausado, scope: p.scope || {}, creado: p.creado || null, sync_base_version: Number(p._syncVersion) || 0, sync_device_id: getDeviceId() }),
+      fromRow: r => ({ id: r.id, nombre: r.nombre, tipo: r.tipo || 'pct', valor: Number(r.valor) || 0, inicio: r.inicio || '', fin: r.fin || '', horaInicio: r.hora_inicio || '', horaFin: r.hora_fin || '', pausado: !!r.pausado, scope: r.scope || {}, creado: r.creado || 0, _syncVersion: Number(r.sync_version) || 0, _deletedAt: r.deleted_at || null }),
     },
     returns: {
       table: 'returns', conflict: 'id',
@@ -83,6 +96,9 @@
       fromRow: r => ({ id: r.id, folio: r.folio, fecha: r.fecha || '', tipo: r.tipo, metodo: r.metodo, monto: Number(r.monto) || 0, efectivo: Number(r.efectivo) || 0, tarjeta: Number(r.tarjeta) || 0, transferencia: Number(r.transferencia) || 0, otro: Number(r.otro) || 0 }),
     },
   };
+  function kindForTable(table) {
+    return Object.keys(MAP).find(kind => MAP[kind].table === table) || null;
+  }
 
   // ── Cola offline ────────────────────────────────────────────────────────────
   function loadQ() { try { return JSON.parse(localStorage.getItem(QKEY)) || []; } catch (e) { return []; } }
@@ -106,11 +122,96 @@
       || (op.type === 'return' && table === 'returns'));
   }
 
+  function rekeyQueuedSaleFolio(operationId, oldFolio, newFolio) {
+    const q = loadQ();
+    let changed = false;
+    q.forEach(pending => {
+      if (pending.type === 'sale' && pending.operationId === operationId && pending.folio === oldFolio) {
+        pending.folio = newFolio;
+        pending.header.folio = newFolio;
+        (pending.items || []).forEach(x => { x.folio = newFolio; });
+        (pending.moves || []).forEach(x => { x.ref = newFolio; });
+        (pending.payments || []).forEach(x => { x.folio = newFolio; });
+        pending.folioRekeyed = true;
+        changed = true;
+      } else if (pending.type === 'return' && pending.folio === oldFolio) {
+        pending.folio = newFolio;
+        pending.header.folio = newFolio;
+        (pending.moves || []).forEach(x => { x.ref = newFolio; });
+        changed = true;
+      }
+    });
+    if (changed) saveQ(q);
+    return changed;
+  }
+
   // Ejecuta una operación contra Supabase. Devuelve true si quedó persistida.
   async function applyOp(c, op) {
     try {
-      if (op.type === 'upsert') { const r = await c.from(op.table).upsert(op.rows, { onConflict: op.conflict }); return !r.error; }
+      if (op.type === 'staffUpdate') {
+        const m = MAP[op.kind];
+        const remote = [];
+        for (const row of op.rows) {
+          const patch = { ...row };
+          delete patch[op.conflict];
+          const r = await c.from(op.table).update(patch)
+            .eq(op.conflict, row[op.conflict]).select('*');
+          if (r.error || !(r.data || []).length) return false;
+          remote.push.apply(remote, r.data.map(m.fromRow));
+        }
+        if (m && window.DATA && window.DATA.applySyncResult) {
+          const expected = {};
+          op.rows.forEach(row => { expected[row.id] = Number(row.sync_base_version) || 0; });
+          const result = window.DATA.applySyncResult(op.kind, remote, expected, 'upsert') || {};
+          rebaseQueuedVersions(op.table, remote);
+          if (result.conflicts && window.UI && window.UI.toast) {
+            window.UI.toast(`${result.conflicts} cambio(s) no se aplicaron porque otra terminal guardó una versión más reciente`, 'var(--danger)');
+          }
+        }
+        return true;
+      }
+      if (op.type === 'upsert') {
+        op.kind = op.kind || kindForTable(op.table);
+        const m = MAP[op.kind];
+        // Reconstituye el snapshot justo antes de enviarlo. Si otra operación en
+        // vuelo confirmó una versión, la op compactada usa esa versión nueva.
+        if (m && m.localKey && window.DATA && Array.isArray(window.DATA[m.localKey])) {
+          op.rows = window.DATA[m.localKey].map(m.toRow);
+        }
+        const r = await c.from(op.table).upsert(op.rows, { onConflict: op.conflict }).select('*');
+        if (r.error) return false;
+        if (m && m.fromRow && window.DATA && window.DATA.applySyncResult) {
+          const expected = {};
+          op.rows.forEach(row => { expected[row.id] = Number(row.sync_base_version) || 0; });
+          const remote = (r.data || []).map(m.fromRow);
+          const result = window.DATA.applySyncResult(op.kind, remote, expected, 'upsert') || {};
+          rebaseQueuedVersions(op.table, remote);
+          if (result.conflicts && window.UI && window.UI.toast) {
+            window.UI.toast(`${result.conflicts} cambio(s) no se aplicaron porque otra terminal guardó una versión más reciente`, 'var(--danger)');
+          }
+        }
+        return true;
+      }
       if (op.type === 'delete') { const r = await c.from(op.table).delete().eq(op.col, op.val); return !r.error; }
+      if (op.type === 'softDelete') {
+        const r = await c.rpc('soft_delete_entity', {
+          p_entity: op.table, p_id: op.val,
+          p_base_version: Number(op.baseVersion) || 0,
+          p_device_id: getDeviceId(),
+        });
+        if (r.error) return false;
+        const m = MAP[op.kind];
+        const raw = Array.isArray(r.data) ? r.data[0] : r.data;
+        if (raw && m && m.fromRow && window.DATA && window.DATA.applySyncResult) {
+          const remote = m.fromRow(raw);
+          const result = window.DATA.applySyncResult(op.kind, [remote], { [op.val]: Number(op.baseVersion) || 0 }, 'delete') || {};
+          rebaseQueuedVersions(op.table, [remote]);
+          if (result.conflicts && window.UI && window.UI.toast) {
+            window.UI.toast('No se eliminó: otra terminal modificó el registro. Se restauró la versión más reciente.', 'var(--danger)');
+          }
+        }
+        return true;
+      }
       if (op.type === 'config') {
         const a = await c.from('lookup').upsert(op.lookup, { onConflict: 'kind,code' });
         if (a.error) return false;
@@ -130,20 +231,132 @@
         return !b.error;
       }
       if (op.type === 'sale') {
-        const s = await c.from('sales').upsert([op.header], { onConflict: 'folio' }); if (s.error) return false;
-        if (op.items.length) { await c.from('sale_items').delete().eq('folio', op.folio); const i = await c.from('sale_items').insert(op.items); if (i.error) return false; }
-        if (op.moves.length) { await c.from('movements').delete().eq('ref', op.folio).eq('tipo', 'Venta'); const mv = await c.from('movements').insert(op.moves); if (mv.error) return false; }
+        const expectedProducts = {};
+        (window.DATA && window.DATA.products || []).forEach(p => {
+          if ((op.stockLines || []).some(l => l.product_id === p.id)) expectedProducts[p.id] = Number(p._syncVersion) || 0;
+        });
+        const committed = await c.rpc('commit_sale', {
+          p_commit_id: op.id,
+          p_operation_id: op.operationId,
+          p_sale: op.header,
+          p_items: op.items || [],
+          p_moves: op.moves || [],
+          p_payments: op.payments || [],
+          p_stock_lines: op.stockLines || [],
+          p_reserve_stock: !!op.reserveStock,
+          p_client_effect: op.clientEffect || null,
+          p_seller_effects: op.sellerEffects || [],
+        });
+        if (committed.error || !committed.data) return false;
+        if (!committed.data.ok) {
+          if (committed.data.error === 'folio_conflict'
+              && !op.folioRekeyed
+              && window.DATA && window.DATA.collisionSafeFolio
+              && window.DATA.rekeySaleFolio) {
+            const newFolio = window.DATA.collisionSafeFolio(op.folio, op.operationId);
+            if (window.DATA.rekeySaleFolio(op.operationId, op.folio, newFolio)
+                && rekeyQueuedSaleFolio(op.operationId, op.folio, newFolio)) {
+              op.folio = newFolio;
+              op.header.folio = newFolio;
+              (op.items || []).forEach(x => { x.folio = newFolio; });
+              (op.moves || []).forEach(x => { x.ref = newFolio; });
+              (op.payments || []).forEach(x => { x.folio = newFolio; });
+              op.folioRekeyed = true;
+              if (window.UI && window.UI.toast) {
+                window.UI.toast(`Folio reconciliado como ${newFolio} para evitar una colisión`, 'var(--accent)');
+              }
+              return applyOp(c, op);
+            }
+          }
+          const stockPending = committed.data.error === 'insufficient_stock';
+          const changed = window.DATA && window.DATA.markSaleSync
+            ? window.DATA.markSaleSync(op.folio, stockPending ? 'stock_pending' : 'sync_error', committed.data)
+            : false;
+          if (changed && window.UI && window.UI.toast) {
+            window.UI.toast(stockPending
+              ? 'Venta pendiente: la nube ya no tiene existencias suficientes'
+              : 'Venta pendiente: existe un conflicto que requiere revisión', 'var(--danger)');
+          }
+          return false;
+        }
+        const reconcile = (kind, rows, expected) => {
+          const m = MAP[kind];
+          if (!rows.length || !m || !m.fromRow || !window.DATA || !window.DATA.applySyncResult) return;
+          const remote = rows.map(m.fromRow);
+          window.DATA.applySyncResult(kind, remote, expected, 'sale');
+          rebaseQueuedVersions(m.table, remote);
+        };
+        reconcile('products', committed.data.products || [], expectedProducts);
+        const expectedClient = {};
+        if (op.clientEffect) expectedClient[op.clientEffect.id] = Number(op.clientEffect.base_version) || 0;
+        reconcile('clients', committed.data.clients || [], expectedClient);
+        const expectedSellers = {};
+        (op.sellerEffects || []).forEach(e => { expectedSellers[e.id] = Number(e.base_version) || 0; });
+        reconcile('sellers', committed.data.sellers || [], expectedSellers);
+        if (window.DATA && window.DATA.markSaleSync) window.DATA.markSaleSync(op.folio, 'synced', { stockReserved: !!op.reserveStock });
         return true;
       }
       if (op.type === 'return') {
-        const s = await c.from('returns').upsert([op.header], { onConflict: 'id' }); if (s.error) return false;
-        await c.from('return_items').delete().eq('return_id', op.id);
-        if (op.items.length) { const i = await c.from('return_items').insert(op.items); if (i.error) return false; }
-        if (op.moves && op.moves.length) { await c.from('movements').delete().eq('ref', op.folio).eq('tipo', 'Devolución'); const mv = await c.from('movements').insert(op.moves); if (mv.error) return false; }
+        const expectedProducts = {};
+        const productSources = op.legacy
+          ? ((op.legacyTargets && op.legacyTargets.products) || [])
+          : ((window.DATA && window.DATA.products) || []).filter(p => (op.stockLines || []).some(l => l.product_id === p.id));
+        productSources.forEach(p => { expectedProducts[p.id] = Number(p.base_version ?? p._syncVersion) || 0; });
+        const common = {
+          p_commit_id: op.id,
+          p_return: op.header,
+          p_items: op.items || [],
+          p_moves: op.moves || [],
+        };
+        const committed = op.legacy
+          ? await c.rpc('commit_legacy_return', {
+              ...common, p_targets: op.legacyTargets || { complete: false },
+            })
+          : await c.rpc('commit_return', {
+              ...common,
+              p_stock_lines: op.stockLines || [],
+              p_client_effect: op.clientEffect || null,
+              p_seller_effects: op.sellerEffects || [],
+              p_legacy: false,
+            });
+        if (committed.error || !committed.data || !committed.data.ok) return false;
+        const reconcile = (kind, rows, expected) => {
+          const m = MAP[kind];
+          if (!rows.length || !m || !m.fromRow || !window.DATA || !window.DATA.applySyncResult) return;
+          const remote = rows.map(m.fromRow);
+          window.DATA.applySyncResult(kind, remote, expected, 'return');
+          rebaseQueuedVersions(m.table, remote);
+        };
+        reconcile('products', committed.data.products || [], expectedProducts);
+        const expectedClient = {};
+        const clientSource = op.legacy ? op.legacyTargets && op.legacyTargets.client : op.clientEffect;
+        if (clientSource) expectedClient[clientSource.id] = Number(clientSource.base_version) || 0;
+        reconcile('clients', committed.data.clients || [], expectedClient);
+        const expectedSellers = {};
+        const sellerSources = op.legacy ? ((op.legacyTargets && op.legacyTargets.sellers) || []) : (op.sellerEffects || []);
+        sellerSources.forEach(e => { expectedSellers[e.id] = Number(e.base_version) || 0; });
+        reconcile('sellers', committed.data.sellers || [], expectedSellers);
+        if (committed.data.sale_state && window.DATA) {
+          const sale = (window.DATA.sales || []).find(x => x.folio === op.folio);
+          if (sale) { sale.estado = committed.data.sale_state; window.DATA.saveSales(); }
+        }
         return true;
       }
     } catch (e) { return false; }
     return false;
+  }
+
+  function rebaseQueuedVersions(table, remoteRows) {
+    if (!remoteRows || !remoteRows.length) return;
+    const versions = {};
+    remoteRows.forEach(r => { versions[r.id] = Number(r._syncVersion ?? r.sync_version) || 0; });
+    const q = loadQ(); let changed = false;
+    q.forEach(op => {
+      if (op.type === 'softDelete' && op.table === table && versions[op.val] > (Number(op.baseVersion) || 0)) {
+        op.baseVersion = versions[op.val]; changed = true;
+      }
+    });
+    if (changed) saveQ(q);
   }
 
   // Encola PRIMERO y luego sube vía flushQueue (ejecutor único). Antes se intentaba la
@@ -164,7 +377,86 @@
     if (flushing) { flushAgain = true; return; } // otra pasada al terminar la actual
     { // migra ops persistidas por una versión anterior (sin id)
       const q0 = loadQ(); let mig = false;
-      q0.forEach(o => { if (!o.id) { o.id = newOpId(); mig = true; } });
+      q0.forEach(o => {
+        if (!o.id) { o.id = newOpId(); mig = true; }
+        if (o.type === 'upsert' && !o.kind) {
+          o.kind = kindForTable(o.table); mig = true;
+        }
+        if (o.type === 'sale') {
+          if (!o.operationId) { o.operationId = o.id; mig = true; }
+          if (o.header && !o.header.operation_id) {
+            o.header.operation_id = o.operationId; mig = true;
+          }
+          if (!Array.isArray(o.stockLines)) {
+            o.stockLines = (o.items || []).map(item => {
+              const productId = item.product_id
+                || (((window.DATA && window.DATA.products) || []).find(p => p.sku === item.sku) || {}).id;
+              return productId && Number(item.qty) > 0
+                ? { product_id: productId, talla: item.talla, qty: Number(item.qty) }
+                : null;
+            }).filter(Boolean);
+            const state = o.header && o.header.estado;
+            o.reserveStock = o.stockLines.length > 0 && state !== 'Apartado' && state !== 'Cancelado';
+            mig = true;
+          }
+          if (!Array.isArray(o.payments)) { o.payments = []; mig = true; }
+          if (!o.clientEffect) { o.clientEffect = null; mig = true; }
+          if (!Array.isArray(o.sellerEffects)) { o.sellerEffects = []; mig = true; }
+        }
+        if (o.type === 'return') {
+          if (!Array.isArray(o.stockLines)) { o.stockLines = []; o.legacy = true; mig = true; }
+          if (!o.clientEffect) { o.clientEffect = null; mig = true; }
+          if (!Array.isArray(o.sellerEffects)) { o.sellerEffects = []; mig = true; }
+          if (o.legacy && !o.legacyTargets) {
+            const data = window.DATA || {};
+            const sale = (data.sales || []).find(s => s.folio === o.folio);
+            const products = [];
+            const seenProducts = new Set();
+            (o.items || []).forEach(item => {
+              const product = (data.products || []).find(p => p.id === item.product_id || p.sku === item.sku);
+              if (!product || seenProducts.has(product.id)) return;
+              seenProducts.add(product.id);
+              products.push({
+                id: product.id, base_version: Number(product._syncVersion) || 0,
+                stock: product.stock || [],
+              });
+              if (!item.product_id) item.product_id = product.id;
+            });
+            let client = null;
+            if (sale && sale.cliente) {
+              const row = (data.clients || []).find(c => !c.generic
+                && ((sale.clienteId && c.id === sale.clienteId)
+                  || (!sale.clienteId && c.nombre === sale.cliente)));
+              if (row) client = {
+                id: row.id, base_version: Number(row._syncVersion) || 0,
+                total: Number(row.total) || 0,
+              };
+            }
+            const sellers = ((sale && sale.vendedores) || []).map(id => {
+              const row = (data.sellers || []).find(s => s.id === id);
+              return row ? {
+                id: row.id, base_version: Number(row._syncVersion) || 0,
+                ventas_mes: Number(row.ventasMes) || 0,
+                comision_acum: Number(row.comisionAcum) || 0,
+              } : null;
+            }).filter(Boolean);
+            o.legacyTargets = {
+              products, client, sellers,
+              complete: !!sale && products.length === new Set((o.items || []).map(i => i.product_id).filter(Boolean)).size
+                && (o.items || []).every(i => !!i.product_id),
+            };
+            mig = true;
+          }
+        }
+        // Las colas antiguas borraban físicamente. Se convierten a tombstone;
+        // base 0 coincide con las filas históricas al instalar la migración.
+        if (o.type === 'delete') {
+          const kind = kindForTable(o.table);
+          if (kind && MAP[kind].localKey) {
+            o.type = 'softDelete'; o.kind = kind; o.baseVersion = 0; mig = true;
+          }
+        }
+      });
       if (mig) saveQ(q0);
     }
     if (!loadQ().length) return;
@@ -202,16 +494,24 @@
   function pushRows(kind, arr) {
     if (!enabled) return;
     const m = MAP[kind]; if (!m || !m.toRow) return;
-    return run({ type: 'upsert', table: m.table, conflict: m.conflict, rows: arr.map(m.toRow) });
+    const seller = window.AUTH && window.AUTH.role && window.AUTH.role() === 'vendedor';
+    if (seller && kind === 'products') return;
+    if (seller && kind === 'sellers') {
+      return run({ type: 'staffUpdate', kind, table: m.table, conflict: m.conflict, rows: arr.map(m.toRow) });
+    }
+    return run({ type: 'upsert', kind, table: m.table, conflict: m.conflict, rows: arr.map(m.toRow) });
   }
-  function deleteRow(kind, id) {
+  function deleteRow(kind, id, baseVersion) {
     if (!enabled) return;
     const m = MAP[kind]; if (!m) return;
+    if (m.localKey) return run({ type: 'softDelete', kind, table: m.table, col: m.conflict, val: id, baseVersion: Number(baseVersion) || 0 });
     return run({ type: 'delete', table: m.table, col: m.conflict, val: id });
   }
-  function pushSale(sale) {
+  function pushSale(sale, effects) {
     if (!enabled) return;
-    const header = { folio: sale.folio, fecha: (sale.fecha || '').replace(' ', 'T'), cliente: sale.cliente, vendedores: sale.vendedores || [], metodo: sale.metodo, estado: sale.estado, items: sale.items || 0, total: Number(sale.total) || 0 };
+    effects = effects || {};
+    const operationId = sale._operationId || newOpId();
+    const header = { folio: sale.folio, operation_id: operationId, fecha: (sale.fecha || '').replace(' ', 'T'), cliente_id: effects.clientId || sale.clienteId || null, cliente: sale.cliente, vendedores: sale.vendedores || [], metodo: sale.metodo, estado: sale.estado, items: sale.items || 0, total: Number(sale.total) || 0 };
     // No rellena snapshots ausentes en ventas históricas: sólo las ventas creadas con el
     // contrato H-03 escriben estos campos.
     if (sale.subtotal != null) header.subtotal = Number(sale.subtotal) || 0;
@@ -226,23 +526,42 @@
     // valor_regalado (cortesías) solo se envía si aplica, así no rompe instalaciones sin la migración pos_009.
     if (Number(sale.valorRegalado) > 0) header.valor_regalado = Number(sale.valorRegalado);
     const items = (sale.lineas || []).map(l => {
-      const row = { folio: sale.folio, sku: l.sku, nombre: l.nombre, talla: l.talla, qty: l.qty, precio: Number(l.precio) || 0 };
+      const productId = l.productId || ((window.DATA.products || []).find(p => p.sku === l.sku) || {}).id || null;
+      const row = { folio: sale.folio, product_id: productId, sku: l.sku, nombre: l.nombre, talla: l.talla, qty: l.qty, precio: Number(l.precio) || 0 };
       if (l.precioBase != null) row.precio_base = Number(l.precioBase) || 0;
       if (l.precioOrig != null) row.precio_original = Number(l.precioOrig) || 0;
       return row;
     });
-    const moves = (sale.lineas || []).map(l => ({ fecha: header.fecha, tipo: 'Venta', producto: l.nombre, sku: l.sku, cant: -l.qty, ref: sale.folio }));
-    return run({ type: 'sale', folio: sale.folio, header, items, moves });
+    const moves = ((window.DATA && window.DATA.movements) || [])
+      .filter(m => m.tipo === 'Venta' && m.ref === sale.folio)
+      .map(m => ({ fecha: String(m.fecha || '').replace(' ', 'T'), tipo: 'Venta', producto: m.producto, sku: m.sku, cant: Number(m.cant) || 0, ref: sale.folio }));
+    const stockLines = items
+      .filter(row => row.product_id && Number(row.qty) > 0)
+      .map(row => ({ product_id: row.product_id, talla: row.talla, qty: Number(row.qty) }));
+    const payments = (effects.payments || ((window.DATA && window.DATA.paymentsForSale) ? window.DATA.paymentsForSale(sale.folio) : []))
+      .map(MAP.payments.toRow);
+    return run({
+      type: 'sale', folio: sale.folio, header, items, moves, payments,
+      operationId,
+      reserveStock: sale._stockRequired !== false && !sale._stockReserved,
+      stockLines,
+      clientEffect: effects.clientEffect || null,
+      sellerEffects: effects.sellerEffects || [],
+    });
   }
-  function pushReturn(ret) {
+  function pushReturn(ret, effects) {
     if (!enabled) return;
+    effects = effects || {};
     const header = { id: ret.id, folio: ret.folio, fecha: ret.fecha || null, cliente: ret.cliente, vendedores: ret.vendedores || [], metodo: ret.metodo || null, total: Number(ret.total) || 0, notas: ret.notas || null };
-    const items = (ret.lineas || []).map(l => ({ return_id: ret.id, sku: l.sku, nombre: l.nombre, talla: l.talla, qty: l.qty, motivo: l.motivo || null, precio: Number(l.precio) || 0 }));
-    // Reemplaza TODOS los movimientos 'Devolución' del folio (idempotente con devoluciones parciales).
-    const moves = (window.DATA.movements || [])
-      .filter(m => m.tipo === 'Devolución' && m.ref === ret.folio)
-      .map(m => ({ fecha: String(m.fecha || '').replace(' ', 'T'), tipo: 'Devolución', producto: m.producto, sku: m.sku, cant: m.cant, ref: m.ref }));
-    return run({ type: 'return', id: ret.id, folio: ret.folio, header, items, moves });
+    const items = (ret.lineas || []).map(l => ({ return_id: ret.id, product_id: l.productId || null, sku: l.sku, nombre: l.nombre, talla: l.talla, qty: l.qty, motivo: l.motivo || null, precio: Number(l.precio) || 0 }));
+    const moves = (ret.lineas || []).map(l => ({ return_id: ret.id, fecha: String(ret.fecha || '').replace(' ', 'T'), tipo: 'Devolución', producto: l.nombre, sku: l.sku, cant: Number(l.qty) || 0, ref: ret.folio }));
+    return run({
+      type: 'return', id: ret.id, folio: ret.folio, header, items, moves,
+      stockLines: effects.stockLines || [],
+      clientEffect: effects.clientEffect || null,
+      sellerEffects: effects.sellerEffects || [],
+      legacy: false,
+    });
   }
   let pushTimer = null;
   function pushConfig(state) {
@@ -331,7 +650,7 @@
   // Filas de venta locales desde filas SQL + sus renglones (compartido: pull y fetch por folio).
   function saleRowsFrom(raws, itemRows) {
     const byFolio = {};
-    (itemRows || []).forEach(x => (byFolio[x.folio] || (byFolio[x.folio] = [])).push({ sku: x.sku, nombre: x.nombre, talla: x.talla, qty: x.qty, precio: Number(x.precio) || 0, precioBase: x.precio_base == null ? undefined : Number(x.precio_base), precioOrig: x.precio_original == null ? undefined : Number(x.precio_original) }));
+    (itemRows || []).forEach(x => (byFolio[x.folio] || (byFolio[x.folio] = [])).push({ productId: x.product_id || undefined, sku: x.sku, nombre: x.nombre, talla: x.talla, qty: x.qty, precio: Number(x.precio) || 0, precioBase: x.precio_base == null ? undefined : Number(x.precio_base), precioOrig: x.precio_original == null ? undefined : Number(x.precio_original) }));
     return raws.map(raw => {
       const s = MAP.sales.fromRow(raw); s.lineas = byFolio[raw.folio] || [];
       const vid = (raw.vendedores || [])[0];
@@ -420,8 +739,14 @@
       // Dominios en PARALELO (antes: 7 round-trips en serie; con red lenta el número de
       // inventario tardaba en llegar). 'sales' va después: su fromRow resuelve el nombre
       // del vendedor contra DATA.sellers, que debe estar ya sincronizado.
-      await Promise.all(['products', 'clients', 'sellers', 'promotions', 'returns', 'liquidations', 'payments'].map(k => pullDomain(k).catch(() => { /* tabla ausente */ })));
-      try { await pullDomain('sales'); } catch (e) { /* tabla ausente */ }
+      const seller = window.AUTH && window.AUTH.role && window.AUTH.role() === 'vendedor';
+      const domains = seller
+        ? ['products', 'clients', 'sellers', 'promotions']
+        : ['products', 'clients', 'sellers', 'promotions', 'returns', 'liquidations', 'payments'];
+      await Promise.all(domains.map(k => pullDomain(k).catch(() => { /* tabla ausente */ })));
+      if (!seller) {
+        try { await pullDomain('sales'); } catch (e) { /* tabla ausente */ }
+      }
       try { window.dispatchEvent(new CustomEvent('configchange', { detail: { domain: true } })); } catch (e) { /* */ }
       // Migración de fotos incrustadas EN SEGUNDO PLANO (no se espera): sube las que quedaron en
       // formato viejo sin que el usuario tenga que pulsar nada. Va después del pull para operar

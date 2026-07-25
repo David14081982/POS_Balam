@@ -22,7 +22,7 @@ await page.waitForFunction(() => window.DATA && window.DATA.recordSale && window
 const out = await page.evaluate(() => {
   const D = window.DATA;
   const pushed = [];
-  window.STORE.pushSale = s => pushed.push(JSON.parse(JSON.stringify(s)));
+  window.STORE.pushSale = (sale, effects) => pushed.push(JSON.parse(JSON.stringify({ sale, effects: effects || {} })));
   window.STORE.pushReturn = () => {};
   window.STORE.pushRows = () => {};
   const stock = window.CONFIG.codes('size_letter').concat(window.CONFIG.codes('size_number')).map(talla => ({ talla, escala: 'L', stock: 50 }));
@@ -77,7 +77,17 @@ check('CASO 5: cliente revierte exactamente ambas devoluciones', out.clientTotal
 check('CASO 4: mixto $400 + $600 persiste completo', out.mixed.pagoEfectivo === 400 && out.mixed.pagoOtro === 600);
 check('CASO 4: historial identifica efectivo $400 + transferencia $600', out.mixedPayments.length === 1 && out.mixedPayments[0].efectivo === 400 && out.mixedPayments[0].transferencia === 600);
 check('CASO 4: negativo/excedido/incompleto/NaN rechazados', out.invalid.every(Boolean));
-check('Sync: snapshots enviados por pushSale', out.pushed.some(s => s.folio === out.tax.folio && s.total === 1150 && s.subtotal === 991.38 && s.iva === 158.62) && out.pushed.some(s => s.anticipo === 300 && s.saldo === 700));
+check('Sync: snapshots enviados por pushSale', out.pushed.some(x => x.sale.folio === out.tax.folio && x.sale.total === 1150 && x.sale.subtotal === 991.38 && x.sale.iva === 158.62) && out.pushed.some(x => x.sale.anticipo === 300 && x.sale.saldo === 700));
+check('H-04: venta incluye pago, cliente y comisión en la misma operación', out.pushed.some(x =>
+  x.sale.folio === out.normal.folio
+  && x.effects.payments?.length === 1
+  && x.effects.clientEffect?.compras_delta === 1
+  && x.effects.sellerEffects?.length === 1));
+check('H-04: cada abono lleva el historial completo y la liquidación lleva comisión', out.pushed.some(x =>
+  x.sale.folio === out.liquida.sale.folio
+  && x.sale.estado === 'Pagado'
+  && x.effects.payments?.length === 3
+  && x.effects.sellerEffects?.length === 1));
 
 await browser.close(); server.close();
 console.log(`\n${pass} pasaron, ${fail} fallaron`);
