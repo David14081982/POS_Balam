@@ -77,6 +77,11 @@
       toRow: l => ({ id: l.id, seller_id: l.sellerId || null, seller: l.seller || null, monto: Number(l.monto) || 0, tipo: l.tipo || 'liquidacion', fecha: l.fecha || null }),
       fromRow: r => ({ id: r.id, sellerId: r.seller_id || '', seller: r.seller || '', monto: Number(r.monto) || 0, tipo: r.tipo || 'liquidacion', fecha: r.fecha || '' }),
     },
+    payments: {
+      table: 'sale_payments', conflict: 'id',
+      toRow: p => ({ id: p.id, folio: p.folio, fecha: p.fecha, tipo: p.tipo, metodo: p.metodo, monto: Number(p.monto) || 0, efectivo: Number(p.efectivo) || 0, tarjeta: Number(p.tarjeta) || 0, transferencia: Number(p.transferencia) || 0, otro: Number(p.otro) || 0 }),
+      fromRow: r => ({ id: r.id, folio: r.folio, fecha: r.fecha || '', tipo: r.tipo, metodo: r.metodo, monto: Number(r.monto) || 0, efectivo: Number(r.efectivo) || 0, tarjeta: Number(r.tarjeta) || 0, transferencia: Number(r.transferencia) || 0, otro: Number(r.otro) || 0 }),
+    },
   };
 
   // ── Cola offline ────────────────────────────────────────────────────────────
@@ -415,7 +420,7 @@
       // Dominios en PARALELO (antes: 7 round-trips en serie; con red lenta el número de
       // inventario tardaba en llegar). 'sales' va después: su fromRow resuelve el nombre
       // del vendedor contra DATA.sellers, que debe estar ya sincronizado.
-      await Promise.all(['products', 'clients', 'sellers', 'promotions', 'returns', 'liquidations'].map(k => pullDomain(k).catch(() => { /* tabla ausente */ })));
+      await Promise.all(['products', 'clients', 'sellers', 'promotions', 'returns', 'liquidations', 'payments'].map(k => pullDomain(k).catch(() => { /* tabla ausente */ })));
       try { await pullDomain('sales'); } catch (e) { /* tabla ausente */ }
       try { window.dispatchEvent(new CustomEvent('configchange', { detail: { domain: true } })); } catch (e) { /* */ }
       // Migración de fotos incrustadas EN SEGUNDO PLANO (no se espera): sube las que quedaron en

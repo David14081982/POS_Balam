@@ -266,5 +266,22 @@ function loadStore(env) {
   ok('10c. otra terminal reconstruye el snapshot exacto', back && back.total === 1000 && back.anticipo === 300 && back.saldo === 700 && back.descuento === 50 && back.lineas[0].precioOrig === 1200);
 }
 
+// ── 11) Historial de pagos entre terminales ───────────────────────────
+{
+  const env = freshEnv();
+  env.window.DATA.payments = [];
+  const S = loadStore(env);
+  await S.init({});
+  S.pushRows('payments', [
+    { id: 'pay-1', folio: 'BG-H03', fecha: '2026-07-25 10:00', tipo: 'anticipo', metodo: 'Efectivo', monto: 300, efectivo: 300, tarjeta: 0, transferencia: 0, otro: 0 },
+    { id: 'pay-2', folio: 'BG-H03', fecha: '2026-07-26 10:00', tipo: 'abono', metodo: 'Tarjeta', monto: 200, efectivo: 0, tarjeta: 200, transferencia: 0, otro: 0 },
+  ]);
+  await sleep(40);
+  const cloudPay = env.cloud.rowsByTable.sale_payments || [];
+  ok('11a. historial identifica cada componente de pago', cloudPay.length === 2 && cloudPay[0].efectivo === 300 && cloudPay[1].tarjeta === 200);
+  await S.pullDomain('payments');
+  ok('11b. otra terminal recibe el historial de pagos', env.window.DATA.applied.some(a => a.kind === 'payments' && a.n === 2));
+}
+
 console.log(`\n════════ ${pass} pasaron, ${fail} fallaron ════════`);
 process.exit(fail ? 1 : 0);

@@ -17,6 +17,12 @@
 
     // KPIs — 100% reales (sin históricos ni metas inventadas)
     const ventasBrutas = nonCancel.reduce((a, s) => a + (Number(s.total) || 0), 0);
+    const cobradoReal = (D.payments || []).reduce((a, p) => a + (Number(p.monto) || 0), 0);
+    const anticipos = (D.payments || []).filter(p => p.tipo === 'anticipo').reduce((a, p) => a + (Number(p.monto) || 0), 0);
+    const abonos = (D.payments || []).filter(p => p.tipo === 'abono' || p.tipo === 'liquidacion').reduce((a, p) => a + (Number(p.monto) || 0), 0);
+    const saldosPendientes = nonCancel.reduce((a, s) => a + (Number(s.saldo) || 0), 0);
+    const descuentos = nonCancel.reduce((a, s) => a + (Number(s.descuento) || 0), 0);
+    const historicasSinDetalle = nonCancel.filter(s => !D.hasFinancialSnapshot(s) || !D.paymentsForSale(s.folio).length).length;
     const utilidad = Math.round(ventasBrutas * (marginPct / 100));
     // Las cortesías (regalos) no son ventas pagadas: no cuentan como pedidos ni en el ticket promedio.
     const cortesias = nonCancel.filter(s => s.metodo === 'Cortesía');
@@ -78,6 +84,14 @@
           kpi('Total pedidos', String(pedidos), iP, tP, cP),
           kpi('Ticket promedio', fmt(ticketProm).replace('.00', ''), 'star', '', 'text-gold-text', true),
         ]),
+        h('div', { key: 'cash', className: 'grid grid-cols-1 md:grid-cols-5 gap-gutter mb-gutter' }, [
+          metricCard('Dinero cobrado', fmt(cobradoReal).replace('.00', ''), 'movimientos de pago registrados'),
+          metricCard('Anticipos', fmt(anticipos).replace('.00', ''), 'recibidos al apartar'),
+          metricCard('Abonos y liquidaciones', fmt(abonos).replace('.00', ''), 'cobros posteriores'),
+          metricCard('Saldos pendientes', fmt(saldosPendientes).replace('.00', ''), 'por cobrar en apartados'),
+          metricCard('Descuentos', fmt(descuentos).replace('.00', ''), 'concedidos sobre precio con IVA'),
+        ]),
+        historicasSinDetalle ? h('div', { key: 'hist', className: 'mb-gutter p-4 rounded-xl bg-warning-soft text-warning text-caption' }, `${historicasSinDetalle} venta(s) histórica(s) no tienen desglose financiero completo; no se inventaron pagos ni descuentos.`) : null,
         // Cortesías (regalos/giveaways): cuántas y el valor regalado. Solo se muestra si hay.
         cortesias.length ? h('div', { key: 'cor', className: CARD + ' p-5 mb-gutter flex items-center gap-4' }, [
           h('div', { key: 'i', className: 'w-11 h-11 rounded-xl grid place-items-center bg-gold-soft text-gold-text shrink-0' }, h(MS, { name: 'tag', size: 22 })),
@@ -434,6 +448,10 @@
 
     // Métricas del periodo
     const totalVendido = validPeriod.reduce((a, s) => a + (Number(s.total) || 0), 0);
+    const pagosPeriodo = (D.payments || []).filter(p => inWin(p.fecha));
+    const totalCobrado = pagosPeriodo.reduce((a, p) => a + (Number(p.monto) || 0), 0);
+    const pendientesPeriodo = validPeriod.reduce((a, s) => a + (Number(s.saldo) || 0), 0);
+    const descuentosPeriodo = validPeriod.reduce((a, s) => a + (Number(s.descuento) || 0), 0);
     const nVentas = validPeriod.length;
     const ticketProm = nVentas ? totalVendido / nVentas : 0;
     const comisiones = validPeriod.reduce((a, s) => a + commOf(s), 0);
@@ -500,6 +518,11 @@
         metricCard('Ventas totales', String(nVentas), 'transacciones procesadas', prevN > 0 && deltaChip(deltaPct(nVentas, prevN), false), true),
         metricCard('Ticket promedio', fmt(ticketProm).replace('.00', ''), 'por transacción'),
         metricCard('Comisiones', fmt(comisiones).replace('.00', ''), 'acumulado del periodo'),
+      ]),
+      h('div', { key: 'finance', className: 'grid grid-cols-1 md:grid-cols-3 gap-gutter mb-gutter' }, [
+        metricCard('Cobrado en el periodo', fmt(totalCobrado).replace('.00', ''), 'según historial de pagos'),
+        metricCard('Saldo pendiente', fmt(pendientesPeriodo).replace('.00', ''), 'apartados del periodo'),
+        metricCard('Descuentos concedidos', fmt(descuentosPeriodo).replace('.00', ''), 'incluyen IVA'),
       ]),
 
       // Ventas por vendedor

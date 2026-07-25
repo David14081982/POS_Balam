@@ -162,6 +162,8 @@
     const [recibido, setRecibido] = useState('');
     const [efectivo, setEfectivo] = useState('');
     const [anticipo, setAnticipo] = useState('');
+    const [otroMetodo, setOtroMetodo] = useState('Tarjeta');
+    const [anticipoMetodo, setAnticipoMetodo] = useState('Efectivo');
     const recv = Number(recibido);
     const cambio = Math.max(0, recv - total);
     const efe = Number(efectivo);
@@ -187,7 +189,13 @@
         metodo,
         anticipo: metodo === 'Apartado' ? ant : total,
         pagoEfectivo: metodo === 'Mixto' ? efe : (metodo === 'Efectivo' ? total : 0),
-        pagoOtro: metodo === 'Mixto' ? Math.round((total - efe) * 100) / 100 : (metodo === 'Efectivo' ? 0 : total),
+        pagoOtro: metodo === 'Apartado' ? 0 : (metodo === 'Mixto' ? Math.round((total - efe) * 100) / 100 : (metodo === 'Efectivo' ? 0 : total)),
+        metodoPago: metodo === 'Apartado' ? anticipoMetodo : metodo,
+        pagoDetalle: metodo === 'Mixto'
+          ? { efectivo: efe, [otroMetodo.toLowerCase()]: Math.round((total - efe) * 100) / 100 }
+          : metodo === 'Apartado'
+            ? { [anticipoMetodo.toLowerCase()]: ant }
+            : { [metodo.toLowerCase()]: total },
       });
     }
     const footer = [
@@ -235,13 +243,24 @@
         h('div', { key: 'l', className: lbl }, 'Pago en efectivo'),
         h('input', { key: 'in', className: inputCls, type: 'number', placeholder: '0.00', value: efectivo, onChange: e => setEfectivo(e.target.value), autoFocus: true }),
         h('div', { key: 'r', className: 'flex justify-between items-center mt-3 pt-3 border-t border-outline-variant' }, [
-          h('span', { key: 'l', className: 'text-body text-on-surface-variant' }, 'Resto con tarjeta'),
+          h('select', { key: 'm', className: inputCls + ' max-w-[190px]', value: otroMetodo, onChange: e => setOtroMetodo(e.target.value) }, [
+            h('option', { key: 't', value: 'Tarjeta' }, 'Resto con tarjeta'),
+            h('option', { key: 'x', value: 'Transferencia' }, 'Resto por transferencia'),
+          ]),
           h('span', { key: 'v', className: 'font-headline text-h2 text-primary' }, fmt(restanteMixto)),
         ]),
       ]),
       metodo === 'Apartado' && h('div', { key: 'ap' }, [
         h('div', { key: 'l', className: lbl }, 'Anticipo recibido'),
         h('input', { key: 'in', className: inputCls, type: 'number', placeholder: '0.00', value: anticipo, onChange: e => setAnticipo(e.target.value), autoFocus: true }),
+        h('div', { key: 'pm', className: 'mt-3' }, [
+          h('div', { key: 'l', className: lbl }, 'Forma del anticipo'),
+          h('select', { key: 's', className: inputCls, value: anticipoMetodo, onChange: e => setAnticipoMetodo(e.target.value) }, [
+            h('option', { key: 'e', value: 'Efectivo' }, 'Efectivo'),
+            h('option', { key: 't', value: 'Tarjeta' }, 'Tarjeta'),
+            h('option', { key: 'x', value: 'Transferencia' }, 'Transferencia'),
+          ]),
+        ]),
         h('div', { key: 's', className: 'flex justify-between items-center mt-3 pt-3 border-t border-outline-variant' }, [
           h('span', { key: 'l', className: 'text-body text-on-surface-variant' }, 'Saldo pendiente'),
           h('span', { key: 'v', className: 'font-headline text-h2 text-primary' }, fmt(saldo)),
@@ -283,6 +302,8 @@
     const subOrig = granTotal + desc;
     const colorDe = (sku) => { const p = D.products.find(x => x.sku === sku); return p ? p.colorName : ''; };
     const lineas = sale.lineas || [];
+    const pagos = D.paymentsForSale ? D.paymentsForSale(sale.folio) : [];
+    const snapshotCompleto = D.hasFinancialSnapshot ? D.hasFinancialSnapshot(sale) : hasSnapshot;
 
     const row = (l, v, cls) => h('div', { key: l, className: 'flex justify-between items-center ' + (cls || '') }, [
       h('span', { key: 'l' }, l), h('span', { key: 'v' }, v),
@@ -358,6 +379,11 @@
             h('p', { key: 'b', className: 'font-medium text-primary', style: { fontSize: '13px' } }, sale.metodo),
           ]),
         ]),
+        pagos.length ? h('div', { key: 'ph', className: 'w-full mt-4 text-left border border-outline-variant rounded-xl p-4' }, [
+          h('p', { key: 't', className: 'uppercase text-on-surface-variant mb-2', style: { fontSize: '10px', letterSpacing: '0.08em' } }, 'Historial de pagos'),
+          ...pagos.map(p => row((p.tipo || 'pago') + ' · ' + p.metodo, fmt(p.monto))),
+        ]) : null,
+        !snapshotCompleto ? h('div', { key: 'hw', className: 'w-full mt-4 p-3 border border-outline-variant rounded-lg text-on-surface-variant', style: { fontSize: '10px' } }, 'Venta histórica: desglose fiscal o de descuentos no disponible; se conserva el total registrado.') : null,
         // Pie
         h('div', { key: 'f', className: 'w-full mt-12 mb-1 flex flex-col items-center' }, [
           h('div', { key: 'd', className: 'w-12 h-px bg-outline-variant mb-6' }),

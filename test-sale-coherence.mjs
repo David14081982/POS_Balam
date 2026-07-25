@@ -41,9 +41,11 @@ const out = await page.evaluate(() => {
   window.PROMOS = promosOriginal;
   const lay = mk({ metodo: 'Apartado', estado: 'Apartado', total: 1000, anticipo: 300, pagoEfectivo: 0, pagoOtro: 0 });
   const layBefore = { total: lay.total, anticipo: lay.anticipo, saldo: lay.saldo };
-  D.completarApartado(lay.folio);
+  const abono = D.registrarPagoApartado(lay.folio, { monto: 200, metodo: 'Tarjeta', detalle: { tarjeta: 200 } });
+  const layMid = { estado: lay.estado, anticipo: lay.anticipo, saldo: lay.saldo };
+  const liquida = D.registrarPagoApartado(lay.folio, { monto: 500, metodo: 'Transferencia', detalle: { transferencia: 500 } });
   const layAfter = { estado: lay.estado, anticipo: lay.anticipo, saldo: lay.saldo };
-  const mixed = mk({ metodo: 'Mixto', estado: 'Pagado', total: 1000, anticipo: 1000, pagoEfectivo: 400, pagoOtro: 600 });
+  const mixed = mk({ metodo: 'Mixto', estado: 'Pagado', total: 1000, anticipo: 1000, pagoEfectivo: 400, pagoOtro: 600, pagoDetalle: { efectivo: 400, transferencia: 600 } });
   const clientTotalBeforeReturns = client.total;
 
   const invalid = [];
@@ -58,7 +60,7 @@ const out = await page.evaluate(() => {
   }
   const retTax = D.recordReturn({ folio: tax.folio, lineas: [{ sku: p.sku, nombre: p.nombre, talla, qty: 1, precio: 1 }] });
   const retLay = D.recordReturn({ folio: lay.folio, lineas: [{ sku: p.sku, nombre: p.nombre, talla, qty: 1, precio: 1 }] });
-  return { normal, tax, layBefore, layAfter, mixed, invalid, retTax, retLay, clientTotalBeforeReturns, clientTotalAfterReturns: client.total, pushed };
+  return { normal, tax, layBefore, layMid, layAfter, abono, liquida, layPayments: D.paymentsForSale(lay.folio), mixed, mixedPayments: D.paymentsForSale(mixed.folio), invalid, retTax, retLay, clientTotalBeforeReturns, clientTotalAfterReturns: client.total, pushed };
 });
 
 check('CASO 1: venta normal = $1,000 en venta local', out.normal.total === 1000);
@@ -67,10 +69,13 @@ check('FINANZAS: $1,150 = importe $991.38 + IVA $158.62', out.tax.subtotal === 9
 check('Devolución usa los $1,150 realmente cobrados', out.tax.lineas[0].precio === 1150 && out.retTax.ok && out.retTax.ret.total === 1150);
 check('CASOS 1–4: cliente acumula totales finales', out.clientTotalBeforeReturns === 4150, String(out.clientTotalBeforeReturns));
 check('CASO 3: apartado persiste anticipo $300 y saldo $700', out.layBefore.anticipo === 300 && out.layBefore.saldo === 700);
+check('CASO 3: abono parcial $200 deja saldo $500', out.abono.ok && out.layMid.estado === 'Apartado' && out.layMid.anticipo === 500 && out.layMid.saldo === 500);
 check('CASO 3: liquidación deja anticipo total y saldo cero', out.layAfter.estado === 'Pagado' && out.layAfter.anticipo === 1000 && out.layAfter.saldo === 0);
+check('CASO 3: historial identifica efectivo/tarjeta/transferencia', out.layPayments.length === 3 && out.layPayments[0].efectivo === 300 && out.layPayments[1].tarjeta === 200 && out.layPayments[2].transferencia === 500);
 check('CASO 3/5: apartado liquidado devuelve $1,000', out.retLay.ok && out.retLay.ret.total === 1000);
 check('CASO 5: cliente revierte exactamente ambas devoluciones', out.clientTotalAfterReturns === 2000, String(out.clientTotalAfterReturns));
 check('CASO 4: mixto $400 + $600 persiste completo', out.mixed.pagoEfectivo === 400 && out.mixed.pagoOtro === 600);
+check('CASO 4: historial identifica efectivo $400 + transferencia $600', out.mixedPayments.length === 1 && out.mixedPayments[0].efectivo === 400 && out.mixedPayments[0].transferencia === 600);
 check('CASO 4: negativo/excedido/incompleto/NaN rechazados', out.invalid.every(Boolean));
 check('Sync: snapshots enviados por pushSale', out.pushed.some(s => s.folio === out.tax.folio && s.total === 1150 && s.subtotal === 991.38 && s.iva === 158.62) && out.pushed.some(s => s.anticipo === 300 && s.saldo === 700));
 

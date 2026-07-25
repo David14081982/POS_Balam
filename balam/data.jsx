@@ -381,7 +381,7 @@
   const LS_SELLERS = 'balam_pos_sellers_v1', LS_CLIENTS = 'balam_pos_clients_v1',
         LS_SALES = 'balam_pos_sales_v1', LS_MOVES = 'balam_pos_moves_v1', LS_FOLIO = 'balam_pos_folio_v1',
         LS_PROMOS = 'balam_pos_promos_v1', LS_LIQ = 'balam_pos_liq_v1', LS_PERIODO = 'balam_pos_periodo_v1',
-        LS_RETURNS = 'balam_pos_returns_v1';
+        LS_RETURNS = 'balam_pos_returns_v1', LS_PAYMENTS = 'balam_pos_payments_v1';
   const sellers = loadArr(LS_SELLERS, seedSellers);
   const clients = loadArr(LS_CLIENTS, seedClients);
   const sales = loadArr(LS_SALES, seedSales);
@@ -389,6 +389,7 @@
   const promos = loadArr(LS_PROMOS, seedPromos);
   const liquidations = loadArr(LS_LIQ, []); // historial de pagos de comisión (corte/liquidación) — local
   const returns = loadArr(LS_RETURNS, seedReturns); // devoluciones (cabecera + renglones) — sincroniza a pos.returns
+  const payments = loadArr(LS_PAYMENTS, []); // movimientos reales de dinero por venta
   let periodoInicio = '';
   try { periodoInicio = localStorage.getItem(LS_PERIODO) || ''; } catch (e) { /* sin storage */ }
 
@@ -432,6 +433,7 @@
   function savePromos() { save(LS_PROMOS, promos); syncUp('promotions', promos); }
   function saveLiquidations() { save(LS_LIQ, liquidations); syncUp('liquidations', liquidations); } // historial — sincroniza a pos.liquidations
   function saveReturns() { save(LS_RETURNS, returns); }  // devoluciones suben vía recordReturn → STORE.pushReturn
+  function savePayments() { save(LS_PAYMENTS, payments); syncUp('payments', payments); }
   // Fusiona filas de la nube en el arreglo local por clave (upsert: actualiza las que
   // coinciden, agrega las nuevas, CONSERVA las no incluidas). Para pulls PARCIALES —
   // el pull de ventas es paginado (ventana reciente + apartados) — reemplazar el
@@ -452,7 +454,7 @@
 
   // Reemplaza un arreglo de dominio con datos de la nube (sin re-empujar).
   function applyRemote(kind, rows) {
-    const M = { products: [products, saveProducts, hydrate], clients: [clients, saveClients], sellers: [sellers, saveSellers], sales: [sales, saveSales], movements: [movements, saveMovements], promotions: [promos, savePromos], returns: [returns, saveReturns], liquidations: [liquidations, saveLiquidations] };
+    const M = { products: [products, saveProducts, hydrate], clients: [clients, saveClients], sellers: [sellers, saveSellers], sales: [sales, saveSales], movements: [movements, saveMovements], promotions: [promos, savePromos], returns: [returns, saveReturns], liquidations: [liquidations, saveLiquidations], payments: [payments, savePayments] };
     const m = M[kind]; if (!m) return;
     remoteApplying = true;
     try { m[0].length = 0; rows.forEach(r => m[0].push(m[2] ? m[2](r) : r)); m[1](); }
@@ -487,6 +489,33 @@
   // Registra una venta: descuenta stock, mueve inventario, actualiza cliente y vendedores.
   // ticket: [{ p, talla, qty }], sellerIds: [id], client: obj, metodo, estado, total, itemCount.
   const money = n => Math.round(Number(n) * 100) / 100;
+  function paymentParts(metodo, monto, detail) {
+    const d = detail || {}, amount = money(monto);
+    const parts = {
+      efectivo: money(d.efectivo || (metodo === 'Efectivo' ? amount : 0)),
+      tarjeta: money(d.tarjeta || (metodo === 'Tarjeta' ? amount : 0)),
+      transferencia: money(d.transferencia || (metodo === 'Transferencia' ? amount : 0)),
+      otro: money(d.otro || 0),
+    };
+    if (Math.abs(money(parts.efectivo + parts.tarjeta + parts.transferencia + parts.otro) - amount) > 0.009) throw new Error('Los componentes del pago no coinciden con el monto');
+    if (Object.values(parts).some(x => x < 0)) throw new Error('Los componentes del pago no pueden ser negativos');
+    return parts;
+  }
+  function addSalePayment(sale, { monto, metodo, tipo, detalle, fecha }) {
+    const amount = money(monto);
+    if (!(amount > 0)) return null;
+    const parts = paymentParts(metodo, amount, detalle);
+    const p = {
+      id: 'pay-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+      folio: sale.folio, fecha: fecha || now(), tipo: tipo || 'pago',
+      metodo, monto: amount, ...parts,
+    };
+    payments.unshift(p);
+    savePayments();
+    return p;
+  }
+  function paymentsForSale(folio) { return payments.filter(p => p.folio === folio).reverse().sort((a, b) => String(a.fecha).localeCompare(String(b.fecha))); }
+  function hasFinancialSnapshot(sale) { return !!sale && sale.subtotal != null && sale.iva != null && sale.descuento != null; }
   function assertSaleAmounts({ ticket, metodo, estado, subtotal, iva, total, anticipo, pagoEfectivo, pagoOtro, ivaIncluded }) {
     const finite = n => Number.isFinite(Number(n));
     if (!Array.isArray(ticket) || !ticket.length || ticket.some(l => !Number.isInteger(Number(l.qty)) || Number(l.qty) <= 0)) throw new Error('La venta requiere artículos con cantidades positivas');
@@ -500,7 +529,7 @@
     if (metodo !== 'Apartado' && metodo !== 'Cortesía' && Math.abs(money(pagoEfectivo + pagoOtro) - money(total)) > 0.009) throw new Error('La suma de pagos no coincide con el total');
     if (pagoEfectivo < 0 || pagoEfectivo > total || pagoOtro < 0 || pagoOtro > total) throw new Error('El desglose de pago es inválido');
   }
-  function recordSale({ ticket, sellerIds, client, metodo, estado, subtotal: subtotalIn, iva: ivaIn, total: totalIn, anticipo: anticipoIn, pagoEfectivo: pagoEfectivoIn, pagoOtro: pagoOtroIn, ivaPct: ivaPctIn, ivaIncluded: ivaIncludedIn, itemCount, fecha: fechaIn }) {
+  function recordSale({ ticket, sellerIds, client, metodo, estado, subtotal: subtotalIn, iva: ivaIn, total: totalIn, anticipo: anticipoIn, pagoEfectivo: pagoEfectivoIn, pagoOtro: pagoOtroIn, pagoDetalle, metodoPago, ivaPct: ivaPctIn, ivaIncluded: ivaIncludedIn, itemCount, fecha: fechaIn }) {
     const total = money(totalIn);
     const ivaPct = 16;
     const ivaIncluded = true;
@@ -575,21 +604,24 @@
     sales.unshift(sale);
     saveSales();
     if (!remoteApplying && window.STORE && window.STORE.pushSale) { try { window.STORE.pushSale(sale); } catch (e) { /* offline */ } }
+    if (!cortesia) {
+      const paidNow = estado === 'Apartado' ? anticipo : total;
+      const tender = metodoPago || (metodo === 'Apartado' ? 'Efectivo' : metodo);
+      if (paidNow > 0) addSalePayment(sale, { monto: paidNow, metodo: tender, tipo: estado === 'Apartado' ? 'anticipo' : 'venta', detalle: pagoDetalle, fecha });
+    }
     return sale;
   }
 
   // Completa un apartado ya cobrado por completo: descuenta stock, acredita comisión/ventas al
   // vendedor atribuido (base neto/bruto vigente AHORA) y marca la venta como Pagado. No re-agrega
   // al cliente (los agregados se hicieron al crear el apartado). Idempotente: solo actúa si está Apartado.
-  function completarApartado(folio) {
-    const sale = sales.find(s => s.folio === folio);
-    if (!sale || sale.estado !== 'Apartado') return null;
+  function finalizarApartado(sale) {
     const fecha2 = now();
     // 1) Stock + movimientos (no se hicieron al apartar)
     (sale.lineas || []).forEach(l => {
       const p = products.find(x => x.sku === l.sku);
       if (p) { const e = (p.stock || []).find(v => v.talla === l.talla); if (e) e.stock = Math.max(0, e.stock - l.qty); }
-      movements.unshift({ fecha: fecha2, tipo: 'Venta', producto: l.nombre, sku: l.sku, cant: -l.qty, ref: folio });
+      movements.unshift({ fecha: fecha2, tipo: 'Venta', producto: l.nombre, sku: l.sku, cant: -l.qty, ref: sale.folio });
     });
     saveProducts(); saveMovements();
     // 2) Comisión + ventas a los vendedores atribuidos
@@ -609,16 +641,43 @@
       saveSellers();
     }
     // 3) Marcar pagada y guardar la comisión real
-    const saldoLiquidado = sale.saldo != null ? Number(sale.saldo) || 0 : Math.max(0, (Number(sale.total) || 0) - (Number(sale.anticipo) || 0));
     sale.estado = 'Pagado';
     sale.anticipo = Number(sale.total) || 0;
     sale.saldo = 0;
-    sale.pagoOtro = money((Number(sale.pagoOtro) || 0) + saldoLiquidado);
     sale.comision = Math.round(comisionVenta * 100) / 100;
     sale.comisionBase = window.CONFIG.get('commission.base') || 'neto';
     saveSales();
     if (window.STORE && window.STORE.pushSale) { try { window.STORE.pushSale(sale); } catch (e) { /* offline */ } }
     return sale;
+  }
+  function registrarPagoApartado(folio, { monto, metodo, detalle, fecha } = {}) {
+    const sale = sales.find(s => s.folio === folio);
+    if (!sale || sale.estado !== 'Apartado') return { ok: false, error: 'El apartado no está pendiente' };
+    const saldo = sale.saldo != null ? money(sale.saldo) : money((Number(sale.total) || 0) - (Number(sale.anticipo) || 0));
+    const amount = money(monto);
+    if (!Number.isFinite(amount) || amount <= 0) return { ok: false, error: 'El abono debe ser mayor a cero' };
+    if (amount > saldo) return { ok: false, error: 'El abono no puede exceder el saldo pendiente' };
+    if (!['Efectivo', 'Tarjeta', 'Transferencia', 'Mixto'].includes(metodo)) return { ok: false, error: 'Método de pago inválido para el abono' };
+    let payment;
+    try { payment = addSalePayment(sale, { monto: amount, metodo, tipo: amount === saldo ? 'liquidacion' : 'abono', detalle, fecha }); }
+    catch (e) { return { ok: false, error: e.message || 'El desglose del pago no cuadra' }; }
+    sale.anticipo = money((Number(sale.anticipo) || 0) + amount);
+    sale.saldo = money((Number(sale.total) || 0) - sale.anticipo);
+    sale.pagoEfectivo = money((Number(sale.pagoEfectivo) || 0) + payment.efectivo);
+    sale.pagoOtro = money((Number(sale.pagoOtro) || 0) + payment.tarjeta + payment.transferencia + payment.otro);
+    if (sale.saldo === 0) finalizarApartado(sale);
+    else {
+      saveSales();
+      if (window.STORE && window.STORE.pushSale) { try { window.STORE.pushSale(sale); } catch (e) { /* offline */ } }
+    }
+    return { ok: true, sale, payment, liquidado: sale.saldo === 0 };
+  }
+  function completarApartado(folio) {
+    const sale = sales.find(s => s.folio === folio);
+    if (!sale || sale.estado !== 'Apartado') return null;
+    const saldo = sale.saldo != null ? Number(sale.saldo) || 0 : Math.max(0, (Number(sale.total) || 0) - (Number(sale.anticipo) || 0));
+    const r = registrarPagoApartado(folio, { monto: saldo, metodo: 'Efectivo', detalle: { efectivo: saldo } });
+    return r.ok ? r.sale : null;
   }
 
   // Registra un pago de comisión en el historial (local).
@@ -840,10 +899,10 @@
   function persistAllLocal() {
     rawSave(LS_KEY, products); rawSave(LS_CLIENTS, clients); rawSave(LS_SELLERS, sellers);
     rawSave(LS_SALES, sales); rawSave(LS_MOVES, movements); rawSave(LS_RETURNS, returns);
-    rawSave(LS_PROMOS, promos); rawSave(LS_LIQ, liquidations);
+    rawSave(LS_PROMOS, promos); rawSave(LS_LIQ, liquidations); rawSave(LS_PAYMENTS, payments);
   }
   function clearAllLocal() {
-    products.length = 0; sales.length = 0; movements.length = 0; returns.length = 0;
+    products.length = 0; sales.length = 0; movements.length = 0; returns.length = 0; payments.length = 0;
     promos.length = 0; liquidations.length = 0;
     clients.length = 0; seedClients.forEach(c => clients.push(JSON.parse(JSON.stringify(c)))); // solo el genérico
     sellers.length = 0; seedSellers.forEach(s => sellers.push(JSON.parse(JSON.stringify(s)))); // solo el admin
@@ -891,7 +950,7 @@
 
       // 2) Vaciar lo transaccional. De movimientos SOLO los de venta/devolución: las
       //    'Entrada'/'Ajuste'/'Transferencia' son historial de inventario y se conservan.
-      sales.length = 0; returns.length = 0; promos.length = 0; liquidations.length = 0;
+      sales.length = 0; returns.length = 0; promos.length = 0; liquidations.length = 0; payments.length = 0;
       const keepMoves = movements.filter(m => m.tipo !== 'Venta' && m.tipo !== 'Devolución');
       movements.length = 0; keepMoves.forEach(m => movements.push(m));
 
@@ -1013,12 +1072,12 @@
   }
 
   window.DATA = {
-    products, sellers, clients, sales, movements, promos, liquidations, returns,
+    products, sellers, clients, sales, movements, promos, liquidations, returns, payments,
     sku, regenerateSkus, totalStock, hydrate, mkStock, emptyStock, SIZE_MARK,
-    saveProducts, saveSellers, saveClients, saveSales, saveMovements, savePromos, saveReturns,
+    saveProducts, saveSellers, saveClients, saveSales, saveMovements, savePromos, saveReturns, savePayments,
     removeProduct, remapOrphanCodes, catalogHealthReport, hexForColorName, applyOrphanFix, get lastRemap() { return lastRemap; },
     addClient, removeClient, recordSale, nextFolio, stockOf, isAutoImg, resetProducts, applyRemote, mergeRemote, liquidarComision,
-    completarApartado, cerrarMes, getPeriodoInicio,
+    completarApartado, registrarPagoApartado, paymentsForSale, hasFinancialSnapshot, cerrarMes, getPeriodoInicio,
     recordReturn, returnedQty, returnsForFolio, isReturnable,
     addUser, updateUser, removeUser,
     addPromo, updatePromo, removePromo, duplicatePromo,

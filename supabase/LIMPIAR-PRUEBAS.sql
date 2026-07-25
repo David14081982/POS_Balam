@@ -33,6 +33,7 @@ begin;
 -- 1) Ventas y devoluciones. CASCADE arrastra sale_items/return_items (FK on delete
 --    cascade). NO se incluye pos.products: el inventario se queda como está.
 truncate table
+  pos.sale_payments,
   pos.sale_items,
   pos.sales,
   pos.return_items,
@@ -86,6 +87,7 @@ commit;
 -- products debe conservar TU número de productos (NO cero).
 select 'sales (0)'                as tabla, count(*) from pos.sales
 union all select 'sale_items (0)',          count(*) from pos.sale_items
+union all select 'sale_payments (0)',       count(*) from pos.sale_payments
 union all select 'returns (0)',             count(*) from pos.returns
 union all select 'return_items (0)',        count(*) from pos.return_items
 union all select 'promotions (0)',          count(*) from pos.promotions

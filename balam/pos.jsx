@@ -150,6 +150,7 @@
           ticket, sellerIds: [sellerId], client, metodo: pendingMetodo.metodo, estado,
           subtotal: importe, iva, total: grandTotal, anticipo: pendingMetodo.anticipo,
           pagoEfectivo: pendingMetodo.pagoEfectivo, pagoOtro: pendingMetodo.pagoOtro,
+          pagoDetalle: pendingMetodo.pagoDetalle, metodoPago: pendingMetodo.metodoPago,
           ivaPct, ivaIncluded, itemCount,
         });
         setPendingMetodo(null);
