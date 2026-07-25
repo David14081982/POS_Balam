@@ -30,8 +30,10 @@ Deno.serve(async (req) => {
     if (!email) return json({ error: 'Sesión inválida' }, 401);
 
     const svc = createClient(URL, SERVICE, { db: { schema: 'pos' } });
-    const { data: me } = await svc.from('sellers').select('role,active').eq('email', email).maybeSingle();
-    if (!me || me.role !== 'admin' || me.active === false) {
+    // Coincidencia por correo SIN distinguir mayúsculas/minúsculas (ilike sin comodines
+    // = igualdad case-insensitive): evita el 403 si la fila guardó el correo con otra caja.
+    const { data: me } = await svc.from('sellers').select('role,active').ilike('email', email).maybeSingle();
+    if (!me || String(me.role).toLowerCase() !== 'admin' || me.active === false) {
       return json({ error: 'Solo un administrador puede gestionar usuarios' }, 403);
     }
 
