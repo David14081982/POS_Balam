@@ -32,9 +32,20 @@ Deno.serve(async (req) => {
     const svc = createClient(URL, SERVICE, { db: { schema: 'pos' } });
     // Coincidencia por correo SIN distinguir mayúsculas/minúsculas (ilike sin comodines
     // = igualdad case-insensitive): evita el 403 si la fila guardó el correo con otra caja.
-    const { data: me } = await svc.from('sellers').select('role,active').ilike('email', email).maybeSingle();
-    if (!me || String(me.role).toLowerCase() !== 'admin' || me.active === false) {
-      return json({ error: 'Solo un administrador puede gestionar usuarios' }, 403);
+    const { data: me, error: meErr } = await svc.from('sellers').select('role,active').ilike('email', email).maybeSingle();
+    // Distinguimos las 3 causas para no dar siempre el mismo "Solo un administrador":
+    //   a) la consulta FALLÓ (típicamente la SERVICE_ROLE key no es válida en este proyecto,
+    //      p. ej. proyectos con el formato nuevo de llaves) → 500 con el motivo real.
+    //   b) no hay fila para ese correo en pos.sellers → 403 identificando el correo.
+    //   c) hay fila pero no es admin / está inactiva → 403 diciendo el rol real.
+    if (meErr) {
+      return json({ error: 'No se pudo verificar tu permiso de administrador (base de datos): ' + meErr.message + '. Suele ser la SERVICE_ROLE key de la función.' }, 500);
+    }
+    if (!me) {
+      return json({ error: 'Tu cuenta (' + email + ') no aparece en la tabla de usuarios (pos.sellers).' }, 403);
+    }
+    if (String(me.role).toLowerCase() !== 'admin' || me.active === false) {
+      return json({ error: 'Tu cuenta no tiene rol de administrador (rol actual: "' + me.role + '", activa: ' + me.active + ').' }, 403);
     }
 
     const body = await req.json();
