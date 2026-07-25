@@ -460,5 +460,29 @@
   // El producto guarda solo la URL; la foto deja de viajar incrustada en cada guardado.
   function uploadProductPhoto(path, blob) { return uploadImage('product-photos', path, blob, 'image/jpeg'); }
 
-  window.STORE = { init, pull, pushConfig, pushRows, pushSale, pushReturn, deleteRow, pullDomain, fetchSaleByFolio, flushQueue, clearQueue, markResetApplied, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().length; } };
+  // Llama una Edge Function con fetch DIRECTO y devuelve SIEMPRE el cuerpo real de la respuesta.
+  // A diferencia de supabase-js .invoke(), aquí leemos el JSON aunque el status sea 4xx/5xx, así el
+  // usuario ve el mensaje verdadero de la función ("Solo un administrador…", "Sesión inválida", etc.)
+  // y nunca el genérico "Edge Function returned a non-2xx status code".
+  // Devuelve { ok, status, body } — body.error trae el motivo si falló.
+  async function callFunction(name, payload) {
+    const c = await ensureClient();
+    if (!c) return { ok: false, status: 0, body: { error: 'Sin conexión con la nube' } };
+    let token = SUPABASE_KEY;
+    try { const { data } = await c.auth.getSession(); if (data && data.session && data.session.access_token) token = data.session.access_token; } catch (e) { /* sin sesión: se envía la anon y la función responderá 401 */ }
+    try {
+      const resp = await fetch(SUPABASE_URL + '/functions/v1/' + name, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + token },
+        body: JSON.stringify(payload || {}),
+      });
+      let body = {};
+      try { body = await resp.json(); } catch (e) { body = { error: 'La función respondió algo que no se pudo leer (código ' + resp.status + ')' }; }
+      return { ok: resp.ok, status: resp.status, body: body || {} };
+    } catch (e) {
+      return { ok: false, status: 0, body: { error: 'No se pudo conectar con la función "' + name + '": ' + (e.message || e) } };
+    }
+  }
+
+  window.STORE = { init, pull, pushConfig, pushRows, pushSale, pushReturn, deleteRow, pullDomain, fetchSaleByFolio, flushQueue, clearQueue, markResetApplied, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().length; } };
 })();

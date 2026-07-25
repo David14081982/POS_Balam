@@ -970,25 +970,16 @@
         if (!editing && (f.password || '').length < 6) { toast('Contraseña de al menos 6 caracteres', 'var(--danger)'); return; }
         if (editing && f.password && f.password.length < 6) { toast('La nueva contraseña debe tener al menos 6 caracteres', 'var(--danger)'); return; }
         try {
-          const c = await window.STORE.getClient();
           const payload = editing
             ? { action: 'update', id: user.id, email: f.email.trim(), nombre: f.nombre.trim(), role: f.role, avatar: f.avatar || '', password: f.password || undefined }
             : { action: 'create', email: f.email.trim(), password: f.password, nombre: f.nombre.trim(), role: f.role, avatar: f.avatar || '' };
-          const { data, error } = await c.functions.invoke('admin-users', { body: payload });
-          if (error || (data && data.error)) {
-            // El MENSAJE REAL de la función viaja en el cuerpo de la respuesta. En un error non-2xx,
-            // supabase-js lo deja en error.context (el Response), no en data — sin leerlo solo se ve
-            // el genérico "returned a non-2xx status code". Lo extraemos para mostrar la causa real
-            // (p. ej. "Solo un administrador…", "correo ya registrado…").
-            let serverMsg = (data && data.error) || '';
-            if (!serverMsg && error && error.context && typeof error.context.text === 'function') {
-              try { const body = JSON.parse(await error.context.text()); serverMsg = body && body.error; } catch (_) { /* cuerpo no-JSON */ }
-            }
-            const msg = serverMsg || (error && error.message) || 'No se pudo guardar';
-            // La pista de "falta desplegar" solo aplica cuando NO se pudo leer un mensaje del servidor
-            // (es decir, la petición no llegó). Si la función respondió con su propio texto, no confunde.
-            const hint = (!serverMsg && /edge function|not found|failed to send|fetch/i.test(msg)) ? ' · Falta desplegar la función "admin-users" en Supabase (necesaria para crear usuarios o cambiar email/contraseña).' : '';
-            toast(msg + hint, 'var(--danger)'); return;
+          // callFunction lee SIEMPRE el cuerpo real de la respuesta, así el usuario ve el motivo
+          // exacto ("Solo un administrador…", "Sesión inválida", "correo ya registrado…") en vez del
+          // genérico "returned a non-2xx status code" que da supabase-js .invoke() en errores.
+          const r = await window.STORE.callFunction('admin-users', payload);
+          if (!r.ok || (r.body && r.body.error)) {
+            toast((r.body && r.body.error) || ('No se pudo guardar (código ' + r.status + ')'), 'var(--danger)');
+            return;
           }
           await window.STORE.pullDomain('sellers');
           toast(editing ? 'Usuario actualizado' : 'Usuario acreditado', 'var(--accent)');
@@ -1010,9 +1001,8 @@
       const online = !!(window.STORE && (await window.STORE.hasSession()));
       if (online) {
         try {
-          const c = await window.STORE.getClient();
-          const { data, error } = await c.functions.invoke('admin-users', { body: { action: 'delete', id: user.id } });
-          if (error || (data && data.error)) { toast((data && data.error) || (error && error.message), 'var(--danger)'); return; }
+          const r = await window.STORE.callFunction('admin-users', { action: 'delete', id: user.id });
+          if (!r.ok || (r.body && r.body.error)) { toast((r.body && r.body.error) || ('No se pudo eliminar (código ' + r.status + ')'), 'var(--danger)'); return; }
           await window.STORE.pullDomain('sellers');
           toast('Usuario eliminado', 'var(--danger)'); onSaved();
         } catch (e) { toast('Error: ' + (e.message || e), 'var(--danger)'); }
