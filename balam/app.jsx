@@ -15,7 +15,7 @@
     const apartados = D.sales.filter(s => s.estado === 'Apartado');
     const items = [];
     if (criticos.length) items.push({ icon: 'alert', tone: '#ba1a1a', title: `${criticos.length} modelo(s) con stock crítico`, sub: criticos.slice(0, 3).map(p => p.nombre).join(', '), page: 'inventario' });
-    apartados.forEach(s => items.push({ icon: 'clock', tone: '#92760F', title: `Apartado por completar · ${s.folio}`, sub: `${s.cliente} · ${fmt(s.total).replace('.00', '')}`, page: 'dashboard' }));
+    apartados.forEach(s => items.push({ icon: 'clock', tone: '#92760F', title: `Apartado por completar · ${s.folio}`, sub: `${s.cliente} · saldo ${fmt(s.saldo != null ? s.saldo : Math.max(0, (Number(s.total) || 0) - (Number(s.anticipo) || 0))).replace('.00', '')}`, page: 'dashboard' }));
     const n = items.length;
     return h('div', { className: 'relative' }, [
       h('button', { key: 'btn', onClick: () => setOpen(o => !o), className: 'relative w-10 h-10 grid place-items-center text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-colors', title: 'Notificaciones' }, [

@@ -242,5 +242,26 @@ function loadStore(env) {
   ok('9b. folio inexistente → null (sin explotar)', n === null);
 }
 
+// ── 10) H-03: snapshot monetario de apartado ida/vuelta ──────────────
+{
+  const env = freshEnv();
+  const S = loadStore(env);
+  await S.init({});
+  S.pushSale({
+    folio: 'BG-H03', fecha: '2026-07-25 10:00', cliente: 'Ana', vendedores: [],
+    metodo: 'Apartado', estado: 'Apartado', items: 1,
+    subtotal: 1000, iva: 0, total: 1000, ivaPct: 0, ivaIncluded: true,
+    anticipo: 300, saldo: 700, pagoEfectivo: 0, pagoOtro: 0, lineas: [],
+  });
+  await sleep(40);
+  const row = (env.cloud.rowsByTable.sales || [])[0];
+  ok('10a. pushSale envía total/anticipo/saldo exactos', row && row.total === 1000 && row.anticipo === 300 && row.saldo === 700);
+  env.window.DATA.merged.length = 0;
+  env.cloud.rowsByTable.sales = [row];
+  await S.pullDomain('sales');
+  const back = env.window.DATA.merged[0] && env.window.DATA.merged[0].rows[0];
+  ok('10b. otra terminal reconstruye el snapshot exacto', back && back.total === 1000 && back.anticipo === 300 && back.saldo === 700);
+}
+
 console.log(`\n════════ ${pass} pasaron, ${fail} fallaron ════════`);
 process.exit(fail ? 1 : 0);

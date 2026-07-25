@@ -137,15 +137,25 @@
     const ivaPct = window.CONFIG.get('tax.ivaPct') || 0;
     const ivaIncluded = !!window.CONFIG.get('tax.included');
     const grandTotal = ivaIncluded ? subtotal : Math.round(subtotal * (1 + ivaPct / 100) * 100) / 100;
+    const iva = Math.round((grandTotal - (ivaIncluded ? subtotal / (1 + ivaPct / 100) : subtotal)) * 100) / 100;
 
     // Paso 1→2: confirmar cobro abre el selector "¿quién realizó esta venta?"
-    function onCobrar(metodo) { setCheckout(false); setPendingMetodo(metodo); }
+    function onCobrar(pago) { setCheckout(false); setPendingMetodo(pago); }
     // Paso 2→3: con el vendedor elegido se registra la venta y se muestra el éxito
     function onSellerConfirm(sellerId) {
-      const estado = pendingMetodo === 'Apartado' ? 'Apartado' : 'Pagado';
-      const sale = D.recordSale({ ticket, sellerIds: [sellerId], client, metodo: pendingMetodo, estado, total: subtotal, itemCount });
-      setPendingMetodo(null);
-      setSuccess(sale);
+      const estado = pendingMetodo.metodo === 'Apartado' ? 'Apartado' : 'Pagado';
+      try {
+        const sale = D.recordSale({
+          ticket, sellerIds: [sellerId], client, metodo: pendingMetodo.metodo, estado,
+          subtotal, iva, total: grandTotal, anticipo: pendingMetodo.anticipo,
+          pagoEfectivo: pendingMetodo.pagoEfectivo, pagoOtro: pendingMetodo.pagoOtro,
+          ivaPct, ivaIncluded, itemCount,
+        });
+        setPendingMetodo(null);
+        setSuccess(sale);
+      } catch (e) {
+        toast(e.message || 'Los importes de la venta no cuadran', 'var(--danger)');
+      }
     }
     function onNewSale() { setSuccess(null); setTicket([]); setClient(D.clients.find(c => c.generic)); }
 

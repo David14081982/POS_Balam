@@ -61,7 +61,7 @@
     },
     sales: {
       table: 'sales', conflict: 'folio',
-      fromRow: r => ({ folio: r.folio, fecha: String(r.fecha).replace('T', ' ').slice(0, 16), cliente: r.cliente, vendedor: '', vendedores: r.vendedores || [], items: r.items || 0, total: Number(r.total) || 0, metodo: r.metodo, estado: r.estado, valorRegalado: Number(r.valor_regalado) || 0, lineas: [] }),
+      fromRow: r => ({ folio: r.folio, fecha: String(r.fecha).replace('T', ' ').slice(0, 16), cliente: r.cliente, vendedor: '', vendedores: r.vendedores || [], items: r.items || 0, subtotal: r.subtotal == null ? undefined : Number(r.subtotal), iva: r.iva == null ? undefined : Number(r.iva), total: Number(r.total) || 0, ivaPct: r.iva_pct == null ? undefined : Number(r.iva_pct), ivaIncluded: r.iva_included == null ? undefined : !!r.iva_included, anticipo: r.anticipo == null ? undefined : Number(r.anticipo), saldo: r.saldo == null ? undefined : Number(r.saldo), pagoEfectivo: r.pago_efectivo == null ? undefined : Number(r.pago_efectivo), pagoOtro: r.pago_otro == null ? undefined : Number(r.pago_otro), metodo: r.metodo, estado: r.estado, valorRegalado: Number(r.valor_regalado) || 0, lineas: [] }),
     },
     promotions: {
       table: 'promotions', conflict: 'id',
@@ -207,6 +207,16 @@
   function pushSale(sale) {
     if (!enabled) return;
     const header = { folio: sale.folio, fecha: (sale.fecha || '').replace(' ', 'T'), cliente: sale.cliente, vendedores: sale.vendedores || [], metodo: sale.metodo, estado: sale.estado, items: sale.items || 0, total: Number(sale.total) || 0 };
+    // No rellena snapshots ausentes en ventas históricas: sólo las ventas creadas con el
+    // contrato H-03 escriben estos campos.
+    if (sale.subtotal != null) header.subtotal = Number(sale.subtotal) || 0;
+    if (sale.iva != null) header.iva = Number(sale.iva) || 0;
+    if (sale.ivaPct != null) header.iva_pct = Number(sale.ivaPct) || 0;
+    if (sale.ivaIncluded != null) header.iva_included = !!sale.ivaIncluded;
+    if (sale.anticipo != null) header.anticipo = Number(sale.anticipo) || 0;
+    if (sale.saldo != null) header.saldo = Number(sale.saldo) || 0;
+    if (sale.pagoEfectivo != null) header.pago_efectivo = Number(sale.pagoEfectivo) || 0;
+    if (sale.pagoOtro != null) header.pago_otro = Number(sale.pagoOtro) || 0;
     // valor_regalado (cortesías) solo se envía si aplica, así no rompe instalaciones sin la migración pos_009.
     if (Number(sale.valorRegalado) > 0) header.valor_regalado = Number(sale.valorRegalado);
     const items = (sale.lineas || []).map(l => ({ folio: sale.folio, sku: l.sku, nombre: l.nombre, talla: l.talla, qty: l.qty, precio: Number(l.precio) || 0 }));

@@ -167,24 +167,41 @@
     const [recibido, setRecibido] = useState('');
     const [efectivo, setEfectivo] = useState('');
     const [anticipo, setAnticipo] = useState('');
-    const recv = parseFloat(recibido) || 0;
+    const recv = Number(recibido);
     const cambio = Math.max(0, recv - total);
-    const efe = parseFloat(efectivo) || 0;
+    const efe = Number(efectivo);
     const restanteMixto = Math.max(0, total - efe);
-    const ant = parseFloat(anticipo) || 0;
+    const ant = Number(anticipo);
     const saldo = Math.max(0, total - ant);
     const esCortesia = metodo === 'Cortesía';        // regalo/giveaway: total $0, exige cliente registrado
 
     const inputCls = 'block w-full h-12 px-4 bg-surface-container-low border border-outline-variant focus:ring-1 focus:ring-primary focus:border-primary text-base rounded-xl font-mono';
     const lbl = 'text-overline uppercase text-on-surface-variant mb-2';
 
+    const metodoValido = METODOS.some(m => m.id === metodo);
+    const efectivoValido = metodo !== 'Efectivo' || (recibido.trim() !== '' && Number.isFinite(recv) && recv >= total);
+    const mixtoValido = metodo !== 'Mixto' || (efectivo.trim() !== '' && Number.isFinite(efe) && efe >= 0 && efe <= total);
+    const apartadoValido = metodo !== 'Apartado' || (anticipo.trim() !== '' && Number.isFinite(ant) && ant >= 0 && ant <= total && !client.generic);
+    const cortesiaValida = !esCortesia || !client.generic;
+    function confirmar() {
+      if (!metodoValido || !efectivoValido || !mixtoValido || !apartadoValido || !cortesiaValida) {
+        toast('Revisa los importes: el pago debe ser numérico, completo y no exceder el total.', 'var(--danger)');
+        return;
+      }
+      onConfirm({
+        metodo,
+        anticipo: metodo === 'Apartado' ? ant : total,
+        pagoEfectivo: metodo === 'Mixto' ? efe : (metodo === 'Efectivo' ? total : 0),
+        pagoOtro: metodo === 'Mixto' ? Math.round((total - efe) * 100) / 100 : (metodo === 'Efectivo' ? 0 : total),
+      });
+    }
     const footer = [
       h('button', { key: 'c', className: 'px-5 h-11 border border-outline-variant text-on-surface text-caption font-bold uppercase tracking-widest hover:bg-surface-container-low rounded-lg transition-colors', onClick: onClose }, 'Cancelar'),
       h('button', {
         key: 'k',
         className: 'px-6 h-11 flex items-center gap-2 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-lg hover:bg-primary-container transition disabled:opacity-40 disabled:cursor-not-allowed',
-        onClick: () => onConfirm(metodo),
-        disabled: (metodo === 'Efectivo' && recv < total) || ((metodo === 'Apartado' || esCortesia) && client.generic),
+        onClick: confirmar,
+        disabled: !metodoValido || !efectivoValido || !mixtoValido || !apartadoValido || !cortesiaValida,
       }, [h(MS, { key: 'i', name: 'check', size: 18 }), metodo === 'Apartado' ? 'Registrar apartado' : esCortesia ? 'Registrar cortesía' : 'Confirmar cobro']),
     ];
 
@@ -259,16 +276,16 @@
   function BalamTicket({ sale }) {
     if (!sale) return null;
     const C = window.CONFIG;
-    const ivaPct = C.get('tax.ivaPct') || 0;
-    const incl = !!C.get('tax.included');
+    const hasSnapshot = sale.subtotal != null || sale.iva != null;
+    const ivaPct = sale.ivaPct != null ? Number(sale.ivaPct) : (C.get('tax.ivaPct') || 0);
+    const incl = sale.ivaIncluded != null ? !!sale.ivaIncluded : !!C.get('tax.included');
     // Base cobrada (con descuento ya aplicado), en la base del precio. El resumen del carrito y el
     // ticket usan EXACTAMENTE el mismo desglose: Subtotal (lista) − Descuento, con IVA del total.
-    const totalBase = Number(sale.total) || 0;
+    const granTotal = Number(sale.total) || 0;
     const desc = Number(sale.descuento) || 0;
-    const subOrig = totalBase + desc;                                  // suma de precios de lista (sin descuento)
-    // IVA = el contenido en el total realmente cobrado (post-descuento); mismo criterio que el carrito.
-    const iva = incl ? totalBase - totalBase / (1 + ivaPct / 100) : totalBase * (ivaPct / 100);
-    const granTotal = incl ? totalBase : totalBase + iva;              // total a pagar
+    const subtotal = hasSnapshot ? Number(sale.subtotal) || 0 : (incl ? granTotal : granTotal / (1 + ivaPct / 100));
+    const iva = hasSnapshot ? Number(sale.iva) || 0 : (incl ? granTotal - granTotal / (1 + ivaPct / 100) : granTotal - subtotal);
+    const subOrig = subtotal + desc;
     const colorDe = (sku) => { const p = D.products.find(x => x.sku === sku); return p ? p.colorName : ''; };
     const lineas = sale.lineas || [];
 
@@ -332,6 +349,10 @@
             h('span', { key: 'l', className: 'font-headline uppercase text-primary', style: { fontSize: '18px', letterSpacing: '-0.01em' } }, 'Total'),
             h('span', { key: 'v', className: 'font-headline text-primary', style: { fontSize: '26px', lineHeight: 1 } }, fmt(granTotal)),
           ]),
+          sale.estado === 'Apartado' ? h('div', { key: 'ap', className: 'mt-3 pt-3 border-t border-outline-variant space-y-1.5' }, [
+            row('Anticipo', fmt(Number(sale.anticipo) || 0)),
+            row('Saldo pendiente', fmt(Number(sale.saldo) || 0)),
+          ]) : null,
         ]),
         // Método de pago
         h('div', { key: 'mp', className: 'w-full mt-5 bg-surface-container-low rounded-xl p-4 text-left flex items-center gap-3' }, [

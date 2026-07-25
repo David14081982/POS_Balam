@@ -47,7 +47,8 @@
     const refresh = () => bump(v => v + 1);
     function completar(folio) {
       const sale = D.sales.find(s => s.folio === folio);
-      if (!window.confirm('¿Completar el apartado ' + folio + (sale ? ' de ' + sale.cliente : '') + '?\nSe descontará el stock y se acreditará la comisión al vendedor.')) return;
+      const saldo = sale ? (sale.saldo != null ? Number(sale.saldo) || 0 : Math.max(0, (Number(sale.total) || 0) - (Number(sale.anticipo) || 0))) : 0;
+      if (!window.confirm('¿Liquidar ' + fmt(saldo) + ' del apartado ' + folio + (sale ? ' de ' + sale.cliente : '') + '?\nSe descontará el stock y se acreditará la comisión al vendedor.')) return;
       const r = D.completarApartado(folio);
       refresh();
       toast(r ? 'Apartado ' + folio + ' completado · venta pagada' : 'No se pudo completar', r ? undefined : 'var(--danger)');
@@ -198,7 +199,7 @@
               h('div', { key: 'l', className: 'space-y-3' }, apartados.slice(0, 6).map(s => h('div', { key: s.folio, className: 'flex items-center justify-between gap-2' }, [
                 h('div', { key: 'd', className: 'min-w-0' }, [
                   h('p', { key: 'n', className: 'text-body-strong text-primary truncate' }, s.cliente),
-                  h('p', { key: 'f', className: 'text-caption text-muted' }, s.folio + ' · ' + fmt(s.total).replace('.00', '')),
+                  h('p', { key: 'f', className: 'text-caption text-muted' }, s.folio + ' · saldo ' + fmt(s.saldo != null ? s.saldo : Math.max(0, (Number(s.total) || 0) - (Number(s.anticipo) || 0))).replace('.00', '')),
                 ]),
                 h('button', { key: 'b', className: 'shrink-0 px-3 py-1.5 text-overline font-bold uppercase tracking-wider rounded bg-primary text-on-primary hover:opacity-90 transition-opacity', onClick: () => completar(s.folio) }, 'Completar'),
               ]))),

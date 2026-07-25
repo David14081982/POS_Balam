@@ -486,7 +486,30 @@
 
   // Registra una venta: descuenta stock, mueve inventario, actualiza cliente y vendedores.
   // ticket: [{ p, talla, qty }], sellerIds: [id], client: obj, metodo, estado, total, itemCount.
-  function recordSale({ ticket, sellerIds, client, metodo, estado, total, itemCount, fecha: fechaIn }) {
+  const money = n => Math.round(Number(n) * 100) / 100;
+  function assertSaleAmounts({ ticket, metodo, estado, subtotal, iva, total, anticipo, pagoEfectivo, pagoOtro, ivaIncluded }) {
+    const finite = n => Number.isFinite(Number(n));
+    if (!Array.isArray(ticket) || !ticket.length || ticket.some(l => !Number.isInteger(Number(l.qty)) || Number(l.qty) <= 0)) throw new Error('La venta requiere artículos con cantidades positivas');
+    if (!window.CONFIG.list('payment_method').some(m => m.code === metodo)) throw new Error('Método de pago inválido');
+    if (![subtotal, iva, total, anticipo, pagoEfectivo, pagoOtro].every(finite)) throw new Error('Los importes deben ser numéricos');
+    if (subtotal < 0 || iva < 0 || total < 0) throw new Error('Subtotal, IVA y total deben ser mayores o iguales a cero');
+    const expectedTotal = ivaIncluded ? subtotal : subtotal + iva;
+    if (Math.abs(money(expectedTotal) - money(total)) > 0.009) throw new Error('El subtotal e IVA no coinciden con el total final');
+    if (anticipo < 0 || anticipo > total) throw new Error('El anticipo debe estar entre cero y el total');
+    if (metodo === 'Apartado' && estado !== 'Apartado') throw new Error('El estado del apartado es inválido');
+    if (metodo !== 'Apartado' && metodo !== 'Cortesía' && Math.abs(money(pagoEfectivo + pagoOtro) - money(total)) > 0.009) throw new Error('La suma de pagos no coincide con el total');
+    if (pagoEfectivo < 0 || pagoEfectivo > total || pagoOtro < 0 || pagoOtro > total) throw new Error('El desglose de pago es inválido');
+  }
+  function recordSale({ ticket, sellerIds, client, metodo, estado, subtotal: subtotalIn, iva: ivaIn, total: totalIn, anticipo: anticipoIn, pagoEfectivo: pagoEfectivoIn, pagoOtro: pagoOtroIn, ivaPct: ivaPctIn, ivaIncluded: ivaIncludedIn, itemCount, fecha: fechaIn }) {
+    const total = money(totalIn);
+    const subtotal = subtotalIn == null ? total : money(subtotalIn);
+    const iva = ivaIn == null ? money(total - subtotal) : money(ivaIn);
+    const anticipo = anticipoIn == null ? (estado === 'Apartado' ? 0 : total) : money(anticipoIn);
+    const pagoEfectivo = pagoEfectivoIn == null ? (metodo === 'Efectivo' ? total : 0) : money(pagoEfectivoIn);
+    const pagoOtro = pagoOtroIn == null ? (metodo === 'Efectivo' || metodo === 'Apartado' ? 0 : total) : money(pagoOtroIn);
+    const ivaPct = Number(ivaPctIn == null ? window.CONFIG.get('tax.ivaPct') : ivaPctIn) || 0;
+    const ivaIncluded = ivaIncludedIn == null ? !!window.CONFIG.get('tax.included') : !!ivaIncludedIn;
+    assertSaleAmounts({ ticket, metodo, estado, subtotal, iva, total, anticipo, pagoEfectivo, pagoOtro, ivaIncluded });
     const folio = nextFolio();
     const fecha = fechaIn || now(); // permite fecha pasada (simulación)
     const cobrada = estado !== 'Apartado' && estado !== 'Cancelado';
@@ -507,7 +530,7 @@
     // 2) Cliente (agregados) — solo registrados y NO en cortesía (no pagó nada).
     if (client && !client.generic && !cortesia) {
       const c = clients.find(x => x.id === client.id);
-      if (c) { c.compras = (c.compras || 0) + 1; c.total = (c.total || 0) + total; c.ultima = fecha.slice(0, 10); saveClients(); }
+      if (c) { c.compras = (c.compras || 0) + 1; c.total = money((c.total || 0) + total); c.ultima = fecha.slice(0, 10); saveClients(); }
     }
     // 3) Vendedores (reparto de venta y comisión).
     //    Base de comisión configurable (commission.base): 'neto' = sin IVA, 'bruto' = con IVA.
@@ -516,10 +539,8 @@
     let comisionVenta = 0;
     if (cobrada && ids.length && !cortesia) {
       const share = total / ids.length;
-      const ivaPct = Number(window.CONFIG.get('tax.ivaPct')) || 0;
-      const incl = !!window.CONFIG.get('tax.included');
-      const neto = incl ? share / (1 + ivaPct / 100) : share;
-      const bruto = incl ? share : share * (1 + ivaPct / 100);
+      const neto = (total - iva) / ids.length;
+      const bruto = share;
       const base = window.CONFIG.get('commission.base') === 'bruto' ? bruto : neto;
       ids.forEach(id => {
         const s = sellers.find(x => x.id === id);
@@ -541,11 +562,14 @@
     const sale = {
       folio, fecha, cliente: client ? client.nombre : 'Público en general',
       vendedor: primary[0] || '—', vendedores: ids.slice(),
-      items: itemCount, total: totalCobrado, metodo, estado,
-      descuento: cortesia ? 0 : Math.max(0, subtotalOrig - total), valorRegalado,
+      items: itemCount, subtotal, iva, total: totalCobrado, ivaPct, ivaIncluded,
+      anticipo: cortesia ? 0 : anticipo, saldo: cortesia ? 0 : money(total - anticipo),
+      pagoEfectivo: cortesia ? 0 : pagoEfectivo, pagoOtro: cortesia ? 0 : pagoOtro,
+      metodo, estado,
+      descuento: cortesia ? 0 : Math.max(0, subtotalOrig - subtotal), valorRegalado,
       comision: comisionVenta, comisionBase: window.CONFIG.get('commission.base') || 'neto',
       // En cortesía cada línea queda en $0 (no se cobró); el valor vive en precioOrig y valorRegalado.
-      lineas: ticket.map(l => ({ sku: l.p.sku, nombre: l.p.nombre, talla: l.talla, qty: l.qty, precio: cortesia ? 0 : unitOf(l), precioOrig: Number(l.p.precio) || 0 })),
+      lineas: ticket.map(l => ({ sku: l.p.sku, nombre: l.p.nombre, talla: l.talla, qty: l.qty, precio: cortesia ? 0 : money(unitOf(l) * (subtotal > 0 ? total / subtotal : 0)), precioBase: cortesia ? 0 : unitOf(l), precioOrig: Number(l.p.precio) || 0 })),
     };
     sales.unshift(sale);
     saveSales();
@@ -572,10 +596,10 @@
     let comisionVenta = 0;
     if (ids.length) {
       const share = (Number(sale.total) || 0) / ids.length;
-      const ivaPct = Number(window.CONFIG.get('tax.ivaPct')) || 0;
-      const incl = !!window.CONFIG.get('tax.included');
-      const neto = incl ? share / (1 + ivaPct / 100) : share;
-      const bruto = incl ? share : share * (1 + ivaPct / 100);
+      const grossTotal = Number(sale.total) || 0;
+      const taxRatio = grossTotal > 0 ? (Number(sale.iva) || 0) / grossTotal : 0;
+      const neto = share * (1 - taxRatio);
+      const bruto = share;
       const base = window.CONFIG.get('commission.base') === 'bruto' ? bruto : neto;
       ids.forEach(id => {
         const s = sellers.find(x => x.id === id);
@@ -584,7 +608,11 @@
       saveSellers();
     }
     // 3) Marcar pagada y guardar la comisión real
+    const saldoLiquidado = sale.saldo != null ? Number(sale.saldo) || 0 : Math.max(0, (Number(sale.total) || 0) - (Number(sale.anticipo) || 0));
     sale.estado = 'Pagado';
+    sale.anticipo = Number(sale.total) || 0;
+    sale.saldo = 0;
+    sale.pagoOtro = money((Number(sale.pagoOtro) || 0) + saldoLiquidado);
     sale.comision = Math.round(comisionVenta * 100) / 100;
     sale.comisionBase = window.CONFIG.get('commission.base') || 'neto';
     saveSales();
@@ -662,16 +690,26 @@
       movements.unshift({ fecha, tipo: 'Devolución', producto: l.nombre, sku: l.sku, cant: Number(l.qty) || 0, ref: folio });
     });
     saveProducts(); saveMovements();
-    // 2) Total reembolsado (precio cobrado por pieza, tomado del renglón de la venta)
-    const refund = Math.round(items.reduce((a, l) => a + (Number(l.precio) || 0) * (Number(l.qty) || 0), 0) * 100) / 100;
+    // 2) Total reembolsado desde el snapshot cobrado, nunca desde la configuración actual
+    // ni desde el precio (manipulable) enviado por la interfaz.
+    const allReturned = (sale.lineas || []).every(x => {
+      const extra = items.filter(l => l.sku === x.sku && l.talla === x.talla).reduce((a, l) => a + (Number(l.qty) || 0), 0);
+      return returnedQty(folio, x.sku, x.talla) + extra >= (Number(x.qty) || 0);
+    });
+    const linePrice = l => {
+      const soldLine = (sale.lineas || []).find(x => x.sku === l.sku && x.talla === l.talla);
+      return soldLine ? Number(soldLine.precio) || 0 : 0;
+    };
+    let refund = money(items.reduce((a, l) => a + linePrice(l) * (Number(l.qty) || 0), 0));
+    if (allReturned) refund = money((Number(sale.total) || 0) - returnsForFolio(folio).reduce((a, r) => a + (Number(r.total) || 0), 0));
     // 3) Reversión proporcional de comisión/ventas del vendedor (configurable en Configuración)
     const ids = sale.vendedores || [];
     if (window.CONFIG.get('returns.reverseCommission') && ids.length && refund > 0) {
       const share = refund / ids.length;
-      const ivaPct = Number(window.CONFIG.get('tax.ivaPct')) || 0;
-      const incl = !!window.CONFIG.get('tax.included');
-      const neto = incl ? share / (1 + ivaPct / 100) : share;
-      const bruto = incl ? share : share * (1 + ivaPct / 100);
+      const grossTotal = Number(sale.total) || 0;
+      const taxRatio = grossTotal > 0 ? (Number(sale.iva) || 0) / grossTotal : 0;
+      const neto = share * (1 - taxRatio);
+      const bruto = share;
       const base = (sale.comisionBase || window.CONFIG.get('commission.base')) === 'bruto' ? bruto : neto;
       ids.forEach(sid => {
         const s = sellers.find(x => x.id === sid);
@@ -688,11 +726,7 @@
       const c = clients.find(x => !x.generic && x.nombre === sale.cliente);
       if (c) { c.total = Math.max(0, Math.round(((c.total || 0) - refund) * 100) / 100); saveClients(); }
     }
-    // 5) Estado de la venta original: total vs parcial (cuenta lo previo + lo de esta devolución)
-    const allReturned = (sale.lineas || []).every(x => {
-      const extra = items.filter(l => l.sku === x.sku && l.talla === x.talla).reduce((a, l) => a + (Number(l.qty) || 0), 0);
-      return returnedQty(folio, x.sku, x.talla) + extra >= (Number(x.qty) || 0);
-    });
+    // 5) Estado de la venta original: total vs parcial
     sale.estado = allReturned ? 'Devuelto' : 'Devolución parcial';
     saveSales();
     if (!remoteApplying && window.STORE && window.STORE.pushSale) { try { window.STORE.pushSale(sale); } catch (e) { /* offline */ } }
@@ -700,7 +734,7 @@
     const ret = {
       id, folio, fecha, cliente: sale.cliente, vendedores: ids.slice(),
       metodo: metodo || sale.metodo, total: refund, notas: notas || '',
-      lineas: items.map(l => ({ sku: l.sku, nombre: l.nombre, talla: l.talla, qty: Number(l.qty) || 0, motivo: l.motivo || '', precio: Number(l.precio) || 0 })),
+      lineas: items.map(l => ({ sku: l.sku, nombre: l.nombre, talla: l.talla, qty: Number(l.qty) || 0, motivo: l.motivo || '', precio: linePrice(l) })),
     };
     returns.unshift(ret);
     saveReturns();
