@@ -49,7 +49,9 @@
   function TicketPanel({ ticket, client, subtotal, subtotalOrig, discount, itemCount, grandTotal, onPickClient, onResetClient, onQty, onRemove, onCobrar, onClear, bottom, flashKey }) {
     const subOrig = subtotalOrig != null ? subtotalOrig : subtotal;
     const desc = discount || 0;
-    const totalPagar = grandTotal != null ? grandTotal : subtotal; // con IVA sumado si no está incluido
+    const totalPagar = grandTotal != null ? grandTotal : subtotal;
+    const importe = Math.round((totalPagar / 1.16) * 100) / 100;
+    const ivaFinanzas = Math.round((totalPagar - importe) * 100) / 100;
     const empty = ticket.length === 0;
     return h('aside', {
       className: 'bg-surface-container-lowest rounded-xl shadow-e3 flex flex-col overflow-hidden shrink-0 ' +
@@ -117,25 +119,18 @@
       // Footer (navy)
       h('div', { key: 'foot', className: 'px-6 py-4 bg-primary text-on-primary' }, [
         h('div', { key: 'rows', className: 'space-y-1.5 mb-2' }, [
-          h('div', { key: 'st', className: 'flex justify-between items-center text-caption opacity-70' }, [
-            h('span', { key: 'l' }, `Subtotal (${itemCount} artículo${itemCount === 1 ? '' : 's'})`), h('span', { key: 'v', className: 'font-medium' }, fmt(subOrig)),
-          ]),
-          (() => {
-            const ivaPct = window.CONFIG.get('tax.ivaPct') || 0;
-            const incl = window.CONFIG.get('tax.included');
-            if (!ivaPct) return null;
-            // IVA = el contenido en el TOTAL realmente cobrado (después del descuento). El descuento
-            // reduce la base gravable, así que el IVA baja proporcionalmente (criterio fiscal SAT/CFDI).
-            // El renglón se muestra ANTES que Descuentos por decisión de presentación; el cálculo NO
-            // depende del orden (siempre parte del subtotal ya descontado).
-            const iva = incl ? subtotal - subtotal / (1 + ivaPct / 100) : subtotal * (ivaPct / 100);
-            return h('div', { key: 'iva', className: 'flex justify-between items-center text-caption opacity-70' }, [
-              h('span', { key: 'l' }, `IVA ${incl ? 'incluido' : ''} (${ivaPct}%)`), h('span', { key: 'v', className: 'font-medium' }, fmt(iva)),
-            ]);
-          })(),
+          desc > 0 ? h('div', { key: 'po', className: 'flex justify-between items-center text-caption opacity-70' }, [
+            h('span', { key: 'l' }, `Precio original (${itemCount} artículo${itemCount === 1 ? '' : 's'})`), h('span', { key: 'v', className: 'font-medium' }, fmt(subOrig)),
+          ]) : null,
           desc > 0 ? h('div', { key: 'ds', className: 'flex justify-between items-center text-caption' }, [
             h('span', { key: 'l', className: 'flex items-center gap-1' }, [h(MS, { key: 'i', name: 'sell', size: 14 }), 'Descuentos']), h('span', { key: 'v', className: 'font-semibold', style: { color: '#FFE088' } }, '− ' + fmt(desc)),
           ]) : null,
+          h('div', { key: 'im', className: 'flex justify-between items-center text-caption opacity-70' }, [
+            h('span', { key: 'l' }, 'Importe'), h('span', { key: 'v', className: 'font-medium' }, fmt(importe)),
+          ]),
+          h('div', { key: 'iva', className: 'flex justify-between items-center text-caption opacity-70' }, [
+            h('span', { key: 'l' }, 'IVA incluido (16%)'), h('span', { key: 'v', className: 'font-medium' }, fmt(ivaFinanzas)),
+          ]),
         ]),
         h('div', { key: 'tot', className: 'flex justify-between items-end mb-3' }, [
           h('span', { key: 'l', className: 'text-overline uppercase opacity-60' }, 'Total a pagar'),
@@ -277,15 +272,15 @@
     if (!sale) return null;
     const C = window.CONFIG;
     const hasSnapshot = sale.subtotal != null || sale.iva != null;
-    const ivaPct = sale.ivaPct != null ? Number(sale.ivaPct) : (C.get('tax.ivaPct') || 0);
-    const incl = sale.ivaIncluded != null ? !!sale.ivaIncluded : !!C.get('tax.included');
+    const ivaPct = sale.ivaPct != null ? Number(sale.ivaPct) : 16;
+    const incl = sale.ivaIncluded != null ? !!sale.ivaIncluded : true;
     // Base cobrada (con descuento ya aplicado), en la base del precio. El resumen del carrito y el
     // ticket usan EXACTAMENTE el mismo desglose: Subtotal (lista) − Descuento, con IVA del total.
     const granTotal = Number(sale.total) || 0;
     const desc = Number(sale.descuento) || 0;
-    const subtotal = hasSnapshot ? Number(sale.subtotal) || 0 : (incl ? granTotal : granTotal / (1 + ivaPct / 100));
-    const iva = hasSnapshot ? Number(sale.iva) || 0 : (incl ? granTotal - granTotal / (1 + ivaPct / 100) : granTotal - subtotal);
-    const subOrig = subtotal + desc;
+    const subtotal = hasSnapshot ? Number(sale.subtotal) || 0 : granTotal / 1.16;
+    const iva = hasSnapshot ? Number(sale.iva) || 0 : granTotal - subtotal;
+    const subOrig = granTotal + desc;
     const colorDe = (sku) => { const p = D.products.find(x => x.sku === sku); return p ? p.colorName : ''; };
     const lineas = sale.lineas || [];
 
@@ -341,9 +336,10 @@
         // Totales
         h('div', { key: 'tt', className: 'w-full border-t-2 border-primary pt-4 mt-8' }, [
           h('div', { key: 'r', className: 'space-y-1.5 text-on-surface-variant' }, [
-            h('div', { key: 'st', className: 'flex justify-between', style: { fontSize: '13px' } }, [h('span', { key: 'l' }, 'Subtotal'), h('span', { key: 'v' }, fmt(subOrig))]),
-            ivaPct ? h('div', { key: 'iva', className: 'flex justify-between', style: { fontSize: '13px' } }, [h('span', { key: 'l' }, `IVA ${incl ? 'incluido ' : ''}(${ivaPct}%)`), h('span', { key: 'v' }, fmt(iva))]) : null,
+            desc > 0 ? h('div', { key: 'po', className: 'flex justify-between', style: { fontSize: '13px' } }, [h('span', { key: 'l' }, 'Precio original'), h('span', { key: 'v' }, fmt(subOrig))]) : null,
             desc > 0 ? h('div', { key: 'ds', className: 'flex justify-between', style: { fontSize: '13px', color: '#9a7b16' } }, [h('span', { key: 'l' }, 'Descuento'), h('span', { key: 'v', className: 'font-semibold' }, '− ' + fmt(desc))]) : null,
+            h('div', { key: 'st', className: 'flex justify-between', style: { fontSize: '13px' } }, [h('span', { key: 'l' }, 'Importe'), h('span', { key: 'v' }, fmt(subtotal))]),
+            h('div', { key: 'iva', className: 'flex justify-between', style: { fontSize: '13px' } }, [h('span', { key: 'l' }, 'IVA incluido (16%)'), h('span', { key: 'v' }, fmt(iva))]),
           ]),
           h('div', { key: 'g', className: 'flex justify-between items-end border-t border-outline-variant pt-3 mt-3' }, [
             h('span', { key: 'l', className: 'font-headline uppercase text-primary', style: { fontSize: '18px', letterSpacing: '-0.01em' } }, 'Total'),

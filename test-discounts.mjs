@@ -111,33 +111,24 @@ check('subtotalOrig (1000*2 + 500)', subtotalOrig, 2500);
 check('subtotal con 10% off', subtotal, 2250);
 check('descuento total', discount, 250);
 
-console.log('\n── H) TICKET: reconstrucción IVA desde sale.total ───────');
-function ticketTotals(total, ivaPct, incl) {
-  const subtotal = incl ? total / (1 + ivaPct / 100) : total;
-  const iva = incl ? total - subtotal : subtotal * (ivaPct / 100);
-  const granTotal = incl ? total : subtotal + iva;
-  return { subtotal, iva, granTotal };
+console.log('\n── H) FINANZAS: IVA 16% incluido en el total ────────────');
+function ticketTotals(total) {
+  const importe = Math.round((total / 1.16) * 100) / 100;
+  const iva = Math.round((total - importe) * 100) / 100;
+  return { importe, iva, total };
 }
-// IVA incluido (default): granTotal debe IGUALAR lo cobrado en POS
-const tIncl = ticketTotals(2250, 16, true);
-check('IVA incluido: granTotal == total cobrado', tIncl.granTotal, 2250);
-check('IVA incluido: subtotal+iva == granTotal', tIncl.subtotal + tIncl.iva, 2250);
-// IVA NO incluido: granTotal del ticket vs lo cobrado en POS
-const tExcl = ticketTotals(2250, 16, false);
-check('IVA NO incl: granTotal ticket', tExcl.granTotal, 2610);
+const fin = ticketTotals(1150);
+check('Importe de $1,150', fin.importe, 991.38);
+check('IVA incluido de $1,150', fin.iva, 158.62);
+check('Importe + IVA = total', fin.importe + fin.iva, 1150);
 
-console.log('\n── I) FIX: POS grandTotal == total del ticket (ambos modos) ──');
-// Réplica de la fórmula nueva en pos.jsx
-const posGrandTotal = (subtotal, ivaPct, incl) => incl ? subtotal : Math.round(subtotal * (1 + ivaPct / 100) * 100) / 100;
-// sale.total se sigue guardando como la BASE (subtotal con descuento) → ticket reconstruye.
-const baseCobrada = 2250;
-// IVA incluido (default): POS cobra subtotal, ticket imprime lo mismo
-check('IVA incl: POS cobra == ticket', posGrandTotal(baseCobrada, 16, true), ticketTotals(baseCobrada, 16, true).granTotal);
-// IVA NO incluido: POS ahora suma IVA y coincide con el ticket
-check('IVA NO incl: POS cobra (con IVA)', posGrandTotal(baseCobrada, 16, false), 2610);
-check('IVA NO incl: POS cobra == ticket', posGrandTotal(baseCobrada, 16, false), ticketTotals(baseCobrada, 16, false).granTotal);
-// Sin IVA configurado (0%): cobro == base en ambos modos
-check('IVA 0%: POS cobra == base', posGrandTotal(baseCobrada, 0, false), 2250);
+console.log('\n── I) DESCUENTO ANTES DEL DESGLOSE DE IVA ──────────────');
+const precioOriginal = 1200, descuentoFin = 50;
+const totalFin = precioOriginal - descuentoFin;
+const desglose = ticketTotals(totalFin);
+check('$1,200 − $50 = total cobrado', totalFin, 1150);
+check('total descontado no vuelve a sumar IVA', desglose.total, 1150);
+check('desglose fiscal conserva total', desglose.importe + desglose.iva, totalFin);
 
 console.log(`\n════════ RESULTADO: ${pass} pasaron, ${fail} fallaron ════════`);
 process.exit(fail ? 1 : 0);

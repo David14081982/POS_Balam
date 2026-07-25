@@ -710,10 +710,12 @@
         h(SerifHeading, { key: 't', className: 'mb-4', children: 'Moneda, impuestos y folios' }),
         h('div', { key: 'g', className: 'grid grid-cols-1 md:grid-cols-2 gap-x-6' }, [
           h(CfgText, { key: 'c', k: 'currency', label: 'Moneda' }),
-          h(CfgText, { key: 'i', k: 'tax.ivaPct', label: 'IVA (%)', type: 'number' }),
           h(CfgText, { key: 'f', k: 'folio.prefix', label: 'Prefijo de folio' }),
         ]),
-        h(CfgToggle, { key: 'inc', k: 'tax.included', title: 'IVA incluido en precios', desc: 'Los precios mostrados ya incluyen el IVA' }),
+        h('div', { key: 'iva', className: 'mt-4 p-4 rounded-xl bg-surface-container-low border border-outline-variant' }, [
+          h('p', { key: 't', className: 'text-body-strong text-primary' }, 'IVA 16% incluido en precios'),
+          h('p', { key: 'd', className: 'text-caption text-on-surface-variant mt-1' }, 'Regla fija de Finanzas: el POS separa Importe e IVA del total; nunca agrega IVA nuevamente.'),
+        ]),
       ]),
     ],
     producto: () => [

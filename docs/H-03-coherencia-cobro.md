@@ -40,3 +40,21 @@ y lo pendiente. El ticket y las devoluciones leen el snapshot histórico.
 
 Las ventas anteriores siguen siendo legibles: si faltan los campos nuevos se
 usan los campos existentes y el total persistido, sin migrarlas ni reescribirlas.
+
+## Regla fiscal confirmada por Finanzas
+
+Todos los precios de Balam incluyen IVA 16%. El descuento se resta del precio
+con IVA y después se separa el total final:
+
+```text
+Precio original  $1,200.00
+Descuento          -$50.00
+Total            $1,150.00
+Importe            $991.38
+IVA 16%            $158.62
+```
+
+El POS no permite el modo “IVA no incluido” y nunca vuelve a sumar IVA al
+precio mostrado. Para ventas nuevas, `subtotal` contiene el importe sin IVA,
+`iva` el impuesto incluido y `total` lo efectivamente cobrado. Las devoluciones
+usan el total histórico efectivamente cobrado.

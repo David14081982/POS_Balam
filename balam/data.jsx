@@ -493,7 +493,7 @@
     if (!window.CONFIG.list('payment_method').some(m => m.code === metodo)) throw new Error('Método de pago inválido');
     if (![subtotal, iva, total, anticipo, pagoEfectivo, pagoOtro].every(finite)) throw new Error('Los importes deben ser numéricos');
     if (subtotal < 0 || iva < 0 || total < 0) throw new Error('Subtotal, IVA y total deben ser mayores o iguales a cero');
-    const expectedTotal = ivaIncluded ? subtotal : subtotal + iva;
+    const expectedTotal = subtotal + iva;
     if (Math.abs(money(expectedTotal) - money(total)) > 0.009) throw new Error('El subtotal e IVA no coinciden con el total final');
     if (anticipo < 0 || anticipo > total) throw new Error('El anticipo debe estar entre cero y el total');
     if (metodo === 'Apartado' && estado !== 'Apartado') throw new Error('El estado del apartado es inválido');
@@ -502,13 +502,13 @@
   }
   function recordSale({ ticket, sellerIds, client, metodo, estado, subtotal: subtotalIn, iva: ivaIn, total: totalIn, anticipo: anticipoIn, pagoEfectivo: pagoEfectivoIn, pagoOtro: pagoOtroIn, ivaPct: ivaPctIn, ivaIncluded: ivaIncludedIn, itemCount, fecha: fechaIn }) {
     const total = money(totalIn);
-    const subtotal = subtotalIn == null ? total : money(subtotalIn);
-    const iva = ivaIn == null ? money(total - subtotal) : money(ivaIn);
+    const ivaPct = 16;
+    const ivaIncluded = true;
+    const subtotal = money(total / 1.16);
+    const iva = money(total - subtotal);
     const anticipo = anticipoIn == null ? (estado === 'Apartado' ? 0 : total) : money(anticipoIn);
     const pagoEfectivo = pagoEfectivoIn == null ? (metodo === 'Efectivo' ? total : 0) : money(pagoEfectivoIn);
     const pagoOtro = pagoOtroIn == null ? (metodo === 'Efectivo' || metodo === 'Apartado' ? 0 : total) : money(pagoOtroIn);
-    const ivaPct = Number(ivaPctIn == null ? window.CONFIG.get('tax.ivaPct') : ivaPctIn) || 0;
-    const ivaIncluded = ivaIncludedIn == null ? !!window.CONFIG.get('tax.included') : !!ivaIncludedIn;
     assertSaleAmounts({ ticket, metodo, estado, subtotal, iva, total, anticipo, pagoEfectivo, pagoOtro, ivaIncluded });
     const folio = nextFolio();
     const fecha = fechaIn || now(); // permite fecha pasada (simulación)
@@ -534,7 +534,7 @@
     }
     // 3) Vendedores (reparto de venta y comisión).
     //    Base de comisión configurable (commission.base): 'neto' = sin IVA, 'bruto' = con IVA.
-    //    `total` puede incluir o no IVA según tax.included → lo normalizamos a neto/bruto antes de aplicar el %.
+    //    Finanzas fija IVA 16% incluido: `total - iva` es neto y `total` es bruto.
     const ids = (sellerIds && sellerIds.length) ? sellerIds : [];
     let comisionVenta = 0;
     if (cobrada && ids.length && !cortesia) {
@@ -559,6 +559,7 @@
     const primary = ids.map(id => (sellers.find(x => x.id === id) || {}).nombre).filter(Boolean);
     const unitOf = l => (window.PROMOS ? window.PROMOS.lineUnit(l.p, l.talla).unit : (Number(l.p.precio) || 0));
     const subtotalOrig = ticket.reduce((a, l) => a + (Number(l.p.precio) || 0) * l.qty, 0);
+    const totalConDescuento = ticket.reduce((a, l) => a + unitOf(l) * l.qty, 0);
     const sale = {
       folio, fecha, cliente: client ? client.nombre : 'Público en general',
       vendedor: primary[0] || '—', vendedores: ids.slice(),
@@ -566,10 +567,10 @@
       anticipo: cortesia ? 0 : anticipo, saldo: cortesia ? 0 : money(total - anticipo),
       pagoEfectivo: cortesia ? 0 : pagoEfectivo, pagoOtro: cortesia ? 0 : pagoOtro,
       metodo, estado,
-      descuento: cortesia ? 0 : Math.max(0, subtotalOrig - subtotal), valorRegalado,
+      descuento: cortesia ? 0 : money(Math.max(0, subtotalOrig - totalConDescuento)), valorRegalado,
       comision: comisionVenta, comisionBase: window.CONFIG.get('commission.base') || 'neto',
       // En cortesía cada línea queda en $0 (no se cobró); el valor vive en precioOrig y valorRegalado.
-      lineas: ticket.map(l => ({ sku: l.p.sku, nombre: l.p.nombre, talla: l.talla, qty: l.qty, precio: cortesia ? 0 : money(unitOf(l) * (subtotal > 0 ? total / subtotal : 0)), precioBase: cortesia ? 0 : unitOf(l), precioOrig: Number(l.p.precio) || 0 })),
+      lineas: ticket.map(l => ({ sku: l.p.sku, nombre: l.p.nombre, talla: l.talla, qty: l.qty, precio: cortesia ? 0 : money(unitOf(l) * (totalConDescuento > 0 ? total / totalConDescuento : 0)), precioBase: cortesia ? 0 : unitOf(l), precioOrig: Number(l.p.precio) || 0 })),
     };
     sales.unshift(sale);
     saveSales();

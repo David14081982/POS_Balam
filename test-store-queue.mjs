@@ -251,16 +251,19 @@ function loadStore(env) {
     folio: 'BG-H03', fecha: '2026-07-25 10:00', cliente: 'Ana', vendedores: [],
     metodo: 'Apartado', estado: 'Apartado', items: 1,
     subtotal: 1000, iva: 0, total: 1000, ivaPct: 0, ivaIncluded: true,
-    anticipo: 300, saldo: 700, pagoEfectivo: 0, pagoOtro: 0, lineas: [],
+    anticipo: 300, saldo: 700, pagoEfectivo: 0, pagoOtro: 0, descuento: 50,
+    lineas: [{ sku: 'S1', nombre: 'P1', talla: 'M', qty: 1, precio: 1150, precioBase: 1150, precioOrig: 1200 }],
   });
   await sleep(40);
   const row = (env.cloud.rowsByTable.sales || [])[0];
   ok('10a. pushSale envía total/anticipo/saldo exactos', row && row.total === 1000 && row.anticipo === 300 && row.saldo === 700);
+  const item = (env.cloud.rowsByTable.sale_items || [])[0];
+  ok('10b. descuento y precios explicativos llegan a la nube', row && row.descuento === 50 && item && item.precio === 1150 && item.precio_base === 1150 && item.precio_original === 1200);
   env.window.DATA.merged.length = 0;
   env.cloud.rowsByTable.sales = [row];
   await S.pullDomain('sales');
   const back = env.window.DATA.merged[0] && env.window.DATA.merged[0].rows[0];
-  ok('10b. otra terminal reconstruye el snapshot exacto', back && back.total === 1000 && back.anticipo === 300 && back.saldo === 700);
+  ok('10c. otra terminal reconstruye el snapshot exacto', back && back.total === 1000 && back.anticipo === 300 && back.saldo === 700 && back.descuento === 50 && back.lineas[0].precioOrig === 1200);
 }
 
 console.log(`\n════════ ${pass} pasaron, ${fail} fallaron ════════`);

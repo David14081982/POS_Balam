@@ -132,12 +132,13 @@
     const subtotal = ticket.reduce((a, l) => a + unitOf(l) * l.qty, 0);
     const discount = Math.max(0, subtotalOrig - subtotal);
     const itemCount = ticket.reduce((a, l) => a + l.qty, 0);
-    // Total a cobrar: si el IVA NO está incluido en el precio, se suma sobre la base con descuento.
-    // Si está incluido (default), el precio ya lo contiene y el total es el subtotal tal cual.
-    const ivaPct = window.CONFIG.get('tax.ivaPct') || 0;
-    const ivaIncluded = !!window.CONFIG.get('tax.included');
-    const grandTotal = ivaIncluded ? subtotal : Math.round(subtotal * (1 + ivaPct / 100) * 100) / 100;
-    const iva = Math.round((grandTotal - (ivaIncluded ? subtotal / (1 + ivaPct / 100) : subtotal)) * 100) / 100;
+    // Regla de Finanzas: todos los precios ya incluyen IVA 16%. El descuento se aplica
+    // al precio con IVA y después se separan Importe + IVA, sin volver a sumarlo.
+    const ivaPct = 16;
+    const ivaIncluded = true;
+    const grandTotal = Math.round(subtotal * 100) / 100;
+    const importe = Math.round((grandTotal / (1 + ivaPct / 100)) * 100) / 100;
+    const iva = Math.round((grandTotal - importe) * 100) / 100;
 
     // Paso 1→2: confirmar cobro abre el selector "¿quién realizó esta venta?"
     function onCobrar(pago) { setCheckout(false); setPendingMetodo(pago); }
@@ -147,7 +148,7 @@
       try {
         const sale = D.recordSale({
           ticket, sellerIds: [sellerId], client, metodo: pendingMetodo.metodo, estado,
-          subtotal, iva, total: grandTotal, anticipo: pendingMetodo.anticipo,
+          subtotal: importe, iva, total: grandTotal, anticipo: pendingMetodo.anticipo,
           pagoEfectivo: pendingMetodo.pagoEfectivo, pagoOtro: pendingMetodo.pagoOtro,
           ivaPct, ivaIncluded, itemCount,
         });
