@@ -803,7 +803,7 @@ antes del registro conserva el no-op histórico.
 **Estado:** RESUELTO
 **Fecha de registro:** 26/07/2026
 **Fecha de resolución:** 26/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `85385aa`
 **Evidencia:** `CONFIG.emit()` consulta e invoca directamente
 `window.STORE.pushConfig(state)`. `STORE`, a su vez, consulta y carga
 `window.CONFIG` durante la reconciliación y al calcular la ventana de ventas.
