@@ -513,7 +513,7 @@ conservada en memoria, pero cerrar la pestaña antes de liberar espacio puede
 perderla. Falta un respaldo durable alternativo para cerrar completamente la
 parte de cuota.
 **Corrección documentada:** `docs/fixes/diagnostico-cola-offline.md`.
-**Commit:** Pendiente de commit.
+**Commit:** `cabfccf`.
 
 ## Regla de actualización
 
