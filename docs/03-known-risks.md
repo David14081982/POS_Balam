@@ -522,7 +522,7 @@ permanece en memoria y la interfaz advierte que no se cierre la pestaña; no se
 declara falsamente como persistida.
 **Corrección documentada:** `docs/fixes/diagnostico-cola-offline.md`.
 **Commit inicial:** `cabfccf`.
-**Commit de cierre:** Pendiente de commit.
+**Commit de cierre:** `6f6a874`.
 
 ## H-15 — Smoke E2E produce falsos negativos y no libera recursos al fallar
 

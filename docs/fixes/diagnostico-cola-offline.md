@@ -4,7 +4,7 @@
 **Estado:** RESUELTO
 **Fecha:** 26/07/2026
 **Commit inicial:** `cabfccf`
-**Commit de cierre:** Pendiente de commit
+**Commit de cierre:** `6f6a874`
 
 ## Problema y reproducción
 
