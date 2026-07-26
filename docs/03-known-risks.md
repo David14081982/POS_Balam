@@ -717,7 +717,7 @@ corrección separada.
 **Estado:** RESUELTO
 **Fecha de registro:** 26/07/2026
 **Fecha de resolución:** 26/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `1ac12dc`
 **Evidencia:** `build-offline.mjs` descarga Babel, React, JsBarcode, CSS,
 fuentes e imágenes durante cada ejecución y usa
 `npx --yes tailwindcss@3.4.17`. En el entorno sin red, Babel degradó a runtime y

@@ -3,7 +3,7 @@
 **Riesgo:** H-20
 **Estado:** RESUELTO
 **Fecha:** 26/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `1ac12dc`
 
 ## Problema y reproducción
 
@@ -74,4 +74,3 @@ La reversión restaura la lectura remota anterior y retira el almacén fijado.
 
 - Riesgo: `docs/03-known-risks.md#h-20--build-depende-de-red-y-recursos-externos-mutables`
 - Arquitectura: `docs/02-architecture.md#build-offline`
-
