@@ -30,15 +30,26 @@ la fuente primaria.
 
 El orden relevante definido en `POS Balam.html` es:
 
-1. `balam/config.jsx`
-2. `balam/data.jsx`
-3. `balam/auth.jsx`
-4. módulos de interfaz
-5. `balam/store.jsx`
-6. `balam/app.jsx`
+1. `balam/core.jsx`
+2. `balam/config.jsx`
+3. `balam/data.jsx`
+4. `balam/auth.jsx`
+5. módulos de interfaz
+6. `balam/store.jsx`
+7. `balam/app.jsx`
 
 Aunque `STORE` se carga después, `CONFIG`, `DATA` y `AUTH` consultan sus métodos
 en tiempo de uso, no durante su declaración. `App` coordina la inicialización.
+
+## CORE
+
+Archivo: `balam/core.jsx`. API: `window.CORE`.
+
+Es el contrato temprano para responsabilidades que deben ser idénticas entre
+módulos y que no dependen del dominio ni de persistencia remota. Actualmente
+expone `getDeviceId()`: conserva la clave histórica `balam_device_id` y
+garantiza que `DATA` y `STORE` usen una sola identidad durante la sesión,
+incluso cuando `localStorage` no está disponible.
 
 ## Recursos de interfaz
 

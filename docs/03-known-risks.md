@@ -654,6 +654,36 @@ fuera del repositorio; por ello se conservó íntegro el contrato del editor.
 Componentes/utilidades duplicados pertenecen a la Fase 16 y no se mezclaron.
 **Corrección documentada:** `docs/fixes/limpieza-codigo-recursos.md`.
 
+## H-18 — Identidad de terminal duplicada entre dominio y sincronización
+
+**Estado:** RESUELTO
+**Fecha de registro:** 26/07/2026
+**Fecha de resolución:** 26/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** `balam/data.jsx` y `balam/store.jsx` implementan por separado
+`getDeviceId()` y la clave `balam_device_id`. En la ruta de error de
+`localStorage`, `DATA` devuelve un identificador volátil nuevo en cada llamada,
+mientras `STORE` conserva otro identificador en memoria.
+**Origen de auditoría:** Fase 16, resto de H-19 y contrato global H-21.
+**Reproducción:** `test-module-contracts.mjs` produjo 11 pruebas aprobadas y 5
+fallidas antes del cambio: faltaban el módulo y su orden de carga, permanecían
+las dos implementaciones y no existía una identidad volátil compartida.
+**Riesgo:** una venta y sus escrituras/conflictos remotos pueden quedar
+atribuidos a identidades de terminal distintas cuando el almacenamiento local
+no está disponible.
+**Corrección:** `balam/core.jsx` es el único propietario de
+`window.CORE.getDeviceId()`, carga antes de `CONFIG`/`DATA`/`STORE`, conserva la
+clave histórica y memoriza también la alternativa volátil. Los dos módulos
+consumen ese contrato sin cambiar payloads ni datos.
+**Pruebas:** contratos 16/16, concurrencia 9/9, cola 97/97, descuentos 43/43,
+migraciones 24/24, roles 10/10, comisiones 10/10, smoke bundle 17/17,
+navegación 13/13 y build offline correcto con 66 assets.
+**Pendiente:** ninguno para la identidad de terminal. Las demás consolidaciones
+de la Fase 16 permanecen separadas por la regla de un problema por corrección.
+**Riesgo residual:** bajo. Sin almacenamiento la identidad sólo puede durar la
+sesión de página, pero ya es única para todos los módulos durante ella.
+**Corrección documentada:** `docs/fixes/identidad-terminal-compartida.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

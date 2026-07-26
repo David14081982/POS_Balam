@@ -125,7 +125,8 @@ function terminal(cloud) {
       mergeRemote() {},
     },
   };
-  const SRC = readFileSync(new URL('balam/store.jsx', import.meta.url), 'utf8');
+  const SRC = readFileSync(new URL('balam/core.jsx', import.meta.url), 'utf8')
+    + '\n' + readFileSync(new URL('balam/store.jsx', import.meta.url), 'utf8');
   const fn = new Function('window', 'localStorage', 'document', 'CustomEvent', SRC + '\nreturn window.STORE;');
   const STORE = fn(window, localStorage, { createElement: () => ({}), head: { appendChild() {} } },
     class { constructor(type, opts) { this.type = type; this.detail = opts?.detail; } });

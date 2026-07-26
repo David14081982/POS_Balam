@@ -10,7 +10,6 @@
   const SCHEMA = 'pos';
   const QKEY = 'balam_sync_queue';
   const QDB = 'balam_sync', QSTORE = 'durable_queue';
-  const DEVICE_KEY = 'balam_device_id';
   // Marca de limpieza de datos de prueba: fila reservada de pos.settings que escribe
   // supabase/LIMPIAR-PRUEBAS.sql. Cada terminal recuerda en RESET_SEEN la última que aplicó;
   // si la nube trae una más nueva, se limpia sola (ver applyResetMark).
@@ -20,18 +19,6 @@
   let sb = null, enabled = false, lastResetMark = null;
   let sessionIdentity = null, sessionManaged = false, onlineSubscribed = false, legacyWarned = false;
   let sessionSeq = 0;
-  let deviceId = null;
-  function getDeviceId() {
-    if (deviceId) return deviceId;
-    try {
-      deviceId = localStorage.getItem(DEVICE_KEY);
-      if (!deviceId) {
-        deviceId = 'dev-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
-        localStorage.setItem(DEVICE_KEY, deviceId);
-      }
-    } catch (e) { deviceId = 'dev-volatile-' + Math.random().toString(36).slice(2, 10); }
-    return deviceId;
-  }
   function activeOwnerId() {
     if (sessionIdentity) return sessionIdentity;
     try {
@@ -73,17 +60,17 @@
       table: 'products', conflict: 'id', localKey: 'products',
       // attrs (Fase 2): valores de catálogos custom. Se envía SOLO si el producto tiene alguno,
       // así las instalaciones que aún no corrieron la migración pos_008 (columna attrs) no se rompen.
-      toRow: p => { const row = { id: p.id, cat: p.cat, manga: p.manga, tela: p.tela, color: p.color, cuello: p.cuello || 'NOR', modelo: String(p.modelo), nombre: p.nombre, orn: p.orn || '—', orn_colors: p.ornColors || [], precio: Number(p.precio) || 0, costo: Number(p.costo) || 0, pop: !!p.pop, stock: p.stock || [], imagen: p.imagen || null, sku: p.sku, barcode_urls: p.barcodeUrls || {}, sync_base_version: Number(p._syncVersion) || 0, sync_device_id: getDeviceId() }; if (p.attrs && Object.keys(p.attrs).length) row.attrs = p.attrs; return row; },
+      toRow: p => { const row = { id: p.id, cat: p.cat, manga: p.manga, tela: p.tela, color: p.color, cuello: p.cuello || 'NOR', modelo: String(p.modelo), nombre: p.nombre, orn: p.orn || '—', orn_colors: p.ornColors || [], precio: Number(p.precio) || 0, costo: Number(p.costo) || 0, pop: !!p.pop, stock: p.stock || [], imagen: p.imagen || null, sku: p.sku, barcode_urls: p.barcodeUrls || {}, sync_base_version: Number(p._syncVersion) || 0, sync_device_id: window.CORE.getDeviceId() }; if (p.attrs && Object.keys(p.attrs).length) row.attrs = p.attrs; return row; },
       fromRow: r => ({ id: r.id, cat: r.cat, manga: r.manga, tela: r.tela, color: r.color, cuello: r.cuello, modelo: r.modelo, nombre: r.nombre, orn: r.orn, ornColors: r.orn_colors || [], precio: Number(r.precio) || 0, costo: Number(r.costo) || 0, pop: !!r.pop, stock: r.stock || [], imagen: r.imagen || undefined, barcodeUrls: r.barcode_urls || {}, attrs: r.attrs || {}, _syncVersion: Number(r.sync_version) || 0, _deletedAt: r.deleted_at || null }),
     },
     clients: {
       table: 'clients', conflict: 'id', localKey: 'clients',
-      toRow: c => ({ id: c.id, nombre: c.nombre, tel: c.tel || null, email: c.email || null, direccion: c.direccion || null, talla: c.talla || null, notas: c.notas || null, compras: c.compras || 0, total: Number(c.total) || 0, ultima: c.ultima || null, nacimiento: c.nacimiento || null, generic: !!c.generic, sync_base_version: Number(c._syncVersion) || 0, sync_device_id: getDeviceId() }),
+      toRow: c => ({ id: c.id, nombre: c.nombre, tel: c.tel || null, email: c.email || null, direccion: c.direccion || null, talla: c.talla || null, notas: c.notas || null, compras: c.compras || 0, total: Number(c.total) || 0, ultima: c.ultima || null, nacimiento: c.nacimiento || null, generic: !!c.generic, sync_base_version: Number(c._syncVersion) || 0, sync_device_id: window.CORE.getDeviceId() }),
       fromRow: r => ({ id: r.id, nombre: r.nombre, tel: r.tel || '—', email: r.email || undefined, direccion: r.direccion || undefined, talla: r.talla || '', notas: r.notas || '', compras: r.compras || 0, total: Number(r.total) || 0, ultima: r.ultima || '', nacimiento: r.nacimiento || '', generic: !!r.generic, _syncVersion: Number(r.sync_version) || 0, _deletedAt: r.deleted_at || null }),
     },
     sellers: {
       table: 'sellers', conflict: 'id', localKey: 'sellers',
-      toRow: s => ({ id: s.id, nombre: s.nombre, iniciales: s.iniciales, color: s.color, comision_pct: Number(s.comisionPct) || 0, meta_mes: Number(s.metaMes) || 0, ventas_mes: Number(s.ventasMes) || 0, ventas_num: s.ventasNum || 0, comision_acum: Number(s.comisionAcum) || 0, bono: s.bono || null, email: s.email || null, password_hash: s.passwordHash || null, role: s.role || 'vendedor', avatar_url: s.avatar || null, active: s.active !== false, sync_base_version: Number(s._syncVersion) || 0, sync_device_id: getDeviceId() }),
+      toRow: s => ({ id: s.id, nombre: s.nombre, iniciales: s.iniciales, color: s.color, comision_pct: Number(s.comisionPct) || 0, meta_mes: Number(s.metaMes) || 0, ventas_mes: Number(s.ventasMes) || 0, ventas_num: s.ventasNum || 0, comision_acum: Number(s.comisionAcum) || 0, bono: s.bono || null, email: s.email || null, password_hash: s.passwordHash || null, role: s.role || 'vendedor', avatar_url: s.avatar || null, active: s.active !== false, sync_base_version: Number(s._syncVersion) || 0, sync_device_id: window.CORE.getDeviceId() }),
       fromRow: r => ({ id: r.id, nombre: r.nombre, iniciales: r.iniciales, color: r.color, comisionPct: Number(r.comision_pct) || 0, metaMes: Number(r.meta_mes) || 0, ventasMes: Number(r.ventas_mes) || 0, ventasNum: r.ventas_num || 0, comisionAcum: Number(r.comision_acum) || 0, bono: r.bono || 'Sin bono', email: r.email || undefined, passwordHash: r.password_hash || null, role: r.role || 'vendedor', avatar: r.avatar_url || null, active: r.active !== false, _syncVersion: Number(r.sync_version) || 0, _deletedAt: r.deleted_at || null }),
     },
     sales: {
@@ -92,7 +79,7 @@
     },
     promotions: {
       table: 'promotions', conflict: 'id', localKey: 'promos',
-      toRow: p => ({ id: p.id, nombre: p.nombre, tipo: p.tipo || 'pct', valor: Number(p.valor) || 0, inicio: p.inicio || null, fin: p.fin || null, hora_inicio: p.horaInicio || null, hora_fin: p.horaFin || null, pausado: !!p.pausado, scope: p.scope || {}, creado: p.creado || null, sync_base_version: Number(p._syncVersion) || 0, sync_device_id: getDeviceId() }),
+      toRow: p => ({ id: p.id, nombre: p.nombre, tipo: p.tipo || 'pct', valor: Number(p.valor) || 0, inicio: p.inicio || null, fin: p.fin || null, hora_inicio: p.horaInicio || null, hora_fin: p.horaFin || null, pausado: !!p.pausado, scope: p.scope || {}, creado: p.creado || null, sync_base_version: Number(p._syncVersion) || 0, sync_device_id: window.CORE.getDeviceId() }),
       fromRow: r => ({ id: r.id, nombre: r.nombre, tipo: r.tipo || 'pct', valor: Number(r.valor) || 0, inicio: r.inicio || '', fin: r.fin || '', horaInicio: r.hora_inicio || '', horaFin: r.hora_fin || '', pausado: !!r.pausado, scope: r.scope || {}, creado: r.creado || 0, _syncVersion: Number(r.sync_version) || 0, _deletedAt: r.deleted_at || null }),
     },
     returns: {
@@ -394,7 +381,7 @@
         const r = await c.rpc('soft_delete_entity', {
           p_entity: op.table, p_id: op.val,
           p_base_version: Number(op.baseVersion) || 0,
-          p_device_id: getDeviceId(),
+          p_device_id: window.CORE.getDeviceId(),
         });
         if (r.error) return failOp(r.error);
         const m = MAP[op.kind];

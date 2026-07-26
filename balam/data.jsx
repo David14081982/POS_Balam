@@ -381,8 +381,7 @@
   const LS_SELLERS = 'balam_pos_sellers_v1', LS_CLIENTS = 'balam_pos_clients_v1',
         LS_SALES = 'balam_pos_sales_v1', LS_MOVES = 'balam_pos_moves_v1', LS_FOLIO = 'balam_pos_folio_v1',
         LS_PROMOS = 'balam_pos_promos_v1', LS_LIQ = 'balam_pos_liq_v1', LS_PERIODO = 'balam_pos_periodo_v1',
-        LS_RETURNS = 'balam_pos_returns_v1', LS_PAYMENTS = 'balam_pos_payments_v1',
-        LS_DEVICE = 'balam_device_id';
+        LS_RETURNS = 'balam_pos_returns_v1', LS_PAYMENTS = 'balam_pos_payments_v1';
   const sellers = loadArr(LS_SELLERS, seedSellers);
   const clients = loadArr(LS_CLIENTS, seedClients);
   const sales = loadArr(LS_SALES, seedSales);
@@ -488,23 +487,11 @@
     const d = new Date(), p = n => String(n).padStart(2, '0');
     return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
   }
-  function getDeviceId() {
-    try {
-      let id = localStorage.getItem(LS_DEVICE);
-      if (!id) {
-        id = 'dev-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
-        localStorage.setItem(LS_DEVICE, id);
-      }
-      return id;
-    } catch (e) {
-      return 'dev-volatile-' + Math.random().toString(36).slice(2, 10);
-    }
-  }
   function newOperationId() {
     try {
       if (window.crypto && window.crypto.randomUUID) return window.crypto.randomUUID();
     } catch (e) { /* fallback portable */ }
-    return 'sale-' + getDeviceId() + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
+    return 'sale-' + window.CORE.getDeviceId() + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
   }
   // Representación compacta y estable del ID inmutable. Un UUID completo conserva
   // sus 128 bits en base 36; el fallback conserva toda su entropía alfanumérica.
@@ -538,7 +525,7 @@
     }
     seq += 1;
     save(LS_FOLIO, seq);
-    getDeviceId();
+    window.CORE.getDeviceId();
     return collisionSafeFolio(prefix + seq, operationId || newOperationId());
   }
   // Existencias disponibles de una talla en un producto.

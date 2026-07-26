@@ -190,7 +190,8 @@ function freshEnv() {
     hold: () => { let release; gate = new Promise(r => { release = () => { gate = null; r(); }; }); return release; } };
 }
 
-const SRC = readFileSync(new URL('balam/store.jsx', import.meta.url), 'utf8');
+const SRC = readFileSync(new URL('balam/core.jsx', import.meta.url), 'utf8')
+  + '\n' + readFileSync(new URL('balam/store.jsx', import.meta.url), 'utf8');
 function loadStore(env) {
   const fn = new Function('window', 'localStorage', 'document', 'CustomEvent', SRC + '\nreturn window.STORE;');
   return fn(env.window, env.localStorage, { createElement: () => ({}), head: { appendChild: () => {} } }, class { constructor(t, o) { this.type = t; this.detail = o && o.detail; } });
