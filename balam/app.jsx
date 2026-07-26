@@ -10,12 +10,39 @@
   // Campana de notificaciones: alertas reales (stock crítico, apartados por completar).
   function NotificationsBell({ go }) {
     const [open, setOpen] = useState(false);
+    const [syncStatus, setSyncStatus] = useState(() => (
+      window.STORE && window.STORE.queueStatus ? window.STORE.queueStatus() : null
+    ));
+    useEffect(() => {
+      const refresh = () => setSyncStatus(
+        window.STORE && window.STORE.queueStatus ? window.STORE.queueStatus() : null
+      );
+      window.addEventListener('syncstatuschange', refresh);
+      refresh();
+      return () => window.removeEventListener('syncstatuschange', refresh);
+    }, []);
     const low = window.CONFIG.get('stock.lowThreshold') || 4;
     const criticos = D.products.filter(p => D.totalStock(p) <= low);
     const apartados = D.sales.filter(s => s.estado === 'Apartado');
     const items = [];
     if (criticos.length) items.push({ icon: 'alert', tone: '#ba1a1a', title: `${criticos.length} modelo(s) con stock crítico`, sub: criticos.slice(0, 3).map(p => p.nombre).join(', '), page: 'inventario' });
     apartados.forEach(s => items.push({ icon: 'clock', tone: '#92760F', title: `Apartado por completar · ${s.folio}`, sub: `${s.cliente} · saldo ${fmt(s.saldo != null ? s.saldo : Math.max(0, (Number(s.total) || 0) - (Number(s.anticipo) || 0))).replace('.00', '')}`, page: 'dashboard' }));
+    ((syncStatus && syncStatus.operations) || []).forEach(op => {
+      if (!op.diagnostic) return;
+      const waiting = op.status === 'retry_wait' || op.status === 'waiting_inventory';
+      items.push({
+        icon: waiting ? 'clock' : 'alert',
+        tone: waiting ? '#92760F' : '#ba1a1a',
+        title: waiting ? 'Cambio pendiente de sincronizar' : 'Cambio bloqueado en la nube',
+        sub: op.diagnostic.message,
+        action: () => window.STORE && window.STORE.retryOperation(op.id),
+      });
+    });
+    if (syncStatus && syncStatus.durability === 'memory') items.unshift({
+      icon: 'alert', tone: '#ba1a1a',
+      title: 'Cola sin almacenamiento durable',
+      sub: 'No cierres esta pestaña; libera espacio y vuelve a intentar.',
+    });
     const n = items.length;
     return h('div', { className: 'relative' }, [
       h('button', { key: 'btn', onClick: () => setOpen(o => !o), className: 'relative w-10 h-10 grid place-items-center text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-colors', title: 'Notificaciones' }, [
@@ -29,7 +56,11 @@
           n > 0 && h('span', { key: 'n', className: 'text-overline font-bold text-on-surface-variant' }, String(n)),
         ]),
         n ? h('div', { key: 'l', className: 'max-h-96 overflow-y-auto divide-y divide-outline-variant' }, items.map((it, i) => h('button', {
-          key: i, onClick: () => { setOpen(false); go(it.page); },
+          key: i, onClick: () => {
+            setOpen(false);
+            if (it.action) it.action();
+            else if (it.page) go(it.page);
+          },
           className: 'w-full text-left px-4 py-3 hover:bg-surface-container-low transition-colors flex gap-3',
         }, [
           h('span', { key: 'i', className: 'mt-0.5 shrink-0', style: { color: it.tone } }, h(MS, { name: it.icon, size: 18 })),

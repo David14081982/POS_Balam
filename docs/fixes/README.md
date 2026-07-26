@@ -27,6 +27,7 @@ sesión de chat.
 | `margen-minimo-promociones.md` | H-11 | Piso de margen en promociones |
 | `lector-excel-seguro.md` | H-12 | Dependencia Excel fijada y lectura con límites |
 | `recuperacion-movimientos-terminal.md` | H-13 | Reconstrucción del kardex desde Supabase |
+| `diagnostico-cola-offline.md` | H-14 | Diagnóstico y recuperación de la cola offline |
 
 Documentación financiera relacionada, creada antes de este índice:
 

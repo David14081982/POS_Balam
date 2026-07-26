@@ -126,20 +126,122 @@
   }
 
   // ── Cola offline ────────────────────────────────────────────────────────────
-  function loadQ() { try { return JSON.parse(localStorage.getItem(QKEY)) || []; } catch (e) { return []; } }
-  // Devuelve si la cola quedó persistida (false = localStorage lleno; el llamador decide el respaldo).
-  function saveQ(q) { try { localStorage.setItem(QKEY, JSON.stringify(q)); return true; } catch (e) { return false; } }
+  let volatileQueue = null, queueDurability = 'localStorage', storageWarned = false;
+  function emitSyncStatus() {
+    try { window.dispatchEvent(new CustomEvent('syncstatuschange', { detail: queueStatus() })); } catch (e) { /* */ }
+  }
+  function loadStoredQ() { try { return JSON.parse(localStorage.getItem(QKEY)) || []; } catch (e) { return []; } }
+  function loadQ() { return volatileQueue || loadStoredQ(); }
+  // Si la cuota impide persistir, conserva la cola completa en memoria y avisa:
+  // nunca degrada silenciosamente a una escritura de red sin respaldo.
+  function saveQ(q) {
+    try {
+      localStorage.setItem(QKEY, JSON.stringify(q));
+      volatileQueue = null; queueDurability = 'localStorage';
+      emitSyncStatus();
+      return true;
+    } catch (e) {
+      volatileQueue = q;
+      queueDurability = 'memory';
+      if (!storageWarned && window.UI && window.UI.toast) {
+        storageWarned = true;
+        window.UI.toast('Sin espacio para guardar la cola de sincronización. No cierres esta pestaña; libera almacenamiento y reintenta.', 'var(--danger)');
+      }
+      emitSyncStatus();
+      return false;
+    }
+  }
   // Descarta operaciones pendientes sin enviarlas (lo usa el reset de la simulación local).
-  function clearQueue() { try { localStorage.removeItem(QKEY); } catch (e) { /* */ } }
+  function clearQueue() {
+    volatileQueue = null; queueDurability = 'localStorage';
+    try { localStorage.removeItem(QKEY); } catch (e) { /* */ }
+    emitSyncStatus();
+  }
   let opSeq = 0;
   const newOpId = () => 'op' + Date.now().toString(36) + '-' + (++opSeq) + '-' + Math.random().toString(36).slice(2, 6);
   function enqueue(op) {
     const q = loadQ();
     if (op.ownerId === undefined) op.ownerId = activeOwnerId();
+    op.status = 'pending';
+    op.attempts = Number(op.attempts) || 0;
+    op.createdAt = op.createdAt || new Date().toISOString();
+    delete op.diagnostic;
     if (op.type === 'upsert') { const i = q.findIndex(x => x.type === 'upsert' && x.table === op.table && x.ownerId === op.ownerId); if (i >= 0) q[i] = op; else q.push(op); }
     else if (op.type === 'config') { const i = q.findIndex(x => x.type === 'config' && x.ownerId === op.ownerId); if (i >= 0) q[i] = op; else q.push(op); }
     else q.push(op); // sale / delete: idempotentes, se conservan en orden
-    return saveQ(q);
+    saveQ(q);
+    return true;
+  }
+  function classifyFailure(error, details) {
+    const raw = error || {};
+    const code = String(raw.code || raw.error || (details && details.error) || 'unknown_error');
+    const message = String(raw.message || raw.error_description || (details && details.message) || code);
+    const httpStatus = Number(raw.status || raw.statusCode || 0) || null;
+    const lower = (code + ' ' + message).toLowerCase();
+    let category = 'unknown', status = 'retry_wait', policy = 'auto_retry', retryable = true;
+    if (code === 'insufficient_stock') {
+      category = 'inventory'; status = 'waiting_inventory'; policy = 'wait_inventory';
+    } else if (httpStatus === 401 || /jwt|not authenticated|unauthorized/.test(lower)) {
+      category = 'auth'; status = 'auth_required'; policy = 'sign_in'; retryable = false;
+    } else if (httpStatus === 403 || code === '42501' || /row-level security|permission denied|forbidden/.test(lower)) {
+      category = 'permission'; status = 'blocked_permission'; policy = 'review_permissions'; retryable = false;
+    } else if (/^(42p01|42703|pgrst)/i.test(code) || /schema cache|column .* does not exist|relation .* does not exist/.test(lower)) {
+      category = 'schema'; status = 'blocked_schema'; policy = 'apply_migration'; retryable = false;
+    } else if (/^23/.test(code)) {
+      category = 'constraint'; status = 'blocked_data'; policy = 'review_data'; retryable = false;
+    } else if (/commit_mismatch|legacy_.*conflict|legacy_context_incomplete|invalid_return|folio_conflict/.test(lower)) {
+      category = 'conflict'; status = 'blocked_conflict'; policy = 'review_conflict'; retryable = false;
+    } else if (httpStatus >= 500) {
+      category = 'server';
+    } else if (raw instanceof TypeError || /failed to fetch|network|load failed|fetch failed/.test(lower)) {
+      category = 'network';
+    }
+    return {
+      category, code, message, httpStatus, status, policy, retryable,
+      details: details || raw.details || null,
+      at: new Date().toISOString(),
+    };
+  }
+  let lastApplyFailure = null;
+  function failOp(error, details) {
+    lastApplyFailure = classifyFailure(error, details);
+    return false;
+  }
+  function isAutomaticallyEligible(op) {
+    return !/^blocked_/.test(op.status || '') && op.status !== 'auth_required';
+  }
+  function queueStatus() {
+    const operations = loadQ().filter(opBelongsToActiveSession).map(op => ({
+      id: op.id, type: op.type, table: op.table || null, folio: op.folio || null,
+      status: op.status || 'pending', attempts: Number(op.attempts) || 0,
+      createdAt: op.createdAt || null, lastAttemptAt: op.lastAttemptAt || null,
+      diagnostic: op.diagnostic || null,
+    }));
+    return {
+      durability: queueDurability,
+      pending: operations.length,
+      blocked: operations.filter(op => /^blocked_/.test(op.status || '')).length,
+      retrying: operations.filter(op => op.status === 'retry_wait' || op.status === 'waiting_inventory').length,
+      operations,
+    };
+  }
+  function retryOperation(id) {
+    const q = loadQ(), op = q.find(x => x.id === id && opBelongsToActiveSession(x));
+    if (!op) return false;
+    op.status = 'pending'; delete op.diagnostic;
+    saveQ(q); flushQueue();
+    return true;
+  }
+  function resumeAuthenticatedOperations() {
+    const q = loadQ(); let changed = false;
+    q.forEach(op => {
+      if (opBelongsToActiveSession(op) && op.status === 'auth_required') {
+        op.status = 'pending';
+        delete op.diagnostic;
+        changed = true;
+      }
+    });
+    if (changed) saveQ(q);
   }
   // Ops pendientes que tocan una tabla: la copia LOCAL es más nueva que la nube.
   function hasPendingFor(table) {
@@ -174,6 +276,7 @@
 
   // Ejecuta una operación contra Supabase. Devuelve true si quedó persistida.
   async function applyOp(c, op) {
+    lastApplyFailure = null;
     try {
       if (op.type === 'staffUpdate') {
         const m = MAP[op.kind];
@@ -183,7 +286,7 @@
           delete patch[op.conflict];
           const r = await c.from(op.table).update(patch)
             .eq(op.conflict, row[op.conflict]).select('*');
-          if (r.error || !(r.data || []).length) return false;
+          if (r.error || !(r.data || []).length) return failOp(r.error || { code: 'empty_response', message: 'La actualización no devolvió la fila esperada' });
           remote.push.apply(remote, r.data.map(m.fromRow));
         }
         if (m && window.DATA && window.DATA.applySyncResult) {
@@ -206,7 +309,7 @@
           op.rows = window.DATA[m.localKey].map(m.toRow);
         }
         const r = await c.from(op.table).upsert(op.rows, { onConflict: op.conflict }).select('*');
-        if (r.error) return false;
+        if (r.error) return failOp(r.error);
         if (m && m.fromRow && window.DATA && window.DATA.applySyncResult) {
           const expected = {};
           op.rows.forEach(row => { expected[row.id] = Number(row.sync_base_version) || 0; });
@@ -219,14 +322,14 @@
         }
         return true;
       }
-      if (op.type === 'delete') { const r = await c.from(op.table).delete().eq(op.col, op.val); return !r.error; }
+      if (op.type === 'delete') { const r = await c.from(op.table).delete().eq(op.col, op.val); return r.error ? failOp(r.error) : true; }
       if (op.type === 'softDelete') {
         const r = await c.rpc('soft_delete_entity', {
           p_entity: op.table, p_id: op.val,
           p_base_version: Number(op.baseVersion) || 0,
           p_device_id: getDeviceId(),
         });
-        if (r.error) return false;
+        if (r.error) return failOp(r.error);
         const m = MAP[op.kind];
         const raw = Array.isArray(r.data) ? r.data[0] : r.data;
         if (raw && m && m.fromRow && window.DATA && window.DATA.applySyncResult) {
@@ -241,21 +344,21 @@
       }
       if (op.type === 'config') {
         const a = await c.from('lookup').upsert(op.lookup, { onConflict: 'kind,code' });
-        if (a.error) return false;
+        if (a.error) return failOp(a.error);
         // Reconciliar borrados: el upsert NO elimina filas. Quita de pos.lookup lo que ya no está en
         // local (categorías/atributos/catálogos borrados); sin esto "revivían" en el siguiente pull.
         // Guard op.lookup.length: nunca vaciar la tabla por un estado vacío accidental.
         if (op.lookup.length) {
           const cur = await c.from('lookup').select('kind,code');
           if (!cur.error && cur.data) {
-            const keep = new Set(op.lookup.map(r => r.kind + ' ' + r.code));
+            const keep = new Set(op.lookup.map(r => r.kind + '\u001f' + r.code));
             for (const r of cur.data) {
-              if (!keep.has(r.kind + ' ' + r.code)) await c.from('lookup').delete().eq('kind', r.kind).eq('code', r.code);
+              if (!keep.has(r.kind + '\u001f' + r.code)) await c.from('lookup').delete().eq('kind', r.kind).eq('code', r.code);
             }
           }
         }
         const b = await c.from('settings').upsert(op.settings, { onConflict: 'key' });
-        return !b.error;
+        return b.error ? failOp(b.error) : true;
       }
       if (op.type === 'sale') {
         const expectedProducts = {};
@@ -274,7 +377,7 @@
           p_client_effect: op.clientEffect || null,
           p_seller_effects: op.sellerEffects || [],
         });
-        if (committed.error || !committed.data) return false;
+        if (committed.error || !committed.data) return failOp(committed.error || { code: 'empty_response', message: 'La venta no devolvió confirmación' });
         if (!committed.data.ok) {
           if (committed.data.error === 'folio_conflict'
               && !op.folioRekeyed
@@ -304,7 +407,7 @@
               ? 'Venta pendiente: la nube ya no tiene existencias suficientes'
               : 'Venta pendiente: existe un conflicto que requiere revisión', 'var(--danger)');
           }
-          return false;
+          return failOp({ code: committed.data.error, message: committed.data.error }, committed.data);
         }
         const reconcile = (kind, rows, expected) => {
           const m = MAP[kind];
@@ -346,7 +449,12 @@
               p_seller_effects: op.sellerEffects || [],
               p_legacy: false,
             });
-        if (committed.error || !committed.data || !committed.data.ok) return false;
+        if (committed.error || !committed.data || !committed.data.ok) {
+          return failOp(committed.error || {
+            code: committed.data && committed.data.error || 'empty_response',
+            message: committed.data && committed.data.error || 'La devolución no devolvió confirmación',
+          }, committed.data);
+        }
         const reconcile = (kind, rows, expected) => {
           const m = MAP[kind];
           if (!rows.length || !m || !m.fromRow || !window.DATA || !window.DATA.applySyncResult) return;
@@ -369,8 +477,8 @@
         }
         return true;
       }
-    } catch (e) { return false; }
-    return false;
+    } catch (e) { return failOp(e); }
+    return failOp({ code: 'unsupported_operation', message: `Operación no soportada: ${op.type || 'sin tipo'}` });
   }
 
   function rebaseQueuedVersions(table, remoteRows) {
@@ -395,10 +503,8 @@
     if (!enabled) return;
     op.id = newOpId();
     op.ownerId = activeOwnerId();
-    if (enqueue(op)) { flushQueue(); return; }
-    // Sin espacio en localStorage para respaldar la op: intento directo (mejor esfuerzo).
-    const c = await ensureClient(); if (!c) return;
-    await applyOp(c, op);
+    enqueue(op);
+    flushQueue();
   }
 
   let flushing = false, flushAgain = false;
@@ -408,6 +514,9 @@
       const q0 = loadQ(); let mig = false;
       q0.forEach(o => {
         if (!o.id) { o.id = newOpId(); mig = true; }
+        if (!o.status) { o.status = 'pending'; mig = true; }
+        if (o.attempts == null) { o.attempts = o.retry ? 1 : 0; mig = true; }
+        if (!o.createdAt) { o.createdAt = new Date().toISOString(); mig = true; }
         // Una cola histórica no permite saber qué cuenta la creó. Con sesión
         // administrada se pone en cuarentena: nunca se atribuye automáticamente.
         if (o.ownerId === undefined && activeOwnerId()) {
@@ -500,16 +609,17 @@
       }
     }
     if (!loadQ().length) return;
-    const c = await ensureClient(); if (!c) return;
     flushing = true;
     let recovered = false;
     try {
+      const c = await ensureClient(); if (!c) return;
       // Una op a la vez, releyendo la cola de storage en cada paso: run() puede encolar
       // o reemplazar ops mientras una subida está en vuelo, y el viejo "saveQ(rest)"
       // final las pisaba. El retiro por id nunca borra una op reemplazada (id nuevo).
       const failed = new Set(); // fallidas en esta pasada: se saltan, quedan para reintento
       for (;;) {
-        const op = loadQ().find(o => opBelongsToActiveSession(o) && !failed.has(o.id));
+        const op = loadQ().find(o => opBelongsToActiveSession(o)
+          && isAutomaticallyEligible(o) && !failed.has(o.id));
         if (!op) break;
         const ok = await applyOp(c, op);
         const cur = loadQ();
@@ -519,7 +629,14 @@
         } else {
           failed.add(op.id);
           const t = cur.find(o => o.id === op.id);
-          if (t && !t.retry) { t.retry = true; saveQ(cur); }
+          if (t) {
+            t.retry = true;
+            t.attempts = (Number(t.attempts) || 0) + 1;
+            t.lastAttemptAt = new Date().toISOString();
+            t.diagnostic = lastApplyFailure || classifyFailure({ code: 'unknown_error' });
+            t.status = t.diagnostic.status;
+            saveQ(cur);
+          }
         }
       }
       // Mismo aviso de siempre, solo cuando se recuperó un pendiente (no en cada guardado).
@@ -834,6 +951,7 @@
       return Promise.resolve({ ok: true, unchanged: true });
     }
     sessionIdentity = next;
+    resumeAuthenticatedOperations();
     const seq = ++sessionSeq;
     enabled = true;
     return init({ pull: true }).then(() => ({
@@ -939,5 +1057,5 @@
     }
   }
 
-  window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushSale, pushReturn, deleteRow, pullDomain, fetchSaleByFolio, flushQueue, clearQueue, markResetApplied, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
+  window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushSale, pushReturn, deleteRow, pullDomain, fetchSaleByFolio, flushQueue, retryOperation, queueStatus, clearQueue, markResetApplied, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
 })();

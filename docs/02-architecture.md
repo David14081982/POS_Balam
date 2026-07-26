@@ -405,7 +405,20 @@ La cola está en `localStorage` bajo `balam_sync_queue`.
   reciente.
 - Ventas y eliminaciones se conservan en orden y deben ser idempotentes.
 - Una operación solo sale de la cola después de éxito remoto.
-- Si falla red, sesión o SQL, permanece para el siguiente reintento.
+- Cada operación conserva `status`, `attempts`, fechas y un diagnóstico con
+  categoría, código, mensaje y política de recuperación.
+- Red y errores de servidor permanecen en reintento automático. Autenticación,
+  RLS, esquema, restricciones y conflictos se clasifican por separado; los
+  bloqueos permanentes no se martillan en cada drenado.
+- `STORE.queueStatus()` expone un resumen sanitizado y
+  `STORE.retryOperation(id)` permite el reintento explícito.
+- La campana administrativa muestra operaciones fallidas y su causa. Una nueva
+  sesión reanuda las operaciones detenidas por autenticación.
+- `flushQueue()` toma el candado antes de esperar al cliente de Supabase: nunca
+  hay dos ejecutores de cola concurrentes dentro de la misma pestaña.
+- Si `localStorage` rechaza la escritura por cuota, la cola completa permanece
+  en memoria y la interfaz muestra una alerta crítica para no cerrar la
+  pestaña. Este respaldo no es durable hasta liberar almacenamiento y reintentar.
 - Cada operación nueva conserva el correo normalizado de la sesión que la creó.
   `flushQueue()` sólo ejecuta operaciones cuyo propietario coincide con la
   sesión activa; la compactación y el reajuste de versiones respetan el mismo

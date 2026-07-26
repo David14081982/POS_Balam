@@ -22,6 +22,7 @@ y `BLOQUEADO`.
 | H-11 | Margen mínimo configurado pero no aplicado | RESUELTO | Promociones / precios |
 | H-12 | Lector Excel vulnerable y sin límites explícitos | RESUELTO | Importación Excel / dependencias |
 | H-13 | Terminal nueva no recupera movimientos remotos | RESUELTO | Sincronización / kardex |
+| H-14 | Cola offline sin diagnóstico ni política de recuperación | PARCIALMENTE RESUELTO | Sincronización / localStorage |
 
 ## H-01 — Inventario concurrente
 
@@ -476,6 +477,43 @@ inventan. La ventana de ventas sigue siendo 365 días configurables más
 apartados, con búsqueda por folio para históricos. Volumen, índices y
 paginación de los demás dominios permanecen separados para la Fase 14.
 **Corrección documentada:** `docs/fixes/recuperacion-movimientos-terminal.md`.
+
+## H-14 — Cola offline sin diagnóstico ni política de recuperación
+
+**Estado:** PARCIALMENTE RESUELTO
+**Fecha de registro:** 26/07/2026
+**Evidencia:** `STORE.applyOp()` devuelve únicamente `true` o `false` y su
+`catch` descarta la excepción. `flushQueue()` sólo agrega `retry=true`; no
+conserva código, mensaje, categoría, número de intentos ni fecha. Red, sesión,
+RLS, esquema, constraints y conflictos de dominio quedan indistinguibles. Toda
+operación fallida vuelve a intentarse en cada drenado, aunque requiera una
+acción administrativa. Si `saveQ()` falla por cuota, `run()` intenta directo y
+no conserva diagnóstico si ese intento también falla.
+**Impacto:** una cola puede permanecer atascada indefinidamente sin explicar
+cómo recuperarla; el usuario sólo conoce el número pendiente. Errores
+permanentes generan tráfico repetido y un fallo de persistencia puede dejar una
+operación sin respaldo durable.
+**Origen de auditoría:** Fase 13, hallazgo original H-15 y parte de H-16.
+**Pruebas requeridas:** reproducir red, 401, 403/RLS, esquema, constraint,
+conflicto de dominio y cuota; verificar que cada operación conserva causa,
+estado y política; comprobar que una fallida no bloquea operaciones
+independientes; reiniciar y releer el diagnóstico sin perder formatos de cola
+anteriores.
+**Corrección:** cada operación conserva estado, intentos, fechas, causa y
+política. Red/servidor siguen en reintento; autenticación, permisos, esquema,
+restricciones, inventario y conflictos se distinguen. Los bloqueos permanentes
+requieren reintento explícito y la campana administrativa muestra la causa.
+El candado se adquiere antes de esperar el cliente de Supabase, evitando dos
+ejecutores simultáneos. Las colas históricas se migran de forma aditiva.
+**Pruebas ejecutadas:** `node test-store-queue.mjs`: 86 pasaron, 0 fallaron
+(red, 401, 403/RLS, esquema, constraint, inventario, cuota, independencia,
+reinicio, reintento explícito y compatibilidad histórica).
+**Riesgo residual:** si `localStorage` está lleno, la cola queda visible y
+conservada en memoria, pero cerrar la pestaña antes de liberar espacio puede
+perderla. Falta un respaldo durable alternativo para cerrar completamente la
+parte de cuota.
+**Corrección documentada:** `docs/fixes/diagnostico-cola-offline.md`.
+**Commit:** Pendiente de commit.
 
 ## Regla de actualización
 

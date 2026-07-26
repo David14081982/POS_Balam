@@ -14,14 +14,19 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 // ── Stubs de entorno (localStorage + supabase-js encadenable) ───────────────────
 function freshEnv() {
   const store = new Map();
+  const storageFailures = new Set();
   const localStorage = {
     getItem: k => (store.has(k) ? store.get(k) : null),
-    setItem: (k, v) => store.set(k, String(v)),
+    setItem: (k, v) => {
+      if (storageFailures.has(k)) throw new DOMException('Quota exceeded', 'QuotaExceededError');
+      store.set(k, String(v));
+    },
     removeItem: k => store.delete(k),
   };
   const calls = [];            // registro cronológico de llamadas a la "nube"
   const cloud = { rowsByTable: {} }; // último payload upsertado / filas a servir por tabla
   const failTables = new Set();
+  const tableErrors = new Map();
   const rpcCalls = [];
   let rpcHandler = async (name, args) => {
     if (name === 'commit_sale') {
@@ -49,6 +54,7 @@ function freshEnv() {
     const exec = async (metodo, arg, filtro) => {
       calls.push({ table, metodo, filtro });
       if (gate) await gate;
+      if (tableErrors.has(table)) return { data: null, error: tableErrors.get(table) };
       if (metodo === 'upsert' || metodo === 'insert') {
         if (failTables.has(table)) return { error: { message: 'falla simulada' } };
         cloud.rowsByTable[table] = arg;
@@ -131,6 +137,8 @@ function freshEnv() {
   };
   return { localStorage, window, calls, cloud, client, rpcCalls,
     setFail: t => failTables.add(t), clearFail: t => failTables.delete(t),
+    setError: (t, e) => tableErrors.set(t, e), clearError: t => tableErrors.delete(t),
+    failStorage: k => storageFailures.add(k), recoverStorage: k => storageFailures.delete(k),
     setRpc: fn => { rpcHandler = fn; },
     hold: () => { let release; gate = new Promise(r => { release = () => { gate = null; r(); }; }); return release; } };
 }
@@ -715,6 +723,117 @@ function loadStore(env) {
   ok('23c. H-13: conserva primera y última identidad sin duplicados',
     pulled && pulled.rows[0].id === 1 && pulled.rows[1000].id === 1001
       && new Set(pulled.rows.map(x => x.id)).size === 1001);
+}
+
+// 24) H-14: un 403 conserva diagnóstico y deja de reintentarse automáticamente
+{
+  const env = freshEnv();
+  env.setError('products', { status: 403, code: '42501', message: 'new row violates row-level security policy' });
+  const S = loadStore(env);
+  await S.init({});
+  S.pushRows('products', [{ id: 'p-rls', nombre: 'RLS' }]);
+  await sleep(40);
+  let q = JSON.parse(env.localStorage.getItem('balam_sync_queue') || '[]');
+  ok('24a. H-14: RLS queda clasificado con código, mensaje e intento',
+    q[0] && q[0].status === 'blocked_permission' && q[0].attempts === 1
+      && q[0].diagnostic.code === '42501' && /row-level security/.test(q[0].diagnostic.message));
+  const callsBefore = env.calls.filter(x => x.table === 'products' && x.metodo === 'upsert').length;
+  await S.flushQueue();
+  const callsAfter = env.calls.filter(x => x.table === 'products' && x.metodo === 'upsert').length;
+  ok('24b. H-14: un bloqueo permanente no se reintenta en cada drenado', callsAfter === callsBefore);
+  const summary = S.queueStatus ? S.queueStatus() : null;
+  ok('24c. H-14: la API expone causa y política de recuperación',
+    summary && summary.blocked === 1 && summary.operations[0].diagnostic.policy === 'review_permissions');
+  const S2 = loadStore(env);
+  const restored = S2.queueStatus ? S2.queueStatus() : null;
+  ok('24d. H-14: reiniciar conserva el diagnóstico', restored && restored.operations[0].attempts === 1);
+  env.clearError('products');
+  if (S2.retryOperation) S2.retryOperation(q[0].id);
+  await sleep(40);
+  ok('24e. H-14: el reintento explícito recupera el bloqueo', S2.pending === 0);
+}
+
+// 25) H-14: una falla de red no impide procesar otra operación independiente
+{
+  const env = freshEnv();
+  env.setRpc(async () => { throw new TypeError('Failed to fetch'); });
+  const S = loadStore(env);
+  await S.init({});
+  const sale = {
+    folio: 'BG-NET', fecha: '2026-07-26 16:00', cliente: 'Público',
+    vendedores: [], metodo: 'Efectivo', estado: 'Pagado', items: 0,
+    total: 10, _operationId: 'op-net', _stockRequired: false, lineas: [],
+  };
+  S.pushSale(sale);
+  S.pushRows('clients', [{ id: 'c-independent', nombre: 'Independiente' }]);
+  await sleep(60);
+  const q = JSON.parse(env.localStorage.getItem('balam_sync_queue') || '[]');
+  const pendingSale = q.find(op => op.type === 'sale');
+  ok('25a. H-14: red caída queda como reintento automático',
+    pendingSale && pendingSale.status === 'retry_wait'
+      && pendingSale.diagnostic.category === 'network'
+      && pendingSale.diagnostic.retryable === true);
+  ok('25b. H-14: la operación independiente sí se sincroniza',
+    (env.cloud.rowsByTable.clients || []).some(x => x.id === 'c-independent'));
+}
+
+// 26) H-14: un conflicto de inventario conserva política específica
+{
+  const env = freshEnv();
+  env.setRpc(async () => ({
+    data: { ok: false, error: 'insufficient_stock', shortages: [{ product_id: 'p1' }] },
+    error: null,
+  }));
+  const S = loadStore(env);
+  await S.init({});
+  S.pushSale({
+    folio: 'BG-STOCK', fecha: '2026-07-26 17:00', cliente: 'Público',
+    vendedores: [], metodo: 'Efectivo', estado: 'Pagado', items: 1,
+    total: 10, _operationId: 'op-stock', _stockRequired: true,
+    lineas: [{ productId: 'p1', sku: 'P1', nombre: 'P1', talla: 'M', qty: 1, precio: 10 }],
+  });
+  await sleep(40);
+  const q = JSON.parse(env.localStorage.getItem('balam_sync_queue') || '[]');
+  ok('26a. H-14: stock insuficiente espera inventario y conserva detalle',
+    q[0] && q[0].status === 'waiting_inventory'
+      && q[0].diagnostic.code === 'insufficient_stock'
+      && q[0].diagnostic.policy === 'wait_inventory');
+}
+
+// 27) H-14: cuota llena es visible y la operación no desaparece durante la sesión
+{
+  const env = freshEnv();
+  env.failStorage('balam_sync_queue');
+  env.setError('products', { code: 'PGRST205', message: 'schema cache missing' });
+  const S = loadStore(env);
+  await S.init({});
+  S.pushRows('products', [{ id: 'p-quota', nombre: 'Sin espacio' }]);
+  await sleep(40);
+  const status = S.queueStatus ? S.queueStatus() : null;
+  ok('27a. H-14: la falla de cuota queda visible como almacenamiento no durable',
+    status && status.durability === 'memory' && status.pending === 1);
+  ok('27b. H-14: se muestra una alerta crítica antes de cerrar la sesión',
+    env.window.UI.toasts.some(x => /almacenamiento.*cola|no cierres/i.test(x)));
+}
+
+// 28) H-14: autenticación, esquema y restricciones usan recuperación distinta.
+{
+  const cases = [
+    [{ status: 401, code: 'PGRST301', message: 'JWT expired' }, 'auth_required', 'sign_in'],
+    [{ code: 'PGRST205', message: 'schema cache missing' }, 'blocked_schema', 'apply_migration'],
+    [{ code: '23505', message: 'duplicate key value' }, 'blocked_data', 'review_data'],
+  ];
+  for (const [error, expectedStatus, expectedPolicy] of cases) {
+    const env = freshEnv();
+    env.setError('products', error);
+    const S = loadStore(env);
+    await S.init({});
+    S.pushRows('products', [{ id: expectedStatus, nombre: expectedStatus }]);
+    await sleep(30);
+    const op = S.queueStatus().operations[0];
+    ok(`28. H-14: ${error.code} usa ${expectedStatus}/${expectedPolicy}`,
+      op && op.status === expectedStatus && op.diagnostic.policy === expectedPolicy);
+  }
 }
 
 console.log(`\n════════ ${pass} pasaron, ${fail} fallaron ════════`);
