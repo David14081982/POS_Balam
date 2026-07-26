@@ -33,6 +33,7 @@ sesión de chat.
 | `limpieza-codigo-recursos.md` | H-17 | Código muerto y CSS no cargado |
 | `identidad-terminal-compartida.md` | H-18 | Contrato único de identidad de terminal |
 | `bundle-reproducible.md` | H-19 | Identidad determinista de assets del bundle |
+| `build-sin-dependencias-remotas.md` | H-20 | Recursos externos fijados y build sin red |
 
 Documentación financiera relacionada, creada antes de este índice:
 

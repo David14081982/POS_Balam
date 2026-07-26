@@ -35,6 +35,13 @@ UUID para el loader. Con las mismas fuentes y respuestas externas, dos builds
 producen artefactos byte por byte idénticos; `index.html` es copia exacta de
 `POS Balam (offline).html`.
 
+Las 46 respuestas externas necesarias están fijadas, con bytes y SHA-256, en
+`balam/vendor/build-resources.json`. El build normal sólo lee y verifica ese
+almacén; un recurso ausente o corrupto aborta. La red se habilita únicamente
+para una actualización deliberada con
+`BALAM_REFRESH_BUILD_RESOURCES=1`, cuyo diff debe revisarse. Tailwind 3.4.17
+proviene de la dependencia exacta del lockfile y no de `npx --yes`.
+
 ## Orden de carga
 
 El orden relevante definido en `POS Balam.html` es:

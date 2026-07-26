@@ -9,6 +9,8 @@ import { createHash } from 'crypto';
 import { execSync } from 'child_process';
 
 const OUT = 'POS Balam (offline).html';
+const RESOURCE_CACHE = process.env.BALAM_BUILD_RESOURCE_CACHE || 'balam/vendor/build-resources.json';
+const REFRESH_RESOURCES = process.env.BALAM_REFRESH_BUILD_RESOURCES === '1';
 // El .html del nivel raíz desaparece (OneDrive/AV). Guardo copia estable en balam/ y uso fallback.
 const SAFE = 'balam/_source.html';
 let SRC = 'POS Balam.html';
@@ -23,6 +25,9 @@ const WRAPPER = fs.existsSync('POS Balam (offline).BACKUP.html') ? 'POS Balam (o
 
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36';
 const MIME = { js: 'text/javascript', jsx: 'text/jsx', css: 'text/css', woff2: 'font/woff2' };
+const resourceCache = fs.existsSync(RESOURCE_CACHE)
+  ? JSON.parse(fs.readFileSync(RESOURCE_CACHE, 'utf8'))
+  : {};
 
 const manifest = {};
 function assetId(buf, mime, compress) {
@@ -45,9 +50,22 @@ function addBytes(buf, mime, compress = true) {
   return uuid;
 }
 async function fetchBuf(url) {
-  const r = await fetch(url, { headers: { 'User-Agent': UA } });
+  const cached = resourceCache[url];
+  if (!REFRESH_RESOURCES) {
+    if (!cached) throw new Error('recurso no fijado: ' + url);
+    const buf = Buffer.from(cached.data, 'base64');
+    const actual = createHash('sha256').update(buf).digest('hex');
+    if (actual !== cached.sha256) throw new Error('hash inválido en cache: ' + url);
+    return buf;
+  }
+  const r = await globalThis.fetch(url, { headers: { 'User-Agent': UA } });
   if (!r.ok) throw new Error(url.slice(0, 70) + ' -> HTTP ' + r.status);
-  return Buffer.from(await r.arrayBuffer());
+  const buf = Buffer.from(await r.arrayBuffer());
+  resourceCache[url] = {
+    sha256: createHash('sha256').update(buf).digest('hex'),
+    data: buf.toString('base64'),
+  };
+  return buf;
 }
 
 let template = fs.readFileSync(SRC, 'utf8');
@@ -70,7 +88,9 @@ if (babelUrl) {
     // presets ['react']: el mismo default que transformScriptTags aplica a text/babel.
     transpile = (src, filename) => B.transform(src, { presets: ['react'], filename }).code;
     console.log('babel  ', 'precompilando JSX en build (' + babelUrl.slice(29, 55) + ')');
-  } catch (e) { console.warn('  AVISO: no pude precompilar (' + e.message + '); el bundle usará Babel en runtime'); }
+  } catch (e) {
+    throw new Error('no se pudo cargar Babel fijado: ' + e.message);
+  }
 }
 
 // 1) Módulos locales balam/* (scripts .jsx + .css)
@@ -113,8 +133,8 @@ if (cfgMatch) {
   cfg.content = ['./balam/*.jsx'];
   fs.writeFileSync('.tw.config.cjs', 'module.exports = ' + JSON.stringify(cfg) + ';');
   fs.writeFileSync('.tw.in.css', '@tailwind base;\n@tailwind components;\n@tailwind utilities;\n');
-  console.log('compilando tailwind estático (npx tailwindcss)…');
-  execSync('npx --yes tailwindcss@3.4.17 -c .tw.config.cjs -i .tw.in.css -o .tw.out.css --minify', { stdio: 'inherit' });
+  console.log('compilando tailwind estático (dependencia local)…');
+  execSync('node node_modules/tailwindcss/lib/cli.js -c .tw.config.cjs -i .tw.in.css -o .tw.out.css --minify', { stdio: 'inherit' });
   const css = fs.readFileSync('.tw.out.css', 'utf8');
   template = template.replace(twCfgRe, '').replace(twCdnRe, '<style id="tw-static">' + css + '</style>\n');
   for (const f of ['.tw.config.cjs', '.tw.in.css', '.tw.out.css']) if (fs.existsSync(f)) fs.unlinkSync(f);
@@ -128,7 +148,9 @@ for (const url of cdnSrcs) {
     const uuid = addBytes(await fetchBuf(url), 'text/javascript', true);
     template = template.split('"' + url + '"').join('"' + uuid + '"');
     console.log('cdn js ', url.slice(0, 60));
-  } catch (e) { console.warn('  SKIP (queda online):', e.message); }
+  } catch (e) {
+    throw new Error('no se pudo fijar script externo: ' + e.message);
+  }
 }
 
 // 3) Google Fonts <link href="...css2..."> → inline <style> con woff2 embebidos
@@ -141,7 +163,9 @@ for (const m of fontLinks) {
     for (const w of woffs) { const uuid = addBytes(await fetchBuf(w), 'font/woff2', false); css = css.split(w).join(uuid); }
     template = template.replace(linkTag, '<style>\n' + css + '\n</style>');
     console.log('font   ', cssUrl.slice(0, 50), '·', woffs.length, 'woff2');
-  } catch (e) { console.warn('  SKIP font (queda online):', e.message); }
+  } catch (e) {
+    throw new Error('no se pudo fijar fuente externa: ' + e.message);
+  }
 }
 
 // 3.5) Imágenes remotas en balam/*.jsx (Unsplash + Google) → embebidas como blob (offline)
@@ -153,7 +177,9 @@ for (const u of imgUrls) {
     const mime = u.includes('lh3.googleusercontent') ? 'image/png' : 'image/jpeg';
     imgMap[u] = addBytes(await fetchBuf(u), mime, false);
     console.log('foto   ', u.slice(0, 52));
-  } catch (e) { console.warn('  SKIP foto:', e.message); }
+  } catch (e) {
+    throw new Error('no se pudo fijar imagen externa: ' + e.message);
+  }
 }
 if (Object.keys(imgMap).length) {
   template = template.replace('</head>', '<script>window.__IMG_MAP=' + JSON.stringify(imgMap) + ';</script>\n</head>');
@@ -177,5 +203,9 @@ wrapper = setBlock(wrapper, 'template', esc(JSON.stringify(template)));
 fs.writeFileSync(OUT, wrapper);
 // index.html = copia exacta del bundle, lista para servir en el VPS (entrada del sitio).
 fs.writeFileSync('index.html', wrapper);
+if (REFRESH_RESOURCES) {
+  fs.writeFileSync(RESOURCE_CACHE, JSON.stringify(resourceCache, null, 2) + '\n');
+  console.log('OK ->', RESOURCE_CACHE, '·', Object.keys(resourceCache).length, 'recursos fijados');
+}
 console.log('\nOK ->', OUT, '·', (wrapper.length / 1e6).toFixed(2) + 'MB ·', Object.keys(manifest).length, 'assets');
 console.log('OK -> index.html (copia para deploy)');

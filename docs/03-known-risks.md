@@ -712,6 +712,37 @@ origen y producir legítimamente otro hash; fijarlos localmente es una
 corrección separada.
 **Corrección documentada:** `docs/fixes/bundle-reproducible.md`.
 
+## H-20 — Build depende de red y recursos externos mutables
+
+**Estado:** RESUELTO
+**Fecha de registro:** 26/07/2026
+**Fecha de resolución:** 26/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** `build-offline.mjs` descarga Babel, React, JsBarcode, CSS,
+fuentes e imágenes durante cada ejecución y usa
+`npx --yes tailwindcss@3.4.17`. En el entorno sin red, Babel degradó a runtime y
+Tailwind terminó el build con `EACCES/fetch failed`.
+**Origen de auditoría:** residual explícito de H-19 y Fase 16/H-22.
+**Riesgo:** el artefacto puede cambiar, degradarse o dejar de construirse por
+estado externo aun cuando el repositorio no cambió.
+**Reproducción:** la prueba de build aprobó 4/7 antes del cambio; faltaban
+ausencia de red, Tailwind fijado y recursos íntegros. La ejecución restringida
+previa confirmó `fetch failed` y terminación en Tailwind.
+**Corrección:** 46 respuestas externas quedaron versionadas con SHA-256;
+el build normal sólo las lee y verifica. La actualización remota requiere
+`BALAM_REFRESH_BUILD_RESOURCES=1`. Tailwind 3.4.17 es dependencia exacta del
+lockfile y cualquier recurso ausente/corrupto aborta el proceso.
+**Pruebas:** build 8/8, caché 46/46, prueba negativa de caché aprobada, build
+normal 66 assets, mismo SHA-256
+`73F36BE13792E6483F673D157457D1296EC0138DFFF23398E96A8FA41C93E05D`,
+smoke 17/17, navegación 13/13, contratos 16/16 y auditoría npm sin
+vulnerabilidades.
+**Pendiente:** ninguno para las respuestas externas del build normal.
+**Riesgo residual:** bajo. Actualizar intencionalmente el caché requiere red y
+revisión; una instalación nueva requiere `npm ci` para dependencias de
+desarrollo fijadas.
+**Corrección documentada:** `docs/fixes/build-sin-dependencias-remotas.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:
