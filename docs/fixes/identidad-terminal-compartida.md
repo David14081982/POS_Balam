@@ -2,7 +2,7 @@
 
 ## Estado
 
-Resuelto el 26/07/2026. Commit: Pendiente de commit.
+Resuelto el 26/07/2026. Commit: `06d0454`.
 
 ## Problema
 
@@ -59,4 +59,3 @@ posible sin persistencia; ahora todos los módulos comparten esa misma identidad
 
 La reversión es independiente: retirar `core.jsx`, restaurar las dos funciones
 anteriores y regenerar los artefactos. No requiere revertir datos ni Supabase.
-

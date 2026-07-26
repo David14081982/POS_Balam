@@ -659,7 +659,7 @@ Componentes/utilidades duplicados pertenecen a la Fase 16 y no se mezclaron.
 **Estado:** RESUELTO
 **Fecha de registro:** 26/07/2026
 **Fecha de resolución:** 26/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `06d0454`
 **Evidencia:** `balam/data.jsx` y `balam/store.jsx` implementan por separado
 `getDeviceId()` y la clave `balam_device_id`. En la ruta de error de
 `localStorage`, `DATA` devuelve un identificador volátil nuevo en cada llamada,
