@@ -18,7 +18,7 @@ y `BLOQUEADO`.
 | H-07 | Acceso excesivo de cualquier autenticado | RESUELTO | RLS / autorización |
 | H-08 | Vendedor sin confinamiento al Punto de Venta | RESUELTO | Auth / navegación / RLS |
 | H-09 | Cambio de sesión reutiliza estado y cola globales | RESUELTO | Auth / sincronización / localStorage |
-| H-10 | Cadena de migraciones no reconstruye el esquema | PARCIALMENTE RESUELTO | Supabase / migraciones |
+| H-10 | Cadena de migraciones no reconstruye el esquema | RESUELTO | Supabase / migraciones |
 | H-11 | Margen mínimo configurado pero no aplicado | RESUELTO | Promociones / precios |
 | H-12 | Lector Excel vulnerable y sin límites explícitos | RESUELTO | Importación Excel / dependencias |
 | H-13 | Terminal nueva no recupera movimientos remotos | RESUELTO | Sincronización / kardex |
@@ -336,9 +336,9 @@ requiere revisión administrativa; no puede cruzarse de sesión silenciosamente.
 
 ## H-10 — Cadena de migraciones no reconstruye el esquema
 
-**Estado:** PARCIALMENTE RESUELTO
+**Estado:** RESUELTO
 **Fecha de registro:** 25/07/2026
-**Commit:** `88fdec3`
+**Commit:** Pendiente de commit
 **Evidencia inicial:** `supabase/migrations/` comienza en
 `20260725001300_pos_013_concurrency.sql`; las definiciones base 001–012 sólo
 existen como scripts manuales en la raíz de `supabase/`. Tampoco existe
@@ -357,21 +357,26 @@ inválido para una instalación limpia: 004 requiere que 005 haya creado
 Las copias históricas inmutables 001–012 viven ahora en `supabase/migrations/`
 con el orden de dependencia correcto. El historial remoto fue reconciliado
 como aplicado sin reejecutar SQL ni tocar datos. La migración 029 comprueba
-tablas, columnas, funciones, RLS, policies, acceso `anon` y Storage.
-**Despliegue:** historial local/remoto 001–029 idéntico en
+tablas, columnas, funciones, RLS, policies, acceso `anon` y Storage. Las
+migraciones 01950 y 030 crean y eliminan semillas reservadas que permiten
+ejecutar las verificaciones históricas 020–026 en una base vacía. La migración
+031 compara una huella semántica estable entre PostgreSQL 17 y 18.
+**Despliegue:** historial local/remoto 001–031 idéntico en
 `telohdbvbvsfmwyriflz`; `db push --dry-run` no reporta pendientes.
-**Pruebas:** `node test-migrations.mjs` 21/21; contrato remoto 029 aprobado;
-`test-store-queue.mjs` 62/62, `test-concurrency.mjs` 9/9,
-`test-role-access.mjs` sin fallos, `test-sale-coherence.mjs` 17/17,
-`test-returns.mjs` 17/17 y `test-commission.mjs` 10/10. `db lint` no reportó
-errores y sí dos advertencias de variables PL/pgSQL no leídas, fuera de este
-contrato.
-**Pendiente para resolución total:** ejecutar `supabase db reset` sobre dos
-entornos vacíos y comparar sus dumps con producción. El intento local fue
-bloqueado porque Docker Desktop no está instalado en esta computadora.
-**Riesgo residual:** medio. La actualización del proyecto existente y su
-contrato final están verificados, pero la ejecución completa de 001–029 desde
-cero todavía no tiene evidencia en una base PostgreSQL/Supabase limpia.
+**Pruebas:** dos clústeres lógicos vacíos e independientes ejecutaron 001–031
+desde cero sobre PostgreSQL 18.4; ambos terminaron con 17 tablas, 191 columnas,
+11 funciones, 30 policies, sin semillas reservadas y con huella
+`a7d720a0d8a5f6ae5d33c5c1f61f3e49`. Sus dumps normalizados fueron idénticos
+(SHA-256 `E101689C7A0F5F45A8A05A6C9052F5F4B2B949121C1FEE39C77862B84727CA66`).
+Producción aprobó la misma huella mediante 031. `node test-migrations.mjs`
+23/23; cola 89/89, concurrencia 9/9, roles 10/10, coherencia de venta 17/17,
+devoluciones 17/17 y folios 4/4. `db lint` no reportó errores y sí dos
+advertencias preexistentes de variables PL/pgSQL no leídas. El smoke de UI
+agotó la espera de arranque, sin aserciones ejecutadas y sin relación con SQL.
+**Riesgo residual:** bajo. La huella omite deliberadamente el orden físico de
+columnas, la representación textual de defaults y las restricciones internas
+`NOT NULL`, que cambian entre PostgreSQL 17/18; conserva nombres y tipos de
+columnas, nulabilidad, restricciones funcionales, índices, funciones y RLS.
 **Corrección documentada:** `docs/fixes/migraciones-reproducibles.md`.
 
 ## H-11 — Margen mínimo configurado pero no aplicado

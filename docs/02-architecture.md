@@ -129,8 +129,8 @@ la cola.
 
 La autoridad de despliegue es la cadena ordenada de
 `supabase/migrations/*.sql`, configurada por `supabase/config.toml`. Contiene
-las bases históricas 001–012, las correcciones 013–028 y una verificación final
-del contrato en 029. Los archivos `supabase/pos_*.sql` se conservan como fuentes
+las bases históricas 001–012, las correcciones 013–028 y verificaciones finales
+del contrato hasta 031. Los archivos `supabase/pos_*.sql` se conservan como fuentes
 históricas legibles de 001–012; `test-migrations.mjs` exige que sus copias
 formales permanezcan idénticas.
 
@@ -143,6 +143,10 @@ La migración `20260725002900_pos_h10_schema_contract_verification.sql` no cambi
 datos: aborta si faltan tablas, columnas o funciones esenciales, si alguna
 tabla `pos` queda sin RLS, si sobreviven policies permisivas antiguas, si
 `anon` conserva acceso al esquema o si falta el bucket público de fotos.
+Las migraciones 01950 y 030 rodean las verificaciones históricas con semillas
+reservadas y las eliminan antes de terminar. La migración 031 aborta cuando la
+huella semántica de tablas, columnas, funciones, restricciones, índices y RLS
+se aparta de dos reconstrucciones limpias reproducibles.
 
 Responsabilidades:
 

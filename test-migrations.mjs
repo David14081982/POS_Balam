@@ -63,6 +63,18 @@ check('9. la cadena termina verificando objetos, RLS y acceso anon',
   contract.includes('h10_schema_contract_missing')
     && contract.includes('h10_rls_disabled')
     && contract.includes('h10_anon_schema_usage'));
+check('10. la instalación limpia prepara y elimina semillas de verificación',
+  files.findIndex(name => name.includes('001950_pos_clean_verification_seeds'))
+      < files.findIndex(name => name.includes('002000_pos_transactional_sale_verification'))
+    && files.findIndex(name => name.includes('003000_pos_clean_verification_cleanup'))
+      > files.findIndex(name => name.includes('002900_pos_h10_schema_contract_verification')));
+const fingerprint = readFileSync(
+  join(migrationDir, '20260725003100_pos_h10_schema_fingerprint.sql'),
+  'utf8',
+).toLowerCase();
+check('11. la cadena compara producción con la huella de instalaciones limpias',
+  fingerprint.includes('h10_schema_fingerprint_mismatch')
+    && fingerprint.includes('a7d720a0d8a5f6ae5d33c5c1f61f3e49'));
 
 console.log(`\n════════ ${passed} pasaron, ${failed} fallaron ════════`);
 process.exit(failed ? 1 : 0);
