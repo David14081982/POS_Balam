@@ -54,9 +54,8 @@ El orden relevante definido en `POS Balam.html` es:
 6. `balam/store.jsx`
 7. `balam/app.jsx`
 
-Aunque `STORE` se carga después, `AUTH` consulta sus métodos en tiempo de uso,
-no durante su declaración. `CONFIG` y `DATA` envían sincronización mediante el
-gateway de `CORE`. `App` coordina la inicialización.
+Aunque `STORE` se carga después, `CONFIG`, `DATA` y `AUTH` acceden a sus
+servicios mediante el gateway de `CORE`. `App` coordina la inicialización.
 
 ## CORE
 
@@ -73,11 +72,12 @@ También aloja el adaptador de productos usado por las guardas de catálogos:
 consulta esas funciones sin depender de `window.DATA`. `CORE` no conserva una
 copia de productos ni asume su estructura más allá de entregar el arreglo.
 
-El gateway de sincronización saliente evita que `DATA` y `CONFIG` conozcan
-directamente a `STORE`: antes del registro es no-op y, después de que `STORE`
-publica su API, reenvía método, argumentos y resultado sin transformación.
-`STORE` puede seguir leyendo/aplicando ambos modelos, por lo que cada dependencia
-queda en una sola dirección.
+El gateway evita que `DATA`, `CONFIG` y `AUTH` conozcan directamente a `STORE`:
+antes del registro es no-op y, después de que `STORE` publica su API, reenvía
+método, argumentos y resultado sin transformación. Además de escrituras
+salientes, `AUTH` obtiene por esa frontera el cliente Supabase compartido.
+`STORE` puede seguir leyendo los modelos y la identidad efectiva, por lo que
+cada dependencia queda en una sola dirección.
 
 ## Recursos de interfaz
 
@@ -151,7 +151,7 @@ cálculos nuevos; las ventas guardadas conservan sus snapshots monetarios.
 
 Archivo: `balam/auth.jsx`. API: `window.AUTH`.
 
-- Usa el cliente creado por `STORE.getClient()`.
+- Obtiene mediante el gateway de `CORE` el cliente compartido que crea `STORE`.
 - Inicializa y observa la sesión de Supabase Auth.
 - Supabase JS persiste el token en `localStorage` y renueva la sesión.
 - Después del login, relaciona el correo autenticado con un vendedor de

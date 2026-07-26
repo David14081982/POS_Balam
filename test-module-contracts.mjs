@@ -30,6 +30,7 @@ const data = read('balam/data.jsx');
 const store = read('balam/store.jsx');
 const core = existsSync('balam/core.jsx') ? read('balam/core.jsx') : '';
 const config = read('balam/config.jsx');
+const auth = read('balam/auth.jsx');
 check('la identidad de terminal tiene una sola implementación', (
   !/function getDeviceId\s*\(/.test(data)
   && !/function getDeviceId\s*\(/.test(store)
@@ -58,6 +59,10 @@ check('sincronización saliente atraviesa un gateway único', (
 check('CONFIG no depende directamente de STORE', !config.includes('window.STORE'));
 check('configuración saliente usa el gateway de sincronización', (
   config.includes("window.CORE.invokeSync('pushConfig', state)")
+));
+check('AUTH no depende directamente de STORE', !auth.includes('window.STORE'));
+check('AUTH obtiene el cliente mediante el gateway', (
+  auth.includes("window.CORE.invokeSync('getClient')")
 ));
 
 let generated = 0;

@@ -43,7 +43,9 @@ function authHarness(email, sellers, options = {}) {
     CustomEvent: class { constructor(type) { this.type = type; } },
     window: {
       DATA: { sellers },
-      STORE: { getClient: async () => client },
+      CORE: {
+        invokeSync: async method => method === 'getClient' ? client : undefined,
+      },
       dispatchEvent: event => listeners.push(event.type),
     },
   };

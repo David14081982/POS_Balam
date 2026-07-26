@@ -826,6 +826,33 @@ no-op, equivalente a la guarda histórica; la configuración permanece local y
 se sincroniza por la cola en una inicialización posterior.
 **Corrección documentada:** `docs/fixes/desacoplar-config-store.md`.
 
+## H-24 — Ciclo directo AUTH ↔ STORE al obtener el cliente Supabase
+
+**Estado:** RESUELTO
+**Fecha de registro:** 26/07/2026
+**Fecha de resolución:** 26/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** `AUTH.client()` consulta e invoca directamente
+`window.STORE.getClient()`. `STORE`, a su vez, consulta `window.AUTH` para
+resolver propietario, rol y reclamación de cola histórica.
+**Origen de auditoría:** Fase 16, residual posterior a H-23.
+**Riesgo:** autenticación y persistencia conocen mutuamente sus APIs globales;
+la inicialización de sesión depende de la forma concreta de `STORE` y conserva
+otro ciclo fuera de la frontera de sincronización existente.
+**Reproducción:** contratos 27/29 antes del cambio; fallaron la ausencia de
+dependencia directa y la obtención del cliente mediante el gateway.
+**Corrección:** `AUTH.client()` obtiene `getClient` exclusivamente mediante
+`CORE.invokeSync()`. `STORE` continúa registrando su API en el gateway y conserva
+la lectura unidireccional de rol, perfil y propietario efectivo.
+**Pruebas:** contratos 29/29, roles 10/10, cola 97/97, build reproducible 8/8,
+smoke del bundle 17/17 y navegación 13/13.
+**Pendiente:** ninguno para `AUTH ↔ STORE`. `STORE → AUTH` queda como dependencia
+unidireccional intencional para aplicar permisos y aislar la cola por sesión.
+**Riesgo residual:** bajo. Antes de que `STORE` registre el gateway no hay
+cliente y `AUTH.init()` conserva su salida local histórica; `App` inicializa
+autenticación después de cargar ambos módulos.
+**Corrección documentada:** `docs/fixes/desacoplar-auth-store.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

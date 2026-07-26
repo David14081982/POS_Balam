@@ -15,7 +15,7 @@
   const PROFILE_KEY = 'balam_auth_profile_v1';
 
   function emit() { try { window.dispatchEvent(new CustomEvent('authchange')); } catch (e) { /* */ } }
-  async function client() { return (window.STORE && window.STORE.getClient) ? await window.STORE.getClient() : null; }
+  async function client() { return await window.CORE.invokeSync('getClient') || null; }
   function cachedProfile(email) {
     try {
       const saved = JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null');
