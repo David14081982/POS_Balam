@@ -572,7 +572,7 @@ mejorar el diagnóstico del bundler sería una tarea distinta.
 **Estado:** RESUELTO
 **Fecha de registro:** 26/07/2026
 **Fecha de resolución:** 26/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `276f6c1`
 **Evidencia:** `pullSales()` afirma ser paginado, pero sus consultas por fecha y
 apartados no usan `range()` ni `limit()`. `pull()`, `pullDomain()` y
 `fetchItemsIn()` también leen conjuntos completos sin recorrer páginas.
