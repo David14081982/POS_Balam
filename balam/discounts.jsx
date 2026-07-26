@@ -69,31 +69,43 @@
     if (s.tallas && s.tallas.length) return (p.stock || []).some(v => s.tallas.indexOf(v.talla) >= 0);
     return true;
   }
-  // Aplica una lista de promos (acumulables) sobre el precio de lista de un producto.
-  function applyStack(orig, list) {
+  // Aplica promos acumulables sin permitir que el descuento reduzca el margen
+  // configurado. El piso nunca sube el precio de lista: si el producto ya está
+  // debajo del margen, simplemente no admite un descuento adicional.
+  function applyStack(orig, list, product) {
     let pct = 0, fijo = 0;
     list.forEach(pr => { if (pr.tipo === 'fijo') fijo += Number(pr.valor) || 0; else pct += Number(pr.valor) || 0; });
     pct = Math.min(pct, 100);
     let unit = orig * (1 - pct / 100) - fijo;
     if (unit < 0) unit = 0;
     unit = Math.round(unit * 100) / 100;
-    return { unit, pct, fijo };
+    const cost = Number(product && product.costo);
+    const configured = Number(C.get('discount.minMarginPct'));
+    const margin = Number.isFinite(configured) ? Math.max(0, Math.min(100, configured)) : 0;
+    let floor = 0;
+    if (Number.isFinite(cost) && cost > 0 && margin > 0) {
+      const required = margin >= 100 ? orig : cost / (1 - margin / 100);
+      floor = Math.round(Math.min(orig, required) * 100) / 100;
+    }
+    const capped = unit < floor;
+    if (capped) unit = floor;
+    return { unit, pct, fijo, floor, capped };
   }
   // Precio unitario efectivo de una línea del ticket (con todas las promos activas).
   function lineUnit(p, talla) {
     const orig = Number(p.precio) || 0;
     const list = active().filter(pr => match(pr, p, talla));
     if (!list.length) return { unit: orig, orig, off: 0, promos: [] };
-    const r = applyStack(orig, list);
-    return { unit: r.unit, orig, off: Math.max(0, orig - r.unit), promos: list };
+    const r = applyStack(orig, list, p);
+    return { unit: r.unit, orig, off: Math.max(0, orig - r.unit), promos: list, capped: r.capped };
   }
   // Vista previa del efecto de UNA promo (en edición) sobre el catálogo.
   function previewDraft(draft) {
     const affected = D.products.filter(p => productMatch(draft, p));
     const examples = affected.slice(0, 4).map(p => {
       const orig = Number(p.precio) || 0;
-      const r = applyStack(orig, [draft]);
-      return { p, orig, unit: r.unit, off: Math.max(0, orig - r.unit) };
+      const r = applyStack(orig, [draft], p);
+      return { p, orig, unit: r.unit, off: Math.max(0, orig - r.unit), capped: r.capped };
     });
     return { count: affected.length, examples };
   }

@@ -560,11 +560,20 @@
   }
 
   // ── Controles de ajustes (parámetros sueltos) ──────────────────────────────────
-  function CfgText({ k, label, hint, type = 'text', wide }) {
+  function CfgText({ k, label, hint, type = 'text', wide, min, max }) {
     const v = C.get(k);
     return h('div', { key: k, className: 'mb-4 ' + (wide ? 'col-span-2' : '') }, [
       h('div', { key: 'l', className: 'font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mb-1.5' }, label),
-      h('input', { key: 'in', type, defaultValue: v, className: INPUT, onBlur: e => C.setSetting(k, type === 'number' ? (Number(e.target.value) || 0) : e.target.value) }),
+      h('input', {
+        key: 'in', type, min, max, defaultValue: v, className: INPUT,
+        onBlur: e => {
+          let next = type === 'number' ? (Number(e.target.value) || 0) : e.target.value;
+          if (type === 'number' && min != null) next = Math.max(Number(min), next);
+          if (type === 'number' && max != null) next = Math.min(Number(max), next);
+          if (type === 'number') e.target.value = next;
+          C.setSetting(k, next);
+        },
+      }),
       hint && h('div', { key: 'h', className: 'text-caption text-on-surface-variant mt-1' }, hint),
     ]);
   }
@@ -753,6 +762,7 @@
         h('div', { key: 'g', className: 'grid grid-cols-1 md:grid-cols-2 gap-x-6' }, [
           h(CfgText, { key: 'lo', k: 'stock.lowThreshold', label: 'Stock bajo (≤ piezas)', type: 'number' }),
           h(CfgText, { key: 'rc', k: 'client.recurrentThreshold', label: 'Cliente recurrente (≥ compras)', type: 'number' }),
+          h(CfgText, { key: 'mm', k: 'discount.minMarginPct', label: 'Margen mínimo en promociones (%)', type: 'number', min: 0, max: 100, hint: 'Limita descuentos nuevos usando el costo registrado del producto.' }),
         ]),
       ]),
     ],

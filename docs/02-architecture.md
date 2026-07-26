@@ -72,6 +72,25 @@ Ventas y devoluciones usan rutas especializadas (`STORE.pushSale()` y
 `STORE.pushReturn()`). Cada una se confirma remotamente mediante su propia
 transacción SQL idempotente.
 
+### Promociones y margen mínimo
+
+`window.PROMOS` calcula el precio unitario que usa el Punto de Venta y la vista
+previa administrativa. Los descuentos porcentuales acumulados se aplican
+primero y después los montos fijos.
+
+Cuando el producto tiene costo positivo y
+`discount.minMarginPct > 0`, el precio promocional no puede bajar de:
+
+```text
+costo / (1 - margen_mínimo / 100)
+```
+
+El piso se limita al precio de lista: una promoción nunca aumenta el precio.
+Si el precio de lista ya incumple el margen, se bloquea el descuento adicional.
+Costo cero/ausente o margen 0 conservan el cálculo histórico. El margen se
+administra en Configuración → Ventas y POS, entre 0% y 100%, y afecta sólo
+cálculos nuevos; las ventas guardadas conservan sus snapshots monetarios.
+
 ## AUTH
 
 Archivo: `balam/auth.jsx`. API: `window.AUTH`.

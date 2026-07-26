@@ -19,6 +19,7 @@ y `BLOQUEADO`.
 | H-08 | Vendedor sin confinamiento al Punto de Venta | RESUELTO | Auth / navegación / RLS |
 | H-09 | Cambio de sesión reutiliza estado y cola globales | RESUELTO | Auth / sincronización / localStorage |
 | H-10 | Cadena de migraciones no reconstruye el esquema | PARCIALMENTE RESUELTO | Supabase / migraciones |
+| H-11 | Margen mínimo configurado pero no aplicado | RESUELTO | Promociones / precios |
 
 ## H-01 — Inventario concurrente
 
@@ -368,6 +369,36 @@ bloqueado porque Docker Desktop no está instalado en esta computadora.
 contrato final están verificados, pero la ejecución completa de 001–029 desde
 cero todavía no tiene evidencia en una base PostgreSQL/Supabase limpia.
 **Corrección documentada:** `docs/fixes/migraciones-reproducibles.md`.
+
+## H-11 — Margen mínimo configurado pero no aplicado
+
+**Estado:** RESUELTO
+**Fecha de registro:** 25/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** `CONFIG` define `discount.minMarginPct=45`, pero
+`PROMOS.applyStack()` sólo suma porcentajes y montos fijos, limita el resultado
+a cero y nunca consulta costo ni configuración. Con precio $1,000, costo $450 y
+descuento 40%, devuelve $600 en lugar del piso $818.18; tampoco devuelve
+`capped=true`.
+**Impacto:** promociones activas pueden vender por debajo del margen comercial
+configurado y la vista previa muestra el mismo precio incorrecto.
+**Origen de auditoría:** Fase 8, hallazgo original H-13.
+**Causa raíz:** `applyStack()` recibía sólo precio y promociones; costo y
+`discount.minMarginPct` nunca llegaban al cálculo. `lineUnit()` y
+`previewDraft()` llamaban esa misma función incompleta.
+**Corrección:** el motor central recibe el producto, calcula el piso
+`costo/(1-margen)` y lo limita al precio de lista. POS y vista previa entregan
+el mismo producto y exponen `capped`. Configuración muestra el margen,
+restringido a 0–100. Costos cero/ausentes y margen 0 conservan compatibilidad
+histórica.
+**Pruebas:** reproducción previa 30 pasaron/2 fallaron. Después,
+`test-discounts.mjs` 43/43, `test-sale-coherence.mjs` 17/17,
+`test-commission.mjs` 10/10, `test-returns.mjs` 17/17,
+`test-store-queue.mjs` 62/62 y `test-smoke.mjs` 13/13.
+**Riesgo residual:** un producto sin costo positivo no permite calcular margen
+y conserva el descuento histórico. Las ventas anteriores no se recalculan; sus
+precios y descuentos permanecen como snapshot.
+**Corrección documentada:** `docs/fixes/margen-minimo-promociones.md`.
 
 ## Regla de actualización
 

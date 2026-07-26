@@ -24,6 +24,7 @@ sesión de chat.
 | `folios-multi-terminal.md` | H-02 | Identidad inmutable y folios únicos offline |
 | `aislamiento-cola-por-sesion.md` | H-09 | Cola offline aislada por identidad |
 | `migraciones-reproducibles.md` | H-10 | Cadena formal y contrato de esquema |
+| `margen-minimo-promociones.md` | H-11 | Piso de margen en promociones |
 
 Documentación financiera relacionada, creada antes de este índice:
 

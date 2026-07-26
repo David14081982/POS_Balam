@@ -26,6 +26,7 @@ vm.createContext(sandbox);
 const code = readFileSync(new URL('./balam/discounts.jsx', import.meta.url), 'utf8');
 vm.runInContext(code, sandbox);
 const PROMOS = sandbox.window.PROMOS;
+const settingsCode = readFileSync(new URL('./balam/settings.jsx', import.meta.url), 'utf8');
 
 // ── Utilidades de prueba ─────────────────────────────────────────────────────
 let pass = 0, fail = 0;
@@ -69,6 +70,29 @@ console.log(`   capped=${r1.capped} (esperado true)`); r1.capped ? pass++ : fail
 const r2 = PROMOS.applyStack(1000, [promo('pct', 10)], prod(1000, 450)); // 900 > 818.18 → no topa
 check('10% sobre $1000 costo $450 → no topa', r2.unit, 900);
 console.log(`   capped=${r2.capped} (esperado false)`); !r2.capped ? pass++ : fail++;
+const r3 = PROMOS.applyStack(1000, [promo('fijo', 300)], prod(1000, 450));
+check('$300 fijo también respeta el piso', r3.unit, 818.18);
+const r4 = PROMOS.applyStack(1000, [promo('pct', 40)], prod(1000, 0));
+check('costo cero conserva el descuento histórico', r4.unit, 600);
+console.log(`   capped=${r4.capped} (esperado false)`); !r4.capped ? pass++ : fail++;
+check('costo inválido conserva el descuento histórico',
+  PROMOS.applyStack(1000, [promo('pct', 40)], prod(1000, 'sin-costo')).unit, 600);
+const r5 = PROMOS.applyStack(1000, [promo('pct', 40)], prod(1000, 1000));
+check('costo igual al precio bloquea descuento sin subir lista', r5.unit, 1000);
+CONFIG_VALUES['discount.minMarginPct'] = 100;
+const r6 = PROMOS.applyStack(1000, [promo('pct', 10)], prod(1000, 450));
+check('margen 100% no produce infinito y bloquea descuento', r6.unit, 1000);
+CONFIG_VALUES['discount.minMarginPct'] = 45;
+const marginProduct = Object.assign(prod(1000, 450), { id: 'margin-product', sku: 'MARGIN' });
+const marginPromo = promo('pct', 40);
+DATA.products = [marginProduct];
+DATA.promos = [marginPromo];
+const marginLine = PROMOS.lineUnit(marginProduct, 'M');
+const marginPreview = PROMOS.previewDraft(marginPromo).examples[0];
+check('POS lineUnit usa el mismo piso', marginLine.unit, 818.18);
+console.log(`   capped=${marginLine.capped} (esperado true)`); marginLine.capped ? pass++ : fail++;
+check('vista previa usa el mismo piso', marginPreview.unit, 818.18);
+console.log(`   capped=${marginPreview.capped} (esperado true)`); marginPreview.capped ? pass++ : fail++;
 CONFIG_VALUES['discount.minMarginPct'] = 0;
 
 console.log('\n── E) lineUnit con promos ACTIVAS por fecha/alcance ─────');
@@ -129,6 +153,13 @@ const desglose = ticketTotals(totalFin);
 check('$1,200 − $50 = total cobrado', totalFin, 1150);
 check('total descontado no vuelve a sumar IVA', desglose.total, 1150);
 check('desglose fiscal conserva total', desglose.importe + desglose.iva, totalFin);
+
+console.log('\n── J) CONFIGURACIÓN ADMINISTRABLE ──────────────────────');
+const marginSettingVisible = settingsCode.includes("k: 'discount.minMarginPct'")
+  && settingsCode.includes("label: 'Margen mínimo en promociones (%)'")
+  && settingsCode.includes('min: 0, max: 100');
+console.log(`${marginSettingVisible ? '✅' : '❌'} margen mínimo visible y limitado 0–100 en Configuración`);
+marginSettingVisible ? pass++ : fail++;
 
 console.log(`\n════════ RESULTADO: ${pass} pasaron, ${fail} fallaron ════════`);
 process.exit(fail ? 1 : 0);
