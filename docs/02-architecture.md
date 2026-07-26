@@ -67,6 +67,11 @@ expone `getDeviceId()`: conserva la clave histórica `balam_device_id` y
 garantiza que `DATA` y `STORE` usen una sola identidad durante la sesión,
 incluso cuando `localStorage` no está disponible.
 
+También aloja el adaptador de productos usado por las guardas de catálogos:
+`DATA` registra funciones para listar y guardar su arreglo real; `CONFIG`
+consulta esas funciones sin depender de `window.DATA`. `CORE` no conserva una
+copia de productos ni asume su estructura más allá de entregar el arreglo.
+
 ## Recursos de interfaz
 
 La apariencia vigente proviene de la configuración Tailwind y del bloque
@@ -90,6 +95,8 @@ Archivo: `balam/config.jsx`. API: `window.CONFIG`.
 - Si `STORE` está disponible, `pushConfig()` replica configuración y catálogos.
 - `DATA` lee ciertos catálogos mediante getters para reflejar cambios sin
   recargar módulos.
+- Las guardas de borrado consultan productos mediante el adaptador de `CORE`;
+  `CONFIG` no depende directamente de `DATA`.
 
 Supabase separa esta información en tablas de configuración (`settings` y
 `lookup`). Si existe configuración pendiente en la cola al arrancar, el pull se

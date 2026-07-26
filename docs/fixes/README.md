@@ -34,6 +34,7 @@ sesión de chat.
 | `identidad-terminal-compartida.md` | H-18 | Contrato único de identidad de terminal |
 | `bundle-reproducible.md` | H-19 | Identidad determinista de assets del bundle |
 | `build-sin-dependencias-remotas.md` | H-20 | Recursos externos fijados y build sin red |
+| `desacoplar-config-data.md` | H-21 | Adaptador de productos entre CONFIG y DATA |
 
 Documentación financiera relacionada, creada antes de este índice:
 

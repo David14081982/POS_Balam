@@ -1267,6 +1267,10 @@
     SIZES_NUM: { enumerable: true, get: SIZES_NUM },
     SIZES: { enumerable: true, get: SIZES_LETRA }, // alias de compatibilidad
   });
+  window.CORE.registerCatalogProducts({
+    list: () => products,
+    save: () => saveProducts(),
+  });
 
   // Sana huérfanos existentes al ARRANCAR (p. ej. daño previo por un import de catálogos que
   // re-codificó colores). Va al FINAL del módulo: remapOrphanCodes → saveProducts → syncUp lee

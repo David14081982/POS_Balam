@@ -3,6 +3,7 @@
 (function () {
   const DEVICE_KEY = 'balam_device_id';
   let deviceId = null;
+  let catalogProductsAdapter = null;
 
   function getDeviceId() {
     if (deviceId) return deviceId;
@@ -18,5 +19,25 @@
     return deviceId;
   }
 
-  window.CORE = { getDeviceId };
+  function registerCatalogProducts(adapter) {
+    if (!adapter || typeof adapter.list !== 'function' || typeof adapter.save !== 'function') {
+      throw new Error('Adaptador de productos inválido');
+    }
+    catalogProductsAdapter = adapter;
+  }
+  function catalogProducts() {
+    if (!catalogProductsAdapter) return [];
+    const products = catalogProductsAdapter.list();
+    return Array.isArray(products) ? products : [];
+  }
+  function saveCatalogProducts() {
+    if (catalogProductsAdapter) catalogProductsAdapter.save();
+  }
+
+  window.CORE = {
+    getDeviceId,
+    registerCatalogProducts,
+    catalogProducts,
+    saveCatalogProducts,
+  };
 })();

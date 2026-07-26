@@ -277,18 +277,17 @@
 
   // ── ¿Un code de catálogo está en uso por algún producto? (guarda de borrado) ──
   function inUse(kind, code) {
-    const D = window.DATA;
-    if (!D || !D.products) return false;
+    const products = window.CORE.catalogProducts();
     const cm = state.catalogMeta[kind];
-    if (cm && cm.custom) return D.products.some(p => (p.attrs || {})[kind] === code);
+    if (cm && cm.custom) return products.some(p => (p.attrs || {})[kind] === code);
     const field = fieldOf(kind);
     if (field && kind !== 'size_letter' && kind !== 'size_number') {
-      if (D.products.some(p => String(p[field]) === String(code))) return true;
-      if (kind === 'color' && D.products.some(p => (p.ornColors || []).includes(code))) return true;
+      if (products.some(p => String(p[field]) === String(code))) return true;
+      if (kind === 'color' && products.some(p => (p.ornColors || []).includes(code))) return true;
       return false;
     }
-    if (kind === 'size_letter') return D.products.some(p => (p.stock || []).some(v => v.escala === 'L' && v.talla === code && v.stock > 0));
-    if (kind === 'size_number') return D.products.some(p => (p.stock || []).some(v => v.escala === 'N' && v.talla === code && v.stock > 0));
+    if (kind === 'size_letter') return products.some(p => (p.stock || []).some(v => v.escala === 'L' && v.talla === code && v.stock > 0));
+    if (kind === 'size_number') return products.some(p => (p.stock || []).some(v => v.escala === 'N' && v.talla === code && v.stock > 0));
     return false;
   }
 
@@ -391,11 +390,10 @@
     // creaba un candado sin llave: blankProduct() auto-rellena attrs[kind] con el primer ítem
     // cuando el catálogo está "En SKU" (aunque esté oculto del alta), así que el usuario nunca
     // eligió ese valor ni tiene UI para quitarlo. El SKU ya congelado de cada producto no cambia.
-    const D = window.DATA;
-    const prods = (D && D.products) || [];
+    const prods = window.CORE.catalogProducts();
     let touched = false;
     prods.forEach(p => { if (p.attrs && (kind in p.attrs)) { delete p.attrs[kind]; touched = true; } });
-    if (touched && D && typeof D.saveProducts === 'function') D.saveProducts();
+    if (touched) window.CORE.saveCatalogProducts();
     delete state.catalogMeta[kind];
     delete state.catalogs[kind];
     emit();

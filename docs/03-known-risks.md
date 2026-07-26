@@ -743,6 +743,34 @@ revisión; una instalación nueva requiere `npm ci` para dependencias de
 desarrollo fijadas.
 **Corrección documentada:** `docs/fixes/build-sin-dependencias-remotas.md`.
 
+## H-21 — Ciclo directo CONFIG ↔ DATA para uso de catálogos
+
+**Estado:** RESUELTO
+**Fecha de registro:** 26/07/2026
+**Fecha de resolución:** 26/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** `DATA` captura `window.CONFIG` al cargar y lo usa para catálogos
+y reglas. A su vez, `CONFIG.inUse()` y `CONFIG.removeCatalog()` consultan
+`window.DATA.products`; el segundo también invoca `DATA.saveProducts()`.
+**Origen de auditoría:** Fase 16, hallazgo original H-21.
+**Riesgo:** el contrato de configuración depende del orden y de la forma
+interna del dominio, impide probarlo aisladamente y convierte cambios de
+productos/configuración en una dependencia circular implícita.
+**Reproducción:** contratos 16/18 antes del cambio; fallaron la ausencia de
+dependencia directa y el adaptador único.
+**Corrección:** `CORE` publica un adaptador de listado/persistencia que `DATA`
+registra sobre su arreglo real. `CONFIG` ya no referencia `window.DATA` y
+conserva las mismas guardas y limpieza.
+**Pruebas:** contratos 20/20, guarda de código usado y limpieza/persistencia
+custom aprobadas, concurrencia 9/9, descuentos 43/43, cola 97/97, roles 10/10,
+smoke 17/17, navegación 13/13 y build de 66 assets correcto.
+**Pendiente:** ninguno para `CONFIG ↔ DATA`. La relación `DATA ↔ STORE` se
+mantiene separada.
+**Riesgo residual:** bajo. `CORE` depende de que `DATA` registre el adaptador,
+protegido por orden de carga y prueba; antes del registro devuelve lista vacía,
+igual que el comportamiento histórico.
+**Corrección documentada:** `docs/fixes/desacoplar-config-data.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:
