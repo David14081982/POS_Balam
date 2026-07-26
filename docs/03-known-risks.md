@@ -618,7 +618,7 @@ justificará sólo si mediciones futuras muestran churn o páginas profundas.
 **Estado:** RESUELTO
 **Fecha de registro:** 26/07/2026
 **Fecha de resolución:** 26/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `3458efd`
 **Evidencia:** `balam/styles.css`, `balam/modules.css` y `balam/light.css`
 permanecen en el repositorio, pero ninguna entrada HTML los enlaza y
 `build-offline.mjs` sólo incorpora recursos locales presentes en `src` o
