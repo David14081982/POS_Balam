@@ -108,10 +108,22 @@ la cola.
 
 ## Supabase
 
-Los scripts versionados en `supabase/pos_*.sql` construyen el esquema `pos`:
-configuración, dominio, usuarios, RLS, promociones, liquidaciones,
-devoluciones, atributos, fotos y contratos financieros. Los scripts son
-incrementales; su numeración expresa el orden histórico.
+La autoridad de despliegue es la cadena ordenada de
+`supabase/migrations/*.sql`, configurada por `supabase/config.toml`. Contiene
+las bases históricas 001–012, las correcciones 013–028 y una verificación final
+del contrato en 029. Los archivos `supabase/pos_*.sql` se conservan como fuentes
+históricas legibles de 001–012; `test-migrations.mjs` exige que sus copias
+formales permanezcan idénticas.
+
+El orden formal coloca promociones antes del antiguo script 004 porque ese
+script intenta activar RLS sobre `pos.promotions`. La versión desplegada queda
+determinada por el historial de migraciones, no por ejecutar manualmente
+`_PEGAR-EN-SQL-EDITOR.sql`.
+
+La migración `20260725002900_pos_h10_schema_contract_verification.sql` no cambia
+datos: aborta si faltan tablas, columnas o funciones esenciales, si alguna
+tabla `pos` queda sin RLS, si sobreviven policies permisivas antiguas, si
+`anon` conserva acceso al esquema o si falta el bucket público de fotos.
 
 Responsabilidades:
 
@@ -152,8 +164,8 @@ El producto no define todavía permisos configurables por pantalla. Esa
 capacidad sería una ampliación independiente del contrato fijo actual.
 
 `supabase/_PEGAR-EN-SQL-EDITOR.sql`, `ARREGLAR-ADMIN.sql` y scripts de limpieza
-son herramientas operativas; antes de ejecutarlos se debe revisar alcance y
-entorno.
+son herramientas operativas heredadas, no migraciones ni fuentes de verdad;
+antes de ejecutarlos se debe revisar alcance y entorno.
 
 ## Edge Functions
 

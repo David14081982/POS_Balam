@@ -22,6 +22,8 @@ sesión de chat.
 | `inventario-concurrente.md` | H-01 | Reserva atómica e idempotente de stock por venta |
 | `venta-transaccional-idempotente.md` | H-04 | Venta y devolución transaccionales e idempotentes |
 | `folios-multi-terminal.md` | H-02 | Identidad inmutable y folios únicos offline |
+| `aislamiento-cola-por-sesion.md` | H-09 | Cola offline aislada por identidad |
+| `migraciones-reproducibles.md` | H-10 | Cadena formal y contrato de esquema |
 
 Documentación financiera relacionada, creada antes de este índice:
 

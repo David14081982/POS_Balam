@@ -18,6 +18,7 @@ y `BLOQUEADO`.
 | H-07 | Acceso excesivo de cualquier autenticado | RESUELTO | RLS / autorización |
 | H-08 | Vendedor sin confinamiento al Punto de Venta | RESUELTO | Auth / navegación / RLS |
 | H-09 | Cambio de sesión reutiliza estado y cola globales | RESUELTO | Auth / sincronización / localStorage |
+| H-10 | Cadena de migraciones no reconstruye el esquema | PARCIALMENTE RESUELTO | Supabase / migraciones |
 
 ## H-01 — Inventario concurrente
 
@@ -327,6 +328,46 @@ primer login, muestra aviso y sólo se procesa tras reclamación administrativa.
 identificar automáticamente a su autor. Se conserva íntegra en cuarentena y
 requiere revisión administrativa; no puede cruzarse de sesión silenciosamente.
 **Corrección documentada:** `docs/fixes/aislamiento-cola-por-sesion.md`.
+
+## H-10 — Cadena de migraciones no reconstruye el esquema
+
+**Estado:** PARCIALMENTE RESUELTO
+**Fecha de registro:** 25/07/2026
+**Commit:** Pendiente de commit
+**Evidencia inicial:** `supabase/migrations/` comienza en
+`20260725001300_pos_013_concurrency.sql`; las definiciones base 001–012 sólo
+existen como scripts manuales en la raíz de `supabase/`. Tampoco existe
+`supabase/config.toml`. Una instalación formal desde cero intenta aplicar 013
+sin haber creado previamente el esquema ni sus tablas.
+**Impacto:** una versión del repositorio no determina por sí sola un esquema,
+conjunto de funciones, grants y policies. Un entorno nuevo depende de orden y
+ejecuciones manuales no registrados.
+**Origen de auditoría:** Fase 6, hallazgo original H-20 y partes de H-15/H-22.
+**Causa raíz:** los scripts 001–012 se ejecutaban manualmente y nunca se
+incorporaron a `supabase_migrations.schema_migrations`; la carpeta formal y el
+proyecto enlazado empezaban en 013. Además, el orden numérico aparente era
+inválido para una instalación limpia: 004 requiere que 005 haya creado
+`promotions`.
+**Corrección:** `supabase/config.toml` formaliza PostgreSQL 17 y expone `pos`.
+Las copias históricas inmutables 001–012 viven ahora en `supabase/migrations/`
+con el orden de dependencia correcto. El historial remoto fue reconciliado
+como aplicado sin reejecutar SQL ni tocar datos. La migración 029 comprueba
+tablas, columnas, funciones, RLS, policies, acceso `anon` y Storage.
+**Despliegue:** historial local/remoto 001–029 idéntico en
+`telohdbvbvsfmwyriflz`; `db push --dry-run` no reporta pendientes.
+**Pruebas:** `node test-migrations.mjs` 21/21; contrato remoto 029 aprobado;
+`test-store-queue.mjs` 62/62, `test-concurrency.mjs` 9/9,
+`test-role-access.mjs` sin fallos, `test-sale-coherence.mjs` 17/17,
+`test-returns.mjs` 17/17 y `test-commission.mjs` 10/10. `db lint` no reportó
+errores y sí dos advertencias de variables PL/pgSQL no leídas, fuera de este
+contrato.
+**Pendiente para resolución total:** ejecutar `supabase db reset` sobre dos
+entornos vacíos y comparar sus dumps con producción. El intento local fue
+bloqueado porque Docker Desktop no está instalado en esta computadora.
+**Riesgo residual:** medio. La actualización del proyecto existente y su
+contrato final están verificados, pero la ejecución completa de 001–029 desde
+cero todavía no tiene evidencia en una base PostgreSQL/Supabase limpia.
+**Corrección documentada:** `docs/fixes/migraciones-reproducibles.md`.
 
 ## Regla de actualización
 
