@@ -858,7 +858,7 @@ autenticación después de cargar ambos módulos.
 **Estado:** RESUELTO
 **Fecha de registro:** 26/07/2026
 **Fecha de resolución:** 26/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `1fbe437`
 **Evidencia:** `balam/clients.jsx` y `balam/inventory.jsx` declaran por separado
 `Segment()` con la misma estructura, estados y tokens. La variante de Inventario
 añade además protección responsiva mediante desplazamiento horizontal.
