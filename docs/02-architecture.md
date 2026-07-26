@@ -416,9 +416,12 @@ La cola está en `localStorage` bajo `balam_sync_queue`.
   sesión reanuda las operaciones detenidas por autenticación.
 - `flushQueue()` toma el candado antes de esperar al cliente de Supabase: nunca
   hay dos ejecutores de cola concurrentes dentro de la misma pestaña.
-- Si `localStorage` rechaza la escritura por cuota, la cola completa permanece
-  en memoria y la interfaz muestra una alerta crítica para no cerrar la
-  pestaña. Este respaldo no es durable hasta liberar almacenamiento y reintentar.
+- Si `localStorage` rechaza la escritura por cuota, la cola completa se refleja
+  en IndexedDB (`balam_sync/durable_queue`) antes de enviarse. El arranque
+  hidrata ese espejo antes de drenar o hacer pull. Cuando `localStorage` vuelve
+  a aceptar escrituras, recupera la autoridad y elimina el espejo para no
+  restaurar snapshots obsoletos. Sólo si ambos almacenamientos fallan se
+  conserva en memoria y se muestra la alerta crítica de no cerrar la pestaña.
 - Cada operación nueva conserva el correo normalizado de la sesión que la creó.
   `flushQueue()` sólo ejecuta operaciones cuyo propietario coincide con la
   sesión activa; la compactación y el reajuste de versiones respetan el mismo

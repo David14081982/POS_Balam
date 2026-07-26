@@ -1,9 +1,10 @@
 # Diagnóstico y recuperación de la cola offline
 
 **Riesgo:** H-14
-**Estado:** PARCIALMENTE RESUELTO
+**Estado:** RESUELTO
 **Fecha:** 26/07/2026
-**Commit:** `cabfccf`
+**Commit inicial:** `cabfccf`
+**Commit de cierre:** Pendiente de commit
 
 ## Problema y reproducción
 
@@ -40,14 +41,17 @@ ejecutor. Si `saveQ()` fallaba, `run()` intentaba escribir directo sin respaldo.
 restricciones, inventario y conflictos. Expone `queueStatus()` y
 `retryOperation()`, reanuda pendientes de autenticación al iniciar sesión y
 mantiene compatibilidad con operaciones antiguas. Cuando falla la cuota,
-conserva la cola completa en memoria y emite una alerta crítica.
+serializa la cola completa en IndexedDB y espera ese respaldo antes de enviarla.
+Un arranque nuevo hidrata el espejo antes del drenado y del pull. Cuando
+`localStorage` vuelve a funcionar, elimina el espejo después de persistir el
+snapshot vigente.
 
 `balam/app.jsx` integra los diagnósticos en la campana administrativa siguiendo
 los componentes y colores existentes. Pulsar una operación permite reintentarla.
 
 ## Pruebas
 
-- `node test-store-queue.mjs`: 86 pasaron, 0 fallaron.
+- `node test-store-queue.mjs`: 89 pasaron, 0 fallaron.
 - Casos cubiertos: red, 401, 403/RLS, esquema, restricción, inventario, cuota,
   operación independiente, reinicio, reintento explícito y cola histórica.
 - `node test-concurrency.mjs`: 9 pasaron, 0 fallaron.
@@ -61,10 +65,11 @@ los componentes y colores existentes. Pulsar una operación permite reintentarla
 
 ## Riesgo residual y pendientes
 
-Si `localStorage` está lleno, el respaldo en memoria evita la pérdida silenciosa
-durante la sesión y advierte no cerrar la pestaña. Sin embargo, no sobrevive a
-un cierre o recarga hasta que se libere espacio y se vuelva a persistir. Falta
-un almacenamiento durable alternativo para cerrar esa parte del riesgo.
+Ninguno conocido mientras el navegador ofrezca al menos uno de sus dos
+almacenamientos persistentes. Si `localStorage` e IndexedDB fallan
+simultáneamente, la cola queda en memoria y se muestra una alerta crítica; no
+hay otro almacenamiento web durable disponible sin introducir infraestructura
+externa.
 
 ## Referencias
 

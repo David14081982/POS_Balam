@@ -14,6 +14,7 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 // ── Stubs de entorno (localStorage + supabase-js encadenable) ───────────────────
 function freshEnv() {
   const store = new Map();
+  const idb = new Map();
   const storageFailures = new Set();
   const localStorage = {
     getItem: k => (store.has(k) ? store.get(k) : null),
@@ -111,11 +112,56 @@ function freshEnv() {
     auth: { getSession: async () => ({ data: { session: null } }) },
     storage: { from: () => ({}) },
   };
+  const indexedDB = {
+    open() {
+      const req = {};
+      setTimeout(() => {
+        const db = {
+          objectStoreNames: { contains: () => true },
+          createObjectStore() {},
+          close() {},
+          transaction() {
+            const tx = {
+              objectStore() {
+                return {
+                  put(value, key) {
+                    const r = {};
+                    setTimeout(() => { idb.set(key, structuredClone(value)); if (tx.oncomplete) tx.oncomplete(); }, 0);
+                    return r;
+                  },
+                  delete(key) {
+                    const r = {};
+                    setTimeout(() => { idb.delete(key); if (tx.oncomplete) tx.oncomplete(); }, 0);
+                    return r;
+                  },
+                  get(key) {
+                    const r = {};
+                    setTimeout(() => {
+                      r.result = idb.has(key) ? structuredClone(idb.get(key)) : undefined;
+                      if (r.onsuccess) r.onsuccess();
+                      if (tx.oncomplete) tx.oncomplete();
+                    }, 0);
+                    return r;
+                  },
+                };
+              },
+            };
+            return tx;
+          },
+        };
+        req.result = db;
+        if (req.onupgradeneeded) req.onupgradeneeded();
+        if (req.onsuccess) req.onsuccess();
+      }, 0);
+      return req;
+    },
+  };
   const window = {
     listeners: {},
     addEventListener(ev, fn) { (this.listeners[ev] = this.listeners[ev] || []).push(fn); },
     removeEventListener() {},
     dispatchEvent() { return true; },
+    indexedDB,
     supabase: { createClient: () => client },
     UI: { toasts: [], toast(msg) { this.toasts.push(msg); } },
     DATA: {
@@ -135,7 +181,7 @@ function freshEnv() {
     },
     CONFIG: { load() {}, get() { return null; } },
   };
-  return { localStorage, window, calls, cloud, client, rpcCalls,
+  return { localStorage, window, calls, cloud, client, rpcCalls, idb,
     setFail: t => failTables.add(t), clearFail: t => failTables.delete(t),
     setError: (t, e) => tableErrors.set(t, e), clearError: t => tableErrors.delete(t),
     failStorage: k => storageFailures.add(k), recoverStorage: k => storageFailures.delete(k),
@@ -808,12 +854,41 @@ function loadStore(env) {
   const S = loadStore(env);
   await S.init({});
   S.pushRows('products', [{ id: 'p-quota', nombre: 'Sin espacio' }]);
-  await sleep(40);
+  await sleep(80);
   const status = S.queueStatus ? S.queueStatus() : null;
-  ok('27a. H-14: la falla de cuota queda visible como almacenamiento no durable',
-    status && status.durability === 'memory' && status.pending === 1);
-  ok('27b. H-14: se muestra una alerta crítica antes de cerrar la sesión',
-    env.window.UI.toasts.some(x => /almacenamiento.*cola|no cierres/i.test(x)));
+  ok('27a. H-14: cuota llena usa el respaldo durable IndexedDB',
+    status && status.durability === 'indexedDB' && status.pending === 1);
+  ok('27b. H-14: la interfaz confirma que la cola quedó protegida',
+    env.window.UI.toasts.some(x => /respaldo local/i.test(x)));
+  const S2 = loadStore(env);
+  await S2.init({});
+  await sleep(30);
+  const restored = S2.queueStatus();
+  ok('27c. H-14: recargar recupera operación y diagnóstico desde IndexedDB',
+    restored.durability === 'indexedDB' && restored.pending === 1
+      && restored.operations[0].diagnostic.code === 'PGRST205');
+  env.recoverStorage('balam_sync_queue');
+  env.clearError('products');
+  S2.retryOperation(restored.operations[0].id);
+  await sleep(80);
+  ok('27d. H-14: al liberar cuota vuelve a localStorage y limpia el respaldo',
+    S2.queueStatus().durability === 'localStorage' && S2.pending === 0
+      && !env.idb.has('balam_sync_queue'));
+}
+
+// 27e) Si el navegador no ofrece IndexedDB, conserva el aviso crítico anterior.
+{
+  const env = freshEnv();
+  env.window.indexedDB = null;
+  env.failStorage('balam_sync_queue');
+  env.setError('products', { code: 'PGRST205', message: 'schema cache missing' });
+  const S = loadStore(env);
+  await S.init({});
+  S.pushRows('products', [{ id: 'p-no-idb', nombre: 'Sin IndexedDB' }]);
+  await sleep(40);
+  ok('27e. H-14: sin ningún almacenamiento durable permanece en memoria y alerta',
+    S.queueStatus().durability === 'memory' && S.pending === 1
+      && env.window.UI.toasts.some(x => /no cierres/i.test(x)));
 }
 
 // 28) H-14: autenticación, esquema y restricciones usan recuperación distinta.

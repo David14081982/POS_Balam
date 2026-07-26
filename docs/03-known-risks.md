@@ -22,7 +22,7 @@ y `BLOQUEADO`.
 | H-11 | Margen mínimo configurado pero no aplicado | RESUELTO | Promociones / precios |
 | H-12 | Lector Excel vulnerable y sin límites explícitos | RESUELTO | Importación Excel / dependencias |
 | H-13 | Terminal nueva no recupera movimientos remotos | RESUELTO | Sincronización / kardex |
-| H-14 | Cola offline sin diagnóstico ni política de recuperación | PARCIALMENTE RESUELTO | Sincronización / localStorage |
+| H-14 | Cola offline sin diagnóstico ni política de recuperación | RESUELTO | Sincronización / almacenamiento local |
 | H-15 | Smoke E2E produce falsos negativos y no libera recursos al fallar | RESUELTO | Pruebas / bundle |
 
 ## H-01 — Inventario concurrente
@@ -481,8 +481,9 @@ paginación de los demás dominios permanecen separados para la Fase 14.
 
 ## H-14 — Cola offline sin diagnóstico ni política de recuperación
 
-**Estado:** PARCIALMENTE RESUELTO
+**Estado:** RESUELTO
 **Fecha de registro:** 26/07/2026
+**Fecha de resolución:** 26/07/2026
 **Evidencia:** `STORE.applyOp()` devuelve únicamente `true` o `false` y su
 `catch` descarta la excepción. `flushQueue()` sólo agrega `retry=true`; no
 conserva código, mensaje, categoría, número de intentos ni fecha. Red, sesión,
@@ -506,15 +507,22 @@ restricciones, inventario y conflictos se distinguen. Los bloqueos permanentes
 requieren reintento explícito y la campana administrativa muestra la causa.
 El candado se adquiere antes de esperar el cliente de Supabase, evitando dos
 ejecutores simultáneos. Las colas históricas se migran de forma aditiva.
-**Pruebas ejecutadas:** `node test-store-queue.mjs`: 86 pasaron, 0 fallaron
+**Pruebas ejecutadas:** `node test-store-queue.mjs`: 89 pasaron, 0 fallaron
 (red, 401, 403/RLS, esquema, constraint, inventario, cuota, independencia,
 reinicio, reintento explícito y compatibilidad histórica).
-**Riesgo residual:** si `localStorage` está lleno, la cola queda visible y
-conservada en memoria, pero cerrar la pestaña antes de liberar espacio puede
-perderla. Falta un respaldo durable alternativo para cerrar completamente la
-parte de cuota.
+El residual de cuota quedó cerrado con un espejo serializado en IndexedDB. El
+arranque lo recupera antes de sincronizar; liberar cuota devuelve la autoridad
+a `localStorage` y elimina el espejo. La primera escritura espera la
+persistencia durable antes de intentar Supabase.
+**Regresiones finales:** concurrencia 9/9, roles 10/10, coherencia de venta
+17/17, devoluciones 17/17, smoke bundle 17/17 y build offline correcto.
+**Riesgo residual:** si un navegador niega simultáneamente `localStorage` e
+IndexedDB, no existe almacenamiento web durable disponible. La operación
+permanece en memoria y la interfaz advierte que no se cierre la pestaña; no se
+declara falsamente como persistida.
 **Corrección documentada:** `docs/fixes/diagnostico-cola-offline.md`.
-**Commit:** `cabfccf`.
+**Commit inicial:** `cabfccf`.
+**Commit de cierre:** Pendiente de commit.
 
 ## H-15 — Smoke E2E produce falsos negativos y no libera recursos al fallar
 

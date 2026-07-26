@@ -9,6 +9,7 @@
   const SUPABASE_KEY = 'sb_publishable_-skU6PI0VrYa91UPHAEaIg_dhsi1l_I'; // publicable (anon), no secreta
   const SCHEMA = 'pos';
   const QKEY = 'balam_sync_queue';
+  const QDB = 'balam_sync', QSTORE = 'durable_queue';
   const DEVICE_KEY = 'balam_device_id';
   // Marca de limpieza de datos de prueba: fila reservada de pos.settings que escribe
   // supabase/LIMPIAR-PRUEBAS.sql. Cada terminal recuerda en RESET_SEEN la última que aplicó;
@@ -126,7 +127,75 @@
   }
 
   // ── Cola offline ────────────────────────────────────────────────────────────
-  let volatileQueue = null, queueDurability = 'localStorage', storageWarned = false;
+  let volatileQueue = null, queueDurability = 'localStorage', storageWarned = false, backupNotified = false;
+  let backupChain = Promise.resolve(), queueHydrated = false;
+  function openQueueDB() {
+    return new Promise((resolve, reject) => {
+      if (!window.indexedDB) return reject(new Error('indexeddb_unavailable'));
+      const req = window.indexedDB.open(QDB, 1);
+      req.onupgradeneeded = () => {
+        if (!req.result.objectStoreNames.contains(QSTORE)) req.result.createObjectStore(QSTORE);
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error || new Error('indexeddb_open_failed'));
+    });
+  }
+  async function queueBackup(mode, value) {
+    const db = await openQueueDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(QSTORE, 'readwrite');
+      const store = tx.objectStore(QSTORE);
+      const req = mode === 'put' ? store.put(value, QKEY) : store.delete(QKEY);
+      req.onerror = () => reject(req.error || new Error('indexeddb_write_failed'));
+      tx.oncomplete = () => { db.close(); resolve(true); };
+      tx.onerror = () => { db.close(); reject(tx.error || new Error('indexeddb_tx_failed')); };
+    });
+  }
+  async function readQueueBackup() {
+    const db = await openQueueDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(QSTORE, 'readonly');
+      const req = tx.objectStore(QSTORE).get(QKEY);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error || new Error('indexeddb_read_failed'));
+      tx.oncomplete = () => db.close();
+    });
+  }
+  function persistQueueBackup(q) {
+    const snapshot = JSON.parse(JSON.stringify(q));
+    queueDurability = 'indexedDB-pending';
+    backupChain = backupChain.catch(() => {}).then(() => queueBackup('put', snapshot))
+      .then(() => {
+        if (volatileQueue) queueDurability = 'indexedDB';
+        if (!backupNotified && window.UI && window.UI.toast) {
+          backupNotified = true;
+          window.UI.toast('Almacenamiento principal lleno: la cola quedó protegida en el respaldo local.', 'var(--accent)');
+        }
+        emitSyncStatus();
+        return true;
+      }).catch(() => {
+        queueDurability = 'memory';
+        if (!storageWarned && window.UI && window.UI.toast) {
+          storageWarned = true;
+          window.UI.toast('No hay espacio durable para la cola. No cierres esta pestaña; libera almacenamiento y reintenta.', 'var(--danger)');
+        }
+        emitSyncStatus();
+        return false;
+      });
+    return backupChain;
+  }
+  async function hydrateDurableQueue() {
+    if (queueHydrated) return;
+    queueHydrated = true;
+    await backupChain;
+    try {
+      const backup = await readQueueBackup();
+      if (Array.isArray(backup)) {
+        volatileQueue = backup;
+        queueDurability = 'indexedDB';
+      }
+    } catch (e) { /* IndexedDB no disponible: localStorage conserva el contrato histórico */ }
+  }
   function emitSyncStatus() {
     try { window.dispatchEvent(new CustomEvent('syncstatuschange', { detail: queueStatus() })); } catch (e) { /* */ }
   }
@@ -138,15 +207,12 @@
     try {
       localStorage.setItem(QKEY, JSON.stringify(q));
       volatileQueue = null; queueDurability = 'localStorage';
+      backupChain = backupChain.catch(() => {}).then(() => queueBackup('delete')).catch(() => false);
       emitSyncStatus();
       return true;
     } catch (e) {
       volatileQueue = q;
-      queueDurability = 'memory';
-      if (!storageWarned && window.UI && window.UI.toast) {
-        storageWarned = true;
-        window.UI.toast('Sin espacio para guardar la cola de sincronización. No cierres esta pestaña; libera almacenamiento y reintenta.', 'var(--danger)');
-      }
+      persistQueueBackup(q);
       emitSyncStatus();
       return false;
     }
@@ -155,6 +221,7 @@
   function clearQueue() {
     volatileQueue = null; queueDurability = 'localStorage';
     try { localStorage.removeItem(QKEY); } catch (e) { /* */ }
+    backupChain = backupChain.catch(() => {}).then(() => queueBackup('delete')).catch(() => false);
     emitSyncStatus();
   }
   let opSeq = 0;
@@ -504,6 +571,7 @@
     op.id = newOpId();
     op.ownerId = activeOwnerId();
     enqueue(op);
+    await backupChain;
     flushQueue();
   }
 
@@ -893,6 +961,7 @@
 
   async function init(opts = {}) {
     enabled = true;
+    await hydrateDurableQueue();
     // Al reconectar: drena la cola y, además, migra fotos incrustadas que hayan quedado.
     if (!onlineSubscribed) {
       onlineSubscribed = true;
