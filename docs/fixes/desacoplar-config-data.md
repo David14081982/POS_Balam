@@ -3,7 +3,7 @@
 **Riesgo:** H-21
 **Estado:** RESUELTO
 **Fecha:** 26/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `d4d7e68`
 
 ## Problema y reproducción
 
@@ -68,4 +68,3 @@ adaptador; no requiere migración ni modificación de datos.
 
 - Riesgo: `docs/03-known-risks.md#h-21--ciclo-directo-config--data-para-uso-de-catálogos`
 - Arquitectura: `docs/02-architecture.md#core`
-

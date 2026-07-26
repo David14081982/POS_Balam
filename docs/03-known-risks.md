@@ -748,7 +748,7 @@ desarrollo fijadas.
 **Estado:** RESUELTO
 **Fecha de registro:** 26/07/2026
 **Fecha de resolución:** 26/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `d4d7e68`
 **Evidencia:** `DATA` captura `window.CONFIG` al cargar y lo usa para catálogos
 y reglas. A su vez, `CONFIG.inUse()` y `CONFIG.removeCatalog()` consultan
 `window.DATA.products`; el segundo también invoca `DATA.saveProducts()`.
