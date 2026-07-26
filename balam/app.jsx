@@ -87,14 +87,19 @@
       const onCfg = () => bumpCfg(v => v + 1);
       const onAuth = () => {
         bumpCfg(v => v + 1);
-        // Al iniciar sesión, jala config + dominio de la nube (una sola vez).
-        if (window.AUTH.hasSession() && window.STORE && !window.STORE.enabled) window.STORE.init({ pull: true });
+        // Cada cambio entrega la identidad efectiva a STORE. Un usuario nuevo
+        // fuerza pull y sólo drena sus operaciones; logout detiene los pushes.
+        if (window.STORE && window.STORE.setSession) {
+          window.STORE.setSession(window.AUTH.current());
+        } else if (window.AUTH.hasSession() && window.STORE) {
+          window.STORE.init({ pull: true });
+        }
       };
       window.addEventListener('configchange', onCfg);
       window.addEventListener('authchange', onAuth);
       if (window.AUTH.init) window.AUTH.init(); // carga sesión persistida → dispara authchange
       // En dev (sin gate de login) sincroniza la nube aunque no haya sesión (anon), como antes.
-      if (!REQUIRE_AUTH && window.STORE && !window.STORE.enabled) window.STORE.init({ pull: true });
+      if (!REQUIRE_AUTH && window.STORE) window.STORE.init({ pull: true });
       return () => { window.removeEventListener('configchange', onCfg); window.removeEventListener('authchange', onAuth); };
     }, []);
 

@@ -1,9 +1,10 @@
 # Control de concurrencia multi-terminal
 
 **Riesgo:** H-06
-**Estado:** PARCIALMENTE RESUELTO
+**Estado:** RESUELTO
 **Fecha:** 25/07/2026
-**Commit:** Pendiente de commit
+**Commit de corrección:** `23bec3b`
+**Commit de verificación:** Pendiente de commit
 **Despliegue Supabase:** `20260725001300`, proyecto
 `telohdbvbvsfmwyriflz` (Balam)
 
@@ -94,19 +95,37 @@ Despliegue remoto:
   `pos.sync_conflicts` en el esquema remoto, con cero conflictos iniciales.
 - `npx supabase db dump --linked --schema pos ...`: no ejecutado; la CLI exige
   Docker Desktop y no estaba disponible. No se cuenta como prueba aprobada.
+- `20260725002600_pos_h06_concurrency_verification.sql`: verificación remota
+  autocontenida sobre productos, clientes, vendedores y promociones.
+- Las dos terminales lógicas leyeron versión 1. La terminal A confirmó versión
+  2; los cuatro intentos posteriores de B con base 1 conservaron A.
+- Una promoción eliminada en versión 3 no revivió cuando B reenvió el snapshot
+  de versión 2.
+- `pos.sync_conflicts` registró exactamente cinco eventos: cuatro ediciones
+  obsoletas y un intento de resurrección, con versiones y `device_id`
+  esperados.
+- La migración eliminó las cuatro entidades y las cinco auditorías temporales
+  antes de finalizar.
+
+Regresiones finales:
+
+- `node test-concurrency.mjs`: 9/9;
+- `node test-store-queue.mjs`: 55/55;
+- `node test-role-access.mjs`: 10/10;
+- `node test-sale-coherence.mjs`: 17/17;
+- `node test-returns.mjs`: 17/17;
+- `node test-folio-concurrency.mjs`: 4/4.
 
 ## Riesgo residual y pendientes
 
-- La protección remota ya está desplegada. Falta una prueba real con dos
-  sesiones autenticadas contra Supabase y verificación directa de
-  `pos.sync_conflicts`.
-- Los snapshots completos siguen siendo ineficientes, aunque ya no pueden
-  sobrescribir una versión más nueva.
-- Un conflicto no fusiona campos automáticamente: primera escritura gana y la
-  segunda terminal debe reaplicar su intención sobre la versión vigente.
-- H-01 permanece abierto: ventas simultáneas necesitan una operación remota
-  transaccional de stock; el versionado H-06 evita regresiones silenciosas, pero
-  no suma deltas concurrentes de ventas.
+No queda riesgo conocido de sobrescritura silenciosa dentro de las cuatro
+entidades protegidas. Los snapshots completos siguen siendo ineficientes y un
+conflicto no fusiona campos automáticamente: por diseño, la primera escritura
+confirmada gana, la segunda terminal recibe la versión vigente y debe reaplicar
+su intención si todavía corresponde.
+
+Las ventas simultáneas usan la reserva transaccional resuelta en H-01; los
+folios multi-terminal quedaron resueltos en H-02.
 
 ## Referencias
 

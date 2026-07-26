@@ -17,6 +17,8 @@
   const RESET_SEEN = 'balam_reset_seen';
 
   let sb = null, enabled = false, lastResetMark = null;
+  let sessionIdentity = null, sessionManaged = false, onlineSubscribed = false, legacyWarned = false;
+  let sessionSeq = 0;
   let deviceId = null;
   function getDeviceId() {
     if (deviceId) return deviceId;
@@ -28,6 +30,17 @@
       }
     } catch (e) { deviceId = 'dev-volatile-' + Math.random().toString(36).slice(2, 10); }
     return deviceId;
+  }
+  function activeOwnerId() {
+    if (sessionIdentity) return sessionIdentity;
+    try {
+      const p = window.AUTH && window.AUTH.current && window.AUTH.current();
+      return p && p.email ? String(p.email).trim().toLowerCase() : null;
+    } catch (e) { return null; }
+  }
+  function opBelongsToActiveSession(op) {
+    return (op.ownerId == null ? null : String(op.ownerId).toLowerCase())
+      === activeOwnerId();
   }
 
   async function ensureClient() {
@@ -110,16 +123,17 @@
   const newOpId = () => 'op' + Date.now().toString(36) + '-' + (++opSeq) + '-' + Math.random().toString(36).slice(2, 6);
   function enqueue(op) {
     const q = loadQ();
-    if (op.type === 'upsert') { const i = q.findIndex(x => x.type === 'upsert' && x.table === op.table); if (i >= 0) q[i] = op; else q.push(op); }
-    else if (op.type === 'config') { const i = q.findIndex(x => x.type === 'config'); if (i >= 0) q[i] = op; else q.push(op); }
+    if (op.ownerId === undefined) op.ownerId = activeOwnerId();
+    if (op.type === 'upsert') { const i = q.findIndex(x => x.type === 'upsert' && x.table === op.table && x.ownerId === op.ownerId); if (i >= 0) q[i] = op; else q.push(op); }
+    else if (op.type === 'config') { const i = q.findIndex(x => x.type === 'config' && x.ownerId === op.ownerId); if (i >= 0) q[i] = op; else q.push(op); }
     else q.push(op); // sale / delete: idempotentes, se conservan en orden
     return saveQ(q);
   }
   // Ops pendientes que tocan una tabla: la copia LOCAL es más nueva que la nube.
   function hasPendingFor(table) {
-    return loadQ().some(op => op.table === table
+    return loadQ().some(op => opBelongsToActiveSession(op) && (op.table === table
       || (op.type === 'sale' && table === 'sales')
-      || (op.type === 'return' && table === 'returns'));
+      || (op.type === 'return' && table === 'returns')));
   }
 
   function rekeyQueuedSaleFolio(operationId, oldFolio, newFolio) {
@@ -352,6 +366,7 @@
     remoteRows.forEach(r => { versions[r.id] = Number(r._syncVersion ?? r.sync_version) || 0; });
     const q = loadQ(); let changed = false;
     q.forEach(op => {
+      if (!opBelongsToActiveSession(op)) return;
       if (op.type === 'softDelete' && op.table === table && versions[op.val] > (Number(op.baseVersion) || 0)) {
         op.baseVersion = versions[op.val]; changed = true;
       }
@@ -366,6 +381,7 @@
   async function run(op) {
     if (!enabled) return;
     op.id = newOpId();
+    op.ownerId = activeOwnerId();
     if (enqueue(op)) { flushQueue(); return; }
     // Sin espacio en localStorage para respaldar la op: intento directo (mejor esfuerzo).
     const c = await ensureClient(); if (!c) return;
@@ -379,6 +395,11 @@
       const q0 = loadQ(); let mig = false;
       q0.forEach(o => {
         if (!o.id) { o.id = newOpId(); mig = true; }
+        // Una cola histórica no permite saber qué cuenta la creó. Con sesión
+        // administrada se pone en cuarentena: nunca se atribuye automáticamente.
+        if (o.ownerId === undefined && activeOwnerId()) {
+          o.ownerId = '__legacy_unclaimed__'; mig = true;
+        }
         if (o.type === 'upsert' && !o.kind) {
           o.kind = kindForTable(o.table); mig = true;
         }
@@ -458,6 +479,12 @@
         }
       });
       if (mig) saveQ(q0);
+      if (!legacyWarned && q0.some(o => o.ownerId === '__legacy_unclaimed__')) {
+        legacyWarned = true;
+        if (window.UI && window.UI.toast) {
+          window.UI.toast('Hay cambios antiguos en cuarentena; un administrador debe revisar y reclamarlos.', 'var(--danger)');
+        }
+      }
     }
     if (!loadQ().length) return;
     const c = await ensureClient(); if (!c) return;
@@ -469,7 +496,7 @@
       // final las pisaba. El retiro por id nunca borra una op reemplazada (id nuevo).
       const failed = new Set(); // fallidas en esta pasada: se saltan, quedan para reintento
       for (;;) {
-        const op = loadQ().find(o => !failed.has(o.id));
+        const op = loadQ().find(o => opBelongsToActiveSession(o) && !failed.has(o.id));
         if (!op) break;
         const ok = await applyOp(c, op);
         const cur = loadQ();
@@ -483,7 +510,7 @@
         }
       }
       // Mismo aviso de siempre, solo cuando se recuperó un pendiente (no en cada guardado).
-      if (recovered && !loadQ().length && window.UI && window.UI.toast) window.UI.toast('Cambios sincronizados con la nube', 'var(--accent)');
+      if (recovered && !loadQ().some(opBelongsToActiveSession) && window.UI && window.UI.toast) window.UI.toast('Cambios sincronizados con la nube', 'var(--accent)');
     } finally {
       flushing = false;
       if (flushAgain) { flushAgain = false; flushQueue(); }
@@ -721,7 +748,10 @@
   async function init(opts = {}) {
     enabled = true;
     // Al reconectar: drena la cola y, además, migra fotos incrustadas que hayan quedado.
-    window.addEventListener('online', () => { flushQueue(); autoMigratePhotos().catch(() => { /* */ }); });
+    if (!onlineSubscribed) {
+      onlineSubscribed = true;
+      window.addEventListener('online', () => { flushQueue(); autoMigratePhotos().catch(() => { /* */ }); });
+    }
     // Drenar la cola ANTES del pull: los cambios de la sesión anterior llegan primero a la
     // nube y el pull ya regresa el estado completo. (Antes el pull corría primero y
     // reemplazaba lo local, "des-haciendo" capturas cuya subida quedó pendiente.)
@@ -754,6 +784,56 @@
       autoMigratePhotos().catch(() => { /* se reintenta al próximo arranque */ });
     }
     flushQueue(); // por si algo quedó pendiente (p. ej. un fallo durante el arranque)
+  }
+
+  // Asocia STORE a la identidad efectiva. Cambiar de cuenta fuerza el mismo
+  // pull que una apertura limpia; logout detiene pushes sin borrar la cola.
+  function setSession(profile) {
+    const next = profile && profile.email
+      ? String(profile.email).trim().toLowerCase()
+      : null;
+    if (!next) {
+      if (sessionManaged) {
+        sessionSeq++;
+        sessionIdentity = null;
+        enabled = false;
+      }
+      return Promise.resolve({ ok: true, signedOut: true });
+    }
+    sessionManaged = true;
+    if (next === sessionIdentity && enabled) {
+      return Promise.resolve({ ok: true, unchanged: true });
+    }
+    sessionIdentity = next;
+    const seq = ++sessionSeq;
+    enabled = true;
+    return init({ pull: true }).then(() => ({
+      ok: seq === sessionSeq,
+      stale: seq !== sessionSeq,
+    }));
+  }
+
+  // Las operaciones creadas antes de H-09 no tienen identidad verificable.
+  // Sólo un administrador puede atribuirlas expresamente a su sesión actual.
+  function claimLegacyQueue() {
+    const profile = window.AUTH && window.AUTH.current && window.AUTH.current();
+    const ownerId = activeOwnerId();
+    if (!ownerId || !profile || String(profile.role || '').toLowerCase() !== 'admin') {
+      return { ok: false, error: 'admin_required' };
+    }
+    const q = loadQ(); let claimed = 0;
+    q.forEach(op => {
+      if (op.ownerId === '__legacy_unclaimed__') {
+        op.ownerId = ownerId;
+        claimed++;
+      }
+    });
+    if (claimed) {
+      saveQ(q);
+      legacyWarned = false;
+      flushQueue();
+    }
+    return { ok: true, claimed };
   }
 
   // Sube una imagen a un bucket de Storage y devuelve su URL pública.
@@ -830,5 +910,5 @@
     }
   }
 
-  window.STORE = { init, pull, pushConfig, pushRows, pushSale, pushReturn, deleteRow, pullDomain, fetchSaleByFolio, flushQueue, clearQueue, markResetApplied, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().length; } };
+  window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushSale, pushReturn, deleteRow, pullDomain, fetchSaleByFolio, flushQueue, clearQueue, markResetApplied, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
 })();

@@ -75,6 +75,10 @@ function authHarness(email, sellers, options = {}) {
   check(app.includes('NAV.filter(n => canAccess(n.id))'), '7. el menú se filtra con el contrato de acceso');
   check(app.includes('const visiblePage = canAccess(page) ? page : defaultPage'), '8. una página persistida prohibida se redirige');
   check(app.includes("user && user.role === 'vendedor' ? 'pos' : 'dashboard'"), '9. vendedor tiene Punto de Venta como destino seguro');
+  check(app.includes('window.STORE.setSession(window.AUTH.current())'),
+    '11. cada authchange entrega la identidad efectiva a STORE');
+  check(!app.includes('window.STORE && !window.STORE.enabled'),
+    '12. un segundo login no omite la reinicialización por STORE.enabled');
 }
 
 {
@@ -85,6 +89,14 @@ function authHarness(email, sellers, options = {}) {
   const offline = authHarness('offline@example.com', [], { saved: online.saved, failProfile: true });
   await offline.AUTH.init();
   check(offline.AUTH.canAccess('pos') === true, '10. sesión persistida conserva POS sin conexión con perfil previamente verificado');
+}
+
+{
+  const store = fs.readFileSync('balam/store.jsx', 'utf8');
+  check(store.includes('op.ownerId = activeOwnerId()'),
+    '13. cada operación nueva conserva el propietario de sesión');
+  check(store.includes('opBelongsToActiveSession'),
+    '14. la cola sólo drena operaciones de la sesión activa');
 }
 
 if (failures) {

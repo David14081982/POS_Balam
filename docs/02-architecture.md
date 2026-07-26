@@ -168,6 +168,11 @@ Actualmente `supabase/functions/admin-users/index.ts`:
 
 Una Edge Function desplegada puede diferir del archivo local. Toda corrección
 debe registrar versión/despliegue y verificar el comportamiento remoto.
+La versión 8 de `admin-users` quedó verificada mediante creación de una identidad
+temporal, autenticación, cambio real de contraseña, invalidación de la anterior,
+autenticación con la nueva y eliminación completa. Las migraciones
+`20260725002700` y `20260725002800` encapsulan la preparación y limpieza de la
+identidad administrativa auxiliar.
 
 ## Sincronización
 
@@ -206,6 +211,12 @@ representación resultante del `upsert`: si fue aceptado, guarda la versión nue
 si fue rechazado, restaura la fila vigente y avisa. Las operaciones compactadas
 se reconstruyen justo antes de enviarse para incorporar versiones confirmadas
 mientras otra operación estaba en vuelo.
+
+La migración de verificación
+`20260725002600_pos_h06_concurrency_verification.sql` comprobó este contrato en
+el Supabase enlazado para productos, clientes, vendedores y promociones:
+cuatro escrituras obsoletas conservaron la primera versión confirmada y quedaron
+auditadas; un snapshot anterior tampoco revivió un tombstone.
 
 Este contrato de snapshots evita que una copia antigua revierta stock, pero por
 sí solo no combina dos deltas de venta concurrentes. La reserva atómica
@@ -345,6 +356,16 @@ La cola está en `localStorage` bajo `balam_sync_queue`.
 - Ventas y eliminaciones se conservan en orden y deben ser idempotentes.
 - Una operación solo sale de la cola después de éxito remoto.
 - Si falla red, sesión o SQL, permanece para el siguiente reintento.
+- Cada operación nueva conserva el correo normalizado de la sesión que la creó.
+  `flushQueue()` sólo ejecuta operaciones cuyo propietario coincide con la
+  sesión activa; la compactación y el reajuste de versiones respetan el mismo
+  límite.
+- `AUTH` entrega cada cambio de identidad a `STORE.setSession()`. El logout
+  suspende sincronización sin borrar pendientes y cada identidad distinta
+  vuelve a drenar su propia cola antes de realizar un pull.
+- Las operaciones históricas sin propietario se ponen en cuarentena. No se
+  atribuyen al primer login: un administrador debe revisarlas y reclamarlas
+  expresamente con `STORE.claimLegacyQueue()`.
 
 La cola mejora durabilidad, pero por sí sola no convierte varias escrituras SQL
 en una transacción. Ventas y devoluciones resuelven ese límite mediante

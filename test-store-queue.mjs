@@ -531,5 +531,73 @@ function loadStore(env) {
   ok('17c. H-02: el reintento exitoso vacía la cola', S.pending === 0);
 }
 
+// 18) H-09: logout/login no mezcla ni reemplaza colas entre identidades
+{
+  const env = freshEnv();
+  let profile = { email: 'admin-a@balam.test', role: 'admin' };
+  env.window.AUTH = { current: () => profile };
+  env.setFail('products');
+  const S = loadStore(env);
+  await S.setSession(profile);
+  S.pushRows('products', [{ id: 'p-a', nombre: 'Pendiente A' }]);
+  await sleep(40);
+
+  let queue = JSON.parse(env.localStorage.getItem('balam_sync_queue'));
+  ok('18a. H-09: la operación conserva al usuario A como propietario',
+    queue.length === 1 && queue[0].ownerId === 'admin-a@balam.test');
+
+  profile = null;
+  await S.setSession(null);
+  profile = { email: 'vendedor-b@balam.test', role: 'vendedor' };
+  env.clearFail('products');
+  await S.setSession(profile);
+  await sleep(40);
+  queue = JSON.parse(env.localStorage.getItem('balam_sync_queue'));
+  ok('18b. H-09: iniciar B no envía ni elimina la operación de A',
+    queue.length === 1 && queue[0].ownerId === 'admin-a@balam.test'
+      && !(env.cloud.rowsByTable.products || []).some(x => x.id === 'p-a'));
+
+  S.pushRows('products', [{ id: 'p-b', nombre: 'Cambio B' }]);
+  await sleep(40);
+  queue = JSON.parse(env.localStorage.getItem('balam_sync_queue'));
+  ok('18c. H-09: B sincroniza sin reemplazar la operación de A',
+    queue.length === 1 && queue[0].ownerId === 'admin-a@balam.test'
+      && (env.cloud.rowsByTable.products || []).some(x => x.id === 'p-b'));
+
+  profile = null;
+  await S.setSession(null);
+  profile = { email: 'admin-a@balam.test', role: 'admin' };
+  await S.setSession(profile);
+  await sleep(40);
+  ok('18d. H-09: al volver A, su cola se reanuda y queda vacía',
+    S.pending === 0 && (env.cloud.rowsByTable.products || []).some(x => x.id === 'p-a'));
+}
+
+// 19) H-09: una cola sin propietario se pone en cuarentena
+{
+  const env = freshEnv();
+  let profile = { email: 'admin-b@balam.test', role: 'admin' };
+  env.window.AUTH = { current: () => profile };
+  env.localStorage.setItem('balam_sync_queue', JSON.stringify([{
+    type: 'upsert', table: 'products', conflict: 'id',
+    rows: [{ id: 'p-legacy-owner', nombre: 'Sin propietario' }],
+  }]));
+  const S = loadStore(env);
+  await S.setSession(profile);
+  await sleep(40);
+  let queue = JSON.parse(env.localStorage.getItem('balam_sync_queue'));
+  ok('19a. H-09: la cola histórica no se atribuye al primer login',
+    queue.length === 1 && queue[0].ownerId === '__legacy_unclaimed__'
+      && !(env.cloud.rowsByTable.products || []).some(x => x.id === 'p-legacy-owner'));
+  ok('19b. H-09: la terminal avisa que requiere revisión administrativa',
+    env.window.UI.toasts.some(msg => msg.includes('cuarentena')));
+
+  const claim = S.claimLegacyQueue();
+  await sleep(40);
+  ok('19c. H-09: el administrador puede reclamarla de forma explícita',
+    claim.ok && claim.claimed === 1 && S.pending === 0
+      && (env.cloud.rowsByTable.products || []).some(x => x.id === 'p-legacy-owner'));
+}
+
 console.log(`\n════════ ${pass} pasaron, ${fail} fallaron ════════`);
 process.exit(fail ? 1 : 0);

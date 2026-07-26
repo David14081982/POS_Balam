@@ -14,9 +14,10 @@ y `BLOQUEADO`.
 | H-03 | Coherencia de cobros | RESUELTO | Ventas / finanzas |
 | H-04 | Escrituras sin transacción única | RESUELTO | Supabase / cola offline |
 | H-05 | Autorización de administración de usuarios | RESUELTO | Auth / Edge Function |
-| H-06 | Sobrescritura multi-terminal de entidades | PARCIALMENTE RESUELTO | Sincronización / dominio |
+| H-06 | Sobrescritura multi-terminal de entidades | RESUELTO | Sincronización / dominio |
 | H-07 | Acceso excesivo de cualquier autenticado | RESUELTO | RLS / autorización |
 | H-08 | Vendedor sin confinamiento al Punto de Venta | RESUELTO | Auth / navegación / RLS |
+| H-09 | Cambio de sesión reutiliza estado y cola globales | RESUELTO | Auth / sincronización / localStorage |
 
 ## H-01 — Inventario concurrente
 
@@ -162,24 +163,32 @@ colisión del folio visible quedó resuelta posteriormente en H-02.
 
 **Estado:** RESUELTO
 **Fecha:** 25/07/2026
-**Commit:** `407ce14`
+**Commit de corrección:** `407ce14`
+**Commit de verificación:** Pendiente de commit
 **Causa raíz:** `service_role` se usaba para consultar el esquema personalizado
 `pos` sin configurarlo correctamente para la validación del administrador.
 **Solución:** validar y operar `pos.sellers` con el cliente del usuario,
 configurado para `pos`, y reservar `service_role` para Supabase Auth.
 **Pruebas:** rechazo sin sesión, creación/edición/eliminación manual de usuario
-temporal y `test-store-queue.mjs` con 29 pruebas aprobadas.
+temporal y `test-store-queue.mjs` con 29 pruebas aprobadas. La verificación
+final contra `admin-users` versión 8 aprobó 9/9: creación de cuenta temporal,
+login con contraseña inicial, cambio real, rechazo de la contraseña anterior,
+login con la nueva, eliminación y rechazo posterior. Las migraciones
+local/remota `20260725002700` y `20260725002800` prepararon y eliminaron la
+identidad administrativa auxiliar; no quedaron cuentas ni perfiles temporales.
+Regresiones: `test-store-queue.mjs` 55/55, `test-role-access.mjs` 10/10 y
+`test-concurrency.mjs` 9/9.
 **Documentación:** `docs/fixes/admin-users-auth.md`.
-**Riesgo residual:** cambio de contraseña no verificado mediante una mutación
-real durante aquella corrección.
+**Riesgo residual:** ninguno conocido dentro del flujo administrativo probado.
 
 ## H-06 — Sobrescritura multi-terminal de entidades
 
-**Estado:** PARCIALMENTE RESUELTO
+**Estado:** RESUELTO
 **Fecha de registro:** 25/07/2026
 **Fecha de corrección local:** 25/07/2026
 **Fecha de despliegue Supabase:** 25/07/2026
-**Commit:** Pendiente de commit
+**Commit de corrección:** `23bec3b`
+**Commit de verificación:** Pendiente de commit
 **Evidencia:** `DATA.saveProducts()`, `saveClients()`, `saveSellers()` y
 `savePromos()` entregan colecciones completas a `STORE.pushRows()`. Los
 `upsert` usan únicamente el identificador y no comparan la versión que la
@@ -194,20 +203,27 @@ agrega versión optimista,
 tombstones y auditoría. `STORE` envía la versión leída, verifica la fila
 devuelta, conserva la cola offline y avisa/restaura cuando el servidor rechaza
 una versión antigua.
-**Pruebas:** `test-concurrency.mjs` (9/9),
-`test-store-queue.mjs` (34/34), `test-sale-coherence.mjs` (15/15),
-`test-commission.mjs` (10/10) y regeneración correcta con
-`node build-offline.mjs`.
+**Pruebas:** `test-concurrency.mjs` 9/9,
+`test-store-queue.mjs` 55/55, `test-role-access.mjs` 10/10,
+`test-sale-coherence.mjs` 17/17, `test-returns.mjs` 17/17 y
+`test-folio-concurrency.mjs` 4/4.
 **Documentación:** `docs/fixes/concurrencia-multi-terminal.md`.
 **Despliegue:** Supabase registró la versión local/remota `20260725001300` en el
 proyecto Balam (`telohdbvbvsfmwyriflz`); la inspección remota confirmó la tabla
 `pos.sync_conflicts`.
-**Pendiente:** verificar dos sesiones reales contra Supabase y consultar la
-auditoría de un conflicto controlado. La fusión automática de intenciones no
-forma parte de la política; primera escritura confirmada gana.
-**Riesgo residual:** medio hasta completar la prueba multi-sesión propia de
-H-06. El descuento concurrente de ventas quedó resuelto posteriormente en
-H-01 mediante reserva atómica.
+**Verificación remota:** la migración local/remota `20260725002600` representó
+dos terminales con versiones y `device_id` distintos. A confirmó cambios sobre
+producto, cliente, vendedor y promoción; los cuatro snapshots obsoletos de B
+conservaron A. Una promoción eliminada tampoco revivió. La auditoría registró
+exactamente cinco conflictos con versiones y terminal correctas, y todas las
+fixtures y auditorías temporales se eliminaron.
+**Pendiente:** ninguno dentro del contrato de las cuatro entidades protegidas.
+La fusión automática de intenciones no forma parte de la política; primera
+escritura confirmada gana.
+**Riesgo residual:** no queda sobrescritura silenciosa conocida. Los snapshots
+completos son ineficientes y, tras un conflicto visible, la segunda terminal
+debe reaplicar manualmente su intención si todavía corresponde. El descuento
+concurrente de ventas quedó resuelto en H-01 mediante reserva atómica.
 
 ## H-07 — Acceso excesivo de cualquier autenticado
 
@@ -281,6 +297,36 @@ verificado para el mismo correo; una desactivación remota se hace efectiva en
 esa terminal al recuperar conexión. Venta y devolución quedaron
 transaccionales en H-04 y la concurrencia de stock quedó resuelta en H-01.
 **Corrección documentada:** `docs/fixes/vendedor-solo-punto-venta.md`.
+
+## H-09 — Cambio de sesión reutiliza estado y cola globales
+
+**Estado:** RESUELTO
+**Fecha de registro:** 25/07/2026
+**Commit:** Pendiente de commit
+**Evidencia previa:** `STORE.enabled` quedaba verdadero después del primer login
+y `app.jsx` sólo ejecutaba `STORE.init({ pull: true })` cuando esa bandera era
+falsa. Un logout seguido de otro login sin recargar no realizaba un pull nuevo.
+Las operaciones de `balam_sync_queue` tampoco conservaban propietario.
+**Impacto:** una cuenta nueva puede usar una copia local preparada bajo otra
+sesión y una operación pendiente puede enviarse con una identidad distinta de
+la que la creó.
+**Origen de auditoría:** Fase 4, hallazgo original H-11.
+**Corrección:** `AUTH` entrega cada `authchange` a `STORE.setSession()`. Cada
+operación nueva conserva `ownerId`; el drenado, la compactación, la detección de
+tablas pendientes y el reajuste de versiones quedan limitados a la identidad
+activa. Logout suspende `STORE` sin borrar la cola y un login distinto ejecuta
+un ciclo nuevo de drenado y pull. Las operaciones históricas sin propietario se
+ponen en cuarentena y sólo un administrador puede reclamarlas expresamente.
+**Pruebas:** reproducción estática previa 4 fallos; después,
+`node test-store-queue.mjs` 62/62, `node test-role-access.mjs` sin fallos y
+`node test-smoke.mjs` 13/13. El
+escenario dinámico A→logout→B conserva la operación de A, permite sincronizar B
+sin reemplazarla y la reanuda al volver A. La cola histórica no se envía al
+primer login, muestra aviso y sólo se procesa tras reclamación administrativa.
+**Riesgo residual:** una cola creada antes de H-09 no contiene evidencia para
+identificar automáticamente a su autor. Se conserva íntegra en cuarentena y
+requiere revisión administrativa; no puede cruzarse de sesión silenciosamente.
+**Corrección documentada:** `docs/fixes/aislamiento-cola-por-sesion.md`.
 
 ## Regla de actualización
 

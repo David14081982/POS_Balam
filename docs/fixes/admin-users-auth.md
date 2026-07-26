@@ -3,7 +3,8 @@
 **Riesgo:** H-05
 **Estado:** RESUELTO
 **Fecha:** 25/07/2026
-**Commit:** `407ce14`
+**Commit de corrección:** `407ce14`
+**Commit de verificación:** Pendiente de commit
 
 ## Problema
 
@@ -35,10 +36,25 @@ administrativas de Supabase Auth: crear, actualizar y eliminar cuentas.
 - `test-store-queue.mjs`: 29 pruebas aprobadas.
 - Los tests de navegador no alcanzaron a iniciar la aplicación por timeout al
   cargar dependencias CDN; no produjeron un fallo dentro del flujo de usuarios.
-- El cambio de contraseña conserva la misma llamada administrativa desplegada,
-  pero no se hizo una modificación real de contraseña durante esta corrección.
+- La verificación final confirmó que `admin-users` sigue activa como versión 8.
+- Una identidad administrativa temporal autenticada creó mediante la Edge
+  Function una cuenta de vendedor con contraseña inicial.
+- La contraseña inicial autenticó con HTTP 200.
+- `action=update` cambió realmente la contraseña y devolvió HTTP 200.
+- La contraseña anterior fue rechazada con HTTP 400 y la nueva autenticó con
+  HTTP 200.
+- `action=delete` eliminó la identidad y su perfil; el acceso posterior fue
+  rechazado.
+- La solicitud sin sesión continuó rechazada con HTTP 401.
+- Resultado remoto: 9/9 verificaciones.
+- Las migraciones `20260725002700` y `20260725002800` prepararon y eliminaron
+  la identidad administrativa temporal. La 028 comprobó que no quedaran cuentas
+  ni perfiles de prueba.
+- Regresiones finales: `test-store-queue.mjs` 55/55,
+  `test-role-access.mjs` 10/10 y `test-concurrency.mjs` 9/9.
 
 ## Riesgo residual
 
-El cambio de contraseña no se verificó mediante una mutación real durante esta
-corrección. No forma parte del fallo de autorización ya resuelto.
+Ninguno conocido dentro del flujo crear, cambiar contraseña y eliminar usuarios
+mediante `admin-users`. La función exige una sesión administrativa activa y la
+clave `service_role` permanece exclusivamente en el entorno de Supabase.
