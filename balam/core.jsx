@@ -4,6 +4,7 @@
   const DEVICE_KEY = 'balam_device_id';
   let deviceId = null;
   let catalogProductsAdapter = null;
+  let syncGateway = null;
 
   function getDeviceId() {
     if (deviceId) return deviceId;
@@ -33,11 +34,21 @@
   function saveCatalogProducts() {
     if (catalogProductsAdapter) catalogProductsAdapter.save();
   }
+  function registerSyncGateway(adapter) {
+    if (!adapter || typeof adapter !== 'object') throw new Error('Gateway de sincronización inválido');
+    syncGateway = adapter;
+  }
+  function invokeSync(method, ...args) {
+    const fn = syncGateway && syncGateway[method];
+    return typeof fn === 'function' ? fn.apply(syncGateway, args) : undefined;
+  }
 
   window.CORE = {
     getDeviceId,
     registerCatalogProducts,
     catalogProducts,
     saveCatalogProducts,
+    registerSyncGateway,
+    invokeSync,
   };
 })();

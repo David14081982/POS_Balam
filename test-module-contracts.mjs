@@ -48,6 +48,13 @@ check('uso de catálogos atraviesa un adaptador único', (
   && config.includes('window.CORE.catalogProducts()')
   && config.includes('window.CORE.saveCatalogProducts()')
 ));
+check('DATA no depende directamente de STORE', !data.includes('window.STORE'));
+check('sincronización saliente atraviesa un gateway único', (
+  core.includes('registerSyncGateway')
+  && core.includes('invokeSync')
+  && data.includes('window.CORE.invokeSync')
+  && store.includes('window.CORE.registerSyncGateway(window.STORE)')
+));
 
 let generated = 0;
 const localStorage = {
@@ -101,6 +108,21 @@ check('el adaptador limpia y persiste atributos de catálogo eliminado', (
   removedCustom.ok === true
   && !(custom.kind in catalogProducts[0].attrs)
   && productSaves === 1
+));
+check('gateway sin STORE conserva no-op y después reenvía argumentos', (
+  typeof catalogSandbox.window.CORE.invokeSync === 'function'
+  && catalogSandbox.window.CORE.invokeSync('pushRows', 'products', []) === undefined
+));
+let forwarded = null;
+if (catalogSandbox.window.CORE.registerSyncGateway) {
+  catalogSandbox.window.CORE.registerSyncGateway({
+    pushRows(...args) { forwarded = args; return 'queued'; },
+  });
+}
+check('gateway devuelve el resultado del adaptador registrado', (
+  typeof catalogSandbox.window.CORE.invokeSync === 'function'
+  && catalogSandbox.window.CORE.invokeSync('pushRows', 'clients', [1]) === 'queued'
+  && JSON.stringify(forwarded) === JSON.stringify(['clients', [1]])
 ));
 
 const expectedGlobals = {

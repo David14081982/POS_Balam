@@ -72,6 +72,11 @@ También aloja el adaptador de productos usado por las guardas de catálogos:
 consulta esas funciones sin depender de `window.DATA`. `CORE` no conserva una
 copia de productos ni asume su estructura más allá de entregar el arreglo.
 
+El gateway de sincronización saliente evita que `DATA` conozca directamente a
+`STORE`: antes del registro es no-op y, después de que `STORE` publica su API,
+reenvía método, argumentos y resultado sin transformación. `STORE` puede seguir
+leyendo/aplicando `DATA`, por lo que la dependencia queda en una sola dirección.
+
 ## Recursos de interfaz
 
 La apariencia vigente proviene de la configuración Tailwind y del bloque
@@ -112,12 +117,13 @@ Archivo: `balam/data.jsx`. API: `window.DATA`.
 - Persiste cada colección en claves propias de `localStorage`.
 - Ejecuta reglas de negocio como folios, ventas, pagos, devoluciones,
   comisiones, inventario y datos de prueba.
-- Las mutaciones guardan primero localmente y después llaman a `STORE`.
+- Las mutaciones guardan primero localmente y después invocan el gateway de
+  sincronización de `CORE`.
 - `applyRemote()` incorpora datos recibidos de la nube sin volver a enviarlos.
 
-Ventas y devoluciones usan rutas especializadas (`STORE.pushSale()` y
-`STORE.pushReturn()`). Cada una se confirma remotamente mediante su propia
-transacción SQL idempotente.
+Ventas y devoluciones solicitan las rutas especializadas `pushSale()` y
+`pushReturn()` mediante el gateway. Cada una se confirma remotamente mediante
+su propia transacción SQL idempotente.
 
 ### Promociones y margen mínimo
 

@@ -413,7 +413,7 @@
   let remoteApplying = false;
   function syncUp(kind, arr) {
     if (remoteApplying) return;
-    if (window.STORE && window.STORE.pushRows) { try { window.STORE.pushRows(kind, arr); } catch (e) { /* offline */ } }
+    try { window.CORE.invokeSync('pushRows', kind, arr); } catch (e) { /* offline */ }
   }
   function saveSellers(sync = true) { save(LS_SELLERS, sellers); if (sync) syncUp('sellers', sellers); }
   function saveClients(sync = true) { save(LS_CLIENTS, clients); if (sync) syncUp('clients', clients); }
@@ -723,9 +723,9 @@
       const tender = metodoPago || (metodo === 'Apartado' ? 'Efectivo' : metodo);
       if (paidNow > 0) addSalePayment(sale, { monto: paidNow, metodo: tender, tipo: estado === 'Apartado' ? 'anticipo' : 'venta', detalle: pagoDetalle, fecha }, false);
     }
-    if (!remoteApplying && window.STORE && window.STORE.pushSale) {
+    if (!remoteApplying) {
       try {
-        window.STORE.pushSale(sale, {
+        window.CORE.invokeSync('pushSale', sale, {
           clientId: client && !client.generic ? client.id : null,
           clientEffect, sellerEffects, payments: paymentsForSale(sale.folio),
         });
@@ -806,9 +806,7 @@
     let sellerEffects = [];
     if (sale.saldo === 0) sellerEffects = finalizarApartado(sale).sellerEffects;
     else saveSales();
-    if (window.STORE && window.STORE.pushSale) {
-      try { window.STORE.pushSale(sale, { sellerEffects, payments: paymentsForSale(sale.folio) }); } catch (e) { /* offline */ }
-    }
+    try { window.CORE.invokeSync('pushSale', sale, { sellerEffects, payments: paymentsForSale(sale.folio) }); } catch (e) { /* offline */ }
     return { ok: true, sale, payment, liquidado: sale.saldo === 0 };
   }
   function completarApartado(folio) {
@@ -963,9 +961,7 @@
     };
     returns.unshift(ret);
     saveReturns();
-    if (!remoteApplying && window.STORE && window.STORE.pushReturn) {
-      try { window.STORE.pushReturn(ret, { stockLines, clientEffect, sellerEffects }); } catch (e) { /* offline */ }
-    }
+    if (!remoteApplying) try { window.CORE.invokeSync('pushReturn', ret, { stockLines, clientEffect, sellerEffects }); } catch (e) { /* offline */ }
     return { ok: true, ret };
   }
 
@@ -996,7 +992,7 @@
     const version = Number(s._syncVersion) || 0;
     const i = sellers.findIndex(x => x.id === id);
     sellers.splice(i, 1); saveSellers();
-    if (window.STORE && window.STORE.deleteRow) { try { window.STORE.deleteRow('sellers', id, version); } catch (e) { /* offline */ } }
+    try { window.CORE.invokeSync('deleteRow', 'sellers', id, version); } catch (e) { /* offline */ }
     return { ok: true };
   }
   // Borra un cliente de local Y de la nube (mismo patrón que removeUser/removeProduct). El cliente
@@ -1008,7 +1004,7 @@
     const version = Number(c._syncVersion) || 0;
     const i = clients.findIndex(x => x.id === id);
     clients.splice(i, 1); saveClients();
-    if (window.STORE && window.STORE.deleteRow) { try { window.STORE.deleteRow('clients', id, version); } catch (e) { /* offline */ } }
+    try { window.CORE.invokeSync('deleteRow', 'clients', id, version); } catch (e) { /* offline */ }
     return { ok: true };
   }
   function iniDe(nombre) { return String(nombre || '').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase(); }
@@ -1030,7 +1026,7 @@
     if (i < 0) return;
     const version = Number(promos[i]._syncVersion) || 0;
     promos.splice(i, 1); savePromos();
-    if (window.STORE && window.STORE.deleteRow) { try { window.STORE.deleteRow('promotions', id, version); } catch (e) { /* offline */ } }
+    try { window.CORE.invokeSync('deleteRow', 'promotions', id, version); } catch (e) { /* offline */ }
   }
   function duplicatePromo(id) {
     const p = promos.find(x => x.id === id);
@@ -1049,7 +1045,7 @@
     if (i < 0) return;
     const version = Number(products[i]._syncVersion) || 0;
     products.splice(i, 1); saveProducts();
-    if (window.STORE && window.STORE.deleteRow) { try { window.STORE.deleteRow('products', id, version); } catch (e) { /* offline */ } }
+    try { window.CORE.invokeSync('deleteRow', 'products', id, version); } catch (e) { /* offline */ }
   }
 
   // Restaura el catálogo original de fábrica
@@ -1089,7 +1085,7 @@
       clearAllLocal(); persistAllLocal();
       try { localStorage.removeItem(LS_DEMO); } catch (e) { /* */ }
       // Descarta lo pendiente de sincronizar para que no se reenvíe nada de la simulación.
-      try { if (window.STORE && window.STORE.clearQueue) window.STORE.clearQueue(); } catch (e) { /* */ }
+      try { window.CORE.invokeSync('clearQueue'); } catch (e) { /* */ }
     } finally { remoteApplying = false; }
     return true;
   }
@@ -1137,7 +1133,7 @@
       periodoInicio = '';
       persistAllLocal();
       // Descarta lo pendiente de subir: son operaciones de las pruebas.
-      try { if (window.STORE && window.STORE.clearQueue) window.STORE.clearQueue(); } catch (e) { /* */ }
+      try { window.CORE.invokeSync('clearQueue'); } catch (e) { /* */ }
     } finally { remoteApplying = false; }
     // 6) Subir lo que el SQL NO puede reconstruir: el stock restaurado y los contadores en
     //    cero. (Las filas borradas —ventas, devoluciones, promos, clientes— las quita el SQL.)

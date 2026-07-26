@@ -771,6 +771,33 @@ protegido por orden de carga y prueba; antes del registro devuelve lista vacía,
 igual que el comportamiento histórico.
 **Corrección documentada:** `docs/fixes/desacoplar-config-data.md`.
 
+## H-22 — Ciclo directo DATA ↔ STORE en sincronización
+
+**Estado:** RESUELTO
+**Fecha de registro:** 26/07/2026
+**Fecha de resolución:** 26/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** `DATA` contiene 13 referencias que consultan o invocan directamente
+`window.STORE` para snapshots, ventas, devoluciones, eliminaciones y cola.
+`STORE`, a su vez, consulta y aplica resultados sobre `window.DATA`.
+**Origen de auditoría:** Fase 16, residual documentado de H-21 y hallazgo
+original H-21.
+**Riesgo:** dominio y persistencia conocen mutuamente sus APIs globales; una
+variación de carga o firma puede romper mutaciones locales, reintentos o
+reconciliación sin una frontera única verificable.
+**Reproducción:** contratos 20/24 antes del cambio; fallaron la ausencia de
+dependencia, el gateway único, su no-op y el reenvío.
+**Corrección:** `CORE` publica un gateway sin estado; `STORE` registra su API y
+`DATA` reenvía métodos/argumentos exclusivamente por esa frontera. `DATA` ya no
+referencia `window.STORE`.
+**Pruebas:** contratos 24/24, cola 97/97, venta 17/17, devoluciones 17/17,
+concurrencia 9/9, folios 4/4, build 8/8, smoke 17/17 y navegación 13/13.
+**Pendiente:** ninguno para `DATA ↔ STORE`. `STORE → DATA` queda como
+dependencia unidireccional intencional. `CONFIG ↔ STORE` permanece separado.
+**Riesgo residual:** bajo. El gateway depende del orden de carga ya congelado;
+antes del registro conserva el no-op histórico.
+**Corrección documentada:** `docs/fixes/desacoplar-data-store.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:
