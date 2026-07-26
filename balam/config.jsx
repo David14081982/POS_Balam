@@ -223,7 +223,7 @@
     version++;
     persist();
     try { window.dispatchEvent(new CustomEvent('configchange', { detail: { version } })); } catch (e) { /* SSR */ }
-    if (window.STORE && window.STORE.pushConfig) { try { window.STORE.pushConfig(state); } catch (e) { /* offline */ } }
+    try { window.CORE.invokeSync('pushConfig', state); } catch (e) { /* offline */ }
   }
 
   // ── API de lectura ────────────────────────────────────────────────────────────

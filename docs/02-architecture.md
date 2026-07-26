@@ -54,8 +54,9 @@ El orden relevante definido en `POS Balam.html` es:
 6. `balam/store.jsx`
 7. `balam/app.jsx`
 
-Aunque `STORE` se carga después, `CONFIG`, `DATA` y `AUTH` consultan sus métodos
-en tiempo de uso, no durante su declaración. `App` coordina la inicialización.
+Aunque `STORE` se carga después, `AUTH` consulta sus métodos en tiempo de uso,
+no durante su declaración. `CONFIG` y `DATA` envían sincronización mediante el
+gateway de `CORE`. `App` coordina la inicialización.
 
 ## CORE
 
@@ -72,10 +73,11 @@ También aloja el adaptador de productos usado por las guardas de catálogos:
 consulta esas funciones sin depender de `window.DATA`. `CORE` no conserva una
 copia de productos ni asume su estructura más allá de entregar el arreglo.
 
-El gateway de sincronización saliente evita que `DATA` conozca directamente a
-`STORE`: antes del registro es no-op y, después de que `STORE` publica su API,
-reenvía método, argumentos y resultado sin transformación. `STORE` puede seguir
-leyendo/aplicando `DATA`, por lo que la dependencia queda en una sola dirección.
+El gateway de sincronización saliente evita que `DATA` y `CONFIG` conozcan
+directamente a `STORE`: antes del registro es no-op y, después de que `STORE`
+publica su API, reenvía método, argumentos y resultado sin transformación.
+`STORE` puede seguir leyendo/aplicando ambos modelos, por lo que cada dependencia
+queda en una sola dirección.
 
 ## Recursos de interfaz
 
@@ -97,7 +99,8 @@ Archivo: `balam/config.jsx`. API: `window.CONFIG`.
 - Contiene ajustes, catálogos y reglas administrables.
 - La copia local vive en `localStorage` bajo `balam_config_v1`.
 - Expone lecturas y mutaciones; al guardar emite `configchange`.
-- Si `STORE` está disponible, `pushConfig()` replica configuración y catálogos.
+- Tras persistir y emitir el evento, el gateway solicita `pushConfig()` para
+  replicar configuración y catálogos cuando `STORE` está disponible.
 - `DATA` lee ciertos catálogos mediante getters para reflejar cambios sin
   recargar módulos.
 - Las guardas de borrado consultan productos mediante el adaptador de `CORE`;

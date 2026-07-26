@@ -798,6 +798,34 @@ dependencia unidireccional intencional. `CONFIG ↔ STORE` permanece separado.
 antes del registro conserva el no-op histórico.
 **Corrección documentada:** `docs/fixes/desacoplar-data-store.md`.
 
+## H-23 — Ciclo directo CONFIG ↔ STORE al sincronizar configuración
+
+**Estado:** RESUELTO
+**Fecha de registro:** 26/07/2026
+**Fecha de resolución:** 26/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** `CONFIG.emit()` consulta e invoca directamente
+`window.STORE.pushConfig(state)`. `STORE`, a su vez, consulta y carga
+`window.CONFIG` durante la reconciliación y al calcular la ventana de ventas.
+**Origen de auditoría:** Fase 16, residual documentado de H-22.
+**Riesgo:** configuración y persistencia conocen mutuamente sus APIs globales;
+el envío de ajustes depende del orden de carga y mantiene una dependencia
+circular fuera del gateway de sincronización ya establecido.
+**Reproducción:** contratos 24/27 antes del cambio; fallaron la ausencia de
+dependencia directa, el uso del gateway y el reenvío de la configuración.
+**Corrección:** `CONFIG.emit()` conserva persistencia local y evento, pero
+solicita `pushConfig` exclusivamente mediante `CORE.invokeSync()`. `STORE`
+continúa registrando el único adaptador del gateway.
+**Pruebas:** contratos 27/27, descuentos 43/43, cola 97/97, concurrencia 9/9,
+roles 10/10, build reproducible 8/8, smoke del bundle 17/17 y navegación 13/13.
+**Pendiente:** ninguno para `CONFIG ↔ STORE`. `STORE → CONFIG` queda como
+dependencia unidireccional intencional para cargar configuración remota y
+consultar la ventana de ventas.
+**Riesgo residual:** bajo. Antes de que `STORE` registre el gateway, el envío es
+no-op, equivalente a la guarda histórica; la configuración permanece local y
+se sincroniza por la cola en una inicialización posterior.
+**Corrección documentada:** `docs/fixes/desacoplar-config-store.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

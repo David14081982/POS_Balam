@@ -55,6 +55,10 @@ check('sincronización saliente atraviesa un gateway único', (
   && data.includes('window.CORE.invokeSync')
   && store.includes('window.CORE.registerSyncGateway(window.STORE)')
 ));
+check('CONFIG no depende directamente de STORE', !config.includes('window.STORE'));
+check('configuración saliente usa el gateway de sincronización', (
+  config.includes("window.CORE.invokeSync('pushConfig', state)")
+));
 
 let generated = 0;
 const localStorage = {
@@ -114,15 +118,23 @@ check('gateway sin STORE conserva no-op y después reenvía argumentos', (
   && catalogSandbox.window.CORE.invokeSync('pushRows', 'products', []) === undefined
 ));
 let forwarded = null;
+let pushedConfig = null;
 if (catalogSandbox.window.CORE.registerSyncGateway) {
   catalogSandbox.window.CORE.registerSyncGateway({
     pushRows(...args) { forwarded = args; return 'queued'; },
+    pushConfig(value) { pushedConfig = value; },
   });
 }
 check('gateway devuelve el resultado del adaptador registrado', (
   typeof catalogSandbox.window.CORE.invokeSync === 'function'
   && catalogSandbox.window.CORE.invokeSync('pushRows', 'clients', [1]) === 'queued'
   && JSON.stringify(forwarded) === JSON.stringify(['clients', [1]])
+));
+catalogSandbox.window.CONFIG.setSetting('sync.contractTest', 7);
+const persistedConfig = JSON.parse(memory.get('balam_config_v1'));
+check('emit persiste y reenvía configuración mediante el gateway', (
+  persistedConfig.settings['sync.contractTest'] === 7
+  && pushedConfig?.settings?.['sync.contractTest'] === 7
 ));
 
 const expectedGlobals = {
