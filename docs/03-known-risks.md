@@ -684,6 +684,34 @@ de la Fase 16 permanecen separadas por la regla de un problema por corrección.
 sesión de página, pero ya es única para todos los módulos durante ella.
 **Corrección documentada:** `docs/fixes/identidad-terminal-compartida.md`.
 
+## H-19 — Bundle no reproducible por identificadores aleatorios
+
+**Estado:** RESUELTO
+**Fecha de registro:** 26/07/2026
+**Fecha de resolución:** 26/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** `build-offline.mjs` importa `randomUUID()` y asigna un UUID nuevo
+a cada entrada del manifiesto. Dos ejecuciones con las mismas fuentes y
+dependencias producen referencias distintas y, por tanto, hashes distintos de
+`index.html` y `POS Balam (offline).html`.
+**Origen de auditoría:** Fase 16, parte de H-22 sobre verificación build/fuente.
+**Riesgo:** un cambio de hash no permite distinguir una modificación real de
+una reconstrucción equivalente, dificulta revisar despliegues y oculta deriva.
+**Reproducción:** `test-build-reproducibility.mjs` aprobó 1/4 antes del cambio:
+los artefactos de una ejecución coincidían entre sí, pero la aleatoriedad, la
+identidad por contenido y el formato determinista fallaron.
+**Corrección:** cada asset usa SHA-256 sobre MIME, modo de compresión y bytes,
+truncado a 128 bits y presentado con el formato UUID compatible con el loader.
+**Pruebas:** reproducción final 4/4; dos builds consecutivos produjeron 66
+assets y el mismo SHA-256
+`73F36BE13792E6483F673D157457D1296EC0138DFFF23398E96A8FA41C93E05D`
+en ambos artefactos; smoke bundle 17/17, navegación 13/13 y contratos 16/16.
+**Pendiente:** ninguno para la aleatoriedad del manifiesto.
+**Riesgo residual:** bajo. Recursos remotos no fijados pueden cambiar en su
+origen y producir legítimamente otro hash; fijarlos localmente es una
+corrección separada.
+**Corrección documentada:** `docs/fixes/bundle-reproducible.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

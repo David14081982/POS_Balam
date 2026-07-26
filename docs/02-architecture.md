@@ -26,6 +26,15 @@ STORE → cola offline → Supabase (esquema pos)
 `index.html` y `POS Balam (offline).html`; estos dos archivos son artefactos, no
 la fuente primaria.
 
+## Build offline
+
+`build-offline.mjs` precompila JSX, genera Tailwind estático e incorpora
+scripts, fuentes e imágenes en un manifiesto. Cada asset se identifica mediante
+SHA-256 de su MIME, modo de compresión y bytes originales, conservando formato
+UUID para el loader. Con las mismas fuentes y respuestas externas, dos builds
+producen artefactos byte por byte idénticos; `index.html` es copia exacta de
+`POS Balam (offline).html`.
+
 ## Orden de carga
 
 El orden relevante definido en `POS Balam.html` es:

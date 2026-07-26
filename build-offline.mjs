@@ -5,7 +5,7 @@
 // Uso: node build-offline.mjs
 import fs from 'fs';
 import zlib from 'zlib';
-import { randomUUID } from 'crypto';
+import { createHash } from 'crypto';
 import { execSync } from 'child_process';
 
 const OUT = 'POS Balam (offline).html';
@@ -25,8 +25,20 @@ const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,
 const MIME = { js: 'text/javascript', jsx: 'text/jsx', css: 'text/css', woff2: 'font/woff2' };
 
 const manifest = {};
+function assetId(buf, mime, compress) {
+  const hex = createHash('sha256')
+    .update(mime).update('\0')
+    .update(compress ? 'gzip' : 'raw').update('\0')
+    .update(buf)
+    .digest('hex')
+    .slice(0, 32);
+  return [
+    hex.slice(0, 8), hex.slice(8, 12), hex.slice(12, 16),
+    hex.slice(16, 20), hex.slice(20),
+  ].join('-');
+}
 function addBytes(buf, mime, compress = true) {
-  const uuid = randomUUID();
+  const uuid = assetId(buf, mime, compress);
   let data = buf, compressed = false;
   if (compress) { data = zlib.gzipSync(buf); compressed = true; }
   manifest[uuid] = { data: Buffer.from(data).toString('base64'), mime, compressed };

@@ -31,6 +31,8 @@ sesión de chat.
 | `arnes-smoke-confiable.md` | H-15 | Smoke E2E aislado, confiable y con cleanup |
 | `paginacion-volumen-sincronizacion.md` | H-16 | Paginación completa e índices medidos |
 | `limpieza-codigo-recursos.md` | H-17 | Código muerto y CSS no cargado |
+| `identidad-terminal-compartida.md` | H-18 | Contrato único de identidad de terminal |
+| `bundle-reproducible.md` | H-19 | Identidad determinista de assets del bundle |
 
 Documentación financiera relacionada, creada antes de este índice:
 
