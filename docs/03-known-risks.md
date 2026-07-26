@@ -23,6 +23,7 @@ y `BLOQUEADO`.
 | H-12 | Lector Excel vulnerable y sin límites explícitos | RESUELTO | Importación Excel / dependencias |
 | H-13 | Terminal nueva no recupera movimientos remotos | RESUELTO | Sincronización / kardex |
 | H-14 | Cola offline sin diagnóstico ni política de recuperación | PARCIALMENTE RESUELTO | Sincronización / localStorage |
+| H-15 | Smoke E2E produce falsos negativos y no libera recursos al fallar | RESUELTO | Pruebas / bundle |
 
 ## H-01 — Inventario concurrente
 
@@ -514,6 +515,43 @@ perderla. Falta un respaldo durable alternativo para cerrar completamente la
 parte de cuota.
 **Corrección documentada:** `docs/fixes/diagnostico-cola-offline.md`.
 **Commit:** `cabfccf`.
+
+## H-15 — Smoke E2E produce falsos negativos y no libera recursos al fallar
+
+**Estado:** RESUELTO
+**Fecha de registro:** 26/07/2026
+**Evidencia:** `node test-smoke.mjs bundle` arranca la aplicación y aprueba las
+primeras siete verificaciones, pero termina por timeout al pulsar `Cancelar`.
+Playwright informa que `#__bundler_err` intercepta el clic. El bundle registra
+en ese panel eventos genéricos de recursos que no son excepciones JavaScript y
+no aparecen como `pageerror`; aun con una imagen válida y cero solicitudes
+Supabase aparecen 12 entradas genéricas. El cierre de Chrome y del servidor
+sólo existe al final feliz, por lo que una excepción puede dejar recursos
+abiertos.
+**Impacto:** un recurso inválido del propio fixture se reporta como fallo del
+producto y bloquea el recorrido. Las fases de limpieza o consolidación no
+disponen de una señal E2E confiable, y un fallo temprano puede contaminar
+ejecuciones posteriores.
+**Pruebas requeridas:** demostrar el fallo actual; usar una imagen embebida
+válida; simular Supabase sin tráfico real; comprobar arranque, navegación,
+migración de foto, recuperación histórica y cero excepciones; garantizar el
+cierre de navegador y servidor también ante errores.
+**Causa raíz:** el arnés no aislaba la superficie interactiva del panel
+diagnóstico del bundle y no tenía `try/finally`. También abortaba las peticiones
+Supabase sin demostrar mediante una respuesta controlada que la jaula operara.
+**Corrección:** el fixture de imagen ahora es válido; el panel permanece visible
+pero usa `pointer-events:none` sólo dentro de la prueba; `pageerror` continúa
+siendo la autoridad para excepciones JavaScript. Supabase se responde
+localmente con HTTP 401, una sonda confirma la intercepción y `try/finally`
+cierra navegador y servidor en cualquier salida.
+**Pruebas:** `node --check test-smoke.mjs` correcto. Dos ejecuciones consecutivas
+de `node test-smoke.mjs bundle`: 17/17 cada una; la sonda Supabase fue
+interceptada en ambas y la segunda ejecución reutilizó el puerto sin conflicto.
+**Riesgo residual:** el panel del bundle conserva 12 mensajes genéricos de
+recursos sin URL. No bloquean el smoke ni ocultan excepciones `pageerror`, pero
+mejorar el diagnóstico del bundler sería una tarea distinta.
+**Corrección documentada:** `docs/fixes/arnes-smoke-confiable.md`.
+**Commit:** Pendiente de commit.
 
 ## Regla de actualización
 

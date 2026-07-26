@@ -55,10 +55,9 @@ los componentes y colores existentes. Pulsar una operación permite reintentarla
 - `node test-returns.mjs`: 17 pasaron, 0 fallaron.
 - `node test-role-access.mjs`: 10 pasaron, 0 fallaron.
 - `node build-offline.mjs`: correcto; regeneró ambos artefactos desde `balam/`.
-- `node test-smoke.mjs bundle`: el arranque y siete verificaciones pasaron, pero
-  el arnés terminó por timeout porque `#__bundler_err` interceptó el clic tras
-  errores de recursos bloqueados por la propia jaula. No se contabiliza como
-  prueba aprobada de cierre.
+- El fallo anterior de `node test-smoke.mjs bundle` correspondía al arnés y fue
+  corregido posteriormente bajo H-15. Su evidencia de cierre está en
+  `docs/fixes/arnes-smoke-confiable.md`; no cambia las pruebas funcionales H-14.
 
 ## Riesgo residual y pendientes
 

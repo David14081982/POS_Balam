@@ -20,16 +20,27 @@ const server = http.createServer((req, res) => {
 });
 await new Promise(r => server.listen(8803, '127.0.0.1', r));
 
-let pass = 0, fail = 0; const errs = [];
+let pass = 0, fail = 0; const errs = [], supabaseRequests = [];
 const check = (name, cond, extra = '') => { console.log(`${cond ? '✅' : '❌'} ${name}${extra ? ' · ' + extra : ''}`); cond ? pass++ : fail++; };
 
-const b = await chromium.launch({ channel: 'chrome', headless: true });
+let b = null;
+try {
+b = await chromium.launch({ channel: 'chrome', headless: true });
 const page = await b.newPage();
 page.on('pageerror', e => errs.push(String(e)));
-await page.route(/supabase\.co/, r => r.abort()); // jaula: cero tráfico a la nube real
+await page.route(/supabase\.co/, route => {
+  supabaseRequests.push(route.request().url());
+  return route.fulfill({
+    status: 401,
+    contentType: 'application/json',
+    body: JSON.stringify({ message: 'Supabase simulado por test-smoke' }),
+  });
+}); // jaula: responde localmente; cero tráfico a la nube real
 
 // Siembra: 1 producto con foto INCRUSTADA (formato viejo) antes de que cargue la app.
-const FAKE_IMG = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAn/2Q==';
+// Debe ser una imagen válida: un fixture truncado dispara el overlay de errores
+// de recursos del bundle y convierte el recorrido en un falso negativo.
+const FAKE_IMG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
 await page.addInitScript((img) => {
   const prod = { id: 'mig-test-1', cat: '21', manga: 'ML', tela: 'ALG', color: 'BL', cuello: 'NOR',
     modelo: '900', nombre: 'Prueba Migración', orn: '—', ornColors: [], precio: 500, costo: 200,
@@ -39,8 +50,15 @@ await page.addInitScript((img) => {
 
 const t0 = Date.now();
 await page.goto('http://127.0.0.1:8803/' + encodeURIComponent(ENTRY), { waitUntil: 'load' });
+// El bundle registra también errores genéricos de recursos en su panel. El
+// smoke conserva el panel visible para diagnóstico, pero evita que esa capa
+// auxiliar bloquee los controles; las excepciones JS reales siguen en errs.
+await page.addStyleTag({ content: '#__bundler_err { pointer-events: none !important; }' });
 await page.waitForFunction(() => window.App && window.DATA && window.SettingsScreen && window.InventoryScreen
   && window.STORE && window.STORE.uploadProductPhoto && window.STORE.fetchSaleByFolio, null, { timeout: 30000 });
+const cageStatus = await page.evaluate(async () => (
+  await fetch('https://smoke-test.supabase.co/rest/v1/probe')
+).status);
 check(`1. la app bootea (${BUNDLE ? 'bundle precompilado' : 'dev con Babel'})`, true, (Date.now() - t0) + ' ms');
 if (BUNDLE) {
   check('1b. Babel NO está en runtime (precompilado)', await page.evaluate(() => !window.Babel));
@@ -117,7 +135,22 @@ await page.waitForSelector('text=Cliente Antiguo', { timeout: 10000 });
 check('12. la venta recuperada de la nube aparece lista para devolver', true);
 
 check('13. cero errores de página en todo el recorrido', errs.length === 0, errs.join(' | ').slice(0, 200));
+const overlayText = await page.locator('#__bundler_err').textContent().catch(() => '');
+const overlayPointerEvents = await page.locator('#__bundler_err').evaluate(
+  el => getComputedStyle(el).pointerEvents
+).catch(() => 'none');
+check('14. el panel diagnóstico no bloquea la interacción', overlayPointerEvents === 'none',
+  (overlayText || 'sin panel').slice(0, 200));
+check('15. Supabase quedó confinado a respuestas locales simuladas',
+  cageStatus === 401 && supabaseRequests.length >= 1,
+  `${supabaseRequests.length} solicitud(es) interceptada(s)`);
 
-await b.close(); server.close();
+} catch (e) {
+  fail++;
+  console.error('❌ smoke interrumpido:', e && e.stack ? e.stack : e);
+} finally {
+  if (b) await b.close().catch(() => {});
+  await new Promise(resolve => server.close(resolve));
+}
 console.log(`\n════════ ${pass} pasaron, ${fail} fallaron ════════`);
 process.exit(fail ? 1 : 0);
