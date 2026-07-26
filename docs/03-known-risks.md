@@ -58,7 +58,7 @@ resuelta posteriormente en H-02.
 **Estado:** RESUELTO
 **Fecha de registro:** 25/07/2026
 **Fecha de corrección/despliegue:** 25/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `23bec3b`
 **Evidencia:** la secuencia se lee y escribe en `localStorage`; terminales o
 perfiles distintos pueden generar el mismo prefijo y número.
 **Impacto:** colisión de folios, asociación incorrecta de renglones/pagos o
@@ -113,7 +113,7 @@ de stock, atomicidad compuesta y folios multi-terminal, respectivamente.
 **Fecha de registro:** 25/07/2026
 **Fecha de corrección/despliegue de venta:** 25/07/2026
 **Fecha de corrección/despliegue de devolución:** 25/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `23bec3b`
 **Evidencia:** una venta o devolución se traduce en cabecera, renglones,
 movimientos y pagos procesados desde la cola; estas escrituras no forman una
 única transacción SQL de dominio.
@@ -164,7 +164,7 @@ colisión del folio visible quedó resuelta posteriormente en H-02.
 **Estado:** RESUELTO
 **Fecha:** 25/07/2026
 **Commit de corrección:** `407ce14`
-**Commit de verificación:** Pendiente de commit
+**Commit de verificación:** `d6537c4`
 **Causa raíz:** `service_role` se usaba para consultar el esquema personalizado
 `pos` sin configurarlo correctamente para la validación del administrador.
 **Solución:** validar y operar `pos.sellers` con el cliente del usuario,
@@ -188,7 +188,7 @@ Regresiones: `test-store-queue.mjs` 55/55, `test-role-access.mjs` 10/10 y
 **Fecha de corrección local:** 25/07/2026
 **Fecha de despliegue Supabase:** 25/07/2026
 **Commit de corrección:** `23bec3b`
-**Commit de verificación:** Pendiente de commit
+**Commit de verificación:** `d6537c4`
 **Evidencia:** `DATA.saveProducts()`, `saveClients()`, `saveSellers()` y
 `savePromos()` entregan colecciones completas a `STORE.pushRows()`. Los
 `upsert` usan únicamente el identificador y no comparan la versión que la
@@ -302,7 +302,7 @@ transaccionales en H-04 y la concurrencia de stock quedó resuelta en H-01.
 
 **Estado:** RESUELTO
 **Fecha de registro:** 25/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `d6537c4`
 **Evidencia previa:** `STORE.enabled` quedaba verdadero después del primer login
 y `app.jsx` sólo ejecutaba `STORE.init({ pull: true })` cuando esa bandera era
 falsa. Un logout seguido de otro login sin recargar no realizaba un pull nuevo.

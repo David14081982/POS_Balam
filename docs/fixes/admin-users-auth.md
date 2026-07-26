@@ -4,7 +4,7 @@
 **Estado:** RESUELTO
 **Fecha:** 25/07/2026
 **Commit de corrección:** `407ce14`
-**Commit de verificación:** Pendiente de commit
+**Commit de verificación:** `d6537c4`
 
 ## Problema
 

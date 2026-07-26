@@ -4,7 +4,7 @@
 **Estado:** RESUELTO
 **Fecha:** 25/07/2026
 **Commit de corrección:** `23bec3b`
-**Commit de verificación:** Pendiente de commit
+**Commit de verificación:** `d6537c4`
 **Despliegue Supabase:** `20260725001300`, proyecto
 `telohdbvbvsfmwyriflz` (Balam)
 
