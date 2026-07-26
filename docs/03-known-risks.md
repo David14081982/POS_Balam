@@ -374,7 +374,7 @@ cero todavía no tiene evidencia en una base PostgreSQL/Supabase limpia.
 
 **Estado:** RESUELTO
 **Fecha de registro:** 25/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `56b3d37`
 **Evidencia:** `CONFIG` define `discount.minMarginPct=45`, pero
 `PROMOS.applyStack()` sólo suma porcentajes y montos fijos, limita el resultado
 a cero y nunca consulta costo ni configuración. Con precio $1,000, costo $450 y
