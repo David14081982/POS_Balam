@@ -689,7 +689,7 @@ sesión de página, pero ya es única para todos los módulos durante ella.
 **Estado:** RESUELTO
 **Fecha de registro:** 26/07/2026
 **Fecha de resolución:** 26/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `a117267`
 **Evidencia:** `build-offline.mjs` importa `randomUUID()` y asigna un UUID nuevo
 a cada entrada del manifiesto. Dos ejecuciones con las mismas fuentes y
 dependencias producen referencias distintas y, por tanto, hashes distintos de

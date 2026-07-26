@@ -3,7 +3,7 @@
 **Riesgo:** H-19
 **Estado:** RESUELTO
 **Fecha:** 26/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `a117267`
 
 ## Problema y reproducción
 
@@ -67,4 +67,3 @@ los artefactos; no afecta datos ni requiere migraciones.
 
 - Riesgo: `docs/03-known-risks.md#h-19--bundle-no-reproducible-por-identificadores-aleatorios`
 - Arquitectura: `docs/02-architecture.md#build-offline`
-
