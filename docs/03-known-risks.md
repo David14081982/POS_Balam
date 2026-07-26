@@ -831,7 +831,7 @@ se sincroniza por la cola en una inicialización posterior.
 **Estado:** RESUELTO
 **Fecha de registro:** 26/07/2026
 **Fecha de resolución:** 26/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `04f960c`
 **Evidencia:** `AUTH.client()` consulta e invoca directamente
 `window.STORE.getClient()`. `STORE`, a su vez, consulta `window.AUTH` para
 resolver propietario, rol y reclamación de cola histórica.
