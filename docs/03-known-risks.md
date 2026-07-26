@@ -551,7 +551,7 @@ interceptada en ambas y la segunda ejecución reutilizó el puerto sin conflicto
 recursos sin URL. No bloquean el smoke ni ocultan excepciones `pageerror`, pero
 mejorar el diagnóstico del bundler sería una tarea distinta.
 **Corrección documentada:** `docs/fixes/arnes-smoke-confiable.md`.
-**Commit:** Pendiente de commit.
+**Commit:** `8f6ce90`.
 
 ## Regla de actualización
 
