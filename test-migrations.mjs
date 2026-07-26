@@ -75,6 +75,14 @@ const fingerprint = readFileSync(
 check('11. la cadena compara producción con la huella de instalaciones limpias',
   fingerprint.includes('h10_schema_fingerprint_mismatch')
     && fingerprint.includes('a7d720a0d8a5f6ae5d33c5c1f61f3e49'));
+const syncIndexes = readFileSync(
+  join(migrationDir, '20260725003200_pos_h16_sync_indexes.sql'),
+  'utf8',
+).toLowerCase();
+check('12. ventas tiene índices para ventana reciente y apartados',
+  syncIndexes.includes('sales_fecha_folio_idx')
+    && syncIndexes.includes('sales_apartado_folio_idx')
+    && syncIndexes.includes("where estado = 'apartado'"));
 
 console.log(`\n════════ ${passed} pasaron, ${failed} fallaron ════════`);
 process.exit(failed ? 1 : 0);

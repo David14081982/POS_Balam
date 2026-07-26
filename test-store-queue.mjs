@@ -65,6 +65,7 @@ function freshEnv() {
         let rows = (cloud.rowsByTable[table] || []).slice();
         const page = String(filtro || '').match(/range:(\d+):(\d+)/);
         if (page) rows = rows.slice(Number(page[1]), Number(page[2]) + 1);
+        else rows = rows.slice(0, 1000); // límite predeterminado de PostgREST
         return { data: rows, error: null };
       }
       return { error: null, data: [] };
@@ -179,7 +180,7 @@ function freshEnv() {
       },
       mergeRemote(kind, rows, key) { this.merged.push({ kind, rows, key }); rows.forEach(r => this.sales.push(r)); },
     },
-    CONFIG: { load() {}, get() { return null; } },
+    CONFIG: { loaded: null, load(value) { this.loaded = value; }, get() { return null; } },
   };
   return { localStorage, window, calls, cloud, client, rpcCalls, idb,
     setFail: t => failTables.add(t), clearFail: t => failTables.delete(t),
@@ -909,6 +910,92 @@ function loadStore(env) {
     ok(`28. H-14: ${error.code} usa ${expectedStatus}/${expectedPolicy}`,
       op && op.status === expectedStatus && op.diagnostic.policy === expectedPolicy);
   }
+}
+
+// 29) Fase 14: ningún pull interpreta la primera página como conjunto completo.
+{
+  const env = freshEnv();
+  env.cloud.rowsByTable.products = Array.from({ length: 1001 }, (_, i) => ({
+    id: `p-${String(i + 1).padStart(4, '0')}`,
+    nombre: `Producto ${i + 1}`,
+  }));
+  const S = loadStore(env);
+  await S.pullDomain('products');
+  const pulled = env.window.DATA.applied.find(x => x.kind === 'products');
+  ok('29a. H-16: dominio recupera más de 1 000 filas sin truncar',
+    pulled && pulled.n === 1001);
+  ok('29b. H-16: dominio recorre páginas consecutivas',
+    env.calls.filter(x => x.table === 'products' && x.metodo === 'select').length === 2);
+}
+
+{
+  const env = freshEnv();
+  env.cloud.rowsByTable.sales = Array.from({ length: 1001 }, (_, i) => ({
+    folio: `BG-VOL-${String(i + 1).padStart(4, '0')}`,
+    fecha: '2026-07-26T12:00:00Z',
+    cliente: 'Volumen',
+    vendedores: [],
+    items: 0,
+    total: 100,
+    metodo: 'Efectivo',
+    estado: 'Cobrado',
+  }));
+  const S = loadStore(env);
+  await S.pullDomain('sales');
+  const pulled = env.window.DATA.merged.find(x => x.kind === 'sales');
+  ok('29c. H-16: ventas recupera más de 1 000 filas sin truncar',
+    pulled && pulled.rows.length === 1001);
+  ok('29d. H-16: consultas de ventas recorren todas sus páginas',
+    env.calls.filter(x => x.table === 'sales' && x.metodo === 'select').length === 4);
+}
+
+{
+  const env = freshEnv();
+  env.cloud.rowsByTable.lookup = Array.from({ length: 1001 }, (_, i) => ({
+    id: `lookup-${i + 1}`,
+    kind: 'volume',
+    code: `C-${i + 1}`,
+    label: `Catálogo ${i + 1}`,
+    sort_order: i,
+  }));
+  env.cloud.rowsByTable.settings = [{ key: 'volume.test', value: true }];
+  const S = loadStore(env);
+  const result = await S.pull();
+  ok('29e. H-16: configuración recupera catálogos mayores a una página',
+    result.ok && env.window.CONFIG.loaded.catalogs.volume.length === 1001);
+  ok('29f. H-16: catálogos recorren todas sus páginas',
+    env.calls.filter(x => x.table === 'lookup' && x.metodo === 'select').length === 2);
+}
+
+{
+  const env = freshEnv();
+  env.cloud.rowsByTable.sales = Array.from({ length: 100 }, (_, i) => ({
+    folio: `BG-LIN-${String(i + 1).padStart(3, '0')}`,
+    fecha: '2026-07-26T12:00:00Z',
+    cliente: 'Volumen',
+    vendedores: [],
+    items: 11,
+    total: 110,
+    metodo: 'Efectivo',
+    estado: 'Cobrado',
+  }));
+  env.cloud.rowsByTable.sale_items = Array.from({ length: 1100 }, (_, i) => ({
+    id: i + 1,
+    folio: `BG-LIN-${String(Math.floor(i / 11) + 1).padStart(3, '0')}`,
+    sku: `SKU-${i + 1}`,
+    nombre: 'Renglón',
+    talla: 'M',
+    qty: 1,
+    precio: 10,
+  }));
+  const S = loadStore(env);
+  await S.pullDomain('sales');
+  const pulled = env.window.DATA.merged.find(x => x.kind === 'sales');
+  const itemCount = pulled && pulled.rows.reduce((sum, sale) => sum + sale.lineas.length, 0);
+  ok('29g. H-16: un lote recupera más de 1 000 renglones de venta',
+    itemCount === 1100);
+  ok('29h. H-16: renglones recorren todas sus páginas',
+    env.calls.filter(x => x.table === 'sale_items' && x.metodo === 'select').length === 2);
 }
 
 console.log(`\n════════ ${pass} pasaron, ${fail} fallaron ════════`);

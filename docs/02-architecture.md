@@ -130,7 +130,8 @@ la cola.
 La autoridad de despliegue es la cadena ordenada de
 `supabase/migrations/*.sql`, configurada por `supabase/config.toml`. Contiene
 las bases históricas 001–012, las correcciones 013–028 y verificaciones finales
-del contrato hasta 031. Los archivos `supabase/pos_*.sql` se conservan como fuentes
+del contrato hasta 031. La migración 032 añade los índices medidos del pull de
+ventas. Los archivos `supabase/pos_*.sql` se conservan como fuentes
 históricas legibles de 001–012; `test-migrations.mjs` exige que sus copias
 formales permanezcan idénticas.
 
@@ -243,6 +244,22 @@ no pisar movimientos locales todavía no confirmados.
 Los campos financieros de una venta se reconstruyen desde su snapshot remoto y
 los pagos desde `sale_payments`. Un registro histórico sin esos campos conserva
 su total conocido y no recibe valores inventados.
+
+### Paginación y volumen
+
+Toda lectura que pretende reconstruir un conjunto completo recorre páginas
+explícitas de 1 000 filas y mantiene un orden estable. Esto incluye
+configuración, catálogos, dominios administrativos, movimientos, ventas,
+apartados y los lotes de renglones de ventas/devoluciones. Una página llena
+nunca se interpreta como fin del conjunto; un error intermedio impide aplicar
+un resultado parcial.
+
+Las ventas recientes se ordenan por `fecha, folio` y los apartados por `folio`.
+La migración `20260725003200_pos_h16_sync_indexes.sql` respalda esas consultas
+con `sales_fecha_folio_idx` y el índice parcial
+`sales_apartado_folio_idx`. Las ventas fuera de la ventana permanecen
+disponibles mediante búsqueda por folio y el pull continúa fusionando, no
+reemplazando, el historial local.
 
 ### Versionado multi-terminal
 

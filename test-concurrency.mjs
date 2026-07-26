@@ -77,6 +77,7 @@ function terminal(cloud) {
         const result = [...cloud.rows[table].values()].map(clone);
         const p = Promise.resolve({ data: result, error: null });
         p.gte = () => p; p.eq = () => p; p.in = () => p;
+        p.order = () => p; p.range = () => p;
         return p;
       },
       delete() {

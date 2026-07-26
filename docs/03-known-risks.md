@@ -24,6 +24,7 @@ y `BLOQUEADO`.
 | H-13 | Terminal nueva no recupera movimientos remotos | RESUELTO | Sincronización / kardex |
 | H-14 | Cola offline sin diagnóstico ni política de recuperación | RESUELTO | Sincronización / almacenamiento local |
 | H-15 | Smoke E2E produce falsos negativos y no libera recursos al fallar | RESUELTO | Pruebas / bundle |
+| H-16 | Pulls truncados por límite de PostgREST | RESUELTO | Sincronización / rendimiento |
 
 ## H-01 — Inventario concurrente
 
@@ -565,6 +566,51 @@ recursos sin URL. No bloquean el smoke ni ocultan excepciones `pageerror`, pero
 mejorar el diagnóstico del bundler sería una tarea distinta.
 **Corrección documentada:** `docs/fixes/arnes-smoke-confiable.md`.
 **Commit:** `8f6ce90`.
+
+## H-16 — Pulls truncados por límite de PostgREST
+
+**Estado:** RESUELTO
+**Fecha de registro:** 26/07/2026
+**Fecha de resolución:** 26/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** `pullSales()` afirma ser paginado, pero sus consultas por fecha y
+apartados no usan `range()` ni `limit()`. `pull()`, `pullDomain()` y
+`fetchItemsIn()` también leen conjuntos completos sin recorrer páginas.
+PostgREST puede limitar cada respuesta aunque existan más filas, por lo que una
+terminal interpreta la primera página como el conjunto completo.
+**Volumen real:** diagnóstico transaccional y revertido en producción:
+`lookup` 453 filas, `products` 240, `sales` 4, `sale_items` 4,
+`sale_payments` 3, `movements` 3 y el resto de dominios con 0–9 filas. El
+problema todavía no se activa con esos volúmenes, pero `lookup` ya se acerca a
+una página y los historiales crecen sin límite.
+**Origen de auditoría:** Fase 14, hallazgo original H-18 y coste de snapshots.
+**Reproducción:** el arnés impuso el límite de 1 000 filas con 1 001 productos y
+1 001 ventas: 89 pruebas pasaron y cuatro nuevas fallaron porque sólo se hizo
+una consulta y se aplicaron 1 000 filas. El mismo contrato afectaba catálogos y
+lotes de renglones.
+**Causa raíz:** los pulls no diferenciaban una respuesta completa de una página
+llena. Sólo movimientos usaba `range()`; el comentario de `pullSales()` decía
+“paginado”, pero sus dos consultas no recorrían páginas.
+**Corrección:** `fetchPages()` centraliza páginas ordenadas de 1 000 filas para
+configuración, dominios, movimientos, ventas y renglones. Las consultas de
+ventas recientes y apartados reciben los únicos dos índices justificados por
+`EXPLAIN ANALYZE`, desplegados en la migración 032.
+**Pruebas:** con 100 000 ventas, 500 000 renglones y 100 000 movimientos, la
+primera página reciente bajó de ~105 ms (sequential scan) a ~2.8 ms (index
+scan); apartados de ~32 ms a ~1.8 ms. Renglones (~3.9 ms) y movimientos
+(~0.75 ms) ya usaban índices y no recibieron nuevos. Insertar 100 000 filas
+sintéticas pasó de ~1.96 s a ~4.15 s, costo incremental aproximado de 0.022 ms
+por fila. `test-store-queue.mjs` 97/97, migraciones 24/24, concurrencia 9/9,
+coherencia financiera 17/17, devoluciones 17/17, roles 10/10 y smoke del bundle
+17/17. Build offline correcto. El smoke de desarrollo no arrancó por sus
+dependencias CDN en el entorno restringido; el bundle distribuido sí se probó.
+**Despliegue:** migración local/remota 032 aplicada en
+`telohdbvbvsfmwyriflz`; dry-run sin pendientes y lint sin errores.
+**Riesgo residual:** bajo. La paginación por offset supone un conjunto estable
+durante cada pull; una escritura concurrente puede cambiar páginas, pero la
+sincronización es eventual y el siguiente pull converge. Migrar a cursores se
+justificará sólo si mediciones futuras muestran churn o páginas profundas.
+**Corrección documentada:** `docs/fixes/paginacion-volumen-sincronizacion.md`.
 
 ## Regla de actualización
 

@@ -822,7 +822,10 @@
   }
   async function pull() {
     const c = await ensureClient(); if (!c) return { ok: false, error: 'sin cliente' };
-    const [lk, st] = await Promise.all([c.from('lookup').select('*'), c.from('settings').select('*')]);
+    const [lk, st] = await Promise.all([
+      fetchAllRows(c, 'lookup', 'id'),
+      fetchAllRows(c, 'settings', 'key'),
+    ]);
     if (lk.error || st.error) return { ok: false, error: (lk.error || st.error).message };
     if (!lk.data.length && !st.data.length) return { ok: false, error: 'vacío — ¿corriste la migración?' };
     const mk = (st.data || []).find(r => r.key === RESET_MARK_KEY);
@@ -862,13 +865,32 @@
     if (window.UI && window.UI.toast) window.UI.toast('Datos de prueba borrados en esta terminal — inventario intacto', 'var(--accent)');
     return true;
   }
-  // Renglones (sale_items/return_items) SOLO de las claves bajadas, en lotes de 100
-  // (antes se bajaba la tabla completa — crecía sin límite con el historial).
+  // Ejecuta una consulta en páginas explícitas. PostgREST limita cada respuesta;
+  // una página llena nunca se interpreta como el conjunto completo.
+  async function fetchPages(makeQuery, pageSize = 1000) {
+    const out = [];
+    for (let from = 0; ; from += pageSize) {
+      const r = await makeQuery().range(from, from + pageSize - 1);
+      if (r.error) return { data: null, error: r.error };
+      const rows = r.data || [];
+      out.push.apply(out, rows);
+      if (rows.length < pageSize) return { data: out, error: null };
+    }
+  }
+  function fetchAllRows(c, table, orderCol) {
+    return fetchPages(() => c.from(table).select('*')
+      .order(orderCol, { ascending: true }));
+  }
+  // Renglones (sale_items/return_items) SOLO de las claves bajadas, en lotes de 100.
+  // Cada lote también se pagina: cien ventas pueden contener más de mil renglones.
   async function fetchItemsIn(c, table, col, keys) {
     const out = [];
     for (let i = 0; i < keys.length; i += 100) {
-      const r = await c.from(table).select('*').in(col, keys.slice(i, i + 100));
-      if (!r.error && r.data) out.push.apply(out, r.data);
+      const batch = keys.slice(i, i + 100);
+      const r = await fetchPages(() => c.from(table).select('*')
+        .in(col, batch).order('id', { ascending: true }));
+      if (r.error) throw r.error;
+      if (r.data) out.push.apply(out, r.data);
     }
     return out;
   }
@@ -876,15 +898,7 @@
   // creciente para que el límite de filas de PostgREST nunca produzca un reemplazo
   // local parcial disfrazado de pull completo.
   async function fetchAllMovements(c) {
-    const out = [], pageSize = 1000;
-    for (let from = 0; ; from += pageSize) {
-      const r = await c.from('movements').select('*').order('id', { ascending: true })
-        .range(from, from + pageSize - 1);
-      if (r.error) return { data: null, error: r.error };
-      const rows = r.data || [];
-      out.push.apply(out, rows);
-      if (rows.length < pageSize) return { data: out, error: null };
-    }
+    return fetchAllRows(c, 'movements', 'id');
   }
   // Filas de venta locales desde filas SQL + sus renglones (compartido: pull y fetch por folio).
   function saleRowsFrom(raws, itemRows) {
@@ -906,8 +920,10 @@
     const days = Number(window.CONFIG && window.CONFIG.get && window.CONFIG.get('sync.salesWindowDays')) || 365;
     const cutoff = new Date(Date.now() - days * 864e5).toISOString();
     const [rec, apart] = await Promise.all([
-      c.from('sales').select('*').gte('fecha', cutoff),
-      c.from('sales').select('*').eq('estado', 'Apartado'),
+      fetchPages(() => c.from('sales').select('*').gte('fecha', cutoff)
+        .order('fecha', { ascending: true }).order('folio', { ascending: true })),
+      fetchPages(() => c.from('sales').select('*').eq('estado', 'Apartado')
+        .order('folio', { ascending: true })),
     ]);
     if (rec.error || apart.error) return; // tabla ausente / sin permiso → modo local
     const uniq = {};
@@ -940,7 +956,7 @@
     if (kind === 'sales') { await pullSales(c); return; }
     const r = kind === 'movements'
       ? await fetchAllMovements(c)
-      : await c.from(m.table).select('*');
+      : await fetchAllRows(c, m.table, m.conflict);
     if (r.error) return; // tabla no existe aún → modo local
     if (hasPendingFor(m.table)) return;
     if (r.data && r.data.length) {
