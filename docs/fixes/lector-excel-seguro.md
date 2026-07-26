@@ -3,7 +3,7 @@
 **Riesgo:** H-12
 **Estado:** RESUELTO
 **Fecha:** 25/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `70c3114`
 
 ## Problema y reproducción
 

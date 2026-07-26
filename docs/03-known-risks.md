@@ -406,7 +406,7 @@ precios y descuentos permanecen como snapshot.
 **Estado:** RESUELTO
 **Fecha de registro:** 25/07/2026
 **Fecha de corrección:** 25/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `70c3114`
 **Evidencia:** `POS Balam.html` y `balam/_source.html` cargan
 `xlsx@0.18.5` desde un CDN. Tanto `XLSXIO.parseFile()` como la importación de
 catálogos en `settings.jsx` entregan directamente el contenido completo de un
