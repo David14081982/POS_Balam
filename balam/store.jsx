@@ -108,6 +108,18 @@
       toRow: p => ({ id: p.id, folio: p.folio, fecha: p.fecha, tipo: p.tipo, metodo: p.metodo, monto: Number(p.monto) || 0, efectivo: Number(p.efectivo) || 0, tarjeta: Number(p.tarjeta) || 0, transferencia: Number(p.transferencia) || 0, otro: Number(p.otro) || 0 }),
       fromRow: r => ({ id: r.id, folio: r.folio, fecha: r.fecha || '', tipo: r.tipo, metodo: r.metodo, monto: Number(r.monto) || 0, efectivo: Number(r.efectivo) || 0, tarjeta: Number(r.tarjeta) || 0, transferencia: Number(r.transferencia) || 0, otro: Number(r.otro) || 0 }),
     },
+    movements: {
+      table: 'movements', conflict: 'id',
+      fromRow: r => ({
+        id: r.id,
+        fecha: String(r.fecha || '').replace('T', ' ').slice(0, 16),
+        tipo: r.tipo,
+        producto: r.producto || '',
+        sku: r.sku || '',
+        cant: Number(r.cant) || 0,
+        ref: r.ref || '',
+      }),
+    },
   };
   function kindForTable(table) {
     return Object.keys(MAP).find(kind => MAP[kind].table === table) || null;
@@ -133,7 +145,8 @@
   function hasPendingFor(table) {
     return loadQ().some(op => opBelongsToActiveSession(op) && (op.table === table
       || (op.type === 'sale' && table === 'sales')
-      || (op.type === 'return' && table === 'returns')));
+      || (op.type === 'return' && table === 'returns')
+      || ((op.type === 'sale' || op.type === 'return') && table === 'movements')));
   }
 
   function rekeyQueuedSaleFolio(operationId, oldFolio, newFolio) {
@@ -674,6 +687,20 @@
     }
     return out;
   }
+  // Movimientos es un historial completo e inmutable. Se pagina por su identidad
+  // creciente para que el límite de filas de PostgREST nunca produzca un reemplazo
+  // local parcial disfrazado de pull completo.
+  async function fetchAllMovements(c) {
+    const out = [], pageSize = 1000;
+    for (let from = 0; ; from += pageSize) {
+      const r = await c.from('movements').select('*').order('id', { ascending: true })
+        .range(from, from + pageSize - 1);
+      if (r.error) return { data: null, error: r.error };
+      const rows = r.data || [];
+      out.push.apply(out, rows);
+      if (rows.length < pageSize) return { data: out, error: null };
+    }
+  }
   // Filas de venta locales desde filas SQL + sus renglones (compartido: pull y fetch por folio).
   function saleRowsFrom(raws, itemRows) {
     const byFolio = {};
@@ -726,7 +753,9 @@
     // viejos). Se re-chequea tras el fetch: el usuario pudo capturar durante el vuelo.
     if (hasPendingFor(m.table)) return;
     if (kind === 'sales') { await pullSales(c); return; }
-    const r = await c.from(m.table).select('*');
+    const r = kind === 'movements'
+      ? await fetchAllMovements(c)
+      : await c.from(m.table).select('*');
     if (r.error) return; // tabla no existe aún → modo local
     if (hasPendingFor(m.table)) return;
     if (r.data && r.data.length) {
@@ -772,7 +801,7 @@
       const seller = window.AUTH && window.AUTH.role && window.AUTH.role() === 'vendedor';
       const domains = seller
         ? ['products', 'clients', 'sellers', 'promotions']
-        : ['products', 'clients', 'sellers', 'promotions', 'returns', 'liquidations', 'payments'];
+        : ['products', 'clients', 'sellers', 'promotions', 'returns', 'liquidations', 'payments', 'movements'];
       await Promise.all(domains.map(k => pullDomain(k).catch(() => { /* tabla ausente */ })));
       if (!seller) {
         try { await pullDomain('sales'); } catch (e) { /* tabla ausente */ }

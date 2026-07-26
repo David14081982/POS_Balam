@@ -221,6 +221,25 @@ También se drena al evento del navegador `online`. La sincronización es
 eventual; la interfaz no espera confirmación remota para aceptar una mutación
 local.
 
+### Recuperación transaccional de terminal
+
+Un arranque administrativo recupera desde Supabase productos, clientes,
+vendedores, promociones, devoluciones con sus renglones, liquidaciones, pagos,
+movimientos y ventas con sus renglones. Las ventas recientes usan la ventana
+configurable de 365 días y se agregan todos los apartados; un folio anterior se
+puede recuperar bajo demanda.
+
+`pos.movements` es un historial de sólo lectura para el cliente: las escrituras
+de venta y devolución se realizan exclusivamente dentro de sus commits SQL
+transaccionales. El pull recorre la tabla por `id` ascendente en páginas de
+1 000 y sólo reemplaza `DATA.movements` después de completar la lectura. Si una
+venta o devolución de la sesión activa sigue en la cola, se omite ese pull para
+no pisar movimientos locales todavía no confirmados.
+
+Los campos financieros de una venta se reconstruyen desde su snapshot remoto y
+los pagos desde `sale_payments`. Un registro histórico sin esos campos conserva
+su total conocido y no recibe valores inventados.
+
 ### Versionado multi-terminal
 
 Productos, clientes, vendedores y promociones usan el contrato introducido por

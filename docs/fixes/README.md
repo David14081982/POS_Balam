@@ -26,6 +26,7 @@ sesión de chat.
 | `migraciones-reproducibles.md` | H-10 | Cadena formal y contrato de esquema |
 | `margen-minimo-promociones.md` | H-11 | Piso de margen en promociones |
 | `lector-excel-seguro.md` | H-12 | Dependencia Excel fijada y lectura con límites |
+| `recuperacion-movimientos-terminal.md` | H-13 | Reconstrucción del kardex desde Supabase |
 
 Documentación financiera relacionada, creada antes de este índice:
 

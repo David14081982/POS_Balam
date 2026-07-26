@@ -54,7 +54,12 @@ function freshEnv() {
         cloud.rowsByTable[table] = arg;
         return { error: null };
       }
-      if (metodo === 'select') return { data: (cloud.rowsByTable[table] || []).slice(), error: null };
+      if (metodo === 'select') {
+        let rows = (cloud.rowsByTable[table] || []).slice();
+        const page = String(filtro || '').match(/range:(\d+):(\d+)/);
+        if (page) rows = rows.slice(Number(page[1]), Number(page[2]) + 1);
+        return { data: rows, error: null };
+      }
       return { error: null, data: [] };
     };
     return {
@@ -87,6 +92,8 @@ function freshEnv() {
         p.gte = (c, v) => { filtros.push('gte:' + c); return p; };
         p.eq = (c, v) => { filtros.push('eq:' + c + ':' + v); return p; };
         p.in = (c, v) => { filtros.push('in:' + c + ':' + v.length); return p; };
+        p.order = (c) => { filtros.push('order:' + c); return p; };
+        p.range = (from, to) => { filtros.push(`range:${from}:${to}`); return p; };
         return p;
       },
       delete: () => ({ eq: () => { const p = exec('delete'); p.eq = () => exec('delete'); return p; } }),
@@ -108,7 +115,7 @@ function freshEnv() {
     DATA: {
       movements: [], sellers: [], sales: [], applied: [], merged: [],
       saveSales() {},
-      applyRemote(kind, rows) { this.applied.push({ kind, n: rows.length }); },
+      applyRemote(kind, rows) { this.applied.push({ kind, n: rows.length, rows }); },
       applySyncResult() { return { conflicts: 0 }; },
       markSaleSync(folio, status, detail) {
         const sale = this.sales.find(s => s.folio === folio);
@@ -597,6 +604,117 @@ function loadStore(env) {
   ok('19c. H-09: el administrador puede reclamarla de forma explícita',
     claim.ok && claim.claimed === 1 && S.pending === 0
       && (env.cloud.rowsByTable.products || []).some(x => x.id === 'p-legacy-owner'));
+}
+
+// 20) H-13: una terminal limpia recupera el kardex persistido en Supabase
+{
+  const env = freshEnv();
+  env.cloud.rowsByTable.movements = [{
+    id: 91, fecha: '2026-07-26T10:15:00+00:00', tipo: 'Venta',
+    producto: 'Guayabera', sku: 'SKU-91', cant: -2, ref: 'BG-91',
+  }];
+  const S = loadStore(env);
+  await S.init({});
+  await S.pullDomain('movements');
+  const pulled = env.window.DATA.applied.find(x => x.kind === 'movements');
+  ok('20a. H-13: pullDomain descarga movimientos en una terminal limpia',
+    !!pulled && pulled.n === 1);
+  ok('20b. H-13: la consulta alcanza pos.movements',
+    env.calls.some(x => x.table === 'movements' && x.metodo === 'select'));
+  ok('20c. H-13: conserva identidad y normaliza los campos del kardex',
+    pulled && pulled.rows[0].id === 91
+      && pulled.rows[0].fecha === '2026-07-26 10:15'
+      && pulled.rows[0].tipo === 'Venta'
+      && pulled.rows[0].cant === -2
+      && pulled.rows[0].ref === 'BG-91');
+}
+
+// 21) H-13: un pull no pisa movimientos cuya venta sigue pendiente
+{
+  const env = freshEnv();
+  env.cloud.rowsByTable.movements = [{
+    id: 92, fecha: '2026-07-26T11:00:00+00:00', tipo: 'Venta',
+    producto: 'Remoto', sku: 'REM', cant: -1, ref: 'BG-REM',
+  }];
+  env.localStorage.setItem('balam_sync_queue', JSON.stringify([{
+    id: 'sale-pending', ownerId: null, type: 'sale', folio: 'BG-LOCAL',
+  }]));
+  const S = loadStore(env);
+  await S.pullDomain('movements');
+  ok('21a. H-13: una venta pendiente protege sus movimientos locales',
+    !env.calls.some(x => x.table === 'movements'));
+  ok('21b. H-13: el pull omitido no reemplaza DATA.movements',
+    !env.window.DATA.applied.some(x => x.kind === 'movements'));
+}
+
+// 22) Fase 12: el arranque limpio reconstruye el conjunto transaccional soportado
+{
+  const env = freshEnv();
+  env.cloud.rowsByTable.lookup = [{ kind: 'category', code: '21', label: 'Clásica' }];
+  env.cloud.rowsByTable.settings = [{ key: 'tax.rate', value: 16 }];
+  env.cloud.rowsByTable.sales = [{
+    folio: 'BG-REC', operation_id: 'op-rec', fecha: '2026-07-26T12:00:00Z',
+    cliente: 'Ana', vendedores: ['s1'], items: 1, subtotal: 862.07, iva: 137.93,
+    total: 1000, descuento: 50, iva_pct: 16, iva_included: true,
+    anticipo: 300, saldo: 700, metodo: 'Apartado', estado: 'Apartado',
+  }];
+  env.cloud.rowsByTable.sale_items = [{
+    folio: 'BG-REC', sku: 'REC', nombre: 'Recuperada', talla: 'M',
+    qty: 1, precio: 1000, precio_base: 1000, precio_original: 1050,
+  }];
+  env.cloud.rowsByTable.sale_payments = [{
+    id: 'pay-rec', folio: 'BG-REC', fecha: '2026-07-26T12:00:00Z',
+    tipo: 'Anticipo', metodo: 'Efectivo', monto: 300, efectivo: 300,
+  }];
+  env.cloud.rowsByTable.returns = [{
+    id: 'ret-rec', folio: 'BG-REC', fecha: '2026-07-26T13:00:00Z',
+    cliente: 'Ana', vendedores: ['s1'], metodo: 'Efectivo', total: 100,
+  }];
+  env.cloud.rowsByTable.return_items = [{
+    return_id: 'ret-rec', sku: 'REC', nombre: 'Recuperada', talla: 'M',
+    qty: 1, motivo: 'Cambio', precio: 100,
+  }];
+  env.cloud.rowsByTable.movements = [{
+    id: 93, fecha: '2026-07-26T12:00:00Z', tipo: 'Venta',
+    producto: 'Recuperada', sku: 'REC', cant: -1, ref: 'BG-REC',
+  }];
+  const S = loadStore(env);
+  await S.init({ pull: true });
+  const salePull = env.window.DATA.merged.find(x => x.kind === 'sales');
+  const returnPull = env.window.DATA.applied.find(x => x.kind === 'returns');
+  const paymentPull = env.window.DATA.applied.find(x => x.kind === 'payments');
+  const movementPull = env.window.DATA.applied.find(x => x.kind === 'movements');
+  ok('22a. Fase 12: arranque recupera venta, renglón y snapshot financiero',
+    salePull && salePull.rows[0].total === 1000
+      && salePull.rows[0].anticipo === 300
+      && salePull.rows[0].saldo === 700
+      && salePull.rows[0].lineas[0].precioOrig === 1050);
+  ok('22b. Fase 12: arranque recupera pagos y devolución con renglones',
+    paymentPull && paymentPull.rows[0].monto === 300
+      && returnPull && returnPull.rows[0].lineas[0].motivo === 'Cambio');
+  ok('22c. Fase 12: arranque recupera también el movimiento del kardex',
+    movementPull && movementPull.rows[0].ref === 'BG-REC' && movementPull.rows[0].cant === -1);
+}
+
+// 23) H-13: el límite de PostgREST no trunca un kardex mayor de una página
+{
+  const env = freshEnv();
+  env.cloud.rowsByTable.movements = Array.from({ length: 1001 }, (_, i) => ({
+    id: i + 1, fecha: '2026-07-26T12:00:00Z', tipo: 'Venta',
+    producto: 'Paginado', sku: `SKU-${i + 1}`, cant: -1, ref: `BG-${i + 1}`,
+  }));
+  const S = loadStore(env);
+  await S.pullDomain('movements');
+  const pulled = env.window.DATA.applied.find(x => x.kind === 'movements');
+  const movementCalls = env.calls.filter(x => x.table === 'movements' && x.metodo === 'select');
+  ok('23a. H-13: recupera las 1 001 filas sin truncar', pulled && pulled.n === 1001);
+  ok('23b. H-13: pagina en rangos consecutivos de 1 000',
+    movementCalls.length === 2
+      && movementCalls[0].filtro.includes('range:0:999')
+      && movementCalls[1].filtro.includes('range:1000:1999'));
+  ok('23c. H-13: conserva primera y última identidad sin duplicados',
+    pulled && pulled.rows[0].id === 1 && pulled.rows[1000].id === 1001
+      && new Set(pulled.rows.map(x => x.id)).size === 1001);
 }
 
 console.log(`\n════════ ${pass} pasaron, ${fail} fallaron ════════`);

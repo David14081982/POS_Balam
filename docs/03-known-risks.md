@@ -21,6 +21,7 @@ y `BLOQUEADO`.
 | H-10 | Cadena de migraciones no reconstruye el esquema | PARCIALMENTE RESUELTO | Supabase / migraciones |
 | H-11 | Margen mínimo configurado pero no aplicado | RESUELTO | Promociones / precios |
 | H-12 | Lector Excel vulnerable y sin límites explícitos | RESUELTO | Importación Excel / dependencias |
+| H-13 | Terminal nueva no recupera movimientos remotos | RESUELTO | Sincronización / kardex |
 
 ## H-01 — Inventario concurrente
 
@@ -437,6 +438,44 @@ una cabecera `__proto__` no contaminó `Object.prototype`.
 la copia fijada y su hash. Un libro legítimo que exceda los límites debe
 dividirse; se rechaza completo antes de modificar datos.
 **Corrección documentada:** `docs/fixes/lector-excel-seguro.md`.
+
+## H-13 — Terminal nueva no recupera movimientos remotos
+
+**Estado:** RESUELTO
+**Fecha de registro:** 26/07/2026
+**Fecha de corrección:** 26/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** las ventas y devoluciones envían sus movimientos a
+`pos.commit_sale()` y `pos.commit_return()`, que los persisten en
+`pos.movements`. Sin embargo, `STORE.MAP` no contiene el dominio `movements` y
+`STORE.init({ pull: true })` no lo incluye entre los dominios administrativos.
+`DATA.applyRemote()` sí sabe recibirlos, pero ese camino nunca se invoca.
+**Impacto:** una terminal limpia puede reconstruir cabeceras, renglones y pagos
+recientes desde Supabase, pero conserva `DATA.movements` vacío. Kardex,
+trazabilidad de inventario y cualquier reporte que consuma movimientos difieren
+entre computadoras.
+**Origen de auditoría:** Fase 12, hallazgo original H-14. La omisión financiera
+original H-06 ya quedó atendida por H-03/H-04 y se verificará como regresión.
+**Causa raíz:** `DATA.applyRemote()` aceptaba movimientos, pero `STORE.MAP` no
+definía la tabla y el arranque no solicitaba ese dominio. El flujo remoto
+quedaba desconectado después de persistir correctamente.
+**Corrección:** `STORE` incorpora un mapper de sólo lectura y el administrador
+recupera el kardex al arrancar. La lectura pagina por `id` en bloques de 1 000 y
+sólo aplica el conjunto completo. Una venta o devolución pendiente protege los
+movimientos locales y omite el pull hasta confirmar la cola.
+**Pruebas:** reproducción previa 62 pasaron/2 fallaron. Después,
+`test-store-queue.mjs` 73/73, `test-sale-coherence.mjs` 17/17,
+`test-returns.mjs` 17/17, `test-role-access.mjs` sin fallos,
+`test-concurrency.mjs` 9/9 y `test-smoke.mjs` 13/13. La recuperación simuló una
+terminal vacía con venta, renglón, snapshot financiero, pago, devolución,
+renglón devuelto y movimiento; otra prueba recuperó 1 001 movimientos sin
+duplicados ni omisiones.
+**Pendiente:** ninguno dentro de la omisión de movimientos H-13.
+**Riesgo residual:** movimientos históricos nunca persistidos en Supabase no se
+inventan. La ventana de ventas sigue siendo 365 días configurables más
+apartados, con búsqueda por folio para históricos. Volumen, índices y
+paginación de los demás dominios permanecen separados para la Fase 14.
+**Corrección documentada:** `docs/fixes/recuperacion-movimientos-terminal.md`.
 
 ## Regla de actualización
 
