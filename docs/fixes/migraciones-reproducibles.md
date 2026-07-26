@@ -3,7 +3,7 @@
 **Riesgo:** H-10
 **Estado:** RESUELTO
 **Fecha:** 26/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `41dac52`
 
 ## Problema y reproducción
 

@@ -338,7 +338,7 @@ requiere revisión administrativa; no puede cruzarse de sesión silenciosamente.
 
 **Estado:** RESUELTO
 **Fecha de registro:** 25/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `41dac52`
 **Evidencia inicial:** `supabase/migrations/` comienza en
 `20260725001300_pos_013_concurrency.sql`; las definiciones base 001–012 sólo
 existen como scripts manuales en la raíz de `supabase/`. Tampoco existe
