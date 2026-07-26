@@ -444,7 +444,7 @@ dividirse; se rechaza completo antes de modificar datos.
 **Estado:** RESUELTO
 **Fecha de registro:** 26/07/2026
 **Fecha de corrección:** 26/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `1e52750`
 **Evidencia:** las ventas y devoluciones envían sus movimientos a
 `pos.commit_sale()` y `pos.commit_return()`, que los persisten en
 `pos.movements`. Sin embargo, `STORE.MAP` no contiene el dominio `movements` y
