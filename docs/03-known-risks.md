@@ -20,6 +20,7 @@ y `BLOQUEADO`.
 | H-09 | Cambio de sesión reutiliza estado y cola globales | RESUELTO | Auth / sincronización / localStorage |
 | H-10 | Cadena de migraciones no reconstruye el esquema | PARCIALMENTE RESUELTO | Supabase / migraciones |
 | H-11 | Margen mínimo configurado pero no aplicado | RESUELTO | Promociones / precios |
+| H-12 | Lector Excel vulnerable y sin límites explícitos | RESUELTO | Importación Excel / dependencias |
 
 ## H-01 — Inventario concurrente
 
@@ -399,6 +400,43 @@ histórica.
 y conserva el descuento histórico. Las ventas anteriores no se recalculan; sus
 precios y descuentos permanecen como snapshot.
 **Corrección documentada:** `docs/fixes/margen-minimo-promociones.md`.
+
+## H-12 — Lector Excel vulnerable y sin límites explícitos
+
+**Estado:** RESUELTO
+**Fecha de registro:** 25/07/2026
+**Fecha de corrección:** 25/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** `POS Balam.html` y `balam/_source.html` cargan
+`xlsx@0.18.5` desde un CDN. Tanto `XLSXIO.parseFile()` como la importación de
+catálogos en `settings.jsx` entregan directamente el contenido completo de un
+archivo elegido por el administrador a `XLSX.read()`, sin límite previo de
+tamaño, hojas ni dimensiones.
+**Impacto:** un libro manipulado puede alcanzar vulnerabilidades conocidas del
+lector y un archivo desproporcionado puede bloquear la interfaz. La dependencia
+no forma parte de `package.json`, por lo que las auditorías npm no la detectan;
+el artefacto offline incorpora la misma versión vulnerable durante el build.
+**Origen de auditoría:** Fase 9, hallazgo original H-12 y parte de H-22.
+**Causa raíz:** la biblioteca se consumía fuera del inventario npm y desde un
+CDN, sin control propio de versión/integridad. Inventario y Configuración
+implementaban lectores separados sin una frontera común de validación.
+**Corrección:** la distribución oficial SheetJS 0.20.3 quedó fijada localmente
+con SHA-256 verificable. `XLSXIO.readWorkbook()` centraliza ambos caminos,
+rechaza archivos vacíos o mayores de 10 MB y limita libros a 32 hojas; cada
+hoja admite como máximo 50 000 filas, 256 columnas y 1 000 000 de celdas
+declaradas. El lector omite fórmulas, HTML y estilos. El build incorpora la
+copia local al artefacto offline.
+**Pruebas:** `test-xlsx-security.mjs` 17/17,
+`test-import-fotos.mjs` 23/23, `test-export-modelo.mjs` 14/14 y
+`test-smoke.mjs` 13/13. `build-offline.mjs` regeneró los artefactos y la prueba
+offline confirmó SheetJS 0.20.3 sin solicitudes externas. Se conservaron
+lecturas válidas XLSX, XLS y CSV; se rechazaron todos los límites declarados y
+una cabecera `__proto__` no contaminó `Object.prototype`.
+**Pendiente:** ninguno dentro de H-12.
+**Riesgo residual:** futuras vulnerabilidades del parser requieren actualizar
+la copia fijada y su hash. Un libro legítimo que exceda los límites debe
+dividirse; se rechaza completo antes de modificar datos.
+**Corrección documentada:** `docs/fixes/lector-excel-seguro.md`.
 
 ## Regla de actualización
 

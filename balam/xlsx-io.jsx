@@ -3,6 +3,13 @@
 // Exporta window.XLSXIO
 (function () {
   const D = window.DATA;
+  const XLSX_LIMITS = Object.freeze({
+    maxFileBytes: 10 * 1024 * 1024,
+    maxSheets: 32,
+    maxRowsPerSheet: 50000,
+    maxColumnsPerSheet: 256,
+    maxCellsPerSheet: 1000000,
+  });
   // 'Foto (URL)' va al FINAL de BASE a propósito: las columnas A–K conservan su posición de siempre.
   const BASE = ['SKU', 'Modelo', 'Categoría', 'Manga', 'Tela', 'Color', 'No. Modelo', 'Ornamento', 'Colores Orn.', 'Cuello', 'Precio', 'Foto (URL)'];
   // Campos que la hoja de Inventario REALMENTE trae. Al ACTUALIZAR un producto existente solo se
@@ -41,6 +48,64 @@
   function ensureXLSX() {
     if (!window.XLSX) { window.UI.toast('No se pudo cargar el motor de Excel', 'var(--danger)'); return false; }
     return true;
+  }
+
+  function validateFile(file) {
+    if (!file || typeof file.size !== 'number') throw new Error('Archivo Excel inválido');
+    if (file.size <= 0) throw new Error('El archivo Excel está vacío');
+    if (file.size > XLSX_LIMITS.maxFileBytes) throw new Error('El archivo Excel supera el límite de 10 MB');
+  }
+
+  function validateWorkbook(wb) {
+    const names = Array.isArray(wb && wb.SheetNames) ? wb.SheetNames : [];
+    if (!names.length) throw new Error('El archivo Excel no contiene hojas');
+    if (names.length > XLSX_LIMITS.maxSheets) {
+      throw new Error(`El archivo Excel supera el límite de ${XLSX_LIMITS.maxSheets} hojas`);
+    }
+    names.forEach(name => {
+      const ws = wb.Sheets && wb.Sheets[name];
+      if (!ws || !ws['!ref']) return;
+      const range = window.XLSX.utils.decode_range(ws['!ref']);
+      const rows = range.e.r - range.s.r + 1;
+      const columns = range.e.c - range.s.c + 1;
+      if (rows > XLSX_LIMITS.maxRowsPerSheet) {
+        throw new Error(`La hoja "${name}" supera el límite de ${XLSX_LIMITS.maxRowsPerSheet} filas`);
+      }
+      if (columns > XLSX_LIMITS.maxColumnsPerSheet) {
+        throw new Error(`La hoja "${name}" supera el límite de ${XLSX_LIMITS.maxColumnsPerSheet} columnas`);
+      }
+      if (rows * columns > XLSX_LIMITS.maxCellsPerSheet) {
+        throw new Error(`La hoja "${name}" supera el límite de ${XLSX_LIMITS.maxCellsPerSheet} celdas`);
+      }
+    });
+    return wb;
+  }
+
+  function readWorkbook(file) {
+    return new Promise((resolve, reject) => {
+      if (!ensureXLSX()) return reject(new Error('Sin motor Excel'));
+      try { validateFile(file); } catch (err) { return reject(err); }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const wb = window.XLSX.read(new Uint8Array(e.target.result), {
+            type: 'array',
+            cellFormula: false,
+            cellHTML: false,
+            cellStyles: false,
+            sheetRows: XLSX_LIMITS.maxRowsPerSheet + 1,
+          });
+          resolve(validateWorkbook(wb));
+        } catch (err) { reject(err); }
+      };
+      reader.onerror = () => reject(new Error('No se pudo leer el archivo'));
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+  function sheetToJson(ws, options) {
+    if (!ws) throw new Error('La hoja solicitada no existe');
+    return window.XLSX.utils.sheet_to_json(ws, options || {});
   }
 
   // Hoja con catálogo de códigos válidos
@@ -234,22 +299,13 @@
 
   // Lee archivo → Promise<{products, total, skipped}>
   function parseFile(file) {
-    return new Promise((resolve, reject) => {
-      if (!ensureXLSX()) return reject(new Error('Sin motor Excel'));
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const wb = window.XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
-          const sheetName = wb.SheetNames.includes('Inventario') ? 'Inventario' : wb.SheetNames[0];
-          const rows = window.XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: '' });
-          const products = [];
-          let skipped = 0;
-          rows.forEach((r, i) => { const p = buildProduct(r, i); if (p) products.push(p); else skipped++; });
-          resolve({ products, total: rows.length, skipped });
-        } catch (err) { reject(err); }
-      };
-      reader.onerror = () => reject(new Error('No se pudo leer el archivo'));
-      reader.readAsArrayBuffer(file);
+    return readWorkbook(file).then(wb => {
+      const sheetName = wb.SheetNames.includes('Inventario') ? 'Inventario' : wb.SheetNames[0];
+      const rows = sheetToJson(wb.Sheets[sheetName], { defval: '' });
+      const products = [];
+      let skipped = 0;
+      rows.forEach((r, i) => { const p = buildProduct(r, i); if (p) products.push(p); else skipped++; });
+      return { products, total: rows.length, skipped };
     });
   }
 
@@ -299,5 +355,9 @@
     window.UI.toast(`${rows.length} vendedores exportados`, 'var(--accent)');
   }
 
-  window.XLSXIO = { exportTemplate, exportInventory, exportReturns, exportSales, exportSellers, parseFile, headers: buildHeaders, IMPORT_FIELDS };
+  window.XLSXIO = {
+    exportTemplate, exportInventory, exportReturns, exportSales, exportSellers,
+    parseFile, readWorkbook, sheetToJson, limits: XLSX_LIMITS,
+    headers: buildHeaders, IMPORT_FIELDS,
+  };
 })();

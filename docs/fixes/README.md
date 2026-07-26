@@ -25,6 +25,7 @@ sesión de chat.
 | `aislamiento-cola-por-sesion.md` | H-09 | Cola offline aislada por identidad |
 | `migraciones-reproducibles.md` | H-10 | Cadena formal y contrato de esquema |
 | `margen-minimo-promociones.md` | H-11 | Piso de margen en promociones |
+| `lector-excel-seguro.md` | H-12 | Dependencia Excel fijada y lectura con límites |
 
 Documentación financiera relacionada, creada antes de este índice:
 

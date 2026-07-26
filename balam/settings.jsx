@@ -417,11 +417,9 @@
       const file = e.target.files && e.target.files[0]; e.target.value = '';
       if (!file) return;
       const X = window.XLSX;
-      if (!X) { toast('No se pudo cargar el motor de Excel', 'var(--danger)'); return; }
-      const reader = new FileReader();
-      reader.onload = () => {
-        let wb;
-        try { wb = X.read(reader.result, { type: 'array' }); } catch (err) { toast('No se pudo leer el archivo', 'var(--danger)'); return; }
+      const IO = window.XLSXIO;
+      if (!X || !IO) { toast('No se pudo cargar el motor de Excel', 'var(--danger)'); return; }
+      IO.readWorkbook(file).then(wb => {
         // Hoja → kind: por el nombre visible del catálogo o por su kind interno,
         // sin distinguir mayúsculas ni acentos ("categoria" también vale).
         const byName = {};
@@ -430,7 +428,7 @@
         wb.SheetNames.forEach(sn => {
           const kind = byName[norm(sn)];
           if (!kind) { ignored.push(sn); return; }
-          map[kind] = X.utils.sheet_to_json(wb.Sheets[sn], { defval: '' }).map(r => {
+          map[kind] = IO.sheetToJson(wb.Sheets[sn], { defval: '' }).map(r => {
             // Encabezados tolerantes: "CÓDIGO" ≡ "Codigo" ≡ "código", etc.
             const pick = (...names) => { for (const k of Object.keys(r)) { if (names.includes(norm(k)) && r[k] != null && String(r[k]).trim() !== '') return r[k]; } return ''; };
             const row = { code: pick('codigo', 'code'), label: pick('nombre', 'etiqueta', 'label') };
@@ -450,7 +448,7 @@
           if (guideSn) {
             // Secciones del sistema con nombre fijo en la guía (aunque el catálogo esté renombrado).
             const SYS = { categoria: 'category', manga: 'sleeve', tela: 'fabric', cuello: 'neck', color: 'color' };
-            const aoa = X.utils.sheet_to_json(wb.Sheets[guideSn], { header: 1, defval: '' });
+            const aoa = IO.sheetToJson(wb.Sheets[guideSn], { header: 1, defval: '' });
             let cur = null;
             aoa.forEach(row => {
               const a = String(row[0] == null ? '' : row[0]).trim();
@@ -514,8 +512,9 @@
         toast((guideMode
           ? `Importado desde la hoja "Catálogos" del Excel de Inventario: ${r.kinds} catálogo(s), ${r.items} elemento(s)`
           : `Importado: ${r.kinds} catálogo(s), ${r.items} elemento(s)` + (ignored.length ? ` — hojas ignoradas: ${ignored.join(', ')}` : '')) + extra, 'var(--accent)');
-      };
-      reader.readAsArrayBuffer(file);
+      }).catch(err => {
+        toast((err && err.message) || 'No se pudo leer el archivo', 'var(--danger)');
+      });
     }
     return h(GlassCard, { key: 'catxlsx', className: 'p-5' }, [
       h('div', { key: 'r', className: 'flex items-center justify-between gap-4 flex-wrap' }, [
