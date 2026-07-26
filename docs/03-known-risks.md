@@ -776,7 +776,7 @@ igual que el comportamiento histórico.
 **Estado:** RESUELTO
 **Fecha de registro:** 26/07/2026
 **Fecha de resolución:** 26/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `678a0bd`
 **Evidencia:** `DATA` contiene 13 referencias que consultan o invocan directamente
 `window.STORE` para snapshots, ventas, devoluciones, eliminaciones y cola.
 `STORE`, a su vez, consulta y aplica resultados sobre `window.DATA`.

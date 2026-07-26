@@ -3,7 +3,7 @@
 **Riesgo:** H-22
 **Estado:** RESUELTO
 **Fecha:** 26/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `678a0bd`
 
 ## Problema y reproducción
 
@@ -72,4 +72,3 @@ ni transformación de datos.
 
 - Riesgo: `docs/03-known-risks.md#h-22--ciclo-directo-data--store-en-sincronización`
 - Arquitectura: `docs/02-architecture.md#core`
-
