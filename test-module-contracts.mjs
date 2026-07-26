@@ -31,6 +31,9 @@ const store = read('balam/store.jsx');
 const core = existsSync('balam/core.jsx') ? read('balam/core.jsx') : '';
 const config = read('balam/config.jsx');
 const auth = read('balam/auth.jsx');
+const shared = read('balam/shared.jsx');
+const clients = read('balam/clients.jsx');
+const inventory = read('balam/inventory.jsx');
 check('la identidad de terminal tiene una sola implementación', (
   !/function getDeviceId\s*\(/.test(data)
   && !/function getDeviceId\s*\(/.test(store)
@@ -63,6 +66,19 @@ check('configuración saliente usa el gateway de sincronización', (
 check('AUTH no depende directamente de STORE', !auth.includes('window.STORE'));
 check('AUTH obtiene el cliente mediante el gateway', (
   auth.includes("window.CORE.invokeSync('getClient')")
+));
+check('UI publica un selector segmentado compartido', (
+  shared.includes('function Segment(')
+  && shared.includes('window.UI =')
+  && shared.includes('Segment')
+));
+check('Clientes consume Segment sin duplicarlo', (
+  clients.includes('Segment } = window.UI')
+  && !clients.includes('function Segment(')
+));
+check('Inventario consume Segment sin duplicarlo', (
+  inventory.includes('Segment } = window.UI')
+  && !inventory.includes('function Segment(')
 ));
 
 let generated = 0;

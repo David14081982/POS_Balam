@@ -38,6 +38,7 @@ sesión de chat.
 | `desacoplar-data-store.md` | H-22 | Gateway de sincronización entre DATA y STORE |
 | `desacoplar-config-store.md` | H-23 | Gateway de sincronización entre CONFIG y STORE |
 | `desacoplar-auth-store.md` | H-24 | Gateway de cliente entre AUTH y STORE |
+| `selector-segmentado-compartido.md` | H-25 | Selector común de Clientes e Inventario |
 
 Documentación financiera relacionada, creada antes de este índice:
 

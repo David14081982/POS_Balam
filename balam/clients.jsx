@@ -1,7 +1,7 @@
 // clients.jsx — CRM de clientes (Heritage Luxury). Exporta window.ClientsScreen
 (function () {
   const { useState, useMemo } = React;
-  const { fmt, toast, Pager, Modal } = window.UI;
+  const { fmt, toast, Pager, Modal, Segment } = window.UI;
   const { MS } = window.HX;
   const D = window.DATA;
   const h = React.createElement;
@@ -11,14 +11,6 @@
     Pagado: 'bg-success-soft text-success', Apartado: 'bg-warning-soft text-warning',
     Pendiente: 'bg-info-soft text-info', Cancelado: 'bg-danger-soft text-danger',
   };
-
-  function Segment({ value, onChange, options }) {
-    return h('div', { className: 'flex p-1 bg-surface-container rounded-lg border border-outline-variant' },
-      options.map(([id, l]) => {
-        const on = value === id;
-        return h('button', { key: id, className: 'px-4 py-1.5 text-overline uppercase rounded transition-colors ' + (on ? 'bg-gold text-on-gold shadow-e1' : 'text-on-surface-variant hover:text-primary'), onClick: () => onChange(id) }, l);
-      }));
-  }
 
   function ClientsScreen() {
     const [query, setQuery] = useState('');

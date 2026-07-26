@@ -92,6 +92,10 @@ producto no renderiza actualmente el panel flotante, esos exports se conservan
 como frontera pública; una limpieza interna no debe retirarlos sin validar al
 host que usa `__activate_edit_mode` y `__edit_mode_set_keys`.
 
+`window.UI.Segment` es el selector segmentado canónico de Clientes e Inventario.
+Conserva los tokens visuales compartidos y permite desplazamiento horizontal
+sin comprimir ni partir opciones cuando el ancho es reducido.
+
 ## CONFIG
 
 Archivo: `balam/config.jsx`. API: `window.CONFIG`.

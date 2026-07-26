@@ -853,6 +853,33 @@ cliente y `AUTH.init()` conserva su salida local histórica; `App` inicializa
 autenticación después de cargar ambos módulos.
 **Corrección documentada:** `docs/fixes/desacoplar-auth-store.md`.
 
+## H-25 — Selector segmentado duplicado en Clientes e Inventario
+
+**Estado:** RESUELTO
+**Fecha de registro:** 26/07/2026
+**Fecha de resolución:** 26/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** `balam/clients.jsx` y `balam/inventory.jsx` declaran por separado
+`Segment()` con la misma estructura, estados y tokens. La variante de Inventario
+añade además protección responsiva mediante desplazamiento horizontal.
+**Origen de auditoría:** Fase 16, residual explícito documentado en H-17.
+**Riesgo:** correcciones visuales o de accesibilidad pueden aplicarse a una
+pantalla y no a la otra; Clientes ya carece de la defensa responsiva presente
+en Inventario.
+**Reproducción:** contratos 29/32 antes del cambio; fallaron el export
+compartido y la eliminación de las dos declaraciones locales.
+**Corrección:** `window.UI.Segment` publica la variante responsiva canónica;
+Clientes e Inventario la importan y conservan intactas sus llamadas, opciones,
+callbacks y estado.
+**Pruebas:** contratos 32/32, comparación visual 22/22 con las nueve pantallas
+idénticas, build reproducible 8/8 y smoke del bundle 17/17. El arnés de filtros
+de desarrollo no inició por depender de CDN en el entorno restringido.
+**Pendiente:** ninguno para las dos implementaciones de `Segment`.
+**Riesgo residual:** bajo. El componente sigue siendo una API global por la
+arquitectura actual; orden de carga y consumidores están cubiertos por contrato
+y navegación del bundle.
+**Corrección documentada:** `docs/fixes/selector-segmentado-compartido.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

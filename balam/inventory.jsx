@@ -1,7 +1,7 @@
 // inventory.jsx — Inventario (Heritage Luxury). Exporta window.InventoryScreen
 (function () {
   const { useState, useMemo, useRef, useEffect } = React;
-  const { fmt, Modal, toast, Pager } = window.UI;
+  const { fmt, Modal, toast, Pager, Segment } = window.UI;
   const { MS, ProductImage } = window.HX;
   const D = window.DATA;
   const h = React.createElement;
@@ -87,20 +87,6 @@
       },
     });
   };
-
-  function Segment({ value, onChange, options }) {
-    // overflow-x-auto + no-scrollbar: cuando hay muchas opciones (catálogo ilimitado), la fila se
-    // desliza en horizontal en vez de romper el ancho. shrink-0/whitespace-nowrap: los botones
-    // conservan su tamaño (no se comprimen ni parten el texto en 2 líneas).
-    return h('div', { className: 'flex p-1 bg-surface-container rounded-lg border border-outline-variant overflow-x-auto no-scrollbar' },
-      options.map(([id, l]) => {
-        const on = value === id;
-        return h('button', {
-          key: id, className: 'shrink-0 whitespace-nowrap px-4 py-1.5 text-overline uppercase rounded transition-colors ' + (on ? 'bg-gold text-on-gold shadow-e1' : 'text-on-surface-variant hover:text-primary'),
-          onClick: () => onChange(id),
-        }, l);
-      }));
-  }
 
   function InventoryScreen() {
     const [query, setQuery] = useState('');

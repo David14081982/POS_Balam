@@ -33,6 +33,20 @@
     return Badge({ tone, children: txt });
   }
 
+  function Segment({ value, onChange, options }) {
+    return React.createElement('div', {
+      className: 'flex p-1 bg-surface-container rounded-lg border border-outline-variant overflow-x-auto no-scrollbar',
+    }, options.map(([id, label]) => {
+      const active = value === id;
+      return React.createElement('button', {
+        key: id,
+        className: 'shrink-0 whitespace-nowrap px-4 py-1.5 text-overline uppercase rounded transition-colors '
+          + (active ? 'bg-gold text-on-gold shadow-e1' : 'text-on-surface-variant hover:text-primary'),
+        onClick: () => onChange(id),
+      }, label);
+    }));
+  }
+
   // Miniatura de producto (placeholder con patrón + swatch de color)
   function ProductThumb({ p, size = 48 }) {
     return React.createElement('div', {
@@ -119,5 +133,5 @@
     ]);
   }
 
-  window.UI = { fmt, Badge, StatusBadge, StockBadge, ProductThumb, ToastHost, toast, Modal, BADGE_TONE, Pager };
+  window.UI = { fmt, Badge, StatusBadge, StockBadge, ProductThumb, ToastHost, toast, Modal, BADGE_TONE, Pager, Segment };
 })();
