@@ -106,7 +106,7 @@
   }/*EDITMODE-END*/;
 
   function App() {
-    const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+    const [t] = useTweaks(TWEAK_DEFAULTS);
     const [page, setPage] = useState(() => localStorage.getItem('balam-page') || 'dashboard');
     useEffect(() => { localStorage.setItem('balam-page', page); }, [page]);
     // Sidebar colapsable (mini-variant): persiste entre sesiones.

@@ -40,6 +40,19 @@ El orden relevante definido en `POS Balam.html` es:
 Aunque `STORE` se carga después, `CONFIG`, `DATA` y `AUTH` consultan sus métodos
 en tiempo de uso, no durante su declaración. `App` coordina la inicialización.
 
+## Recursos de interfaz
+
+La apariencia vigente proviene de la configuración Tailwind y del bloque
+`<style>` de `POS Balam.html`. El build compila Tailwind estático e incorpora
+únicamente recursos locales enlazados mediante `src` o `href`. No existe una
+segunda capa CSS heredada.
+
+`balam/tweaks-panel.jsx` sigue cargándose porque `App` consume `useTweaks` y el
+módulo publica el contrato de editor externo `Tweak*`/`postMessage`. Aunque el
+producto no renderiza actualmente el panel flotante, esos exports se conservan
+como frontera pública; una limpieza interna no debe retirarlos sin validar al
+host que usa `__activate_edit_mode` y `__edit_mode_set_keys`.
+
 ## CONFIG
 
 Archivo: `balam/config.jsx`. API: `window.CONFIG`.

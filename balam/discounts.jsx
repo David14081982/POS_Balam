@@ -8,7 +8,7 @@
 //   (IVA incluido). Solo las promos 'Activo' se aplican en ventas.
 (function () {
   const { useState, useEffect, useMemo } = React;
-  const { fmt, toast, ToastHost } = window.UI;
+  const { fmt, toast } = window.UI;
   const { MS } = window.HX;
   const D = window.DATA;
   const C = window.CONFIG;
@@ -32,7 +32,6 @@
   }
   function active() { return D.promos.filter(p => estado(p) === 'Activo'); }
 
-  const inDim = (arr, val) => !arr || !arr.length || arr.indexOf(val) >= 0;
   // Una dimensión NO filtra cuando está vacía O cuando tiene seleccionadas TODAS sus opciones
   // (universo). Así "seleccionar todo" = "sin filtro" = aplica a TODAS las prendas, incluidas las
   // que no tienen valor en ese grupo (sin ornamento, sin un atributo nuevo). getUni es perezoso:

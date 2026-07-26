@@ -25,6 +25,7 @@ y `BLOQUEADO`.
 | H-14 | Cola offline sin diagnóstico ni política de recuperación | RESUELTO | Sincronización / almacenamiento local |
 | H-15 | Smoke E2E produce falsos negativos y no libera recursos al fallar | RESUELTO | Pruebas / bundle |
 | H-16 | Pulls truncados por límite de PostgREST | RESUELTO | Sincronización / rendimiento |
+| H-17 | Código y estilos heredados sin consumidores | RESUELTO | Frontend / build |
 
 ## H-01 — Inventario concurrente
 
@@ -611,6 +612,47 @@ durante cada pull; una escritura concurrente puede cambiar páginas, pero la
 sincronización es eventual y el siguiente pull converge. Migrar a cursores se
 justificará sólo si mediciones futuras muestran churn o páginas profundas.
 **Corrección documentada:** `docs/fixes/paginacion-volumen-sincronizacion.md`.
+
+## H-17 — Código y estilos heredados sin consumidores
+
+**Estado:** RESUELTO
+**Fecha de registro:** 26/07/2026
+**Fecha de resolución:** 26/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** `balam/styles.css`, `balam/modules.css` y `balam/light.css`
+permanecen en el repositorio, pero ninguna entrada HTML los enlaza y
+`build-offline.mjs` sólo incorpora recursos locales presentes en `src` o
+`href`. `app.jsx` recibe `setTweak` sin usarlo; `discounts.jsx` importa
+`ToastHost` y declara `inDim` sin consumidores.
+**Origen de auditoría:** Fase 15, parte del hallazgo original H-19.
+**Límite de seguridad:** `useTweaks` sí se usa y `tweaks-panel.jsx` implementa
+un protocolo `postMessage` expresamente destinado a un editor externo. Sus
+exports `Tweak*` no se considerarán eliminables sólo por carecer de consumidores
+internos.
+**Reproducción/evidencia equivalente:** búsqueda en entrada, build, módulos y
+pruebas produjo cero referencias a los tres CSS. El build anterior enumeró 65
+assets y ninguno era esos archivos. Búsqueda léxica confirmó que `setTweak`,
+`ToastHost` local e `inDim` sólo aparecían en sus declaraciones. La navegación
+de referencia cargó las nueve pantallas sin excepciones.
+**Causa raíz:** la migración visual a Tailwind dejó tres hojas antiguas en el
+repositorio y refactors posteriores dejaron bindings locales sin uso. La mera
+presencia hacía ambiguo cuál estilo era vigente aunque el navegador no los
+solicitara.
+**Corrección:** se eliminaron `styles.css`, `modules.css` y `light.css`
+(29 490 bytes), además de los tres símbolos locales sin consumidores. Se
+preservaron `useTweaks`, todos los exports `Tweak*` y el protocolo `postMessage`.
+**Pruebas:** `test-ui-navigation.mjs` 13/13 recorre Panel, POS, Inventario,
+Clientes, Devoluciones, Descuentos, Vendedores, Reportes y Configuración,
+comprueba exports de editor y ausencia de CSS heredado. Comparación estabilizada
+contra el commit anterior: 21/21, las nueve capturas idénticas píxel por píxel.
+Smoke bundle 17/17, descuentos 43/43, roles 10/10, cola 97/97, coherencia
+financiera 17/17, devoluciones 17/17, filtros de Inventario 18/18 y migraciones
+24/24. `build-offline.mjs` regeneró correctamente los artefactos con 65 assets.
+**Pendiente:** ninguno dentro de la limpieza demostrada.
+**Riesgo residual:** bajo. No es posible inventariar consumidores externos
+fuera del repositorio; por ello se conservó íntegro el contrato del editor.
+Componentes/utilidades duplicados pertenecen a la Fase 16 y no se mezclaron.
+**Corrección documentada:** `docs/fixes/limpieza-codigo-recursos.md`.
 
 ## Regla de actualización
 

@@ -30,6 +30,7 @@ sesión de chat.
 | `diagnostico-cola-offline.md` | H-14 | Diagnóstico y recuperación de la cola offline |
 | `arnes-smoke-confiable.md` | H-15 | Smoke E2E aislado, confiable y con cleanup |
 | `paginacion-volumen-sincronizacion.md` | H-16 | Paginación completa e índices medidos |
+| `limpieza-codigo-recursos.md` | H-17 | Código muerto y CSS no cargado |
 
 Documentación financiera relacionada, creada antes de este índice:
 
