@@ -114,6 +114,10 @@ la foto de producto solicita JPEG 0.85 de hasta 600 px. La utilidad rechaza
 tipo, lectura o decodificación inválidos y cada formulario conserva sus mensajes
 y acciones posteriores.
 
+La pantalla Vendedores consume `seller.avatar` mediante un componente local
+compartido por resumen, tarjeta, lista y detalle. Cuando no existe fotografía,
+conserva las iniciales y el color del perfil como representación histórica.
+
 ## CONFIG
 
 Archivo: `balam/config.jsx`. API: `window.CONFIG`.

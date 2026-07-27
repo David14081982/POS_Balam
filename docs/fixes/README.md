@@ -43,6 +43,7 @@ sesión de chat.
 | `arneses-e2e-sin-cdn.md` | H-27 | Ocho recorridos E2E sobre el bundle local |
 | `sdk-supabase-local-fijado.md` | H-28 | SDK de navegador local, exacto y verificable |
 | `eligible-active-sellers.md` | H-29 | Vendedores comerciales activos y elegibles |
+| `fotografias-vendedores.md` | H-30 | Fotografías en la pantalla Vendedores |
 
 Documentación financiera relacionada, creada antes de este índice:
 

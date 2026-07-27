@@ -30,6 +30,12 @@
     return 'Periodo desde ' + new Date(ini + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
   };
 
+  function SellerAvatar({ s, className, fallbackClassName, fallbackStyle }) {
+    return s.avatar
+      ? h('img', { src: s.avatar, alt: s.nombre, className: className + ' object-cover' })
+      : h('span', { className: className + ' ' + (fallbackClassName || ''), style: fallbackStyle || { background: s.color } }, s.iniciales);
+  }
+
   function SellersScreen() {
     const [detail, setDetail] = useState(null);
     const [view, setView] = useState('grid');
@@ -87,7 +93,7 @@
               h('h3', { key: 'v', className: 'font-headline text-display text-primary mt-4' }, eligibleSellers.length),
             ]),
             h('div', { key: 'd', className: 'mt-8 flex items-center justify-between' }, [
-              h('div', { key: 'av', className: 'flex -space-x-3' }, eligibleSellers.map(s => h('div', { key: s.id, className: 'w-9 h-9 rounded-full border-2 border-surface flex items-center justify-center text-overline font-bold text-white', style: { background: s.color } }, s.iniciales))),
+              h('div', { key: 'av', className: 'flex -space-x-3' }, eligibleSellers.map(s => h(SellerAvatar, { key: s.id, s, className: 'w-9 h-9 rounded-full border-2 border-surface shrink-0', fallbackClassName: 'flex items-center justify-center text-overline font-bold text-white' }))),
               h('span', { key: 'l', className: 'text-body text-primary font-medium underline underline-offset-4 cursor-pointer hover:opacity-70' }, 'Ver todos'),
             ]),
           ]),
@@ -112,8 +118,7 @@
     const meta = metaHit(s);
     return h('div', { className: 'bg-surface rounded-lg overflow-hidden transition-all duration-300 hover:-translate-y-0.5 ' + SHADOW + ' ' + SHADOW_HOVER }, [
       h('div', { key: 'b', className: 'p-8 flex items-start gap-8' }, [
-        h('div', { key: 'av', className: 'w-24 h-32 flex items-center justify-center border border-outline-variant shrink-0 rounded', style: { background: s.color + '1a' } },
-          h('span', { key: 'i', className: 'font-headline text-4xl', style: { color: s.color } }, s.iniciales)),
+        h(SellerAvatar, { key: 'av', s, className: 'w-24 h-32 border border-outline-variant shrink-0 rounded', fallbackClassName: 'flex items-center justify-center font-headline text-4xl', fallbackStyle: { background: s.color + '1a', color: s.color } }),
         h('div', { key: 'i', className: 'flex-1 min-w-0' }, [
           h('div', { key: 'h', className: 'flex justify-between items-start gap-3' }, [
             h('div', { key: 'n' }, [
@@ -157,7 +162,7 @@
           const pct = metaPct(s);
           return h('tr', { key: s.id, className: 'hover:bg-surface-container transition-colors cursor-pointer', onClick: () => onOpen(s) }, [
             h('td', { key: 'n', className: 'px-6 py-4' }, h('div', { className: 'flex items-center gap-3' }, [
-              h('span', { key: 'a', className: 'w-9 h-9 rounded-full flex items-center justify-center text-overline font-bold text-white', style: { background: s.color } }, s.iniciales),
+              h(SellerAvatar, { key: 'a', s, className: 'w-9 h-9 rounded-full shrink-0', fallbackClassName: 'flex items-center justify-center text-overline font-bold text-white' }),
               h('div', { key: 'd' }, [h('div', { key: 'n', className: 'font-headline text-body text-primary' }, s.nombre), h('div', { key: 'r', className: 'text-overline text-on-surface-variant uppercase tracking-wider' }, role(s))]),
             ])),
             h('td', { key: 'c', className: 'px-6 py-4 text-body' }, s.comisionPct + '%'),
@@ -178,7 +183,7 @@
     ];
     return h(Modal, { title: 'Vendedor', onClose, footer, large: true }, [
       h('div', { key: 'h', className: 'flex items-center gap-4' }, [
-        h('span', { key: 'a', className: 'w-14 h-14 rounded-full flex items-center justify-center text-h2 font-bold text-white shrink-0', style: { background: s.color } }, s.iniciales),
+        h(SellerAvatar, { key: 'a', s, className: 'w-14 h-14 rounded-full shrink-0', fallbackClassName: 'flex items-center justify-center text-h2 font-bold text-white' }),
         h('div', { key: 'i', className: 'flex-1' }, [
           h('h2', { key: 'n', className: 'font-headline text-h1 text-primary' }, s.nombre),
           h('div', { key: 'b', className: 'text-overline text-on-surface-variant uppercase tracking-widest mt-0.5' }, role(s) + ' · ' + s.bono),

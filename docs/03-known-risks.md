@@ -1009,6 +1009,36 @@ mantienen sus filtros históricos porque fueron excluidos expresamente de esta
 corrección. Se documentan sin modificarlos.
 **Corrección documentada:** `docs/fixes/eligible-active-sellers.md`.
 
+## H-30 — Fotografías de vendedores ignoradas por la pantalla comercial
+
+**Estado:** RESUELTO
+**Fecha de registro:** 26/07/2026
+**Fecha de resolución:** 26/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** Configuración → Usuarios guarda y renderiza `seller.avatar`;
+`STORE` conserva el mapeo bidireccional con `pos.sellers.avatar_url` y el
+selector POS también consume el campo. Sin embargo, resumen, tarjetas, lista y
+detalle de `balam/sellers.jsx` renderizan siempre `seller.iniciales` sin
+consultar `seller.avatar`.
+**Origen de auditoría:** UV-05 de la auditoría Usuarios/Vendedores.
+**Riesgo:** la fotografía configurada existe y se sincroniza, pero la pantalla
+comercial presenta una identidad visual distinta e incompleta.
+**Reproducción:** `node test-seller-avatars.mjs` antes del cambio: 4/10. DATA,
+Configuración y STORE conservaron el avatar; fallaron los seis contratos de
+presentación de Vendedores.
+**Causa raíz:** el flujo de datos es correcto; los cuatro consumidores visuales
+de la pantalla Vendedores omiten el campo disponible.
+**Corrección:** `SellerAvatar` renderiza la fotografía disponible y conserva
+iniciales/color como respaldo. Resumen, tarjetas, lista y detalle reutilizan la
+misma representación local.
+**Pruebas:** avatar 13/13; elegibilidad H-29 10/10; contratos de módulos 36/36;
+build reproducible 8/8; navegación 13/13; smoke bundle 17/17.
+**Pendiente:** ninguno para fotografías disponibles o ausentes en Vendedores.
+**Riesgo residual:** una fuente corrupta o inaccesible conserva el
+comportamiento nativo de imagen rota; la carga y reducción del archivo
+permanecen cubiertas por H-26.
+**Corrección documentada:** `docs/fixes/fotografias-vendedores.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:
