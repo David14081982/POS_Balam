@@ -8,7 +8,7 @@ import http from 'http'; import fs from 'fs'; import path from 'path';
 const ROOT = path.resolve('.');
 const MIME = { '.html': 'text/html', '.jsx': 'text/babel', '.js': 'text/javascript', '.css': 'text/css' };
 const server = http.createServer((req, res) => {
-  let p = decodeURIComponent(req.url.split('?')[0]); if (p === '/') p = '/POS Balam.html';
+  let p = decodeURIComponent(req.url.split('?')[0]); if (p === '/') p = '/index.html';
   const fp = path.join(ROOT, p);
   if (!fp.startsWith(ROOT) || !fs.existsSync(fp)) { res.writeHead(404); res.end('nf'); return; }
   res.writeHead(200, { 'Content-Type': MIME[path.extname(fp)] || 'application/octet-stream' });
@@ -23,7 +23,26 @@ const b = await chromium.launch({ channel: 'chrome', headless: true });
 const page = await b.newPage();
 page.on('pageerror', e => errs.push(String(e)));
 await page.route(/supabase\.co/, r => r.abort()); // cero tráfico real a la nube
-await page.goto('http://127.0.0.1:8812/POS%20Balam.html', { waitUntil: 'load' });
+await page.addInitScript(() => {
+  const empty = Promise.resolve({ data: [], error: null });
+  const query = new Proxy({}, {
+    get(_target, property) {
+      if (property === 'then') return empty.then.bind(empty);
+      return () => query;
+    },
+  });
+  const client = {
+    auth: {
+      getSession: async () => ({ data: { session: null } }),
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),
+    },
+    from: () => query,
+    rpc: async () => ({ data: null, error: null }),
+    storage: { from: () => ({}) },
+  };
+  window.supabase = { createClient: () => client };
+});
+await page.goto('http://127.0.0.1:8812/index.html', { waitUntil: 'load' });
 await page.waitForFunction(() => window.DATA && window.STORE && window.CONFIG, null, { timeout: 25000 });
 await page.waitForFunction(() => !!window.supabase, null, { timeout: 25000 }); // CDN cargó
 

@@ -61,8 +61,8 @@ Riesgo bajo: la codificación depende de canvas del navegador, como antes. La
 utilidad transforma esos fallos en rechazo y los consumidores muestran el mismo
 mensaje existente sin guardar datos parciales.
 
-La limitación CDN afecta al arnés de desarrollo, no al bundle distribuido
-recorrido por smoke y comparación visual.
+La limitación CDN observada aquí fue resuelta posteriormente por H-27: el arnés
+de importación ejecuta ahora el bundle local.
 
 ## Referencias
 

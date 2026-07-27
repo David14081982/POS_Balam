@@ -42,6 +42,11 @@ para una actualización deliberada con
 `BALAM_REFRESH_BUILD_RESOURCES=1`, cuyo diff debe revisarse. Tailwind 3.4.17
 proviene de la dependencia exacta del lockfile y no de `npx --yes`.
 
+Los arneses Playwright de comportamiento integrado ejecutan `index.html`, por
+lo que prueban el artefacto distribuido sin Babel ni CDN. Pueden seguir leyendo
+`POS Balam.html` estáticamente para verificar contratos de fuente.
+`test-smoke.mjs` conserva de forma explícita sus dos modos, desarrollo y bundle.
+
 ## Orden de carga
 
 El orden relevante definido en `POS Balam.html` es:

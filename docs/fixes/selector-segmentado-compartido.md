@@ -55,8 +55,8 @@ Riesgo bajo: `Segment` forma parte de la API global `window.UI`, acorde con la
 arquitectura vigente. El orden de carga está congelado por contrato y la
 comparación visual verificó ambos consumidores dentro del recorrido completo.
 
-El fallo de arranque del arnés de desarrollo no afecta al bundle distribuido,
-que sí fue recorrido; permanece como limitación ambiental de esa prueba.
+La limitación ambiental registrada durante esta corrección fue resuelta
+posteriormente por H-27: el arnés de filtros ejecuta ahora el bundle local.
 
 ## Referencias
 

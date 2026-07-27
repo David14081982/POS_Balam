@@ -31,7 +31,7 @@ check('Configuración usa la frontera central de lectura',
 
 const server = http.createServer((req, res) => {
   let requested = decodeURIComponent(req.url.split('?')[0]);
-  if (requested === '/') requested = '/POS Balam.html';
+  if (requested === '/') requested = '/index.html';
   const file = path.join(ROOT, requested);
   if (!file.startsWith(ROOT) || !fs.existsSync(file)) { res.writeHead(404); res.end('nf'); return; }
   res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream' });
@@ -47,7 +47,7 @@ page.on('pageerror', err => pageErrors.push(String(err)));
 page.on('requestfailed', req => resourceErrors.push(`${req.url()} · ${req.failure() && req.failure().errorText}`));
 page.on('response', res => { if (res.status() >= 400) resourceErrors.push(`${res.status()} · ${res.url()}`); });
 await page.route(/supabase\.co/, route => route.abort());
-await page.goto('http://127.0.0.1:8812/POS%20Balam.html', { waitUntil: 'load' });
+await page.goto('http://127.0.0.1:8812/index.html', { waitUntil: 'load' });
 try {
   await page.waitForFunction(() => window.XLSX && window.XLSXIO, null, { timeout: 30000 });
 } catch (err) {

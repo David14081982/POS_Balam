@@ -8,7 +8,7 @@ import http from 'http'; import fs from 'fs'; import path from 'path';
 const ROOT = path.resolve('.');
 const MIME = { '.html': 'text/html', '.jsx': 'text/babel', '.js': 'text/javascript', '.css': 'text/css' };
 const server = http.createServer((req, res) => {
-  let p = decodeURIComponent(req.url.split('?')[0]); if (p === '/') p = '/POS Balam.html';
+  let p = decodeURIComponent(req.url.split('?')[0]); if (p === '/') p = '/index.html';
   const fp = path.join(ROOT, p);
   if (!fp.startsWith(ROOT) || !fs.existsSync(fp)) { res.writeHead(404); res.end('nf'); return; }
   res.writeHead(200, { 'Content-Type': MIME[path.extname(fp)] || 'application/octet-stream' });
@@ -22,6 +22,58 @@ const check = (n, c, e = '') => { console.log(`${c ? '✅' : '❌'} ${n}${e ? ' 
 const b = await chromium.launch({ channel: 'chrome', headless: true });
 const page = await b.newPage();
 page.on('pageerror', e => errs.push(String(e)));
+await page.addInitScript(() => {
+  const baseUrl = 'https://telohdbvbvsfmwyriflz.supabase.co';
+  function request(path, method, body) {
+    return fetch(baseUrl + '/rest/v1/' + path, {
+      method,
+      headers: { 'content-type': 'application/json' },
+      body: body == null ? undefined : JSON.stringify(body),
+    }).then(async response => {
+      let data = null;
+      try { data = JSON.parse(await response.text()); } catch (error) { /* vacío */ }
+      return {
+        data,
+        error: response.ok ? null : { message: response.statusText, status: response.status },
+      };
+    });
+  }
+  function from(table) {
+    let method = 'GET';
+    let body;
+    const builder = {
+      select: () => builder,
+      order: () => builder,
+      range: () => builder,
+      gte: () => builder,
+      eq: () => builder,
+      is: () => builder,
+      in: () => builder,
+      ilike: () => builder,
+      upsert: rows => { method = 'POST'; body = rows; return builder; },
+      insert: rows => { method = 'POST'; body = rows; return builder; },
+      update: rows => { method = 'PATCH'; body = rows; return builder; },
+      delete: () => { method = 'DELETE'; return builder; },
+      maybeSingle: () => request(table, method, body).then(result => ({
+        ...result,
+        data: Array.isArray(result.data) ? (result.data[0] || null) : result.data,
+      })),
+      then: (resolve, reject) => request(table, method, body).then(resolve, reject),
+    };
+    return builder;
+  }
+  const client = {
+    auth: {
+      getSession: async () => ({ data: { session: null } }),
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),
+    },
+    from,
+    rpc: (name, args) => request('rpc/' + name, 'POST', args),
+    storage: { from: () => ({}) },
+    functions: { invoke: async () => ({ data: null, error: null }) },
+  };
+  window.supabase = { createClient: () => client };
+});
 
 // ── Nube falsa CON ESTADO: lo que se sube queda guardado y lo devuelve el siguiente GET.
 // Así se comprueba el ORDEN (limpiar y subir ANTES de bajar el dominio): si se invirtiera,
@@ -38,6 +90,36 @@ await page.route(/supabase\.co\/rest\/v1\//, async route => {
   if (m === 'GET') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(db[table] || []) });
   if (m === 'POST' || m === 'PATCH') {
     let rows = []; try { rows = JSON.parse(req.postData() || '[]'); } catch (e) { /* */ }
+    if (table === 'rpc/commit_sale') {
+      db.sales.push(rows.p_sale);
+      db.sale_items.push(...(rows.p_items || []));
+      const products = [];
+      if (rows.p_reserve_stock) (rows.p_stock_lines || []).forEach(line => {
+        const product = db.products.find(item => item.id === line.product_id);
+        const size = product && (product.stock || []).find(item => item.talla === line.talla);
+        if (size) {
+          size.stock -= Number(line.qty) || 0;
+          product.version = (Number(product.version) || 0) + 1;
+          if (!products.includes(product)) products.push(product);
+        }
+      });
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, products, clients: [], sellers: [] }) });
+    }
+    if (table === 'rpc/commit_return') {
+      db.returns.push(rows.p_return);
+      db.return_items.push(...(rows.p_items || []));
+      const products = [];
+      (rows.p_stock_lines || []).forEach(line => {
+        const product = db.products.find(item => item.id === line.product_id);
+        const size = product && (product.stock || []).find(item => item.talla === line.talla);
+        if (size) {
+          size.stock += Number(line.qty) || 0;
+          product.version = (Number(product.version) || 0) + 1;
+          if (!products.includes(product)) products.push(product);
+        }
+      });
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, products, clients: [], sellers: [] }) });
+    }
     if (!Array.isArray(rows)) rows = [rows];
     seenPosts.push(table);
     const key = table === 'sales' ? 'folio' : (table === 'settings' || table === 'lookup') ? 'key' : 'id';
@@ -48,7 +130,7 @@ await page.route(/supabase\.co\/rest\/v1\//, async route => {
   return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
 });
 
-await page.goto('http://127.0.0.1:8803/POS%20Balam.html', { waitUntil: 'load' });
+await page.goto('http://127.0.0.1:8803/index.html', { waitUntil: 'load' });
 await page.waitForFunction(() => window.DATA && window.STORE && window.CONFIG, null, { timeout: 25000 });
 
 // lookup/settings reales de esta instalación → la nube falsa devuelve config VÁLIDA
@@ -70,7 +152,9 @@ const sembrar = () => page.evaluate(() => {
   let p = D.products.find(x => x.id === 'prop-inv-1');
   if (!p) {
     p = D.hydrate({ id: 'prop-inv-1', cat: '21', manga: 'ML', tela: 'ALG', color: 'BL', cuello: 'NOR', modelo: '888', nombre: 'Guayabera Prop', orn: '—', ornColors: [], precio: 500, costo: 200, pop: false, stock: D.mkStock([0, 10], []) });
-    D.products.push(p); D.saveProducts();
+    // Fixture local: no encolar un snapshot de producto junto con la venta,
+    // porque el RPC transaccional es la única autoridad del descuento remoto.
+    D.products.push(p);
   }
   let sel = D.sellers.find(x => x.id === 'v-prop');
   if (!sel) { sel = { id: 'v-prop', nombre: 'Vendedor Prop', iniciales: 'VP', color: '#333', comisionPct: 10, metaMes: 0, ventasMes: 0, ventasNum: 0, comisionAcum: 0, bono: 'Sin bono', role: 'vendedor', active: true }; D.sellers.push(sel); D.saveSellers(); }

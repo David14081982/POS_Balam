@@ -40,6 +40,7 @@ sesión de chat.
 | `desacoplar-auth-store.md` | H-24 | Gateway de cliente entre AUTH y STORE |
 | `selector-segmentado-compartido.md` | H-25 | Selector común de Clientes e Inventario |
 | `procesamiento-imagenes-compartido.md` | H-26 | Lectura y reducción común de imágenes |
+| `arneses-e2e-sin-cdn.md` | H-27 | Ocho recorridos E2E sobre el bundle local |
 
 Documentación financiera relacionada, creada antes de este índice:
 

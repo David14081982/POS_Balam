@@ -908,6 +908,37 @@ navegador; errores de lectura, decodificación o codificación se rechazan y cad
 consumidor conserva su aviso.
 **Corrección documentada:** `docs/fixes/procesamiento-imagenes-compartido.md`.
 
+## H-27 — Ocho arneses E2E dependen de Babel y CDN
+
+**Estado:** RESUELTO
+**Fecha de registro:** 26/07/2026
+**Fecha de resolución:** 26/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** ocho pruebas Playwright abren `POS Balam.html`, que carga React,
+Babel y otros recursos de CDN. En el entorno restringido,
+`test-filtros-inventario.mjs` y `test-import-fotos.mjs` agotaron su timeout
+antes de ejecutar casos, mientras el mismo bundle local arrancó correctamente.
+**Origen de auditoría:** limitación residual documentada por H-25 y H-26,
+relacionada con H-15/H-20.
+**Riesgo:** pruebas funcionales producen falsos negativos por disponibilidad de
+Internet aunque `index.html`, el artefacto realmente distribuido, sea autónomo.
+Esto deja rutas sin validar en CI o terminales restringidas.
+**Reproducción:** `test-browser-harness-entry.mjs` aprobó 0/8 antes del cambio;
+todos servían y visitaban la entrada Babel/CDN.
+**Corrección:** los ocho servidores y recorridos usan `index.html`. Fotos
+automáticas instala un cliente Supabase controlado; propagación de reset usa un
+adaptador PostgREST local y simula los efectos transaccionales de venta,
+devolución y stock. Las lecturas estáticas y el smoke dual se conservaron.
+**Pruebas:** contrato de entradas 8/8; fotos automáticas 11/11, exportación
+14/14, filtros 18/18, importación 23/23, liquidaciones 10/10, propagación de
+reset 21/21, reset local 19/19 y XLSX 17/17. Además, contratos 36/36, build
+reproducible 8/8 y smoke bundle 17/17.
+**Pendiente:** ninguno para los ocho arneses inventariados.
+**Riesgo residual:** bajo. `test-smoke.mjs` conserva intencionalmente un modo de
+desarrollo que requiere CDN cuando se invoca sin `bundle`; su modo distribuido
+es local y forma parte de la regresión obligatoria.
+**Corrección documentada:** `docs/fixes/arneses-e2e-sin-cdn.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

@@ -11,7 +11,7 @@ const TMP = path.join(os.tmpdir(), 'balam-test-import');
 fs.mkdirSync(TMP, { recursive: true });
 const MIME = { '.html': 'text/html', '.jsx': 'text/babel', '.js': 'text/javascript', '.css': 'text/css' };
 const server = http.createServer((req, res) => {
-  let p = decodeURIComponent(req.url.split('?')[0]); if (p === '/') p = '/POS Balam.html';
+  let p = decodeURIComponent(req.url.split('?')[0]); if (p === '/') p = '/index.html';
   const fp = path.join(ROOT, p);
   if (!fp.startsWith(ROOT) || !fs.existsSync(fp)) { res.writeHead(404); res.end('nf'); return; }
   res.writeHead(200, { 'Content-Type': MIME[path.extname(fp)] || 'application/octet-stream' });
@@ -26,7 +26,7 @@ const b = await chromium.launch({ channel: 'chrome', headless: true });
 const page = await b.newPage({ viewport: { width: 1400, height: 900 } });
 page.on('pageerror', e => errs.push(String(e)));
 await page.route(/supabase\.co/, r => r.abort());
-await page.goto('http://127.0.0.1:8808/POS%20Balam.html', { waitUntil: 'load' });
+await page.goto('http://127.0.0.1:8808/index.html', { waitUntil: 'load' });
 await page.waitForFunction(() => window.DATA && window.CONFIG && window.XLSXIO && window.XLSX, null, { timeout: 30000 });
 
 const FOTO_REAL = 'https://telohdbvbvsfmwyriflz.supabase.co/storage/v1/object/public/product-photos/prod-p1.jpg';
