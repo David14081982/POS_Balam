@@ -1014,7 +1014,7 @@ corrección. Se documentan sin modificarlos.
 **Estado:** RESUELTO
 **Fecha de registro:** 26/07/2026
 **Fecha de resolución:** 26/07/2026
-**Commit:** Pendiente de commit
+**Commit:** df1f074
 **Evidencia:** Configuración → Usuarios guarda y renderiza `seller.avatar`;
 `STORE` conserva el mapeo bidireccional con `pos.sellers.avatar_url` y el
 selector POS también consume el campo. Sin embargo, resumen, tarjetas, lista y

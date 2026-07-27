@@ -3,7 +3,7 @@
 **Riesgo:** H-30
 **Estado:** RESUELTO
 **Fecha:** 26/07/2026
-**Commit:** Pendiente de commit
+**Commit:** df1f074
 
 ## Problema y reproducción
 
