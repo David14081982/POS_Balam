@@ -250,7 +250,7 @@
   // Modal: ¿quién realizó esta venta? (selección única, post-cobro)
   function SellerPickModal({ onClose, onConfirm }) {
     const [sel, setSel] = useState(null);
-    const lista = D.sellers.filter(s => s.active !== false);
+    const lista = D.sellers.filter(D.isEligibleSeller);
     const footer = [
       h('button', {
         key: 'k', className: 'w-full py-3.5 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-xl hover:opacity-90 transition disabled:opacity-40',

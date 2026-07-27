@@ -397,6 +397,17 @@
   sellers.forEach(s => { if (!s.role) s.role = 'vendedor'; if (s.active === undefined) s.active = true; });
   if (!sellers.some(s => s.role === 'admin')) sellers.unshift(seedSellers[0]);
 
+  // Una persona pertenece al catálogo comercial sólo si conserva el contrato
+  // activo de vendedor. Acepta ambos nombres del tombstone para cubrir filas
+  // remotas aún no mapeadas y objetos locales normalizados.
+  function isEligibleSeller(seller) {
+    return !!seller
+      && seller.active === true
+      && seller.role === 'vendedor'
+      && seller._deletedAt == null
+      && seller.deleted_at == null;
+  }
+
   let quotaWarned = false, bulkMode = false; // bulkMode: omite escrituras por-llamada durante una generación masiva
   const save = (key, arr) => {
     if (bulkMode) return; // se persiste todo de una vez al final (ver seedDemo)
@@ -1246,7 +1257,7 @@
     addClient, removeClient, recordSale, nextFolio, collisionSafeFolio, rekeySaleFolio, stockOf, isAutoImg, resetProducts, applyRemote, applySyncResult, mergeRemote, markSaleSync, liquidarComision,
     completarApartado, registrarPagoApartado, paymentsForSale, hasFinancialSnapshot, cerrarMes, getPeriodoInicio,
     recordReturn, returnedQty, returnsForFolio, isReturnable,
-    addUser, updateUser, removeUser,
+    addUser, updateUser, removeUser, isEligibleSeller,
     addPromo, updatePromo, removePromo, duplicatePromo,
     seedDemo, resetEmpty, resetTestData, demoActive,
   };

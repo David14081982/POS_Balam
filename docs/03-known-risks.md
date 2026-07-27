@@ -978,6 +978,37 @@ archivo local se elimina fuera del build, la aplicación continúa local-first
 pero Auth y sincronización no se habilitan.
 **Corrección documentada:** `docs/fixes/sdk-supabase-local-fijado.md`.
 
+## H-29 — Personal no elegible participa como vendedor
+
+**Estado:** RESUELTO
+**Fecha de registro:** 26/07/2026
+**Fecha de resolución:** 26/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** Configuración → Usuarios administra el arreglo completo
+`DATA.sellers`, pero la pantalla lateral Vendedores también calcula y renderiza
+directamente esa colección. El selector del POS sólo excluye
+`active === false`; no exige rol vendedor ni ausencia de tombstone.
+**Origen de auditoría:** UV-03 / UV-04 de la auditoría Usuarios/Vendedores.
+**Riesgo:** administradores, otros roles, inactivos o perfiles eliminados pueden
+aparecer como vendedores y ser seleccionados para atribuir una venta.
+**Reproducción:** `node test-eligible-sellers.mjs` antes del cambio: 6
+verificaciones correctas y 4 fallidas; el administrador, gerente, inactivo y
+perfil eliminado entraban a la pantalla comercial, y el selector POS sólo
+excluía al inactivo.
+**Causa raíz:** no existe una regla compartida de elegibilidad comercial; cada
+consumidor interpreta el catálogo de personal con un filtro distinto.
+**Corrección:** `DATA.isEligibleSeller()` exige `active === true`, rol
+`vendedor` y ausencia de tombstone local o remoto. Vendedores y el selector
+POS consumen la colección filtrada; Usuarios conserva el catálogo completo.
+**Pruebas:** contrato 10/10; contratos de módulos 36/36; roles 10/10;
+liquidaciones 10/10; navegación 13/13; smoke bundle 17/17; coherencia de venta
+17/17; devoluciones 17/17; cola 97/97; reproducibilidad 8/8.
+**Pendiente:** ninguno dentro de la pantalla Vendedores y el selector POS.
+**Riesgo residual:** funciones financieras internas y el módulo Reportes
+mantienen sus filtros históricos porque fueron excluidos expresamente de esta
+corrección. Se documentan sin modificarlos.
+**Corrección documentada:** `docs/fixes/eligible-active-sellers.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

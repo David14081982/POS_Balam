@@ -42,6 +42,7 @@ sesión de chat.
 | `procesamiento-imagenes-compartido.md` | H-26 | Lectura y reducción común de imágenes |
 | `arneses-e2e-sin-cdn.md` | H-27 | Ocho recorridos E2E sobre el bundle local |
 | `sdk-supabase-local-fijado.md` | H-28 | SDK de navegador local, exacto y verificable |
+| `eligible-active-sellers.md` | H-29 | Vendedores comerciales activos y elegibles |
 
 Documentación financiera relacionada, creada antes de este índice:
 

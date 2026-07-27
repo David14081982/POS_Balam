@@ -35,8 +35,9 @@
     const [view, setView] = useState('grid');
     const [, bump] = useState(0);
     const refresh = () => bump(v => v + 1);
-    const totalComision = D.sellers.reduce((a, s) => a + s.comisionAcum, 0);
-    const totalVentas = D.sellers.reduce((a, s) => a + s.ventasMes, 0);
+    const eligibleSellers = D.sellers.filter(D.isEligibleSeller);
+    const totalComision = eligibleSellers.reduce((a, s) => a + s.comisionAcum, 0);
+    const totalVentas = eligibleSellers.reduce((a, s) => a + s.ventasMes, 0);
 
     function liquidar(s) {
       if (!window.confirm('¿Liquidar la comisión acumulada de ' + s.nombre + ' (' + fmt(s.comisionAcum) + ')? Quedará en cero.')) return;
@@ -83,10 +84,10 @@
           h('div', { key: 'c', className: 'bg-surface p-8 rounded-lg ' + SHADOW + ' flex flex-col justify-between' }, [
             h('div', { key: 't' }, [
               h('span', { key: 'l', className: 'text-overline font-bold text-on-surface-variant uppercase tracking-[0.15em]' }, 'Vendedores activos'),
-              h('h3', { key: 'v', className: 'font-headline text-display text-primary mt-4' }, D.sellers.filter(s => s.active !== false).length),
+              h('h3', { key: 'v', className: 'font-headline text-display text-primary mt-4' }, eligibleSellers.length),
             ]),
             h('div', { key: 'd', className: 'mt-8 flex items-center justify-between' }, [
-              h('div', { key: 'av', className: 'flex -space-x-3' }, D.sellers.map(s => h('div', { key: s.id, className: 'w-9 h-9 rounded-full border-2 border-surface flex items-center justify-center text-overline font-bold text-white', style: { background: s.color } }, s.iniciales))),
+              h('div', { key: 'av', className: 'flex -space-x-3' }, eligibleSellers.map(s => h('div', { key: s.id, className: 'w-9 h-9 rounded-full border-2 border-surface flex items-center justify-center text-overline font-bold text-white', style: { background: s.color } }, s.iniciales))),
               h('span', { key: 'l', className: 'text-body text-primary font-medium underline underline-offset-4 cursor-pointer hover:opacity-70' }, 'Ver todos'),
             ]),
           ]),
@@ -99,8 +100,8 @@
               [['grid', 'Grid'], ['list', 'Lista']].map(([id, l]) => h('button', { key: id, className: 'px-3 py-1 text-caption uppercase tracking-tighter rounded ' + (view === id ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:bg-surface-container-low'), onClick: () => setView(id) }, l))),
           ]),
           view === 'grid'
-            ? h('div', { key: 'g', className: 'grid grid-cols-1 xl:grid-cols-2 gap-8' }, D.sellers.map(s => h(SellerCard, { key: s.id, s, onOpen: () => setDetail(s), onLiquidar: () => liquidar(s) })))
-            : h(SellerList, { key: 'l', sellers: D.sellers, onOpen: setDetail }),
+            ? h('div', { key: 'g', className: 'grid grid-cols-1 xl:grid-cols-2 gap-8' }, eligibleSellers.map(s => h(SellerCard, { key: s.id, s, onOpen: () => setDetail(s), onLiquidar: () => liquidar(s) })))
+            : h(SellerList, { key: 'l', sellers: eligibleSellers, onOpen: setDetail }),
         ]),
         detail && h(SellerDetail, { key: 'd', s: detail, onClose: () => setDetail(null), onLiquidar: () => liquidar(detail) }),
       ]));

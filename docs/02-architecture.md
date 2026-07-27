@@ -146,6 +146,16 @@ Archivo: `balam/data.jsx`. API: `window.DATA`.
   sincronización de `CORE`.
 - `applyRemote()` incorpora datos recibidos de la nube sin volver a enviarlos.
 
+### Personal y elegibilidad comercial
+
+`DATA.sellers` conserva el catálogo completo de personal que administra
+Configuración → Usuarios. No todos sus elementos son vendedores comerciales.
+`DATA.isEligibleSeller()` define el subconjunto que pueden consumir la pantalla
+Vendedores y el selector del POS: el perfil debe estar activo, tener rol
+`vendedor` y carecer de tombstone local (`_deletedAt`) o remoto (`deleted_at`).
+Centralizar esta regla evita filtros divergentes sin cambiar la persistencia ni
+ocultar personal de la administración de usuarios.
+
 Ventas y devoluciones solicitan las rutas especializadas `pushSale()` y
 `pushReturn()` mediante el gateway. Cada una se confirma remotamente mediante
 su propia transacción SQL idempotente.
