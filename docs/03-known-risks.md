@@ -885,7 +885,7 @@ y navegación del bundle.
 **Estado:** RESUELTO
 **Fecha de registro:** 26/07/2026
 **Fecha de resolución:** 26/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `95fc44f`
 **Evidencia:** logo de tienda, avatar de usuario y foto de producto implementan
 por separado `FileReader`, decodificación con `Image`, cálculo proporcional,
 canvas y `toDataURL`. Las dos primeras rutas generan PNG a 256 px; producto
