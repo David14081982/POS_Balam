@@ -3,7 +3,7 @@
 **Riesgo:** H-31
 **Estado:** PARCIALMENTE RESUELTO
 **Fecha:** 26/07/2026
-**Commit:** Pendiente de commit
+**Commit:** eacfff7
 
 ## Problema y reproducción
 

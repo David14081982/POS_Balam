@@ -1043,7 +1043,7 @@ permanecen cubiertas por H-26.
 
 **Estado:** PARCIALMENTE RESUELTO
 **Fecha de registro:** 26/07/2026
-**Commit:** Pendiente de commit
+**Commit:** eacfff7
 **Evidencia:** `commission.basePct` se administra como ajuste global, pero el
 modelo comercial y los cálculos existentes consultan directamente
 `seller.comisionPct`. El catálogo `seller_role` sólo se usa para inferir una
