@@ -47,6 +47,41 @@
     }));
   }
 
+  function resizeImageFile(file, { max = 256, type = 'image/png', quality } = {}) {
+    return new Promise((resolve, reject) => {
+      if (!file || !/^image\//.test(file.type || '')) {
+        reject(new Error('invalid_image'));
+        return;
+      }
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('image_read_failed'));
+      reader.onabort = () => reject(new Error('image_read_aborted'));
+      reader.onload = () => {
+        const img = new Image();
+        img.onerror = () => reject(new Error('image_decode_failed'));
+        img.onload = () => {
+          try {
+            const limit = Math.max(1, Number(max) || 1);
+            const scale = Math.min(1, limit / Math.max(img.width, img.height, 1));
+            const width = Math.max(1, Math.round(img.width * scale));
+            const height = Math.max(1, Math.round(img.height * scale));
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+            resolve(quality == null
+              ? canvas.toDataURL(type)
+              : canvas.toDataURL(type, quality));
+          } catch (error) {
+            reject(error);
+          }
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
   // Miniatura de producto (placeholder con patrón + swatch de color)
   function ProductThumb({ p, size = 48 }) {
     return React.createElement('div', {
@@ -133,5 +168,5 @@
     ]);
   }
 
-  window.UI = { fmt, Badge, StatusBadge, StockBadge, ProductThumb, ToastHost, toast, Modal, BADGE_TONE, Pager, Segment };
+  window.UI = { fmt, Badge, StatusBadge, StockBadge, ProductThumb, ToastHost, toast, Modal, BADGE_TONE, Pager, Segment, resizeImageFile };
 })();

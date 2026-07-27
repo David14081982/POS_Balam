@@ -1,7 +1,7 @@
 // inventory.jsx — Inventario (Heritage Luxury). Exporta window.InventoryScreen
 (function () {
   const { useState, useMemo, useRef, useEffect } = React;
-  const { fmt, Modal, toast, Pager, Segment } = window.UI;
+  const { fmt, Modal, toast, Pager, Segment, resizeImageFile } = window.UI;
   const { MS, ProductImage } = window.HX;
   const D = window.DATA;
   const h = React.createElement;
@@ -479,34 +479,27 @@
     // URL — así la foto NO viaja incrustada en cada guardado/pull. Sin sesión o sin red, se
     // queda el data URL local (comportamiento de siempre); la tarjeta "Fotos de producto" en
     // Configuración → Inventario la migra después.
-    function onPickImg(e) {
+    async function onPickImg(e) {
       const file = e.target.files && e.target.files[0]; e.target.value = '';
       if (!file) return;
       if (!/^image\//.test(file.type)) { toast('Selecciona una imagen', 'var(--danger)'); return; }
-      const reader = new FileReader();
-      reader.onload = () => {
-        const img = new Image();
-        img.onload = async () => {
-          const max = 600, scale = Math.min(1, max / Math.max(img.width, img.height));
-          const w = Math.round(img.width * scale), hgt = Math.round(img.height * scale);
-          const cv = document.createElement('canvas'); cv.width = w; cv.height = hgt;
-          cv.getContext('2d').drawImage(img, 0, 0, w, hgt);
-          const dataUrl = cv.toDataURL('image/jpeg', 0.85);
-          set('imagen', dataUrl); // vista previa inmediata + respaldo si la nube no responde
-          toast('Imagen lista', 'var(--accent)');
-          const seq = ++imgSeq.current;
-          try {
-            if (!window.STORE || !window.STORE.uploadProductPhoto || !(await window.STORE.hasSession())) return;
-            const blob = await (await fetch(dataUrl)).blob();
-            const name = 'img-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.jpg';
-            const url = await window.STORE.uploadProductPhoto(name, blob);
-            if (url && alive.current && seq === imgSeq.current) { set('imagen', url); toast('Foto guardada en la nube', 'var(--accent)'); }
-          } catch (err) { /* sin red o sin bucket: se queda el respaldo local (data URL) */ }
-        };
-        img.onerror = () => toast('No se pudo leer la imagen', 'var(--danger)');
-        img.src = reader.result;
-      };
-      reader.readAsDataURL(file);
+      let dataUrl;
+      try {
+        dataUrl = await resizeImageFile(file, { max: 600, type: 'image/jpeg', quality: 0.85 });
+      } catch (error) {
+        toast('No se pudo leer la imagen', 'var(--danger)');
+        return;
+      }
+      set('imagen', dataUrl); // vista previa inmediata + respaldo si la nube no responde
+      toast('Imagen lista', 'var(--accent)');
+      const seq = ++imgSeq.current;
+      try {
+        if (!window.STORE || !window.STORE.uploadProductPhoto || !(await window.STORE.hasSession())) return;
+        const blob = await (await fetch(dataUrl)).blob();
+        const name = 'img-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.jpg';
+        const url = await window.STORE.uploadProductPhoto(name, blob);
+        if (url && alive.current && seq === imgSeq.current) { set('imagen', url); toast('Foto guardada en la nube', 'var(--accent)'); }
+      } catch (err) { /* sin red o sin bucket: se queda el respaldo local (data URL) */ }
     }
     const imgSrc = d.imagen ? ((window.__IMG_MAP && window.__IMG_MAP[d.imagen]) || d.imagen) : '';
     const skuPrev = D.sku({ ...d, modelo: d.modelo || '000' }); // misma receta que el SKU real

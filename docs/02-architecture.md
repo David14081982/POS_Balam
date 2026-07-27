@@ -96,6 +96,12 @@ host que usa `__activate_edit_mode` y `__edit_mode_set_keys`.
 Conserva los tokens visuales compartidos y permite desplazamiento horizontal
 sin comprimir ni partir opciones cuando el ancho es reducido.
 
+`window.UI.resizeImageFile()` centraliza la lectura, decodificación y reducción
+proporcional de imágenes locales. Logo y avatar solicitan PNG de hasta 256 px;
+la foto de producto solicita JPEG 0.85 de hasta 600 px. La utilidad rechaza
+tipo, lectura o decodificación inválidos y cada formulario conserva sus mensajes
+y acciones posteriores.
+
 ## CONFIG
 
 Archivo: `balam/config.jsx`. API: `window.CONFIG`.

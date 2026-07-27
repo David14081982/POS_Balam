@@ -39,6 +39,7 @@ sesión de chat.
 | `desacoplar-config-store.md` | H-23 | Gateway de sincronización entre CONFIG y STORE |
 | `desacoplar-auth-store.md` | H-24 | Gateway de cliente entre AUTH y STORE |
 | `selector-segmentado-compartido.md` | H-25 | Selector común de Clientes e Inventario |
+| `procesamiento-imagenes-compartido.md` | H-26 | Lectura y reducción común de imágenes |
 
 Documentación financiera relacionada, creada antes de este índice:
 

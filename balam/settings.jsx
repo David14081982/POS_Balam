@@ -3,7 +3,7 @@
 // Exporta window.SettingsScreen
 (function () {
   const { useState, useEffect, useRef } = React;
-  const { toast } = window.UI;
+  const { toast, resizeImageFile } = window.UI;
   const { MS, GlassCard, SerifHeading } = window.HX;
   const C = window.CONFIG;
   const D = window.DATA;
@@ -611,25 +611,16 @@
   function LogoUploader() {
     const fileRef = React.useRef(null);
     const logo = C.get('store.logo');
-    function onPick(e) {
+    async function onPick(e) {
       const file = e.target.files && e.target.files[0]; e.target.value = '';
       if (!file) return;
       if (!/^image\//.test(file.type)) { toast('Selecciona una imagen', 'var(--danger)'); return; }
-      const reader = new FileReader();
-      reader.onload = () => {
-        const img = new Image();
-        img.onload = () => {
-          const max = 256, scale = Math.min(1, max / Math.max(img.width, img.height));
-          const w = Math.round(img.width * scale), hgt = Math.round(img.height * scale);
-          const cv = document.createElement('canvas'); cv.width = w; cv.height = hgt;
-          cv.getContext('2d').drawImage(img, 0, 0, w, hgt);
-          C.setSetting('store.logo', cv.toDataURL('image/png'));
-          toast('Logotipo actualizado', 'var(--accent)');
-        };
-        img.onerror = () => toast('No se pudo leer la imagen', 'var(--danger)');
-        img.src = reader.result;
-      };
-      reader.readAsDataURL(file);
+      try {
+        C.setSetting('store.logo', await resizeImageFile(file, { max: 256, type: 'image/png' }));
+        toast('Logotipo actualizado', 'var(--accent)');
+      } catch (error) {
+        toast('No se pudo leer la imagen', 'var(--danger)');
+      }
     }
     return h(GlassCard, { className: 'p-6' }, [
       h(SerifHeading, { key: 't', className: 'mb-4', children: 'Logotipo' }),
@@ -936,25 +927,16 @@
     const set = (k, v) => setF(p => ({ ...p, [k]: v }));
     const fileRef = React.useRef(null);
     // Foto de perfil: redimensiona a 256px y guarda como data URL (sincroniza a sellers.avatar_url).
-    function onPickAvatar(e) {
+    async function onPickAvatar(e) {
       const file = e.target.files && e.target.files[0]; e.target.value = '';
       if (!file) return;
       if (!/^image\//.test(file.type)) { toast('Selecciona una imagen', 'var(--danger)'); return; }
-      const reader = new FileReader();
-      reader.onload = () => {
-        const img = new Image();
-        img.onload = () => {
-          const max = 256, scale = Math.min(1, max / Math.max(img.width, img.height));
-          const w = Math.round(img.width * scale), hgt = Math.round(img.height * scale);
-          const cv = document.createElement('canvas'); cv.width = w; cv.height = hgt;
-          cv.getContext('2d').drawImage(img, 0, 0, w, hgt);
-          set('avatar', cv.toDataURL('image/png'));
-          toast('Foto lista', 'var(--accent)');
-        };
-        img.onerror = () => toast('No se pudo leer la imagen', 'var(--danger)');
-        img.src = reader.result;
-      };
-      reader.readAsDataURL(file);
+      try {
+        set('avatar', await resizeImageFile(file, { max: 256, type: 'image/png' }));
+        toast('Foto lista', 'var(--accent)');
+      } catch (error) {
+        toast('No se pudo leer la imagen', 'var(--danger)');
+      }
     }
 
     function genPassword() {

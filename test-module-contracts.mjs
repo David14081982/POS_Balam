@@ -34,6 +34,7 @@ const auth = read('balam/auth.jsx');
 const shared = read('balam/shared.jsx');
 const clients = read('balam/clients.jsx');
 const inventory = read('balam/inventory.jsx');
+const settings = read('balam/settings.jsx');
 check('la identidad de terminal tiene una sola implementación', (
   !/function getDeviceId\s*\(/.test(data)
   && !/function getDeviceId\s*\(/.test(store)
@@ -73,12 +74,29 @@ check('UI publica un selector segmentado compartido', (
   && shared.includes('Segment')
 ));
 check('Clientes consume Segment sin duplicarlo', (
-  clients.includes('Segment } = window.UI')
+  /const \{[^}]*\bSegment\b[^}]*\} = window\.UI/.test(clients)
   && !clients.includes('function Segment(')
 ));
 check('Inventario consume Segment sin duplicarlo', (
-  inventory.includes('Segment } = window.UI')
+  /const \{[^}]*\bSegment\b[^}]*\} = window\.UI/.test(inventory)
   && !inventory.includes('function Segment(')
+));
+check('UI publica procesamiento de imágenes compartido', (
+  shared.includes('function resizeImageFile(')
+  && shared.includes('resizeImageFile')
+));
+check('Configuración consume el procesador para logo y avatar', (
+  settings.includes('resizeImageFile } = window.UI')
+  && (settings.match(/resizeImageFile\(/g) || []).length === 2
+));
+check('Inventario consume el procesador para foto de producto', (
+  inventory.includes('resizeImageFile } = window.UI')
+  && (inventory.match(/resizeImageFile\(/g) || []).length === 1
+));
+check('FileReader tiene una sola implementación compartida', (
+  shared.includes('new FileReader()')
+  && !settings.includes('new FileReader()')
+  && !inventory.includes('new FileReader()')
 ));
 
 let generated = 0;

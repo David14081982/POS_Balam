@@ -880,6 +880,34 @@ arquitectura actual; orden de carga y consumidores están cubiertos por contrato
 y navegación del bundle.
 **Corrección documentada:** `docs/fixes/selector-segmentado-compartido.md`.
 
+## H-26 — Procesamiento de imágenes duplicado en tres formularios
+
+**Estado:** RESUELTO
+**Fecha de registro:** 26/07/2026
+**Fecha de resolución:** 26/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** logo de tienda, avatar de usuario y foto de producto implementan
+por separado `FileReader`, decodificación con `Image`, cálculo proporcional,
+canvas y `toDataURL`. Las dos primeras rutas generan PNG a 256 px; producto
+genera JPEG 0.85 a 600 px.
+**Origen de auditoría:** Fase 16, residual de utilidades duplicadas de H-17.
+**Riesgo:** validación y manejo de archivos dañados pueden divergir entre
+formularios; cualquier defensa debe mantenerse en tres implementaciones.
+**Reproducción:** contratos 32/36 antes del cambio; fallaron el export
+compartido, sus tres consumos y la implementación única de `FileReader`.
+**Corrección:** `window.UI.resizeImageFile()` concentra validación, lectura,
+decodificación, escala y codificación parametrizada. Los tres formularios
+conservan dimensiones, formato/calidad, mensajes y acciones posteriores.
+**Pruebas:** contratos 36/36, procesador 5/5, comparación visual 22/22 con nueve
+pantallas idénticas, build reproducible 8/8 y smoke del bundle 17/17. El arnés
+de importación de desarrollo no inició por depender de CDN en el entorno
+restringido.
+**Pendiente:** ninguno para los tres pipelines de procesamiento local.
+**Riesgo residual:** bajo. Canvas aún depende de capacidades normales del
+navegador; errores de lectura, decodificación o codificación se rechazan y cada
+consumidor conserva su aviso.
+**Corrección documentada:** `docs/fixes/procesamiento-imagenes-compartido.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:
