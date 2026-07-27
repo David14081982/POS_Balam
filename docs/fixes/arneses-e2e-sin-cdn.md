@@ -3,7 +3,7 @@
 **Riesgo:** H-27
 **Estado:** RESUELTO
 **Fecha:** 26/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `d4a0c13`
 
 ## Problema y reproducción
 

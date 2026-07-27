@@ -913,7 +913,7 @@ consumidor conserva su aviso.
 **Estado:** RESUELTO
 **Fecha de registro:** 26/07/2026
 **Fecha de resolución:** 26/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `d4a0c13`
 **Evidencia:** ocho pruebas Playwright abren `POS Balam.html`, que carga React,
 Babel y otros recursos de CDN. En el entorno restringido,
 `test-filtros-inventario.mjs` y `test-import-fotos.mjs` agotaron su timeout
