@@ -3,7 +3,7 @@
 **Riesgo:** H-29
 **Estado:** RESUELTO
 **Fecha:** 26/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `ce200af`
 
 ## Problema y reproducción
 

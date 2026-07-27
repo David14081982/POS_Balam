@@ -983,7 +983,7 @@ pero Auth y sincronización no se habilitan.
 **Estado:** RESUELTO
 **Fecha de registro:** 26/07/2026
 **Fecha de resolución:** 26/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `ce200af`
 **Evidencia:** Configuración → Usuarios administra el arreglo completo
 `DATA.sellers`, pero la pantalla lateral Vendedores también calcula y renderiza
 directamente esa colección. El selector del POS sólo excluye
