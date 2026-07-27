@@ -939,6 +939,45 @@ desarrollo que requiere CDN cuando se invoca sin `bundle`; su modo distribuido
 es local y forma parte de la regresión obligatoria.
 **Corrección documentada:** `docs/fixes/arneses-e2e-sin-cdn.md`.
 
+## H-28 — SDK Supabase mutable y descargado en runtime
+
+**Estado:** RESUELTO
+**Fecha de registro:** 26/07/2026
+**Fecha de resolución:** 26/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** `STORE.ensureClient()` crea dinámicamente un `<script>` con
+`https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js`.
+La versión mayor es mutable y el SDK no está en la entrada, el almacén de
+recursos del build ni el lockfile.
+**Origen de auditoría:** dependencia externa expuesta al aislar arneses en H-27;
+residual de runtime separado de H-20.
+**Riesgo:** autenticación y sincronización dependen de disponibilidad y bytes
+externos no fijados; un cambio upstream puede alterar producción sin commit, y
+una terminal sin acceso a jsDelivr no puede crear el cliente aunque el bundle
+se haya cargado localmente.
+**Reproducción:** `node test-supabase-sdk.mjs` aprobó 0/4 antes del cambio:
+permanecían la descarga dinámica, la ausencia de una entrada local, la ausencia
+del archivo y la falta de un hash documentado.
+**Causa raíz:** el cliente se resolvía tarde desde una URL que sólo fijaba la
+versión mayor; por ello ni Git, ni el lockfile ni el build eran autoridad sobre
+los bytes ejecutados por Auth y sincronización.
+**Corrección:** `@supabase/supabase-js` 2.110.8 quedó como dependencia exacta y
+su UMD de 207 904 bytes se versionó en `balam/vendor`. Las dos entradas lo
+cargan antes de los módulos y registran SHA-256
+`913f94db33b394a97d34c058347009053ac2d9534459c0990eb08594a108d2ee`.
+`STORE.ensureClient()` sólo consume ese global validado y conserva la salida
+local cuando no existe; ya no crea scripts ni usa red.
+**Pruebas:** contrato Supabase 4/4, contratos de módulos 36/36, roles 10/10,
+cola 97/97, build reproducible 8/8, build offline correcto con 67 assets, smoke
+del bundle 17/17, navegación 13/13, contrato de arneses 8/8, fotos automáticas
+11/11 y propagación de reset 21/21.
+**Pendiente:** ninguno para la entrega del SDK del navegador.
+**Riesgo residual:** bajo. Una actualización futura del SDK requiere cambiar
+versión, archivo, hash y lockfile conjuntamente y repetir las pruebas; si el
+archivo local se elimina fuera del build, la aplicación continúa local-first
+pero Auth y sincronización no se habilitan.
+**Corrección documentada:** `docs/fixes/sdk-supabase-local-fijado.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

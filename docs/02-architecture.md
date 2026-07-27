@@ -42,6 +42,13 @@ para una actualización deliberada con
 `BALAM_REFRESH_BUILD_RESOURCES=1`, cuyo diff debe revisarse. Tailwind 3.4.17
 proviene de la dependencia exacta del lockfile y no de `npx --yes`.
 
+El SDK de navegador `@supabase/supabase-js` está fijado exactamente en la
+versión 2.110.8 tanto en el lockfile como en
+`balam/vendor/supabase-2.110.8/supabase.min.js`. Las entradas fuente documentan
+su SHA-256 y lo cargan antes de los módulos; el build incorpora esos mismos
+bytes como un asset local. La aplicación nunca inyecta ni descarga el SDK en
+tiempo de ejecución.
+
 Los arneses Playwright de comportamiento integrado ejecutan `index.html`, por
 lo que prueban el artefacto distribuido sin Babel ni CDN. Pueden seguir leyendo
 `POS Balam.html` estáticamente para verificar contratos de fuente.
@@ -183,7 +190,9 @@ Archivo: `balam/store.jsx`. API: `window.STORE`.
 
 Es la frontera entre el dominio local y Supabase:
 
-- Crea un único cliente Supabase configurado para el esquema `pos`.
+- Crea un único cliente Supabase configurado para el esquema `pos` mediante el
+  SDK local previamente cargado; si éste falta, conserva el modo local sin
+  intentar una descarga remota.
 - Traduce objetos locales a filas SQL y viceversa mediante `MAP`.
 - Hace `push` de configuración, colecciones, ventas y devoluciones.
 - Hace `pull` de configuración y dominio.

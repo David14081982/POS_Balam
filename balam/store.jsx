@@ -33,15 +33,7 @@
 
   async function ensureClient() {
     if (sb) return sb;
-    if (!window.supabase) {
-      await new Promise((res, rej) => {
-        const s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
-        s.onload = res; s.onerror = rej;
-        document.head.appendChild(s);
-      }).catch(() => null);
-    }
-    if (!window.supabase) return null;
+    if (!window.supabase || typeof window.supabase.createClient !== 'function') return null;
     sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
       db: { schema: SCHEMA },
       auth: { persistSession: true, autoRefreshToken: true, storageKey: 'balam_auth' },
