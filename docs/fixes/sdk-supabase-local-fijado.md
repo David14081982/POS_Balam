@@ -3,7 +3,7 @@
 **Riesgo:** H-28
 **Estado:** RESUELTO
 **Fecha:** 26/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `1cb05b2`
 
 ## Problema y reproducción
 

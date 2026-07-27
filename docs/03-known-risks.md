@@ -944,7 +944,7 @@ es local y forma parte de la regresión obligatoria.
 **Estado:** RESUELTO
 **Fecha de registro:** 26/07/2026
 **Fecha de resolución:** 26/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `1cb05b2`
 **Evidencia:** `STORE.ensureClient()` crea dinámicamente un `<script>` con
 `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js`.
 La versión mayor es mutable y el SDK no está en la entrada, el almacén de
