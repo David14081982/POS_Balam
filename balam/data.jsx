@@ -408,6 +408,55 @@
       && seller.deleted_at == null;
   }
 
+  // Autoridad única del porcentaje efectivo. Los perfiles anteriores a H-31
+  // conservan comisionPct como dato heredado; los nuevos usan la precedencia
+  // explícita personalizada → nivel comercial → configuración general.
+  function resolveSellerCommission(seller) {
+    const profile = seller || {};
+    const numeric = value => {
+      if (value === null || value === undefined || value === '') return null;
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : null;
+    };
+    const overridePct = numeric(profile.commissionOverridePct);
+    const globalPct = numeric(C.get('commission.basePct'));
+    const policyVersion = Number(profile.commissionPolicyVersion) || 0;
+
+    if (overridePct !== null) {
+      return { effectivePct: overridePct, source: 'personalizada', level: null, policyVersion };
+    }
+
+    const levelCode = profile.sellerLevelCode == null ? null : String(profile.sellerLevelCode);
+    const level = levelCode
+      ? C.all('seller_role').find(item => item && String(item.code) === levelCode)
+      : null;
+    const levelPct = level && level.meta ? numeric(level.meta.commissionPct) : null;
+    if (level && levelPct !== null) {
+      return {
+        effectivePct: levelPct,
+        source: 'nivel',
+        level: {
+          code: level.code,
+          label: level.label,
+          active: level.active !== false,
+        },
+        policyVersion,
+      };
+    }
+
+    const legacyPct = numeric(profile.comisionPct);
+    if (policyVersion < 1 && legacyPct !== null) {
+      return { effectivePct: legacyPct, source: 'heredada', level: null, policyVersion };
+    }
+
+    return {
+      effectivePct: globalPct === null ? 0 : globalPct,
+      source: 'general',
+      level: null,
+      policyVersion,
+    };
+  }
+
   let quotaWarned = false, bulkMode = false; // bulkMode: omite escrituras por-llamada durante una generación masiva
   const save = (key, arr) => {
     if (bulkMode) return; // se persiste todo de una vez al final (ver seedDemo)
@@ -981,6 +1030,7 @@
     const s = {
       id: 'u-' + Date.now(), nombre: (u.nombre || '').trim(), iniciales: iniDe(u.nombre),
       color: u.color || '#64748b', comisionPct: Number(u.comisionPct) || 0,
+      commissionOverridePct: null, sellerLevelCode: null, commissionPolicyVersion: 1,
       metaMes: Number(u.metaMes) || 0, ventasMes: 0, ventasNum: 0, comisionAcum: 0, bono: 'Sin bono',
       role: u.role || 'vendedor', email: (u.email || '').trim() || null,
       passwordHash: u.passwordHash || null, avatar: u.avatar || null, active: true,
@@ -1257,7 +1307,7 @@
     addClient, removeClient, recordSale, nextFolio, collisionSafeFolio, rekeySaleFolio, stockOf, isAutoImg, resetProducts, applyRemote, applySyncResult, mergeRemote, markSaleSync, liquidarComision,
     completarApartado, registrarPagoApartado, paymentsForSale, hasFinancialSnapshot, cerrarMes, getPeriodoInicio,
     recordReturn, returnedQty, returnsForFolio, isReturnable,
-    addUser, updateUser, removeUser, isEligibleSeller,
+    addUser, updateUser, removeUser, isEligibleSeller, resolveSellerCommission,
     addPromo, updatePromo, removePromo, duplicatePromo,
     seedDemo, resetEmpty, resetTestData, demoActive,
   };

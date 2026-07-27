@@ -1039,6 +1039,50 @@ comportamiento nativo de imagen rota; la carga y reducción del archivo
 permanecen cubiertas por H-26.
 **Corrección documentada:** `docs/fixes/fotografias-vendedores.md`.
 
+## H-31 — Autoridad de comisión efectiva del vendedor
+
+**Estado:** PARCIALMENTE RESUELTO
+**Fecha de registro:** 26/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** `commission.basePct` se administra como ajuste global, pero el
+modelo comercial y los cálculos existentes consultan directamente
+`seller.comisionPct`. El catálogo `seller_role` sólo se usa para inferir una
+etiqueta visual a partir de `meta.minPct`; no existe asignación persistida de
+nivel ni una regla compartida de precedencia.
+**Origen de auditoría:** UV-06 / UV-07 de la auditoría Usuarios/Vendedores y
+contrato funcional aprobado para H-31.
+**Riesgo:** distintos consumidores pueden elegir porcentajes diferentes; el
+respaldo global no es autoridad real y una migración ingenua confundiría 0%
+intencional con ausencia, alterando silenciosamente vendedores existentes.
+**Reproducción:** `node test-effective-commission.mjs` antes de la corrección:
+6/22. Pasaron las invariantes de H-29, H-30 y módulos financieros excluidos;
+fallaron la autoridad, todas sus fuentes, los casos 0%, compatibilidad y
+persistencia.
+**Causa raíz:** configuración global, nivel comercial y porcentaje del perfil
+son datos independientes sin una función que establezca precedencia. Además,
+el modelo no distingue un `comisionPct` histórico de una ausencia intencional.
+**Corrección:** `DATA.resolveSellerCommission()` centraliza personalizada →
+nivel → general y conserva versión 0 como `heredada`. STORE, altas locales,
+Edge Function y migración 033 persisten override nullable, nivel y versión sin
+inferir ni reescribir datos existentes.
+**Pruebas:** contrato H-31 22/22; elegibilidad H-29 10/10; fotografías H-30
+13/13; contratos de módulos 36/36; migraciones 24/24; cola 97/97; build
+reproducible 8/8; smoke bundle 17/17. Una corrida encadenada de cola produjo
+92/97; el diagnóstico descartó contaminación, estado global, temporizadores y
+orden, y localizó la causa en las esperas de reloj de `test-store-queue.mjs`
+frente a stubs que avanzan por turnos del bucle de eventos. Se reprodujo a
+demanda saturando la CPU, también sobre `HEAD` sin H-31, por lo que no es
+regresión. Con las esperas hechas deterministas la cola aprueba 97/97 aislada,
+encadenada y bajo carga.
+**Pendiente:** desplegar migración 033 y Edge Function. Conectar la autoridad a
+cálculos financieros y a una interfaz de asignación queda expresamente fuera
+de H-31.
+**Riesgo residual:** medio hasta desplegar esquema y función en conjunto. El
+motor histórico continúa consultando `comisionPct` por alcance aprobado, por
+lo que la autoridad existe pero aún no cambia ventas, devoluciones,
+liquidaciones ni cierres.
+**Corrección documentada:** `docs/fixes/autoridad-comision-efectiva.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

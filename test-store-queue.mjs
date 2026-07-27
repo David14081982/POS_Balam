@@ -9,7 +9,18 @@ import { readFileSync } from 'node:fs';
 
 let pass = 0, fail = 0;
 const ok = (name, cond) => { console.log(`${cond ? '✅' : '❌'} ${name}`); cond ? pass++ : fail++; };
-const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+// Las esperas del arnés no miden tiempo real: cuentan turnos del bucle de
+// eventos. Los stubs de red e IndexedDB resuelven con setTimeout(...,0), así que
+// una espera de reloj podía vencer sin que el drenado hubiera avanzado cuando la
+// CPU estaba saturada. Se conserva el piso de tiempo real porque pushConfig
+// aplica un debounce de 600 ms.
+const turn = () => new Promise(r => setImmediate(r));
+const sleep = async (ms) => {
+  const t0 = Date.now();
+  for (let i = 0; i < Math.max(200, ms * 8); i++) await turn();
+  const resto = ms - (Date.now() - t0);
+  if (resto > 0) await new Promise(r => setTimeout(r, resto));
+};
 
 // ── Stubs de entorno (localStorage + supabase-js encadenable) ───────────────────
 function freshEnv() {

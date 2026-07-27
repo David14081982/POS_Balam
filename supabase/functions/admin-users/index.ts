@@ -62,7 +62,8 @@ Deno.serve(async (req) => {
       const { error: pe } = await caller.from('sellers').upsert({
         id, nombre, email: e, role: role || 'vendedor', iniciales: ini(nombre), color: '#64748b',
         avatar_url: avatar || null, active: true, comision_pct: 0, meta_mes: 0, ventas_mes: 0,
-        ventas_num: 0, comision_acum: 0, bono: 'Sin bono',
+        ventas_num: 0, comision_acum: 0, bono: 'Sin bono', commission_override_pct: null,
+        seller_level_code: null, commission_policy_version: 1,
       }, { onConflict: 'id' });
       if (pe) return json({ error: pe.message }, 400);
       return json({ ok: true, id });

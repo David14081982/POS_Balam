@@ -160,6 +160,29 @@ Vendedores y el selector del POS: el perfil debe estar activo, tener rol
 Centralizar esta regla evita filtros divergentes sin cambiar la persistencia ni
 ocultar personal de la administración de usuarios.
 
+### Autoridad de comisión efectiva
+
+`DATA.resolveSellerCommission(seller)` resuelve el porcentaje comercial sin
+alterar `seller.role` ni la elegibilidad definida por H-29. La precedencia para
+perfiles bajo la política H-31 es:
+
+1. `commissionOverridePct`, donde `0` es válido y `null` significa ausencia;
+2. `sellerLevelCode`, resuelto contra `seller_role.meta.commissionPct`;
+3. el ajuste global existente `commission.basePct`.
+
+La respuesta incluye `effectivePct`, `source`, información del nivel utilizado
+y `policyVersion`. Un nivel inactivo previamente asignado continúa resolviendo
+desde el catálogo completo para preservar datos; la lista activa sigue siendo
+la única disponible para futuras interfaces de asignación.
+
+Los perfiles sin `commissionPolicyVersion` o con versión 0 conservan
+`comisionPct` como fuente `heredada`. Las altas nuevas nacen en versión 1, sin
+porcentaje personalizado ni nivel. STORE replica estos campos en
+`pos.sellers`; no se infieren niveles a partir del porcentaje histórico.
+
+H-31 establece esta autoridad, pero no cambia todavía el cálculo financiero de
+ventas, apartados, devoluciones, liquidaciones o cierres, ni metas y bonos.
+
 Ventas y devoluciones solicitan las rutas especializadas `pushSale()` y
 `pushReturn()` mediante el gateway. Cada una se confirma remotamente mediante
 su propia transacción SQL idempotente.

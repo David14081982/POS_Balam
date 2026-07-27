@@ -44,6 +44,7 @@ sesión de chat.
 | `sdk-supabase-local-fijado.md` | H-28 | SDK de navegador local, exacto y verificable |
 | `eligible-active-sellers.md` | H-29 | Vendedores comerciales activos y elegibles |
 | `fotografias-vendedores.md` | H-30 | Fotografías en la pantalla Vendedores |
+| `autoridad-comision-efectiva.md` | H-31 | Precedencia y compatibilidad del porcentaje efectivo |
 
 Documentación financiera relacionada, creada antes de este índice:
 
