@@ -107,9 +107,20 @@ la misma carga que antes rompía la suite, la cola aprueba 97/97.
 
 ## Riesgo residual y pendientes
 
-La migración está versionada pero no fue desplegada por instrucción expresa;
-la Edge Function también queda pendiente de despliegue. Hasta que ambos se
-publiquen conjuntamente, los campos nuevos no existen en producción.
+La migración `20260726003300_pos_h31_effective_commission.sql` **ya está
+desplegada**: se aplicó el 27/07/2026 (28/07/2026 UTC) arrastrada por el
+`db push` de H-32, que la encontró pendiente pese a haberse dado por publicada.
+Las tres columnas y sus restricciones existen en producción y los tres perfiles
+reales quedaron en versión 0 (`heredada`) con su `comision_pct` intacto. El
+registro completo del despliegue está en
+`docs/fixes/trazabilidad-descuento-ticket.md`.
+
+La Edge Function `admin-users` sigue en la versión 8, anterior a H-31, y queda
+pendiente de despliegue. Ya no es bloqueante: la función vigente omite las tres
+columnas, y los valores por defecto del esquema producen exactamente lo que la
+versión nueva escribe de forma explícita —versión 1, override nulo, nivel
+nulo—, así que un alta creada por la función actual nace con el contrato
+correcto. Desplegarla queda como tarea de coherencia, no de corrección.
 
 La autoridad todavía no sustituye `comisionPct` en cálculos financieros ni en
 la presentación, porque ventas históricas, snapshots, devoluciones,

@@ -152,6 +152,49 @@ puede alterar un ticket ya emitido.
 La venta de validación se eliminó al terminar. La base quedó en su estado
 exacto previo: 5 ventas, 5 renglones, 3 promociones y 240 productos.
 
+### La misma operación aplicó también la migración pendiente de H-31
+
+`supabase db push` detectó **dos** migraciones sin aplicar y las ejecutó en
+orden. Queda registrado aquí porque H-31 se había dado por desplegado.
+
+**Migración:** `20260726003300_pos_h31_effective_commission.sql`.
+
+**Fecha:** 27/07/2026 por la tarde, hora local; el servidor opera en UTC y la
+registró la madrugada del 28/07/2026 UTC. Supabase no guarda una marca de
+tiempo en `supabase_migrations.schema_migrations` —sólo `version`, `name` y
+`statements`—, por lo que el minuto exacto no es recuperable de la base; la
+evidencia de sesión más cercana posterior al despliegue es de las 03:46 UTC.
+Ambas versiones quedaron registradas: `20260726003300` y `20260727004000`.
+
+**Motivo por el que estaba pendiente:** se creyó desplegada en una sesión
+anterior, pero nunca se aplicó. Lo confirmaron dos evidencias independientes.
+Antes del despliegue, `pos.sellers` sólo tenía `comision_pct`: las tres
+columnas de H-31 no existían. Y al aplicarla, PostgreSQL emitió
+`NOTICE: constraint "sellers_commission_override_pct_range" ... does not exist,
+skipping` para ambas restricciones, prueba de que era la primera ejecución.
+
+**Objetos agregados a `pos.sellers`:**
+
+| Objeto | Tipo | Detalle |
+| --- | --- | --- |
+| `commission_override_pct` | `numeric` | nullable, sin default |
+| `seller_level_code` | `text` | nullable, sin default |
+| `commission_policy_version` | `smallint` | `not null`, default `1` |
+| `sellers_commission_override_pct_range` | check | nulo, o entre 0 y 100 |
+| `sellers_commission_policy_version_range` | check | valor en (0, 1) |
+
+**No alteró datos históricos ni porcentajes existentes.** El antes y el después
+coinciden: los tres perfiles conservan `comision_pct = 0.00`, exactamente el
+valor que tenían antes del despliegue. Las columnas nuevas nacieron neutras
+—`commission_override_pct` y `seller_level_code` en `null`— y la migración
+marcó las filas existentes con `commission_policy_version = 0`, es decir
+`heredada`: su porcentaje se sigue leyendo de `comision_pct` y no se
+reinterpreta. El default `1` aplica sólo a perfiles futuros.
+
+**Pruebas de comisiones después de aplicarla:** `test-commission` 10/10,
+`test-effective-commission` 22/22, `test-liquidations` 10/10,
+`test-eligible-sellers` 10/10 y `test-migrations` 24/24. Sin fallos.
+
 ## Riesgo residual y pendientes
 
 Bajo el formato aprobado, `Importe + IVA = Precio original`, que **no** es igual

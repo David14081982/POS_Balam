@@ -1074,13 +1074,24 @@ frente a stubs que avanzan por turnos del bucle de eventos. Se reprodujo a
 demanda saturando la CPU, también sobre `HEAD` sin H-31, por lo que no es
 regresión. Con las esperas hechas deterministas la cola aprueba 97/97 aislada,
 encadenada y bajo carga.
-**Pendiente:** desplegar migración 033 y Edge Function. Conectar la autoridad a
-cálculos financieros y a una interfaz de asignación queda expresamente fuera
-de H-31.
-**Riesgo residual:** medio hasta desplegar esquema y función en conjunto. El
-motor histórico continúa consultando `comisionPct` por alcance aprobado, por
-lo que la autoridad existe pero aún no cambia ventas, devoluciones,
-liquidaciones ni cierres.
+**Despliegue:** la migración `20260726003300_pos_h31_effective_commission.sql`
+se aplicó el 27/07/2026 (28/07/2026 UTC), arrastrada por el `db push` de H-32
+al detectarse que seguía pendiente pese a haberse dado por desplegada. Agregó
+`commission_override_pct`, `seller_level_code` y `commission_policy_version` a
+`pos.sellers`, con sus dos restricciones. No alteró datos: los tres perfiles
+conservan `comision_pct = 0.00` y quedaron en versión 0 (`heredada`).
+Detalle completo en `docs/fixes/trazabilidad-descuento-ticket.md`.
+**Pendiente:** desplegar la Edge Function `admin-users`, que sigue en la
+versión 8 anterior a H-31. Ya no es bloqueante: la función vigente omite las
+tres columnas y los valores por defecto del esquema producen exactamente el
+mismo resultado que la versión nueva escribe de forma explícita —versión 1,
+override nulo y nivel nulo—, así que un alta nueva nace correcta con o sin el
+despliegue. Conectar la autoridad a cálculos financieros y a una interfaz de
+asignación queda expresamente fuera de H-31.
+**Riesgo residual:** bajo. El esquema ya está en producción y el motor
+histórico continúa consultando `comisionPct` por alcance aprobado, por lo que
+la autoridad existe pero aún no cambia ventas, devoluciones, liquidaciones ni
+cierres.
 **Corrección documentada:** `docs/fixes/autoridad-comision-efectiva.md`.
 
 ## H-32 — Trazabilidad del descuento y presentación del ticket
