@@ -296,8 +296,14 @@ console.log('\n── H) Contratos de código y esquema ────────
   ok('36. el catálogo del POS muestra el rango', /priceRange/.test(pos));
 
   const mig = read('./supabase/migrations/20260728005100_pos_h36_variant_price.sql');
-  ok('37. la migración agrega la columna con default vacío',
-    /add column if not exists precios_talla/.test(mig) && /default '\{\}'/.test(mig));
+  // El CHECK debe ser una expresión escalar: PostgreSQL rechaza subconsultas
+  // dentro de una restricción (0A000). El primer intento de despliegue murió
+  // exactamente ahí, y este arnés sólo comprobaba que el texto tuviera las
+  // palabras correctas — el síntoma, no la defensa (AP-09).
+  const chk = mig.slice(mig.indexOf('add constraint products_precios_talla_valid'));
+  ok('37. la migración agrega la columna con default vacío y un CHECK sin subconsulta',
+    /add column if not exists precios_talla/.test(mig) && /default '\{\}'/.test(mig)
+      && !/\bselect\b/i.test(chk) && !/\bexists\b/i.test(chk));
   const ver = read('./supabase/migrations/20260728005200_pos_h36_variant_price_verification.sql');
   ok('38. la verificación comprueba la defensa: vendedor rechazado y datos intactos',
     /restrict_seller_product_update|42501/.test(ver) && /raise exception/.test(ver));

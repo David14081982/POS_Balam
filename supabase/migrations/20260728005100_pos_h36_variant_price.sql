@@ -25,26 +25,53 @@
 -- sustracción, de modo que toda columna nueva entra protegida. Eso se PRUEBA en
 -- la verificación 20260728005200, no se da por hecho.
 --
--- Alcance: sólo esta columna y su restricción. No se toca ninguna función,
--- policy, trigger, índice ni dato existente.
+-- ── Sobre el alcance de la restricción ──────────────────────────────────────
+-- Un primer intento validó también el CONTENIDO del mapa —valores numéricos y
+-- no negativos— con `not exists (select …)`. PostgreSQL lo rechazó:
+--
+--     ERROR: cannot use subquery in check constraint (SQLSTATE 0A000)
+--
+-- Un CHECK no admite subconsultas. La alternativa escalar (`jsonb_path_exists`)
+-- no pudo ejecutarse contra ningún motor real antes de desplegar, así que se
+-- adopta el único idioma jsonb ya probado en producción en este esquema —el
+-- `jsonb_typeof(...)` de `sales_folio_aliases_chk`, H-33— y la validación por
+-- valor queda en `DATA.sanitizePreciosTalla()` del cliente.
+--
+-- RIESGO RESIDUAL, deliberado y registrado: la base acepta hoy un valor no
+-- numérico o negativo dentro del mapa. Ninguna ruta del producto lo escribe
+-- —el cliente sanea antes de enviar— pero la defensa de fondo no está en la
+-- base. Endurecerla exige validar la expresión contra PostgreSQL real y es una
+-- historia posterior.
+--
+-- Alcance: sólo esta columna y su restricción de forma. No se toca ninguna
+-- función, policy, trigger, índice ni dato existente.
+
+-- 0) Deja constancia del estado previo. Un intento anterior de esta misma
+--    migración abortó en su segunda sentencia; esto documenta en la salida del
+--    push si la columna llegó a crearse entonces o si nace aquí.
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+     where table_schema = 'pos' and table_name = 'products'
+       and column_name = 'precios_talla'
+  ) then
+    raise notice 'H-36: precios_talla YA existia antes de esta migracion (residuo del intento fallido)';
+  else
+    raise notice 'H-36: precios_talla no existia; se crea en esta migracion';
+  end if;
+end;
+$$;
 
 alter table pos.products
   add column if not exists precios_talla jsonb not null default '{}'::jsonb;
 
 comment on column pos.products.precios_talla is
-  'H-36: excepciones de precio por talla, { talla: precio }. Vacio = todas las tallas valen products.precio. La ausencia de una clave significa precio general; un 0 explicito es un precio.';
+  'H-36: excepciones de precio por talla, { talla: precio }. Vacio = todas las tallas valen products.precio. La ausencia de una clave significa precio general; un 0 explicito es un precio. La base valida la FORMA (objeto); el valor lo sanea DATA.sanitizePreciosTalla().';
 
--- Forma del mapa: objeto JSON, valores numéricos y no negativos. Se valida en la
--- base para que ninguna terminal —presente o futura— pueda dejar un precio
--- imposible dentro del catálogo.
+-- Forma del mapa: debe ser un objeto JSON. Expresión escalar, sin subconsulta.
 alter table pos.products
   drop constraint if exists products_precios_talla_valid,
   add constraint products_precios_talla_valid check (
     jsonb_typeof(precios_talla) = 'object'
-    and not exists (
-      select 1
-        from jsonb_each(precios_talla) as e(talla, precio)
-       where jsonb_typeof(e.precio) <> 'number'
-          or (e.precio)::numeric < 0
-    )
   );
