@@ -43,6 +43,15 @@ Candado explícito antes de validar (`pg_advisory_xact_lock`, `for update` en
 orden estable) e idempotencia por clave + hash del payload.
 Origen: H-01, H-04, H-35
 
+**R-DB-08 · REQUIRED · Una migración aditiva, verificada y no destructiva forma
+parte de la autorización de la historia.**
+No requiere una autorización aparte: se anuncia brevemente antes de ejecutarla
+—qué hace, sobre qué objetos y cómo se revierte— y se aplica. **Sólo se detiene
+si aparece un riesgo nuevo durante el despliegue.** Si es destructiva, cambia
+permisos, o puede provocar pérdida de datos o indisponibilidad, se detiene antes
+de ejecutar (`WORKFLOW.md` § Detención obligatoria, 2 y 3).
+Origen: H-36 · Gobierno: `R-GOV-01`
+
 **R-DB-07 · REQUIRED · `node test-migrations.mjs` debe pasar.**
 Si el cambio introduce una regla nueva sobre la cadena, se añade ahí: ese arnés
 es la autoridad ejecutable del orden, la unicidad y la ausencia de deriva.

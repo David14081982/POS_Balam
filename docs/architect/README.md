@@ -85,8 +85,10 @@ descubre. Las historias que modificaron una autoridad se recuperan con
 - Archivo ≤ 120 líneas. Playbooks ≤ 180. `WORKFLOW.md` ≤ 120 con cap duro: si
   crece, salen las condiciones de detención hacia este README, no se alarga.
 - Sistema ≤ 1 600 líneas. Superarlo obliga a dividir por dominio, no a alargar.
-- **Directorios cerrados.** `playbooks/` y `decisions/` son los únicos. Añadir
-  otro requiere autorización del dueño del proyecto.
+- **Directorios acotados.** `authorities/`, `playbooks/` y `decisions/` son los
+  vigentes. Crear otro, o dividir un archivo que superó su presupuesto, son
+  decisiones internas: se toman y se informan en el informe final, no se
+  consultan (`R-GOV-01`).
 - **Presupuesto por historia.** Al cerrar una historia el sistema gana como
   máximo 0–1 antipatrón, 0–1 ADR y 0–N reglas. Más que eso significa que se
   está documentando en vez de normando.

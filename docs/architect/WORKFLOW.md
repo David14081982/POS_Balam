@@ -48,34 +48,52 @@ cambio de seguridad.
 No hay despliegue sin migraciones aplicadas **antes** que el cliente y sin el
 artefacto publicado verificado contra el `index.html` del commit.
 
+## Autonomía
+
+Autorizar una historia autoriza **su ciclo completo**: análisis, registro del
+riesgo, diseño, línea base, implementación, migraciones, regresión,
+documentación y los commits técnicos y documentales que haga falta. No se pide
+permiso paso a paso.
+
+**R-GOV-01 · BLOCKING · No se detiene una historia para pedir autorización
+sobre una decisión cuya respuesta ya puede deducirse de las reglas aprobadas de
+este sistema.** Detenerse de más cuesta visibilidad, no la aumenta: consume la
+atención del dueño en decisiones que el sistema ya resolvió. Ante la duda, se
+decide, se ejecuta y se explica en el informe final.
+
 ## Detención obligatoria
 
-El agente se detiene y pide autorización ante cualquiera de estas nueve:
+Sólo estas seis. Fuera de ellas, se avanza.
 
-1. Cambiar un contrato existente o cualquiera de los «Contratos que no deben
-   romperse» de `docs/02-architecture.md`.
-2. Ampliar el alcance acordado.
-3. Cambiar permisos, roles, policies RLS o grants.
-4. Aplicar migraciones o desplegar.
-5. Commitear.
-6. Iniciar una historia nueva.
-7. Ejecutar cualquier operación destructiva sobre la base con datos reales,
-   incluidos los scripts operativos heredados de `supabase/`.
-8. Una verificación remota falla, o una prueba no puede ejecutarse.
-9. La evidencia disponible contradice la documentación.
+1. Existe una **decisión de negocio** que no puede deducirse de los requisitos
+   ni del producto actual.
+2. La acción es **irreversible o destructiva**.
+3. El cambio llega a **producción** y puede provocar pérdida de datos,
+   indisponibilidad o alteración de permisos.
+4. El **alcance, coste o comportamiento** solicitado cambia de manera
+   importante.
+5. Las **pruebas revelan que la solución aprobada ya no es viable**.
+6. Se va a **iniciar otra historia**: la autorización es por historia.
 
-## Declaración de cierre
+`R-SEC-04` sobrevive intacta como excepción nombrada: si una verificación de
+seguridad falla en remoto, es parada obligatoria. Eso es exposición, no proceso.
 
-Prosa, no casillas. Cuatro bloques:
+Una contradicción entre la evidencia y la documentación ya **no detiene**: se
+resuelve y se reporta en el informe final.
 
-1. **Las preguntas de `THINKING.md`** que aplican, respondidas con su cita. Las
-   que no aplican, descartadas en una línea con motivo.
-2. **Qué no se modificó**, dicho expresamente: contratos preservados, alcance
-   dejado fuera, decisiones que se respetaron.
-3. **Evidencia que autoriza commit y despliegue**: arneses ejecutados con su
-   resultado, verificación remota, estado de las migraciones.
-4. **La pregunta de aprendizaje** de `THINKING.md`, respondida.
+## Informe ejecutivo
 
-Los conteos, hashes y fechas de esa declaración se escriben en
-`docs/fixes/<corrección>.md` y en `docs/03-known-risks.md`, nunca en este
-directorio.
+Es el **único** entregable del cierre. Seis puntos, sin razonamiento paso a
+paso:
+
+1. **Qué se hizo.**
+2. **Qué cambió para el usuario.**
+3. **Pruebas realizadas.**
+4. **Despliegue.**
+5. **Riesgos residuales.**
+6. **Commits.**
+
+Las once preguntas de `THINKING.md` siguen siendo la disciplina de trabajo —son
+lo que evita los defectos— pero **dejan de escribirse para el dueño**. Los
+conteos, hashes y fechas viven en `docs/fixes/<corrección>.md` y en
+`docs/03-known-risks.md`, nunca en este directorio.

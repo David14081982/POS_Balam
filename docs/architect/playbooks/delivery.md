@@ -23,9 +23,11 @@ y se verifican contra la base real.**
 Nunca al revés. `db push --dry-run` antes, comprobación directa después.
 Origen: H-32, H-34, H-35 · Antipatrón: `AP-08`
 
-**R-DEL-04 · BLOCKING · El commit publica.**
-El hook `post-commit` sube cada commit a GitHub automáticamente. Un commit sin
-evidencia completa es una publicación sin evidencia.
+**R-DEL-04 · REQUIRED · El commit publica.**
+El hook `post-commit` sube cada commit a GitHub automáticamente, así que un
+commit sin evidencia completa es una publicación sin evidencia. Es un listón de
+calidad, **no una puerta de autorización**: los commits técnicos y documentales
+son parte del ciclo de la historia y no se consultan uno por uno.
 
 **R-DEL-05 · REQUIRED · La reproducción previa falla, y su conteo se registra.**
 «7 pasaron, 31 fallaron» es evidencia; «se verificó» no lo es.

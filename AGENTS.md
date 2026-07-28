@@ -38,7 +38,8 @@ Estas instrucciones aplican a todo el repositorio y a cualquier agente de IA.
 3. Registrar estado, fecha, pruebas, riesgo residual y commit. Si el commit aún
    no existe, usar `Pendiente de commit` y reemplazarlo después.
 4. Verificar que la documentación describe el código final.
-5. Entregar la declaración de cierre de `docs/architect/WORKFLOW.md`.
+5. Entregar el informe ejecutivo de `docs/architect/WORKFLOW.md`: qué se hizo,
+   qué cambió para el usuario, pruebas, despliegue, riesgos residuales y commits.
 6. Detenerse. No iniciar otro problema sin una nueva instrucción.
 
 ## Sistema arquitectónico
@@ -49,4 +50,5 @@ Estas instrucciones aplican a todo el repositorio y a cualquier agente de IA.
 - Leer siempre `README.md`, `PHILOSOPHY.md`, `THINKING.md` y `WORKFLOW.md`.
 - Cargar de `playbooks/`, `authorities/` y `decisions/` únicamente lo que la
   tabla de enrutamiento del `README.md` indique. No leer el sistema completo.
-- Antes de cerrar, commitear o desplegar, aplicar `WORKFLOW.md`.
+- Autorizar una historia autoriza su ciclo completo. Las seis condiciones de
+  detención y el formato del informe viven en `WORKFLOW.md`.
