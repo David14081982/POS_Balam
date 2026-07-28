@@ -61,14 +61,55 @@ captura existencias por talla sin mencionar nunca `precio`. Si ya existe un
 idioma de interacción para el problema —la grilla por talla de Existencias, los
 chips con «Todas» del Alcance de Descuentos—, se reutiliza o se justifica por
 escrito por qué no.
-Origen: H-36 (en análisis) · Pregunta: `FF-11`
+Origen: H-36 (en análisis) · Pregunta: `FF-11` · Antipatrón: `AP-10`
 
 ---
 
 ## Antipatrones
 
-Sin antipatrones registrados. Los defectos de esta capa —el overlay del bundle
-en H-15, los CSS huérfanos de H-17, el UUID aleatorio del manifiesto en H-19—
+### AP-10 · Interacción diseñada sin recorrer el flujo existente
+**Origen:** H-36 · **Estado:** vigente · **Severidad:** BLOCKING
+**Contexto:** un cambio necesita capturar, mostrar o editar algo que el usuario
+ya administra por alguna pantalla del producto.
+**Síntoma:** la interfaz propuesta es coherente con el esquema y ajena a cómo el
+negocio trabaja hoy. Suele descubrirse cuando el dueño del producto dice «ya
+existe un flujo para eso», y no antes.
+**Causa raíz:** el flujo se infirió del modelo de datos y de búsquedas
+textuales. El modelo dice qué se puede guardar, nunca cómo se captura; y una
+pantalla no menciona necesariamente el campo que se está cambiando, de modo que
+ninguna búsqueda de ese campo la encuentra.
+**Riesgo:** rediseño completo después de proponerlo y, peor, una interfaz que
+exige al usuario datos o pasos que su flujo actual no le pide, o que duplica un
+idioma de interacción ya establecido y deja dos formas distintas de hacer lo
+mismo dentro del producto.
+**Regla permanente:** `R-CLI-08` · **Pregunta:** `FF-11`.
+**Cómo detectarlo:** si la propuesta de interfaz no cita ningún `archivo:línea`
+de una pantalla real, el flujo no se recorrió. Si el producto ya resuelve un
+problema de la misma forma y la propuesta no lo menciona, tampoco.
+**Cómo prevenirlo:** abrir los componentes de alta, edición y validación del
+flujo afectado; documentar su orden de bloques, sus estados y sus reglas de
+guardado; e inventariar los idiomas de interacción que el producto ya usa para
+problemas de forma parecida, antes de proponer nada.
+**Pruebas obligatorias:** el arnés de la historia cubre el flujo de captura y
+sus validaciones, no sólo la autoridad de dominio.
+**Excepciones justificables:** cambios que no tocan captura ni interacción
+—refactores internos, rendimiento, sincronización—.
+**Caso de origen, como ejemplo:** en H-36 se propuso capturar el precio por
+talla listando las ~20 tallas con un campo en cada una. El producto ya tenía dos
+idiomas para esto: la grilla por talla de «Existencias por talla» en el
+formulario de producto, y los chips multi-selección con interruptor «Todas» del
+Alcance de Descuentos, que es como el negocio ya expresa «este valor afecta a
+estas tallas». El formulario nunca menciona `precio`, así que ninguna búsqueda
+de ese campo lo encontraba.
+**Referencias:** `balam/inventory.jsx` § `ProductForm` ·
+`balam/discounts.jsx` § Alcance
+**Camino de retiro:** no aplica; es un criterio de método, no un descuido
+mecanizable.
+
+---
+
+Otros defectos de esta capa no se registraron —el overlay del bundle en H-15,
+los CSS huérfanos de H-17, el UUID aleatorio del manifiesto en H-19— porque
 fueron irrepetibles o ya están cubiertos por arneses permanentes
 (`test-smoke.mjs`, `test-ui-navigation.mjs`, `test-build-reproducibility.mjs`,
 `test-module-contracts.mjs`). Convertirlos en antipatrones habría diluido el
