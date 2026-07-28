@@ -67,7 +67,7 @@
     },
     sales: {
       table: 'sales', conflict: 'folio',
-      fromRow: r => ({ folio: r.folio, folioAliases: Array.isArray(r.folio_aliases) ? r.folio_aliases : undefined, _operationId: r.operation_id || undefined, _stockReserved: !!r.operation_id && r.estado !== 'Apartado' && r.estado !== 'Cancelado', _syncStatus: 'synced', fecha: String(r.fecha).replace('T', ' ').slice(0, 16), clienteId: r.cliente_id || undefined, cliente: r.cliente, vendedor: '', vendedores: r.vendedores || [], items: r.items || 0, subtotal: r.subtotal == null ? undefined : Number(r.subtotal), iva: r.iva == null ? undefined : Number(r.iva), total: Number(r.total) || 0, descuento: r.descuento == null ? undefined : Number(r.descuento), ivaPct: r.iva_pct == null ? undefined : Number(r.iva_pct), ivaIncluded: r.iva_included == null ? undefined : !!r.iva_included, anticipo: r.anticipo == null ? undefined : Number(r.anticipo), saldo: r.saldo == null ? undefined : Number(r.saldo), pagoEfectivo: r.pago_efectivo == null ? undefined : Number(r.pago_efectivo), pagoOtro: r.pago_otro == null ? undefined : Number(r.pago_otro), metodo: r.metodo, estado: r.estado, valorRegalado: Number(r.valor_regalado) || 0, lineas: [] }),
+      fromRow: r => ({ folio: r.folio, folioAliases: Array.isArray(r.folio_aliases) ? r.folio_aliases : undefined, _operationId: r.operation_id || undefined, _stockReserved: !!r.operation_id && r.estado !== 'Apartado' && r.estado !== 'Cancelado', _syncStatus: 'synced', fecha: String(r.fecha).replace('T', ' ').slice(0, 16), clienteId: r.cliente_id || undefined, cliente: r.cliente, vendedor: '', vendedores: r.vendedores || [], items: r.items || 0, subtotal: r.subtotal == null ? undefined : Number(r.subtotal), iva: r.iva == null ? undefined : Number(r.iva), total: Number(r.total) || 0, descuento: r.descuento == null ? undefined : Number(r.descuento), ivaPct: r.iva_pct == null ? undefined : Number(r.iva_pct), ivaIncluded: r.iva_included == null ? undefined : !!r.iva_included, anticipo: r.anticipo == null ? undefined : Number(r.anticipo), saldo: r.saldo == null ? undefined : Number(r.saldo), pagoEfectivo: r.pago_efectivo == null ? undefined : Number(r.pago_efectivo), pagoOtro: r.pago_otro == null ? undefined : Number(r.pago_otro), metodo: r.metodo, estado: r.estado, valorRegalado: Number(r.valor_regalado) || 0, returnLimitDays: r.return_limit_days == null ? null : Number(r.return_limit_days), returnExpiresAt: r.return_expires_at || null, lineas: [] }),
     },
     promotions: {
       table: 'promotions', conflict: 'id', localKey: 'promos',
@@ -804,6 +804,10 @@
     if (sale.pagoEfectivo != null) header.pago_efectivo = Number(sale.pagoEfectivo) || 0;
     if (sale.pagoOtro != null) header.pago_otro = Number(sale.pagoOtro) || 0;
     if (sale.descuento != null) header.descuento = Number(sale.descuento) || 0;
+    // H-34: el plazo congelado sólo se envía si la venta lo tiene, igual que el
+    // resto de campos opcionales: una instalación sin la migración no lo manda.
+    if (sale.returnLimitDays != null) header.return_limit_days = Number(sale.returnLimitDays) || 0;
+    if (sale.returnExpiresAt != null) header.return_expires_at = sale.returnExpiresAt;
     // valor_regalado (cortesías) solo se envía si aplica, así no rompe instalaciones sin la migración pos_009.
     if (Number(sale.valorRegalado) > 0) header.valor_regalado = Number(sale.valorRegalado);
     const items = (sale.lineas || []).map(l => {

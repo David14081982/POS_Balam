@@ -871,6 +871,12 @@
     // El folio toma su día de la MISMA fecha que se guarda en la venta.
     const folio = nextFolio(operationId, fecha);
     const cobrada = estado !== 'Apartado' && estado !== 'Cancelado';
+    // H-34: el plazo se congela con la política vigente AHORA y cuenta desde la
+    // misma fecha de la venta. El apartado todavía no entrega mercancía: su
+    // plazo arranca al liquidarse (ver finalizarApartado).
+    const returnLimitDays = returnLimitDaysConfig();
+    const returnExpiresAt = (returnLimitDays == null || estado === 'Apartado')
+      ? null : addDays(dayOf(fecha), returnLimitDays);
     // Cortesía (regalo/giveaway): no se cobra (total $0) y NO genera comisión, pero SÍ descuenta
     // inventario. Se guarda 'valorRegalado' (lo que se habría cobrado) para reportes de cuánto se regaló.
     const cortesia = metodo === 'Cortesía';
@@ -949,6 +955,8 @@
       metodo, estado,
       descuento: cortesia ? 0 : money(Math.max(0, subtotalOrig - totalConDescuento)), valorRegalado,
       comision: comisionVenta, comisionBase: window.CONFIG.get('commission.base') || 'neto',
+      // H-34: snapshot del plazo. null = sin límite, igual que las ventas previas.
+      returnLimitDays, returnExpiresAt,
       _operationId: operationId, _stockRequired: cobrada, _syncStatus: 'pending',
       // En cortesía cada línea queda en $0 (no se cobró); el valor vive en precioOrig y valorRegalado.
       // promos: evidencia histórica inmutable de H-32. Un arreglo vacío significa "sin promoción";
@@ -1017,6 +1025,11 @@
     }
     // 3) Marcar pagada y guardar la comisión real
     sale.estado = 'Pagado';
+    // H-34: la mercancía se entrega al liquidar, así que el plazo congelado
+    // arranca aquí y no en la fecha en que se reservó el apartado.
+    if (sale.returnLimitDays != null && !sale.returnExpiresAt) {
+      sale.returnExpiresAt = addDays(dayOf(fecha2), sale.returnLimitDays);
+    }
     sale.anticipo = Number(sale.total) || 0;
     sale.saldo = 0;
     sale.comision = Math.round(comisionVenta * 100) / 100;
@@ -1088,6 +1101,80 @@
   }
   function getPeriodoInicio() { return periodoInicio; }
 
+  // ── H-34: plazo de posventa ─────────────────────────────────────────────────
+  // El plazo para devolver se CONGELA en la venta al crearse. Cambiar la
+  // configuración después NO altera ninguna venta anterior: la política vive en
+  // el documento, igual que el folio (H-33), el snapshot financiero (H-03) y la
+  // evidencia de descuento (H-32). Derivar el vencimiento de la configuración
+  // vigente haría que un ajuste administrativo venciera ventas ya emitidas.
+  //
+  // `returnLimitDays == null` significa SIN LÍMITE. Es también el estado natural
+  // de toda venta anterior a H-34, que por eso nunca vence.
+  const MAX_LIMIT_DAYS = 3650;
+  function returnLimitDaysConfig() {
+    if (!C.get('returns.limitEnabled')) return null;
+    const raw = Math.floor(Number(C.get('returns.limitDays')));
+    return Number.isFinite(raw) && raw > 0 ? Math.min(raw, MAX_LIMIT_DAYS) : null;
+  }
+  // Día local del negocio 'YYYY-MM-DD'. Acepta la fecha ya formateada de la venta
+  // ('YYYY-MM-DD HH:mm'), así plazo y venta salen del MISMO valor y una venta
+  // cerca de la medianoche no queda partida entre dos días (lección de H-33).
+  function dayOf(date) {
+    if (typeof date === 'string') {
+      const m = date.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (m) return m[1] + '-' + m[2] + '-' + m[3];
+    }
+    const d = date instanceof Date ? date : new Date();
+    const p = n => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+  // Aritmética de calendario sobre la tripleta año/mes/día. No convierte husos
+  // horarios, así que el horario de verano no puede correr un vencimiento un día.
+  function dayValue(day) {
+    const m = String(day == null ? '' : day).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    return m ? Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : NaN;
+  }
+  function addDays(day, days) {
+    const base = dayValue(day);
+    if (!Number.isFinite(base)) return null;
+    const d = new Date(base + Math.round(Number(days) || 0) * 86400000);
+    const p = n => String(n).padStart(2, '0');
+    return d.getUTCFullYear() + '-' + p(d.getUTCMonth() + 1) + '-' + p(d.getUTCDate());
+  }
+  function daysUntil(day) {
+    const target = dayValue(day), today = dayValue(dayOf());
+    return Number.isFinite(target) && Number.isFinite(today)
+      ? Math.round((target - today) / 86400000) : null;
+  }
+  const dayWord = n => (Math.abs(n) === 1 ? 'día' : 'días');
+  const noLimit = { limited: false, days: null, expiresAt: null, daysLeft: null, status: 'sin_limite', label: 'Sin límite' };
+  // Autoridad ÚNICA del estado del plazo de una venta. La consultan la pantalla
+  // de Devoluciones (etiqueta y filtros) y `recordReturn` (bloqueo). Nunca lee la
+  // configuración vigente: sólo lo que la venta congeló.
+  //   sin_limite → la venta no vence nunca
+  //   pendiente  → apartado sin liquidar: el plazo aún no arranca
+  //   vigente    → admite posventa (incluye el último día, "Vence hoy")
+  //   vencido    → fuera de plazo
+  function returnDeadline(sale) {
+    const days = sale && sale.returnLimitDays != null ? Number(sale.returnLimitDays) : null;
+    if (!(days > 0)) return Object.assign({}, noLimit);
+    const expiresAt = (sale && sale.returnExpiresAt) || null;
+    if (!expiresAt) {
+      return { limited: true, days, expiresAt: null, daysLeft: null, status: 'pendiente', label: `Plazo de ${days} ${dayWord(days)} al liquidar` };
+    }
+    const daysLeft = daysUntil(expiresAt);
+    // Fecha dañada: no se inventa un vencimiento ni se bloquea al mostrador.
+    if (daysLeft == null) return Object.assign({}, noLimit);
+    if (daysLeft < 0) {
+      const n = -daysLeft;
+      return { limited: true, days, expiresAt, daysLeft, status: 'vencido', label: `Vencido hace ${n} ${dayWord(n)}` };
+    }
+    return {
+      limited: true, days, expiresAt, daysLeft, status: 'vigente',
+      label: daysLeft === 0 ? 'Vence hoy' : `Vence en ${daysLeft} ${dayWord(daysLeft)}`,
+    };
+  }
+
   // ---- Devoluciones ----
   // Piezas de un renglón (sku+talla) de un folio ya devueltas en devoluciones previas.
   function returnedQty(folio, sku, talla) {
@@ -1109,6 +1196,11 @@
     const sale = sales.find(s => s.folio === folio);
     if (!sale) return { ok: false, error: 'No se encontró la venta original' };
     if (!isReturnable(sale)) return { ok: false, error: 'Esa venta no admite devolución (apartado, cancelada o ya devuelta)' };
+    // H-34: el plazo lo decide el snapshot de la venta, no la configuración de hoy.
+    const plazo = returnDeadline(sale);
+    if (plazo.status === 'vencido') {
+      return { ok: false, error: `El plazo de devolución de esta venta venció el ${plazo.expiresAt} (${plazo.label.toLowerCase()})` };
+    }
     const items = (lineas || []).filter(l => (Number(l.qty) || 0) > 0);
     if (!items.length) return { ok: false, error: 'Selecciona al menos un artículo y cantidad a devolver' };
     // Validar contra lo vendido menos lo ya devuelto
@@ -1496,7 +1588,7 @@
     folioBlockRequest, applyFolioBlock, terminalCode,
     findSaleByFolio, saleFolioAliases, folioAliasHit, stockOf, isAutoImg, resetProducts, applyRemote, applySyncResult, mergeRemote, markSaleSync, liquidarComision,
     completarApartado, registrarPagoApartado, paymentsForSale, hasFinancialSnapshot, resolveLineDiscount, cerrarMes, getPeriodoInicio,
-    recordReturn, returnedQty, returnsForFolio, isReturnable,
+    recordReturn, returnedQty, returnsForFolio, isReturnable, returnDeadline,
     addUser, updateUser, removeUser, isEligibleSeller, resolveSellerCommission,
     addPromo, updatePromo, removePromo, duplicatePromo,
     seedDemo, resetEmpty, resetTestData, demoActive,

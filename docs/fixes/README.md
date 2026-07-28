@@ -47,6 +47,7 @@ sesión de chat.
 | `autoridad-comision-efectiva.md` | H-31 | Precedencia y compatibilidad del porcentaje efectivo |
 | `trazabilidad-descuento-ticket.md` | H-32 | Evidencia del descuento por renglón y formato de Finanzas |
 | `folio-comercial-diario.md` | H-33 | Folio corto con consecutivo diario y contador central |
+| `plazo-posventa.md` | H-34 | Plazo de devolución configurable y congelado en la venta |
 
 Documentación financiera relacionada, creada antes de este índice:
 

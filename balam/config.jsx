@@ -169,6 +169,10 @@
     'pos.validateStock': true,
     'returns.reverseCommission': true, // al devolver: revertir comisión/ventas del vendedor en proporción a lo devuelto
     'returns.refundMethod': 'Mismo método', // sugerencia por defecto del método de reembolso
+    // H-34: plazo de posventa. Apagado = las ventas nunca vencen (contrato histórico).
+    // Cada venta congela el plazo vigente al crearse; cambiar esto no altera ventas anteriores.
+    'returns.limitEnabled': false,
+    'returns.limitDays': 15,
     'print.auto': false,
     'print.lowStockAlert': true,
   };

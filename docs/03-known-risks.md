@@ -1204,6 +1204,62 @@ terminales los bloques son disjuntos, así que la segunda empieza en `0011`. Las
 ventas anteriores a H-33 conservan su folio largo por diseño.
 **Corrección documentada:** `docs/fixes/folio-comercial-diario.md`.
 
+## H-34 — Plazo de posventa inexistente y no congelable
+
+**Estado:** RESUELTO
+**Fecha de registro:** 28/07/2026
+**Fecha de resolución:** 28/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** ninguna venta conserva hasta cuándo admite devolución.
+`DATA.isReturnable()` sólo consulta el estado y `recordReturn()` no evalúa
+tiempo, así que una venta de 2019 se devuelve igual que una de hoy. La única
+política de devoluciones persistida es `returns.reverseCommission`, que se lee
+vigente en cada operación.
+**Origen de auditoría:** Fase 1 del módulo de Cambios de productos, contrato
+funcional aprobado el 28/07/2026.
+**Riesgo:** implementar el límite leyendo la configuración vigente haría que
+activarlo venciera retroactivamente ventas ya emitidas y que cambiar los días
+alterara el pasado. El plazo es una condición comercial pactada al vender: debe
+vivir en el documento, como el folio (H-33), el desglose financiero (H-03) y la
+evidencia del descuento (H-32).
+**Reproducción:** `node test-return-deadline.mjs` (nuevo) antes del cambio: 7
+pasaron, 31 fallaron. Los 7 que pasaban son los casos «sin límite», que
+coinciden con el comportamiento histórico.
+**Causa raíz:** contrato ausente, no defecto. La venta no tenía ningún campo
+capaz de expresar la política de posventa aplicada.
+**Corrección:** `pos.sales` gana `return_limit_days` y `return_expires_at` con
+restricciones que impiden un vencimiento sin política que lo explique.
+`DATA.returnDeadline()` es la autoridad única de los cuatro estados —sin
+límite, pendiente, vigente, vencido— y de su etiqueta. El plazo cuenta desde la
+misma fecha guardada en la venta; los apartados lo arrancan al liquidarse. La
+pantalla de Devoluciones filtra y explica el plazo, pero no oculta las ventas
+vencidas: bloquea la confirmación. `commit_sale` se redefine de forma
+estrictamente aditiva, generada a partir del texto vigente para evitar deriva.
+**Despliegue:** migraciones `20260728004500_pos_h34_return_deadline.sql` y
+`20260728004600_pos_h34_return_deadline_verification.sql` aplicadas al proyecto
+`Balam` (`telohdbvbvsfmwyriflz`) el 28/07/2026, antes de publicar el cliente. La
+verificación emitió sus cinco avisos de éxito y no dejó filas temporales. La
+comprobación posterior confirmó columnas nullable sin default, las dos
+restricciones, el índice parcial, 6 ventas reales con 0 plazos y una
+`commit_sale` desplegada que transporta el plazo conservando
+`is distinct from p_operation_id` y `coalesce(v_stock -> 'products', …)`.
+**Pruebas:** plazo de posventa 38/38; migraciones 29/29; coherencia de venta
+17/17; devoluciones 17/17; folio diario 60/60; folios multi-terminal 12/12;
+trazabilidad H-32 65/65; cola 115/115; contratos de módulos 36/36; comisión
+efectiva 22/22; comisiones 10/10; liquidaciones 10/10; descuentos 43/43; build
+reproducible 8/8; smoke bundle 17/17; navegación 13/13; roles 10/10;
+concurrencia 9/9; propagación de reset 21/21; elegibilidad 10/10; avatares
+13/13. Build offline correcto con 67 assets. El diff de `commit_sale` contra la
+versión de H-32 contiene exactamente los tres bloques aditivos previstos.
+**Pendiente:** aplicar las migraciones y verificar en el proyecto `Balam`. La
+política «conservar / reiniciar plazo después de un cambio» pertenece a fases
+posteriores del módulo de Cambios.
+**Riesgo residual:** bajo. Todas las ventas existentes quedan sin límite y no
+cambian de comportamiento. Una venta vencida sólo puede devolverse desactivando
+el límite en Configuración: no existe autorización administrativa puntual con
+justificación registrada.
+**Corrección documentada:** `docs/fixes/plazo-posventa.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

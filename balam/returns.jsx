@@ -5,7 +5,7 @@
 // Exporta window.ReturnsScreen.
 (function () {
   const { useState, useMemo } = React;
-  const { toast, fmt, StatusBadge } = window.UI;
+  const { toast, fmt, StatusBadge, Segment } = window.UI;
   const { MS, GlassCard, SerifHeading } = window.HX;
   const C = window.CONFIG;
   const D = window.DATA;
@@ -24,22 +24,41 @@
     return h(ReturnPicker, { onPick: setFolio });
   }
 
+  // ── H-34: presentación del plazo congelado en la venta ────────────────────────
+  // `DATA.returnDeadline` es la autoridad; aquí sólo se elige el color y el filtro.
+  const DEADLINE_FILTERS = [['todos', 'Todos'], ['vigente', 'Vigentes'], ['vencido', 'Vencidos'], ['sin_limite', 'Sin límite']];
+  const deadlineOf = (sale) => (D.returnDeadline ? D.returnDeadline(sale) : { status: 'sin_limite', label: 'Sin límite' });
+  const DEADLINE_TONE = { vigente: 'text-success', vencido: 'text-danger', pendiente: 'text-warning', sin_limite: 'text-on-surface-variant' };
+  function DeadlineTag({ sale, className }) {
+    const dl = deadlineOf(sale);
+    return h('div', {
+      className: 'flex items-center gap-1 text-overline uppercase mt-0.5 ' + (DEADLINE_TONE[dl.status] || '') + ' ' + (className || ''),
+    }, [
+      h(MS, { key: 'i', name: dl.status === 'vencido' ? 'alert' : 'clock', size: 13 }),
+      h('span', { key: 'l' }, dl.label),
+    ]);
+  }
+
   // ── Paso 1: elegir la venta a devolver + historial de devoluciones ─────────────
   function ReturnPicker({ onPick }) {
     const [q, setQ] = useState('');
+    const [plazo, setPlazo] = useState('todos');
     const [buscando, setBuscando] = useState(false);
     const [, bump] = useState(0);
     const term = q.trim().toLowerCase();
     // La búsqueda acepta el folio vigente, el folio impreso conservado como alias
     // y el nombre del cliente. El alias pertenece SÓLO a la venta que lo imprimió:
     // nunca ofrece la venta ajena que casualmente comparta la cadena.
+    // El plazo NO decide si la venta aparece: una venta vencida se muestra y se
+    // explica. Lo que bloquea es confirmar la devolución (DATA.recordReturn).
     const sales = useMemo(() => D.sales
       .filter(s => D.isReturnable(s))
       .filter(s => !term
         || String(s.folio).toLowerCase().includes(term)
         || (D.saleFolioAliases ? D.saleFolioAliases(s) : []).some(a => String(a).toLowerCase().includes(term))
         || String(s.cliente || '').toLowerCase().includes(term))
-      .slice(0, 40), [q, D.sales.length, buscando]);
+      .filter(s => plazo === 'todos' || deadlineOf(s).status === plazo)
+      .slice(0, 40), [q, plazo, D.sales.length, buscando]);
     const recent = (D.returns || []).slice(0, 8);
     // El pull de ventas es paginado (ventana reciente): un folio más viejo puede no estar
     // en este equipo. Este botón lo trae de la nube y lo fusiona en lo local para devolverlo.
@@ -71,6 +90,7 @@
               h(MS, { key: 'i', name: 'search', size: 18, className: 'absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant' }),
               h('input', { key: 'in', value: q, onChange: e => setQ(e.target.value), placeholder: 'Buscar por folio o cliente…', autoFocus: true, className: 'w-full h-11 pl-10 pr-3 bg-surface-container-low border border-outline-variant focus:ring-1 focus:ring-primary text-body rounded-lg' }),
             ]),
+            h('div', { key: 'pl', className: 'mt-3' }, h(Segment, { value: plazo, onChange: setPlazo, options: DEADLINE_FILTERS })),
           ]),
           h('div', { key: 'list', className: 'flex flex-col gap-2' }, sales.length ? sales.map(s => h('button', {
             key: s.folio,
@@ -90,6 +110,7 @@
             h('div', { key: 'c', className: 'flex-1 min-w-0' }, [
               h('div', { key: 'a', className: 'text-body font-medium text-primary truncate' }, s.cliente || 'Público en general'),
               h('div', { key: 'b', className: 'text-caption text-on-surface-variant' }, `${s.items} art. · ${s.metodo}`),
+              h(DeadlineTag, { key: 'dl', sale: s }),
               !(s.lineas && s.lineas.length) && h('div', { key: 'd', className: 'flex items-center gap-1 text-overline uppercase text-warning mt-0.5' }, [h(MS, { key: 'i', name: 'alert', size: 13 }), 'Sin detalle de artículos']),
             ]),
             h(StatusBadge, { key: 'st', estado: s.estado }),
@@ -147,6 +168,7 @@
     const refund = chosen.reduce((a, r) => a + r.precio * (sel[r.k].qty || 1), 0);
 
     function confirm() {
+      if (vencida) { toast(`Esta venta ya no admite devolución · ${plazo.label.toLowerCase()}`, 'var(--danger)'); return; }
       if (!chosen.length) { toast('Selecciona al menos un artículo', 'var(--danger)'); return; }
       for (const r of chosen) { if (!sel[r.k].motivo) { toast(`Elige el motivo para ${r.nombre}`, 'var(--danger)'); return; } }
       const lineas = chosen.map(r => ({ sku: r.sku, nombre: r.nombre, talla: r.talla, qty: sel[r.k].qty || 1, motivo: sel[r.k].motivo, precio: r.precio }));
@@ -157,6 +179,10 @@
     }
 
     const reverseOn = !!C.get('returns.reverseCommission');
+    // El plazo vive en la venta (H-34): una venta vencida se abre y se explica,
+    // pero no se puede confirmar. `recordReturn` aplica la misma regla al guardar.
+    const plazo = deadlineOf(sale);
+    const vencida = plazo.status === 'vencido';
 
     return h('div', { className: 'flex-1 overflow-y-auto bg-background font-body text-on-surface' },
       h('div', { className: 'max-w-[1100px] mx-auto p-6' }, [
@@ -187,6 +213,12 @@
           h('div', { key: 'd' }, [
             h('div', { key: 'l', className: 'text-overline uppercase tracking-widest text-on-surface-variant' }, 'Fecha de venta'),
             h('div', { key: 'v', className: 'text-body-lg text-primary' }, String(sale.fecha || '').slice(0, 10)),
+          ]),
+          h('div', { key: 's3', className: 'h-10 w-px bg-outline-variant hidden md:block' }),
+          h('div', { key: 'pl' }, [
+            h('div', { key: 'l', className: 'text-overline uppercase tracking-widest text-on-surface-variant' }, 'Plazo'),
+            h('div', { key: 'v', className: 'text-body-lg ' + (DEADLINE_TONE[plazo.status] || 'text-primary') }, plazo.label),
+            plazo.expiresAt && h('div', { key: 'e', className: 'text-overline uppercase text-on-surface-variant' }, `Hasta ${plazo.expiresAt}`),
           ]),
           h('div', { key: 'sp', className: 'flex-1' }),
           h(StatusBadge, { key: 'st', estado: sale.estado }),
@@ -278,7 +310,9 @@
                 reverseOn && h('div', { key: 'cm', className: 'flex items-center gap-2 text-[11px] opacity-70 pt-1' }, [h(MS, { key: 'i', name: 'undo', size: 14 }), 'La comisión del vendedor se ajustará en proporción.']),
               ]),
               h('div', { key: 'btns', className: 'mt-8 space-y-3' }, [
-                h('button', { key: 'ok', onClick: confirm, disabled: !chosen.length, className: 'w-full py-3.5 font-label-sm uppercase tracking-widest text-xs rounded-lg transition-all active:scale-95 disabled:opacity-40', style: { background: '#FFE088', color: '#131B2E' } }, 'Confirmar devolución'),
+                vencida && h('div', { key: 'exp', className: 'mb-3 p-3 rounded-lg text-caption leading-relaxed', style: { background: 'rgba(255,255,255,0.12)' } },
+                  `Fuera de plazo: esta venta admitía devolución hasta el ${plazo.expiresAt}. Para aceptarla, un administrador debe ajustar el plazo en Configuración → Devoluciones.`),
+                h('button', { key: 'ok', onClick: confirm, disabled: !chosen.length || vencida, className: 'w-full py-3.5 font-label-sm uppercase tracking-widest text-xs rounded-lg transition-all active:scale-95 disabled:opacity-40', style: { background: '#FFE088', color: '#131B2E' } }, 'Confirmar devolución'),
                 h('button', { key: 'x', onClick: onBack, className: 'w-full py-3.5 font-label-sm uppercase tracking-widest text-xs rounded-lg border border-white/25 text-on-primary hover:bg-white/10 transition-colors' }, 'Cancelar'),
               ]),
             ]),

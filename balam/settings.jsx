@@ -787,6 +787,14 @@
     devoluciones: () => [
       h('p', { key: 'i', className: 'text-caption text-on-surface-variant' }, 'Catálogo de motivos que el cajero elige al devolver un artículo, y la política de comisiones. Todo se sincroniza a la nube.'),
       h(CatalogEditor, { key: 'rr', kind: 'return_reason', title: 'Motivos de devolución', codePlaceholder: 'Talla', labelPlaceholder: 'Talla errónea', hint: 'El administrador agrega aquí cualquier motivo adicional; el cajero lo selecciona por artículo en la pantalla de Devoluciones.' }),
+      h(GlassCard, { key: 'plazo', className: 'p-6' }, [
+        h(SerifHeading, { key: 't', className: 'mb-2', children: 'Plazo para devoluciones' }),
+        h(CfgToggle, { key: 'le', k: 'returns.limitEnabled', title: 'Aplicar límite de tiempo', desc: 'Si lo apagas, las ventas nunca vencen y pueden devolverse siempre.' }),
+        h('div', { key: 'g', className: 'grid grid-cols-1 md:grid-cols-2 gap-x-6 mt-2' }, [
+          h(CfgText, { key: 'ld', k: 'returns.limitDays', label: 'Días permitidos', type: 'number', min: 1, max: 3650 }),
+        ]),
+        h('p', { key: 'n', className: 'text-caption text-on-surface-variant mt-3' }, 'Cada venta conserva el plazo vigente al momento en que se registró. Cambiar estos ajustes NO modifica ninguna venta anterior: sólo aplica a las ventas nuevas. Los apartados empiezan a contar el día en que se liquidan.'),
+      ]),
       h(GlassCard, { key: 'pol', className: 'p-6' }, [
         h(SerifHeading, { key: 't', className: 'mb-2', children: 'Política de devoluciones' }),
         h(CfgToggle, { key: 'rc', k: 'returns.reverseCommission', title: 'Revertir comisión al devolver', desc: 'Descuenta al vendedor la comisión y las ventas correspondientes a lo devuelto (proporcional, usando la base de la venta). Si lo apagas, las comisiones ya acumuladas no se tocan.' }),

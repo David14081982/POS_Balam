@@ -560,6 +560,33 @@ interpretan como formato nuevo y no participan en el consecutivo diario. Una
 operación antigua todavía en cola conserva la reidentificación por token de
 H-02.
 
+### Plazo de posventa
+
+El plazo para devolver una venta es un **snapshot de la venta**, no una lectura
+de la configuración vigente. `Configuración → Devoluciones` administra
+`returns.limitEnabled` y `returns.limitDays`; cada venta congela ese valor al
+crearse en `sales.return_limit_days` / `sales.return_expires_at`, de modo que
+cambiar la política después no altera ninguna venta anterior.
+
+`return_limit_days` nulo significa **sin límite** y es el estado de todas las
+ventas anteriores a H-34: nunca vencen. Con días congelados y sin fecha, el
+plazo todavía no arranca —es el caso del apartado, que empieza a contar el día
+en que se liquida porque entonces se entrega la mercancía—. El vencimiento se
+mide desde la **misma fecha guardada en la venta**, nunca desde una segunda
+lectura del reloj.
+
+`DATA.returnDeadline(sale)` es la autoridad única: devuelve estado
+(`sin_limite`, `pendiente`, `vigente`, `vencido`), días restantes y la etiqueta
+visible. Una fecha irreconocible se trata como «sin límite»: no se inventa un
+vencimiento. `DATA.isReturnable()` conserva su responsabilidad —el estado de la
+venta— y no absorbe el plazo: son dos compuertas ortogonales, por lo que una
+venta vencida sigue siendo visible y filtrable en Devoluciones aunque no pueda
+confirmarse.
+
+`commit_sale` transporta ambas columnas de forma aditiva: un cliente que no
+envía las claves obtiene NULL, es decir el resultado histórico, y un reintento
+sin plazo no borra el ya registrado.
+
 ### Commit transaccional de devolución
 
 Las migraciones `20260725002100_pos_transactional_return.sql` y
