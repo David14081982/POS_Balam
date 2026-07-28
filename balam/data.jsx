@@ -379,7 +379,10 @@
   const seedReturns = []; // sin devoluciones de ejemplo — se generan en la pantalla Devoluciones
 
   const LS_SELLERS = 'balam_pos_sellers_v1', LS_CLIENTS = 'balam_pos_clients_v1',
-        LS_SALES = 'balam_pos_sales_v1', LS_MOVES = 'balam_pos_moves_v1', LS_FOLIO = 'balam_pos_folio_v1',
+        LS_SALES = 'balam_pos_sales_v1', LS_MOVES = 'balam_pos_moves_v1',
+        // LS_FOLIO: contador global anterior a H-33 (sólo se limpia). LS_FOLIO_V2:
+        // reserva diaria vigente { prefix, date, used, next, until }.
+        LS_FOLIO = 'balam_pos_folio_v1', LS_FOLIO_V2 = 'balam_pos_folio_v2',
         LS_PROMOS = 'balam_pos_promos_v1', LS_LIQ = 'balam_pos_liq_v1', LS_PERIODO = 'balam_pos_periodo_v1',
         LS_RETURNS = 'balam_pos_returns_v1', LS_PAYMENTS = 'balam_pos_payments_v1';
   const sellers = loadArr(LS_SELLERS, seedSellers);
@@ -568,25 +571,174 @@
     const current = String(folio || '').trim();
     return current.endsWith('-' + token) ? current : current + '-' + token;
   }
-  // Consecutivo local legible + identidad inmutable global. Los folios históricos
-  // sin sufijo continúan válidos y sólo aportan su segmento consecutivo.
-  function nextFolio(operationId) {
-    const prefix = (window.CONFIG && window.CONFIG.get('folio.prefix')) || 'BG-';
-    let seq;
-    try { seq = parseInt(localStorage.getItem(LS_FOLIO), 10); } catch (e) { seq = NaN; }
-    if (!seq || isNaN(seq)) {
-      const escaped = String(prefix).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const pattern = new RegExp('^' + escaped + '(\\d+)(?:-|$)');
-      seq = sales.reduce((m, s) => {
-        const match = String(s.folio || '').match(pattern);
-        const n = match ? parseInt(match[1], 10) : 0;
-        return n > m ? n : m;
-      }, 0);
+
+  // ── H-33: folio comercial corto ─────────────────────────────────────────────
+  // El folio VISIBLE es {PREFIJO}-{YYMMDD}-{CONSECUTIVO}. No lleva identidad
+  // técnica: ésa vive en `sale._operationId` (UUID inmutable) y nunca se deriva
+  // del folio. La unicidad entre terminales la da un contador diario en Supabase:
+  // cada terminal RESERVA un bloque de números y los entrega localmente, así una
+  // venta offline conserva un folio corto y definitivo.
+  //
+  // CONTRATO DEL FOLIO IMPRESO: el valor que se imprime no cambia nunca. Cuando
+  // no hay bloque reservado (sin red y sin reserva vigente) el folio incorpora un
+  // CUARTO segmento con el código corto de esta terminal —`BG-260727-0001-K7Q`—,
+  // que lo distingue de cualquier otra terminal y lo vuelve definitivo: no se
+  // renombra al sincronizar. `folio_conflict` sobrevive como última defensa para
+  // el residuo (dos terminales con el mismo código, u operaciones heredadas de
+  // H-02); en ese caso el folio impreso se conserva para siempre en
+  // `sale.folioAliases` y sigue sirviendo para buscar, devolver y reimprimir.
+  const FOLIO_BLOCK = 10;     // números que se piden por reserva
+  const FOLIO_REFILL_AT = 3;  // se repone cuando quedan estos o menos
+  const FOLIO_RE = /^([A-Z0-9]{1,6})-(\d{6})-(\d{4,})(?:-([A-Z0-9]{2,4}))?$/;
+  // Prefijo comercial seguro: mayúsculas, sólo A-Z0-9 y longitud acotada.
+  function normalizeFolioPrefix(raw) {
+    const clean = String(raw == null ? '' : raw).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+    return clean || 'BG';
+  }
+  function folioPrefix() {
+    return normalizeFolioPrefix(window.CONFIG && window.CONFIG.get('folio.prefix'));
+  }
+  // Fecha LOCAL del negocio (el día del mostrador), nunca UTC. Acepta la fecha ya
+  // formateada de la venta ('YYYY-MM-DD HH:mm'): folio y fecha salen del MISMO
+  // valor, así una venta cerca de la medianoche no queda partida entre dos días.
+  function businessDate(date) {
+    if (typeof date === 'string') {
+      const m = date.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (m) return m[1].slice(2) + m[2] + m[3];
     }
-    seq += 1;
-    save(LS_FOLIO, seq);
-    window.CORE.getDeviceId();
-    return collisionSafeFolio(prefix + seq, operationId || newOperationId());
+    const d = date instanceof Date ? date : new Date();
+    const p = n => String(n).padStart(2, '0');
+    return p(d.getFullYear() % 100) + p(d.getMonth() + 1) + p(d.getDate());
+  }
+  // Código corto y estable de esta terminal (3 caracteres base 36). Sólo aparece
+  // en folios provisionales; es lo que impide que dos terminales sin bloque
+  // impriman la misma cadena.
+  function terminalCode(deviceId) {
+    const id = String(deviceId == null ? window.CORE.getDeviceId() : deviceId);
+    let hash = 2166136261; // FNV-1a de 32 bits
+    for (let i = 0; i < id.length; i++) {
+      hash ^= id.charCodeAt(i);
+      hash = Math.imul(hash, 16777619);
+    }
+    return ((hash >>> 0).toString(36).toUpperCase() + '00').slice(0, 3);
+  }
+  // Cuatro dígitos mínimos; a partir de 10000 crece sin truncarse ni repetirse.
+  // `terminal` sólo se agrega en folios provisionales.
+  function folioFromParts(prefix, date, seq, terminal) {
+    const base = normalizeFolioPrefix(prefix) + '-' + String(date)
+      + '-' + String(Math.max(1, Math.floor(Number(seq) || 0))).padStart(4, '0');
+    const tag = String(terminal || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4);
+    return tag ? base + '-' + tag : base;
+  }
+  function parseFolio(folio) {
+    const m = String(folio == null ? '' : folio).trim().toUpperCase().match(FOLIO_RE);
+    return m
+      ? { prefix: m[1], date: m[2], seq: parseInt(m[3], 10), terminal: m[4] || null, provisional: !!m[4] }
+      : null;
+  }
+  function folioPreview(prefix, date) {
+    return folioFromParts(normalizeFolioPrefix(prefix), date || businessDate(), 1);
+  }
+  // Reserva vigente de esta terminal. `used` es el piso local: un número entregado
+  // no se vuelve a entregar aunque se borre la venta.
+  function loadFolioState() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(LS_FOLIO_V2));
+      if (raw && typeof raw === 'object') {
+        return {
+          prefix: String(raw.prefix || ''), date: String(raw.date || ''),
+          used: Number(raw.used) || 0, next: Number(raw.next) || 0, until: Number(raw.until) || 0,
+        };
+      }
+    } catch (e) { /* sin storage o dato dañado */ }
+    return { prefix: '', date: '', used: 0, next: 0, until: 0 };
+  }
+  function saveFolioState(state) {
+    try { localStorage.setItem(LS_FOLIO_V2, JSON.stringify(state)); } catch (e) { /* cuota */ }
+  }
+  function folioStateFor(prefix, date) {
+    const st = loadFolioState();
+    return (st.prefix === prefix && st.date === date) ? st : { prefix, date, used: 0, next: 0, until: 0 };
+  }
+  // Mayor consecutivo del día ya conocido localmente, incluidas las ventas bajadas
+  // de la nube: sirve de piso para no repetir un número de otra terminal.
+  function maxKnownFolioSeq(prefix, date) {
+    return sales.reduce((m, s) => {
+      const p = parseFolio(s.folio);
+      return p && p.prefix === prefix && p.date === date && p.seq > m ? p.seq : m;
+    }, 0);
+  }
+  function takeFolioSeq(prefix, date) {
+    const st = folioStateFor(prefix, date);
+    let seq, reserved;
+    if (st.next && st.next <= st.until) { seq = st.next; st.next = seq + 1; reserved = true; }
+    else { seq = Math.max(st.used, maxKnownFolioSeq(prefix, date)) + 1; reserved = false; }
+    if (seq > st.used) st.used = seq;
+    saveFolioState(st);
+    return { seq, reserved };
+  }
+  // Contrato con STORE: qué bloque hace falta y desde qué piso pedirlo.
+  function folioBlockRequest() {
+    const prefix = folioPrefix(), date = businessDate();
+    const st = folioStateFor(prefix, date);
+    const left = st.next && st.next <= st.until ? st.until - st.next + 1 : 0;
+    return {
+      prefix, date, left, count: FOLIO_BLOCK,
+      floor: Math.max(st.used, maxKnownFolioSeq(prefix, date)),
+      needed: left <= FOLIO_REFILL_AT,
+    };
+  }
+  // Adopta un bloque confirmado por el servidor. Sólo avanza: nunca vuelve a un
+  // número ya entregado por esta terminal.
+  function applyFolioBlock(prefix, date, from, to) {
+    const p = normalizeFolioPrefix(prefix), d = String(date || '');
+    const f = Math.floor(Number(from) || 0), t = Math.floor(Number(to) || 0);
+    if (!/^\d{6}$/.test(d) || !(f > 0) || !(t >= f)) return false;
+    const st = folioStateFor(p, d);
+    if (f <= st.used) return false;
+    st.next = f; st.until = t;
+    if (f - 1 > st.used) st.used = f - 1;
+    saveFolioState(st);
+    return true;
+  }
+  // Autoridad ÚNICA del folio comercial. `operationId` no participa en el valor
+  // visible; se conserva en la firma porque el llamador ya generó la identidad.
+  // Con bloque reservado devuelve el formato limpio; sin bloque agrega el código
+  // de terminal y el resultado sigue siendo DEFINITIVO: no se renombra después.
+  function nextFolio(operationId, fecha) {
+    const prefix = folioPrefix(), date = businessDate(fecha);
+    const taken = takeFolioSeq(prefix, date);
+    const device = window.CORE.getDeviceId(); // identidad de terminal siempre presente
+    const tag = taken.reserved ? null : terminalCode(device);
+    // Reposición en segundo plano: jamás bloquea el cobro.
+    try { window.CORE.invokeSync('ensureFolioBlock'); } catch (e) { /* offline */ }
+    return folioFromParts(prefix, date, taken.seq, tag);
+  }
+  // ── Resolución por folio o alias ────────────────────────────────────────────
+  // Autoridad única de "¿qué venta es este folio?". Un folio impreso que después
+  // recibió otro identificador sigue resolviendo a su venta, y NUNCA se resuelve
+  // a la venta ajena que casualmente comparta la cadena: la coincidencia exacta
+  // por folio vigente tiene prioridad y el alias sólo se consulta después, contra
+  // la venta que realmente lo imprimió.
+  function saleFolioAliases(sale) {
+    return Array.isArray(sale && sale.folioAliases) ? sale.folioAliases : [];
+  }
+  function findSaleByFolio(folioOrAlias) {
+    const term = String(folioOrAlias == null ? '' : folioOrAlias).trim();
+    if (!term) return null;
+    const up = term.toUpperCase();
+    return sales.find(s => s.folio === term)
+      || sales.find(s => String(s.folio || '').toUpperCase() === up)
+      || sales.find(s => saleFolioAliases(s).some(a => String(a).toUpperCase() === up))
+      || null;
+  }
+  // ¿Este término encontró la venta por un folio anterior? La interfaz lo usa para
+  // avisar con qué identificador quedó registrada finalmente.
+  function folioAliasHit(sale, term) {
+    const t = String(term == null ? '' : term).trim().toUpperCase();
+    if (!t || !sale) return null;
+    if (String(sale.folio || '').toUpperCase().includes(t)) return null;
+    return saleFolioAliases(sale).find(a => String(a).toUpperCase().includes(t)) || null;
   }
   // Existencias disponibles de una talla en un producto.
   function stockOf(p, talla) { const e = (p.stock || []).find(v => v.talla === talla); return e ? e.stock : 0; }
@@ -606,9 +758,16 @@
     if (Object.values(parts).some(x => x < 0)) throw new Error('Los componentes del pago no pueden ser negativos');
     return parts;
   }
+  // Reidentificación de último recurso. El folio anterior YA ESTÁ IMPRESO, así que
+  // no se pierde: queda como alias histórico de la venta y sigue resolviendo
+  // búsqueda, devolución y reimpresión. Sólo ocurre en el residuo (colisión de
+  // códigos de terminal u operaciones heredadas de H-02).
   function rekeySaleFolio(operationId, oldFolio, newFolio) {
     const sale = sales.find(s => s._operationId === operationId && s.folio === oldFolio);
     if (!sale || sale._syncStatus === 'synced' || !newFolio || newFolio === oldFolio) return false;
+    const aliases = (sale.folioAliases || []).slice();
+    if (oldFolio && !aliases.includes(oldFolio)) aliases.push(oldFolio);
+    sale.folioAliases = aliases.filter(a => a !== newFolio);
     sale.folio = newFolio;
     payments.forEach(p => { if (p.folio === oldFolio) p.folio = newFolio; });
     movements.forEach(m => { if (m.ref === oldFolio) m.ref = newFolio; });
@@ -708,8 +867,9 @@
     const pagoOtro = pagoOtroIn == null ? (metodo === 'Efectivo' || metodo === 'Apartado' ? 0 : total) : money(pagoOtroIn);
     assertSaleAmounts({ ticket, metodo, estado, subtotal, iva, total, anticipo, pagoEfectivo, pagoOtro, ivaIncluded });
     const operationId = newOperationId();
-    const folio = nextFolio(operationId);
     const fecha = fechaIn || now(); // permite fecha pasada (simulación)
+    // El folio toma su día de la MISMA fecha que se guarda en la venta.
+    const folio = nextFolio(operationId, fecha);
     const cobrada = estado !== 'Apartado' && estado !== 'Cancelado';
     // Cortesía (regalo/giveaway): no se cobra (total $0) y NO genera comisión, pero SÍ descuenta
     // inventario. Se guarda 'valorRegalado' (lo que se habría cobrado) para reportes de cuánto se regaló.
@@ -1153,7 +1313,10 @@
     promos.length = 0; liquidations.length = 0;
     clients.length = 0; seedClients.forEach(c => clients.push(JSON.parse(JSON.stringify(c)))); // solo el genérico
     sellers.length = 0; seedSellers.forEach(s => sellers.push(JSON.parse(JSON.stringify(s)))); // solo el admin
-    try { localStorage.removeItem(LS_FOLIO); localStorage.removeItem(LS_PERIODO); } catch (e) { /* */ }
+    try {
+      localStorage.removeItem(LS_FOLIO); localStorage.removeItem(LS_FOLIO_V2);
+      localStorage.removeItem(LS_PERIODO);
+    } catch (e) { /* */ }
     periodoInicio = '';
   }
 
@@ -1208,8 +1371,12 @@
       //    en cero los acumulados del periodo que generaron las ventas de prueba.
       sellers.forEach(s => { s.ventasMes = 0; s.ventasNum = 0; s.comisionAcum = 0; });
 
-      // 5) Folio y periodo de comisiones vuelven a empezar.
-      try { localStorage.removeItem(LS_FOLIO); localStorage.removeItem(LS_PERIODO); } catch (e) { /* */ }
+      // 5) Folio y periodo de comisiones vuelven a empezar. Se borra también la
+      //    reserva diaria de H-33: el complemento SQL vacía pos.folio_counters.
+      try {
+        localStorage.removeItem(LS_FOLIO); localStorage.removeItem(LS_FOLIO_V2);
+        localStorage.removeItem(LS_PERIODO);
+      } catch (e) { /* */ }
       periodoInicio = '';
       persistAllLocal();
       // Descarta lo pendiente de subir: son operaciones de las pruebas.
@@ -1324,7 +1491,10 @@
     sku, regenerateSkus, totalStock, hydrate, mkStock, emptyStock, SIZE_MARK,
     saveProducts, saveSellers, saveClients, saveSales, saveMovements, savePromos, saveReturns, savePayments,
     removeProduct, remapOrphanCodes, catalogHealthReport, hexForColorName, applyOrphanFix, get lastRemap() { return lastRemap; },
-    addClient, removeClient, recordSale, nextFolio, collisionSafeFolio, rekeySaleFolio, stockOf, isAutoImg, resetProducts, applyRemote, applySyncResult, mergeRemote, markSaleSync, liquidarComision,
+    addClient, removeClient, recordSale, nextFolio, collisionSafeFolio, rekeySaleFolio,
+    normalizeFolioPrefix, businessDate, folioFromParts, parseFolio, folioPreview,
+    folioBlockRequest, applyFolioBlock, terminalCode,
+    findSaleByFolio, saleFolioAliases, folioAliasHit, stockOf, isAutoImg, resetProducts, applyRemote, applySyncResult, mergeRemote, markSaleSync, liquidarComision,
     completarApartado, registrarPagoApartado, paymentsForSale, hasFinancialSnapshot, resolveLineDiscount, cerrarMes, getPeriodoInicio,
     recordReturn, returnedQty, returnsForFolio, isReturnable,
     addUser, updateUser, removeUser, isEligibleSeller, resolveSellerCommission,

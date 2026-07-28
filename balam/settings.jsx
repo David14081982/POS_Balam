@@ -576,6 +576,34 @@
       hint && h('div', { key: 'h', className: 'text-caption text-on-surface-variant mt-1' }, hint),
     ]);
   }
+  // Prefijo del folio comercial (H-33). Normaliza con la MISMA autoridad que genera
+  // el folio (DATA.normalizeFolioPrefix) y muestra el resultado real de hoy. Cambiarlo
+  // sólo afecta a las ventas siguientes: el folio se copia dentro de la venta al crearla.
+  function FolioPrefixField() {
+    const guardado = C.get('folio.prefix');
+    const norm = (v) => (D.normalizeFolioPrefix ? D.normalizeFolioPrefix(v) : String(v || 'BG').toUpperCase());
+    const [pref, setPref] = useState(norm(guardado));
+    const vista = D.folioPreview ? D.folioPreview(pref) : pref;
+    return h('div', { key: 'folio', className: 'mb-4' }, [
+      h('div', { key: 'l', className: 'font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mb-1.5' }, 'Prefijo de folio'),
+      h('input', {
+        key: 'in', type: 'text', maxLength: 6, defaultValue: pref, className: INPUT,
+        onChange: e => setPref(norm(e.target.value)),
+        onBlur: e => {
+          const next = norm(e.target.value);
+          e.target.value = next;
+          setPref(next);
+          if (next !== guardado) C.setSetting('folio.prefix', next);
+        },
+      }),
+      h('div', { key: 'p', className: 'text-caption text-on-surface-variant mt-1' }, [
+        h('span', { key: 'a' }, 'Así se verá hoy: '),
+        h('span', { key: 'b', className: 'font-medium text-primary' }, vista),
+      ]),
+      h('div', { key: 'h', className: 'text-caption text-on-surface-variant mt-0.5' },
+        'Hasta 6 letras o números. El folio es PREFIJO-AAMMDD-0001 y reinicia cada día. Las ventas ya registradas conservan su folio.'),
+    ]);
+  }
   function CfgToggle({ k, title, desc }) {
     const on = !!C.get(k);
     return h('div', { key: k, className: 'flex items-center justify-between gap-4 py-3 border-t border-outline-variant/40 first:border-t-0' }, [
@@ -709,7 +737,7 @@
         h(SerifHeading, { key: 't', className: 'mb-4', children: 'Moneda, impuestos y folios' }),
         h('div', { key: 'g', className: 'grid grid-cols-1 md:grid-cols-2 gap-x-6' }, [
           h(CfgText, { key: 'c', k: 'currency', label: 'Moneda' }),
-          h(CfgText, { key: 'f', k: 'folio.prefix', label: 'Prefijo de folio' }),
+          h(FolioPrefixField, { key: 'f' }),
         ]),
         h('div', { key: 'iva', className: 'mt-4 p-4 rounded-xl bg-surface-container-low border border-outline-variant' }, [
           h('p', { key: 't', className: 'text-body-strong text-primary' }, 'IVA 16% incluido en precios'),

@@ -46,6 +46,12 @@ truncate table
   pos.liquidations
 restart identity;
 
+-- 2b) Consecutivo diario del folio (H-33). Al borrar TODAS las ventas de prueba no
+--     existe folio que reutilizar, así que el contador vuelve a 0001 igual que el
+--     reinicio local de "Borrar datos de prueba". Fuera de esta limpieza el contador
+--     nunca retrocede.
+truncate table pos.folio_counters;
+
 -- 3) Movimientos: SOLO los que generan las ventas y devoluciones. Los de tipo
 --    'Entrada', 'Ajuste' y 'Transferencia' son historial de inventario y se conservan.
 delete from pos.movements

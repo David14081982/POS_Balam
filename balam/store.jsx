@@ -67,7 +67,7 @@
     },
     sales: {
       table: 'sales', conflict: 'folio',
-      fromRow: r => ({ folio: r.folio, _operationId: r.operation_id || undefined, _stockReserved: !!r.operation_id && r.estado !== 'Apartado' && r.estado !== 'Cancelado', _syncStatus: 'synced', fecha: String(r.fecha).replace('T', ' ').slice(0, 16), clienteId: r.cliente_id || undefined, cliente: r.cliente, vendedor: '', vendedores: r.vendedores || [], items: r.items || 0, subtotal: r.subtotal == null ? undefined : Number(r.subtotal), iva: r.iva == null ? undefined : Number(r.iva), total: Number(r.total) || 0, descuento: r.descuento == null ? undefined : Number(r.descuento), ivaPct: r.iva_pct == null ? undefined : Number(r.iva_pct), ivaIncluded: r.iva_included == null ? undefined : !!r.iva_included, anticipo: r.anticipo == null ? undefined : Number(r.anticipo), saldo: r.saldo == null ? undefined : Number(r.saldo), pagoEfectivo: r.pago_efectivo == null ? undefined : Number(r.pago_efectivo), pagoOtro: r.pago_otro == null ? undefined : Number(r.pago_otro), metodo: r.metodo, estado: r.estado, valorRegalado: Number(r.valor_regalado) || 0, lineas: [] }),
+      fromRow: r => ({ folio: r.folio, folioAliases: Array.isArray(r.folio_aliases) ? r.folio_aliases : undefined, _operationId: r.operation_id || undefined, _stockReserved: !!r.operation_id && r.estado !== 'Apartado' && r.estado !== 'Cancelado', _syncStatus: 'synced', fecha: String(r.fecha).replace('T', ' ').slice(0, 16), clienteId: r.cliente_id || undefined, cliente: r.cliente, vendedor: '', vendedores: r.vendedores || [], items: r.items || 0, subtotal: r.subtotal == null ? undefined : Number(r.subtotal), iva: r.iva == null ? undefined : Number(r.iva), total: Number(r.total) || 0, descuento: r.descuento == null ? undefined : Number(r.descuento), ivaPct: r.iva_pct == null ? undefined : Number(r.iva_pct), ivaIncluded: r.iva_included == null ? undefined : !!r.iva_included, anticipo: r.anticipo == null ? undefined : Number(r.anticipo), saldo: r.saldo == null ? undefined : Number(r.saldo), pagoEfectivo: r.pago_efectivo == null ? undefined : Number(r.pago_efectivo), pagoOtro: r.pago_otro == null ? undefined : Number(r.pago_otro), metodo: r.metodo, estado: r.estado, valorRegalado: Number(r.valor_regalado) || 0, lineas: [] }),
     },
     promotions: {
       table: 'promotions', conflict: 'id', localKey: 'promos',
@@ -297,6 +297,59 @@
       || ((op.type === 'sale' || op.type === 'return') && table === 'movements')));
   }
 
+  // ── H-33: contador diario de folios ─────────────────────────────────────────
+  // `pos.reserve_folio_block()` incrementa atómicamente el contador de
+  // (prefijo, día) y devuelve un rango exclusivo para esta terminal. Con bloque
+  // reservado, una venta offline ya nace con folio corto y definitivo.
+  function folioDateIso(yymmdd) {
+    const d = String(yymmdd || '');
+    return /^\d{6}$/.test(d) ? '20' + d.slice(0, 2) + '-' + d.slice(2, 4) + '-' + d.slice(4, 6) : null;
+  }
+  async function reserveFolioNumbers(c, prefix, date, count, floor) {
+    const iso = folioDateIso(date);
+    if (!c || !iso) return null;
+    const r = await c.rpc('reserve_folio_block', {
+      p_prefix: prefix, p_business_date: iso,
+      p_count: Math.max(1, Number(count) || 1), p_floor: Math.max(0, Number(floor) || 0),
+    });
+    if (r.error || !r.data || !r.data.ok) return null;
+    const from = Number(r.data.from) || 0, to = Number(r.data.to) || 0;
+    return from > 0 && to >= from ? { from, to } : null;
+  }
+  let folioReserving = null;
+  // Repone el bloque cuando queda poco o cambió el día. Nunca bloquea una venta:
+  // si no hay red o el contador no existe, la terminal sigue con folio provisional.
+  function ensureFolioBlock(force) {
+    if (!enabled || folioReserving) return folioReserving || Promise.resolve(null);
+    const D = window.DATA;
+    if (!D || !D.folioBlockRequest || !D.applyFolioBlock) return Promise.resolve(null);
+    const req = D.folioBlockRequest();
+    if (!req.needed && !force) return Promise.resolve(null);
+    folioReserving = (async () => {
+      try {
+        const c = await ensureClient();
+        if (!c || !(await hasSession())) return null;
+        const range = await reserveFolioNumbers(c, req.prefix, req.date, req.count, req.floor);
+        if (!range) return null;
+        D.applyFolioBlock(req.prefix, req.date, range.from, range.to);
+        return range;
+      } catch (e) { return null; } finally { folioReserving = null; }
+    })();
+    return folioReserving;
+  }
+  // Folio de reemplazo cuando la nube rechaza el actual. Un folio con formato
+  // H-33 recibe otro número del contador (corto y único); un folio histórico
+  // conserva la reidentificación por token de H-02.
+  async function replacementFolio(c, op) {
+    const D = window.DATA || {};
+    const parsed = D.parseFolio && D.parseFolio(op.folio);
+    if (parsed && D.folioFromParts) {
+      const range = await reserveFolioNumbers(c, parsed.prefix, parsed.date, 1, parsed.seq);
+      if (range) return D.folioFromParts(parsed.prefix, parsed.date, range.from);
+    }
+    return D.collisionSafeFolio ? D.collisionSafeFolio(op.folio, op.operationId) : null;
+  }
+
   function rekeyQueuedSaleFolio(operationId, oldFolio, newFolio) {
     const q = loadQ();
     let changed = false;
@@ -425,12 +478,12 @@
         });
         if (committed.error || !committed.data) return failOp(committed.error || { code: 'empty_response', message: 'La venta no devolvió confirmación' });
         if (!committed.data.ok) {
+          const rekeys = Number(op.folioRekeys) || (op.folioRekeyed ? 1 : 0);
           if (committed.data.error === 'folio_conflict'
-              && !op.folioRekeyed
-              && window.DATA && window.DATA.collisionSafeFolio
-              && window.DATA.rekeySaleFolio) {
-            const newFolio = window.DATA.collisionSafeFolio(op.folio, op.operationId);
-            if (window.DATA.rekeySaleFolio(op.operationId, op.folio, newFolio)
+              && rekeys < 3
+              && window.DATA && window.DATA.rekeySaleFolio) {
+            const newFolio = await replacementFolio(c, op);
+            if (newFolio && window.DATA.rekeySaleFolio(op.operationId, op.folio, newFolio)
                 && rekeyQueuedSaleFolio(op.operationId, op.folio, newFolio)) {
               op.folio = newFolio;
               op.header.folio = newFolio;
@@ -438,8 +491,9 @@
               (op.moves || []).forEach(x => { x.ref = newFolio; });
               (op.payments || []).forEach(x => { x.folio = newFolio; });
               op.folioRekeyed = true;
+              op.folioRekeys = rekeys + 1;
               if (window.UI && window.UI.toast) {
-                window.UI.toast(`Folio reconciliado como ${newFolio} para evitar una colisión`, 'var(--accent)');
+                window.UI.toast(`Este ticket se registró posteriormente como ${newFolio}`, 'var(--accent)');
               }
               return applyOp(c, op);
             }
@@ -469,6 +523,21 @@
         const expectedSellers = {};
         (op.sellerEffects || []).forEach(e => { expectedSellers[e.id] = Number(e.base_version) || 0; });
         reconcile('sellers', committed.data.sellers || [], expectedSellers);
+        // Alias histórico: el folio ya impreso se lee de la venta local —la fuente
+        // durable— y se persiste ANTES de dar la venta por sincronizada, así la
+        // operación permanece en cola hasta que la nube conserve el ticket del
+        // cliente. Reintentar es inocuo: el commit es idempotente por hash.
+        const aliases = (window.DATA && window.DATA.saleFolioAliases
+          ? window.DATA.saleFolioAliases((window.DATA.sales || []).find(s => s.folio === op.folio))
+          : []);
+        if (aliases.length) {
+          const aliased = await c.from('sales')
+            .update({ folio_aliases: aliases })
+            .eq('folio', op.folio).select('folio');
+          if (aliased.error || !(aliased.data || []).length) {
+            return failOp(aliased.error || { code: 'alias_not_stored', message: 'No se pudo conservar el folio impreso como alias' });
+          }
+        }
         if (window.DATA && window.DATA.markSaleSync) window.DATA.markSaleSync(op.folio, 'synced', { stockReserved: !!op.reserveStock });
         return true;
       }
@@ -665,8 +734,16 @@
       // final las pisaba. El retiro por id nunca borra una op reemplazada (id nuevo).
       const failed = new Set(); // fallidas en esta pasada: se saltan, quedan para reintento
       for (;;) {
-        const op = loadQ().find(o => opBelongsToActiveSession(o)
-          && isAutomaticallyEligible(o) && !failed.has(o.id));
+        const queue = loadQ();
+        // Una devolución NO puede adelantarse a la venta que la origina: mientras
+        // esa venta siga en cola —pendiente, fallida o con folio sin resolver— la
+        // nube podría atribuirla a otra venta que comparta el folio impreso.
+        const salesInFlight = new Set(queue
+          .filter(o => o.type === 'sale' && opBelongsToActiveSession(o))
+          .map(o => o.folio));
+        const op = queue.find(o => opBelongsToActiveSession(o)
+          && isAutomaticallyEligible(o) && !failed.has(o.id)
+          && !(o.type === 'return' && salesInFlight.has(o.folio)));
         if (!op) break;
         const ok = await applyOp(c, op);
         const cur = loadQ();
@@ -917,12 +994,18 @@
     window.DATA.mergeRemote('sales', saleRowsFrom(raws, items), 'folio');
   }
   // Trae UNA venta (con renglones) por folio desde la nube y la fusiona en lo local.
-  // Devuelve la venta o null. Tolerante a minúsculas (reintenta en MAYÚSCULAS).
+  // Devuelve la venta o null. Tolerante a minúsculas (reintenta en MAYÚSCULAS) y,
+  // como última consulta, busca el término entre los folios impresos conservados
+  // como alias: un ticket reidentificado nunca deja de encontrarse.
   async function fetchSaleByFolio(folio) {
     const c = await ensureClient(); if (!c) return null;
     const f = String(folio || '').trim(); if (!f) return null;
     let r = await c.from('sales').select('*').eq('folio', f);
     if ((r.error || !(r.data || []).length) && f !== f.toUpperCase()) r = await c.from('sales').select('*').eq('folio', f.toUpperCase());
+    if (r.error || !(r.data || []).length) {
+      const alias = await c.from('sales').select('*').contains('folio_aliases', [f.toUpperCase()]);
+      if (!alias.error && (alias.data || []).length) r = alias;
+    }
     if (r.error || !(r.data || []).length) return null;
     const items = await fetchItemsIn(c, 'sale_items', 'folio', r.data.map(x => x.folio));
     const rows = saleRowsFrom(r.data, items);
@@ -963,7 +1046,11 @@
     // Al reconectar: drena la cola y, además, migra fotos incrustadas que hayan quedado.
     if (!onlineSubscribed) {
       onlineSubscribed = true;
-      window.addEventListener('online', () => { flushQueue(); autoMigratePhotos().catch(() => { /* */ }); });
+      window.addEventListener('online', () => {
+        flushQueue();
+        ensureFolioBlock();
+        autoMigratePhotos().catch(() => { /* */ });
+      });
     }
     // Drenar la cola ANTES del pull: los cambios de la sesión anterior llegan primero a la
     // nube y el pull ya regresa el estado completo. (Antes el pull corría primero y
@@ -997,6 +1084,9 @@
       autoMigratePhotos().catch(() => { /* se reintenta al próximo arranque */ });
     }
     flushQueue(); // por si algo quedó pendiente (p. ej. un fallo durante el arranque)
+    // Deja la terminal con folios del día ya reservados: si pierde la red después,
+    // sigue emitiendo folios cortos definitivos.
+    ensureFolioBlock();
   }
 
   // Asocia STORE a la identidad efectiva. Cambiar de cuenta fuerza el mismo
@@ -1124,6 +1214,6 @@
     }
   }
 
-  window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushSale, pushReturn, deleteRow, pullDomain, fetchSaleByFolio, flushQueue, retryOperation, queueStatus, clearQueue, markResetApplied, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
+  window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushSale, pushReturn, ensureFolioBlock, deleteRow, pullDomain, fetchSaleByFolio, flushQueue, retryOperation, queueStatus, clearQueue, markResetApplied, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
   window.CORE.registerSyncGateway(window.STORE);
 })();

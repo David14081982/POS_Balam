@@ -1144,6 +1144,66 @@ porcentaje, por diseño. Bajo el formato aprobado
 descuento; es lo solicitado por Finanzas.
 **Corrección documentada:** `docs/fixes/trazabilidad-descuento-ticket.md`.
 
+## H-33 — Folio comercial largo por identidad técnica expuesta
+
+**Estado:** RESUELTO
+**Fecha de registro:** 27/07/2026
+**Fecha de resolución:** 27/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** las cinco ventas reales de producción tienen folios como
+`BG-5-8TD4Q6N7QPWZQAZVUYPYCQP0H`, de 29 caracteres. El valor sobresale del
+ticket impreso, se parte en varias líneas en Devoluciones y estira columnas en
+Reportes y en el historial.
+**Origen de auditoría:** requerimiento de operación sobre el folio visible.
+**Riesgo:** el folio es la referencia que el cliente y el mostrador usan para
+buscar, devolver y reimprimir; un valor ilegible degrada la operación diaria y
+no se corrige con recortes visuales.
+**Reproducción:** `node test-folio-diario.mjs` (nuevo) no existía antes del
+cambio; la evidencia directa son los cinco folios reales y la captura de
+Devoluciones partiendo el folio en tres renglones.
+**Causa raíz:** H-02 resolvió la unicidad multi-terminal adosando al folio la
+representación en base 36 de los 128 bits del `operation_id`. El identificador
+técnico quedó expuesto dentro del folio comercial: un solo campo cumplía dos
+funciones incompatibles.
+**Corrección:** el folio pasa a `{PREFIJO}-{AAMMDD}-{0001}` y la identidad
+técnica permanece exclusivamente en `operation_id`. La unicidad la aporta
+`pos.folio_counters` mediante `pos.reserve_folio_block()`: cada terminal reserva
+un bloque diario y lo consume sin red. **El folio impreso no cambia nunca**: sin
+bloque, el folio incorpora el código corto de la terminal
+(`BG-260727-0001-K7Q`) y con eso ya es definitivo. Para el residuo —dos
+terminales con el mismo código, u operaciones heredadas de H-02— sobrevive
+`folio_conflict`, y entonces el folio impreso se conserva para siempre en
+`sale.folioAliases` / `pos.sales.folio_aliases`, resolviendo búsqueda,
+devolución y reimpresión desde cualquier terminal, con aviso explícito en la
+interfaz. Una devolución no se envía mientras su venta siga en cola. Los folios
+históricos no se migran.
+**Despliegue:** migraciones `20260727004100_pos_h33_daily_folio.sql`,
+`20260727004200_pos_h33_daily_folio_verification.sql`,
+`20260727004300_pos_h33_folio_aliases.sql` y
+`20260727004400_pos_h33_folio_aliases_verification.sql` aplicadas al proyecto
+`Balam` el 27/07/2026; `db push --dry-run` posterior sin pendientes.
+**Pruebas:** folio diario 60/60; folios multi-terminal 12/12; cola 115/115;
+migraciones 29/29; coherencia de venta 17/17; devoluciones 17/17; descuentos
+43/43; trazabilidad H-32 65/65; comisión efectiva 22/22; contratos de módulos
+36/36; smoke bundle 17/17; navegación 13/13; y el resto de la suite en verde.
+Build offline correcto con 67 assets. Verificación remota: bloques disjuntos
+1..10 y 11..20, venta aceptada con `BG-260727-0001`, `folio_conflict` limpio en
+la segunda terminal con reconciliación a `BG-260727-0022`, cinco folios
+históricos intactos, alias `H33ALS-260727-0001-K7Q` localizando su venta por
+`folio_aliases @>` y limpieza total de temporales. En Chrome real el ticket
+imprime `TRANSACCIÓN — BG-260727-0001` en una línea y, al reimprimir una venta
+reidentificada, añade «Ticket impreso» con el folio del cliente.
+**Pendiente:** ninguno dentro del formato, la unicidad y la permanencia del
+folio comercial.
+**Riesgo residual:** dos tickets sólo pueden compartir cadena si dos terminales
+generan el mismo código de tres caracteres (1 en 46 656) estando ambas sin
+bloque, el mismo día y en el mismo consecutivo; ese residuo se rechaza en la
+nube y el folio impreso sobrevive como alias permanente. Un folio provisional es
+más largo (18 caracteres) mientras la terminal no conecte en el día. Con dos
+terminales los bloques son disjuntos, así que la segunda empieza en `0011`. Las
+ventas anteriores a H-33 conservan su folio largo por diseño.
+**Corrección documentada:** `docs/fixes/folio-comercial-diario.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

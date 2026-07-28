@@ -383,6 +383,11 @@
         // Transacción
         h('div', { key: 'tx', className: 'w-full border-y border-outline-variant py-4 mb-6 flex flex-col gap-1.5 text-left' }, [
           info('Transacción', sale.folio, 'font-medium'),
+          // Reimpresión de una venta reidentificada: el folio del ticket que
+          // conserva el cliente se imprime junto al vigente y nunca se pierde.
+          (D.saleFolioAliases && D.saleFolioAliases(sale).length)
+            ? info('Ticket impreso', D.saleFolioAliases(sale).join(', '))
+            : null,
           info('Fecha', sale.fecha),
           info('Atendido por', sale.vendedor || '—'),
           (sale.estado && sale.estado !== 'Pagado') ? info('Estado', sale.estado) : null,

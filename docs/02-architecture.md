@@ -278,7 +278,10 @@ La autoridad de despliegue es la cadena ordenada de
 `supabase/migrations/*.sql`, configurada por `supabase/config.toml`. Contiene
 las bases históricas 001–012, las correcciones 013–028 y verificaciones finales
 del contrato hasta 031. La migración 032 añade los índices medidos del pull de
-ventas. Los archivos `supabase/pos_*.sql` se conservan como fuentes
+ventas, 033 la autoridad de comisión efectiva, 004000 la evidencia del descuento
+por renglón, 004100/004200 el contador diario del folio comercial y
+004300/004400 el alias del folio impreso, cada par con su verificación.
+Los archivos `supabase/pos_*.sql` se conservan como fuentes
 históricas legibles de 001–012; `test-migrations.mjs` exige que sus copias
 formales permanezcan idénticas.
 
@@ -494,26 +497,68 @@ ventas históricas siguen siendo legibles.
 
 ### Identidad y folio de venta
 
-Cada venta nueva tiene dos identificadores con responsabilidades distintas:
+Cada venta nueva tiene dos identificadores con responsabilidades **separadas**;
+ninguno se deriva del otro:
 
-- `_operationId` / `sales.operation_id` es la identidad inmutable usada por
-  reserva, commit idempotente y restricción única en Supabase;
-- `folio` es la referencia visible y conserva el formato
-  `prefijo + consecutivo local + token de operación`.
+- `_operationId` / `sales.operation_id` es la identidad técnica inmutable: UUID
+  usado por reserva de stock, commit idempotente, conflictos y cola offline. No
+  se muestra al usuario.
+- `folio` / `sales.folio` es la referencia comercial visible en ticket, tablas,
+  búsquedas, devoluciones y reportes. Desde H-33 su formato es
+  `{PREFIJO}-{AAMMDD}-{CONSECUTIVO}`, por ejemplo `BG-260727-0001`.
 
-El token representa en base 36 los 128 bits completos del UUID de operación.
-Por eso dos terminales offline pueden compartir prefijo y consecutivo sin
-producir la misma referencia. Borrar el navegador crea otra identidad de
-terminal y cada venta recibe además su propio UUID. Los folios históricos sin
-token permanecen válidos y el cálculo del próximo consecutivo ignora los
-dígitos del token.
+`DATA.nextFolio()` es la única autoridad que lo construye. El prefijo proviene
+de `folio.prefix` y se normaliza a A-Z0-9, máximo seis caracteres; el día es el
+del negocio y sale de la **misma** fecha que se guarda en la venta, no de una
+segunda lectura del reloj; el consecutivo usa cuatro dígitos y crece a cinco
+después de 10000 sin truncarse. Cambiar el prefijo no altera ninguna venta ya
+registrada: el folio se copia dentro de la venta al crearla.
 
-Supabase conserva una defensa adicional: `commit_sale()` devuelve
-`folio_conflict` si el folio ya pertenece a otro `operation_id`. Ante una
-operación antigua pendiente, `STORE` genera el folio seguro a partir de la
-misma identidad inmutable, cambia conjuntamente sus renglones, pagos,
-movimientos, devoluciones y entradas de cola, y reintenta el mismo commit. Una
-venta confirmada nunca se renombra.
+La unicidad entre terminales la aporta `pos.folio_counters`, un contador
+atómico por (prefijo, día) que sólo escribe `pos.reserve_folio_block()`. Cada
+terminal reserva un bloque de diez números y lo consume **sin red**, por lo que
+una venta offline ya nace con folio corto y definitivo; repone cuando le quedan
+tres o menos, al arrancar, al reconectar y después de cada venta. El día nuevo
+pide un bloque nuevo y la numeración reinicia en `0001`. `DATA` conserva la
+reserva en `balam_pos_folio_v2` y la pide a `STORE` por el gateway de `CORE`.
+
+### El folio impreso no cambia
+
+Sin bloque vigente y sin red, la terminal emite un folio **provisional** que
+lleva un cuarto segmento con su código de terminal —`BG-260727-0001-K7Q`, tres
+caracteres base 36 derivados de `balam_device_id`—. Ese sufijo lo distingue de
+cualquier otra terminal, así que el folio provisional es **definitivo**: no se
+renombra al sincronizar. El consecutivo toma como piso el mayor del día que la
+terminal conoce, incluidas las ventas bajadas de la nube, y el cobro nunca se
+bloquea. En cuanto llega un bloque, las ventas siguientes vuelven al formato
+limpio; las provisionales ya emitidas conservan su folio.
+
+Supabase conserva `commit_sale()` → `folio_conflict` para el residuo: dos
+terminales que compartan código —una en 46 656— u operaciones heredadas de H-02
+todavía en cola. Sólo en ese caso `STORE` pide otro número del contador y cambia
+conjuntamente renglones, pagos, movimientos, devoluciones y entradas de cola,
+con la misma identidad técnica. El folio ya impreso **no se pierde**: pasa a
+`sale.folioAliases` / `pos.sales.folio_aliases` (índice GIN) y sigue resolviendo
+búsqueda, devolución, reimpresión y `fetchSaleByFolio` desde cualquier terminal.
+La operación permanece en la cola hasta que la nube conserve ese alias.
+
+`DATA.findSaleByFolio()` es la autoridad de resolución: la coincidencia exacta
+por folio vigente tiene prioridad y el alias sólo se consulta después, contra la
+venta que realmente lo imprimió, de modo que un ticket nunca ofrece la venta
+ajena que casualmente comparta la cadena. Cuando la búsqueda resuelve por alias,
+la interfaz lo dice: «este ticket se registró posteriormente como …».
+
+Una devolución no sale de la cola mientras la venta que la origina siga en ella
+—pendiente, fallida o con folio sin resolver—, para que la nube no pueda
+atribuirla a otra venta con el mismo folio impreso.
+
+Una venta ya confirmada en la nube no se renombra nunca.
+
+Los folios anteriores a H-33 —`prefijo + consecutivo + token base 36 del UUID`—
+permanecen válidos, buscables, reimprimibles y devolvibles. No se migran, no se
+interpretan como formato nuevo y no participan en el consecutivo diario. Una
+operación antigua todavía en cola conserva la reidentificación por token de
+H-02.
 
 ### Commit transaccional de devolución
 
@@ -551,7 +596,7 @@ Es persistencia operativa, no un caché descartable. Aloja:
 
 - configuración;
 - colecciones de dominio;
-- secuencia local de folios;
+- reserva diaria de folios (`balam_pos_folio_v2`);
 - periodo y banderas de datos de prueba;
 - sesión administrada por Supabase JS;
 - cola `balam_sync_queue`.

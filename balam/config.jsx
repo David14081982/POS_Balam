@@ -160,7 +160,7 @@
     'commission.base': 'neto', // 'neto' (sobre precio sin IVA) | 'bruto' (sobre el total con IVA)
     'report.marginPct': 33,
     'discount.minMarginPct': 45,
-    'folio.prefix': 'BG-',
+    'folio.prefix': 'BG', // H-33: sólo el prefijo; el folio es PREFIJO-YYMMDD-0001
     'ticket.footer': 'Gracias por ser parte de nuestra herencia.',
     'ticket.tagline': 'Piezas artesanales únicas, cuidando la tradición y el detalle en cada fibra.',
     'pos.askSize': true,

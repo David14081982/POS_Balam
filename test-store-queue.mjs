@@ -94,6 +94,8 @@ function freshEnv() {
         eq: (col, value) => ({
           select: async () => {
             calls.push({ table, metodo: 'update', filtro: `eq:${col}:${value}` });
+            if (tableErrors.has(table)) return { data: null, error: tableErrors.get(table) };
+            if (failTables.has(table)) return { data: null, error: { message: 'falla simulada' } };
             const rows = cloud.rowsByTable[table] || [];
             const current = rows.find(row => row[col] === value) || { [col]: value };
             const updated = { ...current, ...patch, sync_version: (Number(current.sync_version) || 0) + 1 };
@@ -111,6 +113,7 @@ function freshEnv() {
         p.gte = (c, v) => { filtros.push('gte:' + c); return p; };
         p.eq = (c, v) => { filtros.push('eq:' + c + ':' + v); return p; };
         p.in = (c, v) => { filtros.push('in:' + c + ':' + v.length); return p; };
+        p.contains = (c, v) => { filtros.push('cs:' + c + ':' + JSON.stringify(v)); return p; };
         p.order = (c) => { filtros.push('order:' + c); return p; };
         p.range = (from, to) => { filtros.push(`range:${from}:${to}`); return p; };
         return p;
@@ -1008,6 +1011,223 @@ function loadStore(env) {
     itemCount === 1100);
   ok('29h. H-16: renglones recorren todas sus páginas',
     env.calls.filter(x => x.table === 'sale_items' && x.metodo === 'select').length === 2);
+}
+
+// ── 30) H-33: reserva del consecutivo diario y folio corto en conflicto ───────
+function folioDataStub(env, { block = null } = {}) {
+  const D = env.window.DATA;
+  D.folioState = block;
+  D.folioBlockRequest = () => ({
+    prefix: 'BG', date: '260727', left: block ? block.until - block.next + 1 : 0,
+    count: 10, floor: 4, needed: !block,
+  });
+  D.applyFolioBlock = (prefix, date, from, to) => {
+    D.folioState = { prefix, date, next: from, until: to };
+    return true;
+  };
+  D.parseFolio = (folio) => {
+    const m = String(folio || '').toUpperCase().match(/^([A-Z0-9]{1,6})-(\d{6})-(\d{4,})(?:-([A-Z0-9]{2,4}))?$/);
+    return m ? { prefix: m[1], date: m[2], seq: parseInt(m[3], 10), terminal: m[4] || null, provisional: !!m[4] } : null;
+  };
+  D.folioFromParts = (prefix, date, seq) => `${prefix}-${date}-${String(seq).padStart(4, '0')}`;
+  D.collisionSafeFolio = (folio) => folio + '-TOKENLARGO';
+  D.saleFolioAliases = (sale) => (sale && Array.isArray(sale.folioAliases) ? sale.folioAliases : []);
+  return D;
+}
+
+{
+  const env = freshEnv();
+  env.client.auth.getSession = async () => ({ data: { session: { access_token: 't' } } });
+  folioDataStub(env);
+  env.setRpc(async (name) => {
+    if (name === 'reserve_folio_block') return { data: { ok: true, prefix: 'BG', from: 5, to: 14 }, error: null };
+    return { data: { ok: true, products: [], clients: [], sellers: [] }, error: null };
+  });
+  const S = loadStore(env);
+  await S.init({});
+  await sleep(20);
+  const call = env.rpcCalls.find(c => c.name === 'reserve_folio_block');
+  ok('30a. H-33: el arranque reserva un bloque del contador diario', !!call);
+  ok('30b. H-33: la reserva viaja con prefijo, fecha del negocio, tamaño y piso',
+    call && call.args.p_prefix === 'BG' && call.args.p_business_date === '2026-07-27'
+      && call.args.p_count === 10 && call.args.p_floor === 4);
+  ok('30c. H-33: el bloque confirmado queda disponible para las ventas locales',
+    JSON.stringify(env.window.DATA.folioState) === JSON.stringify({ prefix: 'BG', date: '260727', next: 5, until: 14 }));
+}
+
+{
+  const env = freshEnv();
+  env.client.auth.getSession = async () => ({ data: { session: { access_token: 't' } } });
+  folioDataStub(env, { block: { prefix: 'BG', date: '260727', next: 6, until: 14 } });
+  const S = loadStore(env);
+  await S.init({});
+  await sleep(20);
+  ok('30d. H-33: con bloque suficiente no se pide otro',
+    !env.rpcCalls.some(c => c.name === 'reserve_folio_block'));
+}
+
+{
+  const env = freshEnv(); // sin sesión: getSession devuelve null
+  folioDataStub(env);
+  const S = loadStore(env);
+  await S.init({});
+  await sleep(20);
+  ok('30e. H-33: sin sesión no se reserva y la terminal sigue local',
+    !env.rpcCalls.some(c => c.name === 'reserve_folio_block'));
+}
+
+{
+  const env = freshEnv();
+  env.client.auth.getSession = async () => ({ data: { session: { access_token: 't' } } });
+  const D = folioDataStub(env, { block: { prefix: 'BG', date: '260727', next: 6, until: 14 } });
+  const sale = {
+    folio: 'BG-260727-0003-K7Q', fecha: '2026-07-27 15:00', cliente: 'Ana',
+    vendedores: [], metodo: 'Efectivo', estado: 'Pagado', items: 1, total: 500,
+    _operationId: 'op-h33', _stockRequired: false,
+    lineas: [{ productId: 'p-h33', sku: 'H33', nombre: 'Prenda', talla: 'M', qty: 1, precio: 500 }],
+  };
+  D.sales = [sale];
+  D.payments = [{ id: 'pay-h33', folio: sale.folio }];
+  D.movements = [{ tipo: 'Venta', ref: sale.folio, sku: 'H33' }];
+  D.paymentsForSale = (folio) => D.payments.filter(p => p.folio === folio);
+  D.rekeySaleFolio = (id, oldFolio, newFolio) => {
+    if (id !== 'op-h33' || sale.folio !== oldFolio) return false;
+    sale.folioAliases = (sale.folioAliases || []).concat(oldFolio);
+    sale.folio = newFolio;
+    D.payments.forEach(x => { if (x.folio === oldFolio) x.folio = newFolio; });
+    D.movements.forEach(x => { if (x.ref === oldFolio) x.ref = newFolio; });
+    return true;
+  };
+  let intento = 0;
+  env.setRpc(async (name) => {
+    if (name === 'reserve_folio_block') return { data: { ok: true, prefix: 'BG', from: 21, to: 21 }, error: null };
+    if (name === 'commit_sale') {
+      intento++;
+      if (intento === 1) return { data: { ok: false, error: 'folio_conflict' }, error: null };
+      return { data: { ok: true, products: [], clients: [], sellers: [] }, error: null };
+    }
+    return { data: { ok: true }, error: null };
+  });
+  const S = loadStore(env);
+  await S.init({});
+  S.pushSale(sale, { payments: D.payments });
+  await sleep(60);
+  const commits = env.rpcCalls.filter(c => c.name === 'commit_sale');
+  ok('30f. H-33: un folio provisional en conflicto residual recibe OTRO folio corto del contador',
+    sale.folio === 'BG-260727-0021', sale.folio);
+  ok('30g. H-33: el folio reconciliado conserva el formato comercial y no un token largo',
+    /^BG-\d{6}-\d{4}$/.test(sale.folio) && !/TOKENLARGO/.test(sale.folio));
+  ok('30g2. H-33: el folio impreso se conserva como alias y viaja a la nube',
+    sale.folioAliases.join(',') === 'BG-260727-0003-K7Q'
+      && (env.cloud.rowsByTable.sales || []).some(r => (r.folio_aliases || []).includes('BG-260727-0003-K7Q')),
+    JSON.stringify(env.cloud.rowsByTable.sales));
+  ok('30h. H-33: renglones, pagos y movimientos se reidentifican con la venta',
+    commits.length === 2 && commits[1].args.p_sale.folio === sale.folio
+      && commits[1].args.p_items.every(x => x.folio === sale.folio)
+      && commits[1].args.p_payments.every(x => x.folio === sale.folio)
+      && commits[1].args.p_moves.every(x => x.ref === sale.folio));
+  ok('30i. H-33: la identidad técnica de la venta no cambia al reconciliar',
+    commits[1].args.p_operation_id === 'op-h33' && commits[0].args.p_operation_id === 'op-h33');
+  ok('30j. H-33: la reserva puntual pidió un solo número desde el consecutivo en conflicto',
+    env.rpcCalls.some(c => c.name === 'reserve_folio_block' && c.args.p_count === 1 && c.args.p_floor === 3));
+  ok('30k. H-33: la venta queda sincronizada tras la reconciliación', S.pending === 0);
+}
+
+// ── 31) H-33: una devolución no se adelanta a su venta ───────────────────────
+{
+  const env = freshEnv();
+  env.client.auth.getSession = async () => ({ data: { session: { access_token: 't' } } });
+  const D = folioDataStub(env, { block: { prefix: 'BG', date: '260727', next: 6, until: 14 } });
+  const sale = {
+    folio: 'BG-260727-0004-K7Q', fecha: '2026-07-27 15:00', cliente: 'Ana',
+    vendedores: [], metodo: 'Efectivo', estado: 'Pagado', items: 1, total: 500,
+    _operationId: 'op-h33-b', _stockRequired: false,
+    lineas: [{ productId: 'p-h33', sku: 'H33', nombre: 'Prenda', talla: 'M', qty: 1, precio: 500 }],
+  };
+  D.sales = [sale];
+  D.payments = [];
+  D.movements = [];
+  D.paymentsForSale = () => [];
+  D.rekeySaleFolio = () => false; // la reidentificación no puede completarse
+  let ventaFallida = 0;
+  env.setRpc(async (name, args) => {
+    if (name === 'reserve_folio_block') return { data: { ok: false, error: 'sin_red' }, error: null };
+    if (name === 'commit_sale') { ventaFallida++; return { data: { ok: false, error: 'folio_conflict' }, error: null }; }
+    if (name === 'commit_return') return { data: { ok: true, sale_state: 'Devuelto' }, error: null };
+    return { data: { ok: true }, error: null };
+  });
+  const S = loadStore(env);
+  await S.init({});
+  S.pushSale(sale, {});
+  S.pushReturn({
+    id: 'ret-h33', folio: sale.folio, fecha: '2026-07-27 16:00', cliente: 'Ana',
+    vendedores: [], metodo: 'Efectivo', total: 500,
+    lineas: [{ productId: 'p-h33', sku: 'H33', nombre: 'Prenda', talla: 'M', qty: 1, precio: 500 }],
+  }, {});
+  await sleep(60);
+  ok('31a. H-33: la venta en conflicto quedó pendiente', ventaFallida > 0 && S.pending === 2);
+  ok('31b. H-33: la devolución NO se envió mientras su venta sigue en cola',
+    !env.rpcCalls.some(c => c.name === 'commit_return'));
+
+  // Resuelto el conflicto, la venta pasa y la devolución sale detrás.
+  env.setRpc(async (name) => {
+    if (name === 'commit_sale') return { data: { ok: true, products: [], clients: [], sellers: [] }, error: null };
+    if (name === 'commit_return') return { data: { ok: true, sale_state: 'Devuelto' }, error: null };
+    return { data: { ok: true }, error: null };
+  });
+  const pendientes = JSON.parse(env.localStorage.getItem('balam_sync_queue') || '[]');
+  S.retryOperation((pendientes.find(o => o.type === 'sale') || {}).id);
+  await sleep(80);
+  const iSale = env.rpcCalls.findIndex(c => c.name === 'commit_sale' && c.args && c.args.p_sale);
+  const iRet = env.rpcCalls.findIndex(c => c.name === 'commit_return');
+  ok('31c. H-33: al sincronizar la venta, la devolución se envía después',
+    iRet > iSale && iRet >= 0 && S.pending === 0);
+}
+
+// ── 32) H-33: el alias debe quedar en la nube antes de dar por sincronizada ──
+{
+  const env = freshEnv();
+  env.client.auth.getSession = async () => ({ data: { session: { access_token: 't' } } });
+  const D = folioDataStub(env, { block: { prefix: 'BG', date: '260727', next: 6, until: 14 } });
+  const sale = {
+    folio: 'BG-260727-0007-K7Q', fecha: '2026-07-27 15:00', cliente: 'Ana',
+    vendedores: [], metodo: 'Efectivo', estado: 'Pagado', items: 1, total: 500,
+    _operationId: 'op-h33-c', _stockRequired: false, lineas: [],
+  };
+  D.sales = [sale];
+  D.payments = []; D.movements = []; D.paymentsForSale = () => [];
+  D.rekeySaleFolio = (id, oldFolio, newFolio) => {
+    if (sale.folio !== oldFolio) return false;
+    sale.folioAliases = (sale.folioAliases || []).concat(oldFolio);
+    sale.folio = newFolio;
+    return true;
+  };
+  let intento = 0;
+  env.setRpc(async (name) => {
+    if (name === 'reserve_folio_block') return { data: { ok: true, from: 30, to: 30 }, error: null };
+    if (name === 'commit_sale') {
+      intento++;
+      if (intento === 1) return { data: { ok: false, error: 'folio_conflict' }, error: null };
+      return { data: { ok: true, products: [], clients: [], sellers: [] }, error: null };
+    }
+    return { data: { ok: true }, error: null };
+  });
+  env.setError('sales', { message: 'Failed to fetch' }); // caída de red al guardar el alias
+  const S = loadStore(env);
+  await S.init({});
+  S.pushSale(sale, {});
+  await sleep(60);
+  ok('32a. H-33: si el alias no se guarda, la venta NO se da por sincronizada',
+    S.pending === 1 && sale._syncStatus !== 'synced');
+  env.clearError('sales');
+  await S.flushQueue();
+  await sleep(60);
+  ok('32b. H-33: al reintentar, el commit es idempotente y el alias queda en la nube',
+    S.pending === 0
+      && (env.cloud.rowsByTable.sales || []).some(r => (r.folio_aliases || []).includes('BG-260727-0007-K7Q')),
+    JSON.stringify(env.cloud.rowsByTable.sales));
+  ok('32c. H-33: el folio vigente quedó en el formato comercial corto',
+    sale.folio === 'BG-260727-0030', sale.folio);
 }
 
 console.log(`\n════════ ${pass} pasaron, ${fail} fallaron ════════`);

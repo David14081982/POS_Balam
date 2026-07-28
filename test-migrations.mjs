@@ -84,5 +84,34 @@ check('12. ventas tiene índices para ventana reciente y apartados',
     && syncIndexes.includes('sales_apartado_folio_idx')
     && syncIndexes.includes("where estado = 'apartado'"));
 
+const dailyFolio = readFileSync(
+  join(migrationDir, '20260727004100_pos_h33_daily_folio.sql'),
+  'utf8',
+).toLowerCase();
+check('13. el consecutivo diario del folio es atómico y sólo escribible por su función',
+  dailyFolio.includes('pos.folio_counters')
+    && dailyFolio.includes('primary key (prefix, business_date)')
+    && dailyFolio.includes('on conflict (prefix, business_date) do update')
+    && dailyFolio.includes('security definer')
+    && !/create policy .* for (insert|update|all)/.test(dailyFolio));
+check('14. la reserva de folios exige un perfil operativo',
+  dailyFolio.includes('pos.is_active_admin() or pos.is_active_seller()')
+    && dailyFolio.includes('grant execute on function pos.reserve_folio_block'));
+check('15. el contador diario se agrega después del contrato de venta transaccional',
+  files.findIndex(name => name.includes('004100_pos_h33_daily_folio'))
+    > files.findIndex(name => name.includes('001900_pos_transactional_sale')));
+
+const aliases = readFileSync(
+  join(migrationDir, '20260727004300_pos_h33_folio_aliases.sql'),
+  'utf8',
+).toLowerCase();
+check('16. el folio impreso se conserva como alias consultable',
+  aliases.includes('add column if not exists folio_aliases')
+    && aliases.includes('using gin (folio_aliases')
+    && !aliases.includes('update pos.sales set folio'));
+check('17. el alias no altera el contrato transaccional de venta ni devolución',
+  !/create or replace function pos\.(commit_sale|commit_return)/.test(aliases)
+    && !/drop\s+(table|column)/.test(aliases));
+
 console.log(`\n════════ ${passed} pasaron, ${failed} fallaron ════════`);
 process.exit(failed ? 1 : 0);

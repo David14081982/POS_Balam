@@ -16,7 +16,8 @@
     const [, bump] = useState(0);
     const refresh = () => bump(v => v + 1);
     if (folio) {
-      const sale = D.sales.find(s => s.folio === folio);
+      // Resuelve por folio vigente o por el folio impreso conservado como alias.
+      const sale = D.findSaleByFolio ? D.findSaleByFolio(folio) : D.sales.find(s => s.folio === folio);
       if (!sale) { setFolio(null); return null; }
       return h(ReturnDetail, { sale, onBack: () => setFolio(null), onDone: () => { setFolio(null); refresh(); } });
     }
@@ -28,13 +29,17 @@
     const [q, setQ] = useState('');
     const [buscando, setBuscando] = useState(false);
     const [, bump] = useState(0);
-    const sales = useMemo(() => {
-      const term = q.trim().toLowerCase();
-      return D.sales
-        .filter(s => D.isReturnable(s))
-        .filter(s => !term || String(s.folio).toLowerCase().includes(term) || String(s.cliente || '').toLowerCase().includes(term))
-        .slice(0, 40);
-    }, [q, D.sales.length, buscando]);
+    const term = q.trim().toLowerCase();
+    // La búsqueda acepta el folio vigente, el folio impreso conservado como alias
+    // y el nombre del cliente. El alias pertenece SÓLO a la venta que lo imprimió:
+    // nunca ofrece la venta ajena que casualmente comparta la cadena.
+    const sales = useMemo(() => D.sales
+      .filter(s => D.isReturnable(s))
+      .filter(s => !term
+        || String(s.folio).toLowerCase().includes(term)
+        || (D.saleFolioAliases ? D.saleFolioAliases(s) : []).some(a => String(a).toLowerCase().includes(term))
+        || String(s.cliente || '').toLowerCase().includes(term))
+      .slice(0, 40), [q, D.sales.length, buscando]);
     const recent = (D.returns || []).slice(0, 8);
     // El pull de ventas es paginado (ventana reciente): un folio más viejo puede no estar
     // en este equipo. Este botón lo trae de la nube y lo fusiona en lo local para devolverlo.
@@ -44,8 +49,10 @@
       setBuscando(true);
       try {
         const s = await window.STORE.fetchSaleByFolio(q.trim());
+        const alias = s && D.folioAliasHit ? D.folioAliasHit(s, q.trim()) : null;
         if (!s) toast('No se encontró ese folio en la nube', 'var(--danger)');
         else if (!D.isReturnable(s)) toast(`La venta ${s.folio} no admite devolución (${s.estado})`, 'var(--danger)');
+        else if (alias) toast(`Este ticket se registró posteriormente como ${s.folio}`, 'var(--accent)');
         else toast(`Venta ${s.folio} recuperada del histórico`, 'var(--accent)');
       } catch (e) { toast('No se pudo consultar la nube', 'var(--danger)'); }
       setBuscando(false); bump(v => v + 1);
@@ -70,9 +77,15 @@
             className: 'group flex items-center gap-4 p-4 bg-surface-container-lowest rounded-lg shadow-e1 hover:shadow-e2 transition-all text-left',
             onClick: () => onPick(s.folio),
           }, [
-            h('div', { key: 'f', className: 'w-24 shrink-0' }, [
-              h('div', { key: 'a', className: 'font-headline text-h2 text-primary' }, s.folio),
+            // El folio corto de H-33 cabe completo: la columna se dimensiona para
+            // mostrarlo en una sola línea en vez de partirlo por sus guiones.
+            h('div', { key: 'f', className: 'min-w-[9.5rem] shrink-0' }, [
+              h('div', { key: 'a', className: 'font-headline text-h2 text-primary whitespace-nowrap' }, s.folio),
               h('div', { key: 'b', className: 'text-overline uppercase text-on-surface-variant' }, String(s.fecha || '').slice(0, 10)),
+              // El ticket del cliente trae otro folio: se dice con qué quedó registrado.
+              D.folioAliasHit && D.folioAliasHit(s, term) && h('div', {
+                key: 'al', className: 'text-overline text-accent mt-0.5',
+              }, `Ticket ${D.folioAliasHit(s, term)} · registrado como ${s.folio}`),
             ]),
             h('div', { key: 'c', className: 'flex-1 min-w-0' }, [
               h('div', { key: 'a', className: 'text-body font-medium text-primary truncate' }, s.cliente || 'Público en general'),
@@ -160,6 +173,10 @@
           h('div', { key: 'f' }, [
             h('div', { key: 'l', className: 'text-overline uppercase tracking-widest text-on-surface-variant' }, 'Folio original'),
             h('div', { key: 'v', className: 'font-headline text-headline-md text-primary' }, sale.folio),
+            // Ticket impreso con otro folio: se conserva y se explica siempre.
+            !!(D.saleFolioAliases ? D.saleFolioAliases(sale) : []).length && h('div', {
+              key: 'al', className: 'text-caption text-accent mt-1',
+            }, `Ticket ${D.saleFolioAliases(sale).join(', ')} · este ticket se registró posteriormente como ${sale.folio}`),
           ]),
           h('div', { key: 's1', className: 'h-10 w-px bg-outline-variant hidden md:block' }),
           h('div', { key: 'c' }, [
