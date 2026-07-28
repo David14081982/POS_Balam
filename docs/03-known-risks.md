@@ -1335,6 +1335,113 @@ coexistencia devolución + cambio está probada en la autoridad local pero todav
 no en SQL.
 **Corrección documentada:** `docs/fixes/saldo-por-renglon.md`.
 
+## H-36 — Precio único por artículo cuando el negocio lo necesita por talla
+
+**Estado:** EN CURSO
+**Fecha de registro:** 28/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** `pos.products.precio` es un único `numeric(10,2)` por artículo y
+no existe ningún campo, columna ni pantalla que exprese un precio distinto por
+talla: `precioTalla`, `precios_talla` y equivalentes no aparecen en `balam/`,
+`supabase/` ni `docs/`. El negocio necesita que, dentro del mismo SKU, ciertas
+tallas tengan un precio comercial normal distinto —M y L a $350, XL a $450—, y
+eso no es una promoción temporal.
+**Origen de auditoría:** requerimiento de operación sobre precios por talla,
+28/07/2026.
+**Riesgo:** implementar el precio por talla sin una autoridad previa corrompe
+importes en silencio. `recordSale` calcula hoy el descuento con dos precios
+distintos: `subtotalOrig` suma `l.p.precio` —el precio del **artículo**— y
+`totalConDescuento` suma la resolución del renglón. En cuanto ambos dejen de
+coincidir, `descuento` queda mal: se pierde cuando la talla vale más que el
+artículo e **inventa un descuento que nadie concedió** en el caso inverso.
+`assertSaleAmounts` no lo detecta porque valida `subtotal + iva = total` y nunca
+el descuento. Además `precioOrig` congelaría el precio del artículo, es decir
+evidencia histórica falsa.
+**Duplicación existente:** la pregunta «cuánto cuesta esta variante antes de
+promociones» está respondida seis veces leyendo `p.precio` directamente:
+`PROMOS.lineUnit`, `DATA.resolveLineDiscount`, `subtotalOrig` y `precioOrig` de
+`recordSale`, el impresor de etiquetas de Inventario —que ya itera por talla— y
+los tres respaldos de `pos-ticket.jsx`. Es el mismo patrón que H-35 (`AP-01`),
+detectado antes de que la función exista.
+**Concepto adoptado:** en BALAM el SKU identifica el **modelo** y reserva un
+marcador `T` en el segmento de talla; el identificador por pieza se deriva con
+`BARCODES.codeOf(p, talla)` y no se persiste. La variante que ya usan
+existencias, etiquetas, `sale_items`, la reserva de stock y `sale_line_balance`
+es `(producto, talla)`. Por tanto «precio por SKU» y «precio por talla» son el
+mismo eje: el modelo es **precio general del artículo con excepciones por
+talla**, no una entidad genérica de variante comercial.
+**Alcance aprobado:**
+1. Autoridad `DATA.listPrice(producto, talla)`, que devuelve la excepción de la
+   talla o el precio general. Con el catálogo actual el resultado es idéntico al
+   de hoy, artículo por artículo.
+2. Derivada `DATA.priceRange(producto)` para el catálogo del POS, calculada
+   sobre las tallas con existencias porque son las que el POS deja vender.
+3. Los seis lectores actuales pasan por la autoridad, incluidos los dos de
+   `recordSale`.
+4. `pos.products.precios_talla jsonb not null default '{}'`, con forma
+   `{ "<talla>": <precio> }`, replicando el patrón ya existente de
+   `barcode_urls`. `{}` significa «todas las tallas valen el precio general» y es
+   el estado de los 240 artículos actuales.
+5. Captura de excepciones en el formulario de producto y presentación del rango
+   en catálogo, selector de talla y etiquetas.
+**Flujo de captura, ajustado a las pantallas reales:** el formulario de producto
+(`balam/inventory.jsx`, `ProductForm`, alta y edición comparten componente)
+conserva su campo `Precio` sin cambios y no muestra nada más por omisión: la
+mayoría de los artículos no tiene excepciones y no debe pedírsele ninguna. Un
+control discreto agrega **una excepción por grupo de tallas**, reutilizando el
+idioma que el producto ya usa para eso —los chips multi-selección con
+interruptor «Todas» del Alcance de Descuentos, `balam/discounts.jsx`— acotados a
+las tallas de la grilla «Existencias por talla», con `tallaLabel` y respetando
+la escala desactivada. Se admiten varias filas —«XL, XXL → $450»— con resumen
+textual al estilo de `scopeText`. **Nunca se muestran ni se exigen precios
+individuales para todas las tallas.** El dato guardado es el mapa canónico por
+talla; la agrupación vive sólo en la presentación y se reconstruye al abrir
+agrupando tallas con el mismo precio.
+**Pruebas requeridas:** arnés nuevo `test-variant-price.mjs`, escrito antes del
+cambio y demostrando que falla. Debe cubrir: sin excepciones el precio no
+cambia; excepción en una talla sin afectar a las demás; cambiar el precio
+general no arrastra la excepción; rango único frente a `min–max`; rango sobre
+tallas con existencias; venta de dos tallas con precios distintos con
+`descuento` correcto; `precioOrig` congelado con el precio de su talla;
+promoción porcentual y de monto fijo sobre la talla cara; piso de margen con
+costo del artículo; venta histórica legible; reintento sin el campo que no borra
+la excepción; talla inexistente podada al guardar y tolerada al leer; etiqueta
+con el precio de su talla; agrupación al reabrir el formulario; rechazo de una
+talla repetida entre filas; y contratos de `STORE`, migración e interfaz.
+Regresión obligatoria por tocar precio y venta, incluyendo `test-discounts.mjs`
+**sin modificar** como evidencia de que el motor de promociones no se tocó.
+La verificación remota debe comprobar además que un vendedor recibe `42501` al
+escribir la columna nueva contra la base real: el trigger
+`pos.restrict_seller_product_update()` usa lista de exención por sustracción y
+*debería* protegerla, pero eso se prueba, no se deduce.
+**Exclusiones aprobadas:** costo por talla; precios por variante en la
+importación y exportación de Excel; historial de precios; listas de precio por
+cliente o sucursal; y la reimpresión de etiquetas ya emitidas, que es operativa.
+`pos.commit_sale` **no se modifica**: `sale_items` ya transporta `precio`,
+`precio_base` y `precio_original` de forma condicional y la función los trata
+como valores opacos.
+**Riesgos residuales previstos:**
+1. **No existe un módulo de costos.** `pos.products.costo` es una sola columna
+   cuyo único consumidor es el piso de margen de `applyStack`, y `data.jsx` la
+   rellena como el 45 % del precio cuando no se captura. Con el costo a nivel de
+   artículo, el piso subprotege a la talla cara: con precio general $350, costo
+   automático $158 y margen 45 %, el piso queda en $287.27 y se aplicaría también
+   a una talla de $450 cuyo costo real fuera mayor. Acotado y declarado; un
+   módulo de costos real es una historia propia.
+2. Las etiquetas ya impresas con el precio del artículo quedan incorrectas para
+   las tallas que cambien de precio y deben reimprimirse.
+3. `stockOf(p, talla)` busca sólo por `talla` ignorando `escala`, y un artículo
+   puede manejar ambas escalas. El precio usa la misma clave para no introducir
+   una tercera convención; la ambigüedad es preexistente.
+4. Guardar el mapa canónico pierde la agrupación literal capturada: dos filas
+   con el mismo precio se muestran como una sola al reabrir. Se prefirió a
+   `[{tallas, precio}]`, que admite una talla en dos filas con precios distintos
+   y obligaría a una regla de desempate dentro de la autoridad.
+**Aportes al sistema arquitectónico:** esta historia ya produjo `FF-11`,
+`R-CLI-08` y `AP-10` (commits `abb725d` y `aba6bb9`), porque el diseño inicial
+de la captura se derivó del modelo de datos sin recorrer el flujo real.
+**Corrección documentada:** pendiente — `docs/fixes/precio-por-talla.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:
