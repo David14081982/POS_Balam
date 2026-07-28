@@ -72,6 +72,12 @@ una situación excepcional el negocio decide regresar dinero —cliente conflict
 autorización especial—, esa operación se realiza mediante el **flujo de
 Devoluciones ya existente**, no mediante un cambio.
 
+Ese flujo ya ofrece el selector **«Método de reembolso»** en la pantalla de
+Devoluciones —`Mismo método` más los métodos de pago configurados, entre ellos
+Efectivo— y **debe conservarse tal como está**. Es la única vía por la que sale
+dinero hacia el cliente en posventa, y ninguna historia del módulo de Cambios
+puede retirarla ni sustituirla.
+
 El sobrante perdido es parte de la evidencia del documento: la diferencia se
 registra con su signo, y cuando favorece al cliente y no se consume, queda
 constancia de cuánto valor no se aprovechó.
@@ -95,20 +101,32 @@ entregados en el cambio **heredan el plazo restante de la venta original**.
 ## 7. Comisiones
 
 - La comisión de la venta original **se mantiene** para el vendedor que la hizo.
-- El vendedor que atiende el cambio genera comisión **únicamente sobre los
-  artículos adicionales que el cliente agregue** durante la operación.
-- Si sólo hay intercambio de mercancía y cobro de diferencia por ese mismo
-  cambio, **no se genera comisión nueva sobre los artículos sustituidos**.
+- El intercambio en sí **nunca genera comisión**. Primero se consume por completo
+  el valor reconocido de la mercancía entregada; sobre esa parte no hay comisión
+  nueva, aunque el cliente pague una diferencia.
+- **Todo valor que exceda el del intercambio constituye una venta nueva**, y sólo
+  sobre esa venta nueva aplica la comisión del vendedor que atendió el cambio.
+  La base de su comisión es, por tanto:
+
+  ```
+  base = máximo(0, valor de lo recibido − valor reconocido de lo entregado)
+  ```
+
+- **No depende del número de artículos, ni de la talla, ni del SKU.** Depende
+  únicamente del valor económico del intercambio. Un cliente que entrega dos
+  piezas y recibe una, o que cambia una talla por otra más cara, no altera esta
+  regla: sólo cuenta el excedente de valor.
 - Si finalmente se devuelve dinero al cliente por el flujo de Devoluciones, la
   comisión afectada es la del **vendedor de la venta original**, porque es esa
   venta la que se revierte. El vendedor del cambio conserva únicamente la
   comisión de los artículos adicionales que realmente vendió.
 
-Toda esta información debe quedar clara en los reportes.
+«Artículo adicional» significa **mercancía que el cliente decide comprar además
+del intercambio**. No significa cualquier artículo cuyo valor exceda el
+reconocido: el excedente de valor es lo que constituye la venta nueva, no el
+artículo en sí.
 
-> **Pendiente de precisión** — dónde está exactamente la frontera entre
-> «artículo sustituido» y «artículo adicional» cuando el cliente se lleva más
-> piezas de las que entregó. Ver §12.
+Toda esta información debe quedar clara en los reportes.
 
 ## 8. La venta original
 
@@ -161,15 +179,32 @@ podrá añadirse sin modificar el comportamiento funcional del módulo.
 No son preguntas de negocio: el contrato ya las gobierna funcionalmente. Son
 decisiones de diseño que quedan registradas para no olvidarse.
 
-1. **Dónde viven los renglones entregados en un cambio** para que la autoridad
-   de saldo por renglón los gobierne. §2 permite recambiar un artículo recibido
-   en un cambio anterior, y §3 le asigna valor histórico propio; pero
-   `pos.sale_line_balance()` está anclada hoy a `pos.sale_items`, y un artículo
-   entregado en un cambio no es renglón de ninguna venta. Sin resolverlo, nada
-   impediría consumir dos veces la misma pieza — el defecto que H-35 existe para
-   prevenir.
-2. **Frontera entre artículo sustituido y adicional** para el cálculo de
-   comisión (§7).
+1. **La autoridad de saldo necesita una costura de SUMINISTRO, no sólo de
+   consumo.** H-35 dejó preparada la extensión del lado que **resta**: la vista
+   `pos.line_consumption` y su espejo `consumptionSources()`, que ya contempla un
+   término `cambiada`. Pero el lado que **suma** está fijo: dentro de
+   `pos.sale_line_balance()`, el bloque `sold` lee exclusivamente
+   `pos.sale_items` del folio. Como §2 permite recambiar un artículo recibido en
+   un cambio anterior y §3 le da valor histórico propio, ese artículo debe entrar
+   al saldo como suministro del folio de origen, y hoy no puede.
+
+   El modelo que queda coherente es: `vendida` = lo vendido en la venta **más**
+   lo entregado por cambios sobre ella; `consumida` = lo devuelto **más** lo
+   entregado de vuelta en cambios. Así una cadena A→B→C sigue anclada al folio de
+   origen, sin autoridades paralelas.
+
+   Implica **extender `pos.sale_line_balance()` y su espejo local**. H-35 no se
+   reabre —su defecto sigue corregido— pero su función desplegada se modifica, y
+   por tanto aplican `R-DB-01` (migración nueva, nunca reescribir `004700`),
+   `R-DB-03` (generar desde el texto vigente y revisar el diff) y `R-DB-05`
+   (verificación propia).
+2. **Cómo se materializa la «venta nueva» del excedente** (§7): como una fila de
+   venta propia, o como base de comisión registrada dentro del documento de
+   cambio. Una venta sin renglones propios chocaría con el contrato de venta
+   vigente —`assertSaleAmounts` exige artículos con cantidades positivas y H-01
+   exige reserva de stock por renglón—, mientras que el artículo entregado
+   pertenece al cambio y hereda su plazo por §6. La regla de negocio ya está
+   fijada; sólo falta decidir dónde vive.
 3. **Cómo se registra el cobro de la diferencia** dentro de la trazabilidad
    financiera, cuya fuente de verdad de entradas de dinero es hoy
    `pos.sale_payments`.
