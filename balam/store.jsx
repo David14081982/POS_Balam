@@ -734,6 +734,9 @@
       const row = { folio: sale.folio, product_id: productId, sku: l.sku, nombre: l.nombre, talla: l.talla, qty: l.qty, precio: Number(l.precio) || 0 };
       if (l.precioBase != null) row.precio_base = Number(l.precioBase) || 0;
       if (l.precioOrig != null) row.precio_original = Number(l.precioOrig) || 0;
+      // H-32: evidencia del descuento. Condicional, como los precios: una instalación sin la
+      // migración 034 no envía el campo y sigue funcionando igual.
+      if (Array.isArray(l.promos)) row.promos = l.promos;
       return row;
     });
     const moves = ((window.DATA && window.DATA.movements) || [])
@@ -882,7 +885,7 @@
   // Filas de venta locales desde filas SQL + sus renglones (compartido: pull y fetch por folio).
   function saleRowsFrom(raws, itemRows) {
     const byFolio = {};
-    (itemRows || []).forEach(x => (byFolio[x.folio] || (byFolio[x.folio] = [])).push({ productId: x.product_id || undefined, sku: x.sku, nombre: x.nombre, talla: x.talla, qty: x.qty, precio: Number(x.precio) || 0, precioBase: x.precio_base == null ? undefined : Number(x.precio_base), precioOrig: x.precio_original == null ? undefined : Number(x.precio_original) }));
+    (itemRows || []).forEach(x => (byFolio[x.folio] || (byFolio[x.folio] = [])).push({ productId: x.product_id || undefined, sku: x.sku, nombre: x.nombre, talla: x.talla, qty: x.qty, precio: Number(x.precio) || 0, precioBase: x.precio_base == null ? undefined : Number(x.precio_base), precioOrig: x.precio_original == null ? undefined : Number(x.precio_original), promos: Array.isArray(x.promos) ? x.promos : undefined }));
     return raws.map(raw => {
       const s = MAP.sales.fromRow(raw); s.lineas = byFolio[raw.folio] || [];
       const vid = (raw.vendedores || [])[0];

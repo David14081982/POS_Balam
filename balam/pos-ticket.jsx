@@ -7,6 +7,41 @@
   const h = React.createElement;
   // Nombre visible de una talla según el catálogo (refleja renombres de Configuración).
   const tallaLbl = (t) => { const C = window.CONFIG, L = C.map('size_letter'), N = C.map('size_number'); return (L[t] != null && L[t] !== '') ? L[t] : ((N[t] != null && N[t] !== '') ? N[t] : t); };
+  const money2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+
+  // ── H-32: presentación financiera solicitada por Finanzas ────────────────────
+  // Importe e IVA describen el PRECIO ORIGINAL (antes del descuento), no el total cobrado.
+  // El precio original se deriva como total + descuento para que la resta impresa cuadre
+  // exactamente con el total. Ningún importe guardado cambia: esto es sólo presentación.
+  function desglose(totalPagar, descuento, ivaPct) {
+    const pct = Number(ivaPct) > 0 ? Number(ivaPct) : 16;
+    const precioOriginal = money2(money2(totalPagar) + money2(descuento));
+    const importe = money2(precioOriginal / (1 + pct / 100));
+    return { precioOriginal, importe, iva: money2(precioOriginal - importe), ivaPct: pct };
+  }
+
+  // Porcentaje del descuento SÓLO desde evidencia histórica persistida. Nunca se deriva.
+  // Se imprime únicamente si TODOS los renglones con descuento traen evidencia, cada uno con
+  // exactamente UNA promoción, todas porcentuales y todas con el mismo valor configurado.
+  // Cualquier otro caso (monto fijo, promociones distintas, acumulación, venta histórica sin
+  // evidencia) devuelve null y la fila se imprime sin porcentaje.
+  function pctDeEvidencia(items) {
+    if (!Array.isArray(items) || !items.length) return null;
+    const conDescuento = items.filter(x => Number(x.orig) > Number(x.base));
+    if (!conDescuento.length) return null;
+    let pct = null;
+    for (const x of conDescuento) {
+      if (!Array.isArray(x.promos) || x.promos.length !== 1) return null;
+      const pr = x.promos[0];
+      if (!pr || pr.tipo !== 'pct') return null;
+      const v = Number(pr.valor);
+      if (!Number.isFinite(v) || v <= 0) return null;
+      if (pct === null) pct = v; else if (pct !== v) return null;
+    }
+    return pct;
+  }
+  const etiquetaDescuento = (pct) =>
+    'Descuento (SOBRE PRECIO ORIGINAL)' + (pct == null ? '' : ' ' + Number(pct) + '%');
 
   // Asignar/crear cliente EN LÍNEA (sin modal): autocompletado por nombre o teléfono + alta rápida.
   function ClientPicker({ onPick }) {
@@ -47,11 +82,13 @@
   }
 
   function TicketPanel({ ticket, client, subtotal, subtotalOrig, discount, itemCount, grandTotal, onPickClient, onResetClient, onQty, onRemove, onCobrar, onClear, bottom, flashKey }) {
-    const subOrig = subtotalOrig != null ? subtotalOrig : subtotal;
     const desc = discount || 0;
     const totalPagar = grandTotal != null ? grandTotal : subtotal;
-    const importe = Math.round((totalPagar / 1.16) * 100) / 100;
-    const ivaFinanzas = Math.round((totalPagar - importe) * 100) / 100;
+    const dg = desglose(totalPagar, desc, 16);
+    // La evidencia viaja en la línea (l.res), resuelta una sola vez por el POS.
+    const pctEvidencia = desc > 0
+      ? pctDeEvidencia(ticket.map(l => ({ orig: l.res ? l.res.orig : l.p.precio, base: l.res ? l.res.unit : l.p.precio, promos: l.res ? l.res.promos : null })))
+      : null;
     const empty = ticket.length === 0;
     return h('aside', {
       className: 'bg-surface-container-lowest rounded-xl shadow-e3 flex flex-col overflow-hidden shrink-0 ' +
@@ -105,7 +142,9 @@
                       h('button', { key: 'p', className: 'w-7 h-7 flex items-center justify-center hover:bg-surface transition-colors', onClick: () => onQty(l.key, 1) }, h(MS, { name: 'plus', size: 16 })),
                     ]),
                     (() => {
-                      const du = window.PROMOS ? window.PROMOS.lineUnit(l.p, l.talla) : { unit: l.p.precio, off: 0 };
+                      // H-32: se reutiliza la resolución de la línea; no se vuelve a consultar el motor.
+                      const r = l.res || { orig: l.p.precio, unit: l.p.precio };
+                      const du = { unit: r.unit, off: Math.max(0, r.orig - r.unit) };
                       if (du.off > 0) return h('div', { key: 'sub', className: 'text-right leading-tight' }, [
                         h('div', { key: 'o', className: 'text-overline text-on-surface-variant line-through' }, fmt(l.p.precio * l.qty)),
                         h('div', { key: 'n', className: 'font-headline text-body text-gold-text' }, fmt(du.unit * l.qty)),
@@ -119,18 +158,19 @@
       // Footer (navy)
       h('div', { key: 'foot', className: 'px-6 py-4 bg-primary text-on-primary' }, [
         h('div', { key: 'rows', className: 'space-y-1.5 mb-2' }, [
+          // Orden fijado por Finanzas: precio original → importe → IVA → descuento → total.
           desc > 0 ? h('div', { key: 'po', className: 'flex justify-between items-center text-caption opacity-70' }, [
-            h('span', { key: 'l' }, `Precio original (${itemCount} artículo${itemCount === 1 ? '' : 's'})`), h('span', { key: 'v', className: 'font-medium' }, fmt(subOrig)),
-          ]) : null,
-          desc > 0 ? h('div', { key: 'ds', className: 'flex justify-between items-center text-caption' }, [
-            h('span', { key: 'l', className: 'flex items-center gap-1' }, [h(MS, { key: 'i', name: 'sell', size: 14 }), 'Descuentos']), h('span', { key: 'v', className: 'font-semibold', style: { color: '#FFE088' } }, '− ' + fmt(desc)),
+            h('span', { key: 'l' }, `Precio original (${itemCount} artículo${itemCount === 1 ? '' : 's'})`), h('span', { key: 'v', className: 'font-medium' }, fmt(dg.precioOriginal)),
           ]) : null,
           h('div', { key: 'im', className: 'flex justify-between items-center text-caption opacity-70' }, [
-            h('span', { key: 'l' }, 'Importe'), h('span', { key: 'v', className: 'font-medium' }, fmt(importe)),
+            h('span', { key: 'l' }, 'Importe'), h('span', { key: 'v', className: 'font-medium' }, fmt(dg.importe)),
           ]),
           h('div', { key: 'iva', className: 'flex justify-between items-center text-caption opacity-70' }, [
-            h('span', { key: 'l' }, 'IVA incluido (16%)'), h('span', { key: 'v', className: 'font-medium' }, fmt(ivaFinanzas)),
+            h('span', { key: 'l' }, `IVA (${dg.ivaPct}%)`), h('span', { key: 'v', className: 'font-medium' }, fmt(dg.iva)),
           ]),
+          desc > 0 ? h('div', { key: 'ds', className: 'flex justify-between items-center gap-3 text-caption' }, [
+            h('span', { key: 'l', className: 'min-w-0' }, etiquetaDescuento(pctEvidencia)), h('span', { key: 'v', className: 'font-semibold shrink-0', style: { color: '#FFE088' } }, '− ' + fmt(desc)),
+          ]) : null,
         ]),
         h('div', { key: 'tot', className: 'flex justify-between items-end mb-3' }, [
           h('span', { key: 'l', className: 'text-overline uppercase opacity-60' }, 'Total a pagar'),
@@ -293,13 +333,20 @@
     const hasSnapshot = sale.subtotal != null || sale.iva != null;
     const ivaPct = sale.ivaPct != null ? Number(sale.ivaPct) : 16;
     const incl = sale.ivaIncluded != null ? !!sale.ivaIncluded : true;
-    // Base cobrada (con descuento ya aplicado), en la base del precio. El resumen del carrito y el
-    // ticket usan EXACTAMENTE el mismo desglose: Subtotal (lista) − Descuento, con IVA del total.
+    // H-32: el resumen del carrito y el ticket usan EXACTAMENTE el mismo desglose, calculado
+    // sobre el PRECIO ORIGINAL. Se lee sólo lo persistido: nunca se consulta el motor ni las
+    // promociones vigentes para reconstruir una venta antigua.
     const granTotal = Number(sale.total) || 0;
     const desc = Number(sale.descuento) || 0;
-    const subtotal = hasSnapshot ? Number(sale.subtotal) || 0 : granTotal / 1.16;
-    const iva = hasSnapshot ? Number(sale.iva) || 0 : granTotal - subtotal;
-    const subOrig = granTotal + desc;
+    // Cortesía: se conserva intacto el comportamiento previo (el desglose describe el valor
+    // regalado y el total cobrado es cero). Queda expresamente fuera del alcance de H-32.
+    const cortesia = Number(sale.valorRegalado) > 0;
+    const dg = desglose(granTotal, desc, ivaPct);
+    const subtotal = cortesia ? (hasSnapshot ? Number(sale.subtotal) || 0 : granTotal / 1.16) : dg.importe;
+    const iva = cortesia ? (hasSnapshot ? Number(sale.iva) || 0 : granTotal - subtotal) : dg.iva;
+    const pctEvidencia = desc > 0
+      ? pctDeEvidencia((sale.lineas || []).map(l => ({ orig: Number(l.precioOrig), base: Number(l.precioBase), promos: l.promos })))
+      : null;
     const colorDe = (sku) => { const p = D.products.find(x => x.sku === sku); return p ? p.colorName : ''; };
     const lineas = sale.lineas || [];
     const pagos = D.paymentsForSale ? D.paymentsForSale(sale.folio) : [];
@@ -357,13 +404,14 @@
         // Totales
         h('div', { key: 'tt', className: 'w-full border-t-2 border-primary pt-4 mt-8' }, [
           h('div', { key: 'r', className: 'space-y-1.5 text-on-surface-variant' }, [
-            desc > 0 ? h('div', { key: 'po', className: 'flex justify-between', style: { fontSize: '13px' } }, [h('span', { key: 'l' }, 'Precio original'), h('span', { key: 'v' }, fmt(subOrig))]) : null,
-            desc > 0 ? h('div', { key: 'ds', className: 'flex justify-between', style: { fontSize: '13px', color: '#9a7b16' } }, [h('span', { key: 'l' }, 'Descuento'), h('span', { key: 'v', className: 'font-semibold' }, '− ' + fmt(desc))]) : null,
+            // Orden fijado por Finanzas: precio original → importe → IVA → descuento → total.
+            desc > 0 ? h('div', { key: 'po', className: 'flex justify-between', style: { fontSize: '13px' } }, [h('span', { key: 'l' }, 'Precio original'), h('span', { key: 'v' }, fmt(dg.precioOriginal))]) : null,
             h('div', { key: 'st', className: 'flex justify-between', style: { fontSize: '13px' } }, [h('span', { key: 'l' }, 'Importe'), h('span', { key: 'v' }, fmt(subtotal))]),
-            h('div', { key: 'iva', className: 'flex justify-between', style: { fontSize: '13px' } }, [h('span', { key: 'l' }, 'IVA incluido (16%)'), h('span', { key: 'v' }, fmt(iva))]),
+            h('div', { key: 'iva', className: 'flex justify-between', style: { fontSize: '13px' } }, [h('span', { key: 'l' }, `IVA (${dg.ivaPct}%)`), h('span', { key: 'v' }, fmt(iva))]),
+            desc > 0 ? h('div', { key: 'ds', className: 'flex justify-between gap-2', style: { fontSize: '13px', color: '#9a7b16' } }, [h('span', { key: 'l', className: 'min-w-0' }, etiquetaDescuento(pctEvidencia)), h('span', { key: 'v', className: 'font-semibold shrink-0' }, '− ' + fmt(desc))]) : null,
           ]),
           h('div', { key: 'g', className: 'flex justify-between items-end border-t border-outline-variant pt-3 mt-3' }, [
-            h('span', { key: 'l', className: 'font-headline uppercase text-primary', style: { fontSize: '18px', letterSpacing: '-0.01em' } }, 'Total'),
+            h('span', { key: 'l', className: 'font-headline uppercase text-primary', style: { fontSize: '18px', letterSpacing: '-0.01em' } }, 'Total a pagar'),
             h('span', { key: 'v', className: 'font-headline text-primary', style: { fontSize: '26px', lineHeight: 1 } }, fmt(granTotal)),
           ]),
           sale.estado === 'Apartado' ? h('div', { key: 'ap', className: 'mt-3 pt-3 border-t border-outline-variant space-y-1.5' }, [

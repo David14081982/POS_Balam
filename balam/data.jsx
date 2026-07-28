@@ -670,6 +670,20 @@
   }
   function paymentsForSale(folio) { return payments.filter(p => p.folio === folio).reverse().sort((a, b) => String(a.fecha).localeCompare(String(b.fecha))); }
   function hasFinancialSnapshot(sale) { return !!sale && sale.subtotal != null && sale.iva != null && sale.descuento != null; }
+  // H-32: resolución de descuento de un renglón. Devuelve el precio unitario efectivo y la
+  // EVIDENCIA de las promociones que lo produjeron, copiada (no referenciada) para que la venta
+  // siga siendo explicable aunque la promoción se edite o se elimine. Se calcula UNA sola vez,
+  // en el Punto de Venta, y viaja con la línea hasta recordSale: el renglón es dueño de su precio.
+  // No decide reglas comerciales — sólo conserva lo que el motor ya resolvió.
+  function resolveLineDiscount(product, talla) {
+    const orig = Number(product && product.precio) || 0;
+    const du = window.PROMOS ? window.PROMOS.lineUnit(product, talla) : null;
+    if (!du) return { orig, unit: orig, promos: [] };
+    const promos = (Array.isArray(du.promos) ? du.promos : []).map(p => ({
+      id: p.id, nombre: p.nombre, tipo: p.tipo || 'pct', valor: Number(p.valor) || 0,
+    }));
+    return { orig, unit: Number(du.unit) || 0, promos };
+  }
   function assertSaleAmounts({ ticket, metodo, estado, subtotal, iva, total, anticipo, pagoEfectivo, pagoOtro, ivaIncluded }) {
     const finite = n => Number.isFinite(Number(n));
     if (!Array.isArray(ticket) || !ticket.length || ticket.some(l => !Number.isInteger(Number(l.qty)) || Number(l.qty) <= 0)) throw new Error('La venta requiere artículos con cantidades positivas');
@@ -760,9 +774,12 @@
     comisionVenta = Math.round(comisionVenta * 100) / 100;
     // 4) Registro de venta (al frente = más reciente). Precio cobrado = con descuentos del POS.
     const primary = ids.map(id => (sellers.find(x => x.id === id) || {}).nombre).filter(Boolean);
-    const unitOf = l => (window.PROMOS ? window.PROMOS.lineUnit(l.p, l.talla).unit : (Number(l.p.precio) || 0));
+    // H-32: se usa la resolución que el POS ya calculó (l.res). Si el llamador no la trae, se
+    // resuelve aquí UNA vez y se reutiliza; en ningún caso se evalúa el motor dos veces por línea.
+    const resList = ticket.map(l => l.res || resolveLineDiscount(l.p, l.talla));
+    const unitAt = i => resList[i].unit;
     const subtotalOrig = ticket.reduce((a, l) => a + (Number(l.p.precio) || 0) * l.qty, 0);
-    const totalConDescuento = ticket.reduce((a, l) => a + unitOf(l) * l.qty, 0);
+    const totalConDescuento = ticket.reduce((a, l, i) => a + unitAt(i) * l.qty, 0);
     const sale = {
       folio, fecha, clienteId: client && !client.generic ? client.id : undefined, cliente: client ? client.nombre : 'Público en general',
       vendedor: primary[0] || '—', vendedores: ids.slice(),
@@ -774,7 +791,9 @@
       comision: comisionVenta, comisionBase: window.CONFIG.get('commission.base') || 'neto',
       _operationId: operationId, _stockRequired: cobrada, _syncStatus: 'pending',
       // En cortesía cada línea queda en $0 (no se cobró); el valor vive en precioOrig y valorRegalado.
-      lineas: ticket.map(l => ({ productId: l.p.id, sku: l.p.sku, nombre: l.p.nombre, talla: l.talla, qty: l.qty, precio: cortesia ? 0 : money(unitOf(l) * (totalConDescuento > 0 ? total / totalConDescuento : 0)), precioBase: cortesia ? 0 : unitOf(l), precioOrig: Number(l.p.precio) || 0 })),
+      // promos: evidencia histórica inmutable de H-32. Un arreglo vacío significa "sin promoción";
+      // su AUSENCIA significa "venta anterior a H-32", que nunca imprime porcentaje.
+      lineas: ticket.map((l, i) => ({ productId: l.p.id, sku: l.p.sku, nombre: l.p.nombre, talla: l.talla, qty: l.qty, precio: cortesia ? 0 : money(unitAt(i) * (totalConDescuento > 0 ? total / totalConDescuento : 0)), precioBase: cortesia ? 0 : unitAt(i), precioOrig: Number(l.p.precio) || 0, promos: resList[i].promos })),
     };
     sales.unshift(sale);
     saveSales();
@@ -1267,7 +1286,8 @@
           if (!avail.length) continue;
           const v = pick(avail);
           if (ticket.some(t => t.p.id === p.id && t.talla === v.talla)) continue;
-          ticket.push({ p, talla: v.talla, qty: Math.min(rnd(1, 3), v.stock) });
+          // H-32: el generador resuelve igual que el POS, para que recordSale nunca vuelva a evaluar.
+          ticket.push({ p, talla: v.talla, qty: Math.min(rnd(1, 3), v.stock), res: resolveLineDiscount(p, v.talla) });
         }
         if (!ticket.length) return;
         const total = ticket.reduce((a, t) => a + (Number(t.p.precio) || 0) * t.qty, 0);
@@ -1305,7 +1325,7 @@
     saveProducts, saveSellers, saveClients, saveSales, saveMovements, savePromos, saveReturns, savePayments,
     removeProduct, remapOrphanCodes, catalogHealthReport, hexForColorName, applyOrphanFix, get lastRemap() { return lastRemap; },
     addClient, removeClient, recordSale, nextFolio, collisionSafeFolio, rekeySaleFolio, stockOf, isAutoImg, resetProducts, applyRemote, applySyncResult, mergeRemote, markSaleSync, liquidarComision,
-    completarApartado, registrarPagoApartado, paymentsForSale, hasFinancialSnapshot, cerrarMes, getPeriodoInicio,
+    completarApartado, registrarPagoApartado, paymentsForSale, hasFinancialSnapshot, resolveLineDiscount, cerrarMes, getPeriodoInicio,
     recordReturn, returnedQty, returnsForFolio, isReturnable,
     addUser, updateUser, removeUser, isEligibleSeller, resolveSellerCommission,
     addPromo, updatePromo, removePromo, duplicatePromo,

@@ -127,9 +127,11 @@
     function removeLine(key) { setTicket(prev => prev.filter(l => l.key !== key)); }
 
     // Descuentos automáticos (window.PROMOS): precio efectivo por línea.
-    const unitOf = (l) => (window.PROMOS ? window.PROMOS.lineUnit(l.p, l.talla).unit : l.p.precio);
-    const subtotalOrig = ticket.reduce((a, l) => a + l.p.precio * l.qty, 0);
-    const subtotal = ticket.reduce((a, l) => a + unitOf(l) * l.qty, 0);
+    // H-32: cada renglón resuelve su descuento UNA sola vez. La resolución viaja con la línea
+    // hasta el resumen, el ticket y recordSale; nadie vuelve a consultar el motor.
+    const resolved = ticket.map(l => Object.assign({}, l, { res: D.resolveLineDiscount(l.p, l.talla) }));
+    const subtotalOrig = resolved.reduce((a, l) => a + l.res.orig * l.qty, 0);
+    const subtotal = resolved.reduce((a, l) => a + l.res.unit * l.qty, 0);
     const discount = Math.max(0, subtotalOrig - subtotal);
     const itemCount = ticket.reduce((a, l) => a + l.qty, 0);
     // Regla de Finanzas: todos los precios ya incluyen IVA 16%. El descuento se aplica
@@ -147,7 +149,7 @@
       const estado = pendingMetodo.metodo === 'Apartado' ? 'Apartado' : 'Pagado';
       try {
         const sale = D.recordSale({
-          ticket, sellerIds: [sellerId], client, metodo: pendingMetodo.metodo, estado,
+          ticket: resolved, sellerIds: [sellerId], client, metodo: pendingMetodo.metodo, estado,
           subtotal: importe, iva, total: grandTotal, anticipo: pendingMetodo.anticipo,
           pagoEfectivo: pendingMetodo.pagoEfectivo, pagoOtro: pendingMetodo.pagoOtro,
           pagoDetalle: pendingMetodo.pagoDetalle, metodoPago: pendingMetodo.metodoPago,
@@ -216,7 +218,7 @@
 
     const ticketPanel = h(window.TicketPanel, {
       key: 'ticket',
-      ticket, client, subtotal, subtotalOrig, discount, itemCount, grandTotal,
+      ticket: resolved, client, subtotal, subtotalOrig, discount, itemCount, grandTotal,
       onPickClient: setClient, onResetClient: () => setClient(D.clients.find(c => c.generic)),
       onQty: setQty, onRemove: removeLine, onCobrar: () => setCheckout(true),
       onClear: () => setTicket([]), bottom: ticketBottom, flashKey: flash,

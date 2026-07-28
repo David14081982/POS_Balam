@@ -206,6 +206,36 @@ Costo cero/ausente o margen 0 conservan el cálculo histórico. El margen se
 administra en Configuración → Ventas y POS, entre 0% y 100%, y afecta sólo
 cálculos nuevos; las ventas guardadas conservan sus snapshots monetarios.
 
+### Resolución del descuento por renglón
+
+`DATA.resolveLineDiscount(producto, talla)` es la única fuente de la resolución
+de un renglón: devuelve el precio de lista, el precio efectivo y una copia
+congelada de las promociones que lo produjeron. El Punto de Venta la calcula
+**una sola vez** por renglón y la adjunta a la línea; el resumen, el renglón del
+carrito y `recordSale` consumen esa resolución sin volver a consultar el motor.
+El renglón es dueño de su precio.
+
+`sale.lineas[].promos` guarda `[{ id, nombre, tipo, valor }]` como evidencia
+histórica inmutable, y viaja a `pos.sale_items.promos`. Es copia y no
+referencia: la venta sigue siendo explicable aunque la promoción se edite o se
+elimine. Un arreglo vacío significa «sin promoción»; su ausencia significa
+«venta anterior a H-32».
+
+### Presentación financiera del ticket
+
+El resumen del Punto de Venta y el ticket impreso muestran, en este orden:
+precio original, importe, IVA, descuento y total a pagar. El precio original se
+deriva como `total + descuento`, e importe e IVA se calculan **sobre el precio
+original**, por lo que `importe + IVA = precio original` y no coincide con el
+total cuando hay descuento. Es el formato aprobado por Finanzas.
+
+El porcentaje sólo se imprime cuando todos los renglones con descuento traen
+evidencia, cada uno con exactamente una promoción, todas porcentuales y todas
+con el mismo valor configurado. Nunca se deriva dividiendo descuento entre
+precio. Los importes guardados —`subtotal`, `iva`, `total`, `descuento`— no
+cambian: la presentación se calcula al mostrar y el ticket nunca consulta las
+promociones vigentes para reconstruir una venta antigua.
+
 ## AUTH
 
 Archivo: `balam/auth.jsx`. API: `window.AUTH`.

@@ -1083,6 +1083,56 @@ lo que la autoridad existe pero aún no cambia ventas, devoluciones,
 liquidaciones ni cierres.
 **Corrección documentada:** `docs/fixes/autoridad-comision-efectiva.md`.
 
+## H-32 — Trazabilidad del descuento y presentación del ticket
+
+**Estado:** RESUELTO
+**Fecha de registro:** 27/07/2026
+**Fecha de resolución:** 27/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** `PROMOS.lineUnit()` devolvía las promociones aplicadas a cada
+renglón, pero `recordSale` descartaba esa lista y guardaba sólo `precio`,
+`precioBase` y `precioOrig`. La venta perdía la identidad de la promoción al
+guardarse. Además, el resumen y el ticket calculaban importe e IVA sobre el
+total cobrado y colocaban el descuento antes del importe, en desacuerdo con el
+formato aprobado por Finanzas.
+**Origen de auditoría:** requerimiento de Finanzas sobre el formato del ticket.
+**Riesgo:** sin evidencia persistida, el único camino para mostrar el
+porcentaje era derivarlo dividiendo descuento entre precio, lo que produce
+números que ningún administrador configuró: 7.14% con artículos elegibles y no
+elegibles, 4.8% con descuento de monto fijo, 15% con dos promociones
+acumuladas.
+**Reproducción:** `node test-discount-trace.mjs` sobre el código anterior — el
+renglón persistido no contenía ningún campo que identificara la promoción, ni
+localmente ni en `pos.sale_items`.
+**Causa raíz:** la evidencia existía en memoria y moría en `recordSale`; el
+renglón guardaba el resultado del cálculo pero no su justificación. `pos.jsx` y
+`data.jsx` además evaluaban el motor por separado para el mismo renglón.
+**Corrección:** cada renglón persiste `promos`, una copia congelada
+`[{ id, nombre, tipo, valor }]`. `DATA.resolveLineDiscount()` es la única
+fuente de la resolución: el POS la calcula una vez y `recordSale` la consume.
+El porcentaje se imprime sólo con evidencia suficiente y nunca se deriva. El
+motor de promociones no se modificó y ningún importe guardado cambia.
+**Pruebas:** trazabilidad H-32 65/65; descuentos 43/43 sin modificar; cola
+97/97; coherencia de venta 17/17; devoluciones 17/17; liquidaciones 10/10;
+comisiones 10/10; contratos de módulos 36/36; migraciones 24/24; comisión
+efectiva 22/22; y el resto de la suite E2E en verde. Build reproducible 8/8 y
+smoke bundle 17/17. Verificación visual en Chrome real: resumen y ticket
+idénticos al formato pedido, con la evidencia persistida en la venta.
+**Despliegue:** migración `20260727004000_pos_h32_discount_trace.sql` aplicada
+al proyecto `Balam` el 27/07/2026, antes de publicar el cliente. Verificado en
+la base: `pos.sale_items.promos` existe y `commit_sale` lo declara e inserta.
+Venta controlada por el RPC real con `precio_original` 1250.00, `precio_base`
+1125.00 y evidencia `{id, nombre, tipo pct, valor 10}`; reimpresión simulada
+desde otra terminal con el código real del cliente imprimió 10%, y las cinco
+ventas históricas reales no imprimieron ningún porcentaje. La venta de
+validación se eliminó y la base quedó en su estado exacto previo.
+**Pendiente:** ninguno.
+**Riesgo residual:** bajo. Las ventas anteriores a H-32 nunca imprimirán
+porcentaje, por diseño. Bajo el formato aprobado
+`Importe + IVA = Precio original`, que no coincide con el total cuando hay
+descuento; es lo solicitado por Finanzas.
+**Corrección documentada:** `docs/fixes/trazabilidad-descuento-ticket.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

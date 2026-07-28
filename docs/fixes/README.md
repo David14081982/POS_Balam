@@ -45,6 +45,7 @@ sesión de chat.
 | `eligible-active-sellers.md` | H-29 | Vendedores comerciales activos y elegibles |
 | `fotografias-vendedores.md` | H-30 | Fotografías en la pantalla Vendedores |
 | `autoridad-comision-efectiva.md` | H-31 | Precedencia y compatibilidad del porcentaje efectivo |
+| `trazabilidad-descuento-ticket.md` | H-32 | Evidencia del descuento por renglón y formato de Finanzas |
 
 Documentación financiera relacionada, creada antes de este índice:
 
