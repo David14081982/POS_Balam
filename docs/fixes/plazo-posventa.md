@@ -3,7 +3,7 @@
 **Riesgo:** H-34
 **Estado:** RESUELTO
 **Fecha:** 28/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `59a16c9`
 
 Fase 1 del módulo de Cambios de productos. Entrega valor por sí sola —el plazo
 de devoluciones— y establece el contrato que las fases siguientes necesitan.
@@ -153,6 +153,16 @@ Comprobación posterior directa contra la base:
 
 La última fila es la evidencia en producción de que ninguna de las nueve
 desviaciones del intento manual llegó a la base.
+
+Artefacto publicado (GitHub Pages, commit `59a16c9`): el archivo servido en
+`https://david14081982.github.io/POS_Balam/` es idéntico byte por byte al
+`index.html` del commit, SHA-256
+`7b6d102b6661f65478dbbec8b8ca0dedea49cc0e25955413b984d4f4140350f6`. Antes de la
+reconstrucción, Pages seguía entregando el artefacto de H-33
+(`f65e4fa8…`), por lo que la comparación distingue realmente ambas versiones.
+Ese mismo archivo es el que aprobó `test-smoke.mjs bundle` 17/17 y
+`test-ui-navigation.mjs` 13/13: los arneses ejecutan `index.html` y el bundle no
+cambió entre la prueba y la publicación.
 
 ## Riesgo residual y pendientes
 

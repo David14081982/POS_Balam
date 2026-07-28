@@ -1209,7 +1209,7 @@ ventas anteriores a H-33 conservan su folio largo por diseño.
 **Estado:** RESUELTO
 **Fecha de registro:** 28/07/2026
 **Fecha de resolución:** 28/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `59a16c9`
 **Evidencia:** ninguna venta conserva hasta cuándo admite devolución.
 `DATA.isReturnable()` sólo consulta el estado y `recordReturn()` no evalúa
 tiempo, así que una venta de 2019 se devuelve igual que una de hoy. La única
@@ -1242,7 +1242,9 @@ verificación emitió sus cinco avisos de éxito y no dejó filas temporales. La
 comprobación posterior confirmó columnas nullable sin default, las dos
 restricciones, el índice parcial, 6 ventas reales con 0 plazos y una
 `commit_sale` desplegada que transporta el plazo conservando
-`is distinct from p_operation_id` y `coalesce(v_stock -> 'products', …)`.
+`is distinct from p_operation_id` y `coalesce(v_stock -> 'products', …)`. El
+artefacto publicado en GitHub Pages coincide byte por byte con el `index.html`
+del commit (SHA-256 `7b6d102b…`).
 **Pruebas:** plazo de posventa 38/38; migraciones 29/29; coherencia de venta
 17/17; devoluciones 17/17; folio diario 60/60; folios multi-terminal 12/12;
 trazabilidad H-32 65/65; cola 115/115; contratos de módulos 36/36; comisión
