@@ -33,7 +33,7 @@ lo que había, no lo que el negocio significa.
 
 **FF-03 · ¿Cuál es la autoridad única de esta pregunta, y cuántas veces está
 respondida hoy?**
-→ `AUTHORITIES.md`. Tres copias de la misma fórmula fue el defecto de H-35, y
+→ `authorities/`. Tres copias de la misma fórmula fue el defecto de H-35, y
 nadie lo veía porque las tres coincidían.
 
 **FF-04 · ¿Estoy persistiendo algo derivable, o derivando algo que debía
@@ -42,7 +42,7 @@ El porcentaje del ticket no se deriva (H-32). El plazo no se lee de la
 configuración vigente (H-34). La fecha no se lee dos veces (H-33).
 
 **FF-05 · ¿Qué contrato cambia, y quién lo consume hoy?**
-Los consumidores se descubren, no se recuerdan: `AUTHORITIES.md` trae la
+Los consumidores se descubren, no se recuerdan: `authorities/` trae la
 consulta que los localiza.
 
 **FF-06 · ¿Qué ocurre cuando exista un segundo consumidor, un segundo documento

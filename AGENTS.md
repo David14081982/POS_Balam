@@ -47,6 +47,6 @@ Estas instrucciones aplican a todo el repositorio y a cualquier agente de IA.
 `docs/` y de las migraciones; no las sustituye ni repite sus reglas.
 
 - Leer siempre `README.md`, `PHILOSOPHY.md`, `THINKING.md` y `WORKFLOW.md`.
-- Cargar de `playbooks/`, `AUTHORITIES.md` y `decisions/` únicamente lo que la
+- Cargar de `playbooks/`, `authorities/` y `decisions/` únicamente lo que la
   tabla de enrutamiento del `README.md` indique. No leer el sistema completo.
 - Antes de cerrar, commitear o desplegar, aplicar `WORKFLOW.md`.

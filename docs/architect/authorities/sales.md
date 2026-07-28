@@ -1,0 +1,66 @@
+---
+capa: conocimiento
+applies_to: [domain]
+related_histories: [H-02, H-03, H-29, H-31, H-32, H-33, H-34, H-35]
+severity_max: required
+no_alcance: "No define ninguna autoridad ni transcribe firmas. Sólo dice qué pregunta responde cada una y dónde vive."
+---
+
+# Autoridades · Venta y posventa
+
+Reglas de mantenimiento en `../README.md` § Registro de autoridades.
+
+## ¿Cuántas unidades de este renglón siguen disponibles?
+**Autoridad:** `pos.sale_line_balance()` · espejo local `DATA.saleLineBalance()`
+**Definición:** `supabase/migrations/20260728004700_pos_h35_line_balance.sql`
+**Creada por:** H-35 · **Decisión:** `ADR-003`
+**Consumidores:** `grep -rn "sale_line_balance\|saleLineBalance" supabase/ balam/`
+
+## ¿Hasta cuándo admite devolución esta venta?
+**Autoridad:** `DATA.returnDeadline()`
+**Definición:** `balam/data.jsx` · `docs/02-architecture.md` § Plazo de posventa
+**Creada por:** H-34 · **Decisión:** `ADR-002`
+**Consumidores:** `grep -rn "returnDeadline" balam/ test-*.mjs`
+
+## ¿Puede devolverse esta venta por su estado?
+**Autoridad:** `DATA.isReturnable()` — compuerta **ortogonal** al plazo
+**Definición:** `balam/data.jsx`
+**Creada por:** anterior a H-34; su ortogonalidad se fijó en H-34
+**Consumidores:** `grep -rn "isReturnable" balam/ test-*.mjs`
+
+## ¿Qué folio comercial lleva esta venta?
+**Autoridad:** `DATA.nextFolio()` · unicidad en `pos.folio_counters`
+**Definición:** `docs/02-architecture.md` § Identidad y folio de venta
+**Creada por:** H-02 → H-33 · **Decisión:** `ADR-001`
+**Consumidores:** `grep -rn "nextFolio\|reserve_folio_block" balam/ supabase/`
+
+## ¿A qué venta corresponde este folio impreso?
+**Autoridad:** `DATA.findSaleByFolio()` — folio vigente primero, alias después
+**Definición:** `balam/data.jsx` · `docs/02-architecture.md` § El folio impreso no cambia
+**Creada por:** H-33 · **Decisión:** `ADR-001`
+**Consumidores:** `grep -rn "findSaleByFolio\|folioAliases" balam/`
+
+## ¿Qué precio tiene este renglón y por qué?
+**Autoridad:** `DATA.resolveLineDiscount()` — el renglón es dueño de su precio
+**Definición:** `balam/data.jsx` · evidencia en `pos.sale_items.promos`
+**Creada por:** H-32 · **Decisión:** `ADR-002`
+**Consumidores:** `grep -rn "resolveLineDiscount" balam/`
+
+## ¿Cuánto se cobró realmente por esta venta?
+**Autoridad:** snapshot financiero de `pos.sales` + `pos.sale_payments`
+**Definición:** `docs/trazabilidad-financiera.md` · `docs/H-03-coherencia-cobro.md`
+**Creada por:** H-03 · **Decisión:** `ADR-002`
+**Consumidores:** `grep -rn "subtotal\|saldo\|sale_payments" balam/ supabase/`
+
+## ¿Qué comisión le corresponde a este vendedor?
+**Autoridad:** `DATA.resolveSellerCommission()` — existe, pero por alcance de
+H-31 todavía no gobierna los cálculos financieros
+**Definición:** `docs/02-architecture.md` § Autoridad de comisión efectiva
+**Creada por:** H-31
+**Consumidores:** `grep -rn "resolveSellerCommission" balam/`
+
+## ¿Quién puede ser vendedor de una venta?
+**Autoridad:** `DATA.isEligibleSeller()`
+**Definición:** `docs/02-architecture.md` § Personal y elegibilidad comercial
+**Creada por:** H-29
+**Consumidores:** `grep -rn "isEligibleSeller" balam/`

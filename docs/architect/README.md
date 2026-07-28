@@ -24,7 +24,7 @@ reabre por accidente.
 | SQL, permisos, roles, RLS, vistas o funciones | `playbooks/security.md` |
 | `balam/`, cola offline, build o artefactos | `playbooks/client.md` |
 | pruebas, cierre, commit o despliegue | `playbooks/delivery.md` |
-| ubicar quién responde una pregunta de negocio | `AUTHORITIES.md` |
+| ubicar quién responde una pregunta de negocio | `authorities/` — `sales` · `inventory` · `security` · `synchronization` |
 | *(sólo si una regla o un playbook lo cita)* | el `ADR-XXX` correspondiente |
 
 No se lee el sistema completo. La carga típica son cuatro archivos base y uno
@@ -58,6 +58,27 @@ o dos playbooks.
 5. **Contradicción = detención.** Si una regla de este sistema choca con
    `docs/02-architecture.md` o con una migración aplicada, el agente **se
    detiene y lo reporta**. La autoridad final es el código ejecutable.
+
+## Registro de autoridades
+
+`authorities/` responde «¿quién decide esto?» y está indexado por **pregunta de
+negocio**, no por función: las funciones de BALAM han cambiado varias veces; las
+preguntas, casi nunca. Para localizar una sin saber su dominio:
+
+```bash
+grep -rn "<pregunta o función>" docs/architect/authorities/
+```
+
+Dos reglas de mantenimiento:
+
+- Si cambia la función, se edita la entrada. **Si cambia la pregunta, es una
+  autoridad nueva.**
+- **Dos entradas con la misma pregunta son, por definición, `AP-01`.** El
+  registro es también un detector de fórmulas duplicadas.
+
+Los consumidores no se mantienen: cada entrada trae la consulta que los
+descubre. Las historias que modificaron una autoridad se recuperan con
+`grep -rn "<autoridad>" docs/03-known-risks.md`.
 
 ## Presupuestos y crecimiento
 

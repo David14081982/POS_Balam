@@ -11,7 +11,7 @@ no_alcance: "No describe el modelo de dominio. Eso vive en docs/02-architecture.
 ## Reglas
 
 **R-DOM-01 · BLOCKING · Una pregunta de negocio tiene una sola autoridad.**
-Antes de escribir una fórmula, buscarla en `AUTHORITIES.md`. Si ya existe, se
+Antes de escribir una fórmula, buscarla en `../authorities/`. Si ya existe, se
 consume; no se reimplementa. Si no existe y va a ser consultada por más de un
 lugar, se crea como autoridad y se da de alta.
 Origen: H-35, H-29, H-18, H-25, H-26 · Antipatrón: `AP-01`
@@ -39,7 +39,7 @@ exige autorización expresa.
 Origen: H-29 (Reportes excluido), H-31 (cálculos financieros excluidos),
 H-32 (cortesías excluidas), H-35 (`allReturned` conservado)
 
-**R-DOM-06 · REQUIRED · Toda autoridad nueva se da de alta en `AUTHORITIES.md`**
+**R-DOM-06 · REQUIRED · Toda autoridad nueva se da de alta en `../authorities/`**
 con su pregunta de negocio, no con su nombre de función.
 
 **R-DOM-07 · RECOMMENDED · Si se prevé un segundo consumidor, declarar la
@@ -62,7 +62,7 @@ para producir un efecto doble sin que ninguna restricción lo impida. En H-35
 habría sido doble reingreso de stock y doble efecto financiero.
 **Regla permanente:** `R-DOM-01`.
 **Cómo detectarlo:** buscar la fórmula literal en `balam/` y `supabase/`;
-comprobar si `AUTHORITIES.md` ya tiene esa pregunta.
+comprobar si `../authorities/` ya tiene esa pregunta.
 **Cómo prevenirlo:** crear la autoridad antes que el segundo consumidor.
 **Pruebas obligatorias:** un caso que ejercite la costura con una fuente
 adicional simulada, demostrando que el saldo cambia sin tocar consumidores.
