@@ -2,6 +2,12 @@
 (function () {
   const { useState, useEffect, useRef, useMemo } = React;
   const { fmt, toast, Modal } = window.UI;
+  // H-36: antes de elegir talla el catálogo anuncia un rango; el precio real de
+  // la talla aparece al elegirla y es el que circula por resumen y ticket.
+  const precioCatalogo = (p) => {
+    const r = window.DATA.priceRange(p);
+    return r.unico ? fmt(r.min) : fmt(r.min) + ' – ' + fmt(r.max);
+  };
   const { MS, ProductImage } = window.HX;
   const D = window.DATA;
   const h = React.createElement;
@@ -313,7 +319,7 @@
           h('p', { key: 's', className: 'text-overline uppercase text-on-surface-variant mt-1 truncate' }, subtitle),
         ]),
         h('div', { key: 'm', className: 'mt-auto flex justify-between items-center' }, [
-          h('span', { key: 'p', className: 'font-headline text-h2 text-primary' }, fmt(p.precio)),
+          h('span', { key: 'p', className: 'font-headline text-h2 text-primary' }, precioCatalogo(p)),
           out ? null : h('button', {
             key: 'add',
             className: 'w-9 h-9 bg-surface-container-low text-primary rounded-xl flex items-center justify-center hover:bg-primary hover:text-on-primary transition-all',
@@ -337,7 +343,7 @@
         h('div', { key: 'a', className: 'font-headline text-body text-primary truncate' }, p.nombre),
         h('div', { key: 'b', className: 'text-overline uppercase text-on-surface-variant' }, p.sku),
       ]),
-      h('span', { key: 'm', className: 'font-headline text-body text-primary w-24 text-right' }, fmt(p.precio)),
+      h('span', { key: 'm', className: 'font-headline text-body text-primary w-28 text-right' }, precioCatalogo(p)),
       h('button', {
         key: 'add', className: 'w-9 h-9 bg-surface-container-low text-primary rounded-xl flex items-center justify-center hover:bg-primary hover:text-on-primary transition-all shrink-0',
         onClick: e => { e.stopPropagation(); if (!out) onAdd(); },
@@ -353,7 +359,7 @@
         h('div', { key: 'i' }, [
           h('div', { key: 'n', className: 'font-headline text-h2 text-primary' }, p.nombre),
           h('div', { key: 's', className: 'text-overline uppercase text-on-surface-variant' }, p.sku),
-          h('div', { key: 'p', className: 'font-headline text-h2 text-primary mt-1' }, fmt(p.precio)),
+          h('div', { key: 'p', className: 'font-headline text-h2 text-primary mt-1' }, precioCatalogo(p)),
         ]),
       ]),
       h('div', { key: 'lbl', className: 'text-overline uppercase text-on-surface-variant mb-3' }, 'Tallas disponibles'),
@@ -369,6 +375,8 @@
               onClick: () => onPick(p, v.talla),
             }, [
               h('span', { key: 't', className: 'font-semibold text-body text-primary' }, (window.CONFIG.map(e === 'N' ? 'size_number' : 'size_letter')[v.talla] || v.talla)),
+              // H-36: el precio real de la talla, visible antes de agregarla.
+              h('span', { key: 'p', className: 'text-caption font-semibold text-gold-text' }, fmt(D.listPrice(p, v.talla))),
               h('span', { key: 's', className: 'text-caption text-muted' }, v.stock + ' pz'),
             ]))),
         ]);

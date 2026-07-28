@@ -107,6 +107,9 @@
     // Costo del producto (para validar margen en Descuentos). Si falta, estima 45% del precio.
     if (p.costo == null || p.costo === '') p.costo = Math.round((Number(p.precio) || 0) * 0.45);
     p.costo = Number(p.costo) || 0;
+    // H-36: excepciones de precio por talla. Se canoniza aquí para que una talla
+    // retirada del catálogo o un valor inutilizable no sobrevivan en el mapa.
+    p.preciosTalla = sanitizePreciosTalla(p.preciosTalla);
     colorDisplay(p);
     if (!p.imagen) p.imagen = pickImg(p);
     return p;
@@ -834,9 +837,51 @@
   // siga siendo explicable aunque la promoción se edite o se elimine. Se calcula UNA sola vez,
   // en el Punto de Venta, y viaja con la línea hasta recordSale: el renglón es dueño de su precio.
   // No decide reglas comerciales — sólo conserva lo que el motor ya resolvió.
+  // ── Precio por talla (H-36) ────────────────────────────────────────────────
+  // Autoridad ÚNICA de «¿cuánto cuesta esta talla antes de promociones?».
+  // `preciosTalla` es un mapa { talla: precio } de EXCEPCIONES: la ausencia de
+  // una clave significa "vale el precio general del artículo", no "sin precio".
+  // Un `0` explícito sí es un precio. Con el mapa vacío —el estado de todos los
+  // artículos anteriores a H-36— el resultado es el precio general de siempre.
+  function listPrice(product, talla) {
+    const general = Number(product && product.precio) || 0;
+    const mapa = product && product.preciosTalla;
+    if (!mapa || typeof mapa !== 'object' || talla == null) return general;
+    const v = mapa[talla];
+    if (v == null || v === '') return general;
+    const n = Number(v);
+    return Number.isFinite(n) && n >= 0 ? n : general;
+  }
+  // Derivada de listPrice para el catálogo: qué precio anunciar antes de que el
+  // cliente elija talla. Mira sólo las tallas con existencias, porque son las
+  // que el POS deja vender; sin existencias cae al precio general.
+  function priceRange(product) {
+    const general = Number(product && product.precio) || 0;
+    const conStock = ((product && product.stock) || []).filter(v => Number(v.stock) > 0);
+    if (!conStock.length) return { min: general, max: general, unico: true };
+    const precios = conStock.map(v => listPrice(product, v.talla));
+    const min = Math.min.apply(null, precios);
+    const max = Math.max.apply(null, precios);
+    return { min, max, unico: min === max };
+  }
+  // Deja el mapa en su forma canónica: sólo tallas del catálogo vigente y sólo
+  // precios utilizables. Se aplica al guardar; la lectura permanece tolerante.
+  function sanitizePreciosTalla(mapa) {
+    const validas = SIZES_LETRA().concat(SIZES_NUM());
+    const out = {};
+    if (!mapa || typeof mapa !== 'object') return out;
+    Object.keys(mapa).forEach(talla => {
+      if (validas.indexOf(talla) < 0) return;
+      const n = Number(mapa[talla]);
+      if (!Number.isFinite(n) || n < 0) return;
+      out[talla] = Math.round(n * 100) / 100;
+    });
+    return out;
+  }
+
   function resolveLineDiscount(product, talla) {
-    const orig = Number(product && product.precio) || 0;
-    const du = window.PROMOS ? window.PROMOS.lineUnit(product, talla) : null;
+    const orig = listPrice(product, talla);
+    const du = window.PROMOS ? window.PROMOS.lineUnit(product, talla, orig) : null;
     if (!du) return { orig, unit: orig, promos: [] };
     const promos = (Array.isArray(du.promos) ? du.promos : []).map(p => ({
       id: p.id, nombre: p.nombre, tipo: p.tipo || 'pct', valor: Number(p.valor) || 0,
@@ -944,7 +989,10 @@
     // resuelve aquí UNA vez y se reutiliza; en ningún caso se evalúa el motor dos veces por línea.
     const resList = ticket.map(l => l.res || resolveLineDiscount(l.p, l.talla));
     const unitAt = i => resList[i].unit;
-    const subtotalOrig = ticket.reduce((a, l) => a + (Number(l.p.precio) || 0) * l.qty, 0);
+    // H-36: el precio de lista sale de la resolución del renglón, no del artículo.
+    // Con precios por talla, `l.p.precio` y `unitAt(i)` dejan de hablar del mismo
+    // precio y el descuento quedaría mal calculado en ambas direcciones.
+    const subtotalOrig = ticket.reduce((a, l, i) => a + resList[i].orig * l.qty, 0);
     const totalConDescuento = ticket.reduce((a, l, i) => a + unitAt(i) * l.qty, 0);
     const sale = {
       folio, fecha, clienteId: client && !client.generic ? client.id : undefined, cliente: client ? client.nombre : 'Público en general',
@@ -961,7 +1009,7 @@
       // En cortesía cada línea queda en $0 (no se cobró); el valor vive en precioOrig y valorRegalado.
       // promos: evidencia histórica inmutable de H-32. Un arreglo vacío significa "sin promoción";
       // su AUSENCIA significa "venta anterior a H-32", que nunca imprime porcentaje.
-      lineas: ticket.map((l, i) => ({ productId: l.p.id, sku: l.p.sku, nombre: l.p.nombre, talla: l.talla, qty: l.qty, precio: cortesia ? 0 : money(unitAt(i) * (totalConDescuento > 0 ? total / totalConDescuento : 0)), precioBase: cortesia ? 0 : unitAt(i), precioOrig: Number(l.p.precio) || 0, promos: resList[i].promos })),
+      lineas: ticket.map((l, i) => ({ productId: l.p.id, sku: l.p.sku, nombre: l.p.nombre, talla: l.talla, qty: l.qty, precio: cortesia ? 0 : money(unitAt(i) * (totalConDescuento > 0 ? total / totalConDescuento : 0)), precioBase: cortesia ? 0 : unitAt(i), precioOrig: resList[i].orig, promos: resList[i].promos })),
     };
     sales.unshift(sale);
     saveSales();
@@ -1658,6 +1706,7 @@
     folioBlockRequest, applyFolioBlock, terminalCode,
     findSaleByFolio, saleFolioAliases, folioAliasHit, stockOf, isAutoImg, resetProducts, applyRemote, applySyncResult, mergeRemote, markSaleSync, liquidarComision,
     completarApartado, registrarPagoApartado, paymentsForSale, hasFinancialSnapshot, resolveLineDiscount, cerrarMes, getPeriodoInicio,
+    listPrice, priceRange, sanitizePreciosTalla,
     recordReturn, returnedQty, returnsForFolio, isReturnable, returnDeadline, saleLineBalance,
     addUser, updateUser, removeUser, isEligibleSeller, resolveSellerCommission,
     addPromo, updatePromo, removePromo, duplicatePromo,

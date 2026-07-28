@@ -52,6 +52,19 @@ una autoridad se recuperan con `grep -rn "<autoridad>" docs/03-known-risks.md`.
 **Creada por:** H-33 · **Decisión:** `ADR-001`
 **Consumidores:** `grep -rn "findSaleByFolio\|folioAliases" balam/`
 
+## ¿Cuánto cuesta esta talla antes de promociones?
+**Autoridad:** `DATA.listPrice(producto, talla)`
+**Definición:** `balam/data.jsx` · excepciones en `pos.products.precios_talla`
+**Creada por:** H-36 · **Decisión:** `ADR-009`
+**Consumidores:** `grep -rn "listPrice" balam/ test-*.mjs`
+
+## ¿Qué precio muestra este artículo en el catálogo?
+**Autoridad:** `DATA.priceRange(producto)` — **derivada** de `listPrice` sobre
+las tallas con existencias; no reimplementa la resolución
+**Definición:** `balam/data.jsx`
+**Creada por:** H-36 · **Decisión:** `ADR-009`
+**Consumidores:** `grep -rn "priceRange" balam/`
+
 ## ¿Qué precio tiene este renglón y por qué?
 **Autoridad:** `DATA.resolveLineDiscount()` — el renglón es dueño de su precio
 **Definición:** `balam/data.jsx` · evidencia en `pos.sale_items.promos`

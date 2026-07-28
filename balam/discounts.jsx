@@ -91,8 +91,16 @@
     return { unit, pct, fijo, floor, capped };
   }
   // Precio unitario efectivo de una línea del ticket (con todas las promos activas).
-  function lineUnit(p, talla) {
-    const orig = Number(p.precio) || 0;
+  // H-36: el precio de lista de una talla ya no lo decide el motor. Precedencia:
+  //   1) `origIn`, la resolución que el llamador ya calculó — es la vía real:
+  //      el único consumidor de producción es DATA.resolveLineDiscount;
+  //   2) la autoridad DATA.listPrice(p, talla);
+  //   3) `p.precio`, sólo alcanzable por llamadores directos que no pasan orig
+  //      y corren con un DATA parcial (arneses previos a H-36). No es una
+  //      segunda fórmula: es la definición de listPrice sin excepciones.
+  function lineUnit(p, talla, origIn) {
+    const orig = origIn != null ? (Number(origIn) || 0)
+      : (D && typeof D.listPrice === 'function' ? D.listPrice(p, talla) : Number(p.precio) || 0);
     const list = active().filter(pr => match(pr, p, talla));
     if (!list.length) return { unit: orig, orig, off: 0, promos: [] };
     const r = applyStack(orig, list, p);

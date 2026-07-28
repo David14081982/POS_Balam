@@ -49,6 +49,7 @@ sesión de chat.
 | `folio-comercial-diario.md` | H-33 | Folio corto con consecutivo diario y contador central |
 | `plazo-posventa.md` | H-34 | Plazo de devolución configurable y congelado en la venta |
 | `saldo-por-renglon.md` | H-35 | Autoridad única del saldo por renglón entre devoluciones y cambios |
+| `precio-por-talla.md` | H-36 | Precio general del artículo con excepciones por talla |
 
 Documentación financiera relacionada, creada antes de este índice:
 

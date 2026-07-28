@@ -87,3 +87,4 @@ o dos playbooks.
 | `ADR-006` | Local-first: la cola da durabilidad, la transacción vive en SQL | vigente |
 | `ADR-007` | Cero red en runtime y en el build normal | vigente |
 | `ADR-008` | El artefacto generado no es fuente y se verifica al publicarse | vigente |
+| `ADR-009` | El precio por talla es un mapa de excepciones dentro del artículo | vigente |

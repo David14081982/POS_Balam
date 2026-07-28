@@ -25,6 +25,13 @@
   const SELECT = INPUT + ' appearance-none';
   const XLSBTN = 'flex items-center gap-2 px-3 py-1.5 border border-outline-variant rounded bg-surface hover:bg-surface-container text-overline uppercase transition-colors';
   const StockPill = ({ n }) => h(window.UI.StockBadge, { n });
+  // H-36: cuando el artículo tiene excepciones por talla, las listas y la ficha
+  // anuncian el rango en vez de un precio que no aplicaría a todas las tallas.
+  const precioTexto = (p) => {
+    const r = D.priceRange(p);
+    const uno = n => fmt(n).replace('.00', '');
+    return r.unico ? uno(r.min) : uno(r.min) + ' – ' + uno(r.max);
+  };
   // Muestras de color con semántica de forma:
   //   · tela  → ETIQUETA COLGANTE (hang tag): forma de etiqueta con punta y OJAL perforado,
   //     trama de tejido en CSS y sombra que sigue la silueta (drop-shadow, porque box-shadow
@@ -228,7 +235,7 @@
     // tabla 37 — la misma pantalla mostraba dos cifras distintas y se prestaba a leer mal.
     const lowCount = rows.filter(p => { const t = D.totalStock(p); return t > 0 && t <= lowThreshold; }).length;
     const totalUnidades = rows.reduce((a, p) => a + D.totalStock(p), 0);
-    const valorInventario = rows.reduce((a, p) => a + D.totalStock(p) * p.precio, 0);
+    const valorInventario = rows.reduce((a, p) => a + (p.stock || []).reduce((b, v) => b + (Number(v.stock) || 0) * D.listPrice(p, v.talla), 0), 0);
 
     return h('div', { className: 'flex-1 overflow-y-auto bg-background font-body text-on-surface' },
       h('div', { className: 'p-10 max-w-container-max mx-auto' }, [
@@ -290,7 +297,7 @@
                   p.ornColors && p.ornColors.length ? h('div', { key: 'o', className: 'flex items-center gap-1.5', style: { marginLeft: 30 } },
                     p.ornColors.map(c => h(ColorDot, { key: c, hex: D.COLOR_HEX[c], size: 10, title: D.COLOR_NAME[c] }))) : null,
                 ])),
-                h('td', { key: 'p', className: 'px-4 py-4' }, h('span', { className: 'font-headline text-base text-primary' }, fmt(p.precio).replace('.00', ''))),
+                h('td', { key: 'p', className: 'px-4 py-4' }, h('span', { className: 'font-headline text-base text-primary' }, precioTexto(p))),
                 h('td', { key: 'st', className: 'px-4 py-4' }, h(StockPill, { n: total })),
                 h('td', { key: 'x', className: 'px-6 py-4 text-right' }, h(MS, { name: 'chevRight', size: 20, className: 'text-on-surface-variant/40 group-hover:text-primary transition-colors' })),
               ]);
@@ -355,7 +362,7 @@
               // SKU + precio
               h('div', { key: 'g', className: 'grid grid-cols-2 gap-8' }, [
                 drawerField('SKU', h('span', { className: 'font-mono text-body text-primary' }, p.sku)),
-                drawerField('Precio (MXN)', h('span', { className: 'font-headline text-h2 text-primary' }, fmt(p.precio).replace('.00', ''))),
+                drawerField('Precio (MXN)', h('span', { className: 'font-headline text-h2 text-primary' }, precioTexto(p))),
               ]),
               // Atributos
               h('div', { key: 'at', className: 'space-y-4' }, [
@@ -434,12 +441,29 @@
             h('td', { key: 'n', className: 'px-3 py-2' }, h('div', { className: 'flex items-center gap-2' }, [h(ProductImage, { key: 't', p, className: 'w-8 h-8 rounded' }), h('span', { key: 'x', className: 'text-body text-primary' }, p.nombre)])),
             h('td', { key: 's', className: 'px-3 py-2 text-overline font-mono text-on-surface-variant' }, p.sku),
             h('td', { key: 'cu', className: 'px-3 py-2' }, h('span', { className: 'px-2 py-0.5 bg-surface-container-high text-on-surface-variant text-overline rounded' }, D.CUELLO[p.cuello])),
-            h('td', { key: 'p', className: 'px-3 py-2 text-right font-headline text-body' }, fmt(p.precio).replace('.00', '')),
+            h('td', { key: 'p', className: 'px-3 py-2 text-right font-headline text-body' }, precioTexto(p)),
             h('td', { key: 'st', className: 'px-3 py-2 text-right font-mono text-body' }, D.totalStock(p)),
           ]))),
         ])),
       data.products.length > 60 && h('div', { key: 'more', className: 'text-caption text-on-surface-variant mt-2 text-center' }, `… y ${data.products.length - 60} más`),
     ]);
+  }
+
+  // ---------- Precios por talla (H-36) ----------
+  // Mapa canónico { talla: precio } → filas { tallas:[], precio } agrupando las
+  // tallas que comparten precio. Es la inversa de expandirPrecios().
+  function agruparPrecios(mapa) {
+    const porPrecio = {};
+    Object.keys(mapa || {}).forEach(talla => {
+      const k = String(Number(mapa[talla]));
+      (porPrecio[k] || (porPrecio[k] = [])).push(talla);
+    });
+    return Object.keys(porPrecio).map(k => ({ tallas: porPrecio[k], precio: Number(k) }));
+  }
+  function expandirPrecios(rows) {
+    const out = {};
+    (rows || []).forEach(r => (r.tallas || []).forEach(t => { out[t] = Number(r.precio) || 0; }));
+    return out;
   }
 
   // ---------- Formulario de alta / edición ----------
@@ -454,6 +478,11 @@
       imagen: product.imagen || '',
       attrs: product.attrs ? { ...product.attrs } : {}, // valores de catálogos custom (Fase 2)
       stock: alignStock(product.stock),
+      // H-36: las excepciones se editan como filas «grupo de tallas → precio»,
+      // que es como el negocio ya expresa un alcance por tallas en Descuentos.
+      // El dato guardado es el mapa canónico; la agrupación vive sólo aquí y se
+      // reconstruye juntando las tallas que comparten precio.
+      precioRows: agruparPrecios(product.preciosTalla),
     }));
     const set = (k, v) => setD(prev => ({ ...prev, [k]: v }));
     const setAttr = (k, v) => setD(prev => ({ ...prev, attrs: { ...(prev.attrs || {}), [k]: v } }));
@@ -468,6 +497,15 @@
     const modeloCode = (modeloItems.find(x => x.label === d.nombre) || {}).code || '';
     const setStock = (talla, escala, val) => setD(prev => ({ ...prev, stock: prev.stock.map(v => v.talla === talla && v.escala === escala ? { ...v, stock: Math.max(0, Math.round(Number(val) || 0)) } : v) }));
     const toggleOrn = (c) => setD(prev => ({ ...prev, ornColors: prev.ornColors.includes(c) ? prev.ornColors.filter(x => x !== c) : prev.ornColors.concat(c) }));
+    // Filas de excepción: agregar, quitar, cambiar precio y alternar una talla.
+    const addPrecioRow = () => setD(prev => ({ ...prev, precioRows: prev.precioRows.concat([{ tallas: [], precio: '' }]) }));
+    const delPrecioRow = (i) => setD(prev => ({ ...prev, precioRows: prev.precioRows.filter((_, k) => k !== i) }));
+    const setPrecioRow = (i, precio) => setD(prev => ({ ...prev, precioRows: prev.precioRows.map((r, k) => k === i ? { ...r, precio } : r) }));
+    const togglePrecioTalla = (i, talla) => setD(prev => ({
+      ...prev,
+      precioRows: prev.precioRows.map((r, k) => k !== i ? r
+        : { ...r, tallas: r.tallas.includes(talla) ? r.tallas.filter(t => t !== talla) : r.tallas.concat(talla) }),
+    }));
     const fileRef = useRef(null);
     // Guardas de la subida en segundo plano: no tocar el estado tras desmontar, y si el
     // usuario elige otra foto antes de que termine la subida anterior, la vieja se descarta.
@@ -519,7 +557,17 @@
         return val == null || String(val).trim() === '';
       });
       if (falta) { toast('Selecciona ' + meta[falta].label, 'var(--danger)'); return; }
-      onSave({ ...d, nombre: d.nombre.trim(), modelo: modeloFinal, precio: Number(d.precio) || 0, costo: Number(d.costo) || 0 }, mode);
+      // H-36: una talla no puede pertenecer a dos filas; sin esa guarda el mapa
+      // canónico decidiría en silencio cuál precio gana.
+      const usadas = {};
+      const repetida = d.precioRows.reduce((acc, r) => acc || (r.tallas || []).find(t => usadas[t] ? true : (usadas[t] = true) && false), null);
+      if (repetida) { toast(`La talla ${repetida} está en dos precios especiales`, 'var(--danger)'); return; }
+      const vacia = d.precioRows.find(r => (r.tallas || []).length && (r.precio === '' || r.precio == null));
+      if (vacia) { toast('Escribe el precio del grupo de tallas', 'var(--danger)'); return; }
+      // Las filas sin tallas seleccionadas simplemente no producen excepciones.
+      const preciosTalla = expandirPrecios(d.precioRows.filter(r => (r.tallas || []).length));
+      const { precioRows, ...rest } = d;
+      onSave({ ...rest, nombre: d.nombre.trim(), modelo: modeloFinal, precio: Number(d.precio) || 0, costo: Number(d.costo) || 0, preciosTalla }, mode);
     }
 
     const footer = [
@@ -597,6 +645,48 @@
           ]))),
         ])),
       ]),
+      // H-36: excepciones de precio por talla. Invisible mientras no existan:
+      // la mayoría de los artículos tiene un precio único y no debe pedírsele
+      // nada. Cada fila es «grupo de tallas → precio», con el mismo idioma de
+      // chips que el Alcance de Descuentos.
+      h('div', { key: 'ptl', className: 'mt-5 border-t border-outline-variant pt-4' }, [
+        h('div', { key: 'l', className: 'flex items-center gap-2 mb-1' }, [
+          h('span', { key: 't', className: 'flex items-center gap-2 text-caption font-semibold text-on-surface-variant uppercase tracking-widest' }, [h(MS, { key: 'i', name: 'tag', size: 15 }), 'Precios especiales por talla']),
+          h('span', { key: 'sp', className: 'flex-1' }),
+          h('button', {
+            key: 'add', type: 'button', onClick: addPrecioRow,
+            className: 'inline-flex items-center gap-1.5 px-3 h-9 border border-outline-variant text-on-surface-variant text-overline uppercase font-bold tracking-widest rounded-lg hover:bg-surface-container transition-colors',
+          }, [h(MS, { key: 'i', name: 'plus', size: 14 }), 'Agregar precio']),
+        ]),
+        h('p', { key: 'h', className: 'text-overline text-on-surface-variant/70 mb-3' },
+          d.precioRows.length
+            ? 'Las tallas sin precio especial usan el precio general del artículo.'
+            : 'Opcional. Todas las tallas usan el precio general del artículo.'),
+        ...d.precioRows.map((row, i) => h('div', { key: 'r' + i, className: 'mb-3 p-3 rounded-lg bg-surface-container-low border border-outline-variant' }, [
+          h('div', { key: 'top', className: 'flex items-center gap-3 mb-2' }, [
+            h('span', { key: 'l', className: 'text-overline uppercase text-on-surface-variant tracking-widest' }, 'Precio'),
+            h('input', {
+              key: 'p', type: 'number', min: 0, value: row.precio, placeholder: String(d.precio || 0),
+              className: 'w-32 h-9 bg-surface border border-outline-variant rounded px-3 text-body text-right font-mono focus:ring-1 focus:ring-primary',
+              onChange: ev => setPrecioRow(i, ev.target.value),
+            }),
+            h('span', { key: 'sum', className: 'flex-1 text-overline text-on-surface-variant/70 truncate' },
+              row.tallas.length ? 'Tallas ' + row.tallas.join('/') : 'Selecciona las tallas'),
+            h('button', {
+              key: 'x', type: 'button', title: 'Quitar', onClick: () => delPrecioRow(i),
+              className: 'w-9 h-9 grid place-items-center border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors',
+            }, h(MS, { name: 'trash', size: 15 })),
+          ]),
+          ...ESCALAS.filter(([e]) => d.stock.some(v => v.escala === e)).map(([e, label]) => h('div', { key: e, className: 'mt-2' }, [
+            h('div', { key: 'sl', className: 'text-overline uppercase tracking-widest text-on-surface-variant/70 mb-1.5' }, label),
+            h('div', { key: 'c', className: 'flex flex-wrap gap-1.5' }, d.stock.filter(v => v.escala === e).map(v => h('button', {
+              key: v.talla, type: 'button', onClick: () => togglePrecioTalla(i, v.talla),
+              className: 'px-2.5 py-1 border rounded text-overline uppercase transition-colors ' +
+                (row.tallas.includes(v.talla) ? 'border-primary bg-surface-container text-primary font-bold' : 'border-outline-variant text-on-surface-variant hover:border-primary'),
+            }, tallaLabel(v.talla, e)))),
+          ])),
+        ])),
+      ]),
     ]);
   }
 
@@ -642,7 +732,7 @@
       let html = '';
       specs.forEach(s => {
         if (cache[s.code] === undefined) cache[s.code] = B.toPNGDataURL(s.code, PRINT_OPTS);
-        const price = withPrice ? `<div class="bx-price">${escapeHtml(fmt(s.p.precio).replace('.00', ''))}</div>` : '';
+        const price = withPrice ? `<div class="bx-price">${escapeHtml(fmt(D.listPrice(s.p, s.talla)).replace('.00', ''))}</div>` : '';
         const one = `<div class="bx-label"><div class="bx-name">${escapeHtml(s.p.nombre)}</div><img class="bx-img" src="${cache[s.code]}"><div class="bx-meta">${escapeHtml(s.code)}</div>${price}</div>`;
         for (let i = 0; i < copiesOf(s); i++) html += one;
       });
@@ -710,7 +800,7 @@
         h('div', { key: 'g', className: 'grid grid-cols-2 gap-3' }, preview.map(s => h('div', { key: s.code, className: 'border border-outline-variant rounded-lg p-2 flex flex-col items-center gap-1 bg-white overflow-hidden' }, [
           h('div', { key: 'n', className: 'text-overline font-bold text-center text-primary truncate w-full' }, s.p.nombre),
           h('div', { key: 'b', className: 'w-full overflow-hidden' }, h(B.Barcode, { code: s.code, opts: LBL_OPTS })),
-          withPrice && h('div', { key: 'p', className: 'text-caption font-bold text-primary' }, fmt(s.p.precio).replace('.00', '')),
+          withPrice && h('div', { key: 'p', className: 'text-caption font-bold text-primary' }, fmt(D.listPrice(s.p, s.talla)).replace('.00', '')),
         ]))),
         specs.length > preview.length && h('p', { key: 'm', className: 'text-caption text-on-surface-variant mt-2' }, `…y ${specs.length - preview.length} más`),
       ]),

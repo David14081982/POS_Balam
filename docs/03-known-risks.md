@@ -1439,8 +1439,38 @@ como valores opacos.
    y obligaría a una regla de desempate dentro de la autoridad.
 **Aportes al sistema arquitectónico:** esta historia ya produjo `FF-11`,
 `R-CLI-08` y `AP-10` (commits `abb725d` y `aba6bb9`), porque el diseño inicial
-de la captura se derivó del modelo de datos sin recorrer el flujo real.
-**Corrección documentada:** pendiente — `docs/fixes/precio-por-talla.md`.
+de la captura se derivó del modelo de datos sin recorrer el flujo real. La
+decisión de forma quedó en `docs/architect/decisions/ADR-009`.
+**Reproducción:** `node test-variant-price.mjs` antes del cambio: **8 pasaron,
+30 fallaron**. Los 8 que pasaban son el comportamiento actual que no debía
+cambiar. Dos de los fallos reprodujeron el defecto financiero: con M a $350,
+XL a $450 y una promoción del 10 %, la venta registraba `descuento = 70` en vez
+de `80`, y `precioOrig` congelaba `350` en el renglón de XL.
+**Corrección:** `DATA.listPrice()` es la autoridad única y `DATA.priceRange()`
+su derivada para el catálogo. Los seis lectores pasan por ellas. La columna
+`pos.products.precios_talla` guarda el mapa canónico de excepciones; la captura
+usa filas «grupo de tallas → precio» con los chips del Alcance de Descuentos y
+permanece invisible mientras no existan excepciones. `pos.commit_sale` y
+`PROMOS.applyStack` quedaron intactas.
+**Pruebas:** precio por talla 38/38; descuentos 43/43 **sin modificar**;
+trazabilidad H-32 65/65; coherencia de venta 17/17; devoluciones 17/17; saldo por
+renglón 38/38; plazo H-34 38/38; cola 115/115; migraciones 29/29; contratos
+36/36; folio diario 60/60; folios multi-terminal 12/12; comisiones 10/10;
+comisión efectiva 22/22; liquidaciones 10/10; elegibilidad 10/10; avatares
+13/13; concurrencia 9/9; roles 10/10; build reproducible 8/8; SDK 4/4; entradas
+de arnés 8/8; imágenes 5/5; XLSX 17/17; exportación 14/14; smoke bundle 17/17;
+navegación 13/13; filtros 18/18; propagación de reset 21/21; reset local 19/19;
+fotos automáticas 11/11; importación de fotos 23/23. Build offline correcto con
+67 assets.
+**Despliegue:** **ninguno todavía.** Las migraciones `20260728005100` y
+`20260728005200` están escritas y revisadas, pero **no aplicadas**. Deben
+aplicarse **antes** de publicar el cliente: `STORE` envía `precios_talla` sólo
+cuando el artículo tiene excepciones, así que una base sin la columna sólo
+fallaría si alguien captura una excepción antes del despliegue, y esa operación
+quedaría bloqueada en la cola con error de esquema.
+**Pendiente:** aplicar las dos migraciones, verificar el artefacto publicado y
+registrar el commit. Hasta entonces la historia permanece EN CURSO.
+**Corrección documentada:** `docs/fixes/precio-por-talla.md`.
 
 ## Regla de actualización
 

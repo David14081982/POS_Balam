@@ -87,7 +87,12 @@
     const dg = desglose(totalPagar, desc, 16);
     // La evidencia viaja en la línea (l.res), resuelta una sola vez por el POS.
     const pctEvidencia = desc > 0
-      ? pctDeEvidencia(ticket.map(l => ({ orig: l.res ? l.res.orig : l.p.precio, base: l.res ? l.res.unit : l.p.precio, promos: l.res ? l.res.promos : null })))
+      ? pctDeEvidencia(ticket.map(l => {
+          // H-36: sin resolución adjunta, el precio de lista lo da la autoridad
+          // de la talla, nunca el del artículo.
+          const base = l.res || { orig: window.DATA.listPrice(l.p, l.talla), unit: window.DATA.listPrice(l.p, l.talla), promos: null };
+          return { orig: base.orig, base: base.unit, promos: base.promos };
+        }))
       : null;
     const empty = ticket.length === 0;
     return h('aside', {
@@ -143,10 +148,12 @@
                     ]),
                     (() => {
                       // H-32: se reutiliza la resolución de la línea; no se vuelve a consultar el motor.
-                      const r = l.res || { orig: l.p.precio, unit: l.p.precio };
+                      // H-36: el precio de lista es el de la talla, no el del artículo.
+                      const lista = window.DATA.listPrice(l.p, l.talla);
+                      const r = l.res || { orig: lista, unit: lista };
                       const du = { unit: r.unit, off: Math.max(0, r.orig - r.unit) };
                       if (du.off > 0) return h('div', { key: 'sub', className: 'text-right leading-tight' }, [
-                        h('div', { key: 'o', className: 'text-overline text-on-surface-variant line-through' }, fmt(l.p.precio * l.qty)),
+                        h('div', { key: 'o', className: 'text-overline text-on-surface-variant line-through' }, fmt(r.orig * l.qty)),
                         h('div', { key: 'n', className: 'font-headline text-body text-gold-text' }, fmt(du.unit * l.qty)),
                       ]);
                       return h('span', { key: 'sub', className: 'font-headline text-body text-primary' }, fmt(du.unit * l.qty));

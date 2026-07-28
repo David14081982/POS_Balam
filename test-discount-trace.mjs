@@ -40,10 +40,16 @@ const extraer = (texto, re, etiqueta) => {
   return m;
 };
 
+// listPrice real (H-36). resolveLineDiscount dejó de leer `product.precio` y
+// ahora consulta esta autoridad; como aquí el cuerpo se evalúa aislado, hay que
+// inyectarla extrayéndola del mismo archivo real.
+const lpM = extraer(dataSrc, /function listPrice\(product, talla\) \{([\s\S]*?)\n  \}/, 'listPrice');
+const listPrice = new Function('product', 'talla', lpM[1]);
+
 // resolveLineDiscount real
 const resM = extraer(dataSrc, /function resolveLineDiscount\(product, talla\) \{([\s\S]*?)\n  \}/, 'resolveLineDiscount');
-const resolveLineDiscount = new Function('product', 'talla', 'window', resM[1]).bind(null);
-const resolve = (p, talla) => resolveLineDiscount(p, talla, sandbox.window);
+const resolveLineDiscount = new Function('product', 'talla', 'window', 'listPrice', resM[1]).bind(null);
+const resolve = (p, talla) => resolveLineDiscount(p, talla, sandbox.window, listPrice);
 
 // desglose + pctDeEvidencia + etiquetaDescuento reales
 const money2 = n => Math.round((Number(n) || 0) * 100) / 100;
