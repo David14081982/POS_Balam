@@ -112,3 +112,4 @@ descubre. Las historias que modificaron una autoridad se recuperan con
 | `ADR-007` | Cero red en runtime y en el build normal | vigente |
 | `ADR-008` | El artefacto generado no es fuente y se verifica al publicarse | vigente |
 | `ADR-009` | El precio por talla es un mapa de excepciones dentro del artículo | vigente |
+| `ADR-010` | El cambio es un documento autónomo con liquidación económica propia | vigente |

@@ -1504,6 +1504,53 @@ congelado por talla. Cero excepciones de página.
 **Pendiente:** ninguno dentro del alcance aprobado.
 **Corrección documentada:** `docs/fixes/precio-por-talla.md`.
 
+## H-37 — El modelo no puede representar un cambio de mercancía (C4)
+
+**Estado:** EN CURSO
+**Fecha de registro:** 28/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** el Contrato del Cambio está aprobado y registrado
+(`docs/04-contrato-del-cambio.md`), pero el esquema no tiene dónde guardar un
+cambio: no existen `pos.exchanges` ni `pos.exchange_items`, `DATA.exchanges` no
+existe —la costura `consumptionSources()` de H-35 la busca y no la encuentra— y
+`pos.sale_line_balance()` no puede reconocer como suministro una pieza entregada
+en un cambio anterior, porque su bloque `sold` lee exclusivamente
+`pos.sale_items` del folio.
+**Origen de auditoría:** C4 del módulo de Cambios, según
+`docs/04-contrato-del-cambio.md` § 13.
+**Riesgo:** sin la costura de suministro, el contrato permite recambiar una
+pieza recibida en un cambio anterior (§2) mientras la autoridad del saldo no
+puede gobernarla. Sería posible consumir dos veces la misma unidad por caminos
+distintos: exactamente el defecto que H-35 existe para prevenir, reintroducido
+por un documento nuevo.
+**Alcance aprobado:** tablas `pos.exchanges` y `pos.exchange_items` con `lado`;
+vista `pos.line_supply`; extensión de `pos.sale_line_balance()` y de su espejo
+local `DATA.saleLineBalance()`; colección `DATA.exchanges` alimentando la costura
+de consumo ya existente; la autoridad única del valor histórico reconocido; y la
+ampliación aditiva del `check` de `pos.sale_payments.tipo`.
+**Exclusiones:** la interfaz del cambio pertenece a C6 y `pos.commit_exchange()`
+a C5. Esta historia **no** implementa ninguno de los dos: prepara el modelo, tal
+como H-35 preparó el terreno sin implementar cambios.
+**Decisión de materialización:** `ADR-010`.
+**Contrato de `pos.sale_payments` verificado antes de decidir:** `folio` es
+`text not null` **sin clave foránea** —la relación con `pos.sales` es lógica—,
+el índice es `(folio, fecha)`, `monto > 0` admite sólo entradas y `tipo` está
+restringido por `check` a `('venta','anticipo','abono','liquidacion')`. El
+mapeador de `STORE`, las policies RLS y el pull por dominio son genéricos, y
+`reports.jsx` ya suma **todas** las filas como dinero cobrado real. La única
+atadura estructural es el `check` de `tipo`; no hay referencia que se invalide.
+Es **generalizable de forma limpia y aditiva**.
+**Pruebas requeridas:** arnés nuevo demostrando el fallo antes del cambio;
+saldo idéntico al actual con la tabla de cambios vacía; una pieza entregada en un
+cambio entra como suministro y puede recambiarse una sola vez; la cadena A→B→C
+permanece anclada al folio de origen; `paymentsForSale()` de la venta origen no
+devuelve el pago del cambio; `commit_sale` sobre la venta origen no borra el pago
+del cambio; regresión completa incluyendo saldo por renglón, devoluciones,
+coherencia de venta y cola.
+**Riesgo residual previsto:** el desglose de Reportes —anticipos y abonos— dejará
+de sumar el total cobrado hasta que C7 lo actualice; queda declarado, no oculto.
+**Corrección documentada:** pendiente — `docs/fixes/modelo-del-cambio.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

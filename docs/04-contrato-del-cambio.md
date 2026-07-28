@@ -205,13 +205,17 @@ decisiones de diseño que quedan registradas para no olvidarse.
    exige reserva de stock por renglón—, mientras que el artículo entregado
    pertenece al cambio y hereda su plazo por §6. La regla de negocio ya está
    fijada; sólo falta decidir dónde vive.
-3. **Cómo se registra el cobro de la diferencia** dentro de la trazabilidad
-   financiera, cuya fuente de verdad de entradas de dinero es hoy
-   `pos.sale_payments`.
+3. ~~Cómo se registra el cobro de la diferencia.~~ **Resuelto por `ADR-010`:**
+   en `pos.sale_payments` con el **folio propio del cambio** y un `tipo` nuevo,
+   conservando un solo ledger de dinero que entra. Usar el folio de la venta
+   origen está descartado por dos motivos: viola el §8 y además
+   `pos.commit_sale()` borra por folio antes de reinsertar, de modo que un abono
+   posterior de la venta eliminaría el pago del cambio.
 4. **Qué estado derivado recibe una venta** que acumula devolución parcial y
    cambio a la vez, y su precedencia.
-5. **Si el documento de cambio lleva folio visible** para el cliente. Si lo
-   lleva, `ADR-001` obliga a separar identidad técnica de referencia comercial.
+5. ~~Si el documento de cambio lleva folio visible.~~ **Resuelto por `ADR-010`:**
+   sí. Ese folio es además el que da hogar al cobro de la diferencia, y por
+   `ADR-001` debe separarse de la identidad técnica del documento.
 6. **Atomicidad**: el cambio mueve inventario en dos sentidos y puede cobrar.
    Necesita un commit transaccional propio al estilo de H-04 y reserva atómica
    de la pieza entregada al estilo de H-01, o se puede sobrevender.

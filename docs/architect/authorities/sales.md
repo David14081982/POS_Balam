@@ -16,6 +16,15 @@ Reglas de mantenimiento en `../README.md` § Registro de autoridades.
 **Creada por:** H-35 · **Decisión:** `ADR-003`
 **Consumidores:** `grep -rn "sale_line_balance\|saleLineBalance" supabase/ balam/`
 
+## ¿Qué valor histórico se le reconoce a la pieza que el cliente entrega?
+**Autoridad:** pendiente de implementar en C4 — una sola, consumida por SQL,
+cliente e interfaz. Debe resolver tanto piezas provenientes de `pos.sale_items`
+como piezas entregadas en un cambio anterior, que adquieren valor histórico
+propio (`docs/04-contrato-del-cambio.md` § 3)
+**Definición:** `docs/04-contrato-del-cambio.md` § 3 · `ADR-010`
+**Creada por:** C4
+**Consumidores:** `grep -rn "valorReconocido\|recognized" balam/ supabase/`
+
 ## ¿Hasta cuándo admite devolución esta venta?
 **Autoridad:** `DATA.returnDeadline()`
 **Definición:** `balam/data.jsx` · `docs/02-architecture.md` § Plazo de posventa
