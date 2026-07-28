@@ -1088,7 +1088,7 @@ liquidaciones ni cierres.
 **Estado:** RESUELTO
 **Fecha de registro:** 27/07/2026
 **Fecha de resolución:** 27/07/2026
-**Commit:** Pendiente de commit
+**Commit:** 9170011
 **Evidencia:** `PROMOS.lineUnit()` devolvía las promociones aplicadas a cada
 renglón, pero `recordSale` descartaba esa lista y guardaba sólo `precio`,
 `precioBase` y `precioOrig`. La venta perdía la identidad de la promoción al

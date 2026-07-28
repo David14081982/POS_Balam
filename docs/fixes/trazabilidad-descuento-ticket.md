@@ -3,7 +3,7 @@
 **Riesgo:** H-32
 **Estado:** RESUELTO
 **Fecha:** 27/07/2026
-**Commit:** Pendiente de commit
+**Commit:** 9170011
 
 ## Problema y reproducción
 
