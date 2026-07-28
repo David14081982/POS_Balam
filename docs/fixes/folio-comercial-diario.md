@@ -3,7 +3,7 @@
 **Riesgo:** H-33
 **Estado:** RESUELTO
 **Fecha:** 27/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `f6ced07`
 
 ## Problema y reproducción
 
@@ -218,6 +218,21 @@ Supabase (migración 004400, alias, con limpieza total):
 - la restricción rechaza un `folio_aliases` que no sea arreglo;
 - ninguna venta real tiene alias y no quedó rastro temporal.
   `db push --dry-run` posterior: «Remote database is up to date».
+
+Artefacto publicado (GitHub Pages, commit `f6ced07`):
+
+- el archivo servido en `https://david14081982.github.io/POS_Balam/` es idéntico
+  byte por byte al `index.html` del commit, SHA-256
+  `f65e4fa80fcc04cbf2cab3c782a07eaae43c2bc3c1e46d0fea00832b652e57f6`;
+- sobre el sitio en vivo: venta con bloque reservado `BG-260727-0001`, identidad
+  técnica `2b63ae42-86a5-421b-a710-bdc7f461d18b` fuera del folio, ticket con el
+  folio en una sola línea, búsqueda exacta/minúsculas/inexistente correcta y
+  ningún folio histórico interpretado como formato nuevo;
+- el sitio en vivo abre en pantalla de login —el esquema exige sesión por H-07 y
+  H-08—, así que Devoluciones y Configuración se recorrieron ejecutando el
+  archivo descargado de Pages: folio completo en un renglón, filtrado por folio,
+  folio inexistente sin resultados, «Así se verá hoy: BG-260727-0001» y cero
+  excepciones de página.
 
 ## Riesgo residual y pendientes
 

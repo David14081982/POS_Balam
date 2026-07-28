@@ -1149,7 +1149,7 @@ descuento; es lo solicitado por Finanzas.
 **Estado:** RESUELTO
 **Fecha de registro:** 27/07/2026
 **Fecha de resolución:** 27/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `f6ced07`
 **Evidencia:** las cinco ventas reales de producción tienen folios como
 `BG-5-8TD4Q6N7QPWZQAZVUYPYCQP0H`, de 29 caracteres. El valor sobresale del
 ticket impreso, se parte en varias líneas en Devoluciones y estira columnas en
