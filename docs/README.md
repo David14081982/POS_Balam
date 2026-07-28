@@ -6,6 +6,8 @@ Este directorio es la memoria permanente del proyecto:
 - `02-architecture.md`: mapa técnico y contratos del sistema.
 - `03-known-risks.md`: estado auditable de problemas conocidos.
 - `fixes/`: causa raíz, solución y evidencia de cada corrección.
+- `architect/`: sistema operativo de ingeniería. Se lee primero: enruta qué
+  módulos aplican al cambio en curso, con sus reglas, antipatrones y decisiones.
 
 `AGENTS.md`, en la raíz, hace estas reglas automáticas para herramientas que
 reconocen ese estándar. Para cualquier otra IA, iniciar la sesión con:
