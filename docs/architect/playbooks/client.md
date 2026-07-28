@@ -51,6 +51,18 @@ necesariamente eliminable.**
 no se puede inventariar desde el repositorio.
 Origen: H-17
 
+**R-CLI-08 · BLOCKING · Antes de proponer cambios de captura o interacción,
+recorrer el flujo existente de extremo a extremo.**
+Enumerar pantallas, componentes, estados y transiciones reales —alta, edición,
+validación y guardado— y describirlos antes de proponer nada. El diseño parte
+del comportamiento comprobado, no del modelo de datos ni de búsquedas textuales:
+`grep` localiza consumidores de un campo, no flujos. El formulario de producto
+captura existencias por talla sin mencionar nunca `precio`. Si ya existe un
+idioma de interacción para el problema —la grilla por talla de Existencias, los
+chips con «Todas» del Alcance de Descuentos—, se reutiliza o se justifica por
+escrito por qué no.
+Origen: H-36 (en análisis) · Pregunta: `FF-11`
+
 ---
 
 ## Antipatrones

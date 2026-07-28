@@ -5,7 +5,7 @@ severity_max: blocking
 no_alcance: "No prescribe pasos ni evidencia de cierre. Eso vive en WORKFLOW.md."
 ---
 
-# Las diez preguntas
+# Las once preguntas
 
 Se hacen **antes** de diseñar, como preguntas, y se responden **al cerrar**, con
 evidencia. No hay dos listas.
@@ -64,11 +64,20 @@ administrador inactivo · `service_role`.
 La verificación de H-35 abortó porque comprobaba la defensa. Por eso el defecto
 de permisos no llegó a producción.
 
+**FF-11 · ¿Recorrí el flujo real de extremo a extremo, o sólo lo que el texto me
+dejó ver?**
+Se hace al principio, junto a FF-01 y FF-02; lleva el número 11 porque los
+identificadores no se renumeran. `grep` encuentra consumidores de un dato; no
+encuentra pantallas, estados ni transiciones. El formulario de producto captura
+existencias por talla sin mencionar nunca `precio` —H-36, en análisis—, así que
+era invisible para toda búsqueda del campo que se estaba cambiando. Ver
+`playbooks/client.md` § `R-CLI-08`.
+
 ---
 
 ## La pregunta de aprendizaje
 
-Al cerrar, además de las diez, una más que no puede responderse con evidencia
+Al cerrar, además de las once, una más que no puede responderse con evidencia
 previa y por eso obliga a pensar:
 
 > **¿Este defecto debió haber sido prevenido por el sistema? Si sí, ¿qué le
