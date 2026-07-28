@@ -3,7 +3,7 @@
 **Riesgo:** H-36
 **Estado:** RESUELTO
 **Fecha:** 28/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `c8e1778`
 
 ## Problema y reproducción
 
@@ -196,10 +196,106 @@ con la misma técnica. Ninguna de sus 65 aserciones cambió.
 
 ## Despliegue
 
-**Ninguno.** Las dos migraciones están **escritas y verificadas por lectura,
-pero no aplicadas**: no se ejecutó `db push` ni ninguna operación contra
-Supabase. La puerta de publicación permanece cerrada a la espera de
-autorización expresa.
+Ambas migraciones aplicadas al proyecto `Balam` (`telohdbvbvsfmwyriflz`) el
+28/07/2026 y registradas en `supabase_migrations.schema_migrations`.
+
+### El primer intento abortó
+
+```
+Applying migration 20260728005100_pos_h36_variant_price.sql...
+ERROR: cannot use subquery in check constraint (SQLSTATE 0A000)
+At statement: 2
+```
+
+La restricción validaba también el **contenido** del mapa con
+`not exists (select 1 from jsonb_each(precios_talla) …)`. Un `CHECK` de
+PostgreSQL no admite subconsultas: el SQL era inválido y nunca pudo haber
+funcionado.
+
+Ninguna de las dos versiones quedó registrada. Como `R-DB-01` sólo protege las
+migraciones **registradas**, se corrigió el propio archivo `005100` —igual que
+H-35 renumeró `004800` por no haberse registrado— en vez de crear una migración
+de parche para algo que jamás existió en la base.
+
+Quedaba la duda de si el `ADD COLUMN` había alcanzado a confirmarse antes del
+fallo, y no era comprobable desde aquí: `supabase db dump` requiere Docker, no
+hay `psql` nativo y no se dispone de la contraseña de la base. Se resolvió
+haciendo que la migración corregida lo dijera por sí misma, y el despliegue
+correcto contestó: **`precios_talla no existia; se crea en esta migracion`**. El
+intento fallido no dejó residuo.
+
+### Por qué el arnés no lo detectó
+
+Comprobaba que el archivo **contuviera las palabras correctas**, no que el SQL
+fuese válido:
+
+```js
+/add column if not exists precios_talla/.test(mig) && /default '\{\}'/.test(mig)
+```
+
+Es `AP-09` —el síntoma en lugar de la defensa— y la causa de fondo es que ese
+SQL nunca se ejecutó contra ningún motor antes del despliegue. El arnés se
+endureció para exigir que el `CHECK` sea una expresión escalar, sin `select` ni
+`exists`.
+
+### Alcance real de la restricción
+
+La base valida la **forma** del mapa: `jsonb_typeof(precios_talla) = 'object'`,
+el único idioma `jsonb` ya probado en producción en este esquema
+(`sales_folio_aliases_chk`, H-33). La alternativa escalar `jsonb_path_exists`
+habría conservado la validación por valor, pero **no pudo ejecutarse contra un
+motor PostgreSQL real** antes de desplegar —no hay Docker disponible y el
+PostgreSQL 18.4 instalado exige `scram-sha-256` con una contraseña de la que no
+se dispone— y por decisión expresa no se desplegó una segunda expresión sin
+validar. La garantía por valor queda en `DATA.sanitizePreciosTalla()` y el
+residual está registrado.
+
+### Salida de la verificación
+
+```
+NOTICE: H-36: precios_talla no existia; se crea en esta migracion
+NOTICE: H-36: columna precios_talla jsonb NOT NULL default '{}'::jsonb
+NOTICE: H-36: 240 articulos reales, 0 con excepciones de precio
+NOTICE: H-36: excepcion valida conservada · XL = 450
+NOTICE: H-36: la restriccion de forma rechaza arreglo y escalar
+NOTICE: H-36 RESIDUAL: la base acepta un valor negativo en el mapa;
+        la garantia por valor vive en DATA.sanitizePreciosTalla()
+NOTICE: H-36: precios_talla NO esta exenta del trigger de vendedor
+NOTICE: H-36: commit_sale intacta, sin conocimiento del precio por talla
+NOTICE: H-36: verificacion completa · columna, forma, proteccion de vendedor y limpieza
+```
+
+La comprobación 8 de la propia verificación exige que el producto temporal no
+sobreviva y habría abortado la migración de quedar cualquier residuo. No abortó:
+**no quedó ninguna fila semilla**.
+
+### Artefacto publicado
+
+| | SHA-256 | bytes |
+|---|---|---|
+| `index.html` del commit `c8e1778` | `61fb34ddcc264746ee922922ff30b6ec7c5b0b41a19fb43eb6813893aee6bdd3` | 8 655 603 |
+| Servido por GitHub Pages | **idéntico** | 8 655 603 |
+
+Conforme a `R-DEL-07`. El artefacto ya estaba publicado desde el commit, porque
+el hook `post-commit` sube cada commit y Pages sirve el repositorio; la
+migración llegó después, y el riesgo quedó acotado porque `STORE` sólo envía
+`precios_talla` cuando el artículo tiene excepciones y ninguno las tenía.
+
+### Prueba funcional en el bundle
+
+`node test-precio-talla-e2e.mjs` → **19 pasaron, 0 fallaron**, sobre
+`index.html` con Supabase interceptado —no se escribió una sola fila en la nube—:
+captura de la excepción por grupo de tallas en el formulario real, persistencia
+local, reapertura agrupada, etiqueta por talla, rango en el catálogo, precio por
+talla en el selector, carrito con talla M a $450 y XS a $350 (`Importe $689.66`,
+`IVA $110.34`) y venta con `total` 800, `descuento` 0 y `precioOrig` congelado
+por talla. Cero excepciones de página.
+
+Durante su construcción, el arnés produjo **un falso positivo propio**: la
+comprobación del selector de talla buscaba `$350.00` y `$450.00` en la página,
+y la tarjeta del catálogo ya muestra `$350.00 – $450.00`, de modo que pasaba sin
+que el modal se hubiera abierto nunca. Se corrigió exigiendo además que el modal
+esté presente.
 
 ## Riesgo residual y pendientes
 
@@ -221,6 +317,11 @@ autorización expresa.
   un segundo bloque de ~20 columnas y quedó fuera de alcance.
 - Guardar el mapa canónico pierde la agrupación literal capturada: dos filas con
   el mismo precio aparecen fusionadas al reabrir el formulario.
+- **La base valida la forma del mapa, no sus valores.** Un valor negativo o no
+  numérico sería aceptado por PostgreSQL; la garantía vive en
+  `DATA.sanitizePreciosTalla()`. Ninguna ruta del producto los escribe, pero la
+  defensa de fondo no está en la base. Endurecerla exige validar la expresión
+  contra un motor PostgreSQL real y es una historia posterior.
 
 ## Referencias
 

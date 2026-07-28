@@ -1337,9 +1337,10 @@ no en SQL.
 
 ## H-36 — Precio único por artículo cuando el negocio lo necesita por talla
 
-**Estado:** EN CURSO
+**Estado:** RESUELTO
 **Fecha de registro:** 28/07/2026
-**Commit:** Pendiente de commit
+**Fecha de resolución:** 28/07/2026
+**Commit:** `c8e1778`
 **Evidencia:** `pos.products.precio` es un único `numeric(10,2)` por artículo y
 no existe ningún campo, columna ni pantalla que exprese un precio distinto por
 talla: `precioTalla`, `precios_talla` y equivalentes no aparecen en `balam/`,
@@ -1437,6 +1438,13 @@ como valores opacos.
    con el mismo precio se muestran como una sola al reabrir. Se prefirió a
    `[{tallas, precio}]`, que admite una talla en dos filas con precios distintos
    y obligaría a una regla de desempate dentro de la autoridad.
+5. **La base valida la forma del mapa, no sus valores.** Un valor negativo o no
+   numérico sería aceptado por PostgreSQL; la garantía vive en
+   `DATA.sanitizePreciosTalla()`. Ninguna ruta del producto escribe esos valores
+   —el cliente sanea antes de enviar—, pero la defensa de fondo no está en la
+   base. Endurecerla exige validar `jsonb_path_exists` contra un motor real y es
+   una historia posterior; la verificación deja constancia del residual en la
+   salida del despliegue.
 **Aportes al sistema arquitectónico:** esta historia ya produjo `FF-11`,
 `R-CLI-08` y `AP-10` (commits `abb725d` y `aba6bb9`), porque el diseño inicial
 de la captura se derivó del modelo de datos sin recorrer el flujo real. La
@@ -1462,14 +1470,38 @@ de arnés 8/8; imágenes 5/5; XLSX 17/17; exportación 14/14; smoke bundle 17/17
 navegación 13/13; filtros 18/18; propagación de reset 21/21; reset local 19/19;
 fotos automáticas 11/11; importación de fotos 23/23. Build offline correcto con
 67 assets.
-**Despliegue:** **ninguno todavía.** Las migraciones `20260728005100` y
-`20260728005200` están escritas y revisadas, pero **no aplicadas**. Deben
-aplicarse **antes** de publicar el cliente: `STORE` envía `precios_talla` sólo
-cuando el artículo tiene excepciones, así que una base sin la columna sólo
-fallaría si alguien captura una excepción antes del despliegue, y esa operación
-quedaría bloqueada en la cola con error de esquema.
-**Pendiente:** aplicar las dos migraciones, verificar el artefacto publicado y
-registrar el commit. Hasta entonces la historia permanece EN CURSO.
+**Despliegue:** migraciones `20260728005100` y `20260728005200` aplicadas al
+proyecto `Balam` (`telohdbvbvsfmwyriflz`) el 28/07/2026, en ese orden, y
+registradas en `supabase_migrations.schema_migrations`. La verificación emitió
+sus siete avisos: 240 artículos reales con 0 excepciones, excepción válida
+conservada, rechazo de arreglo y de escalar, `precios_talla` no exenta del
+trigger de vendedor, `commit_sale` intacta y limpieza total. El artefacto
+servido por GitHub Pages coincide byte por byte con el `index.html` de
+`c8e1778`, SHA-256 `61fb34dd…`, 8 655 603 bytes.
+**Incidencia durante el despliegue:** el primer intento abortó con
+`ERROR: cannot use subquery in check constraint (SQLSTATE 0A000)`. La
+restricción validaba también el contenido del mapa con
+`not exists (select … from jsonb_each(…))`, y un `CHECK` de PostgreSQL no admite
+subconsultas. Ninguna de las dos versiones quedó registrada y el primer `NOTICE`
+del despliegue correcto —«precios_talla no existia; se crea en esta
+migracion»— probó que el intento fallido **no dejó residuo**. Conforme a
+`R-DB-01`, al no estar registrada la versión se corrigió el propio archivo
+`005100` en vez de crear una migración de parche. El arnés sólo comprobaba que
+el texto de la migración contuviera las palabras correctas —el síntoma, no la
+defensa (`AP-09`)— y se endureció para exigir que el `CHECK` sea escalar.
+**Alcance real de la restricción:** la base valida la **forma** del mapa
+(`jsonb_typeof(precios_talla) = 'object'`), único idioma `jsonb` ya probado en
+producción en este esquema (`sales_folio_aliases_chk`, H-33). La alternativa
+escalar `jsonb_path_exists` no pudo ejecutarse contra un motor PostgreSQL real
+antes de desplegar —no hay Docker, y el PostgreSQL 18 local exige una
+contraseña no disponible— y por decisión expresa no se desplegó sin validar.
+**Prueba funcional en el bundle:** `test-precio-talla-e2e.mjs` 19/19 sobre
+`index.html`, con Supabase interceptado: captura de la excepción por grupo de
+tallas en el formulario real, persistencia local, reapertura agrupada, etiqueta
+por talla, rango en el catálogo, precio por talla en el selector, carrito con
+M a $450 y XS a $350, y venta con `total` 800, `descuento` 0 y `precioOrig`
+congelado por talla. Cero excepciones de página.
+**Pendiente:** ninguno dentro del alcance aprobado.
 **Corrección documentada:** `docs/fixes/precio-por-talla.md`.
 
 ## Regla de actualización
