@@ -1506,8 +1506,9 @@ congelado por talla. Cero excepciones de página.
 
 ## H-37 — El modelo no puede representar un cambio de mercancía (C4)
 
-**Estado:** EN CURSO
+**Estado:** RESUELTO
 **Fecha de registro:** 28/07/2026
+**Fecha de resolución:** 28/07/2026
 **Commit:** Pendiente de commit
 **Evidencia:** el Contrato del Cambio está aprobado y registrado
 (`docs/04-contrato-del-cambio.md`), pero el esquema no tiene dónde guardar un
@@ -1549,7 +1550,37 @@ del cambio; regresión completa incluyendo saldo por renglón, devoluciones,
 coherencia de venta y cola.
 **Riesgo residual previsto:** el desglose de Reportes —anticipos y abonos— dejará
 de sumar el total cobrado hasta que C7 lo actualice; queda declarado, no oculto.
-**Corrección documentada:** pendiente — `docs/fixes/modelo-del-cambio.md`.
+**Reproducción:** `node test-exchange-model.mjs` antes del cambio: **4 pasaron,
+23 fallaron**. Los 4 que pasaban son el comportamiento de H-35 que no debía
+cambiar.
+**Corrección:** `vendida = sale_items ∪ line_supply` y
+`consumida = line_consumption`, que ahora abarca devoluciones y cambios. Una
+cadena A→B→C queda anclada al folio de origen con **una sola** autoridad.
+`DATA.recognizedValue()` nace como autoridad única del valor histórico
+reconocido y nunca deriva del precio vigente. El cobro de la diferencia entra al
+ledger único con el folio propio del cambio y `tipo = 'cambio'`.
+**Despliegue:** migraciones `005300`, `005500` y `005600` aplicadas y registradas
+en el proyecto `Balam` el 28/07/2026. La verificación emitió sus siete avisos y
+no dejó filas temporales.
+**Incidencia durante el despliegue:** el primer intento abortó con
+`H-37: la pieza devuelta deberia quedar sin disponible (disponible=1)`. `005300`
+creó la costura de suministro pero no añadió la rama de cambios a la de consumo:
+`line_consumption` seguía leyendo sólo `return_items`. El espejo local no lo
+reveló porque `consumptionSources()` ya traía esa rama desde H-35 — faltaba sólo
+del lado SQL. Como `005300` ya estaba registrada, se corrigió hacia adelante con
+`005500` (`R-DB-01`) y la verificación se renumeró de `005400` a `005600`
+(`R-DB-02`); `005400` nunca llegó a registrarse. El arnés comprobaba la rama de
+suministro pero no la de consumo —el síntoma y no la defensa, `AP-09`— y se
+endureció.
+**Pruebas:** modelo del cambio 28/28; saldo por renglón 38/38; devoluciones
+17/17; coherencia de venta 17/17; plazo 38/38; precio por talla 38/38 y E2E
+19/19; trazabilidad 65/65; cola 115/115; migraciones 29/29; contratos 36/36;
+descuentos 43/43 sin modificar; folio diario 60/60; folios 12/12; comisiones
+10/10; comisión efectiva 22/22; liquidaciones 10/10; elegibilidad 10/10;
+avatares 13/13; concurrencia 9/9; roles 10/10; build 8/8; SDK 4/4; smoke bundle
+17/17; navegación 13/13; propagación de reset 21/21; filtros 18/18.
+**Pendiente:** C5 (`commit_exchange`), C6 (interfaz) y C7 (reportes).
+**Corrección documentada:** `docs/fixes/modelo-del-cambio.md`.
 
 ## Regla de actualización
 

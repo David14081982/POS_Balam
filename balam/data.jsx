@@ -387,7 +387,8 @@
         // reserva diaria vigente { prefix, date, used, next, until }.
         LS_FOLIO = 'balam_pos_folio_v1', LS_FOLIO_V2 = 'balam_pos_folio_v2',
         LS_PROMOS = 'balam_pos_promos_v1', LS_LIQ = 'balam_pos_liq_v1', LS_PERIODO = 'balam_pos_periodo_v1',
-        LS_RETURNS = 'balam_pos_returns_v1', LS_PAYMENTS = 'balam_pos_payments_v1';
+        LS_RETURNS = 'balam_pos_returns_v1', LS_PAYMENTS = 'balam_pos_payments_v1',
+        LS_EXCHANGES = 'balam_pos_exchanges_v1';
   const sellers = loadArr(LS_SELLERS, seedSellers);
   const clients = loadArr(LS_CLIENTS, seedClients);
   const sales = loadArr(LS_SALES, seedSales);
@@ -396,6 +397,11 @@
   const liquidations = loadArr(LS_LIQ, []); // historial de pagos de comisión (corte/liquidación) — local
   const returns = loadArr(LS_RETURNS, seedReturns); // devoluciones (cabecera + renglones) — sincroniza a pos.returns
   const payments = loadArr(LS_PAYMENTS, []); // movimientos reales de dinero por venta
+  // H-37 (C4): documentos de cambio. Cada renglon lleva `lado`: 'devuelto' consume
+  // unidades de la venta origen y 'entregado' las suministra. Ver
+  // docs/04-contrato-del-cambio.md y ADR-010. Esta fase define el modelo; el
+  // commit transaccional (C5) y la interfaz (C6) son historias posteriores.
+  const exchanges = loadArr(LS_EXCHANGES, []);
   let periodoInicio = '';
   try { periodoInicio = localStorage.getItem(LS_PERIODO) || ''; } catch (e) { /* sin storage */ }
 
@@ -512,6 +518,7 @@
   function saveLiquidations() { save(LS_LIQ, liquidations); syncUp('liquidations', liquidations); } // historial — sincroniza a pos.liquidations
   function saveReturns() { save(LS_RETURNS, returns); }  // devoluciones suben vía recordReturn → STORE.pushReturn
   function savePayments(sync = true) { save(LS_PAYMENTS, payments); if (sync) syncUp('payments', payments); }
+  function saveExchanges(sync = true) { save(LS_EXCHANGES, exchanges); if (sync) syncUp('exchanges', exchanges); }
   // Fusiona filas de la nube en el arreglo local por clave (upsert: actualiza las que
   // coinciden, agrega las nuevas, CONSERVA las no incluidas). Para pulls PARCIALES —
   // el pull de ventas es paginado (ventana reciente + apartados) — reemplazar el
@@ -532,7 +539,7 @@
 
   // Reemplaza un arreglo de dominio con datos de la nube (sin re-empujar).
   function applyRemote(kind, rows) {
-    const M = { products: [products, saveProducts, hydrate], clients: [clients, saveClients], sellers: [sellers, saveSellers], sales: [sales, saveSales], movements: [movements, saveMovements], promotions: [promos, savePromos], returns: [returns, saveReturns], liquidations: [liquidations, saveLiquidations], payments: [payments, savePayments] };
+    const M = { products: [products, saveProducts, hydrate], clients: [clients, saveClients], sellers: [sellers, saveSellers], sales: [sales, saveSales], movements: [movements, saveMovements], promotions: [promos, savePromos], returns: [returns, saveReturns], liquidations: [liquidations, saveLiquidations], payments: [payments, savePayments], exchanges: [exchanges, saveExchanges] };
     const m = M[kind]; if (!m) return;
     remoteApplying = true;
     try {
@@ -1253,25 +1260,62 @@
   // que necesita un documento al reescribirse: no contarse a sí mismo.
   // El consumo se relaciona con el folio VIGENTE de la venta, que es el que
   // rekeySaleFolio propaga a devoluciones, pagos y movimientos.
+  // COSTURA SIMETRICA (H-37): `supplySources()` enumera los documentos que
+  // SUMINISTRAN unidades a una venta, igual que consumptionSources() enumera los
+  // que las consumen. Hoy solo los cambios, con sus renglones `lado ===
+  // 'entregado'`. Es el espejo local exacto de la vista `pos.line_supply`.
+  //
+  // Existe porque el Contrato del Cambio permite recambiar una pieza recibida en
+  // un cambio anterior: esa pieza no es renglon de ninguna venta, asi que sin
+  // este lado la autoridad del saldo no podria gobernarla.
+  function supplySources() {
+    const sources = [];
+    if (Array.isArray(exchanges)) {
+      sources.push({
+        origen: 'cambio', docs: exchanges,
+        id: d => d.id, folio: d => d.origenFolio || d.saleFolio,
+        lines: d => (d.lineas || []).filter(l => l && l.lado === 'entregado'),
+      });
+    }
+    return sources;
+  }
+  // Saldo por (sku, talla) de una venta. `excludeDocument` reproduce la exclusion
+  // que necesita un documento al reescribirse: no contarse a si mismo.
+  //
+  //   vendida   = renglones de la venta  +  entregado por cambios sobre ella
+  //   consumida = devuelto               +  entregado de vuelta en cambios
+  //
+  // Asi una cadena A->B->C queda anclada al folio de origen sin abrir una segunda
+  // autoridad del saldo (ADR-003, ADR-010).
   function saleLineBalance(folio, { excludeDocument } = {}) {
     const sale = findSaleByFolio(folio);
     const key = sale ? sale.folio : folio;
     const rows = {}, order = [];
-    ((sale && sale.lineas) || []).forEach(l => {
-      const k = l.sku + '' + l.talla;
+    const rowFor = (sku, talla) => {
+      const k = sku + '' + talla;
       if (!rows[k]) {
-        rows[k] = { sku: l.sku, talla: l.talla, vendida: 0, devuelta: 0, cambiada: 0, consumida: 0, disponible: 0 };
+        rows[k] = { sku, talla, vendida: 0, devuelta: 0, cambiada: 0, consumida: 0, disponible: 0 };
         order.push(k);
       }
-      rows[k].vendida += Number(l.qty) || 0;
+      return rows[k];
+    };
+    ((sale && sale.lineas) || []).forEach(l => {
+      rowFor(l.sku, l.talla).vendida += Number(l.qty) || 0;
+    });
+    supplySources().forEach(src => {
+      (src.docs || []).forEach(doc => {
+        if (!doc || src.folio(doc) !== key) return;
+        if (excludeDocument != null && src.id(doc) === excludeDocument) return;
+        src.lines(doc).forEach(l => { rowFor(l.sku, l.talla).vendida += Number(l.qty) || 0; });
+      });
     });
     consumptionSources().forEach(src => {
       (src.docs || []).forEach(doc => {
         if (!doc || src.folio(doc) !== key) return;
         if (excludeDocument != null && src.id(doc) === excludeDocument) return;
         src.lines(doc).forEach(l => {
-          const row = rows[l.sku + '' + l.talla];
-          if (!row) return; // consumo de un renglón que esta venta no tiene
+          const row = rows[l.sku + '' + l.talla];
+          if (!row) return; // consumo de un renglon que esta venta no tiene
           const qty = Number(l.qty) || 0;
           row.consumida += qty;
           if (src.origen === 'cambio') row.cambiada += qty; else row.devuelta += qty;
@@ -1283,6 +1327,35 @@
       r.disponible = Math.max(0, r.vendida - r.consumida);
       return r;
     });
+  }
+  // AUTORIDAD UNICA del valor historico reconocido de una pieza que el cliente
+  // entrega (Contrato del Cambio, seccion 3). Responde tanto por piezas vendidas
+  // en la venta origen como por piezas entregadas en un cambio anterior, que
+  // adquieren valor historico propio desde ese momento.
+  //
+  // NUNCA deriva del precio vigente: eso le cobraria al cliente una subida de
+  // precio posterior a su compra. El precio vigente solo aplica a lo que el
+  // cliente RECIBE, y lo resuelve DATA.listPrice().
+  function recognizedValue(folio, sku, talla) {
+    const sale = findSaleByFolio(folio);
+    const key = sale ? sale.folio : folio;
+    let valor = 0, encontrado = false;
+    ((sale && sale.lineas) || []).forEach(l => {
+      if (l.sku !== sku || l.talla !== talla) return;
+      const v = l.precioBase != null ? l.precioBase : (l.precioOrig != null ? l.precioOrig : l.precio);
+      valor = Number(v) || 0; encontrado = true;
+    });
+    // Un cambio posterior reasigna el valor de la pieza: el ultimo manda.
+    supplySources().forEach(src => {
+      (src.docs || []).forEach(doc => {
+        if (!doc || src.folio(doc) !== key) return;
+        src.lines(doc).forEach(l => {
+          if (l.sku !== sku || l.talla !== talla) return;
+          valor = Number(l.precio) || 0; encontrado = true;
+        });
+      });
+    });
+    return encontrado ? valor : 0;
   }
 
   // ---- Devoluciones ----
@@ -1697,7 +1770,7 @@
   }
 
   window.DATA = {
-    products, sellers, clients, sales, movements, promos, liquidations, returns, payments,
+    products, sellers, clients, sales, movements, promos, liquidations, returns, payments, exchanges,
     sku, regenerateSkus, totalStock, hydrate, mkStock, emptyStock, SIZE_MARK,
     saveProducts, saveSellers, saveClients, saveSales, saveMovements, savePromos, saveReturns, savePayments,
     removeProduct, remapOrphanCodes, catalogHealthReport, hexForColorName, applyOrphanFix, get lastRemap() { return lastRemap; },
@@ -1708,6 +1781,7 @@
     completarApartado, registrarPagoApartado, paymentsForSale, hasFinancialSnapshot, resolveLineDiscount, cerrarMes, getPeriodoInicio,
     listPrice, priceRange, sanitizePreciosTalla,
     recordReturn, returnedQty, returnsForFolio, isReturnable, returnDeadline, saleLineBalance,
+    saveExchanges, recognizedValue, supplySources,
     addUser, updateUser, removeUser, isEligibleSeller, resolveSellerCommission,
     addPromo, updatePromo, removePromo, duplicatePromo,
     seedDemo, resetEmpty, resetTestData, demoActive,

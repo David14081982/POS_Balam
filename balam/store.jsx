@@ -88,6 +88,32 @@
       toRow: p => ({ id: p.id, folio: p.folio, fecha: p.fecha, tipo: p.tipo, metodo: p.metodo, monto: Number(p.monto) || 0, efectivo: Number(p.efectivo) || 0, tarjeta: Number(p.tarjeta) || 0, transferencia: Number(p.transferencia) || 0, otro: Number(p.otro) || 0 }),
       fromRow: r => ({ id: r.id, folio: r.folio, fecha: r.fecha || '', tipo: r.tipo, metodo: r.metodo, monto: Number(r.monto) || 0, efectivo: Number(r.efectivo) || 0, tarjeta: Number(r.tarjeta) || 0, transferencia: Number(r.transferencia) || 0, otro: Number(r.otro) || 0 }),
     },
+    // H-37 (C4): documentos de cambio. Los renglones viajan embebidos en la
+    // cabecera igual que los de una devolución, y el commit transaccional que
+    // los escribirá en pos.exchange_items pertenece a C5.
+    exchanges: {
+      table: 'exchanges', conflict: 'id',
+      toRow: e => ({
+        id: e.id, folio: e.folio, origen_folio: e.origenFolio || e.saleFolio || null,
+        fecha: e.fecha || null, usuario: e.usuario || null,
+        valor_reconocido: Number(e.valorReconocido) || 0,
+        valor_entregado: Number(e.valorEntregado) || 0,
+        diferencia: Number(e.diferencia) || 0,
+        valor_no_aprovechado: Number(e.valorNoAprovechado) || 0,
+        base_comision: Number(e.baseComision) || 0,
+        notas: e.notas || null,
+      }),
+      fromRow: r => ({
+        id: r.id, folio: r.folio, origenFolio: r.origen_folio || undefined,
+        fecha: r.fecha || '', usuario: r.usuario || undefined,
+        valorReconocido: Number(r.valor_reconocido) || 0,
+        valorEntregado: Number(r.valor_entregado) || 0,
+        diferencia: Number(r.diferencia) || 0,
+        valorNoAprovechado: Number(r.valor_no_aprovechado) || 0,
+        baseComision: Number(r.base_comision) || 0,
+        notas: r.notas || '', lineas: [],
+      }),
+    },
     movements: {
       table: 'movements', conflict: 'id',
       fromRow: r => ({
