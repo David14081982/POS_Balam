@@ -18,10 +18,11 @@ Vamos a trabajar sobre el proyecto POS BALAM.
 Antes de hacer cualquier cambio:
 
 1. Lee AGENTS.md.
-2. Lee docs/01-engineering-methodology.md.
-3. Lee docs/02-architecture.md.
-4. Lee docs/03-known-risks.md.
-5. Lee docs/fixes/README.md y las correcciones relacionadas con este módulo.
+2. Lee docs/architect/README.md y los módulos que ese archivo enrute.
+3. Lee docs/01-engineering-methodology.md.
+4. Lee docs/02-architecture.md.
+5. Lee docs/03-known-risks.md.
+6. Lee docs/fixes/README.md y las correcciones relacionadas con este módulo.
 
 Trabajaremos siguiendo esa metodología. No la rompas durante toda la sesión.
 Atiende un solo problema y no empieces el siguiente.
