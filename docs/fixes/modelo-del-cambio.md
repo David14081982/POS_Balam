@@ -3,7 +3,7 @@
 **Riesgo:** H-37
 **Estado:** RESUELTO
 **Fecha:** 28/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `d28e1b1`
 
 Fase C4 del módulo de Cambios, gobernada por `docs/04-contrato-del-cambio.md` y
 `ADR-010`. Define el **modelo**; no implementa `pos.commit_exchange()` (C5) ni

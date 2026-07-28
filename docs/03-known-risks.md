@@ -1509,7 +1509,7 @@ congelado por talla. Cero excepciones de página.
 **Estado:** RESUELTO
 **Fecha de registro:** 28/07/2026
 **Fecha de resolución:** 28/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `d28e1b1`
 **Evidencia:** el Contrato del Cambio está aprobado y registrado
 (`docs/04-contrato-del-cambio.md`), pero el esquema no tiene dónde guardar un
 cambio: no existen `pos.exchanges` ni `pos.exchange_items`, `DATA.exchanges` no
