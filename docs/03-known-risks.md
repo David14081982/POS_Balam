@@ -1267,7 +1267,7 @@ justificación registrada.
 **Estado:** RESUELTO
 **Fecha de registro:** 28/07/2026
 **Fecha de resolución:** 28/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `c10920e`
 **Evidencia:** «cuántas unidades quedan disponibles» se calcula tres veces con
 la misma fórmula copiada —validación de `commit_return`, cálculo de estado de
 `commit_return` y `DATA.returnedQty()`—, y las tres consultan directamente

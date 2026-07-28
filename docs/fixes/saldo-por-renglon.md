@@ -3,7 +3,7 @@
 **Riesgo:** H-35
 **Estado:** RESUELTO
 **Fecha:** 28/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `c10920e`
 
 Fase 2 del módulo de Cambios de productos. Establece **una sola** autoridad de
 «¿cuántas unidades de este renglón siguen disponibles?» para que ninguna unidad
