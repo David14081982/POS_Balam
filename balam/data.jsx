@@ -1175,8 +1175,72 @@
     };
   }
 
+  // ── H-35: autoridad única del saldo por renglón ─────────────────────────────
+  // «¿Cuántas unidades de este renglón siguen disponibles?» tiene UNA sola
+  // respuesta, aquí y en SQL (`pos.sale_line_balance`). Sin esta autoridad, una
+  // devolución y un cambio podrían consumir la misma pieza, porque cada uno
+  // validaría contra su propia tabla.
+  //
+  // COSTURA: `consumptionSources()` enumera los documentos que consumen unidades
+  // de una venta. Hoy sólo devoluciones. El módulo de Cambios publicará
+  // `DATA.exchanges` y sus renglones `lado === 'devuelto'` entrarán aquí sin que
+  // ningún consumidor de `saleLineBalance()` cambie. Es el espejo local exacto
+  // de la vista `pos.line_consumption`.
+  function consumptionSources() {
+    const sources = [{
+      origen: 'devolucion', docs: returns,
+      id: d => d.id, folio: d => d.folio, lines: d => d.lineas || [],
+    }];
+    const exchanges = window.DATA && window.DATA.exchanges;
+    if (Array.isArray(exchanges)) {
+      sources.push({
+        origen: 'cambio', docs: exchanges,
+        id: d => d.id, folio: d => d.origenFolio || d.saleFolio,
+        lines: d => (d.lineas || []).filter(l => l && l.lado === 'devuelto'),
+      });
+    }
+    return sources;
+  }
+  // Saldo por (sku, talla) de una venta. `excludeDocument` reproduce la exclusión
+  // que necesita un documento al reescribirse: no contarse a sí mismo.
+  // El consumo se relaciona con el folio VIGENTE de la venta, que es el que
+  // rekeySaleFolio propaga a devoluciones, pagos y movimientos.
+  function saleLineBalance(folio, { excludeDocument } = {}) {
+    const sale = findSaleByFolio(folio);
+    const key = sale ? sale.folio : folio;
+    const rows = {}, order = [];
+    ((sale && sale.lineas) || []).forEach(l => {
+      const k = l.sku + '' + l.talla;
+      if (!rows[k]) {
+        rows[k] = { sku: l.sku, talla: l.talla, vendida: 0, devuelta: 0, cambiada: 0, consumida: 0, disponible: 0 };
+        order.push(k);
+      }
+      rows[k].vendida += Number(l.qty) || 0;
+    });
+    consumptionSources().forEach(src => {
+      (src.docs || []).forEach(doc => {
+        if (!doc || src.folio(doc) !== key) return;
+        if (excludeDocument != null && src.id(doc) === excludeDocument) return;
+        src.lines(doc).forEach(l => {
+          const row = rows[l.sku + '' + l.talla];
+          if (!row) return; // consumo de un renglón que esta venta no tiene
+          const qty = Number(l.qty) || 0;
+          row.consumida += qty;
+          if (src.origen === 'cambio') row.cambiada += qty; else row.devuelta += qty;
+        });
+      });
+    });
+    return order.map(k => {
+      const r = rows[k];
+      r.disponible = Math.max(0, r.vendida - r.consumida);
+      return r;
+    });
+  }
+
   // ---- Devoluciones ----
   // Piezas de un renglón (sku+talla) de un folio ya devueltas en devoluciones previas.
+  // Conserva su significado LITERAL (sólo devoluciones); el disponible lo decide
+  // saleLineBalance().
   function returnedQty(folio, sku, talla) {
     let n = 0;
     returns.forEach(r => { if (r.folio === folio) (r.lineas || []).forEach(l => { if (l.sku === sku && l.talla === talla) n += Number(l.qty) || 0; }); });
@@ -1203,11 +1267,12 @@
     }
     const items = (lineas || []).filter(l => (Number(l.qty) || 0) > 0);
     if (!items.length) return { ok: false, error: 'Selecciona al menos un artículo y cantidad a devolver' };
-    // Validar contra lo vendido menos lo ya devuelto
+    // H-35: el disponible lo decide la autoridad única, que ya descuenta
+    // devoluciones previas y, cuando existan, los cambios de esta venta.
+    const saldo = saleLineBalance(folio);
     for (const l of items) {
-      const sold = (sale.lineas || []).filter(x => x.sku === l.sku && x.talla === l.talla).reduce((a, x) => a + (Number(x.qty) || 0), 0);
-      const prev = returnedQty(folio, l.sku, l.talla);
-      if ((Number(l.qty) || 0) > sold - prev) return { ok: false, error: `Cantidad inválida en ${l.nombre} (talla ${l.talla})` };
+      const row = saldo.find(b => b.sku === l.sku && b.talla === l.talla);
+      if ((Number(l.qty) || 0) > (row ? row.disponible : 0)) return { ok: false, error: `Cantidad inválida en ${l.nombre} (talla ${l.talla})` };
     }
     const fecha = fechaIn || now(); // permite fecha pasada (simulación)
     const id = 'ret-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
@@ -1227,9 +1292,14 @@
     saveProducts(false); saveMovements();
     // 2) Total reembolsado desde el snapshot cobrado, nunca desde la configuración actual
     // ni desde el precio (manipulable) enviado por la interfaz.
+    // H-35: se conserva EXACTAMENTE la comparación histórica por renglón crudo
+    // —incluido su comportamiento ante renglones repetidos— y sólo se sustituye
+    // la fuente: lo consumido en vez de lo devuelto. Sin cambios registrados
+    // ambas cantidades son idénticas, así que ningún importe se altera.
     const allReturned = (sale.lineas || []).every(x => {
       const extra = items.filter(l => l.sku === x.sku && l.talla === x.talla).reduce((a, l) => a + (Number(l.qty) || 0), 0);
-      return returnedQty(folio, x.sku, x.talla) + extra >= (Number(x.qty) || 0);
+      const row = saldo.find(b => b.sku === x.sku && b.talla === x.talla);
+      return (row ? row.consumida : 0) + extra >= (Number(x.qty) || 0);
     });
     const linePrice = l => {
       const soldLine = (sale.lineas || []).find(x => x.sku === l.sku && x.talla === l.talla);
@@ -1588,7 +1658,7 @@
     folioBlockRequest, applyFolioBlock, terminalCode,
     findSaleByFolio, saleFolioAliases, folioAliasHit, stockOf, isAutoImg, resetProducts, applyRemote, applySyncResult, mergeRemote, markSaleSync, liquidarComision,
     completarApartado, registrarPagoApartado, paymentsForSale, hasFinancialSnapshot, resolveLineDiscount, cerrarMes, getPeriodoInicio,
-    recordReturn, returnedQty, returnsForFolio, isReturnable, returnDeadline,
+    recordReturn, returnedQty, returnsForFolio, isReturnable, returnDeadline, saleLineBalance,
     addUser, updateUser, removeUser, isEligibleSeller, resolveSellerCommission,
     addPromo, updatePromo, removePromo, duplicatePromo,
     seedDemo, resetEmpty, resetTestData, demoActive,

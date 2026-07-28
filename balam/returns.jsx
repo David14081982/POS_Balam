@@ -150,7 +150,15 @@
         if (!g[k]) g[k] = { k, sku: l.sku, nombre: l.nombre, talla: l.talla, precio: Number(l.precio) || 0, qty: 0 };
         g[k].qty += Number(l.qty) || 0;
       });
-      return Object.values(g).map(x => { x.returned = D.returnedQty(sale.folio, x.sku, x.talla); x.max = Math.max(0, x.qty - x.returned); return x; });
+      // H-35: lo devolvible sale de la autoridad única del saldo, que descuenta
+      // devoluciones y —cuando existan— cambios. No se recalcula aquí.
+      const saldo = D.saleLineBalance ? D.saleLineBalance(sale.folio) : [];
+      return Object.values(g).map(x => {
+        const b = saldo.find(r => r.sku === x.sku && r.talla === x.talla);
+        x.returned = b ? b.consumida : D.returnedQty(sale.folio, x.sku, x.talla);
+        x.max = b ? b.disponible : Math.max(0, x.qty - x.returned);
+        return x;
+      });
     }, [sale.folio]);
 
     const reasons = C.list('return_reason');

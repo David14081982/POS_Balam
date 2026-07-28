@@ -48,6 +48,7 @@ sesión de chat.
 | `trazabilidad-descuento-ticket.md` | H-32 | Evidencia del descuento por renglón y formato de Finanzas |
 | `folio-comercial-diario.md` | H-33 | Folio corto con consecutivo diario y contador central |
 | `plazo-posventa.md` | H-34 | Plazo de devolución configurable y congelado en la venta |
+| `saldo-por-renglon.md` | H-35 | Autoridad única del saldo por renglón entre devoluciones y cambios |
 
 Documentación financiera relacionada, creada antes de este índice:
 

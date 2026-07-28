@@ -1253,7 +1253,7 @@ reproducible 8/8; smoke bundle 17/17; navegación 13/13; roles 10/10;
 concurrencia 9/9; propagación de reset 21/21; elegibilidad 10/10; avatares
 13/13. Build offline correcto con 67 assets. El diff de `commit_sale` contra la
 versión de H-32 contiene exactamente los tres bloques aditivos previstos.
-**Pendiente:** aplicar las migraciones y verificar en el proyecto `Balam`. La
+**Pendiente:** ninguno en esta fase. La
 política «conservar / reiniciar plazo después de un cambio» pertenece a fases
 posteriores del módulo de Cambios.
 **Riesgo residual:** bajo. Todas las ventas existentes quedan sin límite y no
@@ -1261,6 +1261,79 @@ cambian de comportamiento. Una venta vencida sólo puede devolverse desactivando
 el límite en Configuración: no existe autorización administrativa puntual con
 justificación registrada.
 **Corrección documentada:** `docs/fixes/plazo-posventa.md`.
+
+## H-35 — Saldo por renglón sin autoridad única
+
+**Estado:** RESUELTO
+**Fecha de registro:** 28/07/2026
+**Fecha de resolución:** 28/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** «cuántas unidades quedan disponibles» se calcula tres veces con
+la misma fórmula copiada —validación de `commit_return`, cálculo de estado de
+`commit_return` y `DATA.returnedQty()`—, y las tres consultan directamente
+`pos.return_items`, es decir, la tabla de una sola clase de documento.
+**Origen de auditoría:** Fase 2 del módulo de Cambios de productos.
+**Riesgo:** en cuanto exista un segundo documento que consuma unidades de una
+venta, bastaría con que una de esas fórmulas lo omitiera para que la misma
+pieza se devolviera y se cambiara: doble reingreso de stock y doble efecto
+financiero, sin restricción en la base que lo impida.
+**Reproducción:** `node test-line-balance.mjs` (nuevo) antes del cambio: 7
+pasaron, 27 fallaron.
+**Causa raíz:** ausencia de una autoridad única y de un punto de extensión, no
+una consulta equivocada.
+**Corrección:** la vista `pos.line_consumption` enumera los consumos con su
+origen y la función `pos.sale_line_balance()` responde vendida / consumida /
+disponible por `(sku, talla)`, con exclusión opcional del documento que se
+reescribe. `commit_return` consume esa autoridad en sus dos bloques de
+cantidades sin cambiar firma, orden de validaciones, códigos de error, reglas
+de inventario, importes, comisiones ni respuesta. En el cliente,
+`DATA.saleLineBalance()` es el espejo local y `consumptionSources()` la costura
+por la que el módulo de Cambios entrará sin tocar a ningún consumidor.
+**Despliegue:** migraciones `20260728004700_pos_h35_line_balance.sql`,
+`20260728004900_pos_h35_line_balance_grants.sql` y
+`20260728005000_pos_h35_line_balance_verification.sql` aplicadas al proyecto
+`Balam` (`telohdbvbvsfmwyriflz`) el 28/07/2026, en ese orden. La verificación
+emitió sus ocho avisos de éxito y no dejó filas temporales: 6 ventas reales
+intactas y 0 registros `h35` en ventas, productos, vendedores, devoluciones y
+commits.
+**Incidencia durante el despliegue:** la verificación abortó la primera vez con
+`H-35: line_consumption quedó legible por authenticated`. Su propia guarda
+detectó que el privilegio por defecto del esquema `pos`
+(`defaclobjtype 'r'` → `authenticated=arwdDxtm`) concede toda relación nueva a
+ese rol, y que el `revoke ... from public` de `004700` no lo retira. Se corrigió
+con `004900` antes de continuar: revoke nominal a `authenticated` y `anon`, más
+`security_invoker = true` como defensa de fondo —sin ella la vista se ejecuta
+con los permisos de su dueño y evita el RLS de `sale_items` y `return_items`—.
+La verificación se endureció para exigir ambas condiciones y se renumeró de
+`004800` a `005000`, porque las migraciones corren por orden de versión y la
+verificación debe ser la última.
+**Evidencia de permisos tras la corrección:** `anon` y `authenticated` con
+`lee_vista=false` y `ejecuta_autoridad=false`; `service_role` con ambos en
+`true`. Una sesión real `set role authenticated` recibe
+`ERROR 42501: permission denied for view line_consumption`, mientras
+`service_role` la lee con normalidad. `commit_return` sigue siendo ejecutable
+sólo por `authenticated` —no por `service_role`—, que es la vía de producción.
+**Evidencia funcional bajo `security_invoker`:** ciclo completo por la vía real
+(`set role authenticated` + JWT de vendedor) con venta de 3 piezas, devolución
+parcial de 1 → `ok`, `sale_state = Devolución parcial`, `disponible = 2`; y
+sobredevolución de 5 → `invalid_return_quantity` con `available = 2`. La prueba
+aborta su propia transacción al final, por lo que no dejó rastro.
+**Pruebas:** saldo por renglón 38/38; devoluciones 17/17; plazo H-34 38/38;
+coherencia de venta 17/17; cola 115/115; migraciones 29/29; trazabilidad H-32
+65/65; contratos 36/36; folio diario 60/60; folios multi-terminal 12/12;
+comisiones 10/10; comisión efectiva 22/22; liquidaciones 10/10; descuentos
+43/43; elegibilidad 10/10; build reproducible 8/8; smoke bundle 17/17;
+navegación 13/13; roles 10/10; concurrencia 9/9; propagación de reset 21/21;
+avatares 13/13; SDK 4/4.
+**Pendiente:** ninguno en esta fase. La
+rama de cambios de la vista y su prueba en SQL pertenecen a la fase que cree las
+tablas de cambios.
+**Riesgo residual:** bajo. Con las tablas de cambios inexistentes la vista es
+literalmente la consulta anterior, por lo que saldo, aceptaciones, rechazos,
+importes, inventario, comisiones, estados y respuesta del RPC son idénticos. La
+coexistencia devolución + cambio está probada en la autoridad local pero todavía
+no en SQL.
+**Corrección documentada:** `docs/fixes/saldo-por-renglon.md`.
 
 ## Regla de actualización
 
