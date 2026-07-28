@@ -5,6 +5,7 @@ Estas instrucciones aplican a todo el repositorio y a cualquier agente de IA.
 ## Antes de modificar
 
 1. Leer completos:
+   - `docs/architect/README.md` y los módulos que ese archivo enrute
    - `docs/01-engineering-methodology.md`
    - `docs/02-architecture.md`
    - `docs/03-known-risks.md`
@@ -19,6 +20,8 @@ Estas instrucciones aplican a todo el repositorio y a cualquier agente de IA.
 
 - Seguir, sin omitir ni reordenar, las ocho etapas de
   `docs/01-engineering-methodology.md`.
+- Aplicar las reglas de `docs/architect/playbooks/` que el enrutamiento indique,
+  respetando su severidad.
 - No declarar una causa raíz sin una reproducción o evidencia equivalente.
 - Preservar el modelo local-first, la compatibilidad con datos históricos y la
   cola offline salvo que el cambio aprobado modifique expresamente ese diseño.
@@ -35,4 +38,15 @@ Estas instrucciones aplican a todo el repositorio y a cualquier agente de IA.
 3. Registrar estado, fecha, pruebas, riesgo residual y commit. Si el commit aún
    no existe, usar `Pendiente de commit` y reemplazarlo después.
 4. Verificar que la documentación describe el código final.
-5. Detenerse. No iniciar otro problema sin una nueva instrucción.
+5. Entregar la declaración de cierre de `docs/architect/WORKFLOW.md`.
+6. Detenerse. No iniciar otro problema sin una nueva instrucción.
+
+## Sistema arquitectónico
+
+`docs/architect/` es el sistema operativo de ingeniería del proyecto. Deriva de
+`docs/` y de las migraciones; no las sustituye ni repite sus reglas.
+
+- Leer siempre `README.md`, `PHILOSOPHY.md`, `THINKING.md` y `WORKFLOW.md`.
+- Cargar de `playbooks/`, `AUTHORITIES.md` y `decisions/` únicamente lo que la
+  tabla de enrutamiento del `README.md` indique. No leer el sistema completo.
+- Antes de cerrar, commitear o desplegar, aplicar `WORKFLOW.md`.
