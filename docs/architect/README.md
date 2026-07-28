@@ -20,6 +20,7 @@ reabre por accidente.
 |---|---|
 | *(siempre, en este orden)* | `PHILOSOPHY.md` → `THINKING.md` → `WORKFLOW.md` |
 | una fórmula, un cálculo, una autoridad de negocio | `playbooks/domain.md` |
+| el módulo de Cambios | `../04-contrato-del-cambio.md` — autoridad funcional |
 | esquema, migraciones, persistencia | `playbooks/database.md` |
 | SQL, permisos, roles, RLS, vistas o funciones | `playbooks/security.md` |
 | `balam/`, cola offline, build o artefactos | `playbooks/client.md` |
