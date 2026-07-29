@@ -1642,7 +1642,7 @@ sesiones simultáneas.
 **Estado:** RESUELTO
 **Fecha de registro:** 28/07/2026
 **Fecha de resolución:** 28/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `fd2aaaa`
 **Evidencia:** `AP-09` reincidió **cinco veces en tres historias**: el `CHECK` con
 subconsulta y la ventana corta de `recordSale` en H-36, el selector de talla del
 E2E que pasaba porque la tarjeta ya mostraba las dos cifras, la rama de consumo
