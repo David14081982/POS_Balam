@@ -249,6 +249,9 @@
       h('button', { key: 'c', className: 'px-5 h-11 border border-outline-variant text-on-surface text-caption font-bold uppercase tracking-widest hover:bg-surface-container-low rounded-lg transition-colors', onClick: onClose }, 'Cancelar'),
       h('button', {
         key: 'k',
+        // Contrato estable de interaccion para los E2E: el copy y el icono del
+        // boton cambian, su papel no. Las pruebas no deben depender del texto.
+        'data-testid': 'checkout-confirmar',
         className: 'px-6 h-11 flex items-center gap-2 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-lg hover:bg-primary-container transition disabled:opacity-40 disabled:cursor-not-allowed',
         onClick: confirmar,
         disabled: !metodoValido || !efectivoValido || !mixtoValido || !apartadoValido || !cortesiaValida,
@@ -276,7 +279,7 @@
         ]))),
       metodo === 'Efectivo' && h('div', { key: 'efe' }, [
         h('div', { key: 'l', className: lbl }, 'Efectivo recibido'),
-        h('input', { key: 'in', className: inputCls, type: 'number', placeholder: '0.00', value: recibido, onChange: e => setRecibido(e.target.value), autoFocus: true }),
+        h('input', { key: 'in', 'data-testid': 'checkout-recibido', className: inputCls, type: 'number', placeholder: '0.00', value: recibido, onChange: e => setRecibido(e.target.value), autoFocus: true }),
         h('div', { key: 'q', className: 'flex gap-2 mt-2' },
           [...new Set([200, 500, 1000, Math.ceil(total / 50) * 50])].map(v => h('button', {
             key: v, className: 'px-3 py-1.5 text-caption font-semibold border border-outline-variant rounded-full hover:border-primary transition-colors', onClick: () => setRecibido(String(v)),

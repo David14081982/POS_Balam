@@ -513,7 +513,7 @@
         h('div', { key: 'i', className: 'flex-1 min-w-0 flex flex-col' }, [
           h('div', { key: 'top', className: 'flex justify-between items-start mb-1' }, [
             h('h4', { key: 'n', className: 'text-body-strong text-primary truncate pr-3' }, nombre),
-            h('button', { key: 'x', title: 'Quitar', onClick: onQuitar,
+            h('button', { key: 'x', title: 'Quitar', 'data-testid': 'cambio-quitar', onClick: onQuitar,
               className: 'text-on-surface-variant hover:text-danger transition-colors shrink-0' }, h(MS, { name: 'trash', size: 18 })),
           ]),
           h('p', { key: 'sz', className: 'text-overline uppercase text-on-surface-variant' }, 'Talla ' + talla),
@@ -535,7 +535,7 @@
     ]);
 
     // ── Panel: Resumen del cambio ─────────────────────────────────────────────
-    const panel = h('aside', { className: 'bg-surface-container-lowest rounded-xl shadow-e3 flex flex-col overflow-hidden shrink-0 w-[clamp(340px,32vw,460px)]' }, [
+    const panel = h('aside', { 'data-testid': 'cambio-panel', className: 'bg-surface-container-lowest rounded-xl shadow-e3 flex flex-col overflow-hidden shrink-0 w-[clamp(340px,32vw,460px)]' }, [
       h('div', { key: 'hd', className: 'p-4 border-b border-outline-variant bg-surface' }, [
         h('span', { key: 'l', className: 'text-overline uppercase text-on-surface-variant' }, 'Resumen del cambio'),
         h('div', { key: 'f', className: 'text-caption text-on-surface-variant mt-0.5' }, 'Venta ' + sale.folio),
@@ -580,7 +580,7 @@
               h('span', { key: 'l', className: 'text-overline uppercase opacity-60' }, diferencia > 0 ? 'Diferencia a cobrar' : 'Sin diferencia'),
               h('span', { key: 'v', className: 'font-headline text-h1 tracking-tight leading-none' }, fmt(diferencia)),
             ]),
-        h('button', { key: 'go', disabled: vencida || !marcados.length || !ent.length, onClick: siguiente,
+        h('button', { key: 'go', 'data-testid': 'cambio-accion', disabled: vencida || !marcados.length || !ent.length, onClick: siguiente,
           className: 'w-full py-3 bg-surface text-primary rounded-lg text-caption font-bold uppercase tracking-wider shadow-e2 transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed' },
           [h(MS, { key: 'i', name: diferencia > 0 ? 'shopping_cart_checkout' : 'check', size: 18 }),
            diferencia > 0 ? 'Cobrar ' + fmt(diferencia) : 'Registrar cambio']),
@@ -633,7 +633,7 @@
       h('div', { key: 'cat', className: 'bg-surface-container-lowest rounded-xl border border-outline-variant p-5' }, [
         h('div', { key: 't', className: 'flex items-center gap-3 mb-3' }, [
           h('span', { key: 'l', className: 'text-overline uppercase tracking-widest text-on-surface-variant shrink-0' }, 'Elige lo que se lleva'),
-          h('input', { key: 'q', ref: scanRef, value: query, onKeyDown: onScan, onChange: e => setQuery(e.target.value),
+          h('input', { key: 'q', ref: scanRef, 'data-testid': 'cambio-escaner', value: query, onKeyDown: onScan, onChange: e => setQuery(e.target.value),
             placeholder: 'Escanea el código de barras o busca por nombre / SKU…',
             className: 'flex-1 h-10 px-3 bg-surface-container-low border border-outline-variant rounded-lg text-body focus:ring-1 focus:ring-primary' }),
         ]),
@@ -704,7 +704,7 @@
     return h(window.UI.Modal, { title: 'Vendedor que atiende el cambio', onClose },
       h('div', { className: 'grid grid-cols-2 gap-2 py-2' }, sellers.length
         ? sellers.map(v => h('button', {
-            key: v.id, onClick: () => onPick(v.id),
+            key: v.id, 'data-testid': 'cambio-vendedor', onClick: () => onPick(v.id),
             className: 'p-3 border border-outline-variant rounded-lg hover:border-primary text-left transition-colors',
           }, h('span', { className: 'text-body text-primary font-semibold' }, v.nombre)))
         : h('p', { className: 'text-caption text-on-surface-variant' }, 'No hay vendedores elegibles.')));
