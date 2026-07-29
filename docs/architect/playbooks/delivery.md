@@ -1,7 +1,7 @@
 ---
 capa: reglas+aprendizaje
 applies_to: [testing, documentation, deployment]
-related_histories: [H-10, H-31, H-32, H-33, H-34, H-35]
+related_histories: [H-10, H-31, H-32, H-33, H-34, H-35, H-42, H-43]
 severity_max: blocking
 no_alcance: "No sustituye docs/01-engineering-methodology.md ni docs/fixes/_template.md."
 ---
@@ -94,7 +94,44 @@ es una perdida de defensa disfrazada de agilidad.
 con su estado bloqueado y liberado — asi que la comparacion antes/despues de
 `R-DEL-13` debe leerse **siempre en dos columnas**: interacciones y
 validaciones. La primera puede bajar; la segunda, jamas.
+
+La regla **no depende de que alguien lea el informe**. El instrumento compara
+solo contra `ux-baseline.json` y **sale con codigo 1** si disminuyen las
+validaciones, si aumentan las interacciones o si el recorrido deja de
+completarse. Se ejecuta como las verificaciones de contratos y migraciones, y
+una historia que lo rompa no puede darse por terminada.
+
+    node test-ux-metrics.mjs                    mide y compara (falla si rompe)
+    node test-ux-metrics.mjs --justifica "..."  admite MAS interacciones
+    node test-ux-metrics.mjs --fijar "<motivo>" reescribe la linea base
+
+`--justifica` libera **solo** la columna de interacciones: a veces un paso mas
+es correcto —una confirmacion, un dato que faltaba— y entonces se declara el
+motivo. Las validaciones no tienen valvula de escape: no existe motivo por el
+que una optimizacion pueda ejercer menos defensas. `--fijar` es un acto
+deliberado con motivo y fecha, no un atajo para poner el guardian en verde.
 Origen: H-43
+
+**R-DEL-15 · BLOCKING · Toda historia que prometa «mas rapido», «menos pasos» o
+«menos costoso» trae su propio guardian con linea base.**
+El mecanismo de `R-DEL-14` no es exclusivo de la interfaz: se aplica igual a
+rendimiento, a procesos del punto de venta, a consultas y a cualquier
+optimizacion. La forma es siempre la misma y se construye **antes** de tocar lo
+que se va a optimizar:
+
+| pieza | que es |
+|---|---|
+| coste | lo que la historia promete reducir: interacciones, milisegundos, lecturas, filas recorridas |
+| garantia | lo que jamas puede bajar: validaciones ejercidas, filas correctas, invariantes comprobadas |
+| completitud | que el recorrido u operacion siga terminando |
+| linea base | el fichero versionado con las tres cifras, su motivo y su fecha |
+
+El guardian mide las tres, compara y **sale con codigo distinto de cero** cuando
+la garantia baja o la completitud se pierde. El coste es la unica columna
+negociable, y su aumento se declara.
+Sin esas cuatro piezas la historia no puede cerrarse, porque «quedo mas rapido»
+sin cifra reproducible no es un resultado: es una impresion.
+Origen: H-43 · Filosofia: principio 9
 
 **R-DEL-09 · RECOMMENDED · Regresión proporcional al riesgo, con los arneses
 nombrados y su resultado.**

@@ -49,6 +49,15 @@ idempotente, todavía no está diseñada.
 Verde en local no demuestra una defensa remota. Dar por desplegada una
 migración no la despliega (H-31).
 
-**9. Toda decisión importante debe poder justificarse dentro de cinco años.**
+**9. Una optimización sólo es una mejora si conserva las garantías del sistema
+mientras reduce el coste del recorrido.**
+Más rápido no es mejor si por el camino se perdió una defensa. Toda historia que
+prometa ahorro —clics, tiempo, consultas, latencia— se mide con un instrumento
+contra una línea base, y el instrumento **falla** si el ahorro se pagó con
+garantías. Es el principio 8 aplicado al rendimiento: aquí la intención suele
+ser buena y por eso engaña más.
+Regla: `R-DEL-14` · `R-DEL-15` · Instrumento: `test-ux-metrics.mjs`
+
+**10. Toda decisión importante debe poder justificarse dentro de cinco años.**
 Si no puede, no está lista para tomarse. Por eso existen los ADR, y por eso
 cada uno registra su costo y no sólo su beneficio.

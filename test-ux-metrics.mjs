@@ -13,8 +13,17 @@
 // Identifica cada paso por `data-testid` cuando existe y sólo entonces por
 // texto, para que la traza siga siendo legible cuando el copy cambie (R-DEL-10).
 //
-// Uso:  node test-ux-metrics.mjs [escenario]     (por omisión: cambio-de-talla)
-//       node test-ux-metrics.mjs --json          (vuelca la medición completa)
+// GUARDIÁN (R-DEL-14): compara contra `ux-baseline.json` y FALLA si
+//   • disminuyen las validaciones de negocio ejercidas;
+//   • aumentan las interacciones sin justificación explícita;
+//   • el recorrido deja de completarse.
+// No depende de que alguien lea un informe: se ejecuta como las verificaciones
+// de contratos y migraciones, y una historia que lo rompa no puede cerrarse.
+//
+// Uso:  node test-ux-metrics.mjs [escenario]         mide y compara
+//       node test-ux-metrics.mjs --json              vuelca la medición
+//       node test-ux-metrics.mjs --fijar "<motivo>"  reescribe la línea base
+//       node test-ux-metrics.mjs --justifica "<x>"   admite MÁS interacciones
 import { chromium } from 'playwright-core';
 import http from 'http'; import fs from 'fs'; import path from 'path';
 
@@ -31,6 +40,10 @@ await new Promise(r => server.listen(8847, '127.0.0.1', r));
 
 const ESCENARIO = process.argv.find(a => !a.startsWith('-') && /^[a-z-]+$/.test(a) && a !== 'node') || 'cambio-de-talla';
 const VOLCADO = process.argv.includes('--json');
+const argOf = (f) => { const i = process.argv.indexOf(f); return i >= 0 ? (process.argv[i + 1] || 'sin motivo') : null; };
+const FIJAR = argOf('--fijar');
+const JUSTIFICA = argOf('--justifica');
+const BASE_PATH = path.join(ROOT, 'ux-baseline.json');
 
 const INSTRUMENTO = () => {
   window.__printed = 0; window.print = () => { window.__printed++; };
@@ -166,9 +179,51 @@ console.log(`  validaciones de negocio atravesadas: ${medicion.validaciones.leng
 medicion.validaciones.forEach(v => console.log(`    · ${v.nombre} — bloqueado: ${v.bloqueado} · liberado: ${v.libre}`));
 console.log('\n  paso a paso:');
 medicion.pasos.forEach(p => console.log(`   ${String(p.n).padStart(2)}. ${p.tipo.padEnd(8)} ${p.control}`));
+// ── Guardián (R-DEL-14) ─────────────────────────────────────────────────────
+const bases = fs.existsSync(BASE_PATH) ? JSON.parse(fs.readFileSync(BASE_PATH, 'utf8')) : {};
+const base = bases[ESCENARIO];
+const actual = {
+  interacciones: total, validaciones: medicion.validaciones.length,
+  completado: !!medicion.registrado,
+};
+let roto = [];
+if (FIJAR !== null) {
+  bases[ESCENARIO] = Object.assign({}, actual, { motivo: FIJAR, fijada: new Date().toISOString().slice(0, 10) });
+  fs.writeFileSync(BASE_PATH, JSON.stringify(bases, null, 1) + '\n');
+  console.log(`\n  ✔ línea base fijada para «${ESCENARIO}» · ${FIJAR}`);
+} else if (!base) {
+  console.log(`\n  ⚠ sin línea base para «${ESCENARIO}». Fíjala con --fijar "<motivo>".`);
+} else {
+  console.log('\n══ GUARDIÁN · comparación contra la línea base ══════════════');
+  const fila = (n, a, b, peor) => {
+    const mal = peor(a, b);
+    if (mal) roto.push(n);
+    console.log(`  ${mal ? '❌' : '✅'} ${n.padEnd(24)} base ${String(b).padEnd(6)} ahora ${String(a).padEnd(6)}${mal ? '  ← ROMPE' : ''}`);
+  };
+  // Las validaciones NUNCA pueden bajar: una mejora no se consigue quitando
+  // defensas. Es la mitad que la métrica de interacciones no protege.
+  fila('validaciones', actual.validaciones, base.validaciones, (a, b) => a < b);
+  fila('recorrido completo', actual.completado, base.completado, (a, b) => b && !a);
+  // Las interacciones pueden bajar libremente; subir exige justificación.
+  const sube = actual.interacciones > base.interacciones;
+  if (sube && JUSTIFICA) {
+    console.log(`  ⚠ interacciones${' '.repeat(11)}base ${base.interacciones}      ahora ${actual.interacciones}      ← justificado: ${JUSTIFICA}`);
+  } else {
+    fila('interacciones', actual.interacciones, base.interacciones, (a, b) => a > b);
+  }
+  if (!roto.length && actual.interacciones < base.interacciones) {
+    console.log(`\n  ✔ mejora real: −${base.interacciones - actual.interacciones} interacciones sin perder garantías`);
+  }
+}
+
 if (VOLCADO) {
   const out = path.join(ROOT, `ux-${ESCENARIO}.json`);
   fs.writeFileSync(out, JSON.stringify({ escenario: ESCENARIO, total, ...medicion }, null, 1));
   console.log(`\n  volcado en ${out}`);
 }
 console.log('');
+if (roto.length) {
+  console.error(`✖ GUARDIÁN R-DEL-14: ${roto.join(', ')}. Una optimización no puede`);
+  console.error('  reducir el coste del recorrido sacrificando garantías del sistema.');
+  process.exit(1);
+}
