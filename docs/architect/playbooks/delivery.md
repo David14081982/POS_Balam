@@ -84,6 +84,18 @@ el propio autor del cambio es quien peor puede juzgar cuantas interacciones
 cuesta su pantalla.
 Origen: H-43
 
+**R-DEL-14 · BLOCKING · Una optimizacion de UX conserva o AUMENTA las
+validaciones de negocio que el recorrido ejerce.**
+Reducir interacciones nunca puede lograrse retirando un control funcional. Si el
+recorrido instrumentado ejercia N validaciones antes del cambio, despues debe
+ejercer N o mas: menos interacciones **y** menos validaciones no es una mejora,
+es una perdida de defensa disfrazada de agilidad.
+`test-ux-metrics.mjs` lo hace comprobable — registra cada validacion atravesada
+con su estado bloqueado y liberado — asi que la comparacion antes/despues de
+`R-DEL-13` debe leerse **siempre en dos columnas**: interacciones y
+validaciones. La primera puede bajar; la segunda, jamas.
+Origen: H-43
+
 **R-DEL-09 · RECOMMENDED · Regresión proporcional al riesgo, con los arneses
 nombrados y su resultado.**
 
