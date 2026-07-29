@@ -567,6 +567,28 @@
         if (window.DATA && window.DATA.markSaleSync) window.DATA.markSaleSync(op.folio, 'synced', { stockReserved: !!op.reserveStock });
         return true;
       }
+      // H-38 (C5): el cambio viaja como UNA operacion durable y se confirma con
+      // una sola llamada a pos.commit_exchange(). El dinero lo calcula el
+      // servidor: el cliente no envia valores, solo lo que entrega y recibe.
+      if (op.type === 'exchange') {
+        const committed = await c.rpc('commit_exchange', {
+          p_commit_id: op.key || op.id,
+          p_exchange: op.header,
+          p_items: op.items || [],
+          p_moves: op.moves || [],
+          p_payment: op.payment || null,
+        });
+        if (committed.error || !committed.data || !committed.data.ok) {
+          return failOp(committed.error || {
+            code: (committed.data && committed.data.error) || 'empty_response',
+            message: (committed.data && committed.data.error) || 'El cambio no devolvio confirmacion',
+          });
+        }
+        if (window.DATA && window.DATA.applySyncResult) {
+          window.DATA.applySyncResult({ products: committed.data.products || [] });
+        }
+        return true;
+      }
       if (op.type === 'return') {
         const expectedProducts = {};
         const productSources = op.legacy
@@ -875,6 +897,31 @@
       clientEffect: effects.clientEffect || null,
       sellerEffects: effects.sellerEffects || [],
       legacy: false,
+    });
+  }
+  // H-38: encola el cambio completo. Los renglones llevan `lado`; el servidor
+  // resuelve valor reconocido y precio vigente, asi que aqui no viaja dinero
+  // salvo el cobro de la diferencia, que el propio RPC valida contra su calculo.
+  function pushExchange(exch, effects) {
+    if (!enabled) return;
+    effects = effects || {};
+    const header = {
+      id: exch.id, folio: exch.folio, origen_folio: exch.origenFolio,
+      fecha: exch.fecha || null, usuario: exch.usuario || null, notas: exch.notas || null,
+    };
+    const items = (exch.lineas || []).map(l => ({
+      lado: l.lado, product_id: l.productId || null, sku: l.sku, nombre: l.nombre,
+      talla: l.talla, qty: Number(l.qty) || 0, motivo: l.motivo || null,
+    }));
+    const moves = (exch.lineas || []).map(l => ({
+      fecha: String(exch.fecha || '').replace(' ', 'T'),
+      tipo: l.lado === 'devuelto' ? 'Cambio (entra)' : 'Cambio (sale)',
+      producto: l.nombre, sku: l.sku,
+      cant: (l.lado === 'devuelto' ? 1 : -1) * (Number(l.qty) || 0), ref: exch.folio,
+    }));
+    return run({
+      type: 'exchange', id: exch.id, folio: exch.folio,
+      header, items, moves, payment: effects.payment || null,
     });
   }
   let pushTimer = null;
@@ -1244,6 +1291,6 @@
     }
   }
 
-  window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushSale, pushReturn, ensureFolioBlock, deleteRow, pullDomain, fetchSaleByFolio, flushQueue, retryOperation, queueStatus, clearQueue, markResetApplied, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
+  window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushSale, pushReturn, pushExchange, ensureFolioBlock, deleteRow, pullDomain, fetchSaleByFolio, flushQueue, retryOperation, queueStatus, clearQueue, markResetApplied, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
   window.CORE.registerSyncGateway(window.STORE);
 })();

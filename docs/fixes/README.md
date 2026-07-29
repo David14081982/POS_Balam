@@ -51,6 +51,7 @@ sesión de chat.
 | `saldo-por-renglon.md` | H-35 | Autoridad única del saldo por renglón entre devoluciones y cambios |
 | `precio-por-talla.md` | H-36 | Precio general del artículo con excepciones por talla |
 | `modelo-del-cambio.md` | H-37 | Modelo del cambio de mercancía y costura de suministro (C4) |
+| `commit-transaccional-cambio.md` | H-38 | Autoridad transaccional del cambio (C5) |
 
 Documentación financiera relacionada, creada antes de este índice:
 

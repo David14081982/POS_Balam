@@ -1377,6 +1377,101 @@
   // del vendedor en proporción a lo devuelto (si returns.reverseCommission), ajusta el total del
   // cliente, marca la venta original (Devuelto / Devolución parcial) y sincroniza.
   // arg: { folio, lineas:[{sku,nombre,talla,qty,motivo,precio}], metodo, notas }
+  // ---- Cambios (H-38 / C5) ----
+  // Registra un cambio local y lo entrega a la autoridad transaccional
+  // pos.commit_exchange(). Gobernado por docs/04-contrato-del-cambio.md.
+  //
+  // El DINERO no se calcula aqui: el servidor resuelve valor reconocido y precio
+  // vigente, y valida el cobro contra su propio calculo. Aqui se anticipa el
+  // mismo resultado con las autoridades locales para que la terminal pueda
+  // operar offline, pero la cifra que manda es la del commit.
+  //
+  // El cambio NUNCA devuelve efectivo: si lo entregado vale menos, el sobrante
+  // se registra como valor no aprovechado (Contrato del Cambio, seccion 4).
+  function recordExchange({ origenFolio, lineas, usuario, notas, metodoPago, fecha: fechaIn }) {
+    const sale = findSaleByFolio(origenFolio);
+    if (!sale) return { ok: false, error: 'sale_not_found' };
+    const items = (lineas || []).filter(l => l && (l.lado === 'devuelto' || l.lado === 'entregado'));
+    const devueltos = items.filter(l => l.lado === 'devuelto');
+    const entregados = items.filter(l => l.lado === 'entregado');
+    if (!devueltos.length || !entregados.length) return { ok: false, error: 'invalid_items' };
+
+    // Plazo de posventa (H-34): compuerta, no se reinicia ni se hereda aparte.
+    const plazo = returnDeadline(sale);
+    if (plazo && plazo.status === 'vencido') return { ok: false, error: 'exchange_window_closed' };
+
+    // Saldo por renglon (H-35/H-37): la autoridad ya suma el suministro de
+    // cambios anteriores, asi que una pieza recibida antes puede recambiarse.
+    const saldo = saleLineBalance(sale.folio);
+    const faltan = [];
+    devueltos.forEach(l => {
+      const row = saldo.find(b => b.sku === l.sku && b.talla === l.talla);
+      const disponible = row ? row.disponible : 0;
+      if ((Number(l.qty) || 0) > disponible) faltan.push({ sku: l.sku, talla: l.talla, requested: Number(l.qty) || 0, available: disponible });
+    });
+    if (faltan.length) return { ok: false, error: 'invalid_exchange_quantity', items: faltan };
+
+    const fecha = fechaIn || now();
+    const valorReconocido = devueltos.reduce((a, l) => a + recognizedValue(sale.folio, l.sku, l.talla) * (Number(l.qty) || 0), 0);
+    const valorEntregado = entregados.reduce((a, l) => {
+      const p = products.find(x => x.id === l.productId || x.sku === l.sku);
+      return a + listPrice(p, l.talla) * (Number(l.qty) || 0);
+    }, 0);
+    const diferencia = valorEntregado >= valorReconocido ? money(valorEntregado - valorReconocido) : 0;
+    const valorNoAprovechado = valorEntregado >= valorReconocido ? 0 : money(valorReconocido - valorEntregado);
+
+    const id = 'cmb-' + newOperationId();
+    const exch = {
+      id, folio: nextFolio(id, fecha), origenFolio: sale.folio, fecha,
+      usuario: usuario || '', notas: notas || '',
+      valorReconocido: money(valorReconocido), valorEntregado: money(valorEntregado),
+      diferencia, valorNoAprovechado, baseComision: diferencia,
+      lineas: items.map(l => {
+        const p = products.find(x => x.id === l.productId || x.sku === l.sku);
+        return {
+          lado: l.lado, productId: p ? p.id : l.productId, sku: l.sku, nombre: l.nombre,
+          talla: l.talla, qty: Number(l.qty) || 0, motivo: l.motivo || '',
+          precio: l.lado === 'entregado' ? listPrice(p, l.talla) : recognizedValue(sale.folio, l.sku, l.talla),
+        };
+      }),
+    };
+
+    // Inventario local en dos sentidos: entra lo devuelto, sale lo entregado.
+    exch.lineas.forEach(l => {
+      const p = products.find(x => x.id === l.productId);
+      if (!p) return;
+      const e = (p.stock || []).find(v => v.talla === l.talla);
+      if (!e) return;
+      e.stock = Math.max(0, e.stock + (l.lado === 'devuelto' ? 1 : -1) * l.qty);
+      movements.unshift({
+        fecha, tipo: l.lado === 'devuelto' ? 'Cambio (entra)' : 'Cambio (sale)',
+        producto: l.nombre, sku: l.sku,
+        cant: (l.lado === 'devuelto' ? 1 : -1) * l.qty, ref: exch.folio,
+      });
+    });
+    saveProducts(false); saveMovements();
+
+    let payment = null;
+    if (diferencia > 0) {
+      payment = {
+        id: 'pay-' + id, folio: exch.folio, fecha, tipo: 'cambio',
+        metodo: metodoPago || 'Efectivo', monto: diferencia,
+        efectivo: (metodoPago || 'Efectivo') === 'Efectivo' ? diferencia : 0,
+        tarjeta: 0, transferencia: 0,
+        otro: (metodoPago || 'Efectivo') === 'Efectivo' ? 0 : diferencia,
+      };
+      payments.unshift(payment);
+      savePayments(false);
+    }
+
+    exchanges.unshift(exch);
+    saveExchanges(false);
+    if (!remoteApplying) {
+      try { window.CORE.invokeSync('pushExchange', exch, { payment }); } catch (e) { /* offline */ }
+    }
+    return { ok: true, exchange: exch, payment };
+  }
+
   function recordReturn({ folio, lineas, metodo, notas, fecha: fechaIn }) {
     const sale = sales.find(s => s.folio === folio);
     if (!sale) return { ok: false, error: 'No se encontró la venta original' };
@@ -1781,7 +1876,7 @@
     completarApartado, registrarPagoApartado, paymentsForSale, hasFinancialSnapshot, resolveLineDiscount, cerrarMes, getPeriodoInicio,
     listPrice, priceRange, sanitizePreciosTalla,
     recordReturn, returnedQty, returnsForFolio, isReturnable, returnDeadline, saleLineBalance,
-    saveExchanges, recognizedValue, supplySources,
+    saveExchanges, recognizedValue, supplySources, recordExchange,
     addUser, updateUser, removeUser, isEligibleSeller, resolveSellerCommission,
     addPromo, updatePromo, removePromo, duplicatePromo,
     seedDemo, resetEmpty, resetTestData, demoActive,

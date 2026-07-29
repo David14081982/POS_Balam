@@ -1582,6 +1582,61 @@ avatares 13/13; concurrencia 9/9; roles 10/10; build 8/8; SDK 4/4; smoke bundle
 **Pendiente:** C5 (`commit_exchange`), C6 (interfaz) y C7 (reportes).
 **Corrección documentada:** `docs/fixes/modelo-del-cambio.md`.
 
+## H-38 — El cambio no tiene autoridad transaccional (C5)
+
+**Estado:** RESUELTO
+**Fecha de registro:** 28/07/2026
+**Fecha de resolución:** 28/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** C4 dejó el modelo del cambio pero nada podía escribir en él con
+seguridad. Un cambio mueve inventario en dos sentidos, cobra dinero y consume
+saldo; sin una frontera transaccional un fallo parcial dejaría stock descuadrado
+o un documento a medias.
+**Origen de auditoría:** C5 del módulo de Cambios,
+`docs/04-contrato-del-cambio.md` § 13.
+**Riesgo:** escritura parcial de una operación que toca dinero e inventario, y
+cálculo del dinero en el cliente, donde una terminal manipulada podría fijar el
+valor de lo que entrega o el precio de lo que recibe.
+**Reproducción:** `node test-exchange-commit.mjs` contra el árbol previo:
+**3 pasaron, 28 fallaron**.
+**Corrección:** `pos.commit_exchange()` confirma o revierte en una transacción
+permiso, forma, idempotencia por clave y hash, plazo (H-34), saldo (H-35/H-37),
+valoración en el servidor, inventario en dos sentidos, documento y cobro. Las
+autoridades de valoración `pos.line_recognized_value()` y `pos.list_price()` son
+internas. El cambio **nunca devuelve efectivo**: el sobrante va a
+`valor_no_aprovechado` y `base_comision` es sólo el excedente. En el cliente,
+`DATA.recordExchange()` cierra el ciclo local y `STORE.pushExchange()` encola la
+operación durable.
+**Despliegue:** migraciones `005700`, `005900` y `006000` aplicadas y registradas
+en `Balam` el 28/07/2026. La verificación emitió sus once avisos por la vía real
+—`request.jwt.claims` con un perfil temporal— y no dejó filas.
+**Incidencia durante el despliegue:** el primer intento abortó con
+`acepto un cobro que no cuadra con la diferencia: exchange_id_conflict`.
+`payment_required` y `payment_mismatch` retornaban **después** de insertar
+cabecera, renglones y movimientos; un `return` de PL/pgSQL no aborta la
+transacción, así que un cobro mal formado dejaba el documento a medias. Es la
+escritura parcial que H-04 existe para impedir, reintroducida por una función
+nueva. `005700` ya estaba registrada, así que se corrigió hacia adelante con
+`005900` (`R-DB-01`), generada desde el texto vigente con exactamente dos bloques
+de diferencia (`R-DB-03`), y la verificación se renumeró de `005800` a `006000`
+(`R-DB-02`). El arnés comprobaba que los códigos existieran, no dónde se emiten
+—el síntoma y no la defensa, `AP-09`— y se endureció.
+**Pruebas:** commit del cambio 32/32; modelo del cambio 28/28; saldo por renglón
+38/38; devoluciones 17/17; coherencia de venta 17/17; plazo 38/38; precio por
+talla 38/38 y E2E 19/19; trazabilidad 65/65; cola 115/115; migraciones 29/29;
+contratos 36/36; descuentos 43/43 sin modificar; folio diario 60/60; folios
+12/12; comisiones 10/10; comisión efectiva 22/22; liquidaciones 10/10;
+elegibilidad 10/10; avatares 13/13; concurrencia 9/9; roles 10/10; build 8/8;
+SDK 4/4; entradas 8/8; smoke bundle 17/17; navegación 13/13; propagación de reset
+21/21; filtros 18/18.
+**Pendiente:** C6 (interfaz) y C7 (reportes y liquidación de la comisión del
+segundo vendedor).
+**Riesgo residual:** sin interfaz el cambio no es alcanzable por el usuario. La
+concurrencia entre dos terminales sobre la última pieza se apoya en el bloqueo
+estable dentro de la transacción, ya verificado en H-01, pero no se probó con dos
+sesiones simultáneas.
+**Corrección documentada:** `docs/fixes/commit-transaccional-cambio.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:
