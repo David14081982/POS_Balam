@@ -50,12 +50,65 @@ Origen: H-33, H-34 · Decisión: `ADR-008`
 en un commit aparte. No se mezcla el cierre documental de una historia con la
 creación de un subsistema.
 
+**R-DEL-10 · BLOCKING · Una prueba automatizada localiza los controles por
+CONTRATO ESTABLE, nunca por texto visible, icono, orden o copy.**
+Las pruebas validan comportamientos del negocio mediante contratos estables de
+interaccion; jamas deben depender de elementos cosmeticos de la interfaz. Los
+`data-testid` son **arquitectura de pruebas, no deuda tecnica**: son atributos
+inertes en produccion y el unico punto estable cuando no hay rol ni estructura
+que sirva.
+Origen: H-42 · Antipatron: `AP-11`
+
+**R-DEL-11 · REQUIRED · Toda regla de bloqueo importante se prueba
+explicitamente.**
+Si el negocio impide algo —cobrar sin capturar el efectivo, cambiar fuera de
+plazo, consumir mas saldo del disponible— el arnes lo afirma **en los dos
+sentidos**: bloqueado sin la condicion, libre con ella. Asi una validacion de
+negocio se convierte en garantia permanente en vez de en un camino feliz.
+Origen: H-42 (caso 14b del E2E del cambio)
+
+**R-DEL-12 · REQUIRED · Las semillas de prueba representan un estado VALIDO del
+negocio, no el minimo que compila.**
+Un perfil de vendedor debe cumplir la elegibilidad real, una venta debe tener
+sus importes coherentes, un producto sus existencias. Una semilla minima produce
+falsos fallos que se confunden con defectos del producto y cuesta mas
+depurarlos que escribirla bien.
+Origen: H-42 (el modal de vendedor sin candidatos)
+
 **R-DEL-09 · RECOMMENDED · Regresión proporcional al riesgo, con los arneses
 nombrados y su resultado.**
 
 ---
 
 ## Antipatrones
+
+### AP-11 · Prueba acoplada a lo cosmetico de la interfaz
+**Origen:** H-42 · **Estado:** vigente · **Severidad:** BLOCKING
+**Contexto:** un arnes de navegador necesita pulsar un control.
+**Sintoma:** la prueba falla —o peor, pasa por casualidad— sin que el producto
+haya cambiado de comportamiento. Se depura buscando un defecto que no existe.
+**Causa raiz:** el localizador depende de algo cosmetico. En H-42 ocurrio tres
+veces: `innerText` incluye la **ligadura del icono**, de modo que
+`"shopping_cart_checkout COBRAR $100.00"` no casa con `/^cobrar/`; y `Segment`
+pinta sus opciones con `text-transform: uppercase`, asi que `innerText` devuelve
+`CAMBIO` y no `Cambio`.
+**Riesgo:** dos clases de dano. Un falso negativo consume horas persiguiendo un
+defecto inexistente; un falso positivo —el caso del selector de talla en H-36,
+que pasaba porque la tarjeta ya mostraba las dos cifras— deja sin cubrir lo que
+decia cubrir.
+**Regla permanente:** `R-DEL-10`.
+**Como detectarlo:** si el localizador usa `innerText`, un indice de posicion o
+una clase de estilo, esta acoplado a lo cosmetico.
+**Como prevenirlo:** `data-testid` en el punto de interaccion, o un atributo
+funcional ya existente. Comprobar ademas el ESTADO del control —`disabled`— y no
+solo su presencia.
+**Pruebas obligatorias:** el E2E de la historia no contiene ningun localizador
+por texto visible en los controles que acciona.
+**Excepciones justificables:** afirmar contenido que el usuario debe LEER —un
+importe, un aviso— es legitimo: ahi el texto es el comportamiento.
+**Referencias:** `test-cambio-e2e.mjs` · `docs/fixes/pantalla-del-cambio.md`
+**Camino de retiro:** un arnes que recorra los `test-*.mjs` de navegador y falle
+si accionan un control localizado por `innerText`.
 
 ### AP-08 · Migración dada por desplegada sin evidencia en la base
 **Origen:** H-31 · **Estado:** vigente · **Severidad:** BLOCKING
