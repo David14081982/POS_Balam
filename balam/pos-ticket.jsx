@@ -339,7 +339,7 @@
   // define un segundo formato: entra por la costura `payment`, que añade el acuse
   // del pago recibido y conserva intacto el resto del documento. Sin `payment` el
   // ticket es exactamente el de siempre.
-  function BalamTicket({ sale, payment }) {
+  function BalamTicket({ sale, payment, exchange }) {
     if (!sale) return null;
     const C = window.CONFIG;
     const hasSnapshot = sale.subtotal != null || sale.iva != null;
@@ -413,6 +413,30 @@
           h('div', { key: 'a', className: 'uppercase text-on-surface-variant', style: { fontSize: '11px', letterSpacing: '0.18em' } }, concepto),
           h('div', { key: 'b', className: 'font-headline text-primary mt-1', style: { fontSize: '30px', lineHeight: 1.1 } }, fmt(Number(payment.monto) || 0)),
           h('div', { key: 'c', className: 'text-on-surface-variant mt-1', style: { fontSize: '12px' } }, `Recibido en ${payment.metodo} · ${payment.fecha}`),
+        ]) : null,
+        // C6: acuse del CAMBIO. Segunda costura, hermana de : aquélla
+        // acusa dinero recibido y ésta acusa mercancía intercambiada, que es un
+        // hecho distinto y no cabía en la primera. El resto del documento —tienda,
+        // transacción, renglones vendidos, desglose fiscal— queda intacto, así que
+        // sigue habiendo UN solo formato impreso (ADR: BalamTicket es la autoridad).
+        exchange ? h('div', { key: 'cx', className: 'tk-block w-full mb-6' }, [
+          h('div', { key: 'a', className: 'uppercase text-on-surface-variant', style: { fontSize: '11px', letterSpacing: '0.18em' } }, 'Cambio de mercancia'),
+          h('div', { key: 'b', className: 'font-headline text-primary mt-1', style: { fontSize: '20px', lineHeight: 1.2 } }, exchange.folio),
+          h('div', { key: 'c', className: 'text-on-surface-variant mt-1', style: { fontSize: '12px' } }, 'Sobre la venta ' + (exchange.origenFolio || sale.folio)),
+          h('div', { key: 'd', className: 'mt-3 text-left', style: { fontSize: '12px', lineHeight: 1.6 } }, [
+            h('div', { key: 'h1', className: 'uppercase text-on-surface-variant', style: { letterSpacing: '0.12em' } }, 'Entrega'),
+            ...(exchange.lineas || []).filter(l => l.lado === 'devuelto').map((l, i) =>
+              h('div', { key: 'e' + i }, l.qty + ' × ' + l.nombre + ' · talla ' + l.talla + ' · ' + fmt(l.precio))),
+            h('div', { key: 'h2', className: 'uppercase text-on-surface-variant mt-2', style: { letterSpacing: '0.12em' } }, 'Recibe'),
+            ...(exchange.lineas || []).filter(l => l.lado === 'entregado').map((l, i) =>
+              h('div', { key: 'r' + i }, l.qty + ' × ' + l.nombre + ' · talla ' + l.talla + ' · ' + fmt(l.precio))),
+            Number(exchange.diferencia) > 0
+              ? h('div', { key: 'df', className: 'font-semibold text-primary mt-2' }, 'Diferencia pagada · ' + fmt(exchange.diferencia))
+              : null,
+            Number(exchange.valorNoAprovechado) > 0
+              ? h('div', { key: 'na', className: 'text-on-surface-variant mt-2' }, 'Saldo no aprovechado · ' + fmt(exchange.valorNoAprovechado) + ' (no reembolsable)')
+              : null,
+          ]),
         ]) : null,
         // Transacción
         h('div', { key: 'tx', className: 'tk-block w-full border-y border-outline-variant py-4 mb-6 flex flex-col gap-1.5 text-left' }, [

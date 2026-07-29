@@ -106,6 +106,7 @@
       fromRow: r => ({
         id: r.id, folio: r.folio, origenFolio: r.origen_folio || undefined,
         fecha: r.fecha || '', usuario: r.usuario || undefined,
+        vendedorId: r.vendedor_id || undefined, revisadoPor: r.revisado_por || undefined,
         valorReconocido: Number(r.valor_reconocido) || 0,
         valorEntregado: Number(r.valor_entregado) || 0,
         diferencia: Number(r.diferencia) || 0,
@@ -907,11 +908,14 @@
     effects = effects || {};
     const header = {
       id: exch.id, folio: exch.folio, origen_folio: exch.origenFolio,
-      fecha: exch.fecha || null, usuario: exch.usuario || null, notas: exch.notas || null,
+      fecha: exch.fecha || null, usuario: exch.usuario || null,
+      vendedor_id: exch.vendedorId || null, revisado_por: exch.revisadoPor || null,
+      notas: exch.notas || null,
     };
     const items = (exch.lineas || []).map(l => ({
       lado: l.lado, product_id: l.productId || null, sku: l.sku, nombre: l.nombre,
       talla: l.talla, qty: Number(l.qty) || 0, motivo: l.motivo || null,
+      condicion: l.condicion || null,
     }));
     const moves = (exch.lineas || []).map(l => ({
       fecha: String(exch.fecha || '').replace(' ', 'T'),

@@ -52,6 +52,7 @@ sesión de chat.
 | `precio-por-talla.md` | H-36 | Precio general del artículo con excepciones por talla |
 | `modelo-del-cambio.md` | H-37 | Modelo del cambio de mercancía y costura de suministro (C4) |
 | `commit-transaccional-cambio.md` | H-38 | Autoridad transaccional del cambio (C5) |
+| `pantalla-del-cambio.md` | H-42 | Pantalla del cambio, atribucion y comprobante (C6) |
 | `pantalla-apartados.md` | H-40 | Pantalla de apartados, abono con forma de pago y comprobante |
 | `ticket-impreso-paginado.md` | H-41 | El comprobante impreso se cortaba en la primera hoja |
 

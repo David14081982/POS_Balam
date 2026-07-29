@@ -1794,6 +1794,57 @@ papel disponible contra alto del comprobante— pero el número de hojas esperad
 variaría.
 **Corrección documentada:** `docs/fixes/ticket-impreso-paginado.md`.
 
+## H-42 - El cambio no era alcanzable por el usuario (C6)
+
+**Estado:** RESUELTO
+**Fecha de registro:** 29/07/2026
+**Fecha de resolucion:** 29/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** C4 dejo el modelo y C5 la autoridad transaccional, pero ninguna
+pantalla invocaba `recordExchange`. Ademas el modelo calculaba `base_comision`
+sin poder atribuirla —`pos.exchanges` no tenia vendedor— y no guardaba rastro de
+la revision de la prenda que el Contrato del Cambio, seccion 5, exige para
+recibirla.
+**Origen de auditoria:** C6 del modulo de Cambios,
+`docs/04-contrato-del-cambio.md`, seccion 13.
+**Riesgo:** una funcion completa e inalcanzable, y una comision calculada sin
+dueno que C7 no habria podido liquidar.
+**Reproduccion:** `node test-exchange-screen.mjs` antes del cambio: 29 fallos.
+**Correccion:** el tipo de operacion se elige al inicio sobre la venta ya
+localizada —Devolucion / Cambio— y **el flujo de Devoluciones queda intacto**:
+`ReturnDetail` no cambia una linea y el cambio vive en `ExchangeDetail`. El
+motivo se reutiliza en ambos; el metodo de reembolso sigue siendo exclusivo de
+Devoluciones. La pantalla **consume autoridades y no reimplementa reglas**:
+`saleLineBalance` para lo disponible, `recognizedValue` para lo que se reconoce,
+`listPrice`/`priceRange` para lo que se lleva, `returnDeadline` para el plazo y
+`recordExchange` como unica via de registro. La diferencia usa el
+`CheckoutModal` completo del POS y el vendedor se confirma como en una venta.
+Tres columnas aditivas —`vendedor_id`, `revisado_por`, `condicion`— cierran la
+atribucion y la revision.
+**El comprobante no estrena formato:** `window.BalamTicket` sigue siendo la
+autoridad unica. Se anadio una **segunda costura**, hermana de la `payment` de
+H-40: aquella acusa dinero recibido y esta acusa mercancia intercambiada, que es
+un hecho distinto y no cabia en la primera. El resto del documento queda intacto.
+H-41 lo hizo paginable justo a tiempo: el comprobante de un cambio es mas largo
+que una venta.
+**Despliegue:** migraciones `006300` y `006400` aplicadas y registradas en
+`Balam` el 29/07/2026, a la primera. La verificacion emitio sus cuatro avisos y
+no dejo filas.
+**Pruebas:** pantalla del cambio 29/29; commit del cambio 32/32; modelo 28/28;
+saldo por renglon 38/38; devoluciones 17/17; apartados 55/55; plazo 38/38;
+precio por talla 38/38 y E2E 19/19; trazabilidad 65/65; coherencia de venta
+17/17; cola 115/115; migraciones 31/31; contratos 37/37; descuentos 43/43 sin
+modificar; folio diario 60/60; comisiones 10/10; comision efectiva 22/22;
+liquidaciones 10/10; elegibilidad 10/10; concurrencia 9/9; roles 10/10; build
+8/8; smoke bundle 17/17; navegacion 14/14.
+**Pendiente:** C7 —reportes, liquidacion de la comision del segundo vendedor y
+el desglose de cobrado que aun no cuadra con un pago de cambio—.
+**Riesgo residual:** el catalogo de la pantalla lista los primeros 24 articulos
+filtrados por busqueda, sin paginacion. La revision de la prenda es texto libre,
+no un catalogo administrable. El cambio no se probo con dos terminales
+simultaneas.
+**Correccion documentada:** `docs/fixes/pantalla-del-cambio.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

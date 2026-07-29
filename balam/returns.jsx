@@ -11,15 +11,32 @@
   const D = window.DATA;
   const h = React.createElement;
 
+  // C6: el TIPO DE OPERACIÓN se decide al inicio, sobre la venta ya localizada.
+  // El flujo de Devoluciones queda intacto: `ReturnDetail` no cambia una línea.
+  // El cambio vive en `ExchangeDetail`, que reutiliza las mismas autoridades.
+  const OPERACIONES = [['devolucion', 'Devolución'], ['cambio', 'Cambio']];
+
   function ReturnsScreen() {
     const [folio, setFolio] = useState(null);
+    const [tipo, setTipo] = useState('devolucion');
     const [, bump] = useState(0);
     const refresh = () => bump(v => v + 1);
+    const volver = () => { setFolio(null); setTipo('devolucion'); };
     if (folio) {
       // Resuelve por folio vigente o por el folio impreso conservado como alias.
       const sale = D.findSaleByFolio ? D.findSaleByFolio(folio) : D.sales.find(s => s.folio === folio);
-      if (!sale) { setFolio(null); return null; }
-      return h(ReturnDetail, { sale, onBack: () => setFolio(null), onDone: () => { setFolio(null); refresh(); } });
+      if (!sale) { volver(); return null; }
+      const done = () => { volver(); refresh(); };
+      const selector = h('div', { key: 'op', className: 'max-w-[1100px] mx-auto px-6 pt-6' }, [
+        h('div', { key: 'l', className: 'text-overline uppercase tracking-widest text-on-surface-variant mb-2' }, 'Tipo de operación'),
+        h(Segment, { key: 's', options: OPERACIONES, value: tipo, onChange: setTipo }),
+      ]);
+      return h('div', { className: 'flex-1 overflow-y-auto bg-background font-body text-on-surface' }, [
+        selector,
+        tipo === 'cambio'
+          ? h(ExchangeDetail, { key: 'cd', sale, onBack: volver, onDone: done, embedded: true })
+          : h(ReturnDetail, { key: 'rd', sale, onBack: volver, onDone: done, embedded: true }),
+      ]);
     }
     return h(ReturnPicker, { onPick: setFolio });
   }
@@ -336,6 +353,272 @@
           ]),
         ]),
       ]));
+  }
+
+  // ── C6: pantalla del Cambio ──────────────────────────────────────────────────
+  // Reutiliza las autoridades existentes y no duplica ninguna regla:
+  //   saleLineBalance      → qué queda disponible de la venta
+  //   recognizedValue      → cuánto vale la pieza que el cliente entrega
+  //   priceRange/listPrice → qué cuesta hoy lo que se lleva
+  //   returnDeadline       → si la venta todavía admite posventa
+  //   recordExchange       → única vía de registro; el servidor recalcula el dinero
+  //   CheckoutModal        → el cobro completo del POS para la diferencia
+  //   BalamTicket          → autoridad única del comprobante impreso
+  function ExchangeDetail({ sale, onBack, onDone, embedded }) {
+    const [dev, setDev] = useState({});
+    const [ent, setEnt] = useState([]);
+    const [picking, setPicking] = useState(null);
+    const [q, setQ] = useState('');
+    const [notas, setNotas] = useState('');
+    const [revisor, setRevisor] = useState('');
+    const [cobro, setCobro] = useState(false);
+    const [recibo, setRecibo] = useState(null);
+    const [vendedor, setVendedor] = useState(null);
+    const reasons = C.list('return_reason');
+    const plazo = deadlineOf(sale);
+    const vencida = plazo.status === 'vencido';
+    const elegibles = D.sellers.filter(v => (D.isEligibleSeller ? D.isEligibleSeller(v) : v.active));
+
+    const saldo = (D.saleLineBalance ? D.saleLineBalance(sale.folio) : [])
+      .filter(r => r.disponible > 0)
+      .map(r => Object.assign({}, r, {
+        k: r.sku + '|' + r.talla,
+        nombre: ((sale.lineas || []).find(l => l.sku === r.sku && l.talla === r.talla) || {}).nombre || r.sku,
+        valor: D.recognizedValue ? D.recognizedValue(sale.folio, r.sku, r.talla) : 0,
+      }));
+    const setRow = (k, patch) => setDev(p => Object.assign({}, p, { [k]: Object.assign({ on: true, qty: 1 }, p[k], patch) }));
+    const marcados = saldo.filter(r => dev[r.k] && dev[r.k].on);
+
+    const valorReconocido = marcados.reduce((a, r) => a + r.valor * (dev[r.k].qty || 1), 0);
+    const valorEntregado = ent.reduce((a, l) => a + D.listPrice(l.p, l.talla) * l.qty, 0);
+    const diferencia = Math.max(0, Math.round((valorEntregado - valorReconocido) * 100) / 100);
+    const noAprovechado = Math.max(0, Math.round((valorReconocido - valorEntregado) * 100) / 100);
+
+    const catalogo = useMemo(() => {
+      const t = q.trim().toUpperCase();
+      return D.products.filter(p => !p._deletedAt && (!t
+        || String(p.nombre).toUpperCase().includes(t) || String(p.sku).toUpperCase().includes(t)))
+        .slice(0, 24);
+    }, [q]);
+
+    function agregar(p, talla) {
+      setPicking(null);
+      setEnt(prev => {
+        const i = prev.findIndex(l => l.p.id === p.id && l.talla === talla);
+        if (i >= 0) { const c = prev.slice(); c[i] = Object.assign({}, c[i], { qty: c[i].qty + 1 }); return c; }
+        return prev.concat([{ p, talla, qty: 1 }]);
+      });
+    }
+
+    function validar() {
+      if (vencida) { toast('Esta venta ya no admite posventa · ' + plazo.label.toLowerCase(), 'var(--danger)'); return false; }
+      if (!marcados.length) { toast('Marca lo que el cliente entrega', 'var(--danger)'); return false; }
+      if (!ent.length) { toast('Elige lo que el cliente se lleva', 'var(--danger)'); return false; }
+      for (const r of marcados) {
+        if (!dev[r.k].motivo) { toast('Elige el motivo para ' + r.nombre, 'var(--danger)'); return false; }
+        if (!String(dev[r.k].condicion || '').trim()) { toast('Registra la revisión de ' + r.nombre, 'var(--danger)'); return false; }
+      }
+      if (!String(revisor).trim()) { toast('Escribe quién revisó la mercancía', 'var(--danger)'); return false; }
+      return true;
+    }
+
+    // El excedente lo cobra el checkout completo del POS. Sin diferencia, el
+    // sobrante se pierde (Contrato del Cambio §4) y se confirma explícitamente.
+    function siguiente() {
+      if (!validar()) return;
+      if (diferencia > 0) { setCobro(true); return; }
+      if (noAprovechado > 0 && !window.confirm(
+        'El cliente se lleva ' + fmt(noAprovechado) + ' menos de lo que entrega.\n\n'
+        + 'Ese saldo NO se devuelve en efectivo y NO queda a favor: se pierde.\n\n¿Confirmas el cambio?')) return;
+      setVendedor({ metodo: null });
+    }
+
+    function registrar(sellerId, metodo) {
+      const lineas = marcados.map(r => ({
+        lado: 'devuelto', sku: r.sku, nombre: r.nombre, talla: r.talla,
+        qty: dev[r.k].qty || 1, motivo: dev[r.k].motivo, condicion: dev[r.k].condicion,
+        productId: (D.products.find(p => p.sku === r.sku) || {}).id,
+      })).concat(ent.map(l => ({
+        lado: 'entregado', sku: l.p.sku, nombre: l.p.nombre, talla: l.talla,
+        qty: l.qty, productId: l.p.id,
+      })));
+      const res = D.recordExchange({
+        origenFolio: sale.folio, lineas, notas,
+        usuario: (window.AUTH && window.AUTH.current && (window.AUTH.current() || {}).email) || '',
+        vendedorId: sellerId, revisadoPor: revisor, metodoPago: metodo,
+      });
+      if (!res.ok) { toast(res.error, 'var(--danger)'); return; }
+      toast('Cambio registrado · ' + res.exchange.folio, 'var(--accent)');
+      setVendedor(null); setCobro(false);
+      setRecibo({ sale, exchange: res.exchange, payment: res.payment });
+    }
+
+    const box = 'bg-surface-container-lowest rounded-xl border border-outline-variant p-5';
+    const cuerpo = h('div', { className: 'max-w-[1100px] mx-auto p-6' }, [
+      h('div', { key: 'bc', className: 'flex items-center gap-3 mb-5' }, [
+        h('button', { key: 'b', className: 'inline-flex items-center gap-2 text-on-surface-variant hover:text-primary transition-colors', onClick: onBack },
+          [h(MS, { key: 'i', name: 'chevLeft', size: 18 }), h('span', { key: 't', className: 'text-overline uppercase tracking-widest font-semibold' }, 'Devoluciones')]),
+        h('span', { key: 'f', className: 'text-overline uppercase text-on-surface-variant' }, sale.folio),
+        h(DeadlineTag, { key: 'dl', sale }),
+      ]),
+      vencida && h('div', { key: 'exp', className: 'mb-4 p-3 rounded-lg text-caption bg-surface-container' },
+        'Fuera de plazo: esta venta admitía posventa hasta ' + (plazo.expiresAt || '—') + '. Un administrador debe ajustar el plazo en Configuración → Devoluciones.'),
+
+      h('div', { key: 'dev', className: box + ' mb-5' }, [
+        h('div', { key: 't', className: 'text-overline uppercase tracking-widest text-on-surface-variant mb-3' }, 'Lo que el cliente entrega'),
+        !saldo.length && h('p', { key: 'v', className: 'text-caption text-on-surface-variant' }, 'Esta venta ya no tiene piezas disponibles.'),
+        ...saldo.map(r => {
+          const st = dev[r.k] || {};
+          return h('div', { key: r.k, className: 'py-3 border-b border-outline-variant last:border-0' }, [
+            h('label', { key: 'h', className: 'flex items-center gap-3 cursor-pointer' }, [
+              h('input', { key: 'c', type: 'checkbox', checked: !!st.on, className: 'w-5 h-5 rounded border-outline text-primary',
+                onChange: e => setRow(r.k, { on: e.target.checked }) }),
+              h('div', { key: 'n', className: 'flex-1 min-w-0' }, [
+                h('div', { key: 'a', className: 'text-body text-primary font-semibold truncate' }, r.nombre),
+                h('div', { key: 'b', className: 'text-overline uppercase text-on-surface-variant' },
+                  'Talla ' + r.talla + ' · ' + r.disponible + ' disponible(s) · se reconoce ' + fmt(r.valor)),
+              ]),
+            ]),
+            st.on && h('div', { key: 'd', className: 'mt-3 grid grid-cols-1 md:grid-cols-3 gap-3 pl-8' }, [
+              h('div', { key: 'm' }, [
+                h('label', { key: 'l', className: 'block text-overline uppercase text-on-surface-variant mb-1' }, 'Motivo'),
+                h('select', { key: 's', value: st.motivo || '', className: 'w-full h-10 px-3 bg-surface-container-low border border-outline-variant rounded-lg text-body',
+                  onChange: e => setRow(r.k, { motivo: e.target.value }) },
+                  [h('option', { key: '_', value: '', disabled: true }, 'Selecciona…')].concat(reasons.map(x => h('option', { key: x.code, value: x.code }, x.label)))),
+              ]),
+              h('div', { key: 'q' }, [
+                h('label', { key: 'l', className: 'block text-overline uppercase text-on-surface-variant mb-1' }, 'Cantidad'),
+                h('div', { key: 'w', className: 'flex items-center gap-2' }, [
+                  h('button', { key: 'm', className: 'w-9 h-9 grid place-items-center border border-outline-variant rounded-lg', onClick: () => setRow(r.k, { qty: Math.max(1, (st.qty || 1) - 1) }) }, h(MS, { name: 'minus', size: 16 })),
+                  h('span', { key: 'v', className: 'w-8 text-center font-headline text-h2 text-primary' }, st.qty || 1),
+                  h('button', { key: 'p', className: 'w-9 h-9 grid place-items-center border border-outline-variant rounded-lg', onClick: () => setRow(r.k, { qty: Math.min(r.disponible, (st.qty || 1) + 1) }) }, h(MS, { name: 'plus', size: 16 })),
+                ]),
+              ]),
+              h('div', { key: 'r' }, [
+                h('label', { key: 'l', className: 'block text-overline uppercase text-on-surface-variant mb-1' }, 'Revisión de la prenda'),
+                h('input', { key: 'i', value: st.condicion || '', placeholder: 'Excelente · sin uso, con etiqueta…',
+                  className: 'w-full h-10 px-3 bg-surface-container-low border border-outline-variant rounded-lg text-body',
+                  onChange: e => setRow(r.k, { condicion: e.target.value }) }),
+              ]),
+            ]),
+          ]);
+        }),
+      ]),
+
+      h('div', { key: 'ent', className: box + ' mb-5' }, [
+        h('div', { key: 't', className: 'flex items-center gap-3 mb-3' }, [
+          h('span', { key: 'l', className: 'text-overline uppercase tracking-widest text-on-surface-variant' }, 'Lo que el cliente se lleva'),
+          h('input', { key: 'q', value: q, placeholder: 'Buscar artículo o SKU…', onChange: e => setQ(e.target.value),
+            className: 'flex-1 h-10 px-3 bg-surface-container-low border border-outline-variant rounded-lg text-body' }),
+        ]),
+        ...ent.map((l, i) => h('div', { key: 'l' + i, className: 'flex items-center gap-3 py-2 border-b border-outline-variant last:border-0' }, [
+          h('div', { key: 'n', className: 'flex-1 min-w-0' }, [
+            h('div', { key: 'a', className: 'text-body text-primary truncate' }, l.p.nombre),
+            h('div', { key: 'b', className: 'text-overline uppercase text-on-surface-variant' }, 'Talla ' + l.talla + ' · ' + fmt(D.listPrice(l.p, l.talla))),
+          ]),
+          h('span', { key: 'q', className: 'font-headline text-body text-primary' }, '×' + l.qty),
+          h('button', { key: 'x', className: 'w-9 h-9 grid place-items-center text-on-surface-variant hover:text-danger', onClick: () => setEnt(prev => prev.filter((_, j) => j !== i)) }, h(MS, { name: 'trash', size: 16 })),
+        ])),
+        h('div', { key: 'cat', className: 'grid grid-cols-2 md:grid-cols-4 gap-2 mt-3' }, catalogo.map(p => {
+          const r = D.priceRange(p);
+          return h('button', { key: p.id, onClick: () => setPicking(p),
+            className: 'text-left p-3 border border-outline-variant rounded-lg hover:border-primary transition-colors' }, [
+            h('div', { key: 'n', className: 'text-caption text-primary font-semibold truncate' }, p.nombre),
+            h('div', { key: 'p', className: 'text-overline text-on-surface-variant' },
+              r.unico ? fmt(r.min) : fmt(r.min) + ' – ' + fmt(r.max)),
+          ]);
+        })),
+      ]),
+
+      h('div', { key: 'liq', className: 'bg-primary text-on-primary rounded-xl p-5 mb-5' }, [
+        h('div', { key: 'a', className: 'flex justify-between text-body mb-1' }, [h('span', { key: 'l' }, 'Valor reconocido'), h('span', { key: 'v' }, fmt(valorReconocido))]),
+        h('div', { key: 'b', className: 'flex justify-between text-body mb-1' }, [h('span', { key: 'l' }, 'Valor de lo que se lleva'), h('span', { key: 'v' }, fmt(valorEntregado))]),
+        diferencia > 0 && h('div', { key: 'c', className: 'flex justify-between font-headline mt-3 pt-3 border-t border-white/20', style: { fontSize: '26px' } },
+          [h('span', { key: 'l' }, 'A cobrar'), h('span', { key: 'v' }, fmt(diferencia))]),
+        noAprovechado > 0 && h('div', { key: 'd', className: 'mt-3 pt-3 border-t border-white/20 text-caption' },
+          'Sobrante de ' + fmt(noAprovechado) + ' · no se devuelve en efectivo ni queda a favor.'),
+        h('div', { key: 'r', className: 'mt-4' }, [
+          h('label', { key: 'l', className: 'block text-overline uppercase opacity-70 mb-1' }, 'Revisó la mercancía'),
+          h('input', { key: 'i', value: revisor, placeholder: 'Nombre de quien revisó', onChange: e => setRevisor(e.target.value),
+            className: 'w-full h-10 px-3 rounded-lg text-body bg-white/10 border border-white/20 text-on-primary' }),
+        ]),
+        h('div', { key: 'n', className: 'mt-3' }, [
+          h('label', { key: 'l', className: 'block text-overline uppercase opacity-70 mb-1' }, 'Observaciones'),
+          h('input', { key: 'i', value: notas, onChange: e => setNotas(e.target.value),
+            className: 'w-full h-10 px-3 rounded-lg text-body bg-white/10 border border-white/20 text-on-primary' }),
+        ]),
+        h('button', { key: 'go', disabled: vencida, onClick: siguiente,
+          className: 'w-full mt-5 py-3.5 bg-gold text-on-gold text-caption font-bold uppercase tracking-widest rounded-xl disabled:opacity-40' },
+          diferencia > 0 ? 'Cobrar ' + fmt(diferencia) : 'Registrar cambio'),
+      ]),
+    ]);
+
+    return h('div', { className: embedded ? '' : 'flex-1 overflow-y-auto bg-background font-body text-on-surface' }, [
+      cuerpo,
+      picking && h(ExchangeSizeModal, { key: 'sz', p: picking, onClose: () => setPicking(null), onPick: agregar }),
+      cobro && h(window.CheckoutModal, {
+        key: 'co', total: diferencia, itemCount: ent.reduce((a, l) => a + l.qty, 0),
+        client: { generic: true, nombre: sale.cliente }, onClose: () => setCobro(false),
+        onConfirm: (pago) => { setCobro(false); setVendedor({ metodo: (pago && pago.metodo) ? pago.metodo : 'Efectivo' }); },
+      }),
+      vendedor && h(SellerModal, {
+        key: 'sv', sellers: elegibles, onClose: () => setVendedor(null),
+        onPick: (id) => registrar(id, vendedor.metodo),
+      }),
+      recibo && h(ExchangeReceipt, { key: 'rc', recibo, onClose: () => { setRecibo(null); onDone(); } }),
+      // Comprobante térmico: la MISMA autoridad del Punto de venta, con el cambio
+      // como costura. Vive fuera de pantalla y sólo él queda visible al imprimir.
+      recibo ? h(window.BalamTicket, { key: 'tk', sale: recibo.sale, payment: recibo.payment, exchange: recibo.exchange }) : null,
+    ]);
+  }
+
+  // Selector de talla del cambio: mismo idioma que el POS, con el precio vigente
+  // de cada talla (H-36) y sólo las que tienen existencias.
+  function ExchangeSizeModal({ p, onClose, onPick }) {
+    const conStock = (p.stock || []).filter(v => v.stock > 0);
+    return h(window.UI.Modal, { title: 'Selecciona talla', onClose },
+      h('div', { className: 'flex flex-wrap gap-2 py-2' }, conStock.length
+        ? conStock.map(v => h('button', {
+            key: v.talla, onClick: () => onPick(p, v.talla),
+            className: 'flex flex-col items-center gap-0.5 min-w-[76px] px-3 py-2.5 border border-outline-variant hover:border-primary rounded-lg transition-colors',
+          }, [
+            h('span', { key: 't', className: 'font-semibold text-body text-primary' }, v.talla),
+            h('span', { key: 'p', className: 'text-caption font-semibold text-gold-text' }, fmt(D.listPrice(p, v.talla))),
+            h('span', { key: 's', className: 'text-caption text-muted' }, v.stock + ' pz'),
+          ]))
+        : h('p', { className: 'text-caption text-on-surface-variant' }, 'Sin existencias en ninguna talla.')));
+  }
+
+  // La comisión del excedente es del vendedor que atiende el cambio (Contrato §7),
+  // así que se pide igual que el POS pide confirmar vendedor antes de registrar.
+  function SellerModal({ sellers, onClose, onPick }) {
+    return h(window.UI.Modal, { title: 'Vendedor que atiende el cambio', onClose },
+      h('div', { className: 'grid grid-cols-2 gap-2 py-2' }, sellers.length
+        ? sellers.map(v => h('button', {
+            key: v.id, onClick: () => onPick(v.id),
+            className: 'p-3 border border-outline-variant rounded-lg hover:border-primary text-left transition-colors',
+          }, h('span', { className: 'text-body text-primary font-semibold' }, v.nombre)))
+        : h('p', { className: 'text-caption text-on-surface-variant' }, 'No hay vendedores elegibles.')));
+  }
+
+  // Acuse en pantalla. El documento impreso lo arma window.BalamTicket.
+  function ExchangeReceipt({ recibo, onClose }) {
+    const ex = recibo.exchange;
+    React.useEffect(() => {
+      if (C.get('print.auto')) { const t = setTimeout(() => window.print(), 350); return () => clearTimeout(t); }
+    }, []);
+    return h(window.UI.Modal, {
+      title: 'Cambio registrado', onClose,
+      footer: [
+        h('button', { key: 'p', className: 'flex-1 py-3.5 border border-outline-variant text-caption font-bold uppercase tracking-widest rounded-xl', onClick: () => window.print() }, 'Imprimir comprobante'),
+        h('button', { key: 'n', className: 'flex-1 py-3.5 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-xl', onClick: onClose }, 'Listo'),
+      ],
+    }, h('div', { className: 'py-2 space-y-1 text-body' }, [
+      h('div', { key: 'f' }, ['Cambio ', h('strong', { key: 'b' }, ex.folio)]),
+      h('div', { key: 'o', className: 'text-caption text-on-surface-variant' }, 'Sobre la venta ' + ex.origenFolio),
+      ex.diferencia > 0 && h('div', { key: 'd', className: 'text-caption' }, 'Diferencia cobrada · ' + fmt(ex.diferencia)),
+      ex.valorNoAprovechado > 0 && h('div', { key: 'n', className: 'text-caption' }, 'Sobrante no aprovechado · ' + fmt(ex.valorNoAprovechado)),
+    ]));
   }
 
   window.ReturnsScreen = ReturnsScreen;

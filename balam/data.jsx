@@ -1388,7 +1388,7 @@
   //
   // El cambio NUNCA devuelve efectivo: si lo entregado vale menos, el sobrante
   // se registra como valor no aprovechado (Contrato del Cambio, seccion 4).
-  function recordExchange({ origenFolio, lineas, usuario, notas, metodoPago, fecha: fechaIn }) {
+  function recordExchange({ origenFolio, lineas, usuario, vendedorId, revisadoPor, notas, metodoPago, fecha: fechaIn }) {
     const sale = findSaleByFolio(origenFolio);
     if (!sale) return { ok: false, error: 'sale_not_found' };
     const items = (lineas || []).filter(l => l && (l.lado === 'devuelto' || l.lado === 'entregado'));
@@ -1423,7 +1423,8 @@
     const id = 'cmb-' + newOperationId();
     const exch = {
       id, folio: nextFolio(id, fecha), origenFolio: sale.folio, fecha,
-      usuario: usuario || '', notas: notas || '',
+      usuario: usuario || '', vendedorId: vendedorId || undefined,
+      revisadoPor: revisadoPor || undefined, notas: notas || '',
       valorReconocido: money(valorReconocido), valorEntregado: money(valorEntregado),
       diferencia, valorNoAprovechado, baseComision: diferencia,
       lineas: items.map(l => {
@@ -1431,6 +1432,9 @@
         return {
           lado: l.lado, productId: p ? p.id : l.productId, sku: l.sku, nombre: l.nombre,
           talla: l.talla, qty: Number(l.qty) || 0, motivo: l.motivo || '',
+          // La condicion solo aplica a lo que el cliente ENTREGA: es el resultado
+          // de la revision que decide si la prenda se recibe (Contrato, seccion 5).
+          condicion: l.lado === 'devuelto' ? (l.condicion || '') : undefined,
           precio: l.lado === 'entregado' ? listPrice(p, l.talla) : recognizedValue(sale.folio, l.sku, l.talla),
         };
       }),
