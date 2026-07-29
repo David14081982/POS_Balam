@@ -1637,6 +1637,53 @@ estable dentro de la transacción, ya verificado en H-01, pero no se probó con 
 sesiones simultáneas.
 **Corrección documentada:** `docs/fixes/commit-transaccional-cambio.md`.
 
+## H-39 — Una aserción estática se estaba tomando por verificación
+
+**Estado:** RESUELTO
+**Fecha de registro:** 28/07/2026
+**Fecha de resolución:** 28/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** `AP-09` reincidió **cinco veces en tres historias**: el `CHECK` con
+subconsulta y la ventana corta de `recordSale` en H-36, el selector de talla del
+E2E que pasaba porque la tarjeta ya mostraba las dos cifras, la rama de consumo
+que faltaba en H-37 y los códigos de cobro de H-38 comprobados sin mirar dónde se
+emiten. En los cinco casos el arnés afirmaba que el texto decía lo correcto y
+nadie comprobaba que el comportamiento lo fuera.
+**Origen de auditoría:** deuda del Sistema Operativo priorizada tras H-38.
+**Riesgo:** falsa confianza. Ninguna de las cinco llegó a producción —dos
+fallaron en el push y tres las detuvo la verificación— pero el patrón consume
+rondas de despliegue y, sobre todo, hace que un arnés en verde no signifique lo
+que aparenta.
+**Reproducción:** el detector nuevo señala una función sin verificación en un
+caso sintético; sin él, la cadena no tenía forma de exigirlo.
+**Corrección:** dos reglas y un guardián mecánico.
+`R-DB-09` (BLOCKING) fija que una aserción de texto sobre un `.sql` sólo prueba
+**presencia**, nunca corrección: toda afirmación sobre comportamiento se prueba
+ejecutando el SQL, y la verificación autocontenida es esa prueba.
+`R-DB-10` (REQUIRED) exige que toda función o vista nueva de `pos` esté
+ejercitada por una verificación que la nombre y aborte. `test-migrations.mjs`
+lo mecaniza recorriendo la cadena, y **el propio detector se prueba contra un
+caso sintético** para no ser otro verde sin defensa detrás.
+**Alcance:** funciones y vistas. Las restricciones `check` quedan fuera del
+automatismo porque se verifican por comportamiento y no por nombre; `R-DB-09`
+les aplica igual.
+**Pruebas:** `test-migrations.mjs` 31/31, con los dos checks nuevos. La cadena
+completa —36 migraciones— pasa el guardián sin una sola excepción: todas las
+funciones y vistas de `pos` ya estaban ejercitadas.
+**Despliegue:** ninguno. La historia no toca el esquema.
+**Pendiente:** **ejecutar el SQL contra un PostgreSQL real antes del push sigue
+sin vía disponible.** Docker no está operativo y el PostgreSQL 18.4 instalado
+exige `scram-sha-256` con una contraseña de la que no se dispone;
+`supabase db lint --linked` funciona pero analiza el esquema **desplegado**, no
+las migraciones pendientes, así que no habría atrapado ninguno de los cinco
+casos. Habilitar esa vía —arrancar Docker o facilitar la credencial local— es lo
+único que falta para cerrar `AP-09` por completo.
+**Riesgo residual:** el automatismo garantiza que exista una verificación que
+ejercite cada función y vista, no que esa verificación sea buena. La calidad de
+la verificación sigue dependiendo de `FF-10`.
+**Corrección documentada:** este registro; la historia no produjo documento de
+corrección propio por su tamaño.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

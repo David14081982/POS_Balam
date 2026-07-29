@@ -43,6 +43,24 @@ Candado explícito antes de validar (`pg_advisory_xact_lock`, `for update` en
 orden estable) e idempotencia por clave + hash del payload.
 Origen: H-01, H-04, H-35
 
+**R-DB-09 · BLOCKING · Una aserción de texto sobre un `.sql` sólo prueba
+PRESENCIA, nunca corrección.**
+Un `grep` puede afirmar que la migración *menciona* algo; jamás que el SQL sea
+válido ni que haga lo que dice. Toda afirmación sobre el **comportamiento** de
+SQL se prueba ejecutándolo, y la verificación autocontenida es esa prueba. Un
+arnés no puede sustituirla, sólo acompañarla.
+Origen: H-36, H-37, H-38 · Antipatrón: `AP-09`
+
+**R-DB-10 · REQUIRED · Toda función o vista nueva de `pos` debe estar
+ejercitada por una verificación que la nombre y aborte si no se comporta.**
+Mecanizado: `test-migrations.mjs` recorre la cadena, detecta cada
+`create [or replace] function|view pos.X` y exige una verificación posterior que
+mencione `pos.X` y contenga `raise exception`. El propio detector se prueba
+contra un caso sintético, para que el guardián no sea otro verde sin defensa.
+Las restricciones `check` quedan fuera del automatismo —se verifican por
+comportamiento, no por nombre— pero `R-DB-09` les aplica igual.
+Origen: H-39
+
 **R-DB-08 · REQUIRED · Una migración aditiva, verificada y no destructiva forma
 parte de la autorización de la historia.**
 No requiere una autorización aparte: se anuncia brevemente antes de ejecutarla
@@ -87,8 +105,14 @@ consecutivas y falle si el diff excede los bloques declarados.
 
 ### AP-09 · Verificación que comprueba el síntoma, no la defensa
 **Origen:** H-35 · **Estado:** vigente · **Severidad:** BLOCKING
+**Reincidencias:** cinco en tres historias —H-36 (el `CHECK` con subconsulta y la
+ventana corta en `recordSale`), H-36 E2E (la tarjeta ya contenía las dos cifras
+que buscaba el selector), H-37 (la rama de consumo que faltaba) y H-38 (los
+códigos de cobro comprobados sin mirar dónde se emiten)—. Ninguna llegó a
+producción: dos fallaron en el push y tres las detuvo la verificación. El coste
+fue de ida y vuelta, no de datos. Es el antipatrón más reincidente del catálogo.
 **Contexto:** se escribe una migración de verificación para dar por buena una
-corrección.
+corrección, o un arnés que comprueba el texto de un `.sql`.
 **Síntoma:** la verificación pasa y el defecto sigue presente, porque comprobó
 el resultado visible en vez del mecanismo que lo protege.
 **Causa raíz:** confundir «hoy se comporta bien» con «no puede comportarse mal».
@@ -106,4 +130,8 @@ las defensas por separado.
 **Referencias:** `docs/fixes/saldo-por-renglon.md` ·
 `supabase/migrations/20260728004900_pos_h35_line_balance_grants.sql` ·
 `ADR-004`
-**Camino de retiro:** no aplica; es un criterio de diseño de la verificación.
+**Camino de retiro:** parcialmente recorrido en H-39. `test-migrations.mjs`
+mecaniza ya el caso más caro —una función o vista sin verificación que la
+ejercite— y se prueba a sí mismo. Queda fuera del automatismo la calidad de la
+verificación cuando sí existe, y sobre todo **ejecutar el SQL contra un
+PostgreSQL real antes del push**, que sigue sin vía disponible en este equipo.

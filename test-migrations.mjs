@@ -113,5 +113,38 @@ check('17. el alias no altera el contrato transaccional de venta ni devolución'
   !/create or replace function pos\.(commit_sale|commit_return)/.test(aliases)
     && !/drop\s+(table|column)/.test(aliases));
 
+// H-39: una asercion de texto solo prueba PRESENCIA. Toda funcion o vista de
+// `pos` debe estar EJERCITADA por una verificacion que la nombre y que aborte
+// —`raise exception`— cuando no se comporte como dice. Sin eso, «el texto parece
+// correcto» se confunde con «el SQL hace lo correcto» (AP-09).
+function sinVerificacion(lista, contenido) {
+  const re = /create (?:or replace )?(?:function|view)\s+pos\.([a-z_]+)/gi;
+  const faltantes = [];
+  for (const f of lista) {
+    if (/verification/.test(f)) continue;
+    const t = contenido[f];
+    const objetos = new Set();
+    let m;
+    while ((m = re.exec(t))) objetos.add(m[1]);
+    const posteriores = lista.filter(x => x > f);
+    for (const o of objetos) {
+      const ejercitada = posteriores.some(x => contenido[x].includes('pos.' + o) && /raise exception/.test(contenido[x]))
+        || (/raise exception/.test(t) && t.includes('pos.' + o));
+      if (!ejercitada) faltantes.push(f.slice(0, 14) + ' -> pos.' + o);
+    }
+  }
+  return faltantes;
+}
+const contenidoMig = Object.fromEntries(files.map(f => [f, readFileSync(join(migrationDir, f), 'utf8')]));
+const huerfanas = sinVerificacion(files, contenidoMig);
+check('18. toda funcion o vista de pos esta ejercitada por una verificacion',
+  huerfanas.length === 0, huerfanas.slice(0, 4).join(' | '));
+
+// El detector se prueba a si mismo: si no senalara una violacion evidente, el
+// check 18 seria otro verde sin defensa detras.
+const sintetico = { '99999999999999_falsa.sql': 'create or replace function pos.jamas_verificada() returns int language sql as $x$ select 1 $x$;' };
+check('19. el detector senala una funcion sin verificacion',
+  sinVerificacion(['99999999999999_falsa.sql'], sintetico).length === 1);
+
 console.log(`\n════════ ${passed} pasaron, ${failed} fallaron ════════`);
 process.exit(failed ? 1 : 0);
