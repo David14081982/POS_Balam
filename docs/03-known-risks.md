@@ -1799,7 +1799,7 @@ variaría.
 **Estado:** RESUELTO
 **Fecha de registro:** 29/07/2026
 **Fecha de resolucion:** 29/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `779b607`
 **Evidencia:** C4 dejo el modelo y C5 la autoridad transaccional, pero ninguna
 pantalla invocaba `recordExchange`. Ademas el modelo calculaba `base_comision`
 sin poder atribuirla —`pos.exchanges` no tenia vendedor— y no guardaba rastro de

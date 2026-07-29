@@ -3,7 +3,7 @@
 **Riesgo:** H-42
 **Estado:** RESUELTO
 **Fecha:** 29/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `779b607`
 
 Fase C6 del módulo de Cambios, gobernada por `docs/04-contrato-del-cambio.md` y
 `ADR-010`. Hace alcanzable lo que C4 y C5 dejaron construido.
