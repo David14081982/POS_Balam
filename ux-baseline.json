@@ -5,5 +5,12 @@
   "completado": true,
   "motivo": "linea base instrumentada de H-43, previa a H-44",
   "fijada": "2026-07-29"
+ },
+ "cambio-de-talla-repetido": {
+  "interacciones": 10,
+  "validaciones": 2,
+  "completado": true,
+  "motivo": "H-44: segundo cambio del turno, operacion recordada",
+  "fijada": "2026-07-29"
  }
 }

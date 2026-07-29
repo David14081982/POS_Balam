@@ -47,7 +47,7 @@ const BASE_PATH = path.join(ROOT, 'ux-baseline.json');
 
 const INSTRUMENTO = () => {
   window.__printed = 0; window.print = () => { window.__printed++; };
-  const ux = { clics: 0, textos: 0, menus: 0, validaciones: [], pasos: [], t0: null, t1: null };
+  const ux = { clics: 0, textos: 0, menus: 0, validaciones: [], pasos: [], t0: null, t1: null, pausado: false };
   window.__ux = ux;
   const camposTocados = new Set();
   const nombra = (el) => el.getAttribute('data-testid')
@@ -61,12 +61,12 @@ const INSTRUMENTO = () => {
   };
   document.addEventListener('click', (e) => {
     const t = e.target.closest('button, [role=button], label, input[type=checkbox]');
-    if (!t) return;
+    if (!t || ux.pausado) return;
     ux.clics++; marca('clic', t);
   }, true);
   document.addEventListener('input', (e) => {
     const t = e.target;
-    if (t.tagName !== 'INPUT' || t.type === 'checkbox') return;
+    if (t.tagName !== 'INPUT' || t.type === 'checkbox' || ux.pausado) return;
     // Una captura de texto cuenta UNA vez por campo, no una por tecla.
     const id = t.getAttribute('data-testid') || t.placeholder || t.name || String(ux.textos);
     if (camposTocados.has(id)) return;
@@ -74,11 +74,14 @@ const INSTRUMENTO = () => {
     ux.textos++; marca('escribe', t);
   }, true);
   document.addEventListener('change', (e) => {
-    if (e.target.tagName !== 'SELECT') return;
+    if (e.target.tagName !== 'SELECT' || ux.pausado) return;
     ux.menus++; marca('menú', e.target);
   }, true);
   // Validación de negocio atravesada: un control que estaba bloqueado y se libera.
   window.__validacion = (nombre, bloqueado, libre) => ux.validaciones.push({ nombre, bloqueado, libre });
+  // Sondear una defensa NO es un gesto del cajero: se mide sin contarlo, para
+  // que probar mas garantias jamas encarezca artificialmente el recorrido.
+  window.__pausa = (v) => { ux.pausado = !!v; };
 };
 
 const b = await chromium.launch({ channel: 'chrome', headless: true });
@@ -92,9 +95,16 @@ try {
 
   // Semilla REPRESENTATIVA del negocio (R-DEL-12): venta real, vendedor elegible
   // según H-29, y otra talla del mismo artículo con precio distinto (H-36).
-  const semilla = await page.evaluate(() => {
+  const REPETIDO = ESCENARIO === 'cambio-de-talla-repetido';
+  const semilla = await page.evaluate((repetido) => {
     const D = window.DATA;
     if (window.STORE) { window.STORE.pushRows = () => {}; window.STORE.pushSale = () => {}; window.STORE.pushExchange = () => {}; }
+    // El escenario «repetido» representa el segundo cambio seguido del turno:
+    // el equipo ya recuerda la operacion declarada y no vuelve a preguntarla.
+    try {
+      if (repetido) localStorage.setItem('balam_ultima_operacion', 'cambio');
+      else localStorage.removeItem('balam_ultima_operacion');
+    } catch (e) {}
     D.products.length = 0; D.sales.length = 0; D.exchanges.length = 0;
     const T = D.SIZES_LETRA;
     const p = D.hydrate({ id: 'ux', cat: '21', manga: 'MC', tela: 'ALG', color: 'BL', cuello: 'NOR',
@@ -106,8 +116,12 @@ try {
       metodo: 'Efectivo', estado: 'Pagado', total: 350, itemCount: 1 });
     D.sellers.length = 0;
     D.sellers.push({ id: 'v1', nombre: 'Vendedor UX', role: 'vendedor', active: true, comisionPct: 0 });
+    // Nadie opera el mostrador sin sesion abierta: el estado valido del negocio
+    // incluye al cajero identificado, del que H-44 prellena el revisor.
+    window.AUTH = window.AUTH || {};
+    window.AUTH.current = () => ({ nombre: 'Ana Cajera', email: 'ana@balam.mx' });
     return { folio: v.folio, cara: T[2] };
-  });
+  }, REPETIDO);
   const espera = (ms) => page.waitForTimeout(ms);
   const teclea = (sel, val) => page.evaluate(([s, v]) => {
     const i = document.querySelector(s); if (!i) return false;
@@ -121,6 +135,9 @@ try {
   // ── Escenario: cambio de talla ────────────────────────────────────────────
   await page.evaluate(() => { const x = [...document.querySelectorAll('nav button')].find(e => /Devoluciones/.test(e.innerText)); if (x) x.click(); });
   await espera(1200);
+  // H-44: la operación se declara ANTES de buscar. El buscador ya habla en el
+  // idioma del cambio y la venta elegida aterriza directamente en su pantalla.
+  if (!REPETIDO) { await pulsa('[data-testid="operacion-cambio"]'); await espera(500); }
   await page.evaluate((f) => {
     const i = [...document.querySelectorAll('input')].find(x => /folio|buscar/i.test(x.placeholder || ''));
     if (i) { Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set.call(i, f);
@@ -128,36 +145,46 @@ try {
   }, semilla.folio);
   await espera(1000);
   await page.evaluate((f) => { const x = [...document.querySelectorAll('button')].find(e => e.innerText.includes(f)); if (x) x.click(); }, semilla.folio);
-  await espera(1000);
-  await page.evaluate(() => { const x = [...document.querySelectorAll('button')].find(e => /^cambio$/i.test(e.innerText.trim())); if (x) x.click(); });
-  await espera(900);
+  await espera(1100);
   await pulsa('input[type=checkbox]');
-  await espera(600);
-  await teclea('select', 'Talla');
-  await teclea('input[placeholder*="Excelente"]', 'Excelente, sin uso');
-  await espera(400);
+  await espera(700);
+  // Motivo y condición llegan preseleccionados y VISIBLES; el revisor, prellenado.
   await page.evaluate(() => { const x = [...document.querySelectorAll('button')].find(e => /CAMISA UX/.test(e.innerText)); if (x) x.click(); });
   await espera(700);
   await page.evaluate((t) => {
-    const x = [...document.querySelectorAll('button')].find(e => e.innerText.includes(t) && /pz/.test(e.innerText));
+    const x = [...document.querySelectorAll('button')].find(e => new RegExp('^' + t + '\\b').test(e.innerText.trim()));
     if (x) x.click();
   }, semilla.cara);
-  await espera(800);
-  await teclea('input[placeholder*="Nombre de quien"]', 'Ana Revisora');
-  await espera(300);
+  await espera(700);
+
+  // Validación de negocio 2 (H-44): la revisión de la prenda sigue siendo
+  // OBLIGATORIA aunque llegue preseleccionada. Se sondea en pausa: vaciar el
+  // campo para comprobar la defensa es una prueba, no un gesto del cajero.
+  await page.evaluate(() => window.__pausa(true));
+  await teclea('[data-testid="cambio-condicion"]', '');
+  await espera(400);
+  await pulsa('[data-testid="cambio-accion"]');
+  await espera(600);
+  const bloqCond = await page.evaluate(() => !document.querySelector('[data-testid="checkout-confirmar"]'));
+  await teclea('[data-testid="cambio-condicion"]', 'Sin uso, con etiqueta');
+  await espera(400);
+  await page.evaluate(() => window.__pausa(false));
+
   await pulsa('[data-testid="cambio-accion"]');
   await espera(900);
-  // Validación de negocio: el cobro está bloqueado hasta capturar el efectivo.
-  const bloq = await page.evaluate(() => document.querySelector('[data-testid="checkout-confirmar"]').disabled);
+  const libreCond = await page.evaluate(() => !!document.querySelector('[data-testid="checkout-confirmar"]'));
+  await page.evaluate(([n, b, l]) => window.__validacion(n, b, l), ['la revision de la prenda sigue siendo obligatoria', bloqCond, libreCond]);
+
+  // Validación de negocio 1: el cobro está bloqueado hasta capturar el efectivo.
+  const bloq = await page.evaluate(() => { const e = document.querySelector('[data-testid="checkout-confirmar"]'); return e ? e.disabled : null; });
   await teclea('[data-testid="checkout-recibido"]', '100');
   await espera(500);
-  const libre = await page.evaluate(() => !document.querySelector('[data-testid="checkout-confirmar"]').disabled);
+  const libre = await page.evaluate(() => { const e = document.querySelector('[data-testid="checkout-confirmar"]'); return e ? !e.disabled : null; });
   await page.evaluate(([n, b, l]) => window.__validacion(n, b, l), ['cobro exige efectivo recibido', bloq, libre]);
   await pulsa('[data-testid="checkout-confirmar"]');
   await espera(900);
   await pulsa('[data-testid="cambio-vendedor"]');
   await espera(1400);
-
   medicion = await page.evaluate(() => Object.assign({}, window.__ux, {
     impreso: window.__printed,
     registrado: (window.DATA.exchanges || []).length === 1,

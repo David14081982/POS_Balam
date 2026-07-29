@@ -33,13 +33,17 @@
     return Badge({ tone, children: txt });
   }
 
-  function Segment({ value, onChange, options }) {
+  // `testid` es opcional y estampa un contrato estable por opción
+  // (`<testid>-<id>`) para que las pruebas no localicen la opción por su texto,
+  // que aquí se pinta en mayúsculas por CSS (R-DEL-10).
+  function Segment({ value, onChange, options, testid }) {
     return React.createElement('div', {
       className: 'flex p-1 bg-surface-container rounded-lg border border-outline-variant overflow-x-auto no-scrollbar',
     }, options.map(([id, label]) => {
       const active = value === id;
       return React.createElement('button', {
         key: id,
+        'data-testid': testid ? testid + '-' + id : undefined,
         className: 'shrink-0 whitespace-nowrap px-4 py-1.5 text-overline uppercase rounded transition-colors '
           + (active ? 'bg-gold text-on-gold shadow-e1' : 'text-on-surface-variant hover:text-primary'),
         onClick: () => onChange(id),

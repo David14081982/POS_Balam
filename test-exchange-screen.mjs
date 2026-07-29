@@ -55,8 +55,12 @@ ok('14. pide el vendedor que atiende el cambio',
 ok('15. usa la elegibilidad comercial de H-29', /isEligibleSeller/.test(ex));
 ok('16. exige la revisión de cada prenda recibida',
   /Registra la revisión de/.test(ex) && /revisadoPor: revisor/.test(ex));
-ok('17. advierte del sobrante que el cliente pierde',
-  /no se devuelve en efectivo/i.test(ex) && /window\.confirm/.test(ex));
+// El aviso del sobrante es del SISTEMA, no del navegador. Se comprueba que no
+// queda ninguna LLAMADA a window.confirm —el parentesis distingue la llamada de
+// la mencion en un comentario, que antes hacia pasar esta prueba por accidente.
+ok('17. advierte del sobrante con el modal del sistema, no con window.confirm',
+  /no se devuelve en efectivo/i.test(ex) && !/window\.confirm\(/.test(ex)
+    && /cambio-aviso-confirmar/.test(ex) && /cambio-aviso-revisar/.test(ex));
 ok('18. no ofrece devolver efectivo en ningún punto',
   !/reembolso|devolver dinero/i.test(ex));
 
@@ -102,8 +106,19 @@ ok('35. distingue cobrar de valor no aprovechado',
 ok('36. hay estado vacío en ambos bloques', (ex.match(/vacio\(/g) || []).length >= 2);
 ok('37. el renglón nuevo se ilumina como en el POS',
   /flashLine/.test(ex) && /ring-2 ring-success/.test(ex));
-ok('38. el botón se deshabilita mientras falte una mitad',
-  /disabled: vencida \|\| !marcados\.length \|\| !ent\.length/.test(ex));
+// H-44: el boton ya no es un callejon sin salida. Solo el plazo vencido lo
+// deshabilita; en cualquier otro estado responde y dice que falta, y `validar()`
+// sigue siendo la unica autoridad que decide si se registra.
+ok('38. el botón principal guía en vez de quedar muerto',
+  /const guia = vencida \?/.test(ex) && /disabled: vencida,/.test(ex)
+    && /guia \? guia\.txt :/.test(ex) && /if \(!validar\(\)\)/.test(ex));
+ok('38b. la preselección de motivo y condición es visible y editable',
+  /motivo: motivoDefault, condicion: CONDICIONES\[0\]/.test(ex)
+    && /'data-testid': 'cambio-motivo'/.test(ex) && /'data-testid': 'cambio-condicion'/.test(ex)
+    && /onChange: e => setRow\(r\.k, \{ motivo: e\.target\.value \}\)/.test(ex)
+    && /onChange: e => setRow\(r\.k, \{ condicion: e\.target\.value \}\)/.test(ex));
+ok('38c. el revisor se prellena con la sesión y sigue editable',
+  /sesion\.nombre \|\| sesion\.email/.test(ex) && /onChange: e => setRevisor\(e\.target\.value\)/.test(ex));
 ok('39. lee código de barras igual que el Punto de venta',
   /BARCODES && window\.BARCODES\.find\(raw\)/.test(ex) && /BARCODES\.parse\(raw\)/.test(ex)
     && /addEventListener\('keydown'/.test(ex) && /now - lt > 50/.test(ex));

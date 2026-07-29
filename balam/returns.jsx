@@ -16,20 +16,35 @@
   // El cambio vive en `ExchangeDetail`, que reutiliza las mismas autoridades.
   const OPERACIONES = [['devolucion', 'Devolución'], ['cambio', 'Cambio']];
 
+  // H-44: la operación se declara ANTES de buscar y el equipo recuerda la
+  // última. Un mostrador que atiende cinco cambios seguidos no vuelve a
+  // declararlo cinco veces. Es preferencia del dispositivo, no dato del
+  // negocio: vive en localStorage y su pérdida no cuesta nada.
+  const OP_KEY = 'balam_ultima_operacion';
+  const ultimaOperacion = () => {
+    try { const v = localStorage.getItem(OP_KEY); return OPERACIONES.some(o => o[0] === v) ? v : 'devolucion'; }
+    catch (e) { return 'devolucion'; }
+  };
+  const recordarOperacion = (v) => { try { localStorage.setItem(OP_KEY, v); } catch (e) {} };
+
   function ReturnsScreen() {
     const [folio, setFolio] = useState(null);
-    const [tipo, setTipo] = useState('devolucion');
+    const [tipo, setTipoRaw] = useState(ultimaOperacion);
+    const setTipo = (v) => { setTipoRaw(v); recordarOperacion(v); };
     const [, bump] = useState(0);
     const refresh = () => bump(v => v + 1);
-    const volver = () => { setFolio(null); setTipo('devolucion'); };
+    // Al volver se conserva la operación declarada: el cajero sigue en lo suyo.
+    const volver = () => setFolio(null);
     if (folio) {
       // Resuelve por folio vigente o por el folio impreso conservado como alias.
       const sale = D.findSaleByFolio ? D.findSaleByFolio(folio) : D.sales.find(s => s.folio === folio);
       if (!sale) { volver(); return null; }
       const done = () => { volver(); refresh(); };
+      // Sigue disponible como CORRECCIÓN: la declaración primaria ya ocurrió en
+      // el buscador, pero equivocarse de operación no puede obligar a empezar.
       const selector = h('div', { key: 'op', className: 'max-w-[1100px] mx-auto px-6 pt-6' }, [
         h('div', { key: 'l', className: 'text-overline uppercase tracking-widest text-on-surface-variant mb-2' }, 'Tipo de operación'),
-        h(Segment, { key: 's', options: OPERACIONES, value: tipo, onChange: setTipo }),
+        h(Segment, { key: 's', options: OPERACIONES, value: tipo, onChange: setTipo, testid: 'operacion-detalle' }),
       ]);
       // El contenedor NO scrollea: cada detalle trae el suyo. Anidar dos
       // 'overflow-y-auto' rompia el desplazamiento de Devoluciones, que debe
@@ -41,7 +56,7 @@
           : h(ReturnDetail, { key: 'rd', sale, onBack: volver, onDone: done, embedded: true }),
       ]);
     }
-    return h(ReturnPicker, { onPick: setFolio });
+    return h(ReturnPicker, { onPick: setFolio, tipo, onTipo: setTipo });
   }
 
   // ── H-34: presentación del plazo congelado en la venta ────────────────────────
@@ -60,7 +75,7 @@
   }
 
   // ── Paso 1: elegir la venta a devolver + historial de devoluciones ─────────────
-  function ReturnPicker({ onPick }) {
+  function ReturnPicker({ onPick, tipo, onTipo }) {
     const [q, setQ] = useState('');
     const [plazo, setPlazo] = useState('todos');
     const [buscando, setBuscando] = useState(false);
@@ -102,9 +117,20 @@
         // Columna: selector de venta
         h('div', { key: 'pick', className: 'lg:col-span-2 space-y-4' }, [
           h(GlassCard, { key: 'search', className: 'p-4' }, [
+            // H-44: primero se declara QUÉ se va a hacer; después se busca la
+            // venta. El orden importa porque el resto de la pantalla habla ya
+            // en el idioma de la operación elegida.
+            h('div', { key: 'op', className: 'mb-4 pb-4 border-b border-outline-variant' }, [
+              h('div', { key: 'l', className: 'text-overline uppercase tracking-widest text-on-surface-variant mb-2' }, 'Qué vas a registrar'),
+              h(Segment, { key: 's', options: OPERACIONES, value: tipo, onChange: onTipo, testid: 'operacion' }),
+              h('p', { key: 'h', className: 'text-caption text-on-surface-variant mt-2' },
+                tipo === 'cambio'
+                  ? 'El cliente entrega mercancía y se lleva otra. No se devuelve efectivo.'
+                  : 'Se reembolsa la mercancía que el cliente entrega.'),
+            ]),
             h('div', { key: 'l', className: 'flex items-center gap-2 mb-3 text-on-surface-variant' }, [
-              h(MS, { key: 'i', name: 'undo', size: 18 }),
-              h(SerifHeading, { key: 't', children: 'Selecciona la venta a devolver' }),
+              h(MS, { key: 'i', name: tipo === 'cambio' ? 'repeat' : 'undo', size: 18 }),
+              h(SerifHeading, { key: 't', children: tipo === 'cambio' ? 'Selecciona la venta a cambiar' : 'Selecciona la venta a devolver' }),
             ]),
             h('div', { key: 's', className: 'relative' }, [
               h(MS, { key: 'i', name: 'search', size: 18, className: 'absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant' }),
@@ -373,12 +399,23 @@
     const [query, setQuery] = useState('');
     const [flash, setFlash] = useState(null);
     const [notas, setNotas] = useState('');
-    const [revisor, setRevisor] = useState('');
     const [cobro, setCobro] = useState(false);
     const [recibo, setRecibo] = useState(null);
     const [vendedor, setVendedor] = useState(null);
+    const [aviso, setAviso] = useState(null);
     const scanRef = React.useRef(null);
+    const refDev = React.useRef(null), refCat = React.useRef(null), refDatos = React.useRef(null);
     const reasons = C.list('return_reason');
+    // H-44 · Preselección VISIBLE, nunca silenciosa. El motivo abrumadoramente
+    // más frecuente del cambio es la talla, así que llega marcado en el propio
+    // desplegable: el cajero lo LEE y lo corrige con un toque. Preseleccionar no
+    // es decidir por él; es no obligarle a repetir lo de siempre.
+    const motivoDefault = ((reasons.find(x => /talla/i.test(x.label || x.code)) || reasons[0]) || {}).code || '';
+    const CONDICIONES = ['Sin uso, con etiqueta', 'Sin uso, sin etiqueta', 'Usada, en buen estado', 'Con detalle'];
+    // Quien revisó es, por defecto, quien tiene la sesión abierta. Sigue siendo
+    // un campo de texto editable: revisar y cobrar pueden ser dos personas.
+    const sesion = (window.AUTH && window.AUTH.current && window.AUTH.current()) || {};
+    const [revisor, setRevisor] = useState(sesion.nombre || sesion.email || '');
     const plazo = deadlineOf(sale);
     const vencida = plazo.status === 'vencido';
     const elegibles = D.sellers.filter(v => (D.isEligibleSeller ? D.isEligibleSeller(v) : v.active));
@@ -391,7 +428,11 @@
         nombre: ((sale.lineas || []).find(l => l.sku === r.sku && l.talla === r.talla) || {}).nombre || r.sku,
         valor: D.recognizedValue ? D.recognizedValue(sale.folio, r.sku, r.talla) : 0,
       }));
-    const setRow = (k, patch) => setDev(p => Object.assign({}, p, { [k]: Object.assign({ on: true, qty: 1 }, p[k], patch) }));
+    // La preselección se aplica al ABRIR el renglón y nunca pisa lo ya escrito:
+    // el `patch` y el estado previo mandan sobre los valores por defecto.
+    const setRow = (k, patch) => setDev(p => Object.assign({}, p, {
+      [k]: Object.assign({ on: true, qty: 1, motivo: motivoDefault, condicion: CONDICIONES[0] }, p[k], patch),
+    }));
     const quitarDev = (k) => setDev(p => { const c = Object.assign({}, p); delete c[k]; return c; });
     const marcados = saldo.filter(r => dev[r.k] && dev[r.k].on);
 
@@ -441,7 +482,7 @@
     // Lector USB (HID) con captura global, igual que el POS: distingue el lector
     // del tecleo humano por la cadencia entre teclas.
     const scanRT = React.useRef({});
-    scanRT.current = { agregar, scanEl: scanRef.current, blocked: !!(picking || cobro || vendedor || recibo) };
+    scanRT.current = { agregar, scanEl: scanRef.current, blocked: !!(picking || cobro || vendedor || recibo || aviso) };
     React.useEffect(() => {
       let buf = '', lt = 0;
       function onKey(e) {
@@ -477,12 +518,34 @@
       if (!String(revisor).trim()) { toast('Escribe quién revisó la mercancía', 'var(--danger)'); return false; }
       return true;
     }
+    // H-44 · El botón principal GUÍA: nunca es un callejón sin salida. Declara
+    // qué falta y lleva hasta ahí. `validar()` sigue siendo la única autoridad
+    // que decide si se registra: la guía informa, no autoriza.
+    const faltaMotivo = marcados.find(r => !dev[r.k].motivo);
+    const faltaRevision = marcados.find(r => !String(dev[r.k].condicion || '').trim());
+    const guia = vencida ? { txt: 'Fuera de plazo', icon: 'alert', foco: null }
+      : !marcados.length ? { txt: 'Marca lo que entrega', icon: 'undo', foco: refDev }
+      : !ent.length ? { txt: 'Elige lo que se lleva', icon: 'search', foco: refCat }
+      : faltaMotivo ? { txt: 'Falta el motivo', icon: 'alert', foco: refDev }
+      : faltaRevision ? { txt: 'Falta la revisión de la prenda', icon: 'alert', foco: refDev }
+      : !String(revisor).trim() ? { txt: 'Falta quién revisó', icon: 'alert', foco: refDatos }
+      : null;
     function siguiente() {
-      if (!validar()) return;
+      if (!validar()) {
+        if (guia && guia.foco && guia.foco.current) guia.foco.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
       if (diferencia > 0) { setCobro(true); return; }
-      if (noAprovechado > 0 && !window.confirm(
-        'El cliente se lleva ' + fmt(noAprovechado) + ' menos de lo que entrega.\n\n'
-        + 'Ese saldo NO se devuelve en efectivo y NO queda a favor: se pierde.\n\n¿Confirmas el cambio?')) return;
+      if (noAprovechado > 0) {
+        // Modal del sistema, no `window.confirm`: el navegador no sabe pintar
+        // una cifra ni distinguir la acción destructiva de la que sigue.
+        setAviso({
+          titulo: 'El cliente pierde ' + fmt(noAprovechado),
+          cuerpo: 'Se lleva ' + fmt(noAprovechado) + ' menos de lo que entrega. Ese saldo NO se devuelve en efectivo y NO queda a favor del cliente: se pierde.',
+          onSi: () => { setAviso(null); setVendedor({ metodo: null }); },
+        });
+        return;
+      }
       setVendedor({ metodo: null });
     }
     function registrar(sellerId, metodo) {
@@ -580,10 +643,14 @@
               h('span', { key: 'l', className: 'text-overline uppercase opacity-60' }, diferencia > 0 ? 'Diferencia a cobrar' : 'Sin diferencia'),
               h('span', { key: 'v', className: 'font-headline text-h1 tracking-tight leading-none' }, fmt(diferencia)),
             ]),
-        h('button', { key: 'go', 'data-testid': 'cambio-accion', disabled: vencida || !marcados.length || !ent.length, onClick: siguiente,
-          className: 'w-full py-3 bg-surface text-primary rounded-lg text-caption font-bold uppercase tracking-wider shadow-e2 transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed' },
-          [h(MS, { key: 'i', name: diferencia > 0 ? 'shopping_cart_checkout' : 'check', size: 18 }),
-           diferencia > 0 ? 'Cobrar ' + fmt(diferencia) : 'Registrar cambio']),
+        // Sólo el plazo vencido lo deshabilita, porque ahí no hay nada que
+        // guiar: la venta ya no admite posventa. En cualquier otro estado el
+        // botón responde y dice qué falta (H-44).
+        h('button', { key: 'go', 'data-testid': 'cambio-accion', disabled: vencida, onClick: siguiente,
+          className: 'w-full py-3 rounded-lg text-caption font-bold uppercase tracking-wider shadow-e2 transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed '
+            + (guia ? 'bg-surface/60 text-primary' : 'bg-surface text-primary') },
+          [h(MS, { key: 'i', name: guia ? guia.icon : (diferencia > 0 ? 'shopping_cart_checkout' : 'check'), size: 18 }),
+           guia ? guia.txt : (diferencia > 0 ? 'Cobrar ' + fmt(diferencia) : 'Registrar cambio')]),
       ]),
     ]);
 
@@ -597,7 +664,7 @@
       vencida && h('div', { key: 'exp', className: 'p-3 rounded-lg text-caption bg-surface-container' },
         'Fuera de plazo: esta venta admitía posventa hasta ' + (plazo.expiresAt || '—') + '. Un administrador debe ajustar el plazo en Configuración → Devoluciones.'),
 
-      h('div', { key: 'dev', className: 'bg-surface-container-lowest rounded-xl border border-outline-variant p-5' }, [
+      h('div', { key: 'dev', ref: refDev, className: 'bg-surface-container-lowest rounded-xl border border-outline-variant p-5' }, [
         h('div', { key: 't', className: 'text-overline uppercase tracking-widest text-on-surface-variant mb-3' }, 'Marca lo que el cliente entrega'),
         !saldo.length && h('p', { key: 'v', className: 'text-caption text-on-surface-variant' }, 'Esta venta ya no tiene piezas disponibles.'),
         ...saldo.map(r => {
@@ -615,22 +682,32 @@
             st.on && h('div', { key: 'd', className: 'mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 pl-8' }, [
               h('div', { key: 'm' }, [
                 h('label', { key: 'l', className: 'block text-overline uppercase text-on-surface-variant mb-1' }, 'Motivo'),
-                h('select', { key: 's', value: st.motivo || '', className: 'w-full h-10 px-3 bg-surface-container-low border border-outline-variant rounded-lg text-body',
+                h('select', { key: 's', value: st.motivo || '', 'data-testid': 'cambio-motivo',
+                  className: 'w-full h-10 px-3 bg-surface-container-low border border-outline-variant rounded-lg text-body',
                   onChange: e => setRow(r.k, { motivo: e.target.value }) },
                   [h('option', { key: '_', value: '', disabled: true }, 'Selecciona…')].concat(reasons.map(x => h('option', { key: x.code, value: x.code }, x.label)))),
               ]),
               h('div', { key: 'r' }, [
                 h('label', { key: 'l', className: 'block text-overline uppercase text-on-surface-variant mb-1' }, 'Condición de la prenda'),
                 h('input', { key: 'i', value: st.condicion || '', placeholder: 'Excelente · sin uso, con etiqueta…',
+                  'data-testid': 'cambio-condicion',
                   className: 'w-full h-10 px-3 bg-surface-container-low border border-outline-variant rounded-lg text-body',
                   onChange: e => setRow(r.k, { condicion: e.target.value }) }),
+                // Acciones rápidas: los cuatro dictámenes que se escriben el 95%
+                // de las veces. Siguen siendo texto libre; esto sólo ahorra
+                // teclearlo, y deja ver cuál quedó registrado.
+                h('div', { key: 'q', className: 'flex flex-wrap gap-1.5 mt-2' }, CONDICIONES.map(c => h('button', {
+                  key: c, 'data-testid': 'cambio-condicion-rapida', onClick: () => setRow(r.k, { condicion: c }),
+                  className: 'px-2.5 py-1 rounded-full text-overline uppercase border transition-colors '
+                    + (st.condicion === c ? 'bg-primary text-on-primary border-primary' : 'border-outline-variant text-on-surface-variant hover:border-primary'),
+                }, c))),
               ]),
             ]),
           ]);
         }),
       ]),
 
-      h('div', { key: 'cat', className: 'bg-surface-container-lowest rounded-xl border border-outline-variant p-5' }, [
+      h('div', { key: 'cat', ref: refCat, className: 'bg-surface-container-lowest rounded-xl border border-outline-variant p-5' }, [
         h('div', { key: 't', className: 'flex items-center gap-3 mb-3' }, [
           h('span', { key: 'l', className: 'text-overline uppercase tracking-widest text-on-surface-variant shrink-0' }, 'Elige lo que se lleva'),
           h('input', { key: 'q', ref: scanRef, 'data-testid': 'cambio-escaner', value: query, onKeyDown: onScan, onChange: e => setQuery(e.target.value),
@@ -647,12 +724,12 @@
         })),
       ]),
 
-      h('div', { key: 'datos', className: 'bg-surface-container-lowest rounded-xl border border-outline-variant p-5' }, [
+      h('div', { key: 'datos', ref: refDatos, className: 'bg-surface-container-lowest rounded-xl border border-outline-variant p-5' }, [
         h('div', { key: 't', className: 'text-overline uppercase tracking-widest text-on-surface-variant mb-3' }, 'Datos del cambio'),
         h('div', { key: 'g', className: 'grid grid-cols-1 md:grid-cols-2 gap-3' }, [
           h('div', { key: 'r' }, [
             h('label', { key: 'l', className: 'block text-overline uppercase text-on-surface-variant mb-1' }, 'Revisó la mercancía'),
-            h('input', { key: 'i', value: revisor, placeholder: 'Nombre de quien revisó', onChange: e => setRevisor(e.target.value),
+            h('input', { key: 'i', value: revisor, placeholder: 'Nombre de quien revisó', 'data-testid': 'cambio-revisor', onChange: e => setRevisor(e.target.value),
               className: 'w-full h-10 px-3 bg-surface-container-low border border-outline-variant rounded-lg text-body' }),
           ]),
           h('div', { key: 'n' }, [
@@ -673,6 +750,18 @@
         client: { generic: true, nombre: sale.cliente }, onClose: () => setCobro(false),
         onConfirm: (pago) => { setCobro(false); setVendedor({ metodo: (pago && pago.metodo) ? pago.metodo : 'Efectivo' }); },
       }),
+      // El aviso del sobrante perdido es del sistema, no del navegador: se ve
+      // la cifra, se distingue la acción que sigue de la que vuelve, y la
+      // pantalla no se congela mientras el cajero decide.
+      aviso && h(window.UI.Modal, {
+        key: 'av', title: aviso.titulo, onClose: () => setAviso(null),
+        footer: [
+          h('button', { key: 'n', 'data-testid': 'cambio-aviso-revisar', onClick: () => setAviso(null),
+            className: 'flex-1 py-3.5 border border-outline-variant text-caption font-bold uppercase tracking-widest rounded-xl' }, 'Revisar'),
+          h('button', { key: 's', 'data-testid': 'cambio-aviso-confirmar', onClick: aviso.onSi,
+            className: 'flex-1 py-3.5 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-xl' }, 'Sí, registrar'),
+        ],
+      }, h('p', { className: 'py-2 text-body text-on-surface' }, aviso.cuerpo)),
       vendedor && h(SellerModal, { key: 'sv', sellers: elegibles, onClose: () => setVendedor(null), onPick: (id) => registrar(id, vendedor.metodo) }),
       recibo && h(ExchangeReceipt, { key: 'rc', recibo, onClose: () => { setRecibo(null); onDone(); } }),
       // Comprobante térmico: la MISMA autoridad del Punto de venta, con el cambio

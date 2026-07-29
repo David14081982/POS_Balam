@@ -1845,6 +1845,104 @@ no un catalogo administrable. El cambio no se probo con dos terminales
 simultaneas.
 **Correccion documentada:** `docs/fixes/pantalla-del-cambio.md`.
 
+## H-43 - Una mejora de UX se justificaba con estimaciones, no con medidas
+
+**Estado:** RESUELTO
+**Fecha de registro:** 29/07/2026
+**Fecha de resolucion:** 29/07/2026
+**Commit:** `07e6565` (instrumento) · `7306e20` (R-DEL-14) · `14d4958` (guardian)
+**Evidencia:** al proponer las mejoras de la pantalla del cambio se enumeraron
+las interacciones leyendo el codigo: 16. El instrumento midio 14. El autor del
+cambio es quien peor puede juzgar cuanto cuesta su pantalla.
+**Riesgo:** dos danos distintos. Una optimizacion sin medida no se puede
+verificar; y una optimizacion que reduce clics retirando controles se lee como
+mejora cuando es perdida de defensa disfrazada de agilidad.
+**Reproduccion:** ninguna herramienta del repositorio media el recorrido.
+**Correccion:** `test-ux-metrics.mjs` instrumenta el recorrido con escuchas en
+fase de captura sobre el documento y cuenta clics, capturas de texto —una por
+campo, no una por tecla—, menus aparte, tiempo y **validaciones de negocio
+atravesadas** con su estado bloqueado y liberado. Localiza cada paso por
+`data-testid` y solo entonces por texto.
+Sobre esa medicion se hizo **mecanica** la regla: el instrumento compara contra
+`ux-baseline.json` y **sale con codigo 1** si disminuyen las validaciones, si
+aumentan las interacciones sin justificacion declarada o si el recorrido deja de
+completarse. `--justifica` libera solo la columna de interacciones; las
+validaciones no tienen valvula de escape. `--fijar` reescribe la linea base como
+acto deliberado, con motivo y fecha dentro del propio fichero.
+Sondear una defensa no es un gesto del cajero: `window.__pausa` detiene el
+contador durante la prueba, para que probar mas garantias jamas encarezca
+artificialmente el recorrido medido.
+**Reglas nuevas:** `R-DEL-13`, `R-DEL-14` y `R-DEL-15` en
+`docs/architect/playbooks/delivery.md`; principio 9 de
+`docs/architect/PHILOSOPHY.md`.
+**Pruebas:** guardian probado en los dos sentidos (`R-DEL-11`): verde contra su
+propia linea base y **rojo con codigo 1** contra una linea base exigente,
+marcando ambas columnas.
+**Pendiente:** el mecanismo de `R-DEL-15` aun no tiene un guardian equivalente
+para rendimiento ni para consultas; existe la forma, no la instancia.
+**Riesgo residual:** la linea base cubre un escenario por flujo. Un recorrido no
+instrumentado sigue sin proteccion.
+
+## H-44 - El recorrido del cambio cobraba al cajero lo que ya sabia
+
+**Estado:** PARCIALMENTE RESUELTO - pendiente de reconfirmar el guardian
+**Fecha de registro:** 29/07/2026
+**Fecha de resolucion:** 29/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** el instrumento de H-43 midio 14 interacciones para un cambio de
+talla. Tres de ellas eran datos que el sistema ya conocia o podia proponer: el
+tipo de operacion, el motivo y quien revisa. Ademas el boton principal quedaba
+deshabilitado sin decir que faltaba, y el aviso del sobrante perdido se daba con
+`window.confirm`, que no sabe pintar una cifra ni distinguir la accion
+destructiva de la que sigue.
+**Origen de auditoria:** revision manual de UX posterior a C6, sobre la
+medicion instrumentada de H-43.
+**Riesgo:** un mostrador lento en hora punta y un cajero que abandona la
+pantalla sin entender por que no avanza.
+**Reproduccion:** `node test-ux-metrics.mjs` antes del cambio: 14 interacciones,
+1 validacion. `node test-exchange-screen.mjs`: 39/40 con el nuevo contrato.
+**Correccion:** la operacion se declara **antes** de buscar la venta, y el equipo
+recuerda la ultima en `localStorage` —preferencia del dispositivo, no dato del
+negocio—: el buscador ya habla en el idioma de la operacion elegida y la venta
+aterriza directamente en su pantalla. El selector del detalle sobrevive como
+**correccion**, porque equivocarse de operacion no puede obligar a empezar.
+Motivo y condicion llegan **preseleccionados y visibles en su propio control**,
+nunca en silencio: el motivo mas frecuente del cambio es la talla y se lee en el
+desplegable; la condicion trae cuatro acciones rapidas y sigue siendo texto
+libre. El revisor se prellena con la sesion abierta y sigue editable, porque
+revisar y cobrar pueden ser dos personas.
+El boton principal **guia**: solo el plazo vencido lo deshabilita —ahi no hay
+nada que guiar—, y en cualquier otro estado responde, dice que falta y lleva
+hasta ahi. `validar()` sigue siendo la unica autoridad que decide si se registra:
+la guia informa, no autoriza.
+El aviso del sobrante perdido pasa al modal del sistema, con la cifra visible y
+dos salidas distinguibles.
+**Pruebas:** guardian de `R-DEL-14` **en verde sin intervencion manual**:
+14 -> 11 interacciones y 1 -> 2 validaciones, recorrido completado. Esa corrida
+es real pero **anterior** a la ultima edicion del instrumento —la que anadio el
+escenario repetido, una rama falsa en el camino frio—, y no se pudo reconfirmar:
+el clasificador del entorno de ejecucion quedo indisponible y rechazo toda
+invocacion de Node (`R-DEL-02`). Se resuelve con `node test-ux-metrics.mjs`, que
+debe salir con codigo 0. Escenario
+`cambio-de-talla-repetido` —segundo cambio del turno, operacion recordada— en 10.
+E2E del cambio 34/34 con seis comprobaciones nuevas; pantalla del cambio 42/42;
+devoluciones 17/17; plazo 38/38; saldo por renglon 38/38; modelo 28/28; commit
+del cambio 32/32; apartados 55/55; ticket 23/23; precio por talla 38/38 y E2E
+19/19; coherencia 17/17; contratos 37/37; migraciones 31/31; roles 10/10; build
+8/8; smoke 15/15; navegacion 14/14; reproducibilidad 8/8.
+**Pendiente:** H-45 —camino rapido para el cambio de talla— y C7.
+**Riesgo residual:** `window.confirm` sigue vivo **fuera** de esta pantalla
+—`balam/clients.jsx`, `balam/discounts.jsx`, `balam/sellers.jsx` y
+`balam/settings.jsx`—; H-44 no lo toco porque su alcance era el cambio. Queda
+como **deuda tecnica con historia propia**: estandarizar los dialogos del
+sistema, donde varios de esos avisos son destructivos —eliminar un cliente,
+regenerar SKU, cerrar periodo— y el navegador no distingue la accion destructiva
+de la que sigue ni sabe pintar la cifra en juego. El inventario vive en el
+repositorio, no aqui: `grep -rn "window.confirm(" balam/*.jsx`.
+La condicion de la prenda sigue siendo texto libre con atajos, no un catalogo
+administrable.
+**Correccion documentada:** `docs/fixes/recorrido-del-cambio.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

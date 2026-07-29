@@ -56,6 +56,11 @@ try {
     // Un vendedor ELEGIBLE segun H-29: activo, rol vendedor y sin tombstone.
     D.sellers.length = 0;
     D.sellers.push({ id: 'v1', nombre: 'Vendedor E2E', role: 'vendedor', active: true, comisionPct: 0 });
+    // Nadie opera el mostrador sin sesión abierta (R-DEL-12): el estado válido
+    // del negocio incluye al cajero identificado, del que H-44 prellena el revisor.
+    try { localStorage.removeItem('balam_ultima_operacion'); } catch (e) {}
+    window.AUTH = window.AUTH || {};
+    window.AUTH.current = () => ({ nombre: 'Ana Cajera', email: 'ana@balam.mx' });
     return { folio: v.folio, cara: T[2], codigo: window.BARCODES.codeOf(p, T[2]) };
   });
 
@@ -76,6 +81,13 @@ try {
   console.log('\n── 1) Localizar la venta y elegir la operación ─────────');
   await page.evaluate(() => { const x = [...document.querySelectorAll('nav button')].find(e => /Devoluciones/.test(e.innerText)); if (x) x.click(); });
   await page.waitForTimeout(1200);
+  // H-44: la operacion se declara ANTES de buscar la venta.
+  const antesDeBuscar = await texto();
+  ok('0a. la operacion se declara antes de buscar', /qu[eé] vas a registrar/i.test(antesDeBuscar));
+  await page.evaluate(() => document.querySelector('[data-testid="operacion-cambio"]').click());
+  await page.waitForTimeout(500);
+  ok('0b. el buscador habla ya en el idioma del cambio',
+    /selecciona la venta a cambiar/i.test(await texto()));
   await page.evaluate((f) => {
     const i = [...document.querySelectorAll('input')].find(x => /folio|buscar/i.test(x.placeholder || ''));
     if (i) { const s = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
@@ -84,9 +96,19 @@ try {
   await page.waitForTimeout(1000);
   await page.evaluate((f) => { const x = [...document.querySelectorAll('button')].find(e => e.innerText.includes(f)); if (x) x.click(); }, semilla.folio);
   await page.waitForTimeout(1000);
-  ok('1. la ficha ofrece el tipo de operación', /tipo de operaci/i.test(await texto()));
-  ok('2. se puede entrar al cambio', await click(/^cambio$/i));
-  await page.waitForTimeout(900);
+  ok('1. la ficha ofrece corregir el tipo de operación', /tipo de operaci/i.test(await texto()));
+  ok('2. la venta elegida aterriza directamente en el cambio',
+    await page.evaluate(() => !!document.querySelector('[data-testid="cambio-panel"]')));
+  ok('2b. la operación queda recordada para la siguiente',
+    await page.evaluate(() => localStorage.getItem('balam_ultima_operacion') === 'cambio'));
+  // El boton principal GUIA en vez de quedar muerto: aun sin nada marcado
+  // responde y dice que falta.
+  const guia0 = await page.evaluate(() => {
+    const b = document.querySelector('[data-testid="cambio-accion"]');
+    return b ? { txt: b.innerText.replace(/\s+/g, ' ').trim(), activo: !b.disabled } : null;
+  });
+  ok('2c. el botón principal guía en vez de quedar muerto',
+    !!guia0 && guia0.activo && /marca lo que entrega/i.test(guia0.txt), guia0 ? guia0.txt : 'sin botón');
   const t3 = await texto();
   ok('3. el método de reembolso no aparece en el cambio', !/método de reembolso/i.test(t3));
   ok('4. el panel de resumen está presente desde el inicio', /resumen del cambio/i.test(t3));
@@ -94,9 +116,24 @@ try {
   console.log('\n── 2) Marcar lo que el cliente entrega ─────────────────');
   await page.evaluate(() => { const c = document.querySelector('input[type=checkbox]'); if (c) c.click(); });
   await page.waitForTimeout(600);
-  await setVal('select', 'Talla');
-  await setVal('input[placeholder*="Excelente"]', 'Excelente, sin uso');
+  // H-44: motivo y condicion llegan PRESELECCIONADOS y visibles en su control,
+  // y el revisor prellenado con la sesion. Nada de esto es silencioso.
+  const pre = await page.evaluate(() => ({
+    motivo: (document.querySelector('[data-testid="cambio-motivo"]') || {}).value,
+    condicion: (document.querySelector('[data-testid="cambio-condicion"]') || {}).value,
+    revisor: (document.querySelector('[data-testid="cambio-revisor"]') || {}).value,
+    rapidas: document.querySelectorAll('[data-testid="cambio-condicion-rapida"]').length,
+  }));
+  ok('4b. el motivo llega preseleccionado y visible en su control', pre.motivo === 'Talla', 'motivo=' + pre.motivo);
+  ok('4c. la condición llega preseleccionada y visible', /sin uso/i.test(pre.condicion || ''), 'cond=' + pre.condicion);
+  ok('4d. la condición ofrece acciones rápidas', pre.rapidas >= 3, 'chips=' + pre.rapidas);
+  ok('4e. el revisor llega prellenado con la sesión', /ana/i.test(pre.revisor || ''), 'revisor=' + pre.revisor);
+  // Y todo ello sigue siendo EDITABLE: el resto del recorrido lo sobrescribe.
+  await setVal('[data-testid="cambio-motivo"]', 'Talla');
+  await setVal('[data-testid="cambio-condicion"]', 'Excelente, sin uso');
   await page.waitForTimeout(400);
+  const post = await page.evaluate(() => (document.querySelector('[data-testid="cambio-condicion"]') || {}).value);
+  ok('4f. la preselección es editable, no impuesta', post === 'Excelente, sin uso', 'cond=' + post);
   const panel1 = await page.evaluate(() => {
     const a = document.querySelector('[data-testid="cambio-panel"]');
     return a ? a.innerText.replace(/\s+/g, ' ') : '';
@@ -152,7 +189,7 @@ try {
   await page.waitForTimeout(800);
 
   console.log('\n── 5) Cobrar, confirmar vendedor y registrar ───────────');
-  await setVal('input[placeholder*="Nombre de quien"]', 'Ana Revisora');
+  await setVal('[data-testid="cambio-revisor"]', 'Ana Revisora');
   await page.waitForTimeout(300);
   const accion = () => page.evaluate(() => {
     const b = document.querySelector('[data-testid="cambio-accion"]');
