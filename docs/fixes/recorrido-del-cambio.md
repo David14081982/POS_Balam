@@ -1,9 +1,9 @@
 # El recorrido del cambio cobraba al cajero lo que ya sabía
 
 **Riesgo:** H-44
-**Estado:** PARCIALMENTE RESUELTO — pendiente de reconfirmar el guardián
+**Estado:** RESUELTO
 **Fecha:** 29/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `9e8e5bc`
 
 ## Problema y reproducción
 
@@ -108,30 +108,12 @@ bloquea; restaurada, libera—, que es precisamente el riesgo que la preselecci�
 introducía.
 
 Escenario `cambio-de-talla-repetido` —segundo cambio del turno, operación
-recordada—: **10 interacciones**, línea base fijada.
+recordada—: **10 interacciones**, 2 validaciones, recorrido completado.
 
-### Reconfirmación pendiente (`R-DEL-02`)
-
-Las cifras del escenario oficial —14 → 11 y 1 → 2— salieron de una corrida real,
-pero **anterior** a la última edición del instrumento, la que añadió el escenario
-`cambio-de-talla-repetido`. Esa edición sólo introduce una rama falsa en el
-camino frío —`if (!REPETIDO) { … }`— y el escenario repetido sí corrió en verde
-después, lo que prueba que el fichero es sano; pero eso es razonamiento sobre el
-código, no evidencia sobre el número.
-
-Motivo por el que no se reconfirmó: el clasificador de seguridad del entorno de
-ejecución quedó indisponible y rechazó toda invocación de Node durante el resto
-de la sesión. No es un fallo del producto.
-
-Riesgo asumido: si esa corrida no reprodujera 11 interacciones y 2 validaciones,
-H-44 no estaría cerrada. El comando que lo resuelve es uno:
-
-    node test-ux-metrics.mjs
-
-Debe terminar con código 0 y con `✔ mejora real: −3 interacciones sin perder
-garantías`. Hasta entonces esta corrección queda **parcialmente resuelta** por
-decisión explícita del dueño del repositorio, que pidió commitear el trabajo sin
-esperar al entorno.
+El escenario oficial se reejecutó **después** del repetido y siguió midiendo 11
+interacciones y 2 validaciones, con `ux-baseline.json` intacto —SHA-256
+`0e5f1b52f3b0a9d34c38db487844787b76da49a3b3329889569916d2f3ca6ebe` antes y
+después—: el escenario nuevo no altera el oficial ni reescribe la línea base.
 
 Dos hallazgos del propio guardián durante la implementación:
 
@@ -155,6 +137,15 @@ smoke 15/15; navegación 14/14; reproducibilidad 8/8.
 
 Sin migraciones: H-44 no toca esquema, contrato, autoridades ni reglas
 económicas.
+
+## Despliegue (`R-DEL-07`)
+
+El artefacto servido por GitHub Pages en
+`https://david14081982.github.io/POS_Balam/index.html` se descargó y se comparó
+byte a byte contra el `index.html` del commit `9e8e5bc`. Coinciden:
+
+    SHA-256  ddfe83aafb1b568a80870bf274e658776596bd18c580898e9234c1099132e93a
+    bytes    8 689 063
 
 ## Riesgo residual y pendientes
 

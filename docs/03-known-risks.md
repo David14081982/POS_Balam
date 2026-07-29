@@ -1885,10 +1885,10 @@ instrumentado sigue sin proteccion.
 
 ## H-44 - El recorrido del cambio cobraba al cajero lo que ya sabia
 
-**Estado:** PARCIALMENTE RESUELTO - pendiente de reconfirmar el guardian
+**Estado:** RESUELTO
 **Fecha de registro:** 29/07/2026
 **Fecha de resolucion:** 29/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `9e8e5bc`
 **Evidencia:** el instrumento de H-43 midio 14 interacciones para un cambio de
 talla. Tres de ellas eran datos que el sistema ya conocia o podia proponer: el
 tipo de operacion, el motivo y quien revisa. Ademas el boton principal quedaba
@@ -1917,19 +1917,24 @@ hasta ahi. `validar()` sigue siendo la unica autoridad que decide si se registra
 la guia informa, no autoriza.
 El aviso del sobrante perdido pasa al modal del sistema, con la cifra visible y
 dos salidas distinguibles.
-**Pruebas:** guardian de `R-DEL-14` **en verde sin intervencion manual**:
-14 -> 11 interacciones y 1 -> 2 validaciones, recorrido completado. Esa corrida
-es real pero **anterior** a la ultima edicion del instrumento —la que anadio el
-escenario repetido, una rama falsa en el camino frio—, y no se pudo reconfirmar:
-el clasificador del entorno de ejecucion quedo indisponible y rechazo toda
-invocacion de Node (`R-DEL-02`). Se resuelve con `node test-ux-metrics.mjs`, que
-debe salir con codigo 0. Escenario
-`cambio-de-talla-repetido` —segundo cambio del turno, operacion recordada— en 10.
+**Pruebas:** guardian de `R-DEL-14` **en verde sin intervencion manual**, corrida
+reconfirmada sobre el arbol final (`R-DEL-02`): 14 -> 11 interacciones y 1 -> 2
+validaciones, recorrido completado, codigo de salida 0. Escenario
+`cambio-de-talla-repetido` —segundo cambio del turno, operacion recordada— en 10
+interacciones y 2 validaciones; el escenario oficial se reejecuto despues y
+siguio en 11 con `ux-baseline.json` intacto (SHA-256
+`0e5f1b52f3b0a9d34c38db487844787b76da49a3b3329889569916d2f3ca6ebe`), prueba de
+que el escenario repetido no altera el oficial.
 E2E del cambio 34/34 con seis comprobaciones nuevas; pantalla del cambio 42/42;
 devoluciones 17/17; plazo 38/38; saldo por renglon 38/38; modelo 28/28; commit
 del cambio 32/32; apartados 55/55; ticket 23/23; precio por talla 38/38 y E2E
 19/19; coherencia 17/17; contratos 37/37; migraciones 31/31; roles 10/10; build
-8/8; smoke 15/15; navegacion 14/14; reproducibilidad 8/8.
+8/8; smoke 15/15; navegacion 14/14; reproducibilidad 8/8. Cero fallos.
+**Despliegue:** publicado en `https://david14081982.github.io/POS_Balam/`. El
+artefacto servido se verifico identico byte a byte al `index.html` del commit
+`9e8e5bc`, SHA-256
+`DDFE83AAFB1B568A80870BF274E658776596BD18C580898E9234C1099132E93A`, 8 689 063
+bytes (`R-DEL-07`). Sin migraciones que aplicar antes del cliente.
 **Pendiente:** H-45 —camino rapido para el cambio de talla— y C7.
 **Riesgo residual:** `window.confirm` sigue vivo **fuera** de esta pantalla
 —`balam/clients.jsx`, `balam/discounts.jsx`, `balam/sellers.jsx` y
