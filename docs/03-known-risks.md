@@ -1743,6 +1743,54 @@ impide. Un apartado cuya mercancía se vendió en piso seguirá fallando la rese
 liquidarse, con el mismo comportamiento de antes de esta historia.
 **Corrección documentada:** `docs/fixes/pantalla-apartados.md`.
 
+## H-41 — El comprobante impreso se cortaba en la primera hoja
+
+**Estado:** RESUELTO
+**Fecha de registro:** 28/07/2026
+**Fecha de resolución:** 28/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** reportado por el dueño desde producción tras cobrar dos abonos: el
+comprobante del segundo no mostraba el historial de pagos y los tickets del mismo
+apartado «se veían diferentes». Medido sobre el bundle en medio `print`, el
+comprobante mide 1543–1606 px y el documento imprimible medía 950 px: el papel
+sólo recibía la primera hoja y el resto se descartaba. El corte caía después de
+«Pagado a la fecha», así que el saldo, el historial completo y el pie quedaban
+fuera; como el documento crece con cada abono, el corte se movía en cada
+impresión.
+**Origen de auditoría:** uso real de la cobranza de apartados entregada en H-40.
+**Riesgo:** el cliente recibe un comprobante mutilado, sin la prueba de lo que
+lleva pagado. En una disputa sobre un apartado, el papel es la evidencia.
+**Reproducción:** apartado de 3 piezas con anticipo y tres abonos; imprimir a PDF
+tras cada uno. Antes del cambio: 1 hoja para 1543 px, sin historial de pagos.
+**Corrección:** el comprobante deja de ser un elemento fuera de flujo. Se monta con
+`ReactDOM.createPortal` como hijo directo de `<body>` —fuera de los contenedores
+con scroll de la aplicación— y en `@media print` vuelve al flujo (`position:
+static`) mientras `#root` se retira del layout con `display: none`, no con
+`visibility: hidden`, que dejaba las cajas ocupando espacio. Con el documento
+midiendo lo que mide el comprobante, el navegador pagina solo. Los bloques llevan
+`break-inside: avoid` para que ninguno se parta entre hojas.
+**Alcance:** presentación e impresión. Sin cambios en datos, dominio,
+sincronización ni en el contenido del comprobante. El ticket de venta del POS
+hereda el arreglo: una venta de 6 renglones sufría el mismo corte.
+**Pruebas:** `test-ticket-print.mjs` 23/23 —reproducción convertida en arnés, que
+mide en medio `print` e imprime a PDF real—, `test-layaway-screen.mjs` 55/55, y la
+regresión de cliente: `test-smoke.mjs` 15/15, `test-ui-navigation.mjs` 14/14,
+`test-module-contracts.mjs` 37/37, `test-folio-concurrency.mjs` 12/12,
+`test-discount-trace.mjs` 65/65, `test-precio-talla-e2e.mjs` 19/19,
+`test-returns.mjs` 17/17, `test-store-queue.mjs` 115/115,
+`test-sale-coherence.mjs` 17/17, `test-build-reproducibility.mjs` 8/8.
+**Despliegue:** artefactos regenerados con `node build-offline.mjs`. Sin migración.
+**Pendiente:** no hay numeración de hojas («Hoja 2 de 2») ni encabezado repetido a
+partir de la segunda: las cajas de margen de `@page` y los contadores de página no
+están implementados en Chrome. En impresora térmica de rollo la cuestión no se
+plantea —`size: 80mm auto` produce una tira continua—; en impresora de hojas el
+comprobante continúa en la siguiente sin cortar bloques.
+**Riesgo residual:** la altura de hoja de referencia del arnés (1056 px) es la que
+Chrome usa con altura `auto`; si cambiara, el arnés sigue siendo válido —compara
+papel disponible contra alto del comprobante— pero el número de hojas esperado
+variaría.
+**Corrección documentada:** `docs/fixes/ticket-impreso-paginado.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:
