@@ -115,6 +115,11 @@ interacciones y 2 validaciones, con `ux-baseline.json` intacto —SHA-256
 `0e5f1b52f3b0a9d34c38db487844787b76da49a3b3329889569916d2f3ca6ebe` antes y
 después—: el escenario nuevo no altera el oficial ni reescribe la línea base.
 
+**Nota para quien lo reejecute:** al cerrar la historia la línea base se refijó a
+`11 / 2` (`R-DEL-16`), así que una corrida posterior imprime `base 11 ahora 11` y
+ya no la línea de mejora. La comparación de arriba es la que decidió el cierre;
+la base nueva es la que protege el terreno ganado.
+
 Dos hallazgos del propio guardián durante la implementación:
 
 1. Falló por `recorrido completo` en rojo. Causa: sin sesión abierta el revisor

@@ -1,7 +1,7 @@
 ---
 capa: reglas+aprendizaje
 applies_to: [testing, documentation, deployment]
-related_histories: [H-10, H-31, H-32, H-33, H-34, H-35, H-42, H-43]
+related_histories: [H-10, H-31, H-32, H-33, H-34, H-35, H-42, H-43, H-44]
 severity_max: blocking
 no_alcance: "No sustituye docs/01-engineering-methodology.md ni docs/fixes/_template.md."
 ---
@@ -132,6 +132,21 @@ negociable, y su aumento se declara.
 Sin esas cuatro piezas la historia no puede cerrarse, porque «quedo mas rapido»
 sin cifra reproducible no es un resultado: es una impresion.
 Origen: H-43 · Filosofia: principio 9
+
+**R-DEL-16 · BLOCKING · Una historia que mejora una metrica REFIJA la linea base
+antes de cerrarse.**
+El guardian protege el suelo que tiene registrado, no el que se alcanzo. Si una
+optimizacion baja el coste y no refija la base, la mejora queda **gastable**: la
+siguiente historia puede devolver la mitad del terreno y seguir en verde, porque
+sigue comparando contra el suelo viejo. El trinquete solo trinca si alguien lo
+aprieta.
+Se descubrio al cerrar H-44: el recorrido bajo de 14 interacciones a 11 y la
+linea base seguia diciendo 14, asi que un retroceso a 13 habria pasado la
+comprobacion en las dos columnas.
+Refijar es parte del cierre, con motivo y fecha —`--fijar "<motivo>"`—, y ocurre
+**despues** de que el guardian y la regresion esten en verde, nunca antes: una
+linea base refijada sobre codigo sin probar convierte el guardian en un sello.
+Origen: H-44 · Regla hermana: `R-DEL-14`
 
 **R-DEL-09 · RECOMMENDED · Regresión proporcional al riesgo, con los arneses
 nombrados y su resultado.**

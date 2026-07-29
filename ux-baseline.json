@@ -1,9 +1,9 @@
 {
  "cambio-de-talla": {
-  "interacciones": 14,
-  "validaciones": 1,
+  "interacciones": 11,
+  "validaciones": 2,
   "completado": true,
-  "motivo": "linea base instrumentada de H-43, previa a H-44",
+  "motivo": "H-44 cerrada: 11 interacciones, 2 validaciones",
   "fijada": "2026-07-29"
  },
  "cambio-de-talla-repetido": {
