@@ -31,8 +31,11 @@
         h('div', { key: 'l', className: 'text-overline uppercase tracking-widest text-on-surface-variant mb-2' }, 'Tipo de operación'),
         h(Segment, { key: 's', options: OPERACIONES, value: tipo, onChange: setTipo }),
       ]);
-      return h('div', { className: 'flex-1 overflow-y-auto bg-background font-body text-on-surface' }, [
-        selector,
+      // El contenedor NO scrollea: cada detalle trae el suyo. Anidar dos
+      // 'overflow-y-auto' rompia el desplazamiento de Devoluciones, que debe
+      // quedar exactamente como estaba.
+      return h('div', { className: 'flex-1 flex flex-col overflow-hidden bg-background font-body text-on-surface' }, [
+        h('div', { key: 'sel', className: 'shrink-0 bg-background' }, selector),
         tipo === 'cambio'
           ? h(ExchangeDetail, { key: 'cd', sale, onBack: volver, onDone: done, embedded: true })
           : h(ReturnDetail, { key: 'rd', sale, onBack: volver, onDone: done, embedded: true }),
