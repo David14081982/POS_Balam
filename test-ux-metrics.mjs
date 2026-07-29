@@ -96,7 +96,11 @@ try {
   // Semilla REPRESENTATIVA del negocio (R-DEL-12): venta real, vendedor elegible
   // según H-29, y otra talla del mismo artículo con precio distinto (H-36).
   const REPETIDO = ESCENARIO === 'cambio-de-talla-repetido';
-  const semilla = await page.evaluate((repetido) => {
+  // H-45: el escenario oficial siembra UN solo producto, asi que encontrar la
+  // prenda sale gratis. Un mostrador real tiene cientos y el cajero busca. Este
+  // escenario mide ese coste, que es exactamente el que H-45 quiere abaratar.
+  const REALISTA = ESCENARIO === 'cambio-de-talla-catalogo-real';
+  const semilla = await page.evaluate(([repetido, realista]) => {
     const D = window.DATA;
     if (window.STORE) { window.STORE.pushRows = () => {}; window.STORE.pushSale = () => {}; window.STORE.pushExchange = () => {}; }
     // El escenario «repetido» representa el segundo cambio seguido del turno:
@@ -111,6 +115,16 @@ try {
       modelo: '777', nombre: 'CAMISA UX', orn: '—', ornColors: [], precio: 350, costo: 0,
       pop: false, stock: D.mkStock([5, 5, 5], []) });
     p.preciosTalla = { [T[2]]: 450 };
+    // Los rellenos van PRIMERO para que la prenda buscada quede fuera de las 24
+    // primeras tarjetas: si apareciera en pantalla, el escenario medirira un
+    // catalogo grande sin medir el coste de buscar en el.
+    if (realista) {
+      for (let i = 0; i < 60; i++) {
+        D.products.push(D.hydrate({ id: 'f' + i, cat: '21', manga: 'ML', tela: 'ALG', color: 'AZ',
+          cuello: 'NOR', modelo: String(100 + i), nombre: 'CAMISA CATALOGO ' + i, orn: '—',
+          ornColors: [], precio: 300, costo: 0, pop: false, stock: D.mkStock([2, 2, 2], []) }));
+      }
+    }
     D.products.push(p); D.saveProducts();
     const v = D.recordSale({ ticket: [{ p, talla: T[0], qty: 1 }], sellerIds: [], client: null,
       metodo: 'Efectivo', estado: 'Pagado', total: 350, itemCount: 1 });
@@ -120,8 +134,8 @@ try {
     // incluye al cajero identificado, del que H-44 prellena el revisor.
     window.AUTH = window.AUTH || {};
     window.AUTH.current = () => ({ nombre: 'Ana Cajera', email: 'ana@balam.mx' });
-    return { folio: v.folio, cara: T[2] };
-  }, REPETIDO);
+    return { folio: v.folio, cara: T[2], catalogo: D.products.length };
+  }, [REPETIDO, REALISTA]);
   const espera = (ms) => page.waitForTimeout(ms);
   const teclea = (sel, val) => page.evaluate(([s, v]) => {
     const i = document.querySelector(s); if (!i) return false;
@@ -149,6 +163,8 @@ try {
   await pulsa('input[type=checkbox]');
   await espera(700);
   // Motivo y condición llegan preseleccionados y VISIBLES; el revisor, prellenado.
+  // Con catalogo real la prenda no esta a la vista: hay que buscarla.
+  if (REALISTA) { await teclea('[data-testid="cambio-escaner"]', 'CAMISA UX'); await espera(700); }
   await page.evaluate(() => { const x = [...document.querySelectorAll('button')].find(e => /CAMISA UX/.test(e.innerText)); if (x) x.click(); });
   await espera(700);
   await page.evaluate((t) => {
@@ -187,6 +203,7 @@ try {
   await espera(1400);
   medicion = await page.evaluate(() => Object.assign({}, window.__ux, {
     impreso: window.__printed,
+    catalogo: window.DATA.products.length,
     registrado: (window.DATA.exchanges || []).length === 1,
     diferencia: ((window.DATA.exchanges || [])[0] || {}).diferencia,
   }));
@@ -195,6 +212,7 @@ try {
 const total = medicion.clics + medicion.textos + medicion.menus;
 const seg = medicion.t0 && medicion.t1 ? ((medicion.t1 - medicion.t0) / 1000).toFixed(1) : '—';
 console.log(`\n══ MEDICIÓN · escenario «${ESCENARIO}» ══════════════════════`);
+console.log(`  artículos en catálogo  ${medicion.catalogo}`);
 console.log(`  clics ................ ${medicion.clics}`);
 console.log(`  capturas de texto .... ${medicion.textos}`);
 console.log(`  menús desplegados .... ${medicion.menus}`);

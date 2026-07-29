@@ -12,5 +12,12 @@
   "completado": true,
   "motivo": "H-44: segundo cambio del turno, operacion recordada",
   "fijada": "2026-07-29"
+ },
+ "cambio-de-talla-catalogo-real": {
+  "interacciones": 12,
+  "validaciones": 2,
+  "completado": true,
+  "motivo": "H-45 fase 1: coste real de encontrar la prenda, catalogo de 61 articulos",
+  "fijada": "2026-07-29"
  }
 }
