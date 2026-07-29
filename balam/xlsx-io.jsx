@@ -340,6 +340,24 @@
     window.UI.toast(`${rows.length} ventas exportadas`, 'var(--accent)');
   }
 
+  // Cartera de apartados abiertos (H-40). Las filas llegan ya planas desde
+  // balam/layaway.jsx § filaExport: aquí no se deriva saldo ni porcentaje.
+  function exportLayaways(rows) {
+    if (!ensureXLSX()) return;
+    const H = ['Folio', 'Fecha', 'Días', 'Cliente', 'Vendedor', 'Artículos', 'Total', 'Pagado', 'Saldo', '% pagado', 'Abonos', 'Último abono', 'Mercancía'];
+    const data = rows.map(r => ({
+      'Folio': r.folio, 'Fecha': r.fecha, 'Días': r.dias == null ? '' : r.dias, 'Cliente': r.cliente,
+      'Vendedor': r.vendedor, 'Artículos': r.items, 'Total': r.total, 'Pagado': r.pagado, 'Saldo': r.saldo,
+      '% pagado': r.pct, 'Abonos': r.abonos, 'Último abono': r.ultimoAbono, 'Mercancía': r.articulos,
+    }));
+    const ws = window.XLSX.utils.json_to_sheet(data, { header: H });
+    ws['!cols'] = [{ wch: 12 }, { wch: 12 }, { wch: 7 }, { wch: 24 }, { wch: 20 }, { wch: 9 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 8 }, { wch: 14 }, { wch: 40 }];
+    const wb = window.XLSX.utils.book_new();
+    window.XLSX.utils.book_append_sheet(wb, ws, 'Apartados');
+    download(wb, `Apartados_Balam_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    window.UI.toast(`${rows.length} apartados exportados`, 'var(--accent)');
+  }
+
   function exportSellers(rows) {
     if (!ensureXLSX()) return;
     const H = ['Vendedor', 'Rol', 'Comisión %', 'Ventas del mes', 'Meta', 'Avance %', 'Comisión acumulada', 'Estado'];
@@ -356,7 +374,7 @@
   }
 
   window.XLSXIO = {
-    exportTemplate, exportInventory, exportReturns, exportSales, exportSellers,
+    exportTemplate, exportInventory, exportReturns, exportSales, exportSellers, exportLayaways,
     parseFile, readWorkbook, sheetToJson, limits: XLSX_LIMITS,
     headers: buildHeaders, IMPORT_FIELDS,
   };

@@ -466,6 +466,11 @@ Los apartados no reservan inventario al crearse; la reserva se exige cuando se
 liquidan y pasan a estado cobrado. Las ventas históricas sin `operation_id`
 siguen siendo legibles y actualizables.
 
+El apartado abierto se administra en `balam/layaway.jsx` —pantalla `apartados` del
+menú lateral—: es la única superficie que captura un abono y emite su comprobante.
+No decide nada del dominio: delega en `DATA.registrarPagoApartado`, que sigue
+siendo la autoridad del abono, de la liquidación y de sus efectos.
+
 Este contrato resuelve la competencia por existencias de H-01 y es parte de la
 transacción completa de venta descrita a continuación.
 

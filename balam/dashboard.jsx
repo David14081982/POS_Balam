@@ -1,7 +1,7 @@
 // dashboard.jsx — Panel de control (sistema unificado). Exporta window.DashboardScreen
 (function () {
   const { useState } = React;
-  const { fmt, Badge, StatusBadge, toast } = window.UI;
+  const { fmt, Badge, StatusBadge } = window.UI;
   const { MS, ProductImage } = window.HX;
   const D = window.DATA;
   const h = React.createElement;
@@ -42,23 +42,9 @@
   }
 
   function DashboardScreen({ onNav }) {
-    const [, bump] = useState(0);
     const [chartView, setChartView] = useState('sem'); // 'sem' | 'mes'
-    const refresh = () => bump(v => v + 1);
-    function abonar(folio) {
-      const sale = D.sales.find(s => s.folio === folio);
-      const saldo = sale ? (sale.saldo != null ? Number(sale.saldo) || 0 : Math.max(0, (Number(sale.total) || 0) - (Number(sale.anticipo) || 0))) : 0;
-      const raw = window.prompt('Monto del abono para ' + folio + '\nSaldo pendiente: ' + fmt(saldo), String(saldo));
-      if (raw == null) return;
-      const monto = Number(raw);
-      const choice = window.prompt('Forma de pago\n1 = Efectivo\n2 = Tarjeta\n3 = Transferencia', '1');
-      if (choice == null) return;
-      const metodo = ({ '1': 'Efectivo', '2': 'Tarjeta', '3': 'Transferencia' })[String(choice).trim()];
-      const key = metodo && metodo.toLowerCase();
-      const r = D.registrarPagoApartado(folio, { monto, metodo, detalle: key ? { [key]: monto } : {} });
-      refresh();
-      toast(r.ok ? (r.liquidado ? 'Apartado liquidado · venta pagada' : 'Abono registrado · saldo ' + fmt(r.sale.saldo)) : r.error, r.ok ? undefined : 'var(--danger)');
-    }
+    // El abono se captura en la pantalla de Apartados (balam/layaway.jsx): monto, forma de
+    // pago y comprobante impreso. El panel sólo avisa y lleva ahí — una sola forma de cobrar.
     const SEMANA = chartView === 'mes' ? mesReal() : semanaReal();
     const maxPct = Math.max(1, ...SEMANA.map(x => x.pct));
     const p2 = n => String(n).padStart(2, '0');
@@ -207,8 +193,12 @@
                   h('p', { key: 'n', className: 'text-body-strong text-primary truncate' }, s.cliente),
                   h('p', { key: 'f', className: 'text-caption text-muted' }, s.folio + ' · saldo ' + fmt(s.saldo != null ? s.saldo : Math.max(0, (Number(s.total) || 0) - (Number(s.anticipo) || 0))).replace('.00', '')),
                 ]),
-                h('button', { key: 'b', className: 'shrink-0 px-3 py-1.5 text-overline font-bold uppercase tracking-wider rounded bg-primary text-on-primary hover:opacity-90 transition-opacity', onClick: () => abonar(s.folio) }, 'Abonar'),
+                h('button', { key: 'b', className: 'shrink-0 px-3 py-1.5 text-overline font-bold uppercase tracking-wider rounded bg-primary text-on-primary hover:opacity-90 transition-opacity', onClick: () => onNav && onNav('apartados') }, 'Abonar'),
               ]))),
+              h('button', {
+                key: 'all', className: 'mt-4 w-full py-2 text-overline font-bold uppercase tracking-wider rounded border border-outline-variant text-primary hover:bg-surface-container transition-colors',
+                onClick: () => onNav && onNav('apartados'),
+              }, 'Ver todos los apartados'),
             ]),
             h('div', { key: 'box', className: 'mt-4 p-6 rounded-lg bg-gold-soft flex flex-col items-center text-center' }, [
               h(MS, { key: 'i', name: 'badge', size: 24, className: 'mb-3 text-gold-text' }),

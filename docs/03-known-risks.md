@@ -1684,6 +1684,62 @@ la verificación sigue dependiendo de `FF-10`.
 **Corrección documentada:** este registro; la historia no produjo documento de
 corrección propio por su tamaño.
 
+## H-40 — El apartado abierto no tiene superficie de gestión ni comprobante
+
+**Estado:** RESUELTO
+**Fecha de registro:** 28/07/2026
+**Fecha de resolución:** 28/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** el dominio del apartado estaba completo desde H-03 y H-04
+—`DATA.registrarPagoApartado` asienta abono, liquidación, historial y push— pero
+el producto no exponía el estado intermedio. Los apartados abiertos sólo se veían
+como aviso de seis renglones en el panel, el abono se capturaba con dos
+`window.prompt()` encadenados y ningún pago posterior al anticipo producía
+comprobante: el cliente entregaba dinero y se iba sin papel.
+**Origen de auditoría:** solicitud del dueño del producto tras recorrer el flujo
+del apartado de extremo a extremo.
+**Riesgo:** cobranza sin trazabilidad para el cliente y sin visión de cartera para
+el negocio. Un abono sin comprobante es una disputa futura; una cartera sin
+totales impide saber cuánto dinero está comprometido.
+**Reproducción:** venta con método `Apartado` y anticipo parcial; el panel ofrece
+«Abonar» → `prompt()` de monto → `prompt()` con menú numérico de forma de pago →
+el abono queda asentado sin documento alguno.
+**Corrección:** pantalla propia `Apartados` en el menú lateral
+(`balam/layaway.jsx`) con cartera completa, cuatro indicadores, búsqueda por folio
+o cliente, filtros, renglón con detalle desplegable —mercancía e historial de
+pagos— y acciones de llamar, reimprimir y abonar; modal de abono con el mismo
+lenguaje de la botonera de cobro del POS —incluido `Mixto`—, impresión del listado
+en ventana propia y exportación a `.xlsx`. La captura por `prompt()` desaparece:
+hay una sola forma de cobrar un abono. El comprobante **no es un formato nuevo**:
+`BalamTicket` —el ticket del Punto de venta— gana la costura opcional `payment`
+(`ADR-003`), que añade el acuse del pago, el estado de cobranza y el historial de
+pagos al pie; sin ese parámetro el ticket de venta no cambia.
+**Alcance:** superficie. No hay migración, campo nuevo ni cambio de contrato de
+sincronización; `DATA` sigue siendo la autoridad única del abono y no se modificó.
+**Pruebas:** `test-layaway-screen.mjs` 55/55 sobre el bundle distribuido, más la
+regresión de cliente y ventas —`test-module-contracts.mjs` 37/37,
+`test-smoke.mjs` 15/15, `test-ui-navigation.mjs` 14/14,
+`test-folio-concurrency.mjs` 12/12, `test-discount-trace.mjs` 65/65,
+`test-store-queue.mjs` 115/115, `test-precio-talla-e2e.mjs` 19/19,
+`test-build-reproducibility.mjs` 8/8, `test-xlsx-security.mjs` 17/17,
+`test-returns.mjs` 17/17, `test-sale-coherence.mjs` 17/17,
+`test-line-balance.mjs` 38/38, `test-role-access.mjs` 10/10,
+`test-liquidations.mjs` 10/10, `test-folio-diario.mjs` 60/60—. Las cuatro suites
+que ejercitan el ticket impreso se corrieron después de abrir la costura para
+demostrar que el comprobante de venta no cambió.
+**Despliegue:** artefactos regenerados con `node build-offline.mjs`. La historia no
+toca el esquema, así que no hay migración que aplicar antes del cliente.
+**Pendiente:** reservar inventario al apartar sigue sin resolverse —es una decisión
+de negocio con impacto en el contrato remoto—; no existe cancelación de apartado ni
+devolución de anticipo; el apartado no vence. Dos defectos previos quedaron
+declarados sin corregir por alcance: `pos.allowLayaway` no tiene consumidores y el
+botón «Imprimir» de Reportes imprime en blanco porque fuera del Punto de venta no
+hay `#balam-ticket` montado.
+**Riesgo residual:** la pantalla declara que la pieza no está reservada, pero no lo
+impide. Un apartado cuya mercancía se vendió en piso seguirá fallando la reserva al
+liquidarse, con el mismo comportamiento de antes de esta historia.
+**Corrección documentada:** `docs/fixes/pantalla-apartados.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

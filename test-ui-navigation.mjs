@@ -34,6 +34,7 @@ const pages = [
   ['pos', 'Punto de venta', 'Punto de venta'],
   ['inventario', 'Inventario', 'Inventario'],
   ['clientes', 'Clientes', 'Clientes'],
+  ['apartados', 'Apartados', 'Apartados'],
   ['devoluciones', 'Devoluciones', 'Devoluciones'],
   ['descuentos', 'Promociones y descuentos', 'Descuentos'],
   ['vendedores', 'Vendedores y comisiones', 'Vendedores'],

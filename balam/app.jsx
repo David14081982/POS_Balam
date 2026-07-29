@@ -26,7 +26,7 @@
     const apartados = D.sales.filter(s => s.estado === 'Apartado');
     const items = [];
     if (criticos.length) items.push({ icon: 'alert', tone: '#ba1a1a', title: `${criticos.length} modelo(s) con stock crítico`, sub: criticos.slice(0, 3).map(p => p.nombre).join(', '), page: 'inventario' });
-    apartados.forEach(s => items.push({ icon: 'clock', tone: '#92760F', title: `Apartado por completar · ${s.folio}`, sub: `${s.cliente} · saldo ${fmt(s.saldo != null ? s.saldo : Math.max(0, (Number(s.total) || 0) - (Number(s.anticipo) || 0))).replace('.00', '')}`, page: 'dashboard' }));
+    apartados.forEach(s => items.push({ icon: 'clock', tone: '#92760F', title: `Apartado por completar · ${s.folio}`, sub: `${s.cliente} · saldo ${fmt(s.saldo != null ? s.saldo : Math.max(0, (Number(s.total) || 0) - (Number(s.anticipo) || 0))).replace('.00', '')}`, page: 'apartados' }));
     ((syncStatus && syncStatus.operations) || []).forEach(op => {
       if (!op.diagnostic) return;
       const waiting = op.status === 'retry_wait' || op.status === 'waiting_inventory';
@@ -79,6 +79,8 @@
     { id: 'pos', label: 'Punto de venta', icon: 'pos' },
     { id: 'inventario', label: 'Inventario', icon: 'box', liveBadge: true },
     { id: 'clientes', label: 'Clientes', icon: 'users' },
+    // Apartados es cobranza de mostrador: la ve el mismo perfil que registra la venta.
+    { id: 'apartados', label: 'Apartados', icon: 'clock' },
     { id: 'devoluciones', label: 'Devoluciones', icon: 'undo' },
     { id: 'descuentos', label: 'Descuentos', icon: 'sell', admin: true },
     { id: 'vendedores', label: 'Vendedores', icon: 'badge', admin: true },
@@ -96,7 +98,7 @@
   })();
   const TITLES = {
     dashboard: 'Panel de control', pos: 'Punto de venta', inventario: 'Inventario',
-    clientes: 'Clientes', devoluciones: 'Devoluciones', descuentos: 'Promociones y descuentos', vendedores: 'Vendedores y comisiones', reportes: 'Reportes', config: 'Configuración',
+    clientes: 'Clientes', apartados: 'Apartados', devoluciones: 'Devoluciones', descuentos: 'Promociones y descuentos', vendedores: 'Vendedores y comisiones', reportes: 'Reportes', config: 'Configuración',
   };
 
   // Solo tweaks que siguen vigentes con Heritage (layout de POS)
@@ -229,6 +231,7 @@
           : visiblePage === 'pos' ? h(window.POSScreen, { key: 'pos', layout: t.ticketPos, catalogView: t.catalogView, onNav: go })
           : visiblePage === 'inventario' ? h(window.InventoryScreen, { key: 'inv' })
           : visiblePage === 'clientes' ? h(window.ClientsScreen, { key: 'cli' })
+          : visiblePage === 'apartados' ? h(window.LayawayScreen, { key: 'apt' })
           : visiblePage === 'devoluciones' ? h(window.ReturnsScreen, { key: 'dev', onNav: go })
           : visiblePage === 'descuentos' ? h(window.DiscountsScreen, { key: 'desc' })
           : visiblePage === 'vendedores' ? h(window.SellersScreen, { key: 'ven' })

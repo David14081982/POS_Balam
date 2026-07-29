@@ -334,7 +334,12 @@
 
   // ---- Ticket térmico 80mm (comprobante de venta) ----
   // Se renderiza fuera de pantalla (#balam-ticket) y se imprime con window.print().
-  function BalamTicket({ sale }) {
+  //
+  // AUTORIDAD ÚNICA del comprobante impreso. La cobranza de apartados (H-40) no
+  // define un segundo formato: entra por la costura `payment`, que añade el acuse
+  // del pago recibido y conserva intacto el resto del documento. Sin `payment` el
+  // ticket es exactamente el de siempre.
+  function BalamTicket({ sale, payment }) {
     if (!sale) return null;
     const C = window.CONFIG;
     const hasSnapshot = sale.subtotal != null || sale.iva != null;
@@ -358,6 +363,17 @@
     const lineas = sale.lineas || [];
     const pagos = D.paymentsForSale ? D.paymentsForSale(sale.folio) : [];
     const snapshotCompleto = D.hasFinancialSnapshot ? D.hasFinancialSnapshot(sale) : hasSnapshot;
+    // Estado de cobranza: lo pagado y lo que falta. Se lee de la venta —nunca se
+    // recalcula— y sólo se deriva cuando `saldo` no existe (ventas anteriores).
+    const saldoPend = sale.saldo != null
+      ? Math.max(0, Number(sale.saldo) || 0)
+      : Math.max(0, granTotal - (Number(sale.anticipo) || 0));
+    const pagadoAcum = Math.max(0, granTotal - saldoPend);
+    const esApartado = sale.estado === 'Apartado';
+    // Un abono liquidado deja la venta en 'Pagado': el acuse sigue siendo de apartado.
+    const conCobranza = esApartado || !!payment;
+    const CONCEPTO = { anticipo: 'Anticipo de apartado', abono: 'Abono a apartado', liquidacion: 'Liquidación de apartado' };
+    const concepto = payment ? (CONCEPTO[payment.tipo] || 'Pago recibido') : '';
 
     const row = (l, v, cls) => h('div', { key: l, className: 'flex justify-between items-center ' + (cls || '') }, [
       h('span', { key: 'l' }, l), h('span', { key: 'v' }, v),
@@ -387,9 +403,16 @@
           C.get('store.address') && h('p', { key: 'a', className: 'text-on-surface-variant', style: { fontSize: '12px', lineHeight: 1.5 } }, C.get('store.address')),
           C.get('store.phone') && h('p', { key: 'p', className: 'text-on-surface-variant', style: { fontSize: '12px', lineHeight: 1.5 } }, C.get('store.phone')),
         ]),
+        // Acuse del pago recibido (sólo cobranza de apartado): lo primero que el
+        // cliente debe leer es cuánto entregó hoy y por qué concepto.
+        payment ? h('div', { key: 'rc', className: 'w-full mb-6' }, [
+          h('div', { key: 'a', className: 'uppercase text-on-surface-variant', style: { fontSize: '11px', letterSpacing: '0.18em' } }, concepto),
+          h('div', { key: 'b', className: 'font-headline text-primary mt-1', style: { fontSize: '30px', lineHeight: 1.1 } }, fmt(Number(payment.monto) || 0)),
+          h('div', { key: 'c', className: 'text-on-surface-variant mt-1', style: { fontSize: '12px' } }, `Recibido en ${payment.metodo} · ${payment.fecha}`),
+        ]) : null,
         // Transacción
         h('div', { key: 'tx', className: 'w-full border-y border-outline-variant py-4 mb-6 flex flex-col gap-1.5 text-left' }, [
-          info('Transacción', sale.folio, 'font-medium'),
+          info(payment ? 'Apartado' : 'Transacción', sale.folio, 'font-medium'),
           // Reimpresión de una venta reidentificada: el folio del ticket que
           // conserva el cliente se imprime junto al vigente y nunca se pierde.
           (D.saleFolioAliases && D.saleFolioAliases(sale).length)
@@ -397,11 +420,13 @@
             : null,
           info('Fecha', sale.fecha),
           info('Atendido por', sale.vendedor || '—'),
+          payment ? info('Cliente', sale.cliente || 'Público en general') : null,
           (sale.estado && sale.estado !== 'Pagado') ? info('Estado', sale.estado) : null,
         ]),
         // Detalle
         h('div', { key: 'd', className: 'w-full text-left' }, [
-          h('div', { key: 'h', className: 'uppercase text-on-surface-variant mb-4', style: { fontSize: '11px', letterSpacing: '0.18em' } }, 'Detalle de compra'),
+          h('div', { key: 'h', className: 'uppercase text-on-surface-variant mb-4', style: { fontSize: '11px', letterSpacing: '0.18em' } },
+            conCobranza ? (saldoPend > 0 ? 'Mercancía apartada' : 'Mercancía entregada') : 'Detalle de compra'),
           h('div', { key: 'l', className: 'space-y-5' }, lineas.map((l, i) => h('div', { key: i }, [
             h('div', { key: 'a', className: 'flex justify-between items-start gap-3' }, [
               h('span', { key: 'n', className: 'font-headline flex-1 min-w-0', style: { fontSize: '18px', lineHeight: 1.25 } }, l.nombre),
@@ -426,24 +451,51 @@
             h('span', { key: 'l', className: 'font-headline uppercase text-primary', style: { fontSize: '18px', letterSpacing: '-0.01em' } }, 'Total a pagar'),
             h('span', { key: 'v', className: 'font-headline text-primary', style: { fontSize: '26px', lineHeight: 1 } }, fmt(granTotal)),
           ]),
-          sale.estado === 'Apartado' ? h('div', { key: 'ap', className: 'mt-3 pt-3 border-t border-outline-variant space-y-1.5' }, [
-            row('Anticipo', fmt(Number(sale.anticipo) || 0)),
-            row('Saldo pendiente', fmt(Number(sale.saldo) || 0)),
+          // Estado de cobranza del apartado: cuánto lleva pagado y cuánto falta.
+          conCobranza ? h('div', { key: 'ap', className: 'mt-3 pt-3 border-t border-outline-variant space-y-1.5', style: { fontSize: '13px' } }, [
+            row('Pagado a la fecha', fmt(pagadoAcum)),
+            saldoPend > 0
+              ? h('div', { key: 'sp', className: 'flex justify-between items-center font-semibold text-primary', style: { fontSize: '15px' } }, [
+                h('span', { key: 'l' }, 'Saldo pendiente'), h('span', { key: 'v' }, fmt(saldoPend)),
+              ])
+              : h('div', { key: 'sp', className: 'flex justify-between items-center font-semibold text-primary', style: { fontSize: '15px' } }, [
+                h('span', { key: 'l' }, 'Saldo pendiente'), h('span', { key: 'v' }, 'LIQUIDADO'),
+              ]),
           ]) : null,
         ]),
-        // Método de pago
-        h('div', { key: 'mp', className: 'w-full mt-5 bg-surface-container-low rounded-xl p-4 text-left flex items-center gap-3' }, [
+        // Método de pago. En un acuse de cobranza no se repite: el pago del día ya
+        // declaró su forma arriba y el «método» de la venta es el propio apartado.
+        payment ? null : h('div', { key: 'mp', className: 'w-full mt-5 bg-surface-container-low rounded-xl p-4 text-left flex items-center gap-3' }, [
           h(MS, { key: 'i', name: ((C.find('payment_method', sale.metodo) || {}).meta || {}).icon || 'cash', size: 22, className: 'text-gold-text' }),
           h('div', { key: 't' }, [
             h('p', { key: 'a', className: 'uppercase text-on-surface-variant', style: { fontSize: '10px', letterSpacing: '0.08em' } }, 'Método de pago'),
             h('p', { key: 'b', className: 'font-medium text-primary', style: { fontSize: '13px' } }, sale.metodo),
           ]),
         ]),
+        // Historial de pagos al pie: cada movimiento con su fecha, concepto e importe.
+        // El pago que se acaba de recibir queda marcado para que el cliente lo ubique.
         pagos.length ? h('div', { key: 'ph', className: 'w-full mt-4 text-left border border-outline-variant rounded-xl p-4' }, [
-          h('p', { key: 't', className: 'uppercase text-on-surface-variant mb-2', style: { fontSize: '10px', letterSpacing: '0.08em' } }, 'Historial de pagos'),
-          ...pagos.map(p => row((p.tipo || 'pago') + ' · ' + p.metodo, fmt(p.monto))),
+          h('p', { key: 't', className: 'uppercase text-on-surface-variant mb-2.5', style: { fontSize: '10px', letterSpacing: '0.08em' } }, 'Historial de pagos'),
+          ...pagos.map((p, i) => {
+            const esteEs = payment && p.id === payment.id;
+            return h('div', { key: p.id || i, className: 'flex justify-between items-start gap-3 py-1 ' + (esteEs ? 'font-semibold text-primary' : 'text-on-surface-variant') }, [
+              h('span', { key: 'l', className: 'flex-1 min-w-0', style: { fontSize: '11px', lineHeight: 1.35 } }, [
+                h('span', { key: 'd' }, String(p.fecha || '').slice(0, 10) + ' · '),
+                h('span', { key: 'c' }, CONCEPTO[p.tipo] ? CONCEPTO[p.tipo].replace(' de apartado', '').replace(' a apartado', '') : (p.tipo || 'pago')),
+                h('span', { key: 'm' }, ' · ' + p.metodo),
+                esteEs ? h('span', { key: 'n' }, ' ← este pago') : null,
+              ]),
+              h('span', { key: 'v', className: 'shrink-0', style: { fontSize: '12px' } }, fmt(p.monto)),
+            ]);
+          }),
+          h('div', { key: 'tot', className: 'flex justify-between items-center mt-2 pt-2 border-t border-outline-variant font-semibold text-primary', style: { fontSize: '12px' } }, [
+            h('span', { key: 'l' }, `Total pagado (${pagos.length} movimiento${pagos.length === 1 ? '' : 's'})`),
+            h('span', { key: 'v' }, fmt(pagos.reduce((a, p) => a + (Number(p.monto) || 0), 0))),
+          ]),
         ]) : null,
         !snapshotCompleto ? h('div', { key: 'hw', className: 'w-full mt-4 p-3 border border-outline-variant rounded-lg text-on-surface-variant', style: { fontSize: '10px' } }, 'Venta histórica: desglose fiscal o de descuentos no disponible; se conserva el total registrado.') : null,
+        (conCobranza && saldoPend > 0) ? h('div', { key: 'nt', className: 'w-full mt-4 p-3 border border-outline-variant rounded-lg text-on-surface-variant text-left', style: { fontSize: '10px', lineHeight: 1.5 } },
+          'Conserva este comprobante. La mercancía se entrega al liquidar el saldo.') : null,
         // Pie
         h('div', { key: 'f', className: 'w-full mt-12 mb-1 flex flex-col items-center' }, [
           h('div', { key: 'd', className: 'w-12 h-px bg-outline-variant mb-6' }),
