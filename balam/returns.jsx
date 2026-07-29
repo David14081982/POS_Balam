@@ -6,7 +6,7 @@
 (function () {
   const { useState, useMemo } = React;
   const { toast, fmt, StatusBadge, Segment } = window.UI;
-  const { MS, GlassCard, SerifHeading } = window.HX;
+  const { MS, GlassCard, SerifHeading, ProductImage } = window.HX;
   const C = window.CONFIG;
   const D = window.DATA;
   const h = React.createElement;
@@ -359,24 +359,25 @@
   }
 
   // ── C6: pantalla del Cambio ──────────────────────────────────────────────────
-  // Reutiliza las autoridades existentes y no duplica ninguna regla:
-  //   saleLineBalance      → qué queda disponible de la venta
-  //   recognizedValue      → cuánto vale la pieza que el cliente entrega
-  //   priceRange/listPrice → qué cuesta hoy lo que se lleva
-  //   returnDeadline       → si la venta todavía admite posventa
-  //   recordExchange       → única vía de registro; el servidor recalcula el dinero
-  //   CheckoutModal        → el cobro completo del POS para la diferencia
-  //   BalamTicket          → autoridad única del comprobante impreso
+  // Reutiliza el LENGUAJE del Punto de venta (R-CLI-08): catálogo a la izquierda,
+  // panel de resumen a la derecha, renglones con imagen + cantidad ± + papelera,
+  // pie navy con el desglose y lectura de código de barras idéntica.
+  //
+  // Consume autoridades y no reimplementa reglas:
+  //   saleLineBalance · recognizedValue · listPrice/priceRange · returnDeadline
+  //   recordExchange (única vía de registro) · CheckoutModal · BalamTicket
   function ExchangeDetail({ sale, onBack, onDone, embedded }) {
     const [dev, setDev] = useState({});
     const [ent, setEnt] = useState([]);
     const [picking, setPicking] = useState(null);
-    const [q, setQ] = useState('');
+    const [query, setQuery] = useState('');
+    const [flash, setFlash] = useState(null);
     const [notas, setNotas] = useState('');
     const [revisor, setRevisor] = useState('');
     const [cobro, setCobro] = useState(false);
     const [recibo, setRecibo] = useState(null);
     const [vendedor, setVendedor] = useState(null);
+    const scanRef = React.useRef(null);
     const reasons = C.list('return_reason');
     const plazo = deadlineOf(sale);
     const vencida = plazo.status === 'vencido';
@@ -386,32 +387,84 @@
       .filter(r => r.disponible > 0)
       .map(r => Object.assign({}, r, {
         k: r.sku + '|' + r.talla,
+        p: D.products.find(x => x.sku === r.sku),
         nombre: ((sale.lineas || []).find(l => l.sku === r.sku && l.talla === r.talla) || {}).nombre || r.sku,
         valor: D.recognizedValue ? D.recognizedValue(sale.folio, r.sku, r.talla) : 0,
       }));
     const setRow = (k, patch) => setDev(p => Object.assign({}, p, { [k]: Object.assign({ on: true, qty: 1 }, p[k], patch) }));
+    const quitarDev = (k) => setDev(p => { const c = Object.assign({}, p); delete c[k]; return c; });
     const marcados = saldo.filter(r => dev[r.k] && dev[r.k].on);
 
     const valorReconocido = marcados.reduce((a, r) => a + r.valor * (dev[r.k].qty || 1), 0);
     const valorEntregado = ent.reduce((a, l) => a + D.listPrice(l.p, l.talla) * l.qty, 0);
     const diferencia = Math.max(0, Math.round((valorEntregado - valorReconocido) * 100) / 100);
     const noAprovechado = Math.max(0, Math.round((valorReconocido - valorEntregado) * 100) / 100);
+    // Mismo desglose que el POS: importe e IVA describen lo que se cobra.
+    const ivaPct = 16;
+    const importe = Math.round((diferencia / (1 + ivaPct / 100)) * 100) / 100;
+    const ivaMonto = Math.round((diferencia - importe) * 100) / 100;
 
     const catalogo = useMemo(() => {
-      const t = q.trim().toUpperCase();
+      const t = query.trim().toLowerCase();
       return D.products.filter(p => !p._deletedAt && (!t
-        || String(p.nombre).toUpperCase().includes(t) || String(p.sku).toUpperCase().includes(t)))
+        || String(p.nombre).toLowerCase().includes(t) || String(p.sku).toLowerCase().includes(t)))
         .slice(0, 24);
-    }, [q]);
+    }, [query]);
 
+    function flashLine(key) { setFlash(key); setTimeout(() => setFlash(k => (k === key ? null : k)), 900); }
     function agregar(p, talla) {
       setPicking(null);
       setEnt(prev => {
         const i = prev.findIndex(l => l.p.id === p.id && l.talla === talla);
         if (i >= 0) { const c = prev.slice(); c[i] = Object.assign({}, c[i], { qty: c[i].qty + 1 }); return c; }
-        return prev.concat([{ p, talla, qty: 1 }]);
+        return prev.concat([{ key: p.id + '-' + talla, p, talla, qty: 1 }]);
       });
+      flashLine(p.id + '-' + talla);
     }
+    const entQty = (key, d) => setEnt(prev => prev.map(l => l.key === key ? Object.assign({}, l, { qty: Math.max(1, l.qty + d) }) : l));
+    const entQuitar = (key) => setEnt(prev => prev.filter(l => l.key !== key));
+
+    // Lectura de código de barras: mismo comportamiento que el Punto de venta.
+    function onScan(e) {
+      if (e.key !== 'Enter') return;
+      const raw = String((e.target && e.target.value != null) ? e.target.value : query).trim();
+      if (!raw) return;
+      const hit = window.BARCODES && window.BARCODES.find(raw);
+      if (hit) { agregar(hit.p, hit.talla); setQuery(''); return; }
+      const q = raw.toLowerCase();
+      const exact = D.products.find(p => String(p.sku).toLowerCase() === q);
+      const target = exact || catalogo[0];
+      if (target) { setPicking(target); setQuery(''); return; }
+      const looksCode = window.BARCODES && window.BARCODES.parse(raw);
+      toast(looksCode ? ('Código no encontrado: ' + raw.toUpperCase()) : ('Sin coincidencias para "' + raw + '"'), 'var(--danger)');
+    }
+    // Lector USB (HID) con captura global, igual que el POS: distingue el lector
+    // del tecleo humano por la cadencia entre teclas.
+    const scanRT = React.useRef({});
+    scanRT.current = { agregar, scanEl: scanRef.current, blocked: !!(picking || cobro || vendedor || recibo) };
+    React.useEffect(() => {
+      let buf = '', lt = 0;
+      function onKey(e) {
+        const st = scanRT.current;
+        if (document.activeElement === st.scanEl) return;
+        if (e.key === 'Enter') {
+          const code = buf; buf = '';
+          if (st.blocked || code.length < 4) return;
+          const hit = window.BARCODES && window.BARCODES.find(code);
+          if (!hit) return;
+          e.preventDefault();
+          st.agregar(hit.p, hit.talla);
+          return;
+        }
+        if (e.key && e.key.length === 1) {
+          const now = Date.now();
+          if (now - lt > 50) buf = '';
+          buf += e.key; lt = now;
+        }
+      }
+      document.addEventListener('keydown', onKey, true);
+      return () => document.removeEventListener('keydown', onKey, true);
+    }, []);
 
     function validar() {
       if (vencida) { toast('Esta venta ya no admite posventa · ' + plazo.label.toLowerCase(), 'var(--danger)'); return false; }
@@ -424,9 +477,6 @@
       if (!String(revisor).trim()) { toast('Escribe quién revisó la mercancía', 'var(--danger)'); return false; }
       return true;
     }
-
-    // El excedente lo cobra el checkout completo del POS. Sin diferencia, el
-    // sobrante se pierde (Contrato del Cambio §4) y se confirma explícitamente.
     function siguiente() {
       if (!validar()) return;
       if (diferencia > 0) { setCobro(true); return; }
@@ -435,12 +485,11 @@
         + 'Ese saldo NO se devuelve en efectivo y NO queda a favor: se pierde.\n\n¿Confirmas el cambio?')) return;
       setVendedor({ metodo: null });
     }
-
     function registrar(sellerId, metodo) {
       const lineas = marcados.map(r => ({
         lado: 'devuelto', sku: r.sku, nombre: r.nombre, talla: r.talla,
         qty: dev[r.k].qty || 1, motivo: dev[r.k].motivo, condicion: dev[r.k].condicion,
-        productId: (D.products.find(p => p.sku === r.sku) || {}).id,
+        productId: r.p ? r.p.id : undefined,
       })).concat(ent.map(l => ({
         lado: 'entregado', sku: l.p.sku, nombre: l.p.nombre, talla: l.talla,
         qty: l.qty, productId: l.p.id,
@@ -456,49 +505,122 @@
       setRecibo({ sale, exchange: res.exchange, payment: res.payment });
     }
 
-    const box = 'bg-surface-container-lowest rounded-xl border border-outline-variant p-5';
-    const cuerpo = h('div', { className: 'max-w-[1100px] mx-auto p-6' }, [
-      h('div', { key: 'bc', className: 'flex items-center gap-3 mb-5' }, [
+    // ── Renglón del panel: mismo lenguaje que el ticket del POS ───────────────
+    function Renglon({ img, nombre, talla, qty, importe: imp, onMenos, onMas, onQuitar, destacado }) {
+      return h('div', { className: 'flex gap-3 rounded-lg transition-all duration-500 ' + (destacado ? 'ring-2 ring-success bg-success-soft/50 -mx-2 px-2 py-1' : '') }, [
+        img ? h(ProductImage, { key: 't', p: img, className: 'w-11 h-14 shrink-0 rounded-lg ring-1 ring-outline-variant/50' })
+            : h('div', { key: 't', className: 'w-11 h-14 shrink-0 rounded-lg bg-surface-container grid place-items-center' }, h(MS, { name: 'shirt', size: 18, className: 'text-on-surface-variant/40' })),
+        h('div', { key: 'i', className: 'flex-1 min-w-0 flex flex-col' }, [
+          h('div', { key: 'top', className: 'flex justify-between items-start mb-1' }, [
+            h('h4', { key: 'n', className: 'text-body-strong text-primary truncate pr-3' }, nombre),
+            h('button', { key: 'x', title: 'Quitar', onClick: onQuitar,
+              className: 'text-on-surface-variant hover:text-danger transition-colors shrink-0' }, h(MS, { name: 'trash', size: 18 })),
+          ]),
+          h('p', { key: 'sz', className: 'text-overline uppercase text-on-surface-variant' }, 'Talla ' + talla),
+          h('div', { key: 'm', className: 'mt-auto pt-1.5 flex justify-between items-center' }, [
+            h('div', { key: 'q', className: 'flex items-center bg-surface-container-low border border-outline-variant rounded-md overflow-hidden' }, [
+              h('button', { key: 'a', className: 'w-7 h-7 flex items-center justify-center hover:bg-surface transition-colors', onClick: onMenos }, h(MS, { name: 'minus', size: 16 })),
+              h('span', { key: 'n', className: 'w-8 text-center text-caption font-bold border-x border-outline-variant bg-surface py-1' }, qty),
+              h('button', { key: 'b', className: 'w-7 h-7 flex items-center justify-center hover:bg-surface transition-colors', onClick: onMas }, h(MS, { name: 'plus', size: 16 })),
+            ]),
+            h('span', { key: 's', className: 'font-headline text-body text-primary' }, fmt(imp)),
+          ]),
+        ]),
+      ]);
+    }
+    const vacio = (icono, titulo, pista) => h('div', { className: 'flex flex-col items-center justify-center gap-2 py-6 text-on-surface-variant' }, [
+      h(MS, { key: 'i', name: icono, size: 28, className: 'text-on-surface-variant/40' }),
+      h('div', { key: 't', className: 'text-caption font-semibold text-primary' }, titulo),
+      h('div', { key: 's', className: 'text-caption text-center' }, pista),
+    ]);
+
+    // ── Panel: Resumen del cambio ─────────────────────────────────────────────
+    const panel = h('aside', { className: 'bg-surface-container-lowest rounded-xl shadow-e3 flex flex-col overflow-hidden shrink-0 w-[clamp(340px,32vw,460px)]' }, [
+      h('div', { key: 'hd', className: 'p-4 border-b border-outline-variant bg-surface' }, [
+        h('span', { key: 'l', className: 'text-overline uppercase text-on-surface-variant' }, 'Resumen del cambio'),
+        h('div', { key: 'f', className: 'text-caption text-on-surface-variant mt-0.5' }, 'Venta ' + sale.folio),
+      ]),
+      h('div', { key: 'body', className: 'flex-1 overflow-y-auto no-scrollbar px-5 py-3' }, [
+        h('div', { key: 'he', className: 'text-overline uppercase tracking-widest text-on-surface-variant mb-2' }, 'Entrega'),
+        marcados.length
+          ? h('div', { key: 'de', className: 'space-y-2 mb-4' }, marcados.map(r => h(Renglon, {
+              key: r.k, img: r.p, nombre: r.nombre, talla: r.talla, qty: dev[r.k].qty || 1,
+              importe: r.valor * (dev[r.k].qty || 1),
+              onMenos: () => setRow(r.k, { qty: Math.max(1, (dev[r.k].qty || 1) - 1) }),
+              onMas: () => setRow(r.k, { qty: Math.min(r.disponible, (dev[r.k].qty || 1) + 1) }),
+              onQuitar: () => quitarDev(r.k),
+            })))
+          : h('div', { key: 've' }, vacio('undo', 'Sin mercancía marcada', 'Marca abajo lo que el cliente regresa')),
+        h('div', { key: 'hr', className: 'text-overline uppercase tracking-widest text-on-surface-variant mb-2 pt-2 border-t border-outline-variant' }, 'Recibe'),
+        ent.length
+          ? h('div', { key: 'dr', className: 'space-y-2' }, ent.map(l => h(Renglon, {
+              key: l.key, img: l.p, nombre: l.p.nombre, talla: l.talla, qty: l.qty,
+              importe: D.listPrice(l.p, l.talla) * l.qty, destacado: flash === l.key,
+              onMenos: () => entQty(l.key, -1), onMas: () => entQty(l.key, 1),
+              onQuitar: () => entQuitar(l.key),
+            })))
+          : h('div', { key: 'vr' }, vacio('shopping_cart_checkout', 'Sin mercancía elegida', 'Escanea o toca un producto para empezar')),
+      ]),
+      h('div', { key: 'foot', className: 'px-5 py-4 bg-primary text-on-primary' }, [
+        h('div', { key: 'rows', className: 'space-y-1.5 mb-2' }, [
+          h('div', { key: 'vr', className: 'flex justify-between text-caption opacity-70' }, [h('span', { key: 'l' }, 'Valor reconocido'), h('span', { key: 'v', className: 'font-medium' }, fmt(valorReconocido))]),
+          h('div', { key: 've', className: 'flex justify-between text-caption opacity-70' }, [h('span', { key: 'l' }, 'Valor de lo que recibe'), h('span', { key: 'v', className: 'font-medium' }, fmt(valorEntregado))]),
+          diferencia > 0 ? h('div', { key: 'im', className: 'flex justify-between text-caption opacity-70' }, [h('span', { key: 'l' }, 'Importe'), h('span', { key: 'v', className: 'font-medium' }, fmt(importe))]) : null,
+          diferencia > 0 ? h('div', { key: 'iv', className: 'flex justify-between text-caption opacity-70' }, [h('span', { key: 'l' }, 'IVA (' + ivaPct + '%)'), h('span', { key: 'v', className: 'font-medium' }, fmt(ivaMonto))]) : null,
+        ]),
+        noAprovechado > 0
+          ? h('div', { key: 'na', className: 'mb-3' }, [
+              h('div', { key: 'r', className: 'flex justify-between items-end' }, [
+                h('span', { key: 'l', className: 'text-overline uppercase opacity-60' }, 'Valor no aprovechado'),
+                h('span', { key: 'v', className: 'font-headline text-h1 tracking-tight leading-none', style: { color: '#FFE088' } }, fmt(noAprovechado)),
+              ]),
+              h('div', { key: 'a', className: 'text-caption mt-1 opacity-80' }, 'No se devuelve en efectivo ni queda a favor del cliente.'),
+            ])
+          : h('div', { key: 'tt', className: 'flex justify-between items-end mb-3' }, [
+              h('span', { key: 'l', className: 'text-overline uppercase opacity-60' }, diferencia > 0 ? 'Diferencia a cobrar' : 'Sin diferencia'),
+              h('span', { key: 'v', className: 'font-headline text-h1 tracking-tight leading-none' }, fmt(diferencia)),
+            ]),
+        h('button', { key: 'go', disabled: vencida || !marcados.length || !ent.length, onClick: siguiente,
+          className: 'w-full py-3 bg-surface text-primary rounded-lg text-caption font-bold uppercase tracking-wider shadow-e2 transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed' },
+          [h(MS, { key: 'i', name: diferencia > 0 ? 'shopping_cart_checkout' : 'check', size: 18 }),
+           diferencia > 0 ? 'Cobrar ' + fmt(diferencia) : 'Registrar cambio']),
+      ]),
+    ]);
+
+    // ── Columna de trabajo ────────────────────────────────────────────────────
+    const trabajo = h('div', { className: 'flex-1 min-w-0 flex flex-col gap-5 overflow-y-auto no-scrollbar pr-2 -mr-2' }, [
+      h('div', { key: 'bc', className: 'flex items-center gap-3' }, [
         h('button', { key: 'b', className: 'inline-flex items-center gap-2 text-on-surface-variant hover:text-primary transition-colors', onClick: onBack },
           [h(MS, { key: 'i', name: 'chevLeft', size: 18 }), h('span', { key: 't', className: 'text-overline uppercase tracking-widest font-semibold' }, 'Devoluciones')]),
-        h('span', { key: 'f', className: 'text-overline uppercase text-on-surface-variant' }, sale.folio),
         h(DeadlineTag, { key: 'dl', sale }),
       ]),
-      vencida && h('div', { key: 'exp', className: 'mb-4 p-3 rounded-lg text-caption bg-surface-container' },
+      vencida && h('div', { key: 'exp', className: 'p-3 rounded-lg text-caption bg-surface-container' },
         'Fuera de plazo: esta venta admitía posventa hasta ' + (plazo.expiresAt || '—') + '. Un administrador debe ajustar el plazo en Configuración → Devoluciones.'),
 
-      h('div', { key: 'dev', className: box + ' mb-5' }, [
-        h('div', { key: 't', className: 'text-overline uppercase tracking-widest text-on-surface-variant mb-3' }, 'Lo que el cliente entrega'),
+      h('div', { key: 'dev', className: 'bg-surface-container-lowest rounded-xl border border-outline-variant p-5' }, [
+        h('div', { key: 't', className: 'text-overline uppercase tracking-widest text-on-surface-variant mb-3' }, 'Marca lo que el cliente entrega'),
         !saldo.length && h('p', { key: 'v', className: 'text-caption text-on-surface-variant' }, 'Esta venta ya no tiene piezas disponibles.'),
         ...saldo.map(r => {
           const st = dev[r.k] || {};
           return h('div', { key: r.k, className: 'py-3 border-b border-outline-variant last:border-0' }, [
             h('label', { key: 'h', className: 'flex items-center gap-3 cursor-pointer' }, [
               h('input', { key: 'c', type: 'checkbox', checked: !!st.on, className: 'w-5 h-5 rounded border-outline text-primary',
-                onChange: e => setRow(r.k, { on: e.target.checked }) }),
+                onChange: e => (e.target.checked ? setRow(r.k, { on: true }) : quitarDev(r.k)) }),
               h('div', { key: 'n', className: 'flex-1 min-w-0' }, [
                 h('div', { key: 'a', className: 'text-body text-primary font-semibold truncate' }, r.nombre),
                 h('div', { key: 'b', className: 'text-overline uppercase text-on-surface-variant' },
                   'Talla ' + r.talla + ' · ' + r.disponible + ' disponible(s) · se reconoce ' + fmt(r.valor)),
               ]),
             ]),
-            st.on && h('div', { key: 'd', className: 'mt-3 grid grid-cols-1 md:grid-cols-3 gap-3 pl-8' }, [
+            st.on && h('div', { key: 'd', className: 'mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 pl-8' }, [
               h('div', { key: 'm' }, [
                 h('label', { key: 'l', className: 'block text-overline uppercase text-on-surface-variant mb-1' }, 'Motivo'),
                 h('select', { key: 's', value: st.motivo || '', className: 'w-full h-10 px-3 bg-surface-container-low border border-outline-variant rounded-lg text-body',
                   onChange: e => setRow(r.k, { motivo: e.target.value }) },
                   [h('option', { key: '_', value: '', disabled: true }, 'Selecciona…')].concat(reasons.map(x => h('option', { key: x.code, value: x.code }, x.label)))),
               ]),
-              h('div', { key: 'q' }, [
-                h('label', { key: 'l', className: 'block text-overline uppercase text-on-surface-variant mb-1' }, 'Cantidad'),
-                h('div', { key: 'w', className: 'flex items-center gap-2' }, [
-                  h('button', { key: 'm', className: 'w-9 h-9 grid place-items-center border border-outline-variant rounded-lg', onClick: () => setRow(r.k, { qty: Math.max(1, (st.qty || 1) - 1) }) }, h(MS, { name: 'minus', size: 16 })),
-                  h('span', { key: 'v', className: 'w-8 text-center font-headline text-h2 text-primary' }, st.qty || 1),
-                  h('button', { key: 'p', className: 'w-9 h-9 grid place-items-center border border-outline-variant rounded-lg', onClick: () => setRow(r.k, { qty: Math.min(r.disponible, (st.qty || 1) + 1) }) }, h(MS, { name: 'plus', size: 16 })),
-                ]),
-              ]),
               h('div', { key: 'r' }, [
-                h('label', { key: 'l', className: 'block text-overline uppercase text-on-surface-variant mb-1' }, 'Revisión de la prenda'),
+                h('label', { key: 'l', className: 'block text-overline uppercase text-on-surface-variant mb-1' }, 'Condición de la prenda'),
                 h('input', { key: 'i', value: st.condicion || '', placeholder: 'Excelente · sin uso, con etiqueta…',
                   className: 'w-full h-10 px-3 bg-surface-container-low border border-outline-variant rounded-lg text-body',
                   onChange: e => setRow(r.k, { condicion: e.target.value }) }),
@@ -508,66 +630,50 @@
         }),
       ]),
 
-      h('div', { key: 'ent', className: box + ' mb-5' }, [
+      h('div', { key: 'cat', className: 'bg-surface-container-lowest rounded-xl border border-outline-variant p-5' }, [
         h('div', { key: 't', className: 'flex items-center gap-3 mb-3' }, [
-          h('span', { key: 'l', className: 'text-overline uppercase tracking-widest text-on-surface-variant' }, 'Lo que el cliente se lleva'),
-          h('input', { key: 'q', value: q, placeholder: 'Buscar artículo o SKU…', onChange: e => setQ(e.target.value),
-            className: 'flex-1 h-10 px-3 bg-surface-container-low border border-outline-variant rounded-lg text-body' }),
+          h('span', { key: 'l', className: 'text-overline uppercase tracking-widest text-on-surface-variant shrink-0' }, 'Elige lo que se lleva'),
+          h('input', { key: 'q', ref: scanRef, value: query, onKeyDown: onScan, onChange: e => setQuery(e.target.value),
+            placeholder: 'Escanea el código de barras o busca por nombre / SKU…',
+            className: 'flex-1 h-10 px-3 bg-surface-container-low border border-outline-variant rounded-lg text-body focus:ring-1 focus:ring-primary' }),
         ]),
-        ...ent.map((l, i) => h('div', { key: 'l' + i, className: 'flex items-center gap-3 py-2 border-b border-outline-variant last:border-0' }, [
-          h('div', { key: 'n', className: 'flex-1 min-w-0' }, [
-            h('div', { key: 'a', className: 'text-body text-primary truncate' }, l.p.nombre),
-            h('div', { key: 'b', className: 'text-overline uppercase text-on-surface-variant' }, 'Talla ' + l.talla + ' · ' + fmt(D.listPrice(l.p, l.talla))),
-          ]),
-          h('span', { key: 'q', className: 'font-headline text-body text-primary' }, '×' + l.qty),
-          h('button', { key: 'x', className: 'w-9 h-9 grid place-items-center text-on-surface-variant hover:text-danger', onClick: () => setEnt(prev => prev.filter((_, j) => j !== i)) }, h(MS, { name: 'trash', size: 16 })),
-        ])),
-        h('div', { key: 'cat', className: 'grid grid-cols-2 md:grid-cols-4 gap-2 mt-3' }, catalogo.map(p => {
+        h('div', { key: 'g', className: 'grid grid-cols-2 md:grid-cols-4 gap-2' }, catalogo.map(p => {
           const r = D.priceRange(p);
           return h('button', { key: p.id, onClick: () => setPicking(p),
             className: 'text-left p-3 border border-outline-variant rounded-lg hover:border-primary transition-colors' }, [
             h('div', { key: 'n', className: 'text-caption text-primary font-semibold truncate' }, p.nombre),
-            h('div', { key: 'p', className: 'text-overline text-on-surface-variant' },
-              r.unico ? fmt(r.min) : fmt(r.min) + ' – ' + fmt(r.max)),
+            h('div', { key: 'p', className: 'text-overline text-on-surface-variant' }, r.unico ? fmt(r.min) : fmt(r.min) + ' – ' + fmt(r.max)),
           ]);
         })),
       ]),
 
-      h('div', { key: 'liq', className: 'bg-primary text-on-primary rounded-xl p-5 mb-5' }, [
-        h('div', { key: 'a', className: 'flex justify-between text-body mb-1' }, [h('span', { key: 'l' }, 'Valor reconocido'), h('span', { key: 'v' }, fmt(valorReconocido))]),
-        h('div', { key: 'b', className: 'flex justify-between text-body mb-1' }, [h('span', { key: 'l' }, 'Valor de lo que se lleva'), h('span', { key: 'v' }, fmt(valorEntregado))]),
-        diferencia > 0 && h('div', { key: 'c', className: 'flex justify-between font-headline mt-3 pt-3 border-t border-white/20', style: { fontSize: '26px' } },
-          [h('span', { key: 'l' }, 'A cobrar'), h('span', { key: 'v' }, fmt(diferencia))]),
-        noAprovechado > 0 && h('div', { key: 'd', className: 'mt-3 pt-3 border-t border-white/20 text-caption' },
-          'Sobrante de ' + fmt(noAprovechado) + ' · no se devuelve en efectivo ni queda a favor.'),
-        h('div', { key: 'r', className: 'mt-4' }, [
-          h('label', { key: 'l', className: 'block text-overline uppercase opacity-70 mb-1' }, 'Revisó la mercancía'),
-          h('input', { key: 'i', value: revisor, placeholder: 'Nombre de quien revisó', onChange: e => setRevisor(e.target.value),
-            className: 'w-full h-10 px-3 rounded-lg text-body bg-white/10 border border-white/20 text-on-primary' }),
+      h('div', { key: 'datos', className: 'bg-surface-container-lowest rounded-xl border border-outline-variant p-5' }, [
+        h('div', { key: 't', className: 'text-overline uppercase tracking-widest text-on-surface-variant mb-3' }, 'Datos del cambio'),
+        h('div', { key: 'g', className: 'grid grid-cols-1 md:grid-cols-2 gap-3' }, [
+          h('div', { key: 'r' }, [
+            h('label', { key: 'l', className: 'block text-overline uppercase text-on-surface-variant mb-1' }, 'Revisó la mercancía'),
+            h('input', { key: 'i', value: revisor, placeholder: 'Nombre de quien revisó', onChange: e => setRevisor(e.target.value),
+              className: 'w-full h-10 px-3 bg-surface-container-low border border-outline-variant rounded-lg text-body' }),
+          ]),
+          h('div', { key: 'n' }, [
+            h('label', { key: 'l', className: 'block text-overline uppercase text-on-surface-variant mb-1' }, 'Observaciones'),
+            h('input', { key: 'i', value: notas, onChange: e => setNotas(e.target.value),
+              className: 'w-full h-10 px-3 bg-surface-container-low border border-outline-variant rounded-lg text-body' }),
+          ]),
         ]),
-        h('div', { key: 'n', className: 'mt-3' }, [
-          h('label', { key: 'l', className: 'block text-overline uppercase opacity-70 mb-1' }, 'Observaciones'),
-          h('input', { key: 'i', value: notas, onChange: e => setNotas(e.target.value),
-            className: 'w-full h-10 px-3 rounded-lg text-body bg-white/10 border border-white/20 text-on-primary' }),
-        ]),
-        h('button', { key: 'go', disabled: vencida, onClick: siguiente,
-          className: 'w-full mt-5 py-3.5 bg-gold text-on-gold text-caption font-bold uppercase tracking-widest rounded-xl disabled:opacity-40' },
-          diferencia > 0 ? 'Cobrar ' + fmt(diferencia) : 'Registrar cambio'),
       ]),
     ]);
 
-    return h('div', { className: embedded ? '' : 'flex-1 overflow-y-auto bg-background font-body text-on-surface' }, [
-      cuerpo,
+    return h('div', { className: (embedded ? 'flex-1 min-h-0 ' : 'flex-1 min-h-0 ') + 'bg-background font-body text-on-surface p-6 flex gap-6' }, [
+      trabajo,
+      panel,
       picking && h(ExchangeSizeModal, { key: 'sz', p: picking, onClose: () => setPicking(null), onPick: agregar }),
       cobro && h(window.CheckoutModal, {
         key: 'co', total: diferencia, itemCount: ent.reduce((a, l) => a + l.qty, 0),
         client: { generic: true, nombre: sale.cliente }, onClose: () => setCobro(false),
         onConfirm: (pago) => { setCobro(false); setVendedor({ metodo: (pago && pago.metodo) ? pago.metodo : 'Efectivo' }); },
       }),
-      vendedor && h(SellerModal, {
-        key: 'sv', sellers: elegibles, onClose: () => setVendedor(null),
-        onPick: (id) => registrar(id, vendedor.metodo),
-      }),
+      vendedor && h(SellerModal, { key: 'sv', sellers: elegibles, onClose: () => setVendedor(null), onPick: (id) => registrar(id, vendedor.metodo) }),
       recibo && h(ExchangeReceipt, { key: 'rc', recibo, onClose: () => { setRecibo(null); onDone(); } }),
       // Comprobante térmico: la MISMA autoridad del Punto de venta, con el cambio
       // como costura. Vive fuera de pantalla y sólo él queda visible al imprimir.
@@ -604,12 +710,10 @@
         : h('p', { className: 'text-caption text-on-surface-variant' }, 'No hay vendedores elegibles.')));
   }
 
-  // Acuse en pantalla. El documento impreso lo arma window.BalamTicket.
+  // Acuse en pantalla + impresión automática. El documento lo arma BalamTicket.
   function ExchangeReceipt({ recibo, onClose }) {
     const ex = recibo.exchange;
-    React.useEffect(() => {
-      if (C.get('print.auto')) { const t = setTimeout(() => window.print(), 350); return () => clearTimeout(t); }
-    }, []);
+    React.useEffect(() => { const t = setTimeout(() => window.print(), 350); return () => clearTimeout(t); }, []);
     return h(window.UI.Modal, {
       title: 'Cambio registrado', onClose,
       footer: [

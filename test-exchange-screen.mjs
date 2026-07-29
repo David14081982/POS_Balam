@@ -85,5 +85,30 @@ ok('28. commit_exchange transporta los campos nuevos',
 ok('29. la verificación prueba transporte y compatibilidad',
   /raise exception/.test(ver) && /sin los campos nuevos/.test(ver) && /delete from pos\.exchanges/.test(ver));
 
+console.log('\n── F) Panel de resumen, al estilo del POS ──────────────');
+ok('30. hay un panel lateral con el ancho del ticket del POS',
+  /Resumen del cambio/.test(ex) && /w-\[clamp\(340px/.test(ex));
+ok('31. el panel muestra las dos mitades del cambio',
+  /'Entrega'/.test(ex) && /'Recibe'/.test(ex));
+ok('32. cada renglón trae imagen, cantidad y papelera',
+  /ProductImage/.test(ex) && /onMenos/.test(ex) && /onMas/.test(ex) && /onQuitar/.test(ex));
+ok('33. se puede quitar lo marcado por error en ambos lados',
+  /quitarDev/.test(ex) && /entQuitar/.test(ex));
+ok('34. el pie navy lleva el desglose del POS',
+  /bg-primary text-on-primary/.test(ex) && /Importe/.test(ex) && /IVA \(/.test(ex));
+ok('35. distingue cobrar de valor no aprovechado',
+  /Diferencia a cobrar/.test(ex) && /Valor no aprovechado/.test(ex)
+    && /No se devuelve en efectivo ni queda a favor/.test(ex));
+ok('36. hay estado vacío en ambos bloques', (ex.match(/vacio\(/g) || []).length >= 2);
+ok('37. el renglón nuevo se ilumina como en el POS',
+  /flashLine/.test(ex) && /ring-2 ring-success/.test(ex));
+ok('38. el botón se deshabilita mientras falte una mitad',
+  /disabled: vencida \|\| !marcados\.length \|\| !ent\.length/.test(ex));
+ok('39. lee código de barras igual que el Punto de venta',
+  /BARCODES && window\.BARCODES\.find\(raw\)/.test(ex) && /BARCODES\.parse\(raw\)/.test(ex)
+    && /addEventListener\('keydown'/.test(ex) && /now - lt > 50/.test(ex));
+ok('40. el comprobante se imprime automáticamente al cerrar',
+  /setTimeout\(\(\) => window\.print\(\), 350\)/.test(ex));
+
 console.log(`\n════════ ${pass} pasaron, ${fail} fallaron ════════`);
 process.exit(fail ? 1 : 0);
