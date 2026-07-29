@@ -3,7 +3,7 @@
 **Riesgo:** H-41
 **Estado:** RESUELTO
 **Fecha:** 28/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `ce235ff`
 
 ## Problema y reproducción
 
@@ -147,6 +147,16 @@ comprobante en medio `print` y lo imprime a PDF con `page.pdf()`, comprobando qu
 
 Antes del cambio, con la misma reproducción: 1 hoja para 1543 px, historial fuera del
 papel.
+
+## Despliegue
+
+- Artefactos regenerados con `node build-offline.mjs` antes del commit.
+- Sin migraciones: la corrección no toca el esquema.
+- Publicado por el hook `post-commit` en `https://david14081982.github.io/POS_Balam/`.
+- Artefacto servido verificado contra el `index.html` del commit `ce235ff`:
+  idéntico byte a byte, SHA-256
+  `7466A9A493569A89B0C06E079A4A0148D0CD05A40B078E0785BEF416BE71A6C0`
+  (mismo hash en `index.html` y en `POS Balam (offline).html`).
 
 ## Riesgo residual y pendientes
 

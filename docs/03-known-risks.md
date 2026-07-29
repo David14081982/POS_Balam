@@ -1748,7 +1748,7 @@ liquidarse, con el mismo comportamiento de antes de esta historia.
 **Estado:** RESUELTO
 **Fecha de registro:** 28/07/2026
 **Fecha de resolución:** 28/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `ce235ff`
 **Evidencia:** reportado por el dueño desde producción tras cobrar dos abonos: el
 comprobante del segundo no mostraba el historial de pagos y los tickets del mismo
 apartado «se veían diferentes». Medido sobre el bundle en medio `print`, el
@@ -1779,7 +1779,10 @@ regresión de cliente: `test-smoke.mjs` 15/15, `test-ui-navigation.mjs` 14/14,
 `test-discount-trace.mjs` 65/65, `test-precio-talla-e2e.mjs` 19/19,
 `test-returns.mjs` 17/17, `test-store-queue.mjs` 115/115,
 `test-sale-coherence.mjs` 17/17, `test-build-reproducibility.mjs` 8/8.
-**Despliegue:** artefactos regenerados con `node build-offline.mjs`. Sin migración.
+**Despliegue:** artefactos regenerados con `node build-offline.mjs` y publicados en
+`https://david14081982.github.io/POS_Balam/`. El artefacto servido se verificó
+idéntico byte a byte al `index.html` del commit, SHA-256
+`7466A9A493569A89B0C06E079A4A0148D0CD05A40B078E0785BEF416BE71A6C0`. Sin migración.
 **Pendiente:** no hay numeración de hojas («Hoja 2 de 2») ni encabezado repetido a
 partir de la segunda: las cajas de margen de `@page` y los contadores de página no
 están implementados en Chrome. En impresora térmica de rollo la cuestión no se
