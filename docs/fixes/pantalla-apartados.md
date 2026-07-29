@@ -3,7 +3,7 @@
 **Riesgo:** H-40
 **Estado:** RESUELTO
 **Fecha:** 28/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `2e57fbe`
 
 ## Problema y reproducción
 
@@ -177,6 +177,16 @@ Las suites que ejercitan el ticket de venta —`test-smoke.mjs`,
 `test-folio-concurrency.mjs`, `test-discount-trace.mjs`, `test-precio-talla-e2e.mjs`—
 se ejecutaron después de abrir la costura `payment` para demostrar que el
 comprobante de venta no cambió.
+
+## Despliegue
+
+- Artefactos regenerados con `node build-offline.mjs` antes del commit.
+- Sin migraciones: la historia no toca el esquema, así que `R-DEL-03` no aplica.
+- Publicado por el hook `post-commit` en `https://david14081982.github.io/POS_Balam/`.
+- Artefacto servido verificado contra el `index.html` del commit `2e57fbe`:
+  idéntico byte a byte, SHA-256
+  `0904AD7D57A67F6F432A1FD33F4EF02F78C62B6EB8E3D2E3615A6967DBE9AED4`
+  (mismo hash en `index.html` y en `POS Balam (offline).html`).
 
 ## Riesgo residual y pendientes
 

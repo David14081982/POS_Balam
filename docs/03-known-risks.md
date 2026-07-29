@@ -1689,7 +1689,7 @@ corrección propio por su tamaño.
 **Estado:** RESUELTO
 **Fecha de registro:** 28/07/2026
 **Fecha de resolución:** 28/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `2e57fbe`
 **Evidencia:** el dominio del apartado estaba completo desde H-03 y H-04
 —`DATA.registrarPagoApartado` asienta abono, liquidación, historial y push— pero
 el producto no exponía el estado intermedio. Los apartados abiertos sólo se veían
@@ -1727,7 +1727,10 @@ regresión de cliente y ventas —`test-module-contracts.mjs` 37/37,
 `test-liquidations.mjs` 10/10, `test-folio-diario.mjs` 60/60—. Las cuatro suites
 que ejercitan el ticket impreso se corrieron después de abrir la costura para
 demostrar que el comprobante de venta no cambió.
-**Despliegue:** artefactos regenerados con `node build-offline.mjs`. La historia no
+**Despliegue:** artefactos regenerados con `node build-offline.mjs` y publicados en
+`https://david14081982.github.io/POS_Balam/`. El artefacto servido se verificó
+idéntico byte a byte al `index.html` del commit, SHA-256
+`0904AD7D57A67F6F432A1FD33F4EF02F78C62B6EB8E3D2E3615A6967DBE9AED4`. La historia no
 toca el esquema, así que no hay migración que aplicar antes del cliente.
 **Pendiente:** reservar inventario al apartar sigue sin resolverse —es una decisión
 de negocio con impacto en el contrato remoto—; no existe cancelación de apartado ni
