@@ -1587,7 +1587,7 @@ avatares 13/13; concurrencia 9/9; roles 10/10; build 8/8; SDK 4/4; smoke bundle
 **Estado:** RESUELTO
 **Fecha de registro:** 28/07/2026
 **Fecha de resolución:** 28/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `9906776`
 **Evidencia:** C4 dejó el modelo del cambio pero nada podía escribir en él con
 seguridad. Un cambio mueve inventario en dos sentidos, cobra dinero y consume
 saldo; sin una frontera transaccional un fallo parcial dejaría stock descuadrado

@@ -3,7 +3,7 @@
 **Riesgo:** H-38
 **Estado:** RESUELTO
 **Fecha:** 28/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `9906776`
 
 Fase C5 del módulo de Cambios, gobernada por `docs/04-contrato-del-cambio.md` y
 `ADR-010`. Entrega `pos.commit_exchange()` como **única autoridad transaccional**
