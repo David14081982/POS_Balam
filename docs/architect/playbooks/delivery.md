@@ -75,6 +75,15 @@ falsos fallos que se confunden con defectos del producto y cuesta mas
 depurarlos que escribirla bien.
 Origen: H-42 (el modal de vendedor sin candidatos)
 
+**R-DEL-13 · REQUIRED · Una mejora de UX se justifica con metricas
+reproducibles del recorrido, nunca con estimaciones ni enumeraciones manuales.**
+Toda reduccion de clics, de escritura o de tiempo se demuestra **instrumentando**
+el recorrido antes y despues del cambio, con el mismo instrumento y el mismo
+escenario. Contar los pasos leyendo el codigo es una estimacion, no una medida:
+el propio autor del cambio es quien peor puede juzgar cuantas interacciones
+cuesta su pantalla.
+Origen: H-43
+
 **R-DEL-09 · RECOMMENDED · Regresión proporcional al riesgo, con los arneses
 nombrados y su resultado.**
 
