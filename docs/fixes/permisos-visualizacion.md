@@ -1,9 +1,11 @@
 # Permisos de visualización por usuario
 
 **Riesgo:** H-56
-**Estado:** PARCIALMENTE RESUELTO - FASES 1 A 3
+**Estado:** PARCIALMENTE RESUELTO - FASES 1 A 4
 **Fecha:** 30/07/2026
-**Commits:** Fase 1 `a04b2c3`; Fase 2 `0b9c933`; Fase 3 este commit
+**Commits:** Fase 1 `a04b2c3`; Fase 2 `0b9c933`; Fase 3 `b20bcc8`;
+soporte servidor Fase 4 `17df782`, `06d4eaa`, `d35b3ea`; interfaz Fase 4 este
+commit
 
 ## Problema y reproducción
 
@@ -155,11 +157,32 @@ Revisión ampliada antes del push:
   `public`/`anon` sin acceso. Contrato servidor final: 30/30; historial remoto
   en paridad y dry-run posterior vacío.
 
+### Fase 4 — editor administrativo
+
+`balam/permissions.jsx` deriva módulos y hojas exclusivamente de `SCREENS`,
+sin catálogo visual duplicado. Sincroniza la estructura con versión
+optimista, pagina y busca cuentas Auth, explica el origen del permiso y permite
+heredar, permitir o denegar cada hoja. Los módulos reflejan activado,
+desactivado o parcial y aplican cambios a sus descendientes visibles.
+
+El borrador sobrevive a errores y conflictos; cambiar de usuario exige guardar,
+descartar o cancelar mediante un modal propio. El guardado usa una sola RPC
+atómica y después relee el snapshot remoto. Si el usuario modificado es el
+actual, refresca `AUTH`.
+
+Los padres no persisten permisos: `AUTH.permissionReason()` deriva su acceso de
+las hojas. El registro sube a `h56-screen-registry-v2`, invalidando de forma
+fail-closed las cachés offline anteriores.
+
+Pruebas: editor 21/21; API 30/30; modelo 13/13; AUTH 18/18; migraciones 31/31;
+registro 12/12; roles 15/15; contratos 40/40; cola 115/115; build 8/8; smoke
+17/17; navegación 15/15. Los artefactos se regeneraron con 71 assets.
+
 ## Riesgo residual y pendientes
 
-Fases 4 a 6 permanecen abiertas. El modelo y el cliente ya resuelven permisos
-por usuario con caché versionada; todavía no existen el editor triestado ni la
-migración de capacidades operativas del dominio.
+Fases 5 y 6 permanecen abiertas. El modelo, la autoridad cliente y el editor
+triestado ya están activos; todavía falta migrar las capacidades operativas de
+RLS, RPC y Edge Functions.
 
 La reversión de Fase 1 consiste en retirar `screens.jsx`, restaurar las listas
 anteriores en App y Configuración y regenerar los artefactos. No requiere
@@ -177,6 +200,11 @@ La reversión de Fase 3 requiere primero publicar el cliente de Fase 2 y despué
 una migración hacia adelante que revoque y elimine
 `pos.current_permission_snapshot(text[])`. La migración `007300` sólo verifica
 y no tiene objetos que revertir.
+
+La reversión de Fase 4 publica nuevamente el cliente del commit `d35b3ea`,
+desactiva `config.permisos` en el registro y regenera los artefactos. Las RPC
+de lectura `007600` y `007800` pueden conservarse sin efecto; retirarlas exige
+una migración forward que revoque y elimine sólo esas funciones.
 
 ## Referencias
 

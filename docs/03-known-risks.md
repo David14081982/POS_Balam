@@ -2511,7 +2511,7 @@ administrador debe cambiar el nombre descriptivo de la copia según su uso.
 
 ## H-56 - Las pantallas y su autorización no tienen un registro central
 
-**Estado:** EN PROGRESO - FASES 1 A 3 COMPLETADAS
+**Estado:** EN PROGRESO - FASES 1 A 4 COMPLETADAS
 **Fecha de registro:** 30/07/2026
 **Commits:** Fase 1 `a04b2c3`; Fase 2 `0b9c933`; Fase 3 este commit
 **Evidencia:** `balam/app.jsx` declara por separado `NAV`, `TITLES` y la cadena
@@ -2587,7 +2587,17 @@ propietario, ACL y rechazo anónimo. Ambas aplicadas; contrato servidor 26/26.
 herencia del rol y roles activos sin exponer escritura; `20260730007900`
 verifica forma, guarda y ACL contra la base real. Ambas aplicadas; contrato
 servidor 30/30, historial en paridad y dry-run vacío.
-**Pendiente:** fases 4 a 6.
+**Corrección de Fase 4:** Configuración activa `config.permisos` y monta un
+editor responsivo derivado de `SCREENS`. Lista y busca identidades Auth,
+sincroniza el catálogo por versión, muestra herencia/allow/deny y origen,
+deriva módulos triestado, conserva borradores, detecta concurrencia y guarda un
+lote auditado. `AUTH` deriva los módulos padre de sus hojas y el registro v2
+invalida cachés offline anteriores.
+**Commit de Fase 4:** este commit.
+**Pruebas de Fase 4:** interfaz 21/21; API administrativa 30/30; modelo 13/13;
+AUTH 18/18; migraciones 31/31; registro 12/12; roles 15/15; contratos 40/40;
+cola 115/115; build 8/8; smoke 17/17; navegación 15/15.
+**Pendiente:** fases 5 y 6.
 **Riesgo residual:** hasta completar la Fase 5, la autorización de servidor
 sigue siendo la matriz fija por rol de H-08.
 **Corrección documentada:** `docs/fixes/permisos-visualizacion.md`.

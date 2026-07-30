@@ -26,7 +26,7 @@
     { id: 'config.usuarios', parentId: 'config', section: 'usuarios', title: 'Usuarios', icon: 'users' },
     // Reservada para H-56 Fase 4. Su identidad ya existe para que el servidor
     // pueda protegerla, pero no aparece ni monta UI antes de esa fase.
-    { id: 'config.permisos', parentId: 'config', section: 'permisos', title: 'Permisos de visualización', icon: 'shield', enabled: false },
+    { id: 'config.permisos', parentId: 'config', section: 'permisos', title: 'Permisos de visualización', icon: 'shield' },
     { id: 'config.demo', parentId: 'config', section: 'demo', title: 'Datos de demostración', icon: 'star' },
   ];
 
@@ -45,7 +45,7 @@
 
   const byId = new Map(definitions.map(screen => [screen.id, screen]));
   window.SCREENS = Object.freeze({
-    version: () => 'h56-screen-registry-v1',
+    version: () => 'h56-screen-registry-v2',
     all: () => definitions.slice(),
     get: id => byId.get(id) || null,
     navigation: () => definitions.filter(screen => screen.menu === true && !screen.parentId),

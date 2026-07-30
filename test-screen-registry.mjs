@@ -37,9 +37,9 @@ check('el registro conserva las once pantallas principales',
     'dashboard,pos,inventario,clientes,apartados,prestamos,devoluciones,descuentos,vendedores,reportes,config');
 
 const settings = SCREENS ? SCREENS.childrenOf('config') : [];
-check('Configuración obtiene sus once secciones del mismo registro',
+check('Configuración obtiene sus doce secciones del mismo registro',
   settings.map(screen => screen.id).join(',') ===
-    'config.negocio,config.producto,config.ventas,config.beneficios,config.devoluciones,config.vendedores,config.clientes,config.inventario,config.impresion,config.usuarios,config.demo');
+    'config.negocio,config.producto,config.ventas,config.beneficios,config.devoluciones,config.vendedores,config.clientes,config.inventario,config.impresion,config.usuarios,config.permisos,config.demo');
 
 const app = fs.readFileSync('balam/app.jsx', 'utf8');
 check('App construye navegación y títulos desde el registro',

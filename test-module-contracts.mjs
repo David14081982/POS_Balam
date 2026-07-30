@@ -21,7 +21,7 @@ const expectedScripts = [
   'balam/pos-ticket.jsx', 'balam/inventory.jsx', 'balam/clients.jsx',
   'balam/layaway.jsx', 'balam/loans.jsx',
   'balam/returns.jsx', 'balam/sellers.jsx', 'balam/reports.jsx',
-  'balam/settings.jsx', 'balam/store.jsx', 'balam/app.jsx',
+  'balam/permissions.jsx', 'balam/settings.jsx', 'balam/store.jsx', 'balam/app.jsx',
 ];
 
 check('entrada y fuente segura cargan los mismos módulos', JSON.stringify(scriptsOf(entryHtml)) === JSON.stringify(scriptsOf(sourceHtml)));
@@ -190,6 +190,7 @@ const expectedGlobals = {
   'balam/layaway.jsx': 'LayawayScreen',
   'balam/loans.jsx': 'LoansScreen',
   'balam/barcodes.jsx': 'BARCODES',
+  'balam/permissions.jsx': 'PermissionAdminScreen',
   'balam/store.jsx': 'STORE',
   'balam/app.jsx': 'App',
 };

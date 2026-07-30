@@ -224,5 +224,10 @@ check('pantalla activa revocada no monta componente y muestra acceso restringido
     && app.includes('if (!visibleScreen)')
     && app.includes('const VisibleComponent = visibleScreen.component()'));
 
+const authSource = fs.readFileSync('balam/auth.jsx', 'utf8');
+check('los módulos padre derivan acceso de sus pantallas hijas',
+  authSource.includes("window.SCREENS.childrenOf")
+    && authSource.includes("'parent_derived'"));
+
 console.log(`\n════════ ${passed} pasaron, ${failed} fallaron ════════`);
 process.exit(failed ? 1 : 0);

@@ -15,7 +15,7 @@
   const INPUT = 'block w-full h-11 px-3 bg-surface-container-low border border-outline-variant focus:ring-1 focus:ring-primary text-body rounded-lg';
 
   function SettingsScreen() {
-    const sections = window.SCREENS.childrenOf('config');
+    const sections = window.SCREENS.childrenOf('config').filter(s => window.AUTH.canAccess(s.id));
     const [sec, setSec] = useState('negocio');
     const [addingUser, setAddingUser] = useState(false);
     // Re-render en vivo cuando cambia cualquier ajuste/catálogo (otra pestaña incluida).
@@ -25,6 +25,11 @@
       window.addEventListener('configchange', onCfg);
       return () => window.removeEventListener('configchange', onCfg);
     }, []);
+    useEffect(() => {
+      if (!sections.some(s => s.section === sec)) {
+        setSec(sections.length ? sections[0].section : null);
+      }
+    }, [sec, sections.map(s => s.id).join('|')]);
 
     if (addingUser) return h(NewUserForm, { user: addingUser === true ? null : addingUser, onCancel: () => setAddingUser(false), onSaved: () => { setAddingUser(false); bump(v => v + 1); } });
 
@@ -40,7 +45,10 @@
             onClick: () => setSec(s.section),
           }, [h(MS, { key: 'i', name: s.icon, size: 18 }), h('span', { key: 'l', className: 'text-body' }, s.title)])),
         ),
-        h('div', { key: 'panel', className: 'flex flex-col gap-4 min-w-0' }, PANELS[sec](ctx)),
+        h('div', { key: 'panel', className: 'flex flex-col gap-4 min-w-0' },
+          sec && PANELS[sec] ? PANELS[sec](ctx) : [
+            h(GlassCard, { key: 'restricted', className: 'p-8 text-on-surface-variant' }, 'No hay secciones de Configuración autorizadas.'),
+          ]),
       ]));
   }
 
@@ -1108,6 +1116,7 @@
         ]),
       ];
     },
+    permisos: () => [h(window.PermissionAdminScreen, { key: 'permissions' })],
     demo: () => [h(DemoPanel, { key: 'demo' })],
   };
 

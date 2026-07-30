@@ -45,9 +45,9 @@ check('las nuevas tablas habilitan RLS y revocan escritura directa',
   (model.match(/enable row level security/gi) || []).length >= 5
     && /revoke all on pos\.permission_roles/i.test(model)
     && /grant select/i.test(model));
-check('el registro reserva config.permisos sin mostrarlo todavía',
+check('el registro activa config.permisos únicamente mediante AUTH',
   /id:\s*'config\.permisos'/.test(screens)
-    && /enabled:\s*false/.test(screens));
+    && !/id:\s*'config\.permisos'[^\n]*enabled:\s*false/.test(screens));
 check('la verificación ejecuta casos positivos y negativos',
   /raise exception/i.test(verify)
     && /override_allow/i.test(verify)

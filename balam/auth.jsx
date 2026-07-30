@@ -328,6 +328,19 @@
     if (screen.enabled === false) {
       return { code: 'denied_by_default', allowed: false, cached: !!(access && access.cached) };
     }
+    const children = window.SCREENS && window.SCREENS.childrenOf
+      ? window.SCREENS.childrenOf(screenKey)
+      : [];
+    if (children.length) {
+      const childReasons = children.map(child => permissionReason(child.id));
+      return {
+        code: 'parent_derived',
+        allowed: childReasons.some(reason => reason.allowed),
+        source: 'derived',
+        cached: childReasons.some(reason => reason.cached),
+        verifiedAt: access && access.verifiedAt,
+      };
+    }
     const entry = access && access.permissions ? access.permissions[screenKey] : null;
     if (!entry) {
       return { code: 'denied_by_default', allowed: false, cached: !!(access && access.cached) };
