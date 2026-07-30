@@ -2444,7 +2444,7 @@ la autoridad siempre lo limita al total elegible de la venta.
 
 **Estado:** RESUELTO
 **Fecha de registro:** 30/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `8dc7533`
 **Evidencia:** el apartado de beneficios reutiliza `CatalogEditor`, que coloca
 el código y once controles sin etiqueta en una sola fila `flex` sin envoltura.
 La captura muestra valores internos como `fixed`, `percentage`, `ticket`,
@@ -2468,7 +2468,11 @@ borrado y todas las escrituras sobre `additional_benefit`; no duplica estado.
 manual 12/12; H-52 27/27; contratos 38/38; navegación 15/15; UX 11
 interacciones y 2 validaciones; build 8/8; smoke 17/17.
 **Migraciones:** ninguna.
-**Pendiente:** commit y publicación.
+**Publicación:** commit `8dc7533` publicado en `main`; GitHub Pages coincide
+byte a byte con `index.html`: SHA-256
+`EF266A741A977ED0FD078912786455602BA894819CA59CEEBD38047F5CF108D0`,
+8 739 269 bytes.
+**Pendiente:** ninguno dentro de H-54.
 **Riesgo residual:** el contenedor general de la aplicación conserva su ancho
 mínimo histórico en teléfonos; las tarjetas no se desbordan de su panel.
 **Corrección documentada:** `docs/fixes/editor-simple-de-beneficios.md`.

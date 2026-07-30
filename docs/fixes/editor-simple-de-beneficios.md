@@ -3,7 +3,7 @@
 **Riesgo:** H-54
 **Estado:** RESUELTO
 **Fecha:** 30/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `8dc7533`
 
 ## Problema y reproducción
 
@@ -47,7 +47,11 @@ como explicación, no como control técnico.
 
 ## Riesgo residual y pendientes
 
-Pendiente de commit y publicación. No cambia datos ni requiere migración.
+No cambia datos ni requiere migración. El commit `8dc7533` se publicó en
+`main`; GitHub Pages sirve `index.html` idéntico byte a byte:
+
+    SHA-256  EF266A741A977ED0FD078912786455602BA894819CA59CEEBD38047F5CF108D0
+    bytes    8 739 269
 
 ## Referencias
 
