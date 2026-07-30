@@ -1948,6 +1948,49 @@ La condicion de la prenda sigue siendo texto libre con atajos, no un catalogo
 administrable.
 **Correccion documentada:** `docs/fixes/recorrido-del-cambio.md`.
 
+## H-45 - El cambio de talla obligaba a buscar la prenda que el cliente traia
+
+**Estado:** RESUELTO
+**Fecha de registro:** 29/07/2026
+**Fecha de resolucion:** 29/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** el cambio de talla es el caso mas frecuente del modulo y costaba
+lo mismo que traer cualquier otro articulo, porque el cajero tenia que ENCONTRAR
+en el catalogo la prenda que el cliente acababa de dejar en el mostrador. La
+pantalla ya sabia cual era —esta en el renglon, con su SKU y su talla— y no
+ofrecia ninguna forma de decir «esta misma, en otra medida».
+**Origen de auditoria:** revision manual de UX posterior a C6; fase 1 medida con
+el instrumento de H-43.
+**Riesgo:** un mostrador lento en el caso mas comun, y la puerta abierta a elegir
+otro modelo parecido al buscar a mano.
+**Reproduccion:** el coste era invisible porque el escenario oficial siembra UN
+solo producto (`R-DEL-12`). Con el escenario nuevo
+`cambio-de-talla-catalogo-real` —61 articulos, rellenos sembrados primero para
+que la prenda quede fuera de las 24 primeras tarjetas— aparecio: 12
+interacciones frente a 11 del oficial, y la extra es teclear en el escaner.
+**Correccion:** un boton «Misma prenda, otra talla» en el renglon marcado, que
+abre el MISMO selector de tallas que usa el catalogo. No trae logica propia:
+hace `setPicking(r.p)`, asi que talla, precio vigente de H-36 y existencias
+siguen saliendo de una sola presentacion. Se ofrecen todas las tallas, incluida
+la devuelta, porque un cambio por defecto de fabrica es la misma talla; se
+oculta si la prenda ya no esta en el catalogo; y abrirlo no compromete nada.
+**Alternativa descartada:** tallas en linea dentro del renglon. Ahorraba una
+interaccion mas, pero duplicaba la presentacion de precio y existencias, cargaba
+el renglon con una cuarta decision simultanea restando fuerza al boton guia de
+H-44, y su ahorro era estimacion, no medida. Queda como refinamiento encima de
+este, con 11 interacciones como linea base.
+**Pruebas:** guardian de `R-DEL-14` en verde sin intervencion manual: 12 -> 11
+interacciones, validaciones 2 -> 2, recorrido completado, codigo 0. Los otros dos
+escenarios intactos: oficial 11/2 y repetido 10/2. Linea base refijada a 11/2 al
+cerrar (`R-DEL-16`). E2E del cambio 37/37 con tres comprobaciones nuevas;
+pantalla del cambio 45/45 con tres mas; regresion completa en verde.
+**Pendiente:** C7 —reportes, liquidacion de la comision del segundo vendedor y
+el desglose de cobrado que no cuadra con un pago de tipo cambio—.
+**Riesgo residual:** el catalogo sigue sin paginacion; el atajo lo esquiva para
+el caso de talla, no lo arregla. Sigue pendiente la deuda de estandarizacion de
+dialogos.
+**Correccion documentada:** `docs/fixes/camino-rapido-de-talla.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

@@ -141,6 +141,26 @@ try {
   ok('5. lo marcado aparece en el panel al instante', /ENTREGA[\s\S]*CAMISA E2E/i.test(panel1), panel1.slice(0, 90));
   ok('6. el panel reconoce su valor', /\$350\.00/.test(panel1));
 
+  console.log('\n── 2b) Camino rápido de talla (H-45) ───────────────────');
+  // El cambio de talla es el caso mas frecuente y obligaba a BUSCAR en el
+  // catalogo la prenda que el cliente tiene en la mano.
+  ok('4g. el renglón ofrece el camino rápido de talla',
+    await page.evaluate(() => !!document.querySelector('[data-testid="cambio-misma-prenda"]')));
+  await page.evaluate(() => document.querySelector('[data-testid="cambio-misma-prenda"]').click());
+  await page.waitForTimeout(700);
+  const rapido = await page.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
+  ok('4h. abre el selector de tallas de LA MISMA prenda, con el precio de H-36',
+    /selecciona talla/i.test(rapido) && /\$450\.00/.test(rapido) && /\$350\.00/.test(rapido));
+  // Abrirlo no compromete nada: es un atajo para elegir, no una eleccion.
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(600);
+  const trasCerrar = await page.evaluate(() => {
+    const a = document.querySelector('[data-testid="cambio-panel"]');
+    return a ? a.innerText.replace(/\s+/g, ' ') : '';
+  });
+  ok('4i. abrir el camino rápido y cerrarlo no agrega mercancía',
+    /sin mercanc[ií]a elegida/i.test(trasCerrar), trasCerrar.slice(-70));
+
   console.log('\n── 3) Escanear lo que el cliente se lleva ──────────────');
   await page.evaluate((code) => {
     const i = [...document.querySelectorAll('input')].find(x => /c[oó]digo de barras/i.test(x.placeholder || ''));

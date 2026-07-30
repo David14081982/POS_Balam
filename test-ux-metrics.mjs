@@ -163,9 +163,13 @@ try {
   await pulsa('input[type=checkbox]');
   await espera(700);
   // Motivo y condición llegan preseleccionados y VISIBLES; el revisor, prellenado.
-  // Con catalogo real la prenda no esta a la vista: hay que buscarla.
-  if (REALISTA) { await teclea('[data-testid="cambio-escaner"]', 'CAMISA UX'); await espera(700); }
-  await page.evaluate(() => { const x = [...document.querySelectorAll('button')].find(e => /CAMISA UX/.test(e.innerText)); if (x) x.click(); });
+  // H-45: con catálogo real el camino rápido evita buscar la prenda. El escenario
+  // oficial sigue midiendo el camino general, por el catálogo.
+  if (REALISTA) {
+    await pulsa('[data-testid="cambio-misma-prenda"]');
+  } else {
+    await page.evaluate(() => { const x = [...document.querySelectorAll('button')].find(e => /CAMISA UX/.test(e.innerText)); if (x) x.click(); });
+  }
   await espera(700);
   await page.evaluate((t) => {
     const x = [...document.querySelectorAll('button')].find(e => new RegExp('^' + t + '\\b').test(e.innerText.trim()));

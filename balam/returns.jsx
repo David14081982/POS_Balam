@@ -679,6 +679,22 @@
                   'Talla ' + r.talla + ' · ' + r.disponible + ' disponible(s) · se reconoce ' + fmt(r.valor)),
               ]),
             ]),
+            // H-45 · Camino rápido: el cambio de talla es el caso abrumadoramente
+            // más frecuente, y hasta ahora obligaba a BUSCAR en el catálogo la
+            // prenda que el cliente tiene en la mano. Este botón no trae lógica
+            // propia: abre el MISMO selector de tallas que usa el catálogo, con
+            // el precio vigente de cada talla (H-36) y sólo las que tienen
+            // existencias. Se ofrece todas, incluida la misma que se devuelve,
+            // porque un cambio por defecto de fábrica es la misma talla.
+            st.on && r.p && h('div', { key: 'rapido', className: 'mt-3 pl-8' }, [
+              h('button', {
+                key: 'b', 'data-testid': 'cambio-misma-prenda', onClick: () => setPicking(r.p),
+                className: 'inline-flex items-center gap-2 px-4 h-10 rounded-lg border border-primary text-primary '
+                  + 'text-caption font-bold uppercase tracking-wider hover:bg-surface-container transition-colors',
+              }, [h(MS, { key: 'i', name: 'repeat', size: 16 }), 'Misma prenda, otra talla']),
+              h('span', { key: 'h', className: 'ml-3 text-caption text-on-surface-variant' },
+                'Sin buscarla en el catálogo'),
+            ]),
             st.on && h('div', { key: 'd', className: 'mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 pl-8' }, [
               h('div', { key: 'm' }, [
                 h('label', { key: 'l', className: 'block text-overline uppercase text-on-surface-variant mb-1' }, 'Motivo'),

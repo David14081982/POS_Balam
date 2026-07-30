@@ -125,5 +125,17 @@ ok('39. lee código de barras igual que el Punto de venta',
 ok('40. el comprobante se imprime automáticamente al cerrar',
   /setTimeout\(\(\) => window\.print\(\), 350\)/.test(ex));
 
+// H-45: el camino rapido NO trae logica propia. Abre el mismo `picking` que usa
+// el catalogo, asi que talla, precio vigente (H-36) y existencias siguen
+// saliendo de una sola presentacion.
+ok('41. el camino rápido de talla reutiliza el selector del catálogo',
+  /'data-testid': 'cambio-misma-prenda'/.test(ex)
+    && /onClick: \(\) => setPicking\(r\.p\)/.test(ex));
+ok('42. el camino rápido no reimplementa precio ni existencias',
+  !/cambio-misma-prenda[\s\S]{0,600}listPrice\(/.test(ex)
+    && !/cambio-misma-prenda[\s\S]{0,600}\.stock/.test(ex));
+ok('43. el camino rápido se oculta si la prenda ya no está en el catálogo',
+  /st\.on && r\.p &&/.test(ex));
+
 console.log(`\n════════ ${pass} pasaron, ${fail} fallaron ════════`);
 process.exit(fail ? 1 : 0);
