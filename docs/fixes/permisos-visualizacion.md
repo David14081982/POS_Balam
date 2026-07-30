@@ -1,9 +1,9 @@
 # Permisos de visualización por usuario
 
 **Riesgo:** H-56
-**Estado:** PARCIALMENTE RESUELTO - FASES 1 Y 2
+**Estado:** PARCIALMENTE RESUELTO - FASES 1 A 3
 **Fecha:** 30/07/2026
-**Commit:** Pendiente de commit
+**Commits:** Fase 1 `a04b2c3`; Fase 2 `0b9c933`; Fase 3 este commit
 
 ## Problema y reproducción
 
@@ -64,6 +64,24 @@ existentes. Se sustituyó antes de desplegar: la versión aplicada sólo lee
 `auth.users`/`pos.sellers` y escribe/limpia el modelo nuevo. La precedencia se
 extrae a una función pura para verificar inactivos sin fabricar perfiles.
 
+### Fase 3 — autoridad del cliente y caché restrictiva
+
+`pos.current_permission_snapshot(text[])` entrega en una sola lectura el
+perfil, rol base, permisos efectivos, origen, versión y fecha de verificación
+de `auth.uid()`. Su firma no admite otra identidad; usa las funciones de
+resolución de Fase 2, `SECURITY DEFINER` con `search_path` fijo y sólo concede
+`EXECUTE` a `authenticated`.
+
+`AUTH.canAccess()` es ahora la autoridad única. El menú, navegación interna,
+pantalla persistida, destino inicial y montaje consultan sus métodos públicos.
+Una revocación desmonta la pantalla activa; si no existe otro destino se
+muestra acceso restringido.
+
+La caché `balam_auth_access_v2` valida esquema, versión del modelo, versión del
+registro, identidad y estructura. Sólo conserva permisos previamente
+verificados y cualquier pantalla ausente o nueva se deniega. Supabase reemplaza
+la caché atómicamente al recuperar conexión.
+
 ## Pruebas
 
 - Línea base: `node test-screen-registry.mjs` — 2/12, 10 fallos.
@@ -89,11 +107,25 @@ Fase 2:
 - Navegación bundle — 15/15.
 - Push remoto: `007000` y `007100` aplicadas; dry-run posterior sin pendientes.
 
+Fase 3:
+
+- Línea base `node test-auth-permissions.mjs` — 2/17, 15 fallos.
+- AUTH y caché — 17/17.
+- Modelo — 13/13; migraciones — 31/31; registro — 12/12.
+- Roles Administrador/Vendedor — 15/15.
+- Contratos — 39/39; cola offline — 115/115.
+- Reproducibilidad — 8/8; smoke — 17/17; navegación — 15/15.
+- Build — correcto, 70 assets y artefactos idénticos.
+- Push remoto: `007200` y `007300` aplicadas; historial local/remoto en paridad
+  y dry-run posterior sin pendientes.
+- ACL remota del snapshot: `public=f`, `anon=f`, `authenticated=t`,
+  `service_role=f`.
+
 ## Riesgo residual y pendientes
 
-Fases 3 a 6 permanecen abiertas. El modelo por usuario ya existe, pero el
-cliente sigue usando los roles fijos de H-08; todavía no existen caché
-versionada conectada, editor triestado ni capacidades operativas del dominio.
+Fases 4 a 6 permanecen abiertas. El modelo y el cliente ya resuelven permisos
+por usuario con caché versionada; todavía no existen el editor triestado ni la
+migración de capacidades operativas del dominio.
 
 La reversión de Fase 1 consiste en retirar `screens.jsx`, restaurar las listas
 anteriores en App y Configuración y regenerar los artefactos. No requiere
@@ -106,6 +138,11 @@ tablas nuevas en orden inverso de FK. No toca ninguna tabla comercial. Como el
 último paso elimina auditoría y configuración de permisos, requiere
 autorización destructiva expresa; la reversión operativa preferida sólo revoca
 RPC/policies y conserva las tablas.
+
+La reversión de Fase 3 requiere primero publicar el cliente de Fase 2 y después
+una migración hacia adelante que revoque y elimine
+`pos.current_permission_snapshot(text[])`. La migración `007300` sólo verifica
+y no tiene objetos que revertir.
 
 ## Referencias
 

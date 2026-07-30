@@ -8,7 +8,9 @@ function check(condition, label) {
 }
 
 function authHarness(email, sellers, options = {}) {
-  const session = { user: { email }, access_token: 'test-token' };
+  const matched = sellers.find(s => s.email.toLowerCase() === email.toLowerCase());
+  const session = { user: { id: options.userId || matched?.id || 'orphan-auth-id', email }, access_token: 'test-token' };
+  const screenIds = ['dashboard', 'pos', 'inventario', 'clientes', 'apartados', 'prestamos', 'devoluciones', 'descuentos', 'vendedores', 'reportes', 'config'];
   const saved = options.saved || new Map();
   const localStorage = {
     getItem: key => saved.has(key) ? saved.get(key) : null,
@@ -31,6 +33,31 @@ function authHarness(email, sellers, options = {}) {
       };
       return query;
     },
+    rpc: async name => {
+      if (options.failProfile) return { data: null, error: { message: 'network', code: 'NETWORK' } };
+      if (name !== 'current_permission_snapshot') return { data: null, error: { message: 'rpc' } };
+      const role = matched?.role;
+      return { data: {
+        model_version: 'h56-screen-permissions-v1',
+        permission_version: `${role || 'none'}-v1`,
+        verified_at: '2026-07-30T12:00:00.000Z',
+        profile_status: matched ? 'active' : 'profile_missing',
+        profile: matched ? {
+          ...matched,
+          id: session.user.id,
+          seller_id: matched.id,
+          avatar_url: matched.avatar || null,
+        } : null,
+        base_role: role || null,
+        permissions: screenIds.map(screen_key => ({
+          screen_key,
+          allowed: role === 'admin' || (role === 'vendedor' && screen_key === 'pos'),
+          source: role ? 'role' : 'default',
+          role_code: role || null,
+          effect: null,
+        })),
+      }, error: null };
+    },
     auth: {
       getSession: async () => ({ data: { session } }),
       onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),
@@ -41,10 +68,17 @@ function authHarness(email, sellers, options = {}) {
     console,
     localStorage,
     CustomEvent: class { constructor(type) { this.type = type; } },
+    location: { protocol: 'https:', hostname: 'balam.test' },
     window: {
       DATA: { sellers },
       CORE: {
         invokeSync: async method => method === 'getClient' ? client : undefined,
+      },
+      SCREENS: {
+        version: () => 'h56-screen-registry-v1',
+        all: () => screenIds.map(id => ({ id, menu: true })),
+        navigation: () => screenIds.map(id => ({ id, menu: true })),
+        get: id => screenIds.includes(id) ? { id, menu: true } : null,
       },
       dispatchEvent: event => listeners.push(event.type),
     },
@@ -89,7 +123,7 @@ function authHarness(email, sellers, options = {}) {
   const app = fs.readFileSync('balam/app.jsx', 'utf8');
   check(app.includes('navigation.filter(n => canAccess(n.id))'), '7. el menú central se filtra con el contrato de acceso');
   check(app.includes('const visiblePage = canAccess(page) ? page : defaultPage'), '8. una página persistida prohibida se redirige');
-  check(app.includes("user && user.role === 'vendedor' ? 'pos' : 'dashboard'"), '9. vendedor tiene Punto de Venta como destino seguro');
+  check(app.includes('window.AUTH.defaultScreen()'), '9. el destino seguro lo decide AUTH');
   check(app.includes('window.STORE.setSession(window.AUTH.current())'),
     '11. cada authchange entrega la identidad efectiva a STORE');
   check(!app.includes('window.STORE && !window.STORE.enabled'),
@@ -101,7 +135,7 @@ function authHarness(email, sellers, options = {}) {
     { id: 's2', nombre: 'Caja Offline', email: 'offline@example.com', role: 'vendedor', active: true },
   ]);
   await online.AUTH.init();
-  const offline = authHarness('offline@example.com', [], { saved: online.saved, failProfile: true });
+  const offline = authHarness('offline@example.com', [], { saved: online.saved, failProfile: true, userId: 's2' });
   await offline.AUTH.init();
   check(offline.AUTH.canAccess('pos') === true, '10. sesión persistida conserva POS sin conexión con perfil previamente verificado');
 }

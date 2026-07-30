@@ -2511,9 +2511,9 @@ administrador debe cambiar el nombre descriptivo de la copia según su uso.
 
 ## H-56 - Las pantallas y su autorización no tienen un registro central
 
-**Estado:** EN PROGRESO - FASES 1 Y 2 COMPLETADAS
+**Estado:** EN PROGRESO - FASES 1 A 3 COMPLETADAS
 **Fecha de registro:** 30/07/2026
-**Commit:** Pendiente de commit
+**Commits:** Fase 1 `a04b2c3`; Fase 2 `0b9c933`; Fase 3 este commit
 **Evidencia:** `balam/app.jsx` declara por separado `NAV`, `TITLES` y la cadena
 condicional que monta cada pantalla; `balam/settings.jsx` mantiene además
 `SECTIONS`. `AUTH.canAccess()` sólo conoce el contrato fijo administrador /
@@ -2550,7 +2550,20 @@ el dry-run posterior informa que la base está actualizada.
 **Pruebas de Fase 2:** modelo 13/13; migraciones 31/31; registro 12/12; roles
 15/15; contratos 39/39; cola 115/115; reproducibilidad 8/8; smoke 17/17;
 navegación 15/15.
-**Pendiente:** fases 3 a 6.
+**Corrección de Fase 3:** `AUTH.canAccess()` resuelve exclusivamente el
+snapshot efectivo remoto; navegación, pantalla persistida, enlaces internos,
+destino inicial y montaje usan la misma autoridad. La caché offline v2 está
+versionada por modelo, registro, usuario y conjunto de permisos, conserva fecha
+de verificación y deniega estructuras incompatibles, corruptas o incompletas.
+**Migraciones de Fase 3:** `20260730007200` crea la RPC de snapshot propio y
+`20260730007300` verifica firma, propietario, `SECURITY DEFINER`, `search_path`,
+ACL, usuario permitido, usuario sin permisos, pantalla desconocida y rechazo
+anónimo. Ambas quedaron aplicadas el 30/07/2026; dry-run posterior sin
+pendientes.
+**Pruebas de Fase 3:** AUTH 17/17; modelo 13/13; migraciones 31/31; registro
+12/12; roles 15/15; contratos 39/39; cola 115/115; reproducibilidad 8/8; smoke
+17/17; navegación 15/15; build correcto con 70 assets.
+**Pendiente:** fases 4 a 6.
 **Riesgo residual:** hasta completar la Fase 5, la autorización de servidor
 sigue siendo la matriz fija por rol de H-08.
 **Corrección documentada:** `docs/fixes/permisos-visualizacion.md`.

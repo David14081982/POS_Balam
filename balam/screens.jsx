@@ -45,6 +45,7 @@
 
   const byId = new Map(definitions.map(screen => [screen.id, screen]));
   window.SCREENS = Object.freeze({
+    version: () => 'h56-screen-registry-v1',
     all: () => definitions.slice(),
     get: id => byId.get(id) || null,
     navigation: () => definitions.filter(screen => screen.menu === true && !screen.parentId),

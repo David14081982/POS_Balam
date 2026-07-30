@@ -13,7 +13,7 @@ Reglas de mantenimiento en `../README.md` § Registro de autoridades.
 ## ¿Esta sesión puede ver esta pantalla?
 **Autoridad:** `AUTH.canAccess()`
 **Definición:** `balam/auth.jsx` · `docs/02-architecture.md` § Autorización del esquema pos
-**Creada por:** H-08 · **Decisión:** `ADR-005`
+**Creada por:** H-08 · **Evolucionada por:** H-56 Fase 3 · **Decisión:** `ADR-005`
 **Consumidores:** `grep -rn "canAccess" balam/`
 
 ## ¿Esta cuenta puede tocar el esquema `pos`?

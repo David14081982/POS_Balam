@@ -127,15 +127,19 @@
 
     const user = window.AUTH.current();
     const isAdmin = window.AUTH.isAdmin();
-    const canAccess = id => !REQUIRE_AUTH || window.AUTH.canAccess(id);
+    const canAccess = id => window.AUTH.canAccess(id);
     const navigation = window.SCREENS.navigation();
-    const defaultPage = user && user.role === 'vendedor' ? 'pos' : 'dashboard';
+    const defaultPage = window.AUTH.defaultScreen();
     const visiblePage = canAccess(page) ? page : defaultPage;
-    const visibleScreen = window.SCREENS.get(visiblePage);
+    const visibleScreen = visiblePage ? window.SCREENS.get(visiblePage) : null;
     useEffect(() => {
-      if (page !== visiblePage) setPage(visiblePage);
+      if (visiblePage && page !== visiblePage) setPage(visiblePage);
     }, [page, visiblePage]);
-    function go(id) { if (canAccess(id)) setPage(id); }
+    function go(id) {
+      if (!window.AUTH.requireAccess(id)) return false;
+      setPage(id);
+      return true;
+    }
 
     // Gate de seguridad SOLO en dominio real: sin sesión no se muestra la app (RLS protege).
     if (REQUIRE_AUTH) {
@@ -180,11 +184,11 @@
               !collapsed && badge && h('span', { key: 'b', className: 'px-1.5 py-0.5 text-[10px] font-bold rounded', style: { background: '#131B2E', color: active ? '#FFE088' : '#FFFFFF' } }, badge),
             ]);
           })),
-        h('div', { key: 'cta', className: 'px-3 mt-2' },
+        canAccess('pos') && h('div', { key: 'cta', className: 'px-3 mt-2' },
           h('button', {
             className: 'w-full flex items-center justify-center gap-2 py-3 font-label-sm uppercase tracking-widest text-xs rounded-lg active:scale-95 transition-all hover:opacity-90',
             style: { background: '#FFE088', color: '#131B2E' },
-            onClick: () => setPage('pos'), title: 'Nueva venta',
+            onClick: () => go('pos'), title: 'Nueva venta',
           }, collapsed ? [h(MS, { key: 'i', name: 'add', size: 20 })] : [h(MS, { key: 'i', name: 'add', size: 18 }), 'Nueva venta'])),
         h('div', { key: 'foot', className: 'px-3 mt-4 pt-4', style: { borderTop: '1px solid #1C2437' } },
           h('button', {
@@ -210,15 +214,16 @@
           h('h1', { key: 't', className: 'font-headline text-headline-md text-primary' }, visibleScreen ? visibleScreen.title : 'Balam'),
           D.demoActive && D.demoActive() && h('span', { key: 'demo', className: 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gold-soft text-gold-text text-overline font-bold uppercase tracking-widest', title: 'Datos de demostración (local, no afecta producción)' }, [h(MS, { key: 'i', name: 'star', size: 13, fill: true }), 'Demo']),
           h('div', { key: 's', className: 'flex-1' }),
-          visiblePage !== 'pos' && h('button', {
+          visiblePage !== 'pos' && canAccess('pos') && h('button', {
             key: 'pos', className: 'inline-flex items-center gap-2 px-4 h-10 bg-secondary-container text-on-secondary-container font-label-sm uppercase tracking-widest text-xs rounded-lg hover:opacity-90 transition',
-            onClick: () => setPage('pos'),
+            onClick: () => go('pos'),
           }, [h(MS, { key: 'i', name: 'pos', size: 18 }), 'Nueva venta']),
           isAdmin && h(NotificationsBell, { key: 'b', go }),
           h('div', { key: 'date', className: 'flex items-center gap-1.5 text-xs text-on-surface-variant capitalize' }, [h(MS, { key: 'i', name: 'calendar', size: 16 }), new Date().toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })]),
         ]),
         // Pantalla
         (() => {
+          if (!visibleScreen) return h(RestrictedAccessScreen, { key: 'restricted' });
           const VisibleComponent = visibleScreen.component();
           const props = visibleScreen.props ? visibleScreen.props({ go, tweaks: t }) : {};
           return h(VisibleComponent, { ...props, key: visibleScreen.id });
@@ -227,6 +232,16 @@
       // Toasts
       h(window.UI.ToastHost, { key: 'toast' }),
     ]);
+  }
+
+  function RestrictedAccessScreen() {
+    return h('div', { className: 'flex-1 grid place-items-center p-8 bg-background' },
+      h('div', { className: 'max-w-md text-center' }, [
+        h('div', { key: 'i', className: 'w-14 h-14 mx-auto mb-5 rounded-full grid place-items-center bg-surface-container text-on-surface-variant' }, h(MS, { name: 'lock', size: 26 })),
+        h('h2', { key: 't', className: 'font-headline text-headline-md text-primary mb-2' }, 'Acceso restringido'),
+        h('p', { key: 'd', className: 'text-body text-on-surface-variant' },
+          'Tu cuenta no tiene pantallas disponibles. Solicita al administrador que revise tus permisos.'),
+      ]));
   }
 
   function AccessDeniedScreen() {

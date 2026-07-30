@@ -386,20 +386,27 @@ El acceso directo de navegador al esquema sigue el contrato de las migraciones
 - `service_role` conserva permisos técnicos sobre el esquema y omite RLS, por
   lo que sólo puede existir en infraestructura de servidor.
 
-La interfaz aplica el mismo contrato: administrador ve todas las pantallas y
-vendedor sólo Punto de Venta. `AUTH.canAccess()` es la autoridad de navegación;
-una página persistida no autorizada se reemplaza por el destino seguro del rol.
+La interfaz resuelve permisos efectivos por identidad de Supabase Auth.
+`AUTH.canAccess()` es la única autoridad de navegación; menú, destino inicial,
+pantalla persistida, navegación interna y montaje consumen ese contrato. Una
+pantalla revocada no se monta y se reemplaza por la primera permitida o por el
+estado restringido.
 `balam/screens.jsx` es el registro central de pantallas: de él se derivan menú,
 títulos, componentes y secciones internas de Configuración. Agregar una
 pantalla navegable exige registrarla una sola vez y los consumidores no
 mantienen catálogos paralelos.
-El último perfil verificado se guarda para permitir el arranque local-first sin
-red; al reconectar, Supabase vuelve a validar estado y rol.
+El snapshot de autorización procede de
+`pos.current_permission_snapshot(text[])`, usa exclusivamente `auth.uid()` y
+resuelve cada hoja mediante las funciones de Fase 2. La caché local contiene
+versión de esquema, modelo, registro, permisos y fecha de verificación; sólo se
+usa ante indisponibilidad remota y cualquier dato desconocido, incompleto,
+corrupto o de otra identidad se deniega. Al reconectar, el snapshot remoto
+reemplaza la caché atómicamente.
 
-El producto no define todavía permisos configurables por pantalla. H-56
-completó la costura estructural del registro y su Fase 2 añadió el modelo SQL,
-pero la caché versionada y las capacidades de servidor permanecen en sus fases
-siguientes; hasta entonces sigue vigente el contrato visible fijo de H-08.
+H-56 completó las fases 1 a 3. Administrador y vendedor conservan su conducta
+inicial mediante permisos sembrados por rol, no por una excepción paralela en
+la navegación. El editor de permisos y las capacidades operativas de servidor
+permanecen en las fases 4 y 5.
 
 El modelo de Fase 2 persiste identidades `auth.users.id`, nunca vendedores
 comerciales sin cuenta. `user_screen_permission_overrides` precede a
