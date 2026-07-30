@@ -198,12 +198,26 @@ Pruebas: capacidades 17/17; migraciones 31/31; cola 115/115; roles 15/15; AUTH
 migraciones están aplicadas remotamente, el historial está en paridad y el
 dry-run posterior no tiene pendientes.
 
+El grupo 2 protege devoluciones y cambios sin copiar sus extensas funciones
+transaccionales. `20260730008400` retira la ejecución pública de las RPC
+históricas y expone wrappers que exigen `sales.refund` o `sales.exchange`;
+`20260730008500` verifica el JWT sintético completo, compatibilidad de
+administrador/vendedor, denegaciones por override e identidad inconsistente,
+ACL y limpieza. El cliente usa exclusivamente los wrappers y conserva la misma
+cola e identidad idempotente. No hay hoy una acción de cancelación: el valor
+`Cancelado` es únicamente estado histórico, por lo que no se inventó una
+mutación sin contrato de producto.
+
+Pruebas del grupo 2: capacidades 21/21; migraciones 31/31; cola 115/115; roles
+15/15; AUTH 18/18; contratos 40/40; build 8/8; smoke bundle 17/17; navegación
+15/15. Historial remoto en paridad y dry-run vacío.
+
 ## Riesgo residual y pendientes
 
-Los grupos 2 a 5 de Fase 5 y la Fase 6 permanecen abiertos. El modelo, la
+Los grupos 3 a 5 de Fase 5 y la Fase 6 permanecen abiertos. El modelo, la
 autoridad cliente, el editor triestado y las comisiones ya usan sus fronteras
-finales; falta migrar devoluciones, cambios, cancelaciones, inventario,
-configuración y las operaciones restantes.
+finales; devoluciones y cambios también tienen capacidad propia. Falta migrar
+inventario, configuración y las operaciones restantes.
 
 La reversión de Fase 1 consiste en retirar `screens.jsx`, restaurar las listas
 anteriores en App y Configuración y regenerar los artefactos. No requiere

@@ -50,7 +50,7 @@ function freshEnv() {
       cloud.rowsByTable.movements = args.p_moves || [];
       cloud.rowsByTable.sale_payments = args.p_payments || [];
     }
-    if (name === 'commit_return' || name === 'commit_legacy_return') {
+    if (name === 'commit_return_checked' || name === 'commit_legacy_return') {
       if (['returns', 'return_items', 'movements'].some(t => failTables.has(t))) {
         return { data: null, error: { message: 'falla transaccional simulada' } };
       }
@@ -512,7 +512,7 @@ function loadStore(env) {
   S.pushReturn(ret);
   await sleep(50);
   ok('15a. H-04: la devolución completa viaja en un único RPC',
-    env.rpcCalls[0]?.name === 'commit_return'
+    env.rpcCalls[0]?.name === 'commit_return_checked'
       && env.rpcCalls[0].args.p_return.id === ret.id
       && env.rpcCalls[0].args.p_items.length === 1);
   ok('15b. H-04: el fallo no deja cabecera ni renglones parciales',
@@ -1153,7 +1153,7 @@ function folioDataStub(env, { block = null } = {}) {
   env.setRpc(async (name, args) => {
     if (name === 'reserve_folio_block') return { data: { ok: false, error: 'sin_red' }, error: null };
     if (name === 'commit_sale') { ventaFallida++; return { data: { ok: false, error: 'folio_conflict' }, error: null }; }
-    if (name === 'commit_return') return { data: { ok: true, sale_state: 'Devuelto' }, error: null };
+    if (name === 'commit_return_checked') return { data: { ok: true, sale_state: 'Devuelto' }, error: null };
     return { data: { ok: true }, error: null };
   });
   const S = loadStore(env);
@@ -1167,19 +1167,19 @@ function folioDataStub(env, { block = null } = {}) {
   await sleep(60);
   ok('31a. H-33: la venta en conflicto quedó pendiente', ventaFallida > 0 && S.pending === 2);
   ok('31b. H-33: la devolución NO se envió mientras su venta sigue en cola',
-    !env.rpcCalls.some(c => c.name === 'commit_return'));
+    !env.rpcCalls.some(c => c.name === 'commit_return_checked'));
 
   // Resuelto el conflicto, la venta pasa y la devolución sale detrás.
   env.setRpc(async (name) => {
     if (name === 'commit_sale') return { data: { ok: true, products: [], clients: [], sellers: [] }, error: null };
-    if (name === 'commit_return') return { data: { ok: true, sale_state: 'Devuelto' }, error: null };
+    if (name === 'commit_return_checked') return { data: { ok: true, sale_state: 'Devuelto' }, error: null };
     return { data: { ok: true }, error: null };
   });
   const pendientes = JSON.parse(env.localStorage.getItem('balam_sync_queue') || '[]');
   S.retryOperation((pendientes.find(o => o.type === 'sale') || {}).id);
   await sleep(80);
   const iSale = env.rpcCalls.findIndex(c => c.name === 'commit_sale' && c.args && c.args.p_sale);
-  const iRet = env.rpcCalls.findIndex(c => c.name === 'commit_return');
+  const iRet = env.rpcCalls.findIndex(c => c.name === 'commit_return_checked');
   ok('31c. H-33: al sincronizar la venta, la devolución se envía después',
     iRet > iSale && iRet >= 0 && S.pending === 0);
 }

@@ -2511,7 +2511,7 @@ administrador debe cambiar el nombre descriptivo de la copia según su uso.
 
 ## H-56 - Las pantallas y su autorización no tienen un registro central
 
-**Estado:** EN PROGRESO - FASE 5, GRUPO 1 COMPLETADO
+**Estado:** EN PROGRESO - FASE 5, GRUPOS 1 Y 2 COMPLETADOS
 **Fecha de registro:** 30/07/2026
 **Commits:** Fase 1 `a04b2c3`; Fase 2 `0b9c933`; Fase 3 este commit
 **Evidencia:** `balam/app.jsx` declara por separado `NAV`, `TITLES` y la cadena
@@ -2606,10 +2606,19 @@ las conserva en la cola offline antes de intentar la red.
 **Pruebas de Fase 5, grupo 1:** capacidades 17/17; migraciones 31/31; cola
 115/115; roles 15/15; AUTH 18/18; contratos 40/40; build 8/8; smoke 17/17;
 navegación 15/15. Historial local/remoto en paridad y dry-run vacío.
-**Pendiente:** grupos 2 a 5 de Fase 5 y Fase 6.
-**Riesgo residual:** devoluciones, cambios, cancelaciones, inventario,
-configuración y las operaciones restantes aún conservan sus guardas históricas
-por rol hasta migrar cada frontera a una capacidad explícita.
+**Fase 5, grupo 2:** `20260730008400/08500` retiran la ejecución autenticada
+directa de `commit_return` y `commit_exchange` y publican wrappers que exigen
+`sales.refund` o `sales.exchange` antes de delegar en la misma transacción
+histórica. La verificación reproduce `sub`, `email` y claims completos, prueba
+admin/vendedor, overrides deny, identidad inconsistente, ACL y limpieza.
+**Pruebas de Fase 5, grupo 2:** capacidades 21/21; migraciones 31/31; cola
+115/115; roles 15/15; AUTH 18/18; contratos 40/40; build 8/8; smoke bundle
+17/17; navegación 15/15. Historial local/remoto en paridad y dry-run vacío.
+**Pendiente:** grupos 3 a 5 de Fase 5 y Fase 6. No existe actualmente una
+operación ejecutable para cancelar ventas; `Cancelado` sólo es estado histórico
+y su contrato funcional deberá definirse antes de introducir esa mutación.
+**Riesgo residual:** inventario, configuración y las operaciones restantes aún
+conservan sus guardas históricas por rol hasta migrar cada frontera.
 **Corrección documentada:** `docs/fixes/permisos-visualizacion.md`.
 
 ## Regla de actualización

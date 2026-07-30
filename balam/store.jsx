@@ -591,10 +591,10 @@
         return true;
       }
       // H-38 (C5): el cambio viaja como UNA operacion durable y se confirma con
-      // una sola llamada a pos.commit_exchange(). El dinero lo calcula el
+      // una sola llamada a pos.commit_exchange_checked(). El dinero lo calcula el
       // servidor: el cliente no envia valores, solo lo que entrega y recibe.
       if (op.type === 'exchange') {
-        const committed = await c.rpc('commit_exchange', {
+        const committed = await c.rpc('commit_exchange_checked', {
           p_commit_id: op.key || op.id,
           p_exchange: op.header,
           p_items: op.items || [],
@@ -631,7 +631,7 @@
           ? await c.rpc('commit_legacy_return', {
               ...common, p_targets: op.legacyTargets || { complete: false },
             })
-          : await c.rpc('commit_return', {
+          : await c.rpc('commit_return_checked', {
               ...common,
               p_stock_lines: op.stockLines || [],
               p_client_effect: op.clientEffect || null,
