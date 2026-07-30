@@ -3,7 +3,7 @@
 **Riesgo:** H-55
 **Estado:** RESUELTO
 **Fecha:** 30/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `c720981`
 
 ## Problema y reproducción
 
@@ -38,7 +38,11 @@ Original y copia son objetos independientes; modificar una no altera la otra.
 
 ## Riesgo residual y pendientes
 
-Pendiente de commit y publicación. No requiere migración ni modifica ventas.
+No requiere migración ni modifica ventas. El commit `c720981` se publicó en
+`main`; GitHub Pages sirve `index.html` idéntico byte a byte:
+
+    SHA-256  C8F3E8C15C304E1F4D83BFFF9ADAFC41A9730C194D9331E731F221DBA861C175
+    bytes    8 739 659
 
 ## Referencias
 

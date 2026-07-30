@@ -2481,7 +2481,7 @@ mínimo histórico en teléfonos; las tarjetas no se desbordan de su panel.
 
 **Estado:** RESUELTO
 **Fecha de registro:** 30/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `c720981`
 **Evidencia:** `BenefitEditor` permite crear desde cero, editar y eliminar,
 pero no copiar una opción. Una variante con otro límite exige volver a capturar
 origen, cálculo, alcance, valor y reglas, aunque casi todo sea idéntico.
@@ -2500,7 +2500,11 @@ y se abre para editar. No comparte referencias con el beneficio fuente.
 **Pruebas:** duplicación 6/6; Chrome real 7/7; editor H-54 7/7; captura H-53
 12/12; H-52 27/27; contratos 38/38; navegación 15/15; build 8/8; smoke 17/17.
 **Migraciones:** ninguna.
-**Pendiente:** commit y publicación.
+**Publicación:** commit `c720981` publicado en `main`; GitHub Pages coincide
+byte a byte con `index.html`: SHA-256
+`C8F3E8C15C304E1F4D83BFFF9ADAFC41A9730C194D9331E731F221DBA861C175`,
+8 739 659 bytes.
+**Pendiente:** ninguno dentro de H-55.
 **Riesgo residual:** ninguno conocido dentro de la duplicación; el
 administrador debe cambiar el nombre descriptivo de la copia según su uso.
 **Corrección documentada:** `docs/fixes/duplicar-beneficios.md`.
