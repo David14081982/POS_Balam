@@ -2628,6 +2628,11 @@ contratos 40/40, build 8/8, smoke 17/17 y navegación 15/15.
 **Pendiente real:** cobros/apartados, préstamos y tombstones genéricos todavía
 requieren fronteras específicas; cancelación no tiene contrato funcional.
 Véase `docs/05-operational-capabilities.md`.
+**Extensión `sales.collect`:** `09200/09300/09400` distinguen una venta nueva
+de un apartado ya persistido. Un cobro inicial con dinero exige `sales.create`
+y `sales.collect`; un abono o liquidación exige sólo `sales.collect`. Cambio de
+método y reversión quedan fuera porque no existen como operaciones. Verificación
+remota: compatibilidad vendedor, denegaciones independientes, ACL y limpieza.
 **Corrección documentada:** `docs/fixes/permisos-visualizacion.md`.
 
 ## Regla de actualización

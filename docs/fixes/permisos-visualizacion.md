@@ -223,6 +223,12 @@ Regresión final: capacidades 32/32; migraciones 31/31; cola 115/115; roles
 15/15; AUTH 18/18; contratos 40/40; build 8/8; smoke 17/17; navegación 15/15.
 Migraciones locales/remotas en paridad hasta `09100`; dry-run vacío.
 
+`09200/09300/09400` completan `sales.collect`: el cobro inicial con dinero
+requiere crear y cobrar; el anticipo sigue la misma regla; un abono o
+liquidación de apartado remoto exige sólo cobrar. La transacción comercial y
+la cola no cambian. No existe edición de método ni reversión de cobro, por lo
+que ambas quedan explícitamente fuera.
+
 ## Riesgo residual y pendientes
 
 La terminación de Fase 5 y la Fase 6 permanecen abiertas. El modelo, la

@@ -13,6 +13,8 @@ const settingsCapabilities = read('supabase/migrations/20260730008800_pos_h56_se
 const settingsVerify = read('supabase/migrations/20260730008900_pos_h56_settings_permission_capabilities_verification.sql');
 const remaining = read('supabase/migrations/20260730009000_pos_h56_remaining_capabilities.sql');
 const edgeAdmin = read('supabase/functions/admin-users/index.ts');
+const collect = read('supabase/migrations/20260730009200_pos_h56_sales_collect_capability.sql');
+const collectVerify = read('supabase/migrations/20260730009300_pos_h56_sales_collect_capability_verification.sql');
 const data = read('balam/data.jsx');
 const store = read('balam/store.jsx');
 
@@ -78,6 +80,15 @@ check('clientes, promociones y vendedores usan capacidades propias',
   && /sellers\.manage/.test(remaining));
 check('Edge Function exige sellers.manage en servidor',
   /current_has_capability/.test(edgeAdmin) && /sellers\.manage/.test(edgeAdmin));
+check('cobro inicial exige create y collect cuando existe dinero',
+  /sales\.create/.test(collect) && /sales\.collect/.test(collect)
+  && /jsonb_array_length/.test(collect));
+check('abono de apartado existente exige sólo sales.collect',
+  /estado\s*=\s*'Apartado'/i.test(collect) && /require_current_capability\('sales\.collect'\)/.test(collect));
+check('la verificación cubre cobro inicial, abono y denegaciones',
+  /H56_COLLECT_INITIAL_FAILED/.test(collectVerify)
+  && /H56_COLLECT_LAYAWAY_FAILED/.test(collectVerify)
+  && /H56_COLLECT_DENY_FAILED/.test(collectVerify));
 
 console.log(`\n════════ ${passed} pasaron, ${failed} fallaron ════════`);
 if (failed) process.exit(1);

@@ -15,6 +15,8 @@ clave estable antes de mutar datos.
 | Configuración | Ajustes y catálogos | `settings.manage` | RLS `settings/lookup` | policy por capacidad |
 | Configuración | Permisos | `permissions.manage` | guarda común de RPC administrativas | capacidad + permisos de pantalla |
 | Punto de venta | Confirmar venta | `sales.create` | `commit_sale*_checked` | wrapper sobre transacción vigente |
+| Punto de venta / Apartados | Cobro inicial con dinero | `sales.create` + `sales.collect` | `commit_sale*_checked` | guarda compuesta |
+| Apartados | Abono o liquidación | `sales.collect` | `commit_sale*_checked` | detecta apartado remoto existente |
 | Clientes | Crear | `customers.create` | RLS `clients` | policy por capacidad |
 | Clientes | Editar | `customers.update` | RLS `clients` | policy por capacidad |
 | Clientes | Eliminar | `customers.delete` | RLS `clients` | policy de delete |
@@ -30,8 +32,9 @@ clave estable antes de mutar datos.
 ## Fronteras pendientes
 
 - No existe hoy una acción de cancelación: `Cancelado` es estado histórico.
-- Cobros/apartados, préstamos y algunas RPC auxiliares aún deben migrarse desde
-  sus guardas históricas a `sales.collect` e `inventory.loan`.
+- Cambio de método y reversión de cobro no existen como operaciones; no se
+  infieren desde la edición de una fila.
+- Préstamos aún deben migrarse a `inventory.loan`.
 - El borrado lógico genérico debe dividirse por entidad para que
   `customers.delete`, `promotions.manage` y `sellers.manage` cubran también
   tombstones, no sólo `DELETE`.
