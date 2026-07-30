@@ -3,7 +3,7 @@
 **Riesgo:** H-49
 **Estado:** RESUELTO
 **Fecha:** 30/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `927eabf`
 
 ## Problema y reproducción
 
@@ -100,6 +100,18 @@ para comprobar que mi recompilación no rompía su trabajo: **112/112**.
 Sin migraciones: H-49 no toca esquema, contrato, autoridades del dominio ni
 reglas económicas. Lo único que cambia es dónde vive una aritmética que ya
 existía y qué se muestra.
+
+## Despliegue (`R-DEL-07`)
+
+El artefacto servido por GitHub Pages coincide byte a byte con el `index.html` del
+commit, a la primera:
+
+    SHA-256  12355d0b0db9481b6f64cacdbd68cf585235db820c0edc7f1ce19fdbb2b5b6ce
+    bytes    8 723 393
+
+Comprobado además contra el `.jsx` servido, que es donde el código vive de verdad:
+`balam/reports.jsx` en Pages contiene el renglón «Diferencias cobradas por
+cambios».
 
 ## Riesgo residual y pendientes
 

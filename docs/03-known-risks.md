@@ -2200,7 +2200,7 @@ falte: se comprueba contra el `.jsx` servido, o decodificando.
 
 **Estado:** RESUELTO
 **Fecha de registro:** 30/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `927eabf`
 **Evidencia:** en `balam/reports.jsx`, «Dinero cobrado» suma TODOS los pagos
 —incluidas las diferencias de cambios, que desde H-47 tienen su propio pago de
 tipo `cambio`— mientras «Ventas brutas» suma el total de las VENTAS, y un cambio
@@ -2244,6 +2244,11 @@ trabajo con historia propia. La utilidad estimada se calcula ahora sobre el
 importe que incluye los cambios: es coherente, pero es un numero que se movio sin
 pedirse. «Dinero cobrado» seguira siendo menor que «Ventas brutas» cuando haya
 apartados con saldo, y eso no es descuadre.
+**Despliegue:** artefacto servido por GitHub Pages verificado byte a byte a la
+primera: SHA-256 `12355d0b0db9481b6f64cacdbd68cf585235db820c0edc7f1ce19fdbb2b5b6ce`, 8 723 393 bytes. Comprobado
+ademas contra el `.jsx` servido, donde el codigo vive de verdad.
+**Pendiente:** H-50 —los tres reportes que exige el Contrato § 7—, donde se
+mostrara `noAprovechado`.
 **Correccion documentada:** `docs/fixes/ingreso-del-cambio-en-reportes.md`.
 
 ## Regla de actualización
