@@ -1557,6 +1557,54 @@
     return { ok: true, monto, vendedorId: e.vendedorId || null };
   }
 
+  // ── H-49 · Autoridad del ingreso del periodo ────────────────────────────────
+  //
+  // La suma de ventas está escrita SEIS veces en `balam/*.jsx`. Añadir el ingreso
+  // del cambio en una sola de ellas habría creado la séptima divergencia, así que
+  // la aritmética vive aquí y las pantallas la consumen (`AP-01`, `ADR-003`).
+  //
+  // Decisión del dueño (30/07/2026): la diferencia que el cliente paga en un
+  // cambio SÍ suma al importe vendido —es ingreso por entregar un producto de
+  // mayor valor—, pero NO es un pedido, porque proviene de una operación que ya
+  // existía. De ahí que `ticketProm` se calcule sobre las ventas y no sobre el
+  // importe total: si usara el importe, un cambio inflaría el promedio sin que
+  // nadie hubiera comprado de más.
+  //
+  // `pred` recibe el documento completo —venta o cambio—, y ambos tienen `fecha`,
+  // así que un mismo filtro de periodo sirve para los dos.
+  const enPeriodo = (pred) => (typeof pred === 'function' ? pred : () => true);
+
+  function exchangeRevenue(pred) {
+    const dentro = enPeriodo(pred);
+    return money((exchanges || []).reduce((a, e) => dentro(e) ? a + (Number(e.diferencia) || 0) : a, 0));
+  }
+
+  // Lo que el cliente pierde cuando se lleva menos de lo que entrega. NO es
+  // ingreso cobrado —no entra dinero— pero el Contrato decide que se pierde
+  // (§ 4), así que el negocio necesita verlo: si crece, algo va mal en el
+  // mostrador. Se informa aparte y nunca suma al importe vendido.
+  function exchangeUnusedValue(pred) {
+    const dentro = enPeriodo(pred);
+    return money((exchanges || []).reduce((a, e) => dentro(e) ? a + (Number(e.valorNoAprovechado) || 0) : a, 0));
+  }
+
+  function revenueSummary(pred) {
+    const dentro = enPeriodo(pred);
+    const validas = sales.filter(s => s.estado !== 'Cancelado' && dentro(s));
+    // Las cortesías no son ventas pagadas: no cuentan como pedidos ni en el ticket.
+    const cortesias = validas.filter(s => s.metodo === 'Cortesía').length;
+    const ventasSolas = money(validas.reduce((a, s) => a + (Number(s.total) || 0), 0));
+    const difCambios = exchangeRevenue(pred);
+    const pedidos = validas.length - cortesias;
+    return {
+      ventasSolas, difCambios,
+      importeVendido: money(ventasSolas + difCambios),
+      noAprovechado: exchangeUnusedValue(pred),
+      pedidos,
+      ticketProm: pedidos > 0 ? money(ventasSolas / pedidos) : 0,
+    };
+  }
+
   function recordReturn({ folio, lineas, metodo, notas, fecha: fechaIn }) {
     const sale = sales.find(s => s.folio === folio);
     if (!sale) return { ok: false, error: 'No se encontró la venta original' };
@@ -2200,6 +2248,7 @@
     listPrice, priceRange, sanitizePreciosTalla,
     recordReturn, returnedQty, returnsForFolio, isReturnable, returnDeadline, saleLineBalance,
     saveExchanges, recognizedValue, supplySources, recordExchange, reverseExchangeCommission,
+    revenueSummary, exchangeRevenue, exchangeUnusedValue,
     saveLoans, registrarPrestamo, registrarDevolucionPrestamo, marcarPrestamoNoDevuelto,
     actualizarPrestamo, eliminarPrestamo, prestamoPiezas, prestamoPendientes,
     prestamoAtraso, prestamosVencidos, loanedQty, parseLoanFolio, nextLoanFolio, LOAN_ESTADOS,

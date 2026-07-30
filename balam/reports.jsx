@@ -16,7 +16,13 @@
     const periodoLbl = new Date().toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
 
     // KPIs — 100% reales (sin históricos ni metas inventadas)
-    const ventasBrutas = nonCancel.reduce((a, s) => a + (Number(s.total) || 0), 0);
+    // H-49: el importe vendido, el conteo de pedidos y el ticket promedio salen
+    // de UNA autoridad, `DATA.revenueSummary`, porque la diferencia cobrada en un
+    // cambio suma al importe pero NO es un pedido. Repartir esa distinción por la
+    // pantalla es como se descuadran los reportes.
+    const rev = D.revenueSummary();
+    const ventasBrutas = rev.importeVendido;
+    const difCambios = rev.difCambios;
     const cobradoReal = (D.payments || []).reduce((a, p) => a + (Number(p.monto) || 0), 0);
     const anticipos = (D.payments || []).filter(p => p.tipo === 'anticipo').reduce((a, p) => a + (Number(p.monto) || 0), 0);
     const abonos = (D.payments || []).filter(p => p.tipo === 'abono' || p.tipo === 'liquidacion').reduce((a, p) => a + (Number(p.monto) || 0), 0);
@@ -27,13 +33,23 @@
     // Las cortesías (regalos) no son ventas pagadas: no cuentan como pedidos ni en el ticket promedio.
     const cortesias = nonCancel.filter(s => s.metodo === 'Cortesía');
     const regalado = cortesias.reduce((a, s) => a + (Number(s.valorRegalado) || 0), 0);
-    const pedidos = nonCancel.length - cortesias.length;
-    const ticketProm = pedidos ? Math.round(ventasBrutas / pedidos) : 0;
+    // El ticket promedio se mide sobre VENTAS, nunca sobre el importe total: un
+    // cambio lo inflaría sin que nadie hubiera comprado de más.
+    const pedidos = rev.pedidos;
+    const ticketProm = Math.round(rev.ticketProm);
 
     // Variación real: mes calendario actual vs mes anterior (oculta si no hay base previa)
     const ymOf = d => d.getFullYear() * 12 + d.getMonth();
     const curYM = ymOf(new Date());
-    const monthAgg = off => nonCancel.reduce((acc, s) => { const d = parse(s.fecha); if (d && ymOf(d) === curYM - off) { acc.tot += Number(s.total) || 0; acc.n += 1; } return acc; }, { tot: 0, n: 0 });
+    // La variación mensual mide el mismo importe que el KPI —ventas más
+    // diferencias de cambios— pero el CONTEO sigue siendo de pedidos: un cambio
+    // aporta dinero, no un pedido más.
+    const delMes = off => (doc) => { const d = parse(doc.fecha); return !!d && ymOf(d) === curYM - off; };
+    const monthAgg = off => {
+      const acc = nonCancel.reduce((a, s) => { if (delMes(off)(s)) { a.tot += Number(s.total) || 0; a.n += 1; } return a; }, { tot: 0, n: 0 });
+      acc.tot += D.exchangeRevenue(delMes(off));
+      return acc;
+    };
     const m0 = monthAgg(0), m1 = monthAgg(1);
     const pctMoM = (cur, prev) => prev > 0 ? Math.round((cur - prev) / prev * 100) : null;
     const mom = pct => pct == null ? ['', 'text-on-surface-variant', 'trending_up'] : [(pct >= 0 ? '+' : '') + pct + '% vs mes anterior', pct >= 0 ? 'text-success' : 'text-danger', pct >= 0 ? 'trending_up' : 'trending_down'];
@@ -84,8 +100,11 @@
           kpi('Total pedidos', String(pedidos), iP, tP, cP),
           kpi('Ticket promedio', fmt(ticketProm).replace('.00', ''), 'star', '', 'text-gold-text', true),
         ]),
-        h('div', { key: 'cash', className: 'grid grid-cols-1 md:grid-cols-5 gap-gutter mb-gutter' }, [
+        h('div', { key: 'cash', className: 'grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-gutter mb-gutter' }, [
           metricCard('Dinero cobrado', fmt(cobradoReal).replace('.00', ''), 'movimientos de pago registrados'),
+          // H-49: sin este renglon, «Dinero cobrado» salia mas alto que «Ventas
+          // brutas» y nada en pantalla explicaba la diferencia.
+          metricCard('Diferencias cobradas por cambios', fmt(difCambios).replace('.00', ''), 'excedente pagado al cambiar por algo de mayor valor'),
           metricCard('Anticipos', fmt(anticipos).replace('.00', ''), 'recibidos al apartar'),
           metricCard('Abonos y liquidaciones', fmt(abonos).replace('.00', ''), 'cobros posteriores'),
           metricCard('Saldos pendientes', fmt(saldosPendientes).replace('.00', ''), 'por cobrar en apartados'),

@@ -2198,7 +2198,7 @@ falte: se comprueba contra el `.jsx` servido, o decodificando.
 
 ## H-49 - El dinero cobrado no cuadra con el importe vendido
 
-**Estado:** ABIERTO - numero reclamado, historia en curso
+**Estado:** RESUELTO
 **Fecha de registro:** 30/07/2026
 **Commit:** Pendiente de commit
 **Evidencia:** en `balam/reports.jsx`, «Dinero cobrado» suma TODOS los pagos
@@ -2218,8 +2218,33 @@ operacion ya existente. Asi el cobrado cuadra con el vendido sin alterar
 artificialmente el numero de pedidos, el ticket promedio ni las metas del equipo.
 Ademas debe mostrarse un renglon propio, «Diferencias cobradas por cambios», para
 que quede claro de donde viene ese ingreso.
-**Pendiente:** todo.
-**Riesgo residual:** por determinar.
+**Reproduccion:** `node test-report-revenue.mjs` antes de la correccion: 2
+pasaron, 22 fallaron. La comprobacion 15 mostro el descuadre con numeros:
+`cobrado=450 vendido=undefined` sobre una venta de 350 y un cambio de 100.
+**Correccion:** la aritmetica del ingreso pasa a UNA autoridad,
+`DATA.revenueSummary`, porque la suma de ventas estaba escrita seis veces en
+`balam/*.jsx` y anadir el cambio en una sola habria creado la septima divergencia
+(`AP-01`, `ADR-003`). Devuelve `ventasSolas`, `difCambios`, `importeVendido`,
+`noAprovechado`, `pedidos` y `ticketProm`. El reporte la consume y estrena la
+tarjeta «Diferencias cobradas por cambios».
+La consecuencia menos obvia de la decision del dueno esta resuelta dentro de la
+autoridad: el ticket promedio se mide sobre VENTAS y no sobre el importe total,
+porque si usara el importe un cambio lo inflaria sin que nadie hubiera comprado de
+mas. Y la variacion mensual mide el mismo importe que el KPI, con el conteo
+todavia de pedidos, para que la flecha de tendencia no mienta.
+Un cambio a la baja no aporta ingreso ni positivo ni negativo: el sobrante que el
+cliente pierde (Contrato § 4) se informa aparte en `noAprovechado`.
+**Pruebas:** 24/24. Regresion completa en verde, incluido el arnes de la pantalla
+de Prestamos de otra sesion (112/112) para comprobar que la recompilacion no
+rompia su trabajo. Guardian de UX intacto en 11/11. Sin migraciones.
+**Riesgo residual:** el dashboard y los apartados siguen sumando ventas por su
+cuenta; no se tocaron porque sus cifras no son las senaladas y cambiarlas habria
+movido numeros que nadie pidio mover. Migrar esas cinco sumas restantes es
+trabajo con historia propia. La utilidad estimada se calcula ahora sobre el
+importe que incluye los cambios: es coherente, pero es un numero que se movio sin
+pedirse. «Dinero cobrado» seguira siendo menor que «Ventas brutas» cuando haya
+apartados con saldo, y eso no es descuadre.
+**Correccion documentada:** `docs/fixes/ingreso-del-cambio-en-reportes.md`.
 
 ## Regla de actualización
 
