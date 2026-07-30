@@ -2477,6 +2477,34 @@ byte a byte con `index.html`: SHA-256
 mínimo histórico en teléfonos; las tarjetas no se desbordan de su panel.
 **Corrección documentada:** `docs/fixes/editor-simple-de-beneficios.md`.
 
+## H-55 - Crear una variante de beneficio obliga a capturar todo otra vez
+
+**Estado:** RESUELTO
+**Fecha de registro:** 30/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** `BenefitEditor` permite crear desde cero, editar y eliminar,
+pero no copiar una opción. Una variante con otro límite exige volver a capturar
+origen, cálculo, alcance, valor y reglas, aunque casi todo sea idéntico.
+**Origen:** solicitud del dueño del producto.
+**Riesgo:** mayor tiempo de configuración y diferencias accidentales entre
+beneficios que pretendían compartir la misma base.
+**Alcance:** duplicación independiente con metadatos completos, identidad nueva,
+nombre distinguible, ubicación junto al original y edición inmediata.
+**No alcance:** autoridad de descuentos, ventas, documentos, sincronización,
+esquema y reglas económicas.
+**Reproducción:** `node test-benefit-duplicate.mjs` antes del cambio: 1 pasó,
+5 fallaron.
+**Corrección:** cada tarjeta ofrece “Duplicar”. La copia recibe identidad
+nueva, clona profundamente los metadatos, queda activa y junto a la original,
+y se abre para editar. No comparte referencias con el beneficio fuente.
+**Pruebas:** duplicación 6/6; Chrome real 7/7; editor H-54 7/7; captura H-53
+12/12; H-52 27/27; contratos 38/38; navegación 15/15; build 8/8; smoke 17/17.
+**Migraciones:** ninguna.
+**Pendiente:** commit y publicación.
+**Riesgo residual:** ninguno conocido dentro de la duplicación; el
+administrador debe cambiar el nombre descriptivo de la copia según su uso.
+**Corrección documentada:** `docs/fixes/duplicar-beneficios.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

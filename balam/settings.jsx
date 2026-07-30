@@ -784,6 +784,24 @@
       const r = C.removeItem('additional_benefit', it.code);
       if (!r.ok) toast(r.error, 'var(--danger)');
     }
+    function duplicateBenefit(it) {
+      const base = it.code + '_COPIA';
+      let code = base;
+      let suffix = 2;
+      while (C.find('additional_benefit', code)) code = base + '_' + suffix++;
+      const r = C.addItem('additional_benefit', {
+        code,
+        label: 'Copia de ' + it.label,
+        active: true,
+        meta: JSON.parse(JSON.stringify(it.meta || {})),
+      });
+      if (!r.ok) { toast(r.error, 'var(--danger)'); return; }
+      const originalIndex = items.findIndex(current => current.code === it.code);
+      const moves = Math.max(0, items.length - originalIndex - 1);
+      for (let i = 0; i < moves; i++) C.move('additional_benefit', code, -1);
+      setOpen(code);
+      toast('Opción duplicada. Ya puedes modificar la copia.', 'var(--accent)');
+    }
     const editPanel = it => {
       const m = meta(it);
       const type = m.benefitType || 'percentage';
@@ -852,7 +870,14 @@
             h('button', { key: 'up', type: 'button', className: 'px-3 h-9 border border-outline-variant rounded-lg', onClick: () => C.move('additional_benefit', it.code, -1) }, 'Subir'),
             h('button', { key: 'down', type: 'button', className: 'px-3 h-9 border border-outline-variant rounded-lg', onClick: () => C.move('additional_benefit', it.code, 1) }, 'Bajar'),
           ]),
-          h('button', { key: 'delete', type: 'button', className: 'px-3 h-9 text-danger hover:bg-danger-soft rounded-lg', onClick: () => remove(it) }, 'Eliminar opción'),
+          h('div', { key: 'right', className: 'flex items-center gap-2' }, [
+            h('button', {
+              key: 'duplicate', type: 'button', 'data-testid': 'benefit-duplicate-' + it.code,
+              className: 'px-3 h-9 border border-primary/30 text-primary hover:bg-primary/5 rounded-lg',
+              onClick: () => duplicateBenefit(it),
+            }, 'Duplicar'),
+            h('button', { key: 'delete', type: 'button', className: 'px-3 h-9 text-danger hover:bg-danger-soft rounded-lg', onClick: () => remove(it) }, 'Eliminar opción'),
+          ]),
         ]),
       ]);
     };
