@@ -2583,6 +2583,10 @@ roles 15/15; registro 12/12; contratos 39/39; cola 115/115; build 8/8; smoke
 **Extensión de catálogo:** `20260730007600` expone versión y jerarquía completa
 mediante RPC administrativa de sólo lectura; `20260730007700` verifica forma,
 propietario, ACL y rechazo anónimo. Ambas aplicadas; contrato servidor 26/26.
+**Snapshot del editor:** `20260730007800` añade la lectura administrativa de
+herencia del rol y roles activos sin exponer escritura; `20260730007900`
+verifica forma, guarda y ACL contra la base real. Ambas aplicadas; contrato
+servidor 30/30, historial en paridad y dry-run vacío.
 **Pendiente:** fases 4 a 6.
 **Riesgo residual:** hasta completar la Fase 5, la autorización de servidor
 sigue siendo la matriz fija por rol de H-08.

@@ -150,6 +150,10 @@ Revisión ampliada antes del push:
 - `007600/007700` añaden y verifican la lectura administrativa de versión,
   actividad y jerarquía del catálogo, necesaria para sincronización optimista
   desde más de una terminal. Contrato servidor final: 26/26.
+- `007800/007900` añaden y verifican el snapshot de edición con permiso
+  heredado y catálogo de roles activos. No modifican datos y dejan
+  `public`/`anon` sin acceso. Contrato servidor final: 30/30; historial remoto
+  en paridad y dry-run posterior vacío.
 
 ## Riesgo residual y pendientes
 
