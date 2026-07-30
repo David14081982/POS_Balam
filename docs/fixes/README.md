@@ -58,6 +58,7 @@ sesión de chat.
 | `pantalla-prestamos.md` | H-46 · H-48 · H-50 | Préstamos de mercancía: documento, cartera, vale firmado, lector y fechas |
 | `reportes-del-cambio.md` | H-51 | Trazabilidad de cambios, comisión por origen y valor no aprovechado |
 | `descuento-adicional.md` | H-52 | Beneficios manuales integrados a la cotización y documento de venta |
+| `descuento-adicional-manual.md` | H-53 | Porcentaje e importe manual administrables |
 
 Documentación financiera relacionada, creada antes de este índice:
 

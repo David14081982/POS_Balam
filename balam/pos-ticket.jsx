@@ -229,6 +229,7 @@
     const needsItem = meta.scope === 'item' || meta.benefitType === 'courtesy_piece';
     const needsReason = meta.requiresReason === true || meta.requiresReason === 'true' || meta.origin === 'Otro';
     const needsCard = meta.origin === 'Tarjeta física';
+    const hasCustomValue = !custom || String(value).trim() !== '';
     const appliedValue = custom ? Number(value) : Number(meta.value);
     let preview = null, error = '';
     const draft = benefit ? {
@@ -242,10 +243,10 @@
       appliedBy: ((window.AUTH && window.AUTH.current && window.AUTH.current()) || {}).email || '',
       appliedAt: new Date().toISOString(),
     } : null;
-    try { if (draft) preview = window.DATA.saleQuote(ticket, (existing || []).concat(draft)); }
+    try { if (draft && hasCustomValue) preview = window.DATA.saleQuote(ticket, (existing || []).concat(draft)); }
     catch (e) { error = e.message || 'El descuento no es válido'; }
     async function confirm() {
-      if (!draft || error || (needsReason && !reason.trim()) || (needsCard && (!cardType.trim() || !cardFolio.trim()))) return;
+      if (!draft || !hasCustomValue || error || (needsReason && !reason.trim()) || (needsCard && (!cardType.trim() || !cardFolio.trim()))) return;
       setBusy(true);
       try {
         if (needsCard && (!navigator.onLine || !window.AUTH.hasSession())) throw new Error('Conéctate para validar la tarjeta física');
@@ -261,15 +262,25 @@
     const footer = [
       h('button', { key: 'c', className: 'px-5 h-11 border border-outline-variant rounded-lg', onClick: onClose }, 'Cancelar'),
       h('button', {
-        key: 'a', 'data-testid': 'additional-discount-confirm', disabled: busy || !!error || !draft || (needsReason && !reason.trim()) || (needsCard && (!cardType.trim() || !cardFolio.trim())),
+        key: 'a', 'data-testid': 'additional-discount-confirm', disabled: busy || !!error || !draft || !hasCustomValue || (needsReason && !reason.trim()) || (needsCard && (!cardType.trim() || !cardFolio.trim())),
         className: 'px-6 h-11 bg-primary text-on-primary rounded-lg font-bold disabled:opacity-40', onClick: confirm,
       }, busy ? 'Validando…' : 'Aplicar descuento'),
     ];
     return h(Modal, { title: 'Descuento adicional', onClose, footer }, [
       h('label', { key: 'bl', className: 'text-overline uppercase text-on-surface-variant' }, 'Beneficio'),
-      h('select', { key: 'b', className: cls + ' mb-4', value: code, onChange: e => setCode(e.target.value) },
+      h('select', { key: 'b', className: cls + ' mb-4', value: code, onChange: e => { setCode(e.target.value); setValue(''); } },
         benefits.map(x => h('option', { key: x.code, value: x.code }, x.label))),
-      custom && h('input', { key: 'v', className: cls + ' mb-4', type: 'number', min: 0, value, onChange: e => setValue(e.target.value), placeholder: meta.benefitType === 'percentage' ? 'Porcentaje' : 'Importe' }),
+      custom && h('div', { key: 'custom', className: 'mb-4' }, [
+        h('label', { key: 'l', className: 'block text-overline uppercase text-on-surface-variant mb-1' },
+          meta.benefitType === 'percentage' ? 'Porcentaje de descuento' : 'Importe del descuento'),
+        h('input', {
+          key: 'v', 'data-testid': 'additional-discount-custom-value', className: cls,
+          type: 'number', min: 0.01, step: 0.01,
+          max: meta.benefitType === 'percentage' ? (Number(meta.maxPercent) || 100) : (Number(meta.maxAmount) || undefined),
+          value, onChange: e => setValue(e.target.value),
+          placeholder: meta.benefitType === 'percentage' ? 'Ej. 15' : 'Ej. 250.00',
+        }),
+      ]),
       needsItem && h('select', { key: 't', className: cls + ' mb-4', value: targetKey, onChange: e => setTargetKey(e.target.value) },
         ticket.map(l => h('option', { key: l.key, value: l.key }, `${l.p.nombre} · ${l.talla}`))),
       needsCard && h('div', { key: 'card', className: 'grid grid-cols-2 gap-3 mb-4' }, [

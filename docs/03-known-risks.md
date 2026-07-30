@@ -2402,6 +2402,40 @@ El smoke del bundle recorrió 13 comprobaciones sin errores pero su arnés no
 cerró dentro del límite; el resto de la regresión relevante está en verde.
 **Corrección documentada:** `docs/fixes/descuento-adicional.md`.
 
+## H-53 - La captura manual de descuento no está disponible como beneficio administrable
+
+**Estado:** RESUELTO
+**Fecha de registro:** 30/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** H-52 admite internamente `allowsCustomValue`, porcentaje e
+importe fijo, pero la semilla de `additional_benefit` no ofrece ninguna opción
+de captura libre. Además, `backfillState()` sólo incorpora catálogos completos:
+una configuración histórica que ya contiene beneficios no recibe ítems nuevos.
+**Origen:** solicitud del dueño del producto.
+**Riesgo:** el vendedor no puede capturar el porcentaje o importe pactado desde
+el modal, y agregarlo sólo a la semilla dejaría terminales existentes con un
+catálogo distinto al de instalaciones nuevas.
+**Alcance:** dos beneficios administrables, captura y validación visual,
+retrocompatibilidad de configuración local/nube, pruebas y publicación. Se
+reutilizan el catálogo, permisos, sincronización, snapshot y `DATA.saleQuote()`.
+**No alcance:** fórmulas, IVA, comisiones, posventa, documentos, esquema
+Supabase y autorización secundaria.
+**Reproducción:** `node test-manual-additional-discount.mjs` antes de la
+corrección: 0 pasaron, 7 fallaron.
+**Corrección:** el catálogo incorpora `MANUAL_PERCENT` y `MANUAL_AMOUNT`; el
+modal captura el valor con contrato estable y la vista previa consume
+`DATA.saleQuote()`. `benefits.manualOptionsV1` incorpora ambos ítems una sola
+vez a configuraciones históricas sin resucitarlos después de una decisión del
+administrador.
+**Pruebas:** captura/configuración 12/12; H-52 27/27; coherencia 20/20;
+contratos 38/38; navegación 15/15; UX 11 interacciones y 2 validaciones; build
+8/8; smoke bundle 17/17; build offline correcto con 69 assets.
+**Migraciones:** ninguna; usa el catálogo sincronizado existente.
+**Pendiente:** commit y publicación.
+**Riesgo residual:** `$ máximo = 0` permite cualquier importe positivo, aunque
+la autoridad siempre lo limita al total elegible de la venta.
+**Corrección documentada:** `docs/fixes/descuento-adicional-manual.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

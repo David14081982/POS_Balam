@@ -787,6 +787,20 @@
     ],
     beneficios: () => [
       h('p', { key: 'i', className: 'text-caption text-on-surface-variant' }, 'Opciones que el vendedor puede aplicar después de las promociones configuradas. Cada venta congela el beneficio utilizado; editarlo aquí no altera documentos anteriores.'),
+      h(GlassCard, { key: 'manual', className: 'p-6' }, [
+        h(SerifHeading, { key: 't', className: 'mb-2', children: 'Captura manual del vendedor' }),
+        h('p', { key: 'd', className: 'text-body text-on-surface-variant' }, '“Descuento manual (%)” permite escribir un porcentaje y “Descuento manual ($)” un importe. El administrador puede renombrar, desactivar o limitar ambas opciones en el catálogo inferior.'),
+        h('div', { key: 'g', className: 'grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 text-caption' }, [
+          h('div', { key: 'p', className: 'p-3 rounded-lg bg-surface-container-low' }, [
+            h('b', { key: 't' }, 'Porcentaje manual'),
+            h('p', { key: 'd', className: 'text-on-surface-variant mt-1' }, 'Tipo percentage · usa “% máximo” como límite.'),
+          ]),
+          h('div', { key: 'a', className: 'p-3 rounded-lg bg-surface-container-low' }, [
+            h('b', { key: 't' }, 'Importe manual'),
+            h('p', { key: 'd', className: 'text-on-surface-variant mt-1' }, 'Tipo fixed · usa “$ máximo” como límite; cero significa sin límite adicional.'),
+          ]),
+        ]),
+      ]),
       h(CatalogEditor, {
         key: 'ab', kind: 'additional_benefit', title: 'Descuentos adicionales y beneficios',
         codePlaceholder: 'BENEFICIO', labelPlaceholder: 'Nombre visible',

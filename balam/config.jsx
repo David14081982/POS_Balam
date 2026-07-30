@@ -68,6 +68,8 @@
       { code: 'Cortesía', label: 'Cortesía', meta: { icon: 'tag' } },   // regalo/giveaway: total $0
     ],
     additional_benefit: [
+      { code: 'MANUAL_PERCENT', label: 'Descuento manual (%)', meta: { origin: 'Promoción especial', benefitType: 'percentage', value: 0, maxPercent: 100, maxAmount: 0, scope: 'ticket', requiresReason: true, requiresFolio: false, combinable: false, allowsCustomValue: true } },
+      { code: 'MANUAL_AMOUNT', label: 'Descuento manual ($)', meta: { origin: 'Promoción especial', benefitType: 'fixed', value: 0, maxPercent: 0, maxAmount: 0, scope: 'ticket', requiresReason: true, requiresFolio: false, combinable: false, allowsCustomValue: true } },
       { code: 'EMP50', label: 'Empleado 50%', meta: { origin: 'Empleado', benefitType: 'percentage', value: 50, scope: 'ticket', requiresReason: false, requiresFolio: false, combinable: false, allowsCustomValue: false } },
       { code: 'CARD50', label: 'Tarjeta física 50% en un artículo', meta: { origin: 'Tarjeta física', benefitType: 'percentage', value: 50, scope: 'item', requiresReason: false, requiresFolio: true, combinable: false, allowsCustomValue: false } },
       { code: 'CARD500', label: 'Tarjeta física $500', meta: { origin: 'Tarjeta física', benefitType: 'fixed', value: 500, scope: 'ticket', requiresReason: false, requiresFolio: true, combinable: false, allowsCustomValue: false } },
@@ -182,6 +184,7 @@
     'returns.limitDays': 15,
     'print.auto': false,
     'print.lowStockAlert': true,
+    'benefits.manualOptionsV1': true,
   };
 
   // ── Estado + persistencia ────────────────────────────────────────────────────
@@ -210,7 +213,19 @@
   function backfillState(st) {
     const fresh = seed();
     let changed = false;
+    const needsManualOptions = !Object.prototype.hasOwnProperty.call(st.settings, 'benefits.manualOptionsV1');
     Object.keys(fresh.catalogs).forEach(k => { if (!st.catalogs[k]) { st.catalogs[k] = fresh.catalogs[k]; changed = true; } });
+    if (needsManualOptions) {
+      const benefits = st.catalogs.additional_benefit || (st.catalogs.additional_benefit = []);
+      fresh.catalogs.additional_benefit
+        .filter(item => ['MANUAL_PERCENT', 'MANUAL_AMOUNT'].includes(item.code))
+        .forEach(item => {
+          if (!benefits.some(current => current.code === item.code)) {
+            benefits.unshift(deepClone(item));
+            changed = true;
+          }
+        });
+    }
     Object.keys(fresh.settings).forEach(k => { if (!(k in st.settings)) { st.settings[k] = fresh.settings[k]; changed = true; } });
     // Metadatos por catálogo: rellena el mapa entero o entradas-por-kind ausentes (estados viejos).
     if (!st.catalogMeta) { st.catalogMeta = fresh.catalogMeta; changed = true; }
@@ -459,6 +474,9 @@
   // clave que tenga), así las claves nuevas del código no desaparecen tras un pull.
   function load(next) {
     if (!next || !next.catalogs || !next.settings) return;
+    // Migra el estado remoto ANTES de fusionar defaults; de otro modo una
+    // bandera nueva parecería ya presente y no podría inyectar sus ítems una vez.
+    backfillState(next);
     // Backfill de catálogos NUEVOS aún ausentes en la nube (p. ej. return_reason): si la nube no
     // trae el kind, conserva la semilla local para que no desaparezca tras el pull.
     // OJO: si el kind SÍ figura en los metadatos de la nube (_catalogMeta) pero llega sin filas,
