@@ -55,7 +55,7 @@ sesión de chat.
 | `pantalla-del-cambio.md` | H-42 | Pantalla del cambio, atribucion y comprobante (C6) |
 | `pantalla-apartados.md` | H-40 | Pantalla de apartados, abono con forma de pago y comprobante |
 | `ticket-impreso-paginado.md` | H-41 | El comprobante impreso se cortaba en la primera hoja |
-| `pantalla-prestamos.md` | H-46 · H-48 · H-49 | Préstamos de mercancía: documento, cartera, vale firmado, lector y fechas |
+| `pantalla-prestamos.md` | H-46 · H-48 · H-50 | Préstamos de mercancía: documento, cartera, vale firmado, lector y fechas |
 
 Documentación financiera relacionada, creada antes de este índice:
 

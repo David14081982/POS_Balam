@@ -1,9 +1,10 @@
 # Préstamos de mercancía: el documento que faltaba
 
-**Riesgo:** H-46 · H-48 · H-49
+**Riesgo:** H-46 · H-48 · H-50
 **Estado:** RESUELTO
 **Fecha:** 29/07/2026
-**Commit:** `9387e62` (H-46) · `c9618dd` (H-48) · `Pendiente de commit` (H-49)
+**Commit:** `9387e62` (H-46) · `c9618dd` (H-48) · `287ced9` (H-50, cuyo asunto dice
+`H-49` por la colisión de identificadores que se explica en § Sobre la numeración)
 
 ## Problema y reproducción
 
@@ -279,20 +280,36 @@ plano, y su resultado negativo no es evidencia.
 
 ### Sobre la numeración
 
-Esta historia nació como H-47 y se renumeró a **H-48**. Mientras se probaba, otra
-sesión publicó `be84e3c` y `70b1e06` reclamando H-47 para la comisión del excedente,
-con tres migraciones ya nombradas `pos_h47_*` en el historial compartido. Los
-identificadores no se renumeran una vez publicados
-(`docs/architect/README.md` § Presupuestos y crecimiento), así que el número cedió
-la historia que **no** estaba publicada, que era ésta. Préstamos conserva H-46 por
-decisión del dueño del producto.
+Tres colisiones de identificador, todas por lo mismo: **dos sesiones trabajando el
+mismo árbol a la vez**, cada una tomando el siguiente número libre desde una vista
+desactualizada del registro.
 
-Esa misma sesión commiteó `docs/03-known-risks.md` completo cuando el archivo tenía
-las dos historias mezcladas, de modo que la entrada de esta historia entró al
-historial dentro de `be84e3c`. No hubo pérdida: la entrada está íntegra y aquí sólo
-cambió su identificador.
+| Historia | Nació como | Quedó en | Por qué |
+|---|---|---|---|
+| Préstamos | H-46 | **H-46** | decisión del dueño del producto |
+| Lector | H-47 | **H-48** | la comisión del excedente publicó H-47 primero (`be84e3c`) |
+| Fechas | H-49 | **H-50** | el ingreso del cambio en Reportes publicó H-49 primero (`927eabf`) |
 
-## Fechas en día/mes/año (H-49)
+La regla que resuelve cada caso es la misma y no se negocia: los identificadores no se
+renumeran una vez publicados (`docs/architect/README.md` § Presupuestos y
+crecimiento), así que cede siempre la historia que **no** estaba en el historial
+compartido. En los dos casos fue ésta, y renumerarla no costó nada porque su número
+sólo vivía en documentación y en dos comentarios.
+
+El asunto del commit `287ced9` dice `H-49` y ya no se puede corregir sin reescribir
+historia publicada. La entrada de `docs/03-known-risks.md` lo declara.
+
+Además, esa otra sesión commiteó `docs/03-known-risks.md` completo cuando el archivo
+tenía dos historias mezcladas, de modo que la entrada del lector entró al historial
+dentro de `be84e3c`. No hubo pérdida.
+
+**Cómo se evita:** no trabajar dos sesiones a la vez sobre este repositorio. El hook
+`post-commit` publica cada commit, así que dos sesiones no sólo se pisan los números:
+compiten por el artefacto publicado. Aquí no se perdió ninguno —se comprobó por
+ejecución que el paquete final contiene las cuatro historias— pero eso fue suerte de
+ordenación, no una garantía del proceso.
+
+## Fechas en día/mes/año (H-50)
 
 La pantalla mostraba `2026-07-29`: el formato en que las fechas se **persisten**, no
 el que lee una persona. Aparecía en la fila, en el detalle, en el vale que firma el

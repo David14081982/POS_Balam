@@ -2246,12 +2246,16 @@ ademas contra el `.jsx` servido, donde el codigo vive de verdad.
 mostrara `noAprovechado`.
 **Correccion documentada:** `docs/fixes/ingreso-del-cambio-en-reportes.md`.
 
-## H-49 - Las fechas se mostraban en AAAA-MM-DD y el mostrador lee dia/mes/ano
+## H-50 - Las fechas se mostraban en AAAA-MM-DD y el mostrador lee dia/mes/ano
 
 **Estado:** RESUELTO
 **Fecha de registro:** 29/07/2026
 **Fecha de resolucion:** 29/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `287ced9`. Su asunto dice `H-49` porque se escribio antes de que otra
+sesion publicara `927eabf`/`37ea0c1` reclamando ese numero para el ingreso del cambio
+en Reportes. Los identificadores no se renumeran una vez publicados, y el suyo entro
+primero, asi que esta historia paso a H-50; el asunto del commit ya no se puede
+reescribir sin reescribir historia publicada.
 **Evidencia:** la pantalla Prestamos mostraba `2026-07-29` en la fila, en el detalle,
 en el vale que firma el cliente, en el listado impreso y en la columna del `.xlsx`.
 Es el formato en que las fechas se PERSISTEN —el que ordena y compara—, no el que
@@ -2287,7 +2291,13 @@ comision del excedente 30/30, ticket impreso 23/23, cola 115/115, folio diario 6
 precio por talla 19/19, devoluciones 17/17, reinicio 19/19, coherencia de cobro
 17/17, `.xlsx` 17/17, migraciones 31/31, roles 10/10, reproducibilidad 8/8. Guardian
 de `R-DEL-14` intacto.
-**Despliegue:** por registrar tras el push.
+**Despliegue:** artefactos regenerados y publicados. El artefacto servido por GitHub
+Pages se verifico identico byte a byte al `index.html` del commit `287ced9`: SHA-256
+`DD224BC02A7EF2CF0662023F4FC3E63315233520EB144475DE52EA5F8F32D094`, 8 724 201 bytes
+(`R-DEL-07`). Ese paquete se comprobo ademas **por ejecucion** —no por `grep`— y
+contiene las cuatro historias que estaban en vuelo: `DATA.reverseExchangeCommission`
+(H-47), `DATA.revenueSummary` y `DATA.exchangeRevenue` (H-49), `window.LoansScreen`
+(H-46/H-48) y `UI.fechaCorta` (esta). No se perdio el artefacto de nadie.
 **Pendiente:** Apartados, Devoluciones y Reportes siguen mostrando `AAAA-MM-DD`. El
 formateador ya existe y esta compartido; el barrido es una historia propia porque
 toca cuatro pantallas y sus salidas impresas.
