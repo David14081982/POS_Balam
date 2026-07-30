@@ -2100,28 +2100,23 @@ nombre de la persona—. Regresion de cliente en verde: contratos 38/38, navegac
 45/45, ticket impreso 23/23, cola 115/115, folio diario 60/60, precio por talla
 19/19, devoluciones 17/17, reinicio 19/19, inventario 18/18, coherencia de cobro
 17/17, `.xlsx` 17/17, reproducibilidad 8/8. Guardian de `R-DEL-14` intacto.
-**Despliegue:** el paquete publicado **no se vuelve a generar** en este cierre: se
-commitea el que ya estaba construido y verificado sobre esta fuente, que contiene el
-lector y **no** contiene el codigo cliente de H-47. Es deliberado. El artefacto
-servido por GitHub Pages se verifico identico byte a byte al `index.html` del commit
-`c9618dd`: SHA-256
+**Despliegue:** artefactos regenerados y publicados en el commit `c9618dd`. El
+artefacto servido por GitHub Pages se verifico identico byte a byte al `index.html`
+de ese commit: SHA-256
 `491086D1E500B2F3C6BE21950A5235EC3125F24D9F2C545E98917918960D1615`, 8 721 377 bytes
-(`R-DEL-07`). H-47 —otra
-historia, trabajada en paralelo sobre el mismo arbol— dejo commiteado en
-`balam/store.jsx` y `balam/data.jsx` codigo que escribe `comision_monto`,
-`comision_base`, `comision_pct` y `comision_revertida` en `pos.exchanges`, y sus
-migraciones `20260730006500/6600/6700` **no estan aplicadas** en la base real. Como
-el hook `post-commit` publica cada commit, regenerar aqui pondria en el mostrador un
-cliente que escribe contra columnas inexistentes y el cambio quedaria bloqueado por
-esquema en la cola: `R-DEL-03` y `AP-08`. La divergencia entre fuente y paquete es
-la que H-47 ya declaro en su propio cierre; este cierre la conserva en vez de
-resolverla publicando codigo sin su migracion.
-**Pendiente:** dos cosas que se resuelven con la primera regeneracion **posterior**
-a aplicar las migraciones de H-47: incorporar al paquete el codigo cliente de esa
-historia, y corregir dos comentarios del paquete que todavia dicen `H-47` porque
-esta historia se renumero a H-48 despues de construirlo —el numero vive en un
-comentario, no en comportamiento—. Ademas, cuando el termino no resuelve a ninguna
-prenda del catalogo, la
+(`R-DEL-07`). Ese paquete incorpora tambien el codigo cliente de H-47 —comision del
+excedente, trabajada en paralelo sobre el mismo arbol—, cuyas tres migraciones se
+aplicaron a la base real el 30/07/2026; con eso H-47 cerro su propia divergencia
+declarada (`docs/fixes/comision-del-excedente.md` § Publicacion).
+**Correccion de este registro:** una version anterior de esta entrada afirmaba lo
+contrario —que el paquete excluia el codigo de H-47 y que sus migraciones seguian
+pendientes—. Era falso y nacio de un metodo equivocado: se busco
+`reverseExchangeCommission` con `grep` dentro de `index.html` y, al no aparecer, se
+concluyo ausencia. El artefacto **no guarda los `.jsx` en texto plano**, asi que esa
+busqueda no prueba nada (`AP-09`: se comprobo el sintoma, no el mecanismo). La
+comprobacion valida es por EJECUCION —cargar el paquete y preguntar
+`typeof window.DATA.reverseExchangeCommission`—, y devuelve `function`.
+**Pendiente:** cuando el termino no resuelve a ninguna prenda del catalogo, la
 cartera lo trata como busqueda de texto normal. `BARCODES.parse()` es heuristico
 —da positivo con cualquier cadena con un guion en medio— y en el POS solo elige el
 texto de un aviso; aqui habria cambiado el mensaje de una lista vacia por una razon
@@ -2250,6 +2245,55 @@ ademas contra el `.jsx` servido, donde el codigo vive de verdad.
 **Pendiente:** H-50 —los tres reportes que exige el Contrato § 7—, donde se
 mostrara `noAprovechado`.
 **Correccion documentada:** `docs/fixes/ingreso-del-cambio-en-reportes.md`.
+
+## H-49 - Las fechas se mostraban en AAAA-MM-DD y el mostrador lee dia/mes/ano
+
+**Estado:** RESUELTO
+**Fecha de registro:** 29/07/2026
+**Fecha de resolucion:** 29/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** la pantalla Prestamos mostraba `2026-07-29` en la fila, en el detalle,
+en el vale que firma el cliente, en el listado impreso y en la columna del `.xlsx`.
+Es el formato en que las fechas se PERSISTEN —el que ordena y compara—, no el que
+lee una persona en Merida.
+**Origen de auditoria:** solicitud del dueno del producto.
+**Riesgo:** un vale firmado es un documento que se lee en voz alta ante un cliente.
+Una fecha en un formato que el negocio no usa se malinterpreta, y en un dia 12 de
+mes o menor es ambigua a simple vista.
+**Reproduccion:** la captura de la pantalla con datos mostraba `2026-07-15` en la
+fila y `2026-07-27 14:30` en el detalle.
+**Correccion:** `window.UI.fechaCorta()` y `window.UI.fechaHora()` en
+`balam/shared.jsx` son la unica fuente del formato visible: convierten
+`AAAA-MM-DD [HH:mm]` en `DD/MM/AAAA [HH:mm]` y devuelven el valor tal cual si no lo
+reconocen —nunca inventan una fecha—. Prestamos las consume en los nueve puntos donde
+se lee una fecha: fila, columna de estado, detalle, historial de devoluciones,
+contexto del modal de devolucion, vale impreso —incluida la frase del compromiso—,
+listado impreso y `.xlsx`.
+**Lo que NO cambia:** el formato PERSISTIDO. `fecha`, `fechaEsperada` y
+`fechaDevolucion` siguen guardandose en `AAAA-MM-DD [HH:mm]`, porque de ese orden
+lexicografico dependen las comparaciones de plazo, el consecutivo del folio
+(`businessDate`) y la compatibilidad de los prestamos ya registrados. `diaDe()`
+sobrevive en `balam/loans.jsx` justo para eso, y su comentario lo dice: alimenta las
+comparaciones y los campos `type="date"`, que solo aceptan ISO.
+**Alcance:** presentacion de la pantalla Prestamos y sus salidas. El formateador nace
+compartido en `window.UI` a proposito, para que un barrido posterior de Apartados,
+Devoluciones y Reportes lo consuma en vez de reimplementarlo.
+**Pruebas:** `test-loans-screen.mjs` **117/117**, con cinco comprobaciones nuevas que
+exigen `DD/MM/AAAA` **y** afirman que ninguna cadena `\d{4}-\d{2}-\d{2}` llega a la
+pantalla, al vale ni al listado: asi el formato no puede volver a ISO por descuido.
+Regresion completa en verde, incluida la suite de H-47: contratos 38/38, navegacion
+15/15, smoke 15/15, apartados 55/55, E2E del cambio 37/37, pantalla del cambio 45/45,
+comision del excedente 30/30, ticket impreso 23/23, cola 115/115, folio diario 60/60,
+precio por talla 19/19, devoluciones 17/17, reinicio 19/19, coherencia de cobro
+17/17, `.xlsx` 17/17, migraciones 31/31, roles 10/10, reproducibilidad 8/8. Guardian
+de `R-DEL-14` intacto.
+**Despliegue:** por registrar tras el push.
+**Pendiente:** Apartados, Devoluciones y Reportes siguen mostrando `AAAA-MM-DD`. El
+formateador ya existe y esta compartido; el barrido es una historia propia porque
+toca cuatro pantallas y sus salidas impresas.
+**Riesgo residual:** ninguno conocido. El formateador no toca datos, y una fecha que
+no reconoce se devuelve intacta.
+**Correccion documentada:** `docs/fixes/pantalla-prestamos.md` § Fechas en dia/mes/ano.
 
 ## Regla de actualización
 

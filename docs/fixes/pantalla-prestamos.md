@@ -1,9 +1,9 @@
 # Préstamos de mercancía: el documento que faltaba
 
-**Riesgo:** H-46 · H-48
+**Riesgo:** H-46 · H-48 · H-49
 **Estado:** RESUELTO
 **Fecha:** 29/07/2026
-**Commit:** `9387e62` (H-46) · `c9618dd` (H-48)
+**Commit:** `9387e62` (H-46) · `c9618dd` (H-48) · `Pendiente de commit` (H-49)
 
 ## Problema y reproducción
 
@@ -245,30 +245,37 @@ folio diario 60/60, precio por talla 19/19, devoluciones 17/17, reinicio 19/19,
 inventario 18/18, coherencia de cobro 17/17, `.xlsx` 17/17, reproducibilidad 8/8.
 Guardián de `R-DEL-14` intacto.
 
-### El paquete se publica sin regenerarse, y por qué
+### Despliegue del lector
 
-Se commitea el paquete que ya estaba construido y verificado sobre esta fuente: trae
-el lector y **no** trae el código cliente de H-47. No se regenera aquí, y es
-deliberado. El archivo servido por GitHub Pages se verificó idéntico byte a byte al
-`index.html` del commit `c9618dd` (`R-DEL-07`):
+Artefactos regenerados y publicados en `c9618dd`; el archivo servido por GitHub Pages
+se verificó idéntico byte a byte a su `index.html` (`R-DEL-07`):
 
     SHA-256  491086D1E500B2F3C6BE21950A5235EC3125F24D9F2C545E98917918960D1615
     bytes    8 721 377
 
-H-47 —otra historia, trabajada en paralelo sobre este mismo árbol— dejó commiteado
-en `balam/store.jsx` y `balam/data.jsx` código que escribe `comision_monto`,
-`comision_base`, `comision_pct` y `comision_revertida` en `pos.exchanges`, y sus
-migraciones `20260730006500/6600/6700` **no están aplicadas** en la base real. Como
-el hook `post-commit` publica cada commit, regenerar el paquete aquí pondría en el
-mostrador un cliente que escribe contra columnas inexistentes, y el cambio quedaría
-bloqueado por esquema en la cola offline (`R-DEL-03` · `AP-08`). La divergencia entre
-fuente y paquete es la que H-47 declaró en su propio cierre; este cierre la conserva
-en lugar de resolverla publicando código sin su migración.
+Ese paquete incorpora también el código cliente de H-47 —comisión del excedente,
+trabajada en paralelo sobre este mismo árbol—, cuyas tres migraciones se aplicaron a
+la base real el 30/07/2026. Con eso quedó cerrada la divergencia que esa historia
+había declarado (`comision-del-excedente.md` § Publicación).
 
-Consecuencia menor, declarada: dos comentarios dentro del paquete todavía dicen
-`H-47`, porque esta historia se renumeró a H-48 **después** de construirlo. El
-número vive en un comentario, no en comportamiento, y la primera regeneración
-posterior a las migraciones lo corrige junto con lo demás.
+### Una conclusión que estuvo mal, y por qué
+
+Antes de publicar sostuve que el paquete **excluía** el código de H-47 y que sus
+migraciones seguían pendientes, y sobre esa base estuve a punto de no regenerar el
+artefacto. Las dos afirmaciones eran falsas, y el error fue de método:
+
+busqué `reverseExchangeCommission` con `grep` dentro de `index.html` y, al no
+encontrarlo, concluí ausencia. **El artefacto no guarda los `.jsx` en texto plano**,
+de modo que esa búsqueda no puede probar nada —es `AP-09` en su forma más pura:
+comprobar el síntoma en vez del mecanismo—. La propia H-47 dejó escrita la
+advertencia en su documento, § Nota para quien audite el artefacto, y la leí después
+de haber sacado la conclusión.
+
+La comprobación válida es por **ejecución**: cargar el paquete y preguntar
+`typeof window.DATA.reverseExchangeCommission`, que devuelve `function`. Queda como
+el modo de verificar la composición de un artefacto en este proyecto; un `grep` sobre
+`index.html` o sobre `POS Balam (offline).html` sólo sirve para lo que está en texto
+plano, y su resultado negativo no es evidencia.
 
 ### Sobre la numeración
 
@@ -284,6 +291,31 @@ Esa misma sesión commiteó `docs/03-known-risks.md` completo cuando el archivo 
 las dos historias mezcladas, de modo que la entrada de esta historia entró al
 historial dentro de `be84e3c`. No hubo pérdida: la entrada está íntegra y aquí sólo
 cambió su identificador.
+
+## Fechas en día/mes/año (H-49)
+
+La pantalla mostraba `2026-07-29`: el formato en que las fechas se **persisten**, no
+el que lee una persona. Aparecía en la fila, en el detalle, en el vale que firma el
+cliente, en el listado impreso y en el `.xlsx`.
+
+`window.UI.fechaCorta()` y `window.UI.fechaHora()` —nuevas en `balam/shared.jsx`— son
+la única fuente del formato visible. Nacen **compartidas** a propósito: Apartados,
+Devoluciones y Reportes muestran hoy el mismo ISO, y cuando se barran deben consumir
+este formateador en vez de reimplementarlo en cada pantalla (`R-DOM-01` · `AP-01`
+aplicados a la presentación). Una fecha que no reconocen se devuelve intacta: nunca
+se inventa una fecha.
+
+**El formato persistido no cambia.** `fecha`, `fechaEsperada` y `fechaDevolucion`
+siguen en `AAAA-MM-DD [HH:mm]`, porque de ese orden lexicográfico dependen las
+comparaciones de plazo, el consecutivo del folio vía `businessDate()` y la
+legibilidad de los préstamos ya registrados. Por eso `diaDe()` sobrevive en
+`balam/loans.jsx` con su responsabilidad escrita en el comentario: alimenta las
+comparaciones y los campos `type="date"`, que sólo aceptan ISO. Lo que se **lee**
+pasa por el formateador; lo que se **compara**, no.
+
+Cinco comprobaciones nuevas lo fijan, y no sólo afirman que aparece `DD/MM/AAAA`:
+también exigen que **ninguna** cadena `\d{4}-\d{2}-\d{2}` llegue a la pantalla, al
+vale ni al listado. Un descuido que devuelva una fecha a ISO falla el arnés.
 
 ## Riesgo residual y pendientes
 

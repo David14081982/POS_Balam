@@ -5,6 +5,25 @@
   // Formato moneda MXN
   const fmt = (n) => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+  // ---- Fecha visible: DD/MM/AAAA ----
+  // El negocio lee día/mes/año. Las fechas se PERSISTEN en 'AAAA-MM-DD [HH:mm]' y ese
+  // formato no cambia: es el que ordena, compara y viaja a la nube. Estas dos funciones
+  // son sólo presentación y son la única fuente del formato visible, para que no acabe
+  // reimplementado en cada pantalla.
+  // Un valor que no se reconoce se devuelve tal cual: nunca se inventa una fecha.
+  const RE_FECHA_ISO = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}:\d{2}))?/;
+  function fechaCorta(v) {
+    const s = String(v == null ? '' : v);
+    const m = s.match(RE_FECHA_ISO);
+    return m ? `${m[3]}/${m[2]}/${m[1]}` : s;
+  }
+  function fechaHora(v) {
+    const s = String(v == null ? '' : v);
+    const m = s.match(RE_FECHA_ISO);
+    if (!m) return s;
+    return m[4] ? `${m[3]}/${m[2]}/${m[1]} ${m[4]}` : `${m[3]}/${m[2]}/${m[1]}`;
+  }
+
   // ---- Badge semántico canónico (set único, tokens) ----
   const BADGE_TONE = {
     success: 'bg-success-soft text-success', warning: 'bg-warning-soft text-warning',
@@ -172,5 +191,5 @@
     ]);
   }
 
-  window.UI = { fmt, Badge, StatusBadge, StockBadge, ProductThumb, ToastHost, toast, Modal, BADGE_TONE, Pager, Segment, resizeImageFile };
+  window.UI = { fmt, fechaCorta, fechaHora, Badge, StatusBadge, StockBadge, ProductThumb, ToastHost, toast, Modal, BADGE_TONE, Pager, Segment, resizeImageFile };
 })();

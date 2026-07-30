@@ -262,6 +262,13 @@ try {
     alta.texto.includes(alta.folio) && /rodrigo prestatario/i.test(alta.texto) && /guayabera prestamo t/i.test(alta.texto));
   check('la fila anuncia el plazo restante', /vence en 7 d[ií]as/i.test(alta.texto));
   check('la pantalla declara que un préstamo no descuenta inventario', /no descuenta inventario/i.test(alta.texto));
+  // Formato visible: el negocio lee dia/mes/ano. Lo GUARDADO sigue en AAAA-MM-DD
+  // —ya afirmado arriba sobre el documento—; aqui se exige que nada ISO llegue a la
+  // pantalla, que es lo que se devolveria por descuido al tocar la presentacion.
+  const hoyDMA = dia(0).split('-').reverse().join('/');
+  check('la fecha del préstamo se muestra en día/mes/año', alta.texto.includes(hoyDMA), hoyDMA);
+  check('ninguna fecha ISO se escapa a la pantalla', !/\d{4}-\d{2}-\d{2}/.test(alta.texto),
+    (alta.texto.match(/\d{4}-\d{2}-\d{2}/) || [''])[0]);
 
   console.log('\n── E) Detalle y devolución parcial ─────────────────────');
   check('la fila despliega su detalle', await clickId('loan-detalle-' + alta.folio));
@@ -270,6 +277,8 @@ try {
   check('el detalle muestra la mercancía con su SKU', /mercanc[ií]a prestada/i.test(detalle) && detalle.includes(seed.sku));
   check('el detalle muestra las tres fechas del negocio',
     /devoluci[oó]n esperada/i.test(detalle) && /devoluci[oó]n real/i.test(detalle) && /pendiente/i.test(detalle));
+  check('el detalle también fecha en día/mes/año, con la hora del préstamo',
+    new RegExp(hoyDMA.replace(/\//g, '\\/') + ' \\d{2}:\\d{2}').test(detalle) && !/\d{4}-\d{2}-\d{2}/.test(detalle));
   check('el detalle ofrece editar, declarar pérdida y eliminar',
     !!(await page.$(testid('loan-editar-' + alta.folio)))
     && !!(await page.$(testid('loan-perdido-' + alta.folio)))
@@ -480,6 +489,9 @@ try {
     vale.includes(alta.folio) && /rodrigo prestatario/i.test(vale) && /devoluci[oó]n esperada/i.test(vale));
   check('el vale trae la mercancía con su valor', /guayabera prestamo/i.test(vale) && /\$2,400\.00/.test(vale));
   check('el vale trae el compromiso y las firmas', /me comprometo a devolverla/i.test(vale) && /firma de quien recibe/i.test(vale));
+  check('el vale fecha en día/mes/año, incluido el compromiso',
+    vale.includes(hoyDMA) && new RegExp('m[aá]s tardar el ' + dia(7).split('-').reverse().join('/').replace(/\//g, '\\/')).test(vale)
+    && !/\d{4}-\d{2}-\d{2}/.test(vale));
   check('el vale aclara que no es un comprobante de venta', /no es un comprobante de venta/i.test(vale));
   check('el vale no pide red', !/<script[^>]*src=/i.test(vale) && !/https?:\/\//.test(vale));
 
@@ -502,6 +514,7 @@ try {
     /mercanc[ií]a prestada/i.test(listado) && /piezas fuera/i.test(listado) && /totales/i.test(listado) && listado.includes(alta.folio));
   check('el listado impreso escapa el contenido del negocio', /Persona &lt;script&gt;/.test(listado) && !/<script>alert/.test(listado));
   check('el listado impreso no pide red', !/<script[^>]*src=/i.test(listado) && !/https?:\/\//.test(listado));
+  check('el listado impreso fecha en día/mes/año', listado.includes(hoyDMA) && !/\d{4}-\d{2}-\d{2}/.test(listado));
 
   check('sin errores de consola durante el recorrido', errs.length === 0, errs.join(' | '));
 } finally {

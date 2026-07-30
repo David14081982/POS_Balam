@@ -29,7 +29,7 @@
 // cambiaría comportamiento, no un rótulo.
 (function () {
   const { useState, useMemo, useEffect, useRef } = React;
-  const { fmt, toast, Modal, Segment, Badge } = window.UI;
+  const { fmt, fechaCorta, fechaHora, toast, Modal, Segment, Badge } = window.UI;
   const { MS, GlassCard, SerifHeading, ProductImage } = window.HX;
   const C = window.CONFIG;
   const D = window.DATA;
@@ -55,6 +55,9 @@
   const PLAZOS = [[3, '3 días'], [7, '1 semana'], [15, '15 días'], [30, '1 mes']];
 
   // ── Derivaciones de presentación ────────────────────────────────────────────
+  // `diaDe` NO es presentación: entrega el día en 'AAAA-MM-DD' para comparar fechas y
+  // para llenar los campos `type="date"`, que sólo aceptan ese formato. Lo que se LEE
+  // pasa siempre por `fechaCorta`/`fechaHora` (window.UI).
   const diaDe = v => String(v == null ? '' : v).slice(0, 10);
   const piezasDe = l => D.prestamoPiezas(l);
   const fueraDe = l => D.prestamoPendientes(l);
@@ -340,7 +343,7 @@
         // Folio y plazo
         h('div', { key: 'f', className: 'min-w-[10rem] shrink-0' }, [
           h('div', { key: 'a', className: 'font-headline text-h2 text-primary whitespace-nowrap' }, loan.folio),
-          h('div', { key: 'b', className: 'text-overline uppercase text-on-surface-variant' }, diaDe(loan.fecha)),
+          h('div', { key: 'b', className: 'text-overline uppercase text-on-surface-variant' }, fechaCorta(loan.fecha)),
           h('div', { key: 'c', className: 'mt-0.5' }, chip(plazo.icon, plazo.texto, plazo.cls)),
         ]),
         // Persona y mercancía
@@ -361,7 +364,7 @@
         h('div', { key: 's', className: 'text-right min-w-[8rem]' }, [
           h('div', { key: 'b' }, h(Badge, { tone: est.tone, children: est.label })),
           h('div', { key: 'v', className: 'text-overline uppercase text-on-surface-variant mt-1.5' },
-            loan.estado === 'devuelto' ? diaDe(loan.fechaDevolucion) : `${fuera} fuera`),
+            loan.estado === 'devuelto' ? fechaCorta(loan.fechaDevolucion) : `${fuera} fuera`),
         ]),
         // Acciones
         h('div', { key: 'act', className: 'flex items-center gap-2 shrink-0' }, [
@@ -404,15 +407,17 @@
           h('div', { key: 'fe' }, [
             h('div', { key: 't', className: 'text-overline uppercase tracking-widest text-on-surface-variant mb-2' }, 'Fechas'),
             h('div', { key: 'l', className: 'space-y-1.5 text-caption' }, [
-              fila('Préstamo', loan.fecha || '—'),
-              fila('Devolución esperada', loan.fechaEsperada || '—'),
-              fila('Devolución real', loan.fechaDevolucion || (loan.estado === 'no_devuelto' ? 'No regresó' : 'Pendiente')),
+              fila('Préstamo', fechaHora(loan.fecha) || '—'),
+              fila('Devolución esperada', fechaCorta(loan.fechaEsperada) || '—'),
+              fila('Devolución real', loan.fechaDevolucion
+                ? fechaHora(loan.fechaDevolucion)
+                : (loan.estado === 'no_devuelto' ? 'No regresó' : 'Pendiente')),
               loan.usuario ? fila('Registró', loan.usuario) : null,
             ]),
             (loan.devoluciones || []).length ? h('div', { key: 'h', className: 'mt-4' }, [
               h('div', { key: 't', className: 'text-overline uppercase tracking-widest text-on-surface-variant mb-2' }, 'Devoluciones registradas'),
               h('div', { key: 'l', className: 'space-y-1.5' }, loan.devoluciones.map((d, i) => h('div', { key: i, className: 'text-caption text-on-surface-variant' },
-                `${diaDe(d.fecha)} · ${(d.lineas || []).reduce((a, x) => a + (Number(x.qty) || 0), 0)} pieza(s)` + (d.nota ? ` · ${d.nota}` : '')))),
+                `${fechaCorta(d.fecha)} · ${(d.lineas || []).reduce((a, x) => a + (Number(x.qty) || 0), 0)} pieza(s)` + (d.nota ? ` · ${d.nota}` : '')))),
             ]) : null,
             loan.notaCierre ? h('p', { key: 'nc', className: 'text-caption text-on-surface-variant mt-3 leading-relaxed' }, 'Cierre: ' + loan.notaCierre) : null,
           ]),
@@ -842,7 +847,7 @@
           h('div', { key: 'v', className: 'font-headline text-h1 leading-none' }, String(D.prestamoPendientes(loan))),
         ]),
         h('div', { key: 'b', className: 'flex justify-between text-caption opacity-70 mt-3 pt-3 border-t border-white/15 gap-3' }, [
-          h('span', { key: 'l' }, 'Esperada ' + (loan.fechaEsperada || '—')),
+          h('span', { key: 'l' }, 'Esperada ' + (fechaCorta(loan.fechaEsperada) || '—')),
           h('span', { key: 'v' }, textoPlazo(loan).texto),
         ]),
       ]),
@@ -927,18 +932,20 @@
   // ── Salidas: Excel, vale impreso y listado impreso ──────────────────────────
   // Fila plana compartida por el .xlsx y el listado impreso: una sola definición de
   // «qué columnas describen un préstamo».
+  // Las fechas salen ya en día/mes/año: estas filas alimentan el `.xlsx` y el listado
+  // impreso, que los lee una persona.
   function filaExport(l) {
     const a = D.prestamoAtraso(l);
     return {
       folio: l.folio,
-      fecha: diaDe(l.fecha),
+      fecha: fechaCorta(l.fecha),
       persona: (l.persona || {}).nombre || '—',
       tipo: (TIPOS[(l.persona || {}).tipo] || TIPOS.otro).label,
       tel: (l.persona || {}).tel || '—',
       piezas: piezasDe(l),
       fuera: fueraDe(l),
-      esperada: l.fechaEsperada || '—',
-      devolucion: diaDe(l.fechaDevolucion) || (l.estado === 'no_devuelto' ? 'No regresó' : '—'),
+      esperada: fechaCorta(l.fechaEsperada) || '—',
+      devolucion: fechaCorta(l.fechaDevolucion) || (l.estado === 'no_devuelto' ? 'No regresó' : '—'),
       estado: (ESTADOS[l.estado] || ESTADOS.pendiente).label,
       atraso: a.vencido ? a.dias : 0,
       valor: valorTotalDe(l),
@@ -1003,9 +1010,9 @@
       <div class="cards">
         <div class="card"><div class="k">Recibe</div><div class="v">${escapeHtml((loan.persona || {}).nombre || '—')}</div>
           <div class="sub">${escapeHtml((TIPOS[(loan.persona || {}).tipo] || TIPOS.otro).label)}${(loan.persona || {}).tel ? ' · ' + escapeHtml(loan.persona.tel) : ''}</div></div>
-        <div class="card"><div class="k">Fecha del préstamo</div><div class="v">${escapeHtml(diaDe(loan.fecha))}</div>
+        <div class="card"><div class="k">Fecha del préstamo</div><div class="v">${escapeHtml(fechaCorta(loan.fecha))}</div>
           <div class="sub">${escapeHtml(loan.usuario ? 'registró ' + loan.usuario : '')}</div></div>
-        <div class="card"><div class="k">Devolución esperada</div><div class="v">${escapeHtml(loan.fechaEsperada || '—')}</div>
+        <div class="card"><div class="k">Devolución esperada</div><div class="v">${escapeHtml(fechaCorta(loan.fechaEsperada) || '—')}</div>
           <div class="sub">${escapeHtml(textoPlazo(loan).texto)}</div></div>
       </div>
       <table>
@@ -1014,7 +1021,7 @@
         <tfoot><tr><td colspan="2">Total</td><td class="num">${piezasDe(loan)}</td><td></td><td class="num">${escapeHtml(fmt(valorTotalDe(loan)))}</td></tr></tfoot>
       </table>
       ${loan.nota ? `<div class="aviso"><strong>Nota:</strong> ${escapeHtml(loan.nota)}</div>` : ''}
-      <div class="aviso">Recibí en préstamo la mercancía descrita y me comprometo a devolverla completa y en las mismas condiciones a más tardar el ${escapeHtml(loan.fechaEsperada || '—')}. En caso de no devolverla, acepto cubrir su valor de ${escapeHtml(fmt(valorTotalDe(loan)))}.</div>
+      <div class="aviso">Recibí en préstamo la mercancía descrita y me comprometo a devolverla completa y en las mismas condiciones a más tardar el ${escapeHtml(fechaCorta(loan.fechaEsperada) || '—')}. En caso de no devolverla, acepto cubrir su valor de ${escapeHtml(fmt(valorTotalDe(loan)))}.</div>
       <div class="firma"><div>Firma de quien recibe</div><div>Firma de quien entrega</div></div>
       <div class="foot">Este vale no es un comprobante de venta. La mercancía prestada no se descuenta del inventario.</div>`, 'A4 portrait');
   }
