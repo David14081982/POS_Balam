@@ -24,6 +24,9 @@
     { id: 'config.inventario', parentId: 'config', section: 'inventario', title: 'Inventario', icon: 'box' },
     { id: 'config.impresion', parentId: 'config', section: 'impresion', title: 'Impresión', icon: 'print' },
     { id: 'config.usuarios', parentId: 'config', section: 'usuarios', title: 'Usuarios', icon: 'users' },
+    // Reservada para H-56 Fase 4. Su identidad ya existe para que el servidor
+    // pueda protegerla, pero no aparece ni monta UI antes de esa fase.
+    { id: 'config.permisos', parentId: 'config', section: 'permisos', title: 'Permisos de visualización', icon: 'shield', enabled: false },
     { id: 'config.demo', parentId: 'config', section: 'demo', title: 'Datos de demostración', icon: 'star' },
   ];
 
@@ -45,6 +48,6 @@
     all: () => definitions.slice(),
     get: id => byId.get(id) || null,
     navigation: () => definitions.filter(screen => screen.menu === true && !screen.parentId),
-    childrenOf: parentId => definitions.filter(screen => screen.parentId === parentId),
+    childrenOf: parentId => definitions.filter(screen => screen.parentId === parentId && screen.enabled !== false),
   });
 })();

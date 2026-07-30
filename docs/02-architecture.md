@@ -397,9 +397,18 @@ El último perfil verificado se guarda para permitir el arranque local-first sin
 red; al reconectar, Supabase vuelve a validar estado y rol.
 
 El producto no define todavía permisos configurables por pantalla. H-56
-completó la costura estructural del registro, pero la persistencia por usuario,
-la herencia, la caché versionada y las capacidades de servidor permanecen en
-sus fases siguientes; hasta entonces sigue vigente el contrato fijo de H-08.
+completó la costura estructural del registro y su Fase 2 añadió el modelo SQL,
+pero la caché versionada y las capacidades de servidor permanecen en sus fases
+siguientes; hasta entonces sigue vigente el contrato visible fijo de H-08.
+
+El modelo de Fase 2 persiste identidades `auth.users.id`, nunca vendedores
+comerciales sin cuenta. `user_screen_permission_overrides` precede a
+`role_screen_permissions`; la ausencia de ambos deniega. Las funciones
+`current_screen_permission()` y `current_screen_permissions()` exponen la
+resolución del usuario actual. La administración usa RPC auditadas y no
+escritura directa. Las cinco tablas nuevas tienen RLS y sólo un administrador
+activo que conserve `config.usuarios` y `config.permisos` puede consultarlas o
+mutarlas mediante las fronteras autorizadas.
 
 `supabase/_PEGAR-EN-SQL-EDITOR.sql`, `ARREGLAR-ADMIN.sql` y scripts de limpieza
 son herramientas operativas heredadas, no migraciones ni fuentes de verdad;

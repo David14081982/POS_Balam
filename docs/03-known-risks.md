@@ -2511,7 +2511,7 @@ administrador debe cambiar el nombre descriptivo de la copia según su uso.
 
 ## H-56 - Las pantallas y su autorización no tienen un registro central
 
-**Estado:** EN PROGRESO - FASE 1 COMPLETADA
+**Estado:** EN PROGRESO - FASES 1 Y 2 COMPLETADAS
 **Fecha de registro:** 30/07/2026
 **Commit:** Pendiente de commit
 **Evidencia:** `balam/app.jsx` declara por separado `NAV`, `TITLES` y la cadena
@@ -2540,7 +2540,17 @@ cambió.
 reproducibilidad 8/8; smoke bundle 17/17; navegación bundle 15/15; build
 correcto con 70 assets.
 **Migraciones de Fase 1:** ninguna.
-**Pendiente:** fases 2 a 6.
+**Corrección de Fase 2:** cinco tablas relacionales ligadas a `auth.users`,
+roles base opcionales, overrides `allow`/`deny`, auditoría, resolución
+override → rol → default-deny y RPC administrativas atómicas. Las tablas
+tienen RLS y carecen de escritura directa para `authenticated`.
+**Migraciones de Fase 2:** `20260730007000` y `20260730007100`, aplicadas al
+proyecto enlazado el 30/07/2026. `migration list` muestra ambas local/remoto y
+el dry-run posterior informa que la base está actualizada.
+**Pruebas de Fase 2:** modelo 13/13; migraciones 31/31; registro 12/12; roles
+15/15; contratos 39/39; cola 115/115; reproducibilidad 8/8; smoke 17/17;
+navegación 15/15.
+**Pendiente:** fases 3 a 6.
 **Riesgo residual:** hasta completar la Fase 5, la autorización de servidor
 sigue siendo la matriz fija por rol de H-08.
 **Corrección documentada:** `docs/fixes/permisos-visualizacion.md`.

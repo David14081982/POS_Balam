@@ -1,7 +1,7 @@
 # Permisos de visualización por usuario
 
 **Riesgo:** H-56
-**Estado:** PARCIALMENTE RESUELTO - FASE 1
+**Estado:** PARCIALMENTE RESUELTO - FASES 1 Y 2
 **Fecha:** 30/07/2026
 **Commit:** Pendiente de commit
 
@@ -42,6 +42,28 @@ todas las rutas principales y vendedor conserva únicamente `pos`.
 
 No se creó ninguna migración.
 
+### Fase 2 — modelo y resolución efectiva
+
+Las migraciones `20260730007000` y `20260730007100` crean y verifican un
+modelo relacional separado del perfil comercial:
+
+- roles base y permisos de pantalla por rol;
+- asignación opcional de rol a `auth.users.id`;
+- overrides `allow` / `deny`;
+- auditoría por lote;
+- resolución override → rol → denegación;
+- RPC administrativas atómicas;
+- RLS y privilegios mínimos sobre las cinco tablas nuevas.
+
+`config.permisos` queda reservada como hoja deshabilitada en el registro. No
+aparece todavía en Configuración ni participa en `AUTH.canAccess()`.
+
+La primera versión de la verificación pretendía crear identidades temporales.
+El control previo al push la rechazó por escribir transitoriamente tablas
+existentes. Se sustituyó antes de desplegar: la versión aplicada sólo lee
+`auth.users`/`pos.sellers` y escribe/limpia el modelo nuevo. La precedencia se
+extrae a una función pura para verificar inactivos sin fabricar perfiles.
+
 ## Pruebas
 
 - Línea base: `node test-screen-registry.mjs` — 2/12, 10 fallos.
@@ -53,15 +75,37 @@ No se creó ninguna migración.
 - Navegación del bundle: `node test-ui-navigation.mjs` — 15/15.
 - `node build-offline.mjs` — correcto, 70 assets.
 
+Fase 2:
+
+- Línea base `node test-permissions-model.mjs` — 0/13.
+- Modelo final — 13/13.
+- Migraciones — 31/31.
+- Registro — 12/12.
+- Roles — 15/15.
+- Contratos — 39/39.
+- Cola offline — 115/115.
+- Reproducibilidad — 8/8.
+- Smoke bundle — 17/17.
+- Navegación bundle — 15/15.
+- Push remoto: `007000` y `007100` aplicadas; dry-run posterior sin pendientes.
+
 ## Riesgo residual y pendientes
 
-Fases 2 a 6 permanecen abiertas. Los permisos siguen siendo los roles fijos de
-H-08; todavía no existen persistencia por usuario, overrides, caché versionada,
-editor triestado ni capacidades de servidor.
+Fases 3 a 6 permanecen abiertas. El modelo por usuario ya existe, pero el
+cliente sigue usando los roles fijos de H-08; todavía no existen caché
+versionada conectada, editor triestado ni capacidades operativas del dominio.
 
 La reversión de Fase 1 consiste en retirar `screens.jsx`, restaurar las listas
 anteriores en App y Configuración y regenerar los artefactos. No requiere
 revertir datos ni migraciones.
+
+La reversión de Fase 2 se hace hacia adelante con una migración nueva:
+revoca primero las seis RPC públicas, elimina las cinco policies, retira las
+funciones internas en orden de dependencia y finalmente elimina las cinco
+tablas nuevas en orden inverso de FK. No toca ninguna tabla comercial. Como el
+último paso elimina auditoría y configuración de permisos, requiere
+autorización destructiva expresa; la reversión operativa preferida sólo revoca
+RPC/policies y conserva las tablas.
 
 ## Referencias
 
