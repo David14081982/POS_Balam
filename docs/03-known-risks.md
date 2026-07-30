@@ -2640,7 +2640,9 @@ primer efecto; devolución total y faltante exigen además cierre; la reapertura
 sólo parte de `no_devuelto`. Ninguna transición modifica inventario ni
 movimientos históricos. La verificación remota confirmó transiciones,
 denegación, auditoría y limpieza de fixtures. Regresión específica:
-capacidades 40/40, migraciones 31/31, cola 115/115 y préstamos 117/117.
+capacidades 40/40, migraciones 31/31, cola 115/115 y préstamos 115/117; las
+dos comprobaciones HID pendientes son intermitencias históricas del arnés y no
+recorren autorización ni persistencia remota.
 **Corrección documentada:** `docs/fixes/permisos-visualizacion.md`.
 
 ## Regla de actualización

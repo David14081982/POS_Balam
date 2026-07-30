@@ -239,7 +239,9 @@ sigue siendo automático. La RPC no escribe productos ni movimientos.
 
 La verificación remota pasó transiciones, denegación sin escritura parcial,
 auditoría y limpieza sintética. Regresión específica: capacidades 40/40,
-migraciones 31/31, cola 115/115 y préstamos 117/117. El barrido global también
+migraciones 31/31, cola 115/115 y préstamos 115/117. Las dos comprobaciones
+HID pendientes pertenecen al lector y no recorren autorización ni persistencia
+remota. El barrido global también
 detectó seis arneses históricos incompatibles con cambios anteriores de Fase 5
 o dependientes de estado compartido; ninguno recorre la frontera de préstamos
 y se conservan declarados como riesgo de infraestructura de prueba.
