@@ -67,7 +67,7 @@
     },
     sales: {
       table: 'sales', conflict: 'folio',
-      fromRow: r => ({ folio: r.folio, folioAliases: Array.isArray(r.folio_aliases) ? r.folio_aliases : undefined, _operationId: r.operation_id || undefined, _stockReserved: !!r.operation_id && r.estado !== 'Apartado' && r.estado !== 'Cancelado', _syncStatus: 'synced', fecha: String(r.fecha).replace('T', ' ').slice(0, 16), clienteId: r.cliente_id || undefined, cliente: r.cliente, vendedor: '', vendedores: r.vendedores || [], items: r.items || 0, subtotal: r.subtotal == null ? undefined : Number(r.subtotal), iva: r.iva == null ? undefined : Number(r.iva), total: Number(r.total) || 0, descuento: r.descuento == null ? undefined : Number(r.descuento), ivaPct: r.iva_pct == null ? undefined : Number(r.iva_pct), ivaIncluded: r.iva_included == null ? undefined : !!r.iva_included, anticipo: r.anticipo == null ? undefined : Number(r.anticipo), saldo: r.saldo == null ? undefined : Number(r.saldo), pagoEfectivo: r.pago_efectivo == null ? undefined : Number(r.pago_efectivo), pagoOtro: r.pago_otro == null ? undefined : Number(r.pago_otro), metodo: r.metodo, estado: r.estado, valorRegalado: Number(r.valor_regalado) || 0, returnLimitDays: r.return_limit_days == null ? null : Number(r.return_limit_days), returnExpiresAt: r.return_expires_at || null, lineas: [] }),
+      fromRow: r => ({ folio: r.folio, folioAliases: Array.isArray(r.folio_aliases) ? r.folio_aliases : undefined, _operationId: r.operation_id || undefined, _stockReserved: !!r.operation_id && r.estado !== 'Apartado' && r.estado !== 'Cancelado', _syncStatus: 'synced', fecha: String(r.fecha).replace('T', ' ').slice(0, 16), clienteId: r.cliente_id || undefined, cliente: r.cliente, vendedor: '', vendedores: r.vendedores || [], items: r.items || 0, subtotal: r.subtotal == null ? undefined : Number(r.subtotal), iva: r.iva == null ? undefined : Number(r.iva), total: Number(r.total) || 0, descuento: r.descuento == null ? undefined : Number(r.descuento), descuentoAdicional: r.descuento_adicional == null ? undefined : Number(r.descuento_adicional), totalAntesDescuentoAdicional: r.total_antes_descuento_adicional == null ? undefined : Number(r.total_antes_descuento_adicional), descuentosAdicionales: Array.isArray(r.descuentos_adicionales) ? r.descuentos_adicionales : undefined, ivaPct: r.iva_pct == null ? undefined : Number(r.iva_pct), ivaIncluded: r.iva_included == null ? undefined : !!r.iva_included, anticipo: r.anticipo == null ? undefined : Number(r.anticipo), saldo: r.saldo == null ? undefined : Number(r.saldo), pagoEfectivo: r.pago_efectivo == null ? undefined : Number(r.pago_efectivo), pagoOtro: r.pago_otro == null ? undefined : Number(r.pago_otro), metodo: r.metodo, estado: r.estado, valorRegalado: Number(r.valor_regalado) || 0, returnLimitDays: r.return_limit_days == null ? null : Number(r.return_limit_days), returnExpiresAt: r.return_expires_at || null, lineas: [] }),
     },
     promotions: {
       table: 'promotions', conflict: 'id', localKey: 'promos',
@@ -499,7 +499,9 @@
         (window.DATA && window.DATA.products || []).forEach(p => {
           if ((op.stockLines || []).some(l => l.product_id === p.id)) expectedProducts[p.id] = Number(p._syncVersion) || 0;
         });
-        const committed = await c.rpc('commit_sale', {
+        const saleRpc = Array.isArray(op.header && op.header.descuentos_adicionales)
+          ? 'commit_sale_with_additional_discount' : 'commit_sale';
+        const committed = await c.rpc(saleRpc, {
           p_commit_id: op.id,
           p_operation_id: op.operationId,
           p_sale: op.header,
@@ -864,6 +866,9 @@
     if (sale.pagoEfectivo != null) header.pago_efectivo = Number(sale.pagoEfectivo) || 0;
     if (sale.pagoOtro != null) header.pago_otro = Number(sale.pagoOtro) || 0;
     if (sale.descuento != null) header.descuento = Number(sale.descuento) || 0;
+    if (sale.descuentoAdicional != null) header.descuento_adicional = Number(sale.descuentoAdicional) || 0;
+    if (sale.totalAntesDescuentoAdicional != null) header.total_antes_descuento_adicional = Number(sale.totalAntesDescuentoAdicional) || 0;
+    if (Array.isArray(sale.descuentosAdicionales)) header.descuentos_adicionales = sale.descuentosAdicionales;
     // H-34: el plazo congelado sólo se envía si la venta lo tiene, igual que el
     // resto de campos opcionales: una instalación sin la migración no lo manda.
     if (sale.returnLimitDays != null) header.return_limit_days = Number(sale.returnLimitDays) || 0;
@@ -878,6 +883,7 @@
       // H-32: evidencia del descuento. Condicional, como los precios: una instalación sin la
       // migración 034 no envía el campo y sigue funcionando igual.
       if (Array.isArray(l.promos)) row.promos = l.promos;
+      if (l.descuentoAdicional != null) row.descuento_adicional = Number(l.descuentoAdicional) || 0;
       return row;
     });
     const moves = ((window.DATA && window.DATA.movements) || [])
@@ -1059,7 +1065,7 @@
   // Filas de venta locales desde filas SQL + sus renglones (compartido: pull y fetch por folio).
   function saleRowsFrom(raws, itemRows) {
     const byFolio = {};
-    (itemRows || []).forEach(x => (byFolio[x.folio] || (byFolio[x.folio] = [])).push({ productId: x.product_id || undefined, sku: x.sku, nombre: x.nombre, talla: x.talla, qty: x.qty, precio: Number(x.precio) || 0, precioBase: x.precio_base == null ? undefined : Number(x.precio_base), precioOrig: x.precio_original == null ? undefined : Number(x.precio_original), promos: Array.isArray(x.promos) ? x.promos : undefined }));
+    (itemRows || []).forEach(x => (byFolio[x.folio] || (byFolio[x.folio] = [])).push({ productId: x.product_id || undefined, sku: x.sku, nombre: x.nombre, talla: x.talla, qty: x.qty, precio: Number(x.precio) || 0, precioBase: x.precio_base == null ? undefined : Number(x.precio_base), precioOrig: x.precio_original == null ? undefined : Number(x.precio_original), descuentoAdicional: x.descuento_adicional == null ? undefined : Number(x.descuento_adicional), promos: Array.isArray(x.promos) ? x.promos : undefined }));
     return raws.map(raw => {
       const s = MAP.sales.fromRow(raw); s.lineas = byFolio[raw.folio] || [];
       const vid = (raw.vendedores || [])[0];
@@ -1108,6 +1114,27 @@
     const rows = saleRowsFrom(r.data, items);
     if (!hasPendingFor('sales')) window.DATA.mergeRemote('sales', rows, 'folio');
     return window.DATA.sales.find(s => s.folio === rows[0].folio) || rows[0];
+  }
+  async function physicalCardAvailable(folio) {
+    const c = await ensureClient();
+    if (!c || !navigator.onLine || !(await hasSession())) {
+      throw new Error('Conéctate para validar la tarjeta física');
+    }
+    const r = await c.rpc('physical_card_available', { p_folio: String(folio || '').trim() });
+    if (r.error) throw new Error(r.error.message || 'No se pudo validar la tarjeta física');
+    return r.data === true;
+  }
+  async function claimPhysicalCard(folio, claimToken) {
+    const c = await ensureClient();
+    if (!c || !navigator.onLine || !(await hasSession())) {
+      throw new Error('ConÃ©ctate para validar la tarjeta fÃ­sica');
+    }
+    const r = await c.rpc('claim_physical_card', {
+      p_folio: String(folio || '').trim(),
+      p_claim_token: String(claimToken || '').trim(),
+    });
+    if (r.error) throw new Error(r.error.message || 'No se pudo reservar la tarjeta fÃ­sica');
+    return r.data === true;
   }
 
   async function pullDomain(kind) {
@@ -1311,6 +1338,6 @@
     }
   }
 
-  window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushSale, pushReturn, pushExchange, ensureFolioBlock, deleteRow, pullDomain, fetchSaleByFolio, flushQueue, retryOperation, queueStatus, clearQueue, markResetApplied, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
+  window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushSale, pushReturn, pushExchange, ensureFolioBlock, deleteRow, pullDomain, fetchSaleByFolio, physicalCardAvailable, claimPhysicalCard, flushQueue, retryOperation, queueStatus, clearQueue, markResetApplied, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
   window.CORE.registerSyncGateway(window.STORE);
 })();

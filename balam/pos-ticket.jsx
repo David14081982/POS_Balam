@@ -81,7 +81,7 @@
     ]);
   }
 
-  function TicketPanel({ ticket, client, subtotal, subtotalOrig, discount, itemCount, grandTotal, onPickClient, onResetClient, onQty, onRemove, onCobrar, onClear, bottom, flashKey }) {
+  function TicketPanel({ ticket, client, subtotal, subtotalOrig, discount, itemCount, grandTotal, quote, additionalDiscounts, onPickClient, onResetClient, onQty, onRemove, onCobrar, onAdditionalDiscount, onRemoveAdditionalDiscount, onClear, bottom, flashKey }) {
     const desc = discount || 0;
     const totalPagar = grandTotal != null ? grandTotal : subtotal;
     const dg = desglose(totalPagar, desc, 16);
@@ -178,11 +178,21 @@
           desc > 0 ? h('div', { key: 'ds', className: 'flex justify-between items-center gap-3 text-caption' }, [
             h('span', { key: 'l', className: 'min-w-0' }, etiquetaDescuento(pctEvidencia)), h('span', { key: 'v', className: 'font-semibold shrink-0', style: { color: '#FFE088' } }, '− ' + fmt(desc)),
           ]) : null,
+          (quote && quote.additionalDiscountTotal > 0) ? h('div', { key: 'ad', className: 'space-y-1' },
+            (quote.applications || []).map(a => h('div', { key: a.id, className: 'flex justify-between items-center gap-2 text-caption' }, [
+              h('button', { key: 'x', className: 'text-left min-w-0 truncate', title: 'Quitar descuento', onClick: () => onRemoveAdditionalDiscount(a.id) }, `Descuento adicional — ${a.origin || a.benefitName}`),
+              h('span', { key: 'v', className: 'font-semibold shrink-0', style: { color: '#FFE088' } }, '− ' + fmt(a.discountAmount)),
+            ]))) : null,
         ]),
         h('div', { key: 'tot', className: 'flex justify-between items-end mb-3' }, [
           h('span', { key: 'l', className: 'text-overline uppercase opacity-60' }, 'Total a pagar'),
           h('span', { key: 'v', className: 'font-headline text-h1 tracking-tight leading-none' }, fmt(totalPagar)),
         ]),
+        h('button', {
+          key: 'ad', 'data-testid': 'additional-discount-open', disabled: empty,
+          className: 'w-full mb-3 py-2.5 bg-on-primary/10 hover:bg-on-primary/20 border border-on-primary/20 rounded-lg text-caption font-bold uppercase tracking-wider disabled:opacity-40',
+          onClick: onAdditionalDiscount,
+        }, 'Aplicar descuento adicional'),
         h('div', { key: 'btns', className: 'grid grid-cols-3 gap-3' }, [
           h('button', {
             key: 'd', className: 'py-3 bg-on-primary/10 hover:bg-on-primary/20 border border-on-primary/20 rounded-lg text-caption font-bold uppercase tracking-wider transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed',
@@ -203,7 +213,80 @@
     return window.CONFIG.list('payment_method').map(m => ({ id: m.code, icon: (m.meta && m.meta.icon) || 'cash' }));
   }
 
-  function CheckoutModal({ total, itemCount, client, onClose, onConfirm }) {
+  function AdditionalDiscountModal({ ticket, existing, onClose, onConfirm }) {
+    const benefits = window.CONFIG.list('additional_benefit');
+    const [code, setCode] = useState(() => (benefits[0] || {}).code || '');
+    const [value, setValue] = useState('');
+    const [targetKey, setTargetKey] = useState(() => (ticket[0] || {}).key || '');
+    const [reason, setReason] = useState('');
+    const [cardType, setCardType] = useState('');
+    const [cardFolio, setCardFolio] = useState('');
+    const [busy, setBusy] = useState(false);
+    const [applicationId] = useState(() => 'ad-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8));
+    const benefit = benefits.find(x => x.code === code) || benefits[0];
+    const meta = (benefit && benefit.meta) || {};
+    const custom = meta.allowsCustomValue === true || meta.allowsCustomValue === 'true';
+    const needsItem = meta.scope === 'item' || meta.benefitType === 'courtesy_piece';
+    const needsReason = meta.requiresReason === true || meta.requiresReason === 'true' || meta.origin === 'Otro';
+    const needsCard = meta.origin === 'Tarjeta física';
+    const appliedValue = custom ? Number(value) : Number(meta.value);
+    let preview = null, error = '';
+    const draft = benefit ? {
+      id: applicationId, benefitCode: benefit.code, benefitName: benefit.label,
+      origin: meta.origin, benefitType: meta.benefitType, value: appliedValue,
+      maxPercent: Number(meta.maxPercent) || 0, maxAmount: Number(meta.maxAmount) || 0,
+      scope: needsItem ? 'item' : 'ticket', targetKey: needsItem ? targetKey : undefined,
+      combinable: meta.combinable === true || meta.combinable === 'true', reason: reason.trim(),
+      cardType: cardType.trim(), cardFolio: cardFolio.trim(),
+      onlineVerified: !needsCard || (!!navigator.onLine && !!(window.AUTH && window.AUTH.hasSession())),
+      appliedBy: ((window.AUTH && window.AUTH.current && window.AUTH.current()) || {}).email || '',
+      appliedAt: new Date().toISOString(),
+    } : null;
+    try { if (draft) preview = window.DATA.saleQuote(ticket, (existing || []).concat(draft)); }
+    catch (e) { error = e.message || 'El descuento no es válido'; }
+    async function confirm() {
+      if (!draft || error || (needsReason && !reason.trim()) || (needsCard && (!cardType.trim() || !cardFolio.trim()))) return;
+      setBusy(true);
+      try {
+        if (needsCard && (!navigator.onLine || !window.AUTH.hasSession())) throw new Error('Conéctate para validar la tarjeta física');
+        if (needsCard) {
+          const available = await window.STORE.claimPhysicalCard(cardFolio, applicationId);
+          draft.claimToken = applicationId;
+          if (!available) throw new Error('El folio de tarjeta física ya fue utilizado');
+        }
+        onConfirm(draft);
+      } catch (e) { toast(e.message, 'var(--danger)'); setBusy(false); }
+    }
+    const cls = 'block w-full h-11 px-3 bg-surface-container-low border border-outline-variant rounded-lg';
+    const footer = [
+      h('button', { key: 'c', className: 'px-5 h-11 border border-outline-variant rounded-lg', onClick: onClose }, 'Cancelar'),
+      h('button', {
+        key: 'a', 'data-testid': 'additional-discount-confirm', disabled: busy || !!error || !draft || (needsReason && !reason.trim()) || (needsCard && (!cardType.trim() || !cardFolio.trim())),
+        className: 'px-6 h-11 bg-primary text-on-primary rounded-lg font-bold disabled:opacity-40', onClick: confirm,
+      }, busy ? 'Validando…' : 'Aplicar descuento'),
+    ];
+    return h(Modal, { title: 'Descuento adicional', onClose, footer }, [
+      h('label', { key: 'bl', className: 'text-overline uppercase text-on-surface-variant' }, 'Beneficio'),
+      h('select', { key: 'b', className: cls + ' mb-4', value: code, onChange: e => setCode(e.target.value) },
+        benefits.map(x => h('option', { key: x.code, value: x.code }, x.label))),
+      custom && h('input', { key: 'v', className: cls + ' mb-4', type: 'number', min: 0, value, onChange: e => setValue(e.target.value), placeholder: meta.benefitType === 'percentage' ? 'Porcentaje' : 'Importe' }),
+      needsItem && h('select', { key: 't', className: cls + ' mb-4', value: targetKey, onChange: e => setTargetKey(e.target.value) },
+        ticket.map(l => h('option', { key: l.key, value: l.key }, `${l.p.nombre} · ${l.talla}`))),
+      needsCard && h('div', { key: 'card', className: 'grid grid-cols-2 gap-3 mb-4' }, [
+        h('input', { key: 'type', className: cls, value: cardType, onChange: e => setCardType(e.target.value), placeholder: 'Tipo de tarjeta' }),
+        h('input', { key: 'folio', 'data-testid': 'additional-discount-card-folio', className: cls, value: cardFolio, onChange: e => setCardFolio(e.target.value), placeholder: 'Folio físico' }),
+      ]),
+      h('textarea', { key: 'r', className: 'block w-full min-h-20 p-3 bg-surface-container-low border border-outline-variant rounded-lg mb-4', value: reason, onChange: e => setReason(e.target.value), placeholder: needsReason ? 'Motivo obligatorio' : 'Motivo o comentario' }),
+      preview && h('div', { key: 'p', className: 'p-4 bg-surface-container-low rounded-lg space-y-2 text-caption' }, [
+        h('div', { key: 'a', className: 'flex justify-between' }, [h('span', {}, 'Antes del descuento adicional'), h('b', {}, fmt(preview.beforeAdditionalTotal))]),
+        h('div', { key: 'd', className: 'flex justify-between text-gold-text' }, [h('span', {}, 'Descuento adicional'), h('b', {}, '− ' + fmt(preview.additionalDiscountTotal))]),
+        h('div', { key: 'f', className: 'flex justify-between text-body-strong' }, [h('span', {}, 'Total resultante'), h('b', {}, fmt(preview.finalTotal))]),
+      ]),
+      error && h('div', { key: 'e', className: 'mt-3 p-3 bg-danger-soft text-danger text-caption rounded-lg' }, error),
+    ]);
+  }
+
+  function CheckoutModal({ total, itemCount, client, quote, onClose, onConfirm }) {
     const METODOS = metodos();
     const [metodo, setMetodo] = useState(() => (metodos()[0] || { id: 'Efectivo' }).id);
     const [recibido, setRecibido] = useState('');
@@ -266,6 +349,11 @@
         ]),
         h('div', { key: 'v', className: 'font-headline text-h1 leading-none' }, fmt(esCortesia ? 0 : total)),
       ]),
+      quote && quote.additionalDiscountTotal > 0 && h('div', { key: 'discounts', className: 'mb-5 p-3 rounded-lg bg-gold-soft text-gold-text text-caption' },
+        (quote.applications || []).map(a => h('div', { key: a.id, className: 'flex justify-between gap-3' }, [
+          h('span', { key: 'l' }, `${a.benefitName || 'Descuento adicional'} · ${a.origin || ''}`),
+          h('span', { key: 'v', className: 'font-bold' }, '− ' + fmt(a.discountAmount)),
+        ]))),
       h('div', { key: 'ml', className: lbl }, 'Método de pago'),
       h('div', { key: 'm', className: 'grid gap-2 mb-4', style: { gridTemplateColumns: `repeat(${Math.min(METODOS.length, 5)}, minmax(0, 1fr))` } },
         METODOS.map(m => h('button', {
@@ -353,10 +441,12 @@
     // promociones vigentes para reconstruir una venta antigua.
     const granTotal = Number(sale.total) || 0;
     const desc = Number(sale.descuento) || 0;
+    const descAdicional = Number(sale.descuentoAdicional) || 0;
+    const appsAdicionales = Array.isArray(sale.descuentosAdicionales) ? sale.descuentosAdicionales : [];
     // Cortesía: se conserva intacto el comportamiento previo (el desglose describe el valor
     // regalado y el total cobrado es cero). Queda expresamente fuera del alcance de H-32.
     const cortesia = Number(sale.valorRegalado) > 0;
-    const dg = desglose(granTotal, desc, ivaPct);
+    const dg = desglose(granTotal, desc + descAdicional, ivaPct);
     const subtotal = cortesia ? (hasSnapshot ? Number(sale.subtotal) || 0 : granTotal / 1.16) : dg.importe;
     const iva = cortesia ? (hasSnapshot ? Number(sale.iva) || 0 : granTotal - subtotal) : dg.iva;
     const pctEvidencia = desc > 0
@@ -477,6 +567,19 @@
             h('div', { key: 'st', className: 'flex justify-between', style: { fontSize: '13px' } }, [h('span', { key: 'l' }, 'Importe'), h('span', { key: 'v' }, fmt(subtotal))]),
             h('div', { key: 'iva', className: 'flex justify-between', style: { fontSize: '13px' } }, [h('span', { key: 'l' }, `IVA (${dg.ivaPct}%)`), h('span', { key: 'v' }, fmt(iva))]),
             desc > 0 ? h('div', { key: 'ds', className: 'flex justify-between gap-2', style: { fontSize: '13px', color: '#9a7b16' } }, [h('span', { key: 'l', className: 'min-w-0' }, etiquetaDescuento(pctEvidencia)), h('span', { key: 'v', className: 'font-semibold shrink-0' }, '− ' + fmt(desc))]) : null,
+            ...appsAdicionales.map((a, i) => {
+              const folio = String(a.cardFolio || '');
+              const masked = folio ? ('••••' + folio.slice(-4)) : '';
+              const reason = String(a.reason || '').trim().slice(0, 60);
+              return h('div', { key: 'ad' + i, className: 'text-left pt-1', style: { fontSize: '12px', color: '#9a7b16' } }, [
+                h('div', { key: 'r', className: 'flex justify-between gap-2' }, [
+                  h('span', { key: 'l' }, `Descuento adicional — ${a.origin || a.benefitName || 'Beneficio'}`),
+                  h('span', { key: 'v', className: 'font-semibold shrink-0' }, '− ' + fmt(a.discountAmount)),
+                ]),
+                h('div', { key: 'e', className: 'text-on-surface-variant' },
+                  [a.benefitName, reason, masked].filter(Boolean).join(' · ')),
+              ]);
+            }),
           ]),
           h('div', { key: 'g', className: 'flex justify-between items-end border-t border-outline-variant pt-3 mt-3' }, [
             h('span', { key: 'l', className: 'font-headline uppercase text-primary', style: { fontSize: '18px', letterSpacing: '-0.01em' } }, 'Total a pagar'),
@@ -546,6 +649,7 @@
   }
 
   window.TicketPanel = TicketPanel;
+  window.AdditionalDiscountModal = AdditionalDiscountModal;
   window.CheckoutModal = CheckoutModal;
   window.BalamTicket = BalamTicket;
 })();

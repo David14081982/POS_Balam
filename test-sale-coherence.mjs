@@ -39,6 +39,7 @@ const out = await page.evaluate(() => {
   window.PROMOS = { lineUnit: () => ({ unit: 1150 }) };
   const tax = mk({ metodo: 'Tarjeta', estado: 'Pagado', total: 1150, anticipo: 1150, pagoEfectivo: 0, pagoOtro: 1150 });
   window.PROMOS = promosOriginal;
+  p.precio = 1000;
   const lay = mk({ metodo: 'Apartado', estado: 'Apartado', total: 1000, anticipo: 300, pagoEfectivo: 0, pagoOtro: 0 });
   const layBefore = { total: lay.total, anticipo: lay.anticipo, saldo: lay.saldo };
   const abono = D.registrarPagoApartado(lay.folio, { monto: 200, metodo: 'Tarjeta', detalle: { tarjeta: 200 } });
@@ -46,6 +47,16 @@ const out = await page.evaluate(() => {
   const liquida = D.registrarPagoApartado(lay.folio, { monto: 500, metodo: 'Transferencia', detalle: { transferencia: 500 } });
   const layAfter = { estado: lay.estado, anticipo: lay.anticipo, saldo: lay.saldo };
   const mixed = mk({ metodo: 'Mixto', estado: 'Pagado', total: 1000, anticipo: 1000, pagoEfectivo: 400, pagoOtro: 600, pagoDetalle: { efectivo: 400, transferencia: 600 } });
+  const discounted = D.recordSale({
+    ticket, additionalDiscounts: [{
+      id: 'h52-50', benefitCode: 'EMP50', benefitName: 'Empleado 50%',
+      origin: 'Empleado', benefitType: 'percentage', value: 50,
+      scope: 'ticket', combinable: false, reason: 'Prueba H-52',
+      appliedBy: 'h52@balam.mx', appliedAt: '2026-07-30T12:00:00-07:00',
+    }],
+    sellerIds: [seller.id], client, itemCount: 1, metodo: 'Efectivo',
+    estado: 'Pagado', anticipo: 500, pagoEfectivo: 500, pagoOtro: 0,
+  });
   const clientTotalBeforeReturns = client.total;
 
   const invalid = [];
@@ -60,14 +71,18 @@ const out = await page.evaluate(() => {
   }
   const retTax = D.recordReturn({ folio: tax.folio, lineas: [{ sku: p.sku, nombre: p.nombre, talla, qty: 1, precio: 1 }] });
   const retLay = D.recordReturn({ folio: lay.folio, lineas: [{ sku: p.sku, nombre: p.nombre, talla, qty: 1, precio: 1 }] });
-  return { normal, tax, layBefore, layMid, layAfter, abono, liquida, layPayments: D.paymentsForSale(lay.folio), mixed, mixedPayments: D.paymentsForSale(mixed.folio), invalid, retTax, retLay, clientTotalBeforeReturns, clientTotalAfterReturns: client.total, pushed };
+  const retDiscounted = D.recordReturn({ folio: discounted.folio, lineas: [{ sku: p.sku, nombre: p.nombre, talla, qty: 1, precio: 9999 }] });
+  return { normal, tax, discounted, layBefore, layMid, layAfter, abono, liquida, layPayments: D.paymentsForSale(lay.folio), mixed, mixedPayments: D.paymentsForSale(mixed.folio), invalid, retTax, retLay, retDiscounted, clientTotalBeforeReturns, clientTotalAfterReturns: client.total, pushed };
 });
 
 check('CASO 1: venta normal = $1,000 en venta local', out.normal.total === 1000);
 check('FINANZAS: $1,200 − $50 = total $1,150', out.tax.descuento === 50 && out.tax.total === 1150);
 check('FINANZAS: $1,150 = importe $991.38 + IVA $158.62', out.tax.subtotal === 991.38 && out.tax.iva === 158.62);
 check('Devolución usa los $1,150 realmente cobrados', out.tax.lineas[0].precio === 1150 && out.retTax.ok && out.retTax.ret.total === 1150);
-check('CASOS 1–4: cliente acumula totales finales', out.clientTotalBeforeReturns === 4150, String(out.clientTotalBeforeReturns));
+check('CASOS 1–4/H-52: cliente acumula totales finales', out.clientTotalBeforeReturns === 4650, String(out.clientTotalBeforeReturns));
+check('H-52: descuento adicional queda separado y total final $500', out.discounted.descuento === 0 && out.discounted.descuentoAdicional === 500 && out.discounted.total === 500);
+check('H-52: comisión se calcula sobre los $500 realmente pagados', out.discounted.comision === 21.55);
+check('H-52: Devolución reconoce los $500 realmente pagados', out.retDiscounted.ok && out.retDiscounted.ret.total === 500);
 check('CASO 3: apartado persiste anticipo $300 y saldo $700', out.layBefore.anticipo === 300 && out.layBefore.saldo === 700);
 check('CASO 3: abono parcial $200 deja saldo $500', out.abono.ok && out.layMid.estado === 'Apartado' && out.layMid.anticipo === 500 && out.layMid.saldo === 500);
 check('CASO 3: liquidación deja anticipo total y saldo cero', out.layAfter.estado === 'Pagado' && out.layAfter.anticipo === 1000 && out.layAfter.saldo === 0);

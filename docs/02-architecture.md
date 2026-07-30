@@ -255,6 +255,30 @@ referencia: la venta sigue siendo explicable aunque la promoción se edite o se
 elimine. Un arreglo vacío significa «sin promoción»; su ausencia significa
 «venta anterior a H-32».
 
+### Cotización de venta y descuento adicional
+
+`DATA.saleQuote(ticket, applications)` es la autoridad única del total después
+de promociones configuradas y descuentos adicionales. Recibe renglones cuya
+promoción ya fue resuelta por `DATA.resolveLineDiscount()` y aplica después las
+aplicaciones manuales en orden. Resumen, vista previa, Cobrar venta,
+`recordSale()`, ticket y posventa consumen el mismo resultado.
+
+Cada aplicación congela origen, beneficio, mecánica, alcance, motivo, usuario,
+folio físico cuando aplica e importes anterior/descontado/final. El campo
+histórico `sales.descuento` conserva exclusivamente el descuento configurado;
+`descuento_adicional` y `descuentos_adicionales` son evidencia separada. El
+importe adicional de ticket se prorratea sobre el valor posterior a promociones
+y el último renglón elegible absorbe el residuo de centavos.
+
+El precio final congelado por renglón es el valor que reconocen Cambios y
+Devoluciones. La comisión se calcula sobre el total final realmente pagado. Un
+apartado congela su descuento al crearse y los abonos no lo modifican.
+
+Una tarjeta física sólo puede aplicarse con sesión y conexión. La defensa real
+no es la interfaz: `pos.physical_card_redemptions` hace único el folio y
+`pos.commit_sale_with_additional_discount()` lo consume en la misma transacción
+que delega la venta a `pos.commit_sale()`.
+
 ### Presentación financiera del ticket
 
 El resumen del Punto de Venta y el ticket impreso muestran, en este orden:

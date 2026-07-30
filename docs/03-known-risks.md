@@ -2349,6 +2349,56 @@ el reparto individual de la comision. El total se conserva y el reporte marca
 el reparto como estimado; congelarlo hacia futuro requiere otra historia.
 **Correccion documentada:** `docs/fixes/reportes-del-cambio.md`.
 
+## H-52 - La venta no puede representar un descuento adicional auditable
+
+**Estado:** RESUELTO
+**Fecha de registro:** 30/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** el precio promocional tiene autoridad por renglón en
+`DATA.resolveLineDiscount()`, pero el total se deriva por separado en el POS,
+`recordSale()` y la presentación del ticket. El documento sólo conserva
+`descuento` con el significado fijado por H-32 y no puede representar un
+segundo beneficio, su origen, folio, motivo ni reparto por renglón.
+**Origen:** solicitud del dueño del producto.
+**Riesgo:** implementar la acción únicamente en pantalla produciría cifras
+distintas entre Resumen, Cobrar venta, comisión, ticket, devoluciones, cambios,
+reportes y la venta sincronizada. Un folio físico podría consumirse dos veces
+desde terminales distintas.
+**Decisión del dueño (30/07/2026):** Cambios y Devoluciones reconocen el importe
+realmente pagado; la comisión usa el total posterior a ambos descuentos; los
+importes de ticket se prorratean sobre el valor posterior a promociones, con el
+residuo en el último renglón elegible; no existe autorización secundaria; se
+permiten varias aplicaciones sólo si todas son combinables; la tarjeta física
+es de un solo uso y exige conexión; la cortesía total es un descuento hasta
+cero; un apartado congela el descuento al crearse; el ticket muestra origen,
+beneficio, motivo resumido y folio enmascarado.
+**Reproducción:** `node test-additional-discount.mjs` falla antes de la
+corrección porque no existe `DATA.saleQuote(ticket, applications)`.
+**Alcance:** autoridad de cotización, POS, configuración, documento, cobro,
+pagos, comisión, ticket, reportes, apartados, posventa, persistencia local,
+cola offline y commit remoto. No se cambia el significado de `descuento`,
+`promos`, `valor_regalado`, pagos ni documentos históricos.
+**Corrección:** `DATA.saleQuote()` es la autoridad única de promociones,
+descuentos adicionales, reparto, IVA incluido y total. Documento, cobro,
+comisión, ticket y posventa consumen la cotización congelada. Las tarjetas
+físicas requieren una reserva atómica en línea con token estable antes de
+aplicarse y el commit sólo consume esa reserva.
+**Pruebas:** descuento adicional 27/27; trazabilidad H-32 65/65; coherencia
+financiera 20/20; devoluciones 17/17; apartados 55/55; cola 115/115;
+concurrencia 9/9; ticket 23/23; reportes 24/24; contratos 38/38; migraciones
+31/31; navegación 15/15; build reproducible 8/8. Build offline correcto. El
+smoke del bundle completó 13 comprobaciones sin error pero el arnés agotó el
+tiempo antes de cerrar; el smoke de desarrollo agotó 30 segundos al arrancar.
+**Despliegue:** `006800` y `006900` aplicadas al proyecto Supabase enlazado el
+30/07/2026. La verificación remota informó snapshot, validación, unicidad y
+permisos correctos y no dejó semillas.
+**Pendiente:** crear el commit y desplegar el artefacto cliente cuando
+corresponda al flujo de publicación.
+**Riesgo residual:** una reserva abandonada retiene el folio hasta 15 minutos.
+El smoke del bundle recorrió 13 comprobaciones sin errores pero su arnés no
+cerró dentro del límite; el resto de la regresión relevante está en verde.
+**Corrección documentada:** `docs/fixes/descuento-adicional.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

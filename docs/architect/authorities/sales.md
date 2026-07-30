@@ -55,6 +55,13 @@ propio (`docs/04-contrato-del-cambio.md` § 3)
 **Creada por:** H-32 · **Decisión:** `ADR-002`
 **Consumidores:** `grep -rn "resolveLineDiscount" balam/`
 
+## ¿Cuánto debe pagar esta venta después de todos sus descuentos?
+**Autoridad:** `DATA.saleQuote(ticket, applications)`
+**Definición:** `balam/data.jsx` · snapshot en
+`pos.sales.descuentos_adicionales` y `pos.sale_items.descuento_adicional`
+**Creada por:** H-52 · **Decisiones:** `ADR-002`, `ADR-003`
+**Consumidores:** `grep -rn "saleQuote" balam/ test-*.mjs`
+
 ## ¿Cuánto se cobró realmente por esta venta?
 **Autoridad:** snapshot financiero de `pos.sales` + `pos.sale_payments`
 **Definición:** `docs/trazabilidad-financiera.md` · `docs/H-03-coherencia-cobro.md`

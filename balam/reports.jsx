@@ -28,6 +28,7 @@
     const abonos = (D.payments || []).filter(p => p.tipo === 'abono' || p.tipo === 'liquidacion').reduce((a, p) => a + (Number(p.monto) || 0), 0);
     const saldosPendientes = nonCancel.reduce((a, s) => a + (Number(s.saldo) || 0), 0);
     const descuentos = nonCancel.reduce((a, s) => a + (Number(s.descuento) || 0), 0);
+    const descuentosAdicionales = nonCancel.reduce((a, s) => a + (Number(s.descuentoAdicional) || 0), 0);
     const historicasSinDetalle = nonCancel.filter(s => !D.hasFinancialSnapshot(s) || !D.paymentsForSale(s.folio).length).length;
     const utilidad = Math.round(ventasBrutas * (marginPct / 100));
     // Las cortesías (regalos) no son ventas pagadas: no cuentan como pedidos ni en el ticket promedio.
@@ -100,7 +101,7 @@
           kpi('Total pedidos', String(pedidos), iP, tP, cP),
           kpi('Ticket promedio', fmt(ticketProm).replace('.00', ''), 'star', '', 'text-gold-text', true),
         ]),
-        h('div', { key: 'cash', className: 'grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-gutter mb-gutter' }, [
+        h('div', { key: 'cash', className: 'grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-gutter mb-gutter' }, [
           metricCard('Dinero cobrado', fmt(cobradoReal).replace('.00', ''), 'movimientos de pago registrados'),
           // H-49: sin este renglon, «Dinero cobrado» salia mas alto que «Ventas
           // brutas» y nada en pantalla explicaba la diferencia.
@@ -109,6 +110,7 @@
           metricCard('Abonos y liquidaciones', fmt(abonos).replace('.00', ''), 'cobros posteriores'),
           metricCard('Saldos pendientes', fmt(saldosPendientes).replace('.00', ''), 'por cobrar en apartados'),
           metricCard('Descuentos', fmt(descuentos).replace('.00', ''), 'concedidos sobre precio con IVA'),
+          metricCard('Descuentos adicionales', fmt(descuentosAdicionales).replace('.00', ''), 'beneficios manuales posteriores a promociones'),
         ]),
         historicasSinDetalle ? h('div', { key: 'hist', className: 'mb-gutter p-4 rounded-xl bg-warning-soft text-warning text-caption' }, `${historicasSinDetalle} venta(s) histórica(s) no tienen desglose financiero completo; no se inventaron pagos ni descuentos.`) : null,
         // Cortesías (regalos/giveaways): cuántas y el valor regalado. Solo se muestra si hay.

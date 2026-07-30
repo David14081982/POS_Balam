@@ -901,6 +901,106 @@
     }));
     return { orig, unit: Number(du.unit) || 0, promos };
   }
+  // H-52: autoridad única de «¿cuánto debe pagar esta venta y por qué?».
+  // Recibe líneas cuya promoción configurada YA fue resuelta y aplicaciones
+  // manuales. No consulta configuración: el resultado es una cotización
+  // congelable que consumen POS, cobro, documento, ticket y posventa.
+  function saleQuote(ticket, applications) {
+    if (!Array.isArray(ticket) || !ticket.length) throw new Error('La cotización requiere artículos');
+    const apps = Array.isArray(applications) ? applications : [];
+    if (apps.length > 1 && apps.some(a => !a || a.combinable !== true)) {
+      throw new Error('Este beneficio no puede combinarse con otro descuento adicional');
+    }
+    const lines = ticket.map((line, index) => {
+      const qty = Number(line.qty);
+      const res = line.res || {};
+      const orig = money(res.orig);
+      const unit = money(res.unit);
+      if (!Number.isInteger(qty) || qty <= 0 || orig < 0 || unit < 0 || unit > orig) {
+        throw new Error('El renglón de la cotización es inválido');
+      }
+      return {
+        key: line.key == null ? String(index) : String(line.key), qty,
+        res: { orig, unit, promos: Array.isArray(res.promos) ? JSON.parse(JSON.stringify(res.promos)) : [] },
+        originalTotal: money(orig * qty), configuredTotal: money(unit * qty),
+        remaining: money(unit * qty), additionalDiscount: 0,
+      };
+    });
+    const originalTotal = money(lines.reduce((sum, line) => sum + line.originalTotal, 0));
+    const beforeAdditionalTotal = money(lines.reduce((sum, line) => sum + line.configuredTotal, 0));
+    const configuredDiscountTotal = money(originalTotal - beforeAdditionalTotal);
+    const frozen = [];
+
+    apps.forEach((raw, appIndex) => {
+      const app = raw || {};
+      const type = String(app.benefitType || '');
+      const scope = app.scope === 'item' ? 'item' : 'ticket';
+      const value = Number(app.value);
+      if (app.origin === 'Otro' && !String(app.reason || '').trim()) throw new Error('El motivo es obligatorio');
+      if (app.origin === 'Tarjeta física') {
+        if (!String(app.cardFolio || '').trim()) throw new Error('El folio de la tarjeta es obligatorio');
+        if (app.onlineVerified !== true) throw new Error('La tarjeta física requiere conexión y validación');
+      }
+      if (!['percentage', 'fixed', 'courtesy_piece', 'courtesy_total'].includes(type)) {
+        throw new Error('El tipo de descuento adicional es inválido');
+      }
+      if ((type === 'percentage' || type === 'fixed') && (!Number.isFinite(value) || value <= 0)) {
+        throw new Error('El descuento adicional debe ser mayor que cero');
+      }
+      if (type === 'percentage' && value > 100) throw new Error('El porcentaje no puede exceder 100');
+      if (type === 'percentage' && Number(app.maxPercent) > 0 && value > Number(app.maxPercent)) {
+        throw new Error('El porcentaje excede el máximo permitido');
+      }
+      if (type === 'fixed' && Number(app.maxAmount) > 0 && value > Number(app.maxAmount)) {
+        throw new Error('El importe excede el máximo permitido');
+      }
+      let eligible = lines.filter(line => line.remaining > 0);
+      if (scope === 'item') eligible = eligible.filter(line => line.key === String(app.targetKey));
+      if (!eligible.length) throw new Error('No existe importe elegible para el descuento');
+      const amountBefore = money(eligible.reduce((sum, line) => sum + line.remaining, 0));
+      let requested = 0;
+      if (type === 'percentage') requested = money(amountBefore * value / 100);
+      else if (type === 'fixed') requested = money(value);
+      else if (type === 'courtesy_total') requested = amountBefore;
+      else {
+        if (scope !== 'item' || eligible.length !== 1) throw new Error('La cortesía de pieza requiere un artículo');
+        requested = money(Math.min(eligible[0].remaining, eligible[0].remaining / eligible[0].qty));
+      }
+      const discountAmount = money(Math.min(amountBefore, requested));
+      if (discountAmount <= 0) throw new Error('El descuento adicional no produce ningún beneficio');
+
+      // Prorrateo en centavos. Cada renglón salvo el último recibe su proporción
+      // redondeada; el último absorbe el residuo, de forma determinista.
+      let assigned = 0;
+      eligible.forEach((line, index) => {
+        const share = index === eligible.length - 1
+          ? money(discountAmount - assigned)
+          : money(discountAmount * line.remaining / amountBefore);
+        const safe = money(Math.min(line.remaining, Math.max(0, share)));
+        line.remaining = money(line.remaining - safe);
+        line.additionalDiscount = money(line.additionalDiscount + safe);
+        assigned = money(assigned + safe);
+      });
+      frozen.push(Object.assign({}, JSON.parse(JSON.stringify(app)), {
+        id: app.id || `additional-${appIndex + 1}`, scope,
+        amountBefore, discountAmount: assigned,
+        amountAfter: money(amountBefore - assigned),
+      }));
+    });
+
+    const finalTotal = money(lines.reduce((sum, line) => sum + line.remaining, 0));
+    const subtotal = money(finalTotal / 1.16);
+    const iva = money(finalTotal - subtotal);
+    return {
+      originalTotal, configuredDiscountTotal, beforeAdditionalTotal,
+      additionalDiscountTotal: money(beforeAdditionalTotal - finalTotal),
+      subtotal, iva, ivaPct: 16, ivaIncluded: true, finalTotal,
+      applications: frozen,
+      lines: lines.map(line => Object.assign({}, line, {
+        finalUnit: money(line.remaining / line.qty),
+      })),
+    };
+  }
   function assertSaleAmounts({ ticket, metodo, estado, subtotal, iva, total, anticipo, pagoEfectivo, pagoOtro, ivaIncluded }) {
     const finite = n => Number.isFinite(Number(n));
     if (!Array.isArray(ticket) || !ticket.length || ticket.some(l => !Number.isInteger(Number(l.qty)) || Number(l.qty) <= 0)) throw new Error('La venta requiere artículos con cantidades positivas');
@@ -914,12 +1014,14 @@
     if (metodo !== 'Apartado' && metodo !== 'Cortesía' && Math.abs(money(pagoEfectivo + pagoOtro) - money(total)) > 0.009) throw new Error('La suma de pagos no coincide con el total');
     if (pagoEfectivo < 0 || pagoEfectivo > total || pagoOtro < 0 || pagoOtro > total) throw new Error('El desglose de pago es inválido');
   }
-  function recordSale({ ticket, sellerIds, client, metodo, estado, subtotal: subtotalIn, iva: ivaIn, total: totalIn, anticipo: anticipoIn, pagoEfectivo: pagoEfectivoIn, pagoOtro: pagoOtroIn, pagoDetalle, metodoPago, ivaPct: ivaPctIn, ivaIncluded: ivaIncludedIn, itemCount, fecha: fechaIn }) {
-    const total = money(totalIn);
-    const ivaPct = 16;
-    const ivaIncluded = true;
-    const subtotal = money(total / 1.16);
-    const iva = money(total - subtotal);
+  function recordSale({ ticket, additionalDiscounts, quote: quoteIn, sellerIds, client, metodo, estado, subtotal: subtotalIn, iva: ivaIn, total: totalIn, anticipo: anticipoIn, pagoEfectivo: pagoEfectivoIn, pagoOtro: pagoOtroIn, pagoDetalle, metodoPago, ivaPct: ivaPctIn, ivaIncluded: ivaIncludedIn, itemCount, fecha: fechaIn }) {
+    const quoteTicket = (ticket || []).map(l => l.res ? l : Object.assign({}, l, { res: resolveLineDiscount(l.p, l.talla) }));
+    const quote = quoteIn || saleQuote(quoteTicket, additionalDiscounts || []);
+    const total = money(quote.finalTotal);
+    const ivaPct = quote.ivaPct;
+    const ivaIncluded = quote.ivaIncluded;
+    const subtotal = money(quote.subtotal);
+    const iva = money(quote.iva);
     const anticipo = anticipoIn == null ? (estado === 'Apartado' ? 0 : total) : money(anticipoIn);
     const pagoEfectivo = pagoEfectivoIn == null ? (metodo === 'Efectivo' ? total : 0) : money(pagoEfectivoIn);
     const pagoOtro = pagoOtroIn == null ? (metodo === 'Efectivo' || metodo === 'Apartado' ? 0 : total) : money(pagoOtroIn);
@@ -1001,12 +1103,13 @@
     // H-32: se usa la resolución que el POS ya calculó (l.res). Si el llamador no la trae, se
     // resuelve aquí UNA vez y se reutiliza; en ningún caso se evalúa el motor dos veces por línea.
     const resList = ticket.map(l => l.res || resolveLineDiscount(l.p, l.talla));
-    const unitAt = i => resList[i].unit;
+    const quotedLines = quote.lines || [];
+    const unitAt = i => quotedLines[i] ? quotedLines[i].finalUnit : resList[i].unit;
     // H-36: el precio de lista sale de la resolución del renglón, no del artículo.
     // Con precios por talla, `l.p.precio` y `unitAt(i)` dejan de hablar del mismo
     // precio y el descuento quedaría mal calculado en ambas direcciones.
     const subtotalOrig = ticket.reduce((a, l, i) => a + resList[i].orig * l.qty, 0);
-    const totalConDescuento = ticket.reduce((a, l, i) => a + unitAt(i) * l.qty, 0);
+    const totalConDescuento = ticket.reduce((a, l, i) => a + resList[i].unit * l.qty, 0);
     const sale = {
       folio, fecha, clienteId: client && !client.generic ? client.id : undefined, cliente: client ? client.nombre : 'Público en general',
       vendedor: primary[0] || '—', vendedores: ids.slice(),
@@ -1014,7 +1117,11 @@
       anticipo: cortesia ? 0 : anticipo, saldo: cortesia ? 0 : money(total - anticipo),
       pagoEfectivo: cortesia ? 0 : pagoEfectivo, pagoOtro: cortesia ? 0 : pagoOtro,
       metodo, estado,
-      descuento: cortesia ? 0 : money(Math.max(0, subtotalOrig - totalConDescuento)), valorRegalado,
+      descuento: cortesia ? 0 : money(quote.configuredDiscountTotal),
+      descuentoAdicional: cortesia ? 0 : money(quote.additionalDiscountTotal),
+      totalAntesDescuentoAdicional: cortesia ? 0 : money(quote.beforeAdditionalTotal),
+      descuentosAdicionales: cortesia ? [] : JSON.parse(JSON.stringify(quote.applications || [])),
+      valorRegalado,
       comision: comisionVenta, comisionBase: window.CONFIG.get('commission.base') || 'neto',
       // H-34: snapshot del plazo. null = sin límite, igual que las ventas previas.
       returnLimitDays, returnExpiresAt,
@@ -1022,7 +1129,13 @@
       // En cortesía cada línea queda en $0 (no se cobró); el valor vive en precioOrig y valorRegalado.
       // promos: evidencia histórica inmutable de H-32. Un arreglo vacío significa "sin promoción";
       // su AUSENCIA significa "venta anterior a H-32", que nunca imprime porcentaje.
-      lineas: ticket.map((l, i) => ({ productId: l.p.id, sku: l.p.sku, nombre: l.p.nombre, talla: l.talla, qty: l.qty, precio: cortesia ? 0 : money(unitAt(i) * (totalConDescuento > 0 ? total / totalConDescuento : 0)), precioBase: cortesia ? 0 : unitAt(i), precioOrig: resList[i].orig, promos: resList[i].promos })),
+      lineas: ticket.map((l, i) => ({
+        productId: l.p.id, sku: l.p.sku, nombre: l.p.nombre, talla: l.talla, qty: l.qty,
+        precio: cortesia ? 0 : money(unitAt(i)),
+        precioBase: cortesia ? 0 : resList[i].unit, precioOrig: resList[i].orig,
+        descuentoAdicional: cortesia ? 0 : money(((typeof quotedLines !== 'undefined' && quotedLines[i]) || {}).additionalDiscount),
+        promos: resList[i].promos,
+      })),
     };
     sales.unshift(sale);
     saveSales();
@@ -2309,7 +2422,7 @@
     normalizeFolioPrefix, businessDate, folioFromParts, parseFolio, folioPreview,
     folioBlockRequest, applyFolioBlock, terminalCode,
     findSaleByFolio, saleFolioAliases, folioAliasHit, stockOf, isAutoImg, resetProducts, applyRemote, applySyncResult, mergeRemote, markSaleSync, liquidarComision,
-    completarApartado, registrarPagoApartado, paymentsForSale, hasFinancialSnapshot, resolveLineDiscount, cerrarMes, getPeriodoInicio,
+    completarApartado, registrarPagoApartado, paymentsForSale, hasFinancialSnapshot, resolveLineDiscount, saleQuote, cerrarMes, getPeriodoInicio,
     listPrice, priceRange, sanitizePreciosTalla,
     recordReturn, returnedQty, returnsForFolio, isReturnable, returnDeadline, saleLineBalance,
     saveExchanges, recognizedValue, supplySources, recordExchange, reverseExchangeCommission,

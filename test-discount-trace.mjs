@@ -246,7 +246,7 @@ console.log('\n── 11) Neutralidad: ningún importe cobrado cambia ───�
 console.log('\n── 12) El motor y el contrato no se tocaron ─────────────────────');
 {
   ok('12a. discounts.jsx conserva la acumulación declarada', /descuentos ACUMULABLES/.test(src('./balam/discounts.jsx')));
-  ok('12b. recordSale sigue derivando subtotal del total cobrado', /const subtotal = money\(total \/ 1\.16\);/.test(dataSrc));
+  ok('12b. recordSale consume el subtotal de la autoridad de cotización', /const subtotal = money\(quote\.subtotal\);/.test(dataSrc));
   ok('12c. la invariante subtotal+iva=total sigue vigente', /El subtotal e IVA no coinciden con el total final/.test(dataSrc));
   ok('12d. el POS resuelve una sola vez por renglón', (posSrc.match(/lineUnit\(/g) || []).length === 0);
   ok('12e. data.jsx no vuelve a consultar el motor en recordSale',

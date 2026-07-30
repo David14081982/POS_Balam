@@ -67,6 +67,13 @@
       { code: 'Apartado', label: 'Apartado', meta: { icon: 'clock' } },
       { code: 'Cortesía', label: 'Cortesía', meta: { icon: 'tag' } },   // regalo/giveaway: total $0
     ],
+    additional_benefit: [
+      { code: 'EMP50', label: 'Empleado 50%', meta: { origin: 'Empleado', benefitType: 'percentage', value: 50, scope: 'ticket', requiresReason: false, requiresFolio: false, combinable: false, allowsCustomValue: false } },
+      { code: 'CARD50', label: 'Tarjeta física 50% en un artículo', meta: { origin: 'Tarjeta física', benefitType: 'percentage', value: 50, scope: 'item', requiresReason: false, requiresFolio: true, combinable: false, allowsCustomValue: false } },
+      { code: 'CARD500', label: 'Tarjeta física $500', meta: { origin: 'Tarjeta física', benefitType: 'fixed', value: 500, scope: 'ticket', requiresReason: false, requiresFolio: true, combinable: false, allowsCustomValue: false } },
+      { code: 'CARD1000', label: 'Tarjeta física $1,000', meta: { origin: 'Tarjeta física', benefitType: 'fixed', value: 1000, scope: 'ticket', requiresReason: false, requiresFolio: true, combinable: false, allowsCustomValue: false } },
+      { code: 'COURTESY_PIECE', label: 'Cortesía de una pieza', meta: { origin: 'Cortesía', benefitType: 'courtesy_piece', value: 0, scope: 'item', requiresReason: true, requiresFolio: false, combinable: false, allowsCustomValue: false } },
+    ],
     sale_status: [
       { code: 'Pagado', label: 'Pagado', meta: { tone: 'success' } },
       { code: 'Apartado', label: 'Apartado', meta: { tone: 'warning' } },

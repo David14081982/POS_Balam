@@ -31,6 +31,8 @@
     const TALLAS_N = window.CONFIG.list('size_number');
     const COLORS = window.CONFIG.list('color');
     const [ticket, setTicket] = useState([]);
+    const [additionalDiscounts, setAdditionalDiscounts] = useState([]);
+    const [discountOpen, setDiscountOpen] = useState(false);
     const [client, setClient] = useState(D.clients.find(c => c.generic));
     const [sizePick, setSizePick] = useState(null);
     const [checkout, setCheckout] = useState(false);
@@ -116,10 +118,12 @@
         if (ex) return prev.map(l => l.key === key ? { ...l, qty: l.qty + 1 } : l);
         return [...prev, { key, p, talla, qty: 1 }];
       });
+      setAdditionalDiscounts([]);
       setSizePick(null);
       toast(`${p.nombre} · ${talla} agregado`);
     }
     function setQty(key, d) {
+      setAdditionalDiscounts([]);
       setTicket(prev => prev.flatMap(l => {
         if (l.key !== key) return [l];
         if (d > 0 && validateStock() && l.qty + d > D.stockOf(l.p, l.talla)) {
@@ -130,23 +134,27 @@
         return q <= 0 ? [] : [{ ...l, qty: q }];
       }));
     }
-    function removeLine(key) { setTicket(prev => prev.filter(l => l.key !== key)); }
+    function removeLine(key) { setAdditionalDiscounts([]); setTicket(prev => prev.filter(l => l.key !== key)); }
 
     // Descuentos automáticos (window.PROMOS): precio efectivo por línea.
     // H-32: cada renglón resuelve su descuento UNA sola vez. La resolución viaja con la línea
     // hasta el resumen, el ticket y recordSale; nadie vuelve a consultar el motor.
     const resolved = ticket.map(l => Object.assign({}, l, { res: D.resolveLineDiscount(l.p, l.talla) }));
-    const subtotalOrig = resolved.reduce((a, l) => a + l.res.orig * l.qty, 0);
-    const subtotal = resolved.reduce((a, l) => a + l.res.unit * l.qty, 0);
-    const discount = Math.max(0, subtotalOrig - subtotal);
+    const quote = resolved.length ? D.saleQuote(resolved, additionalDiscounts) : {
+      originalTotal: 0, beforeAdditionalTotal: 0, configuredDiscountTotal: 0,
+      additionalDiscountTotal: 0, finalTotal: 0, subtotal: 0, iva: 0, applications: [],
+    };
+    const subtotalOrig = quote.originalTotal;
+    const subtotal = quote.beforeAdditionalTotal;
+    const discount = quote.configuredDiscountTotal;
     const itemCount = ticket.reduce((a, l) => a + l.qty, 0);
     // Regla de Finanzas: todos los precios ya incluyen IVA 16%. El descuento se aplica
     // al precio con IVA y después se separan Importe + IVA, sin volver a sumarlo.
     const ivaPct = 16;
     const ivaIncluded = true;
-    const grandTotal = Math.round(subtotal * 100) / 100;
-    const importe = Math.round((grandTotal / (1 + ivaPct / 100)) * 100) / 100;
-    const iva = Math.round((grandTotal - importe) * 100) / 100;
+    const grandTotal = quote.finalTotal;
+    const importe = quote.subtotal;
+    const iva = quote.iva;
 
     // Paso 1→2: confirmar cobro abre el selector "¿quién realizó esta venta?"
     function onCobrar(pago) { setCheckout(false); setPendingMetodo(pago); }
@@ -155,7 +163,7 @@
       const estado = pendingMetodo.metodo === 'Apartado' ? 'Apartado' : 'Pagado';
       try {
         const sale = D.recordSale({
-          ticket: resolved, sellerIds: [sellerId], client, metodo: pendingMetodo.metodo, estado,
+          ticket: resolved, additionalDiscounts, quote, sellerIds: [sellerId], client, metodo: pendingMetodo.metodo, estado,
           subtotal: importe, iva, total: grandTotal, anticipo: pendingMetodo.anticipo,
           pagoEfectivo: pendingMetodo.pagoEfectivo, pagoOtro: pendingMetodo.pagoOtro,
           pagoDetalle: pendingMetodo.pagoDetalle, metodoPago: pendingMetodo.metodoPago,
@@ -167,7 +175,7 @@
         toast(e.message || 'Los importes de la venta no cuadran', 'var(--danger)');
       }
     }
-    function onNewSale() { setSuccess(null); setTicket([]); setClient(D.clients.find(c => c.generic)); }
+    function onNewSale() { setSuccess(null); setTicket([]); setAdditionalDiscounts([]); setClient(D.clients.find(c => c.generic)); }
 
     // ---- Catálogo ----
     const catalog = h('section', { key: 'catalog', className: 'pos-cat flex-1 flex flex-col min-w-0' }, [
@@ -225,9 +233,12 @@
     const ticketPanel = h(window.TicketPanel, {
       key: 'ticket',
       ticket: resolved, client, subtotal, subtotalOrig, discount, itemCount, grandTotal,
+      quote, additionalDiscounts,
       onPickClient: setClient, onResetClient: () => setClient(D.clients.find(c => c.generic)),
       onQty: setQty, onRemove: removeLine, onCobrar: () => setCheckout(true),
-      onClear: () => setTicket([]), bottom: ticketBottom, flashKey: flash,
+      onAdditionalDiscount: () => setDiscountOpen(true),
+      onRemoveAdditionalDiscount: id => setAdditionalDiscounts(prev => prev.filter(x => x.id !== id)),
+      onClear: () => { setTicket([]); setAdditionalDiscounts([]); }, bottom: ticketBottom, flashKey: flash,
     });
 
     return h('div', {
@@ -236,7 +247,12 @@
       catalog,
       ticketPanel,
       sizePick && h(SizeModal, { key: 'sm', p: sizePick, onClose: () => setSizePick(null), onPick: addToTicket }),
-      checkout && h(window.CheckoutModal, { key: 'co', total: grandTotal, itemCount, client, onClose: () => setCheckout(false), onConfirm: onCobrar }),
+      discountOpen && h(window.AdditionalDiscountModal, {
+        key: 'ad', ticket: resolved, existing: additionalDiscounts,
+        onClose: () => setDiscountOpen(false),
+        onConfirm: app => { setAdditionalDiscounts(prev => prev.concat(app)); setDiscountOpen(false); },
+      }),
+      checkout && h(window.CheckoutModal, { key: 'co', total: grandTotal, itemCount, client, quote, onClose: () => setCheckout(false), onConfirm: onCobrar }),
       pendingMetodo && h(SellerPickModal, { key: 'sp', onClose: () => setPendingMetodo(null), onConfirm: onSellerConfirm }),
       success && h(SuccessModal, { key: 'ok', sale: success, onNew: onNewSale }),
       success && h(window.BalamTicket, { key: 'tk', sale: success }),
