@@ -2406,7 +2406,7 @@ cerró dentro del límite; el resto de la regresión relevante está en verde.
 
 **Estado:** RESUELTO
 **Fecha de registro:** 30/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `cab74d7`
 **Evidencia:** H-52 admite internamente `allowsCustomValue`, porcentaje e
 importe fijo, pero la semilla de `additional_benefit` no ofrece ninguna opción
 de captura libre. Además, `backfillState()` sólo incorpora catálogos completos:
@@ -2431,7 +2431,11 @@ administrador.
 contratos 38/38; navegación 15/15; UX 11 interacciones y 2 validaciones; build
 8/8; smoke bundle 17/17; build offline correcto con 69 assets.
 **Migraciones:** ninguna; usa el catálogo sincronizado existente.
-**Pendiente:** commit y publicación.
+**Publicación:** commit `cab74d7` publicado en `main`. GitHub Pages coincide
+byte a byte con `index.html`: SHA-256
+`AAEA88C6C9E4FF2B40647A1EB632B4BD01108F01D2EC5BE2474338161C740E06`,
+8 735 331 bytes.
+**Pendiente:** ninguno dentro de H-53.
 **Riesgo residual:** `$ máximo = 0` permite cualquier importe positivo, aunque
 la autoridad siempre lo limita al total elegible de la venta.
 **Corrección documentada:** `docs/fixes/descuento-adicional-manual.md`.

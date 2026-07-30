@@ -3,7 +3,7 @@
 **Riesgo:** H-53
 **Estado:** resuelto
 **Fecha:** 30/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `cab74d7`
 
 ## Problema y evidencia
 
@@ -46,6 +46,11 @@ IVA, comisiones, pagos, posventa y documentos permanecen sin cambios.
 
 ## Despliegue y riesgo residual
 
-Pendiente de commit y publicación. No requiere cambios en Supabase. Riesgo
-residual bajo: `$ máximo = 0` significa sin límite administrativo adicional,
-pero la autoridad nunca permite descontar más que el total elegible.
+No requiere cambios en Supabase. El commit `cab74d7` se publicó en `main` y
+GitHub Pages sirve `index.html` idéntico byte a byte:
+
+    SHA-256  AAEA88C6C9E4FF2B40647A1EB632B4BD01108F01D2EC5BE2474338161C740E06
+    bytes    8 735 331
+
+Riesgo residual bajo: `$ máximo = 0` significa sin límite administrativo
+adicional, pero la autoridad nunca permite descontar más que el total elegible.
