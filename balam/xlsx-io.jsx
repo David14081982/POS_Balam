@@ -358,6 +358,29 @@
     window.UI.toast(`${rows.length} apartados exportados`, 'var(--accent)');
   }
 
+  // Mercancía prestada (H-46). Las filas llegan ya planas desde
+  // balam/loans.jsx § filaExport: aquí no se deriva atraso, valor ni estado.
+  // Es además la vía de respaldo del módulo: los préstamos todavía no viajan a la nube.
+  function exportLoans(rows) {
+    if (!ensureXLSX()) return;
+    const H = ['Folio', 'Fecha del préstamo', 'Recibe', 'Tipo', 'Teléfono', 'Piezas', 'Fuera',
+      'Devolución esperada', 'Devolución real', 'Estado', 'Días de atraso', 'Valor', 'Valor fuera', 'Mercancía', 'Nota'];
+    const data = rows.map(r => ({
+      'Folio': r.folio, 'Fecha del préstamo': r.fecha, 'Recibe': r.persona, 'Tipo': r.tipo,
+      'Teléfono': r.tel, 'Piezas': r.piezas, 'Fuera': r.fuera,
+      'Devolución esperada': r.esperada, 'Devolución real': r.devolucion, 'Estado': r.estado,
+      'Días de atraso': r.atraso, 'Valor': r.valor, 'Valor fuera': r.valorFuera,
+      'Mercancía': r.articulos, 'Nota': r.nota,
+    }));
+    const ws = window.XLSX.utils.json_to_sheet(data, { header: H });
+    ws['!cols'] = [{ wch: 14 }, { wch: 16 }, { wch: 24 }, { wch: 11 }, { wch: 15 }, { wch: 8 }, { wch: 8 },
+      { wch: 18 }, { wch: 18 }, { wch: 13 }, { wch: 13 }, { wch: 12 }, { wch: 12 }, { wch: 40 }, { wch: 30 }];
+    const wb = window.XLSX.utils.book_new();
+    window.XLSX.utils.book_append_sheet(wb, ws, 'Préstamos');
+    download(wb, `Prestamos_Balam_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    window.UI.toast(`${rows.length} préstamos exportados`, 'var(--accent)');
+  }
+
   function exportSellers(rows) {
     if (!ensureXLSX()) return;
     const H = ['Vendedor', 'Rol', 'Comisión %', 'Ventas del mes', 'Meta', 'Avance %', 'Comisión acumulada', 'Estado'];
@@ -374,7 +397,7 @@
   }
 
   window.XLSXIO = {
-    exportTemplate, exportInventory, exportReturns, exportSales, exportSellers, exportLayaways,
+    exportTemplate, exportInventory, exportReturns, exportSales, exportSellers, exportLayaways, exportLoans,
     parseFile, readWorkbook, sheetToJson, limits: XLSX_LIMITS,
     headers: buildHeaders, IMPORT_FIELDS,
   };

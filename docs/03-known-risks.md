@@ -1994,6 +1994,71 @@ contra el `index.html` del commit: SHA-256 `ad7486dbfa1a86a6fd7d293afc0d51aa7e7c
 8 689 492 bytes, a la primera (`R-DEL-07`).
 **Correccion documentada:** `docs/fixes/camino-rapido-de-talla.md`.
 
+## H-46 - La mercancia que sale temporalmente no se registra en ninguna parte
+
+**Estado:** RESUELTO
+**Fecha de registro:** 29/07/2026
+**Fecha de resolucion:** 29/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** el producto sabia representar mercancia que se vende, que se
+aparta, que se devuelve y que se cambia. No sabia representar mercancia que
+**sale y tiene que volver**: una guayabera que un empleado se lleva puesta a un
+evento, o varias piezas que un cliente se lleva a probar. `grep -rin "prestamo"`
+sobre el repositorio completo no devolvia nada: ni coleccion, ni pantalla, ni
+campo, ni catalogo.
+**Origen de auditoria:** solicitud del dueno del producto.
+**Riesgo:** mercancia fuera del negocio sin ningun documento que diga quien la
+tiene, desde cuando y cuando la va a regresar. La perdida no se detecta —no hay
+nada que vencer— y no existe evidencia con la que reclamarla.
+**Reproduccion:** `node test-loans-screen.mjs` sobre el bundle previo al cambio:
+**0 de 2 verificaciones**; se detiene en la primera porque no existe
+`window.LoansScreen`.
+**Correccion:** el prestamo pasa a ser un documento propio, no una venta de cero
+ni un movimiento de inventario. `DATA.loans` congela la evidencia de la prenda
+—nombre, SKU, talla, cantidad y precio de lista del dia— y una copia de la
+persona que recibio; su referencia comercial es `PR-{AAMMDD}-{CONSECUTIVO}`, con
+consecutivo propio que **no** gasta el contador diario de ventas; y tres
+autoridades nuevas responden «cuantas unidades estan fuera»
+(`DATA.loanedQty`), «cuantas faltan por regresar» (`DATA.prestamoPendientes`) y
+«esta vencido y por cuantos dias» (`DATA.prestamoAtraso`). La pantalla
+`balam/loans.jsx` reutiliza los idiomas ya establecidos: la cartera y los
+indicadores de Apartados, el buscador y el selector de talla del Punto de venta,
+el autocompletado de persona del ticket y el documento impreso en ventana propia
+de Inventario. La devolucion admite parciales; la fecha real se fija con la
+entrega que cierra el prestamo; la mercancia declarada perdida todavia puede
+regresar. Los vencidos avisan en la campana administrativa.
+**Alcance:** superficie y modelo local. Sin migracion, sin campo remoto y sin
+cambio en el contrato de sincronizacion.
+**No alcance declarado:** replicacion en la nube —exige una tabla `pos.loans`
+con RLS, `grants` nominales y verificacion autocontenida, y aplicarla contra la
+base real antes de publicar el cliente (`R-DEL-03`, `AP-08`), para lo que esta
+sesion no tenia credenciales—; afectacion de inventario; deposito o garantia en
+dinero; conversion de un prestamo en venta; presencia en Reportes.
+**Pruebas:** `test-loans-screen.mjs` **99/99** sobre el bundle distribuido, con
+cada validacion afirmada en los dos sentidos (`R-DEL-11`) y el rechazo de
+devolver mas piezas de las que faltan comprobado contra la autoridad, no contra
+el sintoma. Regresion completa en verde: contratos de modulo 38/38, navegacion
+15/15, smoke 15/15, apartados 55/55, E2E del cambio 37/37, pantalla del cambio
+45/45, ticket impreso 23/23, cola 115/115, folio diario 60/60, reinicios 19/19 y
+21/21, migraciones 31/31, y las demas suites del repositorio. Guardian de
+`R-DEL-14` sin intervencion: 11 interacciones, 2 validaciones, recorrido
+completo. `R-DEL-13`, `R-DEL-15` y `R-DEL-16` se descartan por escrito: la
+historia anade una capacidad, no promete ahorro, y no tiene metrica que refijar.
+**Despliegue:** artefactos regenerados con `node build-offline.mjs`. Verificacion
+byte a byte del artefacto publicado: pendiente de registrar tras el push.
+**Pendiente:** lo declarado como no alcance. El consecutivo `PR-…` se deriva de
+lo que conoce la terminal, asi que debe resolverse junto con la replicacion, no
+despues.
+**Riesgo residual:** los prestamos viven solo en esta terminal —borrar los datos
+del navegador los pierde y una segunda terminal no los ve—, y el respaldo es la
+exportacion a Excel o el listado impreso. Un prestamo no reserva ni descuenta
+inventario: la pieza sigue contando como existencia y puede venderse en piso por
+descuido, el mismo riesgo residual que H-40 registro para el apartado. La
+decision esta razonada: como la coleccion no se replica, descontar stock —que si
+viaja a `pos.products`— podria dejar un faltante sin explicacion en todas las
+terminales si se pierde el registro local.
+**Correccion documentada:** `docs/fixes/pantalla-prestamos.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

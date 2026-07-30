@@ -27,6 +27,13 @@
     const items = [];
     if (criticos.length) items.push({ icon: 'alert', tone: '#ba1a1a', title: `${criticos.length} modelo(s) con stock crítico`, sub: criticos.slice(0, 3).map(p => p.nombre).join(', '), page: 'inventario' });
     apartados.forEach(s => items.push({ icon: 'clock', tone: '#92760F', title: `Apartado por completar · ${s.folio}`, sub: `${s.cliente} · saldo ${fmt(s.saldo != null ? s.saldo : Math.max(0, (Number(s.total) || 0) - (Number(s.anticipo) || 0))).replace('.00', '')}`, page: 'apartados' }));
+    // H-46: mercancía prestada que ya pasó su fecha. El atraso lo decide DATA, no la campana.
+    (D.prestamosVencidos ? D.prestamosVencidos() : []).forEach(l => items.push({
+      icon: 'alert', tone: '#ba1a1a',
+      title: `Préstamo vencido · ${l.folio}`,
+      sub: `${(l.persona || {}).nombre || '—'} · ${D.prestamoPendientes(l)} pieza(s) sin regresar desde ${l.fechaEsperada}`,
+      page: 'prestamos',
+    }));
     ((syncStatus && syncStatus.operations) || []).forEach(op => {
       if (!op.diagnostic) return;
       const waiting = op.status === 'retry_wait' || op.status === 'waiting_inventory';
@@ -81,6 +88,8 @@
     { id: 'clientes', label: 'Clientes', icon: 'users' },
     // Apartados es cobranza de mostrador: la ve el mismo perfil que registra la venta.
     { id: 'apartados', label: 'Apartados', icon: 'clock' },
+    // Préstamos (H-46): mercancía que sale con obligación de volver.
+    { id: 'prestamos', label: 'Préstamos', icon: 'loan' },
     { id: 'devoluciones', label: 'Devoluciones', icon: 'undo' },
     { id: 'descuentos', label: 'Descuentos', icon: 'sell', admin: true },
     { id: 'vendedores', label: 'Vendedores', icon: 'badge', admin: true },
@@ -98,7 +107,7 @@
   })();
   const TITLES = {
     dashboard: 'Panel de control', pos: 'Punto de venta', inventario: 'Inventario',
-    clientes: 'Clientes', apartados: 'Apartados', devoluciones: 'Devoluciones', descuentos: 'Promociones y descuentos', vendedores: 'Vendedores y comisiones', reportes: 'Reportes', config: 'Configuración',
+    clientes: 'Clientes', apartados: 'Apartados', prestamos: 'Préstamos', devoluciones: 'Devoluciones', descuentos: 'Promociones y descuentos', vendedores: 'Vendedores y comisiones', reportes: 'Reportes', config: 'Configuración',
   };
 
   // Solo tweaks que siguen vigentes con Heritage (layout de POS)
@@ -232,6 +241,7 @@
           : visiblePage === 'inventario' ? h(window.InventoryScreen, { key: 'inv' })
           : visiblePage === 'clientes' ? h(window.ClientsScreen, { key: 'cli' })
           : visiblePage === 'apartados' ? h(window.LayawayScreen, { key: 'apt' })
+          : visiblePage === 'prestamos' ? h(window.LoansScreen, { key: 'pre' })
           : visiblePage === 'devoluciones' ? h(window.ReturnsScreen, { key: 'dev', onNav: go })
           : visiblePage === 'descuentos' ? h(window.DiscountsScreen, { key: 'desc' })
           : visiblePage === 'vendedores' ? h(window.SellersScreen, { key: 'ven' })

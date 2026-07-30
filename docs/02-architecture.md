@@ -187,6 +187,33 @@ Ventas y devoluciones solicitan las rutas especializadas `pushSale()` y
 `pushReturn()` mediante el gateway. Cada una se confirma remotamente mediante
 su propia transacción SQL idempotente.
 
+### Préstamos de mercancía
+
+`DATA.loans` es la colección de mercancía que sale del negocio con obligación de
+volver, administrada en `balam/loans.jsx` —pantalla `prestamos` del menú
+lateral—. Un préstamo es un documento propio, no una venta de cero ni un
+movimiento de inventario:
+
+- congela su evidencia —`nombre`, `sku`, `talla`, `qty` y el `precio` de lista de
+  la talla el día del préstamo, más una copia de la persona que recibió—, de modo
+  que editar el producto o el cliente después no altera un préstamo registrado;
+- su referencia comercial es `PR-{AAMMDD}-{CONSECUTIVO}`, con consecutivo propio
+  derivado de los préstamos del día que conoce la terminal. **No** consume
+  `pos.folio_counters`: la identidad técnica es un UUID separado;
+- sus estados son `pendiente`, `devuelto` y `no_devuelto`. No son un catálogo
+  administrable: son el contrato del módulo;
+- la devolución puede ser parcial. Cada entrega deja su asiento y la fecha real de
+  devolución se fija con la que completa el préstamo. Una pieza declarada no
+  devuelta que aparece después todavía puede devolverse;
+- **no mueve existencias.** `DATA.loanedQty(sku, talla)` es la única autoridad de
+  «unidades fuera» y `DATA.prestamoAtraso()` la única de «vencido»; ambas se
+  derivan de la colección. `pos.movements` no se usa: es historial de sólo lectura
+  para el cliente y el pull lo reemplaza.
+
+Esta fase es **local**: no existe tabla remota y `saveLoans()` no sincroniza. El
+respaldo del módulo son su exportación a `.xlsx` y su listado impreso, y el vale
+impreso por préstamo es el documento que firma quien recibe la mercancía.
+
 ### Promociones y margen mínimo
 
 `window.PROMOS` calcula el precio unitario que usa el Punto de Venta y la vista
@@ -629,6 +656,8 @@ Es persistencia operativa, no un caché descartable. Aloja:
 - configuración;
 - colecciones de dominio;
 - reserva diaria de folios (`balam_pos_folio_v2`);
+- préstamos de mercancía (`balam_pos_loans_v1`), que todavía no tienen réplica
+  remota: borrar los datos del navegador los elimina;
 - periodo y banderas de datos de prueba;
 - sesión administrada por Supabase JS;
 - cola `balam_sync_queue`.

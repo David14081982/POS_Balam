@@ -17,6 +17,7 @@
     download: 'download', logout: 'logout', calendar: 'calendar_today', star: 'star',
     truck: 'local_shipping', repeat: 'sync', sparkle: 'auto_awesome',
     add: 'add', dashboard: 'dashboard', help: 'help_outline', close: 'close',
+    loan: 'assignment_return', // H-46: mercancía que sale y tiene que volver
   };
 
   // Ícono Material Symbols. API: { name, size=20, fill, className, style }

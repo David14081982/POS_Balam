@@ -19,7 +19,8 @@ const expectedScripts = [
   'balam/discounts.jsx', 'balam/xlsx-io.jsx', 'balam/barcodes.jsx',
   'balam/tweaks-panel.jsx', 'balam/dashboard.jsx', 'balam/pos.jsx',
   'balam/pos-ticket.jsx', 'balam/inventory.jsx', 'balam/clients.jsx',
-  'balam/layaway.jsx', 'balam/returns.jsx', 'balam/sellers.jsx', 'balam/reports.jsx',
+  'balam/layaway.jsx', 'balam/loans.jsx',
+  'balam/returns.jsx', 'balam/sellers.jsx', 'balam/reports.jsx',
   'balam/settings.jsx', 'balam/store.jsx', 'balam/app.jsx',
 ];
 
@@ -186,6 +187,7 @@ const expectedGlobals = {
   'balam/discounts.jsx': 'PROMOS',
   'balam/xlsx-io.jsx': 'XLSXIO',
   'balam/layaway.jsx': 'LayawayScreen',
+  'balam/loans.jsx': 'LoansScreen',
   'balam/barcodes.jsx': 'BARCODES',
   'balam/store.jsx': 'STORE',
   'balam/app.jsx': 'App',

@@ -388,7 +388,7 @@
         LS_FOLIO = 'balam_pos_folio_v1', LS_FOLIO_V2 = 'balam_pos_folio_v2',
         LS_PROMOS = 'balam_pos_promos_v1', LS_LIQ = 'balam_pos_liq_v1', LS_PERIODO = 'balam_pos_periodo_v1',
         LS_RETURNS = 'balam_pos_returns_v1', LS_PAYMENTS = 'balam_pos_payments_v1',
-        LS_EXCHANGES = 'balam_pos_exchanges_v1';
+        LS_EXCHANGES = 'balam_pos_exchanges_v1', LS_LOANS = 'balam_pos_loans_v1';
   const sellers = loadArr(LS_SELLERS, seedSellers);
   const clients = loadArr(LS_CLIENTS, seedClients);
   const sales = loadArr(LS_SALES, seedSales);
@@ -402,6 +402,9 @@
   // docs/04-contrato-del-cambio.md y ADR-010. Esta fase define el modelo; el
   // commit transaccional (C5) y la interfaz (C6) son historias posteriores.
   const exchanges = loadArr(LS_EXCHANGES, []);
+  // H-46: préstamos de mercancía. Colección local sin contrato remoto todavía; su
+  // modelo y sus autoridades viven más abajo, en la sección «préstamos».
+  const loans = loadArr(LS_LOANS, []);
   let periodoInicio = '';
   try { periodoInicio = localStorage.getItem(LS_PERIODO) || ''; } catch (e) { /* sin storage */ }
 
@@ -519,6 +522,9 @@
   function saveReturns() { save(LS_RETURNS, returns); }  // devoluciones suben vía recordReturn → STORE.pushReturn
   function savePayments(sync = true) { save(LS_PAYMENTS, payments); if (sync) syncUp('payments', payments); }
   function saveExchanges(sync = true) { save(LS_EXCHANGES, exchanges); if (sync) syncUp('exchanges', exchanges); }
+  // H-46: sin `syncUp`. No hay tabla `pos.loans`, y encolar contra una tabla ausente
+  // dejaría la operación bloqueada por esquema en la cola (ver sección «préstamos»).
+  function saveLoans() { save(LS_LOANS, loans); }
   // Fusiona filas de la nube en el arreglo local por clave (upsert: actualiza las que
   // coinciden, agrega las nuevas, CONSERVA las no incluidas). Para pulls PARCIALES —
   // el pull de ventas es paginado (ventana reciente + apartados) — reemplazar el
@@ -1678,6 +1684,240 @@
     return products;
   }
 
+  // ── H-46: préstamos de mercancía ─────────────────────────────────────────────
+  // Un préstamo es un documento propio: mercancía que SALE del negocio y tiene que
+  // volver. No es una venta de $0 ni un movimiento de inventario, y por eso no
+  // reutiliza ninguno de los dos:
+  //   · `pos.movements` es historial de sólo lectura para el cliente —cada pull
+  //     reemplaza el arreglo—, así que un movimiento local de préstamo se borraría
+  //     solo en la siguiente sincronización;
+  //   · el consecutivo diario de la venta vive en `pos.folio_counters` y gastar un
+  //     número aquí movería la numeración comercial de las ventas (`ADR-001`).
+  // El documento CONGELA su propia evidencia —nombre, SKU, talla y persona— para
+  // seguir siendo explicable si el producto o el cliente se editan o se borran
+  // después (`R-DOM-02`).
+  //
+  // Esta fase es LOCAL: no existe tabla remota, y por eso `saveLoans()` NO llama a
+  // `syncUp()`. Encolar filas contra una tabla ausente dejaría la operación
+  // bloqueada por esquema en la cola, visible en la campana, para siempre.
+  //
+  // Los préstamos NO mueven existencias. La cifra «unidades fuera» se deriva de
+  // esta colección mediante `loanedQty()`, que es su única autoridad.
+  const LOAN_ESTADOS = ['pendiente', 'devuelto', 'no_devuelto'];
+  const LOAN_PERSONA_TIPOS = ['cliente', 'empleado', 'otro'];
+  const LOAN_FOLIO_RE = /^PR-(\d{6})-(\d{3,})$/;
+  const DIA_RE = /^\d{4}-\d{2}-\d{2}$/;
+  const soloDia = v => String(v == null ? '' : v).slice(0, 10);
+  const horaActual = () => now().slice(11, 16);
+  const diaActual = () => now().slice(0, 10);
+  // Identidad técnica del préstamo. No se reutiliza `newOperationId()`: su valor de
+  // respaldo se identifica como venta y estas dos identidades no son la misma cosa.
+  function newLoanId() {
+    try {
+      if (window.crypto && window.crypto.randomUUID) return window.crypto.randomUUID();
+    } catch (e) { /* respaldo portable */ }
+    return 'loan-' + window.CORE.getDeviceId() + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+  }
+  function parseLoanFolio(folio) {
+    const m = String(folio == null ? '' : folio).trim().toUpperCase().match(LOAN_FOLIO_RE);
+    return m ? { date: m[1], seq: parseInt(m[2], 10) } : null;
+  }
+  // Referencia comercial del préstamo: `PR-{AAMMDD}-{CONSECUTIVO}`. El día sale de la
+  // MISMA fecha que se guarda en el documento, nunca de una segunda lectura del reloj
+  // (`R-DOM-03`), y el consecutivo se deriva de los préstamos que esta terminal ya
+  // conoce de ese día.
+  function nextLoanFolio(fecha) {
+    const date = businessDate(fecha);
+    const seq = loans.reduce((m, l) => {
+      const p = parseLoanFolio(l.folio);
+      return p && p.date === date && p.seq > m ? p.seq : m;
+    }, 0) + 1;
+    return 'PR-' + date + '-' + String(seq).padStart(3, '0');
+  }
+  function normalizeLoanPersona(raw) {
+    const p = raw || {};
+    const nombre = String(p.nombre || '').trim();
+    if (!nombre) return null;
+    return {
+      tipo: LOAN_PERSONA_TIPOS.indexOf(p.tipo) >= 0 ? p.tipo : 'otro',
+      id: p.id || null,
+      nombre,
+      tel: String(p.tel || '').trim(),
+    };
+  }
+  // Piezas comprometidas y piezas todavía fuera. Un renglón puede regresar por partes.
+  function prestamoPiezas(loan) {
+    return ((loan && loan.lineas) || []).reduce((a, l) => a + (Number(l.qty) || 0), 0);
+  }
+  function prestamoPendientes(loan) {
+    return ((loan && loan.lineas) || []).reduce((a, l) => (
+      a + Math.max(0, (Number(l.qty) || 0) - (Number(l.devueltas) || 0))
+    ), 0);
+  }
+  // Autoridad única del atraso: compara la fecha ESPERADA guardada en el documento
+  // contra el día de referencia. `dias` positivo = días de retraso; negativo = días
+  // que faltan. Sólo un préstamo `pendiente` con piezas fuera puede estar vencido:
+  // uno cerrado como `no_devuelto` ya declaró su desenlace y no se vuelve a alarmar.
+  function prestamoAtraso(loan, hoy) {
+    const pendientes = prestamoPendientes(loan);
+    const esperada = soloDia(loan && loan.fechaEsperada);
+    if (!loan || loan.estado !== 'pendiente' || !pendientes || !DIA_RE.test(esperada)) {
+      return { vencido: false, dias: null, pendientes };
+    }
+    const ref = DIA_RE.test(soloDia(hoy)) ? soloDia(hoy) : diaActual();
+    const dias = Math.round((Date.parse(ref + 'T00:00:00') - Date.parse(esperada + 'T00:00:00')) / 86400000);
+    return { vencido: dias > 0, dias, pendientes };
+  }
+  function prestamosVencidos(hoy) {
+    return loans.filter(l => prestamoAtraso(l, hoy).vencido);
+  }
+  // Unidades de un artículo que están fuera del negocio por un préstamo abierto.
+  // Los préstamos no descuentan existencias: quien necesite mostrar «hay 5, 2 están
+  // prestadas» consume esta función y no vuelve a recorrer la colección.
+  function loanedQty(sku, talla) {
+    return loans.reduce((a, l) => (
+      l.estado !== 'pendiente' ? a : a + (l.lineas || []).reduce((b, x) => (
+        x.sku === sku && (talla == null || x.talla === talla)
+          ? b + Math.max(0, (Number(x.qty) || 0) - (Number(x.devueltas) || 0))
+          : b
+      ), 0)
+    ), 0);
+  }
+  function registrarPrestamo(input) {
+    const d = input || {};
+    const dia = soloDia(d.fecha) || diaActual();
+    if (!DIA_RE.test(dia)) return { ok: false, error: 'La fecha del préstamo no es válida' };
+    const esperada = soloDia(d.fechaEsperada);
+    if (!DIA_RE.test(esperada)) return { ok: false, error: 'Falta la fecha esperada de devolución' };
+    if (esperada < dia) return { ok: false, error: 'La devolución esperada no puede ser anterior al préstamo' };
+    const persona = normalizeLoanPersona(d.persona);
+    if (!persona) return { ok: false, error: 'Falta el nombre de quien recibe la mercancía' };
+    const lineas = [];
+    (d.lineas || []).forEach(l => {
+      const qty = Math.floor(Number(l && l.qty) || 0);
+      const talla = String((l && l.talla) || '').trim();
+      if (qty <= 0 || !talla) return;
+      const p = products.find(x => x.id === (l.productId || l.id)) || products.find(x => x.sku === l.sku);
+      if (!p) return;
+      const key = p.sku + '|' + talla;
+      const ex = lineas.find(x => x.key === key);
+      if (ex) { ex.qty += qty; return; }
+      // `precio` es el precio de lista de la talla en el momento del préstamo
+      // (autoridad de H-36) y se congela: es lo que vale la pérdida si la pieza no
+      // vuelve, y no puede depender de una edición posterior del catálogo.
+      lineas.push({
+        key, productId: p.id, sku: p.sku, nombre: p.nombre, talla, qty, devueltas: 0,
+        precio: Number(listPrice(p, talla)) || 0,
+      });
+    });
+    if (!lineas.length) return { ok: false, error: 'Agrega al menos una pieza al préstamo' };
+    const loan = {
+      id: newLoanId(),
+      fecha: dia + ' ' + horaActual(),
+      fechaEsperada: esperada,
+      fechaDevolucion: null,
+      estado: 'pendiente',
+      persona, lineas, devoluciones: [],
+      nota: String(d.nota || '').trim(),
+      notaCierre: '',
+      usuario: String(d.usuario || '').trim(),
+    };
+    loan.folio = nextLoanFolio(loan.fecha);
+    loans.unshift(loan); saveLoans();
+    return { ok: true, loan };
+  }
+  // Devolución total o parcial. Cada entrega deja su propio asiento en
+  // `loan.devoluciones`; `fechaDevolucion` —la fecha REAL que pide el negocio— se
+  // fija con el asiento que completa el préstamo. Un préstamo dado por perdido que
+  // finalmente regresa se acepta: vuelve a `pendiente` o cierra como `devuelto`.
+  function registrarDevolucionPrestamo(id, input) {
+    const d = input || {};
+    const loan = loans.find(x => x.id === id);
+    if (!loan) return { ok: false, error: 'El préstamo no existe' };
+    if (loan.estado === 'devuelto') return { ok: false, error: 'Este préstamo ya está devuelto por completo' };
+    const dia = soloDia(d.fecha) || diaActual();
+    if (!DIA_RE.test(dia)) return { ok: false, error: 'La fecha de devolución no es válida' };
+    if (dia < soloDia(loan.fecha)) return { ok: false, error: 'La devolución no puede ser anterior al préstamo' };
+    const pedido = {};
+    (d.lineas || []).forEach(l => {
+      const qty = Math.floor(Number(l && l.qty) || 0);
+      if (qty > 0 && l && l.key) pedido[l.key] = (pedido[l.key] || 0) + qty;
+    });
+    const claves = Object.keys(pedido);
+    if (!claves.length) return { ok: false, error: 'Indica cuántas piezas regresaron' };
+    for (let i = 0; i < claves.length; i++) {
+      const linea = loan.lineas.find(l => l.key === claves[i]);
+      if (!linea) return { ok: false, error: 'El préstamo no incluye esa pieza' };
+      const restante = (Number(linea.qty) || 0) - (Number(linea.devueltas) || 0);
+      if (pedido[claves[i]] > restante) {
+        return { ok: false, error: `Sólo faltan ${restante} pieza(s) de ${linea.nombre} talla ${linea.talla}` };
+      }
+    }
+    claves.forEach(k => {
+      const linea = loan.lineas.find(l => l.key === k);
+      linea.devueltas = (Number(linea.devueltas) || 0) + pedido[k];
+    });
+    if (!Array.isArray(loan.devoluciones)) loan.devoluciones = [];
+    const asiento = {
+      fecha: dia + ' ' + horaActual(),
+      lineas: claves.map(k => ({ key: k, qty: pedido[k] })),
+      nota: String(d.nota || '').trim(),
+    };
+    loan.devoluciones.push(asiento);
+    const completo = prestamoPendientes(loan) === 0;
+    loan.estado = completo ? 'devuelto' : 'pendiente';
+    loan.fechaDevolucion = completo ? asiento.fecha : null;
+    if (completo && asiento.nota) loan.notaCierre = asiento.nota;
+    saveLoans();
+    return { ok: true, loan, cerrado: completo };
+  }
+  // Declarar la pérdida. No mueve existencias —el préstamo nunca las movió— pero
+  // deja el desenlace escrito y saca al préstamo de la lista de vencidos.
+  function marcarPrestamoNoDevuelto(id, input) {
+    const d = input || {};
+    const loan = loans.find(x => x.id === id);
+    if (!loan) return { ok: false, error: 'El préstamo no existe' };
+    if (loan.estado === 'devuelto') return { ok: false, error: 'Este préstamo ya está devuelto' };
+    if (!prestamoPendientes(loan)) return { ok: false, error: 'Este préstamo no tiene piezas fuera' };
+    const dia = soloDia(d.fecha) || diaActual();
+    if (!DIA_RE.test(dia)) return { ok: false, error: 'La fecha no es válida' };
+    loan.estado = 'no_devuelto';
+    loan.fechaCierre = dia + ' ' + horaActual();
+    loan.notaCierre = String(d.nota || '').trim();
+    saveLoans();
+    return { ok: true, loan };
+  }
+  // Corregir la captura. Sólo mientras nada haya regresado: con devoluciones
+  // asentadas el documento ya tiene consecuencias y se corrige hacia adelante.
+  function actualizarPrestamo(id, patch) {
+    const loan = loans.find(x => x.id === id);
+    if (!loan) return { ok: false, error: 'El préstamo no existe' };
+    if ((loan.devoluciones || []).length) return { ok: false, error: 'Ya hay devoluciones registradas: no se puede editar' };
+    const p = patch || {};
+    if (p.persona !== undefined) {
+      const persona = normalizeLoanPersona(p.persona);
+      if (!persona) return { ok: false, error: 'Falta el nombre de quien recibe la mercancía' };
+      loan.persona = persona;
+    }
+    if (p.fechaEsperada !== undefined) {
+      const esperada = soloDia(p.fechaEsperada);
+      if (!DIA_RE.test(esperada)) return { ok: false, error: 'Falta la fecha esperada de devolución' };
+      if (esperada < soloDia(loan.fecha)) return { ok: false, error: 'La devolución esperada no puede ser anterior al préstamo' };
+      loan.fechaEsperada = esperada;
+    }
+    if (p.nota !== undefined) loan.nota = String(p.nota || '').trim();
+    if (p.estado !== undefined && p.estado === 'pendiente' && loan.estado === 'no_devuelto') loan.estado = 'pendiente';
+    saveLoans();
+    return { ok: true, loan };
+  }
+  function eliminarPrestamo(id) {
+    const i = loans.findIndex(x => x.id === id);
+    if (i < 0) return { ok: false, error: 'El préstamo no existe' };
+    if ((loans[i].devoluciones || []).length) return { ok: false, error: 'Ya hay devoluciones registradas: no se puede eliminar' };
+    loans.splice(i, 1); saveLoans();
+    return { ok: true };
+  }
+
   // ── Simulación de demostración (LOCAL-ONLY: nunca toca la nube) ─────────────────
   // Genera catálogo, clientes, vendedores y ~300 ventas (+ devoluciones) PASADAS por el
   // motor real, así TODO lo calculado (stock, comisiones, totales, reportes) se deriva solo.
@@ -1689,10 +1929,11 @@
     rawSave(LS_KEY, products); rawSave(LS_CLIENTS, clients); rawSave(LS_SELLERS, sellers);
     rawSave(LS_SALES, sales); rawSave(LS_MOVES, movements); rawSave(LS_RETURNS, returns);
     rawSave(LS_PROMOS, promos); rawSave(LS_LIQ, liquidations); rawSave(LS_PAYMENTS, payments);
+    rawSave(LS_LOANS, loans);
   }
   function clearAllLocal() {
     products.length = 0; sales.length = 0; movements.length = 0; returns.length = 0; payments.length = 0;
-    promos.length = 0; liquidations.length = 0;
+    promos.length = 0; liquidations.length = 0; loans.length = 0;
     clients.length = 0; seedClients.forEach(c => clients.push(JSON.parse(JSON.stringify(c)))); // solo el genérico
     sellers.length = 0; seedSellers.forEach(s => sellers.push(JSON.parse(JSON.stringify(s)))); // solo el admin
     try {
@@ -1743,6 +1984,9 @@
       // 2) Vaciar lo transaccional. De movimientos SOLO los de venta/devolución: las
       //    'Entrada'/'Ajuste'/'Transferencia' son historial de inventario y se conservan.
       sales.length = 0; returns.length = 0; promos.length = 0; liquidations.length = 0; payments.length = 0;
+      // Los préstamos de prueba también son datos transaccionales. No hay stock que
+      // revertir: un préstamo nunca descontó existencias.
+      loans.length = 0;
       const keepMoves = movements.filter(m => m.tipo !== 'Venta' && m.tipo !== 'Devolución');
       movements.length = 0; keepMoves.forEach(m => movements.push(m));
 
@@ -1869,7 +2113,7 @@
   }
 
   window.DATA = {
-    products, sellers, clients, sales, movements, promos, liquidations, returns, payments, exchanges,
+    products, sellers, clients, sales, movements, promos, liquidations, returns, payments, exchanges, loans,
     sku, regenerateSkus, totalStock, hydrate, mkStock, emptyStock, SIZE_MARK,
     saveProducts, saveSellers, saveClients, saveSales, saveMovements, savePromos, saveReturns, savePayments,
     removeProduct, remapOrphanCodes, catalogHealthReport, hexForColorName, applyOrphanFix, get lastRemap() { return lastRemap; },
@@ -1881,6 +2125,9 @@
     listPrice, priceRange, sanitizePreciosTalla,
     recordReturn, returnedQty, returnsForFolio, isReturnable, returnDeadline, saleLineBalance,
     saveExchanges, recognizedValue, supplySources, recordExchange,
+    saveLoans, registrarPrestamo, registrarDevolucionPrestamo, marcarPrestamoNoDevuelto,
+    actualizarPrestamo, eliminarPrestamo, prestamoPiezas, prestamoPendientes,
+    prestamoAtraso, prestamosVencidos, loanedQty, parseLoanFolio, nextLoanFolio, LOAN_ESTADOS,
     addUser, updateUser, removeUser, isEligibleSeller, resolveSellerCommission,
     addPromo, updatePromo, removePromo, duplicatePromo,
     seedDemo, resetEmpty, resetTestData, demoActive,

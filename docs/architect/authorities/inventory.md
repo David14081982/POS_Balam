@@ -1,7 +1,7 @@
 ---
 capa: conocimiento
 applies_to: [domain, database]
-related_histories: [H-01, H-36]
+related_histories: [H-01, H-36, H-46]
 severity_max: required
 no_alcance: "No define ninguna autoridad ni transcribe firmas. Sólo dice qué pregunta responde cada una y dónde vive."
 ---
@@ -28,3 +28,23 @@ las tallas con existencias; no reimplementa la resolución
 **Definición:** migraciones `20260725001700`, `20260725001800`
 **Creada por:** H-01 · **Decisión:** `ADR-006`
 **Consumidores:** `grep -rn "reserve_sale_stock" supabase/ balam/`
+
+## ¿Cuántas unidades de este artículo están fuera por un préstamo?
+**Autoridad:** `DATA.loanedQty(sku, talla)` — el préstamo **no** mueve existencias,
+así que esta cifra se deriva de la colección y no del stock
+**Definición:** `balam/data.jsx` § préstamos · `docs/02-architecture.md` § Préstamos de mercancía
+**Creada por:** H-46
+**Consumidores:** `grep -rn "loanedQty" balam/ test-*.mjs`
+
+## ¿Cuántas piezas de este préstamo faltan por regresar?
+**Autoridad:** `DATA.prestamoPendientes(prestamo)`
+**Definición:** `balam/data.jsx` § préstamos
+**Creada por:** H-46
+**Consumidores:** `grep -rn "prestamoPendientes" balam/ test-*.mjs`
+
+## ¿Está vencido este préstamo, y por cuántos días?
+**Autoridad:** `DATA.prestamoAtraso(prestamo, hoy)` — compara la fecha esperada
+**guardada en el documento**; un préstamo cerrado nunca está vencido
+**Definición:** `balam/data.jsx` § préstamos
+**Creada por:** H-46 · **Decisión:** `ADR-002`
+**Consumidores:** `grep -rn "prestamoAtraso\|prestamosVencidos" balam/ test-*.mjs`
