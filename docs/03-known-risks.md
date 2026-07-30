@@ -2353,7 +2353,7 @@ el reparto como estimado; congelarlo hacia futuro requiere otra historia.
 
 **Estado:** RESUELTO
 **Fecha de registro:** 30/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `420a4f9`
 **Evidencia:** el precio promocional tiene autoridad por renglón en
 `DATA.resolveLineDiscount()`, pero el total se deriva por separado en el POS,
 `recordSale()` y la presentación del ticket. El documento sólo conserva
@@ -2392,8 +2392,11 @@ tiempo antes de cerrar; el smoke de desarrollo agotó 30 segundos al arrancar.
 **Despliegue:** `006800` y `006900` aplicadas al proyecto Supabase enlazado el
 30/07/2026. La verificación remota informó snapshot, validación, unicidad y
 permisos correctos y no dejó semillas.
-**Pendiente:** crear el commit y desplegar el artefacto cliente cuando
-corresponda al flujo de publicación.
+**Publicación:** commit `420a4f9` publicado en `main`. GitHub Pages sirve el
+`index.html` del commit byte a byte: SHA-256
+`080FA2BA99304D6C73F893BCE8556226CCDF67B678DC630B14C48B187C104B33`,
+8 734 207 bytes.
+**Pendiente:** ninguno dentro de H-52.
 **Riesgo residual:** una reserva abandonada retiene el folio hasta 15 minutos.
 El smoke del bundle recorrió 13 comprobaciones sin errores pero su arnés no
 cerró dentro del límite; el resto de la regresión relevante está en verde.

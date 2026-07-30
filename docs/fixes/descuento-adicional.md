@@ -1,9 +1,9 @@
 # Descuento adicional integrado al documento de venta
 
-**Riesgo:** H-52  
-**Estado:** resuelto y verificado remotamente  
-**Fecha:** 30/07/2026  
-**Commit:** Pendiente de commit
+**Riesgo:** H-52
+**Estado:** resuelto y verificado remotamente
+**Fecha:** 30/07/2026
+**Commit:** `420a4f9`
 
 ## Problema y evidencia
 
@@ -79,3 +79,9 @@ permisos, y revirtió sus datos de prueba. No se ejecutó el SQL localmente
 porque el PostgreSQL local de Supabase no estaba levantado. La reserva
 abandonada inmoviliza el folio durante un máximo de 15 minutos; es una
 consecuencia intencional para privilegiar la unicidad.
+
+El commit `420a4f9` se publicó en `main`. GitHub Pages sirve `index.html`
+idéntico byte a byte al artefacto del commit:
+
+    SHA-256  080FA2BA99304D6C73F893BCE8556226CCDF67B678DC630B14C48B187C104B33
+    bytes    8 734 207
