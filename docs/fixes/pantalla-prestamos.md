@@ -3,7 +3,7 @@
 **Riesgo:** H-46
 **Estado:** RESUELTO
 **Fecha:** 29/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `9387e62`
 
 ## Problema y reproducción
 
@@ -175,6 +175,19 @@ refijar.
 
 `R-DEL-03` no aplica: la historia no toca el esquema y no hay migración que
 aplicar antes del cliente.
+
+## Despliegue
+
+Artefactos regenerados con `node build-offline.mjs`; `index.html` es copia exacta
+de `POS Balam (offline).html`. El archivo servido por GitHub Pages se verificó
+idéntico byte a byte al `index.html` del commit `9387e62` (`R-DEL-07`):
+
+    SHA-256  BFF07979BB358B54808213BD42946CCAFF66743271BCDDB754CE54540591EE7C
+    bytes    8 716 917
+
+La primera lectura devolvió todavía el artefacto anterior
+(`AD7486DB…`, 8 689 492 bytes, el de H-45); la segunda, veinte segundos después,
+ya servía el nuevo.
 
 ## Riesgo residual y pendientes
 

@@ -1999,7 +1999,7 @@ contra el `index.html` del commit: SHA-256 `ad7486dbfa1a86a6fd7d293afc0d51aa7e7c
 **Estado:** RESUELTO
 **Fecha de registro:** 29/07/2026
 **Fecha de resolucion:** 29/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `9387e62`
 **Evidencia:** el producto sabia representar mercancia que se vende, que se
 aparta, que se devuelve y que se cambia. No sabia representar mercancia que
 **sale y tiene que volver**: una guayabera que un empleado se lleva puesta a un
@@ -2044,8 +2044,12 @@ el sintoma. Regresion completa en verde: contratos de modulo 38/38, navegacion
 `R-DEL-14` sin intervencion: 11 interacciones, 2 validaciones, recorrido
 completo. `R-DEL-13`, `R-DEL-15` y `R-DEL-16` se descartan por escrito: la
 historia anade una capacidad, no promete ahorro, y no tiene metrica que refijar.
-**Despliegue:** artefactos regenerados con `node build-offline.mjs`. Verificacion
-byte a byte del artefacto publicado: pendiente de registrar tras el push.
+**Despliegue:** artefactos regenerados con `node build-offline.mjs` y publicados
+en `https://david14081982.github.io/POS_Balam/`. El artefacto servido se verifico
+identico byte a byte al `index.html` del commit: SHA-256
+`BFF07979BB358B54808213BD42946CCAFF66743271BCDDB754CE54540591EE7C`, 8 716 917
+bytes (`R-DEL-07`). La historia no toca el esquema, asi que no hay migracion que
+aplicar antes del cliente.
 **Pendiente:** lo declarado como no alcance. El consecutivo `PR-…` se deriva de
 lo que conoce la terminal, asi que debe resolverse junto con la replicacion, no
 despues.
