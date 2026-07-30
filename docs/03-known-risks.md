@@ -2563,6 +2563,23 @@ pendientes.
 **Pruebas de Fase 3:** AUTH 17/17; modelo 13/13; migraciones 31/31; registro
 12/12; roles 15/15; contratos 39/39; cola 115/115; reproducibilidad 8/8; smoke
 17/17; navegación 15/15; build correcto con 70 assets.
+**Diagnóstico de Fase 4:** la RPC de Fase 2 guardaba atómicamente, pero no
+recibía la versión que leyó el cliente; dos administradores podían
+sobrescribirse sin detectar el conflicto. `20260730007400` añade listado Auth,
+catálogo, snapshot administrativo, versión y guardado optimista;
+`20260730007500` aporta la verificación remota autocontenida.
+**Prueba previa de Fase 4:** `test-permission-admin-rpcs.mjs` pasó de 0/13 a
+13/13 para el contrato estático; falta ejecutar el comportamiento SQL remoto
+antes de iniciar la interfaz.
+**Soporte servidor de Fase 4:** los requisitos de catálogo y defensa global
+llevaron el contrato a 23 casos. `07400` ahora añade catálogo persistido,
+asignación activa, token que incorpora rol/perfil/catálogo y triggers diferidos
+sobre todas las tablas que pueden romper la invariante. `07500` usa fixtures
+sintéticas autocontenidas y no escribe administradores productivos. Ambas
+quedaron aplicadas el 30/07/2026, con historial local/remoto en paridad y
+dry-run posterior vacío. Resultado: API 23/23; migraciones 31/31; AUTH 17/17;
+roles 15/15; registro 12/12; contratos 39/39; cola 115/115; build 8/8; smoke
+17/17; navegación 15/15.
 **Pendiente:** fases 4 a 6.
 **Riesgo residual:** hasta completar la Fase 5, la autorización de servidor
 sigue siendo la matriz fija por rol de H-08.

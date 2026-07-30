@@ -121,6 +121,33 @@ Fase 3:
 - ACL remota del snapshot: `public=f`, `anon=f`, `authenticated=t`,
   `service_role=f`.
 
+Preparación de Fase 4:
+
+- La RPC de escritura de Fase 2 no recibe una versión esperada y no puede
+  detectar una edición concurrente.
+- `20260730007400` añade listado paginable de identidades Auth, snapshot
+  administrativo, token estable y guardado atómico con bloqueo y versión.
+- `20260730007500` verifica autorización, ACL, pantalla desconocida, conflicto,
+  atomicidad, auditoría y protección del último administrador.
+- Ambas migraciones quedaron aplicadas y verificadas remotamente.
+- Contrato inicial: 0/13; contrato propuesto: 13/13. Migraciones generales:
+  31/31.
+
+Revisión ampliada antes del push:
+
+- El catálogo servidor persiste sólo identidad, jerarquía, condición de hoja,
+  actividad y versión; una sincronización administrativa atómica lo actualiza
+  desde `screens.jsx` sin borrar filas retiradas.
+- El token incorpora perfil, asignación activa, rol activo, permisos del rol,
+  overrides y versión global del catálogo.
+- Triggers diferidos protegen el último administrador ante cambios de perfil,
+  asignación, rol, permisos de rol, overrides y catálogo.
+- La verificación usa UUID y perfiles sintéticos reservados, aborta ante
+  colisión y limpia/restaura todos los fixtures antes del commit.
+- Contrato ampliado: 10 fallos iniciales sobre 23; resultado final 23/23.
+  Cadena de migraciones: 31/31. Historial local/remoto en paridad y dry-run
+  posterior vacío.
+
 ## Riesgo residual y pendientes
 
 Fases 4 a 6 permanecen abiertas. El modelo y el cliente ya resuelven permisos
