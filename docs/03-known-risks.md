@@ -2118,7 +2118,7 @@ de barras.
 
 **Estado:** RESUELTO en base de datos - pendiente de publicar el cliente
 **Fecha de registro:** 30/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `be84e3c`
 **Evidencia:** `recordExchange` calculaba `baseComision` —el excedente de valor—
 y desde H-42 guardaba tambien a quien le correspondia, pero no acreditaba nada a
 nadie: no tocaba a los vendedores en ningun punto. Y `pos.commit_exchange` no
@@ -2160,7 +2160,13 @@ y la limpieza borraba de `line_consumption` y `line_supply`, que son VISTAS. El
 `drop` es protector —mientras coexistan las firmas de cinco y
 seis parametros, una llamada con cinco es ambigua y PostgreSQL la rechaza— y el
 cliente no puede publicarse antes de las migraciones (`R-DEL-03`).
-**Pendiente:** publicar el cliente; H-48, que hace visible
+**Pendiente:** publicar el cliente. `index.html` no se recompilo en este commit
+porque contiene trabajo sin cerrar de la pantalla de Prestamos de otra sesion, asi
+que **el paquete y las fuentes divergen temporalmente** y
+`test-build-reproducibility` fallara hasta que ese trabajo cierre y se recompile.
+Produccion sigue sirviendo el paquete anterior, que funciona: llama a
+`commit_exchange` con cinco parametros y el sexto tiene valor por omision. Tambien
+H-48, que hace visible
 este ingreso en los reportes.
 **Riesgo residual:** la reversa no tiene camino que la invoque porque no existe
 cancelar un cambio. El IVA al 16% se replica como criterio en `recordExchange`

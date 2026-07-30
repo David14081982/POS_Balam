@@ -3,7 +3,7 @@
 **Riesgo:** H-47
 **Estado:** RESUELTO en base de datos — pendiente de publicar el cliente
 **Fecha:** 30/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `be84e3c`
 
 ## Problema y reproducción
 
