@@ -2068,7 +2068,7 @@ terminales si se pierde el registro local.
 **Estado:** RESUELTO
 **Fecha de registro:** 29/07/2026
 **Fecha de resolucion:** 29/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `c9618dd`
 **Evidencia:** el negocio tiene lector de codigo de barras y toda la mercancia
 lleva etiqueta `SKU-TALLA` (`balam/barcodes.jsx`). El Punto de venta lo aprovecha
 por dos caminos —`onScan` en su campo de captura y una captura global HID con
@@ -2102,7 +2102,11 @@ nombre de la persona—. Regresion de cliente en verde: contratos 38/38, navegac
 17/17, `.xlsx` 17/17, reproducibilidad 8/8. Guardian de `R-DEL-14` intacto.
 **Despliegue:** el paquete publicado **no se vuelve a generar** en este cierre: se
 commitea el que ya estaba construido y verificado sobre esta fuente, que contiene el
-lector y **no** contiene el codigo cliente de H-47. Es deliberado. H-47 —otra
+lector y **no** contiene el codigo cliente de H-47. Es deliberado. El artefacto
+servido por GitHub Pages se verifico identico byte a byte al `index.html` del commit
+`c9618dd`: SHA-256
+`491086D1E500B2F3C6BE21950A5235EC3125F24D9F2C545E98917918960D1615`, 8 721 377 bytes
+(`R-DEL-07`). H-47 —otra
 historia, trabajada en paralelo sobre el mismo arbol— dejo commiteado en
 `balam/store.jsx` y `balam/data.jsx` codigo que escribe `comision_monto`,
 `comision_base`, `comision_pct` y `comision_revertida` en `pos.exchanges`, y sus

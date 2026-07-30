@@ -3,7 +3,7 @@
 **Riesgo:** H-46 · H-48
 **Estado:** RESUELTO
 **Fecha:** 29/07/2026
-**Commit:** `9387e62` (H-46) · `Pendiente de commit` (H-48)
+**Commit:** `9387e62` (H-46) · `c9618dd` (H-48)
 
 ## Problema y reproducción
 
@@ -249,7 +249,11 @@ Guardián de `R-DEL-14` intacto.
 
 Se commitea el paquete que ya estaba construido y verificado sobre esta fuente: trae
 el lector y **no** trae el código cliente de H-47. No se regenera aquí, y es
-deliberado.
+deliberado. El archivo servido por GitHub Pages se verificó idéntico byte a byte al
+`index.html` del commit `c9618dd` (`R-DEL-07`):
+
+    SHA-256  491086D1E500B2F3C6BE21950A5235EC3125F24D9F2C545E98917918960D1615
+    bytes    8 721 377
 
 H-47 —otra historia, trabajada en paralelo sobre este mismo árbol— dejó commiteado
 en `balam/store.jsx` y `balam/data.jsx` código que escribe `comision_monto`,
