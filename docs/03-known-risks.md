@@ -2305,6 +2305,47 @@ toca cuatro pantallas y sus salidas impresas.
 no reconoce se devuelve intacta.
 **Correccion documentada:** `docs/fixes/pantalla-prestamos.md` § Fechas en dia/mes/ano.
 
+## H-51 - Los cambios no tienen reportes explicables de posventa y dinero
+
+**Estado:** RESUELTO
+**Fecha de registro:** 29/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** el Contrato del Cambio § 7 y § 13 exige tres lecturas que la
+pantalla Reportes no ofrece: ventas cambiadas con lo devuelto y lo entregado;
+comision por vendedor separando ventas y excedentes de cambios; y valor no
+aprovechado. Los documentos y las autoridades ya conservan los datos, pero no
+existe una superficie que permita consultarlos.
+**Origen de auditoria:** C7 del modulo de Cambios; continuacion expresamente
+autorizada por el dueno.
+**Riesgo:** un reclamo obliga a consultar la base; un vendedor no puede explicar
+de donde sale su cheque; y el valor que los clientes pierden en cambios a la baja
+queda como ingreso silencioso sin total ni indicador operativo.
+**Decision del dueno (29/07/2026):** la utilidad estimada permanece calculada
+sobre el importe vendido total, incluidas las diferencias de cambios.
+**Alcance:** presentar los tres reportes consumiendo las autoridades y evidencia
+congelada existentes. Sin cambios de esquema, contrato, autoridades del dominio
+ni reglas economicas.
+**Reproduccion:** `node test-exchange-reports.mjs` antes de implementar: 5
+pasaron, 19 fallaron.
+**Correccion:** `DATA.exchangeReport` presenta la trazabilidad congelada de cada
+cambio; `DATA.sellerCommissionReport` separa por vendedor la comision de ventas
+y de excedentes; Reportes gana una pestana Cambios que consume ambas y
+`DATA.exchangeUnusedValue`, con un solo filtro de periodo.
+**Pruebas:** arnes H-51 24/24; ingreso 24/24; comision del excedente 30/30;
+Prestamos 117/117; UX 11 interacciones y 2 validaciones; smoke 17/17; navegacion
+15/15; reproducibilidad 8/8; contratos 38/38; pantalla del cambio 45/45; E2E
+37/37; modelo 28/28; commit del cambio 32/32; saldo 38/38; plazo 38/38;
+devoluciones 17/17; coherencia 17/17; comisiones 10/10; comision efectiva 22/22;
+liquidaciones 10/10; cola 115/115; concurrencia 9/9; folio 60/60; trazabilidad
+65/65; migraciones 31/31; roles 10/10; ticket 23/23; apartados 55/55.
+**Despliegue:** sin migraciones. Artefactos regenerados; verificacion publicada
+pendiente de commit.
+**Pendiente:** registrar commits y evidencia de publicacion.
+**Riesgo residual:** las ventas historicas con varios vendedores no congelaron
+el reparto individual de la comision. El total se conserva y el reporte marca
+el reparto como estimado; congelarlo hacia futuro requiere otra historia.
+**Correccion documentada:** `docs/fixes/reportes-del-cambio.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

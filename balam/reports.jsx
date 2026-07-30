@@ -218,19 +218,114 @@
     ]);
   }
 
-  // ── Shell con pestañas: Resumen | Devoluciones ─────────────────────────────────
+  // ── Reportes del cambio: trazabilidad, comisión por origen y valor perdido ─────
+  function ExchangesReport() {
+    const [range, setRange] = useState('30');
+    const cutoff = range === 'all' ? null : Date.now() - Number(range) * 86400000;
+    const pred = doc => {
+      if (cutoff == null) return true;
+      const d = new Date(String((doc && doc.fecha) || '').replace(' ', 'T'));
+      return !isNaN(d) && d.getTime() >= cutoff;
+    };
+    const cambios = D.exchangeReport(pred);
+    const comisiones = D.sellerCommissionReport(pred);
+    const noAprovechado = D.exchangeUnusedValue(pred);
+    const fecha = value => window.UI.fechaCorta ? window.UI.fechaCorta(value) : String(value || '').slice(0, 10);
+    const lineLabel = l => `${Number(l.qty) || 0} × ${l.nombre || l.sku || 'Artículo'} · talla ${l.talla || '—'}`;
+
+    return h(React.Fragment, null, [
+      h('div', { key: 'hd', className: 'flex flex-wrap items-end justify-between gap-4 mb-8' }, [
+        h('div', { key: 't' }, [
+          h('h2', { key: 'a', className: 'font-headline text-headline-lg text-primary' }, 'Reporte de cambios'),
+          h('p', { key: 'b', className: 'text-on-surface-variant text-body mt-1' }, 'Trazabilidad de posventa y sus efectos económicos.'),
+        ]),
+        h('label', { key: 'f', className: 'text-caption font-semibold text-on-surface-variant' }, [
+          'Periodo ',
+          h('select', {
+            key: 's', value: range, 'data-testid': 'exchange-report-range',
+            onChange: e => setRange(e.target.value),
+            className: 'ml-2 bg-surface-container-low border-none rounded-lg text-caption font-semibold px-3 py-2',
+          }, [
+            h('option', { key: '30', value: '30' }, 'Últimos 30 días'),
+            h('option', { key: '90', value: '90' }, 'Últimos 90 días'),
+            h('option', { key: 'all', value: 'all' }, 'Todo el historial'),
+          ]),
+        ]),
+      ]),
+
+      h('section', { key: 'unused', 'data-testid': 'exchange-unused-report', className: CARD + ' p-6 mb-gutter border-l-4 border-l-secondary' }, [
+        h('p', { key: 'l', className: 'text-caption font-semibold uppercase tracking-wider text-on-surface-variant' }, 'Valor no aprovechado'),
+        h('div', { key: 'v', className: 'font-headline text-headline-lg text-primary mt-2' }, fmt(noAprovechado).replace('.00', '')),
+        h('p', { key: 's', className: 'text-caption text-on-surface-variant mt-2' }, 'Valor que el cliente entregó y no recuperó al llevarse mercancía de menor valor.'),
+      ]),
+
+      h('section', { key: 'comm', 'data-testid': 'exchange-commission-report', className: CARD + ' overflow-hidden mb-gutter' }, [
+        h('div', { key: 'h', className: 'p-6 border-b border-outline-variant' }, [
+          h('h3', { key: 't', className: 'font-headline text-headline-md text-primary' }, 'Comisión por vendedor y origen'),
+          h('p', { key: 's', className: 'text-caption text-on-surface-variant mt-1' }, 'Separa ventas de excedentes cobrados en cambios.'),
+        ]),
+        comisiones.length ? h('div', { key: 'w', className: 'overflow-x-auto' }, h('table', { className: 'w-full text-left' }, [
+          h('thead', { key: 'h' }, h('tr', { className: 'bg-surface-container-low border-b border-outline-variant' },
+            ['Vendedor', 'De ventas', 'De cambios', 'Total'].map((c, i) => h('th', { key: c, className: 'px-6 py-3 text-overline uppercase text-on-surface-variant' + (i ? ' text-right' : '') }, c)))),
+          h('tbody', { key: 'b', className: 'divide-y divide-outline-variant/40' }, comisiones.map(r => h('tr', { key: r.vendedorId || 'none' }, [
+            h('td', { key: 'n', className: 'px-6 py-4 text-body font-semibold' }, [
+              r.vendedor,
+              r.repartoEstimado ? h('span', { key: 'e', className: 'block text-overline text-warning mt-1' }, 'Reparto estimado: venta histórica con varios vendedores') : null,
+            ]),
+            h('td', { key: 'v', className: 'px-6 py-4 text-right text-body' }, fmt(r.ventas).replace('.00', '')),
+            h('td', { key: 'c', className: 'px-6 py-4 text-right text-body' }, fmt(r.cambios).replace('.00', '')),
+            h('td', { key: 't', className: 'px-6 py-4 text-right text-body font-bold text-gold-text' }, fmt(r.total).replace('.00', '')),
+          ]))),
+        ])) : emptyHint('No hay comisiones en el periodo seleccionado.'),
+      ]),
+
+      h('section', { key: 'history', 'data-testid': 'exchange-history-report', className: CARD + ' overflow-hidden' }, [
+        h('div', { key: 'h', className: 'p-6 border-b border-outline-variant' }, [
+          h('h3', { key: 't', className: 'font-headline text-headline-md text-primary' }, 'Ventas cambiadas'),
+          h('p', { key: 's', className: 'text-caption text-on-surface-variant mt-1' }, 'Qué salió del cliente y qué mercancía recibió.'),
+        ]),
+        cambios.length ? h('div', { key: 'list', className: 'divide-y divide-outline-variant/50' }, cambios.map(c => h('article', { key: c.id || c.folio, className: 'p-6' }, [
+          h('div', { key: 'top', className: 'flex flex-wrap justify-between gap-3 mb-4' }, [
+            h('div', { key: 'id' }, [
+              h('p', { key: 'f', className: 'font-mono text-caption text-primary' }, `${c.origenFolio || '—'} → ${c.folio || '—'}`),
+              h('p', { key: 'd', className: 'text-caption text-on-surface-variant mt-1' }, `${fecha(c.fecha)} · atendió ${c.vendedor} · revisó ${c.revisadoPor}`),
+            ]),
+            h('div', { key: 'money', className: 'text-right text-caption' }, [
+              c.diferencia > 0 ? h('p', { key: 'd', className: 'font-bold text-success' }, `Diferencia cobrada ${fmt(c.diferencia).replace('.00', '')}`) : null,
+              c.valorNoAprovechado > 0 ? h('p', { key: 'u', className: 'font-bold text-warning' }, `No aprovechado ${fmt(c.valorNoAprovechado).replace('.00', '')}`) : null,
+            ]),
+          ]),
+          h('div', { key: 'lines', className: 'grid grid-cols-1 md:grid-cols-2 gap-4' }, [
+            h('div', { key: 'out', className: 'rounded-lg bg-surface-container-low p-4' }, [
+              h('p', { key: 'h', className: 'text-overline uppercase font-bold text-on-surface-variant mb-2' }, 'Cliente entregó'),
+              ...(c.devueltos || []).map((l, i) => h('p', { key: i, className: 'text-body' }, `${lineLabel(l)}${l.motivo ? ` · ${l.motivo}` : ''}${l.condicion ? ` · ${l.condicion}` : ''}`)),
+            ]),
+            h('div', { key: 'in', className: 'rounded-lg bg-gold-soft p-4' }, [
+              h('p', { key: 'h', className: 'text-overline uppercase font-bold text-gold-text mb-2' }, 'Cliente recibió'),
+              ...(c.entregados || []).map((l, i) => h('p', { key: i, className: 'text-body' }, lineLabel(l))),
+            ]),
+          ]),
+          c.notas ? h('p', { key: 'note', className: 'text-caption text-on-surface-variant mt-4' }, `Nota: ${c.notas}`) : null,
+        ]))) : emptyHint('No hay cambios en el periodo seleccionado.'),
+      ]),
+    ]);
+  }
+
+  // ── Shell con pestañas: Resumen | Ventas | Cambios | Devoluciones ──────────────
   function ReportsScreen({ onNav }) {
     const [tab, setTab] = useState('resumen');
-    const TABS = [['resumen', 'Resumen', 'chart'], ['ventas', 'Ventas', 'cash'], ['devoluciones', 'Devoluciones', 'undo']];
+    const TABS = [['resumen', 'Resumen', 'chart'], ['ventas', 'Ventas', 'cash'], ['cambios', 'Cambios', 'swap'], ['devoluciones', 'Devoluciones', 'undo']];
     return h('div', { className: 'flex-1 overflow-y-auto bg-background font-body text-on-surface' },
       h('div', { className: 'p-10 max-w-container-max mx-auto' }, [
         h('div', { key: 'tabs', className: 'inline-flex items-center gap-2 p-1.5 mb-8 bg-surface-container-low rounded-xl border border-outline-variant' },
           TABS.map(([id, label, icon]) => h('button', {
             key: id, onClick: () => setTab(id),
+            'data-testid': id === 'cambios' ? 'reports-tab-exchanges' : undefined,
             className: 'flex items-center gap-2 px-6 py-2.5 rounded-lg text-caption font-bold uppercase tracking-wider transition-all ' +
               (tab === id ? 'bg-primary text-on-primary shadow-e2' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'),
           }, [h(MS, { key: 'i', name: icon, size: 18 }), label]))),
         tab === 'ventas' ? h(SalesReport, { key: 'ven' })
+          : tab === 'cambios' ? h(ExchangesReport, { key: 'cam' })
           : tab === 'devoluciones' ? h(ReturnsReport, { key: 'dev' })
             : h(ResumenReport, { key: 'res', onNav }),
       ]));

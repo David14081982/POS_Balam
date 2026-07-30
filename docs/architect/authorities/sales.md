@@ -73,3 +73,16 @@ H-31 todavía no gobierna los cálculos financieros
 **Definición:** `docs/02-architecture.md` § Personal y elegibilidad comercial
 **Creada por:** H-29
 **Consumidores:** `grep -rn "isEligibleSeller" balam/`
+
+## ¿Qué mercancía salió y entró en una venta cambiada?
+**Autoridad:** `DATA.exchangeReport()`
+**Definición:** evidencia congelada en `DATA.exchanges`
+**Creada por:** H-51
+**Consumidores:** `grep -rn "exchangeReport" balam/ test-*.mjs`
+
+## ¿Cuánta comisión proviene de ventas y cuánta de cambios?
+**Autoridad:** `DATA.sellerCommissionReport()`
+**Definición:** comisión congelada en ventas y cambios; el reparto histórico de
+una venta con varios vendedores se identifica expresamente como estimado
+**Creada por:** H-51
+**Consumidores:** `grep -rn "sellerCommissionReport" balam/ test-*.mjs`

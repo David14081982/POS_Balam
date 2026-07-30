@@ -1588,6 +1588,71 @@
     return money((exchanges || []).reduce((a, e) => dentro(e) ? a + (Number(e.valorNoAprovechado) || 0) : a, 0));
   }
 
+  // Proyecciones de lectura para los tres reportes exigidos por el Contrato § 7.
+  // No recalculan la liquidación: presentan la evidencia congelada en ventas y
+  // cambios, para que Reportes no replique aritmética ni conozca el documento.
+  function exchangeReport(pred) {
+    const dentro = enPeriodo(pred);
+    return (exchanges || []).filter(dentro).map(e => {
+      const vendedor = sellers.find(s => s.id === e.vendedorId);
+      const lineas = (e.lineas || []).map(l => ({ ...l }));
+      return {
+        id: e.id, folio: e.folio, origenFolio: e.origenFolio, fecha: e.fecha,
+        vendedorId: e.vendedorId || null,
+        vendedor: vendedor ? vendedor.nombre : (e.vendedorId ? 'Vendedor histórico' : '—'),
+        revisadoPor: e.revisadoPor || '—', notas: e.notas || '',
+        valorReconocido: Number(e.valorReconocido) || 0,
+        valorEntregado: Number(e.valorEntregado) || 0,
+        diferencia: Number(e.diferencia) || 0,
+        valorNoAprovechado: Number(e.valorNoAprovechado) || 0,
+        comisionMonto: Number(e.comisionMonto) || 0,
+        devueltos: lineas.filter(l => l.lado === 'devuelto'),
+        entregados: lineas.filter(l => l.lado === 'entregado'),
+      };
+    }).sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
+  }
+
+  function sellerCommissionReport(pred) {
+    const dentro = enPeriodo(pred);
+    const porId = {};
+    const ensure = id => {
+      const key = id || '__sin_vendedor__';
+      if (!porId[key]) {
+        const s = sellers.find(x => x.id === id);
+        porId[key] = {
+          vendedorId: id || null,
+          vendedor: s ? s.nombre : (id ? 'Vendedor histórico' : 'Sin vendedor'),
+          ventas: 0, cambios: 0, total: 0, repartoEstimado: false,
+        };
+      }
+      return porId[key];
+    };
+    sales.filter(s => s.estado !== 'Cancelado' && dentro(s)).forEach(sale => {
+      const ids = (sale.vendedores || []).filter(Boolean);
+      const fallback = !ids.length && sale.vendedor && sale.vendedor !== '—'
+        ? sellers.find(s => s.nombre === sale.vendedor) : null;
+      if (!ids.length && fallback) ids.push(fallback.id);
+      if (!ids.length) return;
+      const total = Number(sale.comision) || 0;
+      const share = money(total / ids.length);
+      ids.forEach((id, i) => {
+        const row = ensure(id);
+        // El último absorbe el residuo de centavos para conservar el total.
+        row.ventas = money(row.ventas + (i === ids.length - 1 ? total - share * (ids.length - 1) : share));
+        if (ids.length > 1) row.repartoEstimado = true;
+      });
+    });
+    (exchanges || []).filter(dentro).forEach(e => {
+      const monto = e.comisionRevertida ? 0 : (Number(e.comisionMonto) || 0);
+      if (!e.vendedorId && !monto) return;
+      const row = ensure(e.vendedorId);
+      row.cambios = money(row.cambios + monto);
+    });
+    return Object.values(porId).map(row => ({
+      ...row, total: money(row.ventas + row.cambios),
+    })).sort((a, b) => b.total - a.total || a.vendedor.localeCompare(b.vendedor));
+  }
+
   function revenueSummary(pred) {
     const dentro = enPeriodo(pred);
     const validas = sales.filter(s => s.estado !== 'Cancelado' && dentro(s));
@@ -2248,7 +2313,7 @@
     listPrice, priceRange, sanitizePreciosTalla,
     recordReturn, returnedQty, returnsForFolio, isReturnable, returnDeadline, saleLineBalance,
     saveExchanges, recognizedValue, supplySources, recordExchange, reverseExchangeCommission,
-    revenueSummary, exchangeRevenue, exchangeUnusedValue,
+    revenueSummary, exchangeRevenue, exchangeUnusedValue, exchangeReport, sellerCommissionReport,
     saveLoans, registrarPrestamo, registrarDevolucionPrestamo, marcarPrestamoNoDevuelto,
     actualizarPrestamo, eliminarPrestamo, prestamoPiezas, prestamoPendientes,
     prestamoAtraso, prestamosVencidos, loanedQty, parseLoanFolio, nextLoanFolio, LOAN_ESTADOS,
