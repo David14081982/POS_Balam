@@ -147,6 +147,9 @@ Revisión ampliada antes del push:
 - Contrato ampliado: 10 fallos iniciales sobre 23; resultado final 23/23.
   Cadena de migraciones: 31/31. Historial local/remoto en paridad y dry-run
   posterior vacío.
+- `007600/007700` añaden y verifican la lectura administrativa de versión,
+  actividad y jerarquía del catálogo, necesaria para sincronización optimista
+  desde más de una terminal. Contrato servidor final: 26/26.
 
 ## Riesgo residual y pendientes
 

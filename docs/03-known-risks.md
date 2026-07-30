@@ -2580,6 +2580,9 @@ quedaron aplicadas el 30/07/2026, con historial local/remoto en paridad y
 dry-run posterior vacío. Resultado: API 23/23; migraciones 31/31; AUTH 17/17;
 roles 15/15; registro 12/12; contratos 39/39; cola 115/115; build 8/8; smoke
 17/17; navegación 15/15.
+**Extensión de catálogo:** `20260730007600` expone versión y jerarquía completa
+mediante RPC administrativa de sólo lectura; `20260730007700` verifica forma,
+propietario, ACL y rechazo anónimo. Ambas aplicadas; contrato servidor 26/26.
 **Pendiente:** fases 4 a 6.
 **Riesgo residual:** hasta completar la Fase 5, la autorización de servidor
 sigue siendo la matriz fija por rol de H-08.

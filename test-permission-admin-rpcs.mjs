@@ -10,6 +10,16 @@ const functional = fs.existsSync(functionalPath)
 const verification = fs.existsSync(verificationPath)
   ? fs.readFileSync(verificationPath, 'utf8')
   : '';
+const catalogSnapshotPath =
+  'supabase/migrations/20260730007600_pos_h56_permission_catalog_snapshot.sql';
+const catalogSnapshotVerificationPath =
+  'supabase/migrations/20260730007700_pos_h56_permission_catalog_snapshot_verification.sql';
+const catalogSnapshot = fs.existsSync(catalogSnapshotPath)
+  ? fs.readFileSync(catalogSnapshotPath, 'utf8')
+  : '';
+const catalogSnapshotVerification = fs.existsSync(catalogSnapshotVerificationPath)
+  ? fs.readFileSync(catalogSnapshotVerificationPath, 'utf8')
+  : '';
 
 let passed = 0;
 let failed = 0;
@@ -46,6 +56,9 @@ check('la verificación prueba no autorizado y último administrador', /H56_PERM
 check('la verificación cubre búsqueda, límites e inactivo', /H56_PERMISSION_SEARCH_FAILED/.test(verification) && /H56_PERMISSION_PAGE_LIMIT_FAILED/.test(verification) && /H56_PERMISSION_INACTIVE_FAILED/.test(verification));
 check('la verificación cubre todas las causas del token', /H56_TOKEN_ASSIGNMENT_ACTIVE_FAILED/.test(verification) && /H56_TOKEN_ROLE_ACTIVE_FAILED/.test(verification) && /H56_TOKEN_USER_STATE_FAILED/.test(verification) && /H56_TOKEN_CATALOG_FAILED/.test(verification));
 check('la verificación prueba ACL y ausencia de acceso anónimo', /H56_PERMISSION_ADMIN_API_ACL_FAILED/.test(verification) && /H56_PERMISSION_ADMIN_ANON_FAILED/.test(verification));
+check('publica snapshot administrativo del catálogo', /admin_screen_permission_catalog_snapshot\s*\(/i.test(catalogSnapshot));
+check('el snapshot del catálogo tiene guarda propia y sólo lectura', /can_manage_screen_permissions\s*\(\s*auth\.uid\(\)/i.test(catalogSnapshot) && !/\b(insert|update|delete|truncate)\b/i.test(catalogSnapshot));
+check('la verificación remota cubre versión, jerarquía y ACL', /H56_CATALOG_SNAPSHOT_SHAPE_FAILED/.test(catalogSnapshotVerification) && /H56_CATALOG_SNAPSHOT_ACL_FAILED/.test(catalogSnapshotVerification));
 
 console.log(`\n════════ ${passed} pasaron, ${failed} fallaron ════════`);
 if (failed) process.exit(1);
