@@ -178,11 +178,32 @@ Pruebas: editor 21/21; API 30/30; modelo 13/13; AUTH 18/18; migraciones 31/31;
 registro 12/12; roles 15/15; contratos 40/40; cola 115/115; build 8/8; smoke
 17/17; navegación 15/15. Los artefactos se regeneraron con 71 assets.
 
+### Fase 5 — capacidades operativas, grupo 1
+
+La visualización y la operación ya tienen autoridades distintas. Las
+migraciones `20260730008000/08100` crean y verifican un catálogo estable de
+capacidades, permisos heredados por rol, overrides individuales y auditoría.
+La resolución efectiva es override → rol → denegado; una clave desconocida o
+una cuenta inactiva nunca obtiene autorización.
+
+`20260730008200/08300` protegen `commissions.settle` y
+`commissions.close_period`. Liquidar y cerrar usan RPC transaccionales,
+idempotencia estable, bloqueo acotado y auditoría atómica. La escritura directa
+de acumuladores y liquidaciones queda denegada a clientes autenticados. El
+cliente primero conserva la operación en la cola offline y después invoca
+exclusivamente esas RPC.
+
+Pruebas: capacidades 17/17; migraciones 31/31; cola 115/115; roles 15/15; AUTH
+18/18; contratos 40/40; build 8/8; smoke 17/17; navegación 15/15. Las cuatro
+migraciones están aplicadas remotamente, el historial está en paridad y el
+dry-run posterior no tiene pendientes.
+
 ## Riesgo residual y pendientes
 
-Fases 5 y 6 permanecen abiertas. El modelo, la autoridad cliente y el editor
-triestado ya están activos; todavía falta migrar las capacidades operativas de
-RLS, RPC y Edge Functions.
+Los grupos 2 a 5 de Fase 5 y la Fase 6 permanecen abiertos. El modelo, la
+autoridad cliente, el editor triestado y las comisiones ya usan sus fronteras
+finales; falta migrar devoluciones, cambios, cancelaciones, inventario,
+configuración y las operaciones restantes.
 
 La reversión de Fase 1 consiste en retirar `screens.jsx`, restaurar las listas
 anteriores en App y Configuración y regenerar los artefactos. No requiere
@@ -205,6 +226,12 @@ La reversión de Fase 4 publica nuevamente el cliente del commit `d35b3ea`,
 desactiva `config.permisos` en el registro y regenera los artefactos. Las RPC
 de lectura `007600` y `007800` pueden conservarse sin efecto; retirarlas exige
 una migración forward que revoque y elimine sólo esas funciones.
+
+La reversión del grupo 1 de Fase 5 requiere publicar el cliente previo y crear
+una migración hacia adelante que retire el trigger de acumuladores, restaure
+los privilegios históricos estrictamente necesarios y revoque las RPC de
+comisiones. Las tablas de capacidades y auditoría pueden conservarse inertes;
+eliminarlas sería destructivo y requiere autorización separada.
 
 ## Referencias
 

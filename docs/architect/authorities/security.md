@@ -21,3 +21,9 @@ Reglas de mantenimiento en `../README.md` § Registro de autoridades.
 **Definición:** migraciones `20260725001400`, `20260725001500`, `20260725001600`
 **Creada por:** H-07, H-08 · **Decisión:** `ADR-005`
 **Consumidores:** `grep -rn "is_active_admin\|is_active_seller" supabase/`
+
+## ¿Esta cuenta puede ejecutar esta operación sensible?
+**Autoridad:** `pos.require_current_capability(text)`
+**Definición:** migración `20260730008000` y las fronteras RPC/RLS que la consumen
+**Creada por:** H-56 Fase 5 · **Decisión:** `ADR-005`
+**Consumidores:** `grep -rn "require_current_capability" supabase/migrations/`

@@ -403,10 +403,18 @@ usa ante indisponibilidad remota y cualquier dato desconocido, incompleto,
 corrupto o de otra identidad se deniega. Al reconectar, el snapshot remoto
 reemplaza la caché atómicamente.
 
-H-56 completó las fases 1 a 3. Administrador y vendedor conservan su conducta
+H-56 completó las fases 1 a 4. Administrador y vendedor conservan su conducta
 inicial mediante permisos sembrados por rol, no por una excepción paralela en
-la navegación. El editor de permisos y las capacidades operativas de servidor
-permanecen en las fases 4 y 5.
+la navegación. El editor de permisos ya está activo.
+
+La Fase 5 separa la visualización de la autorización operativa. El catálogo
+`operational_capabilities` contiene claves estables de acción; los permisos de
+rol y overrides individuales se resuelven en servidor mediante
+`resolve_operational_capability()`. Toda frontera sensible debe invocar
+`require_current_capability()` dentro de su transacción. Administrador hereda
+todas las capacidades y vendedor conserva sólo las operaciones históricamente
+autorizadas. El primer grupo protege liquidación y cierre de comisiones con RPC
+atómicas, auditoría e idempotencia, sin escritura directa desde el cliente.
 
 El modelo de Fase 2 persiste identidades `auth.users.id`, nunca vendedores
 comerciales sin cuenta. `user_screen_permission_overrides` precede a

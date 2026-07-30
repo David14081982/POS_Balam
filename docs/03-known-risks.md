@@ -2511,7 +2511,7 @@ administrador debe cambiar el nombre descriptivo de la copia según su uso.
 
 ## H-56 - Las pantallas y su autorización no tienen un registro central
 
-**Estado:** EN PROGRESO - FASES 1 A 4 COMPLETADAS
+**Estado:** EN PROGRESO - FASE 5, GRUPO 1 COMPLETADO
 **Fecha de registro:** 30/07/2026
 **Commits:** Fase 1 `a04b2c3`; Fase 2 `0b9c933`; Fase 3 este commit
 **Evidencia:** `balam/app.jsx` declara por separado `NAV`, `TITLES` y la cadena
@@ -2597,9 +2597,19 @@ invalida cachés offline anteriores.
 **Pruebas de Fase 4:** interfaz 21/21; API administrativa 30/30; modelo 13/13;
 AUTH 18/18; migraciones 31/31; registro 12/12; roles 15/15; contratos 40/40;
 cola 115/115; build 8/8; smoke 17/17; navegación 15/15.
-**Pendiente:** fases 5 y 6.
-**Riesgo residual:** hasta completar la Fase 5, la autorización de servidor
-sigue siendo la matriz fija por rol de H-08.
+**Fase 5, grupo 1:** `20260730008000/08100` crean y verifican el catálogo
+estable de capacidades, permisos por rol, overrides, auditoría y resolución
+override → rol → denegado. `20260730008200/08300` reemplazan las escrituras
+fragmentadas de liquidación y cierre por RPC atómicas, auditadas, idempotentes
+y protegidas por `commissions.settle` y `commissions.close_period`. El cliente
+las conserva en la cola offline antes de intentar la red.
+**Pruebas de Fase 5, grupo 1:** capacidades 17/17; migraciones 31/31; cola
+115/115; roles 15/15; AUTH 18/18; contratos 40/40; build 8/8; smoke 17/17;
+navegación 15/15. Historial local/remoto en paridad y dry-run vacío.
+**Pendiente:** grupos 2 a 5 de Fase 5 y Fase 6.
+**Riesgo residual:** devoluciones, cambios, cancelaciones, inventario,
+configuración y las operaciones restantes aún conservan sus guardas históricas
+por rol hasta migrar cada frontera a una capacidad explícita.
 **Corrección documentada:** `docs/fixes/permisos-visualizacion.md`.
 
 ## Regla de actualización

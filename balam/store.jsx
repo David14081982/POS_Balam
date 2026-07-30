@@ -412,6 +412,18 @@
   async function applyOp(c, op) {
     lastApplyFailure = null;
     try {
+      if (op.type === 'commissionSettle' || op.type === 'commissionClose') {
+        const name = op.type === 'commissionSettle'
+          ? 'settle_commission_checked'
+          : 'close_commission_period_checked';
+        const args = { p_operation_id: op.operationId };
+        if (op.type === 'commissionSettle') args.p_seller_id = op.sellerId;
+        const r = await c.rpc(name, args);
+        if (r.error) return failOp(r.error);
+        await pullDomain('sellers');
+        await pullDomain('liquidations');
+        return true;
+      }
       if (op.type === 'staffUpdate') {
         const m = MAP[op.kind];
         const remote = [];
@@ -849,6 +861,14 @@
     const m = MAP[kind]; if (!m) return;
     if (m.localKey) return run({ type: 'softDelete', kind, table: m.table, col: m.conflict, val: id, baseVersion: Number(baseVersion) || 0 });
     return run({ type: 'delete', table: m.table, col: m.conflict, val: id });
+  }
+  function settleCommission({ operationId, sellerId }) {
+    if (!enabled) return;
+    return run({ type: 'commissionSettle', operationId, sellerId });
+  }
+  function closeCommissionPeriod({ operationId }) {
+    if (!enabled) return;
+    return run({ type: 'commissionClose', operationId });
   }
   function pushSale(sale, effects) {
     if (!enabled) return;
@@ -1338,6 +1358,6 @@
     }
   }
 
-  window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushSale, pushReturn, pushExchange, ensureFolioBlock, deleteRow, pullDomain, fetchSaleByFolio, physicalCardAvailable, claimPhysicalCard, flushQueue, retryOperation, queueStatus, clearQueue, markResetApplied, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
+  window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushSale, pushReturn, pushExchange, ensureFolioBlock, deleteRow, settleCommission, closeCommissionPeriod, pullDomain, fetchSaleByFolio, physicalCardAvailable, claimPhysicalCard, flushQueue, retryOperation, queueStatus, clearQueue, markResetApplied, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
   window.CORE.registerSyncGateway(window.STORE);
 })();

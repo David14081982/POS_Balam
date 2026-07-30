@@ -1244,33 +1244,39 @@
   }
 
   // Registra un pago de comisión en el historial (local).
-  function addLiquidacion(s, monto, tipo) {
-    liquidations.unshift({ id: 'liq-' + Date.now() + '-' + s.id, fecha: now(), sellerId: s.id, seller: s.nombre, monto: Math.round((Number(monto) || 0) * 100) / 100, tipo });
-    saveLiquidations();
+  function addLiquidacion(s, monto, tipo, operationId) {
+    const prefix = tipo === 'corte' ? 'cut-' : 'liq-';
+    liquidations.unshift({ id: prefix + operationId + (tipo === 'corte' ? '-' + s.id : ''), fecha: now(), sellerId: s.id, seller: s.nombre, monto: Math.round((Number(monto) || 0) * 100) / 100, tipo });
   }
   // Liquida (paga) la comisión acumulada de un vendedor: la registra en el historial, la pone en
   // cero y persiste/sincroniza. Devuelve el monto liquidado, o null si el vendedor no existe.
   function liquidarComision(id) {
     const s = sellers.find(x => x.id === id);
     if (!s) return null;
+    const operationId = newOperationId();
     const monto = Number(s.comisionAcum) || 0;
-    if (monto > 0) addLiquidacion(s, monto, 'liquidacion');
+    if (monto > 0) addLiquidacion(s, monto, 'liquidacion', operationId);
     s.comisionAcum = 0;
-    saveSellers();
+    save(LS_LIQ, liquidations);
+    saveSellers(false);
+    window.CORE.invokeSync('settleCommission', { operationId, sellerId: id });
     return monto;
   }
   // Corte de mes: paga la comisión pendiente de TODOS los vendedores y reinicia los acumulados del
   // periodo (ventasMes, ventasNum, comisionAcum). metaMes NO se toca. Marca el inicio del nuevo periodo.
   function cerrarMes() {
+    const operationId = newOperationId();
     let total = 0, n = 0;
     sellers.forEach(s => {
       const pend = Number(s.comisionAcum) || 0;
-      if (pend > 0) { addLiquidacion(s, pend, 'corte'); total += pend; n++; }
+      if (pend > 0) { addLiquidacion(s, pend, 'corte', operationId); total += pend; n++; }
       s.comisionAcum = 0; s.ventasMes = 0; s.ventasNum = 0;
     });
     periodoInicio = now().slice(0, 10);
     try { localStorage.setItem(LS_PERIODO, periodoInicio); } catch (e) { /* sin storage */ }
-    saveSellers();
+    save(LS_LIQ, liquidations);
+    saveSellers(false);
+    window.CORE.invokeSync('closeCommissionPeriod', { operationId });
     return { total: Math.round(total * 100) / 100, vendedores: n, periodoInicio };
   }
   function getPeriodoInicio() { return periodoInicio; }
