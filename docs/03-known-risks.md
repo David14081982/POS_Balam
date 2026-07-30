@@ -1953,7 +1953,7 @@ administrable.
 **Estado:** RESUELTO
 **Fecha de registro:** 29/07/2026
 **Fecha de resolucion:** 29/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `449da80`
 **Evidencia:** el cambio de talla es el caso mas frecuente del modulo y costaba
 lo mismo que traer cualquier otro articulo, porque el cajero tenia que ENCONTRAR
 en el catalogo la prenda que el cliente acababa de dejar en el mostrador. La
@@ -1989,6 +1989,9 @@ el desglose de cobrado que no cuadra con un pago de tipo cambio—.
 **Riesgo residual:** el catalogo sigue sin paginacion; el atajo lo esquiva para
 el caso de talla, no lo arregla. Sigue pendiente la deuda de estandarizacion de
 dialogos.
+**Despliegue:** artefacto servido por GitHub Pages verificado byte a byte
+contra el `index.html` del commit: SHA-256 `ad7486dbfa1a86a6fd7d293afc0d51aa7e7cdfb8fa0c7143e81d0e33c0af90cb`,
+8 689 492 bytes, a la primera (`R-DEL-07`).
 **Correccion documentada:** `docs/fixes/camino-rapido-de-talla.md`.
 
 ## Regla de actualización

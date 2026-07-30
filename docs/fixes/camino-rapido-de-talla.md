@@ -3,7 +3,7 @@
 **Riesgo:** H-45
 **Estado:** RESUELTO
 **Fecha:** 29/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `449da80`
 
 ## Problema y reproducción
 
@@ -112,6 +112,15 @@ E2E 19/19; build 8/8; migraciones 31/31; apartados 55/55; ticket 23/23;
 coherencia 17/17.
 
 Sin migraciones: no toca esquema, contrato, autoridades ni reglas económicas.
+
+## Despliegue (`R-DEL-07`)
+
+El artefacto servido por GitHub Pages en
+`https://david14081982.github.io/POS_Balam/index.html` se descargó y se comparó
+byte a byte contra el `index.html` del commit `449da80`. Coinciden a la primera:
+
+    SHA-256  ad7486dbfa1a86a6fd7d293afc0d51aa7e7cdfb8fa0c7143e81d0e33c0af90cb
+    bytes    8 689 492
 
 ## Riesgo residual y pendientes
 
