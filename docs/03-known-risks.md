@@ -2509,6 +2509,42 @@ byte a byte con `index.html`: SHA-256
 administrador debe cambiar el nombre descriptivo de la copia según su uso.
 **Corrección documentada:** `docs/fixes/duplicar-beneficios.md`.
 
+## H-56 - Las pantallas y su autorización no tienen un registro central
+
+**Estado:** EN PROGRESO - FASE 1 COMPLETADA
+**Fecha de registro:** 30/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** `balam/app.jsx` declara por separado `NAV`, `TITLES` y la cadena
+condicional que monta cada pantalla; `balam/settings.jsx` mantiene además
+`SECTIONS`. `AUTH.canAccess()` sólo conoce el contrato fijo administrador /
+vendedor y no existe un catálogo que pueda alimentar permisos por usuario.
+**Origen:** solicitud y decisiones expresas del dueño del producto.
+**Riesgo:** una pantalla nueva puede quedar fuera del menú, del control de
+navegación o del futuro editor de permisos; ocultar una entrada no impediría el
+acceso directo a datos, RPC o Edge Functions.
+**Alcance total:** registro central de pantallas; permisos por usuario con rol
+base opcional y overrides; caché offline restrictiva; editor triestado; y
+capacidades de servidor aplicadas en RLS, RPC y Edge Functions.
+**Fase 1:** centralizar navegación, títulos, render y secciones de
+Configuración sin cambiar el contrato vigente: administrador completo y
+vendedor sólo Punto de Venta.
+**No alcance de Fase 1:** esquema, migraciones, permisos persistidos,
+capacidades, RLS, RPC, Edge Functions y nueva interfaz de asignación.
+**Reproducción:** `node test-screen-registry.mjs` antes de implementar:
+2 pasaron, 10 fallaron por ausencia del registro y por los catálogos duplicados.
+**Corrección de Fase 1:** `window.SCREENS` centraliza las 11 pantallas
+principales y las 11 secciones de Configuración; App deriva menú, títulos y
+montaje, y Configuración deriva su navegación interna. El contrato H-08 no
+cambió.
+**Pruebas de Fase 1:** registro 12/12; roles 15/15; contratos 39/39;
+reproducibilidad 8/8; smoke bundle 17/17; navegación bundle 15/15; build
+correcto con 70 assets.
+**Migraciones de Fase 1:** ninguna.
+**Pendiente:** fases 2 a 6.
+**Riesgo residual:** hasta completar la Fase 5, la autorización de servidor
+sigue siendo la matriz fija por rol de H-08.
+**Corrección documentada:** `docs/fixes/permisos-visualizacion.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

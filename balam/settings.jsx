@@ -9,26 +9,13 @@
   const D = window.DATA;
   const h = React.createElement;
 
-  const SECTIONS = [
-    { id: 'negocio', label: 'Negocio', icon: 'gear' },
-    { id: 'producto', label: 'Catálogos de producto', icon: 'box' },
-    { id: 'ventas', label: 'Ventas y POS', icon: 'pos' },
-    { id: 'beneficios', label: 'Descuentos adicionales y beneficios', icon: 'tag' },
-    { id: 'devoluciones', label: 'Devoluciones', icon: 'undo' },
-    { id: 'vendedores', label: 'Vendedores', icon: 'badge' },
-    { id: 'clientes', label: 'Clientes', icon: 'users' },
-    { id: 'inventario', label: 'Inventario', icon: 'box' },
-    { id: 'impresion', label: 'Impresión', icon: 'print' },
-    { id: 'usuarios', label: 'Usuarios', icon: 'users' },
-    { id: 'demo', label: 'Datos de demostración', icon: 'star' },
-  ];
-
   const TONE_OPTS = ['success', 'warning', 'info', 'danger', 'neutral', 'gold'];
   const ICON_OPTS = ['cash', 'card', 'transfer', 'split', 'clock', 'receipt', 'tag', 'star'];
 
   const INPUT = 'block w-full h-11 px-3 bg-surface-container-low border border-outline-variant focus:ring-1 focus:ring-primary text-body rounded-lg';
 
   function SettingsScreen() {
+    const sections = window.SCREENS.childrenOf('config');
     const [sec, setSec] = useState('negocio');
     const [addingUser, setAddingUser] = useState(false);
     // Re-render en vivo cuando cambia cualquier ajuste/catálogo (otra pestaña incluida).
@@ -45,13 +32,13 @@
     return h('div', { className: 'flex-1 overflow-y-auto bg-background font-body text-on-surface p-6' },
       h('div', { className: 'grid grid-cols-1 md:grid-cols-[220px_1fr] gap-6 max-w-5xl' }, [
         h(GlassCard, { key: 'nav', className: 'p-2 h-fit md:sticky md:top-6' },
-          SECTIONS.map(s => h('button', {
+          sections.map(s => h('button', {
             key: s.id,
-            'data-testid': 'settings-section-' + s.id,
+            'data-testid': 'settings-section-' + s.section,
             className: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ' +
-              (sec === s.id ? 'bg-surface-container-low text-primary font-medium' : 'text-on-surface-variant hover:bg-surface-container-low'),
-            onClick: () => setSec(s.id),
-          }, [h(MS, { key: 'i', name: s.icon, size: 18 }), h('span', { key: 'l', className: 'text-body' }, s.label)])),
+              (sec === s.section ? 'bg-surface-container-low text-primary font-medium' : 'text-on-surface-variant hover:bg-surface-container-low'),
+            onClick: () => setSec(s.section),
+          }, [h(MS, { key: 'i', name: s.icon, size: 18 }), h('span', { key: 'l', className: 'text-body' }, s.title)])),
         ),
         h('div', { key: 'panel', className: 'flex flex-col gap-4 min-w-0' }, PANELS[sec](ctx)),
       ]));

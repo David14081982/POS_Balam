@@ -15,7 +15,7 @@ const scriptsOf = html => [...html.matchAll(/<script type="text\/babel" src="(ba
   .map(match => match[1]);
 const expectedScripts = [
   'balam/icons.jsx', 'balam/core.jsx', 'balam/config.jsx', 'balam/data.jsx',
-  'balam/auth.jsx', 'balam/shared.jsx', 'balam/heritage.jsx',
+  'balam/auth.jsx', 'balam/screens.jsx', 'balam/shared.jsx', 'balam/heritage.jsx',
   'balam/discounts.jsx', 'balam/xlsx-io.jsx', 'balam/barcodes.jsx',
   'balam/tweaks-panel.jsx', 'balam/dashboard.jsx', 'balam/pos.jsx',
   'balam/pos-ticket.jsx', 'balam/inventory.jsx', 'balam/clients.jsx',
@@ -182,6 +182,7 @@ const expectedGlobals = {
   'balam/config.jsx': 'CONFIG',
   'balam/data.jsx': 'DATA',
   'balam/auth.jsx': 'AUTH',
+  'balam/screens.jsx': 'SCREENS',
   'balam/shared.jsx': 'UI',
   'balam/heritage.jsx': 'HX',
   'balam/discounts.jsx': 'PROMOS',

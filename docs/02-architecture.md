@@ -389,11 +389,17 @@ El acceso directo de navegador al esquema sigue el contrato de las migraciones
 La interfaz aplica el mismo contrato: administrador ve todas las pantallas y
 vendedor sólo Punto de Venta. `AUTH.canAccess()` es la autoridad de navegación;
 una página persistida no autorizada se reemplaza por el destino seguro del rol.
+`balam/screens.jsx` es el registro central de pantallas: de él se derivan menú,
+títulos, componentes y secciones internas de Configuración. Agregar una
+pantalla navegable exige registrarla una sola vez y los consumidores no
+mantienen catálogos paralelos.
 El último perfil verificado se guarda para permitir el arranque local-first sin
 red; al reconectar, Supabase vuelve a validar estado y rol.
 
-El producto no define todavía permisos configurables por pantalla. Esa
-capacidad sería una ampliación independiente del contrato fijo actual.
+El producto no define todavía permisos configurables por pantalla. H-56
+completó la costura estructural del registro, pero la persistencia por usuario,
+la herencia, la caché versionada y las capacidades de servidor permanecen en
+sus fases siguientes; hasta entonces sigue vigente el contrato fijo de H-08.
 
 `supabase/_PEGAR-EN-SQL-EDITOR.sql`, `ARREGLAR-ADMIN.sql` y scripts de limpieza
 son herramientas operativas heredadas, no migraciones ni fuentes de verdad;

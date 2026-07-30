@@ -66,6 +66,19 @@ function authHarness(email, sellers, options = {}) {
 }
 
 {
+  const { AUTH } = authHarness('admin@example.com', [
+    { id: 'a1', nombre: 'Admin Uno', email: 'admin@example.com', role: 'admin', active: true },
+  ]);
+  await AUTH.init();
+  const registryContext = { window: {} };
+  vm.createContext(registryContext);
+  vm.runInContext(fs.readFileSync('balam/screens.jsx', 'utf8'), registryContext);
+  const routes = registryContext.window.SCREENS.navigation();
+  check(routes.every(route => AUTH.canAccess(route.id) === true),
+    '15. administrador conserva acceso a todas las pantallas principales');
+}
+
+{
   const { AUTH } = authHarness('orphan@example.com', []);
   await AUTH.init();
   check(AUTH.current() === null, '5. cuenta sin perfil no recibe identidad administrativa');
@@ -74,7 +87,7 @@ function authHarness(email, sellers, options = {}) {
 
 {
   const app = fs.readFileSync('balam/app.jsx', 'utf8');
-  check(app.includes('NAV.filter(n => canAccess(n.id))'), '7. el menú se filtra con el contrato de acceso');
+  check(app.includes('navigation.filter(n => canAccess(n.id))'), '7. el menú central se filtra con el contrato de acceso');
   check(app.includes('const visiblePage = canAccess(page) ? page : defaultPage'), '8. una página persistida prohibida se redirige');
   check(app.includes("user && user.role === 'vendedor' ? 'pos' : 'dashboard'"), '9. vendedor tiene Punto de Venta como destino seguro');
   check(app.includes('window.STORE.setSession(window.AUTH.current())'),
@@ -105,4 +118,4 @@ if (failures) {
   console.error(`\n════════ ${failures} fallaron ════════`);
   process.exit(1);
 }
-console.log('\n════════ 10 pasaron, 0 fallaron ════════');
+console.log('\n════════ 15 pasaron, 0 fallaron ════════');

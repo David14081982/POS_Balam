@@ -81,21 +81,6 @@
     ]);
   }
 
-  const NAV = [
-    { id: 'dashboard', label: 'Panel de control', icon: 'dashboard' },
-    { id: 'pos', label: 'Punto de venta', icon: 'pos' },
-    { id: 'inventario', label: 'Inventario', icon: 'box', liveBadge: true },
-    { id: 'clientes', label: 'Clientes', icon: 'users' },
-    // Apartados es cobranza de mostrador: la ve el mismo perfil que registra la venta.
-    { id: 'apartados', label: 'Apartados', icon: 'clock' },
-    // Préstamos (H-46): mercancía que sale con obligación de volver.
-    { id: 'prestamos', label: 'Préstamos', icon: 'loan' },
-    { id: 'devoluciones', label: 'Devoluciones', icon: 'undo' },
-    { id: 'descuentos', label: 'Descuentos', icon: 'sell', admin: true },
-    { id: 'vendedores', label: 'Vendedores', icon: 'badge', admin: true },
-    { id: 'reportes', label: 'Reportes', icon: 'chart', admin: true },
-    { id: 'config', label: 'Configuración', icon: 'gear', admin: true },
-  ];
   // Exigir login SOLO en dominio real (https). En local (file:// o localhost) la app
   // abre directo para desarrollo; la seguridad real de datos la da RLS en el servidor.
   const REQUIRE_AUTH = (() => {
@@ -105,11 +90,6 @@
       return !dev;
     } catch (e) { return false; }
   })();
-  const TITLES = {
-    dashboard: 'Panel de control', pos: 'Punto de venta', inventario: 'Inventario',
-    clientes: 'Clientes', apartados: 'Apartados', prestamos: 'Préstamos', devoluciones: 'Devoluciones', descuentos: 'Promociones y descuentos', vendedores: 'Vendedores y comisiones', reportes: 'Reportes', config: 'Configuración',
-  };
-
   // Solo tweaks que siguen vigentes con Heritage (layout de POS)
   const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
     "ticketPos": "right",
@@ -148,8 +128,10 @@
     const user = window.AUTH.current();
     const isAdmin = window.AUTH.isAdmin();
     const canAccess = id => !REQUIRE_AUTH || window.AUTH.canAccess(id);
+    const navigation = window.SCREENS.navigation();
     const defaultPage = user && user.role === 'vendedor' ? 'pos' : 'dashboard';
     const visiblePage = canAccess(page) ? page : defaultPage;
+    const visibleScreen = window.SCREENS.get(visiblePage);
     useEffect(() => {
       if (page !== visiblePage) setPage(visiblePage);
     }, [page, visiblePage]);
@@ -181,7 +163,7 @@
               h('button', { key: 'tg', onClick: () => setCollapsed(true), title: 'Colapsar menú', className: 'w-8 h-8 rounded-lg grid place-items-center shrink-0 transition-colors', style: { color: '#5D637B' }, onMouseEnter: e => e.currentTarget.style.background = '#1C2437', onMouseLeave: e => e.currentTarget.style.background = 'transparent' }, h(MS, { name: 'chevLeft', size: 20 })),
             ]),
         h('nav', { key: 'nav', className: 'flex-1 px-3 flex flex-col gap-1' },
-          NAV.filter(n => canAccess(n.id)).map(n => {
+          navigation.filter(n => canAccess(n.id)).map(n => {
             const active = visiblePage === n.id;
             const badge = n.liveBadge ? String(D.products.length) : n.badge;
             return h('button', {
@@ -191,10 +173,10 @@
               onMouseEnter: e => { if (!active) e.currentTarget.style.background = '#1C2437'; },
               onMouseLeave: e => { if (!active) e.currentTarget.style.background = 'transparent'; },
               onClick: () => go(n.id),
-              title: n.label,
+              title: n.menuLabel,
             }, [
               h(MS, { key: 'i', name: n.icon, size: 20, fill: active }),
-              !collapsed && h('span', { key: 'l', className: 'flex-1 text-sm' }, n.label),
+              !collapsed && h('span', { key: 'l', className: 'flex-1 text-sm' }, n.menuLabel),
               !collapsed && badge && h('span', { key: 'b', className: 'px-1.5 py-0.5 text-[10px] font-bold rounded', style: { background: '#131B2E', color: active ? '#FFE088' : '#FFFFFF' } }, badge),
             ]);
           })),
@@ -225,7 +207,7 @@
       h('main', { key: 'ct', className: 'flex-1 flex flex-col min-w-0' }, [
         // Topbar
         h('header', { key: 'tb', className: 'h-16 shrink-0 flex items-center gap-4 px-6 bg-surface/80 backdrop-blur-md border-b border-outline-variant' }, [
-          h('h1', { key: 't', className: 'font-headline text-headline-md text-primary' }, TITLES[visiblePage]),
+          h('h1', { key: 't', className: 'font-headline text-headline-md text-primary' }, visibleScreen ? visibleScreen.title : 'Balam'),
           D.demoActive && D.demoActive() && h('span', { key: 'demo', className: 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gold-soft text-gold-text text-overline font-bold uppercase tracking-widest', title: 'Datos de demostración (local, no afecta producción)' }, [h(MS, { key: 'i', name: 'star', size: 13, fill: true }), 'Demo']),
           h('div', { key: 's', className: 'flex-1' }),
           visiblePage !== 'pos' && h('button', {
@@ -236,17 +218,11 @@
           h('div', { key: 'date', className: 'flex items-center gap-1.5 text-xs text-on-surface-variant capitalize' }, [h(MS, { key: 'i', name: 'calendar', size: 16 }), new Date().toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })]),
         ]),
         // Pantalla
-        visiblePage === 'dashboard' ? h(window.DashboardScreen, { key: 'dash', onNav: go })
-          : visiblePage === 'pos' ? h(window.POSScreen, { key: 'pos', layout: t.ticketPos, catalogView: t.catalogView, onNav: go })
-          : visiblePage === 'inventario' ? h(window.InventoryScreen, { key: 'inv' })
-          : visiblePage === 'clientes' ? h(window.ClientsScreen, { key: 'cli' })
-          : visiblePage === 'apartados' ? h(window.LayawayScreen, { key: 'apt' })
-          : visiblePage === 'prestamos' ? h(window.LoansScreen, { key: 'pre' })
-          : visiblePage === 'devoluciones' ? h(window.ReturnsScreen, { key: 'dev', onNav: go })
-          : visiblePage === 'descuentos' ? h(window.DiscountsScreen, { key: 'desc' })
-          : visiblePage === 'vendedores' ? h(window.SellersScreen, { key: 'ven' })
-          : visiblePage === 'reportes' ? h(window.ReportsScreen, { key: 'rep', onNav: go })
-          : h(window.SettingsScreen, { key: 'cfg' }),
+        (() => {
+          const VisibleComponent = visibleScreen.component();
+          const props = visibleScreen.props ? visibleScreen.props({ go, tweaks: t }) : {};
+          return h(VisibleComponent, { ...props, key: visibleScreen.id });
+        })(),
       ]),
       // Toasts
       h(window.UI.ToastHost, { key: 'toast' }),
