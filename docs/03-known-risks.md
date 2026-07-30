@@ -2063,7 +2063,7 @@ viaja a `pos.products`— podria dejar un faltante sin explicacion en todas las
 terminales si se pierde el registro local.
 **Correccion documentada:** `docs/fixes/pantalla-prestamos.md`.
 
-## H-47 - El prestamo obligaba a teclear la prenda que el lector ya sabe leer
+## H-48 - El prestamo obligaba a teclear la prenda que el lector ya sabe leer
 
 **Estado:** RESUELTO
 **Fecha de registro:** 29/07/2026
@@ -2100,9 +2100,24 @@ nombre de la persona—. Regresion de cliente en verde: contratos 38/38, navegac
 45/45, ticket impreso 23/23, cola 115/115, folio diario 60/60, precio por talla
 19/19, devoluciones 17/17, reinicio 19/19, inventario 18/18, coherencia de cobro
 17/17, `.xlsx` 17/17, reproducibilidad 8/8. Guardian de `R-DEL-14` intacto.
-**Despliegue:** artefactos regenerados y publicados; verificacion byte a byte
-pendiente de registrar tras el push.
-**Pendiente:** cuando el termino no resuelve a ninguna prenda del catalogo, la
+**Despliegue:** el paquete publicado **no se vuelve a generar** en este cierre: se
+commitea el que ya estaba construido y verificado sobre esta fuente, que contiene el
+lector y **no** contiene el codigo cliente de H-47. Es deliberado. H-47 —otra
+historia, trabajada en paralelo sobre el mismo arbol— dejo commiteado en
+`balam/store.jsx` y `balam/data.jsx` codigo que escribe `comision_monto`,
+`comision_base`, `comision_pct` y `comision_revertida` en `pos.exchanges`, y sus
+migraciones `20260730006500/6600/6700` **no estan aplicadas** en la base real. Como
+el hook `post-commit` publica cada commit, regenerar aqui pondria en el mostrador un
+cliente que escribe contra columnas inexistentes y el cambio quedaria bloqueado por
+esquema en la cola: `R-DEL-03` y `AP-08`. La divergencia entre fuente y paquete es
+la que H-47 ya declaro en su propio cierre; este cierre la conserva en vez de
+resolverla publicando codigo sin su migracion.
+**Pendiente:** dos cosas que se resuelven con la primera regeneracion **posterior**
+a aplicar las migraciones de H-47: incorporar al paquete el codigo cliente de esa
+historia, y corregir dos comentarios del paquete que todavia dicen `H-47` porque
+esta historia se renumero a H-48 despues de construirlo —el numero vive en un
+comentario, no en comportamiento—. Ademas, cuando el termino no resuelve a ninguna
+prenda del catalogo, la
 cartera lo trata como busqueda de texto normal. `BARCODES.parse()` es heuristico
 —da positivo con cualquier cadena con un guion en medio— y en el POS solo elige el
 texto de un aviso; aqui habria cambiado el mensaje de una lista vacia por una razon

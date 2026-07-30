@@ -28,7 +28,7 @@
 // administrable: no son etiquetas, son el contrato del módulo. Un cuarto estado
 // cambiaría comportamiento, no un rótulo.
 (function () {
-  const { useState, useMemo, useEffect } = React;
+  const { useState, useMemo, useEffect, useRef } = React;
   const { fmt, toast, Modal, Segment, Badge } = window.UI;
   const { MS, GlassCard, SerifHeading, ProductImage } = window.HX;
   const C = window.CONFIG;
@@ -76,6 +76,25 @@
     const d = new Date(t + dias * 86400000), p = n => String(n).padStart(2, '0');
     return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
   }
+  // ── Lector de código de barras (H-48) ───────────────────────────────────────
+  // `window.BARCODES` es la autoridad del código `SKU-TALLA` y se consume tal cual:
+  // aquí no se parsea ni se reimplementa la resolución de etiquetas.
+  const leerCodigo = raw => (window.BARCODES ? window.BARCODES.find(raw) : null);
+  const pareceCodigo = raw => !!(window.BARCODES && window.BARCODES.parse(raw));
+  // Un lector HID teclea la ráfaga en el campo que tenga el foco. Cuando la ráfaga
+  // resulta ser un código conocido y no cayó en el buscador, se retira del campo lo
+  // que el lector acaba de escribir: si no, escanear con el foco en «quién recibe»
+  // dejaría el código metido dentro del nombre de la persona.
+  function retirarCodigoTecleado(el, code) {
+    if (!el || (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA')) return;
+    const valor = String(el.value == null ? '' : el.value);
+    if (!valor.toUpperCase().endsWith(String(code).toUpperCase())) return;
+    const proto = el.tagName === 'INPUT' ? window.HTMLInputElement.prototype : window.HTMLTextAreaElement.prototype;
+    const setter = Object.getOwnPropertyDescriptor(proto, 'value').set;
+    setter.call(el, valor.slice(0, valor.length - String(code).length));
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
   // Tallas ofrecidas al capturar, agrupadas por escala como en el Punto de venta.
   // Sin `incluirVacias` sólo se ofrecen las que tienen existencia.
   const ESCALAS = [['L', 'Letras'], ['N', 'Números']];
@@ -116,8 +135,13 @@
     const refresh = () => bump(v => v + 1);
 
     const term = q.trim().toLowerCase();
+    // H-48: un código leído en el buscador responde «¿quién tiene esta prenda?». Se
+    // resuelve con la autoridad del Punto de venta y busca en TODOS los estados: si la
+    // prenda ya volvió, la respuesta útil sigue siendo el préstamo que la sacó.
+    const escaneo = useMemo(() => (q.trim() ? leerCodigo(q.trim()) : null), [q]);
     const rows = useMemo(() => D.loans
       .filter(l => {
+        if (escaneo) return (l.lineas || []).some(x => x.sku === escaneo.p.sku && x.talla === escaneo.talla);
         const a = D.prestamoAtraso(l);
         if (filtro === 'pendientes') return l.estado === 'pendiente';
         if (filtro === 'vencidos') return a.vencido;
@@ -125,7 +149,7 @@
         if (filtro === 'perdidos') return l.estado === 'no_devuelto';
         return true;
       })
-      .filter(l => !term
+      .filter(l => escaneo || !term
         || String(l.folio).toLowerCase().includes(term)
         || String(l.persona && l.persona.nombre || '').toLowerCase().includes(term)
         || (l.lineas || []).some(x => (
@@ -139,7 +163,7 @@
         if (abiertoA) return String(a.fechaEsperada || '').localeCompare(String(b.fechaEsperada || ''));
         return String(b.fecha || '').localeCompare(String(a.fecha || ''));
       }),
-    [term, filtro, D.loans.length, nuevo, devolviendo, confirmando, editando]);
+    [term, escaneo, filtro, D.loans.length, nuevo, devolviendo, confirmando, editando]);
 
     // Los indicadores describen la cartera completa, no el filtro: la pregunta del
     // dueño es «qué tengo fuera», no «qué estoy viendo».
@@ -221,14 +245,22 @@
         // Búsqueda y filtros
         h(GlassCard, { key: 'f', className: 'p-4 flex flex-wrap items-center gap-4' }, [
           h('div', { key: 's', className: 'relative flex-1 min-w-[240px]' }, [
-            h(MS, { key: 'i', name: 'search', size: 18, className: 'absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant' }),
+            h(MS, { key: 'i', name: 'barcode', size: 20, className: 'absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant' }),
             h('input', {
               key: 'in', 'data-testid': 'loans-buscar', value: q, onChange: e => setQ(e.target.value),
-              placeholder: 'Buscar por folio, persona o prenda…',
-              className: 'w-full h-11 pl-10 pr-3 bg-surface-container-low border border-outline-variant focus:ring-1 focus:ring-primary text-body rounded-lg',
+              placeholder: 'Escanea una prenda o busca por folio, persona o prenda…',
+              className: 'w-full h-11 pl-11 pr-3 bg-surface-container-low border border-outline-variant focus:ring-1 focus:ring-primary text-body rounded-lg',
             }),
           ]),
           h(Segment, { key: 'sg', value: filtro, onChange: setFiltro, options: FILTROS, testid: 'loans-filtro' }),
+          // Una lectura ignora el filtro de estado a propósito; se dice en pantalla.
+          escaneo ? h('div', {
+            key: 'esc', 'data-testid': 'loans-escaneo',
+            className: 'w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-gold-soft text-gold-text text-caption font-semibold',
+          }, [
+            h(MS, { key: 'i', name: 'barcode', size: 16 }),
+            h('span', { key: 't' }, `Código leído · ${escaneo.p.nombre} talla ${escaneo.talla} · ${rows.length} préstamo(s) con esta pieza, en cualquier estado`),
+          ]) : null,
         ]),
 
         // Listado
@@ -244,11 +276,14 @@
           : h('div', { key: 'e', className: CARD + ' p-12 text-center' }, [
             h('div', { key: 'i', className: 'w-12 h-12 mx-auto mb-3 rounded-full grid place-items-center bg-surface-container text-on-surface-variant' }, h(MS, { name: 'loan', size: 24 })),
             h('div', { key: 't', className: 'font-headline text-h2 text-primary mb-1' },
-              D.loans.length ? 'Ningún préstamo coincide con el filtro' : 'No hay préstamos registrados'),
+              escaneo ? 'Esta pieza no está en ningún préstamo'
+                : D.loans.length ? 'Ningún préstamo coincide con el filtro' : 'No hay préstamos registrados'),
             h('p', { key: 'd', className: 'text-caption text-on-surface-variant max-w-md mx-auto leading-relaxed' },
-              D.loans.length
-                ? 'Ajusta la búsqueda o cambia el filtro a «Todos».'
-                : 'Registra un préstamo cuando una prenda salga del negocio con obligación de volver: un empleado que la porta en un evento o un cliente que se la lleva a probar.'),
+              escaneo
+                ? `${escaneo.p.nombre} talla ${escaneo.talla} nunca salió en préstamo, o el préstamo se registró con otra talla.`
+                : D.loans.length
+                  ? 'Ajusta la búsqueda o cambia el filtro a «Todos».'
+                  : 'Registra un préstamo cuando una prenda salga del negocio con obligación de volver: un empleado que la porta en un evento o un cliente que se la lleva a probar.'),
           ])),
 
         // Nota operativa: el contrato del módulo, dicho donde se opera.
@@ -427,6 +462,7 @@
     const [busca, setBusca] = useState('');
     const [picking, setPicking] = useState(null); // producto elegido, pendiente de talla
     const [verTallasVacias, setVerTallasVacias] = useState(false);
+    const buscaRef = useRef(null);
 
     const inputCls = 'block w-full h-11 px-3 bg-surface-container-low border border-outline-variant focus:ring-1 focus:ring-primary focus:border-primary text-body rounded-lg';
     const lbl = 'text-overline uppercase tracking-widest text-on-surface-variant mb-2 block';
@@ -465,7 +501,62 @@
         }]);
       });
       setPicking(null); setBusca('');
+      toast(`${p.nombre} · ${talla} agregada al préstamo`);
     }
+
+    // Lectura en el buscador: los tres caminos del Punto de venta, en el mismo orden.
+    //   1) código de barras completo → la pieza exacta entra al préstamo, sin talla que elegir;
+    //   2) SKU exacto → abre el selector de talla;
+    //   3) texto libre → abre la primera coincidencia del catálogo.
+    function onScan(e) {
+      if (e.key !== 'Enter') return;
+      // El valor se lee del DOM, más confiable que el estado ante lectores muy rápidos.
+      const raw = String(e.target && e.target.value != null ? e.target.value : busca).trim();
+      if (!raw) return;
+      e.preventDefault();
+      const hit = leerCodigo(raw);
+      if (hit) { agregar(hit.p, hit.talla); return; }
+      const q = raw.toLowerCase();
+      const exacto = D.products.find(p => p.sku.toLowerCase() === q);
+      const destino = exacto || catalogo[0];
+      if (destino) { setPicking(destino); setBusca(''); setVerTallasVacias(false); return; }
+      toast(pareceCodigo(raw)
+        ? 'Código no encontrado: ' + raw.toUpperCase()
+        : `Sin coincidencias para «${raw}»`, 'var(--danger)');
+    }
+
+    // Lector USB (HID) mientras la captura está abierta: funciona aunque el foco no
+    // esté en el buscador. Misma heurística de cadencia que `balam/pos.jsx`: un lector
+    // teclea por debajo de ~30 ms por carácter, así que una pausa mayor a 50 ms
+    // reinicia el búfer y el tecleo humano nunca se confunde con una lectura. Sólo
+    // interviene si la ráfaga resuelve a un código conocido.
+    const scanRT = useRef({});
+    scanRT.current = { agregar, buscador: buscaRef.current };
+    useEffect(() => {
+      if (editar) return undefined; // editando no entra mercancía nueva
+      let buf = '', ultima = 0;
+      function onKey(e) {
+        const st = scanRT.current;
+        if (document.activeElement === st.buscador) return; // lo atiende onScan
+        if (e.key === 'Enter') {
+          const code = buf; buf = '';
+          if (code.length < 4) return;
+          const hit = leerCodigo(code);
+          if (!hit) return; // no es un código conocido → no intervenir
+          e.preventDefault();
+          retirarCodigoTecleado(document.activeElement, code);
+          st.agregar(hit.p, hit.talla);
+          return;
+        }
+        if (e.key && e.key.length === 1) {
+          const ahora = Date.now();
+          if (ahora - ultima > 50) buf = '';
+          buf += e.key; ultima = ahora;
+        }
+      }
+      window.addEventListener('keydown', onKey);
+      return () => window.removeEventListener('keydown', onKey);
+    }, []);
     function setQty(key, delta) {
       setLineas(prev => prev.flatMap(x => {
         if (x.key !== key) return [x];
@@ -517,12 +608,13 @@
           ? h('p', { key: 'ro', className: 'text-caption text-on-surface-variant mb-2' },
             'La mercancía de un préstamo no se cambia: si salió otra prenda, elimina este préstamo y registra el correcto.')
           : h('div', { key: 'bs', className: 'relative mb-3' }, [
-            h(MS, { key: 'i', name: 'search', size: 18, className: 'absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant' }),
+            h(MS, { key: 'i', name: 'barcode', size: 20, className: 'absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant' }),
             h('input', {
-              key: 'in', 'data-testid': 'prestamo-buscar-producto', value: busca,
+              key: 'in', 'data-testid': 'prestamo-buscar-producto', ref: buscaRef, value: busca,
               onChange: e => { setBusca(e.target.value); setPicking(null); },
-              placeholder: 'Busca la prenda por nombre o SKU…',
-              className: inputCls + ' pl-10',
+              onKeyDown: onScan, autoFocus: true,
+              placeholder: 'Escanea el código de barras o busca por nombre o SKU…',
+              className: inputCls + ' pl-11',
             }),
             catalogo.length ? h('div', { key: 'dd', className: 'absolute z-30 left-0 right-0 mt-1 bg-surface-container-lowest border border-outline-variant rounded-lg shadow-e3 max-h-64 overflow-y-auto' },
               catalogo.map(p => h('button', {

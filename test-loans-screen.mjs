@@ -60,6 +60,12 @@ try {
     await el.fill(String(v));
     return true;
   };
+  const pressId = async (t, key) => {
+    const el = await page.$(testid(t));
+    if (!el) return false;
+    await el.press(key);
+    return true;
+  };
   const disabledId = t => page.evaluate(s => {
     const el = document.querySelector(s);
     return el ? !!el.disabled : null;
@@ -161,6 +167,63 @@ try {
   await fillId('prestamo-nota', 'Se la lleva para la boda del sábado');
   check('el préstamo se registra', await clickId('prestamo-confirmar'));
   await page.waitForTimeout(700);
+
+  console.log('\n── B2) Lector de código de barras (H-48) ───────────────');
+  // El código se teclea en el buscador y se cierra con Enter, igual que lo haría un
+  // lector USB HID. La pieza exacta entra sin pasar por el selector de talla.
+  const codigo = await page.evaluate(([sku, talla]) => {
+    const p = window.DATA.products.find(x => x.sku === sku);
+    return window.BARCODES.codeOf(p, talla);
+  }, [seed.sku, seed.talla]);
+  check('el código de la pieza se construye con la autoridad del negocio', /\S/.test(codigo), codigo);
+  await clickId('loans-nuevo');
+  await page.waitForTimeout(400);
+  await fillId('prestamo-buscar-producto', codigo);
+  await pressId('prestamo-buscar-producto', 'Enter');
+  await page.waitForTimeout(400);
+  const trasLeer = await page.evaluate(() => ({
+    lineas: [...document.querySelectorAll('[data-testid^="prestamo-mas-"]')].map(e => e.dataset.testid),
+    tallasAbiertas: !!document.querySelector('[data-testid^="prestamo-talla-"]'),
+    buscador: (document.querySelector('[data-testid="prestamo-buscar-producto"]') || {}).value,
+  }));
+  check('leer el código agrega la pieza exacta al préstamo',
+    JSON.stringify(trasLeer.lineas) === JSON.stringify(['prestamo-mas-' + seed.sku + '|' + seed.talla]), JSON.stringify(trasLeer.lineas));
+  check('leer el código no pregunta la talla: ya venía en la etiqueta', trasLeer.tallasAbiertas === false);
+  check('el buscador queda listo para la siguiente lectura', trasLeer.buscador === '');
+  // Segunda lectura de la misma etiqueta: suma cantidad, no duplica el renglón.
+  await fillId('prestamo-buscar-producto', codigo);
+  await pressId('prestamo-buscar-producto', 'Enter');
+  await page.waitForTimeout(350);
+  check('leer dos veces la misma etiqueta suma cantidad sin duplicar renglón', /2 pieza\(s\)/i.test(await texto()));
+  // Un código inexistente se distingue de una búsqueda sin resultados.
+  await fillId('prestamo-buscar-producto', '99-XX-XXX-XX-000-M');
+  await pressId('prestamo-buscar-producto', 'Enter');
+  await page.waitForTimeout(400);
+  check('un código desconocido lo dice como código, no como búsqueda', /c[oó]digo no encontrado/i.test(await texto()));
+
+  // Lector con el foco FUERA del buscador: la ráfaga se reconoce y no queda escrita
+  // dentro del campo que tenía el foco.
+  await fillId('prestamo-persona', 'Rodrigo');
+  await page.click(testid('prestamo-persona'));
+  const hid = await page.evaluate(async code => {
+    const el = document.querySelector('[data-testid="prestamo-persona"]');
+    el.focus();
+    for (const ch of code) {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: ch, bubbles: true }));
+      const set = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+      set.call(el, el.value + ch);
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      await new Promise(r => setTimeout(r, 5));
+    }
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    await new Promise(r => setTimeout(r, 250));
+    return { persona: document.querySelector('[data-testid="prestamo-persona"]').value };
+  }, codigo);
+  check('el lector funciona con el foco fuera del buscador', /3 pieza\(s\)/i.test(await texto()));
+  check('la ráfaga del lector no se queda escrita en el nombre de la persona', hid.persona === 'Rodrigo', hid.persona);
+  await clickId('prestamo-cancelar');
+  await page.waitForTimeout(400);
+  check('cancelar la captura no registra nada', await page.evaluate(() => window.DATA.loans.length === 1));
 
   console.log('\n── C) Lo que el préstamo dejó escrito ──────────────────');
   const alta = await page.evaluate(() => {
@@ -270,6 +333,31 @@ try {
   check('el filtro «Devueltos» lo recupera', await clickId('loans-filtro-devueltos'));
   await page.waitForTimeout(400);
   check('el préstamo devuelto aparece con su estado', (await texto()).includes(alta.folio) && /devuelto/i.test(await texto()));
+
+  console.log('\n── F2) Leer una prenda en la cartera (H-48) ────────────');
+  // El préstamo ya está devuelto: con el filtro en «Pendientes» no se lista. Leer su
+  // etiqueta debe encontrarlo igual, porque la pregunta es «¿quién tuvo esta pieza?».
+  await clickId('loans-filtro-pendientes');
+  await page.waitForTimeout(350);
+  check('con el filtro en pendientes el préstamo cerrado no se lista', !(await texto()).includes(alta.folio));
+  await fillId('loans-buscar', codigo);
+  await page.waitForTimeout(450);
+  const enCartera = await texto();
+  check('leer una prenda la encuentra en cualquier estado', enCartera.includes(alta.folio));
+  check('la cartera declara que la búsqueda vino de una lectura',
+    !!(await page.$(testid('loans-escaneo'))) && /c[oó]digo le[ií]do/i.test(enCartera) && /en cualquier estado/i.test(enCartera));
+  // Prenda real del catálogo que todavía no ha salido en ningún préstamo: la respuesta
+  // es sobre la PIEZA, no un «no coincide con el filtro».
+  const codigoLibre = await page.evaluate(sku => {
+    const p = window.DATA.products.find(x => x.sku === sku);
+    return window.BARCODES.codeOf(p, p.stock.find(v => v.stock > 0).talla);
+  }, seed.sku2);
+  await fillId('loans-buscar', codigoLibre);
+  await page.waitForTimeout(400);
+  check('leer una prenda que nunca salió lo dice sobre la pieza, no sobre el filtro',
+    /no est[aá] en ning[uú]n pr[eé]stamo/i.test(await texto()));
+  await fillId('loans-buscar', '');
+  await page.waitForTimeout(350);
 
   console.log('\n── G) Vencidos y aviso en la campana ───────────────────');
   const vencido = await page.evaluate(() => {

@@ -1,9 +1,9 @@
 # Préstamos de mercancía: el documento que faltaba
 
-**Riesgo:** H-46
+**Riesgo:** H-46 · H-48
 **Estado:** RESUELTO
 **Fecha:** 29/07/2026
-**Commit:** `9387e62`
+**Commit:** `9387e62` (H-46) · `Pendiente de commit` (H-48)
 
 ## Problema y reproducción
 
@@ -188,6 +188,98 @@ idéntico byte a byte al `index.html` del commit `9387e62` (`R-DEL-07`):
 La primera lectura devolvió todavía el artefacto anterior
 (`AD7486DB…`, 8 689 492 bytes, el de H-45); la segunda, veinte segundos después,
 ya servía el nuevo.
+
+## Lector de código de barras (H-48)
+
+La primera entrega aceptaba sólo texto: había que leer el nombre de la prenda y
+teclearlo, aunque toda la mercancía lleva etiqueta `SKU-TALLA` y el negocio tiene
+lector. Además de costar el doble, teclear admite equivocarse de prenda o de
+talla, y el préstamo **congela** esa evidencia: el error queda escrito en el vale
+que firma el cliente.
+
+No se creó ninguna autoridad: se consume `window.BARCODES`
+(`balam/barcodes.jsx`), la misma que resuelve las etiquetas en el Punto de venta,
+con `find()` por coincidencia contra `codeOf(producto, talla)`. Aquí no se parsea
+ni se interpreta el formato del código.
+
+**En la captura del préstamo** se reprodujeron los tres caminos de
+`balam/pos.jsx` § `onScan`, en el mismo orden: código completo → la pieza exacta
+entra al préstamo sin preguntar la talla, porque ya venía en la etiqueta; SKU
+exacto → abre el selector de talla; texto libre → abre la primera coincidencia.
+Leer dos veces la misma etiqueta suma cantidad en el renglón que ya existe. El
+buscador nace enfocado, así que el lector funciona en cuanto se abre la captura.
+
+**Lector USB (HID) con el foco fuera del buscador.** Se replicó la captura global
+de `balam/pos.jsx` con su heurística de cadencia —un lector teclea por debajo de
+~30 ms por carácter, así que una pausa mayor a 50 ms reinicia el búfer— y sólo
+interviene cuando la ráfaga resuelve a un código conocido: el tecleo humano nunca
+se confunde con una lectura.
+
+Con una diferencia necesaria respecto del POS: la captura del préstamo tiene
+**tres campos de texto**, así que una ráfaga con el foco en «quién recibe» dejaría
+el código metido dentro del nombre de la persona. Al reconocer el código se retira
+del campo enfocado exactamente lo que el lector acabó de escribir
+(`retirarCodigoTecleado`), verificando antes que el valor termine con ese código.
+El arnés lo fija: `la ráfaga del lector no se queda escrita en el nombre de la
+persona`.
+
+**En el buscador de la cartera** una lectura responde otra pregunta: «¿quién tiene
+esta prenda?». Cuando el término resuelve a una pieza, la búsqueda **ignora el
+filtro de estado** —si la prenda ya volvió, la respuesta útil sigue siendo el
+préstamo que la sacó— y la pantalla lo declara con un aviso que nombra la prenda,
+la talla y cuántos préstamos la contienen. Si la pieza nunca salió, el mensaje
+habla de la pieza y no del filtro.
+
+Lo que **no** se hizo, por restricción deliberada: cuando el término no resuelve a
+ninguna prenda del catálogo, la cartera lo trata como búsqueda de texto normal. La
+detección heurística de `BARCODES.parse()` da positivo con cualquier cadena que
+lleve un guion en medio —`Rodrigo-Perez` incluido—, y en el POS eso sólo elige el
+texto de un aviso, donde equivocarse es inocuo. Aquí habría cambiado el mensaje de
+una lista vacía por una razón adivinada.
+
+**Pruebas de H-48:** ocho comprobaciones nuevas en la captura y cuatro en la
+cartera, dentro de `test-loans-screen.mjs` → **112/112**. Regresión de cliente en
+verde: contratos 38/38, navegación 15/15, smoke 15/15, apartados 55/55, E2E del
+cambio 37/37, pantalla del cambio 45/45, ticket impreso 23/23, cola 115/115,
+folio diario 60/60, precio por talla 19/19, devoluciones 17/17, reinicio 19/19,
+inventario 18/18, coherencia de cobro 17/17, `.xlsx` 17/17, reproducibilidad 8/8.
+Guardián de `R-DEL-14` intacto.
+
+### El paquete se publica sin regenerarse, y por qué
+
+Se commitea el paquete que ya estaba construido y verificado sobre esta fuente: trae
+el lector y **no** trae el código cliente de H-47. No se regenera aquí, y es
+deliberado.
+
+H-47 —otra historia, trabajada en paralelo sobre este mismo árbol— dejó commiteado
+en `balam/store.jsx` y `balam/data.jsx` código que escribe `comision_monto`,
+`comision_base`, `comision_pct` y `comision_revertida` en `pos.exchanges`, y sus
+migraciones `20260730006500/6600/6700` **no están aplicadas** en la base real. Como
+el hook `post-commit` publica cada commit, regenerar el paquete aquí pondría en el
+mostrador un cliente que escribe contra columnas inexistentes, y el cambio quedaría
+bloqueado por esquema en la cola offline (`R-DEL-03` · `AP-08`). La divergencia entre
+fuente y paquete es la que H-47 declaró en su propio cierre; este cierre la conserva
+en lugar de resolverla publicando código sin su migración.
+
+Consecuencia menor, declarada: dos comentarios dentro del paquete todavía dicen
+`H-47`, porque esta historia se renumeró a H-48 **después** de construirlo. El
+número vive en un comentario, no en comportamiento, y la primera regeneración
+posterior a las migraciones lo corrige junto con lo demás.
+
+### Sobre la numeración
+
+Esta historia nació como H-47 y se renumeró a **H-48**. Mientras se probaba, otra
+sesión publicó `be84e3c` y `70b1e06` reclamando H-47 para la comisión del excedente,
+con tres migraciones ya nombradas `pos_h47_*` en el historial compartido. Los
+identificadores no se renumeran una vez publicados
+(`docs/architect/README.md` § Presupuestos y crecimiento), así que el número cedió
+la historia que **no** estaba publicada, que era ésta. Préstamos conserva H-46 por
+decisión del dueño del producto.
+
+Esa misma sesión commiteó `docs/03-known-risks.md` completo cuando el archivo tenía
+las dos historias mezcladas, de modo que la entrada de esta historia entró al
+historial dentro de `be84e3c`. No hubo pérdida: la entrada está íntegra y aquí sólo
+cambió su identificador.
 
 ## Riesgo residual y pendientes
 

@@ -210,6 +210,13 @@ movimiento de inventario:
   derivan de la colección. `pos.movements` no se usa: es historial de sólo lectura
   para el cliente y el pull lo reemplaza.
 
+La captura consume `window.BARCODES` igual que el Punto de venta: leer la etiqueta
+`SKU-TALLA` mete la pieza exacta en el préstamo sin preguntar la talla, y la
+captura global HID —con la misma heurística de cadencia de `balam/pos.jsx`— funciona
+aunque el foco esté en otro campo, retirando del campo enfocado lo que el lector
+acabó de escribir. En el buscador de la cartera una lectura responde «¿quién tiene
+esta prenda?» y busca en todos los estados, ignorando el filtro a propósito.
+
 Esta fase es **local**: no existe tabla remota y `saveLoans()` no sincroniza. El
 respaldo del módulo son su exportación a `.xlsx` y su listado impreso, y el vale
 impreso por préstamo es el documento que firma quien recibe la mercancía.
