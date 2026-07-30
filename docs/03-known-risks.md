@@ -2440,6 +2440,39 @@ byte a byte con `index.html`: SHA-256
 la autoridad siempre lo limita al total elegible de la venta.
 **Corrección documentada:** `docs/fixes/descuento-adicional-manual.md`.
 
+## H-54 - El administrador recibe controles técnicos y desbordados para beneficios
+
+**Estado:** RESUELTO
+**Fecha de registro:** 30/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** el apartado de beneficios reutiliza `CatalogEditor`, que coloca
+el código y once controles sin etiqueta en una sola fila `flex` sin envoltura.
+La captura muestra valores internos como `fixed`, `percentage`, `ticket`,
+`item`, `true` y `false`, además de contenido fuera del margen derecho.
+**Origen:** observación directa del dueño del producto.
+**Riesgo:** un administrador no puede entender con seguridad qué regla está
+editando y puede guardar una combinación equivocada; en pantallas angostas hay
+controles inaccesibles.
+**Alcance:** editor específico, responsivo y en español para el catálogo
+`additional_benefit`, conservando alta, edición, orden, activación y borrado.
+**No alcance:** datos, autoridad `saleQuote`, reglas económicas, permisos,
+sincronización, esquema y modal del vendedor.
+**Reproducción:** `node test-benefit-settings-ui.mjs` antes del cambio: 1
+pasó, 6 fallaron.
+**Causa raíz:** `CatalogEditor` está diseñado para catálogos compactos y
+representaba once decisiones de negocio como una fila técnica sin etiquetas.
+**Corrección:** `BenefitEditor` presenta una tarjeta resumida por opción y una
+edición desplegable en español. Conserva alta, nombre, activación, orden,
+borrado y todas las escrituras sobre `additional_benefit`; no duplica estado.
+**Pruebas:** contrato visual 7/7; Chrome real 5/5 a 1280, 768 y 390 px; captura
+manual 12/12; H-52 27/27; contratos 38/38; navegación 15/15; UX 11
+interacciones y 2 validaciones; build 8/8; smoke 17/17.
+**Migraciones:** ninguna.
+**Pendiente:** commit y publicación.
+**Riesgo residual:** el contenedor general de la aplicación conserva su ancho
+mínimo histórico en teléfonos; las tarjetas no se desbordan de su panel.
+**Corrección documentada:** `docs/fixes/editor-simple-de-beneficios.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

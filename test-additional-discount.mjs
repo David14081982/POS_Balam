@@ -90,7 +90,7 @@ check('comisión usa el total final de la cotización', /const total = money\(qu
 check('modal está antes del cobro y tiene vista previa', /additional-discount-open/.test(ticketSrc) && /Antes del descuento adicional/.test(ticketSrc) && /Total resultante/.test(ticketSrc));
 check('Cobrar venta informa el beneficio', /quote\.applications/.test(ticketSrc) && /Descuento adicional/.test(ticketSrc));
 check('ticket enmascara el folio físico', /'••••' \+ folio\.slice\(-4\)/.test(ticketSrc));
-check('Configuración ofrece la pantalla de beneficios', /Descuentos adicionales y beneficios/.test(settingsSrc) && /kind: 'additional_benefit'/.test(settingsSrc));
+check('Configuración ofrece la pantalla de beneficios', /Descuentos adicionales y beneficios/.test(settingsSrc) && /h\(BenefitEditor/.test(settingsSrc));
 check('cola transporta snapshot y reparto', /descuentos_adicionales/.test(storeSrc) && /descuento_adicional/.test(storeSrc));
 check('commit remoto consume cada tarjeta una sola vez', /physical_card_redemptions[\s\S]*folio text primary key/.test(migrationSrc) && /pg_advisory_xact_lock/.test(migrationSrc));
 check('tarjeta física usa wrapper transaccional', /commit_sale_with_additional_discount/.test(storeSrc) && /v_result := pos\.commit_sale/.test(migrationSrc));

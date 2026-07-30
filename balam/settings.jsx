@@ -47,6 +47,7 @@
         h(GlassCard, { key: 'nav', className: 'p-2 h-fit md:sticky md:top-6' },
           SECTIONS.map(s => h('button', {
             key: s.id,
+            'data-testid': 'settings-section-' + s.id,
             className: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ' +
               (sec === s.id ? 'bg-surface-container-low text-primary font-medium' : 'text-on-surface-variant hover:bg-surface-container-low'),
             onClick: () => setSec(s.id),
@@ -721,6 +722,201 @@
     ]);
   }
 
+  // Editor deliberadamente específico: los beneficios tienen lenguaje de negocio
+  // propio y no caben en la fila técnica del editor genérico de catálogos.
+  function BenefitEditor() {
+    const items = C.all('additional_benefit');
+    const [open, setOpen] = useState('');
+    const [adding, setAdding] = useState(false);
+    const [newName, setNewName] = useState('');
+    const [newType, setNewType] = useState('percentage');
+    const isOn = v => v === true || v === 'true';
+    const meta = it => it.meta || {};
+    const typeLabels = {
+      percentage: 'Porcentaje',
+      fixed: 'Cantidad de dinero',
+      courtesy_piece: 'Cortesía de un artículo',
+      courtesy_total: 'Cortesía de toda la venta',
+    };
+    const scopeLabels = { ticket: 'Toda la venta', item: 'Un artículo' };
+    const origins = ['Promoción especial', 'Empleado', 'Cliente frecuente', 'Tarjeta física', 'Cortesía', 'Otro'];
+    const fieldClass = 'block w-full h-10 px-3 bg-surface-container-low border border-outline-variant rounded-lg text-body';
+    const update = (it, patch) => C.updateItem('additional_benefit', it.code, patch);
+    const updateMeta = (it, patch) => update(it, { meta: patch });
+    const toggle = (it, key) => updateMeta(it, { [key]: !isOn(meta(it)[key]) });
+    const Switch = ({ it, field, label, description }) => {
+      const on = isOn(meta(it)[field]);
+      return h('button', {
+        type: 'button', onClick: () => toggle(it, field),
+        className: 'w-full flex items-center justify-between gap-3 p-3 rounded-lg border text-left transition ' +
+          (on ? 'border-primary/40 bg-primary/5' : 'border-outline-variant bg-surface-container-low'),
+      }, [
+        h('span', { key: 't', className: 'min-w-0' }, [
+          h('span', { key: 'l', className: 'block text-body font-medium text-primary' }, label),
+          description && h('span', { key: 'd', className: 'block text-caption text-on-surface-variant mt-0.5' }, description),
+        ]),
+        h('span', {
+          key: 's', className: 'w-11 h-6 p-0.5 rounded-full shrink-0 transition-colors ' + (on ? 'bg-primary' : 'bg-outline-variant'),
+        }, h('span', { className: 'block w-5 h-5 bg-white rounded-full shadow transition-transform ' + (on ? 'translate-x-5' : '') })),
+      ]);
+    };
+    function addBenefit() {
+      const name = newName.trim();
+      if (!name) { toast('Escribe el nombre que verá el vendedor', 'var(--danger)'); return; }
+      const base = 'BENEFICIO_' + name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/gi, '_').replace(/^_|_$/g, '').toUpperCase();
+      let code = base || ('BENEFICIO_' + Date.now());
+      let suffix = 2;
+      while (C.find('additional_benefit', code)) code = base + '_' + suffix++;
+      const r = C.addItem('additional_benefit', {
+        code, label: name,
+        meta: {
+          origin: 'Promoción especial', benefitType: newType, value: 0,
+          maxPercent: newType === 'percentage' ? 100 : 0, maxAmount: 0,
+          scope: 'ticket', requiresReason: true, requiresFolio: false,
+          requiresAuthorization: false, combinable: false, allowsCustomValue: true,
+        },
+      });
+      if (!r.ok) { toast(r.error, 'var(--danger)'); return; }
+      setNewName(''); setAdding(false); setOpen(code);
+    }
+    function remove(it) {
+      if (!window.confirm(`¿Eliminar “${it.label}”? Las ventas anteriores conservarán el beneficio que utilizaron.`)) return;
+      const r = C.removeItem('additional_benefit', it.code);
+      if (!r.ok) toast(r.error, 'var(--danger)');
+    }
+    const editPanel = it => {
+      const m = meta(it);
+      const type = m.benefitType || 'percentage';
+      const custom = isOn(m.allowsCustomValue);
+      const monetary = type === 'percentage' || type === 'fixed';
+      return h('div', { className: 'p-4 pt-2 border-t border-outline-variant/60' }, [
+        h('div', { key: 'grid', className: 'grid grid-cols-1 md:grid-cols-2 gap-4' }, [
+          h('label', { key: 'name', className: 'block' }, [
+            h('span', { key: 'l', className: 'block text-caption font-medium mb-1' }, 'Nombre que verá el vendedor'),
+            h('input', { key: 'i', className: fieldClass, defaultValue: it.label, onBlur: e => update(it, { label: e.target.value.trim() || it.label }) }),
+          ]),
+          h('label', { key: 'origin', className: 'block' }, [
+            h('span', { key: 'l', className: 'block text-caption font-medium mb-1' }, '¿De dónde proviene?'),
+            h('select', { key: 's', className: fieldClass, value: m.origin || 'Otro', onChange: e => updateMeta(it, { origin: e.target.value }) },
+              origins.map(x => h('option', { key: x, value: x }, x))),
+          ]),
+          h('label', { key: 'type', className: 'block' }, [
+            h('span', { key: 'l', className: 'block text-caption font-medium mb-1' }, '¿Cómo se calcula?'),
+            h('select', { key: 's', className: fieldClass, value: type, onChange: e => updateMeta(it, { benefitType: e.target.value }) },
+              Object.entries(typeLabels).map(([value, label]) => h('option', { key: value, value }, label))),
+          ]),
+          h('label', { key: 'scope', className: 'block' }, [
+            h('span', { key: 'l', className: 'block text-caption font-medium mb-1' }, '¿Dónde se aplica?'),
+            h('select', { key: 's', className: fieldClass, value: m.scope || 'ticket', onChange: e => updateMeta(it, { scope: e.target.value }) }, [
+              h('option', { key: 'ticket', value: 'ticket' }, 'Toda la venta'),
+              h('option', { key: 'item', value: 'item' }, 'Un artículo'),
+            ]),
+          ]),
+        ]),
+        monetary && h('div', { key: 'value', className: 'mt-4 grid grid-cols-1 md:grid-cols-2 gap-4' }, [
+          h(Switch, {
+            key: 'custom', it, field: 'allowsCustomValue', label: 'El vendedor escribe el valor',
+            description: custom ? 'Lo capturará al aplicar el descuento.' : 'Se utilizará siempre el valor configurado.',
+          }),
+          custom
+            ? h('label', { key: 'limit', className: 'block' }, [
+                h('span', { key: 'l', className: 'block text-caption font-medium mb-1' },
+                  type === 'percentage' ? 'Porcentaje máximo permitido' : 'Importe máximo permitido'),
+                h('input', {
+                  key: 'i', type: 'number', min: 0, step: 0.01, className: fieldClass,
+                  defaultValue: type === 'percentage' ? (Number(m.maxPercent) || 0) : (Number(m.maxAmount) || 0),
+                  onBlur: e => updateMeta(it, { [type === 'percentage' ? 'maxPercent' : 'maxAmount']: Math.max(0, Number(e.target.value) || 0) }),
+                }),
+                h('span', { key: 'h', className: 'block text-caption text-on-surface-variant mt-1' },
+                  type === 'fixed' ? 'Cero significa sin límite adicional.' : 'El sistema nunca acepta más de 100%.'),
+              ])
+            : h('label', { key: 'fixed', className: 'block' }, [
+                h('span', { key: 'l', className: 'block text-caption font-medium mb-1' },
+                  type === 'percentage' ? 'Porcentaje que se aplicará' : 'Importe que se descontará'),
+                h('input', {
+                  key: 'i', type: 'number', min: 0, step: 0.01, className: fieldClass,
+                  defaultValue: Number(m.value) || 0,
+                  onBlur: e => updateMeta(it, { value: Math.max(0, Number(e.target.value) || 0) }),
+                }),
+              ]),
+        ]),
+        h('div', { key: 'rules', className: 'mt-4 grid grid-cols-1 md:grid-cols-2 gap-3' }, [
+          h(Switch, { key: 'reason', it, field: 'requiresReason', label: 'Pedir una explicación al vendedor' }),
+          h(Switch, { key: 'combine', it, field: 'combinable', label: 'Se puede combinar con otro beneficio' }),
+          m.origin === 'Tarjeta física' && h('div', { key: 'card', className: 'p-3 rounded-lg border border-outline-variant bg-surface-container-low text-caption text-on-surface-variant' },
+            'Al aplicarla se pedirá el tipo y folio de la tarjeta. Requiere conexión y sólo puede usarse una vez.'),
+        ]),
+        h('div', { key: 'actions', className: 'mt-4 pt-4 border-t border-outline-variant/60 flex flex-wrap items-center justify-between gap-3' }, [
+          h('div', { key: 'move', className: 'flex items-center gap-2' }, [
+            h('span', { key: 'l', className: 'text-caption text-on-surface-variant' }, 'Orden en el Punto de Venta:'),
+            h('button', { key: 'up', type: 'button', className: 'px-3 h-9 border border-outline-variant rounded-lg', onClick: () => C.move('additional_benefit', it.code, -1) }, 'Subir'),
+            h('button', { key: 'down', type: 'button', className: 'px-3 h-9 border border-outline-variant rounded-lg', onClick: () => C.move('additional_benefit', it.code, 1) }, 'Bajar'),
+          ]),
+          h('button', { key: 'delete', type: 'button', className: 'px-3 h-9 text-danger hover:bg-danger-soft rounded-lg', onClick: () => remove(it) }, 'Eliminar opción'),
+        ]),
+      ]);
+    };
+    return h(GlassCard, { className: 'p-5 overflow-hidden' }, [
+      h('div', { key: 'head', className: 'flex items-start justify-between gap-4 flex-wrap mb-4' }, [
+        h('div', { key: 'text' }, [
+          h(SerifHeading, { key: 't', children: 'Opciones disponibles en el Punto de Venta' }),
+          h('p', { key: 'd', className: 'text-caption text-on-surface-variant mt-1' }, 'Abre una opción para cambiarla. Los nombres internos y reglas técnicas están ocultos.'),
+        ]),
+        h('button', {
+          key: 'add', type: 'button', 'data-testid': 'benefit-add',
+          className: 'px-4 h-10 bg-primary text-on-primary rounded-lg font-medium shrink-0',
+          onClick: () => setAdding(v => !v),
+        }, adding ? 'Cancelar' : 'Nueva opción'),
+      ]),
+      adding && h('div', { key: 'new', className: 'mb-4 p-4 rounded-xl border border-primary/30 bg-primary/5' }, [
+        h('p', { key: 't', className: 'text-body font-semibold mb-3' }, 'Crear una opción para el vendedor'),
+        h('div', { key: 'g', className: 'grid grid-cols-1 md:grid-cols-[1fr_220px_auto] gap-3' }, [
+          h('input', { key: 'n', className: fieldClass, value: newName, placeholder: 'Ej. Cliente frecuente', onChange: e => setNewName(e.target.value) }),
+          h('select', { key: 't', className: fieldClass, value: newType, onChange: e => setNewType(e.target.value) }, [
+            h('option', { key: 'p', value: 'percentage' }, 'Porcentaje'),
+            h('option', { key: 'f', value: 'fixed' }, 'Cantidad de dinero'),
+            h('option', { key: 'cp', value: 'courtesy_piece' }, 'Cortesía de un artículo'),
+            h('option', { key: 'ct', value: 'courtesy_total' }, 'Cortesía de toda la venta'),
+          ]),
+          h('button', { key: 'b', type: 'button', className: 'px-4 h-10 bg-primary text-on-primary rounded-lg font-medium', onClick: addBenefit }, 'Crear'),
+        ]),
+      ]),
+      h('div', { key: 'list', className: 'space-y-3' }, items.map(it => {
+        const m = meta(it);
+        const off = it.active === false;
+        const expanded = open === it.code;
+        return h('section', {
+          key: it.code, 'data-testid': 'benefit-card-' + it.code,
+          className: 'rounded-xl border border-outline-variant overflow-hidden ' + (off ? 'opacity-60' : 'bg-surface'),
+        }, [
+          h('div', { key: 'summary', className: 'p-4 flex items-center gap-3' }, [
+            h('button', {
+              key: 'open', type: 'button', className: 'flex-1 min-w-0 text-left',
+              onClick: () => setOpen(expanded ? '' : it.code),
+            }, [
+              h('span', { key: 'name', className: 'block text-body font-semibold text-primary truncate' }, it.label),
+              h('span', { key: 'desc', className: 'block text-caption text-on-surface-variant mt-1' },
+                `${typeLabels[m.benefitType] || 'Beneficio'} · ${scopeLabels[m.scope] || 'Toda la venta'}${isOn(m.allowsCustomValue) ? ' · El vendedor escribe el valor' : ''}`),
+            ]),
+            h('button', {
+              key: 'active', type: 'button',
+              className: 'px-3 h-8 rounded-full text-caption font-semibold shrink-0 ' +
+                (off ? 'bg-surface-container text-on-surface-variant' : 'bg-success-soft text-success'),
+              onClick: () => C.setActive('additional_benefit', it.code, off),
+            }, off ? 'Desactivada' : 'Activa'),
+            h('button', {
+              key: 'edit', type: 'button', 'aria-expanded': expanded,
+              className: 'w-9 h-9 grid place-items-center rounded-lg hover:bg-surface-container shrink-0',
+              title: expanded ? 'Cerrar edición' : 'Editar opción',
+              onClick: () => setOpen(expanded ? '' : it.code),
+            }, h(MS, { name: 'chevDown', size: 18, style: { transform: expanded ? 'rotate(180deg)' : '' } })),
+          ]),
+          expanded ? editPanel(it) : null,
+        ]);
+      })),
+    ]);
+  }
+
   // ── Paneles por sección ────────────────────────────────────────────────────────
   const PANELS = {
     negocio: () => [
@@ -793,31 +989,15 @@
         h('div', { key: 'g', className: 'grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 text-caption' }, [
           h('div', { key: 'p', className: 'p-3 rounded-lg bg-surface-container-low' }, [
             h('b', { key: 't' }, 'Porcentaje manual'),
-            h('p', { key: 'd', className: 'text-on-surface-variant mt-1' }, 'Tipo percentage · usa “% máximo” como límite.'),
+            h('p', { key: 'd', className: 'text-on-surface-variant mt-1' }, 'El vendedor escribe un porcentaje, por ejemplo 10 o 15.5. Puedes establecer un máximo.'),
           ]),
           h('div', { key: 'a', className: 'p-3 rounded-lg bg-surface-container-low' }, [
             h('b', { key: 't' }, 'Importe manual'),
-            h('p', { key: 'd', className: 'text-on-surface-variant mt-1' }, 'Tipo fixed · usa “$ máximo” como límite; cero significa sin límite adicional.'),
+            h('p', { key: 'd', className: 'text-on-surface-variant mt-1' }, 'El vendedor escribe una cantidad de dinero. Cero como máximo significa sin límite adicional.'),
           ]),
         ]),
       ]),
-      h(CatalogEditor, {
-        key: 'ab', kind: 'additional_benefit', title: 'Descuentos adicionales y beneficios',
-        codePlaceholder: 'BENEFICIO', labelPlaceholder: 'Nombre visible',
-        metaFields: [
-          { key: 'origin', label: 'Origen', type: 'select', options: ['Tarjeta física', 'Empleado', 'Cliente frecuente', 'Cortesía', 'Promoción especial', 'Otro'], def: 'Otro' },
-          { key: 'benefitType', label: 'Tipo', type: 'select', options: ['percentage', 'fixed', 'courtesy_piece', 'courtesy_total'], def: 'percentage' },
-          { key: 'value', label: 'Valor', type: 'number', def: 0 },
-          { key: 'maxPercent', label: '% máximo', type: 'number', def: 0 },
-          { key: 'maxAmount', label: '$ máximo', type: 'number', def: 0 },
-          { key: 'scope', label: 'Alcance', type: 'select', options: ['ticket', 'item'], def: 'ticket' },
-          { key: 'requiresReason', label: 'Motivo', type: 'select', options: ['false', 'true'], def: 'false' },
-          { key: 'requiresFolio', label: 'Folio', type: 'select', options: ['false', 'true'], def: 'false' },
-          { key: 'requiresAuthorization', label: 'Requiere autorización', type: 'select', options: ['false'], def: 'false' },
-          { key: 'combinable', label: 'Combinable', type: 'select', options: ['false', 'true'], def: 'false' },
-          { key: 'allowsCustomValue', label: 'Valor libre', type: 'select', options: ['false', 'true'], def: 'false' },
-        ],
-      }),
+      h(BenefitEditor, { key: 'ab' }),
     ],
     devoluciones: () => [
       h('p', { key: 'i', className: 'text-caption text-on-surface-variant' }, 'Catálogo de motivos que el cajero elige al devolver un artículo, y la política de comisiones. Todo se sincroniza a la nube.'),
