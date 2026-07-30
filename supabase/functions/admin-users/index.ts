@@ -35,7 +35,9 @@ Deno.serve(async (req) => {
     const svc = createClient(URL, SERVICE, { db: { schema: 'pos' } });
     // Coincidencia por correo SIN distinguir mayúsculas/minúsculas (ilike sin comodines
     // = igualdad case-insensitive): evita el 403 si la fila guardó el correo con otra caja.
-    const { data: me, error: meErr } = await caller.from('sellers').select('role,active').ilike('email', email).maybeSingle();
+    const { data: allowed, error: meErr } = await caller.rpc(
+      'current_has_capability', { p_capability_key: 'sellers.manage' },
+    );
     // Distinguimos las 3 causas para no dar siempre el mismo "Solo un administrador":
     //   a) la consulta FALLÓ → 500 con el motivo real.
     //   b) no hay fila para ese correo en pos.sellers → 403 identificando el correo.
@@ -43,11 +45,8 @@ Deno.serve(async (req) => {
     if (meErr) {
       return json({ error: 'No se pudo verificar tu permiso de administrador (base de datos): ' + meErr.message }, 500);
     }
-    if (!me) {
-      return json({ error: 'Tu cuenta (' + email + ') no aparece en la tabla de usuarios (pos.sellers).' }, 403);
-    }
-    if (String(me.role).toLowerCase() !== 'admin' || me.active === false) {
-      return json({ error: 'Tu cuenta no tiene rol de administrador (rol actual: "' + me.role + '", activa: ' + me.active + ').' }, 403);
+    if (allowed !== true) {
+      return json({ error: 'Tu cuenta no tiene la capacidad sellers.manage.' }, 403);
     }
 
     const body = await req.json();

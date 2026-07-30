@@ -41,7 +41,22 @@ function freshEnv() {
   const tableErrors = new Map();
   const rpcCalls = [];
   let rpcHandler = async (name, args) => {
-    if (name === 'commit_sale') {
+    if (name === 'save_products_checked') {
+      calls.push({ table: 'products', metodo: 'upsert' });
+      if (gate) await gate;
+      if (failTables.has('products') || tableErrors.has('products')) {
+        return { data: null, error: tableErrors.get('products') || { message: 'falla simulada' } };
+      }
+      cloud.rowsByTable.products = args.p_rows || [];
+      return { data: args.p_rows || [], error: null };
+    }
+    if (name === 'delete_product_checked') {
+      const current = (cloud.rowsByTable.products || []).find(x => x.id === args.p_id) || {
+        id: args.p_id, deleted_at: new Date().toISOString(), sync_version: Number(args.p_base_version) + 1,
+      };
+      return { data: current, error: null };
+    }
+    if (name === 'commit_sale_checked') {
       if (['sales', 'sale_items', 'movements', 'sale_payments'].some(t => failTables.has(t))) {
         return { data: null, error: { message: 'falla transaccional simulada' } };
       }
@@ -450,7 +465,7 @@ function loadStore(env) {
   await sleep(40);
   ok('13a. sin stock remoto no se inserta la venta', !env.calls.some(c => c.table === 'sales' && c.metodo === 'upsert'));
   ok('13b. la venta queda pendiente y recuperable en cola', S.pending === 1 && sale._syncStatus === 'stock_pending');
-  ok('13c. el commit usa product_id/talla/cantidad e id estable', env.rpcCalls[0]?.name === 'commit_sale'
+  ok('13c. el commit usa product_id/talla/cantidad e id estable', env.rpcCalls[0]?.name === 'commit_sale_checked'
     && env.rpcCalls[0].args.p_operation_id === 'op-h01-stable'
     && env.rpcCalls[0].args.p_stock_lines[0].product_id === 'p-last');
 
@@ -464,7 +479,7 @@ function loadStore(env) {
   await S.flushQueue();
   await sleep(40);
   ok('13d. al existir stock/reintentar, la venta se persiste y sale de cola',
-    env.rpcCalls.length === 2 && env.rpcCalls[1].name === 'commit_sale' && S.pending === 0);
+    env.rpcCalls.length === 2 && env.rpcCalls[1].name === 'commit_sale_checked' && S.pending === 0);
   ok('13e. el reintento conserva la misma clave idempotente',
     env.rpcCalls.length === 2 && env.rpcCalls.every(c => c.args.p_operation_id === 'op-h01-stable'));
 }
@@ -486,7 +501,7 @@ function loadStore(env) {
   S.pushSale(sale);
   await sleep(50);
   ok('14a. H-04: la venta completa viaja en un único RPC',
-    env.rpcCalls[0]?.name === 'commit_sale'
+    env.rpcCalls[0]?.name === 'commit_sale_checked'
       && env.rpcCalls[0].args.p_sale.folio === 'BG-H04'
       && env.rpcCalls[0].args.p_items.length === 1);
   ok('14b. H-04: el fallo no deja cabecera ni renglones parciales',
@@ -587,7 +602,7 @@ function loadStore(env) {
   };
   let attempt = 0;
   env.setRpc(async (name, args) => {
-    if (name !== 'commit_sale') return { data: { ok: true }, error: null };
+    if (name !== 'commit_sale_checked') return { data: { ok: true }, error: null };
     attempt++;
     if (attempt === 1) return { data: { ok: false, error: 'folio_conflict' }, error: null };
     return { data: { ok: true, products: [], clients: [], sellers: [] }, error: null };
@@ -1101,7 +1116,7 @@ function folioDataStub(env, { block = null } = {}) {
   let intento = 0;
   env.setRpc(async (name) => {
     if (name === 'reserve_folio_block') return { data: { ok: true, prefix: 'BG', from: 21, to: 21 }, error: null };
-    if (name === 'commit_sale') {
+    if (name === 'commit_sale_checked') {
       intento++;
       if (intento === 1) return { data: { ok: false, error: 'folio_conflict' }, error: null };
       return { data: { ok: true, products: [], clients: [], sellers: [] }, error: null };
@@ -1112,7 +1127,7 @@ function folioDataStub(env, { block = null } = {}) {
   await S.init({});
   S.pushSale(sale, { payments: D.payments });
   await sleep(60);
-  const commits = env.rpcCalls.filter(c => c.name === 'commit_sale');
+  const commits = env.rpcCalls.filter(c => c.name === 'commit_sale_checked');
   ok('30f. H-33: un folio provisional en conflicto residual recibe OTRO folio corto del contador',
     sale.folio === 'BG-260727-0021', sale.folio);
   ok('30g. H-33: el folio reconciliado conserva el formato comercial y no un token largo',
@@ -1152,7 +1167,7 @@ function folioDataStub(env, { block = null } = {}) {
   let ventaFallida = 0;
   env.setRpc(async (name, args) => {
     if (name === 'reserve_folio_block') return { data: { ok: false, error: 'sin_red' }, error: null };
-    if (name === 'commit_sale') { ventaFallida++; return { data: { ok: false, error: 'folio_conflict' }, error: null }; }
+    if (name === 'commit_sale_checked') { ventaFallida++; return { data: { ok: false, error: 'folio_conflict' }, error: null }; }
     if (name === 'commit_return_checked') return { data: { ok: true, sale_state: 'Devuelto' }, error: null };
     return { data: { ok: true }, error: null };
   });
@@ -1171,14 +1186,14 @@ function folioDataStub(env, { block = null } = {}) {
 
   // Resuelto el conflicto, la venta pasa y la devolución sale detrás.
   env.setRpc(async (name) => {
-    if (name === 'commit_sale') return { data: { ok: true, products: [], clients: [], sellers: [] }, error: null };
+    if (name === 'commit_sale_checked') return { data: { ok: true, products: [], clients: [], sellers: [] }, error: null };
     if (name === 'commit_return_checked') return { data: { ok: true, sale_state: 'Devuelto' }, error: null };
     return { data: { ok: true }, error: null };
   });
   const pendientes = JSON.parse(env.localStorage.getItem('balam_sync_queue') || '[]');
   S.retryOperation((pendientes.find(o => o.type === 'sale') || {}).id);
   await sleep(80);
-  const iSale = env.rpcCalls.findIndex(c => c.name === 'commit_sale' && c.args && c.args.p_sale);
+  const iSale = env.rpcCalls.findIndex(c => c.name === 'commit_sale_checked' && c.args && c.args.p_sale);
   const iRet = env.rpcCalls.findIndex(c => c.name === 'commit_return_checked');
   ok('31c. H-33: al sincronizar la venta, la devolución se envía después',
     iRet > iSale && iRet >= 0 && S.pending === 0);
@@ -1205,7 +1220,7 @@ function folioDataStub(env, { block = null } = {}) {
   let intento = 0;
   env.setRpc(async (name) => {
     if (name === 'reserve_folio_block') return { data: { ok: true, from: 30, to: 30 }, error: null };
-    if (name === 'commit_sale') {
+    if (name === 'commit_sale_checked') {
       intento++;
       if (intento === 1) return { data: { ok: false, error: 'folio_conflict' }, error: null };
       return { data: { ok: true, products: [], clients: [], sellers: [] }, error: null };

@@ -454,7 +454,9 @@
         if (m && m.localKey && window.DATA && Array.isArray(window.DATA[m.localKey])) {
           op.rows = window.DATA[m.localKey].map(m.toRow);
         }
-        const r = await c.from(op.table).upsert(op.rows, { onConflict: op.conflict }).select('*');
+        const r = op.kind === 'products'
+          ? await c.rpc('save_products_checked', { p_operation_id: op.id, p_rows: op.rows })
+          : await c.from(op.table).upsert(op.rows, { onConflict: op.conflict }).select('*');
         if (r.error) return failOp(r.error);
         if (m && m.fromRow && window.DATA && window.DATA.applySyncResult) {
           const expected = {};
@@ -470,11 +472,17 @@
       }
       if (op.type === 'delete') { const r = await c.from(op.table).delete().eq(op.col, op.val); return r.error ? failOp(r.error) : true; }
       if (op.type === 'softDelete') {
-        const r = await c.rpc('soft_delete_entity', {
-          p_entity: op.table, p_id: op.val,
-          p_base_version: Number(op.baseVersion) || 0,
-          p_device_id: window.CORE.getDeviceId(),
-        });
+        const r = op.kind === 'products'
+          ? await c.rpc('delete_product_checked', {
+              p_operation_id: op.id, p_id: op.val,
+              p_base_version: Number(op.baseVersion) || 0,
+              p_device_id: window.CORE.getDeviceId(),
+            })
+          : await c.rpc('soft_delete_entity', {
+              p_entity: op.table, p_id: op.val,
+              p_base_version: Number(op.baseVersion) || 0,
+              p_device_id: window.CORE.getDeviceId(),
+            });
         if (r.error) return failOp(r.error);
         const m = MAP[op.kind];
         const raw = Array.isArray(r.data) ? r.data[0] : r.data;
@@ -512,7 +520,7 @@
           if ((op.stockLines || []).some(l => l.product_id === p.id)) expectedProducts[p.id] = Number(p._syncVersion) || 0;
         });
         const saleRpc = Array.isArray(op.header && op.header.descuentos_adicionales)
-          ? 'commit_sale_with_additional_discount' : 'commit_sale';
+          ? 'commit_sale_with_additional_discount_checked' : 'commit_sale_checked';
         const committed = await c.rpc(saleRpc, {
           p_commit_id: op.id,
           p_operation_id: op.operationId,

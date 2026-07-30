@@ -2511,7 +2511,7 @@ administrador debe cambiar el nombre descriptivo de la copia según su uso.
 
 ## H-56 - Las pantallas y su autorización no tienen un registro central
 
-**Estado:** EN PROGRESO - FASE 5, GRUPOS 1 Y 2 COMPLETADOS
+**Estado:** EN PROGRESO - FASE 5, GRUPOS PRIORITARIOS IMPLEMENTADOS
 **Fecha de registro:** 30/07/2026
 **Commits:** Fase 1 `a04b2c3`; Fase 2 `0b9c933`; Fase 3 este commit
 **Evidencia:** `balam/app.jsx` declara por separado `NAV`, `TITLES` y la cadena
@@ -2619,6 +2619,15 @@ operación ejecutable para cancelar ventas; `Cancelado` sólo es estado históri
 y su contrato funcional deberá definirse antes de introducir esa mutación.
 **Riesgo residual:** inventario, configuración y las operaciones restantes aún
 conservan sus guardas históricas por rol hasta migrar cada frontera.
+**Fase 5, grupos 3 a 5:** `08600/08700` protegen ajustes y bajas de productos;
+`08800/08900` separan `settings.manage` y `permissions.manage`;
+`09000/09100` protegen confirmación de ventas y RLS de clientes, promociones y
+vendedores. `admin-users` desplegada exige `sellers.manage`. Regresión:
+capacidades 32/32, migraciones 31/31, cola 115/115, roles 15/15, AUTH 18/18,
+contratos 40/40, build 8/8, smoke 17/17 y navegación 15/15.
+**Pendiente real:** cobros/apartados, préstamos y tombstones genéricos todavía
+requieren fronteras específicas; cancelación no tiene contrato funcional.
+Véase `docs/05-operational-capabilities.md`.
 **Corrección documentada:** `docs/fixes/permisos-visualizacion.md`.
 
 ## Regla de actualización

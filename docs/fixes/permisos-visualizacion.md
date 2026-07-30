@@ -212,12 +212,25 @@ Pruebas del grupo 2: capacidades 21/21; migraciones 31/31; cola 115/115; roles
 15/15; AUTH 18/18; contratos 40/40; build 8/8; smoke bundle 17/17; navegación
 15/15. Historial remoto en paridad y dry-run vacío.
 
+Los grupos 3 a 5 añaden `08600` a `09100`: inventario deja de aceptar escritura
+directa y usa RPC auditadas; configuración y permisos tienen capacidades
+distintas; ventas pasan por wrappers `sales.create`; clientes, promociones y
+vendedores reciben policies por acción. La Edge Function `admin-users` fue
+desplegada con una guarda `sellers.manage` resuelta mediante el JWT del actor.
+El mapa versionado está en `docs/05-operational-capabilities.md`.
+
+Regresión final: capacidades 32/32; migraciones 31/31; cola 115/115; roles
+15/15; AUTH 18/18; contratos 40/40; build 8/8; smoke 17/17; navegación 15/15.
+Migraciones locales/remotas en paridad hasta `09100`; dry-run vacío.
+
 ## Riesgo residual y pendientes
 
-Los grupos 3 a 5 de Fase 5 y la Fase 6 permanecen abiertos. El modelo, la
+La terminación de Fase 5 y la Fase 6 permanecen abiertas. El modelo, la
 autoridad cliente, el editor triestado y las comisiones ya usan sus fronteras
 finales; devoluciones y cambios también tienen capacidad propia. Falta migrar
-inventario, configuración y las operaciones restantes.
+inventario y configuración. Persisten las fronteras de cobros/apartados,
+préstamos y tombstones genéricos descritas en el mapa; cancelación carece de
+contrato funcional.
 
 La reversión de Fase 1 consiste en retirar `screens.jsx`, restaurar las listas
 anteriores en App y Configuración y regenerar los artefactos. No requiere

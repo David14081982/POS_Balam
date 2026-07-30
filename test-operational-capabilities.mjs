@@ -7,6 +7,12 @@ const commissions = read('supabase/migrations/20260730008200_pos_h56_commission_
 const commissionsVerify = read('supabase/migrations/20260730008300_pos_h56_commission_capabilities_verification.sql');
 const postSale = read('supabase/migrations/20260730008400_pos_h56_post_sale_capabilities.sql');
 const postSaleVerify = read('supabase/migrations/20260730008500_pos_h56_post_sale_capabilities_verification.sql');
+const inventory = read('supabase/migrations/20260730008600_pos_h56_inventory_capabilities.sql');
+const inventoryVerify = read('supabase/migrations/20260730008700_pos_h56_inventory_capabilities_verification.sql');
+const settingsCapabilities = read('supabase/migrations/20260730008800_pos_h56_settings_permission_capabilities.sql');
+const settingsVerify = read('supabase/migrations/20260730008900_pos_h56_settings_permission_capabilities_verification.sql');
+const remaining = read('supabase/migrations/20260730009000_pos_h56_remaining_capabilities.sql');
+const edgeAdmin = read('supabase/functions/admin-users/index.ts');
 const data = read('balam/data.jsx');
 const store = read('balam/store.jsx');
 
@@ -45,6 +51,33 @@ check('la verificación cubre autorización, ACL y compatibilidad',
   /H56_POSTSALE_UNAUTHORIZED_FAILED/.test(postSaleVerify)
   && /H56_POSTSALE_ACL_FAILED/.test(postSaleVerify)
   && /H56_POSTSALE_COMPATIBILITY_FAILED/.test(postSaleVerify));
+check('ajuste y eliminación de inventario tienen capacidades separadas',
+  /inventory\.adjust/.test(inventory) && /inventory\.delete/.test(inventory));
+check('inventario deja de aceptar escritura directa autenticada',
+  /revoke insert, update, delete, truncate on pos\.products from authenticated/i.test(inventory));
+check('las mutaciones de inventario son auditadas e idempotentes',
+  /capability_operation_audit/.test(inventory) && /pg_advisory_xact_lock/.test(inventory));
+check('STORE usa exclusivamente las RPC protegidas de inventario',
+  /save_products_checked/.test(store) && /delete_product_checked/.test(store));
+check('la verificación de inventario comprueba ACL negativas',
+  /H56_INVENTORY_ACL_FAILED/.test(inventoryVerify));
+check('administrar permisos exige permissions.manage',
+  /resolve_operational_capability[\s\S]*permissions\.manage/i.test(settingsCapabilities));
+check('settings y lookup exigen settings.manage para escribir',
+  /settings_capability_write/.test(settingsCapabilities)
+  && /lookup_capability_write/.test(settingsCapabilities)
+  && /settings\.manage/.test(settingsCapabilities));
+check('la verificación separa compatibilidad y denegación',
+  /H56_PERMISSIONS_COMPATIBILITY_FAILED/.test(settingsVerify)
+  && /H56_PERMISSIONS_CAPABILITY_FAILED/.test(settingsVerify));
+check('ventas públicas exigen sales.create',
+  /commit_sale_checked/.test(remaining) && /sales\.create/.test(remaining));
+check('clientes, promociones y vendedores usan capacidades propias',
+  /customers\.create/.test(remaining) && /customers\.update/.test(remaining)
+  && /customers\.delete/.test(remaining) && /promotions\.manage/.test(remaining)
+  && /sellers\.manage/.test(remaining));
+check('Edge Function exige sellers.manage en servidor',
+  /current_has_capability/.test(edgeAdmin) && /sellers\.manage/.test(edgeAdmin));
 
 console.log(`\n════════ ${passed} pasaron, ${failed} fallaron ════════`);
 if (failed) process.exit(1);
