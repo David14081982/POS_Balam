@@ -2309,7 +2309,7 @@ no reconoce se devuelve intacta.
 
 **Estado:** RESUELTO
 **Fecha de registro:** 29/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `f45dba5`
 **Evidencia:** el Contrato del Cambio § 7 y § 13 exige tres lecturas que la
 pantalla Reportes no ofrece: ventas cambiadas con lo devuelto y lo entregado;
 comision por vendedor separando ventas y excedentes de cambios; y valor no
@@ -2338,9 +2338,12 @@ Prestamos 117/117; UX 11 interacciones y 2 validaciones; smoke 17/17; navegacion
 devoluciones 17/17; coherencia 17/17; comisiones 10/10; comision efectiva 22/22;
 liquidaciones 10/10; cola 115/115; concurrencia 9/9; folio 60/60; trazabilidad
 65/65; migraciones 31/31; roles 10/10; ticket 23/23; apartados 55/55.
-**Despliegue:** sin migraciones. Artefactos regenerados; verificacion publicada
-pendiente de commit.
-**Pendiente:** registrar commits y evidencia de publicacion.
+**Despliegue:** sin migraciones. `f45dba5` publicado en `main`; `index.html`
+servido coincide byte a byte, SHA-256
+`BAB34C4DAD52A11720B8EC930C6F41448E9988F4AD8FC59DB1488FBA3C25823A`,
+8 727 125 bytes. Los `balam/data.jsx` y `balam/reports.jsx` servidos coinciden
+con la fuente y contienen las proyecciones y contratos de H-51.
+**Pendiente:** ninguno dentro del alcance.
 **Riesgo residual:** las ventas historicas con varios vendedores no congelaron
 el reparto individual de la comision. El total se conserva y el reporte marca
 el reparto como estimado; congelarlo hacia futuro requiere otra historia.

@@ -3,7 +3,7 @@
 **Riesgo:** H-51
 **Estado:** RESUELTO
 **Fecha:** 29/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `f45dba5`
 
 ## Problema y reproducción
 
@@ -68,8 +68,16 @@ commit del cambio 32/32; saldo 38/38; plazo 38/38; devoluciones 17/17; coherenci
 
 ## Despliegue
 
-Sin migraciones. Pendiente registrar el commit y verificar el artefacto servido
-byte a byte, además de comprobar `balam/data.jsx` y `balam/reports.jsx` servidos.
+Sin migraciones. El commit `f45dba5` se publicó en `main`. GitHub Pages sirve
+`index.html` idéntico byte a byte al artefacto del commit:
+
+    SHA-256  BAB34C4DAD52A11720B8EC930C6F41448E9988F4AD8FC59DB1488FBA3C25823A
+    bytes    8 727 125
+
+La trampa de auditoría se comprobó contra la fuente servida:
+`balam/data.jsx` coincide con el repositorio y contiene
+`sellerCommissionReport`; `balam/reports.jsx` también coincide y contiene
+`exchange-history-report`.
 
 ## Riesgo residual y pendientes
 
