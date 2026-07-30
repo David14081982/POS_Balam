@@ -1,7 +1,7 @@
 # La comisión del excedente se calculaba, se atribuía y nunca se pagaba
 
 **Riesgo:** H-47
-**Estado:** RESUELTO en base de datos — pendiente de publicar el cliente
+**Estado:** RESUELTO
 **Fecha:** 30/07/2026
 **Commit:** `be84e3c`
 
@@ -144,10 +144,30 @@ las migraciones (`R-DEL-03`), y por eso el orden fue base primero.
 - La venta original sigue sin congelar su porcentaje de comisión: si cambia entre
   la venta y la devolución, la reversión de la venta difiere de lo acreditado.
   Debilidad heredada, fuera del alcance de H-47, digna de historia propia.
-- H-48 —el descuadre entre cobrado y vendido— sigue abierto, y es el que hace
-  visible este ingreso en los reportes. H-46 quedó ocupada por la historia de
-  Préstamos de otra sesión (`9387e62`), así que esta corrección se renumeró a
-  H-47 y el resto del plan de C7 se desplazó.
+- H-49 —el descuadre entre cobrado y vendido— sigue abierto, y es el que hace
+  visible este ingreso en los reportes.
+
+### Publicación
+
+El cliente salió en el commit `c9618dd` de la sesión de Préstamos, que recompiló
+los artefactos sobre las fuentes ya commiteadas de esta historia. La divergencia
+que este documento declaró quedó cerrada: reproducibilidad 8/8, y GitHub Pages
+sirve `balam/data.jsx` idéntico a la fuente, con la acreditación y la reversa
+dentro. `index.html` servido, SHA-256
+`491086d1e500b2f3c6be21950a5235ec3125f24d9f2c545e98917918960d1615`, coincide byte a byte.
+
+**Nota para quien audite el artefacto:** `index.html` no incrusta los `.jsx`, los
+carga en ejecución, y `POS Balam (offline).html` los guarda codificados
+(`atob`). Buscar un identificador con `grep` en cualquiera de los dos devuelve
+cero y **no** prueba que falte —lo comprobé con `recordExchange`, que existe
+desde hace semanas y también da cero—. Se verifica contra el `.jsx` servido.
+
+### Convivencia de numeración
+
+H-46 y H-48 quedaron ocupadas por la sesión de Préstamos (`9387e62`, `c9618dd`).
+Esta corrección se renumeró a H-47 y el plan de C7 se desplazó: descuadre H-49,
+reportes H-50, diálogos H-51, catálogo H-52. El número se reclama registrando el
+riesgo al abrir la historia, no al cerrarla.
 
 ## Referencias
 

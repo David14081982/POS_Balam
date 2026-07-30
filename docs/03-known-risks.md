@@ -2135,7 +2135,7 @@ de barras.
 
 ## H-47 - La comision del excedente se calculaba, se atribuia y nunca se pagaba
 
-**Estado:** RESUELTO en base de datos - pendiente de publicar el cliente
+**Estado:** RESUELTO
 **Fecha de registro:** 30/07/2026
 **Commit:** `be84e3c`
 **Evidencia:** `recordExchange` calculaba `baseComision` —el excedente de valor—
@@ -2179,18 +2179,21 @@ y la limpieza borraba de `line_consumption` y `line_supply`, que son VISTAS. El
 `drop` es protector —mientras coexistan las firmas de cinco y
 seis parametros, una llamada con cinco es ambigua y PostgreSQL la rechaza— y el
 cliente no puede publicarse antes de las migraciones (`R-DEL-03`).
-**Pendiente:** publicar el cliente. `index.html` no se recompilo en este commit
-porque contiene trabajo sin cerrar de la pantalla de Prestamos de otra sesion, asi
-que **el paquete y las fuentes divergen temporalmente** y
-`test-build-reproducibility` fallara hasta que ese trabajo cierre y se recompile.
-Produccion sigue sirviendo el paquete anterior, que funciona: llama a
-`commit_exchange` con cinco parametros y el sexto tiene valor por omision. Tambien
-H-48, que hace visible
-este ingreso en los reportes.
+**Pendiente:** H-49 —el descuadre entre cobrado y vendido—, que hace visible en
+los reportes el ingreso que esta historia empieza a acreditar.
 **Riesgo residual:** la reversa no tiene camino que la invoque porque no existe
 cancelar un cambio. El IVA al 16% se replica como criterio en `recordExchange`
 porque `recordSale` lo fija asi (`AP-01`). La venta original sigue sin congelar
 su porcentaje de comision: debilidad heredada, digna de historia propia.
+**Publicacion:** el cliente salio en el commit `c9618dd` de la sesion de
+Prestamos, que recompilo los artefactos sobre las fuentes ya commiteadas de esta
+historia. GitHub Pages sirve `balam/data.jsx` identico a la fuente del
+repositorio, con la acreditacion y la reversa dentro, y el `index.html` servido
+coincide byte a byte: SHA-256 `491086d1e500b2f3c6be21950a5235ec3125f24d9f2c545e98917918960d1615`.
+Nota para quien audite: `index.html` NO incrusta los `.jsx`, los carga en
+ejecucion, y `POS Balam (offline).html` los guarda codificados (`atob`). Buscar
+un identificador con grep en cualquiera de los dos da cero y **no** prueba que
+falte: se comprueba contra el `.jsx` servido, o decodificando.
 **Correccion documentada:** `docs/fixes/comision-del-excedente.md`.
 
 ## Regla de actualización
