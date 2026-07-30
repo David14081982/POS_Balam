@@ -424,6 +424,23 @@
         await pullDomain('liquidations');
         return true;
       }
+      if (op.type === 'loanOperation') {
+        const committed = await c.rpc('commit_loan_operation', {
+          p_operation_id: op.id,
+          p_action: op.action,
+          p_loan: op.loan,
+          p_expected_version: Number(op.expectedVersion) || 0,
+        });
+        if (committed.error || !committed.data) {
+          return failOp(committed.error || { code: 'empty_response', message: 'El préstamo no devolvió confirmación' });
+        }
+        const local = window.DATA && (window.DATA.loans || []).find(x => x.id === op.loan.id);
+        if (local && committed.data._loanVersion != null) {
+          local._loanVersion = Number(committed.data._loanVersion) || 0;
+          if (window.DATA.saveLoans) window.DATA.saveLoans();
+        }
+        return true;
+      }
       if (op.type === 'staffUpdate') {
         const m = MAP[op.kind];
         const remote = [];
@@ -877,6 +894,15 @@
   function closeCommissionPeriod({ operationId }) {
     if (!enabled) return;
     return run({ type: 'commissionClose', operationId });
+  }
+  function pushLoanOperation(action, loan, expectedVersion) {
+    if (!enabled) return;
+    return run({
+      type: 'loanOperation',
+      action,
+      loan: JSON.parse(JSON.stringify(loan)),
+      expectedVersion: Number(expectedVersion) || 0,
+    });
   }
   function pushSale(sale, effects) {
     if (!enabled) return;
@@ -1366,6 +1392,6 @@
     }
   }
 
-  window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushSale, pushReturn, pushExchange, ensureFolioBlock, deleteRow, settleCommission, closeCommissionPeriod, pullDomain, fetchSaleByFolio, physicalCardAvailable, claimPhysicalCard, flushQueue, retryOperation, queueStatus, clearQueue, markResetApplied, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
+  window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushSale, pushReturn, pushExchange, ensureFolioBlock, deleteRow, settleCommission, closeCommissionPeriod, pushLoanOperation, pullDomain, fetchSaleByFolio, physicalCardAvailable, claimPhysicalCard, flushQueue, retryOperation, queueStatus, clearQueue, markResetApplied, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
   window.CORE.registerSyncGateway(window.STORE);
 })();

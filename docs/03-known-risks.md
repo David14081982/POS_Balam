@@ -2633,6 +2633,14 @@ de un apartado ya persistido. Un cobro inicial con dinero exige `sales.create`
 y `sales.collect`; un abono o liquidación exige sólo `sales.collect`. Cambio de
 método y reversión quedan fuera porque no existen como operaciones. Verificación
 remota: compatibilidad vendedor, denegaciones independientes, ACL y limpieza.
+**Extensión `inventory.loan`:** `09500/09600` crean el documento remoto
+versionado y la autoridad transaccional de entrega, devolución, faltante,
+edición, baja controlada y reapertura. Edición y baja se rechazan después del
+primer efecto; devolución total y faltante exigen además cierre; la reapertura
+sólo parte de `no_devuelto`. Ninguna transición modifica inventario ni
+movimientos históricos. La verificación remota confirmó transiciones,
+denegación, auditoría y limpieza de fixtures. Regresión específica:
+capacidades 40/40, migraciones 31/31, cola 115/115 y préstamos 117/117.
 **Corrección documentada:** `docs/fixes/permisos-visualizacion.md`.
 
 ## Regla de actualización

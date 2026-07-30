@@ -15,6 +15,8 @@ const remaining = read('supabase/migrations/20260730009000_pos_h56_remaining_cap
 const edgeAdmin = read('supabase/functions/admin-users/index.ts');
 const collect = read('supabase/migrations/20260730009200_pos_h56_sales_collect_capability.sql');
 const collectVerify = read('supabase/migrations/20260730009300_pos_h56_sales_collect_capability_verification.sql');
+const loans = read('supabase/migrations/20260730009500_pos_h56_inventory_loan_capabilities.sql');
+const loansVerify = read('supabase/migrations/20260730009600_pos_h56_inventory_loan_capabilities_verification.sql');
 const data = read('balam/data.jsx');
 const store = read('balam/store.jsx');
 
@@ -89,6 +91,22 @@ check('la verificación cubre cobro inicial, abono y denegaciones',
   /H56_COLLECT_INITIAL_FAILED/.test(collectVerify)
   && /H56_COLLECT_LAYAWAY_FAILED/.test(collectVerify)
   && /H56_COLLECT_DENY_FAILED/.test(collectVerify));
+check('préstamos separan siete capacidades operativas',
+  ['deliver','return','shortage','close','edit','delete','reopen']
+    .every(x => loans.includes(`inventory.loan.${x}`)));
+check('préstamos usan documento remoto, tombstone, versión y auditoría',
+  /loan_documents/.test(loans) && /deleted_at/.test(loans)
+  && /expected_version/.test(loans) && /capability_operation_audit/.test(loans));
+check('devolución total y faltante exigen cierre adicional',
+  /inventory\.loan\.return[\s\S]*inventory\.loan\.close/.test(loans)
+  && /inventory\.loan\.shortage[\s\S]*inventory\.loan\.close/.test(loans));
+check('reapertura no toca productos ni movimientos',
+  /inventory\.loan\.reopen/.test(loans)
+  && !/update pos\.(products|movements)/i.test(loans));
+check('la verificación cubre transiciones y denegaciones de préstamo',
+  /H56_LOAN_TRANSITION_FAILED/.test(loansVerify)
+  && /H56_LOAN_DENY_FAILED/.test(loansVerify)
+  && /H56_LOAN_CLEANUP_FAILED/.test(loansVerify));
 
 console.log(`\n════════ ${passed} pasaron, ${failed} fallaron ════════`);
 if (failed) process.exit(1);

@@ -252,7 +252,9 @@ try {
   check('el préstamo NO descuenta inventario', alta.stock === 6, `stock ${alta.stock}`);
   check('la autoridad de unidades prestadas las reporta', alta.prestadas === 2);
   check('un préstamo dentro de plazo no está vencido', alta.atraso.vencido === false && alta.atraso.dias === -7);
-  check('el préstamo no encola nada contra la nube', !/loans/.test(alta.cola), alta.cola.slice(0, 120));
+  check('el préstamo encola la entrega protegida sin escribir inventario directamente',
+    /"type":"loanOperation"/.test(alta.cola) && /"action":"deliver"/.test(alta.cola),
+    alta.cola.slice(0, 120));
 
   console.log('\n── D) La cartera en pantalla ───────────────────────────');
   check('el indicador de piezas fuera las cuenta', /piezas fuera/i.test(alta.texto) && /2 pieza\(s\) fuera del negocio/i.test(alta.texto));

@@ -2131,6 +2131,7 @@
     };
     loan.folio = nextLoanFolio(loan.fecha);
     loans.unshift(loan); saveLoans();
+    try { window.CORE.invokeSync('pushLoanOperation', 'deliver', loan, 0); } catch (e) { /* offline */ }
     return { ok: true, loan };
   }
   // Devolución total o parcial. Cada entrega deja su propio asiento en
@@ -2142,6 +2143,7 @@
     const loan = loans.find(x => x.id === id);
     if (!loan) return { ok: false, error: 'El préstamo no existe' };
     if (loan.estado === 'devuelto') return { ok: false, error: 'Este préstamo ya está devuelto por completo' };
+    const baseVersion = Number(loan._loanVersion) || 0;
     const dia = soloDia(d.fecha) || diaActual();
     if (!DIA_RE.test(dia)) return { ok: false, error: 'La fecha de devolución no es válida' };
     if (dia < soloDia(loan.fecha)) return { ok: false, error: 'La devolución no puede ser anterior al préstamo' };
@@ -2176,6 +2178,7 @@
     loan.fechaDevolucion = completo ? asiento.fecha : null;
     if (completo && asiento.nota) loan.notaCierre = asiento.nota;
     saveLoans();
+    try { window.CORE.invokeSync('pushLoanOperation', 'return', loan, baseVersion); } catch (e) { /* offline */ }
     return { ok: true, loan, cerrado: completo };
   }
   // Declarar la pérdida. No mueve existencias —el préstamo nunca las movió— pero
@@ -2186,12 +2189,14 @@
     if (!loan) return { ok: false, error: 'El préstamo no existe' };
     if (loan.estado === 'devuelto') return { ok: false, error: 'Este préstamo ya está devuelto' };
     if (!prestamoPendientes(loan)) return { ok: false, error: 'Este préstamo no tiene piezas fuera' };
+    const baseVersion = Number(loan._loanVersion) || 0;
     const dia = soloDia(d.fecha) || diaActual();
     if (!DIA_RE.test(dia)) return { ok: false, error: 'La fecha no es válida' };
     loan.estado = 'no_devuelto';
     loan.fechaCierre = dia + ' ' + horaActual();
     loan.notaCierre = String(d.nota || '').trim();
     saveLoans();
+    try { window.CORE.invokeSync('pushLoanOperation', 'shortage', loan, baseVersion); } catch (e) { /* offline */ }
     return { ok: true, loan };
   }
   // Corregir la captura. Sólo mientras nada haya regresado: con devoluciones
@@ -2201,6 +2206,8 @@
     if (!loan) return { ok: false, error: 'El préstamo no existe' };
     if ((loan.devoluciones || []).length) return { ok: false, error: 'Ya hay devoluciones registradas: no se puede editar' };
     const p = patch || {};
+    const baseVersion = Number(loan._loanVersion) || 0;
+    const wasShortage = loan.estado === 'no_devuelto';
     if (p.persona !== undefined) {
       const persona = normalizeLoanPersona(p.persona);
       if (!persona) return { ok: false, error: 'Falta el nombre de quien recibe la mercancía' };
@@ -2215,13 +2222,17 @@
     if (p.nota !== undefined) loan.nota = String(p.nota || '').trim();
     if (p.estado !== undefined && p.estado === 'pendiente' && loan.estado === 'no_devuelto') loan.estado = 'pendiente';
     saveLoans();
+    try { window.CORE.invokeSync('pushLoanOperation', wasShortage && loan.estado === 'pendiente' ? 'reopen' : 'edit', loan, baseVersion); } catch (e) { /* offline */ }
     return { ok: true, loan };
   }
   function eliminarPrestamo(id) {
     const i = loans.findIndex(x => x.id === id);
     if (i < 0) return { ok: false, error: 'El préstamo no existe' };
     if ((loans[i].devoluciones || []).length) return { ok: false, error: 'Ya hay devoluciones registradas: no se puede eliminar' };
+    const loan = loans[i];
+    const baseVersion = Number(loan._loanVersion) || 0;
     loans.splice(i, 1); saveLoans();
+    try { window.CORE.invokeSync('pushLoanOperation', 'delete', loan, baseVersion); } catch (e) { /* offline */ }
     return { ok: true };
   }
 

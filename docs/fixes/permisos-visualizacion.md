@@ -229,14 +229,28 @@ liquidación de apartado remoto exige sólo cobrar. La transacción comercial y
 la cola no cambian. No existe edición de método ni reversión de cobro, por lo
 que ambas quedan explícitamente fuera.
 
+`09500/09600` completan la frontera `inventory.loan`. El cliente conserva el
+documento en la cola local-first y el servidor serializa por préstamo, valida
+versión, capacidad y transición, guarda un tombstone para la baja y audita en
+la misma transacción. `edit` y `delete` sólo aceptan un préstamo pendiente sin
+eventos; `return` exige además `close` cuando completa la devolución;
+`shortage` siempre exige `close`; `reopen` sólo acepta `no_devuelto`. El cierre
+sigue siendo automático. La RPC no escribe productos ni movimientos.
+
+La verificación remota pasó transiciones, denegación sin escritura parcial,
+auditoría y limpieza sintética. Regresión específica: capacidades 40/40,
+migraciones 31/31, cola 115/115 y préstamos 117/117. El barrido global también
+detectó seis arneses históricos incompatibles con cambios anteriores de Fase 5
+o dependientes de estado compartido; ninguno recorre la frontera de préstamos
+y se conservan declarados como riesgo de infraestructura de prueba.
+
 ## Riesgo residual y pendientes
 
 La terminación de Fase 5 y la Fase 6 permanecen abiertas. El modelo, la
-autoridad cliente, el editor triestado y las comisiones ya usan sus fronteras
-finales; devoluciones y cambios también tienen capacidad propia. Falta migrar
-inventario y configuración. Persisten las fronteras de cobros/apartados,
-préstamos y tombstones genéricos descritas en el mapa; cancelación carece de
-contrato funcional.
+autoridad cliente, el editor triestado, comisiones, posventa, inventario,
+configuración, cobros y préstamos ya tienen fronteras operativas. Persisten
+las bajas específicas de clientes, promociones y vendedores descritas en el
+mapa; cancelación carece de contrato funcional.
 
 La reversión de Fase 1 consiste en retirar `screens.jsx`, restaurar las listas
 anteriores en App y Configuración y regenerar los artefactos. No requiere
