@@ -2063,6 +2063,111 @@ viaja a `pos.products`— podria dejar un faltante sin explicacion en todas las
 terminales si se pierde el registro local.
 **Correccion documentada:** `docs/fixes/pantalla-prestamos.md`.
 
+## H-47 - El prestamo obligaba a teclear la prenda que el lector ya sabe leer
+
+**Estado:** RESUELTO
+**Fecha de registro:** 29/07/2026
+**Fecha de resolucion:** 29/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** el negocio tiene lector de codigo de barras y toda la mercancia
+lleva etiqueta `SKU-TALLA` (`balam/barcodes.jsx`). El Punto de venta lo aprovecha
+por dos caminos —`onScan` en su campo de captura y una captura global HID con
+heuristica de cadencia (`balam/pos.jsx`)— pero la captura del prestamo entregada
+en H-46 solo aceptaba texto: habia que leer el nombre de la prenda y teclearlo.
+**Origen de auditoria:** solicitud del dueno del producto tras usar la pantalla.
+**Riesgo:** el mostrador paga dos veces por el mismo dato. Teclear el nombre
+tambien admite equivocarse de prenda o de talla, y el prestamo congela esa
+evidencia: un error de captura queda escrito en el documento que firma el cliente.
+**Reproduccion:** `node test-loans-screen.mjs` con las comprobaciones de lector
+sobre el bundle previo: la lectura del codigo no agrega ninguna pieza.
+**Correccion:** los tres caminos de `onScan` del Punto de venta, en el mismo
+orden: codigo completo → la pieza exacta entra sin preguntar la talla, porque ya
+venia en la etiqueta; SKU exacto → abre el selector de talla; texto libre → abre
+la primera coincidencia. El buscador nace enfocado y leer dos veces la misma
+etiqueta suma cantidad en el renglon existente. Se replico tambien la captura
+global HID con su heuristica de cadencia, con una defensa que el POS no necesita:
+la captura del prestamo tiene tres campos de texto, asi que al reconocer el codigo
+se retira del campo enfocado exactamente lo que el lector escribio —si no,
+escanear con el foco en «quien recibe» dejaria el codigo dentro del nombre—. En el
+buscador de la cartera una lectura responde «quien tiene esta prenda» y busca en
+**todos** los estados, ignorando el filtro a proposito y diciendolo en pantalla.
+**Alcance:** captura del prestamo y buscador de la cartera. Ninguna autoridad
+nueva: se consume `window.BARCODES`, la misma del Punto de venta.
+**Pruebas:** `test-loans-screen.mjs` **112/112** —ocho comprobaciones nuevas en la
+captura y cuatro en la cartera, incluida la ráfaga que no debe quedar escrita en el
+nombre de la persona—. Regresion de cliente en verde: contratos 38/38, navegacion
+15/15, smoke 15/15, apartados 55/55, E2E del cambio 37/37, pantalla del cambio
+45/45, ticket impreso 23/23, cola 115/115, folio diario 60/60, precio por talla
+19/19, devoluciones 17/17, reinicio 19/19, inventario 18/18, coherencia de cobro
+17/17, `.xlsx` 17/17, reproducibilidad 8/8. Guardian de `R-DEL-14` intacto.
+**Despliegue:** artefactos regenerados y publicados; verificacion byte a byte
+pendiente de registrar tras el push.
+**Pendiente:** cuando el termino no resuelve a ninguna prenda del catalogo, la
+cartera lo trata como busqueda de texto normal. `BARCODES.parse()` es heuristico
+—da positivo con cualquier cadena con un guion en medio— y en el POS solo elige el
+texto de un aviso; aqui habria cambiado el mensaje de una lista vacia por una razon
+adivinada. Se dejo fuera a proposito.
+**Riesgo residual:** la heuristica de cadencia del lector es la misma del Punto de
+venta y hereda su limite: un tecleo humano extraordinariamente rapido que resulte
+ser un codigo valido se interpretaria como lectura. Nunca ha ocurrido y el efecto
+seria agregar una pieza visible que se puede quitar antes de registrar.
+**Correccion documentada:** `docs/fixes/pantalla-prestamos.md` § Lector de codigo
+de barras.
+
+## H-47 - La comision del excedente se calculaba, se atribuia y nunca se pagaba
+
+**Estado:** RESUELTO en base de datos - pendiente de publicar el cliente
+**Fecha de registro:** 30/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** `recordExchange` calculaba `baseComision` —el excedente de valor—
+y desde H-42 guardaba tambien a quien le correspondia, pero no acreditaba nada a
+nadie: no tocaba a los vendedores en ningun punto. Y `pos.commit_exchange` no
+PODIA acreditar, porque nacio sin parametro de efectos de vendedor, el que
+`commit_sale` tiene desde `20260725001900`.
+**Origen de auditoria:** C7 del modulo de Cambios; explicacion pedida por el
+dueno el 30/07/2026 sobre lo que faltaba del modulo.
+**Riesgo:** dinero que el negocio le debe a una persona. Quien atendia el cambio
+hacia una venta nueva, el sistema la registraba con su nombre, y a fin de mes
+cobraba como si no la hubiera hecho.
+**Reproduccion:** `node test-exchange-commission.mjs` antes de la correccion:
+8 pasaron, 21 fallaron.
+**Decision del dueno:** la comision se acredita en el acto, igual que en una
+venta, con una reversa preparada para cuando el cambio se cancele o se modifique.
+**Correccion:** el excedente comisiona segun `commission.base` y el porcentaje
+del vendedor, y se acredita al registrar. Un cambio NO es un pedido: se toca
+`comisionAcum` y nada mas —ni `ventasMes` ni `ventasNum`—, asi que el conteo de
+ventas, el ticket promedio y las metas no se mueven. Lo acreditado queda
+congelado en el documento (monto, criterio y porcentaje) para que la reversa
+reste lo que de verdad se pago y no un recalculo (ADR-002, `AP-06`).
+`reverseExchangeCommission` es la reversa: idempotente, nunca deja el acumulado
+en negativo, y es una COSTURA DECLARADA —hoy no existe forma de cancelar ni
+modificar un cambio—, probada para que no sea codigo muerto (ADR-003).
+`commit_exchange` gana `p_seller_effects` con la misma reconciliacion de version
+que `commit_sale`, de modo que un reenvio de la cola durable no paga dos veces.
+**Pruebas:** 30/30. Regresion completa en verde, con las rutas de dinero y
+sincronizacion en foco: comisiones 10/10; comision efectiva 22/22; liquidaciones
+10/10; cola 115/115; concurrencia 9/9; trazabilidad 65/65; folio diario 60/60;
+coherencia 17/17; devoluciones 17/17; modelo 28/28; commit del cambio 32/32;
+saldo 38/38; plazo 38/38; contratos 38/38; migraciones 31/31; E2E del cambio
+37/37; pantalla 45/45; smoke 15/15; navegacion 15/15; roles 10/10; build 8/8.
+Guardian de UX intacto en 11/11.
+**Despliegue:** las tres migraciones aplicadas y registradas en `Balam` el
+30/07/2026, autorizadas por el dueno al ser operacion destructiva en produccion.
+La verificacion emitio sus ocho avisos y no dejo filas. Dos fallos, ambos de la
+semilla y no de la funcion, corregidos en el sitio al no estar registrada aun
+(`R-DB-01`): faltaba la reserva de inventario que una venta cobrada exige (H-01),
+y la limpieza borraba de `line_consumption` y `line_supply`, que son VISTAS. El
+`drop` es protector —mientras coexistan las firmas de cinco y
+seis parametros, una llamada con cinco es ambigua y PostgreSQL la rechaza— y el
+cliente no puede publicarse antes de las migraciones (`R-DEL-03`).
+**Pendiente:** publicar el cliente; H-48, que hace visible
+este ingreso en los reportes.
+**Riesgo residual:** la reversa no tiene camino que la invoque porque no existe
+cancelar un cambio. El IVA al 16% se replica como criterio en `recordExchange`
+porque `recordSale` lo fija asi (`AP-01`). La venta original sigue sin congelar
+su porcentaje de comision: debilidad heredada, digna de historia propia.
+**Correccion documentada:** `docs/fixes/comision-del-excedente.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

@@ -1426,6 +1426,27 @@
     const diferencia = valorEntregado >= valorReconocido ? money(valorEntregado - valorReconocido) : 0;
     const valorNoAprovechado = valorEntregado >= valorReconocido ? 0 : money(valorReconocido - valorEntregado);
 
+    // H-47 · Contrato del Cambio § 7: el intercambio en sí NUNCA comisiona. Sólo
+    // el EXCEDENTE de valor constituye venta nueva, y su comisión es de quien
+    // atendió el cambio. Se acredita en el acto, como en una venta.
+    //
+    // Pero un cambio NO es un pedido: no toca `ventasMes` ni `ventasNum`, así que
+    // no mueve el conteo de ventas, el ticket promedio ni las metas del equipo.
+    // Sólo el acumulado de comisión cambia.
+    //
+    // Lo acreditado queda CONGELADO en el documento (ADR-002): monto, base y
+    // porcentaje. La reversa resta exactamente lo que se pagó, no lo que la
+    // configuración de hoy diría. Sin eso, cambiar `commission.base` o el
+    // porcentaje de alguien descuadraría la reversa (AP-06).
+    const comisionBase = window.CONFIG.get('commission.base') === 'bruto' ? 'bruto' : 'neto';
+    const vendedorCambio = vendedorId ? sellers.find(x => x.id === vendedorId) : null;
+    const comisionPct = vendedorCambio ? (Number(vendedorCambio.comisionPct) || 0) : 0;
+    // El excedente viene con IVA incluido al 16%, misma convención que `recordSale`
+    // fija en su cálculo de subtotal. Unificar ambas en un solo ayudante queda
+    // pendiente: aquí se replica el criterio, no el importe.
+    const baseComisionable = comisionBase === 'bruto' ? diferencia : money(diferencia / 1.16);
+    const comisionMonto = money(baseComisionable * comisionPct / 100);
+
     const id = 'cmb-' + newOperationId();
     const exch = {
       id, folio: nextFolio(id, fecha), origenFolio: sale.folio, fecha,
@@ -1433,6 +1454,7 @@
       revisadoPor: revisadoPor || undefined, notas: notas || '',
       valorReconocido: money(valorReconocido), valorEntregado: money(valorEntregado),
       diferencia, valorNoAprovechado, baseComision: diferencia,
+      comisionMonto, comisionBase, comisionPct,
       lineas: items.map(l => {
         const p = products.find(x => x.id === l.productId || x.sku === l.sku);
         return {
@@ -1474,12 +1496,65 @@
       savePayments(false);
     }
 
+    // Acreditación de la comisión del excedente. Mismo patrón de concurrencia
+    // optimista que la venta: se registra la versión con la que se leyó al
+    // vendedor, para que la nube rechace el efecto si otro equipo lo movió.
+    const sellerEffects = [];
+    if (vendedorCambio && comisionMonto > 0) {
+      const baseVersion = Number(vendedorCambio._syncVersion) || 0;
+      const before = Number(vendedorCambio.comisionAcum) || 0;
+      vendedorCambio.comisionAcum = money(before + comisionMonto);
+      sellerEffects.push({
+        id: vendedorCambio.id, base_version: baseVersion,
+        comision_acum_delta: comisionMonto,
+        after_comision_acum: vendedorCambio.comisionAcum,
+      });
+      saveSellers(false);
+    }
+
     exchanges.unshift(exch);
     saveExchanges(false);
     if (!remoteApplying) {
-      try { window.CORE.invokeSync('pushExchange', exch, { payment }); } catch (e) { /* offline */ }
+      try { window.CORE.invokeSync('pushExchange', exch, { payment, sellerEffects }); } catch (e) { /* offline */ }
     }
     return { ok: true, exchange: exch, payment };
+  }
+
+  // H-47 · Reversa de la comisión del excedente.
+  //
+  // Hoy NO existe ninguna forma de cancelar ni modificar un cambio: `pos.exchanges`
+  // no tiene estado y nada lo revierte. Esta es la COSTURA DECLARADA para cuando
+  // exista, y está probada para que no sea código muerto (ADR-003).
+  //
+  // Resta el monto CONGELADO, no uno recalculado: si el dueño cambió la base de
+  // comisión o el porcentaje de alguien entre el registro y la reversa, lo que se
+  // devuelve sigue siendo lo que de verdad se pagó.
+  function reverseExchangeCommission(exchangeId, { fecha: fechaIn } = {}) {
+    const e = exchanges.find(x => x.id === exchangeId);
+    if (!e) return { ok: false, error: 'exchange_not_found' };
+    if (e.comisionRevertida) return { ok: false, error: 'comision_ya_revertida' };
+    const monto = money(Number(e.comisionMonto) || 0);
+    const s = e.vendedorId ? sellers.find(x => x.id === e.vendedorId) : null;
+    const sellerEffects = [];
+    if (s && monto > 0) {
+      const baseVersion = Number(s._syncVersion) || 0;
+      const before = Number(s.comisionAcum) || 0;
+      // Nunca deja el acumulado en negativo: si ya se liquidó el periodo, la
+      // comisión no se puede "des-pagar" restando de un saldo que no existe.
+      s.comisionAcum = Math.max(0, money(before - monto));
+      sellerEffects.push({
+        id: s.id, base_version: baseVersion,
+        comision_acum_delta: s.comisionAcum - before,
+        after_comision_acum: s.comisionAcum,
+      });
+      saveSellers(false);
+    }
+    e.comisionRevertida = fechaIn || now();
+    saveExchanges(false);
+    if (!remoteApplying) {
+      try { window.CORE.invokeSync('pushExchange', e, { sellerEffects }); } catch (err) { /* offline */ }
+    }
+    return { ok: true, monto, vendedorId: e.vendedorId || null };
   }
 
   function recordReturn({ folio, lineas, metodo, notas, fecha: fechaIn }) {
@@ -2124,7 +2199,7 @@
     completarApartado, registrarPagoApartado, paymentsForSale, hasFinancialSnapshot, resolveLineDiscount, cerrarMes, getPeriodoInicio,
     listPrice, priceRange, sanitizePreciosTalla,
     recordReturn, returnedQty, returnsForFolio, isReturnable, returnDeadline, saleLineBalance,
-    saveExchanges, recognizedValue, supplySources, recordExchange,
+    saveExchanges, recognizedValue, supplySources, recordExchange, reverseExchangeCommission,
     saveLoans, registrarPrestamo, registrarDevolucionPrestamo, marcarPrestamoNoDevuelto,
     actualizarPrestamo, eliminarPrestamo, prestamoPiezas, prestamoPendientes,
     prestamoAtraso, prestamosVencidos, loanedQty, parseLoanFolio, nextLoanFolio, LOAN_ESTADOS,

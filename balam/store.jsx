@@ -101,6 +101,10 @@
         diferencia: Number(e.diferencia) || 0,
         valor_no_aprovechado: Number(e.valorNoAprovechado) || 0,
         base_comision: Number(e.baseComision) || 0,
+        comision_monto: Number(e.comisionMonto) || 0,
+        comision_base: e.comisionBase || null,
+        comision_pct: Number(e.comisionPct) || 0,
+        comision_revertida: e.comisionRevertida || null,
         notas: e.notas || null,
       }),
       fromRow: r => ({
@@ -112,6 +116,10 @@
         diferencia: Number(r.diferencia) || 0,
         valorNoAprovechado: Number(r.valor_no_aprovechado) || 0,
         baseComision: Number(r.base_comision) || 0,
+        comisionMonto: Number(r.comision_monto) || 0,
+        comisionBase: r.comision_base || undefined,
+        comisionPct: Number(r.comision_pct) || 0,
+        comisionRevertida: r.comision_revertida || undefined,
         notas: r.notas || '', lineas: [],
       }),
     },
@@ -578,6 +586,9 @@
           p_items: op.items || [],
           p_moves: op.moves || [],
           p_payment: op.payment || null,
+          // H-47: la comision del excedente se acredita DENTRO de la misma
+          // transaccion que el cambio, con guarda de version por vendedor.
+          p_seller_effects: op.seller_effects || [],
         });
         if (committed.error || !committed.data || !committed.data.ok) {
           return failOp(committed.error || {
@@ -910,6 +921,10 @@
       id: exch.id, folio: exch.folio, origen_folio: exch.origenFolio,
       fecha: exch.fecha || null, usuario: exch.usuario || null,
       vendedor_id: exch.vendedorId || null, revisado_por: exch.revisadoPor || null,
+      // H-47: lo acreditado viaja congelado, no se recalcula en la nube.
+      comision_monto: Number(exch.comisionMonto) || 0,
+      comision_base: exch.comisionBase || null,
+      comision_pct: Number(exch.comisionPct) || 0,
       notas: exch.notas || null,
     };
     const items = (exch.lineas || []).map(l => ({
@@ -926,6 +941,7 @@
     return run({
       type: 'exchange', id: exch.id, folio: exch.folio,
       header, items, moves, payment: effects.payment || null,
+      seller_effects: effects.sellerEffects || [],
     });
   }
   let pushTimer = null;
