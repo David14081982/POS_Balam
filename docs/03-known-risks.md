@@ -2196,6 +2196,31 @@ un identificador con grep en cualquiera de los dos da cero y **no** prueba que
 falte: se comprueba contra el `.jsx` servido, o decodificando.
 **Correccion documentada:** `docs/fixes/comision-del-excedente.md`.
 
+## H-49 - El dinero cobrado no cuadra con el importe vendido
+
+**Estado:** ABIERTO - numero reclamado, historia en curso
+**Fecha de registro:** 30/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** en `balam/reports.jsx`, «Dinero cobrado» suma TODOS los pagos
+—incluidas las diferencias de cambios, que desde H-47 tienen su propio pago de
+tipo `cambio`— mientras «Ventas brutas» suma el total de las VENTAS, y un cambio
+no es una venta. Las dos cifras se leen juntas en la misma pantalla y no cuadran.
+El desglose existente solo separa anticipos y abonos de apartados: no hay ningun
+renglon que nombre las diferencias de cambios.
+**Origen de auditoria:** C7 del modulo de Cambios.
+**Riesgo:** con un cambio al mes no se nota; con veinte, al cerrar el mes hay un
+hueco de miles de pesos y la pregunta «me falta dinero o falta un registro» no
+tiene respuesta en pantalla.
+**Decision del dueno (30/07/2026):** la diferencia pagada SI se suma al importe
+de ventas, porque es ingreso adicional por entregar un producto de mayor valor.
+Pero NO se contabiliza como pedido ni como venta nueva, porque proviene de una
+operacion ya existente. Asi el cobrado cuadra con el vendido sin alterar
+artificialmente el numero de pedidos, el ticket promedio ni las metas del equipo.
+Ademas debe mostrarse un renglon propio, «Diferencias cobradas por cambios», para
+que quede claro de donde viene ese ingreso.
+**Pendiente:** todo.
+**Riesgo residual:** por determinar.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:
