@@ -319,8 +319,13 @@
       if (kind === 'color' && products.some(p => (p.ornColors || []).includes(code))) return true;
       return false;
     }
-    if (kind === 'size_letter') return products.some(p => (p.stock || []).some(v => v.escala === 'L' && v.talla === code && v.stock > 0));
-    if (kind === 'size_number') return products.some(p => (p.stock || []).some(v => v.escala === 'N' && v.talla === code && v.stock > 0));
+    const sizeItem = (state.catalogs[kind] || []).find(item => item.code === code);
+    const sizeMeta = sizeItem && sizeItem.meta && typeof sizeItem.meta === 'object' ? sizeItem.meta : {};
+    const sizeValue = Object.prototype.hasOwnProperty.call(sizeMeta, 'value') ? sizeMeta.value : code;
+    if (kind === 'size_letter') return products.some(p => (p.stock || []).some(v =>
+      v.escala === 'L' && String(v.talla) === String(sizeValue) && Number(v.stock) > 0));
+    if (kind === 'size_number') return products.some(p => (p.stock || []).some(v =>
+      v.escala === 'N' && String(v.talla) === String(sizeValue) && Number(v.stock) > 0));
     return false;
   }
 

@@ -11,12 +11,12 @@
     maxCellsPerSheet: 1000000,
   });
   // 'Foto (URL)' va al FINAL de BASE a propósito: las columnas A–K conservan su posición de siempre.
-  const BASE = ['SKU', 'Modelo', 'Categoría', 'Manga', 'Tela', 'Color', 'No. Modelo', 'Ornamento', 'Colores Orn.', 'Cuello', 'Precio', 'Foto (URL)'];
+  const BASE = ['SKU', 'Modelo', 'Categoría', 'Manga', 'Tela', 'Color', 'No. Modelo', 'Ornamento', 'Colores Orn.', 'Cuello', 'Precio', 'Foto (URL)', 'Categoría por talla'];
   // Campos que la hoja de Inventario REALMENTE trae. Al ACTUALIZAR un producto existente solo se
   // tocan estos: id, costo, destacado y códigos de barras se conservan porque el Excel no los
   // lleva (reemplazarlos con los valores por defecto de hydrate borraría lo que ya tenías).
   // 'imagen' NO está en la lista: se trata aparte (solo pisa si la hoja trae una URL real).
-  const IMPORT_FIELDS = ['cat', 'manga', 'tela', 'color', 'cuello', 'modelo', 'nombre', 'orn', 'ornColors', 'precio', 'attrs', 'stock'];
+  const IMPORT_FIELDS = ['cat', 'sizeCategoryId', 'manga', 'tela', 'color', 'cuello', 'modelo', 'nombre', 'orn', 'ornColors', 'precio', 'attrs', 'stock'];
   // URL de la foto para el Excel: SOLO fotos reales accesibles por enlace.
   // Se omiten (a) las genéricas de relleno que asigna el sistema y (b) las incrustadas
   // (data:image/…), que son texto de decenas de miles de caracteres y no caben en una celda
@@ -26,9 +26,17 @@
     if (!/^https?:\/\//i.test(u)) return '';
     return D.isAutoImg && D.isAutoImg(u) ? '' : u;
   }
-  // Encabezados de talla. Letras tal cual; números prefijados "T" para no confundir con cantidades.
-  const LETRA_H = D.SIZES_LETRA.slice();                  // XS, S, M, …
-  const NUM_H = D.SIZES_NUM.map(n => 'T' + n);            // T34, T36, …
+  // Encabezados vivos desde CONFIG. Incluyen inactivos para no perder stock
+  // histórico al exportar y reimportar.
+  const sizeItems = (kind, prefix) => window.CONFIG.all(kind).map(item => {
+    const meta = item && item.meta && typeof item.meta === 'object' ? item.meta : {};
+    const value = Object.prototype.hasOwnProperty.call(meta, 'value') ? meta.value : item.code;
+    return { value, header: (prefix || '') + String(value) };
+  });
+  const letterItems = () => sizeItems('size_letter', '');
+  const numberItems = () => sizeItems('size_number', 'T');
+  const letterHeaders = () => letterItems().map(item => item.header);
+  const numberHeaders = () => numberItems().map(item => item.header);
   // Catálogos creados por el admin (Fase 2): una columna extra por catálogo (encabezado = su nombre).
   function customCols() {
     const meta = (window.CONFIG && window.CONFIG.allCatalogMeta) ? window.CONFIG.allCatalogMeta() : {};
@@ -43,7 +51,7 @@
   // por nombre además de por código, así que lee bien la columna aunque traiga el nombre largo.
   function exportCols() { return customCols().filter(c => BASE.indexOf(c.label) < 0); }
   // Orden de columnas: base · catálogos custom · tallas. Se calcula al vuelo (los custom son dinámicos).
-  function buildHeaders() { return BASE.concat(exportCols().map(c => c.label), LETRA_H, NUM_H); }
+  function buildHeaders() { return BASE.concat(exportCols().map(c => c.label), letterHeaders(), numberHeaders()); }
 
   function ensureXLSX() {
     if (!window.XLSX) { window.UI.toast('No se pudo cargar el motor de Excel', 'var(--danger)'); return false; }
@@ -125,14 +133,17 @@
       rows.push([], [c.label.toUpperCase() + ' (col. ' + c.label + ')']);
       window.CONFIG.list(c.kind).forEach(it => rows.push([it.code, it.label]));
     });
+    rows.push([], ['CATEGORÍAS POR TALLA (col. Categoría por talla)']);
+    window.CONFIG.sizeCategories().forEach(category => rows.push([category.id, category.label]));
     rows.push([], ['NOTAS']);
     rows.push(['• El SKU se arma como: Categoría-Manga-Tela-Color-NoModelo  (ej. 21-MC-ALG-BL-060)']);
     rows.push(['• Si dejas la columna SKU vacía, el sistema lo arma con las columnas de atributos.']);
     rows.push(['• Colores Orn.: códigos de hilo del bordado separados por coma (ej. OR, VI). Vacío si no lleva.']);
     rows.push(['• Cuello: usa un código de la tabla CUELLO (NOR, MAO, ITA, CER).']);
-    rows.push(['• Tallas LETRA: columnas ' + D.SIZES_LETRA.join(', ') + '.']);
-    rows.push(['• Tallas NÚMERO: columnas T34…T52 (la "T" es sólo para distinguirlas; captura la cantidad).']);
-    rows.push(['• Una prenda puede llenar ambas escalas. Las tallas que no apliquen se dejan en 0 o vacías.']);
+    rows.push(['• Categoría por talla: usa exactamente un código de la tabla CATEGORÍAS POR TALLA.']);
+    rows.push(['• Tallas LETRA: columnas ' + letterHeaders().join(', ') + '.']);
+    rows.push(['• Tallas NÚMERO: columnas ' + numberHeaders().join(', ') + ' (la "T" sólo distingue el encabezado).']);
+    rows.push(['• Captura existencias únicamente en la escala de la categoría elegida. Una fila con ambas escalas se omite por ambigua.']);
     rows.push(['• Foto (URL): enlace http(s) a la imagen. Al importar se asigna al producto.']);
     rows.push(['   Vacío = se conserva la foto que ya tiene (o se le pone una genérica si es nuevo).']);
     rows.push(['• Al importar, si el SKU YA EXISTE el producto se ACTUALIZA (no se duplica).']);
@@ -146,7 +157,9 @@
   // Convierte un producto → fila plana con todas las columnas
   function rowFromProduct(p) {
     const r = {
-      'SKU': p.sku, 'Modelo': p.nombre, 'Categoría': p.cat, 'Manga': p.manga, 'Tela': p.tela,
+      'SKU': p.sku, 'Modelo': p.nombre, 'Categoría': p.cat,
+      'Categoría por talla': D.resolveProductSizes(p).categoryId || '',
+      'Manga': p.manga, 'Tela': p.tela,
       'Color': p.color, 'No. Modelo': p.modelo, 'Ornamento': p.orn,
       'Colores Orn.': (p.ornColors || []).join(', '), 'Cuello': p.cuello || 'NOR', 'Precio': p.precio,
       'Foto (URL)': fotoUrl(p),
@@ -154,8 +167,8 @@
     exportCols().forEach(c => { r[c.label] = (p.attrs || {})[c.kind] || ''; });
     const byKey = {};
     p.stock.forEach(v => { byKey[v.escala + v.talla] = v.stock; });
-    D.SIZES_LETRA.forEach((t, i) => { r[LETRA_H[i]] = byKey['L' + t] || 0; });
-    D.SIZES_NUM.forEach((t, i) => { r[NUM_H[i]] = byKey['N' + t] || 0; });
+    letterItems().forEach(item => { r[item.header] = byKey['L' + item.value] || 0; });
+    numberItems().forEach(item => { r[item.header] = byKey['N' + item.value] || 0; });
     return r;
   }
 
@@ -165,7 +178,7 @@
     if (h === 'SKU') return 20;
     if (h === 'Ornamento' || h === 'Colores Orn.') return 18;
     if (h === 'Cuello' || h === 'Categoría') return 12;
-    if (BASE.indexOf(h) >= 0 || LETRA_H.indexOf(h) >= 0 || NUM_H.indexOf(h) >= 0) return 7;
+    if (BASE.indexOf(h) >= 0 || letterHeaders().indexOf(h) >= 0 || numberHeaders().indexOf(h) >= 0) return 7;
     return 16; // columnas de catálogos custom
   }
 
@@ -187,7 +200,8 @@
     const ejemplo = rowFromProduct(D.hydrate({
       cat: '21', manga: 'MC', tela: 'ALG', color: 'BL', modelo: '060', nombre: 'EJEMPLO — borra esta fila',
       orn: 'Bordado Eléctrico', ornColors: ['OR', 'VI'], cuello: 'MAO', precio: 650,
-      stock: D.mkStock([2, 4, 6, 9, 12, 8, 5], [0, 0, 3, 5, 6, 4]),
+      sizeCategoryId: 'size_letter', attrs: { __sizeCategoryId: 'size_letter' },
+      stock: D.mkStock([2, 4, 6, 9, 12, 8, 5], []).filter(v => v.escala === 'L'),
     }));
     const headers = buildHeaders();
     const ws = window.XLSX.utils.json_to_sheet([ejemplo], { header: headers });
@@ -249,6 +263,16 @@
     return byLabel ? byLabel.code : '';
   }
 
+  function validSizeCategory(raw) {
+    const value = String(raw == null ? '' : raw).trim();
+    if (!value) return null;
+    const categories = window.CONFIG.sizeCategories ? window.CONFIG.sizeCategories() : [];
+    return categories.find(category => category.id === value)
+      || categories.find(category => category.id.toLowerCase() === value.toLowerCase())
+      || categories.find(category => String(category.label).toLowerCase() === value.toLowerCase())
+      || null;
+  }
+
   function buildProduct(row, idx) {
     const nombre = String(row['Modelo'] || '').trim();
     const skuRaw = String(row['SKU'] || '').trim().toUpperCase();
@@ -276,9 +300,35 @@
     tela = valid('fabric', tela, 'ALG');
     color = valid('color', color, 'BL');
     modelo = String(modelo).padStart(3, '0');
-    const letras = D.SIZES_LETRA.map((t, i) => num(row[LETRA_H[i]]));
-    const nums = D.SIZES_NUM.map((t, i) => num(row[NUM_H[i]]));
+    const letterSizes = letterItems();
+    const numberSizes = numberItems();
+    const letras = letterSizes.map(item => num(row[item.header]));
+    const nums = numberSizes.map(item => num(row[item.header]));
+    let sizeCategory = validSizeCategory(row['Categoría por talla']);
+    const hasLetters = letras.some(value => value > 0);
+    const hasNumbers = nums.some(value => value > 0);
+    // Compatibilidad con hojas anteriores: sólo se infiere cuando exactamente
+    // una escala tiene existencias. Dos escalas o ninguna son ambiguas.
+    if (!sizeCategory && hasLetters !== hasNumbers) {
+      const scale = hasLetters ? 'L' : 'N';
+      sizeCategory = window.CONFIG.sizeCategories().find(category => category.scale === scale) || null;
+    }
+    // Una hoja histórica sin ninguna existencia no contiene dos intenciones en
+    // conflicto. Conserva el default histórico del alta: primera categoría.
+    if (!sizeCategory && !hasLetters && !hasNumbers) {
+      sizeCategory = window.CONFIG.sizeCategories()[0] || null;
+    }
+    if (!sizeCategory) return null;
+    if ((sizeCategory.scale === 'L' && hasNumbers) || (sizeCategory.scale === 'N' && hasLetters)) return null;
+    const selectedSizes = sizeCategory.scale === 'N' ? numberSizes : letterSizes;
+    const quantities = sizeCategory.scale === 'N' ? nums : letras;
+    const stock = selectedSizes.map((item, index) => ({
+      talla: item.value,
+      escala: sizeCategory.scale,
+      stock: Math.max(0, Math.round(quantities[index] || 0)),
+    }));
     const attrs = {};
+    attrs.__sizeCategoryId = sizeCategory.id;
     customCols().forEach(c => { const v = validCustom(c.kind, row[c.label]); if (v) attrs[c.kind] = v; });
     // Foto: solo enlaces http(s). Cualquier otra cosa se ignora y hydrate pone la genérica
     // (mismo comportamiento que un archivo sin esta columna).
@@ -291,8 +341,8 @@
       ornColors: parseOrnColors(row['Colores Orn.']),
       cuello: parseCuello(row['Cuello']),
       precio: num(row['Precio']),
-      attrs,
-      stock: D.mkStock(letras, nums),
+      attrs, sizeCategoryId: sizeCategory.id,
+      stock,
       pop: false,
     });
   }

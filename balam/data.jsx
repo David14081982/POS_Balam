@@ -15,9 +15,14 @@
   const CAT = () => C.map('category');
   const CUELLO = () => C.map('neck');
 
-  // Dos escalas de talla. Cada prenda puede manejar AMBAS a la vez.
-  const SIZES_LETRA = () => C.codes('size_letter');
-  const SIZES_NUM = () => C.codes('size_number');
+  // Catálogos históricos de las dos escalas. Un producto usa exactamente UNA
+  // categoría; estas lecturas se conservan para compatibilidad y Excel.
+  const sizeValues = kind => C.list(kind).map(item => {
+    const meta = item && item.meta && typeof item.meta === 'object' ? item.meta : {};
+    return Object.prototype.hasOwnProperty.call(meta, 'value') ? meta.value : item.code;
+  });
+  const SIZES_LETRA = () => sizeValues('size_letter');
+  const SIZES_NUM = () => sizeValues('size_number');
 
   const categoryScale = categoryId => {
     const meta = C && C.catalogMeta ? C.catalogMeta(categoryId) : null;
@@ -27,13 +32,18 @@
   };
 
   function inferSizeCategory(product, variants) {
-    const explicit = product && (product.sizeCategoryId || (product.attrs && product.attrs.__sizeCategoryId));
-    if (explicit && C && C.catalogMeta && C.catalogMeta(explicit)) return explicit;
+    const categories = (C && C.sizeCategories ? C.sizeCategories() : []);
+    const valid = id => !!id && categories.some(category => category.id === id);
+    // attrs es la representación persistida y sizeCategoryId sólo su proyección
+    // en memoria. Una copia local antigua puede traerlas en conflicto.
+    const persisted = product && product.attrs && product.attrs.__sizeCategoryId;
+    if (valid(persisted)) return persisted;
+    const derived = product && product.sizeCategoryId;
+    if (valid(derived)) return derived;
     const positive = new Set((variants || []).filter(v => Number(v.stock) > 0).map(v => v.escala).filter(Boolean));
     if (positive.size !== 1) return null;
     const scale = Array.from(positive)[0];
-    const category = (C && C.sizeCategories ? C.sizeCategories() : [])
-      .find(item => item.scale === scale);
+    const category = categories.find(item => item.scale === scale);
     return category ? category.id : (scale === 'N' ? 'size_number' : scale === 'L' ? 'size_letter' : null);
   }
 
@@ -43,47 +53,89 @@
   // sin reconstruir catálogos en las pantallas.
   function resolveProductSizes(product, catalogs, variants) {
     const rows = Array.isArray(variants) ? variants : ((product && product.stock) || []);
-    let categoryId = product && (product.sizeCategoryId || (product.attrs && product.attrs.__sizeCategoryId));
-    if (!categoryId) categoryId = inferSizeCategory(product, rows);
     const configuredCategories = C && C.sizeCategories ? C.sizeCategories() : [
       { id: 'size_letter', label: 'Talla (Letra)', scale: 'L' },
       { id: 'size_number', label: 'Talla (Número)', scale: 'N' },
     ];
-    const categoryIds = categoryId ? [categoryId]
-      : configuredCategories.filter(cat =>
-        rows.some(v => !v.escala || v.escala === cat.scale)).map(cat => cat.id);
+    const categoryId = inferSizeCategory(product, rows);
+    const rawPersisted = product && product.attrs && product.attrs.__sizeCategoryId;
+    const rawDerived = product && product.sizeCategoryId;
+    const categoryConflict = !!(rawPersisted && rawDerived && rawPersisted !== rawDerived);
+    // Sin categoría inequívoca no se mezclan catálogos. Inventario debe pedir
+    // una asignación explícita; POS no ofrece variantes ambiguas.
+    if (!categoryId) {
+      const positiveScales = new Set(rows.filter(v => Number(v.stock) > 0).map(v => v.escala).filter(Boolean));
+      return {
+        categoryId: null,
+        categoryLabel: '',
+        categoryConflict,
+        requiresAssignment: true,
+        ambiguous: positiveScales.size > 1,
+        sizes: [],
+      };
+    }
     const source = catalogs || null;
     const sizes = [];
-    categoryIds.forEach(catId => {
-      const category = configuredCategories.find(cat => cat.id === catId);
-      const scale = (category && category.scale) || categoryScale(catId);
-      let items = source
-        ? (Array.isArray(source[catId]) ? source[catId] : [])
-        : (C && C.all ? C.all(catId) : []);
-      if (!items.length && C && C.codes) {
-        items = C.codes(catId).map(value => ({ code: value, label: value, active: true }));
-      }
-      items.forEach((item, index) => {
-        const meta = item && item.meta && typeof item.meta === 'object' ? item.meta : {};
-        const value = Object.prototype.hasOwnProperty.call(meta, 'value') ? meta.value : item.code;
-        const matches = rows.filter(v =>
-          (!scale || !v.escala || v.escala === scale) && String(v.talla) === String(value));
-        sizes.push({
-          categoryId: catId,
-          sizeId: item.code,
-          value,
-          label: item.label == null || item.label === '' ? String(value) : item.label,
-          order: Number.isFinite(Number(meta.order)) ? Number(meta.order) : index,
-          stock: matches.reduce((sum, v) => sum + (Number(v.stock) || 0), 0),
-          variantId: matches.length ? (matches[0].id || null) : null,
-          active: item.active !== false,
-          scale,
-        });
+    const category = configuredCategories.find(cat => cat.id === categoryId);
+    const scale = (category && category.scale) || categoryScale(categoryId);
+    let items = source
+      ? (Array.isArray(source[categoryId]) ? source[categoryId] : [])
+      : (C && C.all ? C.all(categoryId) : []);
+    if (!items.length && C && C.codes) {
+      items = C.codes(categoryId).map(value => ({ code: value, label: value, active: true }));
+    }
+    items.forEach((item, index) => {
+      const meta = item && item.meta && typeof item.meta === 'object' ? item.meta : {};
+      const value = Object.prototype.hasOwnProperty.call(meta, 'value') ? meta.value : item.code;
+      const matches = rows.filter(v =>
+        (!scale || !v.escala || v.escala === scale) && String(v.talla) === String(value));
+      sizes.push({
+        categoryId,
+        sizeId: item.code,
+        filterKey: encodeURIComponent(categoryId) + ':' + encodeURIComponent(String(item.code)),
+        value,
+        label: item.label == null || item.label === '' ? String(value) : item.label,
+        // El orden administrable es el del arreglo CONFIG/lookup.sort_order.
+        order: index,
+        stock: matches.reduce((sum, v) => sum + (Number(v.stock) || 0), 0),
+        variantId: matches.length ? (matches[0].id || null) : null,
+        active: item.active !== false,
+        scale,
       });
     });
-    sizes.sort((a, b) => categoryIds.indexOf(a.categoryId) - categoryIds.indexOf(b.categoryId) || a.order - b.order);
-    const category = configuredCategories.find(cat => cat.id === categoryId);
-    return { categoryId: categoryId || null, categoryLabel: category ? category.label : categoryId || '', sizes };
+    return {
+      categoryId,
+      categoryLabel: category ? category.label : categoryId,
+      categoryConflict,
+      requiresAssignment: false,
+      ambiguous: false,
+      sizes,
+    };
+  }
+
+  // Proyección del filtro global: todas las tallas activas de todas las
+  // categorías configuradas, en orden categoría → sort_order. No depende de
+  // productos ni de existencias.
+  function resolveSizeFilterOptions(catalogs) {
+    const categories = C && C.sizeCategories ? C.sizeCategories() : [];
+    const out = [];
+    categories.forEach(category => {
+      const product = {
+        sizeCategoryId: category.id,
+        attrs: { __sizeCategoryId: category.id },
+        stock: [],
+      };
+      resolveProductSizes(product, catalogs, []).sizes
+        .filter(size => size.active)
+        .forEach(size => out.push({ ...size, categoryLabel: category.label }));
+    });
+    return out;
+  }
+
+  function sizeFilterMatch(product, filterKey) {
+    if (!filterKey || filterKey === 'all') return true;
+    return resolveProductSizes(product).sizes.some(size =>
+      size.active && size.stock > 0 && size.filterKey === filterKey);
   }
 
   // Construye el arreglo de stock (20 entradas: 10 letra + 10 número).
@@ -120,7 +172,9 @@
     // Receta vacía → el modelo como respaldo: el SKU es el identificador y no puede quedar vacío.
     return parts.length ? parts.join('-') : modTok;
   }
-  function totalStock(p) { return p.stock.reduce((a, v) => a + (v.stock || 0), 0); }
+  function totalStock(p) {
+    return resolveProductSizes(p).sizes.reduce((sum, size) => sum + (Number(size.stock) || 0), 0);
+  }
 
   // Fotos genéricas curadas (Unsplash). build-offline.mjs las embebe → 100% offline.
   // URLs completas literales para que el build las detecte.
@@ -159,8 +213,9 @@
   function hydrate(p) {
     p.modelo = String(p.modelo);
     if (!p.attrs || typeof p.attrs !== 'object') p.attrs = {}; // valores de catálogos custom (Fase 2)
-    p.sizeCategoryId = p.sizeCategoryId || p.attrs.__sizeCategoryId || inferSizeCategory(p, p.stock);
+    p.sizeCategoryId = inferSizeCategory(p, p.stock);
     if (p.sizeCategoryId) p.attrs.__sizeCategoryId = p.sizeCategoryId;
+    else delete p.attrs.__sizeCategoryId;
     if (!Array.isArray(p.ornColors)) p.ornColors = [];
     if (!p.cuello) p.cuello = 'NOR';
     // Normaliza stock al modelo de 20 entradas si viniera incompleto
@@ -830,6 +885,13 @@
     const hit = resolveProductSizes(p).sizes.find(s => String(s.value) === String(talla));
     return hit ? hit.stock : 0;
   }
+  function stockVariantOf(p, talla) {
+    const size = resolveProductSizes(p).sizes.find(s => String(s.value) === String(talla));
+    if (!size) return null;
+    return (p.stock || []).find(variant =>
+      (!size.scale || variant.escala === size.scale)
+      && String(variant.talla) === String(size.value)) || null;
+  }
 
   // Registra una venta: descuenta stock, mueve inventario, actualiza cliente y vendedores.
   // ticket: [{ p, talla, qty }], sellerIds: [id], client: obj, metodo, estado, total, itemCount.
@@ -952,8 +1014,11 @@
   // Deja el mapa en su forma canónica: sólo tallas del catálogo vigente y sólo
   // precios utilizables. Se aplica al guardar; la lectura permanece tolerante.
   function sanitizePreciosTalla(mapa, product) {
-    const validas = product
-      ? resolveProductSizes(product).sizes.map(s => String(s.value))
+    const resolved = product ? resolveProductSizes(product) : null;
+    // Un histórico ambiguo no debe perder precios antes de que el administrador
+    // elija categoría; conserva claves reconocidas en cualquiera de las escalas.
+    const validas = resolved && !resolved.requiresAssignment
+      ? resolved.sizes.map(s => String(s.value))
       : SIZES_LETRA().concat(SIZES_NUM()).map(String);
     const out = {};
     if (!mapa || typeof mapa !== 'object') return out;
@@ -1121,7 +1186,7 @@
     // 1) Descuento de stock + movimientos (solo si la venta se cobró/entregó)
     if (cobrada) {
       ticket.forEach(l => {
-        const e = (l.p.stock || []).find(v => v.talla === l.talla);
+        const e = stockVariantOf(l.p, l.talla);
         if (e) e.stock = Math.max(0, e.stock - l.qty);
         movements.unshift({ fecha, tipo: 'Venta', producto: l.p.nombre, sku: l.p.sku, cant: -l.qty, ref: folio });
       });
@@ -1238,7 +1303,7 @@
     // 1) Stock + movimientos (no se hicieron al apartar)
     (sale.lineas || []).forEach(l => {
       const p = products.find(x => x.sku === l.sku);
-      if (p) { const e = (p.stock || []).find(v => v.talla === l.talla); if (e) e.stock = Math.max(0, e.stock - l.qty); }
+      if (p) { const e = stockVariantOf(p, l.talla); if (e) e.stock = Math.max(0, e.stock - l.qty); }
       movements.unshift({ fecha: fecha2, tipo: 'Venta', producto: l.nombre, sku: l.sku, cant: -l.qty, ref: sale.folio });
     });
     saveProducts(false); saveMovements();
@@ -1665,7 +1730,7 @@
     exch.lineas.forEach(l => {
       const p = products.find(x => x.id === l.productId);
       if (!p) return;
-      const e = (p.stock || []).find(v => v.talla === l.talla);
+      const e = stockVariantOf(p, l.talla);
       if (!e) return;
       e.stock = Math.max(0, e.stock + (l.lado === 'devuelto' ? 1 : -1) * l.qty);
       movements.unshift({
@@ -1890,7 +1955,7 @@
     items.forEach(l => {
       const p = products.find(x => x.sku === l.sku);
       if (p) {
-        const e = (p.stock || []).find(v => v.talla === l.talla);
+        const e = stockVariantOf(p, l.talla);
         if (e) e.stock = (Number(e.stock) || 0) + (Number(l.qty) || 0);
         stockLines.push({ product_id: p.id, talla: l.talla, qty: Number(l.qty) || 0 });
       }
@@ -2364,7 +2429,7 @@
       products.forEach(p => { if (p.sku) bySku[p.sku] = p; });
       const bump = (sku, talla, delta) => {
         const p = bySku[sku]; if (!p) return;
-        const e = (p.stock || []).find(v => v.talla === talla); if (!e) return;
+        const e = stockVariantOf(p, talla); if (!e) return;
         e.stock = Math.max(0, (Number(e.stock) || 0) + delta);
       };
       sales.forEach(s => {
@@ -2422,13 +2487,17 @@
 
       // 1) Productos (~24) con stock en tallas centrales
       for (let i = 0; i < 24; i++) {
-        const letras = SIZES_LETRA().map((_, k) => (k >= 1 && k <= 6 ? rnd(0, 14) : 0));
-        const nums = (Math.random() < 0.35) ? SIZES_NUM().map((_, k) => (k >= 2 && k <= 7 ? rnd(0, 10) : 0)) : [];
+        const numberSizes = Math.random() < 0.35;
+        const letras = numberSizes ? [] : SIZES_LETRA().map((_, k) => (k >= 1 && k <= 6 ? rnd(0, 14) : 0));
+        const nums = numberSizes ? SIZES_NUM().map((_, k) => (k >= 2 && k <= 7 ? rnd(0, 10) : 0)) : [];
+        const sizeCategoryId = numberSizes ? 'size_number' : 'size_letter';
         products.push(hydrate({
           id: 'dp' + i, cat: pick(cats), manga: pick(mangas), tela: pick(telas), color: pick(colors),
           cuello: pick(cuellos), modelo: String(100 + i), nombre: NOMS[i % NOMS.length],
           orn: (orns && orns.length ? pick(orns) : '—'), ornColors: [], precio: rnd(8, 28) * 50,
-          pop: Math.random() < 0.25, stock: mkStock(letras, nums),
+          pop: Math.random() < 0.25,
+          sizeCategoryId, attrs: { __sizeCategoryId: sizeCategoryId },
+          stock: mkStock(letras, nums).filter(v => v.escala === (numberSizes ? 'N' : 'L')),
         }));
       }
 
@@ -2467,7 +2536,9 @@
         const ticket = [];
         for (let k = 0, n = rnd(1, 3); k < n; k++) {
           const p = pick(products);
-          const avail = (p.stock || []).filter(v => v.stock > 0);
+          const avail = resolveProductSizes(p).sizes
+            .filter(size => size.active && size.stock > 0)
+            .map(size => ({ talla: size.value, escala: size.scale, stock: size.stock }));
           if (!avail.length) continue;
           const v = pick(avail);
           if (ticket.some(t => t.p.id === p.id && t.talla === v.talla)) continue;
@@ -2514,7 +2585,8 @@
     folioBlockRequest, applyFolioBlock, terminalCode,
     findSaleByFolio, saleFolioAliases, folioAliasHit, stockOf, isAutoImg, resetProducts, applyRemote, applySyncResult, mergeRemote, markSaleSync, liquidarComision,
     completarApartado, registrarPagoApartado, paymentsForSale, hasFinancialSnapshot, resolveLineDiscount, saleQuote, cerrarMes, getPeriodoInicio,
-    listPrice, priceRange, sanitizePreciosTalla, resolveProductSizes, inferSizeCategory,
+    listPrice, priceRange, sanitizePreciosTalla, resolveProductSizes,
+    resolveSizeFilterOptions, sizeFilterMatch, inferSizeCategory,
     recordReturn, returnedQty, returnsForFolio, isReturnable, returnDeadline, saleLineBalance,
     saveExchanges, recognizedValue, supplySources, recordExchange, reverseExchangeCommission,
     revenueSummary, exchangeRevenue, exchangeUnusedValue, exchangeReport, sellerCommissionReport,

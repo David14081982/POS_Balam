@@ -243,13 +243,25 @@ cálculos nuevos; las ventas guardadas conservan sus snapshots monetarios.
 ### Categorías y existencias por talla
 
 `DATA.resolveProductSizes(producto, catálogos, variantes)` es la autoridad única
-de las tallas aplicables. Resuelve la categoría persistida en el producto contra
-los catálogos vivos de `CONFIG` y devuelve identidad, valor original, etiqueta,
-orden comercial, estado, existencia e identidad de variante. POS, el selector
-de talla y el detalle/formulario de Inventario consumen ese resultado. Los
-productos históricos se infieren sólo cuando sus existencias identifican una
-escala inequívoca; un registro ambiguo conserva sus variantes y debe asignarse
-explícitamente al volver a guardarse.
+de las tallas aplicables. La relación canónica es el único escalar
+`producto.attrs.__sizeCategoryId`; `sizeCategoryId` es una proyección derivada y
+no puede prevalecer sobre el dato persistido. La autoridad resuelve exactamente
+una categoría contra los catálogos vivos de `CONFIG` y devuelve identidad, valor
+original, etiqueta, orden por posición configurada, estado, existencia e
+identidad de variante. POS, códigos de barras, préstamos, cambios, descuentos y
+el detalle/formulario de Inventario consumen ese resultado.
+
+`DATA.resolveSizeFilterOptions()` es la proyección derivada para el filtro global
+del POS: enumera todas las tallas activas de todas las categorías de talla en el
+orden de Configuración, sin depender de los productos ni de sus existencias. Su
+clave compuesta conserva categoría e identidad aunque dos categorías lleguen a
+usar la misma representación textual.
+
+Los productos históricos se infieren sólo cuando sus existencias positivas
+identifican una escala inequívoca. Un registro con existencias positivas en dos
+escalas no mezcla ni vende variantes: queda sin resolución y exige asignación
+explícita en Inventario. La importación Excel transporta una categoría y rechaza
+filas que llenen dos escalas o contradigan la categoría declarada.
 
 ### Resolución del descuento por renglón
 

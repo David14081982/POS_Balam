@@ -3,7 +3,7 @@
 **Riesgo:** H-57
 **Estado:** RESUELTO
 **Fecha:** 30/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `c1597ad`
 
 ## Problema y reproducción
 
@@ -30,8 +30,8 @@ un contrato que diferenciara esos conceptos ni una identidad de variante.
 Los catálogos existentes siguen siendo las categorías; no se creó otro
 catálogo. `code` permanece como ID estable. El valor real es `meta.value` cuando
 está configurado y, para compatibilidad, `code` en los registros históricos.
-La etiqueta es `label`, el orden es `meta.order` o la posición estable del
-arreglo y la actividad es `active`.
+La etiqueta es `label`, el orden es la posición estable del arreglo configurado
+y la actividad es `active`.
 
 La asignación vive en `producto.attrs.__sizeCategoryId`, que ya se sincroniza y
 cachea offline. `DATA.resolveProductSizes()` enlaza esa categoría con las

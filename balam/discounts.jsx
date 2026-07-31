@@ -58,14 +58,16 @@
   function match(promo, p, talla) {
     const s = promo.scope || {};
     if (!dimsMatch(s, p)) return false;
-    if (talla != null && s.tallas && s.tallas.length && s.tallas.indexOf(talla) < 0) return false;
+    if (talla != null && s.tallas && s.tallas.length
+      && !s.tallas.some(value => String(value) === String(talla))) return false;
     return true;
   }
   // Para vista previa / conteo (sin talla concreta): exige stock en alguna talla del alcance.
   function productMatch(promo, p) {
     const s = promo.scope || {};
     if (!dimsMatch(s, p)) return false;
-    if (s.tallas && s.tallas.length) return (p.stock || []).some(v => s.tallas.indexOf(v.talla) >= 0);
+    if (s.tallas && s.tallas.length) return D.resolveProductSizes(p).sizes.some(size =>
+      size.active && s.tallas.some(value => String(value) === String(size.value)));
     return true;
   }
   // Aplica promos acumulables sin permitir que el descuento reduzca el margen
@@ -262,7 +264,9 @@
     const codesOf = (items) => items.map(it => it.code);
     const cats = C.list('category'), telas = C.list('fabric'), mangas = C.list('sleeve'), cuellos = C.list('neck'), colores = C.list('color');
     const ornItems = C.list('ornament');               // incluye "Sin ornamento" (—) → "Todas" cubre todo
-    const tallas = C.codes('size_letter').concat(C.codes('size_number'));
+    // Mantiene el contrato histórico `scope.tallas: value[]`, pero obtiene el
+    // universo activo y su orden desde la misma autoridad que POS e Inventario.
+    const tallas = D.resolveSizeFilterOptions().map(size => size.value);
     const customCats = Object.keys(C.allCatalogMeta ? C.allCatalogMeta() : {}).filter(k => { const m = C.catalogMeta(k); return m && m.custom; }).map(k => ({ kind: k, label: C.catalogLabel(k), items: C.list(k) }));
     const modelos = useMemo(() => [...new Set(D.products.map(p => String(p.modelo)))].sort((a, b) => a.localeCompare(b, 'es', { numeric: true })), []);
 

@@ -233,7 +233,8 @@
     // tabla 37 — la misma pantalla mostraba dos cifras distintas y se prestaba a leer mal.
     const lowCount = rows.filter(p => { const t = D.totalStock(p); return t > 0 && t <= lowThreshold; }).length;
     const totalUnidades = rows.reduce((a, p) => a + D.totalStock(p), 0);
-    const valorInventario = rows.reduce((a, p) => a + (p.stock || []).reduce((b, v) => b + (Number(v.stock) || 0) * D.listPrice(p, v.talla), 0), 0);
+    const valorInventario = rows.reduce((a, p) => a + D.resolveProductSizes(p).sizes
+      .reduce((b, size) => b + (Number(size.stock) || 0) * D.listPrice(p, size.value), 0), 0);
 
     return h('div', { className: 'flex-1 overflow-y-auto bg-background font-body text-on-surface' },
       h('div', { className: 'p-10 max-w-container-max mx-auto' }, [
@@ -347,7 +348,10 @@
   // ---------- Drawer de detalle ----------
   function DetailDrawer({ p, onClose, onEdit, onDelete, onLabels }) {
     const open = !!p;
-    const resolvedSizes = p ? D.resolveProductSizes(p).sizes.filter(s => s.active && s.stock > 0) : [];
+    const sizeResolution = p ? D.resolveProductSizes(p) : null;
+    const resolvedSizes = sizeResolution
+      ? sizeResolution.sizes.filter(s => s.active && s.stock > 0)
+      : [];
     return h(React.Fragment, {}, [
       h('div', { key: 'ov', className: 'fixed inset-0 bg-primary-container/40 backdrop-blur-sm z-[55] transition-opacity duration-300 ' + (open ? 'opacity-100' : 'opacity-0 pointer-events-none'), onClick: onClose }),
       h('div', { key: 'dr', className: 'fixed inset-y-0 right-0 w-[460px] bg-surface border-l border-outline-variant z-[60] shadow-e3 flex flex-col transition-transform duration-300 ' + (open ? 'translate-x-0' : 'translate-x-full') },
@@ -377,9 +381,15 @@
                 ]),
               ]),
               // Stock por talla
-              h('div', { key: 'stk', className: 'space-y-3' }, [
-                h('h3', { key: 't', className: 'text-overline font-bold uppercase text-primary tracking-widest border-b border-outline-variant pb-3' }, 'Existencias por talla'),
-                 h('div', { key: 'g', className: 'flex flex-wrap gap-2' }, resolvedSizes.map(size =>
+               h('div', { key: 'stk', className: 'space-y-3' }, [
+                 h('h3', { key: 't', className: 'text-overline font-bold uppercase text-primary tracking-widest border-b border-outline-variant pb-3' }, 'Existencias por talla'),
+                 sizeResolution && sizeResolution.requiresAssignment && h('div', {
+                   key: 'warn',
+                   className: 'p-3 rounded-lg bg-warning-soft text-warning text-caption',
+                 }, sizeResolution.ambiguous
+                   ? 'El producto conserva existencias en más de una categoría. Edítalo y elige una categoría antes de venderlo.'
+                   : 'El producto no tiene una categoría por talla asignada. Edítalo para completar la relación.'),
+                  h('div', { key: 'g', className: 'flex flex-wrap gap-2' }, resolvedSizes.map(size =>
                    h('div', { key: size.sizeId, className: 'flex flex-col items-center min-w-[48px] px-2 py-1.5 border border-outline-variant rounded' }, [
                      h('span', { key: 't', className: 'text-caption font-semibold text-primary' }, size.label),
                      h('span', { key: 's', className: 'text-overline text-on-surface-variant' }, size.stock + ' pz'),
@@ -477,8 +487,8 @@
       cuello: product.cuello, precio: product.precio, costo: product.costo != null ? product.costo : '', pop: !!product.pop,
       imagen: product.imagen || '',
       attrs: product.attrs ? { ...product.attrs } : {}, // valores de catálogos custom (Fase 2)
-      sizeCategoryId: product.sizeCategoryId || (product.attrs && product.attrs.__sizeCategoryId) || D.inferSizeCategory(product, product.stock) || '',
-      stock: alignStock(product, product.sizeCategoryId || (product.attrs && product.attrs.__sizeCategoryId) || D.inferSizeCategory(product, product.stock) || ''),
+      sizeCategoryId: D.inferSizeCategory(product, product.stock) || '',
+      stock: alignStock(product, D.inferSizeCategory(product, product.stock) || ''),
       // H-36: las excepciones se editan como filas «grupo de tallas → precio»,
       // que es como el negocio ya expresa un alcance por tallas en Descuentos.
       // El dato guardado es el mapa canónico; la agrupación vive sólo aquí y se
@@ -734,7 +744,11 @@
     const [saving, setSaving] = useState(false);
 
     const specs = [];
-    (products || []).forEach(p => (p.stock || []).forEach(v => { if (v.stock > 0) specs.push({ p, talla: v.talla, stock: v.stock, code: B.codeOf(p, v.talla) }); }));
+    (products || []).forEach(p => D.resolveProductSizes(p).sizes.forEach(size => {
+      if (size.active && size.stock > 0) {
+        specs.push({ p, talla: size.value, stock: size.stock, code: B.codeOf(p, size.value) });
+      }
+    }));
     const copiesOf = s => copiesMode === 'stock' ? s.stock : Math.max(1, Number(copies) || 1);
     const totalLabels = specs.reduce((a, s) => a + copiesOf(s), 0);
     const uniqueCount = new Set(specs.map(s => s.code)).size;

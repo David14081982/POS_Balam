@@ -2649,7 +2649,7 @@ recorren autorización ni persistencia remota.
 
 **Estado:** RESUELTO
 **Fecha de registro:** 30/07/2026
-**Commit:** `0f9aa1e`
+**Commit:** `c1597ad`
 **Evidencia:** Configuración conserva dos catálogos globales (`size_letter` y
 `size_number`), pero el producto no persiste cuál le corresponde.
 `balam/pos.jsx` construye el filtro con ambos catálogos y abre el selector
@@ -2687,7 +2687,7 @@ escalas requiere asignación manual al editarse; no se infiere arbitrariamente.
 
 **Estado:** RESUELTO
 **Fecha de registro:** 30/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `0f9aa1e`
 **Evidencia:** `FilterSelect` aplica `bg-gold` directamente al `<select>` cuando
 el filtro está activo, pero sus `<option>` no restablecen fondo ni texto. En
 Chromium para Windows el menú nativo pinta las opciones con esos colores
@@ -2715,6 +2715,73 @@ byte a byte con `index.html`: SHA-256
 **Riesgo residual:** la apariencia exacta del hover y de la selección depende
 del navegador y del sistema operativo, como corresponde a un control nativo.
 **Corrección documentada:** `docs/fixes/menu-filtro-tallas.md`.
+
+## H-59 - La resolución de tallas permite mezcla y orden dependiente de productos
+
+**Estado:** RESUELTO
+**Fecha de registro:** 30/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** el filtro de POS recorre `DATA.products`, omite tallas sin stock y
+deduplica sólo por valor; `resolveProductSizes()` devuelve las dos categorías
+cuando un producto histórico no tiene asignación y conserva variantes de ambas
+escalas; la importación Excel carga ambas escalas y no persiste categoría.
+**Origen:** auditoría integral solicitada por el dueño del producto.
+**Riesgo:** POS e Inventario pueden omitir tallas configuradas, mostrar un orden
+accidental o mezclar escalas; un producto importado puede quedar ambiguo.
+**Alcance:** autoridad configurada, relación producto-categoría única,
+variantes, filtro POS, selector POS, detalle y formulario de Inventario,
+importación/exportación, actividad, orden, normalización, caché offline y
+compatibilidad histórica.
+**No alcance:** cambiar los valores comerciales de los catálogos y definir una
+política nueva de desactivación completa de categorías. La persistencia remota
+de los 240 productos auditados se autorizó después de la corrección técnica.
+**Reproducción:** `node test-size-categories-audit.mjs` antes de corregir: 5
+pasaron y 10 fallaron. Demostró omisiones por stock, orden accidental, mezcla
+de escalas, precedencia incorrecta entre `attrs` y el campo derivado, falta de
+identidad de categoría y carga Excel ambigua.
+**Causa raíz:** el filtro global derivaba su universo de productos y stock en
+vez de Configuración; el fallback de `resolveProductSizes()` podía devolver las
+dos escalas; convivían dos copias de la relación con precedencia incorrecta; el
+orden visible podía usar `meta.order` obsoleto; y Excel no transportaba una
+categoría y aceptaba existencias en ambas escalas.
+**Corrección:** `attrs.__sizeCategoryId` queda como relación canónica escalar.
+`resolveProductSizes()` resuelve una sola categoría, normaliza texto/número,
+respeta el orden real del catálogo y bloquea registros ambiguos.
+`resolveSizeFilterOptions()` proyecta todas las tallas activas directamente de
+Configuración con identidad compuesta. POS, Inventario, códigos de barras,
+préstamos, cambios, descuentos, totales y mutaciones de stock consumen la
+autoridad. Excel exporta/importa la categoría, rechaza mezclas y conserva la
+inferencia histórica sólo cuando una escala es inequívoca. STORE y la caché
+offline persisten una sola relación en `attrs`.
+La auditoría real descartó stock positivo en ambas escalas. La migración H-59
+asignó `size_number` a los 240 IDs auditados y su verificación posterior
+confirmó 3,505 unidades en 237 productos, los tres agotados en cero y cero
+candidatas en una repetición.
+**Pruebas:** persistencia H-59 12/12; auditoría H-59 23/23; autoridad 9/9;
+menú POS 6/6; filtros de
+Inventario 18/18; precio por talla 38/38 y E2E 19/19; descuentos 43/43 y
+trazabilidad 65/65; exportación 14/14; importación con fotos 23/23; seguridad
+Excel 17/17; cola offline 115/115; contratos 40/40; cambios E2E 37/37, pantalla
+45/45 y modelo 28/28; devoluciones 17/17; préstamos 117/117; smoke 17/17;
+navegación 15/15; roles 15/15; reproducibilidad 8/8; migraciones 31/31. Build
+correcto: 71 assets.
+**Migraciones:** `20260731009700_pos_h59_size_category_persistence.sql` y
+`20260731009800_pos_h59_size_category_persistence_verification.sql`, aplicadas
+en Supabase. La primera ejecución de la 097 se canceló íntegramente por
+metadatos históricos sin `sizeCategory/sizeScale`; la guarda compatible se
+reintentó y modificó 240/240 filas. La 098 verificó el estado e idempotencia.
+**Publicación:** se aplicaron únicamente las migraciones de datos autorizadas.
+No existe commit, push de Git ni despliegue de la aplicación.
+**Pendiente:** completar antes del despliegue la prueba funcional con un perfil
+limpio. La preinspección posterior confirmó que la terminal existente ya
+convergió a 240/240 `size_number`, conserva 3,505 unidades, tiene la cola
+principal vacía, el respaldo IndexedDB sin operaciones y cero fotos embebidas.
+**Riesgo residual:** el modelo no ofrece estado activo/inactivo para la categoría
+completa; sólo para sus tallas. Definir desactivación de categorías requiere una
+decisión funcional. Promociones y ventas históricas guardan la talla por valor,
+sin identidad de categoría; con los catálogos actuales no colisionan, pero una
+futura reutilización del mismo valor en dos categorías requeriría migración.
+**Corrección documentada:** `docs/fixes/auditoria-categorias-talla.md`.
 
 ## Regla de actualización
 

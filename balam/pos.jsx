@@ -26,16 +26,18 @@
     const [talla, setTalla] = useState('all');
     const [color, setColor] = useState('all');
     const [onlyPop, setOnlyPop] = useState(false);
-    // El filtro se deriva de la autoridad por producto; no enumera catálogos
-    // globales ni compara IDs contra etiquetas.
-    const TALLAS = [];
-    const seenSizes = new Set();
-    D.products.forEach(p => D.resolveProductSizes(p).sizes.forEach(size => {
-      const key = String(size.value);
-      if (!size.active || size.stock <= 0 || seenSizes.has(key)) return;
-      seenSizes.add(key);
-      TALLAS.push({ value: key, label: size.label });
-    }));
+    const [catalogVersion, setCatalogVersion] = useState(() => window.CONFIG.version || 0);
+    useEffect(() => {
+      const refreshCatalogs = () => setCatalogVersion(window.CONFIG.version || Date.now());
+      window.addEventListener('configchange', refreshCatalogs);
+      return () => window.removeEventListener('configchange', refreshCatalogs);
+    }, []);
+    // Todas las tallas activas configuradas, aunque hoy ningún producto tenga
+    // stock. La clave conserva categoría + identidad de talla.
+    const TALLAS = useMemo(() => D.resolveSizeFilterOptions(), [catalogVersion]);
+    useEffect(() => {
+      if (talla !== 'all' && !TALLAS.some(size => size.filterKey === talla)) setTalla('all');
+    }, [talla, catalogVersion]);
     const COLORS = window.CONFIG.list('color');
     const [ticket, setTicket] = useState([]);
     const [additionalDiscounts, setAdditionalDiscounts] = useState([]);
@@ -53,8 +55,7 @@
       return D.products.filter(p => {
         if (onlyPop && !p.pop) return false;
         if (cat !== 'all' && p.cat !== cat) return false;
-        if (talla !== 'all' && !D.resolveProductSizes(p).sizes.some(size =>
-          size.active && String(size.value) === talla && size.stock > 0)) return false;
+        if (!D.sizeFilterMatch(p, talla)) return false;
         if (color !== 'all' && p.color !== color) return false;
         if (!q) return true;
         return p.nombre.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q) || p.colorName.toLowerCase().includes(q);
@@ -213,7 +214,10 @@
           testid: 'pos-size-filter',
         }, [
           h('option', { key: 'all', value: 'all' }, 'Todas las tallas'),
-          ...TALLAS.map(t => h('option', { key: t.value, value: t.value }, t.label)),
+          ...TALLAS.map(t => h('option', {
+            key: t.filterKey,
+            value: t.filterKey,
+          }, t.label)),
         ]),
         h(FilterSelect, {
           key: 'fc', value: color, active: color !== 'all', onChange: e => setColor(e.target.value),
@@ -386,7 +390,8 @@
 
   // Modal de talla
   function SizeModal({ p, onClose, onPick }) {
-    const sizes = D.resolveProductSizes(p).sizes.filter(size => size.active && size.stock > 0);
+    const resolved = D.resolveProductSizes(p);
+    const sizes = resolved.sizes.filter(size => size.active && size.stock > 0);
     return h(Modal, { title: 'Selecciona talla', onClose }, [
       h('div', { key: 'h', className: 'flex items-center gap-4 mb-5' }, [
         h(ProductImage, { key: 't', p, className: 'w-16 h-20 rounded-lg ring-1 ring-outline-variant/50' }),
@@ -397,6 +402,12 @@
         ]),
       ]),
       h('div', { key: 'lbl', className: 'text-overline uppercase text-on-surface-variant mb-3' }, 'Tallas disponibles'),
+      resolved.requiresAssignment && h('div', {
+        key: 'warn',
+        className: 'p-3 mb-3 rounded-lg bg-warning-soft text-warning text-caption',
+      }, resolved.ambiguous
+        ? 'Este producto tiene existencias en más de una categoría. Asígnale una categoría en Inventario antes de venderlo.'
+        : 'Este producto no tiene una categoría por talla asignada. Corrígelo en Inventario antes de venderlo.'),
       h('div', { key: 'category', className: 'mb-4' }, [
           h('div', { key: 'sz', className: 'flex flex-wrap gap-2' },
             sizes.map(size => h('button', {

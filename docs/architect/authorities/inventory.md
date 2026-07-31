@@ -1,7 +1,7 @@
 ---
 capa: conocimiento
 applies_to: [domain, database]
-related_histories: [H-01, H-36, H-46, H-57]
+related_histories: [H-01, H-36, H-46, H-57, H-59]
 severity_max: required
 no_alcance: "No define ninguna autoridad ni transcribe firmas. Sólo dice qué pregunta responde cada una y dónde vive."
 ---
@@ -20,8 +20,16 @@ Reglas de mantenimiento en `../README.md` § Registro de autoridades.
 **Autoridad:** `DATA.resolveProductSizes(producto, catálogos, variantes)`
 **Definición:** `balam/data.jsx` · categoría persistida en
 `producto.attrs.__sizeCategoryId` · catálogos en `CONFIG`
-**Creada por:** H-57
+**Creada por:** H-57 · **Endurecida por:** H-59
 **Consumidores:** `grep -rn "resolveProductSizes" balam/ test-*.mjs`
+
+## ¿Qué opciones muestra el filtro global de tallas y en qué orden?
+**Autoridad:** `DATA.resolveSizeFilterOptions()`
+**Definición:** `balam/data.jsx` · proyección de todas las tallas activas de
+`CONFIG`, por orden de categoría y posición del catálogo; no consulta productos
+ni existencias
+**Creada por:** H-59
+**Consumidores:** `grep -rn "resolveSizeFilterOptions" balam/ test-*.mjs`
 
 ## ¿Qué precio muestra este artículo en el catálogo?
 **Autoridad:** `DATA.priceRange(producto)` — **derivada** de `listPrice` sobre

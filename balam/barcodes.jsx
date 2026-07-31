@@ -38,9 +38,10 @@
     if (!s) return null;
     const prods = D.products || [];
     for (let a = 0; a < prods.length; a++) {
-      const p = prods[a], st = p.stock || [];
-      for (let b = 0; b < st.length; b++) {
-        if (codeOf(p, st[b].talla) === s) return { p, talla: st[b].talla };
+      const p = prods[a];
+      const sizes = D.resolveProductSizes(p).sizes.filter(size => size.active && size.stock > 0);
+      for (let b = 0; b < sizes.length; b++) {
+        if (codeOf(p, sizes[b].value) === s) return { p, talla: sizes[b].value };
       }
     }
     return null;

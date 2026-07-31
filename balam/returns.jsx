@@ -789,16 +789,16 @@
   // Selector de talla del cambio: mismo idioma que el POS, con el precio vigente
   // de cada talla (H-36) y sólo las que tienen existencias.
   function ExchangeSizeModal({ p, onClose, onPick }) {
-    const conStock = (p.stock || []).filter(v => v.stock > 0);
+    const conStock = D.resolveProductSizes(p).sizes.filter(size => size.active && size.stock > 0);
     return h(window.UI.Modal, { title: 'Selecciona talla', onClose },
       h('div', { className: 'flex flex-wrap gap-2 py-2' }, conStock.length
-        ? conStock.map(v => h('button', {
-            key: v.talla, onClick: () => onPick(p, v.talla),
+        ? conStock.map(size => h('button', {
+            key: size.sizeId, onClick: () => onPick(p, size.value),
             className: 'flex flex-col items-center gap-0.5 min-w-[76px] px-3 py-2.5 border border-outline-variant hover:border-primary rounded-lg transition-colors',
           }, [
-            h('span', { key: 't', className: 'font-semibold text-body text-primary' }, v.talla),
-            h('span', { key: 'p', className: 'text-caption font-semibold text-gold-text' }, fmt(D.listPrice(p, v.talla))),
-            h('span', { key: 's', className: 'text-caption text-muted' }, v.stock + ' pz'),
+            h('span', { key: 't', className: 'font-semibold text-body text-primary' }, size.label),
+            h('span', { key: 'p', className: 'text-caption font-semibold text-gold-text' }, fmt(D.listPrice(p, size.value))),
+            h('span', { key: 's', className: 'text-caption text-muted' }, size.stock + ' pz'),
           ]))
         : h('p', { className: 'text-caption text-on-surface-variant' }, 'Sin existencias en ninguna talla.')));
   }

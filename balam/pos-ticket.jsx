@@ -6,7 +6,25 @@
   const D = window.DATA;
   const h = React.createElement;
   // Nombre visible de una talla según el catálogo (refleja renombres de Configuración).
-  const tallaLbl = (t) => { const C = window.CONFIG, L = C.map('size_letter'), N = C.map('size_number'); return (L[t] != null && L[t] !== '') ? L[t] : ((N[t] != null && N[t] !== '') ? N[t] : t); };
+  const tallaLbl = (t, product) => {
+    const D = window.DATA;
+    if (product && D && typeof D.resolveProductSizes === 'function') {
+      const size = D.resolveProductSizes(product).sizes.find(item => String(item.value) === String(t));
+      if (size) return size.label;
+    }
+    // Compatibilidad de documentos históricos sin identidad de categoría.
+    // Compara contra el valor real (meta.value), no sólo contra el ID del ítem.
+    const C = window.CONFIG;
+    for (const category of (C.sizeCategories ? C.sizeCategories() : [])) {
+      const item = C.all(category.id).find(candidate => {
+        const meta = candidate.meta && typeof candidate.meta === 'object' ? candidate.meta : {};
+        const value = Object.prototype.hasOwnProperty.call(meta, 'value') ? meta.value : candidate.code;
+        return String(value) === String(t);
+      });
+      if (item) return item.label;
+    }
+    return t;
+  };
   const money2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
   // ── H-32: presentación financiera solicitada por Finanzas ────────────────────
@@ -139,7 +157,7 @@
                     h('h4', { key: 'n', className: 'text-body-strong text-primary truncate pr-3' }, l.p.nombre),
                     h('button', { key: 'x', className: 'text-on-surface-variant hover:text-danger transition-colors shrink-0', onClick: () => onRemove(l.key), title: 'Quitar' }, h(MS, { name: 'trash', size: 18 })),
                   ]),
-                  h('p', { key: 'sz', className: 'text-overline uppercase text-on-surface-variant' }, 'Talla ' + tallaLbl(l.talla) + ' • ' + l.p.colorName),
+                  h('p', { key: 'sz', className: 'text-overline uppercase text-on-surface-variant' }, 'Talla ' + tallaLbl(l.talla, l.p) + ' • ' + l.p.colorName),
                   h('div', { key: 'm', className: 'mt-auto pt-1.5 flex justify-between items-center' }, [
                     h('div', { key: 'q', className: 'flex items-center bg-surface-container-low border border-outline-variant rounded-md overflow-hidden' }, [
                       h('button', { key: 'm', className: 'w-7 h-7 flex items-center justify-center hover:bg-surface transition-colors', onClick: () => onQty(l.key, -1) }, h(MS, { name: 'minus', size: 16 })),
@@ -565,7 +583,7 @@
               h('span', { key: 'p', className: 'font-semibold text-primary shrink-0', style: { fontSize: '14px' } }, fmt((l.precioOrig != null ? l.precioOrig : l.precio) * l.qty)),
             ]),
             h('div', { key: 'b', className: 'flex justify-between items-start gap-3 mt-1 text-on-surface-variant', style: { fontSize: '10px', lineHeight: 1.4 } }, [
-              h('span', { key: 's', className: 'flex-1 min-w-0' }, `SKU: ${l.sku} · Talla: ${tallaLbl(l.talla)}${colorDe(l.sku) ? ' · ' + colorDe(l.sku) : ''}`),
+              h('span', { key: 's', className: 'flex-1 min-w-0' }, `SKU: ${l.sku} · Talla: ${tallaLbl(l.talla, D.products.find(p => p.sku === l.sku))}${colorDe(l.sku) ? ' · ' + colorDe(l.sku) : ''}`),
               h('span', { key: 'q', className: 'shrink-0' }, `Cant: ${l.qty}`),
             ]),
           ]))),

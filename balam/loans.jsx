@@ -98,20 +98,24 @@
     el.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
-  // Tallas ofrecidas al capturar, agrupadas por escala como en el Punto de venta.
+  // Tallas ofrecidas al capturar desde la misma autoridad que Punto de venta.
   // Sin `incluirVacias` sólo se ofrecen las que tienen existencia.
-  const ESCALAS = [['L', 'Letras'], ['N', 'Números']];
   const tallaLbl = (escala, talla) => C.map(escala === 'N' ? 'size_number' : 'size_letter')[talla] || talla;
   function tallasVisibles(producto, incluirVacias) {
-    const grupos = filtro => ESCALAS
-      .map(([escala, etiqueta]) => [escala, etiqueta, (producto.stock || []).filter(v => v.escala === escala && filtro(v))])
-      .filter(grupo => grupo[2].length);
+    const resolved = D.resolveProductSizes(producto);
+    const items = resolved.sizes.filter(size => size.active).map(size => ({
+      talla: size.value, escala: size.scale, stock: size.stock, label: size.label,
+    }));
+    const grupos = filtro => resolved.categoryId && items.some(filtro)
+      ? [[items[0] ? items[0].escala : '', resolved.categoryLabel, items.filter(filtro)]]
+      : [];
     const conStock = grupos(v => v.stock > 0);
     // Una prenda sin ninguna existencia registrada ofrece todas sus tallas: si el
     // negocio la tiene en la mano, el dato equivocado es la existencia.
     return (incluirVacias || !conStock.length) ? grupos(() => true) : conStock;
   }
-  const hayTallasVacias = producto => (producto.stock || []).some(v => !(v.stock > 0));
+  const hayTallasVacias = producto => D.resolveProductSizes(producto).sizes
+    .some(size => size.active && !(size.stock > 0));
 
   // Texto del plazo. `dias` viene de DATA.prestamoAtraso: positivo = retraso.
   function textoPlazo(loan) {
@@ -657,7 +661,7 @@
                 (v.stock > 0 ? 'border-outline-variant hover:border-primary hover:bg-surface' : 'border-warning/60 hover:border-warning'),
               onClick: () => agregar(picking, v.talla),
             }, [
-              h('span', { key: 't', className: 'font-semibold text-body text-primary' }, tallaLbl(escala, v.talla)),
+              h('span', { key: 't', className: 'font-semibold text-body text-primary' }, v.label || tallaLbl(escala, v.talla)),
               h('span', { key: 'p', className: 'text-caption font-semibold text-gold-text' }, fmt(D.listPrice(picking, v.talla)).replace('.00', '')),
               h('span', { key: 's', className: 'text-caption ' + (v.stock > 0 ? 'text-muted' : 'text-warning') }, v.stock + ' pz'),
             ]))),

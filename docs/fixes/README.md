@@ -63,6 +63,7 @@ sesión de chat.
 | `duplicar-beneficios.md` | H-55 | Copia independiente de una opción de beneficio |
 | `autoridad-categorias-por-talla.md` | H-57 | Categoría y existencias por talla compartidas por POS e Inventario |
 | `menu-filtro-tallas.md` | H-58 | Fondo normal del menú nativo del filtro de tallas |
+| `auditoria-categorias-talla.md` | H-59 | Autoridad, orden, importación, consumidores y persistencia canónica de categorías por talla |
 
 Documentación financiera relacionada, creada antes de este índice:
 
