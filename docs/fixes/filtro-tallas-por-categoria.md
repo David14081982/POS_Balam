@@ -178,6 +178,10 @@ dejándolo anotado aquí.
 
 ## Riesgo residual y pendientes
 
+El dueño validó el filtro agrupado en la terminal real el 31/07/2026 y lo dio
+por aceptado. Con eso queda aceptada también H-59: su contenido era correcto
+desde entonces y lo que faltaba era la presentación.
+
 El orden de las **categorías** entre sí no es administrable hoy: sale del orden
 de los catálogos en `CONFIG.catalogMeta`, que es el mismo que usa la pantalla de
 Configuración para listar sus tarjetas (Letra antes que Número). Coinciden, así

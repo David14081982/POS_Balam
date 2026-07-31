@@ -2880,7 +2880,9 @@ SHA-256 `70C9D23C0CC75DB02FE5631CCD9AF31CFB39813994F4CBAFE5392B29D45A2B6B`,
 (62) sobre los catálogos reales, la lista plana es su concatenación y hubo cero
 errores de página. El asunto del commit quedó malformado (una línea `@` previa);
 el contenido es correcto y no se reescribió el historial publicado.
-**Pendiente:** validación funcional del dueño en la terminal real.
+**Pendiente:** ninguno. El dueño validó el filtro agrupado en la terminal real el
+31/07/2026 y lo dio por aceptado; con ello queda también aceptada H-59, cuya
+presentación era lo que faltaba.
 **Riesgo residual:** el orden **entre** categorías no es administrable: sale del
 orden de `CONFIG.catalogMeta`, que coincide con el que la pantalla de
 Configuración usa para listar sus tarjetas. Hacerlo elegible requiere una
