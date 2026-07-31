@@ -210,6 +210,7 @@
         // Desplegables compactos: primero talla, luego color.
         h(FilterSelect, {
           key: 'ft', value: talla, active: talla !== 'all', onChange: e => setTalla(e.target.value),
+          testid: 'pos-size-filter',
         }, [
           h('option', { key: 'all', value: 'all' }, 'Todas las tallas'),
           ...TALLAS.map(t => h('option', { key: t.value, value: t.value }, t.label)),
@@ -267,13 +268,22 @@
   }
 
   // Desplegable de filtro compacto (talla / color) con estética de "pill".
-  function FilterSelect({ value, active, onChange, children }) {
+  function FilterSelect({ value, active, onChange, children, testid }) {
+    // Chromium puede usar los colores del <select> como base para su popup
+    // nativo. El control cerrado conserva el gold activo; las opciones
+    // recuperan la superficie normal y el navegador decide selección y hover.
+    const menuOptions = React.Children.map(children, child =>
+      React.isValidElement(child)
+        ? React.cloneElement(child, {
+            className: ((child.props.className || '') + ' bg-surface text-on-surface').trim(),
+          })
+        : child);
     return h('div', { className: 'relative shrink-0' }, [
       h('select', {
-        key: 's', value, onChange,
+        key: 's', value, onChange, 'data-testid': testid,
         className: 'h-9 pl-4 pr-9 text-caption font-semibold uppercase tracking-wider rounded-full border appearance-none cursor-pointer transition-all focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary ' +
           (active ? 'bg-gold text-on-gold border-gold shadow-e1' : 'bg-surface border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary'),
-      }, children),
+      }, menuOptions),
       h('span', { key: 'c', className: 'pointer-events-none absolute inset-y-0 right-0 pr-2.5 flex items-center ' + (active ? 'text-on-gold' : 'text-on-surface-variant') }, h(MS, { name: 'chevDown', size: 16 })),
     ]);
   }

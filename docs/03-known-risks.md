@@ -2683,6 +2683,35 @@ texto por compatibilidad. Un producto histórico con stock positivo en ambas
 escalas requiere asignación manual al editarse; no se infiere arbitrariamente.
 **Corrección documentada:** `docs/fixes/autoridad-categorias-por-talla.md`.
 
+## H-58 - El menú nativo del filtro de tallas hereda el fondo amarillo
+
+**Estado:** RESUELTO
+**Fecha de registro:** 30/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** `FilterSelect` aplica `bg-gold` directamente al `<select>` cuando
+el filtro está activo, pero sus `<option>` no restablecen fondo ni texto. En
+Chromium para Windows el menú nativo pinta las opciones con esos colores
+heredados y toda la lista parece seleccionada.
+**Origen:** defecto visual reportado por el dueño del producto.
+**Riesgo:** no se distingue con claridad la talla seleccionada de las demás
+opciones del filtro.
+**Alcance:** conservar amarillo el control cerrado y restablecer en sus opciones
+los colores normales del menú, dejando selección y hover al navegador.
+**No alcance:** paleta general, forma o distribución del filtro, otros menús,
+datos, sincronización y sustitución del `<select>` nativo.
+**Reproducción:** `node test-pos-size-filter-menu.mjs` antes del cambio: 3
+pasaron, 2 fallaron.
+**Corrección:** `FilterSelect` conserva el amarillo en el `<select>` cerrado y
+restablece `bg-surface text-on-surface` en cada `<option>`. Selección y hover
+permanecen nativos; no se creó un componente personalizado.
+**Pruebas:** menú 6/6; tallas 9/9; contratos 40/40; smoke bundle 17/17;
+navegación 15/15; build correcto con 71 assets.
+**Migraciones:** ninguna.
+**Pendiente:** ninguno dentro de H-58.
+**Riesgo residual:** la apariencia exacta del hover y de la selección depende
+del navegador y del sistema operativo, como corresponde a un control nativo.
+**Corrección documentada:** `docs/fixes/menu-filtro-tallas.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:
