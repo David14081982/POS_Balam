@@ -2953,9 +2953,11 @@ registradas en el historial remoto. La verificación emitió
 event_guard=ok capability_guard=ok fixtures_clean=ok`; habría abortado con
 `raise exception` ante el fallo de cualquiera de las seis, incluido residuo de
 semillas.
-**Pendiente:** comprobar en producción los cinco supuestos —persistencia, cola,
-migración local terminada, consulta desde otra terminal y reintentos sin
-duplicar— antes de sustituir el aviso de la pantalla.
+**Cierre operativo:** el dueño del producto comprobó en producción los cinco
+supuestos —persistencia, cola, migración local terminada, consulta desde otra
+terminal y reintentos sin duplicar— y sólo entonces se sustituyó el aviso de la
+pantalla, que ya declara la sincronización y conserva intacta la advertencia de
+inventario. **Pendiente:** ninguno dentro de H-62.
 **Riesgo residual:** la lectura remota es sólo para administrador; el servidor no
 valida cantidades; el aviso de la pantalla sigue declarando persistencia local
 hasta la comprobación en producción.

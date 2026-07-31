@@ -447,11 +447,13 @@ paquete, y el archivo servido es idéntico byte a byte al probado.
 
 ## Riesgo residual y pendientes
 
-**El aviso de la pantalla sigue diciendo que los préstamos son locales.** Es
-deliberado: H-62 no lo sustituye hasta comprobar en producción que la nube
-persiste, que la cola drena, que la migración terminó, que otra terminal los
-consulta y que los reintentos no duplican. Cambiar el texto antes sería afirmar
-una garantía que todavía no se ha observado en la operación real.
+**El aviso de la pantalla ya declara la sincronización.** Se sustituyó al cerrar
+H-62, después —y sólo después— de que el dueño del producto comprobara en
+producción los cinco supuestos: la nube persiste, la cola drena, la migración
+local terminó, otra terminal los consulta y los reintentos no duplican. El texto
+conserva íntegra la advertencia de inventario, que no ha cambiado, y menciona el
+vale firmado como herramienta operativa y de auditoría, ya no como el único
+respaldo.
 
 **Sólo el administrador ve los préstamos sincronizados.** La RLS de
 `pos.loan_documents` concede la lectura a `pos.is_active_admin()` y las

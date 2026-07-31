@@ -297,7 +297,7 @@
         D.loans.length ? h('div', { key: 'nota', className: 'p-4 rounded-lg border flex gap-3', style: { borderColor: 'rgba(212,175,56,0.3)', background: 'rgba(212,175,56,0.06)' } }, [
           h(MS, { key: 'i', name: 'alert', size: 20, className: 'text-gold-text shrink-0' }),
           h('p', { key: 't', className: 'text-caption text-on-surface-variant leading-relaxed' },
-            'Un préstamo no descuenta inventario: la pieza sigue contando como existencia y puede venderse en piso por descuido. Usa el vale impreso como respaldo y revisa los vencidos antes de cerrar el día. Los préstamos se guardan en esta terminal y todavía no viajan a la nube: exporta el listado para respaldarlos.'),
+            'Un préstamo no descuenta inventario: la pieza sigue contando como existencia y puede venderse en piso por descuido. Los préstamos se guardan en esta terminal y se sincronizan con la nube: si no hay conexión, puedes seguir trabajando y los movimientos pendientes se enviarán automáticamente al restablecerse el servicio. Conserva el vale firmado y revisa los vencidos antes de cerrar el día.'),
         ]) : null,
 
         nuevo && h(PrestamoModal, { key: 'nv', onClose: () => setNuevo(false), onDone: () => { setNuevo(false); refresh(); } }),
