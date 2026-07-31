@@ -165,7 +165,11 @@
               h('tbody', { key: 'b', className: 'divide-y divide-outline-variant' }, D.sales.slice(0, 5).map((s, i) =>
                 h('tr', { key: s.folio, className: 'hover:bg-surface-container-low transition-colors' }, [
                   h('td', { key: 'c', className: 'px-6 py-4' }, h('div', { className: 'flex items-center gap-4' }, [
-                    h(ProductImage, { key: 't', p: D.products[i % D.products.length], className: 'w-10 h-10 rounded border border-outline-variant' }),
+                    h(ProductImage, {
+                      key: 't',
+                      p: D.products.length ? D.products[i % D.products.length] : null,
+                      className: 'w-10 h-10 rounded border border-outline-variant',
+                    }),
                     h('div', { key: 'd' }, [
                       h('p', { key: 'n', className: 'text-body-strong text-primary' }, s.cliente),
                       h('p', { key: 'f', className: 'text-caption text-muted' }, s.folio + ' · ' + s.fecha.slice(0, 10)),

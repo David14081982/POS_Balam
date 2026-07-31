@@ -2785,6 +2785,39 @@ sin identidad de categoría; con los catálogos actuales no colisionan, pero una
 futura reutilización del mismo valor en dos categorías requeriría migración.
 **Corrección documentada:** `docs/fixes/auditoria-categorias-talla.md`.
 
+## H-60 - El arranque con catálogo vacío bloquea render y sincronización
+
+**Estado:** RESUELTO
+**Fecha de registro:** 31/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** producción mostró `ProductThumb: Cannot read properties of
+undefined (reading 'modelo')`; la cola conservó un upsert de productos con
+`rows: []` e ID `opms8lh2lx-1-a8ig`, rechazado por `save_products_checked` con
+`22P02`. El pendiente impidió el pull y dejó cero productos en memoria.
+**Origen:** validación funcional posterior al despliegue de H-59.
+**Riesgo:** una terminal limpia puede perder toda la interfaz, reintentar una
+escritura imposible y no recuperar el catálogo remoto aunque Supabase conserve
+las 240 filas intactas.
+**Alcance:** render durante la ventana sin catálogo, UUID de operaciones de
+producto, rechazo y saneamiento selectivo de upserts vacíos, y protección del
+catálogo local ante respuestas vacías.
+**No alcance:** modificar productos, existencias, movimientos, transacciones o
+refactorizar la cola de otros dominios.
+**Causa raíz:** Dashboard calculaba módulo con longitud cero; `ProductThumb`
+desreferenciaba el resultado; el ID interno `op...` se enviaba a un parámetro
+UUID; y `pushRows` admitía un snapshot vacío que luego bloqueaba su propio pull.
+**Corrección:** placeholder explícito para referencias ausentes; UUID v4 para
+operaciones nuevas y pendientes de producto; rechazo, retiro y no envío
+exclusivos de upserts vacíos de productos; una respuesta vacía no reemplaza un
+catálogo local existente.
+**Pruebas:** arranque 3/3; cola 121/121; smoke 17/17; navegación 15/15; H-59
+23/23, 9/9, 6/6, 18/18 y 12/12; contratos 40/40; reproducibilidad 8/8; build
+correcto con 71 assets.
+**Pendiente:** verificación posterior al despliegue en producción.
+**Riesgo residual:** ninguno conocido dentro del incidente; la cola conserva
+intactas todas las operaciones que no sean un upsert vacío de productos.
+**Corrección documentada:** `docs/fixes/arranque-catalogo-vacio.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

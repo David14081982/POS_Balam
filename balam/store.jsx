@@ -252,8 +252,29 @@
     backupChain = backupChain.catch(() => {}).then(() => queueBackup('delete')).catch(() => false);
     emitSyncStatus();
   }
-  let opSeq = 0;
-  const newOpId = () => 'op' + Date.now().toString(36) + '-' + (++opSeq) + '-' + Math.random().toString(36).slice(2, 6);
+  function newOpId() {
+    try {
+      if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
+      if (window.crypto && typeof window.crypto.getRandomValues === 'function') {
+        const b = new Uint8Array(16); window.crypto.getRandomValues(b);
+        b[6] = (b[6] & 0x0f) | 0x40; b[8] = (b[8] & 0x3f) | 0x80;
+        const h = Array.from(b, x => x.toString(16).padStart(2, '0')).join('');
+        return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+      }
+    } catch (e) { /* fallback portable */ }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = Math.floor(Math.random() * 16);
+      return (c === 'x' ? r : ((r & 3) | 8)).toString(16);
+    });
+  }
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  const isEmptyProductUpsert = op => op && op.type === 'upsert'
+    && (op.kind === 'products' || op.table === 'products')
+    && (!Array.isArray(op.rows) || op.rows.length === 0);
+  const needsUuidQueueId = op => op && (
+    (op.type === 'upsert' && (op.kind === 'products' || op.table === 'products'))
+    || (op.type === 'softDelete' && op.kind === 'products')
+  );
   function enqueue(op) {
     const q = loadQ();
     if (op.ownerId === undefined) op.ownerId = activeOwnerId();
@@ -485,6 +506,7 @@
         if (m && m.localKey && window.DATA && Array.isArray(window.DATA[m.localKey])) {
           op.rows = window.DATA[m.localKey].map(m.toRow);
         }
+        if (op.kind === 'products' && (!Array.isArray(op.rows) || !op.rows.length)) return true;
         const r = op.kind === 'products'
           ? await c.rpc('save_products_checked', { p_operation_id: op.id, p_rows: op.rows })
           : await c.from(op.table).upsert(op.rows, { onConflict: op.conflict }).select('*');
@@ -740,8 +762,11 @@
   async function flushQueue() {
     if (flushing) { flushAgain = true; return; } // otra pasada al terminar la actual
     { // migra ops persistidas por una versión anterior (sin id)
-      const q0 = loadQ(); let mig = false;
-      q0.forEach(o => {
+      const stored = loadQ(), q0 = []; let mig = false;
+      stored.forEach(o => {
+        // Descarta exclusivamente upserts vacíos de productos. Ninguna venta,
+        // cambio, devolución, foto u otra operación se toca.
+        if (isEmptyProductUpsert(o)) { mig = true; return; }
         if (!o.id) { o.id = newOpId(); mig = true; }
         if (!o.status) { o.status = 'pending'; mig = true; }
         if (o.attempts == null) { o.attempts = o.retry ? 1 : 0; mig = true; }
@@ -753,6 +778,9 @@
         }
         if (o.type === 'upsert' && !o.kind) {
           o.kind = kindForTable(o.table); mig = true;
+        }
+        if (needsUuidQueueId(o) && !UUID_RE.test(String(o.id || ''))) {
+          o.id = newOpId(); mig = true;
         }
         if (o.type === 'sale') {
           if (!o.operationId) { o.operationId = o.id; mig = true; }
@@ -828,6 +856,7 @@
             o.type = 'softDelete'; o.kind = kind; o.baseVersion = 0; mig = true;
           }
         }
+        q0.push(o);
       });
       if (mig) saveQ(q0);
       if (!legacyWarned && q0.some(o => o.ownerId === '__legacy_unclaimed__')) {
@@ -888,6 +917,7 @@
   function pushRows(kind, arr) {
     if (!enabled) return;
     const m = MAP[kind]; if (!m || !m.toRow) return;
+    if (kind === 'products' && (!Array.isArray(arr) || !arr.length)) return;
     const seller = window.AUTH && window.AUTH.role && window.AUTH.role() === 'vendedor';
     if (seller && kind === 'products') return;
     if (seller && kind === 'sellers') {

@@ -671,6 +671,9 @@
   function applyRemote(kind, rows) {
     const M = { products: [products, saveProducts, hydrate], clients: [clients, saveClients], sellers: [sellers, saveSellers], sales: [sales, saveSales], movements: [movements, saveMovements], promotions: [promos, savePromos], returns: [returns, saveReturns], liquidations: [liquidations, saveLiquidations], payments: [payments, savePayments], exchanges: [exchanges, saveExchanges] };
     const m = M[kind]; if (!m) return;
+    // Una respuesta vacía también puede ser una lectura parcial/fallida. Nunca
+    // sacrifica un catálogo local existente; los borrados reales usan tombstones.
+    if (kind === 'products' && products.length && (!Array.isArray(rows) || !rows.length)) return false;
     remoteApplying = true;
     try {
       m[0].length = 0;
@@ -683,6 +686,7 @@
       sellers.unshift(JSON.parse(JSON.stringify(seedSellers[0])));
       saveSellers();
     }
+    return true;
   }
 
   // ---- Motor de venta ----

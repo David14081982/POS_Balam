@@ -1245,5 +1245,53 @@ function folioDataStub(env, { block = null } = {}) {
     sale.folio === 'BG-260727-0030', sale.folio);
 }
 
-console.log(`\n════════ ${pass} pasaron, ${fail} fallaron ════════`);
+console.log(`\nSubtotal previo H-60: ${pass} pasaron, ${fail} fallaron`);
+// H-60: una sincronización vacía nunca bloquea el catálogo.
+{
+  const env = freshEnv();
+  env.cloud.rowsByTable.products = [{ id: 'p-remoto', nombre: 'Remoto', stock: [] }];
+  env.localStorage.setItem('balam_sync_queue', JSON.stringify([
+    {
+      type: 'upsert', kind: 'products', table: 'products', conflict: 'id', rows: [],
+      id: 'opms8lh2lx-1-a8ig', status: 'retry_wait', attempts: 12,
+      diagnostic: { code: '22P02' },
+    },
+    {
+      type: 'sale', id: 'venta-intacta', operationId: 'venta-intacta',
+      status: 'blocked_data', folio: 'BG-PENDIENTE', header: {}, items: [],
+    },
+    {
+      type: 'photo', id: 'foto-intacta', status: 'blocked_data',
+      bucket: 'product-photos', path: 'pendiente.webp',
+    },
+  ]));
+  const S = loadStore(env);
+  await S.init({ pull: true });
+  const q = JSON.parse(env.localStorage.getItem('balam_sync_queue') || '[]');
+  ok('33a. H-60: elimina sólo el upsert vacío e inválido de productos',
+    q.length === 2 && !q.some(o => o.table === 'products'));
+  ok('33b. H-60: conserva ventas y fotos pendientes sin alterarlas',
+    q.some(o => o.id === 'venta-intacta') && q.some(o => o.id === 'foto-intacta'));
+  ok('33c. H-60: al quitar el bloqueo, el pull recupera el catálogo remoto',
+    env.window.DATA.applied.some(a => a.kind === 'products' && a.n === 1));
+}
+
+// H-60: productos usan UUID y no generan operaciones vacías.
+{
+  const env = freshEnv();
+  const S = loadStore(env);
+  await S.init({});
+  S.pushRows('products', []);
+  await sleep(20);
+  ok('34a. H-60: pushRows vacío no crea una operación offline', S.pending === 0);
+  S.pushRows('products', [{ id: 'p-uuid', modelo: '1', stock: [], precio: 1, costo: 1 }]);
+  await sleep(40);
+  const call = env.rpcCalls.find(c => c.name === 'save_products_checked');
+  ok('34b. H-60: save_products_checked recibe un UUID v4',
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+      .test(String(call && call.args.p_operation_id)));
+  ok('34c. H-60: la escritura válida termina sin pendientes', S.pending === 0);
+}
+
+console.log(`════════ ${pass} pasaron, ${fail} fallaron ════════`);
 process.exit(fail ? 1 : 0);

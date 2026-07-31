@@ -107,7 +107,14 @@
 
   // Miniatura de producto (placeholder con patrón + swatch de color)
   function ProductThumb({ p, size = 48 }) {
+    const valid = p && typeof p === 'object';
+    const modelo = valid && p.modelo != null ? String(p.modelo) : '';
+    const colorHex = valid && typeof p.colorHex === 'string' && p.colorHex
+      ? p.colorHex : '#8b9099';
+    const angle = modelo ? (modelo.charCodeAt(0) * 37) % 180 : 135;
     return React.createElement('div', {
+      'data-testid': valid ? undefined : 'product-thumb-missing',
+      title: valid ? undefined : 'Producto no disponible',
       style: {
         width: size, height: size, position: 'relative', overflow: 'hidden',
         background: '#e6e8ea', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -117,10 +124,13 @@
         key: 'bg',
         style: {
           position: 'absolute', inset: 0,
-          background: `repeating-linear-gradient(${(p.modelo.charCodeAt(0) * 37) % 180}deg, ${p.colorHex}33 0 4px, transparent 4px 9px)`,
+          background: `repeating-linear-gradient(${angle}deg, ${colorHex}33 0 4px, transparent 4px 9px)`,
         }
       }),
-      React.createElement(window.Icon, { key: 'i', name: 'shirt', size: size * 0.5, style: { color: p.colorHex, opacity: 0.9, position: 'relative' } }),
+      React.createElement(window.Icon, {
+        key: 'i', name: valid ? 'shirt' : 'alert', size: size * 0.5,
+        style: { color: colorHex, opacity: 0.9, position: 'relative' },
+      }),
     ]);
   }
 
