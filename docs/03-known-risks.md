@@ -2720,7 +2720,7 @@ del navegador y del sistema operativo, como corresponde a un control nativo.
 
 **Estado:** RESUELTO
 **Fecha de registro:** 30/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `e1eefba`
 **Evidencia:** el filtro de POS recorre `DATA.products`, omite tallas sin stock y
 deduplica sólo por valor; `resolveProductSizes()` devuelve las dos categorías
 cuando un producto histórico no tiene asignación y conserva variantes de ambas
@@ -2770,8 +2770,10 @@ correcto: 71 assets.
 en Supabase. La primera ejecución de la 097 se canceló íntegramente por
 metadatos históricos sin `sizeCategory/sizeScale`; la guarda compatible se
 reintentó y modificó 240/240 filas. La 098 verificó el estado e idempotencia.
-**Publicación:** se aplicaron únicamente las migraciones de datos autorizadas.
-No existe commit, push de Git ni despliegue de la aplicación.
+**Publicación:** se aplicaron las migraciones de datos autorizadas. El commit
+`e1eefba` fue subido automáticamente a `origin/main` por el hook local
+`post-commit`; no se ejecutó una orden explícita de despliegue y el estado de
+GitHub Pages no se verificó.
 **Pendiente:** completar antes del despliegue la prueba funcional con un perfil
 limpio. La preinspección posterior confirmó que la terminal existente ya
 convergió a 240/240 `size_number`, conserva 3,505 unidades, tiene la cola

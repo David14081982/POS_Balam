@@ -3,7 +3,7 @@
 **Riesgo:** H-59
 **Estado:** RESUELTO
 **Fecha:** 30/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `e1eefba`
 
 ## Problema y reproducción
 
@@ -158,8 +158,10 @@ Promociones y renglones históricos conservan la talla por valor, sin ID de
 categoría. Los catálogos actuales no colisionan; si en el futuro dos categorías
 usan el mismo valor, esos documentos necesitarán una migración de identidad.
 
-No se creó commit ni push de Git y no se desplegó la aplicación. Sólo se
-aplicaron las dos migraciones de datos/verificación expresamente autorizadas.
+La corrección quedó en el commit `e1eefba`. El hook local `post-commit` lo
+subió automáticamente a `origin/main`; no se ejecutó una orden explícita de
+despliegue y el estado de GitHub Pages no se verificó. También se aplicaron las
+dos migraciones de datos/verificación expresamente autorizadas.
 
 ## Referencias
 
