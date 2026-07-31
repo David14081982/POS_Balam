@@ -438,6 +438,13 @@ verificó idéntico byte a byte al `index.html` del commit `5d9800b`
     SHA-256  136DD8D9F6FE1DC2A912F97EAE9ADF68483EC81A33D97CF7D6F9C9FA266C4670
     bytes    8 765 220
 
+El cierre operativo —el aviso que ya declara la sincronización— se publicó en
+`ea7d953` y se verificó igual (`R-DEL-07`). Las dos primeras lecturas
+devolvieron todavía el artefacto anterior; la tercera ya servía el nuevo:
+
+    SHA-256  E854B19680BD4140507AFB3C800828ACCC3D9A2C5CB59ED219150213209B8BF6
+    bytes    8 765 296
+
 La composición del paquete no se auditó con `grep`: el artefacto no guarda los
 `.jsx` en texto plano y un `grep` negativo no prueba nada (`AP-09`, y la
 conclusión equivocada que quedó registrada arriba en H-48). Se comprobó por
