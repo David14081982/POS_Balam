@@ -89,10 +89,10 @@ try {
 
   check('producto Letra resuelve únicamente Talla (Letra)',
     result.rLetter.categoryId === 'size_letter'
-      && result.rLetter.sizes.every(s => s.categoryId === 'size_letter'));
+      && result.rLetter.sizes.every(s => s.sizeCategoryId === 'size_letter'));
   check('producto Número resuelve únicamente Talla (Número)',
     result.rNumber.categoryId === 'size_number'
-      && result.rNumber.sizes.every(s => s.categoryId === 'size_number'));
+      && result.rNumber.sizes.every(s => s.sizeCategoryId === 'size_number'));
   check('variantes de otra escala no contaminan las existencias',
     result.rLetter.sizes.every(s => s.label !== '40')
       && result.rNumber.sizes.every(s => s.label !== 'M'));
@@ -115,14 +115,14 @@ try {
   check('el filtro excluye tallas inactivas',
     result.filter && !result.filter.some(s => s.label === 'X'));
   check('cada opción del filtro conserva identidad de categoría',
-    result.filter && result.filter.every(s => s.categoryId && s.filterKey));
+    result.filter && result.filter.every(s => s.sizeCategoryId && s.filterKey));
 
   const pos = fs.readFileSync('balam/pos.jsx', 'utf8');
   const inventory = fs.readFileSync('balam/inventory.jsx', 'utf8');
   const xlsx = fs.readFileSync('balam/xlsx-io.jsx', 'utf8');
   const store = fs.readFileSync('balam/store.jsx', 'utf8');
   check('el filtro POS consume la proyección centralizada',
-    /resolveSizeFilterOptions/.test(pos));
+    /resolveSizeFilterGroups/.test(pos));
   check('selector POS y existencias Inventario consumen resolveProductSizes',
     /function SizeModal[\s\S]*resolveProductSizes/.test(pos)
       && /function DetailDrawer[\s\S]*resolveProductSizes/.test(inventory));

@@ -2827,6 +2827,60 @@ migraciones que aplicar antes del cliente.
 intactas todas las operaciones que no sean un upsert vacío de productos.
 **Corrección documentada:** `docs/fixes/arranque-catalogo-vacio.md`.
 
+## H-61 - El filtro de tallas del POS se dibuja como lista plana y mezcla categorías
+
+**Estado:** RESUELTO
+**Fecha de registro:** 31/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** el menú renderizado por el artefacto entregaba
+`Todas las tallas, XS, S, L, 2XL, PIEZA, CHICO, GRANDE, 36, 4, 12, 0, PIEZA`:
+cero `<optgroup>`, doce opciones al mismo nivel que la opción global y dos
+«PIEZA» —una de Letra y otra de Número— indistinguibles entre sí.
+**Origen:** validación funcional del dueño; H-59 no se aceptó.
+**Riesgo:** el operador no puede saber dónde termina una categoría y empieza la
+otra, ni a qué categoría pertenece una talla cuyo código existe en las dos. El
+filtrado era correcto desde H-59; lo que engañaba era la presentación.
+**Alcance:** forma de la respuesta de la autoridad del filtro global, su render
+en Punto de venta y el nombre del campo de identidad por talla.
+**No alcance:** cambiar el contenido de los catálogos, definir un orden
+administrable **entre** categorías y sustituir el `<select>` nativo.
+**Reproducción:** `node test-pos-size-filter-groups.mjs` antes de corregir: **4
+pasaron y 15 fallaron**. Demostró la ausencia de grupos, de encabezado por
+categoría y de una única opción global.
+**Causa raíz:** la autoridad respondía con el tipo equivocado.
+`resolveSizeFilterOptions()` aplanaba a un arreglo y perdía ahí la estructura de
+categorías; `balam/pos.jsx` ya no podía reconstruirla. Se modeló la
+implementación —una lista de opciones de `<select>`— en lugar del concepto de
+negocio, que es un catálogo organizado por categorías (`FF-02`).
+**Corrección:** `DATA.resolveSizeFilterGroups()` pasa a ser la autoridad y
+devuelve `[{ categoryId, categoryLabel, sizes }]` derivado íntegramente de
+`CONFIG` —categorías, su orden, tallas activas y orden de cada talla—.
+`resolveSizeFilterOptions()` se conserva como derivación plana por concatenación,
+de modo que no aparece una segunda fórmula. El campo de identidad por talla pasa
+a llamarse `sizeCategoryId`, un solo nombre y coincidente con
+`attrs.__sizeCategoryId`. El POS dibuja un `<optgroup>` por categoría y
+`FilterSelect` propaga la cascada de color de H-58 dentro de los grupos. Una
+categoría sin tallas activas no produce grupo.
+**Pruebas:** H-61 19/19; H-59 23/23 y persistencia 12/12; autoridad 9/9; menú
+POS 6/6; filtros de Inventario 18/18; precio 38/38 y E2E 19/19; descuentos
+43/43; trazabilidad 65/65; cambios E2E 37/37; devoluciones 17/17; préstamos
+117/117; ticket 23/23; Excel 14/14, 23/23 y 17/17; contratos 40/40; smoke 17/17;
+navegación 15/15; roles 15/15; permisos 18/18; pantallas 12/12; cola 121/121;
+arranque 5/5; reproducibilidad 8/8; migraciones 31/31; guardián de UX en verde
+—validaciones 2, interacciones 11— sin refijar línea base. Build correcto con
+71 assets. `test-additional-discount.mjs` falla 1 caso **también en `HEAD`**
+(preexistente, ajeno); `test-loans-screen.mjs` mostró inestabilidad del arnés del
+lector en una corrida y 117/117 en las dos siguientes.
+**Migraciones:** ninguna. El cambio es del cliente.
+**Despliegue:** pendiente de registrar.
+**Pendiente:** validación funcional del dueño en la terminal real.
+**Riesgo residual:** el orden **entre** categorías no es administrable: sale del
+orden de `CONFIG.catalogMeta`, que coincide con el que la pantalla de
+Configuración usa para listar sus tarjetas. Hacerlo elegible requiere una
+decisión funcional y un control nuevo. La activación sigue siendo por talla y no
+por categoría completa, igual que en H-59.
+**Corrección documentada:** `docs/fixes/filtro-tallas-por-categoria.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

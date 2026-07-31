@@ -65,6 +65,7 @@ sesión de chat.
 | `menu-filtro-tallas.md` | H-58 | Fondo normal del menú nativo del filtro de tallas |
 | `auditoria-categorias-talla.md` | H-59 | Autoridad, orden, importación, consumidores y persistencia canónica de categorías por talla |
 | `arranque-catalogo-vacio.md` | H-60 | Arranque seguro, UUID de productos y recuperación selectiva de cola |
+| `filtro-tallas-por-categoria.md` | H-61 | El filtro de tallas del POS es una estructura por categoría, no una lista plana |
 
 Documentación financiera relacionada, creada antes de este índice:
 

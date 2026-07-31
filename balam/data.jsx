@@ -90,7 +90,10 @@
       const matches = rows.filter(v =>
         (!scale || !v.escala || v.escala === scale) && String(v.talla) === String(value));
       sizes.push({
-        categoryId,
+        // Identidad compuesta: una talla es {sizeCategoryId, sizeId}. El mismo
+        // código puede existir en dos categorías (PZ en Letra y en Número) y son
+        // dos tallas distintas; `filterKey` es esa pareja ya serializada.
+        sizeCategoryId: categoryId,
         sizeId: item.code,
         filterKey: encodeURIComponent(categoryId) + ':' + encodeURIComponent(String(item.code)),
         value,
@@ -113,23 +116,34 @@
     };
   }
 
-  // Proyección del filtro global: todas las tallas activas de todas las
-  // categorías configuradas, en orden categoría → sort_order. No depende de
-  // productos ni de existencias.
-  function resolveSizeFilterOptions(catalogs) {
+  // Autoridad del filtro global de tallas: una ESTRUCTURA por categoría, no una
+  // lista. Las categorías salen de Configuración en su orden, y las tallas de
+  // cada una en el orden de su catálogo. No recorre productos ni existencias, no
+  // ordena por texto ni por número, y jamás funde dos categorías: dos tallas con
+  // el mismo código en categorías distintas son dos opciones distintas.
+  // Una categoría sin tallas activas no produce grupo (no se anuncia un grupo
+  // vacío); las tallas activas se ofrecen aunque no tengan existencias.
+  function resolveSizeFilterGroups(catalogs) {
     const categories = C && C.sizeCategories ? C.sizeCategories() : [];
-    const out = [];
-    categories.forEach(category => {
+    return categories.map(category => {
       const product = {
         sizeCategoryId: category.id,
         attrs: { __sizeCategoryId: category.id },
         stock: [],
       };
-      resolveProductSizes(product, catalogs, []).sizes
+      const sizes = resolveProductSizes(product, catalogs, []).sizes
         .filter(size => size.active)
-        .forEach(size => out.push({ ...size, categoryLabel: category.label }));
-    });
-    return out;
+        .map(size => ({ ...size, categoryLabel: category.label }));
+      return { categoryId: category.id, categoryLabel: category.label, sizes };
+    }).filter(group => group.sizes.length);
+  }
+
+  // Proyección plana de la misma autoridad, para los consumidores que sólo
+  // necesitan el conjunto de tallas ofrecidas. Es una DERIVACIÓN de los grupos:
+  // no reimplementa el orden ni la selección de categorías.
+  function resolveSizeFilterOptions(catalogs) {
+    return resolveSizeFilterGroups(catalogs)
+      .reduce((out, group) => out.concat(group.sizes), []);
   }
 
   function sizeFilterMatch(product, filterKey) {
@@ -2590,7 +2604,7 @@
     findSaleByFolio, saleFolioAliases, folioAliasHit, stockOf, isAutoImg, resetProducts, applyRemote, applySyncResult, mergeRemote, markSaleSync, liquidarComision,
     completarApartado, registrarPagoApartado, paymentsForSale, hasFinancialSnapshot, resolveLineDiscount, saleQuote, cerrarMes, getPeriodoInicio,
     listPrice, priceRange, sanitizePreciosTalla, resolveProductSizes,
-    resolveSizeFilterOptions, sizeFilterMatch, inferSizeCategory,
+    resolveSizeFilterGroups, resolveSizeFilterOptions, sizeFilterMatch, inferSizeCategory,
     recordReturn, returnedQty, returnsForFolio, isReturnable, returnDeadline, saleLineBalance,
     saveExchanges, recognizedValue, supplySources, recordExchange, reverseExchangeCommission,
     revenueSummary, exchangeRevenue, exchangeUnusedValue, exchangeReport, sellerCommissionReport,

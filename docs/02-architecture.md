@@ -251,11 +251,19 @@ original, etiqueta, orden por posición configurada, estado, existencia e
 identidad de variante. POS, códigos de barras, préstamos, cambios, descuentos y
 el detalle/formulario de Inventario consumen ese resultado.
 
-`DATA.resolveSizeFilterOptions()` es la proyección derivada para el filtro global
-del POS: enumera todas las tallas activas de todas las categorías de talla en el
-orden de Configuración, sin depender de los productos ni de sus existencias. Su
-clave compuesta conserva categoría e identidad aunque dos categorías lleguen a
-usar la misma representación textual.
+`DATA.resolveSizeFilterGroups()` es la autoridad del filtro global del POS y
+devuelve una **estructura por categoría**, no una lista: las categorías en el
+orden de Configuración y, dentro de cada una, sus tallas activas en el orden de
+su catálogo, sin depender de los productos ni de sus existencias. Una categoría
+sin tallas activas no produce grupo. La identidad de cada opción es la pareja
+`{ sizeCategoryId, sizeId }` —serializada en `filterKey`—, así que dos
+categorías que usen la misma representación textual siguen produciendo opciones
+distintas. El POS la dibuja con un `<optgroup>` por categoría y «Todas las
+tallas» como única opción global.
+
+`DATA.resolveSizeFilterOptions()` es la proyección plana de esa misma autoridad,
+obtenida por concatenación de sus grupos, para los consumidores que sólo
+necesitan el conjunto de tallas ofrecidas.
 
 Los productos históricos se infieren sólo cuando sus existencias positivas
 identifican una escala inequívoca. Un registro con existencias positivas en dos

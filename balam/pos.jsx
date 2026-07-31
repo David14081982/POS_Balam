@@ -32,11 +32,15 @@
       window.addEventListener('configchange', refreshCatalogs);
       return () => window.removeEventListener('configchange', refreshCatalogs);
     }, []);
-    // Todas las tallas activas configuradas, aunque hoy ningún producto tenga
-    // stock. La clave conserva categoría + identidad de talla.
-    const TALLAS = useMemo(() => D.resolveSizeFilterOptions(), [catalogVersion]);
+    // Estructura por categoría tal como la define Configuración → Catálogos de
+    // producto: un grupo por categoría, sus tallas en el orden configurado y
+    // todas las activas aunque hoy ningún producto tenga stock. La clave de cada
+    // opción conserva categoría + identidad de talla.
+    const TALLA_GRUPOS = useMemo(() => D.resolveSizeFilterGroups(), [catalogVersion]);
     useEffect(() => {
-      if (talla !== 'all' && !TALLAS.some(size => size.filterKey === talla)) setTalla('all');
+      if (talla === 'all') return;
+      const vigente = TALLA_GRUPOS.some(grupo => grupo.sizes.some(size => size.filterKey === talla));
+      if (!vigente) setTalla('all');
     }, [talla, catalogVersion]);
     const COLORS = window.CONFIG.list('color');
     const [ticket, setTicket] = useState([]);
@@ -214,10 +218,16 @@
           testid: 'pos-size-filter',
         }, [
           h('option', { key: 'all', value: 'all' }, 'Todas las tallas'),
-          ...TALLAS.map(t => h('option', {
+          // Un <optgroup> por categoría: el menú nativo dibuja el encabezado y
+          // no permite seleccionarlo, así que «Todas las tallas» sigue siendo la
+          // única opción global y ninguna categoría se mezcla con otra.
+          ...TALLA_GRUPOS.map(grupo => h('optgroup', {
+            key: grupo.categoryId,
+            label: grupo.categoryLabel,
+          }, grupo.sizes.map(t => h('option', {
             key: t.filterKey,
             value: t.filterKey,
-          }, t.label)),
+          }, t.label)))),
         ]),
         h(FilterSelect, {
           key: 'fc', value: color, active: color !== 'all', onChange: e => setColor(e.target.value),
@@ -276,12 +286,15 @@
     // Chromium puede usar los colores del <select> como base para su popup
     // nativo. El control cerrado conserva el gold activo; las opciones
     // recuperan la superficie normal y el navegador decide selección y hover.
-    const menuOptions = React.Children.map(children, child =>
-      React.isValidElement(child)
-        ? React.cloneElement(child, {
-            className: ((child.props.className || '') + ' bg-surface text-on-surface').trim(),
-          })
-        : child);
+    // Recorre también el interior de un <optgroup>: la cascada debe llegar a la
+    // <option>, que es lo que Chromium pinta, no sólo al grupo que la contiene.
+    const paint = child => {
+      if (!React.isValidElement(child)) return child;
+      const painted = { className: ((child.props.className || '') + ' bg-surface text-on-surface').trim() };
+      if (child.type === 'optgroup') painted.children = React.Children.map(child.props.children, paint);
+      return React.cloneElement(child, painted);
+    };
+    const menuOptions = React.Children.map(children, paint);
     return h('div', { className: 'relative shrink-0' }, [
       h('select', {
         key: 's', value, onChange, 'data-testid': testid,
