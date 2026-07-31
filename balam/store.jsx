@@ -137,6 +137,16 @@
         notas: r.notas || '', lineas: [],
       }),
     },
+    // H-62: el préstamo se guarda entero en `document`. La fila no se traduce
+    // campo por campo porque el documento ES la evidencia congelada; sólo se le
+    // adjunta la versión confirmada por el servidor y el tombstone.
+    loans: {
+      table: 'loan_documents', conflict: 'id',
+      fromRow: r => Object.assign({}, r.document, {
+        _loanVersion: Number(r.version) || 0,
+        _deletedAt: r.deleted_at || undefined,
+      }),
+    },
     movements: {
       table: 'movements', conflict: 'id',
       fromRow: r => ({
@@ -305,8 +315,14 @@
       category = 'schema'; status = 'blocked_schema'; policy = 'apply_migration'; retryable = false;
     } else if (/^23/.test(code)) {
       category = 'constraint'; status = 'blocked_data'; policy = 'review_data'; retryable = false;
-    } else if (/commit_mismatch|legacy_.*conflict|legacy_context_incomplete|invalid_return|folio_conflict/.test(lower)) {
+    } else if (/commit_mismatch|legacy_.*conflict|legacy_context_incomplete|invalid_return|folio_conflict|loan_version_conflict|loan_operation_conflict/.test(lower)) {
+      // H-62: los conflictos de préstamo son PERMANENTES pese a llegar con el
+      // código 40001, que por sí solo significa «serialización» y se reintentaría
+      // en bucle. Una versión esperada que ya no coincide no va a coincidir en el
+      // siguiente intento: necesita revisión, no martilleo.
       category = 'conflict'; status = 'blocked_conflict'; policy = 'review_conflict'; retryable = false;
+    } else if (/invalid_loan_|loan_not_found/.test(lower)) {
+      category = 'constraint'; status = 'blocked_data'; policy = 'review_data'; retryable = false;
     } else if (httpStatus >= 500) {
       category = 'server';
     } else if (raw instanceof TypeError || /failed to fetch|network|load failed|fetch failed/.test(lower)) {
@@ -364,6 +380,7 @@
     return loadQ().some(op => opBelongsToActiveSession(op) && (op.table === table
       || (op.type === 'sale' && table === 'sales')
       || (op.type === 'return' && table === 'returns')
+      || (op.type === 'loanOperation' && table === 'loan_documents')
       || ((op.type === 'sale' || op.type === 'return') && table === 'movements')));
   }
 
@@ -443,6 +460,37 @@
     return changed;
   }
 
+  // H-62 · Reidentificación del folio en las operaciones que este mismo préstamo
+  // dejó encoladas: todas llevan una copia del documento con el folio anterior.
+  function rekeyQueuedLoanFolio(loanId, newFolio) {
+    const q = loadQ();
+    let changed = false;
+    q.forEach(pending => {
+      if (pending.type === 'loanOperation' && pending.loan && pending.loan.id === loanId
+          && pending.loan.folio !== newFolio) {
+        pending.loan.folio = newFolio;
+        changed = true;
+      }
+    });
+    if (changed) saveQ(q);
+    return changed;
+  }
+
+  // H-62 · Reajuste de la versión esperada. Sólo la SIGUIENTE operación de ese
+  // préstamo se reajusta: al confirmarse, ella reajustará a la que venga detrás.
+  // Reajustarlas todas de golpe pondría la misma versión base a dos operaciones
+  // consecutivas y la segunda volvería a chocar.
+  function rebaseQueuedLoanVersions(currentOpId, loanId, version) {
+    const q = loadQ();
+    const next = q.find(pending => pending.type === 'loanOperation'
+      && pending.id !== currentOpId
+      && pending.loan && pending.loan.id === loanId);
+    if (!next || Number(next.expectedVersion) === version) return false;
+    next.expectedVersion = version;
+    saveQ(q);
+    return true;
+  }
+
   // Ejecuta una operación contra Supabase. Devuelve true si quedó persistida.
   async function applyOp(c, op) {
     lastApplyFailure = null;
@@ -469,11 +517,38 @@
         if (committed.error || !committed.data) {
           return failOp(committed.error || { code: 'empty_response', message: 'El préstamo no devolvió confirmación' });
         }
+        // H-62: choque de folio entre terminales. Mismo contrato que la venta
+        // (`folio_conflict`): se pide un folio libre, el YA IMPRESO en el vale se
+        // conserva como alias y se reintenta con la MISMA operación —el servidor
+        // no auditó el intento fallido, así que la idempotencia sigue limpia—.
+        if (committed.data.ok === false) {
+          const rekeys = Number(op.folioRekeys) || 0;
+          if (committed.data.error === 'folio_conflict' && rekeys < 3
+              && window.DATA && window.DATA.rekeyLoanFolio) {
+            const newFolio = window.DATA.collisionSafeLoanFolio(op.loan.folio, op.loan.id, rekeys + 1);
+            if (newFolio && window.DATA.rekeyLoanFolio(op.loan.id, op.loan.folio, newFolio)) {
+              op.loan.folio = newFolio;
+              op.folioRekeys = rekeys + 1;
+              rekeyQueuedLoanFolio(op.loan.id, newFolio);
+              if (window.UI && window.UI.toast) {
+                window.UI.toast(`Este préstamo se registró en la nube como ${newFolio}`, 'var(--accent)');
+              }
+              return applyOp(c, op);
+            }
+          }
+          return failOp({ code: committed.data.error || 'loan_rejected', message: committed.data.error || 'El préstamo fue rechazado' }, committed.data);
+        }
+        const version = Number(committed.data._loanVersion) || 0;
         const local = window.DATA && (window.DATA.loans || []).find(x => x.id === op.loan.id);
         if (local && committed.data._loanVersion != null) {
-          local._loanVersion = Number(committed.data._loanVersion) || 0;
+          local._loanVersion = version;
           if (window.DATA.saveLoans) window.DATA.saveLoans();
         }
+        // Rebase: las operaciones que este mismo préstamo dejó encoladas detrás
+        // leyeron la versión que había ANTES de confirmar ésta. Sin reajustarlas
+        // la siguiente choca con `LOAN_VERSION_CONFLICT` y no vuelve a pasar
+        // nunca. Es el equivalente de `rebaseQueuedVersions` para documentos.
+        if (committed.data._loanVersion != null) rebaseQueuedLoanVersions(op.id, op.loan.id, version);
         return true;
       }
       if (op.type === 'staffUpdate') {
@@ -948,6 +1023,58 @@
       expectedVersion: Number(expectedVersion) || 0,
     });
   }
+
+  // ── H-62 · Migración de los préstamos que sólo vivían en esta terminal ──────
+  // Antes de H-62 un préstamo se enviaba únicamente al mutarlo, así que los
+  // registrados antes de que existiera la réplica —o mientras no había sesión—
+  // nunca salieron del navegador. Esta rutina los adopta en la nube UNA sola vez
+  // conservando folio, fechas, líneas y devoluciones.
+  //
+  // No borra nada. Antes de encolar deja una copia congelada de la cartera en
+  // `balam_pos_loans_premigracion_v1`, que sobrevive a la migración y sólo se
+  // retira a mano: mientras exista, el estado anterior es reconstruible.
+  const LOAN_BACKUP_KEY = 'balam_pos_loans_premigracion_v1';
+  function migrateLocalLoans() {
+    const D = window.DATA || {};
+    const todos = Array.isArray(D.loans) ? D.loans : [];
+    // No sincronizado = el servidor nunca confirmó una versión para él.
+    const pendientes = todos.filter(l => l && l.id && l._loanVersion == null);
+    const enCola = new Set(loadQ()
+      .filter(op => op.type === 'loanOperation' && op.loan)
+      .map(op => op.loan.id));
+    const informe = {
+      detectados: pendientes.length, encolados: 0, yaEnCola: 0,
+      confirmados: 0, sinConfirmar: 0, fallidos: [], respaldo: false,
+    };
+    if (!pendientes.length) return Promise.resolve(informe);
+    if (!enabled) { informe.fallidos.push({ folio: '—', motivo: 'sin_conexion' }); return Promise.resolve(informe); }
+    try {
+      if (!localStorage.getItem(LOAN_BACKUP_KEY)) {
+        localStorage.setItem(LOAN_BACKUP_KEY, JSON.stringify({
+          fecha: new Date().toISOString(), motivo: 'H-62 migración a Supabase', loans: todos,
+        }));
+      }
+      informe.respaldo = true;
+    } catch (e) { informe.fallidos.push({ folio: '—', motivo: 'sin_respaldo_local' }); }
+    pendientes.forEach(loan => {
+      if (enCola.has(loan.id)) { informe.yaEnCola++; return; }
+      informe.encolados++;
+      pushLoanOperation('deliver', loan, 0);
+    });
+    return flushQueue().then(() => {
+      pendientes.forEach(loan => {
+        const vivo = (D.loans || []).find(l => l.id === loan.id);
+        if (vivo && vivo._loanVersion != null) informe.confirmados++;
+        else informe.sinConfirmar++;
+      });
+      loadQ().forEach(op => {
+        if (op.type === 'loanOperation' && op.diagnostic && /^blocked_/.test(op.status || '')) {
+          informe.fallidos.push({ folio: (op.loan || {}).folio || '—', motivo: op.diagnostic.code });
+        }
+      });
+      return informe;
+    });
+  }
   function pushSale(sale, effects) {
     if (!enabled) return;
     effects = effects || {};
@@ -1292,14 +1419,29 @@
       // inventario tardaba en llegar). 'sales' va después: su fromRow resuelve el nombre
       // del vendedor contra DATA.sellers, que debe estar ya sincronizado.
       const seller = window.AUTH && window.AUTH.role && window.AUTH.role() === 'vendedor';
+      // `loans` sólo lo baja un administrador: la RLS de `pos.loan_documents`
+      // concede la lectura a `pos.is_active_admin()`, así que pedirla con perfil
+      // de vendedor devolvería siempre el conjunto vacío.
       const domains = seller
         ? ['products', 'clients', 'sellers', 'promotions']
-        : ['products', 'clients', 'sellers', 'promotions', 'returns', 'liquidations', 'payments', 'movements'];
+        : ['products', 'clients', 'sellers', 'promotions', 'returns', 'liquidations', 'payments', 'movements', 'loans'];
       await Promise.all(domains.map(k => pullDomain(k).catch(() => { /* tabla ausente */ })));
       if (!seller) {
         try { await pullDomain('sales'); } catch (e) { /* tabla ausente */ }
       }
       try { window.dispatchEvent(new CustomEvent('configchange', { detail: { domain: true } })); } catch (e) { /* */ }
+      // H-62: adopción de los préstamos que nunca salieron de esta terminal. Va
+      // DESPUÉS del pull a propósito: sólo entonces se distingue lo que la nube
+      // ya conoce de lo que sólo vive aquí. Es idempotente y no borra nada, así
+      // que no exige que el dueño pulse ni escriba nada. Un vendedor no la
+      // ejecuta: no tiene la capacidad ni la lectura.
+      if (!seller) {
+        migrateLocalLoans().then(informe => {
+          if (informe && informe.confirmados > 0 && window.UI && window.UI.toast) {
+            window.UI.toast(`${informe.confirmados} préstamo(s) de esta terminal se respaldaron en la nube`, 'var(--accent)');
+          }
+        }).catch(() => { /* se reintenta al próximo arranque */ });
+      }
       // Migración de fotos incrustadas EN SEGUNDO PLANO (no se espera): sube las que quedaron en
       // formato viejo sin que el usuario tenga que pulsar nada. Va después del pull para operar
       // sobre el inventario ya sincronizado.
@@ -1436,6 +1578,6 @@
     }
   }
 
-  window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushSale, pushReturn, pushExchange, ensureFolioBlock, deleteRow, settleCommission, closeCommissionPeriod, pushLoanOperation, pullDomain, fetchSaleByFolio, physicalCardAvailable, claimPhysicalCard, flushQueue, retryOperation, queueStatus, clearQueue, markResetApplied, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
+  window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushSale, pushReturn, pushExchange, ensureFolioBlock, deleteRow, settleCommission, closeCommissionPeriod, pushLoanOperation, migrateLocalLoans, pullDomain, fetchSaleByFolio, physicalCardAvailable, claimPhysicalCard, flushQueue, retryOperation, queueStatus, clearQueue, markResetApplied, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
   window.CORE.registerSyncGateway(window.STORE);
 })();

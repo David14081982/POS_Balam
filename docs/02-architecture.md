@@ -217,9 +217,32 @@ aunque el foco esté en otro campo, retirando del campo enfocado lo que el lecto
 acabó de escribir. En el buscador de la cartera una lectura responde «¿quién tiene
 esta prenda?» y busca en todos los estados, ignorando el filtro a propósito.
 
-Esta fase es **local**: no existe tabla remota y `saveLoans()` no sincroniza. El
-respaldo del módulo son su exportación a `.xlsx` y su listado impreso, y el vale
-impreso por préstamo es el documento que firma quien recibe la mercancía.
+El préstamo **se replica** (H-62). No viaja como upsert de tabla: cada operación
+—entrega, devolución, faltante, edición, baja y reapertura— se conserva en la
+cola offline y se confirma con `pos.commit_loan_operation()`, transacción
+idempotente por (operación, payload) auditada en
+`pos.capability_operation_audit`. `pos.loan_documents` guarda el documento
+**entero** en `document jsonb`: la evidencia congelada viaja tal cual y no se
+normaliza, de modo que no existe una segunda representación del préstamo.
+`_loanVersion` es la versión confirmada por el servidor y, a la vez, el
+indicador de «esto ya está en la nube».
+
+El pull sólo lo ejecuta un administrador, porque la RLS de `pos.loan_documents`
+concede la lectura a `pos.is_active_admin()`. `DATA.applyRemoteLoans()` fusiona
+en vez de reemplazar: un préstamo local que el servidor todavía no confirmó
+sobrevive al pull —su envío puede seguir en la cola o estar pendiente de
+migrar—, y un tombstone remoto sí retira el documento local.
+
+El folio de préstamo es único entre terminales por el mismo contrato que el de
+venta (`ADR-001`). Cuando dos terminales sin conexión emiten el mismo
+`PR-{AAMMDD}-{NNN}`, la nube responde `folio_conflict`, la terminal añade su
+código corto —`PR-260731-003-K7Q`— y **conserva el folio ya impreso** en
+`loan.folioAliases`; `DATA.findLoanByFolio()` resuelve por folio vigente
+primero y por alias después. El vale que firmó el cliente nunca deja de
+localizar su préstamo.
+
+La exportación a `.xlsx`, el listado impreso y el vale firmado se conservan como
+herramientas operativas y de auditoría; ya no son el único respaldo.
 
 ### Promociones y margen mínimo
 
@@ -748,8 +771,11 @@ Es persistencia operativa, no un caché descartable. Aloja:
 - configuración;
 - colecciones de dominio;
 - reserva diaria de folios (`balam_pos_folio_v2`);
-- préstamos de mercancía (`balam_pos_loans_v1`), que todavía no tienen réplica
-  remota: borrar los datos del navegador los elimina;
+- préstamos de mercancía (`balam_pos_loans_v1`), caché local de
+  `pos.loan_documents`: lo ya sincronizado se reconstruye desde la nube, lo que
+  todavía no salió de la cola no;
+- copia congelada previa a la migración de H-62
+  (`balam_pos_loans_premigracion_v1`), que sólo se retira a mano;
 - periodo y banderas de datos de prueba;
 - sesión administrada por Supabase JS;
 - cola `balam_sync_queue`.

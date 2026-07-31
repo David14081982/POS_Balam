@@ -660,8 +660,10 @@
   function saveReturns() { save(LS_RETURNS, returns); }  // devoluciones suben vía recordReturn → STORE.pushReturn
   function savePayments(sync = true) { save(LS_PAYMENTS, payments); if (sync) syncUp('payments', payments); }
   function saveExchanges(sync = true) { save(LS_EXCHANGES, exchanges); if (sync) syncUp('exchanges', exchanges); }
-  // H-46: sin `syncUp`. No hay tabla `pos.loans`, y encolar contra una tabla ausente
-  // dejaría la operación bloqueada por esquema en la cola (ver sección «préstamos»).
+  // Sin `syncUp`: un préstamo NO viaja como upsert de tabla. Cada operación
+  // —entrega, devolución, faltante, edición, baja, reapertura— viaja por su
+  // propia transacción idempotente `pos.commit_loan_operation()`, igual que la
+  // venta viaja por `commit_sale`. Ver `pushLoanOperation` en `balam/store.jsx`.
   function saveLoans() { save(LS_LOANS, loans); }
   // Fusiona filas de la nube en el arreglo local por clave (upsert: actualiza las que
   // coinciden, agrega las nuevas, CONSERVA las no incluidas). Para pulls PARCIALES —
@@ -684,6 +686,9 @@
   // Reemplaza un arreglo de dominio con datos de la nube (sin re-empujar).
   function applyRemote(kind, rows) {
     const M = { products: [products, saveProducts, hydrate], clients: [clients, saveClients], sellers: [sellers, saveSellers], sales: [sales, saveSales], movements: [movements, saveMovements], promotions: [promos, savePromos], returns: [returns, saveReturns], liquidations: [liquidations, saveLiquidations], payments: [payments, savePayments], exchanges: [exchanges, saveExchanges] };
+    // Los préstamos no se reemplazan: se fusionan conservando lo que la nube
+    // todavía no confirmó (H-62).
+    if (kind === 'loans') return applyRemoteLoans(rows);
     const m = M[kind]; if (!m) return;
     // Una respuesta vacía también puede ser una lectura parcial/fallida. Nunca
     // sacrifica un catálogo local existente; los borrados reales usan tombstones.
@@ -2161,15 +2166,22 @@
   // seguir siendo explicable si el producto o el cliente se editan o se borran
   // después (`R-DOM-02`).
   //
-  // Esta fase es LOCAL: no existe tabla remota, y por eso `saveLoans()` NO llama a
-  // `syncUp()`. Encolar filas contra una tabla ausente dejaría la operación
-  // bloqueada por esquema en la cola, visible en la campana, para siempre.
+  // H-62: el préstamo SÍ se replica. Cada operación viaja por la cola offline y
+  // se confirma con `pos.commit_loan_operation()`, una transacción idempotente
+  // por (operación, payload) sobre `pos.loan_documents`, donde el documento se
+  // guarda entero: la evidencia congelada viaja tal cual, sin normalizar. La
+  // terminal conserva en `_loanVersion` la versión confirmada por el servidor, y
+  // ése es también el indicador de «esto ya está en la nube».
   //
   // Los préstamos NO mueven existencias. La cifra «unidades fuera» se deriva de
   // esta colección mediante `loanedQty()`, que es su única autoridad.
   const LOAN_ESTADOS = ['pendiente', 'devuelto', 'no_devuelto'];
   const LOAN_PERSONA_TIPOS = ['cliente', 'empleado', 'otro'];
-  const LOAN_FOLIO_RE = /^PR-(\d{6})-(\d{3,})$/;
+  // H-62: el cuarto segmento OPCIONAL es el código corto de la terminal, igual
+  // que en el folio de venta (`FOLIO_RE`). Sólo aparece cuando dos terminales
+  // generaron el mismo consecutivo el mismo día y la nube lo rechazó; el folio
+  // ya impreso sobrevive como alias. Aditivo: un folio sin él sigue casando.
+  const LOAN_FOLIO_RE = /^PR-(\d{6})-(\d{3,})(?:-([A-Z0-9]{2,4}))?$/;
   const DIA_RE = /^\d{4}-\d{2}-\d{2}$/;
   const soloDia = v => String(v == null ? '' : v).slice(0, 10);
   const horaActual = () => now().slice(11, 16);
@@ -2184,7 +2196,70 @@
   }
   function parseLoanFolio(folio) {
     const m = String(folio == null ? '' : folio).trim().toUpperCase().match(LOAN_FOLIO_RE);
-    return m ? { date: m[1], seq: parseInt(m[2], 10) } : null;
+    return m ? { date: m[1], seq: parseInt(m[2], 10), terminal: m[3] || null } : null;
+  }
+  // ── H-62: el folio impreso no cambia ───────────────────────────────────────
+  // Mismo contrato que la venta (`ADR-001` · `docs/02-architecture.md` § El folio
+  // impreso no cambia). Si la nube rechaza el folio porque otra terminal ya lo
+  // emitió hoy, el préstamo recibe un folio nuevo y el que YA FIRMÓ el cliente
+  // en el vale se conserva como alias: sigue resolviendo búsqueda y reimpresión.
+  function loanFolioAliases(loan) {
+    return Array.isArray(loan && loan.folioAliases) ? loan.folioAliases : [];
+  }
+  function findLoanByFolio(folioOrAlias) {
+    const term = String(folioOrAlias == null ? '' : folioOrAlias).trim();
+    if (!term) return null;
+    const up = term.toUpperCase();
+    return loans.find(l => l.folio === term)
+      || loans.find(l => String(l.folio || '').toUpperCase() === up)
+      || loans.find(l => loanFolioAliases(l).some(a => String(a).toUpperCase() === up))
+      || null;
+  }
+  // Folio seguro entre terminales. El primer intento añade el código corto de
+  // ESTA terminal —tres caracteres base 36, el mismo `terminalCode()` que usa el
+  // folio provisional de venta—; si aun así chocara (dos terminales con el mismo
+  // código, una en 46 656) se cae al token de la identidad técnica, que es único
+  // por construcción.
+  function collisionSafeLoanFolio(folio, loanId, intento) {
+    const base = String(folio || '').trim().toUpperCase();
+    if (Number(intento) > 1) return collisionSafeFolio(base, loanId);
+    const tag = terminalCode();
+    return base.endsWith('-' + tag) ? collisionSafeFolio(base, loanId) : base + '-' + tag;
+  }
+  // Incorpora los préstamos bajados de la nube. NO es un reemplazo ciego: un
+  // préstamo local que el servidor todavía no confirmó —sin `_loanVersion`—
+  // sobrevive al pull, porque su envío puede seguir en la cola o estar pendiente
+  // de migrar. Perderlo aquí sería perder mercancía que está fuera del negocio.
+  // Un tombstone remoto sí retira el documento local (`R-CLI-04`).
+  function applyRemoteLoans(rows) {
+    const list = Array.isArray(rows) ? rows : [];
+    // Una lectura vacía nunca sacrifica la cartera local: puede ser una lectura
+    // parcial, o una nube a la que todavía no se migró nada. Mismo criterio que
+    // el catálogo de productos.
+    if (!list.length && loans.length) return false;
+    remoteApplying = true;
+    try {
+      const sinConfirmar = loans.filter(l => l && l._loanVersion == null);
+      const remotos = new Map();
+      list.forEach(r => { if (r && r.id) remotos.set(r.id, r); });
+      loans.length = 0;
+      remotos.forEach(r => { if (!r._deletedAt) loans.push(r); });
+      sinConfirmar.forEach(l => { if (!remotos.has(l.id)) loans.push(l); });
+      loans.sort((a, b) => String(b.fecha || '').localeCompare(String(a.fecha || '')));
+      saveLoans();
+    } finally { remoteApplying = false; }
+    return true;
+  }
+  // Reidentificación del folio de un préstamo todavía no confirmado por la nube.
+  function rekeyLoanFolio(id, oldFolio, newFolio) {
+    const loan = loans.find(l => l.id === id && l.folio === oldFolio);
+    if (!loan || loan._loanVersion != null || !newFolio || newFolio === oldFolio) return false;
+    const aliases = loanFolioAliases(loan).slice();
+    if (oldFolio && !aliases.includes(oldFolio)) aliases.push(oldFolio);
+    loan.folioAliases = aliases.filter(a => a !== newFolio);
+    loan.folio = newFolio;
+    saveLoans();
+    return true;
   }
   // Referencia comercial del préstamo: `PR-{AAMMDD}-{CONSECUTIVO}`. El día sale de la
   // MISMA fecha que se guarda en el documento, nunca de una segunda lectura del reloj
@@ -2611,6 +2686,7 @@
     saveLoans, registrarPrestamo, registrarDevolucionPrestamo, marcarPrestamoNoDevuelto,
     actualizarPrestamo, eliminarPrestamo, prestamoPiezas, prestamoPendientes,
     prestamoAtraso, prestamosVencidos, loanedQty, parseLoanFolio, nextLoanFolio, LOAN_ESTADOS,
+    applyRemoteLoans, findLoanByFolio, loanFolioAliases, rekeyLoanFolio, collisionSafeLoanFolio,
     addUser, updateUser, removeUser, isEligibleSeller, resolveSellerCommission,
     addPromo, updatePromo, removePromo, duplicatePromo,
     seedDemo, resetEmpty, resetTestData, demoActive,

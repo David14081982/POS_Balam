@@ -2890,6 +2890,73 @@ decisión funcional y un control nuevo. La activación sigue siendo por talla y 
 por categoría completa, igual que en H-59.
 **Corrección documentada:** `docs/fixes/filtro-tallas-por-categoria.md`.
 
+## H-62 - Los préstamos se escribían en la nube pero nadie sabía leerlos
+
+**Estado:** PENDIENTE DE APLICAR MIGRACIÓN
+**Fecha de registro:** 31/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** H-56 Fase 5 creó `pos.loan_documents` y
+`pos.commit_loan_operation()` —`20260730009500/09600`, aplicadas y verificadas
+en remoto— y conectó `STORE.pushLoanOperation()`. La pantalla, `docs/02-architecture.md`
+y el comentario de `balam/data.jsx` seguían afirmando que los préstamos eran
+locales. `supabase migration list --linked` confirma ambas migraciones
+aplicadas.
+**Origen:** solicitud del dueño del producto de persistir y sincronizar
+préstamos con Supabase sin crear una implementación paralela.
+**Riesgo:** una segunda terminal no veía ningún préstamo y la caché no se podía
+reconstruir, de modo que borrar los datos del navegador seguía pareciendo
+pérdida total aunque la nube ya tuviera el documento. Peor: un choque de folio
+entre dos terminales devolvía HTTP 200 con `{ok:false}`, que `applyOp` tomaba
+por éxito y **retiraba la operación de la cola sin haberla persistido**.
+**Alcance:** lectura de préstamos, cola offline, reintentos, choque de folio y
+migración de los préstamos locales existentes.
+**No alcance declarado:** reglas del módulo, inventario, reportes, impresión,
+exportación, interfaz, navegación, permisos, auditoría y estructura del
+documento. El aviso de la pantalla NO se sustituye hasta comprobarlo en
+producción. Validación de cantidades en servidor queda como deuda por decisión
+del dueño del producto.
+**Reproducción:** `node test-loans-sync.mjs` antes de implementar: **29 pasaron,
+22 fallaron**.
+**Causa raíz:** contrato ausente, no defecto (`FF-01`). H-56 entregó la mitad de
+escritura de la réplica como efecto colateral de las capacidades operativas, y
+nunca se declaró; la mitad de lectura no existía.
+**Corrección:** `MAP.loans` + `DATA.applyRemoteLoans()` fusionan sin perder lo
+que la nube no ha confirmado; `rebaseQueuedLoanVersions()` evita el
+`LOAN_VERSION_CONFLICT` de dos cambios offline; `classifyFailure()` deja de
+reintentar en bucle `40001`, `22023` y `P0002`; el folio reutiliza el contrato
+`folio_conflict` de la venta con sufijo de terminal y alias del folio impreso; y
+`STORE.migrateLocalLoans()` adopta los préstamos históricos una sola vez,
+dejando antes una copia congelada que no se borra.
+**Migraciones:** `20260731009900` redefine `commit_loan_operation` —diff de un
+solo bloque contra la definición desplegada (`R-DB-03`)— para devolver
+`folio_conflict` estructurado y admitir la adopción de documentos ya cerrados;
+`20260731010000` la verifica y comprueba además que no se perdieron la guarda de
+versión, la de eventos ni la de capacidad.
+**Pruebas:** préstamos sincronización 52/52; pantalla de préstamos 117/117 sin
+editar un caso; contratos 40/40; cola 121/121; migraciones 31/31; build 8/8;
+smoke 15/15; navegación 15/15; capacidades 40/40; AUTH 18/18; roles 15/15;
+permisos 13/13; registro 12/12; apartados 55/55; cambio E2E 37/37; pantalla del
+cambio 45/45; devoluciones 17/17; reinicio 19/19; folio diario 60/60;
+concurrencia de folio 12/12; ticket 23/23; precio por talla 19/19; saldo por
+renglón 38/38; `.xlsx` 17/17; inventario 18/18; coherencia de cobro 20/20;
+arranque de producción 5/5; tallas 9/9 y persistencia 12/12; SDK 4/4; exportación
+14/14. Guardián `R-DEL-14` sin intervención: interacciones 11, validaciones 2,
+recorrido completo. `R-DEL-13`, `R-DEL-15` y `R-DEL-16` se descartan por escrito:
+esta historia no promete menos pasos ni menos coste.
+**Pendiente:** aplicar `20260731009900/010000` contra la base real. El cliente
+NO puede publicarse antes (`R-DEL-03`, `AP-08`): sin ellas, la adopción de un
+préstamo histórico ya cerrado sería rechazada con `22023` y quedaría bloqueada
+en la cola.
+**Riesgo residual:** la lectura remota es sólo para administrador; el servidor no
+valida cantidades; el aviso de la pantalla sigue declarando persistencia local
+hasta la comprobación en producción.
+**Deuda preexistente detectada, no corregida:** `test-reset-propaga` 12/21 y
+`test-concurrency` aborta en su primera comprobación; ambos fallan igual con el
+artefacto anterior a H-62, comprobado sustituyéndolo. Las dos comprobaciones HID
+de `test-loans-screen` son intermitentes desde H-56.
+**Corrección documentada:** `docs/fixes/pantalla-prestamos.md` § Persistencia
+remota (H-62).
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

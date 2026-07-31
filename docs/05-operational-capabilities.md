@@ -34,7 +34,9 @@ clave estable antes de mutar datos.
 - No existe hoy una acción de cancelación: `Cancelado` es estado histórico.
 - Cambio de método y reversión de cobro no existen como operaciones; no se
   infieren desde la edición de una fila.
-- Préstamos aún deben migrarse a `inventory.loan`.
+- Préstamos ya operan bajo `inventory.loan.*` con documento remoto versionado
+  (H-56 Fase 5) y réplica completa —lectura, cola, reintento y migración— desde
+  H-62. Pendiente: el servidor no valida cantidades devueltas.
 - El borrado lógico genérico debe dividirse por entidad para que
   `customers.delete`, `promotions.manage` y `sellers.manage` cubran también
   tombstones, no sólo `DELETE`.

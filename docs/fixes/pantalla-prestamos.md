@@ -334,17 +334,97 @@ Cinco comprobaciones nuevas lo fijan, y no sólo afirman que aparece `DD/MM/AAAA
 también exigen que **ninguna** cadena `\d{4}-\d{2}-\d{2}` llegue a la pantalla, al
 vale ni al listado. Un descuido que devuelva una fecha a ISO falla el arnés.
 
+## Persistencia remota (H-62)
+
+Los préstamos dejan de vivir sólo en una terminal.
+
+### Lo que ya existía y nadie había declarado
+
+H-56 Fase 5 —la historia de capacidades operativas— **ya había creado el
+backend**: `20260730009500/09600` crean `pos.loan_documents` y
+`pos.commit_loan_operation()`, y están aplicadas y verificadas contra la base
+real. `STORE.pushLoanOperation()` y las cinco llamadas de `DATA` viajaban en el
+artefacto publicado desde entonces. De modo que los préstamos registrados con
+sesión de administrador **ya se estaban escribiendo en la nube** mientras la
+pantalla y esta documentación afirmaban lo contrario. El comentario de
+`balam/data.jsx` § préstamos decía todavía «no existe tabla remota».
+
+Lo que faltaba no era el envío, sino todo lo demás. H-62 lo completa sin crear
+un segundo sistema: el pull reutiliza `MAP` + `fetchAllRows` + `applyRemote`, el
+folio reutiliza el contrato de `folio_conflict` de la venta, y la idempotencia
+reutiliza `pos.capability_operation_audit`.
+
+### Los cinco huecos que impedían la réplica
+
+| Hueco | Consecuencia real | Corrección |
+|---|---|---|
+| No existía lectura | Otra terminal no los veía; la caché no se reconstruía | `MAP.loans` + `applyRemoteLoans()` + dominio `loans` en el pull |
+| Folio choca entre terminales | La segunda terminal recibía `23505`, clasificado `blocked_data` **no reintentable**: ese préstamo no llegaba nunca | `folio_conflict` estructurado + sufijo de terminal + alias |
+| La versión no se rebasea | Dos cambios sin conexión: el segundo fallaba `40001` | `rebaseQueuedLoanVersions()` |
+| `40001`/`22023`/`P0002` sin clasificar | Caían en `unknown` → reintento automático **infinito** | Ramas nuevas en `classifyFailure()` |
+| `deliver` sólo aceptaba `pendiente` | Un préstamo histórico ya cerrado no se podía adoptar | `deliver` admite los tres estados y nace con `has_events` |
+
+Además, el choque de folio tenía una segunda cara peor que el bloqueo: como la
+respuesta `{ok:false}` llegaba con HTTP 200, `applyOp` la tomaba por éxito y
+**retiraba la operación de la cola**. El préstamo desaparecía de la cola sin
+haberse persistido. El arnés lo fija con `el préstamo se persiste pese al choque`.
+
+### La devolución parcial no cambió de forma
+
+Se conserva el modelo de H-46: `lineas[].devueltas` acumula y `devoluciones[]`
+guarda el asiento de cada entrega, todo **dentro del mismo documento**. No se
+normalizó en tablas hijas, y es deliberado: `pos.loan_documents.document` guarda
+el documento entero, de modo que la evidencia congelada viaja tal cual y
+`DATA.prestamoPendientes()` sigue siendo la única autoridad de «cuántas faltan».
+Normalizar habría creado una segunda respuesta a una pregunta que ya tenía una
+(`AP-01`), y habría exigido un motor de diferencias que el cliente no tiene.
+
+### Migración de los préstamos locales
+
+`STORE.migrateLocalLoans()` adopta en la nube, una sola vez, los préstamos que
+nunca salieron del navegador —los que no tienen `_loanVersion`—, conservando
+folio, fechas, líneas y devoluciones. Antes de encolar nada deja una copia
+congelada en `balam_pos_loans_premigracion_v1` con su fecha y su motivo.
+
+**No borra nada.** La copia previa sobrevive a la migración y sólo se retira a
+mano: mientras exista, el estado anterior es reconstruible. Es idempotente por
+construcción —un préstamo confirmado no se reenvía y uno ya encolado no se
+duplica— y `pos.loan_documents.id` es llave primaria, así que duplicar es
+imposible por esquema. Devuelve un informe con detectados, encolados,
+confirmados, sin confirmar y fallidos con su causa.
+
+### Pruebas
+
+Reproducción previa: `node test-loans-sync.mjs` → **29/51**, 22 fallando.
+Después del cambio: **52/52**.
+
+El arnés prueba el CLIENTE contra un doble de Supabase que implementa el mismo
+contrato; el SERVIDOR lo prueba la verificación autocontenida de
+`20260731010000` contra la base real. Son dos mitades de la misma garantía y
+ninguna sustituye a la otra (`R-SEC-03` · `R-DB-09`).
+
+`test-loans-screen.mjs` es el guardián de «ninguna diferencia funcional»: sus
+117 casos siguen intactos, sin editar uno solo.
+
 ## Riesgo residual y pendientes
 
-**Los préstamos viven sólo en esta terminal.** No hay tabla `pos.loans`: crearla
-exige una migración con RLS, `grants` nominales y verificación autocontenida
-(`R-SEC-01`, `R-DB-05`, `R-DB-10`), y aplicarla contra la base real antes de
-publicar el cliente (`R-DEL-03`, `AP-08`). Esta sesión no tenía credenciales para
-hacerlo, y publicar un cliente que empuje contra una tabla ausente dejaría la
-operación bloqueada por esquema en la cola, visible en la campana, para siempre.
-Consecuencias mientras eso siga pendiente: borrar los datos del navegador pierde
-los préstamos, una segunda terminal no los ve, y el respaldo es la exportación a
-Excel o el listado impreso. La pantalla lo dice donde se opera.
+**El aviso de la pantalla sigue diciendo que los préstamos son locales.** Es
+deliberado: H-62 no lo sustituye hasta comprobar en producción que la nube
+persiste, que la cola drena, que la migración terminó, que otra terminal los
+consulta y que los reintentos no duplican. Cambiar el texto antes sería afirmar
+una garantía que todavía no se ha observado en la operación real.
+
+**Sólo el administrador ve los préstamos sincronizados.** La RLS de
+`pos.loan_documents` concede la lectura a `pos.is_active_admin()` y las
+capacidades `inventory.loan.*` están sembradas únicamente para el rol `admin`.
+Un vendedor al que se le conceda la pantalla podría capturar y su operación
+quedaría bloqueada por permiso: pantalla y capacidad se conceden por separado.
+
+**El servidor no valida cantidades.** `commit_loan_operation()` comprueba
+transiciones, versión, capacidad e idempotencia, pero acepta los `devueltas` que
+le mande el cliente: «no devolver más de lo pendiente» sigue siendo una defensa
+sólo del cliente. Queda **fuera de H-62 por decisión del dueño del producto** y
+registrado como deuda técnica: no impide guardar, sincronizar ni recuperar.
 
 **Un préstamo no reserva ni descuenta inventario.** La pieza prestada sigue
 contando como existencia y puede venderse en piso por descuido. Es el mismo
@@ -358,10 +438,21 @@ pieza; recordatorio automático al vencer más allá del aviso de la campana;
 préstamos de mercancía que no está en el catálogo. El préstamo tampoco aparece en
 Reportes.
 
-**Numeración entre terminales:** el consecutivo del folio se deriva de los
-préstamos que conoce la terminal, así que dos terminales podrían emitir el mismo
-`PR-…`. Hoy es inocuo —los préstamos no se comparten— pero es un requisito a
-resolver junto con la replicación, no después.
+**Numeración entre terminales:** resuelto en H-62 con el contrato de la venta.
+El consecutivo se sigue derivando de los préstamos que conoce la terminal —con
+el pull, eso ya incluye los de las demás—, y el residuo real, dos terminales sin
+conexión el mismo día, lo resuelve `folio_conflict`: la segunda añade su código
+corto y conserva el folio impreso como alias. **No existe un consecutivo global
+limpio con la terminal offline** salvo que el folio impreso pueda cambiar
+después, y el vale firmado no puede cambiar.
+
+**Deuda técnica preexistente detectada durante H-62, no corregida aquí:**
+`test-reset-propaga.mjs` da 12/21 —su doble de Supabase no conoce
+`commit_sale_with_additional_discount_checked`, la RPC de H-52—, y
+`test-concurrency.mjs` aborta en su primera comprobación. Ambos fallan igual con
+el artefacto anterior a H-62, comprobado sustituyéndolo. Las dos comprobaciones
+HID de `test-loans-screen.mjs` son intermitentes desde H-56 y también lo son sin
+estos cambios.
 
 ## Referencias
 
