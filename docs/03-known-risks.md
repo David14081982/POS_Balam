@@ -2649,7 +2649,7 @@ recorren autorización ni persistencia remota.
 
 **Estado:** RESUELTO
 **Fecha de registro:** 30/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `0f9aa1e`
 **Evidencia:** Configuración conserva dos catálogos globales (`size_letter` y
 `size_number`), pero el producto no persiste cuál le corresponde.
 `balam/pos.jsx` construye el filtro con ambos catálogos y abre el selector
@@ -2707,6 +2707,10 @@ permanecen nativos; no se creó un componente personalizado.
 **Pruebas:** menú 6/6; tallas 9/9; contratos 40/40; smoke bundle 17/17;
 navegación 15/15; build correcto con 71 assets.
 **Migraciones:** ninguna.
+**Publicación:** commit `0f9aa1e` publicado en `main`; GitHub Pages coincide
+byte a byte con `index.html`: SHA-256
+`F6E1F38F8B5AA2308E8C47FDCB4BBEF9D6996207AD49234E816D4DB7077F597D`,
+8 754 568 bytes.
 **Pendiente:** ninguno dentro de H-58.
 **Riesgo residual:** la apariencia exacta del hover y de la selección depende
 del navegador y del sistema operativo, como corresponde a un control nativo.

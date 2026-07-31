@@ -3,7 +3,7 @@
 **Riesgo:** H-58
 **Estado:** RESUELTO
 **Fecha:** 30/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `0f9aa1e`
 
 ## Problema y reproducción
 
@@ -42,6 +42,10 @@ se introducen pseudoselectores, hacks ni un listbox personalizado.
 - `node test-smoke.mjs bundle`: 17/17.
 - `node test-ui-navigation.mjs`: 15/15.
 - `node build-offline.mjs`: correcto, 71 assets.
+
+GitHub Pages coincide byte a byte con `index.html`: SHA-256
+`F6E1F38F8B5AA2308E8C47FDCB4BBEF9D6996207AD49234E816D4DB7077F597D`,
+8 754 568 bytes.
 
 ## Riesgo residual y pendientes
 
