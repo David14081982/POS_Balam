@@ -2789,7 +2789,7 @@ futura reutilización del mismo valor en dos categorías requeriría migración.
 
 **Estado:** RESUELTO
 **Fecha de registro:** 31/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `e5c93d7` y `faa6a0e`
 **Evidencia:** producción mostró `ProductThumb: Cannot read properties of
 undefined (reading 'modelo')`; la cola conservó un upsert de productos con
 `rows: []` e ID `opms8lh2lx-1-a8ig`, rechazado por `save_products_checked` con
@@ -2816,7 +2816,13 @@ sin modificar la configuración remota.
 **Pruebas:** arranque 5/5; cola 121/121; smoke 17/17; navegación 15/15; H-59
 23/23, 9/9, 6/6, 18/18 y 12/12; contratos 40/40; reproducibilidad 8/8; build
 correcto con 71 assets.
-**Pendiente:** verificación posterior al despliegue en producción.
+**Despliegue:** publicado en `https://david14081982.github.io/POS_Balam/`. El
+artefacto servido se verificó idéntico al `index.html` del commit `faa6a0e`,
+SHA-256
+`641E48A95C38FBA92DB29A0CEFE789E0772A6B61753FE615D547EE7C2C430F44`, 8 759 344
+bytes. El paquete se reconstruyó sin diferencias antes de publicar. Sin
+migraciones que aplicar antes del cliente.
+**Pendiente:** validación funcional del dueño en una terminal limpia.
 **Riesgo residual:** ninguno conocido dentro del incidente; la cola conserva
 intactas todas las operaciones que no sean un upsert vacío de productos.
 **Corrección documentada:** `docs/fixes/arranque-catalogo-vacio.md`.

@@ -3,7 +3,7 @@
 **Riesgo:** H-60
 **Estado:** RESUELTO
 **Fecha:** 31/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `e5c93d7` y `faa6a0e`
 
 ## Problema y reproducción
 
@@ -75,10 +75,18 @@ Tres contratos independientes no estaban defendidos:
 - Contratos: 40/40; reproducibilidad: 8/8.
 - `node build-offline.mjs`: correcto, 71 assets.
 
+## Despliegue
+
+Publicado en `https://david14081982.github.io/POS_Balam/`. El artefacto servido
+se verificó idéntico al `index.html` del commit `faa6a0e`, SHA-256
+`641E48A95C38FBA92DB29A0CEFE789E0772A6B61753FE615D547EE7C2C430F44`, 8 759 344
+bytes. El paquete se reconstruyó sin diferencias antes de publicar.
+
 ## Riesgo residual y pendientes
 
-Pendiente de la verificación posterior al despliegue contra producción y de
-reemplazar el commit en este documento.
+Pendiente la validación funcional del dueño en una terminal limpia: que el
+catálogo se recupere solo y que un producto agotado conserve su categoría de
+talla.
 
 ## Referencias
 
