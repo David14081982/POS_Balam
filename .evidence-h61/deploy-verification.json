@@ -1,0 +1,51 @@
+{
+  "at": "2026-07-31T08:32:50.682Z",
+  "url": "https://david14081982.github.io/POS_Balam/",
+  "api": {
+    "groups": "function",
+    "options": "function"
+  },
+  "authority": {
+    "categories": [
+      {
+        "id": "size_letter",
+        "label": "Talla (Letra)",
+        "count": 14
+      },
+      {
+        "id": "size_number",
+        "label": "Talla (Número)",
+        "count": 62
+      }
+    ],
+    "first": [
+      [
+        "XS",
+        "S",
+        "L",
+        "XL",
+        "2XL",
+        "3XL",
+        "4XL",
+        "5XL"
+      ],
+      [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8"
+      ]
+    ],
+    "flatIsDerived": true
+  },
+  "reachedPos": false,
+  "dom": {
+    "global": [],
+    "groups": []
+  },
+  "pageErrors": []
+}

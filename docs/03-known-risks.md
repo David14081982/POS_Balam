@@ -2831,7 +2831,7 @@ intactas todas las operaciones que no sean un upsert vacío de productos.
 
 **Estado:** RESUELTO
 **Fecha de registro:** 31/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `59c5c52`
 **Evidencia:** el menú renderizado por el artefacto entregaba
 `Todas las tallas, XS, S, L, 2XL, PIEZA, CHICO, GRANDE, 36, 4, 12, 0, PIEZA`:
 cero `<optgroup>`, doce opciones al mismo nivel que la opción global y dos
@@ -2872,7 +2872,14 @@ arranque 5/5; reproducibilidad 8/8; migraciones 31/31; guardián de UX en verde
 (preexistente, ajeno); `test-loans-screen.mjs` mostró inestabilidad del arnés del
 lector en una corrida y 117/117 en las dos siguientes.
 **Migraciones:** ninguna. El cambio es del cliente.
-**Despliegue:** pendiente de registrar.
+**Despliegue:** publicado en `https://david14081982.github.io/POS_Balam/`. El
+artefacto servido se verificó idéntico al `index.html` del commit `59c5c52`,
+SHA-256 `70C9D23C0CC75DB02FE5631CCD9AF31CFB39813994F4CBAFE5392B29D45A2B6B`,
+8 760 388 bytes. Además se cargó el paquete publicado y se le interrogó:
+`resolveSizeFilterGroups` responde con `Talla (Letra)` (14) y `Talla (Número)`
+(62) sobre los catálogos reales, la lista plana es su concatenación y hubo cero
+errores de página. El asunto del commit quedó malformado (una línea `@` previa);
+el contenido es correcto y no se reescribió el historial publicado.
 **Pendiente:** validación funcional del dueño en la terminal real.
 **Riesgo residual:** el orden **entre** categorías no es administrable: sale del
 orden de `CONFIG.catalogMeta`, que coincide con el que la pantalla de

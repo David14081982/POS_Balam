@@ -3,7 +3,7 @@
 **Riesgo:** H-61
 **Estado:** RESUELTO
 **Fecha:** 31/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `59c5c52`
 
 ## Problema y reproducción
 
@@ -151,6 +151,30 @@ Dos observaciones honestas sobre la regresión:
   ofrece la pantalla de beneficios»). Se comprobó en un worktree sobre `HEAD`:
   falla igual **antes** de este cambio. Es un fallo preexistente, ajeno a esta
   historia, y no se tocó.
+
+## Despliegue
+
+Publicado en `https://david14081982.github.io/POS_Balam/`. El archivo servido
+coincide byte a byte con el `index.html` del commit `59c5c52`: SHA-256
+`70C9D23C0CC75DB02FE5631CCD9AF31CFB39813994F4CBAFE5392B29D45A2B6B`,
+8 760 388 bytes. Sin migraciones que aplicar antes del cliente.
+
+El hash prueba los bytes, no la conducta, así que el paquete publicado se cargó
+y se le preguntó por su comportamiento
+(`.evidence-h61/verify-deploy.mjs` → `deploy-verification.json`):
+`window.DATA.resolveSizeFilterGroups` es una función y, con los catálogos reales
+de la tienda, responde con dos grupos —`Talla (Letra)` con 14 tallas y
+`Talla (Número)` con 62—, cada uno en el orden de Configuración, y la lista
+plana resulta ser exactamente la concatenación de esos grupos. Cero errores de
+página. El render del `<select>` no pudo comprobarse contra Pages porque la
+pantalla exige inicio de sesión; se comprobó contra el mismo artefacto servido
+localmente, cuyos bytes son los mismos.
+
+**Nota de convención (`R-DEL-08`):** el asunto del commit `59c5c52` quedó
+malformado —una línea `@` antes del asunto real, por sintaxis de shell
+equivocada al redactarlo—. El cuerpo y el contenido son correctos. No se
+reescribió el historial ya publicado en `main`: se corrige hacia adelante
+dejándolo anotado aquí.
 
 ## Riesgo residual y pendientes
 
