@@ -282,9 +282,26 @@
   // Categorías por talla: son los catálogos estructurales ya administrados por
   // Configuración. No se mantiene una lista paralela en POS ni Inventario.
   function sizeCategories() {
-    return Object.keys(state.catalogMeta)
-      .filter(kind => state.catalogMeta[kind] && state.catalogMeta[kind].sizeCategory)
-      .map(kind => ({ id: kind, label: state.catalogMeta[kind].label || kind, scale: state.catalogMeta[kind].sizeScale || null }));
+    const structural = {
+      size_letter: { label: 'Talla (Letra)', scale: 'L' },
+      size_number: { label: 'Talla (Número)', scale: 'N' },
+    };
+    const kinds = Object.keys(state.catalogMeta)
+      .filter(kind => state.catalogMeta[kind] && state.catalogMeta[kind].sizeCategory);
+    Object.keys(structural).forEach(kind => {
+      // Configuraciones históricas traen los catálogos, pero pueden carecer de
+      // las banderas sizeCategory/sizeScale añadidas después.
+      if (!kinds.includes(kind) && (state.catalogs[kind] || state.catalogMeta[kind])) kinds.push(kind);
+    });
+    return kinds.map(kind => {
+      const meta = state.catalogMeta[kind] || {};
+      const fallback = structural[kind] || {};
+      return {
+        id: kind,
+        label: meta.label || fallback.label || kind,
+        scale: meta.sizeScale || fallback.scale || null,
+      };
+    });
   }
   // Etiqueta visible del catálogo (con respaldo si no hubiera meta).
   function catalogLabel(kind) { const m = state.catalogMeta[kind]; return (m && m.label) || kind; }

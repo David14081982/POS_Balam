@@ -30,6 +30,9 @@ Tres contratos independientes no estaban defendidos:
    producto.
 3. `pushRows('products', [])` podía crear un pendiente sin efecto que bloqueaba
    el pull de la misma autoridad.
+4. La configuración histórica contenía los IDs `size_letter` y `size_number`
+   pero no sus banderas nuevas `sizeCategory/sizeScale`; al hidratar un producto
+   agotado, `inferSizeCategory()` no reconocía su categoría persistida.
 
 ## Diseño
 
@@ -42,6 +45,8 @@ Tres contratos independientes no estaban defendidos:
   ventas, cambios, devoluciones, fotos ni otras operaciones.
 - Una respuesta vacía no reemplaza un catálogo local de productos existente.
   Los borrados reales continúan viajando como tombstones.
+- Los IDs estructurales históricos de talla conservan su escala localmente sin
+  reescribir la configuración remota.
 
 ## Solución
 
@@ -52,6 +57,8 @@ Tres contratos independientes no estaban defendidos:
   sanea únicamente el pendiente defectuoso y permite que el pull continúe.
 - `balam/data.jsx` protege un catálogo local existente ante una aplicación
   remota vacía.
+- `balam/config.jsx` reconoce los dos IDs estructurales aun cuando una
+  configuración histórica no tenga las banderas añadidas posteriormente.
 - `test-production-startup-regression.mjs` reproduce ventas históricas con cero
   productos durante el arranque.
 - `test-store-queue.mjs` cubre UUID, no creación, limpieza selectiva y
@@ -59,7 +66,7 @@ Tres contratos independientes no estaban defendidos:
 
 ## Pruebas
 
-- `node test-production-startup-regression.mjs`: 3/3.
+- `node test-production-startup-regression.mjs`: 5/5.
 - `node test-store-queue.mjs`: 121/121.
 - `node test-smoke.mjs bundle`: 17/17.
 - `node test-ui-navigation.mjs`: 15/15.

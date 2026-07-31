@@ -52,6 +52,28 @@ try {
     !errors.some(error => /modelo/.test(error)));
   check('3. La ausencia se representa explícitamente, no se oculta',
     await page.locator('[data-testid="product-thumb-missing"]').count() === 1);
+  const historical = await page.evaluate(() => {
+    const snapshot = window.CONFIG.snapshot();
+    snapshot.catalogMeta.size_letter = { label: 'Talla (Letra)' };
+    snapshot.catalogMeta.size_number = { label: 'Talla (Número)' };
+    window.CONFIG.load(snapshot);
+    window.DATA.applyRemote('products', [{
+      id: 'agotado-historico', nombre: 'Agotado', modelo: '0',
+      attrs: { __sizeCategoryId: 'size_number' },
+      stock: [{ talla: '40', escala: 'N', stock: 0 }],
+    }]);
+    const loaded = window.DATA.products[0];
+    return {
+      categories: window.CONFIG.sizeCategories(),
+      persisted: loaded && loaded.attrs && loaded.attrs.__sizeCategoryId,
+      derived: loaded && loaded.sizeCategoryId,
+    };
+  });
+  check('4. Metadatos históricos conservan ambas categorías estructurales',
+    historical.categories.some(x => x.id === 'size_letter' && x.scale === 'L')
+      && historical.categories.some(x => x.id === 'size_number' && x.scale === 'N'));
+  check('5. Un producto agotado conserva la categoría persistida al hidratar',
+    historical.persisted === 'size_number' && historical.derived === 'size_number');
 } finally {
   if (browser) await browser.close();
   await new Promise(done => server.close(done));

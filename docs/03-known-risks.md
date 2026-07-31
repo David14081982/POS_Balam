@@ -2805,12 +2805,15 @@ catálogo local ante respuestas vacías.
 refactorizar la cola de otros dominios.
 **Causa raíz:** Dashboard calculaba módulo con longitud cero; `ProductThumb`
 desreferenciaba el resultado; el ID interno `op...` se enviaba a un parámetro
-UUID; y `pushRows` admitía un snapshot vacío que luego bloqueaba su propio pull.
+UUID; `pushRows` admitía un snapshot vacío que luego bloqueaba su propio pull;
+y los metadatos históricos de talla no incluían las banderas estructurales que
+el cliente usaba para validar la categoría persistida de productos agotados.
 **Corrección:** placeholder explícito para referencias ausentes; UUID v4 para
 operaciones nuevas y pendientes de producto; rechazo, retiro y no envío
 exclusivos de upserts vacíos de productos; una respuesta vacía no reemplaza un
-catálogo local existente.
-**Pruebas:** arranque 3/3; cola 121/121; smoke 17/17; navegación 15/15; H-59
+catálogo local existente; los IDs estructurales de talla conservan su escala
+sin modificar la configuración remota.
+**Pruebas:** arranque 5/5; cola 121/121; smoke 17/17; navegación 15/15; H-59
 23/23, 9/9, 6/6, 18/18 y 12/12; contratos 40/40; reproducibilidad 8/8; build
 correcto con 71 assets.
 **Pendiente:** verificación posterior al despliegue en producción.
