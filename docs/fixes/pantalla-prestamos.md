@@ -406,6 +406,30 @@ ninguna sustituye a la otra (`R-SEC-03` · `R-DB-09`).
 `test-loans-screen.mjs` es el guardián de «ninguna diferencia funcional»: sus
 117 casos siguen intactos, sin editar uno solo.
 
+### Despliegue de H-62
+
+Migraciones aplicadas **antes** que el cliente (`R-DEL-03`). La verificación
+autocontenida se ejecutó contra la base real y emitió:
+
+    H62_LOAN folio_conflict=structured audit_clean=ok rekey=ok
+             version_guard=ok event_guard=ok capability_guard=ok
+             fixtures_clean=ok
+
+Artefactos regenerados con `node build-offline.mjs`; `index.html` es copia
+exacta de `POS Balam (offline).html`. El archivo servido por GitHub Pages se
+verificó idéntico byte a byte al `index.html` del commit `5d9800b`
+(`R-DEL-07`):
+
+    SHA-256  136DD8D9F6FE1DC2A912F97EAE9ADF68483EC81A33D97CF7D6F9C9FA266C4670
+    bytes    8 765 220
+
+La composición del paquete no se auditó con `grep`: el artefacto no guarda los
+`.jsx` en texto plano y un `grep` negativo no prueba nada (`AP-09`, y la
+conclusión equivocada que quedó registrada arriba en H-48). Se comprobó por
+**ejecución**: `test-loans-sync.mjs` recorre `index.html` y ejerce
+`STORE.migrateLocalLoans()`, el pull y el rekey de folio sobre ese mismo
+paquete, y el archivo servido es idéntico byte a byte al probado.
+
 ## Riesgo residual y pendientes
 
 **El aviso de la pantalla sigue diciendo que los préstamos son locales.** Es

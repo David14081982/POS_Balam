@@ -2892,9 +2892,10 @@ por categoría completa, igual que en H-59.
 
 ## H-62 - Los préstamos se escribían en la nube pero nadie sabía leerlos
 
-**Estado:** PENDIENTE DE APLICAR MIGRACIÓN
+**Estado:** RESUELTO
 **Fecha de registro:** 31/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `a1a6f48` (migraciones) · `5d9800b` (cliente, artefactos y
+documentación) · este commit registra hashes y despliegue
 **Evidencia:** H-56 Fase 5 creó `pos.loan_documents` y
 `pos.commit_loan_operation()` —`20260730009500/09600`, aplicadas y verificadas
 en remoto— y conectó `STORE.pushLoanOperation()`. La pantalla, `docs/02-architecture.md`
@@ -2943,10 +2944,16 @@ arranque de producción 5/5; tallas 9/9 y persistencia 12/12; SDK 4/4; exportaci
 14/14. Guardián `R-DEL-14` sin intervención: interacciones 11, validaciones 2,
 recorrido completo. `R-DEL-13`, `R-DEL-15` y `R-DEL-16` se descartan por escrito:
 esta historia no promete menos pasos ni menos coste.
-**Pendiente:** aplicar `20260731009900/010000` contra la base real. El cliente
-NO puede publicarse antes (`R-DEL-03`, `AP-08`): sin ellas, la adopción de un
-préstamo histórico ya cerrado sería rechazada con `22023` y quedaría bloqueada
-en la cola.
+**Migraciones aplicadas:** `20260731009900` y `20260731010000` se aplicaron
+contra la base real ANTES de publicar el cliente (`R-DEL-03`) y quedan
+registradas en el historial remoto. La verificación emitió
+`H62_LOAN folio_conflict=structured audit_clean=ok rekey=ok version_guard=ok
+event_guard=ok capability_guard=ok fixtures_clean=ok`; habría abortado con
+`raise exception` ante el fallo de cualquiera de las seis, incluido residuo de
+semillas.
+**Pendiente:** comprobar en producción los cinco supuestos —persistencia, cola,
+migración local terminada, consulta desde otra terminal y reintentos sin
+duplicar— antes de sustituir el aviso de la pantalla.
 **Riesgo residual:** la lectura remota es sólo para administrador; el servidor no
 valida cantidades; el aviso de la pantalla sigue declarando persistencia local
 hasta la comprobación en producción.
