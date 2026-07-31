@@ -137,12 +137,10 @@ function selectLoanDocuments(rangeHeader) {
   return { status: 200, body: rows.slice(from, to + 1) };
 }
 
-const b = await chromium.launch({ channel: 'chrome', headless: true });
-try {
-  const page = await b.newPage({ viewport: { width: 1500, height: 1000 } });
-  page.on('pageerror', e => errs.push(String(e)));
-
-  await page.route(/supabase\.co/, async route => {
+// Enrutado compartido: TODAS las terminales del arnés hablan con el mismo doble,
+// de modo que el contrato remoto está definido una sola vez.
+async function enrutarNube(destino) {
+  await destino.route(/supabase\.co/, async route => {
     if (!cloud.online) return route.abort();
     const req = route.request();
     const url = req.url();
@@ -163,6 +161,14 @@ try {
       body: JSON.stringify(out.body),
     });
   });
+}
+
+const b = await chromium.launch({ channel: 'chrome', headless: true });
+try {
+  const page = await b.newPage({ viewport: { width: 1500, height: 1000 } });
+  page.on('pageerror', e => errs.push(String(e)));
+
+  await enrutarNube(page);
 
   await page.goto('http://127.0.0.1:8827/index.html', { waitUntil: 'load' });
   await page.waitForFunction(() => window.DATA && window.CONFIG && window.STORE, null, { timeout: 25000 });
@@ -428,6 +434,125 @@ try {
     `llamadas ${cloud.rpcCalls - llamadasPrevias}`);
   check('el segundo informe declara cero pendientes',
     !informe2.ausente && informe2.detectados === 0, JSON.stringify(informe2).slice(0, 140));
+
+  console.log('\n── M) Dos terminales independientes: A → B → A ─────────');
+  // Contextos de navegador SEPARADOS: cada uno con su propio `localStorage` y,
+  // por tanto, su propio `balam_device_id`. No es la misma terminal recargada:
+  // son dos instalaciones distintas contra la misma nube.
+  const abrirTerminal = async nombre => {
+    const ctx = await b.newContext({ viewport: { width: 1400, height: 900 } });
+    await enrutarNube(ctx);
+    const p = await ctx.newPage();
+    p.on('pageerror', e => errs.push(nombre + ': ' + String(e)));
+    await p.goto('http://127.0.0.1:8827/index.html', { waitUntil: 'load' });
+    await p.waitForFunction(() => window.DATA && window.CONFIG && window.STORE, null, { timeout: 25000 });
+    await p.evaluate(() => {
+      if (window.STORE) { window.STORE.pushRows = () => {}; window.STORE.pushConfig = () => {}; window.STORE.pushSale = () => {}; }
+    });
+    return { ctx, page: p };
+  };
+  const sincronizar = async t => {
+    await t.page.evaluate(() => window.STORE.init({ pull: true }));
+    await t.page.waitForTimeout(1200);
+  };
+  const cartera = t => t.page.evaluate(() => window.DATA.loans.map(l => ({
+    id: l.id, folio: l.folio, estado: l.estado,
+    piezas: (l.lineas || []).reduce((a, x) => a + (Number(x.qty) || 0), 0),
+    devueltas: (l.lineas || []).reduce((a, x) => a + (Number(x.devueltas) || 0), 0),
+    persona: (l.persona || {}).nombre, fechaDevolucion: l.fechaDevolucion || null,
+    version: l._loanVersion == null ? null : l._loanVersion,
+  })));
+
+  const A = await abrirTerminal('A');
+  const B = await abrirTerminal('B');
+  const idA = await A.page.evaluate(() => window.CORE.getDeviceId());
+  const idB = await B.page.evaluate(() => window.CORE.getDeviceId());
+  check('A y B son terminales distintas', !!idA && !!idB && idA !== idB, `${idA} · ${idB}`);
+
+  // A registra un préstamo con su propio catálogo local.
+  const creado = await A.page.evaluate(() => {
+    const D = window.DATA;
+    D.products.push(D.hydrate({
+      id: 'h62m', cat: '21', manga: 'MC', tela: 'ALG', color: 'AZ', cuello: 'NOR',
+      modelo: '999', nombre: 'GUAYABERA DOS TERMINALES', orn: '—', ornColors: [], precio: 2000,
+      costo: 0, pop: false, stock: D.mkStock([0, 5, 0], []),
+    }));
+    D.saveProducts();
+    const p = D.products.find(x => x.id === 'h62m');
+    const talla = p.stock.find(v => v.stock > 0).talla;
+    const hoy = new Date().toISOString().slice(0, 10);
+    const manana = new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10);
+    const r = D.registrarPrestamo({
+      fecha: hoy, fechaEsperada: manana,
+      persona: { nombre: 'Cliente de la Terminal A', tipo: 'cliente' },
+      lineas: [{ productId: p.id, sku: p.sku, talla, qty: 3 }],
+      usuario: 'Terminal A',
+    });
+    return r.ok ? { id: r.loan.id, folio: r.loan.folio, key: r.loan.lineas[0].key } : { error: r.error };
+  });
+  check('A registra el préstamo', !!creado.id, creado.error || creado.folio);
+  await A.page.evaluate(() => window.STORE.flushQueue());
+  await A.page.waitForTimeout(900);
+  check('A lo confirma contra la nube',
+    !!cloud.loans.get(creado.id) && cloud.loans.get(creado.id).version === 1);
+
+  // B nunca ha visto ese préstamo: sólo puede llegarle por sincronización.
+  const antesEnB = await cartera(B);
+  check('B no conocía el préstamo antes de sincronizar',
+    !antesEnB.some(l => l.id === creado.id), `${antesEnB.length} en cartera`);
+  await sincronizar(B);
+  const enB = (await cartera(B)).find(l => l.id === creado.id);
+  check('B ve el préstamo creado en A', !!enB, JSON.stringify(await cartera(B)).slice(0, 120));
+  check('B lo ve con folio, persona y piezas idénticos',
+    !!enB && enB.folio === creado.folio && enB.persona === 'Cliente de la Terminal A' && enB.piezas === 3,
+    JSON.stringify(enB || {}));
+  check('B lo recibe ya confirmado por el servidor', !!enB && enB.version === 1, enB && `v${enB.version}`);
+
+  // B registra la devolución parcial de una pieza.
+  const devB = await B.page.evaluate(([id, key]) => {
+    const hoy = new Date().toISOString().slice(0, 10);
+    const r = window.DATA.registrarDevolucionPrestamo(id, { fecha: hoy, lineas: [{ key, qty: 1 }] });
+    return r.ok ? { ok: true, cerrado: r.cerrado } : { ok: false, error: r.error };
+  }, [creado.id, creado.key]);
+  check('B registra una devolución parcial', devB.ok && !devB.cerrado, devB.error);
+  await B.page.evaluate(() => window.STORE.flushQueue());
+  await B.page.waitForTimeout(900);
+  check('la devolución de B llega a la nube',
+    (cloud.loans.get(creado.id) || {}).version === 2
+      && cloud.loans.get(creado.id).document.lineas[0].devueltas === 1,
+    `v${(cloud.loans.get(creado.id) || {}).version}`);
+
+  // A vuelve a sincronizar y debe ver lo que hizo B.
+  await sincronizar(A);
+  const enA = (await cartera(A)).find(l => l.id === creado.id);
+  check('A ve la devolución registrada en B', !!enA && enA.devueltas === 1, JSON.stringify(enA || {}));
+  check('A sigue viendo el préstamo abierto con dos piezas fuera',
+    !!enA && enA.estado === 'pendiente' && enA.piezas - enA.devueltas === 2);
+
+  // B cierra el préstamo devolviendo las dos piezas restantes.
+  const cierreB = await B.page.evaluate(([id, key]) => {
+    const hoy = new Date().toISOString().slice(0, 10);
+    const r = window.DATA.registrarDevolucionPrestamo(id, { fecha: hoy, lineas: [{ key, qty: 2 }] });
+    return r.ok ? { ok: true, cerrado: r.cerrado } : { ok: false, error: r.error };
+  }, [creado.id, creado.key]);
+  check('B cierra el préstamo con la devolución total', cierreB.ok && cierreB.cerrado, cierreB.error);
+  await B.page.evaluate(() => window.STORE.flushQueue());
+  await B.page.waitForTimeout(900);
+  await sincronizar(A);
+  const finalA = (await cartera(A)).find(l => l.id === creado.id);
+  check('A ve el préstamo como devuelto', !!finalA && finalA.estado === 'devuelto', JSON.stringify(finalA || {}));
+  check('A ve la fecha real de devolución', !!finalA && !!finalA.fechaDevolucion, finalA && String(finalA.fechaDevolucion));
+  check('las tres piezas constan como regresadas en A',
+    !!finalA && finalA.devueltas === 3, finalA && `devueltas ${finalA.devueltas}`);
+  check('ninguna de las dos terminales quedó con operaciones bloqueadas',
+    (await A.page.evaluate(() => window.STORE.queueStatus().blocked)) === 0
+      && (await B.page.evaluate(() => window.STORE.queueStatus().blocked)) === 0);
+  check('el inventario de A no se movió en todo el intercambio',
+    await A.page.evaluate(() => {
+      const p = window.DATA.products.find(x => x.id === 'h62m');
+      return p ? window.DATA.stockOf(p, p.stock.find(v => v.stock > 0).talla) : -1;
+    }) === 5);
+  await A.ctx.close(); await B.ctx.close();
 
   console.log('\n── L) Coherencia final ─────────────────────────────────');
   check('ninguna operación quedó bloqueada al terminar', await bloqueadas() === 0,

@@ -396,7 +396,22 @@ confirmados, sin confirmar y fallidos con su causa.
 ### Pruebas
 
 Reproducción previa: `node test-loans-sync.mjs` → **29/51**, 22 fallando.
-Después del cambio: **52/52**.
+Después del cambio: **69/69**.
+
+Incluye el recorrido entre **dos terminales independientes** —dos contextos de
+navegador con `localStorage` y `balam_device_id` distintos contra la misma
+nube—: A registra, sincroniza; B lo ve con folio, persona y piezas idénticos; B
+devuelve una pieza y luego cierra el préstamo; A vuelve a sincronizar y ve la
+devolución parcial primero y el cierre con su fecha real después. Ninguna de las
+dos queda con operaciones bloqueadas y el inventario no se mueve.
+
+**Sobre el folio renombrado:** el renombrado sólo AÑADE un sufijo, de modo que
+el folio impreso queda como prefijo del nuevo. Lo localizan las dos superficies:
+`DATA.findLoanByFolio()` por alias explícito, y el buscador de la cartera por
+subcadena. La garantía duradera es el alias —la coincidencia por subcadena es
+incidental y dejaría de funcionar si un renombrado futuro sustituyera en vez de
+añadir—, así que el buscador debería consumir la autoridad. Queda como deuda:
+hoy no cambia el resultado para nadie.
 
 El arnés prueba el CLIENTE contra un doble de Supabase que implementa el mismo
 contrato; el SERVIDOR lo prueba la verificación autocontenida de

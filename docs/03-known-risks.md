@@ -2933,7 +2933,9 @@ solo bloque contra la definición desplegada (`R-DB-03`)— para devolver
 `folio_conflict` estructurado y admitir la adopción de documentos ya cerrados;
 `20260731010000` la verifica y comprueba además que no se perdieron la guarda de
 versión, la de eventos ni la de capacidad.
-**Pruebas:** préstamos sincronización 52/52; pantalla de préstamos 117/117 sin
+**Pruebas:** préstamos sincronización 69/69 —incluye el recorrido A→B→A entre
+dos terminales independientes, con `localStorage` y `balam_device_id`
+distintos—; pantalla de préstamos 117/117 sin
 editar un caso; contratos 40/40; cola 121/121; migraciones 31/31; build 8/8;
 smoke 15/15; navegación 15/15; capacidades 40/40; AUTH 18/18; roles 15/15;
 permisos 13/13; registro 12/12; apartados 55/55; cambio E2E 37/37; pantalla del
