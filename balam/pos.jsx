@@ -26,9 +26,16 @@
     const [talla, setTalla] = useState('all');
     const [color, setColor] = useState('all');
     const [onlyPop, setOnlyPop] = useState(false);
-    // Catálogos administrables para los desplegables de talla y color.
-    const TALLAS_L = window.CONFIG.list('size_letter');
-    const TALLAS_N = window.CONFIG.list('size_number');
+    // El filtro se deriva de la autoridad por producto; no enumera catálogos
+    // globales ni compara IDs contra etiquetas.
+    const TALLAS = [];
+    const seenSizes = new Set();
+    D.products.forEach(p => D.resolveProductSizes(p).sizes.forEach(size => {
+      const key = String(size.value);
+      if (!size.active || size.stock <= 0 || seenSizes.has(key)) return;
+      seenSizes.add(key);
+      TALLAS.push({ value: key, label: size.label });
+    }));
     const COLORS = window.CONFIG.list('color');
     const [ticket, setTicket] = useState([]);
     const [additionalDiscounts, setAdditionalDiscounts] = useState([]);
@@ -46,7 +53,8 @@
       return D.products.filter(p => {
         if (onlyPop && !p.pop) return false;
         if (cat !== 'all' && p.cat !== cat) return false;
-        if (talla !== 'all' && !p.stock.some(v => v.talla === talla && v.stock > 0)) return false;
+        if (talla !== 'all' && !D.resolveProductSizes(p).sizes.some(size =>
+          size.active && String(size.value) === talla && size.stock > 0)) return false;
         if (color !== 'all' && p.color !== color) return false;
         if (!q) return true;
         return p.nombre.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q) || p.colorName.toLowerCase().includes(q);
@@ -204,8 +212,7 @@
           key: 'ft', value: talla, active: talla !== 'all', onChange: e => setTalla(e.target.value),
         }, [
           h('option', { key: 'all', value: 'all' }, 'Todas las tallas'),
-          TALLAS_L.length && h('optgroup', { key: 'gl', label: 'Letras' }, TALLAS_L.map(t => h('option', { key: t.code, value: t.code }, t.label))),
-          TALLAS_N.length && h('optgroup', { key: 'gn', label: 'Números' }, TALLAS_N.map(t => h('option', { key: t.code, value: t.code }, t.label))),
+          ...TALLAS.map(t => h('option', { key: t.value, value: t.value }, t.label)),
         ]),
         h(FilterSelect, {
           key: 'fc', value: color, active: color !== 'all', onChange: e => setColor(e.target.value),
@@ -369,6 +376,7 @@
 
   // Modal de talla
   function SizeModal({ p, onClose, onPick }) {
+    const sizes = D.resolveProductSizes(p).sizes.filter(size => size.active && size.stock > 0);
     return h(Modal, { title: 'Selecciona talla', onClose }, [
       h('div', { key: 'h', className: 'flex items-center gap-4 mb-5' }, [
         h(ProductImage, { key: 't', p, className: 'w-16 h-20 rounded-lg ring-1 ring-outline-variant/50' }),
@@ -379,24 +387,19 @@
         ]),
       ]),
       h('div', { key: 'lbl', className: 'text-overline uppercase text-on-surface-variant mb-3' }, 'Tallas disponibles'),
-      ...[['L', 'Letras'], ['N', 'Números']].map(([e, label]) => {
-        const items = p.stock.filter(v => v.escala === e && v.stock > 0);
-        if (!items.length) return null;
-        return h('div', { key: e, className: 'mb-4' }, [
-          h('div', { key: 'sl', className: 'text-overline uppercase text-muted mb-2' }, label),
+      h('div', { key: 'category', className: 'mb-4' }, [
           h('div', { key: 'sz', className: 'flex flex-wrap gap-2' },
-            items.map(v => h('button', {
-              key: v.talla,
+            sizes.map(size => h('button', {
+              key: size.sizeId,
               className: 'flex flex-col items-center gap-0.5 min-w-[64px] px-3 py-2.5 border border-outline-variant hover:border-primary hover:bg-surface-container-low transition-colors rounded-lg',
-              onClick: () => onPick(p, v.talla),
+              onClick: () => onPick(p, size.value),
             }, [
-              h('span', { key: 't', className: 'font-semibold text-body text-primary' }, (window.CONFIG.map(e === 'N' ? 'size_number' : 'size_letter')[v.talla] || v.talla)),
+              h('span', { key: 't', className: 'font-semibold text-body text-primary' }, size.label),
               // H-36: el precio real de la talla, visible antes de agregarla.
-              h('span', { key: 'p', className: 'text-caption font-semibold text-gold-text' }, fmt(D.listPrice(p, v.talla))),
-              h('span', { key: 's', className: 'text-caption text-muted' }, v.stock + ' pz'),
+              h('span', { key: 'p', className: 'text-caption font-semibold text-gold-text' }, fmt(D.listPrice(p, size.value))),
+              h('span', { key: 's', className: 'text-caption text-muted' }, size.stock + ' pz'),
             ]))),
-        ]);
-      }),
+        ]),
     ]);
   }
 

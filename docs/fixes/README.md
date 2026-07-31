@@ -61,6 +61,7 @@ sesión de chat.
 | `descuento-adicional-manual.md` | H-53 | Porcentaje e importe manual administrables |
 | `editor-simple-de-beneficios.md` | H-54 | Editor administrativo claro y responsivo de beneficios |
 | `duplicar-beneficios.md` | H-55 | Copia independiente de una opción de beneficio |
+| `autoridad-categorias-por-talla.md` | H-57 | Categoría y existencias por talla compartidas por POS e Inventario |
 
 Documentación financiera relacionada, creada antes de este índice:
 

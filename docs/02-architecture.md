@@ -240,6 +240,17 @@ Costo cero/ausente o margen 0 conservan el cálculo histórico. El margen se
 administra en Configuración → Ventas y POS, entre 0% y 100%, y afecta sólo
 cálculos nuevos; las ventas guardadas conservan sus snapshots monetarios.
 
+### Categorías y existencias por talla
+
+`DATA.resolveProductSizes(producto, catálogos, variantes)` es la autoridad única
+de las tallas aplicables. Resuelve la categoría persistida en el producto contra
+los catálogos vivos de `CONFIG` y devuelve identidad, valor original, etiqueta,
+orden comercial, estado, existencia e identidad de variante. POS, el selector
+de talla y el detalle/formulario de Inventario consumen ese resultado. Los
+productos históricos se infieren sólo cuando sus existencias identifican una
+escala inequívoca; un registro ambiguo conserva sus variantes y debe asignarse
+explícitamente al volver a guardarse.
+
 ### Resolución del descuento por renglón
 
 `DATA.resolveLineDiscount(producto, talla)` es la única fuente de la resolución

@@ -6,19 +6,17 @@
   const D = window.DATA;
   const h = React.createElement;
 
-  const ESCALAS = [['L', 'Letras'], ['N', 'Números']];
-  // Nombre visible de una talla según el catálogo (size_letter/size_number). Si se renombró en
-  // Configuración, aquí se refleja; si no existe, cae al código.
-  const tallaLabel = (talla, escala) => {
-    const m = window.CONFIG.map(escala === 'N' ? 'size_number' : 'size_letter');
-    return (m[talla] != null && m[talla] !== '') ? m[talla] : talla;
+  const tallaLabel = (product, talla) => {
+    const hit = D.resolveProductSizes(product).sizes.find(s => String(s.value) === String(talla));
+    return hit ? hit.label : talla;
   };
-  // Alinea el stock de un producto al catálogo de tallas VIGENTE: conserva cantidades por talla,
-  // agrega las tallas nuevas en 0 y omite las que ya no existen. Misma lógica que D.hydrate.
-  const alignStock = (existing) => {
-    const by = {}; (existing || []).forEach(v => { by[v.escala + v.talla] = v.stock; });
-    return window.DATA.SIZES_LETRA.map(t => ({ talla: t, escala: 'L', stock: by['L' + t] || 0 }))
-      .concat(window.DATA.SIZES_NUM.map(t => ({ talla: t, escala: 'N', stock: by['N' + t] || 0 })));
+  const alignStock = (product, categoryId) => {
+    const candidate = { ...product, sizeCategoryId: categoryId, attrs: { ...(product.attrs || {}), __sizeCategoryId: categoryId } };
+    return D.resolveProductSizes(candidate).sizes.filter(size => size.active || size.stock > 0).map(size => {
+      const old = (product.stock || []).find(v =>
+        (!size.scale || v.escala === size.scale) && String(v.talla) === String(size.value));
+      return { ...(old && old.id ? { id: old.id } : {}), talla: size.value, escala: size.scale, stock: old ? (Number(old.stock) || 0) : 0 };
+    });
   };
   const CARD = 'bg-surface-container-lowest rounded-xl shadow-e1';
   const INPUT = 'w-full bg-surface border border-outline-variant rounded-lg px-3 h-11 text-body focus:ring-1 focus:ring-primary focus:border-primary transition-all';
@@ -339,12 +337,17 @@
     // edita). Los códigos históricos ('21', 'ML', …) quedan solo como respaldo si está vacío —
     // un default fósil que ya no existe en el catálogo produce SKUs y atributos huérfanos.
     const first = (kind, fb) => { const l = window.CONFIG.list(kind); return l.length ? l[0].code : fb; };
-    return { cat: first('category', '21'), manga: first('sleeve', 'ML'), tela: first('fabric', 'ALG'), color: first('color', 'BL'), modelo: '', nombre: '', orn: '—', ornColors: [], cuello: first('neck', 'NOR'), precio: 0, stock: D.emptyStock(), pop: false, attrs };
+    const sizeCategoryId = ((window.CONFIG.sizeCategories && window.CONFIG.sizeCategories()[0]) || {}).id || 'size_letter';
+    attrs.__sizeCategoryId = sizeCategoryId;
+    const base = { cat: first('category', '21'), manga: first('sleeve', 'ML'), tela: first('fabric', 'ALG'), color: first('color', 'BL'), modelo: '', nombre: '', orn: '—', ornColors: [], cuello: first('neck', 'NOR'), precio: 0, stock: [], pop: false, attrs, sizeCategoryId };
+    base.stock = alignStock(base, sizeCategoryId);
+    return base;
   }
 
   // ---------- Drawer de detalle ----------
   function DetailDrawer({ p, onClose, onEdit, onDelete, onLabels }) {
     const open = !!p;
+    const resolvedSizes = p ? D.resolveProductSizes(p).sizes.filter(s => s.active && s.stock > 0) : [];
     return h(React.Fragment, {}, [
       h('div', { key: 'ov', className: 'fixed inset-0 bg-primary-container/40 backdrop-blur-sm z-[55] transition-opacity duration-300 ' + (open ? 'opacity-100' : 'opacity-0 pointer-events-none'), onClick: onClose }),
       h('div', { key: 'dr', className: 'fixed inset-y-0 right-0 w-[460px] bg-surface border-l border-outline-variant z-[60] shadow-e3 flex flex-col transition-transform duration-300 ' + (open ? 'translate-x-0' : 'translate-x-full') },
@@ -376,14 +379,11 @@
               // Stock por talla
               h('div', { key: 'stk', className: 'space-y-3' }, [
                 h('h3', { key: 't', className: 'text-overline font-bold uppercase text-primary tracking-widest border-b border-outline-variant pb-3' }, 'Existencias por talla'),
-                ...ESCALAS.filter(([e]) => p.stock.some(v => v.escala === e && v.stock > 0)).map(([e, label]) => h('div', { key: e }, [
-                  h('div', { key: 'l', className: 'text-overline uppercase tracking-widest text-on-surface-variant/70 mb-2' }, label),
-                  h('div', { key: 'g', className: 'flex flex-wrap gap-2' }, p.stock.filter(v => v.escala === e && v.stock > 0).map(v =>
-                    h('div', { key: v.talla, className: 'flex flex-col items-center min-w-[48px] px-2 py-1.5 border border-outline-variant rounded' }, [
-                      h('span', { key: 't', className: 'text-caption font-semibold text-primary' }, tallaLabel(v.talla, e)),
-                      h('span', { key: 's', className: 'text-overline text-on-surface-variant' }, v.stock + ' pz'),
-                    ]))),
-                ])),
+                 h('div', { key: 'g', className: 'flex flex-wrap gap-2' }, resolvedSizes.map(size =>
+                   h('div', { key: size.sizeId, className: 'flex flex-col items-center min-w-[48px] px-2 py-1.5 border border-outline-variant rounded' }, [
+                     h('span', { key: 't', className: 'text-caption font-semibold text-primary' }, size.label),
+                     h('span', { key: 's', className: 'text-overline text-on-surface-variant' }, size.stock + ' pz'),
+                   ]))),
               ]),
               // Acciones
               h('div', { key: 'ac', className: 'pt-4 space-y-3' }, [
@@ -477,7 +477,8 @@
       cuello: product.cuello, precio: product.precio, costo: product.costo != null ? product.costo : '', pop: !!product.pop,
       imagen: product.imagen || '',
       attrs: product.attrs ? { ...product.attrs } : {}, // valores de catálogos custom (Fase 2)
-      stock: alignStock(product.stock),
+      sizeCategoryId: product.sizeCategoryId || (product.attrs && product.attrs.__sizeCategoryId) || D.inferSizeCategory(product, product.stock) || '',
+      stock: alignStock(product, product.sizeCategoryId || (product.attrs && product.attrs.__sizeCategoryId) || D.inferSizeCategory(product, product.stock) || ''),
       // H-36: las excepciones se editan como filas «grupo de tallas → precio»,
       // que es como el negocio ya expresa un alcance por tallas en Descuentos.
       // El dato guardado es el mapa canónico; la agrupación vive sólo aquí y se
@@ -485,6 +486,13 @@
       precioRows: agruparPrecios(product.preciosTalla),
     }));
     const set = (k, v) => setD(prev => ({ ...prev, [k]: v }));
+    const setSizeCategory = categoryId => setD(prev => ({
+      ...prev,
+      sizeCategoryId: categoryId,
+      attrs: { ...(prev.attrs || {}), __sizeCategoryId: categoryId },
+      stock: alignStock(prev, categoryId),
+      precioRows: [],
+    }));
     const setAttr = (k, v) => setD(prev => ({ ...prev, attrs: { ...(prev.attrs || {}), [k]: v } }));
     // Catálogo "Modelo" (custom) que alimenta el desplegable de "Nombre / Modelo" (detección
     // centralizada en CONFIG.modeloKind). Si no existe, el campo sigue siendo texto libre.
@@ -549,6 +557,7 @@
       // viejos capturados a mano al reeditarlos). Sin catálogo, se respeta el texto libre.
       const modeloFinal = (modeloKind && modeloCode) ? modeloCode : String(d.modelo).trim();
       if (!modeloFinal) { toast(modeloKind ? 'Selecciona el Nombre / Modelo' : 'Escribe el número de modelo', 'var(--danger)'); return; }
+      if (!d.sizeCategoryId) { toast('Selecciona la categoría por talla', 'var(--danger)'); return; }
       // Catálogos marcados "Obligatorio" (y que aparecen en el alta) deben tener valor.
       const meta = window.CONFIG.allCatalogMeta ? window.CONFIG.allCatalogMeta() : {};
       const falta = Object.keys(meta).find(k => {
@@ -603,6 +612,14 @@
           ? h('input', { className: INPUT + ' opacity-60 cursor-not-allowed', value: modeloCode || d.modelo, readOnly: true, tabIndex: -1, title: 'Se llena automáticamente con la clave del catálogo Modelo al elegir Nombre / Modelo' })
           : h('input', { className: INPUT, value: d.modelo, placeholder: '128', onChange: e => set('modelo', e.target.value) })),
         field('Precio', h('input', { className: INPUT, type: 'number', min: 0, value: d.precio, onChange: e => set('precio', e.target.value) })),
+        field('Categoría por talla', h('select', {
+          className: SELECT, value: d.sizeCategoryId, 'data-testid': 'product-size-category',
+          onChange: e => setSizeCategory(e.target.value),
+        }, [
+          h('option', { key: '', value: '' }, 'Selecciona…'),
+          ...(window.CONFIG.sizeCategories ? window.CONFIG.sizeCategories() : []).map(cat =>
+            h('option', { key: cat.id, value: cat.id }, cat.label)),
+        ])),
         // Atributos select del alta: etiqueta y visibilidad salen de CONFIG.catalogMeta (editable
         // por el admin en Configuración → Catálogos de producto). Solo se muestran los "En alta".
         ...[
@@ -635,15 +652,14 @@
           h('span', { key: 'sp', className: 'flex-1' }),
           h('span', { key: 'tt', className: 'px-2 py-1 text-overline uppercase rounded bg-gold text-on-gold' }, `${total} pz en total`),
         ]),
-        // Solo escalas con tallas activas en el catálogo (o con stock legado > 0): si el admin
-        // desactiva toda una escala (p. ej. Letras), su sección desaparece del alta.
-        ...ESCALAS.filter(([e]) => (e === 'L' ? D.SIZES_LETRA : D.SIZES_NUM).length || d.stock.some(v => v.escala === e && v.stock > 0)).map(([e, label]) => h('div', { key: e, className: 'mb-4' }, [
-          h('div', { key: 'sl', className: 'text-overline uppercase tracking-widest text-on-surface-variant/70 mb-2' }, label),
-          h('div', { key: 'r', className: 'grid grid-cols-5 sm:grid-cols-10 gap-2' }, d.stock.filter(v => v.escala === e).map(v => h('div', { key: v.talla, className: 'flex flex-col items-center gap-1' }, [
-            h('label', { key: 'l', className: 'text-overline uppercase text-on-surface-variant' }, tallaLabel(v.talla, e)),
-            h('input', { key: 'i', type: 'number', min: 0, value: v.stock, className: 'w-full h-9 text-center bg-surface-container border border-outline-variant focus:ring-1 focus:ring-primary text-body rounded font-mono', onChange: ev => setStock(v.talla, e, ev.target.value) }),
+        h('div', { key: d.sizeCategoryId || 'none', className: 'mb-4' }, [
+          h('div', { key: 'sl', className: 'text-overline uppercase tracking-widest text-on-surface-variant/70 mb-2' },
+            ((window.CONFIG.sizeCategories ? window.CONFIG.sizeCategories() : []).find(cat => cat.id === d.sizeCategoryId) || {}).label || 'Sin categoría'),
+          h('div', { key: 'r', className: 'grid grid-cols-5 sm:grid-cols-10 gap-2' }, d.stock.map(v => h('div', { key: String(v.talla), className: 'flex flex-col items-center gap-1' }, [
+            h('label', { key: 'l', className: 'text-overline uppercase text-on-surface-variant' }, tallaLabel(d, v.talla)),
+            h('input', { key: 'i', type: 'number', min: 0, value: v.stock, className: 'w-full h-9 text-center bg-surface-container border border-outline-variant focus:ring-1 focus:ring-primary text-body rounded font-mono', onChange: ev => setStock(v.talla, v.escala, ev.target.value) }),
           ]))),
-        ])),
+        ]),
       ]),
       // H-36: excepciones de precio por talla. Invisible mientras no existan:
       // la mayoría de los artículos tiene un precio único y no debe pedírsele
@@ -677,14 +693,13 @@
               className: 'w-9 h-9 grid place-items-center border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors',
             }, h(MS, { name: 'trash', size: 15 })),
           ]),
-          ...ESCALAS.filter(([e]) => d.stock.some(v => v.escala === e)).map(([e, label]) => h('div', { key: e, className: 'mt-2' }, [
-            h('div', { key: 'sl', className: 'text-overline uppercase tracking-widest text-on-surface-variant/70 mb-1.5' }, label),
-            h('div', { key: 'c', className: 'flex flex-wrap gap-1.5' }, d.stock.filter(v => v.escala === e).map(v => h('button', {
+          h('div', { key: d.sizeCategoryId || 'none', className: 'mt-2' }, [
+            h('div', { key: 'c', className: 'flex flex-wrap gap-1.5' }, d.stock.map(v => h('button', {
               key: v.talla, type: 'button', onClick: () => togglePrecioTalla(i, v.talla),
               className: 'px-2.5 py-1 border rounded text-overline uppercase transition-colors ' +
                 (row.tallas.includes(v.talla) ? 'border-primary bg-surface-container text-primary font-bold' : 'border-outline-variant text-on-surface-variant hover:border-primary'),
-            }, tallaLabel(v.talla, e)))),
-          ])),
+            }, tallaLabel(d, v.talla)))),
+          ]),
         ])),
       ]),
     ]);

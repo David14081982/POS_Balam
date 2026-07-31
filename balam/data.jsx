@@ -19,6 +19,73 @@
   const SIZES_LETRA = () => C.codes('size_letter');
   const SIZES_NUM = () => C.codes('size_number');
 
+  const categoryScale = categoryId => {
+    const meta = C && C.catalogMeta ? C.catalogMeta(categoryId) : null;
+    return meta && meta.sizeScale ? meta.sizeScale
+      : categoryId === 'size_number' ? 'N'
+        : categoryId === 'size_letter' ? 'L' : null;
+  };
+
+  function inferSizeCategory(product, variants) {
+    const explicit = product && (product.sizeCategoryId || (product.attrs && product.attrs.__sizeCategoryId));
+    if (explicit && C && C.catalogMeta && C.catalogMeta(explicit)) return explicit;
+    const positive = new Set((variants || []).filter(v => Number(v.stock) > 0).map(v => v.escala).filter(Boolean));
+    if (positive.size !== 1) return null;
+    const scale = Array.from(positive)[0];
+    const category = (C && C.sizeCategories ? C.sizeCategories() : [])
+      .find(item => item.scale === scale);
+    return category ? category.id : (scale === 'N' ? 'size_number' : scale === 'L' ? 'size_letter' : null);
+  }
+
+  // Autoridad única: Producto → categoría asignada → tallas configuradas →
+  // variantes/existencias. `catalogs` se admite para pruebas y adaptadores; en
+  // producción se consulta CONFIG en vivo, por lo que una edición se refleja
+  // sin reconstruir catálogos en las pantallas.
+  function resolveProductSizes(product, catalogs, variants) {
+    const rows = Array.isArray(variants) ? variants : ((product && product.stock) || []);
+    let categoryId = product && (product.sizeCategoryId || (product.attrs && product.attrs.__sizeCategoryId));
+    if (!categoryId) categoryId = inferSizeCategory(product, rows);
+    const configuredCategories = C && C.sizeCategories ? C.sizeCategories() : [
+      { id: 'size_letter', label: 'Talla (Letra)', scale: 'L' },
+      { id: 'size_number', label: 'Talla (Número)', scale: 'N' },
+    ];
+    const categoryIds = categoryId ? [categoryId]
+      : configuredCategories.filter(cat =>
+        rows.some(v => !v.escala || v.escala === cat.scale)).map(cat => cat.id);
+    const source = catalogs || null;
+    const sizes = [];
+    categoryIds.forEach(catId => {
+      const category = configuredCategories.find(cat => cat.id === catId);
+      const scale = (category && category.scale) || categoryScale(catId);
+      let items = source
+        ? (Array.isArray(source[catId]) ? source[catId] : [])
+        : (C && C.all ? C.all(catId) : []);
+      if (!items.length && C && C.codes) {
+        items = C.codes(catId).map(value => ({ code: value, label: value, active: true }));
+      }
+      items.forEach((item, index) => {
+        const meta = item && item.meta && typeof item.meta === 'object' ? item.meta : {};
+        const value = Object.prototype.hasOwnProperty.call(meta, 'value') ? meta.value : item.code;
+        const matches = rows.filter(v =>
+          (!scale || !v.escala || v.escala === scale) && String(v.talla) === String(value));
+        sizes.push({
+          categoryId: catId,
+          sizeId: item.code,
+          value,
+          label: item.label == null || item.label === '' ? String(value) : item.label,
+          order: Number.isFinite(Number(meta.order)) ? Number(meta.order) : index,
+          stock: matches.reduce((sum, v) => sum + (Number(v.stock) || 0), 0),
+          variantId: matches.length ? (matches[0].id || null) : null,
+          active: item.active !== false,
+          scale,
+        });
+      });
+    });
+    sizes.sort((a, b) => categoryIds.indexOf(a.categoryId) - categoryIds.indexOf(b.categoryId) || a.order - b.order);
+    const category = configuredCategories.find(cat => cat.id === categoryId);
+    return { categoryId: categoryId || null, categoryLabel: category ? category.label : categoryId || '', sizes };
+  }
+
   // Construye el arreglo de stock (20 entradas: 10 letra + 10 número).
   // letras / nums: arreglos de hasta 10 cantidades (faltantes → 0).
   function mkStock(letras, nums) {
@@ -92,6 +159,8 @@
   function hydrate(p) {
     p.modelo = String(p.modelo);
     if (!p.attrs || typeof p.attrs !== 'object') p.attrs = {}; // valores de catálogos custom (Fase 2)
+    p.sizeCategoryId = p.sizeCategoryId || p.attrs.__sizeCategoryId || inferSizeCategory(p, p.stock);
+    if (p.sizeCategoryId) p.attrs.__sizeCategoryId = p.sizeCategoryId;
     if (!Array.isArray(p.ornColors)) p.ornColors = [];
     if (!p.cuello) p.cuello = 'NOR';
     // Normaliza stock al modelo de 20 entradas si viniera incompleto
@@ -109,7 +178,7 @@
     p.costo = Number(p.costo) || 0;
     // H-36: excepciones de precio por talla. Se canoniza aquí para que una talla
     // retirada del catálogo o un valor inutilizable no sobrevivan en el mapa.
-    p.preciosTalla = sanitizePreciosTalla(p.preciosTalla);
+    p.preciosTalla = sanitizePreciosTalla(p.preciosTalla, p);
     colorDisplay(p);
     if (!p.imagen) p.imagen = pickImg(p);
     return p;
@@ -757,7 +826,10 @@
     return saleFolioAliases(sale).find(a => String(a).toUpperCase().includes(t)) || null;
   }
   // Existencias disponibles de una talla en un producto.
-  function stockOf(p, talla) { const e = (p.stock || []).find(v => v.talla === talla); return e ? e.stock : 0; }
+  function stockOf(p, talla) {
+    const hit = resolveProductSizes(p).sizes.find(s => String(s.value) === String(talla));
+    return hit ? hit.stock : 0;
+  }
 
   // Registra una venta: descuenta stock, mueve inventario, actualiza cliente y vendedores.
   // ticket: [{ p, talla, qty }], sellerIds: [id], client: obj, metodo, estado, total, itemCount.
@@ -870,21 +942,23 @@
   // que el POS deja vender; sin existencias cae al precio general.
   function priceRange(product) {
     const general = Number(product && product.precio) || 0;
-    const conStock = ((product && product.stock) || []).filter(v => Number(v.stock) > 0);
+    const conStock = resolveProductSizes(product).sizes.filter(v => v.active && Number(v.stock) > 0);
     if (!conStock.length) return { min: general, max: general, unico: true };
-    const precios = conStock.map(v => listPrice(product, v.talla));
+    const precios = conStock.map(v => listPrice(product, v.value));
     const min = Math.min.apply(null, precios);
     const max = Math.max.apply(null, precios);
     return { min, max, unico: min === max };
   }
   // Deja el mapa en su forma canónica: sólo tallas del catálogo vigente y sólo
   // precios utilizables. Se aplica al guardar; la lectura permanece tolerante.
-  function sanitizePreciosTalla(mapa) {
-    const validas = SIZES_LETRA().concat(SIZES_NUM());
+  function sanitizePreciosTalla(mapa, product) {
+    const validas = product
+      ? resolveProductSizes(product).sizes.map(s => String(s.value))
+      : SIZES_LETRA().concat(SIZES_NUM()).map(String);
     const out = {};
     if (!mapa || typeof mapa !== 'object') return out;
     Object.keys(mapa).forEach(talla => {
-      if (validas.indexOf(talla) < 0) return;
+      if (validas.indexOf(String(talla)) < 0) return;
       const n = Number(mapa[talla]);
       if (!Number.isFinite(n) || n < 0) return;
       out[talla] = Math.round(n * 100) / 100;
@@ -2440,7 +2514,7 @@
     folioBlockRequest, applyFolioBlock, terminalCode,
     findSaleByFolio, saleFolioAliases, folioAliasHit, stockOf, isAutoImg, resetProducts, applyRemote, applySyncResult, mergeRemote, markSaleSync, liquidarComision,
     completarApartado, registrarPagoApartado, paymentsForSale, hasFinancialSnapshot, resolveLineDiscount, saleQuote, cerrarMes, getPeriodoInicio,
-    listPrice, priceRange, sanitizePreciosTalla,
+    listPrice, priceRange, sanitizePreciosTalla, resolveProductSizes, inferSizeCategory,
     recordReturn, returnedQty, returnsForFolio, isReturnable, returnDeadline, saleLineBalance,
     saveExchanges, recognizedValue, supplySources, recordExchange, reverseExchangeCommission,
     revenueSummary, exchangeRevenue, exchangeUnusedValue, exchangeReport, sellerCommissionReport,

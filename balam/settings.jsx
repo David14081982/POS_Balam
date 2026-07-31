@@ -974,8 +974,8 @@
       h(CatalogEditor, { key: 'col', kind: 'color', codePlaceholder: 'AZ', metaFields: [{ key: 'hex', label: 'Color', type: 'color', def: '#cccccc' }] }),
       h(ColorHexFixCard, { key: 'colhex' }),
       h(CatalogEditor, { key: 'orn', kind: 'ornament', codePlaceholder: 'Bordado', labelPlaceholder: 'Nombre del ornamento' }),
-      h(CatalogEditor, { key: 'szl', kind: 'size_letter', codePlaceholder: 'M', labelPlaceholder: 'M' }),
-      h(CatalogEditor, { key: 'szn', kind: 'size_number', codePlaceholder: '40', labelPlaceholder: '40' }),
+      h(CatalogEditor, { key: 'szl', kind: 'size_letter', title: 'Categorías por talla · Letras y especiales', codePlaceholder: 'M', labelPlaceholder: 'M' }),
+      h(CatalogEditor, { key: 'szn', kind: 'size_number', title: 'Categorías por talla · Números', codePlaceholder: '40', labelPlaceholder: '40' }),
       // Catálogos creados por el administrador (Fase 2)
       ...Object.keys(C.allCatalogMeta ? C.allCatalogMeta() : {}).filter(k => { const m = C.catalogMeta(k); return m && m.custom; })
         .map(k => h(CatalogEditor, { key: k, kind: k, codePlaceholder: 'CÓD' })),

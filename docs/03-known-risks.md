@@ -2645,6 +2645,44 @@ dos comprobaciones HID pendientes son intermitencias históricas del arnés y no
 recorren autorización ni persistencia remota.
 **Corrección documentada:** `docs/fixes/permisos-visualizacion.md`.
 
+## H-57 - POS e Inventario ignoran la categoría por talla del producto
+
+**Estado:** RESUELTO
+**Fecha de registro:** 30/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** Configuración conserva dos catálogos globales (`size_letter` y
+`size_number`), pero el producto no persiste cuál le corresponde.
+`balam/pos.jsx` construye el filtro con ambos catálogos y abre el selector
+recorriendo `p.stock`; `balam/inventory.jsx` alinea y muestra ambas escalas.
+**Origen:** auditoría funcional solicitada por el dueño del producto.
+**Riesgo:** una pantalla puede mezclar categorías, mostrar una talla de otra
+familia, comparar el código contra una etiqueta o perder un `0` por conversión.
+Editar el catálogo no garantiza una resolución idéntica en POS e Inventario.
+**Alcance:** autoridad única de tallas por producto, asignación compatible con
+datos históricos y consumo compartido en filtro POS, selector, existencias y
+detalle de Inventario.
+**No alcance:** crear otro catálogo de tallas, alterar valores u orden
+configurados, migrar ventas históricas o cambiar la regla vigente que oculta
+tallas sin existencia en selección y detalle.
+**Reproducción:** `node test-product-sizes.mjs` antes de implementar: 0 pasaron,
+9 fallaron.
+**Causa raíz:** faltaba la relación producto → categoría; POS e Inventario
+resolvían por separado usando ambos catálogos globales o recorriendo `p.stock`.
+**Corrección:** `DATA.resolveProductSizes()` enlaza la categoría persistida en
+`attrs.__sizeCategoryId` con los catálogos vivos y las variantes. Devuelve ID,
+valor original, etiqueta, orden, existencia, variante y actividad. POS,
+selector e Inventario consumen la misma salida.
+**Pruebas:** autoridad 9/9; precio por talla 38/38; E2E 19/19; filtros 18/18;
+cola offline 115/115; contratos 40/40; smoke 17/17; navegación 15/15; build
+correcto con 71 assets.
+**Migraciones:** ninguna; la asignación reutiliza `attrs`, ya sincronizado y
+cacheado offline.
+**Pendiente:** ninguno dentro de H-57.
+**Riesgo residual:** los valores numéricos históricos siguen almacenados como
+texto por compatibilidad. Un producto histórico con stock positivo en ambas
+escalas requiere asignación manual al editarse; no se infiere arbitrariamente.
+**Corrección documentada:** `docs/fixes/autoridad-categorias-por-talla.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

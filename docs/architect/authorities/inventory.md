@@ -1,7 +1,7 @@
 ---
 capa: conocimiento
 applies_to: [domain, database]
-related_histories: [H-01, H-36, H-46]
+related_histories: [H-01, H-36, H-46, H-57]
 severity_max: required
 no_alcance: "No define ninguna autoridad ni transcribe firmas. Sólo dice qué pregunta responde cada una y dónde vive."
 ---
@@ -15,6 +15,13 @@ Reglas de mantenimiento en `../README.md` § Registro de autoridades.
 **Definición:** `balam/data.jsx` · excepciones en `pos.products.precios_talla`
 **Creada por:** H-36 · **Decisión:** `ADR-009`
 **Consumidores:** `grep -rn "listPrice" balam/ test-*.mjs`
+
+## ¿Qué tallas aplican a este producto y cuántas piezas existen?
+**Autoridad:** `DATA.resolveProductSizes(producto, catálogos, variantes)`
+**Definición:** `balam/data.jsx` · categoría persistida en
+`producto.attrs.__sizeCategoryId` · catálogos en `CONFIG`
+**Creada por:** H-57
+**Consumidores:** `grep -rn "resolveProductSizes" balam/ test-*.mjs`
 
 ## ¿Qué precio muestra este artículo en el catálogo?
 **Autoridad:** `DATA.priceRange(producto)` — **derivada** de `listPrice` sobre

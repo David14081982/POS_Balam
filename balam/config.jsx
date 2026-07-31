@@ -146,8 +146,8 @@
     color:       { label: 'Color',          inForm: true,  inSku: true,  skuOrder: 4, field: 'color',  system: true, struct: true, formSelect: true },
     neck:        { label: 'Cuello',         inForm: true,  inSku: false, skuOrder: 5, field: 'cuello', system: true, formSelect: true },
     ornament:    { label: 'Ornamento',      inForm: false, inSku: false, skuOrder: 6, field: 'orn',    system: true },
-    size_letter: { label: 'Talla (Letra)',  inForm: false, inSku: false, skuOrder: 7, system: true, struct: true },
-    size_number: { label: 'Talla (Número)', inForm: false, inSku: false, skuOrder: 8, system: true, struct: true, sizeSlot: true },
+    size_letter: { label: 'Talla (Letra)',  inForm: false, inSku: false, skuOrder: 7, system: true, struct: true, sizeCategory: true, sizeScale: 'L' },
+    size_number: { label: 'Talla (Número)', inForm: false, inSku: false, skuOrder: 8, system: true, struct: true, sizeCategory: true, sizeScale: 'N', sizeSlot: true },
   };
 
   // ── Semilla de parámetros sueltos ────────────────────────────────────────────
@@ -279,6 +279,13 @@
   // ── Metadatos por catálogo (label / inForm / inSku / orden) ───────────────────
   function catalogMeta(kind) { return state.catalogMeta[kind] || null; }
   function allCatalogMeta() { return deepClone(state.catalogMeta); }
+  // Categorías por talla: son los catálogos estructurales ya administrados por
+  // Configuración. No se mantiene una lista paralela en POS ni Inventario.
+  function sizeCategories() {
+    return Object.keys(state.catalogMeta)
+      .filter(kind => state.catalogMeta[kind] && state.catalogMeta[kind].sizeCategory)
+      .map(kind => ({ id: kind, label: state.catalogMeta[kind].label || kind, scale: state.catalogMeta[kind].sizeScale || null }));
+  }
   // Etiqueta visible del catálogo (con respaldo si no hubiera meta).
   function catalogLabel(kind) { const m = state.catalogMeta[kind]; return (m && m.label) || kind; }
   // Propiedad del producto que lleva el código de un catálogo (p.cat, p.manga, …).
@@ -499,7 +506,7 @@
 
   window.CONFIG = {
     all, list, map, metaMap, codes, find, get, settings, inUse,
-    catalogMeta, allCatalogMeta, catalogLabel, fieldOf, skuParts, modeloKind,
+    catalogMeta, allCatalogMeta, sizeCategories, catalogLabel, fieldOf, skuParts, modeloKind,
     addItem, updateItem, setActive, removeItem, move, setCatalogMeta, moveSkuOrder, addCatalog, removeCatalog, importCatalogs, setSetting, setSettings,
     reset, snapshot, load,
     get version() { return version; },
