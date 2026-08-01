@@ -1,10 +1,11 @@
 # Existencias retenidas por códigos históricos de talla desactivados
 
 **Riesgo:** H-63
-**Estado:** PARCIALMENTE RESUELTO — fase 1 (protección) publicada; fase 2
-(recuperación) pendiente de verificación remota y autorización
-**Fecha:** 31/07/2026
-**Commit:** `b4bfb3f` · despliegue registrado en el commit siguiente
+**Estado:** RESUELTO — fase 1 (protección) publicada; fase 2 (recuperación)
+ejecutada y verificada el 01/08/2026
+**Fecha:** 31/07/2026 (fase 1) · 01/08/2026 (fase 2)
+**Commit:** `b4bfb3f` (protección) · `c18a0f7` (despliegue) · el commit de este
+documento registra la fase 2
 
 ## Problema y reproducción
 
@@ -176,23 +177,74 @@ Los `data-testid` añadidos (`catalog-row-*`, `catalog-toggle-*`,
 `catalog-import-input`, `catalog-import-diag` con `data-diag`, y `toast`) son
 arquitectura de pruebas: atributos inertes en producción, `R-DEL-10`.
 
+## Fase 2 · recuperación (01/08/2026)
+
+**Precondición operativa, no técnica.** La segunda computadora se apagó y el
+dueño confirmó que nadie la encendería. Es lo que neutraliza el hueco de
+`CONFIG.load()`: una terminal apagada no empuja su configuración vieja.
+
+**Ejecución:** ocho clics del dueño en Configuración → Catálogos de producto →
+«Categorías por talla · Números», reactivando `s`, `A`, `B`, `C`, `D`, `E`, `G` y
+`H`. `F` (etiqueta 49, cero existencias) quedó inactivo a propósito. Ni una
+línea de código, ni una migración: el cambio son ocho banderas `active` del
+catálogo, que la cola subió sola a Supabase.
+
+**Medido antes de ejecutar**, simulando la reactivación sobre una copia del
+snapshot real con el artefacto de producción: piezas ofrecidas por el POS
+2,065 → 3,525; productos sin talla vendible 29 → 0; productos con piezas ocultas
+142 → 0; productos que mostrarían dos chips con la misma etiqueta: 0.
+
+**Medido después**, con el mismo instrumento: exactamente esas cifras.
+
+| Invariante | Antes | Después |
+|---|---|---|
+| Productos / piezas | 240 / 3,525 | 240 / 3,525 |
+| Huella de `stock` completo | `41737f2c822a0a8a` | **idéntica** |
+| Huella de `preciosTalla` | `e8c6f0d3a9ec38e4` | **idéntica** |
+| Huella de `barcodeUrls` | `8bb052a93a8e1a69` | **idéntica** |
+| `size_letter` | 14 / 0 | 14 / 0, misma huella |
+| Ventas, devoluciones, préstamos, pagos, movimientos, promociones, clientes, vendedores | — | todas con huella idéntica |
+
+**Verificación remota:** `size_number` 70 activas / 1 inactiva con `F` en
+`false`; `size_letter` 14 / 0; 240 productos, 237 con existencias y 3,525 piezas;
+y el reparto por talla **idéntico fila por fila** al local —37 tallas, cero
+diferencias—, lo que prueba que la recuperación no movió una sola existencia.
+
+**Validación del dueño:** ALONSO `1-ALS-MC-AMAR-T` ofrece «42 · 6 pz» en el
+selector del Punto de Venta y en el detalle de Inventario.
+
+**Reversión:** se probó ANTES de ejecutar, sobre un fixture ya reactivado.
+Restaurar el catálogo con `CONFIG.snapshot()` → apagar los ocho → `CONFIG.load()`
+devuelve 62 activos / 9 inactivos y 2,065 piezas sin tocar productos. Hace falta
+esa vía porque, una vez reactivados, la protección de la fase 1 impide apagarlos
+desde la interfaz: tienen existencias vivas. No hubo que usarla.
+
 ## Riesgo residual y pendientes
 
-1. **`CONFIG.load()` no está protegido.** Un pull de la nube o de otra terminal
+1. **Ocho etiquetas repetidas en el filtro global de tallas** —`0`, `40`, `42`,
+   `44`, `46`, `48`, `50`, `52`—, una por cada gemelo histórico reactivado. Es
+   presentación, no venta: ningún producto tiene piezas en ambos gemelos, así que
+   el selector de talla de cada artículo sigue mostrando una sola opción por
+   etiqueta. Quitarlo exige consolidar el stock histórico sobre los códigos
+   numéricos.
+2. **`CONFIG.load()` no está protegido.** Un pull de la nube o de otra terminal
    puede reintroducir la desactivación sin pasar por la guarda. Es una ruta de
    convergencia de sincronización, no de administración, y bloquearla exige una
-   decisión funcional propia. Por eso la fase 2 requiere antes la verificación
-   remota de sólo lectura.
-2. **Las 1,460 piezas siguen invisibles.** La protección impide que el daño
-   crezca; no lo repara.
-3. **`size_letter` queda fuera** por decisión de alcance: hoy no tiene códigos
-   inactivos ni piezas afectadas.
-4. **Pendiente antes de la fase 2:** confirmar en remoto los mismos 240
-   productos, `stock[].talla` coincidente con el snapshot local, los ocho códigos
-   con piezas aún inactivos, ninguna terminal con configuración más nueva y
-   ninguna operación remota que pueda revertir la recuperación.
-5. **Pendiente de cierre:** regenerar artefactos, probar el bundle, commit y
-   publicación. No autorizados todavía.
+   decisión funcional propia. En la fase 2 se neutralizó apagando la segunda
+   computadora, no con código.
+3. **`size_letter` queda fuera** de la protección por decisión de alcance: no
+   tiene códigos inactivos ni piezas afectadas.
+4. **Pendiente operativo:** auditoría **offline** de la segunda computadora antes
+   de reconectarla —`balam_sync_queue`, `balam_config_v1`, `size_number`,
+   `size_letter`—. Si conserva una operación `config` pendiente, no debe abrir el
+   POS en línea; si la cola está limpia, puede conectarse y recibir el catálogo
+   nuevo.
+5. **Continuación propuesta, no abierta:** consolidar el stock de los ocho
+   códigos históricos sobre sus gemelos numéricos y retirar los históricos. La
+   vía segura es exportar a Excel, mover las columnas `Ts`/`TA`…`TH` a
+   `T0`/`T40`…`T52` e importar **como actualización por SKU, nunca borrando**, con
+   un arnés que falle si se mueve una sola pieza. Elimina las etiquetas repetidas
+   y cierra `AP-01` en este dominio.
 
 ## Referencias
 

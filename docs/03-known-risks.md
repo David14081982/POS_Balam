@@ -2970,11 +2970,11 @@ remota (H-62).
 
 ## H-63 - Existencias retenidas por códigos históricos de talla desactivados
 
-**Estado:** PARCIALMENTE RESUELTO — fase 1 (protección) publicada; fase 2
-(recuperación) pendiente de verificación remota y autorización
+**Estado:** RESUELTO — fase 1 (protección) publicada y fase 2 (recuperación)
+ejecutada y verificada
 **Fecha de registro:** 31/07/2026
-**Commit:** `b4bfb3f` (protección, artefactos y documentación) · este commit
-registra el despliegue
+**Commit:** `b4bfb3f` (protección, artefactos y documentación) · `c18a0f7`
+(despliegue) · este commit registra la fase 2
 **Evidencia:** auditoría de sólo lectura del 31/07/2026 sobre el snapshot real
 —copia temporal del perfil, red bloqueada, artefacto interrogado con los datos
 reales—. El catálogo `size_number` tiene 71 entradas: 62 activas y 9 inactivas
@@ -3060,17 +3060,44 @@ y coincide con el de la auditoría: productos, configuración y promociones con 
 misma huella; 240 productos, 3,525 piezas, los nueve códigos históricos siguen
 inactivos y `size_letter` sigue con 14 filas activas.
 **Migraciones:** ninguna. El cambio es del cliente y no toca el esquema.
-**Pendiente:** (1) verificación remota de sólo lectura —mismos 240 productos,
-`stock[].talla` coincidente con el snapshot local, los ocho códigos con piezas
-aún inactivos, ninguna terminal con configuración más nueva y ninguna operación
-remota que pueda revertir la recuperación—; (2) fase 2 de recuperación; (3)
-regeneración de artefactos, commit y publicación, no autorizados todavía.
-**Riesgo residual:** la protección vive en el cliente. Un `CONFIG.load()`
-proveniente de la nube o de otra terminal puede reintroducir la desactivación
+**Fase 2 · recuperación (01/08/2026):** ejecutada desde la terminal principal,
+con la segunda computadora apagada y confirmada por el dueño. Antes se verificó
+en remoto que Supabase tenía los mismos 240 productos, 3,525 piezas, `stock[]`
+idéntico fila por fila (37 tallas, cero diferencias) y los nueve códigos aún
+inactivos. La recuperación fueron **ocho clics del dueño** en Configuración →
+Catálogos de producto → «Categorías por talla · Números», reactivando `s`, `A`,
+`B`, `C`, `D`, `E`, `G` y `H`; `F` (etiqueta 49, sin existencias) quedó inactivo
+a propósito. **No se escribió una sola fila de producto:** la huella de `stock`
+completo (`41737f2c822a0a8a`), la de `preciosTalla` (`e8c6f0d3a9ec38e4`) y la de
+`barcodeUrls` (`8bb052a93a8e1a69`) son idénticas antes y después, igual que
+ventas, devoluciones, préstamos, pagos, movimientos, promociones, clientes y
+vendedores. El efecto se midió con el mismo instrumento de la auditoría:
+**piezas ofrecidas por el POS 2,065 → 3,525 (+1,460)**, productos con
+existencias pero sin talla vendible 29 → 0, productos con piezas ocultas
+142 → 0. Verificación remota posterior: `size_number` 70 activas / 1 inactiva,
+`size_letter` 14 / 0, 240 productos y 3,525 piezas sin cambio, y el reparto por
+talla idéntico al local. El dueño confirmó en pantalla que ALONSO
+`1-ALS-MC-AMAR-T` ya ofrece «42 · 6 pz». La reversión —restaurar el catálogo
+previo con `CONFIG.load()`— se probó ANTES de ejecutar y devuelve 62/9 y 2,065
+piezas sin tocar inventario; no hizo falta usarla.
+**Pendiente:** auditoría **offline** de la segunda computadora antes de volver a
+conectarla —`balam_sync_queue`, `balam_config_v1`, `size_number`, `size_letter`—;
+si conserva una operación `config` pendiente no debe abrir el POS en línea.
+**Riesgo residual:** (1) el filtro global de tallas del POS muestra ahora **ocho
+etiquetas repetidas** —`0`, `40`, `42`, `44`, `46`, `48`, `50`, `52`—, una por
+cada gemelo histórico reactivado. No afecta la venta: ningún producto tiene
+piezas en ambos gemelos, así que el selector de talla de cada artículo sigue
+mostrando una sola opción por etiqueta. Eliminarlo exige consolidar el stock
+histórico sobre los códigos numéricos, que es una migración de datos y merece
+historia propia. (2) La protección vive en el cliente: un `CONFIG.load()`
+proveniente de la nube o de otra terminal puede reintroducir una desactivación
 sin pasar por la guarda, porque esa ruta es convergencia de sincronización y no
-administración. Mientras la fase 2 no se ejecute, las 1,460 piezas siguen
-invisibles para la operación. `size_letter` queda fuera de la protección por
-decisión de alcance: hoy no tiene códigos inactivos ni piezas afectadas.
+administración. (3) `size_letter` queda fuera de la protección por decisión de
+alcance: no tiene códigos inactivos ni piezas afectadas.
+**Deuda preexistente detectada, no corregida:** la cola de la terminal principal
+conserva desde el 31/07/2026 un `upsert` de `sellers` bloqueado con `42501`
+`COMMISSION_RPC_REQUIRED`. Es ajeno a H-63 —no toca catálogos ni existencias— y
+no se tocó: borrarlo destruiría una captura.
 **Corrección documentada:** `docs/fixes/tallas-historicas-con-existencias.md`.
 
 ## Regla de actualización
