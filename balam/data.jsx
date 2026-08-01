@@ -2708,6 +2708,16 @@
     list: () => products,
     save: () => saveProducts(),
   });
+  // H-63: CONFIG necesita saber si una talla está referenciada por el alcance de una
+  // promoción antes de dejar que se desactive. Sólo lectura, por el gateway de CORE.
+  // Se registra sólo si el contrato existe: varios arneses construyen un CORE mínimo y
+  // exigirlo los rompería sin que el producto tenga un defecto (core.jsx y data.jsx
+  // siempre viajan en el mismo artefacto). `test-module-contracts.mjs` vigila que las
+  // dos puntas del gateway sigan cableadas, así que la guarda no puede esconder su
+  // desaparición.
+  if (typeof window.CORE.registerCatalogPromotions === 'function') {
+    window.CORE.registerCatalogPromotions({ list: () => promos });
+  }
 
   // Sana huérfanos existentes al ARRANCAR (p. ej. daño previo por un import de catálogos que
   // re-codificó colores). Va al FINAL del módulo: remapOrphanCodes → saveProducts → syncUp lee

@@ -115,6 +115,12 @@
     function commitLabel(it, v) { if (v !== it.label) C.updateItem(kind, it.code, { label: v }); }
     function commitMeta(it, key, v) { C.updateItem(kind, it.code, { meta: { [key]: v } }); }
     function del(it) { const r = C.removeItem(kind, it.code); if (!r.ok) toast(r.error, 'var(--danger)'); }
+    // H-63: el interruptor puede negarse (una talla con existencias vivas). Sin este
+    // aviso el botón parecería no responder y el administrador insistiría a ciegas.
+    function toggle(it) {
+      const r = C.setActive(kind, it.code, it.active === false);
+      if (r && !r.ok) toast(r.error, 'var(--danger)');
+    }
     function delCatalog() {
       if (!window.confirm('¿Eliminar el catálogo "' + (cmeta ? cmeta.label : kind) + '" y todos sus elementos? Si algún producto tiene un valor de este catálogo, se quitará (su SKU ya asignado no cambia). Esta acción no se puede deshacer.')) return;
       const r = C.removeCatalog(kind); if (!r.ok) toast(r.error, 'var(--danger)'); else toast('Catálogo eliminado', 'var(--danger)');
@@ -175,15 +181,23 @@
       // Filas
       h('div', { key: 'rows', className: 'flex flex-col divide-y divide-outline-variant/50 mb-3' }, items.map(it => {
         const off = it.active === false;
-        return h('div', { key: it.code, className: 'flex items-center gap-2 py-2 ' + (off ? 'opacity-50' : '') }, [
+        // data-testid y data-active son contrato de pruebas (R-DEL-10): el estado
+        // activo/inactivo debe poder afirmarse sin depender del texto «On»/«Off».
+        return h('div', {
+          key: it.code,
+          'data-testid': 'catalog-row-' + kind + '-' + it.code,
+          'data-active': String(!off),
+          className: 'flex items-center gap-2 py-2 ' + (off ? 'opacity-50' : ''),
+        }, [
           h('span', { key: 'cd', className: 'font-mono text-caption text-on-surface-variant w-16 shrink-0 truncate', title: it.code }, it.code),
           h('input', { key: 'lb', defaultValue: it.label, className: 'flex-1 min-w-0 h-8 px-2 bg-surface border border-outline-variant rounded text-body focus:ring-1 focus:ring-primary', onBlur: e => commitLabel(it, e.target.value) }),
           ...metaFields.map(f => h('span', { key: f.key, className: 'shrink-0' }, metaInput(it, f))),
           h('button', { key: 'up', className: 'w-7 h-7 grid place-items-center rounded hover:bg-surface-container text-on-surface-variant shrink-0', title: 'Subir', onClick: () => C.move(kind, it.code, -1) }, h(MS, { name: 'chevDown', size: 16, style: { transform: 'rotate(180deg)' } })),
           h('button', { key: 'dn', className: 'w-7 h-7 grid place-items-center rounded hover:bg-surface-container text-on-surface-variant shrink-0', title: 'Bajar', onClick: () => C.move(kind, it.code, 1) }, h(MS, { name: 'chevDown', size: 16 })),
           h('button', {
-            key: 'tg', className: 'px-2 h-7 rounded text-overline uppercase font-bold shrink-0 ' + (off ? 'bg-surface-container text-on-surface-variant' : 'bg-success-soft text-success'),
-            title: off ? 'Inactivo — clic para activar' : 'Activo — clic para desactivar', onClick: () => C.setActive(kind, it.code, off),
+            key: 'tg', 'data-testid': 'catalog-toggle-' + kind + '-' + it.code,
+            className: 'px-2 h-7 rounded text-overline uppercase font-bold shrink-0 ' + (off ? 'bg-surface-container text-on-surface-variant' : 'bg-success-soft text-success'),
+            title: off ? 'Inactivo — clic para activar' : 'Activo — clic para desactivar', onClick: () => toggle(it),
           }, off ? 'Off' : 'On'),
           h('button', { key: 'del', className: 'w-7 h-7 grid place-items-center rounded text-danger hover:bg-danger-soft shrink-0', title: 'Eliminar', onClick: () => del(it) }, h(MS, { name: 'trash', size: 16 })),
         ]);
@@ -486,6 +500,32 @@
           ? 'Este es un Excel de INVENTARIO: los catálogos se leerán de su hoja "Catálogos" (guía de códigos). El orden del archivo manda y los códigos que no vengan se DESACTIVAN (no se borran). OJO: esto NO importa productos ni existencias — eso se hace con el botón Importar de la pantalla Inventario. ¿Aplicar?'
           : '¿Aplicar el Excel a los catálogos? El orden del archivo manda y los códigos que no vengan en él se DESACTIVAN (no se borran).')) return;
         const r = C.importCatalogs(map);
+        // H-63: el archivo dejaría sin punto de venta tallas con existencias vivas. No se
+        // aplicó NADA (la importación es atómica); se explica cuáles y con cuánto inventario.
+        if (r.ok === false && Array.isArray(r.blocked) && r.blocked.length) {
+          setDiag({
+            kind: 'blocked-sizes',
+            title: 'No se aplicó: el archivo desactivaría tallas con existencias',
+            lines: [
+              'Ningún catálogo se modificó. La importación se aplica completa o no se aplica.',
+              ...r.blocked.map(b => {
+                const ref = b.references || {};
+                const partes = [];
+                if (ref.stock) partes.push(`${ref.stock} pieza(s) en ${ref.productos} producto(s)`);
+                if (ref.precios) partes.push(`${ref.precios} precio(s) especial(es)`);
+                if (ref.barcodes) partes.push(`${ref.barcodes} código(s) de barras`);
+                if (ref.promociones) partes.push(`${ref.promociones} promoción(es)`);
+                const motivo = b.reason === 'ausente'
+                  ? 'no viene en el archivo (eso la desactivaría)'
+                  : 'viene con ACTIVO = NO';
+                return `Talla ${b.label} (código ${b.code}): ${motivo} — ${partes.join(', ')}.`;
+              }),
+              'Incluye esas tallas en el archivo con ACTIVO = SI, o retira primero su inventario.',
+            ],
+          });
+          toast('No se pudo importar — revisa el detalle en la tarjeta', 'var(--danger)');
+          return;
+        }
         // Hojas reconocidas pero ninguna fila con CÓDIGO → suele ser un encabezado distinto o filas de título arriba.
         if (!r.kinds) {
           setDiag({
@@ -521,12 +561,19 @@
         ]),
         h('div', { key: 'b', className: 'flex items-center gap-2 shrink-0' }, [
           h('button', { key: 'ex', type: 'button', className: 'inline-flex items-center gap-2 px-4 h-10 border border-outline-variant text-primary text-caption font-bold uppercase tracking-widest rounded-lg hover:border-primary hover:bg-surface-container transition', onClick: doExport }, [h(MS, { key: 'i', name: 'download', size: 16 }), 'Exportar']),
-          h('input', { key: 'f', ref: fileRef, type: 'file', accept: '.xlsx,.xls', className: 'hidden', onChange: doImport }),
+          h('input', { key: 'f', 'data-testid': 'catalog-import-input', ref: fileRef, type: 'file', accept: '.xlsx,.xls', className: 'hidden', onChange: doImport }),
           h('button', { key: 'im', type: 'button', className: 'inline-flex items-center gap-2 px-4 h-10 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-lg hover:opacity-90 transition', onClick: () => fileRef.current && fileRef.current.click() }, [h(MS, { key: 'i', name: 'upload', size: 16 }), 'Importar']),
         ]),
       ]),
       // Diagnóstico del último intento de importación fallido (persiste hasta cerrarlo o importar bien).
-      diag ? h('div', { key: 'diag', className: 'mt-4 border border-danger/40 bg-danger-soft rounded-lg p-4' }, [
+      diag ? h('div', {
+        key: 'diag',
+        'data-testid': 'catalog-import-diag',
+        // Identidad estable del diagnóstico: una prueba afirma CUÁL diagnóstico salió,
+        // no cómo está redactado su título.
+        'data-diag': diag.kind || 'generic',
+        className: 'mt-4 border border-danger/40 bg-danger-soft rounded-lg p-4',
+      }, [
         h('div', { key: 'h', className: 'flex items-start justify-between gap-3' }, [
           h('div', { key: 't', className: 'flex items-center gap-2 text-body font-semibold text-danger' }, [h(MS, { key: 'i', name: 'alert', size: 18 }), diag.title]),
           h('button', { key: 'x', type: 'button', className: 'text-caption font-bold uppercase tracking-widest text-on-surface-variant hover:text-primary shrink-0', onClick: () => setDiag(null) }, 'Cerrar'),

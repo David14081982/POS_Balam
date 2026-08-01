@@ -325,8 +325,72 @@
       .map(x => ({ kind: x.kind, field: x.m.field, custom: !!x.m.custom, sizeSlot: !!x.m.sizeSlot }));
   }
 
+  // ── H-63 · ¿Qué referencias vivas tiene este código de talla? ────────────────
+  // Autoridad única de la pregunta. La categoría define la ESCALA y el valor real
+  // sale de meta.value (o del código, en los registros históricos): nunca se
+  // clasifica por la apariencia del código ni de la etiqueta. Un código puede
+  // llamarse 'B' y ser una talla numérica perfectamente válida.
+  // Cuenta cuatro clases de referencia, todas por VALOR: existencias positivas,
+  // precios especiales por talla, códigos de barras generados y alcance de
+  // promociones. Devolver cero es la única licencia para retirarlo de la operación.
+  const SIZE_KINDS = ['size_letter', 'size_number'];
+  function sizeCodeReferences(kind, code) {
+    const vacio = { stock: 0, productos: 0, precios: 0, barcodes: 0, promociones: 0, total: 0 };
+    if (SIZE_KINDS.indexOf(kind) < 0) return vacio;
+    const item = (state.catalogs[kind] || []).find(it => it.code === code);
+    if (!item) return vacio;
+    const meta = item.meta && typeof item.meta === 'object' ? item.meta : {};
+    const value = Object.prototype.hasOwnProperty.call(meta, 'value') ? meta.value : item.code;
+    const scale = (sizeCategories().find(cat => cat.id === kind) || {}).scale
+      || (kind === 'size_number' ? 'N' : 'L');
+    const target = String(value);
+    const out = Object.assign({}, vacio);
+    window.CORE.catalogProducts().forEach(p => {
+      // Sólo cuentan las referencias de productos de ESTA categoría; un producto de
+      // la otra escala no convierte su talla homónima en una referencia viva.
+      const assigned = (p.attrs || {}).__sizeCategoryId || p.sizeCategoryId || null;
+      if (assigned && assigned !== kind) return;
+      const piezas = (p.stock || []).reduce((sum, v) =>
+        (v.escala === scale && String(v.talla) === target ? sum + (Number(v.stock) || 0) : sum), 0);
+      if (piezas > 0) { out.stock += piezas; out.productos++; }
+      const precios = p.preciosTalla || {};
+      if (Object.prototype.hasOwnProperty.call(precios, target)) out.precios++;
+      const barcodes = p.barcodeUrls || {};
+      if (Object.prototype.hasOwnProperty.call(barcodes, target)) out.barcodes++;
+    });
+    window.CORE.catalogPromotions().forEach(promo => {
+      const tallas = (promo && promo.scope && Array.isArray(promo.scope.tallas)) ? promo.scope.tallas : [];
+      if (tallas.some(t => String(t) === target)) out.promociones++;
+    });
+    out.total = out.stock + out.precios + out.barcodes + out.promociones;
+    return out;
+  }
+  // Alcance de la protección de H-63: sólo Talla (Número), donde el daño está
+  // demostrado. Talla (Letra) conserva su comportamiento exacto — ampliarla es una
+  // decisión funcional pendiente, no un descuido.
+  const PROTECTED_SIZE_KIND = 'size_number';
+  function sizeCodeProtected(kind, code) {
+    return kind === PROTECTED_SIZE_KIND && sizeCodeReferences(kind, code).total > 0;
+  }
+  function sizeGuardError(kind, code) {
+    const r = sizeCodeReferences(kind, code);
+    const partes = [];
+    if (r.stock) partes.push(`${r.stock} pieza(s) en ${r.productos} producto(s)`);
+    if (r.precios) partes.push(`${r.precios} precio(s) especial(es)`);
+    if (r.barcodes) partes.push(`${r.barcodes} código(s) de barras`);
+    if (r.promociones) partes.push(`${r.promociones} promoción(es)`);
+    const item = (state.catalogs[kind] || []).find(it => it.code === code);
+    const etiqueta = item ? `${item.label} (${code})` : code;
+    return `La talla ${etiqueta} tiene existencias o referencias vivas: ${partes.join(', ')}. `
+      + 'Desactivarla dejaría ese inventario fuera del punto de venta.';
+  }
+
   // ── ¿Un code de catálogo está en uso por algún producto? (guarda de borrado) ──
   function inUse(kind, code) {
+    // H-63: para la categoría protegida, «en uso» es la misma pregunta que responde
+    // sizeCodeReferences. Sin esto habría dos fórmulas para un mismo hecho y la
+    // ruta de borrado seguiría admitiendo un código referenciado sólo por precios.
+    if (kind === PROTECTED_SIZE_KIND) return sizeCodeReferences(kind, code).total > 0;
     const products = window.CORE.catalogProducts();
     const cm = state.catalogMeta[kind];
     if (cm && cm.custom) return products.some(p => (p.attrs || {})[kind] === code);
@@ -339,10 +403,9 @@
     const sizeItem = (state.catalogs[kind] || []).find(item => item.code === code);
     const sizeMeta = sizeItem && sizeItem.meta && typeof sizeItem.meta === 'object' ? sizeItem.meta : {};
     const sizeValue = Object.prototype.hasOwnProperty.call(sizeMeta, 'value') ? sizeMeta.value : code;
+    // size_number no llega aquí: lo resuelve arriba la autoridad de referencias.
     if (kind === 'size_letter') return products.some(p => (p.stock || []).some(v =>
       v.escala === 'L' && String(v.talla) === String(sizeValue) && Number(v.stock) > 0));
-    if (kind === 'size_number') return products.some(p => (p.stock || []).some(v =>
-      v.escala === 'N' && String(v.talla) === String(sizeValue) && Number(v.stock) > 0));
     return false;
   }
 
@@ -359,6 +422,12 @@
   function updateItem(kind, code, patch) {
     const it = find(kind, code);
     if (!it) return { ok: false, error: 'No existe' };
+    // H-63: desactivar es la operación peligrosa; reactivar nunca se bloquea.
+    // Se comprueba ANTES de tocar nada para que un rechazo no deje el catálogo
+    // a medio modificar ni emita un configchange.
+    if ('active' in patch && !patch.active && it.active !== false && sizeCodeProtected(kind, code)) {
+      return { ok: false, error: sizeGuardError(kind, code), references: sizeCodeReferences(kind, code) };
+    }
     if ('label' in patch) it.label = patch.label;
     if ('active' in patch) it.active = !!patch.active;
     if ('meta' in patch) it.meta = Object.assign({}, it.meta, patch.meta);
@@ -462,8 +531,15 @@
   //   · códigos existentes que NO vienen en el archivo se conservan al final DESACTIVADOS
   //     (nunca se borra: productos e historial pueden referenciarlos)
   //   · kinds desconocidos u hojas vacías se ignoran (no tocan nada)
+  // H-63: el resultado se ARMA COMPLETO antes de aplicarse. Si alguna hoja dejaría
+  // inactivo un código de talla protegido —por ACTIVO=NO o por ausencia, que es la
+  // desactivación silenciosa que causó el defecto— se rechaza el archivo ENTERO:
+  // media importación aplicada es peor que ninguna, porque deja el catálogo en un
+  // estado que nadie pidió y que el archivo ya no describe.
   function importCatalogs(map) {
     let kinds = 0, items = 0;
+    const staged = {};
+    const blocked = [];
     Object.keys(map || {}).forEach(kind => {
       if (!state.catalogs[kind]) return;
       const rows = (map[kind] || []).filter(r => r && String(r.code == null ? '' : r.code).trim());
@@ -476,18 +552,40 @@
         seen[code] = true;
         const old = prev.find(it => it.code === code);
         const label = String(r.label == null ? '' : r.label).trim();
+        const active = r.active != null ? !!r.active : (old ? old.active !== false : true);
+        if (old && old.active !== false && !active && sizeCodeProtected(kind, code)) {
+          blocked.push({ kind, code, label: old.label, reason: 'desactivado', references: sizeCodeReferences(kind, code) });
+        }
         next.push({
           code,
           label: label || (old ? old.label : code),
-          active: r.active != null ? !!r.active : (old ? old.active !== false : true),
+          active,
           meta: Object.assign({}, old ? old.meta : {}, r.meta || {}),
         });
         items++;
       });
-      prev.forEach(it => { if (!seen[it.code]) next.push(Object.assign({}, it, { active: false })); });
-      state.catalogs[kind] = next;
+      prev.forEach(it => {
+        if (seen[it.code]) return;
+        if (it.active !== false && sizeCodeProtected(kind, it.code)) {
+          blocked.push({ kind, code: it.code, label: it.label, reason: 'ausente', references: sizeCodeReferences(kind, it.code) });
+        }
+        next.push(Object.assign({}, it, { active: false }));
+      });
+      staged[kind] = next;
       kinds++;
     });
+    if (blocked.length) {
+      const detalle = blocked.map(b => `${b.label} (${b.code})`).join(', ');
+      return {
+        ok: false,
+        kinds: 0,
+        items: 0,
+        blocked,
+        error: `El archivo dejaría sin punto de venta ${blocked.length} talla(s) con existencias o referencias vivas: ${detalle}. `
+          + 'No se aplicó ningún cambio.',
+      };
+    }
+    Object.keys(staged).forEach(kind => { state.catalogs[kind] = staged[kind]; });
     if (kinds) emit();
     return { ok: true, kinds, items };
   }
@@ -527,7 +625,7 @@
   }
 
   window.CONFIG = {
-    all, list, map, metaMap, codes, find, get, settings, inUse,
+    all, list, map, metaMap, codes, find, get, settings, inUse, sizeCodeReferences,
     catalogMeta, allCatalogMeta, sizeCategories, catalogLabel, fieldOf, skuParts, modeloKind,
     addItem, updateItem, setActive, removeItem, move, setCatalogMeta, moveSkuOrder, addCatalog, removeCatalog, importCatalogs, setSetting, setSettings,
     reset, snapshot, load,

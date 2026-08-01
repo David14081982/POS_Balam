@@ -23,6 +23,16 @@ Reglas de mantenimiento en `../README.md` § Registro de autoridades.
 **Creada por:** H-57 · **Endurecida por:** H-59
 **Consumidores:** `grep -rn "resolveProductSizes" balam/ test-*.mjs`
 
+## ¿Qué referencias vivas tiene este código de talla?
+**Autoridad:** `CONFIG.sizeCodeReferences(categoría, code)` — existencias
+positivas, precios especiales, códigos de barras y alcance de promociones,
+resueltos por **escala y valor real**, nunca por la apariencia del código
+**Definición:** `balam/config.jsx` · promociones y productos por el gateway de
+`CORE` · consumida por `updateItem`, `importCatalogs` e `inUse`
+**Creada por:** H-63 · **Alcance:** protege `size_number`; `size_letter` conserva
+su guarda anterior
+**Consumidores:** `grep -rn "sizeCodeReferences\|sizeCodeProtected" balam/ test-*.mjs`
+
 ## ¿Qué opciones muestra el filtro global de tallas y en qué orden?
 **Autoridad:** `DATA.resolveSizeFilterGroups()` — responde con una **estructura
 por categoría**, no con una lista. `DATA.resolveSizeFilterOptions()` es su

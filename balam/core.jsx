@@ -4,6 +4,7 @@
   const DEVICE_KEY = 'balam_device_id';
   let deviceId = null;
   let catalogProductsAdapter = null;
+  let catalogPromotionsAdapter = null;
   let syncGateway = null;
 
   function getDeviceId() {
@@ -34,6 +35,20 @@
   function saveCatalogProducts() {
     if (catalogProductsAdapter) catalogProductsAdapter.save();
   }
+  // H-63: las promociones referencian tallas por valor dentro de scope.tallas, así que
+  // una guarda de catálogo necesita leerlas. Va por el mismo gateway que los productos
+  // para conservar la dirección DATA → CONFIG (R-CLI-05): DATA registra, CONFIG consulta.
+  function registerCatalogPromotions(adapter) {
+    if (!adapter || typeof adapter.list !== 'function') {
+      throw new Error('Adaptador de promociones inválido');
+    }
+    catalogPromotionsAdapter = adapter;
+  }
+  function catalogPromotions() {
+    if (!catalogPromotionsAdapter) return [];
+    const promotions = catalogPromotionsAdapter.list();
+    return Array.isArray(promotions) ? promotions : [];
+  }
   function registerSyncGateway(adapter) {
     if (!adapter || typeof adapter !== 'object') throw new Error('Gateway de sincronización inválido');
     syncGateway = adapter;
@@ -48,6 +63,8 @@
     registerCatalogProducts,
     catalogProducts,
     saveCatalogProducts,
+    registerCatalogPromotions,
+    catalogPromotions,
     registerSyncGateway,
     invokeSync,
   };

@@ -148,6 +148,7 @@
     return React.createElement('div', { className: 'fixed bottom-5 right-5 z-[200] flex flex-col gap-2 items-end' },
       toasts.map(t => React.createElement('div', {
         key: t.id,
+        'data-testid': 'toast',
         className: 'flex items-center gap-2.5 px-4 py-3 bg-primary-container text-white text-sm rounded-lg shadow-e3',
       }, [
         React.createElement('span', { key: 'd', className: 'w-2 h-2 rounded-full shrink-0', style: { background: t.color } }),

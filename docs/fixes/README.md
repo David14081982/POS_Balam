@@ -66,6 +66,7 @@ sesión de chat.
 | `auditoria-categorias-talla.md` | H-59 | Autoridad, orden, importación, consumidores y persistencia canónica de categorías por talla |
 | `arranque-catalogo-vacio.md` | H-60 | Arranque seguro, UUID de productos y recuperación selectiva de cola |
 | `filtro-tallas-por-categoria.md` | H-61 | El filtro de tallas del POS es una estructura por categoría, no una lista plana |
+| `tallas-historicas-con-existencias.md` | H-63 | Una talla numérica con referencias vivas no puede desactivarse (fase 1: protección) |
 
 Documentación financiera relacionada, creada antes de este índice:
 

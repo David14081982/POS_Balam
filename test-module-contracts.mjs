@@ -54,6 +54,15 @@ check('uso de catálogos atraviesa un adaptador único', (
   && config.includes('window.CORE.catalogProducts()')
   && config.includes('window.CORE.saveCatalogProducts()')
 ));
+// H-63: la lectura de promociones desde CONFIG usa el mismo gateway. DATA la registra
+// bajo una guarda de existencia (varios arneses arman un CORE mínimo), así que el
+// cableado de las dos puntas se vigila aquí y no puede desaparecer en silencio.
+check('la lectura de promociones para catálogos atraviesa el mismo adaptador', (
+  core.includes('registerCatalogPromotions')
+  && core.includes('catalogPromotions')
+  && data.includes('window.CORE.registerCatalogPromotions')
+  && config.includes('window.CORE.catalogPromotions()')
+));
 check('DATA no depende directamente de STORE', !data.includes('window.STORE'));
 check('sincronización saliente atraviesa un gateway único', (
   core.includes('registerSyncGateway')

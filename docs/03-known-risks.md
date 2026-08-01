@@ -2968,6 +2968,106 @@ de `test-loans-screen` son intermitentes desde H-56.
 **Corrección documentada:** `docs/fixes/pantalla-prestamos.md` § Persistencia
 remota (H-62).
 
+## H-63 - Existencias retenidas por códigos históricos de talla desactivados
+
+**Estado:** EN PROGRESO - FASE 1 (PROTECCIÓN)
+**Fecha de registro:** 31/07/2026
+**Commit:** Pendiente de commit
+**Evidencia:** auditoría de sólo lectura del 31/07/2026 sobre el snapshot real
+—copia temporal del perfil, red bloqueada, artefacto interrogado con los datos
+reales—. El catálogo `size_number` tiene 71 entradas: 62 activas y 9 inactivas
+(índices 62–70) con códigos `s`, `A`, `B`, `C`, `D`, `E`, `F`, `G`, `H` y
+etiquetas `0`, `40`, `42`, `44`, `46`, `48`, `49`, `50`, `52`. Cada una tiene un
+gemelo ACTIVO con la misma etiqueta y código numérico. Las existencias siguen
+apuntando al código histórico: de 3,525 piezas en 240 productos, **1,460 piezas
+en 142 productos (59 %) son invisibles** para el selector del POS y para el
+detalle de Inventario; **29 productos tienen todo su stock fuera del selector**.
+Reparto por código: `B`/42 → 74 productos y 320 piezas; `A`/40 → 85 y 318;
+`C`/44 → 67 y 249; `D`/46 → 59 y 163; `E`/48 → 57 y 143; `G`/50 → 53 y 115;
+`H`/52 → 44 y 83; `s`/0 → 13 y 69; `F`/49 → 0 y 0. Caso representativo: ALONSO
+`1-ALS-MC-AMAR-T`, con una sola fila `{ talla: "B", escala: "N", stock: 6 }`.
+`size_letter`: 14 entradas, 14 activas, cero piezas afectadas.
+**Origen:** auditoría funcional solicitada por el dueño del producto tras
+observar que la tarjeta del POS cuenta 6 piezas que el selector no ofrece.
+**Riesgo:** el 41 % del inventario existe para los contadores y para la
+valuación, pero no puede venderse, no puede etiquetarse, no aparece en el
+detalle y no se ofrece en préstamos ni devoluciones. Un código de talla con
+existencias vivas puede volver a desactivarse en cualquier momento por la
+importación de catálogos o por el interruptor manual, ampliando el daño.
+**Alcance (fase 1, autorizada):** impedir que un código de `size_number` con
+referencias vivas —existencias, precios por talla, códigos de barras o
+promociones— quede inactivo por el interruptor manual o por la importación de
+catálogos, y hacer atómica esa importación.
+**Alcance (fase 2, NO autorizada todavía):** reactivar únicamente los códigos
+históricos con stock demostrado, previa verificación remota de sólo lectura.
+**No alcance:** modificar las reglas de visibilidad de los consumidores
+—`pos.jsx`, `inventory.jsx`, `xlsx-io.jsx`, `barcodes.jsx`, `loans.jsx`,
+`returns.jsx`, `resolveProductSizes`, `totalStock`, filtro del POS, detalle,
+formulario y exportación—; remapear productos; cambiar `stock[].talla`;
+fusionar filas; declarar alias; cambiar códigos; desactivar los gemelos;
+normalizar todos los consumidores; y usar «Guardar producto» como reparación.
+La protección tampoco cubre `CONFIG.load()` ni `CONFIG.reset()`.
+**Reproducción:** `node test-h63-size-protection.mjs` sobre `HEAD` (`5333546`), en
+un worktree limpio: **10 pasaron, 24 fallaron**. Demostró que el interruptor
+manual desactiva sin preguntar, que la importación desactiva por ACTIVO=NO y por
+ausencia, que una hoja inválida aplica igualmente las demás y que borrar un
+código referenciado sólo por precios estaba permitido.
+**Causa raíz:** `importCatalogs()` conserva los códigos ausentes del archivo
+anexándolos DESACTIVADOS al final (`balam/config.jsx` § `importCatalogs`), y ni
+esa ruta ni `setActive()` consultan si el código tiene referencias vivas; sólo
+`removeItem()` lo hacía, y sólo por existencias. Las existencias siguen
+apuntando por valor al código histórico porque el puente de códigos huérfanos
+(`REMAP_FIELDS` en `balam/data.jsx`) cubre categoría, manga, tela, color y
+cuello, pero no las tallas: la referencia de talla no es un campo del producto,
+vive dentro de cada fila de `stock[]`. Las pantallas de operación excluyen
+correctamente una talla inactiva; el defecto no está en ellas.
+**Corrección (fase 1):** `CONFIG.sizeCodeReferences()` responde «¿qué
+referencias vivas tiene este código de talla?» resolviendo por valor y escala
+de la categoría, nunca por la apariencia del código. `updateItem()` rechaza
+desactivar un código de `size_number` con referencias; `importCatalogs()` se
+vuelve atómica y rechaza el archivo completo si alguna desactivación —explícita
+por `ACTIVO=NO` o implícita por ausencia— tocaría un código protegido;
+`removeItem()` consume la misma autoridad para `size_number`. Configuración
+muestra el motivo del rechazo. `size_letter` y el resto de catálogos conservan
+su comportamiento exacto.
+**Pruebas:** H-63 E2E funcional **58/58** por interacción real sobre los dos
+artefactos regenerados —`index.html` por HTTP y `POS Balam (offline).html` por
+`file://` con la red apagada—, localizando por `data-testid`. El mismo E2E
+contra el artefacto anterior: **19 fallaron y 6 pasaron** antes de abortar (los
+seis verdes son vacuos: pasan porque no ocurre nada). H-63 protección **34/34**;
+contratos 41/41; smoke del bundle 17/17; navegación 15/15; reproducibilidad 8/8;
+registro de pantallas
+12/12; beneficios 6/6 y 7/7; permisos de interfaz 21/21; auditoría H-59 23/23;
+autoridad de tallas 9/9; persistencia H-59 12/12; grupos H-61 19/19; menú POS
+6/6; filtros de Inventario 18/18; exportación 14/14; seguridad Excel 17/17;
+importación con fotos 23/23; precio por talla 38/38; cambios modelo 28/28,
+comisión 30/30 y reportes 24/24; folio diario 60/60; saldo por renglón 38/38;
+ingresos 24/24; plazo posventa 38/38; E2E de precio por talla 19/19.
+`test-exchange-commit` falla su caso 31 **también en `HEAD`**, comprobado en un
+worktree limpio: preexistente y ajeno, no se corrige dentro de H-63.
+**Artefactos:** regenerados localmente con `node build-offline.mjs`, sólo para
+pruebas. `index.html` y `POS Balam (offline).html` son idénticos entre sí,
+8 769 520 bytes, SHA-256
+`2C1153AA91D049A35A30BEEB85EB5FE1B24F2DD18A74C7A989691C7E69C319E5`. **No se
+publicaron.**
+**Datos reales:** el snapshot del terminal se releyó en sólo lectura al terminar
+y coincide con el de la auditoría: productos, configuración y promociones con la
+misma huella; 240 productos, 3,525 piezas, los nueve códigos históricos siguen
+inactivos y `size_letter` sigue con 14 filas activas.
+**Migraciones:** ninguna. El cambio es del cliente y no toca el esquema.
+**Pendiente:** (1) verificación remota de sólo lectura —mismos 240 productos,
+`stock[].talla` coincidente con el snapshot local, los ocho códigos con piezas
+aún inactivos, ninguna terminal con configuración más nueva y ninguna operación
+remota que pueda revertir la recuperación—; (2) fase 2 de recuperación; (3)
+regeneración de artefactos, commit y publicación, no autorizados todavía.
+**Riesgo residual:** la protección vive en el cliente. Un `CONFIG.load()`
+proveniente de la nube o de otra terminal puede reintroducir la desactivación
+sin pasar por la guarda, porque esa ruta es convergencia de sincronización y no
+administración. Mientras la fase 2 no se ejecute, las 1,460 piezas siguen
+invisibles para la operación. `size_letter` queda fuera de la protección por
+decisión de alcance: hoy no tiene códigos inactivos ni piezas afectadas.
+**Corrección documentada:** `docs/fixes/tallas-historicas-con-existencias.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:
