@@ -3239,6 +3239,97 @@ ajustar la pieza descuadrada. Revisar si afecta también a ventas normales de lo
 **Riesgo residual:** por determinar.
 **Corrección documentada:** pendiente.
 
+## H-66 - El código de una talla es a la vez identidad, valor de intercambio y etiqueta
+
+**Estado:** DISEÑO ACEPTADO - NO IMPLEMENTADO
+**Fecha de registro:** 01/08/2026
+**Commit:** Pendiente de commit
+**Evidencia:** el catálogo `size_number` guarda identidades históricas —`s`, `0`,
+`A`…`H`— que no coinciden con la talla que representan: `0` es la 38, `A` la 40,
+`B` la 42. `stock[].talla` guarda esa identidad y el Excel compone sus
+encabezados con ella, de modo que la exportación sale con columnas `T0`, `TA`,
+`TB`. El administrador no tiene forma de corregir el código sin que sea una
+migración de existencias: en `pos.lookup` la fila se identifica por
+`unique(kind, code)`, así que editar `code` equivale a cambiar la identidad.
+**Origen:** solicitud del dueño del producto tras H-64: «editar un código desde
+Configuración y que se refleje en Excel».
+**Riesgo:** hoy cada corrección de un código es una migración física de 2,261
+filas de `stock` con 1,817 piezas reales, más documentos y cola. Es la misma
+causa que produjo H-63 y H-64, y volverá a producirse: un solo campo hace de
+identidad técnica, de valor de intercambio y de etiqueta de importación
+(`FF-02`).
+**Diseño aprobado — `ADR-011`, Diseño C.** Se separan tres conceptos que hoy
+comparten un campo: `internal_code` es la identidad estable e inmutable con la
+que el inventario encuentra sus piezas; `code` pasa a ser el **código canónico**,
+editable, que usan Configuración y Excel; `label` sigue siendo la etiqueta
+visible. **Editar el canónico no mueve una sola existencia.**
+**Alcance:** `size_number` y `size_letter` en cuanto al modelo, sin cambiar
+etiquetas de letra. Columna `internal_code` con `default code`, `not null`,
+inmutable, y `unique(kind, internal_code)` **además** de `unique(kind, code)`.
+Toda operación de catálogo —lectura, upsert, edición, borrado, activación,
+importación, sincronización, reconciliación, RPC y `expected_version`— pasa a
+identificar la fila por `(kind, internal_code)`. Historial de códigos canónicos.
+`catalog_version` con `expected_version` en el push. Excel por canónico, con
+marca de esquema y modo heredado explícito. `sizeId` y `filterKey` repuntados a
+la identidad. Interfaz de Configuración con los tres campos separados.
+**No alcance:** mover existencias, cantidades, productos, ventas, apartados,
+devoluciones, préstamos, movimientos, promociones, `preciosTalla` ni
+`barcodeUrls` — **la huella completa del inventario debe ser idéntica antes y
+después**. Tampoco: tabla de equivalencias para resolver inventario, cambios en
+`stockVariantOf()`, renombrador universal para otros catálogos, `size_id`
+inmutable (Diseño B) ni reabrir H-64 o H-65.
+**Reproducción:** `node test-h66-canonical-code.mjs --reproduccion` antes de
+implementar: **5 pasaron, 26 fallaron**. Los cinco verdes son guardas —la huella
+de `stock` no cambia, la identidad histórica sigue en su sitio, no hay forma de
+editar la identidad, `resolveProductSizes` sigue localizando por identidad y
+`size_letter` queda intacta— y deben seguir verdes al terminar. **El arnés exige
+el argumento explícito**: sin él imprime su propósito y termina en 0, de modo que
+ningún recorrido de `test-*.mjs` puede teñir de rojo la rama principal con un
+arnés que todavía debe fallar. El proyecto no tiene `npm test`, ni CI, ni hook
+que ejecute pruebas —el único hook es `post-commit`, que sólo sube el commit—.
+**Cuatro contratos corregidos antes de aceptar el diseño (`ADR-011`):**
+**(1) Terminales anteriores.** Se demostró sobre el artefacto publicado que, si
+el servidor proyecta `meta.value = internal_code`, una fila `code=40` con
+identidad `A` resuelve `stock[].talla='A'` y devuelve sus 6 piezas. Pero ese
+mismo artefacto **exporta a Excel con encabezados de identidad** (`TA`, `TB`,
+`Ts`), así que la lectura compatible no basta: se combina con **bloqueo de
+escritura de catálogo impuesto en el servidor**, no en el cliente viejo, que no
+se puede modificar. POS e Inventario siguen operando: sólo leen, y la identidad
+no cambia.
+**(2) `expected_version` no puede ser evadible.** `pos.lookup` tiene hoy RLS con
+política `active_admin_all` y `grant all … to authenticated`: cualquier
+administrador activo escribe directo, y `pushConfig()` lo hace. El contrato
+exige revocar la escritura directa y llevar toda alta, edición, activación,
+desactivación y borrado a RPC que valide la versión **en el servidor**.
+**(3) Historial temporal.** Un par `anterior → actual` no sirve: `T0` significa
+la identidad `0` (talla 38) antes de H-66 y la identidad `s` (talla 0) después.
+El historial se modela como **intervalos de vigencia** por `catalog_version`, y
+`(canonical_code, catalog_version)` debe resolver a una sola identidad.
+**(4) Excel sin versión.** No entra por un modo genérico «heredado». Se bloquea,
+o el administrador elige explícitamente el esquema histórico, con vista previa de
+columna, identidad, etiqueta y cantidad antes de aplicar.
+**Diseños descartados y por qué:** *A · migrar los nueve códigos* — reescribe
+2,261 filas con 1,817 piezas, obliga a una tabla de equivalencias y a tocar
+`stockVariantOf()`, deja la talla 0 sin poder usar el código `0`, y cada
+corrección futura vuelve a ser una migración. *B · `size_id` inmutable* — es el
+destino correcto a largo plazo, pero exige reescribir el contrato de `stock[]` y
+de todas las referencias en una tienda viva; C es su primer paso, no su
+alternativa.
+**Hallazgo que sostiene el diseño:** la separación ya existe en el modelo desde
+H-57 y está sin usar. `resolveProductSizes()` localiza el stock con
+`meta.value ?? item.code` (`balam/data.jsx:89`), y hoy `meta.value` está vacío en
+las 76 entradas de talla. H-66 no inventa un concepto: activa una costura ya
+construida.
+**Migraciones previstas:** una para la columna, sus índices y la tabla de
+historial; otra de verificación autocontenida (`ADR-004`).
+**Pendiente:** todo lo demás. Autorizado sólo registrar el riesgo, documentar la
+decisión, preparar el arnés rojo, auditar consumidores y diseñar contratos.
+**Riesgo residual previsto:** el dato crudo de `stock[]` seguirá guardando `A`,
+`B`, `0`; los archivos Excel anteriores siguen siendo el único punto ambiguo y se
+resuelven con marca de esquema o modo heredado confirmado, nunca por adivinación;
+y una terminal con el artefacto anterior necesita una política explícita.
+**Corrección documentada:** pendiente.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:
