@@ -1,10 +1,10 @@
 # Existencias retenidas por códigos históricos de talla desactivados
 
 **Riesgo:** H-63
-**Estado:** PARCIALMENTE RESUELTO — fase 1 (protección) implementada; fase 2
-(recuperación) no autorizada todavía
+**Estado:** PARCIALMENTE RESUELTO — fase 1 (protección) publicada; fase 2
+(recuperación) pendiente de verificación remota y autorización
 **Fecha:** 31/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `b4bfb3f` · despliegue registrado en el commit siguiente
 
 ## Problema y reproducción
 
@@ -140,11 +140,13 @@ Después del cambio:
 | `test-folio-diario.mjs` · `test-line-balance.mjs` · `test-report-revenue.mjs` · `test-return-deadline.mjs` | 60/60 · 38/38 · 24/24 · 38/38 |
 | `test-exchange-commit.mjs` | 31/1 — **el mismo fallo en `HEAD`**, comprobado en worktree limpio |
 
-Artefactos regenerados con `node build-offline.mjs` **sólo para pruebas**:
-`index.html` y `POS Balam (offline).html`, idénticos entre sí, 8 769 520 bytes,
-SHA-256 `2C1153AA91D049A35A30BEEB85EB5FE1B24F2DD18A74C7A989691C7E69C319E5`. No se
-publicaron. Smoke del bundle 17/17, navegación 15/15 y reproducibilidad 8/8
-sobre el paquete nuevo.
+Artefactos regenerados con `node build-offline.mjs`: `index.html` y
+`POS Balam (offline).html`, idénticos entre sí, 8 769 520 bytes, SHA-256
+`2C1153AA91D049A35A30BEEB85EB5FE1B24F2DD18A74C7A989691C7E69C319E5`. Smoke del
+bundle 17/17, navegación 15/15 y reproducibilidad 8/8 sobre el paquete nuevo.
+El artefacto servido por GitHub Pages se verificó idéntico byte a byte al del
+commit `b4bfb3f`, y el paquete publicado arranca sin errores en un perfil
+desechable y sin sesión.
 
 El snapshot real del terminal se releyó en sólo lectura al terminar: productos,
 configuración y promociones conservan la misma huella que en la auditoría —240

@@ -2970,9 +2970,11 @@ remota (H-62).
 
 ## H-63 - Existencias retenidas por códigos históricos de talla desactivados
 
-**Estado:** EN PROGRESO - FASE 1 (PROTECCIÓN)
+**Estado:** PARCIALMENTE RESUELTO — fase 1 (protección) publicada; fase 2
+(recuperación) pendiente de verificación remota y autorización
 **Fecha de registro:** 31/07/2026
-**Commit:** Pendiente de commit
+**Commit:** `b4bfb3f` (protección, artefactos y documentación) · este commit
+registra el despliegue
 **Evidencia:** auditoría de sólo lectura del 31/07/2026 sobre el snapshot real
 —copia temporal del perfil, red bloqueada, artefacto interrogado con los datos
 reales—. El catálogo `size_number` tiene 71 entradas: 62 activas y 9 inactivas
@@ -3045,11 +3047,14 @@ comisión 30/30 y reportes 24/24; folio diario 60/60; saldo por renglón 38/38;
 ingresos 24/24; plazo posventa 38/38; E2E de precio por talla 19/19.
 `test-exchange-commit` falla su caso 31 **también en `HEAD`**, comprobado en un
 worktree limpio: preexistente y ajeno, no se corrige dentro de H-63.
-**Artefactos:** regenerados localmente con `node build-offline.mjs`, sólo para
-pruebas. `index.html` y `POS Balam (offline).html` son idénticos entre sí,
+**Despliegue:** publicado en `https://david14081982.github.io/POS_Balam/`. El
+artefacto servido se verificó idéntico al `index.html` del commit `b4bfb3f`:
 8 769 520 bytes, SHA-256
-`2C1153AA91D049A35A30BEEB85EB5FE1B24F2DD18A74C7A989691C7E69C319E5`. **No se
-publicaron.**
+`2C1153AA91D049A35A30BEEB85EB5FE1B24F2DD18A74C7A989691C7E69C319E5`, el mismo de
+`POS Balam (offline).html`. El paquete publicado se cargó en un perfil
+desechable y sin sesión: muestra el inicio de sesión, publica
+`CONFIG.sizeCodeReferences` y el gateway de promociones, y no emitió ningún
+error de página. Sin migraciones que aplicar antes del cliente.
 **Datos reales:** el snapshot del terminal se releyó en sólo lectura al terminar
 y coincide con el de la auditoría: productos, configuración y promociones con la
 misma huella; 240 productos, 3,525 piezas, los nueve códigos históricos siguen
