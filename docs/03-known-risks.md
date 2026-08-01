@@ -3100,6 +3100,145 @@ conserva desde el 31/07/2026 un `upsert` de `sellers` bloqueado con `42501`
 no se tocó: borrarlo destruiría una captura.
 **Corrección documentada:** `docs/fixes/tallas-historicas-con-existencias.md`.
 
+## H-64 - Existencias clasificadas en una talla que no corresponde
+
+**Estado:** RESUELTO
+**Fecha de registro:** 01/08/2026
+**Commit:** Pendiente de commit
+**Evidencia:** el dueño aportó el archivo de origen del inventario
+(`Inventario_Balamfinal final.xlsx`, 242 filas, 225 SKUs, 59 columnas de talla) y
+confirmó que **la talla 38 tiene 398 prendas físicas**. El sistema tiene **cero**
+en la talla 38 y **428** en la talla `0`. Comparando archivo contra sistema, SKU
+por SKU: en **100 productos** la cantidad que el archivo pone en `T38` está en el
+sistema bajo la talla `0`, con la cifra idéntica. La talla `0` del archivo suma
+**62** piezas y en el sistema hay exactamente **12 productos con 62 piezas** que
+el archivo no asigna a 38 — coinciden al dígito. Además, 643 piezas que el
+archivo asigna a tallas numéricas están hoy repartidas entre `0`, `CH`, `M`,
+`GR`, `XG`, `XXG`, `3XG` y `4XG`. Los totales casi coinciden —archivo 3,517 ·
+sistema 3,525— así que no se perdieron piezas: **están en la casilla
+equivocada**.
+**Origen:** análisis solicitado por el dueño del producto para resolver las
+etiquetas duplicadas de H-63; el archivo de origen destapó un problema mayor.
+**Riesgo:** la tienda **no puede vender talla 38** —el sistema anuncia cero— y
+ofrece 366 prendas bajo «talla 0», que no significa nada comercialmente. Ya
+ocurrió: **10 ventas** quedaron registradas con talla `0` siendo prendas 38, y
+sus tickets impresos no se pueden corregir (`ADR-002`).
+**Alcance:** reubicar por producto las existencias mal clasificadas de la talla
+`0` a la `38` según el archivo de origen, y consolidar las 1,460 piezas de los
+códigos históricos `s, A, B, C, D, E, G, H` sobre sus gemelos numéricos. Ambas
+correcciones tocan el mismo campo en los mismos productos y se hacen **en una
+sola pasada**: separarlas duplicaría el riesgo sin ganar nada.
+**No alcance:** cambiar CANTIDADES. La migración **reubica, no ajusta**: el total
+debe seguir en 3,525 y la suma por producto no puede variar. El archivo es la
+autoridad de **en qué talla** va cada pieza; el sistema sigue siendo la autoridad
+de **cuántas** hay, porque desde el 24/07/2026 hubo ventas, un préstamo y
+devoluciones. Tampoco entra: reimportar el archivo —no trae `Categoría por
+talla`, ni columnas `T3XG/T4XG/T5XG` (43 piezas se irían a cero), ni costos, ni
+precios especiales, y repite 12 SKUs—; reescribir documentos ya emitidos; ni
+tocar `size_letter`.
+**Plan descartado:** la primera lectura llevaba a reclasificar existencias —115
+productos y 366 piezas de `0` a `38`— con todo lo que eso arrastra: ventana sin
+documentos vivos, arnés de migración y respaldo. **No hizo falta.** Demostrada la
+causa, el error estaba en el catálogo y no en las existencias, así que se corrigió
+donde estaba: **cero piezas movidas**.
+**Causa raíz — DEMOSTRADA.** El export del inventario del 24/07/2026
+(`Inventario_Balam_2026-07-24 (6).xlsx`, anterior a H-59, H-61 y H-63) conserva
+el orden real del catálogo `size_number` de entonces, y ese orden es la prueba:
+
+| posición | columna | piezas | talla que ocupa esa posición |
+|---|---|---|---|
+| 36 | `T36` | 161 | 36 |
+| 37 | `T37` | 0 | 37 |
+| **38** | **`T0`** | **398** | **38** |
+| 39 | `T39` | 0 | 39 |
+| **40** | **`TA`** | **382** | **40** |
+| **42** | **`TB`** | **375** | **42** |
+| **44** | **`TC`** | **311** | **44** |
+| **46** | **`TD`** | **190** | **46** |
+| **48** | **`TE`** | **161** | **48** |
+| **49** | **`TF`** | **0** | **49** |
+| **50** | **`TG`** | **115** | **50** |
+| **52** | **`TH`** | **84** | **52** |
+| 53 | `Ts` | 62 | *(después de 52: la talla «0» real)* |
+| 54 | `TPZ` | 803 | PIEZA |
+
+Los códigos `A`…`H` ocupan exactamente las posiciones de 40, 42, 44, 46, 48, 49,
+50 y 52, y sus etiquetas coinciden. **El código `0` ocupa la posición de la talla
+38** y lleva etiqueta `0`: es un error de captura del propio catálogo, no de las
+existencias ni de una importación. Las piezas siempre estuvieron bien; el código
+con el que se registraron es el equivocado.
+**Corrección del planteamiento de H-63:** aquella historia emparejó cada código
+histórico con el numérico de su misma etiqueta, y acertó en ocho de nueve. Falló
+en uno: dio por hecho que el código `0` era la talla `0` cuando es la **38**, y
+que `s` era su gemelo. El mapa correcto, por código, es
+`0→38 · A→40 · B→42 · C→44 · D→46 · E→48 · F→49 · G→50 · H→52 · s→0`.
+Con ese mapa desaparecen además las ocho etiquetas repetidas: cada código pasa a
+tener una talla distinta.
+**Corrección aplicada:** once ediciones del dueño en Configuración → Catálogos de
+producto → «Categorías por talla · Números», **sin una sola línea de código y sin
+tocar existencias**:
+1. renombrar la etiqueta del código `0` de «0» a «**38**»;
+2. eliminar los nueve gemelos numéricos vacíos `38, 40, 42, 44, 46, 48, 49, 50, 52`.
+Los nueve estaban sin referencias —cero piezas, cero precios especiales, cero
+códigos de barras, cero promociones y **cero documentos**: ninguna venta,
+devolución, préstamo o cambio los citaba—, así que `removeItem()` los admitió y la
+reconciliación de `pushConfig` los retiró también de `pos.lookup`. Se comprobó
+antes en simulación sobre copia, con las dos variantes —apagar y borrar—, y ambas
+dieron el mismo resultado.
+**Medido antes de ejecutar y confirmado después:** piezas bajo la etiqueta 38
+**0 → 358**; etiquetas duplicadas en el filtro **8 → 0**; opciones del filtro
+70 → 61; catálogo 71 → 62 entradas; productos con existencias invisibles 0; cero
+errores de página. **Invariantes intactas:** 240 productos, 3,524 piezas y huella
+de existencias `34ed009694a1eeb2` **idéntica antes y después** —prueba de que no
+se movió ninguna pieza—, más ventas, devoluciones, préstamos, pagos, movimientos
+y promociones sin variación.
+**Verificación remota:** `pos.lookup` confirma el código `0` con etiqueta `38`,
+activo y en `sort_order 37` —su lugar natural entre la 37 y la 39—; `s, A, B, C,
+D, E, G, H` presentes y activos; `F` inactivo por no tener piezas; ninguno de los
+nueve códigos borrados; `size_number` 61 activas / 62 totales y `size_letter`
+14/14 intacta.
+**Migraciones:** ninguna. **Artefactos:** sin cambio; H-64 no tocó código, así que
+`index.html` sigue siendo el de H-63 fase 1.
+**Pendiente:** el dueño reordenará a mano el catálogo. Tras el borrado, las tallas
+40 a 52 quedaron al final de la lista (posiciones 55-61 de 61) porque conservan el
+orden de sus códigos históricos. Se preparó y probó un reordenamiento —62 entradas
+antes y después, mismos códigos, 3,524 piezas sin cambio, cero duplicados— y el
+dueño prefirió hacerlo manualmente.
+**Riesgo residual:** los códigos internos siguen siendo los históricos, así que
+las columnas del Excel se llaman `T0` (que es la 38), `TA` (la 40), `TB` (la 42)…
+El código es el identificador que amarra las existencias y renombrarlo las
+desconectaría; unificarlo exigiría mover las 1,818 piezas a códigos numéricos, que
+es precisamente lo que esta historia evitó. Queda como posible historia futura, sin
+urgencia: cada talla aparece ya una sola vez y con sus prendas.
+**Corrección documentada:** `docs/fixes/talla-mal-codificada-en-catalogo.md`.
+
+## H-65 - Una liquidación de apartado no descontó su pieza del inventario
+
+**Estado:** ABIERTO - SIN INVESTIGAR
+**Fecha de registro:** 01/08/2026
+**Commit:** Pendiente de commit
+**Evidencia:** al liquidar los dos apartados que H-64 exigía cerrar, ambos
+registraron su movimiento `Venta · cant −1` y ambos quedaron en `Pagado`, pero
+**sólo uno descontó existencias**. `BG-260729-0011` (ADRIANO `1-ARO-MC-AMAR-T`,
+talla `0`) bajó de 3 a 2. `BG-260728-0004` (ALONSO `1-ALS-ML-CCAP-T`, talla `B`)
+**siguió en 3**. El total pasó de 3,525 a 3,524 cuando debía quedar en 3,523.
+**Origen:** verificación de precondiciones de H-64.
+**Riesgo:** hay una prenda menos en la tienda de las que el sistema cree, y el
+kardex afirma una salida que el inventario no refleja. Si el fallo es sistemático,
+cada venta afectada descuadra el inventario en silencio.
+**Hipótesis no demostrada:** `finalizarApartado()` localiza el producto con
+`products.find(x => x.sku === l.sku)` y se queda con el primero. El catálogo tiene
+**12 SKUs duplicados** —dos productos distintos comparten SKU— y `1-ALS-ML-CCAP-T`
+es uno de ellos. Se descartó que fuera un fallo de resolución de talla:
+`stockVariantOf()` resuelve hoy correctamente el código `B` en los dos productos.
+Tampoco se descontó del otro: **ninguno de los dos bajó**.
+**Alcance propuesto:** reproducir el caso, determinar la causa, corregirla y
+ajustar la pieza descuadrada. Revisar si afecta también a ventas normales de los
+12 SKUs duplicados.
+**Pendiente:** todo. El dueño decidió atenderlo después de H-64.
+**Riesgo residual:** por determinar.
+**Corrección documentada:** pendiente.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:
