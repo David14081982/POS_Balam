@@ -424,7 +424,10 @@
       category = 'schema'; status = 'blocked_schema'; policy = 'apply_migration'; retryable = false;
     } else if (/^23/.test(code)) {
       category = 'constraint'; status = 'blocked_data'; policy = 'review_data'; retryable = false;
-    } else if (/commit_mismatch|operation_mismatch|operation_id_conflict|operation_adoption_conflict|item_adoption_conflict|seller_effects_mismatch|payment_id_conflict|payment_balance_mismatch|layaway_not_pending|layaway_already_liquidated|layaway_local_state_conflict|legacy_.*conflict|legacy_context_incomplete|invalid_return|folio_conflict|loan_version_conflict|loan_operation_conflict/.test(lower)) {
+    } else if (/commit_mismatch|operation_mismatch|operation_id_conflict|operation_adoption_conflict|item_adoption_conflict|seller_effects_mismatch|payment_id_conflict|payment_balance_mismatch|layaway_not_pending|layaway_already_liquidated|layaway_local_state_conflict|legacy_.*conflict|legacy_context_incomplete|invalid_return|folio_conflict|loan_version_conflict|loan_operation_conflict|operation_purged/.test(lower)) {
+      // H-68: `operation_purged` es la última defensa contra la resurrección. El
+      // documento que esta operación quiere escribir fue borrado a propósito; reintentar
+      // no lo va a hacer válido, así que se detiene y se muestra en el panel de sincronía.
       // H-62: los conflictos de préstamo son PERMANENTES pese a llegar con el
       // código 40001, que por sí solo significa «serialización» y se reintentaría
       // en bucle. Una versión esperada que ya no coincide no va a coincidir en el
@@ -1681,14 +1684,167 @@
     //      borrarlas aquí las dejaría vivas allá y volverían en el siguiente pull.
     // Se pospone al próximo arranque: la cola ya estará vacía y la limpieza se aplicará
     // entera. Quien quiera forzarla usa el botón de Configuración.
+    // (H-68: la marca es el camino HISTÓRICO. Una limpieza hecha con la autoridad
+    // remota trae además su época y se aplica en `applyRemotePurge`, ANTES del
+    // flush, así que ya no depende de que la cola estuviera vacía.)
     if (pendingAtBoot || loadQ().length) return false;
     if (!(window.DATA && window.DATA.resetTestData)) return false;
-    try { if (window.DATA.resetTestData() !== true) return false; }
-    catch (e) { return false; }
+    if (!localPurgeApplied()) return false;
     try { localStorage.setItem(RESET_SEEN, lastResetMark); } catch (e) { /* */ }
     try { await flushQueue(); } catch (e) { /* offline: el stock restaurado queda en cola */ }
     if (window.UI && window.UI.toast) window.UI.toast('Datos de prueba borrados en esta terminal — inventario intacto', 'var(--accent)');
     return true;
+  }
+
+  // ── H-68 · Borrado de datos de prueba con autoridad transaccional ───────────
+  // El borrado NO es una secuencia de borrados desde el navegador: `pos.purge_test_data()`
+  // hace todo —revertir existencias, vaciar lo operativo, poner acumulados en cero y
+  // sellar la época— dentro de UNA transacción. Si algo falla, la nube no cambia y esta
+  // terminal tampoco toca nada.
+  //
+  // La época sellada es lo que hace que la limpieza VIAJE a los equipos apagados: al
+  // encender, cada terminal la lee ANTES de drenar su cola (`applyRemotePurge`), invalida
+  // sus operaciones pendientes de datos ya borrados y se limpia sola. Sin ese orden, el
+  // flush del arranque volvería a subir las ventas de prueba a la nube recién limpiada.
+  const PURGE_SEEN = 'balam_purge_seen';       // época ya aplicada en esta terminal
+  const PURGE_TICKET = 'balam_purge_ticket';   // id reservado: un reintento no purga dos veces
+  // Documentos: se descartan. Cada uno vive de un registro que la limpieza borró.
+  const PURGE_DOCUMENT_OPS = {
+    sale: 1, return: 1, exchange: 1, loanOperation: 1,
+    commissionSettle: 1, commissionClose: 1,
+  };
+  // Cargas masivas que suben el arreglo COMPLETO: no se descartan a ciegas ni se dejan
+  // pasar. Se reconstruyen desde el estado ya limpio, así una alta de catálogo capturada
+  // sin red sobrevive y las filas borradas no vuelven.
+  const PURGE_REBUILT_UPSERTS = { products: 1, sellers: 1, clients: 1 };
+  const PURGE_DROPPED_UPSERTS = { liquidations: 1, payments: 1, exchanges: 1 };
+  function localPurgeApplied(opts) {
+    let local;
+    try { local = window.DATA.resetTestData(opts); } catch (e) { return null; }
+    // `false` = hay una liquidación de apartado pendiente: no se limpia NADA.
+    if (local === false) return null;
+    if (local === true) return { ok: true };           // contrato histórico
+    return local && local.ok === true ? local : null;
+  }
+  // Invalida SÓLO lo vinculado con lo borrado. Una operación creada DESPUÉS de la
+  // limpieza es ajena y queda intacta; una sin fecha se trata como anterior porque no
+  // puede demostrar que no lo es.
+  function pruneQueueForPurge(cutoffIso) {
+    const cutoff = Date.parse(cutoffIso || '');
+    const limit = Number.isFinite(cutoff) ? cutoff : Date.now();
+    const q = loadQ();
+    const kept = [];
+    const rebuild = {};
+    let dropped = 0;
+    q.forEach(op => {
+      const at = Date.parse(op.createdAt || '');
+      if (Number.isFinite(at) && at > limit) { kept.push(op); return; }
+      if (PURGE_DOCUMENT_OPS[op.type]) { dropped++; return; }
+      if (op.type === 'upsert' || op.type === 'staffUpdate') {
+        const kind = op.kind || op.table;
+        if (PURGE_REBUILT_UPSERTS[kind]) { rebuild[kind] = true; dropped++; return; }
+        if (PURGE_DROPPED_UPSERTS[kind]) { dropped++; return; }
+      }
+      kept.push(op); // config, bajas de catálogo y todo lo ajeno: intacto
+    });
+    if (dropped) saveQ(kept);
+    return { dropped, kept: kept.length, rebuild: Object.keys(rebuild) };
+  }
+  // Se reencolan DESPUÉS de bajar el dominio: sólo entonces las filas locales llevan la
+  // versión que la limpieza dejó en la nube y el control optimista las acepta.
+  function rebuildPurgedUpserts(kinds) {
+    (kinds || []).forEach(kind => {
+      const rows = window.DATA && window.DATA[kind === 'products' ? 'products' : kind];
+      if (Array.isArray(rows) && rows.length) pushRows(kind, rows);
+    });
+  }
+  async function readPurgeState() {
+    const c = await ensureClient();
+    if (!c || !(await hasSession())) return null;
+    try {
+      const r = await c.rpc('test_data_purge_state');
+      if (r.error || !r.data) return null;
+      const state = Array.isArray(r.data) ? r.data[0] : r.data;
+      return state && state.epoch ? state : null;
+    } catch (e) { return null; }
+  }
+  function purgeSeen() {
+    try { return localStorage.getItem(PURGE_SEEN); } catch (e) { return null; }
+  }
+  function markPurgeSeen(state) {
+    try {
+      localStorage.setItem(PURGE_SEEN, String(state.epoch));
+      // La marca histórica queda saldada a la vez: `applyResetMark` no debe volver a
+      // limpiar por el camino viejo lo que esta época ya limpió.
+      if (lastResetMark) localStorage.setItem(RESET_SEEN, lastResetMark);
+    } catch (e) { /* */ }
+  }
+  // Limpieza propagada por época. Corre ANTES del flush del arranque: es lo único que
+  // impide que un equipo apagado resucite en la nube lo que otro acaba de borrar.
+  async function applyRemotePurge() {
+    const state = await readPurgeState();
+    if (!state) return null;
+    if (purgeSeen() === String(state.epoch)) return null;   // ya aplicada aquí
+    if (!(window.DATA && window.DATA.resetTestData)) return null;
+    const prune = pruneQueueForPurge(state.purged_at);
+    const local = localPurgeApplied({ authority: 'remote' });
+    if (!local) return null;   // liquidación pendiente: se reintenta al próximo arranque
+    markPurgeSeen(state);
+    if (window.UI && window.UI.toast) {
+      window.UI.toast('Datos de prueba borrados en esta terminal — inventario y configuración intactos', 'var(--accent)');
+    }
+    return { state, local, prune };
+  }
+  // Autoridad del botón «Borrar datos de prueba». Con sesión, la transacción remota
+  // manda: si falla, no se borra nada aquí. Sin sesión (uso local/demostración) la
+  // terminal es su propia autoridad y sólo puede limpiarse a sí misma.
+  async function purgeTestData() {
+    if (!(window.DATA && window.DATA.resetTestData)) return { ok: false, error: 'DATA no disponible' };
+    const footprint = window.DATA.testDataFootprint();
+    if (footprint.bloqueado === 'LAYAWAY_LOCK') {
+      return { ok: false, code: 'LAYAWAY_LOCK', error: 'Hay una liquidación de apartado pendiente; reconcíliala antes de borrar los datos de prueba' };
+    }
+    if (footprint.bloqueado === 'IDENTITY_AMBIGUOUS') {
+      return { ok: false, code: 'IDENTITY_AMBIGUOUS', error: 'Hay renglones cuyo SKU resuelve a más de un producto: no se puede saber a qué producto devolver esas piezas', detalle: footprint.identidadAmbigua };
+    }
+    const c = await ensureClient();
+    const online = !!c && (await hasSession());
+    if (!online) {
+      const local = localPurgeApplied();
+      if (!local) return { ok: false, code: 'LAYAWAY_LOCK', error: 'No se pudo limpiar esta terminal' };
+      return { ok: true, mode: 'local', antes: footprint, local };
+    }
+    // Un identificador reservado y persistido: si la respuesta se pierde por red, el
+    // reintento entra con el MISMO id y la transacción remota lo reconoce como repetición
+    // en vez de volver a borrar y restaurar.
+    let ticket = null;
+    try { ticket = localStorage.getItem(PURGE_TICKET); } catch (e) { ticket = null; }
+    if (!ticket) {
+      ticket = newOpId();
+      try { localStorage.setItem(PURGE_TICKET, ticket); } catch (e) { /* */ }
+    }
+    let remote;
+    try { remote = await c.rpc('purge_test_data', { p_purge_id: ticket }); }
+    catch (e) { return { ok: false, code: 'NETWORK', error: String((e && e.message) || e) }; }
+    if (remote.error) {
+      return { ok: false, code: 'REMOTE', error: remote.error.message || String(remote.error), diagnostic: classifyFailure(remote.error) };
+    }
+    const report = remote.data || {};
+    if (report.ok !== true) {
+      return { ok: false, code: String(report.error || 'REMOTE'), error: report.message || report.error || 'La limpieza remota no se completó', detalle: report };
+    }
+    // A partir de aquí la nube YA quedó limpia y restaurada en una sola transacción.
+    const prune = pruneQueueForPurge(report.purged_at);
+    const local = localPurgeApplied({ authority: 'remote' });
+    markPurgeSeen({ epoch: report.epoch });
+    try { localStorage.removeItem(PURGE_TICKET); } catch (e) { /* */ }
+    const domains = ['products', 'sellers', 'clients', 'promotions', 'liquidations', 'payments', 'movements', 'returns', 'loans'];
+    await Promise.all(domains.map(k => pullDomain(k).catch(() => { /* tabla ausente */ })));
+    try { await pullDomain('sales'); } catch (e) { /* */ }
+    rebuildPurgedUpserts(prune.rebuild);
+    try { await flushQueue(); } catch (e) { /* se reintenta al reconectar */ }
+    try { window.dispatchEvent(new CustomEvent('configchange', { detail: { domain: true } })); } catch (e) { /* */ }
+    return { ok: true, mode: 'remote', antes: footprint, remoto: report, local: local || null, cola: prune };
   }
   // Ejecuta una consulta en páginas explícitas. PostgREST limita cada respuesta;
   // una página llena nunca se interpreta como el conjunto completo.
@@ -1906,6 +2062,12 @@
     // reemplazaba lo local, "des-haciendo" capturas cuya subida quedó pendiente.)
     // Se mide la cola ANTES de drenarla: la limpieza propagada la necesita para saber si
     // había capturas sin subir (ver applyResetMark); después del flush ya no se distingue.
+    // H-68: la limpieza de datos de prueba se aplica ANTES de drenar nada. Un equipo
+    // que estuvo apagado llega con operaciones de esos mismos datos en la cola; si se
+    // flushara primero, las volvería a subir a la nube recién limpiada y reaparecerían
+    // en todas las terminales al siguiente pull.
+    let purged = null;
+    try { purged = await applyRemotePurge(); } catch (e) { /* nunca bloquear el arranque */ }
     const pendingAtBoot = loadQ().length;
     try { await flushQueue(); } catch (e) { /* offline: la cola queda para el reintento */ }
     if (opts.pull) {
@@ -1929,6 +2091,10 @@
       if (!seller) {
         try { await pullDomain('sales'); } catch (e) { /* tabla ausente */ }
       }
+      // H-68: las cargas masivas que la limpieza invalidó se reencolan AQUÍ, ya con la
+      // versión que la nube dejó tras restaurar. Antes del pull el control optimista las
+      // rechazaría por versión vieja.
+      if (purged && purged.prune && purged.prune.rebuild.length) rebuildPurgedUpserts(purged.prune.rebuild);
       try { window.dispatchEvent(new CustomEvent('configchange', { detail: { domain: true } })); } catch (e) { /* */ }
       // H-62: adopción de los préstamos que nunca salieron de esta terminal. Va
       // DESPUÉS del pull a propósito: sólo entonces se distingue lo que la nube
@@ -2078,6 +2244,6 @@
     }
   }
 
-  window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushSale, settleLayaway, pushReturn, pushExchange, ensureFolioBlock, deleteRow, settleCommission, closeCommissionPeriod, pushLoanOperation, migrateLocalLoans, pullDomain, fetchSaleByFolio, physicalCardAvailable, claimPhysicalCard, flushQueue, retryOperation, queueStatus, hasPendingLayaway, clearQueue, markResetApplied, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
+  window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushSale, settleLayaway, pushReturn, pushExchange, ensureFolioBlock, deleteRow, settleCommission, closeCommissionPeriod, pushLoanOperation, migrateLocalLoans, pullDomain, fetchSaleByFolio, physicalCardAvailable, claimPhysicalCard, flushQueue, retryOperation, queueStatus, hasPendingLayaway, clearQueue, markResetApplied, purgeTestData, applyRemotePurge, pruneQueueForPurge, readPurgeState, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
   window.CORE.registerSyncGateway(window.STORE);
 })();

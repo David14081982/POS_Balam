@@ -1170,6 +1170,7 @@
   // ── Panel: datos de demostración (simulación local para pruebas) ───────────────
   function DemoPanel() {
     const [busy, setBusy] = useState(false);
+    const [purga, setPurga] = useState(null);
     const active = D.demoActive();
     async function generar() {
       // La simulación es LOCAL. Con sesión iniciada se subiría a Supabase y contaminaría los datos
@@ -1201,18 +1202,27 @@
       }
       setTimeout(() => location.reload(), 800);
     }
-    // Borra SOLO lo transaccional de prueba (ventas, devoluciones, descuentos, liquidaciones,
-    // clientes) y devuelve al inventario el stock que consumieron. Los productos NO se tocan.
-    function limpiarPruebas() {
-      if (!window.confirm('¿Borrar los DATOS DE PRUEBA de este dispositivo?\n\nSE BORRA: ventas, devoluciones, descuentos/promociones, liquidaciones de comisión, movimientos de venta y clientes registrados.\n\nSE CONSERVA: tu inventario (productos, precios, fotos y códigos), los usuarios/vendedores y toda la configuración.\n\nEl stock vuelve a como estaba antes de las pruebas. No se puede deshacer.')) return;
-      if (!D.resetTestData()) {
-        toast('Hay una liquidación pendiente; reconcíliala antes de restaurar las pruebas', 'var(--danger)');
+    // H-68 · Borra lo OPERATIVO de prueba —ventas, cobros, apartados, abonos,
+    // devoluciones, cambios, préstamos, clientes, comisiones, cierres y sus
+    // movimientos— y devuelve al inventario las piezas que esas operaciones
+    // movieron. La configuración entera (productos, catálogos, tallas, precios,
+    // descuentos, vendedores, usuarios, permisos) NO se toca, y el informe final
+    // lo demuestra con una huella tomada antes y después.
+    function limpiarPruebas() { setPurga({ paso: 'confirmar', resumen: D.testDataFootprint() }); }
+    async function ejecutarPurga() {
+      setPurga(p => Object.assign({}, p, { paso: 'ejecutando' }));
+      let r;
+      try {
+        r = window.STORE && window.STORE.purgeTestData
+          ? await window.STORE.purgeTestData()
+          : { ok: false, error: 'El módulo de sincronización no está disponible' };
+      } catch (e) { r = { ok: false, error: String((e && e.message) || e) }; }
+      if (!r || !r.ok) {
+        setPurga({ paso: 'error', error: (r && r.error) || 'No se pudo borrar', detalle: r && r.detalle });
         return;
       }
-      // La marca vigente queda como aplicada: si no, el próximo arranque volvería a avisar.
       try { if (window.STORE && window.STORE.markResetApplied) window.STORE.markResetApplied(); } catch (e) { /* */ }
-      window.alert('Datos de prueba borrados en este dispositivo y stock restaurado.\n\nSi usas la nube, corre también el archivo supabase/LIMPIAR-PRUEBAS.sql en Supabase (SQL Editor): además de vaciarla, deja una marca para que las DEMÁS terminales se limpien solas la próxima vez que las abran.');
-      setTimeout(() => location.reload(), 800);
+      setPurga({ paso: 'informe', informe: r, despues: D.testDataFootprint() });
     }
     return [
       active && h('div', { key: 'badge', className: 'inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gold-soft text-gold-text text-overline font-bold uppercase tracking-widest w-fit' }, [h(MS, { key: 'i', name: 'star', size: 14, fill: true }), 'Modo demostración activo']),
@@ -1220,7 +1230,7 @@
         h(SerifHeading, { key: 't', className: 'mb-2', children: 'Borrar datos de prueba' }),
         h('p', { key: 'd', className: 'text-body text-on-surface-variant leading-relaxed mb-5' }, 'Deja el sistema listo para operar de verdad: borra las ventas, devoluciones, descuentos, liquidaciones y clientes que capturaste probando, y devuelve al inventario las piezas que esas ventas descontaron. Tu inventario, tus usuarios y tu configuración NO se tocan.'),
         h('div', { key: 'b' }, [
-          h('button', { key: 'x', className: 'inline-flex items-center gap-2 px-5 h-11 border border-outline-variant text-danger font-label-sm uppercase tracking-widest text-caption rounded-lg hover:bg-danger-soft hover:border-danger/30 transition', onClick: limpiarPruebas }, [h(MS, { key: 'i', name: 'trash', size: 16 }), 'Borrar datos de prueba (conserva inventario)']),
+          h('button', { key: 'x', 'data-testid': 'purga-abrir', className: 'inline-flex items-center gap-2 px-5 h-11 border border-outline-variant text-danger font-label-sm uppercase tracking-widest text-caption rounded-lg hover:bg-danger-soft hover:border-danger/30 transition', onClick: limpiarPruebas }, [h(MS, { key: 'i', name: 'trash', size: 16 }), 'Borrar datos de prueba (conserva inventario)']),
         ]),
       ]),
       h(GlassCard, { key: 'c', className: 'p-6' }, [
@@ -1239,7 +1249,137 @@
           h('li', { key: '3' }, 'Cuando termines de probar, usa “Limpiar / Resetear a vacío” para volver al estado de producción.'),
         ]),
       ]),
+      purga && h(PurgaModal, { key: 'purga', estado: purga, onEjecutar: ejecutarPurga, onCerrar: () => setPurga(null) }),
     ];
+  }
+
+  // ── H-68 · Modal de «Borrar datos de prueba» ────────────────────────────────
+  // Antes de ejecutar muestra QUÉ se va a borrar y qué se conserva; al terminar,
+  // el informe por módulo con las piezas antes y después. Nada de esto se
+  // adivina: son las mismas cuentas que la autoridad remota devuelve.
+  const N = v => Number(v || 0).toLocaleString('es-MX');
+  function Fila({ etiqueta, valor, tono }) {
+    return h('div', { className: 'flex items-baseline justify-between gap-4 py-1.5 border-b border-outline-variant/40 last:border-0' }, [
+      h('span', { key: 'l', className: 'text-caption text-on-surface-variant' }, etiqueta),
+      h('span', { key: 'v', className: 'font-mono text-body font-semibold ' + (tono || 'text-primary') }, valor),
+    ]);
+  }
+  function PurgaModal({ estado, onEjecutar, onCerrar }) {
+    const { Modal } = window.UI;
+    const r = estado.resumen;
+    if (estado.paso === 'confirmar' || estado.paso === 'ejecutando') {
+      const ejecutando = estado.paso === 'ejecutando';
+      const bloqueo = r.bloqueado;
+      return h(Modal, {
+        title: 'Borrar datos de prueba',
+        large: true,
+        onClose: ejecutando ? (() => {}) : onCerrar,
+        footer: [
+          h('button', { key: 'c', disabled: ejecutando, className: 'px-5 h-11 text-on-surface-variant font-label-sm uppercase tracking-widest text-caption rounded-lg hover:bg-surface-container disabled:opacity-50', onClick: onCerrar }, 'Cancelar'),
+          h('button', {
+            key: 'k', disabled: ejecutando || !!bloqueo,
+            'data-testid': 'purga-confirmar',
+            className: 'inline-flex items-center gap-2 px-5 h-11 bg-danger text-white font-label-sm uppercase tracking-widest text-caption rounded-lg hover:opacity-90 transition disabled:opacity-40',
+            onClick: onEjecutar,
+          }, [h(MS, { key: 'i', name: ejecutando ? 'clock' : 'trash', size: 16 }), ejecutando ? 'Borrando…' : 'Sí, borrar los datos de prueba']),
+        ],
+      }, [
+        h('p', { key: 'aviso', className: 'text-body text-on-surface leading-relaxed mb-5' },
+          'Se eliminarán ventas, apartados, préstamos, devoluciones, clientes, movimientos, comisiones y reportes de prueba. Se conservarán el inventario base, productos, usuarios y toda la configuración.'),
+        bloqueo === 'LAYAWAY_LOCK' && h('div', { key: 'bl', className: 'mb-5 p-4 rounded-lg bg-danger-soft text-danger text-caption leading-relaxed' },
+          'Hay una liquidación de apartado pendiente de reconciliar. Termina de sincronizarla antes de borrar: hasta entonces no se puede saber si esa pieza salió del inventario.'),
+        bloqueo === 'IDENTITY_AMBIGUOUS' && h('div', { key: 'bl', className: 'mb-5 p-4 rounded-lg bg-danger-soft text-danger text-caption leading-relaxed' },
+          `Hay ${N(r.identidadAmbigua.length)} renglón(es) cuyo SKU corresponde a más de un producto. No se puede saber a cuál devolver esas piezas, así que no se borra nada.`),
+        h('div', { key: 'g', className: 'grid grid-cols-1 md:grid-cols-2 gap-6' }, [
+          h('div', { key: 'del' }, [
+            h('div', { key: 't', className: 'text-overline font-bold uppercase tracking-widest text-danger mb-2' }, 'Se elimina'),
+            h(Fila, { key: '1', etiqueta: 'Ventas y cobros', valor: N(r.ventas), tono: 'text-danger' }),
+            h(Fila, { key: '2', etiqueta: 'Apartados', valor: N(r.apartados), tono: 'text-danger' }),
+            h(Fila, { key: '3', etiqueta: 'Abonos y pagos', valor: N(r.abonos), tono: 'text-danger' }),
+            h(Fila, { key: '4', etiqueta: 'Devoluciones', valor: N(r.devoluciones), tono: 'text-danger' }),
+            h(Fila, { key: '5', etiqueta: 'Cambios', valor: N(r.cambios), tono: 'text-danger' }),
+            h(Fila, { key: '6', etiqueta: 'Préstamos', valor: N(r.prestamos), tono: 'text-danger' }),
+            h(Fila, { key: '7', etiqueta: 'Clientes de prueba', valor: N(r.clientes), tono: 'text-danger' }),
+            h(Fila, { key: '8', etiqueta: 'Movimientos de esas operaciones', valor: N(r.movimientos), tono: 'text-danger' }),
+            h(Fila, { key: '9', etiqueta: 'Comisiones liquidadas', valor: N(r.comisiones), tono: 'text-danger' }),
+            h(Fila, { key: '10', etiqueta: 'Cierres de periodo', valor: N(r.cierres), tono: 'text-danger' }),
+          ]),
+          h('div', { key: 'keep' }, [
+            h('div', { key: 't', className: 'text-overline font-bold uppercase tracking-widest text-success mb-2' }, 'Se conserva'),
+            h(Fila, { key: '1', etiqueta: 'Productos', valor: N(r.productos), tono: 'text-success' }),
+            h(Fila, { key: '2', etiqueta: 'Descuentos configurados', valor: N(r.descuentos), tono: 'text-success' }),
+            h(Fila, { key: '3', etiqueta: 'Vendedores y usuarios', valor: N(r.vendedores), tono: 'text-success' }),
+            h(Fila, { key: '4', etiqueta: 'Movimientos de inventario', valor: N(r.movimientosInventario), tono: 'text-success' }),
+            h(Fila, { key: '5', etiqueta: 'Piezas en existencia (ahora)', valor: N(r.piezas), tono: 'text-success' }),
+            h('div', { key: 'n', className: 'mt-4 text-caption text-on-surface-variant leading-relaxed' },
+              `Las existencias vuelven a como estaban antes de probar: se devuelven ${N(r.piezasARestaurar)} pieza(s) y se retiran ${N(r.piezasAQuitar)} que habían entrado por devoluciones o cambios.`),
+          ]),
+        ]),
+        h('p', { key: 'multi', className: 'mt-5 text-caption text-on-surface-variant leading-relaxed' },
+          'Las demás terminales —incluidas las que estén apagadas— se limpian solas la próxima vez que se abran, y sus operaciones pendientes de estos datos quedan invalidadas.'),
+      ]);
+    }
+    if (estado.paso === 'error') {
+      return h(Modal, { title: 'No se borró nada', onClose: onCerrar, footer: [h('button', { key: 'c', className: 'px-5 h-11 bg-primary text-on-primary font-label-sm uppercase tracking-widest text-caption rounded-lg', onClick: onCerrar }, 'Entendido')] }, [
+        h('p', { key: 'e', className: 'text-body text-on-surface leading-relaxed' }, estado.error),
+        h('p', { key: 'n', className: 'mt-3 text-caption text-on-surface-variant leading-relaxed' },
+          'La operación es de todo o nada: ni la nube ni esta terminal cambiaron. Corrige lo indicado y vuelve a intentarlo.'),
+      ]);
+    }
+    const inf = estado.informe || {};
+    const rem = inf.remoto || {};
+    const del = rem.eliminados || (inf.local && inf.local.eliminados) || {};
+    const antes = inf.antes || {};
+    const desp = estado.despues || {};
+    const piezasAntes = rem.piezas_antes != null ? rem.piezas_antes : (inf.local && inf.local.piezasAntes);
+    const piezasDespues = rem.piezas_despues != null ? rem.piezas_despues : (inf.local && inf.local.piezasDespues);
+    const configIntacta = inf.local ? inf.local.configIntacta !== false : true;
+    return h(Modal, {
+      title: 'Datos de prueba borrados', large: true, onClose: () => location.reload(),
+      footer: [h('button', { key: 'c', 'data-testid': 'purga-cerrar', className: 'px-5 h-11 bg-primary text-on-primary font-label-sm uppercase tracking-widest text-caption rounded-lg', onClick: () => location.reload() }, 'Cerrar y recargar')],
+    }, [
+      h('div', { key: 'm', className: 'mb-5 p-4 rounded-lg bg-success-soft text-success text-caption leading-relaxed' },
+        inf.mode === 'remote'
+          ? 'La limpieza se hizo en una sola transacción en el servidor: la nube y esta terminal quedaron iguales, y las demás terminales se limpiarán solas al abrirse.'
+          : 'Sin sesión iniciada: se limpió SOLO esta terminal. Inicia sesión y vuelve a pulsar el botón para limpiar también la nube y las demás terminales.'),
+      h('div', { key: 'g', className: 'grid grid-cols-1 md:grid-cols-2 gap-6' }, [
+        h('div', { key: 'del' }, [
+          h('div', { key: 't', className: 'text-overline font-bold uppercase tracking-widest text-danger mb-2' }, 'Eliminado por módulo'),
+          h(Fila, { key: '1', etiqueta: 'Ventas y cobros', valor: N(del.ventas) }),
+          h(Fila, { key: '2', etiqueta: 'Apartados', valor: N(del.apartados) }),
+          h(Fila, { key: '3', etiqueta: 'Abonos y pagos', valor: N(del.abonos) }),
+          h(Fila, { key: '4', etiqueta: 'Devoluciones', valor: N(del.devoluciones) }),
+          h(Fila, { key: '5', etiqueta: 'Cambios', valor: N(del.cambios) }),
+          h(Fila, { key: '6', etiqueta: 'Préstamos', valor: N(del.prestamos) }),
+          h(Fila, { key: '7', etiqueta: 'Clientes', valor: N(del.clientes) }),
+          h(Fila, { key: '8', etiqueta: 'Movimientos', valor: N(del.movimientos) }),
+          h(Fila, { key: '9', etiqueta: 'Comisiones', valor: N(del.comisiones) }),
+          h(Fila, { key: '10', etiqueta: 'Cierres de periodo', valor: N(del.cierres) }),
+        ]),
+        h('div', { key: 'keep' }, [
+          h('div', { key: 't', className: 'text-overline font-bold uppercase tracking-widest text-success mb-2' }, 'Conservado y restaurado'),
+          h(Fila, { key: '1', etiqueta: 'Piezas antes', valor: N(piezasAntes) }),
+          h(Fila, { key: '2', etiqueta: 'Piezas después', valor: N(piezasDespues), tono: 'text-success' }),
+          h(Fila, { key: '3', etiqueta: 'Productos conservados', valor: N(desp.productos || antes.productos), tono: 'text-success' }),
+          h(Fila, { key: '4', etiqueta: 'Descuentos conservados', valor: N(desp.descuentos != null ? desp.descuentos : antes.descuentos), tono: 'text-success' }),
+          h(Fila, { key: '5', etiqueta: 'Vendedores conservados', valor: N(desp.vendedores || antes.vendedores), tono: 'text-success' }),
+          h(Fila, { key: '6', etiqueta: 'Movimientos de inventario', valor: N(desp.movimientosInventario), tono: 'text-success' }),
+          h('div', {
+            key: 'fp', 'data-testid': 'purga-config-intacta',
+            className: 'mt-4 flex items-start gap-2 text-caption leading-relaxed ' + (configIntacta ? 'text-success' : 'text-danger'),
+          }, [
+            h(MS, { key: 'i', name: configIntacta ? 'check' : 'alert', size: 16 }),
+            h('span', { key: 't' }, configIntacta
+              ? 'Configuración intacta: la huella de productos, catálogos, tallas, precios, descuentos, vendedores, usuarios y permisos es idéntica a la de antes de borrar.'
+              : 'Atención: la huella de configuración cambió. Revisa Configuración antes de seguir operando.'),
+          ]),
+        ]),
+      ]),
+      h('div', { key: 'ops', className: 'mt-5 text-caption text-on-surface-variant leading-relaxed' },
+        inf.cola
+          ? `Cola de sincronización: ${N(inf.cola.dropped)} operación(es) de los datos borrados quedaron invalidadas; ${N(inf.cola.kept)} operación(es) ajenas siguen intactas.`
+          : 'Cola de sincronización sin operaciones pendientes de los datos borrados.'),
+    ]);
   }
 
   // ---------- Pantalla: alta/edición de usuario (admin agrega admin o vendedor) ----------

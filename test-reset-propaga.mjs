@@ -222,7 +222,9 @@ await init();
 const d1 = await estado();
 check('marca nueva → ventas borradas', d1.sales === 0, `sales=${d1.sales}`);
 check('marca nueva → devoluciones borradas', d1.returns === 0);
-check('marca nueva → descuentos borrados', d1.promos === 0);
+// H-68: una regla de descuento es configuración; la limpieza propagada tampoco
+// la toca. Lo operativo del descuento vivía dentro de las ventas ya borradas.
+check('marca nueva → descuentos CONSERVADOS', d1.promos === 1, String(d1.promos));
 check('STOCK RESTAURADO a 10 (no lo pisó el pull)', d1.stock === 10, `got=${d1.stock} exp=10`);
 check('INVENTARIO intacto (el producto vive)', d1.productoVive);
 check('la marca queda registrada en la terminal', d1.seen === '1000', String(d1.seen));

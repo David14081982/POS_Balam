@@ -3423,6 +3423,62 @@ archivo —borrarla lo vuelve no importable, con aviso—; los códigos internos
 siguen siendo los históricos, que es H-66.
 **Corrección documentada:** `docs/fixes/columnas-de-talla-en-excel.md`.
 
+## H-68 - El borrado de datos de prueba dejaba operaciones vivas y torcía el inventario
+
+**Estado:** RESUELTO
+**Fecha de registro:** 02/08/2026
+**Commit:** Pendiente de commit
+**Evidencia:** `node test-h68-purga-datos-prueba.mjs` ejecuta el artefacto del
+commit anterior (`git show HEAD:index.html`) sobre el mismo escenario y afirma el
+defecto: el documento de cambio SOBREVIVÍA, sus dos movimientos quedaban
+huérfanos y el inventario terminaba en **21 de 20** en un producto y **19 de 20**
+en otro —una pieza inventada y otra perdida—; además borraba las reglas de
+descuento configuradas y vaciaba la cola de sincronización entera, incluida una
+operación ajena.
+**Origen:** reportado por el dueño del producto, con el requisito explícito de que
+las terminales APAGADAS queden depuradas al pulsar el botón.
+**Reproducción:** fase «ANTES» del arnés, 6 afirmaciones en verde contra el
+paquete previo.
+**Alcance:** `Configuración → Datos de demostración → «Borrar datos de prueba
+(conserva inventario)»`; la autoridad remota que lo respalda; la propagación por
+época a las demás terminales; la invalidación selectiva de la cola.
+**No alcance:** «Limpiar / Resetear a vacío» y la simulación de demostración
+conservan su comportamiento; no se toca ninguna pantalla de captura.
+**Solución:** `pos.purge_test_data()` hace la limpieza entera en UNA transacción:
+deriva la reversión de existencias de los documentos por `product_id` + identidad
+de talla (`ADR-011`), vacía lo operativo, pone en cero los acumulados, comprueba
+dentro de la misma transacción que no quedó nada y que
+`pos.config_fingerprint()` no se movió, y sella una época. Las terminales leen esa
+época en `init()` **antes** de drenar su cola, invalidan sólo lo vinculado a los
+datos borrados y se limpian solas; las lápidas de `pos.purged_documents` rechazan
+cualquier reinserción con `operation_purged`. Los DESCUENTOS configurados pasan a
+tratarse como configuración y ya no se borran.
+**Pruebas:** `test-h68-purga-datos-prueba.mjs` **49 pasaron, 0 fallaron**.
+Regresión: `test-reset-pruebas.mjs` 19/0 · `test-reset-propaga.mjs` 21/0 ·
+`test-store-queue.mjs` 133/0 · `test-h65-layaway-liquidation.mjs` 35/35 ·
+`test-h65-layaway-e2e.mjs` 28/28 · `test-sale-coherence.mjs` 20/0 ·
+`test-exchange-commit.mjs` 32/0 · `test-loans-sync.mjs` 69/69 ·
+`test-operational-capabilities.mjs` 40/0 · `test-permissions-model.mjs` 13/0 ·
+`test-discounts.mjs` 43/0 · `test-returns.mjs` 17/0 · `test-migrations.mjs` 31/0 ·
+`test-module-contracts.mjs` 41/0 · `test-smoke.mjs` 15/0 ·
+`test-ui-navigation.mjs` 15/0 · `test-build-reproducibility.mjs` 8/0 ·
+`test-h67-size-headers.mjs` 27/0 · `test-h63-size-protection.mjs` 34/0 ·
+`test-product-sizes.mjs` 9/0 · `test-ux-metrics.mjs` sin retroceso.
+`test-concurrency.mjs` y `test-liquidations.mjs` fallan IGUAL antes y después del
+cambio (verificado con `git stash`): son defectos previos, ajenos a esta historia.
+**Migraciones:** `20260802010500_pos_h68_purge_test_data.sql` y su verificación
+`20260802010600`. `db push --dry-run` las declara pendientes; se aplican antes de
+publicar el cliente (`R-DEL-03`).
+**Despliegue:** Pendiente de registro.
+**Pendiente:** ninguno de esta historia.
+**Riesgo residual:** la limpieza es global (no hay «borrar sólo lo de este mes»);
+las lápidas crecen con cada limpieza y nadie las poda; un renglón histórico cuyo
+SKU resuelve a dos productos bloquea la limpieza entera —correcto, pero exige
+desambiguar el catálogo primero—; `pos.capability_operation_audit` y
+`pos.permission_change_audit` se conservan a propósito por ser evidencia de
+seguridad, así que guardan referencias a folios ya borrados.
+**Corrección documentada:** `docs/fixes/borrado-de-datos-de-prueba.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

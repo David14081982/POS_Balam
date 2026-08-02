@@ -75,8 +75,13 @@ check('la cache usa journal previo, rollback dirigido y verificacion antes de re
 check('el producto queda bloqueado mientras la liquidacion esta pendiente',
   /acquireLayawayProductLock/.test(data) && /assertLayawayProductsUnlocked/.test(data)
   && /reconcileLayawayProductLocks/.test(store));
+// H-68 cambio la firma: resetTestData ahora devuelve un informe y reserva `false`
+// EXCLUSIVAMENTE para el lock de liquidacion pendiente. La garantia es la misma:
+// ninguna limpieza —manual, propagada por epoca o por marca— avanza con un lock.
 check('la limpieza remota no ignora un lock de liquidacion',
-  /resetTestData\(\)\s*!==\s*true/.test(store));
+  /function localPurgeApplied/.test(store) && /local === false/.test(store)
+  && /if \(!localPurgeApplied\(\)\) return false;/.test(store)
+  && /if \(!local\) return null;/.test(store));
 check('el reintento devuelve el pago autoritativo original',
   /layawayResults/.test(store) && /paymentId/.test(store)
   && /authoritativePaymentId/.test(data));

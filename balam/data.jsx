@@ -3107,7 +3107,7 @@
     rawSave(LS_KEY, products); rawSave(LS_CLIENTS, clients); rawSave(LS_SELLERS, sellers);
     rawSave(LS_SALES, sales); rawSave(LS_MOVES, movements); rawSave(LS_RETURNS, returns);
     rawSave(LS_PROMOS, promos); rawSave(LS_LIQ, liquidations); rawSave(LS_PAYMENTS, payments);
-    rawSave(LS_LOANS, loans);
+    rawSave(LS_LOANS, loans); rawSave(LS_EXCHANGES, exchanges);
   }
   function clearAllLocal() {
     products.length = 0; sales.length = 0; movements.length = 0; returns.length = 0; payments.length = 0;
@@ -3135,63 +3135,278 @@
     return true;
   }
 
-  // Borra los datos de PRUEBA CONSERVANDO el catálogo de productos (inventario), los
-  // vendedores/usuarios y la configuración. Complemento local de supabase/LIMPIAR-PRUEBAS.sql:
-  // el SQL vacía la nube, esto vacía ESTE dispositivo (la app nunca borra lo local cuando la
-  // nube llega vacía — ver store.jsx pullDomain — y sin esto las pruebas reaparecerían y hasta
-  // se re-subirían, porque savePromos/saveClients suben el arreglo COMPLETO).
-  // El stock vuelve a como estaba antes de probar: se reintegra lo que descontaron las ventas
-  // y se quita lo que reingresaron las devoluciones (mismo criterio que recordSale/recordReturn).
-  function resetTestData() {
-    if (readLayawayProductLocks().length) return false;
-    remoteApplying = true; // vaciado local: que no encole nada a medias
-    try {
-      // 1) Revertir stock. Solo las ventas que SÍ descontaron (recordSale: cobrada =
-      //    estado distinto de Apartado/Cancelado); las devoluciones ya lo habían reingresado.
-      const bySku = {};
-      products.forEach(p => { if (p.sku) bySku[p.sku] = p; });
-      const bump = (sku, talla, delta) => {
-        const p = bySku[sku]; if (!p) return;
-        const e = stockVariantOf(p, talla); if (!e) return;
-        e.stock = Math.max(0, (Number(e.stock) || 0) + delta);
-      };
-      sales.forEach(s => {
-        if (s.estado === 'Apartado' || s.estado === 'Cancelado') return; // nunca descontaron
-        (s.lineas || []).forEach(l => bump(l.sku, l.talla, Number(l.qty) || 0));
-      });
-      returns.forEach(r => (r.lineas || []).forEach(l => bump(l.sku, l.talla, -(Number(l.qty) || 0))));
+  // ── H-68 · Borrado de datos de prueba ───────────────────────────────────────
+  // Deja el sistema como estaba ANTES de operar: sin ventas ni cobros, apartados,
+  // abonos, devoluciones, cambios, préstamos, clientes de prueba, comisiones,
+  // liquidaciones, cierres ni los movimientos que esas operaciones generaron; y con
+  // las existencias que movieron de vuelta en su lugar.
+  //
+  // NADA de Configuración se toca: productos, SKU, catálogos y códigos de talla,
+  // precios, vendedores con sus porcentajes y metas, reglas de comisión, DESCUENTOS
+  // configurados, reglas de devolución, usuarios, contraseñas, permisos e impresión
+  // sobreviven idénticos. `configFingerprint()` lo vuelve comprobable: se toma antes
+  // y después y debe coincidir.
+  //
+  // La reversión de existencias se DERIVA de los documentos —nunca de cifras
+  // capturadas— y se identifica por `productId` + identidad interna de talla
+  // (`ADR-011`), no por SKU ni por la etiqueta visible. Un SKU que resuelve a dos
+  // productos detiene la operación ENTERA antes de tocar nada; una línea cuyo
+  // producto ya no existe no tiene existencia que restaurar y se informa aparte.
+  const PURGE_MOVE_TYPES = ['Venta', 'Devolución', 'Cambio (entra)', 'Cambio (sale)'];
+  const isPurgeMove = m => PURGE_MOVE_TYPES.indexOf(m && m.tipo) >= 0;
+  // Una venta con estado Apartado o Cancelado NUNCA descontó existencias (ver
+  // recordSale § 1). Es el mismo criterio que decide la reserva remota, así que
+  // un apartado se elimina sin devolver piezas y un apartado ya liquidado
+  // —estado Pagado— las devuelve exactamente una vez.
+  const saleConsumedStock = s => !!s && s.estado !== 'Apartado' && s.estado !== 'Cancelado';
 
-      // 2) Vaciar lo transaccional. De movimientos SOLO los de venta/devolución: las
-      //    'Entrada'/'Ajuste'/'Transferencia' son historial de inventario y se conservan.
-      sales.length = 0; returns.length = 0; promos.length = 0; liquidations.length = 0; payments.length = 0;
-      // Los préstamos de prueba también son datos transaccionales. No hay stock que
-      // revertir: un préstamo nunca descontó existencias.
-      loans.length = 0;
-      const keepMoves = movements.filter(m => m.tipo !== 'Venta' && m.tipo !== 'Devolución');
+  // Entrada de existencias de una talla POR IDENTIDAD. No pasa por
+  // `resolveProductSizes`: una talla desactivada en el catálogo sigue teniendo
+  // piezas que devolver, y el catálogo vigente no puede decidir eso.
+  function stockEntryByIdentity(p, talla) {
+    const rows = (p.stock || []).filter(v => String(v.talla) === String(talla));
+    if (rows.length === 1) return rows[0];
+    if (!rows.length) return null;
+    // Mismo código en dos escalas: desempata la categoría de talla del producto.
+    const info = resolveProductSizes(p);
+    const scale = info.sizes.length ? info.sizes[0].scale : null;
+    const scoped = scale ? rows.filter(v => v.escala === scale) : [];
+    return scoped.length === 1 ? scoped[0] : null;
+  }
+  function purgeLineIdentity(line, ref, issues) {
+    const talla = String((line && line.talla) || '');
+    const explicit = line && line.productId;
+    if (explicit) {
+      const p = products.find(x => x.id === explicit);
+      if (p) return { product: p, talla };
+      issues.sinProducto.push({ ref, productId: explicit, sku: (line && line.sku) || '', talla });
+      return null;
+    }
+    // Documento histórico sin identidad explícita: se resuelve por SKU SÓLO si es
+    // inequívoco, y lo que se guarda es el producto resuelto, no el SKU.
+    const sku = String((line && line.sku) || '').trim();
+    const matches = sku ? products.filter(x => x.sku === sku) : [];
+    if (matches.length === 1) return { product: matches[0], talla };
+    if (!sku) { issues.ambiguos.push({ ref, motivo: 'sin identidad', talla }); return null; }
+    if (!matches.length) { issues.sinProducto.push({ ref, productId: null, sku, talla }); return null; }
+    issues.ambiguos.push({ ref, motivo: 'SKU duplicado', sku, talla, candidatos: matches.map(m => m.id) });
+    return null;
+  }
+  // Efecto NETO de los documentos sobre cada (producto, talla). Positivo = hay que
+  // devolver piezas al inventario; negativo = hay que quitarlas.
+  function purgeStockDeltas(issues) {
+    const deltas = [];
+    const index = {};
+    const bump = (hit, delta) => {
+      if (!hit || !delta) return;
+      const key = hit.product.id + ' ' + hit.talla;
+      let entry = index[key];
+      if (!entry) {
+        entry = { productId: hit.product.id, product: hit.product, talla: hit.talla, delta: 0 };
+        index[key] = entry; deltas.push(entry);
+      }
+      entry.delta += delta;
+    };
+    sales.forEach(s => {
+      if (!saleConsumedStock(s)) return;
+      (s.lineas || []).forEach(l => bump(purgeLineIdentity(l, 'venta ' + s.folio, issues), Number(l.qty) || 0));
+    });
+    returns.forEach(r => (r.lineas || []).forEach(l =>
+      bump(purgeLineIdentity(l, 'devolución ' + (r.folio || r.id), issues), -(Number(l.qty) || 0))));
+    // Un cambio movió el inventario en los DOS sentidos: entró lo devuelto y salió
+    // lo entregado. Revertirlo es deshacer ambos, no sólo uno.
+    exchanges.forEach(e => (e.lineas || []).forEach(l =>
+      bump(purgeLineIdentity(l, 'cambio ' + (e.folio || e.id), issues),
+        (l.lado === 'devuelto' ? -1 : 1) * (Number(l.qty) || 0))));
+    // Los préstamos no mueven existencias (ver `registrarPrestamo`): nada que revertir.
+    return deltas;
+  }
+
+  // Huella de TODO lo que la limpieza debe dejar idéntico. Excluye a propósito las
+  // existencias (se restauran) y los acumulados del vendedor (se ponen en cero):
+  // esas dos cosas tienen su propia comprobación numérica.
+  function configFingerprint() {
+    const productShape = p => ({
+      id: p.id, sku: p.sku, cat: p.cat, manga: p.manga, tela: p.tela, color: p.color,
+      cuello: p.cuello, modelo: p.modelo, nombre: p.nombre, orn: p.orn,
+      ornColors: p.ornColors || [], precio: p.precio, costo: p.costo, pop: !!p.pop,
+      imagen: p.imagen || null, barcodeUrls: p.barcodeUrls || {}, attrs: p.attrs || {},
+      sizeCategoryId: p.sizeCategoryId || null, preciosTalla: p.preciosTalla || {},
+      tallas: (p.stock || []).map(v => ({ talla: v.talla, escala: v.escala })),
+    });
+    const sellerShape = s => ({
+      id: s.id, nombre: s.nombre, iniciales: s.iniciales, color: s.color,
+      comisionPct: s.comisionPct, commissionOverridePct: s.commissionOverridePct == null ? null : s.commissionOverridePct,
+      sellerLevelCode: s.sellerLevelCode == null ? null : s.sellerLevelCode,
+      commissionPolicyVersion: s.commissionPolicyVersion || 0, metaMes: s.metaMes,
+      bono: s.bono || null, role: s.role, email: s.email || null,
+      passwordHash: s.passwordHash || null, avatar: s.avatar || null, active: s.active !== false,
+    });
+    let config = null;
+    try { config = window.CONFIG && window.CONFIG.snapshot ? window.CONFIG.snapshot() : null; } catch (e) { config = null; }
+    const canonical = JSON.stringify({
+      productos: products.map(productShape).sort((a, b) => String(a.id).localeCompare(String(b.id))),
+      vendedores: sellers.map(sellerShape).sort((a, b) => String(a.id).localeCompare(String(b.id))),
+      descuentos: promos.slice().sort((a, b) => String(a.id).localeCompare(String(b.id))),
+      config,
+    });
+    // FNV-1a de 32 bits en hexadecimal: suficiente para detectar cualquier cambio
+    // accidental y no arrastra dependencias criptográficas al arranque.
+    let h = 0x811c9dc5;
+    for (let i = 0; i < canonical.length; i++) {
+      h ^= canonical.charCodeAt(i);
+      h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+    }
+    return ('0000000' + h.toString(16)).slice(-8) + '-' + canonical.length;
+  }
+  function totalPieces() {
+    return products.reduce((a, p) => a + (p.stock || []).reduce((b, v) => b + (Number(v.stock) || 0), 0), 0);
+  }
+  // Resumen de lo que la limpieza va a borrar. Lo usa el modal ANTES de ejecutar y
+  // el informe DESPUÉS, con la misma cuenta, para que el dueño compare.
+  function testDataFootprint() {
+    const issues = { ambiguos: [], sinProducto: [] };
+    const deltas = purgeStockDeltas(issues);
+    return {
+      ventas: sales.filter(s => s.estado !== 'Apartado').length,
+      apartados: sales.filter(s => s.estado === 'Apartado').length,
+      abonos: payments.length,
+      devoluciones: returns.length,
+      cambios: exchanges.length,
+      prestamos: loans.length,
+      clientes: clients.filter(c => !c.generic).length,
+      movimientos: movements.filter(isPurgeMove).length,
+      comisiones: liquidations.filter(l => l.tipo !== 'corte').length,
+      cierres: liquidations.filter(l => l.tipo === 'corte').length,
+      vendedoresConAcumulado: sellers.filter(s => (Number(s.ventasMes) || 0) || (Number(s.ventasNum) || 0) || (Number(s.comisionAcum) || 0)).length,
+      // Conservado — se informa para que el dueño vea qué NO se toca.
+      productos: products.length,
+      piezas: totalPieces(),
+      descuentos: promos.length,
+      vendedores: sellers.length,
+      movimientosInventario: movements.filter(m => !isPurgeMove(m)).length,
+      configHuella: configFingerprint(),
+      piezasARestaurar: deltas.reduce((a, d) => a + Math.max(0, d.delta), 0),
+      piezasAQuitar: deltas.reduce((a, d) => a + Math.max(0, -d.delta), 0),
+      identidadAmbigua: issues.ambiguos,
+      lineasSinProducto: issues.sinProducto,
+      bloqueado: issues.ambiguos.length > 0 ? 'IDENTITY_AMBIGUOUS'
+        : (readLayawayProductLocks().length ? 'LAYAWAY_LOCK' : null),
+    };
+  }
+
+  function snapshotLocalDomain() {
+    return JSON.stringify({
+      products, sales, returns, exchanges, payments, liquidations, loans,
+      movements, clients, sellers, periodoInicio,
+    });
+  }
+  function restoreLocalDomain(raw) {
+    const snap = JSON.parse(raw);
+    const swap = (arr, next) => { arr.length = 0; (next || []).forEach(x => arr.push(x)); };
+    swap(products, snap.products); swap(sales, snap.sales); swap(returns, snap.returns);
+    swap(exchanges, snap.exchanges); swap(payments, snap.payments);
+    swap(liquidations, snap.liquidations); swap(loans, snap.loans);
+    swap(movements, snap.movements); swap(clients, snap.clients); swap(sellers, snap.sellers);
+    periodoInicio = snap.periodoInicio || '';
+  }
+
+  // Complemento local de la autoridad remota `pos.purge_test_data()`. La app nunca
+  // borra lo local cuando la nube llega vacía (ver store.jsx pullDomain: una caída
+  // de red no debe vaciar una terminal), así que sin esto las pruebas reaparecerían
+  // e incluso se re-subirían — saveClients/savePayments suben el arreglo COMPLETO.
+  //
+  // `opts.authority === 'remote'` significa que el servidor ya restauró existencias
+  // y contadores: entonces NO se re-suben, se pulan después. En modo local (sin
+  // sesión) esta función es la única autoridad y sí sube lo restaurado.
+  //
+  // Devuelve el informe; `false` mantiene el contrato histórico de los llamadores
+  // que sólo miran `=== true` (store.jsx applyResetMark, settings.jsx).
+  function resetTestData(opts) {
+    const options = opts || {};
+    if (readLayawayProductLocks().length) return false;
+    const antes = testDataFootprint();
+    if (antes.identidadAmbigua.length) {
+      return { ok: false, code: 'IDENTITY_AMBIGUOUS', identidadAmbigua: antes.identidadAmbigua };
+    }
+    const rollback = snapshotLocalDomain();
+    const eliminados = {
+      ventas: antes.ventas, apartados: antes.apartados, abonos: antes.abonos,
+      devoluciones: antes.devoluciones, cambios: antes.cambios, prestamos: antes.prestamos,
+      clientes: antes.clientes, movimientos: antes.movimientos,
+      comisiones: antes.comisiones, cierres: antes.cierres,
+    };
+    remoteApplying = true; // vaciado local: que no encole nada a medias
+    let report = null;
+    try {
+      // 1) Revertir existencias ANTES de borrar: los documentos son la única fuente
+      //    del efecto que hay que deshacer.
+      const issues = { ambiguos: [], sinProducto: [] };
+      const deltas = purgeStockDeltas(issues);
+      const ajustes = [];
+      deltas.forEach(d => {
+        if (!d.delta) return;
+        const entry = stockEntryByIdentity(d.product, d.talla);
+        if (!entry) { issues.sinProducto.push({ ref: 'talla', productId: d.productId, talla: d.talla }); return; }
+        const before = Number(entry.stock) || 0;
+        entry.stock = Math.max(0, before + d.delta);
+        ajustes.push({ productId: d.productId, talla: d.talla, delta: d.delta, antes: before, despues: entry.stock });
+      });
+
+      // 2) Vaciar lo operativo. De movimientos SÓLO los que produjeron las
+      //    operaciones borradas: 'Entrada'/'Ajuste'/'Transferencia' son historial de
+      //    inventario y se conservan.
+      sales.length = 0; returns.length = 0; exchanges.length = 0;
+      liquidations.length = 0; payments.length = 0; loans.length = 0;
+      const keepMoves = movements.filter(m => !isPurgeMove(m));
       movements.length = 0; keepMoves.forEach(m => movements.push(m));
 
-      // 3) Clientes: solo el genérico de mostrador (contadores en cero).
+      // 3) Clientes: sólo el genérico de mostrador, con sus contadores en cero.
       clients.length = 0; seedClients.forEach(c => clients.push(JSON.parse(JSON.stringify(c))));
 
-      // 4) Vendedores: se CONSERVAN (usuarios, contraseñas, comisión, meta); solo se ponen
-      //    en cero los acumulados del periodo que generaron las ventas de prueba.
+      // 4) Vendedores: se CONSERVAN enteros (usuario, contraseña, %, meta, nivel,
+      //    política de comisión); sólo se ponen en cero los acumulados del periodo.
       sellers.forEach(s => { s.ventasMes = 0; s.ventasNum = 0; s.comisionAcum = 0; });
 
-      // 5) Folio y periodo de comisiones vuelven a empezar. Se borra también la
-      //    reserva diaria de H-33: el complemento SQL vacía pos.folio_counters.
+      // 5) Los DESCUENTOS configurados NO se borran: son configuración. Lo operativo
+      //    de un descuento —su aplicación— vivía dentro de las ventas, que ya no están.
+
+      // 6) Folio, periodo de comisiones y rastros de commits a medias vuelven a
+      //    empezar: el complemento remoto vacía pos.folio_counters y los diarios.
       try {
         localStorage.removeItem(LS_FOLIO); localStorage.removeItem(LS_FOLIO_V2);
         localStorage.removeItem(LS_PERIODO);
+        localStorage.removeItem(LS_SALE_COMMIT_JOURNAL_LEGACY);
+        for (let i = Number(localStorage.length || 0) - 1; i >= 0; i--) {
+          const key = localStorage.key(i);
+          if (key && key.indexOf(LS_SALE_COMMIT_JOURNAL_PREFIX) === 0) localStorage.removeItem(key);
+        }
       } catch (e) { /* */ }
       periodoInicio = '';
+      pendingSaleCommitJournal = null;
       persistAllLocal();
-      // Descarta lo pendiente de subir: son operaciones de las pruebas.
-      try { window.CORE.invokeSync('clearQueue'); } catch (e) { /* */ }
+      report = {
+        ok: true, eliminados, ajustes,
+        piezasAntes: antes.piezas, piezasDespues: totalPieces(),
+        productos: products.length, descuentos: promos.length, vendedores: sellers.length,
+        movimientosInventario: movements.filter(m => !isPurgeMove(m)).length,
+        lineasSinProducto: issues.sinProducto,
+        configHuellaAntes: antes.configHuella, configHuellaDespues: configFingerprint(),
+      };
+      report.configIntacta = report.configHuellaAntes === report.configHuellaDespues;
+    } catch (e) {
+      // Atomicidad local: o queda todo limpio, o queda todo como estaba.
+      try { restoreLocalDomain(rollback); persistAllLocal(); } catch (e2) { /* */ }
+      remoteApplying = false;
+      return { ok: false, code: 'LOCAL_ROLLBACK', error: String((e && e.message) || e) };
     } finally { remoteApplying = false; }
-    // 6) Subir lo que el SQL NO puede reconstruir: el stock restaurado y los contadores en
-    //    cero. (Las filas borradas —ventas, devoluciones, promos, clientes— las quita el SQL.)
-    syncUp('products', products); syncUp('sellers', sellers); syncUp('clients', clients);
-    return true;
+    if (options.authority !== 'remote') {
+      // Modo local: esta terminal es la única autoridad, así que sube lo restaurado.
+      // Con autoridad remota NO se sube: el servidor ya lo hizo y sus filas traen una
+      // versión más nueva; re-subir las locales chocaría con el control de versión.
+      syncUp('products', products); syncUp('sellers', sellers); syncUp('clients', clients);
+    }
+    return report;
   }
 
   function seedDemo() {
@@ -3332,6 +3547,7 @@
     addUser, updateUser, removeUser, isEligibleSeller, resolveSellerCommission,
     addPromo, updatePromo, removePromo, duplicatePromo,
     seedDemo, resetEmpty, resetTestData, demoActive,
+    testDataFootprint, configFingerprint, totalPieces, stockEntryByIdentity,
   };
   const localWriterMutators = [
     'regenerateSkus', 'saveProducts', 'saveSellers', 'saveClients', 'saveSales',

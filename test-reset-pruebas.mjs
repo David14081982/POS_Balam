@@ -89,7 +89,9 @@ check('INVENTARIO conservado (producto vive)', d.productoVive && d.products >= 1
 check('precio y costo intactos', d.precio === 500 && d.costo === 200);
 check('ventas borradas', d.sales === 0);
 check('devoluciones borradas', d.returns === 0);
-check('descuentos/promos borrados', d.promos === 0);
+// H-68: una regla de descuento es CONFIGURACIÓN, no un dato de prueba. Lo
+// operativo del descuento —su aplicación— vivía dentro de la venta borrada.
+check('descuentos configurados CONSERVADOS', d.promos === 1, String(d.promos));
 check('liquidaciones borradas', d.liq === 0);
 check('clientes: solo el genérico', d.clients === 1 && d.clientesGenerico);
 check('movimientos de venta/devolución borrados', !d.movsTipos.includes('Venta') && !d.movsTipos.includes('Devolución'));
@@ -99,7 +101,7 @@ check('vendedor conserva % comisión y meta', d.sellerPct === 10 && d.sellerMeta
 check('acumulados del vendedor en cero', d.ventasMes === 0 && d.ventasNum === 0 && d.comisionAcum === 0);
 check('sube a la nube products/sellers/clients', ['products', 'sellers', 'clients'].every(k => d.pushed.includes(k)), JSON.stringify(d.pushed));
 check('NO re-sube promociones ni ventas', !d.pushed.includes('promotions'));
-check('persistido: sin ventas/promos, con productos', r.persistido.sales === 0 && r.persistido.promos === 0 && r.persistido.products >= 1);
+check('persistido: sin ventas, con descuentos y productos', r.persistido.sales === 0 && r.persistido.promos === 1 && r.persistido.products >= 1);
 check('sin errores de página', errs.length === 0, errs.join(' | '));
 
 console.log(`\n════════ ${pass} pasaron, ${fail} fallaron ════════`);
