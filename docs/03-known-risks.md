@@ -3216,7 +3216,7 @@ urgencia: cada talla aparece ya una sola vez y con sus prendas.
 
 **Estado:** RESUELTO Y PUBLICADO - FALTA APLICAR 4 MIGRACIONES
 **Fecha de registro:** 01/08/2026
-**Commit:** Pendiente de commit
+**Commit:** `c39b567`
 **Decisión:** **E1 CONFIRMADA. No correspondía ajustar inventario.** La reserva
 de `BG-260728-0004` ya había descontado `imp-1784582003842-2 · B · qty 1` el
 30/07/2026 durante el abono parcial, bajo la operación
@@ -3258,8 +3258,9 @@ restantes fallan idénticas en `HEAD` y no pertenecen a H-65:
 `test-additional-discount`, `test-concurrency` y `test-liquidations`.
 **Despliegue:** paquete publicado en
 `https://david14081982.github.io/POS_Balam/`, 8,788,159 bytes, SHA-256
-`3C8610F9D4B7E02BCE8996E4F3686973F92FE504B318781CFA6119258123E394`. La
-protección entre pestañas no depende de ninguna migración y ya está activa.
+`3C8610F9D4B7E02BCE8996E4F3686973F92FE504B318781CFA6119258123E394`. El artefacto
+servido se descargó y coincide byte por byte con el local. La protección entre
+pestañas no depende de ninguna migración y ya está activa.
 **Pendiente:** aplicar `20260801010150`, `20260801010300`, `20260801010400` y
 `20260801010450` con `supabase db push --linked --include-all`. El comando fue
 rechazado por la política de permisos del entorno de trabajo, no por la base;

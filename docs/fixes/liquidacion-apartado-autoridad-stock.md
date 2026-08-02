@@ -4,7 +4,7 @@
 **Estado:** RESUELTO Y PUBLICADO · migraciones 150/300/400/450 pendientes de
 aplicar en Supabase  
 **Fecha:** 01/08/2026  
-**Commit:** Pendiente de commit
+**Commit:** `c39b567`
 
 ## Problema y reproducción
 
@@ -282,9 +282,15 @@ El artefacto de ese primer despliegue medía 8,781,680 bytes con SHA-256
 
 **El paquete se publicó; las cuatro migraciones restantes NO se aplicaron.**
 
-Artefacto publicado: 8,788,159 bytes, SHA-256
+Artefacto publicado por el hook `post-commit` en
+`https://david14081982.github.io/POS_Balam/` desde el commit `c39b567`:
+8,788,159 bytes, SHA-256
 `3C8610F9D4B7E02BCE8996E4F3686973F92FE504B318781CFA6119258123E394`.
 `index.html` y `POS Balam (offline).html` son copias exactas.
+
+El archivo servido se descargó y se comparó: antes del despliegue tenía SHA-256
+`2C1153AA91D049A35A30BEEB85EB5FE1B24F2DD18A74C7A989691C7E69C319E5` con 8,769,520
+bytes; después coincide **byte por byte** con el local.
 
 | Migración | Estado remoto |
 |---|---|
