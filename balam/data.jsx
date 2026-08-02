@@ -381,6 +381,8 @@
   function applyOrphanFix(id, campo, from, to) {
     const p = products.find(x => x.id === id);
     if (!p) return { ok: false, error: 'Producto no encontrado' };
+    try { assertLayawayProductsUnlocked([id]); }
+    catch (e) { return { ok: false, error: e.message, code: e.code }; }
     const sys = REMAP_FIELDS.find(x => x[1] === campo);
     const kind = campo === 'ornColors' ? 'color' : (sys ? sys[0] : campo);
     if (!C.list(kind).some(x => x.code === String(to))) return { ok: false, error: 'Elige un valor del catálogo' };
@@ -434,6 +436,79 @@
 
   // ---- Persistencia ----
   const LS_KEY = 'balam_pos_products_v2';
+  const LS_SALE_COMMIT_JOURNAL_LEGACY = 'balam_pos_sale_commit_journal_v1';
+  const LS_SALE_COMMIT_JOURNAL_PREFIX = 'balam_pos_sale_commit_journal_v2:';
+  const LS_LAYAWAY_PRODUCT_LOCKS = 'balam_pos_layaway_product_locks_v1';
+  const LOCAL_WRITER_LOCK = 'balam-pos-local-writer-v1';
+  const localWriterLeaseSupported = !!(window.navigator && window.navigator.locks
+    && typeof window.navigator.locks.request === 'function');
+  let localWriterState = localWriterLeaseSupported ? 'waiting' : 'unsupported';
+  let localWriterRelease = null;
+  let localWriterWarningShown = false;
+  const localWriterWaiters = [];
+  function setLocalWriterState(state) {
+    localWriterState = state;
+    if (state === 'writer' || state === 'unsupported' || state === 'blocked') {
+      const waiters = localWriterWaiters.splice(0);
+      waiters.forEach(resolve => resolve(state === 'writer' || state === 'unsupported'));
+    }
+    try { window.dispatchEvent(new CustomEvent('localwriterchange', { detail: { state } })); }
+    catch (e) { /* navegador/arnés sin CustomEvent */ }
+  }
+  function localWriterAllowed(requireLease) {
+    return localWriterState === 'writer'
+      || (!requireLease && localWriterState === 'unsupported');
+  }
+  function assertLocalWriter(requireLease = false) {
+    if (localWriterAllowed(requireLease)) return true;
+    const error = new Error(requireLease && !localWriterLeaseSupported
+      ? 'Este navegador no puede garantizar una liquidación segura entre pestañas'
+      : 'Otra pestaña tiene el control de escritura; ciérrala o espera el relevo automático');
+    error.code = requireLease && !localWriterLeaseSupported
+      ? 'LOCAL_WRITER_UNSUPPORTED' : 'LOCAL_WRITER_REQUIRED';
+    if (!localWriterWarningShown && window.UI && window.UI.toast) {
+      localWriterWarningShown = true;
+      window.UI.toast(error.message, 'var(--danger)');
+    }
+    throw error;
+  }
+  function awaitLocalWriter(timeout = 250) {
+    if (localWriterAllowed(false)) return Promise.resolve(true);
+    if (localWriterState === 'blocked') return Promise.resolve(false);
+    return new Promise(resolve => {
+      let settled = false;
+      const finish = value => { if (!settled) { settled = true; resolve(value); } };
+      localWriterWaiters.push(finish);
+      setTimeout(() => finish(localWriterAllowed(false)), Math.max(0, Number(timeout) || 0));
+    });
+  }
+  function saleCommitJournalKey(commitId) {
+    return LS_SALE_COMMIT_JOURNAL_PREFIX + String(commitId || '').trim();
+  }
+  function readPendingSaleCommitJournal() {
+    const found = [];
+    try {
+      const legacy = localStorage.getItem(LS_SALE_COMMIT_JOURNAL_LEGACY);
+      if (legacy) found.push({ key: LS_SALE_COMMIT_JOURNAL_LEGACY, raw: legacy });
+      for (let i = 0; i < Number(localStorage.length || 0); i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(LS_SALE_COMMIT_JOURNAL_PREFIX)) {
+          found.push({ key, raw: localStorage.getItem(key) });
+        }
+      }
+      if (!found.length) return null;
+      if (found.length !== 1) return { version: 0, invalid: true, multiple: true };
+      const parsed = JSON.parse(found[0].raw);
+      if (!parsed || parsed.version !== 1) return { version: 0, invalid: true, key: found[0].key };
+      parsed.key = found[0].key;
+      return parsed;
+    } catch (e) {
+      // Un journal ilegible significa que una confirmación pudo quedar a medias.
+      // No se adivina el estado: la cola remota debe reconciliarlo.
+      return { version: 0, invalid: true };
+    }
+  }
+  let pendingSaleCommitJournal = readPendingSaleCommitJournal();
   let products;
   try {
     const raw = localStorage.getItem(LS_KEY);
@@ -455,9 +530,34 @@
     if (!remoteApplying) { try { remapOrphanCodes(); } catch (e) { /* catálogo a medio cargar */ } }
   });
 
+  const catalogResyncReasons = new Map();
+  if (pendingSaleCommitJournal) {
+    catalogResyncReasons.set('h65-cache', 'Una liquidación confirmada requiere reconciliar su caché local');
+  }
+  let catalogResyncRequired = catalogResyncReasons.size > 0;
+  let catalogResyncReason = [...catalogResyncReasons.values()].join(' ');
+  function refreshCatalogResync() {
+    catalogResyncRequired = catalogResyncReasons.size > 0;
+    catalogResyncReason = [...catalogResyncReasons.values()].join(' ');
+  }
+  function requireCatalogResync(reason, token = 'general') {
+    catalogResyncReasons.set(token,
+      reason || 'No se pudo conservar la respuesta autoritativa del inventario');
+    refreshCatalogResync();
+  }
+  function clearCatalogResync(token = 'general') {
+    if (token === 'h65-cache' && pendingSaleCommitJournal) return false;
+    catalogResyncReasons.delete(token);
+    refreshCatalogResync();
+    return !catalogResyncReasons.has(token);
+  }
   function saveProducts(sync = true) {
-    try { localStorage.setItem(LS_KEY, JSON.stringify(products)); } catch (e) { /* cuota llena */ }
+    if (!remoteApplying && !protectLayawayLockedProducts()) return false;
+    let persisted = true;
+    try { localStorage.setItem(LS_KEY, JSON.stringify(products)); }
+    catch (e) { persisted = false; requireCatalogResync('La caché local del inventario no se pudo actualizar', 'products-cache'); }
     if (sync && typeof syncUp === 'function') syncUp('products', products);
+    return persisted;
   }
 
   // Recalcula el SKU de TODOS los productos con la receta vigente (acción explícita del admin).
@@ -543,12 +643,258 @@
   // H-46: préstamos de mercancía. Colección local sin contrato remoto todavía; su
   // modelo y sus autoridades viven más abajo, en la sección «préstamos».
   const loans = loadArr(LS_LOANS, []);
+
+  function indexedSnapshots(arr, predicate) {
+    const snapshots = [];
+    arr.forEach((value, index) => {
+      if (predicate(value)) snapshots.push({ index, value: JSON.parse(JSON.stringify(value)) });
+    });
+    return snapshots;
+  }
+  function restoreIndexedSnapshots(arr, predicate, snapshots) {
+    for (let i = arr.length - 1; i >= 0; i--) if (predicate(arr[i])) arr.splice(i, 1);
+    (snapshots || []).slice().sort((a, b) => a.index - b.index).forEach(entry => {
+      const value = JSON.parse(JSON.stringify(entry.value));
+      arr.splice(Math.max(0, Math.min(Number(entry.index) || 0, arr.length)), 0, value);
+    });
+  }
+  function restoreSaleCommitJournal(journal) {
+    if (!journal || journal.version !== 1 || !journal.folio) return false;
+    const productIds = new Set(journal.productIds || []);
+    const sellerIds = new Set(journal.sellerIds || []);
+    restoreIndexedSnapshots(products, p => productIds.has(p.id), journal.products);
+    restoreIndexedSnapshots(sales, s => s.folio === journal.folio, journal.sales);
+    restoreIndexedSnapshots(payments, p => p.folio === journal.folio, journal.payments);
+    restoreIndexedSnapshots(movements,
+      m => m.ref === journal.folio && m.tipo === 'Venta', journal.movements);
+    restoreIndexedSnapshots(sellers, s => sellerIds.has(s.id), journal.sellers);
+    return true;
+  }
+  function makeSaleCommitJournal(commitId, folio, reservationOperationId, remoteProducts, remoteSellers) {
+    const productIds = [...new Set((remoteProducts || []).map(p => p.id).filter(Boolean))];
+    const sellerIds = [...new Set((remoteSellers || []).map(s => s.id).filter(Boolean))];
+    const productSet = new Set(productIds), sellerSet = new Set(sellerIds);
+    return {
+      version: 1,
+      commitId,
+      folio,
+      reservationOperationId,
+      productIds,
+      sellerIds,
+      products: indexedSnapshots(products, p => productSet.has(p.id)),
+      sales: indexedSnapshots(sales, s => s.folio === folio),
+      payments: indexedSnapshots(payments, p => p.folio === folio),
+      movements: indexedSnapshots(movements, m => m.ref === folio && m.tipo === 'Venta'),
+      sellers: indexedSnapshots(sellers, s => sellerSet.has(s.id)),
+    };
+  }
+
+  function readLayawayProductLocks() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(LS_LAYAWAY_PRODUCT_LOCKS) || '[]');
+      return Array.isArray(parsed) ? parsed.filter(lock => lock && lock.operationId) : [];
+    } catch (e) { return []; }
+  }
+  function writeLayawayProductLocks(locks) {
+    try {
+      if (locks.length) localStorage.setItem(LS_LAYAWAY_PRODUCT_LOCKS, JSON.stringify(locks));
+      else localStorage.removeItem(LS_LAYAWAY_PRODUCT_LOCKS);
+      return true;
+    } catch (e) { return false; }
+  }
+  function layawayProductIds(sale) {
+    return [...new Set(((sale && sale.lineas) || []).map(line => line.productId).filter(Boolean))];
+  }
+  function cachedLayawayProducts(productIds) {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
+      if (!Array.isArray(parsed) || !parsed.length) return null;
+      const snapshots = productIds.map(id => parsed.find(product => product.id === id));
+      return snapshots.every(Boolean)
+        ? snapshots.map(product => JSON.parse(JSON.stringify(product))) : null;
+    } catch (e) { return null; }
+  }
+  function acquireLayawayProductLock(sale) {
+    try { assertLocalWriter(true); } catch (e) { return false; }
+    const operationId = sale && sale._operationId;
+    const productIds = layawayProductIds(sale);
+    if (!operationId || !productIds.length) return false;
+    const locks = readLayawayProductLocks();
+    const own = locks.find(lock => lock.operationId === operationId);
+    if (own) {
+      if ((own.productIds || []).length !== productIds.length
+          || !own.productIds.every(id => productIds.includes(id))) return false;
+      const cached = cachedLayawayProducts(productIds);
+      if (!cached || productIds.some(id => {
+        const memory = products.find(product => product.id === id);
+        const stored = cached.find(product => product.id === id);
+        return !memory || !stored || JSON.stringify(memory) !== JSON.stringify(stored);
+      })) return false;
+      // Un pull remoto puede avanzar el producto mientras la RPC se reintenta.
+      // El lock sigue protegiendo la identidad, pero su snapshot debe rebajarse
+      // al cache durable para no restaurar una versión anterior en saveProducts().
+      own.productSnapshots = cached;
+      own.refreshedAt = new Date().toISOString();
+      return writeLayawayProductLocks([own]);
+    }
+    // H-65 serializa todas las liquidaciones locales. Aunque usen productos
+    // distintos, las cinco colecciones se persisten como una sola unidad.
+    if (locks.length) return false;
+
+    // Otra pestaña pudo persistir una edición justo antes de esta acción.
+    // No se inicia la RPC sobre una copia que ya difiere del cache compartido.
+    const productSnapshots = cachedLayawayProducts(productIds);
+    if (!productSnapshots || productIds.some(id => {
+      const memory = products.find(product => product.id === id);
+      const cached = productSnapshots.find(product => product.id === id);
+      return !memory || !cached || JSON.stringify(memory) !== JSON.stringify(cached);
+    })) return false;
+    if (productSnapshots.length !== productIds.length) return false;
+    const next = [{
+      operationId, folio: sale.folio, productIds, productSnapshots,
+      createdAt: new Date().toISOString(),
+    }];
+    if (!writeLayawayProductLocks(next)) return false;
+    const verified = readLayawayProductLocks().find(lock => lock.operationId === operationId);
+    return !!verified && verified.productIds.length === productIds.length;
+  }
+  function releaseLayawayProductLock(operationId) {
+    const locks = readLayawayProductLocks();
+    const next = locks.filter(lock => lock.operationId !== operationId);
+    return next.length === locks.length || writeLayawayProductLocks(next);
+  }
+  function reconcileLayawayProductLocks(operations) {
+    try { assertLocalWriter(true); } catch (e) { return false; }
+    const active = (operations || []).filter(op => op && op.operationId);
+    const current = readLayawayProductLocks();
+    const chosen = active.find(op => current.some(lock => lock.operationId === op.operationId))
+      || active[0];
+    if (!chosen) return writeLayawayProductLocks([]);
+    const retained = current.find(lock => lock.operationId === chosen.operationId);
+    if (retained && !writeLayawayProductLocks([retained])) return false;
+    if (!retained && !writeLayawayProductLocks([])) return false;
+    return ensureLayawayProductLockFromOperation(chosen);
+  }
+  function ensureLayawayProductLockFromOperation(op) {
+    try { assertLocalWriter(true); } catch (e) { return false; }
+    if (!op || !op.operationId) return false;
+    const productIds = [...new Set((op.productIds || (op.itemIdentities || [])
+      .map(item => item.product_id)).filter(Boolean))];
+    if (!productIds.length) return false;
+    const own = readLayawayProductLocks().find(lock => lock.operationId === op.operationId);
+    if (!own) {
+      const expected = Array.isArray(op.productSnapshots) ? op.productSnapshots : [];
+      const cached = cachedLayawayProducts(productIds);
+      if (expected.length !== productIds.length || !cached
+          || productIds.some(id => JSON.stringify(expected.find(p => p.id === id))
+            !== JSON.stringify(cached.find(p => p.id === id)))) return false;
+    }
+    return acquireLayawayProductLock({
+      _operationId: op.operationId, folio: op.folio,
+      lineas: productIds.map(productId => ({ productId })),
+    });
+  }
+  function layawayProductLockSnapshot(operationId) {
+    const lock = readLayawayProductLocks().find(entry => entry.operationId === operationId);
+    return lock ? JSON.parse(JSON.stringify(lock)) : null;
+  }
+  function hasLayawayLiquidationLock(folio, operationId) {
+    return readLayawayProductLocks().some(lock =>
+      (folio && lock.folio === folio) || (operationId && lock.operationId === operationId));
+  }
+  function refreshLayawayProductLockSnapshots() {
+    const locks = readLayawayProductLocks();
+    if (!locks.length) return true;
+    const refreshed = locks.map(lock => Object.assign({}, lock, {
+      productSnapshots: (lock.productIds || []).map(id => products.find(p => p.id === id))
+        .filter(Boolean).map(product => JSON.parse(JSON.stringify(product))),
+      refreshedAt: new Date().toISOString(),
+    }));
+    if (refreshed.some(lock => lock.productSnapshots.length !== (lock.productIds || []).length)) return false;
+    return writeLayawayProductLocks(refreshed);
+  }
+  function assertLayawayProductsUnlocked(productIds) {
+    const wanted = new Set((productIds || []).filter(Boolean));
+    const conflict = readLayawayProductLocks().find(lock =>
+      (lock.productIds || []).some(id => wanted.has(id)));
+    if (!conflict) return true;
+    const error = new Error(`El producto está en una liquidación pendiente (${conflict.folio}); espera su confirmación`);
+    error.code = 'LAYAWAY_PRODUCT_LOCKED';
+    throw error;
+  }
+  let layawayLockWarned = false;
+  function protectLayawayLockedProducts() {
+    const locks = readLayawayProductLocks();
+    let restored = false;
+    locks.forEach(lock => (lock.productSnapshots || []).forEach(snapshot => {
+      const index = products.findIndex(p => p.id === snapshot.id);
+      if (index >= 0 && JSON.stringify(products[index]) !== JSON.stringify(snapshot)) {
+        products[index] = hydrate(JSON.parse(JSON.stringify(snapshot)));
+        restored = true;
+      }
+    }));
+    if (restored && !layawayLockWarned) {
+      layawayLockWarned = true;
+      if (window.UI && window.UI.toast) {
+        window.UI.toast('Ese producto tiene una liquidación pendiente; no se modificó hasta reconciliarla', 'var(--danger)');
+      }
+    }
+    return !restored;
+  }
+  if (pendingSaleCommitJournal) {
+    restoreSaleCommitJournal(pendingSaleCommitJournal);
+    requireCatalogResync('Una liquidación confirmada requiere reconciliar su caché local', 'h65-cache');
+  }
   let periodoInicio = '';
   try { periodoInicio = localStorage.getItem(LS_PERIODO) || ''; } catch (e) { /* sin storage */ }
 
   // Normaliza personas guardadas antes de unificar usuarios/vendedores.
   sellers.forEach(s => { if (!s.role) s.role = 'vendedor'; if (s.active === undefined) s.active = true; });
   if (!sellers.some(s => s.role === 'admin')) sellers.unshift(seedSellers[0]);
+
+  // Un solo dueño de escritura evita que dos pestañas persistan arreglos
+  // completos a partir de memorias distintas. Al recibir el relevo se descarta
+  // toda copia en memoria y se reconstruye desde el cache durable antes de
+  // habilitar mutadores o drenar la cola.
+  const localWriterCollections = [
+    [LS_KEY, products, seed, hydrate], [LS_SELLERS, sellers, seedSellers],
+    [LS_CLIENTS, clients, seedClients], [LS_SALES, sales, seedSales],
+    [LS_MOVES, movements, seedMovements], [LS_PROMOS, promos, seedPromos],
+    [LS_LIQ, liquidations, []], [LS_RETURNS, returns, seedReturns],
+    [LS_PAYMENTS, payments, []], [LS_EXCHANGES, exchanges, []], [LS_LOANS, loans, []],
+  ];
+  const localWriterFallbacks = new Map(localWriterCollections.map(([key, , fallback]) =>
+    [key, JSON.parse(JSON.stringify(fallback || []))]));
+  function rebaseLocalWriterCollections() {
+    try {
+      localWriterCollections.forEach(([key, target, , mapper]) => {
+        const raw = localStorage.getItem(key);
+        const parsed = raw == null
+          ? JSON.parse(JSON.stringify(localWriterFallbacks.get(key) || []))
+          : JSON.parse(raw);
+        if (!Array.isArray(parsed)) throw new Error(`invalid_local_cache:${key}`);
+        target.splice(0, target.length,
+          ...parsed.map(row => mapper ? mapper(row) : row));
+      });
+      sellers.forEach(s => {
+        if (!s.role) s.role = 'vendedor';
+        if (s.active === undefined) s.active = true;
+      });
+      if (!sellers.some(s => s.role === 'admin')) sellers.unshift(JSON.parse(JSON.stringify(seedSellers[0])));
+      pendingSaleCommitJournal = readPendingSaleCommitJournal();
+      if (pendingSaleCommitJournal) {
+        if (pendingSaleCommitJournal.invalid
+            || !restoreSaleCommitJournal(pendingSaleCommitJournal)) {
+          throw new Error('invalid_sale_commit_journal');
+        }
+        requireCatalogResync('Una liquidación confirmada requiere reconciliar su caché local', 'h65-cache');
+      } else clearCatalogResync('h65-cache');
+      return true;
+    } catch (e) {
+      requireCatalogResync('La caché local no pudo reconstruirse para tomar el control de escritura', 'h65-cache');
+      return false;
+    }
+  }
 
   // Una persona pertenece al catálogo comercial sólo si conserva el contrato
   // activo de vendedor. Acepta ambos nombres del tombstone para cubrir filas
@@ -612,14 +958,15 @@
 
   let quotaWarned = false, bulkMode = false; // bulkMode: omite escrituras por-llamada durante una generación masiva
   const save = (key, arr) => {
-    if (bulkMode) return; // se persiste todo de una vez al final (ver seedDemo)
-    try { localStorage.setItem(key, JSON.stringify(arr)); }
+    if (bulkMode) return true; // se persiste todo de una vez al final (ver seedDemo)
+    try { localStorage.setItem(key, JSON.stringify(arr)); return true; }
     catch (e) {
       // Cuota de localStorage excedida (típico con muchas imágenes en base64): avisar una vez.
       if (!quotaWarned) {
         quotaWarned = true;
         if (window.UI && window.UI.toast) window.UI.toast('Almacenamiento local lleno. Reduce el peso de las imágenes de productos o inicia sesión para respaldar en la nube; algunos cambios podrían no guardarse en este dispositivo.', 'var(--danger)');
       }
+      return false;
     }
   };
   // Sube cambios a la nube si el seam está activo (no durante aplicación de datos remotos).
@@ -628,8 +975,8 @@
     if (remoteApplying) return;
     try { window.CORE.invokeSync('pushRows', kind, arr); } catch (e) { /* offline */ }
   }
-  function saveSellers(sync = true) { save(LS_SELLERS, sellers); if (sync) syncUp('sellers', sellers); }
-  function saveClients(sync = true) { save(LS_CLIENTS, clients); if (sync) syncUp('clients', clients); }
+  function saveSellers(sync = true) { const ok = save(LS_SELLERS, sellers); if (sync) syncUp('sellers', sellers); return ok; }
+  function saveClients(sync = true) { const ok = save(LS_CLIENTS, clients); if (sync) syncUp('clients', clients); return ok; }
   // Alta rápida de cliente (desde el POS): nombre obligatorio, teléfono opcional. Si el teléfono ya
   // existe en otro cliente, REUSA ese (evita duplicados). Devuelve el cliente (nuevo o existente) o null.
   function addClient({ nombre, tel }) {
@@ -641,7 +988,7 @@
     clients.unshift(c); saveClients();
     return c;
   }
-  function saveSales() { save(LS_SALES, sales); }       // ventas suben vía recordSale → STORE.pushSale
+  function saveSales() { return save(LS_SALES, sales); }       // ventas suben vía recordSale → STORE.pushSale
   function markSaleSync(folio, status, detail) {
     const sale = sales.find(s => s.folio === folio);
     if (!sale) return false;
@@ -650,15 +997,18 @@
     sale._syncStatus = status;
     if (detail) sale._syncDetail = detail;
     else delete sale._syncDetail;
-    if (status === 'synced' && detail && detail.stockReserved) sale._stockReserved = true;
+    if (status === 'synced' && detail
+        && (detail.stockReserved === true || detail.stock_reserved === true)) {
+      sale._stockReserved = true;
+    }
     saveSales();
     return changed;
   }
-  function saveMovements() { save(LS_MOVES, movements); }
+  function saveMovements() { return save(LS_MOVES, movements); }
   function savePromos() { save(LS_PROMOS, promos); syncUp('promotions', promos); }
   function saveLiquidations() { save(LS_LIQ, liquidations); syncUp('liquidations', liquidations); } // historial — sincroniza a pos.liquidations
   function saveReturns() { save(LS_RETURNS, returns); }  // devoluciones suben vía recordReturn → STORE.pushReturn
-  function savePayments(sync = true) { save(LS_PAYMENTS, payments); if (sync) syncUp('payments', payments); }
+  function savePayments(sync = true) { const ok = save(LS_PAYMENTS, payments); if (sync) syncUp('payments', payments); return ok; }
   function saveExchanges(sync = true) { save(LS_EXCHANGES, exchanges); if (sync) syncUp('exchanges', exchanges); }
   // Sin `syncUp`: un préstamo NO viaja como upsert de tabla. Cada operación
   // —entrega, devolución, faltante, edición, baja, reapertura— viaja por su
@@ -693,19 +1043,30 @@
     // Una respuesta vacía también puede ser una lectura parcial/fallida. Nunca
     // sacrifica un catálogo local existente; los borrados reales usan tombstones.
     if (kind === 'products' && products.length && (!Array.isArray(rows) || !rows.length)) return false;
+    let persisted = true;
     remoteApplying = true;
     try {
       m[0].length = 0;
       rows.filter(r => !r._deletedAt).forEach(r => m[0].push(m[2] ? m[2](r) : r));
-      m[1]();
+      persisted = m[1]() !== false;
     }
     finally { remoteApplying = false; }
+    if (kind === 'products') {
+      if (persisted) {
+        if (!refreshLayawayProductLockSnapshots()) {
+          requireCatalogResync('El lock de una liquidación pendiente no pudo rebajarse al catálogo remoto', 'h65-cache');
+          return false;
+        }
+        clearCatalogResync('products-cache');
+        clearCatalogResync('product-conflict');
+      } else requireCatalogResync('El catálogo remoto no pudo persistirse en la caché local', 'products-cache');
+    }
     // La nube puede no tener admin aún (antes de pos_003). Garantiza uno local y súbelo.
     if (kind === 'sellers' && !sellers.some(s => s.role === 'admin')) {
       sellers.unshift(JSON.parse(JSON.stringify(seedSellers[0])));
       saveSellers();
     }
-    return true;
+    return persisted;
   }
 
   // ---- Motor de venta ----
@@ -985,17 +1346,181 @@
       });
       m[1]();
     } finally { remoteApplying = false; }
-    return { conflicts, operation };
+    if (kind === 'products' && conflicts) {
+      requireCatalogResync('Otra terminal confirmó una versión distinta del inventario; se requiere resincronización', 'product-conflict');
+    }
+    return { conflicts, operation, requiresResync: kind === 'products' && conflicts > 0 };
   }
-  function addSalePayment(sale, { monto, metodo, tipo, detalle, fecha }, sync = true) {
+
+  // H-65: aplica como una sola unidad el snapshot que devolvió la liquidación
+  // transaccional. No usa la heurística expected+1: para venta, productos,
+  // pagos y movimiento de este folio la respuesta del servidor es la autoridad.
+  // Si alguna escritura de caché falla, la operación permanece en cola y nuevas
+  // ventas se bloquean hasta que un pull completo pueda persistir el catálogo.
+  function applySaleCommitResult(commitId, folio, result) {
+    try { assertLocalWriter(true); }
+    catch (e) { return { ok: false, error: e.code || 'LOCAL_WRITER_REQUIRED' }; }
+    commitId = String(commitId || '').trim();
+    result = result || {};
+    const authoritativeSale = result.sale;
+    const stockReserved = result.stockReserved === true || result.stock_reserved === true;
+    const reservationOperationId = result.reservationOperationId || result.reservation_operation_id || null;
+    if (!commitId || !authoritativeSale || authoritativeSale.folio !== folio
+        || authoritativeSale.estado !== 'Pagado') {
+      return { ok: false, error: 'AUTHORITATIVE_SALE_MISSING' };
+    }
+    if (!stockReserved || !reservationOperationId) {
+      return { ok: false, error: 'STOCK_RESERVATION_NOT_CONFIRMED' };
+    }
+
+    const remoteProducts = Array.isArray(result.products) ? result.products : [];
+    const remoteSellers = Array.isArray(result.sellers) ? result.sellers : [];
+    const requiredIds = new Set((authoritativeSale.lineas || [])
+      .map(line => line.productId).filter(Boolean));
+    if (!requiredIds.size
+        || [...requiredIds].some(id => !remoteProducts.some(p => p.id === id))) {
+      return { ok: false, error: 'AUTHORITATIVE_PRODUCTS_INCOMPLETE' };
+    }
+
+    // Bajo el lease cross-tab, toda colección se relee antes del journal. Así
+    // los cambios no relacionados que otra pestaña confirmó antes del relevo no
+    // se pierden al persistir la respuesta H-65.
+    if (!rebaseLocalWriterCollections()) {
+      return { ok: false, error: 'CACHE_REBASE_REQUIRED' };
+    }
+    const current = sales.find(s => s.folio === folio);
+    const expectedOperationId = current && current._operationId;
+    if (expectedOperationId && reservationOperationId !== expectedOperationId) {
+      return { ok: false, error: 'STOCK_RESERVATION_NOT_CONFIRMED' };
+    }
+
+    const durableJournal = pendingSaleCommitJournal;
+    const legacyReplay = durableJournal
+      && durableJournal.key === LS_SALE_COMMIT_JOURNAL_LEGACY
+      && !durableJournal.commitId
+      && durableJournal.folio === folio
+      && durableJournal.reservationOperationId === reservationOperationId;
+    if (durableJournal && (durableJournal.invalid
+        || (!legacyReplay && durableJournal.commitId !== commitId))) {
+      requireCatalogResync('Otra liquidación espera reconciliar su caché local', 'h65-cache');
+      return { ok: false, error: 'CACHE_JOURNAL_CONFLICT' };
+    }
+    const journalKey = durableJournal ? durableJournal.key : saleCommitJournalKey(commitId);
+    const journal = durableJournal || makeSaleCommitJournal(
+      commitId, folio, reservationOperationId, remoteProducts, remoteSellers
+    );
+    journal.key = journalKey;
+    journal.commitId = journal.commitId || commitId;
+    try {
+      if (!durableJournal || legacyReplay) localStorage.setItem(journalKey, JSON.stringify(journal));
+      const storedJournal = JSON.parse(localStorage.getItem(journalKey) || 'null');
+      if (!storedJournal || storedJournal.commitId !== commitId
+          || storedJournal.reservationOperationId !== reservationOperationId) {
+        throw new Error('journal_not_verified');
+      }
+      pendingSaleCommitJournal = Object.assign(storedJournal, { key: journalKey });
+    } catch (e) {
+      requireCatalogResync('No se pudo preparar la confirmación local de la liquidación', 'h65-cache');
+      return { ok: false, error: 'CACHE_JOURNAL_UNAVAILABLE' };
+    }
+
+    const restoreAfterCacheFailure = error => {
+      restoreSaleCommitJournal(journal);
+      try {
+        if (!localStorage.getItem(journalKey)) {
+          localStorage.setItem(journalKey, JSON.stringify(journal));
+        }
+        pendingSaleCommitJournal = Object.assign({}, journal, { key: journalKey });
+      } catch (e) { /* el gate h65 conserva el bloqueo aunque storage esté lleno */ }
+      // Restauración best-effort: el journal permanece como autoridad de
+      // recuperación si una de estas claves sigue sin poder escribirse.
+      saveProducts(false); saveSales(); savePayments(false); saveMovements(); saveSellers(false);
+      requireCatalogResync('La confirmación remota de la liquidación no pudo persistirse completa', 'h65-cache');
+      return { ok: false, error };
+    };
+
+    remoteApplying = true;
+    try {
+      remoteProducts.forEach(remote => {
+        const i = products.findIndex(p => p.id === remote.id);
+        const row = hydrate(remote);
+        if (i >= 0) products[i] = row; else products.push(row);
+      });
+
+      const confirmedSale = Object.assign({}, authoritativeSale, {
+        _stockRequired: true,
+        _stockReserved: true,
+        _syncStatus: 'synced',
+        _syncDetail: {
+          stockReserved: true,
+          stockIdempotent: result.stockIdempotent === true || result.stock_idempotent === true,
+          reservationOperationId,
+        },
+      });
+      const saleIndex = sales.findIndex(s => s.folio === folio);
+      if (saleIndex >= 0) sales[saleIndex] = confirmedSale;
+      else sales.unshift(confirmedSale);
+
+      payments.splice(0, payments.length,
+        ...payments.filter(p => p.folio !== folio),
+        ...(Array.isArray(result.payments) ? result.payments.slice().reverse() : []));
+      payments.sort((a, b) => String(b.fecha || '').localeCompare(String(a.fecha || '')));
+
+      movements.splice(0, movements.length,
+        ...movements.filter(m => !(m.ref === folio && m.tipo === 'Venta')),
+        ...(Array.isArray(result.movements) ? result.movements.slice().reverse() : []));
+      movements.sort((a, b) => String(b.fecha || '').localeCompare(String(a.fecha || '')));
+
+      remoteSellers.forEach(remote => {
+        const i = sellers.findIndex(s => s.id === remote.id);
+        if (i >= 0) sellers[i] = remote; else sellers.push(remote);
+      });
+
+      const persisted = [
+        saveProducts(false), saveSales(), savePayments(false), saveMovements(), saveSellers(false),
+      ].every(Boolean);
+      let verified = false;
+      if (persisted) {
+        try {
+          verified = localStorage.getItem(LS_KEY) === JSON.stringify(products)
+            && localStorage.getItem(LS_SALES) === JSON.stringify(sales)
+            && localStorage.getItem(LS_PAYMENTS) === JSON.stringify(payments)
+            && localStorage.getItem(LS_MOVES) === JSON.stringify(movements)
+            && localStorage.getItem(LS_SELLERS) === JSON.stringify(sellers);
+        } catch (e) { verified = false; }
+      }
+      if (!verified) return restoreAfterCacheFailure('CACHE_RESYNC_REQUIRED');
+      try {
+        localStorage.removeItem(journalKey);
+        if (localStorage.getItem(journalKey) !== null) {
+          throw new Error('journal_not_cleared');
+        }
+      } catch (e) { return restoreAfterCacheFailure('CACHE_JOURNAL_NOT_CLEARED'); }
+      pendingSaleCommitJournal = null;
+      releaseLayawayProductLock(reservationOperationId);
+      clearCatalogResync('h65-cache');
+      clearCatalogResync('products-cache');
+      const confirmedPayment = (Array.isArray(result.payments) ? result.payments : [])
+        .find(p => p.tipo === 'liquidacion') || null;
+      return {
+        ok: true, sale: confirmedSale,
+        paymentId: confirmedPayment && confirmedPayment.id,
+      };
+    } finally { remoteApplying = false; }
+  }
+  function salePaymentDraft(sale, { monto, metodo, tipo, detalle, fecha }) {
     const amount = money(monto);
     if (!(amount > 0)) return null;
     const parts = paymentParts(metodo, amount, detalle);
-    const p = {
+    return {
       id: 'pay-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
       folio: sale.folio, fecha: fecha || now(), tipo: tipo || 'pago',
       metodo, monto: amount, ...parts,
     };
+  }
+  function addSalePayment(sale, spec, sync = true) {
+    const p = salePaymentDraft(sale, spec);
+    if (!p) return null;
     payments.unshift(p);
     savePayments(sync);
     return p;
@@ -1177,6 +1702,9 @@
     if (pagoEfectivo < 0 || pagoEfectivo > total || pagoOtro < 0 || pagoOtro > total) throw new Error('El desglose de pago es inválido');
   }
   function recordSale({ ticket, additionalDiscounts, quote: quoteIn, sellerIds, client, metodo, estado, subtotal: subtotalIn, iva: ivaIn, total: totalIn, anticipo: anticipoIn, pagoEfectivo: pagoEfectivoIn, pagoOtro: pagoOtroIn, pagoDetalle, metodoPago, ivaPct: ivaPctIn, ivaIncluded: ivaIncludedIn, itemCount, fecha: fechaIn }) {
+    if (catalogResyncRequired) {
+      throw new Error(`El inventario requiere resincronización antes de continuar vendiendo. ${catalogResyncReason}`);
+    }
     const quoteTicket = (ticket || []).map(l => l.res ? l : Object.assign({}, l, { res: resolveLineDiscount(l.p, l.talla) }));
     const quote = quoteIn || saleQuote(quoteTicket, additionalDiscounts || []);
     const total = money(quote.finalTotal);
@@ -1193,6 +1721,7 @@
     // El folio toma su día de la MISMA fecha que se guarda en la venta.
     const folio = nextFolio(operationId, fecha);
     const cobrada = estado !== 'Apartado' && estado !== 'Cancelado';
+    if (cobrada) assertLayawayProductsUnlocked((ticket || []).map(line => line.p && line.p.id));
     // H-34: el plazo se congela con la política vigente AHORA y cuenta desde la
     // misma fecha de la venta. El apartado todavía no entrega mercancía: su
     // plazo arranca al liquidarse (ver finalizarApartado).
@@ -1211,7 +1740,7 @@
       ticket.forEach(l => {
         const e = stockVariantOf(l.p, l.talla);
         if (e) e.stock = Math.max(0, e.stock - l.qty);
-        movements.unshift({ fecha, tipo: 'Venta', producto: l.p.nombre, sku: l.p.sku, cant: -l.qty, ref: folio });
+        movements.unshift({ fecha, tipo: 'Venta', producto: l.p.nombre, productId: l.p.id, sku: l.p.sku, talla: l.talla, cant: -l.qty, ref: folio });
       });
       saveProducts(false); saveMovements();
     }
@@ -1317,20 +1846,45 @@
     return sale;
   }
 
-  // Completa un apartado ya cobrado por completo: descuenta stock, acredita comisión/ventas al
-  // vendedor atribuido (base neto/bruto vigente AHORA) y marca la venta como Pagado. No re-agrega
-  // al cliente (los agregados se hicieron al crear el apartado). Idempotente: solo actúa si está Apartado.
-  function finalizarApartado(sale) {
+  // H-65: prepara la intención de liquidación SIN mutar ningún agregado local.
+  // La identidad primaria es productId. El SKU sólo adopta documentos históricos
+  // y únicamente cuando identifica exactamente un producto; nunca se usa find().
+  function resolveLayawayProduct(line) {
+    const productId = String(line && line.productId || '').trim();
+    if (productId) {
+      const product = products.find(p => p.id === productId);
+      if (!product) throw new Error(`El producto ${productId} ya no está en el catálogo; resincroniza antes de liquidar`);
+      return product;
+    }
+    const skuValue = String(line && line.sku || '').trim();
+    const matches = products.filter(p => String(p.sku || '').trim() === skuValue);
+    if (matches.length > 1) {
+      const error = new Error(`SKU ambiguo ${skuValue}: el apartado histórico no identifica un producto único`);
+      error.code = 'PRODUCT_SKU_AMBIGUOUS';
+      throw error;
+    }
+    if (matches.length !== 1) {
+      const error = new Error(`No se encontró el producto histórico ${skuValue}`);
+      error.code = 'PRODUCT_NOT_FOUND';
+      throw error;
+    }
+    return matches[0];
+  }
+
+  function finalizarApartado(sale, payment) {
     const fecha2 = now();
     const sellerEffects = [];
-    // 1) Stock + movimientos (no se hicieron al apartar)
-    (sale.lineas || []).forEach(l => {
-      const p = products.find(x => x.sku === l.sku);
-      if (p) { const e = stockVariantOf(p, l.talla); if (e) e.stock = Math.max(0, e.stock - l.qty); }
-      movements.unshift({ fecha: fecha2, tipo: 'Venta', producto: l.nombre, sku: l.sku, cant: -l.qty, ref: sale.folio });
+    const resolvedLines = (sale.lineas || []).map(line => {
+      const product = resolveLayawayProduct(line);
+      const qty = Number(line.qty);
+      if (!Number.isInteger(qty) || qty <= 0) throw new Error('El apartado contiene una cantidad inválida');
+      if (!stockVariantOf(product, line.talla)) {
+        throw new Error(`La talla ${line.talla} ya no existe en ${product.nombre || product.id}; resincroniza antes de liquidar`);
+      }
+      return Object.assign({}, line, { productId: product.id });
     });
-    saveProducts(false); saveMovements();
-    // 2) Comisión + ventas a los vendedores atribuidos
+
+    // Comisión/ventas se calculan como deltas, pero no se aplican todavía.
     const ids = sale.vendedores || [];
     let comisionVenta = 0;
     if (ids.length) {
@@ -1346,62 +1900,118 @@
           const baseVersion = Number(s._syncVersion) || 0;
           const c = base * (s.comisionPct || 0) / 100;
           comisionVenta += c;
-          s.ventasMes = (s.ventasMes || 0) + share;
-          s.ventasNum = (s.ventasNum || 0) + 1;
-          s.comisionAcum = (s.comisionAcum || 0) + c;
           sellerEffects.push({
             id: s.id, base_version: baseVersion,
             ventas_mes_delta: share, ventas_num_delta: 1, comision_acum_delta: c,
-            after_ventas_mes: s.ventasMes, after_ventas_num: s.ventasNum,
-            after_comision_acum: s.comisionAcum,
+            after_ventas_mes: (Number(s.ventasMes) || 0) + share,
+            after_ventas_num: (Number(s.ventasNum) || 0) + 1,
+            after_comision_acum: (Number(s.comisionAcum) || 0) + c,
           });
         }
       });
-      saveSellers(false);
     }
-    // 3) Marcar pagada y guardar la comisión real
-    sale.estado = 'Pagado';
-    // H-34: la mercancía se entrega al liquidar, así que el plazo congelado
-    // arranca aquí y no en la fecha en que se reservó el apartado.
-    if (sale.returnLimitDays != null && !sale.returnExpiresAt) {
-      sale.returnExpiresAt = addDays(dayOf(fecha2), sale.returnLimitDays);
-    }
-    sale.anticipo = Number(sale.total) || 0;
-    sale.saldo = 0;
-    sale.comision = Math.round(comisionVenta * 100) / 100;
-    sale.comisionBase = window.CONFIG.get('commission.base') || 'neto';
-    sale._operationId = sale._operationId || newOperationId();
-    sale._stockRequired = true;
-    sale._syncStatus = 'pending';
-    saveSales();
-    return { sale, sellerEffects };
+    const saleDraft = Object.assign({}, sale, {
+      lineas: resolvedLines,
+      estado: 'Pagado',
+      anticipo: Number(sale.total) || 0,
+      saldo: 0,
+      pagoEfectivo: money((Number(sale.pagoEfectivo) || 0) + payment.efectivo),
+      pagoOtro: money((Number(sale.pagoOtro) || 0) + payment.tarjeta + payment.transferencia + payment.otro),
+      comision: Math.round(comisionVenta * 100) / 100,
+      comisionBase: window.CONFIG.get('commission.base') || 'neto',
+      returnExpiresAt: sale.returnLimitDays != null && !sale.returnExpiresAt
+        ? addDays(dayOf(fecha2), sale.returnLimitDays) : sale.returnExpiresAt,
+      _operationId: sale._operationId || newOperationId(),
+      _stockRequired: true,
+      _syncStatus: 'pending',
+    });
+    return { sale: saleDraft, payment, sellerEffects };
   }
+
+  async function liquidarApartado(sale, payment) {
+    let prepared;
+    try { prepared = finalizarApartado(sale, payment); }
+    catch (e) { return { ok: false, error: e.message || 'No se pudo identificar la mercancía del apartado', code: e.code }; }
+    if (!acquireLayawayProductLock(prepared.sale)) {
+      return {
+        ok: false,
+        error: 'El producto cambió o ya tiene una liquidación pendiente; resincroniza antes de continuar',
+        code: 'LAYAWAY_PRODUCT_LOCKED',
+      };
+    }
+    let remote;
+    try {
+      remote = await Promise.resolve(window.CORE.invokeSync('settleLayaway', prepared.sale, {
+        payment: prepared.payment,
+        sellerEffects: prepared.sellerEffects,
+      }));
+    } catch (e) {
+      return { ok: false, pending: true, error: e.message || 'La liquidación quedó pendiente de confirmación' };
+    }
+    if (!remote || remote.ok !== true) {
+      const remoteError = remote && remote.error;
+      if (!remote || remote.pending !== true) releaseLayawayProductLock(prepared.sale._operationId);
+      return {
+        ok: false,
+        pending: !!(remote && remote.pending),
+        error: (typeof remoteError === 'string' ? remoteError : remoteError && remoteError.message)
+          || (remote && (remote.diagnostic || {}).message)
+          || 'La liquidación quedó pendiente de confirmación; no entregues la mercancía',
+      };
+    }
+    const confirmedSale = sales.find(s => s.folio === sale.folio);
+    const authoritativePaymentId = remote.paymentId || remote.payment_id || payment.id;
+    const confirmedPayment = payments.find(p => p.id === authoritativePaymentId);
+    if (!confirmedSale || confirmedSale.estado !== 'Pagado' || !confirmedPayment
+        || confirmedSale._stockReserved !== true) {
+      requireCatalogResync('La confirmación remota no quedó reconciliada en esta terminal');
+      return { ok: false, error: 'La terminal debe resincronizar antes de entregar la mercancía' };
+    }
+    return { ok: true, sale: confirmedSale, payment: confirmedPayment, liquidado: true };
+  }
+
   function registrarPagoApartado(folio, { monto, metodo, detalle, fecha } = {}) {
     const sale = sales.find(s => s.folio === folio);
     if (!sale || sale.estado !== 'Apartado') return { ok: false, error: 'El apartado no está pendiente' };
+    // La cola durable se consulta por el gateway de sincronización: DATA no
+    // conoce a STORE. Si esa consulta falla se asume liquidación pendiente; un
+    // abono de más sobre un apartado ya liquidado no se puede deshacer.
+    let queuedLiquidation = false;
+    try { queuedLiquidation = window.CORE.invokeSync('hasPendingLayaway', folio) === true; }
+    catch (e) { queuedLiquidation = true; }
+    if (hasLayawayLiquidationLock(folio, sale._operationId) || queuedLiquidation) {
+      return {
+        ok: false, pending: true, code: 'LAYAWAY_LIQUIDATION_PENDING',
+        error: 'Este apartado ya tiene una liquidación pendiente; no captures otro abono hasta reconciliarla',
+      };
+    }
+    if (catalogResyncRequired) {
+      return { ok: false, error: `La terminal requiere resincronizar antes de registrar otro pago. ${catalogResyncReason}` };
+    }
     const saldo = sale.saldo != null ? money(sale.saldo) : money((Number(sale.total) || 0) - (Number(sale.anticipo) || 0));
     const amount = money(monto);
     if (!Number.isFinite(amount) || amount <= 0) return { ok: false, error: 'El abono debe ser mayor a cero' };
     if (amount > saldo) return { ok: false, error: 'El abono no puede exceder el saldo pendiente' };
     if (!['Efectivo', 'Tarjeta', 'Transferencia', 'Mixto'].includes(metodo)) return { ok: false, error: 'Método de pago inválido para el abono' };
     let payment;
-    try { payment = addSalePayment(sale, { monto: amount, metodo, tipo: amount === saldo ? 'liquidacion' : 'abono', detalle, fecha }, false); }
+    try { payment = salePaymentDraft(sale, { monto: amount, metodo, tipo: amount === saldo ? 'liquidacion' : 'abono', detalle, fecha }); }
     catch (e) { return { ok: false, error: e.message || 'El desglose del pago no cuadra' }; }
+    if (amount === saldo) return liquidarApartado(sale, payment);
+    payments.unshift(payment);
+    savePayments(false);
     sale.anticipo = money((Number(sale.anticipo) || 0) + amount);
     sale.saldo = money((Number(sale.total) || 0) - sale.anticipo);
     sale.pagoEfectivo = money((Number(sale.pagoEfectivo) || 0) + payment.efectivo);
     sale.pagoOtro = money((Number(sale.pagoOtro) || 0) + payment.tarjeta + payment.transferencia + payment.otro);
-    let sellerEffects = [];
-    if (sale.saldo === 0) sellerEffects = finalizarApartado(sale).sellerEffects;
-    else saveSales();
-    try { window.CORE.invokeSync('pushSale', sale, { sellerEffects, payments: paymentsForSale(sale.folio) }); } catch (e) { /* offline */ }
-    return { ok: true, sale, payment, liquidado: sale.saldo === 0 };
+    saveSales();
+    try { window.CORE.invokeSync('pushSale', sale, { sellerEffects: [], payments: paymentsForSale(sale.folio) }); } catch (e) { /* offline */ }
+    return { ok: true, sale, payment, liquidado: false };
   }
-  function completarApartado(folio) {
+  async function completarApartado(folio) {
     const sale = sales.find(s => s.folio === folio);
     if (!sale || sale.estado !== 'Apartado') return null;
     const saldo = sale.saldo != null ? Number(sale.saldo) || 0 : Math.max(0, (Number(sale.total) || 0) - (Number(sale.anticipo) || 0));
-    const r = registrarPagoApartado(folio, { monto: saldo, metodo: 'Efectivo', detalle: { efectivo: saldo } });
+    const r = await Promise.resolve(registrarPagoApartado(folio, { monto: saldo, metodo: 'Efectivo', detalle: { efectivo: saldo } }));
     return r.ok ? r.sale : null;
   }
 
@@ -1682,6 +2292,13 @@
     const devueltos = items.filter(l => l.lado === 'devuelto');
     const entregados = items.filter(l => l.lado === 'entregado');
     if (!devueltos.length || !entregados.length) return { ok: false, error: 'invalid_items' };
+    try {
+      assertLayawayProductsUnlocked(items.map(line => {
+        const product = products.find(p => p.id === line.productId)
+          || products.find(p => p.sku === line.sku);
+        return product && product.id;
+      }));
+    } catch (e) { return { ok: false, error: e.message, code: e.code }; }
 
     // Plazo de posventa (H-34): compuerta, no se reinicia ni se hereda aparte.
     const plazo = returnDeadline(sale);
@@ -1962,6 +2579,14 @@
     }
     const items = (lineas || []).filter(l => (Number(l.qty) || 0) > 0);
     if (!items.length) return { ok: false, error: 'Selecciona al menos un artículo y cantidad a devolver' };
+    try {
+      assertLayawayProductsUnlocked(items.map(line => {
+        const sold = (sale.lineas || []).find(x => x.sku === line.sku && x.talla === line.talla);
+        const product = products.find(p => p.id === (line.productId || (sold && sold.productId)))
+          || products.find(p => p.sku === line.sku);
+        return product && product.id;
+      }));
+    } catch (e) { return { ok: false, error: e.message, code: e.code }; }
     // H-35: el disponible lo decide la autoridad única, que ya descuenta
     // devoluciones previas y, cuando existan, los cambios de esta venta.
     const saldo = saleLineBalance(folio);
@@ -2139,14 +2764,17 @@
   // que removeUser/removePromo.
   function removeProduct(id) {
     const i = products.findIndex(x => x.id === id);
-    if (i < 0) return;
+    if (i < 0) return false;
+    try { assertLayawayProductsUnlocked([id]); } catch (e) { return false; }
     const version = Number(products[i]._syncVersion) || 0;
     products.splice(i, 1); saveProducts();
     try { window.CORE.invokeSync('deleteRow', 'products', id, version); } catch (e) { /* offline */ }
+    return true;
   }
 
   // Restaura el catálogo original de fábrica
   function resetProducts() {
+    if (readLayawayProductLocks().length) return false;
     products.length = 0;
     seed.map(hydrate).forEach(p => products.push(p));
     saveProducts();
@@ -2496,6 +3124,7 @@
   // Vacía a estado de producción (sin datos). Local-only: NO borra la nube. Si hay sesión, el llamador
   // (DemoPanel) avisa que Supabase conserva los datos y se repoblarán al recargar.
   function resetEmpty() {
+    if (readLayawayProductLocks().length) return false;
     remoteApplying = true;
     try {
       clearAllLocal(); persistAllLocal();
@@ -2514,6 +3143,7 @@
   // El stock vuelve a como estaba antes de probar: se reintegra lo que descontaron las ventas
   // y se quita lo que reingresaron las devoluciones (mismo criterio que recordSale/recordReturn).
   function resetTestData() {
+    if (readLayawayProductLocks().length) return false;
     remoteApplying = true; // vaciado local: que no encole nada a medias
     try {
       // 1) Revertir stock. Solo las ventas que SÍ descontaron (recordSale: cobrada =
@@ -2565,6 +3195,9 @@
   }
 
   function seedDemo() {
+    if (readLayawayProductLocks().length) {
+      return { ok: false, error: 'Hay una liquidación pendiente; reconcíliala antes de reemplazar los datos locales' };
+    }
     remoteApplying = true; bulkMode = true; // LOCAL-ONLY y rápido (persiste al final)
     try {
       clearAllLocal();
@@ -2665,7 +3298,7 @@
       persistAllLocal();
       try { localStorage.setItem(LS_DEMO, '1'); } catch (e) { /* */ }
     } finally { remoteApplying = false; bulkMode = false; }
-    return { products: products.length, clients: clients.length, sellers: sellers.length, sales: sales.length, returns: returns.length };
+    return { ok: true, products: products.length, clients: clients.length, sellers: sellers.length, sales: sales.length, returns: returns.length };
   }
 
   window.DATA = {
@@ -2676,7 +3309,7 @@
     addClient, removeClient, recordSale, nextFolio, collisionSafeFolio, rekeySaleFolio,
     normalizeFolioPrefix, businessDate, folioFromParts, parseFolio, folioPreview,
     folioBlockRequest, applyFolioBlock, terminalCode,
-    findSaleByFolio, saleFolioAliases, folioAliasHit, stockOf, isAutoImg, resetProducts, applyRemote, applySyncResult, mergeRemote, markSaleSync, liquidarComision,
+    findSaleByFolio, saleFolioAliases, folioAliasHit, stockOf, isAutoImg, resetProducts, applyRemote, applySyncResult, applySaleCommitResult, mergeRemote, markSaleSync, liquidarComision,
     completarApartado, registrarPagoApartado, paymentsForSale, hasFinancialSnapshot, resolveLineDiscount, saleQuote, cerrarMes, getPeriodoInicio,
     listPrice, priceRange, sanitizePreciosTalla, resolveProductSizes,
     resolveSizeFilterGroups, resolveSizeFilterOptions, sizeFilterMatch, inferSizeCategory,
@@ -2687,10 +3320,40 @@
     actualizarPrestamo, eliminarPrestamo, prestamoPiezas, prestamoPendientes,
     prestamoAtraso, prestamosVencidos, loanedQty, parseLoanFolio, nextLoanFolio, LOAN_ESTADOS,
     applyRemoteLoans, findLoanByFolio, loanFolioAliases, rekeyLoanFolio, collisionSafeLoanFolio,
+    requireCatalogResync, clearCatalogResync,
+    acquireLayawayProductLock, releaseLayawayProductLock,
+    reconcileLayawayProductLocks, ensureLayawayProductLockFromOperation,
+    layawayProductLockSnapshot, hasLayawayLiquidationLock,
+    assertLayawayProductsUnlocked, assertLocalWriter, awaitLocalWriter,
+    get localWriterState() { return localWriterState; },
+    get isLocalWriter() { return localWriterAllowed(false); },
+    get localWriterLeaseSupported() { return localWriterLeaseSupported; },
+    get catalogResyncRequired() { return catalogResyncRequired; },
     addUser, updateUser, removeUser, isEligibleSeller, resolveSellerCommission,
     addPromo, updatePromo, removePromo, duplicatePromo,
     seedDemo, resetEmpty, resetTestData, demoActive,
   };
+  const localWriterMutators = [
+    'regenerateSkus', 'saveProducts', 'saveSellers', 'saveClients', 'saveSales',
+    'saveMovements', 'savePromos', 'saveReturns', 'savePayments', 'removeProduct',
+    'applyOrphanFix', 'addClient', 'removeClient', 'recordSale', 'rekeySaleFolio',
+    'applyFolioBlock', 'resetProducts', 'applyRemote', 'applySyncResult',
+    'applySaleCommitResult', 'mergeRemote', 'markSaleSync', 'liquidarComision',
+    'completarApartado', 'registrarPagoApartado', 'cerrarMes', 'recordReturn',
+    'saveExchanges', 'recordExchange', 'reverseExchangeCommission', 'saveLoans',
+    'registrarPrestamo', 'registrarDevolucionPrestamo', 'marcarPrestamoNoDevuelto',
+    'actualizarPrestamo', 'eliminarPrestamo', 'applyRemoteLoans', 'rekeyLoanFolio',
+    'addUser', 'updateUser', 'removeUser', 'addPromo', 'updatePromo', 'removePromo',
+    'duplicatePromo', 'seedDemo', 'resetEmpty', 'resetTestData',
+  ];
+  localWriterMutators.forEach(name => {
+    const original = window.DATA[name];
+    if (typeof original !== 'function') return;
+    window.DATA[name] = function (...args) {
+      assertLocalWriter(false);
+      return original.apply(window.DATA, args);
+    };
+  });
   // Catálogos retrocompatibles: D.CAT[code], Object.entries(D.TELA), D.SIZES_LETRA, …
   // ahora se resuelven EN VIVO desde CONFIG en cada acceso (reflejan ediciones del admin).
   Object.defineProperties(window.DATA, {
@@ -2706,7 +3369,7 @@
   });
   window.CORE.registerCatalogProducts({
     list: () => products,
-    save: () => saveProducts(),
+    save: () => window.DATA.saveProducts(),
   });
   // H-63: CONFIG necesita saber si una talla está referenciada por el alcance de una
   // promoción antes de dejar que se desactive. Sólo lectura, por el gateway de CORE.
@@ -2719,8 +3382,42 @@
     window.CORE.registerCatalogPromotions({ list: () => promos });
   }
 
-  // Sana huérfanos existentes al ARRANCAR (p. ej. daño previo por un import de catálogos que
-  // re-codificó colores). Va al FINAL del módulo: remapOrphanCodes → saveProducts → syncUp lee
-  // 'remoteApplying' (let), que ya debe estar inicializado — llamarlo antes sería TDZ.
-  try { remapOrphanCodes(); } catch (e) { /* mejor arrancar que bloquear */ }
+  let localWriterRequestActive = false;
+  function startLocalWriterLease() {
+    if (!localWriterLeaseSupported) {
+      setLocalWriterState('unsupported');
+      try { remapOrphanCodes(); } catch (e) { /* mejor arrancar que bloquear */ }
+      return;
+    }
+    if (localWriterRequestActive || localWriterState === 'writer') return;
+    localWriterRequestActive = true;
+    Promise.resolve(window.navigator.locks.request(LOCAL_WRITER_LOCK, { mode: 'exclusive' }, async () => {
+      setLocalWriterState('rebasing');
+      if (!rebaseLocalWriterCollections()) {
+        setLocalWriterState('blocked');
+        return;
+      }
+      setLocalWriterState('writer');
+      localWriterWarningShown = false;
+      try { remapOrphanCodes(); } catch (e) { /* el catálogo sigue disponible */ }
+      await new Promise(resolve => {
+        let released = false;
+        localWriterRelease = () => {
+          if (released) return;
+          released = true;
+          localWriterRelease = null;
+          resolve();
+        };
+        window.addEventListener('pagehide', localWriterRelease, { once: true });
+        window.addEventListener('beforeunload', localWriterRelease, { once: true });
+      });
+      setLocalWriterState('waiting');
+    })).catch(() => setLocalWriterState('blocked')).finally(() => {
+      localWriterRequestActive = false;
+    });
+  }
+  window.addEventListener('pageshow', () => {
+    if (localWriterState === 'waiting') startLocalWriterLease();
+  });
+  startLocalWriterLease();
 })();

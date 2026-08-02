@@ -233,8 +233,8 @@ console.log('\n── E) Contratos de la autoridad transaccional ─────
       && /delete from pos\.exchanges/.test(ver) && /nunca sale efectivo/.test(ver));
 
   const store = read('./balam/store.jsx');
-  ok('31. STORE encola el cambio y llama al RPC',
-    /pushExchange/.test(store) && /rpc\('commit_exchange'/.test(store));
+  ok('31. STORE encola el cambio y llama a la frontera checked',
+    /pushExchange/.test(store) && /rpc\('commit_exchange_checked'/.test(store));
 }
 
 console.log(`\n════════ ${pass} pasaron, ${fail} fallaron ════════`);

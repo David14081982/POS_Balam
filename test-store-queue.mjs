@@ -196,6 +196,12 @@ function freshEnv() {
     UI: { toasts: [], toast(msg) { this.toasts.push(msg); } },
     DATA: {
       movements: [], sellers: [], sales: [], applied: [], merged: [],
+      h65EnsureCalls: 0, h65EnsureAllowed: true,
+      ensureLayawayProductLockFromOperation() {
+        this.h65EnsureCalls++;
+        return this.h65EnsureAllowed;
+      },
+      releaseLayawayProductLock() { this.h65Released = true; return true; },
       saveSales() {},
       applyRemote(kind, rows) { this.applied.push({ kind, n: rows.length, rows }); },
       applySyncResult() { return { conflicts: 0 }; },
@@ -356,12 +362,18 @@ function loadStore(env) {
   const env = freshEnv();
   const S = loadStore(env);
   await S.init({});
+  env.setRpc(async name => name === 'sale_stock_reservation_status'
+    ? { data: [
+        { operation_id: 'op-bg1', folio: 'BG-1', stock_reserved: false, reservation_operation_id: null },
+        { operation_id: 'op-bg2', folio: 'BG-2', stock_reserved: true, reservation_operation_id: 'op-bg2' },
+      ], error: null }
+    : { data: { ok: true }, error: null });
   env.cloud.rowsByTable.sales = [
-    { folio: 'BG-1', fecha: '2026-07-01T10:00:00', vendedores: [], estado: 'Pagado', items: 1, total: 100, metodo: 'Efectivo', cliente: 'A' },
-    { folio: 'BG-2', fecha: '2026-06-01T10:00:00', vendedores: [], estado: 'Apartado', items: 1, total: 200, metodo: 'Efectivo', cliente: 'B' },
+    { folio: 'BG-1', operation_id: 'op-bg1', fecha: '2026-07-01T10:00:00', vendedores: [], estado: 'Pagado', items: 1, total: 100, metodo: 'Efectivo', cliente: 'A' },
+    { folio: 'BG-2', operation_id: 'op-bg2', fecha: '2026-06-01T10:00:00', vendedores: [], estado: 'Apartado', items: 1, total: 200, metodo: 'Efectivo', cliente: 'B' },
   ];
   env.cloud.rowsByTable.sale_items = [
-    { folio: 'BG-1', sku: 'S1', nombre: 'P1', talla: 'M', qty: 1, precio: 100 },
+    { id: 81, folio: 'BG-1', sku: 'S1', nombre: 'P1', talla: 'M', qty: 1, precio: 100 },
   ];
   await S.pullDomain('sales');
   const merged = env.window.DATA.merged.find(m => m.kind === 'sales');
@@ -370,7 +382,13 @@ function loadStore(env) {
   ok('8c. la consulta de ventas filtra (gte fecha / eq estado), ya no baja todo', env.calls.some(c => c.table === 'sales' && /gte:fecha/.test(c.filtro)) && env.calls.some(c => c.table === 'sales' && /eq:estado:Apartado/.test(c.filtro)));
   ok('8d. sale_items se pide por folios (in), no la tabla completa', env.calls.some(c => c.table === 'sale_items' && /in:folio/.test(c.filtro)));
   const bg1 = merged && merged.rows.find(r => r.folio === 'BG-1');
+  const bg2 = merged && merged.rows.find(r => r.folio === 'BG-2');
   ok('8e. los renglones se adjuntan a su venta', bg1 && bg1.lineas.length === 1 && bg1.lineas[0].sku === 'S1');
+  ok('8f. el pull conserva identidad remota del renglón para adopción histórica',
+    bg1 && bg1.lineas[0]._saleItemId === 81);
+  ok('8g. una reserva negativa no inventa reservation_operation_id',
+    bg1 && bg1._stockReserved === false && !bg1._reservationOperationId
+      && bg2 && bg2._stockReserved === true && bg2._reservationOperationId === 'op-bg2');
 }
 
 // ── 9) fetchSaleByFolio: folio viejo bajo demanda ──────────────────────────────
@@ -397,7 +415,7 @@ function loadStore(env) {
     metodo: 'Apartado', estado: 'Apartado', items: 1,
     subtotal: 1000, iva: 0, total: 1000, ivaPct: 0, ivaIncluded: true,
     anticipo: 300, saldo: 700, pagoEfectivo: 0, pagoOtro: 0, descuento: 50,
-    lineas: [{ sku: 'S1', nombre: 'P1', talla: 'M', qty: 1, precio: 1150, precioBase: 1150, precioOrig: 1200 }],
+    lineas: [{ productId: 'p-h03', sku: 'S1', nombre: 'P1', talla: 'M', qty: 1, precio: 1150, precioBase: 1150, precioOrig: 1200 }],
   });
   await sleep(40);
   const row = (env.cloud.rowsByTable.sales || [])[0];
@@ -472,6 +490,8 @@ function loadStore(env) {
   env.setRpc(async () => ({
     data: {
       ok: true, idempotent: false,
+      stock_reserved: true, stock_idempotent: false,
+      reservation_operation_id: 'op-h01-stable',
       products: [{ id: 'p-last', sku: 'LAST', stock: [{ talla: 'M', stock: 0 }], sync_version: 2 }],
     },
     error: null,
@@ -1290,7 +1310,117 @@ console.log(`\nSubtotal previo H-60: ${pass} pasaron, ${fail} fallaron`);
   ok('34b. H-60: save_products_checked recibe un UUID v4',
     /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
       .test(String(call && call.args.p_operation_id)));
-  ok('34c. H-60: la escritura válida termina sin pendientes', S.pending === 0);
+ok('34c. H-60: la escritura válida termina sin pendientes', S.pending === 0);
+}
+
+// ── 35) H-65: liquidación durable, autoridad explícita y reintento único ───
+{
+  const env = freshEnv();
+  env.window.DATA.products = [{ id: 'p-h65', sku: 'H65', stock: [{ talla: 'M', stock: 3 }], _syncVersion: 7 }];
+  env.window.DATA.applySaleCommitResult = function (commitId, folio, result) {
+    this.h65Applied = { commitId, folio, result };
+    return { ok: true };
+  };
+  env.setRpc(async (name) => name === 'commit_layaway_liquidation_checked'
+    ? { data: { ok: false, error: 'insufficient_stock', stock_reserved: false, stock_idempotent: false, reservation_operation_id: null }, error: null }
+    : { data: { ok: true }, error: null });
+  const S = loadStore(env); await S.init({});
+  const draft = {
+    folio: 'BG-H65-QUEUE', estado: 'Pagado', _operationId: 'op-h65-stable',
+    lineas: [{ productId: 'p-h65', sku: 'H65', talla: 'M', qty: 1 }],
+  };
+  const effects = { payment: { id: 'pay-h65', folio: draft.folio, fecha: '2026-08-01 12:00', tipo: 'liquidacion', metodo: 'Efectivo', monto: 100, efectivo: 100, tarjeta: 0, transferencia: 0, otro: 0 }, sellerEffects: [] };
+  const insufficient = await S.settleLayaway(draft, effects);
+  ok('35a. H-65: stock insuficiente conserva una sola liquidación durable',
+    insufficient.ok === false && S.pending === 1);
+  ok('35b. H-65: stock insuficiente no aplica un éxito local', !env.window.DATA.h65Applied);
+}
+
+{
+  const env = freshEnv();
+  env.window.DATA.products = [{ id: 'p-h65', sku: 'H65', stock: [{ talla: 'M', stock: 3 }], _syncVersion: 7 }];
+  let applied = 0;
+  env.window.DATA.applySaleCommitResult = function (commitId, folio, result) {
+    applied++; this.h65Applied = { commitId, folio, result }; return { ok: true };
+  };
+  env.setRpc(async (name) => name === 'commit_layaway_liquidation_checked'
+    ? { data: null, error: { message: 'Failed to fetch', code: 'network_error' } }
+    : { data: { ok: true }, error: null });
+  const S = loadStore(env); await S.init({});
+  const draft = {
+    folio: 'BG-H65-RETRY', estado: 'Pagado', _operationId: 'op-h65-retry-stable',
+    lineas: [{ productId: 'p-h65', sku: 'H65', nombre: 'H65', talla: 'M', qty: 1, precio: 100 }],
+  };
+  const effects = { payment: { id: 'pay-h65-retry', folio: draft.folio, fecha: '2026-08-01 12:00', tipo: 'liquidacion', metodo: 'Efectivo', monto: 100, efectivo: 100, tarjeta: 0, transferencia: 0, otro: 0 }, sellerEffects: [] };
+  const first = await S.settleLayaway(draft, effects);
+  const second = await S.settleLayaway(draft, effects);
+  const queued = JSON.parse(env.localStorage.getItem('balam_sync_queue') || '[]');
+  const failedCalls = env.rpcCalls.filter(c => c.name === 'commit_layaway_liquidation_checked');
+  ok('35c. H-65: red caída no duplica la operación offline',
+    first.ok === false && second.ok === false && queued.length === 1 && queued[0].mode === 'layaway_liquidation');
+  ok('35d. H-65: todos los reintentos conservan operationId, commitId y pago',
+    failedCalls.length >= 2
+      && failedCalls.every(c => c.args.p_operation_id === 'op-h65-retry-stable'
+        && c.args.p_commit_id === queued[0].id && c.args.p_payment.id === 'pay-h65-retry'));
+
+  env.setRpc(async (name, args) => name === 'commit_layaway_liquidation_checked'
+    ? { data: {
+        ok: true, idempotent: true, stock_reserved: true, stock_idempotent: true,
+        reservation_operation_id: args.p_operation_id,
+        sale: { folio: draft.folio, operation_id: args.p_operation_id, fecha: '2026-08-01T12:00:00-07:00', cliente: 'H65', vendedores: [], metodo: 'Apartado', estado: 'Pagado', items: 1, total: 100, anticipo: 100, saldo: 0 },
+        items: [{ folio: draft.folio, product_id: 'p-h65', sku: 'H65', nombre: 'H65', talla: 'M', qty: 1, precio: 100 }],
+        products: [{ id: 'p-h65', sku: 'H65', modelo: 'H65', stock: [{ talla: 'M', stock: 3 }], sync_version: 7 }],
+        payments: [effects.payment],
+        movements: [{ id: 65, fecha: '2026-08-01T12:00:00-07:00', tipo: 'Venta', producto: 'H65', product_id: 'p-h65', sku: 'H65', talla: 'M', cant: -1, ref: draft.folio }],
+        sellers: [],
+      }, error: null }
+    : { data: { ok: true }, error: null });
+  const retryWithNewDraft = await S.settleLayaway(draft, {
+    payment: { ...effects.payment, id: 'pay-h65-should-not-replace' },
+    sellerEffects: [],
+  });
+  ok('35e. H-65: el reintento confirmado vacía la cola y aplica una sola respuesta',
+    S.pending === 0 && applied === 1 && env.window.DATA.h65Applied.folio === draft.folio);
+  ok('35f. H-65: DATA recibe reserva/idempotencia e identidad exacta del movimiento',
+    env.window.DATA.h65Applied.result.stockReserved === true
+      && env.window.DATA.h65Applied.result.stockIdempotent === true
+      && env.window.DATA.h65Applied.result.reservationOperationId === 'op-h65-retry-stable'
+      && env.window.DATA.h65Applied.result.movements[0].productId === 'p-h65'
+      && env.window.DATA.h65Applied.result.movements[0].talla === 'M');
+  ok('35g. H-65: el reintento de interfaz devuelve el pago autoritativo original',
+    retryWithNewDraft.ok === true && retryWithNewDraft.paymentId === 'pay-h65-retry');
+  const confirmedCall = env.rpcCalls.filter(c => c.name === 'commit_layaway_liquidation_checked').at(-1);
+  ok('35h. H-65: la RPC recibe identidad de renglón y snapshot de comisión',
+    confirmedCall.args.p_payment.id === 'pay-h65-retry'
+      && confirmedCall.args.p_context.item_identities[0].product_id === 'p-h65'
+      && confirmedCall.args.p_context.commission_amount === 0);
+}
+
+// 36) H-65: un rechazo permanente se bloquea y no se martilla.
+{
+  const env = freshEnv();
+  env.window.DATA.products = [{ id: 'p-h65-block', sku: 'H65-B', stock: [{ talla: 'M', stock: 3 }] }];
+  env.window.DATA.applySaleCommitResult = () => ({ ok: true });
+  env.setRpc(async name => name === 'commit_layaway_liquidation_checked'
+    ? { data: { ok: false, error: 'operation_mismatch', stock_reserved: false }, error: null }
+    : { data: { ok: true }, error: null });
+  const S = loadStore(env); await S.init({});
+  const draft = {
+    folio: 'BG-H65-BLOCK', estado: 'Pagado', _operationId: 'op-h65-block',
+    lineas: [{ productId: 'p-h65-block', sku: 'H65-B', talla: 'M', qty: 1 }],
+  };
+  await S.settleLayaway(draft, {
+    payment: { id: 'pay-h65-block', folio: draft.folio, fecha: '2026-08-01 12:00', tipo: 'liquidacion', metodo: 'Efectivo', monto: 100, efectivo: 100, tarjeta: 0, transferencia: 0, otro: 0 },
+    sellerEffects: [],
+  });
+  const before = env.rpcCalls.filter(c => c.name === 'commit_layaway_liquidation_checked').length;
+  await S.flushQueue();
+  const status = S.queueStatus();
+  const after = env.rpcCalls.filter(c => c.name === 'commit_layaway_liquidation_checked').length;
+  ok('36a. H-65: operation_mismatch queda bloqueado como conflicto permanente',
+    status.operations[0].status === 'blocked_conflict'
+      && status.operations[0].diagnostic.retryable === false);
+  ok('36b. H-65: el drenado automático no reintenta el rechazo permanente', before === after);
 }
 
 console.log(`════════ ${pass} pasaron, ${fail} fallaron ════════`);

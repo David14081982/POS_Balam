@@ -62,7 +62,42 @@ try {
   // ── Semilla: un apartado real creado por la autoridad de dominio ────────────
   const seed = await page.evaluate(() => {
     const D = window.DATA;
-    if (window.STORE) { window.STORE.pushRows = () => {}; window.STORE.pushConfig = () => {}; window.STORE.pushSale = () => {}; }
+    if (window.STORE) {
+      window.STORE.pushRows = () => {};
+      window.STORE.pushConfig = () => {};
+      window.STORE.pushSale = () => {};
+      // H-65: servidor transaccional simulado. DATA no recibe el éxito hasta
+      // que este adaptador devuelve y aplica venta+producto+pago+movimiento.
+      window.STORE.settleLayaway = async (draft, effects) => {
+        const product = D.products.find(p => p.id === draft.lineas[0].productId);
+        const remoteProduct = JSON.parse(JSON.stringify(product));
+        const variant = remoteProduct.stock.find(v => v.talla === draft.lineas[0].talla);
+        variant.stock -= Number(draft.lineas[0].qty) || 0;
+        remoteProduct._syncVersion = (Number(product._syncVersion) || 0) + 1;
+        const movement = {
+          id: 65001, fecha: draft.fecha, tipo: 'Venta', producto: draft.lineas[0].nombre,
+          productId: product.id, sku: draft.lineas[0].sku, talla: draft.lineas[0].talla,
+          cant: -draft.lineas[0].qty, ref: draft.folio,
+        };
+        const sellers = (effects.sellerEffects || []).map(effect => {
+          const current = D.sellers.find(s => s.id === effect.id);
+          return Object.assign({}, current, {
+            ventasMes: effect.after_ventas_mes,
+            ventasNum: effect.after_ventas_num,
+            comisionAcum: effect.after_comision_acum,
+            _syncVersion: (Number(current && current._syncVersion) || 0) + 1,
+          });
+        });
+        const applied = D.applySaleCommitResult('h65-screen-commit-' + draft.folio, draft.folio, {
+          sale: Object.assign({}, draft, { _operationId: draft._operationId }),
+          products: [remoteProduct], payments: D.paymentsForSale(draft.folio).concat(effects.payment),
+          movements: [movement], sellers,
+          stockReserved: true, stockIdempotent: false,
+          reservationOperationId: draft._operationId,
+        });
+        return { ok: applied.ok === true };
+      };
+    }
     D.sales.length = 0; D.payments.length = 0; D.products.length = 0;
     // Plazo de devolución activo: así se comprueba que la liquidación lo arranca (H-34).
     window.CONFIG.setSetting('returns.limitEnabled', true);

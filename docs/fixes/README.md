@@ -68,6 +68,7 @@ sesión de chat.
 | `filtro-tallas-por-categoria.md` | H-61 | El filtro de tallas del POS es una estructura por categoría, no una lista plana |
 | `tallas-historicas-con-existencias.md` | H-63 | Una talla numérica con referencias vivas no puede desactivarse (fase 1: protección) |
 | `talla-mal-codificada-en-catalogo.md` | H-64 | La talla 38 estaba codificada como «0»; se corrigió el catálogo sin mover existencias |
+| `liquidacion-apartado-autoridad-stock.md` | H-65 | Liquidación atómica e idempotente con stock confirmado por el servidor |
 
 Documentación financiera relacionada, creada antes de este índice:
 

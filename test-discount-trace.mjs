@@ -71,7 +71,10 @@ const buildLineas = (ticket, ctx) => ticket.map(new Function(
 const itemsM = extraer(storeSrc, /const items = \(sale\.lineas \|\| \[\]\)\.map\(l => \{([\s\S]*?)\n    \}\);/, 'sale_items');
 const toItemRow = (sale, l) => new Function('sale', 'l', 'window',
   itemsM[1].replace(/^\s*const productId[\s\S]*?;\n/, 'const productId = l.productId || null;\n'))(sale, l, sandbox.window);
-const backM = extraer(storeSrc, /\.forEach\(x => \(byFolio\[x\.folio\] \|\| \(byFolio\[x\.folio\] = \[\]\)\)\.push\((\{[\s\S]*?\})\)\);/, 'fromRow');
+// H-65 extrajo el mapeo de renglón a una función propia (`saleItemFromRow`): la
+// usan el pull, la búsqueda por folio y la respuesta autoritativa de la
+// liquidación. La prueba sigue leyendo el código real, ahora en su nueva costura.
+const backM = extraer(storeSrc, /function saleItemFromRow\(x\) \{\s*return (\{[\s\S]*?\});\n  \}/, 'fromRow');
 const fromItemRow = new Function('x', 'return ' + backM[1]);
 
 // ── Utilidades de escenario ──────────────────────────────────────────────────

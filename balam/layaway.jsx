@@ -277,6 +277,7 @@
     const [monto, setMonto] = useState(String(saldo));
     const [efectivo, setEfectivo] = useState('');
     const [otroMetodo, setOtroMetodo] = useState('Tarjeta');
+    const [confirmando, setConfirmando] = useState(false);
 
     const inputCls = 'block w-full h-12 px-4 bg-surface-container-low border border-outline-variant focus:ring-1 focus:ring-primary focus:border-primary text-base rounded-xl font-mono';
     const lbl = 'text-overline uppercase tracking-widest text-on-surface-variant mb-2';
@@ -289,24 +290,33 @@
     const liquida = montoValido && Math.abs(amount - saldo) < 0.009;
     const nuevoSaldo = montoValido ? Math.max(0, Math.round((saldo - amount) * 100) / 100) : saldo;
 
-    function confirmar() {
+    async function confirmar() {
+      if (confirmando) return;
       if (!montoValido) { toast('El abono debe ser mayor a cero y no exceder el saldo.', 'var(--danger)'); return; }
       if (!mixtoValido) { toast('El desglose del pago mixto no cuadra con el monto.', 'var(--danger)'); return; }
       const detalle = metodo === 'Mixto'
         ? { efectivo: efe, [otroMetodo.toLowerCase()]: restanteMixto }
         : { [metodo.toLowerCase()]: Math.round(amount * 100) / 100 };
-      const r = D.registrarPagoApartado(sale.folio, { monto: amount, metodo, detalle });
-      if (!r.ok) { toast(r.error, 'var(--danger)'); return; }
-      toast(r.liquidado ? 'Apartado liquidado · venta pagada' : 'Abono registrado · saldo ' + fmt(r.sale.saldo), 'var(--accent)');
-      onDone({ sale: r.sale, payment: r.payment, liquidado: r.liquidado });
+      setConfirmando(true);
+      try {
+        const r = await Promise.resolve(D.registrarPagoApartado(sale.folio, { monto: amount, metodo, detalle }));
+        if (!r || !r.ok) {
+          toast((r && r.error) || (r && r.pending
+            ? 'Liquidación pendiente de confirmación; no entregues la mercancía.'
+            : 'No se pudo registrar el pago.'), 'var(--danger)');
+          return;
+        }
+        toast(r.liquidado ? 'Apartado liquidado · venta pagada' : 'Abono registrado · saldo ' + fmt(r.sale.saldo), 'var(--accent)');
+        onDone({ sale: r.sale, payment: r.payment, liquidado: r.liquidado });
+      } finally { setConfirmando(false); }
     }
 
     const footer = [
-      h('button', { key: 'c', className: 'px-5 h-11 text-caption font-bold uppercase tracking-widest text-on-surface-variant hover:text-primary transition', onClick: onClose }, 'Cancelar'),
+      h('button', { key: 'c', disabled: confirmando, className: 'px-5 h-11 text-caption font-bold uppercase tracking-widest text-on-surface-variant hover:text-primary transition disabled:opacity-40', onClick: onClose }, 'Cancelar'),
       h('button', {
-        key: 'k', disabled: !montoValido || !mixtoValido, onClick: confirmar,
+        key: 'k', disabled: confirmando || !montoValido || !mixtoValido, onClick: confirmar,
         className: 'px-6 h-11 flex items-center gap-2 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-lg hover:bg-primary-container transition disabled:opacity-40 disabled:cursor-not-allowed',
-      }, [h(MS, { key: 'i', name: 'check', size: 18 }), liquida ? 'Liquidar apartado' : 'Registrar abono']),
+      }, [h(MS, { key: 'i', name: confirmando ? 'progress_activity' : 'check', size: 18 }), confirmando ? 'Confirmando…' : (liquida ? 'Liquidar apartado' : 'Registrar abono')]),
     ];
 
     return h(Modal, { title: 'Abonar a apartado', onClose, footer }, [

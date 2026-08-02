@@ -1180,12 +1180,20 @@
       }
       if (!window.confirm('¿Generar la SIMULACIÓN de demostración?\n\nReemplaza los datos actuales por ~24 productos, 8 clientes, 4 vendedores y ~300 ventas de los últimos 90 días (con devoluciones). Todo se calcula con el motor real.\n\nEs LOCAL: NO toca tu base en la nube.')) return;
       setBusy(true);
-      setTimeout(() => { const r = D.seedDemo(); toast(`Simulación lista: ${r.sales} ventas · ${r.products} productos · ${r.returns} devoluciones`, 'var(--accent)'); setTimeout(() => location.reload(), 700); }, 30);
+      setTimeout(() => {
+        const r = D.seedDemo();
+        if (!r || r.ok === false) { setBusy(false); toast((r && r.error) || 'No se pudo generar la simulación', 'var(--danger)'); return; }
+        toast(`Simulación lista: ${r.sales} ventas · ${r.products} productos · ${r.returns} devoluciones`, 'var(--accent)');
+        setTimeout(() => location.reload(), 700);
+      }, 30);
     }
     async function limpiar() {
       if (!window.confirm('¿Limpiar TODO y volver al estado vacío de producción?\n\nBorra productos, clientes, ventas, devoluciones, etc. de ESTE dispositivo. No se puede deshacer.')) return;
       const online = !!(window.STORE && (await window.STORE.hasSession()));
-      D.resetEmpty();
+      if (!D.resetEmpty()) {
+        toast('Hay una liquidación pendiente; reconcíliala antes de borrar los datos', 'var(--danger)');
+        return;
+      }
       if (online) {
         window.alert('Datos locales vaciados.\n\n⚠ Tienes sesión iniciada: tu Supabase TODAVÍA conserva los datos y, al recargar, la app los volverá a descargar (la simulación "revivirá").\n\nPara vaciar la nube, hazlo desde Supabase, o cierra sesión para trabajar solo en local.');
       } else {
@@ -1197,7 +1205,10 @@
     // clientes) y devuelve al inventario el stock que consumieron. Los productos NO se tocan.
     function limpiarPruebas() {
       if (!window.confirm('¿Borrar los DATOS DE PRUEBA de este dispositivo?\n\nSE BORRA: ventas, devoluciones, descuentos/promociones, liquidaciones de comisión, movimientos de venta y clientes registrados.\n\nSE CONSERVA: tu inventario (productos, precios, fotos y códigos), los usuarios/vendedores y toda la configuración.\n\nEl stock vuelve a como estaba antes de las pruebas. No se puede deshacer.')) return;
-      D.resetTestData();
+      if (!D.resetTestData()) {
+        toast('Hay una liquidación pendiente; reconcíliala antes de restaurar las pruebas', 'var(--danger)');
+        return;
+      }
       // La marca vigente queda como aplicada: si no, el próximo arranque volvería a avisar.
       try { if (window.STORE && window.STORE.markResetApplied) window.STORE.markResetApplied(); } catch (e) { /* */ }
       window.alert('Datos de prueba borrados en este dispositivo y stock restaurado.\n\nSi usas la nube, corre también el archivo supabase/LIMPIAR-PRUEBAS.sql en Supabase (SQL Editor): además de vaciarla, deja una marca para que las DEMÁS terminales se limpien solas la próxima vez que las abran.');

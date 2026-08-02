@@ -17,7 +17,8 @@
   const RESET_SEEN = 'balam_reset_seen';
 
   let sb = null, enabled = false, lastResetMark = null;
-  let sessionIdentity = null, sessionManaged = false, onlineSubscribed = false, legacyWarned = false;
+  let sessionIdentity = null, sessionManaged = false, onlineSubscribed = false,
+    writerSubscribed = false, legacyWarned = false;
   let sessionSeq = 0;
   function activeOwnerId() {
     if (sessionIdentity) return sessionIdentity;
@@ -81,7 +82,9 @@
     },
     sales: {
       table: 'sales', conflict: 'folio',
-      fromRow: r => ({ folio: r.folio, folioAliases: Array.isArray(r.folio_aliases) ? r.folio_aliases : undefined, _operationId: r.operation_id || undefined, _stockReserved: !!r.operation_id && r.estado !== 'Apartado' && r.estado !== 'Cancelado', _syncStatus: 'synced', fecha: String(r.fecha).replace('T', ' ').slice(0, 16), clienteId: r.cliente_id || undefined, cliente: r.cliente, vendedor: '', vendedores: r.vendedores || [], items: r.items || 0, subtotal: r.subtotal == null ? undefined : Number(r.subtotal), iva: r.iva == null ? undefined : Number(r.iva), total: Number(r.total) || 0, descuento: r.descuento == null ? undefined : Number(r.descuento), descuentoAdicional: r.descuento_adicional == null ? undefined : Number(r.descuento_adicional), totalAntesDescuentoAdicional: r.total_antes_descuento_adicional == null ? undefined : Number(r.total_antes_descuento_adicional), descuentosAdicionales: Array.isArray(r.descuentos_adicionales) ? r.descuentos_adicionales : undefined, ivaPct: r.iva_pct == null ? undefined : Number(r.iva_pct), ivaIncluded: r.iva_included == null ? undefined : !!r.iva_included, anticipo: r.anticipo == null ? undefined : Number(r.anticipo), saldo: r.saldo == null ? undefined : Number(r.saldo), pagoEfectivo: r.pago_efectivo == null ? undefined : Number(r.pago_efectivo), pagoOtro: r.pago_otro == null ? undefined : Number(r.pago_otro), metodo: r.metodo, estado: r.estado, valorRegalado: Number(r.valor_regalado) || 0, returnLimitDays: r.return_limit_days == null ? null : Number(r.return_limit_days), returnExpiresAt: r.return_expires_at || null, lineas: [] }),
+      // H-65: el estado de una venta no prueba que el inventario se reservara.
+      // Esa autoridad pertenece exclusivamente a la respuesta/consulta remota.
+      fromRow: r => ({ folio: r.folio, folioAliases: Array.isArray(r.folio_aliases) ? r.folio_aliases : undefined, _operationId: r.operation_id || undefined, _stockReserved: r.stock_reserved === true, _stockRequired: r.estado !== 'Apartado' && r.estado !== 'Cancelado', _stockIdempotent: r.stock_idempotent === true, _reservationOperationId: r.reservation_operation_id || undefined, _syncStatus: 'synced', fecha: String(r.fecha).replace('T', ' ').slice(0, 16), clienteId: r.cliente_id || undefined, cliente: r.cliente, vendedor: '', vendedores: r.vendedores || [], items: r.items || 0, subtotal: r.subtotal == null ? undefined : Number(r.subtotal), iva: r.iva == null ? undefined : Number(r.iva), total: Number(r.total) || 0, descuento: r.descuento == null ? undefined : Number(r.descuento), descuentoAdicional: r.descuento_adicional == null ? undefined : Number(r.descuento_adicional), totalAntesDescuentoAdicional: r.total_antes_descuento_adicional == null ? undefined : Number(r.total_antes_descuento_adicional), descuentosAdicionales: Array.isArray(r.descuentos_adicionales) ? r.descuentos_adicionales : undefined, ivaPct: r.iva_pct == null ? undefined : Number(r.iva_pct), ivaIncluded: r.iva_included == null ? undefined : !!r.iva_included, anticipo: r.anticipo == null ? undefined : Number(r.anticipo), saldo: r.saldo == null ? undefined : Number(r.saldo), pagoEfectivo: r.pago_efectivo == null ? undefined : Number(r.pago_efectivo), pagoOtro: r.pago_otro == null ? undefined : Number(r.pago_otro), metodo: r.metodo, estado: r.estado, comision: r.comision == null ? undefined : Number(r.comision), comisionBase: r.comision_base || undefined, valorRegalado: Number(r.valor_regalado) || 0, returnLimitDays: r.return_limit_days == null ? null : Number(r.return_limit_days), returnExpiresAt: r.return_expires_at || null, lineas: [] }),
     },
     promotions: {
       table: 'promotions', conflict: 'id', localKey: 'promos',
@@ -154,7 +157,9 @@
         fecha: String(r.fecha || '').replace('T', ' ').slice(0, 16),
         tipo: r.tipo,
         producto: r.producto || '',
+        productId: r.product_id || undefined,
         sku: r.sku || '',
+        talla: r.talla || undefined,
         cant: Number(r.cant) || 0,
         ref: r.ref || '',
       }),
@@ -163,10 +168,114 @@
   function kindForTable(table) {
     return Object.keys(MAP).find(kind => MAP[kind].table === table) || null;
   }
+  function hasLocalWriter(requireLease = false) {
+    const data = window.DATA;
+    if (!data || typeof data.assertLocalWriter !== 'function') return true;
+    try { data.assertLocalWriter(requireLease); return true; }
+    catch (e) { return false; }
+  }
+
+  // H-65: un SKU no es identidad. Sólo se admite como puente para documentos
+  // históricos cuando identifica exactamente un producto del catálogo local.
+  function productIdentityError(code, line, context, matches) {
+    const sku = String((line && line.sku) || '').trim();
+    const error = new Error(code === 'product_identity_ambiguous'
+      ? `El SKU ${sku || '—'} coincide con más de un producto`
+      : `No se pudo identificar el producto del SKU ${sku || '—'}`);
+    error.code = code;
+    error.details = {
+      context: context || 'unknown', sku: sku || null,
+      product_id: (line && (line.productId || line.product_id)) || null,
+      matches: (matches || []).map(p => p.id),
+    };
+    return error;
+  }
+  function resolveLineProductId(line, context) {
+    const explicit = line && (line.productId || line.product_id);
+    if (explicit) return String(explicit);
+    const sku = String((line && line.sku) || '').trim();
+    const products = (window.DATA && Array.isArray(window.DATA.products))
+      ? window.DATA.products : [];
+    const matches = sku ? products.filter(p => String(p.sku || '') === sku) : [];
+    if (matches.length === 1) return matches[0].id;
+    throw productIdentityError(matches.length > 1
+      ? 'product_identity_ambiguous' : 'product_identity_missing', line, context, matches);
+  }
+  function saleItemFromRow(x) {
+    return {
+      _saleItemId: x.id == null ? undefined : Number(x.id),
+      productId: x.product_id || x.productId || undefined,
+      sku: x.sku, nombre: x.nombre, talla: x.talla, qty: x.qty,
+      precio: Number(x.precio) || 0,
+      precioBase: x.precio_base == null ? x.precioBase : Number(x.precio_base),
+      precioOrig: x.precio_original == null ? x.precioOrig : Number(x.precio_original),
+      descuentoAdicional: x.descuento_adicional == null
+        ? x.descuentoAdicional : Number(x.descuento_adicional),
+      promos: Array.isArray(x.promos) ? x.promos : undefined,
+    };
+  }
+  function mappedSaleCommitResult(raw, op) {
+    const payload = Array.isArray(raw) ? raw[0] : raw;
+    if (!payload || typeof payload !== 'object') return null;
+    const saleRaw = Array.isArray(payload.sale) ? payload.sale[0] : payload.sale;
+    const itemRows = Array.isArray(payload.items) ? payload.items : [];
+    let sale = null;
+    if (saleRaw) {
+      sale = MAP.sales.fromRow(saleRaw);
+      if (sale.comision == null && op && op.commissionSnapshot) {
+        sale.comision = Number(op.commissionSnapshot.amount) || 0;
+        sale.comisionBase = op.commissionSnapshot.base || undefined;
+      }
+      sale.lineas = itemRows.map(saleItemFromRow);
+      sale._stockReserved = payload.stock_reserved === true;
+      sale._stockIdempotent = payload.stock_idempotent === true;
+      sale._reservationOperationId = payload.reservation_operation_id || undefined;
+      const vid = (saleRaw.vendedores || [])[0];
+      const sellers = (window.DATA && window.DATA.sellers) || [];
+      sale.vendedor = (sellers.find(x => x.id === vid) || {}).nombre || sale.vendedor || '';
+    }
+    return {
+      ok: payload.ok === true,
+      idempotent: payload.idempotent === true,
+      stockReserved: payload.stock_reserved === true,
+      stockIdempotent: payload.stock_idempotent === true,
+      reservationOperationId: payload.reservation_operation_id || null,
+      stock_reserved: payload.stock_reserved === true,
+      stock_idempotent: payload.stock_idempotent === true,
+      reservation_operation_id: payload.reservation_operation_id || null,
+      products: (payload.products || []).map(MAP.products.fromRow),
+      sale,
+      items: itemRows.map(saleItemFromRow),
+      payments: (payload.payments || []).map(MAP.payments.fromRow),
+      movements: (payload.movements || []).map(MAP.movements.fromRow),
+      sellers: (payload.sellers || []).map(MAP.sellers.fromRow),
+      commit: payload.commit || null,
+    };
+  }
+  async function resyncProductsAfterConflict(c, currentOpId) {
+    const hasOtherPendingProductChange = () => loadQ().some(op => op.id !== currentOpId
+      && opBelongsToActiveSession(op) && op.table === 'products');
+    if (!window.DATA || typeof window.DATA.applyRemote !== 'function'
+        || hasOtherPendingProductChange()) return false;
+    const refreshed = await fetchAllRows(c, 'products', 'id');
+    if (refreshed.error || hasOtherPendingProductChange()
+        || !Array.isArray(refreshed.data) || !refreshed.data.length) return false;
+    window.DATA.applyRemote('products', refreshed.data.map(MAP.products.fromRow));
+    return true;
+  }
 
   // ── Cola offline ────────────────────────────────────────────────────────────
   let volatileQueue = null, queueDurability = 'localStorage', storageWarned = false, backupNotified = false;
   let backupChain = Promise.resolve(), queueHydrated = false;
+  const layawayResults = new Map();
+  function rememberLayawayResult(op, authoritative) {
+    const payment = (authoritative.payments || []).find(row => row.tipo === 'liquidacion') || null;
+    layawayResults.set(op.id, {
+      paymentId: payment && payment.id,
+      reservationOperationId: authoritative.reservationOperationId,
+    });
+    while (layawayResults.size > 50) layawayResults.delete(layawayResults.keys().next().value);
+  }
   function openQueueDB() {
     return new Promise((resolve, reject) => {
       if (!window.indexedDB) return reject(new Error('indexeddb_unavailable'));
@@ -315,12 +424,15 @@
       category = 'schema'; status = 'blocked_schema'; policy = 'apply_migration'; retryable = false;
     } else if (/^23/.test(code)) {
       category = 'constraint'; status = 'blocked_data'; policy = 'review_data'; retryable = false;
-    } else if (/commit_mismatch|legacy_.*conflict|legacy_context_incomplete|invalid_return|folio_conflict|loan_version_conflict|loan_operation_conflict/.test(lower)) {
+    } else if (/commit_mismatch|operation_mismatch|operation_id_conflict|operation_adoption_conflict|item_adoption_conflict|seller_effects_mismatch|payment_id_conflict|payment_balance_mismatch|layaway_not_pending|layaway_already_liquidated|layaway_local_state_conflict|legacy_.*conflict|legacy_context_incomplete|invalid_return|folio_conflict|loan_version_conflict|loan_operation_conflict/.test(lower)) {
       // H-62: los conflictos de préstamo son PERMANENTES pese a llegar con el
       // código 40001, que por sí solo significa «serialización» y se reintentaría
       // en bucle. Una versión esperada que ya no coincide no va a coincidir en el
       // siguiente intento: necesita revisión, no martilleo.
       category = 'conflict'; status = 'blocked_conflict'; policy = 'review_conflict'; retryable = false;
+    } else if (/product_identity_(missing|ambiguous)|layaway_items_(missing_product_id|identity_ambiguous|invalid)|layaway_item_(identity_(missing|ambiguous|mismatch)|product_missing|sku_ambiguous)|layaway_not_found|invalid_(request|context|commission_snapshot|payment|payment_parts|layaway_liquidation)|reservation_confirmation_missing|invalid_commit_response/.test(lower)
+        || (code.toUpperCase() === 'P0001' && /seller|vendedor|inactive|inactivo|no existe/.test(lower))) {
+      category = 'constraint'; status = 'blocked_data'; policy = 'review_data'; retryable = false;
     } else if (/invalid_loan_|loan_not_found/.test(lower)) {
       category = 'constraint'; status = 'blocked_data'; policy = 'review_data'; retryable = false;
     } else if (httpStatus >= 500) {
@@ -342,6 +454,12 @@
   function isAutomaticallyEligible(op) {
     return !/^blocked_/.test(op.status || '') && op.status !== 'auth_required';
   }
+  function blockQueueForIdentity(op, error) {
+    const diagnostic = classifyFailure(error);
+    op.retry = true;
+    op.diagnostic = diagnostic;
+    op.status = diagnostic.status;
+  }
   function queueStatus() {
     const operations = loadQ().filter(opBelongsToActiveSession).map(op => ({
       id: op.id, type: op.type, table: op.table || null, folio: op.folio || null,
@@ -358,6 +476,7 @@
     };
   }
   function retryOperation(id) {
+    if (!hasLocalWriter(false)) return false;
     const q = loadQ(), op = q.find(x => x.id === id && opBelongsToActiveSession(x));
     if (!op) return false;
     op.status = 'pending'; delete op.diagnostic;
@@ -365,6 +484,7 @@
     return true;
   }
   function resumeAuthenticatedOperations() {
+    if (!hasLocalWriter(false)) return false;
     const q = loadQ(); let changed = false;
     q.forEach(op => {
       if (opBelongsToActiveSession(op) && op.status === 'auth_required') {
@@ -570,6 +690,13 @@
           if (result.conflicts && window.UI && window.UI.toast) {
             window.UI.toast(`${result.conflicts} cambio(s) no se aplicaron porque otra terminal guardó una versión más reciente`, 'var(--danger)');
           }
+          if (op.kind === 'products' && result.conflicts
+              && !(await resyncProductsAfterConflict(c, op.id))) {
+            return failOp({
+              code: 'product_resync_required',
+              message: 'El inventario requiere resincronización antes de continuar',
+            }, result);
+          }
         }
         return true;
       }
@@ -595,6 +722,13 @@
           if (result.conflicts && window.UI && window.UI.toast) {
             window.UI.toast(`${result.conflicts} cambio(s) no se aplicaron porque otra terminal guardó una versión más reciente`, 'var(--danger)');
           }
+          if (op.kind === 'products' && result.conflicts
+              && !(await resyncProductsAfterConflict(c, op.id))) {
+            return failOp({
+              code: 'product_resync_required',
+              message: 'El inventario requiere resincronización antes de continuar',
+            }, result);
+          }
         }
         return true;
       }
@@ -619,7 +753,14 @@
           const result = window.DATA.applySyncResult(op.kind, [remote], { [op.val]: Number(op.baseVersion) || 0 }, 'delete') || {};
           rebaseQueuedVersions(op.table, [remote]);
           if (result.conflicts && window.UI && window.UI.toast) {
-            window.UI.toast('No se eliminó: otra terminal modificó el registro. Se restauró la versión más reciente.', 'var(--danger)');
+            window.UI.toast('No se eliminó: otra terminal modificó el registro. Se resincronizará el inventario.', 'var(--danger)');
+          }
+          if (op.kind === 'products' && result.conflicts
+              && !(await resyncProductsAfterConflict(c, op.id))) {
+            return failOp({
+              code: 'product_resync_required',
+              message: 'El inventario requiere resincronización antes de continuar',
+            }, result);
           }
         }
         return true;
@@ -641,6 +782,81 @@
         }
         const b = await c.from('settings').upsert(op.settings, { onConflict: 'key' });
         return b.error ? failOp(b.error) : true;
+      }
+      if (op.type === 'sale' && op.mode === 'layaway_liquidation') {
+        const failLayaway = (error, details) => {
+          const failed = failOp(error, details);
+          if (lastApplyFailure && lastApplyFailure.retryable === false
+              && window.DATA && typeof window.DATA.releaseLayawayProductLock === 'function') {
+            window.DATA.releaseLayawayProductLock(op.operationId);
+          }
+          return failed;
+        };
+        if (!hasLocalWriter(true)
+            || !window.DATA
+            || typeof window.DATA.ensureLayawayProductLockFromOperation !== 'function'
+            || window.DATA.ensureLayawayProductLockFromOperation(op) !== true) {
+          return failLayaway({
+            code: 'layaway_local_state_conflict',
+            message: 'La identidad local del inventario cambió; resincroniza antes de reintentar',
+          });
+        }
+        const committed = await c.rpc('commit_layaway_liquidation_checked', {
+          p_commit_id: op.id,
+          p_operation_id: op.operationId,
+          p_folio: op.folio,
+          p_payment: op.payment,
+          p_seller_effects: op.sellerEffects || [],
+          p_context: {
+            item_identities: op.itemIdentities || [],
+            commission_amount: Number((op.commissionSnapshot || {}).amount) || 0,
+            commission_base: (op.commissionSnapshot || {}).base || 'neto',
+          },
+        });
+        const payload = Array.isArray(committed.data) ? committed.data[0] : committed.data;
+        if (committed.error || !payload) {
+          return failLayaway(committed.error || {
+            code: 'empty_response', message: 'La liquidación no devolvió confirmación',
+          });
+        }
+        if (payload.ok !== true) {
+          return failLayaway({
+            code: payload.error || 'layaway_liquidation_rejected',
+            message: payload.message || payload.error || 'La liquidación fue rechazada',
+          }, payload);
+        }
+        if (payload.stock_reserved !== true
+            || payload.reservation_operation_id !== op.operationId) {
+          return failLayaway({
+            code: 'reservation_confirmation_missing',
+            message: 'La liquidación no confirmó la reserva de inventario',
+          }, payload);
+        }
+        if (!window.DATA || typeof window.DATA.applySaleCommitResult !== 'function') {
+          return failLayaway({
+            code: 'local_commit_apply_unavailable',
+            message: 'La terminal no puede aplicar la respuesta autoritativa de la liquidación',
+          }, payload);
+        }
+        const authoritative = mappedSaleCommitResult(payload, op);
+        if (!authoritative || !authoritative.sale) {
+          return failLayaway({
+            code: 'invalid_commit_response',
+            message: 'La liquidación no devolvió la venta autoritativa',
+          }, payload);
+        }
+        // DATA persiste venta, pago, movimientos, vendedores y productos como
+        // una sola respuesta coherente. Si la persistencia falla, el commit
+        // permanece en cola y su reintento remoto es idempotente.
+        const applied = await Promise.resolve(window.DATA.applySaleCommitResult(op.id, op.folio, authoritative));
+        if (applied === false || (applied && applied.ok === false)) {
+          return failLayaway({
+            code: 'local_commit_persistence_failed',
+            message: 'No se pudo persistir localmente la liquidación confirmada',
+          }, applied || payload);
+        }
+        rememberLayawayResult(op, authoritative);
+        return true;
       }
       if (op.type === 'sale') {
         const expectedProducts = {};
@@ -694,20 +910,40 @@
           }
           return failOp({ code: committed.data.error, message: committed.data.error }, committed.data);
         }
-        const reconcile = (kind, rows, expected) => {
+        if (op.reserveStock === true
+            && (committed.data.stock_reserved !== true
+              || committed.data.reservation_operation_id !== op.operationId)) {
+          return failOp({
+            code: 'reservation_confirmation_missing',
+            message: 'La venta no devolvió una confirmación verificable de inventario',
+          }, committed.data);
+        }
+        const reconcile = async (kind, rows, expected) => {
           const m = MAP[kind];
-          if (!rows.length || !m || !m.fromRow || !window.DATA || !window.DATA.applySyncResult) return;
+          if (!rows.length || !m || !m.fromRow || !window.DATA || !window.DATA.applySyncResult) return true;
           const remote = rows.map(m.fromRow);
-          window.DATA.applySyncResult(kind, remote, expected, 'sale');
+          const result = window.DATA.applySyncResult(kind, remote, expected, 'sale') || {};
           rebaseQueuedVersions(m.table, remote);
+          if (kind === 'products' && result.conflicts) {
+            if (window.UI && window.UI.toast) {
+              window.UI.toast('El inventario cambió en otra terminal; se está resincronizando', 'var(--danger)');
+            }
+            return resyncProductsAfterConflict(c, op.id);
+          }
+          return true;
         };
-        reconcile('products', committed.data.products || [], expectedProducts);
+        if (!(await reconcile('products', committed.data.products || [], expectedProducts))) {
+          return failOp({
+            code: 'product_resync_required',
+            message: 'El inventario requiere resincronización antes de confirmar la venta',
+          }, committed.data);
+        }
         const expectedClient = {};
         if (op.clientEffect) expectedClient[op.clientEffect.id] = Number(op.clientEffect.base_version) || 0;
-        reconcile('clients', committed.data.clients || [], expectedClient);
+        await reconcile('clients', committed.data.clients || [], expectedClient);
         const expectedSellers = {};
         (op.sellerEffects || []).forEach(e => { expectedSellers[e.id] = Number(e.base_version) || 0; });
-        reconcile('sellers', committed.data.sellers || [], expectedSellers);
+        await reconcile('sellers', committed.data.sellers || [], expectedSellers);
         // Alias histórico: el folio ya impreso se lee de la venta local —la fuente
         // durable— y se persiste ANTES de dar la venta por sincronizada, así la
         // operación permanece en cola hasta que la nube conserve el ticket del
@@ -723,7 +959,16 @@
             return failOp(aliased.error || { code: 'alias_not_stored', message: 'No se pudo conservar el folio impreso como alias' });
           }
         }
-        if (window.DATA && window.DATA.markSaleSync) window.DATA.markSaleSync(op.folio, 'synced', { stockReserved: !!op.reserveStock });
+        if (window.DATA && window.DATA.markSaleSync) {
+          window.DATA.markSaleSync(op.folio, 'synced', {
+            stockReserved: committed.data.stock_reserved === true,
+            stockIdempotent: committed.data.stock_idempotent === true,
+            reservationOperationId: committed.data.reservation_operation_id || null,
+            stock_reserved: committed.data.stock_reserved === true,
+            stock_idempotent: committed.data.stock_idempotent === true,
+            reservation_operation_id: committed.data.reservation_operation_id || null,
+          });
+        }
         return true;
       }
       // H-38 (C5): el cambio viaja como UNA operacion durable y se confirma con
@@ -780,22 +1025,34 @@
             message: committed.data && committed.data.error || 'La devolución no devolvió confirmación',
           }, committed.data);
         }
-        const reconcile = (kind, rows, expected) => {
+        const reconcile = async (kind, rows, expected) => {
           const m = MAP[kind];
-          if (!rows.length || !m || !m.fromRow || !window.DATA || !window.DATA.applySyncResult) return;
+          if (!rows.length || !m || !m.fromRow || !window.DATA || !window.DATA.applySyncResult) return true;
           const remote = rows.map(m.fromRow);
-          window.DATA.applySyncResult(kind, remote, expected, 'return');
+          const result = window.DATA.applySyncResult(kind, remote, expected, 'return') || {};
           rebaseQueuedVersions(m.table, remote);
+          if (kind === 'products' && result.conflicts) {
+            if (window.UI && window.UI.toast) {
+              window.UI.toast('El inventario cambió en otra terminal; se está resincronizando', 'var(--danger)');
+            }
+            return resyncProductsAfterConflict(c, op.id);
+          }
+          return true;
         };
-        reconcile('products', committed.data.products || [], expectedProducts);
+        if (!(await reconcile('products', committed.data.products || [], expectedProducts))) {
+          return failOp({
+            code: 'product_resync_required',
+            message: 'El inventario requiere resincronización antes de confirmar la devolución',
+          }, committed.data);
+        }
         const expectedClient = {};
         const clientSource = op.legacy ? op.legacyTargets && op.legacyTargets.client : op.clientEffect;
         if (clientSource) expectedClient[clientSource.id] = Number(clientSource.base_version) || 0;
-        reconcile('clients', committed.data.clients || [], expectedClient);
+        await reconcile('clients', committed.data.clients || [], expectedClient);
         const expectedSellers = {};
         const sellerSources = op.legacy ? ((op.legacyTargets && op.legacyTargets.sellers) || []) : (op.sellerEffects || []);
         sellerSources.forEach(e => { expectedSellers[e.id] = Number(e.base_version) || 0; });
-        reconcile('sellers', committed.data.sellers || [], expectedSellers);
+        await reconcile('sellers', committed.data.sellers || [], expectedSellers);
         if (committed.data.sale_state && window.DATA) {
           const sale = (window.DATA.sales || []).find(x => x.folio === op.folio);
           if (sale) { sale.estado = committed.data.sale_state; window.DATA.saveSales(); }
@@ -825,7 +1082,7 @@
   // en vuelo, la operación moría sin rastro y el pull del siguiente arranque pisaba lo
   // capturado. Persistida antes de volar, sobrevive al refresh y se reintenta sola.
   async function run(op) {
-    if (!enabled) return;
+    if (!enabled || !hasLocalWriter(false)) return;
     op.id = newOpId();
     op.ownerId = activeOwnerId();
     enqueue(op);
@@ -833,8 +1090,23 @@
     flushQueue();
   }
 
-  let flushing = false, flushAgain = false;
+  let flushing = false, flushAgain = false, flushIdleWaiters = [];
+  function waitForFlushIdle() {
+    if (!flushing && !flushAgain) return Promise.resolve();
+    return new Promise(resolve => { flushIdleWaiters.push(resolve); });
+  }
+  function hasPendingLayaway(folio) {
+    const wanted = String(folio || '').trim();
+    return !!wanted && loadQ().some(op => op && op.type === 'sale'
+      && op.mode === 'layaway_liquidation' && op.folio === wanted);
+  }
+  function releaseFlushIdleWaiters() {
+    if (flushing || flushAgain) return;
+    const waiters = flushIdleWaiters.splice(0);
+    waiters.forEach(resolve => resolve());
+  }
   async function flushQueue() {
+    if (!hasLocalWriter(false)) return;
     if (flushing) { flushAgain = true; return; } // otra pasada al terminar la actual
     { // migra ops persistidas por una versión anterior (sin id)
       const stored = loadQ(), q0 = []; let mig = false;
@@ -862,17 +1134,36 @@
           if (o.header && !o.header.operation_id) {
             o.header.operation_id = o.operationId; mig = true;
           }
-          if (!Array.isArray(o.stockLines)) {
-            o.stockLines = (o.items || []).map(item => {
-              const productId = item.product_id
-                || (((window.DATA && window.DATA.products) || []).find(p => p.sku === item.sku) || {}).id;
-              return productId && Number(item.qty) > 0
-                ? { product_id: productId, talla: item.talla, qty: Number(item.qty) }
-                : null;
-            }).filter(Boolean);
+          if (o.mode !== 'layaway_liquidation') {
+            const previousIdentityState = JSON.stringify({
+              stockLines: o.stockLines, reserveStock: o.reserveStock,
+              status: o.status, diagnostic: o.diagnostic,
+              productIds: (o.items || []).map(item => item.product_id || null),
+            });
+            try {
+              o.stockLines = (o.items || []).map(item => {
+                const productId = resolveLineProductId(item, 'legacy_sale_queue');
+                if (!item.product_id) item.product_id = productId;
+                return Number(item.qty) > 0
+                  ? { product_id: productId, talla: item.talla, qty: Number(item.qty) }
+                  : null;
+              }).filter(Boolean);
+              if (o.diagnostic && /product_identity_(missing|ambiguous)/.test(String(o.diagnostic.code || ''))) {
+                o.status = 'pending'; delete o.diagnostic;
+              }
+            } catch (identityError) {
+              o.stockLines = [];
+              o.reserveStock = false;
+              blockQueueForIdentity(o, identityError);
+            }
             const state = o.header && o.header.estado;
-            o.reserveStock = o.stockLines.length > 0 && state !== 'Apartado' && state !== 'Cancelado';
-            mig = true;
+            if (state === 'Apartado' || state === 'Cancelado') o.reserveStock = false;
+            else if (typeof o.reserveStock !== 'boolean') o.reserveStock = o.stockLines.length > 0;
+            if (previousIdentityState !== JSON.stringify({
+              stockLines: o.stockLines, reserveStock: o.reserveStock,
+              status: o.status, diagnostic: o.diagnostic,
+              productIds: (o.items || []).map(item => item.product_id || null),
+            })) mig = true;
           }
           if (!Array.isArray(o.payments)) { o.payments = []; mig = true; }
           if (!o.clientEffect) { o.clientEffect = null; mig = true; }
@@ -887,15 +1178,27 @@
             const sale = (data.sales || []).find(s => s.folio === o.folio);
             const products = [];
             const seenProducts = new Set();
+            let identityComplete = true;
             (o.items || []).forEach(item => {
-              const product = (data.products || []).find(p => p.id === item.product_id || p.sku === item.sku);
-              if (!product || seenProducts.has(product.id)) return;
-              seenProducts.add(product.id);
-              products.push({
-                id: product.id, base_version: Number(product._syncVersion) || 0,
-                stock: product.stock || [],
-              });
-              if (!item.product_id) item.product_id = product.id;
+              if (!identityComplete) return;
+              try {
+                const productId = resolveLineProductId(item, 'legacy_return_queue');
+                const exact = (data.products || []).filter(p => p.id === productId);
+                if (exact.length !== 1) {
+                  throw productIdentityError('product_identity_missing', item, 'legacy_return_queue', exact);
+                }
+                const product = exact[0];
+                if (seenProducts.has(product.id)) return;
+                seenProducts.add(product.id);
+                products.push({
+                  id: product.id, base_version: Number(product._syncVersion) || 0,
+                  stock: product.stock || [],
+                });
+                if (!item.product_id) item.product_id = product.id;
+              } catch (identityError) {
+                identityComplete = false;
+                blockQueueForIdentity(o, identityError);
+              }
             });
             let client = null;
             if (sale && sale.cliente) {
@@ -917,7 +1220,7 @@
             }).filter(Boolean);
             o.legacyTargets = {
               products, client, sellers,
-              complete: !!sale && products.length === new Set((o.items || []).map(i => i.product_id).filter(Boolean)).size
+              complete: identityComplete && !!sale && products.length === new Set((o.items || []).map(i => i.product_id).filter(Boolean)).size
                 && (o.items || []).every(i => !!i.product_id),
             };
             mig = true;
@@ -958,15 +1261,44 @@
         const salesInFlight = new Set(queue
           .filter(o => o.type === 'sale' && opBelongsToActiveSession(o))
           .map(o => o.folio));
+        const genericSalesBehindLayaway = new Set();
+        const layawaysBehindGenericSale = new Set();
+        queue.forEach((candidate, index) => {
+          if (candidate.type !== 'sale') return;
+          if (candidate.mode === 'layaway_liquidation') {
+            if (queue.slice(0, index).some(prior => prior.type === 'sale'
+                && prior.mode !== 'layaway_liquidation' && prior.folio === candidate.folio)) {
+              layawaysBehindGenericSale.add(candidate.id);
+            }
+          } else if (queue.slice(0, index).some(prior => prior.type === 'sale'
+            && prior.mode === 'layaway_liquidation' && prior.folio === candidate.folio)) {
+            genericSalesBehindLayaway.add(candidate.id);
+          }
+        });
         const op = queue.find(o => opBelongsToActiveSession(o)
           && isAutomaticallyEligible(o) && !failed.has(o.id)
+          && !genericSalesBehindLayaway.has(o.id)
+          && !layawaysBehindGenericSale.has(o.id)
           && !(o.type === 'return' && salesInFlight.has(o.folio)));
         if (!op) break;
         const ok = await applyOp(c, op);
         const cur = loadQ();
         if (ok) {
           if (op.retry) recovered = true;
-          saveQ(cur.filter(o => o.id !== op.id));
+          const remaining = cur.filter(o => o.id !== op.id);
+          if (op.type === 'sale' && op.mode === 'layaway_liquidation') {
+            remaining.forEach(later => {
+              if (later.type !== 'sale' || later.mode === 'layaway_liquidation'
+                  || later.folio !== op.folio) return;
+              later.retry = true;
+              later.status = 'blocked_conflict';
+              later.diagnostic = classifyFailure({
+                code: 'layaway_already_liquidated',
+                message: 'Una liquidación autoritativa anterior ya cerró este apartado',
+              });
+            });
+          }
+          saveQ(remaining);
         } else {
           failed.add(op.id);
           const t = cur.find(o => o.id === op.id);
@@ -984,7 +1316,10 @@
       if (recovered && !loadQ().some(opBelongsToActiveSession) && window.UI && window.UI.toast) window.UI.toast('Cambios sincronizados con la nube', 'var(--accent)');
     } finally {
       flushing = false;
-      if (flushAgain) { flushAgain = false; flushQueue(); }
+      if (flushAgain) {
+        flushAgain = false;
+        Promise.resolve(flushQueue()).finally(releaseFlushIdleWaiters);
+      } else releaseFlushIdleWaiters();
     }
   }
 
@@ -1091,6 +1426,8 @@
     if (sale.pagoEfectivo != null) header.pago_efectivo = Number(sale.pagoEfectivo) || 0;
     if (sale.pagoOtro != null) header.pago_otro = Number(sale.pagoOtro) || 0;
     if (sale.descuento != null) header.descuento = Number(sale.descuento) || 0;
+    if (sale.comision != null) header.comision = Number(sale.comision) || 0;
+    if (sale.comisionBase != null) header.comision_base = sale.comisionBase;
     if (sale.descuentoAdicional != null) header.descuento_adicional = Number(sale.descuentoAdicional) || 0;
     if (sale.totalAntesDescuentoAdicional != null) header.total_antes_descuento_adicional = Number(sale.totalAntesDescuentoAdicional) || 0;
     if (Array.isArray(sale.descuentosAdicionales)) header.descuentos_adicionales = sale.descuentosAdicionales;
@@ -1101,7 +1438,7 @@
     // valor_regalado (cortesías) solo se envía si aplica, así no rompe instalaciones sin la migración pos_009.
     if (Number(sale.valorRegalado) > 0) header.valor_regalado = Number(sale.valorRegalado);
     const items = (sale.lineas || []).map(l => {
-      const productId = l.productId || ((window.DATA.products || []).find(p => p.sku === l.sku) || {}).id || null;
+      const productId = resolveLineProductId(l, `sale:${sale.folio}`);
       const row = { folio: sale.folio, product_id: productId, sku: l.sku, nombre: l.nombre, talla: l.talla, qty: l.qty, precio: Number(l.precio) || 0 };
       if (l.precioBase != null) row.precio_base = Number(l.precioBase) || 0;
       if (l.precioOrig != null) row.precio_original = Number(l.precioOrig) || 0;
@@ -1113,7 +1450,7 @@
     });
     const moves = ((window.DATA && window.DATA.movements) || [])
       .filter(m => m.tipo === 'Venta' && m.ref === sale.folio)
-      .map(m => ({ fecha: String(m.fecha || '').replace(' ', 'T'), tipo: 'Venta', producto: m.producto, sku: m.sku, cant: Number(m.cant) || 0, ref: sale.folio }));
+      .map(m => ({ fecha: String(m.fecha || '').replace(' ', 'T'), tipo: 'Venta', producto: m.producto, product_id: m.productId || m.product_id || null, sku: m.sku, talla: m.talla || null, cant: Number(m.cant) || 0, ref: sale.folio }));
     const stockLines = items
       .filter(row => row.product_id && Number(row.qty) > 0)
       .map(row => ({ product_id: row.product_id, talla: row.talla, qty: Number(row.qty) }));
@@ -1122,11 +1459,111 @@
     return run({
       type: 'sale', folio: sale.folio, header, items, moves, payments,
       operationId,
-      reserveStock: sale._stockRequired !== false && !sale._stockReserved,
+      reserveStock: sale._stockRequired === true && sale._stockReserved !== true,
       stockLines,
       clientEffect: effects.clientEffect || null,
       sellerEffects: effects.sellerEffects || [],
     });
+  }
+  function liquidationQueueResult(commitId, folio) {
+    const pendingOp = loadQ().find(op => op.id === commitId && opBelongsToActiveSession(op));
+    if (!pendingOp) {
+      const applied = layawayResults.get(commitId) || {};
+      return {
+        ok: true, pending: false, commitId, folio,
+        paymentId: applied.paymentId || null,
+        reservationOperationId: applied.reservationOperationId || null,
+      };
+    }
+    const diagnostic = pendingOp.diagnostic || null;
+    const blocked = /^blocked_/.test(pendingOp.status || '') || pendingOp.status === 'auth_required';
+    return {
+      ok: false,
+      pending: !blocked,
+      queued: true,
+      commitId,
+      folio,
+      error: diagnostic,
+    };
+  }
+  async function settleLayaway(draft, effects) {
+    draft = draft || {};
+    effects = effects || {};
+    if (!enabled) {
+      return { ok: false, pending: false, error: { code: 'store_disabled', message: 'La sincronización no está inicializada' } };
+    }
+    if (!hasLocalWriter(true)) {
+      return {
+        ok: false, pending: false,
+        error: { code: 'local_writer_required', message: 'La liquidación requiere la pestaña activa de escritura' },
+      };
+    }
+    const sale = draft.sale || draft;
+    const folio = String(draft.folio || sale.folio || '').trim();
+    const operationId = draft.operationId || draft.operation_id
+      || sale._operationId || sale.operationId || sale.operation_id;
+    const payment = draft.payment || effects.payment;
+    if (!folio || !operationId || !payment || typeof payment !== 'object') {
+      return {
+        ok: false, pending: false,
+        error: {
+          code: 'invalid_layaway_liquidation',
+          message: 'La liquidación requiere folio, operación original y pago final',
+        },
+      };
+    }
+    const ownerId = activeOwnerId();
+    const existing = loadQ().find(op => opBelongsToActiveSession(op)
+      && op.type === 'sale' && op.mode === 'layaway_liquidation'
+      && op.folio === folio);
+    if (existing) {
+      await backupChain;
+      await flushQueue();
+      await waitForFlushIdle();
+      return liquidationQueueResult(existing.id, folio);
+    }
+    const clone = value => JSON.parse(JSON.stringify(value));
+    const productIds = [...new Set((sale.lineas || []).map(line => line.productId).filter(Boolean))];
+    const durableLock = window.DATA && typeof window.DATA.layawayProductLockSnapshot === 'function'
+      ? window.DATA.layawayProductLockSnapshot(String(operationId)) : null;
+    if (window.DATA && typeof window.DATA.layawayProductLockSnapshot === 'function'
+        && (!durableLock || JSON.stringify((durableLock.productIds || []).slice().sort())
+          !== JSON.stringify(productIds.slice().sort()))) {
+      return {
+        ok: false, pending: false,
+        error: { code: 'layaway_local_state_conflict', message: 'No existe un lock durable para esta liquidación' },
+      };
+    }
+    const productSnapshots = durableLock ? durableLock.productSnapshots
+      : productIds.map(id => (window.DATA && window.DATA.products || []).find(product => product.id === id)).filter(Boolean);
+    const op = {
+      id: newOpId(),
+      ownerId,
+      type: 'sale',
+      mode: 'layaway_liquidation',
+      table: 'sales',
+      folio,
+      operationId: String(operationId),
+      productIds: clone(productIds),
+      productSnapshots: clone(productSnapshots),
+      payment: clone(payment),
+      sellerEffects: clone(effects.sellerEffects || effects.seller_effects || []),
+      itemIdentities: (sale.lineas || []).map(line => ({
+        sale_item_id: line._saleItemId == null ? null : Number(line._saleItemId),
+        product_id: line.productId || null,
+        sku: line.sku || null,
+        talla: line.talla || null,
+      })),
+      commissionSnapshot: {
+        amount: Number(sale.comision) || 0,
+        base: sale.comisionBase || 'neto',
+      },
+    };
+    enqueue(op);
+    await backupChain;
+    await flushQueue();
+    await waitForFlushIdle();
+    return liquidationQueueResult(op.id, folio);
   }
   function pushReturn(ret, effects) {
     if (!enabled) return;
@@ -1246,7 +1683,8 @@
     // entera. Quien quiera forzarla usa el botón de Configuración.
     if (pendingAtBoot || loadQ().length) return false;
     if (!(window.DATA && window.DATA.resetTestData)) return false;
-    try { window.DATA.resetTestData(); } catch (e) { return false; }
+    try { if (window.DATA.resetTestData() !== true) return false; }
+    catch (e) { return false; }
     try { localStorage.setItem(RESET_SEEN, lastResetMark); } catch (e) { /* */ }
     try { await flushQueue(); } catch (e) { /* offline: el stock restaurado queda en cola */ }
     if (window.UI && window.UI.toast) window.UI.toast('Datos de prueba borrados en esta terminal — inventario intacto', 'var(--accent)');
@@ -1290,12 +1728,51 @@
   // Filas de venta locales desde filas SQL + sus renglones (compartido: pull y fetch por folio).
   function saleRowsFrom(raws, itemRows) {
     const byFolio = {};
-    (itemRows || []).forEach(x => (byFolio[x.folio] || (byFolio[x.folio] = [])).push({ productId: x.product_id || undefined, sku: x.sku, nombre: x.nombre, talla: x.talla, qty: x.qty, precio: Number(x.precio) || 0, precioBase: x.precio_base == null ? undefined : Number(x.precio_base), precioOrig: x.precio_original == null ? undefined : Number(x.precio_original), descuentoAdicional: x.descuento_adicional == null ? undefined : Number(x.descuento_adicional), promos: Array.isArray(x.promos) ? x.promos : undefined }));
+    (itemRows || []).forEach(x => (byFolio[x.folio] || (byFolio[x.folio] = [])).push(saleItemFromRow(x)));
     return raws.map(raw => {
       const s = MAP.sales.fromRow(raw); s.lineas = byFolio[raw.folio] || [];
       const vid = (raw.vendedores || [])[0];
       s.vendedor = (window.DATA.sellers.find(x => x.id === vid) || {}).nombre || s.vendedor || '';
       return s;
+    });
+  }
+  function reservationStatusRows(data) {
+    if (Array.isArray(data)) return data;
+    if (!data || typeof data !== 'object') return [];
+    if (Array.isArray(data.statuses)) return data.statuses;
+    if (Array.isArray(data.reservations)) return data.reservations;
+    if (Array.isArray(data.data)) return data.data;
+    return data.operation_id || data.reservation_operation_id ? [data] : [];
+  }
+  async function attachSaleReservationStatus(c, raws) {
+    const operations = Array.from(new Set((raws || [])
+      .map(row => row.operation_id).filter(Boolean)));
+    if (!operations.length) return raws || [];
+    const statuses = [];
+    for (let i = 0; i < operations.length; i += 200) {
+      const status = await c.rpc('sale_stock_reservation_status', {
+        p_operation_ids: operations.slice(i, i + 200),
+      });
+      // Compatibilidad durante el despliegue: si la función aún no existe,
+      // no se infiere nada por estado; simplemente se conserva `false`.
+      if (status.error) return raws || [];
+      statuses.push.apply(statuses, reservationStatusRows(status.data));
+    }
+    const byOperation = {}, byFolio = {};
+    statuses.forEach(status => {
+      const operationId = status.operation_id || status.reservation_operation_id;
+      if (operationId) byOperation[operationId] = status;
+      if (status.folio) byFolio[status.folio] = status;
+    });
+    return (raws || []).map(raw => {
+      const status = byOperation[raw.operation_id] || byFolio[raw.folio];
+      if (!status) return raw;
+      return Object.assign({}, raw, {
+        stock_reserved: status.stock_reserved === true,
+        stock_idempotent: status.stock_idempotent === true,
+        reservation_operation_id: status.stock_reserved === true
+          ? (status.reservation_operation_id || null) : null,
+      });
     });
   }
   // Ventas: pull PAGINADO — la ventana reciente (sync.salesWindowDays, def. 365 días) más
@@ -1315,8 +1792,9 @@
     if (rec.error || apart.error) return; // tabla ausente / sin permiso → modo local
     const uniq = {};
     (rec.data || []).concat(apart.data || []).forEach(x => { uniq[x.folio] = x; });
-    const raws = Object.values(uniq);
+    let raws = Object.values(uniq);
     if (!raws.length) return;
+    raws = await attachSaleReservationStatus(c, raws);
     const items = await fetchItemsIn(c, 'sale_items', 'folio', raws.map(x => x.folio));
     if (hasPendingFor('sales')) return; // capturaron durante el vuelo: no pisar
     window.DATA.mergeRemote('sales', saleRowsFrom(raws, items), 'folio');
@@ -1335,8 +1813,9 @@
       if (!alias.error && (alias.data || []).length) r = alias;
     }
     if (r.error || !(r.data || []).length) return null;
-    const items = await fetchItemsIn(c, 'sale_items', 'folio', r.data.map(x => x.folio));
-    const rows = saleRowsFrom(r.data, items);
+    const remoteSales = await attachSaleReservationStatus(c, r.data);
+    const items = await fetchItemsIn(c, 'sale_items', 'folio', remoteSales.map(x => x.folio));
+    const rows = saleRowsFrom(remoteSales, items);
     if (!hasPendingFor('sales')) window.DATA.mergeRemote('sales', rows, 'folio');
     return window.DATA.sales.find(s => s.folio === rows[0].folio) || rows[0];
   }
@@ -1391,7 +1870,28 @@
 
   async function init(opts = {}) {
     enabled = true;
+    if (!writerSubscribed) {
+      writerSubscribed = true;
+      window.addEventListener('localwriterchange', event => {
+        if (event && event.detail && event.detail.state === 'writer') {
+          queueHydrated = false;
+          volatileQueue = null;
+          Promise.resolve(init({ pull: true })).catch(() => { /* relevo best-effort */ });
+        }
+      });
+    }
+    if (window.DATA && typeof window.DATA.awaitLocalWriter === 'function'
+        && !(await window.DATA.awaitLocalWriter(300))) {
+      return { ok: false, readOnly: true };
+    }
+    if (!hasLocalWriter(false)) return { ok: false, readOnly: true };
     await hydrateDurableQueue();
+    const layawayOpsAtBoot = loadQ().filter(op =>
+      op.type === 'sale' && op.mode === 'layaway_liquidation'
+      && isAutomaticallyEligible(op));
+    if (window.DATA && typeof window.DATA.reconcileLayawayProductLocks === 'function') {
+      window.DATA.reconcileLayawayProductLocks(layawayOpsAtBoot);
+    }
     // Al reconectar: drena la cola y, además, migra fotos incrustadas que hayan quedado.
     if (!onlineSubscribed) {
       onlineSubscribed = true;
@@ -1578,6 +2078,6 @@
     }
   }
 
-  window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushSale, pushReturn, pushExchange, ensureFolioBlock, deleteRow, settleCommission, closeCommissionPeriod, pushLoanOperation, migrateLocalLoans, pullDomain, fetchSaleByFolio, physicalCardAvailable, claimPhysicalCard, flushQueue, retryOperation, queueStatus, clearQueue, markResetApplied, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
+  window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushSale, settleLayaway, pushReturn, pushExchange, ensureFolioBlock, deleteRow, settleCommission, closeCommissionPeriod, pushLoanOperation, migrateLocalLoans, pullDomain, fetchSaleByFolio, physicalCardAvailable, claimPhysicalCard, flushQueue, retryOperation, queueStatus, hasPendingLayaway, clearQueue, markResetApplied, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
   window.CORE.registerSyncGateway(window.STORE);
 })();

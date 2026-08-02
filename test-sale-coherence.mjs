@@ -19,10 +19,41 @@ await page.route(/supabase\.co/, r => r.abort());
 await page.goto('http://127.0.0.1:8812/', { waitUntil: 'load' });
 await page.waitForFunction(() => window.DATA && window.DATA.recordSale && window.DATA.recordReturn);
 
-const out = await page.evaluate(() => {
+const out = await page.evaluate(async () => {
   const D = window.DATA;
-  const pushed = [];
+  const pushed = [], settled = [];
   window.STORE.pushSale = (sale, effects) => pushed.push(JSON.parse(JSON.stringify({ sale, effects: effects || {} })));
+  window.STORE.settleLayaway = async (draft, effects) => {
+    settled.push(JSON.parse(JSON.stringify({ sale: draft, effects: effects || {} })));
+    const remoteProducts = (draft.lineas || []).map(line => {
+      const current = D.products.find(p => p.id === line.productId);
+      const remote = JSON.parse(JSON.stringify(current));
+      const variant = remote.stock.find(v => v.talla === line.talla);
+      variant.stock -= Number(line.qty) || 0;
+      remote._syncVersion = (Number(current._syncVersion) || 0) + 1;
+      return remote;
+    });
+    const remoteSellers = (effects.sellerEffects || []).map(effect => {
+      const current = D.sellers.find(s => s.id === effect.id);
+      return Object.assign({}, current, {
+        ventasMes: effect.after_ventas_mes, ventasNum: effect.after_ventas_num,
+        comisionAcum: effect.after_comision_acum,
+        _syncVersion: (Number(current._syncVersion) || 0) + 1,
+      });
+    });
+    const result = D.applySaleCommitResult('h03-commit-' + draft.folio, draft.folio, {
+      sale: draft, products: remoteProducts,
+      payments: D.paymentsForSale(draft.folio).concat(effects.payment),
+      movements: (draft.lineas || []).map((line, i) => ({
+        id: 65010 + i, fecha: effects.payment.fecha, tipo: 'Venta',
+        producto: line.nombre, productId: line.productId, sku: line.sku,
+        talla: line.talla, cant: -line.qty, ref: draft.folio,
+      })),
+      sellers: remoteSellers, stockReserved: true, stockIdempotent: false,
+      reservationOperationId: draft._operationId,
+    });
+    return { ok: result.ok === true };
+  };
   window.STORE.pushReturn = () => {};
   window.STORE.pushRows = () => {};
   const stock = window.CONFIG.codes('size_letter').concat(window.CONFIG.codes('size_number')).map(talla => ({ talla, escala: 'L', stock: 50 }));
@@ -40,12 +71,14 @@ const out = await page.evaluate(() => {
   const tax = mk({ metodo: 'Tarjeta', estado: 'Pagado', total: 1150, anticipo: 1150, pagoEfectivo: 0, pagoOtro: 1150 });
   window.PROMOS = promosOriginal;
   p.precio = 1000;
+  D.saveProducts(false);
   const lay = mk({ metodo: 'Apartado', estado: 'Apartado', total: 1000, anticipo: 300, pagoEfectivo: 0, pagoOtro: 0 });
   const layBefore = { total: lay.total, anticipo: lay.anticipo, saldo: lay.saldo };
-  const abono = D.registrarPagoApartado(lay.folio, { monto: 200, metodo: 'Tarjeta', detalle: { tarjeta: 200 } });
+  const abono = await Promise.resolve(D.registrarPagoApartado(lay.folio, { monto: 200, metodo: 'Tarjeta', detalle: { tarjeta: 200 } }));
   const layMid = { estado: lay.estado, anticipo: lay.anticipo, saldo: lay.saldo };
-  const liquida = D.registrarPagoApartado(lay.folio, { monto: 500, metodo: 'Transferencia', detalle: { transferencia: 500 } });
-  const layAfter = { estado: lay.estado, anticipo: lay.anticipo, saldo: lay.saldo };
+  const liquida = await Promise.resolve(D.registrarPagoApartado(lay.folio, { monto: 500, metodo: 'Transferencia', detalle: { transferencia: 500 } }));
+  const layConfirmed = D.sales.find(s => s.folio === lay.folio);
+  const layAfter = { estado: layConfirmed.estado, anticipo: layConfirmed.anticipo, saldo: layConfirmed.saldo };
   const mixed = mk({ metodo: 'Mixto', estado: 'Pagado', total: 1000, anticipo: 1000, pagoEfectivo: 400, pagoOtro: 600, pagoDetalle: { efectivo: 400, transferencia: 600 } });
   const discounted = D.recordSale({
     ticket, additionalDiscounts: [{
@@ -57,7 +90,11 @@ const out = await page.evaluate(() => {
     sellerIds: [seller.id], client, itemCount: 1, metodo: 'Efectivo',
     estado: 'Pagado', anticipo: 500, pagoEfectivo: 500, pagoOtro: 0,
   });
-  const clientTotalBeforeReturns = client.total;
+  // H-65: al confirmar la liquidación, DATA reconstruye sus colecciones desde la
+  // caché durable (relevo entre pestañas). La referencia inicial deja de ser la
+  // fila viva; el total del cliente se lee siempre del catálogo vigente.
+  const clienteVivo = () => D.clients.find(c => c.id === client.id);
+  const clientTotalBeforeReturns = clienteVivo().total;
 
   const invalid = [];
   for (const args of [
@@ -72,7 +109,7 @@ const out = await page.evaluate(() => {
   const retTax = D.recordReturn({ folio: tax.folio, lineas: [{ sku: p.sku, nombre: p.nombre, talla, qty: 1, precio: 1 }] });
   const retLay = D.recordReturn({ folio: lay.folio, lineas: [{ sku: p.sku, nombre: p.nombre, talla, qty: 1, precio: 1 }] });
   const retDiscounted = D.recordReturn({ folio: discounted.folio, lineas: [{ sku: p.sku, nombre: p.nombre, talla, qty: 1, precio: 9999 }] });
-  return { normal, tax, discounted, layBefore, layMid, layAfter, abono, liquida, layPayments: D.paymentsForSale(lay.folio), mixed, mixedPayments: D.paymentsForSale(mixed.folio), invalid, retTax, retLay, retDiscounted, clientTotalBeforeReturns, clientTotalAfterReturns: client.total, pushed };
+  return { normal, tax, discounted, layBefore, layMid, layAfter, abono, liquida, layPayments: D.paymentsForSale(lay.folio), mixed, mixedPayments: D.paymentsForSale(mixed.folio), invalid, retTax, retLay, retDiscounted, clientTotalBeforeReturns, clientTotalAfterReturns: clienteVivo().total, pushed, settled };
 });
 
 check('CASO 1: venta normal = $1,000 en venta local', out.normal.total === 1000);
@@ -98,10 +135,10 @@ check('H-04: venta incluye pago, cliente y comisión en la misma operación', ou
   && x.effects.payments?.length === 1
   && x.effects.clientEffect?.compras_delta === 1
   && x.effects.sellerEffects?.length === 1));
-check('H-04: cada abono lleva el historial completo y la liquidación lleva comisión', out.pushed.some(x =>
+check('H-65: la liquidación viaja por la autoridad atómica con pago final y comisión', out.settled.some(x =>
   x.sale.folio === out.liquida.sale.folio
   && x.sale.estado === 'Pagado'
-  && x.effects.payments?.length === 3
+  && x.effects.payment?.tipo === 'liquidacion'
   && x.effects.sellerEffects?.length === 1));
 
 await browser.close(); server.close();

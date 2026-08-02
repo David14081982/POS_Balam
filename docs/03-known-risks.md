@@ -3214,30 +3214,71 @@ urgencia: cada talla aparece ya una sola vez y con sus prendas.
 
 ## H-65 - Una liquidación de apartado no descontó su pieza del inventario
 
-**Estado:** ABIERTO - SIN INVESTIGAR
+**Estado:** RESUELTO Y PUBLICADO - FALTA APLICAR 4 MIGRACIONES
 **Fecha de registro:** 01/08/2026
 **Commit:** Pendiente de commit
-**Evidencia:** al liquidar los dos apartados que H-64 exigía cerrar, ambos
-registraron su movimiento `Venta · cant −1` y ambos quedaron en `Pagado`, pero
-**sólo uno descontó existencias**. `BG-260729-0011` (ADRIANO `1-ARO-MC-AMAR-T`,
-talla `0`) bajó de 3 a 2. `BG-260728-0004` (ALONSO `1-ALS-ML-CCAP-T`, talla `B`)
-**siguió en 3**. El total pasó de 3,525 a 3,524 cuando debía quedar en 3,523.
-**Origen:** verificación de precondiciones de H-64.
-**Riesgo:** hay una prenda menos en la tienda de las que el sistema cree, y el
-kardex afirma una salida que el inventario no refleja. Si el fallo es sistemático,
-cada venta afectada descuadra el inventario en silencio.
-**Hipótesis no demostrada:** `finalizarApartado()` localiza el producto con
-`products.find(x => x.sku === l.sku)` y se queda con el primero. El catálogo tiene
-**12 SKUs duplicados** —dos productos distintos comparten SKU— y `1-ALS-ML-CCAP-T`
-es uno de ellos. Se descartó que fuera un fallo de resolución de talla:
-`stockVariantOf()` resuelve hoy correctamente el código `B` en los dos productos.
-Tampoco se descontó del otro: **ninguno de los dos bajó**.
-**Alcance propuesto:** reproducir el caso, determinar la causa, corregirla y
-ajustar la pieza descuadrada. Revisar si afecta también a ventas normales de los
-12 SKUs duplicados.
-**Pendiente:** todo. El dueño decidió atenderlo después de H-64.
-**Riesgo residual:** por determinar.
-**Corrección documentada:** pendiente.
+**Decisión:** **E1 CONFIRMADA. No correspondía ajustar inventario.** La reserva
+de `BG-260728-0004` ya había descontado `imp-1784582003842-2 · B · qty 1` el
+30/07/2026 durante el abono parcial, bajo la operación
+`ef547feb-9bf3-457b-b5c5-f8846b4b510c`. La liquidación del 01/08 reutilizó esa
+reserva idempotente; por eso el valor remoto correcto era y sigue siendo **3**.
+`BG-260729-0011` reservó al liquidarse y su comparador permanece correctamente
+en **2**.
+**Causa raíz demostrada:** el apartado descargado no llevaba
+`_stockRequired=false`; el abono parcial se envió como reservable. Después,
+`finalizarApartado()` descontaba y persistía localmente antes de conocer la
+respuesta. El servidor devolvió correctamente el snapshot idempotente en 3 y la
+reconciliación reemplazó el decremento local fantasma, produciendo la apariencia
+de una pieza no descontada.
+**Corrección de la hipótesis inicial:** los SKU duplicados **no causaron este
+incidente**. La reserva señala el `productId` exacto y ninguno de los dos
+productos con `1-ALS-ML-CCAP-T` cambió después. La duplicidad sí permanece como
+riesgo independiente para documentos históricos sin `productId`: el fallback
+ahora exige SKU único y bloquea cualquier ambigüedad.
+**Corrección aplicada:** liquidación remota atómica e idempotente; confirmación
+explícita de reserva; identidad por producto; ledger propio; replay estable;
+journal/rollback de caché; locks por producto; errores permanentes bloqueados y
+adopción histórica auditada. Migraciones 101/102 desplegadas y verificadas.
+**Concurrencia entre pestañas:** la escritura local se arrienda con
+`navigator.locks`. La pestaña dueña reconstruye las once colecciones desde la
+caché durable antes de habilitar mutadores; las demás quedan en lectura; un
+navegador sin Web Locks falla cerrado y no liquida. Del lado remoto, el advisory
+lock por `operation_id`, la unicidad del ledger y el rechazo
+`layaway_already_liquidated` cubren además dos terminales distintas.
+**Reservas equivalentes:** una reserva anterior con las mismas líneas en otro
+orden —o con el mismo par en renglones separados— se reconoce idempotente
+comparando canónico contra canónico y entregando al core su representación
+exacta. Sólo un contenido realmente distinto se rechaza, siempre como
+`operation_mismatch` con `reason`, revirtiendo antes toda adopción legacy.
+**Pruebas:** reproducción anterior 4/35; las 67 suites del repositorio se
+corrieron tras el último cambio y 64 quedaron verdes con 1,679 verificaciones
+(H-65 estático 35/35, E2E 28/28, cola 133/133, apartados 55/55, contratos de
+módulo 41/41, migraciones 31/31, build 8/8, smoke 15/15). Las tres suites
+restantes fallan idénticas en `HEAD` y no pertenecen a H-65:
+`test-additional-discount`, `test-concurrency` y `test-liquidations`.
+**Despliegue:** paquete publicado en
+`https://david14081982.github.io/POS_Balam/`, 8,788,159 bytes, SHA-256
+`3C8610F9D4B7E02BCE8996E4F3686973F92FE504B318781CFA6119258123E394`. La
+protección entre pestañas no depende de ninguna migración y ya está activa.
+**Pendiente:** aplicar `20260801010150`, `20260801010300`, `20260801010400` y
+`20260801010450` con `supabase db push --linked --include-all`. El comando fue
+rechazado por la política de permisos del entorno de trabajo, no por la base;
+`--dry-run` y `db lint` pasan. Hasta entonces el servidor conserva el
+comportamiento del primer despliegue: una reserva histórica con otro orden
+responde `operation_mismatch` y **no descuenta dos veces**.
+**Inventario:** sin ajuste, antes y después. `imp-1784582003842-2 · B` sigue en
+**3**; el duplicado en **3**; el comparador `imp-1784582003839-0 · 0` en **2**;
+3,531 piezas remotas. Ninguna de las cuatro migraciones pendientes puede moverlo:
+150 y 450 son no-op con catálogo presente, 300 sólo redefine funciones y aborta
+ante deriva, y 400 compara la huella `md5` de todo el catálogo antes y después y
+lanza `H65_VERIFICATION_MOVED_REAL_INVENTORY` si difiere.
+**Riesgo residual:** un SKU histórico ambiguo se bloquea para revisión. Un
+navegador sin Web Locks vende pero no liquida. La divergencia global preexistente
+del espejo local (240 productos/3,523 piezas) frente a la autoridad remota (239
+activos/3,531 piezas) no pertenece a H-65 y no se alteró. H-66 y la cola
+bloqueada de vendedores permanecieron intactos.
+**Corrección documentada:**
+`docs/fixes/liquidacion-apartado-autoridad-stock.md`.
 
 ## H-66 - El código de una talla es a la vez identidad, valor de intercambio y etiqueta
 

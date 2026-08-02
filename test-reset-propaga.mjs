@@ -90,8 +90,13 @@ await page.route(/supabase\.co\/rest\/v1\//, async route => {
   if (m === 'GET') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(db[table] || []) });
   if (m === 'POST' || m === 'PATCH') {
     let rows = []; try { rows = JSON.parse(req.postData() || '[]'); } catch (e) { /* */ }
-    if (table === 'rpc/commit_sale') {
-      db.sales.push(rows.p_sale);
+    if (table === 'rpc/commit_sale'
+        || table === 'rpc/commit_sale_checked'
+        || table === 'rpc/commit_sale_with_additional_discount_checked') {
+      const existingSale = db.sales.findIndex(item => item.folio === rows.p_sale.folio);
+      if (existingSale >= 0) db.sales[existingSale] = rows.p_sale;
+      else db.sales.push(rows.p_sale);
+      db.sale_items = db.sale_items.filter(item => item.folio !== rows.p_sale.folio);
       db.sale_items.push(...(rows.p_items || []));
       const products = [];
       if (rows.p_reserve_stock) (rows.p_stock_lines || []).forEach(line => {
@@ -103,9 +108,14 @@ await page.route(/supabase\.co\/rest\/v1\//, async route => {
           if (!products.includes(product)) products.push(product);
         }
       });
-      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, products, clients: [], sellers: [] }) });
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+        ok: true, products, clients: [], sellers: [],
+        stock_reserved: rows.p_reserve_stock === true,
+        stock_idempotent: false,
+        reservation_operation_id: rows.p_reserve_stock === true ? rows.p_operation_id : null,
+      }) });
     }
-    if (table === 'rpc/commit_return') {
+    if (table === 'rpc/commit_return' || table === 'rpc/commit_return_checked') {
       db.returns.push(rows.p_return);
       db.return_items.push(...(rows.p_items || []));
       const products = [];
@@ -119,6 +129,16 @@ await page.route(/supabase\.co\/rest\/v1\//, async route => {
         }
       });
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, products, clients: [], sellers: [] }) });
+    }
+    if (table === 'rpc/save_products_checked') {
+      const productRows = Array.isArray(rows.p_rows) ? rows.p_rows : [];
+      seenPosts.push('products');
+      productRows.forEach(row => {
+        const index = db.products.findIndex(item => item.id === row.id);
+        if (index >= 0) db.products[index] = row;
+        else db.products.push(row);
+      });
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
     }
     if (!Array.isArray(rows)) rows = [rows];
     seenPosts.push(table);

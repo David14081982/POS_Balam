@@ -166,7 +166,11 @@
       toast(mode === 'edit' ? 'Producto actualizado' : 'Producto agregado al inventario', 'var(--accent)');
     }
     function deleteProduct(p) {
-      D.removeProduct(p.id); refresh();
+      if (!D.removeProduct(p.id)) {
+        toast('El producto tiene una liquidación pendiente; espera su confirmación', 'var(--danger)');
+        return;
+      }
+      refresh();
       setDetail(null);
       toast('Producto eliminado', 'var(--danger)');
     }

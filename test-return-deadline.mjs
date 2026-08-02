@@ -47,11 +47,34 @@ function terminal({ storage = new Map(), clock = '2026-07-28T10:00:00', device =
     all: () => [], find: () => null,
   };
   const syncCalls = [];
+  let dataRef = null;
   const CORE = {
     getDeviceId: () => device,
     registerCatalogProducts: () => {},
     registerSyncGateway: () => {},
-    invokeSync: (method, ...args) => { syncCalls.push({ method, args }); },
+    invokeSync: (method, ...args) => {
+      syncCalls.push({ method, args });
+      if (method !== 'settleLayaway' || !dataRef) return undefined;
+      const sale = args[0], effects = args[1] || {};
+      const remoteProducts = [...new Set((sale.lineas || []).map(line => line.productId))]
+        .map(id => JSON.parse(JSON.stringify(dataRef.products.find(p => p.id === id))));
+      remoteProducts.forEach(product => (sale.lineas || []).filter(line => line.productId === product.id)
+        .forEach(line => {
+          const variant = product.stock.find(row => row.talla === line.talla);
+          if (variant) variant.stock -= Number(line.qty) || 0;
+        }));
+      const movementRows = (sale.lineas || []).map((line, index) => ({
+        id: 34000 + index, fecha: effects.payment.fecha, tipo: 'Venta',
+        producto: line.nombre, productId: line.productId, sku: line.sku,
+        talla: line.talla, cant: -line.qty, ref: sale.folio,
+      }));
+      const applied = dataRef.applySaleCommitResult('h34-commit-' + sale.folio, sale.folio, {
+        sale, products: remoteProducts, payments: [effects.payment],
+        movements: movementRows, sellers: [], stockReserved: true,
+        stockIdempotent: false, reservationOperationId: sale._operationId,
+      });
+      return Promise.resolve({ ok: applied.ok, paymentId: effects.payment.id });
+    },
   };
   let nowIso = clock;
   class FakeDate extends Date {
@@ -67,10 +90,15 @@ function terminal({ storage = new Map(), clock = '2026-07-28T10:00:00', device =
     CONFIG, CORE, localStorage, UI: { toast: () => {} },
     addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => true,
     crypto: { randomUUID: () => 'uuid-' + Math.random().toString(16).slice(2) },
+    // H-65: la terminal simulada es un navegador con Web Locks y una sola
+    // pestaña. Sin este contrato, DATA falla cerrado y ninguna liquidación
+    // ocurre — que es exactamente lo que debe pasar donde no existe.
+    navigator: { locks: { request: (name, opts, fn) => Promise.resolve(fn()) } },
   };
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
   vm.runInContext(src, sandbox);
+  dataRef = sandbox.window.DATA;
   const t = {
     D: sandbox.window.DATA, CONFIG, storage, syncCalls, device,
     setClock: iso => { nowIso = iso; },
@@ -93,6 +121,7 @@ function producto(t, over = {}) {
     stock: [{ talla: 'M', escala: 'L', stock: 40 }], sku: 'SKU-1',
   }, over);
   t.D.products.push(p);
+  t.D.saveProducts(false);
   return p;
 }
 function vender(t, { fecha, estado = 'Pagado', metodo = 'Efectivo', total = 1000, anticipo } = {}) {
@@ -218,9 +247,11 @@ function vender(t, { fecha, estado = 'Pagado', metodo = 'Efectivo', total = 1000
     s.returnLimitDays === 15 && s.returnExpiresAt == null, `${s.returnLimitDays}/${s.returnExpiresAt}`);
   ok('25. su estado de plazo es "pendiente"', deadline(t, s).status === 'pendiente', JSON.stringify(deadline(t, s)));
   t.setClock('2026-08-20T10:00:00');
-  t.D.registrarPagoApartado(s.folio, { monto: 800, metodo: 'Efectivo', detalle: { efectivo: 800 } });
+  const liquidated = await t.D.registrarPagoApartado(s.folio, { monto: 800, metodo: 'Efectivo', detalle: { efectivo: 800 } });
   ok('26. al liquidarse el plazo arranca desde la liquidación',
-    s.estado === 'Pagado' && s.returnExpiresAt === '2026-09-04', `${s.estado}/${s.returnExpiresAt}`);
+    liquidated.sale && liquidated.sale.estado === 'Pagado'
+      && liquidated.sale.returnExpiresAt === '2026-09-04',
+    `${(liquidated.sale || {}).estado}/${(liquidated.sale || {}).returnExpiresAt}`);
 }
 
 // ── 27-29) Normalización de la configuración ────────────────────────────────

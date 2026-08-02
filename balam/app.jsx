@@ -105,6 +105,12 @@
     useEffect(() => { try { localStorage.setItem('balam-sidebar', collapsed ? '1' : '0'); } catch (e) { /* */ } }, [collapsed]);
     // Auth real (Supabase) + nube. Solo una sesión autenticada sincroniza pos.* (RLS).
     const [, bumpCfg] = useState(0);
+    const [, bumpWriter] = useState(0);
+    useEffect(() => {
+      const onWriter = () => bumpWriter(value => value + 1);
+      window.addEventListener('localwriterchange', onWriter);
+      return () => window.removeEventListener('localwriterchange', onWriter);
+    }, []);
     useEffect(() => {
       const onCfg = () => bumpCfg(v => v + 1);
       const onAuth = () => {
@@ -149,6 +155,17 @@
       }
       if (!window.AUTH.hasSession()) return h(LoginScreen, { key: 'login' });
       if (!user) return h(AccessDeniedScreen, { key: 'denied' });
+    }
+    if (window.DATA && window.DATA.localWriterLeaseSupported && !window.DATA.isLocalWriter) {
+      const blocked = window.DATA.localWriterState === 'blocked';
+      return h('div', { className: 'h-full grid place-items-center p-6', style: { background: '#131B2E' } },
+        h('div', { className: 'max-w-md text-center' }, [
+          h('div', { key: 'i', className: 'material-symbols-rounded text-4xl mb-3', style: { color: blocked ? '#ff8a80' : '#FFE088' } }, blocked ? 'sync_problem' : 'tab'),
+          h('div', { key: 't', className: 'font-headline text-xl text-white mb-2' }, blocked ? 'Caché local bloqueada' : 'Otra pestaña está operando'),
+          h('div', { key: 'd', className: 'text-sm', style: { color: '#AEB4C5' } }, blocked
+            ? 'Recarga esta pestaña para reconstruir los datos antes de continuar.'
+            : 'Esta pestaña permanece en lectura. Al cerrar la pestaña activa, tomará el control automáticamente.'),
+        ]));
     }
 
     return h('div', { className: 'flex h-full bg-background font-body text-on-surface' }, [
