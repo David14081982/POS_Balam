@@ -3427,7 +3427,7 @@ siguen siendo los históricos, que es H-66.
 
 **Estado:** RESUELTO
 **Fecha de registro:** 02/08/2026
-**Commit:** Pendiente de commit
+**Commit:** `f397e92`
 **Evidencia:** `node test-h68-purga-datos-prueba.mjs` ejecuta el artefacto del
 commit anterior (`git show HEAD:index.html`) sobre el mismo escenario y afirma el
 defecto: el documento de cambio SOBREVIVÍA, sus dos movimientos quedaban
@@ -3467,9 +3467,19 @@ Regresión: `test-reset-pruebas.mjs` 19/0 · `test-reset-propaga.mjs` 21/0 ·
 `test-concurrency.mjs` y `test-liquidations.mjs` fallan IGUAL antes y después del
 cambio (verificado con `git stash`): son defectos previos, ajenos a esta historia.
 **Migraciones:** `20260802010500_pos_h68_purge_test_data.sql` y su verificación
-`20260802010600`. `db push --dry-run` las declara pendientes; se aplican antes de
-publicar el cliente (`R-DEL-03`).
-**Despliegue:** Pendiente de registro.
+`20260802010600`, **aplicadas antes que el cliente** (`R-DEL-03`). El push las
+aplicó por primera vez y PostgreSQL lo probó con sus avisos `... does not exist,
+skipping` sobre las dos políticas y los cuatro disparadores nuevos (`AP-08`);
+`supabase migration list --linked` las muestra en local y remoto. La verificación
+corrió contra la base real: ejecutó la limpieza completa sobre un escenario
+propio y la deshizo entera, comprobando después que ni un documento, ni una
+pieza, ni un byte de la configuración del dueño habían cambiado.
+**Despliegue:** artefacto publicado con `f397e92`, 8 803 579 bytes, SHA-256
+`616b1d05491afe14e6a058e4a0f29b7e9d7301ef7a5cfde1fee9cc200c101fa0`, idéntico al
+`index.html` del commit. Verificado **sobre el sitio publicado** con el escenario
+completo (venta, apartado, devolución, cambio y préstamo) → **11/0**: inventario
+de 24 → 22 → **24 piezas**, productos y descuentos conservados, huella de
+configuración sin cambio y segunda ejecución sin efecto.
 **Pendiente:** ninguno de esta historia.
 **Riesgo residual:** la limpieza es global (no hay «borrar sólo lo de este mes»);
 las lápidas crecen con cada limpieza y nadie las poda; un renglón histórico cuyo

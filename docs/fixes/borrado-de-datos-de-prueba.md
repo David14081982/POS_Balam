@@ -3,7 +3,7 @@
 **Riesgo:** H-68
 **Estado:** RESUELTO
 **Fecha:** 02/08/2026
-**Commit:** Pendiente de commit
+**Commit:** `f397e92`
 
 ## Problema y reproducción
 
@@ -168,6 +168,38 @@ y él mismo declara que no pertenece a la suite de regresión.
 Dos arneses fallan **igual antes y después del cambio** (comprobado con
 `git stash` sobre `balam/` y los artefactos): `test-concurrency.mjs` aborta en su
 paso 1 y `test-liquidations.mjs` da 8/2. No los toca esta historia.
+
+## Migraciones y despliegue
+
+`supabase db push --dry-run --linked` declaró las dos como pendientes; el push
+las aplicó por PRIMERA vez, y PostgreSQL lo probó con sus avisos —
+`policy "active_admin_select" for relation "pos.test_data_purges" does not exist,
+skipping` y los cuatro equivalentes de los disparadores— que sólo aparecen cuando
+el objeto no existía (`AP-08`). `supabase migration list --linked` las muestra
+aplicadas en local y remoto con fecha `2026-08-02 01:05:00` y `01:06:00`.
+
+La verificación `20260802010600` corrió **contra la base real**: montó su
+escenario, ejecutó la limpieza completa, comprobó existencias restauradas,
+idempotencia, lápidas y denegación al no-administrador, y lo deshizo todo. Sus
+comprobaciones finales —`H68_ROLLBACK_INCOMPLETE_ROWS`,
+`H68_ROLLBACK_INCOMPLETE_STOCK`, `H68_ROLLBACK_INCOMPLETE_CONFIG`,
+`H68_FIXTURES_SURVIVED`— habrían abortado el push si un solo documento, una sola
+pieza o un solo byte de la configuración del dueño hubiera cambiado. No abortó.
+
+Artefacto publicado con `f397e92`: **8 803 579 bytes**, SHA-256
+`616b1d05491afe14e6a058e4a0f29b7e9d7301ef7a5cfde1fee9cc200c101fa0`, idéntico al
+`git show HEAD:index.html` del commit. (El archivo del disco pesa 8 803 750 bytes
+y su SHA-256 es `35bda40c…`: Git normaliza CRLF→LF al versionar, así que la
+comparación válida es contra el blob del commit, que es lo que GitHub Pages
+sirve.)
+
+**Verificación sobre el sitio publicado** —`https://david14081982.github.io/POS_Balam/index.html`,
+sin iniciar sesión, con el escenario completo (venta, apartado, devolución,
+cambio y préstamo)— **11 pasaron, 0 fallaron**: el paquete expone las siete
+funciones nuevas, borra los cinco tipos de documento, restaura el inventario de
+24 → 22 → **24 piezas**, conserva productos y descuentos, la huella de
+configuración no se mueve (`9d40f13a-12865`) y la segunda ejecución no vuelve a
+tocar el inventario.
 
 ## Riesgo residual y pendientes
 
