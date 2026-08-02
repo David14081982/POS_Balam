@@ -3,7 +3,7 @@
 **Riesgo:** H-69
 **Estado:** RESUELTO
 **Fecha:** 02/08/2026
-**Commit:** Pendiente de commit
+**Commit:** `54f7a9c`
 
 ## Problema y reproducción
 
@@ -167,6 +167,20 @@ demostrado en remoto que
 Las tres funciones `*_checked` se generaron desde su **texto vigente** con
 ediciones acotadas y diff revisado bloque a bloque (`R-DB-03`, `AP-05`); las
 funciones grandes no se tocaron.
+
+## Publicacion
+
+Artefacto publicado en GitHub Pages y verificado byte a byte (`R-DEL-07`):
+
+    sha256  370a3ee1e7bb1d65fb8934b341af33765f2736403963b15325f10ff2b95baab8
+    bytes   8 824 948
+
+El archivo servido por `https://david14081982.github.io/POS_Balam/index.html`
+coincide exactamente con el `index.html` del commit `54f7a9c`. La comprobacion
+funcional se hizo **cargando el paquete servido y preguntandole por ejecucion**,
+no con `grep`: la escalera es 3/4/5 con umbral 120 %, un perfil sin decision
+explicita resuelve el 3 % general, una venta de un alta nueva registra $30 sobre
+$1,000 de base y congela su desglose por vendedor. Cero errores de pagina.
 
 ## Riesgo residual y pendientes
 
