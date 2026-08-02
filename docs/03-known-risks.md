@@ -3377,7 +3377,7 @@ y una terminal con el artefacto anterior necesita una política explícita.
 
 **Estado:** RESUELTO
 **Fecha de registro:** 01/08/2026
-**Commit:** Pendiente de commit
+**Commit:** `6708cd7`
 **Evidencia:** `balam/xlsx-io.jsx` § `sizeItems()` componía el encabezado con
 `meta.value ?? item.code` —la identidad con la que se localizan las piezas— y no
 usaba `item.label` en ninguna parte. Con el catálogo real de la tienda, la
@@ -3412,6 +3412,11 @@ disco y reimportado. Regresión: `test-export-modelo.mjs` 14/0 ·
 `test-ui-navigation.mjs` 15/0 · `test-build-reproducibility.mjs` 8/0 ·
 `test-ux-metrics.mjs` sin retroceso.
 **Migraciones:** ninguna. El cambio es del cliente.
+**Despliegue:** artefacto publicado con `6708cd7`, 8,791,523 bytes, SHA-256
+`4b45e087b4b58f8d55a46426f090c1da9bcfdfc7046eb4cec4c2c4688946c2af`, idéntico al
+`index.html` del commit. Verificado **sobre el sitio publicado**: exportación
+real descargada por el navegador, releída y reimportada → 6/0, con encabezados
+`T38…T50` y mapa `T38→0 · T40→A · T42→B`.
 **Pendiente:** ninguno de esta historia.
 **Riesgo residual:** la hoja «Catálogos» pasa a ser parte del contrato del
 archivo —borrarla lo vuelve no importable, con aviso—; los códigos internos

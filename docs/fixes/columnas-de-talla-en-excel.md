@@ -3,7 +3,7 @@
 **Riesgo:** H-67
 **Estado:** RESUELTO
 **Fecha:** 01/08/2026
-**Commit:** Pendiente de commit
+**Commit:** `6708cd7`
 
 ## Problema y reproducción
 
@@ -145,6 +145,30 @@ T46→D · T48→E · T50→G · T49→F`.
 (11 interacciones · 2 validaciones · recorrido completo).
 
 Sin migraciones: el cambio es del cliente y no toca el esquema.
+
+## Despliegue y verificación en producción
+
+Publicado con el commit `6708cd7`. El artefacto servido por GitHub Pages en
+`https://david14081982.github.io/POS_Balam/` mide **8,791,523 bytes** con SHA-256
+`4b45e087b4b58f8d55a46426f090c1da9bcfdfc7046eb4cec4c2c4688946c2af`, **idéntico**
+al `index.html` del commit.
+
+La verificación no se quedó en el hash: se cargó el sitio publicado, se exportó
+desde él y **el navegador descargó un .xlsx real** (`Inventario_Balam_2026-08-02.xlsx`,
+29,235 bytes), que se releyó y se reimportó con ese mismo artefacto → **6 pasaron,
+0 fallaron**. Encabezados del archivo descargado del sitio:
+
+```
+SKU · Modelo · Categoría · Manga · Tela · Color · No. Modelo · Ornamento ·
+Colores Orn. · Cuello · Precio · Foto (URL) · Categoría por talla ·
+XS · S · M · L · XL · 2XL · 3XL · 4XL · 5XL · 6XL ·
+T38 · T40 · T42 · T44 · T46 · T48 · T50
+
+mapa: T38→0 · T40→A · T42→B · T44→C · T46→D · T48→E · T50→G
+```
+
+Cantidades `T38=5 · T40=7 · T42=3 · T50=2`, y al reimportarlo el sitio escribió
+en las identidades `0`, `A`, `B`, `G` — nunca en `38`, `40` ni `42`.
 
 ## Riesgo residual y pendientes
 
