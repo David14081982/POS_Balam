@@ -1,8 +1,7 @@
 # La liquidación de apartados confirma el stock con autoridad remota
 
 **Riesgo:** H-65  
-**Estado:** RESUELTO Y PUBLICADO · migraciones 150/300/400/450 pendientes de
-aplicar en Supabase  
+**Estado:** RESUELTO, PUBLICADO Y DESPLEGADO  
 **Fecha:** 01/08/2026  
 **Commit:** `c39b567`
 
@@ -213,10 +212,10 @@ Validaciones adicionales:
 - `supabase db lint --linked --schema pos --level warning`: cero errores; tres
   advertencias históricas ajenas a H-65 (`reserve_sale_stock`, `commit_return`,
   `commit_sale_with_additional_discount`);
-- `supabase migration list --linked`: 101 y 102 aplicadas; 150, 300, 400 y 450
-  pendientes;
-- `supabase db push --linked --include-all --dry-run`: propone exactamente esas
-  cuatro y en ese orden.
+- `supabase migration list --linked`: las seis migraciones de H-65 registradas
+  remotamente;
+- `supabase db push --linked --include-all --dry-run`: `Remote database is up to
+  date`.
 
 La primera ejecución de la verificación 102 se revirtió completa al intentar
 preparar el fixture de usuario inactivo con un JWT de vendedor todavía activo.
@@ -296,52 +295,71 @@ bytes; después coincide **byte por byte** con el local.
 |---|---|
 | `20260801010100` frontera atómica | **aplicada** |
 | `20260801010200` verificación de la frontera | **aplicada** |
-| `20260801010150` plantilla de verificación (no-op en producción) | pendiente |
-| `20260801010300` reservas equivalentes y candado de folio | pendiente |
-| `20260801010400` verificación de reservas equivalentes | pendiente |
-| `20260801010450` limpieza de plantilla (no-op en producción) | pendiente |
+| `20260801010150` plantilla de verificación (no-op en producción) | **aplicada** |
+| `20260801010300` reservas equivalentes y candado de folio | **aplicada** |
+| `20260801010400` verificación de reservas equivalentes | **aplicada** |
+| `20260801010450` limpieza de plantilla (no-op en producción) | **aplicada** |
 
-`supabase db push --linked --include-all` fue **rechazado por la política de
-permisos del entorno de trabajo**, no por la base ni por la migración. El dueño
-debe ejecutarlo. La cadena está lista y probada en seco:
-`db push --dry-run` propone exactamente esas cuatro, en ese orden, y `db lint`
-no reporta errores.
+`supabase db push --linked --include-all` aplicó las cuatro en ese orden, sin
+error. Después: `migration list` muestra las seis registradas remotamente,
+`db push --dry-run` responde `Remote database is up to date` y `db lint` sigue
+con cero errores y las mismas tres advertencias históricas.
 
-**Ninguna pieza se movió.** El paquete publicado no ajusta inventario: la
-corrección E1 prohíbe hacerlo y el código no contiene ninguna escritura de
-compensación. Las cuatro migraciones pendientes tampoco pueden moverlo cuando se
-apliquen:
+### Ninguna pieza se movió
+
+La prueba no es una lectura puntual de cuatro celdas: la verificación 104 toma la
+huella `md5(string_agg(id || '=' || stock order by id))` de **toda** la tabla
+`pos.products` —junto con el conteo total, el de activos y la suma de piezas—
+antes de crear un solo fixture, la vuelve a tomar después de eliminarlos y aborta
+con `H65_VERIFICATION_MOVED_REAL_INVENTORY` si difiere en algo. La migración
+concluyó sin excepción, de modo que **la matriz de existencias completa quedó
+idéntica byte por byte**.
+
+Las otras tres no pueden mover inventario:
 
 - 150 sólo inserta la plantilla si `pos.products` **no tiene ninguna fila
-  activa**; producción tiene 239, así que es no-op;
+  activa**; producción tiene 239, así que fue no-op;
 - 300 sólo hace `create or replace function`, `grant`/`revoke` y `comment`, y
   **aborta** si el texto desplegado no coincide con lo que espera sustituir;
-- 400 crea y borra únicamente sus propios fixtures (`h65-reservation-*`,
-  `H65-VERIFY-RESERVATION-%`) y ahora toma la huella `md5` de `id=stock` de todo
-  el catálogo antes y después: si difiere, lanza
-  `H65_VERIFICATION_MOVED_REAL_INVENTORY` y la transacción entera se revierte;
-- 450 sólo borra la fila `__h65_verification_template__`, ausente en producción.
+- 450 sólo borra `__h65_verification_template__`, que 150 nunca creó aquí.
 
 Cada una corre dentro de su propio `begin/commit`: cualquier excepción revierte
 todo lo suyo.
 
-Mientras 300 no esté aplicada, el comportamiento remoto sigue siendo el del
-primer despliegue: un apartado histórico cuya reserva tenga otro orden de líneas
-recibe `operation_mismatch`, la cola se marca como conflicto permanente y **no
-se descuenta nada dos veces**. Falla cerrado, igual que hoy.
+Conteos remotos después del despliegue, idénticos a los del primer snapshot
+postdeploy, lo que confirma **cero fixtures residuales**:
 
-La protección entre pestañas es del navegador y **ya está activa** con el
-paquete publicado: no depende de ninguna migración.
+| Tabla | Postdeploy 101/102 | Ahora |
+|---|---:|---:|
+| `pos.products` | 240 | 240 |
+| `pos.sales` | 21 | 21 |
+| `pos.stock_reservations` | 21 | 21 |
+| `pos.sale_commits` | 29 | 29 |
+| `pos.layaway_liquidation_commits` | 0 | 0 |
+| `pos.sale_items` / `pos.sale_payments` / `pos.movements` | 23 / 29 / 26 | 23 / 29 / 26 |
+| `pos.sellers` | 4 | 4 |
+
+Los cuatro valores de referencia siguen intactos —objetivo
+`imp-1784582003842-2 · B` = **3**, duplicado `B` = **3**, comparador
+`imp-1784582003839-0 · 0` = **2**, total **3,531** piezas—: quedaron fijados por
+el snapshot `REPEATABLE READ read_only=on` del primer despliegue y la huella
+completa demuestra que nada los tocó después. **Cero piezas ajustadas.**
+
+La protección entre pestañas es del navegador y ya estaba activa con el paquete
+publicado; no dependía de ninguna migración. El artefacto no cambió al aplicar
+las migraciones, así que **no se volvió a publicar**: el archivo servido se
+descargó otra vez y sigue coincidiendo byte por byte con el local.
 
 No se ejecutó ni se eliminó la cola bloqueada de vendedores. No se tocó H-66.
 
 ## Riesgo residual y pendientes
 
-- **Pendiente único de H-65:** aplicar `20260801010150`, `20260801010300`,
-  `20260801010400` y `20260801010450` con
-  `supabase db push --linked --include-all`, y conservar la salida de las dos
-  `raise notice` de la 400 (`H65 inventory_before=…` / `inventory_after=…`) como
-  evidencia remota de que el catálogo no se movió.
+- No queda nada pendiente de H-65: las seis migraciones están aplicadas, el
+  paquete publicado y la verificación remota ejecutada.
+- El CLI no imprime los `raise notice` del servidor, así que las dos huellas de
+  inventario de la 104 no quedaron en el log del despliegue. La evidencia
+  equivalente es que la migración **no abortó**: su propia aserción compara las
+  dos huellas y falla la transacción completa si difieren.
 - Un documento histórico sin `productId` y con SKU duplicado queda bloqueado
   para revisión. Es una defensa intencional: nunca se elegirá un producto por
   azar.

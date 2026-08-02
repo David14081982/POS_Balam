@@ -3214,7 +3214,7 @@ urgencia: cada talla aparece ya una sola vez y con sus prendas.
 
 ## H-65 - Una liquidación de apartado no descontó su pieza del inventario
 
-**Estado:** RESUELTO Y PUBLICADO - FALTA APLICAR 4 MIGRACIONES
+**Estado:** RESUELTO Y DESPLEGADO
 **Fecha de registro:** 01/08/2026
 **Commit:** `c39b567`
 **Decisión:** **E1 CONFIRMADA. No correspondía ajustar inventario.** La reserva
@@ -3259,20 +3259,20 @@ restantes fallan idénticas en `HEAD` y no pertenecen a H-65:
 **Despliegue:** paquete publicado en
 `https://david14081982.github.io/POS_Balam/`, 8,788,159 bytes, SHA-256
 `3C8610F9D4B7E02BCE8996E4F3686973F92FE504B318781CFA6119258123E394`. El artefacto
-servido se descargó y coincide byte por byte con el local. La protección entre
-pestañas no depende de ninguna migración y ya está activa.
-**Pendiente:** aplicar `20260801010150`, `20260801010300`, `20260801010400` y
-`20260801010450` con `supabase db push --linked --include-all`. El comando fue
-rechazado por la política de permisos del entorno de trabajo, no por la base;
-`--dry-run` y `db lint` pasan. Hasta entonces el servidor conserva el
-comportamiento del primer despliegue: una reserva histórica con otro orden
-responde `operation_mismatch` y **no descuenta dos veces**.
+servido se descargó y coincide byte por byte con el local. Aplicar las
+migraciones no cambió el artefacto, así que no se volvió a publicar.
+**Migraciones:** las seis de H-65 están aplicadas —101 y 102 en el primer
+despliegue; 150, 300, 400 y 450 en el segundo, en ese orden y sin error—.
+`migration list` las muestra registradas, `db push --dry-run` responde `Remote
+database is up to date` y `db lint` conserva cero errores.
 **Inventario:** sin ajuste, antes y después. `imp-1784582003842-2 · B` sigue en
 **3**; el duplicado en **3**; el comparador `imp-1784582003839-0 · 0` en **2**;
-3,531 piezas remotas. Ninguna de las cuatro migraciones pendientes puede moverlo:
-150 y 450 son no-op con catálogo presente, 300 sólo redefine funciones y aborta
-ante deriva, y 400 compara la huella `md5` de todo el catálogo antes y después y
-lanza `H65_VERIFICATION_MOVED_REAL_INVENTORY` si difiere.
+3,531 piezas remotas. La verificación 104 toma la huella `md5` de `id=stock` de
+toda la tabla `pos.products` antes y después de sus fixtures y aborta con
+`H65_VERIFICATION_MOVED_REAL_INVENTORY` si difiere: no abortó, así que la matriz
+completa quedó idéntica. Los conteos remotos post-despliegue son los mismos del
+primer snapshot (productos 240, ventas 21, reservas 21, commits 29, ledger H-65
+0), lo que confirma cero fixtures residuales. **Cero piezas ajustadas.**
 **Riesgo residual:** un SKU histórico ambiguo se bloquea para revisión. Un
 navegador sin Web Locks vende pero no liquida. La divergencia global preexistente
 del espejo local (240 productos/3,523 piezas) frente a la autoridad remota (239
