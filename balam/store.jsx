@@ -1827,7 +1827,19 @@
     try { remote = await c.rpc('purge_test_data', { p_purge_id: ticket }); }
     catch (e) { return { ok: false, code: 'NETWORK', error: String((e && e.message) || e) }; }
     if (remote.error) {
-      return { ok: false, code: 'REMOTE', error: remote.error.message || String(remote.error), diagnostic: classifyFailure(remote.error) };
+      // La respuesta COMPLETA viaja al informe: código, detalle y pista. Un
+      // «DELETE requires a WHERE clause» sin más contexto costó una sesión
+      // entera de diagnóstico (H-68); el siguiente fallo se lee en el acto.
+      const e = remote.error;
+      return {
+        ok: false, code: 'REMOTE',
+        error: e.message || String(e),
+        detalle: {
+          code: e.code || null, details: e.details || null,
+          hint: e.hint || null, status: e.status || null,
+        },
+        diagnostic: classifyFailure(e),
+      };
     }
     const report = remote.data || {};
     if (report.ok !== true) {

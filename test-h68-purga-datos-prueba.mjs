@@ -525,6 +525,68 @@ if (!previo) {
   await antesCtx.close();
 }
 
+// ── Guardián · ninguna sentencia sin WHERE llega a la base ──────────────────
+// Supabase precarga `safeupdate` para el rol `authenticated`: cualquier DELETE o
+// UPDATE sin WHERE se rechaza con «DELETE requires a WHERE clause». `db push`
+// corre como `postgres`, sin esa guarda, así que una migración puede aplicarse
+// verde y romperse en el navegador. Esto lo vigila desde el repositorio.
+//
+// Se evalúa la definición VIGENTE de cada función —la última `create or replace`
+// de la cadena de migraciones—, que es lo que de verdad ejecuta la base.
+{
+  const migDir = path.join(ROOT, 'supabase', 'migrations');
+  const files = fs.readdirSync(migDir).filter(f => f.endsWith('.sql')).sort();
+  const cuerpoDe = (sql) => {
+    const out = [];
+    const re = /create\s+(?:or\s+replace\s+)?function\s+pos\.([a-z_]+)\s*\([\s\S]*?\$([a-z_]*)\$([\s\S]*?)\$\2\$/gi;
+    let m;
+    while ((m = re.exec(sql))) out.push({ name: m[1], body: m[3] });
+    return out;
+  };
+  const sinWhere = (body) => {
+    const hallazgos = [];
+    const re = /\b(delete\s+from|update)\s+pos\.([a-z_]+)/gi;
+    let m;
+    while ((m = re.exec(body))) {
+      const fin = body.indexOf(';', m.index);
+      const stmt = body.slice(m.index, fin < 0 ? body.length : fin);
+      if (!/\bwhere\b/i.test(stmt)) hallazgos.push(`${m[1].toLowerCase().startsWith('delete') ? 'DELETE' : 'UPDATE'} pos.${m[2]}`);
+    }
+    return hallazgos;
+  };
+  // Definición vigente: la última de cada función a lo largo de la cadena.
+  const vigente = {};
+  for (const f of files) {
+    const sql = fs.readFileSync(path.join(migDir, f), 'utf8');
+    for (const fn of cuerpoDe(sql)) vigente[fn.name] = { file: f, body: fn.body };
+  }
+  const rotas = Object.entries(vigente)
+    .map(([name, x]) => ({ name, file: x.file, hallazgos: sinWhere(x.body) }))
+    .filter(x => x.hallazgos.length);
+  check('ninguna función vigente de pos ejecuta DELETE o UPDATE sin WHERE',
+    rotas.length === 0,
+    rotas.map(r => `${r.name} (${r.file.slice(0, 14)}): ${r.hallazgos.join(', ')}`).join(' | '));
+
+  // El guardián se prueba a sí mismo contra el defecto REAL que rompió el botón.
+  const rota = fs.readFileSync(path.join(migDir, '20260802010500_pos_h68_purge_test_data.sql'), 'utf8');
+  const cuerpoRoto = cuerpoDe(rota).find(x => x.name === 'purge_test_data');
+  const hallazgosRotos = cuerpoRoto ? sinWhere(cuerpoRoto.body) : [];
+  check('ANTES · la primera versión de purge_test_data tenía 17 borrados sin WHERE',
+    hallazgosRotos.length === 17 && hallazgosRotos[0] === 'DELETE pos.physical_card_redemptions',
+    `${hallazgosRotos.length}: ${hallazgosRotos.slice(0, 3).join(', ')}`);
+
+  // Y la versión vigente borra exactamente esas mismas tablas, ahora por identidad.
+  const fix = vigente['purge_test_data'];
+  const porIdentidad = (fix.body.match(/=\s*any\(v_[a-z_]+\)/g) || []).length;
+  check('la versión vigente borra por identidad del plan (= any(...))',
+    fix.file.startsWith('20260802010700') && porIdentidad >= 15,
+    `${fix.file.slice(0, 14)} · ${porIdentidad} condiciones`);
+  check('cada borrado comprueba su propio conteo contra el plan',
+    (fix.body.match(/get diagnostics v_rows = row_count/g) || []).length >= 17
+    && /purge_delete_mismatch/.test(fix.body),
+    String((fix.body.match(/get diagnostics v_rows = row_count/g) || []).length));
+}
+
 check('sin errores de página', errs.length === 0, errs.join(' | '));
 
 console.log(`\n════════ ${pass} pasaron, ${fail} fallaron ════════`);

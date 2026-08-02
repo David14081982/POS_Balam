@@ -3453,7 +3453,8 @@ dentro de la misma transacción que no quedó nada y que
 datos borrados y se limpian solas; las lápidas de `pos.purged_documents` rechazan
 cualquier reinserción con `operation_purged`. Los DESCUENTOS configurados pasan a
 tratarse como configuración y ya no se borran.
-**Pruebas:** `test-h68-purga-datos-prueba.mjs` **49 pasaron, 0 fallaron**.
+**Pruebas:** `test-h68-purga-datos-prueba.mjs` **53 pasaron, 0 fallaron** (49 de
+la historia + 4 del guardián de `WHERE`; sin la migración correctiva, 50/3).
 Regresión: `test-reset-pruebas.mjs` 19/0 · `test-reset-propaga.mjs` 21/0 ·
 `test-store-queue.mjs` 133/0 · `test-h65-layaway-liquidation.mjs` 35/35 ·
 `test-h65-layaway-e2e.mjs` 28/28 · `test-sale-coherence.mjs` 20/0 ·
@@ -3466,8 +3467,26 @@ Regresión: `test-reset-pruebas.mjs` 19/0 · `test-reset-propaga.mjs` 21/0 ·
 `test-product-sizes.mjs` 9/0 · `test-ux-metrics.mjs` sin retroceso.
 `test-concurrency.mjs` y `test-liquidations.mjs` fallan IGUAL antes y después del
 cambio (verificado con `git stash`): son defectos previos, ajenos a esta historia.
+**Corrección posterior (02/08/2026):** el botón fallaba en producción con
+`DELETE requires a WHERE clause`. `pos.purge_test_data()` vaciaba diecisiete
+tablas con `delete from pos.<tabla>;` sin condición (migración `20260802010500`,
+líneas 465–484; la primera en ejecutarse, `pos.physical_card_redemptions`).
+Supabase precarga `safeupdate` para el rol del navegador —comprobado en
+`pg_db_role_setting` de la instalación real— y `db push`, que entra como
+`postgres`, no la tiene: por eso la migración se aplicó verde y el botón se
+rompió. `20260802010700` recalcula un **plan de identidades** y ejecuta cada
+borrado como `where <pk> = any(...)` comprobando su propio conteo contra el plan;
+un descuadre aborta la transacción. El kardex se borra por `id` de fila, no por
+`tipo`. `pos.sync_conflicts` sale del alcance por ser diagnóstico. La guarda NO
+se tocó. Un guardián permanente del arnés evalúa la definición **vigente** de
+cada función `pos.*` y falla si alguna vuelve a quedarse sin `WHERE`: sin la
+corrección da 50/3 y enumera las 17 tablas; con ella, 53/0.
 **Migraciones:** `20260802010500_pos_h68_purge_test_data.sql` y su verificación
-`20260802010600`, **aplicadas antes que el cliente** (`R-DEL-03`). El push las
+`20260802010600`; la corrección `20260802010700_pos_h68_purge_where_clause.sql`
+con sus verificaciones `20260802010800` (comportamiento, conteos y ausencia de
+sentencias sin `WHERE` leída de `pg_get_functiondef`) y `20260802010900`
+(causa raíz: `safeupdate` presente en el catálogo, frontera cerrada a `anon`).
+Las cinco **aplicadas antes que el cliente** (`R-DEL-03`). El push las
 aplicó por primera vez y PostgreSQL lo probó con sus avisos `... does not exist,
 skipping` sobre las dos políticas y los cuatro disparadores nuevos (`AP-08`);
 `supabase migration list --linked` las muestra en local y remoto. La verificación

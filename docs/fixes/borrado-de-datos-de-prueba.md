@@ -201,8 +201,80 @@ funciones nuevas, borra los cinco tipos de documento, restaura el inventario de
 configuración no se mueve (`9d40f13a-12865`) y la segunda ejecución no vuelve a
 tocar el inventario.
 
+## Corrección posterior · `DELETE requires a WHERE clause`
+
+**Síntoma.** Al pulsar el botón en el sitio publicado, el modal mostró «No se
+borró nada · DELETE requires a WHERE clause». La transacción hizo rollback: ni la
+nube ni la terminal cambiaron.
+
+**Identificación exacta.**
+
+| | |
+|---|---|
+| Función / RPC | `pos.purge_test_data(text)` |
+| Archivo | `supabase/migrations/20260802010500_pos_h68_purge_test_data.sql` |
+| Sentencias | **17** `delete from pos.<tabla>;` sin condición, líneas **465–484** |
+| Primera en ejecutarse | línea **465**, `delete from pos.physical_card_redemptions;` |
+| Orden | tras calcular el plan, restaurar existencias e insertar las lápidas; la primera del bloque de vaciado |
+| Tablas afectadas | `physical_card_redemptions`, `exchange_items`, `exchanges`, `return_items`, `returns`, `sale_payments`, `sale_items`, `sales`, `loan_documents`, `liquidations`, `stock_reservations`, `sale_commits`, `return_commits`, `exchange_commits`, `layaway_liquidation_commits`, `sync_conflicts`, `folio_counters` |
+| Respuesta de Supabase | `{"code":"P0001"…}` con `message: DELETE requires a WHERE clause`; el cliente lo devolvía como `{ ok:false, code:'REMOTE', error:… }` |
+
+El `delete from pos.movements … where tipo in (…)` de la línea 487 y los tres
+`update` sí llevaban condición. Se revisó **toda** la cadena de migraciones: los
+únicos borrados sin filtro eran esos 17.
+
+**Causa raíz.** Supabase precarga la biblioteca **`safeupdate`** —comprobado en
+`pg_db_role_setting` de la instalación real por
+`20260802010900_pos_h68_safeupdate_guard_verification.sql`—, que rechaza todo
+`DELETE` o `UPDATE` sin `WHERE`. `db push` entra como `postgres`, **sin** esa
+guarda, así que la migración se aplicó y su verificación pasó; el navegador entra
+como `authenticated`, **con** la guarda. La frontera es `SECURITY DEFINER`, pero
+la guarda es de **sesión**: cambiar de dueño no la desactiva, y está bien que así
+sea.
+
+**Corrección.** La guarda no se toca.
+`20260802010700_pos_h68_purge_where_clause.sql` redefine la frontera para que
+calcule primero el **plan de borrado** —los identificadores exactos de cada fila
+a eliminar— y ejecute cada sentencia contra ese plan:
+
+```sql
+delete from pos.sales s where s.folio = any(v_sale_folios);
+get diagnostics v_rows = row_count;
+if v_rows <> cardinality(v_sale_folios) then
+  raise exception 'purge_delete_mismatch' …;
+end if;
+```
+
+Las diecisiete llevan condición **y** comprueban su propio conteo: un descuadre
+aborta la transacción entera. El kardex pasa a borrarse por `id` de fila en vez
+de por `tipo`, así que `Entrada`, `Ajuste` y `Transferencia` ya no dependen de un
+filtro por texto: nunca entran al plan.
+
+**Cambio de alcance declarado.** `pos.sync_conflicts` deja de vaciarse. Es
+superficie de diagnóstico —del mismo lado que las bitácoras de auditoría que
+H-68 ya conservaba— y ninguna pantalla la lee.
+
+**Guardián permanente.** El arnés evalúa la definición **vigente** de cada función
+`pos.*` (la última `create or replace` de la cadena, que es lo que ejecuta la
+base) y falla si alguna tiene un `DELETE`/`UPDATE` sin `WHERE`. Sin la migración
+correctiva el arnés da **50 pasaron, 3 fallaron** y enumera las 17 tablas; con
+ella, **53 pasaron, 0 fallaron**.
+
+**Lo que no se pudo probar dinámicamente, declarado.** `load 'safeupdate'` está
+prohibido para el rol de migraciones (`access to library "safeupdate" is not
+allowed`, 42501), así que la guarda no puede **armarse** dentro de una migración
+para ejecutar la limpieza bajo ella. El vínculo se cierra por deducción sobre
+hechos comprobados, no por conjetura: la guarda existe en esta instalación
+(comprobado), sólo rechaza sentencias sin `WHERE` (su definición), y la frontera
+desplegada no tiene ninguna (comprobado leyendo `pg_get_functiondef`, no el
+archivo).
+
 ## Riesgo residual y pendientes
 
+- La ejecución REAL del botón sobre la nube la decide el dueño: exige sesión de
+  administrador y borra de verdad. La frontera ya corrió íntegra sobre la base
+  real dentro de la verificación (y se deshizo), así que lo único no ejercitado
+  es la pulsación con credenciales.
 - La limpieza sigue siendo **global**: no existe «borrar sólo lo de este mes».
   Es deliberado — el botón dice «datos de prueba», no «datos seleccionados».
 - Las lápidas de `pos.purged_documents` crecen con cada limpieza. Son filas

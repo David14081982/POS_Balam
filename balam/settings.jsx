@@ -1320,8 +1320,13 @@
       ]);
     }
     if (estado.paso === 'error') {
+      const det = estado.detalle && !Array.isArray(estado.detalle) ? estado.detalle : null;
+      const traza = det ? Object.keys(det).filter(k => det[k] != null).map(k => `${k}: ${det[k]}`) : [];
       return h(Modal, { title: 'No se borró nada', onClose: onCerrar, footer: [h('button', { key: 'c', className: 'px-5 h-11 bg-primary text-on-primary font-label-sm uppercase tracking-widest text-caption rounded-lg', onClick: onCerrar }, 'Entendido')] }, [
-        h('p', { key: 'e', className: 'text-body text-on-surface leading-relaxed' }, estado.error),
+        h('p', { key: 'e', 'data-testid': 'purga-error', className: 'text-body text-on-surface leading-relaxed' }, estado.error),
+        // La respuesta del servidor, tal cual: sin esto un fallo remoto sólo deja
+        // una frase suelta y no se puede saber qué tabla ni qué sentencia falló.
+        traza.length > 0 && h('pre', { key: 'd', className: 'mt-3 p-3 rounded-lg bg-surface-container-low text-caption text-on-surface-variant whitespace-pre-wrap break-words' }, traza.join('\n')),
         h('p', { key: 'n', className: 'mt-3 text-caption text-on-surface-variant leading-relaxed' },
           'La operación es de todo o nada: ni la nube ni esta terminal cambiaron. Corrige lo indicado y vuelve a intentarlo.'),
       ]);
