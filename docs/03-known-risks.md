@@ -3205,11 +3205,12 @@ orden de sus códigos históricos. Se preparó y probó un reordenamiento —62 
 antes y después, mismos códigos, 3,524 piezas sin cambio, cero duplicados— y el
 dueño prefirió hacerlo manualmente.
 **Riesgo residual:** los códigos internos siguen siendo los históricos, así que
-las columnas del Excel se llaman `T0` (que es la 38), `TA` (la 40), `TB` (la 42)…
-El código es el identificador que amarra las existencias y renombrarlo las
-desconectaría; unificarlo exigiría mover las 1,818 piezas a códigos numéricos, que
-es precisamente lo que esta historia evitó. Queda como posible historia futura, sin
-urgencia: cada talla aparece ya una sola vez y con sus prendas.
+las columnas del Excel se llamaban `T0` (que es la 38), `TA` (la 40), `TB` (la
+42)… **Resuelto por H-67**, que compone el encabezado con la etiqueta y sigue
+localizando las piezas por el código interno. El código es el identificador que
+amarra las existencias y renombrarlo las desconectaría; unificarlo exigiría mover
+las 1,818 piezas a códigos numéricos, que es precisamente lo que esta historia
+evitó, y es el alcance de H-66.
 **Corrección documentada:** `docs/fixes/talla-mal-codificada-en-catalogo.md`.
 
 ## H-65 - Una liquidación de apartado no descontó su pieza del inventario
@@ -3371,6 +3372,51 @@ decisión, preparar el arnés rojo, auditar consumidores y diseñar contratos.
 resuelven con marca de esquema o modo heredado confirmado, nunca por adivinación;
 y una terminal con el artefacto anterior necesita una política explícita.
 **Corrección documentada:** pendiente.
+
+## H-67 - Las columnas de talla del Excel salen con la identidad interna
+
+**Estado:** RESUELTO
+**Fecha de registro:** 01/08/2026
+**Commit:** Pendiente de commit
+**Evidencia:** `balam/xlsx-io.jsx` § `sizeItems()` componía el encabezado con
+`meta.value ?? item.code` —la identidad con la que se localizan las piezas— y no
+usaba `item.label` en ninguna parte. Con el catálogo real de la tienda, la
+exportación de Inventario producía columnas `T0`, `TA`, `TB`, `TC`, `TD`, `TE` y
+`TG` para las tallas 38, 40, 42, 44, 46, 48 y 50.
+**Origen:** pendiente 2 de H-64, reportado por el dueño del producto.
+**Reproducción:** `node test-h67-size-headers.mjs` ejecuta el módulo del commit
+anterior (`fc4ac77`) sobre el mismo catálogo y afirma que genera `T0`, `TA`, `TB`
+y ningún `T38`/`T40`/`T42`, **con el mismo total de piezas (55)**: el reparto
+siempre fue correcto y sólo el nombre de la columna estaba mal.
+**Alcance:** encabezado visible del Excel de Inventario —exportación, plantilla e
+importación—. El encabezado se compone con la **etiqueta**; las piezas se
+localizan con la **identidad**, que no se toca.
+**No alcance:** `stock[].talla`, códigos internos, existencias, cantidades,
+documentos históricos, la edición de `internal_code` de H-66 y H-65.
+**Solución:** `sizeItems()` separa identidad (`value`) de encabezado (`header`,
+compuesto con `label`) y conserva `legacyHeader` para los archivos anteriores. El
+archivo exportado publica en su hoja «Catálogos» el bloque `MAPA DE COLUMNAS DE
+TALLA` con la identidad a la que escribe cada columna, y la importación lo usa;
+sin mapa se aplica la regla histórica —encabezado = identidad—, y un archivo con
+columnas nuevas al que le falta la hoja se bloquea en vez de vaciar el stock
+(`ADR-011` § 4: el significado de `T0` no se adivina). Dos tallas con la misma
+etiqueta bloquean exportación e importación con aviso accionable.
+**Pruebas:** `test-h67-size-headers.mjs` **27 pasaron, 0 fallaron**, incluida la
+verificación del `.xlsx` **realmente descargado por el navegador**, releído del
+disco y reimportado. Regresión: `test-export-modelo.mjs` 14/0 ·
+`test-import-fotos.mjs` 23/0 · `test-xlsx-security.mjs` 17/0 ·
+`test-product-sizes.mjs` 9/0 · `test-h59-size-persistence.mjs` 12/0 ·
+`test-h63-size-protection.mjs` 34/0 · `test-size-categories-audit.mjs` 23/0 ·
+`test-pos-size-filter-groups.mjs` 19/0 · `test-filtros-inventario.mjs` 18/0 ·
+`test-module-contracts.mjs` 41/0 · `test-smoke.mjs` 15/0 ·
+`test-ui-navigation.mjs` 15/0 · `test-build-reproducibility.mjs` 8/0 ·
+`test-ux-metrics.mjs` sin retroceso.
+**Migraciones:** ninguna. El cambio es del cliente.
+**Pendiente:** ninguno de esta historia.
+**Riesgo residual:** la hoja «Catálogos» pasa a ser parte del contrato del
+archivo —borrarla lo vuelve no importable, con aviso—; los códigos internos
+siguen siendo los históricos, que es H-66.
+**Corrección documentada:** `docs/fixes/columnas-de-talla-en-excel.md`.
 
 ## Regla de actualización
 

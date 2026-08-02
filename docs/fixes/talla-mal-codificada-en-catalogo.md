@@ -129,7 +129,10 @@ Sin migraciones y sin cambios de artefacto: H-64 no tocó código, así que
    mismos códigos, 3,524 piezas sin cambio, cero duplicados, cero errores— y el
    dueño prefirió hacerlo manualmente.
 2. **Los códigos internos siguen siendo los históricos**, así que las columnas del
-   Excel se llaman `T0` (la 38), `TA` (la 40), `TB` (la 42)… El código es el
+   Excel se llamaban `T0` (la 38), `TA` (la 40), `TB` (la 42)… *(Resuelto por
+   H-67 — `docs/fixes/columnas-de-talla-en-excel.md`: la columna se llama ahora
+   con la etiqueta de la talla y las piezas se siguen localizando por el código
+   interno, que no cambió.)* El código es el
    identificador que amarra las existencias: renombrarlo las desconectaría, y
    unificarlo exigiría mover las 1,818 piezas, que es justo lo que esta historia
    evitó. Queda como posible historia futura y sin urgencia: cada talla aparece ya

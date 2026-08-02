@@ -121,7 +121,9 @@
       if (!file) return;
       window.XLSXIO.parseFile(file)
         .then(res => { if (!res.products.length) { toast('No se encontraron productos válidos en el archivo', 'var(--danger)'); return; } setImportPreview(res); })
-        .catch(() => toast('No se pudo leer el archivo Excel', 'var(--danger)'));
+        // Los errores propios del lector (etiquetas duplicadas, archivo sin la hoja
+        // «Catálogos») traen un mensaje que el dueño puede accionar: se muestra tal cual.
+        .catch(err => toast((err && err.balam && err.message) || 'No se pudo leer el archivo Excel', 'var(--danger)'));
     }
     // Importar ACTUALIZA por SKU: si el SKU ya existe se modifica ese producto en vez de agregar
     // otro. (Antes siempre hacía push, así que reimportar el mismo archivo duplicaba el catálogo.)

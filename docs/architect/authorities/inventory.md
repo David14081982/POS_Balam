@@ -33,6 +33,17 @@ resueltos por **escala y valor real**, nunca por la apariencia del código
 su guarda anterior
 **Consumidores:** `grep -rn "sizeCodeReferences\|sizeCodeProtected" balam/ test-*.mjs`
 
+## ¿Cómo se llama en Excel la columna de una talla y a qué identidad escribe?
+**Autoridad:** `XLSXIO.sizeColumns()` — devuelve las dos escalas con `value`
+(identidad, la que localiza las piezas), `header` (etiqueta, la que se lee) y
+`legacyHeader` (el encabezado de los archivos anteriores). Valida además que dos
+tallas no produzcan la misma columna
+**Definición:** `balam/xlsx-io.jsx` · el archivo exportado publica su mapa
+columna → identidad en la hoja «Catálogos»
+**Creada por:** H-67 · **Decisión:** `ADR-011` § 4 — un encabezado sin mapa nunca
+se traduce por adivinación
+**Consumidores:** `grep -rn "sizeColumns\|legacyHeader" balam/ test-*.mjs`
+
 ## ¿Qué opciones muestra el filtro global de tallas y en qué orden?
 **Autoridad:** `DATA.resolveSizeFilterGroups()` — responde con una **estructura
 por categoría**, no con una lista. `DATA.resolveSizeFilterOptions()` es su
