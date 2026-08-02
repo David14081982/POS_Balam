@@ -1423,5 +1423,86 @@ ok('34c. H-60: la escritura válida termina sin pendientes', S.pending === 0);
   ok('36b. H-65: el drenado automático no reintenta el rechazo permanente', before === after);
 }
 
+// ── 37) H-69: el perfil del vendedor NUNCA lleva columnas de las RPC ──────────
+{
+  const env = freshEnv();
+  const S = loadStore(env);
+  await S.init({});
+  env.window.DATA.sellers = [{
+    id: 's-h69', nombre: 'Lupita', iniciales: 'LR', color: '#000',
+    comisionPct: 0, commissionOverridePct: 3, sellerLevelCode: null,
+    commissionPolicyVersion: 1, metaMes: 15000,
+    ventasMes: 4321, ventasNum: 9, comisionAcum: 777.77,
+    role: 'vendedor', active: true,
+  }];
+  S.pushRows('sellers', env.window.DATA.sellers);
+  await sleep(40);
+  const op = (JSON.parse(env.localStorage.getItem('balam_sync_queue') || '[]'))[0];
+  const enviado = (env.cloud.rowsByTable.sellers || [])[0] || {};
+  const update = env.calls.find(c => c.table === 'sellers' && c.metodo === 'update');
+  ok('37a. H-69: el vendedor viaja como actualizacion acotada, no como upsert',
+    !!update && !env.calls.some(c => c.table === 'sellers' && c.metodo === 'upsert'));
+  ok('37b. H-69: el payload NO lleva comision_acum', !('comision_acum' in enviado));
+  ok('37c. H-69: el payload NO lleva ventas_mes', !('ventas_mes' in enviado));
+  ok('37d. H-69: el payload NO lleva ventas_num', !('ventas_num' in enviado));
+  ok('37e. H-69: el payload SI lleva el porcentaje personalizado',
+    enviado.commission_override_pct === 3);
+  ok('37f. H-69: el payload SI lleva la meta mensual', enviado.meta_mes === 15000);
+  ok('37g. H-69: el payload SI lleva el nivel y la version de politica',
+    'seller_level_code' in enviado && enviado.commission_policy_version === 1);
+  ok('37h. H-69: la cola queda vacia', S.pending === 0 && !op);
+}
+
+// ── 38) H-69: la op bloqueada por COMMISSION_RPC_REQUIRED se cierra auditada ──
+{
+  const env = freshEnv();
+  const S = loadStore(env);
+  env.window.DATA.sellers = [{
+    id: 's-blk', nombre: 'Monica', iniciales: 'MD', color: '#000',
+    comisionPct: 0, commissionOverridePct: 3, sellerLevelCode: null,
+    commissionPolicyVersion: 1, metaMes: 0,
+    ventasMes: 100, ventasNum: 2, comisionAcum: 55.5,
+    role: 'vendedor', active: true,
+  }];
+  // Reproduce la op real: un upsert de sellers rechazado con 42501.
+  env.localStorage.setItem('balam_sync_queue', JSON.stringify([{
+    id: 'op-blocked-h69', type: 'upsert', kind: 'sellers', table: 'sellers', conflict: 'id',
+    status: 'blocked_permission', retry: true, attempts: 4,
+    createdAt: '2026-07-31T10:00:00.000Z',
+    diagnostic: { category: 'permission', code: '42501', message: 'COMMISSION_RPC_REQUIRED',
+      status: 'blocked_permission', policy: 'review_permissions', retryable: false },
+    rows: [{ id: 's-blk', nombre: 'Monica', comision_pct: 0, commission_override_pct: null,
+      meta_mes: 0, ventas_mes: 100, ventas_num: 2, comision_acum: 55.5, sync_base_version: 0 }],
+  }]));
+  await S.init({});
+  await sleep(60);
+  const enviado = (env.cloud.rowsByTable.sellers || [])[0] || {};
+  ok('38a. H-69: la op bloqueada dejo de estar bloqueada', S.pending === 0);
+  ok('38b. H-69: se aplico como actualizacion acotada',
+    env.calls.some(c => c.table === 'sellers' && c.metodo === 'update'));
+  ok('38c. H-69: al aplicarla ya no lleva las columnas de las RPC',
+    !('comision_acum' in enviado) && !('ventas_mes' in enviado) && !('ventas_num' in enviado));
+  ok('38d. H-69: el perfil que la op queria guardar SI llego', enviado.nombre === 'Monica');
+}
+
+// ── 39) H-69: el ajuste historico viaja como RPC idempotente ─────────────────
+{
+  const env = freshEnv();
+  const S = loadStore(env);
+  await S.init({});
+  env.setRpc(async (name) => (name === 'apply_commission_adjustment_checked'
+    ? { data: { ok: true }, error: null } : { data: null, error: null }));
+  S.applyCommissionAdjustment({ operationId: '11111111-1111-4111-8111-111111111111',
+    rows: [{ seller_id: 's1', monto: 120, ventas: 3 }], motivo: 'H-69' });
+  await sleep(40);
+  const call = env.rpcCalls.find(c => c.name === 'apply_commission_adjustment_checked');
+  ok('39a. H-69: el ajuste llama a su RPC', !!call);
+  ok('39b. H-69: el ajuste viaja con operation_id e importes',
+    !!call && call.args.p_operation_id === '11111111-1111-4111-8111-111111111111'
+      && call.args.p_rows[0].monto === 120);
+  ok('39c. H-69: el ajuste NO escribe sellers desde el cliente',
+    !env.calls.some(c => c.table === 'sellers' && (c.metodo === 'upsert' || c.metodo === 'update')));
+}
+
 console.log(`════════ ${pass} pasaron, ${fail} fallaron ════════`);
 process.exit(fail ? 1 : 0);

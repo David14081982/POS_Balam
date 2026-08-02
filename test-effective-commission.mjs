@@ -17,12 +17,23 @@ const check = (name, condition) => {
   condition ? pass++ : fail++;
 };
 
-const match = data.match(
-  /function resolveSellerCommission\(seller\)\s*\{([\s\S]*?)\n  \}/,
-);
-const run = match
-  ? new Function('seller', 'C', match[1])
-  : () => ({ effectivePct: NaN, source: 'ausente', level: null });
+// H-69: la autoridad dejo de ser una funcion aislada y ahora se apoya en dos
+// ayudantes (`commissionNumeric`, `pct2`) y en la escalera de la tienda
+// (`commissionLadderFor`). Extraerla sola dejaba de compilar, asi que se extraen
+// las cuatro piezas juntas: sigue siendo el TEXTO REAL de `balam/data.jsx`, no
+// una copia. Los contratos de H-31 se conservan intactos.
+const grab = (re, nombre) => {
+  const m = data.match(re);
+  if (!m) throw new Error('No se encontro ' + nombre + ' en balam/data.jsx');
+  return m[0];
+};
+const piezas = [
+  grab(/  const commissionNumeric = value => \{[\s\S]*?\n  \};/, 'commissionNumeric'),
+  grab(/  const pct2 = n => [^\n]*;/, 'pct2'),
+  grab(/  function commissionLadderFor\(basePct\) \{[\s\S]*?\n  \}/, 'commissionLadderFor'),
+  grab(/  function resolveSellerCommission\(seller\) \{[\s\S]*?\n  \}/, 'resolveSellerCommission'),
+].join('\n');
+const run = new Function('seller', 'C', piezas + '\nreturn resolveSellerCommission(seller);');
 
 const levels = [
   {
@@ -46,7 +57,10 @@ const levels = [
 ];
 let globalPct = 5;
 const C = {
-  get: key => (key === 'commission.basePct' ? globalPct : undefined),
+  get: key => (key === 'commission.basePct' ? globalPct
+    : key === 'commission.goalPct' ? globalPct + 1
+    : key === 'commission.surplusPct' ? globalPct + 2
+    : key === 'commission.surplusThresholdPct' ? 120 : undefined),
   list: kind => (kind === 'seller_role' ? levels.filter(level => level.active !== false) : []),
   all: kind => (kind === 'seller_role' ? levels : []),
 };
@@ -121,14 +135,35 @@ check('H-30 permanece intacto en la pantalla comercial', sellersUi.includes('fun
 
 check('DATA publica una sola autoridad de comisión efectiva', data.includes('resolveSellerCommission,'));
 check('STORE persiste personalizada nullable, nivel y versión', /commission_override_pct/.test(store) && /seller_level_code/.test(store) && /commission_policy_version/.test(store));
-check('alta local nace bajo la política nueva sin porcentaje personalizado', /commissionOverridePct:\s*null/.test(data) && /commissionPolicyVersion:\s*1/.test(data));
+// H-69: el alta ya acepta politica desde el formulario, asi que el literal
+// `commissionOverridePct: null` desaparecio. Lo que debe seguir siendo cierto es
+// el CONTRATO: sin decision explicita, el alta nace sin porcentaje propio y en
+// version 1, de modo que hereda el porcentaje de la tienda.
+check('alta local nace bajo la política nueva sin porcentaje personalizado',
+  /commissionOverridePct: commissionNumeric\(u\.commissionOverridePct\)/.test(data)
+  && /commissionPolicyVersion: 1/.test(data));
 check('alta remota nace bajo la política nueva', /commission_override_pct:\s*null/.test(edge) && /commission_policy_version:\s*1/.test(edge));
 check('migración conserva filas existentes como legado', /commission_policy_version\s*=\s*0/i.test(migrations) && /set default 1/i.test(migrations));
 check('migración es idempotente', (migrations.match(/if not exists/gi) || []).length >= 3);
 check('no se infieren niveles desde comision_pct', !/seller_level_code\s*=.*comision_pct/i.test(migrations));
 
-check('motor de venta histórico no fue conectado en H-31', data.includes('const c = base * (s.comisionPct || 0) / 100;'));
-check('devoluciones conservan su cálculo histórico', (data.match(/const c = base \* \(s\.comisionPct \|\| 0\) \/ 100;/g) || []).length === 3);
+// ── H-69 invierte el no-alcance de H-31 ─────────────────────────────────────
+// H-31 dejo la autoridad escrita pero DESCONECTADA, y estas dos comprobaciones
+// vigilaban esa frontera. H-69 la cruza: ahora el invariante es el contrario y
+// mucho mas fuerte -ningun camino financiero puede volver a leer el porcentaje
+// crudo del perfil-. Es el camino de retiro de `AP-01` para esta formula.
+check('H-69: ningún cálculo financiero lee ya seller.comisionPct',
+  !/base \* \(s\.comisionPct \|\| 0\) \/ 100/.test(data)
+  && !/\(Number\(vendedorCambio\.comisionPct\) \|\| 0\)/.test(data));
+check('H-69: venta, apartado, cambio y devolución consumen la autoridad',
+  (data.match(/saleCommissionEntries\(/g) || []).length >= 3
+  && /commissionEntryFor\(vendedorCambio/.test(data)
+  && /saleFrozenCommissions\(sale\)/.test(data));
+check('H-69: la comisión de cada venta queda congelada por vendedor',
+  /comisiones: comisionesVenta/.test(data) && /sellerId: profile\.id/.test(data));
+check('H-69: la reversa parte de lo congelado, no del porcentaje vigente',
+  /const congeladas = saleFrozenCommissions\(sale\);/.test(data)
+  && /returnedCommissionBySeller\(folio\)/.test(data));
 check('metas y bonos no consumen la autoridad nueva', !/resolveSellerCommission[\s\S]{0,80}(metaMes|bono)/.test(data));
 
 console.log(`\n════════ ${pass} pasaron, ${fail} fallaron ════════`);

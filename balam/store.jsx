@@ -48,6 +48,23 @@
   }
 
   // ── Mappers local↔fila SQL ──────────────────────────────────────────────────
+  // H-69 · Frontera de escritura del vendedor.
+  //
+  // `comision_acum`, `ventas_mes` y `ventas_num` son EXCLUSIVAS de las RPC
+  // financieras: la nube las protege con el trigger
+  // `pos.restrict_direct_commission_writes`, que responde 42501
+  // COMMISSION_RPC_REQUIRED a cualquier escritura directa como `authenticated`.
+  // El cliente respeta la misma frontera ANTES de intentar la red, así que un
+  // guardado de perfil -nombre, foto, estado, porcentaje, nivel, meta- ya no
+  // puede quedar bloqueado por un acumulado que divergió.
+  const SELLER_RPC_ONLY_COLUMNS = ['comision_acum', 'ventas_mes', 'ventas_num'];
+  const sellerRow = s => ({ id: s.id, nombre: s.nombre, iniciales: s.iniciales, color: s.color, comision_pct: Number(s.comisionPct) || 0, commission_override_pct: s.commissionOverridePct == null || !Number.isFinite(Number(s.commissionOverridePct)) ? null : Number(s.commissionOverridePct), seller_level_code: s.sellerLevelCode == null ? null : String(s.sellerLevelCode), commission_policy_version: Number(s.commissionPolicyVersion) || 0, meta_mes: Number(s.metaMes) || 0, ventas_mes: Number(s.ventasMes) || 0, ventas_num: s.ventasNum || 0, comision_acum: Number(s.comisionAcum) || 0, bono: s.bono || null, email: s.email || null, password_hash: s.passwordHash || null, role: s.role || 'vendedor', avatar_url: s.avatar || null, active: s.active !== false, sync_base_version: Number(s._syncVersion) || 0, sync_device_id: window.CORE.getDeviceId() });
+  const sellerProfileRow = s => {
+    const row = sellerRow(s);
+    SELLER_RPC_ONLY_COLUMNS.forEach(col => { delete row[col]; });
+    return row;
+  };
+
   const MAP = {
     products: {
       table: 'products', conflict: 'id', localKey: 'products',
@@ -77,14 +94,14 @@
     },
     sellers: {
       table: 'sellers', conflict: 'id', localKey: 'sellers',
-      toRow: s => ({ id: s.id, nombre: s.nombre, iniciales: s.iniciales, color: s.color, comision_pct: Number(s.comisionPct) || 0, commission_override_pct: s.commissionOverridePct == null || !Number.isFinite(Number(s.commissionOverridePct)) ? null : Number(s.commissionOverridePct), seller_level_code: s.sellerLevelCode == null ? null : String(s.sellerLevelCode), commission_policy_version: Number(s.commissionPolicyVersion) || 0, meta_mes: Number(s.metaMes) || 0, ventas_mes: Number(s.ventasMes) || 0, ventas_num: s.ventasNum || 0, comision_acum: Number(s.comisionAcum) || 0, bono: s.bono || null, email: s.email || null, password_hash: s.passwordHash || null, role: s.role || 'vendedor', avatar_url: s.avatar || null, active: s.active !== false, sync_base_version: Number(s._syncVersion) || 0, sync_device_id: window.CORE.getDeviceId() }),
+      toRow: sellerRow, profileRow: sellerProfileRow,
       fromRow: r => ({ id: r.id, nombre: r.nombre, iniciales: r.iniciales, color: r.color, comisionPct: Number(r.comision_pct) || 0, commissionOverridePct: r.commission_override_pct == null ? null : Number(r.commission_override_pct), sellerLevelCode: r.seller_level_code == null ? null : String(r.seller_level_code), commissionPolicyVersion: Number(r.commission_policy_version) || 0, metaMes: Number(r.meta_mes) || 0, ventasMes: Number(r.ventas_mes) || 0, ventasNum: r.ventas_num || 0, comisionAcum: Number(r.comision_acum) || 0, bono: r.bono || 'Sin bono', email: r.email || undefined, passwordHash: r.password_hash || null, role: r.role || 'vendedor', avatar: r.avatar_url || null, active: r.active !== false, _syncVersion: Number(r.sync_version) || 0, _deletedAt: r.deleted_at || null }),
     },
     sales: {
       table: 'sales', conflict: 'folio',
       // H-65: el estado de una venta no prueba que el inventario se reservara.
       // Esa autoridad pertenece exclusivamente a la respuesta/consulta remota.
-      fromRow: r => ({ folio: r.folio, folioAliases: Array.isArray(r.folio_aliases) ? r.folio_aliases : undefined, _operationId: r.operation_id || undefined, _stockReserved: r.stock_reserved === true, _stockRequired: r.estado !== 'Apartado' && r.estado !== 'Cancelado', _stockIdempotent: r.stock_idempotent === true, _reservationOperationId: r.reservation_operation_id || undefined, _syncStatus: 'synced', fecha: String(r.fecha).replace('T', ' ').slice(0, 16), clienteId: r.cliente_id || undefined, cliente: r.cliente, vendedor: '', vendedores: r.vendedores || [], items: r.items || 0, subtotal: r.subtotal == null ? undefined : Number(r.subtotal), iva: r.iva == null ? undefined : Number(r.iva), total: Number(r.total) || 0, descuento: r.descuento == null ? undefined : Number(r.descuento), descuentoAdicional: r.descuento_adicional == null ? undefined : Number(r.descuento_adicional), totalAntesDescuentoAdicional: r.total_antes_descuento_adicional == null ? undefined : Number(r.total_antes_descuento_adicional), descuentosAdicionales: Array.isArray(r.descuentos_adicionales) ? r.descuentos_adicionales : undefined, ivaPct: r.iva_pct == null ? undefined : Number(r.iva_pct), ivaIncluded: r.iva_included == null ? undefined : !!r.iva_included, anticipo: r.anticipo == null ? undefined : Number(r.anticipo), saldo: r.saldo == null ? undefined : Number(r.saldo), pagoEfectivo: r.pago_efectivo == null ? undefined : Number(r.pago_efectivo), pagoOtro: r.pago_otro == null ? undefined : Number(r.pago_otro), metodo: r.metodo, estado: r.estado, comision: r.comision == null ? undefined : Number(r.comision), comisionBase: r.comision_base || undefined, valorRegalado: Number(r.valor_regalado) || 0, returnLimitDays: r.return_limit_days == null ? null : Number(r.return_limit_days), returnExpiresAt: r.return_expires_at || null, lineas: [] }),
+      fromRow: r => ({ folio: r.folio, folioAliases: Array.isArray(r.folio_aliases) ? r.folio_aliases : undefined, _operationId: r.operation_id || undefined, _stockReserved: r.stock_reserved === true, _stockRequired: r.estado !== 'Apartado' && r.estado !== 'Cancelado', _stockIdempotent: r.stock_idempotent === true, _reservationOperationId: r.reservation_operation_id || undefined, _syncStatus: 'synced', fecha: String(r.fecha).replace('T', ' ').slice(0, 16), clienteId: r.cliente_id || undefined, cliente: r.cliente, vendedor: '', vendedores: r.vendedores || [], items: r.items || 0, subtotal: r.subtotal == null ? undefined : Number(r.subtotal), iva: r.iva == null ? undefined : Number(r.iva), total: Number(r.total) || 0, descuento: r.descuento == null ? undefined : Number(r.descuento), descuentoAdicional: r.descuento_adicional == null ? undefined : Number(r.descuento_adicional), totalAntesDescuentoAdicional: r.total_antes_descuento_adicional == null ? undefined : Number(r.total_antes_descuento_adicional), descuentosAdicionales: Array.isArray(r.descuentos_adicionales) ? r.descuentos_adicionales : undefined, ivaPct: r.iva_pct == null ? undefined : Number(r.iva_pct), ivaIncluded: r.iva_included == null ? undefined : !!r.iva_included, anticipo: r.anticipo == null ? undefined : Number(r.anticipo), saldo: r.saldo == null ? undefined : Number(r.saldo), pagoEfectivo: r.pago_efectivo == null ? undefined : Number(r.pago_efectivo), pagoOtro: r.pago_otro == null ? undefined : Number(r.pago_otro), metodo: r.metodo, estado: r.estado, comision: r.comision == null ? undefined : Number(r.comision), comisionBase: r.comision_base || undefined, comisiones: Array.isArray(r.comisiones) ? r.comisiones : undefined, valorRegalado: Number(r.valor_regalado) || 0, returnLimitDays: r.return_limit_days == null ? null : Number(r.return_limit_days), returnExpiresAt: r.return_expires_at || null, lineas: [] }),
     },
     promotions: {
       table: 'promotions', conflict: 'id', localKey: 'promos',
@@ -121,6 +138,9 @@
         comision_monto: Number(e.comisionMonto) || 0,
         comision_base: e.comisionBase || null,
         comision_pct: Number(e.comisionPct) || 0,
+        comision_base_importe: Number(e.comisionBaseImporte) || 0,
+        comision_source: e.comisionSource || null,
+        comision_policy_version: e.comisionPolicyVersion == null ? null : Number(e.comisionPolicyVersion),
         comision_revertida: e.comisionRevertida || null,
         notas: e.notas || null,
       }),
@@ -136,6 +156,9 @@
         comisionMonto: Number(r.comision_monto) || 0,
         comisionBase: r.comision_base || undefined,
         comisionPct: Number(r.comision_pct) || 0,
+        comisionBaseImporte: Number(r.comision_base_importe) || 0,
+        comisionSource: r.comision_source || undefined,
+        comisionPolicyVersion: r.comision_policy_version == null ? undefined : Number(r.comision_policy_version),
         comisionRevertida: r.comision_revertida || undefined,
         notas: r.notas || '', lineas: [],
       }),
@@ -401,7 +424,7 @@
     op.attempts = Number(op.attempts) || 0;
     op.createdAt = op.createdAt || new Date().toISOString();
     delete op.diagnostic;
-    if (op.type === 'upsert') { const i = q.findIndex(x => x.type === 'upsert' && x.table === op.table && x.ownerId === op.ownerId); if (i >= 0) q[i] = op; else q.push(op); }
+    if (op.type === 'upsert' || op.type === 'profileUpdate') { const i = q.findIndex(x => (x.type === 'upsert' || x.type === 'profileUpdate') && x.table === op.table && x.ownerId === op.ownerId); if (i >= 0) q[i] = op; else q.push(op); }
     else if (op.type === 'config') { const i = q.findIndex(x => x.type === 'config' && x.ownerId === op.ownerId); if (i >= 0) q[i] = op; else q.push(op); }
     else q.push(op); // sale / delete: idempotentes, se conservan en orden
     saveQ(q);
@@ -674,6 +697,65 @@
         if (committed.data._loanVersion != null) rebaseQueuedLoanVersions(op.id, op.loan.id, version);
         return true;
       }
+      // H-69 · Escritura acotada del perfil del vendedor.
+      //
+      // Se usa `update` y NUNCA `upsert`: un upsert con `on conflict do update`
+      // rellenaría las columnas ausentes con su valor por defecto, y el trigger
+      // vería un `comision_acum` distinto del guardado y volvería a responder
+      // 42501. Un `update` sólo escribe las columnas enviadas, así que el
+      // acumulado remoto se conserva intacto por construcción.
+      if (op.type === 'profileUpdate') {
+        const m = MAP[op.kind] || MAP.sellers;
+        // Mismo criterio que el upsert: el cuerpo se reconstruye justo antes de
+        // enviarse, para que una operación compactada lleve la versión que otra
+        // op en vuelo acaba de confirmar.
+        // Sólo se reconstruye si DATA tiene realmente esa colección cargada. Con
+        // la colección vacía, reconstruir borraría las filas que la operación
+        // traía y el guardado desaparecería sin error.
+        if (m && m.localKey && m.profileRow && window.DATA
+            && Array.isArray(window.DATA[m.localKey]) && window.DATA[m.localKey].length) {
+          op.rows = window.DATA[m.localKey].map(m.profileRow);
+        }
+        const remote = [];
+        for (const row of op.rows) {
+          const patch = Object.assign({}, row);
+          delete patch[op.conflict];
+          let r = await c.from(op.table).update(patch).eq(op.conflict, row[op.conflict]).select('*');
+          if (r.error) return failOp(r.error);
+          // Perfil que todavía no existe en la nube (alta local sin sesión
+          // administrada): se inserta. El INSERT no pasa por el trigger, que
+          // sólo vigila `before update`, y los acumulados nacen en cero.
+          if (!(r.data || []).length) {
+            r = await c.from(op.table).insert(row).select('*');
+            if (r.error) return failOp(r.error);
+          }
+          if (!(r.data || []).length) {
+            return failOp({ code: 'empty_response', message: 'El perfil no devolvió la fila esperada' });
+          }
+          remote.push.apply(remote, r.data.map(m.fromRow));
+        }
+        if (m && window.DATA && window.DATA.applySyncResult) {
+          const expected = {};
+          op.rows.forEach(row => { expected[row.id] = Number(row.sync_base_version) || 0; });
+          const result = window.DATA.applySyncResult(op.kind, remote, expected, 'upsert') || {};
+          rebaseQueuedVersions(op.table, remote);
+          if (result.conflicts && window.UI && window.UI.toast) {
+            window.UI.toast(`${result.conflicts} cambio(s) de personal no se aplicaron porque otra terminal guardó una versión más reciente`, 'var(--danger)');
+          }
+        }
+        return true;
+      }
+      if (op.type === 'commissionAdjustment') {
+        const r = await c.rpc('apply_commission_adjustment_checked', {
+          p_operation_id: op.operationId,
+          p_rows: op.rows || [],
+          p_motivo: op.motivo || '',
+        });
+        if (r.error) return failOp(r.error);
+        await pullDomain('sellers');
+        await pullDomain('liquidations');
+        return true;
+      }
       if (op.type === 'staffUpdate') {
         const m = MAP[op.kind];
         const remote = [];
@@ -814,6 +896,9 @@
             item_identities: op.itemIdentities || [],
             commission_amount: Number((op.commissionSnapshot || {}).amount) || 0,
             commission_base: (op.commissionSnapshot || {}).base || 'neto',
+            // H-69: el apartado comisiona al liquidarse, así que su desglose
+            // congelado por vendedor viaja con la confirmación del pago.
+            commission_rows: (op.commissionSnapshot || {}).rows || [],
           },
         });
         const payload = Array.isArray(committed.data) ? committed.data[0] : committed.data;
@@ -1129,6 +1214,38 @@
         if (o.type === 'upsert' && !o.kind) {
           o.kind = kindForTable(o.table); mig = true;
         }
+        // H-69 · Cierre auditado de la operación bloqueada por
+        // COMMISSION_RPC_REQUIRED.
+        //
+        // No se borra: se DETERMINA que quedó obsoleta y se sustituye por la
+        // forma que sí puede aplicarse. Quedó obsoleta porque su cuerpo se
+        // reconstruye desde `DATA.sellers` en cada intento —nunca fue una
+        // captura histórica, sino un espejo del estado local— y porque las tres
+        // columnas que la bloqueaban dejaron de pertenecer al cliente. Lo que
+        // esa operación quería guardar era el PERFIL, y eso viaja íntegro.
+        //
+        // La supersesión queda registrada en la propia operación (`supersededOp`,
+        // `supersededReason`, `supersededDiagnostic`) para que el cierre de la
+        // historia pueda demostrar qué se convirtió y por qué.
+        if ((o.type === 'upsert' || o.type === 'staffUpdate')
+            && (o.kind === 'sellers' || o.table === 'sellers')) {
+          const previo = o.diagnostic || null;
+          o.supersededOp = o.type;
+          o.supersededReason = 'commission_columns_are_rpc_only';
+          if (previo) o.supersededDiagnostic = previo;
+          o.type = 'profileUpdate';
+          o.kind = 'sellers';
+          o.conflict = o.conflict || 'id';
+          o.rows = (o.rows || []).map(row => {
+            const clean = Object.assign({}, row);
+            SELLER_RPC_ONLY_COLUMNS.forEach(col => { delete clean[col]; });
+            return clean;
+          });
+          o.status = 'pending';
+          o.retry = true;
+          delete o.diagnostic;
+          mig = true;
+        }
         if (needsUuidQueueId(o) && !UUID_RE.test(String(o.id || ''))) {
           o.id = newOpId(); mig = true;
         }
@@ -1333,8 +1450,12 @@
     if (kind === 'products' && (!Array.isArray(arr) || !arr.length)) return;
     const seller = window.AUTH && window.AUTH.role && window.AUTH.role() === 'vendedor';
     if (seller && kind === 'products') return;
-    if (seller && kind === 'sellers') {
-      return run({ type: 'staffUpdate', kind, table: m.table, conflict: m.conflict, rows: arr.map(m.toRow) });
+    // H-69: el vendedor NUNCA viaja como upsert de tabla completa. Va como
+    // actualización acotada de perfil, sin las tres columnas que sólo las RPC
+    // financieras pueden escribir. Vale para administrador y para vendedor: la
+    // frontera es de datos, no de rol.
+    if (kind === 'sellers') {
+      return run({ type: 'profileUpdate', kind, table: m.table, conflict: m.conflict, rows: arr.map(m.profileRow) });
     }
     return run({ type: 'upsert', kind, table: m.table, conflict: m.conflict, rows: arr.map(m.toRow) });
   }
@@ -1347,6 +1468,13 @@
   function settleCommission({ operationId, sellerId }) {
     if (!enabled) return;
     return run({ type: 'commissionSettle', operationId, sellerId });
+  }
+  // H-69: el ajuste histórico es un documento propio. Viaja por la cola como una
+  // RPC más —idempotente por `operationId`— y jamás escribe `comision_acum`
+  // desde el cliente.
+  function applyCommissionAdjustment({ operationId, rows, motivo }) {
+    if (!enabled) return;
+    return run({ type: 'commissionAdjustment', operationId, rows: rows || [], motivo: motivo || '' });
   }
   function closeCommissionPeriod({ operationId }) {
     if (!enabled) return;
@@ -1431,6 +1559,9 @@
     if (sale.descuento != null) header.descuento = Number(sale.descuento) || 0;
     if (sale.comision != null) header.comision = Number(sale.comision) || 0;
     if (sale.comisionBase != null) header.comision_base = sale.comisionBase;
+    // H-69: el desglose por vendedor viaja con la venta. Campo opcional, como el
+    // resto de snapshots: una instalacion sin la migracion simplemente no lo manda.
+    if (Array.isArray(sale.comisiones)) header.comisiones = sale.comisiones;
     if (sale.descuentoAdicional != null) header.descuento_adicional = Number(sale.descuentoAdicional) || 0;
     if (sale.totalAntesDescuentoAdicional != null) header.total_antes_descuento_adicional = Number(sale.totalAntesDescuentoAdicional) || 0;
     if (Array.isArray(sale.descuentosAdicionales)) header.descuentos_adicionales = sale.descuentosAdicionales;
@@ -1560,6 +1691,7 @@
       commissionSnapshot: {
         amount: Number(sale.comision) || 0,
         base: sale.comisionBase || 'neto',
+        rows: Array.isArray(sale.comisiones) ? sale.comisiones : [],
       },
     };
     enqueue(op);
@@ -1596,6 +1728,9 @@
       comision_monto: Number(exch.comisionMonto) || 0,
       comision_base: exch.comisionBase || null,
       comision_pct: Number(exch.comisionPct) || 0,
+      comision_base_importe: Number(exch.comisionBaseImporte) || 0,
+      comision_source: exch.comisionSource || null,
+      comision_policy_version: exch.comisionPolicyVersion == null ? null : Number(exch.comisionPolicyVersion),
       notas: exch.notas || null,
     };
     const items = (exch.lineas || []).map(l => ({
@@ -1711,7 +1846,7 @@
   // Documentos: se descartan. Cada uno vive de un registro que la limpieza borró.
   const PURGE_DOCUMENT_OPS = {
     sale: 1, return: 1, exchange: 1, loanOperation: 1,
-    commissionSettle: 1, commissionClose: 1,
+    commissionSettle: 1, commissionClose: 1, commissionAdjustment: 1,
   };
   // Cargas masivas que suben el arreglo COMPLETO: no se descartan a ciegas ni se dejan
   // pasar. Se reconstruyen desde el estado ya limpio, así una alta de catálogo capturada
@@ -1740,7 +1875,7 @@
       const at = Date.parse(op.createdAt || '');
       if (Number.isFinite(at) && at > limit) { kept.push(op); return; }
       if (PURGE_DOCUMENT_OPS[op.type]) { dropped++; return; }
-      if (op.type === 'upsert' || op.type === 'staffUpdate') {
+      if (op.type === 'upsert' || op.type === 'staffUpdate' || op.type === 'profileUpdate') {
         const kind = op.kind || op.table;
         if (PURGE_REBUILT_UPSERTS[kind]) { rebuild[kind] = true; dropped++; return; }
         if (PURGE_DROPPED_UPSERTS[kind]) { dropped++; return; }
@@ -2256,6 +2391,6 @@
     }
   }
 
-  window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushSale, settleLayaway, pushReturn, pushExchange, ensureFolioBlock, deleteRow, settleCommission, closeCommissionPeriod, pushLoanOperation, migrateLocalLoans, pullDomain, fetchSaleByFolio, physicalCardAvailable, claimPhysicalCard, flushQueue, retryOperation, queueStatus, hasPendingLayaway, clearQueue, markResetApplied, purgeTestData, applyRemotePurge, pruneQueueForPurge, readPurgeState, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
+  window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushSale, settleLayaway, pushReturn, pushExchange, ensureFolioBlock, deleteRow, settleCommission, closeCommissionPeriod, applyCommissionAdjustment, pushLoanOperation, migrateLocalLoans, pullDomain, fetchSaleByFolio, physicalCardAvailable, claimPhysicalCard, flushQueue, retryOperation, queueStatus, hasPendingLayaway, clearQueue, markResetApplied, purgeTestData, applyRemotePurge, pruneQueueForPurge, readPurgeState, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
   window.CORE.registerSyncGateway(window.STORE);
 })();

@@ -1104,7 +1104,7 @@
           h(CfgText, { key: 'mg', k: 'report.marginPct', label: 'Margen de utilidad (%)', type: 'number' }),
         ]),
       ]),
-      h(CatalogEditor, { key: 'rol', kind: 'seller_role', title: 'Niveles / roles de vendedor', codePlaceholder: 'senior', labelPlaceholder: 'Nombre del nivel', metaFields: [{ key: 'minPct', label: '% mín.', type: 'number', def: 0 }] }),
+      h(CatalogEditor, { key: 'rol', kind: 'seller_role', title: 'Niveles / roles de vendedor', codePlaceholder: 'senior', labelPlaceholder: 'Nombre del nivel', metaFields: [{ key: 'minPct', label: '% mín.', type: 'number', def: 0 }, { key: 'commissionPct', label: '% de comisión', type: 'number', def: 0 }] }),
     ],
     clientes: () => [
       h('p', { key: 'i', className: 'text-caption text-on-surface-variant' }, 'Listas que aparecen en el alta de cliente (CRM).'),
@@ -1398,7 +1398,15 @@
     ];
     const catRoles = C.list('user_role');
     const roles = catRoles.length ? catRoles : ROLE_FALLBACK;
-    const [f, setF] = useState({ nombre: user ? user.nombre : '', email: user ? (user.email || '') : '', password: '', role: user ? user.role : 'vendedor', avatar: user ? (user.avatar || '') : '' });
+    const [f, setF] = useState({
+      nombre: user ? user.nombre : '', email: user ? (user.email || '') : '', password: '',
+      role: user ? user.role : 'vendedor', avatar: user ? (user.avatar || '') : '',
+      // H-69: vacío significa "sin decisión", que es distinto de 0 %. Por eso se
+      // conserva la cadena vacía y no se normaliza a cero en el formulario.
+      commissionOverridePct: user && user.commissionOverridePct != null ? String(user.commissionOverridePct) : '',
+      sellerLevelCode: user && user.sellerLevelCode != null ? String(user.sellerLevelCode) : '',
+      metaMes: user ? String(Number(user.metaMes) || 0) : '0',
+    });
     const set = (k, v) => setF(p => ({ ...p, [k]: v }));
     const fileRef = React.useRef(null);
     // Foto de perfil: redimensiona a 256px y guarda como data URL (sincroniza a sellers.avatar_url).
@@ -1422,6 +1430,19 @@
     }
     async function submit() {
       if (!f.nombre.trim()) { toast('Escribe el nombre completo', 'var(--danger)'); return; }
+      // H-69: la comision se guarda SIEMPRE por la escritura de perfil, nunca por
+      // la Edge Function, porque `admin-users` solo administra la cuenta de
+      // acceso. Vacio = sin decision (hereda el porcentaje de la tienda); 0 = 0 %
+      // decidido a proposito, y son cosas distintas.
+      const pctRaw = String(f.commissionOverridePct == null ? '' : f.commissionOverridePct).trim();
+      if (pctRaw !== '' && !(Number(pctRaw) >= 0 && Number(pctRaw) <= 100)) {
+        toast('El porcentaje de comision debe estar entre 0 y 100', 'var(--danger)'); return;
+      }
+      const comision = {
+        commissionOverridePct: pctRaw === '' ? null : Number(pctRaw),
+        sellerLevelCode: f.sellerLevelCode || null,
+        metaMes: Math.max(0, Number(f.metaMes) || 0),
+      };
       // Producción (hay sesión real de admin): la cuenta de acceso se gestiona vía Edge Function.
       const online = !!(window.STORE && (await window.STORE.hasSession()));
       if (online) {
@@ -1430,7 +1451,7 @@
         // SIN la Edge Function admin-users. Así renombrar / cambiar rol / foto funciona aunque la
         // función no esté desplegada. (Crear usuarios y cambiar email/contraseña sí la requieren, por Auth.)
         if (editing && !f.password && f.email.trim() === (user.email || '')) {
-          D.updateUser(user.id, { nombre: f.nombre.trim(), role: f.role, avatar: f.avatar || null });
+          D.updateUser(user.id, Object.assign({ nombre: f.nombre.trim(), role: f.role, avatar: f.avatar || null }, comision));
           toast('Usuario actualizado', 'var(--accent)');
           onSaved();
           return;
@@ -1450,6 +1471,10 @@
             return;
           }
           await window.STORE.pullDomain('sellers');
+          // La cuenta ya existe; la politica de comision se escribe despues, por
+          // la ruta de perfil, que es la unica que la nube deja tocar.
+          const destino = editing ? user : (D.sellers || []).find(x => String(x.email || '').toLowerCase() === f.email.trim().toLowerCase());
+          if (destino) D.updateUser(destino.id, comision);
           toast(editing ? 'Usuario actualizado' : 'Usuario acreditado', 'var(--accent)');
           onSaved();
         } catch (e) { toast('Error: ' + (e.message || e), 'var(--danger)'); }
@@ -1457,10 +1482,10 @@
       }
       // Dev / local: solo perfil (sin cuenta de acceso real; el login real va en producción).
       if (editing) {
-        D.updateUser(user.id, { nombre: f.nombre, email: f.email.trim() || null, role: f.role, avatar: f.avatar || null });
+        D.updateUser(user.id, Object.assign({ nombre: f.nombre, email: f.email.trim() || null, role: f.role, avatar: f.avatar || null }, comision));
         toast('Usuario actualizado (local)', 'var(--accent)');
       } else {
-        D.addUser({ nombre: f.nombre, email: f.email, role: f.role, avatar: f.avatar || null });
+        D.addUser(Object.assign({ nombre: f.nombre, email: f.email, role: f.role, avatar: f.avatar || null }, comision));
         toast('Usuario creado (local)', 'var(--accent)');
       }
       onSaved();
@@ -1528,6 +1553,7 @@
               ]);
             })),
           ]),
+          f.role === 'vendedor' && h(CommissionFields, { key: 'com', f, set }),
           h('div', { key: 'ac', className: 'flex justify-end items-center gap-6 pt-8' }, [
             editing && h('button', { key: 'd', className: 'mr-auto inline-flex items-center gap-2 text-danger text-overline font-bold uppercase tracking-widest hover:opacity-70 transition-colors', onClick: eliminar }, [h(MS, { key: 'i', name: 'trash', size: 16 }), 'Eliminar usuario']),
             h('button', { key: 'c', className: 'text-on-surface-variant text-overline font-bold uppercase tracking-widest hover:text-primary transition-colors', onClick: onCancel }, 'Cancelar'),
@@ -1535,6 +1561,75 @@
           ]),
         ]),
       ]));
+  }
+
+  // ── H-69 · Comisión del vendedor en el alta/edición ───────────────────────────
+  //
+  // Tres campos que se pueden dejar vacíos y una explicación que NO se calcula
+  // aquí: el porcentaje efectivo y su origen los responde `DATA`, la misma
+  // autoridad que cobra. Si la pantalla los dedujera por su cuenta, volvería a
+  // haber dos respuestas para la misma pregunta (`R-DOM-01`).
+  function CommissionFields({ f, set }) {
+    const under = 'w-full border-0 border-b border-outline-variant bg-transparent py-3 text-body focus:border-primary focus:ring-0 px-0 transition-all';
+    const lbl = 'block text-overline uppercase font-bold text-on-surface-variant tracking-widest mb-1';
+    const niveles = C.list('seller_role');
+    // Perfil hipotético con lo que hay en el formulario: así el aviso muestra lo
+    // que se va a guardar, no lo que está guardado.
+    const preview = D.resolveSellerCommission({
+      commissionOverridePct: f.commissionOverridePct === '' ? null : f.commissionOverridePct,
+      sellerLevelCode: f.sellerLevelCode || null,
+      commissionPolicyVersion: 1,
+      metaMes: Number(f.metaMes) || 0,
+    });
+    const meta = Number(f.metaMes) || 0;
+    const umbral = meta > 0 ? Math.round(meta * preview.surplusThresholdPct / 100) : 0;
+    const dinero = n => '$' + (Number(n) || 0).toLocaleString('es-MX');
+    return h('div', { key: 'com', className: 'mt-8 pt-8 border-t border-outline-variant' }, [
+      h('label', { key: 'l', className: lbl + ' mb-4' }, 'Comisión'),
+      h('div', { key: 'g', className: 'grid grid-cols-1 md:grid-cols-3 gap-8' }, [
+        h('div', { key: 'p' }, [
+          h('label', { key: 'l', className: 'block text-caption text-on-surface-variant mb-1' }, 'Porcentaje personalizado'),
+          h('input', {
+            key: 'i', type: 'number', min: '0', max: '100', step: '0.01', className: under,
+            'data-testid': 'seller-commission-pct',
+            value: f.commissionOverridePct == null ? '' : f.commissionOverridePct,
+            placeholder: 'Vacío = usa el de la tienda',
+            onChange: e => set('commissionOverridePct', e.target.value === '' ? '' : e.target.value),
+          }),
+        ]),
+        h('div', { key: 'n' }, [
+          h('label', { key: 'l', className: 'block text-caption text-on-surface-variant mb-1' }, 'Nivel de comisión'),
+          h('select', {
+            key: 'i', className: under, 'data-testid': 'seller-commission-level',
+            value: f.sellerLevelCode || '',
+            onChange: e => set('sellerLevelCode', e.target.value),
+          }, [h('option', { key: '', value: '' }, 'Sin nivel asignado')].concat(
+            niveles.map(n => h('option', { key: n.code, value: n.code },
+              n.label + (n.meta && n.meta.commissionPct != null ? ` · ${n.meta.commissionPct}%` : ' · sin % definido'))))),
+        ]),
+        h('div', { key: 'm' }, [
+          h('label', { key: 'l', className: 'block text-caption text-on-surface-variant mb-1' }, 'Meta mensual ($)'),
+          h('input', {
+            key: 'i', type: 'number', min: '0', step: '1', className: under,
+            'data-testid': 'seller-commission-goal',
+            value: f.metaMes == null ? '' : f.metaMes,
+            placeholder: '0 = sin meta',
+            onChange: e => set('metaMes', e.target.value),
+          }),
+        ]),
+      ]),
+      h('div', { key: 'eff', className: 'mt-6 p-5 rounded-lg bg-surface-container-low border border-outline-variant', 'data-testid': 'seller-commission-effective' }, [
+        h('div', { key: 'r', className: 'flex items-baseline gap-3 flex-wrap' }, [
+          h('span', { key: 'l', className: 'text-caption text-on-surface-variant uppercase tracking-widest font-bold' }, 'Porcentaje efectivo'),
+          h('span', { key: 'v', className: 'font-headline text-h1 text-primary', 'data-testid': 'seller-commission-effective-pct' }, preview.effectivePct + '%'),
+          h('span', { key: 's', className: 'text-caption text-on-surface-variant', 'data-testid': 'seller-commission-source' }, '· ' + D.commissionSourceLabel(preview.source)),
+        ]),
+        h('p', { key: 'd', className: 'text-caption text-on-surface-variant mt-2 leading-relaxed' },
+          meta > 0
+            ? `Cobra ${preview.basePct}% hasta ${dinero(meta)} de venta neta en el mes, ${preview.goalPct}% de ahí hasta ${dinero(umbral)}, y ${preview.surplusPct}% sobre lo que pase de ${dinero(umbral)}. Cada tramo se paga sólo sobre la parte que le toca.`
+            : `Sin meta mensual cobra ${preview.basePct}% plano sobre la venta neta. Pon una meta para activar los tramos de ${preview.goalPct}% y ${preview.surplusPct}%.`),
+      ]),
+    ]);
   }
 
   window.SettingsScreen = SettingsScreen;

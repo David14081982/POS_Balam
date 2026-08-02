@@ -562,15 +562,26 @@
     window.UI.toast(`${rows.length} préstamos exportados`, 'var(--accent)');
   }
 
+  // H-69: el reporte mensual sale de la MISMA autoridad que pinta la pantalla
+  // (`DATA.commissionLedger`), asi que el XLSX y Vendedores no pueden discrepar.
+  // Separa lo generado, lo revertido y lo ya liquidado, porque un cierre de mes
+  // deja el pendiente en cero pero no borra lo que se genero.
   function exportSellers(rows) {
     if (!ensureXLSX()) return;
-    const H = ['Vendedor', 'Rol', 'Comisión %', 'Ventas del mes', 'Meta', 'Avance %', 'Comisión acumulada', 'Estado'];
+    const H = ['Vendedor', 'Rol', 'Comisión %', 'Origen del %', 'Ventas del mes', 'Base comisionable',
+      'Meta', 'Avance %', 'Comisión generada', 'Revertido', 'Liquidado', 'Pendiente', 'Estado'];
     const data = rows.map(r => ({
-      'Vendedor': r.nombre, 'Rol': r.rol, 'Comisión %': r.pct, 'Ventas del mes': r.ventas,
-      'Meta': r.meta, 'Avance %': r.avance, 'Comisión acumulada': r.comision, 'Estado': r.estado,
+      'Vendedor': r.nombre, 'Rol': r.rol, 'Comisión %': r.pct, 'Origen del %': r.origen || '',
+      'Ventas del mes': r.ventas, 'Base comisionable': r.base == null ? 0 : r.base,
+      'Meta': r.meta, 'Avance %': r.avance,
+      'Comisión generada': r.generado == null ? r.comision : r.generado,
+      'Revertido': r.revertido == null ? 0 : r.revertido,
+      'Liquidado': r.liquidado == null ? 0 : r.liquidado,
+      'Pendiente': r.comision, 'Estado': r.estado,
     }));
     const ws = window.XLSX.utils.json_to_sheet(data, { header: H });
-    ws['!cols'] = [{ wch: 22 }, { wch: 24 }, { wch: 11 }, { wch: 15 }, { wch: 12 }, { wch: 10 }, { wch: 18 }, { wch: 10 }];
+    ws['!cols'] = [{ wch: 22 }, { wch: 24 }, { wch: 11 }, { wch: 30 }, { wch: 15 }, { wch: 17 },
+      { wch: 12 }, { wch: 10 }, { wch: 17 }, { wch: 12 }, { wch: 12 }, { wch: 13 }, { wch: 10 }];
     const wb = window.XLSX.utils.book_new();
     window.XLSX.utils.book_append_sheet(wb, ws, 'Vendedores');
     download(wb, `Vendedores_Balam_${new Date().toISOString().slice(0, 10)}.xlsx`);

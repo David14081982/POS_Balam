@@ -30,6 +30,13 @@ const r = await page.evaluate(() => {
   out.mappingOk = !!window.STORE.pushRows('liquidations', []);
   // Espía pushRows (sin tocar la nube).
   const calls = []; window.STORE.pushRows = (k, a) => { calls.push({ k, n: a.length }); };
+  // H-56/H-69: `pos.liquidations` dejo de ser escribible por `authenticated`
+  // (la migracion 20260730008200 revoco insert/update/delete). La fila remota la
+  // crea la RPC, asi que lo que hay que vigilar es que el cliente NO la empuje y
+  // SI encole la operacion auditada.
+  const rpcs = [];
+  window.STORE.settleCommission = a => rpcs.push({ tipo: 'settle', ...a });
+  window.STORE.closeCommissionPeriod = a => rpcs.push({ tipo: 'close', ...a });
 
   // Fixtures: producción arranca SIN vendedores de ejemplo (solo el admin) — el test
   // crea los suyos con la forma real. Antes asumía D.sellers[1]/[2] y quedó roto al
@@ -44,14 +51,14 @@ const r = await page.evaluate(() => {
   s.comisionAcum = 500;
   const monto = D.liquidarComision(s.id);
   const e0 = D.liquidations[0];
-  out.liquidar = { monto, len: D.liquidations.length, tipo: e0 && e0.tipo, sellerId: e0 && e0.sellerId === s.id, hasFecha: !!(e0 && e0.fecha), acum0: s.comisionAcum, pushed: calls.some(c => c.k === 'liquidations') };
+  out.liquidar = { monto, len: D.liquidations.length, tipo: e0 && e0.tipo, sellerId: e0 && e0.sellerId === s.id, hasFecha: !!(e0 && e0.fecha), acum0: s.comisionAcum, pushed: calls.some(c => c.k === 'liquidations'), rpc: rpcs.some(r => r.tipo === 'settle' && r.sellerId === s.id) };
 
   // 2) cerrarMes liquida pendientes (2 vendedores) → entradas 'corte'
-  D.liquidations.length = 0; calls.length = 0;
+  D.liquidations.length = 0; calls.length = 0; rpcs.length = 0;
   D.sellers.forEach(x => { x.comisionAcum = 0; });
   v1.comisionAcum = 100; v2.comisionAcum = 200;
   const res = D.cerrarMes();
-  out.corte = { vendedores: res.vendedores, total: res.total, len: D.liquidations.length, allCorte: D.liquidations.every(l => l.tipo === 'corte'), pushed: calls.some(c => c.k === 'liquidations'), acumReset: D.sellers[1].comisionAcum === 0 && D.sellers[2].comisionAcum === 0 };
+  out.corte = { vendedores: res.vendedores, total: res.total, len: D.liquidations.length, allCorte: D.liquidations.every(l => l.tipo === 'corte'), pushed: calls.some(c => c.k === 'liquidations'), rpc: rpcs.some(r => r.tipo === 'close'), acumReset: D.sellers.every(x => (Number(x.comisionAcum) || 0) === 0) };
 
   // 3) applyRemote('liquidations') reemplaza desde la nube (fromRow ya aplicado por pullDomain)
   D.applyRemote('liquidations', [
@@ -71,10 +78,12 @@ check('MAP.liquidations registrado (toRow)', r.mappingOk === true);
 check('liquidarComision registra 1 entrada', r.liquidar.len === 1 && r.liquidar.monto === 500);
 check('Entrada tipo liquidacion + sellerId + fecha', r.liquidar.tipo === 'liquidacion' && r.liquidar.sellerId && r.liquidar.hasFecha);
 check('comisionAcum → 0 tras liquidar', r.liquidar.acum0 === 0);
-check('saveLiquidations dispara pushRows(liquidations)', r.liquidar.pushed === true);
+check('liquidar NO empuja filas a pos.liquidations (solo-RPC desde H-56)', r.liquidar.pushed === false);
+check('liquidar encola la RPC auditada settle_commission_checked', r.liquidar.rpc === true);
 check('cerrarMes liquida 2 vendedores', r.corte.vendedores === 2 && r.corte.total === 300);
 check('2 entradas, todas tipo corte', r.corte.len === 2 && r.corte.allCorte === true);
-check('corte dispara pushRows + resetea acum', r.corte.pushed === true && r.corte.acumReset === true);
+check('corte NO empuja filas a pos.liquidations y resetea el acumulado', r.corte.pushed === false && r.corte.acumReset === true);
+check('corte encola la RPC auditada close_commission_period_checked', r.corte.rpc === true);
 check('applyRemote reemplaza (2 filas nube)', r.applyRemote.len === 2 && r.applyRemote.montoA === 111 && r.applyRemote.replaced === true);
 check('Sin errores de página (pageerror=0)', errs.length === 0, errs.join(' | '));
 

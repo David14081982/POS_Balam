@@ -3510,6 +3510,66 @@ desambiguar el catálogo primero—; `pos.capability_operation_audit` y
 seguridad, así que guardan referencias a folios ya borrados.
 **Corrección documentada:** `docs/fixes/borrado-de-datos-de-prueba.md`.
 
+## H-69 - Las ventas con vendedor no generaban comision
+
+**Estado:** RESUELTO
+**Fecha de registro:** 02/08/2026
+**Commit:** Pendiente de commit
+**Evidencia:** auditoria sobre el motor real del artefacto publicado, con cuatro
+perfiles y dieciseis casos. Una venta de $1,160 con vendedor asignado registro
+`comision = 0`, y un perfil con `commissionOverridePct = 8` registro tambien `0`.
+`grep -rn "resolveSellerCommission" balam/ supabase/` devolvia **un solo
+resultado: su propia definicion**. El despliegue de H-31 ya dejaba escrito que
+«los tres perfiles conservan `comision_pct = 0.00`».
+**Origen:** auditoria completa del sistema de comisiones solicitada por el dueno
+del producto.
+**Riesgo:** ninguna venta pagaba comision desde el inicio de la operacion real, y
+la pantalla de Configuracion mostraba tres ajustes -comision base, meta mensual y
+bono- que ningun calculo leia, de modo que el dueno creia tener configurado algo
+que no existia.
+**Causa raiz:** combinacion. (1) El porcentaje nacia en `0` por contrato de alta
+-`admin-users` lo fijaba y el formulario no lo enviaba- y **ninguna pantalla podia
+cambiarlo**. (2) La autoridad `DATA.resolveSellerCommission()` existia desde H-31
+pero estaba desconectada: cuatro copias de la formula leian `seller.comisionPct`
+en crudo (`AP-01`). (3) Los ajustes globales de comision no tenian consumidor.
+**Correccion:** politica de tienda por tramos marginales 3/4/5 con umbral al
+120 % de la meta; autoridad unica consumida por ventas, apartados, cambios y
+devoluciones; evidencia congelada por vendedor en cada documento; reversas desde
+lo congelado y no desde el porcentaje vigente; reversa de cambio conectada;
+reportes derivados de la evidencia; escritura de perfil acotada que ya no puede
+chocar con `COMMISSION_RPC_REQUIRED`; y ajuste historico como documento aparte,
+auditado e idempotente, que se propone pero no se paga solo.
+**Operacion bloqueada:** el `upsert` de `sellers` detenido desde el 31/07/2026 con
+`42501 COMMISSION_RPC_REQUIRED` **no se borro**. Se determino obsoleto -su cuerpo
+se reconstruia desde `DATA.sellers` en cada intento, asi que nunca fue una captura
+historica- y se convierte a la forma acotada `profileUpdate`, registrando la
+supersesion en la propia operacion. El perfil que queria guardar llega integro.
+Probado en `test-store-queue.mjs` 38a-38d.
+**Pruebas:** H-69 88/88; cola 148/148; comision efectiva 24/24; liquidaciones
+12/12; contratos 41/41; comisiones 10/10; elegibilidad 10/10; comision del cambio
+30/30; coherencia de venta 20/20; devoluciones 17/17; cambio 32/32; reportes del
+cambio 24/24; descuentos 43/43; ingreso 24/24; migraciones 31/31; capacidades
+40/40; permisos 13/13; roles 15/15; AUTH 18/18; navegacion 15/15; registro 12/12;
+folio 60/60; filtros 18/18; H-63 58/58; avatares 13/13; admin 21/21; apartados
+H-65 correctos; build 8/8; smoke 15/15; UX sin retroceso.
+**Despliegue:** `20260802011000`, `20260802011100` y `20260802011200` aplicadas el
+02/08/2026. Sin `raise notice` visible en el CLI, la evidencia va aseverada dentro
+de las migraciones: **que no aborten es la prueba**. Quedo demostrado en remoto
+que ningun vendedor activo resuelve 0 % por omision, que **Lupita Rivera y Monica
+Duarte existen y ambas resuelven el 3 % de la tienda**, que la RPC de ajuste
+exige capacidad y es idempotente, que el trigger que protege los acumulados sigue
+en pie, que `authenticated` no puede insertar ajustes, y que no quedaron semillas.
+Las tres funciones `*_checked` se generaron desde su texto vigente con diff
+revisado bloque a bloque (`R-DB-03`, `AP-05`).
+**Pendiente:** aplicar -o no- el ajuste historico, que es decision del dueno;
+fijar metas mensuales para activar los tramos de 4 % y 5 %.
+**Riesgo residual:** la posicion en la escalera se deriva localmente, asi que dos
+terminales vendiendo a la vez pueden situar una venta de borde en tramos
+distintos; el importe queda congelado y auditado, de modo que no hay doble pago
+ni perdida. Cancelar una venta o un cambio sigue sin operacion de negocio.
+`test-concurrency.mjs` aborta tambien en `HEAD`: deuda preexistente ajena.
+**Correccion documentada:** `docs/fixes/comisiones-de-vendedores.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

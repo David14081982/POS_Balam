@@ -162,8 +162,18 @@
     'tax.included': true,
     'stock.lowThreshold': 4,
     'client.recurrentThreshold': 3,
-    'commission.basePct': 5,
-    'commission.monthlyGoal': 200000,
+    // H-69 · Escalera de comisión de la tienda. Los tres porcentajes son
+    // MARGINALES: cada peso de venta neta del mes se paga a la tasa de su tramo,
+    // así que una venta ya cobrada nunca se recalcula al cruzar un umbral.
+    //   base   → desde 0 hasta la meta del vendedor
+    //   meta   → desde la meta hasta el umbral de excedente
+    //   exced. → por encima del umbral
+    // Un vendedor SIN meta (metaMes = 0) comisiona la tasa base plana.
+    'commission.basePct': 3,
+    'commission.goalPct': 4,
+    'commission.surplusPct': 5,
+    'commission.surplusThresholdPct': 120, // % de la meta a partir del cual aplica la tasa de excedente
+    'commission.monthlyGoal': 200000,      // sugerencia al dar de alta; la meta real vive en el perfil
     'commission.bonus': 2000,
     'commission.auto': true,
     'commission.base': 'neto', // 'neto' (sobre precio sin IVA) | 'bruto' (sobre el total con IVA)

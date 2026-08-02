@@ -626,7 +626,10 @@
         LS_FOLIO = 'balam_pos_folio_v1', LS_FOLIO_V2 = 'balam_pos_folio_v2',
         LS_PROMOS = 'balam_pos_promos_v1', LS_LIQ = 'balam_pos_liq_v1', LS_PERIODO = 'balam_pos_periodo_v1',
         LS_RETURNS = 'balam_pos_returns_v1', LS_PAYMENTS = 'balam_pos_payments_v1',
-        LS_EXCHANGES = 'balam_pos_exchanges_v1', LS_LOANS = 'balam_pos_loans_v1';
+        LS_EXCHANGES = 'balam_pos_exchanges_v1', LS_LOANS = 'balam_pos_loans_v1',
+        // H-69: ajustes historicos de comision. Documento SEPARADO de la venta:
+        // no reescribe tickets ya emitidos (ADR-002), solo reconoce lo no pagado.
+        LS_ADJUSTMENTS = 'balam_pos_commission_adjustments_v1';
   const sellers = loadArr(LS_SELLERS, seedSellers);
   const clients = loadArr(LS_CLIENTS, seedClients);
   const sales = loadArr(LS_SALES, seedSales);
@@ -643,6 +646,10 @@
   // H-46: préstamos de mercancía. Colección local sin contrato remoto todavía; su
   // modelo y sus autoridades viven más abajo, en la sección «préstamos».
   const loans = loadArr(LS_LOANS, []);
+  // H-69: ajustes historicos de comision aplicados. Cada uno es un documento con
+  // su propio identificador de operacion, y su presencia es lo que hace la
+  // propuesta IDEMPOTENTE: un folio ya reconocido no vuelve a proponerse.
+  const commissionAdjustments = loadArr(LS_ADJUSTMENTS, []);
 
   function indexedSnapshots(arr, predicate) {
     const snapshots = [];
@@ -862,6 +869,7 @@
     [LS_MOVES, movements, seedMovements], [LS_PROMOS, promos, seedPromos],
     [LS_LIQ, liquidations, []], [LS_RETURNS, returns, seedReturns],
     [LS_PAYMENTS, payments, []], [LS_EXCHANGES, exchanges, []], [LS_LOANS, loans, []],
+    [LS_ADJUSTMENTS, commissionAdjustments, []],
   ];
   const localWriterFallbacks = new Map(localWriterCollections.map(([key, , fallback]) =>
     [key, JSON.parse(JSON.stringify(fallback || []))]));
@@ -910,50 +918,258 @@
   // Autoridad única del porcentaje efectivo. Los perfiles anteriores a H-31
   // conservan comisionPct como dato heredado; los nuevos usan la precedencia
   // explícita personalizada → nivel comercial → configuración general.
+  // H-69: la autoridad deja de responder solo el porcentaje y pasa a responder
+  // la POLITICA completa -tasa base, tasas de meta y excedente, umbral y meta
+  // del vendedor-. Ventas, apartados, cambios y devoluciones la consumen; nadie
+  // vuelve a leer comisionPct para calcular dinero (R-DOM-01).
+  const commissionNumeric = value => {
+    if (value === null || value === undefined || value === '') return null;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+  const pct2 = n => Math.round((Number(n) || 0) * 10000) / 10000;
+  const cents = n => Math.round((Number(n) || 0) * 100) / 100;
+
+  // Tasas de la escalera para una tasa base dada. Un porcentaje individual
+  // -personalizada o nivel- desplaza la escalera COMPLETA por el mismo salto que
+  // la politica de la tienda define entre sus tramos. Sin esto, pactar un 8 %
+  // con alguien le quitaria en silencio el incentivo por meta.
+  function commissionLadderFor(basePct) {
+    const storeBase = commissionNumeric(C.get('commission.basePct'));
+    const storeGoal = commissionNumeric(C.get('commission.goalPct'));
+    const storeSurplus = commissionNumeric(C.get('commission.surplusPct'));
+    const threshold = commissionNumeric(C.get('commission.surplusThresholdPct'));
+    const base = storeBase === null ? 0 : storeBase;
+    const goalDelta = (storeGoal === null ? base : storeGoal) - base;
+    const surplusDelta = (storeSurplus === null ? base : storeSurplus) - base;
+    return {
+      basePct: pct2(basePct),
+      // Un tramo superior nunca paga menos que el anterior: la escalera sube o
+      // se aplana, jamas baja.
+      goalPct: pct2(Math.max(basePct, basePct + goalDelta)),
+      surplusPct: pct2(Math.max(basePct, basePct + goalDelta, basePct + surplusDelta)),
+      surplusThresholdPct: threshold === null || threshold < 100 ? 100 : threshold,
+    };
+  }
+
   function resolveSellerCommission(seller) {
     const profile = seller || {};
-    const numeric = value => {
-      if (value === null || value === undefined || value === '') return null;
-      const parsed = Number(value);
-      return Number.isFinite(parsed) ? parsed : null;
-    };
-    const overridePct = numeric(profile.commissionOverridePct);
-    const globalPct = numeric(C.get('commission.basePct'));
+    const overridePct = commissionNumeric(profile.commissionOverridePct);
+    const globalPct = commissionNumeric(C.get('commission.basePct'));
     const policyVersion = Number(profile.commissionPolicyVersion) || 0;
+    const meta = Math.max(0, Number(profile.metaMes) || 0);
+    const decorate = (effectivePct, source, level) => Object.assign(
+      { effectivePct: pct2(effectivePct), source, level, policyVersion, meta },
+      commissionLadderFor(effectivePct)
+    );
 
-    if (overridePct !== null) {
-      return { effectivePct: overridePct, source: 'personalizada', level: null, policyVersion };
-    }
+    if (overridePct !== null) return decorate(overridePct, 'personalizada', null);
 
     const levelCode = profile.sellerLevelCode == null ? null : String(profile.sellerLevelCode);
     const level = levelCode
       ? C.all('seller_role').find(item => item && String(item.code) === levelCode)
       : null;
-    const levelPct = level && level.meta ? numeric(level.meta.commissionPct) : null;
+    const levelPct = level && level.meta ? commissionNumeric(level.meta.commissionPct) : null;
     if (level && levelPct !== null) {
+      return decorate(levelPct, 'nivel', {
+        code: level.code, label: level.label, active: level.active !== false,
+      });
+    }
+
+    const legacyPct = commissionNumeric(profile.comisionPct);
+    if (policyVersion < 1 && legacyPct !== null) return decorate(legacyPct, 'heredada', null);
+
+    return decorate(globalPct === null ? 0 : globalPct, 'general', null);
+  }
+
+  // Etiqueta legible del origen, para que la pantalla no reinvente el vocabulario.
+  const COMMISSION_SOURCE_LABEL = {
+    personalizada: 'Porcentaje personalizado de esta persona',
+    nivel: 'Porcentaje del nivel asignado',
+    general: 'Porcentaje base de la tienda',
+    heredada: 'Porcentaje historico anterior a la politica actual',
+  };
+  function commissionSourceLabel(source) {
+    return COMMISSION_SOURCE_LABEL[source] || 'Origen desconocido';
+  }
+
+  // Reparte una base comisionable por los tramos de la escalera, partiendo del
+  // acumulado que el vendedor ya lleva en el periodo. Devuelve el desglose para
+  // que el documento pueda congelarlo y cualquiera reconstruir la cifra despues.
+  function commissionTiers(policy, priorBase, base) {
+    const p = policy || {};
+    const from = Math.max(0, Number(priorBase) || 0);
+    const amount = Math.max(0, Number(base) || 0);
+    const meta = Math.max(0, Number(p.meta) || 0);
+    const flat = () => {
+      const monto = cents(amount * (Number(p.basePct) || 0) / 100);
       return {
-        effectivePct: levelPct,
-        source: 'nivel',
-        level: {
-          code: level.code,
-          label: level.label,
-          active: level.active !== false,
-        },
-        policyVersion,
+        monto,
+        pctEfectivo: amount > 0 ? pct2(monto * 100 / amount) : pct2(p.basePct),
+        tramos: amount > 0
+          ? [{ pct: pct2(p.basePct), base: cents(amount), monto, desde: cents(from), hasta: cents(from + amount) }]
+          : [],
       };
-    }
-
-    const legacyPct = numeric(profile.comisionPct);
-    if (policyVersion < 1 && legacyPct !== null) {
-      return { effectivePct: legacyPct, source: 'heredada', level: null, policyVersion };
-    }
-
-    return {
-      effectivePct: globalPct === null ? 0 : globalPct,
-      source: 'general',
-      level: null,
-      policyVersion,
     };
+    if (amount <= 0 || meta <= 0) return flat();
+
+    const umbral = meta * (Number(p.surplusThresholdPct) || 100) / 100;
+    const bandas = [
+      { hasta: meta, pct: Number(p.basePct) || 0 },
+      { hasta: umbral, pct: Number(p.goalPct) || 0 },
+      { hasta: Infinity, pct: Number(p.surplusPct) || 0 },
+    ];
+    const tramos = [];
+    let cursor = from, restante = amount, monto = 0;
+    for (const banda of bandas) {
+      if (restante <= 0) break;
+      if (cursor >= banda.hasta) continue;
+      const trozo = Math.min(restante, banda.hasta - cursor);
+      const parcial = cents(trozo * banda.pct / 100);
+      tramos.push({ pct: pct2(banda.pct), base: cents(trozo), monto: parcial, desde: cents(cursor), hasta: cents(cursor + trozo) });
+      monto = cents(monto + parcial);
+      cursor += trozo; restante -= trozo;
+    }
+    return { monto, pctEfectivo: pct2(monto * 100 / amount), tramos };
+  }
+
+  // Base comisionable que un vendedor lleva acumulada en el periodo vigente,
+  // DERIVADA de la evidencia congelada. No hay contador que mantener: si una
+  // venta se devuelve o se cancela, su base deja de contar sola.
+  // `exceptFolio` evita que una venta que se esta registrando ahora se cuente a
+  // si misma durante un reintento.
+  function sellerPeriodBase(sellerId, exceptFolio) {
+    if (!sellerId) return 0;
+    const desde = periodoInicio || '';
+    const dentro = doc => !desde || String((doc && doc.fecha) || '') >= desde;
+    let total = 0;
+    (sales || []).forEach(sale => {
+      if (!sale || sale.estado === 'Cancelado' || !dentro(sale)) return;
+      if (exceptFolio && sale.folio === exceptFolio) return;
+      (sale.comisiones || []).forEach(row => {
+        if (row && row.sellerId === sellerId) total += Number(row.base) || 0;
+      });
+    });
+    (exchanges || []).forEach(exch => {
+      if (!exch || !dentro(exch) || exch.comisionRevertida) return;
+      if (exch.vendedorId !== sellerId) return;
+      total += Number(exch.comisionBaseImporte) || 0;
+    });
+    (returns || []).forEach(ret => {
+      if (!ret || !dentro(ret)) return;
+      (ret.comisiones || []).forEach(row => {
+        if (row && row.sellerId === sellerId) total -= Number(row.base) || 0;
+      });
+    });
+    return Math.max(0, cents(total));
+  }
+
+  // Calcula lo que corresponde a un vendedor por una base concreta y devuelve el
+  // registro CONGELABLE: identidad, tasa, base, importe, origen y version. Es lo
+  // unico que las cuatro operaciones financieras necesitan saber.
+  function commissionEntryFor(seller, base, { exceptFolio, priorBase } = {}) {
+    const profile = seller || {};
+    const policy = resolveSellerCommission(profile);
+    const prior = priorBase == null ? sellerPeriodBase(profile.id, exceptFolio) : Math.max(0, Number(priorBase) || 0);
+    const tiers = commissionTiers(policy, prior, base);
+    return {
+      sellerId: profile.id || null,
+      vendedor: profile.nombre || '',
+      base: cents(Math.max(0, Number(base) || 0)),
+      pct: tiers.pctEfectivo,
+      monto: tiers.monto,
+      source: policy.source,
+      policyVersion: policy.policyVersion,
+      meta: policy.meta,
+      basePct: policy.basePct,
+      goalPct: policy.goalPct,
+      surplusPct: policy.surplusPct,
+      surplusThresholdPct: policy.surplusThresholdPct,
+      baseAcumuladaPrevia: cents(prior),
+      tramos: tiers.tramos,
+    };
+  }
+
+  // Base comisionable de una venta: neto sin IVA tras TODOS los descuentos, o el
+  // bruto cobrado si la tienda lo configuro asi. Las cortesias no comisionan
+  // porque no se cobro nada. Una sola definicion para venta y apartado.
+  function saleCommissionBase(total, iva, { cortesia } = {}) {
+    if (cortesia) return 0;
+    const bruto = Math.max(0, Number(total) || 0);
+    const impuesto = Math.max(0, Number(iva) || 0);
+    if (C.get('commission.base') === 'bruto') return cents(bruto);
+    return cents(Math.max(0, bruto - impuesto));
+  }
+
+  // Reparte la base entre los vendedores de una venta compartida y devuelve el
+  // renglon congelado de cada uno. El ultimo absorbe el residuo de centavos, asi
+  // que la suma de las bases es exactamente la base de la venta.
+  function saleCommissionEntries(sellerIds, baseTotal, { exceptFolio } = {}) {
+    const ids = (sellerIds || []).filter(Boolean);
+    if (!ids.length) return [];
+    const total = cents(Math.max(0, Number(baseTotal) || 0));
+    const parte = cents(total / ids.length);
+    const priors = {};
+    return ids.map((id, i) => {
+      const seller = sellers.find(x => x.id === id);
+      if (!seller) return null;
+      const base = i === ids.length - 1 ? cents(total - parte * (ids.length - 1)) : parte;
+      // Un mismo vendedor repetido en la venta avanza por la escalera dentro de
+      // la propia venta; no se le cuenta dos veces desde el mismo punto.
+      const prior = priors[id] == null ? sellerPeriodBase(id, exceptFolio) : priors[id];
+      const entry = commissionEntryFor(seller, base, { priorBase: prior });
+      priors[id] = cents(prior + base);
+      return entry;
+    }).filter(Boolean);
+  }
+
+  // Comisiones congeladas de una venta. Una venta posterior a H-69 las trae
+  // escritas; una ANTERIOR no, y entonces se reconstruyen desde su propio
+  // snapshot -`comision`, `comisionBase`, `vendedores`- sin consultar jamas la
+  // configuracion ni el porcentaje de hoy (R-DOM-02). Reconstruir no es derivar:
+  // se usa lo que el documento guardo, no lo que la tienda cobraria ahora.
+  function saleFrozenCommissions(sale) {
+    const doc = sale || {};
+    if (Array.isArray(doc.comisiones) && doc.comisiones.length) {
+      return doc.comisiones.map(row => Object.assign({}, row));
+    }
+    const ids = (doc.vendedores || []).filter(Boolean);
+    if (!ids.length) return [];
+    const total = cents(Number(doc.comision) || 0);
+    const totalVenta = Number(doc.total) || 0;
+    const impuesto = Number(doc.iva) || 0;
+    const baseDoc = (doc.comisionBase === 'bruto')
+      ? cents(totalVenta)
+      : cents(Math.max(0, totalVenta - impuesto));
+    const parteMonto = cents(total / ids.length);
+    const parteBase = cents(baseDoc / ids.length);
+    return ids.map((id, i) => {
+      const seller = sellers.find(x => x.id === id);
+      const monto = i === ids.length - 1 ? cents(total - parteMonto * (ids.length - 1)) : parteMonto;
+      const base = i === ids.length - 1 ? cents(baseDoc - parteBase * (ids.length - 1)) : parteBase;
+      return {
+        sellerId: id, vendedor: seller ? seller.nombre : '',
+        base, monto, pct: base > 0 ? pct2(monto * 100 / base) : 0,
+        source: 'historica', policyVersion: 0, meta: 0, tramos: [], reconstruida: true,
+      };
+    });
+  }
+
+  // Cuanto se ha revertido ya de cada vendedor por devoluciones previas de un
+  // folio. Evita que dos devoluciones parciales resten mas de lo que se acredito.
+  function returnedCommissionBySeller(folio) {
+    const acc = {};
+    (returns || []).forEach(ret => {
+      if (!ret || ret.folio !== folio) return;
+      (ret.comisiones || []).forEach(row => {
+        if (!row || !row.sellerId) return;
+        const cur = acc[row.sellerId] || { base: 0, monto: 0 };
+        cur.base = cents(cur.base + (Number(row.base) || 0));
+        cur.monto = cents(cur.monto + (Number(row.monto) || 0));
+        acc[row.sellerId] = cur;
+      });
+    });
+    return acc;
   }
 
   let quotaWarned = false, bulkMode = false; // bulkMode: omite escrituras por-llamada durante una generación masiva
@@ -1764,27 +1980,27 @@
     //    Finanzas fija IVA 16% incluido: `total - iva` es neto y `total` es bruto.
     const ids = (sellerIds && sellerIds.length) ? sellerIds : [];
     let comisionVenta = 0;
+    let comisionesVenta = [];
     if (cobrada && ids.length && !cortesia) {
       const share = total / ids.length;
-      const neto = (total - iva) / ids.length;
-      const bruto = share;
-      const base = window.CONFIG.get('commission.base') === 'bruto' ? bruto : neto;
-      ids.forEach(id => {
-        const s = sellers.find(x => x.id === id);
-        if (s) {
-          const baseVersion = Number(s._syncVersion) || 0;
-          const c = base * (s.comisionPct || 0) / 100;
-          comisionVenta += c;
-          s.ventasMes = (s.ventasMes || 0) + share;
-          s.ventasNum = (s.ventasNum || 0) + 1;
-          s.comisionAcum = (s.comisionAcum || 0) + c;
-          sellerEffects.push({
-            id: s.id, base_version: baseVersion,
-            ventas_mes_delta: share, ventas_num_delta: 1, comision_acum_delta: c,
-            after_ventas_mes: s.ventasMes, after_ventas_num: s.ventasNum,
-            after_comision_acum: s.comisionAcum,
-          });
-        }
+      // H-69: una sola autoridad decide base y tasa. El renglon que devuelve se
+      // CONGELA en la venta, asi que una devolucion posterior revierte lo que de
+      // verdad se pago y no lo que la configuracion de hoy diria (AP-06).
+      comisionesVenta = saleCommissionEntries(ids, saleCommissionBase(total, iva, { cortesia }), { exceptFolio: folio });
+      comisionesVenta.forEach(entry => {
+        const s = sellers.find(x => x.id === entry.sellerId);
+        if (!s) return;
+        const baseVersion = Number(s._syncVersion) || 0;
+        comisionVenta += entry.monto;
+        s.ventasMes = (s.ventasMes || 0) + share;
+        s.ventasNum = (s.ventasNum || 0) + 1;
+        s.comisionAcum = (s.comisionAcum || 0) + entry.monto;
+        sellerEffects.push({
+          id: s.id, base_version: baseVersion,
+          ventas_mes_delta: share, ventas_num_delta: 1, comision_acum_delta: entry.monto,
+          after_ventas_mes: s.ventasMes, after_ventas_num: s.ventasNum,
+          after_comision_acum: s.comisionAcum,
+        });
       });
       saveSellers(false);
     }
@@ -1814,6 +2030,10 @@
       descuentosAdicionales: cortesia ? [] : JSON.parse(JSON.stringify(quote.applications || [])),
       valorRegalado,
       comision: comisionVenta, comisionBase: window.CONFIG.get('commission.base') || 'neto',
+      // H-69: evidencia congelada por vendedor. `comision` se conserva como el
+      // total del documento; `comisiones` dice a QUIEN, sobre QUE base, con QUE
+      // tasa y por QUE politica. Su ausencia significa "venta anterior a H-69".
+      comisiones: comisionesVenta,
       // H-34: snapshot del plazo. null = sin límite, igual que las ventas previas.
       returnLimitDays, returnExpiresAt,
       _operationId: operationId, _stockRequired: cobrada, _syncStatus: 'pending',
@@ -1887,27 +2107,29 @@
     // Comisión/ventas se calculan como deltas, pero no se aplican todavía.
     const ids = sale.vendedores || [];
     let comisionVenta = 0;
+    let comisionesVenta = [];
     if (ids.length) {
       const share = (Number(sale.total) || 0) / ids.length;
-      const grossTotal = Number(sale.total) || 0;
-      const taxRatio = grossTotal > 0 ? (Number(sale.iva) || 0) / grossTotal : 0;
-      const neto = share * (1 - taxRatio);
-      const bruto = share;
-      const base = window.CONFIG.get('commission.base') === 'bruto' ? bruto : neto;
-      ids.forEach(id => {
-        const s = sellers.find(x => x.id === id);
-        if (s) {
-          const baseVersion = Number(s._syncVersion) || 0;
-          const c = base * (s.comisionPct || 0) / 100;
-          comisionVenta += c;
-          sellerEffects.push({
-            id: s.id, base_version: baseVersion,
-            ventas_mes_delta: share, ventas_num_delta: 1, comision_acum_delta: c,
-            after_ventas_mes: (Number(s.ventasMes) || 0) + share,
-            after_ventas_num: (Number(s.ventasNum) || 0) + 1,
-            after_comision_acum: (Number(s.comisionAcum) || 0) + c,
-          });
-        }
+      // H-69: el apartado comisiona AL LIQUIDARSE, con la politica vigente ese
+      // dia y la misma autoridad que la venta directa. Antes de liquidar no hay
+      // comision, por eso la escalera se evalua aqui y no al apartar.
+      comisionesVenta = saleCommissionEntries(
+        ids,
+        saleCommissionBase(sale.total, sale.iva, { cortesia: sale.metodo === 'Cortesia' || sale.metodo === 'Cortesía' }),
+        { exceptFolio: sale.folio }
+      );
+      comisionesVenta.forEach(entry => {
+        const s = sellers.find(x => x.id === entry.sellerId);
+        if (!s) return;
+        const baseVersion = Number(s._syncVersion) || 0;
+        comisionVenta += entry.monto;
+        sellerEffects.push({
+          id: s.id, base_version: baseVersion,
+          ventas_mes_delta: share, ventas_num_delta: 1, comision_acum_delta: entry.monto,
+          after_ventas_mes: (Number(s.ventasMes) || 0) + share,
+          after_ventas_num: (Number(s.ventasNum) || 0) + 1,
+          after_comision_acum: (Number(s.comisionAcum) || 0) + entry.monto,
+        });
       });
     }
     const saleDraft = Object.assign({}, sale, {
@@ -1919,6 +2141,7 @@
       pagoOtro: money((Number(sale.pagoOtro) || 0) + payment.tarjeta + payment.transferencia + payment.otro),
       comision: Math.round(comisionVenta * 100) / 100,
       comisionBase: window.CONFIG.get('commission.base') || 'neto',
+      comisiones: comisionesVenta,
       returnExpiresAt: sale.returnLimitDays != null && !sale.returnExpiresAt
         ? addDays(dayOf(fecha2), sale.returnLimitDays) : sale.returnExpiresAt,
       _operationId: sale._operationId || newOperationId(),
@@ -2338,12 +2561,16 @@
     // porcentaje de alguien descuadraría la reversa (AP-06).
     const comisionBase = window.CONFIG.get('commission.base') === 'bruto' ? 'bruto' : 'neto';
     const vendedorCambio = vendedorId ? sellers.find(x => x.id === vendedorId) : null;
-    const comisionPct = vendedorCambio ? (Number(vendedorCambio.comisionPct) || 0) : 0;
     // El excedente viene con IVA incluido al 16%, misma convención que `recordSale`
-    // fija en su cálculo de subtotal. Unificar ambas en un solo ayudante queda
-    // pendiente: aquí se replica el criterio, no el importe.
+    // fija en su cálculo de subtotal.
     const baseComisionable = comisionBase === 'bruto' ? diferencia : money(diferencia / 1.16);
-    const comisionMonto = money(baseComisionable * comisionPct / 100);
+    // H-69: el cambio consume la MISMA autoridad que la venta. Solo la diferencia
+    // positiva comisiona, y su renglón queda congelado igual que el de una venta.
+    const comisionEntry = vendedorCambio && baseComisionable > 0
+      ? commissionEntryFor(vendedorCambio, baseComisionable)
+      : null;
+    const comisionPct = comisionEntry ? comisionEntry.pct : 0;
+    const comisionMonto = comisionEntry ? comisionEntry.monto : 0;
 
     const id = 'cmb-' + newOperationId();
     const exch = {
@@ -2353,6 +2580,13 @@
       valorReconocido: money(valorReconocido), valorEntregado: money(valorEntregado),
       diferencia, valorNoAprovechado, baseComision: diferencia,
       comisionMonto, comisionBase, comisionPct,
+      // H-69: importe realmente comisionado, origen y version de la politica.
+      // `comisionBase` sigue diciendo neto/bruto; `comisionBaseImporte` dice
+      // cuanto. Sin el, la escalera no sabria cuanto avanzo este cambio.
+      comisionBaseImporte: comisionEntry ? comisionEntry.base : 0,
+      comisionSource: comisionEntry ? comisionEntry.source : null,
+      comisionPolicyVersion: comisionEntry ? comisionEntry.policyVersion : null,
+      comisionTramos: comisionEntry ? comisionEntry.tramos : [],
       lineas: items.map(l => {
         const p = products.find(x => x.id === l.productId || x.sku === l.sku);
         return {
@@ -2455,6 +2689,57 @@
     return { ok: true, monto, vendedorId: e.vendedorId || null };
   }
 
+  // H-69 · Reversa de la comision de una VENTA cancelada.
+  //
+  // Resta el saldo CONGELADO que siga vivo -lo ya revertido por devoluciones
+  // parciales no se resta dos veces- y deja la venta en `Cancelado`, que es el
+  // estado que todos los reportes ya excluyen.
+  //
+  // NO ALCANCE: esta funcion revierte COMISION. La cancelacion como operacion de
+  // negocio -reingreso de inventario, reverso de cobros- sigue sin contrato
+  // funcional (`docs/03-known-risks.md` H-56), asi que no se inventa aqui: quien
+  // la construya consumira esta autoridad en vez de recalcular.
+  function reverseSaleCommission(folio, { fecha: fechaIn, motivo } = {}) {
+    const sale = sales.find(s => s.folio === folio);
+    if (!sale) return { ok: false, error: 'sale_not_found' };
+    if (sale.comisionRevertida) return { ok: false, error: 'comision_ya_revertida' };
+    const congeladas = saleFrozenCommissions(sale);
+    const yaRevertido = returnedCommissionBySeller(folio);
+    const sellerEffects = [];
+    const revertidas = [];
+    congeladas.forEach(entry => {
+      const s = sellers.find(x => x.id === entry.sellerId);
+      if (!s) return;
+      const previo = yaRevertido[entry.sellerId] || { base: 0, monto: 0 };
+      const monto = Math.max(0, money((Number(entry.monto) || 0) - previo.monto));
+      const base = Math.max(0, money((Number(entry.base) || 0) - previo.base));
+      if (monto <= 0 && base <= 0) return;
+      const baseVersion = Number(s._syncVersion) || 0;
+      const before = Number(s.comisionAcum) || 0;
+      s.comisionAcum = Math.max(0, money(before - monto));
+      revertidas.push({
+        sellerId: entry.sellerId, vendedor: entry.vendedor || s.nombre,
+        base, monto, pct: entry.pct, source: entry.source,
+        policyVersion: entry.policyVersion, origen: 'cancelacion',
+      });
+      sellerEffects.push({
+        id: s.id, base_version: baseVersion,
+        comision_acum_delta: s.comisionAcum - before,
+        after_comision_acum: s.comisionAcum,
+      });
+    });
+    if (sellerEffects.length) saveSellers(false);
+    sale.estado = 'Cancelado';
+    sale.comisionRevertida = fechaIn || now();
+    sale.comisionRevertidaMotivo = motivo || '';
+    sale.comisionesRevertidas = revertidas;
+    saveSales();
+    if (!remoteApplying) {
+      try { window.CORE.invokeSync('pushSale', sale, { sellerEffects, payments: paymentsForSale(sale.folio) }); } catch (err) { /* offline */ }
+    }
+    return { ok: true, folio, revertidas, monto: money(revertidas.reduce((a, r) => a + r.monto, 0)) };
+  }
+
   // ── H-49 · Autoridad del ingreso del periodo ────────────────────────────────
   //
   // La suma de ventas está escrita SEIS veces en `balam/*.jsx`. Añadir el ingreso
@@ -2510,45 +2795,240 @@
     }).sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
   }
 
-  function sellerCommissionReport(pred) {
+  // ── H-69 · AUTORIDAD UNICA de los reportes de comision ──────────────────────
+  //
+  // Recorre la evidencia CONGELADA -ventas, cambios, devoluciones, cancelaciones
+  // y liquidaciones- y devuelve el recorrido completo por vendedor. No lee
+  // `comisionPct` ni `comisionAcum`, asi que un cierre de mes ya no borra el
+  // reporte del mes: el cierre pone el saldo pendiente en cero, no la historia.
+  //
+  // Vendedores, Reportes y el XLSX consumen ESTA funcion. Tres pantallas, una
+  // aritmetica (`R-DOM-01`).
+  function commissionLedger(pred) {
     const dentro = enPeriodo(pred);
     const porId = {};
-    const ensure = id => {
+    const ensure = (id, nombre) => {
       const key = id || '__sin_vendedor__';
       if (!porId[key]) {
         const s = sellers.find(x => x.id === id);
         porId[key] = {
           vendedorId: id || null,
-          vendedor: s ? s.nombre : (id ? 'Vendedor histórico' : 'Sin vendedor'),
-          ventas: 0, cambios: 0, total: 0, repartoEstimado: false,
+          vendedor: s ? s.nombre : (nombre || (id ? 'Vendedor histórico' : 'Sin vendedor')),
+          activo: s ? isEligibleSeller(s) : false,
+          ventas: 0, cambios: 0, revertido: 0, liquidado: 0,
+          base: 0, importeVendido: 0, pedidos: 0, repartoEstimado: false,
         };
       }
       return porId[key];
     };
-    sales.filter(s => s.estado !== 'Cancelado' && dentro(s)).forEach(sale => {
+
+    // Una venta cancelada SI aporta a `generado` y su reversa aporta a
+    // `revertido`, de modo que la resta da cero y el recorrido queda visible.
+    // Excluirla de la generacion Y restar su reversa contaria dos veces la misma
+    // cancelacion y dejaria el neto en negativo.
+    // El VOLUMEN de venta -importe, pedidos- si excluye lo cancelado: eso no se
+    // vendio. Comision e importe responden preguntas distintas.
+    sales.filter(s => s && dentro(s)).forEach(sale => {
+      const congeladas = saleFrozenCommissions(sale);
+      if (!congeladas.length) return;
+      const cancelada = sale.estado === 'Cancelado';
       const ids = (sale.vendedores || []).filter(Boolean);
-      const fallback = !ids.length && sale.vendedor && sale.vendedor !== '—'
-        ? sellers.find(s => s.nombre === sale.vendedor) : null;
-      if (!ids.length && fallback) ids.push(fallback.id);
-      if (!ids.length) return;
-      const total = Number(sale.comision) || 0;
-      const share = money(total / ids.length);
-      ids.forEach((id, i) => {
-        const row = ensure(id);
-        // El último absorbe el residuo de centavos para conservar el total.
-        row.ventas = money(row.ventas + (i === ids.length - 1 ? total - share * (ids.length - 1) : share));
-        if (ids.length > 1) row.repartoEstimado = true;
+      const partes = ids.length || 1;
+      congeladas.forEach(entry => {
+        const row = ensure(entry.sellerId, entry.vendedor);
+        row.ventas = money(row.ventas + (Number(entry.monto) || 0));
+        if (!cancelada) {
+          row.base = money(row.base + (Number(entry.base) || 0));
+          row.importeVendido = money(row.importeVendido + (Number(sale.total) || 0) / partes);
+          row.pedidos += 1;
+        }
+        // Una venta anterior a H-69 no sabe como se repartio entre dos personas:
+        // se declara estimada en vez de fingir precision.
+        if (entry.reconstruida && partes > 1) row.repartoEstimado = true;
       });
     });
-    (exchanges || []).filter(dentro).forEach(e => {
+
+    (exchanges || []).filter(e => e && dentro(e)).forEach(e => {
       const monto = e.comisionRevertida ? 0 : (Number(e.comisionMonto) || 0);
       if (!e.vendedorId && !monto) return;
       const row = ensure(e.vendedorId);
       row.cambios = money(row.cambios + monto);
+      if (!e.comisionRevertida) row.base = money(row.base + (Number(e.comisionBaseImporte) || 0));
     });
-    return Object.values(porId).map(row => ({
-      ...row, total: money(row.ventas + row.cambios),
-    })).sort((a, b) => b.total - a.total || a.vendedor.localeCompare(b.vendedor));
+
+    (returns || []).filter(r => r && dentro(r)).forEach(ret => {
+      (ret.comisiones || []).forEach(entry => {
+        const row = ensure(entry.sellerId, entry.vendedor);
+        row.revertido = money(row.revertido + (Number(entry.monto) || 0));
+        row.base = money(row.base - (Number(entry.base) || 0));
+      });
+    });
+
+    sales.filter(s => s && s.estado === 'Cancelado' && dentro(s)).forEach(sale => {
+      (sale.comisionesRevertidas || []).forEach(entry => {
+        const row = ensure(entry.sellerId, entry.vendedor);
+        // Solo la comision se revierte aqui. La base ya quedo fuera al no
+        // sumarse la venta cancelada, asi que restarla otra vez la duplicaria.
+        row.revertido = money(row.revertido + (Number(entry.monto) || 0));
+      });
+    });
+
+    (liquidations || []).filter(l => l && dentro(l)).forEach(l => {
+      const row = ensure(l.sellerId, l.seller);
+      row.liquidado = money(row.liquidado + (Number(l.monto) || 0));
+    });
+
+    return Object.values(porId).map(row => {
+      const generado = money(row.ventas + row.cambios);
+      const neto = money(generado - row.revertido);
+      const seller = sellers.find(x => x.id === row.vendedorId);
+      const acumulado = seller ? money(Number(seller.comisionAcum) || 0) : null;
+      const pendiente = money(neto - row.liquidado);
+      return Object.assign({}, row, {
+        base: money(Math.max(0, row.base)),
+        generado, neto, pendiente,
+        total: neto, // nombre historico que ya consumian los reportes del cambio
+        acumuladoVigente: acumulado,
+        // Si el saldo derivado y el contador que paga la liquidacion difieren, se
+        // muestra en vez de esconderse: es la senal de que algo no se sincronizo.
+        descuadre: acumulado == null ? null : money(acumulado - pendiente),
+      });
+    }).sort((a, b) => b.neto - a.neto || String(a.vendedor).localeCompare(String(b.vendedor)));
+  }
+
+  // Nombre historico conservado: el Reporte de cambios ya lo consumia. Devuelve
+  // la misma proyeccion, ahora derivada de la autoridad unica.
+  function sellerCommissionReport(pred) {
+    return commissionLedger(pred);
+  }
+
+  // Filtro de periodo listo para usar: desde el ultimo corte de mes.
+  function currentPeriodPredicate() {
+    const desde = periodoInicio || '';
+    return doc => !desde || String((doc && doc.fecha) || '') >= desde;
+  }
+
+  // ── H-69 · Ajuste historico de comision ─────────────────────────────────────
+  //
+  // Las ventas emitidas con comision cero NO se reescriben: un ticket impreso y
+  // una fila confirmada ya no se tocan (`ADR-002`, `FF-08`). Lo que si puede
+  // hacerse es RECONOCER aparte lo que la politica autorizada habria pagado, en
+  // un documento propio, auditado e idempotente.
+  //
+  // Esta funcion solo PROPONE. No mueve un peso: no toca `comisionAcum`, no
+  // escribe liquidaciones y no llama a ninguna RPC. Aplicarlo es un acto
+  // separado y explicito (`applyCommissionAdjustment`).
+  function commissionAdjustmentPreview({ pred, pct } = {}) {
+    const dentro = enPeriodo(pred);
+    const yaAjustado = new Set();
+    (commissionAdjustments || []).forEach(doc => {
+      (doc.renglones || []).forEach(r => { if (r && r.folio) yaAjustado.add(r.folio + '|' + r.sellerId); });
+    });
+    const forzado = commissionNumeric(pct);
+    const renglones = [];
+    (sales || []).filter(s => s && dentro(s)).forEach(sale => {
+      const ids = (sale.vendedores || []).filter(Boolean);
+      if (!ids.length) return;
+      const pagado = saleFrozenCommissions(sale);
+      const totalPagado = pagado.reduce((a, r) => a + (Number(r.monto) || 0), 0);
+      // Solo interesa lo que NO se pago. Una venta que ya comisiono queda fuera.
+      if (totalPagado > 0) return;
+      const cancelada = sale.estado === 'Cancelado';
+      const baseVenta = saleCommissionBase(sale.total, sale.iva, { cortesia: sale.metodo === 'Cortesía' });
+      if (baseVenta <= 0) return;
+      const devuelto = returnsForFolio(sale.folio).reduce((a, r) => a + (Number(r.total) || 0), 0);
+      const totalVenta = Number(sale.total) || 0;
+      const vivo = totalVenta > 0 ? Math.max(0, 1 - Math.min(1, devuelto / totalVenta)) : 0;
+      const parte = cents(baseVenta / ids.length);
+      ids.forEach((id, i) => {
+        const clave = sale.folio + '|' + id;
+        if (yaAjustado.has(clave)) return;
+        const seller = sellers.find(x => x.id === id);
+        const politica = resolveSellerCommission(seller || {});
+        const tasa = forzado === null ? politica.basePct : forzado;
+        const baseBruta = i === ids.length - 1 ? cents(baseVenta - parte * (ids.length - 1)) : parte;
+        const baseViva = cancelada ? 0 : cents(baseBruta * vivo);
+        const comision = cents(baseViva * tasa / 100);
+        renglones.push({
+          folio: sale.folio, fecha: sale.fecha,
+          sellerId: id, vendedor: seller ? seller.nombre : 'Vendedor histórico',
+          ventaTotal: cents(totalVenta), ventaNeta: baseBruta,
+          devuelto: cents(cancelada ? 0 : baseBruta - baseViva),
+          cancelada, estado: sale.estado,
+          baseAjustada: baseViva, pct: pct2(tasa), comision,
+          origenPolitica: forzado === null ? politica.source : 'ajuste manual',
+          policyVersion: politica.policyVersion,
+        });
+      });
+    });
+    const porVendedor = {};
+    renglones.forEach(r => {
+      const row = porVendedor[r.sellerId] || {
+        sellerId: r.sellerId, vendedor: r.vendedor,
+        ventas: 0, ventaNeta: 0, devuelto: 0, canceladas: 0, comision: 0,
+      };
+      row.ventas += 1;
+      row.ventaNeta = cents(row.ventaNeta + r.ventaNeta);
+      row.devuelto = cents(row.devuelto + r.devuelto);
+      if (r.cancelada) row.canceladas += 1;
+      row.comision = cents(row.comision + r.comision);
+      porVendedor[r.sellerId] = row;
+    });
+    const totales = renglones.reduce((a, r) => ({
+      ventas: a.ventas + 1,
+      ventaNeta: cents(a.ventaNeta + r.ventaNeta),
+      devuelto: cents(a.devuelto + r.devuelto),
+      comision: cents(a.comision + r.comision),
+    }), { ventas: 0, ventaNeta: 0, devuelto: 0, comision: 0 });
+    return {
+      renglones: renglones.sort((a, b) => String(a.fecha).localeCompare(String(b.fecha))),
+      porVendedor: Object.values(porVendedor).sort((a, b) => b.comision - a.comision),
+      totales,
+      yaAjustados: yaAjustado.size,
+      aplicable: renglones.length > 0 && totales.comision > 0,
+    };
+  }
+
+  // Convierte la propuesta en un DOCUMENTO con identidad propia. Sigue sin pagar
+  // nada: devuelve el borrador para que la pantalla muestre el resumen final
+  // antes de que nadie confirme.
+  function commissionAdjustmentDraft(preview, { motivo } = {}) {
+    const p = preview || commissionAdjustmentPreview();
+    return {
+      id: 'adj-' + newOperationId(),
+      operationId: newOperationId(),
+      fecha: now(),
+      motivo: String(motivo || '').trim(),
+      renglones: p.renglones.map(r => Object.assign({}, r)),
+      porVendedor: p.porVendedor.map(r => Object.assign({}, r)),
+      totales: Object.assign({}, p.totales),
+      estado: 'borrador',
+    };
+  }
+
+  // Aplica el ajuste. Idempotente por `operationId`: repetirlo no vuelve a pagar.
+  // El acumulado NO se toca aqui -esa columna es exclusiva de las RPC-; la nube
+  // decide y esta terminal solo registra el documento y encola la operacion.
+  function applyCommissionAdjustment(draft) {
+    const doc = draft || {};
+    if (!doc.operationId) return { ok: false, error: 'ajuste_sin_operacion' };
+    if ((commissionAdjustments || []).some(x => x.operationId === doc.operationId)) {
+      return { ok: false, error: 'ajuste_ya_aplicado', idempotente: true };
+    }
+    if (!doc.renglones || !doc.renglones.length) return { ok: false, error: 'ajuste_vacio' };
+    const aplicado = Object.assign({}, doc, { estado: 'aplicado', aplicadoEn: now() });
+    commissionAdjustments.unshift(aplicado);
+    save(LS_ADJUSTMENTS, commissionAdjustments);
+    try {
+      window.CORE.invokeSync('applyCommissionAdjustment', {
+        operationId: doc.operationId,
+        rows: aplicado.porVendedor.map(r => ({
+          seller_id: r.sellerId, monto: r.comision, ventas: r.ventas,
+        })),
+        motivo: aplicado.motivo,
+      });
+    } catch (e) { /* offline: queda en la cola */ }
+    return { ok: true, ajuste: aplicado };
   }
 
   function revenueSummary(pred) {
@@ -2629,29 +3109,42 @@
     if (allReturned) refund = money((Number(sale.total) || 0) - returnsForFolio(folio).reduce((a, r) => a + (Number(r.total) || 0), 0));
     // 3) Reversión proporcional de comisión/ventas del vendedor (configurable en Configuración)
     const ids = sale.vendedores || [];
+    const comisionesRevertidas = [];
     if (window.CONFIG.get('returns.reverseCommission') && ids.length && refund > 0) {
       const share = refund / ids.length;
-      const grossTotal = Number(sale.total) || 0;
-      const taxRatio = grossTotal > 0 ? (Number(sale.iva) || 0) / grossTotal : 0;
-      const neto = share * (1 - taxRatio);
-      const bruto = share;
-      const base = (sale.comisionBase || window.CONFIG.get('commission.base')) === 'bruto' ? bruto : neto;
-      ids.forEach(sid => {
-        const s = sellers.find(x => x.id === sid);
-        if (s) {
-          const baseVersion = Number(s._syncVersion) || 0;
-          const beforeVentas = Number(s.ventasMes) || 0;
-          const beforeComision = Number(s.comisionAcum) || 0;
-          const c = base * (s.comisionPct || 0) / 100;
-          s.comisionAcum = Math.max(0, Math.round((beforeComision - c) * 100) / 100);
-          s.ventasMes = Math.max(0, Math.round((beforeVentas - share) * 100) / 100);
-          sellerEffects.push({
-            id: s.id, base_version: baseVersion,
-            ventas_mes_delta: s.ventasMes - beforeVentas,
-            comision_acum_delta: s.comisionAcum - beforeComision,
-            after_ventas_mes: s.ventasMes, after_comision_acum: s.comisionAcum,
-          });
-        }
+      // H-69: se revierte lo CONGELADO en la venta, en proporcion a lo devuelto.
+      // Nunca se recalcula con el porcentaje vigente: si la politica cambio entre
+      // la venta y la devolucion, recalcular restaria una cifra que nadie cobro
+      // (AP-06). Una devolucion total revierte exactamente el saldo restante.
+      const congeladas = saleFrozenCommissions(sale);
+      const totalVenta = Number(sale.total) || 0;
+      const proporcion = totalVenta > 0 ? Math.min(1, refund / totalVenta) : 0;
+      const yaRevertido = returnedCommissionBySeller(folio);
+      congeladas.forEach(entry => {
+        const s = sellers.find(x => x.id === entry.sellerId);
+        if (!s) return;
+        const previo = yaRevertido[entry.sellerId] || { base: 0, monto: 0 };
+        const topeMonto = Math.max(0, money((Number(entry.monto) || 0) - previo.monto));
+        const topeBase = Math.max(0, money((Number(entry.base) || 0) - previo.base));
+        const montoRev = allReturned ? topeMonto : Math.min(topeMonto, money((Number(entry.monto) || 0) * proporcion));
+        const baseRev = allReturned ? topeBase : Math.min(topeBase, money((Number(entry.base) || 0) * proporcion));
+        const baseVersion = Number(s._syncVersion) || 0;
+        const beforeVentas = Number(s.ventasMes) || 0;
+        const beforeComision = Number(s.comisionAcum) || 0;
+        s.comisionAcum = Math.max(0, money(beforeComision - montoRev));
+        s.ventasMes = Math.max(0, money(beforeVentas - share));
+        comisionesRevertidas.push({
+          sellerId: entry.sellerId, vendedor: entry.vendedor || s.nombre,
+          base: baseRev, monto: montoRev, pct: entry.pct,
+          source: entry.source, policyVersion: entry.policyVersion,
+          origen: 'devolucion',
+        });
+        sellerEffects.push({
+          id: s.id, base_version: baseVersion,
+          ventas_mes_delta: s.ventasMes - beforeVentas,
+          comision_acum_delta: s.comisionAcum - beforeComision,
+          after_ventas_mes: s.ventasMes, after_comision_acum: s.comisionAcum,
+        });
       });
       saveSellers(false);
     }
@@ -2675,6 +3168,9 @@
     const ret = {
       id, folio, fecha, cliente: sale.cliente, vendedores: ids.slice(),
       metodo: metodo || sale.metodo, total: refund, notas: notas || '',
+      // H-69: lo que esta devolucion revirtio, por vendedor. Es la contrapartida
+      // congelada de `sale.comisiones` y lo que los reportes restan.
+      comisiones: comisionesRevertidas,
       lineas: items.map(l => {
         const p = products.find(x => x.sku === l.sku);
         return { productId: p ? p.id : undefined, sku: l.sku, nombre: l.nombre, talla: l.talla, qty: Number(l.qty) || 0, motivo: l.motivo || '', precio: linePrice(l) };
@@ -2691,7 +3187,12 @@
     const s = {
       id: 'u-' + Date.now(), nombre: (u.nombre || '').trim(), iniciales: iniDe(u.nombre),
       color: u.color || '#64748b', comisionPct: Number(u.comisionPct) || 0,
-      commissionOverridePct: null, sellerLevelCode: null, commissionPolicyVersion: 1,
+      // H-69: el alta ya puede nacer con su politica. `null` sigue significando
+      // "sin decision" y hace que caiga en el porcentaje base de la tienda, que
+      // es justo lo que el negocio quiere por defecto.
+      commissionOverridePct: commissionNumeric(u.commissionOverridePct),
+      sellerLevelCode: u.sellerLevelCode == null || u.sellerLevelCode === '' ? null : String(u.sellerLevelCode),
+      commissionPolicyVersion: 1,
       metaMes: Number(u.metaMes) || 0, ventasMes: 0, ventasNum: 0, comisionAcum: 0, bono: 'Sin bono',
       role: u.role || 'vendedor', email: (u.email || '').trim() || null,
       passwordHash: u.passwordHash || null, avatar: u.avatar || null, active: true,
@@ -2699,11 +3200,30 @@
     sellers.push(s); saveSellers();
     return s;
   }
+  // H-69: `updateUser` escribe PERFIL. Las tres columnas financieras
+  // -comisionAcum, ventasMes, ventasNum- son exclusivas de las RPC y se
+  // rechazan aqui aunque alguien las mande por descuido: es la misma frontera
+  // que el trigger `restrict_direct_commission_writes` defiende en la nube, y
+  // conviene que el cliente la respete ANTES de intentar la red.
+  const SELLER_FINANCIAL_FIELDS = ['comisionAcum', 'ventasMes', 'ventasNum'];
   function updateUser(id, patch) {
     const s = sellers.find(x => x.id === id);
     if (!s) return null;
-    Object.assign(s, patch);
-    if (patch.nombre) s.iniciales = iniDe(patch.nombre);
+    const clean = Object.assign({}, patch || {});
+    SELLER_FINANCIAL_FIELDS.forEach(k => { delete clean[k]; });
+    if ('commissionOverridePct' in clean) clean.commissionOverridePct = commissionNumeric(clean.commissionOverridePct);
+    if ('sellerLevelCode' in clean) {
+      clean.sellerLevelCode = clean.sellerLevelCode == null || clean.sellerLevelCode === ''
+        ? null : String(clean.sellerLevelCode);
+    }
+    if ('metaMes' in clean) clean.metaMes = Math.max(0, Number(clean.metaMes) || 0);
+    // Fijar politica en un perfil legado lo saca de `heredada`: una decision
+    // explicita del dueno manda sobre el dato historico.
+    if (('commissionOverridePct' in clean) || ('sellerLevelCode' in clean)) {
+      clean.commissionPolicyVersion = Math.max(1, Number(s.commissionPolicyVersion) || 0);
+    }
+    Object.assign(s, clean);
+    if (clean.nombre) s.iniciales = iniDe(clean.nombre);
     saveSellers();
     return s;
   }
@@ -3545,6 +4065,13 @@
     get localWriterLeaseSupported() { return localWriterLeaseSupported; },
     get catalogResyncRequired() { return catalogResyncRequired; },
     addUser, updateUser, removeUser, isEligibleSeller, resolveSellerCommission,
+    // H-69 · autoridad de comisión y su evidencia congelada
+    commissionLadderFor, commissionTiers, commissionEntryFor, commissionSourceLabel,
+    saleCommissionBase, saleCommissionEntries, saleFrozenCommissions,
+    returnedCommissionBySeller, sellerPeriodBase, commissionLedger,
+    currentPeriodPredicate, reverseSaleCommission,
+    commissionAdjustments, commissionAdjustmentPreview, commissionAdjustmentDraft,
+    applyCommissionAdjustment,
     addPromo, updatePromo, removePromo, duplicatePromo,
     seedDemo, resetEmpty, resetTestData, demoActive,
     testDataFootprint, configFingerprint, totalPieces, stockEntryByIdentity,
@@ -3561,6 +4088,7 @@
     'actualizarPrestamo', 'eliminarPrestamo', 'applyRemoteLoans', 'rekeyLoanFolio',
     'addUser', 'updateUser', 'removeUser', 'addPromo', 'updatePromo', 'removePromo',
     'duplicatePromo', 'seedDemo', 'resetEmpty', 'resetTestData',
+    'reverseSaleCommission', 'applyCommissionAdjustment',
   ];
   localWriterMutators.forEach(name => {
     const original = window.DATA[name];

@@ -57,7 +57,13 @@
     const [tV, cV, iV] = mom(pctMoM(m0.tot, m1.tot)), [tP, cP, iP] = mom(pctMoM(m0.n, m1.n));
 
     // Meta global (equipo) — guardas contra meta=0 (evita NaN/Infinity y "100%" falso)
-    const teamVentas = D.sellers.reduce((a, s) => a + (Number(s.ventasMes) || 0), 0);
+    // H-69: el equipo y las comisiones salen de `DATA.commissionLedger`, la
+    // misma autoridad que pinta Vendedores y el XLSX. Antes se leia
+    // `ventasMes`/`comisionAcum`, que el cierre de mes pone en cero: el reporte
+    // del mes desaparecia justo despues de cerrarlo.
+    const ledgerPeriodo = D.commissionLedger(D.currentPeriodPredicate());
+    const ledgerDe = id => ledgerPeriodo.find(r => r.vendedorId === id) || { importeVendido: 0, pendiente: 0, generado: 0, neto: 0 };
+    const teamVentas = D.sellers.reduce((a, s) => a + ledgerDe(s.id).importeVendido, 0);
     const teamMeta = D.sellers.reduce((a, s) => a + (Number(s.metaMes) || 0), 0);
     const avance = teamMeta > 0 ? Math.min(100, Math.round(teamVentas / teamMeta * 100)) : 0;
     const falta = Math.max(0, teamMeta - teamVentas);
@@ -71,8 +77,8 @@
     const maxRev = cats.length ? cats[0].rev : 1;
 
     // Comisiones (reales)
-    const topVend = [...D.sellers].sort((a, b) => b.ventasMes - a.ventasMes);
-    const totalComision = D.sellers.reduce((a, s) => a + (Number(s.comisionAcum) || 0), 0);
+    const topVend = [...D.sellers].sort((a, b) => ledgerDe(b.id).importeVendido - ledgerDe(a.id).importeVendido);
+    const totalComision = D.sellers.reduce((a, s) => a + ledgerDe(s.id).pendiente, 0);
 
     // Ventas por semana (últimas 6) — reales
     const nowD = new Date();
@@ -196,8 +202,8 @@
                   h('div', { key: 'a', className: 'w-8 h-8 rounded-full flex items-center justify-center text-overline font-bold text-white', style: { background: s.color } }, s.iniciales),
                   h('span', { key: 'x', className: 'text-body font-semibold' }, s.nombre),
                 ])),
-                h('td', { key: 'v', className: 'py-4 text-body' }, fmt(s.ventasMes).replace('.00', '')),
-                h('td', { key: 'c', className: 'py-4 text-body font-bold text-right text-gold-text' }, fmt(s.comisionAcum).replace('.00', '')),
+                h('td', { key: 'v', className: 'py-4 text-body' }, fmt(ledgerDe(s.id).importeVendido).replace('.00', '')),
+                h('td', { key: 'c', className: 'py-4 text-body font-bold text-right text-gold-text' }, fmt(ledgerDe(s.id).pendiente).replace('.00', '')),
               ]))),
               h('tfoot', { key: 'f' }, h('tr', {}, [
                 h('td', { key: 'l', className: 'pt-6 font-bold text-body', colSpan: 2 }, 'Total a liquidar'),
@@ -543,14 +549,12 @@
       return s.vendedor === sv.nombre;
     };
     const isValid = s => s.estado !== 'Cancelado';
+    // H-69: la comision de una venta es la que quedo CONGELADA en el documento.
+    // Ya no se reconstruye con el porcentaje vigente del vendedor, que daria una
+    // cifra distinta cada vez que el dueno edita la politica (AP-06).
     const commOf = (s) => {
       if (!isValid(s)) return 0;
-      if (typeof s.comision === 'number') return s.comision;
-      const ids = (s.vendedores && s.vendedores.length) ? s.vendedores
-        : (() => { const m = D.sellers.find(x => x.nombre === s.vendedor); return m ? [m.id] : []; })();
-      if (!ids.length) return 0;
-      const share = (Number(s.total) || 0) / ids.length;
-      return ids.reduce((a, id) => { const sv = D.sellers.find(x => x.id === id); return a + (sv ? share * (sv.comisionPct || 0) / 100 : 0); }, 0);
+      return D.saleFrozenCommissions(s).reduce((a, c) => a + (Number(c.monto) || 0), 0);
     };
     const productLabel = (s) => {
       if (s.lineas && s.lineas.length) return s.lineas[0].nombre + (s.lineas.length > 1 ? ` +${s.lineas.length - 1}` : '');
