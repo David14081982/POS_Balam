@@ -12,10 +12,13 @@ import { execSync } from 'child_process';
 
 const ROOT = path.resolve('c:/Users/david/Downloads/POS BALAM');
 const MIME = { '.html': 'text/html', '.jsx': 'text/babel', '.js': 'text/javascript', '.css': 'text/css' };
-// Artefacto del commit ANTERIOR: la reproducción del defecto corre sobre el
+// Artefacto ANTERIOR a la corrección: la reproducción del defecto corre sobre el
 // paquete que el dueño tenía instalado, no sobre una copia del código a mano.
+// Se fija al commit —no a HEAD— para que la reproducción siga siendo la misma
+// cuando lleguen más historias encima.
+const COMMIT_PREVIO = '1ea14f6';
 let previo = null;
-try { previo = execSync('git show HEAD:index.html', { cwd: ROOT, maxBuffer: 64 * 1024 * 1024 }); }
+try { previo = execSync(`git show ${COMMIT_PREVIO}:index.html`, { cwd: ROOT, maxBuffer: 64 * 1024 * 1024 }); }
 catch (e) { previo = null; }
 const server = http.createServer((req, res) => {
   let p = decodeURIComponent(req.url.split('?')[0]); if (p === '/') p = '/index.html';
