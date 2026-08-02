@@ -260,6 +260,18 @@ base) y falla si alguna tiene un `DELETE`/`UPDATE` sin `WHERE`. Sin la migració
 correctiva el arnés da **50 pasaron, 3 fallaron** y enumera las 17 tablas; con
 ella, **53 pasaron, 0 fallaron**.
 
+**Verificación sobre lo publicado.** `node test-h68-boton-publicado.mjs`
+descarga el `index.html` del sitio, comprueba su SHA-256 contra el blob del
+commit y lo sirve para **accionar la interfaz real** —Configuración → Datos de
+demostración → botón → modal—: **17 pasaron, 0 fallaron**. Incluye responder a la
+frontera con el error EXACTO que rompió el botón (se lee en pantalla con su
+código `P0001` y no se borra nada) y después con el contrato real: el informe
+enumera el borrado por módulo, el inventario vuelve de **22 → 24** piezas, la
+huella de configuración no se mueve y el reintento reusa el mismo ticket antes de
+liberarlo. El sitio exige inicio de sesión, así que el recorrido se hace sobre
+los bytes descargados servidos en local: es el mismo archivo, byte a byte, y lo
+único que cambia es el origen.
+
 **Lo que no se pudo probar dinámicamente, declarado.** `load 'safeupdate'` está
 prohibido para el rol de migraciones (`access to library "safeupdate" is not
 allowed`, 42501), así que la guarda no puede **armarse** dentro de una migración

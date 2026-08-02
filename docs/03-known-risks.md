@@ -3454,7 +3454,9 @@ datos borrados y se limpian solas; las lápidas de `pos.purged_documents` rechaz
 cualquier reinserción con `operation_purged`. Los DESCUENTOS configurados pasan a
 tratarse como configuración y ya no se borran.
 **Pruebas:** `test-h68-purga-datos-prueba.mjs` **53 pasaron, 0 fallaron** (49 de
-la historia + 4 del guardián de `WHERE`; sin la migración correctiva, 50/3).
+la historia + 4 del guardián de `WHERE`; sin la migración correctiva, 50/3) ·
+`test-h68-boton-publicado.mjs` **17 pasaron, 0 fallaron** accionando la interfaz
+real sobre el artefacto descargado del sitio.
 Regresión: `test-reset-pruebas.mjs` 19/0 · `test-reset-propaga.mjs` 21/0 ·
 `test-store-queue.mjs` 133/0 · `test-h65-layaway-liquidation.mjs` 35/35 ·
 `test-h65-layaway-e2e.mjs` 28/28 · `test-sale-coherence.mjs` 20/0 ·
