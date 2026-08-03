@@ -79,7 +79,9 @@ function freshEnv() {
 
   function mkQuery(table) {
     const exec = async (metodo, arg, filtro) => {
-      calls.push({ table, metodo, filtro });
+      // `n` = filas del payload: deja verificar que una op ACOTADA (H-70) viaja
+      // con una sola fila y no con la tabla entera.
+      calls.push({ table, metodo, filtro, n: Array.isArray(arg) ? arg.length : undefined });
       if (gate) await gate;
       if (tableErrors.has(table)) return { data: null, error: tableErrors.get(table) };
       if (metodo === 'upsert' || metodo === 'insert') {
@@ -1502,6 +1504,69 @@ ok('34c. H-60: la escritura válida termina sin pendientes', S.pending === 0);
       && call.args.p_rows[0].monto === 120);
   ok('39c. H-69: el ajuste NO escribe sellers desde el cliente',
     !env.calls.some(c => c.table === 'sellers' && (c.metodo === 'upsert' || c.metodo === 'update')));
+}
+
+// ── 40) H-70 · Envío ACOTADO de una ficha de cliente ──────────────────────────
+// Editar un cliente ya no manda el arreglo entero (pisaba a los demás con esta
+// copia local). Como la coalescencia de la cola reemplaza el upsert pendiente de
+// la misma tabla, la op acotada tiene que convivir con la de tabla completa en
+// lugar de descartarla.
+{
+  const env = freshEnv();
+  const S = loadStore(env);
+  await S.init({});
+  env.window.DATA.clients = [
+    { id: 'c1', nombre: 'Ana', tel: '1' },
+    { id: 'c2', nombre: 'Luis', tel: '2' },
+  ];
+  const release = env.hold();
+  S.pushClient(env.window.DATA.clients[0]);
+  await sleep(10);
+  release();
+  await sleep(60);
+  const filas = env.cloud.rowsByTable.clients || [];
+  ok('40a. H-70: la edición de una ficha sube UNA sola fila',
+    filas.length === 1 && filas[0].id === 'c1');
+}
+{
+  const env = freshEnv();
+  const S = loadStore(env);
+  await S.init({});
+  env.window.DATA.clients = [
+    { id: 'c1', nombre: 'Ana', tel: '1' },
+    { id: 'c2', nombre: 'Luis', tel: '2' },
+  ];
+  const release = env.hold();
+  S.pushRows('clients', env.window.DATA.clients);   // alta pendiente (offline)
+  await sleep(10);
+  S.pushClient(env.window.DATA.clients[1]);          // edición de otra ficha
+  await sleep(10);
+  ok('40b. H-70: la op acotada NO descarta el alta pendiente de la tabla', S.pending === 2);
+  release();
+  await sleep(80);
+  const upserts = env.calls.filter(c => c.table === 'clients' && c.metodo === 'upsert');
+  ok('40c. H-70: ambas llegan a la nube', upserts.length === 2);
+  ok('40d. H-70: el alta viaja completa (2 filas) y la edición acotada (1)',
+    upserts.length === 2 && upserts[0].n === 2 && upserts[1].n === 1);
+  ok('40e. H-70: la cola queda vacía', S.pending === 0);
+}
+{
+  const env = freshEnv();
+  const S = loadStore(env);
+  await S.init({});
+  env.window.DATA.clients = [{ id: 'c1', nombre: 'Ana', tel: '1' }];
+  const release = env.hold();
+  S.pushClient(env.window.DATA.clients[0]);
+  await sleep(10);
+  env.window.DATA.clients[0].nombre = 'Ana Ruiz'; // se reconstituye al volar
+  S.pushClient(env.window.DATA.clients[0]);
+  await sleep(10);
+  ok('40f. H-70: dos ediciones de la MISMA ficha se coalescen', S.pending === 1);
+  release();
+  await sleep(60);
+  const filas = env.cloud.rowsByTable.clients || [];
+  ok('40g. H-70: vuela el último estado de esa ficha',
+    filas.length === 1 && filas[0].nombre === 'Ana Ruiz');
 }
 
 console.log(`════════ ${pass} pasaron, ${fail} fallaron ════════`);

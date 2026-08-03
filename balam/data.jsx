@@ -553,6 +553,7 @@
   }
   function saveProducts(sync = true) {
     if (!remoteApplying && !protectLayawayLockedProducts()) return false;
+    bumpRevision(); // el inventario no pasa por `save()`; su aviso se emite aquí
     let persisted = true;
     try { localStorage.setItem(LS_KEY, JSON.stringify(products)); }
     catch (e) { persisted = false; requireCatalogResync('La caché local del inventario no se pudo actualizar', 'products-cache'); }
@@ -1183,7 +1184,31 @@
   }
 
   let quotaWarned = false, bulkMode = false; // bulkMode: omite escrituras por-llamada durante una generación masiva
+  // ── H-70 · Señal de cambio de los datos de dominio ──────────────────────────
+  //
+  // Las pantallas memoizan listas derivadas de estos arreglos y hasta ahora no
+  // tenían forma de enterarse de que la nube los había reemplazado: `applyRemote`
+  // vacía el arreglo y mete objetos NUEVOS, así que un `useMemo` con dependencias
+  // de interfaz seguía pintando los de antes del pull —KPIs actualizados y tabla
+  // congelada—. `revision` es un contador monótono y `datachange` su aviso; se
+  // emiten desde el ÚNICO punto por el que pasa toda escritura de dominio, para
+  // que ninguna ruta nueva tenga que acordarse de avisar.
+  let dataRevision = 0, revisionQueued = false;
+  function bumpRevision() {
+    dataRevision++;
+    if (revisionQueued) return;
+    if (typeof window === 'undefined' || typeof window.dispatchEvent !== 'function') return;
+    revisionQueued = true;
+    // Coalescido: una venta guarda productos, movimientos, ventas, pagos y
+    // cliente. Son cinco escrituras y un solo aviso.
+    Promise.resolve().then(() => {
+      revisionQueued = false;
+      try { window.dispatchEvent(new CustomEvent('datachange', { detail: { revision: dataRevision } })); }
+      catch (e) { /* entorno de prueba sin CustomEvent */ }
+    });
+  }
   const save = (key, arr) => {
+    bumpRevision(); // el dato ya cambió en memoria, se persista o no
     if (bulkMode) return true; // se persiste todo de una vez al final (ver seedDemo)
     try { localStorage.setItem(key, JSON.stringify(arr)); return true; }
     catch (e) {
@@ -3058,6 +3083,102 @@
     };
   }
 
+  // ── H-70 · Autoridad única: las compras de un cliente ────────────────────────
+  //
+  // Clientes mostraba `c.compras`, `c.total` y `c.ultima`: tres contadores que
+  // sólo escribe `recordSale`, y sólo en la terminal que cobró. Cualquier otra
+  // —y TODAS después de un pull, porque la nube manda su propia copia de la
+  // fila— veía ceros aunque las ventas estuvieran ahí. Los documentos son la
+  // verdad; esos campos son una caché y aquí no se leen.
+  //
+  // PERTENENCIA (en este orden, sin excepción):
+  //   1. `venta.clienteId === cliente.id`. Es identidad: renombrar al cliente no
+  //      le quita sus compras, y dos homónimos no las mezclan.
+  //   2. Sólo si la venta NO trae `clienteId` —las anteriores a que existiera esa
+  //      columna— se acepta el nombre. El nombre jamás desempata una venta que sí
+  //      tiene identidad, y una venta cuyo `clienteId` apunta a un cliente
+  //      borrado queda huérfana antes que atribuirse por parecido.
+  //   Si el nombre de una venta legada coincide con VARIOS clientes el dato no
+  //   alcanza para decidir: se le asigna al primero registrado con ese nombre,
+  //   para que su importe se cuente exactamente una vez y la columna siga
+  //   cuadrando con el KPI.
+  //
+  // QUÉ CUENTA (contrato explícito):
+  //   compra válida = estado ≠ 'Cancelado' Y método ≠ 'Cortesía'.
+  //     · Apartado SÍ es compra, y suma el total de la pieza, no el anticipo: es
+  //       el mismo importe que Reportes ya informa como vendido.
+  //     · 'Devuelto' y 'Devolución parcial' SIGUEN siendo compras —la visita
+  //       ocurrió—; lo reembolsado se resta del gasto, no del número de compras.
+  //     · Cancelada: fuera de compras, de gasto y de última visita. Aparece en el
+  //       historial porque el mostrador necesita poder verla.
+  //     · Cortesía: no se cobró nada, no es compra ni suma. También se lista.
+  //   gasto = Σ total de compras válidas − Σ devuelto + Σ diferencia de cambios.
+  //     El cambio no es una compra más: sólo su excedente cobrado suma.
+  //   última visita = fecha máxima entre las compras válidas.
+  //
+  // El índice se calcula una vez por revisión de los datos (ver `bumpRevision`),
+  // no una vez por fila: la pantalla resuelve N clientes con un solo recorrido de
+  // las ventas.
+  const clientNameKey = (n) => String(n == null ? '' : n).trim().toLowerCase();
+  const EMPTY_SUMMARY = () => ({
+    id: null, ventas: [], compras: 0, total: 0, ultima: '', bruto: 0,
+    devuelto: 0, cambios: 0, apartados: 0, cortesias: 0, canceladas: 0, ticketProm: 0,
+  });
+  let clientSalesCache = null;
+  function clientSalesCacheKey() {
+    return [dataRevision, clients.length, sales.length, returns.length, exchanges.length].join(':');
+  }
+  function clientSalesSummaries() {
+    const key = clientSalesCacheKey();
+    if (clientSalesCache && clientSalesCache.key === key) return clientSalesCache.map;
+    const map = {};
+    clients.forEach(c => { const s = EMPTY_SUMMARY(); s.id = c.id; map[c.id] = s; });
+    // Un nombre repetido lo gana el primero registrado (ver nota de pertenencia).
+    const porNombre = {};
+    clients.forEach(c => { const k = clientNameKey(c.nombre); if (k && porNombre[k] === undefined) porNombre[k] = c.id; });
+    const duenoDeFolio = {};
+    sales.forEach(s => {
+      const conIdentidad = s.clienteId !== undefined && s.clienteId !== null && s.clienteId !== '';
+      const id = conIdentidad ? s.clienteId : porNombre[clientNameKey(s.cliente)];
+      const r = id === undefined ? undefined : map[id];
+      if (!r) return;
+      r.ventas.push(s);
+      const cancelada = s.estado === 'Cancelado';
+      const cortesia = s.metodo === 'Cortesía';
+      if (cancelada) { r.canceladas++; return; }
+      if (cortesia) { r.cortesias++; return; }
+      if (s.estado === 'Apartado') r.apartados++;
+      r.compras++;
+      r.bruto += Number(s.total) || 0;
+      const dia = String(s.fecha || '').slice(0, 10);
+      if (dia > r.ultima) r.ultima = dia;
+      if (s.folio) duenoDeFolio[s.folio] = id; // sólo las compras válidas reciben ajustes
+    });
+    (returns || []).forEach(x => {
+      const r = map[duenoDeFolio[x.folio]];
+      if (r) r.devuelto += Number(x.total) || 0;
+    });
+    (exchanges || []).forEach(x => {
+      const r = map[duenoDeFolio[x.origenFolio]];
+      if (r) r.cambios += Number(x.diferencia) || 0;
+    });
+    Object.keys(map).forEach(id => {
+      const r = map[id];
+      r.ventas.sort((a, b) => String(b.fecha || '').localeCompare(String(a.fecha || '')));
+      r.bruto = money(r.bruto); r.devuelto = money(r.devuelto); r.cambios = money(r.cambios);
+      r.total = Math.max(0, money(r.bruto - r.devuelto + r.cambios));
+      r.ticketProm = r.compras > 0 ? money(r.total / r.compras) : 0;
+    });
+    clientSalesCache = { key, map };
+    return map;
+  }
+  // Acepta el cliente o su id. Nunca devuelve null: un cliente desconocido tiene
+  // un resumen vacío, para que ninguna pantalla tenga que defenderse.
+  function clientSalesSummary(client) {
+    const id = client && typeof client === 'object' ? client.id : client;
+    return clientSalesSummaries()[id] || EMPTY_SUMMARY();
+  }
+
   function recordReturn({ folio, lineas, metodo, notas, fecha: fechaIn }) {
     const sale = sales.find(s => s.folio === folio);
     if (!sale) return { ok: false, error: 'No se encontró la venta original' };
@@ -3246,6 +3367,34 @@
     sellers.splice(i, 1); saveSellers();
     try { window.CORE.invokeSync('deleteRow', 'sellers', id, version); } catch (e) { /* offline */ }
     return { ok: true };
+  }
+  // H-70 · Edición de la ficha del cliente. Recibe el ID, nunca el objeto: la
+  // pantalla tenía en la mano una referencia que el pull ya había reemplazado por
+  // otra con el mismo id, y escribía sobre un huérfano fuera de `clients` — el
+  // cambio se veía un instante y desaparecía al siguiente render. Aquí se
+  // localiza SIEMPRE al cliente vigente del arreglo.
+  //
+  // Sólo se tocan los campos de ficha. `compras`, `total` y `ultima` se conservan
+  // intactos por si algo fuera de esta pantalla todavía los lee; no son de nadie
+  // más que de `recordSale`. Y sube UN registro: mandar el arreglo completo
+  // pisaba con esta copia local lo que otras terminales hubieran cambiado en
+  // cualquier otro cliente.
+  const CLIENT_PROFILE_FIELDS = ['nombre', 'tel', 'email', 'direccion', 'talla', 'notas', 'nacimiento'];
+  function updateClient(id, patch) {
+    const c = clients.find(x => x.id === id);
+    if (!c) return null;
+    const clean = {};
+    CLIENT_PROFILE_FIELDS.forEach(k => { if (patch && k in patch) clean[k] = patch[k]; });
+    if ('nombre' in clean) {
+      const nombre = String(clean.nombre || '').trim();
+      if (!nombre) return null; // el nombre es la identidad visible: no se vacía
+      clean.nombre = nombre;
+    }
+    if ('tel' in clean) clean.tel = String(clean.tel || '').trim() || '—';
+    Object.assign(c, clean);
+    save(LS_CLIENTS, clients); // la caché local siempre guarda el arreglo entero
+    try { window.CORE.invokeSync('pushClient', c); } catch (e) { /* offline: queda en la cola */ }
+    return c;
   }
   // Borra un cliente de local Y de la nube (mismo patrón que removeUser/removeProduct). El cliente
   // genérico de mostrador no se puede borrar (lo requiere el POS).
@@ -4051,7 +4200,8 @@
     sku, regenerateSkus, totalStock, hydrate, mkStock, emptyStock, SIZE_MARK,
     saveProducts, saveSellers, saveClients, saveSales, saveMovements, savePromos, saveReturns, savePayments,
     removeProduct, remapOrphanCodes, catalogHealthReport, hexForColorName, applyOrphanFix, get lastRemap() { return lastRemap; },
-    addClient, removeClient, recordSale, nextFolio, collisionSafeFolio, rekeySaleFolio,
+    addClient, updateClient, removeClient, clientSalesSummary, clientSalesSummaries,
+    recordSale, nextFolio, collisionSafeFolio, rekeySaleFolio,
     normalizeFolioPrefix, businessDate, folioFromParts, parseFolio, folioPreview,
     folioBlockRequest, applyFolioBlock, terminalCode,
     findSaleByFolio, saleFolioAliases, folioAliasHit, stockOf, isAutoImg, resetProducts, applyRemote, applySyncResult, applySaleCommitResult, mergeRemote, markSaleSync, liquidarComision,

@@ -1,6 +1,6 @@
 // clients.jsx — CRM de clientes (Heritage Luxury). Exporta window.ClientsScreen
 (function () {
-  const { useState, useMemo } = React;
+  const { useState, useMemo, useEffect } = React;
   const { fmt, toast, Pager, Modal, Segment } = window.UI;
   const { MS } = window.HX;
   const D = window.DATA;
@@ -12,32 +12,63 @@
     Pendiente: 'bg-info-soft text-info', Cancelado: 'bg-danger-soft text-danger',
   };
 
+  // El pull de la nube REEMPLAZA `D.clients` y `D.sales` por objetos nuevos
+  // después de que esta pantalla montó. Un `useMemo` con dependencias de interfaz
+  // —búsqueda, filtro, refreshKey— no se entera de eso: los KPI, que se
+  // recalculaban en cada render, decían la verdad mientras la tabla seguía
+  // pintando la lista anterior al pull. Este contador es la dependencia que
+  // faltaba: `datachange` lo emite DATA en cada escritura de dominio (venta,
+  // devolución, cambio, edición) y `configchange` marca el fin de un pull.
+  function useDataRevision() {
+    const [rev, setRev] = useState(0);
+    useEffect(() => {
+      const on = () => setRev(r => r + 1);
+      window.addEventListener('datachange', on);
+      window.addEventListener('configchange', on);
+      return () => { window.removeEventListener('datachange', on); window.removeEventListener('configchange', on); };
+    }, []);
+    return rev;
+  }
+
   function ClientsScreen() {
     const [query, setQuery] = useState('');
     const [filter, setFilter] = useState('all');
-    const [detail, setDetail] = useState(null);
+    // El cajón y el modal guardan el ID, no el objeto: tras un pull el objeto que
+    // se capturó al hacer clic ya no es el que vive en `D.clients` (ver H-70).
+    const [detailId, setDetailId] = useState(null);
     const [adding, setAdding] = useState(false);
-    const [editC, setEditC] = useState(null);
+    const [editId, setEditId] = useState(null);
     const [page, setPage] = useState(1);
     const [refreshKey, setRefreshKey] = useState(0);
+    const revision = useDataRevision();
 
     const recurrent = window.CONFIG.get('client.recurrentThreshold') || 3;
+    // Autoridad única (data.jsx): las compras salen de las VENTAS del cliente, no
+    // de los contadores `compras/total/ultima`, que sólo escribe la terminal que
+    // cobró y que la nube sobreescribe con su propia copia.
+    const resumenes = useMemo(() => D.clientSalesSummaries(), [revision, refreshKey]);
+    const reales = useMemo(() => D.clients.filter(c => !c.generic), [revision, refreshKey]);
+    const resumenDe = (c) => (c && resumenes[c.id]) || D.clientSalesSummary(null);
     const rows = useMemo(() => {
       const q = query.trim().toLowerCase();
-      return D.clients.filter(c => {
-        if (c.generic) return false;
-        if (filter === 'rec' && c.compras < recurrent) return false;
-        if (filter === 'new' && c.compras >= recurrent) return false;
-        return c.nombre.toLowerCase().includes(q) || c.tel.includes(q);
+      return reales.filter(c => {
+        const compras = resumenDe(c).compras;
+        if (filter === 'rec' && compras < recurrent) return false;
+        if (filter === 'new' && compras >= recurrent) return false;
+        return c.nombre.toLowerCase().includes(q) || String(c.tel || '').includes(q);
       });
-    }, [query, filter, refreshKey]);
+    }, [reales, resumenes, query, filter, recurrent]);
     const PER = 8, pages = Math.max(1, Math.ceil(rows.length / PER)), pg = Math.min(page, pages);
     const slice = rows.slice((pg - 1) * PER, pg * PER);
+    const detail = detailId ? reales.find(c => c.id === detailId) || null : null;
+    const editC = editId ? reales.find(c => c.id === editId) || null : null;
 
     function saveEditClient(patch) {
-      Object.assign(editC, { nombre: patch.nombre.trim(), tel: patch.tel || '—', email: patch.email, talla: patch.talla, notas: patch.notas, nacimiento: patch.nacimiento || '' });
-      D.saveClients();
-      setEditC(null); setRefreshKey(k => k + 1);
+      // `D.updateClient` localiza al cliente VIGENTE por id y sube sólo ese
+      // registro. Antes se escribía sobre el objeto capturado al abrir el modal,
+      // que después de un pull ya no pertenecía a `D.clients`.
+      if (!D.updateClient(editId, patch)) { toast('Ese cliente ya no existe en este dispositivo', 'var(--danger)'); setEditId(null); return; }
+      setEditId(null); setRefreshKey(k => k + 1);
       toast('Cliente actualizado', 'var(--accent)');
     }
 
@@ -45,7 +76,7 @@
       if (!window.confirm(`¿Eliminar a «${c.nombre}»?\n\nSe quita de este dispositivo y de la nube. Su historial de ventas se conserva. No se puede deshacer.`)) return;
       const r = D.removeClient(c.id);
       if (!r.ok) { toast(r.error, 'var(--danger)'); return; }
-      setDetail(null); setRefreshKey(k => k + 1);
+      setDetailId(null); setRefreshKey(k => k + 1);
       toast('Cliente eliminado', 'var(--danger)');
     }
 
@@ -62,20 +93,21 @@
 
     if (adding) return h(NewClientForm, { onCancel: () => setAdding(false), onSave: saveNewClient });
 
-    const reales = D.clients.filter(c => !c.generic);
+    // Los KPI leen EXACTAMENTE la misma autoridad que la tabla: por construcción,
+    // la suma de la columna «Total gastado» es el total facturado.
     const totalClientes = reales.length;
-    const totalFacturado = reales.reduce((a, c) => a + c.total, 0);
+    const totalFacturado = Math.round(reales.reduce((a, c) => a + resumenDe(c).total, 0) * 100) / 100;
     const ventaProm = Math.round(totalFacturado / (totalClientes || 1));
-    const recurrentes = reales.filter(c => c.compras >= recurrent).length;
+    const recurrentes = reales.filter(c => resumenDe(c).compras >= recurrent).length;
 
     return h('div', { className: 'flex-1 overflow-y-auto bg-background font-body text-on-surface' },
       h('div', { className: 'p-10 max-w-container-max mx-auto' }, [
         // KPIs
         h('div', { key: 'kpi', className: 'grid grid-cols-1 md:grid-cols-4 gap-gutter mb-8' }, [
-          kpi('Clientes registrados', totalClientes),
-          kpi('Ticket promedio', fmt(ventaProm).replace('.00', '')),
-          kpi(`Recurrentes (${recurrent}+)`, recurrentes, true),
-          kpi('Total facturado', fmt(totalFacturado).replace('.00', ''), false, 'MXN'),
+          kpi('Clientes registrados', totalClientes, false, '', 'clients-kpi-registrados'),
+          kpi('Ticket promedio', fmt(ventaProm).replace('.00', ''), false, '', 'clients-kpi-ticket'),
+          kpi(`Recurrentes (${recurrent}+)`, recurrentes, true, '', 'clients-kpi-recurrentes'),
+          kpi('Total facturado', fmt(totalFacturado).replace('.00', ''), false, 'MXN', 'clients-kpi-facturado'),
         ]),
         // Filtros + acción
         h('div', { key: 'fl', className: 'flex items-center justify-between gap-4 flex-wrap mb-6' }, [
@@ -94,18 +126,21 @@
             h('thead', { key: 'h' }, h('tr', { className: 'bg-surface-container/50 border-b border-outline-variant' },
               [['Cliente', ''], ['Teléfono', ''], ['Talla', ''], ['Compras', 'text-right'], ['Total gastado', 'text-right'], ['Última visita', ''], ['', '']].map(([c, al], i) =>
                 h('th', { key: i, className: 'px-4 py-4 text-overline uppercase tracking-wider font-semibold text-on-surface-variant/80 ' + al + (i === 0 ? ' pl-6' : '') }, c)))),
-            h('tbody', { key: 'b', className: 'divide-y divide-outline-variant' }, slice.map(c => h('tr', { key: c.id, className: 'hover:bg-surface-container transition-all group cursor-pointer', onClick: () => setDetail(c) }, [
-              h('td', { key: 'n', className: 'px-6 py-4' }, h('div', { className: 'flex items-center gap-4' }, [
-                h('div', { key: 'a', className: 'w-10 h-10 rounded-full bg-primary-container text-gold flex items-center justify-center text-caption font-bold shrink-0' }, c.nombre.split(' ').map(w => w[0]).slice(0, 2).join('')),
-                h('span', { key: 'x', className: 'font-headline text-body text-primary' }, c.nombre),
-              ])),
-              h('td', { key: 't', className: 'px-4 py-4 text-overline font-mono text-on-surface-variant' }, c.tel),
-              h('td', { key: 'tz', className: 'px-4 py-4' }, h('span', { className: 'px-2 py-0.5 bg-surface-container-high rounded text-overline font-bold uppercase text-on-surface-variant' }, c.talla || '—')),
-              h('td', { key: 'c', className: 'px-4 py-4 text-right font-mono text-body' }, c.compras),
-              h('td', { key: 'g', className: 'px-4 py-4 text-right font-headline text-body text-primary' }, fmt(c.total).replace('.00', '')),
-              h('td', { key: 'u', className: 'px-4 py-4 text-caption text-on-surface-variant' }, fechaCorta(c.ultima)),
-              h('td', { key: 'x', className: 'px-6 py-4 text-right' }, h(MS, { name: 'chevRight', size: 20, className: 'text-on-surface-variant/40 group-hover:text-primary transition-colors' })),
-            ]))),
+            h('tbody', { key: 'b', className: 'divide-y divide-outline-variant' }, slice.map(c => {
+              const r = resumenDe(c);
+              return h('tr', { key: c.id, 'data-testid': 'clients-row', 'data-client-id': c.id, className: 'hover:bg-surface-container transition-all group cursor-pointer', onClick: () => setDetailId(c.id) }, [
+                h('td', { key: 'n', className: 'px-6 py-4' }, h('div', { className: 'flex items-center gap-4' }, [
+                  h('div', { key: 'a', className: 'w-10 h-10 rounded-full bg-primary-container text-gold flex items-center justify-center text-caption font-bold shrink-0' }, c.nombre.split(' ').map(w => w[0]).slice(0, 2).join('')),
+                  h('span', { key: 'x', 'data-testid': 'clients-cell-nombre', className: 'font-headline text-body text-primary' }, c.nombre),
+                ])),
+                h('td', { key: 't', className: 'px-4 py-4 text-overline font-mono text-on-surface-variant' }, c.tel),
+                h('td', { key: 'tz', className: 'px-4 py-4' }, h('span', { className: 'px-2 py-0.5 bg-surface-container-high rounded text-overline font-bold uppercase text-on-surface-variant' }, c.talla || '—')),
+                h('td', { key: 'c', 'data-testid': 'clients-cell-compras', className: 'px-4 py-4 text-right font-mono text-body' }, r.compras),
+                h('td', { key: 'g', 'data-testid': 'clients-cell-total', className: 'px-4 py-4 text-right font-headline text-body text-primary' }, fmt(r.total).replace('.00', '')),
+                h('td', { key: 'u', 'data-testid': 'clients-cell-ultima', className: 'px-4 py-4 text-caption text-on-surface-variant' }, fechaCorta(r.ultima)),
+                h('td', { key: 'x', className: 'px-6 py-4 text-right' }, h(MS, { name: 'chevRight', size: 20, className: 'text-on-surface-variant/40 group-hover:text-primary transition-colors' })),
+              ]);
+            })),
           ])),
           h('div', { key: 'pg', className: 'px-6 py-4 border-t border-outline-variant flex items-center justify-between bg-surface-container/30' }, [
             h('span', { key: 'l', className: 'text-overline font-bold text-on-surface-variant uppercase tracking-widest' }, `${rows.length} cliente${rows.length === 1 ? '' : 's'}${pages > 1 ? ` · página ${pg}/${pages}` : ''}`),
@@ -113,28 +148,32 @@
           ]),
         ]),
         // Drawer
-        h(ClientDrawer, { key: 'dr', c: detail, onClose: () => setDetail(null), onEdit: (cl) => setEditC(cl), onDelete: deleteClient }),
+        h(ClientDrawer, { key: 'dr', c: detail, resumen: resumenDe(detail), onClose: () => setDetailId(null), onEdit: (cl) => setEditId(cl.id), onDelete: deleteClient }),
         // Modal de edición
-        editC && h(ClientEditModal, { key: 'ed', c: editC, onClose: () => setEditC(null), onSave: saveEditClient }),
+        editC && h(ClientEditModal, { key: 'ed', c: editC, onClose: () => setEditId(null), onSave: saveEditClient }),
       ]));
   }
 
-  function kpi(label, value, gold, suffix) {
+  function kpi(label, value, gold, suffix, testid) {
     return h('div', { key: label, className: CARD + ' p-6' + (gold ? ' border-l-4 border-l-secondary' : '') }, [
       h('p', { key: 'l', className: 'text-overline text-on-surface-variant uppercase tracking-widest mb-2 opacity-70 font-semibold' }, label),
       h('div', { key: 'v', className: 'flex items-baseline gap-1' }, [
-        h('h3', { key: 'a', className: 'font-headline text-h1 text-primary' }, value),
+        h('h3', { key: 'a', 'data-testid': testid, className: 'font-headline text-h1 text-primary' }, value),
         suffix && h('span', { key: 'b', className: 'text-overline text-on-surface-variant font-bold' }, suffix),
       ]),
     ]);
   }
 
-  function ClientDrawer({ c, onClose, onEdit, onDelete }) {
+  function ClientDrawer({ c, resumen, onClose, onEdit, onDelete }) {
     const open = !!c;
-    const historial = c ? D.sales.filter(s => s.cliente === c.nombre) : [];
+    // El historial lo resuelve la MISMA autoridad que la tabla: primero por
+    // `clienteId` y sólo después, para ventas sin identidad, por nombre. Buscar
+    // por nombre —lo que hacía antes— borraba el historial al renombrar a alguien
+    // y mezclaba el de dos homónimos.
+    const historial = resumen ? resumen.ventas : [];
     return h(React.Fragment, {}, [
       h('div', { key: 'ov', className: 'fixed inset-0 bg-primary-container/40 backdrop-blur-sm z-[55] transition-opacity duration-300 ' + (open ? 'opacity-100' : 'opacity-0 pointer-events-none'), onClick: onClose }),
-      h('div', { key: 'dr', className: 'fixed inset-y-0 right-0 w-[460px] bg-surface border-l border-outline-variant z-[60] shadow-e3 flex flex-col transition-transform duration-300 ' + (open ? 'translate-x-0' : 'translate-x-full') },
+      h('div', { key: 'dr', 'data-testid': 'client-drawer', className: 'fixed inset-y-0 right-0 w-[460px] bg-surface border-l border-outline-variant z-[60] shadow-e3 flex flex-col transition-transform duration-300 ' + (open ? 'translate-x-0' : 'translate-x-full') },
         c && [
           h('div', { key: 'h', className: 'px-8 py-6 border-b border-outline-variant flex justify-between items-center' }, [
             h('div', { key: 't' }, [
@@ -154,8 +193,10 @@
             ]),
             // Stats
             h('div', { key: 'st', className: 'grid grid-cols-2 gap-4' }, [
-              stat('Compras totales', c.compras), stat('Total gastado', fmt(c.total).replace('.00', '')),
-              stat('Ticket promedio', fmt(Math.round(c.total / (c.compras || 1))).replace('.00', '')), stat('Última visita', fechaCorta(c.ultima)),
+              stat('Compras totales', resumen.compras, 'client-drawer-compras'),
+              stat('Total gastado', fmt(resumen.total).replace('.00', ''), 'client-drawer-total'),
+              stat('Ticket promedio', fmt(resumen.ticketProm).replace('.00', ''), 'client-drawer-ticket'),
+              stat('Última visita', fechaCorta(resumen.ultima), 'client-drawer-ultima'),
             ]),
             // Notas
             c.notas && h('div', { key: 'no', className: 'space-y-2' }, [
@@ -165,7 +206,7 @@
             // Historial
             h('div', { key: 'hi', className: 'space-y-3' }, [
               h('h3', { key: 't', className: 'text-overline font-bold uppercase text-primary tracking-widest border-b border-outline-variant pb-3' }, 'Historial de compras'),
-              historial.length ? h('div', { key: 'l', className: 'divide-y divide-outline-variant' }, historial.map(s => h('div', { key: s.folio, className: 'flex items-center justify-between py-3' }, [
+              historial.length ? h('div', { key: 'l', className: 'divide-y divide-outline-variant' }, historial.map(s => h('div', { key: s.folio, 'data-testid': 'client-history-row', 'data-folio': s.folio, className: 'flex items-center justify-between py-3' }, [
                 h('div', { key: 'a' }, [
                   h('p', { key: 'f', className: 'text-body font-semibold text-primary' }, s.folio),
                   h('p', { key: 'd', className: 'text-overline text-on-surface-variant' }, s.fecha + ' · ' + s.items + ' art.'),
@@ -179,7 +220,7 @@
             // Acciones
             h('div', { key: 'ac', className: 'pt-2 flex gap-4' }, [
               h('button', { key: 'p', className: 'w-14 h-[52px] rounded-xl border border-outline-variant text-primary hover:bg-surface-container transition-all flex items-center justify-center disabled:opacity-30', disabled: !c.tel || c.tel === '—', onClick: () => { const t = String(c.tel || '').replace(/[^0-9+]/g, ''); if (t) window.location.href = 'tel:' + t; }, title: 'Llamar' }, h(MS, { name: 'phone', size: 20 })),
-              h('button', { key: 'e', className: 'flex-grow bg-primary text-on-primary py-3.5 rounded-xl text-overline font-bold uppercase tracking-widest hover:opacity-90 transition-all shadow-e2 active:scale-95 flex items-center justify-center gap-2', onClick: () => onEdit && onEdit(c) }, [h(MS, { key: 'i', name: 'edit', size: 18 }), 'Editar cliente']),
+              h('button', { key: 'e', 'data-testid': 'client-edit-open', className: 'flex-grow bg-primary text-on-primary py-3.5 rounded-xl text-overline font-bold uppercase tracking-widest hover:opacity-90 transition-all shadow-e2 active:scale-95 flex items-center justify-center gap-2', onClick: () => onEdit && onEdit(c) }, [h(MS, { key: 'i', name: 'edit', size: 18 }), 'Editar cliente']),
               h('button', { key: 'd', className: 'w-14 h-[52px] rounded-xl border border-outline-variant text-danger hover:bg-danger-soft hover:border-danger/30 transition-all flex items-center justify-center', onClick: () => onDelete && onDelete(c), title: 'Eliminar cliente' }, h(MS, { name: 'trash', size: 20 })),
             ]),
           ]),
@@ -196,11 +237,11 @@
     function save() { if (!f.nombre.trim()) { toast('El nombre es obligatorio', 'var(--danger)'); return; } onSave(f); }
     const footer = [
       h('button', { key: 'c', className: 'px-5 py-3 border border-outline-variant rounded-xl text-caption font-bold uppercase tracking-widest text-on-surface hover:bg-surface-container transition', onClick: onClose }, 'Cancelar'),
-      h('button', { key: 's', className: 'px-6 py-3 bg-primary text-on-primary rounded-xl text-caption font-bold uppercase tracking-widest hover:opacity-90 transition flex items-center gap-2', onClick: save }, [h(MS, { key: 'i', name: 'check', size: 16 }), 'Guardar cambios']),
+      h('button', { key: 's', 'data-testid': 'client-edit-save', className: 'px-6 py-3 bg-primary text-on-primary rounded-xl text-caption font-bold uppercase tracking-widest hover:opacity-90 transition flex items-center gap-2', onClick: save }, [h(MS, { key: 'i', name: 'check', size: 16 }), 'Guardar cambios']),
     ];
     return h(Modal, { title: 'Editar cliente', onClose, footer }, [
       h('div', { key: 'g', className: 'space-y-4' }, [
-        field('Nombre completo', h('input', { className: inp, value: f.nombre, onChange: e => set('nombre', e.target.value), autoFocus: true })),
+        field('Nombre completo', h('input', { className: inp, 'data-testid': 'client-edit-nombre', value: f.nombre, onChange: e => set('nombre', e.target.value), autoFocus: true })),
         h('div', { key: 'row', className: 'grid grid-cols-2 gap-4' }, [
           field('Teléfono', h('input', { className: inp, type: 'tel', value: f.tel, onChange: e => set('tel', e.target.value), placeholder: '999 000 0000' })),
           field('Talla', h('input', { className: inp, value: f.talla, onChange: e => set('talla', e.target.value), placeholder: 'M, L, 32…' })),
@@ -214,10 +255,10 @@
     ]);
   }
 
-  function stat(label, value) {
+  function stat(label, value, testid) {
     return h('div', { key: label, className: 'bg-surface-container/50 p-4 rounded-xl border border-outline-variant' }, [
       h('span', { key: 'l', className: 'block text-overline uppercase font-bold text-on-surface-variant tracking-widest opacity-60 mb-1.5' }, label),
-      h('span', { key: 'v', className: 'font-headline text-h2 text-primary' }, value),
+      h('span', { key: 'v', 'data-testid': testid, className: 'font-headline text-h2 text-primary' }, value),
     ]);
   }
   function fechaCorta(f) { if (!f) return '—'; const [y, m, d] = f.split('-'); return `${d}/${m}/${y.slice(2)}`; }

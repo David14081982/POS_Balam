@@ -3581,6 +3581,52 @@ ni perdida. Cancelar una venta o un cambio sigue sin operacion de negocio.
 `test-concurrency.mjs` aborta tambien en `HEAD`: deuda preexistente ajena.
 **Correccion documentada:** `docs/fixes/comisiones-de-vendedores.md`.
 
+## H-70 - La pantalla Clientes no derivaba las compras de las ventas
+
+**Estado:** RESUELTO
+**Fecha de registro:** 03/08/2026
+**Commit:** Pendiente de commit
+**Origen:** reporte del dueño del producto: clientes con ventas reales aparecían
+con «0 compras» y «$0».
+**Riesgo:** la ficha de cliente era inservible como CRM. El mostrador no podía
+saber cuánto había comprado alguien, si era recurrente ni cuándo fue su última
+visita; renombrar a un cliente aparentaba borrarle el historial y dos homónimos
+lo compartían. El encabezado y la tabla de la misma pantalla se contradecían
+después de un pull, lo que ponía en duda cifras que sí eran correctas.
+**Causa raíz:** tres defectos de consumo, ninguno de datos. (1) La pantalla leía
+`c.compras`, `c.total` y `c.ultima`, tres contadores desnormalizados que sólo
+escribe `recordSale` en la terminal que cobró y que el pull sobreescribe con la
+copia de la nube. (2) El `useMemo` de la lista dependía sólo de estado de interfaz
+—búsqueda, filtro, `refreshKey`—, así que `applyRemote`, que reemplaza
+`DATA.clients` por objetos nuevos, no lo invalidaba: los KPI se recalculaban y la
+tabla no. (3) El historial del cajón filtraba `s.cliente === c.nombre`, ignorando
+`clienteId`. Secundariamente, `saveEditClient` mutaba el objeto capturado al abrir
+el modal, que tras un pull ya no pertenecía a `DATA.clients`, y subía el arreglo
+completo de clientes.
+**Solución:** autoridad única `DATA.clientSalesSummaries()` /
+`clientSalesSummary()` en `balam/data.jsx`, que resuelve la pertenencia por
+`clienteId` y acepta el nombre **sólo** para ventas sin identidad, y fija por
+contrato qué cuenta —apartados sí, canceladas no, cortesías en el historial pero
+sin sumar, devoluciones restando lo reembolsado, cambios sumando sólo su
+diferencia—. `bumpRevision()` y el evento `datachange` dan a las pantallas la
+señal de cambio que faltaba. `updateClient(id, patch)` edita al cliente vigente
+por id y `STORE.pushClient` sube un solo registro mediante una op de cola acotada.
+`compras`, `total` y `ultima` se conservan por compatibilidad; ninguna venta
+histórica se migró ni se reescribió.
+**Pruebas:** `test-h70-clientes-ventas.mjs` 39/39 (reproducción roja previa: 6
+pasaron, 33 fallaron); `test-store-queue.mjs` 155/155 con seis casos nuevos para
+el envío acotado. Regresión de 39 suites en verde: ventas, apartados,
+devoluciones, cambios, comisiones H-69, liquidación H-65, folios, permisos,
+inventario, migraciones y build.
+**Riesgo residual:** una venta legada sin `clienteId` cuyo nombre coincide con
+varios clientes se atribuye al primero registrado con ese nombre —el dato no
+permite decidir y contarla en todos inflaría el gasto—; el caso se extingue solo
+porque toda venta nueva lleva identidad. Una venta cuyo `clienteId` apunta a un
+cliente borrado no aparece en ninguna ficha, de forma deliberada.
+`test-concurrency.mjs` y `test-reset-propaga.mjs` fallan también en `HEAD`: deuda
+preexistente ajena a este trabajo.
+**Corrección documentada:** `docs/fixes/clientes-y-sus-ventas.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

@@ -424,7 +424,14 @@
     op.attempts = Number(op.attempts) || 0;
     op.createdAt = op.createdAt || new Date().toISOString();
     delete op.diagnostic;
-    if (op.type === 'upsert' || op.type === 'profileUpdate') { const i = q.findIndex(x => (x.type === 'upsert' || x.type === 'profileUpdate') && x.table === op.table && x.ownerId === op.ownerId); if (i >= 0) q[i] = op; else q.push(op); }
+    // H-70: una op ACOTADA (`rowIds`) sólo se colapsa contra otra que cubra
+    // exactamente las mismas filas. Antes cualquier upsert de la tabla pisaba al
+    // anterior; con envíos por fila eso habría descartado, por ejemplo, el alta de
+    // un cliente que seguía en la cola al editar a otro. Una op de tabla completa
+    // sí puede pisar a cualquiera —como siempre—: su cuerpo se reconstruye del
+    // arreglo local justo antes de volar y ya las contiene a todas.
+    const opScope = (x) => (x.rowIds ? x.rowIds.slice().sort().join('|') : null);
+    if (op.type === 'upsert' || op.type === 'profileUpdate') { const scope = opScope(op); const i = q.findIndex(x => (x.type === 'upsert' || x.type === 'profileUpdate') && x.table === op.table && x.ownerId === op.ownerId && (scope === null || opScope(x) === scope)); if (i >= 0) q[i] = op; else q.push(op); }
     else if (op.type === 'config') { const i = q.findIndex(x => x.type === 'config' && x.ownerId === op.ownerId); if (i >= 0) q[i] = op; else q.push(op); }
     else q.push(op); // sale / delete: idempotentes, se conservan en orden
     saveQ(q);
@@ -791,8 +798,16 @@
         // Reconstituye el snapshot justo antes de enviarlo. Si otra operación en
         // vuelo confirmó una versión, la op compactada usa esa versión nueva.
         if (m && m.localKey && window.DATA && Array.isArray(window.DATA[m.localKey])) {
-          op.rows = window.DATA[m.localKey].map(m.toRow);
+          const local = window.DATA[m.localKey];
+          // H-70: una op acotada se reconstruye SÓLO con sus filas. Reconstruirla
+          // con el arreglo entero era justo lo que se quería evitar al enviarla
+          // por fila. Si la fila ya no existe localmente, la op queda sin cuerpo
+          // y no escribe nada (un borrado viaja por su propia `deleteRow`).
+          op.rows = op.rowIds
+            ? op.rowIds.map(id => local.find(x => x && x.id === id)).filter(Boolean).map(m.toRow)
+            : local.map(m.toRow);
         }
+        if (op.rowIds && (!Array.isArray(op.rows) || !op.rows.length)) return true;
         if (op.kind === 'products' && (!Array.isArray(op.rows) || !op.rows.length)) return true;
         const r = op.kind === 'products'
           ? await c.rpc('save_products_checked', { p_operation_id: op.id, p_rows: op.rows })
@@ -1458,6 +1473,15 @@
       return run({ type: 'profileUpdate', kind, table: m.table, conflict: m.conflict, rows: arr.map(m.profileRow) });
     }
     return run({ type: 'upsert', kind, table: m.table, conflict: m.conflict, rows: arr.map(m.toRow) });
+  }
+  // H-70: la edición de una ficha viaja sola. Mismo upsert y mismo control de
+  // versión que `pushRows`, pero con una fila: el arreglo completo pisaba con
+  // esta copia local a cualquier otro cliente que otra terminal hubiera tocado
+  // mientras tanto.
+  function pushClient(c) {
+    if (!enabled || !c || !c.id) return;
+    const m = MAP.clients;
+    return run({ type: 'upsert', kind: 'clients', table: m.table, conflict: m.conflict, rowIds: [c.id], rows: [m.toRow(c)] });
   }
   function deleteRow(kind, id, baseVersion) {
     if (!enabled) return;
@@ -2391,6 +2415,6 @@
     }
   }
 
-  window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushSale, settleLayaway, pushReturn, pushExchange, ensureFolioBlock, deleteRow, settleCommission, closeCommissionPeriod, applyCommissionAdjustment, pushLoanOperation, migrateLocalLoans, pullDomain, fetchSaleByFolio, physicalCardAvailable, claimPhysicalCard, flushQueue, retryOperation, queueStatus, hasPendingLayaway, clearQueue, markResetApplied, purgeTestData, applyRemotePurge, pruneQueueForPurge, readPurgeState, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
+  window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushClient, pushSale, settleLayaway, pushReturn, pushExchange, ensureFolioBlock, deleteRow, settleCommission, closeCommissionPeriod, applyCommissionAdjustment, pushLoanOperation, migrateLocalLoans, pullDomain, fetchSaleByFolio, physicalCardAvailable, claimPhysicalCard, flushQueue, retryOperation, queueStatus, hasPendingLayaway, clearQueue, markResetApplied, purgeTestData, applyRemotePurge, pruneQueueForPurge, readPurgeState, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
   window.CORE.registerSyncGateway(window.STORE);
 })();
