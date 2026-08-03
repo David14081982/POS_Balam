@@ -25,10 +25,14 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        # actions/checkout v4.4.0 fijado por SHA completo (supply-chain).
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
       - name: Configurar Node.js
-        uses: actions/setup-node@v4
+        # actions/setup-node v4.4.0 fijado por SHA completo (supply-chain).
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 20
 
@@ -42,8 +46,9 @@ jobs:
       - name: Ejecutar todas las pruebas test-*.mjs
         run: |
           set -uo pipefail
-          shopt -s nullglob
-          tests=( test-*.mjs )
+          # Descubrimiento recursivo y seguro: encuentra todos los test-*.mjs,
+          # incluyendo subdirectorios, con nombres delimitados por NUL (soporta espacios/saltos).
+          mapfile -d '' -t tests < <(find . -type f -name 'test-*.mjs' -not -path '*/node_modules/*' -print0 | sort -z)
           if [ ${#tests[@]} -eq 0 ]; then
             echo "No se encontraron archivos test-*.mjs" >&2
             exit 1
