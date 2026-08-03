@@ -1590,7 +1590,14 @@
       h('span', { key: 'r', className: 'text-body text-on-surface-variant' }, rango),
       h('span', { key: 't', className: 'font-headline text-body text-primary' }, tasa + '%'),
     ]);
+    // Una escalera que no sube significa que la politica vigente NO es la que se
+    // cree tener. Paso justo eso: el porcentaje base persistido en la nube era
+    // mayor que las tasas de los tramos, y la guarda que impide que un tramo
+    // pague menos que el anterior la aplanaba en silencio. Ahora se dice.
+    const asciende = pol.goalPct > pol.basePct && pol.surplusPct > pol.goalPct;
     return h('div', { 'data-testid': 'commission-ladder-preview', className: 'mt-5 p-5 rounded-lg bg-surface-container-low border border-outline-variant' }, [
+      !asciende ? h('div', { key: 'w', 'data-testid': 'commission-ladder-warning', className: 'mb-3 p-3 rounded border border-danger/40 bg-danger/5 text-caption' },
+        `La escalera no sube: ${pol.basePct}% / ${pol.goalPct}% / ${pol.surplusPct}%. Un tramo nunca paga menos que el anterior, así que todos cobran ${pol.surplusPct}%. Revisa que la tasa de meta sea mayor que la base y la de excedente mayor que la de meta.`) : null,
       h('div', { key: 'h', className: 'text-overline uppercase font-bold text-on-surface-variant tracking-widest mb-2' },
         meta > 0 ? 'Ejemplo con una meta de ' + dinero(meta) : 'Sin meta configurada'),
       meta > 0

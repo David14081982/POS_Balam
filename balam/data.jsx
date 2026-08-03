@@ -1001,11 +1001,14 @@
     const from = Math.max(0, Number(priorBase) || 0);
     const amount = Math.max(0, Number(base) || 0);
     const meta = Math.max(0, Number(p.meta) || 0);
+    // El porcentaje que se congela es la TASA APLICADA, no una deducida del
+    // importe. Dividir el dinero ya redondeado entre la base devolvia 2.9999 %
+    // para un 3 % limpio, y ese numero acababa impreso en el documento.
     const flat = () => {
       const monto = cents(amount * (Number(p.basePct) || 0) / 100);
       return {
         monto,
-        pctEfectivo: amount > 0 ? pct2(monto * 100 / amount) : pct2(p.basePct),
+        pctEfectivo: pct2(p.basePct),
         tramos: amount > 0
           ? [{ pct: pct2(p.basePct), base: cents(amount), monto, desde: cents(from), hasta: cents(from + amount) }]
           : [],
@@ -1030,7 +1033,14 @@
       monto = cents(monto + parcial);
       cursor += trozo; restante -= trozo;
     }
-    return { monto, pctEfectivo: pct2(monto * 100 / amount), tramos };
+    // Media ponderada de las tasas REALMENTE aplicadas, por base de cada tramo.
+    // Con un solo tramo devuelve la tasa exacta; con varios, la mezcla correcta.
+    // Nunca se deriva del importe redondeado (ver `flat`).
+    const baseTotal = tramos.reduce((a, t) => a + t.base, 0);
+    const ponderada = baseTotal > 0
+      ? tramos.reduce((a, t) => a + t.base * t.pct, 0) / baseTotal
+      : Number(p.basePct) || 0;
+    return { monto, pctEfectivo: pct2(ponderada), tramos };
   }
 
   // Base comisionable que un vendedor lleva acumulada en el periodo vigente,

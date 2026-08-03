@@ -111,6 +111,30 @@ ck('la seccion de Vendedores es alcanzable', dom.pestana);
 ck('la vista previa de la escalera se renderiza', dom.preview);
 ck('sin errores de pagina', errores.length === 0, errores.join(' | '));
 
+// 8) La politica es un DATO persistido: cambiar el valor por defecto del codigo
+//    NO cambia nada en una instalacion que ya lo tiene guardado. Este guardian
+//    exige que la migracion siembre exactamente lo que el codigo declara. Es la
+//    comprobacion que faltaba: la escalera se cambio en config.jsx y en
+//    produccion siguio valiendo 5, asi que la politica autorizada no estaba en
+//    vigor pese a que todas las pruebas pasaban.
+const cfg = fs.readFileSync(path.join(ROOT, 'balam/config.jsx'), 'utf8');
+const mig = fs.readdirSync(path.join(ROOT, 'supabase/migrations'))
+  .filter(f => f.includes('h69'))
+  .map(f => fs.readFileSync(path.join(ROOT, 'supabase/migrations', f), 'utf8'))
+  .join('\n');
+const declarado = k => {
+  const m = cfg.match(new RegExp(`'commission\\.${k}':\\s*([0-9.]+)`));
+  return m ? m[1] : null;
+};
+[['basePct', 3], ['goalPct', 4], ['surplusPct', 5], ['surplusThresholdPct', 120]].forEach(([k, esperado]) => {
+  const dec = declarado(k);
+  ck(`config.jsx declara commission.${k} = ${esperado}`, Number(dec) === esperado, dec);
+  ck(`alguna migracion siembra commission.${k} en pos.settings`,
+    new RegExp(`'commission\\.${k}'`).test(mig) && mig.includes('pos.settings'));
+});
+ck('alguna migracion fija commission.base = neto',
+  /'commission\.base'/.test(mig) && /"neto"/.test(mig));
+
 await browser.close(); server.close();
 console.log(`\n════════ ${pass} pasaron, ${fail} fallaron ════════`);
 process.exit(fail ? 1 : 0);
