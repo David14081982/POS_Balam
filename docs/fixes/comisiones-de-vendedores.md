@@ -182,6 +182,24 @@ no con `grep`: la escalera es 3/4/5 con umbral 120 %, un perfil sin decision
 explicita resuelve el 3 % general, una venta de un alta nueva registra $30 sobre
 $1,000 de base y congela su desglose por vendedor. Cero errores de pagina.
 
+## Enmienda (03/08/2026) · la escalera era editable a medias
+
+Al preguntar el dueño dónde se editan las tres tasas se detectó un hueco de la
+entrega: sólo `commission.basePct` estaba en pantalla. El 4 %, el 5 % y el
+umbral del 120 % existían como ajustes con valor por defecto y **ninguna pantalla
+los exponía**, que es exactamente la forma del defecto que H-69 corrige.
+
+- `Configuración → Vendedores → Comisiones` muestra ahora las cuatro tasas
+  —base, meta, excedente y umbral— con una vista previa de la escalera resultante
+  calculada por `DATA.resolveSellerCommission()`, no por la pantalla.
+- `commission.monthlyGoal` deja de ser inerte: prellena la meta de un alta nueva.
+- `commission.bonus` se conserva pero se declara en pantalla como informativo,
+  porque la política vigente no paga bono automático. Un control que no hace nada
+  y no lo dice es lo que originó esta historia.
+- `test-h69-commission-settings.mjs` (16/16) recorre la pantalla real, navega por
+  `data-testid` y comprueba que editar una tasa **cambia el importe cobrado**,
+  no sólo que el campo existe.
+
 ## Riesgo residual y pendientes
 
 1. **La posición en la escalera se deriva localmente.** `sellerPeriodBase()` suma

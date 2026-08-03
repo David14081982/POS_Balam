@@ -1086,10 +1086,22 @@
     vendedores: () => [
       h(GlassCard, { key: 'com', className: 'p-6' }, [
         h(SerifHeading, { key: 't', className: 'mb-4', children: 'Comisiones' }),
+        h('p', { key: 'i', className: 'text-caption text-on-surface-variant mb-4 leading-relaxed' },
+          'Escalera de la tienda. Los tres porcentajes son POR TRAMOS: cada peso vendido se paga a la tasa del tramo donde cae, así que una venta ya cobrada nunca se recalcula. Un vendedor sin meta mensual cobra la tasa base plana.'),
         h('div', { key: 'g', className: 'grid grid-cols-1 md:grid-cols-3 gap-x-6' }, [
           h(CfgText, { key: 'b', k: 'commission.basePct', label: 'Comisión base (%)', type: 'number' }),
-          h(CfgText, { key: 'm', k: 'commission.monthlyGoal', label: 'Meta mensual ($)', type: 'number' }),
+          h(CfgText, { key: 'gp', k: 'commission.goalPct', label: 'Al alcanzar la meta (%)', type: 'number' }),
+          h(CfgText, { key: 'sp', k: 'commission.surplusPct', label: 'Sobre el excedente (%)', type: 'number' }),
+        ]),
+        h('div', { key: 'g2', className: 'grid grid-cols-1 md:grid-cols-3 gap-x-6' }, [
+          h(CfgText, { key: 'st', k: 'commission.surplusThresholdPct', label: 'El excedente empieza en (% de la meta)', type: 'number' }),
+          h(CfgText, { key: 'm', k: 'commission.monthlyGoal', label: 'Meta mensual sugerida ($)', type: 'number' }),
+        ]),
+        h(LadderPreview, { key: 'lp' }),
+        h('div', { key: 'bono', className: 'mt-6 pt-6 border-t border-outline-variant' }, [
           h(CfgText, { key: 'o', k: 'commission.bonus', label: 'Bono al superar meta ($)', type: 'number' }),
+          h('p', { key: 'n', className: 'text-caption text-on-surface-variant mt-1' },
+            'Informativo: la política vigente no paga bono automático. El importe queda guardado para cuando se defina esa regla.'),
         ]),
         h(CfgSeg, {
           key: 'base', k: 'commission.base',
@@ -1405,7 +1417,10 @@
       // conserva la cadena vacía y no se normaliza a cero en el formulario.
       commissionOverridePct: user && user.commissionOverridePct != null ? String(user.commissionOverridePct) : '',
       sellerLevelCode: user && user.sellerLevelCode != null ? String(user.sellerLevelCode) : '',
-      metaMes: user ? String(Number(user.metaMes) || 0) : '0',
+      // H-69: un alta nueva parte de la meta sugerida de la tienda; editarla es
+      // un campo mas de la ficha. Asi `commission.monthlyGoal` deja de ser un
+      // ajuste sin consumidor, que fue justo el defecto que se corrigio.
+      metaMes: user ? String(Number(user.metaMes) || 0) : String(Number(C.get('commission.monthlyGoal')) || 0),
     });
     const set = (k, v) => setF(p => ({ ...p, [k]: v }));
     const fileRef = React.useRef(null);
@@ -1561,6 +1576,32 @@
           ]),
         ]),
       ]));
+  }
+
+  // Vista previa de la escalera de la tienda. Los numeros los resuelve la MISMA
+  // autoridad que cobra: si la pantalla los dedujera por su cuenta, volveria a
+  // haber dos respuestas para la misma pregunta (R-DOM-01).
+  function LadderPreview() {
+    const meta = Number(C.get('commission.monthlyGoal')) || 0;
+    const pol = D.resolveSellerCommission({ commissionPolicyVersion: 1, metaMes: meta });
+    const umbral = meta > 0 ? Math.round(meta * pol.surplusThresholdPct / 100) : 0;
+    const dinero = n => '$' + (Number(n) || 0).toLocaleString('es-MX');
+    const fila = (rango, tasa) => h('div', { key: rango, className: 'flex justify-between py-1.5' }, [
+      h('span', { key: 'r', className: 'text-body text-on-surface-variant' }, rango),
+      h('span', { key: 't', className: 'font-headline text-body text-primary' }, tasa + '%'),
+    ]);
+    return h('div', { 'data-testid': 'commission-ladder-preview', className: 'mt-5 p-5 rounded-lg bg-surface-container-low border border-outline-variant' }, [
+      h('div', { key: 'h', className: 'text-overline uppercase font-bold text-on-surface-variant tracking-widest mb-2' },
+        meta > 0 ? 'Ejemplo con una meta de ' + dinero(meta) : 'Sin meta configurada'),
+      meta > 0
+        ? h('div', { key: 'b', className: 'divide-y divide-outline-variant' }, [
+          fila('De $0 a ' + dinero(meta), pol.basePct),
+          fila('De ' + dinero(meta) + ' a ' + dinero(umbral), pol.goalPct),
+          fila('Más de ' + dinero(umbral), pol.surplusPct),
+        ])
+        : h('p', { key: 'b', className: 'text-body text-on-surface-variant' },
+          'Quien no tenga meta en su ficha cobra ' + pol.basePct + '% plano. La meta de cada persona se pone en Configuración → Usuarios.'),
+    ]);
   }
 
   // ── H-69 · Comisión del vendedor en el alta/edición ───────────────────────────
