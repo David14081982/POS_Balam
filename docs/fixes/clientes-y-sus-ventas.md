@@ -3,7 +3,11 @@
 **Riesgo:** H-70
 **Estado:** RESUELTO
 **Fecha:** 03/08/2026
-**Commit:** Pendiente de commit
+**Commit:** `a753e9c`
+**Artefacto publicado:** sha256
+`dabdf17008d56d977adee75c14f9d6bf80a7e7943eca4fd1045b11107543a9c2`
+(8 833 276 bytes), idéntico byte a byte al `index.html` del commit y verificado
+por ejecución en `https://david14081982.github.io/POS_Balam/`.
 
 ## Problema y reproducción
 
@@ -169,6 +173,25 @@ precio-talla-e2e 19/19 · variant-price 38/38 · h59-size-persistence 12/12
 dos corridas aisladas con estas mismas fuentes: su heurística de lector usa una
 ventana de 50 ms por carácter y es sensible a la carga de la máquina, no a este
 cambio.
+
+**Verificación del artefacto publicado.**
+
+```
+node verify-h70-publicado.mjs      9/9
+```
+
+No inspecciona el archivo: lo descarga del sitio, comprueba que su sha256 es el
+del blob del commit y le pregunta al programa en ejecución. Confirma que
+`DATA.clientSalesSummary`, `DATA.clientSalesSummaries`, `DATA.updateClient` y
+`STORE.pushClient` existen y responden, siembra un cliente con dos ventas por las
+autoridades reales del paquete servido, apaga los contadores desnormalizados
+—el peor caso real— y lee la tabla, los KPI y el cajón por sus `data-testid`:
+**2 compras, $2,000 gastados, última visita 01/08/26 y los dos folios en el
+historial**. Evidencia visual en `.evidence-h70/clientes-con-sus-ventas.png`.
+
+La producción exige iniciar sesión, así que el recorrido por menú no llega a
+Clientes sin credenciales; por eso el guion monta `window.ClientsScreen` del
+mismo paquete servido. Lo auditado es el código publicado, no una copia local.
 
 ## Riesgo residual y pendientes
 

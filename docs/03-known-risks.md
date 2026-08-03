@@ -3585,7 +3585,12 @@ ni perdida. Cancelar una venta o un cambio sigue sin operacion de negocio.
 
 **Estado:** RESUELTO
 **Fecha de registro:** 03/08/2026
-**Commit:** Pendiente de commit
+**Commit:** `a753e9c`
+**Artefacto publicado:** sha256
+`dabdf17008d56d977adee75c14f9d6bf80a7e7943eca4fd1045b11107543a9c2`
+(8 833 276 bytes), idéntico byte a byte al `index.html` del commit y verificado
+por ejecución sobre `https://david14081982.github.io/POS_Balam/`
+(`verify-h70-publicado.mjs` 9/9).
 **Origen:** reporte del dueño del producto: clientes con ventas reales aparecían
 con «0 compras» y «$0».
 **Riesgo:** la ficha de cliente era inservible como CRM. El mostrador no podía
