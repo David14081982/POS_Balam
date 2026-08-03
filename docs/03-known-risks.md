@@ -3515,7 +3515,7 @@ seguridad, así que guardan referencias a folios ya borrados.
 **Estado:** RESUELTO
 **Fecha de registro:** 02/08/2026
 **Commit:** `54f7a9c` · enmienda `5b4196c`
-**Artefacto publicado:** sha256 `5e07144ebb3482dd18283f422d525a44425f6f53b01d24a895e00b4fb34aa0cd` (8 825 952 bytes), identico byte a byte al `index.html` del commit y verificado por ejecucion.
+**Artefacto publicado:** sha256 `59686a164b98677f6848289b3307bae4484b4d1d8894d38006f7a15491618ec5` (8 826 696 bytes), identico byte a byte al `index.html` del commit y verificado por ejecucion.
 **Evidencia:** auditoria sobre el motor real del artefacto publicado, con cuatro
 perfiles y dieciseis casos. Una venta de $1,160 con vendedor asignado registro
 `comision = 0`, y un perfil con `commissionOverridePct = 8` registro tambien `0`.
@@ -3562,6 +3562,16 @@ exige capacidad y es idempotente, que el trigger que protege los acumulados sigu
 en pie, que `authenticated` no puede insertar ajustes, y que no quedaron semillas.
 Las tres funciones `*_checked` se generaron desde su texto vigente con diff
 revisado bloque a bloque (`R-DB-03`, `AP-05`).
+**Enmienda 03/08/2026:** el 3 % autorizado no estaba en vigor. La escalera se
+cambio en el defecto del codigo, pero `CONFIG.load()` fusiona
+`Object.assign(defaults, nube)` y en `pos.settings` seguia `commission.basePct=5`
+con las tres claves nuevas ausentes, asi que la escalera se aplanaba a 5/5/5.
+`commission.base` estaba ademas en `bruto`, contra la autorizacion expresa de que
+el IVA no comisiona. Corregido con `20260803011300` y `20260803011400`, que
+siembran la politica como DATO con registro de reversion y promueven a version 1
+a todo perfil sin decision explicita sea cual sea su rol. Leccion incorporada al
+arnes: la migracion debe sembrar lo que el codigo declara, porque cambiar un
+valor por defecto ya persistido no cambia nada.
 **Pendiente:** aplicar -o no- el ajuste historico, que es decision del dueno;
 fijar metas mensuales para activar los tramos de 4 % y 5 %.
 **Riesgo residual:** la posicion en la escalera se deriva localmente, asi que dos

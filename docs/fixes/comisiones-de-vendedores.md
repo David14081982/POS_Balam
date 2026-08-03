@@ -172,8 +172,8 @@ funciones grandes no se tocaron.
 
 Artefacto publicado en GitHub Pages y verificado byte a byte (`R-DEL-07`):
 
-    sha256  5e07144ebb3482dd18283f422d525a44425f6f53b01d24a895e00b4fb34aa0cd
-    bytes   8 825 952
+    sha256  59686a164b98677f6848289b3307bae4484b4d1d8894d38006f7a15491618ec5
+    bytes   8 826 696
 
 El archivo servido por `https://david14081982.github.io/POS_Balam/index.html`
 coincide exactamente con el `index.html` del commit `54f7a9c` · enmienda `5b4196c`. La comprobacion
@@ -199,6 +199,54 @@ los exponía**, que es exactamente la forma del defecto que H-69 corrige.
 - `test-h69-commission-settings.mjs` (16/16) recorre la pantalla real, navega por
   `data-testid` y comprueba que editar una tasa **cambia el importe cobrado**,
   no sólo que el campo existe.
+
+## Enmienda 2 (03/08/2026) · el 3 % nunca entro en vigor
+
+El dueño reportó una venta con el vendedor PRUEBA y comisión $0. La lectura de
+la base real —sonda de sólo lectura que aborta llevando los datos en el mensaje,
+única vía disponible porque `anon` recibe 401— devolvió:
+
+    PRUEBA | 8946790c-8cbc-45b0-ad50-0cb74a0b0126 | role=vendedor | active
+    comision_pct=0.00 | override=NULL | version=1 | nivel=NULL | meta=0.00
+    commission.basePct = 5      <-- el defecto anterior a H-69
+
+**El perfil estaba bien. La política de la tienda no.** La escalera se cambió en
+el valor por defecto de `balam/config.jsx`, pero los ajustes se persisten en
+`pos.settings` y `CONFIG.load()` los fusiona con
+`Object.assign({}, SEED_SETTINGS, next.settings)`: **lo persistido gana sobre el
+defecto**. `commission.basePct` seguía valiendo 5 —nadie lo editó nunca porque
+era un ajuste sin consumidor— y `goalPct`, `surplusPct` y `surplusThresholdPct`
+no existían. Con la guarda que impide que un tramo pague menos que el anterior,
+la escalera se aplanaba a **5/5/5**: la política autorizada no estaba en vigor
+pese a que las 88 pruebas pasaban, porque todas corrían sobre los defectos del
+código y ninguna miraba el dato persistido.
+
+La misma lectura encontró `commission.base = 'bruto'`, que contradice la
+autorización expresa («el IVA no comisiona»): sobre $1,150 pagaba $34.50 en vez
+de $29.74.
+
+**Corrección:**
+
+- `20260803011300` siembra la escalera 3/4/5/120 en `pos.settings` como dato, con
+  registro de reversión, y promueve a versión 1 a **todo** perfil sin decisión
+  explícita, sea cual sea su rol: la migración anterior filtraba por `vendedor` y
+  dejaba a los administradores en versión 0, una trampa para el día que uno pase
+  a vendedor.
+- `20260803011400` alinea `commission.base` a `neto`, guardando el valor previo.
+- El porcentaje congelado deja de deducirse del importe redondeado: registraba
+  `2.9999 %` para un 3 % limpio, y ese número acababa en el documento.
+- La vista previa de la escalera **denuncia** una escalera que no asciende en vez
+  de aplanarla en silencio.
+- Guardián nuevo en `test-h69-commission-settings.mjs`: la migración debe sembrar
+  exactamente lo que el código declara. Es la comprobación que faltaba.
+
+**Verificación:** `test-h69-prueba-e2e.mjs` (24/24) reproduce el perfil real de
+PRUEBA y la política real y comprueba el recorrido que pidió el dueño: la ficha
+dice 3 % antes de cobrar, la venta de $1,150 congela 3 % sobre base $991.38 y
+registra **$29.74**, sube `comision_acum`, Vendedores/detalle/Reportes dan la
+misma cifra, otra terminal resuelve igual y el reintento no duplica.
+Comprobación visual sobre el artefacto **descargado de producción**: la tarjeta
+de PRUEBA muestra «Comisión 3 % · Porcentaje base de la tienda».
 
 ## Riesgo residual y pendientes
 
