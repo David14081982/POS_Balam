@@ -3514,8 +3514,8 @@ seguridad, así que guardan referencias a folios ya borrados.
 
 **Estado:** RESUELTO
 **Fecha de registro:** 02/08/2026
-**Commit:** `54f7a9c`
-**Artefacto publicado:** sha256 `370a3ee1e7bb1d65fb8934b341af33765f2736403963b15325f10ff2b95baab8` (8 824 948 bytes), identico byte a byte al `index.html` del commit y verificado por ejecucion.
+**Commit:** `54f7a9c` · enmienda `5b4196c`
+**Artefacto publicado:** sha256 `5e07144ebb3482dd18283f422d525a44425f6f53b01d24a895e00b4fb34aa0cd` (8 825 952 bytes), identico byte a byte al `index.html` del commit y verificado por ejecucion.
 **Evidencia:** auditoria sobre el motor real del artefacto publicado, con cuatro
 perfiles y dieciseis casos. Una venta de $1,160 con vendedor asignado registro
 `comision = 0`, y un perfil con `commissionOverridePct = 8` registro tambien `0`.

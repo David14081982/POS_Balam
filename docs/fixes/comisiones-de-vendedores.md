@@ -3,7 +3,7 @@
 **Riesgo:** H-69
 **Estado:** RESUELTO
 **Fecha:** 02/08/2026
-**Commit:** `54f7a9c`
+**Commit:** `54f7a9c` · enmienda `5b4196c`
 
 ## Problema y reproducción
 
@@ -172,11 +172,11 @@ funciones grandes no se tocaron.
 
 Artefacto publicado en GitHub Pages y verificado byte a byte (`R-DEL-07`):
 
-    sha256  370a3ee1e7bb1d65fb8934b341af33765f2736403963b15325f10ff2b95baab8
-    bytes   8 824 948
+    sha256  5e07144ebb3482dd18283f422d525a44425f6f53b01d24a895e00b4fb34aa0cd
+    bytes   8 825 952
 
 El archivo servido por `https://david14081982.github.io/POS_Balam/index.html`
-coincide exactamente con el `index.html` del commit `54f7a9c`. La comprobacion
+coincide exactamente con el `index.html` del commit `54f7a9c` · enmienda `5b4196c`. La comprobacion
 funcional se hizo **cargando el paquete servido y preguntandole por ejecucion**,
 no con `grep`: la escalera es 3/4/5 con umbral 120 %, un perfil sin decision
 explicita resuelve el 3 % general, una venta de un alta nueva registra $30 sobre
