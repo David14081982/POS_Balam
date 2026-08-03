@@ -50,7 +50,7 @@ reviews:
         según ADR-006 (local-first), ADR-007 (cero red en runtime) y ADR-008
         (el artefacto generado no es fuente). Vigilar regresiones en la
         sincronización y en la durabilidad de la cola.
-    - path: "**/*.mjs"
+    - path: "**/test-*.mjs"
       instructions: >-
         Tratar los archivos test-*.mjs como red de regresión. Una prueba
         modificada o debilitada es un hallazgo relevante. No declarar aprobada
