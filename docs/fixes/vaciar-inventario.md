@@ -3,7 +3,14 @@
 **Riesgo:** H-76
 **Estado:** RESUELTO — publicado; ejecución en producción pendiente del dueño
 **Fecha:** 04/08/2026
-**Commit:** Pendiente de commit
+**Commit:** `8815aea`
+**Artefacto publicado:** sha256
+`3de3c685a6bc081b9b3090831c7329f4ecc8af5e716f9a201949766613198cdb`
+(8 848 852 bytes), idéntico byte a byte al `index.html` del commit y verificado
+por ejecución sobre `https://david14081982.github.io/POS_Balam/`
+(`verify-h76-publicado.mjs` 13/13: la autoridad viaja en el artefacto, el
+apartado vivo bloquea sin borrar nada, el vaciado deja la configuración
+intacta, y la tarjeta real nace con el borrado bloqueado hasta el respaldo).
 
 ## Problema y reproducción
 

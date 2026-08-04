@@ -3885,7 +3885,11 @@ correccion es su precondicion.
 
 **Estado:** RESUELTO
 **Fecha de registro:** 04/08/2026
-**Commit:** Pendiente de commit
+**Commit:** `8815aea`
+**Artefacto publicado:** sha256
+`3de3c685a6bc081b9b3090831c7329f4ecc8af5e716f9a201949766613198cdb`
+(8 848 852 bytes), verificado por ejecución sobre
+`https://david14081982.github.io/POS_Balam/` (`verify-h76-publicado.mjs` 13/13).
 **Origen:** el dueño del producto necesita borrar los 239 productos actuales para
 subir un inventario nuevo desde cero.
 **Riesgo:** el producto no ofrecía ninguna ruta correcta y las tres disponibles
