@@ -3179,6 +3179,36 @@
     return clientSalesSummaries()[id] || EMPTY_SUMMARY();
   }
 
+  // H-71 · ¿A qué producto pertenece este renglón devuelto?
+  // La pantalla de Devoluciones envía renglones SIN identidad —sólo sku, talla y
+  // cantidad—, así que la identidad se toma del renglón CONGELADO en la venta,
+  // que desde H-32 guarda `productId`. El SKU se conserva únicamente como puente
+  // para documentos históricos y sólo cuando identifica un producto único.
+  // No reimplementa la regla: consume la autoridad de H-65 y sólo traduce el
+  // mensaje al vocabulario de la devolución, conservando su `code` (R-DOM-01).
+  const RETURN_IDENTITY_MESSAGE = {
+    PRODUCT_SKU_AMBIGUOUS: sku => `El SKU ${sku} corresponde a más de un producto: esta devolución no puede saber a cuál regresar la pieza. Corrige el SKU duplicado en Inventario.`,
+    PRODUCT_NOT_FOUND: sku => `El producto del SKU ${sku} ya no está en el catálogo; no se puede regresar la pieza al inventario. Resincroniza o restitúyelo antes de devolver.`,
+  };
+  function resolveReturnProduct(sale, line) {
+    const sold = (sale.lineas || []).find(x => x.sku === line.sku && x.talla === line.talla);
+    const productId = (line && line.productId) || (sold && sold.productId) || '';
+    try {
+      return resolveLayawayProduct({ productId, sku: line && line.sku });
+    } catch (e) {
+      // La autoridad de H-65 codifica los fallos del puente por SKU; un
+      // `productId` congelado que ya no existe en el catálogo llega sin código y
+      // significa exactamente lo mismo para una devolución: no hay a dónde
+      // regresar la pieza.
+      const code = e.code || 'PRODUCT_NOT_FOUND';
+      const build = RETURN_IDENTITY_MESSAGE[code];
+      if (!build) throw e;
+      const error = new Error(build(String((line && line.sku) || '—')));
+      error.code = code;
+      throw error;
+    }
+  }
+
   function recordReturn({ folio, lineas, metodo, notas, fecha: fechaIn }) {
     const sale = sales.find(s => s.folio === folio);
     if (!sale) return { ok: false, error: 'No se encontró la venta original' };
@@ -3190,13 +3220,15 @@
     }
     const items = (lineas || []).filter(l => (Number(l.qty) || 0) > 0);
     if (!items.length) return { ok: false, error: 'Selecciona al menos un artículo y cantidad a devolver' };
+    // H-71: la identidad de CADA renglón se resuelve ANTES de tocar nada. Un
+    // renglón irresoluble aborta la devolución entera: reembolsar sin poder
+    // restituir la pieza deja el inventario corto y en silencio.
+    let resolvedProducts;
     try {
-      assertLayawayProductsUnlocked(items.map(line => {
-        const sold = (sale.lineas || []).find(x => x.sku === line.sku && x.talla === line.talla);
-        const product = products.find(p => p.id === (line.productId || (sold && sold.productId)))
-          || products.find(p => p.sku === line.sku);
-        return product && product.id;
-      }));
+      resolvedProducts = items.map(line => resolveReturnProduct(sale, line));
+    } catch (e) { return { ok: false, error: e.message, code: e.code }; }
+    try {
+      assertLayawayProductsUnlocked(resolvedProducts.map(product => product.id));
     } catch (e) { return { ok: false, error: e.message, code: e.code }; }
     // H-35: el disponible lo decide la autoridad única, que ya descuenta
     // devoluciones previas y, cuando existan, los cambios de esta venta.
@@ -3211,13 +3243,12 @@
     const sellerEffects = [];
     let clientEffect = null;
     // 1) Reingreso de stock + movimiento 'Devolución' (cant positiva)
-    items.forEach(l => {
-      const p = products.find(x => x.sku === l.sku);
-      if (p) {
-        const e = stockVariantOf(p, l.talla);
-        if (e) e.stock = (Number(e.stock) || 0) + (Number(l.qty) || 0);
-        stockLines.push({ product_id: p.id, talla: l.talla, qty: Number(l.qty) || 0 });
-      }
+    items.forEach((l, i) => {
+      // H-71: el producto ya viene resuelto por identidad; aquí no se busca nada.
+      const p = resolvedProducts[i];
+      const e = stockVariantOf(p, l.talla);
+      if (e) e.stock = (Number(e.stock) || 0) + (Number(l.qty) || 0);
+      stockLines.push({ product_id: p.id, talla: l.talla, qty: Number(l.qty) || 0 });
       movements.unshift({ fecha, tipo: 'Devolución', producto: l.nombre, sku: l.sku, cant: Number(l.qty) || 0, ref: folio });
     });
     saveProducts(false); saveMovements();
@@ -3302,10 +3333,12 @@
       // H-69: lo que esta devolucion revirtio, por vendedor. Es la contrapartida
       // congelada de `sale.comisiones` y lo que los reportes restan.
       comisiones: comisionesRevertidas,
-      lineas: items.map(l => {
-        const p = products.find(x => x.sku === l.sku);
-        return { productId: p ? p.id : undefined, sku: l.sku, nombre: l.nombre, talla: l.talla, qty: Number(l.qty) || 0, motivo: l.motivo || '', precio: linePrice(l) };
-      }),
+      // H-71: el documento congela la identidad que se resolvió al abrir la
+      // devolución, no la que un SKU repetido devolvería hoy.
+      lineas: items.map((l, i) => ({
+        productId: resolvedProducts[i].id, sku: l.sku, nombre: l.nombre, talla: l.talla,
+        qty: Number(l.qty) || 0, motivo: l.motivo || '', precio: linePrice(l),
+      })),
     };
     returns.unshift(ret);
     saveReturns();

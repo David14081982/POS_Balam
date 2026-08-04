@@ -71,6 +71,7 @@ sesión de chat.
 | `liquidacion-apartado-autoridad-stock.md` | H-65 | Liquidación atómica e idempotente con stock confirmado por el servidor |
 | `columnas-de-talla-en-excel.md` | H-67 | La columna de Excel se llama como la talla; las piezas se siguen localizando por la identidad interna |
 | `clientes-y-sus-ventas.md` | H-70 | Las compras de cada cliente se derivan de sus ventas por identidad, no de contadores desnormalizados |
+| `devolucion-por-identidad.md` | H-71 | La devolución restituye el inventario al producto congelado en la venta, y bloquea cuando no puede identificarlo |
 
 Documentación financiera relacionada, creada antes de este índice:
 

@@ -16,6 +16,17 @@ Reglas de mantenimiento en `../README.md` § Registro de autoridades.
 **Creada por:** H-35 · **Decisión:** `ADR-003`
 **Consumidores:** `grep -rn "sale_line_balance\|saleLineBalance" supabase/ balam/`
 
+## ¿A qué producto pertenece este renglón devuelto?
+**Autoridad:** `resolveReturnProduct(sale, line)` — interna a `balam/data.jsx`,
+como `resolveLayawayProduct`; no se exporta en `window.DATA`. Identidad tomada del
+renglón **congelado en la venta**; el SKU sólo adopta documentos históricos y
+únicamente si identifica un producto único. **Consume** `resolveLayawayProduct()`
+(H-65) en vez de reimplementar la regla: sólo traduce el mensaje y conserva su
+`code`. Sin identidad resoluble la devolución se rechaza entera
+**Definición:** `balam/data.jsx` · `docs/fixes/devolucion-por-identidad.md`
+**Creada por:** H-71 · **Decisiones:** `ADR-011`, `ADR-002`
+**Consumidores:** `grep -rn "resolveReturnProduct" balam/ test-*.mjs`
+
 ## ¿Qué valor histórico se le reconoce a la pieza que el cliente entrega?
 **Autoridad:** pendiente de implementar en C4 — una sola, consumida por SQL,
 cliente e interfaz. Debe resolver tanto piezas provenientes de `pos.sale_items`

@@ -3632,6 +3632,53 @@ cliente borrado no aparece en ninguna ficha, de forma deliberada.
 preexistente ajena a este trabajo.
 **Corrección documentada:** `docs/fixes/clientes-y-sus-ventas.md`.
 
+## H-71 - La devolución restituía el inventario por SKU y podía no restituirlo
+
+**Estado:** RESUELTO
+**Fecha de registro:** 03/08/2026
+**Commit:** Pendiente de commit
+**Origen:** auditoría del sistema de impresión y del ciclo de vida del SKU
+solicitada por el dueño del producto; defectos D-1 y D-2 de ese informe.
+**Riesgo:** pérdida de inventario real, silenciosa y sin rastro. `recordReturn`
+localizaba el producto al que regresar la pieza con
+`products.find(x => x.sku === l.sku)` y protegía la escritura con un `if (p)` sin
+`else`. Si el SKU del producto había cambiado después de la venta, la devolución
+se aceptaba, se reembolsaba el dinero y **las existencias no se movían**
+(medido: 19 → 19 con $2 000 reembolsados). Si dos productos compartían SKU, la
+pieza se acreditaba **al artículo ajeno** (clon 3 → 4, vendido 19 → 19). El
+documento de devolución congelaba además un `productId` equivocado o ninguno, de
+modo que el error se propagaba a la nube y a los reportes.
+**Causa raíz:** el SKU no es identidad (`ADR-011`) y el renglón de venta ya
+congela `productId` desde H-32, pero `recordReturn` nunca lo consultaba para
+mover existencias. La pantalla de Devoluciones envía renglones sin identidad, así
+que la única fuente legítima era el renglón congelado en la venta. Contribuyó la
+ausencia de atomicidad: las existencias se mutaban en el mismo recorrido que
+resolvía el producto. La corrección correcta ya existía en el repositorio
+—`resolveLayawayProduct()`, creada por H-65— y nunca se propagó a devoluciones.
+**Solución:** `resolveReturnProduct(sale, line)` en `balam/data.jsx`, que toma la
+identidad del renglón congelado en la venta y **consume** la autoridad de H-65 en
+vez de reimplementarla, traduciendo sólo el mensaje y conservando su `code`.
+`recordReturn` resuelve todos los renglones antes de tocar nada y rechaza la
+devolución entera —sin mover stock, sin reembolsar y sin documento— cuando algún
+renglón es ambiguo o su producto ya no existe. `resolveLayawayProduct` no se
+modificó: H-65, H-66, H-69 y H-70 quedan intactas. Ninguna venta ni devolución
+histórica se migró. Compatibilidad conservada: una venta legada sin `productId`
+se devuelve por SKU mientras sea inequívoco.
+**Pruebas:** `test-h71-devolucion-identidad.mjs` **29/29** sobre `index.html`
+(reproducción roja previa: **11 pasaron, 18 fallaron**). Regresión en verde:
+devoluciones 17/17, saldo por renglón 38/38, H-65 35/35 y 28/28, cambios 28/28 y
+32/32, coherencia de venta 20/20, comisiones H-69 88/88 y 10/10, clientes H-70
+39/39, cola 155/155, contratos 41/41, smoke 15/15, navegación 15/15, ticket
+impreso 23/23, build 8/8, y `test-ux-metrics.mjs` sin retroceso (11
+interacciones, 2 validaciones).
+**Riesgo residual:** tres huecos de la misma familia quedan **fuera de alcance** y
+registrados (`R-DOM-05`): `stockVariantOf()` sigue saltándose la restitución en
+silencio si el código de talla del renglón ya no existe en el catálogo; el pull
+de devoluciones de `balam/store.jsx` descarta `product_id`; y `recordExchange`
+conserva el respaldo `x.sku === l.sku` con `find()`. `test-concurrency.mjs` y
+`test-reset-propaga.mjs` fallan también en `HEAD`: deuda preexistente ajena.
+**Corrección documentada:** `docs/fixes/devolucion-por-identidad.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:
