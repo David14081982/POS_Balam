@@ -3,7 +3,12 @@
 **Riesgo:** H-72
 **Estado:** RESUELTO
 **Fecha:** 03/08/2026
-**Commit:** Pendiente de commit
+**Commit:** `fd13854`
+**Artefacto publicado:** sha256
+`1eed702ef8740548e191c099e67e73f1cdbcb4e5a85a754196d8b0372e55f173`
+(8 836 252 bytes), idéntico byte a byte al `index.html` del commit y verificado
+por ejecución sobre `https://david14081982.github.io/POS_Balam/`
+(`verify-h72-publicado.mjs` 10/10).
 
 ## Problema y reproducción
 

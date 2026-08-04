@@ -3688,7 +3688,11 @@ conserva el respaldo `x.sku === l.sku` con `find()`. `test-concurrency.mjs` y
 
 **Estado:** RESUELTO
 **Fecha de registro:** 03/08/2026
-**Commit:** Pendiente de commit
+**Commit:** `fd13854`
+**Artefacto publicado:** sha256
+`1eed702ef8740548e191c099e67e73f1cdbcb4e5a85a754196d8b0372e55f173`
+(8 836 252 bytes), verificado por ejecución sobre
+`https://david14081982.github.io/POS_Balam/` (`verify-h72-publicado.mjs` 10/10).
 **Origen:** los tres huecos que H-71 registró fuera de alcance, más el defecto D-8
 del informe de auditoría, autorizados juntos por el dueño del producto por
 compartir causa.
