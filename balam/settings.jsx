@@ -367,6 +367,134 @@
     ]);
   }
 
+  // ── H-76 · Vaciar el inventario para reemplazarlo entero ─────────────────────
+  // La importación de Excel actualiza por SKU y nunca borra, así que subir un
+  // catálogo nuevo encima del viejo los mezcla. Aquí se vacía de una vez, con la
+  // cuenta a la vista y con las mismas guardas que la autoridad exige.
+  //
+  // El respaldo NO es un consejo: mientras no se exporte, el botón de borrar
+  // sigue bloqueado. Es la única defensa real de una acción irreversible.
+  function ClearInventoryCard() {
+    const [busy, setBusy] = useState(false);
+    const [respaldo, setRespaldo] = useState(false);
+    const [sesion, setSesion] = useState(null);   // null = aún no se sabe
+    const [resultado, setResultado] = useState(null);
+    useEffect(() => {
+      let vivo = true;
+      Promise.resolve(window.STORE && window.STORE.hasSession ? window.STORE.hasSession() : false)
+        .then(v => { if (vivo) setSesion(!!v); })
+        .catch(() => { if (vivo) setSesion(false); });
+      return () => { vivo = false; };
+    }, []);
+    const f = D.inventoryFootprint ? D.inventoryFootprint() : null;
+    if (!f) return null;
+    // Sin sesión el vaciado sería mentira: la nube conserva los productos y el
+    // siguiente arranque los vuelve a bajar. Se bloquea con su motivo.
+    const bloqueo = f.bloqueado || (sesion === false ? 'NO_SESSION' : null);
+    const MOTIVO = {
+      LAYAWAY_LOCK: 'Hay una liquidación de apartado pendiente de reconciliar. Espera a que se confirme.',
+      LAYAWAY_ACTIVE: `Hay ${N(f.apartados)} apartado(s) vivo(s): esas piezas están comprometidas con un cliente. Liquídalos o cancélalos en la pantalla Apartados y vuelve aquí.`,
+      QUEUE_PENDING: `Hay ${N(f.pendientes)} operación(es) sin subir a la nube. Conéctate y espera a que la cola quede vacía: una carga pendiente volvería a crear lo que borres.`,
+      EMPTY: 'El inventario ya está vacío. Importa el catálogo nuevo desde Inventario → Importar Excel.',
+      NO_SESSION: 'Inicia sesión antes de vaciar: sin sesión sólo se borraría esta computadora y la nube volvería a bajar los productos al siguiente arranque.',
+    };
+
+    function exportarRespaldo() {
+      try {
+        window.XLSXIO.exportInventory(D.products);
+        setRespaldo(true);
+      } catch (e) {
+        toast('No se pudo exportar el respaldo: ' + (e.message || e), 'var(--danger)');
+      }
+    }
+    function vaciar() {
+      if (!window.confirm(
+        'Se van a BORRAR los ' + f.productos + ' productos del inventario (' + f.piezas + ' piezas).\n\n' +
+        'Esto no se puede deshacer desde la app: se borran aquí y en la nube.\n\n' +
+        (f.documentosVivos > 0
+          ? 'Tus ventas y demás documentos NO se borran y conservan congelados el SKU, el nombre, la talla y el precio de cada prenda; sólo pierden la foto y el enlace al producto.\n\n'
+          : '') +
+        'Los catálogos, tallas, descuentos, vendedores, usuarios y permisos NO se tocan.\n\n' +
+        '¿Vaciar el inventario?')) return;
+      setBusy(true);
+      try {
+        const r = D.clearInventory();
+        setResultado(r);
+        if (r.ok) {
+          toast(`Inventario vaciado: ${r.borrados} producto(s) y ${r.piezas} pieza(s) retirados`, 'var(--accent)');
+          // Las pantallas montadas releen `D.products` con este evento — es el
+          // mismo aviso que emite el pull cuando el inventario cambia debajo.
+          window.dispatchEvent(new Event('configchange'));
+        } else {
+          toast(r.error, 'var(--danger)');
+        }
+      } catch (e) {
+        setResultado({ ok: false, error: e.message || 'No se pudo vaciar el inventario' });
+        toast(e.message || 'No se pudo vaciar el inventario', 'var(--danger)');
+      }
+      setBusy(false);
+    }
+
+    const aviso = (icon, texto, tono) => h('div', {
+      className: 'flex items-start gap-2 p-3 rounded-lg text-caption leading-relaxed ' + tono,
+    }, [h(MS, { key: 'i', name: icon, size: 16, className: 'shrink-0 mt-0.5' }), h('span', { key: 't' }, texto)]);
+
+    return h(GlassCard, { key: 'clearinv', className: 'p-5' }, [
+      h('div', { key: 'h', className: 'flex items-baseline justify-between mb-1' }, [
+        h(SerifHeading, { key: 't', children: 'Vaciar inventario' }),
+        h('span', { key: 'c', className: 'text-overline uppercase text-on-surface-variant' },
+          `${N(f.productos)} productos · ${N(f.piezas)} piezas`),
+      ]),
+      h('p', { key: 'd', className: 'text-caption text-on-surface-variant mb-4 leading-relaxed' },
+        'Borra TODOS los productos para subir un catálogo nuevo desde cero. Hace falta porque importar un Excel actualiza los productos que ya existen y agrega los que no: nunca borra, así que el catálogo viejo se quedaría mezclado con el nuevo. No se tocan los catálogos, las tallas, los descuentos, los vendedores ni los usuarios.'),
+      h('div', { key: 'body', className: 'space-y-4' }, [
+        f.documentosVivos > 0 && bloqueo !== 'EMPTY'
+          ? aviso('alert',
+              `Hay ${N(f.documentosVivos)} documento(s) que citan estos productos (${N(f.documentos.ventas)} venta(s), ` +
+              `${N(f.documentos.devoluciones)} devolución(es), ${N(f.documentos.cambios)} cambio(s), ` +
+              `${N(f.documentos.prestamos)} préstamo(s), ${N(f.documentos.movimientos)} movimiento(s)). ` +
+              'No se borran y siguen siendo explicables —cada venta guarda congelados el SKU, el nombre, la talla y el precio—, ' +
+              'pero perderán la foto y el enlace al producto. Si quieres empezar de cero del todo, borra primero los datos de prueba en «Datos de demostración».',
+              'bg-gold/5 border border-gold/30 text-on-surface-variant')
+          : null,
+        bloqueo
+          ? aviso('alert', MOTIVO[bloqueo], 'bg-danger-soft text-danger')
+          : aviso('alert', 'Esta acción no se puede deshacer desde la app. Exporta el respaldo primero: es la única forma de recuperar lo que borres.', 'bg-danger-soft text-danger'),
+        h('div', { key: 'act', className: 'flex justify-end gap-3 flex-wrap' }, [
+          h('button', {
+            key: 'bk', type: 'button', 'data-testid': 'vaciar-inventario-respaldo',
+            disabled: busy || f.productos === 0,
+            className: 'inline-flex items-center gap-2 px-4 h-10 border border-outline-variant text-on-surface text-caption font-bold uppercase tracking-widest rounded-lg hover:bg-surface-container transition disabled:opacity-40 disabled:cursor-not-allowed',
+            onClick: exportarRespaldo,
+          }, [h(MS, { key: 'i', name: respaldo ? 'check' : 'upload', size: 16 }), respaldo ? 'Respaldo exportado' : 'Exportar respaldo a Excel']),
+          h('button', {
+            key: 'go', type: 'button', 'data-testid': 'vaciar-inventario',
+            disabled: busy || !!bloqueo || !respaldo,
+            title: respaldo ? '' : 'Exporta el respaldo antes de borrar',
+            className: 'inline-flex items-center gap-2 px-4 h-10 bg-danger text-white text-caption font-bold uppercase tracking-widest rounded-lg hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed',
+            onClick: vaciar,
+          }, [h(MS, { key: 'i', name: busy ? 'clock' : 'trash', size: 16 }), busy ? 'Vaciando…' : 'Vaciar inventario']),
+        ]),
+      ]),
+      resultado ? h('div', {
+        key: 'res', 'data-testid': 'vaciar-inventario-informe',
+        className: 'mt-4 pt-4 border-t border-outline-variant/60 text-caption leading-relaxed ' + (resultado.ok ? 'text-on-surface' : 'text-danger'),
+      }, resultado.ok
+        ? [
+            h('p', { key: 'a', className: 'font-semibold text-primary mb-1' },
+              `Listo: se retiraron ${N(resultado.borrados)} productos y ${N(resultado.piezas)} piezas del inventario.`),
+            h('p', { key: 'b' },
+              `Renglones de existencias borrados: ${N(resultado.renglones)}. ` +
+              (resultado.configIntacta
+                ? 'Catálogos, tallas, precios, descuentos, vendedores, usuarios y permisos quedaron intactos.'
+                : 'ATENCIÓN: la huella de configuración cambió; revisa Configuración antes de seguir.')),
+            h('p', { key: 'c', className: 'mt-1 font-semibold' },
+              'Ahora importa el catálogo nuevo desde Inventario → Importar Excel.'),
+          ]
+        : h('p', {}, resultado.error)) : null,
+    ]);
+  }
+
   // ── Diagnóstico de catálogos: códigos huérfanos y nombres repetidos ───────────
   // Radiografía en vivo (se recalcula con cada configchange vía el bump de SettingsScreen):
   // muestra QUÉ productos apuntan a códigos que ya no existen en el catálogo y POR QUÉ no se
@@ -1227,6 +1355,7 @@
       h(CatalogEditor, { key: 'cc', kind: 'country_code', title: 'Códigos de país', codePlaceholder: '+52', labelPlaceholder: 'México (+52)' }),
     ],
     inventario: () => [
+      h(ClearInventoryCard, { key: 'vaciar' }),
       h(PhotoMigrationCard, { key: 'fotos' }),
       h(CatalogEditor, { key: 'mt', kind: 'movement_type', title: 'Tipos de movimiento', codePlaceholder: 'Entrada', labelPlaceholder: 'Entrada' }),
     ],

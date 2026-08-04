@@ -61,6 +61,17 @@ las tallas con existencias; no reimplementa la resolución
 **Creada por:** H-36 · **Decisión:** `ADR-009`
 **Consumidores:** `grep -rn "priceRange" balam/`
 
+## ¿Qué contiene el inventario y qué impide vaciarlo?
+**Autoridad:** `DATA.inventoryFootprint()` — productos, piezas, renglones,
+documentos que los citan, apartados, cola pendiente y el motivo de bloqueo.
+`DATA.clearInventory()` ejecuta el vaciado **delegando** en `removeProduct`: no es
+una segunda forma de borrar un producto
+**Definición:** `balam/data.jsx` · huella de lo conservado con
+`configFingerprint({ omitProductos: true })`
+**Creada por:** H-76 · **Decisión:** `ADR-002` (los documentos conservan su
+evidencia), `ADR-006` (la baja viaja por la cola)
+**Consumidores:** `grep -rn "inventoryFootprint\|clearInventory" balam/ test-*.mjs`
+
 ## ¿Hay inventario para esta venta?
 **Autoridad:** `pos.reserve_sale_stock()`, invocada dentro de `pos.commit_sale()`
 **Definición:** migraciones `20260725001700`, `20260725001800`

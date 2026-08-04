@@ -76,6 +76,7 @@ sesión de chat.
 | `comprobante-del-cambio.md` | H-73 | El comprobante decide su vocabulario por el tipo real de la operación, no por la presencia de la costura de pago |
 | `codigos-de-talla-reales.md` | H-74 | Los códigos de talla pasan a ser la talla real y todas sus referencias se migran en un solo acto verificado |
 | `cobro-del-cambio-por-forma-de-pago.md` | H-75 | La diferencia de un cambio se clasifica por su forma de pago real, no todo al cajón «otro» |
+| `vaciar-inventario.md` | H-76 | Vaciar el inventario entero para reemplazarlo, con respaldo obligatorio, guardas e invariante |
 
 Documentación financiera relacionada, creada antes de este índice:
 

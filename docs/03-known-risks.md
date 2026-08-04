@@ -3881,6 +3881,48 @@ es una pregunta abierta del reporte de ingresos. D-5 sigue pendiente; esta
 correccion es su precondicion.
 **Correccion documentada:** `docs/fixes/cobro-del-cambio-por-forma-de-pago.md`.
 
+## H-76 - No existía forma de reemplazar el catálogo completo
+
+**Estado:** RESUELTO
+**Fecha de registro:** 04/08/2026
+**Commit:** Pendiente de commit
+**Origen:** el dueño del producto necesita borrar los 239 productos actuales para
+subir un inventario nuevo desde cero.
+**Riesgo:** el producto no ofrecía ninguna ruta correcta y las tres disponibles
+llevaban a un estado peor. Importar el Excel nuevo ACTUALIZA por SKU y nunca
+borra, así que el catálogo viejo se queda mezclado con el nuevo y nadie lo nota
+hasta cobrar una prenda que ya no existe. «Borrar datos de prueba» conserva el
+inventario por diseño. Y borrar producto por producto son 239 operaciones sin
+cuenta previa, sin respaldo y sin garantía de terminar: interrumpirlas a la mitad
+deja un inventario que no es ni el viejo ni el nuevo.
+**Causa raíz:** contrato ausente (`FF-01`), no defecto. Nadie respondía «¿qué
+contiene el inventario y qué impide vaciarlo?». `removeProduct` ya hacía bien la
+baja de UN producto —local, `delete_product_checked` remoto y cola durable—, lo
+que faltaba era la decisión de conjunto: guardas, cuenta e invariante.
+**Solución:** `DATA.inventoryFootprint()` como autoridad de la pregunta y
+`DATA.clearInventory()`, que **no reimplementa el borrado**: delega en
+`removeProduct` producto a producto (`AP-01` evitado). Todo o nada en la decisión:
+las guardas se resuelven antes de tocar el primer producto y bloquean una
+liquidación de apartado sin reconciliar, un apartado vivo y una cola con
+operaciones sin subir; los documentos vivos se informan pero no bloquean, porque
+la venta congela su evidencia (`ADR-002`). En Configuración → Inventario, la
+tarjeta «Vaciar inventario» mantiene el botón de borrado deshabilitado hasta
+haber exportado el respaldo y hasta que haya sesión iniciada.
+`configFingerprint({ omitProductos: true })` demuestra que no cambió nada más.
+**Pruebas:** `test-h76-vaciar-inventario.mjs` **38/38** (previo **3 pasaron, 34
+fallaron**), con los tres bloqueos afirmados en los dos sentidos y el recorrido
+real por la pantalla. Regresión en verde: purga 53/53, reset 19/19, contratos
+41/41, cola 159/159, H-74 25/25, H-63 34/34, filtros de inventario 18/18, tallas
+9/9, permisos 21/21, capacidades 40/40, exportación 14/14, smoke 15/15,
+navegación 15/15, reproducibilidad 8/8, sitio publicado 17/17 y UX sin retroceso.
+**Riesgo residual:** no hay deshacer —el Excel de respaldo recrea productos con
+identidad nueva y obliga a reimprimir etiquetas—; las fotos y los códigos de
+barras ya subidos a Storage quedan huérfanos; el vaciado viaja producto a
+producto por la cola y no como una transacción remota con época propia (H-68), de
+modo que una terminal apagada no se entera hasta su siguiente pull; y las
+promociones con alcance por producto quedan apuntando a nada hasta que se editen.
+**Corrección documentada:** `docs/fixes/vaciar-inventario.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

@@ -3705,6 +3705,83 @@
     return true;
   }
 
+  // ── H-76 · Vaciar el inventario para reemplazarlo entero ────────────────────
+  // Reemplazar el catálogo completo no tenía autoridad. La importación de Excel
+  // ACTUALIZA por SKU y jamás borra (`inventory.jsx` § confirmImport), la purga de
+  // datos de prueba conserva el inventario por diseño (`resetTestData`), y quedaba
+  // borrar producto por producto: eso no es una operación, son N operaciones sin
+  // cuenta, sin respaldo y sin garantía de terminar.
+  //
+  // Vaciar NO reimplementa el borrado: cada producto sale por `removeProduct`, que
+  // ya es la autoridad de «cómo se borra un producto» —baja local, soft delete
+  // remoto por `delete_product_checked` y cola durable—. Esta función sólo añade lo
+  // que faltaba: las guardas, la cuenta y la invariante.
+  //
+  // La decisión es todo o nada: las guardas se resuelven ANTES de tocar el primer
+  // producto, porque medio inventario borrado es peor que ninguno.
+  const CLEAR_INVENTORY_ERROR = {
+    LAYAWAY_LOCK: 'Hay una liquidación de apartado pendiente de reconciliar. Hasta que se confirme no se puede saber si esa pieza salió del inventario.',
+    LAYAWAY_ACTIVE: 'Hay apartados vivos: esas piezas están comprometidas con un cliente. Liquídalos o cancélalos antes de vaciar el inventario.',
+    QUEUE_PENDING: 'Hay operaciones sin subir a la nube. Conéctate y espera a que la cola quede vacía: una carga pendiente de productos volvería a crear lo que acabas de borrar.',
+    EMPTY: 'El inventario ya está vacío: no hay nada que borrar.',
+  };
+  function inventoryFootprint() {
+    const documentos = liveDocumentCounts();
+    let pendientes = 0;
+    try {
+      const q = window.CORE.invokeSync('queueStatus');
+      pendientes = q && Array.isArray(q.operations) ? q.operations.length : 0;
+    } catch (e) { pendientes = 0; }
+    const apartados = sales.filter(s => s.estado === 'Apartado').length;
+    return {
+      productos: products.length,
+      piezas: totalPieces(),
+      renglones: products.reduce((n, p) => n + ((p.stock || []).length), 0),
+      // Documentos vivos: se INFORMAN, no bloquean. Una venta congela su SKU,
+      // nombre, talla y precio (`ADR-002`), así que el ticket sigue siendo
+      // explicable aunque el producto ya no exista.
+      documentos,
+      documentosVivos: documentos.ventas + documentos.devoluciones + documentos.cambios
+        + documentos.prestamos + documentos.movimientos + documentos.pagos,
+      apartados,
+      pendientes,
+      // Lo que NO se toca; el informe lo compara antes y después.
+      descuentos: promos.length,
+      vendedores: sellers.length,
+      // Sin los productos: son justo lo que este vaciado borra, así que
+      // compararlos no probaría nada. Lo que debe seguir idéntico es TODO lo demás.
+      configHuella: configFingerprint({ omitProductos: true }),
+      bloqueado: readLayawayProductLocks().length ? 'LAYAWAY_LOCK'
+        : apartados > 0 ? 'LAYAWAY_ACTIVE'
+          : pendientes > 0 ? 'QUEUE_PENDING'
+            : products.length === 0 ? 'EMPTY' : null,
+    };
+  }
+  function clearInventory() {
+    const antes = inventoryFootprint();
+    if (antes.bloqueado) {
+      return { ok: false, code: antes.bloqueado, error: CLEAR_INVENTORY_ERROR[antes.bloqueado], antes };
+    }
+    const ids = products.map(p => p.id);
+    const fallidos = [];
+    let borrados = 0;
+    ids.forEach(id => { if (removeProduct(id)) borrados++; else fallidos.push(id); });
+    const despues = inventoryFootprint();
+    // Invariante: no queda ningún producto y se borraron todos los que había. Si
+    // no cuadra se informa con los que sobrevivieron, nunca con un «listo».
+    if (despues.productos !== 0 || borrados !== antes.productos) {
+      return {
+        ok: false, code: 'INCOMPLETE', fallidos, borrados, restantes: despues.productos, antes, despues,
+        error: `Quedaron ${despues.productos} producto(s) sin borrar. Revisa Inventario antes de importar el catálogo nuevo.`,
+      };
+    }
+    return {
+      ok: true, borrados, piezas: antes.piezas, renglones: antes.renglones,
+      documentosVivos: antes.documentosVivos, antes, despues,
+      configIntacta: despues.configHuella === antes.configHuella,
+    };
+  }
+
   // Restaura el catálogo original de fábrica
   function resetProducts() {
     if (readLayawayProductLocks().length) return false;
@@ -4158,7 +4235,12 @@
   // Huella de TODO lo que la limpieza debe dejar idéntico. Excluye a propósito las
   // existencias (se restauran) y los acumulados del vendedor (se ponen en cero):
   // esas dos cosas tienen su propia comprobación numérica.
-  function configFingerprint() {
+  // H-76: `omitProductos` responde la MISMA pregunta —«¿cambió algo que no debía
+  // cambiar?»— sobre un vaciado de inventario, donde los productos son
+  // precisamente lo que cambia y compararlos no diría nada. No es una segunda
+  // huella: es la misma, sin la parte que la operación sí puede tocar.
+  function configFingerprint(opts) {
+    const omitProductos = !!(opts && opts.omitProductos);
     const productShape = p => ({
       id: p.id, sku: p.sku, cat: p.cat, manga: p.manga, tela: p.tela, color: p.color,
       cuello: p.cuello, modelo: p.modelo, nombre: p.nombre, orn: p.orn,
@@ -4178,7 +4260,7 @@
     let config = null;
     try { config = window.CONFIG && window.CONFIG.snapshot ? window.CONFIG.snapshot() : null; } catch (e) { config = null; }
     const canonical = JSON.stringify({
-      productos: products.map(productShape).sort((a, b) => String(a.id).localeCompare(String(b.id))),
+      productos: omitProductos ? null : products.map(productShape).sort((a, b) => String(a.id).localeCompare(String(b.id))),
       vendedores: sellers.map(sellerShape).sort((a, b) => String(a.id).localeCompare(String(b.id))),
       descuentos: promos.slice().sort((a, b) => String(a.id).localeCompare(String(b.id))),
       config,
@@ -4452,7 +4534,7 @@
   window.DATA = {
     products, sellers, clients, sales, movements, promos, liquidations, returns, payments, exchanges, loans,
     sku, regenerateSkus, totalStock, hydrate, mkStock, emptyStock, SIZE_MARK,
-    migrateSizeCodes, liveDocumentCounts,
+    migrateSizeCodes, liveDocumentCounts, inventoryFootprint, clearInventory,
     saveProducts, saveSellers, saveClients, saveSales, saveMovements, savePromos, saveReturns, savePayments,
     removeProduct, remapOrphanCodes, catalogHealthReport, hexForColorName, applyOrphanFix, get lastRemap() { return lastRemap; },
     addClient, updateClient, removeClient, clientSalesSummary, clientSalesSummaries,
