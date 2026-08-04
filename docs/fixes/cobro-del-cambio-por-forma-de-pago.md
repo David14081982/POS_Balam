@@ -3,7 +3,12 @@
 **Riesgo:** H-75
 **Estado:** RESUELTO
 **Fecha:** 03/08/2026
-**Commit:** Pendiente de commit
+**Commit:** `8f7da4e`
+**Artefacto publicado:** sha256
+`e00ba3bf03e6ece7853efe0ecc1099b14ae67264cfa1cd7a1a703aae3aa42cc5`
+(8 844 348 bytes), idéntico byte a byte al `index.html` del commit y verificado
+por ejecución sobre `https://david14081982.github.io/POS_Balam/`
+(`verify-h75-publicado.mjs` 8/8).
 
 ## Problema y reproducción
 

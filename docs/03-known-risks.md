@@ -3842,7 +3842,11 @@ volveria a ser una migracion.
 
 **Estado:** RESUELTO
 **Fecha de registro:** 03/08/2026
-**Commit:** Pendiente de commit
+**Commit:** `8f7da4e`
+**Artefacto publicado:** sha256
+`e00ba3bf03e6ece7853efe0ecc1099b14ae67264cfa1cd7a1a703aae3aa42cc5`
+(8 844 348 bytes), verificado por ejecucion sobre
+`https://david14081982.github.io/POS_Balam/` (`verify-h75-publicado.mjs` 8/8).
 **Origen:** hallazgo al disenar el reporte de ingresos por dia y forma de pago que
 pidio el dueno del producto; se corrige antes que el reporte, para no construirlo
 sobre un dato mal clasificado.
