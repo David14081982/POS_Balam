@@ -1,7 +1,7 @@
 # Los códigos de talla pasan a ser la talla real
 
 **Riesgo:** H-74
-**Estado:** RESUELTO — herramienta entregada; la ejecución sobre producción es del dueño
+**Estado:** RESUELTO — ejecutado en producción el 03/08/2026
 **Fecha:** 03/08/2026
 **Commit:** `070697b`
 **Artefacto publicado:** sha256
@@ -122,11 +122,28 @@ Regresión ejecutada, toda en verde:
     test-discounts 43/43 · test-smoke 15/15 · test-ui-navigation 15/15
     test-build-reproducibility 8/8 · test-ux-metrics sin retroceso
 
-## Riesgo residual y pendientes
+## Ejecución en producción
 
-- **La ejecución sobre producción no la hace esta sesión.** La base sólo acepta
-  escrituras de un administrador con sesión; el dueño pulsa el botón. La
-  herramienta comprueba sus premisas contra los datos reales en ese momento.
+El dueño del producto ejecutó la corrección el **03/08/2026** desde su terminal,
+con sesión de administrador, y confirma dos hechos observados:
+
+1. el botón completó la corrección;
+2. **las etiquetas impresas después ya salen con el código correcto** —lo que
+   demuestra de extremo a extremo que `BARCODES.codeOf` sustituye el marcador `T`
+   por la talla real y que el catálogo quedó migrado—.
+
+La invariante de existencias la comprobó la propia herramienta **antes** de
+aplicar: `migrateSizeCodes()` compara total de piezas, total por producto y
+número de renglones, y revierte todo si no cuadran, de modo que un resultado
+correcto sólo puede producirse con la huella intacta.
+
+**Pendiente de cotejo independiente:** un export de inventario posterior a la
+migración, para verificar contra `Inventario_Balam_2026-08-03.xlsx` (previo) que
+las **3,596 piezas** siguen siendo 3,596 y que los diez códigos cambiaron. No
+altera el estado —la herramienta ya lo verificó en el acto— pero cierra la
+evidencia según el principio 8.
+
+## Riesgo residual y pendientes
 - **Reimpresión de etiquetas: 573** combinaciones producto × talla (o 1,873 si se
   etiqueta por pieza). Hasta reimprimirlas, esas prendas no se escanean en caja.
 - Las imágenes de códigos de barras ya subidas a Storage quedan huérfanas: los

@@ -3782,7 +3782,7 @@ de alcance.
 
 ## H-74 - Los codigos de talla no eran la talla que representan
 
-**Estado:** RESUELTO — herramienta entregada; la ejecucion sobre produccion es del dueno
+**Estado:** RESUELTO — ejecutado en produccion el 03/08/2026
 **Fecha de registro:** 03/08/2026
 **Commit:** `070697b`
 **Artefacto publicado:** sha256
@@ -3822,8 +3822,15 @@ suites en verde: tallas H-63 34/34 y 58/58, H-59 12/12, H-67 27/27, filtros 19/1
 y 18/18, auditoria 23/23, H-71 29/29, H-72 16/16, H-73 29/29, cola 159/159,
 contratos 41/41, precio por talla 19/19 y 38/38, purga 53/53, reset 19/19,
 descuentos 43/43, smoke 15/15, navegacion 15/15, build 8/8 y UX sin retroceso.
-**Riesgo residual:** la ejecucion sobre produccion la hace el dueno —la base solo
-acepta escrituras con sesion de administrador—; hay que **reimprimir 573
+**Ejecucion:** el dueno la ejecuto el 03/08/2026 desde su terminal y confirma que
+el boton completo la correccion y que **las etiquetas impresas despues ya salen con
+el codigo correcto**, lo que demuestra de extremo a extremo que el marcador `T` se
+sustituye por la talla real. La invariante de existencias la comprobo la propia
+herramienta antes de aplicar —revierte todo si no cuadra—, asi que un resultado
+correcto solo puede producirse con la huella intacta. **Pendiente de cotejo
+independiente:** un export posterior que confirme las 3,596 piezas frente al
+`Inventario_Balam_2026-08-03.xlsx` previo.
+**Riesgo residual:** hay que **reimprimir 573
 etiquetas** (o 1,873 si se etiqueta por pieza) y hasta entonces esas prendas no se
 escanean en caja; las imagenes de codigos de barras ya subidas quedan huerfanas en
 Storage; `promo.scope.tallas` no distingue escala. **H-66 sigue abierta:** esta
