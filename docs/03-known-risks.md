@@ -3743,7 +3743,11 @@ remoto de `movements` y queda registrado. Persiste la deuda de nomenclatura de
 
 **Estado:** RESUELTO
 **Fecha de registro:** 03/08/2026
-**Commit:** Pendiente de commit
+**Commit:** `b266ef5`
+**Artefacto publicado:** sha256
+`7f85b7b2195ead06e6a8f19700e51af0cff83a6ff35ff68470d5c57bc0cacd5c`
+(8 836 728 bytes), verificado por ejecución sobre
+`https://david14081982.github.io/POS_Balam/` (`verify-h73-publicado.mjs` 9/9).
 **Origen:** defecto D-4 del informe de auditoría del sistema de impresión.
 **Riesgo:** el cliente recibía un papel que decía que su compra de contado era un
 apartado liquidado. Una venta en efectivo con un cambio cobrado imprimía
