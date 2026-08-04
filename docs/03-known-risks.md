@@ -3739,6 +3739,43 @@ remoto de `movements` y queda registrado. Persiste la deuda de nomenclatura de
 `test-concurrency.mjs` y `test-reset-propaga.mjs` fallan también en `HEAD`.
 **Corrección documentada:** `docs/fixes/identidad-en-posventa.md`.
 
+## H-73 - El comprobante de un cambio hablaba de apartado
+
+**Estado:** RESUELTO
+**Fecha de registro:** 03/08/2026
+**Commit:** Pendiente de commit
+**Origen:** defecto D-4 del informe de auditoría del sistema de impresión.
+**Riesgo:** el cliente recibía un papel que decía que su compra de contado era un
+apartado liquidado. Una venta en efectivo con un cambio cobrado imprimía
+**APARTADO** en el renglón de la transacción, **MERCANCÍA ENTREGADA** como título
+del detalle, **Pagado a la fecha**, **Saldo pendiente** y **LIQUIDADO**, y además
+**ocultaba el bloque «Método de pago»** de la venta. No hay pérdida de datos —todo
+es presentación— pero el comprobante es el documento que el cliente conserva.
+**Causa raíz:** `balam/pos-ticket.jsx` § `BalamTicket` decidía el vocabulario por
+la PRESENCIA de la costura `payment` (`conCobranza = esApartado || !!payment` y
+`info(payment ? 'Apartado' : 'Transacción')`), no por lo que esa costura
+significaba. La costura nació en H-40 para la cobranza de apartados y C6 la
+reutilizó para acusar la diferencia de un cambio. El dato que los distingue ya
+viajaba en el documento y nadie lo miraba: el apartado etiqueta sus pagos como
+`anticipo`/`abono`/`liquidacion` y el cambio como `cambio`.
+**Solución:** el vocabulario se decide por el TIPO real del pago. `CONCEPTO` gana
+la entrada `cambio` —«Diferencia de cambio cobrada»— en vez de caer al genérico, y
+el bloque «Método de pago» sólo se oculta en una cobranza de apartado, no en
+cualquier acuse. Únicamente presentación: no se tocó ningún importe, ninguna
+autoridad de negocio ni ningún documento persistido. Un tipo desconocido sigue
+cayendo al genérico y no adopta vocabulario ajeno.
+**Pruebas:** `test-h73-comprobante-del-cambio.mjs` **29/29** (previo **25 pasaron,
+4 fallaron**), con los tres cambios que pidió el dueño —diferencia a favor del
+negocio, a favor del cliente y sin diferencia— más los tres momentos reales del
+apartado como guarda. Regresión en verde: ticket impreso 23/23, cambio E2E 37/37,
+apartados 55/55, H-65 28/28, pantalla del cambio 45/45, reportes del cambio 24/24,
+liquidaciones 12/12, H-72 16/16, H-71 29/29, smoke 15/15, navegación 15/15,
+contratos 41/41, build 8/8 y UX sin retroceso.
+**Riesgo residual:** D-3 (un comprobante emitido cambia si después se edita el
+producto) y D-5 (imprimir en Reportes saca hoja en blanco) siguen abiertos y fuera
+de alcance.
+**Corrección documentada:** `docs/fixes/comprobante-del-cambio.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

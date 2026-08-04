@@ -492,9 +492,20 @@
       : Math.max(0, granTotal - (Number(sale.anticipo) || 0));
     const pagadoAcum = Math.max(0, granTotal - saldoPend);
     const esApartado = sale.estado === 'Apartado';
+    // H-73: la costura `payment` la usan DOS operaciones distintas. Nació para la
+    // cobranza de apartados (H-40) y el Cambio la reutilizó para acusar dinero
+    // (C6), así que el vocabulario se decide por el TIPO del pago —dato que ya
+    // viajaba en el documento— y no por la mera presencia de la costura. Un
+    // cambio no es una cobranza: no dice «Apartado», ni «Mercancía entregada»,
+    // ni «Saldo pendiente», y no oculta el método de pago de la venta.
+    const CONCEPTO = {
+      anticipo: 'Anticipo de apartado', abono: 'Abono a apartado',
+      liquidacion: 'Liquidación de apartado', cambio: 'Diferencia de cambio cobrada',
+    };
+    const COBRANZA_APARTADO = ['anticipo', 'abono', 'liquidacion'];
+    const esCobranzaApartado = !!payment && COBRANZA_APARTADO.indexOf(payment.tipo) >= 0;
     // Un abono liquidado deja la venta en 'Pagado': el acuse sigue siendo de apartado.
-    const conCobranza = esApartado || !!payment;
-    const CONCEPTO = { anticipo: 'Anticipo de apartado', abono: 'Abono a apartado', liquidacion: 'Liquidación de apartado' };
+    const conCobranza = esApartado || esCobranzaApartado;
     const concepto = payment ? (CONCEPTO[payment.tipo] || 'Pago recibido') : '';
 
     const row = (l, v, cls) => h('div', { key: l, className: 'flex justify-between items-center ' + (cls || '') }, [
@@ -562,7 +573,8 @@
         ]) : null,
         // Transacción
         h('div', { key: 'tx', className: 'tk-block w-full border-y border-outline-variant py-4 mb-6 flex flex-col gap-1.5 text-left' }, [
-          info(payment ? 'Apartado' : 'Transacción', sale.folio, 'font-medium'),
+          // H-73: el rótulo lo decide la operación real, no la costura.
+          info(conCobranza ? 'Apartado' : 'Transacción', sale.folio, 'font-medium'),
           // Reimpresión de una venta reidentificada: el folio del ticket que
           // conserva el cliente se imprime junto al vigente y nunca se pierde.
           (D.saleFolioAliases && D.saleFolioAliases(sale).length)
@@ -626,9 +638,11 @@
               ]),
           ]) : null,
         ]),
-        // Método de pago. En un acuse de cobranza no se repite: el pago del día ya
-        // declaró su forma arriba y el «método» de la venta es el propio apartado.
-        payment ? null : h('div', { key: 'mp', className: 'tk-block w-full mt-5 bg-surface-container-low rounded-xl p-4 text-left flex items-center gap-3' }, [
+        // Método de pago. En un acuse de COBRANZA DE APARTADO no se repite: el pago
+        // del día ya declaró su forma arriba y el «método» de la venta es el propio
+        // apartado. H-73: un acuse de cambio sí lo conserva, porque ahí el método de
+        // la venta y el de la diferencia son dos hechos distintos.
+        esCobranzaApartado ? null : h('div', { key: 'mp', className: 'tk-block w-full mt-5 bg-surface-container-low rounded-xl p-4 text-left flex items-center gap-3' }, [
           h(MS, { key: 'i', name: ((C.find('payment_method', sale.metodo) || {}).meta || {}).icon || 'cash', size: 22, className: 'text-gold-text' }),
           h('div', { key: 't' }, [
             h('p', { key: 'a', className: 'uppercase text-on-surface-variant', style: { fontSize: '10px', letterSpacing: '0.08em' } }, 'Método de pago'),

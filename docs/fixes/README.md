@@ -73,6 +73,7 @@ sesión de chat.
 | `clientes-y-sus-ventas.md` | H-70 | Las compras de cada cliente se derivan de sus ventas por identidad, no de contadores desnormalizados |
 | `devolucion-por-identidad.md` | H-71 | La devolución restituye el inventario al producto congelado en la venta, y bloquea cuando no puede identificarlo |
 | `identidad-en-posventa.md` | H-72 | Devolución, cambio, pantalla del Cambio y pull dejan de resolver la pieza por SKU o por el catálogo vigente |
+| `comprobante-del-cambio.md` | H-73 | El comprobante decide su vocabulario por el tipo real de la operación, no por la presencia de la costura de pago |
 
 Documentación financiera relacionada, creada antes de este índice:
 
