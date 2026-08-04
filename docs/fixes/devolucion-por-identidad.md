@@ -3,7 +3,12 @@
 **Riesgo:** H-71
 **Estado:** RESUELTO
 **Fecha:** 03/08/2026
-**Commit:** Pendiente de commit
+**Commit:** `e09efc8`
+**Artefacto publicado:** sha256
+`bf8f71729f3dd482e8877208822c0242da635da1a8d246f92d1f7429d421dc31`
+(8 834 300 bytes), idéntico byte a byte al `index.html` del commit y verificado
+por ejecución sobre `https://david14081982.github.io/POS_Balam/`
+(`verify-h71-publicado.mjs` 10/10).
 
 ## Problema y reproducción
 
@@ -144,6 +149,12 @@ Regresión ejecutada, toda en verde:
 
 `test-concurrency.mjs` y `test-reset-propaga.mjs` (13/8) fallan igual que en
 `HEAD`: deuda preexistente registrada en H-70 y ajena a este trabajo.
+
+Artefacto publicado: `node verify-h71-publicado.mjs` → **10/10**. Compara el
+sha256 de lo servido por GitHub Pages contra el blob del commit y después
+**ejerce la corrección en el paquete publicado**: SKU cambiado tras la venta
+(19 → 20), SKU duplicado (vendido 19 → 20, ajeno 3 → 3) e identidad ambigua
+(rechazada, sin mover stock ni dejar documento).
 
 ## Riesgo residual y pendientes
 

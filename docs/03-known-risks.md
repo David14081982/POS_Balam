@@ -3636,7 +3636,12 @@ preexistente ajena a este trabajo.
 
 **Estado:** RESUELTO
 **Fecha de registro:** 03/08/2026
-**Commit:** Pendiente de commit
+**Commit:** `e09efc8`
+**Artefacto publicado:** sha256
+`bf8f71729f3dd482e8877208822c0242da635da1a8d246f92d1f7429d421dc31`
+(8 834 300 bytes), idéntico byte a byte al `index.html` del commit y verificado
+por ejecución sobre `https://david14081982.github.io/POS_Balam/`
+(`verify-h71-publicado.mjs` 10/10).
 **Origen:** auditoría del sistema de impresión y del ciclo de vida del SKU
 solicitada por el dueño del producto; defectos D-1 y D-2 de ese informe.
 **Riesgo:** pérdida de inventario real, silenciosa y sin rastro. `recordReturn`
