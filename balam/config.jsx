@@ -445,6 +445,50 @@
     return { ok: true };
   }
   function setActive(kind, code, active) { return updateItem(kind, code, { active }); }
+
+  // ── H-74 · Renombrar el CÓDIGO de una talla ─────────────────────────────────
+  // `updateItem` jamás toca `code` por diseño: el código es la identidad con la
+  // que el inventario encuentra sus piezas (`ADR-011`). Esta puerta existe sólo
+  // para la migración de `DATA.migrateSizeCodes()`, que reescribe en el MISMO
+  // acto las referencias del inventario; usarla sola desconectaría las piezas.
+  //
+  // Resuelve el orden por sí misma: renombrar `0→38` y `s→0` a la vez colisiona,
+  // porque el destino de `s` lo ocupa el origen de `0`. Se aplican primero los
+  // pares cuyo destino ya está libre y se repite; si ningún par avanza en una
+  // pasada, el mapa tiene un ciclo y se rechaza entero.
+  const SIZE_KINDS_RENAME = ['size_letter', 'size_number'];
+  function renameSizeCodes(kind, pairs, opts) {
+    if (SIZE_KINDS_RENAME.indexOf(kind) < 0) return { ok: false, code: 'INVALID_KIND', error: 'Sólo se renombran códigos de talla' };
+    const arr = state.catalogs[kind] || [];
+    const pend = (pairs || []).map(p => ({ from: String(p[0]), to: String(p[1]) })).filter(p => p.from !== p.to);
+    if (!pend.length) return { ok: false, code: 'EMPTY_MAP', error: 'No hay códigos que renombrar' };
+    const origenes = new Set(pend.map(p => p.from));
+    for (const p of pend) {
+      if (!arr.some(x => x.code === p.from)) return { ok: false, code: 'SOURCE_MISSING', error: `El código ${p.from} no existe en el catálogo` };
+      // Un destino ocupado sólo es admisible si ese ocupante también se renombra.
+      const ocupa = arr.find(x => x.code === p.to);
+      if (ocupa && !origenes.has(p.to)) return { ok: false, code: 'TARGET_TAKEN', error: `El código ${p.to} ya lo usa una talla que no se renombra` };
+    }
+    if (new Set(pend.map(p => p.to)).size !== pend.length) return { ok: false, code: 'DUPLICATE_TARGET', error: 'Dos tallas no pueden quedar con el mismo código' };
+    const aplicado = [];
+    let restantes = pend.slice();
+    while (restantes.length) {
+      const libres = restantes.filter(p => !arr.some(x => x.code === p.to));
+      if (!libres.length) return { ok: false, code: 'RENAME_CYCLE', error: 'El mapa de códigos forma un ciclo y no puede aplicarse' };
+      libres.forEach(p => { arr.find(x => x.code === p.from).code = p.to; aplicado.push(p.from + '→' + p.to); });
+      restantes = restantes.filter(p => libres.indexOf(p) < 0);
+    }
+    // Orden natural: las tallas con etiqueta numérica ascendente primero; las
+    // demás conservan su orden relativo al final.
+    if (opts && opts.reorder) {
+      const num = (x) => { const n = Number(String(x.label).trim()); return Number.isFinite(n) && String(x.label).trim() !== '' ? n : null; };
+      const conNum = arr.filter(x => num(x) !== null).sort((a, b) => num(a) - num(b));
+      const sinNum = arr.filter(x => num(x) === null);
+      state.catalogs[kind] = conNum.concat(sinNum);
+    }
+    emit();
+    return { ok: true, aplicado };
+  }
   function removeItem(kind, code) {
     if (inUse(kind, code)) return { ok: false, error: 'En uso por productos — desactívalo en lugar de borrarlo' };
     const arr = state.catalogs[kind] || [];
@@ -638,6 +682,7 @@
     all, list, map, metaMap, codes, find, get, settings, inUse, sizeCodeReferences,
     catalogMeta, allCatalogMeta, sizeCategories, catalogLabel, fieldOf, skuParts, modeloKind,
     addItem, updateItem, setActive, removeItem, move, setCatalogMeta, moveSkuOrder, addCatalog, removeCatalog, importCatalogs, setSetting, setSettings,
+    renameSizeCodes,
     reset, snapshot, load,
     get version() { return version; },
     KINDS: Object.keys(SEED_CATALOGS),

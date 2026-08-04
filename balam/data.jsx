@@ -3526,6 +3526,162 @@
   // Borra un producto de local Y de la nube. Antes solo se hacía splice + saveProducts (upsert),
   // que NO elimina la fila en Supabase: el producto "revivía" en el siguiente pull. Mismo patrón
   // que removeUser/removePromo.
+  // ── H-74 · Migración de códigos de talla ────────────────────────────────────
+  // El catálogo guarda identidades históricas que no son la talla que
+  // representan (`0` es la 38, `A` la 40, `s` la 0). Esta autoridad las cambia
+  // por la talla real y reescribe EN EL MISMO ACTO todo lo que las referencia,
+  // porque el código es la identidad con la que el inventario encuentra sus
+  // piezas (`ADR-011`): renombrar sin reescribir las desconectaría.
+  //
+  // RENOMBRA, NO REUBICA. La huella del inventario —total, total por producto y
+  // número de renglones— debe ser idéntica antes y después, y si no lo es se
+  // revierte todo. No existe camino en el que quede a medias.
+  const SIZE_SCALE_OF = { size_letter: 'L', size_number: 'N' };
+  function sizeMigrationFingerprint(kind) {
+    const scale = SIZE_SCALE_OF[kind];
+    let total = 0, renglones = 0;
+    const porProducto = {};
+    products.forEach(p => {
+      if (inferSizeCategory(p, p.stock) !== kind) return;
+      let suma = 0;
+      (p.stock || []).forEach(v => {
+        if (scale && v.escala && v.escala !== scale) return;
+        suma += Number(v.stock) || 0; renglones++;
+      });
+      porProducto[p.id] = suma; total += suma;
+    });
+    return { total, renglones, porProducto: JSON.stringify(porProducto) };
+  }
+  function liveDocumentCounts() {
+    return {
+      ventas: sales.length,
+      apartados: sales.filter(s => s.estado === 'Apartado').length,
+      devoluciones: returns.length,
+      cambios: exchanges.length,
+      prestamos: loans.length,
+      movimientos: movements.length,
+      pagos: payments.length,
+    };
+  }
+  function migrateSizeCodes({ kind, map, reorder } = {}) {
+    if (!SIZE_SCALE_OF[kind]) return { ok: false, code: 'INVALID_KIND', error: 'Sólo se migran categorías de talla' };
+    const pares = Object.keys(map || {}).map(from => [String(from), String(map[from])]).filter(p => p[0] !== p[1]);
+    if (!pares.length) return { ok: false, code: 'EMPTY_MAP', error: 'No hay códigos que cambiar' };
+
+    // 1) Guarda: ningún documento puede citar un código que va a desaparecer.
+    const documentos = liveDocumentCounts();
+    const vivos = documentos.ventas + documentos.devoluciones + documentos.cambios
+      + documentos.prestamos + documentos.movimientos + documentos.pagos;
+    if (vivos > 0) {
+      return {
+        ok: false, code: 'DOCUMENTS_PRESENT', documentos,
+        error: 'Hay documentos registrados que citan los códigos actuales. Borra los datos de prueba o migra también los documentos antes de continuar.',
+      };
+    }
+    // 2) Guarda: nada pendiente de sincronizar ni caché por reconciliar.
+    if (catalogResyncRequired) return { ok: false, code: 'RESYNC_REQUIRED', error: catalogResyncReason };
+    let pendientes = 0;
+    try {
+      const q = window.CORE.invokeSync('queueStatus');
+      pendientes = q && Array.isArray(q.operations) ? q.operations.length : 0;
+    } catch (e) { pendientes = 0; }
+    if (pendientes > 0) {
+      return { ok: false, code: 'QUEUE_PENDING', pendientes,
+        error: `Hay ${pendientes} operación(es) sin sincronizar. Conéctate y espera a que la cola quede vacía.` };
+    }
+
+    // 3) Reversa completa antes de tocar nada.
+    const snapCfg = C.snapshot();
+    const snapProd = JSON.parse(JSON.stringify(products));
+    const snapPromos = JSON.parse(JSON.stringify(promos));
+    const antes = sizeMigrationFingerprint(kind);
+    const revertir = () => {
+      C.load(snapCfg);
+      products.length = 0; snapProd.forEach(p => products.push(p));
+      promos.length = 0; snapPromos.forEach(x => promos.push(x));
+    };
+
+    // 4) Catálogo. Resuelve el orden y rechaza mapas imposibles.
+    const rc = C.renameSizeCodes(kind, pares, { reorder: !!reorder });
+    if (!rc.ok) { revertir(); return { ok: false, code: rc.code || 'RENAME_REJECTED', error: rc.error }; }
+
+    // 5) Inventario, precios por talla, códigos de barras y promociones.
+    const destino = {}; pares.forEach(([from, to]) => { destino[from] = to; });
+    const scale = SIZE_SCALE_OF[kind];
+    const efectos = { productos: 0, renglones: 0, piezas: 0, precios: 0, barcodes: 0, promociones: 0, etiquetas: 0 };
+    try {
+      products.forEach(p => {
+        if (inferSizeCategory(p, p.stock) !== kind) return;
+        let tocado = false;
+        (p.stock || []).forEach(v => {
+          if (scale && v.escala && v.escala !== scale) return;
+          const nuevo = destino[String(v.talla)];
+          if (nuevo === undefined) return;
+          v.talla = nuevo; tocado = true; efectos.renglones++;
+          const piezas = Number(v.stock) || 0;
+          if (piezas > 0) { efectos.piezas += piezas; efectos.etiquetas++; }
+        });
+        const remapKeys = (mapa) => {
+          if (!mapa || typeof mapa !== 'object') return 0;
+          let n = 0;
+          Object.keys(mapa).forEach(k => {
+            const nuevo = destino[String(k)];
+            if (nuevo === undefined || nuevo === k) return;
+            mapa[nuevo] = mapa[k]; delete mapa[k]; n++;
+          });
+          return n;
+        };
+        efectos.precios += remapKeys(p.preciosTalla);
+        efectos.barcodes += remapKeys(p.barcodeUrls);
+        if (tocado) efectos.productos++;
+      });
+      promos.forEach(pr => {
+        const t = pr && pr.scope && Array.isArray(pr.scope.tallas) ? pr.scope.tallas : null;
+        if (!t) return;
+        let cambio = false;
+        pr.scope.tallas = t.map(x => {
+          const nuevo = destino[String(x)];
+          if (nuevo === undefined) return x;
+          cambio = true; return nuevo;
+        });
+        if (cambio) efectos.promociones++;
+      });
+    } catch (e) {
+      revertir();
+      return { ok: false, code: 'MIGRATION_FAILED', error: e.message || 'No se pudo reescribir el inventario' };
+    }
+
+    // 6) Invariantes. Cualquier diferencia revierte TODO.
+    const despues = sizeMigrationFingerprint(kind);
+    // Sobrante = renglón que todavía usa un código de ORIGEN. Un código puede ser
+    // origen y destino a la vez (`0` es el origen de la 38 y el destino de `s`),
+    // así que un renglón con un código que también es destino NO es sobrante.
+    const destinos = new Set(pares.map(p => p[1]));
+    const residuo = products.reduce((n, p) => {
+      if (inferSizeCategory(p, p.stock) !== kind) return n;
+      return n + (p.stock || []).filter(v =>
+        (!scale || !v.escala || v.escala === scale)
+        && destino[String(v.talla)] !== undefined && !destinos.has(String(v.talla))).length;
+    }, 0);
+    if (antes.total !== despues.total || antes.renglones !== despues.renglones
+      || antes.porProducto !== despues.porProducto || residuo > 0) {
+      revertir();
+      return {
+        ok: false, code: 'INVARIANT_BROKEN',
+        error: 'La comprobación de existencias no cuadró: no se cambió nada.',
+        antes: { total: antes.total, renglones: antes.renglones },
+        despues: { total: despues.total, renglones: despues.renglones, residuo },
+      };
+    }
+
+    saveProducts(); if (typeof savePromos === 'function') savePromos();
+    return {
+      ok: true, aplicado: rc.aplicado, efectos,
+      piezasTotales: despues.total, renglones: despues.renglones,
+      catalogo: (C.all(kind) || []).map(x => ({ code: x.code, label: x.label })),
+    };
+  }
+
   function removeProduct(id) {
     const i = products.findIndex(x => x.id === id);
     if (i < 0) return false;
@@ -4283,6 +4439,7 @@
   window.DATA = {
     products, sellers, clients, sales, movements, promos, liquidations, returns, payments, exchanges, loans,
     sku, regenerateSkus, totalStock, hydrate, mkStock, emptyStock, SIZE_MARK,
+    migrateSizeCodes, liveDocumentCounts,
     saveProducts, saveSellers, saveClients, saveSales, saveMovements, savePromos, saveReturns, savePayments,
     removeProduct, remapOrphanCodes, catalogHealthReport, hexForColorName, applyOrphanFix, get lastRemap() { return lastRemap; },
     addClient, updateClient, removeClient, clientSalesSummary, clientSalesSummaries,

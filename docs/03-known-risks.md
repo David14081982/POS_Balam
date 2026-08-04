@@ -3780,6 +3780,53 @@ producto) y D-5 (imprimir en Reportes saca hoja en blanco) siguen abiertos y fue
 de alcance.
 **Corrección documentada:** `docs/fixes/comprobante-del-cambio.md`.
 
+## H-74 - Los codigos de talla no eran la talla que representan
+
+**Estado:** RESUELTO — herramienta entregada; la ejecucion sobre produccion es del dueno
+**Fecha de registro:** 03/08/2026
+**Commit:** Pendiente de commit
+**Origen:** solicitud del dueno del producto: «reemplazar los codigos incorrectos
+de talla por los reales (0 -> 38, A -> 40) y que todas las referencias queden
+migradas, tambien para impresion de codigos de barras».
+**Evidencia:** su export real `Inventario_Balam_2026-08-03.xlsx`. Catalogo de 76
+entradas (`size_number` 62, `size_letter` 14). Diez identidades no son su talla:
+`0`=38, `A`=40, `B`=42, `C`=44, `D`=46, `E`=48, `F`=49, `G`=50, `H`=52, `s`=0.
+**239 productos, 3,596 piezas; 164 productos distintos afectados, 1,873 piezas y
+573 combinaciones producto x talla.** Los 239 SKU llevan el marcador `T`, asi que
+la etiqueta de una prenda talla 38 imprime hoy `...-0`.
+**Riesgo:** el codigo de barras miente sobre la talla y ninguna pantalla permitia
+corregirlo, porque el codigo es la identidad con la que el inventario localiza sus
+piezas (`ADR-011`): `updateItem` no toca `code` y borrar y recrear desconecta las
+existencias.
+**Causa raiz:** un solo campo cumple tres funciones —identidad tecnica, valor de
+intercambio y etiqueta de importacion—, el mismo diagnostico de H-66 (`FF-02`).
+H-64 demostro el mapa correcto y corrigio las ETIQUETAS, dejando los codigos
+porque cambiarlos era una migracion fisica. Esta historia hace esa migracion.
+**Solucion:** `CONFIG.renameSizeCodes()` —unica puerta que toca `code`, resuelve
+por si misma el orden de la colision `s -> 0` y reordena— y
+`DATA.migrateSizeCodes()`, que guarda, copia para reversa, renombra el catalogo,
+reescribe `stock[].talla`, las claves de `preciosTalla` y `barcodeUrls` y
+`promo.scope.tallas`, y **verifica que el total de piezas, el total por producto y
+el numero de renglones sean identicos**. Cualquier guarda que salte revierte todo:
+documentos vivos, cola pendiente, cache por reconciliar, mapa imposible o
+invariante rota. Tarjeta «Corregir codigos de talla» en Configuracion ->
+Catalogos, que propone el mapa sola, se bloquea si hay documentos explicando
+cuantos, y publica el resultado con cifras y las etiquetas a reimprimir.
+**Pruebas:** `test-h74-codigos-de-talla.mjs` **25/25** (previo **4 pasaron, 16
+fallaron**), incluido el recorrido real accionando el boton. Regresion de 24
+suites en verde: tallas H-63 34/34 y 58/58, H-59 12/12, H-67 27/27, filtros 19/19
+y 18/18, auditoria 23/23, H-71 29/29, H-72 16/16, H-73 29/29, cola 159/159,
+contratos 41/41, precio por talla 19/19 y 38/38, purga 53/53, reset 19/19,
+descuentos 43/43, smoke 15/15, navegacion 15/15, build 8/8 y UX sin retroceso.
+**Riesgo residual:** la ejecucion sobre produccion la hace el dueno —la base solo
+acepta escrituras con sesion de administrador—; hay que **reimprimir 573
+etiquetas** (o 1,873 si se etiqueta por pieza) y hasta entonces esas prendas no se
+escanean en caja; las imagenes de codigos de barras ya subidas quedan huerfanas en
+Storage; `promo.scope.tallas` no distingue escala. **H-66 sigue abierta:** esta
+historia corrige el dato, no la causa, y la proxima correccion de un codigo
+volveria a ser una migracion.
+**Correccion documentada:** `docs/fixes/codigos-de-talla-reales.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

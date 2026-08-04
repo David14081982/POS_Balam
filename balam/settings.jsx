@@ -266,6 +266,107 @@
     ]);
   }
 
+  // ── H-74 · Corregir los códigos de talla ─────────────────────────────────────
+  // El catálogo guarda identidades históricas que no son la talla que
+  // representan: el código `0` es la talla 38, `A` es la 40, `s` es la 0. Como el
+  // código es lo que el inventario usa para encontrar las piezas y lo que la
+  // etiqueta imprime, el código de barras de una prenda 38 dice «…-0».
+  //
+  // Se proponen SÓLO las tallas cuya etiqueta es un número: así quedan fuera
+  // PIEZA, CHICO, MEDIANO y demás, que no son códigos equivocados sino nombres.
+  function SizeCodeMigration() {
+    const [busy, setBusy] = useState(false);
+    const [resultado, setResultado] = useState(null);
+    const KIND = 'size_number';
+    const items = C.all(KIND) || [];
+    const propuesta = items.filter(it => {
+      const lab = String(it.label == null ? '' : it.label).trim();
+      return lab !== '' && /^\d+$/.test(lab) && String(it.code) !== lab;
+    }).map(it => ({ from: String(it.code), to: String(it.label).trim() }));
+    const documentos = D.liveDocumentCounts ? D.liveDocumentCounts() : null;
+    const vivos = documentos
+      ? documentos.ventas + documentos.devoluciones + documentos.cambios
+        + documentos.prestamos + documentos.movimientos + documentos.pagos
+      : 0;
+
+    function aplicar() {
+      const mapa = {};
+      propuesta.forEach(p => { mapa[p.from] = p.to; });
+      const detalle = propuesta.map(p => `  ${p.from}  →  ${p.to}`).join('\n');
+      if (!window.confirm(
+        'Se cambiarán ' + propuesta.length + ' códigos de talla:\n\n' + detalle +
+        '\n\nLas existencias NO se mueven: sólo cambia el código con el que están guardadas. ' +
+        'Se comprueba que el total de piezas sea idéntico antes y después, y si no lo es no se cambia nada.\n\n' +
+        'DESPUÉS TENDRÁS QUE REIMPRIMIR LAS ETIQUETAS de código de barras: las actuales dejarán de leerse.\n\n' +
+        '¿Continuar?')) return;
+      setBusy(true);
+      try {
+        const r = D.migrateSizeCodes({ kind: KIND, map: mapa, reorder: true });
+        setResultado(r);
+        if (r.ok) toast(`${r.aplicado.length} códigos corregidos · ${r.piezasTotales} piezas intactas`, 'var(--accent)');
+        else toast(r.error, 'var(--danger)');
+      } catch (e) {
+        setResultado({ ok: false, error: e.message || 'No se pudo completar' });
+        toast(e.message || 'No se pudo completar', 'var(--danger)');
+      }
+      setBusy(false);
+    }
+
+    const aviso = (icon, texto, tono) => h('div', {
+      className: 'flex items-start gap-2 p-3 rounded-lg text-caption leading-relaxed ' + tono,
+    }, [h(MS, { key: 'i', name: icon, size: 16, className: 'shrink-0 mt-0.5' }), h('span', { key: 't' }, texto)]);
+
+    return h(GlassCard, { key: 'sizemig', className: 'p-5' }, [
+      h('div', { key: 'h', className: 'flex items-baseline justify-between mb-1' }, [
+        h(SerifHeading, { key: 't', children: 'Corregir códigos de talla' }),
+        h('span', { key: 'c', className: 'text-overline uppercase text-on-surface-variant' },
+          propuesta.length + (propuesta.length === 1 ? ' código' : ' códigos')),
+      ]),
+      h('p', { key: 'd', className: 'text-caption text-on-surface-variant mb-4 leading-relaxed' },
+        'Algunas tallas se guardan con un código que no es la talla: el código «0» es en realidad la 38 y «A» es la 40. Eso hace que el código de barras de una prenda talla 38 termine en «-0». Aquí se corrigen de una vez, sin mover una sola pieza, y el catálogo queda ordenado.'),
+      propuesta.length === 0
+        ? aviso('check', 'Todos los códigos de talla numérica ya coinciden con su talla. No hay nada que corregir.', 'bg-success-soft text-success')
+        : h('div', { key: 'body', className: 'space-y-4' }, [
+            h('div', { key: 'map', className: 'flex flex-wrap gap-2' }, propuesta.map(p =>
+              h('span', {
+                key: p.from,
+                className: 'inline-flex items-center gap-1.5 px-3 h-8 rounded-lg border border-outline-variant bg-surface-container-low text-caption font-mono',
+              }, [
+                h('span', { key: 'a', className: 'text-on-surface-variant line-through' }, p.from),
+                h(MS, { key: 'i', name: 'chevRight', size: 13, className: 'text-on-surface-variant' }),
+                h('span', { key: 'b', className: 'font-bold text-primary' }, p.to),
+              ]))),
+            vivos > 0
+              ? aviso('alert',
+                  `No se puede ejecutar todavía: hay ${vivos} documento(s) que citan los códigos actuales ` +
+                  `(${documentos.ventas} venta(s), ${documentos.devoluciones} devolución(es), ${documentos.cambios} cambio(s), ` +
+                  `${documentos.prestamos} préstamo(s), ${documentos.movimientos} movimiento(s), ${documentos.pagos} pago(s)). ` +
+                  'Borra los datos de prueba desde «Datos de demostración» y vuelve a intentarlo.',
+                  'bg-danger-soft text-danger')
+              : aviso('alert',
+                  'Después de aplicarlo tendrás que REIMPRIMIR las etiquetas de código de barras: las que están pegadas hoy dejarán de leerse en caja.',
+                  'bg-gold/5 border border-gold/30 text-on-surface-variant'),
+            h('div', { key: 'act', className: 'flex justify-end' },
+              h('button', {
+                type: 'button', 'data-testid': 'migrar-codigos-talla',
+                disabled: busy || vivos > 0,
+                className: 'inline-flex items-center gap-2 px-4 h-10 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-lg hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed',
+                onClick: aplicar,
+              }, [h(MS, { key: 'i', name: busy ? 'clock' : 'repeat', size: 16 }), busy ? 'Corrigiendo…' : 'Corregir códigos'])),
+          ]),
+      resultado ? h('div', {
+        key: 'res',
+        className: 'mt-4 pt-4 border-t border-outline-variant/60 text-caption leading-relaxed ' + (resultado.ok ? 'text-on-surface' : 'text-danger'),
+      }, resultado.ok
+        ? [
+            h('p', { key: 'a', className: 'font-semibold text-primary mb-1' }, 'Listo · ' + resultado.aplicado.join(' · ')),
+            h('p', { key: 'b' }, `Piezas antes y después: ${resultado.piezasTotales} · renglones de existencias: ${resultado.renglones} · productos tocados: ${resultado.efectos.productos} · precios por talla remapeados: ${resultado.efectos.precios} · códigos de barras: ${resultado.efectos.barcodes} · promociones: ${resultado.efectos.promociones}.`),
+            h('p', { key: 'c', className: 'mt-1 font-semibold' }, `Reimprime ${resultado.efectos.etiquetas} etiqueta(s) en Inventario → Etiquetas.`),
+          ]
+        : h('p', {}, resultado.error)) : null,
+    ]);
+  }
+
   // ── Diagnóstico de catálogos: códigos huérfanos y nombres repetidos ───────────
   // Radiografía en vivo (se recalcula con cada configchange vía el bump de SettingsScreen):
   // muestra QUÉ productos apuntan a códigos que ya no existen en el catálogo y POR QUÉ no se
@@ -1012,6 +1113,7 @@
     producto: () => [
       h('p', { key: 'intro', className: 'text-caption text-on-surface-variant' }, 'Estos catálogos alimentan el SKU, el alta de productos, los filtros y la importación de Excel. Renómbralos, decide cuáles aparecen en el alta y cuáles forman el SKU. El código entra al SKU: si está en uso por productos no podrás borrarlo (desactívalo).'),
       h(SkuBuilder, { key: 'sku' }),
+      h(SizeCodeMigration, { key: 'sizemig' }),
       h(CatalogHealthCard, { key: 'health' }),
       h(CatalogXlsxCard, { key: 'catxlsx' }),
       h(CatalogEditor, { key: 'cat', kind: 'category', codePlaceholder: '21' }),
