@@ -75,6 +75,7 @@ sesión de chat.
 | `identidad-en-posventa.md` | H-72 | Devolución, cambio, pantalla del Cambio y pull dejan de resolver la pieza por SKU o por el catálogo vigente |
 | `comprobante-del-cambio.md` | H-73 | El comprobante decide su vocabulario por el tipo real de la operación, no por la presencia de la costura de pago |
 | `codigos-de-talla-reales.md` | H-74 | Los códigos de talla pasan a ser la talla real y todas sus referencias se migran en un solo acto verificado |
+| `cobro-del-cambio-por-forma-de-pago.md` | H-75 | La diferencia de un cambio se clasifica por su forma de pago real, no todo al cajón «otro» |
 
 Documentación financiera relacionada, creada antes de este índice:
 

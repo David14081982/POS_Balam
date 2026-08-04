@@ -2543,7 +2543,7 @@
   //
   // El cambio NUNCA devuelve efectivo: si lo entregado vale menos, el sobrante
   // se registra como valor no aprovechado (Contrato del Cambio, seccion 4).
-  function recordExchange({ origenFolio, lineas, usuario, vendedorId, revisadoPor, notas, metodoPago, fecha: fechaIn }) {
+  function recordExchange({ origenFolio, lineas, usuario, vendedorId, revisadoPor, notas, metodoPago, pagoDetalle, fecha: fechaIn }) {
     const sale = findSaleByFolio(origenFolio);
     if (!sale) return { ok: false, error: 'sale_not_found' };
     const items = (lineas || []).filter(l => l && (l.lado === 'devuelto' || l.lado === 'entregado'));
@@ -2665,15 +2665,28 @@
     });
     saveProducts(false); saveMovements();
 
+    // H-75 · El cobro de la diferencia se clasifica con la MISMA autoridad que
+    // cualquier otro cobro (`paymentParts`). Antes se armaba a mano y sólo
+    // reconocía el efectivo: tarjeta, transferencia y mixto caían todos en el
+    // cajón `otro`, así que ese dinero no aparecía en su columna en ningún corte
+    // de caja (`docs/trazabilidad-financiera.md` § Pago mixto).
+    //
+    // Un método sin columna propia sigue yendo a `otro`, pero por DECISIÓN
+    // explícita —se declara el detalle— y no por descarte.
     let payment = null;
     if (diferencia > 0) {
-      payment = {
+      const metodoCobro = metodoPago || 'Efectivo';
+      const conColumna = ['Efectivo', 'Tarjeta', 'Transferencia'].indexOf(metodoCobro) >= 0;
+      const detalle = (pagoDetalle && Object.keys(pagoDetalle).length)
+        ? pagoDetalle
+        : (conColumna ? undefined : { otro: diferencia });
+      let partes;
+      try { partes = paymentParts(metodoCobro, diferencia, detalle); }
+      catch (e) { return { ok: false, code: 'INVALID_PAYMENT', error: e.message }; }
+      payment = Object.assign({
         id: 'pay-' + id, folio: exch.folio, fecha, tipo: 'cambio',
-        metodo: metodoPago || 'Efectivo', monto: diferencia,
-        efectivo: (metodoPago || 'Efectivo') === 'Efectivo' ? diferencia : 0,
-        tarjeta: 0, transferencia: 0,
-        otro: (metodoPago || 'Efectivo') === 'Efectivo' ? 0 : diferencia,
-      };
+        metodo: metodoCobro, monto: diferencia,
+      }, partes);
       payments.unshift(payment);
       savePayments(false);
     }

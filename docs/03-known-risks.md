@@ -3838,6 +3838,45 @@ historia corrige el dato, no la causa, y la proxima correccion de un codigo
 volveria a ser una migracion.
 **Correccion documentada:** `docs/fixes/codigos-de-talla-reales.md`.
 
+## H-75 - El cobro de un cambio con tarjeta no se clasificaba como tarjeta
+
+**Estado:** RESUELTO
+**Fecha de registro:** 03/08/2026
+**Commit:** Pendiente de commit
+**Origen:** hallazgo al disenar el reporte de ingresos por dia y forma de pago que
+pidio el dueno del producto; se corrige antes que el reporte, para no construirlo
+sobre un dato mal clasificado.
+**Riesgo:** dinero real reportado en la columna equivocada, sin aviso. El cobro de
+la diferencia de un cambio solo reconocia el efectivo: con $1,000 de diferencia,
+Tarjeta iba a `otro: 1000`, Transferencia igual, y un Mixto de 400+600 caia entero
+en `otro`. La suma siempre cuadraba con el monto, asi que ninguna comprobacion
+existente lo delataba. Un corte de caja por forma de pago habria reportado de
+menos en Tarjeta y de mas en un cajon sin nombre.
+**Causa raiz:** `recordExchange` armaba el pago a mano con un ternario que dejaba
+`tarjeta` y `transferencia` cableadas a cero, en vez de consumir `paymentParts()`
+—la autoridad que usa cualquier otro cobro— (`AP-01`, `R-DOM-01`). Segundo
+eslabon: la pantalla del Cambio recibia del cobro el `pagoDetalle` ya calculado y
+se quedaba solo con el nombre del metodo, de modo que un mixto no podia repartirse.
+**Solucion:** `recordExchange` consume `paymentParts()`, acepta `pagoDetalle` y
+rechaza con `INVALID_PAYMENT` si el desglose no cuadra en vez de registrar un
+cobro mal clasificado; la pantalla deja viajar el desglose hasta el documento. Un
+metodo sin columna propia sigue yendo a `otro`, pero por decision explicita —se le
+pasa `{ otro: monto }`— y no por descarte. Los cobros ya registrados NO se migran
+(`ADR-002`).
+**Pruebas:** `test-h75-cobro-del-cambio.mjs` **14/14** (previo **10 pasaron, 4
+fallaron**), con las cinco formas de pago y la invariante
+`efectivo + tarjeta + transferencia + otro == monto` en todas. Regresion en verde:
+cambio E2E 37/37, modelo 28/28, commit 32/32, reportes 24/24, pantalla 45/45,
+comision 30/30, H-71 29/29, H-72 16/16, H-73 29/29, H-74 25/25, coherencia 20/20,
+ingresos 24/24, cola 159/159, liquidaciones 12/12, smoke 15/15, navegacion 15/15,
+contratos 41/41 y UX sin retroceso.
+**Riesgo residual:** los cobros de cambio anteriores conservan su clasificacion en
+`otro`; un reporte sobre fechas previas debe leerse con eso en mente. Las
+devoluciones siguen sin desglose por forma de pago —guardan un solo `metodo`—, que
+es una pregunta abierta del reporte de ingresos. D-5 sigue pendiente; esta
+correccion es su precondicion.
+**Correccion documentada:** `docs/fixes/cobro-del-cambio-por-forma-de-pago.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

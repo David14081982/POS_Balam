@@ -552,7 +552,7 @@
       }
       setVendedor({ metodo: null });
     }
-    function registrar(sellerId, metodo) {
+    function registrar(sellerId, metodo, pagoDetalle) {
       const lineas = marcados.map(r => ({
         lado: 'devuelto', sku: r.sku, nombre: r.nombre, talla: r.talla,
         qty: dev[r.k].qty || 1, motivo: dev[r.k].motivo, condicion: dev[r.k].condicion,
@@ -565,6 +565,7 @@
         origenFolio: sale.folio, lineas, notas,
         usuario: (window.AUTH && window.AUTH.current && (window.AUTH.current() || {}).email) || '',
         vendedorId: sellerId, revisadoPor: revisor, metodoPago: metodo,
+        pagoDetalle: pagoDetalle || undefined,
       });
       if (!res.ok) { toast(res.error, 'var(--danger)'); return; }
       toast('Cambio registrado · ' + res.exchange.folio, 'var(--accent)');
@@ -768,7 +769,16 @@
       cobro && h(window.CheckoutModal, {
         key: 'co', total: diferencia, itemCount: ent.reduce((a, l) => a + l.qty, 0),
         client: { generic: true, nombre: sale.cliente }, onClose: () => setCobro(false),
-        onConfirm: (pago) => { setCobro(false); setVendedor({ metodo: (pago && pago.metodo) ? pago.metodo : 'Efectivo' }); },
+        onConfirm: (pago) => {
+          setCobro(false);
+          // H-75: el desglose que ya calculó el cobro viaja hasta el documento.
+          // Sin él, un pago mixto o con tarjeta no podia clasificarse por su
+          // forma real y acababa entero en el cajon «otro».
+          setVendedor({
+            metodo: (pago && pago.metodo) ? pago.metodo : 'Efectivo',
+            detalle: (pago && pago.pagoDetalle) || null,
+          });
+        },
       }),
       // El aviso del sobrante perdido es del sistema, no del navegador: se ve
       // la cifra, se distingue la acción que sigue de la que vuelve, y la
@@ -782,7 +792,7 @@
             className: 'flex-1 py-3.5 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-xl' }, 'Sí, registrar'),
         ],
       }, h('p', { className: 'py-2 text-body text-on-surface' }, aviso.cuerpo)),
-      vendedor && h(SellerModal, { key: 'sv', sellers: elegibles, onClose: () => setVendedor(null), onPick: (id) => registrar(id, vendedor.metodo) }),
+      vendedor && h(SellerModal, { key: 'sv', sellers: elegibles, onClose: () => setVendedor(null), onPick: (id) => registrar(id, vendedor.metodo, vendedor.detalle) }),
       recibo && h(ExchangeReceipt, { key: 'rc', recibo, onClose: () => { setRecibo(null); onDone(); } }),
       // Comprobante térmico: la MISMA autoridad del Punto de venta, con el cambio
       // como costura. Vive fuera de pantalla y sólo él queda visible al imprimir.
