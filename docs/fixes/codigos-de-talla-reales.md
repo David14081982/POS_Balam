@@ -3,7 +3,12 @@
 **Riesgo:** H-74
 **Estado:** RESUELTO — herramienta entregada; la ejecución sobre producción es del dueño
 **Fecha:** 03/08/2026
-**Commit:** Pendiente de commit
+**Commit:** `070697b`
+**Artefacto publicado:** sha256
+`4e6a0a90538afc981c210c5f9adb97ff20443a087485c05d889ef2fd8c420274`
+(8 843 704 bytes), idéntico byte a byte al `index.html` del commit y verificado
+por ejecución sobre `https://david14081982.github.io/POS_Balam/`
+(`verify-h74-publicado.mjs` 10/10).
 
 ## Problema y reproducción
 

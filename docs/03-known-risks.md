@@ -3784,7 +3784,11 @@ de alcance.
 
 **Estado:** RESUELTO — herramienta entregada; la ejecucion sobre produccion es del dueno
 **Fecha de registro:** 03/08/2026
-**Commit:** Pendiente de commit
+**Commit:** `070697b`
+**Artefacto publicado:** sha256
+`4e6a0a90538afc981c210c5f9adb97ff20443a087485c05d889ef2fd8c420274`
+(8 843 704 bytes), verificado por ejecucion sobre
+`https://david14081982.github.io/POS_Balam/` (`verify-h74-publicado.mjs` 10/10).
 **Origen:** solicitud del dueno del producto: «reemplazar los codigos incorrectos
 de talla por los reales (0 -> 38, A -> 40) y que todas las referencias queden
 migradas, tambien para impresion de codigos de barras».
