@@ -424,7 +424,11 @@
       .filter(r => r.disponible > 0)
       .map(r => Object.assign({}, r, {
         k: r.sku + '|' + r.talla,
-        p: D.products.find(x => x.sku === r.sku),
+        // H-72: la prenda devuelta se identifica con la línea histórica de la
+        // venta, no con un `find` por SKU. Con un SKU duplicado, aquélla mostraba
+        // la foto del clon, abría el clon en «misma prenda» y mandaba su
+        // productId a recordExchange.
+        p: D.saleLineProduct(sale, r),
         nombre: ((sale.lineas || []).find(l => l.sku === r.sku && l.talla === r.talla) || {}).nombre || r.sku,
         valor: D.recognizedValue ? D.recognizedValue(sale.folio, r.sku, r.talla) : 0,
       }));

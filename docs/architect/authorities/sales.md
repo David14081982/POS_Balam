@@ -24,8 +24,22 @@ renglón **congelado en la venta**; el SKU sólo adopta documentos históricos y
 (H-65) en vez de reimplementar la regla: sólo traduce el mensaje y conserva su
 `code`. Sin identidad resoluble la devolución se rechaza entera
 **Definición:** `balam/data.jsx` · `docs/fixes/devolucion-por-identidad.md`
-**Creada por:** H-71 · **Decisiones:** `ADR-011`, `ADR-002`
-**Consumidores:** `grep -rn "resolveReturnProduct" balam/ test-*.mjs`
+**Creada por:** H-71 · **Ampliada por:** H-72 — la línea de la venta tiene
+precedencia sobre el `productId` que envíe el llamador, y `saleLineProduct()` es
+la misma resolución **sin lanzar** (devuelve `null`) para que la interfaz pinte un
+renglón sin poder mover existencias. Consumida también por `recordExchange`
+**Decisiones:** `ADR-011`, `ADR-002`
+**Consumidores:** `grep -rn "resolveReturnProduct\|saleLineProduct" balam/ test-*.mjs`
+
+## ¿A qué renglón de existencias regresa esta pieza?
+**Autoridad:** `resolveReturnStockEntry(product, talla)` — interna a
+`balam/data.jsx`. `stockVariantOf()` primero y `stockEntryByIdentity()` como
+respaldo, que localiza el renglón por el valor **crudo** de talla y no depende del
+catálogo vigente. Cero o varias coincidencias equivalentes ⇒ bloqueo
+`STOCK_IDENTITY_AMBIGUOUS`; nunca se elige una en silencio
+**Definición:** `balam/data.jsx` · `docs/fixes/identidad-en-posventa.md`
+**Creada por:** H-72 · **Decisión:** `ADR-011`
+**Consumidores:** `grep -rn "resolveReturnStockEntry" balam/ test-*.mjs`
 
 ## ¿Qué valor histórico se le reconoce a la pieza que el cliente entrega?
 **Autoridad:** pendiente de implementar en C4 — una sola, consumida por SQL,

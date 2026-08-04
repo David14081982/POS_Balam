@@ -2550,12 +2550,28 @@
     const devueltos = items.filter(l => l.lado === 'devuelto');
     const entregados = items.filter(l => l.lado === 'entregado');
     if (!devueltos.length || !entregados.length) return { ok: false, error: 'invalid_items' };
+    // H-72 · La identidad se resuelve ANTES de comprobar candados, de valorar y de
+    // mover nada, y el SKU deja de ser autoridad. La pieza DEVUELTA se identifica
+    // con la línea histórica de la venta —igual que en H-71—, así que un SKU
+    // duplicado o reescrito ya no puede desviarla a otro artículo. La pieza
+    // ENTREGADA exige `productId` explícito: la pantalla siempre lo envía, y sin
+    // él `listPrice` devolvía 0 y el cambio se registraba con una prenda en cero.
+    const identidad = new Map();
     try {
-      assertLayawayProductsUnlocked(items.map(line => {
-        const product = products.find(p => p.id === line.productId)
-          || products.find(p => p.sku === line.sku);
-        return product && product.id;
-      }));
+      devueltos.forEach(l => { identidad.set(l, resolveReturnProduct(sale, l)); });
+      entregados.forEach(l => {
+        const id = String((l && l.productId) || '').trim();
+        const p = id ? products.find(x => x.id === id) : null;
+        if (!p) {
+          const error = new Error(`No se pudo identificar la prenda que se entrega (${l.nombre || l.sku || '—'}); no puede valorarse. Resincroniza el inventario antes de registrar el cambio.`);
+          error.code = 'PRODUCT_NOT_FOUND';
+          throw error;
+        }
+        identidad.set(l, p);
+      });
+    } catch (e) { return { ok: false, error: e.message, code: e.code }; }
+    try {
+      assertLayawayProductsUnlocked(items.map(line => identidad.get(line).id));
     } catch (e) { return { ok: false, error: e.message, code: e.code }; }
 
     // Plazo de posventa (H-34): compuerta, no se reinicia ni se hereda aparte.
@@ -2575,10 +2591,8 @@
 
     const fecha = fechaIn || now();
     const valorReconocido = devueltos.reduce((a, l) => a + recognizedValue(sale.folio, l.sku, l.talla) * (Number(l.qty) || 0), 0);
-    const valorEntregado = entregados.reduce((a, l) => {
-      const p = products.find(x => x.id === l.productId || x.sku === l.sku);
-      return a + listPrice(p, l.talla) * (Number(l.qty) || 0);
-    }, 0);
+    const valorEntregado = entregados.reduce((a, l) =>
+      a + listPrice(identidad.get(l), l.talla) * (Number(l.qty) || 0), 0);
     const diferencia = valorEntregado >= valorReconocido ? money(valorEntregado - valorReconocido) : 0;
     const valorNoAprovechado = valorEntregado >= valorReconocido ? 0 : money(valorReconocido - valorEntregado);
 
@@ -2623,9 +2637,10 @@
       comisionPolicyVersion: comisionEntry ? comisionEntry.policyVersion : null,
       comisionTramos: comisionEntry ? comisionEntry.tramos : [],
       lineas: items.map(l => {
-        const p = products.find(x => x.id === l.productId || x.sku === l.sku);
+        // H-72: identidad ya resuelta arriba; aquí no se busca por SKU.
+        const p = identidad.get(l);
         return {
-          lado: l.lado, productId: p ? p.id : l.productId, sku: l.sku, nombre: l.nombre,
+          lado: l.lado, productId: p.id, sku: l.sku, nombre: l.nombre,
           talla: l.talla, qty: Number(l.qty) || 0, motivo: l.motivo || '',
           // La condicion solo aplica a lo que el cliente ENTREGA: es el resultado
           // de la revision que decide si la prenda se recibe (Contrato, seccion 5).
@@ -3192,7 +3207,11 @@
   };
   function resolveReturnProduct(sale, line) {
     const sold = (sale.lineas || []).find(x => x.sku === line.sku && x.talla === line.talla);
-    const productId = (line && line.productId) || (sold && sold.productId) || '';
+    // H-72: manda la línea HISTÓRICA de la venta, no lo que envíe el llamador. La
+    // pantalla del Cambio derivaba su `productId` de un `find` por SKU, así que
+    // con un duplicado mandaba el del clon; el documento de la venta es la
+    // autoridad y no puede quedar por debajo de un dato reconstruido.
+    const productId = (sold && sold.productId) || (line && line.productId) || '';
     try {
       return resolveLayawayProduct({ productId, sku: line && line.sku });
     } catch (e) {
@@ -3209,6 +3228,33 @@
     }
   }
 
+  // H-72 · Misma autoridad, sin lanzar: devuelve el producto o `null`. La usa la
+  // interfaz, que necesita pintar un renglón aunque la identidad no resuelva;
+  // quien va a MOVER existencias usa `resolveReturnProduct`, que exige identidad.
+  function saleLineProduct(sale, line) {
+    if (!sale || !line) return null;
+    try { return resolveReturnProduct(sale, line); } catch (e) { return null; }
+  }
+
+  // H-72 · ¿A qué renglón de existencias regresa esta pieza?
+  // `stockVariantOf` pasa por el catálogo y devuelve `null` si el código de talla
+  // ya no está listado (escenario H-64), así que la restitución se saltaba en
+  // silencio. Las piezas se guardan por el valor CRUDO de la talla, de modo que
+  // `stockEntryByIdentity` las localiza sin depender del catálogo. Si esa
+  // identidad no es única —cero o varias equivalentes— se bloquea: nadie puede
+  // decidir a cuál de dos renglones equivalentes regresa la pieza.
+  function resolveReturnStockEntry(product, talla) {
+    const entry = stockVariantOf(product, talla) || stockEntryByIdentity(product, talla);
+    if (entry) return entry;
+    const nombre = (product && (product.nombre || product.id)) || '—';
+    const n = ((product && product.stock) || []).filter(v => String(v.talla) === String(talla)).length;
+    const error = new Error(n === 0
+      ? `La talla ${talla} ya no existe en ${nombre}: no hay a dónde regresar la pieza. Resincroniza el inventario antes de devolver.`
+      : `La talla ${talla} de ${nombre} tiene ${n} renglones de existencias equivalentes: no se puede decidir a cuál regresar la pieza. Corrige el inventario antes de devolver.`);
+    error.code = 'STOCK_IDENTITY_AMBIGUOUS';
+    throw error;
+  }
+
   function recordReturn({ folio, lineas, metodo, notas, fecha: fechaIn }) {
     const sale = sales.find(s => s.folio === folio);
     if (!sale) return { ok: false, error: 'No se encontró la venta original' };
@@ -3223,12 +3269,17 @@
     // H-71: la identidad de CADA renglón se resuelve ANTES de tocar nada. Un
     // renglón irresoluble aborta la devolución entera: reembolsar sin poder
     // restituir la pieza deja el inventario corto y en silencio.
-    let resolvedProducts;
+    // H-72: la resolución previa cubre además el renglón de existencias, para que
+    // una talla retirada del catálogo no vuelva a saltarse la restitución.
+    let resolved;
     try {
-      resolvedProducts = items.map(line => resolveReturnProduct(sale, line));
+      resolved = items.map(line => {
+        const product = resolveReturnProduct(sale, line);
+        return { product, entry: resolveReturnStockEntry(product, line.talla) };
+      });
     } catch (e) { return { ok: false, error: e.message, code: e.code }; }
     try {
-      assertLayawayProductsUnlocked(resolvedProducts.map(product => product.id));
+      assertLayawayProductsUnlocked(resolved.map(x => x.product.id));
     } catch (e) { return { ok: false, error: e.message, code: e.code }; }
     // H-35: el disponible lo decide la autoridad única, que ya descuenta
     // devoluciones previas y, cuando existan, los cambios de esta venta.
@@ -3244,10 +3295,11 @@
     let clientEffect = null;
     // 1) Reingreso de stock + movimiento 'Devolución' (cant positiva)
     items.forEach((l, i) => {
-      // H-71: el producto ya viene resuelto por identidad; aquí no se busca nada.
-      const p = resolvedProducts[i];
-      const e = stockVariantOf(p, l.talla);
-      if (e) e.stock = (Number(e.stock) || 0) + (Number(l.qty) || 0);
+      // H-71/H-72: producto y renglón de existencias ya vienen resueltos por
+      // identidad; aquí no se busca nada y no hay camino silencioso.
+      const p = resolved[i].product;
+      const e = resolved[i].entry;
+      e.stock = (Number(e.stock) || 0) + (Number(l.qty) || 0);
       stockLines.push({ product_id: p.id, talla: l.talla, qty: Number(l.qty) || 0 });
       movements.unshift({ fecha, tipo: 'Devolución', producto: l.nombre, sku: l.sku, cant: Number(l.qty) || 0, ref: folio });
     });
@@ -3336,7 +3388,7 @@
       // H-71: el documento congela la identidad que se resolvió al abrir la
       // devolución, no la que un SKU repetido devolvería hoy.
       lineas: items.map((l, i) => ({
-        productId: resolvedProducts[i].id, sku: l.sku, nombre: l.nombre, talla: l.talla,
+        productId: resolved[i].product.id, sku: l.sku, nombre: l.nombre, talla: l.talla,
         qty: Number(l.qty) || 0, motivo: l.motivo || '', precio: linePrice(l),
       })),
     };
@@ -4242,6 +4294,7 @@
     listPrice, priceRange, sanitizePreciosTalla, resolveProductSizes,
     resolveSizeFilterGroups, resolveSizeFilterOptions, sizeFilterMatch, inferSizeCategory,
     recordReturn, returnedQty, returnsForFolio, isReturnable, returnDeadline, saleLineBalance,
+    saleLineProduct,
     saveExchanges, recognizedValue, supplySources, recordExchange, reverseExchangeCommission,
     revenueSummary, exchangeRevenue, exchangeUnusedValue, exchangeReport, sellerCommissionReport,
     saveLoans, registrarPrestamo, registrarDevolucionPrestamo, marcarPrestamoNoDevuelto,

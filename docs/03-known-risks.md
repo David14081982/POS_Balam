@@ -3684,6 +3684,57 @@ conserva el respaldo `x.sku === l.sku` con `find()`. `test-concurrency.mjs` y
 `test-reset-propaga.mjs` fallan también en `HEAD`: deuda preexistente ajena.
 **Corrección documentada:** `docs/fixes/devolucion-por-identidad.md`.
 
+## H-72 - La posventa identificaba la pieza por SKU y por el catálogo vigente
+
+**Estado:** RESUELTO
+**Fecha de registro:** 03/08/2026
+**Commit:** Pendiente de commit
+**Origen:** los tres huecos que H-71 registró fuera de alcance, más el defecto D-8
+del informe de auditoría, autorizados juntos por el dueño del producto por
+compartir causa.
+**Riesgo:** inventario mal acreditado y documentos mal identificados, siempre en
+silencio. (A1) El pull de devoluciones descartaba `product_id`, así que
+sincronizar dejaba el documento local peor identificado que el remoto. (A2) Si el
+código de talla del renglón ya no estaba en el catálogo, la restitución se
+saltaba: se reembolsaba y la pieza no volvía (medido 5 → 5). (A3) `recordExchange`
+resolvía por SKU: con un duplicado la pieza devuelta iba al artículo ajeno
+(vendido 19 → 19, clon 3 → 4) y una identidad irresoluble registraba un cambio con
+la prenda entregada **valorada en $0**. (D-8) La pantalla del Cambio derivaba la
+prenda con `find` por SKU, de modo que mostraba la foto del clon, «misma prenda»
+abría el clon —comprobado: el modal ofrecía $5.00 · 3 pz en vez de $2,000.00 ·
+20 pz— y enviaba ese `productId` a `recordExchange`: era el defecto que alimentaba
+A3.
+**Causa raíz:** cuatro consultas resolvían identidad por un campo que no lo es
+—el SKU— o a través del catálogo vigente, teniendo a mano `sale.lineas[].productId`
+(congelado desde H-32) y el renglón crudo de `producto.stock[]`, que guarda las
+piezas por valor de talla sin depender del catálogo.
+**Solución:** se reutiliza la autoridad de H-71 y se añaden dos entradas:
+`saleLineProduct()` —misma resolución sin lanzar, para la interfaz— y
+`resolveReturnStockEntry()` —`stockVariantOf()` con respaldo en
+`stockEntryByIdentity()`, y bloqueo `STOCK_IDENTITY_AMBIGUOUS` si la identidad no
+es única—. `resolveReturnProduct()` pasa a preferir el `productId` **de la venta**
+sobre el que envíe el llamador. `recordReturn` y `recordExchange` resuelven toda
+su identidad antes de comprobar candados, valorar o mover, y el respaldo por SKU
+desaparece de ambos. La pantalla del Cambio consume la autoridad. El pull conserva
+`product_id`. Ningún documento histórico se migró.
+**Pruebas:** `test-h72-identidad-posventa.mjs` **16/16** (previo **5 pasaron, 11
+fallaron**) y `test-store-queue.mjs` **159/159** (previo **158 pasaron, 1 falló**).
+La aserción definitiva de D-8 se comprobó además **roja contra el artefacto de
+`HEAD`**, para descartar un verde por casualidad. Regresión de 24 suites en verde:
+H-71 29/29, devoluciones 17/17, saldo 38/38, los seis arneses de cambios (28, 32,
+24, 45, 37, 30), H-65 35/35 y 28/28, liquidaciones 12/12, préstamos 69/69,
+inventario 18/18 y 9/9, coherencia 20/20, clientes 39/39, comisiones 88/88,
+contratos 41/41, smoke 15/15, navegación 15/15, build 8/8 y UX sin retroceso.
+Cada bloqueo se afirma con una huella completa antes/después —existencias,
+ventas, pagos, documentos, movimientos y cola— que demuestra **cero efectos
+parciales**.
+**Riesgo residual:** el movimiento de inventario de una devolución sigue sin
+`productId`, a diferencia del de una venta; tocarlo exige revisar el esquema
+remoto de `movements` y queda registrado. Persiste la deuda de nomenclatura de
+`resolveLayawayProduct`. D-3, D-4 y D-5 del informe siguen abiertos.
+`test-concurrency.mjs` y `test-reset-propaga.mjs` fallan también en `HEAD`.
+**Corrección documentada:** `docs/fixes/identidad-en-posventa.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

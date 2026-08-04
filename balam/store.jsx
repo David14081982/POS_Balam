@@ -2183,7 +2183,10 @@
       if (kind === 'returns') {
         const itRows = await fetchItemsIn(c, 'return_items', 'return_id', r.data.map(x => x.id));
         const byRid = {};
-        itRows.forEach(x => (byRid[x.return_id] || (byRid[x.return_id] = [])).push({ sku: x.sku, nombre: x.nombre, talla: x.talla, qty: x.qty, motivo: x.motivo || '', precio: Number(x.precio) || 0 }));
+        // H-72: `pushReturn` escribe `product_id`; el pull debe leerlo de vuelta o
+        // la devolución local queda peor identificada que la remota, igual que
+        // `saleItemFromRow` conserva la identidad de los renglones de venta.
+        itRows.forEach(x => (byRid[x.return_id] || (byRid[x.return_id] = [])).push({ productId: x.product_id || undefined, sku: x.sku, nombre: x.nombre, talla: x.talla, qty: x.qty, motivo: x.motivo || '', precio: Number(x.precio) || 0 }));
         const rows = r.data.map(raw => { const s = m.fromRow(raw); s.lineas = byRid[raw.id] || []; return s; });
         window.DATA.applyRemote('returns', rows); return;
       }

@@ -1569,5 +1569,37 @@ ok('34c. H-60: la escritura válida termina sin pendientes', S.pending === 0);
     filas.length === 1 && filas[0].nombre === 'Ana Ruiz');
 }
 
+// ── 41) H-72 · El pull de devoluciones conserva la identidad del producto ─────
+// `pushReturn` escribe `product_id` en `return_items`, pero el pull no lo leía de
+// vuelta: tras sincronizar, la devolución local quedaba peor identificada que la
+// remota. Se comprueba el viaje COMPLETO nube → local.
+{
+  const env = freshEnv();
+  const S = loadStore(env);
+  await S.init({});
+  env.cloud.rowsByTable.returns = [{
+    id: 'ret-h72', folio: 'DV-0001', fecha: '2026-08-03T10:00:00', cliente: 'Ana Poot',
+    vendedores: ['s0'], metodo: 'Efectivo', total: 1000, notas: '',
+  }];
+  env.cloud.rowsByTable.return_items = [{
+    return_id: 'ret-h72', product_id: 'P-ALFA', sku: '21-MC-ALG-BL', nombre: 'GUAYABERA',
+    talla: 'S', qty: 1, motivo: 'talla', precio: 1000,
+  }];
+  await S.pullDomain('returns');
+  const aplicado = env.window.DATA.applied.find(a => a.kind === 'returns');
+  const linea = aplicado && aplicado.rows[0] && aplicado.rows[0].lineas[0];
+  ok('41a. H-72: el pull aplicó la devolución a DATA (nube→local)', !!aplicado && aplicado.rows.length === 1);
+  ok('41b. H-72: el renglón bajado conserva product_id como productId',
+    !!linea && linea.productId === 'P-ALFA');
+  ok('41c. H-72: y conserva el resto del renglón intacto',
+    !!linea && linea.sku === '21-MC-ALG-BL' && linea.talla === 'S'
+    && linea.qty === 1 && linea.precio === 1000 && linea.motivo === 'talla');
+  // Ida y vuelta: lo que sube pushReturn debe volver a bajar con la misma identidad.
+  env.window.DATA.applied.length = 0;
+  const subido = (env.cloud.rowsByTable.return_items || [])[0];
+  ok('41d. H-72: la fila remota que escribe pushReturn ya traía product_id',
+    !!subido && subido.product_id === 'P-ALFA');
+}
+
 console.log(`════════ ${pass} pasaron, ${fail} fallaron ════════`);
 process.exit(fail ? 1 : 0);

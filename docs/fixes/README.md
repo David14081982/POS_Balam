@@ -72,6 +72,7 @@ sesión de chat.
 | `columnas-de-talla-en-excel.md` | H-67 | La columna de Excel se llama como la talla; las piezas se siguen localizando por la identidad interna |
 | `clientes-y-sus-ventas.md` | H-70 | Las compras de cada cliente se derivan de sus ventas por identidad, no de contadores desnormalizados |
 | `devolucion-por-identidad.md` | H-71 | La devolución restituye el inventario al producto congelado en la venta, y bloquea cuando no puede identificarlo |
+| `identidad-en-posventa.md` | H-72 | Devolución, cambio, pantalla del Cambio y pull dejan de resolver la pieza por SKU o por el catálogo vigente |
 
 Documentación financiera relacionada, creada antes de este índice:
 
