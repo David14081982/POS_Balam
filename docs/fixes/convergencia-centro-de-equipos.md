@@ -46,6 +46,12 @@ build reproducible 8/8; navegación 15/15; smoke bundle 17/17. Las migraciones
 se aplicaron en producción, su verificación pasó y el dry-run posterior informó
 `Remote database is up to date`.
 
+GitHub Pages completó correctamente el despliegue del commit documental
+`1d396d4`. El `index.html` público coincide con el blob normalizado de `main`:
+SHA-256 `F48690222328F8EE0CEE960AD5AF5CAFDA9BB79E52E52E7F846C4AED0CCEE357`
+y 8,864,440 bytes. El archivo de trabajo tiene finales de línea CRLF y por eso
+su hash directo de Windows no es una comparación válida con el blob publicado.
+
 ## Riesgo residual y pendientes
 
 Un heartbeat por minuto continúa mientras el POS está visible y en línea. Es
