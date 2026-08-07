@@ -11,7 +11,7 @@
   const QKEY = 'balam_sync_queue';
   const QDB = 'balam_sync', QSTORE = 'durable_queue';
   const SYNC_PROTOCOL_VERSION = 1;
-  const SYNC_SCHEMA_VERSION = 20260807012200;
+  const SYNC_SCHEMA_VERSION = 20260807012400;
   const SYNC_CURSOR_KEY = 'balam_sync_domain_cursors_v1';
   const SYNC_DOMAINS = {
     permissions: { deps: [] }, config: { deps: ['permissions'] },
@@ -2462,6 +2462,7 @@
       p_last_synced_at: clean ? new Date().toISOString() : null,
     });
     await consumeSyncCommands(c);
+    await consumeSyncQuarantineDecisions(c);
   }
   async function consumeSyncCommands(c) {
     if (!c) return 0;
@@ -2609,6 +2610,120 @@
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     return snapshot;
   }
+  async function sha256Hex(value) {
+    if (!window.crypto || !window.crypto.subtle || typeof TextEncoder === 'undefined') {
+      throw new Error('CRYPTO_UNAVAILABLE');
+    }
+    const bytes = new TextEncoder().encode(String(value));
+    const digest = await window.crypto.subtle.digest('SHA-256', bytes);
+    return Array.from(new Uint8Array(digest)).map(x => x.toString(16).padStart(2, '0')).join('');
+  }
+  function quarantinePayloadSummary(op) {
+    const sourceItems = Array.isArray(op.items) ? op.items
+      : (Array.isArray(op.stockLines) ? op.stockLines : []);
+    const items = sourceItems.slice(0, 100).map(item => ({
+      sku: item.sku || item.product_sku || null,
+      productId: item.product_id || item.productId || null,
+      description: item.nombre || item.product_name || item.descripcion || null,
+      size: item.talla || item.size || null,
+      quantity: Number(item.qty ?? item.cantidad) || 0,
+      amount: Number(item.total ?? item.importe ?? item.precio) || 0,
+    }));
+    const header = op.header && typeof op.header === 'object' ? op.header : {};
+    return {
+      folio: op.folio || header.folio || null,
+      date: header.fecha || op.fecha || op.createdAt || null,
+      total: Number(header.total ?? op.total) || 0,
+      paymentMethod: header.metodo || op.metodo || null,
+      itemCount: sourceItems.length,
+      itemsTruncated: sourceItems.length > items.length,
+      items,
+      diagnostic: op.diagnostic ? {
+        category: op.diagnostic.category || null, code: op.diagnostic.code || null,
+        message: op.diagnostic.message || null, policy: op.diagnostic.policy || null,
+      } : null,
+    };
+  }
+  async function reportQuarantineCases(c, operations, localEpoch, remoteEpoch) {
+    const cases = [];
+    for (const op of operations) {
+      const payloadHash = await sha256Hex(JSON.stringify(op));
+      const payloadSummary = quarantinePayloadSummary(op);
+      const result = await c.rpc('report_sync_quarantine', {
+        p_device_id: window.CORE.getDeviceId(), p_operation_id: String(op.id),
+        p_remote_epoch: Number(remoteEpoch), p_local_epoch: Number(localEpoch) || null,
+        p_operation_type: op.type || 'unknown', p_domain: syncActivityDomain(op),
+        p_reference: op.folio || (op.header && op.header.folio) || null,
+        p_summary: syncActivitySummary(op), p_payload_hash: payloadHash,
+        p_payload_summary: payloadSummary,
+      });
+      if (result.error) throw new Error(result.error.message || 'QUARANTINE_REPORT_FAILED');
+      cases.push({ operationId: String(op.id), remoteEpoch: Number(remoteEpoch), payloadHash });
+    }
+    return cases;
+  }
+  function quarantineArchives() {
+    const archives = [];
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (!key || !key.startsWith('balam_sync_quarantine_')) continue;
+        try { archives.push({ key, value: JSON.parse(localStorage.getItem(key) || '{}') }); }
+        catch (e) { /* un archivo corrupto no oculta los demás */ }
+      }
+    } catch (e) { /* almacenamiento no disponible */ }
+    return archives;
+  }
+  function restoreQuarantinedOperation(operationId, remoteEpoch) {
+    for (const archive of quarantineArchives()) {
+      if (Number(archive.value.epoch) !== Number(remoteEpoch)) continue;
+      const op = (archive.value.operations || []).find(x => String(x.id) === String(operationId));
+      if (!op) continue;
+      const active = loadQ();
+      if (!active.some(x => String(x.id) === String(op.id))) {
+        const restored = JSON.parse(JSON.stringify(op));
+        restored.status = 'retry_wait'; restored.nextAttemptAt = 0;
+        delete restored.diagnostic;
+        saveQ(active.concat(restored));
+      }
+      return { archive, operation: op };
+    }
+    return null;
+  }
+  function removeResolvedQuarantine(found, operationId) {
+    if (!found) return;
+    found.archive.value.operations = (found.archive.value.operations || [])
+      .filter(x => String(x.id) !== String(operationId));
+    try { localStorage.setItem(found.archive.key, JSON.stringify(found.archive.value)); } catch (e) { /* evidencia original queda */ }
+  }
+  async function consumeSyncQuarantineDecisions(c) {
+    if (!c) return 0;
+    const result = await c.rpc('consume_sync_quarantine_decisions', {
+      p_device_id: window.CORE.getDeviceId(),
+    });
+    if (result.error) return 0;
+    let completed = 0;
+    for (const command of (result.data || [])) {
+      const found = restoreQuarantinedOperation(command.operation_id, command.remote_epoch);
+      if (!found) {
+        await c.rpc('complete_sync_quarantine', {
+          p_device_id: window.CORE.getDeviceId(), p_operation_id: command.operation_id,
+          p_remote_epoch: command.remote_epoch, p_ok: false,
+          p_message: 'La operación original no está disponible en este equipo',
+        });
+        continue;
+      }
+      await flushQueue();
+      const pending = loadQ().some(op => String(op.id) === String(command.operation_id));
+      await c.rpc('complete_sync_quarantine', {
+        p_device_id: window.CORE.getDeviceId(), p_operation_id: command.operation_id,
+        p_remote_epoch: command.remote_epoch, p_ok: !pending,
+        p_message: pending ? 'La RPC normal rechazó o difirió la operación' : null,
+      });
+      if (!pending) { removeResolvedQuarantine(found, command.operation_id); completed++; }
+    }
+    return completed;
+  }
   async function rebootstrapFromCloud() {
     if (window.CORE.activityStatus().active) throw new Error('ACTIVITY_ACTIVE');
     const c = await ensureClient(); if (!c) throw new Error('OFFLINE');
@@ -2620,8 +2735,11 @@
     // el JSON que la interfaz obliga a exportar antes de permitir esta acción.
     const queued = loadQ(); const stale = queued.filter(opBelongsToActiveSession);
     if (stale.length) {
+      let localEpoch = null;
+      try { localEpoch = Number(localStorage.getItem('balam_sync_data_epoch')) || null; } catch (e) { /* */ }
+      const cases = await reportQuarantineCases(c, stale, localEpoch, Number(latest.data_epoch));
       const key = `balam_sync_quarantine_${latest.data_epoch}_${Date.now()}`;
-      try { localStorage.setItem(key, JSON.stringify({ epoch: latest.data_epoch, operations: stale })); }
+      try { localStorage.setItem(key, JSON.stringify({ epoch: latest.data_epoch, localEpoch, cases, operations: stale })); }
       catch (e) { throw new Error('QUARANTINE_STORAGE_UNAVAILABLE'); }
       saveQ(queued.filter(op => !opBelongsToActiveSession(op)));
     }
@@ -2660,6 +2778,7 @@
     const r = await c.from('sync_devices').select('*').order('last_seen_at', { ascending: false });
     if (r.error) return { devices: [], current: 0, stale: 0, error: r.error.message };
     const history = await c.from('sync_activity').select('*').order('updated_at', { ascending: false }).limit(200);
+    const quarantine = await c.from('sync_quarantine_cases').select('*').order('updated_at', { ascending: false }).limit(500);
     const now = Date.now(), devices = (r.data || []).map(device => {
       const ageMs = Math.max(0, now - new Date(device.last_seen_at || 0).getTime());
       const staleEpoch = Number(device.data_epoch) !== Number(syncManifest.data_epoch)
@@ -2668,14 +2787,61 @@
       return Object.assign({}, device, { ageMs, connection, staleEpoch });
     });
     const activity = history.error ? [] : (history.data || []);
+    const quarantineCases = quarantine.error ? [] : (quarantine.data || []);
     const epoch = Number(syncManifest.data_epoch);
     return {
-      devices, activity,
+      devices, activity, quarantine: quarantineCases,
       current: devices.filter(d => Number(d.data_epoch) === epoch && !d.staleEpoch).length,
       stale: devices.filter(d => d.staleEpoch).length,
       attention: activity.filter(a => a.requires_action).length,
       disconnected: devices.filter(d => d.connection !== 'online').length,
     };
+  }
+  async function decideSyncQuarantine(item, decision, note) {
+    const c = await ensureClient(); if (!c) throw new Error('Sin conexión con la nube');
+    const r = await c.rpc('admin_decide_sync_quarantine', {
+      p_device_id: item.device_id, p_operation_id: item.operation_id,
+      p_remote_epoch: Number(item.remote_epoch), p_decision: decision,
+      p_note: note || null,
+    });
+    if (r.error) throw new Error(r.error.message || 'No se pudo registrar la decisión');
+    return true;
+  }
+  function exportQuarantineReport(cases) {
+    if (!window.XLSX) throw new Error('No se pudo cargar el motor de Excel');
+    const rows = Array.isArray(cases) ? cases : [];
+    const X = window.XLSX, wb = X.utils.book_new();
+    const summary = rows.map(item => ({
+      'Equipo': item.display_name || item.device_id,
+      'Operación': item.operation_id, 'Tipo': item.operation_type,
+      'Folio / referencia': item.reference || '', 'Estado': item.status,
+      'Época local': item.local_epoch || '', 'Época nube': item.remote_epoch,
+      'Total': Number(item.payload_summary && item.payload_summary.total) || 0,
+      'Artículos': Number(item.payload_summary && item.payload_summary.itemCount) || 0,
+      'Fecha operación': item.payload_summary && item.payload_summary.date || '',
+      'Huella SHA-256': item.payload_hash, 'Decisión / nota': item.decision_note || '',
+      'Resultado': item.execution_message || '', 'Actualizado': item.updated_at || '',
+    }));
+    const itemRows = [];
+    rows.forEach(item => ((item.payload_summary && item.payload_summary.items) || []).forEach(line => itemRows.push({
+      'Equipo': item.display_name || item.device_id, 'Operación': item.operation_id,
+      'Folio': item.reference || '', 'SKU': line.sku || '', 'Producto': line.description || '',
+      'Talla': line.size || '', 'Cantidad': Number(line.quantity) || 0,
+      'Importe': Number(line.amount) || 0,
+    })));
+    const totals = [{
+      'Expedientes': rows.length,
+      'Pendientes de revisar': rows.filter(x => x.status === 'pending_review').length,
+      'Aprobados/en ejecución': rows.filter(x => x.status === 'approved' || x.status === 'delivered').length,
+      'Resueltos': rows.filter(x => x.status === 'resolved').length,
+      'Rechazados': rows.filter(x => x.status === 'rejected').length,
+      'Fallidos': rows.filter(x => x.status === 'failed').length,
+    }];
+    X.utils.book_append_sheet(wb, X.utils.json_to_sheet(totals), 'Resumen');
+    X.utils.book_append_sheet(wb, X.utils.json_to_sheet(summary), 'Operaciones');
+    X.utils.book_append_sheet(wb, X.utils.json_to_sheet(itemRows), 'Artículos');
+    X.writeFile(wb, `cuarentena-balam-${Date.now()}.xlsx`, { bookType: 'xlsx' });
+    return { cases: rows.length, items: itemRows.length };
   }
   async function updateSyncDevice(deviceId, displayName, deviceType) {
     const c = await ensureClient(); if (!c) throw new Error('Sin conexión con la nube');
@@ -2932,6 +3098,6 @@
     }
   }
 
-  window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushClient, pushSale, settleLayaway, pushReturn, pushExchange, ensureFolioBlock, deleteRow, settleCommission, closeCommissionPeriod, applyCommissionAdjustment, pushLoanOperation, migrateLocalLoans, pullDomain, fetchSaleByFolio, physicalCardAvailable, claimPhysicalCard, flushQueue, retryOperation, queueStatus, syncStatus, syncFleetStatus, updateSyncDevice, requestSyncRetry, markSyncActivityReviewed, reconcileDomains, invalidateDomain, establishPointZero, rebootstrapFromCloud, exportSyncRecovery, hasPendingLayaway, clearQueue, markResetApplied, purgeTestData, applyRemotePurge, pruneQueueForPurge, readPurgeState, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
+  window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushClient, pushSale, settleLayaway, pushReturn, pushExchange, ensureFolioBlock, deleteRow, settleCommission, closeCommissionPeriod, applyCommissionAdjustment, pushLoanOperation, migrateLocalLoans, pullDomain, fetchSaleByFolio, physicalCardAvailable, claimPhysicalCard, flushQueue, retryOperation, queueStatus, syncStatus, syncFleetStatus, updateSyncDevice, requestSyncRetry, markSyncActivityReviewed, decideSyncQuarantine, exportQuarantineReport, reconcileDomains, invalidateDomain, establishPointZero, rebootstrapFromCloud, exportSyncRecovery, hasPendingLayaway, clearQueue, markResetApplied, purgeTestData, applyRemotePurge, pruneQueueForPurge, readPurgeState, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
   window.CORE.registerSyncGateway(window.STORE);
 })();

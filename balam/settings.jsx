@@ -1300,8 +1300,32 @@
     });
     const devices = (fleet && fleet.devices) || [];
     const activity = (fleet && fleet.activity) || [];
+    const quarantine = (fleet && fleet.quarantine) || [];
     const attention = activity.filter(item => item.requires_action);
+    const quarantineAttention = quarantine.filter(item => item.status === 'pending_review' || item.status === 'failed');
+    const attentionTotal = attention.length + quarantineAttention.length;
     const visibleActivity = tab === 'atencion' ? attention : activity;
+    const decideQuarantine = (item, decision) => {
+      const verb = decision === 'approve' ? 'autorizar el reintento' : 'rechazar';
+      if (!window.confirm(`Se va a ${verb} de esta operación. La aprobación conservará todas las validaciones normales de BALAM. ¿Continuar?`)) return;
+      const note = window.prompt('Nota de la decisión (opcional):', '') || '';
+      act(async () => {
+        await window.STORE.decideSyncQuarantine(item, decision, note);
+        toast(decision === 'approve'
+          ? 'Aprobada. El equipo de origen la intentará por su cola normal.'
+          : 'Operación rechazada; su evidencia permanece conservada.', 'var(--accent)');
+      });
+    };
+    const exportQuarantine = () => {
+      try {
+        const rows = quarantine.map(item => {
+          const device = devices.find(d => d.device_id === item.device_id);
+          return Object.assign({}, item, { display_name: device ? deviceLabel(device) : item.device_id });
+        });
+        const result = window.STORE.exportQuarantineReport(rows);
+        toast(`Reporte exportado: ${result.cases} expediente(s)`, 'var(--accent)');
+      } catch (e) { toast(e.message || String(e), 'var(--danger)'); }
+    };
     return h(GlassCard, { key: 'sync-health', className: 'p-6', 'data-testid': 'sync-health' }, [
       h('div', { key: 'h', className: 'flex items-center justify-between gap-3' }, [
         h('div', { key: 'titles' }, [
@@ -1316,13 +1340,14 @@
         ['Equipos registrados', devices.length, 'text-primary'],
         ['En línea', devices.filter(d => d.connection === 'online').length, 'text-success'],
         ['Desconectados', (fleet && fleet.disconnected) || 0, 'text-warning'],
-        ['Requiere atención', attention.length, attention.length ? 'text-danger' : 'text-success'],
+        ['Requiere atención', attentionTotal, attentionTotal ? 'text-danger' : 'text-success'],
       ].map((item, index) => h('div', { key: index, className: 'p-3 rounded-xl bg-surface-container-low border border-outline-variant' }, [
         h('div', { key: 'n', className: 'text-2xl font-bold ' + item[2] }, String(item[1])),
         h('div', { key: 'l', className: 'text-overline text-on-surface-variant mt-1' }, item[0]),
       ]))),
       h('div', { key: 'tabs', className: 'flex gap-2 mt-5 border-b border-outline-variant' }, [
-        ['equipos','Equipos'], ['actividad','Actividad reciente'], ['atencion',`Requiere atención${attention.length ? ` (${attention.length})` : ''}`]
+        ['equipos','Equipos'], ['actividad','Actividad reciente'], ['atencion',`Requiere atención${attention.length ? ` (${attention.length})` : ''}`],
+        ['cuarentena',`Cuarentena${quarantineAttention.length ? ` (${quarantineAttention.length})` : ''}`]
       ].map(item => h('button', { key: item[0], onClick: () => setTab(item[0]), className: 'px-3 py-2 text-caption font-semibold border-b-2 ' + (tab === item[0] ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant') }, item[1]))),
       tab === 'equipos' && h('div', { key: 'devices', className: 'mt-4 space-y-3' }, devices.length ? devices.map(device => {
         const state = deviceState(device), isEditing = editing === device.device_id;
@@ -1352,7 +1377,7 @@
           ]),
         ]);
       }) : h('p', { className: 'text-caption text-on-surface-variant py-6 text-center' }, 'Todavía no hay equipos reportados.')),
-      tab !== 'equipos' && h('div', { key: 'activity', className: 'mt-4 space-y-2' }, visibleActivity.length ? visibleActivity.map(item => {
+      (tab === 'actividad' || tab === 'atencion') && h('div', { key: 'activity', className: 'mt-4 space-y-2' }, visibleActivity.length ? visibleActivity.map(item => {
         const device = devices.find(d => d.device_id === item.device_id);
         const actionable = item.requires_action;
         return h('div', { key: item.device_id + ':' + item.operation_id, className: 'p-4 rounded-xl border border-outline-variant flex flex-col md:flex-row md:items-center gap-3' }, [
@@ -1370,6 +1395,39 @@
           ]),
         ]);
       }) : h('p', { className: 'text-caption text-on-surface-variant py-6 text-center' }, tab === 'atencion' ? 'No hay incidencias que requieran intervención.' : 'Todavía no hay actividad registrada.')),
+      tab === 'cuarentena' && h('div', { key: 'quarantine', className: 'mt-4 space-y-3', 'data-testid': 'sync-quarantine' }, [
+        h('div', { key: 'tools', className: 'flex items-start justify-between gap-3 flex-wrap p-3 rounded-xl bg-surface-container-low border border-outline-variant' }, [
+          h('div', { key: 'text' }, [
+            h('div', { key: 'title', className: 'font-semibold text-primary' }, 'Expedientes de recuperación'),
+            h('div', { key: 'desc', className: 'text-caption text-on-surface-variant mt-1' }, 'El Excel es legible; el JSON técnico original permanece como respaldo del equipo.'),
+          ]),
+          h('button', { key: 'xlsx', disabled: !quarantine.length, onClick: exportQuarantine, className: 'px-3 h-10 border border-outline-variant rounded-lg disabled:opacity-40' }, 'Exportar reporte Excel'),
+        ]),
+        ...(quarantine.length ? quarantine.map(item => {
+          const device = devices.find(d => d.device_id === item.device_id);
+          const detail = item.payload_summary || {};
+          const actionable = item.status === 'pending_review' || item.status === 'failed';
+          const labels = { pending_review: 'Pendiente de revisión', approved: 'Aprobada', delivered: 'En ejecución', rejected: 'Rechazada', resolved: 'Resuelta', failed: 'Falló al reintentar' };
+          return h('article', { key: item.device_id + ':' + item.operation_id + ':' + item.remote_epoch, className: 'p-4 rounded-xl border border-outline-variant bg-surface' }, [
+            h('div', { key: 'row', className: 'flex flex-col md:flex-row md:items-start gap-3' }, [
+              h('div', { key: 'body', className: 'flex-1 min-w-0' }, [
+                h('div', { key: 'title', className: 'font-semibold text-primary' }, item.summary),
+                h('div', { key: 'meta', className: 'text-overline text-on-surface-variant mt-1' },
+                  `${device ? deviceLabel(device) : item.device_id} · ${item.reference || 'sin folio'} · ${detail.itemCount || 0} artículo(s) · $${Number(detail.total || 0).toFixed(2)}`),
+                h('div', { key: 'epoch', className: 'text-overline text-on-surface-variant mt-1' },
+                  `Línea base local ${item.local_epoch || '—'} → nube ${item.remote_epoch} · huella ${String(item.payload_hash || '').slice(0, 12)}…`),
+                item.decision_note && h('div', { key: 'note', className: 'text-caption mt-2' }, `Nota: ${item.decision_note}`),
+                item.execution_message && h('div', { key: 'execution', className: 'text-caption text-danger mt-2' }, item.execution_message),
+              ]),
+              h('span', { key: 'status', className: 'px-3 py-1 rounded-full text-overline font-bold ' + (item.status === 'resolved' ? 'text-success bg-success-soft' : actionable ? 'text-danger bg-danger-soft' : 'text-warning bg-warning-soft') }, labels[item.status] || item.status),
+            ]),
+            actionable && window.AUTH.isAdmin() && h('div', { key: 'actions', className: 'flex gap-2 flex-wrap mt-3' }, [
+              h('button', { key: 'approve', 'data-testid': 'quarantine-approve-' + item.operation_id, disabled: busy, onClick: () => decideQuarantine(item, 'approve'), className: 'px-3 h-9 bg-primary text-on-primary rounded-lg disabled:opacity-40' }, 'Autorizar por RPC normal'),
+              h('button', { key: 'reject', 'data-testid': 'quarantine-reject-' + item.operation_id, disabled: busy, onClick: () => decideQuarantine(item, 'reject'), className: 'px-3 h-9 border border-danger text-danger rounded-lg disabled:opacity-40' }, 'Rechazar'),
+            ]),
+          ]);
+        }) : [h('p', { key: 'empty', className: 'text-caption text-on-surface-variant py-6 text-center' }, 'No existen operaciones en cuarentena.')]),
+      ]),
       h('details', { key: 'tools', className: 'mt-5 border-t border-outline-variant pt-4' }, [
         h('summary', { key: 'summary', className: 'cursor-pointer text-caption font-semibold text-primary' }, 'Herramientas de verificación y recuperación'),
         h('p', { key: 'technical', className: 'text-overline text-on-surface-variant mt-3' },
