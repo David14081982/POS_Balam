@@ -79,6 +79,7 @@ sesión de chat.
 | `vaciar-inventario.md` | H-76 | Vaciar el inventario entero para reemplazarlo, con respaldo obligatorio, guardas e invariante |
 | `renovacion-sesion-sin-bloqueo.md` | H-78 | Renovar la sesión sin desmontar temporalmente el POS |
 | `centro-de-equipos.md` | H-79 | Supervisión central por instalación, actividad y reintentos administrativos |
+| `convergencia-centro-de-equipos.md` | H-80 | El historial operativo converge sin tráfico ni reconciliación comercial autorreferente |
 
 Documentación financiera relacionada, creada antes de este índice:
 
