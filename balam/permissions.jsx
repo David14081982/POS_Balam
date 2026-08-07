@@ -143,6 +143,7 @@
     const [pendingUser, setPendingUser] = useState(null);
     const [reloadNonce, setReloadNonce] = useState(0);
     const dirty = Object.keys(draft).length > 0;
+    window.UI.useSyncActivity(!!(dirty || saving), ['permissions','sellers'], { screen: 'permissions' });
 
     async function loadUsers(search, append) {
       const offset = append ? users.length : 0;

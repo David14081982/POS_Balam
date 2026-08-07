@@ -255,11 +255,13 @@
   function persist() {
     try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (e) { /* cuota */ }
   }
-  function emit() {
+  function emit(opts) {
     version++;
     persist();
     try { window.dispatchEvent(new CustomEvent('configchange', { detail: { version } })); } catch (e) { /* SSR */ }
-    try { window.CORE.invokeSync('pushConfig', state); } catch (e) { /* offline */ }
+    if (!(opts && opts.sync === false)) {
+      try { window.CORE.invokeSync('pushConfig', state); } catch (e) { /* offline */ }
+    }
   }
 
   // ── API de lectura ────────────────────────────────────────────────────────────
@@ -672,10 +674,10 @@
     // Metadatos: fusiona sobre los defaults (la nube gana por kind presente; los kinds nuevos del código no desaparecen).
     const meta = Object.assign({}, deepClone(SEED_CATALOG_META), next.catalogMeta || {});
     state = { v: next.v || 1, catalogs: cats, catalogMeta: meta, settings: Object.assign({}, deepClone(SEED_SETTINGS), next.settings) };
-    // Inyecta ítems nuevos que la nube no trae (p. ej. el método 'Cortesía' en un payment_method ya
-    // poblado). emit() → pushConfig vuelve a subir la config reparada, volviéndola persistente.
+    // Inyecta ítems nuevos que la nube no trae. Una aplicación remota persiste y
+    // notifica, pero no vuelve a subir el mismo snapshot (evita bucle Realtime).
     backfillState(state);
-    emit();
+    emit({ sync: false });
   }
 
   window.CONFIG = {

@@ -26,6 +26,7 @@ y `BLOQUEADO`.
 | H-15 | Smoke E2E produce falsos negativos y no libera recursos al fallar | RESUELTO | Pruebas / bundle |
 | H-16 | Pulls truncados por límite de PostgREST | RESUELTO | Sincronización / rendimiento |
 | H-17 | Código y estilos heredados sin consumidores | RESUELTO | Frontend / build |
+| H-77 | Terminales abiertas no convergen y una línea base antigua carece de cuarentena | CÓDIGO LISTO / DESPLIEGUE PENDIENTE | Sincronización / offline / multi-terminal |
 
 ## H-01 — Inventario concurrente
 
@@ -3926,6 +3927,45 @@ producto por la cola y no como una transacción remota con época propia (H-68),
 modo que una terminal apagada no se entera hasta su siguiente pull; y las
 promociones con alcance por producto quedan apuntando a nada hasta que se editen.
 **Corrección documentada:** `docs/fixes/vaciar-inventario.md`.
+
+## H-77 - Terminales abiertas no convergen y una línea base antigua carece de cuarentena
+
+**Estado:** CÓDIGO LISTO / DESPLIEGUE PENDIENTE
+**Fecha de registro:** 06/08/2026
+**Commit:** Pendiente de commit
+**Origen:** dos computadoras con la misma cuenta: A modifica una talla; B no
+recibe el cambio hasta recargar. El requisito ampliado exige convergencia sin
+recarga y que una terminal offline nunca restaure una línea base anterior.
+**Evidencia inicial:** `CONFIG.emit()` solicita `pushConfig` y recargar B recupera
+el cambio remoto. `STORE.pull()` sólo se llama dentro de `init({pull:true})`; no
+hay `postgres_changes`, cursores ni reconciliación al recuperar foco. El listener
+`online` sólo drena la cola. Configuración escribe `lookup`, sus borrados y
+`settings` en solicitudes separadas, sin versión global ni atomicidad.
+**Causa raíz:** contrato entrante ausente (`FF-01`). La salida es durable, pero
+la bajada pertenece al arranque. No existe protocolo versionado que conecte un
+commit remoto con invalidación, compuerta y reconciliación, ni una época que
+invalide líneas base administrativas anteriores.
+**Alcance autorizado:** protocolo evolutivo, manifiesto, terminales, versiones,
+época/rebootstrap, configuración atómica, Realtime como aviso, compuertas,
+activación progresiva de dominios, panel de salud y punto cero.
+**Invariantes:** local-first; cola antes de red; SQL conserva atomicidad e
+idempotencia; un pull no pisa trabajo pendiente; una terminal incompatible o de
+época anterior falla cerrada sin perder su cola; un evento perdido converge;
+ningún formulario se recarga ni pierde un borrador.
+**Riesgo:** intervención transversal sobre autoridades estabilizadas. Se mitiga
+con línea base, modo sombra, banderas por dominio y activación secuencial.
+**Decisión:** `docs/architect/decisions/ADR-012-protocolo-evolutivo-de-sincronizacion.md`.
+**Corrección:** manifiesto y reloj por 14 dominios, invalidación Realtime con
+reconciliación durable, compuertas de actividad, configuración atómica,
+inventario protegido por época, cuarentena/rebootstrap, registro de flota y
+punto cero firmado. Los artefactos fueron regenerados.
+**Pruebas:** cola 159/159; concurrencia/vivo 14/14; contrato H-77 20/20;
+migraciones 31/31; módulos 41/41; propagación 21/21; smoke bundle 17/17 y build
+reproducible 8/8. Docker no está disponible para ejecutar PostgreSQL local.
+**Riesgo residual:** migraciones aún no aplicadas. Faltan respaldo, canario de
+dos equipos, punto cero real y ventana de observación/reversa. Ningún dato
+remoto fue tocado.
+**Corrección documentada:** `docs/fixes/sincronizacion-viva-multiterminal.md`.
 
 ## Regla de actualización
 

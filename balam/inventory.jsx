@@ -102,6 +102,7 @@
     const [products, setProducts] = useState(() => D.products.slice());
     const [importPreview, setImportPreview] = useState(null);
     const [labelTargets, setLabelTargets] = useState(null); // productos para imprimir etiquetas
+    window.UI.useSyncActivity(!!(editing || importPreview), ['products', 'config', 'promotions'], { screen: 'inventory' });
     const [page, setPage] = useState(1);
     const fileRef = useRef(null);
 

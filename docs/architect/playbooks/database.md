@@ -74,6 +74,18 @@ Origen: H-36 · Gobierno: `R-GOV-01`
 Si el cambio introduce una regla nueva sobre la cadena, se añade ahí: ese arnés
 es la autoridad ejecutable del orden, la unicidad y la ausencia de deriva.
 
+**R-DB-11 · BLOCKING · Toda relación compartida nueva declara dominio de
+sincronización o por qué es sólo local.** Su commit incrementa la versión del
+dominio dentro de la misma transacción. Decisión: `ADR-012`
+
+**R-DB-12 · BLOCKING · Una escritura que reemplaza una línea base valida
+protocolo, época y versión esperada en PostgreSQL.** El cliente no es defensa;
+una versión anterior se rechaza y conserva para cuarentena. Origen: H-77
+
+**R-DB-13 · REQUIRED · Una evolución incompatible actualiza el manifiesto y
+trae migración de cola o rebootstrap explícito.** Un campo ausente en un cliente
+anterior no borra el valor vigente. Decisión: `ADR-012`
+
 ---
 
 ## Antipatrones

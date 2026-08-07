@@ -58,6 +58,9 @@
     const [abonando, setAbonando] = useState(null);   // folio en captura
     const [recibo, setRecibo] = useState(null);       // { sale, payment, liquidado } tras asentar
     const [reimprimir, setReimprimir] = useState(null); // folio a reimprimir sin cobrar
+    window.UI.useSyncActivity(!!abonando,
+      ['config','products','clients','sellers','sales','payments','liquidations','movements'],
+      { screen: 'layaway' });
     const [, bump] = useState(0);
     const refresh = () => bump(v => v + 1);
 

@@ -11,11 +11,11 @@
   function NotificationsBell({ go }) {
     const [open, setOpen] = useState(false);
     const [syncStatus, setSyncStatus] = useState(() => (
-      window.STORE && window.STORE.queueStatus ? window.STORE.queueStatus() : null
+      window.STORE && window.STORE.syncStatus ? window.STORE.syncStatus() : null
     ));
     useEffect(() => {
       const refresh = () => setSyncStatus(
-        window.STORE && window.STORE.queueStatus ? window.STORE.queueStatus() : null
+        window.STORE && window.STORE.syncStatus ? window.STORE.syncStatus() : null
       );
       window.addEventListener('syncstatuschange', refresh);
       refresh();

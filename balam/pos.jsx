@@ -52,6 +52,9 @@
     const [pendingMetodo, setPendingMetodo] = useState(null); // venta por confirmar vendedor
     const [success, setSuccess] = useState(null);             // venta registrada
     const [flash, setFlash] = useState(null);                 // línea recién agregada por escáner (destello verde)
+    window.UI.useSyncActivity(!!(ticket.length || checkout || pendingMetodo),
+      ['config','products','promotions','clients','sellers','sales','payments','movements'],
+      { screen: 'pos' });
     const scanRef = useRef(null);
 
     const filtered = useMemo(() => {

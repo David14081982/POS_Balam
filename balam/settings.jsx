@@ -18,6 +18,8 @@
     const sections = window.SCREENS.childrenOf('config').filter(s => window.AUTH.canAccess(s.id));
     const [sec, setSec] = useState('negocio');
     const [addingUser, setAddingUser] = useState(false);
+    window.UI.useSyncActivity(!!addingUser, ['sellers', 'permissions'], { screen: 'settings-user' });
+    const syncFocus = window.UI.useSyncFocusActivity(['config'], { screen: 'settings' });
     // Re-render en vivo cuando cambia cualquier ajuste/catálogo (otra pestaña incluida).
     const [, bump] = useState(0);
     useEffect(() => {
@@ -34,7 +36,7 @@
     if (addingUser) return h(NewUserForm, { user: addingUser === true ? null : addingUser, onCancel: () => setAddingUser(false), onSaved: () => { setAddingUser(false); bump(v => v + 1); } });
 
     const ctx = { setAddingUser, refresh: () => bump(v => v + 1) };
-    return h('div', { className: 'flex-1 overflow-y-auto bg-background font-body text-on-surface p-6' },
+    return h('div', Object.assign({ className: 'flex-1 overflow-y-auto bg-background font-body text-on-surface p-6' }, syncFocus),
       h('div', { className: 'grid grid-cols-1 md:grid-cols-[220px_1fr] gap-6 max-w-5xl' }, [
         h(GlassCard, { key: 'nav', className: 'p-2 h-fit md:sticky md:top-6' },
           sections.map(s => h('button', {
@@ -1214,8 +1216,63 @@
   }
 
   // ── Paneles por sección ────────────────────────────────────────────────────────
+  function SyncHealthCard() {
+    const statusNow = () => window.STORE && window.STORE.syncStatus ? window.STORE.syncStatus() : null;
+    const [status, setStatus] = useState(statusNow);
+    const [busy, setBusy] = useState(false);
+    const [backup, setBackup] = useState(false);
+    const [fleet, setFleet] = useState(null);
+    useEffect(() => {
+      const refresh = () => setStatus(statusNow());
+      window.addEventListener('syncstatuschange', refresh); refresh();
+      if (window.STORE.syncFleetStatus) window.STORE.syncFleetStatus().then(setFleet).catch(() => {});
+      return () => window.removeEventListener('syncstatuschange', refresh);
+    }, []);
+    if (!status) return null;
+    const clean = status.synchronized;
+    const needsBootstrap = status.compatibility === 'must_rebootstrap';
+    const act = async fn => {
+      setBusy(true);
+      try {
+        await fn(); setStatus(statusNow());
+        if (window.STORE.syncFleetStatus) setFleet(await window.STORE.syncFleetStatus());
+      }
+      catch (e) { toast(e.message || String(e), 'var(--danger)'); }
+      setBusy(false);
+    };
+    const exportBackup = () => {
+      try { window.STORE.exportSyncRecovery(); setBackup(true); toast('Respaldo de recuperación exportado', 'var(--accent)'); }
+      catch (e) { toast(e.message || String(e), 'var(--danger)'); }
+    };
+    const pointZero = () => {
+      if (!window.confirm('Se fijará esta nube como inventario autoritativo. Las demás computadoras deberán resincronizarse antes de volver a escribir. ¿Continuar?')) return;
+      act(async () => {
+        const r = await window.STORE.establishPointZero();
+        toast(`Punto cero ${r.data_epoch}: ${r.product_count} productos · ${r.piece_count} piezas`, 'var(--accent)');
+      });
+    };
+    return h(GlassCard, { key: 'sync-health', className: 'p-6', 'data-testid': 'sync-health' }, [
+      h('div', { key: 'h', className: 'flex items-center justify-between gap-3' }, [
+        h(SerifHeading, { key: 't', children: 'Sincronización de equipos' }),
+        h('span', { key: 's', className: 'text-overline font-bold uppercase ' + (clean ? 'text-success' : 'text-danger') },
+          clean ? '100% sincronizado' : needsBootstrap ? 'Reinicio requerido' : 'Reconciliando'),
+      ]),
+      h('p', { key: 'd', className: 'text-caption text-on-surface-variant mt-2' },
+        `Época ${status.dataEpoch == null ? '—' : status.dataEpoch} · tiempo real ${status.realtime} · ${status.pending} pendientes · ${status.blocked} bloqueados · ${status.invalidDomains.length} dominios por aplicar.`),
+      fleet && h('p', { key: 'f', className: 'text-caption text-on-surface-variant mt-1' },
+        `${fleet.current} equipo(s) en la época vigente · ${fleet.stale} equipo(s) bloqueados hasta resincronizar.`),
+      h('div', { key: 'a', className: 'flex gap-2 flex-wrap mt-4' }, [
+        h('button', { key: 'r', disabled: busy, onClick: () => act(() => window.STORE.reconcileDomains()), className: 'px-4 h-10 border border-outline-variant rounded-lg disabled:opacity-40' }, 'Verificar ahora'),
+        h('button', { key: 'b', disabled: busy, onClick: exportBackup, className: 'px-4 h-10 border border-outline-variant rounded-lg disabled:opacity-40' }, backup ? 'Respaldo exportado' : 'Exportar recuperación'),
+        needsBootstrap && h('button', { key: 'rb', disabled: busy || !backup, onClick: () => act(() => window.STORE.rebootstrapFromCloud()), className: 'px-4 h-10 bg-primary text-on-primary rounded-lg disabled:opacity-40' }, 'Resincronizar desde la nube'),
+        window.AUTH.isAdmin() && h('button', { key: 'z', disabled: busy || !clean || !backup, onClick: pointZero, className: 'px-4 h-10 bg-danger text-white rounded-lg disabled:opacity-40' }, 'Establecer punto cero'),
+      ]),
+    ]);
+  }
+
   const PANELS = {
     negocio: () => [
+      h(SyncHealthCard, { key: 'sync' }),
       h(LogoUploader, { key: 'logo' }),
       h(GlassCard, { key: 'd', className: 'p-6' }, [
         h(SerifHeading, { key: 't', className: 'mb-4', children: 'Datos de la tienda' }),

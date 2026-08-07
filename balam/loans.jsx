@@ -138,6 +138,8 @@
     const [devolviendo, setDevolviendo] = useState(null); // folio en captura de devolución
     const [confirmando, setConfirmando] = useState(null); // { tipo, folio }
     const [vale, setVale] = useState(null);               // folio a imprimir
+    window.UI.useSyncActivity(!!(nuevo || editando || devolviendo || confirmando),
+      ['products','clients','loans'], { screen: 'loans' });
     const [, bump] = useState(0);
     const refresh = () => bump(v => v + 1);
 

@@ -156,6 +156,43 @@
       ])));
   }
   function toast(msg, color) { if (pushToastFn) pushToastFn(msg, color); }
+  function useSyncActivity(active, domains, detail) {
+    const token = React.useRef(null);
+    const key = (Array.isArray(domains) ? domains : [domains]).join('|');
+    useEffect(() => {
+      if (active && !token.current && window.CORE && window.CORE.beginActivity) {
+        token.current = window.CORE.beginActivity(key.split('|').filter(Boolean), detail || null);
+      } else if (!active && token.current && window.CORE && window.CORE.endActivity) {
+        window.CORE.endActivity(token.current); token.current = null;
+      }
+      return () => {
+        if (token.current && window.CORE && window.CORE.endActivity) {
+          window.CORE.endActivity(token.current); token.current = null;
+        }
+      };
+    }, [!!active, key]);
+  }
+  function useSyncFocusActivity(domains, detail) {
+    const token = React.useRef(null);
+    const list = Array.isArray(domains) ? domains : [domains];
+    useEffect(() => () => {
+      if (token.current && window.CORE && window.CORE.endActivity) window.CORE.endActivity(token.current);
+      token.current = null;
+    }, []);
+    return {
+      onFocusCapture() {
+        if (!token.current && window.CORE && window.CORE.beginActivity) token.current = window.CORE.beginActivity(list, detail || null);
+      },
+      onBlurCapture(event) {
+        const root = event.currentTarget;
+        setTimeout(() => {
+          if (root && root.contains && root.contains(document.activeElement)) return;
+          if (token.current && window.CORE && window.CORE.endActivity) window.CORE.endActivity(token.current);
+          token.current = null;
+        }, 0);
+      },
+    };
+  }
 
   // Modal
   function Modal({ title, onClose, children, footer, large }) {
@@ -202,5 +239,5 @@
     ]);
   }
 
-  window.UI = { fmt, fechaCorta, fechaHora, Badge, StatusBadge, StockBadge, ProductThumb, ToastHost, toast, Modal, BADGE_TONE, Pager, Segment, resizeImageFile };
+  window.UI = { fmt, fechaCorta, fechaHora, Badge, StatusBadge, StockBadge, ProductThumb, ToastHost, toast, Modal, BADGE_TONE, Pager, Segment, resizeImageFile, useSyncActivity, useSyncFocusActivity };
 })();

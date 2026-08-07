@@ -162,6 +162,7 @@
     const [, bump] = useState(0);
     const refresh = () => bump(v => v + 1);
     const [editing, setEditing] = useState(null); // null | {} (nuevo) | promo (editar)
+    window.UI.useSyncActivity(!!editing, ['promotions', 'products', 'config'], { screen: 'discounts' });
     useEffect(() => {
       const on = () => refresh();
       window.addEventListener('configchange', on);

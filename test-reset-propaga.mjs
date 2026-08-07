@@ -145,7 +145,7 @@ await page.route(/supabase\.co\/rest\/v1\//, async route => {
     const key = table === 'sales' ? 'folio' : (table === 'settings' || table === 'lookup') ? 'key' : 'id';
     db[table] = db[table] || [];
     rows.forEach(r => { const i = db[table].findIndex(x => x[key] === r[key]); if (i >= 0) db[table][i] = r; else db[table].push(r); });
-    return route.fulfill({ status: 201, contentType: 'application/json', body: '[]' });
+    return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(rows) });
   }
   return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
 });

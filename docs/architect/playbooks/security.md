@@ -46,6 +46,10 @@ La interfaz y el servidor aplican el mismo contrato; filtrar el menú sin
 respaldo en RLS no protege nada.
 Origen: H-08 · Decisión: `ADR-005`
 
+**R-SEC-08 · BLOCKING · El canal de invalidación no publica datos de
+negocio.** Expone sólo versiones autorizadas; los datos se recuperan por los
+pulls y RLS vigentes. Realtime no amplía permisos. Decisión: `ADR-012`
+
 ---
 
 ## Antipatrones

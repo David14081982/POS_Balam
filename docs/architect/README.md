@@ -23,7 +23,8 @@ reabre por accidente.
 | el módulo de Cambios | `../04-contrato-del-cambio.md` — autoridad funcional |
 | esquema, migraciones, persistencia | `playbooks/database.md` |
 | SQL, permisos, roles, RLS, vistas o funciones | `playbooks/security.md` |
-| `balam/`, cola offline, build o artefactos | `playbooks/client.md` |
+| `balam/`, build o artefactos | `playbooks/client.md` |
+| sincronización, cola, Realtime, offline o terminales | `playbooks/client.md` · `playbooks/synchronization.md` · `authorities/synchronization.md` · `ADR-006` · `ADR-012` |
 | pruebas, cierre, commit o despliegue | `playbooks/delivery.md` |
 | ubicar quién responde una pregunta de negocio | `authorities/` — `sales` · `inventory` · `security` · `synchronization` |
 | *(sólo si una regla o un playbook lo cita)* | el `ADR-XXX` correspondiente |
@@ -114,3 +115,4 @@ descubre. Las historias que modificaron una autoridad se recuperan con
 | `ADR-009` | El precio por talla es un mapa de excepciones dentro del artículo | vigente |
 | `ADR-010` | El cambio es un documento autónomo con liquidación económica propia | vigente |
 | `ADR-011` | La identidad de una talla no es el código que se edita | vigente |
+| `ADR-012` | La sincronización entrante es un protocolo versionado | vigente |

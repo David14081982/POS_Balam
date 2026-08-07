@@ -1,7 +1,7 @@
 ---
 capa: conocimiento
 applies_to: [client, database]
-related_histories: [H-04, H-09, H-14, H-18, H-62]
+related_histories: [H-04, H-09, H-14, H-18, H-62, H-77]
 severity_max: required
 no_alcance: "No define ninguna autoridad ni transcribe firmas. Sólo dice qué pregunta responde cada una y dónde vive."
 ---
@@ -44,3 +44,19 @@ igual que `findSaleByFolio()`
 **Definición:** `balam/core.jsx` · `docs/02-architecture.md` § CORE
 **Creada por:** H-18
 **Consumidores:** `grep -rn "getDeviceId" balam/`
+
+## ¿Qué estado remoto desconoce esta terminal?
+**Autoridad:** `pos.sync_domain_versions` frente a los cursores durables de
+`STORE`; Realtime sólo invalida
+**Definición:** `ADR-012` · **Creada por:** H-77
+**Consumidores:** registro de dominios y coordinador de `balam/store.jsx`
+
+## ¿Puede esta terminal escribir o debe reconstruirse?
+**Autoridad:** `pos.system_manifest` + versión/época de `pos.sync_devices`;
+PostgreSQL valida las operaciones que reemplazan una línea base
+**Definición:** `ADR-012` · **Creada por:** H-77
+
+## ¿Está completamente sincronizada?
+**Autoridad:** `STORE.syncStatus()`: cola, cursores, invalidaciones, pulls,
+conflictos, compatibilidad y época; offline nunca satisface el contrato
+**Definición:** `playbooks/synchronization.md` · **Creada por:** H-77

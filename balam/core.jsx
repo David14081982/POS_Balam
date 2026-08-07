@@ -6,6 +6,8 @@
   let catalogProductsAdapter = null;
   let catalogPromotionsAdapter = null;
   let syncGateway = null;
+  const syncActivities = new Map();
+  let syncActivitySeq = 0;
 
   function getDeviceId() {
     if (deviceId) return deviceId;
@@ -57,6 +59,33 @@
     const fn = syncGateway && syncGateway[method];
     return typeof fn === 'function' ? fn.apply(syncGateway, args) : undefined;
   }
+  function beginActivity(domains, detail) {
+    const list = (Array.isArray(domains) ? domains : [domains]).filter(Boolean);
+    const token = 'sync-activity-' + (++syncActivitySeq);
+    syncActivities.set(token, { domains: list, detail: detail || null });
+    try { window.dispatchEvent(new CustomEvent('syncactivitychange', { detail: activityStatus() })); } catch (e) { /* SSR */ }
+    return token;
+  }
+  function endActivity(token) {
+    const changed = syncActivities.delete(token);
+    if (changed) {
+      try { window.dispatchEvent(new CustomEvent('syncactivitychange', { detail: activityStatus() })); } catch (e) { /* SSR */ }
+    }
+    return changed;
+  }
+  function domainBusy(domain) {
+    for (const activity of syncActivities.values()) {
+      if (activity.domains.includes('*') || activity.domains.includes(domain)) return true;
+    }
+    return false;
+  }
+  function activityStatus() {
+    const domains = {};
+    for (const activity of syncActivities.values()) {
+      activity.domains.forEach(domain => { domains[domain] = (domains[domain] || 0) + 1; });
+    }
+    return { active: syncActivities.size, domains };
+  }
 
   window.CORE = {
     getDeviceId,
@@ -67,5 +96,9 @@
     catalogPromotions,
     registerSyncGateway,
     invokeSync,
+    beginActivity,
+    endActivity,
+    domainBusy,
+    activityStatus,
   };
 })();

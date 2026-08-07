@@ -60,6 +60,7 @@
     const [view, setView] = useState('grid');
     const [ajuste, setAjuste] = useState(false);
     const [, bump] = useState(0);
+    window.UI.useSyncActivity(!!ajuste, ['sellers','liquidations','sales','returns','exchanges'], { screen: 'sellers' });
     const refresh = () => bump(v => v + 1);
     const eligibleSellers = D.sellers.filter(D.isEligibleSeller);
     const periodo = D.currentPeriodPredicate();

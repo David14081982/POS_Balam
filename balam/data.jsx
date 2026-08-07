@@ -1285,7 +1285,7 @@
   }
 
   // Reemplaza un arreglo de dominio con datos de la nube (sin re-empujar).
-  function applyRemote(kind, rows) {
+  function applyRemote(kind, rows, opts) {
     const M = { products: [products, saveProducts, hydrate], clients: [clients, saveClients], sellers: [sellers, saveSellers], sales: [sales, saveSales], movements: [movements, saveMovements], promotions: [promos, savePromos], returns: [returns, saveReturns], liquidations: [liquidations, saveLiquidations], payments: [payments, savePayments], exchanges: [exchanges, saveExchanges] };
     // Los préstamos no se reemplazan: se fusionan conservando lo que la nube
     // todavía no confirmó (H-62).
@@ -1293,7 +1293,8 @@
     const m = M[kind]; if (!m) return;
     // Una respuesta vacía también puede ser una lectura parcial/fallida. Nunca
     // sacrifica un catálogo local existente; los borrados reales usan tombstones.
-    if (kind === 'products' && products.length && (!Array.isArray(rows) || !rows.length)) return false;
+    if (kind === 'products' && products.length && (!Array.isArray(rows) || !rows.length)
+        && !(opts && opts.authoritative)) return false;
     let persisted = true;
     remoteApplying = true;
     try {

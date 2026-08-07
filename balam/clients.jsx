@@ -38,6 +38,7 @@
     const [detailId, setDetailId] = useState(null);
     const [adding, setAdding] = useState(false);
     const [editId, setEditId] = useState(null);
+    window.UI.useSyncActivity(!!(adding || editId), ['clients'], { screen: 'clients' });
     const [page, setPage] = useState(1);
     const [refreshKey, setRefreshKey] = useState(0);
     const revision = useDataRevision();

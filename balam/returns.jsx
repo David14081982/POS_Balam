@@ -32,6 +32,9 @@
     const [tipo, setTipoRaw] = useState(ultimaOperacion);
     const setTipo = (v) => { setTipoRaw(v); recordarOperacion(v); };
     const [, bump] = useState(0);
+    window.UI.useSyncActivity(!!folio,
+      ['products','sales','returns','exchanges','payments','movements','sellers'],
+      { screen: 'returns-exchanges' });
     const refresh = () => bump(v => v + 1);
     // Al volver se conserva la operación declarada: el cajero sigue en lo suyo.
     const volver = () => setFolio(null);

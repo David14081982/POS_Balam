@@ -86,11 +86,11 @@ check('DATA exporta saleQuote', /window\.DATA\s*=\s*\{[\s\S]*\bsaleQuote\b/.test
 console.log('\n── Consumidores y persistencia ──────────────────────────────────');
 check('POS usa saleQuote como total de Resumen y Cobro', /const quote = resolved\.length \? D\.saleQuote/.test(posSrc) && /total: grandTotal[\s\S]*quote/.test(posSrc));
 check('recordSale congela aplicaciones y reparto', /descuentosAdicionales:/.test(src) && /descuentoAdicional: cortesia/.test(src));
-check('comisión usa el total final de la cotización', /const total = money\(quote\.finalTotal\)/.test(src) && /const base = window\.CONFIG\.get\('commission\.base'\)/.test(src));
+check('comisión usa el total final de la cotización', /const total = money\(quote\.finalTotal\)/.test(src) && /saleCommissionBase\(total, iva/.test(src));
 check('modal está antes del cobro y tiene vista previa', /additional-discount-open/.test(ticketSrc) && /Antes del descuento adicional/.test(ticketSrc) && /Total resultante/.test(ticketSrc));
 check('Cobrar venta informa el beneficio', /quote\.applications/.test(ticketSrc) && /Descuento adicional/.test(ticketSrc));
 check('ticket enmascara el folio físico', /'••••' \+ folio\.slice\(-4\)/.test(ticketSrc));
-check('Configuración ofrece la pantalla de beneficios', /Descuentos adicionales y beneficios/.test(settingsSrc) && /h\(BenefitEditor/.test(settingsSrc));
+check('Configuración ofrece la pantalla de beneficios', /Opciones que el vendedor puede aplicar después de las promociones/.test(settingsSrc) && /h\(BenefitEditor/.test(settingsSrc));
 check('cola transporta snapshot y reparto', /descuentos_adicionales/.test(storeSrc) && /descuento_adicional/.test(storeSrc));
 check('commit remoto consume cada tarjeta una sola vez', /physical_card_redemptions[\s\S]*folio text primary key/.test(migrationSrc) && /pg_advisory_xact_lock/.test(migrationSrc));
 check('tarjeta física usa wrapper transaccional', /commit_sale_with_additional_discount/.test(storeSrc) && /v_result := pos\.commit_sale/.test(migrationSrc));
