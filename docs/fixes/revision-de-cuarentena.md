@@ -33,6 +33,9 @@ corresponda conservan permisos, inventario, concurrencia e idempotencia.
   reportar, decidir, consumir y completar.
 - `STORE` crea la huella, conserva el archivo local, consume aprobaciones y
   reactiva la operación original exclusivamente por `flushQueue()`.
+- Los archivos de cuarentena creados por versiones anteriores se reportan una
+  sola vez al iniciar su propietario y quedan marcados localmente para evitar
+  tráfico repetitivo (`cc7fc90`).
 - El Centro de equipos incorpora la pestaña Cuarentena, decisiones con nota y
   Excel con Resumen, Operaciones y Artículos.
 - El JSON técnico continúa disponible y no se sustituye.
@@ -45,10 +48,10 @@ H-81 15/15 (línea base 2/15); migraciones 31/31; cola 162/162; concurrencia
 `20260807012400/12500` se aplicaron en producción, la verificación SQL pasó y
 el dry-run posterior informó `Remote database is up to date`.
 
-GitHub Pages completó correctamente el despliegue de `b7cd028`. El
+GitHub Pages completó correctamente el despliegue final de `f094ef8`. El
 `index.html` público coincide byte a byte con el blob normalizado de `main`:
-SHA-256 `6C03FF1ECE516ADFC16B871BB4BEECD304DFF930298C3D288712556F6ACD4755`
-y 8,868,933 bytes.
+SHA-256 `BBD98B5F24FA57B20C254143222BBCD5FFEFA456FA8A526BC0C5F35C0E7F1931`
+y 8,869,105 bytes.
 
 ## Riesgo residual y pendientes
 
