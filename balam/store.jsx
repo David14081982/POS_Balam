@@ -2461,6 +2461,7 @@
         : (syncCompatibility === 'must_rebootstrap' ? 'must_rebootstrap' : 'quarantined'),
       p_last_synced_at: clean ? new Date().toISOString() : null,
     });
+    await reportStoredQuarantineArchives(c);
     await consumeSyncCommands(c);
     await consumeSyncQuarantineDecisions(c);
   }
@@ -2674,6 +2675,18 @@
     } catch (e) { /* almacenamiento no disponible */ }
     return archives;
   }
+  async function reportStoredQuarantineArchives(c) {
+    for (const archive of quarantineArchives()) {
+      const value = archive.value || {};
+      const operations = Array.isArray(value.operations)
+        ? value.operations.filter(opBelongsToActiveSession) : [];
+      if (value.reportedAt || !operations.length || !Number(value.epoch)) continue;
+      const cases = await reportQuarantineCases(c, operations, value.localEpoch, Number(value.epoch));
+      value.cases = cases; value.reportedAt = new Date().toISOString();
+      try { localStorage.setItem(archive.key, JSON.stringify(value)); }
+      catch (e) { throw new Error('QUARANTINE_STORAGE_UNAVAILABLE'); }
+    }
+  }
   function restoreQuarantinedOperation(operationId, remoteEpoch) {
     for (const archive of quarantineArchives()) {
       if (Number(archive.value.epoch) !== Number(remoteEpoch)) continue;
@@ -2739,7 +2752,7 @@
       try { localEpoch = Number(localStorage.getItem('balam_sync_data_epoch')) || null; } catch (e) { /* */ }
       const cases = await reportQuarantineCases(c, stale, localEpoch, Number(latest.data_epoch));
       const key = `balam_sync_quarantine_${latest.data_epoch}_${Date.now()}`;
-      try { localStorage.setItem(key, JSON.stringify({ epoch: latest.data_epoch, localEpoch, cases, operations: stale })); }
+      try { localStorage.setItem(key, JSON.stringify({ epoch: latest.data_epoch, localEpoch, cases, reportedAt: new Date().toISOString(), operations: stale })); }
       catch (e) { throw new Error('QUARANTINE_STORAGE_UNAVAILABLE'); }
       saveQ(queued.filter(op => !opBelongsToActiveSession(op)));
     }
