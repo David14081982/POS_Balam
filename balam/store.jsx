@@ -11,7 +11,7 @@
   const QKEY = 'balam_sync_queue';
   const QDB = 'balam_sync', QSTORE = 'durable_queue';
   const SYNC_PROTOCOL_VERSION = 1;
-  const SYNC_SCHEMA_VERSION = 20260807012000;
+  const SYNC_SCHEMA_VERSION = 20260807012200;
   const SYNC_CURSOR_KEY = 'balam_sync_domain_cursors_v1';
   const SYNC_DOMAINS = {
     permissions: { deps: [] }, config: { deps: ['permissions'] },
@@ -2406,6 +2406,17 @@
     if (!SYNC_DOMAINS[domain]) return false;
     const next = Number(version) || 0;
     if (next <= (Number(syncCursors[domain]) || 0)) return false;
+    // La flota es observabilidad, no estado comercial. Su versión sólo pide
+    // refrescar el centro de equipos; no abre una reconciliación global ni
+    // convierte el indicador del POS en «Reconciliando».
+    if (domain === 'devices' && domainMode(domain) === 'active') {
+      syncCursors[domain] = next;
+      syncInvalid.delete(domain);
+      saveSyncCursors();
+      try { window.dispatchEvent(new CustomEvent('syncfleetchange')); } catch (e) { /* */ }
+      try { window.dispatchEvent(new CustomEvent('syncstatuschange', { detail: syncStatus() })); } catch (e) { /* */ }
+      return true;
+    }
     syncInvalid.set(domain, Math.max(next, Number(syncInvalid.get(domain)) || 0));
     if (syncReconcilePromise) syncReconcileAgain = true;
     try { window.dispatchEvent(new CustomEvent('syncstatuschange', { detail: syncStatus() })); } catch (e) { /* */ }
@@ -2450,7 +2461,6 @@
         : (syncCompatibility === 'must_rebootstrap' ? 'must_rebootstrap' : 'quarantined'),
       p_last_synced_at: clean ? new Date().toISOString() : null,
     });
-    await reportQueueActivity(c);
     await consumeSyncCommands(c);
   }
   async function consumeSyncCommands(c) {
@@ -2544,6 +2554,7 @@
       if (syncRealtimeState !== 'subscribed') reconcileDomains().catch(() => { /* */ });
     }, 60000);
     if (!syncHeartbeatTimer) syncHeartbeatTimer = setInterval(() => {
+      if (document.hidden || (typeof navigator !== 'undefined' && !navigator.onLine)) return;
       heartbeatDevice(c).catch(() => { /* el siguiente latido reintenta */ });
     }, 60000);
     if (!syncLifecycleSubscribed) {
