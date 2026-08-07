@@ -3,7 +3,7 @@
 **Riesgo:** H-77  
 **Estado:** PARCIALMENTE RESUELTO — código listo, despliegue pendiente  
 **Fecha:** 06/08/2026  
-**Commit:** Pendiente de commit
+**Commit:** `d6b8a8e`
 
 ## Problema y reproducción
 

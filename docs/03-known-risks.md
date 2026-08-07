@@ -3932,7 +3932,7 @@ promociones con alcance por producto quedan apuntando a nada hasta que se editen
 
 **Estado:** CÓDIGO LISTO / DESPLIEGUE PENDIENTE
 **Fecha de registro:** 06/08/2026
-**Commit:** Pendiente de commit
+**Commit:** `d6b8a8e`
 **Origen:** dos computadoras con la misma cuenta: A modifica una talla; B no
 recibe el cambio hasta recargar. El requisito ampliado exige convergencia sin
 recarga y que una terminal offline nunca restaure una línea base anterior.
