@@ -184,10 +184,11 @@
     }
   }
 
-  async function resolveProfile(c, nextSession) {
+  async function resolveProfile(c, nextSession, options = {}) {
     const seq = ++resolveSeq;
+    const preserveResolved = options.preserveResolved === true;
     session = nextSession || null;
-    applyResolved(null, null, 'profile_missing');
+    if (!preserveResolved) applyResolved(null, null, 'profile_missing');
 
     if (session && session.user && session.user.email && session.user.id && c) {
       const remote = await fetchPermissionSnapshot(c);
@@ -234,9 +235,15 @@
     if (!subscribed) {
       subscribed = true;
       c.auth.onAuthStateChange((_evt, next) => {
-        ready = false;
-        emit();
-        resolveProfile(c, next || null);
+        const nextSession = next || null;
+        const sameResolvedUser = ready && profile && access
+          && session && session.user && nextSession && nextSession.user
+          && session.user.id === nextSession.user.id;
+        if (!sameResolvedUser) {
+          ready = false;
+          emit();
+        }
+        resolveProfile(c, nextSession, { preserveResolved: sameResolvedUser });
       });
     }
     await resolveProfile(c, initial);

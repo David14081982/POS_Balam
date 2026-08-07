@@ -37,6 +37,8 @@ function harness(options = {}) {
     ? { id: userId, nombre: 'Usuario', iniciales: 'US', email, role: 'vendedor', active: true, deleted_at: null }
     : options.profile;
   let offline = !!options.offline;
+  let authCallback = null;
+  let delayedRpc = null;
   const localStorage = {
     getItem: key => saved.has(key) ? saved.get(key) : null,
     setItem: (key, value) => saved.set(key, String(value)),
@@ -59,6 +61,7 @@ function harness(options = {}) {
       if (name !== 'current_permission_snapshot') {
         return { data: null, error: { message: `RPC inesperada: ${name}` } };
       }
+      if (delayedRpc) await delayedRpc.promise;
       const profileStatus = !profile ? 'profile_missing'
         : profile.active === false ? 'user_inactive' : 'active';
       const remoteProfile = profile ? {
@@ -78,7 +81,10 @@ function harness(options = {}) {
     },
     auth: {
       getSession: async () => ({ data: { session } }),
-      onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),
+      onAuthStateChange: callback => {
+        authCallback = callback;
+        return { data: { subscription: { unsubscribe() {} } } };
+      },
       signOut: async () => {},
     },
   };
@@ -106,6 +112,16 @@ function harness(options = {}) {
     setSnapshot(value) { remoteSnapshot = value; },
     setOffline(value) { offline = value; },
     setProfile(value) { profile = value; },
+    delayRpc() {
+      let release;
+      const promise = new Promise(resolve => { release = resolve; });
+      delayedRpc = { promise, release };
+    },
+    releaseRpc() {
+      if (delayedRpc) delayedRpc.release();
+      delayedRpc = null;
+    },
+    emitAuth(event) { return authCallback && authCallback(event, session); },
   };
 }
 
@@ -134,6 +150,15 @@ check('API pública de navegación queda completa',
     && typeof online.AUTH.defaultScreen === 'function'
     && typeof online.AUTH.refreshPermissions === 'function'
     && online.AUTH.defaultScreen() === 'pos');
+
+online.delayRpc();
+online.emitAuth('TOKEN_REFRESHED');
+check('renovar el token no desmonta la sesion ni muestra el gate de carga',
+  online.AUTH.isReady() === true
+    && online.AUTH.current()?.email === 'user@example.com'
+    && online.AUTH.canAccess('pos') === true);
+online.releaseRpc();
+await new Promise(resolve => setTimeout(resolve, 0));
 
 const deny = harness({
   snapshot: snapshot([
