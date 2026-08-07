@@ -1,9 +1,9 @@
 # Centro administrativo de equipos
 
 **Riesgo:** H-79
-**Estado:** MIGRACIONES DESPLEGADAS / CLIENTE PENDIENTE
+**Estado:** RESUELTO
 **Fecha:** 07/08/2026
-**Commit:** Pendiente de commit
+**Commit:** `5c8a145`
 
 ## Problema y reproducción
 
@@ -61,8 +61,11 @@ avanzado y conservan su comportamiento.
 ## Riesgo residual y pendientes
 
 Las migraciones `12000/12100` quedaron aplicadas y su verificación SQL pasó; el
-dry-run posterior quedó vacío. El cliente todavía no está publicado. Un
-equipo apagado sólo puede declarar sus operaciones cuando vuelva a conectarse;
+dry-run posterior quedó vacío. GitHub Pages coincide con el `index.html` del
+commit: SHA-256
+`D6AD3E0E06D1FDFB57852796FF603B5942941A21BEEEB5E396E7DF9F7A124B1E`.
+
+Un equipo apagado sólo puede declarar sus operaciones cuando vuelva a conectarse;
 el centro lo muestra como estado desconocido. El reintento administrativo puede
 volver a fallar si la causa real —permiso, dato o conflicto— sigue vigente.
 
