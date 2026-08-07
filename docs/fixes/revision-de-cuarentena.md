@@ -45,6 +45,11 @@ H-81 15/15 (línea base 2/15); migraciones 31/31; cola 162/162; concurrencia
 `20260807012400/12500` se aplicaron en producción, la verificación SQL pasó y
 el dry-run posterior informó `Remote database is up to date`.
 
+GitHub Pages completó correctamente el despliegue de `b7cd028`. El
+`index.html` público coincide byte a byte con el blob normalizado de `main`:
+SHA-256 `6C03FF1ECE516ADFC16B871BB4BEECD304DFF930298C3D288712556F6ACD4755`
+y 8,868,933 bytes.
+
 ## Riesgo residual y pendientes
 
 Una operación rechazada conserva su evidencia local y remota, pero no se
