@@ -1601,5 +1601,29 @@ ok('34c. H-60: la escritura válida termina sin pendientes', S.pending === 0);
     !!subido && subido.product_id === 'P-ALFA');
 }
 
+// 42) H-77: una configuración histórica de otra sesión no es pendiente actual.
+{
+  const env = freshEnv();
+  const profile = { email: 'admin-vigente@balam.test', role: 'admin' };
+  env.window.AUTH = { current: () => profile };
+  env.cloud.rowsByTable.lookup = [{ kind: 'category', code: '21', label: 'Guayabera', active: true, meta: {}, sort_order: 0 }];
+  env.cloud.rowsByTable.settings = [{ key: 'currency', value: 'MXN' }];
+  env.localStorage.setItem('balam_sync_queue', JSON.stringify([{
+    id: 'config-ajena', type: 'config', ownerId: 'otra-cuenta@balam.test',
+    status: 'blocked_permission', attempts: 1,
+    diagnostic: { status: 'blocked_permission', policy: 'review_permissions', retryable: false },
+    lookup: [], settings: [],
+  }]));
+  const S = loadStore(env);
+  await S.setSession(profile);
+  await sleep(30);
+  ok('42a. H-77: una config ajena bloqueada no muestra cambios locales pendientes',
+    !env.window.UI.toasts.some(msg => msg.includes('Cambios locales pendientes')));
+  ok('42b. H-77: la config ajena no impide descargar la configuración remota',
+    !!env.window.CONFIG.loaded && env.window.CONFIG.loaded.settings.currency === 'MXN');
+  ok('42c. H-77: la operación histórica permanece intacta para su propietario',
+    JSON.parse(env.localStorage.getItem('balam_sync_queue')).some(op => op.id === 'config-ajena'));
+}
+
 console.log(`════════ ${pass} pasaron, ${fail} fallaron ════════`);
 process.exit(fail ? 1 : 0);

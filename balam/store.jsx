@@ -2598,7 +2598,8 @@
     try { await flushQueue(); } catch (e) { /* offline: la cola queda para el reintento */ }
     if (opts.pull) {
       // Config local sin subir (op 'config' aún en cola): conservarla, no pisarla con la nube.
-      const cfgPending = loadQ().some(op => op.type === 'config');
+      const cfgPending = loadQ().some(op => op.type === 'config'
+        && opBelongsToActiveSession(op) && isAutomaticallyEligible(op));
       const r = cfgPending ? { ok: true, skipped: true } : await pull();
       if (window.UI && window.UI.toast) window.UI.toast(r.skipped ? 'Cambios locales pendientes de subir — se conservan' : (r.ok ? 'Configuración sincronizada (nube)' : 'Nube no disponible — modo local'), r.ok ? 'var(--accent)' : 'var(--danger)');
       // Limpieza pendiente de otra terminal: se aplica AQUÍ antes de bajar el dominio.
