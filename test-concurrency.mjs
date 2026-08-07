@@ -272,5 +272,7 @@ C.window.CORE.endActivity(activity);
 await sleep(300);
 ok('9b. H-77: al terminar la captura se aplica el cambio remoto diferido',
   C.local.clients.find(x => x.id === 'c1')?.nombre === 'Ana diferida');
+ok('10. H-77: el estado final deja de mostrarse como reconciliando',
+  C.STORE.syncStatus().reconciling === false && C.STORE.syncStatus().synchronized === true);
 
 process.exit(fail ? 1 : 0);

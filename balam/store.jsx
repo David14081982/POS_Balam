@@ -2409,6 +2409,10 @@
     })().finally(() => {
       syncReconcilePromise = null;
       const again = syncReconcileAgain; syncReconcileAgain = false;
+      // El evento emitido dentro de la reconciliación todavía veía la promesa
+      // activa. Publica el estado final para que el panel salga de
+      // «Reconciliando» cuando ya no queda trabajo.
+      try { window.dispatchEvent(new CustomEvent('syncstatuschange', { detail: syncStatus() })); } catch (e) { /* */ }
       if (again && Array.from(syncInvalid.keys()).some(domain =>
         domainMode(domain) === 'active' && !domainBlocked(domain))) {
         Promise.resolve().then(() => reconcileDomains()).catch(() => { /* siguiente timbre reintenta */ });
