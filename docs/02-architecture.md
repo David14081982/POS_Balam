@@ -504,6 +504,19 @@ identidad administrativa auxiliar.
 
 ## Sincronización
 
+El dominio operativo `devices` no transporta datos comerciales. Proyecta el
+estado de cada instalación en `pos.sync_devices` y el ciclo resumido de su cola
+en `pos.sync_activity`: equipo, usuario, tipo de operación, referencia, estado y
+diagnóstico acotado. Nunca persiste el payload de ventas, inventario o clientes.
+Un heartbeat de un equipo conectado se publica cada minuto; una ausencia de
+heartbeat significa estado actual desconocido, no «sincronizado».
+
+El Centro de equipos es una lectura administrativa de esa proyección. Nombrar
+una instalación no cambia su `device_id`. «Autorizar reintento» crea una orden
+para la instalación de origen; cuando vuelva a conectarse, reutiliza
+`STORE.retryOperation()` sobre la misma operación durable. La orden no concede
+permisos, no altera documentos y no sustituye las RPC de negocio.
+
 En el arranque, `STORE.init({ pull: true })`:
 
 1. Cuenta las operaciones que ya estaban pendientes.

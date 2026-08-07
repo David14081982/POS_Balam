@@ -11,7 +11,7 @@
   const QKEY = 'balam_sync_queue';
   const QDB = 'balam_sync', QSTORE = 'durable_queue';
   const SYNC_PROTOCOL_VERSION = 1;
-  const SYNC_SCHEMA_VERSION = 20260806011900;
+  const SYNC_SCHEMA_VERSION = 20260807012000;
   const SYNC_CURSOR_KEY = 'balam_sync_domain_cursors_v1';
   const SYNC_DOMAINS = {
     permissions: { deps: [] }, config: { deps: ['permissions'] },
@@ -22,7 +22,7 @@
     payments: { deps: ['sales'] }, returns: { deps: ['sales', 'products'] },
     exchanges: { deps: ['sales', 'products'] }, loans: { deps: ['products', 'clients'] },
     liquidations: { deps: ['sellers', 'sales'] }, movements: { deps: ['sales', 'returns'] },
-    purges: { deps: [] },
+    purges: { deps: [] }, devices: { deps: ['permissions'] },
   };
   // Marca de limpieza de datos de prueba: fila reservada de pos.settings que escribe
   // supabase/LIMPIAR-PRUEBAS.sql. Cada terminal recuerda en RESET_SEEN la última que aplicó;
@@ -36,7 +36,8 @@
   let sessionSeq = 0;
   let syncManifest = null, syncChannel = null, syncReconcilePromise = null;
   let syncReconcileAgain = false;
-  let syncRealtimeState = 'off', syncPollTimer = null, syncLifecycleSubscribed = false;
+  let syncRealtimeState = 'off', syncPollTimer = null, syncHeartbeatTimer = null,
+    syncLifecycleSubscribed = false;
   let syncCompatibility = 'legacy';
   const syncInvalid = new Map();
   function loadSyncCursors() {
@@ -462,6 +463,9 @@
     else if (op.type === 'config') { const i = q.findIndex(x => x.type === 'config' && x.ownerId === op.ownerId); if (i >= 0) q[i] = op; else q.push(op); }
     else q.push(op); // sale / delete: idempotentes, se conservan en orden
     saveQ(q);
+    // La cola sigue siendo la autoridad local. El historial remoto es sólo una
+    // proyección operativa y nunca recibe el payload comercial de la operación.
+    recordSyncActivity(null, op).catch(() => {});
     return true;
   }
   function classifyFailure(error, details) {
@@ -1472,6 +1476,7 @@
         const ok = await applyOp(c, op);
         const cur = loadQ();
         if (ok) {
+          await recordSyncActivity(c, op, 'synced');
           if (op.retry) recovered = true;
           const remaining = cur.filter(o => o.id !== op.id);
           if (op.type === 'sale' && op.mode === 'layaway_liquidation') {
@@ -1497,6 +1502,7 @@
             t.diagnostic = lastApplyFailure || classifyFailure({ code: 'unknown_error' });
             t.status = t.diagnostic.status;
             saveQ(cur);
+            await recordSyncActivity(c, t);
           }
         }
       }
@@ -2266,10 +2272,80 @@
     // ventas) vía la cola; un vaciado intencional de la nube ahora SÍ se respeta.)
     return { ok: true };
   }
+  function syncActivityDomain(op) {
+    if (!op) return null;
+    if (op.type === 'config') return 'config';
+    if (op.type === 'sale') return 'sales';
+    if (op.type === 'return') return 'returns';
+    if (op.type === 'exchange') return 'exchanges';
+    if (op.type === 'loanOperation') return 'loans';
+    if (/^commission/.test(op.type || '')) return 'liquidations';
+    return op.kind || kindForTable(op.table) || null;
+  }
+  function syncActivitySummary(op) {
+    const labels = {
+      config: 'Actualización de configuración', sale: 'Venta', return: 'Devolución',
+      exchange: 'Cambio de mercancía', loanOperation: 'Movimiento de préstamo',
+      commissionSettle: 'Liquidación de comisión', commissionClose: 'Cierre de comisiones',
+      commissionAdjustment: 'Ajuste de comisión', upsert: 'Actualización de registros',
+      profileUpdate: 'Actualización de perfil', softDelete: 'Baja de registro',
+    };
+    const base = labels[op.type] || 'Operación local';
+    const ref = op.folio || op.reference || null;
+    return ref ? `${base} · ${String(ref).slice(0, 80)}` : base;
+  }
+  function syncActivityStatus(op, forced) {
+    if (forced) return forced;
+    if (op.status === 'quarantined') return 'quarantined';
+    if (/^blocked_/.test(op.status || '') || op.status === 'auth_required') return 'blocked';
+    if (op.status === 'retry_wait' || op.status === 'waiting_inventory') return 'retrying';
+    return 'pending';
+  }
+  async function syncActivityUser(c) {
+    try {
+      const result = await c.auth.getSession();
+      return result && result.data && result.data.session && result.data.session.user;
+    } catch (e) { return null; }
+  }
+  let syncActivityChain = Promise.resolve();
+  function recordSyncActivity(c, op, forcedStatus) {
+    if (!op || !op.id) return Promise.resolve(false);
+    // Congela sólo la forma operativa. La cadena conserva el orden pending →
+    // blocked/synced aun si la red responde antes que el primer reporte.
+    const snapshot = JSON.parse(JSON.stringify(op));
+    const task = syncActivityChain.catch(() => {}).then(async () => {
+      const client = c || await ensureClient(); if (!client) return false;
+      const user = await syncActivityUser(client); if (!user || !user.id) return false;
+      const status = syncActivityStatus(snapshot, forcedStatus);
+      const diagnostic = snapshot.diagnostic ? {
+        category: snapshot.diagnostic.category || null, code: snapshot.diagnostic.code || null,
+        message: snapshot.diagnostic.message || null, policy: snapshot.diagnostic.policy || null,
+      } : null;
+      const row = {
+        device_id: window.CORE.getDeviceId(), operation_id: String(snapshot.id),
+        user_id: user.id, user_email: user.email || activeOwnerId(),
+        operation_type: snapshot.type || 'unknown', domain: syncActivityDomain(snapshot),
+        reference: snapshot.folio ? String(snapshot.folio).slice(0, 80) : null,
+        summary: syncActivitySummary(snapshot), status,
+        requires_action: status === 'blocked' || status === 'quarantined',
+        diagnostic, updated_at: new Date().toISOString(),
+        completed_at: status === 'synced' ? new Date().toISOString() : null,
+      };
+      const result = await client.from('sync_activity').upsert(row, { onConflict: 'device_id,operation_id' });
+      return !result.error;
+    });
+    syncActivityChain = task.catch(() => false);
+    return task;
+  }
+  async function reportQueueActivity(c) {
+    const operations = loadQ().filter(opBelongsToActiveSession);
+    for (const op of operations) await recordSyncActivity(c, op);
+    return operations.length;
+  }
 
   const DOMAIN_ORDER = ['permissions','config','sellers','products','clients',
     'promotions','sales','payments','returns','exchanges','loans','liquidations',
-    'movements','purges'];
+    'movements','purges','devices'];
   const DOMAIN_TABLE = {
     config: 'settings', products: 'products', clients: 'clients', sellers: 'sellers',
     promotions: 'promotions', sales: 'sales', payments: 'sale_payments',
@@ -2308,6 +2384,10 @@
     return { ok: true, rows: r.data || [] };
   }
   async function applyDomainPull(domain) {
+    if (domain === 'devices') {
+      try { window.dispatchEvent(new CustomEvent('syncfleetchange')); } catch (e) { /* */ }
+      return { ok: true };
+    }
     if (domain === 'config') return pull();
     if (domain === 'purges') {
       await applyRemotePurge();
@@ -2357,18 +2437,39 @@
   }
   async function heartbeatDevice(c) {
     if (!syncManifest) return;
-    const session = await c.auth.getSession();
-    const user = session && session.data && session.data.session && session.data.session.user;
+    const user = await syncActivityUser(c);
     if (!user || !user.id) return;
-    await c.from('sync_devices').upsert({
-      device_id: window.CORE.getDeviceId(), user_id: user.id,
-      user_email: user.email || activeOwnerId(), client_build: SYNC_SCHEMA_VERSION,
-      protocol_version: SYNC_PROTOCOL_VERSION, schema_version: SYNC_SCHEMA_VERSION,
-      data_epoch: Number(syncManifest.data_epoch) || 1, cursors: syncCursors,
-      queue_pending: loadQ().filter(opBelongsToActiveSession).length,
-      status: syncCompatibility === 'ok' ? 'online' : (syncCompatibility === 'must_rebootstrap' ? 'must_rebootstrap' : 'quarantined'),
-      last_seen_at: new Date().toISOString(),
-    }, { onConflict: 'device_id' });
+    const q = queueStatus();
+    const clean = syncStatus().synchronized;
+    await c.rpc('report_sync_device', {
+      p_device_id: window.CORE.getDeviceId(), p_client_build: String(SYNC_SCHEMA_VERSION),
+      p_protocol_version: SYNC_PROTOCOL_VERSION, p_schema_version: SYNC_SCHEMA_VERSION,
+      p_data_epoch: Number(syncManifest.data_epoch) || 1, p_cursors: syncCursors,
+      p_queue_pending: q.pending, p_queue_blocked: q.blocked,
+      p_status: syncCompatibility === 'ok' ? (q.blocked ? 'pending' : 'online')
+        : (syncCompatibility === 'must_rebootstrap' ? 'must_rebootstrap' : 'quarantined'),
+      p_last_synced_at: clean ? new Date().toISOString() : null,
+    });
+    await reportQueueActivity(c);
+    await consumeSyncCommands(c);
+  }
+  async function consumeSyncCommands(c) {
+    if (!c) return 0;
+    const result = await c.rpc('consume_sync_commands', { p_device_id: window.CORE.getDeviceId() });
+    if (result.error) return 0;
+    let consumed = 0;
+    for (const command of (result.data || [])) {
+      if (command.action !== 'retry') continue;
+      const accepted = retryOperation(command.operation_id);
+      if (accepted) await waitForFlushIdle();
+      const synchronized = accepted && !loadQ().some(op => op.id === command.operation_id);
+      await c.rpc('complete_sync_command', {
+        p_device_id: window.CORE.getDeviceId(), p_operation_id: command.operation_id,
+        p_ok: synchronized,
+      });
+      if (synchronized) consumed++;
+    }
+    return consumed;
   }
   async function reconcileDomains() {
     if (syncReconcilePromise) return syncReconcilePromise;
@@ -2422,6 +2523,7 @@
   }
   function stopLiveSync() {
     if (syncPollTimer) { clearInterval(syncPollTimer); syncPollTimer = null; }
+    if (syncHeartbeatTimer) { clearInterval(syncHeartbeatTimer); syncHeartbeatTimer = null; }
     if (syncChannel && sb && typeof sb.removeChannel === 'function') sb.removeChannel(syncChannel);
     syncChannel = null; syncRealtimeState = 'off';
   }
@@ -2441,10 +2543,16 @@
     if (!syncPollTimer) syncPollTimer = setInterval(() => {
       if (syncRealtimeState !== 'subscribed') reconcileDomains().catch(() => { /* */ });
     }, 60000);
+    if (!syncHeartbeatTimer) syncHeartbeatTimer = setInterval(() => {
+      heartbeatDevice(c).catch(() => { /* el siguiente latido reintenta */ });
+    }, 60000);
     if (!syncLifecycleSubscribed) {
       syncLifecycleSubscribed = true;
       window.addEventListener('visibilitychange', () => {
-        if (!document.hidden) reconcileDomains().catch(() => { /* */ });
+        if (!document.hidden) {
+          reconcileDomains().catch(() => { /* */ });
+          heartbeatDevice(c).catch(() => { /* */ });
+        }
       });
       window.addEventListener('syncactivitychange', () => {
         if (syncReconcilePromise) syncReconcileAgain = true;
@@ -2537,14 +2645,51 @@
   }
   async function syncFleetStatus() {
     const c = await ensureClient();
-    if (!c || !syncManifest) return { devices: [], current: 0, stale: 0 };
+    if (!c || !syncManifest) return { devices: [], activity: [], current: 0, stale: 0, attention: 0 };
     const r = await c.from('sync_devices').select('*').order('last_seen_at', { ascending: false });
     if (r.error) return { devices: [], current: 0, stale: 0, error: r.error.message };
-    const devices = r.data || []; const epoch = Number(syncManifest.data_epoch);
+    const history = await c.from('sync_activity').select('*').order('updated_at', { ascending: false }).limit(200);
+    const now = Date.now(), devices = (r.data || []).map(device => {
+      const ageMs = Math.max(0, now - new Date(device.last_seen_at || 0).getTime());
+      const staleEpoch = Number(device.data_epoch) !== Number(syncManifest.data_epoch)
+        || device.status === 'must_rebootstrap' || device.status === 'quarantined';
+      const connection = ageMs <= 120000 ? 'online' : (ageMs <= 86400000 ? 'disconnected' : 'unknown');
+      return Object.assign({}, device, { ageMs, connection, staleEpoch });
+    });
+    const activity = history.error ? [] : (history.data || []);
+    const epoch = Number(syncManifest.data_epoch);
     return {
-      devices, current: devices.filter(d => Number(d.data_epoch) === epoch && d.status !== 'must_rebootstrap').length,
-      stale: devices.filter(d => Number(d.data_epoch) !== epoch || d.status === 'must_rebootstrap').length,
+      devices, activity,
+      current: devices.filter(d => Number(d.data_epoch) === epoch && !d.staleEpoch).length,
+      stale: devices.filter(d => d.staleEpoch).length,
+      attention: activity.filter(a => a.requires_action).length,
+      disconnected: devices.filter(d => d.connection !== 'online').length,
     };
+  }
+  async function updateSyncDevice(deviceId, displayName, deviceType) {
+    const c = await ensureClient(); if (!c) throw new Error('Sin conexión con la nube');
+    const r = await c.rpc('admin_update_sync_device', {
+      p_device_id: deviceId, p_display_name: displayName, p_device_type: deviceType,
+    });
+    if (r.error) throw new Error(r.error.message || 'No se pudo actualizar el equipo');
+    try { window.dispatchEvent(new CustomEvent('syncfleetchange')); } catch (e) { /* */ }
+    return r.data;
+  }
+  async function requestSyncRetry(deviceId, operationId) {
+    const c = await ensureClient(); if (!c) throw new Error('Sin conexión con la nube');
+    const r = await c.rpc('admin_request_sync_retry', {
+      p_device_id: deviceId, p_operation_id: operationId,
+    });
+    if (r.error) throw new Error(r.error.message || 'No se pudo solicitar el reintento');
+    return true;
+  }
+  async function markSyncActivityReviewed(deviceId, operationId) {
+    const c = await ensureClient(); if (!c) throw new Error('Sin conexión con la nube');
+    const r = await c.rpc('admin_mark_sync_activity_reviewed', {
+      p_device_id: deviceId, p_operation_id: operationId,
+    });
+    if (r.error) throw new Error(r.error.message || 'No se pudo marcar como revisado');
+    return true;
   }
 
   async function init(opts = {}) {
@@ -2776,6 +2921,6 @@
     }
   }
 
-  window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushClient, pushSale, settleLayaway, pushReturn, pushExchange, ensureFolioBlock, deleteRow, settleCommission, closeCommissionPeriod, applyCommissionAdjustment, pushLoanOperation, migrateLocalLoans, pullDomain, fetchSaleByFolio, physicalCardAvailable, claimPhysicalCard, flushQueue, retryOperation, queueStatus, syncStatus, syncFleetStatus, reconcileDomains, invalidateDomain, establishPointZero, rebootstrapFromCloud, exportSyncRecovery, hasPendingLayaway, clearQueue, markResetApplied, purgeTestData, applyRemotePurge, pruneQueueForPurge, readPurgeState, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
+  window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushClient, pushSale, settleLayaway, pushReturn, pushExchange, ensureFolioBlock, deleteRow, settleCommission, closeCommissionPeriod, applyCommissionAdjustment, pushLoanOperation, migrateLocalLoans, pullDomain, fetchSaleByFolio, physicalCardAvailable, claimPhysicalCard, flushQueue, retryOperation, queueStatus, syncStatus, syncFleetStatus, updateSyncDevice, requestSyncRetry, markSyncActivityReviewed, reconcileDomains, invalidateDomain, establishPointZero, rebootstrapFromCloud, exportSyncRecovery, hasPendingLayaway, clearQueue, markResetApplied, purgeTestData, applyRemotePurge, pruneQueueForPurge, readPurgeState, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
   window.CORE.registerSyncGateway(window.STORE);
 })();

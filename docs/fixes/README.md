@@ -78,6 +78,7 @@ sesión de chat.
 | `cobro-del-cambio-por-forma-de-pago.md` | H-75 | La diferencia de un cambio se clasifica por su forma de pago real, no todo al cajón «otro» |
 | `vaciar-inventario.md` | H-76 | Vaciar el inventario entero para reemplazarlo, con respaldo obligatorio, guardas e invariante |
 | `renovacion-sesion-sin-bloqueo.md` | H-78 | Renovar la sesión sin desmontar temporalmente el POS |
+| `centro-de-equipos.md` | H-79 | Supervisión central por instalación, actividad y reintentos administrativos |
 
 Documentación financiera relacionada, creada antes de este índice:
 

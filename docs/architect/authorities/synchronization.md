@@ -1,7 +1,7 @@
 ---
 capa: conocimiento
 applies_to: [client, database]
-related_histories: [H-04, H-09, H-14, H-18, H-62, H-77]
+related_histories: [H-04, H-09, H-14, H-18, H-62, H-77, H-79]
 severity_max: required
 no_alcance: "No define ninguna autoridad ni transcribe firmas. Sólo dice qué pregunta responde cada una y dónde vive."
 ---
@@ -60,3 +60,17 @@ PostgreSQL valida las operaciones que reemplazan una línea base
 **Autoridad:** `STORE.syncStatus()`: cola, cursores, invalidaciones, pulls,
 conflictos, compatibilidad y época; offline nunca satisface el contrato
 **Definición:** `playbooks/synchronization.md` · **Creada por:** H-77
+
+## ¿Qué equipo requiere atención y qué intentó sincronizar?
+**Autoridad:** `pos.sync_devices` para la última señal declarada y
+`pos.sync_activity` para la proyección resumida de cada operación. La cola local
+continúa siendo la autoridad de lo pendiente; ausencia de señal es «desconocido»
+y nunca prueba sincronía
+**Definición:** migración `20260807012000` · **Creada por:** H-79
+**Consumidores:** `grep -rn "syncFleetStatus\|sync_activity" balam/`
+
+## ¿Puede un administrador ordenar un reintento remoto?
+**Autoridad:** `pos.admin_request_sync_retry()` crea la orden y la instalación
+de origen la consume mediante `pos.consume_sync_commands()`. La ejecución sigue
+perteneciendo a `STORE.retryOperation()` y conserva RLS, RPC e idempotencia
+**Definición:** migración `20260807012000` · **Creada por:** H-79

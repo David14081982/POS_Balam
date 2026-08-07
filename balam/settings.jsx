@@ -1222,11 +1222,26 @@
     const [busy, setBusy] = useState(false);
     const [backup, setBackup] = useState(false);
     const [fleet, setFleet] = useState(null);
+    const [tab, setTab] = useState('equipos');
+    const [editing, setEditing] = useState(null);
+    const [deviceName, setDeviceName] = useState('');
+    const [deviceType, setDeviceType] = useState('pc');
+    const loadFleet = async () => {
+      if (window.STORE && window.STORE.syncFleetStatus) {
+        const next = await window.STORE.syncFleetStatus(); setFleet(next);
+      }
+    };
     useEffect(() => {
       const refresh = () => setStatus(statusNow());
+      const refreshFleet = () => loadFleet().catch(() => {});
       window.addEventListener('syncstatuschange', refresh); refresh();
-      if (window.STORE.syncFleetStatus) window.STORE.syncFleetStatus().then(setFleet).catch(() => {});
-      return () => window.removeEventListener('syncstatuschange', refresh);
+      window.addEventListener('syncfleetchange', refreshFleet); refreshFleet();
+      const timer = setInterval(refreshFleet, 30000);
+      return () => {
+        clearInterval(timer);
+        window.removeEventListener('syncstatuschange', refresh);
+        window.removeEventListener('syncfleetchange', refreshFleet);
+      };
     }, []);
     if (!status) return null;
     const clean = status.synchronized;
@@ -1235,7 +1250,7 @@
       setBusy(true);
       try {
         await fn(); setStatus(statusNow());
-        if (window.STORE.syncFleetStatus) setFleet(await window.STORE.syncFleetStatus());
+        await loadFleet();
       }
       catch (e) { toast(e.message || String(e), 'var(--danger)'); }
       setBusy(false);
@@ -1251,21 +1266,120 @@
         toast(`Punto cero ${r.data_epoch}: ${r.product_count} productos · ${r.piece_count} piezas`, 'var(--accent)');
       });
     };
+    const relativeTime = value => {
+      const seconds = Math.max(0, Math.floor((Date.now() - new Date(value || 0).getTime()) / 1000));
+      if (seconds < 60) return 'Ahora';
+      if (seconds < 3600) return `Hace ${Math.floor(seconds / 60)} min`;
+      if (seconds < 86400) return `Hace ${Math.floor(seconds / 3600)} h`;
+      return `Hace ${Math.floor(seconds / 86400)} día(s)`;
+    };
+    const deviceLabel = device => device.display_name || `Equipo ${String(device.device_id || '').slice(-6).toUpperCase()}`;
+    const deviceState = device => {
+      if (device.staleEpoch) return { label: 'Requiere resincronización', cls: 'text-danger bg-danger-soft' };
+      if (Number(device.queue_blocked) > 0) return { label: 'Requiere atención', cls: 'text-danger bg-danger-soft' };
+      if (device.connection === 'unknown') return { label: 'Estado actual desconocido', cls: 'text-on-surface-variant bg-surface-container' };
+      if (device.connection === 'disconnected') return { label: 'Desconectado', cls: 'text-warning bg-warning-soft' };
+      if (Number(device.queue_pending) > 0) return { label: 'Sincronizando', cls: 'text-warning bg-warning-soft' };
+      return { label: 'Sincronizado', cls: 'text-success bg-success-soft' };
+    };
+    const beginEdit = device => {
+      setEditing(device.device_id); setDeviceName(deviceLabel(device));
+      setDeviceType(device.device_type === 'unknown' ? 'pc' : device.device_type);
+    };
+    const saveDevice = () => act(async () => {
+      await window.STORE.updateSyncDevice(editing, deviceName, deviceType);
+      setEditing(null); toast('Equipo actualizado', 'var(--accent)');
+    });
+    const retry = activity => act(async () => {
+      await window.STORE.requestSyncRetry(activity.device_id, activity.operation_id);
+      toast('Reintento solicitado. Se ejecutará cuando ese equipo vuelva a conectarse.', 'var(--accent)');
+    });
+    const reviewed = activity => act(async () => {
+      await window.STORE.markSyncActivityReviewed(activity.device_id, activity.operation_id);
+      toast('Incidencia marcada como revisada', 'var(--accent)');
+    });
+    const devices = (fleet && fleet.devices) || [];
+    const activity = (fleet && fleet.activity) || [];
+    const attention = activity.filter(item => item.requires_action);
+    const visibleActivity = tab === 'atencion' ? attention : activity;
     return h(GlassCard, { key: 'sync-health', className: 'p-6', 'data-testid': 'sync-health' }, [
       h('div', { key: 'h', className: 'flex items-center justify-between gap-3' }, [
-        h(SerifHeading, { key: 't', children: 'Sincronización de equipos' }),
+        h('div', { key: 'titles' }, [
+          h(SerifHeading, { key: 't', children: 'Centro de equipos' }),
+          h('p', { key: 'sub', className: 'text-caption text-on-surface-variant mt-1' },
+            'Supervisa cada instalación de BALAM y atiende excepciones desde un solo lugar.'),
+        ]),
         h('span', { key: 's', className: 'text-overline font-bold uppercase ' + (clean ? 'text-success' : 'text-danger') },
-          clean ? '100% sincronizado' : needsBootstrap ? 'Reinicio requerido' : 'Reconciliando'),
+          clean ? 'Este equipo sincronizado' : needsBootstrap ? 'Reinicio requerido' : 'Reconciliando'),
       ]),
-      h('p', { key: 'd', className: 'text-caption text-on-surface-variant mt-2' },
-        `Época ${status.dataEpoch == null ? '—' : status.dataEpoch} · tiempo real ${status.realtime} · ${status.pending} pendientes · ${status.blocked} bloqueados · ${status.invalidDomains.length} dominios por aplicar.`),
-      fleet && h('p', { key: 'f', className: 'text-caption text-on-surface-variant mt-1' },
-        `${fleet.current} equipo(s) en la época vigente · ${fleet.stale} equipo(s) bloqueados hasta resincronizar.`),
-      h('div', { key: 'a', className: 'flex gap-2 flex-wrap mt-4' }, [
-        h('button', { key: 'r', disabled: busy, onClick: () => act(() => window.STORE.reconcileDomains()), className: 'px-4 h-10 border border-outline-variant rounded-lg disabled:opacity-40' }, 'Verificar ahora'),
-        h('button', { key: 'b', disabled: busy, onClick: exportBackup, className: 'px-4 h-10 border border-outline-variant rounded-lg disabled:opacity-40' }, backup ? 'Respaldo exportado' : 'Exportar recuperación'),
-        needsBootstrap && h('button', { key: 'rb', disabled: busy || !backup, onClick: () => act(() => window.STORE.rebootstrapFromCloud()), className: 'px-4 h-10 bg-primary text-on-primary rounded-lg disabled:opacity-40' }, 'Resincronizar desde la nube'),
-        window.AUTH.isAdmin() && h('button', { key: 'z', disabled: busy || !clean || !backup, onClick: pointZero, className: 'px-4 h-10 bg-danger text-white rounded-lg disabled:opacity-40' }, 'Establecer punto cero'),
+      h('div', { key: 'summary', className: 'grid grid-cols-2 md:grid-cols-4 gap-3 mt-5' }, [
+        ['Equipos registrados', devices.length, 'text-primary'],
+        ['En línea', devices.filter(d => d.connection === 'online').length, 'text-success'],
+        ['Desconectados', (fleet && fleet.disconnected) || 0, 'text-warning'],
+        ['Requiere atención', attention.length, attention.length ? 'text-danger' : 'text-success'],
+      ].map((item, index) => h('div', { key: index, className: 'p-3 rounded-xl bg-surface-container-low border border-outline-variant' }, [
+        h('div', { key: 'n', className: 'text-2xl font-bold ' + item[2] }, String(item[1])),
+        h('div', { key: 'l', className: 'text-overline text-on-surface-variant mt-1' }, item[0]),
+      ]))),
+      h('div', { key: 'tabs', className: 'flex gap-2 mt-5 border-b border-outline-variant' }, [
+        ['equipos','Equipos'], ['actividad','Actividad reciente'], ['atencion',`Requiere atención${attention.length ? ` (${attention.length})` : ''}`]
+      ].map(item => h('button', { key: item[0], onClick: () => setTab(item[0]), className: 'px-3 py-2 text-caption font-semibold border-b-2 ' + (tab === item[0] ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant') }, item[1]))),
+      tab === 'equipos' && h('div', { key: 'devices', className: 'mt-4 space-y-3' }, devices.length ? devices.map(device => {
+        const state = deviceState(device), isEditing = editing === device.device_id;
+        return h('div', { key: device.device_id, className: 'p-4 rounded-xl border border-outline-variant bg-surface' }, [
+          h('div', { key: 'row', className: 'flex flex-col md:flex-row md:items-center gap-3' }, [
+            h('div', { key: 'icon', className: 'w-10 h-10 rounded-lg bg-surface-container grid place-items-center text-primary' }, h(MS, { name: device.device_type === 'laptop' ? 'dashboard' : 'pos', size: 20 })),
+            h('div', { key: 'main', className: 'flex-1 min-w-0' }, [
+              h('div', { key: 'name', className: 'font-semibold text-primary truncate' }, deviceLabel(device)),
+              h('div', { key: 'meta', className: 'text-overline text-on-surface-variant mt-1' },
+                `${device.device_type === 'laptop' ? 'Laptop' : device.device_type === 'pc' ? 'PC' : 'Equipo'} · última señal ${relativeTime(device.last_seen_at)} · versión ${device.client_build || '—'}`),
+            ]),
+            h('span', { key: 'state', className: 'px-3 py-1 rounded-full text-overline font-bold ' + state.cls }, state.label),
+            window.AUTH.isAdmin() && h('button', { key: 'edit', onClick: () => beginEdit(device), className: 'px-3 h-9 border border-outline-variant rounded-lg text-caption' }, 'Identificar'),
+          ]),
+          h('div', { key: 'counts', className: 'text-overline text-on-surface-variant mt-3' },
+            `${Number(device.queue_pending) || 0} pendiente(s) · ${Number(device.queue_blocked) || 0} bloqueado(s) · última sincronización confirmada ${device.last_synced_at ? relativeTime(device.last_synced_at) : 'no disponible'}`),
+          isEditing && h('div', { key: 'form', className: 'grid grid-cols-1 md:grid-cols-[1fr_160px_auto] gap-2 mt-3 p-3 bg-surface-container-low rounded-lg' }, [
+            h('input', { key: 'name', value: deviceName, maxLength: 80, onChange: e => setDeviceName(e.target.value), placeholder: 'Ej. Laptop administración', className: 'h-10 px-3 rounded-lg border border-outline-variant bg-surface' }),
+            h('select', { key: 'type', value: deviceType, onChange: e => setDeviceType(e.target.value), className: 'h-10 px-3 rounded-lg border border-outline-variant bg-surface' }, [
+              h('option', { key: 'pc', value: 'pc' }, 'PC'), h('option', { key: 'laptop', value: 'laptop' }, 'Laptop'),
+              h('option', { key: 'tablet', value: 'tablet' }, 'Tablet'), h('option', { key: 'other', value: 'other' }, 'Otro'),
+            ]),
+            h('div', { key: 'buttons', className: 'flex gap-2' }, [
+              h('button', { key: 'save', disabled: busy || !deviceName.trim(), onClick: saveDevice, className: 'px-3 h-10 bg-primary text-on-primary rounded-lg disabled:opacity-40' }, 'Guardar'),
+              h('button', { key: 'cancel', onClick: () => setEditing(null), className: 'px-3 h-10 border border-outline-variant rounded-lg' }, 'Cancelar'),
+            ]),
+          ]),
+        ]);
+      }) : h('p', { className: 'text-caption text-on-surface-variant py-6 text-center' }, 'Todavía no hay equipos reportados.')),
+      tab !== 'equipos' && h('div', { key: 'activity', className: 'mt-4 space-y-2' }, visibleActivity.length ? visibleActivity.map(item => {
+        const device = devices.find(d => d.device_id === item.device_id);
+        const actionable = item.requires_action;
+        return h('div', { key: item.device_id + ':' + item.operation_id, className: 'p-4 rounded-xl border border-outline-variant flex flex-col md:flex-row md:items-center gap-3' }, [
+          h('div', { key: 'body', className: 'flex-1 min-w-0' }, [
+            h('div', { key: 'title', className: 'font-semibold text-primary' }, item.summary),
+            h('div', { key: 'meta', className: 'text-overline text-on-surface-variant mt-1' },
+              `${device ? deviceLabel(device) : 'Equipo no identificado'} · ${item.user_email || 'usuario'} · ${relativeTime(item.updated_at)}`),
+            item.diagnostic && h('div', { key: 'reason', className: 'text-caption text-danger mt-2' }, item.diagnostic.message || item.diagnostic.code),
+          ]),
+          h('span', { key: 'status', className: 'px-3 py-1 rounded-full text-overline font-bold ' + (item.status === 'synced' ? 'text-success bg-success-soft' : actionable ? 'text-danger bg-danger-soft' : 'text-warning bg-warning-soft') },
+            item.status === 'synced' ? 'Sincronizado' : actionable ? 'Requiere atención' : item.status === 'retrying' ? 'Reintentando' : 'Pendiente'),
+          actionable && window.AUTH.isAdmin() && h('div', { key: 'actions', className: 'flex gap-2' }, [
+            h('button', { key: 'retry', disabled: busy || item.action_status === 'requested' || item.action_status === 'delivered', onClick: () => retry(item), className: 'px-3 h-9 bg-primary text-on-primary rounded-lg disabled:opacity-40' }, item.action_status === 'requested' || item.action_status === 'delivered' ? 'Reintento solicitado' : 'Autorizar reintento'),
+            h('button', { key: 'review', disabled: busy || item.admin_action === 'review', onClick: () => reviewed(item), className: 'px-3 h-9 border border-outline-variant rounded-lg disabled:opacity-40' }, item.admin_action === 'review' ? 'Revisado' : 'Marcar revisado'),
+          ]),
+        ]);
+      }) : h('p', { className: 'text-caption text-on-surface-variant py-6 text-center' }, tab === 'atencion' ? 'No hay incidencias que requieran intervención.' : 'Todavía no hay actividad registrada.')),
+      h('details', { key: 'tools', className: 'mt-5 border-t border-outline-variant pt-4' }, [
+        h('summary', { key: 'summary', className: 'cursor-pointer text-caption font-semibold text-primary' }, 'Herramientas de verificación y recuperación'),
+        h('p', { key: 'technical', className: 'text-overline text-on-surface-variant mt-3' },
+          `Época ${status.dataEpoch == null ? '—' : status.dataEpoch} · tiempo real ${status.realtime} · ${status.pending} pendientes locales · ${status.blocked} bloqueados · ${status.invalidDomains.length} dominios por aplicar.`),
+        h('div', { key: 'a', className: 'flex gap-2 flex-wrap mt-3' }, [
+          h('button', { key: 'r', disabled: busy, onClick: () => act(() => window.STORE.reconcileDomains()), className: 'px-4 h-10 border border-outline-variant rounded-lg disabled:opacity-40' }, 'Verificar ahora'),
+          h('button', { key: 'b', disabled: busy, onClick: exportBackup, className: 'px-4 h-10 border border-outline-variant rounded-lg disabled:opacity-40' }, backup ? 'Respaldo exportado' : 'Exportar recuperación'),
+          needsBootstrap && h('button', { key: 'rb', disabled: busy || !backup, onClick: () => act(() => window.STORE.rebootstrapFromCloud()), className: 'px-4 h-10 bg-primary text-on-primary rounded-lg disabled:opacity-40' }, 'Resincronizar desde la nube'),
+          window.AUTH.isAdmin() && h('button', { key: 'z', disabled: busy || !clean || !backup, onClick: pointZero, className: 'px-4 h-10 bg-danger text-white rounded-lg disabled:opacity-40' }, 'Establecer punto cero'),
+        ]),
       ]),
     ]);
   }

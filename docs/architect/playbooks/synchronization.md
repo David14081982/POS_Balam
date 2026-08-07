@@ -1,7 +1,7 @@
 ---
 capa: reglas
 applies_to: [sync, client, database, realtime, offline]
-related_histories: [H-06, H-09, H-13, H-14, H-16, H-62, H-68, H-77]
+related_histories: [H-06, H-09, H-13, H-14, H-16, H-62, H-68, H-77, H-79]
 severity_max: blocking
 no_alcance: "Los dominios concretos viven en docs/02-architecture.md y el registro ejecutable."
 ---
