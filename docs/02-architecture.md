@@ -517,6 +517,15 @@ para la instalación de origen; cuando vuelva a conectarse, reutiliza
 `STORE.retryOperation()` sobre la misma operación durable. La orden no concede
 permisos, no altera documentos y no sustituye las RPC de negocio.
 
+Una operación separada por cambio de época conserva dos representaciones con
+responsabilidades distintas. El JSON y el archivo local guardan la operación
+completa como evidencia recuperable; `pos.sync_quarantine_cases` guarda en la
+nube sólo huella SHA-256, resumen, artículos acotados y la decisión auditada.
+El administrador puede exportar esa proyección a Excel, aprobar o rechazar. Una
+aprobación no escribe tablas comerciales: el equipo de origen restaura la misma
+operación en la cola y `flushQueue()` vuelve a ejecutar su RPC normal con todas
+sus defensas de permisos, inventario, época e idempotencia.
+
 En el arranque, `STORE.init({ pull: true })`:
 
 1. Cuenta las operaciones que ya estaban pendientes.

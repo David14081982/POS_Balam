@@ -80,6 +80,7 @@ sesión de chat.
 | `renovacion-sesion-sin-bloqueo.md` | H-78 | Renovar la sesión sin desmontar temporalmente el POS |
 | `centro-de-equipos.md` | H-79 | Supervisión central por instalación, actividad y reintentos administrativos |
 | `convergencia-centro-de-equipos.md` | H-80 | El historial operativo converge sin tráfico ni reconciliación comercial autorreferente |
+| `revision-de-cuarentena.md` | H-81 | Expediente Excel, decisión auditada y reactivación por la cola/RPC vigente |
 
 Documentación financiera relacionada, creada antes de este índice:
 

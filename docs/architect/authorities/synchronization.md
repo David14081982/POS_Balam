@@ -67,6 +67,13 @@ conflictos, compatibilidad y época; offline nunca satisface el contrato
 continúa siendo la autoridad de lo pendiente; ausencia de señal es «desconocido»
 y nunca prueba sincronía
 **Definición:** migración `20260807012000` · **Creada por:** H-79
+
+## ¿Qué se decide sobre una operación en cuarentena?
+**Autoridad:** `pos.sync_quarantine_cases` conserva huella, resumen y decisión;
+la operación completa permanece en el archivo local/JSON del equipo. Aprobar
+sólo autoriza que `STORE` la restaure en su cola y la ejecute por la RPC vigente
+**Definición:** migración `20260807012400` · **Creada por:** H-81
+**Consumidores:** `grep -rn "sync_quarantine_cases\|decideSyncQuarantine" balam/ supabase/`
 **Consumidores:** `grep -rn "syncFleetStatus\|sync_activity" balam/`
 
 ## ¿Puede un administrador ordenar un reintento remoto?
