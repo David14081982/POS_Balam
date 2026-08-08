@@ -443,6 +443,8 @@
   const localWriterLeaseSupported = !!(window.navigator && window.navigator.locks
     && typeof window.navigator.locks.request === 'function');
   let localWriterState = localWriterLeaseSupported ? 'waiting' : 'unsupported';
+  let localWriterContended = false;
+  let localWriterContentionTimer = null;
   let localWriterRelease = null;
   let localWriterWarningShown = false;
   const localWriterWaiters = [];
@@ -454,6 +456,37 @@
     }
     try { window.dispatchEvent(new CustomEvent('localwriterchange', { detail: { state } })); }
     catch (e) { /* navegador/arnés sin CustomEvent */ }
+  }
+  function setLocalWriterContended(contended) {
+    const next = contended === true;
+    if (localWriterContended === next) return;
+    localWriterContended = next;
+    try {
+      window.dispatchEvent(new CustomEvent('localwriterchange', {
+        detail: { state: localWriterState, contended: next },
+      }));
+    } catch (e) { /* navegador/arnés sin CustomEvent */ }
+  }
+  function clearLocalWriterContentionCheck() {
+    if (localWriterContentionTimer != null) clearTimeout(localWriterContentionTimer);
+    localWriterContentionTimer = null;
+  }
+  function scheduleLocalWriterContentionCheck() {
+    clearLocalWriterContentionCheck();
+    setLocalWriterContended(false);
+    if (!window.navigator.locks || typeof window.navigator.locks.query !== 'function') return;
+    localWriterContentionTimer = setTimeout(async () => {
+      localWriterContentionTimer = null;
+      if (localWriterState !== 'waiting') return;
+      try {
+        const snapshot = await window.navigator.locks.query();
+        if (localWriterState !== 'waiting') return;
+        const anotherOwner = (snapshot.held || []).some(lock => lock.name === LOCAL_WRITER_LOCK);
+        setLocalWriterContended(anotherOwner);
+      } catch (e) {
+        // La consulta sólo mejora el diagnóstico visual. Nunca concede escritura.
+      }
+    }, 250);
   }
   function localWriterAllowed(requireLease) {
     return localWriterState === 'writer'
@@ -4562,6 +4595,7 @@
     get localWriterState() { return localWriterState; },
     get isLocalWriter() { return localWriterAllowed(false); },
     get localWriterLeaseSupported() { return localWriterLeaseSupported; },
+    get localWriterContended() { return localWriterContended; },
     get catalogResyncRequired() { return catalogResyncRequired; },
     addUser, updateUser, removeUser, isEligibleSeller, resolveSellerCommission,
     // H-69 · autoridad de comisión y su evidencia congelada
@@ -4634,7 +4668,10 @@
     }
     if (localWriterRequestActive || localWriterState === 'writer') return;
     localWriterRequestActive = true;
+    scheduleLocalWriterContentionCheck();
     Promise.resolve(window.navigator.locks.request(LOCAL_WRITER_LOCK, { mode: 'exclusive' }, async () => {
+      clearLocalWriterContentionCheck();
+      setLocalWriterContended(false);
       setLocalWriterState('rebasing');
       if (!rebaseLocalWriterCollections()) {
         setLocalWriterState('blocked');
@@ -4655,7 +4692,11 @@
         window.addEventListener('beforeunload', localWriterRelease, { once: true });
       });
       setLocalWriterState('waiting');
-    })).catch(() => setLocalWriterState('blocked')).finally(() => {
+    })).catch(() => {
+      clearLocalWriterContentionCheck();
+      setLocalWriterContended(false);
+      setLocalWriterState('blocked');
+    }).finally(() => {
       localWriterRequestActive = false;
     });
   }

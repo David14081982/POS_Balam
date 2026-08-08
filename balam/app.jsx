@@ -157,14 +157,32 @@
       if (!user) return h(AccessDeniedScreen, { key: 'denied' });
     }
     if (window.DATA && window.DATA.localWriterLeaseSupported && !window.DATA.isLocalWriter) {
-      const blocked = window.DATA.localWriterState === 'blocked';
-      return h('div', { className: 'h-full grid place-items-center p-6', style: { background: '#131B2E' } },
+      const writerState = window.DATA.localWriterState;
+      const blocked = writerState === 'blocked';
+      const rebasing = writerState === 'rebasing';
+      const contended = writerState === 'waiting' && window.DATA.localWriterContended === true;
+      const icon = blocked ? 'sync_problem' : (contended ? 'tab' : (rebasing ? 'sync' : 'hourglass_top'));
+      const title = blocked ? 'Caché local bloqueada'
+        : (contended ? 'Otra pestaña está operando'
+          : (rebasing ? 'Actualizando datos locales' : 'Preparando almacenamiento local'));
+      const description = blocked
+        ? 'Recarga esta pestaña para reconstruir los datos antes de continuar.'
+        : (contended
+          ? 'Esta pestaña permanece en lectura. Al cerrar la pestaña activa, tomará el control automáticamente.'
+          : (rebasing
+            ? 'Estamos incorporando los datos locales más recientes antes de habilitar operaciones.'
+            : 'Estamos preparando esta pestaña para operar de forma segura.'));
+      return h('div', {
+        className: 'h-full grid place-items-center p-6',
+        style: { background: '#131B2E' },
+        'data-testid': 'local-writer-gate',
+        'data-writer-state': writerState,
+        'data-writer-contended': contended ? 'true' : 'false',
+      },
         h('div', { className: 'max-w-md text-center' }, [
-          h('div', { key: 'i', className: 'material-symbols-rounded text-4xl mb-3', style: { color: blocked ? '#ff8a80' : '#FFE088' } }, blocked ? 'sync_problem' : 'tab'),
-          h('div', { key: 't', className: 'font-headline text-xl text-white mb-2' }, blocked ? 'Caché local bloqueada' : 'Otra pestaña está operando'),
-          h('div', { key: 'd', className: 'text-sm', style: { color: '#AEB4C5' } }, blocked
-            ? 'Recarga esta pestaña para reconstruir los datos antes de continuar.'
-            : 'Esta pestaña permanece en lectura. Al cerrar la pestaña activa, tomará el control automáticamente.'),
+          h('div', { key: 'i', className: 'material-symbols-rounded text-4xl mb-3', style: { color: blocked ? '#ff8a80' : '#FFE088' } }, icon),
+          h('div', { key: 't', className: 'font-headline text-xl text-white mb-2' }, title),
+          h('div', { key: 'd', className: 'text-sm', style: { color: '#AEB4C5' } }, description),
         ]));
     }
 
