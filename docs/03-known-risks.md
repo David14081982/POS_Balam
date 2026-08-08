@@ -3967,6 +3967,34 @@ dos equipos, punto cero real y ventana de observación/reversa. Ningún dato
 remoto fue tocado.
 **Corrección documentada:** `docs/fixes/sincronizacion-viva-multiterminal.md`.
 
+## H-82 - El arranque atribuye estados transitorios a otra pestaña
+
+**Estado:** RESUELTO
+**Fecha de registro:** 07/08/2026
+**Commit:** `e2e6634`
+**Origen:** al actualizar, iniciar sesión o recargar, una sola pestaña muestra
+«Otra pestaña está operando» aunque no exista otro contexto activo.
+**Reproducción:** `node test-h82-local-writer-ui.mjs` produjo 2/9 antes de
+corregir: la exclusión funcionaba, pero no existían diagnóstico de propietario,
+estados visuales diferenciados ni limpieza observable del aviso.
+**Causa raíz:** `App` presenta el mismo mensaje para todo estado distinto de
+`writer`; por ello `waiting` y `rebasing` se atribuyen falsamente a un segundo
+contexto sin consultar al propietario real del Web Lock.
+**Alcance:** separar diagnóstico visual y autoridad de escritura. Se conserva el
+Web Lock exclusivo, el rebase previo, la cola offline y el cierre a escritura.
+No toca Supabase, documentos, inventario ni sincronización remota.
+**Riesgo:** habilitar interacción antes de `writer` produciría dos escritores.
+La consulta de diagnóstico no puede participar en la autorización.
+**Corrección:** una consulta local y diferida de Web Locks confirma contención
+sin intervenir en `isLocalWriter`. `waiting`, `rebasing`, `blocked` y propietario
+real muestran estados distintos; el gate desaparece al adquirir el lock.
+**Pruebas:** H-82 13/13; H-65 28/28; AUTH 19/19; módulos 41/41; smoke bundle
+17/17; navegación 15/15; build reproducible 8/8.
+**Riesgo residual:** navegadores con `request()` pero sin `query()` conservan el
+cierre seguro y muestran «Preparando almacenamiento local» mientras esperan; no
+afirmarán que existe otra pestaña sin evidencia.
+**Corrección documentada:** `docs/fixes/diagnostico-del-escritor-local.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

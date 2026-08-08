@@ -3,7 +3,7 @@
 **Riesgo:** H-82
 **Estado:** RESUELTO
 **Fecha:** 07/08/2026
-**Commit:** Pendiente de commit
+**Commit:** `e2e6634`
 
 ## Problema y reproducción
 
