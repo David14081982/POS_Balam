@@ -1,9 +1,9 @@
 # Rediseño UI/UX de Nuevo/Editar producto
 
 **Riesgo:** H-84
-**Estado:** RESUELTO — PUBLICACIÓN PENDIENTE
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha:** 08/08/2026
-**Commit técnico:** Pendiente de commit
+**Commit técnico:** `53a3d9ee1299338f7fc4591de7cdda2ad3adb164`
 
 ## Problema y reproducción
 
@@ -86,6 +86,14 @@ No se modifican DATA, CONFIG, Excel, STORE, Supabase, SKU, `product_id`,
 - `node test-smoke.mjs bundle` → **17/17**.
 - `node build-offline.mjs` → compilación JSX y regeneración de ambos artefactos
   completadas.
+- `origin/main` y `HEAD` coinciden en
+  `53a3d9ee1299338f7fc4591de7cdda2ad3adb164`.
+- `node test-h68-boton-publicado.mjs` → **17/17** sobre los bytes descargados de
+  GitHub Pages; el SHA-256 servido y el del `index.html` del commit coinciden en
+  `aafca872c731ba0849b07977960ff2c2578ed6657932666d7017111a2482bd45`.
+- No existe migración H-84. La compatibilidad con el esquema H-83 ya aplicado se
+  demuestra mediante H-83 **32/32 + 17/17** y precio por talla **19/19 + 38/38**;
+  el cliente no cambia estructuras persistidas ni contratos remotos.
 
 ## Riesgo residual y pendientes
 

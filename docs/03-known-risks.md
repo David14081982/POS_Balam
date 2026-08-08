@@ -4042,9 +4042,9 @@ requiere comprobar la prenda física.
 
 ## H-84 - El alta de producto dispersa el resultado efectivo por talla
 
-**Estado:** RESUELTO — PUBLICACIÓN PENDIENTE
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha de registro:** 08/08/2026
-**Commit:** Pendiente de commit
+**Commit técnico:** `53a3d9ee1299338f7fc4591de7cdda2ad3adb164`
 **Origen:** auditoría UI/UX autorizada de Inventario → Nuevo producto.
 **Evidencia inicial:** el formulario conserva correctamente existencias,
 precios especiales y colores de ornamento por talla, pero presenta cada eje en
@@ -4079,6 +4079,11 @@ No cambió ninguna autoridad ni dato comercial.
 H-83 **32/32 + 17/17**; precio por talla **19/19 + 38/38**; tamaños **9/9**;
 Inventario **18/18**; POS por talla **19/19**; módulos **41/41**; navegación
 **15/15**; build reproducible **8/8**; smoke bundle **17/17**.
+`origin/main` contiene el commit técnico; GitHub Pages sirve el mismo
+`index.html` byte a byte (SHA-256
+`aafca872c731ba0849b07977960ff2c2578ed6657932666d7017111a2482bd45`) y el
+recorrido del sitio publicado terminó **17/17**. H-84 no requiere migración y el
+cliente conserva compatibilidad con el esquema H-83 aplicado.
 **Riesgo residual:** ninguno funcional conocido en el alcance; la apariencia de
 los diálogos nativos de confirmación depende de la plataforma.
 **Corrección documentada:** `docs/fixes/redisenio-ui-nuevo-producto.md`.
