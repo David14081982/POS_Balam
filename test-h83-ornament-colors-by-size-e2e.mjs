@@ -60,6 +60,7 @@ try {
   });
   await page.waitForTimeout(500);
   await page.getByRole('button', { name: /Editar producto/i }).click();
+  await page.getByTestId('product-exceptions-toggle').click();
   await page.waitForSelector('[data-testid="ornament-colors-by-size"]');
 
   check('1. el alta/edición muestra el tercer mecanismo agrupado',
@@ -69,9 +70,12 @@ try {
 
   await page.getByTestId('add-ornament-colors-by-size').click();
   for (const size of [XS, S, M]) await page.getByTestId(`ornament-group-0-size-${size}`).click();
+  await page.getByTestId('ornament-group-0-color-toggle').click();
   for (const color of ['OR', 'CF']) await page.getByTestId(`ornament-group-0-color-${color}`).click();
+  await page.getByTestId('ornament-group-0-color-close').click();
   await page.getByTestId('add-ornament-colors-by-size').click();
   for (const size of [L, XL]) await page.getByTestId(`ornament-group-1-size-${size}`).click();
+  await page.getByTestId('ornament-group-1-color-toggle').click();
   await page.getByTestId('ornament-group-1-color-PL').click();
 
   const summaries = await page.locator('[data-testid^="ornament-color-group-"]').allInnerTexts();
@@ -107,6 +111,7 @@ try {
   });
   await page.waitForTimeout(400);
   await page.getByRole('button', { name: /Editar producto/i }).click();
+  await page.getByTestId('product-exceptions-toggle').click();
   await page.waitForSelector('[data-testid="ornament-color-group-1"]');
   check('10. editar y volver a abrir reconstruye los dos grupos',
     await page.locator('[data-testid^="ornament-color-group-"]').count() === 2);
@@ -114,19 +119,21 @@ try {
   // Solapamiento incompatible: XS ya usa OR+CF y se intenta asignar PL.
   await page.getByTestId('add-ornament-colors-by-size').click();
   await page.getByTestId(`ornament-group-2-size-${XS}`).click();
+  await page.getByTestId('ornament-group-2-color-toggle').click();
   await page.getByTestId('ornament-group-2-color-PL').click();
   await page.getByRole('button', { name: /Guardar cambios/i }).click();
   await page.waitForTimeout(350);
   check('11. un solapamiento incompatible bloquea el guardado y nombra los grupos',
-    /dos grupos de colores de ornamento que se superponen/i.test(await page.locator('body').innerText()));
+    /colores incompatibles en los grupos/i.test(await page.locator('body').innerText()));
   check('12. el bloqueo no aplicó último gana',
     await page.locator('[data-testid="ornament-color-group-2"]').isVisible());
-  await page.locator('[data-testid="ornament-color-group-2"] button[title="Quitar"]').click();
+  await page.getByTestId('ornament-group-2-delete').click();
   const ornamentSelect = page.locator('label').filter({ hasText: /^Ornamento$/i }).locator('..').locator('select');
   await ornamentSelect.selectOption('Alforza');
   check('13. un ornamento que no admite colores oculta el bloque',
     await page.locator('[data-testid="ornament-colors-by-size"]').count() === 0);
   await ornamentSelect.selectOption('Bordado Eléctrico');
+  page.once('dialog', dialog => dialog.accept());
   await page.getByRole('button', { name: /^Cancelar$/i }).click();
 
   // POS: la talla muestra el resultado de DATA.effectiveOrnamentColors.

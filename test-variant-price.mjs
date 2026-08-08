@@ -285,7 +285,7 @@ console.log('\n── H) Contratos de código y esquema ────────
 
   const inv = read('./balam/inventory.jsx');
   ok('33. Inventario captura excepciones por GRUPO de tallas, no una por talla',
-    /preciosTalla/.test(inv) && /Precios especiales por talla/.test(inv));
+    /preciosTalla/.test(inv) && /Precios especiales/.test(inv) && /add-price-by-size/.test(inv));
   ok('34. la etiqueta imprime el precio de su talla', /listPrice\(\s*s\.p\s*,\s*s\.talla\s*\)/.test(inv));
 
   const store = read('./balam/store.jsx');

@@ -183,9 +183,9 @@ ok('20. un cambio conserva evidencia para la pieza recibida y la entregada',
 
 console.log('\n── Contratos de interfaz, Excel y sincronización ──');
 ok('21. el formulario ofrece el bloque agrupado y su contrato estable',
-  /Colores de ornamento por talla/.test(inventorySrc) && /data-testid[^\n]+ornament-colors-by-size/.test(inventorySrc));
+  /Colores de ornamento/.test(inventorySrc) && /data-testid[^\n]+ornament-colors-by-size/.test(inventorySrc));
 ok('22. la interfaz bloquea superposiciones; no aplica último gana',
-  /dos grupos[^\n]+colores de ornamento|grupos[^\n]+superponen/i.test(inventorySrc));
+  /colores incompatibles[^\n]+grupos/i.test(inventorySrc));
 ok('23. el Excel transporta la relación talla → colores', /Colores Orn\. por talla/.test(xlsxSrc));
 ok('24. la importación conserva el contenedor extensible attrs', /__ornamentColorsBySize/.test(xlsxSrc));
 

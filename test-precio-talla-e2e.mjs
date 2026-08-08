@@ -60,35 +60,26 @@ try {
   await page.waitForTimeout(700);
   await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => /Editar producto/i.test(x.innerText)); if (b) b.click(); });
   await page.waitForTimeout(700);
+  await page.getByTestId('product-exceptions-toggle').click();
 
   // innerText respeta `text-transform: uppercase`, así que la comparación va sin
   // distinguir mayúsculas.
-  const seccion = await page.evaluate(() => /precios especiales por talla/i.test(document.body.innerText));
+  const seccion = await page.evaluate(() => /precios especiales/i.test(document.body.innerText));
   check('1. el formulario ofrece «Precios especiales por talla»', seccion);
   const filasIniciales = await page.evaluate(() =>
-    document.body.innerText.includes('Todas las tallas usan el precio general del artículo.'));
+    document.body.innerText.includes('Sin precios especiales.'));
   check('2. sin excepciones no pide ningún precio por talla', filasIniciales);
 
-  await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => /Agregar precio/i.test(x.innerText)); if (b) b.click(); });
+  await page.getByTestId('add-price-by-size').click();
   await page.waitForTimeout(400);
-  const chips = await page.evaluate(t => {
-    const btns = [...document.querySelectorAll('button')].filter(x => x.innerText.trim() === t);
-    return btns.length;
-  }, T_EXC);
+  const chips = await page.getByTestId(`price-group-0-size-${T_EXC}`).count();
   check('3. la fila ofrece las tallas como chips (idioma del Alcance de Descuentos)', chips > 0, `chips «${T_EXC}»: ${chips}`);
 
-  await page.evaluate(t => {
-    const btns = [...document.querySelectorAll('button')].filter(x => x.innerText.trim() === t);
-    btns[btns.length - 1].click();                   // el chip de la fila de precios
-  }, T_EXC);
+  await page.getByTestId(`price-group-0-size-${T_EXC}`).click();
   await page.waitForTimeout(300);
-  await page.evaluate(() => {
-    const inp = [...document.querySelectorAll('input[type=number]')].find(i => i.placeholder === '350');
-    const set = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-    set.call(inp, '450'); inp.dispatchEvent(new Event('input', { bubbles: true }));
-  });
+  await page.getByTestId('price-group-0-value').fill('450');
   await page.waitForTimeout(300);
-  const resumen = await page.evaluate(t => document.body.innerText.includes('Tallas ' + t), T_EXC);
+  const resumen = (await page.getByTestId('price-group-0').innerText()).includes(T_EXC);
   check('4. la fila resume el grupo afectado', resumen, `«Tallas ${T_EXC}»`);
 
   await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => /Guardar cambios/i.test(x.innerText)); if (b) b.click(); });
@@ -135,12 +126,9 @@ try {
   await page.waitForTimeout(700);
   await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => /Editar producto/i.test(x.innerText)); if (b) b.click(); });
   await page.waitForTimeout(700);
-  const reabierto = await page.evaluate(() => {
-    const inp = [...document.querySelectorAll('input[type=number]')].map(i => i.value);
-    return { valores: inp, texto: document.body.innerText.includes('Las tallas sin precio especial usan el precio general del artículo.') };
-  });
-  check('9. la excepción reaparece agrupada al reabrir', reabierto.valores.includes('450') && reabierto.texto,
-    JSON.stringify(reabierto.valores.slice(0, 8)));
+  await page.getByTestId('product-exceptions-toggle').click();
+  const reabierto = await page.getByTestId('price-group-0').innerText();
+  check('9. la excepción reaparece agrupada al reabrir', reabierto.includes('450') && reabierto.includes(T_EXC), reabierto);
   await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => /^Cancelar$/i.test(x.innerText.trim())); if (b) b.click(); });
   await page.waitForTimeout(500);
 

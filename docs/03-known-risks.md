@@ -4040,6 +4040,49 @@ asignaron colores inventados a prendas del inventario productivo; esa decisión
 requiere comprobar la prenda física.
 **Corrección documentada:** `docs/fixes/colores-ornamento-por-talla.md`.
 
+## H-84 - El alta de producto dispersa el resultado efectivo por talla
+
+**Estado:** RESUELTO — PUBLICACIÓN PENDIENTE
+**Fecha de registro:** 08/08/2026
+**Commit:** Pendiente de commit
+**Origen:** auditoría UI/UX autorizada de Inventario → Nuevo producto.
+**Evidencia inicial:** el formulario conserva correctamente existencias,
+precios especiales y colores de ornamento por talla, pero presenta cada eje en
+un bloque vertical separado. Cada grupo H-83 repite el catálogo completo de
+colores y no existe una proyección conjunta del resultado efectivo por talla.
+Las validaciones aparecen principalmente al intentar guardar.
+**Riesgo:** la capturista debe recordar y comparar tallas entre secciones
+distantes; aumenta el scroll, la carga cognitiva y la posibilidad de cerrar o
+guardar sin comprender el resultado final.
+**Alcance:** exclusivamente presentación e interacción de `ProductForm`:
+jerarquía, selector compacto de colores, grupos resumidos, matriz derivada,
+validación inline, advertencia al cambiar categoría, borrador sucio,
+accesibilidad y responsive.
+**No alcance:** DATA, CONFIG, Excel, STORE, Supabase, SKU, identidades técnicas,
+H-83, reglas de precio, stock o sincronización.
+**Reproducción:** `node test-h84-product-form-ux-metrics.mjs --fijar` sobre la
+interfaz anterior: alta completa con cuatro defensas ejercidas; cuerpo de
+1,393 px, overflow de 863 px, 57 opciones de color y 30 selectores de talla
+visibles con sólo dos grupos configurados; cero filas de resumen efectivo.
+**Causa raíz:** la presentación confunde superficie de edición con resumen:
+mantiene abiertos catálogos y alcances completos después de configurarlos. El
+estado efectivo de cada talla sólo puede reconstruirse comparando tres bloques
+distantes y las validaciones carecen de una representación inline común.
+**Corrección:** `ProductForm` conserva una sola captura masiva, compacta
+selectores y grupos configurados, y agrega una matriz derivada de sólo lectura.
+Los errores comparten una autoridad de validación UI y enfocan el control; los
+cambios de familia y el cierre sucio exigen confirmación. `Modal` aplica foco,
+diálogo semántico y responsive sólo mediante la variante opt-in del formulario.
+No cambió ninguna autoridad ni dato comercial.
+**Pruebas:** H-84 E2E **19/19**; métrica antes/después verde (colores visibles
+57→0, tallas repetidas 30→0, overflow editable ajustado 863→817, matriz 0→5);
+H-83 **32/32 + 17/17**; precio por talla **19/19 + 38/38**; tamaños **9/9**;
+Inventario **18/18**; POS por talla **19/19**; módulos **41/41**; navegación
+**15/15**; build reproducible **8/8**; smoke bundle **17/17**.
+**Riesgo residual:** ninguno funcional conocido en el alcance; la apariencia de
+los diálogos nativos de confirmación depende de la plataforma.
+**Corrección documentada:** `docs/fixes/redisenio-ui-nuevo-producto.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

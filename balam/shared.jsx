@@ -195,28 +195,58 @@
   }
 
   // Modal
-  function Modal({ title, onClose, children, footer, large }) {
+  function Modal({ title, onClose, children, footer, large, testId, productForm }) {
+    const panelRef = useRef(null);
+    const previousFocus = useRef(null);
+    const closeRef = useRef(onClose);
+    useEffect(() => { closeRef.current = onClose; }, [onClose]);
     useEffect(() => {
-      const h = (e) => { if (e.key === 'Escape') onClose(); };
+      previousFocus.current = document.activeElement;
+      const focusable = () => panelRef.current ? [...panelRef.current.querySelectorAll(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])')]
+        .filter(node => node.offsetParent !== null) : [];
+      const h = (e) => {
+        if (e.key === 'Escape') { closeRef.current(); return; }
+        if (!productForm || e.key !== 'Tab') return;
+        const nodes = focusable(); if (!nodes.length) return;
+        const first = nodes[0], last = nodes[nodes.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      };
       window.addEventListener('keydown', h);
-      return () => window.removeEventListener('keydown', h);
-    }, []);
+      if (productForm) requestAnimationFrame(() => {
+        const target = panelRef.current && (panelRef.current.querySelector('[data-autofocus]') || focusable()[0]);
+        if (target) target.focus();
+      });
+      return () => {
+        window.removeEventListener('keydown', h);
+        if (productForm && previousFocus.current && previousFocus.current.focus) previousFocus.current.focus();
+      };
+    }, [productForm]);
     return React.createElement('div', {
-      className: 'fixed inset-0 z-[150] bg-on-surface/40 backdrop-blur-sm flex items-center justify-center p-4',
+      className: 'fixed inset-0 z-[150] bg-on-surface/40 backdrop-blur-sm flex items-center justify-center ' + (productForm ? 'p-0 sm:p-4' : 'p-4'),
       onClick: onClose,
     },
       React.createElement('div', {
-        className: 'bg-surface-container-lowest rounded-xl shadow-e3 w-full flex flex-col max-h-[88vh] ' + (large ? 'max-w-3xl' : 'max-w-md'),
+        ref: panelRef,
+        role: productForm ? 'dialog' : undefined,
+        'aria-modal': productForm ? 'true' : undefined,
+        'aria-labelledby': productForm && testId ? testId + '-title' : undefined,
+        className: 'bg-surface-container-lowest shadow-e3 w-full flex flex-col ' +
+          (productForm ? 'h-[100dvh] max-h-[100dvh] rounded-none sm:h-auto sm:max-h-[94vh] sm:rounded-xl max-w-6xl' :
+            'rounded-xl max-h-[88vh] ' + (large ? 'max-w-3xl' : 'max-w-md')),
+        'data-testid': testId,
         onClick: e => e.stopPropagation(),
       }, [
-        React.createElement('div', { key: 'h', className: 'flex items-center gap-3 px-6 py-4 border-b border-outline-variant' }, [
-          React.createElement('div', { key: 't', className: 'flex-1 font-headline text-headline-md text-primary' }, title),
+        React.createElement('div', { key: 'h', className: 'flex items-center gap-3 px-4 sm:px-6 py-3 sm:py-4 border-b border-outline-variant' }, [
+          React.createElement('div', { key: 't', id: productForm && testId ? testId + '-title' : undefined, className: 'flex-1 font-headline text-headline-md text-primary' }, title),
           React.createElement('button', {
             key: 'x', className: 'w-9 h-9 grid place-items-center text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors', onClick: onClose,
+            'aria-label': 'Cerrar', 'data-testid': testId ? testId + '-close' : undefined,
           }, React.createElement(window.HX.MS, { name: 'close', size: 20 })),
         ]),
-        React.createElement('div', { key: 'b', className: 'px-6 py-5 overflow-y-auto' }, children),
-        footer && React.createElement('div', { key: 'f', className: 'flex items-center justify-end gap-3 px-6 py-4 border-t border-outline-variant' }, footer),
+        React.createElement('div', { key: 'b', className: (productForm ? 'px-4 sm:px-6 py-4 sm:py-5' : 'px-6 py-5') + ' overflow-y-auto', 'data-testid': testId ? testId + '-body' : undefined }, children),
+        footer && React.createElement('div', { key: 'f', className: (productForm ? 'flex flex-wrap items-center gap-2 sm:gap-3 px-4 sm:px-6 py-3 sm:py-4' : 'flex items-center justify-end gap-3 px-6 py-4') + ' border-t border-outline-variant', 'data-testid': testId ? testId + '-footer' : undefined }, footer),
       ]));
   }
 

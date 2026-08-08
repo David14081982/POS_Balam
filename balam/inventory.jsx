@@ -265,7 +265,7 @@
               ]),
               h(Segment, { key: 'sg2', value: stockFilter, onChange: v => { setStockFilter(v); setPage(1); }, options: [['all', 'Todo'], ['low', 'Bajo'], ['out', 'Agotados']] }),
             ].concat(catalogFilters)),
-            h('button', { key: 'add', className: 'flex items-center gap-2 px-6 py-2.5 bg-primary text-on-primary rounded-lg hover:opacity-90 transition-all text-overline font-bold uppercase tracking-wider shadow-e2', onClick: () => setEditing({ mode: 'new', product: blankProduct() }) }, [h(MS, { key: 'i', name: 'plus', size: 18 }), 'Nuevo producto']),
+            h('button', { key: 'add', 'data-testid': 'inventory-new-product', className: 'flex items-center gap-2 px-6 py-2.5 bg-primary text-on-primary rounded-lg hover:opacity-90 transition-all text-overline font-bold uppercase tracking-wider shadow-e2', onClick: () => setEditing({ mode: 'new', product: blankProduct() }) }, [h(MS, { key: 'i', name: 'plus', size: 18 }), 'Nuevo producto']),
           ]),
           // Excel
           h('div', { key: 'r2', className: 'flex items-center gap-4 py-2 border-y border-outline-variant/60' }, [
@@ -287,7 +287,7 @@
                 h('th', { key: i, className: 'px-4 py-4 text-overline uppercase tracking-wider font-semibold text-on-surface-variant/80' + (i === 0 ? ' pl-6' : '') }, c)))),
             h('tbody', { key: 'b', className: 'divide-y divide-outline-variant' }, slice.map(p => {
               const total = D.totalStock(p);
-              return h('tr', { key: p.id, className: 'hover:bg-surface-container transition-all group cursor-pointer', onClick: () => setDetail(p) }, [
+              return h('tr', { key: p.id, 'data-testid': 'inventory-product-' + p.id, className: 'hover:bg-surface-container transition-all group cursor-pointer', onClick: () => setDetail(p) }, [
                 h('td', { key: 'n', className: 'px-6 py-4' }, h('div', { className: 'flex items-center gap-4' }, [
                   h(ProductImage, { key: 'i', p, className: 'w-12 h-14 rounded shadow-e1 border border-outline-variant shrink-0' }),
                   h('span', { key: 'x', className: 'font-bold text-body text-primary' }, p.nombre),
@@ -368,7 +368,7 @@
               h('p', { key: 'a', className: 'text-overline uppercase font-bold text-on-surface-variant tracking-widest opacity-60' }, 'Detalle de producto'),
               h('h2', { key: 'b', className: 'text-h1 font-headline text-primary mt-1' }, p.nombre),
             ]),
-            h('button', { key: 'x', className: 'p-2 hover:bg-surface-container rounded-full transition-colors', onClick: onClose }, h(MS, { name: 'close', size: 22, className: 'text-on-surface-variant' })),
+            h('button', { key: 'x', 'data-testid': 'product-detail-close', 'aria-label': 'Cerrar detalle', className: 'p-2 hover:bg-surface-container rounded-full transition-colors', onClick: onClose }, h(MS, { name: 'close', size: 22, className: 'text-on-surface-variant' })),
           ]),
           h('div', { key: 'c', className: 'flex-grow overflow-y-auto' }, [
             h('div', { key: 'img', className: 'aspect-[4/3] bg-surface-container relative overflow-hidden' }, h(ProductImage, { p, className: 'w-full h-full' })),
@@ -406,7 +406,7 @@
               h('div', { key: 'ac', className: 'pt-4 space-y-3' }, [
                 h('button', { key: 'lb', className: 'w-full py-3 rounded-xl border border-outline-variant text-primary hover:border-primary hover:bg-surface-container transition-all flex items-center justify-center gap-2 text-overline font-bold uppercase tracking-widest', onClick: () => onLabels && onLabels(p) }, [h(MS, { key: 'i', name: 'barcode', size: 18 }), 'Imprimir etiqueta']),
                 h('div', { key: 'row', className: 'flex gap-4' }, [
-                  h('button', { key: 'e', className: 'flex-grow bg-primary text-on-primary py-3.5 rounded-xl text-overline font-bold uppercase tracking-widest hover:opacity-90 transition-all shadow-e2 active:scale-95 flex items-center justify-center gap-2', onClick: onEdit }, [h(MS, { key: 'i', name: 'edit', size: 18 }), 'Editar producto']),
+                  h('button', { key: 'e', 'data-testid': 'product-detail-edit', className: 'flex-grow bg-primary text-on-primary py-3.5 rounded-xl text-overline font-bold uppercase tracking-widest hover:opacity-90 transition-all shadow-e2 active:scale-95 flex items-center justify-center gap-2', onClick: onEdit }, [h(MS, { key: 'i', name: 'edit', size: 18 }), 'Editar producto']),
                   h('button', { key: 'd', className: 'w-14 h-[52px] rounded-xl border border-outline-variant text-danger hover:bg-danger-soft hover:border-danger/30 transition-all flex items-center justify-center', onClick: onDelete, title: 'Eliminar' }, h(MS, { name: 'trash', size: 20 })),
                 ]),
               ]),
@@ -475,7 +475,7 @@
       const k = String(Number(mapa[talla]));
       (porPrecio[k] || (porPrecio[k] = [])).push(talla);
     });
-    return Object.keys(porPrecio).map(k => ({ tallas: porPrecio[k], precio: Number(k) }));
+    return Object.keys(porPrecio).map(k => ({ tallas: porPrecio[k], precio: Number(k), expanded: false }));
   }
   function expandirPrecios(rows) {
     const out = {};
@@ -497,7 +497,7 @@
     order.forEach(talla => {
       if (!clean[talla]) return;
       const key = JSON.stringify(clean[talla]);
-      if (!groups[key]) groups[key] = { tallas: [], colores: clean[talla].slice() };
+      if (!groups[key]) groups[key] = { tallas: [], colores: clean[talla].slice(), expanded: false };
       groups[key].tallas.push(talla);
     });
     return Object.values(groups);
@@ -509,6 +509,17 @@
       (row.tallas || []).forEach(talla => { if (colors.length) out[talla] = colors.slice(); });
     });
     return out;
+  }
+
+  // Las banderas de presentación nunca forman parte de la identidad del borrador
+  // ni del dato persistido. Esta firma alimenta exclusivamente la protección de
+  // cierre con cambios pendientes.
+  function productDraftSignature(draft) {
+    return JSON.stringify({
+      ...draft,
+      precioRows: (draft.precioRows || []).map(row => ({ tallas: row.tallas || [], precio: row.precio })),
+      ornamentColorRows: (draft.ornamentColorRows || []).map(row => ({ tallas: row.tallas || [], colores: row.colores || [] })),
+    });
   }
 
   // ---------- Formulario de alta / edición ----------
@@ -532,6 +543,12 @@
       ornamentColorRows: agruparColoresOrnamento(
         product.attrs && product.attrs.__ornamentColorsBySize, product),
     }));
+    const initialSignature = useRef(productDraftSignature(d));
+    const [exceptionsOpen, setExceptionsOpen] = useState(false);
+    const [colorPicker, setColorPicker] = useState(null);
+    const [colorQuery, setColorQuery] = useState('');
+    const [showAllSummary, setShowAllSummary] = useState(false);
+    const [attemptedSubmit, setAttemptedSubmit] = useState(false);
     const set = (k, v) => setD(prev => ({ ...prev, [k]: v }));
     const setSizeCategory = categoryId => setD(prev => ({
       ...prev,
@@ -541,6 +558,24 @@
       precioRows: [],
       ornamentColorRows: [],
     }));
+    const requestSizeCategory = categoryId => {
+      if (categoryId === d.sizeCategoryId) return;
+      const aligned = alignStock(d, categoryId);
+      const preserved = new Set(aligned.map(row => `${row.escala}|${row.talla}`));
+      const stockLost = d.stock.filter(row => Number(row.stock) > 0 && !preserved.has(`${row.escala}|${row.talla}`));
+      const priceGroups = d.precioRows.filter(row => (row.tallas || []).length).length;
+      const colorGroups = d.ornamentColorRows.filter(row => (row.tallas || []).length).length;
+      if (stockLost.length || priceGroups || colorGroups) {
+        const parts = [];
+        if (stockLost.length) parts.push(`${stockLost.length} talla(s) con existencias`);
+        if (priceGroups) parts.push(`${priceGroups} grupo(s) de precio`);
+        if (colorGroups) parts.push(`${colorGroups} grupo(s) de colores`);
+        if (!window.confirm(`Cambiar la familia de tallas eliminará ${parts.join(', ')}. ¿Deseas continuar?`)) return;
+      }
+      setSizeCategory(categoryId);
+      setExceptionsOpen(false);
+      setColorPicker(null);
+    };
     const setAttr = (k, v) => setD(prev => ({ ...prev, attrs: { ...(prev.attrs || {}), [k]: v } }));
     // Catálogo "Modelo" (custom) que alimenta el desplegable de "Nombre / Modelo" (detección
     // centralizada en CONFIG.modeloKind). Si no existe, el campo sigue siendo texto libre.
@@ -554,19 +589,27 @@
     const setStock = (talla, escala, val) => setD(prev => ({ ...prev, stock: prev.stock.map(v => v.talla === talla && v.escala === escala ? { ...v, stock: Math.max(0, Math.round(Number(val) || 0)) } : v) }));
     const toggleOrn = (c) => setD(prev => ({ ...prev, ornColors: prev.ornColors.includes(c) ? prev.ornColors.filter(x => x !== c) : prev.ornColors.concat(c) }));
     // Filas de excepción: agregar, quitar, cambiar precio y alternar una talla.
-    const addPrecioRow = () => setD(prev => ({ ...prev, precioRows: prev.precioRows.concat([{ tallas: [], precio: '' }]) }));
+    const addPrecioRow = () => { setExceptionsOpen(true); setD(prev => ({
+      ...prev,
+      precioRows: prev.precioRows.map(row => ({ ...row, expanded: false })).concat([{ tallas: [], precio: '', expanded: true }]),
+    })); };
     const delPrecioRow = (i) => setD(prev => ({ ...prev, precioRows: prev.precioRows.filter((_, k) => k !== i) }));
     const setPrecioRow = (i, precio) => setD(prev => ({ ...prev, precioRows: prev.precioRows.map((r, k) => k === i ? { ...r, precio } : r) }));
+    const setPrecioExpanded = (i, expanded) => setD(prev => ({ ...prev, precioRows: prev.precioRows.map((r, k) => k === i ? { ...r, expanded } : r) }));
     const togglePrecioTalla = (i, talla) => setD(prev => ({
       ...prev,
       precioRows: prev.precioRows.map((r, k) => k !== i ? r
         : { ...r, tallas: r.tallas.includes(talla) ? r.tallas.filter(t => t !== talla) : r.tallas.concat(talla) }),
     }));
-    const addOrnamentColorRow = () => setD(prev => ({
-      ...prev, ornamentColorRows: prev.ornamentColorRows.concat([{ tallas: [], colores: [] }]),
-    }));
+    const addOrnamentColorRow = () => { setExceptionsOpen(true); setD(prev => ({
+      ...prev,
+      ornamentColorRows: prev.ornamentColorRows.map(row => ({ ...row, expanded: false })).concat([{ tallas: [], colores: [], expanded: true }]),
+    })); };
     const delOrnamentColorRow = i => setD(prev => ({
       ...prev, ornamentColorRows: prev.ornamentColorRows.filter((_, k) => k !== i),
+    }));
+    const setOrnamentColorExpanded = (i, expanded) => setD(prev => ({
+      ...prev, ornamentColorRows: prev.ornamentColorRows.map((row, k) => k === i ? { ...row, expanded } : row),
     }));
     const toggleOrnamentColorSize = (i, talla) => setD(prev => ({
       ...prev,
@@ -618,48 +661,221 @@
     const imgSrc = d.imagen ? ((window.__IMG_MAP && window.__IMG_MAP[d.imagen]) || d.imagen) : '';
     const skuPrev = D.sku({ ...d, modelo: d.modelo || '000' }); // misma receta que el SKU real
     const total = d.stock.reduce((a, v) => a + v.stock, 0);
+    const stockedSizes = d.stock.filter(row => Number(row.stock) > 0).length;
+    const modeloFinal = (modeloKind && modeloCode) ? modeloCode : String(d.modelo).trim();
+    const previewPrices = expandirPrecios(d.precioRows.filter(row =>
+      (row.tallas || []).length && row.precio !== '' && row.precio != null));
+    const previewOrnamentColors = expandirColoresOrnamento(d.ornamentColorRows.filter(row =>
+      (row.tallas || []).length && (row.colores || []).length));
+    const previewAttrs = { ...(d.attrs || {}), __ornamentColorsBySize: previewOrnamentColors };
+    const previewProduct = { ...d, attrs: previewAttrs, preciosTalla: previewPrices };
+
+    function validateDraft() {
+      const out = [];
+      if (!d.nombre.trim()) out.push({ code: 'name', target: 'product-name', message: 'Selecciona o escribe el nombre / modelo.' });
+      if (!modeloFinal) out.push({ code: 'model', target: modeloKind ? 'product-name' : 'product-model', message: modeloKind ? 'Selecciona el Nombre / Modelo.' : 'Escribe el número de modelo.' });
+      if (!d.sizeCategoryId) out.push({ code: 'size-category', target: 'product-size-category', message: 'Selecciona la familia de tallas.' });
+      const meta = window.CONFIG.allCatalogMeta ? window.CONFIG.allCatalogMeta() : {};
+      Object.keys(meta).forEach(kind => {
+        const m = meta[kind]; if (!m.required || !m.inForm) return;
+        const value = m.custom ? (d.attrs || {})[kind] : d[m.field];
+        if (value == null || String(value).trim() === '') out.push({ code: 'catalog-' + kind, target: 'product-field-' + kind, message: 'Selecciona ' + m.label + '.' });
+      });
+      const priceOwners = {};
+      d.precioRows.forEach((row, index) => {
+        if ((row.tallas || []).length && (row.precio === '' || row.precio == null)) {
+          out.push({ code: 'price-empty-' + index, type: 'price', index, target: `price-group-${index}-value`, sizes: row.tallas.slice(), message: `Escribe el precio del grupo ${index + 1}.` });
+        }
+        (row.tallas || []).forEach(size => {
+          if (priceOwners[size] != null) out.push({ code: `price-overlap-${priceOwners[size]}-${index}-${size}`, type: 'price', index, target: `price-group-${index}-size-${size}`, sizes: [String(size)], message: `La talla ${tallaLabel(d, size)} está en dos precios especiales (grupos ${priceOwners[size] + 1} y ${index + 1}).` });
+          else priceOwners[size] = index;
+        });
+      });
+      const colorOwners = {};
+      d.ornamentColorRows.forEach((row, index) => {
+        const colors = ordenarColoresOrnamento(row.colores);
+        if ((row.tallas || []).length && !colors.length) {
+          out.push({ code: 'color-empty-' + index, type: 'color', index, target: `ornament-group-${index}-color-toggle`, sizes: row.tallas.slice(), message: `Selecciona al menos un color en el grupo ${index + 1}.` });
+        }
+        (row.tallas || []).forEach(size => {
+          const previous = colorOwners[size];
+          if (previous && JSON.stringify(previous.colors) !== JSON.stringify(colors)) {
+            out.push({ code: `color-overlap-${previous.index}-${index}-${size}`, type: 'color', index, target: `ornament-group-${index}-size-${size}`, sizes: [String(size)], message: `La talla ${tallaLabel(d, size)} tiene colores incompatibles en los grupos ${previous.index + 1} y ${index + 1}.` });
+          } else colorOwners[size] = { colors, index };
+        });
+      });
+      return out;
+    }
+
+    const errors = validateDraft();
+    const liveErrors = errors.filter(error => attemptedSubmit || error.type === 'price' || error.type === 'color');
+    const summaryRows = D.resolveProductSizes(previewProduct).sizes.map(size => {
+      const value = String(size.value);
+      const stockRow = d.stock.find(row => String(row.talla) === value && (!size.scale || row.escala === size.scale));
+      const stock = Number(stockRow && stockRow.stock) || 0;
+      const colorSpecial = Object.prototype.hasOwnProperty.call(previewOrnamentColors, value);
+      const priceSpecial = Object.prototype.hasOwnProperty.call(previewPrices, value);
+      return {
+        value, label: size.label, stock, colorSpecial, priceSpecial,
+        ornament: d.orn || '—', colors: D.effectiveOrnamentColors(previewProduct, value),
+        price: D.listPrice(previewProduct, value),
+        errors: liveErrors.filter(error => (error.sizes || []).map(String).includes(value)),
+      };
+    });
+    const relevantSummaryRows = summaryRows.filter(row => showAllSummary || row.stock > 0 || row.colorSpecial || row.priceSpecial || row.errors.length);
+
+    const focusError = error => {
+      if (!error) return;
+      if (error.type === 'price') { setExceptionsOpen(true); setPrecioExpanded(error.index, true); }
+      if (error.type === 'color') { setExceptionsOpen(true); setOrnamentColorExpanded(error.index, true); }
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        const target = document.querySelector(`[data-testid="${error.target}"]`);
+        if (target) { target.scrollIntoView({ block: 'center', behavior: 'smooth' }); target.focus(); }
+      }));
+    };
+    const isDirty = productDraftSignature(d) !== initialSignature.current;
+    const requestClose = () => {
+      if (isDirty && !window.confirm('Hay cambios sin guardar. ¿Deseas cerrar el formulario y descartarlos?')) return;
+      onClose();
+    };
+
+    const renderColorSelector = ({ pickerId, selected, onToggle, optionTestId, toggleTestId, closeTestId }) => {
+      const open = colorPicker === pickerId;
+      const canonical = ordenarColoresOrnamento(selected);
+      const query = colorQuery.trim().toLowerCase();
+      const colors = Object.keys(D.COLOR_NAME).filter(code => !query || code.toLowerCase().includes(query) || String(D.COLOR_NAME[code]).toLowerCase().includes(query));
+      return h('div', { className: 'relative' }, [
+        h('div', { key: 'summary', className: 'flex flex-wrap items-center gap-2' }, [
+          ...canonical.map(code => h('button', {
+            key: code, type: 'button', onClick: () => onToggle(code), title: `Quitar ${D.COLOR_NAME[code]}`,
+            className: 'inline-flex items-center gap-1.5 min-h-9 px-2.5 border border-primary/40 bg-surface-container rounded-lg text-overline font-semibold text-primary',
+          }, [h('span', { key: 'sw', className: 'w-3.5 h-3.5 rounded-full border border-outline-variant', style: { background: D.COLOR_HEX[code] } }), code, h(MS, { key: 'x', name: 'close', size: 13 })])),
+          h('button', {
+            key: 'toggle', type: 'button', 'data-testid': toggleTestId, 'aria-expanded': open ? 'true' : 'false',
+            className: 'inline-flex items-center gap-2 min-h-10 px-3 border border-outline-variant rounded-lg text-caption font-semibold text-on-surface-variant hover:border-primary hover:text-primary transition-colors',
+            onClick: () => { setColorPicker(open ? null : pickerId); setColorQuery(''); },
+          }, [h(MS, { key: 'i', name: 'palette', size: 16 }), canonical.length ? `${canonical.length} seleccionado${canonical.length === 1 ? '' : 's'}` : 'Elegir colores', h(MS, { key: 'c', name: 'chevDown', size: 15, style: { transform: open ? 'rotate(180deg)' : '' } })]),
+        ]),
+        open && h('div', { key: 'panel', className: 'mt-2 p-3 border border-outline-variant rounded-xl bg-surface-container-low shadow-e1', role: 'group', 'aria-label': 'Selector de colores de ornamento' }, [
+          h('div', { key: 'search', className: 'flex items-center gap-2 mb-3' }, [
+            h('input', { key: 'q', type: 'search', value: colorQuery, onChange: event => setColorQuery(event.target.value), placeholder: 'Buscar código o color…', className: INPUT + ' flex-1', 'data-testid': toggleTestId + '-search' }),
+            h('button', { key: 'close', type: 'button', 'data-testid': closeTestId, className: 'min-w-10 h-10 grid place-items-center border border-outline-variant rounded-lg text-on-surface-variant', onClick: () => setColorPicker(null), 'aria-label': 'Cerrar selector de colores' }, h(MS, { name: 'close', size: 17 })),
+          ]),
+          h('div', { key: 'colors', className: 'grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-8 gap-2 max-h-52 overflow-y-auto pr-1' }, colors.map(code => {
+            const active = canonical.includes(code);
+            return h('button', {
+              key: code, type: 'button', 'data-testid': optionTestId(code), 'aria-pressed': active ? 'true' : 'false', title: D.COLOR_NAME[code], onClick: () => onToggle(code),
+              className: 'min-h-10 flex items-center gap-1.5 px-2 border rounded-lg transition-colors ' + (active ? 'border-primary bg-surface-container text-primary font-bold' : 'border-outline-variant bg-surface hover:border-primary text-on-surface-variant'),
+            }, [h('span', { key: 'sw', className: 'w-3.5 h-3.5 rounded-full border border-outline-variant shrink-0', style: { background: D.COLOR_HEX[code] } }), h('span', { key: 'c', className: 'text-overline truncate' }, code), active && h(MS, { key: 'ok', name: 'check', size: 13 })]);
+          })),
+          !colors.length && h('p', { key: 'empty', className: 'text-caption text-on-surface-variant py-3 text-center' }, 'No hay colores que coincidan.'),
+        ]),
+      ]);
+    };
+
+    const sectionHeading = (number, id, title) => h('div', { key: 'heading', className: 'flex items-center gap-2 mb-4' }, [
+      h('span', { key: 'n', className: 'w-7 h-7 rounded-full bg-primary text-on-primary grid place-items-center text-caption font-bold shrink-0' }, number),
+      h('h2', { key: 't', id, className: 'font-headline text-title text-primary' }, title),
+    ]);
+
+    const renderColorExceptions = () => D.ornamentSupportsColors(d) && h('div', { key: 'colors', 'data-testid': 'ornament-colors-by-size' }, [
+      h('div', { key: 'head', className: 'flex flex-wrap items-center gap-2 mb-1' }, [
+        h(MS, { key: 'i', name: 'palette', size: 16 }),
+        h('h3', { key: 't', className: 'text-caption font-bold uppercase tracking-widest text-primary' }, 'Colores de ornamento'),
+        h('span', { key: 'sp', className: 'flex-1' }),
+        h('button', { key: 'add', type: 'button', onClick: addOrnamentColorRow, 'data-testid': 'add-ornament-colors-by-size', className: 'inline-flex items-center gap-1 px-3 min-h-10 border border-outline-variant rounded-lg text-overline font-bold text-primary' }, [h(MS, { key: 'i', name: 'plus', size: 14 }), 'Agregar colores']),
+      ]),
+      h('p', { key: 'help', className: 'text-overline text-on-surface-variant/70 mb-3' }, 'Las demás tallas usan los colores generales.'),
+      !d.ornamentColorRows.length && h('p', { key: 'empty', className: 'p-3 rounded-lg bg-surface-container-low text-caption text-on-surface-variant' }, 'Sin colores especiales.'),
+      ...d.ornamentColorRows.map((row, index) => {
+        const rowErrors = liveErrors.filter(error => error.type === 'color' && error.index === index);
+        return h('div', { key: 'ocr' + index, className: 'mb-3 p-3 rounded-xl border ' + (rowErrors.length ? 'border-danger/50 bg-danger-soft/40' : 'border-outline-variant bg-surface-container-low'), 'data-testid': 'ornament-color-group-' + index }, [
+          h('div', { key: 'top', className: 'flex items-center gap-2' }, [
+            h('button', { key: 'edit', type: 'button', 'data-testid': 'ornament-group-' + index + '-edit', 'aria-expanded': row.expanded ? 'true' : 'false', onClick: () => setOrnamentColorExpanded(index, !row.expanded), className: 'flex-1 min-w-0 text-left' }, [
+              h('span', { key: 'label', className: 'block text-overline uppercase font-bold text-on-surface-variant' }, 'Grupo ' + (index + 1)),
+              h('span', { key: 'sum', className: 'block text-caption text-primary truncate' }, (row.tallas.length ? row.tallas.map(size => tallaLabel(d, size)).join('/') : 'Sin tallas') + ' → ' + (row.colores.length ? row.colores.join(' + ') : 'Sin colores')),
+            ]),
+            h('button', { key: 'x', type: 'button', title: 'Quitar grupo', 'aria-label': 'Eliminar grupo ' + (index + 1) + ' de colores', onClick: () => delOrnamentColorRow(index), 'data-testid': 'ornament-group-' + index + '-delete', className: 'w-10 h-10 grid place-items-center border border-outline-variant rounded-lg text-on-surface-variant hover:text-danger' }, h(MS, { name: 'trash', size: 16 })),
+          ]),
+          row.expanded && h('div', { key: 'editbody', className: 'mt-3 pt-3 border-t border-outline-variant' }, [
+            h('p', { key: 'sl', className: 'text-overline uppercase tracking-widest text-on-surface-variant mb-1.5' }, 'Tallas'),
+            h('div', { key: 'sizes', className: 'flex flex-wrap gap-1.5 mb-3' }, d.stock.map(size => h('button', {
+              key: size.talla, type: 'button', onClick: () => toggleOrnamentColorSize(index, size.talla),
+              'data-testid': 'ornament-group-' + index + '-size-' + size.talla,
+              'aria-pressed': row.tallas.includes(String(size.talla)) ? 'true' : 'false',
+              className: 'min-h-10 px-3 border rounded-lg text-overline uppercase transition-colors ' + (row.tallas.includes(String(size.talla)) ? 'border-primary bg-surface-container text-primary font-bold' : 'border-outline-variant bg-surface text-on-surface-variant hover:border-primary'),
+            }, tallaLabel(d, size.talla) + (Number(size.stock) > 0 ? ' · ' + size.stock : '')))),
+            h('p', { key: 'cl', className: 'text-overline uppercase tracking-widest text-on-surface-variant mb-1.5' }, 'Colores'),
+            renderColorSelector({ pickerId: 'group-' + index, selected: row.colores, onToggle: color => toggleOrnamentColor(index, color), optionTestId: color => 'ornament-group-' + index + '-color-' + color, toggleTestId: 'ornament-group-' + index + '-color-toggle', closeTestId: 'ornament-group-' + index + '-color-close' }),
+            ...rowErrors.map(error => h('p', { key: error.code, className: 'mt-2 text-caption text-danger', role: 'alert' }, error.message)),
+            h('div', { key: 'donebar', className: 'flex justify-end mt-3' }, h('button', { type: 'button', 'data-testid': 'ornament-group-' + index + '-done', className: 'px-4 min-h-10 bg-primary text-on-primary rounded-lg text-overline font-bold uppercase', onClick: () => { if (rowErrors.length) focusError(rowErrors[0]); else { setOrnamentColorExpanded(index, false); setColorPicker(null); } } }, 'Listo')),
+          ]),
+        ]);
+      }),
+    ]);
+
+    const renderPriceExceptions = () => h('div', { key: 'prices' }, [
+      h('div', { key: 'head', className: 'flex flex-wrap items-center gap-2 mb-1' }, [
+        h(MS, { key: 'i', name: 'tag', size: 16 }),
+        h('h3', { key: 't', className: 'text-caption font-bold uppercase tracking-widest text-primary' }, 'Precios especiales'),
+        h('span', { key: 'base', className: 'text-overline text-on-surface-variant' }, 'General ' + fmt(Number(d.precio) || 0).replace('.00', '')),
+        h('span', { key: 'sp', className: 'flex-1' }),
+        h('button', { key: 'add', type: 'button', onClick: addPrecioRow, 'data-testid': 'add-price-by-size', className: 'inline-flex items-center gap-1 px-3 min-h-10 border border-outline-variant rounded-lg text-overline font-bold text-primary' }, [h(MS, { key: 'i', name: 'plus', size: 14 }), 'Agregar precio']),
+      ]),
+      h('p', { key: 'help', className: 'text-overline text-on-surface-variant/70 mb-3' }, 'Las demás tallas usan el precio general.'),
+      !d.precioRows.length && h('p', { key: 'empty', className: 'p-3 rounded-lg bg-surface-container-low text-caption text-on-surface-variant' }, 'Sin precios especiales.'),
+      ...d.precioRows.map((row, index) => {
+        const rowErrors = liveErrors.filter(error => error.type === 'price' && error.index === index);
+        return h('div', { key: 'price' + index, className: 'mb-3 p-3 rounded-xl border ' + (rowErrors.length ? 'border-danger/50 bg-danger-soft/40' : 'border-outline-variant bg-surface-container-low'), 'data-testid': 'price-group-' + index }, [
+          h('div', { key: 'top', className: 'flex items-center gap-2' }, [
+            h('button', { key: 'edit', type: 'button', 'data-testid': 'price-group-' + index + '-edit', 'aria-expanded': row.expanded ? 'true' : 'false', onClick: () => setPrecioExpanded(index, !row.expanded), className: 'flex-1 min-w-0 text-left' }, [
+              h('span', { key: 'label', className: 'block text-overline uppercase font-bold text-on-surface-variant' }, 'Grupo ' + (index + 1)),
+              h('span', { key: 'sum', className: 'block text-caption text-primary truncate' }, (row.tallas.length ? row.tallas.map(size => tallaLabel(d, size)).join('/') : 'Sin tallas') + ' → ' + (row.precio === '' ? 'Sin precio' : fmt(Number(row.precio) || 0).replace('.00', ''))),
+            ]),
+            h('button', { key: 'x', type: 'button', title: 'Quitar grupo', 'aria-label': 'Eliminar grupo ' + (index + 1) + ' de precio', onClick: () => delPrecioRow(index), 'data-testid': 'price-group-' + index + '-delete', className: 'w-10 h-10 grid place-items-center border border-outline-variant rounded-lg text-on-surface-variant hover:text-danger' }, h(MS, { name: 'trash', size: 16 })),
+          ]),
+          row.expanded && h('div', { key: 'editbody', className: 'mt-3 pt-3 border-t border-outline-variant' }, [
+            field('Precio del grupo', h('input', { type: 'number', min: 0, value: row.precio, placeholder: String(d.precio || 0), 'data-testid': 'price-group-' + index + '-value', className: INPUT + ' max-w-40 text-right font-mono', onChange: event => setPrecioRow(index, event.target.value) }), null, rowErrors.find(error => error.code.indexOf('price-empty') === 0)),
+            h('p', { key: 'sl', className: 'text-overline uppercase tracking-widest text-on-surface-variant mt-3 mb-1.5' }, 'Tallas'),
+            h('div', { key: 'sizes', className: 'flex flex-wrap gap-1.5' }, d.stock.map(size => h('button', {
+              key: size.talla, type: 'button', onClick: () => togglePrecioTalla(index, size.talla), 'data-testid': 'price-group-' + index + '-size-' + size.talla,
+              'aria-pressed': row.tallas.includes(size.talla) ? 'true' : 'false',
+              className: 'min-h-10 px-3 border rounded-lg text-overline uppercase transition-colors ' + (row.tallas.includes(size.talla) ? 'border-primary bg-surface-container text-primary font-bold' : 'border-outline-variant bg-surface text-on-surface-variant hover:border-primary'),
+            }, tallaLabel(d, size.talla) + (Number(size.stock) > 0 ? ' · ' + size.stock : '')))),
+            ...rowErrors.filter(error => error.code.indexOf('price-empty') !== 0).map(error => h('p', { key: error.code, className: 'mt-2 text-caption text-danger', role: 'alert' }, error.message)),
+            h('div', { key: 'donebar', className: 'flex justify-end mt-3' }, h('button', { type: 'button', 'data-testid': 'price-group-' + index + '-done', className: 'px-4 min-h-10 bg-primary text-on-primary rounded-lg text-overline font-bold uppercase', onClick: () => rowErrors.length ? focusError(rowErrors[0]) : setPrecioExpanded(index, false) }, 'Listo')),
+          ]),
+        ]);
+      }),
+    ]);
+
+    const renderSizeSummary = () => h('section', { key: 'summary', className: 'rounded-xl border border-outline-variant p-4 sm:p-5', 'aria-labelledby': 'product-section-summary', 'data-testid': 'product-size-summary' }, [
+      h('div', { key: 'heading', className: 'flex flex-wrap items-center gap-2 mb-3' }, [
+        sectionHeading('6', 'product-section-summary', 'Resumen efectivo por talla'),
+        h('span', { key: 'sp', className: 'flex-1' }),
+        h('button', { key: 'all', type: 'button', 'data-testid': 'product-summary-show-all', 'aria-pressed': showAllSummary ? 'true' : 'false', onClick: () => setShowAllSummary(value => !value), className: 'min-h-10 px-3 border border-outline-variant rounded-lg text-overline font-bold text-primary' }, showAllSummary ? 'Ocultar tallas en cero' : 'Mostrar todas'),
+      ]),
+      h('div', { key: 'columns', className: 'hidden md:grid grid-cols-[.55fr_.75fr_1.1fr_1.3fr_.9fr_1.2fr] gap-3 px-3 py-2 text-overline uppercase tracking-widest text-on-surface-variant border-b border-outline-variant' }, ['Talla', 'Existencia', 'Ornamento', 'Colores efectivos', 'Precio efectivo', 'Estado'].map(label => h('span', { key: label }, label))),
+      !relevantSummaryRows.length && h('p', { key: 'empty', className: 'py-5 text-center text-caption text-on-surface-variant' }, 'Captura existencias o excepciones para ver el resumen por talla.'),
+      ...relevantSummaryRows.map(row => h('div', { key: row.value, 'data-testid': 'product-size-summary-row-' + row.value, className: 'grid grid-cols-2 md:grid-cols-[.55fr_.75fr_1.1fr_1.3fr_.9fr_1.2fr] gap-2 md:gap-3 px-3 py-3 border-b last:border-b-0 border-outline-variant/70 items-center text-caption' }, [
+        summaryCell('Talla', row.label, 'font-bold text-primary'),
+        summaryCell('Existencia', row.stock, 'font-mono'),
+        summaryCell('Ornamento efectivo', row.ornament),
+        summaryCell('Colores efectivos', [row.colors.length ? row.colors.join(' + ') : 'Sin colores', row.colorSpecial && h('span', { key: 'badge', className: 'ml-1 px-1.5 py-0.5 rounded bg-gold/30 text-primary text-overline font-bold' }, 'Especial')]),
+        summaryCell('Precio efectivo', [fmt(row.price).replace('.00', ''), row.priceSpecial && h('span', { key: 'badge', className: 'ml-1 px-1.5 py-0.5 rounded bg-gold/30 text-primary text-overline font-bold' }, 'Especial')], 'font-mono font-semibold'),
+        summaryCell('Estado', row.errors.length ? row.errors[0].message : (row.colorSpecial || row.priceSpecial ? 'Excepción aplicada' : 'General'), row.errors.length ? 'text-danger font-semibold' : 'text-accent font-semibold'),
+      ])),
+      !showAllSummary && summaryRows.length > relevantSummaryRows.length && h('p', { key: 'hidden', className: 'mt-2 text-overline text-on-surface-variant text-center' }, (summaryRows.length - relevantSummaryRows.length) + ' talla(s) sin existencia ni excepciones ocultas'),
+    ]);
+
+    const summaryCell = (label, content, className) => h('div', { key: label, className: className || '' }, [
+      h('span', { key: 'ml', className: 'md:hidden text-overline text-on-surface-variant block' }, label), content,
+    ]);
 
     function submit() {
-      if (!d.nombre.trim()) { toast('Escribe el nombre / modelo de la prenda', 'var(--danger)'); return; }
-      // Con catálogo "Modelo", el No. Modelo ES la clave del catálogo (también corrige productos
-      // viejos capturados a mano al reeditarlos). Sin catálogo, se respeta el texto libre.
-      const modeloFinal = (modeloKind && modeloCode) ? modeloCode : String(d.modelo).trim();
-      if (!modeloFinal) { toast(modeloKind ? 'Selecciona el Nombre / Modelo' : 'Escribe el número de modelo', 'var(--danger)'); return; }
-      if (!d.sizeCategoryId) { toast('Selecciona la categoría por talla', 'var(--danger)'); return; }
-      // Catálogos marcados "Obligatorio" (y que aparecen en el alta) deben tener valor.
-      const meta = window.CONFIG.allCatalogMeta ? window.CONFIG.allCatalogMeta() : {};
-      const falta = Object.keys(meta).find(k => {
-        const m = meta[k]; if (!m.required || !m.inForm) return false;
-        const val = m.custom ? (d.attrs || {})[k] : d[m.field];
-        return val == null || String(val).trim() === '';
-      });
-      if (falta) { toast('Selecciona ' + meta[falta].label, 'var(--danger)'); return; }
-      // H-36: una talla no puede pertenecer a dos filas; sin esa guarda el mapa
-      // canónico decidiría en silencio cuál precio gana.
-      const usadas = {};
-      const repetida = d.precioRows.reduce((acc, r) => acc || (r.tallas || []).find(t => usadas[t] ? true : (usadas[t] = true) && false), null);
-      if (repetida) { toast(`La talla ${repetida} está en dos precios especiales`, 'var(--danger)'); return; }
-      const vacia = d.precioRows.find(r => (r.tallas || []).length && (r.precio === '' || r.precio == null));
-      if (vacia) { toast('Escribe el precio del grupo de tallas', 'var(--danger)'); return; }
-      // Las filas sin tallas seleccionadas simplemente no producen excepciones.
+      setAttemptedSubmit(true);
+      if (errors.length) { focusError(errors[0]); toast(errors[0].message, 'var(--danger)'); return; }
       const preciosTalla = expandirPrecios(d.precioRows.filter(r => (r.tallas || []).length));
-      // H-83: dos grupos pueden repetir una talla solamente si describen el
-      // mismo conjunto. Si son incompatibles se bloquea: nunca hay ultimo gana.
-      const usedColorSizes = {};
-      for (let i = 0; i < d.ornamentColorRows.length; i++) {
-        const row = d.ornamentColorRows[i];
-        const colors = ordenarColoresOrnamento(row.colores);
-        if (row.tallas.length && !colors.length) {
-          toast(`Selecciona al menos un color de ornamento en el grupo ${i + 1}`, 'var(--danger)'); return;
-        }
-        for (const talla of row.tallas) {
-          const previous = usedColorSizes[talla];
-          if (previous && JSON.stringify(previous.colors) !== JSON.stringify(colors)) {
-            toast(`La talla ${talla} aparece en dos grupos de colores de ornamento que se superponen (${previous.group} y ${i + 1})`, 'var(--danger)'); return;
-          }
-          usedColorSizes[talla] = { colors, group: i + 1 };
-        }
-      }
       const rawOrnamentColorsBySize = expandirColoresOrnamento(
         d.ornamentColorRows.filter(row => row.tallas.length));
       const { precioRows, ornamentColorRows, ...rest } = d;
@@ -670,194 +886,139 @@
     }
 
     const footer = [
-      h('div', { key: 'sk', className: 'flex-1 self-center text-overline uppercase tracking-wider text-on-surface-variant font-mono' }, 'SKU: ' + skuPrev),
-      h('button', { key: 'c', className: 'px-5 h-11 border border-outline-variant text-on-surface text-caption font-bold uppercase tracking-widest hover:bg-surface-container rounded-lg transition-colors', onClick: onClose }, 'Cancelar'),
-      h('button', { key: 's', className: 'inline-flex items-center gap-2 px-5 h-11 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-lg hover:opacity-90 transition', onClick: submit }, [h(MS, { key: 'i', name: 'check', size: 16 }), mode === 'edit' ? 'Guardar cambios' : 'Agregar producto']),
+      h('div', { key: 'sk', className: 'flex-1 min-w-full sm:min-w-[20rem] self-center' }, [
+        h('div', { key: 'sku', className: 'text-overline uppercase tracking-wider text-primary font-mono font-bold' }, 'SKU: ' + skuPrev),
+        h('div', { key: 'sum', className: 'text-overline text-on-surface-variant mt-0.5' }, `${total} piezas · ${stockedSizes} tallas con existencia · ${d.precioRows.filter(row => row.tallas.length).length} precio(s) especial(es) · ${d.ornamentColorRows.filter(row => row.tallas.length).length} grupo(s) de colores`),
+        h('button', { key: 'status', type: 'button', 'data-testid': 'product-validation-summary', onClick: () => errors.length && focusError(errors[0]), className: 'mt-1 text-caption font-semibold ' + (errors.length ? 'text-danger' : 'text-accent') }, errors.length ? `${errors.length} pendiente${errors.length === 1 ? '' : 's'} por corregir` : 'Sin errores'),
+      ]),
+      h('button', { key: 'c', 'data-testid': 'product-cancel', className: 'px-4 sm:px-5 h-11 border border-outline-variant text-on-surface text-caption font-bold uppercase tracking-widest hover:bg-surface-container rounded-lg transition-colors', onClick: requestClose }, 'Cancelar'),
+      h('button', { key: 's', 'data-testid': 'product-save', className: 'inline-flex items-center gap-2 px-5 h-11 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-lg hover:opacity-90 transition', onClick: submit }, [h(MS, { key: 'i', name: 'check', size: 16 }), mode === 'edit' ? 'Guardar cambios' : 'Agregar producto']),
     ];
 
-    return h(Modal, { title: mode === 'edit' ? 'Editar producto' : 'Nuevo producto', onClose, footer, large: true }, [
-      // Imagen del producto (subir / cambiar / quitar)
-      h('div', { key: 'img', className: 'flex items-center gap-4 mb-5' }, [
-        h('div', { key: 'pv', className: 'w-20 h-24 rounded-lg overflow-hidden shrink-0 border border-outline-variant bg-surface-container grid place-items-center' },
-          imgSrc ? h('img', { src: imgSrc, className: 'w-full h-full object-cover' }) : h(MS, { name: 'shirt', size: 28, className: 'text-on-surface-variant/40' })),
-        h('div', { key: 'b', className: 'flex-1 min-w-0' }, [
-          h('p', { key: 'l', className: 'text-caption font-semibold text-on-surface-variant uppercase tracking-widest mb-1' }, 'Imagen del producto'),
-          h('p', { key: 'd', className: 'text-overline text-on-surface-variant/70 mb-2' }, 'JPG/PNG · se ajusta a 600 px. Sin imagen = se genera una automática.'),
-          h('input', { key: 'f', ref: fileRef, type: 'file', accept: 'image/*', className: 'hidden', onChange: onPickImg }),
-          h('div', { key: 'btns', className: 'flex gap-2' }, [
-            h('button', { key: 'u', type: 'button', className: 'inline-flex items-center gap-2 px-4 h-10 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-lg hover:opacity-90 transition', onClick: () => fileRef.current && fileRef.current.click() }, [h(MS, { key: 'i', name: d.imagen ? 'edit' : 'upload', size: 16 }), d.imagen ? 'Cambiar' : 'Subir imagen']),
-            d.imagen && h('button', { key: 'x', type: 'button', className: 'inline-flex items-center gap-2 px-4 h-10 border border-outline-variant text-on-surface-variant text-caption font-bold uppercase tracking-widest rounded-lg hover:bg-surface-container transition', onClick: () => set('imagen', '') }, [h(MS, { key: 'i', name: 'trash', size: 16 }), 'Quitar']),
+    return h(Modal, { title: mode === 'edit' ? 'Editar producto' : 'Nuevo producto', onClose: requestClose, footer, large: true, testId: 'product-form', productForm: true }, [
+      attemptedSubmit && errors.length ? h('div', { key: 'errors', role: 'alert', className: 'mb-4 p-3 rounded-xl border border-danger/30 bg-danger-soft', 'data-testid': 'product-form-errors' }, [
+        h('p', { key: 't', className: 'text-caption font-bold text-danger mb-1' }, `Corrige ${errors.length} pendiente${errors.length === 1 ? '' : 's'} antes de guardar:`),
+        ...errors.map(error => h('button', { key: error.code, type: 'button', onClick: () => focusError(error), className: 'block w-full text-left text-caption text-danger hover:underline py-0.5' }, error.message)),
+      ]) : null,
+      h('section', { key: 'identity', className: 'rounded-xl border border-outline-variant p-4 sm:p-5 mb-4', 'aria-labelledby': 'product-section-identity' }, [
+        sectionHeading('1', 'product-section-identity', 'Identidad y precio general'),
+        h('div', { key: 'content', className: 'flex flex-col sm:flex-row gap-4' }, [
+          h('div', { key: 'img', className: 'flex sm:flex-col items-center gap-3 sm:w-28 shrink-0' }, [
+            h('div', { key: 'pv', className: 'w-16 h-20 sm:w-20 sm:h-24 rounded-lg overflow-hidden shrink-0 border border-outline-variant bg-surface-container grid place-items-center' }, imgSrc ? h('img', { src: imgSrc, className: 'w-full h-full object-cover', alt: 'Vista previa del producto' }) : h(MS, { name: 'shirt', size: 26, className: 'text-on-surface-variant/40' })),
+            h('input', { key: 'f', ref: fileRef, type: 'file', accept: 'image/*', className: 'hidden', onChange: onPickImg }),
+            h('div', { key: 'buttons', className: 'flex sm:flex-col gap-2' }, [
+              h('button', { key: 'u', type: 'button', className: 'px-3 min-h-10 border border-outline-variant rounded-lg text-overline font-bold text-primary', onClick: () => fileRef.current && fileRef.current.click() }, d.imagen ? 'Cambiar foto' : 'Agregar foto'),
+              d.imagen && h('button', { key: 'x', type: 'button', className: 'px-3 min-h-10 text-overline text-danger', onClick: () => set('imagen', '') }, 'Quitar'),
+            ]),
+          ]),
+          h('div', { key: 'fields', className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 flex-1' }, [
+            field('Nombre / Modelo', modeloKind
+              ? h('select', { className: INPUT, value: modeloCode, 'data-testid': 'product-name', 'data-autofocus': true, onChange: e => setModelo(e.target.value) }, [h('option', { key: '', value: '' }, 'Selecciona…'), ...modeloItems.map(it => h('option', { key: it.code, value: it.code }, it.label))])
+              : h('input', { className: INPUT, value: d.nombre, 'data-testid': 'product-name', 'data-autofocus': true, placeholder: 'Ej. Tira Red', onChange: e => set('nombre', e.target.value) }), 'wide', attemptedSubmit && errors.find(error => error.code === 'name')),
+            field('No. Modelo', modeloKind
+              ? h('input', { className: INPUT + ' opacity-70', value: modeloCode || d.modelo, 'data-testid': 'product-model', readOnly: true, tabIndex: -1 })
+              : h('input', { className: INPUT, value: d.modelo, 'data-testid': 'product-model', placeholder: '128', onChange: e => set('modelo', e.target.value) }), null, attemptedSubmit && errors.find(error => error.code === 'model'), modeloKind ? 'Se llena automáticamente al elegir el modelo.' : null),
+            field('Precio general', h('input', { className: INPUT, type: 'number', min: 0, value: d.precio, 'data-testid': 'product-general-price', onChange: e => set('precio', e.target.value) })),
           ]),
         ]),
       ]),
-      h('div', { key: 'g1', className: 'grid grid-cols-2 md:grid-cols-3 gap-4' }, [
-        field('Nombre / Modelo', modeloKind
-          ? h('select', { className: INPUT, value: modeloCode, onChange: e => setModelo(e.target.value) }, [
-              h('option', { key: '', value: '' }, 'Selecciona…'),
-              ...modeloItems.map(it => h('option', { key: it.code, value: it.code }, it.label)),
-            ])
-          : h('input', { className: INPUT, value: d.nombre, placeholder: 'Ej. Tira Red', onChange: e => set('nombre', e.target.value) }), 'wide'),
-        // Con catálogo "Modelo" presente, la clave viene del catálogo (setModelo) y no se edita a mano.
-        field('No. Modelo', modeloKind
-          ? h('input', { className: INPUT + ' opacity-60 cursor-not-allowed', value: modeloCode || d.modelo, readOnly: true, tabIndex: -1, title: 'Se llena automáticamente con la clave del catálogo Modelo al elegir Nombre / Modelo' })
-          : h('input', { className: INPUT, value: d.modelo, placeholder: '128', onChange: e => set('modelo', e.target.value) })),
-        field('Precio', h('input', { className: INPUT, type: 'number', min: 0, value: d.precio, onChange: e => set('precio', e.target.value) })),
-        field('Categoría por talla', h('select', {
+      h('section', { key: 'features', className: 'rounded-xl border border-outline-variant p-4 sm:p-5 mb-4', 'aria-labelledby': 'product-section-features' }, [
+        sectionHeading('2', 'product-section-features', 'Características generales'),
+        h('div', { key: 'grid', className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4' }, [
+          ...[
+            { kind: 'category', field: 'cat', map: D.CAT }, { kind: 'sleeve', field: 'manga', map: D.MANGA },
+            { kind: 'fabric', field: 'tela', map: D.TELA }, { kind: 'color', field: 'color', map: D.COLOR_NAME, useKeyAsValue: true },
+            { kind: 'neck', field: 'cuello', map: D.CUELLO },
+          ].filter(a => { const m = window.CONFIG.catalogMeta(a.kind); return !m || m.inForm; }).map(a => field(window.CONFIG.catalogLabel(a.kind), sel(d[a.field], a.map, value => set(a.field, value), a.useKeyAsValue, 'product-field-' + a.kind), null, attemptedSubmit && errors.find(error => error.code === 'catalog-' + a.kind))),
+          ...Object.keys(window.CONFIG.allCatalogMeta ? window.CONFIG.allCatalogMeta() : {}).filter(kind => { const meta = window.CONFIG.catalogMeta(kind); return meta && meta.custom && meta.inForm && kind !== modeloKind; }).map(kind => field(window.CONFIG.catalogLabel(kind), sel((d.attrs || {})[kind] || '', window.CONFIG.map(kind), value => setAttr(kind, value), false, 'product-field-' + kind), null, attemptedSubmit && errors.find(error => error.code === 'catalog-' + kind))),
+        ]),
+      ]),
+      h('section', { key: 'ornament', className: 'rounded-xl border border-outline-variant p-4 sm:p-5 mb-4', 'aria-labelledby': 'product-section-ornament' }, [
+        sectionHeading('3', 'product-section-ornament', 'Ornamento general'),
+        h('div', { key: 'grid', className: 'grid grid-cols-1 lg:grid-cols-3 gap-4 items-start' }, [
+          field(window.CONFIG.catalogLabel('ornament'), sel(d.orn || '—', window.CONFIG.map('ornament'), value => { set('orn', value); setColorPicker(null); }, false, 'product-ornament')),
+          D.ornamentSupportsColors(d) && h('div', { key: 'colors', className: 'lg:col-span-2' }, [
+            h('p', { key: 'label', className: 'text-caption font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5' }, 'Colores generales del ornamento'),
+            renderColorSelector({ pickerId: 'general', selected: d.ornColors, onToggle: toggleOrn, optionTestId: code => `product-general-color-${code}`, toggleTestId: 'general-color-selector-toggle', closeTestId: 'general-color-selector-close' }),
+            h('p', { key: 'help', className: 'text-overline text-on-surface-variant/70 mt-2' }, 'Todas las tallas heredan estos colores salvo que tengan una excepción.'),
+          ]),
+          !D.ornamentSupportsColors(d) && h('p', { key: 'none', className: 'lg:col-span-2 text-caption text-on-surface-variant self-end pb-3' }, 'Este ornamento no utiliza colores de hilo.'),
+        ]),
+      ]),
+      h('section', { key: 'stock', className: 'rounded-xl border border-outline-variant p-4 sm:p-5 mb-4', 'aria-labelledby': 'product-section-stock' }, [
+        h('div', { key: 'heading', className: 'flex flex-wrap items-center gap-2 mb-4' }, [
+          sectionHeading('4', 'product-section-stock', 'Tallas y existencias'),
+          h('span', { key: 'sp', className: 'flex-1' }),
+          h('span', { key: 'total', className: 'px-2.5 py-1 text-overline uppercase rounded bg-gold text-on-gold font-bold' }, total + ' pz en total'),
+        ]),
+        h('div', { key: 'category', className: 'max-w-sm mb-4' }, field('Familia de tallas', h('select', {
           className: SELECT, value: d.sizeCategoryId, 'data-testid': 'product-size-category',
-          onChange: e => setSizeCategory(e.target.value),
+          onChange: event => requestSizeCategory(event.target.value),
         }, [
           h('option', { key: '', value: '' }, 'Selecciona…'),
-          ...(window.CONFIG.sizeCategories ? window.CONFIG.sizeCategories() : []).map(cat =>
-            h('option', { key: cat.id, value: cat.id }, cat.label)),
-        ])),
-        // Atributos select del alta: etiqueta y visibilidad salen de CONFIG.catalogMeta (editable
-        // por el admin en Configuración → Catálogos de producto). Solo se muestran los "En alta".
-        ...[
-          { kind: 'category', field: 'cat', map: D.CAT },
-          { kind: 'sleeve', field: 'manga', map: D.MANGA },
-          { kind: 'fabric', field: 'tela', map: D.TELA },
-          { kind: 'color', field: 'color', map: D.COLOR_NAME, useKeyAsValue: true },
-          { kind: 'neck', field: 'cuello', map: D.CUELLO },
-        ].filter(a => { const m = window.CONFIG.catalogMeta(a.kind); return !m || m.inForm; })
-          .map(a => field(window.CONFIG.catalogLabel(a.kind), sel(d[a.field], a.map, v => set(a.field, v), a.useKeyAsValue))),
-        field(window.CONFIG.catalogLabel('ornament'), sel(d.orn || '—', window.CONFIG.map('ornament'), v => set('orn', v))),
-        // Catálogos creados por el admin (Fase 2): se muestran como select cuando están "En alta".
-        // Su valor se guarda en d.attrs[kind]; entra al SKU si el catálogo está "En SKU".
-        ...Object.keys(window.CONFIG.allCatalogMeta ? window.CONFIG.allCatalogMeta() : {})
-          .filter(k => { const m = window.CONFIG.catalogMeta(k); return m && m.custom && m.inForm && k !== modeloKind; })
-          .map(k => field(window.CONFIG.catalogLabel(k), sel((d.attrs || {})[k] || '', window.CONFIG.map(k), v => setAttr(k, v)))),
-      ]),
-      D.ornamentSupportsColors(d) && h('div', { key: 'oc', className: 'mt-4' }, [
-        h('div', { key: 'l', className: 'text-caption font-semibold text-on-surface-variant uppercase tracking-widest mb-2' }, ['Colores Orn. ', h('span', { key: 's', className: 'normal-case tracking-normal text-on-surface-variant/70' }, '(hilos del bordado)')]),
-        h('div', { key: 'g', className: 'flex flex-wrap gap-1.5' }, Object.keys(D.COLOR_NAME).map(c => h('button', {
-          key: c, type: 'button', title: D.COLOR_NAME[c],
-          className: 'flex items-center gap-1 px-2 py-1 border rounded transition-colors ' + (d.ornColors.includes(c) ? 'border-primary bg-surface-container' : 'border-outline-variant hover:border-primary'),
-          onClick: () => toggleOrn(c),
-        }, [h('span', { key: 'sw', className: 'w-3 h-3 rounded-full border border-outline-variant', style: { background: D.COLOR_HEX[c] } }), h('span', { key: 'c', className: 'text-overline' }, c)]))),
-      ]),
-      D.ornamentSupportsColors(d) && h('div', {
-        key: 'ocbs', className: 'mt-5 border-t border-outline-variant pt-4',
-        'data-testid': 'ornament-colors-by-size',
-      }, [
-        h('div', { key: 'l', className: 'flex items-center gap-2 mb-1' }, [
-          h('span', { key: 't', className: 'flex items-center gap-2 text-caption font-semibold text-on-surface-variant uppercase tracking-widest' }, [h(MS, { key: 'i', name: 'palette', size: 15 }), 'Colores de ornamento por talla']),
-          h('span', { key: 'sp', className: 'flex-1' }),
-          h('button', {
-            key: 'add', type: 'button', onClick: addOrnamentColorRow,
-            'data-testid': 'add-ornament-colors-by-size',
-            className: 'inline-flex items-center gap-1.5 px-3 h-9 border border-outline-variant text-on-surface-variant text-overline uppercase font-bold tracking-widest rounded-lg hover:bg-surface-container transition-colors',
-          }, [h(MS, { key: 'i', name: 'plus', size: 14 }), 'Agregar colores']),
-        ]),
-        h('p', { key: 'h', className: 'text-overline text-on-surface-variant/70 mb-3' },
-          d.ornamentColorRows.length
-            ? 'Las tallas sin configuraciÃ³n especial usan los colores generales del producto.'
-            : 'Opcional. Todas las tallas usan los colores generales del producto.'),
-        ...d.ornamentColorRows.map((row, i) => h('div', {
-          key: 'ocr' + i, className: 'mb-3 p-3 rounded-lg bg-surface-container-low border border-outline-variant',
-          'data-testid': 'ornament-color-group-' + i,
-        }, [
-          h('div', { key: 'top', className: 'flex items-center gap-3 mb-2' }, [
-            h('span', { key: 'sum', className: 'flex-1 text-caption text-on-surface-variant' },
-              row.tallas.length ? 'Tallas ' + row.tallas.join('/') : 'Selecciona las tallas'),
-            h('span', { key: 'colors', className: 'text-overline text-on-surface-variant/70' },
-              row.colores.length ? row.colores.join(' + ') : 'Sin colores'),
-            h('button', {
-              key: 'x', type: 'button', title: 'Quitar', onClick: () => delOrnamentColorRow(i),
-              className: 'w-9 h-9 grid place-items-center border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors',
-            }, h(MS, { name: 'trash', size: 15 })),
-          ]),
-          h('div', { key: 'sizes', className: 'mb-3' }, [
-            h('div', { key: 'label', className: 'text-overline uppercase tracking-widest text-on-surface-variant/70 mb-1.5' }, 'Tallas'),
-            h('div', { key: 'chips', className: 'flex flex-wrap gap-1.5' }, d.stock.map(v => h('button', {
-              key: v.talla, type: 'button', onClick: () => toggleOrnamentColorSize(i, v.talla),
-              'data-testid': `ornament-group-${i}-size-${v.talla}`,
-              className: 'px-2.5 py-1 border rounded text-overline uppercase transition-colors ' +
-                (row.tallas.includes(String(v.talla)) ? 'border-primary bg-surface-container text-primary font-bold' : 'border-outline-variant text-on-surface-variant hover:border-primary'),
-            }, tallaLabel(d, v.talla)))),
-          ]),
-          h('div', { key: 'colors' }, [
-            h('div', { key: 'label', className: 'text-overline uppercase tracking-widest text-on-surface-variant/70 mb-1.5' }, 'Colores de ornamento'),
-            h('div', { key: 'chips', className: 'flex flex-wrap gap-1.5' }, Object.keys(D.COLOR_NAME).map(color => h('button', {
-              key: color, type: 'button', title: D.COLOR_NAME[color], onClick: () => toggleOrnamentColor(i, color),
-              'data-testid': `ornament-group-${i}-color-${color}`,
-              className: 'flex items-center gap-1 px-2 py-1 border rounded transition-colors ' +
-                (row.colores.includes(color) ? 'border-primary bg-surface-container' : 'border-outline-variant hover:border-primary'),
-            }, [h('span', { key: 'sw', className: 'w-3 h-3 rounded-full border border-outline-variant', style: { background: D.COLOR_HEX[color] } }), h('span', { key: 'c', className: 'text-overline' }, color)]))),
-          ]),
-        ])),
-      ]),
-      h('div', { key: 'div', className: 'border-t border-outline-variant my-5' }),
-      h('div', { key: 'stk' }, [
-        h('div', { key: 'l', className: 'flex items-center gap-2 mb-3' }, [
-          h('span', { key: 't', className: 'flex items-center gap-2 text-caption font-semibold text-on-surface-variant uppercase tracking-widest' }, [h(MS, { key: 'i', name: 'tag', size: 15 }), 'Existencias por talla']),
-          h('span', { key: 'sp', className: 'flex-1' }),
-          h('span', { key: 'tt', className: 'px-2 py-1 text-overline uppercase rounded bg-gold text-on-gold' }, `${total} pz en total`),
-        ]),
-        h('div', { key: d.sizeCategoryId || 'none', className: 'mb-4' }, [
-          h('div', { key: 'sl', className: 'text-overline uppercase tracking-widest text-on-surface-variant/70 mb-2' },
-            ((window.CONFIG.sizeCategories ? window.CONFIG.sizeCategories() : []).find(cat => cat.id === d.sizeCategoryId) || {}).label || 'Sin categoría'),
-          h('div', { key: 'r', className: 'grid grid-cols-5 sm:grid-cols-10 gap-2' }, d.stock.map(v => h('div', { key: String(v.talla), className: 'flex flex-col items-center gap-1' }, [
-            h('label', { key: 'l', className: 'text-overline uppercase text-on-surface-variant' }, tallaLabel(d, v.talla)),
-            h('input', { key: 'i', type: 'number', min: 0, value: v.stock, className: 'w-full h-9 text-center bg-surface-container border border-outline-variant focus:ring-1 focus:ring-primary text-body rounded font-mono', onChange: ev => setStock(v.talla, v.escala, ev.target.value) }),
-          ]))),
-        ]),
-      ]),
-      // H-36: excepciones de precio por talla. Invisible mientras no existan:
-      // la mayoría de los artículos tiene un precio único y no debe pedírsele
-      // nada. Cada fila es «grupo de tallas → precio», con el mismo idioma de
-      // chips que el Alcance de Descuentos.
-      h('div', { key: 'ptl', className: 'mt-5 border-t border-outline-variant pt-4' }, [
-        h('div', { key: 'l', className: 'flex items-center gap-2 mb-1' }, [
-          h('span', { key: 't', className: 'flex items-center gap-2 text-caption font-semibold text-on-surface-variant uppercase tracking-widest' }, [h(MS, { key: 'i', name: 'tag', size: 15 }), 'Precios especiales por talla']),
-          h('span', { key: 'sp', className: 'flex-1' }),
-          h('button', {
-            key: 'add', type: 'button', onClick: addPrecioRow,
-            className: 'inline-flex items-center gap-1.5 px-3 h-9 border border-outline-variant text-on-surface-variant text-overline uppercase font-bold tracking-widest rounded-lg hover:bg-surface-container transition-colors',
-          }, [h(MS, { key: 'i', name: 'plus', size: 14 }), 'Agregar precio']),
-        ]),
-        h('p', { key: 'h', className: 'text-overline text-on-surface-variant/70 mb-3' },
-          d.precioRows.length
-            ? 'Las tallas sin precio especial usan el precio general del artículo.'
-            : 'Opcional. Todas las tallas usan el precio general del artículo.'),
-        ...d.precioRows.map((row, i) => h('div', { key: 'r' + i, className: 'mb-3 p-3 rounded-lg bg-surface-container-low border border-outline-variant' }, [
-          h('div', { key: 'top', className: 'flex items-center gap-3 mb-2' }, [
-            h('span', { key: 'l', className: 'text-overline uppercase text-on-surface-variant tracking-widest' }, 'Precio'),
+          ...(window.CONFIG.sizeCategories ? window.CONFIG.sizeCategories() : []).map(category => h('option', { key: category.id, value: category.id }, category.label)),
+        ]), null, attemptedSubmit && errors.find(error => error.code === 'size-category'))),
+        h('div', { key: d.sizeCategoryId || 'none', className: 'grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-10 gap-2' }, d.stock.map((row, index) => {
+          const id = 'product-stock-' + row.talla;
+          return h('div', { key: String(row.talla), className: 'flex flex-col items-center gap-1' }, [
+            h('label', { key: 'l', htmlFor: id, className: 'text-overline uppercase text-on-surface-variant font-semibold' }, tallaLabel(d, row.talla)),
             h('input', {
-              key: 'p', type: 'number', min: 0, value: row.precio, placeholder: String(d.precio || 0),
-              className: 'w-32 h-9 bg-surface border border-outline-variant rounded px-3 text-body text-right font-mono focus:ring-1 focus:ring-primary',
-              onChange: ev => setPrecioRow(i, ev.target.value),
+              key: 'i', id, type: 'number', inputMode: 'numeric', min: 0, value: row.stock, 'data-testid': id,
+              className: 'w-full h-11 text-center bg-surface-container border border-outline-variant focus:ring-2 focus:ring-primary text-body rounded-lg font-mono',
+              onFocus: event => event.currentTarget.select(),
+              onKeyDown: event => {
+                if (!['Enter', 'ArrowRight', 'ArrowLeft'].includes(event.key)) return;
+                event.preventDefault();
+                const next = d.stock[index + (event.key === 'ArrowLeft' ? -1 : 1)];
+                if (next) { const target = document.querySelector('[data-testid="product-stock-' + next.talla + '"]'); if (target) target.focus(); }
+              },
+              onChange: event => setStock(row.talla, row.escala, event.target.value),
             }),
-            h('span', { key: 'sum', className: 'flex-1 text-overline text-on-surface-variant/70 truncate' },
-              row.tallas.length ? 'Tallas ' + row.tallas.join('/') : 'Selecciona las tallas'),
-            h('button', {
-              key: 'x', type: 'button', title: 'Quitar', onClick: () => delPrecioRow(i),
-              className: 'w-9 h-9 grid place-items-center border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors',
-            }, h(MS, { name: 'trash', size: 15 })),
-          ]),
-          h('div', { key: d.sizeCategoryId || 'none', className: 'mt-2' }, [
-            h('div', { key: 'c', className: 'flex flex-wrap gap-1.5' }, d.stock.map(v => h('button', {
-              key: v.talla, type: 'button', onClick: () => togglePrecioTalla(i, v.talla),
-              className: 'px-2.5 py-1 border rounded text-overline uppercase transition-colors ' +
-                (row.tallas.includes(v.talla) ? 'border-primary bg-surface-container text-primary font-bold' : 'border-outline-variant text-on-surface-variant hover:border-primary'),
-            }, tallaLabel(d, v.talla)))),
-          ]),
-        ])),
+          ]);
+        })),
       ]),
+      h('section', { key: 'exceptions', className: 'rounded-xl border border-outline-variant mb-4 overflow-hidden', 'aria-labelledby': 'product-section-exceptions' }, [
+        h('button', {
+          key: 'toggle', type: 'button', 'data-testid': 'product-exceptions-toggle',
+          'aria-expanded': exceptionsOpen ? 'true' : 'false', onClick: () => setExceptionsOpen(value => !value),
+          className: 'w-full flex flex-wrap items-center gap-3 p-4 sm:p-5 text-left hover:bg-surface-container-low transition-colors',
+        }, [
+          h('span', { key: 'n', className: 'w-7 h-7 rounded-full bg-primary text-on-primary grid place-items-center text-caption font-bold' }, '5'),
+          h('span', { key: 'title', id: 'product-section-exceptions', className: 'font-headline text-title text-primary' }, 'Excepciones por talla'),
+          h('span', { key: 'count', className: 'text-overline text-on-surface-variant' }, d.ornamentColorRows.filter(row => row.tallas.length).length + ' de colores · ' + d.precioRows.filter(row => row.tallas.length).length + ' de precio'),
+          h('span', { key: 'sp', className: 'flex-1' }),
+          h(MS, { key: 'chev', name: 'chevDown', size: 18, style: { transform: exceptionsOpen ? 'rotate(180deg)' : '' } }),
+        ]),
+        exceptionsOpen && h('div', { key: 'body', className: 'border-t border-outline-variant p-4 sm:p-5 grid grid-cols-1 xl:grid-cols-2 gap-5' }, [
+          renderColorExceptions(),
+          renderPriceExceptions(),
+        ]),
+      ]),
+      renderSizeSummary(),
     ]);
   }
 
-  function sel(value, map, onChange, useKeyAsValue) {
+  function sel(value, map, onChange, useKeyAsValue, testId) {
     const opts = Object.entries(map).map(([k, v]) => h('option', { key: k, value: k }, useKeyAsValue ? `${v} (${k})` : v));
     // Valor huérfano (código guardado que ya no existe en el catálogo): opción visible con aviso.
     // Sin esto, el <select> muestra la PRIMERA opción aunque el estado conserve el código viejo,
     // y el capturista guarda sin darse cuenta (SKU/atributos huérfanos, p. ej. cat '21').
     if (!(value in map)) opts.unshift(h('option', { key: '__orphan', value }, value ? `⚠ ${value} — ya no existe, elige otro` : 'Selecciona…'));
-    return h('select', { className: SELECT, value, onChange: e => onChange(e.target.value) }, opts);
+    return h('select', { className: SELECT, value, onChange: e => onChange(e.target.value), 'data-testid': testId }, opts);
   }
-  function field(label, control, mod) {
-    return h('div', { key: label, className: mod === 'wide' ? 'col-span-2 md:col-span-1' : '' }, [
-      h('label', { key: 'l', className: 'block text-caption font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5' }, label),
-      React.cloneElement(control, { key: 'c' }),
+  function field(label, control, mod, error, help) {
+    const id = control.props.id || control.props['data-testid'];
+    const errorMessage = typeof error === 'string' ? error : error && error.message;
+    const descriptionId = id && (errorMessage || help) ? id + (errorMessage ? '-error' : '-help') : undefined;
+    return h('div', { key: label, className: mod === 'wide' ? 'sm:col-span-2 lg:col-span-1' : '' }, [
+      h('label', { key: 'l', htmlFor: id, className: 'block text-caption font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5' }, label),
+      React.cloneElement(control, {
+        key: 'c', id,
+        'aria-invalid': errorMessage ? 'true' : undefined,
+        'aria-describedby': descriptionId,
+      }),
+      errorMessage && h('p', { key: 'e', id: id + '-error', role: 'alert', className: 'mt-1.5 text-caption font-semibold text-danger', 'data-testid': id + '-error' }, errorMessage),
+      !errorMessage && help && h('p', { key: 'h', id: id + '-help', className: 'mt-1.5 text-caption text-on-surface-variant' }, help),
     ]);
   }
 

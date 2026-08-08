@@ -97,7 +97,7 @@ await page.getByRole('button', { name: 'Inventario' }).first().click();
 await page.waitForSelector('text=Prueba Migración', { timeout: 10000 });
 check('6. Inventario lista el producto sembrado', true);
 await page.getByRole('button', { name: /Nuevo producto/i }).click();
-await page.waitForSelector('text=Imagen del producto', { timeout: 10000 });
+await page.getByTestId('product-form').waitFor({ timeout: 10000 });
 check('7. el formulario de producto abre y renderiza', true);
 await page.getByRole('button', { name: 'Cancelar' }).click();
 
