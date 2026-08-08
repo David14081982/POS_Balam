@@ -3997,9 +3997,9 @@ afirmarán que existe otra pestaña sin evidencia.
 
 ## H-83 - El producto no puede representar colores de ornamento distintos por talla
 
-**Estado:** RESUELTO — implementación y pruebas completas; publicación pendiente
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha de registro:** 08/08/2026
-**Commit:** Pendiente de commit
+**Commit técnico:** `b3bd58ead8e790ae17de98d248fec388f1ca188d`
 **Origen:** solicitud del dueño del producto, previa a la futura matriz comercial
 de SKU.
 **Evidencia inicial:** el producto sólo conserva `ornColors` como lista general;
@@ -4032,7 +4032,9 @@ No cambian stock, precios ni SKU.
 **Pruebas:** línea H-83 32/32; E2E del producto de dos grupos 17/17; cola 162/162;
 migraciones 31/31; módulos 41/41; protección de tallas 34/34; Excel 17/17 y
 27/27; precios 19/19; devoluciones/cambios relacionados 188/188; build 8/8.
-Dry-run remoto: sólo `12600/12700` pendientes.
+Producción: migraciones `12600/12700` aplicadas; dry-run posterior al cliente:
+`Remote database is up to date`. `origin/main` contiene `b3bd58e` y GitHub Pages
+sirve exactamente su blob `index.html` `a98e9b533846af53085daeff968cc0a28274a74f`.
 **Riesgo residual:** documentos anteriores no tienen snapshot retroactivo. No se
 asignaron colores inventados a prendas del inventario productivo; esa decisión
 requiere comprobar la prenda física.

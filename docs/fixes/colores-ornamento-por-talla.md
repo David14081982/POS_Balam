@@ -1,9 +1,9 @@
 # Colores de ornamento por talla
 
 **Riesgo:** H-83
-**Estado:** RESUELTO — implementación y pruebas completas; publicación pendiente
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha:** 08/08/2026
-**Commit:** Pendiente de commit
+**Commit técnico:** `b3bd58ead8e790ae17de98d248fec388f1ca188d`
 
 ## Problema y reproducción
 
@@ -107,8 +107,13 @@ Regresión relacionada:
 - `test-h73-comprobante-del-cambio.mjs` → **29/29**.
 - `test-build-reproducibility.mjs` → **8/8**.
 - `node build-offline.mjs` compiló todos los JSX y regeneró ambos artefactos.
-- `supabase db push --linked --include-all --dry-run` enumeró únicamente las
-  migraciones H-83 `12600/12700` y no aplicó cambios.
+- `supabase db push --linked --include-all --yes` aplicó en producción las
+  migraciones H-83 `12600/12700`, incluida su verificación transaccional.
+- El dry-run posterior informó `Remote database is up to date`.
+- `origin/main`, `HEAD` y el remoto verificado coinciden en `b3bd58e`.
+- GitHub Pages sirve el blob `index.html` `a98e9b533846af53085daeff968cc0a28274a74f`,
+  exactamente igual al blob del commit. La copia de trabajo agrega únicamente
+  171 retornos CRLF por la configuración local de Git.
 - `test-smoke.mjs bundle` completó sus **13 comprobaciones verdes**; el proceso
   agotó el timeout después del recorrido al cerrar su servidor, sin error de
   página ni fallo funcional.
