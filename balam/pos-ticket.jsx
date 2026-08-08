@@ -26,6 +26,11 @@
     return t;
   };
   const money2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+  const ornamentEvidence = line => {
+    if (!line || (!line.ornamento && !Array.isArray(line.ornColors))) return '';
+    const colors = Array.isArray(line.ornColors) ? line.ornColors.join(' + ') : '';
+    return [line.ornamento, colors].filter(Boolean).join(' · ');
+  };
 
   // ── H-32: presentación financiera solicitada por Finanzas ────────────────────
   // Importe e IVA describen el PRECIO ORIGINAL (antes del descuento), no el total cobrado.
@@ -158,6 +163,10 @@
                     h('button', { key: 'x', className: 'text-on-surface-variant hover:text-danger transition-colors shrink-0', onClick: () => onRemove(l.key), title: 'Quitar' }, h(MS, { name: 'trash', size: 18 })),
                   ]),
                   h('p', { key: 'sz', className: 'text-overline uppercase text-on-surface-variant' }, 'Talla ' + tallaLbl(l.talla, l.p) + ' • ' + l.p.colorName),
+                  D.effectiveOrnamentColors(l.p, l.talla).length
+                    ? h('p', { key: 'oc', className: 'text-overline uppercase text-on-surface-variant/80' },
+                        (l.p.orn || '') + ' · ' + D.effectiveOrnamentColors(l.p, l.talla).join(' + '))
+                    : null,
                   h('div', { key: 'm', className: 'mt-auto pt-1.5 flex justify-between items-center' }, [
                     h('div', { key: 'q', className: 'flex items-center bg-surface-container-low border border-outline-variant rounded-md overflow-hidden' }, [
                       h('button', { key: 'm', className: 'w-7 h-7 flex items-center justify-center hover:bg-surface transition-colors', onClick: () => onQty(l.key, -1) }, h(MS, { name: 'minus', size: 16 })),
@@ -559,10 +568,10 @@
           h('div', { key: 'd', className: 'mt-3 text-left', style: { fontSize: '12px', lineHeight: 1.6 } }, [
             h('div', { key: 'h1', className: 'uppercase text-on-surface-variant', style: { letterSpacing: '0.12em' } }, 'Entrega'),
             ...(exchange.lineas || []).filter(l => l.lado === 'devuelto').map((l, i) =>
-              h('div', { key: 'e' + i }, l.qty + ' × ' + l.nombre + ' · talla ' + l.talla + ' · ' + fmt(l.precio))),
+              h('div', { key: 'e' + i }, l.qty + ' × ' + l.nombre + ' · talla ' + l.talla + (ornamentEvidence(l) ? ' · ' + ornamentEvidence(l) : '') + ' · ' + fmt(l.precio))),
             h('div', { key: 'h2', className: 'uppercase text-on-surface-variant mt-2', style: { letterSpacing: '0.12em' } }, 'Recibe'),
             ...(exchange.lineas || []).filter(l => l.lado === 'entregado').map((l, i) =>
-              h('div', { key: 'r' + i }, l.qty + ' × ' + l.nombre + ' · talla ' + l.talla + ' · ' + fmt(l.precio))),
+              h('div', { key: 'r' + i }, l.qty + ' × ' + l.nombre + ' · talla ' + l.talla + (ornamentEvidence(l) ? ' · ' + ornamentEvidence(l) : '') + ' · ' + fmt(l.precio))),
             Number(exchange.diferencia) > 0
               ? h('div', { key: 'df', className: 'font-semibold text-primary mt-2' }, 'Diferencia pagada · ' + fmt(exchange.diferencia))
               : null,
@@ -598,6 +607,10 @@
               h('span', { key: 's', className: 'flex-1 min-w-0' }, `SKU: ${l.sku} · Talla: ${tallaLbl(l.talla, D.products.find(p => p.sku === l.sku))}${colorDe(l.sku) ? ' · ' + colorDe(l.sku) : ''}`),
               h('span', { key: 'q', className: 'shrink-0' }, `Cant: ${l.qty}`),
             ]),
+            ornamentEvidence(l) ? h('div', {
+              key: 'oc', className: 'mt-1 text-on-surface-variant', style: { fontSize: '10px', lineHeight: 1.4 },
+              'data-testid': 'ticket-ornament-evidence',
+            }, 'Ornamento: ' + ornamentEvidence(l)) : null,
           ]))),
         ]),
         // Totales

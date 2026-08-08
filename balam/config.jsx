@@ -53,9 +53,9 @@
       { code: 'VE', label: 'Verde', meta: { hex: '#3d8c5a' } },
     ],
     ornament: [
-      { code: 'Bordado Eléctrico', label: 'Bordado Eléctrico' },
-      { code: 'Alforza', label: 'Alforza' },
-      { code: '—', label: 'Sin ornamento' },
+      { code: 'Bordado Eléctrico', label: 'Bordado Eléctrico', meta: { allowsColors: true } },
+      { code: 'Alforza', label: 'Alforza', meta: { allowsColors: false } },
+      { code: '—', label: 'Sin ornamento', meta: { allowsColors: false } },
     ],
     size_letter: ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL', '6XL'].map(s => ({ code: s, label: s })),
     size_number: ['34', '36', '38', '40', '42', '44', '46', '48', '50', '52'].map(s => ({ code: s, label: s })),
@@ -225,6 +225,16 @@
     let changed = false;
     const needsManualOptions = !Object.prototype.hasOwnProperty.call(st.settings, 'benefits.manualOptionsV1');
     Object.keys(fresh.catalogs).forEach(k => { if (!st.catalogs[k]) { st.catalogs[k] = fresh.catalogs[k]; changed = true; } });
+    // H-83: rellena sólo el metadato ausente de ornamentos históricos.
+    const ornaments = st.catalogs.ornament || [];
+    (fresh.catalogs.ornament || []).forEach(seedItem => {
+      const current = ornaments.find(item => item.code === seedItem.code);
+      if (!current || !seedItem.meta || !Object.prototype.hasOwnProperty.call(seedItem.meta, 'allowsColors')) return;
+      if (!current.meta || !Object.prototype.hasOwnProperty.call(current.meta, 'allowsColors')) {
+        current.meta = Object.assign({}, current.meta || {}, { allowsColors: seedItem.meta.allowsColors });
+        changed = true;
+      }
+    });
     if (needsManualOptions) {
       const benefits = st.catalogs.additional_benefit || (st.catalogs.additional_benefit = []);
       fresh.catalogs.additional_benefit
@@ -347,7 +357,7 @@
   // promociones. Devolver cero es la única licencia para retirarlo de la operación.
   const SIZE_KINDS = ['size_letter', 'size_number'];
   function sizeCodeReferences(kind, code) {
-    const vacio = { stock: 0, productos: 0, precios: 0, barcodes: 0, promociones: 0, total: 0 };
+    const vacio = { stock: 0, productos: 0, precios: 0, coloresOrnamento: 0, barcodes: 0, promociones: 0, total: 0 };
     if (SIZE_KINDS.indexOf(kind) < 0) return vacio;
     const item = (state.catalogs[kind] || []).find(it => it.code === code);
     if (!item) return vacio;
@@ -367,6 +377,8 @@
       if (piezas > 0) { out.stock += piezas; out.productos++; }
       const precios = p.preciosTalla || {};
       if (Object.prototype.hasOwnProperty.call(precios, target)) out.precios++;
+      const ornamentColors = (p.attrs || {}).__ornamentColorsBySize || {};
+      if (Object.prototype.hasOwnProperty.call(ornamentColors, target)) out.coloresOrnamento++;
       const barcodes = p.barcodeUrls || {};
       if (Object.prototype.hasOwnProperty.call(barcodes, target)) out.barcodes++;
     });
@@ -374,7 +386,7 @@
       const tallas = (promo && promo.scope && Array.isArray(promo.scope.tallas)) ? promo.scope.tallas : [];
       if (tallas.some(t => String(t) === target)) out.promociones++;
     });
-    out.total = out.stock + out.precios + out.barcodes + out.promociones;
+    out.total = out.stock + out.precios + out.coloresOrnamento + out.barcodes + out.promociones;
     return out;
   }
   // Alcance de la protección de H-63: sólo Talla (Número), donde el daño está
@@ -389,6 +401,7 @@
     const partes = [];
     if (r.stock) partes.push(`${r.stock} pieza(s) en ${r.productos} producto(s)`);
     if (r.precios) partes.push(`${r.precios} precio(s) especial(es)`);
+    if (r.coloresOrnamento) partes.push(`${r.coloresOrnamento} configuración(es) de colores de ornamento`);
     if (r.barcodes) partes.push(`${r.barcodes} código(s) de barras`);
     if (r.promociones) partes.push(`${r.promociones} promoción(es)`);
     const item = (state.catalogs[kind] || []).find(it => it.code === code);
@@ -404,12 +417,24 @@
     // ruta de borrado seguiría admitiendo un código referenciado sólo por precios.
     if (kind === PROTECTED_SIZE_KIND) return sizeCodeReferences(kind, code).total > 0;
     const products = window.CORE.catalogProducts();
+    if (SIZE_KINDS.includes(kind)) {
+      const sizeItem = (state.catalogs[kind] || []).find(item => item.code === code);
+      const sizeMeta = sizeItem && sizeItem.meta && typeof sizeItem.meta === 'object' ? sizeItem.meta : {};
+      const sizeValue = Object.prototype.hasOwnProperty.call(sizeMeta, 'value') ? sizeMeta.value : code;
+      if (products.some(p => {
+        const assigned = (p.attrs || {}).__sizeCategoryId || p.sizeCategoryId || null;
+        const map = (p.attrs || {}).__ornamentColorsBySize || {};
+        return (!assigned || assigned === kind) && Object.prototype.hasOwnProperty.call(map, String(sizeValue));
+      })) return true;
+    }
     const cm = state.catalogMeta[kind];
     if (cm && cm.custom) return products.some(p => (p.attrs || {})[kind] === code);
     const field = fieldOf(kind);
     if (field && kind !== 'size_letter' && kind !== 'size_number') {
       if (products.some(p => String(p[field]) === String(code))) return true;
-      if (kind === 'color' && products.some(p => (p.ornColors || []).includes(code))) return true;
+      if (kind === 'color' && products.some(p => (p.ornColors || []).includes(code)
+        || Object.values((p.attrs || {}).__ornamentColorsBySize || {})
+          .some(colors => Array.isArray(colors) && colors.includes(code)))) return true;
       return false;
     }
     const sizeItem = (state.catalogs[kind] || []).find(item => item.code === code);

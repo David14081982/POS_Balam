@@ -11,7 +11,7 @@
     maxCellsPerSheet: 1000000,
   });
   // 'Foto (URL)' va al FINAL de BASE a propósito: las columnas A–K conservan su posición de siempre.
-  const BASE = ['SKU', 'Modelo', 'Categoría', 'Manga', 'Tela', 'Color', 'No. Modelo', 'Ornamento', 'Colores Orn.', 'Cuello', 'Precio', 'Foto (URL)', 'Categoría por talla'];
+  const BASE = ['SKU', 'Modelo', 'Categoría', 'Manga', 'Tela', 'Color', 'No. Modelo', 'Ornamento', 'Colores Orn.', 'Cuello', 'Precio', 'Foto (URL)', 'Categoría por talla', 'Colores Orn. por talla'];
   // Campos que la hoja de Inventario REALMENTE trae. Al ACTUALIZAR un producto existente solo se
   // tocan estos: id, costo, destacado y códigos de barras se conservan porque el Excel no los
   // lleva (reemplazarlos con los valores por defecto de hydrate borraría lo que ya tenías).
@@ -224,6 +224,9 @@
       'Color': p.color, 'No. Modelo': p.modelo, 'Ornamento': p.orn,
       'Colores Orn.': (p.ornColors || []).join(', '), 'Cuello': p.cuello || 'NOR', 'Precio': p.precio,
       'Foto (URL)': fotoUrl(p),
+      // JSON conserva códigos canónicos y la relación exacta, no etiquetas.
+      'Colores Orn. por talla': JSON.stringify(D.sanitizeOrnamentColorsBySize(
+        p.attrs && p.attrs.__ornamentColorsBySize, p)),
     };
     exportCols().forEach(c => { r[c.label] = (p.attrs || {})[c.kind] || ''; });
     const byKey = {};
@@ -239,6 +242,7 @@
     if (h === 'Modelo') return 26;
     if (h === 'SKU') return 20;
     if (h === 'Ornamento' || h === 'Colores Orn.') return 18;
+    if (h === 'Colores Orn. por talla') return 42;
     if (h === 'Cuello' || h === 'Categoría') return 12;
     if (BASE.indexOf(h) >= 0 || sizeHeaders.indexOf(h) >= 0) return 7;
     return 16; // columnas de catálogos custom
@@ -265,7 +269,10 @@
     const ejemplo = rowFromProduct(D.hydrate({
       cat: '21', manga: 'MC', tela: 'ALG', color: 'BL', modelo: '060', nombre: 'EJEMPLO — borra esta fila',
       orn: 'Bordado Eléctrico', ornColors: ['OR', 'VI'], cuello: 'MAO', precio: 650,
-      sizeCategoryId: 'size_letter', attrs: { __sizeCategoryId: 'size_letter' },
+      sizeCategoryId: 'size_letter', attrs: {
+        __sizeCategoryId: 'size_letter',
+        __ornamentColorsBySize: { XS: ['OR', 'VI'], S: ['OR', 'VI'], L: ['VI'] },
+      },
       stock: D.mkStock([2, 4, 6, 9, 12, 8, 5], []).filter(v => v.escala === 'L'),
     }), cols);
     const headers = buildHeaders(cols);
@@ -297,6 +304,18 @@
   function parseOrnColors(v) {
     return String(v || '').split(/[,;/]+/).map(s => s.trim().toUpperCase())
       .filter(c => c && D.COLOR_NAME[c]);
+  }
+  function parseOrnamentColorsBySize(v, idx) {
+    const raw = String(v == null ? '' : v).trim();
+    if (!raw) return {};
+    let parsed;
+    try { parsed = JSON.parse(raw); } catch (error) {
+      throw balamError(`La fila ${idx + 2} tiene JSON inválido en «Colores Orn. por talla».`);
+    }
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      throw balamError(`La fila ${idx + 2} debe usar un objeto talla → colores en «Colores Orn. por talla».`);
+    }
+    return parsed;
   }
   // Acepta código (NOR) o nombre ("Mao (chino)") → código de cuello
   function parseCuello(v) {
@@ -398,12 +417,15 @@
     }));
     const attrs = {};
     attrs.__sizeCategoryId = sizeCategory.id;
+    if (cols.hasOrnamentColorsBySize) {
+      attrs.__ornamentColorsBySize = parseOrnamentColorsBySize(row['Colores Orn. por talla'], idx);
+    }
     customCols().forEach(c => { const v = validCustom(c.kind, row[c.label]); if (v) attrs[c.kind] = v; });
     // Foto: solo enlaces http(s). Cualquier otra cosa se ignora y hydrate pone la genérica
     // (mismo comportamiento que un archivo sin esta columna).
     const foto = String(row['Foto (URL)'] || '').trim();
     const imagen = /^https?:\/\//i.test(foto) ? foto : undefined;
-    return D.hydrate({
+    const product = D.hydrate({
       id: 'imp-' + Date.now() + '-' + idx,
       cat, manga, tela, color, modelo, nombre, imagen,
       orn: String(row['Ornamento'] || '—').trim() || '—',
@@ -414,6 +436,9 @@
       stock,
       pop: false,
     });
+    // Una hoja anterior a H-83 no expresa intención de borrar este dato.
+    if (!cols.hasOrnamentColorsBySize) delete product.attrs.__ornamentColorsBySize;
+    return product;
   }
 
   // Columna de la que sale la cantidad de una talla:
@@ -481,6 +506,7 @@
       cols.fileMap = sizeMapFromWorkbook(wb);
       const sheetName = wb.SheetNames.includes('Inventario') ? 'Inventario' : wb.SheetNames[0];
       const ws = wb.Sheets[sheetName];
+      cols.hasOrnamentColorsBySize = headerRowOf(ws).includes('Colores Orn. por talla');
       if (!cols.fileMap) assertLegacyReadable(ws, cols);
       const rows = sheetToJson(ws, { defval: '' });
       const products = [];
@@ -592,5 +618,7 @@
     exportTemplate, exportInventory, exportReturns, exportSales, exportSellers, exportLayaways, exportLoans,
     parseFile, readWorkbook, sheetToJson, limits: XLSX_LIMITS,
     headers: buildHeaders, sizeColumns, IMPORT_FIELDS,
+    // Costura pura para pruebas de ida/vuelta; no persiste ni descarga archivos.
+    __test: { rowFromProduct, buildProduct },
   };
 })();

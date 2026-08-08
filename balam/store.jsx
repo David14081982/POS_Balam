@@ -11,7 +11,7 @@
   const QKEY = 'balam_sync_queue';
   const QDB = 'balam_sync', QSTORE = 'durable_queue';
   const SYNC_PROTOCOL_VERSION = 1;
-  const SYNC_SCHEMA_VERSION = 20260807012400;
+  const SYNC_SCHEMA_VERSION = 20260808012700;
   const SYNC_CURSOR_KEY = 'balam_sync_domain_cursors_v1';
   const SYNC_DOMAINS = {
     permissions: { deps: [] }, config: { deps: ['permissions'] },
@@ -257,6 +257,8 @@
       _saleItemId: x.id == null ? undefined : Number(x.id),
       productId: x.product_id || x.productId || undefined,
       sku: x.sku, nombre: x.nombre, talla: x.talla, qty: x.qty,
+      ornamento: x.ornamento || undefined,
+      ornColors: Array.isArray(x.orn_colors) ? x.orn_colors : undefined,
       precio: Number(x.precio) || 0,
       precioBase: x.precio_base == null ? x.precioBase : Number(x.precio_base),
       precioOrig: x.precio_original == null ? x.precioOrig : Number(x.precio_original),
@@ -1657,6 +1659,8 @@
     const items = (sale.lineas || []).map(l => {
       const productId = resolveLineProductId(l, `sale:${sale.folio}`);
       const row = { folio: sale.folio, product_id: productId, sku: l.sku, nombre: l.nombre, talla: l.talla, qty: l.qty, precio: Number(l.precio) || 0 };
+      if (l.ornamento != null) row.ornamento = l.ornamento;
+      if (Array.isArray(l.ornColors)) row.orn_colors = l.ornColors.slice();
       if (l.precioBase != null) row.precio_base = Number(l.precioBase) || 0;
       if (l.precioOrig != null) row.precio_original = Number(l.precioOrig) || 0;
       // H-32: evidencia del descuento. Condicional, como los precios: una instalación sin la
@@ -1787,7 +1791,7 @@
     if (!enabled) return;
     effects = effects || {};
     const header = { id: ret.id, folio: ret.folio, fecha: ret.fecha || null, cliente: ret.cliente, vendedores: ret.vendedores || [], metodo: ret.metodo || null, total: Number(ret.total) || 0, notas: ret.notas || null };
-    const items = (ret.lineas || []).map(l => ({ return_id: ret.id, product_id: l.productId || null, sku: l.sku, nombre: l.nombre, talla: l.talla, qty: l.qty, motivo: l.motivo || null, precio: Number(l.precio) || 0 }));
+    const items = (ret.lineas || []).map(l => ({ return_id: ret.id, product_id: l.productId || null, sku: l.sku, nombre: l.nombre, talla: l.talla, qty: l.qty, motivo: l.motivo || null, precio: Number(l.precio) || 0, ornamento: l.ornamento || null, orn_colors: Array.isArray(l.ornColors) ? l.ornColors.slice() : null }));
     const moves = (ret.lineas || []).map(l => ({ return_id: ret.id, fecha: String(ret.fecha || '').replace(' ', 'T'), tipo: 'Devolución', producto: l.nombre, sku: l.sku, cant: Number(l.qty) || 0, ref: ret.folio }));
     return run({
       type: 'return', id: ret.id, folio: ret.folio, header, items, moves,
@@ -1820,6 +1824,8 @@
       lado: l.lado, product_id: l.productId || null, sku: l.sku, nombre: l.nombre,
       talla: l.talla, qty: Number(l.qty) || 0, motivo: l.motivo || null,
       condicion: l.condicion || null,
+      ornamento: l.ornamento || null,
+      orn_colors: Array.isArray(l.ornColors) ? l.ornColors.slice() : null,
     }));
     const moves = (exch.lineas || []).map(l => ({
       fecha: String(exch.fecha || '').replace(' ', 'T'),
@@ -2247,7 +2253,7 @@
         // H-72: `pushReturn` escribe `product_id`; el pull debe leerlo de vuelta o
         // la devolución local queda peor identificada que la remota, igual que
         // `saleItemFromRow` conserva la identidad de los renglones de venta.
-        itRows.forEach(x => (byRid[x.return_id] || (byRid[x.return_id] = [])).push({ productId: x.product_id || undefined, sku: x.sku, nombre: x.nombre, talla: x.talla, qty: x.qty, motivo: x.motivo || '', precio: Number(x.precio) || 0 }));
+        itRows.forEach(x => (byRid[x.return_id] || (byRid[x.return_id] = [])).push({ productId: x.product_id || undefined, sku: x.sku, nombre: x.nombre, talla: x.talla, qty: x.qty, motivo: x.motivo || '', precio: Number(x.precio) || 0, ornamento: x.ornamento || undefined, ornColors: Array.isArray(x.orn_colors) ? x.orn_colors : undefined }));
         const rows = r.data.map(raw => { const s = m.fromRow(raw); s.lineas = byRid[raw.id] || []; return s; });
         window.DATA.applyRemote('returns', rows); return { ok: true };
       }
@@ -2255,9 +2261,11 @@
         const itRows = await fetchItemsIn(c, 'exchange_items', 'exchange_id', r.data.map(x => x.id));
         const byId = {};
         itRows.forEach(x => (byId[x.exchange_id] || (byId[x.exchange_id] = [])).push({
-          lado: x.lado, sku: x.sku, nombre: x.nombre, talla: x.talla,
+          lado: x.lado, productId: x.product_id || undefined, sku: x.sku, nombre: x.nombre, talla: x.talla,
           qty: Number(x.qty) || 0, precio: Number(x.precio) || 0,
           motivo: x.motivo || '', condicion: x.condicion || undefined,
+          ornamento: x.ornamento || undefined,
+          ornColors: Array.isArray(x.orn_colors) ? x.orn_colors : undefined,
         }));
         const rows = r.data.map(raw => { const value = m.fromRow(raw); value.lineas = byId[raw.id] || []; return value; });
         window.DATA.applyRemote('exchanges', rows); return { ok: true };

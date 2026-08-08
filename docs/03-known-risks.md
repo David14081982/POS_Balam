@@ -3995,6 +3995,49 @@ cierre seguro y muestran «Preparando almacenamiento local» mientras esperan; n
 afirmarán que existe otra pestaña sin evidencia.
 **Corrección documentada:** `docs/fixes/diagnostico-del-escritor-local.md`.
 
+## H-83 - El producto no puede representar colores de ornamento distintos por talla
+
+**Estado:** RESUELTO — implementación y pruebas completas; publicación pendiente
+**Fecha de registro:** 08/08/2026
+**Commit:** Pendiente de commit
+**Origen:** solicitud del dueño del producto, previa a la futura matriz comercial
+de SKU.
+**Evidencia inicial:** el producto sólo conserva `ornColors` como lista general;
+`ProductForm` ofrece existencias y precios especiales agrupados por talla, pero
+no existe un dato equivalente para los hilos del ornamento. POS, Excel y los
+documentos sólo pueden consultar el color general vigente.
+**Riesgo:** dos tallas físicamente distintas quedan representadas como si usaran
+los mismos hilos. Si la futura matriz comercial consume esa información, puede
+fusionar referencias diferentes; además un ticket o una devolución no conserva
+evidencia del color efectivo que se entregó.
+**Alcance:** mapa canónico talla → códigos de color dentro del snapshot versionado
+del producto; autoridad única de resolución; captura agrupada; Excel; POS y
+evidencia documental. Compatibilidad local-first y sincronización mediante la
+estructura extensible vigente.
+**No alcance:** identidad nueva de producto o variante, sufijos comerciales,
+matriz de SKU, regeneración de SKU, stock, precios y migraciones de inventario.
+**Reproducción:** `node test-h83-ornament-colors-by-size.mjs` sobre el código
+anterior: **8 pasaron y 17 fallaron**. Demostró ausencia de autoridad,
+canonicalización, captura, Excel y snapshot documental; las huellas de stock,
+precios y SKU ya quedaron verdes como invariantes.
+**Causa raíz:** contrato ausente. `ornColors` responde sólo por el producto
+completo, mientras `stock` y `preciosTalla` ya reconocen la talla como variante.
+Ninguna autoridad responde qué colores son efectivos para una talla y los
+renglones documentales no congelan esa evidencia.
+**Corrección:** `attrs.__ornamentColorsBySize` es la única matriz editable y
+`DATA.effectiveOrnamentColors()` la única autoridad efectiva. Inventario ofrece
+grupos; Excel conserva códigos; POS consume la autoridad; ventas, devoluciones y
+cambios congelan evidencia. Las RPC públicas mantienen nombres y atomicidad.
+No cambian stock, precios ni SKU.
+**Pruebas:** línea H-83 32/32; E2E del producto de dos grupos 17/17; cola 162/162;
+migraciones 31/31; módulos 41/41; protección de tallas 34/34; Excel 17/17 y
+27/27; precios 19/19; devoluciones/cambios relacionados 188/188; build 8/8.
+Dry-run remoto: sólo `12600/12700` pendientes.
+**Riesgo residual:** documentos anteriores no tienen snapshot retroactivo. No se
+asignaron colores inventados a prendas del inventario productivo; esa decisión
+requiere comprobar la prenda física.
+**Corrección documentada:** `docs/fixes/colores-ornamento-por-talla.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

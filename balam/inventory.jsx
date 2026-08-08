@@ -483,6 +483,34 @@
     return out;
   }
 
+  // H-83: el mapa persistido se presenta como grupos de tallas que comparten el
+  // mismo conjunto de colores. El orden de los colores no crea otro grupo.
+  function ordenarColoresOrnamento(colors) {
+    const selected = new Set((colors || []).map(String));
+    return (window.CONFIG.all ? window.CONFIG.all('color') : window.CONFIG.list('color'))
+      .map(item => String(item.code)).filter(code => selected.has(code));
+  }
+  function agruparColoresOrnamento(mapa, product) {
+    const clean = D.sanitizeOrnamentColorsBySize(mapa, product);
+    const groups = {};
+    const order = D.resolveProductSizes(product).sizes.map(size => String(size.value));
+    order.forEach(talla => {
+      if (!clean[talla]) return;
+      const key = JSON.stringify(clean[talla]);
+      if (!groups[key]) groups[key] = { tallas: [], colores: clean[talla].slice() };
+      groups[key].tallas.push(talla);
+    });
+    return Object.values(groups);
+  }
+  function expandirColoresOrnamento(rows) {
+    const out = {};
+    (rows || []).forEach(row => {
+      const colors = ordenarColoresOrnamento(row.colores);
+      (row.tallas || []).forEach(talla => { if (colors.length) out[talla] = colors.slice(); });
+    });
+    return out;
+  }
+
   // ---------- Formulario de alta / edición ----------
   function ProductForm({ mode, product, onClose, onSave }) {
     // Los códigos huérfanos NO se sustituyen al abrir: el select los muestra con aviso (sel() ya
@@ -501,6 +529,8 @@
       // El dato guardado es el mapa canónico; la agrupación vive sólo aquí y se
       // reconstruye juntando las tallas que comparten precio.
       precioRows: agruparPrecios(product.preciosTalla),
+      ornamentColorRows: agruparColoresOrnamento(
+        product.attrs && product.attrs.__ornamentColorsBySize, product),
     }));
     const set = (k, v) => setD(prev => ({ ...prev, [k]: v }));
     const setSizeCategory = categoryId => setD(prev => ({
@@ -509,6 +539,7 @@
       attrs: { ...(prev.attrs || {}), __sizeCategoryId: categoryId },
       stock: alignStock(prev, categoryId),
       precioRows: [],
+      ornamentColorRows: [],
     }));
     const setAttr = (k, v) => setD(prev => ({ ...prev, attrs: { ...(prev.attrs || {}), [k]: v } }));
     // Catálogo "Modelo" (custom) que alimenta el desplegable de "Nombre / Modelo" (detección
@@ -530,6 +561,26 @@
       ...prev,
       precioRows: prev.precioRows.map((r, k) => k !== i ? r
         : { ...r, tallas: r.tallas.includes(talla) ? r.tallas.filter(t => t !== talla) : r.tallas.concat(talla) }),
+    }));
+    const addOrnamentColorRow = () => setD(prev => ({
+      ...prev, ornamentColorRows: prev.ornamentColorRows.concat([{ tallas: [], colores: [] }]),
+    }));
+    const delOrnamentColorRow = i => setD(prev => ({
+      ...prev, ornamentColorRows: prev.ornamentColorRows.filter((_, k) => k !== i),
+    }));
+    const toggleOrnamentColorSize = (i, talla) => setD(prev => ({
+      ...prev,
+      ornamentColorRows: prev.ornamentColorRows.map((row, k) => k !== i ? row : {
+        ...row, tallas: row.tallas.includes(String(talla))
+          ? row.tallas.filter(value => value !== String(talla)) : row.tallas.concat(String(talla)),
+      }),
+    }));
+    const toggleOrnamentColor = (i, color) => setD(prev => ({
+      ...prev,
+      ornamentColorRows: prev.ornamentColorRows.map((row, k) => k !== i ? row : {
+        ...row, colores: row.colores.includes(color)
+          ? row.colores.filter(value => value !== color) : ordenarColoresOrnamento(row.colores.concat(color)),
+      }),
     }));
     const fileRef = useRef(null);
     // Guardas de la subida en segundo plano: no tocar el estado tras desmontar, y si el
@@ -592,8 +643,30 @@
       if (vacia) { toast('Escribe el precio del grupo de tallas', 'var(--danger)'); return; }
       // Las filas sin tallas seleccionadas simplemente no producen excepciones.
       const preciosTalla = expandirPrecios(d.precioRows.filter(r => (r.tallas || []).length));
-      const { precioRows, ...rest } = d;
-      onSave({ ...rest, nombre: d.nombre.trim(), modelo: modeloFinal, precio: Number(d.precio) || 0, costo: Number(d.costo) || 0, preciosTalla }, mode);
+      // H-83: dos grupos pueden repetir una talla solamente si describen el
+      // mismo conjunto. Si son incompatibles se bloquea: nunca hay ultimo gana.
+      const usedColorSizes = {};
+      for (let i = 0; i < d.ornamentColorRows.length; i++) {
+        const row = d.ornamentColorRows[i];
+        const colors = ordenarColoresOrnamento(row.colores);
+        if (row.tallas.length && !colors.length) {
+          toast(`Selecciona al menos un color de ornamento en el grupo ${i + 1}`, 'var(--danger)'); return;
+        }
+        for (const talla of row.tallas) {
+          const previous = usedColorSizes[talla];
+          if (previous && JSON.stringify(previous.colors) !== JSON.stringify(colors)) {
+            toast(`La talla ${talla} aparece en dos grupos de colores de ornamento que se superponen (${previous.group} y ${i + 1})`, 'var(--danger)'); return;
+          }
+          usedColorSizes[talla] = { colors, group: i + 1 };
+        }
+      }
+      const rawOrnamentColorsBySize = expandirColoresOrnamento(
+        d.ornamentColorRows.filter(row => row.tallas.length));
+      const { precioRows, ornamentColorRows, ...rest } = d;
+      const attrs = { ...(rest.attrs || {}) };
+      attrs.__ornamentColorsBySize = D.sanitizeOrnamentColorsBySize(
+        rawOrnamentColorsBySize, { ...rest, attrs });
+      onSave({ ...rest, attrs, nombre: d.nombre.trim(), modelo: modeloFinal, precio: Number(d.precio) || 0, costo: Number(d.costo) || 0, preciosTalla }, mode);
     }
 
     const footer = [
@@ -654,13 +727,64 @@
           .filter(k => { const m = window.CONFIG.catalogMeta(k); return m && m.custom && m.inForm && k !== modeloKind; })
           .map(k => field(window.CONFIG.catalogLabel(k), sel((d.attrs || {})[k] || '', window.CONFIG.map(k), v => setAttr(k, v)))),
       ]),
-      h('div', { key: 'oc', className: 'mt-4' }, [
+      D.ornamentSupportsColors(d) && h('div', { key: 'oc', className: 'mt-4' }, [
         h('div', { key: 'l', className: 'text-caption font-semibold text-on-surface-variant uppercase tracking-widest mb-2' }, ['Colores Orn. ', h('span', { key: 's', className: 'normal-case tracking-normal text-on-surface-variant/70' }, '(hilos del bordado)')]),
         h('div', { key: 'g', className: 'flex flex-wrap gap-1.5' }, Object.keys(D.COLOR_NAME).map(c => h('button', {
           key: c, type: 'button', title: D.COLOR_NAME[c],
           className: 'flex items-center gap-1 px-2 py-1 border rounded transition-colors ' + (d.ornColors.includes(c) ? 'border-primary bg-surface-container' : 'border-outline-variant hover:border-primary'),
           onClick: () => toggleOrn(c),
         }, [h('span', { key: 'sw', className: 'w-3 h-3 rounded-full border border-outline-variant', style: { background: D.COLOR_HEX[c] } }), h('span', { key: 'c', className: 'text-overline' }, c)]))),
+      ]),
+      D.ornamentSupportsColors(d) && h('div', {
+        key: 'ocbs', className: 'mt-5 border-t border-outline-variant pt-4',
+        'data-testid': 'ornament-colors-by-size',
+      }, [
+        h('div', { key: 'l', className: 'flex items-center gap-2 mb-1' }, [
+          h('span', { key: 't', className: 'flex items-center gap-2 text-caption font-semibold text-on-surface-variant uppercase tracking-widest' }, [h(MS, { key: 'i', name: 'palette', size: 15 }), 'Colores de ornamento por talla']),
+          h('span', { key: 'sp', className: 'flex-1' }),
+          h('button', {
+            key: 'add', type: 'button', onClick: addOrnamentColorRow,
+            'data-testid': 'add-ornament-colors-by-size',
+            className: 'inline-flex items-center gap-1.5 px-3 h-9 border border-outline-variant text-on-surface-variant text-overline uppercase font-bold tracking-widest rounded-lg hover:bg-surface-container transition-colors',
+          }, [h(MS, { key: 'i', name: 'plus', size: 14 }), 'Agregar colores']),
+        ]),
+        h('p', { key: 'h', className: 'text-overline text-on-surface-variant/70 mb-3' },
+          d.ornamentColorRows.length
+            ? 'Las tallas sin configuraciÃ³n especial usan los colores generales del producto.'
+            : 'Opcional. Todas las tallas usan los colores generales del producto.'),
+        ...d.ornamentColorRows.map((row, i) => h('div', {
+          key: 'ocr' + i, className: 'mb-3 p-3 rounded-lg bg-surface-container-low border border-outline-variant',
+          'data-testid': 'ornament-color-group-' + i,
+        }, [
+          h('div', { key: 'top', className: 'flex items-center gap-3 mb-2' }, [
+            h('span', { key: 'sum', className: 'flex-1 text-caption text-on-surface-variant' },
+              row.tallas.length ? 'Tallas ' + row.tallas.join('/') : 'Selecciona las tallas'),
+            h('span', { key: 'colors', className: 'text-overline text-on-surface-variant/70' },
+              row.colores.length ? row.colores.join(' + ') : 'Sin colores'),
+            h('button', {
+              key: 'x', type: 'button', title: 'Quitar', onClick: () => delOrnamentColorRow(i),
+              className: 'w-9 h-9 grid place-items-center border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors',
+            }, h(MS, { name: 'trash', size: 15 })),
+          ]),
+          h('div', { key: 'sizes', className: 'mb-3' }, [
+            h('div', { key: 'label', className: 'text-overline uppercase tracking-widest text-on-surface-variant/70 mb-1.5' }, 'Tallas'),
+            h('div', { key: 'chips', className: 'flex flex-wrap gap-1.5' }, d.stock.map(v => h('button', {
+              key: v.talla, type: 'button', onClick: () => toggleOrnamentColorSize(i, v.talla),
+              'data-testid': `ornament-group-${i}-size-${v.talla}`,
+              className: 'px-2.5 py-1 border rounded text-overline uppercase transition-colors ' +
+                (row.tallas.includes(String(v.talla)) ? 'border-primary bg-surface-container text-primary font-bold' : 'border-outline-variant text-on-surface-variant hover:border-primary'),
+            }, tallaLabel(d, v.talla)))),
+          ]),
+          h('div', { key: 'colors' }, [
+            h('div', { key: 'label', className: 'text-overline uppercase tracking-widest text-on-surface-variant/70 mb-1.5' }, 'Colores de ornamento'),
+            h('div', { key: 'chips', className: 'flex flex-wrap gap-1.5' }, Object.keys(D.COLOR_NAME).map(color => h('button', {
+              key: color, type: 'button', title: D.COLOR_NAME[color], onClick: () => toggleOrnamentColor(i, color),
+              'data-testid': `ornament-group-${i}-color-${color}`,
+              className: 'flex items-center gap-1 px-2 py-1 border rounded transition-colors ' +
+                (row.colores.includes(color) ? 'border-primary bg-surface-container' : 'border-outline-variant hover:border-primary'),
+            }, [h('span', { key: 'sw', className: 'w-3 h-3 rounded-full border border-outline-variant', style: { background: D.COLOR_HEX[color] } }), h('span', { key: 'c', className: 'text-overline' }, color)]))),
+          ]),
+        ])),
       ]),
       h('div', { key: 'div', className: 'border-t border-outline-variant my-5' }),
       h('div', { key: 'stk' }, [

@@ -435,6 +435,12 @@
               // H-36: el precio real de la talla, visible antes de agregarla.
               h('span', { key: 'p', className: 'text-caption font-semibold text-gold-text' }, fmt(D.listPrice(p, size.value))),
               h('span', { key: 's', className: 'text-caption text-muted' }, size.stock + ' pz'),
+              D.effectiveOrnamentColors(p, size.value).length
+                ? h('span', {
+                    key: 'oc', className: 'text-overline text-on-surface-variant mt-1',
+                    'data-testid': 'effective-ornament-colors-' + size.sizeId,
+                  }, D.effectiveOrnamentColors(p, size.value).join(' + '))
+                : null,
             ]))),
         ]),
     ]);

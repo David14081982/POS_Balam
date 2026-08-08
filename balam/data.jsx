@@ -248,6 +248,10 @@
     // H-36: excepciones de precio por talla. Se canoniza aquí para que una talla
     // retirada del catálogo o un valor inutilizable no sobrevivan en el mapa.
     p.preciosTalla = sanitizePreciosTalla(p.preciosTalla, p);
+    // H-83: talla -> colores vive solamente en attrs. La propiedad reservada
+    // conserva el producto como agregado atomico; no hay proyeccion paralela.
+    p.attrs.__ornamentColorsBySize = sanitizeOrnamentColorsBySize(
+      p.attrs.__ornamentColorsBySize, p);
     colorDisplay(p);
     if (!p.imagen) p.imagen = pickImg(p);
     return p;
@@ -1864,6 +1868,54 @@
     return out;
   }
 
+  // -- Colores de ornamento por talla (H-83) --
+  // Los arreglos son conjuntos: se deduplican y ordenan por el catalogo, nunca
+  // por la etiqueta ni por el orden accidental de captura.
+  function canonicalOrnamentColors(colors) {
+    const all = C && typeof C.all === 'function' ? C.all('color') : [];
+    const order = {};
+    all.forEach((item, index) => { order[String(item.code)] = index; });
+    return Array.from(new Set((Array.isArray(colors) ? colors : [])
+      .map(code => String(code == null ? '' : code).trim())
+      .filter(code => code && Object.prototype.hasOwnProperty.call(order, code))))
+      .sort((a, b) => order[a] - order[b]);
+  }
+
+  function ornamentSupportsColors(product) {
+    const code = String((product && product.orn) || '').trim();
+    if (!code) return false;
+    const item = C && typeof C.find === 'function' ? C.find('ornament', code) : null;
+    if (item && item.meta && item.meta.allowsColors === false) return false;
+    const label = String((item && item.label) || code).trim().toLowerCase();
+    return code !== '—' && label !== 'sin ornamento';
+  }
+
+  function sanitizeOrnamentColorsBySize(mapa, product) {
+    const resolved = product ? resolveProductSizes(product) : null;
+    const validas = resolved && !resolved.requiresAssignment
+      ? resolved.sizes.map(size => String(size.value))
+      : SIZES_LETRA().concat(SIZES_NUM()).map(String);
+    const out = {};
+    if (!mapa || typeof mapa !== 'object' || Array.isArray(mapa)) return out;
+    Object.keys(mapa).forEach(talla => {
+      if (validas.indexOf(String(talla)) < 0) return;
+      const colors = canonicalOrnamentColors(mapa[talla]);
+      // Vacio significa ausencia de especial y, por tanto, herencia general.
+      if (colors.length) out[talla] = colors;
+    });
+    return out;
+  }
+
+  // Autoridad unica para todos los consumidores. Devuelve copia para impedir
+  // que una pantalla mute accidentalmente el agregado del producto.
+  function effectiveOrnamentColors(product, talla) {
+    if (!ornamentSupportsColors(product)) return [];
+    const mapa = sanitizeOrnamentColorsBySize(
+      product && product.attrs && product.attrs.__ornamentColorsBySize, product);
+    const special = talla == null ? null : mapa[String(talla)];
+    return (special && special.length ? special : canonicalOrnamentColors(product && product.ornColors)).slice();
+  }
+
   function resolveLineDiscount(product, talla) {
     const orig = listPrice(product, talla);
     const du = window.PROMOS ? window.PROMOS.lineUnit(product, talla, orig) : null;
@@ -2111,6 +2163,7 @@
       // su AUSENCIA significa "venta anterior a H-32", que nunca imprime porcentaje.
       lineas: ticket.map((l, i) => ({
         productId: l.p.id, sku: l.p.sku, nombre: l.p.nombre, talla: l.talla, qty: l.qty,
+        ornamento: l.p.orn || '', ornColors: effectiveOrnamentColors(l.p, l.talla),
         precio: cortesia ? 0 : money(unitAt(i)),
         precioBase: cortesia ? 0 : resList[i].unit, precioOrig: resList[i].orig,
         descuentoAdicional: cortesia ? 0 : money(((typeof quotedLines !== 'undefined' && quotedLines[i]) || {}).additionalDiscount),
@@ -2673,9 +2726,13 @@
       lineas: items.map(l => {
         // H-72: identidad ya resuelta arriba; aquí no se busca por SKU.
         const p = identidad.get(l);
+        const sold = (sale.lineas || []).find(x => x.sku === l.sku && x.talla === l.talla);
+        const frozenColors = sold && Array.isArray(sold.ornColors)
+          ? sold.ornColors.slice() : effectiveOrnamentColors(p, l.talla);
         return {
           lado: l.lado, productId: p.id, sku: l.sku, nombre: l.nombre,
           talla: l.talla, qty: Number(l.qty) || 0, motivo: l.motivo || '',
+          ornamento: (sold && sold.ornamento) || p.orn || '', ornColors: frozenColors,
           // La condicion solo aplica a lo que el cliente ENTREGA: es el resultado
           // de la revision que decide si la prenda se recibe (Contrato, seccion 5).
           condicion: l.lado === 'devuelto' ? (l.condicion || '') : undefined,
@@ -3437,6 +3494,13 @@
       lineas: items.map((l, i) => ({
         productId: resolved[i].product.id, sku: l.sku, nombre: l.nombre, talla: l.talla,
         qty: Number(l.qty) || 0, motivo: l.motivo || '', precio: linePrice(l),
+        ornamento: (((sale.lineas || []).find(x => x.sku === l.sku && x.talla === l.talla)) || {}).ornamento
+          || resolved[i].product.orn || '',
+        ornColors: (() => {
+          const sold = (sale.lineas || []).find(x => x.sku === l.sku && x.talla === l.talla);
+          return sold && Array.isArray(sold.ornColors)
+            ? sold.ornColors.slice() : effectiveOrnamentColors(resolved[i].product, l.talla);
+        })(),
       })),
     };
     returns.unshift(ret);
@@ -4578,6 +4642,7 @@
     findSaleByFolio, saleFolioAliases, folioAliasHit, stockOf, isAutoImg, resetProducts, applyRemote, applySyncResult, applySaleCommitResult, mergeRemote, markSaleSync, liquidarComision,
     completarApartado, registrarPagoApartado, paymentsForSale, hasFinancialSnapshot, resolveLineDiscount, saleQuote, cerrarMes, getPeriodoInicio,
     listPrice, priceRange, sanitizePreciosTalla, resolveProductSizes,
+    ornamentSupportsColors, sanitizeOrnamentColorsBySize, effectiveOrnamentColors,
     resolveSizeFilterGroups, resolveSizeFilterOptions, sizeFilterMatch, inferSizeCategory,
     recordReturn, returnedQty, returnsForFolio, isReturnable, returnDeadline, saleLineBalance,
     saleLineProduct,
