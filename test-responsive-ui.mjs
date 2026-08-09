@@ -5,14 +5,17 @@ import { resolve, join, extname } from 'node:path';
 
 const ROOT = resolve('.');
 const PUBLIC_URL = process.env.BALAM_BASE_URL;
+const ARTIFACT_PATH = process.env.BALAM_ARTIFACT_PATH;
 const WIDTHS = [320, 360, 375, 390, 430, 600, 768, 1024, 1280, 1440];
 const SCREENS = ['dashboard', 'pos', 'inventario', 'clientes', 'apartados', 'prestamos', 'devoluciones', 'descuentos', 'vendedores', 'reportes', 'config'];
 const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
 const server = createServer((req, res) => {
   const pathname = decodeURIComponent(req.url.split('?')[0]);
-  const file = join(ROOT, pathname === '/' ? 'index.html' : pathname);
+  const file = ARTIFACT_PATH && (pathname === '/' || pathname === '/index.html')
+    ? resolve(ARTIFACT_PATH)
+    : join(ROOT, pathname === '/' ? 'index.html' : pathname);
   if (!file.startsWith(ROOT) || !existsSync(file)) { res.writeHead(404); res.end(); return; }
-  res.writeHead(200, { 'Content-Type': mime[extname(file)] || 'application/octet-stream' });
+  res.writeHead(200, { 'Content-Type': ARTIFACT_PATH && file === resolve(ARTIFACT_PATH) ? 'text/html' : (mime[extname(file)] || 'application/octet-stream') });
   createReadStream(file).pipe(res);
 });
 if (!PUBLIC_URL) await new Promise(resolveServer => server.listen(8898, '127.0.0.1', resolveServer));

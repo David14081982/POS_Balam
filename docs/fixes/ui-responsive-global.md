@@ -1,9 +1,9 @@
 # UI responsive global
 
 **Riesgo:** H-87
-**Estado:** RESUELTO · PUBLICACIÓN PENDIENTE
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha:** 09/08/2026
-**Commit:** Pendiente de commit
+**Commits:** `e477c92` (implementación), `bb11b19` (documentación) y `9855a55` (suite pública)
 
 ## Problema y reproducción
 
@@ -53,7 +53,13 @@ ventas, precios, sincronización, permisos ni los contratos H-83/H-84/H-85/H-86.
 
 ## Despliegue
 
-Pendiente de commit y publicación. No requiere migraciones.
+Publicado en `https://david14081982.github.io/POS_Balam/`. El build local tiene
+SHA-256 `C3FEDDF9BA7C99DE375240DF2D633F6BF78C73536DF32CCB4D76E9953C6FAD7C`.
+GitHub Pages normalizó los finales de línea al servir el mismo contenido: el
+archivo público descargado tiene SHA-256
+`3679A7A8E470B5BC0110EEFC858AAB1E781D794078BF065F75F6FC8F5019D857` y
+`git diff --no-index` confirmó equivalencia de contenido. La suite H-87 volvió
+a pasar **492/492** sobre ese archivo público. No requiere migraciones.
 
 ## Riesgo residual
 

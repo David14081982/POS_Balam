@@ -28,7 +28,7 @@ y `BLOQUEADO`.
 | H-17 | Código y estilos heredados sin consumidores | RESUELTO | Frontend / build |
 | H-77 | Terminales abiertas no convergen y una línea base antigua carece de cuarentena | CÓDIGO LISTO / DESPLIEGUE PENDIENTE | Sincronización / offline / multi-terminal |
 | H-85 | Los comprobantes reconstruyen evidencia vigente y varias superficies no imprimen o no permiten reimpresión | RESUELTO Y PUBLICADO | Ventas / posventa / impresión |
-| H-87 | La interfaz conserva una composición de escritorio en viewports pequeños | RESUELTO · PUBLICACIÓN PENDIENTE | UI / responsive / accesibilidad |
+| H-87 | La interfaz conserva una composición de escritorio en viewports pequeños | RESUELTO Y PUBLICADO | UI / responsive / accesibilidad |
 
 ## H-01 — Inventario concurrente
 
@@ -4176,9 +4176,9 @@ explícita cuando su SKU ya existe; es una barrera intencional contra fusiones.
 
 ## H-87 - La interfaz conserva una composición de escritorio en viewports pequeños
 
-**Estado:** RESUELTO · PUBLICACIÓN PENDIENTE
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha de registro:** 09/08/2026
-**Commit:** Pendiente de commit
+**Commits:** `e477c92`, `bb11b19`, `9855a55`
 **Origen:** auditoría global responsive autorizada por el dueño del producto.
 **Reproducción:** sobre el bundle local, las once pantallas principales producen
 `document.scrollWidth > viewport` entre 320 y 430 px. A 320 px se midieron, entre
@@ -4206,7 +4206,12 @@ se modificaron contratos de negocio.
 32/32 + 17/17; H-84 19/19; H-85 18/18; H-86 37/37; Clientes 39/39;
 Inventario 18/18; POS 19/19; navegación 15/15; AUTH 19/19; permisos 13/13 +
 21/21; módulos 41/41; smoke bundle 17/17; build reproducible 8/8.
-**Riesgo residual:** ninguno funcional conocido; publicación pendiente.
+**Despliegue:** publicado en `https://david14081982.github.io/POS_Balam/`.
+Build local SHA-256 `C3FEDDF9BA7C99DE375240DF2D633F6BF78C73536DF32CCB4D76E9953C6FAD7C`;
+bytes públicos SHA-256 `3679A7A8E470B5BC0110EEFC858AAB1E781D794078BF065F75F6FC8F5019D857`
+tras normalización de finales de línea, con contenido equivalente y suite
+responsive pública **492/492**.
+**Riesgo residual:** ninguno funcional conocido.
 **Corrección documentada:** `docs/fixes/ui-responsive-global.md`.
 
 ## Regla de actualización
