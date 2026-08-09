@@ -31,6 +31,7 @@ y `BLOQUEADO`.
 | H-87 | La interfaz conserva una composición de escritorio en viewports pequeños | RESUELTO Y PUBLICADO | UI / responsive / accesibilidad |
 | H-88A | El resumen de venta queda después del catálogo en móvil y tablet | RESUELTO Y PUBLICADO | POS / UI / responsive |
 | H-88B | La impresión móvil de etiquetas depende de popup, autoimpresión y autocierre | RESUELTO Y PUBLICADO | Inventario / etiquetas / impresión |
+| H-89 | BALAM no tiene contrato de instalación PWA ni materialización demostrada del logo configurado | RESUELTO Y PUBLICADO | Cliente / PWA / build |
 
 ## H-01 — Inventario concurrente
 
@@ -4254,6 +4255,44 @@ H-88B público **19/19** y H-88A público **30/30**.
 **Riesgo residual:** impresión física depende de servicio, driver, impresora y
 calibración; códigos advertidos requieren prueba física.
 **Corrección documentada:** `docs/fixes/impresion-etiquetas-movil.md`.
+
+## H-89 - BALAM no tiene contrato de instalación PWA ni materialización demostrada del logo configurado
+
+**Estado:** RESUELTO Y PUBLICADO
+**Fecha de registro:** 09/08/2026
+**Commits técnicos:** `2dd877f`, `e403d4b`
+**Origen:** solicitud del dueño para convertir BALAM en PWA instalable sin crear
+una segunda autoridad visual distinta de `Configuración → Negocio → Logotipo`.
+**Reproducción:** la publicación no sirve manifest, service worker, favicon ni
+Apple touch icon; las rutas correspondientes responden 404. El flujo vigente
+reduce el logo a 256 px, insuficiente como fuente real para un icono de 512 px.
+**Causa raíz:** no existía contrato PWA ni una fuente suficiente del logo. Un
+manifest virtual enlazado antes del control efectivo habría creado una carrera;
+además Chrome resuelve `id: "./"` contra el origen y habría identificado la raíz
+del dominio en vez de `/POS_Balam/`.
+**Corrección:** después del control del worker, BALAM deriva desde `store.logo`
+PNG 180/192/512/maskable, materializa rutas versionadas en Cache Storage y sólo
+entonces enlaza el manifest. `start_url`, scope e iconos son relativos; el ID
+estable es `/POS_Balam/`. Logos nuevos requieren 512 px y se conservan hasta
+1024; históricos menores funcionan con advertencia. El worker cachea sólo
+shell/assets, no APIs ni datos, y espera una actualización explícita segura.
+`POS Balam (offline).html` no registra service worker.
+**Pruebas:** prototipo Chrome **10/10**; instalación nativa local **6/6** con
+igualdad de píxeles instalados 192/512/maskable y reapertura standalone; H-89
+productivo **19/19**; módulos **42/42**; smoke **17/17**; build **8/8**;
+responsive **492/492**. Sobre los bytes públicos, Chrome devolvió cero errores,
+aceptó el diálogo nativo, instaló exactamente los píxeles derivados del logo y
+reabrió `https://david14081982.github.io/POS_Balam/` en standalone (**5/5**).
+**Despliegue:** `origin/main` contiene `2dd877f` y `e403d4b`. `sw.js`, manifest
+y los PNG públicos coinciden byte por byte; `index.html` coincide tras normalizar finales
+de línea con SHA-256
+`BBA0F28875134D5107548054F0F86075F0EB013A27ED4CC478300C2F62CDCA19`.
+**Riesgo residual:** Chrome puede descargar la generación nueva en
+`Pending Manifest Icons` y conservar temporalmente el icono activo anterior de
+una app ya instalada; la web no controla cuándo el sistema operativo aplica la
+identidad pendiente. Instalaciones nuevas usan el logo vigente. Logos históricos
+menores de 512 px conservan pérdida de calidad advertida.
+**Corrección documentada:** `docs/fixes/pwa-instalable-logo-dinamico.md`.
 
 ## Regla de actualización
 

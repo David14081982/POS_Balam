@@ -54,6 +54,35 @@ lo que prueban el artefacto distribuido sin Babel ni CDN. Pueden seguir leyendo
 `POS Balam.html` estáticamente para verificar contratos de fuente.
 `test-smoke.mjs` conserva de forma explícita sus dos modos, desarrollo y bundle.
 
+## Instalación PWA
+
+La publicación HTTP bajo `/POS_Balam/` registra `sw.js` con ese mismo scope.
+El worker conserva sólo el shell autocontenido, el manifest y los iconos; no
+intercepta Supabase, APIs ni datos de dominio. `STORE`, `localStorage` y la cola
+offline siguen siendo las únicas autoridades operativas. La primera carga
+requiere red y una navegación posterior puede usar el shell ya instalado.
+
+`CONFIG.get('store.logo')` es la única autoridad visual administrable. Una vez
+que el worker controla la página, `window.PWA` deriva PNG 180, 192, 512 y
+maskable 512, los materializa con rutas versionadas por hash en Cache Storage y
+enlaza al final un manifest igualmente versionado. Esta secuencia evita que
+Chrome lea un manifest antes de que sus iconos existan. Se conserva una
+generación anterior para instalaciones o lecturas concurrentes. Sin logo, o si
+un logo histórico no puede decodificarse, se usan recursos fallback generados
+por el build; no constituyen una segunda marca configurable.
+
+El manifest mantiene `start_url`, `scope` e iconos relativos. Su `id` es
+`/POS_Balam/`: Chrome resuelve `id` contra el origen, no contra la URL del
+manifest, por lo que `./` identificaría incorrectamente la raíz del dominio.
+Las cargas nuevas de logo exigen al menos 512 px en el lado mayor y conservan
+hasta 1024 px. Fuentes históricas menores siguen funcionando con advertencia de
+escalado.
+
+Una versión nueva del worker queda en espera. Sólo una acción explícita envía
+`BALAM_SKIP_WAITING`, y se bloquea mientras exista actividad de negocio,
+captura, diálogo o una cola únicamente en memoria. `POS Balam (offline).html`
+no registra worker y permanece como artefacto independiente.
+
 ## Orden de carga
 
 El orden relevante definido en `POS Balam.html` es:
@@ -63,8 +92,9 @@ El orden relevante definido en `POS Balam.html` es:
 3. `balam/data.jsx`
 4. `balam/auth.jsx`
 5. módulos de interfaz
-6. `balam/store.jsx`
-7. `balam/app.jsx`
+6. `balam/pwa.jsx` (no altera datos de dominio)
+7. `balam/store.jsx`
+8. `balam/app.jsx`
 
 Aunque `STORE` se carga después, `CONFIG`, `DATA` y `AUTH` acceden a sus
 servicios mediante el gateway de `CORE`. `App` coordina la inicialización.

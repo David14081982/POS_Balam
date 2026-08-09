@@ -82,6 +82,7 @@ sesión de chat.
 | `convergencia-centro-de-equipos.md` | H-80 | El historial operativo converge sin tráfico ni reconciliación comercial autorreferente |
 | `revision-de-cuarentena.md` | H-81 | Expediente Excel, decisión auditada y reactivación por la cola/RPC vigente |
 | `sistema-de-comprobantes-historicos.md` | H-85 | Evidencia visual congelada, reimpresión, Reportes y devolución imprimibles |
+| `pwa-instalable-logo-dinamico.md` | H-89 | Instalación PWA, iconos derivados del logo configurado y actualización segura |
 
 Documentación financiera relacionada, creada antes de este índice:
 
