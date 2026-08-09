@@ -1,0 +1,111 @@
+{
+  "appUrl": "https://david14081982.github.io/POS_Balam/",
+  "chromePath": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+  "events": [
+    {
+      "name": "bytes públicos son instalables con logo runtime",
+      "detail": "https://david14081982.github.io/POS_Balam/"
+    },
+    {
+      "name": "manifest público resuelve 192, 512 y maskable desde Cache Storage",
+      "detail": ""
+    },
+    {
+      "name": "diálogo nativo de Chrome aceptó la instalación pública",
+      "detail": ""
+    },
+    {
+      "name": "Chrome instaló exactamente los píxeles derivados de store.logo",
+      "detail": ""
+    },
+    {
+      "name": "instalación pública reabre en display standalone",
+      "detail": "https://david14081982.github.io/POS_Balam/"
+    }
+  ],
+  "installability": {
+    "installabilityErrors": []
+  },
+  "appIdentity": {
+    "appId": "https://david14081982.github.io/POS_Balam/",
+    "recommendedId": "/POS_Balam/"
+  },
+  "manifest": {
+    "url": "https://david14081982.github.io/POS_Balam/manifest-d2fe367fe1ac975a316c.webmanifest",
+    "errors": [],
+    "data": "{\"name\":\"BALAM\",\"short_name\":\"BALAM\",\"id\":\"/POS_Balam/\",\"start_url\":\"./\",\"scope\":\"./\",\"display\":\"standalone\",\"background_color\":\"#131b2e\",\"theme_color\":\"#131b2e\",\"icons\":[{\"src\":\"./pwa/runtime/icon-d2fe367fe1ac975a316c-192.png\",\"sizes\":\"192x192\",\"type\":\"image/png\",\"purpose\":\"any\"},{\"src\":\"./pwa/runtime/icon-d2fe367fe1ac975a316c-512.png\",\"sizes\":\"512x512\",\"type\":\"image/png\",\"purpose\":\"any\"},{\"src\":\"./pwa/runtime/icon-d2fe367fe1ac975a316c-maskable-512.png\",\"sizes\":\"512x512\",\"type\":\"image/png\",\"purpose\":\"maskable\"}]}",
+    "parsed": {
+      "scope": "https://david14081982.github.io/POS_Balam/"
+    },
+    "manifest": {
+      "backgroundColor": "rgba(19,27,46,1)",
+      "display": "kStandalone",
+      "icons": [
+        {
+          "url": "https://david14081982.github.io/POS_Balam/pwa/runtime/icon-d2fe367fe1ac975a316c-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        },
+        {
+          "url": "https://david14081982.github.io/POS_Balam/pwa/runtime/icon-d2fe367fe1ac975a316c-512.png",
+          "sizes": "512x512",
+          "type": "image/png"
+        },
+        {
+          "url": "https://david14081982.github.io/POS_Balam/pwa/runtime/icon-d2fe367fe1ac975a316c-maskable-512.png",
+          "sizes": "512x512",
+          "type": "image/png"
+        }
+      ],
+      "id": "https://david14081982.github.io/POS_Balam/",
+      "name": "BALAM",
+      "orientation": "DEFAULT",
+      "preferRelatedApplications": false,
+      "scope": "https://david14081982.github.io/POS_Balam/",
+      "startUrl": "https://david14081982.github.io/POS_Balam/",
+      "themeColor": "rgba(19,27,46,1)"
+    }
+  },
+  "runtimePixelDigests": {
+    "icon192": "c60bebc2ed2ec6846036f971d1879893cb02a78ea3b34533abea94331fbcc2cd",
+    "icon512": "80b6cccd28bb1d1bef27962e5a4c9fd7598973324909fe7d482b633ce3c624c0",
+    "maskable512": "113f4426898aada98bbf552acb261ca0cb898a57d190707da60472c3bc8cf444"
+  },
+  "installDialogAutomation": "INVOKED",
+  "installChoice": {
+    "outcome": "accepted",
+    "platform": "web"
+  },
+  "internalAppId": "bhdifclimoimebmjdjiokajijnkbikbl",
+  "installedFileDigests": {
+    "icon192": "908d4c9a511b2d63ff74032d30701dd8807e287c93d998d4169028b74fe3758e",
+    "icon512": "e640f4c46dc1664f952df18c3c163e6b209560b35a1c15b8181efccffffd759e",
+    "maskable512": "09d5a8a46ce3fc9aaf7e30dff5dd3b255085cfde3fb8a1e46abdb71cefdd3c84"
+  },
+  "installedPixelDigests": {
+    "icon192": "c60bebc2ed2ec6846036f971d1879893cb02a78ea3b34533abea94331fbcc2cd",
+    "icon512": "80b6cccd28bb1d1bef27962e5a4c9fd7598973324909fe7d482b633ce3c624c0",
+    "maskable512": "113f4426898aada98bbf552acb261ca0cb898a57d190707da60472c3bc8cf444"
+  },
+  "reopened": {
+    "standalone": true,
+    "href": "https://david14081982.github.io/POS_Balam/",
+    "pwa": {
+      "supported": true,
+      "ready": true,
+      "standalone": true,
+      "canInstall": false,
+      "installKind": null,
+      "updateAvailable": false,
+      "iconSource": "store.logo",
+      "iconQuality": "sufficient",
+      "sourceSize": {
+        "width": 1024,
+        "height": 1024
+      },
+      "manifestUrl": "https://david14081982.github.io/POS_Balam/manifest-d2fe367fe1ac975a316c.webmanifest",
+      "error": ""
+    }
+  },
+  "sourceDataUrlSha256": "d2fe367fe1ac975a316c1f37d3f44ab2af7b96cd6b348246fe71860569fa1b82"
+}
