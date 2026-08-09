@@ -28,6 +28,7 @@ y `BLOQUEADO`.
 | H-17 | Código y estilos heredados sin consumidores | RESUELTO | Frontend / build |
 | H-77 | Terminales abiertas no convergen y una línea base antigua carece de cuarentena | CÓDIGO LISTO / DESPLIEGUE PENDIENTE | Sincronización / offline / multi-terminal |
 | H-85 | Los comprobantes reconstruyen evidencia vigente y varias superficies no imprimen o no permiten reimpresión | RESUELTO Y PUBLICADO | Ventas / posventa / impresión |
+| H-87 | La interfaz conserva una composición de escritorio en viewports pequeños | RESUELTO · PUBLICACIÓN PENDIENTE | UI / responsive / accesibilidad |
 
 ## H-01 — Inventario concurrente
 
@@ -4172,6 +4173,41 @@ el recorrido H-86 sobre esos bytes públicos pasó 37/37 y descargó/reimportó 
 **Riesgo residual:** los archivos heredados sin ID requieren una decisión
 explícita cuando su SKU ya existe; es una barrera intencional contra fusiones.
 **Corrección documentada:** `docs/fixes/contrato-excel-inventario.md`.
+
+## H-87 - La interfaz conserva una composición de escritorio en viewports pequeños
+
+**Estado:** RESUELTO · PUBLICACIÓN PENDIENTE
+**Fecha de registro:** 09/08/2026
+**Commit:** Pendiente de commit
+**Origen:** auditoría global responsive autorizada por el dueño del producto.
+**Reproducción:** sobre el bundle local, las once pantallas principales producen
+`document.scrollWidth > viewport` entre 320 y 430 px. A 320 px se midieron, entre
+otros, Panel 463 px, POS 468 px, Inventario 665 px, Clientes 641 px, Apartados
+664 px, Préstamos 666 px, Devoluciones 530 px, Descuentos 695 px, Vendedores
+679 px, Reportes 650 px y Configuración entre 542 y 709 px.
+**Riesgo:** acciones operativas, importes, filtros, tablas, formularios y
+navegación quedan fuera de pantalla o pierden legibilidad y superficie táctil en
+teléfonos y tablets estrechas.
+**Alcance:** composición responsive incremental de shell, primitivas UI, KPIs,
+tablas, formularios, modales/drawers y pantallas visibles; suite estructural y
+visual en 320, 360, 375, 390, 430, 600, 768, 1024, 1280 y 1440 px.
+**No alcance:** DATA, CONFIG, STORE, Supabase, migraciones, SKU, inventario,
+ventas, precios, sincronización, permisos y contratos H-83/H-84/H-85/H-86.
+**Causa raíz:** el shell reservaba sidebar y topbar de escritorio en teléfono;
+las pantallas repetían espaciado fijo, mínimos acumulativos y barras sin reflujo.
+KPIs, targets, modales y drawers carecían de un contrato responsive compartido,
+y las tablas de Inventario/Clientes no cambiaban de proyección en móvil.
+**Corrección:** drawer móvil y topbar priorizada; primitivas compartidas de
+composición, KPI, modal, drawer y targets; KPIs fluidos; tablas de Inventario y
+Clientes convertidas en filas-tarjeta en teléfono; formularios, POS, Reportes y
+Configuración con composición progresiva. No se aplicó ocultamiento global ni
+se modificaron contratos de negocio.
+**Pruebas:** responsive H-87 492/492 en diez viewports y once pantallas; H-83
+32/32 + 17/17; H-84 19/19; H-85 18/18; H-86 37/37; Clientes 39/39;
+Inventario 18/18; POS 19/19; navegación 15/15; AUTH 19/19; permisos 13/13 +
+21/21; módulos 41/41; smoke bundle 17/17; build reproducible 8/8.
+**Riesgo residual:** ninguno funcional conocido; publicación pendiente.
+**Corrección documentada:** `docs/fixes/ui-responsive-global.md`.
 
 ## Regla de actualización
 
