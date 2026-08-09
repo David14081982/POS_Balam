@@ -4,6 +4,7 @@ import { createReadStream, existsSync } from 'node:fs';
 import { resolve, join, extname } from 'node:path';
 
 const ROOT = resolve('.');
+const PUBLIC_URL = process.env.BALAM_BASE_URL;
 const WIDTHS = [320, 360, 375, 390, 430, 600, 768, 1024, 1280, 1440];
 const SCREENS = ['dashboard', 'pos', 'inventario', 'clientes', 'apartados', 'prestamos', 'devoluciones', 'descuentos', 'vendedores', 'reportes', 'config'];
 const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
@@ -14,7 +15,7 @@ const server = createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': mime[extname(file)] || 'application/octet-stream' });
   createReadStream(file).pipe(res);
 });
-await new Promise(resolveServer => server.listen(8898, '127.0.0.1', resolveServer));
+if (!PUBLIC_URL) await new Promise(resolveServer => server.listen(8898, '127.0.0.1', resolveServer));
 
 let browser;
 const failures = [];
@@ -30,7 +31,7 @@ try {
   await context.route(/supabase\.co/, route => route.fulfill({ status: 401, contentType: 'application/json', body: '{}' }));
   const page = await context.newPage();
   await page.addInitScript(() => { localStorage.setItem('balam-sidebar', '1'); });
-  await page.goto('http://127.0.0.1:8898/index.html');
+  await page.goto(PUBLIC_URL || 'http://127.0.0.1:8898/index.html');
   await page.waitForFunction(() => window.App && window.DATA, null, { timeout: 60000 });
   await page.evaluate(() => {
     const config = window.CONFIG;
@@ -122,5 +123,5 @@ try {
   if (failures.length) process.exitCode = 1;
 } finally {
   if (browser) await browser.close();
-  await new Promise(resolveServer => server.close(resolveServer));
+  if (!PUBLIC_URL) await new Promise(resolveServer => server.close(resolveServer));
 }
