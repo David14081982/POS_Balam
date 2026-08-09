@@ -92,5 +92,22 @@
     });
   }
 
-  window.BARCODES = { codeOf, parse, find, draw, Barcode, toPNGDataURL, toPNGBlob, BASE_OPTS, ready };
+  // Legibilidad física para una etiqueta de 60×40 mm. El área útil del código
+  // es 56 mm; JsBarcode con width=1 entrega el número exacto de módulos. Un
+  // módulo menor de 0.25 mm se advierte porque la reducción deja de ser robusta
+  // para impresoras/lectores comerciales, aunque el PNG todavía pueda generarse.
+  function validateLabelCode(code, usableMm = 56, minModuleMm = 0.25) {
+    if (!ready()) return { ok: false, reason: 'JsBarcode no disponible', modules: 0, moduleMm: 0, minModuleMm };
+    const canvas = document.createElement('canvas');
+    try {
+      window.JsBarcode(canvas, String(code), Object.assign({}, BASE_OPTS, { width: 1, margin: 0, displayValue: false }));
+      const modules = canvas.width;
+      const moduleMm = modules ? usableMm / modules : 0;
+      return { ok: moduleMm >= minModuleMm, modules, moduleMm, minModuleMm, usableMm };
+    } catch (error) {
+      return { ok: false, reason: error && error.message || 'Código inválido', modules: 0, moduleMm: 0, minModuleMm, usableMm };
+    }
+  }
+
+  window.BARCODES = { codeOf, parse, find, draw, Barcode, toPNGDataURL, toPNGBlob, validateLabelCode, BASE_OPTS, ready };
 })();

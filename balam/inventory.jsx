@@ -156,17 +156,20 @@
         toast((error && error.balam && error.message) || 'No se pudo aplicar la importación; no se modificó el inventario', 'var(--danger)');
       }
     }
-    function saveProduct(draft, mode) {
+    function saveProduct(draft, mode, options) {
+      let saved = draft;
       if (mode === 'edit') {
         const target = D.products.find(p => p.id === draft.id);
-        if (target) { Object.assign(target, draft); D.hydrate(target); }
+        if (target) { Object.assign(target, draft); D.hydrate(target); saved = target; }
       } else {
         const p = D.hydrate(Object.assign({}, draft, { id: 'new-' + Date.now() }));
         D.products.push(p);
+        saved = p;
       }
       D.saveProducts(); refresh();
       setEditing(null); setDetail(null);
       toast(mode === 'edit' ? 'Producto actualizado' : 'Producto agregado al inventario', 'var(--accent)');
+      if (options && options.openLabels) setLabelTargets([saved]);
     }
     function deleteProduct(p) {
       if (!D.removeProduct(p.id)) {
@@ -417,7 +420,7 @@
               ]),
               // Acciones
               h('div', { key: 'ac', className: 'pt-4 space-y-3' }, [
-                h('button', { key: 'lb', className: 'w-full py-3 rounded-xl border border-outline-variant text-primary hover:border-primary hover:bg-surface-container transition-all flex items-center justify-center gap-2 text-overline font-bold uppercase tracking-widest', onClick: () => onLabels && onLabels(p) }, [h(MS, { key: 'i', name: 'barcode', size: 18 }), 'Imprimir etiqueta']),
+                h('button', { key: 'lb', 'data-testid': 'product-detail-labels', className: 'w-full py-3 rounded-xl border border-outline-variant text-primary hover:border-primary hover:bg-surface-container transition-all flex items-center justify-center gap-2 text-overline font-bold uppercase tracking-widest', onClick: () => onLabels && onLabels(p) }, [h(MS, { key: 'i', name: 'barcode', size: 18 }), 'Imprimir etiqueta']),
                 h('div', { key: 'row', className: 'flex gap-4' }, [
                   h('button', { key: 'e', 'data-testid': 'product-detail-edit', className: 'flex-grow bg-primary text-on-primary py-3.5 rounded-xl text-overline font-bold uppercase tracking-widest hover:opacity-90 transition-all shadow-e2 active:scale-95 flex items-center justify-center gap-2', onClick: onEdit }, [h(MS, { key: 'i', name: 'edit', size: 18 }), 'Editar producto']),
                   h('button', { key: 'd', className: 'w-14 h-[52px] rounded-xl border border-outline-variant text-danger hover:bg-danger-soft hover:border-danger/30 transition-all flex items-center justify-center', onClick: onDelete, title: 'Eliminar' }, h(MS, { name: 'trash', size: 20 })),
@@ -892,7 +895,7 @@
       h('span', { key: 'ml', className: 'md:hidden text-overline text-on-surface-variant block' }, label), content,
     ]);
 
-    function submit() {
+    function submit(afterSave) {
       setAttemptedSubmit(true);
       if (errors.length) { focusError(errors[0]); toast(errors[0].message, 'var(--danger)'); return; }
       const preciosTalla = expandirPrecios(d.precioRows.filter(r => (r.tallas || []).length));
@@ -902,7 +905,7 @@
       const attrs = { ...(rest.attrs || {}) };
       attrs.__ornamentColorsBySize = D.sanitizeOrnamentColorsBySize(
         rawOrnamentColorsBySize, { ...rest, attrs });
-      onSave({ ...rest, attrs, nombre: d.nombre.trim(), modelo: modeloFinal, precio: Number(d.precio) || 0, costo: Number(d.costo) || 0, preciosTalla }, mode);
+      onSave({ ...rest, attrs, nombre: d.nombre.trim(), modelo: modeloFinal, precio: Number(d.precio) || 0, costo: Number(d.costo) || 0, preciosTalla }, mode, { openLabels: afterSave === 'labels' });
     }
 
     const footer = [
@@ -912,7 +915,8 @@
         h('button', { key: 'status', type: 'button', 'data-testid': 'product-validation-summary', onClick: () => errors.length && focusError(errors[0]), className: 'mt-1 text-caption font-semibold ' + (errors.length ? 'text-danger' : 'text-accent') }, errors.length ? `${errors.length} pendiente${errors.length === 1 ? '' : 's'} por corregir` : 'Sin errores'),
       ]),
       h('button', { key: 'c', 'data-testid': 'product-cancel', className: 'px-4 sm:px-5 h-11 border border-outline-variant text-on-surface text-caption font-bold uppercase tracking-widest hover:bg-surface-container rounded-lg transition-colors', onClick: requestClose }, 'Cancelar'),
-      h('button', { key: 's', 'data-testid': 'product-save', className: 'inline-flex items-center gap-2 px-5 h-11 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-lg hover:opacity-90 transition', onClick: submit }, [h(MS, { key: 'i', name: 'check', size: 16 }), mode === 'edit' ? 'Guardar cambios' : 'Agregar producto']),
+      mode === 'edit' && h('button', { key: 'sl', type: 'button', 'data-testid': 'product-save-labels', className: 'inline-flex items-center gap-2 px-4 h-11 border border-primary text-primary text-caption font-bold uppercase tracking-widest rounded-lg hover:bg-surface-container', onClick: () => submit('labels') }, [h(MS, { key: 'i', name: 'barcode', size: 16 }), 'Guardar y abrir etiquetas']),
+      h('button', { key: 's', 'data-testid': 'product-save', className: 'inline-flex items-center gap-2 px-5 h-11 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-lg hover:opacity-90 transition', onClick: () => submit() }, [h(MS, { key: 'i', name: 'check', size: 16 }), mode === 'edit' ? 'Guardar cambios' : 'Agregar producto']),
     ];
 
     return h(Modal, { title: mode === 'edit' ? 'Editar producto' : 'Nuevo producto', onClose: requestClose, footer, large: true, testId: 'product-form', productForm: true }, [
@@ -1048,6 +1052,22 @@
   // En la etiqueta impresa el código va aparte (.bx-meta), así que el código de barras no repite el texto.
   const PRINT_OPTS = Object.assign({}, LBL_OPTS, { displayValue: false });
 
+  function buildLabelDocument(rendered) {
+    const labels = rendered.map(item => `<div class="bx-label"><div class="bx-name">${escapeHtml(item.name)}</div><img class="bx-img" src="${item.image}"><div class="bx-meta">${escapeHtml(item.code)}</div>${item.price ? `<div class="bx-price">${escapeHtml(item.price)}</div>` : ''}</div>`).join('');
+    return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Etiquetas Balam</title><style>
+      @page { size: 60mm 40mm; margin: 0; } *{box-sizing:border-box} body{margin:0;font-family:system-ui,sans-serif;background:#eef0f4}.bx-tools{position:sticky;top:0;z-index:2;display:flex;gap:8px;flex-wrap:wrap;padding:12px;background:#131b2e;color:white}.bx-tools button{min-height:44px;padding:0 16px;border:0;border-radius:8px;font-weight:700}.bx-sheet{display:flex;flex-wrap:wrap;gap:12px;padding:16px}.bx-label{width:60mm;height:40mm;padding:2mm;display:flex;flex-direction:column;align-items:center;justify-content:center;background:white;overflow:hidden;page-break-after:always}.bx-name{font-size:9pt;font-weight:700;text-align:center;line-height:1.05;max-height:2.3em;overflow:hidden;margin-bottom:.5mm}.bx-img{width:100%;max-height:18mm;object-fit:contain}.bx-meta{max-width:100%;font:8pt monospace;letter-spacing:.2px;margin-top:.3mm;overflow-wrap:anywhere;text-align:center}.bx-price{font-size:12pt;font-weight:800;margin-top:.3mm}@media(max-width:600px){.bx-sheet{padding:8px;justify-content:center}}@media print{body{background:white}.bx-tools{display:none}.bx-sheet{display:block;padding:0}.bx-label{margin:0}}
+    </style></head><body><div class="bx-tools"><button type="button" onclick="window.print()">Imprimir</button><button id="download" type="button">Descargar</button><button id="share" type="button" hidden>Compartir</button><span>${rendered.length} etiqueta(s) · 60×40 mm</span></div><main class="bx-sheet">${labels}</main><script>
+      const source=document.documentElement.outerHTML;const file=()=>new File([source],'etiquetas-balam.html',{type:'text/html'});document.getElementById('download').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(file());a.download='etiquetas-balam.html';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};const share=document.getElementById('share');if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file()]})){share.hidden=false;share.onclick=()=>navigator.share({files:[file()],title:'Etiquetas Balam'})}
+    </script></body></html>`;
+  }
+
+  function downloadLabelDocument(documentHtml) {
+    const blob = new Blob([documentHtml], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'etiquetas-balam.html'; anchor.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
   function LabelModal({ products, onClose }) {
     const B = window.BARCODES;
     const [copiesMode, setCopiesMode] = useState('one'); // 'one' | 'stock'
@@ -1068,29 +1088,24 @@
     if (!B || !B.ready()) return h(Modal, { title: 'Etiquetas', onClose }, h('p', { className: 'text-body text-on-surface-variant py-6 text-center' }, 'La librería de códigos de barras no cargó. Revisa tu conexión e inténtalo de nuevo.'));
     if (!specs.length) return h(Modal, { title: 'Etiquetas', onClose }, h('p', { className: 'text-body text-on-surface-variant py-6 text-center' }, 'No hay tallas con existencias para etiquetar.'));
 
-    function printLabels() {
+    function renderDocument() {
       const cache = {};
-      let html = '';
+      const rendered = [];
       specs.forEach(s => {
         if (cache[s.code] === undefined) cache[s.code] = B.toPNGDataURL(s.code, PRINT_OPTS);
-        const price = withPrice ? `<div class="bx-price">${escapeHtml(fmt(D.listPrice(s.p, s.talla)).replace('.00', ''))}</div>` : '';
-        const one = `<div class="bx-label"><div class="bx-name">${escapeHtml(s.p.nombre)}</div><img class="bx-img" src="${cache[s.code]}"><div class="bx-meta">${escapeHtml(s.code)}</div>${price}</div>`;
-        for (let i = 0; i < copiesOf(s); i++) html += one;
+        const one = { name: s.p.nombre, image: cache[s.code], code: s.code, price: withPrice ? fmt(D.listPrice(s.p, s.talla)).replace('.00', '') : '' };
+        for (let i = 0; i < copiesOf(s); i++) rendered.push(one);
       });
+      return buildLabelDocument(rendered);
+    }
+    function openPrintableView() {
       const win = window.open('', '_blank', 'width=520,height=680');
-      if (!win) { toast('Permite las ventanas emergentes para imprimir', 'var(--danger)'); return; }
-      win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Etiquetas Balam</title><style>
-        @page { size: 60mm 40mm; margin: 0; }
-        * { box-sizing: border-box; }
-        body { margin: 0; font-family: monospace; }
-        .bx-label { width: 60mm; height: 40mm; padding: 2mm; display: flex; flex-direction: column; align-items: center; justify-content: center; page-break-after: always; overflow: hidden; }
-        .bx-name { font-family: sans-serif; font-size: 9pt; font-weight: 700; text-align: center; line-height: 1.05; max-height: 2.3em; overflow: hidden; margin-bottom: .5mm; }
-        .bx-img { width: 100%; max-height: 18mm; object-fit: contain; }
-        .bx-meta { font-size: 8pt; letter-spacing: .4px; margin-top: .3mm; }
-        .bx-price { font-family: sans-serif; font-size: 12pt; font-weight: 800; margin-top: .3mm; }
-      </style></head><body>${html}<scr` + `ipt>window.onload=function(){window.focus();window.print();setTimeout(function(){window.close();},400);};</scr` + `ipt></body></html>`);
+      if (!win) { toast('El navegador bloqueó la vista imprimible. Usa Descargar.', 'var(--danger)'); return; }
+      win.document.write(renderDocument());
       win.document.close();
     }
+    const validations = specs.map(s => ({ ...s, validation: B.validateLabelCode(s.code) }));
+    const riskyCodes = validations.filter(item => !item.validation.ok);
 
     async function saveToSupabase() {
       if (saving) return;
@@ -1117,10 +1132,11 @@
     const preview = specs.slice(0, 4);
     const footer = [
       h('button', { key: 'sv', disabled: saving, onClick: saveToSupabase, className: 'px-5 py-3 border border-outline-variant rounded-xl text-caption font-bold uppercase tracking-widest text-primary hover:bg-surface-container transition disabled:opacity-50 flex items-center gap-2' }, [h(MS, { key: 'i', name: saving ? 'clock' : 'upload', size: 16 }), saving ? 'Guardando…' : `Guardar en Supabase (${uniqueCount})`]),
-      h('button', { key: 'pr', onClick: printLabels, className: 'px-6 py-3 bg-primary text-on-primary rounded-xl text-caption font-bold uppercase tracking-widest hover:opacity-90 transition flex items-center gap-2' }, [h(MS, { key: 'i', name: 'print', size: 16 }), `Imprimir (${totalLabels})`]),
+      h('button', { key: 'dl', onClick: () => downloadLabelDocument(renderDocument()), 'data-testid': 'labels-download', className: 'px-5 py-3 border border-outline-variant rounded-xl text-caption font-bold uppercase tracking-widest text-primary hover:bg-surface-container transition flex items-center gap-2' }, [h(MS, { key: 'i', name: 'download', size: 16 }), 'Descargar']),
+      h('button', { key: 'pr', onClick: openPrintableView, 'data-testid': 'labels-open-printable', className: 'px-6 py-3 bg-primary text-on-primary rounded-xl text-caption font-bold uppercase tracking-widest hover:opacity-90 transition flex items-center gap-2' }, [h(MS, { key: 'i', name: 'print', size: 16 }), `Abrir vista imprimible (${totalLabels})`]),
     ];
 
-    return h(Modal, { title: 'Etiquetas de código de barras', onClose, footer }, [
+    return h(Modal, { title: 'Etiquetas de código de barras', onClose, footer, testId: 'label-modal', large: true }, [
       h('div', { key: 'cfg', className: 'space-y-4 mb-5' }, [
         h('div', { key: 'r1', className: 'flex items-center justify-between gap-4' }, [
           h('span', { key: 'l', className: 'text-caption font-semibold text-on-surface-variant' }, 'Copias'),
@@ -1135,12 +1151,13 @@
           h('input', { key: 'i', type: 'checkbox', checked: withPrice, onChange: e => setWithPrice(e.target.checked), className: 'w-5 h-5 rounded border-outline text-primary focus:ring-primary' }),
         ]),
         h('p', { key: 'sum', className: 'text-caption text-on-surface-variant' }, `${specs.length} talla(s) con existencias · ${totalLabels} etiqueta(s) a imprimir`),
+        riskyCodes.length > 0 && h('div', { key: 'warn', role: 'alert', 'data-testid': 'labels-legibility-warning', className: 'p-3 rounded-lg bg-warning-soft text-warning text-caption' }, `${riskyCodes.length} código(s) son demasiado largos para una lectura Code128 robusta en 60×40 mm. Acorta el SKU antes de imprimir o valida una muestra con tu lector.`),
       ]),
       h('div', { key: 'pv', className: 'border-t border-outline-variant pt-4' }, [
         h('p', { key: 'l', className: 'text-overline uppercase font-bold text-on-surface-variant tracking-widest mb-3' }, 'Vista previa'),
         h('div', { key: 'g', className: 'grid grid-cols-2 gap-3' }, preview.map(s => h('div', { key: s.code, className: 'border border-outline-variant rounded-lg p-2 flex flex-col items-center gap-1 bg-white overflow-hidden' }, [
           h('div', { key: 'n', className: 'text-overline font-bold text-center text-primary truncate w-full' }, s.p.nombre),
-          h('div', { key: 'b', className: 'w-full overflow-hidden' }, h(B.Barcode, { code: s.code, opts: LBL_OPTS })),
+          h('div', { key: 'b', className: 'w-full overflow-hidden', 'data-testid': 'label-preview-barcode' }, h(B.Barcode, { code: s.code, opts: LBL_OPTS })),
           withPrice && h('div', { key: 'p', className: 'text-caption font-bold text-primary' }, fmt(D.listPrice(s.p, s.talla)).replace('.00', '')),
         ]))),
         specs.length > preview.length && h('p', { key: 'm', className: 'text-caption text-on-surface-variant mt-2' }, `…y ${specs.length - preview.length} más`),
