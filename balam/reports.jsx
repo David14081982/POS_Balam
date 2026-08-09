@@ -1,6 +1,6 @@
 // reports.jsx — Reportes / Analítica (Heritage Luxury). Exporta window.ReportsScreen
 (function () {
-  const { useState } = React;
+  const { useState, useEffect } = React;
   const { fmt, toast, StatusBadge } = window.UI;
   const { MS, ProductImage } = window.HX;
   const D = window.DATA;
@@ -8,6 +8,41 @@
   const GOLD_GRAD = 'linear-gradient(135deg, #92760F 0%, #D4AF38 100%)';
 
   const CARD = 'bg-surface-container-lowest rounded-xl shadow-e1';
+
+  const escapeReport = value => String(value == null ? '' : value)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  function openReportDocument(model) {
+    const win = window.open('', '_blank');
+    if (!win) { toast('El navegador bloqueo la ventana de impresion', 'var(--danger)'); return; }
+    try { win.opener = null; } catch (error) { /* ventana aislada cuando el navegador lo permite */ }
+    const metrics = (model.metrics || []).map(item => `<tr><th>${escapeReport(item[0])}</th><td>${escapeReport(item[1])}</td></tr>`).join('');
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeReport(model.title)}</title><style>
+      @page{size:A4;margin:14mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#131b2e;margin:0}
+      main{display:block}h1{font-size:24px;margin:0 0 4px}p{color:#566070;margin:0 0 24px}
+      table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:10px;border-bottom:1px solid #d9dde5;text-align:left}td{text-align:right;font-weight:700}
+      @media print{main{display:block!important}}
+    </style></head><body><main data-report-printable="true"><h1>${escapeReport(model.title)}</h1><p>${escapeReport(model.period)}</p><table>${metrics}</table></main></body></html>`;
+    win.document.write(html); win.document.close();
+    setTimeout(() => { win.focus(); win.print(); }, 100);
+  }
+
+  function ReprintSaleModal({ sale, onClose }) {
+    const printed = React.useRef(false);
+    useEffect(() => {
+      if (printed.current) return undefined;
+      printed.current = true;
+      const timer = setTimeout(() => window.print(), 100);
+      return () => clearTimeout(timer);
+    }, []);
+    return h(window.UI.Modal, { title: 'Reimpresion de venta', onClose, footer: [
+      h('button', { key: 'p', onClick: () => window.print(), className: 'px-4 py-3 border border-outline-variant rounded-lg' }, 'Imprimir nuevamente'),
+      h('button', { key: 'c', 'data-testid': 'sales-reprint-close', onClick: onClose, className: 'px-4 py-3 bg-primary text-on-primary rounded-lg' }, 'Cerrar'),
+    ] }, [
+      h('p', { key: 'm', className: 'text-caption text-on-surface-variant' }, `Documento historico ${sale.folio}. Esta accion no modifica la venta.`),
+      h(window.BalamTicket, { key: 't', sale }),
+    ]);
+  }
 
   function ResumenReport({ onNav }) {
     const marginPct = window.CONFIG.get('report.marginPct') || 33;
@@ -96,8 +131,8 @@
         // Acciones
         h('div', { key: 'act', className: 'flex justify-end gap-3 mb-8' }, [
           h('button', { key: 'm', className: 'flex items-center gap-2 px-4 py-2 border border-outline-variant rounded-lg hover:bg-surface-container-low transition-all text-body font-semibold', onClick: () => { const subj = encodeURIComponent(`Reporte Balam — ${periodoLbl}`); const body = encodeURIComponent(`Resumen ${periodoLbl}\n\nVentas brutas: ${fmt(ventasBrutas)}\nUtilidad neta: ${fmt(utilidad)}\nTotal pedidos: ${pedidos}\nTicket promedio: ${fmt(ticketProm)}\nComisiones a liquidar: ${fmt(totalComision)}`); window.location.href = `mailto:?subject=${subj}&body=${body}`; } }, [h(MS, { key: 'i', name: 'mail', size: 16 }), 'Enviar por correo']),
-          h('button', { key: 'p', className: 'flex items-center gap-2 px-4 py-2 border border-outline-variant rounded-lg hover:bg-surface-container-low transition-all text-body font-semibold', onClick: () => window.print() }, [h(MS, { key: 'i', name: 'print', size: 16 }), 'Imprimir']),
-          h('button', { key: 'e', className: 'flex items-center gap-2 px-6 py-2 bg-primary text-on-primary rounded-lg hover:opacity-90 transition-all text-body font-semibold shadow-e2', onClick: () => { toast('Abriendo impresión — elige "Guardar como PDF"'); setTimeout(() => window.print(), 350); } }, [h(MS, { key: 'i', name: 'download', size: 16 }), 'Exportar PDF']),
+          h('button', { key: 'p', 'data-testid': 'report-print', className: 'flex items-center gap-2 px-4 py-2 border border-outline-variant rounded-lg hover:bg-surface-container-low transition-all text-body font-semibold', onClick: () => openReportDocument({ title: 'Reporte Balam', period: periodoLbl, metrics: [['Ventas brutas', fmt(ventasBrutas)], ['Utilidad neta', fmt(utilidad)], ['Total pedidos', pedidos], ['Ticket promedio', fmt(ticketProm)], ['Comisiones', fmt(totalComision)]] }) }, [h(MS, { key: 'i', name: 'print', size: 16 }), 'Imprimir']),
+          h('button', { key: 'e', 'data-testid': 'report-pdf', className: 'flex items-center gap-2 px-6 py-2 bg-primary text-on-primary rounded-lg hover:opacity-90 transition-all text-body font-semibold shadow-e2', onClick: () => { toast('Abriendo impresion — elige "Guardar como PDF"'); openReportDocument({ title: 'Reporte Balam', period: periodoLbl, metrics: [['Ventas brutas', fmt(ventasBrutas)], ['Utilidad neta', fmt(utilidad)], ['Total pedidos', pedidos], ['Ticket promedio', fmt(ticketProm)], ['Comisiones', fmt(totalComision)]] }); } }, [h(MS, { key: 'i', name: 'download', size: 16 }), 'Exportar PDF']),
         ]),
 
         // KPIs
@@ -328,7 +363,8 @@
         h('div', { key: 'tabs', className: 'inline-flex items-center gap-2 p-1.5 mb-8 bg-surface-container-low rounded-xl border border-outline-variant' },
           TABS.map(([id, label, icon]) => h('button', {
             key: id, onClick: () => setTab(id),
-            'data-testid': id === 'cambios' ? 'reports-tab-exchanges' : undefined,
+            'data-testid': id === 'cambios' ? 'reports-tab-exchanges'
+              : `reports-tab-${id === 'resumen' ? 'summary' : (id === 'ventas' ? 'sales' : id)}`,
             className: 'flex items-center gap-2 px-6 py-2.5 rounded-lg text-caption font-bold uppercase tracking-wider transition-all ' +
               (tab === id ? 'bg-primary text-on-primary shadow-e2' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'),
           }, [h(MS, { key: 'i', name: icon, size: 18 }), label]))),
@@ -523,6 +559,7 @@
     const [vend, setVend] = useState('');       // filtro por vendedor (id)
     const [estado, setEstado] = useState('');   // filtro por estado de venta
     const [page, setPage] = useState(1);
+    const [reprintSale, setReprintSale] = useState(null);
 
     // Ventana por rango de fechas. El "periodo previo" es la misma longitud justo antes de 'desde'.
     const fromT = from ? new Date(from + 'T00:00:00').getTime() : null;
@@ -593,7 +630,7 @@
       .map(s => {
         const first = s.lineas && s.lineas[0];
         const prod = first ? D.products.find(p => p.sku === first.sku) : null;
-        return { id: s.folio, fecha: s.fecha, folio: s.folio, cliente: s.cliente, producto: productLabel(s), vendedor: sellerNames(s).join(', ') || '—', metodo: s.metodo || '—', monto: Number(s.total) || 0, comision: commOf(s), estado: s.estado, prod };
+        return { id: s.folio, fecha: s.fecha, folio: s.folio, cliente: s.cliente, producto: productLabel(s), vendedor: sellerNames(s).join(', ') || '—', metodo: s.metodo || '—', monto: Number(s.total) || 0, comision: commOf(s), estado: s.estado, prod, sale: s };
       });
     const PER = 12, pages = Math.max(1, Math.ceil(rows.length / PER)), pg = Math.min(page, pages);
     const slice = rows.slice((pg - 1) * PER, pg * PER);
@@ -672,7 +709,7 @@
         rows.length
           ? h('div', { key: 'wrap', className: 'overflow-x-auto' }, h('table', { className: 'w-full text-left' }, [
             h('thead', { key: 'thd' }, h('tr', { className: 'bg-surface-container-low border-b border-outline-variant' },
-              ['Fecha', 'Folio', 'Cliente', 'Producto', 'Vendedor', 'Método', 'Monto', 'Comisión', 'Estado'].map((c, i) => h('th', { key: i, className: 'px-5 py-3 text-overline font-semibold text-on-surface-variant uppercase tracking-wider whitespace-nowrap' + ((c === 'Monto' || c === 'Comisión' || c === 'Estado') ? ' text-right' : '') }, c)))),
+              ['Fecha', 'Folio', 'Cliente', 'Producto', 'Vendedor', 'Método', 'Monto', 'Comisión', 'Estado', 'Acciones'].map((c, i) => h('th', { key: i, className: 'px-5 py-3 text-overline font-semibold text-on-surface-variant uppercase tracking-wider whitespace-nowrap' + ((c === 'Monto' || c === 'Comisión' || c === 'Estado') ? ' text-right' : '') }, c)))),
             h('tbody', { key: 'tb', className: 'divide-y divide-outline-variant/40' }, slice.map(r => h('tr', { key: r.id, className: 'hover:bg-surface-container-lowest transition-colors' }, [
               h('td', { key: 'f', className: 'px-5 py-3 text-body whitespace-nowrap' }, String(r.fecha || '').slice(0, 10)),
               h('td', { key: 'fo', className: 'px-5 py-3 font-mono text-caption text-primary whitespace-nowrap' }, r.folio),
@@ -686,6 +723,11 @@
               h('td', { key: 'm', className: 'px-5 py-3 text-right text-body font-semibold text-primary whitespace-nowrap' }, fmt(r.monto).replace('.00', '')),
               h('td', { key: 'co', className: 'px-5 py-3 text-right text-body font-semibold text-gold-text whitespace-nowrap' }, r.comision > 0 ? fmt(r.comision).replace('.00', '') : '—'),
               h('td', { key: 'e', className: 'px-5 py-3 text-right' }, h(StatusBadge, { estado: r.estado })),
+              h('td', { key: 'a', className: 'px-5 py-3 text-right' }, h('button', {
+                'data-testid': `sales-reprint-${r.folio}`,
+                onClick: () => setReprintSale(D.findSaleByFolio(r.folio)),
+                className: 'px-3 py-2 border border-outline-variant rounded-lg text-caption font-semibold hover:bg-surface-container',
+              }, 'Reimprimir')),
             ]))),
           ]))
           : emptyHint('No hay ventas que coincidan con los filtros.'),
@@ -698,6 +740,7 @@
           ]),
         ]),
       ]),
+      reprintSale ? h(ReprintSaleModal, { key: 'rp', sale: reprintSale, onClose: () => setReprintSale(null) }) : null,
     ]);
   }
 

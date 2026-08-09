@@ -107,13 +107,13 @@
        impresión vuelve al FLUJO del documento. Mientras estuvo `position: fixed` el
        navegador no podía paginarlo: la altura imprimible era la de la ventana y todo
        lo que sobrepasaba —historial de pagos incluido— se perdía. */
-    #balam-ticket { position: absolute; left: -99999px; top: 0; width: 80mm; background: #fff; color: #131B2E; }
+    #balam-ticket, #balam-return-receipt { position: absolute; left: -99999px; top: 0; width: 80mm; background: #fff; color: #131B2E; }
     @media print {
       /* La app entera sale del layout: así la altura del documento es la del ticket
          y el navegador reparte el contenido en las hojas que hagan falta. */
       html, body { height: auto !important; min-height: 0 !important; overflow: visible !important; background: #fff !important; }
       #root { display: none !important; }
-      #balam-ticket { position: static !important; left: auto !important; top: auto !important; margin: 0 auto !important; }
+      #balam-ticket, #balam-return-receipt { position: static !important; left: auto !important; top: auto !important; margin: 0 auto !important; }
       /* Ningún bloque se parte a la mitad entre una hoja y la siguiente. */
       .tk-block { break-inside: avoid; page-break-inside: avoid; }
       @page { size: 80mm auto; margin: 0; }

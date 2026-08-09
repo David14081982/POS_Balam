@@ -2138,6 +2138,44 @@
     // precio y el descuento quedaría mal calculado en ambas direcciones.
     const subtotalOrig = ticket.reduce((a, l, i) => a + resList[i].orig * l.qty, 0);
     const totalConDescuento = ticket.reduce((a, l, i) => a + resList[i].unit * l.qty, 0);
+    const catalogLabel = (kind, code, fallback) => {
+      const item = C && typeof C.find === 'function' ? C.find(kind, String(code == null ? '' : code)) : null;
+      return String((item && item.label) || fallback || code || '');
+    };
+    const saleLines = ticket.map((l, i) => ({
+      productId: l.p.id, sku: l.p.sku, nombre: l.p.nombre, talla: l.talla, qty: l.qty,
+      ornamento: l.p.orn || '', ornColors: effectiveOrnamentColors(l.p, l.talla),
+      precio: cortesia ? 0 : money(unitAt(i)),
+      precioBase: cortesia ? 0 : resList[i].unit, precioOrig: resList[i].orig,
+      descuentoAdicional: cortesia ? 0 : money(((typeof quotedLines !== 'undefined' && quotedLines[i]) || {}).additionalDiscount),
+      promos: resList[i].promos,
+    }));
+    // Evidencia visual cerrada. El comprobante historico no vuelve al catalogo.
+    const receiptSnapshot = {
+      version: 1,
+      store: {
+        name: C.get('store.name') || 'Balam Guayaberas',
+        rfc: C.get('store.rfc') || '', address: C.get('store.address') || '',
+        phone: C.get('store.phone') || '', footer: C.get('ticket.footer') || '',
+        tagline: C.get('ticket.tagline') || '',
+      },
+      sellerName: primary[0] || 'â€”',
+      lines: ticket.map((l, i) => {
+        const size = resolveProductSizes(l.p).sizes.find(item => String(item.value) === String(l.talla));
+        const colors = saleLines[i].ornColors || [];
+        return {
+          productId: l.p.id, sku: String(l.p.sku || ''), name: String(l.p.nombre || ''),
+          sizeCode: String(l.talla == null ? '' : l.talla), sizeLabel: String((size && size.label) || l.talla || ''),
+          colorCode: String(l.p.color || ''), colorLabel: String(l.p.colorName || catalogLabel('color', l.p.color, l.p.color)),
+          ornamentCode: String(l.p.orn || ''), ornamentLabel: catalogLabel('ornament', l.p.orn, l.p.orn),
+          ornamentColors: colors.map(code => ({ code, label: catalogLabel('color', code, code) })),
+          attributes: [
+            ['category', l.p.cat], ['model', l.p.modelo], ['sleeve', l.p.manga],
+            ['material', l.p.tela], ['neck', l.p.cuello], ['cut', l.p.corte],
+          ].filter(entry => entry[1] != null && entry[1] !== '').map(entry => ({ key: entry[0], value: String(entry[1]) })),
+        };
+      }),
+    };
     const sale = {
       folio, fecha, clienteId: client && !client.generic ? client.id : undefined, cliente: client ? client.nombre : 'Público en general',
       vendedor: primary[0] || '—', vendedores: ids.slice(),
@@ -2156,19 +2194,12 @@
       // tasa y por QUE politica. Su ausencia significa "venta anterior a H-69".
       comisiones: comisionesVenta,
       // H-34: snapshot del plazo. null = sin límite, igual que las ventas previas.
-      returnLimitDays, returnExpiresAt,
+      returnLimitDays, returnExpiresAt, receiptSnapshot,
       _operationId: operationId, _stockRequired: cobrada, _syncStatus: 'pending',
       // En cortesía cada línea queda en $0 (no se cobró); el valor vive en precioOrig y valorRegalado.
       // promos: evidencia histórica inmutable de H-32. Un arreglo vacío significa "sin promoción";
       // su AUSENCIA significa "venta anterior a H-32", que nunca imprime porcentaje.
-      lineas: ticket.map((l, i) => ({
-        productId: l.p.id, sku: l.p.sku, nombre: l.p.nombre, talla: l.talla, qty: l.qty,
-        ornamento: l.p.orn || '', ornColors: effectiveOrnamentColors(l.p, l.talla),
-        precio: cortesia ? 0 : money(unitAt(i)),
-        precioBase: cortesia ? 0 : resList[i].unit, precioOrig: resList[i].orig,
-        descuentoAdicional: cortesia ? 0 : money(((typeof quotedLines !== 'undefined' && quotedLines[i]) || {}).additionalDiscount),
-        promos: resList[i].promos,
-      })),
+      lineas: saleLines,
     };
     sales.unshift(sale);
     saveSales();

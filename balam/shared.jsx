@@ -194,6 +194,17 @@
     };
   }
 
+  // Autoridad unica de impresion automatica para comprobantes.
+  function useReceiptAutoPrint(delay = 350) {
+    const printed = useRef(false);
+    useEffect(() => {
+      if (printed.current || !window.CONFIG || !window.CONFIG.get('print.auto')) return undefined;
+      printed.current = true;
+      const timer = setTimeout(() => window.print(), delay);
+      return () => clearTimeout(timer);
+    }, [delay]);
+  }
+
   // Modal
   function Modal({ title, onClose, children, footer, large, testId, productForm }) {
     const panelRef = useRef(null);
@@ -269,5 +280,5 @@
     ]);
   }
 
-  window.UI = { fmt, fechaCorta, fechaHora, Badge, StatusBadge, StockBadge, ProductThumb, ToastHost, toast, Modal, BADGE_TONE, Pager, Segment, resizeImageFile, useSyncActivity, useSyncFocusActivity };
+  window.UI = { fmt, fechaCorta, fechaHora, Badge, StatusBadge, StockBadge, ProductThumb, ToastHost, toast, Modal, BADGE_TONE, Pager, Segment, resizeImageFile, useSyncActivity, useSyncFocusActivity, useReceiptAutoPrint };
 })();

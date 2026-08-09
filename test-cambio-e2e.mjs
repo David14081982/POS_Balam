@@ -39,6 +39,8 @@ try {
   // ── Semilla: una venta de una talla barata, con otra talla más cara ────────
   const semilla = await page.evaluate(() => {
     const D = window.DATA;
+    // H-85: este recorrido verifica explicitamente el camino auto habilitado.
+    window.CONFIG.setSetting('print.auto', true);
     if (window.STORE) { window.STORE.pushRows = () => {}; window.STORE.pushSale = () => {}; window.STORE.pushExchange = () => {}; }
     D.products.length = 0; D.sales.length = 0; D.exchanges.length = 0;
     const T = D.SIZES_LETRA;

@@ -490,8 +490,24 @@
     const pctEvidencia = desc > 0
       ? pctDeEvidencia((sale.lineas || []).map(l => ({ orig: Number(l.precioOrig), base: Number(l.precioBase), promos: l.promos })))
       : null;
-    const colorDe = (sku) => { const p = D.products.find(x => x.sku === sku); return p ? p.colorName : ''; };
     const lineas = sale.lineas || [];
+    const receiptSnapshot = sale.receiptSnapshot && sale.receiptSnapshot.version === 1
+      ? sale.receiptSnapshot : null;
+    const frozenStore = receiptSnapshot && receiptSnapshot.store ? receiptSnapshot.store : {};
+    const displayLines = lineas.map((line, index) => {
+      const frozen = receiptSnapshot && Array.isArray(receiptSnapshot.lines)
+        ? receiptSnapshot.lines[index] : null;
+      if (!frozen) return {
+        name: line.nombre || '', sku: line.sku || '', sizeLabel: line.talla || '',
+        colorLabel: '', ornamentLabel: line.ornamento || '',
+        ornamentColors: (line.ornColors || []).map(code => ({ code, label: code })),
+      };
+      return frozen;
+    });
+    const frozenOrnament = (line, display) => {
+      const colors = (display.ornamentColors || []).map(item => item.label || item.code).filter(Boolean).join(' + ');
+      return [display.ornamentLabel || line.ornamento, colors].filter(Boolean).join(' Â· ');
+    };
     const pagos = D.paymentsForSale ? D.paymentsForSale(sale.folio) : [];
     const snapshotCompleto = D.hasFinancialSnapshot ? D.hasFinancialSnapshot(sale) : hasSnapshot;
     // Estado de cobranza: lo pagado y lo que falta. Se lee de la venta —nunca se
@@ -544,10 +560,10 @@
             ? h('img', { key: 'm', src: C.get('store.logo'), className: 'w-16 h-16 mb-4 rounded-2xl object-cover' })
             : h('div', { key: 'm', className: 'w-16 h-16 mb-4 rounded-2xl grid place-items-center', style: { background: '#131B2E' } }, h(MS, { name: 'landscape', size: 40, fill: true, style: { color: '#FFFFFF' } })),
           h('h1', { key: 't', className: 'font-headline', style: { fontSize: '32px', letterSpacing: '0.1em', lineHeight: 1 } }, 'BALAM'),
-          h('p', { key: 's', className: 'font-semibold text-primary mt-3', style: { fontSize: '14px' } }, C.get('store.name') || 'Balam Guayaberas'),
-          C.get('store.rfc') && h('p', { key: 'r', className: 'text-on-surface-variant mt-1', style: { fontSize: '12px', lineHeight: 1.5 } }, 'RFC: ' + C.get('store.rfc')),
-          C.get('store.address') && h('p', { key: 'a', className: 'text-on-surface-variant', style: { fontSize: '12px', lineHeight: 1.5 } }, C.get('store.address')),
-          C.get('store.phone') && h('p', { key: 'p', className: 'text-on-surface-variant', style: { fontSize: '12px', lineHeight: 1.5 } }, C.get('store.phone')),
+          h('p', { key: 's', className: 'font-semibold text-primary mt-3', style: { fontSize: '14px' } }, frozenStore.name || C.get('store.name') || 'Balam Guayaberas'),
+          (frozenStore.rfc || (!receiptSnapshot && C.get('store.rfc'))) && h('p', { key: 'r', className: 'text-on-surface-variant mt-1', style: { fontSize: '12px', lineHeight: 1.5 } }, 'RFC: ' + (frozenStore.rfc || C.get('store.rfc'))),
+          (frozenStore.address || (!receiptSnapshot && C.get('store.address'))) && h('p', { key: 'a', className: 'text-on-surface-variant', style: { fontSize: '12px', lineHeight: 1.5 } }, frozenStore.address || C.get('store.address')),
+          (frozenStore.phone || (!receiptSnapshot && C.get('store.phone'))) && h('p', { key: 'p', className: 'text-on-surface-variant', style: { fontSize: '12px', lineHeight: 1.5 } }, frozenStore.phone || C.get('store.phone')),
         ]),
         // Acuse del pago recibido (sólo cobranza de apartado): lo primero que el
         // cliente debe leer es cuánto entregó hoy y por qué concepto.
@@ -590,7 +606,7 @@
             ? info('Ticket impreso', D.saleFolioAliases(sale).join(', '))
             : null,
           info('Fecha', sale.fecha),
-          info('Atendido por', sale.vendedor || '—'),
+          info('Atendido por', (receiptSnapshot && receiptSnapshot.sellerName) || sale.vendedor || '—'),
           payment ? info('Cliente', sale.cliente || 'Público en general') : null,
           (sale.estado && sale.estado !== 'Pagado') ? info('Estado', sale.estado) : null,
         ]),
@@ -598,20 +614,20 @@
         h('div', { key: 'd', className: 'w-full text-left' }, [
           h('div', { key: 'h', className: 'uppercase text-on-surface-variant mb-4', style: { fontSize: '11px', letterSpacing: '0.18em' } },
             conCobranza ? (saldoPend > 0 ? 'Mercancía apartada' : 'Mercancía entregada') : 'Detalle de compra'),
-          h('div', { key: 'l', className: 'space-y-5' }, lineas.map((l, i) => h('div', { key: i, className: 'tk-block' }, [
+          h('div', { key: 'l', className: 'space-y-5' }, lineas.map((l, i) => { const shown = displayLines[i]; return h('div', { key: i, className: 'tk-block' }, [
             h('div', { key: 'a', className: 'flex justify-between items-start gap-3' }, [
-              h('span', { key: 'n', className: 'font-headline flex-1 min-w-0', style: { fontSize: '18px', lineHeight: 1.25 } }, l.nombre),
+              h('span', { key: 'n', className: 'font-headline flex-1 min-w-0', style: { fontSize: '18px', lineHeight: 1.25 } }, shown.name || l.nombre),
               h('span', { key: 'p', className: 'font-semibold text-primary shrink-0', style: { fontSize: '14px' } }, fmt((l.precioOrig != null ? l.precioOrig : l.precio) * l.qty)),
             ]),
             h('div', { key: 'b', className: 'flex justify-between items-start gap-3 mt-1 text-on-surface-variant', style: { fontSize: '10px', lineHeight: 1.4 } }, [
-              h('span', { key: 's', className: 'flex-1 min-w-0' }, `SKU: ${l.sku} · Talla: ${tallaLbl(l.talla, D.products.find(p => p.sku === l.sku))}${colorDe(l.sku) ? ' · ' + colorDe(l.sku) : ''}`),
+              h('span', { key: 's', className: 'flex-1 min-w-0' }, `SKU: ${shown.sku || l.sku} · Talla: ${shown.sizeLabel || l.talla}${shown.colorLabel ? ' · ' + shown.colorLabel : ''}`),
               h('span', { key: 'q', className: 'shrink-0' }, `Cant: ${l.qty}`),
             ]),
-            ornamentEvidence(l) ? h('div', {
+            frozenOrnament(l, shown) ? h('div', {
               key: 'oc', className: 'mt-1 text-on-surface-variant', style: { fontSize: '10px', lineHeight: 1.4 },
               'data-testid': 'ticket-ornament-evidence',
-            }, 'Ornamento: ' + ornamentEvidence(l)) : null,
-          ]))),
+            }, 'Ornamento: ' + frozenOrnament(l, shown)) : null,
+          ]); })),
         ]),
         // Totales
         h('div', { key: 'tt', className: 'tk-block w-full border-t-2 border-primary pt-4 mt-8' }, [
@@ -690,8 +706,8 @@
         // Pie
         h('div', { key: 'f', className: 'tk-block w-full mt-12 mb-1 flex flex-col items-center' }, [
           h('div', { key: 'd', className: 'w-12 h-px bg-outline-variant mb-6' }),
-          h('p', { key: 'm', className: 'font-headline italic text-primary px-2 mb-1', style: { fontSize: '20px', lineHeight: 1.35 } }, C.get('ticket.footer') || 'Gracias por ser parte de nuestra herencia.'),
-          C.get('ticket.tagline') && h('p', { key: 'tl', className: 'text-on-surface-variant px-4 mt-3', style: { fontSize: '12px', lineHeight: 1.6 } }, C.get('ticket.tagline')),
+          h('p', { key: 'm', className: 'font-headline italic text-primary px-2 mb-1', style: { fontSize: '20px', lineHeight: 1.35 } }, frozenStore.footer || (!receiptSnapshot && C.get('ticket.footer')) || 'Gracias por ser parte de nuestra herencia.'),
+          (frozenStore.tagline || (!receiptSnapshot && C.get('ticket.tagline'))) && h('p', { key: 'tl', className: 'text-on-surface-variant px-4 mt-3', style: { fontSize: '12px', lineHeight: 1.6 } }, frozenStore.tagline || C.get('ticket.tagline')),
           h('div', { key: 'bc', className: 'mt-9 w-full flex flex-col items-center gap-2' }, [
             h('div', { key: 'b', className: 'flex items-end justify-center gap-[1px] py-2 px-6 w-full', style: { background: 'rgba(19,27,46,0.035)' } }, bars),
             h('span', { key: 'u', className: 'text-on-surface-variant', style: { fontSize: '9px', letterSpacing: '0.3em' } }, 'BALAMGUAYABERAS.COM'),
@@ -704,8 +720,57 @@
       : documento;
   }
 
+  // Documento termico propio de una devolucion directa. No reutiliza el
+  // vocabulario de Cambio y consume solo la venta/retorno ya congelados.
+  function BalamReturnReceipt({ sale, returnDoc }) {
+    if (!sale || !returnDoc) return null;
+    const snapshot = sale.receiptSnapshot && sale.receiptSnapshot.version === 1 ? sale.receiptSnapshot : null;
+    const store = snapshot && snapshot.store ? snapshot.store : {};
+    const seller = (snapshot && snapshot.sellerName) || sale.vendedor || '—';
+    const displayFor = (line, index) => {
+      const saleIndex = (sale.lineas || []).findIndex(soldLine =>
+        String(soldLine.productId || '') === String(line.productId || '')
+        && String(soldLine.sku || '') === String(line.sku || '')
+        && String(soldLine.talla || '') === String(line.talla || ''));
+      const sold = snapshot && Array.isArray(snapshot.lines)
+        ? snapshot.lines[saleIndex >= 0 ? saleIndex : index] : null;
+      return sold || { name: line.nombre || '', sku: line.sku || '', sizeLabel: line.talla || '' };
+    };
+    const documentNode = h('div', { id: 'balam-return-receipt' },
+      h('div', { className: 'px-6 py-7 font-body text-on-surface', style: { width: '80mm', boxSizing: 'border-box' } }, [
+        h('div', { key: 'h', className: 'tk-block text-center border-b border-outline-variant pb-5 mb-5' }, [
+          h('h1', { key: 'b', className: 'font-headline text-primary', style: { fontSize: '28px' } }, 'BALAM'),
+          h('div', { key: 's', style: { fontSize: '12px' } }, store.name || 'Balam Guayaberas'),
+          h('div', { key: 't', className: 'font-semibold mt-4', style: { fontSize: '18px' } }, 'COMPROBANTE DE DEVOLUCIÓN'),
+        ]),
+        h('div', { key: 'i', className: 'tk-block space-y-1 border-b border-outline-variant pb-4 mb-5', style: { fontSize: '12px' } }, [
+          h('div', { key: 'f' }, `Folio de devolución: ${returnDoc.id}`),
+          h('div', { key: 'o' }, `Venta original: ${returnDoc.folio || sale.folio}`),
+          h('div', { key: 'd' }, `Fecha: ${returnDoc.fecha || ''}`),
+          h('div', { key: 'v' }, `Vendedor: ${seller}`),
+          h('div', { key: 'c' }, `Cliente: ${returnDoc.cliente || sale.cliente || 'Público en general'}`),
+          h('div', { key: 'm' }, `Método de devolución: ${returnDoc.metodo || '—'}`),
+          h('div', { key: 'r' }, `Referencia de operación: ${returnDoc.id}`),
+        ]),
+        h('div', { key: 'l', className: 'space-y-4' }, (returnDoc.lineas || []).map((line, index) => {
+          const shown = displayFor(line, index);
+          return h('div', { key: index, className: 'tk-block border-b border-outline-variant pb-3', style: { fontSize: '12px' } }, [
+            h('div', { key: 'n', className: 'font-semibold' }, shown.name || line.nombre),
+            h('div', { key: 'a' }, `SKU: ${shown.sku || line.sku} · Talla: ${shown.sizeLabel || line.talla}`),
+            h('div', { key: 'q' }, `Cantidad: ${line.qty} · Importe: ${fmt((Number(line.precio) || 0) * (Number(line.qty) || 0))}`),
+          ]);
+        })),
+        h('div', { key: 'tot', className: 'tk-block flex justify-between font-headline text-primary mt-6 pt-4 border-t-2 border-primary', style: { fontSize: '20px' } }, [
+          h('span', { key: 'l' }, 'REEMBOLSO'), h('span', { key: 'v' }, fmt(returnDoc.total)),
+        ]),
+      ]));
+    return (typeof ReactDOM !== 'undefined' && ReactDOM.createPortal && typeof document !== 'undefined')
+      ? ReactDOM.createPortal(documentNode, document.body) : documentNode;
+  }
+
   window.TicketPanel = TicketPanel;
   window.AdditionalDiscountModal = AdditionalDiscountModal;
   window.CheckoutModal = CheckoutModal;
   window.BalamTicket = BalamTicket;
+  window.BalamReturnReceipt = BalamReturnReceipt;
 })();

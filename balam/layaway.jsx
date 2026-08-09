@@ -416,9 +416,7 @@
   function ReciboModal({ recibo, onClose }) {
     const { sale, payment, liquidado } = recibo;
     // Mismo comportamiento que la venta: si la impresión automática está activa, se dispara.
-    useEffect(() => {
-      if (C.get('print.auto')) { const t = setTimeout(() => window.print(), 350); return () => clearTimeout(t); }
-    }, []);
+    window.UI.useReceiptAutoPrint();
     const footer = [
       h('button', {
         key: 'p', className: 'flex-1 py-3.5 border border-outline-variant text-on-surface text-caption font-bold uppercase tracking-widest rounded-xl hover:bg-surface-container transition flex items-center justify-center gap-2',

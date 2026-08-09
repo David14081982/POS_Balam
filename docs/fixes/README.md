@@ -81,6 +81,7 @@ sesión de chat.
 | `centro-de-equipos.md` | H-79 | Supervisión central por instalación, actividad y reintentos administrativos |
 | `convergencia-centro-de-equipos.md` | H-80 | El historial operativo converge sin tráfico ni reconciliación comercial autorreferente |
 | `revision-de-cuarentena.md` | H-81 | Expediente Excel, decisión auditada y reactivación por la cola/RPC vigente |
+| `sistema-de-comprobantes-historicos.md` | H-85 | Evidencia visual congelada, reimpresión, Reportes y devolución imprimibles |
 
 Documentación financiera relacionada, creada antes de este índice:
 

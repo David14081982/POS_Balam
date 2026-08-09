@@ -27,6 +27,7 @@ y `BLOQUEADO`.
 | H-16 | Pulls truncados por límite de PostgREST | RESUELTO | Sincronización / rendimiento |
 | H-17 | Código y estilos heredados sin consumidores | RESUELTO | Frontend / build |
 | H-77 | Terminales abiertas no convergen y una línea base antigua carece de cuarentena | CÓDIGO LISTO / DESPLIEGUE PENDIENTE | Sincronización / offline / multi-terminal |
+| H-85 | Los comprobantes reconstruyen evidencia vigente y varias superficies no imprimen o no permiten reimpresión | RESUELTO, PENDIENTE DE PUBLICACIÓN | Ventas / posventa / impresión |
 
 ## H-01 — Inventario concurrente
 
@@ -4087,6 +4088,47 @@ cliente conserva compatibilidad con el esquema H-83 aplicado.
 **Riesgo residual:** ninguno funcional conocido en el alcance; la apariencia de
 los diálogos nativos de confirmación depende de la plataforma.
 **Corrección documentada:** `docs/fixes/redisenio-ui-nuevo-producto.md`.
+
+## H-85 - Los comprobantes no son una proyección histórica cerrada
+
+**Estado:** RESUELTO, PENDIENTE DE PUBLICACIÓN
+**Fecha de registro:** 08/08/2026
+**Commit:** Pendiente de commit
+**Origen:** auditoría quirúrgica del sistema de tickets solicitada por el dueño
+del producto y autorización expresa de la corrección completa.
+**Reproducción:** el ticket de una venta blanca cambia a rojo al editar el
+producto y toma el color de un clon cuando otro producto comparte el SKU;
+Reportes invoca `window.print()` pero `#root` queda oculto y no existe contenido
+imprimible; una venta de contado pierde toda superficie de reimpresión al cerrar
+su modal; la devolución directa termina sólo con un `toast`; Cambios imprime
+automáticamente incluso con `print.auto=false`.
+**Causa raíz:** el documento congela importes, nombre, SKU y ornamento, pero
+`BalamTicket` todavía consulta el catálogo vigente por SKU para resolver color y
+talla. Las demás fallas son contratos de superficie ausentes o divergentes: el
+historial no monta el comprobante, Reportes reutiliza el modo térmico global, la
+devolución no tiene documento y Cambios no consume la configuración compartida.
+**Alcance:** snapshot visual inmutable del renglón; compatibilidad conservadora
+para ventas antiguas; reimpresión de contado; documento imprimible propio de
+Reportes; comprobante térmico de devolución directa; y una sola política
+`print.auto` para POS, Apartados y Cambios.
+**No alcance:** SKU, identidad nueva de producto o variante, códigos de barras de
+inventario, H-83/H-84, stock, precios y reglas comerciales de venta/posventa.
+**Corrección:** las ventas nuevas congelan `receiptSnapshot.version=1` y STORE
+lo transporta a `pos.sales.receipt_snapshot`. `BalamTicket` dejó de consultar
+productos por SKU; el modo histórico anterior sólo usa campos ya congelados.
+Historial reimprime por folio sin efectos, Reportes genera un documento A4
+propio, la devolución directa emite `BalamReturnReceipt` y
+`UI.useReceiptAutoPrint()` gobierna POS, Apartados y Cambios.
+**Pruebas:** H-85 **18/18**; ticket/paginación/80 mm **23/23**; Apartados
+**55/55**; Cambio E2E **37/37**; comprobante de Cambio **29/29**; devoluciones
+**17/17**; coherencia comercial/sync **20/20**; Reportes **24/24**; H-83
+**32/32 + 17/17**; H-84 **19/19**. Build regenerado correctamente.
+Migraciones `12800/12900` aplicadas y verificadas; `dry-run` remoto posterior
+sin pendientes.
+**Riesgo residual:** ventas anteriores a H-85 no contienen etiquetas que nunca
+se persistieron. Se conserva el código crudo o se omite el dato; no se completa
+desde el catálogo vigente porque eso fabricaría evidencia histórica.
+**Corrección documentada:** `docs/fixes/sistema-de-comprobantes-historicos.md`.
 
 ## Regla de actualización
 

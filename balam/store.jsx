@@ -216,6 +216,11 @@
       }),
     },
   };
+  const saleHeaderFromRow = MAP.sales.fromRow;
+  MAP.sales.fromRow = row => Object.assign(saleHeaderFromRow(row), {
+    receiptSnapshot: row.receipt_snapshot && typeof row.receipt_snapshot === 'object'
+      ? row.receipt_snapshot : undefined,
+  });
   function kindForTable(table) {
     return Object.keys(MAP).find(kind => MAP[kind].table === table) || null;
   }
@@ -1654,6 +1659,7 @@
     // resto de campos opcionales: una instalación sin la migración no lo manda.
     if (sale.returnLimitDays != null) header.return_limit_days = Number(sale.returnLimitDays) || 0;
     if (sale.returnExpiresAt != null) header.return_expires_at = sale.returnExpiresAt;
+    if (sale.receiptSnapshot && typeof sale.receiptSnapshot === 'object') header.receipt_snapshot = sale.receiptSnapshot;
     // valor_regalado (cortesías) solo se envía si aplica, así no rompe instalaciones sin la migración pos_009.
     if (Number(sale.valorRegalado) > 0) header.valor_regalado = Number(sale.valorRegalado);
     const items = (sale.lineas || []).map(l => {

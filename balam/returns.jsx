@@ -190,6 +190,17 @@
   }
 
   // ── Paso 2: detalle de la devolución ───────────────────────────────────────────
+  function DirectReturnReceiptModal({ receipt, onClose }) {
+    window.UI.useReceiptAutoPrint();
+    return h(window.UI.Modal, { title: 'Devolucion registrada', onClose, footer: [
+      h('button', { key: 'p', onClick: () => window.print(), className: 'flex-1 py-3.5 border border-outline-variant text-caption font-bold uppercase tracking-widest rounded-xl' }, 'Imprimir comprobante'),
+      h('button', { key: 'c', onClick: onClose, className: 'flex-1 py-3.5 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-xl' }, 'Listo'),
+    ] }, [
+      h('p', { key: 'm', className: 'text-caption text-on-surface-variant' }, `Reembolso ${receipt.returnDoc.id} · ${fmt(receipt.returnDoc.total)}`),
+      h(window.BalamReturnReceipt, { key: 'r', sale: receipt.sale, returnDoc: receipt.returnDoc }),
+    ]);
+  }
+
   function ReturnDetail({ sale, onBack, onDone }) {
     // Agrupa renglones por sku+talla y calcula lo aún devolvible (vendido − ya devuelto).
     const rows = useMemo(() => {
@@ -215,6 +226,7 @@
     const [sel, setSel] = useState({});        // { k: { on, motivo, qty } }
     const [metodo, setMetodo] = useState('Mismo método');
     const [notas, setNotas] = useState('');
+    const [receipt, setReceipt] = useState(null);
 
     const setRow = (k, patch) => setSel(p => ({ ...p, [k]: { ...(p[k] || { on: false, motivo: '', qty: 1 }), ...patch } }));
     const toggle = (row) => { const cur = sel[row.k] || {}; setRow(row.k, { on: !cur.on, qty: cur.qty || 1, motivo: cur.motivo || '' }); };
@@ -232,7 +244,7 @@
       const res = D.recordReturn({ folio: sale.folio, lineas, metodo: metodo === 'Mismo método' ? sale.metodo : metodo, notas });
       if (!res.ok) { toast(res.error, 'var(--danger)'); return; }
       toast(`Devolución registrada · ${fmt(res.ret.total)}`, 'var(--accent)');
-      onDone();
+      setReceipt({ sale, returnDoc: res.ret });
     }
 
     const reverseOn = !!C.get('returns.reverseCommission');
@@ -241,6 +253,7 @@
     const plazo = deadlineOf(sale);
     const vencida = plazo.status === 'vencido';
 
+    if (receipt) return h(DirectReturnReceiptModal, { receipt, onClose: onDone });
     return h('div', { className: 'flex-1 overflow-y-auto bg-background font-body text-on-surface' },
       h('div', { className: 'max-w-[1100px] mx-auto p-6' }, [
         // Breadcrumb
@@ -835,7 +848,7 @@
   // Acuse en pantalla + impresión automática. El documento lo arma BalamTicket.
   function ExchangeReceipt({ recibo, onClose }) {
     const ex = recibo.exchange;
-    React.useEffect(() => { const t = setTimeout(() => window.print(), 350); return () => clearTimeout(t); }, []);
+    window.UI.useReceiptAutoPrint();
     return h(window.UI.Modal, {
       title: 'Cambio registrado', onClose,
       footer: [

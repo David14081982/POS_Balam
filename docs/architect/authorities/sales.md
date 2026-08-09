@@ -1,7 +1,7 @@
 ---
 capa: conocimiento
 applies_to: [domain]
-related_histories: [H-02, H-03, H-29, H-31, H-32, H-33, H-34, H-35]
+related_histories: [H-02, H-03, H-29, H-31, H-32, H-33, H-34, H-35, H-85]
 severity_max: required
 no_alcance: "No define ninguna autoridad ni transcribe firmas. Sólo dice qué pregunta responde cada una y dónde vive."
 ---
@@ -9,6 +9,19 @@ no_alcance: "No define ninguna autoridad ni transcribe firmas. Sólo dice qué p
 # Autoridades · Venta y posventa
 
 Reglas de mantenimiento en `../README.md` § Registro de autoridades.
+
+## ¿Qué datos visibles imprime una venta histórica?
+**Autoridad:** `sale.receiptSnapshot` (`pos.sales.receipt_snapshot`) para
+documentos H-85; `BalamTicket` sólo proyecta ese snapshot y los importes/líneas
+congelados de la venta. Nunca resuelve nombre, SKU, talla, color, ornamento,
+precio ni atributos visibles con el catálogo vigente.
+**Compatibilidad:** una venta anterior a H-85 usa exclusivamente los campos que
+ya existen en `sale.lineas`; muestra el código crudo de talla y omite color si no
+fue persistido. No inventa evidencia mediante `products.find(sku)`.
+**Definición:** `balam/data.jsx`, `balam/pos-ticket.jsx`,
+`supabase/migrations/20260808012800_pos_h85_historical_receipt_snapshot.sql`
+**Creada por:** H-85 · **Decisión:** `ADR-002`
+**Consumidores:** `grep -rn "receiptSnapshot\|receipt_snapshot" balam/ supabase/ test-*.mjs`
 
 ## ¿Cuántas unidades de este renglón siguen disponibles?
 **Autoridad:** `pos.sale_line_balance()` · espejo local `DATA.saleLineBalance()`

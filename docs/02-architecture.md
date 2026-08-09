@@ -348,6 +348,22 @@ precio. Los importes guardados —`subtotal`, `iva`, `total`, `descuento`— no
 cambian: la presentación se calcula al mostrar y el ticket nunca consulta las
 promociones vigentes para reconstruir una venta antigua.
 
+### Evidencia visual del comprobante histórico
+
+Toda venta creada desde H-85 guarda `receiptSnapshot.version = 1` y su espejo
+remoto `pos.sales.receipt_snapshot`. El documento congela identidad textual de
+la tienda y vendedor, y por cada renglón: nombre, SKU comercial, talla
+código/etiqueta, color, ornamento, colores de ornamento y atributos visibles.
+`BalamTicket` es una proyección de esa evidencia y de los importes ya guardados;
+no consulta `DATA.products` por SKU durante una impresión o reimpresión.
+
+La compatibilidad con ventas anteriores es conservadora: se imprimen nombre,
+SKU, talla, precio y ornamento que ya vivan en el renglón; un dato ausente se
+omite o conserva como código crudo. Nunca se completa desde el producto actual.
+La reimpresión sólo monta ese documento: no registra pagos, movimientos ni otro
+documento. Reportes imprime en una ventana A4 autocontenida, separada del modo
+térmico de 80 mm.
+
 ## AUTH
 
 Archivo: `balam/auth.jsx`. API: `window.AUTH`.
