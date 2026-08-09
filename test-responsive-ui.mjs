@@ -2,15 +2,37 @@ import { chromium } from 'playwright-core';
 import { createServer } from 'node:http';
 import { createReadStream, existsSync } from 'node:fs';
 import { resolve, join, extname } from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 
 const ROOT = resolve('.');
 const PUBLIC_URL = process.env.BALAM_BASE_URL;
 const ARTIFACT_PATH = process.env.BALAM_ARTIFACT_PATH;
+const REMOTE_ARTIFACT_URL = process.env.BALAM_ARTIFACT_URL;
+let remoteArtifact = null;
+if (REMOTE_ARTIFACT_URL) {
+  const response = await fetch(REMOTE_ARTIFACT_URL, { cache: 'no-store' });
+  if (!response.ok) throw new Error(`No se pudo descargar el artefacto público: HTTP ${response.status}`);
+  remoteArtifact = Buffer.from(await response.arrayBuffer());
+}
+if (remoteArtifact) {
+  const committed = execFileSync('git', ['show', 'HEAD:index.html'], { maxBuffer: 64 * 1024 * 1024 });
+  const digest = value => createHash('sha256').update(value).digest('hex');
+  if (digest(remoteArtifact) !== digest(committed)) {
+    throw new Error(`El artefacto público no coincide con HEAD: ${digest(remoteArtifact)} != ${digest(committed)}`);
+  }
+  console.log(`Artefacto público verificado: ${digest(remoteArtifact)}`);
+}
 const WIDTHS = [320, 360, 375, 390, 430, 600, 768, 1024, 1280, 1440];
 const SCREENS = ['dashboard', 'pos', 'inventario', 'clientes', 'apartados', 'prestamos', 'devoluciones', 'descuentos', 'vendedores', 'reportes', 'config'];
 const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
 const server = createServer((req, res) => {
   const pathname = decodeURIComponent(req.url.split('?')[0]);
+  if (remoteArtifact && (pathname === '/' || pathname === '/index.html')) {
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.end(remoteArtifact);
+    return;
+  }
   const file = ARTIFACT_PATH && (pathname === '/' || pathname === '/index.html')
     ? resolve(ARTIFACT_PATH)
     : join(ROOT, pathname === '/' ? 'index.html' : pathname);
