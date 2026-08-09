@@ -101,7 +101,7 @@
     }
 
     return h('div', { className: 'flex-1 overflow-y-auto bg-background font-body text-on-surface' },
-      h('div', { className: 'p-6 max-w-[1280px] mx-auto space-y-6' }, [
+      h('div', { className: 'w-full min-w-0 px-4 py-6 sm:p-6 max-w-[1280px] mx-auto space-y-6' }, [
 
         // Encabezado + acciones de salida (imprimir listado / Excel)
         h('div', { key: 'hd', className: 'flex flex-wrap items-end justify-between gap-4' }, [
@@ -110,7 +110,7 @@
             h('p', { key: 'b', className: 'text-caption text-on-surface-variant mt-1' },
               todos.length ? `${todos.length} apartado(s) abiertos · ${fmt(porCobrar).replace('.00', '')} por cobrar` : 'No hay apartados abiertos.'),
           ]),
-          h('div', { key: 'act', className: 'flex gap-3' }, [
+          h('div', { key: 'act', className: 'flex flex-wrap gap-2 sm:gap-3' }, [
             h('button', {
               key: 'p', className: 'flex items-center gap-2 px-4 py-2 border border-outline-variant rounded-lg hover:bg-surface-container-low transition-all text-body font-semibold',
               onClick: () => imprimirListado(rows),
@@ -126,7 +126,7 @@
         ]),
 
         // KPIs
-        h('div', { key: 'kpi', className: 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4' }, [
+        h('div', { key: 'kpi', className: 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4' }, [
           kpi('Saldo por cobrar', fmt(porCobrar).replace('.00', ''), 'cash', `${todos.length} apartado(s) abiertos`, 'gold'),
           kpi('Anticipos y abonos', fmt(yaCobrado).replace('.00', ''), 'check', `de ${fmt(comprometido).replace('.00', '')} comprometidos`, 'success'),
           kpi('Piezas comprometidas', String(piezas), 'box', 'aún no descontadas del inventario', 'neutral'),
@@ -135,7 +135,7 @@
 
         // Búsqueda + filtros
         h(GlassCard, { key: 'f', className: 'p-4 flex flex-wrap items-center gap-4' }, [
-          h('div', { key: 's', className: 'relative flex-1 min-w-[240px]' }, [
+          h('div', { key: 's', className: 'relative flex-1 basis-full sm:basis-auto min-w-0' }, [
             h(MS, { key: 'i', name: 'search', size: 18, className: 'absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant' }),
             h('input', {
               key: 'in', value: q, onChange: e => setQ(e.target.value), placeholder: 'Buscar por folio o cliente…',
@@ -442,14 +442,7 @@
     warning: 'bg-warning-soft text-warning', neutral: 'bg-surface-container text-on-surface-variant',
   };
   function kpi(label, value, icon, sub, tone) {
-    return h('div', { key: label, className: CARD + ' p-5 flex items-start gap-4' }, [
-      h('div', { key: 'i', className: 'w-11 h-11 rounded-xl grid place-items-center shrink-0 ' + (KPI_TONE[tone] || KPI_TONE.neutral) }, h(MS, { name: icon, size: 22 })),
-      h('div', { key: 't', className: 'min-w-0' }, [
-        h('div', { key: 'a', className: 'text-overline uppercase text-on-surface-variant' }, label),
-        h('div', { key: 'b', className: 'font-headline text-h1 text-primary leading-tight' }, value),
-        h('div', { key: 'c', className: 'text-caption text-on-surface-variant' }, sub),
-      ]),
-    ]);
+    return h(window.UI.KPI, { key: label, label, value, icon, helper: sub, tone });
   }
 
   // ── Salidas: Excel e impresión del listado ──────────────────────────────────

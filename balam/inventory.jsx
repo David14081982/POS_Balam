@@ -106,6 +106,13 @@
     window.UI.useSyncActivity(!!(editing || importPreview), ['products', 'config', 'promotions'], { screen: 'inventory' });
     const [page, setPage] = useState(1);
     const fileRef = useRef(null);
+    const [mobileTable, setMobileTable] = useState(() => window.matchMedia('(max-width: 767px)').matches);
+    useEffect(() => {
+      const media = window.matchMedia('(max-width: 767px)');
+      const onChange = event => setMobileTable(event.matches);
+      media.addEventListener('change', onChange);
+      return () => media.removeEventListener('change', onChange);
+    }, []);
 
     function refresh() { setProducts(D.products.slice()); }
     // El pull de la nube reemplaza D.products DESPUÉS de montar esta pantalla (y un import
@@ -237,9 +244,9 @@
       .reduce((b, size) => b + (Number(size.stock) || 0) * D.listPrice(p, size.value), 0), 0);
 
     return h('div', { className: 'flex-1 overflow-y-auto bg-background font-body text-on-surface' },
-      h('div', { className: 'p-10 max-w-container-max mx-auto' }, [
+      h('div', { className: 'w-full min-w-0 px-4 py-6 sm:px-6 lg:p-10 max-w-container-max mx-auto' }, [
         // KPIs
-        h('div', { key: 'kpi', className: 'grid grid-cols-1 md:grid-cols-4 gap-gutter mb-8' }, [
+        h('div', { key: 'kpi', className: 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-gutter mb-8' }, [
           kpi('SKUs activos', rows.length),
           kpi('Unidades en stock', totalUnidades),
           kpi('Stock bajo', lowCount, true),
@@ -252,7 +259,7 @@
         h('div', { key: 'fl', className: 'flex flex-col gap-4 mb-6' }, [
           h('div', { key: 'r1', className: 'flex items-end justify-between gap-4 flex-wrap' }, [
             h('div', { key: 'l', className: 'flex items-end gap-3 flex-wrap' }, [
-              h('div', { key: 's', className: 'relative w-72' }, [
+              h('div', { key: 's', className: 'relative w-full sm:w-72 min-w-0' }, [
                 h('span', { key: 'i', className: 'absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/50' }, h(MS, { name: 'search', size: 20 })),
                 h('input', { key: 'in', className: 'w-full bg-surface border border-outline-variant rounded-lg pl-10 pr-4 py-2.5 text-body focus:ring-1 focus:ring-primary focus:border-primary transition-all', placeholder: 'Buscar SKU, modelo o color…', value: query, onChange: e => { setQuery(e.target.value); setPage(1); } }),
               ]),
@@ -261,10 +268,10 @@
             h('button', { key: 'add', 'data-testid': 'inventory-new-product', className: 'flex items-center gap-2 px-6 py-2.5 bg-primary text-on-primary rounded-lg hover:opacity-90 transition-all text-overline font-bold uppercase tracking-wider shadow-e2', onClick: () => setEditing({ mode: 'new', product: blankProduct() }) }, [h(MS, { key: 'i', name: 'plus', size: 18 }), 'Nuevo producto']),
           ]),
           // Excel
-          h('div', { key: 'r2', className: 'flex items-center gap-4 py-2 border-y border-outline-variant/60' }, [
+          h('div', { key: 'r2', className: 'flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 py-3 border-y border-outline-variant/60 min-w-0' }, [
             h('span', { key: 'l', className: 'text-overline font-bold text-on-surface-variant uppercase tracking-widest flex items-center gap-2' }, [h(MS, { key: 'i', name: 'box', size: 18 }), 'Excel:']),
             h('input', { key: 'f', ref: fileRef, type: 'file', accept: '.xlsx,.xls,.csv', className: 'hidden', onChange: onPickFile }),
-            h('div', { key: 'b', className: 'flex gap-2' }, [
+            h('div', { key: 'b', className: 'flex flex-wrap gap-2 min-w-0' }, [
               h('button', { key: 't', className: XLSBTN, onClick: () => window.XLSXIO.exportTemplate() }, [h(MS, { key: 'i', name: 'download', size: 16 }), 'Plantilla']),
               h('button', { key: 'i', className: XLSBTN, onClick: () => fileRef.current && fileRef.current.click() }, [h(MS, { key: 'i', name: 'upload', size: 16 }), 'Importar']),
               h('button', { key: 'e', className: XLSBTN, onClick: () => window.XLSXIO.exportInventory(products) }, [h(MS, { key: 'i', name: 'file_export', size: 16 }), 'Exportar']),
@@ -274,7 +281,21 @@
         ]),
         // Tabla
         h('div', { key: 'tbl', className: CARD + ' overflow-hidden shadow-e1' }, [
-          h('div', { key: 'sc', className: 'overflow-x-auto' }, h('table', { className: 'w-full text-left border-collapse' }, [
+          mobileTable && h('div', { key: 'mobile', className: 'divide-y divide-outline-variant' }, slice.map(p => {
+            const total = D.totalStock(p);
+            return h('button', { key: p.id, className: 'w-full min-h-11 p-4 text-left hover:bg-surface-container transition-colors', onClick: () => setDetail(p), 'aria-label': `Abrir ${p.nombre}` }, [
+              h('div', { key: 'top', className: 'flex items-start gap-3 min-w-0' }, [
+                h(ProductImage, { key: 'i', p, className: 'w-12 h-14 rounded shadow-e1 border border-outline-variant shrink-0' }),
+                h('div', { key: 'copy', className: 'flex-1 min-w-0' }, [
+                  h('div', { key: 'name', className: 'font-bold text-body text-primary whitespace-normal [overflow-wrap:anywhere]' }, p.nombre),
+                  h('div', { key: 'sku', className: 'mt-1 text-overline font-mono text-on-surface-variant [overflow-wrap:anywhere]' }, p.sku),
+                  h('div', { key: 'meta', className: 'mt-2 flex flex-wrap items-center gap-2' }, [h(StockPill, { key: 'stock', n: total }), h('span', { key: 'price', className: 'font-headline text-body text-primary' }, precioTexto(p))]),
+                ]),
+                h(MS, { key: 'next', name: 'chevRight', size: 20, className: 'shrink-0 text-on-surface-variant' }),
+              ]),
+            ]);
+          })),
+          !mobileTable && h('div', { key: 'sc', className: 'overflow-x-auto', 'data-horizontal-scroll': 'inventory-table', tabIndex: 0, role: 'region', 'aria-label': 'Tabla completa de inventario' }, h('table', { className: 'w-full text-left border-collapse' }, [
             h('thead', { key: 'h' }, h('tr', { className: 'bg-surface-container/50 border-b border-outline-variant' },
               ['Producto', 'SKU', 'Atributos', 'Color / Orn.', 'Precio', 'Stock', ''].map((c, i) =>
                 h('th', { key: i, className: 'px-4 py-4 text-overline uppercase tracking-wider font-semibold text-on-surface-variant/80' + (i === 0 ? ' pl-6' : '') }, c)))),
@@ -322,13 +343,7 @@
   }
 
   function kpi(label, value, gold, suffix) {
-    return h('div', { key: label, className: CARD + ' p-6' + (gold ? ' border-l-4 border-l-secondary' : '') }, [
-      h('p', { key: 'l', className: 'text-overline text-on-surface-variant uppercase tracking-widest mb-2 opacity-70 font-semibold' }, label),
-      h('div', { key: 'v', className: 'flex items-baseline gap-1' }, [
-        h('h3', { key: 'a', className: 'font-headline text-h1 text-primary' }, value),
-        suffix && h('span', { key: 'b', className: 'text-overline text-on-surface-variant font-bold' }, suffix),
-      ]),
-    ]);
+    return h(window.UI.KPI, { key: label, label, value, unit: suffix, tone: gold ? 'gold' : 'neutral', className: gold ? 'border-l-4 border-l-secondary' : '' });
   }
 
   function blankProduct() {
@@ -359,7 +374,7 @@
       : [];
     return h(React.Fragment, {}, [
       h('div', { key: 'ov', className: 'fixed inset-0 bg-primary-container/40 backdrop-blur-sm z-[55] transition-opacity duration-300 ' + (open ? 'opacity-100' : 'opacity-0 pointer-events-none'), onClick: onClose }),
-      h('div', { key: 'dr', className: 'fixed inset-y-0 right-0 w-[460px] bg-surface border-l border-outline-variant z-[60] shadow-e3 flex flex-col transition-transform duration-300 ' + (open ? 'translate-x-0' : 'translate-x-full') },
+      h('div', { key: 'dr', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Detalle del producto', className: 'fixed inset-0 sm:inset-y-0 sm:left-auto sm:right-0 w-full sm:w-[460px] max-w-full bg-surface border-l border-outline-variant z-[60] shadow-e3 flex flex-col transition-transform duration-300 ' + (open ? 'translate-x-0' : 'translate-x-full') },
         p && [
           h('div', { key: 'h', className: 'px-8 py-6 border-b border-outline-variant flex justify-between items-center' }, [
             h('div', { key: 't' }, [

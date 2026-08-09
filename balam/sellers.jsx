@@ -102,7 +102,7 @@
     }
 
     return h('div', { className: 'flex-1 overflow-y-auto bg-background font-body text-on-surface' },
-      h('div', { className: 'p-10 max-w-container-max mx-auto' }, [
+      h('div', { className: 'w-full min-w-0 px-4 py-6 sm:px-6 lg:p-10 max-w-container-max mx-auto' }, [
         h('section', { key: 'hd', className: 'flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6' }, [
           h('div', { key: 'l' }, [
             h('h2', { key: 't', className: 'font-headline text-headline-lg text-primary' }, 'Vendedores y comisiones'),
@@ -119,18 +119,18 @@
         descuadres.length ? h('div', { key: 'warn', 'data-testid': 'commission-mismatch', className: 'mb-8 p-4 rounded-lg border border-danger/40 bg-danger/5 text-body' },
           'Hay ' + descuadres.length + ' vendedor(es) cuyo saldo pendiente calculado no coincide con el acumulado guardado. Revisa la sincronización antes de liquidar: ' +
           descuadres.map(x => x.s.nombre + ' (' + fmt(x.row.descuadre) + ')').join(', ')) : null,
-        h('section', { key: 'sum', className: 'grid grid-cols-1 md:grid-cols-3 gap-gutter mb-12' }, [
+        h('section', { key: 'sum', className: 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-gutter mb-12' }, [
           h('div', { key: 'a', className: 'bg-surface p-8 rounded-lg ' + SHADOW + ' flex flex-col justify-between' }, [
             h('div', { key: 't' }, [
               h('span', { key: 'l', className: 'text-overline font-bold text-on-surface-variant uppercase tracking-[0.15em]' }, 'Ventas del mes (equipo)'),
-              h('h3', { key: 'v', className: 'font-headline text-display text-primary mt-4' }, fmt(totalVentas).replace('.00', '')),
+              h('h3', { key: 'v', className: 'font-headline text-primary mt-4 leading-tight [font-size:clamp(1.35rem,5.5vw,2.5rem)] [overflow-wrap:anywhere]' }, fmt(totalVentas).replace('.00', '')),
             ]),
             h('div', { key: 'd', className: 'mt-8 flex items-center text-on-surface-variant' }, [h(MS, { key: 'i', name: 'calendar', size: 18, className: 'mr-1' }), h('span', { key: 's', className: 'text-body' }, periodoLabel())]),
           ]),
           h('div', { key: 'b', className: 'bg-surface p-8 rounded-lg border-t-2 border-t-gold ' + SHADOW + ' flex flex-col justify-between' }, [
             h('div', { key: 't' }, [
               h('span', { key: 'l', className: 'text-overline font-bold text-on-surface-variant uppercase tracking-[0.15em]' }, 'Comisiones por liquidar'),
-              h('h3', { key: 'v', 'data-testid': 'commission-pending-total', className: 'font-headline text-display text-primary mt-4' }, fmt(totalComision).replace('.00', '')),
+              h('h3', { key: 'v', 'data-testid': 'commission-pending-total', className: 'font-headline text-primary mt-4 leading-tight [font-size:clamp(1.35rem,5.5vw,2.5rem)] [overflow-wrap:anywhere]' }, fmt(totalComision).replace('.00', '')),
             ]),
             h('div', { key: 'd', className: 'mt-8 flex items-center text-on-surface-variant' }, [h(MS, { key: 'i', name: 'calendar', size: 18, className: 'mr-1' }), h('span', { key: 's', className: 'text-body' }, periodoLabel())]),
           ]),

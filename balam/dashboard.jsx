@@ -78,10 +78,10 @@
     const ventasEstrella = estrella ? D.sales.reduce((a, s) => a + (s.lineas || []).filter(l => l.sku === estrella.sku).reduce((b, l) => b + (l.qty || 0), 0), 0) : 0;
 
     return h('div', { className: 'flex-1 overflow-y-auto bg-background font-body text-on-surface' },
-      h('div', { className: 'p-10 max-w-[1280px] mx-auto space-y-8' }, [
+      h('div', { className: 'w-full min-w-0 px-4 py-6 sm:px-6 lg:p-10 max-w-[1280px] mx-auto space-y-6 lg:space-y-8' }, [
 
         // Banner
-        h('section', { key: 'b', className: 'relative overflow-hidden rounded-xl bg-primary-container p-8 text-on-primary flex justify-between items-center' }, [
+        h('section', { key: 'b', className: 'relative rounded-xl bg-primary-container p-5 sm:p-8 text-on-primary flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 min-w-0' }, [
           // Imagen decorativa derecha (~40%, full height) — oculta en móvil
           h('div', { key: 'img', className: 'hidden md:block absolute right-0 top-0 h-full w-2/5 pointer-events-none select-none' }, [
             h('img', { key: 'i', src: (window.__IMG_MAP && window.__IMG_MAP[BANNER_IMG]) || BANNER_IMG, alt: '', 'aria-hidden': true, className: 'w-full h-full object-cover opacity-90', onError: e => { e.currentTarget.style.display = 'none'; } }),
@@ -103,7 +103,7 @@
         ]),
 
         // Métricas
-        h('div', { key: 'm', className: 'grid grid-cols-1 md:grid-cols-4 gap-6' }, [
+        h('div', { key: 'm', className: 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6' }, [
           metric('Ventas hoy', fmt(ventasHoy).replace('.00', ''), deltaHoy == null ? 'neutral' : (deltaHoy >= 0 ? 'success' : 'danger'), deltaHoy == null ? '—' : (deltaHoy >= 0 ? '+' : '') + deltaHoy + '%', deltaHoy == null ? 'Sin ventas ayer para comparar' : 'Comparado con ayer'),
           metric('Tickets', String(hoy.length), 'neutral', 'Hoy', 'Promedio: ' + fmt(promedio).replace('.00', '') + ' / ticket'),
           metric('Favorito', estrella ? estrella.nombre : '—', 'gold', 'Destacado', ventasEstrella + ' vendidas este periodo', true),
@@ -217,14 +217,7 @@
   }
 
   function metric(label, value, tone, badge, footer, big) {
-    return h('div', { key: label, className: CARD_INT + ' p-6' }, [
-      h('div', { key: 'h', className: 'flex justify-between items-center mb-4' }, [
-        h('span', { key: 'l', className: OVERLINE }, label),
-        h(Badge, { key: 'b', tone }, badge),
-      ]),
-      h('p', { key: 'v', className: 'font-headline text-primary truncate ' + (big ? 'text-h2' : 'text-h1') }, value),
-      h('div', { key: 'f', className: 'mt-4 flex items-center gap-1.5 text-caption text-muted' }, footer),
-    ]);
+    return h(window.UI.KPI, { key: label, label, value, tone, helper: h('div', { className: 'flex flex-wrap items-center gap-2' }, [h(Badge, { key: 'b', tone }, badge), h('span', { key: 'f' }, footer)]) });
   }
   function cumple(nombre, cuando, hoy) {
     return h('div', { key: nombre, className: 'flex justify-between items-center' }, [

@@ -36,13 +36,13 @@
     if (addingUser) return h(NewUserForm, { user: addingUser === true ? null : addingUser, onCancel: () => setAddingUser(false), onSaved: () => { setAddingUser(false); bump(v => v + 1); } });
 
     const ctx = { setAddingUser, refresh: () => bump(v => v + 1) };
-    return h('div', Object.assign({ className: 'flex-1 overflow-y-auto bg-background font-body text-on-surface p-6' }, syncFocus),
-      h('div', { className: 'grid grid-cols-1 md:grid-cols-[220px_1fr] gap-6 max-w-5xl' }, [
-        h(GlassCard, { key: 'nav', className: 'p-2 h-fit md:sticky md:top-6' },
+    return h('div', Object.assign({ className: 'flex-1 min-w-0 overflow-y-auto bg-background font-body text-on-surface px-4 py-6 sm:p-6' }, syncFocus),
+      h('div', { className: 'grid grid-cols-1 md:grid-cols-[220px_minmax(0,1fr)] gap-4 md:gap-6 max-w-5xl min-w-0' }, [
+        h(GlassCard, { key: 'nav', className: 'p-2 h-fit md:sticky md:top-6 flex md:block gap-1 overflow-x-auto no-scrollbar min-w-0' },
           sections.map(s => h('button', {
             key: s.id,
             'data-testid': 'settings-section-' + s.section,
-            className: 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ' +
+            className: 'shrink-0 min-h-11 md:w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ' +
               (sec === s.section ? 'bg-surface-container-low text-primary font-medium' : 'text-on-surface-variant hover:bg-surface-container-low'),
             onClick: () => setSec(s.section),
           }, [h(MS, { key: 'i', name: s.icon, size: 18 }), h('span', { key: 'l', className: 'text-body' }, s.title)])),

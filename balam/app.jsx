@@ -52,12 +52,12 @@
     });
     const n = items.length;
     return h('div', { className: 'relative' }, [
-      h('button', { key: 'btn', onClick: () => setOpen(o => !o), className: 'relative w-10 h-10 grid place-items-center text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-colors', title: 'Notificaciones' }, [
+      h('button', { key: 'btn', onClick: () => setOpen(o => !o), className: 'relative w-11 h-11 grid place-items-center text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-colors', title: 'Notificaciones', 'aria-label': 'Notificaciones', 'aria-expanded': open ? 'true' : 'false' }, [
         h(MS, { key: 'i', name: 'bell', size: 20 }),
         n > 0 && h('span', { key: 'd', className: 'absolute top-1.5 right-1.5 w-2 h-2 rounded-full border border-surface', style: { background: '#ba1a1a' } }),
       ]),
       open && h('div', { key: 'bk', className: 'fixed inset-0 z-[65]', onClick: () => setOpen(false) }),
-      open && h('div', { key: 'pop', className: 'absolute right-0 mt-2 w-80 bg-surface rounded-xl shadow-e3 border border-outline-variant z-[70] overflow-hidden' }, [
+      open && h('div', { key: 'pop', className: 'fixed left-3 right-3 top-16 sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:w-80 mt-2 bg-surface rounded-xl shadow-e3 border border-outline-variant z-[70] overflow-hidden' }, [
         h('div', { key: 'h', className: 'px-4 py-3 border-b border-outline-variant flex items-center justify-between' }, [
           h('span', { key: 't', className: 'text-overline font-bold uppercase tracking-widest text-primary' }, 'Notificaciones'),
           n > 0 && h('span', { key: 'n', className: 'text-overline font-bold text-on-surface-variant' }, String(n)),
@@ -103,6 +103,18 @@
     // Sidebar colapsable (mini-variant): persiste entre sesiones.
     const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem('balam-sidebar') === '1'; } catch (e) { return false; } });
     useEffect(() => { try { localStorage.setItem('balam-sidebar', collapsed ? '1' : '0'); } catch (e) { /* */ } }, [collapsed]);
+    const [mobileNavOpen, setMobileNavOpen] = useState(false);
+    useEffect(() => {
+      if (!mobileNavOpen) return undefined;
+      const previous = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      const onKey = event => { if (event.key === 'Escape') setMobileNavOpen(false); };
+      window.addEventListener('keydown', onKey);
+      return () => {
+        document.body.style.overflow = previous;
+        window.removeEventListener('keydown', onKey);
+      };
+    }, [mobileNavOpen]);
     // Auth real (Supabase) + nube. Solo una sesión autenticada sincroniza pos.* (RLS).
     const [, bumpCfg] = useState(0);
     const [, bumpWriter] = useState(0);
@@ -144,8 +156,10 @@
     function go(id) {
       if (!window.AUTH.requireAccess(id)) return false;
       setPage(id);
+      setMobileNavOpen(false);
       return true;
     }
+    const navCollapsed = collapsed && !mobileNavOpen;
 
     // Gate de seguridad SOLO en dominio real: sin sesión no se muestra la app (RLS protege).
     if (REQUIRE_AUTH) {
@@ -186,11 +200,17 @@
         ]));
     }
 
-    return h('div', { className: 'flex h-full bg-background font-body text-on-surface' }, [
+    return h('div', { className: 'flex h-full min-w-0 bg-background font-body text-on-surface' }, [
+      mobileNavOpen && h('button', {
+        key: 'nav-backdrop', className: 'fixed inset-0 z-[80] bg-on-surface/45 backdrop-blur-sm md:hidden',
+        onClick: () => setMobileNavOpen(false), 'aria-label': 'Cerrar navegación', tabIndex: -1,
+      }),
       // ---------- Sidebar ----------
-      h('aside', { key: 'sb', className: 'shrink-0 flex flex-col py-4 overflow-hidden', style: { background: '#131B2E', width: collapsed ? 64 : 256, transition: 'width .25s ease' } }, [
-        h('div', { key: 'br', className: 'mb-8 mt-2 flex items-center gap-3 ' + (collapsed ? 'px-2 justify-center' : 'px-5') },
-          collapsed
+      h('aside', { key: 'sb', id: 'balam-navigation', 'aria-label': 'Navegación principal',
+        className: 'fixed inset-y-0 left-0 z-[90] w-[min(280px,calc(100vw-40px))] shrink-0 flex flex-col py-4 overflow-hidden transition-all duration-200 md:static md:z-auto md:translate-x-0 ' + (mobileNavOpen ? 'translate-x-0 ' : '-translate-x-full ') + (collapsed ? 'md:w-16' : 'md:w-64'),
+        style: { background: '#131B2E' } }, [
+        h('div', { key: 'br', className: 'mb-8 mt-2 flex items-center gap-3 ' + (navCollapsed ? 'px-2 justify-center' : 'px-5') },
+          navCollapsed
             ? [h('button', { key: 'tg', onClick: () => setCollapsed(false), title: 'Expandir menú', className: 'w-10 h-10 rounded-lg grid place-items-center shrink-0 transition-colors', style: { color: '#5D637B' }, onMouseEnter: e => e.currentTarget.style.background = '#1C2437', onMouseLeave: e => e.currentTarget.style.background = 'transparent' }, h(MS, { name: 'chevRight', size: 22 }))]
             : [
               h('div', { key: 'm', className: 'w-9 h-9 rounded-lg grid place-items-center shrink-0 overflow-hidden', style: { background: '#1C2437', color: '#FFE088' } },
@@ -199,7 +219,7 @@
                 h('div', { key: 'a', className: 'font-headline text-[18px] text-white leading-none truncate' }, 'Balam'),
                 h('div', { key: 'b', className: 'text-[10px] uppercase tracking-widest mt-1 truncate', style: { color: '#5D637B' } }, 'Guayaberas'),
               ]),
-              h('button', { key: 'tg', onClick: () => setCollapsed(true), title: 'Colapsar menú', className: 'w-8 h-8 rounded-lg grid place-items-center shrink-0 transition-colors', style: { color: '#5D637B' }, onMouseEnter: e => e.currentTarget.style.background = '#1C2437', onMouseLeave: e => e.currentTarget.style.background = 'transparent' }, h(MS, { name: 'chevLeft', size: 20 })),
+              h('button', { key: 'tg', onClick: () => mobileNavOpen ? setMobileNavOpen(false) : setCollapsed(true), title: mobileNavOpen ? 'Cerrar menú' : 'Colapsar menú', className: 'w-11 h-11 rounded-lg grid place-items-center shrink-0 transition-colors', style: { color: '#AEB4C5' }, onMouseEnter: e => e.currentTarget.style.background = '#1C2437', onMouseLeave: e => e.currentTarget.style.background = 'transparent' }, h(MS, { name: mobileNavOpen ? 'close' : 'chevLeft', size: 20 })),
             ]),
         h('nav', { key: 'nav', className: 'flex-1 px-3 flex flex-col gap-1' },
           navigation.filter(n => canAccess(n.id)).map(n => {
@@ -207,7 +227,7 @@
             const badge = n.liveBadge ? String(D.products.length) : n.badge;
             return h('button', {
               key: n.id,
-              className: 'flex items-center gap-3 py-2.5 rounded-lg transition-colors text-left ' + (collapsed ? 'justify-center px-0 ' : 'px-4 ') + (active ? 'font-semibold' : ''),
+              className: 'min-h-11 flex items-center gap-3 py-2.5 rounded-lg transition-colors text-left ' + (navCollapsed ? 'justify-center px-0 ' : 'px-4 ') + (active ? 'font-semibold' : ''),
               style: active ? { background: '#1C2437', color: '#FFE088' } : { color: '#FFFFFF' },
               onMouseEnter: e => { if (!active) e.currentTarget.style.background = '#1C2437'; },
               onMouseLeave: e => { if (!active) e.currentTarget.style.background = 'transparent'; },
@@ -215,8 +235,8 @@
               title: n.menuLabel,
             }, [
               h(MS, { key: 'i', name: n.icon, size: 20, fill: active }),
-              !collapsed && h('span', { key: 'l', className: 'flex-1 text-sm' }, n.menuLabel),
-              !collapsed && badge && h('span', { key: 'b', className: 'px-1.5 py-0.5 text-[10px] font-bold rounded', style: { background: '#131B2E', color: active ? '#FFE088' : '#FFFFFF' } }, badge),
+              !navCollapsed && h('span', { key: 'l', className: 'flex-1 text-sm' }, n.menuLabel),
+              !navCollapsed && badge && h('span', { key: 'b', className: 'px-1.5 py-0.5 text-[10px] font-bold rounded', style: { background: '#131B2E', color: active ? '#FFE088' : '#FFFFFF' } }, badge),
             ]);
           })),
         canAccess('pos') && h('div', { key: 'cta', className: 'px-3 mt-2' },
@@ -224,10 +244,10 @@
             className: 'w-full flex items-center justify-center gap-2 py-3 font-label-sm uppercase tracking-widest text-xs rounded-lg active:scale-95 transition-all hover:opacity-90',
             style: { background: '#FFE088', color: '#131B2E' },
             onClick: () => go('pos'), title: 'Nueva venta',
-          }, collapsed ? [h(MS, { key: 'i', name: 'add', size: 20 })] : [h(MS, { key: 'i', name: 'add', size: 18 }), 'Nueva venta'])),
+          }, navCollapsed ? [h(MS, { key: 'i', name: 'add', size: 20 })] : [h(MS, { key: 'i', name: 'add', size: 18 }), 'Nueva venta'])),
         h('div', { key: 'foot', className: 'px-3 mt-4 pt-4', style: { borderTop: '1px solid #1C2437' } },
           h('button', {
-            className: 'w-full flex items-center gap-3 py-1.5 rounded-lg transition-colors ' + (collapsed ? 'justify-center px-0' : 'px-2'),
+            className: 'w-full min-h-11 flex items-center gap-3 py-1.5 rounded-lg transition-colors ' + (navCollapsed ? 'justify-center px-0' : 'px-2'),
             onMouseEnter: e => { e.currentTarget.style.background = '#1C2437'; },
             onMouseLeave: e => { e.currentTarget.style.background = 'transparent'; },
             onClick: () => { if (user) window.AUTH.logout(); },
@@ -235,26 +255,28 @@
           }, [
             h('div', { key: 'a', className: 'w-9 h-9 rounded-full grid place-items-center text-xs font-bold shrink-0', style: { background: user ? '#FFE088' : '#1C2437', color: user ? '#131B2E' : '#5D637B' } },
               user ? (user.iniciales || 'US') : h(MS, { name: 'user', size: 18 })),
-            !collapsed && h('div', { key: 'm', className: 'flex-1 text-left min-w-0' }, [
+            !navCollapsed && h('div', { key: 'm', className: 'flex-1 text-left min-w-0' }, [
               h('div', { key: 'n', className: 'text-sm font-medium text-white truncate' }, user ? user.nombre : 'Modo local'),
               h('div', { key: 'r', className: 'text-[10px] uppercase tracking-widest', style: { color: '#5D637B' } }, user ? (isAdmin ? 'Administrador' : 'Vendedor') : 'Sin candado'),
             ]),
-            !collapsed && h(MS, { key: 'i', name: user ? 'logout' : 'arrowUpRight', size: 18, style: { color: '#5D637B' } }),
+            !navCollapsed && h(MS, { key: 'i', name: user ? 'logout' : 'arrowUpRight', size: 18, style: { color: '#5D637B' } }),
           ])),
       ]),
       // ---------- Contenido ----------
       h('main', { key: 'ct', className: 'flex-1 flex flex-col min-w-0' }, [
         // Topbar
-        h('header', { key: 'tb', className: 'h-16 shrink-0 flex items-center gap-4 px-6 bg-surface/80 backdrop-blur-md border-b border-outline-variant' }, [
-          h('h1', { key: 't', className: 'font-headline text-headline-md text-primary' }, visibleScreen ? visibleScreen.title : 'Balam'),
-          D.demoActive && D.demoActive() && h('span', { key: 'demo', className: 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gold-soft text-gold-text text-overline font-bold uppercase tracking-widest', title: 'Datos de demostración (local, no afecta producción)' }, [h(MS, { key: 'i', name: 'star', size: 13, fill: true }), 'Demo']),
+        h('header', { key: 'tb', className: 'min-h-16 shrink-0 flex items-center gap-2 sm:gap-4 px-3 sm:px-6 py-2 bg-surface/80 backdrop-blur-md border-b border-outline-variant' }, [
+          h('button', { key: 'menu', className: 'md:hidden w-11 h-11 shrink-0 grid place-items-center rounded-lg hover:bg-surface-container focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary', onClick: () => setMobileNavOpen(true), 'aria-label': 'Abrir navegación', 'aria-controls': 'balam-navigation', 'aria-expanded': mobileNavOpen ? 'true' : 'false' }, h(MS, { name: 'menu', size: 22 })),
+          h('h1', { key: 't', className: 'min-w-0 truncate font-headline text-lg sm:text-headline-md text-primary' }, visibleScreen ? visibleScreen.title : 'Balam'),
+          D.demoActive && D.demoActive() && h('span', { key: 'demo', className: 'hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gold-soft text-gold-text text-overline font-bold uppercase tracking-widest', title: 'Datos de demostración (local, no afecta producción)' }, [h(MS, { key: 'i', name: 'star', size: 13, fill: true }), 'Demo']),
           h('div', { key: 's', className: 'flex-1' }),
           visiblePage !== 'pos' && canAccess('pos') && h('button', {
-            key: 'pos', className: 'inline-flex items-center gap-2 px-4 h-10 bg-secondary-container text-on-secondary-container font-label-sm uppercase tracking-widest text-xs rounded-lg hover:opacity-90 transition',
+            key: 'pos', className: 'inline-flex items-center justify-center gap-2 px-3 sm:px-4 min-w-11 h-11 bg-secondary-container text-on-secondary-container font-label-sm uppercase tracking-widest text-xs rounded-lg hover:opacity-90 transition',
             onClick: () => go('pos'),
-          }, [h(MS, { key: 'i', name: 'pos', size: 18 }), 'Nueva venta']),
+            'aria-label': 'Nueva venta',
+          }, [h(MS, { key: 'i', name: 'pos', size: 18 }), h('span', { key: 'l', className: 'hidden lg:inline' }, 'Nueva venta')]),
           isAdmin && h(NotificationsBell, { key: 'b', go }),
-          h('div', { key: 'date', className: 'flex items-center gap-1.5 text-xs text-on-surface-variant capitalize' }, [h(MS, { key: 'i', name: 'calendar', size: 16 }), new Date().toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })]),
+          h('div', { key: 'date', className: 'hidden xl:flex items-center gap-1.5 text-xs text-on-surface-variant capitalize' }, [h(MS, { key: 'i', name: 'calendar', size: 16 }), new Date().toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })]),
         ]),
         // Pantalla
         (() => {

@@ -196,7 +196,7 @@
     // ---- Catálogo ----
     const catalog = h('section', { key: 'catalog', className: 'pos-cat flex-1 flex flex-col min-w-0' }, [
       // Captura / scan
-      h('div', { key: 'cap', className: 'flex gap-3 mb-6' }, [
+      h('div', { key: 'cap', className: 'flex flex-col sm:flex-row gap-3 mb-6' }, [
         h('div', { key: 'scan', className: 'relative flex-1' }, [
           h('span', { key: 'i', className: 'absolute inset-y-0 left-0 pl-3.5 flex items-center text-on-surface-variant/50' }, h(MS, { name: 'barcode', size: 20 })),
           h('input', {
@@ -214,7 +214,7 @@
         }, [h(MS, { key: 'i', name: 'star', size: 20, fill: onlyPop }), 'Populares']),
       ]),
       // Filtros
-      h('div', { key: 'fil', className: 'flex items-center gap-2 mb-8 overflow-x-auto pb-1' }, [
+      h('div', { key: 'fil', className: 'flex items-center gap-2 mb-6 sm:mb-8 overflow-x-auto pb-2 min-w-0', tabIndex: 0, role: 'region', 'aria-label': 'Filtros del catálogo' }, [
         // Desplegables compactos: primero talla, luego color.
         h(FilterSelect, {
           key: 'ft', value: talla, active: talla !== 'all', onChange: e => setTalla(e.target.value),
@@ -240,7 +240,7 @@
         ]),
         ...CAT_FILTERS.map(f => h('button', {
           key: f.id,
-          className: 'px-5 py-2 text-caption font-semibold uppercase tracking-wider rounded-full whitespace-nowrap border transition-all ' +
+          className: 'min-h-11 px-5 py-2 text-caption font-semibold uppercase tracking-wider rounded-full whitespace-nowrap border transition-all ' +
             (cat === f.id ? 'bg-gold text-on-gold border-gold shadow-e1' : 'bg-surface border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary'),
           onClick: () => setCat(f.id),
         }, f.label)),
@@ -267,7 +267,7 @@
     });
 
     return h('div', {
-      className: 'flex-1 min-h-0 bg-background font-body text-on-surface p-8 flex gap-8 ' + (ticketBottom ? 'flex-col' : ''),
+      className: 'flex-1 min-h-0 min-w-0 bg-background font-body text-on-surface px-4 py-6 sm:p-6 lg:p-8 flex flex-col xl:flex-row gap-6 lg:gap-8 ' + (ticketBottom ? 'xl:flex-col' : ''),
     }, [
       catalog,
       ticketPanel,
@@ -301,7 +301,7 @@
     return h('div', { className: 'relative shrink-0' }, [
       h('select', {
         key: 's', value, onChange, 'data-testid': testid,
-        className: 'h-9 pl-4 pr-9 text-caption font-semibold uppercase tracking-wider rounded-full border appearance-none cursor-pointer transition-all focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary ' +
+        className: 'h-11 pl-4 pr-9 text-caption font-semibold uppercase tracking-wider rounded-full border appearance-none cursor-pointer transition-all focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary ' +
           (active ? 'bg-gold text-on-gold border-gold shadow-e1' : 'bg-surface border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary'),
       }, menuOptions),
       h('span', { key: 'c', className: 'pointer-events-none absolute inset-y-0 right-0 pr-2.5 flex items-center ' + (active ? 'text-on-gold' : 'text-on-surface-variant') }, h(MS, { name: 'chevDown', size: 16 })),
@@ -319,7 +319,7 @@
       }, 'Confirmar vendedor'),
     ];
     return h(Modal, { title: '¿Quién realizó esta venta?', onClose, footer }, [
-      h('div', { key: 'g', className: 'grid grid-cols-3 gap-4 py-2' }, lista.map(s => {
+      h('div', { key: 'g', className: 'grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 py-2' }, lista.map(s => {
         const on = sel === s.id;
         return h('button', {
           key: s.id, className: 'flex flex-col items-center gap-2 group', onClick: () => setSel(s.id),

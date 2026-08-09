@@ -178,7 +178,7 @@
     function dup(p) { D.duplicatePromo(p.id); refresh(); toast('Promoción duplicada (en pausa)'); }
     function del(p) { if (window.confirm('¿Eliminar la promoción "' + p.nombre + '"?')) { D.removePromo(p.id); refresh(); toast('Promoción eliminada', 'var(--danger)'); } }
 
-    return h('div', { className: 'flex-1 min-h-0 overflow-y-auto bg-background font-body text-on-surface p-8' }, [
+    return h('div', { className: 'flex-1 min-h-0 min-w-0 overflow-y-auto bg-background font-body text-on-surface px-4 py-6 sm:p-8' }, [
       // Encabezado
       h('div', { key: 'hd', className: 'mb-8 flex flex-wrap gap-4 justify-between items-end' }, [
         h('div', { key: 'l', className: 'max-w-2xl' }, [
@@ -338,13 +338,13 @@
         ]),
         // Body
         h('div', { key: 'b', className: 'flex-grow overflow-y-auto px-8 py-7' },
-          h('div', { className: 'grid grid-cols-12 gap-10' }, [
+          h('div', { className: 'grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10' }, [
             // Configurador
             h('div', { key: 'cfg', className: 'col-span-12 lg:col-span-7 space-y-8' }, [
               // Información básica
               h('section', { key: 's1' }, [
                 sectionTitle('Información básica'),
-                h('div', { key: 'g', className: 'grid grid-cols-2 gap-5' }, [
+                h('div', { key: 'g', className: 'grid grid-cols-1 sm:grid-cols-2 gap-5' }, [
                   h('div', { key: 'n', className: 'col-span-2 space-y-1.5' }, [
                     h('label', { key: 'l', className: lblCls }, 'Nombre de la promoción'),
                     h('input', { key: 'c', className: underline + ' text-body-lg', placeholder: 'Ej. Gala de Verano', value: d.nombre, onChange: e => set('nombre', e.target.value), autoFocus: true }),
@@ -365,7 +365,7 @@
               // Vigencia
               h('section', { key: 's2' }, [
                 sectionTitle('Vigencia temporal'),
-                h('div', { key: 'g', className: 'grid grid-cols-2 gap-6' }, [
+                h('div', { key: 'g', className: 'grid grid-cols-1 sm:grid-cols-2 gap-6' }, [
                   h('div', { key: 'i', className: 'space-y-1.5' }, [
                     h('label', { key: 'l', className: lblCls }, 'Inicio (opcional)'),
                     h('div', { key: 'c', className: 'flex items-center gap-2 border-b border-outline-variant py-2' }, [

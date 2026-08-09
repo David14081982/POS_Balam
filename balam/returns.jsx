@@ -255,7 +255,7 @@
 
     if (receipt) return h(DirectReturnReceiptModal, { receipt, onClose: onDone });
     return h('div', { className: 'flex-1 overflow-y-auto bg-background font-body text-on-surface' },
-      h('div', { className: 'max-w-[1100px] mx-auto p-6' }, [
+      h('div', { className: 'w-full min-w-0 max-w-[1100px] mx-auto px-4 py-6 sm:p-6' }, [
         // Breadcrumb
         h('div', { key: 'bc', className: 'flex items-center gap-3 mb-6' }, [
           h('button', { key: 'b', className: 'inline-flex items-center gap-2 text-on-surface-variant hover:text-primary transition-colors', onClick: onBack }, [
@@ -837,7 +837,7 @@
   // así que se pide igual que el POS pide confirmar vendedor antes de registrar.
   function SellerModal({ sellers, onClose, onPick }) {
     return h(window.UI.Modal, { title: 'Vendedor que atiende el cambio', onClose },
-      h('div', { className: 'grid grid-cols-2 gap-2 py-2' }, sellers.length
+      h('div', { className: 'grid grid-cols-1 sm:grid-cols-2 gap-2 py-2' }, sellers.length
         ? sellers.map(v => h('button', {
             key: v.id, 'data-testid': 'cambio-vendedor', onClick: () => onPick(v.id),
             className: 'p-3 border border-outline-variant rounded-lg hover:border-primary text-left transition-colors',

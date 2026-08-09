@@ -119,8 +119,8 @@
       : null;
     const empty = ticket.length === 0;
     return h('aside', {
-      className: 'bg-surface-container-lowest rounded-xl shadow-e3 flex flex-col overflow-hidden shrink-0 ' +
-        (bottom ? 'w-full max-h-[42vh]' : 'w-[clamp(340px,30vw,440px)]'),
+      className: 'bg-surface-container-lowest rounded-xl shadow-e3 flex flex-col overflow-hidden shrink-0 w-full min-w-0 ' +
+        (bottom ? 'xl:max-h-[42vh]' : 'xl:w-[clamp(340px,30vw,440px)]'),
     }, [
       // Resumen de venta + cliente
       h('div', { key: 'top', className: 'p-4 border-b border-outline-variant bg-surface' }, [

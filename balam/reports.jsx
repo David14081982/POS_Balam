@@ -136,7 +136,7 @@
         ]),
 
         // KPIs
-        h('div', { key: 'kpi', className: 'grid grid-cols-1 md:grid-cols-4 gap-gutter mb-gutter' }, [
+        h('div', { key: 'kpi', className: 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-gutter mb-gutter' }, [
           kpi('Ventas brutas', fmt(ventasBrutas).replace('.00', ''), iV, tV, cV),
           kpi('Utilidad neta', fmt(utilidad).replace('.00', ''), iV, tV, cV),
           kpi('Total pedidos', String(pedidos), iP, tP, cP),
@@ -252,13 +252,7 @@
   }
 
   function kpi(label, value, icon, delta, deltaCls, gold) {
-    return h('div', { key: label, className: CARD + ' p-6' + (gold ? ' border-l-4 border-l-secondary' : '') }, [
-      h('p', { key: 'l', className: 'text-caption font-semibold text-on-surface-variant uppercase tracking-wider mb-2' }, label),
-      h('h3', { key: 'v', className: 'font-headline text-headline-lg text-primary' }, value),
-      delta && h('div', { key: 'd', className: 'mt-4 flex items-center gap-1 text-caption font-bold ' + (deltaCls || 'text-on-surface-variant') }, [
-        h(MS, { key: 'i', name: icon, size: 16 }), h('span', { key: 's' }, delta),
-      ]),
-    ]);
+    return h(window.UI.KPI, { key: label, label, value, icon, tone: gold ? 'gold' : 'neutral', className: gold ? 'border-l-4 border-l-secondary' : '', helper: delta ? h('span', { className: 'font-bold ' + (deltaCls || 'text-on-surface-variant') }, delta) : null });
   }
 
   // ── Reportes del cambio: trazabilidad, comisión por origen y valor perdido ─────
@@ -359,8 +353,8 @@
     const [tab, setTab] = useState('resumen');
     const TABS = [['resumen', 'Resumen', 'chart'], ['ventas', 'Ventas', 'cash'], ['cambios', 'Cambios', 'swap'], ['devoluciones', 'Devoluciones', 'undo']];
     return h('div', { className: 'flex-1 overflow-y-auto bg-background font-body text-on-surface' },
-      h('div', { className: 'p-10 max-w-container-max mx-auto' }, [
-        h('div', { key: 'tabs', className: 'inline-flex items-center gap-2 p-1.5 mb-8 bg-surface-container-low rounded-xl border border-outline-variant' },
+      h('div', { className: 'w-full min-w-0 px-4 py-6 sm:px-6 lg:p-10 max-w-container-max mx-auto' }, [
+        h('div', { key: 'tabs', className: 'flex items-center gap-2 p-1.5 mb-8 bg-surface-container-low rounded-xl border border-outline-variant overflow-x-auto no-scrollbar', role: 'tablist', 'aria-label': 'Secciones de reportes' },
           TABS.map(([id, label, icon]) => h('button', {
             key: id, onClick: () => setTab(id),
             'data-testid': id === 'cambios' ? 'reports-tab-exchanges'
@@ -377,14 +371,7 @@
 
   // ── Tarjeta de métrica y chip de variación (reutilizables en el reporte) ───────
   function metricCard(label, value, sub, extra, accent) {
-    return h('div', { key: label, className: CARD + ' p-6' + (accent ? ' border-l-4 border-l-primary' : '') }, [
-      h('p', { key: 'l', className: 'text-caption font-semibold text-on-surface-variant uppercase tracking-wider mb-2' }, label),
-      h('div', { key: 'v', className: 'flex items-end justify-between gap-2' }, [
-        h('h3', { key: 'a', className: 'font-headline text-headline-md text-primary leading-tight' }, value),
-        extra || null,
-      ]),
-      sub && h('p', { key: 's', className: 'text-caption text-on-surface-variant mt-3' }, sub),
-    ]);
+    return h(window.UI.KPI, { key: label, label, value, className: accent ? 'border-l-4 border-l-primary' : '', helper: h('div', { className: 'flex flex-wrap items-center justify-between gap-2' }, [sub ? h('span', { key: 's' }, sub) : null, extra || null]) });
   }
   // Variación. betterDown=true (devoluciones): MÁS es peor (rojo). betterDown=false (ventas): MÁS es mejor (verde).
   function deltaChip(pct, betterDown = true) {

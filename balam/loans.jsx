@@ -206,7 +206,7 @@
     }
 
     return h('div', { className: 'flex-1 overflow-y-auto bg-background font-body text-on-surface' },
-      h('div', { className: 'p-6 max-w-[1280px] mx-auto space-y-6' }, [
+      h('div', { className: 'w-full min-w-0 px-4 py-6 sm:p-6 max-w-[1280px] mx-auto space-y-6' }, [
 
         // Encabezado y acciones
         h('div', { key: 'hd', className: 'flex flex-wrap items-end justify-between gap-4' }, [
@@ -240,7 +240,7 @@
         ]),
 
         // Indicadores
-        h('div', { key: 'kpi', className: 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4' }, [
+        h('div', { key: 'kpi', className: 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4' }, [
           kpi('Piezas fuera', String(piezasFuera), 'loan', `${pendientes.length} préstamo(s) pendientes`, piezasFuera ? 'gold' : 'neutral'),
           kpi('Valor prestado', fmt(valorFuera).replace('.00', ''), 'cash', 'al precio del día del préstamo', 'neutral'),
           kpi('Vencidos', String(vencidos.length), 'alert',
@@ -253,7 +253,7 @@
 
         // Búsqueda y filtros
         h(GlassCard, { key: 'f', className: 'p-4 flex flex-wrap items-center gap-4' }, [
-          h('div', { key: 's', className: 'relative flex-1 min-w-[240px]' }, [
+          h('div', { key: 's', className: 'relative flex-1 basis-full sm:basis-auto min-w-0' }, [
             h(MS, { key: 'i', name: 'barcode', size: 20, className: 'absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant' }),
             h('input', {
               key: 'in', 'data-testid': 'loans-buscar', value: q, onChange: e => setQ(e.target.value),
@@ -1085,14 +1085,7 @@
     neutral: 'bg-surface-container text-on-surface-variant',
   };
   function kpi(label, value, icon, sub, tone) {
-    return h('div', { key: label, className: CARD + ' p-5 flex items-start gap-4' }, [
-      h('div', { key: 'i', className: 'w-11 h-11 rounded-xl grid place-items-center shrink-0 ' + (KPI_TONE[tone] || KPI_TONE.neutral) }, h(MS, { name: icon, size: 22 })),
-      h('div', { key: 't', className: 'min-w-0' }, [
-        h('div', { key: 'a', className: 'text-overline uppercase text-on-surface-variant' }, label),
-        h('div', { key: 'b', className: 'font-headline text-h1 text-primary leading-tight' }, value),
-        h('div', { key: 'c', className: 'text-caption text-on-surface-variant' }, sub),
-      ]),
-    ]);
+    return h(window.UI.KPI, { key: label, label, value, icon, helper: sub, tone });
   }
 
   window.LoansScreen = LoansScreen;
