@@ -3,8 +3,8 @@ import { createServer } from 'node:http';
 import { createReadStream, existsSync } from 'node:fs';
 import { resolve, join, extname } from 'node:path';
 
-const root=resolve('.'), mime={'.html':'text/html','.js':'text/javascript','.css':'text/css'};
-const server=createServer((req,res)=>{const pathname=decodeURIComponent(req.url.split('?')[0]);const file=join(root,pathname==='/'?'index.html':pathname);if(!file.startsWith(root)||!existsSync(file)){res.writeHead(404);res.end();return;}res.writeHead(200,{'Content-Type':mime[extname(file)]||'application/octet-stream'});createReadStream(file).pipe(res);});
+const root=resolve('.'), artifact=process.env.BALAM_ARTIFACT_PATH, mime={'.html':'text/html','.js':'text/javascript','.css':'text/css'};
+const server=createServer((req,res)=>{const pathname=decodeURIComponent(req.url.split('?')[0]);const file=artifact&&(pathname==='/'||pathname==='/index.html')?resolve(artifact):join(root,pathname==='/'?'index.html':pathname);if(!file.startsWith(root)||!existsSync(file)){res.writeHead(404);res.end();return;}res.writeHead(200,{'Content-Type':artifact&&file===resolve(artifact)?'text/html':(mime[extname(file)]||'application/octet-stream')});createReadStream(file).pipe(res);});
 await new Promise(r=>server.listen(8896,'127.0.0.1',r));
 let browser,passed=0;const failures=[];const check=(ok,name,detail='')=>ok?passed++:failures.push(name+(detail?' · '+detail:''));
 try{
