@@ -275,6 +275,7 @@
             onClick: () => go('pos'),
             'aria-label': 'Nueva venta',
           }, [h(MS, { key: 'i', name: 'pos', size: 18 }), h('span', { key: 'l', className: 'hidden lg:inline' }, 'Nueva venta')]),
+          window.PWA && h(window.PWA.Control, { key: 'pwa' }),
           isAdmin && h(NotificationsBell, { key: 'b', go }),
           h('div', { key: 'date', className: 'hidden xl:flex items-center gap-1.5 text-xs text-on-surface-variant capitalize' }, [h(MS, { key: 'i', name: 'calendar', size: 16 }), new Date().toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })]),
         ]),

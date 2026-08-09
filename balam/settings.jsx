@@ -3,7 +3,7 @@
 // Exporta window.SettingsScreen
 (function () {
   const { useState, useEffect, useRef } = React;
-  const { toast, resizeImageFile } = window.UI;
+  const { toast, resizeImageFile, imageFileDimensions } = window.UI;
   const { MS, GlassCard, SerifHeading } = window.HX;
   const C = window.CONFIG;
   const D = window.DATA;
@@ -919,7 +919,12 @@
       if (!file) return;
       if (!/^image\//.test(file.type)) { toast('Selecciona una imagen', 'var(--danger)'); return; }
       try {
-        C.setSetting('store.logo', await resizeImageFile(file, { max: 256, type: 'image/png' }));
+        const dimensions = await imageFileDimensions(file);
+        if (Math.max(dimensions.width, dimensions.height) < 512) {
+          toast('El logotipo debe medir al menos 512 px en su lado mayor', 'var(--danger)');
+          return;
+        }
+        C.setSetting('store.logo', await resizeImageFile(file, { max: 1024, type: 'image/png' }));
         toast('Logotipo actualizado', 'var(--accent)');
       } catch (error) {
         toast('No se pudo leer la imagen', 'var(--danger)');
@@ -931,12 +936,13 @@
         h('div', { key: 'pv', className: 'w-20 h-20 rounded-full overflow-hidden grid place-items-center shrink-0 border border-outline-variant', style: { background: '#131B2E' } },
           logo ? h('img', { src: logo, className: 'w-full h-full object-cover' }) : h('span', { className: 'font-headline text-2xl', style: { color: '#FFE088' } }, 'B')),
         h('div', { key: 'b', className: 'flex-1' }, [
-          h('p', { key: 'd', className: 'text-caption text-on-surface-variant mb-3' }, 'Se usa en el inicio (barra lateral) y en el ticket impreso. Se ajusta a 256 px.'),
-          h('input', { key: 'f', ref: fileRef, type: 'file', accept: 'image/*', className: 'hidden', onChange: onPick }),
+          h('p', { key: 'd', className: 'text-caption text-on-surface-variant mb-3' }, 'Es la única fuente visual para BALAM, tickets e iconos de instalación. Conserva hasta 1024 px; las cargas nuevas requieren al menos 512 px.'),
+          h('input', { key: 'f', ref: fileRef, type: 'file', accept: 'image/*', className: 'hidden', onChange: onPick, 'data-testid': 'logo-file-input' }),
           h('div', { key: 'btns', className: 'flex gap-3' }, [
-            h('button', { key: 'u', className: 'inline-flex items-center gap-2 px-4 h-10 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-lg hover:opacity-90 transition', onClick: () => fileRef.current && fileRef.current.click() }, [h(MS, { key: 'i', name: 'upload', size: 16 }), 'Subir logo']),
+            h('button', { key: 'u', className: 'inline-flex items-center gap-2 px-4 h-10 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-lg hover:opacity-90 transition', onClick: () => fileRef.current && fileRef.current.click(), 'data-testid': 'logo-upload-action' }, [h(MS, { key: 'i', name: 'upload', size: 16 }), 'Subir logo']),
             logo && h('button', { key: 'x', className: 'inline-flex items-center gap-2 px-4 h-10 border border-outline-variant text-on-surface-variant text-caption font-bold uppercase tracking-widest rounded-lg hover:bg-surface-container transition', onClick: () => { C.setSetting('store.logo', ''); toast('Logotipo eliminado'); } }, [h(MS, { key: 'i', name: 'trash', size: 16 }), 'Quitar']),
           ]),
+          window.PWA && h(window.PWA.BrandStatus, { key: 'pwa-status' }),
         ]),
       ]),
     ]);

@@ -122,6 +122,22 @@
     });
   }
 
+  function imageFileDimensions(file) {
+    return new Promise((resolve, reject) => {
+      if (!file || !/^image\//.test(file.type || '')) { reject(new Error('invalid_image')); return; }
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('image_read_failed'));
+      reader.onabort = () => reject(new Error('image_read_aborted'));
+      reader.onload = () => {
+        const image = new Image();
+        image.onerror = () => reject(new Error('image_decode_failed'));
+        image.onload = () => resolve({ width: image.naturalWidth, height: image.naturalHeight });
+        image.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
   // Miniatura de producto (placeholder con patrón + swatch de color)
   function ProductThumb({ p, size = 48 }) {
     const valid = p && typeof p === 'object';
@@ -349,5 +365,5 @@
     ]);
   }
 
-  window.UI = { fmt, fechaCorta, fechaHora, Badge, StatusBadge, StockBadge, ProductThumb, ToastHost, toast, Page, Toolbar, ActionGroup, KPI, Drawer, Modal, BADGE_TONE, Pager, Segment, resizeImageFile, useSyncActivity, useSyncFocusActivity, useReceiptAutoPrint };
+  window.UI = { fmt, fechaCorta, fechaHora, Badge, StatusBadge, StockBadge, ProductThumb, ToastHost, toast, Page, Toolbar, ActionGroup, KPI, Drawer, Modal, BADGE_TONE, Pager, Segment, resizeImageFile, imageFileDimensions, useSyncActivity, useSyncFocusActivity, useReceiptAutoPrint };
 })();

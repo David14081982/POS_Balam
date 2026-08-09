@@ -49,6 +49,59 @@ function addBytes(buf, mime, compress = true) {
   manifest[uuid] = { data: Buffer.from(data).toString('base64'), mime, compressed };
   return uuid;
 }
+
+const CRC_TABLE = (() => {
+  const table = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let value = n;
+    for (let bit = 0; bit < 8; bit++) value = (value & 1) ? (0xedb88320 ^ (value >>> 1)) : (value >>> 1);
+    table[n] = value >>> 0;
+  }
+  return table;
+})();
+function crc32(buf) {
+  let value = 0xffffffff;
+  for (const byte of buf) value = CRC_TABLE[(value ^ byte) & 0xff] ^ (value >>> 8);
+  return (value ^ 0xffffffff) >>> 0;
+}
+function pngChunk(type, data) {
+  const name = Buffer.from(type, 'ascii');
+  const length = Buffer.alloc(4); length.writeUInt32BE(data.length);
+  const checksum = Buffer.alloc(4); checksum.writeUInt32BE(crc32(Buffer.concat([name, data])));
+  return Buffer.concat([length, name, data, checksum]);
+}
+function fallbackIconPng(size, maskable = false) {
+  const width = size, height = size;
+  const rows = Buffer.alloc((width * 4 + 1) * height);
+  const navy = [0x13, 0x1b, 0x2e, 0xff], gold = [0xff, 0xe0, 0x88, 0xff];
+  const motifScale = maskable ? 0.82 : 1;
+  const cx = .5, cy = .5, radius = .33 * motifScale;
+  for (let y = 0; y < height; y++) {
+    const row = y * (width * 4 + 1); rows[row] = 0;
+    for (let x = 0; x < width; x++) {
+      const nx = (x + .5) / width, ny = (y + .5) / height;
+      const inGold = Math.hypot(nx - cx, ny - cy) <= radius;
+      const vertical = nx >= cx - .105 * motifScale && nx <= cx - .035 * motifScale
+        && ny >= cy - .19 * motifScale && ny <= cy + .19 * motifScale;
+      const lobe = [cy - .095 * motifScale, cy + .095 * motifScale].some(centerY => {
+        const distance = Math.hypot(nx - (cx - .015 * motifScale), ny - centerY);
+        return nx >= cx - .06 * motifScale && distance >= .065 * motifScale && distance <= .13 * motifScale;
+      });
+      const color = inGold && !(vertical || lobe) ? gold : navy;
+      const offset = row + 1 + x * 4;
+      rows[offset] = color[0]; rows[offset + 1] = color[1]; rows[offset + 2] = color[2]; rows[offset + 3] = color[3];
+    }
+  }
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(width, 0); ihdr.writeUInt32BE(height, 4);
+  ihdr[8] = 8; ihdr[9] = 6; ihdr[10] = 0; ihdr[11] = 0; ihdr[12] = 0;
+  return Buffer.concat([
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+    pngChunk('IHDR', ihdr),
+    pngChunk('IDAT', zlib.deflateSync(rows, { level: 9 })),
+    pngChunk('IEND', Buffer.alloc(0)),
+  ]);
+}
 async function fetchBuf(url) {
   const cached = resourceCache[url];
   if (!REFRESH_RESOURCES) {
@@ -203,9 +256,24 @@ wrapper = setBlock(wrapper, 'template', esc(JSON.stringify(template)));
 fs.writeFileSync(OUT, wrapper);
 // index.html = copia exacta del bundle, lista para servir en el VPS (entrada del sitio).
 fs.writeFileSync('index.html', wrapper);
+
+// H-89: recursos HTTP externos al HTML autocontenido. Las fuentes viven en balam/;
+// estos archivos de raíz son artefactos reproducibles para GitHub Pages.
+const buildHash = createHash('sha256').update(wrapper).digest('hex').slice(0, 20);
+const swSource = fs.readFileSync('balam/pwa-sw.js', 'utf8');
+if (!swSource.includes('__BALAM_BUILD_HASH__')) throw new Error('token PWA build hash faltante');
+fs.writeFileSync('sw.js', swSource.replaceAll('__BALAM_BUILD_HASH__', buildHash));
+fs.copyFileSync('balam/pwa-manifest.webmanifest', 'manifest.webmanifest');
+fs.mkdirSync('pwa', { recursive: true });
+fs.writeFileSync('pwa/icon-192.png', fallbackIconPng(192));
+fs.writeFileSync('pwa/icon-512.png', fallbackIconPng(512));
+fs.writeFileSync('pwa/icon-maskable-512.png', fallbackIconPng(512, true));
+fs.writeFileSync('pwa/apple-touch-icon.png', fallbackIconPng(180));
+fs.writeFileSync('pwa/favicon-64.png', fallbackIconPng(64));
 if (REFRESH_RESOURCES) {
   fs.writeFileSync(RESOURCE_CACHE, JSON.stringify(resourceCache, null, 2) + '\n');
   console.log('OK ->', RESOURCE_CACHE, '·', Object.keys(resourceCache).length, 'recursos fijados');
 }
 console.log('\nOK ->', OUT, '·', (wrapper.length / 1e6).toFixed(2) + 'MB ·', Object.keys(manifest).length, 'assets');
 console.log('OK -> index.html (copia para deploy)');
+console.log('OK -> PWA shell', buildHash, '· manifest, service worker y 5 iconos');

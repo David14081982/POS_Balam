@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#131b2e">
+  <title>H-89 · Icono runtime</title>
+  <style>
+    :root { color-scheme: light; font: 16px/1.5 system-ui, sans-serif; background: #f8fafc; color: #131b2e; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; }
+    main { width: min(32rem, calc(100% - 2rem)); padding: 1.5rem; background: white; border-radius: 1rem; box-shadow: 0 1rem 3rem #0f172a20; }
+    header { display: flex; gap: 1rem; align-items: center; }
+    #preview { width: 5rem; height: 5rem; border-radius: 1rem; }
+    button { min-height: 44px; padding: .65rem 1rem; border: 0; border-radius: .75rem; background: #131b2e; color: white; font: inherit; font-weight: 700; cursor: pointer; }
+    button + button { margin-left: .5rem; }
+    code { overflow-wrap: anywhere; }
+    [data-state="ready"] { color: #166534; }
+    [data-state="error"] { color: #b91c1c; }
+    @media (display-mode: standalone) { #mode::after { content: "standalone"; } }
+    @media not (display-mode: standalone) { #mode::after { content: "browser"; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <canvas id="preview" width="1024" height="1024" aria-label="Logo runtime actual"></canvas>
+      <div><h1>Prototipo H-89</h1><p>Modo: <strong id="mode"></strong></p></div>
+    </header>
+    <p id="status" role="status">Preparando service worker…</p>
+    <p>Marca: <strong id="brand"></strong></p>
+    <p>Manifest: <code id="manifest-url">pendiente</code></p>
+    <button id="install" type="button" hidden>Instalar prototipo</button>
+    <button id="brand-a" type="button">Logo A</button>
+    <button id="brand-b" type="button">Logo B</button>
+  </main>
+  <script>
+    (() => {
+      const SCOPE = '/POS_Balam/';
+      const CACHE = 'h89-runtime-brand-v1';
+      const status = document.querySelector('#status');
+      const installButton = document.querySelector('#install');
+      const canvas = document.querySelector('#preview');
+      const ctx = canvas.getContext('2d');
+
+      function paintLogo(brand) {
+        const primary = brand === 'b' ? '#075985' : '#b91c1c';
+        const accent = brand === 'b' ? '#fbbf24' : '#f8fafc';
+        ctx.clearRect(0, 0, 1024, 1024);
+        ctx.fillStyle = primary;
+        ctx.fillRect(0, 0, 1024, 1024);
+        ctx.fillStyle = accent;
+        ctx.beginPath();
+        ctx.moveTo(512, 130);
+        ctx.lineTo(865, 800);
+        ctx.lineTo(159, 800);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = primary;
+        ctx.font = 'bold 300px system-ui';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(brand.toUpperCase(), 512, 570);
+      }
+
+      function canvasBlob(source, size, maskable = false) {
+        const out = document.createElement('canvas');
+        out.width = size;
+        out.height = size;
+        const outCtx = out.getContext('2d');
+        if (maskable) {
+          outCtx.fillStyle = '#131b2e';
+          outCtx.fillRect(0, 0, size, size);
+          const inset = Math.round(size * .1);
+          outCtx.drawImage(source, inset, inset, size - inset * 2, size - inset * 2);
+        } else {
+          outCtx.drawImage(source, 0, 0, size, size);
+        }
+        return new Promise((resolve, reject) => out.toBlob(blob => blob ? resolve(blob) : reject(new Error('PNG_EMPTY')), 'image/png'));
+      }
+
+      async function sha256(blob) {
+        const bytes = await blob.arrayBuffer();
+        const digest = await crypto.subtle.digest('SHA-256', bytes);
+        return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+      }
+
+      async function waitForController() {
+        if (navigator.serviceWorker.controller) return;
+        await new Promise((resolve, reject) => {
+          const timer = setTimeout(() => reject(new Error('SW_CONTROLLER_TIMEOUT')), 10000);
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            clearTimeout(timer);
+            resolve();
+          }, { once: true });
+        });
+      }
+
+      async function materialize(brand) {
+        paintLogo(brand);
+        const source = await canvasBlob(canvas, 1024);
+        const hash = await sha256(source);
+        const shortHash = hash.slice(0, 16);
+        const base = `${location.origin}${SCOPE}`;
+        const paths = {
+          icon192: `runtime/icon-${shortHash}-192.png`,
+          icon512: `runtime/icon-${shortHash}-512.png`,
+          maskable: `runtime/icon-${shortHash}-maskable-512.png`
+        };
+        const [icon192, icon512, maskable] = await Promise.all([
+          canvasBlob(canvas, 192),
+          canvasBlob(canvas, 512),
+          canvasBlob(canvas, 512, true)
+        ]);
+        const cache = await caches.open(CACHE);
+        for (const [path, blob] of [[paths.icon192, icon192], [paths.icon512, icon512], [paths.maskable, maskable]]) {
+          await cache.put(base + path, new Response(blob, { headers: { 'Content-Type': 'image/png', 'Cache-Control': 'public,max-age=31536000,immutable' } }));
+        }
+        const manifest = {
+          name: 'BALAM H89',
+          short_name: 'BALAM',
+          id: '/POS_Balam/',
+          start_url: './?source=pwa',
+          scope: './',
+          display: 'standalone',
+          background_color: '#131b2e',
+          theme_color: '#131b2e',
+          icons: [
+            { src: `./${paths.icon192}`, sizes: '192x192', type: 'image/png', purpose: 'any' },
+            { src: `./${paths.icon512}`, sizes: '512x512', type: 'image/png', purpose: 'any' },
+            { src: `./${paths.maskable}`, sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+          ]
+        };
+        const manifestPath = `manifest-${shortHash}.webmanifest`;
+        await cache.put(base + manifestPath, new Response(JSON.stringify(manifest), { headers: { 'Content-Type': 'application/manifest+json', 'Cache-Control': 'no-cache' } }));
+        let link = document.querySelector('link[rel="manifest"]');
+        if (!link) {
+          link = document.createElement('link');
+          link.rel = 'manifest';
+          document.head.appendChild(link);
+        }
+        link.href = `${SCOPE}${manifestPath}`;
+        localStorage.setItem('h89-brand', brand);
+        document.querySelector('#brand').textContent = brand.toUpperCase();
+        document.querySelector('#manifest-url').textContent = link.href;
+        status.textContent = `Recursos listos: ${shortHash}`;
+        status.dataset.state = 'ready';
+        const iconHashes = {
+          icon192: await sha256(icon192),
+          icon512: await sha256(icon512),
+          maskable: await sha256(maskable)
+        };
+        window.dispatchEvent(new CustomEvent('h89ready', { detail: { brand, hash: shortHash, manifestUrl: link.href, paths, iconHashes } }));
+        return { brand, hash: shortHash, manifestUrl: link.href, paths, iconHashes };
+      }
+
+      async function start() {
+        if (!('serviceWorker' in navigator) || !('caches' in window)) throw new Error('PWA_APIS_UNAVAILABLE');
+        await navigator.serviceWorker.register(`${SCOPE}sw.js`, { scope: SCOPE });
+        await navigator.serviceWorker.ready;
+        await waitForController();
+        return materialize(localStorage.getItem('h89-brand') || 'a');
+      }
+
+      document.querySelector('#brand-a').addEventListener('click', () => materialize('a'));
+      document.querySelector('#brand-b').addEventListener('click', () => materialize('b'));
+      let installPrompt = null;
+      window.addEventListener('beforeinstallprompt', event => {
+        event.preventDefault();
+        installPrompt = event;
+        installButton.hidden = false;
+        window.__H89.beforeInstallPrompt = true;
+      });
+      window.addEventListener('appinstalled', () => {
+        installButton.hidden = true;
+        window.__H89.installed = true;
+        window.dispatchEvent(new Event('h89installed'));
+      });
+      installButton.addEventListener('click', async () => {
+        if (!installPrompt) return;
+        window.__H89.promptOpened = true;
+        await installPrompt.prompt();
+        window.__H89.installChoice = await installPrompt.userChoice;
+        installPrompt = null;
+      });
+      window.__H89 = { start, materialize, cacheName: CACHE };
+      start().then(result => { window.__H89.result = result; }).catch(error => {
+        status.textContent = error.message;
+        status.dataset.state = 'error';
+        window.__H89.error = error.message;
+      });
+    })();
+  </script>
+</body>
+</html>

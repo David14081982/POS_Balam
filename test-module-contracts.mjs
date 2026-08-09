@@ -15,7 +15,7 @@ const scriptsOf = html => [...html.matchAll(/<script type="text\/babel" src="(ba
   .map(match => match[1]);
 const expectedScripts = [
   'balam/icons.jsx', 'balam/core.jsx', 'balam/config.jsx', 'balam/data.jsx',
-  'balam/auth.jsx', 'balam/screens.jsx', 'balam/shared.jsx', 'balam/heritage.jsx',
+  'balam/auth.jsx', 'balam/screens.jsx', 'balam/shared.jsx', 'balam/pwa.jsx', 'balam/heritage.jsx',
   'balam/discounts.jsx', 'balam/xlsx-io.jsx', 'balam/barcodes.jsx',
   'balam/tweaks-panel.jsx', 'balam/dashboard.jsx', 'balam/pos.jsx',
   'balam/pos-ticket.jsx', 'balam/inventory.jsx', 'balam/clients.jsx',
@@ -96,7 +96,7 @@ check('UI publica procesamiento de imágenes compartido', (
   && shared.includes('resizeImageFile')
 ));
 check('Configuración consume el procesador para logo y avatar', (
-  settings.includes('resizeImageFile } = window.UI')
+  /const \{[^}]*\bresizeImageFile\b[^}]*\} = window\.UI/.test(settings)
   && (settings.match(/resizeImageFile\(/g) || []).length === 2
 ));
 check('Inventario consume el procesador para foto de producto', (
@@ -193,6 +193,7 @@ const expectedGlobals = {
   'balam/auth.jsx': 'AUTH',
   'balam/screens.jsx': 'SCREENS',
   'balam/shared.jsx': 'UI',
+  'balam/pwa.jsx': 'PWA',
   'balam/heritage.jsx': 'HX',
   'balam/discounts.jsx': 'PROMOS',
   'balam/xlsx-io.jsx': 'XLSXIO',

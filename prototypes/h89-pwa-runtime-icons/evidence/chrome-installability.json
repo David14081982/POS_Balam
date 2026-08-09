@@ -1,0 +1,100 @@
+{
+  "chrome": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36",
+  "appUrl": "http://127.0.0.1:41789/POS_Balam/",
+  "scope": {
+    "scope": "http://127.0.0.1:41789/POS_Balam/",
+    "controller": "http://127.0.0.1:41789/POS_Balam/sw.js"
+  },
+  "first": {
+    "brand": "a",
+    "hash": "3155baf21773c08b",
+    "manifestUrl": "http://127.0.0.1:41789/POS_Balam/manifest-3155baf21773c08b.webmanifest",
+    "paths": {
+      "icon192": "runtime/icon-3155baf21773c08b-192.png",
+      "icon512": "runtime/icon-3155baf21773c08b-512.png",
+      "maskable": "runtime/icon-3155baf21773c08b-maskable-512.png"
+    },
+    "iconHashes": {
+      "icon192": "1a0a7b79b5c74aad9405e6757b558e6ab5f9ef742c6904c7ec2f05c4d2e3eaf5",
+      "icon512": "edbc0ca89c4f3a725e24d2cad61e6cabd4174542925dade72735a9b4171093f4",
+      "maskable": "9e38118ba151a582d5b17edb2372dd9a3cebf4761d9b20d7c553b05d84cf39ae"
+    }
+  },
+  "changed": {
+    "brand": "b",
+    "hash": "7a0e5638db0ff76b",
+    "manifestUrl": "http://127.0.0.1:41789/POS_Balam/manifest-7a0e5638db0ff76b.webmanifest",
+    "paths": {
+      "icon192": "runtime/icon-7a0e5638db0ff76b-192.png",
+      "icon512": "runtime/icon-7a0e5638db0ff76b-512.png",
+      "maskable": "runtime/icon-7a0e5638db0ff76b-maskable-512.png"
+    },
+    "iconHashes": {
+      "icon192": "dc8d8cc8e90c556eeeab2dc73e310b72f14e23177527d0ef364c7929846a7a70",
+      "icon512": "f5676a90fb5bd51859c4148bb4c127959907e419144346bbfee4c64c2b6f4415",
+      "maskable": "965aa6c2af69857a87953765a63c340cbad31fdccc22468ca4795561b42dfb00"
+    }
+  },
+  "cacheState": {
+    "oldManifest": true,
+    "newManifest": true,
+    "oldIcons": true,
+    "newIcons": true
+  },
+  "installabilityA": {
+    "installabilityErrors": []
+  },
+  "manifestErrorsA": [],
+  "checks": [
+    {
+      "name": "manifest virtual bajo /POS_Balam/",
+      "ok": true,
+      "detail": "http://127.0.0.1:41789/POS_Balam/manifest-3155baf21773c08b.webmanifest"
+    },
+    {
+      "name": "service worker controla el scope",
+      "ok": true,
+      "detail": "{\"scope\":\"http://127.0.0.1:41789/POS_Balam/\",\"controller\":\"http://127.0.0.1:41789/POS_Balam/sw.js\"}"
+    },
+    {
+      "name": "Chrome leyó iconos 192, 512 y maskable",
+      "ok": true,
+      "detail": "3155baf21773c08b"
+    },
+    {
+      "name": "Chrome reconoce instalabilidad",
+      "ok": true,
+      "detail": "0 errores"
+    },
+    {
+      "name": "Chrome obtuvo el icono primario desde Cache Storage",
+      "ok": true,
+      "detail": "7072 caracteres"
+    },
+    {
+      "name": "sobrevive a recarga",
+      "ok": true,
+      "detail": "3155baf21773c08b"
+    },
+    {
+      "name": "cambio de logo actualiza manifest y hashes",
+      "ok": true,
+      "detail": "3155baf21773c08b → 7a0e5638db0ff76b"
+    },
+    {
+      "name": "generación anterior y nueva coexisten",
+      "ok": true,
+      "detail": "{\"oldManifest\":true,\"newManifest\":true,\"oldIcons\":true,\"newIcons\":true}"
+    },
+    {
+      "name": "logo nuevo sobrevive a actualización/recarga",
+      "ok": true,
+      "detail": "7a0e5638db0ff76b"
+    },
+    {
+      "name": "recursos sobreviven a actualización del service worker",
+      "ok": true,
+      "detail": "{\"previous\":\"http://127.0.0.1:41789/POS_Balam/sw.js\",\"current\":\"http://127.0.0.1:41789/POS_Balam/sw.js?v=2\",\"statuses\":[200,200,200,200]}"
+    }
+  ]
+}

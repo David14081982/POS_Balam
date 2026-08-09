@@ -1,0 +1,393 @@
+{
+  "appUrl": "http://127.0.0.1:41790/POS_Balam/",
+  "profileDir": "evidence\\chrome-profile-1786313714360",
+  "events": [
+    {
+      "name": "Chrome emitió beforeinstallprompt",
+      "detail": "3155baf21773c08b"
+    },
+    {
+      "name": "diálogo nativo aceptó la instalación",
+      "detail": "{\"outcome\":\"accepted\",\"platform\":\"web\"}"
+    },
+    {
+      "name": "Chrome materializó iconos de la aplicación instalada",
+      "detail": "16 PNG"
+    },
+    {
+      "name": "reapertura de la instalación en display standalone",
+      "detail": ""
+    },
+    {
+      "name": "manifest de la aplicación instalada cambió a logo B",
+      "detail": "3155baf21773c08b → ddd498977bad78c3"
+    },
+    {
+      "name": "capturada política real de actualización del icono instalado",
+      "detail": "Chrome conservó el PNG instalado"
+    }
+  ],
+  "initial": {
+    "brand": "a",
+    "hash": "3155baf21773c08b",
+    "manifestUrl": "http://127.0.0.1:41790/POS_Balam/manifest-3155baf21773c08b.webmanifest",
+    "paths": {
+      "icon192": "runtime/icon-3155baf21773c08b-192.png",
+      "icon512": "runtime/icon-3155baf21773c08b-512.png",
+      "maskable": "runtime/icon-3155baf21773c08b-maskable-512.png"
+    },
+    "iconHashes": {
+      "icon192": "1a0a7b79b5c74aad9405e6757b558e6ab5f9ef742c6904c7ec2f05c4d2e3eaf5",
+      "icon512": "edbc0ca89c4f3a725e24d2cad61e6cabd4174542925dade72735a9b4171093f4",
+      "maskable": "9e38118ba151a582d5b17edb2372dd9a3cebf4761d9b20d7c553b05d84cf39ae"
+    }
+  },
+  "appIdBeforeInstall": {
+    "appId": "http://127.0.0.1:41790/POS_Balam/",
+    "recommendedId": "/POS_Balam/?source=pwa"
+  },
+  "installDialogAutomation": "INVOKED",
+  "installChoice": {
+    "outcome": "accepted",
+    "platform": "web"
+  },
+  "appIdAfterInstall": {
+    "appId": "http://127.0.0.1:41790/POS_Balam/",
+    "recommendedId": "/POS_Balam/?source=pwa"
+  },
+  "installedPngsA": [
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Icons\\128.png",
+      "evidence": "evidence\\installed-brand-a-1786313714360\\01-c316f4615dfe.png",
+      "bytes": 4641,
+      "sha256": "c316f4615dfe5731af888618606ee8e51c9686d228855955876c959611e2d271"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Icons\\192.png",
+      "evidence": "evidence\\installed-brand-a-1786313714360\\02-3dbf306abe05.png",
+      "bytes": 2404,
+      "sha256": "3dbf306abe05ad4d1dd6d570a6d54e276b1946353fc31f14918759d2ec2d1a1e"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Icons\\256.png",
+      "evidence": "evidence\\installed-brand-a-1786313714360\\03-ab463ec8c683.png",
+      "bytes": 8740,
+      "sha256": "ab463ec8c683c877d445452d04af956a7da8e3d44cf4fa60d78ddf2d15513b7c"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Icons\\32.png",
+      "evidence": "evidence\\installed-brand-a-1786313714360\\04-4fc37578ed14.png",
+      "bytes": 1023,
+      "sha256": "4fc37578ed14418983159a1d53846866f64fcfad8a70b04977f34336c6c91d15"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Icons\\48.png",
+      "evidence": "evidence\\installed-brand-a-1786313714360\\05-59fe411ddc04.png",
+      "bytes": 1606,
+      "sha256": "59fe411ddc0460f143c060ec1fd4c895ef401c210a950e76a374850efc0a00fb"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Icons\\512.png",
+      "evidence": "evidence\\installed-brand-a-1786313714360\\06-c37f19d7b2e3.png",
+      "bytes": 9440,
+      "sha256": "c37f19d7b2e38ea3cba9bccb3e285b24a2c13a0af47e0a0614c9e8d4e1c72190"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Icons\\64.png",
+      "evidence": "evidence\\installed-brand-a-1786313714360\\07-32948a13f6e1.png",
+      "bytes": 2092,
+      "sha256": "32948a13f6e13be727e68cad06c1d8fb37c19dd5637fe31882102948e3176e63"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Icons\\96.png",
+      "evidence": "evidence\\installed-brand-a-1786313714360\\08-7ac16fea68dc.png",
+      "bytes": 3379,
+      "sha256": "7ac16fea68dc68c3f4490a5d851c34adf64f03c170d919e20d8621bbd0061ea0"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Icons Maskable\\512.png",
+      "evidence": "evidence\\installed-brand-a-1786313714360\\09-2ccf61fab812.png",
+      "bytes": 7490,
+      "sha256": "2ccf61fab812fdfe8ed0b505d525343b43376236b63bae1f5aaa2fb07dfa96b0"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Trusted Icons\\Icons\\128.png",
+      "evidence": "evidence\\installed-brand-a-1786313714360\\10-a4e2f2671ca2.png",
+      "bytes": 4382,
+      "sha256": "a4e2f2671ca2158afad8ab60998673072aacf7939c3263b770b64a317a88f560"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Trusted Icons\\Icons\\256.png",
+      "evidence": "evidence\\installed-brand-a-1786313714360\\11-ab463ec8c683.png",
+      "bytes": 8740,
+      "sha256": "ab463ec8c683c877d445452d04af956a7da8e3d44cf4fa60d78ddf2d15513b7c"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Trusted Icons\\Icons\\32.png",
+      "evidence": "evidence\\installed-brand-a-1786313714360\\12-d874e0a2c977.png",
+      "bytes": 1030,
+      "sha256": "d874e0a2c9779e86362eb396b7fd1db80e9031817872bb237bfb63f9a889163d"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Trusted Icons\\Icons\\48.png",
+      "evidence": "evidence\\installed-brand-a-1786313714360\\13-8f8a9516b96a.png",
+      "bytes": 1575,
+      "sha256": "8f8a9516b96a81553d5f4e46777340845361780eab2478f14c75aa4fdcf95502"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Trusted Icons\\Icons\\512.png",
+      "evidence": "evidence\\installed-brand-a-1786313714360\\14-c37f19d7b2e3.png",
+      "bytes": 9440,
+      "sha256": "c37f19d7b2e38ea3cba9bccb3e285b24a2c13a0af47e0a0614c9e8d4e1c72190"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Trusted Icons\\Icons\\64.png",
+      "evidence": "evidence\\installed-brand-a-1786313714360\\15-77a301e18f5c.png",
+      "bytes": 2104,
+      "sha256": "77a301e18f5c5fa7f3340cd41488a9db6bb2a37171ee6efc6d9e65527e520a15"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Trusted Icons\\Icons\\96.png",
+      "evidence": "evidence\\installed-brand-a-1786313714360\\16-a9c07955034e.png",
+      "bytes": 3340,
+      "sha256": "a9c07955034eb18e8c7e2a67158f0bffe763d754e6657d031e1a62fb0e229beb"
+    }
+  ],
+  "pixelDigestsA": {
+    "runtime192": "5910056fdae4b57a0894be5f2739506132470f9a31c16721114def4cb1643d31",
+    "installed192": "5910056fdae4b57a0894be5f2739506132470f9a31c16721114def4cb1643d31",
+    "runtime512": "9c4273f9b55d5114dfd3dc5264e29e9c96d9914919a6670bf33aabe057685902",
+    "installed512": "9c4273f9b55d5114dfd3dc5264e29e9c96d9914919a6670bf33aabe057685902",
+    "runtimeMaskable": "1b4ec03d7e57d6c8912f95164e8df5d07257efa7a10d16fcb81a517aa1584f77",
+    "installedMaskable": "1b4ec03d7e57d6c8912f95164e8df5d07257efa7a10d16fcb81a517aa1584f77"
+  },
+  "internalAppId": "jojchbkloljpdkiandcmcmoogbfeecnm",
+  "changed": {
+    "brand": "b",
+    "hash": "ddd498977bad78c3",
+    "manifestUrl": "http://127.0.0.1:41790/POS_Balam/manifest-ddd498977bad78c3.webmanifest",
+    "paths": {
+      "icon192": "runtime/icon-ddd498977bad78c3-192.png",
+      "icon512": "runtime/icon-ddd498977bad78c3-512.png",
+      "maskable": "runtime/icon-ddd498977bad78c3-maskable-512.png"
+    },
+    "iconHashes": {
+      "icon192": "02488bb7f01e7a20edf61503bc65990e0f604480a612970a4123151aa2582f55",
+      "icon512": "792d405987d8b3522c4c034d0212216c085d78e9220d2f750e63ad7242e815c8",
+      "maskable": "55619992016086d7effc5931b3eed71bac6d82a8b07160251ae40d2b862e2c13"
+    }
+  },
+  "currentBAfterReload": {
+    "brand": "b",
+    "hash": "7a0e5638db0ff76b",
+    "manifestUrl": "http://127.0.0.1:41790/POS_Balam/manifest-7a0e5638db0ff76b.webmanifest",
+    "paths": {
+      "icon192": "runtime/icon-7a0e5638db0ff76b-192.png",
+      "icon512": "runtime/icon-7a0e5638db0ff76b-512.png",
+      "maskable": "runtime/icon-7a0e5638db0ff76b-maskable-512.png"
+    },
+    "iconHashes": {
+      "icon192": "dc8d8cc8e90c556eeeab2dc73e310b72f14e23177527d0ef364c7929846a7a70",
+      "icon512": "f5676a90fb5bd51859c4148bb4c127959907e419144346bbfee4c64c2b6f4415",
+      "maskable": "965aa6c2af69857a87953765a63c340cbad31fdccc22468ca4795561b42dfb00"
+    }
+  },
+  "installabilityAfterBrandChange": {
+    "installabilityErrors": []
+  },
+  "installedPngsBAfterImmediateUpdate": [
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Icons\\128.png",
+      "evidence": "evidence\\installed-brand-b-immediate-1786313714360\\01-c316f4615dfe.png",
+      "bytes": 4641,
+      "sha256": "c316f4615dfe5731af888618606ee8e51c9686d228855955876c959611e2d271"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Icons\\192.png",
+      "evidence": "evidence\\installed-brand-b-immediate-1786313714360\\02-3dbf306abe05.png",
+      "bytes": 2404,
+      "sha256": "3dbf306abe05ad4d1dd6d570a6d54e276b1946353fc31f14918759d2ec2d1a1e"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Icons\\256.png",
+      "evidence": "evidence\\installed-brand-b-immediate-1786313714360\\03-ab463ec8c683.png",
+      "bytes": 8740,
+      "sha256": "ab463ec8c683c877d445452d04af956a7da8e3d44cf4fa60d78ddf2d15513b7c"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Icons\\32.png",
+      "evidence": "evidence\\installed-brand-b-immediate-1786313714360\\04-4fc37578ed14.png",
+      "bytes": 1023,
+      "sha256": "4fc37578ed14418983159a1d53846866f64fcfad8a70b04977f34336c6c91d15"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Icons\\48.png",
+      "evidence": "evidence\\installed-brand-b-immediate-1786313714360\\05-59fe411ddc04.png",
+      "bytes": 1606,
+      "sha256": "59fe411ddc0460f143c060ec1fd4c895ef401c210a950e76a374850efc0a00fb"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Icons\\512.png",
+      "evidence": "evidence\\installed-brand-b-immediate-1786313714360\\06-7fc82bc4303f.png",
+      "bytes": 9442,
+      "sha256": "7fc82bc4303f8100134968478db6e86dc552e4303bdb7166d86b74d05b9c3c64"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Icons\\64.png",
+      "evidence": "evidence\\installed-brand-b-immediate-1786313714360\\07-32948a13f6e1.png",
+      "bytes": 2092,
+      "sha256": "32948a13f6e13be727e68cad06c1d8fb37c19dd5637fe31882102948e3176e63"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Icons\\96.png",
+      "evidence": "evidence\\installed-brand-b-immediate-1786313714360\\08-7ac16fea68dc.png",
+      "bytes": 3379,
+      "sha256": "7ac16fea68dc68c3f4490a5d851c34adf64f03c170d919e20d8621bbd0061ea0"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Icons Maskable\\512.png",
+      "evidence": "evidence\\installed-brand-b-immediate-1786313714360\\09-2ccf61fab812.png",
+      "bytes": 7490,
+      "sha256": "2ccf61fab812fdfe8ed0b505d525343b43376236b63bae1f5aaa2fb07dfa96b0"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Pending Manifest Icons\\Icons\\128.png",
+      "evidence": "evidence\\installed-brand-b-immediate-1786313714360\\10-e0163a86cd19.png",
+      "bytes": 4588,
+      "sha256": "e0163a86cd192cf9a8e86830aae8952040502da60d1e229f749889cfe064f3ef"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Pending Manifest Icons\\Icons\\192.png",
+      "evidence": "evidence\\installed-brand-b-immediate-1786313714360\\11-4f80e332fe45.png",
+      "bytes": 2294,
+      "sha256": "4f80e332fe451eb1c20a736193ab425bcc0b2e9e15307182807bc07f31866269"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Pending Manifest Icons\\Icons\\256.png",
+      "evidence": "evidence\\installed-brand-b-immediate-1786313714360\\12-363e97767a5c.png",
+      "bytes": 8556,
+      "sha256": "363e97767a5c50e14d7b701e0b55c03fe1b3255f4aec2b4d40a3f098af4b5289"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Pending Manifest Icons\\Icons\\32.png",
+      "evidence": "evidence\\installed-brand-b-immediate-1786313714360\\13-9e42e323dfb4.png",
+      "bytes": 1092,
+      "sha256": "9e42e323dfb4bbdebbf092df96a36cc0cc1c2cd2e09d5a1ecee55ed6915dd24c"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Pending Manifest Icons\\Icons\\48.png",
+      "evidence": "evidence\\installed-brand-b-immediate-1786313714360\\14-f910c5a7aa93.png",
+      "bytes": 1656,
+      "sha256": "f910c5a7aa9316bdbccd3571c2411922fb8deb55dc77dc4123a1cfb36c47dd7b"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Pending Manifest Icons\\Icons\\512.png",
+      "evidence": "evidence\\installed-brand-b-immediate-1786313714360\\15-ffcff378525a.png",
+      "bytes": 9082,
+      "sha256": "ffcff378525a36967a86eb972d0e1fbe35bcd0d47c9b0a0446179e2e9c934abf"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Pending Manifest Icons\\Icons\\64.png",
+      "evidence": "evidence\\installed-brand-b-immediate-1786313714360\\16-e0be4c0ab66c.png",
+      "bytes": 2118,
+      "sha256": "e0be4c0ab66cb51ecf947de51f1f0d85ca46eb7ca2ab0b4ac74435054c991613"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Pending Manifest Icons\\Icons\\96.png",
+      "evidence": "evidence\\installed-brand-b-immediate-1786313714360\\17-a514f1cf9430.png",
+      "bytes": 3328,
+      "sha256": "a514f1cf9430a263f7077f4292a210ebf253751e02c85ce5fb449b53c2daa0d4"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Pending Manifest Icons\\Icons Maskable\\512.png",
+      "evidence": "evidence\\installed-brand-b-immediate-1786313714360\\18-26810d38642f.png",
+      "bytes": 7112,
+      "sha256": "26810d38642f84f088a7dfb530c651f42aa05b07ea2de10d6eee446fc5957dbf"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Pending Trusted Icons\\Icons\\128.png",
+      "evidence": "evidence\\installed-brand-b-immediate-1786313714360\\19-88e1d3cdf6d7.png",
+      "bytes": 4302,
+      "sha256": "88e1d3cdf6d7e67043f9b35d3a93448fed5c9c5bf8c9cecb1f746ae05319cab9"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Pending Trusted Icons\\Icons\\256.png",
+      "evidence": "evidence\\installed-brand-b-immediate-1786313714360\\20-363e97767a5c.png",
+      "bytes": 8556,
+      "sha256": "363e97767a5c50e14d7b701e0b55c03fe1b3255f4aec2b4d40a3f098af4b5289"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Pending Trusted Icons\\Icons\\32.png",
+      "evidence": "evidence\\installed-brand-b-immediate-1786313714360\\21-aaa4faff2ed6.png",
+      "bytes": 1064,
+      "sha256": "aaa4faff2ed60b7f239d1608afe439951890ebf264c14018443df66f6d830b50"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Pending Trusted Icons\\Icons\\48.png",
+      "evidence": "evidence\\installed-brand-b-immediate-1786313714360\\22-edb23725a810.png",
+      "bytes": 1665,
+      "sha256": "edb23725a81051807d7bf34f73ce46a8298f4215ef7fcfcd3c378e92949786fd"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Pending Trusted Icons\\Icons\\512.png",
+      "evidence": "evidence\\installed-brand-b-immediate-1786313714360\\23-ffcff378525a.png",
+      "bytes": 9082,
+      "sha256": "ffcff378525a36967a86eb972d0e1fbe35bcd0d47c9b0a0446179e2e9c934abf"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Pending Trusted Icons\\Icons\\64.png",
+      "evidence": "evidence\\installed-brand-b-immediate-1786313714360\\24-9c0aacd0ce4e.png",
+      "bytes": 2149,
+      "sha256": "9c0aacd0ce4ef78a12f59f205c2d7317578c136d36c6e1a2c4d6e858742529f2"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Pending Trusted Icons\\Icons\\96.png",
+      "evidence": "evidence\\installed-brand-b-immediate-1786313714360\\25-223aedd178e6.png",
+      "bytes": 3380,
+      "sha256": "223aedd178e603957fced3002b6385d75a924588369248ecbb34d608ab9d9d5d"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Trusted Icons\\Icons\\128.png",
+      "evidence": "evidence\\installed-brand-b-immediate-1786313714360\\26-b72834f292a8.png",
+      "bytes": 4381,
+      "sha256": "b72834f292a81c0f9bc834070ddcdbff8ffb2a7287548442149d9f0356242972"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Trusted Icons\\Icons\\256.png",
+      "evidence": "evidence\\installed-brand-b-immediate-1786313714360\\27-ab463ec8c683.png",
+      "bytes": 8740,
+      "sha256": "ab463ec8c683c877d445452d04af956a7da8e3d44cf4fa60d78ddf2d15513b7c"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Trusted Icons\\Icons\\32.png",
+      "evidence": "evidence\\installed-brand-b-immediate-1786313714360\\28-d874e0a2c977.png",
+      "bytes": 1030,
+      "sha256": "d874e0a2c9779e86362eb396b7fd1db80e9031817872bb237bfb63f9a889163d"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Trusted Icons\\Icons\\48.png",
+      "evidence": "evidence\\installed-brand-b-immediate-1786313714360\\29-8f8a9516b96a.png",
+      "bytes": 1575,
+      "sha256": "8f8a9516b96a81553d5f4e46777340845361780eab2478f14c75aa4fdcf95502"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Trusted Icons\\Icons\\512.png",
+      "evidence": "evidence\\installed-brand-b-immediate-1786313714360\\30-7fc82bc4303f.png",
+      "bytes": 9442,
+      "sha256": "7fc82bc4303f8100134968478db6e86dc552e4303bdb7166d86b74d05b9c3c64"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Trusted Icons\\Icons\\64.png",
+      "evidence": "evidence\\installed-brand-b-immediate-1786313714360\\31-79145c98df61.png",
+      "bytes": 2105,
+      "sha256": "79145c98df619b6f77c63940a809c751f546bdcd02dd2d9e0540ed8e4295f7d3"
+    },
+    {
+      "source": "Default\\Web Applications\\Manifest Resources\\jojchbkloljpdkiandcmcmoogbfeecnm\\Trusted Icons\\Icons\\96.png",
+      "evidence": "evidence\\installed-brand-b-immediate-1786313714360\\32-a9c07955034e.png",
+      "bytes": 3340,
+      "sha256": "a9c07955034eb18e8c7e2a67158f0bffe763d754e6657d031e1a62fb0e229beb"
+    }
+  ],
+  "installedIconUpdatedImmediately": false
+}
