@@ -104,7 +104,7 @@
     ]);
   }
 
-  function TicketPanel({ ticket, client, subtotal, subtotalOrig, discount, itemCount, grandTotal, quote, additionalDiscounts, onPickClient, onResetClient, onQty, onRemove, onCobrar, onAdditionalDiscount, onRemoveAdditionalDiscount, onClear, bottom, flashKey }) {
+  function TicketPanel({ ticket, client, subtotal, subtotalOrig, discount, itemCount, grandTotal, quote, additionalDiscounts, onPickClient, onResetClient, onQty, onRemove, onCobrar, onAdditionalDiscount, onRemoveAdditionalDiscount, onClear, bottom, flashKey, surface }) {
     const desc = discount || 0;
     const totalPagar = grandTotal != null ? grandTotal : subtotal;
     const dg = desglose(totalPagar, desc, 16);
@@ -119,7 +119,7 @@
       : null;
     const empty = ticket.length === 0;
     return h('aside', {
-      className: 'bg-surface-container-lowest rounded-xl shadow-e3 flex flex-col overflow-hidden shrink-0 w-full min-w-0 ' +
+      className: 'bg-surface-container-lowest rounded-xl shadow-e3 flex flex-col overflow-hidden shrink-0 w-full min-w-0 ' + (surface === 'overlay' ? 'h-full ' : '') +
         (bottom ? 'xl:max-h-[42vh]' : 'xl:w-[clamp(340px,30vw,440px)]'),
     }, [
       // Resumen de venta + cliente

@@ -52,6 +52,11 @@
     const [pendingMetodo, setPendingMetodo] = useState(null); // venta por confirmar vendedor
     const [success, setSuccess] = useState(null);             // venta registrada
     const [flash, setFlash] = useState(null);                 // línea recién agregada por escáner (destello verde)
+    const [cartOpen, setCartOpen] = useState(false);
+    const [cartFeedback, setCartFeedback] = useState(null);
+    const viewportBand = useViewportBand();
+    const cartTriggerRef = useRef(null);
+    const feedbackTimer = useRef(null);
     window.UI.useSyncActivity(!!(ticket.length || checkout || pendingMetodo),
       ['config','products','promotions','clients','sellers','sales','payments','movements'],
       { screen: 'pos' });
@@ -136,8 +141,11 @@
       });
       setAdditionalDiscounts([]);
       setSizePick(null);
-      toast(`${p.nombre} · ${talla} agregado`);
+      setCartFeedback({ key, nombre: p.nombre, talla });
+      clearTimeout(feedbackTimer.current);
+      feedbackTimer.current = setTimeout(() => setCartFeedback(current => current && current.key === key ? null : current), 1800);
     }
+    useEffect(() => () => clearTimeout(feedbackTimer.current), []);
     function setQty(key, d) {
       setAdditionalDiscounts([]);
       setTicket(prev => prev.flatMap(l => {
@@ -263,14 +271,23 @@
       onQty: setQty, onRemove: removeLine, onCobrar: () => setCheckout(true),
       onAdditionalDiscount: () => setDiscountOpen(true),
       onRemoveAdditionalDiscount: id => setAdditionalDiscounts(prev => prev.filter(x => x.id !== id)),
-      onClear: () => { setTicket([]); setAdditionalDiscounts([]); }, bottom: ticketBottom, flashKey: flash,
+      onClear: () => { setTicket([]); setAdditionalDiscounts([]); }, bottom: ticketBottom, flashKey: flash, surface: viewportBand === 'desktop' ? 'inline' : 'overlay',
     });
+    const compactCart = viewportBand !== 'desktop' && h(CartAccess, {
+      key: 'cart-access', itemCount, total: grandTotal, feedback: cartFeedback,
+      onOpen: () => setCartOpen(true), triggerRef: cartTriggerRef, tablet: viewportBand === 'tablet',
+    });
+    const cartOverlay = viewportBand !== 'desktop' && cartOpen && h(CartOverlay, {
+      key: 'cart-overlay', mobile: viewportBand === 'mobile', onClose: () => setCartOpen(false), returnFocusRef: cartTriggerRef,
+    }, ticketPanel);
 
     return h('div', {
-      className: 'flex-1 min-h-0 min-w-0 bg-background font-body text-on-surface px-4 py-6 sm:p-6 lg:p-8 flex flex-col xl:flex-row gap-6 lg:gap-8 ' + (ticketBottom ? 'xl:flex-col' : ''),
+      className: 'flex-1 min-h-0 min-w-0 bg-background font-body text-on-surface px-4 pt-6 pb-28 sm:px-6 sm:pt-6 sm:pb-28 lg:px-8 lg:pt-8 lg:pb-28 xl:pb-8 flex flex-col xl:flex-row gap-6 lg:gap-8 ' + (ticketBottom ? 'xl:flex-col' : ''),
     }, [
       catalog,
-      ticketPanel,
+      viewportBand === 'desktop' && ticketPanel,
+      compactCart,
+      cartOverlay,
       sizePick && h(SizeModal, { key: 'sm', p: sizePick, onClose: () => setSizePick(null), onPick: addToTicket }),
       discountOpen && h(window.AdditionalDiscountModal, {
         key: 'ad', ticket: resolved, existing: additionalDiscounts,
@@ -282,6 +299,68 @@
       success && h(SuccessModal, { key: 'ok', sale: success, onNew: onNewSale }),
       success && h(window.BalamTicket, { key: 'tk', sale: success }),
     ]);
+  }
+
+  function useViewportBand() {
+    const read = () => window.innerWidth >= 1280 ? 'desktop' : window.innerWidth >= 768 ? 'tablet' : 'mobile';
+    const [band, setBand] = useState(read);
+    useEffect(() => {
+      const onResize = () => setBand(read());
+      window.addEventListener('resize', onResize);
+      return () => window.removeEventListener('resize', onResize);
+    }, []);
+    return band;
+  }
+
+  function CartAccess({ itemCount, total, feedback, onOpen, triggerRef, tablet }) {
+    const empty = itemCount === 0;
+    return h('div', {
+      className: (tablet ? 'fixed right-6 bottom-6 w-[360px]' : 'fixed inset-x-0 bottom-0 w-full') + ' z-40 px-3 pt-2 bg-surface/95 backdrop-blur border-t border-outline-variant shadow-e3',
+      style: { paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' },
+      'data-testid': 'pos-cart-access',
+    }, h('button', {
+      ref: triggerRef, type: 'button', disabled: empty, onClick: onOpen,
+      className: 'w-full min-h-14 px-4 rounded-xl bg-primary text-on-primary flex items-center gap-3 text-left disabled:opacity-60 transition ' + (feedback ? 'ring-4 ring-success/30' : ''),
+      'data-testid': 'pos-cart-open', 'aria-haspopup': 'dialog',
+      'aria-label': empty ? 'Venta vacía' : `Ver venta, ${itemCount} artículos, total ${fmt(total)}`,
+    }, [
+      h(MS, { key: 'i', name: feedback ? 'check' : 'shopping_cart', size: 22 }),
+      h('span', { key: 'copy', className: 'flex-1 min-w-0' }, [
+        h('span', { key: 'main', className: 'block text-caption font-bold uppercase tracking-wider' }, empty ? 'Venta vacía' : `Ver venta (${itemCount})`),
+        h('span', { key: 'feedback', className: 'block text-overline truncate opacity-75', 'aria-live': 'polite' }, feedback ? `${feedback.nombre} · talla ${feedback.talla} agregado` : 'Resumen siempre disponible'),
+      ]),
+      h('span', { key: 'total', className: 'font-headline text-lg shrink-0' }, fmt(total)),
+    ]));
+  }
+
+  function CartOverlay({ mobile, onClose, returnFocusRef, children }) {
+    const panelRef = useRef(null);
+    useEffect(() => {
+      const focusable = () => panelRef.current ? [...panelRef.current.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])')].filter(node => node.offsetParent !== null) : [];
+      const onKey = event => {
+        if (event.key === 'Escape') { onClose(); return; }
+        if (event.key !== 'Tab') return;
+        const nodes = focusable(); if (!nodes.length) return;
+        const first = nodes[0], last = nodes[nodes.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+      };
+      window.addEventListener('keydown', onKey);
+      requestAnimationFrame(() => focusable()[0]?.focus());
+      return () => { window.removeEventListener('keydown', onKey); requestAnimationFrame(() => returnFocusRef.current?.focus()); };
+    }, []);
+    return h('div', { className: 'fixed inset-0 z-[140] bg-on-surface/40 flex ' + (mobile ? 'items-end' : 'justify-end'), onMouseDown: event => { if (event.target === event.currentTarget) onClose(); } },
+      h('section', {
+        ref: panelRef, role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Resumen de venta', 'data-testid': 'pos-cart-surface',
+        className: 'bg-surface min-w-0 flex flex-col shadow-e3 ' + (mobile ? 'w-full max-h-[88dvh] rounded-t-2xl' : 'h-full w-[min(460px,92vw)]'),
+        style: mobile ? { paddingBottom: 'env(safe-area-inset-bottom)' } : undefined,
+      }, [
+        h('header', { key: 'h', className: 'min-h-16 px-4 flex items-center border-b border-outline-variant' }, [
+          h('h2', { key: 't', className: 'flex-1 font-headline text-headline-md text-primary' }, 'Resumen de venta'),
+          h('button', { key: 'x', onClick: onClose, className: 'w-11 h-11 grid place-items-center rounded-lg hover:bg-surface-container', 'aria-label': 'Cerrar resumen' }, h(MS, { name: 'close', size: 20 })),
+        ]),
+        h('div', { key: 'b', className: 'flex-1 min-h-0 overflow-hidden p-3' }, children),
+      ]));
   }
 
   // Desplegable de filtro compacto (talla / color) con estética de "pill".
