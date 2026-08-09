@@ -7,8 +7,9 @@ import fs from 'fs';
 import path from 'path';
 
 const ROOT = path.resolve('.');
+const REMOTE_URL = /^https?:\/\//.test(process.argv[2] || '') ? process.argv[2] : '';
 const MIME = { '.html': 'text/html', '.jsx': 'text/babel', '.js': 'text/javascript', '.css': 'text/css' };
-const server = http.createServer((req, res) => {
+const server = REMOTE_URL ? null : http.createServer((req, res) => {
   let p = decodeURIComponent(req.url.split('?')[0]);
   if (p === '/') p = '/index.html';
   const fp = path.join(ROOT, p);
@@ -16,7 +17,7 @@ const server = http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': MIME[path.extname(fp)] || 'application/octet-stream' });
   fs.createReadStream(fp).pipe(res);
 });
-await new Promise(resolve => server.listen(8871, '127.0.0.1', resolve));
+if (server) await new Promise(resolve => server.listen(8871, '127.0.0.1', resolve));
 
 let pass = 0, fail = 0;
 const errors = [];
@@ -35,7 +36,7 @@ try {
     window.print = () => { window.__printed += 1; };
   });
   await page.route(/supabase\.co/, route => route.abort());
-  await page.goto('http://127.0.0.1:8871/index.html', { waitUntil: 'load' });
+  await page.goto(REMOTE_URL || 'http://127.0.0.1:8871/index.html', { waitUntil: 'load' });
   await page.waitForFunction(() => window.DATA && window.CONFIG && window.BalamTicket, null, { timeout: 25000 });
 
   const seeded = await page.evaluate(() => {
@@ -205,7 +206,7 @@ try {
   check('sin excepciones de página', errors.length === 0, errors.slice(0, 3).join(' | '));
 } finally {
   await browser.close();
-  server.close();
+  if (server) server.close();
 }
 
 console.log(`\n════════ ${pass} pasaron, ${fail} fallaron ════════`);

@@ -27,7 +27,7 @@ y `BLOQUEADO`.
 | H-16 | Pulls truncados por límite de PostgREST | RESUELTO | Sincronización / rendimiento |
 | H-17 | Código y estilos heredados sin consumidores | RESUELTO | Frontend / build |
 | H-77 | Terminales abiertas no convergen y una línea base antigua carece de cuarentena | CÓDIGO LISTO / DESPLIEGUE PENDIENTE | Sincronización / offline / multi-terminal |
-| H-85 | Los comprobantes reconstruyen evidencia vigente y varias superficies no imprimen o no permiten reimpresión | RESUELTO, PENDIENTE DE PUBLICACIÓN | Ventas / posventa / impresión |
+| H-85 | Los comprobantes reconstruyen evidencia vigente y varias superficies no imprimen o no permiten reimpresión | RESUELTO Y PUBLICADO | Ventas / posventa / impresión |
 
 ## H-01 — Inventario concurrente
 
@@ -4091,9 +4091,9 @@ los diálogos nativos de confirmación depende de la plataforma.
 
 ## H-85 - Los comprobantes no son una proyección histórica cerrada
 
-**Estado:** RESUELTO, PENDIENTE DE PUBLICACIÓN
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha de registro:** 08/08/2026
-**Commit:** Pendiente de commit
+**Commit técnico:** `568bdc4984bd42f0b74c0ee074f518c50d55efe0`
 **Origen:** auditoría quirúrgica del sistema de tickets solicitada por el dueño
 del producto y autorización expresa de la corrección completa.
 **Reproducción:** el ticket de una venta blanca cambia a rojo al editar el
@@ -4125,6 +4125,10 @@ propio, la devolución directa emite `BalamReturnReceipt` y
 **32/32 + 17/17**; H-84 **19/19**. Build regenerado correctamente.
 Migraciones `12800/12900` aplicadas y verificadas; `dry-run` remoto posterior
 sin pendientes.
+**Publicación:** `origin/main` contiene el commit técnico; Pages terminó con
+éxito y sirve el mismo blob `index.html` (SHA-256
+`1ADD911CCD83071EBF3B8338A6378FF1AC37909475127D238BCEAFE5D8795AAF`). El
+recorrido H-85 sobre el sitio público pasó **18/18** con Supabase bloqueado.
 **Riesgo residual:** ventas anteriores a H-85 no contienen etiquetas que nunca
 se persistieron. Se conserva el código crudo o se omite el dato; no se completa
 desde el catálogo vigente porque eso fabricaría evidencia histórica.

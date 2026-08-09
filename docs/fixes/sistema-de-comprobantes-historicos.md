@@ -1,9 +1,9 @@
 # Sistema de comprobantes históricos
 
 **Riesgo:** H-85
-**Estado:** RESUELTO
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha:** 08/08/2026
-**Commit:** Pendiente de commit
+**Commit técnico:** `568bdc4984bd42f0b74c0ee074f518c50d55efe0`
 
 ## Problema y reproducción
 
@@ -67,12 +67,17 @@ Las migraciones `20260808012800/12900` se aplicaron al proyecto enlazado; la
 verificación SQL terminó correctamente y el `db push --dry-run` posterior
 respondió `Remote database is up to date`.
 
+`origin/main` contiene el commit técnico. El workflow de GitHub Pages terminó
+correctamente para ese SHA y el `index.html` servido coincide con el blob del
+commit: SHA-256 `1ADD911CCD83071EBF3B8338A6378FF1AC37909475127D238BCEAFE5D8795AAF`.
+El mismo arnés H-85 ejecutado directamente contra el sitio publicado, con
+Supabase bloqueado, terminó **18/18**.
+
 ## Riesgo residual y pendientes
 
 Las ventas anteriores a H-85 no adquieren datos que nunca congelaron. Por
 diseño, una etiqueta histórica ausente se muestra como código crudo o se omite;
-rellenarla desde Inventario crearía evidencia falsa. El sitio publicado se
-registrará al desplegar el cliente.
+rellenarla desde Inventario crearía evidencia falsa.
 
 ## Referencias
 
