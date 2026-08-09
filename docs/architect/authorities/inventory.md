@@ -44,6 +44,19 @@ columna → identidad en la hoja «Catálogos»
 se traduce por adivinación
 **Consumidores:** `grep -rn "sizeColumns\|legacyHeader" balam/ test-*.mjs`
 
+## ¿Cuál es el contrato Excel de Inventario y cómo se decide una importación?
+**Autoridad:** `XLSXIO.schema` (`INVENTORY_XLSX_SCHEMA`) define hojas, versión,
+columnas visibles y columnas técnicas. `XLSXIO.planImport()` es la única
+autoridad de preflight: localiza actualizaciones por `_BALAM_ID_PRODUCTO`,
+calcula altas/cambios/conflictos y no produce mutaciones. `applyImportPlan()`
+aplica el plan completo únicamente si sigue vigente y no contiene conflictos
+**Definición:** `balam/xlsx-io.jsx` · Plantilla y Exportar delegan en
+`writeInventoryWorkbook()`; Importar consume el libro emitido por ese escritor
+**Creada por:** H-86 · **Decisiones:** SKU es dato comercial, no identidad de
+actualización; un error bloquea todas las filas; el orden físico de columnas no
+forma parte de su identidad
+**Consumidores:** `grep -rn "XLSXIO.schema\|planImport\|applyImportPlan" balam/ test-*.mjs`
+
 ## ¿Qué opciones muestra el filtro global de tallas y en qué orden?
 **Autoridad:** `DATA.resolveSizeFilterGroups()` — responde con una **estructura
 por categoría**, no con una lista. `DATA.resolveSizeFilterOptions()` es su

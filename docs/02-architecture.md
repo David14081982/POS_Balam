@@ -294,6 +294,31 @@ escalas no mezcla ni vende variantes: queda sin resolución y exige asignación
 explícita en Inventario. La importación Excel transporta una categoría y rechaza
 filas que llenen dos escalas o contradigan la categoría declarada.
 
+### Contrato Excel canónico de Inventario
+
+`XLSXIO.schema` publica el contrato versionado `balam.inventory`. Plantilla y
+Exportar invocan el mismo escritor: la primera entrega cero productos y la
+segunda el estado actual, pero ambas contienen las mismas hojas y columnas.
+`Inventario` transporta el estado editable, las identidades técnicas
+`_BALAM_ID_PRODUCTO`/`_BALAM_VERSION_PRODUCTO` y todas las tallas; `Catálogos`
+publica los códigos y el mapa inequívoco encabezado humano → escala/valor; la
+hoja oculta `_BALAM` identifica versión y huellas del esquema.
+
+El lector resuelve columnas por encabezado, no por posición. Un libro canónico
+se bloquea si falta o se duplica una columna obligatoria, si la versión es
+incompatible, si una talla no puede resolverse o si un valor tipado/JSON es
+inválido. Los archivos heredados siguen una ruta explícita y sus campos ausentes
+significan **preservar** al actualizar; nunca reciben códigos de catálogo por
+default silencioso.
+
+`XLSXIO.planImport()` hace el preflight completo sin mutar DATA. Un ID técnico
+válido actualiza exactamente ese producto; sin ID, un SKU nuevo es alta y un SKU
+existente es conflicto. SKU duplicado en archivo o catálogo bloquea. La vista
+previa expone altas, actualizaciones, conflictos y diferencias de stock/precio.
+`applyImportPlan()` vuelve a comprobar la huella de base y reemplaza el estado en
+una sola operación sólo si el plan entero sigue válido. STORE, Supabase y la
+sincronización permanecen fuera de este contrato local.
+
 ### Resolución del descuento por renglón
 
 `DATA.resolveLineDiscount(producto, talla)` es la única fuente de la resolución

@@ -101,6 +101,7 @@
     const [editing, setEditing] = useState(null);
     const [products, setProducts] = useState(() => D.products.slice());
     const [importPreview, setImportPreview] = useState(null);
+    const [importResolutions, setImportResolutions] = useState({});
     const [labelTargets, setLabelTargets] = useState(null); // productos para imprimir etiquetas
     window.UI.useSyncActivity(!!(editing || importPreview), ['products', 'config', 'promotions'], { screen: 'inventory' });
     const [page, setPage] = useState(1);
@@ -121,40 +122,32 @@
       e.target.value = '';
       if (!file) return;
       window.XLSXIO.parseFile(file)
-        .then(res => { if (!res.products.length) { toast('No se encontraron productos válidos en el archivo', 'var(--danger)'); return; } setImportPreview(res); })
+        .then(res => {
+          if (!res.products.length) { toast('El archivo no contiene productos para importar', 'var(--danger)'); return; }
+          setImportResolutions({}); setImportPreview(res);
+        })
         // Los errores propios del lector (etiquetas duplicadas, archivo sin la hoja
         // «Catálogos») traen un mensaje que el dueño puede accionar: se muestra tal cual.
         .catch(err => toast((err && err.balam && err.message) || 'No se pudo leer el archivo Excel', 'var(--danger)'));
     }
-    // Importar ACTUALIZA por SKU: si el SKU ya existe se modifica ese producto en vez de agregar
-    // otro. (Antes siempre hacía push, así que reimportar el mismo archivo duplicaba el catálogo.)
-    // El SKU es la identidad estable del producto — el historial de ventas y movimientos lo
-    // referencia por SKU, y hydrate lo congela al crearlo.
+    // H-86: la vista previa es un plan completo. Ninguna fila toca DATA mientras
+    // exista un conflicto y la actualización localiza por el ID técnico exportado.
     function confirmImport() {
-      // Si dos productos comparten SKU (posible: la receta puede no incluir el No. Modelo), se
-      // actualiza SIEMPRE el primero. Determinista y estable entre importaciones.
-      const bySku = {};
-      D.products.forEach(p => { if (p.sku && !bySku[p.sku]) bySku[p.sku] = p; });
-      const F = (window.XLSXIO && window.XLSXIO.IMPORT_FIELDS) || [];
-      let nuevos = 0, actualizados = 0;
-      importPreview.products.forEach(imp => {
-        const target = bySku[imp.sku];
-        if (!target) { D.products.push(imp); bySku[imp.sku] = imp; nuevos++; return; }
-        // Solo los campos que la hoja trae. Se conservan id, costo, destacado y códigos de
-        // barras: el Excel no los lleva y copiarlos borraría lo que ya está capturado.
-        F.forEach(k => { if (k !== 'attrs' && imp[k] !== undefined) target[k] = imp[k]; });
-        // attrs se FUSIONA, no se reemplaza: un catálogo custom sin columna en el archivo
-        // dejaría el valor vacío y se perdería el que ya tenía el producto.
-        target.attrs = Object.assign({}, target.attrs, imp.attrs);
-        // La foto solo se pisa si la hoja trajo una URL real; la genérica que pone hydrate
-        // cuando la celda va vacía nunca reemplaza una foto ya subida.
-        if (imp.imagen && !D.isAutoImg(imp.imagen)) target.imagen = imp.imagen;
-        D.hydrate(target);
-        actualizados++;
-      });
-      D.saveProducts(); refresh();
-      setImportPreview(null);
-      toast(`${nuevos} nuevos · ${actualizados} actualizados`, 'var(--accent)');
+      const plan = window.XLSXIO.planImport(importPreview, D.products, importResolutions);
+      if (!plan.ok) {
+        toast(`Importación bloqueada: ${plan.conflicts.length} conflicto(s). No se modificó el inventario.`, 'var(--danger)');
+        return;
+      }
+      const backup = D.products.map(product => JSON.parse(JSON.stringify(product)));
+      try {
+        const result = window.XLSXIO.applyImportPlan(plan, D.products);
+        D.saveProducts(); refresh();
+        setImportPreview(null); setImportResolutions({});
+        toast(`${result.nuevos} nuevos · ${result.actualizados} actualizados`, 'var(--accent)');
+      } catch (error) {
+        D.products.splice(0, D.products.length, ...backup); refresh();
+        toast((error && error.balam && error.message) || 'No se pudo aplicar la importación; no se modificó el inventario', 'var(--danger)');
+      }
     }
     function saveProduct(draft, mode) {
       if (mode === 'edit') {
@@ -319,7 +312,12 @@
         h(DetailDrawer, { key: 'dr', p: detail, onClose: () => setDetail(null), onEdit: () => setEditing({ mode: 'edit', product: detail }), onDelete: () => deleteProduct(detail), onLabels: (prod) => setLabelTargets([prod]) }),
         labelTargets && h(LabelModal, { key: 'lbl', products: labelTargets, onClose: () => setLabelTargets(null) }),
         editing && h(ProductForm, { key: 'f-' + editing.mode + '-' + (editing.product.id || 'new'), mode: editing.mode, product: editing.product, onClose: () => setEditing(null), onSave: saveProduct }),
-        importPreview && h(ImportModal, { key: 'imp', data: importPreview, onClose: () => setImportPreview(null), onConfirm: confirmImport }),
+        importPreview && h(ImportModal, {
+          key: 'imp', data: importPreview,
+          plan: window.XLSXIO.planImport(importPreview, D.products, importResolutions),
+          onResolve: (rowKey, productId) => setImportResolutions(current => Object.assign({}, current, { [rowKey]: productId })),
+          onClose: () => { setImportPreview(null); setImportResolutions({}); }, onConfirm: confirmImport,
+        }),
       ]));
   }
 
@@ -431,38 +429,45 @@
   }
 
   // ---------- Previsualización de importación ----------
-  function ImportModal({ data, onClose, onConfirm }) {
-    // Qué va a pasar con cada fila: el SKU ya existente se ACTUALIZA, el nuevo se AGREGA.
-    const existentes = new Set(D.products.map(p => p.sku));
-    const esNuevo = (p) => !existentes.has(p.sku);
-    const nuevos = data.products.filter(esNuevo).length;
-    const actualiza = data.products.length - nuevos;
+  function ImportModal({ data, plan, onClose, onConfirm, onResolve }) {
+    const stockTotal = state => state && Array.isArray(state.stock)
+      ? state.stock.reduce((sum, item) => sum + (Number(item.stock) || 0), 0) : 0;
+    const priceSummary = state => {
+      if (!state) return '—';
+      const specials = Object.keys(state.preciosTalla || {}).length;
+      return fmt(state.precio).replace('.00', '') + (specials ? ` + ${specials} especial(es)` : '');
+    };
     const footer = [
       h('button', { key: 'c', className: 'px-5 h-11 border border-outline-variant text-on-surface text-caption font-bold uppercase tracking-widest hover:bg-surface-container rounded-lg transition-colors', onClick: onClose }, 'Cancelar'),
-      h('button', { key: 'k', className: 'inline-flex items-center gap-2 px-5 h-11 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-lg hover:opacity-90 transition', onClick: onConfirm }, [h(MS, { key: 'i', name: 'check', size: 16 }), `Importar ${data.products.length}`]),
+      h('button', { key: 'k', 'data-testid': 'inventory-import-confirm', disabled: !plan.ok, className: 'inline-flex items-center gap-2 px-5 h-11 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-lg hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed', onClick: onConfirm }, [h(MS, { key: 'i', name: plan.ok ? 'check' : 'block', size: 16 }), plan.ok ? `Importar ${plan.rows.length}` : 'Importación bloqueada']),
     ];
     return h(Modal, { title: 'Previsualizar importación', onClose, footer, large: true }, [
       h('div', { key: 'sum', className: 'flex items-center gap-2 mb-4 flex-wrap text-caption' }, [
-        nuevos > 0 && h('span', { key: 'n', className: 'px-2 py-1 bg-success-soft text-success font-bold rounded' }, `${nuevos} nuevos`),
-        actualiza > 0 && h('span', { key: 'u', className: 'px-2 py-1 bg-gold-soft text-gold-text font-bold rounded' }, `${actualiza} se actualizan`),
+        plan.creates > 0 && h('span', { key: 'n', 'data-testid': 'inventory-import-creates', className: 'px-2 py-1 bg-success-soft text-success font-bold rounded' }, `${plan.creates} altas`),
+        plan.updates > 0 && h('span', { key: 'u', 'data-testid': 'inventory-import-updates', className: 'px-2 py-1 bg-gold-soft text-gold-text font-bold rounded' }, `${plan.updates} actualizaciones`),
+        plan.conflicts.length > 0 && h('span', { key: 'x', 'data-testid': 'inventory-import-conflicts', className: 'px-2 py-1 bg-danger-soft text-danger font-bold rounded' }, `${plan.conflicts.length} conflictos`),
         data.skipped > 0 && h('span', { key: 'b', className: 'px-2 py-1 bg-warning-soft text-warning font-bold rounded' }, `${data.skipped} omitidos`),
-        h('span', { key: 'c', className: 'text-on-surface-variant' }, `${data.total} filas leídas`),
+        h('span', { key: 'c', className: 'text-on-surface-variant' }, `${data.total} filas leídas · ${data.schema === 'current' ? 'Esquema BALAM v' + data.metadata.schema_version : 'Archivo heredado'}`),
       ]),
-      actualiza > 0 && h('p', { key: 'nota', className: 'text-caption text-on-surface-variant mb-3' }, 'Los que se actualizan conservan su costo, si están destacados y sus códigos de barras (esta hoja no los lleva). La foto solo cambia si la columna “Foto (URL)” trae un enlace.'),
+      ...(plan.warnings || []).map((warning, index) => h('p', { key: 'w' + index, role: 'status', className: 'text-caption text-warning mb-2 p-2 rounded bg-warning-soft' }, warning)),
+      plan.conflicts.length > 0 && h('p', { key: 'blocked', role: 'alert', className: 'text-caption font-semibold text-danger mb-3' }, 'Todo-o-nada: mientras exista un conflicto no se aplicará ninguna fila.'),
       h('div', { key: 'tbl', className: 'border border-outline-variant rounded-lg overflow-hidden max-h-80 overflow-y-auto' },
         h('table', { className: 'w-full' }, [
           h('thead', { key: 'h', className: 'sticky top-0 bg-surface' }, h('tr', { className: 'border-b border-outline-variant' },
-            ['Acción', 'Producto', 'SKU', 'Cuello', 'Precio', 'Stock'].map((c, i) => h('th', { key: i, className: 'px-3 py-2 text-overline font-semibold text-on-surface-variant uppercase tracking-widest text-left' + (c === 'Precio' || c === 'Stock' ? ' text-right' : '') }, c)))),
-          h('tbody', { key: 'b', className: 'divide-y divide-outline-variant' }, data.products.slice(0, 60).map(p => h('tr', { key: p.id }, [
-            h('td', { key: 'a', className: 'px-3 py-2' }, h('span', { className: 'px-2 py-0.5 text-overline font-bold rounded ' + (esNuevo(p) ? 'bg-success-soft text-success' : 'bg-gold-soft text-gold-text') }, esNuevo(p) ? 'Nuevo' : 'Actualiza')),
-            h('td', { key: 'n', className: 'px-3 py-2' }, h('div', { className: 'flex items-center gap-2' }, [h(ProductImage, { key: 't', p, className: 'w-8 h-8 rounded' }), h('span', { key: 'x', className: 'text-body text-primary' }, p.nombre)])),
-            h('td', { key: 's', className: 'px-3 py-2 text-overline font-mono text-on-surface-variant' }, p.sku),
-            h('td', { key: 'cu', className: 'px-3 py-2' }, h('span', { className: 'px-2 py-0.5 bg-surface-container-high text-on-surface-variant text-overline rounded' }, D.CUELLO[p.cuello])),
-            h('td', { key: 'p', className: 'px-3 py-2 text-right font-headline text-body' }, precioTexto(p)),
-            h('td', { key: 'st', className: 'px-3 py-2 text-right font-mono text-body' }, D.totalStock(p)),
+            ['Acción', 'Producto / SKU', 'Stock antes → después', 'Precios antes → después', 'Campos modificados'].map((c, i) => h('th', { key: i, className: 'px-3 py-2 text-overline font-semibold text-on-surface-variant uppercase tracking-widest text-left' }, c)))),
+          h('tbody', { key: 'b', className: 'divide-y divide-outline-variant' }, plan.rows.slice(0, 60).map(row => h('tr', { key: row.rowKey, 'data-testid': 'inventory-import-row-' + row.rowNumber }, [
+            h('td', { key: 'a', className: 'px-3 py-2 align-top' }, [
+              h('span', { key: 'badge', className: 'px-2 py-0.5 text-overline font-bold rounded ' + (row.action === 'new' ? 'bg-success-soft text-success' : row.action === 'update' ? 'bg-gold-soft text-gold-text' : 'bg-danger-soft text-danger') }, row.action === 'new' ? 'Alta' : row.action === 'update' ? 'Actualiza' : 'Conflicto'),
+              row.conflict && h('p', { key: 'msg', className: 'mt-1 text-overline text-danger max-w-56' }, row.conflict.message),
+              row.conflict && row.conflict.resolvable && h('button', { key: 'resolve', type: 'button', 'data-testid': 'inventory-import-resolve-' + row.rowNumber, onClick: () => onResolve(row.rowKey, row.conflict.candidateId), className: 'mt-2 px-2 min-h-8 border border-danger/40 rounded text-overline font-bold text-danger' }, 'Confirmar producto existente'),
+            ]),
+            h('td', { key: 'n', className: 'px-3 py-2 align-top' }, [h('div', { key: 'name', className: 'text-body text-primary font-semibold' }, row.incoming.nombre), h('code', { key: 'sku', className: 'text-overline text-on-surface-variant' }, row.incoming.sku)]),
+            h('td', { key: 'st', className: 'px-3 py-2 align-top font-mono text-caption' }, row.action === 'new' ? `0 → ${stockTotal(row.after)}` : row.before && row.after ? `${stockTotal(row.before)} → ${stockTotal(row.after)}` : '—'),
+            h('td', { key: 'pr', className: 'px-3 py-2 align-top text-caption' }, row.action === 'new' ? `— → ${priceSummary(row.after)}` : row.before && row.after ? `${priceSummary(row.before)} → ${priceSummary(row.after)}` : '—'),
+            h('td', { key: 'f', className: 'px-3 py-2 align-top text-caption' }, row.fields.length ? row.fields.join(', ') : (row.action === 'update' ? 'Sin cambios' : '—')),
           ]))),
         ])),
-      data.products.length > 60 && h('div', { key: 'more', className: 'text-caption text-on-surface-variant mt-2 text-center' }, `… y ${data.products.length - 60} más`),
+      plan.rows.length > 60 && h('div', { key: 'more', className: 'text-caption text-on-surface-variant mt-2 text-center' }, `… y ${plan.rows.length - 60} más`),
     ]);
   }
 

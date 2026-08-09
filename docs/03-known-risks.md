@@ -4134,6 +4134,41 @@ se persistieron. Se conserva el código crudo o se omite el dato; no se completa
 desde el catálogo vigente porque eso fabricaría evidencia histórica.
 **Corrección documentada:** `docs/fixes/sistema-de-comprobantes-historicos.md`.
 
+## H-86 - Plantilla, Exportar e Importar no comparten un contrato Excel canónico
+
+**Estado:** RESUELTO
+**Fecha de registro:** 09/08/2026
+**Commit:** Pendiente de commit
+**Origen:** auditoría quirúrgica y contrato aprobado por el dueño para unificar
+Inventario → Plantilla, Exportar e Importar.
+**Reproducción:** el escritor actual omite precios por talla, costo, destacado,
+identidad y versión; la plantilla contiene una fila de ejemplo; el lector no
+versiona ni exige el mismo esquema; y `confirmImport()` indexa un solo producto
+por SKU. Con inventario vacío, 239 filas con 222 SKU únicos crean 222 productos:
+las otras 17 filas sobrescriben el primero de su grupo y sustituyen su stock.
+**Riesgo:** pérdida silenciosa de productos y existencias, restauraciones
+incompletas y actualizaciones sobre una referencia distinta de la exportada.
+**Alcance:** un esquema/escritor versionado para Plantilla y Exportar, parser del
+mismo contrato, adaptador heredado explícito, preflight por identidad técnica,
+vista previa y aplicación local todo-o-nada. Tallas conservan label humano y mapa
+técnico; precio por talla y H-83 siguen consumiendo sus autoridades vigentes.
+**No alcance:** SKU comercial futuro, sufijos, `variant_id`, matriz SKU, STORE,
+Supabase, sincronización y migraciones.
+**Corrección:** `INVENTORY_XLSX_SCHEMA` y un escritor único producen Plantilla
+vacía y Exportar lleno con idénticas hojas/columnas. El parser versionado acepta
+reordenamiento, conserva heredados de forma explícita y el plan todo-o-nada
+actualiza sólo por ID técnico. La vista previa hace visibles las diferencias y
+mantiene bloqueada la confirmación ante cualquier conflicto.
+**Pruebas:** `test-h86-inventory-xlsx-contract.mjs` (37/37, incluido fixture
+239/222 → 29 conflictos y cero mutaciones); H-83 (32/32 + 17 E2E), H-84
+(19/19), precios por talla (19/19 + 38/38), H-67 (27/27), H-74 (25/25),
+importación/fotos (23/23), modelo custom (14/14), seguridad XLSX (17/17),
+tallas (9/9 + 34/34), Inventario (18/18), contratos (41/41), navegación
+(15/15), build (8/8) y humo del bundle (17/17).
+**Riesgo residual:** los archivos heredados sin ID requieren una decisión
+explícita cuando su SKU ya existe; es una barrera intencional contra fusiones.
+**Corrección documentada:** `docs/fixes/contrato-excel-inventario.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

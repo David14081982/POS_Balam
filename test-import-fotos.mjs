@@ -60,15 +60,12 @@ check('fixture: la foto real NO se marca como genérica y la de relleno sí', an
 // ── Exportar → construir el .xlsx en el navegador → guardarlo a disco ────────────────
 const xls = await page.evaluate(() => {
   const D = window.DATA;
-  const real = window.XLSX.utils.json_to_sheet; let filas = null;
+  const real = window.XLSX.utils.json_to_sheet; let filas = null, libro = null;
   window.XLSX.utils.json_to_sheet = (d, o) => { if (!filas) filas = d; return real(d, o); };
-  const realW = window.XLSX.writeFile; window.XLSX.writeFile = () => {};
+  const realW = window.XLSX.writeFile; window.XLSX.writeFile = wb => { libro = wb; };
   window.XLSXIO.exportInventory(D.products);
   window.XLSX.utils.json_to_sheet = real; window.XLSX.writeFile = realW;
-  const wb = window.XLSX.utils.book_new();
-  const ws = window.XLSX.utils.json_to_sheet(filas, { header: window.XLSXIO.headers() });
-  window.XLSX.utils.book_append_sheet(wb, ws, 'Inventario');
-  return { fotos: filas.map(f => f['Foto (URL)']), headers: window.XLSXIO.headers(), b64: window.XLSX.write(wb, { bookType: 'xlsx', type: 'base64' }) };
+  return { fotos: filas.map(f => f['Foto (URL)']), headers: window.XLSXIO.headers(), b64: window.XLSX.write(libro, { bookType: 'xlsx', type: 'base64' }) };
 });
 check('existe la columna "Foto (URL)"', xls.headers.includes('Foto (URL)'));
 check('A–K conservan su posición (Foto va después de Precio)', xls.headers[10] === 'Precio' && xls.headers[11] === 'Foto (URL)', xls.headers.slice(9, 12).join(' | '));
@@ -86,7 +83,7 @@ async function importar(ruta) {
   await page.waitForTimeout(900);
   await page.setInputFiles('input[type=file][accept*=".xlsx"]', ruta);
   await page.waitForSelector('text=Previsualizar importación', { timeout: 15000 });
-  const badges = await page.evaluate(() => document.body.innerText.match(/\d+ (nuevos|se actualizan)/g) || []);
+  const badges = await page.evaluate(() => document.body.innerText.match(/\d+ (altas|actualizaciones|conflictos)/g) || []);
   // El texto del botón lleva la ligadura del ícono y el estilo lo pone en mayúsculas
   // ("check IMPORTAR 4"): se busca sin anclar y sin distinguir may/min.
   const clicked = await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => /importar\s+\d+/i.test(x.innerText)); if (b) { b.click(); return true; } return false; });
@@ -96,7 +93,7 @@ async function importar(ruta) {
   return badges;
 }
 const badges1 = await importar(file1);
-check('la vista previa avisa que se ACTUALIZAN (no que son nuevos)', badges1.some(t => /se actualizan/.test(t)) && !badges1.some(t => /[1-9]\d* nuevos/.test(t)), JSON.stringify(badges1));
+check('la vista previa avisa que se ACTUALIZAN (no que son altas)', badges1.some(t => /actualizaciones/.test(t)) && !badges1.some(t => /[1-9]\d* altas/.test(t)), JSON.stringify(badges1));
 
 const d1 = await page.evaluate(() => {
   const D = window.DATA, p1 = D.products.find(p => p.id === 'p1');
@@ -125,17 +122,16 @@ const xls2 = await page.evaluate(({ b64, NUEVA }) => {
   filas[1]['Foto (URL)'] = NUEVA;   // al que tenía genérica se le pone una real
   filas[0]['Precio'] = 1234;        // y se cambia un precio
   // Fila nueva: color distinto → SKU distinto → debe AGREGARSE, no actualizar.
-  filas.push(Object.assign({}, filas[0], { SKU: '', 'Color': 'HU', 'No. Modelo': '099', 'Modelo': 'PRODUCTO NUEVO', 'Foto (URL)': NUEVA }));
+  filas.push(Object.assign({}, filas[0], { SKU: '', 'Color': 'HU', 'No. Modelo': '099', 'Modelo': 'PRODUCTO NUEVO', 'Foto (URL)': NUEVA, '_BALAM_ID_PRODUCTO': '', '_BALAM_VERSION_PRODUCTO': '' }));
   const ws2 = window.XLSX.utils.json_to_sheet(filas, { header: window.XLSXIO.headers() });
-  const wb2 = window.XLSX.utils.book_new();
-  window.XLSX.utils.book_append_sheet(wb2, ws2, 'Inventario');
-  return window.XLSX.write(wb2, { bookType: 'xlsx', type: 'base64' });
+  wb.Sheets['Inventario'] = ws2;
+  return window.XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
 }, { b64: xls.b64, NUEVA });
 const file2 = path.join(TMP, 'inv2.xlsx');
 fs.writeFileSync(file2, Buffer.from(xls2, 'base64'));
 
 const badges2 = await importar(file2);
-check('la vista previa distingue 1 nuevo y 3 que se actualizan', badges2.some(t => /1 nuevos/.test(t)) && badges2.some(t => /3 se actualizan/.test(t)), JSON.stringify(badges2));
+check('la vista previa distingue 1 alta y 3 actualizaciones', badges2.some(t => /1 altas/.test(t)) && badges2.some(t => /3 actualizaciones/.test(t)), JSON.stringify(badges2));
 
 const d2 = await page.evaluate(({ NUEVA }) => {
   const D = window.DATA;
