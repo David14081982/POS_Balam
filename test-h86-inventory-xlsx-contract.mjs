@@ -29,23 +29,25 @@ check('la vista previa muestra conflictos y campos modificados', /conflictos/i.t
 check('la confirmación consume un plan prevalidado', /applyImportPlan/.test(inventory));
 
 const ROOT = path.resolve('.');
-const PUBLIC_URL = String(process.env.H86_BASE_URL || '').trim();
+const ARTIFACT_PATH = String(process.env.H86_ARTIFACT_PATH || '').trim();
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.jsx': 'text/javascript', '.css': 'text/css' };
-const server = PUBLIC_URL ? null : http.createServer((req, res) => {
+const server = http.createServer((req, res) => {
   let pathname = decodeURIComponent(req.url.split('?')[0]);
   if (pathname === '/') pathname = '/index.html';
-  const file = path.join(ROOT, pathname);
-  if (!file.startsWith(ROOT) || !existsSync(file) || statSync(file).isDirectory()) { res.writeHead(404); res.end('nf'); return; }
+  const file = pathname === '/index.html' && ARTIFACT_PATH ? path.resolve(ARTIFACT_PATH) : path.join(ROOT, pathname);
+  const allowed = file.startsWith(ROOT) || (ARTIFACT_PATH && file === path.resolve(ARTIFACT_PATH));
+  if (!allowed || !existsSync(file) || statSync(file).isDirectory()) { res.writeHead(404); res.end('nf'); return; }
   res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream' });
   createReadStream(file).pipe(res);
 });
-if (server) await new Promise(resolve => server.listen(8860, '127.0.0.1', resolve));
+await new Promise(resolve => server.listen(8860, '127.0.0.1', resolve));
 const browser = await chromium.launch({ channel: 'chrome', headless: true });
 const page = await browser.newPage();
 const pageErrors = [];
 page.on('pageerror', error => pageErrors.push(String(error)));
 await page.route(/supabase\.co/, route => route.abort());
-await page.goto(PUBLIC_URL || 'http://127.0.0.1:8860/index.html', { waitUntil: 'load' });
+await page.addInitScript(() => localStorage.setItem('balam-page', 'inventory'));
+await page.goto('http://127.0.0.1:8860/index.html', { waitUntil: 'load' });
 await page.waitForFunction(() => window.DATA && window.CONFIG && window.XLSXIO && window.XLSX, null, { timeout: 30000 });
 
 const result = await page.evaluate(async () => {
@@ -243,6 +245,6 @@ check('el archivo realmente descargado vuelve como una actualización por ID', /
 check('la vista previa del archivo descargado declara cero cambios', realUi.noChanges);
 check('el archivo real descargado existe y no está vacío', existsSync(downloadedPath) && statSync(downloadedPath).size > 0, downloadedPath);
 
-await browser.close(); if (server) server.close();
+await browser.close(); server.close();
 console.log(`\n${pass} pasaron, ${fail} fallaron`);
 process.exit(fail ? 1 : 0);

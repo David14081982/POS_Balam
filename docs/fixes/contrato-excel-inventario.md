@@ -3,7 +3,7 @@
 **Riesgo:** H-86
 **Estado:** RESUELTO
 **Fecha:** 09/08/2026
-**Commit:** Pendiente de commit
+**Commit:** `e97aa65`
 
 ## Problema y reproducción
 
@@ -68,6 +68,10 @@ vez. No se modifica STORE ni el contrato remoto.
 - `node test-filtros-inventario.mjs`, `test-module-contracts.mjs`,
   `test-ui-navigation.mjs`, `test-build-reproducibility.mjs` y
   `test-smoke.mjs bundle` — **18/18 + 41/41 + 15/15 + 8/8 + 17/17**.
+- El artefacto descargado de GitHub Pages coincide con el blob Git
+  `f203199a59a2ea88e85a01fb55f8bf7c37c7ad42`. El mismo arnés H-86 sobre esos
+  bytes públicos pasó **37/37**, incluida la descarga y reimportación de un
+  `.xlsx` real.
 
 ## Riesgo residual y pendientes
 

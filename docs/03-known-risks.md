@@ -4138,7 +4138,7 @@ desde el catálogo vigente porque eso fabricaría evidencia histórica.
 
 **Estado:** RESUELTO
 **Fecha de registro:** 09/08/2026
-**Commit:** Pendiente de commit
+**Commit:** `e97aa65`
 **Origen:** auditoría quirúrgica y contrato aprobado por el dueño para unificar
 Inventario → Plantilla, Exportar e Importar.
 **Reproducción:** el escritor actual omite precios por talla, costo, destacado,
@@ -4165,6 +4165,10 @@ mantiene bloqueada la confirmación ante cualquier conflicto.
 importación/fotos (23/23), modelo custom (14/14), seguridad XLSX (17/17),
 tallas (9/9 + 34/34), Inventario (18/18), contratos (41/41), navegación
 (15/15), build (8/8) y humo del bundle (17/17).
+**Despliegue:** `origin/main` contiene `e97aa650ca02b7125c01eacc64e796657281b2e0`.
+GitHub Pages coincide con el blob `f203199a59a2ea88e85a01fb55f8bf7c37c7ad42`;
+el recorrido H-86 sobre esos bytes públicos pasó 37/37 y descargó/reimportó un
+`.xlsx` real sin diferencias canónicas.
 **Riesgo residual:** los archivos heredados sin ID requieren una decisión
 explícita cuando su SKU ya existe; es una barrera intencional contra fusiones.
 **Corrección documentada:** `docs/fixes/contrato-excel-inventario.md`.
