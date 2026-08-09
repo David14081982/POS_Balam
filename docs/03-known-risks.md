@@ -29,6 +29,8 @@ y `BLOQUEADO`.
 | H-77 | Terminales abiertas no convergen y una línea base antigua carece de cuarentena | CÓDIGO LISTO / DESPLIEGUE PENDIENTE | Sincronización / offline / multi-terminal |
 | H-85 | Los comprobantes reconstruyen evidencia vigente y varias superficies no imprimen o no permiten reimpresión | RESUELTO Y PUBLICADO | Ventas / posventa / impresión |
 | H-87 | La interfaz conserva una composición de escritorio en viewports pequeños | RESUELTO Y PUBLICADO | UI / responsive / accesibilidad |
+| H-88A | El resumen de venta queda después del catálogo en móvil y tablet | RESUELTO Y PUBLICADO | POS / UI / responsive |
+| H-88B | La impresión móvil de etiquetas depende de popup, autoimpresión y autocierre | RESUELTO Y PUBLICADO | Inventario / etiquetas / impresión |
 
 ## H-01 — Inventario concurrente
 
@@ -4213,6 +4215,45 @@ tras normalización de finales de línea, con contenido equivalente y suite
 responsive pública **492/492**.
 **Riesgo residual:** ninguno funcional conocido.
 **Corrección documentada:** `docs/fixes/ui-responsive-global.md`.
+
+## H-88A - El resumen de venta queda después del catálogo en móvil y tablet
+
+**Estado:** RESUELTO Y PUBLICADO
+**Fecha:** 09/08/2026
+**Commits:** `979e4db`, `ff518db`, `70643d0`
+**Reproducción:** el resumen comenzaba entre 4,285 y 16,050 px en 320–1024 px
+y seguía fuera de vista después de agregar una prenda.
+**Causa raíz:** `POSScreen` renderizaba catálogo y `TicketPanel` en columna hasta
+1280 px; la altura completa del catálogo precedía al carrito.
+**Corrección:** una única superficie editable: bottom sheet móvil, drawer
+tablet y panel lateral escritorio; barra persistente de cantidad/total con
+safe-area, feedback, foco, Escape y restauración.
+**Pruebas:** H-88A **30/30**, responsive **492/492**, POS **19/19 + 6/6**,
+navegación **15/15**, smoke **17/17**, build **8/8**. Bytes públicos H-88A
+SHA-256 `921678516A0EAF6885023B265E4040E295185C6265059F7B32ADEB35C7C3C882`.
+**Riesgo residual:** ninguno funcional conocido.
+**Corrección documentada:** `docs/fixes/carrito-pos-siempre-accesible.md`.
+
+## H-88B - La impresión móvil de etiquetas depende de popup y autoimpresión
+
+**Estado:** RESUELTO Y PUBLICADO
+**Fecha:** 09/08/2026
+**Commit técnico:** `e1238e1`
+**Reproducción:** la etiqueta se generaba, pero un popup llamaba `window.print()`
+en `onload` y programaba `window.close()` 400 ms después; popup, diálogo y
+hardware no tenían estados distinguibles ni fallback.
+**Causa raíz:** generación, preview e invocación estaban acopladas a una ventana
+secundaria y el flujo declaraba éxito antes de conocer el resultado físico.
+**Corrección:** documento estable 60×40 mm; Imprimir por gesto directo, Descargar
+y Compartir compatible; sin autoimpresión/autocierre; warning Code128 menor a
+0.25 mm; Guardar y abrir etiquetas sólo después del guardado.
+**Pruebas:** H-88B **19/19**, H83 **32/32 + 17/17**, H84 **19/19**, precios
+**38/38**, Inventario **18/18**, smoke **17/17**, build **8/8**; bytes públicos
+SHA-256 `637C9DFAAE2A40A070EEA81C440E5CDEC3890998F16C1F882E4CA187D683ADED`;
+H-88B público **19/19** y H-88A público **30/30**.
+**Riesgo residual:** impresión física depende de servicio, driver, impresora y
+calibración; códigos advertidos requieren prueba física.
+**Corrección documentada:** `docs/fixes/impresion-etiquetas-movil.md`.
 
 ## Regla de actualización
 
