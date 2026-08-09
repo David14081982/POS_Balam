@@ -3,7 +3,7 @@
 **Riesgo:** H-89
 **Estado:** RESUELTO
 **Fecha:** 09/08/2026
-**Commits:** `2dd877f`, `e403d4b`
+**Commits técnicos:** `2dd877f`, `e403d4b`, `af5e599`
 
 ## Problema y reproducción
 
@@ -79,6 +79,9 @@ Chrome/sistema operativo.
 - Instalación sobre los bytes públicos: **5/5** en Chrome real; diálogo nativo
   aceptado, cero errores de instalabilidad, píxeles 192/512/maskable idénticos y
   reapertura de `https://david14081982.github.io/POS_Balam/` en standalone.
+- El arnés descargó el `index.html` publicado, verificó su SHA-256 contra el blob
+  del commit y ejecutó esos mismos bytes en origen local controlado: responsive
+  público **492/492**.
 - Regresiones H-83/H-84/H-85/H-86/H-88A/H-88B ejecutadas antes del build final:
   **32/32 + 17/17**, **19/19**, **18/18**, **37/37**, **30/30** y **19/19**.
 
