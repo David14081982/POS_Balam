@@ -12,10 +12,15 @@
   const escapeReport = value => String(value == null ? '' : value)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-  function openReportDocument(model) {
+  function openPrintableWindow(html, autoPrint) {
     const win = window.open('', '_blank');
-    if (!win) { toast('El navegador bloqueo la ventana de impresion', 'var(--danger)'); return; }
+    if (!win) { toast('El navegador bloqueo la ventana de impresion', 'var(--danger)'); return null; }
     try { win.opener = null; } catch (error) { /* ventana aislada cuando el navegador lo permite */ }
+    win.document.write(html); win.document.close();
+    if (autoPrint) setTimeout(() => { win.focus(); win.print(); }, 100);
+    return win;
+  }
+  function openReportDocument(model) {
     const metrics = (model.metrics || []).map(item => `<tr><th>${escapeReport(item[0])}</th><td>${escapeReport(item[1])}</td></tr>`).join('');
     const tableHead = model.columns ? `<thead><tr>${model.columns.map(column => `<th>${escapeReport(column)}</th>`).join('')}</tr></thead>` : '';
     const tableRows = model.rows ? `<tbody>${model.rows.map(row => `<tr>${row.map(value => `<td>${escapeReport(value)}</td>`).join('')}</tr>`).join('')}</tbody>` : '';
@@ -28,8 +33,58 @@
       table{width:100%;border-collapse:collapse;font-size:12px}thead{display:table-header-group}th,td{padding:9px;border-bottom:1px solid #d9dde5;text-align:left}thead th{background:#131b2e;color:white;text-transform:uppercase;font-size:9px;letter-spacing:.05em}td:not(:first-child){text-align:right;font-weight:700}tr{break-inside:avoid}.note{margin:14px 0 0;padding:10px;background:#f4f1e8;border-left:3px solid #92760f;font-size:11px}
       @media print{main{display:block!important}}
     </style></head><body><main data-report-printable="true"><div class="brand">${escapeReport(model.brand || '')}</div><h1>${escapeReport(model.title)}</h1><p>${escapeReport(model.period)}</p>${model.generated ? `<p class="generated">Generado: ${escapeReport(model.generated)}</p>` : ''}${summary}<table>${tableHead || ''}${tableRows || metrics}</table>${notes}</main></body></html>`;
-    win.document.write(html); win.document.close();
-    setTimeout(() => { win.focus(); win.print(); }, 100);
+    openPrintableWindow(html, true);
+  }
+
+  // Proyección compartida: pantalla, A4 y ticket consumen este mismo snapshot
+  // ya normalizado por DATA.paymentMethodReport(). Aquí sólo hay etiquetas.
+  function paymentMethodReportView(model, period, generated) {
+    const reconciliationText = model.reconciliation.ok
+      ? 'Conciliación correcta · diferencia $0.00'
+      : `Conciliación pendiente · diferencia ${fmt(model.reconciliation.difference)}`;
+    const origins = [
+      ['Ventas', model.origins.sales],
+      ['Movimientos de apartados', model.origins.layaways],
+      ['Cambios cobrados', model.origins.exchanges],
+      ['Devoluciones', model.origins.returns],
+    ];
+    return {
+      period, generated, entries: model.entries, refunds: model.refunds, net: model.net,
+      methods: model.methods, principal: model.principal, courtesies: model.courtesies,
+      undistributed: model.undistributed, reconciliation: model.reconciliation,
+      reconciliationText, operations: model.operations, origins,
+      exchangeEntries: model.exchangeEntries,
+    };
+  }
+
+  function openPaymentMethodTicket(view) {
+    const methodBlocks = view.methods.length ? view.methods.map(row => `<section class="method tk-block">
+      <h2>${escapeReport(row.methodLabel)}</h2>
+      <div class="money"><span>Entradas</span><strong>${escapeReport(fmt(row.entries))}</strong></div>
+      <div class="money"><span>Devoluciones</span><strong>${escapeReport(row.refunds ? `−${fmt(row.refunds)}` : fmt(0))}</strong></div>
+      <div class="money net"><span>Neto</span><strong>${escapeReport(fmt(row.net))}</strong></div>
+    </section>`).join('') : '<p class="empty tk-block">Sin movimientos monetarios en el periodo.</p>';
+    const origins = view.origins.map(item => `<div class="count"><span>${escapeReport(item[0])}</span><strong>${escapeReport(item[1])}</strong></div>`).join('');
+    const undistributed = view.undistributed ? `<section class="alert tk-block"><h2>IMPORTE SIN DISTRIBUCIÓN</h2><strong>${escapeReport(fmt(view.undistributed))}</strong><p>Detalle histórico insuficiente; no se atribuye sin evidencia.</p></section>` : '';
+    const courtesy = view.courtesies ? `<section class="tk-block muted"><h2>OPERACIONES SIN INGRESO</h2><div class="count"><span>Cortesías</span><strong>${escapeReport(view.courtesies)}</strong></div><p>Ingreso: $0.00</p></section>` : '';
+    const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Reporte por método de pago · BALAM</title><style>
+      @page{size:80mm auto;margin:0}*{box-sizing:border-box}html,body{margin:0;min-width:0;background:#e8eaf0;color:#131b2e;font-family:Arial,sans-serif}
+      .tools{position:sticky;top:0;z-index:2;display:flex;gap:8px;align-items:center;padding:10px;background:#131b2e;color:#fff}.tools button{min-height:44px;padding:0 14px;border:0;border-radius:7px;font-weight:800}.tools .primary{background:#d4af38;color:#131b2e}.tools .secondary{background:#fff;color:#131b2e}
+      main{width:80mm;max-width:100%;margin:12px auto;background:#fff;padding:5mm 4.5mm;font-size:9.5pt;line-height:1.3;overflow:visible}.tk-block{break-inside:avoid;page-break-inside:avoid}.brand{text-align:center;border-bottom:2px solid #131b2e;padding-bottom:3mm}.brand strong{display:block;font-size:14pt;letter-spacing:.2em}.brand h1{margin:1.5mm 0 0;font-size:11pt;letter-spacing:.04em}.meta{padding:3mm 0;border-bottom:1px dashed #596273}.meta p{margin:1mm 0;overflow-wrap:anywhere}.method{padding:3mm 0;border-bottom:1px dashed #596273}.method h2,.alert h2,.muted h2,.origins h2{margin:0 0 2mm;font-size:10pt;line-height:1.2;overflow-wrap:anywhere;word-break:break-word}.money,.count{display:grid;grid-template-columns:minmax(0,1fr) max-content;gap:3mm;align-items:baseline;margin:.8mm 0}.money span,.count span{min-width:0;overflow-wrap:anywhere}.money strong,.count strong{white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}.money.net{margin-top:1.5mm;padding-top:1.5mm;border-top:1px solid #c7cad1;font-weight:800}.totals{padding:3mm 0;border-bottom:2px solid #131b2e}.totals .grand{font-size:12pt;border-top:2px solid #131b2e;padding-top:2mm;margin-top:2mm}.summary,.origins,.muted,.alert,.reconciliation{padding:3mm 0;border-bottom:1px dashed #596273}.summary p,.muted p,.alert p,.reconciliation p{margin:1mm 0;overflow-wrap:anywhere}.alert{color:#7a4500}.alert>strong{display:block;font-size:12pt}.reconciliation{font-weight:800}.reconciliation.pending{color:#a32929}.empty{padding:5mm 0;text-align:center}.foot{text-align:center;padding-top:3mm;font-size:8pt;color:#596273}
+      @media(max-width:360px){main{margin:0 auto;padding:4mm 3.5mm}.tools{flex-wrap:wrap}}
+      @media print{html,body{height:auto!important;min-height:0!important;background:#fff!important;overflow:visible!important}.tools{display:none!important}main{width:80mm;max-width:80mm;margin:0!important;padding:5mm 4.5mm!important}}
+    </style></head><body><div class="tools"><button type="button" class="primary" onclick="window.print()">Imprimir ticket</button><button type="button" class="secondary" onclick="window.close()">Cerrar</button><span>80 mm</span></div><main data-payment-method-ticket="true">
+      <header class="brand tk-block"><strong>BALAM</strong><h1>REPORTE POR MÉTODO DE PAGO</h1></header>
+      <section class="meta tk-block"><p><strong>Periodo:</strong><br>${escapeReport(view.period)}</p><p><strong>Generado:</strong><br>${escapeReport(view.generated)}</p></section>
+      ${methodBlocks}
+      <section class="totals tk-block"><div class="money"><span>TOTAL ENTRADAS</span><strong>${escapeReport(fmt(view.entries))}</strong></div><div class="money"><span>DEVOLUCIONES</span><strong>${escapeReport(view.refunds ? `−${fmt(view.refunds)}` : fmt(0))}</strong></div><div class="money grand"><span>NETO</span><strong>${escapeReport(fmt(view.net))}</strong></div></section>
+      <section class="summary tk-block"><p><strong>Operaciones:</strong> ${escapeReport(view.operations)}</p><p><strong>Método principal:</strong><br>${view.principal ? `${escapeReport(view.principal.methodLabel)} · ${escapeReport(fmt(view.principal.net))}` : 'Sin movimientos'}</p></section>
+      <section class="origins tk-block"><h2>ORIGEN DE OPERACIONES</h2>${origins}<div class="money"><span>Entradas por cambios</span><strong>${escapeReport(fmt(view.exchangeEntries))}</strong></div><p>Importe informativo; ya está incluido en Total entradas.</p></section>
+      ${courtesy}${undistributed}
+      <section class="reconciliation tk-block ${view.reconciliation.ok ? '' : 'pending'}"><p>CONCILIACIÓN: ${view.reconciliation.ok ? 'CORRECTA' : 'PENDIENTE'}</p><p>Σ métodos ${escapeReport(fmt(view.reconciliation.distributedNet))} + sin distribución ${escapeReport(fmt(view.undistributed))} = neto ${escapeReport(fmt(view.net))}</p>${view.reconciliation.ok ? '' : `<p>Diferencia: ${escapeReport(fmt(view.reconciliation.difference))}</p>`}</section>
+      <footer class="foot tk-block">Reporte ejecutivo · BALAM</footer>
+    </main></body></html>`;
+    openPrintableWindow(html, false);
   }
 
   function ReprintSaleModal({ sale, onClose }) {
@@ -373,20 +428,20 @@
     const applyPreset = id => { const range = rangeFor(id); setPreset(id); setFrom(range[0]); setTo(range[1]); };
     const model = D.paymentMethodReport({ from, to });
     const period = from === to ? from : `${from} – ${to}`;
-    const reconciliationText = model.reconciliation.ok
-      ? 'Conciliación correcta · diferencia $0.00'
-      : `Conciliación pendiente · diferencia ${fmt(model.reconciliation.difference)}`;
+    const view = paymentMethodReportView(model, period, new Date().toLocaleString('es-MX'));
     const print = () => openReportDocument({
-      brand: 'BALAM', title: 'Reporte de ingresos por método de pago', period: `Periodo: ${period}`,
-      generated: new Date().toLocaleString('es-MX'),
-      summary: [['Total entradas', fmt(model.entries)], ['Devoluciones', fmt(model.refunds)], ['Neto', fmt(model.net)],
-        ['Método principal', model.principal ? `${model.principal.methodLabel} · ${fmt(model.principal.net)}` : 'Sin movimientos']],
+      brand: 'BALAM', title: 'Reporte de ingresos por método de pago', period: `Periodo: ${view.period}`,
+      generated: view.generated,
+      summary: [['Total entradas', fmt(view.entries)], ['Devoluciones', fmt(view.refunds)], ['Neto', fmt(view.net)],
+        ['Método principal', view.principal ? `${view.principal.methodLabel} · ${fmt(view.principal.net)}` : 'Sin movimientos']],
       columns: ['Método', 'Operaciones', 'Entradas', 'Devoluciones', 'Neto', '% del total'],
-      rows: model.methods.map(row => [row.methodLabel, row.operations, fmt(row.entries), fmt(row.refunds), fmt(row.net), `${row.percentage.toFixed(2)}%`])
-        .concat([['TOTAL', '', fmt(model.entries), fmt(model.refunds), fmt(model.net), '100.00%']]),
-      notes: [reconciliationText]
-        .concat(model.undistributed ? [`Importe histórico sin distribución: ${fmt(model.undistributed)}. No fue atribuido a ningún método.`] : [])
-        .concat(model.courtesies ? [`Cortesías: ${model.courtesies} operaciones · $0.00 ingresado.`] : []),
+      rows: view.methods.map(row => [row.methodLabel, row.operations, fmt(row.entries), fmt(row.refunds), fmt(row.net), `${row.percentage.toFixed(2)}%`])
+        .concat([['TOTAL', '', fmt(view.entries), fmt(view.refunds), fmt(view.net), '100.00%']]),
+      notes: [view.reconciliationText, `Operaciones económicas: ${view.operations}.`,
+        ...view.origins.map(item => `${item[0]}: ${item[1]}.`),
+        `Entradas por cambios: ${fmt(view.exchangeEntries)} (informativo; ya incluido en Total entradas).`]
+        .concat(view.undistributed ? [`Importe histórico sin distribución: ${fmt(view.undistributed)}. No fue atribuido a ningún método.`] : [])
+        .concat(view.courtesies ? [`Cortesías: ${view.courtesies} operaciones · $0.00 ingresado.`] : []),
     });
     return h('section', { 'data-testid': 'payment-method-report' }, [
       h('div', { key: 'head', className: 'flex flex-col lg:flex-row lg:items-end justify-between gap-4 mb-6' }, [
@@ -396,8 +451,9 @@
           h('p', { key: 'p', className: 'text-body text-on-surface-variant mt-1' }, 'Entradas y devoluciones según el medio real utilizado.'),
         ]),
         h('div', { key: 'actions', className: 'flex flex-wrap gap-2' }, [
-          h('button', { key: 'print', 'data-testid': 'payment-method-print', onClick: print, className: 'px-4 py-2 border border-outline-variant rounded-lg font-semibold' }, 'Imprimir'),
+          h('button', { key: 'print', 'data-testid': 'payment-method-print', onClick: print, className: 'px-4 py-2 border border-outline-variant rounded-lg font-semibold' }, 'Imprimir reporte'),
           h('button', { key: 'pdf', 'data-testid': 'payment-method-pdf', onClick: () => { toast('Abriendo impresión — elige "Guardar como PDF"'); print(); }, className: 'px-4 py-2 bg-primary text-on-primary rounded-lg font-semibold' }, 'Exportar PDF'),
+          h('button', { key: 'ticket', 'data-testid': 'payment-method-ticket', onClick: () => openPaymentMethodTicket(view), className: 'px-4 py-2 bg-secondary text-on-secondary rounded-lg font-semibold' }, 'Imprimir ticket'),
         ]),
       ]),
       h('div', { key: 'filters', className: CARD + ' p-4 mb-6 flex flex-wrap items-center gap-2' }, [
@@ -408,15 +464,15 @@
         h('input', { key: 'to', type: 'date', value: to, min: from || undefined, onChange: e => { setPreset('custom'); setTo(e.target.value); }, className: 'h-10 px-3 bg-surface-container-low border border-outline-variant rounded-lg' }),
       ]),
       h('div', { key: 'kpis', className: 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-gutter mb-6' }, [
-        metricCard('Total entradas', fmt(model.entries), 'dinero recibido', null, true),
-        metricCard('Devoluciones', fmt(model.refunds), 'dinero devuelto'),
-        metricCard('Neto', fmt(model.net), 'entradas menos devoluciones'),
-        metricCard('Método principal', model.principal ? model.principal.methodLabel : '—', model.principal ? fmt(model.principal.net) : 'sin movimientos'),
+        metricCard('Total entradas', fmt(view.entries), 'dinero recibido', null, true),
+        metricCard('Devoluciones', fmt(view.refunds), 'dinero devuelto'),
+        metricCard('Neto', fmt(view.net), 'entradas menos devoluciones'),
+        metricCard('Método principal', view.principal ? view.principal.methodLabel : '—', view.principal ? fmt(view.principal.net) : 'sin movimientos'),
       ]),
       h('div', { key: 'table', className: CARD + ' overflow-hidden mb-6' }, [
         h('div', { key: 'scroll', className: 'overflow-x-auto' }, h('table', { className: 'w-full min-w-[720px]', 'data-testid': 'payment-method-table' }, [
           h('thead', { key: 'h' }, h('tr', { className: 'bg-primary text-on-primary' }, ['Método', 'Operaciones', 'Entradas', 'Devoluciones', 'Neto', '% del total'].map(label => h('th', { key: label, className: 'px-4 py-3 text-left text-overline uppercase' }, label)))),
-          h('tbody', { key: 'b' }, model.methods.length ? model.methods.map(row => h('tr', { key: row.methodCode, className: 'border-b border-outline-variant/50' }, [
+          h('tbody', { key: 'b' }, view.methods.length ? view.methods.map(row => h('tr', { key: row.methodCode, className: 'border-b border-outline-variant/50' }, [
             h('td', { key: 'm', className: 'px-4 py-3 font-semibold' }, row.methodLabel),
             h('td', { key: 'o', className: 'px-4 py-3 text-right' }, row.operations),
             h('td', { key: 'e', className: 'px-4 py-3 text-right' }, fmt(row.entries)),
@@ -426,17 +482,28 @@
           ])) : h('tr', { key: 'empty' }, h('td', { colSpan: 6, className: 'p-8 text-center text-on-surface-variant' }, 'Sin movimientos monetarios en el periodo.'))),
           h('tfoot', { key: 'f' }, h('tr', { className: 'bg-surface-container-low font-bold' }, [
             h('td', { key: 'l', className: 'px-4 py-3' }, 'TOTAL'), h('td', { key: 'o' }),
-            h('td', { key: 'e', className: 'px-4 py-3 text-right' }, fmt(model.entries)), h('td', { key: 'r', className: 'px-4 py-3 text-right' }, fmt(model.refunds)),
-            h('td', { key: 'n', className: 'px-4 py-3 text-right' }, fmt(model.net)), h('td', { key: 'p' }),
+            h('td', { key: 'e', className: 'px-4 py-3 text-right' }, fmt(view.entries)), h('td', { key: 'r', className: 'px-4 py-3 text-right' }, fmt(view.refunds)),
+            h('td', { key: 'n', className: 'px-4 py-3 text-right' }, fmt(view.net)), h('td', { key: 'p' }),
           ])),
         ])),
       ]),
-      h('div', { key: 'recon', 'data-testid': 'payment-method-reconciliation', className: 'p-4 rounded-xl border ' + (model.reconciliation.ok ? 'bg-success-soft text-success border-success/30' : 'bg-danger-soft text-danger border-danger/30') }, [
-        h('div', { key: 't', className: 'font-bold' }, reconciliationText),
-        h('div', { key: 'f', className: 'text-caption mt-1' }, `Σ métodos ${fmt(model.reconciliation.distributedNet)} + sin distribución ${fmt(model.undistributed)} = neto ${fmt(model.net)}`),
+      h('div', { key: 'origins', 'data-testid': 'payment-method-origins', className: CARD + ' p-4 mb-6' }, [
+        h('div', { key: 'head', className: 'flex flex-wrap items-baseline justify-between gap-3 mb-3' }, [
+          h('h3', { key: 'h', className: 'font-headline text-title-lg text-primary' }, 'Origen de operaciones'),
+          h('span', { key: 'ops', className: 'text-caption font-bold' }, `Operaciones económicas: ${view.operations}`),
+        ]),
+        h('div', { key: 'grid', className: 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3' }, view.origins.map(item => h('div', { key: item[0], className: 'rounded-lg bg-surface-container-low p-3 flex justify-between gap-3' }, [
+          h('span', { key: 'l', className: 'text-caption text-on-surface-variant' }, item[0]),
+          h('strong', { key: 'v' }, item[1]),
+        ]))),
+        h('p', { key: 'exchange', className: 'text-caption mt-3 text-on-surface-variant' }, `Entradas por cambios: ${fmt(view.exchangeEntries)} · informativo; ya incluido en Total entradas.`),
       ]),
-      model.undistributed ? h('div', { key: 'und', className: 'mt-4 p-4 rounded-xl bg-warning-soft text-warning' }, `Importe histórico sin distribución: ${fmt(model.undistributed)}. Se conserva visible y no se atribuye sin evidencia.`) : null,
-      model.courtesies ? h('div', { key: 'courtesy', className: 'mt-4 p-4 rounded-xl bg-surface-container-low text-on-surface-variant' }, `Cortesías: ${model.courtesies} operaciones · $0.00 ingresado`) : null,
+      h('div', { key: 'recon', 'data-testid': 'payment-method-reconciliation', className: 'p-4 rounded-xl border ' + (view.reconciliation.ok ? 'bg-success-soft text-success border-success/30' : 'bg-danger-soft text-danger border-danger/30') }, [
+        h('div', { key: 't', className: 'font-bold' }, view.reconciliationText),
+        h('div', { key: 'f', className: 'text-caption mt-1' }, `Σ métodos ${fmt(view.reconciliation.distributedNet)} + sin distribución ${fmt(view.undistributed)} = neto ${fmt(view.net)}`),
+      ]),
+      view.undistributed ? h('div', { key: 'und', className: 'mt-4 p-4 rounded-xl bg-warning-soft text-warning' }, `Importe histórico sin distribución: ${fmt(view.undistributed)}. Se conserva visible y no se atribuye sin evidencia.`) : null,
+      view.courtesies ? h('div', { key: 'courtesy', className: 'mt-4 p-4 rounded-xl bg-surface-container-low text-on-surface-variant' }, `Cortesías: ${view.courtesies} operaciones · $0.00 ingresado`) : null,
     ]);
   }
 

@@ -3359,8 +3359,22 @@
       return rows.get(part.methodCode);
     };
     let entries = 0, refundsTotal = 0, undistributedEntries = 0, undistributedRefunds = 0;
+    // Metadatos aditivos del mismo ledger H-90. Una fila monetaria cuenta una
+    // vez aunque tenga varios componentes; los cobros sucesivos de un apartado
+    // cuentan por separado porque cada uno es dinero recibido en su propia fecha.
+    const monetaryOperations = new Set();
+    const originOperations = { sales: new Set(), layaways: new Set(), exchanges: new Set(), returns: new Set() };
+    let exchangeEntries = 0;
     (payments || []).filter(payment => inRange(payment.fecha)).forEach(payment => {
       const amount = money(payment.monto || 0); entries = money(entries + amount);
+      const operationKey = `payment:${payment.id}`;
+      monetaryOperations.add(operationKey);
+      if (payment.tipo === 'cambio') {
+        originOperations.exchanges.add(operationKey);
+        exchangeEntries = money(exchangeEntries + amount);
+      } else if (['anticipo', 'abono', 'liquidacion'].includes(payment.tipo)) {
+        originOperations.layaways.add(operationKey);
+      } else if (payment.tipo === 'venta') originOperations.sales.add(operationKey);
       const allocation = historicalMoneyAllocation(payment, 'entry');
       undistributedEntries = money(undistributedEntries + allocation.undistributed);
       allocation.components.forEach(part => {
@@ -3370,6 +3384,8 @@
     });
     (returns || []).filter(ret => inRange(ret.fecha)).forEach(ret => {
       const amount = money(ret.total || 0); refundsTotal = money(refundsTotal + amount);
+      const operationKey = `return:${ret.id}`;
+      monetaryOperations.add(operationKey); originOperations.returns.add(operationKey);
       const allocation = historicalMoneyAllocation(ret, 'refund');
       undistributedRefunds = money(undistributedRefunds + allocation.undistributed);
       allocation.components.forEach(part => {
@@ -3395,6 +3411,14 @@
       from, to, entries, refunds: refundsTotal, net, methods, principal, courtesies,
       undistributed, undistributedEntries, undistributedRefunds,
       reconciliation: { ok: Math.abs(difference) <= 0.009, difference, distributedNet, undistributed },
+      operations: monetaryOperations.size,
+      origins: {
+        sales: originOperations.sales.size,
+        layaways: originOperations.layaways.size,
+        exchanges: originOperations.exchanges.size,
+        returns: originOperations.returns.size,
+      },
+      exchangeEntries,
     };
   }
 
