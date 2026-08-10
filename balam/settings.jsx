@@ -1,4 +1,4 @@
-// settings.jsx — Módulo de Configuración (Heritage). Cataloga y parametriza TODO lo que
+// settings.jsx — Módulo de Configuración (Balam). Cataloga y parametriza TODO lo que
 // antes estaba hardcodeado. Lee/escribe en window.CONFIG (balam/config.jsx), local-first.
 // Exporta window.SettingsScreen
 (function () {

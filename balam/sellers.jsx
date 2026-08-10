@@ -1,4 +1,4 @@
-// sellers.jsx — Vendedores y comisiones (Heritage Luxury). Exporta window.SellersScreen
+// sellers.jsx — Vendedores y comisiones (Balam). Exporta window.SellersScreen
 //
 // H-69: esta pantalla ya NO calcula comisión. Pregunta.
 // `DATA.commissionLedger()` recorre la evidencia congelada —ventas, cambios,
@@ -106,7 +106,7 @@
         h('section', { key: 'hd', className: 'flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6' }, [
           h('div', { key: 'l' }, [
             h('h2', { key: 't', className: 'font-headline text-headline-lg text-primary' }, 'Vendedores y comisiones'),
-            h('p', { key: 'd', className: 'text-on-surface-variant mt-2 max-w-2xl text-body' }, 'Visualización de rendimiento individual y métricas del equipo Heritage. Gestiona los incentivos basados en la excelencia del servicio.'),
+            h('p', { key: 'd', className: 'text-on-surface-variant mt-2 max-w-2xl text-body' }, 'Visualización de rendimiento individual y métricas del equipo Balam. Gestiona los incentivos basados en la excelencia del servicio.'),
           ]),
           h('div', { key: 'r', className: 'flex items-center gap-3' }, [
             h('button', { key: 'aj', 'data-testid': 'commission-adjustment-open', className: 'flex items-center gap-2 px-6 py-2.5 bg-surface border border-outline-variant text-primary hover:border-primary transition-colors rounded-lg', onClick: () => setAjuste(true) }, [h(MS, { key: 'i', name: 'receipt', size: 18 }), h('span', { key: 's', className: 'text-overline font-bold uppercase tracking-widest' }, 'Ajuste histórico')]),

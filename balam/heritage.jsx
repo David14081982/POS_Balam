@@ -1,4 +1,4 @@
-// heritage.jsx — Primitivas del rediseño "Artisanal Heritage" (Stitch).
+// heritage.jsx — Primitivas visuales del diseño Balam (Stitch).
 // Solo las usan las pantallas ya migradas. Exporta a window.HX.
 (function () {
   // Mapa de íconos propios -> nombres Material Symbols.

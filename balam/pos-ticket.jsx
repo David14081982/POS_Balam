@@ -1,4 +1,4 @@
-// pos-ticket.jsx — Panel de ticket + modal de cobro (Heritage slate). Exporta window.TicketPanel, window.CheckoutModal
+// pos-ticket.jsx — Panel de ticket + modal de cobro (Balam). Exporta window.TicketPanel, window.CheckoutModal
 (function () {
   const { useState } = React;
   const { fmt, toast, Modal } = window.UI;

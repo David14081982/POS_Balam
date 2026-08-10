@@ -1,4 +1,4 @@
-// clients.jsx — CRM de clientes (Heritage Luxury). Exporta window.ClientsScreen
+// clients.jsx — CRM de clientes (Balam). Exporta window.ClientsScreen
 (function () {
   const { useState, useMemo, useEffect } = React;
   const { fmt, toast, Pager, Modal, Segment } = window.UI;
@@ -89,7 +89,7 @@
       });
       D.saveClients();
       setAdding(false); setRefreshKey(k => k + 1);
-      toast('Cliente registrado en Balam Heritage', 'var(--accent)');
+      toast('Cliente registrado en Balam', 'var(--accent)');
     }
 
     if (adding) return h(NewClientForm, { onCancel: () => setAdding(false), onSave: saveNewClient });

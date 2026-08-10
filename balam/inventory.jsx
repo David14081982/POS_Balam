@@ -1,4 +1,4 @@
-// inventory.jsx — Inventario (Heritage Luxury). Exporta window.InventoryScreen
+// inventory.jsx — Inventario (Balam). Exporta window.InventoryScreen
 (function () {
   const { useState, useMemo, useRef, useEffect } = React;
   const { fmt, Modal, toast, Pager, Segment, resizeImageFile } = window.UI;

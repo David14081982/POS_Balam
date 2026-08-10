@@ -1,4 +1,4 @@
-// discounts.jsx — Promociones / Descuentos (Heritage).
+// discounts.jsx — Promociones / Descuentos (Balam).
 // Exporta:
 //   window.PROMOS        → motor (estado, match, lineUnit, preview) usado por el POS.
 //   window.DiscountsScreen → pantalla de administración (tabla + modal + vista previa).

@@ -1,4 +1,4 @@
-// app.jsx — Shell principal (Heritage): sidebar, topbar, router. Exporta window.App
+// app.jsx — Shell principal (Balam): sidebar, topbar, router. Exporta window.App
 (function () {
   const { useState, useEffect } = React;
   const D = window.DATA;
@@ -90,7 +90,7 @@
       return !dev;
     } catch (e) { return false; }
   })();
-  // Solo tweaks que siguen vigentes con Heritage (layout de POS)
+  // Solo tweaks que siguen vigentes con Balam (layout de POS)
   const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
     "ticketPos": "right",
     "catalogView": "grid"

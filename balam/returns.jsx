@@ -1,4 +1,4 @@
-// returns.jsx — Pantalla de Devoluciones (Heritage). Replica el diseño de "Detalle de
+// returns.jsx — Pantalla de Devoluciones (Balam). Replica el diseño de "Detalle de
 // Devolución": elegir folio → seleccionar artículos (checkbox revela motivo + cantidad) →
 // notas → resumen con total a reembolsar. Reingresa stock, revierte comisión (configurable)
 // y marca la venta original. Todo se asienta en window.DATA y sincroniza a pos.returns.

@@ -1,4 +1,4 @@
-// pos.jsx — Punto de venta (Heritage slate). Exporta window.POSScreen
+// pos.jsx — Punto de venta (Balam). Exporta window.POSScreen
 (function () {
   const { useState, useEffect, useRef, useMemo } = React;
   const { fmt, toast, Modal } = window.UI;

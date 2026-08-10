@@ -103,7 +103,7 @@
       { code: 'Garantia', label: 'Garantía' },
     ],
     seller_role: [
-      { code: 'senior', label: 'Heritage Senior Associate', meta: { minPct: 5 } },
+      { code: 'senior', label: 'Balam Senior Associate', meta: { minPct: 5 } },
       { code: 'consultant', label: 'Cargo de vendedor', meta: { minPct: 0 } },
     ],
     user_role: [
@@ -235,6 +235,13 @@
         changed = true;
       }
     });
+    // H-93: migra únicamente la etiqueta predeterminada histórica; cualquier
+    // nombre personalizado por el negocio se conserva sin cambios.
+    const seniorRole = (st.catalogs.seller_role || []).find(item => item.code === 'senior');
+    if (seniorRole && seniorRole.label === 'Heritage Senior Associate') {
+      seniorRole.label = 'Balam Senior Associate';
+      changed = true;
+    }
     if (needsManualOptions) {
       const benefits = st.catalogs.additional_benefit || (st.catalogs.additional_benefit = []);
       fresh.catalogs.additional_benefit

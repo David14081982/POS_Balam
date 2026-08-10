@@ -4531,6 +4531,25 @@ eliminarán en el punto cero ya acordado.
 **Riesgo residual:** cambios futuros del producto o política requieren nueva versión; impresión física conserva dependencias de hardware.
 **Corrección documentada:** `docs/fixes/manual-procedimientos-inventario-comisiones.md`.
 
+## H-93 - El frontend todavía muestra la marca Heritage
+
+**Estado:** RESUELTO · PENDIENTE DE PUBLICACIÓN
+**Fecha:** 10/08/2026
+**Riesgo:** textos visibles y una etiqueta predeterminada histórica presentan una
+marca distinta a Balam; configuraciones persistidas pueden conservar esa etiqueta.
+**Alcance:** cadenas visibles, migración exacta de la etiqueta predeterminada,
+pruebas, artefactos y documentación.
+**No alcance:** renombrar el módulo técnico `balam/heritage.jsx` o su API interna.
+**Corrección:** cuatro cadenas visibles actualizadas, comentarios editoriales
+normalizados y migración exacta de la etiqueta histórica sin alterar nombres
+personalizados.
+**Pruebas:** H-93 6/6; comisiones 88/88 y ajustes 25/25; registro 12/12;
+smoke de producción 17/17; navegación 15/15; build 8/8.
+**Riesgo residual:** el nombre técnico del módulo y el literal de migración no se
+muestran al usuario.
+**Commit:** Pendiente de commit.
+**Corrección documentada:** `docs/fixes/marca-balam-en-frontend.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

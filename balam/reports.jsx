@@ -1,4 +1,4 @@
-// reports.jsx — Reportes / Analítica (Heritage Luxury). Exporta window.ReportsScreen
+// reports.jsx — Reportes / Analítica (Balam). Exporta window.ReportsScreen
 (function () {
   const { useState, useEffect } = React;
   const { fmt, toast, StatusBadge } = window.UI;

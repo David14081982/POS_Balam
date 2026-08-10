@@ -10,7 +10,7 @@
   const CARD_INT = CARD + ' hover:shadow-e2 transition-shadow';
   const OVERLINE = 'text-overline text-muted';
 
-  // Imagen decorativa del banner (bordado Heritage — embebida vía __IMG_MAP → offline)
+  // Imagen decorativa del banner (bordado Balam — embebida vía __IMG_MAP → offline)
   const BANNER_IMG = 'https://lh3.googleusercontent.com/aida-public/AB6AXuAl2JC_UU8z37TP3sNY-qHinm2p5UswTgFKhukJOrvlPCQXoCsGJGSO7lwd71uHlCL0TIkrHYbLeehidQDdzj_xN-vTy8sxz_CFtm2HRauWLYT0Tc0AkvlJbWcfe88a10XbQX4r-pX61ZxpHoUoVMOkLcfXBJ2BgdcBsYlncy8e3K-TTmM9k7xxqewNNdh3iGMCSMzt3wq8qyB2xgprumQdc9KrIR4lucMtxe9ZsRtJnDd4KL5lGi_l8lWmqThKdE5izNVS8yIHTMM';
 
   const DOW = ['DOM', 'LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB'];
@@ -185,7 +185,7 @@
           ]),
           h('div', { key: 'sa', className: 'col-span-12 lg:col-span-3 space-y-4' }, [
             action('add', 'Nueva venta', 'Checkout rápido', () => onNav && onNav('pos'), true),
-            action('user', 'Registrar cliente', 'CRM Heritage', () => onNav && onNav('clientes'), false),
+            action('user', 'Registrar cliente', 'CRM Balam', () => onNav && onNav('clientes'), false),
             apartados.length > 0 && h('div', { key: 'apt', className: CARD + ' p-6 border-l-4 border-l-gold' }, [
               h('div', { key: 'h', className: 'flex items-center gap-2 mb-3' }, [
                 h(MS, { key: 'i', name: 'clock', size: 20, className: 'text-gold-text' }),
