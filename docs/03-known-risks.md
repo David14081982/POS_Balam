@@ -4510,22 +4510,22 @@ eliminarán en el punto cero ya acordado.
 
 ## H-92 - Administración no ofrece acceso al manual de procedimientos
 
-**Estado:** RESUELTO — pendiente de publicación
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha:** 10/08/2026
 **Riesgo:** el PDF oficial existe, pero el personal administrativo debe localizarlo fuera de BALAM; una sección de permiso nueva quedaría denegada hasta sincronizar el catálogo remoto.
 **Alcance:** tarjeta en `Configuración → Negocio`, con apertura y descarga del PDF oficial, pruebas, build y documentación.
 **No alcance:** permisos nuevos, lógica de negocio, datos, Supabase y migraciones.
 **Corrección:** tarjeta `Manual de procedimientos` en `Configuración → Negocio`, con apertura segura y descarga del PDF oficial, sin permiso nuevo.
-**Pruebas:** H-92 10/10; registro 12/12; permisos 21/21; smoke 17/17; navegación 15/15; build 8/8.
+**Pruebas:** H-92 10/10; registro 12/12; permisos 21/21; smoke 17/17; navegación 15/15; build 8/8; página y PDF públicos HTTP 200; bytes públicos normalizados idénticos al build.
 **Riesgo residual:** el despliegue debe incluir el PDF raíz; una copia offline aislada necesita que el PDF se copie a su lado.
-**Commit:** Pendiente de commit.
+**Commit técnico:** `4998c06`.
 **Corrección documentada:** `docs/fixes/acceso-administrativo-manual-procedimientos.md`.
 
 ## H-91 - El manual operativo no cubría Inventario y Comisiones publicados
 
-**Estado:** RESUELTO — entrega documental local
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha:** 10/08/2026
-**Commit:** Pendiente de commit
+**Commit técnico:** `4998c06`
 **Corrección:** manual nuevo en HTML y PDF, auditado contra H83, H84, H86, H88B y H69; funciones no publicadas separadas del procedimiento.
 **Pruebas:** generador PDF correcto; validador 12 secciones, 9 imágenes válidas, cero desbordes y cero errores; capturador oficial sin errores JS.
 **Riesgo residual:** cambios futuros del producto o política requieren nueva versión; impresión física conserva dependencias de hardware.

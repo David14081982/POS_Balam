@@ -1,9 +1,9 @@
 # Manual de procedimientos de Inventario y Comisiones
 
 **Riesgo:** H-91  
-**Estado:** RESUELTO — entrega documental local  
+**Estado:** RESUELTO Y PUBLICADO  
 **Fecha:** 10/08/2026  
-**Commit:** Pendiente de commit
+**Commit técnico:** `4998c06`
 
 ## Problema y evidencia
 
@@ -25,4 +25,3 @@ No se modificaron `balam/`, DATA, CONFIG, STORE, Supabase, migraciones ni artefa
 ## Riesgo residual
 
 La lectura física de etiquetas depende de impresora, papel, escala y lector. El manual debe versionarse cuando cambie el sistema publicado o la política comercial. No se realizó despliegue: la historia es documental.
-

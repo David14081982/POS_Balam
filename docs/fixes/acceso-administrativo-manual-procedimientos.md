@@ -1,9 +1,9 @@
 # Acceso administrativo al Manual de procedimientos
 
 **Riesgo:** H-92  
-**Estado:** RESUELTO — pendiente de publicación  
+**Estado:** RESUELTO Y PUBLICADO  
 **Fecha:** 10/08/2026  
-**Commit:** Pendiente de commit
+**Commit técnico:** `4998c06`
 
 ## Problema y evidencia
 
@@ -28,3 +28,10 @@ El PDF queda como archivo publicable junto a `index.html`. El artefacto offline 
 ## Riesgo residual
 
 La publicación web debe incluir el PDF raíz además de `index.html`. Una copia aislada de `POS Balam (offline).html` no puede abrir un archivo que no fue copiado junto a ella.
+
+## Publicación
+
+GitHub Pages sirve el `index.html` normalizado con 8,931,283 bytes y SHA-256
+`1ADF54F39E1D15F579301540A86B39682CBB04E372B4B9FC95925049374B0FEE`,
+idéntico al build del commit. El PDF público responde HTTP 200 como
+`application/pdf` con 2,017,904 bytes.
