@@ -111,14 +111,19 @@ try {
   };
   record('manifest público resuelve 192, 512 y maskable desde Cache Storage');
 
-  await page.evaluate(() => {
-    const button = document.createElement('button');
-    button.id = 'h89-public-install';
-    button.textContent = 'Instalar prueba H-89';
-    button.addEventListener('click', async () => { window.__h89PublicChoice = await PWA.requestInstall(); });
-    document.body.appendChild(button);
-  });
-  await page.locator('#h89-public-install').click();
+  for (const width of [320, 360, 390, 430]) {
+    await page.setViewportSize({ width, height: 780 });
+    const action = page.getByTestId('pwa-login-install-action');
+    await action.waitFor();
+    const geometry = await action.evaluate(button => {
+      const rect = button.getBoundingClientRect();
+      return { height: rect.height, overflow: document.documentElement.scrollWidth - innerWidth };
+    });
+    assert.ok(geometry.height >= 44 && geometry.overflow <= 0, `${width}: ${JSON.stringify(geometry)}`);
+  }
+  record('login público muestra Instalar BALAM en 320/360/390/430');
+
+  await page.getByTestId('pwa-login-install-action').click();
   await page.waitForTimeout(1000);
   const automationScript = [
     'Add-Type -AssemblyName UIAutomationClient',
@@ -138,8 +143,8 @@ try {
     'Write-Output "INVOKED"',
   ].join('; ');
   report.installDialogAutomation = (await execFileAsync('powershell.exe', ['-NoProfile', '-Command', automationScript])).stdout.trim();
-  await page.waitForFunction(() => window.__h89PublicChoice, null, { timeout: 30000 });
-  report.installChoice = await page.evaluate(() => window.__h89PublicChoice);
+  await page.waitForFunction(() => window.PWA?.getState().lastInstallOutcome === 'accepted', null, { timeout: 30000 });
+  report.installChoice = await page.evaluate(() => ({ outcome: PWA.getState().lastInstallOutcome, platform: 'web' }));
   assert.equal(report.installChoice.outcome, 'accepted');
   record('diálogo nativo de Chrome aceptó la instalación pública');
 

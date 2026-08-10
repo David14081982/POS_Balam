@@ -11,6 +11,10 @@
       "detail": ""
     },
     {
+      "name": "login público muestra Instalar BALAM en 320/360/390/430",
+      "detail": ""
+    },
+    {
       "name": "diálogo nativo de Chrome aceptó la instalación pública",
       "detail": ""
     },
@@ -104,6 +108,7 @@
         "height": 1024
       },
       "manifestUrl": "https://david14081982.github.io/POS_Balam/manifest-d2fe367fe1ac975a316c.webmanifest",
+      "lastInstallOutcome": null,
       "error": ""
     }
   },
