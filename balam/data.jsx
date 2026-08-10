@@ -1569,17 +1569,58 @@
   // Registra una venta: descuenta stock, mueve inventario, actualiza cliente y vendedores.
   // ticket: [{ p, talla, qty }], sellerIds: [id], client: obj, metodo, estado, total, itemCount.
   const money = n => Math.round(Number(n) * 100) / 100;
+  const NON_MONEY_METHODS = ['Mixto', 'Apartado', 'Cortesía'];
+  function methodSnapshot(code, suppliedLabel) {
+    const id = String(code == null ? '' : code).trim();
+    if (!id || NON_MONEY_METHODS.includes(id)) throw new Error('El componente requiere un método monetario real');
+    const current = C && typeof C.find === 'function' ? C.find('payment_method', id) : null;
+    return { methodCode: id, methodLabel: String(suppliedLabel || (current && current.label) || id).trim() || id };
+  }
+  function normalizeMoneyComponents(metodo, monto, detail) {
+    const amount = money(monto);
+    let raw = Array.isArray(detail) ? detail : (detail && Array.isArray(detail.components) ? detail.components : null);
+    if (!raw) {
+      const d = detail || {};
+      if (metodo === 'Mixto') {
+        raw = [];
+        const aliases = { efectivo: 'Efectivo', tarjeta: 'Tarjeta', transferencia: 'Transferencia' };
+        Object.keys(d).forEach(key => {
+          const value = money(d[key]);
+          if (!(value > 0)) return;
+          const configured = C && typeof C.list === 'function'
+            ? C.list('payment_method').find(item => String(item.code).toLowerCase() === String(key).toLowerCase()) : null;
+          raw.push({ methodCode: aliases[key] || (configured && configured.code) || (key === 'otro' ? '' : key), amount: value });
+        });
+      } else {
+        raw = amount > 0 ? [{ methodCode: metodo, amount }] : [];
+      }
+    }
+    const merged = new Map();
+    (raw || []).forEach(part => {
+      const value = money(part && (part.amount != null ? part.amount : part.monto));
+      if (!(value > 0)) throw new Error('Cada componente del pago debe ser mayor a cero');
+      const snap = methodSnapshot(part.methodCode || part.codigo || part.metodo, part.methodLabel || part.etiqueta);
+      const prior = merged.get(snap.methodCode);
+      if (prior) prior.amount = money(prior.amount + value);
+      else merged.set(snap.methodCode, { ...snap, amount: value });
+    });
+    const components = [...merged.values()];
+    if (amount > 0 && !components.length) throw new Error('El pago requiere al menos un componente monetario');
+    if (metodo === 'Mixto' && components.length < 2) throw new Error('Un pago mixto requiere al menos dos métodos reales');
+    const componentTotal = money(components.reduce((sum, part) => sum + part.amount, 0));
+    if (Math.abs(componentTotal - amount) > 0.009) throw new Error('Los componentes del pago no coinciden con el monto');
+    return components;
+  }
   function paymentParts(metodo, monto, detail) {
-    const d = detail || {}, amount = money(monto);
-    const parts = {
-      efectivo: money(d.efectivo || (metodo === 'Efectivo' ? amount : 0)),
-      tarjeta: money(d.tarjeta || (metodo === 'Tarjeta' ? amount : 0)),
-      transferencia: money(d.transferencia || (metodo === 'Transferencia' ? amount : 0)),
-      otro: money(d.otro || 0),
-    };
-    if (Math.abs(money(parts.efectivo + parts.tarjeta + parts.transferencia + parts.otro) - amount) > 0.009) throw new Error('Los componentes del pago no coinciden con el monto');
-    if (Object.values(parts).some(x => x < 0)) throw new Error('Los componentes del pago no pueden ser negativos');
-    return parts;
+    const components = normalizeMoneyComponents(metodo, monto, detail);
+    const parts = { efectivo: 0, tarjeta: 0, transferencia: 0, otro: 0 };
+    components.forEach(part => {
+      if (part.methodCode === 'Efectivo') parts.efectivo = money(parts.efectivo + part.amount);
+      else if (part.methodCode === 'Tarjeta') parts.tarjeta = money(parts.tarjeta + part.amount);
+      else if (part.methodCode === 'Transferencia') parts.transferencia = money(parts.transferencia + part.amount);
+      else parts.otro = money(parts.otro + part.amount);
+    });
+    return { ...parts, components };
   }
   // Reidentificación de último recurso. El folio anterior YA ESTÁ IMPRESO, así que
   // no se pierde: queda como alias histórico de la venta y sigue resolviendo
@@ -2368,7 +2409,8 @@
     const amount = money(monto);
     if (!Number.isFinite(amount) || amount <= 0) return { ok: false, error: 'El abono debe ser mayor a cero' };
     if (amount > saldo) return { ok: false, error: 'El abono no puede exceder el saldo pendiente' };
-    if (!['Efectivo', 'Tarjeta', 'Transferencia', 'Mixto'].includes(metodo)) return { ok: false, error: 'Método de pago inválido para el abono' };
+    if (!window.CONFIG.list('payment_method').some(item => item.code === metodo)
+        || ['Apartado', 'Cortesía'].includes(metodo)) return { ok: false, error: 'Método de pago inválido para el abono' };
     let payment;
     try { payment = salePaymentDraft(sale, { monto: amount, metodo, tipo: amount === saldo ? 'liquidacion' : 'abono', detalle, fecha }); }
     catch (e) { return { ok: false, error: e.message || 'El desglose del pago no cuadra' }; }
@@ -3233,6 +3275,129 @@
     };
   }
 
+  // H-90 · Autoridad única de «¿por qué medio entró o salió el dinero?».
+  // Los documentos nuevos traen `components`; los anteriores sólo se adoptan
+  // cuando sus cuatro columnas o su método simple constituyen evidencia inequívoca.
+  function historicalMoneyAllocation(doc, direction) {
+    const amount = money(doc && (doc.monto != null ? doc.monto : doc.total));
+    let exact = null;
+    if (Array.isArray(doc && doc.components) && doc.components.length) {
+      try {
+        exact = doc.components.map(part => ({
+          ...methodSnapshot(part.methodCode, part.methodLabel), amount: money(part.amount),
+        }));
+      } catch (error) {
+        return { components: [], undistributed: amount, quality: 'invalid' };
+      }
+    }
+    if (exact) {
+      const sum = money(exact.reduce((total, part) => total + part.amount, 0));
+      return Math.abs(sum - amount) <= 0.009
+        ? { components: exact, undistributed: 0, quality: 'exact' }
+        : { components: [], undistributed: amount, quality: 'invalid' };
+    }
+    if (doc && doc.monto != null) {
+      const components = [];
+      [['Efectivo', 'efectivo'], ['Tarjeta', 'tarjeta'], ['Transferencia', 'transferencia']].forEach(([code, field]) => {
+        const value = money(doc[field] || 0);
+        if (value > 0) components.push({ ...methodSnapshot(code), amount: value });
+      });
+      const other = money(doc.otro || 0);
+      let undistributed = 0;
+      if (other > 0 && doc.metodo && !NON_MONEY_METHODS.includes(doc.metodo)) {
+        components.push({ ...methodSnapshot(doc.metodo), amount: other });
+      } else undistributed = other;
+      const known = money(components.reduce((total, part) => total + part.amount, 0) + undistributed);
+      if (known < amount) {
+        if (!components.length && doc.metodo && !NON_MONEY_METHODS.includes(doc.metodo)) {
+          components.push({ ...methodSnapshot(doc.metodo), amount });
+        } else undistributed = money(undistributed + amount - known);
+      }
+      return { components, undistributed, quality: undistributed > 0 ? 'partial' : 'legacy-exact' };
+    }
+    if (amount > 0 && doc && doc.metodo && !NON_MONEY_METHODS.includes(doc.metodo)) {
+      return { components: [{ ...methodSnapshot(doc.metodo), amount }], undistributed: 0, quality: 'legacy-exact' };
+    }
+    return { components: [], undistributed: amount, quality: amount > 0 ? 'undistributed' : 'exact' };
+  }
+  function sameMethodRefundComponents(sale, refundAmount) {
+    const amount = money(refundAmount);
+    if (!(amount > 0) || !sale) return [];
+    const totals = new Map();
+    let paid = 0;
+    for (const payment of paymentsForSale(sale.folio)) {
+      const allocation = historicalMoneyAllocation(payment, 'entry');
+      if (allocation.undistributed > 0) return null;
+      allocation.components.forEach(part => {
+        const prior = totals.get(part.methodCode) || { methodCode: part.methodCode, methodLabel: part.methodLabel, amount: 0 };
+        prior.amount = money(prior.amount + part.amount); totals.set(part.methodCode, prior);
+      });
+      paid = money(paid + (Number(payment.monto) || 0));
+    }
+    if (!totals.size || amount > paid + 0.009) return null;
+    const rows = [...totals.values()];
+    let assigned = 0;
+    return rows.map((part, index) => {
+      const value = index === rows.length - 1 ? money(amount - assigned) : money(amount * part.amount / paid);
+      assigned = money(assigned + value);
+      return { methodCode: part.methodCode, methodLabel: part.methodLabel, amount: value };
+    }).filter(part => part.amount > 0);
+  }
+  function paymentMethodReport(options) {
+    const opts = options || {};
+    const from = String(opts.from || '').slice(0, 10), to = String(opts.to || '').slice(0, 10);
+    const inRange = value => {
+      const day = String(value || '').slice(0, 10);
+      return (!from || day >= from) && (!to || day <= to);
+    };
+    const rows = new Map();
+    const ensure = part => {
+      if (!rows.has(part.methodCode)) rows.set(part.methodCode, {
+        methodCode: part.methodCode, methodLabel: part.methodLabel, entries: 0, refunds: 0,
+        net: 0, operations: 0, _operations: new Set(),
+      });
+      return rows.get(part.methodCode);
+    };
+    let entries = 0, refundsTotal = 0, undistributedEntries = 0, undistributedRefunds = 0;
+    (payments || []).filter(payment => inRange(payment.fecha)).forEach(payment => {
+      const amount = money(payment.monto || 0); entries = money(entries + amount);
+      const allocation = historicalMoneyAllocation(payment, 'entry');
+      undistributedEntries = money(undistributedEntries + allocation.undistributed);
+      allocation.components.forEach(part => {
+        const row = ensure(part); row.entries = money(row.entries + part.amount);
+        row._operations.add(`payment:${payment.id}`);
+      });
+    });
+    (returns || []).filter(ret => inRange(ret.fecha)).forEach(ret => {
+      const amount = money(ret.total || 0); refundsTotal = money(refundsTotal + amount);
+      const allocation = historicalMoneyAllocation(ret, 'refund');
+      undistributedRefunds = money(undistributedRefunds + allocation.undistributed);
+      allocation.components.forEach(part => {
+        const row = ensure(part); row.refunds = money(row.refunds + part.amount);
+        row._operations.add(`return:${ret.id}`);
+      });
+    });
+    const configured = C && typeof C.list === 'function' ? C.list('payment_method') : [];
+    const order = new Map(configured.map((item, index) => [item.code, index]));
+    const methods = [...rows.values()].map(row => {
+      row.net = money(row.entries - row.refunds); row.operations = row._operations.size; delete row._operations;
+      return row;
+    }).sort((a, b) => (order.has(a.methodCode) ? order.get(a.methodCode) : 9999)
+      - (order.has(b.methodCode) ? order.get(b.methodCode) : 9999) || a.methodLabel.localeCompare(b.methodLabel));
+    const net = money(entries - refundsTotal);
+    methods.forEach(row => { row.percentage = net ? money(row.net * 100 / net) : 0; });
+    const distributedNet = money(methods.reduce((sum, row) => sum + row.net, 0));
+    const undistributed = money(undistributedEntries - undistributedRefunds);
+    const difference = money(net - distributedNet - undistributed);
+    const principal = methods.filter(row => row.net > 0).sort((a, b) => b.net - a.net)[0] || null;
+    const courtesies = (sales || []).filter(sale => inRange(sale.fecha) && sale.metodo === 'Cortesía').length;
+    return {
+      from, to, entries, refunds: refundsTotal, net, methods, principal, courtesies,
+      undistributed, undistributedEntries, undistributedRefunds,
+      reconciliation: { ok: Math.abs(difference) <= 0.009, difference, distributedNet, undistributed },
+    };
+  }
+
   // ── H-70 · Autoridad única: las compras de un cliente ────────────────────────
   //
   // Clientes mostraba `c.compras`, `c.total` y `c.ultima`: tres contadores que
@@ -3390,7 +3555,7 @@
     throw error;
   }
 
-  function recordReturn({ folio, lineas, metodo, notas, fecha: fechaIn }) {
+  function recordReturn({ folio, lineas, metodo, refundComponents, notas, fecha: fechaIn }) {
     const sale = sales.find(s => s.folio === folio);
     if (!sale) return { ok: false, error: 'No se encontró la venta original' };
     if (!isReturnable(sale)) return { ok: false, error: 'Esa venta no admite devolución (apartado, cancelada o ya devuelta)' };
@@ -3428,18 +3593,7 @@
     const stockLines = [];
     const sellerEffects = [];
     let clientEffect = null;
-    // 1) Reingreso de stock + movimiento 'Devolución' (cant positiva)
-    items.forEach((l, i) => {
-      // H-71/H-72: producto y renglón de existencias ya vienen resueltos por
-      // identidad; aquí no se busca nada y no hay camino silencioso.
-      const p = resolved[i].product;
-      const e = resolved[i].entry;
-      e.stock = (Number(e.stock) || 0) + (Number(l.qty) || 0);
-      stockLines.push({ product_id: p.id, talla: l.talla, qty: Number(l.qty) || 0 });
-      movements.unshift({ fecha, tipo: 'Devolución', producto: l.nombre, sku: l.sku, cant: Number(l.qty) || 0, ref: folio });
-    });
-    saveProducts(false); saveMovements();
-    // 2) Total reembolsado desde el snapshot cobrado, nunca desde la configuración actual
+    // 1) Total reembolsado desde el snapshot cobrado, nunca desde la configuración actual
     // ni desde el precio (manipulable) enviado por la interfaz.
     // H-35: se conserva EXACTAMENTE la comparación histórica por renglón crudo
     // —incluido su comportamiento ante renglones repetidos— y sólo se sustituye
@@ -3456,6 +3610,26 @@
     };
     let refund = money(items.reduce((a, l) => a + linePrice(l) * (Number(l.qty) || 0), 0));
     if (allReturned) refund = money((Number(sale.total) || 0) - returnsForFolio(folio).reduce((a, r) => a + (Number(r.total) || 0), 0));
+    let components, refundMethod = metodo || sale.metodo, componentInput = refundComponents;
+    if (!componentInput && !metodo) {
+      componentInput = sameMethodRefundComponents(sale, refund);
+      if (!componentInput || !componentInput.length) return { ok: false, error: 'El historial no permite demostrar cómo salió el reembolso' };
+      refundMethod = componentInput.length > 1 ? 'Mixto' : componentInput[0].methodCode;
+    }
+    try { components = normalizeMoneyComponents(refundMethod, refund, componentInput); }
+    catch (error) { return { ok: false, error: error.message }; }
+    // 2) Reingreso de stock + movimiento 'Devolución' (cant positiva). H-90:
+    // ocurre DESPUÉS de validar el desglose; un reembolso rechazado no deja efectos.
+    items.forEach((l, i) => {
+      // H-71/H-72: producto y renglón de existencias ya vienen resueltos por
+      // identidad; aquí no se busca nada y no hay camino silencioso.
+      const p = resolved[i].product;
+      const e = resolved[i].entry;
+      e.stock = (Number(e.stock) || 0) + (Number(l.qty) || 0);
+      stockLines.push({ product_id: p.id, talla: l.talla, qty: Number(l.qty) || 0 });
+      movements.unshift({ fecha, tipo: 'Devolución', producto: l.nombre, sku: l.sku, cant: Number(l.qty) || 0, ref: folio });
+    });
+    saveProducts(false); saveMovements();
     // 3) Reversión proporcional de comisión/ventas del vendedor (configurable en Configuración)
     const ids = sale.vendedores || [];
     const comisionesRevertidas = [];
@@ -3516,7 +3690,7 @@
     // 6) Registro de la devolución (al frente = más reciente) + sincronización
     const ret = {
       id, folio, fecha, cliente: sale.cliente, vendedores: ids.slice(),
-      metodo: metodo || sale.metodo, total: refund, notas: notas || '',
+      metodo: refundMethod, total: refund, components, notas: notas || '',
       // H-69: lo que esta devolucion revirtio, por vendedor. Es la contrapartida
       // congelada de `sale.comisiones` y lo que los reportes restan.
       comisiones: comisionesRevertidas,
@@ -4676,6 +4850,7 @@
     ornamentSupportsColors, sanitizeOrnamentColorsBySize, effectiveOrnamentColors,
     resolveSizeFilterGroups, resolveSizeFilterOptions, sizeFilterMatch, inferSizeCategory,
     recordReturn, returnedQty, returnsForFolio, isReturnable, returnDeadline, saleLineBalance,
+    paymentMethodReport, sameMethodRefundComponents,
     saleLineProduct,
     saveExchanges, recognizedValue, supplySources, recordExchange, reverseExchangeCommission,
     revenueSummary, exchangeRevenue, exchangeUnusedValue, exchangeReport, sellerCommissionReport,
@@ -4753,6 +4928,15 @@
   // desaparición.
   if (typeof window.CORE.registerCatalogPromotions === 'function') {
     window.CORE.registerCatalogPromotions({ list: () => promos });
+  }
+  if (typeof window.CORE.registerMonetaryDocuments === 'function') {
+    window.CORE.registerMonetaryDocuments({
+      referencesMethod: code => {
+        const references = doc => doc && (doc.metodo === code
+          || (Array.isArray(doc.components) && doc.components.some(part => part.methodCode === code)));
+        return payments.some(references) || returns.some(references);
+      },
+    });
   }
 
   let localWriterRequestActive = false;

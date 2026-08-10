@@ -123,7 +123,7 @@ ok('39. lee código de barras igual que el Punto de venta',
   /BARCODES && window\.BARCODES\.find\(raw\)/.test(ex) && /BARCODES\.parse\(raw\)/.test(ex)
     && /addEventListener\('keydown'/.test(ex) && /now - lt > 50/.test(ex));
 ok('40. el comprobante se imprime automáticamente al cerrar',
-  /setTimeout\(\(\) => window\.print\(\), 350\)/.test(ex));
+  /useReceiptAutoPrint\(\)/.test(ex));
 
 // H-45: el camino rapido NO trae logica propia. Abre el mismo `picking` que usa
 // el catalogo, asi que talla, precio vigente (H-36) y existencias siguen

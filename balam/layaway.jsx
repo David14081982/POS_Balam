@@ -24,9 +24,6 @@
   const h = React.createElement;
 
   const CARD = 'bg-surface-container-lowest rounded-lg shadow-e1';
-  // Formas de pago que DATA.registrarPagoApartado acepta (balam/data.jsx § registrarPagoApartado).
-  // El catálogo de CONFIG manda el orden y la presencia; esta lista es el filtro de lo asentable.
-  const ABONABLES = ['Efectivo', 'Tarjeta', 'Transferencia', 'Mixto'];
   const REZAGO_DIAS = 30;   // umbral del filtro «+30 días». Es descriptivo: no bloquea nada.
 
   // ── Derivaciones de presentación ────────────────────────────────────────────
@@ -46,8 +43,7 @@
   const FILTROS = [['todos', 'Todos'], ['sin_abonos', 'Solo anticipo'], ['con_abonos', 'Con abonos'], ['rezagados', '+' + REZAGO_DIAS + ' días']];
 
   function metodosAbono() {
-    const cat = (C.codes('payment_method') || []).filter(m => ABONABLES.includes(m));
-    const ids = cat.length ? cat : ABONABLES.slice();
+    const ids = (C.codes('payment_method') || []).filter(id => !['Apartado', 'Cortesía'].includes(id));
     return ids.map(id => ({ id, icon: ((C.find('payment_method', id) || {}).meta || {}).icon || 'cash' }));
   }
 
@@ -278,8 +274,8 @@
     const saldo = saldoDe(sale);
     const [metodo, setMetodo] = useState(() => (metodosAbono()[0] || { id: 'Efectivo' }).id);
     const [monto, setMonto] = useState(String(saldo));
-    const [efectivo, setEfectivo] = useState('');
-    const [otroMetodo, setOtroMetodo] = useState('Tarjeta');
+    const realMethods = METODOS.filter(item => item.id !== 'Mixto');
+    const [components, setComponents] = useState(() => realMethods.slice(0, 2).map((item, index) => ({ methodCode: item.id, amount: index ? String(saldo) : '0' })));
     const [confirmando, setConfirmando] = useState(false);
 
     const inputCls = 'block w-full h-12 px-4 bg-surface-container-low border border-outline-variant focus:ring-1 focus:ring-primary focus:border-primary text-base rounded-xl font-mono';
@@ -287,9 +283,14 @@
 
     const amount = Number(monto);
     const montoValido = monto.trim() !== '' && Number.isFinite(amount) && amount > 0 && amount <= saldo + 0.009;
-    const efe = Number(efectivo);
-    const mixtoValido = metodo !== 'Mixto' || (efectivo.trim() !== '' && Number.isFinite(efe) && efe >= 0 && efe <= amount);
-    const restanteMixto = Math.max(0, Math.round((amount - efe) * 100) / 100);
+    const exactComponents = components.map(part => ({
+      methodCode: part.methodCode,
+      methodLabel: ((C.find('payment_method', part.methodCode) || {}).label) || part.methodCode,
+      amount: Math.round((Number(part.amount) || 0) * 100) / 100,
+    })).filter(part => part.amount > 0);
+    const mixtoValido = metodo !== 'Mixto' || (exactComponents.length >= 2
+      && new Set(exactComponents.map(part => part.methodCode)).size === exactComponents.length
+      && Math.abs(exactComponents.reduce((sum, part) => sum + part.amount, 0) - amount) < 0.009);
     const liquida = montoValido && Math.abs(amount - saldo) < 0.009;
     const nuevoSaldo = montoValido ? Math.max(0, Math.round((saldo - amount) * 100) / 100) : saldo;
 
@@ -297,9 +298,9 @@
       if (confirmando) return;
       if (!montoValido) { toast('El abono debe ser mayor a cero y no exceder el saldo.', 'var(--danger)'); return; }
       if (!mixtoValido) { toast('El desglose del pago mixto no cuadra con el monto.', 'var(--danger)'); return; }
-      const detalle = metodo === 'Mixto'
-        ? { efectivo: efe, [otroMetodo.toLowerCase()]: restanteMixto }
-        : { [metodo.toLowerCase()]: Math.round(amount * 100) / 100 };
+      const current = C.find('payment_method', metodo);
+      const detalle = metodo === 'Mixto' ? exactComponents
+        : [{ methodCode: metodo, methodLabel: (current && current.label) || metodo, amount: Math.round(amount * 100) / 100 }];
       setConfirmando(true);
       try {
         const r = await Promise.resolve(D.registrarPagoApartado(sale.folio, { monto: amount, metodo, detalle }));
@@ -368,19 +369,12 @@
           h('span', { key: 't', className: 'text-[9px] leading-none tracking-tight uppercase w-full text-center truncate', title: m.id }, m.id),
         ]))),
       metodo === 'Mixto' && h('div', { key: 'mix', className: 'mb-4' }, [
-        h('div', { key: 'l', className: lbl }, 'Parte en efectivo'),
-        h('input', { key: 'in', className: inputCls, type: 'number', min: '0', step: '0.01', placeholder: '0.00', value: efectivo, onChange: e => setEfectivo(e.target.value) }),
-        h('div', { key: 'r', className: 'flex justify-between items-center mt-3 pt-3 border-t border-outline-variant gap-3' }, [
-          h('select', { key: 'm', className: inputCls + ' max-w-[190px]', value: otroMetodo, onChange: e => setOtroMetodo(e.target.value) }, [
-            h('option', { key: 't', value: 'Tarjeta' }, 'Resto con tarjeta'),
-            h('option', { key: 'x', value: 'Transferencia' }, 'Resto por transferencia'),
-          ]),
-          h('span', { key: 'v', className: 'font-headline text-h2 text-primary' }, fmt(restanteMixto)),
-        ]),
+        h('div', { key: 'l', className: lbl }, 'Distribución real del abono'),
+        h(window.MoneyComponentsEditor, { key: 'e', total: montoValido ? amount : 0, value: components, onChange: setComponents, testid: 'layaway-money-components' }),
       ]),
-      (metodo === 'Tarjeta' || metodo === 'Transferencia') && h('div', { key: 'simple', className: 'flex items-start gap-2 p-3 bg-surface-container-low text-on-surface-variant text-caption rounded-lg mb-4' }, [
+      (!['Efectivo', 'Mixto'].includes(metodo)) && h('div', { key: 'simple', className: 'flex items-start gap-2 p-3 bg-surface-container-low text-on-surface-variant text-caption rounded-lg mb-4' }, [
         h(MS, { key: 'i', name: (METODOS.find(m => m.id === metodo) || {}).icon || 'cash', size: 16 }),
-        metodo === 'Tarjeta' ? 'Cobra en la terminal antes de confirmar.' : 'Confirma la transferencia por ' + fmt(montoValido ? amount : 0) + ' antes de cerrar.',
+        'Confirma el cobro por ' + metodo + ' antes de cerrar.',
       ]),
       // Efecto del abono
       h('div', { key: 'ef', className: 'p-4 rounded-lg bg-surface-container-low' }, [

@@ -5,6 +5,7 @@
   let deviceId = null;
   let catalogProductsAdapter = null;
   let catalogPromotionsAdapter = null;
+  let monetaryDocumentsAdapter = null;
   let syncGateway = null;
   const syncActivities = new Map();
   let syncActivitySeq = 0;
@@ -51,6 +52,13 @@
     const promotions = catalogPromotionsAdapter.list();
     return Array.isArray(promotions) ? promotions : [];
   }
+  function registerMonetaryDocuments(adapter) {
+    if (!adapter || typeof adapter.referencesMethod !== 'function') throw new Error('Adaptador monetario inválido');
+    monetaryDocumentsAdapter = adapter;
+  }
+  function monetaryMethodInUse(code) {
+    return !!(monetaryDocumentsAdapter && monetaryDocumentsAdapter.referencesMethod(code));
+  }
   function registerSyncGateway(adapter) {
     if (!adapter || typeof adapter !== 'object') throw new Error('Gateway de sincronización inválido');
     syncGateway = adapter;
@@ -94,6 +102,8 @@
     saveCatalogProducts,
     registerCatalogPromotions,
     catalogPromotions,
+    registerMonetaryDocuments,
+    monetaryMethodInUse,
     registerSyncGateway,
     invokeSync,
     beginActivity,

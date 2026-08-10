@@ -239,6 +239,42 @@
   function metodos() {
     return window.CONFIG.list('payment_method').map(m => ({ id: m.code, icon: (m.meta && m.meta.icon) || 'cash' }));
   }
+  const realPaymentMethods = () => window.CONFIG.list('payment_method')
+    .filter(item => !['Mixto', 'Apartado', 'Cortesía'].includes(item.code));
+  const initialComponents = total => {
+    const methods = realPaymentMethods();
+    return methods.slice(0, 2).map((item, index) => ({ methodCode: item.code, amount: index ? String(total) : '0' }));
+  };
+  const componentPayload = parts => (parts || []).map(part => {
+    const item = window.CONFIG.find('payment_method', part.methodCode);
+    return { methodCode: part.methodCode, methodLabel: (item && item.label) || part.methodCode, amount: money2(part.amount) };
+  }).filter(part => part.amount > 0);
+  const componentsValid = (parts, total) => {
+    const positive = componentPayload(parts);
+    return positive.length >= 2 && new Set(positive.map(part => part.methodCode)).size === positive.length
+      && Math.abs(money2(positive.reduce((sum, part) => sum + part.amount, 0)) - money2(total)) <= 0.009;
+  };
+  function MoneyComponentsEditor({ total, value, onChange, testid }) {
+    const methods = realPaymentMethods();
+    const setPart = (index, patch) => onChange(value.map((part, i) => i === index ? { ...part, ...patch } : part));
+    const used = new Set(value.map(part => part.methodCode));
+    const remaining = money2(total - value.reduce((sum, part) => sum + (Number(part.amount) || 0), 0));
+    return h('div', { className: 'space-y-2', 'data-testid': testid || 'money-components' }, [
+      value.map((part, index) => h('div', { key: index, className: 'grid grid-cols-[minmax(0,1fr)_110px_36px] gap-2 items-center' }, [
+        h('select', { key: 'm', 'data-testid': `money-component-method-${index}`, value: part.methodCode, onChange: e => setPart(index, { methodCode: e.target.value }), className: 'h-11 px-3 bg-surface-container-low border border-outline-variant rounded-lg min-w-0' },
+          methods.map(item => h('option', { key: item.code, value: item.code, disabled: used.has(item.code) && item.code !== part.methodCode }, item.label))),
+        h('input', { key: 'a', 'data-testid': `money-component-amount-${index}`, type: 'number', min: '0', step: '0.01', value: part.amount, onChange: e => setPart(index, { amount: e.target.value }), className: 'h-11 px-3 bg-surface-container-low border border-outline-variant rounded-lg font-mono min-w-0', 'aria-label': `Importe ${index + 1}` }),
+        h('button', { key: 'x', type: 'button', disabled: value.length <= 2, onClick: () => onChange(value.filter((_, i) => i !== index)), className: 'h-9 rounded border border-outline-variant disabled:opacity-30', 'aria-label': 'Quitar componente' }, '×'),
+      ])),
+      h('div', { key: 'foot', className: 'flex items-center justify-between gap-3 text-caption' }, [
+        h('button', { key: 'add', type: 'button', disabled: value.length >= methods.length, onClick: () => {
+          const next = methods.find(item => !used.has(item.code));
+          if (next) onChange(value.concat({ methodCode: next.code, amount: String(Math.max(0, remaining)) }));
+        }, className: 'px-3 py-2 border border-outline-variant rounded-lg disabled:opacity-30' }, 'Agregar método'),
+        h('span', { key: 'r', className: Math.abs(remaining) <= 0.009 ? 'text-success' : 'text-danger' }, `Por asignar: ${fmt(remaining)}`),
+      ]),
+    ]);
+  }
 
   function AdditionalDiscountModal({ ticket, existing, onClose, onConfirm }) {
     const benefits = window.CONFIG.list('additional_benefit');
@@ -328,14 +364,12 @@
     const METODOS = metodos();
     const [metodo, setMetodo] = useState(() => (metodos()[0] || { id: 'Efectivo' }).id);
     const [recibido, setRecibido] = useState('');
-    const [efectivo, setEfectivo] = useState('');
     const [anticipo, setAnticipo] = useState('');
-    const [otroMetodo, setOtroMetodo] = useState('Tarjeta');
     const [anticipoMetodo, setAnticipoMetodo] = useState('Efectivo');
+    const [mixParts, setMixParts] = useState(() => initialComponents(total));
+    const [advanceParts, setAdvanceParts] = useState(() => initialComponents(0));
     const recv = Number(recibido);
     const cambio = Math.max(0, recv - total);
-    const efe = Number(efectivo);
-    const restanteMixto = Math.max(0, total - efe);
     const ant = Number(anticipo);
     const saldo = Math.max(0, total - ant);
     const esCortesia = metodo === 'Cortesía';        // regalo/giveaway: total $0, exige cliente registrado
@@ -345,25 +379,27 @@
 
     const metodoValido = METODOS.some(m => m.id === metodo);
     const efectivoValido = metodo !== 'Efectivo' || (recibido.trim() !== '' && Number.isFinite(recv) && recv >= total);
-    const mixtoValido = metodo !== 'Mixto' || (efectivo.trim() !== '' && Number.isFinite(efe) && efe >= 0 && efe <= total);
-    const apartadoValido = metodo !== 'Apartado' || (anticipo.trim() !== '' && Number.isFinite(ant) && ant >= 0 && ant <= total && !client.generic);
+    const mixtoValido = metodo !== 'Mixto' || componentsValid(mixParts, total);
+    const apartadoValido = metodo !== 'Apartado' || (anticipo.trim() !== '' && Number.isFinite(ant) && ant >= 0 && ant <= total && !client.generic
+      && (anticipoMetodo !== 'Mixto' || ant === 0 || componentsValid(advanceParts, ant)));
     const cortesiaValida = !esCortesia || !client.generic;
     function confirmar() {
       if (!metodoValido || !efectivoValido || !mixtoValido || !apartadoValido || !cortesiaValida) {
         toast('Revisa los importes: el pago debe ser numérico, completo y no exceder el total.', 'var(--danger)');
         return;
       }
+      const detail = metodo === 'Mixto' ? componentPayload(mixParts)
+        : metodo === 'Apartado' ? (anticipoMetodo === 'Mixto' ? componentPayload(advanceParts)
+          : ant > 0 ? componentPayload([{ methodCode: anticipoMetodo, amount: ant }]) : [])
+        : esCortesia ? [] : componentPayload([{ methodCode: metodo, amount: total }]);
+      const cash = detail.filter(part => part.methodCode === 'Efectivo').reduce((sum, part) => sum + part.amount, 0);
       onConfirm({
         metodo,
         anticipo: metodo === 'Apartado' ? ant : total,
-        pagoEfectivo: metodo === 'Mixto' ? efe : (metodo === 'Efectivo' ? total : 0),
-        pagoOtro: metodo === 'Apartado' ? 0 : (metodo === 'Mixto' ? Math.round((total - efe) * 100) / 100 : (metodo === 'Efectivo' ? 0 : total)),
+        pagoEfectivo: money2(cash),
+        pagoOtro: esCortesia ? 0 : money2((metodo === 'Apartado' ? ant : total) - cash),
         metodoPago: metodo === 'Apartado' ? anticipoMetodo : metodo,
-        pagoDetalle: metodo === 'Mixto'
-          ? { efectivo: efe, [otroMetodo.toLowerCase()]: Math.round((total - efe) * 100) / 100 }
-          : metodo === 'Apartado'
-            ? { [anticipoMetodo.toLowerCase()]: ant }
-            : { [metodo.toLowerCase()]: total },
+        pagoDetalle: detail,
       });
     }
     const footer = [
@@ -396,6 +432,7 @@
       h('div', { key: 'm', className: 'grid gap-2 mb-4', style: { gridTemplateColumns: `repeat(${Math.min(METODOS.length, 5)}, minmax(0, 1fr))` } },
         METODOS.map(m => h('button', {
           key: m.id,
+          'data-testid': `checkout-method-${m.id}`,
           className: 'flex flex-col items-center gap-1.5 py-3 border rounded-xl transition-colors ' +
             (metodo === m.id ? 'border-primary bg-surface-container-low text-primary' : 'border-outline-variant text-on-surface-variant hover:border-primary'),
           onClick: () => setMetodo(m.id),
@@ -416,26 +453,17 @@
         ]),
       ]),
       metodo === 'Mixto' && h('div', { key: 'mix' }, [
-        h('div', { key: 'l', className: lbl }, 'Pago en efectivo'),
-        h('input', { key: 'in', className: inputCls, type: 'number', placeholder: '0.00', value: efectivo, onChange: e => setEfectivo(e.target.value), autoFocus: true }),
-        h('div', { key: 'r', className: 'flex justify-between items-center mt-3 pt-3 border-t border-outline-variant' }, [
-          h('select', { key: 'm', className: inputCls + ' max-w-[190px]', value: otroMetodo, onChange: e => setOtroMetodo(e.target.value) }, [
-            h('option', { key: 't', value: 'Tarjeta' }, 'Resto con tarjeta'),
-            h('option', { key: 'x', value: 'Transferencia' }, 'Resto por transferencia'),
-          ]),
-          h('span', { key: 'v', className: 'font-headline text-h2 text-primary' }, fmt(restanteMixto)),
-        ]),
+        h('div', { key: 'l', className: lbl }, 'Distribución real del cobro'),
+        h(MoneyComponentsEditor, { key: 'e', total, value: mixParts, onChange: setMixParts, testid: 'checkout-money-components' }),
       ]),
       metodo === 'Apartado' && h('div', { key: 'ap' }, [
         h('div', { key: 'l', className: lbl }, 'Anticipo recibido'),
         h('input', { key: 'in', className: inputCls, type: 'number', placeholder: '0.00', value: anticipo, onChange: e => setAnticipo(e.target.value), autoFocus: true }),
         h('div', { key: 'pm', className: 'mt-3' }, [
           h('div', { key: 'l', className: lbl }, 'Forma del anticipo'),
-          h('select', { key: 's', className: inputCls, value: anticipoMetodo, onChange: e => setAnticipoMetodo(e.target.value) }, [
-            h('option', { key: 'e', value: 'Efectivo' }, 'Efectivo'),
-            h('option', { key: 't', value: 'Tarjeta' }, 'Tarjeta'),
-            h('option', { key: 'x', value: 'Transferencia' }, 'Transferencia'),
-          ]),
+           h('select', { key: 's', className: inputCls, value: anticipoMetodo, onChange: e => setAnticipoMetodo(e.target.value) },
+             METODOS.filter(item => !['Apartado', 'Cortesía'].includes(item.id)).map(item => h('option', { key: item.id, value: item.id }, item.id))),
+           anticipoMetodo === 'Mixto' && ant > 0 ? h('div', { key: 'mx', className: 'mt-3' }, h(MoneyComponentsEditor, { total: ant, value: advanceParts, onChange: setAdvanceParts, testid: 'advance-money-components' })) : null,
         ]),
         h('div', { key: 's', className: 'flex justify-between items-center mt-3 pt-3 border-t border-outline-variant' }, [
           h('span', { key: 'l', className: 'text-body text-on-surface-variant' }, 'Saldo pendiente'),
@@ -445,9 +473,9 @@
           h(MS, { key: 'i', name: 'alert', size: 16 }), 'Un apartado requiere cliente registrado. Asígnalo antes de confirmar.',
         ]),
       ]),
-      (metodo === 'Tarjeta' || metodo === 'Transferencia') && h('div', { key: 'simple', className: 'flex items-start gap-2 p-3 bg-surface-container-low text-on-surface-variant text-caption rounded-lg' }, [
-        h(MS, { key: 'i', name: METODOS.find(m => m.id === metodo).icon, size: 16 }),
-        metodo === 'Tarjeta' ? 'Inserta o acerca la tarjeta en la terminal.' : 'Confirma la transferencia por ' + fmt(total) + ' antes de cerrar.',
+      (!['Efectivo', 'Mixto', 'Apartado', 'Cortesía'].includes(metodo)) && h('div', { key: 'simple', className: 'flex items-start gap-2 p-3 bg-surface-container-low text-on-surface-variant text-caption rounded-lg' }, [
+        h(MS, { key: 'i', name: (METODOS.find(m => m.id === metodo) || {}).icon || 'cash', size: 16 }),
+        'Confirma el cobro por ' + metodo + ' antes de cerrar.',
       ]),
       esCortesia && h('div', { key: 'cor' }, [
         h('div', { key: 'n', className: 'flex items-start gap-2 p-3 bg-surface-container-low text-on-surface-variant text-caption rounded-lg' }, [
@@ -771,6 +799,7 @@
   window.TicketPanel = TicketPanel;
   window.AdditionalDiscountModal = AdditionalDiscountModal;
   window.CheckoutModal = CheckoutModal;
+  window.MoneyComponentsEditor = MoneyComponentsEditor;
   window.BalamTicket = BalamTicket;
   window.BalamReturnReceipt = BalamReturnReceipt;
 })();

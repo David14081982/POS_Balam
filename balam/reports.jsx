@@ -17,12 +17,17 @@
     if (!win) { toast('El navegador bloqueo la ventana de impresion', 'var(--danger)'); return; }
     try { win.opener = null; } catch (error) { /* ventana aislada cuando el navegador lo permite */ }
     const metrics = (model.metrics || []).map(item => `<tr><th>${escapeReport(item[0])}</th><td>${escapeReport(item[1])}</td></tr>`).join('');
+    const tableHead = model.columns ? `<thead><tr>${model.columns.map(column => `<th>${escapeReport(column)}</th>`).join('')}</tr></thead>` : '';
+    const tableRows = model.rows ? `<tbody>${model.rows.map(row => `<tr>${row.map(value => `<td>${escapeReport(value)}</td>`).join('')}</tr>`).join('')}</tbody>` : '';
+    const summary = (model.summary || []).length ? `<section class="summary">${model.summary.map(item => `<div><small>${escapeReport(item[0])}</small><strong>${escapeReport(item[1])}</strong></div>`).join('')}</section>` : '';
+    const notes = (model.notes || []).map(note => `<p class="note">${escapeReport(note)}</p>`).join('');
     const html = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeReport(model.title)}</title><style>
       @page{size:A4;margin:14mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#131b2e;margin:0}
-      main{display:block}h1{font-size:24px;margin:0 0 4px}p{color:#566070;margin:0 0 24px}
-      table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:10px;border-bottom:1px solid #d9dde5;text-align:left}td{text-align:right;font-weight:700}
+      main{display:block}.brand{font-size:12px;letter-spacing:.18em;font-weight:800;color:#92760f;margin-bottom:8px}h1{font-size:24px;margin:0 0 4px}p{color:#566070;margin:0 0 8px}
+      .generated{font-size:11px;margin-bottom:22px}.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:18px 0}.summary div{border:1px solid #d9dde5;border-radius:8px;padding:10px}.summary small{display:block;color:#566070;font-size:9px;text-transform:uppercase}.summary strong{display:block;margin-top:5px;font-size:15px}
+      table{width:100%;border-collapse:collapse;font-size:12px}thead{display:table-header-group}th,td{padding:9px;border-bottom:1px solid #d9dde5;text-align:left}thead th{background:#131b2e;color:white;text-transform:uppercase;font-size:9px;letter-spacing:.05em}td:not(:first-child){text-align:right;font-weight:700}tr{break-inside:avoid}.note{margin:14px 0 0;padding:10px;background:#f4f1e8;border-left:3px solid #92760f;font-size:11px}
       @media print{main{display:block!important}}
-    </style></head><body><main data-report-printable="true"><h1>${escapeReport(model.title)}</h1><p>${escapeReport(model.period)}</p><table>${metrics}</table></main></body></html>`;
+    </style></head><body><main data-report-printable="true"><div class="brand">${escapeReport(model.brand || '')}</div><h1>${escapeReport(model.title)}</h1><p>${escapeReport(model.period)}</p>${model.generated ? `<p class="generated">Generado: ${escapeReport(model.generated)}</p>` : ''}${summary}<table>${tableHead || ''}${tableRows || metrics}</table>${notes}</main></body></html>`;
     win.document.write(html); win.document.close();
     setTimeout(() => { win.focus(); win.print(); }, 100);
   }
@@ -348,10 +353,97 @@
     ]);
   }
 
-  // ── Shell con pestañas: Resumen | Ventas | Cambios | Devoluciones ──────────────
+  function PaymentMethodReport() {
+    const dayText = date => {
+      const d = date || new Date();
+      const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
+    const today = dayText();
+    const rangeFor = id => {
+      const now = new Date();
+      if (id === 'ayer') { const d = new Date(now); d.setDate(d.getDate() - 1); return [dayText(d), dayText(d)]; }
+      if (id === 'semana') { const d = new Date(now); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return [dayText(d), today]; }
+      if (id === 'mes') return [dayText(new Date(now.getFullYear(), now.getMonth(), 1)), today];
+      return [today, today];
+    };
+    const [preset, setPreset] = useState('hoy');
+    const initial = rangeFor('hoy');
+    const [from, setFrom] = useState(initial[0]), [to, setTo] = useState(initial[1]);
+    const applyPreset = id => { const range = rangeFor(id); setPreset(id); setFrom(range[0]); setTo(range[1]); };
+    const model = D.paymentMethodReport({ from, to });
+    const period = from === to ? from : `${from} – ${to}`;
+    const reconciliationText = model.reconciliation.ok
+      ? 'Conciliación correcta · diferencia $0.00'
+      : `Conciliación pendiente · diferencia ${fmt(model.reconciliation.difference)}`;
+    const print = () => openReportDocument({
+      brand: 'BALAM', title: 'Reporte de ingresos por método de pago', period: `Periodo: ${period}`,
+      generated: new Date().toLocaleString('es-MX'),
+      summary: [['Total entradas', fmt(model.entries)], ['Devoluciones', fmt(model.refunds)], ['Neto', fmt(model.net)],
+        ['Método principal', model.principal ? `${model.principal.methodLabel} · ${fmt(model.principal.net)}` : 'Sin movimientos']],
+      columns: ['Método', 'Operaciones', 'Entradas', 'Devoluciones', 'Neto', '% del total'],
+      rows: model.methods.map(row => [row.methodLabel, row.operations, fmt(row.entries), fmt(row.refunds), fmt(row.net), `${row.percentage.toFixed(2)}%`])
+        .concat([['TOTAL', '', fmt(model.entries), fmt(model.refunds), fmt(model.net), '100.00%']]),
+      notes: [reconciliationText]
+        .concat(model.undistributed ? [`Importe histórico sin distribución: ${fmt(model.undistributed)}. No fue atribuido a ningún método.`] : [])
+        .concat(model.courtesies ? [`Cortesías: ${model.courtesies} operaciones · $0.00 ingresado.`] : []),
+    });
+    return h('section', { 'data-testid': 'payment-method-report' }, [
+      h('div', { key: 'head', className: 'flex flex-col lg:flex-row lg:items-end justify-between gap-4 mb-6' }, [
+        h('div', { key: 'title' }, [
+          h('div', { key: 'eyebrow', className: 'text-overline uppercase tracking-widest text-gold-text font-bold' }, 'Flujo de dinero'),
+          h('h2', { key: 'h', className: 'font-headline text-headline-lg text-primary' }, 'Ingresos por método de pago'),
+          h('p', { key: 'p', className: 'text-body text-on-surface-variant mt-1' }, 'Entradas y devoluciones según el medio real utilizado.'),
+        ]),
+        h('div', { key: 'actions', className: 'flex flex-wrap gap-2' }, [
+          h('button', { key: 'print', 'data-testid': 'payment-method-print', onClick: print, className: 'px-4 py-2 border border-outline-variant rounded-lg font-semibold' }, 'Imprimir'),
+          h('button', { key: 'pdf', 'data-testid': 'payment-method-pdf', onClick: () => { toast('Abriendo impresión — elige "Guardar como PDF"'); print(); }, className: 'px-4 py-2 bg-primary text-on-primary rounded-lg font-semibold' }, 'Exportar PDF'),
+        ]),
+      ]),
+      h('div', { key: 'filters', className: CARD + ' p-4 mb-6 flex flex-wrap items-center gap-2' }, [
+        [['hoy', 'Hoy'], ['ayer', 'Ayer'], ['semana', 'Esta semana'], ['mes', 'Este mes']].map(([id, label]) => h('button', { key: id, onClick: () => applyPreset(id), className: 'px-3 py-2 rounded-lg text-caption font-semibold ' + (preset === id ? 'bg-primary text-on-primary' : 'border border-outline-variant') }, label)),
+        h('span', { key: 'sep', className: 'hidden sm:block w-px h-8 bg-outline-variant mx-1' }),
+        h('input', { key: 'from', type: 'date', value: from, max: to || undefined, onChange: e => { setPreset('custom'); setFrom(e.target.value); }, className: 'h-10 px-3 bg-surface-container-low border border-outline-variant rounded-lg' }),
+        h('span', { key: 'dash', className: 'text-on-surface-variant' }, 'a'),
+        h('input', { key: 'to', type: 'date', value: to, min: from || undefined, onChange: e => { setPreset('custom'); setTo(e.target.value); }, className: 'h-10 px-3 bg-surface-container-low border border-outline-variant rounded-lg' }),
+      ]),
+      h('div', { key: 'kpis', className: 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-gutter mb-6' }, [
+        metricCard('Total entradas', fmt(model.entries), 'dinero recibido', null, true),
+        metricCard('Devoluciones', fmt(model.refunds), 'dinero devuelto'),
+        metricCard('Neto', fmt(model.net), 'entradas menos devoluciones'),
+        metricCard('Método principal', model.principal ? model.principal.methodLabel : '—', model.principal ? fmt(model.principal.net) : 'sin movimientos'),
+      ]),
+      h('div', { key: 'table', className: CARD + ' overflow-hidden mb-6' }, [
+        h('div', { key: 'scroll', className: 'overflow-x-auto' }, h('table', { className: 'w-full min-w-[720px]', 'data-testid': 'payment-method-table' }, [
+          h('thead', { key: 'h' }, h('tr', { className: 'bg-primary text-on-primary' }, ['Método', 'Operaciones', 'Entradas', 'Devoluciones', 'Neto', '% del total'].map(label => h('th', { key: label, className: 'px-4 py-3 text-left text-overline uppercase' }, label)))),
+          h('tbody', { key: 'b' }, model.methods.length ? model.methods.map(row => h('tr', { key: row.methodCode, className: 'border-b border-outline-variant/50' }, [
+            h('td', { key: 'm', className: 'px-4 py-3 font-semibold' }, row.methodLabel),
+            h('td', { key: 'o', className: 'px-4 py-3 text-right' }, row.operations),
+            h('td', { key: 'e', className: 'px-4 py-3 text-right' }, fmt(row.entries)),
+            h('td', { key: 'r', className: 'px-4 py-3 text-right text-danger' }, row.refunds ? `− ${fmt(row.refunds)}` : fmt(0)),
+            h('td', { key: 'n', className: 'px-4 py-3 text-right font-bold' }, fmt(row.net)),
+            h('td', { key: 'p', className: 'px-4 py-3 text-right' }, `${row.percentage.toFixed(2)}%`),
+          ])) : h('tr', { key: 'empty' }, h('td', { colSpan: 6, className: 'p-8 text-center text-on-surface-variant' }, 'Sin movimientos monetarios en el periodo.'))),
+          h('tfoot', { key: 'f' }, h('tr', { className: 'bg-surface-container-low font-bold' }, [
+            h('td', { key: 'l', className: 'px-4 py-3' }, 'TOTAL'), h('td', { key: 'o' }),
+            h('td', { key: 'e', className: 'px-4 py-3 text-right' }, fmt(model.entries)), h('td', { key: 'r', className: 'px-4 py-3 text-right' }, fmt(model.refunds)),
+            h('td', { key: 'n', className: 'px-4 py-3 text-right' }, fmt(model.net)), h('td', { key: 'p' }),
+          ])),
+        ])),
+      ]),
+      h('div', { key: 'recon', 'data-testid': 'payment-method-reconciliation', className: 'p-4 rounded-xl border ' + (model.reconciliation.ok ? 'bg-success-soft text-success border-success/30' : 'bg-danger-soft text-danger border-danger/30') }, [
+        h('div', { key: 't', className: 'font-bold' }, reconciliationText),
+        h('div', { key: 'f', className: 'text-caption mt-1' }, `Σ métodos ${fmt(model.reconciliation.distributedNet)} + sin distribución ${fmt(model.undistributed)} = neto ${fmt(model.net)}`),
+      ]),
+      model.undistributed ? h('div', { key: 'und', className: 'mt-4 p-4 rounded-xl bg-warning-soft text-warning' }, `Importe histórico sin distribución: ${fmt(model.undistributed)}. Se conserva visible y no se atribuye sin evidencia.`) : null,
+      model.courtesies ? h('div', { key: 'courtesy', className: 'mt-4 p-4 rounded-xl bg-surface-container-low text-on-surface-variant' }, `Cortesías: ${model.courtesies} operaciones · $0.00 ingresado`) : null,
+    ]);
+  }
+
+  // ── Shell con pestañas ─────────────────────────────────────────────────────
   function ReportsScreen({ onNav }) {
     const [tab, setTab] = useState('resumen');
-    const TABS = [['resumen', 'Resumen', 'chart'], ['ventas', 'Ventas', 'cash'], ['cambios', 'Cambios', 'swap'], ['devoluciones', 'Devoluciones', 'undo']];
+    const TABS = [['resumen', 'Resumen', 'chart'], ['metodos', 'Ingresos por método', 'cash'], ['ventas', 'Ventas', 'receipt'], ['cambios', 'Cambios', 'swap'], ['devoluciones', 'Devoluciones', 'undo']];
     return h('div', { className: 'flex-1 overflow-y-auto bg-background font-body text-on-surface' },
       h('div', { className: 'w-full min-w-0 px-4 py-6 sm:px-6 lg:p-10 max-w-container-max mx-auto' }, [
         h('div', { key: 'tabs', className: 'flex items-center gap-2 p-1.5 mb-8 bg-surface-container-low rounded-xl border border-outline-variant overflow-x-auto no-scrollbar', role: 'tablist', 'aria-label': 'Secciones de reportes' },
@@ -362,7 +454,8 @@
             className: 'flex items-center gap-2 px-6 py-2.5 rounded-lg text-caption font-bold uppercase tracking-wider transition-all ' +
               (tab === id ? 'bg-primary text-on-primary shadow-e2' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'),
           }, [h(MS, { key: 'i', name: icon, size: 18 }), label]))),
-        tab === 'ventas' ? h(SalesReport, { key: 'ven' })
+        tab === 'metodos' ? h(PaymentMethodReport, { key: 'pay' })
+          : tab === 'ventas' ? h(SalesReport, { key: 'ven' })
           : tab === 'cambios' ? h(ExchangesReport, { key: 'cam' })
           : tab === 'devoluciones' ? h(ReturnsReport, { key: 'dev' })
             : h(ResumenReport, { key: 'res', onNav }),

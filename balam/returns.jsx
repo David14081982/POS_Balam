@@ -222,9 +222,12 @@
     }, [sale.folio]);
 
     const reasons = C.list('return_reason');
-    const methods = ['Mismo método'].concat(C.codes('payment_method'));
+    const monetaryMethods = C.list('payment_method').filter(item => !['Apartado', 'Cortesía'].includes(item.code));
+    const methods = ['Mismo método'].concat(monetaryMethods.map(item => item.code));
     const [sel, setSel] = useState({});        // { k: { on, motivo, qty } }
     const [metodo, setMetodo] = useState('Mismo método');
+    const realMethods = monetaryMethods.filter(item => item.code !== 'Mixto');
+    const [refundParts, setRefundParts] = useState(() => realMethods.slice(0, 2).map(item => ({ methodCode: item.code, amount: '0' })));
     const [notas, setNotas] = useState('');
     const [receipt, setReceipt] = useState(null);
 
@@ -235,13 +238,31 @@
     const chosen = rows.filter(r => sel[r.k] && sel[r.k].on && r.max > 0);
     const count = chosen.reduce((a, r) => a + (sel[r.k].qty || 1), 0);
     const refund = chosen.reduce((a, r) => a + r.precio * (sel[r.k].qty || 1), 0);
+    const snapshotParts = parts => (parts || []).map(part => {
+      const item = C.find('payment_method', part.methodCode);
+      return { methodCode: part.methodCode, methodLabel: (item && item.label) || part.methodLabel || part.methodCode, amount: Math.round((Number(part.amount) || 0) * 100) / 100 };
+    }).filter(part => part.amount > 0);
+    const sameParts = metodo === 'Mismo método' && D.sameMethodRefundComponents
+      ? D.sameMethodRefundComponents(sale, refund) : null;
 
     function confirm() {
       if (vencida) { toast(`Esta venta ya no admite devolución · ${plazo.label.toLowerCase()}`, 'var(--danger)'); return; }
       if (!chosen.length) { toast('Selecciona al menos un artículo', 'var(--danger)'); return; }
       for (const r of chosen) { if (!sel[r.k].motivo) { toast(`Elige el motivo para ${r.nombre}`, 'var(--danger)'); return; } }
       const lineas = chosen.map(r => ({ sku: r.sku, nombre: r.nombre, talla: r.talla, qty: sel[r.k].qty || 1, motivo: sel[r.k].motivo, precio: r.precio }));
-      const res = D.recordReturn({ folio: sale.folio, lineas, metodo: metodo === 'Mismo método' ? sale.metodo : metodo, notas });
+      let components;
+      if (metodo === 'Mismo método') {
+        components = sameParts;
+        if (!components || !components.length) { toast('El historial no permite demostrar la distribución del reembolso. Elige cómo saldrá el dinero.', 'var(--danger)'); return; }
+      } else if (metodo === 'Mixto') {
+        components = snapshotParts(refundParts);
+        const sum = components.reduce((total, part) => total + part.amount, 0);
+        if (components.length < 2 || new Set(components.map(part => part.methodCode)).size !== components.length || Math.abs(sum - refund) > 0.009) {
+          toast('La distribución del reembolso debe usar al menos dos métodos y cuadrar con el total.', 'var(--danger)'); return;
+        }
+      } else components = snapshotParts([{ methodCode: metodo, amount: refund }]);
+      const nominal = metodo === 'Mismo método' ? (components.length > 1 ? 'Mixto' : components[0].methodCode) : metodo;
+      const res = D.recordReturn({ folio: sale.folio, lineas, metodo: nominal, refundComponents: components, notas });
       if (!res.ok) { toast(res.error, 'var(--danger)'); return; }
       toast(`Devolución registrada · ${fmt(res.ret.total)}`, 'var(--accent)');
       setReceipt({ sale, returnDoc: res.ret });
@@ -376,13 +397,18 @@
                   h('label', { key: 'l', className: 'block text-overline uppercase opacity-70 mb-1.5' }, 'Método de reembolso'),
                   h('select', { key: 's', value: metodo, onChange: e => setMetodo(e.target.value), className: 'w-full h-10 px-3 rounded-lg text-body bg-white/10 border border-white/20 text-on-primary focus:ring-1 focus:ring-secondary-fixed' },
                     methods.map(m => h('option', { key: m, value: m, style: { color: '#131B2E' } }, m))),
+                  metodo === 'Mismo método' && refund > 0 ? h('div', { key: 'same', className: 'mt-3 text-caption opacity-80 space-y-1' }, sameParts && sameParts.length
+                    ? sameParts.map(part => h('div', { key: part.methodCode, className: 'flex justify-between gap-3' }, [h('span', { key: 'l' }, part.methodLabel), h('b', { key: 'v' }, fmt(part.amount))]))
+                    : h('p', { className: 'text-warning' }, 'Sin distribución histórica demostrable; elige métodos explícitos.')) : null,
+                  metodo === 'Mixto' && refund > 0 ? h('div', { key: 'mix', className: 'mt-3 p-3 rounded-lg bg-white text-on-surface' },
+                    h(window.MoneyComponentsEditor, { total: refund, value: refundParts, onChange: setRefundParts, testid: 'return-money-components' })) : null,
                 ]),
                 reverseOn && h('div', { key: 'cm', className: 'flex items-center gap-2 text-[11px] opacity-70 pt-1' }, [h(MS, { key: 'i', name: 'undo', size: 14 }), 'La comisión del vendedor se ajustará en proporción.']),
               ]),
               h('div', { key: 'btns', className: 'mt-8 space-y-3' }, [
                 vencida && h('div', { key: 'exp', className: 'mb-3 p-3 rounded-lg text-caption leading-relaxed', style: { background: 'rgba(255,255,255,0.12)' } },
                   `Fuera de plazo: esta venta admitía devolución hasta el ${plazo.expiresAt}. Para aceptarla, un administrador debe ajustar el plazo en Configuración → Devoluciones.`),
-                h('button', { key: 'ok', onClick: confirm, disabled: !chosen.length || vencida, className: 'w-full py-3.5 font-label-sm uppercase tracking-widest text-xs rounded-lg transition-all active:scale-95 disabled:opacity-40', style: { background: '#FFE088', color: '#131B2E' } }, 'Confirmar devolución'),
+                h('button', { key: 'ok', 'data-testid': 'return-confirm', onClick: confirm, disabled: !chosen.length || vencida, className: 'w-full py-3.5 font-label-sm uppercase tracking-widest text-xs rounded-lg transition-all active:scale-95 disabled:opacity-40', style: { background: '#FFE088', color: '#131B2E' } }, 'Confirmar devolución'),
                 h('button', { key: 'x', onClick: onBack, className: 'w-full py-3.5 font-label-sm uppercase tracking-widest text-xs rounded-lg border border-white/25 text-on-primary hover:bg-white/10 transition-colors' }, 'Cancelar'),
               ]),
             ]),

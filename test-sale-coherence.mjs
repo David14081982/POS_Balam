@@ -124,7 +124,7 @@ check('CASO 3: apartado persiste anticipo $300 y saldo $700', out.layBefore.anti
 check('CASO 3: abono parcial $200 deja saldo $500', out.abono.ok && out.layMid.estado === 'Apartado' && out.layMid.anticipo === 500 && out.layMid.saldo === 500);
 check('CASO 3: liquidación deja anticipo total y saldo cero', out.layAfter.estado === 'Pagado' && out.layAfter.anticipo === 1000 && out.layAfter.saldo === 0);
 check('CASO 3: historial identifica efectivo/tarjeta/transferencia', out.layPayments.length === 3 && out.layPayments[0].efectivo === 300 && out.layPayments[1].tarjeta === 200 && out.layPayments[2].transferencia === 500);
-check('CASO 3/5: apartado liquidado devuelve $1,000', out.retLay.ok && out.retLay.ret.total === 1000);
+check('CASO 3/5: apartado liquidado devuelve $1,000', out.retLay.ok && out.retLay.ret.total === 1000, out.retLay.error || '');
 check('CASO 5: cliente revierte exactamente ambas devoluciones', out.clientTotalAfterReturns === 2000, String(out.clientTotalAfterReturns));
 check('CASO 4: mixto $400 + $600 persiste completo', out.mixed.pagoEfectivo === 400 && out.mixed.pagoOtro === 600);
 check('CASO 4: historial identifica efectivo $400 + transferencia $600', out.mixedPayments.length === 1 && out.mixedPayments[0].efectivo === 400 && out.mixedPayments[0].transferencia === 600);

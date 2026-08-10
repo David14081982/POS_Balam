@@ -5,6 +5,11 @@
 //     reintentan al reconectar (evento 'online') o en el próximo init.
 // Requiere migraciones pos_001/002/003 corridas. Sin clave secreta no hay DDL.
 (function () {
+  const MONEY_WIRE_MARKER = '__BALAM_MONEY_V1__';
+  function moneyWireMethod(method, components) {
+    if (!Array.isArray(components) || !components.length) return method;
+    return MONEY_WIRE_MARKER + JSON.stringify({ nominalMethod: method, components });
+  }
   const SUPABASE_URL = 'https://telohdbvbvsfmwyriflz.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_-skU6PI0VrYa91UPHAEaIg_dhsi1l_I'; // publicable (anon), no secreta
   const SCHEMA = 'pos';
@@ -138,7 +143,7 @@
     },
     returns: {
       table: 'returns', conflict: 'id',
-      fromRow: r => ({ id: r.id, folio: r.folio, fecha: r.fecha || '', cliente: r.cliente, vendedores: r.vendedores || [], metodo: r.metodo, total: Number(r.total) || 0, notas: r.notas || '', lineas: [] }),
+      fromRow: r => ({ id: r.id, folio: r.folio, fecha: r.fecha || '', cliente: r.cliente, vendedores: r.vendedores || [], metodo: r.metodo, total: Number(r.total) || 0, components: Array.isArray(r.components) ? r.components : undefined, notas: r.notas || '', lineas: [] }),
     },
     liquidations: {
       table: 'liquidations', conflict: 'id',
@@ -147,8 +152,8 @@
     },
     payments: {
       table: 'sale_payments', conflict: 'id',
-      toRow: p => ({ id: p.id, folio: p.folio, fecha: p.fecha, tipo: p.tipo, metodo: p.metodo, monto: Number(p.monto) || 0, efectivo: Number(p.efectivo) || 0, tarjeta: Number(p.tarjeta) || 0, transferencia: Number(p.transferencia) || 0, otro: Number(p.otro) || 0 }),
-      fromRow: r => ({ id: r.id, folio: r.folio, fecha: r.fecha || '', tipo: r.tipo, metodo: r.metodo, monto: Number(r.monto) || 0, efectivo: Number(r.efectivo) || 0, tarjeta: Number(r.tarjeta) || 0, transferencia: Number(r.transferencia) || 0, otro: Number(r.otro) || 0 }),
+      toRow: p => ({ id: p.id, folio: p.folio, fecha: p.fecha, tipo: p.tipo, metodo: moneyWireMethod(p.metodo, p.components), monto: Number(p.monto) || 0, efectivo: Number(p.efectivo) || 0, tarjeta: Number(p.tarjeta) || 0, transferencia: Number(p.transferencia) || 0, otro: Number(p.otro) || 0 }),
+      fromRow: r => ({ id: r.id, folio: r.folio, fecha: r.fecha || '', tipo: r.tipo, metodo: r.metodo, monto: Number(r.monto) || 0, efectivo: Number(r.efectivo) || 0, tarjeta: Number(r.tarjeta) || 0, transferencia: Number(r.transferencia) || 0, otro: Number(r.otro) || 0, components: Array.isArray(r.components) ? r.components : undefined }),
     },
     // H-37 (C4): documentos de cambio. Los renglones viajan embebidos en la
     // cabecera igual que los de una devolución, y el commit transaccional que
@@ -1773,7 +1778,7 @@
       operationId: String(operationId),
       productIds: clone(productIds),
       productSnapshots: clone(productSnapshots),
-      payment: clone(payment),
+      payment: clone(MAP.payments.toRow(payment)),
       sellerEffects: clone(effects.sellerEffects || effects.seller_effects || []),
       itemIdentities: (sale.lineas || []).map(line => ({
         sale_item_id: line._saleItemId == null ? null : Number(line._saleItemId),
@@ -1796,7 +1801,7 @@
   function pushReturn(ret, effects) {
     if (!enabled) return;
     effects = effects || {};
-    const header = { id: ret.id, folio: ret.folio, fecha: ret.fecha || null, cliente: ret.cliente, vendedores: ret.vendedores || [], metodo: ret.metodo || null, total: Number(ret.total) || 0, notas: ret.notas || null };
+    const header = { id: ret.id, folio: ret.folio, fecha: ret.fecha || null, cliente: ret.cliente, vendedores: ret.vendedores || [], metodo: moneyWireMethod(ret.metodo || null, ret.components), total: Number(ret.total) || 0, notas: ret.notas || null };
     const items = (ret.lineas || []).map(l => ({ return_id: ret.id, product_id: l.productId || null, sku: l.sku, nombre: l.nombre, talla: l.talla, qty: l.qty, motivo: l.motivo || null, precio: Number(l.precio) || 0, ornamento: l.ornamento || null, orn_colors: Array.isArray(l.ornColors) ? l.ornColors.slice() : null }));
     const moves = (ret.lineas || []).map(l => ({ return_id: ret.id, fecha: String(ret.fecha || '').replace(' ', 'T'), tipo: 'Devolución', producto: l.nombre, sku: l.sku, cant: Number(l.qty) || 0, ref: ret.folio }));
     return run({
@@ -1841,7 +1846,7 @@
     }));
     return run({
       type: 'exchange', id: exch.id, folio: exch.folio,
-      header, items, moves, payment: effects.payment || null,
+      header, items, moves, payment: effects.payment ? MAP.payments.toRow(effects.payment) : null,
       seller_effects: effects.sellerEffects || [],
     });
   }

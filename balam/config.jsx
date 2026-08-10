@@ -412,6 +412,7 @@
 
   // ── ¿Un code de catálogo está en uso por algún producto? (guarda de borrado) ──
   function inUse(kind, code) {
+    if (kind === 'payment_method' && window.CORE.monetaryMethodInUse(code)) return true;
     // H-63: para la categoría protegida, «en uso» es la misma pregunta que responde
     // sizeCodeReferences. Sin esto habría dos fórmulas para un mismo hecho y la
     // ruta de borrado seguiría admitiendo un código referenciado sólo por precios.

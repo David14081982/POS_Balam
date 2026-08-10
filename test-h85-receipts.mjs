@@ -156,6 +156,21 @@ try {
   const reportDocs = await page.evaluate(() => window.__reportDocs || []);
   check('4. Reportes → Imprimir genera contenido visible propio', reportDocs[0] && /Reporte Balam|Ventas brutas/i.test(reportDocs[0].html) && reportDocs[0].printed === 1);
   check('5. Reportes → PDF genera contenido visible propio', reportDocs[1] && /Reporte Balam|Ventas brutas/i.test(reportDocs[1].html) && reportDocs[1].printed === 1);
+  const methodTab = page.getByTestId('reports-tab-metodos');
+  if (await methodTab.count()) await methodTab.click();
+  await page.waitForTimeout(250);
+  const methodPrint = page.getByTestId('payment-method-print');
+  const methodPdf = page.getByTestId('payment-method-pdf');
+  if (await methodPrint.count()) await methodPrint.click();
+  await page.waitForTimeout(450);
+  if (await methodPdf.count()) await methodPdf.click();
+  await page.waitForTimeout(450);
+  const methodDocs = await page.evaluate(() => (window.__reportDocs || []).slice(2));
+  check('5b. Ingresos por método imprime documento A4 ejecutivo', methodDocs[0]
+    && /size:A4/.test(methodDocs[0].html) && /Ingresos por método de pago/i.test(methodDocs[0].html)
+    && /Entradas|Devoluciones|Conciliaci/.test(methodDocs[0].html) && methodDocs[0].printed === 1, JSON.stringify(methodDocs.map(x => ({ len: x.html.length, printed: x.printed, title: (x.html.match(/<title>(.*?)<\/title>/) || [])[1] }))));
+  check('5c. Ingresos por método genera PDF desde el mismo contrato', methodDocs[1]
+    && /BALAM/.test(methodDocs[1].html) && /TOTAL/.test(methodDocs[1].html) && methodDocs[1].printed === 1, `documentos=${methodDocs.length}`);
 
   console.log('\n── D) Comprobante de devolución directa ──');
   const returned = await page.evaluate(seed => {
