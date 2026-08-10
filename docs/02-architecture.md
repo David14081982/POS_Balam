@@ -240,6 +240,15 @@ un método simple prueban la distribución; el resto permanece como importe
 histórico sin distribución. Su conciliación cumple `Σ neto por método + sin
 distribución = neto monetario`, o publica la diferencia exacta.
 
+La misma respuesta publica tres metadatos derivados sin cambiar la proyección
+monetaria: `operations` cuenta IDs únicos de filas de cobro o devolución;
+`origins` los clasifica una sola vez como venta, movimiento de apartado, cambio
+cobrado o devolución; y `exchangeEntries` suma únicamente pagos `tipo=cambio`.
+Anticipo, abono y liquidación son movimientos monetarios independientes porque
+ocurren en fechas propias. Un pago mixto conserva un solo ID y cuenta una vez.
+Pantalla, A4 y ticket térmico de 80 mm consumen el mismo snapshot; ninguna
+salida consulta directamente ventas, pagos, cambios o devoluciones.
+
 Las columnas fijas de `sale_payments` continúan como compatibilidad de clientes
 anteriores, pero no se amplían al agregar métodos. Todo documento posterior a
 H-90 debe llevar componentes válidos cuya suma sea exactamente su monto.

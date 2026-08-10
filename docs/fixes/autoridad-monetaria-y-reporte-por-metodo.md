@@ -74,6 +74,72 @@ las autoridades de inventario, SKU, `product_id`, `variant_id`, existencias ni
 comisiones; sólo se adelantó la validación monetaria de una devolución para que
 un rechazo ocurra antes de ejecutar los efectos de stock ya existentes.
 
+## Extensión térmica ejecutiva
+
+**Fecha:** 09/08/2026
+**Estado:** RESUELTO Y PUBLICADO
+**Commit técnico:** `8d68133e88e11f9f97c79b252a70938c4ebe50e2`
+
+### Contrato
+
+H-90 agrega exclusivamente `operations`, `origins` y `exchangeEntries` a su
+respuesta. La prueba compara la versión vigente contra el código del commit
+H-90 original `700faaae879b38c60d551082ec02e1f53141858e`: `entries`, `refunds`,
+`net`, `methods`, `principal`, `courtesies`, los tres importes sin distribución
+y `reconciliation` son idénticos.
+
+`operations` cuenta IDs monetarios únicos: una venta mixta cuenta una vez; cada
+anticipo, abono y liquidación cuenta como **movimiento de apartado** porque es un
+cobro distinto en su propia fecha; una diferencia positiva de cambio cuenta al
+existir su pago; y una devolución cuenta como salida. `origins` mantiene los
+cuatro conjuntos sin doble conteo. `exchangeEntries` suma exclusivamente pagos
+`tipo=cambio`; no lee mercancía, diferencia de UI ni valor no aprovechado.
+
+### Presentación
+
+`PaymentMethodReport` llama una vez a `DATA.paymentMethodReport()` y construye
+un view model compartido por pantalla, A4/PDF y ticket. El documento térmico usa
+80 mm, bloques verticales, cifras tabulares, salto de nombres largos y bloques
+indivisibles. Abre una vista estable con acciones Imprimir/Cerrar; no
+autoimprime, no autocierra y permite reintentar sobre el mismo snapshot sin
+recalcular ni mutar movimientos. La infraestructura 60×40 de H-88B permanece
+separada.
+
+### Pruebas locales
+
+- Metadatos y paridad con `700faaa`: **17/17**.
+- Chrome, igualdad pantalla/A4/ticket y 80 mm: **21/21**; 16 métodos dinámicos,
+  nombre largo, millones, 3,252 px de contenido, cero overflow y cero mutaciones.
+- H-90 original: **24/24**; H-85: **20/20**; ticket H-41: **23/23**;
+  H-88B: **19/19**.
+- Ingresos: **24/24**; coherencia: **20/20**; devoluciones: **17/17**;
+  apartados: **55/55**; H-65: **35/35 + 28/28**; H-75: **14/14**.
+- Cambios: modelo **28/28**, commit **32/32**, reportes **24/24**, pantalla
+  **45/45**, E2E **37/37**, comisión **30/30**; cola **162/162**.
+- Módulos **42/42**, migraciones **31/31**, responsive **492/492**, navegación
+  **15/15**, smoke del bundle **17/17** y build reproducible **8/8**.
+- El smoke de desarrollo con Babel agotó 30 s dos veces después de la regresión
+  intensiva; el bundle precompilado —artefacto de distribución— recorrió 17/17.
+
+### Publicación verificada
+
+El hook automático publicó el commit técnico en `origin/main`; la referencia
+remota devolvió exactamente `8d68133e88e11f9f97c79b252a70938c4ebe50e2`.
+GitHub Pages run `31357121942` terminó en `success`. El `index.html` del commit y
+la respuesta pública coincidieron byte por byte: 8,930,579 bytes y SHA-256
+`EFDDA5328E5DDB4D469B6EB12F372101ADD5B080DF8E5DC5CF59818B2349B9F0`.
+Sobre esa URL pública pasaron H-90 térmico **21/21** y H-85 **20/20**.
+
+### Riesgo residual
+
+`origins.layaways` cuenta movimientos monetarios de apartado, no documentos de
+apartado únicos. Esta semántica queda visible con el rótulo «Movimientos de
+apartados» en las tres superficies. No existe riesgo monetario nuevo conocido:
+los campos agregados no participan en sumas ni conciliación.
+
+No hay migraciones ni cambios en Supabase. Tampoco se modificaron escritores de
+pagos, ventas, apartados, cambios o devoluciones.
+
 ## Referencias
 
 - Riesgo: `docs/03-known-risks.md#h-90---la-autoridad-monetaria-no-conserva-componentes-configurables-ni-reembolsos-exactos`

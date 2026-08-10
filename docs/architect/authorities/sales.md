@@ -111,9 +111,15 @@ propio (`docs/04-contrato-del-cambio.md` § 3)
 de `pos.sale_payments.components` y `pos.returns.components`.
 **Compatibilidad:** las columnas históricas sólo se adoptan cuando prueban una
 distribución inequívoca; todo residuo se conserva como importe sin distribución.
+**Metadatos aditivos:** `operations` cuenta documentos monetarios únicos;
+`origins` clasifica sus IDs en `sales`, `layaways`, `exchanges` y `returns` sin
+sumar `methods[].operations`; `exchangeEntries` suma sólo entradas
+`tipo = cambio`. Cada anticipo, abono y liquidación es un movimiento de apartado
+independiente. Ninguno de estos campos participa en las sumas o conciliación.
 **Definición:** `balam/data.jsx` · migración `20260809013000`
 **Creada por:** H-90 · **Decisiones:** `ADR-002`, `ADR-003`
-**Consumidores:** `grep -rn "paymentMethodReport" balam/ test-*.mjs`
+**Consumidores:** `balam/reports.jsx` proyecta pantalla, A4 y ticket 80 mm desde
+un único view model; `grep -rn "paymentMethodReport" balam/ test-*.mjs`
 
 ## ¿Qué comisión le corresponde a este vendedor?
 **Autoridad:** `DATA.resolveSellerCommission()` — existe, pero por alcance de

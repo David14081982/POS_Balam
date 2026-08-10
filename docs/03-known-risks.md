@@ -32,7 +32,7 @@ y `BLOQUEADO`.
 | H-88A | El resumen de venta queda después del catálogo en móvil y tablet | RESUELTO Y PUBLICADO | POS / UI / responsive |
 | H-88B | La impresión móvil de etiquetas depende de popup, autoimpresión y autocierre | RESUELTO Y PUBLICADO | Inventario / etiquetas / impresión |
 | H-89 | BALAM no tiene contrato de instalación PWA ni materialización demostrada del logo configurado | RESUELTO Y PUBLICADO | Cliente / PWA / build |
-| H-90 | La autoridad monetaria no conserva componentes configurables ni reembolsos exactos | RESUELTO Y PUBLICADO | Ventas / devoluciones / reportes / Supabase |
+| H-90 | La autoridad monetaria no conserva componentes configurables ni reembolsos exactos | RESUELTO Y PUBLICADO | Ventas / devoluciones / reportes / impresión |
 
 ## H-01 — Inventario concurrente
 
@@ -4349,6 +4349,43 @@ retiren, por compatibilidad de despliegue. Los datos transaccionales de prueba s
 eliminarán antes del lanzamiento según la decisión del dueño.
 **Corrección documentada:**
 `docs/fixes/autoridad-monetaria-y-reporte-por-metodo.md`.
+
+### Extensión térmica autorizada
+
+**Estado:** RESUELTO Y PUBLICADO
+**Fecha de registro:** 09/08/2026
+**Riesgo:** sumar `methods[].operations` duplica una venta mixta y calcular el
+origen en `reports.jsx` abriría una segunda autoridad sobre pagos, devoluciones,
+apartados y cambios. El contrato térmico tampoco puede inferir esos datos.
+**Semántica aprobada:** `operations` cuenta IDs únicos de documentos monetarios
+del periodo. Cada venta cobrada cuenta una vez; cada anticipo, abono o
+liquidación cuenta como un **movimiento de apartado** independiente porque es
+dinero recibido en una fecha propia; cada diferencia positiva de cambio
+efectivamente cobrada cuenta una vez; y cada devolución cuenta una vez como
+salida. Un pago mixto sigue siendo una sola operación. `origins` publica esos
+cuatro conteos sin doble atribución y `exchangeEntries` suma exclusivamente los
+pagos H-90 con `tipo = cambio`.
+**Invariantes:** la ampliación es aditiva; `entries`, `refunds`, `net`,
+`methods`, `courtesies`, importes sin distribución y `reconciliation` deben ser
+idénticos antes y después. Reportes sólo puede consumir
+`DATA.paymentMethodReport()`.
+**Alcance:** metadatos derivados en H-90, salida térmica ejecutiva de 80 mm,
+igualdad pantalla/A4/ticket, regresiones, artefactos y publicación.
+**No alcance:** migraciones, Supabase, escrituras de pagos/ventas/apartados/
+cambios/devoluciones, inventario, SKU, identidades, stock, comisiones y precios.
+**Pruebas:** paridad aditiva **17/17**; Chrome local y público **21/21**;
+regresión H-90 original **24/24**; H-85 local y público **20/20**; ticket H-41
+**23/23**; H-88B **19/19**; regresiones funcionales y de build completas.
+**Publicación:** commit técnico
+`8d68133e88e11f9f97c79b252a70938c4ebe50e2`; GitHub Pages run
+`31357121942` terminado en `success`. El blob Git y la respuesta pública tienen
+8,930,579 bytes y SHA-256
+`EFDDA5328E5DDB4D469B6EB12F372101ADD5B080DF8E5DC5CF59818B2349B9F0`.
+**Riesgo residual:** la semántica de apartados mide movimientos monetarios, no
+documentos únicos de apartado; pantalla, A4 y ticket lo nombran explícitamente.
+No hay migración ni cambio remoto y los datos transaccionales de prueba se
+eliminarán en el punto cero ya acordado.
+**Commit:** `8d68133`.
 
 ## Regla de actualización
 
