@@ -3,7 +3,7 @@
 **Riesgo:** H-89
 **Estado:** RESUELTO
 **Fecha:** 09/08/2026
-**Commits técnicos:** `2dd877f`, `e403d4b`, `af5e599`
+**Commits:** `2dd877f`, `e403d4b`, `af5e599`, `6fd6809`, `c48fe8d`
 
 ## Problema y reproducción
 
@@ -62,6 +62,9 @@ Chrome/sistema operativo.
   advertencia explícita.
 - `POS Balam.html` añade safe-area, color de tema, favicon y carga el módulo;
   `balam/app.jsx` presenta instalar/actualizar cuando corresponde.
+- `PWA.InstallAction` concentra estado, gesto, resultado y fallback iOS. Login y
+  topbar consumen ese mismo componente; el login ya no deja el prompt capturado
+  sin una acción visible antes de autenticarse.
 - `test-h89-pwa.mjs` prueba el contrato productivo sobre Chrome y el bundle.
 
 ## Pruebas
@@ -70,15 +73,19 @@ Chrome/sistema operativo.
 - Instalación nativa y reapertura headed Chrome: **6/6**; hashes de píxeles
   192/512/maskable iguales a los iconos instalados.
 - H-89 productivo: **19/19**.
+- Instalación desde login: **10/10**; cubre `canInstall` verdadero/falso,
+  aceptación, cancelación, standalone, topbar, iOS y 320/360/390/430 px.
 - Contratos de módulos: **42/42**.
 - Smoke bundle: **17/17**.
 - Build reproducible: **8/8**.
 - Responsive H-87: **492/492** en 320, 360, 375, 390, 430, 600, 768, 1024,
   1280 y 1440 px; H-89 repitió el modo standalone en 320, 360, 390, 430, 768 y
   1024 px.
-- Instalación sobre los bytes públicos: **5/5** en Chrome real; diálogo nativo
-  aceptado, cero errores de instalabilidad, píxeles 192/512/maskable idénticos y
-  reapertura de `https://david14081982.github.io/POS_Balam/` en standalone.
+- Instalación sobre los bytes públicos: **6/6** en Chrome real; la acción del
+  login fue visible y operable en 320/360/390/430 px, el diálogo nativo fue
+  aceptado, no hubo errores de instalabilidad, los píxeles 192/512/maskable
+  fueron idénticos y la reapertura de
+  `https://david14081982.github.io/POS_Balam/` ocurrió en standalone.
 - El arnés descargó el `index.html` publicado, verificó su SHA-256 contra el blob
   del commit y ejecutó esos mismos bytes en origen local controlado: responsive
   público **492/492**.
@@ -90,8 +97,9 @@ Evidencia: `prototypes/h89-pwa-runtime-icons/evidence/chrome-installability.json
 y copias de los PNG instalados.
 
 Los bytes públicos de `sw.js`, manifest e iconos coinciden exactamente con los
-locales. `index.html` sólo difiere por CRLF/LF y ambos normalizan al SHA-256
-`BBA0F28875134D5107548054F0F86075F0EB013A27ED4CC478300C2F62CDCA19`.
+locales. El artefacto público `index.html` verificado tiene SHA-256
+`60B02D0B5C132D36C41F9E1CE41FB8A9B86C812F238985707DFD77463A9AA33E` y su
+regresión responsive terminó **492/492**.
 
 ## Riesgo residual y pendientes
 

@@ -83,6 +83,14 @@ Una versión nueva del worker queda en espera. Sólo una acción explícita env�
 captura, diálogo o una cola únicamente en memoria. `POS Balam (offline).html`
 no registra worker y permanece como artefacto independiente.
 
+`window.PWA.InstallAction` es la única superficie que inicia instalación. El
+login y el topbar la montan con composiciones distintas, pero ambos consumen el
+mismo `canInstall`, `standalone` y `requestInstall()`. La llamada a `prompt()`
+ocurre directamente dentro del clic y registra `accepted` o `dismissed`; iOS no
+simula ese evento y muestra la ruta manual Compartir → Añadir a pantalla de
+inicio. La pantalla de autenticación sólo compone esta superficie y no conoce
+el mecanismo de instalación.
+
 ## Orden de carga
 
 El orden relevante definido en `POS Balam.html` es:

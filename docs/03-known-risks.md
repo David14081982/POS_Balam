@@ -4281,12 +4281,18 @@ shell/assets, no APIs ni datos, y espera una actualización explícita segura.
 igualdad de píxeles instalados 192/512/maskable y reapertura standalone; H-89
 productivo **19/19**; módulos **42/42**; smoke **17/17**; build **8/8**;
 responsive **492/492**. Sobre los bytes públicos, Chrome devolvió cero errores,
-aceptó el diálogo nativo, instaló exactamente los píxeles derivados del logo y
-reabrió `https://david14081982.github.io/POS_Balam/` en standalone (**5/5**).
-**Despliegue:** `origin/main` contiene `2dd877f` y `e403d4b`. `sw.js`, manifest
-y los PNG públicos coinciden byte por byte; `index.html` coincide tras normalizar finales
-de línea con SHA-256
-`BBA0F28875134D5107548054F0F86075F0EB013A27ED4CC478300C2F62CDCA19`.
+mostró la acción del login en 320/360/390/430 px, aceptó el diálogo nativo,
+instaló exactamente los píxeles derivados del logo y reabrió
+`https://david14081982.github.io/POS_Balam/` en standalone (**6/6**).
+**Seguimiento UX:** el prompt se difería correctamente, pero su única acción
+vivía en el topbar posterior al login. `6fd6809` publica una sola
+`PWA.InstallAction` consumida por login y topbar, registra aceptación/cancelación
+y muestra instrucciones reales en iOS. Prueba específica **10/10**; Chrome real
+sobre el login público **6/6**; H-87 sobre los bytes públicos **492/492**.
+El arnés y la evidencia pública reproducible quedaron en `c48fe8d`.
+**Despliegue:** `origin/main` contiene `6fd6809` y `c48fe8d`. `sw.js`, manifest
+y los PNG públicos coinciden byte por byte; `index.html` público tiene SHA-256
+`60B02D0B5C132D36C41F9E1CE41FB8A9B86C812F238985707DFD77463A9AA33E`.
 **Riesgo residual:** Chrome puede descargar la generación nueva en
 `Pending Manifest Icons` y conservar temporalmente el icono activo anterior de
 una app ya instalada; la web no controla cuándo el sistema operativo aplica la
