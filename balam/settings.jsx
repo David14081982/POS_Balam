@@ -13,6 +13,7 @@
   const ICON_OPTS = ['cash', 'card', 'transfer', 'split', 'clock', 'receipt', 'tag', 'star'];
 
   const INPUT = 'block w-full h-11 px-3 bg-surface-container-low border border-outline-variant focus:ring-1 focus:ring-primary text-body rounded-lg';
+  const PROCEDURES_MANUAL_PATH = 'Manual_de_Procedimientos_BALAM_Inventario_Comisiones.pdf';
 
   function SettingsScreen() {
     const sections = window.SCREENS.childrenOf('config').filter(s => window.AUTH.canAccess(s.id));
@@ -1448,9 +1449,38 @@
     ]);
   }
 
+  function ProceduresManualCard() {
+    return h(GlassCard, { className: 'p-6', 'data-testid': 'procedures-manual-card' }, [
+      h('div', { key: 'head', className: 'flex items-start gap-4' }, [
+        h('span', { key: 'icon', className: 'w-11 h-11 rounded-xl bg-surface-container-low text-primary grid place-items-center shrink-0' },
+          h(MS, { name: 'receipt', size: 22 })),
+        h('div', { key: 'copy', className: 'min-w-0' }, [
+          h(SerifHeading, { key: 'title', className: 'mb-2', children: 'Manual de procedimientos' }),
+          h('p', { key: 'description', className: 'text-body text-on-surface-variant leading-relaxed' },
+            'Consulta la guía oficial de Inventario, productos, códigos de barras y comisiones. Puedes abrirla en otra pestaña o descargar el PDF para capacitación.'),
+        ]),
+      ]),
+      h('div', { key: 'actions', className: 'mt-5 flex flex-wrap gap-3' }, [
+        h('a', {
+          key: 'open', href: PROCEDURES_MANUAL_PATH, target: '_blank', rel: 'noopener noreferrer',
+          'data-testid': 'procedures-manual-open',
+          className: 'inline-flex items-center gap-2 px-5 min-h-11 bg-primary text-on-primary rounded-lg text-caption font-bold uppercase tracking-widest hover:opacity-90 transition',
+        }, [h(MS, { key: 'icon', name: 'receipt', size: 17 }), 'Abrir manual']),
+        h('a', {
+          key: 'download', href: PROCEDURES_MANUAL_PATH, download: 'Manual_de_Procedimientos_BALAM_Inventario_Comisiones.pdf',
+          'data-testid': 'procedures-manual-download',
+          className: 'inline-flex items-center gap-2 px-5 min-h-11 border border-outline-variant text-primary rounded-lg text-caption font-bold uppercase tracking-widest hover:border-primary hover:bg-surface-container-low transition',
+        }, [h(MS, { key: 'icon', name: 'download', size: 17 }), 'Descargar PDF']),
+      ]),
+      h('p', { key: 'hint', className: 'mt-3 text-overline text-on-surface-variant' },
+        'Documento interno · versión 2.0 · actualizado el 10 de agosto de 2026'),
+    ]);
+  }
+
   const PANELS = {
     negocio: () => [
       h(SyncHealthCard, { key: 'sync' }),
+      h(ProceduresManualCard, { key: 'manual' }),
       h(LogoUploader, { key: 'logo' }),
       h(GlassCard, { key: 'd', className: 'p-6' }, [
         h(SerifHeading, { key: 't', className: 'mb-4', children: 'Datos de la tienda' }),

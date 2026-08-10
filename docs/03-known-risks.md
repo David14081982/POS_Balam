@@ -26,7 +26,9 @@ y `BLOQUEADO`.
 | H-15 | Smoke E2E produce falsos negativos y no libera recursos al fallar | RESUELTO | Pruebas / bundle |
 | H-16 | Pulls truncados por límite de PostgREST | RESUELTO | Sincronización / rendimiento |
 | H-17 | Código y estilos heredados sin consumidores | RESUELTO | Frontend / build |
-| H-77 | Terminales abiertas no convergen y una línea base antigua carece de cuarentena | CÓDIGO LISTO / DESPLIEGUE PENDIENTE | Sincronización / offline / multi-terminal |
+| H-77 | Terminales abiertas no convergen y una línea base antigua carece de cuarentena | DESPLEGADO / OBSERVACIÓN | Sincronización / offline / multi-terminal |
+| H-78 | Renovar la sesión al recuperar foco desmonta temporalmente la aplicación | RESUELTO | Autenticación / experiencia de uso |
+| H-79 | No existe supervisión central por equipo | RESUELTO | Sincronización / administración |
 | H-85 | Los comprobantes reconstruyen evidencia vigente y varias superficies no imprimen o no permiten reimpresión | RESUELTO Y PUBLICADO | Ventas / posventa / impresión |
 | H-87 | La interfaz conserva una composición de escritorio en viewports pequeños | RESUELTO Y PUBLICADO | UI / responsive / accesibilidad |
 | H-88A | El resumen de venta queda después del catálogo en móvil y tablet | RESUELTO Y PUBLICADO | POS / UI / responsive |
@@ -3111,7 +3113,7 @@ no se tocó: borrarlo destruiría una captura.
 
 **Estado:** RESUELTO
 **Fecha de registro:** 01/08/2026
-**Commit:** Pendiente de commit
+**Commit:** `42bef5e`
 **Evidencia:** el dueño aportó el archivo de origen del inventario
 (`Inventario_Balamfinal final.xlsx`, 242 filas, 225 SKUs, 59 columnas de talla) y
 confirmó que **la talla 38 tiene 398 prendas físicas**. El sistema tiene **cero**
@@ -3936,7 +3938,7 @@ promociones con alcance por producto quedan apuntando a nada hasta que se editen
 
 ## H-77 - Terminales abiertas no convergen y una línea base antigua carece de cuarentena
 
-**Estado:** CÓDIGO LISTO / DESPLIEGUE PENDIENTE
+**Estado:** DESPLEGADO / OBSERVACIÓN
 **Fecha de registro:** 06/08/2026
 **Commit:** `d6b8a8e`
 **Origen:** dos computadoras con la misma cuenta: A modifica una talla; B no
@@ -3968,10 +3970,129 @@ punto cero firmado. Los artefactos fueron regenerados.
 **Pruebas:** cola 159/159; concurrencia/vivo 14/14; contrato H-77 20/20;
 migraciones 31/31; módulos 41/41; propagación 21/21; smoke bundle 17/17 y build
 reproducible 8/8. Docker no está disponible para ejecutar PostgreSQL local.
-**Riesgo residual:** migraciones aún no aplicadas. Faltan respaldo, canario de
-dos equipos, punto cero real y ventana de observación/reversa. Ningún dato
-remoto fue tocado.
+**Despliegue:** migraciones `20260806011500`, `11600`, `11800`, `11900` y
+`20260806999900` aplicadas a Balam. Respaldo previo verificado en
+`C:\tmp\balam-pos-pre-h77-20260806.dump`. GitHub Pages coincidió con el blob del
+commit y pasó canario público 13/13.
+**Punto cero:** época 2, 222 productos, 3,335 piezas, huella
+`297e27bef01bcfb3d569a3b9803cc25b`. Época 1 fue rechazada explícitamente y época
+2 aceptada; 14 dominios y publicación Realtime confirmados.
+**Riesgo residual:** falta observar dos computadoras físicas autenticadas en el
+panel de flota. Las terminales anteriores quedan bloqueadas/rebootstrap y no
+pueden restaurar inventario administrativo viejo.
 **Corrección documentada:** `docs/fixes/sincronizacion-viva-multiterminal.md`.
+
+## H-78 - Renovar la sesión al recuperar foco desmonta temporalmente la aplicación
+
+**Estado:** RESUELTO
+**Fecha de registro:** 06/08/2026
+**Commit:** Pendiente de commit
+**Origen:** cambiar de pestaña, minimizar o restaurar la ventana oscurece el POS
+y muestra «Cargando…» mientras vuelve a consultar permisos.
+**Reproducción:** `node test-auth-permissions.mjs` produjo 18 aprobaciones y 1
+fallo: `TOKEN_REFRESHED` convirtió una sesión ya resuelta en `AUTH.isReady() =
+false`, eliminó temporalmente el perfil y desmontó la interfaz.
+**Causa raíz:** el listener de `onAuthStateChange` trataba toda renovación o
+reafirmación de la misma identidad como una sesión nueva. El gate de seguridad
+de `App` respondió correctamente al falso estado de arranque.
+**Corrección:** `AUTH` conserva el perfil y los permisos ya verificados cuando
+el evento pertenece al mismo usuario, mientras refresca el snapshot en segundo
+plano. Cambios de identidad, cierre de sesión, inactividad y revocaciones reales
+mantienen el comportamiento restrictivo.
+**Pruebas:** AUTH 19/19; módulos 41/41; roles 15/15; build 8/8; smoke bundle
+17/17; navegación 15/15.
+**Riesgo residual:** ninguno conocido; una identidad distinta continúa usando
+el gate de carga hasta verificar sus permisos.
+**Corrección documentada:** `docs/fixes/renovacion-sesion-sin-bloqueo.md`.
+
+## H-79 - No existe supervisión central por equipo
+
+**Estado:** RESUELTO
+**Fecha de registro:** 07/08/2026
+**Commit:** `5c8a145`
+**Origen:** el administrador necesita supervisar PC y laptops remotas sin abrir
+cada instalación ni confiar a ciegas en un indicador local.
+**Reproducción:** `test-h79-device-center.mjs` inició 0/17: no existían historial,
+metadatos legibles, heartbeat periódico, atención central ni orden remota segura.
+**Causa raíz:** H-77 entregó el protocolo de convergencia, pero no una proyección
+operativa. `sync_devices` conservaba sólo el último heartbeat y un total de cola;
+el detalle permanecía correctamente local y era invisible desde otro equipo.
+**Corrección:** dominio `devices`, actividad resumida sin payload comercial,
+heartbeat por minuto, nombre/tipo de instalación, estados online/desconectado/
+desconocido, bandeja de atención y solicitud administrativa de reintento que el
+equipo de origen ejecuta mediante la cola existente.
+**Invariantes:** la cola local sigue siendo autoridad; las RPC comerciales y RLS
+no cambian; aprobar un reintento no concede permisos ni altera documentos; un
+equipo sin señal nunca figura como sincronizado.
+**Pruebas:** contrato H-79 17/17 (línea base 0/17); cola 162/162; concurrencia 15/15;
+H-77 20/20; migraciones 31/31; módulos 41/41; AUTH 19/19; roles 15/15; build 8/8;
+navegación 15/15; smoke bundle 17/17; dry-run remoto correcto sin aplicar.
+**Despliegue:** `12000/12100` aplicadas; la verificación SQL pasó y el dry-run
+posterior quedó vacío. GitHub Pages coincide byte a byte con `index.html` del
+commit; SHA-256 `D6AD3E0E06D1FDFB57852796FF603B5942941A21BEEEB5E396E7DF9F7A124B1E`.
+**Riesgo residual:** un equipo apagado no puede revelar trabajo exclusivamente
+local hasta reconectarse.
+**Corrección documentada:** `docs/fixes/centro-de-equipos.md`.
+
+## H-80 - El historial de equipos se invalida a sí mismo sin converger
+
+**Estado:** RESUELTO
+**Fecha de registro:** 07/08/2026
+**Commit:** `e8768f9`
+**Origen:** el indicador alterna continuamente entre «Reconciliando» y
+«Este equipo sincronizado» aun sin cambios comerciales.
+**Evidencia inicial:** `recordSyncActivity()` hace `upsert` con un `updated_at`
+nuevo en cada heartbeat; el trigger `h79_sync_activity` incrementa el dominio
+`devices` ante cualquier `UPDATE`; Realtime vuelve a llamar
+`reconcileDomains()`, cuyo cierre ejecuta otro heartbeat y repite el ciclo.
+**Riesgo:** escrituras, eventos Realtime, lecturas y transiciones visuales
+innecesarias mientras existe una operación local pendiente o bloqueada.
+**Alcance:** hacer convergente la proyección operativa y separar sus
+invalidaciones del estado de reconciliación comercial. No modifica documentos,
+inventario, autoridades SQL comerciales ni la cola offline.
+**Corrección:** el heartbeat dejó de reproyectar operaciones sin cambios; el
+trigger ignora actualizaciones que sólo cambian marcas de tiempo; y el dominio
+`devices` refresca su vista sin abrir la reconciliación comercial global. Los
+latidos periódicos se omiten con pestaña oculta o sin red.
+**Pruebas:** reproducción H-80 0/7 antes y 7/7 después; H-79 17/17;
+migraciones 31/31; cola 162/162; concurrencia 15/15; H-77 20/20; módulos
+41/41; AUTH 19/19; roles 15/15; build 8/8; navegación 15/15; smoke bundle
+17/17. La verificación SQL conductual pasó en producción y el dry-run
+posterior quedó vacío.
+**Riesgo residual:** permanece un heartbeat controlado por minuto mientras la
+aplicación está visible y en línea; es la señal necesaria para determinar si
+el equipo continúa conectado.
+**Corrección documentada:** `docs/fixes/convergencia-centro-de-equipos.md`.
+
+## H-81 - La cuarentena carece de expediente legible y resolución administrativa
+
+**Estado:** RESUELTO
+**Fecha de registro:** 07/08/2026
+**Commit:** `0fabf4d`
+**Origen:** una operación protegida por cambio de época queda en JSON y
+almacenamiento local, pero el administrador no puede comprenderla ni decidir su
+reintento desde el Centro de equipos.
+**Reproducción:** `test-h81-quarantine-review.mjs` establece el contrato ausente:
+expediente central sin payload comercial completo, huella, reporte Excel,
+decisión auditada y reactivación exclusiva mediante la cola/RPC vigente.
+**Riesgo:** una venta real puede permanecer fuera de inventario y reportes, o
+reinicializarse el equipo sin una revisión humana comprensible.
+**Alcance:** extender cuarentena y Centro de equipos. No crea escrituras
+comerciales administrativas, no modifica RPC de ventas/documentos y no permite
+que una aprobación omita inventario, permisos, época o idempotencia.
+**Corrección:** expediente remoto resumido con RLS, huella SHA-256, decisión
+administrativa auditada, reporte Excel y consumo exclusivo por el equipo de
+origen. Aprobar restaura la operación original en la cola y ejecuta
+`flushQueue()`; rechazar conserva la evidencia sin ejecutarla.
+**Pruebas:** H-81 15/15 (línea base 2/15); migraciones 31/31; cola 162/162;
+concurrencia 15/15; H-77 20/20; H-79 17/17; H-80 7/7; módulos 41/41; AUTH
+19/19; roles 15/15; build 8/8; navegación 15/15; smoke bundle 17/17. Las
+migraciones `12400/12500` y su verificación pasaron en producción; dry-run
+posterior vacío.
+**Riesgo residual:** una operación aprobada puede seguir siendo rechazada por
+su RPC normal; quedará como fallida para nueva revisión. Si se pierde el equipo
+y también el JSON, el resumen remoto no permite reconstruir el payload completo.
+**Corrección documentada:** `docs/fixes/revision-de-cuarentena.md`.
 
 ## H-82 - El arranque atribuye estados transitorios a otra pestaña
 
@@ -4386,6 +4507,29 @@ documentos únicos de apartado; pantalla, A4 y ticket lo nombran explícitamente
 No hay migración ni cambio remoto y los datos transaccionales de prueba se
 eliminarán en el punto cero ya acordado.
 **Commit:** `8d68133`.
+
+## H-92 - Administración no ofrece acceso al manual de procedimientos
+
+**Estado:** RESUELTO — pendiente de publicación
+**Fecha:** 10/08/2026
+**Riesgo:** el PDF oficial existe, pero el personal administrativo debe localizarlo fuera de BALAM; una sección de permiso nueva quedaría denegada hasta sincronizar el catálogo remoto.
+**Alcance:** tarjeta en `Configuración → Negocio`, con apertura y descarga del PDF oficial, pruebas, build y documentación.
+**No alcance:** permisos nuevos, lógica de negocio, datos, Supabase y migraciones.
+**Corrección:** tarjeta `Manual de procedimientos` en `Configuración → Negocio`, con apertura segura y descarga del PDF oficial, sin permiso nuevo.
+**Pruebas:** H-92 10/10; registro 12/12; permisos 21/21; smoke 17/17; navegación 15/15; build 8/8.
+**Riesgo residual:** el despliegue debe incluir el PDF raíz; una copia offline aislada necesita que el PDF se copie a su lado.
+**Commit:** Pendiente de commit.
+**Corrección documentada:** `docs/fixes/acceso-administrativo-manual-procedimientos.md`.
+
+## H-91 - El manual operativo no cubría Inventario y Comisiones publicados
+
+**Estado:** RESUELTO — entrega documental local
+**Fecha:** 10/08/2026
+**Commit:** Pendiente de commit
+**Corrección:** manual nuevo en HTML y PDF, auditado contra H83, H84, H86, H88B y H69; funciones no publicadas separadas del procedimiento.
+**Pruebas:** generador PDF correcto; validador 12 secciones, 9 imágenes válidas, cero desbordes y cero errores; capturador oficial sin errores JS.
+**Riesgo residual:** cambios futuros del producto o política requieren nueva versión; impresión física conserva dependencias de hardware.
+**Corrección documentada:** `docs/fixes/manual-procedimientos-inventario-comisiones.md`.
 
 ## Regla de actualización
 

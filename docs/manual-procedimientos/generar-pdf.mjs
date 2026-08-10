@@ -1,0 +1,15 @@
+import { chromium } from 'playwright-core';
+import { createServer } from 'node:http';
+import { createReadStream, existsSync } from 'node:fs';
+import { resolve, join, extname } from 'node:path';
+const dir=resolve('docs/manual-procedimientos');
+const out=resolve('Manual_de_Procedimientos_BALAM_Inventario_Comisiones.pdf');
+const mime={'.html':'text/html','.png':'image/png','.jpg':'image/jpeg'};
+const server=createServer((req,res)=>{const p=decodeURIComponent(req.url.split('?')[0]);const f=join(dir,p==='/'?'manual.html':p);if(!f.startsWith(dir)||!existsSync(f)){res.writeHead(404);res.end('nf');return;}res.writeHead(200,{'Content-Type':mime[extname(f)]||'application/octet-stream'});createReadStream(f).pipe(res);});
+await new Promise(r=>server.listen(8896,'127.0.0.1',r));
+const browser=await chromium.launch({channel:'chrome',headless:true});
+const page=await browser.newPage();
+await page.goto('http://127.0.0.1:8896/manual.html',{waitUntil:'networkidle'});
+await page.pdf({path:out,format:'Letter',printBackground:true,margin:{top:'16mm',right:'15mm',bottom:'17mm',left:'18mm'},displayHeaderFooter:true,headerTemplate:'<span></span>',footerTemplate:'<div style="font:8px Segoe UI;color:#6b7285;width:100%;padding:0 18mm;display:flex;justify-content:space-between"><span>BALAM · Manual interno</span><span><span class="pageNumber"></span> / <span class="totalPages"></span></span></div>'});
+console.log('PDF',out);
+await browser.close();await new Promise(r=>server.close(r));

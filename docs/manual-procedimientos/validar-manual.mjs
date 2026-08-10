@@ -1,0 +1,13 @@
+import { chromium } from 'playwright-core';
+import { createServer } from 'node:http';
+import { createReadStream, existsSync, mkdirSync } from 'node:fs';
+import { resolve, join, extname } from 'node:path';
+const dir=resolve('docs/manual-procedimientos'), out=join(dir,'revision');mkdirSync(out,{recursive:true});
+const mime={'.html':'text/html','.png':'image/png','.jpg':'image/jpeg'};
+const server=createServer((req,res)=>{const p=decodeURIComponent(req.url.split('?')[0]);const f=join(dir,p==='/'?'manual.html':p);if(!f.startsWith(dir)||!existsSync(f)){res.writeHead(404);res.end();return;}res.writeHead(200,{'Content-Type':mime[extname(f)]||'application/octet-stream'});createReadStream(f).pipe(res);});
+await new Promise(r=>server.listen(8895,'127.0.0.1',r));
+const browser=await chromium.launch({channel:'chrome',headless:true});const page=await browser.newPage({viewport:{width:816,height:1056},deviceScaleFactor:1});
+const errors=[];page.on('pageerror',e=>errors.push(String(e)));await page.goto('http://127.0.0.1:8895/manual.html',{waitUntil:'networkidle'});await page.emulateMedia({media:'print'});
+const audit=await page.evaluate(()=>({images:[...document.images].map(x=>({src:x.getAttribute('src'),ok:x.complete&&x.naturalWidth>0})),wide:[...document.querySelectorAll('body *')].filter(x=>x.scrollWidth>x.clientWidth+2).map(x=>x.tagName+'.'+x.className).slice(0,20),sections:document.querySelectorAll('section').length,headings:[...document.querySelectorAll('h1')].map(x=>x.textContent.trim())}));
+for(let i=0;i<await page.locator('section').count();i++)await page.locator('section').nth(i).screenshot({path:join(out,`seccion-${String(i+1).padStart(2,'0')}.png`)});
+console.log(JSON.stringify({errors,audit},null,2));await browser.close();await new Promise(r=>server.close(r));
