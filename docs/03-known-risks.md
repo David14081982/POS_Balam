@@ -4533,7 +4533,7 @@ eliminarán en el punto cero ya acordado.
 
 ## H-93 - El frontend todavía muestra la marca Heritage
 
-**Estado:** RESUELTO · PENDIENTE DE PUBLICACIÓN
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha:** 10/08/2026
 **Riesgo:** textos visibles y una etiqueta predeterminada histórica presentan una
 marca distinta a Balam; configuraciones persistidas pueden conservar esa etiqueta.
@@ -4547,7 +4547,10 @@ personalizados.
 smoke de producción 17/17; navegación 15/15; build 8/8.
 **Riesgo residual:** el nombre técnico del módulo y el literal de migración no se
 muestran al usuario.
-**Commit:** Pendiente de commit.
+**Publicación:** GitHub Pages run `31379184547` en `success`; HTTP 200 y
+artefacto público idéntico al build normalizado (8,931,332 bytes, SHA-256
+`D51B854A5E5E96D847CA2904201D05947A2AB46EC90170CE40F353A823D7A7D1`).
+**Commit:** `e482a25`.
 **Corrección documentada:** `docs/fixes/marca-balam-en-frontend.md`.
 
 ## Regla de actualización

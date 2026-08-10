@@ -2,7 +2,7 @@
 
 ## Estado
 
-RESUELTO · Pendiente de publicación
+RESUELTO Y PUBLICADO
 
 ## Fecha
 
@@ -52,4 +52,7 @@ técnico interno. Ninguno se muestra en la interfaz.
 
 ## Commit
 
-Pendiente de commit.
+`e482a25` · GitHub Pages run `31379184547` terminó en `success`. El
+artefacto público respondió HTTP 200 y coincide byte a byte con el build local
+normalizado a LF: 8,931,332 bytes, SHA-256
+`D51B854A5E5E96D847CA2904201D05947A2AB46EC90170CE40F353A823D7A7D1`.
