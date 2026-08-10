@@ -225,6 +225,25 @@ Ventas y devoluciones solicitan las rutas especializadas `pushSale()` y
 `pushReturn()` mediante el gateway. Cada una se confirma remotamente mediante
 su propia transacción SQL idempotente.
 
+### Autoridad monetaria por método
+
+`pos.sale_payments.components` congela cada entrada como una lista de
+`{methodCode, methodLabel, amount}`; `pos.returns.components` conserva con la
+misma forma cada salida por reembolso. El código identifica el método y la
+etiqueta snapshot impide que un cambio posterior en Configuración reescriba la
+historia. `Mixto` y `Apartado` son experiencias/tipos de operación y nunca
+componentes receptores de dinero.
+
+`DATA.paymentMethodReport()` es la única proyección de entradas, devoluciones y
+neto por método. Adopta documentos anteriores sólo cuando las columnas fijas o
+un método simple prueban la distribución; el resto permanece como importe
+histórico sin distribución. Su conciliación cumple `Σ neto por método + sin
+distribución = neto monetario`, o publica la diferencia exacta.
+
+Las columnas fijas de `sale_payments` continúan como compatibilidad de clientes
+anteriores, pero no se amplían al agregar métodos. Todo documento posterior a
+H-90 debe llevar componentes válidos cuya suma sea exactamente su monto.
+
 ### Préstamos de mercancía
 
 `DATA.loans` es la colección de mercancía que sale del negocio con obligación de

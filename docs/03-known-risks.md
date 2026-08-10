@@ -32,6 +32,7 @@ y `BLOQUEADO`.
 | H-88A | El resumen de venta queda después del catálogo en móvil y tablet | RESUELTO Y PUBLICADO | POS / UI / responsive |
 | H-88B | La impresión móvil de etiquetas depende de popup, autoimpresión y autocierre | RESUELTO Y PUBLICADO | Inventario / etiquetas / impresión |
 | H-89 | BALAM no tiene contrato de instalación PWA ni materialización demostrada del logo configurado | RESUELTO Y PUBLICADO | Cliente / PWA / build |
+| H-90 | La autoridad monetaria no conserva componentes configurables ni reembolsos exactos | RESUELTO Y PUBLICADO | Ventas / devoluciones / reportes / Supabase |
 
 ## H-01 — Inventario concurrente
 
@@ -4299,6 +4300,55 @@ una app ya instalada; la web no controla cuándo el sistema operativo aplica la
 identidad pendiente. Instalaciones nuevas usan el logo vigente. Logos históricos
 menores de 512 px conservan pérdida de calidad advertida.
 **Corrección documentada:** `docs/fixes/pwa-instalable-logo-dinamico.md`.
+
+## H-90 - La autoridad monetaria no conserva componentes configurables ni reembolsos exactos
+
+**Estado:** RESUELTO Y PUBLICADO
+**Fecha de registro:** 09/08/2026
+**Fecha de corrección/despliegue:** 09/08/2026
+**Commit técnico:** `700faaae879b38c60d551082ec02e1f53141858e`
+**Origen:** historia aprobada por el dueño para responder cuánto dinero entró o
+salió realmente por cada método configurado.
+**Reproducción:** `pos.sale_payments` conserva cuatro columnas fijas
+(`efectivo`, `tarjeta`, `transferencia`, `otro`). Un mixto con Mercado Pago,
+Cheque u otro método configurable colapsa identidades diferentes en `otro`.
+Las devoluciones sólo congelan un texto `metodo`, sin componentes monetarios;
+por ello un reembolso mixto no se puede distribuir sin inventarlo.
+**Riesgo:** reportes monetarios inexactos, historia modificada por cambios en
+Configuración, doble conteo de apartados/cambios y conciliaciones que ocultan
+importes sin evidencia suficiente.
+**Alcance:** desglose monetario dinámico e inmutable en ventas, apartados,
+devoluciones y diferencias positivas de cambios; adaptador histórico prudente;
+autoridad `DATA.paymentMethodReport()`; pantalla ejecutiva y documento A4 H-85.
+**No alcance:** inventario, SKU, identidades de producto/variante, stock,
+comisiones y la regla vigente de cambios sin reembolso por diferencia negativa.
+**Corrección:** pagos y devoluciones nuevos congelan componentes dinámicos con
+código estable, etiqueta snapshot e importe. `Mixto`, `Apartado` y `Cortesía`
+no pueden recibir dinero como componentes. `Mismo método` usa exclusivamente la
+distribución cobrada demostrable; si falta evidencia, bloquea. El adaptador
+histórico sólo adopta efectivo, tarjeta, transferencia o un método simple
+inequívoco y deja cualquier residuo como `Importe histórico sin distribución`.
+`DATA.paymentMethodReport()` es la autoridad única del reporte, publica la
+igualdad de conciliación y la pantalla genera su documento A4 específico.
+**Despliegue:** migraciones remotas `20260809013000` a `20260809013300`; el
+dry-run final informó `Remote database is up to date`. GitHub Pages desplegó
+exitosamente el commit técnico. El blob servido mide 8,926,906 bytes y tiene
+SHA-256 `922FF57C9BC61E3D97D8CB723F280B94323E70231B2C5E3848A36E942926D044`.
+**Pruebas:** H-90 `24/24`; bytes públicos H-90 `6/6`; A4/PDF público H-85
+`20/20`; coherencia `20/20`; ingresos `24/24`; devoluciones `17/17`;
+apartados `55/55`; H-65 `35/35` y E2E `28/28`; H-75 `14/14`; Cambio E2E
+`37/37`; cola offline `162/162`; módulos `42/42`; migraciones `31/31`;
+responsive `492/492`; navegación `15/15`; smoke del bundle `17/17` y build
+reproducible `8/8`. La ejecución pública demostró
+`Σ métodos 1,040 + sin distribución 60 = neto 1,100`.
+**Pendiente:** ninguno dentro de la historia aprobada.
+**Riesgo residual:** los documentos históricos ambiguos permanecen
+deliberadamente sin atribuir; no se inventa su distribución. Tras el punto cero,
+clientes antiguos todavía podrían escribir `components = NULL` hasta que se
+retiren, por compatibilidad de despliegue. Los datos transaccionales de prueba se
+eliminarán antes del lanzamiento según la decisión del dueño.
+**Corrección documentada:**
+`docs/fixes/autoridad-monetaria-y-reporte-por-metodo.md`.
 
 ## Regla de actualización
 

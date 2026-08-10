@@ -106,6 +106,15 @@ propio (`docs/04-contrato-del-cambio.md` § 3)
 **Creada por:** H-03 · **Decisión:** `ADR-002`
 **Consumidores:** `grep -rn "subtotal\|saldo\|sale_payments" balam/ supabase/`
 
+## ¿Por qué método entró o salió realmente el dinero?
+**Autoridad:** `DATA.paymentMethodReport()` proyecta los componentes congelados
+de `pos.sale_payments.components` y `pos.returns.components`.
+**Compatibilidad:** las columnas históricas sólo se adoptan cuando prueban una
+distribución inequívoca; todo residuo se conserva como importe sin distribución.
+**Definición:** `balam/data.jsx` · migración `20260809013000`
+**Creada por:** H-90 · **Decisiones:** `ADR-002`, `ADR-003`
+**Consumidores:** `grep -rn "paymentMethodReport" balam/ test-*.mjs`
+
 ## ¿Qué comisión le corresponde a este vendedor?
 **Autoridad:** `DATA.resolveSellerCommission()` — existe, pero por alcance de
 H-31 todavía no gobierna los cálculos financieros

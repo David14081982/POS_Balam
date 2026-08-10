@@ -83,6 +83,7 @@ sesión de chat.
 | `revision-de-cuarentena.md` | H-81 | Expediente Excel, decisión auditada y reactivación por la cola/RPC vigente |
 | `sistema-de-comprobantes-historicos.md` | H-85 | Evidencia visual congelada, reimpresión, Reportes y devolución imprimibles |
 | `pwa-instalable-logo-dinamico.md` | H-89 | Instalación PWA, iconos derivados del logo configurado y actualización segura |
+| `autoridad-monetaria-y-reporte-por-metodo.md` | H-90 | Componentes monetarios dinámicos, reembolsos exactos, conciliación y reporte A4 |
 
 Documentación financiera relacionada, creada antes de este índice:
 
