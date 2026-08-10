@@ -341,8 +341,8 @@
       } finally { setBusy(false); }
     }
 
-    return h('div', { className: 'h-full w-full grid place-items-center p-6', style: { background: '#131B2E' } },
-      h('div', { className: 'w-full max-w-sm rounded-2xl p-8 shadow-2xl', style: { background: '#0E1424' } }, [
+    return h('div', { className: 'min-h-full w-full grid place-items-center p-4 sm:p-6 overflow-y-auto', style: { background: '#131B2E' } },
+      h('div', { className: 'w-full max-w-sm rounded-2xl p-6 sm:p-8 my-auto shadow-2xl', style: { background: '#0E1424' } }, [
         h('div', { key: 'br', className: 'flex flex-col items-center mb-8' }, [
           h('div', { key: 'm', className: 'w-16 h-16 rounded-2xl grid place-items-center overflow-hidden mb-4', style: { background: '#1C2437', color: '#FFE088' } },
             logo ? h('img', { src: logo, className: 'w-full h-full object-cover' }) : h(JaguarMark, { size: 34 })),
@@ -362,6 +362,7 @@
           style: { background: '#FFE088', color: '#131B2E' }, onClick: submit, disabled: busy,
         }, [h(MS, { key: 'i', name: 'check', size: 18 }), busy ? 'Entrando…' : 'Iniciar sesión']),
         h('p', { key: 'note', className: 'text-center mt-6 text-[11px]', style: { color: '#5D637B' } }, 'El acceso se habilita según el rol asignado a tu cuenta.'),
+        window.PWA && h(window.PWA.InstallAction, { key: 'pwa-install', surface: 'login' }),
       ]));
   }
 

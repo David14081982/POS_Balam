@@ -21,6 +21,7 @@
     iconQuality: 'fallback',
     sourceSize: null,
     manifestUrl: '',
+    lastInstallOutcome: null,
     error: '',
   };
 
@@ -264,9 +265,11 @@
     if (!installPrompt) return { outcome: 'unavailable' };
     const prompt = installPrompt;
     installPrompt = null;
-    publish({ canInstall: false });
+    publish({ canInstall: false, lastInstallOutcome: 'pending' });
     await prompt.prompt();
-    return prompt.userChoice;
+    const choice = await prompt.userChoice;
+    publish({ lastInstallOutcome: choice && choice.outcome ? choice.outcome : 'unknown' });
+    return choice;
   }
 
   async function init() {
@@ -300,7 +303,7 @@
   window.addEventListener('beforeinstallprompt', event => {
     event.preventDefault();
     installPrompt = event;
-    publish({ canInstall: state.ready && !state.standalone, installKind: 'prompt' });
+    publish({ canInstall: state.ready && !state.standalone, installKind: 'prompt', lastInstallOutcome: null });
   });
   window.addEventListener('appinstalled', () => {
     installPrompt = null;
@@ -323,16 +326,13 @@
     else if (mediaStandalone.addListener) mediaStandalone.addListener(onStandalone);
   }
 
-  function Control() {
+  function InstallAction({ surface = 'topbar' }) {
     const snapshot = useSnapshot();
     const [instructions, setInstructions] = useState(false);
-    if (!snapshot.supported || snapshot.standalone) return null;
-    const update = snapshot.updateAvailable;
-    const install = snapshot.ready && snapshot.canInstall;
-    if (!update && !install) return null;
-    const label = update ? 'Actualizar BALAM' : 'Instalar BALAM';
+    if (!snapshot.supported || snapshot.standalone || !snapshot.ready || !snapshot.canInstall) return null;
+    const login = surface === 'login';
+    const label = 'Instalar BALAM';
     const action = async () => {
-      if (update) { await activateUpdate(); return; }
       if (snapshot.installKind === 'prompt') { await requestInstall(); return; }
       setInstructions(true);
     };
@@ -342,17 +342,38 @@
     return h(React.Fragment, null, [
       h('button', {
         key: 'action', type: 'button', onClick: action,
-        className: 'inline-flex items-center justify-center gap-2 min-w-11 h-11 px-3 rounded-lg bg-gold-soft text-gold-text font-label-sm uppercase tracking-widest text-xs hover:opacity-90',
+        className: login
+          ? 'mt-5 w-full min-h-11 px-4 rounded-lg inline-flex items-center justify-center gap-2 font-label-sm uppercase tracking-widest text-xs hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary'
+          : 'inline-flex items-center justify-center gap-2 min-w-11 h-11 px-3 rounded-lg bg-gold-soft text-gold-text font-label-sm uppercase tracking-widest text-xs hover:opacity-90',
+        style: login ? { background: '#131B2E', border: '1px solid #2A3350', color: '#FFE088' } : undefined,
         'aria-label': label,
-        'data-testid': update ? 'pwa-update-action' : 'pwa-install-action',
+        'data-testid': login ? 'pwa-login-install-action' : 'pwa-install-action',
       }, [
-        h(window.HX.MS, { key: 'i', name: update ? 'sync' : 'download', size: 18 }),
-        h('span', { key: 'l', className: 'hidden xl:inline' }, update ? 'Actualizar' : 'Instalar'),
+        h(window.HX.MS, { key: 'i', name: 'download', size: 18 }),
+        h('span', { key: 'l', className: login ? '' : 'hidden xl:inline' }, login ? 'Instalar BALAM' : 'Instalar'),
       ]),
+      login && snapshot.installKind === 'ios' && h('p', {
+        key: 'ios-hint', className: 'mt-2 text-center text-[11px]', style: { color: '#AEB4C5' },
+        'data-testid': 'pwa-login-ios-hint',
+      }, 'Compartir → Añadir a pantalla de inicio'),
       instructions && h(window.UI.Modal, {
         key: 'instructions', title: 'Instalar BALAM', onClose: () => setInstructions(false), testId: 'pwa-install-instructions',
         footer: h('button', { type: 'button', className: 'h-11 px-5 rounded-lg bg-primary text-on-primary font-semibold', onClick: () => setInstructions(false) }, 'Entendido'),
       }, h('p', { className: 'text-body text-on-surface-variant' }, modalText)),
+    ]);
+  }
+
+  function Control() {
+    const snapshot = useSnapshot();
+    if (!snapshot.supported || snapshot.standalone) return null;
+    if (!snapshot.updateAvailable) return h(InstallAction, { surface: 'topbar' });
+    return h('button', {
+      type: 'button', onClick: activateUpdate,
+      className: 'inline-flex items-center justify-center gap-2 min-w-11 h-11 px-3 rounded-lg bg-gold-soft text-gold-text font-label-sm uppercase tracking-widest text-xs hover:opacity-90',
+      'aria-label': 'Actualizar BALAM', 'data-testid': 'pwa-update-action',
+    }, [
+      h(window.HX.MS, { key: 'i', name: 'sync', size: 18 }),
+      h('span', { key: 'l', className: 'hidden xl:inline' }, 'Actualizar'),
     ]);
   }
 
@@ -369,7 +390,7 @@
 
   window.PWA = {
     init, applyBrand, activateUpdate, requestInstall, reloadSafety,
-    getState: () => state, useSnapshot, Control, BrandStatus,
+    getState: () => state, useSnapshot, InstallAction, Control, BrandStatus,
   };
   init();
 })();
