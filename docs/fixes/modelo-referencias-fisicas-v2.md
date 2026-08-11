@@ -1,9 +1,9 @@
 # Modelo definitivo de referencias físicas V2
 
 **Riesgo:** H-94
-**Estado:** PARCIALMENTE RESUELTO — Supabase listo; publicación del cliente pendiente
+**Estado:** PUBLICADO Y VALIDADO CON DATOS DE PRUEBA — NO LISTO PARA PRODUCCIÓN
 **Fecha:** 10/08/2026
-**Commit:** Pendiente de commit
+**Commit técnico:** `136c8d0`
 
 ## Problema y reproducción
 
@@ -98,10 +98,24 @@ V1 y se mantuvo `products.id|talla` para V2; pantalla 117/117, sincronización
 
 ## Riesgo residual y pendientes
 
-La implementación, las pruebas locales y el esquema remoto están completos. En
-esta revisión falta publicar y validar los bytes exactos del cliente en GitHub
-Pages. La reversa retira primero el cliente; el esquema aditivo queda y cualquier
-corrección de base es hacia adelante.
+La implementación, las pruebas locales, el esquema remoto y la publicación del
+cliente están completos. GitHub Pages run `31465090935` terminó en `success` para
+`136c8d0`; `origin/main` coincidió con el SHA completo
+`136c8d054a2441e8e0cbfdd530de378379df5853`. El sitio sirvió 8,950,198 bytes,
+SHA-256 `F9EC47BFC7833E1B7E26CC670AC9C2279CA11C30E70004772C1DBC782C08DCB0`.
+Pages normalizó las 171 terminaciones CRLF del blob a LF; tras esa única
+normalización el contenido fue idéntico, sin otra diferencia.
+
+Sobre la descarga real de Pages: H-94 15/15, smoke V1 17/17, préstamos V1
+117/117, apartados 28/28, formulario 19/19, colores de ornamento 17/17,
+comprobantes 20/20 y etiquetas 19/19. Después de publicar se repitieron Excel
+42/42, sincronización de préstamos entre terminales 69/69, convergencia 7/7 y
+cola offline 162/162. La reversa retira primero el cliente; el esquema aditivo
+queda y cualquier corrección de base es hacia adelante.
+
+No se declara listo para producción. Falta la validación manual del propietario
+y una historia separada para punto cero, CONFIG/SKU definitivo, inventario real
+y etiquetas reales.
 
 Punto cero, fijación de CONFIG/SKU, carga real e impresión de etiquetas reales
 siguen expresamente fuera de este trabajo.
