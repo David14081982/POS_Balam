@@ -124,6 +124,10 @@
       const r = C.setActive(kind, it.code, it.active === false);
       if (r && !r.ok) toast(r.error, 'var(--danger)');
     }
+    function setMeta(patch) {
+      const r = C.setCatalogMeta(kind, patch);
+      if (r && !r.ok) toast(r.error, 'var(--danger)');
+    }
     function delCatalog() {
       if (!window.confirm('¿Eliminar el catálogo "' + (cmeta ? cmeta.label : kind) + '" y todos sus elementos? Si algún producto tiene un valor de este catálogo, se quitará (su SKU ya asignado no cambia). Esta acción no se puede deshacer.')) return;
       const r = C.removeCatalog(kind); if (!r.ok) toast(r.error, 'var(--danger)'); else toast('Catálogo eliminado', 'var(--danger)');
@@ -148,13 +152,15 @@
     }, [locked ? h(MS, { key: 'i', name: 'lock', size: 12 }) : null, txt]);
     // Interruptores según el tipo de catálogo:
     //   En alta → catálogos select; bloqueado-ON si son estructurales (color: swatch siempre presente).
+    //   En referencia → identidad física V2; independiente del SKU comercial.
     //   En SKU  → cualquier catálogo con código (incluido color); libre.
     const pills = [];
     const selectAttr = cmeta && (cmeta.formSelect || cmeta.custom); // se captura como menú en el alta
-    if (cmeta && cmeta.formSelect) pills.push(metaPill('En alta', cmeta.inForm, () => C.setCatalogMeta(kind, { inForm: !cmeta.inForm }), cmeta.struct));
-    if (cmeta && (cmeta.field || cmeta.custom || cmeta.sizeSlot)) pills.push(metaPill('En SKU', cmeta.inSku, () => C.setCatalogMeta(kind, { inSku: !cmeta.inSku })));
-    if (selectAttr) pills.push(metaPill('Obligatorio', !!cmeta.required, () => C.setCatalogMeta(kind, { required: !cmeta.required })));
-    if (selectAttr) pills.push(metaPill('Filtrable', !!cmeta.filterable, () => C.setCatalogMeta(kind, { filterable: !cmeta.filterable })));
+    if (cmeta && cmeta.formSelect) pills.push(metaPill('En alta', cmeta.inForm, () => setMeta({ inForm: !cmeta.inForm }), cmeta.struct));
+    if (cmeta && (cmeta.field || cmeta.custom || cmeta.sizeCategory)) pills.push(metaPill('En referencia', !!cmeta.inReference, () => setMeta({ inReference: !cmeta.inReference })));
+    if (cmeta && (cmeta.field || cmeta.custom || cmeta.sizeSlot)) pills.push(metaPill('En SKU', cmeta.inSku, () => setMeta({ inSku: !cmeta.inSku })));
+    if (selectAttr) pills.push(metaPill('Obligatorio', !!cmeta.required, () => setMeta({ required: !cmeta.required })));
+    if (selectAttr) pills.push(metaPill('Filtrable', !!cmeta.filterable, () => setMeta({ filterable: !cmeta.filterable })));
     const structNote = (cmeta && cmeta.struct && !cmeta.field)
       ? h('span', { key: 'st', className: 'inline-flex items-center gap-1.5 text-overline uppercase text-on-surface-variant/70' }, [h(MS, { key: 'i', name: 'lock', size: 13 }), 'Atributo estructural (matriz de stock)'])
       : null;
@@ -219,10 +225,14 @@
   // modelo fijo al final, con vista previa en vivo. Reordena vía CONFIG.moveSkuOrder.
   function SkuBuilder() {
     const parts = C.skuParts();
+    const skuCollisions = Object.values((D.products || []).reduce((groups, product) => {
+      const key = String(product.sku || '');
+      (groups[key] || (groups[key] = [])).push(product); return groups;
+    }, {})).filter(group => group.length > 1);
     function regenerar() {
       const n = (D.products || []).length;
       if (!n) { toast('No hay productos que regenerar'); return; }
-      if (!window.confirm('¿Regenerar el SKU de ' + n + ' producto(s) con la receta actual?\n\n⚠ El SKU es el identificador del producto. Las ventas, devoluciones y movimientos YA registrados seguirán apuntando al SKU anterior, por lo que podrían dejar de vincularse con el producto en reportes. Úsalo solo durante la configuración inicial, antes de tener ventas reales.\n\nEsta acción no se puede deshacer.')) return;
+      if (!window.confirm('¿Regenerar el SKU comercial de ' + n + ' producto(s) con la receta actual?\n\nLa identidad técnica no cambia, pero los documentos existentes conservarán el SKU anterior como snapshot. Úsalo durante la configuración inicial para evitar confusión visual.\n\nEsta acción no se puede deshacer.')) return;
       const r = D.regenerateSkus();
       toast(r.changed + ' de ' + r.total + ' SKUs actualizados', 'var(--accent)');
     }
@@ -232,6 +242,9 @@
       const l = C.list(kind); return l.length ? l[0].code : '??';
     };
     const preview = parts.map(p => sampleCode(p.kind)).join('-');
+    const currentMaxSkuLength = (D.products || []).reduce((max, product) => Math.max(max, String(product.sku || '').length), 0);
+    const previewCode128 = window.BARCODES && window.BARCODES.validateLabelCode && preview
+      ? window.BARCODES.validateLabelCode(preview) : null;
     // El catálogo "Modelo" no cuenta como oculto: está cableado al campo Nombre / Modelo del alta.
     const modeloK = C.modeloKind ? C.modeloKind() : null;
     const hidden = parts.filter(x => x.kind !== modeloK).map(p => C.catalogMeta(p.kind)).filter(m => m && m.formSelect && !m.inForm);
@@ -253,17 +266,47 @@
         h('span', { key: 'l', className: 'text-overline uppercase tracking-widest text-on-surface-variant' }, 'Vista previa'),
         h('span', { key: 'v', className: 'font-mono text-body text-gold-text' }, preview),
       ]),
+      h('div', { key: 'length', className: 'mt-2 text-caption text-on-surface-variant' }, [
+        h('span', { key: 'stats' }, `Longitud esperada: ${preview.length} caracteres · máximo actual: ${currentMaxSkuLength}. El SKU comercial no tiene un máximo técnico fijado.`),
+        h('span', { key: 'barcode', className: 'block mt-1' }, previewCode128
+          ? `Si se intentara codificar esta vista como Code128 60×40: ${previewCode128.ok ? 'apta' : 'no apta'} (${previewCode128.moduleMm.toFixed(3)} mm por módulo). V2 siempre codifica el barcode logístico de 16 caracteres, no este SKU.`
+          : 'V2 codifica un barcode logístico fijo de 16 caracteres; nunca el SKU comercial.'),
+      ]),
       hasSize ? h('div', { key: 'szn', className: 'mt-2 flex items-start gap-2 text-caption text-on-surface-variant' }, [
         h(MS, { key: 'i', name: 'barcode', size: 15, className: 'text-on-surface-variant/70 shrink-0 mt-0.5' }),
-        h('span', { key: 't' }, `“${sizeMark}” marca la posición de la Talla (Número): el SKU del modelo la muestra así, y cada etiqueta/código de barras la reemplaza por la talla real (p. ej. ${sizeMark}→38).`),
+        h('span', { key: 't' }, `En referencias V2, el SKU muestra la talla real. “${sizeMark}” sólo conserva el lugar de talla en productos V1 con matriz; el barcode logístico V2 es independiente del SKU.`),
       ]) : null,
       hidden.length ? h('div', { key: 'w', className: 'mt-3 flex items-start gap-2 text-caption text-on-surface-variant bg-gold/5 border border-gold/30 rounded-lg p-3' }, [
         h(MS, { key: 'i', name: 'alert', size: 16, className: 'text-gold-text shrink-0 mt-0.5' }),
         h('span', { key: 't' }, 'En el SKU pero oculto del alta: ' + hidden.map(m => m.label).join(', ') + '. Los productos nuevos no podrán elegir ese valor.'),
       ]) : null,
+      skuCollisions.length ? h('div', { key: 'duplicates', role: 'alert', 'data-testid': 'sku-duplicate-warning', className: 'mt-3 border border-warning/50 bg-warning-soft rounded-lg p-3' }, [
+        h('p', { key: 'title', className: 'text-caption font-bold text-warning' }, `Advertencia: ${skuCollisions.reduce((sum, group) => sum + group.length, 0)} referencias físicas comparten ${skuCollisions.length} SKU visible(s).`),
+        ...skuCollisions.slice(0, 8).map(group => {
+          const differences = D.referenceDifferences
+            ? group.slice(1).flatMap(product => D.referenceDifferences(group[0], product)) : [];
+          const uniqueDifferences = differences.filter((diff, index) =>
+            differences.findIndex(item => item.label === diff.label
+              && JSON.stringify(item.left) === JSON.stringify(diff.left)
+              && JSON.stringify(item.right) === JSON.stringify(diff.right)) === index);
+          const off = [...new Set(uniqueDifferences.map(diff => diff.label).filter(label => {
+            const kind = Object.keys(C.allCatalogMeta()).find(key => C.catalogMeta(key).label === label);
+            return kind && !C.catalogMeta(kind).inSku;
+          }))];
+          const offKinds = off.map(label => Object.keys(C.allCatalogMeta())
+            .find(key => C.catalogMeta(key).label === label)).filter(Boolean);
+          return h('div', { key: group[0].sku, className: 'mt-2 text-overline text-on-surface-variant' }, [
+            h('code', { key: 'sku', className: 'font-bold text-primary' }, group[0].sku),
+            h('span', { key: 'count' }, ` · ${group.length} referencias: ${group.map(p => p.id).join(', ')}`),
+            uniqueDifferences.length ? h('div', { key: 'diff' }, 'Diferencias: ' + uniqueDifferences.map(d => `${d.label} (${Array.isArray(d.left) ? d.left.join('+') : d.left} / ${Array.isArray(d.right) ? d.right.join('+') : d.right})`).join(', ')) : null,
+            off.length ? h('div', { key: 'off', className: 'font-semibold text-warning' }, 'EN SKU = OFF: ' + off.join(', ') + '. Actívalo para distinguirlas comercialmente.') : null,
+            offKinds.length && D.skuPreview ? h('div', { key: 'proposal', className: 'mt-1 font-mono text-primary' }, 'Si se incorporan: ' + group.map(p => `${p.id}: ${D.skuPreview(p, offKinds)}`).join(' · ')) : null,
+          ]);
+        }),
+      ]) : null,
       // Regenerar SKUs de productos existentes (el SKU está congelado al crear).
       h('div', { key: 'rg', className: 'mt-4 pt-4 border-t border-outline-variant/60 flex items-center justify-between gap-3 flex-wrap' }, [
-        h('p', { key: 't', className: 'text-caption text-on-surface-variant max-w-md' }, 'El SKU se fija al crear cada producto. Si cambiaste la receta y quieres aplicarla a los productos ya existentes, regenéralos (afecta el historial — úsalo en configuración inicial).'),
+        h('p', { key: 't', className: 'text-caption text-on-surface-variant max-w-md' }, 'El SKU se fija al crear cada producto. Una regeneración explícita cambia sólo su código comercial actual; products.id, barcode y snapshots de documentos no cambian.'),
         h('button', { key: 'b', type: 'button', className: 'inline-flex items-center gap-2 px-4 h-10 border border-danger/40 text-danger text-caption font-bold uppercase tracking-widest rounded-lg hover:bg-danger-soft transition shrink-0', onClick: regenerar }, [h(MS, { key: 'i', name: 'repeat', size: 16 }), 'Regenerar SKUs']),
       ]),
     ]);
@@ -1504,7 +1547,7 @@
       ]),
     ],
     producto: () => [
-      h('p', { key: 'intro', className: 'text-caption text-on-surface-variant' }, 'Estos catálogos alimentan el SKU, el alta de productos, los filtros y la importación de Excel. Renómbralos, decide cuáles aparecen en el alta y cuáles forman el SKU. El código entra al SKU: si está en uso por productos no podrás borrarlo (desactívalo).'),
+      h('p', { key: 'intro', className: 'text-caption text-on-surface-variant' }, 'Estos catálogos gobiernan el alta, la firma física, el SKU, los filtros y Excel. “En referencia” crea identidad y stock propios; “En SKU” sólo decide el código comercial visible.'),
       h(SkuBuilder, { key: 'sku' }),
       h(SizeCodeMigration, { key: 'sizemig' }),
       h(CatalogHealthCard, { key: 'health' }),
@@ -1516,6 +1559,7 @@
       h(CatalogEditor, { key: 'col', kind: 'color', codePlaceholder: 'AZ', metaFields: [{ key: 'hex', label: 'Color', type: 'color', def: '#cccccc' }] }),
       h(ColorHexFixCard, { key: 'colhex' }),
       h(CatalogEditor, { key: 'orn', kind: 'ornament', codePlaceholder: 'Bordado', labelPlaceholder: 'Nombre del ornamento' }),
+      h(CatalogEditor, { key: 'orncol', kind: 'ornament_color', codePlaceholder: 'DRO', labelPlaceholder: 'Dorado', metaFields: [{ key: 'hex', label: 'Color', type: 'color', def: '#cccccc' }] }),
       h(CatalogEditor, { key: 'szl', kind: 'size_letter', title: 'Categorías por talla · Letras y especiales', codePlaceholder: 'M', labelPlaceholder: 'M' }),
       h(CatalogEditor, { key: 'szn', kind: 'size_number', title: 'Categorías por talla · Números', codePlaceholder: '40', labelPlaceholder: '40' }),
       // Catálogos creados por el administrador (Fase 2)

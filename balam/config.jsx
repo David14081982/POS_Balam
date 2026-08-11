@@ -57,6 +57,16 @@
       { code: 'Alforza', label: 'Alforza', meta: { allowsColors: false } },
       { code: '—', label: 'Sin ornamento', meta: { allowsColors: false } },
     ],
+    // H-94: autoridad independiente. Estos códigos no son Color Tela y su
+    // orden persistido define la forma canónica de una combinación multicolor.
+    ornament_color: [
+      { code: 'DRO', label: 'Dorado', meta: { hex: '#caa83a' } },
+      { code: 'AZL', label: 'Azul', meta: { hex: '#3b6fb0' } },
+      { code: 'CF', label: 'Café', meta: { hex: '#5a4334' } },
+      { code: 'PLT', label: 'Plateado', meta: { hex: '#c8ccd2' } },
+      { code: 'BL', label: 'Blanco', meta: { hex: '#f3f4f6' } },
+      { code: 'NE', label: 'Negro', meta: { hex: '#1c1f24' } },
+    ],
     size_letter: ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL', '6XL'].map(s => ({ code: s, label: s })),
     size_number: ['34', '36', '38', '40', '42', '44', '46', '48', '50', '52'].map(s => ({ code: s, label: s })),
     payment_method: [
@@ -133,21 +143,23 @@
   // (+ número de modelo al final). Nada cambia hasta que el admin lo edite.
   //   label   → nombre visible del catálogo (antes hardcodeado como título)
   //   inForm  → aparece como campo en el alta de producto
-  //   inSku   → su código forma parte del SKU
+  //   inReference → su código forma parte de la firma física V2
+  //   inSku   → su código forma parte del SKU comercial
   //   skuOrder→ posición dentro del SKU (entre los inSku)
   //   field   → propiedad del producto que lleva su código (p.cat, p.manga, …)
   //   system    → catálogo del sistema (no se puede borrar, solo desactivar/renombrar)
   //   struct    → estructural (swatch / matriz de stock): no se quita del alta ni del SKU por toggle
   //   formSelect→ se captura como menú desplegable en el alta (lo controla el toggle "En alta")
   const SEED_CATALOG_META = {
-    category:    { label: 'Categoría',      inForm: true,  inSku: true,  skuOrder: 1, field: 'cat',    system: true, formSelect: true },
-    sleeve:      { label: 'Manga',          inForm: true,  inSku: true,  skuOrder: 2, field: 'manga',  system: true, formSelect: true },
-    fabric:      { label: 'Tela',           inForm: true,  inSku: true,  skuOrder: 3, field: 'tela',   system: true, formSelect: true, filterable: true },
-    color:       { label: 'Color',          inForm: true,  inSku: true,  skuOrder: 4, field: 'color',  system: true, struct: true, formSelect: true },
-    neck:        { label: 'Cuello',         inForm: true,  inSku: false, skuOrder: 5, field: 'cuello', system: true, formSelect: true },
-    ornament:    { label: 'Ornamento',      inForm: false, inSku: false, skuOrder: 6, field: 'orn',    system: true },
-    size_letter: { label: 'Talla (Letra)',  inForm: false, inSku: false, skuOrder: 7, system: true, struct: true, sizeCategory: true, sizeScale: 'L' },
-    size_number: { label: 'Talla (Número)', inForm: false, inSku: false, skuOrder: 8, system: true, struct: true, sizeCategory: true, sizeScale: 'N', sizeSlot: true },
+    category:       { label: 'Categoría',             inForm: true, inReference: true, inSku: true,  required: true, skuOrder: 1, field: 'cat',    system: true, formSelect: true },
+    sleeve:         { label: 'Manga',                 inForm: true, inReference: true, inSku: true,  required: true, skuOrder: 2, field: 'manga',  system: true, formSelect: true },
+    fabric:         { label: 'Material',              inForm: true, inReference: true, inSku: true,  required: true, skuOrder: 3, field: 'tela',   system: true, formSelect: true, filterable: true },
+    color:          { label: 'Color Tela',            inForm: true, inReference: true, inSku: true,  required: true, skuOrder: 4, field: 'color',  system: true, struct: true, formSelect: true, filterable: true },
+    neck:           { label: 'Cuello',                inForm: true, inReference: true, inSku: false, required: true, skuOrder: 5, field: 'cuello', system: true, formSelect: true },
+    ornament:       { label: 'Ornamento',             inForm: true, inReference: true, inSku: false, required: true, skuOrder: 6, field: 'orn',    system: true, formSelect: true },
+    ornament_color: { label: 'Color de ornamento',    inForm: true, inReference: true, inSku: false, required: false, skuOrder: 7, field: 'ornamentColorCodes', system: true, formSelect: true, multiselect: true, filterable: true },
+    size_letter:    { label: 'Talla (Letra)',         inForm: false, inReference: true, inSku: false, skuOrder: 8, system: true, struct: true, sizeCategory: true, sizeScale: 'L', sizeSlot: true },
+    size_number:    { label: 'Talla (Número)',        inForm: false, inReference: true, inSku: false, skuOrder: 9, system: true, struct: true, sizeCategory: true, sizeScale: 'N', sizeSlot: true },
   };
 
   // ── Semilla de parámetros sueltos ────────────────────────────────────────────
@@ -256,7 +268,17 @@
     Object.keys(fresh.settings).forEach(k => { if (!(k in st.settings)) { st.settings[k] = fresh.settings[k]; changed = true; } });
     // Metadatos por catálogo: rellena el mapa entero o entradas-por-kind ausentes (estados viejos).
     if (!st.catalogMeta) { st.catalogMeta = fresh.catalogMeta; changed = true; }
-    else Object.keys(fresh.catalogMeta).forEach(k => { if (!st.catalogMeta[k]) { st.catalogMeta[k] = fresh.catalogMeta[k]; changed = true; } });
+    else Object.keys(fresh.catalogMeta).forEach(k => {
+      if (!st.catalogMeta[k]) { st.catalogMeta[k] = fresh.catalogMeta[k]; changed = true; return; }
+      Object.keys(fresh.catalogMeta[k]).forEach(field => {
+        if (!Object.prototype.hasOwnProperty.call(st.catalogMeta[k], field)) {
+          st.catalogMeta[k][field] = deepClone(fresh.catalogMeta[k][field]); changed = true;
+        }
+      });
+    });
+    // Corrección exacta de las etiquetas heredadas; nombres personalizados se conservan.
+    if (st.catalogMeta.fabric && st.catalogMeta.fabric.label === 'Tela') { st.catalogMeta.fabric.label = 'Material'; changed = true; }
+    if (st.catalogMeta.color && st.catalogMeta.color.label === 'Color') { st.catalogMeta.color.label = 'Color Tela'; changed = true; }
     // Talla (Número): habilita el segmento de talla en el SKU para estados guardados antes de esta función.
     if (st.catalogMeta.size_number && !st.catalogMeta.size_number.sizeSlot) { st.catalogMeta.size_number.sizeSlot = true; changed = true; }
     // Asegura el método 'Cortesía' (regalos/giveaways) aunque payment_method ya exista (local o nube).
@@ -354,6 +376,16 @@
       .map(x => ({ kind: x.kind, field: x.m.field, custom: !!x.m.custom, sizeSlot: !!x.m.sizeSlot }));
   }
 
+  // Partes de la firma física: independiente del Constructor de SKU. Una
+  // categoría puede estar En referencia y fuera del código comercial visible.
+  function referenceParts() {
+    return Object.keys(state.catalogMeta)
+      .map(kind => ({ kind, m: state.catalogMeta[kind] }))
+      .filter(x => x.m && x.m.inReference && (x.m.field || x.m.custom || x.m.sizeCategory))
+      .map(x => ({ kind: x.kind, field: x.m.field, custom: !!x.m.custom,
+        sizeCategory: !!x.m.sizeCategory, multiselect: !!x.m.multiselect }));
+  }
+
   // ── H-63 · ¿Qué referencias vivas tiene este código de talla? ────────────────
   // Autoridad única de la pregunta. La categoría define la ESCALA y el valor real
   // sale de meta.value (o del código, en los registros históricos): nunca se
@@ -439,7 +471,9 @@
     if (cm && cm.custom) return products.some(p => (p.attrs || {})[kind] === code);
     const field = fieldOf(kind);
     if (field && kind !== 'size_letter' && kind !== 'size_number') {
-      if (products.some(p => String(p[field]) === String(code))) return true;
+      if (products.some(p => Array.isArray(p[field])
+        ? p[field].map(String).includes(String(code))
+        : String(p[field]) === String(code))) return true;
       if (kind === 'color' && products.some(p => (p.ornColors || []).includes(code)
         || Object.values((p.attrs || {}).__ornamentColorsBySize || {})
           .some(colors => Array.isArray(colors) && colors.includes(code)))) return true;
@@ -548,10 +582,16 @@
   function setCatalogMeta(kind, patch) {
     const m = state.catalogMeta[kind];
     if (!m) return { ok: false, error: 'No existe' };
+    if ('inReference' in patch && !!patch.inReference !== !!m.inReference
+        && window.CORE.catalogProducts().some(product => product && product.recordModel === 'v2' && !product._deletedAt)) {
+      return { ok: false, code: 'REFERENCE_RULE_LOCKED',
+        error: 'La regla EN REFERENCIA ya tiene referencias V2. Cambiarla alteraría la definición física; configura la receta antes de crear inventario V2.' };
+    }
     if ('label' in patch) m.label = String(patch.label || '').trim() || m.label;
     // 'struct' (color, tallas) no se puede OCULTAR del alta (swatch/matriz de stock), pero sí
     // puede entrar o salir del SKU libremente (el SKU es solo un identificador).
     if ('inForm' in patch && !m.struct) m.inForm = !!patch.inForm;
+    if ('inReference' in patch) m.inReference = !!patch.inReference;
     if ('inSku' in patch) m.inSku = !!patch.inSku;
     if ('required' in patch) m.required = !!patch.required;     // obligatorio en el alta
     if ('filterable' in patch) m.filterable = !!patch.filterable; // aparece como filtro en Inventario
@@ -590,7 +630,7 @@
     while (state.catalogMeta[kind] || state.catalogs[kind]) kind = base + '_' + (n++);
     const orders = Object.keys(state.catalogMeta).map(k => state.catalogMeta[k].skuOrder || 0);
     state.catalogs[kind] = [];
-    state.catalogMeta[kind] = { label: name, inForm: false, inSku: false, skuOrder: (orders.length ? Math.max.apply(null, orders) : 0) + 1, field: null, custom: true, formSelect: true, system: false };
+    state.catalogMeta[kind] = { label: name, inForm: false, inReference: false, inSku: false, skuOrder: (orders.length ? Math.max.apply(null, orders) : 0) + 1, field: null, custom: true, formSelect: true, system: false };
     emit();
     return { ok: true, kind };
   }
@@ -599,11 +639,18 @@
     const m = state.catalogMeta[kind];
     if (!m) return { ok: false, error: 'No existe' };
     if (!m.custom) return { ok: false, error: 'Un catálogo del sistema no se puede borrar' };
+    const prods = window.CORE.catalogProducts();
+    const referencedByV2 = prods.filter(p => p && p.recordModel === 'v2'
+      && p.attrs && Object.prototype.hasOwnProperty.call(p.attrs, kind));
+    if (m.inReference && referencedByV2.length) {
+      return { ok: false, code: 'REFERENCE_CATALOG_IN_USE',
+        error: `Este catálogo forma parte de ${referencedByV2.length} referencia(s) V2. Desactívalo o reclasifica primero; borrarlo alteraría su identidad física.`,
+        references: referencedByV2.map(p => p.id) };
+    }
     // Al borrar, limpia el valor del atributo en los productos y procede. Bloquear por "en uso"
     // creaba un candado sin llave: blankProduct() auto-rellena attrs[kind] con el primer ítem
     // cuando el catálogo está "En SKU" (aunque esté oculto del alta), así que el usuario nunca
     // eligió ese valor ni tiene UI para quitarlo. El SKU ya congelado de cada producto no cambia.
-    const prods = window.CORE.catalogProducts();
     let touched = false;
     prods.forEach(p => { if (p.attrs && (kind in p.attrs)) { delete p.attrs[kind]; touched = true; } });
     if (touched) window.CORE.saveCatalogProducts();
@@ -715,7 +762,7 @@
 
   window.CONFIG = {
     all, list, map, metaMap, codes, find, get, settings, inUse, sizeCodeReferences,
-    catalogMeta, allCatalogMeta, sizeCategories, catalogLabel, fieldOf, skuParts, modeloKind,
+    catalogMeta, allCatalogMeta, sizeCategories, catalogLabel, fieldOf, skuParts, referenceParts, modeloKind,
     addItem, updateItem, setActive, removeItem, move, setCatalogMeta, moveSkuOrder, addCatalog, removeCatalog, importCatalogs, setSetting, setSettings,
     renameSizeCodes,
     reset, snapshot, load,

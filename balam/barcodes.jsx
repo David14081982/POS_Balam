@@ -1,4 +1,4 @@
-// barcodes.jsx — Códigos de barras Code128B (formato SKU-TALLA). Exporta window.BARCODES
+// barcodes.jsx — Code128: barcodeCode V2 y adaptador SKU-talla exclusivamente V1.
 // Render on-demand con JsBarcode (offline, sin guardar nada). El guardado de PNG en
 // Supabase Storage es OPCIONAL y explícito (ver inventory.jsx → "Guardar imagen").
 (function () {
@@ -14,6 +14,7 @@
   // Ej. base "21-ML-ALG-T-128" + talla "38" → "21-ML-ALG-38-128".
   // Respaldo (SKUs viejos sin marcador): la talla se pega al final, como antes.
   function codeOf(p, talla) {
+    if (D && D.isV2Reference && D.isV2Reference(p)) return String(p.barcodeCode || '').toUpperCase();
     const mark = (D && D.SIZE_MARK) || 'T';
     const parts = String(p.sku).split('-');
     const i = parts.findIndex(seg => seg.toUpperCase() === mark.toUpperCase());
@@ -25,6 +26,7 @@
   // último guion. NO se usa para localizar el producto — de eso se encarga find() por coincidencia.
   function parse(code) {
     const s = String(code || '').trim().toUpperCase();
+    if (/^B[A-F0-9]{15}$/.test(s)) return { barcodeCode: s, model: 'v2' };
     const i = s.lastIndexOf('-');
     if (i <= 0 || i === s.length - 1) return null;
     return { sku: s.slice(0, i), talla: s.slice(i + 1) };
@@ -33,18 +35,27 @@
   // Encuentra { p, talla } a partir de un código escaneado, buscando en memoria (sin red).
   // Por COINCIDENCIA: compara el código contra codeOf(p, talla) de cada producto/talla. Así funciona
   // con la talla en cualquier posición del SKU y sigue leyendo etiquetas viejas (talla al final).
-  function find(code) {
+  function resolve(code) {
     const s = String(code || '').trim().toUpperCase();
-    if (!s) return null;
+    if (!s) return { ok: false, code: 'BARCODE_EMPTY', matches: [] };
     const prods = D.products || [];
-    for (let a = 0; a < prods.length; a++) {
-      const p = prods[a];
-      const sizes = D.resolveProductSizes(p).sizes.filter(size => size.active && size.stock > 0);
-      for (let b = 0; b < sizes.length; b++) {
-        if (codeOf(p, sizes[b].value) === s) return { p, talla: sizes[b].value };
+    const matches = [];
+    prods.filter(p => p && !p._deletedAt).forEach(p => {
+      if (D.isV2Reference && D.isV2Reference(p)) {
+        if (String(p.barcodeCode || '').toUpperCase() === s) matches.push({ p, talla: p.sizeCode, productId: p.id });
+        return;
       }
-    }
-    return null;
+      D.resolveProductSizes(p).sizes.filter(size => size.active && size.stock > 0).forEach(size => {
+        if (codeOf(p, size.value) === s) matches.push({ p, talla: size.value, productId: p.id, legacy: true });
+      });
+    });
+    if (matches.length === 1) return { ok: true, hit: matches[0], matches };
+    return { ok: false, code: matches.length > 1 ? 'BARCODE_AMBIGUOUS' : 'BARCODE_NOT_FOUND', matches };
+  }
+  let lastResolution = null;
+  function find(code) {
+    lastResolution = resolve(code);
+    return lastResolution.ok ? lastResolution.hit : null;
   }
 
   const ready = () => typeof window.JsBarcode === 'function';
@@ -109,5 +120,6 @@
     }
   }
 
-  window.BARCODES = { codeOf, parse, find, draw, Barcode, toPNGDataURL, toPNGBlob, validateLabelCode, BASE_OPTS, ready };
+  window.BARCODES = { codeOf, parse, resolve, find, draw, Barcode, toPNGDataURL, toPNGBlob, validateLabelCode, BASE_OPTS, ready,
+    get lastResolution() { return lastResolution; } };
 })();

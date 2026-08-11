@@ -80,7 +80,7 @@
     return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
   }
   // ── Lector de código de barras (H-48) ───────────────────────────────────────
-  // `window.BARCODES` es la autoridad del código `SKU-TALLA` y se consume tal cual:
+  // `window.BARCODES` resuelve barcode logístico V2 y conserva un adaptador V1.
   // aquí no se parsea ni se reimplementa la resolución de etiquetas.
   const leerCodigo = raw => (window.BARCODES ? window.BARCODES.find(raw) : null);
   const pareceCodigo = raw => !!(window.BARCODES && window.BARCODES.parse(raw));
@@ -150,7 +150,10 @@
     const escaneo = useMemo(() => (q.trim() ? leerCodigo(q.trim()) : null), [q]);
     const rows = useMemo(() => D.loans
       .filter(l => {
-        if (escaneo) return (l.lineas || []).some(x => x.sku === escaneo.p.sku && x.talla === escaneo.talla);
+        if (escaneo) return (l.lineas || []).some(x => (
+          x.productId === escaneo.p.id
+          || (!D.isV2Reference(escaneo.p) && !x.productId && x.sku === escaneo.p.sku)
+        ) && x.talla === escaneo.talla);
         const a = D.prestamoAtraso(l);
         if (filtro === 'pendientes') return l.estado === 'pendiente';
         if (filtro === 'vencidos') return a.vencido;
@@ -502,7 +505,7 @@
     const listo = !!nombre.trim() && piezas > 0 && fechasOk;
 
     function agregar(p, talla) {
-      const key = p.sku + '|' + talla;
+      const key = (D.isV2Reference(p) ? p.id : p.sku) + '|' + talla;
       setLineas(prev => {
         const ex = prev.find(x => x.key === key);
         if (ex) return prev.map(x => x.key === key ? Object.assign({}, x, { qty: x.qty + 1 }) : x);
@@ -527,9 +530,13 @@
       e.preventDefault();
       const hit = leerCodigo(raw);
       if (hit) { agregar(hit.p, hit.talla); return; }
+      if (window.BARCODES && window.BARCODES.lastResolution && window.BARCODES.lastResolution.code === 'BARCODE_AMBIGUOUS') {
+        toast('Código ambiguo bloqueado. Resincroniza el inventario.', 'var(--danger)'); return;
+      }
       const q = raw.toLowerCase();
-      const exacto = D.products.find(p => p.sku.toLowerCase() === q);
-      const destino = exacto || catalogo[0];
+      const exactos = D.products.filter(p => p.sku.toLowerCase() === q);
+      if (exactos.length > 1) { toast(`${exactos.length} referencias comparten ese SKU. Selecciona una por sus atributos.`, 'var(--warning)'); return; }
+      const destino = exactos[0] || catalogo[0];
       if (destino) { setPicking(destino); setBusca(''); setVerTallasVacias(false); return; }
       toast(pareceCodigo(raw)
         ? 'Código no encontrado: ' + raw.toUpperCase()
@@ -676,7 +683,7 @@
         ]) : null,
         lineas.length
           ? h('div', { key: 'ln', className: 'border border-outline-variant rounded-lg divide-y divide-outline-variant' }, lineas.map(x => {
-            const prod = D.products.find(p => p.sku === x.sku);
+            const prod = D.products.find(p => p.id === x.productId);
             const disponible = prod ? D.stockOf(prod, x.talla) : 0;
             const excede = (Number(x.qty) || 0) > disponible;
             return h('div', { key: x.key, className: 'flex items-center gap-3 px-3 py-2' }, [

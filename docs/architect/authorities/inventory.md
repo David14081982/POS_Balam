@@ -1,7 +1,7 @@
 ---
 capa: conocimiento
 applies_to: [domain, database]
-related_histories: [H-01, H-36, H-46, H-57, H-59, H-61]
+related_histories: [H-01, H-36, H-46, H-57, H-59, H-61, H-94]
 severity_max: required
 no_alcance: "No define ninguna autoridad ni transcribe firmas. Sólo dice qué pregunta responde cada una y dónde vive."
 ---
@@ -15,6 +15,13 @@ Reglas de mantenimiento en `../README.md` § Registro de autoridades.
 **Definición:** `balam/data.jsx` · excepciones en `pos.products.precios_talla`
 **Creada por:** H-36 · **Decisión:** `ADR-009`
 **Consumidores:** `grep -rn "listPrice" balam/ test-*.mjs`
+
+## ¿Qué identifica y qué distingue una referencia física V2?
+**Autoridad:** `products.id` identifica; `barcode_code` localiza; SKU representa.
+`DATA.physicalSignature()` deriva las dimensiones de `CONFIG.referenceParts()`
+**Definición:** `balam/data.jsx`, `balam/config.jsx` y migración H-94
+**Creada por:** H-94 · **Decisión:** `ADR-013`
+**Consumidores:** `grep -rn "physicalSignature\|barcodeCode\|productId" balam/`
 
 ## ¿Qué tallas aplican a este producto y cuántas piezas existen?
 **Autoridad:** `DATA.resolveProductSizes(producto, catálogos, variantes)`
@@ -92,7 +99,7 @@ evidencia), `ADR-006` (la baja viaja por la cola)
 **Consumidores:** `grep -rn "reserve_sale_stock" supabase/ balam/`
 
 ## ¿Cuántas unidades de este artículo están fuera por un préstamo?
-**Autoridad:** `DATA.loanedQty(sku, talla)` — el préstamo **no** mueve existencias,
+**Autoridad:** `DATA.loanedQty(productId, talla)` para V2; SKU sólo como adaptador V1 — el préstamo **no** mueve existencias,
 así que esta cifra se deriva de la colección y no del stock
 **Definición:** `balam/data.jsx` § préstamos · `docs/02-architecture.md` § Préstamos de mercancía
 **Creada por:** H-46

@@ -1,5 +1,5 @@
 // xlsx-io.jsx — Importar / exportar inventario en Excel (.xlsx) con SheetJS.
-// Considera: Ornamento, Colores Orn., Cuello, Tela y 20 columnas de talla (10 letra + 10 número).
+// Considera: Ornamento, Color de ornamento, Cuello, Material, Color Tela y tallas.
 // Exporta window.XLSXIO
 (function () {
   const D = window.DATA;
@@ -16,15 +16,15 @@
   // oculta solamente para reducir ruido: ocultar no es una frontera de seguridad.
   const INVENTORY_XLSX_SCHEMA = Object.freeze({
     name: 'balam.inventory',
-    version: 1,
+    version: 2,
     sheets: Object.freeze(['Inventario', 'Catálogos', '_BALAM']),
     columns: Object.freeze([
       { key: 'sku', header: 'SKU', type: 'text', required: true },
       { key: 'nombre', header: 'Modelo', type: 'text', required: true },
       { key: 'cat', header: 'Categoría', type: 'catalog:category', required: true },
       { key: 'manga', header: 'Manga', type: 'catalog:sleeve', required: true },
-      { key: 'tela', header: 'Tela', type: 'catalog:fabric', required: true },
-      { key: 'color', header: 'Color', type: 'catalog:color', required: true },
+      { key: 'tela', header: 'Material', type: 'catalog:fabric', required: true },
+      { key: 'color', header: 'Color Tela', type: 'catalog:color', required: true },
       { key: 'modelo', header: 'No. Modelo', type: 'text', required: true },
       { key: 'orn', header: 'Ornamento', type: 'catalog:ornament', required: true },
       { key: 'ornColors', header: 'Colores Orn.', type: 'color-list', required: true },
@@ -36,16 +36,22 @@
       { key: 'preciosTalla', header: 'Precios especiales por talla', type: 'json:size-prices', required: true },
       { key: 'costo', header: 'Costo', type: 'money', required: true },
       { key: 'pop', header: 'Destacado', type: 'boolean', required: true },
+      { key: 'sizeCode', header: 'Talla referencia', type: 'text', required: true, since: 2 },
+      { key: 'stockQuantity', header: 'Existencia referencia', type: 'integer', required: true, since: 2 },
+      { key: 'ornamentColorCodes', header: 'Colores de ornamento V2', type: 'catalog-list:ornament_color', required: true, since: 2 },
     ]),
     technicalColumns: Object.freeze([
       { key: 'sourceId', header: '_BALAM_ID_PRODUCTO', type: 'technical-id', required: true, hidden: true },
       { key: 'sourceVersion', header: '_BALAM_VERSION_PRODUCTO', type: 'integer', required: true, hidden: true },
+      { key: 'recordModel', header: '_BALAM_MODELO_REFERENCIA', type: 'technical-model', required: true, hidden: true, since: 2 },
+      { key: 'barcodeCode', header: '_BALAM_BARCODE_CODE', type: 'technical-barcode', required: true, hidden: true, since: 2 },
+      { key: 'physicalSignature', header: '_BALAM_FIRMA_FISICA', type: 'technical-signature', required: true, hidden: true, since: 2 },
     ]),
   });
   const BASE = INVENTORY_XLSX_SCHEMA.columns.map(column => column.header);
   // Compatibilidad pública para arneses anteriores. H-86 ya no aplica esta
   // lista directamente: el plan canónico decide presencia/PRESERVAR por columna.
-  const IMPORT_FIELDS = ['cat', 'sizeCategoryId', 'manga', 'tela', 'color', 'cuello', 'modelo', 'nombre', 'orn', 'ornColors', 'precio', 'costo', 'pop', 'preciosTalla', 'attrs', 'stock'];
+  const IMPORT_FIELDS = ['recordModel', 'barcodeCode', 'physicalSignature', 'sizeCode', 'stockQuantity', 'ornamentColorCodes', 'cat', 'sizeCategoryId', 'manga', 'tela', 'color', 'cuello', 'modelo', 'nombre', 'orn', 'ornColors', 'precio', 'costo', 'pop', 'preciosTalla', 'attrs', 'stock'];
   // URL de la foto para el Excel: SOLO fotos reales accesibles por enlace.
   // Se omiten (a) las genéricas de relleno que asigna el sistema y (b) las incrustadas
   // (data:image/…), que son texto de decenas de miles de caracteres y no caben en una celda
@@ -280,13 +286,13 @@
     Object.entries(D.CAT).forEach(([k, v]) => rows.push([k, v]));
     rows.push([], ['MANGA (col. Manga)']);
     Object.entries(D.MANGA).forEach(([k, v]) => rows.push([k, v]));
-    rows.push([], ['TELA (col. Tela)']);
+    rows.push([], ['MATERIAL (col. Material)']);
     Object.entries(D.TELA).forEach(([k, v]) => rows.push([k, v]));
     rows.push([], ['CUELLO (col. Cuello)']);
     Object.entries(D.CUELLO).forEach(([k, v]) => rows.push([k, v]));
     rows.push([], ['ORNAMENTO (col. Ornamento)']);
     window.CONFIG.all('ornament').forEach(item => rows.push([item.code, item.label]));
-    rows.push([], ['COLOR (cols. Color y Colores Orn.)']);
+    rows.push([], ['COLOR TELA (col. Color Tela)']);
     Object.entries(D.COLOR_NAME).forEach(([k, v]) => rows.push([k, v]));
     customCols().forEach(c => {
       const exported = exportCols().find(column => column.kind === c.kind);
@@ -296,7 +302,7 @@
     rows.push([], ['CATEGORÍAS POR TALLA (col. Categoría por talla)']);
     window.CONFIG.sizeCategories().forEach(category => rows.push([category.id, category.label]));
     rows.push([], ['NOTAS']);
-    rows.push(['• El SKU se arma como: Categoría-Manga-Tela-Color-NoModelo  (ej. 21-MC-ALG-BL-060)']);
+    rows.push(['• El SKU comercial se arma con las categorías marcadas EN SKU; Material y Color Tela son conceptos distintos.']);
     rows.push(['• Si dejas la columna SKU vacía, el sistema lo arma con las columnas de atributos.']);
     rows.push(['• Colores Orn.: códigos de hilo del bordado separados por coma (ej. OR, VI). Vacío si no lleva.']);
     rows.push(['• Cuello: usa un código de la tabla CUELLO (NOR, MAO, ITA, CER).']);
@@ -339,15 +345,21 @@
     const r = {
       'SKU': p.sku, 'Modelo': p.nombre, 'Categoría': p.cat,
       'Categoría por talla': D.resolveProductSizes(p).categoryId || '',
-      'Manga': p.manga, 'Tela': p.tela,
-      'Color': p.color, 'No. Modelo': p.modelo, 'Ornamento': p.orn,
-      'Colores Orn.': (p.ornColors || []).join(', '), 'Cuello': p.cuello || 'NOR', 'Precio': p.precio,
+      'Manga': p.manga, 'Material': p.tela,
+      'Color Tela': p.color, 'No. Modelo': p.modelo, 'Ornamento': p.orn,
+      'Colores Orn.': p.recordModel === 'v2' ? '' : (p.ornColors || []).join(', '), 'Cuello': p.cuello || 'NOR', 'Precio': p.precio,
       'Foto (URL)': fotoUrl(p), 'Costo': Number(p.costo) || 0, 'Destacado': p.pop ? 'SI' : 'NO',
       'Precios especiales por talla': JSON.stringify(orderedSizeMap(pricesBySize, p, value => Number(value))),
       // JSON conserva códigos canónicos y la relación exacta, no etiquetas.
-      'Colores Orn. por talla': JSON.stringify(orderedSizeMap(ornamentBySize, p, colors => colors.slice())),
+      'Colores Orn. por talla': p.recordModel === 'v2' ? '{}' : JSON.stringify(orderedSizeMap(ornamentBySize, p, colors => colors.slice())),
       '_BALAM_ID_PRODUCTO': p.id || '',
       '_BALAM_VERSION_PRODUCTO': p._syncVersion == null ? 0 : Number(p._syncVersion) || 0,
+      '_BALAM_MODELO_REFERENCIA': p.recordModel || 'v1',
+      '_BALAM_BARCODE_CODE': p.barcodeCode || '',
+      '_BALAM_FIRMA_FISICA': p.physicalSignature || '',
+      'Talla referencia': p.recordModel === 'v2' ? p.sizeCode : '',
+      'Existencia referencia': p.recordModel === 'v2' ? Number(p.stockQuantity) || 0 : '',
+      'Colores de ornamento V2': p.recordModel === 'v2' ? (p.ornamentColorCodes || []).join(', ') : '',
     };
     exportCols().forEach(c => { r[c.label] = (p.attrs || {})[c.kind] || ''; });
     const byKey = {};
@@ -501,15 +513,15 @@
     const skuRaw = present('SKU') ? String(row['SKU'] || '').trim().toUpperCase() : '';
     const catRaw = requiredText('Categoría', '');
     const mangaRaw = requiredText('Manga', '');
-    const telaRaw = requiredText('Tela', '');
-    const colorRaw = requiredText('Color', '');
+    const telaRaw = requiredText('Material', '');
+    const colorRaw = requiredText('Color Tela', '');
     const modelo = requiredText('No. Modelo', '');
     const ornRaw = requiredText('Ornamento', '—');
     const cuelloRaw = requiredText('Cuello', 'NOR');
     const cat = catRaw ? catalogValue('category', catRaw, idx, 'Categoría', false, unknownCatalogValues) : '';
     const manga = mangaRaw ? catalogValue('sleeve', mangaRaw, idx, 'Manga', false, unknownCatalogValues) : '';
-    const tela = telaRaw ? catalogValue('fabric', telaRaw, idx, 'Tela', false, unknownCatalogValues) : '';
-    const color = colorRaw ? catalogValue('color', colorRaw, idx, 'Color', false, unknownCatalogValues) : '';
+    const tela = telaRaw ? catalogValue('fabric', telaRaw, idx, 'Material', false, unknownCatalogValues) : '';
+    const color = colorRaw ? catalogValue('color', colorRaw, idx, 'Color Tela', false, unknownCatalogValues) : '';
     const orn = ornRaw ? catalogValue('ornament', ornRaw, idx, 'Ornamento', false, unknownCatalogValues) : '—';
     const cuello = cuelloRaw ? catalogValue('neck', cuelloRaw, idx, 'Cuello', false, unknownCatalogValues) : 'NOR';
     const valuesByKind = { size_letter: [], size_number: [] };
@@ -566,12 +578,33 @@
     const precio = present('Precio') ? parseNumber(row['Precio'], idx, 'Precio') : 0;
     const costo = present('Costo') ? parseNumber(row['Costo'], idx, 'Costo') : 0;
     const pop = present('Destacado') ? parseBoolean(row['Destacado'], idx, 'Destacado') : false;
-    const ornColors = present('Colores Orn.') ? parseOrnColors(row['Colores Orn.'], idx, unknownCatalogValues) : [];
-    const product = D.hydrate({
-      id: sourceId || 'imp-' + Date.now() + '-' + idx, cat, manga, tela, color, modelo, nombre,
+    const recordModel = present('_BALAM_MODELO_REFERENCIA')
+      ? String(row['_BALAM_MODELO_REFERENCIA'] || 'v1').trim().toLowerCase() : 'v1';
+    if (!['v1', 'v2'].includes(recordModel)) rowError(idx, '_BALAM_MODELO_REFERENCIA', 'debe ser v1 o v2.');
+    const ornColors = recordModel === 'v2' ? []
+      : present('Colores Orn.') ? parseOrnColors(row['Colores Orn.'], idx, unknownCatalogValues) : [];
+    if (recordModel === 'v2') delete attrs.__ornamentColorsBySize;
+    const sizeCode = present('Talla referencia') ? String(row['Talla referencia'] || '').trim() : '';
+    const stockQuantity = present('Existencia referencia') ? parseInteger(row['Existencia referencia'], idx, 'Existencia referencia', { emptyZero: true }) : 0;
+    const ornamentColorCodes = present('Colores de ornamento V2')
+      ? String(row['Colores de ornamento V2'] || '').split(',').map(value => value.trim()).filter(Boolean).map(value =>
+        catalogValue('ornament_color', value, idx, 'Colores de ornamento V2', false, unknownCatalogValues)) : [];
+    if (recordModel === 'v2' && !sizeCode) rowError(idx, 'Talla referencia', 'es obligatoria para V2.');
+    if (recordModel === 'v2' && !allowedSizes.has(sizeCode)) rowError(idx, 'Talla referencia', 'no pertenece a la categoría elegida.');
+    const barcodeCode = present('_BALAM_BARCODE_CODE') ? String(row['_BALAM_BARCODE_CODE'] || '').trim().toUpperCase() : '';
+    const physicalSignature = present('_BALAM_FIRMA_FISICA') ? String(row['_BALAM_FIRMA_FISICA'] || '').trim() : '';
+    const rawProduct = {
+      id: sourceId || undefined, recordModel, barcodeCode: barcodeCode || undefined,
+      physicalSignature: physicalSignature || undefined,
+      sizeCode, sizeScale: sizeCategory.scale, stockQuantity, ornamentColorCodes,
+      cat, manga, tela, color, modelo, nombre,
       imagen: foto || undefined, orn, ornColors, cuello, precio, costo, pop, preciosTalla,
-      attrs, sizeCategoryId: sizeCategory.id, stock, sku: skuRaw || undefined,
-    });
+      attrs, sizeCategoryId: sizeCategory.id,
+      stock: recordModel === 'v2' ? [{ talla: sizeCode, escala: sizeCategory.scale, stock: stockQuantity }] : stock,
+      sku: skuRaw || undefined,
+    };
+    const product = recordModel === 'v2' ? D.createReference(rawProduct, [])
+      : D.hydrate(Object.assign(rawProduct, { id: sourceId || 'imp-' + Date.now() + '-' + idx }));
     // Un heredado sin la columna H-83 expresa PRESERVAR, no un mapa vacío.
     if (!present('Colores Orn. por talla')) delete product.attrs.__ornamentColorsBySize;
     Object.defineProperty(product, '__xlsx', { value: {
@@ -684,12 +717,15 @@
   }
   function validateCurrentWorkbook(wb, ws, cols, meta, mapEntries) {
     if (String(meta.schema_name || '') !== INVENTORY_XLSX_SCHEMA.name) throw balamError(`El archivo declara el esquema «${meta.schema_name || 'sin nombre'}», no un inventario BALAM.`);
-    if (Number(meta.schema_version) !== INVENTORY_XLSX_SCHEMA.version) throw balamError(`Versión de esquema incompatible: archivo ${meta.schema_version || 'sin versión'}, BALAM ${INVENTORY_XLSX_SCHEMA.version}.`);
+    const schemaVersion = Number(meta.schema_version);
+    if (![1, INVENTORY_XLSX_SCHEMA.version].includes(schemaVersion)) throw balamError(`Versión de esquema incompatible: archivo ${meta.schema_version || 'sin versión'}, BALAM ${INVENTORY_XLSX_SCHEMA.version}.`);
     if (!wb.Sheets['Inventario'] || !wb.Sheets['Catálogos']) throw balamError('El archivo canónico debe conservar las hojas «Inventario» y «Catálogos».');
     const headers = headerRowOf(ws);
     const duplicates = duplicateHeaders(headers);
     if (duplicates.length) throw balamError(`La hoja «Inventario» repite la columna «${duplicates[0]}».`);
-    const required = inventoryColumns(cols).map(column => column.header);
+    const legacyHeaders = { tela: 'Tela', color: 'Color' };
+    const required = inventoryColumns(cols).filter(column => !column.since || schemaVersion >= column.since)
+      .map(column => schemaVersion === 1 && legacyHeaders[column.key] ? legacyHeaders[column.key] : column.header);
     const missing = required.filter(header => !headers.includes(header));
     if (missing.length) throw balamError(`El archivo canónico no contiene la columna obligatoria «${missing[0]}».`);
     if (!cols.fileMap || !mapEntries.length) throw balamError('El archivo canónico no contiene el mapa técnico de tallas en «Catálogos».');
@@ -733,6 +769,15 @@
         if (!cols.fileMap) assertLegacyReadable(ws, cols);
       }
       const rows = sheetToJson(ws, { defval: '' });
+      // Contrato v1/heredado: esos archivos llamaban “Tela” a Material y
+      // “Color” a Color Tela. Se traducen al vocabulario vigente antes de
+      // construir el producto; nunca vuelven a definir categorías de CONFIG.
+      if (!cols.fileHeaders.includes('Material') && cols.fileHeaders.includes('Tela')) cols.fileHeaders.push('Material');
+      if (!cols.fileHeaders.includes('Color Tela') && cols.fileHeaders.includes('Color')) cols.fileHeaders.push('Color Tela');
+      rows.forEach(row => {
+        if (!Object.prototype.hasOwnProperty.call(row, 'Material') && Object.prototype.hasOwnProperty.call(row, 'Tela')) row.Material = row.Tela;
+        if (!Object.prototype.hasOwnProperty.call(row, 'Color Tela') && Object.prototype.hasOwnProperty.call(row, 'Color')) row['Color Tela'] = row.Color;
+      });
       const products = [];
       let skipped = 0;
       rows.forEach((r, i) => { const p = buildProduct(r, i, cols); if (p) products.push(p); else skipped++; });
@@ -748,6 +793,11 @@
     Object.keys(product.attrs || {}).sort().forEach(key => { attrs[key] = clone(product.attrs[key]); });
     return {
       id: product.id || '', version: Number(product._syncVersion) || 0, sku: product.sku || '',
+      recordModel: product.recordModel || 'v1', barcodeCode: product.barcodeCode || '',
+      physicalSignature: product.physicalSignature || '', sizeCode: product.sizeCode || '',
+      stockQuantity: product.stockQuantity == null ? null : Number(product.stockQuantity),
+      physicalIdentityLocked: !!product.physicalIdentityLocked,
+      ornamentColorCodes: (product.ornamentColorCodes || []).slice(),
       nombre: product.nombre || '', cat: product.cat || '', manga: product.manga || '', tela: product.tela || '',
       color: product.color || '', modelo: String(product.modelo == null ? '' : product.modelo), orn: product.orn || '',
       ornColors: (product.ornColors || []).slice(), cuello: product.cuello || '', precio: Number(product.precio) || 0,
@@ -761,7 +811,7 @@
   function inventoryStateFingerprint(products) { return fingerprint((products || []).map(canonicalProductState)); }
   function unknownMatchesTarget(issue, target) {
     if (!target) return false;
-    const direct = { 'Categoría': 'cat', 'Manga': 'manga', 'Tela': 'tela', 'Color': 'color', 'Ornamento': 'orn', 'Cuello': 'cuello' };
+    const direct = { 'Categoría': 'cat', 'Manga': 'manga', 'Material': 'tela', 'Color Tela': 'color', 'Ornamento': 'orn', 'Cuello': 'cuello' };
     if (direct[issue.header]) return String(target[direct[issue.header]]) === String(issue.value);
     if (issue.header === 'Colores Orn.') return (target.ornColors || []).map(String).includes(String(issue.value));
     if (issue.header === 'Colores Orn. por talla') {
@@ -775,18 +825,29 @@
     const present = new Set(meta.presentHeaders || []);
     (meta.unknownCatalogValues || []).forEach(issue => present.delete(issue.header));
     [
-      ['Categoría', 'cat'], ['Manga', 'manga'], ['Tela', 'tela'], ['Color', 'color'], ['Cuello', 'cuello'],
+      ['Categoría', 'cat'], ['Manga', 'manga'], ['Material', 'tela'], ['Color Tela', 'color'], ['Cuello', 'cuello'],
       ['No. Modelo', 'modelo'], ['Modelo', 'nombre'], ['Ornamento', 'orn'], ['Colores Orn.', 'ornColors'],
       ['Precio', 'precio'], ['Costo', 'costo'], ['Destacado', 'pop'],
     ].forEach(([header, field]) => { if (present.has(header)) after[field] = clone(incoming[field]); });
     if (present.has('Precios especiales por talla')) after.preciosTalla = clone(incoming.preciosTalla || {});
+    if (target.recordModel === 'v2') {
+      after.recordModel = 'v2';
+      if (present.has('Talla referencia')) after.sizeCode = incoming.sizeCode;
+      if (present.has('Existencia referencia')) after.stockQuantity = Number(incoming.stockQuantity) || 0;
+      if (present.has('Colores de ornamento V2')) {
+        after.ornamentColorCodes = clone(incoming.ornamentColorCodes || []);
+        after.ornColors = clone(incoming.ornamentColorCodes || []);
+      }
+      after.barcodeCode = target.barcodeCode;
+    }
     if (meta.imageProvided) after.imagen = incoming.imagen;
     const attrs = Object.assign({}, after.attrs || {});
     if (present.has('Categoría por talla')) {
       after.sizeCategoryId = incoming.sizeCategoryId;
       attrs.__sizeCategoryId = incoming.sizeCategoryId;
     }
-    if (present.has('Colores Orn. por talla')) attrs.__ornamentColorsBySize = clone((incoming.attrs || {}).__ornamentColorsBySize || {});
+    if (target.recordModel === 'v2') delete attrs.__ornamentColorsBySize;
+    else if (present.has('Colores Orn. por talla')) attrs.__ornamentColorsBySize = clone((incoming.attrs || {}).__ornamentColorsBySize || {});
     Object.keys(meta.customValues || {}).forEach(kind => {
       const value = meta.customValues[kind];
       if (value) attrs[kind] = value; else delete attrs[kind];
@@ -807,29 +868,37 @@
     after.id = target.id;
     after.sku = target.sku;
     after._syncVersion = target._syncVersion;
+    if (after.recordModel === 'v2') after.physicalSignature = D.physicalSignature(after);
     return D.hydrate(after);
   }
   function changeSummary(before, after) {
     return [
-      ['nombre', 'Nombre'], ['cat', 'Categoría'], ['manga', 'Manga'], ['tela', 'Tela'], ['color', 'Color'],
+      ['recordModel', 'Modelo de registro'], ['barcodeCode', 'Código logístico'],
+      ['sizeCode', 'Talla referencia'], ['stockQuantity', 'Existencia referencia'],
+      ['ornamentColorCodes', 'Colores de ornamento V2'],
+      ['nombre', 'Nombre'], ['cat', 'Categoría'], ['manga', 'Manga'], ['tela', 'Material'], ['color', 'Color Tela'],
       ['modelo', 'No. Modelo'], ['orn', 'Ornamento'], ['ornColors', 'Colores'], ['cuello', 'Cuello'],
       ['precio', 'Precio'], ['preciosTalla', 'Precios por talla'], ['costo', 'Costo'], ['pop', 'Destacado'],
       ['imagen', 'Imagen'], ['sizeCategoryId', 'Categoría por talla'], ['attrs', 'Atributos'], ['stock', 'Existencias'],
     ].filter(([key]) => stableJson(before[key]) !== stableJson(after[key])).map(([, label]) => label);
   }
   function planImport(parsed, currentProducts, resolutions) {
+    const SKU_DUPLICATE_WARNING = 'SKU_DUPLICATE_WARNING';
+    const BARCODE_DUPLICATE = 'BARCODE_DUPLICATE';
     const current = currentProducts || [];
     const resolutionMap = resolutions || {};
-    const byId = Object.create(null); const bySku = Object.create(null);
+    const byId = Object.create(null); const bySku = Object.create(null); const byBarcode = Object.create(null);
     current.forEach(product => {
       if (product.id) byId[product.id] = product;
       (bySku[product.sku] || (bySku[product.sku] = [])).push(product);
+      if (product.barcodeCode) (byBarcode[product.barcodeCode] || (byBarcode[product.barcodeCode] = [])).push(product);
     });
-    const fileSkuCounts = Object.create(null); const fileIdCounts = Object.create(null);
+    const fileSkuCounts = Object.create(null); const fileIdCounts = Object.create(null); const fileBarcodeCounts = Object.create(null);
     (parsed.products || []).forEach(product => {
       fileSkuCounts[product.sku] = (fileSkuCounts[product.sku] || 0) + 1;
       const id = importMeta(product).sourceId;
       if (id) fileIdCounts[id] = (fileIdCounts[id] || 0) + 1;
+      if (product.barcodeCode) fileBarcodeCounts[product.barcodeCode] = (fileBarcodeCounts[product.barcodeCode] || 0) + 1;
     });
     const rows = []; const nextById = Object.create(null);
     current.forEach(product => { nextById[product.id] = clone(product); });
@@ -837,16 +906,25 @@
       const meta = importMeta(incoming); const rowKey = 'row-' + meta.rowIndex;
       const matches = bySku[incoming.sku] || [];
       let conflict = null; let target = null; let action = null;
-      if (fileSkuCounts[incoming.sku] > 1) conflict = { code: 'DUPLICATE_SKU_FILE', message: `El SKU ${incoming.sku} aparece ${fileSkuCounts[incoming.sku]} veces en el archivo.` };
-      else if (meta.sourceId && fileIdCounts[meta.sourceId] > 1) conflict = { code: 'DUPLICATE_ID_FILE', message: `El ID ${meta.sourceId} aparece más de una vez en el archivo.` };
-      else if (matches.length > 1) conflict = { code: 'DUPLICATE_SKU_CURRENT', message: `El SKU ${incoming.sku} pertenece a ${matches.length} productos actuales.` };
+      const v2 = incoming.recordModel === 'v2';
+      const barcodeMatches = incoming.barcodeCode ? (byBarcode[incoming.barcodeCode] || []) : [];
+      if (meta.sourceId && fileIdCounts[meta.sourceId] > 1) conflict = { code: 'DUPLICATE_ID_FILE', message: `El ID ${meta.sourceId} aparece más de una vez en el archivo.` };
+      else if (v2 && incoming.barcodeCode && fileBarcodeCounts[incoming.barcodeCode] > 1) conflict = { code: BARCODE_DUPLICATE, message: `El código logístico ${incoming.barcodeCode} aparece más de una vez en el archivo.` };
+      else if (v2 && barcodeMatches.length > 1) conflict = { code: BARCODE_DUPLICATE, message: `El código logístico ${incoming.barcodeCode} resuelve a varias referencias actuales.` };
+      else if (!v2 && fileSkuCounts[incoming.sku] > 1) conflict = { code: 'DUPLICATE_SKU_FILE', message: `El SKU ${incoming.sku} aparece ${fileSkuCounts[incoming.sku]} veces en el archivo legacy.` };
+      else if (!v2 && matches.length > 1) conflict = { code: 'DUPLICATE_SKU_CURRENT', message: `El SKU ${incoming.sku} pertenece a ${matches.length} productos legacy actuales.` };
       else if (meta.sourceId) {
         target = byId[meta.sourceId] || null;
         if (!target) conflict = { code: 'ID_NOT_FOUND', message: `El ID técnico ${meta.sourceId} no existe actualmente; no se creará desde Excel.` };
-        else if (String(target.sku) !== String(incoming.sku)) conflict = { code: 'SKU_ID_MISMATCH', message: `El ID ${meta.sourceId} pertenece al SKU ${target.sku}, no a ${incoming.sku}.` };
+        else if ((target.recordModel || 'v1') !== (incoming.recordModel || 'v1')) conflict = { code: 'REFERENCE_MODEL_MISMATCH', message: `El ID ${meta.sourceId} es ${(target.recordModel || 'v1').toUpperCase()} y la fila declara ${(incoming.recordModel || 'v1').toUpperCase()}; Excel no convierte modelos de referencia.` };
+        else if (!v2 && String(target.sku) !== String(incoming.sku)) conflict = { code: 'SKU_ID_MISMATCH', message: `El ID ${meta.sourceId} pertenece al SKU ${target.sku}, no a ${incoming.sku}.` };
         else if (meta.sourceVersion !== null && Number(target._syncVersion || 0) !== Number(meta.sourceVersion)) conflict = { code: 'VERSION_CONFLICT', message: `El producto ${incoming.sku} cambió después de exportar (versión ${meta.sourceVersion} → ${Number(target._syncVersion) || 0}).` };
         else action = 'update';
-      } else if (!matches.length) {
+      } else if (v2 && barcodeMatches.length === 1) {
+        target = barcodeMatches[0];
+        if ((target.recordModel || 'v1') !== 'v2') conflict = { code: 'REFERENCE_MODEL_MISMATCH', message: `El código logístico ${incoming.barcodeCode} no pertenece a una referencia V2.` };
+        else action = 'update';
+      } else if (v2 || !matches.length) {
         if (meta.missing && meta.missing.length) conflict = { code: 'LEGACY_MISSING_NEW', message: `La fila heredada no puede crear un producto: faltan ${meta.missing.join(', ')}.` };
         else action = 'new';
       } else {
@@ -864,18 +942,35 @@
       let after = null; let beforeState = null; let afterState = null; let fields = [];
       if (!conflict && action === 'update') {
         after = updateFromImport(target, incoming);
+        if (target.recordModel === 'v2' && after.physicalSignature !== target.physicalSignature
+            && (target.physicalIdentityLocked || (Number(target.stockQuantity) || 0) !== 0
+              || (D.referenceHasOperations && D.referenceHasOperations(target.id)))) {
+          conflict = { code: 'REFERENCE_RECLASSIFICATION_REQUIRED', message: 'La fila intenta cambiar atributos físicos de una referencia con operaciones. Usa Reclasificación.' };
+          action = null; after = null;
+        }
+      }
+      if (!conflict && action === 'update') {
         beforeState = canonicalProductState(target); afterState = canonicalProductState(after);
         fields = changeSummary(beforeState, afterState); nextById[target.id] = after;
       } else if (!conflict && action === 'new') {
-        after = clone(incoming); after.id = 'imp-' + Date.now() + '-' + meta.rowIndex; after._syncVersion = 0;
-        after = D.hydrate(after); afterState = canonicalProductState(after); fields = ['Alta completa']; nextById[after.id] = after;
+        try {
+          after = clone(incoming); after._syncVersion = 0;
+          after = v2 ? D.createReference(after, Object.values(nextById)) : D.hydrate(after);
+          afterState = canonicalProductState(after); fields = ['Alta completa']; nextById[after.id] = after;
+        } catch (error) {
+          conflict = { code: error.code || 'REFERENCE_CREATE_INVALID', message: error.message || 'La referencia V2 no pudo validarse.' };
+          action = null; after = null;
+        }
       }
       rows.push({ rowKey, rowNumber: meta.rowIndex + 2, incoming, action: conflict ? 'conflict' : action, conflict, targetId: target && target.id, before: beforeState, after: afterState, fields });
     });
     const conflicts = rows.filter(row => row.conflict);
     const ok = conflicts.length === 0 && rows.length > 0;
+    const warnings = (parsed.warnings || []).slice();
+    Object.keys(fileSkuCounts).filter(sku => fileSkuCounts[sku] > 1).forEach(sku =>
+      warnings.push(`${SKU_DUPLICATE_WARNING}: ${fileSkuCounts[sku]} referencias comparten el SKU ${sku}; se conservarán separadas por ID y barcode.`));
     return {
-      ok, schema: parsed.schema, warnings: (parsed.warnings || []).slice(), rows, conflicts,
+      ok, schema: parsed.schema, warnings, rows, conflicts,
       creates: rows.filter(row => row.action === 'new').length,
       updates: rows.filter(row => row.action === 'update').length,
       baseFingerprint: inventoryStateFingerprint(current),

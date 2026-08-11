@@ -81,12 +81,20 @@
       const raw = String(e.target && e.target.value != null ? e.target.value : query).trim();
       if (!raw) return;
       // 1) ¿Código de barras SKU-TALLA? (lector USB HID o tecleado) → agrega la talla exacta al ticket.
-      const hit = window.BARCODES && window.BARCODES.find(raw);
-      if (hit) { addToTicket(hit.p, hit.talla); setQuery(''); flashLine(hit.p.id + '-' + hit.talla); return; }
+      const barcodeResult = window.BARCODES && window.BARCODES.resolve(raw);
+      const hit = barcodeResult && barcodeResult.ok ? barcodeResult.hit : null;
+      if (hit) { addToTicket(hit.p, hit.talla); setQuery(''); flashLine(hit.productId); return; }
+      if (barcodeResult && barcodeResult.code === 'BARCODE_AMBIGUOUS') {
+        toast('Código bloqueado: resuelve a más de una referencia. Resincroniza antes de vender.', 'var(--danger)'); return;
+      }
       // 2) Coincidencia exacta por SKU → abre el selector de talla.
       const q = raw.toLowerCase();
-      const exact = D.products.find(p => p.sku.toLowerCase() === q);
-      const target = exact || filtered[0];
+      const exactMatches = D.products.filter(p => p.sku.toLowerCase() === q);
+      if (exactMatches.length > 1) {
+        toast(`${exactMatches.length} referencias comparten ese SKU. Selecciona la referencia por sus atributos.`, 'var(--warning)');
+        setQuery(raw); return;
+      }
+      const target = exactMatches[0] || filtered[0];
       if (target) { openSize(target); setQuery(''); return; }
       // 3) Sin resultado: mensaje según parezca código o búsqueda libre.
       const looksCode = window.BARCODES && window.BARCODES.parse(raw);
@@ -106,11 +114,15 @@
         if (e.key === 'Enter') {
           const code = buf; buf = '';
           if (st.blocked || code.length < 4) return;       // hay un modal abierto o ráfaga muy corta
-          const hit = window.BARCODES && window.BARCODES.find(code);
+          const result = window.BARCODES && window.BARCODES.resolve(code);
+          if (result && result.code === 'BARCODE_AMBIGUOUS') {
+            toast('Código ambiguo bloqueado. Resincroniza el inventario.', 'var(--danger)'); return;
+          }
+          const hit = result && result.ok ? result.hit : null;
           if (!hit) return;                                // no es un código conocido → no intervenir
           e.preventDefault();
           st.addToTicket(hit.p, hit.talla);
-          st.flashLine(hit.p.id + '-' + hit.talla);
+          st.flashLine(hit.productId);
           return;
         }
         if (e.key && e.key.length === 1) {
@@ -137,7 +149,7 @@
       setTicket(prev => {
         const ex = prev.find(l => l.key === key);
         if (ex) return prev.map(l => l.key === key ? { ...l, qty: l.qty + 1 } : l);
-        return [...prev, { key, p, talla, qty: 1 }];
+        return [...prev, { key, productId: p.id, p, talla, qty: 1 }];
       });
       setAdditionalDiscounts([]);
       setSizePick(null);

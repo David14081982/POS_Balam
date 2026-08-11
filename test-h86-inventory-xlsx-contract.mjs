@@ -65,6 +65,12 @@ const result = await page.evaluate(async () => {
   }, over || {}));
   const toFile = (wb, name) => new File([X.write(wb, { bookType: 'xlsx', type: 'array' })], name, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const product = make('prod-h86', '21-MC-ALG-BL-T');
+  const reference = D.createReference({
+    cat: '21', manga: 'ML', tela: 'POL', color: 'AZ', cuello: 'ITA', modelo: 'V2X',
+    nombre: 'REFERENCIA V2', orn: 'Bordado Eléctrico', ornamentColorCodes: ['PLT', 'DRO'],
+    sizeCategoryId: 'size_number', sizeCode: '40', sizeScale: 'N', stockQuantity: 7,
+    precio: 980, costo: 410, sku: '21-V2X-ML-POL-AZ-40', attrs: { __sizeCategoryId: 'size_number' },
+  }, []);
   const template = IO.__test.inventoryWorkbook([]).wb;
   const exported = IO.__test.inventoryWorkbook([product]).wb;
   const templateHeaders = X.utils.sheet_to_json(template.Sheets.Inventario, { header: 1, defval: '' })[0];
@@ -76,6 +82,36 @@ const result = await page.evaluate(async () => {
   const appliedResult = IO.applyImportPlan(plan, applied);
   const beforeState = IO.__test.canonicalProductState(product);
   const afterState = IO.__test.canonicalProductState(applied[0]);
+  const v2Parsed = await IO.parseFile(toFile(IO.__test.inventoryWorkbook([reference]).wb, 'reference-v2.xlsx'));
+  const v2Plan = IO.planImport(v2Parsed, [reference], {});
+  const v2Applied = [clone(reference)];
+  if (v2Plan.ok) IO.applyImportPlan(v2Plan, v2Applied);
+  const v2RoundtripSame = JSON.stringify(IO.__test.canonicalProductState(reference))
+    === JSON.stringify(IO.__test.canonicalProductState(v2Applied[0]));
+  const wrongModel = clone(product); wrongModel.id = reference.id; wrongModel._syncVersion = 0;
+  const modelMismatchPlan = IO.planImport(v2Parsed, [wrongModel], {});
+  const samePhysical = D.createReference(Object.assign({}, clone(reference), {
+    id: undefined, barcodeCode: undefined, physicalSignature: undefined,
+  }), []);
+  const physicalDuplicateBook = IO.__test.inventoryWorkbook([reference, samePhysical]).wb;
+  const physicalDuplicateRows = X.utils.sheet_to_json(physicalDuplicateBook.Sheets.Inventario, { defval: '' });
+  physicalDuplicateRows.forEach(row => { row._BALAM_ID_PRODUCTO = ''; row._BALAM_VERSION_PRODUCTO = ''; });
+  physicalDuplicateBook.Sheets.Inventario = X.utils.json_to_sheet(physicalDuplicateRows, {
+    header: X.utils.sheet_to_json(physicalDuplicateBook.Sheets.Inventario, { header: 1, defval: '' })[0],
+  });
+  const physicalDuplicateParsed = await IO.parseFile(toFile(physicalDuplicateBook, 'physical-duplicate-v2.xlsx'));
+  const physicalDuplicatePlan = IO.planImport(physicalDuplicateParsed, [], {});
+  const lockedBook = IO.__test.inventoryWorkbook([reference]).wb;
+  const lockedRows = X.utils.sheet_to_json(lockedBook.Sheets.Inventario, { defval: '' });
+  lockedRows[0]['Color Tela'] = 'BL';
+  lockedBook.Sheets.Inventario = X.utils.json_to_sheet(lockedRows, {
+    header: X.utils.sheet_to_json(lockedBook.Sheets.Inventario, { header: 1, defval: '' })[0],
+  });
+  const lockedParsed = await IO.parseFile(toFile(lockedBook, 'locked-v2.xlsx'));
+  const lockedReference = clone(reference); lockedReference.stockQuantity = 0;
+  lockedReference.stock = [{ talla: lockedReference.sizeCode, escala: lockedReference.sizeScale, stock: 0 }];
+  lockedReference.physicalIdentityLocked = true;
+  const lockedPlan = IO.planImport(lockedParsed, [lockedReference], {});
 
   // Mover columnas sin alterar encabezados ni mapa.
   const movedWb = X.read(X.write(exported, { bookType: 'xlsx', type: 'array' }), { type: 'array' });
@@ -144,7 +180,7 @@ const result = await page.evaluate(async () => {
   try { await IO.parseFile(toFile(badSizeMap, 'bad-size.xlsx')); } catch (error) { badSizeBlocked = /talla|identidad/i.test(error.message); }
   const invalidCatalog = X.read(X.write(exported, { bookType: 'xlsx', type: 'array' }), { type: 'array' });
   const invalidRows = X.utils.sheet_to_json(invalidCatalog.Sheets.Inventario, { defval: '' });
-  invalidRows[0].Color = 'NO_EXISTE';
+  invalidRows[0]['Color Tela'] = 'NO_EXISTE';
   invalidCatalog.Sheets.Inventario = X.utils.json_to_sheet(invalidRows, { header: exportHeaders });
   const invalidParsed = await IO.parseFile(toFile(invalidCatalog, 'invalid-catalog.xlsx'));
   const invalidPlan = IO.planImport(invalidParsed, [product], {});
@@ -158,6 +194,17 @@ const result = await page.evaluate(async () => {
     metadata: parsed.metadata, schema: parsed.schema, planOk: plan.ok, planUpdates: plan.updates,
     noChanges: plan.rows[0] && plan.rows[0].fields.length === 0,
     roundtripSame: JSON.stringify(beforeState) === JSON.stringify(afterState), appliedResult,
+    v2PlanOk: v2Plan.ok, v2RoundtripSame, v2Conflicts: v2Plan.conflicts,
+    v2Before: IO.__test.canonicalProductState(reference),
+    v2After: IO.__test.canonicalProductState(v2Applied[0]),
+    v2Identity: v2Applied[0] && { id: v2Applied[0].id, barcodeCode: v2Applied[0].barcodeCode,
+      recordModel: v2Applied[0].recordModel, sizeCode: v2Applied[0].sizeCode,
+      stockQuantity: v2Applied[0].stockQuantity },
+    modelMismatchBlocked: !modelMismatchPlan.ok && modelMismatchPlan.conflicts.some(row => row.conflict.code === 'REFERENCE_MODEL_MISMATCH'),
+    physicalDuplicateBlocked: !physicalDuplicatePlan.ok && physicalDuplicatePlan.conflicts.some(row => row.conflict.code === 'REFERENCE_SIGNATURE_DUPLICATE'),
+    physicalDuplicateConflicts: physicalDuplicatePlan.conflicts.map(row => row.conflict),
+    lockedEditBlocked: !lockedPlan.ok && lockedPlan.conflicts.some(row => row.conflict.code === 'REFERENCE_RECLASSIFICATION_REQUIRED'),
+    v2Label: window.BARCODES.validateLabelCode(reference.barcodeCode),
     movedOk: movedParsed.schema === 'current' && movedParsed.warnings.some(warning => /posición/.test(warning)),
     legacyWarning: legacy.schema === 'legacy' && legacy.warnings.length > 0,
     legacyConflict: !legacyBlocked.ok && legacyBlocked.conflicts[0].conflict.code === 'ID_REQUIRED',
@@ -176,9 +223,21 @@ check('Plantilla y Exportar tienen exactamente las mismas hojas', result.sheetsE
 check('Plantilla y Exportar tienen exactamente las mismas columnas', result.headersEqual);
 check('Plantilla contiene cero productos', result.templateRows === 0, String(result.templateRows));
 check('el contrato incluye todos los campos H-86 obligatorios', result.hasRequired);
-check('el archivo se reconoce como esquema canónico versionado', result.schema === 'current' && Number(result.metadata.schema_version) === 1);
+check('el archivo se reconoce como esquema canónico versionado', result.schema === 'current' && Number(result.metadata.schema_version) === 2);
 check('round-trip por ID produce una actualización sin cambios', result.planOk && result.planUpdates === 1 && result.noChanges);
 check('round-trip conserva el estado canónico completo', result.roundtripSame, JSON.stringify(result.appliedResult));
+check('round-trip V2 conserva products.id, barcode, talla única y stock escalar',
+  result.v2PlanOk && result.v2RoundtripSame && result.v2Identity.recordModel === 'v2'
+  && !!result.v2Identity.id && !!result.v2Identity.barcodeCode
+  && result.v2Identity.sizeCode === '40' && result.v2Identity.stockQuantity === 7,
+  JSON.stringify({ identity: result.v2Identity, conflicts: result.v2Conflicts,
+    before: result.v2Before, after: result.v2After }));
+check('barcode V2 de 16 caracteres cabe en Code128 dentro de 60×40',
+  result.v2Label.ok && result.v2Label.modules > 0 && result.v2Label.moduleMm >= 0.25,
+  JSON.stringify(result.v2Label));
+check('Excel no convierte un products.id V1 en referencia V2', result.modelMismatchBlocked);
+check('dos altas V2 con la misma firma quedan como conflicto de plan, no abortan la vista previa', result.physicalDuplicateBlocked, JSON.stringify(result.physicalDuplicateConflicts));
+check('Excel no cambia la firma de una referencia que tuvo stock aunque hoy esté en cero', result.lockedEditBlocked);
 check('mover columnas sigue siendo válido y se informa', result.movedOk);
 check('el heredado se reconoce y advierte explícitamente', result.legacyWarning);
 check('ID vacío + SKU existente es conflicto', result.legacyConflict);

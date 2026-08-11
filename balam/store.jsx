@@ -16,7 +16,7 @@
   const QKEY = 'balam_sync_queue';
   const QDB = 'balam_sync', QSTORE = 'durable_queue';
   const SYNC_PROTOCOL_VERSION = 1;
-  const SYNC_SCHEMA_VERSION = 20260808012700;
+  const SYNC_SCHEMA_VERSION = 20260810013500;
   const SYNC_CURSOR_KEY = 'balam_sync_domain_cursors_v1';
   const SYNC_DOMAINS = {
     permissions: { deps: [] }, config: { deps: ['permissions'] },
@@ -116,9 +116,17 @@
         else delete attrs.__sizeCategoryId;
         if (Object.keys(attrs).length) row.attrs = attrs;
         if (p.preciosTalla && Object.keys(p.preciosTalla).length) row.precios_talla = p.preciosTalla;
+        if (p.recordModel === 'v2') Object.assign(row, {
+          record_model: 'v2', size_category_id: p.sizeCategoryId,
+          size_code: String(p.sizeCode), size_scale: p.sizeScale || null,
+          stock_quantity: Math.max(0, Math.round(Number(p.stockQuantity) || 0)),
+          barcode_code: p.barcodeCode,
+          ornament_color_codes: Array.isArray(p.ornamentColorCodes) ? p.ornamentColorCodes.slice() : [],
+          physical_signature: p.physicalSignature,
+        });
         return row;
       },
-      fromRow: r => ({ id: r.id, cat: r.cat, manga: r.manga, tela: r.tela, color: r.color, cuello: r.cuello, modelo: r.modelo, nombre: r.nombre, orn: r.orn, ornColors: r.orn_colors || [], precio: Number(r.precio) || 0, costo: Number(r.costo) || 0, pop: !!r.pop, stock: r.stock || [], imagen: r.imagen || undefined, barcodeUrls: r.barcode_urls || {}, attrs: r.attrs || {}, sizeCategoryId: (r.attrs || {}).__sizeCategoryId || null, preciosTalla: r.precios_talla || {}, _syncVersion: Number(r.sync_version) || 0, _deletedAt: r.deleted_at || null }),
+      fromRow: r => ({ id: r.id, recordModel: r.record_model || 'v1', cat: r.cat, manga: r.manga, tela: r.tela, color: r.color, cuello: r.cuello, modelo: r.modelo, nombre: r.nombre, orn: r.orn, ornColors: r.orn_colors || [], ornamentColorCodes: r.ornament_color_codes || [], precio: Number(r.precio) || 0, costo: Number(r.costo) || 0, pop: !!r.pop, stock: r.stock || [], stockQuantity: r.stock_quantity == null ? null : Number(r.stock_quantity), physicalIdentityLocked: !!r.physical_identity_locked, sizeCode: r.size_code || null, sizeScale: r.size_scale || null, barcodeCode: r.barcode_code || null, physicalSignature: r.physical_signature || null, imagen: r.imagen || undefined, barcodeUrls: r.barcode_urls || {}, attrs: r.attrs || {}, sizeCategoryId: r.size_category_id || (r.attrs || {}).__sizeCategoryId || null, preciosTalla: r.precios_talla || {}, _syncVersion: Number(r.sync_version) || 0, _deletedAt: r.deleted_at || null }),
     },
     clients: {
       table: 'clients', conflict: 'id', localKey: 'clients',
@@ -265,11 +273,16 @@
   function saleItemFromRow(x) {
     return {
       _saleItemId: x.id == null ? undefined : Number(x.id),
+      lineId: x.line_id || undefined, barcodeCode: x.barcode_code || undefined,
+      physicalAttrs: x.physical_attrs || undefined,
       productId: x.product_id || x.productId || undefined,
       sku: x.sku, nombre: x.nombre, talla: x.talla, qty: x.qty,
       ornamento: x.ornamento || undefined,
       ornColors: Array.isArray(x.orn_colors) ? x.orn_colors : undefined,
       precio: Number(x.precio) || 0,
+      listPrice: x.list_price == null ? undefined : Number(x.list_price),
+      effectivePrice: x.effective_price == null ? undefined : Number(x.effective_price),
+      discountSnapshot: x.discount_snapshot || undefined,
       precioBase: x.precio_base == null ? x.precioBase : Number(x.precio_base),
       precioOrig: x.precio_original == null ? x.precioOrig : Number(x.precio_original),
       descuentoAdicional: x.descuento_adicional == null
@@ -693,6 +706,20 @@
   async function applyOp(c, op) {
     lastApplyFailure = null;
     try {
+      if (op.type === 'referenceReclassification') {
+        const r = await c.rpc('commit_reference_reclassification', {
+          p_operation_id: op.operationId,
+          p_source_product_id: op.sourceProductId,
+          p_target_product_id: op.targetProductId,
+          p_quantity: op.quantity,
+          p_actor: op.actor,
+          p_reason: op.reason,
+          p_reversal_of: op.reversalOf || null,
+        });
+        if (r.error || !r.data || r.data.ok === false) return failOp(r.error || r.data || { message: 'Reclasificación sin confirmación' });
+        await pullDomain('products'); await pullDomain('movements');
+        return true;
+      }
       if (op.type === 'commissionSettle' || op.type === 'commissionClose') {
         const name = op.type === 'commissionSettle'
           ? 'settle_commission_checked'
@@ -1678,6 +1705,12 @@
       // migración 034 no envía el campo y sigue funcionando igual.
       if (Array.isArray(l.promos)) row.promos = l.promos;
       if (l.descuentoAdicional != null) row.descuento_adicional = Number(l.descuentoAdicional) || 0;
+      if (l.lineId) row.line_id = l.lineId;
+      if (l.barcodeCode) row.barcode_code = l.barcodeCode;
+      if (l.physicalAttrs) row.physical_attrs = l.physicalAttrs;
+      if (l.listPrice != null) row.list_price = Number(l.listPrice) || 0;
+      if (l.effectivePrice != null) row.effective_price = Number(l.effectivePrice) || 0;
+      if (l.discountSnapshot) row.discount_snapshot = l.discountSnapshot;
       return row;
     });
     const moves = ((window.DATA && window.DATA.movements) || [])
@@ -1802,8 +1835,16 @@
     if (!enabled) return;
     effects = effects || {};
     const header = { id: ret.id, folio: ret.folio, fecha: ret.fecha || null, cliente: ret.cliente, vendedores: ret.vendedores || [], metodo: moneyWireMethod(ret.metodo || null, ret.components), total: Number(ret.total) || 0, notas: ret.notas || null };
-    const items = (ret.lineas || []).map(l => ({ return_id: ret.id, product_id: l.productId || null, sku: l.sku, nombre: l.nombre, talla: l.talla, qty: l.qty, motivo: l.motivo || null, precio: Number(l.precio) || 0, ornamento: l.ornamento || null, orn_colors: Array.isArray(l.ornColors) ? l.ornColors.slice() : null }));
-    const moves = (ret.lineas || []).map(l => ({ return_id: ret.id, fecha: String(ret.fecha || '').replace(' ', 'T'), tipo: 'Devolución', producto: l.nombre, sku: l.sku, cant: Number(l.qty) || 0, ref: ret.folio }));
+    const items = (ret.lineas || []).map(l => ({ return_id: ret.id, line_id: l.lineId || null,
+      source_sale_line_id: l.sourceSaleLineId || null, product_id: l.productId || null,
+      barcode_code: l.barcodeCode || null, physical_attrs: l.physicalAttrs || null,
+      list_price: l.listPrice == null ? null : Number(l.listPrice) || 0,
+      effective_price: l.effectivePrice == null ? null : Number(l.effectivePrice) || 0,
+      discount_snapshot: l.discountSnapshot || null,
+      sku: l.sku, nombre: l.nombre, talla: l.talla, qty: l.qty, motivo: l.motivo || null,
+      precio: Number(l.precio) || 0, ornamento: l.ornamento || null,
+      orn_colors: Array.isArray(l.ornColors) ? l.ornColors.slice() : null }));
+    const moves = (ret.lineas || []).map(l => ({ return_id: ret.id, fecha: String(ret.fecha || '').replace(' ', 'T'), tipo: 'Devolución', producto: l.nombre, product_id: l.productId || null, sku: l.sku, talla: l.talla, cant: Number(l.qty) || 0, ref: ret.folio }));
     return run({
       type: 'return', id: ret.id, folio: ret.folio, header, items, moves,
       stockLines: effects.stockLines || [],
@@ -1832,7 +1873,12 @@
       notas: exch.notas || null,
     };
     const items = (exch.lineas || []).map(l => ({
-      lado: l.lado, product_id: l.productId || null, sku: l.sku, nombre: l.nombre,
+      line_id: l.lineId || null, source_sale_line_id: l.sourceSaleLineId || null,
+      lado: l.lado, product_id: l.productId || null, barcode_code: l.barcodeCode || null,
+      physical_attrs: l.physicalAttrs || null, sku: l.sku, nombre: l.nombre,
+      list_price: l.listPrice == null ? null : Number(l.listPrice) || 0,
+      effective_price: l.effectivePrice == null ? null : Number(l.effectivePrice) || 0,
+      discount_snapshot: l.discountSnapshot || null,
       talla: l.talla, qty: Number(l.qty) || 0, motivo: l.motivo || null,
       condicion: l.condicion || null,
       ornamento: l.ornamento || null,
@@ -1841,7 +1887,7 @@
     const moves = (exch.lineas || []).map(l => ({
       fecha: String(exch.fecha || '').replace(' ', 'T'),
       tipo: l.lado === 'devuelto' ? 'Cambio (entra)' : 'Cambio (sale)',
-      producto: l.nombre, sku: l.sku,
+      producto: l.nombre, product_id: l.productId || null, sku: l.sku, talla: l.talla,
       cant: (l.lado === 'devuelto' ? 1 : -1) * (Number(l.qty) || 0), ref: exch.folio,
     }));
     return run({
@@ -2264,7 +2310,7 @@
         // H-72: `pushReturn` escribe `product_id`; el pull debe leerlo de vuelta o
         // la devolución local queda peor identificada que la remota, igual que
         // `saleItemFromRow` conserva la identidad de los renglones de venta.
-        itRows.forEach(x => (byRid[x.return_id] || (byRid[x.return_id] = [])).push({ productId: x.product_id || undefined, sku: x.sku, nombre: x.nombre, talla: x.talla, qty: x.qty, motivo: x.motivo || '', precio: Number(x.precio) || 0, ornamento: x.ornamento || undefined, ornColors: Array.isArray(x.orn_colors) ? x.orn_colors : undefined }));
+        itRows.forEach(x => (byRid[x.return_id] || (byRid[x.return_id] = [])).push({ lineId: x.line_id || undefined, sourceSaleLineId: x.source_sale_line_id || undefined, productId: x.product_id || undefined, barcodeCode: x.barcode_code || undefined, physicalAttrs: x.physical_attrs || undefined, listPrice: x.list_price == null ? undefined : Number(x.list_price), effectivePrice: x.effective_price == null ? undefined : Number(x.effective_price), discountSnapshot: x.discount_snapshot || undefined, sku: x.sku, nombre: x.nombre, talla: x.talla, qty: x.qty, motivo: x.motivo || '', precio: Number(x.precio) || 0, ornamento: x.ornamento || undefined, ornColors: Array.isArray(x.orn_colors) ? x.orn_colors : undefined }));
         const rows = r.data.map(raw => { const s = m.fromRow(raw); s.lineas = byRid[raw.id] || []; return s; });
         window.DATA.applyRemote('returns', rows); return { ok: true };
       }
@@ -2272,8 +2318,13 @@
         const itRows = await fetchItemsIn(c, 'exchange_items', 'exchange_id', r.data.map(x => x.id));
         const byId = {};
         itRows.forEach(x => (byId[x.exchange_id] || (byId[x.exchange_id] = [])).push({
-          lado: x.lado, productId: x.product_id || undefined, sku: x.sku, nombre: x.nombre, talla: x.talla,
+          lineId: x.line_id || undefined, sourceSaleLineId: x.source_sale_line_id || undefined,
+          lado: x.lado, productId: x.product_id || undefined, barcodeCode: x.barcode_code || undefined,
+          physicalAttrs: x.physical_attrs || undefined, sku: x.sku, nombre: x.nombre, talla: x.talla,
           qty: Number(x.qty) || 0, precio: Number(x.precio) || 0,
+          listPrice: x.list_price == null ? undefined : Number(x.list_price),
+          effectivePrice: x.effective_price == null ? undefined : Number(x.effective_price),
+          discountSnapshot: x.discount_snapshot || undefined,
           motivo: x.motivo || '', condicion: x.condicion || undefined,
           ornamento: x.ornamento || undefined,
           ornColors: Array.isArray(x.orn_colors) ? x.orn_colors : undefined,
@@ -2291,6 +2342,13 @@
     // ventas) vía la cola; un vaciado intencional de la nube ahora SÍ se respeta.)
     return { ok: true };
   }
+  function commitReferenceReclassification(payload) {
+    if (!enabled || !payload) return;
+    return run({ type: 'referenceReclassification', operationId: payload.operationId,
+      sourceProductId: payload.sourceProductId, targetProductId: payload.targetProductId,
+      quantity: Number(payload.quantity) || 0, actor: payload.actor || '',
+      reason: payload.reason || '', reversalOf: payload.reversalOf || null });
+  }
   function syncActivityDomain(op) {
     if (!op) return null;
     if (op.type === 'config') return 'config';
@@ -2298,6 +2356,7 @@
     if (op.type === 'return') return 'returns';
     if (op.type === 'exchange') return 'exchanges';
     if (op.type === 'loanOperation') return 'loans';
+    if (op.type === 'referenceReclassification') return 'products';
     if (/^commission/.test(op.type || '')) return 'liquidations';
     return op.kind || kindForTable(op.table) || null;
   }
@@ -2309,6 +2368,7 @@
       commissionAdjustment: 'Ajuste de comisión', upsert: 'Actualización de registros',
       profileUpdate: 'Actualización de perfil', softDelete: 'Baja de registro',
     };
+    labels.referenceReclassification = 'Reclasificación de referencia';
     const base = labels[op.type] || 'Operación local';
     const ref = op.folio || op.reference || null;
     return ref ? `${base} · ${String(ref).slice(0, 80)}` : base;
@@ -2450,7 +2510,9 @@
     syncManifest = manifest.data[0];
     const min = Number(syncManifest.sync_protocol_min) || 1;
     const max = Number(syncManifest.sync_protocol_current) || min;
-    if (SYNC_PROTOCOL_VERSION < min) syncCompatibility = 'client_outdated';
+    const serverSchema = Number(syncManifest.schema_version) || 0;
+    if (serverSchema < SYNC_SCHEMA_VERSION) syncCompatibility = 'server_outdated';
+    else if (SYNC_PROTOCOL_VERSION < min) syncCompatibility = 'client_outdated';
     else if (SYNC_PROTOCOL_VERSION > max) syncCompatibility = 'server_outdated';
     else syncCompatibility = 'ok';
     const epochKey = 'balam_sync_data_epoch';
@@ -3130,6 +3192,6 @@
     }
   }
 
-  window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushClient, pushSale, settleLayaway, pushReturn, pushExchange, ensureFolioBlock, deleteRow, settleCommission, closeCommissionPeriod, applyCommissionAdjustment, pushLoanOperation, migrateLocalLoans, pullDomain, fetchSaleByFolio, physicalCardAvailable, claimPhysicalCard, flushQueue, retryOperation, queueStatus, syncStatus, syncFleetStatus, updateSyncDevice, requestSyncRetry, markSyncActivityReviewed, decideSyncQuarantine, exportQuarantineReport, reconcileDomains, invalidateDomain, establishPointZero, rebootstrapFromCloud, exportSyncRecovery, hasPendingLayaway, clearQueue, markResetApplied, purgeTestData, applyRemotePurge, pruneQueueForPurge, readPurgeState, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
+  window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushClient, pushSale, settleLayaway, pushReturn, pushExchange, commitReferenceReclassification, ensureFolioBlock, deleteRow, settleCommission, closeCommissionPeriod, applyCommissionAdjustment, pushLoanOperation, migrateLocalLoans, pullDomain, fetchSaleByFolio, physicalCardAvailable, claimPhysicalCard, flushQueue, retryOperation, queueStatus, syncStatus, syncFleetStatus, updateSyncDevice, requestSyncRetry, markSyncActivityReviewed, decideSyncQuarantine, exportQuarantineReport, reconcileDomains, invalidateDomain, establishPointZero, rebootstrapFromCloud, exportSyncRecovery, hasPendingLayaway, clearQueue, markResetApplied, purgeTestData, applyRemotePurge, pruneQueueForPurge, readPurgeState, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
   window.CORE.registerSyncGateway(window.STORE);
 })();

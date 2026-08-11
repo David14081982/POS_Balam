@@ -31,6 +31,118 @@
         : categoryId === 'size_letter' ? 'L' : null;
   };
 
+  function isV2Reference(product) {
+    return !!product && product.recordModel === 'v2';
+  }
+  function newUuid() {
+    if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16);
+    });
+  }
+  // 16 caracteres Code128B: prefijo humano de dominio + 60 bits del UUID.
+  // Es corto para 60×40, se genera offline y la base conserva la garantía final.
+  function barcodeFromId(id) {
+    const hex = String(id || '').replace(/[^a-f0-9]/gi, '').toUpperCase();
+    if (hex.length < 15) throw Object.assign(new Error('No se pudo generar el código logístico'), { code: 'BARCODE_SOURCE_INVALID' });
+    return 'B' + hex.slice(0, 15);
+  }
+  function canonicalReferenceOrnamentColors(values) {
+    const allowed = new Set((C && C.all ? C.all('ornament_color') : []).map(item => String(item.code)));
+    return [...new Set((Array.isArray(values) ? values : []).map(String).filter(code => allowed.has(code)))]
+      .sort((a, b) => a.localeCompare(b));
+  }
+  function referenceValue(product, part) {
+    if (part.sizeCategory) {
+      return part.kind === product.sizeCategoryId ? String(product.sizeCode == null ? '' : product.sizeCode) : null;
+    }
+    if (part.kind === 'ornament_color') return canonicalReferenceOrnamentColors(product.ornamentColorCodes || product.ornColors || []);
+    if (part.custom) return String(((product.attrs || {})[part.kind]) || '');
+    return String(product[part.field] == null ? '' : product[part.field]);
+  }
+  function physicalSignature(product) {
+    const parts = C && typeof C.referenceParts === 'function' ? C.referenceParts() : [];
+    const payload = [['model', String(product.modelo == null ? '' : product.modelo)]];
+    parts.forEach(part => {
+      const value = referenceValue(product, part);
+      if (value !== null) payload.push([part.kind, value]);
+    });
+    return JSON.stringify(payload);
+  }
+
+  function physicalSnapshot(product, talla) {
+    return {
+      recordModel: isV2Reference(product) ? 'v2' : 'v1',
+      category: product.cat || '', model: String(product.modelo || ''), sleeve: product.manga || '',
+      material: product.tela || '', fabricColor: product.color || '', neck: product.cuello || '',
+      ornament: product.orn || '', ornamentColorCodes: isV2Reference(product)
+        ? canonicalReferenceOrnamentColors(product.ornamentColorCodes || [])
+        : effectiveOrnamentColors(product, talla),
+      sizeCategoryId: isV2Reference(product) ? product.sizeCategoryId : inferSizeCategory(product, product.stock),
+      sizeCode: String(talla == null ? '' : talla),
+      custom: Object.fromEntries(Object.entries(product.attrs || {}).filter(([key]) => !key.startsWith('__'))),
+    };
+  }
+
+  function referenceDifferences(a, b) {
+    const fields = [
+      ['Modelo', 'modelo'], ['Categoría', 'cat'], ['Manga', 'manga'],
+      ['Material', 'tela'], ['Color Tela', 'color'], ['Cuello', 'cuello'],
+      ['Ornamento', 'orn'], ['Talla', 'sizeCode'],
+    ];
+    const out = fields.filter(([, field]) => String(a[field] ?? '') !== String(b[field] ?? ''))
+      .map(([label, field]) => ({ label, left: a[field], right: b[field] }));
+    const ac = canonicalReferenceOrnamentColors(a.ornamentColorCodes || a.ornColors || []);
+    const bc = canonicalReferenceOrnamentColors(b.ornamentColorCodes || b.ornColors || []);
+    if (JSON.stringify(ac) !== JSON.stringify(bc)) out.push({ label: 'Color de ornamento', left: ac, right: bc });
+    return out;
+  }
+
+  function referenceDiagnostics(candidate, collection, excludeId) {
+    const activeRows = (collection || products || []).filter(p => p && !p._deletedAt);
+    const idHit = activeRows.find(p => p.id === candidate.id && p.id !== excludeId);
+    if (idHit) return { ok: false, code: 'REFERENCE_ID_DUPLICATE', conflict: idHit };
+    const rows = activeRows.filter(p => p.id !== excludeId);
+    const barcodeHit = rows.find(p => isV2Reference(p) && p.barcodeCode === candidate.barcodeCode);
+    if (barcodeHit) return { ok: false, code: 'BARCODE_DUPLICATE', conflict: barcodeHit };
+    const signatureHit = rows.find(p => isV2Reference(p) && p.physicalSignature === candidate.physicalSignature);
+    if (signatureHit) return { ok: false, code: 'REFERENCE_SIGNATURE_DUPLICATE', conflict: signatureHit };
+    const skuMatches = rows.filter(p => String(p.sku || '') === String(candidate.sku || ''));
+    return {
+      ok: true,
+      warnings: skuMatches.length ? [{ code: 'SKU_DUPLICATE_WARNING', count: skuMatches.length + 1,
+        references: skuMatches.map(p => p.id).concat(candidate.id),
+        differences: skuMatches.map(p => ({ productId: p.id, fields: referenceDifferences(p, candidate) })),
+        disabledSkuAttributes: (C && C.referenceParts ? C.referenceParts() : [])
+          .filter(part => !(C.catalogMeta(part.kind) || {}).inSku).map(part => part.kind) }] : [],
+    };
+  }
+
+  function createReference(draft, collection) {
+    const p = JSON.parse(JSON.stringify(draft || {}));
+    p.id = p.id || newUuid();
+    p.recordModel = 'v2';
+    p.sizeCategoryId = p.sizeCategoryId || (p.attrs || {}).__sizeCategoryId || '';
+    p.sizeCode = String(p.sizeCode == null ? p.talla == null ? '' : p.talla : p.sizeCode);
+    p.sizeScale = p.sizeScale || categoryScale(p.sizeCategoryId) || '';
+    p.stockQuantity = Math.max(0, Math.round(Number(p.stockQuantity == null ? p.stock : p.stockQuantity) || 0));
+    p.physicalIdentityLocked = !!p.physicalIdentityLocked || p.stockQuantity > 0;
+    p.ornamentColorCodes = canonicalReferenceOrnamentColors(p.ornamentColorCodes || p.ornColors || []);
+    p.ornColors = p.ornamentColorCodes.slice();
+    p.attrs = Object.assign({}, p.attrs || {}, { __sizeCategoryId: p.sizeCategoryId });
+    p.stock = [{ talla: p.sizeCode, escala: p.sizeScale, stock: p.stockQuantity }];
+    p.barcodeCode = p.barcodeCode || barcodeFromId(p.id);
+    p.sku = p.sku || sku(p);
+    // La firma es siempre derivada de CONFIG; una columna importada nunca es autoridad.
+    p.physicalSignature = physicalSignature(p);
+    const diag = referenceDiagnostics(p, collection);
+    if (!diag.ok) throw Object.assign(new Error(diag.code === 'REFERENCE_SIGNATURE_DUPLICATE'
+      ? 'Ya existe una referencia con la misma combinación física'
+      : 'La identidad técnica o logística ya está en uso'), { code: diag.code, conflict: diag.conflict });
+    p.referenceWarnings = diag.warnings;
+    return hydrate(p);
+  }
+
   function inferSizeCategory(product, variants) {
     const categories = (C && C.sizeCategories ? C.sizeCategories() : []);
     const valid = id => !!id && categories.some(category => category.id === id);
@@ -52,6 +164,24 @@
   // producción se consulta CONFIG en vivo, por lo que una edición se refleja
   // sin reconstruir catálogos en las pantallas.
   function resolveProductSizes(product, catalogs, variants) {
+    if (isV2Reference(product)) {
+      const categoryId = product.sizeCategoryId || (product.attrs || {}).__sizeCategoryId || null;
+      const category = (C && C.sizeCategories ? C.sizeCategories() : []).find(item => item.id === categoryId);
+      const items = C && C.all ? C.all(categoryId) : [];
+      const item = items.find(entry => String((entry.meta || {}).value ?? entry.code) === String(product.sizeCode));
+      return {
+        categoryId, categoryLabel: (category && category.label) || categoryId || '',
+        categoryConflict: false, requiresAssignment: !categoryId || !product.sizeCode,
+        ambiguous: false,
+        sizes: categoryId && product.sizeCode ? [{
+          sizeCategoryId: categoryId, sizeId: item ? item.code : product.sizeCode,
+          filterKey: encodeURIComponent(categoryId) + ':' + encodeURIComponent(String(item ? item.code : product.sizeCode)),
+          value: product.sizeCode, label: (item && item.label) || String(product.sizeCode), order: Math.max(0, items.indexOf(item)),
+          stock: Math.max(0, Number(product.stockQuantity) || 0), variantId: product.id,
+          active: !item || item.active !== false, scale: product.sizeScale || categoryScale(categoryId),
+        }] : [],
+      };
+    }
     const rows = Array.isArray(variants) ? variants : ((product && product.stock) || []);
     const configuredCategories = C && C.sizeCategories ? C.sizeCategories() : [
       { id: 'size_letter', label: 'Talla (Letra)', scale: 'L' },
@@ -182,11 +312,31 @@
     // Respaldo para cuando CONFIG aún no cargó: orden fijo histórico (con modelo al final).
     if (!(C && typeof C.skuParts === 'function')) return [p.cat, p.manga, p.tela, p.color, modTok].join('-');
     // El segmento de talla emite el marcador (SIZE_MARK); no lleva un valor por producto.
-    const parts = C.skuParts().map(x => x.sizeSlot ? SIZE_MARK : (x.custom ? (p.attrs || {})[x.kind] : p[x.field]));
+    const sizeCategoryId = p.sizeCategoryId || (p.attrs || {}).__sizeCategoryId || inferSizeCategory(p, p.stock);
+    const applicable = C.skuParts().filter(x => {
+      const meta = C.catalogMeta(x.kind) || {};
+      return !meta.sizeCategory || !sizeCategoryId || x.kind === sizeCategoryId;
+    });
+    const parts = applicable.map(x => x.sizeSlot
+      ? (isV2Reference(p) ? p.sizeCode : SIZE_MARK)
+      : (x.custom ? (p.attrs || {})[x.kind] : p[x.field]));
     // Receta vacía → el modelo como respaldo: el SKU es el identificador y no puede quedar vacío.
     return parts.length ? parts.join('-') : modTok;
   }
+  function skuPreview(p, extraKinds) {
+    const extras = new Set((extraKinds || []).map(String));
+    const meta = C && C.allCatalogMeta ? C.allCatalogMeta() : {};
+    const sizeCategoryId = p.sizeCategoryId || (p.attrs || {}).__sizeCategoryId || inferSizeCategory(p, p.stock);
+    const parts = Object.keys(meta).map(kind => ({ kind, m: meta[kind] }))
+      .filter(x => (x.m.inSku || extras.has(x.kind)) && (x.m.field || x.m.custom || x.m.sizeSlot)
+        && (!x.m.sizeCategory || !sizeCategoryId || x.kind === sizeCategoryId))
+      .sort((a, b) => (a.m.skuOrder || 0) - (b.m.skuOrder || 0))
+      .map(x => x.m.sizeSlot ? (isV2Reference(p) ? p.sizeCode : SIZE_MARK)
+        : x.m.custom ? (p.attrs || {})[x.kind] : p[x.m.field]);
+    return parts.filter(value => value != null && value !== '').join('-') || String(p.modelo || '');
+  }
   function totalStock(p) {
+    if (isV2Reference(p)) return Math.max(0, Number(p.stockQuantity) || 0);
     return resolveProductSizes(p).sizes.reduce((sum, size) => sum + (Number(size.stock) || 0), 0);
   }
 
@@ -227,6 +377,25 @@
   function hydrate(p) {
     p.modelo = String(p.modelo);
     if (!p.attrs || typeof p.attrs !== 'object') p.attrs = {}; // valores de catálogos custom (Fase 2)
+    if (isV2Reference(p)) {
+      p.sizeCategoryId = p.sizeCategoryId || p.attrs.__sizeCategoryId || '';
+      p.attrs.__sizeCategoryId = p.sizeCategoryId;
+      p.sizeCode = String(p.sizeCode == null ? p.talla == null ? '' : p.talla : p.sizeCode);
+      p.sizeScale = p.sizeScale || categoryScale(p.sizeCategoryId) || '';
+      p.stockQuantity = Math.max(0, Math.round(Number(p.stockQuantity) || 0));
+      p.physicalIdentityLocked = !!p.physicalIdentityLocked || p.stockQuantity > 0;
+      p.ornamentColorCodes = canonicalReferenceOrnamentColors(p.ornamentColorCodes || p.ornColors || []);
+      p.ornColors = p.ornamentColorCodes.slice();
+      p.stock = [{ talla: p.sizeCode, escala: p.sizeScale, stock: p.stockQuantity }];
+      if (!p.barcodeCode) p.barcodeCode = barcodeFromId(p.id);
+      if (!p.sku) p.sku = sku(p);
+      if (!p.physicalSignature) p.physicalSignature = physicalSignature(p);
+      if (p.costo == null || p.costo === '') p.costo = Math.round((Number(p.precio) || 0) * 0.45);
+      p.costo = Number(p.costo) || 0;
+      colorDisplay(p);
+      if (!p.imagen) p.imagen = pickImg(p);
+      return p;
+    }
     p.sizeCategoryId = inferSizeCategory(p, p.stock);
     if (p.sizeCategoryId) p.attrs.__sizeCategoryId = p.sizeCategoryId;
     else delete p.attrs.__sizeCategoryId;
@@ -596,6 +765,96 @@
     catch (e) { persisted = false; requireCatalogResync('La caché local del inventario no se pudo actualizar', 'products-cache'); }
     if (sync && typeof syncUp === 'function') syncUp('products', products);
     return persisted;
+  }
+
+  function referenceHasOperations(productId) {
+    const id = String(productId || '');
+    const hasLine = docs => (docs || []).some(doc => (doc.lineas || []).some(line => String(line.productId || '') === id));
+    return hasLine(sales) || hasLine(returns) || hasLine(exchanges) || hasLine(loans)
+      || movements.some(move => String(move.productId || move.product_id || '') === id);
+  }
+
+  function updateReference(candidate) {
+    const current = products.find(product => product.id === candidate.id);
+    if (!current) throw Object.assign(new Error('La referencia ya no existe'), { code: 'REFERENCE_NOT_FOUND' });
+    if (!isV2Reference(current)) {
+      if (candidate.recordModel === 'v2') throw Object.assign(new Error('Una fila V1 no se convierte automáticamente; crea referencias V2 nuevas'), { code: 'REFERENCE_MODEL_IMMUTABLE' });
+      Object.assign(current, candidate); return hydrate(current);
+    }
+    if (candidate.recordModel && candidate.recordModel !== 'v2') throw Object.assign(new Error('El modelo de una referencia V2 es inmutable'), { code: 'REFERENCE_MODEL_IMMUTABLE' });
+    if (candidate.barcodeCode && candidate.barcodeCode !== current.barcodeCode) throw Object.assign(new Error('El código logístico de la referencia es inmutable'), { code: 'BARCODE_IMMUTABLE' });
+    const next = Object.assign({}, current, candidate, {
+      ornamentColorCodes: canonicalReferenceOrnamentColors(candidate.ornamentColorCodes || candidate.ornColors || current.ornamentColorCodes),
+    });
+    next.physicalSignature = physicalSignature(next);
+    if (next.physicalSignature !== current.physicalSignature
+        && (current.physicalIdentityLocked || (Number(current.stockQuantity) || 0) !== 0 || referenceHasOperations(current.id))) {
+      throw Object.assign(new Error('Esta referencia ya tiene operaciones; reclasifica sus piezas en vez de cambiar atributos físicos'),
+        { code: 'REFERENCE_RECLASSIFICATION_REQUIRED' });
+    }
+    const diag = referenceDiagnostics(next, products, current.id);
+    if (!diag.ok) throw Object.assign(new Error('La edición colisiona con otra referencia'), { code: diag.code, conflict: diag.conflict });
+    next.physicalIdentityLocked = !!current.physicalIdentityLocked || (Number(next.stockQuantity) || 0) > 0;
+    Object.assign(current, next, { referenceWarnings: diag.warnings });
+    return hydrate(current);
+  }
+
+  function reclassifyReference({ sourceProductId, targetProductId, quantity, actor, reason, operationId, reversalOf }) {
+    const source = products.find(p => p.id === sourceProductId);
+    const target = products.find(p => p.id === targetProductId);
+    const qty = Math.round(Number(quantity) || 0);
+    if (!isV2Reference(source) || !isV2Reference(target) || source.id === target.id) {
+      return { ok: false, code: 'REFERENCE_NOT_FOUND', error: 'Selecciona dos referencias V2 distintas' };
+    }
+    if (qty <= 0) {
+      return { ok: false, code: 'INSUFFICIENT_REFERENCE_STOCK', error: 'La cantidad no está disponible en la referencia origen' };
+    }
+    const op = operationId || newUuid();
+    const prior = movements.filter(move => move.operationId === op);
+    if (prior.length) {
+      const same = prior.length === 2
+        && prior.some(move => String(move.productId) === String(source.id) && Number(move.cant) === -qty)
+        && prior.some(move => String(move.productId) === String(target.id) && Number(move.cant) === qty)
+        && prior.every(move => (move.reversalOf || null) === (reversalOf || null));
+      return same
+        ? { ok: true, idempotent: true, operationId: op }
+        : { ok: false, code: 'RECLASSIFICATION_OPERATION_CONFLICT', error: 'Ese ID de operación ya pertenece a otra reclasificación' };
+    }
+    if (qty > stockOf(source, source.sizeCode)) {
+      return { ok: false, code: 'INSUFFICIENT_REFERENCE_STOCK', error: 'La cantidad no está disponible en la referencia origen' };
+    }
+    if (reversalOf) {
+      const original = movements.filter(move => move.operationId === reversalOf);
+      const alreadyReversed = movements.some(move => move.reversalOf === reversalOf);
+      const inverse = original.length === 2 && !alreadyReversed
+        && original.some(move => String(move.productId) === String(target.id) && Number(move.cant) === -qty)
+        && original.some(move => String(move.productId) === String(source.id) && Number(move.cant) === qty);
+      if (!inverse) return { ok: false, code: 'RECLASSIFICATION_NOT_REVERSIBLE', error: 'La operación indicada no admite esta reversión' };
+    }
+    const sourceEntry = stockVariantOf(source, source.sizeCode);
+    const targetEntry = stockVariantOf(target, target.sizeCode);
+    const sourceBefore = sourceEntry.stock, targetBefore = targetEntry.stock;
+    sourceEntry.stock -= qty; targetEntry.stock += qty;
+    const fecha = now();
+    movements.unshift(
+      { fecha, tipo: 'Reclasificación', producto: source.nombre, productId: source.id, sku: source.sku, talla: source.sizeCode, cant: -qty, ref: reason, operationId: op, reversalOf: reversalOf || null },
+      { fecha, tipo: 'Reclasificación', producto: target.nombre, productId: target.id, sku: target.sku, talla: target.sizeCode, cant: qty, ref: reason, operationId: op, reversalOf: reversalOf || null },
+    );
+    const productsSaved = saveProducts(false);
+    const movementsSaved = saveMovements();
+    if (!productsSaved || !movementsSaved) {
+      sourceEntry.stock = sourceBefore; targetEntry.stock = targetBefore;
+      movements.splice(0, 2);
+      saveProducts(false); saveMovements();
+      return { ok: false, code: 'LOCAL_PERSISTENCE_FAILED', error: 'No se pudo guardar la reclasificación completa; no se movió ninguna pieza' };
+    }
+    try {
+      window.CORE.invokeSync('commitReferenceReclassification', {
+        operationId: op, sourceProductId: source.id, targetProductId: target.id,
+        quantity: qty, actor: actor || 'Administrador', reason: reason || 'Reclasificación', reversalOf: reversalOf || null,
+      });
+    } catch (error) { /* la cola local-first reintenta desde STORE */ }
+    return { ok: true, idempotent: false, operationId: op, source, target };
   }
 
   // Recalcula el SKU de TODOS los productos con la receta vigente (acción explícita del admin).
@@ -1555,10 +1814,23 @@
   }
   // Existencias disponibles de una talla en un producto.
   function stockOf(p, talla) {
+    if (isV2Reference(p)) return String(p.sizeCode) === String(talla) ? Math.max(0, Number(p.stockQuantity) || 0) : 0;
     const hit = resolveProductSizes(p).sizes.find(s => String(s.value) === String(talla));
     return hit ? hit.stock : 0;
   }
   function stockVariantOf(p, talla) {
+    if (isV2Reference(p)) {
+      if (String(p.sizeCode) !== String(talla)) return null;
+      return {
+        talla: p.sizeCode, escala: p.sizeScale,
+        get stock() { return Math.max(0, Number(p.stockQuantity) || 0); },
+        set stock(value) {
+          p.stockQuantity = Math.max(0, Math.round(Number(value) || 0));
+          if (p.stockQuantity > 0) p.physicalIdentityLocked = true;
+          p.stock = [{ talla: p.sizeCode, escala: p.sizeScale, stock: p.stockQuantity }];
+        },
+      };
+    }
     const size = resolveProductSizes(p).sizes.find(s => String(s.value) === String(talla));
     if (!size) return null;
     return (p.stock || []).find(variant =>
@@ -1951,6 +2223,7 @@
   // que una pantalla mute accidentalmente el agregado del producto.
   function effectiveOrnamentColors(product, talla) {
     if (!ornamentSupportsColors(product)) return [];
+    if (isV2Reference(product)) return canonicalReferenceOrnamentColors(product.ornamentColorCodes || []).slice();
     const mapa = sanitizeOrnamentColorsBySize(
       product && product.attrs && product.attrs.__ornamentColorsBySize, product);
     const special = talla == null ? null : mapa[String(talla)];
@@ -2184,8 +2457,13 @@
       return String((item && item.label) || fallback || code || '');
     };
     const saleLines = ticket.map((l, i) => ({
-      productId: l.p.id, sku: l.p.sku, nombre: l.p.nombre, talla: l.talla, qty: l.qty,
+      lineId: l.lineId || newUuid(), productId: l.p.id,
+      barcodeCode: isV2Reference(l.p) ? l.p.barcodeCode : null,
+      sku: l.p.sku, nombre: l.p.nombre, talla: l.talla, qty: l.qty,
       ornamento: l.p.orn || '', ornColors: effectiveOrnamentColors(l.p, l.talla),
+      physicalAttrs: physicalSnapshot(l.p, l.talla),
+      listPrice: money(resList[i].orig), effectivePrice: cortesia ? 0 : money(unitAt(i)),
+      discountSnapshot: { promotions: (resList[i].promos || []).slice(), additional: cortesia ? 0 : money(((typeof quotedLines !== 'undefined' && quotedLines[i]) || {}).additionalDiscount) },
       precio: cortesia ? 0 : money(unitAt(i)),
       precioBase: cortesia ? 0 : resList[i].unit, precioOrig: resList[i].orig,
       descuentoAdicional: cortesia ? 0 : money(((typeof quotedLines !== 'undefined' && quotedLines[i]) || {}).additionalDiscount),
@@ -2205,11 +2483,12 @@
         const size = resolveProductSizes(l.p).sizes.find(item => String(item.value) === String(l.talla));
         const colors = saleLines[i].ornColors || [];
         return {
-          productId: l.p.id, sku: String(l.p.sku || ''), name: String(l.p.nombre || ''),
+          lineId: saleLines[i].lineId, productId: l.p.id,
+          barcodeCode: saleLines[i].barcodeCode, sku: String(l.p.sku || ''), name: String(l.p.nombre || ''),
           sizeCode: String(l.talla == null ? '' : l.talla), sizeLabel: String((size && size.label) || l.talla || ''),
           colorCode: String(l.p.color || ''), colorLabel: String(l.p.colorName || catalogLabel('color', l.p.color, l.p.color)),
           ornamentCode: String(l.p.orn || ''), ornamentLabel: catalogLabel('ornament', l.p.orn, l.p.orn),
-          ornamentColors: colors.map(code => ({ code, label: catalogLabel('color', code, code) })),
+          ornamentColors: colors.map(code => ({ code, label: catalogLabel(isV2Reference(l.p) ? 'ornament_color' : 'color', code, code) })),
           attributes: [
             ['category', l.p.cat], ['model', l.p.modelo], ['sleeve', l.p.manga],
             ['material', l.p.tela], ['neck', l.p.cuello], ['cut', l.p.corte],
@@ -2606,22 +2885,34 @@
     const sale = findSaleByFolio(folio);
     const key = sale ? sale.folio : folio;
     const rows = {}, order = [];
-    const rowFor = (sku, talla) => {
-      const k = sku + '' + talla;
+    const lineKey = line => line && (line.sourceSaleLineId || line.lineId)
+      ? 'line:' + (line.sourceSaleLineId || line.lineId)
+      : 'legacy:' + String((line && line.sku) || '') + '|' + String((line && line.talla) || '');
+    const rowFor = line => {
+      const k = lineKey(line);
       if (!rows[k]) {
-        rows[k] = { sku, talla, vendida: 0, devuelta: 0, cambiada: 0, consumida: 0, disponible: 0 };
+        rows[k] = { lineId: line.lineId || null, productId: line.productId || null,
+          sku: line.sku, talla: line.talla, vendida: 0, devuelta: 0, cambiada: 0, consumida: 0, disponible: 0 };
         order.push(k);
       }
       return rows[k];
     };
+    // Un documento histórico no conoce sourceSaleLineId. Sólo se permite el
+    // adaptador SKU+talla cuando conduce a un único renglón de la venta; nunca
+    // se toma la primera coincidencia.
+    const consumptionKey = line => {
+      if (line && line.sourceSaleLineId) return 'line:' + line.sourceSaleLineId;
+      const matches = ((sale && sale.lineas) || []).filter(sold => sold.sku === line.sku && sold.talla === line.talla);
+      return matches.length === 1 ? lineKey(matches[0]) : lineKey(line);
+    };
     ((sale && sale.lineas) || []).forEach(l => {
-      rowFor(l.sku, l.talla).vendida += Number(l.qty) || 0;
+      rowFor(l).vendida += Number(l.qty) || 0;
     });
     supplySources().forEach(src => {
       (src.docs || []).forEach(doc => {
         if (!doc || src.folio(doc) !== key) return;
         if (excludeDocument != null && src.id(doc) === excludeDocument) return;
-        src.lines(doc).forEach(l => { rowFor(l.sku, l.talla).vendida += Number(l.qty) || 0; });
+        src.lines(doc).forEach(l => { rowFor(l).vendida += Number(l.qty) || 0; });
       });
     });
     consumptionSources().forEach(src => {
@@ -2629,7 +2920,7 @@
         if (!doc || src.folio(doc) !== key) return;
         if (excludeDocument != null && src.id(doc) === excludeDocument) return;
         src.lines(doc).forEach(l => {
-          const row = rows[l.sku + '' + l.talla];
+          const row = rows[consumptionKey(l)];
           if (!row) return; // consumo de un renglon que esta venta no tiene
           const qty = Number(l.qty) || 0;
           row.consumida += qty;
@@ -2651,12 +2942,12 @@
   // NUNCA deriva del precio vigente: eso le cobraria al cliente una subida de
   // precio posterior a su compra. El precio vigente solo aplica a lo que el
   // cliente RECIBE, y lo resuelve DATA.listPrice().
-  function recognizedValue(folio, sku, talla) {
+  function recognizedValue(folio, sku, talla, lineId) {
     const sale = findSaleByFolio(folio);
     const key = sale ? sale.folio : folio;
     let valor = 0, encontrado = false;
     ((sale && sale.lineas) || []).forEach(l => {
-      if (l.sku !== sku || l.talla !== talla) return;
+      if (lineId ? l.lineId !== lineId : (l.sku !== sku || l.talla !== talla)) return;
       const v = l.precioBase != null ? l.precioBase : (l.precioOrig != null ? l.precioOrig : l.precio);
       valor = Number(v) || 0; encontrado = true;
     });
@@ -2665,7 +2956,7 @@
       (src.docs || []).forEach(doc => {
         if (!doc || src.folio(doc) !== key) return;
         src.lines(doc).forEach(l => {
-          if (l.sku !== sku || l.talla !== talla) return;
+          if (lineId ? l.lineId !== lineId : (l.sku !== sku || l.talla !== talla)) return;
           valor = Number(l.precio) || 0; encontrado = true;
         });
       });
@@ -2743,14 +3034,17 @@
     const saldo = saleLineBalance(sale.folio);
     const faltan = [];
     devueltos.forEach(l => {
-      const row = saldo.find(b => b.sku === l.sku && b.talla === l.talla);
+      const row = l.sourceSaleLineId
+        ? saldo.find(b => b.lineId === l.sourceSaleLineId)
+        : saldo.filter(b => b.sku === l.sku && b.talla === l.talla).length === 1
+          ? saldo.find(b => b.sku === l.sku && b.talla === l.talla) : null;
       const disponible = row ? row.disponible : 0;
       if ((Number(l.qty) || 0) > disponible) faltan.push({ sku: l.sku, talla: l.talla, requested: Number(l.qty) || 0, available: disponible });
     });
     if (faltan.length) return { ok: false, error: 'invalid_exchange_quantity', items: faltan };
 
     const fecha = fechaIn || now();
-    const valorReconocido = devueltos.reduce((a, l) => a + recognizedValue(sale.folio, l.sku, l.talla) * (Number(l.qty) || 0), 0);
+    const valorReconocido = devueltos.reduce((a, l) => a + recognizedValue(sale.folio, l.sku, l.talla, l.sourceSaleLineId) * (Number(l.qty) || 0), 0);
     const valorEntregado = entregados.reduce((a, l) =>
       a + listPrice(identidad.get(l), l.talla) * (Number(l.qty) || 0), 0);
     const diferencia = valorEntregado >= valorReconocido ? money(valorEntregado - valorReconocido) : 0;
@@ -2799,17 +3093,33 @@
       lineas: items.map(l => {
         // H-72: identidad ya resuelta arriba; aquí no se busca por SKU.
         const p = identidad.get(l);
-        const sold = (sale.lineas || []).find(x => x.sku === l.sku && x.talla === l.talla);
+        // Sólo lo DEVUELTO puede heredar evidencia de la venta de origen. La
+        // referencia ENTREGADA se congela siempre desde su propio productId;
+        // buscarla por el mismo SKU+talla copiaría barcode/atributos ajenos.
+        const legacySold = l.lado === 'devuelto'
+          ? (sale.lineas || []).filter(x => x.sku === l.sku && x.talla === l.talla) : [];
+        const sold = l.lado === 'devuelto' && l.sourceSaleLineId
+          ? (sale.lineas || []).find(x => x.lineId === l.sourceSaleLineId)
+          : l.lado === 'devuelto' && legacySold.length === 1 ? legacySold[0] : null;
         const frozenColors = sold && Array.isArray(sold.ornColors)
           ? sold.ornColors.slice() : effectiveOrnamentColors(p, l.talla);
         return {
-          lado: l.lado, productId: p.id, sku: l.sku, nombre: l.nombre,
+          lineId: newUuid(), sourceSaleLineId: (sold && sold.lineId) || l.sourceSaleLineId || null,
+          lado: l.lado, productId: p.id,
+          barcodeCode: (sold && sold.barcodeCode) || (isV2Reference(p) ? p.barcodeCode : null),
+          physicalAttrs: (sold && sold.physicalAttrs) || physicalSnapshot(p, l.talla),
+          sku: l.sku, nombre: l.nombre,
           talla: l.talla, qty: Number(l.qty) || 0, motivo: l.motivo || '',
           ornamento: (sold && sold.ornamento) || p.orn || '', ornColors: frozenColors,
           // La condicion solo aplica a lo que el cliente ENTREGA: es el resultado
           // de la revision que decide si la prenda se recibe (Contrato, seccion 5).
           condicion: l.lado === 'devuelto' ? (l.condicion || '') : undefined,
-          precio: l.lado === 'entregado' ? listPrice(p, l.talla) : recognizedValue(sale.folio, l.sku, l.talla),
+          precio: l.lado === 'entregado' ? listPrice(p, l.talla) : recognizedValue(sale.folio, l.sku, l.talla, l.sourceSaleLineId),
+          listPrice: l.lado === 'entregado' ? listPrice(p, l.talla)
+            : Number((sold && (sold.listPrice ?? sold.precioOrig)) ?? recognizedValue(sale.folio, l.sku, l.talla, l.sourceSaleLineId)) || 0,
+          effectivePrice: l.lado === 'entregado' ? listPrice(p, l.talla)
+            : Number((sold && (sold.effectivePrice ?? sold.precio)) ?? recognizedValue(sale.folio, l.sku, l.talla, l.sourceSaleLineId)) || 0,
+          discountSnapshot: sold && sold.discountSnapshot ? JSON.parse(JSON.stringify(sold.discountSnapshot)) : { promotions: [], additional: 0 },
         };
       }),
     };
@@ -2823,7 +3133,7 @@
       e.stock = Math.max(0, e.stock + (l.lado === 'devuelto' ? 1 : -1) * l.qty);
       movements.unshift({
         fecha, tipo: l.lado === 'devuelto' ? 'Cambio (entra)' : 'Cambio (sale)',
-        producto: l.nombre, sku: l.sku,
+        producto: l.nombre, productId: p.id, sku: l.sku, talla: l.talla,
         cant: (l.lado === 'devuelto' ? 1 : -1) * l.qty, ref: exch.folio,
       });
     });
@@ -3530,12 +3840,21 @@
     PRODUCT_NOT_FOUND: sku => `El producto del SKU ${sku} ya no está en el catálogo; no se puede regresar la pieza al inventario. Resincroniza o restitúyelo antes de devolver.`,
   };
   function resolveReturnProduct(sale, line) {
-    const sold = (sale.lineas || []).find(x => x.sku === line.sku && x.talla === line.talla);
+    const sold = line && line.sourceSaleLineId
+      ? (sale.lineas || []).find(x => x.lineId === line.sourceSaleLineId)
+      : line && line.lineId
+        ? (sale.lineas || []).find(x => x.lineId === line.lineId)
+        : (sale.lineas || []).filter(x => x.sku === line.sku && x.talla === line.talla).length === 1
+          ? (sale.lineas || []).find(x => x.sku === line.sku && x.talla === line.talla) : null;
     // H-72: manda la línea HISTÓRICA de la venta, no lo que envíe el llamador. La
     // pantalla del Cambio derivaba su `productId` de un `find` por SKU, así que
     // con un duplicado mandaba el del clon; el documento de la venta es la
     // autoridad y no puede quedar por debajo de un dato reconstruido.
     const productId = (sold && sold.productId) || (line && line.productId) || '';
+    if (!productId && (sale.lineas || []).filter(x => x.sku === line.sku && x.talla === line.talla).length > 1) {
+      const error = new Error('La línea histórica es ambigua; selecciona la línea original exacta.');
+      error.code = 'SALE_LINE_IDENTITY_AMBIGUOUS'; throw error;
+    }
     try {
       return resolveLayawayProduct({ productId, sku: line && line.sku });
     } catch (e) {
@@ -3608,8 +3927,19 @@
     // H-35: el disponible lo decide la autoridad única, que ya descuenta
     // devoluciones previas y, cuando existan, los cambios de esta venta.
     const saldo = saleLineBalance(folio);
+    const soldLineFor = line => (line && (line.sourceSaleLineId || line.lineId))
+      ? (sale.lineas || []).find(x => x.lineId === (line.sourceSaleLineId || line.lineId))
+      : (sale.lineas || []).filter(x => x.sku === line.sku && x.talla === line.talla).length === 1
+        ? (sale.lineas || []).find(x => x.sku === line.sku && x.talla === line.talla) : null;
+    const balanceFor = line => {
+      const sold = soldLineFor(line);
+      return sold && sold.lineId
+        ? saldo.find(row => row.lineId === sold.lineId)
+        : saldo.filter(row => row.sku === line.sku && row.talla === line.talla).length === 1
+          ? saldo.find(row => row.sku === line.sku && row.talla === line.talla) : null;
+    };
     for (const l of items) {
-      const row = saldo.find(b => b.sku === l.sku && b.talla === l.talla);
+      const row = balanceFor(l);
       if ((Number(l.qty) || 0) > (row ? row.disponible : 0)) return { ok: false, error: `Cantidad inválida en ${l.nombre} (talla ${l.talla})` };
     }
     const fecha = fechaIn || now(); // permite fecha pasada (simulación)
@@ -3624,12 +3954,14 @@
     // la fuente: lo consumido en vez de lo devuelto. Sin cambios registrados
     // ambas cantidades son idénticas, así que ningún importe se altera.
     const allReturned = (sale.lineas || []).every(x => {
-      const extra = items.filter(l => l.sku === x.sku && l.talla === x.talla).reduce((a, l) => a + (Number(l.qty) || 0), 0);
-      const row = saldo.find(b => b.sku === x.sku && b.talla === x.talla);
+      const extra = items.filter(l => x.lineId ? ((soldLineFor(l) || {}).lineId === x.lineId)
+        : l.sku === x.sku && l.talla === x.talla).reduce((a, l) => a + (Number(l.qty) || 0), 0);
+      const row = x.lineId ? saldo.find(b => b.lineId === x.lineId)
+        : saldo.find(b => !b.lineId && b.sku === x.sku && b.talla === x.talla);
       return (row ? row.consumida : 0) + extra >= (Number(x.qty) || 0);
     });
     const linePrice = l => {
-      const soldLine = (sale.lineas || []).find(x => x.sku === l.sku && x.talla === l.talla);
+      const soldLine = soldLineFor(l);
       return soldLine ? Number(soldLine.precio) || 0 : 0;
     };
     let refund = money(items.reduce((a, l) => a + linePrice(l) * (Number(l.qty) || 0), 0));
@@ -3651,7 +3983,7 @@
       const e = resolved[i].entry;
       e.stock = (Number(e.stock) || 0) + (Number(l.qty) || 0);
       stockLines.push({ product_id: p.id, talla: l.talla, qty: Number(l.qty) || 0 });
-      movements.unshift({ fecha, tipo: 'Devolución', producto: l.nombre, sku: l.sku, cant: Number(l.qty) || 0, ref: folio });
+      movements.unshift({ fecha, tipo: 'Devolución', producto: l.nombre, productId: p.id, sku: l.sku, talla: l.talla, cant: Number(l.qty) || 0, ref: folio });
     });
     saveProducts(false); saveMovements();
     // 3) Reversión proporcional de comisión/ventas del vendedor (configurable en Configuración)
@@ -3721,12 +4053,20 @@
       // H-71: el documento congela la identidad que se resolvió al abrir la
       // devolución, no la que un SKU repetido devolvería hoy.
       lineas: items.map((l, i) => ({
-        productId: resolved[i].product.id, sku: l.sku, nombre: l.nombre, talla: l.talla,
+        lineId: newUuid(), sourceSaleLineId: (soldLineFor(l) || {}).lineId || null,
+        productId: resolved[i].product.id,
+        barcodeCode: (soldLineFor(l) || {}).barcodeCode || (isV2Reference(resolved[i].product) ? resolved[i].product.barcodeCode : null),
+        physicalAttrs: (soldLineFor(l) || {}).physicalAttrs || physicalSnapshot(resolved[i].product, l.talla),
+        sku: l.sku, nombre: l.nombre, talla: l.talla,
         qty: Number(l.qty) || 0, motivo: l.motivo || '', precio: linePrice(l),
-        ornamento: (((sale.lineas || []).find(x => x.sku === l.sku && x.talla === l.talla)) || {}).ornamento
+        listPrice: Number(((soldLineFor(l) || {}).listPrice ?? (soldLineFor(l) || {}).precioOrig) ?? linePrice(l)) || 0,
+        effectivePrice: Number(((soldLineFor(l) || {}).effectivePrice ?? (soldLineFor(l) || {}).precio) ?? linePrice(l)) || 0,
+        discountSnapshot: (soldLineFor(l) || {}).discountSnapshot
+          ? JSON.parse(JSON.stringify((soldLineFor(l) || {}).discountSnapshot)) : { promotions: [], additional: 0 },
+        ornamento: (soldLineFor(l) || {}).ornamento
           || resolved[i].product.orn || '',
         ornColors: (() => {
-          const sold = (sale.lineas || []).find(x => x.sku === l.sku && x.talla === l.talla);
+          const sold = soldLineFor(l);
           return sold && Array.isArray(sold.ornColors)
             ? sold.ornColors.slice() : effectiveOrnamentColors(resolved[i].product, l.talla);
         })(),
@@ -4278,12 +4618,15 @@
   // Unidades de un artículo que están fuera del negocio por un préstamo abierto.
   // Los préstamos no descuentan existencias: quien necesite mostrar «hay 5, 2 están
   // prestadas» consume esta función y no vuelve a recorrer la colección.
-  function loanedQty(sku, talla) {
-    return loans.reduce((a, l) => (
-      l.estado !== 'pendiente' ? a : a + (l.lineas || []).reduce((b, x) => (
-        x.sku === sku && (talla == null || x.talla === talla)
-          ? b + Math.max(0, (Number(x.qty) || 0) - (Number(x.devueltas) || 0))
-          : b
+  function loanedQty(productIdOrLegacySku, talla) {
+      return loans.reduce((a, l) => (
+        l.estado !== 'pendiente' ? a : a + (l.lineas || []).reduce((b, x) => (
+        (x.productId === productIdOrLegacySku
+          || ((!x.physicalAttrs || x.physicalAttrs.recordModel !== 'v2')
+            && x.sku === productIdOrLegacySku))
+          && (talla == null || x.talla === talla)
+            ? b + Math.max(0, (Number(x.qty) || 0) - (Number(x.devueltas) || 0))
+            : b
       ), 0)
     ), 0);
   }
@@ -4297,23 +4640,33 @@
     const persona = normalizeLoanPersona(d.persona);
     if (!persona) return { ok: false, error: 'Falta el nombre de quien recibe la mercancía' };
     const lineas = [];
+    let identityError = null;
     (d.lineas || []).forEach(l => {
       const qty = Math.floor(Number(l && l.qty) || 0);
       const talla = String((l && l.talla) || '').trim();
       if (qty <= 0 || !talla) return;
-      const p = products.find(x => x.id === (l.productId || l.id)) || products.find(x => x.sku === l.sku);
-      if (!p) return;
-      const key = p.sku + '|' + talla;
+      const explicit = l.productId || l.id;
+      const legacyMatches = !explicit && l.sku ? products.filter(x => x.sku === l.sku) : [];
+      const p = explicit ? products.find(x => x.id === explicit) : legacyMatches.length === 1 ? legacyMatches[0] : null;
+      if (!p) { identityError = legacyMatches.length > 1 ? 'PRODUCT_IDENTITY_AMBIGUOUS' : 'PRODUCT_NOT_FOUND'; return; }
+      const key = (isV2Reference(p) ? p.id : p.sku) + '|' + talla;
       const ex = lineas.find(x => x.key === key);
       if (ex) { ex.qty += qty; return; }
       // `precio` es el precio de lista de la talla en el momento del préstamo
       // (autoridad de H-36) y se congela: es lo que vale la pérdida si la pieza no
       // vuelve, y no puede depender de una edición posterior del catálogo.
       lineas.push({
-        key, productId: p.id, sku: p.sku, nombre: p.nombre, talla, qty, devueltas: 0,
+        key, lineId: newUuid(), productId: p.id,
+        barcodeCode: isV2Reference(p) ? p.barcodeCode : null,
+        physicalAttrs: physicalSnapshot(p, talla),
+        sku: p.sku, nombre: p.nombre, talla, qty, devueltas: 0,
+        listPrice: Number(listPrice(p, talla)) || 0,
+        effectivePrice: Number(listPrice(p, talla)) || 0,
+        discountSnapshot: { promotions: [], additional: 0 },
         precio: Number(listPrice(p, talla)) || 0,
       });
     });
+    if (identityError) return { ok: false, code: identityError, error: 'El préstamo requiere la referencia exacta; no se puede elegir por SKU.' };
     if (!lineas.length) return { ok: false, error: 'Agrega al menos una pieza al préstamo' };
     const loan = {
       id: newLoanId(),
@@ -4861,6 +5214,9 @@
   window.DATA = {
     products, sellers, clients, sales, movements, promos, liquidations, returns, payments, exchanges, loans,
     sku, regenerateSkus, totalStock, hydrate, mkStock, emptyStock, SIZE_MARK,
+    isV2Reference, createReference, updateReference, physicalSignature, skuPreview,
+    canonicalReferenceOrnamentColors, referenceDiagnostics, referenceDifferences,
+    physicalSnapshot, barcodeFromId, referenceHasOperations, reclassifyReference,
     migrateSizeCodes, liveDocumentCounts, inventoryFootprint, clearInventory,
     saveProducts, saveSellers, saveClients, saveSales, saveMovements, savePromos, saveReturns, savePayments,
     removeProduct, remapOrphanCodes, catalogHealthReport, hexForColorName, applyOrphanFix, get lastRemap() { return lastRemap; },
@@ -4916,7 +5272,7 @@
     'actualizarPrestamo', 'eliminarPrestamo', 'applyRemoteLoans', 'rekeyLoanFolio',
     'addUser', 'updateUser', 'removeUser', 'addPromo', 'updatePromo', 'removePromo',
     'duplicatePromo', 'seedDemo', 'resetEmpty', 'resetTestData',
-    'reverseSaleCommission', 'applyCommissionAdjustment',
+    'reverseSaleCommission', 'applyCommissionAdjustment', 'reclassifyReference',
   ];
   localWriterMutators.forEach(name => {
     const original = window.DATA[name];

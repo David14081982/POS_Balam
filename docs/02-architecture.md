@@ -188,6 +188,37 @@ Archivo: `balam/data.jsx`. API: `window.DATA`.
   sincronización de `CORE`.
 - `applyRemote()` incorpora datos recibidos de la nube sin volver a enviarlos.
 
+### Identidad de referencias físicas V2
+
+El modelo es aditivo. Un producto V1 conserva su `products.id`, matriz `stock[]`
+y adaptadores históricos. Toda alta nueva es V2: una referencia física equivale
+a una fila `products`, con un solo `size_code`, `stock_quantity` escalar,
+`barcode_code` y firma física canónica. No existe un `variant_id` paralelo:
+`products.id` es la identidad técnica única e inmutable.
+
+`CONFIG.referenceParts()` define, mediante `EN REFERENCIA`, qué categorías
+integran la firma física. Es independiente de `EN SKU`; por ello dos referencias
+pueden compartir SKU comercial sin compartir identidad ni stock. La duplicidad
+de SKU produce advertencia; duplicar `products.id`, `barcode_code` o firma física
+V2 bloquea. Material (`tela`) y Color Tela (`color`) son dimensiones distintas,
+y Color de ornamento es un catálogo independiente y multiselección canónica.
+
+El escaneo moderno sólo sigue `Code128 → barcode_code → products.id`. Nunca
+atraviesa SKU ni elige la primera coincidencia. La etiqueta muestra nombre,
+barras, SKU y precio; el texto técnico de `barcode_code` no se imprime. El SKU
+queda como representación humana configurable y no cambia al editar precio.
+
+Ventas, devoluciones, cambios y préstamos nuevos congelan `line_id`,
+`productId`, barcode, SKU, atributos físicos, talla, precio de lista, descuentos
+y precio efectivo. La posventa parte de la línea original. `SKU+talla` subsiste
+únicamente para documentos V1 y sólo se adopta cuando produce un candidato
+único; toda ambigüedad bloquea.
+
+Una referencia V2 con stock o documentos no admite edición silenciosa de su
+firma. `DATA.reclassifyReference()` anticipa offline la operación y
+`pos.commit_reference_reclassification()` mueve cantidad entre dos IDs con
+bloqueo, auditoría, idempotencia y reversa exacta. Nunca reescribe documentos.
+
 ### Personal y elegibilidad comercial
 
 `DATA.sellers` conserva el catálogo completo de personal que administra
@@ -260,8 +291,8 @@ volver, administrada en `balam/loans.jsx` —pantalla `prestamos` del menú
 lateral—. Un préstamo es un documento propio, no una venta de cero ni un
 movimiento de inventario:
 
-- congela su evidencia —`nombre`, `sku`, `talla`, `qty` y el `precio` de lista de
-  la talla el día del préstamo, más una copia de la persona que recibió—, de modo
+- congela su evidencia —`line_id`, `productId`, barcode, `nombre`, `sku`,
+  atributos, `talla`, `qty` y precios—, más una copia de la persona que recibió, de modo
   que editar el producto o el cliente después no altera un préstamo registrado;
 - su referencia comercial es `PR-{AAMMDD}-{CONSECUTIVO}`, con consecutivo propio
   derivado de los préstamos del día que conoce la terminal. **No** consume
@@ -271,13 +302,13 @@ movimiento de inventario:
 - la devolución puede ser parcial. Cada entrega deja su asiento y la fecha real de
   devolución se fija con la que completa el préstamo. Una pieza declarada no
   devuelta que aparece después todavía puede devolverse;
-- **no mueve existencias.** `DATA.loanedQty(sku, talla)` es la única autoridad de
+- **no mueve existencias.** `DATA.loanedQty(productId, talla)` es la autoridad V2 de
   «unidades fuera» y `DATA.prestamoAtraso()` la única de «vencido»; ambas se
   derivan de la colección. `pos.movements` no se usa: es historial de sólo lectura
   para el cliente y el pull lo reemplaza.
 
-La captura consume `window.BARCODES` igual que el Punto de venta: leer la etiqueta
-`SKU-TALLA` mete la pieza exacta en el préstamo sin preguntar la talla, y la
+La captura consume `window.BARCODES` igual que el Punto de venta: V2 resuelve
+`barcode_code` directamente a `products.id`; `SKU-TALLA` queda como adaptador V1. La
 captura global HID —con la misma heurística de cadencia de `balam/pos.jsx`— funciona
 aunque el foco esté en otro campo, retirando del campo enfocado lo que el lector
 acabó de escribir. En el buscador de la cartera una lectura responde «¿quién tiene
@@ -366,7 +397,8 @@ filas que llenen dos escalas o contradigan la categoría declarada.
 Exportar invocan el mismo escritor: la primera entrega cero productos y la
 segunda el estado actual, pero ambas contienen las mismas hojas y columnas.
 `Inventario` transporta el estado editable, las identidades técnicas
-`_BALAM_ID_PRODUCTO`/`_BALAM_VERSION_PRODUCTO` y todas las tallas; `Catálogos`
+`_BALAM_ID_PRODUCTO`/`_BALAM_VERSION_PRODUCTO`; V2 añade modelo de registro,
+barcode, firma, una talla y stock escalar, mientras V1 conserva todas las tallas. `Catálogos`
 publica los códigos y el mapa inequívoco encabezado humano → escala/valor; la
 hoja oculta `_BALAM` identifica versión y huellas del esquema.
 
@@ -378,8 +410,10 @@ significan **preservar** al actualizar; nunca reciben códigos de catálogo por
 default silencioso.
 
 `XLSXIO.planImport()` hace el preflight completo sin mutar DATA. Un ID técnico
-válido actualiza exactamente ese producto; sin ID, un SKU nuevo es alta y un SKU
-existente es conflicto. SKU duplicado en archivo o catálogo bloquea. La vista
+válido actualiza exactamente ese producto y nunca convierte V1↔V2; V2 también
+puede localizar por barcode único. Sin identidad, el adaptador V1 exige una
+coincidencia única. SKU duplicado entre referencias V2 sólo advierte; ID,
+barcode, firma o edición física usada bloquean. La vista
 previa expone altas, actualizaciones, conflictos y diferencias de stock/precio.
 `applyImportPlan()` vuelve a comprobar la huella de base y reemplaza el estado en
 una sola operación sólo si el plan entero sigue válido. STORE, Supabase y la

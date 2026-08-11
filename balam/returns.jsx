@@ -202,19 +202,23 @@
   }
 
   function ReturnDetail({ sale, onBack, onDone }) {
-    // Agrupa renglones por sku+talla y calcula lo aún devolvible (vendido − ya devuelto).
+    // V2 conserva cada lineId. Sólo documentos V1 sin identidad de línea se
+    // agrupan mediante el adaptador SKU+talla.
     const rows = useMemo(() => {
       const g = {};
       (sale.lineas || []).forEach(l => {
-        const k = l.sku + '__' + l.talla;
-        if (!g[k]) g[k] = { k, sku: l.sku, nombre: l.nombre, talla: l.talla, precio: Number(l.precio) || 0, qty: 0 };
+        const k = l.lineId ? 'line:' + l.lineId : 'legacy:' + l.sku + '__' + l.talla;
+        if (!g[k]) g[k] = { k, lineId: l.lineId || null, productId: l.productId || null,
+          barcodeCode: l.barcodeCode || null, physicalAttrs: l.physicalAttrs || null,
+          sku: l.sku, nombre: l.nombre, talla: l.talla, precio: Number(l.precio) || 0, qty: 0 };
         g[k].qty += Number(l.qty) || 0;
       });
       // H-35: lo devolvible sale de la autoridad única del saldo, que descuenta
       // devoluciones y —cuando existan— cambios. No se recalcula aquí.
       const saldo = D.saleLineBalance ? D.saleLineBalance(sale.folio) : [];
       return Object.values(g).map(x => {
-        const b = saldo.find(r => r.sku === x.sku && r.talla === x.talla);
+        const b = x.lineId ? saldo.find(r => r.lineId === x.lineId)
+          : saldo.find(r => !r.lineId && r.sku === x.sku && r.talla === x.talla);
         x.returned = b ? b.consumida : D.returnedQty(sale.folio, x.sku, x.talla);
         x.max = b ? b.disponible : Math.max(0, x.qty - x.returned);
         return x;
@@ -249,7 +253,10 @@
       if (vencida) { toast(`Esta venta ya no admite devolución · ${plazo.label.toLowerCase()}`, 'var(--danger)'); return; }
       if (!chosen.length) { toast('Selecciona al menos un artículo', 'var(--danger)'); return; }
       for (const r of chosen) { if (!sel[r.k].motivo) { toast(`Elige el motivo para ${r.nombre}`, 'var(--danger)'); return; } }
-      const lineas = chosen.map(r => ({ sku: r.sku, nombre: r.nombre, talla: r.talla, qty: sel[r.k].qty || 1, motivo: sel[r.k].motivo, precio: r.precio }));
+      const lineas = chosen.map(r => ({ lineId: r.lineId, sourceSaleLineId: r.lineId,
+        productId: r.productId, barcodeCode: r.barcodeCode, physicalAttrs: r.physicalAttrs,
+        sku: r.sku, nombre: r.nombre, talla: r.talla, qty: sel[r.k].qty || 1,
+        motivo: sel[r.k].motivo, precio: r.precio }));
       let components;
       if (metodo === 'Mismo método') {
         components = sameParts;
@@ -465,14 +472,14 @@
     const saldo = (D.saleLineBalance ? D.saleLineBalance(sale.folio) : [])
       .filter(r => r.disponible > 0)
       .map(r => Object.assign({}, r, {
-        k: r.sku + '|' + r.talla,
+        k: r.lineId ? 'line:' + r.lineId : r.sku + '|' + r.talla,
         // H-72: la prenda devuelta se identifica con la línea histórica de la
         // venta, no con un `find` por SKU. Con un SKU duplicado, aquélla mostraba
         // la foto del clon, abría el clon en «misma prenda» y mandaba su
         // productId a recordExchange.
         p: D.saleLineProduct(sale, r),
-        nombre: ((sale.lineas || []).find(l => l.sku === r.sku && l.talla === r.talla) || {}).nombre || r.sku,
-        valor: D.recognizedValue ? D.recognizedValue(sale.folio, r.sku, r.talla) : 0,
+        nombre: ((sale.lineas || []).find(l => r.lineId ? l.lineId === r.lineId : l.sku === r.sku && l.talla === r.talla) || {}).nombre || r.sku,
+        valor: D.recognizedValue ? D.recognizedValue(sale.folio, r.sku, r.talla, r.lineId) : 0,
       }));
     // La preselección se aplica al ABRIR el renglón y nunca pisa lo ya escrito:
     // el `patch` y el estado previo mandan sobre los valores por defecto.
@@ -516,11 +523,14 @@
       if (e.key !== 'Enter') return;
       const raw = String((e.target && e.target.value != null) ? e.target.value : query).trim();
       if (!raw) return;
-      const hit = window.BARCODES && window.BARCODES.find(raw);
+      const barcodeResult = window.BARCODES && window.BARCODES.resolve(raw);
+      const hit = barcodeResult && barcodeResult.ok ? barcodeResult.hit : null;
       if (hit) { agregar(hit.p, hit.talla); setQuery(''); return; }
+      if (barcodeResult && barcodeResult.code === 'BARCODE_AMBIGUOUS') { toast('Código ambiguo bloqueado. Resincroniza el inventario.', 'var(--danger)'); return; }
       const q = raw.toLowerCase();
-      const exact = D.products.find(p => String(p.sku).toLowerCase() === q);
-      const target = exact || catalogo[0];
+      const exactMatches = D.products.filter(p => String(p.sku).toLowerCase() === q);
+      if (exactMatches.length > 1) { toast(`${exactMatches.length} referencias comparten ese SKU. Selecciona una por sus atributos.`, 'var(--warning)'); return; }
+      const target = exactMatches[0] || catalogo[0];
       if (target) { setPicking(target); setQuery(''); return; }
       const looksCode = window.BARCODES && window.BARCODES.parse(raw);
       toast(looksCode ? ('Código no encontrado: ' + raw.toUpperCase()) : ('Sin coincidencias para "' + raw + '"'), 'var(--danger)');
@@ -537,7 +547,9 @@
         if (e.key === 'Enter') {
           const code = buf; buf = '';
           if (st.blocked || code.length < 4) return;
-          const hit = window.BARCODES && window.BARCODES.find(code);
+          const result = window.BARCODES && window.BARCODES.resolve(code);
+          if (result && result.code === 'BARCODE_AMBIGUOUS') { toast('Código ambiguo bloqueado. Resincroniza el inventario.', 'var(--danger)'); return; }
+          const hit = result && result.ok ? result.hit : null;
           if (!hit) return;
           e.preventDefault();
           st.agregar(hit.p, hit.talla);
@@ -598,10 +610,10 @@
       const lineas = marcados.map(r => ({
         lado: 'devuelto', sku: r.sku, nombre: r.nombre, talla: r.talla,
         qty: dev[r.k].qty || 1, motivo: dev[r.k].motivo, condicion: dev[r.k].condicion,
-        productId: r.p ? r.p.id : undefined,
+        sourceSaleLineId: r.lineId || null, productId: r.p ? r.p.id : r.productId,
       })).concat(ent.map(l => ({
         lado: 'entregado', sku: l.p.sku, nombre: l.p.nombre, talla: l.talla,
-        qty: l.qty, productId: l.p.id,
+        qty: l.qty, productId: l.p.id, barcodeCode: l.p.barcodeCode || null,
       })));
       const res = D.recordExchange({
         origenFolio: sale.folio, lineas, notas,

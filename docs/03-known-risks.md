@@ -4553,6 +4553,42 @@ artefacto público idéntico al build normalizado (8,931,332 bytes, SHA-256
 **Commit:** `e482a25`.
 **Corrección documentada:** `docs/fixes/marca-balam-en-frontend.md`.
 
+## H-94 - Referencias físicas V2 carecen de identidad logística y stock propios
+
+**Estado:** PARCIALMENTE RESUELTO — Supabase desplegado y verificado; cliente pendiente
+**Fecha de registro:** 10/08/2026
+**Commit:** Pendiente de commit
+**Origen:** contrato definitivo aprobado por el dueño para separar identidad
+técnica, logística y comercial antes de cargar el inventario real.
+**Reproducción:** el alta crea un producto con `new-<timestamp>` y una matriz
+`stock[]`; Code128 deriva `SKU+talla` y el escáner devuelve la primera
+coincidencia. CONFIG no tiene `EN REFERENCIA` y H-83 reutiliza Color Tela para
+colores de ornamento. Dos referencias físicas con el mismo SKU no pueden
+mantener stock y escaneo inequívocos bajo ese contrato.
+**Riesgo:** venta, devolución, cambio, préstamo o sincronización sobre una
+referencia homónima; pérdida de stock por colisión; documentos incapaces de
+demostrar qué pieza física operaron.
+**Alcance:** modelo aditivo V2 por `products.id`, talla y stock escalares,
+`barcode_code`, firma física gobernada por CONFIG, catálogo independiente de
+color de ornamento, lectores V1/V2, POS, posventa, Excel, etiquetas,
+sincronización, reclasificación auditada y pruebas.
+**No alcance:** convertir automáticamente productos V1 de prueba, ejecutar el
+punto cero, cargar inventario real o imprimir etiquetas reales.
+**Pruebas:** H-94 48/48; Excel H-86 42/42; formulario H-84 19/19;
+cola 162/162; ventas 20/20; devoluciones 17/17; saldo 38/38; cambios
+28/28 y 32/32; préstamos V1 117/117 y sync 69/69; H-83 32/32; etiquetas 19/19; smoke
+17/17; migraciones 31/31; build 8/8.
+**Despliegue de base:** `13400`/`13500` aplicadas el 10/08/2026. La huella
+transaccional conservó exactamente 1,378 productos V1, una línea de venta y un
+movimiento; no existían líneas de devolución/cambio. La verificación comprobó
+objetos, guardas y ACL, `migration list` quedó simétrico y el dry-run respondió
+`Remote database is up to date`.
+**Riesgo residual:** falta publicar y validar en GitHub Pages los bytes exactos
+del cliente ya aprobado. Supabase queda aditivo y compatible con V1. Punto cero,
+carga real y etiquetas reales siguen fuera.
+**Corrección documentada:**
+`docs/fixes/modelo-referencias-fisicas-v2.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

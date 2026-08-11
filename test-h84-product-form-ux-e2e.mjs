@@ -131,9 +131,10 @@ try {
     return { width: rect.width, height: rect.height, overflow: body.scrollWidth - body.clientWidth };
   });
   check('15. responsive móvil ocupa la pantalla sin desbordamiento horizontal', mobile.width <= 390 && mobile.height <= 844 && mobile.overflow <= 1, JSON.stringify(mobile));
-  await page.getByTestId(`product-stock-${XS}`).focus(); await page.keyboard.press('Enter');
-  check('16. teclado avanza entre existencias',
-    await page.evaluate(size => document.activeElement?.dataset?.testid === `product-stock-${size}`, S));
+  check('16. una referencia V2 nueva captura exactamente una talla y un stock escalar',
+    await page.getByTestId('product-reference-size').count() === 1
+    && await page.getByTestId('product-reference-stock').count() === 1
+    && await page.locator('[data-testid^="product-stock-"]').count() === 0);
   await page.getByTestId('product-cancel').click(); await page.setViewportSize({ width: 1440, height: 900 });
 
   check('17. Inventario permanece operativo', await page.getByTestId('inventory-new-product').isVisible());

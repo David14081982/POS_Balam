@@ -116,3 +116,4 @@ descubre. Las historias que modificaron una autoridad se recuperan con
 | `ADR-010` | El cambio es un documento autónomo con liquidación económica propia | vigente |
 | `ADR-011` | La identidad de una talla no es el código que se edita | vigente |
 | `ADR-012` | La sincronización entrante es un protocolo versionado | vigente |
+| `ADR-013` | Referencia física: products.id, barcode y SKU separados | vigente |

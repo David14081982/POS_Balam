@@ -103,7 +103,8 @@
     const [importPreview, setImportPreview] = useState(null);
     const [importResolutions, setImportResolutions] = useState({});
     const [labelTargets, setLabelTargets] = useState(null); // productos para imprimir etiquetas
-    window.UI.useSyncActivity(!!(editing || importPreview), ['products', 'config', 'promotions'], { screen: 'inventory' });
+    const [reclassSource, setReclassSource] = useState(null);
+    window.UI.useSyncActivity(!!(editing || importPreview || reclassSource), ['products', 'config', 'promotions'], { screen: 'inventory' });
     const [page, setPage] = useState(1);
     const fileRef = useRef(null);
     const [mobileTable, setMobileTable] = useState(() => window.matchMedia('(max-width: 767px)').matches);
@@ -158,17 +159,23 @@
     }
     function saveProduct(draft, mode, options) {
       let saved = draft;
-      if (mode === 'edit') {
-        const target = D.products.find(p => p.id === draft.id);
-        if (target) { Object.assign(target, draft); D.hydrate(target); saved = target; }
-      } else {
-        const p = D.hydrate(Object.assign({}, draft, { id: 'new-' + Date.now() }));
-        D.products.push(p);
-        saved = p;
+      try {
+        if (mode === 'edit') saved = D.updateReference && D.isV2Reference(draft)
+          ? D.updateReference(draft)
+          : (() => { const target = D.products.find(p => p.id === draft.id); if (target) { Object.assign(target, draft); D.hydrate(target); } return target || draft; })();
+        else {
+          const p = D.createReference(draft, D.products);
+          D.products.push(p); saved = p;
+        }
+      } catch (error) {
+        toast((error && error.message) || 'No se pudo guardar la referencia', 'var(--danger)'); return;
       }
       D.saveProducts(); refresh();
       setEditing(null); setDetail(null);
       toast(mode === 'edit' ? 'Producto actualizado' : 'Producto agregado al inventario', 'var(--accent)');
+      if ((saved.referenceWarnings || []).some(w => w.code === 'SKU_DUPLICATE_WARNING')) {
+        toast('Advertencia: referencias físicas distintas comparten el mismo SKU visible.', 'var(--warning)');
+      }
       if (options && options.openLabels) setLabelTargets([saved]);
     }
     function deleteProduct(p) {
@@ -182,7 +189,7 @@
     }
 
     const lowThreshold = window.CONFIG.get('stock.lowThreshold') || 4;
-    // Catálogos marcados como "Filtrables" (Configuración). Por defecto solo Tela.
+    // Catálogos marcados como "Filtrables" (Configuración). Por defecto Material y Color Tela.
     const filterableKinds = Object.keys(window.CONFIG.allCatalogMeta ? window.CONFIG.allCatalogMeta() : {})
       .filter(k => { const m = window.CONFIG.catalogMeta(k); return m && m.filterable; });
     const rows = useMemo(() => {
@@ -318,7 +325,7 @@
                     h('span', { key: 'n', className: 'text-overline font-medium text-on-surface-variant' }, p.colorName),
                   ]),
                   p.ornColors && p.ornColors.length ? h('div', { key: 'o', className: 'flex items-center gap-1.5', style: { marginLeft: 30 } },
-                    p.ornColors.map(c => h(ColorDot, { key: c, hex: D.COLOR_HEX[c], size: 10, title: D.COLOR_NAME[c] }))) : null,
+                    p.ornColors.map(c => { const item = window.CONFIG.find(D.isV2Reference(p) ? 'ornament_color' : 'color', c); return h(ColorDot, { key: c, hex: (item && item.meta && item.meta.hex) || D.COLOR_HEX[c], size: 10, title: (item && item.label) || D.COLOR_NAME[c] || c }); })) : null,
                 ])),
                 h('td', { key: 'p', className: 'px-4 py-4' }, h('span', { className: 'font-headline text-base text-primary' }, precioTexto(p))),
                 h('td', { key: 'st', className: 'px-4 py-4' }, h(StockPill, { n: total })),
@@ -333,7 +340,7 @@
           ]),
         ]),
         // Drawer detalle (siempre montado, slide-in)
-        h(DetailDrawer, { key: 'dr', p: detail, onClose: () => setDetail(null), onEdit: () => setEditing({ mode: 'edit', product: detail }), onDelete: () => deleteProduct(detail), onLabels: (prod) => setLabelTargets([prod]) }),
+        h(DetailDrawer, { key: 'dr', p: detail, onClose: () => setDetail(null), onEdit: () => setEditing({ mode: 'edit', product: detail }), onDelete: () => deleteProduct(detail), onLabels: (prod) => setLabelTargets([prod]), onReclassify: prod => setReclassSource(prod) }),
         labelTargets && h(LabelModal, { key: 'lbl', products: labelTargets, onClose: () => setLabelTargets(null) }),
         editing && h(ProductForm, { key: 'f-' + editing.mode + '-' + (editing.product.id || 'new'), mode: editing.mode, product: editing.product, onClose: () => setEditing(null), onSave: saveProduct }),
         importPreview && h(ImportModal, {
@@ -342,6 +349,9 @@
           onResolve: (rowKey, productId) => setImportResolutions(current => Object.assign({}, current, { [rowKey]: productId })),
           onClose: () => { setImportPreview(null); setImportResolutions({}); }, onConfirm: confirmImport,
         }),
+        reclassSource && h(ReclassificationModal, { key: 'reclass', source: reclassSource,
+          products: D.products, onClose: () => setReclassSource(null),
+          onCommitted: result => { setReclassSource(null); setDetail(null); refresh(); toast(`Reclasificación registrada · ${result.operationId}`, 'var(--accent)'); } }),
       ]));
   }
 
@@ -363,13 +373,16 @@
     const first = (kind, fb) => { const l = window.CONFIG.list(kind); return l.length ? l[0].code : fb; };
     const sizeCategoryId = ((window.CONFIG.sizeCategories && window.CONFIG.sizeCategories()[0]) || {}).id || 'size_letter';
     attrs.__sizeCategoryId = sizeCategoryId;
-    const base = { cat: first('category', '21'), manga: first('sleeve', 'ML'), tela: first('fabric', 'ALG'), color: first('color', 'BL'), modelo: '', nombre: '', orn: '—', ornColors: [], cuello: first('neck', 'NOR'), precio: 0, stock: [], pop: false, attrs, sizeCategoryId };
-    base.stock = alignStock(base, sizeCategoryId);
+    const sizeItem = (window.CONFIG.list(sizeCategoryId)[0] || {});
+    const sizeCode = Object.prototype.hasOwnProperty.call(sizeItem.meta || {}, 'value') ? sizeItem.meta.value : sizeItem.code;
+    const sizeScale = ((window.CONFIG.sizeCategories().find(item => item.id === sizeCategoryId) || {}).scale) || '';
+    const base = { recordModel: 'v2', cat: first('category', '21'), manga: first('sleeve', 'ML'), tela: first('fabric', 'ALG'), color: first('color', 'BL'), modelo: '', nombre: '', orn: '—', ornColors: [], ornamentColorCodes: [], cuello: first('neck', 'NOR'), precio: 0, stockQuantity: 0, sizeCode: String(sizeCode || ''), sizeScale, stock: [], pop: false, attrs, sizeCategoryId };
+    base.stock = [{ talla: base.sizeCode, escala: sizeScale, stock: 0 }];
     return base;
   }
 
   // ---------- Drawer de detalle ----------
-  function DetailDrawer({ p, onClose, onEdit, onDelete, onLabels }) {
+  function DetailDrawer({ p, onClose, onEdit, onDelete, onLabels, onReclassify }) {
     const open = !!p;
     const sizeResolution = p ? D.resolveProductSizes(p) : null;
     const resolvedSizes = sizeResolution
@@ -399,8 +412,8 @@
                 h('h3', { key: 't', className: 'text-overline font-bold uppercase text-primary tracking-widest border-b border-outline-variant pb-3' }, 'Atributos'),
                 h('div', { key: 'gr', className: 'grid grid-cols-2 gap-4' }, [
                   drawerInfo('Categoría', D.CAT[p.cat]), drawerInfo('Manga', D.MANGA[p.manga]),
-                  drawerInfo('Tela', D.TELA[p.tela]), drawerInfo('Cuello', D.CUELLO[p.cuello]),
-                  drawerInfo('Color', p.colorName, p.colorHex), drawerInfo('Ornamento', p.orn),
+                  drawerInfo('Material', D.TELA[p.tela]), drawerInfo('Cuello', D.CUELLO[p.cuello]),
+                  drawerInfo('Color Tela', p.colorName, p.colorHex), drawerInfo('Ornamento', p.orn),
                 ]),
               ]),
               // Stock por talla
@@ -421,6 +434,7 @@
               // Acciones
               h('div', { key: 'ac', className: 'pt-4 space-y-3' }, [
                 h('button', { key: 'lb', 'data-testid': 'product-detail-labels', className: 'w-full py-3 rounded-xl border border-outline-variant text-primary hover:border-primary hover:bg-surface-container transition-all flex items-center justify-center gap-2 text-overline font-bold uppercase tracking-widest', onClick: () => onLabels && onLabels(p) }, [h(MS, { key: 'i', name: 'barcode', size: 18 }), 'Imprimir etiqueta']),
+                D.isV2Reference(p) && h('button', { key: 'rc', 'data-testid': 'product-detail-reclassify', className: 'w-full py-3 rounded-xl border border-warning/40 text-warning hover:bg-warning-soft transition-all flex items-center justify-center gap-2 text-overline font-bold uppercase tracking-widest', onClick: () => onReclassify && onReclassify(p) }, [h(MS, { key: 'i', name: 'swap', size: 18 }), 'Reclasificar piezas']),
                 h('div', { key: 'row', className: 'flex gap-4' }, [
                   h('button', { key: 'e', 'data-testid': 'product-detail-edit', className: 'flex-grow bg-primary text-on-primary py-3.5 rounded-xl text-overline font-bold uppercase tracking-widest hover:opacity-90 transition-all shadow-e2 active:scale-95 flex items-center justify-center gap-2', onClick: onEdit }, [h(MS, { key: 'i', name: 'edit', size: 18 }), 'Editar producto']),
                   h('button', { key: 'd', className: 'w-14 h-[52px] rounded-xl border border-outline-variant text-danger hover:bg-danger-soft hover:border-danger/30 transition-all flex items-center justify-center', onClick: onDelete, title: 'Eliminar' }, h(MS, { name: 'trash', size: 20 })),
@@ -429,6 +443,48 @@
             ]),
           ]),
         ]),
+    ]);
+  }
+
+  function ReclassificationModal({ source, products, onClose, onCommitted }) {
+    const targets = (products || []).filter(p => D.isV2Reference(p) && p.id !== source.id && !p._deletedAt);
+    const [targetId, setTargetId] = useState(targets[0] ? targets[0].id : '');
+    const [quantity, setQuantity] = useState(1);
+    const [reason, setReason] = useState('');
+    const [reversalOf, setReversalOf] = useState('');
+    const target = targets.find(p => p.id === targetId);
+    const max = Math.max(0, Number(source.stockQuantity) || 0);
+    const valid = !!target && Number(quantity) > 0 && Number(quantity) <= max && reason.trim().length >= 3;
+    function commit() {
+      if (!valid) return;
+      const result = D.reclassifyReference({
+        sourceProductId: source.id, targetProductId: target.id, quantity: Number(quantity),
+        actor: 'Administrador', reason: reason.trim(), reversalOf: reversalOf.trim() || null,
+      });
+      if (!result.ok) { toast(result.error || 'No se pudo reclasificar', 'var(--danger)'); return; }
+      onCommitted(result);
+    }
+    const footer = [
+      h('button', { key: 'cancel', className: 'px-5 h-11 border border-outline-variant rounded-lg text-caption font-bold uppercase', onClick: onClose }, 'Cancelar'),
+      h('button', { key: 'commit', 'data-testid': 'reclassification-confirm', disabled: !valid, className: 'px-5 h-11 bg-primary text-on-primary rounded-lg text-caption font-bold uppercase disabled:opacity-40', onClick: commit }, 'Registrar movimiento'),
+    ];
+    return h(Modal, { title: 'Reclasificar piezas', onClose, footer }, [
+      h('p', { key: 'intro', className: 'text-caption text-on-surface-variant mb-4' }, 'Mueve stock entre dos referencias sin editar ni fusionar sus identidades. El movimiento queda auditado y puede revertirse con una operación inversa.'),
+      h('div', { key: 'source', className: 'p-3 mb-4 rounded-lg bg-surface-container text-caption' }, [
+        h('strong', { key: 'name' }, source.nombre + ' · ' + source.sku),
+        h('div', { key: 'id', className: 'font-mono text-overline mt-1' }, `${source.id} · ${max} pz disponibles`),
+      ]),
+      h('label', { key: 'target-label', className: 'block text-overline font-bold uppercase mb-1' }, 'Referencia destino'),
+      h('select', { key: 'target', 'data-testid': 'reclassification-target', className: SELECT + ' mb-4', value: targetId, onChange: e => setTargetId(e.target.value) }, [
+        !targets.length && h('option', { key: 'none', value: '' }, 'No hay otra referencia V2'),
+        ...targets.map(p => h('option', { key: p.id, value: p.id }, `${p.sku} · ${p.nombre} · ${p.sizeCode}`)),
+      ]),
+      h('label', { key: 'qty-label', className: 'block text-overline font-bold uppercase mb-1' }, 'Cantidad'),
+      h('input', { key: 'qty', 'data-testid': 'reclassification-quantity', type: 'number', min: 1, max, step: 1, className: INPUT + ' mb-4', value: quantity, onChange: e => setQuantity(e.target.value) }),
+      h('label', { key: 'reason-label', className: 'block text-overline font-bold uppercase mb-1' }, 'Motivo auditado'),
+      h('textarea', { key: 'reason', 'data-testid': 'reclassification-reason', className: 'w-full min-h-20 bg-surface border border-outline-variant rounded-lg p-3 text-body mb-4', value: reason, onChange: e => setReason(e.target.value), placeholder: 'Ej. Corrección de clasificación física verificada' }),
+      h('label', { key: 'reversal-label', className: 'block text-overline font-bold uppercase mb-1' }, 'Revierte operación (opcional)'),
+      h('input', { key: 'reversal', className: INPUT, value: reversalOf, onChange: e => setReversalOf(e.target.value), placeholder: 'ID de la operación original' }),
     ]);
   }
   function drawerField(label, control) {
@@ -551,13 +607,20 @@
     // lo maneja). Sustituirlos por el primer elemento activo reescribía el color/atributo real del
     // producto con solo abrir y guardar. La normalización masiva vive en Regenerar SKUs.
     const [d, setD] = useState(() => ({
+      recordModel: product.recordModel || 'v1', barcodeCode: product.barcodeCode || null,
+      physicalSignature: product.physicalSignature || null,
       id: product.id, cat: product.cat, manga: product.manga, tela: product.tela, color: product.color,
-      modelo: product.modelo, nombre: product.nombre, orn: product.orn, ornColors: (product.ornColors || []).slice(),
+      modelo: product.modelo, nombre: product.nombre, orn: product.orn,
+      ornColors: (product.ornamentColorCodes || product.ornColors || []).slice(),
+      ornamentColorCodes: (product.ornamentColorCodes || []).slice(),
       cuello: product.cuello, precio: product.precio, costo: product.costo != null ? product.costo : '', pop: !!product.pop,
       imagen: product.imagen || '',
       attrs: product.attrs ? { ...product.attrs } : {}, // valores de catálogos custom (Fase 2)
-      sizeCategoryId: D.inferSizeCategory(product, product.stock) || '',
-      stock: alignStock(product, D.inferSizeCategory(product, product.stock) || ''),
+      sizeCategoryId: product.sizeCategoryId || D.inferSizeCategory(product, product.stock) || '',
+      sizeCode: product.sizeCode || '', sizeScale: product.sizeScale || '',
+      stockQuantity: product.stockQuantity == null ? 0 : Number(product.stockQuantity),
+      stock: D.isV2Reference(product) ? (product.stock || []).map(row => ({ ...row }))
+        : alignStock(product, D.inferSizeCategory(product, product.stock) || ''),
       // H-36: las excepciones se editan como filas «grupo de tallas → precio»,
       // que es como el negocio ya expresa un alcance por tallas en Descuentos.
       // El dato guardado es el mapa canónico; la agrupación vive sólo aquí y se
@@ -577,7 +640,13 @@
       ...prev,
       sizeCategoryId: categoryId,
       attrs: { ...(prev.attrs || {}), __sizeCategoryId: categoryId },
-      stock: alignStock(prev, categoryId),
+      ...(prev.recordModel === 'v2' ? (() => {
+        const item = window.CONFIG.list(categoryId)[0] || {};
+        const sizeCode = Object.prototype.hasOwnProperty.call(item.meta || {}, 'value') ? item.meta.value : item.code;
+        const scale = ((window.CONFIG.sizeCategories().find(cat => cat.id === categoryId) || {}).scale) || '';
+        return { sizeCode: String(sizeCode || ''), sizeScale: scale,
+          stock: [{ talla: String(sizeCode || ''), escala: scale, stock: Number(prev.stockQuantity) || 0 }] };
+      })() : { stock: alignStock(prev, categoryId) }),
       precioRows: [],
       ornamentColorRows: [],
     }));
@@ -609,8 +678,18 @@
     // también en d.attrs[modeloKind] = código. El No. Modelo deja de capturarse a mano.
     const setModelo = (code) => { const it = modeloItems.find(x => x.code === code); setD(prev => ({ ...prev, nombre: it ? it.label : '', modelo: code, attrs: { ...(prev.attrs || {}), [modeloKind]: code } })); };
     const modeloCode = (modeloItems.find(x => x.label === d.nombre) || {}).code || '';
-    const setStock = (talla, escala, val) => setD(prev => ({ ...prev, stock: prev.stock.map(v => v.talla === talla && v.escala === escala ? { ...v, stock: Math.max(0, Math.round(Number(val) || 0)) } : v) }));
-    const toggleOrn = (c) => setD(prev => ({ ...prev, ornColors: prev.ornColors.includes(c) ? prev.ornColors.filter(x => x !== c) : prev.ornColors.concat(c) }));
+    const setStock = (talla, escala, val) => setD(prev => {
+      const quantity = Math.max(0, Math.round(Number(val) || 0));
+      return prev.recordModel === 'v2'
+        ? { ...prev, stockQuantity: quantity, stock: [{ talla: prev.sizeCode, escala: prev.sizeScale, stock: quantity }] }
+        : { ...prev, stock: prev.stock.map(v => v.talla === talla && v.escala === escala ? { ...v, stock: quantity } : v) };
+    });
+    const setReferenceSize = value => setD(prev => ({ ...prev, sizeCode: String(value),
+      stock: [{ talla: String(value), escala: prev.sizeScale, stock: Number(prev.stockQuantity) || 0 }] }));
+    const toggleOrn = (c) => setD(prev => {
+      const colors = prev.ornColors.includes(c) ? prev.ornColors.filter(x => x !== c) : prev.ornColors.concat(c);
+      return { ...prev, ornColors: colors, ornamentColorCodes: prev.recordModel === 'v2' ? colors : prev.ornamentColorCodes };
+    });
     // Filas de excepción: agregar, quitar, cambiar precio y alternar una talla.
     const addPrecioRow = () => { setExceptionsOpen(true); setD(prev => ({
       ...prev,
@@ -698,6 +777,7 @@
       if (!d.nombre.trim()) out.push({ code: 'name', target: 'product-name', message: 'Selecciona o escribe el nombre / modelo.' });
       if (!modeloFinal) out.push({ code: 'model', target: modeloKind ? 'product-name' : 'product-model', message: modeloKind ? 'Selecciona el Nombre / Modelo.' : 'Escribe el número de modelo.' });
       if (!d.sizeCategoryId) out.push({ code: 'size-category', target: 'product-size-category', message: 'Selecciona la familia de tallas.' });
+      if (d.recordModel === 'v2' && !String(d.sizeCode || '').trim()) out.push({ code: 'size-code', target: 'product-reference-size', message: 'Selecciona la talla de la referencia.' });
       const meta = window.CONFIG.allCatalogMeta ? window.CONFIG.allCatalogMeta() : {};
       Object.keys(meta).forEach(kind => {
         const m = meta[kind]; if (!m.required || !m.inForm) return;
@@ -764,15 +844,20 @@
 
     const renderColorSelector = ({ pickerId, selected, onToggle, optionTestId, toggleTestId, closeTestId }) => {
       const open = colorPicker === pickerId;
-      const canonical = ordenarColoresOrnamento(selected);
+      const referenceColors = d.recordModel === 'v2';
+      const colorItems = window.CONFIG.all(referenceColors ? 'ornament_color' : 'color');
+      const names = Object.fromEntries(colorItems.map(item => [item.code, item.label]));
+      const hexes = Object.fromEntries(colorItems.map(item => [item.code, (item.meta || {}).hex || '#8b9099']));
+      const selectedSet = new Set((selected || []).map(String));
+      const canonical = colorItems.map(item => String(item.code)).filter(code => selectedSet.has(code));
       const query = colorQuery.trim().toLowerCase();
-      const colors = Object.keys(D.COLOR_NAME).filter(code => !query || code.toLowerCase().includes(query) || String(D.COLOR_NAME[code]).toLowerCase().includes(query));
+      const colors = Object.keys(names).filter(code => !query || code.toLowerCase().includes(query) || String(names[code]).toLowerCase().includes(query));
       return h('div', { className: 'relative' }, [
         h('div', { key: 'summary', className: 'flex flex-wrap items-center gap-2' }, [
           ...canonical.map(code => h('button', {
-            key: code, type: 'button', onClick: () => onToggle(code), title: `Quitar ${D.COLOR_NAME[code]}`,
+            key: code, type: 'button', onClick: () => onToggle(code), title: `Quitar ${names[code]}`,
             className: 'inline-flex items-center gap-1.5 min-h-9 px-2.5 border border-primary/40 bg-surface-container rounded-lg text-overline font-semibold text-primary',
-          }, [h('span', { key: 'sw', className: 'w-3.5 h-3.5 rounded-full border border-outline-variant', style: { background: D.COLOR_HEX[code] } }), code, h(MS, { key: 'x', name: 'close', size: 13 })])),
+          }, [h('span', { key: 'sw', className: 'w-3.5 h-3.5 rounded-full border border-outline-variant', style: { background: hexes[code] } }), code, h(MS, { key: 'x', name: 'close', size: 13 })])),
           h('button', {
             key: 'toggle', type: 'button', 'data-testid': toggleTestId, 'aria-expanded': open ? 'true' : 'false',
             className: 'inline-flex items-center gap-2 min-h-10 px-3 border border-outline-variant rounded-lg text-caption font-semibold text-on-surface-variant hover:border-primary hover:text-primary transition-colors',
@@ -787,9 +872,9 @@
           h('div', { key: 'colors', className: 'grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-8 gap-2 max-h-52 overflow-y-auto pr-1' }, colors.map(code => {
             const active = canonical.includes(code);
             return h('button', {
-              key: code, type: 'button', 'data-testid': optionTestId(code), 'aria-pressed': active ? 'true' : 'false', title: D.COLOR_NAME[code], onClick: () => onToggle(code),
+              key: code, type: 'button', 'data-testid': optionTestId(code), 'aria-pressed': active ? 'true' : 'false', title: names[code], onClick: () => onToggle(code),
               className: 'min-h-10 flex items-center gap-1.5 px-2 border rounded-lg transition-colors ' + (active ? 'border-primary bg-surface-container text-primary font-bold' : 'border-outline-variant bg-surface hover:border-primary text-on-surface-variant'),
-            }, [h('span', { key: 'sw', className: 'w-3.5 h-3.5 rounded-full border border-outline-variant shrink-0', style: { background: D.COLOR_HEX[code] } }), h('span', { key: 'c', className: 'text-overline truncate' }, code), active && h(MS, { key: 'ok', name: 'check', size: 13 })]);
+            }, [h('span', { key: 'sw', className: 'w-3.5 h-3.5 rounded-full border border-outline-variant shrink-0', style: { background: hexes[code] } }), h('span', { key: 'c', className: 'text-overline truncate' }, code), active && h(MS, { key: 'ok', name: 'check', size: 13 })]);
           })),
           !colors.length && h('p', { key: 'empty', className: 'text-caption text-on-surface-variant py-3 text-center' }, 'No hay colores que coincidan.'),
         ]),
@@ -898,14 +983,21 @@
     function submit(afterSave) {
       setAttemptedSubmit(true);
       if (errors.length) { focusError(errors[0]); toast(errors[0].message, 'var(--danger)'); return; }
-      const preciosTalla = expandirPrecios(d.precioRows.filter(r => (r.tallas || []).length));
+      const preciosTalla = d.recordModel === 'v2' ? {} : expandirPrecios(d.precioRows.filter(r => (r.tallas || []).length));
       const rawOrnamentColorsBySize = expandirColoresOrnamento(
         d.ornamentColorRows.filter(row => row.tallas.length));
       const { precioRows, ornamentColorRows, ...rest } = d;
       const attrs = { ...(rest.attrs || {}) };
-      attrs.__ornamentColorsBySize = D.sanitizeOrnamentColorsBySize(
+      if (d.recordModel === 'v2') delete attrs.__ornamentColorsBySize;
+      else attrs.__ornamentColorsBySize = D.sanitizeOrnamentColorsBySize(
         rawOrnamentColorsBySize, { ...rest, attrs });
-      onSave({ ...rest, attrs, nombre: d.nombre.trim(), modelo: modeloFinal, precio: Number(d.precio) || 0, costo: Number(d.costo) || 0, preciosTalla }, mode, { openLabels: afterSave === 'labels' });
+      const referenceShape = d.recordModel === 'v2' ? {
+        recordModel: 'v2', sizeCode: String(d.sizeCode), sizeScale: d.sizeScale,
+        stockQuantity: Math.max(0, Math.round(Number(d.stockQuantity) || 0)),
+        ornamentColorCodes: (d.ornColors || []).slice(),
+        stock: [{ talla: String(d.sizeCode), escala: d.sizeScale, stock: Math.max(0, Math.round(Number(d.stockQuantity) || 0)) }],
+      } : {};
+      onSave({ ...rest, ...referenceShape, attrs, nombre: d.nombre.trim(), modelo: modeloFinal, precio: Number(d.precio) || 0, costo: Number(d.costo) || 0, preciosTalla }, mode, { openLabels: afterSave === 'labels' });
     }
 
     const footer = [
@@ -982,7 +1074,19 @@
           h('option', { key: '', value: '' }, 'Selecciona…'),
           ...(window.CONFIG.sizeCategories ? window.CONFIG.sizeCategories() : []).map(category => h('option', { key: category.id, value: category.id }, category.label)),
         ]), null, attemptedSubmit && errors.find(error => error.code === 'size-category'))),
-        h('div', { key: d.sizeCategoryId || 'none', className: 'grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-10 gap-2' }, d.stock.map((row, index) => {
+        d.recordModel === 'v2' ? h('div', { key: 'reference-stock', className: 'grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl' }, [
+          field('Talla de la referencia', h('select', {
+            className: SELECT, value: d.sizeCode, 'data-testid': 'product-reference-size', onChange: event => setReferenceSize(event.target.value),
+          }, [h('option', { key: '', value: '' }, 'Selecciona…'), ...window.CONFIG.list(d.sizeCategoryId).map(item => {
+            const value = Object.prototype.hasOwnProperty.call(item.meta || {}, 'value') ? item.meta.value : item.code;
+            return h('option', { key: item.code, value: String(value) }, item.label);
+          })]), null, attemptedSubmit && errors.find(error => error.code === 'size-code')),
+          field('Existencia de esta referencia', h('input', {
+            className: INPUT, type: 'number', inputMode: 'numeric', min: 0, value: d.stockQuantity,
+            'data-testid': 'product-reference-stock', onFocus: event => event.currentTarget.select(),
+            onChange: event => setStock(d.sizeCode, d.sizeScale, event.target.value),
+          })),
+        ]) : h('div', { key: d.sizeCategoryId || 'none', className: 'grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-10 gap-2' }, d.stock.map((row, index) => {
           const id = 'product-stock-' + row.talla;
           return h('div', { key: String(row.talla), className: 'flex flex-col items-center gap-1' }, [
             h('label', { key: 'l', htmlFor: id, className: 'text-overline uppercase text-on-surface-variant font-semibold' }, tallaLabel(d, row.talla)),
@@ -1001,7 +1105,7 @@
           ]);
         })),
       ]),
-      h('section', { key: 'exceptions', className: 'rounded-xl border border-outline-variant mb-4 overflow-hidden', 'aria-labelledby': 'product-section-exceptions' }, [
+      d.recordModel !== 'v2' && h('section', { key: 'exceptions', className: 'rounded-xl border border-outline-variant mb-4 overflow-hidden', 'aria-labelledby': 'product-section-exceptions' }, [
         h('button', {
           key: 'toggle', type: 'button', 'data-testid': 'product-exceptions-toggle',
           'aria-expanded': exceptionsOpen ? 'true' : 'false', onClick: () => setExceptionsOpen(value => !value),
@@ -1018,7 +1122,7 @@
           renderPriceExceptions(),
         ]),
       ]),
-      renderSizeSummary(),
+      d.recordModel !== 'v2' && renderSizeSummary(),
     ]);
   }
 
@@ -1049,11 +1153,11 @@
   // ── Etiquetas de código de barras (impresión 6×4 cm + guardado opcional en Supabase) ──
   function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
   const LBL_OPTS = { height: 60, fontSize: 13, margin: 4 }; // ajuste del código para la vista previa
-  // En la etiqueta impresa el código va aparte (.bx-meta), así que el código de barras no repite el texto.
+  // Las barras no imprimen su valor. El único texto técnico visible es el SKU comercial.
   const PRINT_OPTS = Object.assign({}, LBL_OPTS, { displayValue: false });
 
   function buildLabelDocument(rendered) {
-    const labels = rendered.map(item => `<div class="bx-label"><div class="bx-name">${escapeHtml(item.name)}</div><img class="bx-img" src="${item.image}"><div class="bx-meta">${escapeHtml(item.code)}</div>${item.price ? `<div class="bx-price">${escapeHtml(item.price)}</div>` : ''}</div>`).join('');
+    const labels = rendered.map(item => `<div class="bx-label"><div class="bx-name">${escapeHtml(item.name)}</div><img class="bx-img" src="${item.image}"><div class="bx-meta">${escapeHtml(item.sku)}</div>${item.price ? `<div class="bx-price">${escapeHtml(item.price)}</div>` : ''}</div>`).join('');
     return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Etiquetas Balam</title><style>
       @page { size: 60mm 40mm; margin: 0; } *{box-sizing:border-box} body{margin:0;font-family:system-ui,sans-serif;background:#eef0f4}.bx-tools{position:sticky;top:0;z-index:2;display:flex;gap:8px;flex-wrap:wrap;padding:12px;background:#131b2e;color:white}.bx-tools button{min-height:44px;padding:0 16px;border:0;border-radius:8px;font-weight:700}.bx-sheet{display:flex;flex-wrap:wrap;gap:12px;padding:16px}.bx-label{width:60mm;height:40mm;padding:2mm;display:flex;flex-direction:column;align-items:center;justify-content:center;background:white;overflow:hidden;page-break-after:always}.bx-name{font-size:9pt;font-weight:700;text-align:center;line-height:1.05;max-height:2.3em;overflow:hidden;margin-bottom:.5mm}.bx-img{width:100%;max-height:18mm;object-fit:contain}.bx-meta{max-width:100%;font:8pt monospace;letter-spacing:.2px;margin-top:.3mm;overflow-wrap:anywhere;text-align:center}.bx-price{font-size:12pt;font-weight:800;margin-top:.3mm}@media(max-width:600px){.bx-sheet{padding:8px;justify-content:center}}@media print{body{background:white}.bx-tools{display:none}.bx-sheet{display:block;padding:0}.bx-label{margin:0}}
     </style></head><body><div class="bx-tools"><button type="button" onclick="window.print()">Imprimir</button><button id="download" type="button">Descargar</button><button id="share" type="button" hidden>Compartir</button><span>${rendered.length} etiqueta(s) · 60×40 mm</span></div><main class="bx-sheet">${labels}</main><script>
@@ -1093,7 +1197,7 @@
       const rendered = [];
       specs.forEach(s => {
         if (cache[s.code] === undefined) cache[s.code] = B.toPNGDataURL(s.code, PRINT_OPTS);
-        const one = { name: s.p.nombre, image: cache[s.code], code: s.code, price: withPrice ? fmt(D.listPrice(s.p, s.talla)).replace('.00', '') : '' };
+        const one = { name: s.p.nombre, image: cache[s.code], barcode: s.code, sku: s.p.sku, price: withPrice ? fmt(D.listPrice(s.p, s.talla)).replace('.00', '') : '' };
         for (let i = 0; i < copiesOf(s); i++) rendered.push(one);
       });
       return buildLabelDocument(rendered);
@@ -1151,13 +1255,14 @@
           h('input', { key: 'i', type: 'checkbox', checked: withPrice, onChange: e => setWithPrice(e.target.checked), className: 'w-5 h-5 rounded border-outline text-primary focus:ring-primary' }),
         ]),
         h('p', { key: 'sum', className: 'text-caption text-on-surface-variant' }, `${specs.length} talla(s) con existencias · ${totalLabels} etiqueta(s) a imprimir`),
-        riskyCodes.length > 0 && h('div', { key: 'warn', role: 'alert', 'data-testid': 'labels-legibility-warning', className: 'p-3 rounded-lg bg-warning-soft text-warning text-caption' }, `${riskyCodes.length} código(s) son demasiado largos para una lectura Code128 robusta en 60×40 mm. Acorta el SKU antes de imprimir o valida una muestra con tu lector.`),
+        riskyCodes.length > 0 && h('div', { key: 'warn', role: 'alert', 'data-testid': 'labels-legibility-warning', className: 'p-3 rounded-lg bg-warning-soft text-warning text-caption' }, `${riskyCodes.length} código(s) son demasiado largos para una lectura Code128 robusta en 60×40 mm. En V2 revisa el barcode logístico; en etiquetas V1 acorta el SKU o valida una muestra con tu lector.`),
       ]),
       h('div', { key: 'pv', className: 'border-t border-outline-variant pt-4' }, [
         h('p', { key: 'l', className: 'text-overline uppercase font-bold text-on-surface-variant tracking-widest mb-3' }, 'Vista previa'),
         h('div', { key: 'g', className: 'grid grid-cols-2 gap-3' }, preview.map(s => h('div', { key: s.code, className: 'border border-outline-variant rounded-lg p-2 flex flex-col items-center gap-1 bg-white overflow-hidden' }, [
           h('div', { key: 'n', className: 'text-overline font-bold text-center text-primary truncate w-full' }, s.p.nombre),
-          h('div', { key: 'b', className: 'w-full overflow-hidden', 'data-testid': 'label-preview-barcode' }, h(B.Barcode, { code: s.code, opts: LBL_OPTS })),
+          h('div', { key: 'b', className: 'w-full overflow-hidden', 'data-testid': 'label-preview-barcode' }, h(B.Barcode, { code: s.code, opts: Object.assign({}, LBL_OPTS, { displayValue: false }) })),
+          h('div', { key: 's', className: 'text-overline font-mono text-primary text-center break-all' }, s.p.sku),
           withPrice && h('div', { key: 'p', className: 'text-caption font-bold text-primary' }, fmt(D.listPrice(s.p, s.talla)).replace('.00', '')),
         ]))),
         specs.length > preview.length && h('p', { key: 'm', className: 'text-caption text-on-surface-variant mt-2' }, `…y ${specs.length - preview.length} más`),
