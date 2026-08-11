@@ -49,7 +49,7 @@ await page.evaluate(() => { const b = [...document.querySelectorAll('nav button'
 await page.waitForTimeout(1200);
 
 const filtros = () => page.evaluate(() => {
-  const wraps = [...document.querySelectorAll('select')].filter(s => [...s.options].some(o => o.value === 'all'));
+  const wraps = [...document.querySelectorAll('select[data-testid^="inventory-catalog-filter-"]')];
   return wraps.map(s => ({
     etiqueta: (s.parentElement.querySelector('label') || {}).innerText || '',
     valor: s.value, opciones: [...s.options].map(o => o.text),
@@ -58,10 +58,14 @@ const filtros = () => page.evaluate(() => {
 const visibles = () => page.evaluate(() => [...document.querySelectorAll('td')].map(t => t.innerText.trim()).filter(t => /^(ALGODON|POLIESTER) (UNO|DOS)$/.test(t)));
 
 const f0 = await filtros();
-check('el filtro de catálogo es un <select>, no una franja de botones', f0.length === 1, 'selects=' + f0.length);
-check('lleva ETIQUETA con el nombre del catálogo', /tela/i.test(f0[0] && f0[0].etiqueta), JSON.stringify(f0[0] && f0[0].etiqueta));
-check('arranca en "Todas"', f0[0] && f0[0].valor === 'all', f0[0] && f0[0].valor);
-check('la primera opción es "Todas" y trae el catálogo', f0[0] && f0[0].opciones[0] === 'Todas' && f0[0].opciones.length > 2, JSON.stringify((f0[0] || {}).opciones || []).slice(0, 70));
+const material0 = await page.evaluate(() => {
+  const s = document.querySelector('[data-testid="inventory-catalog-filter-fabric"]');
+  return s ? { etiqueta: (s.parentElement.querySelector('label') || {}).innerText || '', valor: s.value, opciones: [...s.options].map(o => o.text) } : null;
+});
+check('el filtro de Material es un <select>, no una franja de botones', !!material0, 'selects=' + f0.length);
+check('lleva ETIQUETA con el nombre del catálogo', /material/i.test(material0 && material0.etiqueta), JSON.stringify(material0 && material0.etiqueta));
+check('arranca en "Todas"', material0 && material0.valor === 'all', material0 && material0.valor);
+check('la primera opción es "Todas" y trae el catálogo', material0 && material0.opciones[0] === 'Todas' && material0.opciones.length > 2, JSON.stringify((material0 || {}).opciones || []).slice(0, 70));
 check('ya NO quedan franjas de botones de catálogo', await page.evaluate(() => ![...document.querySelectorAll('button')].some(x => x.innerText.trim().toUpperCase() === 'ALGODÓN')));
 
 const v0 = await visibles();
@@ -71,7 +75,7 @@ check('sin filtro se ven los 3 productos', v0.length === 3, JSON.stringify(v0));
 const unaFila = await page.evaluate(() => {
   const inp = document.querySelector('input[placeholder*="Buscar"]');
   const seg = [...document.querySelectorAll('button')].find(x => x.innerText.trim().toUpperCase() === 'TODO');
-  const sel = [...document.querySelectorAll('select')].find(s => [...s.options].some(o => o.value === 'all'));
+  const sel = document.querySelector('[data-testid="inventory-catalog-filter-fabric"]');
   if (!inp || !seg || !sel) return null;
   const y = el => Math.round(el.getBoundingClientRect().bottom);
   return { inp: y(inp), seg: y(seg), sel: y(sel) };
@@ -82,9 +86,7 @@ const k0 = await kpis();
 check('KPI sin filtro: 3 SKUs y 15 unidades', /3/.test(k0) && /15/.test(k0), k0);
 
 // Filtrar por ALG
-await page.selectOption('select >> nth=0', 'ALG').catch(async () => {
-  await page.evaluate(() => { const s = [...document.querySelectorAll('select')].find(x => [...x.options].some(o => o.value === 'all')); s.value = 'ALG'; s.dispatchEvent(new Event('change', { bubbles: true })); });
-});
+await page.selectOption('[data-testid="inventory-catalog-filter-fabric"]', 'ALG');
 await page.waitForTimeout(700);
 const v1 = await visibles();
 check('al elegir ALGODÓN filtra a 2 productos', v1.length === 2 && v1.every(t => /ALGODON/.test(t)), JSON.stringify(v1));
@@ -94,14 +96,14 @@ const k1 = await kpis();
 check('KPI "SKUs activos" responde al filtro (3 → 2)', /SKUS ACTIVOS 2\b/i.test(k1), k1);
 check('KPI "Unidades en stock" responde al filtro (15 → 10)', /10/.test(k1) && !/\b15\b/.test(k1), k1);
 check('KPI "Valor inventario" responde al filtro ($15,000 → $10,000)', /10,000/.test(k1) && !/15,000/.test(k1), k1);
-check('aparece el botón "Limpiar" con el filtro activo', await page.evaluate(() => [...document.querySelectorAll('button')].some(x => /limpiar/i.test(x.innerText))));
+check('aparece el botón "Limpiar" con el filtro activo', await page.locator('[data-testid="inventory-catalog-filters-clear"]').count() === 1);
 
 // Limpiar
-await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => /limpiar/i.test(x.innerText)); if (b) b.click(); });
+await page.click('[data-testid="inventory-catalog-filters-clear"]');
 await page.waitForTimeout(700);
 const v2 = await visibles();
 check('"Limpiar" regresa a los 3 productos', v2.length === 3, JSON.stringify(v2));
-check('el desplegable vuelve a "Todas"', (await filtros())[0].valor === 'all');
+check('el desplegable vuelve a "Todas"', await page.inputValue('[data-testid="inventory-catalog-filter-fabric"]') === 'all');
 check('los KPIs también regresan al total', /SKUS ACTIVOS 3\b/i.test(await kpis()), await kpis());
 
 // El buscador sigue funcionando junto al filtro

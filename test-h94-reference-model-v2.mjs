@@ -43,15 +43,15 @@ function configRuntime() {
 const C = configRuntime();
 console.log('\n── CONFIG y firma física ──');
 ok('1. existe el catálogo independiente Color de ornamento', C.catalogMeta('ornament_color')?.label === 'Color de ornamento');
-ok('2. CONFIG expone EN REFERENCIA separado de EN SKU',
+ok('2. CONFIG mantiene EN REFERENCIA y EN SKU como dimensiones separadas aunque ambas inicien activas',
   typeof C.referenceParts === 'function' && C.catalogMeta('ornament_color')?.inReference === true
-  && C.catalogMeta('ornament_color')?.inSku === false);
+  && C.catalogMeta('ornament_color')?.inSku === true);
 ok('3. Material y Color Tela son categorías distintas',
   C.catalogMeta('fabric')?.label === 'Material' && C.catalogMeta('color')?.label === 'Color Tela');
 ok('4. talla, material, cuello, ornamento y sus colores forman la referencia inicial', (() => {
   const kinds = (C.referenceParts?.() || []).map(part => part.kind);
   return ['fabric', 'color', 'neck', 'ornament', 'ornament_color'].every(kind => kinds.includes(kind))
-    && kinds.some(kind => /^size_/.test(kind));
+    && kinds.includes('effective_size');
 })());
 
 console.log('\n── Autoridad V2 ──');

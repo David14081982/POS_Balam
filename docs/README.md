@@ -6,6 +6,8 @@ Este directorio es la memoria permanente del proyecto:
 - `02-architecture.md`: mapa técnico y contratos del sistema.
 - `03-known-risks.md`: estado auditable de problemas conocidos.
 - `04-contrato-del-cambio.md`: autoridad funcional del módulo de Cambios.
+- `06-contrato-config-referencias-fisicas-v2.md`: configuración objetivo y
+  contrato previo al piloto de referencias físicas H-94 V2.
 - `fixes/`: causa raíz, solución y evidencia de cada corrección.
 - `architect/`: sistema operativo de ingeniería. Se lee primero: enruta qué
   módulos aplican al cambio en curso, con sus reglas, antipatrones y decisiones.

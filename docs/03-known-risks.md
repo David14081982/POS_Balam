@@ -4595,6 +4595,15 @@ dos terminales, convergencia y cola pasaron 42/42, 69/69, 7/7 y 162/162.
 **Riesgo residual:** no es aprobación de producción. Falta validación manual y
 una historia separada para punto cero, CONFIG/SKU definitivo, carga real e
 impresión de etiquetas reales. Supabase queda aditivo y compatible con V1.
+El 11/08/2026 se autorizó el contrato objetivo y el catálogo independiente
+`ornament_color` con seis valores exactos. `13600` se aplicó de forma atómica:
+CONFIG quedó en versión 9, `lookup` pasó de 474 a 480 y la evidencia SQL devolvió
+`DRO/AZL/CF/PLT/BL/NE` con la metadata aprobada. Los 1,378 V1, stock y documentos
+conservaron sus huellas; migraciones local/remota coinciden y el dry-run final
+informa `Remote database is up to date`. El cliente deja de usar defaults como
+segunda autoridad durante cargas remotas. CONFIG 30/30, H-94 48/48, Excel
+42/42, etiquetas 19/19, formulario 19/19 y ornamentos 17/17 están verdes.
+Quedan publicación y piloto sintético; todavía no es producción.
 **Corrección documentada:**
 `docs/fixes/modelo-referencias-fisicas-v2.md`.
 

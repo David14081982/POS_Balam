@@ -231,6 +231,7 @@
         h('label', { key: 'l', className: 'text-overline font-bold uppercase tracking-widest text-on-surface-variant' }, window.CONFIG.catalogLabel(fk)),
         h('select', {
           key: 's',
+          'data-testid': 'inventory-catalog-filter-' + fk,
           className: 'min-w-[9.5rem] max-w-[14rem] bg-surface border rounded-lg px-3 py-2.5 text-body transition-all focus:ring-1 focus:ring-primary focus:border-primary '
             + (activo ? 'border-gold text-primary font-semibold' : 'border-outline-variant'),
           value: val,
@@ -240,6 +241,7 @@
     }).concat(Object.keys(filters).some(k => filters[k] && filters[k] !== 'all')
       ? [h('button', {
         key: '__clr',
+        'data-testid': 'inventory-catalog-filters-clear',
         className: 'h-11 px-4 inline-flex items-center gap-2 text-caption font-bold uppercase tracking-widest text-on-surface-variant border border-outline-variant rounded-lg hover:text-primary hover:bg-surface-container transition-colors',
         onClick: () => { setFilters({}); setPage(1); },
       }, [h(MS, { key: 'i', name: 'close', size: 16 }), 'Limpiar'])]
@@ -360,12 +362,13 @@
   }
 
   function blankProduct() {
-    // Valores por defecto de catálogos custom activos (Fase 2): primer ítem disponible, para que
-    // un atributo nuevo en el SKU no genere segmentos vacíos en productos recién creados.
+    // Los catálogos custom empiezan sin selección. Autorrellenar el primer valor
+    // convertiría Características en obligatorio y crearía identidad física sin
+    // una decisión de la empleada.
     const attrs = {};
     const meta = window.CONFIG.allCatalogMeta ? window.CONFIG.allCatalogMeta() : {};
     Object.keys(meta).forEach(k => {
-      if (meta[k].custom && (meta[k].inForm || meta[k].inSku)) { const l = window.CONFIG.list(k); attrs[k] = l.length ? l[0].code : ''; }
+      if (meta[k].custom && (meta[k].inForm || meta[k].inSku || meta[k].inReference)) attrs[k] = '';
     });
     // Defaults de los catálogos del sistema: primer elemento ACTIVO del catálogo (el admin los
     // edita). Los códigos históricos ('21', 'ML', …) quedan solo como respaldo si está vacío —
@@ -677,7 +680,7 @@
     // NO. MODELO (d.modelo = código del catálogo: ADR, ARO, …) y, si el catálogo entra al SKU/filtros,
     // también en d.attrs[modeloKind] = código. El No. Modelo deja de capturarse a mano.
     const setModelo = (code) => { const it = modeloItems.find(x => x.code === code); setD(prev => ({ ...prev, nombre: it ? it.label : '', modelo: code, attrs: { ...(prev.attrs || {}), [modeloKind]: code } })); };
-    const modeloCode = (modeloItems.find(x => x.label === d.nombre) || {}).code || '';
+    const modeloCode = String((d.attrs || {})[modeloKind] || (modeloItems.find(x => x.label === d.nombre) || {}).code || '');
     const setStock = (talla, escala, val) => setD(prev => {
       const quantity = Math.max(0, Math.round(Number(val) || 0));
       return prev.recordModel === 'v2'
@@ -688,7 +691,8 @@
       stock: [{ talla: String(value), escala: prev.sizeScale, stock: Number(prev.stockQuantity) || 0 }] }));
     const toggleOrn = (c) => setD(prev => {
       const colors = prev.ornColors.includes(c) ? prev.ornColors.filter(x => x !== c) : prev.ornColors.concat(c);
-      return { ...prev, ornColors: colors, ornamentColorCodes: prev.recordModel === 'v2' ? colors : prev.ornamentColorCodes };
+      const canonical = D.canonicalReferenceOrnamentColors(colors);
+      return { ...prev, ornColors: canonical, ornamentColorCodes: prev.recordModel === 'v2' ? canonical : prev.ornamentColorCodes };
     });
     // Filas de excepción: agregar, quitar, cambiar precio y alternar una talla.
     const addPrecioRow = () => { setExceptionsOpen(true); setD(prev => ({
@@ -775,15 +779,28 @@
     function validateDraft() {
       const out = [];
       if (!d.nombre.trim()) out.push({ code: 'name', target: 'product-name', message: 'Selecciona o escribe el nombre / modelo.' });
-      if (!modeloFinal) out.push({ code: 'model', target: modeloKind ? 'product-name' : 'product-model', message: modeloKind ? 'Selecciona el Nombre / Modelo.' : 'Escribe el número de modelo.' });
+      if (!modeloKind && !modeloFinal) out.push({ code: 'model', target: 'product-model', message: 'Escribe el número de modelo.' });
       if (!d.sizeCategoryId) out.push({ code: 'size-category', target: 'product-size-category', message: 'Selecciona la familia de tallas.' });
       if (d.recordModel === 'v2' && !String(d.sizeCode || '').trim()) out.push({ code: 'size-code', target: 'product-reference-size', message: 'Selecciona la talla de la referencia.' });
       const meta = window.CONFIG.allCatalogMeta ? window.CONFIG.allCatalogMeta() : {};
       Object.keys(meta).forEach(kind => {
         const m = meta[kind]; if (!m.required || !m.inForm) return;
-        const value = m.custom ? (d.attrs || {})[kind] : d[m.field];
-        if (value == null || String(value).trim() === '') out.push({ code: 'catalog-' + kind, target: 'product-field-' + kind, message: 'Selecciona ' + m.label + '.' });
+        // V1 ya tiene su modelo histórico en `modelo`; exigirle una
+        // reclasificación de catálogo para editar precio/foto violaría la
+        // compatibilidad. V2 sí debe elegir el valor publicado explícitamente.
+        const value = m.custom
+          ? (kind === modeloKind && d.recordModel !== 'v2'
+            ? ((d.attrs || {})[kind] || d.modelo) : (d.attrs || {})[kind])
+          : d[m.field];
+        if (value == null || String(value).trim() === '') out.push({ code: 'catalog-' + kind,
+          target: kind === modeloKind ? 'product-name' : (kind === 'ornament' ? 'product-ornament' : 'product-field-' + kind),
+          message: 'Selecciona ' + m.label + '.' });
       });
+      if (d.recordModel === 'v2' && D.ornamentColorMode(d) === 'required'
+          && !D.canonicalReferenceOrnamentColors(d.ornColors).length) {
+        out.push({ code: 'ornament-color-required', target: 'general-color-selector-toggle',
+          message: 'Selecciona al menos un color de ornamento.' });
+      }
       const priceOwners = {};
       d.precioRows.forEach((row, index) => {
         if ((row.tallas || []).length && (row.precio === '' || row.precio == null)) {
@@ -994,7 +1011,8 @@
       const referenceShape = d.recordModel === 'v2' ? {
         recordModel: 'v2', sizeCode: String(d.sizeCode), sizeScale: d.sizeScale,
         stockQuantity: Math.max(0, Math.round(Number(d.stockQuantity) || 0)),
-        ornamentColorCodes: (d.ornColors || []).slice(),
+        ornamentColorCodes: D.ornamentColorMode(d) === 'none'
+          ? [] : D.canonicalReferenceOrnamentColors(d.ornColors),
         stock: [{ talla: String(d.sizeCode), escala: d.sizeScale, stock: Math.max(0, Math.round(Number(d.stockQuantity) || 0)) }],
       } : {};
       onSave({ ...rest, ...referenceShape, attrs, nombre: d.nombre.trim(), modelo: modeloFinal, precio: Number(d.precio) || 0, costo: Number(d.costo) || 0, preciosTalla }, mode, { openLabels: afterSave === 'labels' });
@@ -1002,7 +1020,7 @@
 
     const footer = [
       h('div', { key: 'sk', className: 'flex-1 min-w-full sm:min-w-[20rem] self-center' }, [
-        h('div', { key: 'sku', className: 'text-overline uppercase tracking-wider text-primary font-mono font-bold' }, 'SKU: ' + skuPrev),
+        h('div', { key: 'sku', 'data-testid': 'product-sku-preview', className: 'text-overline uppercase tracking-wider text-primary font-mono font-bold' }, 'SKU: ' + skuPrev),
         h('div', { key: 'sum', className: 'text-overline text-on-surface-variant mt-0.5' }, `${total} piezas · ${stockedSizes} tallas con existencia · ${d.precioRows.filter(row => row.tallas.length).length} precio(s) especial(es) · ${d.ornamentColorRows.filter(row => row.tallas.length).length} grupo(s) de colores`),
         h('button', { key: 'status', type: 'button', 'data-testid': 'product-validation-summary', onClick: () => errors.length && focusError(errors[0]), className: 'mt-1 text-caption font-semibold ' + (errors.length ? 'text-danger' : 'text-accent') }, errors.length ? `${errors.length} pendiente${errors.length === 1 ? '' : 's'} por corregir` : 'Sin errores'),
       ]),
@@ -1052,10 +1070,16 @@
       h('section', { key: 'ornament', className: 'rounded-xl border border-outline-variant p-4 sm:p-5 mb-4', 'aria-labelledby': 'product-section-ornament' }, [
         sectionHeading('3', 'product-section-ornament', 'Ornamento general'),
         h('div', { key: 'grid', className: 'grid grid-cols-1 lg:grid-cols-3 gap-4 items-start' }, [
-          field(window.CONFIG.catalogLabel('ornament'), sel(d.orn || '—', window.CONFIG.map('ornament'), value => { set('orn', value); setColorPicker(null); }, false, 'product-ornament')),
+          field(window.CONFIG.catalogLabel('ornament'), sel(d.orn || '—', window.CONFIG.map('ornament'), value => {
+            setD(prev => ({ ...prev, orn: value,
+              ...(D.ornamentColorMode(value) === 'none' ? { ornColors: [], ornamentColorCodes: [] } : {}) }));
+            setColorPicker(null);
+          }, false, 'product-ornament'), null, attemptedSubmit && errors.find(error => error.code === 'catalog-ornament')),
           D.ornamentSupportsColors(d) && h('div', { key: 'colors', className: 'lg:col-span-2' }, [
             h('p', { key: 'label', className: 'text-caption font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5' }, 'Colores generales del ornamento'),
             renderColorSelector({ pickerId: 'general', selected: d.ornColors, onToggle: toggleOrn, optionTestId: code => `product-general-color-${code}`, toggleTestId: 'general-color-selector-toggle', closeTestId: 'general-color-selector-close' }),
+            attemptedSubmit && errors.find(error => error.code === 'ornament-color-required')
+              ? h('p', { key: 'required-error', className: 'mt-2 text-caption text-danger', role: 'alert' }, errors.find(error => error.code === 'ornament-color-required').message) : null,
             h('p', { key: 'help', className: 'text-overline text-on-surface-variant/70 mt-2' }, 'Todas las tallas heredan estos colores salvo que tengan una excepción.'),
           ]),
           !D.ornamentSupportsColors(d) && h('p', { key: 'none', className: 'lg:col-span-2 text-caption text-on-surface-variant self-end pb-3' }, 'Este ornamento no utiliza colores de hilo.'),

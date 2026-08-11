@@ -31,8 +31,8 @@ const r = await page.evaluate(async () => {
   const D = window.DATA, C = window.CONFIG, out = {};
   if (window.STORE) { window.STORE.pushRows = () => {}; window.STORE.pushConfig = () => {}; }
 
-  // Catálogo "Modelo" (custom), como el que tiene la tienda
-  C.addCatalog('Modelo');
+  // Autoridad "Modelo" publicada: H-94 usa `producto`; instalaciones antiguas
+  // pueden conservar `modelo`, pero nunca se crea una segunda autoridad.
   out.kind = C.modeloKind();
   C.addItem(out.kind, { code: 'TB', label: 'TIRA BORDADA' });
   C.addItem(out.kind, { code: 'CAN', label: 'CANDELA REAL' });
@@ -54,7 +54,7 @@ const r = await page.evaluate(async () => {
     mk('x3', 'GALA PREMIUM', 'GAP'),
     mk('x4', 'Nombre Libre', 'ZZZ'),
   ];
-  prods.forEach(p => { p.attrs = { modelo: p.modelo }; }); // como los guarda el alta de producto
+  prods.forEach(p => { p.attrs = { [out.kind]: p.modelo }; }); // como los guarda el alta de producto
   out.nombresAntes = prods.map(p => p.nombre);
   out.headers = window.XLSXIO.headers();
 
@@ -69,7 +69,7 @@ const r = await page.evaluate(async () => {
 
   out.filas = (capturado || []).map(f => ({
     sku: f['SKU'], modelo: f['Modelo'], noModelo: f['No. Modelo'],
-    cat: f['Categoría'], manga: f['Manga'], tela: f['Tela'], color: f['Color'],
+    cat: f['Categoría'], manga: f['Manga'], tela: f['Material'], color: f['Color Tela'],
     orn: f['Ornamento'], cuello: f['Cuello'], precio: f['Precio'],
   }));
   out.nombresDespues = prods.map(p => p.nombre);
@@ -84,7 +84,7 @@ const r = await page.evaluate(async () => {
     const buf = window.XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
     const file = new File([buf], 'inv.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const res = await window.XLSXIO.parseFile(file);
-    out.reimport = (res.products || []).map(p => ({ nombre: p.nombre, modelo: p.modelo, attrModelo: (p.attrs || {}).modelo, sku: p.sku }));
+  out.reimport = (res.products || []).map(p => ({ nombre: p.nombre, modelo: p.modelo, attrModelo: (p.attrs || {})[out.kind], sku: p.sku }));
   } catch (e) { out.reimportError = String(e); }
   return out;
 });
@@ -93,7 +93,7 @@ if (r.filas.length !== 4) { console.log('No se capturaron las filas:', JSON.stri
 const [f1, f2, f3, f4] = r.filas;
 console.log(JSON.stringify(r.filas, null, 1));
 
-check('catálogo custom "Modelo" existe (el que causaba el choque)', r.kind === 'modelo', String(r.kind));
+check('existe una sola autoridad custom para Modelo', ['producto', 'modelo'].includes(r.kind), String(r.kind));
 check('columna "Modelo" aparece UNA sola vez en los encabezados', r.headers.filter(h => h === 'Modelo').length === 1, 'veces=' + r.headers.filter(h => h === 'Modelo').length);
 check('columna B sale SIN ABREVIAR (nombre del producto)', f1 && f1.modelo === 'TIRA BORDADA', f1 && f1.modelo);
 check('columna G conserva el código', f1 && f1.noModelo === 'TB', f1 && f1.noModelo);

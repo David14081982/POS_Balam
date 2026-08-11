@@ -121,9 +121,34 @@ y etiquetas reales.
 Punto cero, fijación de CONFIG/SKU, carga real e impresión de etiquetas reales
 siguen expresamente fuera de este trabajo.
 
+### CONFIG objetivo del 11/08/2026
+
+El cliente y las pruebas del contrato objetivo quedaron implementados
+localmente. El dry-run encontró sólo `13600`, pero la guarda remota demostró que
+`ornament_color` existe únicamente como default materializado por el cliente:
+no está en `_catalogMeta` crudo y `pos.lookup` no tiene `DRO/AZL/CF` bajo ese
+kind. La migración abortó completa en ambos diagnósticos. Conteos posteriores:
+1,378 productos, 40 settings, 474 lookup, 1 venta, 1 movimiento, cero documentos
+piloto y 8 commits CONFIG. No hubo commit, push, Pages ni fixtures H94-PILOT.
+
+El propietario autorizó después un namespace remoto independiente con seis
+valores exactos: `DRO`, `AZL`, `CF`, `PLT`, `BL` y `NE`. `13600` exige ausencia
+previa del kind, inserta sólo esas filas, persiste la metadata objetivo y compara
+huellas de productos/documentos dentro de una única transacción.
+
+La aplicación remota terminó correctamente con CONFIG versión 9. La evidencia
+SQL devolvió las seis filas exactas y su `_catalogMeta`; `lookup` pasó de 474 a
+480, mientras 1,378 productos V1, stock y documentos conservaron sus huellas.
+`migration list` quedó simétrico y el dry-run final informó
+`Remote database is up to date`. El cliente impide que una carga remota ausente
+fabrique este kind desde defaults. Pruebas: CONFIG 30/30, H-94 48/48, Excel
+42/42, etiquetas 19/19, formulario 19/19 y ornamentos 17/17. Publicación y
+piloto sintético siguen pendientes. Commit de esta fase: `Pendiente de commit`.
+
 ## Referencias
 
 - Riesgo: `docs/03-known-risks.md#h-94---referencias-físicas-v2-carecen-de-identidad-logística-y-stock-propios`
 - `docs/02-architecture.md`
 - `docs/architect/authorities/inventory.md`
 - `docs/architect/decisions/ADR-013-identidad-de-referencia-fisica-v2.md`
+- `docs/06-contrato-config-referencias-fisicas-v2.md`

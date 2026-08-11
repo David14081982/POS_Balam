@@ -24,10 +24,24 @@ try {
   await page.route(/supabase\.co/, route => route.abort());
   await page.goto('http://127.0.0.1:8854/index.html', { waitUntil: 'load' });
   await page.waitForFunction(() => window.DATA && window.CONFIG && window.InventoryScreen, null, { timeout: 25000 });
-  await page.evaluate(() => localStorage.setItem('balam-page', 'inventario'));
+  await page.evaluate(() => {
+    const C = window.CONFIG, D = window.DATA, kind = C.modeloKind();
+    if (!C.find(kind, 'H84')) C.addItem(kind, { code: 'H84', label: 'PRODUCTO H84 UX' });
+    D.products.length = 0;
+    D.products.push(D.hydrate({
+      id: 'h84-v1-metrics', cat: '21', manga: 'MC', tela: 'ALG', color: 'BL', cuello: 'MAO',
+      modelo: 'H84', nombre: 'PRODUCTO H84 UX', orn: 'Bordado Eléctrico', ornColors: [],
+      precio: 1000, costo: 300, pop: false, sizeCategoryId: 'size_letter',
+      attrs: { [kind]: 'H84', __sizeCategoryId: 'size_letter' },
+      stock: D.mkStock([10, 20, 30, 15, 12], []).filter(row => row.escala === 'L'),
+    }));
+    D.saveProducts();
+    localStorage.setItem('balam-page', 'inventario');
+  });
   await page.reload({ waitUntil: 'load' });
   await page.waitForFunction(() => window.DATA && window.InventoryScreen, null, { timeout: 25000 });
-  await page.getByTestId('inventory-new-product').click();
+  await page.getByTestId('inventory-product-h84-v1-metrics').click();
+  await page.getByTestId('product-detail-edit').click();
   await page.getByTestId('product-form').waitFor();
 
   const setup = await page.evaluate(() => {
@@ -90,6 +104,9 @@ try {
     return {
       scrollHeight: body.scrollHeight,
       scrollOverflow: Math.max(0, body.scrollHeight - body.clientHeight),
+      referenceFieldHeight: ['product-field-corte', 'product-field-caracteristicas']
+        .map(id => document.querySelector(`[data-testid="${id}"]`))
+        .filter(Boolean).reduce((sum, node) => sum + node.parentElement.getBoundingClientRect().height, 0),
       visibleColorChoices: visible('[data-testid^="product-general-color-"], [data-testid^="ornament-group-"][data-testid*="-color-"]'),
       visibleSizeChoices: visible('[data-testid^="ornament-group-"][data-testid*="-size-"], [data-testid^="price-group-"][data-testid*="-size-"]'),
       matrixRows: visible('[data-testid^="product-size-summary-row-"]'),
@@ -134,7 +151,8 @@ try {
   if (await name.evaluate(node => node.tagName === 'SELECT')) await name.selectOption(originalName);
   else await name.fill(originalName);
 
-  const skuPreview = (await page.getByTestId('product-form-footer').innerText()).match(/SKU:\s*([^\s·]+)/i)?.[1] || '';
+  const skuPreview = (await page.getByTestId('product-sku-preview').evaluate(node => node.textContent || ''))
+    .replace(/^SKU:\s*/i, '');
   const savedName = await name.inputValue();
   await page.getByTestId('product-save').click();
   await page.waitForTimeout(200);
@@ -152,7 +170,8 @@ try {
     // La matriz solicitada agrega información de sólo lectura. Descontar 60 px por fila
     // permite comparar la densidad de la superficie editable antes/después sin ocultar
     // la altura bruta, que también se reporta.
-    adjustedScrollOverflow: Math.max(0, metrics.scrollOverflow - metrics.matrixRows * 60),
+    adjustedScrollOverflow: Math.max(0, metrics.scrollOverflow
+      - metrics.matrixRows * 60 - metrics.referenceFieldHeight),
     validations, completed: await page.getByTestId('product-form').count() === 0, persisted, skuPreview,
   };
 } finally {

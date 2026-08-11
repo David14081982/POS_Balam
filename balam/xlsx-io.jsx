@@ -359,7 +359,8 @@
       '_BALAM_FIRMA_FISICA': p.physicalSignature || '',
       'Talla referencia': p.recordModel === 'v2' ? p.sizeCode : '',
       'Existencia referencia': p.recordModel === 'v2' ? Number(p.stockQuantity) || 0 : '',
-      'Colores de ornamento V2': p.recordModel === 'v2' ? (p.ornamentColorCodes || []).join(', ') : '',
+      'Colores de ornamento V2': p.recordModel === 'v2'
+        ? D.canonicalReferenceOrnamentColors(p.ornamentColorCodes || []).join(', ') : '',
     };
     exportCols().forEach(c => { r[c.label] = (p.attrs || {})[c.kind] || ''; });
     const byKey = {};
@@ -586,9 +587,9 @@
     if (recordModel === 'v2') delete attrs.__ornamentColorsBySize;
     const sizeCode = present('Talla referencia') ? String(row['Talla referencia'] || '').trim() : '';
     const stockQuantity = present('Existencia referencia') ? parseInteger(row['Existencia referencia'], idx, 'Existencia referencia', { emptyZero: true }) : 0;
-    const ornamentColorCodes = present('Colores de ornamento V2')
+    const ornamentColorCodes = D.canonicalReferenceOrnamentColors(present('Colores de ornamento V2')
       ? String(row['Colores de ornamento V2'] || '').split(',').map(value => value.trim()).filter(Boolean).map(value =>
-        catalogValue('ornament_color', value, idx, 'Colores de ornamento V2', false, unknownCatalogValues)) : [];
+        catalogValue('ornament_color', value, idx, 'Colores de ornamento V2', false, unknownCatalogValues)) : []);
     if (recordModel === 'v2' && !sizeCode) rowError(idx, 'Talla referencia', 'es obligatoria para V2.');
     if (recordModel === 'v2' && !allowedSizes.has(sizeCode)) rowError(idx, 'Talla referencia', 'no pertenece a la categoría elegida.');
     const barcodeCode = present('_BALAM_BARCODE_CODE') ? String(row['_BALAM_BARCODE_CODE'] || '').trim().toUpperCase() : '';
@@ -797,7 +798,7 @@
       physicalSignature: product.physicalSignature || '', sizeCode: product.sizeCode || '',
       stockQuantity: product.stockQuantity == null ? null : Number(product.stockQuantity),
       physicalIdentityLocked: !!product.physicalIdentityLocked,
-      ornamentColorCodes: (product.ornamentColorCodes || []).slice(),
+      ornamentColorCodes: D.canonicalReferenceOrnamentColors(product.ornamentColorCodes || []),
       nombre: product.nombre || '', cat: product.cat || '', manga: product.manga || '', tela: product.tela || '',
       color: product.color || '', modelo: String(product.modelo == null ? '' : product.modelo), orn: product.orn || '',
       ornColors: (product.ornColors || []).slice(), cuello: product.cuello || '', precio: Number(product.precio) || 0,
@@ -835,8 +836,8 @@
       if (present.has('Talla referencia')) after.sizeCode = incoming.sizeCode;
       if (present.has('Existencia referencia')) after.stockQuantity = Number(incoming.stockQuantity) || 0;
       if (present.has('Colores de ornamento V2')) {
-        after.ornamentColorCodes = clone(incoming.ornamentColorCodes || []);
-        after.ornColors = clone(incoming.ornamentColorCodes || []);
+        after.ornamentColorCodes = D.canonicalReferenceOrnamentColors(incoming.ornamentColorCodes || []);
+        after.ornColors = clone(after.ornamentColorCodes);
       }
       after.barcodeCode = target.barcodeCode;
     }

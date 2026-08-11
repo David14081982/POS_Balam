@@ -45,4 +45,5 @@ e impresión de etiquetas son operaciones posteriores y separadas.
 
 ## Referencias
 
-`ADR-002` · `ADR-006` · `ADR-012` · `docs/02-architecture.md` · H-94
+`ADR-002` · `ADR-006` · `ADR-012` · `docs/02-architecture.md` ·
+`docs/06-contrato-config-referencias-fisicas-v2.md` · H-94

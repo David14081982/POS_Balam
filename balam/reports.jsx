@@ -507,10 +507,47 @@
     ]);
   }
 
+  function ReferenceStatsReport() {
+    const referenceKinds = (window.CONFIG.referenceParts ? window.CONFIG.referenceParts() : [])
+      .map(part => part.kind);
+    const options = [...new Set(referenceKinds)].map(kind => [kind, window.CONFIG.catalogLabel(kind)]);
+    const initial = options.some(option => option[0] === 'caracteristicas') ? 'caracteristicas' : (options[0] || [''])[0];
+    const [kind, setKind] = useState(initial);
+    const [combine, setCombine] = useState('');
+    const kinds = [kind].concat(combine && combine !== kind ? [combine] : []).filter(Boolean);
+    const rows = D.referenceDimensionStats({ kinds });
+    return h('div', { 'data-testid': 'reference-dimension-report' }, [
+      h('div', { key: 'head', className: 'mb-6 flex flex-wrap items-end justify-between gap-4' }, [
+        h('div', { key: 'title' }, [
+          h('h2', { key: 'h', className: 'font-headline text-display-sm text-primary' }, 'Referencias físicas'),
+          h('p', { key: 'p', className: 'text-caption text-on-surface-variant mt-1' }, 'Existencia desde products.id y atributos; ventas desde snapshots. El SKU no se analiza.'),
+        ]),
+        h('div', { key: 'filters', className: 'flex flex-wrap gap-3' }, [
+          h('label', { key: 'primary', className: 'text-overline uppercase text-on-surface-variant' }, [
+            'Dimensión', h('select', { key: 's', value: kind, 'data-testid': 'reference-stats-primary', onChange: event => setKind(event.target.value), className: 'block mt-1 h-10 px-3 bg-surface border border-outline-variant rounded-lg text-caption' }, options.map(option => h('option', { key: option[0], value: option[0] }, option[1]))),
+          ]),
+          h('label', { key: 'combine', className: 'text-overline uppercase text-on-surface-variant' }, [
+            'Combinar con', h('select', { key: 's', value: combine, 'data-testid': 'reference-stats-secondary', onChange: event => setCombine(event.target.value), className: 'block mt-1 h-10 px-3 bg-surface border border-outline-variant rounded-lg text-caption' }, [h('option', { key: '', value: '' }, 'Sin segunda dimensión'), ...options.filter(option => option[0] !== kind).map(option => h('option', { key: option[0], value: option[0] }, option[1]))]),
+          ]),
+        ]),
+      ]),
+      h('div', { key: 'table', className: CARD + ' overflow-x-auto' }, h('table', { className: 'w-full text-left' }, [
+        h('thead', { key: 'h' }, h('tr', { className: 'bg-surface-container-low border-b border-outline-variant' }, ['Dimensión', 'Referencias', 'Existencia', 'Unidades vendidas', 'Ventas'].map(label => h('th', { key: label, className: 'px-5 py-3 text-overline uppercase text-on-surface-variant ' + (label === 'Dimensión' ? '' : 'text-right') }, label)))),
+        h('tbody', { key: 'b', className: 'divide-y divide-outline-variant/40' }, rows.length ? rows.map(row => h('tr', { key: row.key }, [
+          h('td', { key: 'l', className: 'px-5 py-3 font-semibold text-primary' }, row.label),
+          h('td', { key: 'r', className: 'px-5 py-3 text-right' }, row.references),
+          h('td', { key: 's', className: 'px-5 py-3 text-right' }, row.stock),
+          h('td', { key: 'u', className: 'px-5 py-3 text-right' }, row.unitsSold),
+          h('td', { key: 'v', className: 'px-5 py-3 text-right font-semibold' }, fmt(row.sales)),
+        ])) : h('tr', { key: 'empty' }, h('td', { colSpan: 5, className: 'p-8 text-center text-on-surface-variant' }, 'Sin referencias para esta dimensión.'))),
+      ])),
+    ]);
+  }
+
   // ── Shell con pestañas ─────────────────────────────────────────────────────
   function ReportsScreen({ onNav }) {
     const [tab, setTab] = useState('resumen');
-    const TABS = [['resumen', 'Resumen', 'chart'], ['metodos', 'Ingresos por método', 'cash'], ['ventas', 'Ventas', 'receipt'], ['cambios', 'Cambios', 'swap'], ['devoluciones', 'Devoluciones', 'undo']];
+    const TABS = [['resumen', 'Resumen', 'chart'], ['referencias', 'Referencias', 'inventory'], ['metodos', 'Ingresos por método', 'cash'], ['ventas', 'Ventas', 'receipt'], ['cambios', 'Cambios', 'swap'], ['devoluciones', 'Devoluciones', 'undo']];
     return h('div', { className: 'flex-1 overflow-y-auto bg-background font-body text-on-surface' },
       h('div', { className: 'w-full min-w-0 px-4 py-6 sm:px-6 lg:p-10 max-w-container-max mx-auto' }, [
         h('div', { key: 'tabs', className: 'flex items-center gap-2 p-1.5 mb-8 bg-surface-container-low rounded-xl border border-outline-variant overflow-x-auto no-scrollbar', role: 'tablist', 'aria-label': 'Secciones de reportes' },
@@ -521,7 +558,8 @@
             className: 'flex items-center gap-2 px-6 py-2.5 rounded-lg text-caption font-bold uppercase tracking-wider transition-all ' +
               (tab === id ? 'bg-primary text-on-primary shadow-e2' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'),
           }, [h(MS, { key: 'i', name: icon, size: 18 }), label]))),
-        tab === 'metodos' ? h(PaymentMethodReport, { key: 'pay' })
+        tab === 'referencias' ? h(ReferenceStatsReport, { key: 'ref' })
+          : tab === 'metodos' ? h(PaymentMethodReport, { key: 'pay' })
           : tab === 'ventas' ? h(SalesReport, { key: 'ven' })
           : tab === 'cambios' ? h(ExchangesReport, { key: 'cam' })
           : tab === 'devoluciones' ? h(ReturnsReport, { key: 'dev' })

@@ -6,6 +6,22 @@
 (function () {
   const LS_KEY = 'balam_config_v1';
 
+  // Compatibilidad de CONFIG: instalaciones antiguas publicaron el catálogo
+  // Modelo con kind `modelo`; H-94 encontró `producto` en BALAM vigente. Nunca
+  // deben coexistir dos autoridades sólo porque una semilla nueva rellenó la otra.
+  function modelKindInState(st) {
+    const meta = (st && st.catalogMeta) || {};
+    const catalogs = (st && st.catalogs) || {};
+    const candidates = Object.keys(meta).filter(kind => meta[kind] && meta[kind].custom
+      && (kind === 'producto' || kind === 'modelo'
+        || String(meta[kind].label || '').trim().toLowerCase() === 'modelo'));
+    const withValues = candidates.find(kind => Array.isArray(catalogs[kind]) && catalogs[kind].length);
+    if (withValues) return withValues;
+    if (candidates.includes('producto') && !candidates.includes('modelo')) return 'producto';
+    if (candidates.includes('modelo')) return 'modelo';
+    return candidates[0] || null;
+  }
+
   // ── Semilla de catálogos (valores actuales del sistema, ahora editables) ──────
   // Cada item: { code, label, active, meta? }. El orden del arreglo = orden visible.
   const SEED_CATALOGS = {
@@ -136,6 +152,11 @@
       { code: '+1', label: 'EE. UU. / Canadá (+1)' },
       { code: '+34', label: 'España (+34)' },
     ],
+    // Catálogos personalizados publicados por BALAM. Sus valores vienen de
+    // CONFIG remota; la semilla sólo conserva la forma del contrato offline.
+    producto: [],
+    corte: [],
+    caracteristicas: [],
   };
 
   // ── Metadatos por catálogo (Fase 1: renombrar · En alta · En SKU · orden) ─────
@@ -152,15 +173,67 @@
   //   formSelect→ se captura como menú desplegable en el alta (lo controla el toggle "En alta")
   const SEED_CATALOG_META = {
     category:       { label: 'Categoría',             inForm: true, inReference: true, inSku: true,  required: true, skuOrder: 1, field: 'cat',    system: true, formSelect: true },
-    sleeve:         { label: 'Manga',                 inForm: true, inReference: true, inSku: true,  required: true, skuOrder: 2, field: 'manga',  system: true, formSelect: true },
-    fabric:         { label: 'Material',              inForm: true, inReference: true, inSku: true,  required: true, skuOrder: 3, field: 'tela',   system: true, formSelect: true, filterable: true },
-    color:          { label: 'Color Tela',            inForm: true, inReference: true, inSku: true,  required: true, skuOrder: 4, field: 'color',  system: true, struct: true, formSelect: true, filterable: true },
-    neck:           { label: 'Cuello',                inForm: true, inReference: true, inSku: false, required: true, skuOrder: 5, field: 'cuello', system: true, formSelect: true },
-    ornament:       { label: 'Ornamento',             inForm: true, inReference: true, inSku: false, required: true, skuOrder: 6, field: 'orn',    system: true, formSelect: true },
-    ornament_color: { label: 'Color de ornamento',    inForm: true, inReference: true, inSku: false, required: false, skuOrder: 7, field: 'ornamentColorCodes', system: true, formSelect: true, multiselect: true, filterable: true },
-    size_letter:    { label: 'Talla (Letra)',         inForm: false, inReference: true, inSku: false, skuOrder: 8, system: true, struct: true, sizeCategory: true, sizeScale: 'L', sizeSlot: true },
-    size_number:    { label: 'Talla (Número)',        inForm: false, inReference: true, inSku: false, skuOrder: 9, system: true, struct: true, sizeCategory: true, sizeScale: 'N', sizeSlot: true },
+    producto:       { label: 'Modelo',                inForm: true, inReference: true, inSku: true,  required: true, skuOrder: 2, field: null, custom: true, formSelect: true, system: false },
+    sleeve:         { label: 'Manga',                 inForm: true, inReference: true, inSku: true,  required: true, skuOrder: 3, field: 'manga',  system: true, formSelect: true },
+    fabric:         { label: 'Material',              inForm: true, inReference: true, inSku: true,  required: true, skuOrder: 4, field: 'tela',   system: true, formSelect: true, filterable: true },
+    color:          { label: 'Color Tela',            inForm: true, inReference: true, inSku: true,  required: true, skuOrder: 5, field: 'color',  system: true, struct: true, formSelect: true, filterable: true },
+    neck:           { label: 'Cuello',                inForm: true, inReference: true, inSku: true,  required: true, skuOrder: 6, field: 'cuello', system: true, formSelect: true },
+    ornament:       { label: 'Ornamento',             inForm: true, inReference: true, inSku: true,  required: true, skuOrder: 7, field: 'orn',    system: true, formSelect: true },
+    ornament_color: { label: 'Color de ornamento',    inForm: true, inReference: true, inSku: true,  required: false, skuOrder: 8, field: 'ornamentColorCodes', system: true, formSelect: true, multiselect: true, filterable: true },
+    effective_size: { label: 'Talla efectiva',        inForm: false, inReference: true, inSku: true, required: true, skuOrder: 9, system: true, struct: true, virtual: true, sizeSlot: true, effectiveSize: true },
+    size_letter:    { label: 'Talla (Letra)',         inForm: false, inReference: true, inSku: false, required: true, skuOrder: 9, system: true, struct: true, sizeCategory: true, sizeScale: 'L' },
+    size_number:    { label: 'Talla (Número)',        inForm: false, inReference: true, inSku: false, required: true, skuOrder: 9, system: true, struct: true, sizeCategory: true, sizeScale: 'N' },
+    corte:          { label: 'Corte',                 inForm: true, inReference: true, inSku: false, required: false, filterable: false, skuOrder: 10, field: null, custom: true, formSelect: true, system: false },
+    caracteristicas:{ label: 'Características',       inForm: true, inReference: true, inSku: false, required: false, filterable: true, skuOrder: 11, field: null, custom: true, formSelect: true, system: false },
   };
+
+  // Transformación pura de la CONFIG publicada al contrato H-94 aprobado.
+  // No escribe ni regenera productos: el despliegue la usa para construir un
+  // único snapshot atómico de pos.commit_config.
+  function h94TargetSnapshot(input) {
+    const next = deepClone(input || seed());
+    next.catalogs = next.catalogs || {};
+    next.catalogMeta = next.catalogMeta || {};
+    const modelKind = modelKindInState(next) || 'producto';
+    [modelKind, 'corte', 'caracteristicas'].forEach(kind => {
+      if (!next.catalogs[kind]) next.catalogs[kind] = [];
+    });
+    const target = deepClone(SEED_CATALOG_META);
+    if (modelKind !== 'producto') {
+      target[modelKind] = Object.assign({}, target.producto, next.catalogMeta[modelKind] || {});
+      delete target.producto;
+      if (!((next.catalogs.producto || []).length)) {
+        delete next.catalogs.producto;
+        delete next.catalogMeta.producto;
+      }
+    }
+    Object.keys(target).forEach(kind => {
+      const current = next.catalogMeta[kind] || {};
+      // Etiquetas, custom/system y campos publicados se preservan; los flags y
+      // el orden aprobados son los únicos valores que manda el contrato.
+      next.catalogMeta[kind] = Object.assign({}, target[kind], current, {
+        inForm: target[kind].inForm,
+        inReference: target[kind].inReference,
+        inSku: target[kind].inSku,
+        required: !!target[kind].required,
+        filterable: !!target[kind].filterable,
+        skuOrder: target[kind].skuOrder,
+      });
+      ['sizeSlot', 'effectiveSize', 'virtual'].forEach(field => {
+        if (Object.prototype.hasOwnProperty.call(target[kind], field)) next.catalogMeta[kind][field] = target[kind][field];
+        else delete next.catalogMeta[kind][field];
+      });
+    });
+    (next.catalogs.ornament || []).forEach(item => {
+      const code = String(item.code || '');
+      const existing = item.meta && ['none', 'optional', 'required'].includes(item.meta.colorMode)
+        ? item.meta.colorMode : null;
+      item.meta = Object.assign({}, item.meta || {}, {
+        colorMode: code === '—' || code === 'NA' ? 'none' : (existing || 'optional'),
+      });
+    });
+    return next;
+  }
 
   // ── Semilla de parámetros sueltos ────────────────────────────────────────────
   const SEED_SETTINGS = {
@@ -232,11 +305,18 @@
   // Rellena catálogos/ajustes/ítems nuevos ausentes en un estado (guardado local viejo O traído de la
   // nube). Muta el estado in situ y devuelve si cambió. Se usa al arrancar (datos locales) y dentro de
   // load() (datos de Supabase), para que una config vieja en la nube se auto-repare y se vuelva a subir.
-  function backfillState(st) {
+  function backfillState(st, options) {
     const fresh = seed();
+    const remoteAuthority = !!(options && options.remoteAuthority);
     let changed = false;
+    const existingModelKind = modelKindInState(st);
+    const preserveLegacyModel = existingModelKind && existingModelKind !== 'producto';
     const needsManualOptions = !Object.prototype.hasOwnProperty.call(st.settings, 'benefits.manualOptionsV1');
-    Object.keys(fresh.catalogs).forEach(k => { if (!st.catalogs[k]) { st.catalogs[k] = fresh.catalogs[k]; changed = true; } });
+    Object.keys(fresh.catalogs).forEach(k => {
+      if (k === 'producto' && preserveLegacyModel) return;
+      if (k === 'ornament_color' && remoteAuthority) return;
+      if (!st.catalogs[k]) { st.catalogs[k] = fresh.catalogs[k]; changed = true; }
+    });
     // H-83: rellena sólo el metadato ausente de ornamentos históricos.
     const ornaments = st.catalogs.ornament || [];
     (fresh.catalogs.ornament || []).forEach(seedItem => {
@@ -269,6 +349,8 @@
     // Metadatos por catálogo: rellena el mapa entero o entradas-por-kind ausentes (estados viejos).
     if (!st.catalogMeta) { st.catalogMeta = fresh.catalogMeta; changed = true; }
     else Object.keys(fresh.catalogMeta).forEach(k => {
+      if (k === 'producto' && preserveLegacyModel) return;
+      if (k === 'ornament_color' && remoteAuthority && !st.catalogMeta[k]) return;
       if (!st.catalogMeta[k]) { st.catalogMeta[k] = fresh.catalogMeta[k]; changed = true; return; }
       Object.keys(fresh.catalogMeta[k]).forEach(field => {
         if (!Object.prototype.hasOwnProperty.call(st.catalogMeta[k], field)) {
@@ -279,8 +361,13 @@
     // Corrección exacta de las etiquetas heredadas; nombres personalizados se conservan.
     if (st.catalogMeta.fabric && st.catalogMeta.fabric.label === 'Tela') { st.catalogMeta.fabric.label = 'Material'; changed = true; }
     if (st.catalogMeta.color && st.catalogMeta.color.label === 'Color') { st.catalogMeta.color.label = 'Color Tela'; changed = true; }
-    // Talla (Número): habilita el segmento de talla en el SKU para estados guardados antes de esta función.
-    if (st.catalogMeta.size_number && !st.catalogMeta.size_number.sizeSlot) { st.catalogMeta.size_number.sizeSlot = true; changed = true; }
+    // H-94: el Constructor usa un único slot virtual; las dos familias sólo
+    // aportan valores y escala. Un cache anterior puede conservar sizeSlot.
+    ['size_letter', 'size_number'].forEach(kind => {
+      if (st.catalogMeta[kind] && Object.prototype.hasOwnProperty.call(st.catalogMeta[kind], 'sizeSlot')) {
+        delete st.catalogMeta[kind].sizeSlot; changed = true;
+      }
+    });
     // Asegura el método 'Cortesía' (regalos/giveaways) aunque payment_method ya exista (local o nube).
     const pm = st.catalogs.payment_method;
     if (pm && !pm.some(it => it.code === 'Cortesía')) { pm.push({ code: 'Cortesía', label: 'Cortesía', active: true, meta: { icon: 'tag' } }); changed = true; }
@@ -362,9 +449,7 @@
   // o, de respaldo, por su nombre. null si no existe. Lo usan el alta (inventory) y el Constructor
   // de SKU (settings) — ese catálogo SÍ se captura aunque su "En alta" esté apagado.
   function modeloKind() {
-    const m = state.catalogMeta;
-    if (m.modelo && m.modelo.custom) return 'modelo';
-    return Object.keys(m).find(k => m[k].custom && String(m[k].label || '').trim().toLowerCase() === 'modelo') || null;
+    return modelKindInState(state);
   }
 
   // Partes del SKU: catálogos con inSku, ordenados por skuOrder → [{ kind, field }].
@@ -373,7 +458,8 @@
       .map(kind => ({ kind, m: state.catalogMeta[kind] }))
       .filter(x => x.m && x.m.inSku && (x.m.field || x.m.custom || x.m.sizeSlot))
       .sort((a, b) => (a.m.skuOrder || 0) - (b.m.skuOrder || 0))
-      .map(x => ({ kind: x.kind, field: x.m.field, custom: !!x.m.custom, sizeSlot: !!x.m.sizeSlot }));
+      .map(x => ({ kind: x.kind, field: x.m.field, custom: !!x.m.custom,
+        sizeSlot: !!x.m.sizeSlot, effectiveSize: !!x.m.effectiveSize }));
   }
 
   // Partes de la firma física: independiente del Constructor de SKU. Una
@@ -381,9 +467,9 @@
   function referenceParts() {
     return Object.keys(state.catalogMeta)
       .map(kind => ({ kind, m: state.catalogMeta[kind] }))
-      .filter(x => x.m && x.m.inReference && (x.m.field || x.m.custom || x.m.sizeCategory))
+      .filter(x => x.m && x.m.inReference && (x.m.field || x.m.custom || x.m.effectiveSize))
       .map(x => ({ kind: x.kind, field: x.m.field, custom: !!x.m.custom,
-        sizeCategory: !!x.m.sizeCategory, multiselect: !!x.m.multiselect }));
+        effectiveSize: !!x.m.effectiveSize, multiselect: !!x.m.multiselect }));
   }
 
   // ── H-63 · ¿Qué referencias vivas tiene este código de talla? ────────────────
@@ -739,30 +825,40 @@
     if (!next || !next.catalogs || !next.settings) return;
     // Migra el estado remoto ANTES de fusionar defaults; de otro modo una
     // bandera nueva parecería ya presente y no podría inyectar sus ítems una vez.
-    backfillState(next);
+    backfillState(next, { remoteAuthority: true });
     // Backfill de catálogos NUEVOS aún ausentes en la nube (p. ej. return_reason): si la nube no
     // trae el kind, conserva la semilla local para que no desaparezca tras el pull.
     // OJO: si el kind SÍ figura en los metadatos de la nube (_catalogMeta) pero llega sin filas,
     // es que el admin vació el catálogo a propósito (p. ej. Talla Letra) — se respeta vacío en
     // vez de resucitar la semilla (bug: las tallas "revivían" en cada recarga).
     const cats = next.catalogs, fresh = seed();
+    const remoteModelKind = modelKindInState(next);
     Object.keys(fresh.catalogs).forEach(k => {
+      if (k === 'producto' && remoteModelKind && remoteModelKind !== 'producto') return;
       const known = !!(next.catalogMeta && next.catalogMeta[k]);
+      if (k === 'ornament_color') {
+        if (!cats[k]) cats[k] = [];
+        return;
+      }
       if (!cats[k]) cats[k] = known ? [] : fresh.catalogs[k];
       else if (!cats[k].length && !known) cats[k] = fresh.catalogs[k];
     });
     // Metadatos: fusiona sobre los defaults (la nube gana por kind presente; los kinds nuevos del código no desaparecen).
-    const meta = Object.assign({}, deepClone(SEED_CATALOG_META), next.catalogMeta || {});
+    const defaultMeta = deepClone(SEED_CATALOG_META);
+    if (remoteModelKind && remoteModelKind !== 'producto') delete defaultMeta.producto;
+    if (!(next.catalogMeta && next.catalogMeta.ornament_color)) delete defaultMeta.ornament_color;
+    const meta = Object.assign({}, defaultMeta, next.catalogMeta || {});
     state = { v: next.v || 1, catalogs: cats, catalogMeta: meta, settings: Object.assign({}, deepClone(SEED_SETTINGS), next.settings) };
     // Inyecta ítems nuevos que la nube no trae. Una aplicación remota persiste y
     // notifica, pero no vuelve a subir el mismo snapshot (evita bucle Realtime).
-    backfillState(state);
+    backfillState(state, { remoteAuthority: true });
     emit({ sync: false });
   }
 
   window.CONFIG = {
     all, list, map, metaMap, codes, find, get, settings, inUse, sizeCodeReferences,
     catalogMeta, allCatalogMeta, sizeCategories, catalogLabel, fieldOf, skuParts, referenceParts, modeloKind,
+    h94TargetSnapshot,
     addItem, updateItem, setActive, removeItem, move, setCatalogMeta, moveSkuOrder, addCatalog, removeCatalog, importCatalogs, setSetting, setSettings,
     renameSizeCodes,
     reset, snapshot, load,

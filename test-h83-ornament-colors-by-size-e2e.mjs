@@ -29,19 +29,21 @@ try {
   await page.waitForFunction(() => window.DATA && window.CONFIG && window.InventoryScreen, null, { timeout: 25000 });
 
   const fixture = await page.evaluate(() => {
-    const D = window.DATA;
+    const D = window.DATA, C = window.CONFIG;
     if (window.STORE) {
       window.STORE.pushRows = () => {}; window.STORE.pushConfig = () => {};
       window.STORE.pushSale = () => {}; window.STORE.pushReturn = () => {};
       window.STORE.pushExchange = () => {};
     }
     D.products.length = 0;
+    const modelKind = C.modeloKind();
+    if (!C.find(modelKind, 'H83')) C.addItem(modelKind, { code: 'H83', label: 'GUAYABERA H83 DOS GRUPOS' });
     const sizes = D.SIZES_LETRA.slice(0, 5).map(String);
     const product = D.hydrate({
       id: 'h83-e2e-product', cat: '21', manga: 'MC', tela: 'ALG', color: 'BL', cuello: 'MAO',
       modelo: 'H83', nombre: 'GUAYABERA H83 DOS GRUPOS', orn: 'Bordado Eléctrico',
       ornColors: ['VI'], precio: 650, preciosTalla: {}, costo: 200, pop: false,
-      attrs: { __sizeCategoryId: 'size_letter' }, sizeCategoryId: 'size_letter',
+      attrs: { [modelKind]: 'H83', __sizeCategoryId: 'size_letter' }, sizeCategoryId: 'size_letter',
       stock: D.mkStock([10, 20, 30, 15, 12], []).filter(row => row.escala === 'L'),
     });
     D.products.push(product); D.saveProducts();

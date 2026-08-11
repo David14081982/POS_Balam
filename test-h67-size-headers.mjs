@@ -153,10 +153,10 @@ check('10 · la talla INACTIVA conserva su columna y sus piezas',
   real.encabezados.includes('T49') && f1 && f1['T49'] === 4, f1 ? String(f1['T49']) : 'sin fila');
 check('11 · Talla (Letra) sin regresiones', letraHeaders.join(',') === 'CHICO,MEDIANO,GRANDE'
   && f3 && f3['CHICO'] === 1 && f3['MEDIANO'] === 6, letraHeaders.join(',') + ' · ' + (f3 ? f3['MEDIANO'] : '—'));
-const BASE = ['SKU', 'Modelo', 'Categoría', 'Manga', 'Tela', 'Color', 'No. Modelo', 'Ornamento', 'Colores Orn.', 'Cuello', 'Precio', 'Foto (URL)', 'Categoría por talla'];
+const BASE = ['SKU', 'Modelo', 'Categoría', 'Manga', 'Material', 'Color Tela', 'No. Modelo', 'Ornamento', 'Colores Orn.', 'Cuello', 'Precio', 'Foto (URL)', 'Categoría por talla'];
 check('12 · el resto de columnas del Excel queda intacto',
   BASE.every((h, i) => real.encabezados[i] === h) && f1 && f1['Categoría'] === '21' && f1['Manga'] === 'MC'
-  && f1['Tela'] === 'ALG' && f1['Color'] === 'BL' && f1['Precio'] === 650 && f1['Categoría por talla'] === 'size_number',
+  && f1['Material'] === 'ALG' && f1['Color Tela'] === 'BL' && f1['Precio'] === 650 && f1['Categoría por talla'] === 'size_number',
   real.encabezados.slice(0, 13).join('|'));
 
 // El archivo lleva su propio mapa columna → identidad: es lo que lo hace reimportable.

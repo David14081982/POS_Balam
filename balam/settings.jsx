@@ -125,6 +125,21 @@
       if (r && !r.ok) toast(r.error, 'var(--danger)');
     }
     function setMeta(patch) {
+      if (Object.prototype.hasOwnProperty.call(patch, 'inSku') && !!patch.inSku !== !!cmeta.inSku
+          && D.skuConfigurationImpact) {
+        const impact = D.skuConfigurationImpact(kind, !!patch.inSku);
+        const omitted = (impact.omitted || []).map(key => C.catalogLabel(key)).join(', ') || 'ninguno';
+        const examples = (impact.examples || []).map(row => `${row.productId}: ${row.before || '—'} → ${row.after || '—'}`).join('\n');
+        const message = [
+          `${impact.affected} de ${impact.total} referencia(s) cambiarían en una regeneración futura.`,
+          `SKU repetidos previstos: ${(impact.collisions || []).length}.`,
+          `Longitud típica/máxima: ${impact.typicalLength}/${impact.maxLength}.`,
+          `Atributos físicos fuera del SKU: ${omitted}.`,
+          examples ? `Ejemplos:\n${examples}` : '',
+          '', 'El cambio sólo afecta nuevos SKU; no regenera productos existentes. ¿Aplicar EN SKU?',
+        ].filter(Boolean).join('\n');
+        if (!window.confirm(message)) return;
+      }
       const r = C.setCatalogMeta(kind, patch);
       if (r && !r.ok) toast(r.error, 'var(--danger)');
     }
@@ -183,6 +198,11 @@
           h(SerifHeading, { key: 't', children: title }),
           h('span', { key: 'c', className: 'text-overline uppercase text-on-surface-variant' }, countLabel),
         ]);
+
+    if (cmeta && cmeta.virtual) return h(GlassCard, { key: kind, className: 'p-5' }, [
+      header,
+      h('p', { key: 'virtual', className: 'text-caption text-on-surface-variant' }, 'Segmento calculado: usa letra o número según la única familia elegida en la referencia. No tiene valores propios.'),
+    ]);
 
     return h(GlassCard, { key: kind, className: 'p-5' }, [
       header,
@@ -1558,8 +1578,9 @@
       h(CatalogEditor, { key: 'nck', kind: 'neck', codePlaceholder: 'NOR' }),
       h(CatalogEditor, { key: 'col', kind: 'color', codePlaceholder: 'AZ', metaFields: [{ key: 'hex', label: 'Color', type: 'color', def: '#cccccc' }] }),
       h(ColorHexFixCard, { key: 'colhex' }),
-      h(CatalogEditor, { key: 'orn', kind: 'ornament', codePlaceholder: 'Bordado', labelPlaceholder: 'Nombre del ornamento' }),
+      h(CatalogEditor, { key: 'orn', kind: 'ornament', codePlaceholder: 'Bordado', labelPlaceholder: 'Nombre del ornamento', metaFields: [{ key: 'colorMode', label: 'Contrato de color', type: 'select', options: ['none', 'optional', 'required'], def: 'optional' }] }),
       h(CatalogEditor, { key: 'orncol', kind: 'ornament_color', codePlaceholder: 'DRO', labelPlaceholder: 'Dorado', metaFields: [{ key: 'hex', label: 'Color', type: 'color', def: '#cccccc' }] }),
+      h(CatalogEditor, { key: 'effsize', kind: 'effective_size' }),
       h(CatalogEditor, { key: 'szl', kind: 'size_letter', title: 'Categorías por talla · Letras y especiales', codePlaceholder: 'M', labelPlaceholder: 'M' }),
       h(CatalogEditor, { key: 'szn', kind: 'size_number', title: 'Categorías por talla · Números', codePlaceholder: '40', labelPlaceholder: '40' }),
       // Catálogos creados por el administrador (Fase 2)

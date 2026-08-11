@@ -31,6 +31,30 @@
         : categoryId === 'size_letter' ? 'L' : null;
   };
 
+  // H-94: una referencia tiene una sola talla efectiva. La categoría y el
+  // código forman la identidad; el token comercial sólo agrega la escala si el
+  // mismo código existe en más de una familia activa.
+  function effectiveSize(product, explicitSize) {
+    const categoryId = product && (product.sizeCategoryId || (product.attrs || {}).__sizeCategoryId) || null;
+    const code = String(explicitSize == null ? (product && product.sizeCode == null ? '' : product.sizeCode) : explicitSize);
+    const category = (C && C.sizeCategories ? C.sizeCategories() : []).find(item => item.id === categoryId);
+    const items = categoryId && C && C.all ? C.all(categoryId) : [];
+    const valueOf = item => String(Object.prototype.hasOwnProperty.call((item && item.meta) || {}, 'value') ? item.meta.value : item.code);
+    const item = items.find(entry => valueOf(entry) === code) || null;
+    const scale = (category && category.scale) || categoryScale(categoryId) || '';
+    const matches = (C && C.sizeCategories ? C.sizeCategories() : []).filter(candidate =>
+      (C.all(candidate.id) || []).some(entry => entry.active !== false && valueOf(entry) === code));
+    return {
+      sizeCategoryId: categoryId,
+      sizeCode: code,
+      scale,
+      label: (item && item.label) || code,
+      skuToken: matches.length > 1 && scale ? `${scale}:${code}` : code,
+      valid: !!categoryId && !!code && !!item && item.active !== false,
+      ambiguousAcrossCategories: matches.length > 1,
+    };
+  }
+
   function isV2Reference(product) {
     return !!product && product.recordModel === 'v2';
   }
@@ -50,19 +74,32 @@
   function canonicalReferenceOrnamentColors(values) {
     const allowed = new Set((C && C.all ? C.all('ornament_color') : []).map(item => String(item.code)));
     return [...new Set((Array.isArray(values) ? values : []).map(String).filter(code => allowed.has(code)))]
-      .sort((a, b) => a.localeCompare(b));
+      .sort((a, b) => a < b ? -1 : a > b ? 1 : 0);
+  }
+  function ornamentColorMode(productOrCode) {
+    const code = String(typeof productOrCode === 'string' ? productOrCode : (productOrCode && productOrCode.orn) || '');
+    const item = C && C.find ? C.find('ornament', code) : null;
+    if (item && item.meta && item.meta.allowsColors === false) return 'none';
+    const mode = item && item.meta && item.meta.colorMode;
+    if (['none', 'optional', 'required'].includes(mode)) return mode;
+    return code && code !== '—' ? 'optional' : 'none';
   }
   function referenceValue(product, part) {
-    if (part.sizeCategory) {
-      return part.kind === product.sizeCategoryId ? String(product.sizeCode == null ? '' : product.sizeCode) : null;
+    if (part.effectiveSize) {
+      const size = effectiveSize(product);
+      return [size.sizeCategoryId || '', size.sizeCode || ''];
     }
     if (part.kind === 'ornament_color') return canonicalReferenceOrnamentColors(product.ornamentColorCodes || product.ornColors || []);
-    if (part.custom) return String(((product.attrs || {})[part.kind]) || '');
+    if (part.custom) {
+      const value = (product.attrs || {})[part.kind];
+      return String(value == null && C && C.modeloKind && part.kind === C.modeloKind()
+        ? product.modelo || '' : value || '');
+    }
     return String(product[part.field] == null ? '' : product[part.field]);
   }
   function physicalSignature(product) {
     const parts = C && typeof C.referenceParts === 'function' ? C.referenceParts() : [];
-    const payload = [['model', String(product.modelo == null ? '' : product.modelo)]];
+    const payload = [];
     parts.forEach(part => {
       const value = referenceValue(product, part);
       if (value !== null) payload.push([part.kind, value]);
@@ -71,6 +108,7 @@
   }
 
   function physicalSnapshot(product, talla) {
+    const size = effectiveSize(product, talla);
     return {
       recordModel: isV2Reference(product) ? 'v2' : 'v1',
       category: product.cat || '', model: String(product.modelo || ''), sleeve: product.manga || '',
@@ -78,23 +116,99 @@
       ornament: product.orn || '', ornamentColorCodes: isV2Reference(product)
         ? canonicalReferenceOrnamentColors(product.ornamentColorCodes || [])
         : effectiveOrnamentColors(product, talla),
-      sizeCategoryId: isV2Reference(product) ? product.sizeCategoryId : inferSizeCategory(product, product.stock),
-      sizeCode: String(talla == null ? '' : talla),
+      sizeCategoryId: size.sizeCategoryId || (isV2Reference(product) ? product.sizeCategoryId : inferSizeCategory(product, product.stock)),
+      sizeCode: size.sizeCode,
       custom: Object.fromEntries(Object.entries(product.attrs || {}).filter(([key]) => !key.startsWith('__'))),
     };
   }
 
+  function referenceDimensionValue(source, kind) {
+    const snapshot = source && !source.attrs && source.custom ? source : null;
+    if (kind === 'effective_size') {
+      const size = effectiveSize(snapshot ? {
+        sizeCategoryId: snapshot.sizeCategoryId, sizeCode: snapshot.sizeCode,
+        attrs: { __sizeCategoryId: snapshot.sizeCategoryId },
+      } : source);
+      return size.skuToken || '';
+    }
+    if (kind === 'ornament_color') {
+      const colors = canonicalReferenceOrnamentColors(snapshot
+        ? snapshot.ornamentColorCodes : (source.ornamentColorCodes || source.ornColors || []));
+      return colors.join('+');
+    }
+    const snapshotFields = {
+      category: 'category', producto: 'model', sleeve: 'sleeve', fabric: 'material',
+      color: 'fabricColor', neck: 'neck', ornament: 'ornament',
+    };
+    if (snapshot && snapshotFields[kind]) return String(snapshot[snapshotFields[kind]] || '');
+    if (snapshot) return String((snapshot.custom || {})[kind] || '');
+    const meta = C && C.catalogMeta ? C.catalogMeta(kind) : null;
+    if (!meta) return '';
+    if (meta.custom) {
+      const value = (source.attrs || {})[kind];
+      return String(value == null && C.modeloKind && kind === C.modeloKind() ? source.modelo || '' : value || '');
+    }
+    return String(source[meta.field] == null ? '' : source[meta.field]);
+  }
+
+  // Estadísticas físicas: inventario desde products.id + attrs y ventas desde
+  // el snapshot de cada línea. SKU nunca participa en la resolución.
+  function referenceDimensionStats(options) {
+    const opts = options || {};
+    const kinds = (opts.kinds || (opts.kind ? [opts.kind] : ['caracteristicas'])).map(String);
+    const sourceProducts = opts.products || products || [];
+    const sourceSales = opts.sales || sales || [];
+    const groups = new Map();
+    const groupFor = source => {
+      const values = kinds.map(kind => referenceDimensionValue(source, kind));
+      const key = JSON.stringify(values);
+      if (!groups.has(key)) groups.set(key, {
+        key, kinds: kinds.slice(), values, references: new Set(), stock: 0,
+        unitsSold: 0, sales: 0,
+      });
+      return groups.get(key);
+    };
+    sourceProducts.filter(product => product && !product._deletedAt).forEach(product => {
+      if (!isV2Reference(product) && kinds.includes('effective_size')) {
+        resolveProductSizes(product).sizes.forEach(size => {
+          const row = Object.assign({}, product, {
+            sizeCategoryId: size.sizeCategoryId,
+            sizeCode: String(size.value),
+            attrs: Object.assign({}, product.attrs || {}, { __sizeCategoryId: size.sizeCategoryId }),
+          });
+          const group = groupFor(row);
+          group.references.add(String(product.id));
+          group.stock += Math.max(0, Number(size.stock) || 0);
+        });
+        return;
+      }
+      const group = groupFor(product);
+      group.references.add(String(product.id));
+      group.stock += totalStock(product);
+    });
+    sourceSales.forEach(sale => (sale.lineas || []).forEach(line => {
+      const snapshot = line.physicalAttrs;
+      if (!snapshot) return; // histórico sin evidencia: no se adivina por SKU
+      const group = groupFor(snapshot);
+      const qty = Math.max(0, Number(line.qty) || 0);
+      group.unitsSold += qty;
+      group.sales += qty * Number(line.effectivePrice == null ? line.precio : line.effectivePrice || 0);
+    }));
+    return Array.from(groups.values()).map(group => ({
+      key: group.key, kinds: group.kinds, values: group.values,
+      label: group.values.map(value => value || 'Sin valor').join(' · '),
+      references: group.references.size, stock: group.stock,
+      unitsSold: group.unitsSold, sales: group.sales,
+    })).sort((a, b) => a.label < b.label ? -1 : a.label > b.label ? 1 : 0);
+  }
+
   function referenceDifferences(a, b) {
-    const fields = [
-      ['Modelo', 'modelo'], ['Categoría', 'cat'], ['Manga', 'manga'],
-      ['Material', 'tela'], ['Color Tela', 'color'], ['Cuello', 'cuello'],
-      ['Ornamento', 'orn'], ['Talla', 'sizeCode'],
-    ];
-    const out = fields.filter(([, field]) => String(a[field] ?? '') !== String(b[field] ?? ''))
-      .map(([label, field]) => ({ label, left: a[field], right: b[field] }));
-    const ac = canonicalReferenceOrnamentColors(a.ornamentColorCodes || a.ornColors || []);
-    const bc = canonicalReferenceOrnamentColors(b.ornamentColorCodes || b.ornColors || []);
-    if (JSON.stringify(ac) !== JSON.stringify(bc)) out.push({ label: 'Color de ornamento', left: ac, right: bc });
+    const out = [];
+    (C && C.referenceParts ? C.referenceParts() : []).forEach(part => {
+      const left = referenceValue(a, part), right = referenceValue(b, part);
+      if (JSON.stringify(left) === JSON.stringify(right)) return;
+      out.push({ label: C.catalogLabel(part.kind), left, right, kind: part.kind });
+    });
     return out;
   }
 
@@ -128,8 +242,14 @@
     p.stockQuantity = Math.max(0, Math.round(Number(p.stockQuantity == null ? p.stock : p.stockQuantity) || 0));
     p.physicalIdentityLocked = !!p.physicalIdentityLocked || p.stockQuantity > 0;
     p.ornamentColorCodes = canonicalReferenceOrnamentColors(p.ornamentColorCodes || p.ornColors || []);
+    if (ornamentColorMode(p) === 'none') p.ornamentColorCodes = [];
+    if (ornamentColorMode(p) === 'required' && !p.ornamentColorCodes.length) {
+      throw Object.assign(new Error('Selecciona al menos un color de ornamento'), { code: 'ORNAMENT_COLOR_REQUIRED' });
+    }
     p.ornColors = p.ornamentColorCodes.slice();
     p.attrs = Object.assign({}, p.attrs || {}, { __sizeCategoryId: p.sizeCategoryId });
+    const size = effectiveSize(p);
+    if (!size.valid) throw Object.assign(new Error('La talla no pertenece a la familia seleccionada'), { code: 'REFERENCE_SIZE_INVALID' });
     p.stock = [{ talla: p.sizeCode, escala: p.sizeScale, stock: p.stockQuantity }];
     p.barcodeCode = p.barcodeCode || barcodeFromId(p.id);
     p.sku = p.sku || sku(p);
@@ -302,6 +422,29 @@
   // por pieza (barcodes.codeOf) lo reemplaza por la talla real. Ver Constructor de SKU.
   const SIZE_MARK = 'T';
 
+  function skuPartToken(p, kind, meta) {
+    if (meta.effectiveSize || meta.sizeSlot) return isV2Reference(p) ? effectiveSize(p).skuToken : SIZE_MARK;
+    if (kind === 'ornament_color') return canonicalReferenceOrnamentColors(p.ornamentColorCodes || p.ornColors || []).join('+');
+    if (meta.custom) {
+      const value = (p.attrs || {})[kind];
+      const modelValue = String(p.modelo == null ? '' : p.modelo);
+      const modelToken = /^\d+$/.test(modelValue) ? modelValue.padStart(3, '0') : modelValue;
+      return value == null && C.modeloKind && kind === C.modeloKind() ? modelToken : value;
+    }
+    return p[meta.field];
+  }
+
+  function skuFromMeta(p, meta, extraKinds) {
+    const extras = new Set((extraKinds || []).map(String));
+    const parts = Object.keys(meta || {}).map(kind => ({ kind, m: meta[kind] }))
+      .filter(part => (part.m.inSku || extras.has(part.kind))
+        && (part.m.field || part.m.custom || part.m.sizeSlot))
+      .sort((a, b) => (a.m.skuOrder || 0) - (b.m.skuOrder || 0))
+      .map(part => skuPartToken(p, part.kind, part.m))
+      .filter(value => value != null && value !== '');
+    return parts.join('-') || String(p.modelo || '');
+  }
+
   // SKU armado desde la receta configurable (CONFIG.skuParts): catálogos con "En SKU", ordenados.
   // El No. Modelo YA NO se agrega como token fijo al final: si el admin quiere la clave del modelo
   // en el SKU, activa "En SKU" en el catálogo Modelo y elige su posición como cualquier segmento.
@@ -311,29 +454,36 @@
     const modTok = /^\d+$/.test(mod) ? mod.padStart(3, '0') : mod;
     // Respaldo para cuando CONFIG aún no cargó: orden fijo histórico (con modelo al final).
     if (!(C && typeof C.skuParts === 'function')) return [p.cat, p.manga, p.tela, p.color, modTok].join('-');
-    // El segmento de talla emite el marcador (SIZE_MARK); no lleva un valor por producto.
-    const sizeCategoryId = p.sizeCategoryId || (p.attrs || {}).__sizeCategoryId || inferSizeCategory(p, p.stock);
-    const applicable = C.skuParts().filter(x => {
-      const meta = C.catalogMeta(x.kind) || {};
-      return !meta.sizeCategory || !sizeCategoryId || x.kind === sizeCategoryId;
-    });
-    const parts = applicable.map(x => x.sizeSlot
-      ? (isV2Reference(p) ? p.sizeCode : SIZE_MARK)
-      : (x.custom ? (p.attrs || {})[x.kind] : p[x.field]));
+    const parts = C.skuParts().map(x => skuPartToken(p, x.kind, Object.assign({}, C.catalogMeta(x.kind) || {}, x)));
     // Receta vacía → el modelo como respaldo: el SKU es el identificador y no puede quedar vacío.
     return parts.length ? parts.join('-') : modTok;
   }
   function skuPreview(p, extraKinds) {
-    const extras = new Set((extraKinds || []).map(String));
     const meta = C && C.allCatalogMeta ? C.allCatalogMeta() : {};
-    const sizeCategoryId = p.sizeCategoryId || (p.attrs || {}).__sizeCategoryId || inferSizeCategory(p, p.stock);
-    const parts = Object.keys(meta).map(kind => ({ kind, m: meta[kind] }))
-      .filter(x => (x.m.inSku || extras.has(x.kind)) && (x.m.field || x.m.custom || x.m.sizeSlot)
-        && (!x.m.sizeCategory || !sizeCategoryId || x.kind === sizeCategoryId))
-      .sort((a, b) => (a.m.skuOrder || 0) - (b.m.skuOrder || 0))
-      .map(x => x.m.sizeSlot ? (isV2Reference(p) ? p.sizeCode : SIZE_MARK)
-        : x.m.custom ? (p.attrs || {})[x.kind] : p[x.m.field]);
-    return parts.filter(value => value != null && value !== '').join('-') || String(p.modelo || '');
+    return skuFromMeta(p, meta, extraKinds);
+  }
+  function skuConfigurationImpact(kind, inSku, collection) {
+    const meta = C && C.allCatalogMeta ? C.allCatalogMeta() : {};
+    if (!meta[kind]) return { ok: false, code: 'CATALOG_NOT_FOUND' };
+    meta[kind].inSku = !!inSku;
+    const rows = (collection || products || []).filter(product => product && !product._deletedAt)
+      .map(product => ({ product, proposedSku: skuFromMeta(product, meta) }));
+    const groups = {};
+    rows.forEach(row => { (groups[row.proposedSku] || (groups[row.proposedSku] = [])).push(row.product); });
+    const collisions = Object.keys(groups).filter(key => groups[key].length > 1)
+      .map(key => ({ sku: key, references: groups[key].map(product => product.id), count: groups[key].length }));
+    const lengths = rows.map(row => row.proposedSku.length).sort((a, b) => a - b);
+    const omitted = Object.keys(meta).filter(key => meta[key].inReference && !meta[key].inSku);
+    return {
+      ok: true,
+      affected: rows.filter(row => String(row.product.sku || '') !== row.proposedSku).length,
+      total: rows.length,
+      collisions,
+      omitted,
+      typicalLength: lengths.length ? lengths[Math.floor(lengths.length / 2)] : 0,
+      maxLength: lengths.length ? lengths[lengths.length - 1] : 0,
+      examples: rows.slice(0, 5).map(row => ({ productId: row.product.id, before: row.product.sku || '', after: row.proposedSku })),
+    };
   }
   function totalStock(p) {
     if (isV2Reference(p)) return Math.max(0, Number(p.stockQuantity) || 0);
@@ -786,6 +936,14 @@
     const next = Object.assign({}, current, candidate, {
       ornamentColorCodes: canonicalReferenceOrnamentColors(candidate.ornamentColorCodes || candidate.ornColors || current.ornamentColorCodes),
     });
+    if (ornamentColorMode(next) === 'none') next.ornamentColorCodes = [];
+    if (ornamentColorMode(next) === 'required' && !next.ornamentColorCodes.length) {
+      throw Object.assign(new Error('Selecciona al menos un color de ornamento'), { code: 'ORNAMENT_COLOR_REQUIRED' });
+    }
+    next.ornColors = next.ornamentColorCodes.slice();
+    if (!effectiveSize(next).valid) {
+      throw Object.assign(new Error('La talla no pertenece a la familia seleccionada'), { code: 'REFERENCE_SIZE_INVALID' });
+    }
     next.physicalSignature = physicalSignature(next);
     if (next.physicalSignature !== current.physicalSignature
         && (current.physicalIdentityLocked || (Number(current.stockQuantity) || 0) !== 0 || referenceHasOperations(current.id))) {
@@ -2195,12 +2353,7 @@
   }
 
   function ornamentSupportsColors(product) {
-    const code = String((product && product.orn) || '').trim();
-    if (!code) return false;
-    const item = C && typeof C.find === 'function' ? C.find('ornament', code) : null;
-    if (item && item.meta && item.meta.allowsColors === false) return false;
-    const label = String((item && item.label) || code).trim().toLowerCase();
-    return code !== '—' && label !== 'sin ornamento';
+    return ornamentColorMode(product) !== 'none';
   }
 
   function sanitizeOrnamentColorsBySize(mapa, product) {
@@ -5215,6 +5368,7 @@
     products, sellers, clients, sales, movements, promos, liquidations, returns, payments, exchanges, loans,
     sku, regenerateSkus, totalStock, hydrate, mkStock, emptyStock, SIZE_MARK,
     isV2Reference, createReference, updateReference, physicalSignature, skuPreview,
+    effectiveSize, ornamentColorMode, referenceDimensionStats, skuConfigurationImpact,
     canonicalReferenceOrnamentColors, referenceDiagnostics, referenceDifferences,
     physicalSnapshot, barcodeFromId, referenceHasOperations, reclassifyReference,
     migrateSizeCodes, liveDocumentCounts, inventoryFootprint, clearInventory,
