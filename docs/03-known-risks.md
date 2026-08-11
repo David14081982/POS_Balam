@@ -4587,7 +4587,8 @@ objetos, guardas y ACL, `migration list` quedó simétrico y el dry-run respondi
 `136c8d0`. El artefacto servido tiene 8,950,198 bytes y SHA-256
 `F9EC47BFC7833E1B7E26CC670AC9C2279CA11C30E70004772C1DBC782C08DCB0`;
 coincide con el blob aprobado después de la única transformación de Pages:
-CRLF→LF en 171 líneas. Sobre esos bytes: H-94 15/15, smoke V1 17/17,
+CRLF→LF en 171 líneas. Sobre esos bytes: H-94 16/16 —incluida convergencia de
+dos referencias homónimas sin fusión—, smoke V1 17/17,
 préstamos 117/117, apartados 28/28, formulario 19/19, ornamentos 17/17,
 comprobantes 20/20 y etiquetas 19/19. Las regresiones posteriores de Excel,
 dos terminales, convergencia y cola pasaron 42/42, 69/69, 7/7 y 162/162.

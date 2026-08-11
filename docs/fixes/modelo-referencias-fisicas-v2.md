@@ -106,7 +106,8 @@ SHA-256 `F9EC47BFC7833E1B7E26CC670AC9C2279CA11C30E70004772C1DBC782C08DCB0`.
 Pages normalizó las 171 terminaciones CRLF del blob a LF; tras esa única
 normalización el contenido fue idéntico, sin otra diferencia.
 
-Sobre la descarga real de Pages: H-94 15/15, smoke V1 17/17, préstamos V1
+Sobre la descarga real de Pages: H-94 16/16 —incluidas dos terminales que no
+fusionan referencias con SKU iguales—, smoke V1 17/17, préstamos V1
 117/117, apartados 28/28, formulario 19/19, colores de ornamento 17/17,
 comprobantes 20/20 y etiquetas 19/19. Después de publicar se repitieron Excel
 42/42, sincronización de préstamos entre terminales 69/69, convergencia 7/7 y
