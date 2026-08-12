@@ -167,8 +167,21 @@
         return h('div', { className: 'h-full grid place-items-center', style: { background: '#131B2E' } },
           h('div', { className: 'text-sm', style: { color: '#5D637B' } }, 'Cargando…'));
       }
-      if (!window.AUTH.hasSession()) return h(LoginScreen, { key: 'login' });
-      if (!user) return h(AccessDeniedScreen, { key: 'denied' });
+      // ToastHost vive en la rama autenticada, así que antes de entrar los avisos
+      // se emitían contra un host sin montar y se perdían en silencio: la pantalla
+      // de Login no podía explicar por qué no dejaba pasar. Va con cada rama previa.
+      if (!window.AUTH.hasSession()) {
+        return h(React.Fragment, null, [
+          h(LoginScreen, { key: 'login' }),
+          h(window.UI.ToastHost, { key: 'toast' }),
+        ]);
+      }
+      if (!user) {
+        return h(React.Fragment, null, [
+          h(AccessDeniedScreen, { key: 'denied' }),
+          h(window.UI.ToastHost, { key: 'toast' }),
+        ]);
+      }
     }
     if (window.DATA && window.DATA.localWriterLeaseSupported && !window.DATA.isLocalWriter) {
       const writerState = window.DATA.localWriterState;
@@ -324,6 +337,9 @@
     const [email, setEmail] = useState('');
     const [pass, setPass] = useState('');
     const [busy, setBusy] = useState(false);
+    // El motivo del rechazo se queda escrito en la pantalla. Un toast se
+    // desvanece en 2,6 s y en una caja eso equivale a no haber dicho nada.
+    const [error, setError] = useState('');
     const logo = window.CONFIG.get('store.logo');
     const nombre = window.CONFIG.get('store.name') || 'Balam Guayaberas';
 
@@ -332,12 +348,24 @@
 
     async function submit() {
       if (busy) return;
-      if (!email.trim() || !pass) { toast('Escribe correo y contraseña', 'var(--danger)'); return; }
+      if (!email.trim() || !pass) {
+        setError('Escribe correo y contraseña');
+        toast('Escribe correo y contraseña', 'var(--danger)');
+        return;
+      }
       setBusy(true);
+      setError('');
       try {
         const r = await window.AUTH.login(email, pass);
         if (r.ok) { toast('Sesión iniciada', 'var(--accent)'); return; }
-        toast(r.error || 'No se pudo iniciar sesión', 'var(--danger)');
+        const motivo = r.error || 'No se pudo iniciar sesión';
+        setError(motivo);
+        toast(motivo, 'var(--danger)');
+      } catch (e) {
+        // Un fallo inesperado tampoco puede dejar la pantalla muda.
+        const motivo = (e && e.message) || 'No se pudo iniciar sesión';
+        setError(motivo);
+        toast(motivo, 'var(--danger)');
       } finally { setBusy(false); }
     }
 
@@ -356,6 +384,14 @@
         h('div', { key: 'pw', className: 'mb-7' }, [
           h('label', { key: 'l', className: lbl, style: { color: '#5D637B' } }, 'Contraseña'),
           h('input', { key: 'i', className: input, style: { color: '#fff', borderColor: '#2A3350' }, type: 'password', value: pass, onChange: e => setPass(e.target.value), placeholder: '••••••••', onKeyDown: e => { if (e.key === 'Enter') submit(); } }),
+        ]),
+        error && h('div', {
+          key: 'err', role: 'alert', 'data-testid': 'login-error',
+          className: 'mb-5 -mt-2 px-3 py-2.5 rounded-lg text-sm flex items-start gap-2',
+          style: { background: 'rgba(255,138,128,0.12)', color: '#FF8A80' },
+        }, [
+          h(MS, { key: 'i', name: 'lock', size: 16 }),
+          h('span', { key: 'm' }, error),
         ]),
         h('button', {
           key: 'go', className: 'w-full h-12 rounded-lg font-label-sm uppercase tracking-widest text-xs flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50',
