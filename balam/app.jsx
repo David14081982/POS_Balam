@@ -351,7 +351,7 @@
         ]),
         h('div', { key: 'em', className: 'mb-5' }, [
           h('label', { key: 'l', className: lbl, style: { color: '#5D637B' } }, 'Correo'),
-          h('input', { key: 'i', className: input, style: { color: '#fff', borderColor: '#2A3350' }, type: 'email', value: email, onChange: e => setEmail(e.target.value), placeholder: 'admin@balam.com', autoFocus: true, onKeyDown: e => { if (e.key === 'Enter') submit(); } }),
+          h('input', { key: 'i', className: input, style: { color: '#fff', borderColor: '#2A3350' }, type: 'email', value: email, onChange: e => setEmail(e.target.value), placeholder: 'admin@balamguayaberas.com', autoFocus: true, onKeyDown: e => { if (e.key === 'Enter') submit(); } }),
         ]),
         h('div', { key: 'pw', className: 'mb-7' }, [
           h('label', { key: 'l', className: lbl, style: { color: '#5D637B' } }, 'Contraseña'),

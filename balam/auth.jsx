@@ -260,7 +260,9 @@
       emit();
       await resolveProfile(c, data.session || null);
       if (!profile) {
-        try { await c.auth.signOut(); } catch (e) { /* */ }
+        // Alcance local: esta terminal no pudo resolver perfil, pero eso no es
+        // motivo para revocar los refresh tokens de las demás terminales.
+        try { await c.auth.signOut({ scope: 'local' }); } catch (e) { /* */ }
         session = null;
         ready = true;
         emit();
@@ -275,7 +277,10 @@
   }
   async function logout() {
     const c = await client();
-    try { if (c) await c.auth.signOut(); } catch (e) { /* */ }
+    // supabase-js v2 usa scope 'global' por defecto y revoca la sesión de la
+    // cuenta en TODOS los dispositivos. Cerrar sesión en una caja no debe
+    // expulsar a la bodega ni al teléfono: el alcance es esta terminal.
+    try { if (c) await c.auth.signOut({ scope: 'local' }); } catch (e) { /* */ }
     resolveSeq++;
     session = null;
     applyResolved(null, null, 'profile_missing');
