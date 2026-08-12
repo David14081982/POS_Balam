@@ -84,6 +84,36 @@
     if (['none', 'optional', 'required'].includes(mode)) return mode;
     return code && code !== '—' ? 'optional' : 'none';
   }
+  // H-86: autoridad única para la representación persistida de atributos
+  // gobernados por catálogos custom. Sólo esos kinds se interpretan: las
+  // claves reservadas __* y cualquier dato histórico desconocido se conservan
+  // literalmente. Un obligatorio se valida en las fronteras de escritura;
+  // hydrate mantiene compatibilidad de lectura con V1 histórico.
+  function canonicalProductAttrs(attrs, options) {
+    const source = attrs && typeof attrs === 'object' && !Array.isArray(attrs) ? attrs : {};
+    const out = Object.assign({}, source);
+    const opts = options || {};
+    const meta = C && C.allCatalogMeta ? C.allCatalogMeta() : {};
+    const modelKind = C && C.modeloKind ? C.modeloKind() : null;
+    Object.keys(meta).forEach(kind => {
+      const definition = meta[kind];
+      if (!definition || !definition.custom || kind.startsWith('__')) return;
+      const raw = source[kind];
+      const blank = raw == null || (typeof raw === 'string' && raw.trim() === '');
+      if (!blank) {
+        out[kind] = typeof raw === 'string' ? raw.trim() : raw;
+        return;
+      }
+      delete out[kind];
+      if (!opts.validateRequired || !definition.required) return;
+      const fallback = kind === modelKind && opts.product ? opts.product.modelo : null;
+      if (fallback != null && String(fallback).trim() !== '') return;
+      throw Object.assign(new Error(`Selecciona ${definition.label || kind}.`), {
+        code: 'CUSTOM_ATTRIBUTE_REQUIRED', kind,
+      });
+    });
+    return out;
+  }
   function referenceValue(product, part) {
     if (part.effectiveSize) {
       const size = effectiveSize(product);
@@ -91,7 +121,7 @@
     }
     if (part.kind === 'ornament_color') return canonicalReferenceOrnamentColors(product.ornamentColorCodes || product.ornColors || []);
     if (part.custom) {
-      const value = (product.attrs || {})[part.kind];
+      const value = canonicalProductAttrs(product.attrs, { product })[part.kind];
       return String(value == null && C && C.modeloKind && part.kind === C.modeloKind()
         ? product.modelo || '' : value || '');
     }
@@ -109,6 +139,7 @@
 
   function physicalSnapshot(product, talla) {
     const size = effectiveSize(product, talla);
+    const attrs = canonicalProductAttrs(product.attrs, { product });
     return {
       recordModel: isV2Reference(product) ? 'v2' : 'v1',
       category: product.cat || '', model: String(product.modelo || ''), sleeve: product.manga || '',
@@ -118,7 +149,7 @@
         : effectiveOrnamentColors(product, talla),
       sizeCategoryId: size.sizeCategoryId || (isV2Reference(product) ? product.sizeCategoryId : inferSizeCategory(product, product.stock)),
       sizeCode: size.sizeCode,
-      custom: Object.fromEntries(Object.entries(product.attrs || {}).filter(([key]) => !key.startsWith('__'))),
+      custom: Object.fromEntries(Object.entries(attrs).filter(([key]) => !key.startsWith('__'))),
     };
   }
 
@@ -141,11 +172,11 @@
       color: 'fabricColor', neck: 'neck', ornament: 'ornament',
     };
     if (snapshot && snapshotFields[kind]) return String(snapshot[snapshotFields[kind]] || '');
-    if (snapshot) return String((snapshot.custom || {})[kind] || '');
+    if (snapshot) return String(canonicalProductAttrs(snapshot.custom)[kind] || '');
     const meta = C && C.catalogMeta ? C.catalogMeta(kind) : null;
     if (!meta) return '';
     if (meta.custom) {
-      const value = (source.attrs || {})[kind];
+      const value = canonicalProductAttrs(source.attrs, { product: source })[kind];
       return String(value == null && C.modeloKind && kind === C.modeloKind() ? source.modelo || '' : value || '');
     }
     return String(source[meta.field] == null ? '' : source[meta.field]);
@@ -247,7 +278,9 @@
       throw Object.assign(new Error('Selecciona al menos un color de ornamento'), { code: 'ORNAMENT_COLOR_REQUIRED' });
     }
     p.ornColors = p.ornamentColorCodes.slice();
-    p.attrs = Object.assign({}, p.attrs || {}, { __sizeCategoryId: p.sizeCategoryId });
+    p.attrs = canonicalProductAttrs(Object.assign({}, p.attrs || {}, { __sizeCategoryId: p.sizeCategoryId }), {
+      validateRequired: true, product: p,
+    });
     const size = effectiveSize(p);
     if (!size.valid) throw Object.assign(new Error('La talla no pertenece a la familia seleccionada'), { code: 'REFERENCE_SIZE_INVALID' });
     p.stock = [{ talla: p.sizeCode, escala: p.sizeScale, stock: p.stockQuantity }];
@@ -426,7 +459,7 @@
     if (meta.effectiveSize || meta.sizeSlot) return isV2Reference(p) ? effectiveSize(p).skuToken : SIZE_MARK;
     if (kind === 'ornament_color') return canonicalReferenceOrnamentColors(p.ornamentColorCodes || p.ornColors || []).join('+');
     if (meta.custom) {
-      const value = (p.attrs || {})[kind];
+      const value = canonicalProductAttrs(p.attrs, { product: p })[kind];
       const modelValue = String(p.modelo == null ? '' : p.modelo);
       const modelToken = /^\d+$/.test(modelValue) ? modelValue.padStart(3, '0') : modelValue;
       return value == null && C.modeloKind && kind === C.modeloKind() ? modelToken : value;
@@ -526,7 +559,7 @@
   // Recalcula campos derivados (sku, hex/nombre de color) y normaliza estructura.
   function hydrate(p) {
     p.modelo = String(p.modelo);
-    if (!p.attrs || typeof p.attrs !== 'object') p.attrs = {}; // valores de catálogos custom (Fase 2)
+    p.attrs = canonicalProductAttrs(p.attrs, { product: p });
     if (isV2Reference(p)) {
       p.sizeCategoryId = p.sizeCategoryId || p.attrs.__sizeCategoryId || '';
       p.attrs.__sizeCategoryId = p.sizeCategoryId;
@@ -539,7 +572,7 @@
       p.stock = [{ talla: p.sizeCode, escala: p.sizeScale, stock: p.stockQuantity }];
       if (!p.barcodeCode) p.barcodeCode = barcodeFromId(p.id);
       if (!p.sku) p.sku = sku(p);
-      if (!p.physicalSignature) p.physicalSignature = physicalSignature(p);
+      p.physicalSignature = physicalSignature(p);
       if (p.costo == null || p.costo === '') p.costo = Math.round((Number(p.precio) || 0) * 0.45);
       p.costo = Number(p.costo) || 0;
       colorDisplay(p);
@@ -956,6 +989,7 @@
   // implica sincronizar; syncProducts exige siempre un conjunto explícito.
   function persistProducts() {
     if (!remoteApplying && !protectLayawayLockedProducts()) return false;
+    products.forEach(product => { product.attrs = canonicalProductAttrs(product.attrs, { product }); });
     bumpRevision(); // el inventario no pasa por `save()`; su aviso se emite aquí
     let persisted = true;
     try { localStorage.setItem(LS_KEY, JSON.stringify(products)); }
@@ -989,13 +1023,16 @@
     if (!current) throw Object.assign(new Error('La referencia ya no existe'), { code: 'REFERENCE_NOT_FOUND' });
     if (!isV2Reference(current)) {
       if (candidate.recordModel === 'v2') throw Object.assign(new Error('Una fila V1 no se convierte automáticamente; crea referencias V2 nuevas'), { code: 'REFERENCE_MODEL_IMMUTABLE' });
-      Object.assign(current, candidate); return hydrate(current);
+      const next = Object.assign({}, current, candidate);
+      next.attrs = canonicalProductAttrs(next.attrs, { validateRequired: true, product: next });
+      Object.assign(current, next); return hydrate(current);
     }
     if (candidate.recordModel && candidate.recordModel !== 'v2') throw Object.assign(new Error('El modelo de una referencia V2 es inmutable'), { code: 'REFERENCE_MODEL_IMMUTABLE' });
     if (candidate.barcodeCode && candidate.barcodeCode !== current.barcodeCode) throw Object.assign(new Error('El código logístico de la referencia es inmutable'), { code: 'BARCODE_IMMUTABLE' });
     const next = Object.assign({}, current, candidate, {
       ornamentColorCodes: canonicalReferenceOrnamentColors(candidate.ornamentColorCodes || candidate.ornColors || current.ornamentColorCodes),
     });
+    next.attrs = canonicalProductAttrs(next.attrs, { validateRequired: true, product: next });
     if (ornamentColorMode(next) === 'none') next.ornamentColorCodes = [];
     if (ornamentColorMode(next) === 'required' && !next.ornamentColorCodes.length) {
       throw Object.assign(new Error('Selecciona al menos un color de ornamento'), { code: 'ORNAMENT_COLOR_REQUIRED' });
@@ -5433,7 +5470,7 @@
     sku, regenerateSkus, totalStock, hydrate, mkStock, emptyStock, SIZE_MARK,
     isV2Reference, createReference, updateReference, physicalSignature, skuPreview,
     effectiveSize, ornamentColorMode, referenceDimensionStats, skuConfigurationImpact,
-    canonicalReferenceOrnamentColors, referenceDiagnostics, referenceDifferences,
+    canonicalReferenceOrnamentColors, canonicalProductAttrs, referenceDiagnostics, referenceDifferences,
     physicalSnapshot, barcodeFromId, referenceHasOperations, reclassifyReference,
     migrateSizeCodes, liveDocumentCounts, inventoryFootprint, clearInventory,
     persistProducts, syncProducts, saveProducts, saveSellers, saveClients, saveSales, saveMovements, savePromos, saveReturns, savePayments,

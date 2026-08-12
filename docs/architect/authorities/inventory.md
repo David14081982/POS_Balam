@@ -23,6 +23,15 @@ Reglas de mantenimiento en `../README.md` § Registro de autoridades.
 **Creada por:** H-94 · **Decisión:** `ADR-013`
 **Consumidores:** `grep -rn "physicalSignature\|barcodeCode\|productId" balam/`
 
+## ¿Cuál es la representación canónica de los atributos custom de un producto?
+**Autoridad:** `DATA.canonicalProductAttrs(attrs, options)` omite únicamente los
+kinds custom conocidos cuyo valor sea `null`, vacío o sólo espacios; preserva
+claves `__*` y atributos históricos desconocidos. Con `validateRequired` rechaza
+un catálogo obligatorio sin valor.
+**Definición:** `balam/data.jsx` · metadata vigente en `CONFIG.catalogMeta`
+**Creada por:** extensión H-86
+**Consumidores:** `grep -rn "canonicalProductAttrs" balam/ test-*.mjs`
+
 ## ¿Qué tallas aplican a este producto y cuántas piezas existen?
 **Autoridad:** `DATA.resolveProductSizes(producto, catálogos, variantes)`
 **Definición:** `balam/data.jsx` · categoría persistida en

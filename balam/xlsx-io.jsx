@@ -339,8 +339,9 @@
     return out;
   }
   function rowFromProduct(p, cols) {
+    const canonicalAttrs = D.canonicalProductAttrs(p.attrs, { product: p });
     const ornamentBySize = D.sanitizeOrnamentColorsBySize(
-      p.attrs && p.attrs.__ornamentColorsBySize, p);
+      canonicalAttrs.__ornamentColorsBySize, p);
     const pricesBySize = D.sanitizePreciosTalla ? D.sanitizePreciosTalla(p.preciosTalla, p) : (p.preciosTalla || {});
     const r = {
       'SKU': p.sku, 'Modelo': p.nombre, 'Categoría': p.cat,
@@ -362,7 +363,7 @@
       'Colores de ornamento V2': p.recordModel === 'v2'
         ? D.canonicalReferenceOrnamentColors(p.ornamentColorCodes || []).join(', ') : '',
     };
-    exportCols().forEach(c => { r[c.label] = (p.attrs || {})[c.kind] || ''; });
+    exportCols().forEach(c => { r[c.label] = canonicalAttrs[c.kind] || ''; });
     const byKey = {};
     p.stock.forEach(v => { byKey[v.escala + v.talla] = v.stock; });
     // La columna se llama por la etiqueta; las piezas se buscan por la identidad.
@@ -604,6 +605,17 @@
       stock: recordModel === 'v2' ? [{ talla: sizeCode, escala: sizeCategory.scale, stock: stockQuantity }] : stock,
       sku: skuRaw || undefined,
     };
+    try {
+      // El adaptador legacy conserva su contrato de lectura histórica: campos
+      // que todavía no existían significan PRESERVAR. El esquema canónico sí
+      // exige todos los catálogos custom marcados como obligatorios.
+      rawProduct.attrs = D.canonicalProductAttrs(rawProduct.attrs, {
+        validateRequired: canonical || recordModel === 'v2', product: rawProduct,
+      });
+    } catch (error) {
+      const definition = window.CONFIG.catalogMeta(error.kind) || {};
+      rowError(idx, definition.label || error.kind || 'Atributos', error.message || 'es obligatorio.');
+    }
     const product = recordModel === 'v2' ? D.createReference(rawProduct, [])
       : D.hydrate(Object.assign(rawProduct, { id: sourceId || 'imp-' + Date.now() + '-' + idx }));
     // Un heredado sin la columna H-83 expresa PRESERVAR, no un mapa vacío.
@@ -791,7 +803,8 @@
   function canonicalProductState(product) {
     const resolved = D.resolveProductSizes(product);
     const attrs = {};
-    Object.keys(product.attrs || {}).sort().forEach(key => { attrs[key] = clone(product.attrs[key]); });
+    const canonicalAttrs = D.canonicalProductAttrs(product.attrs, { product });
+    Object.keys(canonicalAttrs).sort().forEach(key => { attrs[key] = clone(canonicalAttrs[key]); });
     return {
       id: product.id || '', version: Number(product._syncVersion) || 0, sku: product.sku || '',
       recordModel: product.recordModel || 'v1', barcodeCode: product.barcodeCode || '',
@@ -853,7 +866,7 @@
       const value = meta.customValues[kind];
       if (value) attrs[kind] = value; else delete attrs[kind];
     });
-    after.attrs = attrs;
+    after.attrs = D.canonicalProductAttrs(attrs, { validateRequired: true, product: after });
     const stockKeys = new Set(meta.stockPresent || []);
     if (stockKeys.size) {
       if (meta.canonical) after.stock = clone(incoming.stock || []);
