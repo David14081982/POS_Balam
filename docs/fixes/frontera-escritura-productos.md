@@ -1,9 +1,9 @@
 # Frontera explícita de escritura de productos
 
 **Riesgo:** H-95
-**Estado:** EN PROGRESO — verificación local completa, publicación pendiente
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha:** 11/08/2026
-**Commit:** Pendiente de commit
+**Commit:** `3973499`
 
 ## Problema y reproducción
 
@@ -89,14 +89,36 @@ durante el piloto H-94. Esta historia no contiene migración SQL.
 - Artefacto local: 8,959,245 bytes; SHA-256
   `e16d889824e5b773e9de3a5bfb8223a601e945b4c640203fe37a4b215e49138e`.
 
-La verificación remota, el commit y la comparación contra GitHub Pages se
-registrarán después de publicar.
+- `npx supabase db push --dry-run --linked` →
+  `Remote database is up to date`; ninguna migración H-95 pendiente.
+- Huella remota antes/después: 1,378 V1, 0 V2, 0 piloto, 3,334 piezas,
+  `v1_fingerprint=d8bd3f2ed327f3e330c814d0bf9e8731`, versión máxima 79 y
+  último `updated_at=2026-08-11 22:38:29.754181+00`, sin cambios.
+- La última `inventory.adjust` sigue siendo
+  `05e6b23e-afd4-4ea5-9806-c704ce2018f9`, la operación H-94 de 233 filas;
+  no apareció ninguna operación posterior.
+- `origin/main` y HEAD coinciden en
+  `3973499f22f3307d5702b56d10c84cbb79047329`.
+- GitHub Pages run `31552891080` → `success`.
+- Artefacto servido: 8,959,074 bytes, SHA-256
+  `f24fdb926036fe6eb088e7793f36ca3b3b918f9423f4e4d4cf26f35f89d76aa2`.
+  Coincide exactamente con el build aprobado después de la única
+  transformación de Pages: CRLF→LF en 171 líneas.
+- `node .evidence-h95/verify-h95-published.mjs` sobre los bytes descargados →
+  11/11: alcances 1/11, persistencia local, CONFIG, Realtime, dos terminales,
+  diagnóstico, preview y aplicación por ID.
 
 ## Riesgo residual y pendientes
 
-Pendiente verificar la versión publicada y observar la huella V1/cola remota
-antes y después. H-94 permanece detenido. La canonicalización H-86 es otra
-historia y no se modificó aquí.
+Ninguno conocido dentro de la frontera de escritura H-95. H-94 permanece
+detenido y la canonicalización H-86 es otra historia; no se inició ni se
+modificó aquí.
+
+La tabla remota de observabilidad `sync_activity` conservó sin cambios 38 filas
+no completadas, incluidas 2 bloqueadas. No equivale por sí sola a la cola local
+activa y no se limpió ni reinterpretó en esta historia. La puerta global
+`cola=0 / bloqueos=0 / CONFIG sincronizada` corresponde al cierre posterior de
+ambas historias, tal como autorizó el dueño.
 
 ## Referencias
 

@@ -4609,9 +4609,9 @@ Quedan publicación y piloto sintético; todavía no es producción.
 
 ## H-95 - Una escritura acotada de productos puede expandirse al inventario local completo
 
-**Estado:** EN PROGRESO
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha de registro:** 11/08/2026
-**Commit técnico:** Pendiente de commit
+**Commit técnico:** `3973499`
 **Origen:** auditoría forense del piloto preproducción H-94.
 **Reproducción:** `STORE.pushRows('products', subset)` encola una operación sin
 `rowIds`; al drenarla, `applyOp()` reconstruye `rows` desde todo
@@ -4627,8 +4627,24 @@ Realtime, CONFIG y dos terminales; pruebas de IDs y payload exactos.
 **No alcance:** restaurar o regenerar los 222 SKU, modificar productos remotos,
 reanudar H94-PILOT, punto cero, inventario real, etiquetas reales y la historia
 separada H86 de atributos opcionales.
+**Corrección:** `rowIds` queda obligatorio y durable en upserts de productos;
+rebase, cola y reintento sólo reconstruyen esos IDs. DATA separa persistencia
+local de intención remota. CONFIG y Realtime sólo invalidan. El remapeo es un
+diagnóstico puro y reparar exige preview, confirmación e ID exacto.
+**Pruebas:** rojas 2/11 y 162/168; verdes H-95 16/16, cola 168/168,
+concurrencia 15/15, regresiones ampliadas verdes, build 8/8 y smoke 17/17.
+Supabase quedó `Remote database is up to date`. La huella remota antes/después
+conservó 1,378 V1, 3,334 piezas y
+`d8bd3f2ed327f3e330c814d0bf9e8731`; no apareció ningún ajuste posterior al
+incidente H-94.
+**Publicación:** `origin/main=3973499`; Pages run `31552891080` terminó en
+`success`. El HTML servido tiene 8,959,074 bytes y SHA-256
+`F24FDB926036FE6EB088E7793F36CA3B3B918F9423F4E4D4CF26F35F89D76AA2`, idéntico
+al build tras normalizar 171 CRLF; H-95 publicado 11/11.
+**Riesgo residual:** ninguno conocido en H-95. H-94 sigue detenido; H86 y la
+puerta global de cola/bloqueos se trabajarán por separado.
 **Corrección documentada:**
-`docs/fixes/frontera-escritura-productos.md` (pendiente durante implementación).
+`docs/fixes/frontera-escritura-productos.md`.
 
 ## Regla de actualización
 
