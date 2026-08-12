@@ -149,7 +149,7 @@
       const backup = D.products.map(product => JSON.parse(JSON.stringify(product)));
       try {
         const result = window.XLSXIO.applyImportPlan(plan, D.products);
-        D.saveProducts(); refresh();
+        D.saveProducts(result.productIds); refresh();
         setImportPreview(null); setImportResolutions({});
         toast(`${result.nuevos} nuevos · ${result.actualizados} actualizados`, 'var(--accent)');
       } catch (error) {
@@ -170,7 +170,7 @@
       } catch (error) {
         toast((error && error.message) || 'No se pudo guardar la referencia', 'var(--danger)'); return;
       }
-      D.saveProducts(); refresh();
+      D.saveProducts([saved.id]); refresh();
       setEditing(null); setDetail(null);
       toast(mode === 'edit' ? 'Producto actualizado' : 'Producto agregado al inventario', 'var(--accent)');
       if ((saved.referenceWarnings || []).some(w => w.code === 'SKU_DUPLICATE_WARNING')) {
@@ -1251,7 +1251,7 @@
           okN++;
         } catch (e) { failN++; }
       }
-      D.saveProducts();
+      D.saveProducts([...new Set(specs.map(spec => spec.p.id))]);
       setSaving(false);
       toast(failN ? `Guardadas ${okN}, fallaron ${failN}. Error al guardar imagen del código; intenta regenerarlo.` : `${okN} ${okN === 1 ? 'imagen guardada' : 'imágenes guardadas'} en Supabase`, failN ? 'var(--danger)' : 'var(--accent)');
     }

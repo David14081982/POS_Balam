@@ -35,8 +35,8 @@
     const products = catalogProductsAdapter.list();
     return Array.isArray(products) ? products : [];
   }
-  function saveCatalogProducts() {
-    if (catalogProductsAdapter) catalogProductsAdapter.save();
+  function saveCatalogProducts(productIds) {
+    if (catalogProductsAdapter) catalogProductsAdapter.save(productIds);
   }
   // H-63: las promociones referencian tallas por valor dentro de scope.tallas, así que
   // una guarda de catálogo necesita leerlas. Va por el mismo gateway que los productos

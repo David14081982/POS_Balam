@@ -867,6 +867,12 @@
       if (op.type === 'upsert') {
         op.kind = op.kind || kindForTable(op.table);
         const m = MAP[op.kind];
+        if (op.kind === 'products' && (!Array.isArray(op.rowIds) || !op.rowIds.length)) {
+          return failOp({
+            code: 'product_scope_required',
+            message: 'Una escritura de productos sin IDs concretos fue bloqueada',
+          });
+        }
         // Reconstituye el snapshot justo antes de enviarlo. Si otra operación en
         // vuelo confirmó una versión, la op compactada usa esa versión nueva.
         if (m && m.localKey && window.DATA && Array.isArray(window.DATA[m.localKey])) {
@@ -875,9 +881,17 @@
           // con el arreglo entero era justo lo que se quería evitar al enviarla
           // por fila. Si la fila ya no existe localmente, la op queda sin cuerpo
           // y no escribe nada (un borrado viaja por su propia `deleteRow`).
-          op.rows = op.rowIds
-            ? op.rowIds.map(id => local.find(x => x && x.id === id)).filter(Boolean).map(m.toRow)
-            : local.map(m.toRow);
+          if (op.rowIds) {
+            const selected = op.rowIds.map(id => local.find(x => x && String(x.id) === String(id)));
+            if (selected.some(row => !row)) {
+              return failOp({
+                code: 'product_scope_incomplete',
+                message: 'La escritura acotada ya no puede reconstruir todos sus IDs',
+                details: { rowIds: op.rowIds.slice() },
+              });
+            }
+            op.rows = selected.map(m.toRow);
+          } else op.rows = local.map(m.toRow);
         }
         if (op.rowIds && (!Array.isArray(op.rows) || !op.rows.length)) return true;
         if (op.kind === 'products' && (!Array.isArray(op.rows) || !op.rows.length)) return true;
@@ -1457,6 +1471,24 @@
             mig = true;
           }
         }
+        // H-95: una operación histórica conserva los IDs contenidos en su
+        // payload original. La falta de rowIds nunca autoriza reconstruirla
+        // desde el inventario local completo del momento del reintento.
+        if (o.type === 'upsert' && (o.kind === 'products' || o.table === 'products')
+            && (!Array.isArray(o.rowIds) || !o.rowIds.length)) {
+          const ids = Array.isArray(o.rows)
+            ? o.rows.map(row => String(row && row.id || '').trim()).filter(Boolean)
+            : [];
+          if (ids.length && ids.length === o.rows.length && new Set(ids).size === ids.length) {
+            o.kind = 'products'; o.rowIds = ids; mig = true;
+          } else {
+            blockQueueForIdentity(o, {
+              code: 'product_scope_required',
+              message: 'La operación histórica de productos no declara IDs verificables',
+            });
+            mig = true;
+          }
+        }
         // Las colas antiguas borraban físicamente. Se convierten a tombstone;
         // base 0 coincide con las filas históricas al instalar la migración.
         if (o.type === 'delete') {
@@ -1570,7 +1602,20 @@
     if (kind === 'sellers') {
       return run({ type: 'profileUpdate', kind, table: m.table, conflict: m.conflict, rows: arr.map(m.profileRow) });
     }
-    return run({ type: 'upsert', kind, table: m.table, conflict: m.conflict, rows: arr.map(m.toRow) });
+    const rowIds = kind === 'products'
+      ? arr.map(row => String(row && row.id || '').trim())
+      : null;
+    if (kind === 'products'
+        && (rowIds.some(id => !id) || new Set(rowIds).size !== rowIds.length)) {
+      throw Object.assign(new Error('Cada producto del alcance debe tener un ID único'), {
+        code: 'PRODUCT_SCOPE_INVALID',
+      });
+    }
+    return run({
+      type: 'upsert', kind, table: m.table, conflict: m.conflict,
+      ...(kind === 'products' ? { rowIds } : {}),
+      rows: arr.map(m.toRow),
+    });
   }
   // H-70: la edición de una ficha viaja sola. Mismo upsert y mismo control de
   // versión que `pushRows`, pero con una fila: el arreglo completo pisaba con
@@ -3145,18 +3190,20 @@
     const c = await ensureClient(); if (!c) return 0;
     if (!(await hasSession())) return 0;
     migratingPhotos = true;
-    let ok = 0;
+    let ok = 0; const changedIds = [];
     try {
       for (const p of pend) {
         try {
           const blob = await (await fetch(p.imagen)).blob();
           const url = await uploadProductPhoto('prod-' + p.id + '.jpg', blob);
           if (!url) continue;
-          p.imagen = url; ok++;
-          if (ok % 5 === 0 && D.saveProducts) D.saveProducts(); // persistir + sincronizar por lotes
+          p.imagen = url; ok++; changedIds.push(p.id);
+          if (changedIds.length === 5 && D.saveProducts) {
+            D.saveProducts(changedIds.splice(0)); // persiste y sincroniza sólo estas filas
+          }
         } catch (e) { /* una foto falló: se reintenta en el próximo arranque */ }
       }
-      if (ok && D.saveProducts) D.saveProducts();
+      if (changedIds.length && D.saveProducts) D.saveProducts(changedIds.splice(0));
       if (ok && window.UI && window.UI.toast) window.UI.toast(`${ok} foto(s) de producto guardadas en la nube`, 'var(--accent)');
     } finally { migratingPhotos = false; }
     return ok;

@@ -618,9 +618,9 @@
   }
   const REMAP_FIELDS = [['category', 'cat'], ['sleeve', 'manga'], ['fabric', 'tela'], ['color', 'color'], ['neck', 'cuello']];
   let lastRemap = { fixed: 0, orphans: 0, detail: [] };
-  // Pase de reparación: re-vincula códigos huérfanos de TODOS los productos (campos del sistema,
-  // hilos del bordado y catálogos custom). No toca el SKU (congelado por diseño: el historial de
-  // ventas referencia por SKU). Idempotente: la segunda pasada no cambia nada.
+  // Diagnóstico puro: propone re-vínculos para códigos huérfanos de TODOS los
+  // productos. No muta productos, no persiste y no sincroniza. Aplicar una
+  // propuesta pertenece a previewOrphanFix/applyOrphanFix y exige un ID exacto.
   function remapOrphanCodes() {
     let fixed = 0, orphans = 0; const detail = [];
     const metaAll = (C && C.allCatalogMeta) ? C.allCatalogMeta() : {};
@@ -632,19 +632,23 @@
         const cur = String(p[field] == null ? '' : p[field]);
         if (l.some(x => x.code === cur)) return;
         const nu = bridgeCode(kind, cur);
-        if (nu) { detail.push({ sku: p.sku, kind, from: cur, to: nu }); p[field] = nu; fixed++; }
+        if (nu) {
+          detail.push({ productId: p.id, product: p.nombre, sku: p.sku, kind, campo: field, from: cur, to: nu });
+          fixed++;
+        }
         else orphans++;
       });
       if (Array.isArray(p.ornColors) && p.ornColors.length) {
         const lc = (C && typeof C.list === 'function') ? C.list('color') : [];
         if (lc.length) {
-          const seen = {};
-          p.ornColors = p.ornColors.map(c => {
-            if (lc.some(x => x.code === c)) return c;
+          p.ornColors.forEach(c => {
+            if (lc.some(x => x.code === c)) return;
             const nu = bridgeCode('color', c);
-            if (nu) { detail.push({ sku: p.sku, kind: 'ornColors', from: c, to: nu }); fixed++; return nu; }
-            orphans++; return c;
-          }).filter(c => (seen[c] ? false : (seen[c] = true)));
+            if (nu) {
+              detail.push({ productId: p.id, product: p.nombre, sku: p.sku, kind: 'color', campo: 'ornColors', from: c, to: nu });
+              fixed++;
+            } else orphans++;
+          });
         }
       }
       customKinds.forEach(k => {
@@ -653,16 +657,14 @@
         const l = C.list(k);
         if (!l.length || l.some(x => x.code === String(v))) return;
         const nu = bridgeCode(k, v);
-        if (nu) { detail.push({ sku: p.sku, kind: k, from: v, to: nu }); p.attrs[k] = nu; fixed++; }
+        if (nu) {
+          detail.push({ productId: p.id, product: p.nombre, sku: p.sku, kind: k, campo: k, from: v, to: nu });
+          fixed++;
+        }
         else orphans++;
       });
-      colorDisplay(p);
     });
     lastRemap = { fixed, orphans, detail };
-    if (fixed) {
-      saveProducts();
-      if (window.UI && window.UI.toast) window.UI.toast(fixed + ' referencia(s) de producto re-vinculadas al catálogo por nombre', 'var(--accent)');
-    }
     return lastRemap;
   }
 
@@ -699,16 +701,43 @@
     return { orphans, duplicates };
   }
 
-  // Corrección manual puntual desde el Diagnóstico: cambia UNA referencia huérfana de un
-  // producto al código ACTIVO elegido por el admin. No toca el SKU congelado.
-  function applyOrphanFix(id, campo, from, to) {
-    const p = products.find(x => x.id === id);
+  function orphanFixToken(productId, campo, from, to) {
+    return [productId, campo, from, to].map(value => encodeURIComponent(String(value))).join('|');
+  }
+  // Primera fase administrativa: valida y congela exactamente qué ID/campo se
+  // corregiría. No modifica memoria, localStorage, cola ni nube.
+  function previewOrphanFix(id, campo, from, to) {
+    id = String(id || ''); campo = String(campo || ''); from = String(from || ''); to = String(to || '');
+    const p = products.find(x => String(x.id) === id);
     if (!p) return { ok: false, error: 'Producto no encontrado' };
-    try { assertLayawayProductsUnlocked([id]); }
-    catch (e) { return { ok: false, error: e.message, code: e.code }; }
     const sys = REMAP_FIELDS.find(x => x[1] === campo);
     const kind = campo === 'ornColors' ? 'color' : (sys ? sys[0] : campo);
     if (!C.list(kind).some(x => x.code === String(to))) return { ok: false, error: 'Elige un valor del catálogo' };
+    const current = campo === 'ornColors'
+      ? (p.ornColors || []).map(String)
+      : sys ? String(p[campo] == null ? '' : p[campo])
+        : String((p.attrs || {})[campo] == null ? '' : (p.attrs || {})[campo]);
+    const matches = campo === 'ornColors' ? current.includes(from) : current === from;
+    if (!matches) return { ok: false, code: 'ORPHAN_FIX_STALE', error: 'El producto cambió; vuelve a generar la vista previa' };
+    return {
+      ok: true, type: 'orphan_fix', productId: id, product: p.nombre, sku: p.sku,
+      campo, kind, from, to, token: orphanFixToken(id, campo, from, to),
+    };
+  }
+  // Segunda fase: sólo acepta el plan exacto devuelto por previewOrphanFix. La
+  // confirmación visible vive en Configuración antes de llamar esta función.
+  function applyOrphanFix(plan) {
+    if (!plan || plan.type !== 'orphan_fix') {
+      return { ok: false, code: 'ORPHAN_FIX_PREVIEW_REQUIRED', error: 'Primero revisa y confirma la corrección' };
+    }
+    const checked = previewOrphanFix(plan.productId, plan.campo, plan.from, plan.to);
+    if (!checked.ok) return checked;
+    if (checked.token !== plan.token) return { ok: false, code: 'ORPHAN_FIX_STALE', error: 'La vista previa ya no es válida' };
+    const id = checked.productId, campo = checked.campo, from = checked.from, to = checked.to;
+    const p = products.find(x => String(x.id) === id);
+    try { assertLayawayProductsUnlocked([id]); }
+    catch (e) { return { ok: false, error: e.message, code: e.code }; }
+    const sys = REMAP_FIELDS.find(x => x[1] === campo);
     if (campo === 'ornColors') {
       const seen = {};
       p.ornColors = (p.ornColors || []).map(c => c === from ? to : c).filter(c => (seen[c] ? false : (seen[c] = true)));
@@ -718,8 +747,8 @@
       p.attrs = Object.assign({}, p.attrs, { [campo]: to });
     }
     colorDisplay(p);
-    saveProducts();
-    return { ok: true };
+    saveProducts([id]);
+    return { ok: true, productId: id, campo, from, to };
   }
 
   // Diccionario nombre→#hex para "Corregir # por nombre" (Configuración → catálogo Color).
@@ -881,8 +910,9 @@
   // recalculan estos dos campos de display — el SKU sigue congelado por diseño.
   window.addEventListener('configchange', () => {
     products.forEach(colorDisplay);
-    // Sana referencias huérfanas cuando el catálogo cambió (import de catálogos, edición del
-    // admin, pull de la nube). Guarda: no correr a media aplicación de datos remotos.
+    // Recalcula únicamente el diagnóstico de referencias huérfanas cuando el
+    // catálogo cambia. Nunca muta ni guarda productos; una reparación requiere
+    // preview y confirmación administrativa por ID concreto.
     if (!remoteApplying) { try { remapOrphanCodes(); } catch (e) { /* catálogo a medio cargar */ } }
   });
 
@@ -907,13 +937,43 @@
     refreshCatalogResync();
     return !catalogResyncReasons.has(token);
   }
-  function saveProducts(sync = true) {
+  function productSyncIds(targets) {
+    if (targets === undefined || targets === null || targets === false) return [];
+    const source = Array.isArray(targets) ? targets : [targets];
+    const ids = [];
+    source.forEach(target => {
+      const id = String(target && typeof target === 'object' ? target.id : target || '').trim();
+      if (!id) throw Object.assign(new Error('La intención remota de productos exige IDs concretos'), { code: 'PRODUCT_SYNC_SCOPE_REQUIRED' });
+      if (!ids.includes(id)) ids.push(id);
+    });
+    const missing = ids.filter(id => !products.some(product => String(product.id) === id));
+    if (missing.length) throw Object.assign(new Error('El alcance contiene productos que ya no existen'), {
+      code: 'PRODUCT_SYNC_TARGET_MISSING', productIds: missing,
+    });
+    return ids;
+  }
+  // Persistencia local y permiso remoto son actos separados. Persistir nunca
+  // implica sincronizar; syncProducts exige siempre un conjunto explícito.
+  function persistProducts() {
     if (!remoteApplying && !protectLayawayLockedProducts()) return false;
     bumpRevision(); // el inventario no pasa por `save()`; su aviso se emite aquí
     let persisted = true;
     try { localStorage.setItem(LS_KEY, JSON.stringify(products)); }
     catch (e) { persisted = false; requireCatalogResync('La caché local del inventario no se pudo actualizar', 'products-cache'); }
-    if (sync && typeof syncUp === 'function') syncUp('products', products);
+    return persisted;
+  }
+  function syncProducts(targets) {
+    const ids = productSyncIds(targets);
+    if (!ids.length || remoteApplying) return 0;
+    syncUp('products', ids.map(id => products.find(product => String(product.id) === id)));
+    return ids.length;
+  }
+  // Compatibilidad de llamada: sin alcance sólo persiste localmente. Una
+  // sincronización sucede únicamente cuando el llamador aporta IDs/filas.
+  function saveProducts(targets) {
+    const ids = productSyncIds(targets);
+    const persisted = persistProducts();
+    if (persisted && ids.length) syncProducts(ids);
     return persisted;
   }
 
@@ -998,12 +1058,12 @@
       { fecha, tipo: 'Reclasificación', producto: source.nombre, productId: source.id, sku: source.sku, talla: source.sizeCode, cant: -qty, ref: reason, operationId: op, reversalOf: reversalOf || null },
       { fecha, tipo: 'Reclasificación', producto: target.nombre, productId: target.id, sku: target.sku, talla: target.sizeCode, cant: qty, ref: reason, operationId: op, reversalOf: reversalOf || null },
     );
-    const productsSaved = saveProducts(false);
+    const productsSaved = persistProducts();
     const movementsSaved = saveMovements();
     if (!productsSaved || !movementsSaved) {
       sourceEntry.stock = sourceBefore; targetEntry.stock = targetBefore;
       movements.splice(0, 2);
-      saveProducts(false); saveMovements();
+      persistProducts(); saveMovements();
       return { ok: false, code: 'LOCAL_PERSISTENCE_FAILED', error: 'No se pudo guardar la reclasificación completa; no se movió ninguna pieza' };
     }
     try {
@@ -1039,7 +1099,7 @@
       const n = sku(p);
       if (n !== p.sku) { p.sku = n; changed++; }
     });
-    if (changed || fixed) saveProducts();
+    if (changed || fixed) saveProducts(products.map(product => product.id));
     return { total: products.length, changed };
   }
 
@@ -2194,7 +2254,7 @@
       } catch (e) { /* el gate h65 conserva el bloqueo aunque storage esté lleno */ }
       // Restauración best-effort: el journal permanece como autoridad de
       // recuperación si una de estas claves sigue sin poder escribirse.
-      saveProducts(false); saveSales(); savePayments(false); saveMovements(); saveSellers(false);
+      persistProducts(); saveSales(); savePayments(false); saveMovements(); saveSellers(false);
       requireCatalogResync('La confirmación remota de la liquidación no pudo persistirse completa', 'h65-cache');
       return { ok: false, error };
     };
@@ -2237,7 +2297,7 @@
       });
 
       const persisted = [
-        saveProducts(false), saveSales(), savePayments(false), saveMovements(), saveSellers(false),
+        persistProducts(), saveSales(), savePayments(false), saveMovements(), saveSellers(false),
       ].every(Boolean);
       let verified = false;
       if (persisted) {
@@ -2546,7 +2606,7 @@
         if (e) e.stock = Math.max(0, e.stock - l.qty);
         movements.unshift({ fecha, tipo: 'Venta', producto: l.p.nombre, productId: l.p.id, sku: l.p.sku, talla: l.talla, cant: -l.qty, ref: folio });
       });
-      saveProducts(false); saveMovements();
+      persistProducts(); saveMovements();
     }
     // 2) Cliente (agregados) — solo registrados y NO en cortesía (no pagó nada).
     if (client && !client.generic && !cortesia) {
@@ -3290,7 +3350,7 @@
         cant: (l.lado === 'devuelto' ? 1 : -1) * l.qty, ref: exch.folio,
       });
     });
-    saveProducts(false); saveMovements();
+    persistProducts(); saveMovements();
 
     // H-75 · El cobro de la diferencia se clasifica con la MISMA autoridad que
     // cualquier otro cobro (`paymentParts`). Antes se armaba a mano y sólo
@@ -4138,7 +4198,7 @@
       stockLines.push({ product_id: p.id, talla: l.talla, qty: Number(l.qty) || 0 });
       movements.unshift({ fecha, tipo: 'Devolución', producto: l.nombre, productId: p.id, sku: l.sku, talla: l.talla, cant: Number(l.qty) || 0, ref: folio });
     });
-    saveProducts(false); saveMovements();
+    persistProducts(); saveMovements();
     // 3) Reversión proporcional de comisión/ventas del vendedor (configurable en Configuración)
     const ids = sale.vendedores || [];
     const comisionesRevertidas = [];
@@ -4442,6 +4502,7 @@
     const destino = {}; pares.forEach(([from, to]) => { destino[from] = to; });
     const scale = SIZE_SCALE_OF[kind];
     const efectos = { productos: 0, renglones: 0, piezas: 0, precios: 0, barcodes: 0, promociones: 0, etiquetas: 0 };
+    const changedProductIds = new Set();
     try {
       products.forEach(p => {
         if (inferSizeCategory(p, p.stock) !== kind) return;
@@ -4464,8 +4525,11 @@
           });
           return n;
         };
-        efectos.precios += remapKeys(p.preciosTalla);
-        efectos.barcodes += remapKeys(p.barcodeUrls);
+        const changedPrices = remapKeys(p.preciosTalla);
+        const changedBarcodes = remapKeys(p.barcodeUrls);
+        efectos.precios += changedPrices;
+        efectos.barcodes += changedBarcodes;
+        if (tocado || changedPrices || changedBarcodes) changedProductIds.add(p.id);
         if (tocado) efectos.productos++;
       });
       promos.forEach(pr => {
@@ -4507,7 +4571,7 @@
       };
     }
 
-    saveProducts(); if (typeof savePromos === 'function') savePromos();
+    saveProducts([...changedProductIds]); if (typeof savePromos === 'function') savePromos();
     return {
       ok: true, aplicado: rc.aplicado, efectos,
       piezasTotales: despues.total, renglones: despues.renglones,
@@ -4520,7 +4584,7 @@
     if (i < 0) return false;
     try { assertLayawayProductsUnlocked([id]); } catch (e) { return false; }
     const version = Number(products[i]._syncVersion) || 0;
-    products.splice(i, 1); saveProducts();
+    products.splice(i, 1); persistProducts();
     try { window.CORE.invokeSync('deleteRow', 'products', id, version); } catch (e) { /* offline */ }
     return true;
   }
@@ -4607,7 +4671,7 @@
     if (readLayawayProductLocks().length) return false;
     products.length = 0;
     seed.map(hydrate).forEach(p => products.push(p));
-    saveProducts();
+    saveProducts(products.map(product => product.id));
     return products;
   }
 
@@ -5372,8 +5436,8 @@
     canonicalReferenceOrnamentColors, referenceDiagnostics, referenceDifferences,
     physicalSnapshot, barcodeFromId, referenceHasOperations, reclassifyReference,
     migrateSizeCodes, liveDocumentCounts, inventoryFootprint, clearInventory,
-    saveProducts, saveSellers, saveClients, saveSales, saveMovements, savePromos, saveReturns, savePayments,
-    removeProduct, remapOrphanCodes, catalogHealthReport, hexForColorName, applyOrphanFix, get lastRemap() { return lastRemap; },
+    persistProducts, syncProducts, saveProducts, saveSellers, saveClients, saveSales, saveMovements, savePromos, saveReturns, savePayments,
+    removeProduct, remapOrphanCodes, catalogHealthReport, hexForColorName, previewOrphanFix, applyOrphanFix, get lastRemap() { return lastRemap; },
     addClient, updateClient, removeClient, clientSalesSummary, clientSalesSummaries,
     recordSale, nextFolio, collisionSafeFolio, rekeySaleFolio,
     normalizeFolioPrefix, businessDate, folioFromParts, parseFolio, folioPreview,
@@ -5415,7 +5479,7 @@
     testDataFootprint, configFingerprint, totalPieces, stockEntryByIdentity,
   };
   const localWriterMutators = [
-    'regenerateSkus', 'saveProducts', 'saveSellers', 'saveClients', 'saveSales',
+    'regenerateSkus', 'persistProducts', 'syncProducts', 'saveProducts', 'saveSellers', 'saveClients', 'saveSales',
     'saveMovements', 'savePromos', 'saveReturns', 'savePayments', 'removeProduct',
     'applyOrphanFix', 'addClient', 'removeClient', 'recordSale', 'rekeySaleFolio',
     'applyFolioBlock', 'resetProducts', 'applyRemote', 'applySyncResult',
@@ -5451,7 +5515,7 @@
   });
   window.CORE.registerCatalogProducts({
     list: () => products,
-    save: () => window.DATA.saveProducts(),
+    save: productIds => window.DATA.saveProducts(productIds),
   });
   // H-63: CONFIG necesita saber si una talla está referenciada por el alcance de una
   // promoción antes de dejar que se desactive. Sólo lectura, por el gateway de CORE.

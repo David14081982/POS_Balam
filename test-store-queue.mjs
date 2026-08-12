@@ -296,10 +296,12 @@ function loadStore(env) {
   await sleep(10);
   S.pushRows('products', [{ id: 'v2', modelo: '1', stock: [], precio: 1, costo: 1 }]);
   await sleep(10);
-  ok('4a. la cola coalesce ediciones rápidas (1 op, la última)', S.pending === 1);
+  ok('4a. H-95: alcances de productos distintos no se coalescen entre sí', S.pending === 2);
   release();
   await sleep(60);
-  ok('4b. estado final en la nube = último snapshot (v2)', (env.cloud.rowsByTable.products || [])[0] && env.cloud.rowsByTable.products[0].id === 'v2');
+  ok('4b. ambos alcances llegan en orden y el último payload es v2',
+    env.rpcCalls.filter(call => /^save_products_checked/.test(call.name)).length === 2
+      && (env.cloud.rowsByTable.products || [])[0]?.id === 'v2');
   ok('4c. cola vacía al terminar', S.pending === 0);
 }
 
@@ -1623,6 +1625,66 @@ ok('34c. H-60: la escritura válida termina sin pendientes', S.pending === 0);
     !!env.window.CONFIG.loaded && env.window.CONFIG.loaded.settings.currency === 'MXN');
   ok('42c. H-77: la operación histórica permanece intacta para su propietario',
     JSON.parse(env.localStorage.getItem('balam_sync_queue')).some(op => op.id === 'config-ajena'));
+}
+
+// 43) H-95 · Una intención acotada de productos conserva sus IDs de extremo a extremo.
+// No basta el conteo: se compara el conjunto exacto pedido, el rowIds durable y
+// el payload que recibe la RPC después de reconstruir/reintentar la operación.
+function h95Product(id) {
+  return { id, modelo: id, nombre: id, stock: [], precio: 1, costo: 1, attrs: {} };
+}
+async function h95ScopedWrite(requestedIds, extraIds = []) {
+  const env = freshEnv();
+  const S = loadStore(env);
+  await S.init({});
+  env.window.DATA.products = requestedIds.concat(extraIds).map(h95Product);
+  const release = env.hold();
+  S.pushRows('products', requestedIds.map(id => env.window.DATA.products.find(p => p.id === id)));
+  await sleep(10);
+  const queued = JSON.parse(env.localStorage.getItem('balam_sync_queue') || '[]')[0] || {};
+  release();
+  await sleep(60);
+  const rpc = env.rpcCalls.find(call => /^save_products_checked/.test(call.name));
+  return {
+    queuedIds: (queued.rowIds || []).slice().sort(),
+    payloadIds: ((rpc && rpc.args && rpc.args.p_rows) || []).map(row => row.id).sort(),
+  };
+}
+{
+  const one = await h95ScopedWrite(['scope-1'], ['outside-a', 'outside-b']);
+  ok('43a. H-95 A: pushRows(products, 1) conserva rowIds exacto',
+    JSON.stringify(one.queuedIds) === JSON.stringify(['scope-1']));
+  ok('43b. H-95 A: la RPC recibe exclusivamente ese ID',
+    JSON.stringify(one.payloadIds) === JSON.stringify(['scope-1']));
+}
+{
+  const requested = Array.from({ length: 11 }, (_, i) => `scope-${i + 1}`).sort();
+  const eleven = await h95ScopedWrite(requested, ['outside-a', 'outside-b']);
+  ok('43c. H-95 B: pushRows(products, 11) conserva los once rowIds exactos',
+    JSON.stringify(eleven.queuedIds) === JSON.stringify(requested));
+  ok('43d. H-95 B: la RPC recibe los once IDs y ningún producto exterior',
+    JSON.stringify(eleven.payloadIds) === JSON.stringify(requested));
+}
+{
+  const env = freshEnv();
+  const S = loadStore(env);
+  await S.init({});
+  env.window.DATA.products = ['offline-a', 'offline-b', 'outside'].map(h95Product);
+  env.setFail('products');
+  S.pushRows('products', env.window.DATA.products.slice(0, 2));
+  await sleep(40);
+  const queued = JSON.parse(env.localStorage.getItem('balam_sync_queue') || '[]')[0] || {};
+  ok('43e. H-95 J: la cola offline conserva exactamente rowIds',
+    JSON.stringify((queued.rowIds || []).slice().sort()) === JSON.stringify(['offline-a', 'offline-b']));
+  env.window.DATA.products.push(h95Product('late-outside'));
+  env.clearFail('products');
+  S.retryOperation(queued.id);
+  await sleep(70);
+  const successful = env.rpcCalls.filter(call => /^save_products_checked/.test(call.name))
+    .map(call => (call.args.p_rows || []).map(row => row.id).sort())
+    .find(ids => ids.length && ids.every(id => id !== 'late-outside')) || [];
+  ok('43f. H-95 K: reintento/idempotencia conserva scope y no incorpora filas tardías',
+    JSON.stringify(successful) === JSON.stringify(['offline-a', 'offline-b']));
 }
 
 console.log(`════════ ${pass} pasaron, ${fail} fallaron ════════`);

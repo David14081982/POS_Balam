@@ -4607,6 +4607,29 @@ Quedan publicación y piloto sintético; todavía no es producción.
 **Corrección documentada:**
 `docs/fixes/modelo-referencias-fisicas-v2.md`.
 
+## H-95 - Una escritura acotada de productos puede expandirse al inventario local completo
+
+**Estado:** EN PROGRESO
+**Fecha de registro:** 11/08/2026
+**Commit técnico:** Pendiente de commit
+**Origen:** auditoría forense del piloto preproducción H-94.
+**Reproducción:** `STORE.pushRows('products', subset)` encola una operación sin
+`rowIds`; al drenarla, `applyOp()` reconstruye `rows` desde todo
+`DATA.products`. Dos solicitudes de 11 y 1 referencias terminaron enviando las
+mismas 233 filas: 222 V1 y 11 V2.
+**Riesgo:** una intención puntual, una reparación automática posterior a
+CONFIG o el relevo de terminal puede reescribir productos no seleccionados,
+incrementar sus versiones y publicar metadata/SKU locales sin autorización.
+**Alcance:** frontera explícita por IDs para productos, separación entre
+persistencia local e intención remota, remapeo sólo diagnóstico y reparación
+administrativa con preview/confirmación, cola offline, reintentos, pull,
+Realtime, CONFIG y dos terminales; pruebas de IDs y payload exactos.
+**No alcance:** restaurar o regenerar los 222 SKU, modificar productos remotos,
+reanudar H94-PILOT, punto cero, inventario real, etiquetas reales y la historia
+separada H86 de atributos opcionales.
+**Corrección documentada:**
+`docs/fixes/frontera-escritura-productos.md` (pendiente durante implementación).
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

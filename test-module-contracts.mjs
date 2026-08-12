@@ -52,7 +52,7 @@ check('uso de catálogos atraviesa un adaptador único', (
   && core.includes('saveCatalogProducts')
   && data.includes('window.CORE.registerCatalogProducts')
   && config.includes('window.CORE.catalogProducts()')
-  && config.includes('window.CORE.saveCatalogProducts()')
+  && config.includes('window.CORE.saveCatalogProducts(touchedIds)')
 ));
 // H-63: la lectura de promociones desde CONFIG usa el mismo gateway. DATA la registra
 // bajo una guarda de existencia (varios arneses arman un CORE mínimo), así que el
@@ -140,13 +140,14 @@ const catalogSandbox = {
 vm.createContext(catalogSandbox);
 vm.runInContext(core + '\n' + config, catalogSandbox);
 let productSaves = 0;
+let savedProductIds = null;
 const catalogProducts = [{
   id: 'p1', color: 'BL', stock: [],
   attrs: {},
 }];
 catalogSandbox.window.CORE.registerCatalogProducts({
   list: () => catalogProducts,
-  save: () => { productSaves++; },
+  save: ids => { productSaves++; savedProductIds = ids; },
 });
 const protectedColor = catalogSandbox.window.CONFIG.removeItem('color', 'BL');
 check('la guarda de catálogo conserva códigos usados por productos', (
@@ -161,6 +162,7 @@ check('el adaptador limpia y persiste atributos de catálogo eliminado', (
   removedCustom.ok === true
   && !(custom.kind in catalogProducts[0].attrs)
   && productSaves === 1
+  && JSON.stringify(savedProductIds) === JSON.stringify(['p1'])
 ));
 check('gateway sin STORE conserva no-op y después reenvía argumentos', (
   typeof catalogSandbox.window.CORE.invokeSync === 'function'

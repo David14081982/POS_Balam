@@ -737,9 +737,11 @@
     // creaba un candado sin llave: blankProduct() auto-rellena attrs[kind] con el primer ítem
     // cuando el catálogo está "En SKU" (aunque esté oculto del alta), así que el usuario nunca
     // eligió ese valor ni tiene UI para quitarlo. El SKU ya congelado de cada producto no cambia.
-    let touched = false;
-    prods.forEach(p => { if (p.attrs && (kind in p.attrs)) { delete p.attrs[kind]; touched = true; } });
-    if (touched) window.CORE.saveCatalogProducts();
+    const touchedIds = [];
+    prods.forEach(p => {
+      if (p.attrs && (kind in p.attrs)) { delete p.attrs[kind]; touchedIds.push(p.id); }
+    });
+    if (touchedIds.length) window.CORE.saveCatalogProducts(touchedIds);
     delete state.catalogMeta[kind];
     delete state.catalogs[kind];
     emit();

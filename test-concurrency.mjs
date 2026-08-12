@@ -16,7 +16,10 @@ function cloudEnv() {
   const conflicts = [];
   const listeners = new Set();
   const versions = new Map(['products','clients','sellers','promotions'].map(x => [x, 0]));
-  const manifest = { singleton: true, schema_version: 20260806011900,
+  // Debe representar el contrato de esquema que exige el cliente actual. Un
+  // manifest anterior deja la terminal deliberadamente en cuarentena y no es
+  // un escenario de concurrencia válido.
+  const manifest = { singleton: true, schema_version: 20260810013500,
     sync_protocol_min: 1, sync_protocol_current: 1, data_epoch: 1,
     domain_modes: Object.fromEntries(['config','products','clients','sellers','promotions','sales','payments','returns','exchanges','loans','liquidations','movements','permissions','purges'].map(x => [x, 'shadow'])) };
   function bump(domain) {

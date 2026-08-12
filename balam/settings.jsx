@@ -583,7 +583,14 @@
     }
     const [sel, setSel] = useState(best);
     function apply() {
-      const r = D.applyOrphanFix(o.id, o.campo, o.code, sel);
+      const plan = D.previewOrphanFix(o.id, o.campo, o.code, sel);
+      if (!plan.ok) { toast(plan.error, 'var(--danger)'); return; }
+      if (!window.confirm(
+        `Corregir ${plan.product || plan.sku || plan.productId}\n\n`
+        + `${C.catalogLabel(plan.kind)}: ${plan.from} → ${plan.to}\n\n`
+        + `Se modificará únicamente la referencia ${plan.productId}. ¿Aplicar?`
+      )) return;
+      const r = D.applyOrphanFix(plan);
       if (!r.ok) { toast(r.error, 'var(--danger)'); return; }
       toast('Producto corregido', 'var(--accent)');
       onDone();
@@ -835,11 +842,12 @@
           return;
         }
         setDiag(null);
-        // El configchange del import ya corrió la re-vinculación por nombre (data.jsx): si el
-        // archivo re-codificó catálogos, los productos se remapearon solos — repórtalo aquí.
+        // El configchange del import ya recalculó el diagnóstico (data.jsx). Si
+        // el archivo recodificó catálogos, sólo se informa el plan potencial:
+        // ninguna referencia se modifica sin preview y confirmación por ID.
         const rm = (window.DATA && window.DATA.lastRemap) || { fixed: 0, orphans: 0 };
         const extra = (rm.fixed || rm.orphans)
-          ? ` · productos: ${rm.fixed} re-vinculado(s) por nombre${rm.orphans ? `, ${rm.orphans} sin equivalente (revísalos al editar)` : ''}`
+          ? ` · productos: ${rm.fixed} posible(s) re-vínculo(s) pendiente(s) de confirmación${rm.orphans ? `, ${rm.orphans} sin equivalente (revísalos al editar)` : ''}`
           : '';
         toast((guideMode
           ? `Importado desde la hoja "Catálogos" del Excel de Inventario: ${r.kinds} catálogo(s), ${r.items} elemento(s)`
@@ -1028,19 +1036,19 @@
       if (!window.STORE || !window.STORE.uploadProductPhoto) { toast('Sincronización con la nube no disponible', 'var(--danger)'); return; }
       if (!(await window.STORE.hasSession())) { toast('Inicia sesión para subir las fotos a la nube', 'var(--danger)'); return; }
       setBusy(true);
-      const total = pend.length; let ok = 0, fallo = 0;
+      const total = pend.length; let ok = 0, fallo = 0; const changedIds = [];
       setProg({ done: 0, total, fail: 0 });
       for (const p of pend) {
         try {
           const blob = await (await fetch(p.imagen)).blob();
           const url = await window.STORE.uploadProductPhoto('prod-' + p.id + '.jpg', blob);
           if (!url) throw new Error('sin URL');
-          p.imagen = url; ok++;
-          if (ok % 5 === 0) D.saveProducts(); // persistir avance por lotes
+          p.imagen = url; ok++; changedIds.push(p.id);
+          if (changedIds.length === 5) D.saveProducts(changedIds.splice(0));
         } catch (e) { fallo++; }
         setProg({ done: ok, total, fail: fallo });
       }
-      if (ok) D.saveProducts();
+      if (changedIds.length) D.saveProducts(changedIds.splice(0));
       setBusy(false); setTick(t => t + 1);
       toast(fallo
         ? `Migradas ${ok} de ${total}; fallaron ${fallo}. Verifica conexión y que corriste la migración pos_010 (bucket product-photos); al reintentar continúa donde se quedó.`

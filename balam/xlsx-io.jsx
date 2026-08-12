@@ -983,7 +983,11 @@
     if (inventoryStateFingerprint(products || []) !== plan.baseFingerprint) throw balamError('El inventario cambió mientras revisabas la importación. Vuelve a abrir el archivo.');
     const clean = plan.nextProducts.map(product => { const copy = clone(product); delete copy.__xlsx; return copy; });
     products.splice(0, products.length, ...clean);
-    return { nuevos: plan.creates, actualizados: plan.updates };
+    const productIds = (plan.rows || [])
+      .filter(row => row.action === 'new' || row.action === 'update')
+      .map(row => row.targetId || (row.after && row.after.id))
+      .filter(Boolean);
+    return { nuevos: plan.creates, actualizados: plan.updates, productIds };
   }
 
   // Exporta el historial de devoluciones (a nivel renglón) a un .xlsx descargable.
