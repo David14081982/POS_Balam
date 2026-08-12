@@ -187,6 +187,12 @@ Archivo: `balam/data.jsx`. API: `window.DATA`.
 - Las mutaciones guardan primero localmente y después invocan el gateway de
   sincronización de `CORE`.
 - `applyRemote()` incorpora datos recibidos de la nube sin volver a enviarlos.
+- `DATA.canonicalProductAttrs()` es la autoridad de representación para atributos
+  de catálogos custom conocidos. Un opcional `null`, vacío o con sólo espacios se
+  omite; claves `__*` y atributos históricos desconocidos se preservan. Las
+  fronteras de alta, edición e importación rechazan los obligatorios sin valor.
+  Firma física, snapshots, persistencia, estadísticas, Excel y fingerprints
+  consumen esa misma autoridad.
 
 ### Identidad de referencias físicas V2
 
@@ -408,6 +414,11 @@ incompatible, si una talla no puede resolverse o si un valor tipado/JSON es
 inválido. Los archivos heredados siguen una ruta explícita y sus campos ausentes
 significan **preservar** al actualizar; nunca reciben códigos de catálogo por
 default silencioso.
+
+Los atributos custom se comparan y transportan en su representación de DATA:
+para un catálogo opcional conocido, ausencia, `null`, `""` y espacios significan
+«sin valor» y se serializan omitiendo la clave. Excel no mantiene una fórmula
+paralela para fingerprints ni para el round-trip.
 
 `XLSXIO.planImport()` hace el preflight completo sin mutar DATA. Un ID técnico
 válido actualiza exactamente ese producto y nunca convierte V1↔V2; V2 también

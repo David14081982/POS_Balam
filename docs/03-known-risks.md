@@ -4262,7 +4262,7 @@ desde el catálogo vigente porque eso fabricaría evidencia histórica.
 
 ## H-86 - Plantilla, Exportar e Importar no comparten un contrato Excel canónico
 
-**Estado:** RESUELTO
+**Estado:** RESUELTO Y PUBLICADO — ATRIBUTOS OPCIONALES CANÓNICOS
 **Fecha de registro:** 09/08/2026
 **Commit:** `e97aa65`
 **Origen:** auditoría quirúrgica y contrato aprobado por el dueño para unificar
@@ -4297,7 +4297,53 @@ el recorrido H-86 sobre esos bytes públicos pasó 37/37 y descargó/reimportó 
 `.xlsx` real sin diferencias canónicas.
 **Riesgo residual:** los archivos heredados sin ID requieren una decisión
 explícita cuando su SKU ya existe; es una barrera intencional contra fusiones.
-**Corrección documentada:** `docs/fixes/contrato-excel-inventario.md`.
+
+### Extensión — atributos personalizados opcionales
+
+**Fecha de registro:** 11/08/2026
+**Reproducción roja:** `node test-h86-optional-attrs-canonical.mjs` sobre el
+cliente H-95 publicado: **8 pasaron y 9 fallaron**. DATA conserva
+`attrs.caracteristicas` cuando vale `""`, `null` o espacios; el parser Excel lo
+omite mediante una regla local; y `canonicalProductState()` vuelve a copiar el
+objeto crudo. Por ello vacío y ausencia no tienen la misma semántica ni huella,
+y los espacios sí alteran la firma física H-94.
+**Riesgo:** un round-trip sin cambio de negocio parece modificar inventario; una
+representación equivalente de «sin valor» puede crear una firma física distinta;
+snapshots y estadísticas pueden divergir según la ruta que produjo el producto.
+**Alcance:** una autoridad compartida para catálogos custom conocidos,
+canonicalización en DATA, firma física, snapshots, guardado, Excel, estadísticas
+y fingerprints; validación explícita de obligatorios; pruebas de compatibilidad
+H-86/H-94/H-95 y publicación.
+**No alcance:** claves `__*`, atributos históricos desconocidos, campos no
+gobernados, productos/stock/SKU/barcodes remotos, CONFIG remota, migraciones y
+reanudar H94-PILOT.
+**Causa raíz demostrada:** no existe una autoridad de canonicalización. `hydrate`
+acepta `attrs` literalmente, `buildProduct()` decide por su cuenta con
+`if (value)` y `canonicalProductState()` copia todas las claves. La misma regla
+de negocio queda repartida y produce estados distintos.
+**Corrección:** `DATA.canonicalProductAttrs()` es la autoridad compartida. Omite
+sin valor únicamente para custom conocidos; preserva `__*` y desconocidos; y
+rechaza obligatorios en alta, edición e importación canónica. DATA, firma,
+snapshots, persistencia, estadísticas, Excel y huellas delegan en ella. El
+adaptador legacy conserva campo ausente = preservar.
+**Pruebas:** roja 8/17; verde 17/17. H-86 42/42; H-94 48/48 y CONFIG 30/30;
+H-95 16/16; H-83 32/32 + 17/17; H-84 19/19; importación 23/23;
+exportación 14/14; seguridad XLSX 17/17; cola 168/168; sync 20/20;
+convergencia 7/7; contratos 42/42; build 8/8; smoke 17/17.
+**Publicación:** commit técnico `27456bb504732babeea66449584c70ecb6f3e89b`,
+`origin/main` idéntico; Pages run `31555048380` en `success`. El HTML servido
+mide 8,960,138 bytes y tiene SHA-256
+`B8EA359CEA4E91929FC9C20528E63AEB77CF1EFDAD548E947448C887BA8755A1`;
+coincide con el build tras normalizar 171 CRLF. Sobre esos bytes: atributos
+17/17, H-86 42/42, H-94 48/48 y smoke 17/17.
+**Invariantes remotas:** antes/después 1,378 V1, 0 V2, 0 H94-PILOT, 3,334
+piezas, huella `d8bd3f2ed327f3e330c814d0bf9e8731`, versión products 40 y CONFIG
+46 sin cambio. Último equipo: cola 0, bloqueos 0 y cursor CONFIG 46/46. Dry-run:
+`Remote database is up to date`.
+**Riesgo residual:** ninguno conocido dentro de H-86. H94-PILOT sigue detenido
+y requiere autorización separada para reiniciarse desde limpio.
+**Commit:** `27456bb`.
+**Corrección documentada:** `docs/fixes/atributos-opcionales-canonicos.md`.
 
 ## H-87 - La interfaz conserva una composición de escritorio en viewports pequeños
 
