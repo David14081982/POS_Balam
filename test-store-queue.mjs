@@ -1688,4 +1688,68 @@ async function h95ScopedWrite(requestedIds, extraIds = []) {
 }
 
 console.log(`════════ ${pass} pasaron, ${fail} fallaron ════════`);
+console.log('H96) Cambio conserva clave comercial entre cola y replay');
+{
+  const env = freshEnv();
+  const operationId = '33333333-3333-4333-8333-333333333396';
+  const exchange = {
+    id: 'cmb-' + operationId, _operationId: operationId,
+    folio: 'CB-H96-0001', origenFolio: 'BG-H96-0001', fecha: '2026-08-12 12:00',
+    usuario: 'admin@balam.test', diferencia: 100,
+    lineas: [
+      { lineId: 'h96-a', lado: 'devuelto', productId: 'product-a', sku: 'SKU-HOMONIMO', nombre: 'A', talla: '40', qty: 1 },
+      { lineId: 'h96-b', lado: 'entregado', productId: 'product-b', sku: 'SKU-HOMONIMO', nombre: 'B', talla: '40', qty: 1 },
+    ],
+  };
+  const effects = { payment: { id: 'pay-h96', folio: exchange.folio, fecha: exchange.fecha,
+    tipo: 'cambio', metodo: 'Efectivo', monto: 100, efectivo: 100 },
+    sellerEffects: [{ id: 'seller-h96', base_version: 7, comision_acum_delta: 5, after_comision_acum: 25 }] };
+  let remoteApplied = false;
+  env.setRpc(async (name) => {
+    if (name !== 'commit_exchange_checked') return { data: { ok: true }, error: null };
+    if (!remoteApplied) { remoteApplied = true; throw new TypeError('Failed to fetch after remote commit'); }
+    return { data: { ok: true, idempotent: true, products: [], sellers: [] }, error: null };
+  });
+  const S = loadStore(env);
+  await S.init({});
+  S.pushExchange(exchange, effects);
+  await sleep(50);
+  ok('44a. H-96: timeout posterior al commit conserva la operacion para replay',
+    S.queueStatus().retrying === 1 && S.pending === 1);
+  await S.flushQueue();
+  await sleep(50);
+  ok('44b. H-96: reconexion/replay reutiliza clave comercial y limpia cola',
+    env.rpcCalls.filter(c => c.name === 'commit_exchange_checked').length === 2
+      && env.rpcCalls.filter(c => c.name === 'commit_exchange_checked').every(c => c.args.p_commit_id === operationId)
+      && S.pending === 0 && S.queueStatus().blocked === 0);
+  S.pushExchange(exchange, effects);
+  await sleep(50);
+  const exchangeCalls = env.rpcCalls.filter(c => c.name === 'commit_exchange_checked');
+  ok('44c. H-96: replay nuevo conserva product_id homonimos y op.key',
+    exchangeCalls.length === 3 && exchangeCalls.every(c => c.args.p_commit_id === operationId)
+      && exchangeCalls.every(c => c.args.p_items[0].product_id === 'product-a' && c.args.p_items[1].product_id === 'product-b')
+      && S.pending === 0);
+}
+{
+  const env = freshEnv();
+  env.setRpc(async name => name === 'commit_exchange_checked'
+    ? { data: { ok: false, error: 'exchange_id_conflict' }, error: null }
+    : { data: { ok: true }, error: null });
+  const S = loadStore(env);
+  await S.init({});
+  S.pushExchange({ id: 'cmb-h96-conflict', _operationId: 'h96-conflict', folio: 'CB-H96-CONFLICT',
+    origenFolio: 'BG-H96', fecha: '2026-08-12 12:00', lineas: [
+      { lado: 'devuelto', productId: 'product-a', sku: 'SKU-X', nombre: 'A', talla: '40', qty: 1 },
+      { lado: 'entregado', productId: 'product-b', sku: 'SKU-X', nombre: 'B', talla: '40', qty: 1 },
+    ] });
+  await sleep(50);
+  const status = S.queueStatus();
+  ok('44d. H-96: exchange_id_conflict es permanente y nunca auto_retry',
+    status.pending === 1 && status.blocked === 1 && status.retrying === 0
+      && status.operations[0].status === 'blocked_conflict');
+  S.clearQueue();
+  ok('44e. H-96: el arnes termina con cola limpia', S.pending === 0 && S.queueStatus().blocked === 0);
+}
+
+console.log(`H96 total actualizado: ${pass} pasaron, ${fail} fallaron`);
 process.exit(fail ? 1 : 0);

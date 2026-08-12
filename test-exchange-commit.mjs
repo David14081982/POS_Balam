@@ -238,4 +238,42 @@ console.log('\n── E) Contratos de la autoridad transaccional ─────
 }
 
 console.log(`\n════════ ${pass} pasaron, ${fail} fallaron ════════`);
+console.log('\nH96) La intencion local es idempotente');
+{
+  const { t, p, v } = escenario();
+  const operationId = '11111111-1111-4111-8111-111111111196';
+  const seller = { id: 'seller-h96', nombre: 'H96', active: true, role: 'vendedor',
+    comisionPct: 5, commissionPolicyVersion: 0, comisionAcum: 0, ventasMes: 0, ventasNum: 0 };
+  t.D.sellers.push(seller);
+  const first = cam(t, v.folio, [{ talla: 'M', qty: 1 }], [{ talla: 'G', qty: 1 }], { operationId, vendedorId: seller.id });
+  const afterFirst = { exchanges: t.D.exchanges.length, movements: t.D.movements.length,
+    payments: t.D.payments.length, stockM: stockDe(p, 'M'), stockG: stockDe(p, 'G'),
+    commission: seller.comisionAcum };
+  const second = cam(t, v.folio, [{ talla: 'M', qty: 1 }], [{ talla: 'G', qty: 1 }], { operationId, vendedorId: seller.id });
+  ok('32. H-96: repetir el mismo operationId devuelve el cambio existente',
+    first.ok && second.ok && second.idempotent === true
+      && second.exchange.id === first.exchange.id && first.exchange._operationId === operationId);
+  ok('33. H-96: doble clic no repite stock, movimientos, documento ni pago',
+    t.D.exchanges.length === afterFirst.exchanges && t.D.movements.length === afterFirst.movements
+      && t.D.payments.length === afterFirst.payments
+      && stockDe(p, 'M') === afterFirst.stockM && stockDe(p, 'G') === afterFirst.stockG
+      && afterFirst.commission > 0 && seller.comisionAcum === afterFirst.commission);
+  const changed = cam(t, v.folio, [{ talla: 'M', qty: 1 }], [{ talla: 'CH', qty: 1 }], { operationId, vendedorId: seller.id });
+  ok('34. H-96: el mismo operationId con payload distinto se bloquea',
+    changed.ok === false && changed.error === 'operation_mismatch');
+}
+{
+  const { t, p, v } = escenario();
+  p.preciosTalla = { M: 450, CH: 350 };
+  const operationId = '22222222-2222-4222-8222-222222222296';
+  const first = cam(t, v.folio, [{ talla: 'M', qty: 1 }], [{ talla: 'CH', qty: 1 }], { operationId });
+  const counts = { exchanges: t.D.exchanges.length, movements: t.D.movements.length, payments: t.D.payments.length };
+  const second = cam(t, v.folio, [{ talla: 'M', qty: 1 }], [{ talla: 'CH', qty: 1 }], { operationId });
+  ok('35. H-96: sin diferencia tambien es idempotente y nunca crea pago',
+    first.ok && second.ok && second.idempotent === true
+      && t.D.exchanges.length === counts.exchanges && t.D.movements.length === counts.movements
+      && t.D.payments.length === counts.payments && !first.payment && !second.payment);
+}
+
+console.log(`H96 total actualizado: ${pass} pasaron, ${fail} fallaron`);
 process.exit(fail ? 1 : 0);

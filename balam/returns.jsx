@@ -454,6 +454,9 @@
     const [aviso, setAviso] = useState(null);
     const scanRef = React.useRef(null);
     const refDev = React.useRef(null), refCat = React.useRef(null), refDatos = React.useRef(null);
+    // H-96: la intenciÃ³n nace una vez para este flujo y sobrevive cualquier
+    // doble clic o reenvÃ­o. `recordExchange` y STORE no vuelven a generarla.
+    const operationIdRef = React.useRef(null);
     const reasons = C.list('return_reason');
     // H-44 · Preselección VISIBLE, nunca silenciosa. El motivo abrumadoramente
     // más frecuente del cambio es la talla, así que llega marcado en el propio
@@ -607,6 +610,7 @@
       setVendedor({ metodo: null });
     }
     function registrar(sellerId, metodo, pagoDetalle) {
+      if (!operationIdRef.current) operationIdRef.current = D.newOperationId();
       const lineas = marcados.map(r => ({
         lado: 'devuelto', sku: r.sku, nombre: r.nombre, talla: r.talla,
         qty: dev[r.k].qty || 1, motivo: dev[r.k].motivo, condicion: dev[r.k].condicion,
@@ -620,6 +624,7 @@
         usuario: (window.AUTH && window.AUTH.current && (window.AUTH.current() || {}).email) || '',
         vendedorId: sellerId, revisadoPor: revisor, metodoPago: metodo,
         pagoDetalle: pagoDetalle || undefined,
+        operationId: operationIdRef.current,
       });
       if (!res.ok) { toast(res.error, 'var(--danger)'); return; }
       toast('Cambio registrado · ' + res.exchange.folio, 'var(--accent)');

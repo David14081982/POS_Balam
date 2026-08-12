@@ -187,6 +187,10 @@
       }),
       fromRow: r => ({
         id: r.id, folio: r.folio, origenFolio: r.origen_folio || undefined,
+        // H-96: las altas nuevas derivan la identidad comercial del ID durable.
+        // No requiere columna nueva y permite que un pull conserve la clave que
+        // debe llegar a exchange_commits en cualquier replay posterior.
+        _operationId: String(r.id || '').startsWith('cmb-') ? String(r.id).slice(4) : undefined,
         fecha: r.fecha || '', usuario: r.usuario || undefined,
         vendedorId: r.vendedor_id || undefined, revisadoPor: r.revisado_por || undefined,
         valorReconocido: Number(r.valor_reconocido) || 0,
@@ -512,7 +516,7 @@
       category = 'constraint'; status = 'blocked_data'; policy = 'review_data'; retryable = false;
     } else if (/sync_protocol_outdated|rebootstrap_required/.test(lower)) {
       category = 'compatibility'; status = 'quarantined'; policy = 'rebootstrap'; retryable = false;
-    } else if (/config_version_conflict|config_commit_mismatch|commit_mismatch|operation_mismatch|operation_id_conflict|operation_adoption_conflict|item_adoption_conflict|seller_effects_mismatch|payment_id_conflict|payment_balance_mismatch|layaway_not_pending|layaway_already_liquidated|layaway_local_state_conflict|legacy_.*conflict|legacy_context_incomplete|invalid_return|folio_conflict|loan_version_conflict|loan_operation_conflict|operation_purged/.test(lower)) {
+    } else if (/config_version_conflict|config_commit_mismatch|commit_mismatch|operation_mismatch|operation_id_conflict|operation_adoption_conflict|item_adoption_conflict|exchange_id_conflict|seller_effects_mismatch|payment_id_conflict|payment_balance_mismatch|layaway_not_pending|layaway_already_liquidated|layaway_local_state_conflict|legacy_.*conflict|legacy_context_incomplete|invalid_return|folio_conflict|loan_version_conflict|loan_operation_conflict|operation_purged/.test(lower)) {
       // H-68: `operation_purged` es la última defensa contra la resurrección. El
       // documento que esta operación quiere escribir fue borrado a propósito; reintentar
       // no lo va a hacer válido, así que se detiene y se muestra en el panel de sincronía.
@@ -1937,6 +1941,9 @@
     }));
     return run({
       type: 'exchange', id: exch.id, folio: exch.folio,
+      // `id` identifica esta entrada de cola; `key` identifica la intenciÃ³n
+      // comercial y sobrevive timeout, replay, reconexiÃ³n y una cola nueva.
+      key: exch._operationId || exch.operationId || exch.id,
       header, items, moves, payment: effects.payment ? MAP.payments.toRow(effects.payment) : null,
       seller_effects: effects.sellerEffects || [],
     });

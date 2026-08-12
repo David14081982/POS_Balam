@@ -3244,7 +3244,7 @@
   //
   // El cambio NUNCA devuelve efectivo: si lo entregado vale menos, el sobrante
   // se registra como valor no aprovechado (Contrato del Cambio, seccion 4).
-  function recordExchange({ origenFolio, lineas, usuario, vendedorId, revisadoPor, notas, metodoPago, pagoDetalle, fecha: fechaIn }) {
+  function recordExchange({ origenFolio, lineas, usuario, vendedorId, revisadoPor, notas, metodoPago, pagoDetalle, fecha: fechaIn, operationId }) {
     const sale = findSaleByFolio(origenFolio);
     if (!sale) return { ok: false, error: 'sale_not_found' };
     const items = (lineas || []).filter(l => l && (l.lado === 'devuelto' || l.lado === 'entregado'));
@@ -3271,6 +3271,34 @@
         identidad.set(l, p);
       });
     } catch (e) { return { ok: false, error: e.message, code: e.code }; }
+
+    // H-96: una intenciÃ³n recibe esta identidad una sola vez. La huella contiene
+    // exclusivamente el payload comercial de entrada ya resuelto por product_id;
+    // no incluye IDs de renglÃ³n, snapshots ni fecha generados durante el commit.
+    const opId = String(operationId || newOperationId());
+    const detail = pagoDetalle && typeof pagoDetalle === 'object'
+      ? Object.keys(pagoDetalle).sort().reduce((out, key) => { out[key] = pagoDetalle[key]; return out; }, {})
+      : null;
+    const operationFingerprint = JSON.stringify({
+      origenFolio: String(origenFolio || ''), usuario: usuario || '',
+      vendedorId: vendedorId || null, revisadoPor: revisadoPor || null,
+      notas: notas || '', metodoPago: metodoPago || null, pagoDetalle: detail,
+      lineas: items.map(l => ({
+        lado: l.lado, productId: identidad.get(l).id,
+        sourceSaleLineId: l.sourceSaleLineId || null,
+        sku: l.sku || '', nombre: l.nombre || '', talla: l.talla || '',
+        qty: Number(l.qty) || 0, motivo: l.motivo || null, condicion: l.condicion || null,
+      })),
+    });
+    const existing = exchanges.find(e => e && (e._operationId === opId || e.id === 'cmb-' + opId));
+    if (existing) {
+      if (existing._operationFingerprint !== operationFingerprint) {
+        return { ok: false, error: 'operation_mismatch', operationId: opId };
+      }
+      const priorPayment = payments.find(p => p && (p.id === 'pay-' + existing.id
+        || (p.folio === existing.folio && p.tipo === 'cambio'))) || null;
+      return { ok: true, idempotent: true, operationId: opId, exchange: existing, payment: priorPayment };
+    }
     try {
       assertLayawayProductsUnlocked(items.map(line => identidad.get(line).id));
     } catch (e) { return { ok: false, error: e.message, code: e.code }; }
@@ -3325,9 +3353,10 @@
     const comisionPct = comisionEntry ? comisionEntry.pct : 0;
     const comisionMonto = comisionEntry ? comisionEntry.monto : 0;
 
-    const id = 'cmb-' + newOperationId();
+    const id = 'cmb-' + opId;
     const exch = {
       id, folio: nextFolio(id, fecha), origenFolio: sale.folio, fecha,
+      _operationId: opId, _operationFingerprint: operationFingerprint,
       usuario: usuario || '', vendedorId: vendedorId || undefined,
       revisadoPor: revisadoPor || undefined, notas: notas || '',
       valorReconocido: money(valorReconocido), valorEntregado: money(valorEntregado),
@@ -3436,7 +3465,7 @@
     if (!remoteApplying) {
       try { window.CORE.invokeSync('pushExchange', exch, { payment, sellerEffects }); } catch (e) { /* offline */ }
     }
-    return { ok: true, exchange: exch, payment };
+    return { ok: true, idempotent: false, operationId: opId, exchange: exch, payment };
   }
 
   // H-47 · Reversa de la comisión del excedente.
@@ -5476,7 +5505,7 @@
     persistProducts, syncProducts, saveProducts, saveSellers, saveClients, saveSales, saveMovements, savePromos, saveReturns, savePayments,
     removeProduct, remapOrphanCodes, catalogHealthReport, hexForColorName, previewOrphanFix, applyOrphanFix, get lastRemap() { return lastRemap; },
     addClient, updateClient, removeClient, clientSalesSummary, clientSalesSummaries,
-    recordSale, nextFolio, collisionSafeFolio, rekeySaleFolio,
+    recordSale, newOperationId, nextFolio, collisionSafeFolio, rekeySaleFolio,
     normalizeFolioPrefix, businessDate, folioFromParts, parseFolio, folioPreview,
     folioBlockRequest, applyFolioBlock, terminalCode,
     findSaleByFolio, saleFolioAliases, folioAliasHit, stockOf, isAutoImg, resetProducts, applyRemote, applySyncResult, applySaleCommitResult, mergeRemote, markSaleSync, liquidarComision,

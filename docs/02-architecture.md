@@ -816,6 +816,22 @@ Las operaciones de venta creadas por versiones anteriores de la aplicación se
 migran en la cola con pagos/efectos vacíos y conservan su identificador. Las
 ventas históricas siguen siendo legibles.
 
+### Identidad idempotente del Cambio
+
+Cada intención de Cambio recibe un `operationId` estable antes de aplicar su
+primer efecto. `DATA.recordExchange()` lo congela en `_operationId` y
+materializa el documento como `cmb-{operationId}`. La identidad técnica de una
+entrada de cola sigue siendo `op.id`; `STORE.pushExchange()` transporta la
+identidad comercial separada en `op.key`, y ésa es la que llega como
+`p_commit_id` a `pos.commit_exchange_checked()` y `pos.exchange_commits`.
+
+Repetir clave y payload devuelve `idempotent=true` sin volver a mover stock,
+crear documentos, movimientos, pagos ni comisión. La misma clave con payload
+distinto es un conflicto permanente. Un `exchange_id_conflict` tampoco es un
+error transitorio: queda `blocked_conflict` y nunca se reintenta en bucle. Los
+renglones continúan identificándose por `products.id`; SKU no participa en la
+idempotencia ni en la resolución física.
+
 ### Identidad y folio de venta
 
 Cada venta nueva tiene dos identificadores con responsabilidades **separadas**;

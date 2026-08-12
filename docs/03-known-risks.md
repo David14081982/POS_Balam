@@ -4601,7 +4601,7 @@ artefacto público idéntico al build normalizado (8,931,332 bytes, SHA-256
 
 ## H-94 - Referencias físicas V2 carecen de identidad logística y stock propios
 
-**Estado:** RESUELTO EN FASE H-94 — publicado y validado con datos de prueba; no producción
+**Estado:** MIGRACIONES 13700/13800 APLICADAS; PILOTO DETENIDO POR H-96 Y LIMPIO — NO PRODUCCIÓN
 **Fecha de registro:** 10/08/2026
 **Commit técnico:** `136c8d0`
 **Origen:** contrato definitivo aprobado por el dueño para separar identidad
@@ -4650,6 +4650,50 @@ informa `Remote database is up to date`. El cliente deja de usar defaults como
 segunda autoridad durante cargas remotas. CONFIG 30/30, H-94 48/48, Excel
 42/42, etiquetas 19/19, formulario 19/19 y ornamentos 17/17 están verdes.
 Quedan publicación y piloto sintético; todavía no es producción.
+El piloto remoto del 11/08/2026 reprodujo `42703: column "product_id" does not
+exist` al intentar la primera escritura V2. La causa estructural quedó demostrada:
+`commit_exchange` recibía y usaba `product_id` para inventario, pero 13400 no
+había creado `exchange_items.product_id`. La corrección aditiva 13700 añadió la
+columna nullable y su índice, preservó los históricos en NULL y corrigió la
+autoridad transaccional para congelar ID, barcode, SKU y atributos físicos.
+Su verificación PostgreSQL real ejercitó dos referencias con el mismo SKU:
+A regresó de stock 1 a 2, B salió de 3 a 2, ambos renglones y movimientos
+conservaron el `products.id` exacto, el reintento fue idempotente y una falla
+tardía revirtió todo. El savepoint eliminó los fixtures y las huellas protegidas
+confirmaron cero cambios preexistentes. Lint remoto quedó limpio, local/remoto
+incluyen 13700 y el dry-run final informa `Remote database is up to date`.
+
+El piloto se reinició desde cero con 11 referencias sintéticas. Alta, barcodes,
+SKU homónimos, búsqueda, etiquetas y canonicalización funcionaron, pero Excel
+H-86 no conservó literalmente `attrs.caracteristicas = ""` en H94-PILOT-J: el
+round-trip retiró esa clave vacía. Por la condición de parada no se crearon
+ventas, apartados, devoluciones, cambios, préstamos ni reclasificaciones. Los 11
+fixtures se eliminaron mediante una transacción acotada que comprobó cero
+referencias documentales y cero residuo.
+
+La auditoría final detectó además que durante el alta del piloto dos operaciones
+`upsert` del equipo `dev-ms40ac73-07fnos14` actualizaron 222 filas V1 a las
+22:38:29 UTC. El conteo actual es 1,378, la autoridad remota reporta actualmente
+3,334 piezas y no existen V2 ni H94-PILOT, pero la huella cruda V1 cambió de
+`afc72c5bac34c5583f3fa8379c5b61979024b368c833e18f3178f11170ebf685` a
+`1737ef422f39b8ea41493c233334aaaac75de6b06d76aa335d5066b19bb77359`.
+El código contiene una ruta `configchange → remapOrphanCodes() → saveProducts()`
+capaz de enviar el arreglo local completo, pero todavía no hay evidencia
+suficiente para atribuirle esta ejecución ni para afirmar que sólo cambiaron
+metadatos. No se restauró ni reinterpretó ninguna fila. El piloto A–S queda
+detenido hasta autorizar historias separadas para el round-trip vacío y para
+aislar/prevenir la escritura masiva V1.
+
+El intento controlado del 12/08/2026, posterior a H-95 y H-86, creó exactamente
+7 referencias, 5 SKU y 35 piezas con IDs durables y alcance remoto exacto. La
+fase de lectura pasó pares homónimos por Corte/Características, 7/7 barcodes,
+etiquetas 60×40, Excel H-86 y estadísticas. Se detuvo antes del primer documento
+al confirmar que H-96 sigue abierto y afecta una retransmisión normal de Cambio.
+La limpieza autorizada comprobó cero referencias documentales y eliminó sólo
+los siete IDs del manifiesto. Resultado remoto: 1,378 V1, V2=0, H94-PILOT=0,
+stock=3,334 y huella `d8bd3f2ed327f3e330c814d0bf9e8731`; cola y bloqueos
+quedaron en cero. No se ejecutó punto cero, carga real, SKU masivos ni etiquetas
+reales.
 **Corrección documentada:**
 `docs/fixes/modelo-referencias-fisicas-v2.md`.
 
@@ -4691,6 +4735,52 @@ al build tras normalizar 171 CRLF; H-95 publicado 11/11.
 puerta global de cola/bloqueos se trabajarán por separado.
 **Corrección documentada:**
 `docs/fixes/frontera-escritura-productos.md`.
+
+## H-96 - El reintento de un Cambio confirmado entra en conflicto y no abandona la cola
+
+**Estado:** RESUELTO Y PUBLICABLE; PENDIENTE DE REVALIDACIÓN EN H94-PILOT
+**Fecha de registro:** 12/08/2026
+**Commit técnico:** Pendiente de commit
+**Origen:** piloto remoto H-94 posterior a la migración 13800.
+**Reproducción:** confirmar un Cambio V2 A→B y reenviar el mismo documento con
+`STORE.pushExchange`. El servidor responde `exchange_id_conflict`; la cola lo
+clasifica como `unknown/retryable`, mantiene `pending=1` y alcanzó 159 intentos
+sin converger.
+**Riesgo:** el documento y stock iniciales pueden ser correctos, pero una
+retransmisión normal deja la terminal permanentemente sin sincronizar y repite
+una operación determinísticamente rechazada. H94 no puede acreditar
+idempotencia ni sincronización A–S en ese estado.
+**Evidencia:** el STOP ocurrió exactamente en `exchange-idempotent-retry`; la
+operación pendiente era única, de tipo `exchange`, con el folio del Cambio ya
+confirmado. No se observaron duplicados de stock o documento antes de detener.
+**No alcance aplicado:** no se modificó 13700, `pushExchange`, la clasificación
+de errores ni otra familia de Movimientos. La operación sintética se retiró por
+ID/tipo/folio y todos los fixtures se limpiaron.
+**Estado remoto posterior:** la limpieza física exacta eliminó tres reservas
+sintéticas y los 22 tombstones V2 de ambos intentos; quedaron 1,378 V1, cero
+H94-PILOT, cero V2 activos, stock 3,334, cola 0, bloqueos 0 y CONFIG
+sincronizada. Huellas V1: MD5 crudo
+`d8bd3f2ed327f3e330c814d0bf9e8731` y SHA-256
+`1737ef422f39b8ea41493c233334aaaac75de6b06d76aa335d5066b19bb77359`.
+**Causa raíz demostrada:** `recordExchange()` no congelaba `operationId` y
+`pushExchange()` no definía `op.key`. Cada nueva entrada de cola generaba otro
+`op.id`, que llegaba como `p_commit_id`; `exchange_commits` no podía reconocer
+el reenvío y el ID documental existente producía `exchange_id_conflict`.
+Además, ese código no estaba clasificado como conflicto permanente.
+**Corrección:** la intención conserva `operationId` desde la pantalla hasta
+`exchange_commits`; `op.id` queda separado como identidad técnica de cola y
+`op.key` como identidad comercial. La repetición local exacta se reconoce antes
+de cualquier efecto; payload distinto se bloquea; `exchange_id_conflict` queda
+`blocked_conflict`. No se requirió migración SQL ni modificación histórica.
+**Prueba roja:** Cambio 33/36 y cola 170/173.
+**Prueba verde:** Cambio 36/36, cola 173/173, E2E 37/37, pantalla 45/45,
+comisión 30/30, identidad posventa 16/16, cobro 14/14, SQL H-94 10/10 y
+15/15, modelo V2 48/48, H-95 16/16, H-86 17/17 y 42/42, build, smoke 17/17 y
+navegación 15/15.
+**Pendiente:** publicar el cliente y revalidar la frontera remota dentro del
+H94-PILOT completo desde limpio. Esto ya forma parte del ciclo autorizado.
+**Corrección documentada:**
+`docs/fixes/reintento-cambios-conflicto-cola.md`.
 
 ## Regla de actualización
 

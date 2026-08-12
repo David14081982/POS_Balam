@@ -120,7 +120,8 @@ ok('38b. la preselección de motivo y condición es visible y editable',
 ok('38c. el revisor se prellena con la sesión y sigue editable',
   /sesion\.nombre \|\| sesion\.email/.test(ex) && /onChange: e => setRevisor\(e\.target\.value\)/.test(ex));
 ok('39. lee código de barras igual que el Punto de venta',
-  /BARCODES && window\.BARCODES\.find\(raw\)/.test(ex) && /BARCODES\.parse\(raw\)/.test(ex)
+  /BARCODES && window\.BARCODES\.resolve\(raw\)/.test(ex) && /barcodeResult\.hit/.test(ex)
+    && /BARCODES\.parse\(raw\)/.test(ex)
     && /addEventListener\('keydown'/.test(ex) && /now - lt > 50/.test(ex));
 ok('40. el comprobante se imprime automáticamente al cerrar',
   /useReceiptAutoPrint\(\)/.test(ex));
