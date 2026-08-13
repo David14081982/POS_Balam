@@ -35,7 +35,7 @@ y `BLOQUEADO`.
 | H-88B | La impresión móvil de etiquetas depende de popup, autoimpresión y autocierre | RESUELTO Y PUBLICADO | Inventario / etiquetas / impresión |
 | H-89 | BALAM no tiene contrato de instalación PWA ni materialización demostrada del logo configurado | RESUELTO Y PUBLICADO | Cliente / PWA / build |
 | H-90 | La autoridad monetaria no conserva componentes configurables ni reembolsos exactos | RESUELTO Y PUBLICADO | Ventas / devoluciones / reportes / impresión |
-| H-99 | La etiqueta 60×40 perdió jerarquía visual y concentra SKU/precio al pie | RESUELTO Y PUBLICADO | Inventario / etiquetas / impresión |
+| H-99 | La vista previa no representa la composición imprimible 60×40 aprobada | RESUELTO Y PUBLICADO | Inventario / etiquetas / impresión |
 
 ## H-01 — Inventario concurrente
 
@@ -4949,6 +4949,33 @@ y `products.id` continúan ocultos y el Code128 sigue codificando el mismo valor
 `c1adc6242a909bebea1ccff4bd7a046c22f1f34951e755db170443fa2fddaa8c`).
 Sobre esos bytes, H-99 pasó 9/9 y H-88B 19/19.
 **Corrección documentada:** `docs/fixes/jerarquia-visual-etiqueta-60x40.md`.
+
+**Regresión visual registrada (13/08/2026):** la validación publicada cubrió la
+plantilla imprimible, pero no comparó geométricamente el preview del modal. La
+vista previa continúa construyéndose con un árbol React y reglas Tailwind
+independientes (`gap`, padding y tamaños propios), mientras
+`buildLabelDocument()` usa `.bx-label` y dimensiones físicas. Esta duplicidad
+permite que nombre, barcode, SKU y precio cambien de posición y proporción sin
+que falle el arnés H-99 existente. La corrección queda abierta hasta probar la
+misma autoridad de markup/CSS en preview, documento y bytes de Pages.
+
+**Corrección de la regresión:** `LABEL_LAYOUT_CSS` y `labelMarkup()` son ahora
+la única autoridad de composición. Preview, documento imprimible, descarga y
+compartir reciben el mismo `.bx-label`; el preview sólo escala el bloque físico
+60×40 completo con `transform`, sin recalcular zonas o tipografías. Un único
+`labelItem()` proyecta además nombre, imagen Code128, SKU y precio.
+**Prueba de paridad:** H-99 **12/12** sobre SKU corto, típico y largo: misma
+proporción 3:2, mismas coordenadas normalizadas de nombre/barcode/SKU/precio y
+misma jerarquía tipográfica en preview e impresión. H-88B **19/19** y navegación
+**15/15** permanecen verdes. Build offline correcto. Smoke de desarrollo quedó
+no concluyente por una instancia previa que conservó el puerto 8803; no se
+observó una falla funcional atribuible al cambio.
+**Publicación de la regresión:** commit `1f5785e`; `origin/main` apunta al mismo
+SHA. Pages sirve el blob Git exacto `a87db4da74fc262586d955667342b0eeb5b9ad07`
+(8,971,523 bytes de transferencia; SHA-256
+`c86f019e5d318bfcdcb7ebdd3491a16b95ae1ed434fe9e943a39b6c65c863e4e`).
+El arnés H-99 ejecutado sobre esos bytes públicos pasó **12/12**, incluidas las
+tres comparaciones explícitas preview/impresión.
 
 ## Regla de actualización
 
