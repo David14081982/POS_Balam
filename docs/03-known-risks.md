@@ -4871,8 +4871,10 @@ navegación 15/15; contratos 42/42; registro 12/12; build 8/8; smoke bundle
 17/17. La verificación remota declaró estructura, permisos, plan, rollback y
 producción correctos.
 **Despliegue:** migraciones 13900/14000 aplicadas; cliente `80b5234` enviado a
-`origin/main`. No se invocó `execute_point_zero` y los 1,378 productos siguen
-fuera del alcance autorizado.
+`origin/main`. Pages sirve el blob exacto `7d73cb9dabef16eceaf98a821242905a32cd25a3`
+(8,969,403 bytes; SHA-256 `c6af545ff8e4cab2b0f1bd384bad7dd21832bdcbce4c0cfd42d827680027a8da`).
+No se invocó `execute_point_zero` y los 1,378 productos siguen fuera del alcance
+autorizado.
 **Riesgo residual:** el respaldo no tiene restauración automática; todos los
 equipos registrados deben estar en línea y limpios para ejecutar.
 **Corrección documentada:** `docs/fixes/punto-cero-administrativo.md`.

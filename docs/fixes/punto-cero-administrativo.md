@@ -97,7 +97,9 @@ configuración, catálogos, personal, Auth y las cuatro familias de permisos.
 
 Las dos migraciones están aplicadas en el proyecto enlazado y su verificación
 no ejecutó Punto Cero sobre datos del negocio. El cliente del commit `80b5234`
-se envió a `origin/main` para publicación por GitHub Pages.
+se envió a `origin/main`. GitHub Pages sirve exactamente su blob `index.html`
+`7d73cb9dabef16eceaf98a821242905a32cd25a3`: 8,969,403 bytes y SHA-256
+`c6af545ff8e4cab2b0f1bd384bad7dd21832bdcbce4c0cfd42d827680027a8da`.
 
 No se llamó `execute_point_zero`, no se borraron los **1,378 productos**
 actuales, no se cargó inventario real, no se importó Excel, no se imprimieron
