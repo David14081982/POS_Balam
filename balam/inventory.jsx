@@ -1189,10 +1189,47 @@
     return Math.min(12.5, usablePx * 0.75 / (chars * 0.62));
   }
 
+  // H-99: ésta es la única autoridad visual de la etiqueta. El documento usa
+  // estas dimensiones físicas y el preview escala el bloque completo, sin
+  // recalcular ninguna zona ni tipografía.
+  const LABEL_LAYOUT_CSS = `
+    .bx-label,.bx-label *{box-sizing:border-box}.bx-label{width:60mm;height:40mm;padding:1.5mm 2mm 1.3mm;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;background:white;color:#111827;overflow:hidden;page-break-after:always;font-family:system-ui,sans-serif}.bx-name{width:100%;height:5.3mm;font-size:14pt;font-weight:700;text-align:center;line-height:1;white-space:nowrap;overflow:hidden;margin:0 0 .5mm}.bx-img{display:block;width:100%;height:15mm;object-fit:contain;margin:0}.bx-meta{width:100%;height:5mm;font-family:monospace;font-weight:600;line-height:1;letter-spacing:0;text-align:center;white-space:nowrap;overflow:hidden;margin:.7mm 0 0}.bx-price{height:7.4mm;font-size:20pt;font-weight:900;line-height:1;text-align:center;white-space:nowrap;margin:.3mm 0 0}`;
+
+  function labelMarkup(item) {
+    return `<div class="bx-label" data-testid="label-master"><div class="bx-name" data-label-part="name">${escapeHtml(item.name)}</div><img class="bx-img" data-testid="label-preview-barcode" data-label-part="barcode" alt="" src="${item.image}"><div class="bx-meta" data-label-part="sku" style="font-size:${labelSkuFontPt(item.sku).toFixed(2)}pt">${escapeHtml(item.sku)}</div>${item.price ? `<div class="bx-price" data-label-part="price">${escapeHtml(item.price)}</div>` : ''}</div>`;
+  }
+
+  function LabelPreview({ item }) {
+    const stageRef = useRef(null);
+    const labelRef = useRef(null);
+    const [scale, setScale] = useState(1);
+    useEffect(() => {
+      const stage = stageRef.current;
+      const label = labelRef.current && labelRef.current.firstElementChild;
+      if (!stage || !label) return undefined;
+      const fit = () => setScale(Math.min(stage.clientWidth / label.offsetWidth, stage.clientHeight / label.offsetHeight));
+      fit();
+      if (typeof ResizeObserver === 'undefined') return undefined;
+      const observer = new ResizeObserver(fit);
+      observer.observe(stage);
+      return () => observer.disconnect();
+    }, [item.image, item.name, item.sku, item.price]);
+    return h('div', {
+      ref: stageRef,
+      className: 'relative w-full overflow-hidden bg-white border border-outline-variant rounded-lg',
+      style: { aspectRatio: '3 / 2' },
+      'data-testid': 'label-preview-stage',
+    }, h('div', {
+      ref: labelRef,
+      style: { transform: `scale(${scale})`, transformOrigin: 'top left' },
+      dangerouslySetInnerHTML: { __html: labelMarkup(item) },
+    }));
+  }
+
   function buildLabelDocument(rendered) {
-    const labels = rendered.map(item => `<div class="bx-label"><div class="bx-name">${escapeHtml(item.name)}</div><img class="bx-img" src="${item.image}"><div class="bx-meta" style="font-size:${labelSkuFontPt(item.sku).toFixed(2)}pt">${escapeHtml(item.sku)}</div>${item.price ? `<div class="bx-price">${escapeHtml(item.price)}</div>` : ''}</div>`).join('');
+    const labels = rendered.map(labelMarkup).join('');
     return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Etiquetas Balam</title><style>
-      @page { size: 60mm 40mm; margin: 0; } *{box-sizing:border-box} body{margin:0;font-family:system-ui,sans-serif;background:#eef0f4}.bx-tools{position:sticky;top:0;z-index:2;display:flex;gap:8px;flex-wrap:wrap;padding:12px;background:#131b2e;color:white}.bx-tools button{min-height:44px;padding:0 16px;border:0;border-radius:8px;font-weight:700}.bx-sheet{display:flex;flex-wrap:wrap;gap:12px;padding:16px}.bx-label{width:60mm;height:40mm;padding:1.5mm 2mm 1.3mm;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;background:white;overflow:hidden;page-break-after:always}.bx-name{width:100%;height:5.3mm;font-size:14pt;font-weight:700;text-align:center;line-height:1;white-space:nowrap;overflow:hidden;margin:0 0 .5mm}.bx-img{display:block;width:100%;height:15mm;object-fit:contain;margin:0}.bx-meta{width:100%;height:5mm;font-family:monospace;font-weight:600;line-height:1;letter-spacing:0;text-align:center;white-space:nowrap;overflow:hidden;margin:.7mm 0 0}.bx-price{height:7.4mm;font-size:20pt;font-weight:900;line-height:1;text-align:center;white-space:nowrap;margin:.3mm 0 0}@media(max-width:600px){.bx-sheet{padding:8px;justify-content:center}}@media print{body{background:white}.bx-tools{display:none}.bx-sheet{display:block;padding:0}.bx-label{margin:0}}
+      @page { size: 60mm 40mm; margin: 0; } *{box-sizing:border-box} body{margin:0;font-family:system-ui,sans-serif;background:#eef0f4}.bx-tools{position:sticky;top:0;z-index:2;display:flex;gap:8px;flex-wrap:wrap;padding:12px;background:#131b2e;color:white}.bx-tools button{min-height:44px;padding:0 16px;border:0;border-radius:8px;font-weight:700}.bx-sheet{display:flex;flex-wrap:wrap;gap:12px;padding:16px}${LABEL_LAYOUT_CSS}@media(max-width:600px){.bx-sheet{padding:8px;justify-content:center}}@media print{body{background:white}.bx-tools{display:none}.bx-sheet{display:block;padding:0}.bx-label{margin:0}}
     </style></head><body><div class="bx-tools"><button type="button" onclick="window.print()">Imprimir</button><button id="download" type="button">Descargar</button><button id="share" type="button" hidden>Compartir</button><span>${rendered.length} etiqueta(s) · 60×40 mm</span></div><main class="bx-sheet">${labels}</main><script>
       const source=document.documentElement.outerHTML;const file=()=>new File([source],'etiquetas-balam.html',{type:'text/html'});document.getElementById('download').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(file());a.download='etiquetas-balam.html';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};const share=document.getElementById('share');if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file()]})){share.hidden=false;share.onclick=()=>navigator.share({files:[file()],title:'Etiquetas Balam'})}
     </script></body></html>`;
@@ -1211,6 +1248,7 @@
     const [copies, setCopies] = useState(1);
     const [withPrice, setWithPrice] = useState(true);
     const [saving, setSaving] = useState(false);
+    const imageCache = useRef({});
 
     const specs = [];
     (products || []).forEach(p => D.resolveProductSizes(p).sizes.forEach(size => {
@@ -1225,12 +1263,15 @@
     if (!B || !B.ready()) return h(Modal, { title: 'Etiquetas', onClose }, h('p', { className: 'text-body text-on-surface-variant py-6 text-center' }, 'La librería de códigos de barras no cargó. Revisa tu conexión e inténtalo de nuevo.'));
     if (!specs.length) return h(Modal, { title: 'Etiquetas', onClose }, h('p', { className: 'text-body text-on-surface-variant py-6 text-center' }, 'No hay tallas con existencias para etiquetar.'));
 
+    function labelItem(s) {
+      if (imageCache.current[s.code] === undefined) imageCache.current[s.code] = B.toPNGDataURL(s.code, PRINT_OPTS);
+      return { name: s.p.nombre, image: imageCache.current[s.code], barcode: s.code, sku: s.p.sku, price: withPrice ? fmt(D.listPrice(s.p, s.talla)).replace('.00', '') : '' };
+    }
+
     function renderDocument() {
-      const cache = {};
       const rendered = [];
       specs.forEach(s => {
-        if (cache[s.code] === undefined) cache[s.code] = B.toPNGDataURL(s.code, PRINT_OPTS);
-        const one = { name: s.p.nombre, image: cache[s.code], barcode: s.code, sku: s.p.sku, price: withPrice ? fmt(D.listPrice(s.p, s.talla)).replace('.00', '') : '' };
+        const one = labelItem(s);
         for (let i = 0; i < copiesOf(s); i++) rendered.push(one);
       });
       return buildLabelDocument(rendered);
@@ -1266,7 +1307,7 @@
     }
 
     const seg = (val, on, label) => h('button', { key: val, onClick: () => setCopiesMode(val), className: 'px-3 py-1.5 rounded-md text-caption font-semibold transition-colors ' + (on ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:text-primary') }, label);
-    const preview = specs.slice(0, 4);
+    const preview = specs.slice(0, 4).map(labelItem);
     const footer = [
       h('button', { key: 'sv', disabled: saving, onClick: saveToSupabase, className: 'px-5 py-3 border border-outline-variant rounded-xl text-caption font-bold uppercase tracking-widest text-primary hover:bg-surface-container transition disabled:opacity-50 flex items-center gap-2' }, [h(MS, { key: 'i', name: saving ? 'clock' : 'upload', size: 16 }), saving ? 'Guardando…' : `Guardar en Supabase (${uniqueCount})`]),
       h('button', { key: 'dl', onClick: () => downloadLabelDocument(renderDocument()), 'data-testid': 'labels-download', className: 'px-5 py-3 border border-outline-variant rounded-xl text-caption font-bold uppercase tracking-widest text-primary hover:bg-surface-container transition flex items-center gap-2' }, [h(MS, { key: 'i', name: 'download', size: 16 }), 'Descargar']),
@@ -1291,14 +1332,9 @@
         riskyCodes.length > 0 && h('div', { key: 'warn', role: 'alert', 'data-testid': 'labels-legibility-warning', className: 'p-3 rounded-lg bg-warning-soft text-warning text-caption' }, `${riskyCodes.length} código(s) son demasiado largos para una lectura Code128 robusta en 60×40 mm. En V2 revisa el barcode logístico; en etiquetas V1 acorta el SKU o valida una muestra con tu lector.`),
       ]),
       h('div', { key: 'pv', className: 'border-t border-outline-variant pt-4' }, [
+        h('style', { key: 'css' }, LABEL_LAYOUT_CSS),
         h('p', { key: 'l', className: 'text-overline uppercase font-bold text-on-surface-variant tracking-widest mb-3' }, 'Vista previa'),
-        h('div', { key: 'g', className: 'grid grid-cols-2 gap-3' }, preview.map(s => h('div', { key: s.code, className: 'border border-outline-variant rounded-lg p-2 flex flex-col items-center gap-1 bg-white overflow-hidden' }, [
-          h('div', { key: 'n', className: 'text-overline font-bold text-center text-primary truncate w-full' }, s.p.nombre),
-          h('div', { key: 'b', className: 'w-full overflow-hidden', 'data-testid': 'label-preview-barcode' }, h(B.Barcode, { code: s.code, opts: Object.assign({}, LBL_OPTS, { displayValue: false }) })),
-          h('div', { key: 's', className: 'font-mono font-semibold text-primary text-center whitespace-nowrap w-full overflow-hidden',
-            style: { fontSize: Math.max(7, labelSkuFontPt(s.p.sku)) + 'pt' } }, s.p.sku),
-          withPrice && h('div', { key: 'p', className: 'text-xl leading-none font-black text-primary' }, fmt(D.listPrice(s.p, s.talla)).replace('.00', '')),
-        ]))),
+        h('div', { key: 'g', className: 'grid grid-cols-1 sm:grid-cols-2 gap-3' }, preview.map((item, index) => h(LabelPreview, { key: `${item.barcode}-${index}`, item }))),
         specs.length > preview.length && h('p', { key: 'm', className: 'text-caption text-on-surface-variant mt-2' }, `…y ${specs.length - preview.length} más`),
       ]),
     ]);

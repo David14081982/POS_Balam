@@ -8,16 +8,18 @@ import { resolve, join } from 'node:path';
 
 const root = resolve('.');
 const evidence = resolve('.evidence-label-visual');
+const artifactPath = process.env.BALAM_ARTIFACT_PATH ? resolve(process.env.BALAM_ARTIFACT_PATH) : null;
 await mkdir(evidence, { recursive: true });
 const server = createServer((request, response) => {
   let pathname = decodeURIComponent(request.url.split('?')[0]);
   if (pathname === '/') pathname = '/index.html';
-  const file = join(root, pathname);
+  const file = pathname === '/index.html' && artifactPath ? artifactPath : join(root, pathname);
   if (!file.startsWith(root) || !existsSync(file)) { response.writeHead(404); response.end(); return; }
   response.writeHead(200, { 'Content-Type': pathname.endsWith('.html') ? 'text/html; charset=utf-8' : 'application/octet-stream' });
   createReadStream(file).pipe(response);
 });
-await new Promise(done => server.listen(8899, '127.0.0.1', done));
+await new Promise(done => server.listen(0, '127.0.0.1', done));
+const testUrl = `http://127.0.0.1:${server.address().port}/`;
 
 let passed = 0, failed = 0;
 const check = (name, condition, detail = '') => {
@@ -29,7 +31,7 @@ try {
   const context = await browser.newContext({ viewport: { width: 1200, height: 850 }, deviceScaleFactor: 2 });
   await context.route(/supabase\.co/, route => route.abort());
   const page = await context.newPage();
-  await page.goto('http://127.0.0.1:8899/', { waitUntil: 'load' });
+  await page.goto(testUrl, { waitUntil: 'load' });
   await page.waitForFunction(() => window.DATA && window.BARCODES && window.InventoryScreen);
   const fixtures = await page.evaluate(() => {
     const D = window.DATA;
@@ -57,6 +59,21 @@ try {
   for (const fixture of fixtures) {
     await page.getByTestId(`inventory-product-${fixture.id}`).click();
     await page.getByTestId('product-detail-labels').click();
+    const unifiedPreview = page.getByTestId('label-preview-stage').first().locator('.bx-label');
+    const legacyPreview = page.getByTestId('label-preview-barcode').first().locator('..');
+    const previewLabel = await unifiedPreview.count() ? unifiedPreview : legacyPreview;
+    await previewLabel.screenshot({ path: resolve(evidence, `preview-${fixture.id}.png`) });
+    const previewResult = await previewLabel.evaluate(node => {
+      const unified = node.classList.contains('bx-label');
+      const part = (selector, index) => unified ? node.querySelector(selector) : node.children[index];
+      const rect = (selector, index) => part(selector, index).getBoundingClientRect();
+      const font = (selector, index) => parseFloat(getComputedStyle(part(selector, index)).fontSize);
+      return {
+        label: node.getBoundingClientRect(),
+        name: rect('.bx-name', 0), barcode: rect('.bx-img', 1), sku: rect('.bx-meta', 2), price: rect('.bx-price', 3),
+        fonts: { name: font('.bx-name', 0), sku: font('.bx-meta', 2), price: font('.bx-price', 3) },
+      };
+    });
     const popupPromise = context.waitForEvent('page');
     await page.getByTestId('labels-open-printable').click();
     const popup = await popupPromise;
@@ -74,7 +91,7 @@ try {
         expected,
         text: node.innerText,
         namePx: px('.bx-name'), skuPx: px('.bx-meta'), pricePx: px('.bx-price'),
-        label: { width: labelRect.width, height: labelRect.height },
+        label: { x: labelRect.x, y: labelRect.y, width: labelRect.width, height: labelRect.height },
         name: rect('.bx-name'), barcode: rect('.bx-img'), sku: rect('.bx-meta'), price: rect('.bx-price'),
         skuLines: getComputedStyle(sku).whiteSpace === 'nowrap' ? 1 : 2,
         skuOverflow: sku.scrollWidth > sku.clientWidth + 1 || sku.scrollHeight > sku.clientHeight + 1,
@@ -82,7 +99,7 @@ try {
         technicalIdVisible: node.innerText.includes(expected.id),
       };
     }, fixture);
-    measurements.push(result);
+    measurements.push({ ...result, preview: previewResult });
     await popup.close();
     await page.getByTestId('label-modal-close').click();
     await page.getByTestId('product-detail-close').click();
@@ -106,9 +123,24 @@ try {
   check('barcode_code e identidad técnica permanecen ocultos', measurements.every(item => !item.barcodeTextVisible && !item.technicalIdVisible));
   check('orden vertical es nombre, barcode, SKU, precio', measurements.every(item =>
     item.name.bottom <= item.barcode.top && item.barcode.bottom <= item.sku.top && item.sku.bottom <= item.price.top));
+  const relativeBox = (box, label) => ({
+    x: (box.x - label.x) / label.width, y: (box.y - label.y) / label.height,
+    width: box.width / label.width, height: box.height / label.height,
+  });
+  const sameBox = (left, right) => ['x', 'y', 'width', 'height'].every(key => Math.abs(left[key] - right[key]) < 0.002);
+  check('preview e impresión comparten proporción 60×40', measurements.every(item =>
+    Math.abs(item.preview.label.width / item.preview.label.height - item.label.width / item.label.height) < 0.002));
+  check('preview e impresión conservan posiciones relativas idénticas', measurements.every(item =>
+    ['name', 'barcode', 'sku', 'price'].every(part => sameBox(
+      relativeBox(item.preview[part], item.preview.label), relativeBox(item[part], item.label)
+    ))));
+  check('preview e impresión usan la misma jerarquía tipográfica', measurements.every(item =>
+    Math.abs(item.preview.fonts.name / item.namePx - 1) < 0.002 &&
+    Math.abs(item.preview.fonts.sku / item.skuPx - 1) < 0.002 &&
+    Math.abs(item.preview.fonts.price / item.pricePx - 1) < 0.002));
   console.log(JSON.stringify(measurements, null, 2));
 } finally {
-  await browser.close();
+  await Promise.race([browser.close(), new Promise(done => setTimeout(done, 5000))]);
   server.close();
 }
 console.log(`\nH-99 etiqueta visual: ${passed} pasaron, ${failed} fallaron`);
