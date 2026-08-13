@@ -4841,7 +4841,8 @@ del manifiesto cero.
 
 **Estado:** RESUELTO Y DESPLEGADO; BORRADO REAL DETENIDO
 **Fecha de registro:** 12/08/2026
-**Commit:** Pendiente de commit
+**Commits:** `c1ed627` (jerarquía), `1f5785e` (paridad), `4e0ff31` y
+`c5e67ab` (cierre documental).
 **Origen:** cambio de enfoque aprobado para conservar una herramienta permanente
 durante las pruebas presenciales previas a producción.
 **Evidencia inicial:** H-68 ofrece una purga transaccional que conserva productos
@@ -4966,10 +4967,9 @@ compartir reciben el mismo `.bx-label`; el preview sólo escala el bloque físic
 `labelItem()` proyecta además nombre, imagen Code128, SKU y precio.
 **Prueba de paridad:** H-99 **12/12** sobre SKU corto, típico y largo: misma
 proporción 3:2, mismas coordenadas normalizadas de nombre/barcode/SKU/precio y
-misma jerarquía tipográfica en preview e impresión. H-88B **19/19** y navegación
-**15/15** permanecen verdes. Build offline correcto. Smoke de desarrollo quedó
-no concluyente por una instancia previa que conservó el puerto 8803; no se
-observó una falla funcional atribuible al cambio.
+misma jerarquía tipográfica en preview e impresión. H-88B **19/19**, H-94
+**49/49**, navegación **15/15** y smoke bundle **17/17** permanecen verdes.
+Build offline correcto.
 **Publicación de la regresión:** commit `1f5785e`; `origin/main` apunta al mismo
 SHA. Pages sirve el blob Git exacto `a87db4da74fc262586d955667342b0eeb5b9ad07`
 (8,971,523 bytes de transferencia; SHA-256

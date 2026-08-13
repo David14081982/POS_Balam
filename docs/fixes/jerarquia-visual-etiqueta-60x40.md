@@ -59,16 +59,13 @@ lógica.
   preview/impresión **3/3**; total **12/12**;
 - SKU corto **12.5 pt**, típico **12.5 pt** y largo **5.57 pt**, todos completos
   y en una línea; precio constante **20 pt**;
-- H-88B **19/19**, H-94 **49/49**, H-83 E2E **17/17**;
+- H-88B **19/19** y H-94 **49/49**;
 - navegación **15/15**, smoke bundle **17/17**;
 - `node build-offline.mjs`: correcto.
 
 La ampliación del arnés compara posiciones normalizadas de nombre, barcode,
 SKU y precio, proporción 3:2 y jerarquía tipográfica entre preview e impresión
-para las tres longitudes. El smoke de desarrollo intentado durante esta
-regresión no concluyó porque una ejecución previa conservó el puerto 8803; los
-smokes bundle publicados anteriores siguen documentados y el build actual fue
-correcto.
+para las tres longitudes.
 
 La comparativa A/B/C y los renders están en `.evidence-label-visual/`.
 
