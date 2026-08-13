@@ -67,11 +67,16 @@ try {
       const unified = node.classList.contains('bx-label');
       const part = (selector, index) => unified ? node.querySelector(selector) : node.children[index];
       const rect = (selector, index) => part(selector, index).getBoundingClientRect();
-      const font = (selector, index) => parseFloat(getComputedStyle(part(selector, index)).fontSize);
+      const font = (selector, index) => parseFloat(part(selector, index).getAttribute('data-font-pt')) * 96 / 72;
+      const geometry = selector => {
+        const element = node.querySelector(selector);
+        return ['x', 'y', 'width', 'height', 'data-font-pt'].map(name => element.getAttribute(name));
+      };
       return {
         label: node.getBoundingClientRect(),
         name: rect('.bx-name', 0), barcode: rect('.bx-img', 1), sku: rect('.bx-meta', 2), price: rect('.bx-price', 3),
         fonts: { name: font('.bx-name', 0), sku: font('.bx-meta', 2), price: font('.bx-price', 3) },
+        geometry: ['.bx-name', '.bx-img', '.bx-meta', '.bx-price'].map(geometry),
       };
     });
     const popupPromise = context.waitForEvent('page');
@@ -82,11 +87,12 @@ try {
     await label.screenshot({ path: resolve(evidence, `etiqueta-${fixture.id}.png`) });
     const result = await label.evaluate((node, expected) => {
       const q = selector => node.querySelector(selector);
-      const px = selector => parseFloat(getComputedStyle(q(selector)).fontSize);
+      const px = selector => parseFloat(q(selector).getAttribute('data-font-pt')) * 96 / 72;
       const rect = selector => q(selector).getBoundingClientRect();
       const labelRect = node.getBoundingClientRect();
       const sku = q('.bx-meta');
       const barcode = q('.bx-img');
+      const geometry = selector => ['x', 'y', 'width', 'height', 'data-font-pt'].map(name => q(selector).getAttribute(name));
       return {
         expected,
         text: node.innerText,
@@ -94,9 +100,10 @@ try {
         label: { x: labelRect.x, y: labelRect.y, width: labelRect.width, height: labelRect.height },
         name: rect('.bx-name'), barcode: rect('.bx-img'), sku: rect('.bx-meta'), price: rect('.bx-price'),
         skuLines: getComputedStyle(sku).whiteSpace === 'nowrap' ? 1 : 2,
-        skuOverflow: sku.scrollWidth > sku.clientWidth + 1 || sku.scrollHeight > sku.clientHeight + 1,
+        skuOverflow: rect('.bx-meta').width > labelRect.width * 56 / 60 + 1,
         barcodeTextVisible: node.innerText.includes(expected.barcodeCode),
         technicalIdVisible: node.innerText.includes(expected.id),
+        geometry: ['.bx-name', '.bx-img', '.bx-meta', '.bx-price'].map(geometry),
       };
     }, fixture);
     measurements.push({ ...result, preview: previewResult });
@@ -123,17 +130,10 @@ try {
   check('barcode_code e identidad técnica permanecen ocultos', measurements.every(item => !item.barcodeTextVisible && !item.technicalIdVisible));
   check('orden vertical es nombre, barcode, SKU, precio', measurements.every(item =>
     item.name.bottom <= item.barcode.top && item.barcode.bottom <= item.sku.top && item.sku.bottom <= item.price.top));
-  const relativeBox = (box, label) => ({
-    x: (box.x - label.x) / label.width, y: (box.y - label.y) / label.height,
-    width: box.width / label.width, height: box.height / label.height,
-  });
-  const sameBox = (left, right) => ['x', 'y', 'width', 'height'].every(key => Math.abs(left[key] - right[key]) < 0.002);
   check('preview e impresión comparten proporción 60×40', measurements.every(item =>
     Math.abs(item.preview.label.width / item.preview.label.height - item.label.width / item.label.height) < 0.002));
   check('preview e impresión conservan posiciones relativas idénticas', measurements.every(item =>
-    ['name', 'barcode', 'sku', 'price'].every(part => sameBox(
-      relativeBox(item.preview[part], item.preview.label), relativeBox(item[part], item.label)
-    ))));
+    JSON.stringify(item.preview.geometry) === JSON.stringify(item.geometry)));
   check('preview e impresión usan la misma jerarquía tipográfica', measurements.every(item =>
     Math.abs(item.preview.fonts.name / item.namePx - 1) < 0.002 &&
     Math.abs(item.preview.fonts.sku / item.skuPx - 1) < 0.002 &&

@@ -1,7 +1,7 @@
 # Jerarquía visual de la etiqueta 60×40
 
 **Riesgo:** H-99
-**Estado:** RESUELTO Y PUBLICADO
+**Estado:** RESUELTO, PENDIENTE DE PUBLICAR
 **Fecha:** 13/08/2026
 **Commits técnicos:** `c1ed627` (jerarquía), `1f5785e` (paridad) y
 `0ca8a17` (marco físico del preview).
@@ -45,13 +45,13 @@ constantes 9/8/12 pt, `overflow-wrap:anywhere`, barcode de 60 px y
 ## Solución
 
 `balam/inventory.jsx` usa nombre 14 pt, barcode 15 mm, SKU hasta 12.5 pt con
-reducción proporcional y precio 20 pt/900. `LABEL_LAYOUT_CSS` y
-`labelMarkup()` son la autoridad única para preview, documento imprimible,
-descarga y compartir. El preview renderiza exactamente ese `.bx-label` físico
-60×40 y únicamente escala el bloque completo para caber en pantalla mediante
-`transform`; no contiene reglas visuales propias. `labelItem()` comparte
-también la proyección de los datos. No se modificó `balam/barcodes.jsx` ni otra
-lógica.
+reducción proporcional y precio 20 pt/900. `labelSvg()` es la autoridad visual
+única: fija un `viewBox` 60×40 y las coordenadas físicas de todas las zonas.
+Preview y documento imprimible insertan el mismo SVG; el preview únicamente
+escala la etiqueta completa. El PDF rasteriza ese SVG exacto a 720×480 y lo
+coloca sin recomposición en una página de 60×40 mm. `labelItem()` comparte
+también la proyección de datos. No se modificó `balam/barcodes.jsx` ni otra
+lógica de identidad, precio o stock.
 
 ## Pruebas
 
@@ -62,6 +62,9 @@ lógica.
 - H-88B **19/19** y H-94 **49/49**;
 - navegación **15/15**, smoke bundle **17/17**;
 - `node build-offline.mjs`: correcto.
+- `node test-h99-label-pdf.mjs`: **23/23**; PDF 1.4, MIME, xref, multipágina,
+  MediaBox 60×40, JPEG/Code128, contenido y paridad exacta con el master;
+- `node test-h89-pwa.mjs`: **19/19**.
 
 La ampliación del arnés compara posiciones normalizadas de nombre, barcode,
 SKU y precio, proporción 3:2 y jerarquía tipográfica entre preview e impresión
@@ -94,6 +97,40 @@ layout maestro. Pages sirve su blob exacto
 `db7ef56081b81537ec086ef93ed75e127e65ff64` (8,971,523 bytes; SHA-256
 `9c4c79e0377c3d95253e29abc07b086873ae53aaeeed3048c1ab1e84c975449c`).
 H-99 volvió a pasar **12/12** directamente sobre esos bytes públicos.
+
+## Reapertura: descarga PDF
+
+La versión publicada conserva paridad preview/impresión, pero
+`downloadLabelDocument()` y el script de la vista imprimible entregan
+`text/html` con extensión `.html`; compartir usa el mismo archivo. Todos los
+puntos de entrada convergen en `LabelModal`, por lo que la corrección debe
+mantener esa costura y reemplazar la salida pública por un PDF real de una
+página 60×40 mm por etiqueta, sin depender de `window.print()`.
+
+### Causa demostrada
+
+No había una biblioteca ni un generador PDF. `downloadLabelDocument()` creaba
+un `Blob` `text/html` y el script del popup creaba/compartía un `File`
+`text/html`; ambos se llamaban `etiquetas-balam.html`. La impresión sólo era
+correcta si el navegador ejecutaba `window.print()` y el usuario elegía PDF.
+
+### Corrección local
+
+`buildLabelPdf()` construye un PDF 1.4 válido y multipágina, una página física
+60×40 por copia. La generación usa el mismo `labelSvg()` del preview y del
+documento imprimible, conserva el Code128 como imagen y añade una capa de texto
+invisible sólo para nombre, SKU y precio. Descargar entrega `.pdf` con MIME
+`application/pdf`; compartir sólo se ofrece cuando el dispositivo acepta ese
+archivo. Sin Web Share, Descargar PDF permanece disponible y no existe fallback
+HTML. La vista imprimible queda exclusivamente para imprimir/reintentar.
+
+La prueba roja pasó **4/16** y falló precisamente extensión, MIME, firma,
+páginas, medidas y compartir. La verde pasó PDF H-99 **23/23**, paridad visual
+**12/12**, H-88B **19/19**, H-94 **49/49**, navegación **15/15**, smoke
+**17/17** y PWA H-89 **19/19**. El PDF multipágina de evidencia está en
+`.evidence-label-visual/etiquetas-h99-multipagina.pdf`.
+
+Publicación y commit: pendientes.
 
 ## Referencias
 

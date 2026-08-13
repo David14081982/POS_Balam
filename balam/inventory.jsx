@@ -287,7 +287,7 @@
               h('button', { key: 't', className: XLSBTN, onClick: () => window.XLSXIO.exportTemplate() }, [h(MS, { key: 'i', name: 'download', size: 16 }), 'Plantilla']),
               h('button', { key: 'i', className: XLSBTN, onClick: () => fileRef.current && fileRef.current.click() }, [h(MS, { key: 'i', name: 'upload', size: 16 }), 'Importar']),
               h('button', { key: 'e', className: XLSBTN, onClick: () => window.XLSXIO.exportInventory(products) }, [h(MS, { key: 'i', name: 'file_export', size: 16 }), 'Exportar']),
-              h('button', { key: 'bc', className: XLSBTN, onClick: () => { if (!rows.length) { toast('No hay productos para etiquetar', 'var(--danger)'); return; } setLabelTargets(rows.slice()); }, title: 'Imprimir etiquetas de los productos filtrados' }, [h(MS, { key: 'i', name: 'barcode', size: 16 }), 'Etiquetas']),
+              h('button', { key: 'bc', 'data-testid': 'inventory-labels', className: XLSBTN, onClick: () => { if (!rows.length) { toast('No hay productos para etiquetar', 'var(--danger)'); return; } setLabelTargets(rows.slice()); }, title: 'Imprimir etiquetas de los productos filtrados' }, [h(MS, { key: 'i', name: 'barcode', size: 16 }), 'Etiquetas']),
             ]),
           ]),
         ]),
@@ -1193,10 +1193,110 @@
   // estas dimensiones físicas y el preview escala el bloque completo, sin
   // recalcular ninguna zona ni tipografía.
   const LABEL_LAYOUT_CSS = `
-    .bx-label,.bx-label *{box-sizing:border-box}.bx-label{width:60mm;height:40mm;padding:1.5mm 2mm 1.3mm;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;background:white;color:#111827;overflow:hidden;page-break-after:always;font-family:system-ui,sans-serif}.bx-name{width:100%;height:5.3mm;font-size:14pt;font-weight:700;text-align:center;line-height:1;white-space:nowrap;overflow:hidden;margin:0 0 .5mm}.bx-img{display:block;width:100%;height:15mm;object-fit:contain;margin:0}.bx-meta{width:100%;height:5mm;font-family:monospace;font-weight:600;line-height:1;letter-spacing:0;text-align:center;white-space:nowrap;overflow:hidden;margin:.7mm 0 0}.bx-price{height:7.4mm;font-size:20pt;font-weight:900;line-height:1;text-align:center;white-space:nowrap;margin:.3mm 0 0}`;
+    .bx-label,.bx-label *{box-sizing:border-box}.bx-label{width:60mm;height:40mm;background:white;color:#111827;overflow:hidden;page-break-after:always;font-family:Arial,sans-serif}.bx-artwork{display:block;width:60mm;height:40mm}.bx-name{font-family:Arial,sans-serif;font-weight:700}.bx-img{display:block}.bx-meta{font-family:monospace;font-weight:600;white-space:nowrap}.bx-price{font-family:Arial,sans-serif;font-weight:900}`;
+
+  const LABEL_WIDTH_MM = 60;
+  const LABEL_HEIGHT_MM = 40;
+  const PDF_WIDTH_PT = LABEL_WIDTH_MM * 72 / 25.4;
+  const PDF_HEIGHT_PT = LABEL_HEIGHT_MM * 72 / 25.4;
+  const ptToMm = pt => Number(pt) * 25.4 / 72;
+
+  function labelSvg(item) {
+    const skuPt = labelSkuFontPt(item.sku).toFixed(2);
+    return `<svg class="bx-artwork" data-label-artwork="h99" xmlns="http://www.w3.org/2000/svg" width="60mm" height="40mm" viewBox="0 0 60 40" role="img" aria-label="Etiqueta ${escapeHtml(item.sku)}"><rect width="60" height="40" fill="#fff"/><text class="bx-name" data-label-part="name" data-font-pt="14" x="30" y="4.15" fill="#111827" font-family="Arial,sans-serif" font-size="${ptToMm(14).toFixed(5)}" font-weight="700" text-anchor="middle" dominant-baseline="middle">${escapeHtml(item.name)}</text><image class="bx-img" data-testid="label-preview-barcode" data-label-part="barcode" x="2" y="7.3" width="56" height="15" preserveAspectRatio="xMidYMid meet" href="${item.image}"/><text class="bx-meta" data-label-part="sku" data-font-pt="${skuPt}" x="30" y="25.5" fill="#111827" font-family="monospace" font-size="${ptToMm(skuPt).toFixed(5)}" font-weight="600" text-anchor="middle" dominant-baseline="middle">${escapeHtml(item.sku)}</text>${item.price ? `<text class="bx-price" data-label-part="price" data-font-pt="20" x="30" y="34" fill="#111827" font-family="Arial,sans-serif" font-size="${ptToMm(20).toFixed(5)}" font-weight="900" text-anchor="middle" dominant-baseline="middle">${escapeHtml(item.price)}</text>` : ''}</svg>`;
+  }
 
   function labelMarkup(item) {
-    return `<div class="bx-label" data-testid="label-master"><div class="bx-name" data-label-part="name">${escapeHtml(item.name)}</div><img class="bx-img" data-testid="label-preview-barcode" data-label-part="barcode" alt="" src="${item.image}"><div class="bx-meta" data-label-part="sku" style="font-size:${labelSkuFontPt(item.sku).toFixed(2)}pt">${escapeHtml(item.sku)}</div>${item.price ? `<div class="bx-price" data-label-part="price">${escapeHtml(item.price)}</div>` : ''}</div>`;
+    return `<div class="bx-label" data-testid="label-master">${labelSvg(item)}</div>`;
+  }
+
+  function concatBytes(parts) {
+    const size = parts.reduce((total, part) => total + part.length, 0);
+    const output = new Uint8Array(size);
+    let offset = 0;
+    parts.forEach(part => { output.set(part, offset); offset += part.length; });
+    return output;
+  }
+
+  const asciiBytes = value => new TextEncoder().encode(String(value));
+  function pdfText(value) {
+    return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\x20-\x7e]/g, '?').replace(/([\\()])/g, '\\$1');
+  }
+
+  async function labelJpeg(item) {
+    const svgBlob = new Blob([labelSvg(item)], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(svgBlob);
+    try {
+      const image = new Image();
+      await new Promise((resolve, reject) => {
+        image.onload = resolve;
+        image.onerror = () => reject(new Error('No se pudo renderizar la etiqueta para PDF'));
+        image.src = url;
+      });
+      const canvas = document.createElement('canvas');
+      canvas.width = 720; canvas.height = 480;
+      const context = canvas.getContext('2d');
+      context.fillStyle = '#fff'; context.fillRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      const jpeg = await new Promise((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('No se pudo codificar la etiqueta para PDF')), 'image/jpeg', 0.96));
+      return new Uint8Array(await jpeg.arrayBuffer());
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  async function buildLabelPdf(rendered) {
+    if (!rendered.length) throw new Error('No hay etiquetas para generar el PDF');
+    // Secuencial para que lotes grandes no mantengan decenas de canvas activos
+    // al mismo tiempo en móviles; el PDF sigue siendo un solo archivo.
+    const images = [];
+    for (const item of rendered) images.push(await labelJpeg(item));
+    const objects = [];
+    const pageIds = rendered.map((_, index) => 4 + index * 3);
+    objects[1] = asciiBytes('<< /Type /Catalog /Pages 2 0 R >>');
+    objects[2] = asciiBytes(`<< /Type /Pages /Count ${rendered.length} /Kids [${pageIds.map(id => `${id} 0 R`).join(' ')}] >>`);
+    objects[3] = asciiBytes('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
+    rendered.forEach((item, index) => {
+      const pageId = pageIds[index], imageId = pageId + 1, contentId = pageId + 2;
+      const metadata = `${pdfText(item.name)} | ${pdfText(item.sku)}${item.price ? ` | ${pdfText(item.price)}` : ''}`;
+      const content = asciiBytes(`q\n${PDF_WIDTH_PT.toFixed(5)} 0 0 ${PDF_HEIGHT_PT.toFixed(5)} 0 0 cm\n/Im0 Do\nQ\nBT /F1 1 Tf 3 Tr 1 0 0 1 0 0 Tm (${metadata}) Tj ET`);
+      objects[pageId] = asciiBytes(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PDF_WIDTH_PT.toFixed(5)} ${PDF_HEIGHT_PT.toFixed(5)}] /Resources << /XObject << /Im0 ${imageId} 0 R >> /Font << /F1 3 0 R >> >> /Contents ${contentId} 0 R >>`);
+      objects[imageId] = concatBytes([
+        asciiBytes(`<< /Type /XObject /Subtype /Image /Width 720 /Height 480 /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${images[index].length} >>\nstream\n`),
+        images[index], asciiBytes('\nendstream'),
+      ]);
+      objects[contentId] = concatBytes([asciiBytes(`<< /Length ${content.length} >>\nstream\n`), content, asciiBytes('\nendstream')]);
+    });
+    const chunks = [asciiBytes('%PDF-1.4\n%\u00e2\u00e3\u00cf\u00d3\n')];
+    const offsets = [0];
+    let cursor = chunks[0].length;
+    for (let id = 1; id < objects.length; id++) {
+      offsets[id] = cursor;
+      const object = concatBytes([asciiBytes(`${id} 0 obj\n`), objects[id], asciiBytes('\nendobj\n')]);
+      chunks.push(object); cursor += object.length;
+    }
+    const xrefOffset = cursor;
+    const xref = [`xref\n0 ${objects.length}\n0000000000 65535 f \n`];
+    for (let id = 1; id < objects.length; id++) xref.push(`${String(offsets[id]).padStart(10, '0')} 00000 n \n`);
+    xref.push(`trailer\n<< /Size ${objects.length} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`);
+    chunks.push(asciiBytes(xref.join('')));
+    return new Blob([concatBytes(chunks)], { type: 'application/pdf' });
+  }
+
+  function safeFilePart(value) {
+    return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9_-]+/g, '_').replace(/^_+|_+$/g, '') || 'Etiqueta';
+  }
+  function localDateStamp(date) {
+    return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
+  }
+  function labelPdfFileName(products) {
+    if ((products || []).length === 1) return `BALAM_${safeFilePart(products[0].nombre)}_${safeFilePart(products[0].sku)}.pdf`;
+    return `BALAM_Etiquetas_${localDateStamp(new Date())}.pdf`;
+  }
+  function downloadLabelPdf(asset) {
+    const url = URL.createObjectURL(asset.blob);
+    const anchor = document.createElement('a'); anchor.href = url; anchor.download = asset.fileName; anchor.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   function LabelPreview({ item }) {
@@ -1230,16 +1330,7 @@
     const labels = rendered.map(labelMarkup).join('');
     return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Etiquetas Balam</title><style>
       @page { size: 60mm 40mm; margin: 0; } *{box-sizing:border-box} body{margin:0;font-family:system-ui,sans-serif;background:#eef0f4}.bx-tools{position:sticky;top:0;z-index:2;display:flex;gap:8px;flex-wrap:wrap;padding:12px;background:#131b2e;color:white}.bx-tools button{min-height:44px;padding:0 16px;border:0;border-radius:8px;font-weight:700}.bx-sheet{display:flex;flex-wrap:wrap;gap:12px;padding:16px}${LABEL_LAYOUT_CSS}@media(max-width:600px){.bx-sheet{padding:8px;justify-content:center}}@media print{body{background:white}.bx-tools{display:none}.bx-sheet{display:block;padding:0}.bx-label{margin:0}}
-    </style></head><body><div class="bx-tools"><button type="button" onclick="window.print()">Imprimir</button><button id="download" type="button">Descargar</button><button id="share" type="button" hidden>Compartir</button><span>${rendered.length} etiqueta(s) · 60×40 mm</span></div><main class="bx-sheet">${labels}</main><script>
-      const source=document.documentElement.outerHTML;const file=()=>new File([source],'etiquetas-balam.html',{type:'text/html'});document.getElementById('download').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(file());a.download='etiquetas-balam.html';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};const share=document.getElementById('share');if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file()]})){share.hidden=false;share.onclick=()=>navigator.share({files:[file()],title:'Etiquetas Balam'})}
-    </script></body></html>`;
-  }
-
-  function downloadLabelDocument(documentHtml) {
-    const blob = new Blob([documentHtml], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'etiquetas-balam.html'; anchor.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    </style></head><body><div class="bx-tools"><button id="print" type="button" onclick="window.print()">Imprimir</button><button type="button" onclick="window.close()">Cerrar</button><span>${rendered.length} etiqueta(s) · 60×40 mm</span></div><main class="bx-sheet">${labels}</main></body></html>`;
   }
 
   function LabelModal({ products, onClose }) {
@@ -1248,7 +1339,10 @@
     const [copies, setCopies] = useState(1);
     const [withPrice, setWithPrice] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [pdfAsset, setPdfAsset] = useState(null);
+    const [pdfError, setPdfError] = useState('');
     const imageCache = useRef({});
+    const pdfGeneration = useRef(0);
 
     const specs = [];
     (products || []).forEach(p => D.resolveProductSizes(p).sizes.forEach(size => {
@@ -1259,6 +1353,20 @@
     const copiesOf = s => copiesMode === 'stock' ? s.stock : Math.max(1, Number(copies) || 1);
     const totalLabels = specs.reduce((a, s) => a + copiesOf(s), 0);
     const uniqueCount = new Set(specs.map(s => s.code)).size;
+    const pdfKey = [copiesMode, copies, withPrice ? 'price' : 'no-price', specs.map(s => `${s.p.id}:${s.talla}:${s.stock}:${s.code}:${D.listPrice(s.p, s.talla)}`).join('|')].join('::');
+
+    useEffect(() => {
+      if (!B || !B.ready || !B.ready() || !specs.length) return undefined;
+      const generation = ++pdfGeneration.current;
+      setPdfAsset(null); setPdfError('');
+      const rendered = renderItems();
+      buildLabelPdf(rendered).then(blob => {
+        if (generation === pdfGeneration.current) setPdfAsset({ blob, fileName: labelPdfFileName(products), rendered });
+      }).catch(error => {
+        if (generation === pdfGeneration.current) setPdfError((error && error.message) || 'No se pudo generar el PDF');
+      });
+      return () => { if (generation === pdfGeneration.current) pdfGeneration.current++; };
+    }, [pdfKey]);
 
     if (!B || !B.ready()) return h(Modal, { title: 'Etiquetas', onClose }, h('p', { className: 'text-body text-on-surface-variant py-6 text-center' }, 'La librería de códigos de barras no cargó. Revisa tu conexión e inténtalo de nuevo.'));
     if (!specs.length) return h(Modal, { title: 'Etiquetas', onClose }, h('p', { className: 'text-body text-on-surface-variant py-6 text-center' }, 'No hay tallas con existencias para etiquetar.'));
@@ -1268,13 +1376,16 @@
       return { name: s.p.nombre, image: imageCache.current[s.code], barcode: s.code, sku: s.p.sku, price: withPrice ? fmt(D.listPrice(s.p, s.talla)).replace('.00', '') : '' };
     }
 
-    function renderDocument() {
+    function renderItems() {
       const rendered = [];
       specs.forEach(s => {
         const one = labelItem(s);
         for (let i = 0; i < copiesOf(s); i++) rendered.push(one);
       });
-      return buildLabelDocument(rendered);
+      return rendered;
+    }
+    function renderDocument() {
+      return buildLabelDocument(renderItems());
     }
     function openPrintableView() {
       const win = window.open('', '_blank', 'width=520,height=680');
@@ -1306,13 +1417,22 @@
       toast(failN ? `Guardadas ${okN}, fallaron ${failN}. Error al guardar imagen del código; intenta regenerarlo.` : `${okN} ${okN === 1 ? 'imagen guardada' : 'imágenes guardadas'} en Supabase`, failN ? 'var(--danger)' : 'var(--accent)');
     }
 
-    const seg = (val, on, label) => h('button', { key: val, onClick: () => setCopiesMode(val), className: 'px-3 py-1.5 rounded-md text-caption font-semibold transition-colors ' + (on ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:text-primary') }, label);
+    const seg = (val, on, label) => h('button', { key: val, 'data-testid': `labels-copies-${val}`, onClick: () => setCopiesMode(val), className: 'px-3 py-1.5 rounded-md text-caption font-semibold transition-colors ' + (on ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:text-primary') }, label);
     const preview = specs.slice(0, 4).map(labelItem);
+    const canSharePdf = !!(pdfAsset && navigator.share && navigator.canShare && navigator.canShare({ files: [new File([pdfAsset.blob], pdfAsset.fileName, { type: 'application/pdf' })] }));
+    function sharePdf() {
+      if (!pdfAsset || !canSharePdf) return;
+      const file = new File([pdfAsset.blob], pdfAsset.fileName, { type: 'application/pdf' });
+      navigator.share({ files: [file], title: 'Etiquetas Balam' }).catch(error => {
+        if (!error || error.name !== 'AbortError') toast('No se pudo compartir el PDF. Usa Descargar PDF.', 'var(--danger)');
+      });
+    }
     const footer = [
       h('button', { key: 'sv', disabled: saving, onClick: saveToSupabase, className: 'px-5 py-3 border border-outline-variant rounded-xl text-caption font-bold uppercase tracking-widest text-primary hover:bg-surface-container transition disabled:opacity-50 flex items-center gap-2' }, [h(MS, { key: 'i', name: saving ? 'clock' : 'upload', size: 16 }), saving ? 'Guardando…' : `Guardar en Supabase (${uniqueCount})`]),
-      h('button', { key: 'dl', onClick: () => downloadLabelDocument(renderDocument()), 'data-testid': 'labels-download', className: 'px-5 py-3 border border-outline-variant rounded-xl text-caption font-bold uppercase tracking-widest text-primary hover:bg-surface-container transition flex items-center gap-2' }, [h(MS, { key: 'i', name: 'download', size: 16 }), 'Descargar']),
+      h('button', { key: 'dl', disabled: !pdfAsset, onClick: () => downloadLabelPdf(pdfAsset), 'data-testid': 'labels-download', className: 'px-5 py-3 border border-outline-variant rounded-xl text-caption font-bold uppercase tracking-widest text-primary hover:bg-surface-container transition disabled:opacity-50 flex items-center gap-2' }, [h(MS, { key: 'i', name: pdfAsset ? 'download' : 'clock', size: 16 }), pdfAsset ? 'Descargar PDF' : 'Generando PDF…']),
+      canSharePdf && h('button', { key: 'sh', onClick: sharePdf, 'data-testid': 'labels-share', className: 'px-5 py-3 border border-outline-variant rounded-xl text-caption font-bold uppercase tracking-widest text-primary hover:bg-surface-container transition flex items-center gap-2' }, [h(MS, { key: 'i', name: 'share', size: 16 }), 'Compartir PDF']),
       h('button', { key: 'pr', onClick: openPrintableView, 'data-testid': 'labels-open-printable', className: 'px-6 py-3 bg-primary text-on-primary rounded-xl text-caption font-bold uppercase tracking-widest hover:opacity-90 transition flex items-center gap-2' }, [h(MS, { key: 'i', name: 'print', size: 16 }), `Abrir vista imprimible (${totalLabels})`]),
-    ];
+    ].filter(Boolean);
 
     return h(Modal, { title: 'Etiquetas de código de barras', onClose, footer, testId: 'label-modal', large: true }, [
       h('div', { key: 'cfg', className: 'space-y-4 mb-5' }, [
@@ -1322,13 +1442,14 @@
         ]),
         copiesMode === 'one' && h('div', { key: 'r2', className: 'flex items-center justify-between gap-4' }, [
           h('span', { key: 'l', className: 'text-caption font-semibold text-on-surface-variant' }, 'Copias por talla'),
-          h('input', { key: 'i', type: 'number', min: 1, value: copies, onChange: e => setCopies(e.target.value), className: 'w-24 bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-body text-right focus:ring-1 focus:ring-primary' }),
+          h('input', { key: 'i', type: 'number', min: 1, value: copies, onChange: e => setCopies(e.target.value), 'data-testid': 'labels-copies-input', className: 'w-24 bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-body text-right focus:ring-1 focus:ring-primary' }),
         ]),
         h('label', { key: 'r3', className: 'flex items-center justify-between gap-4 cursor-pointer' }, [
           h('span', { key: 'l', className: 'text-caption font-semibold text-on-surface-variant' }, 'Incluir precio en la etiqueta'),
           h('input', { key: 'i', type: 'checkbox', checked: withPrice, onChange: e => setWithPrice(e.target.checked), className: 'w-5 h-5 rounded border-outline text-primary focus:ring-primary' }),
         ]),
         h('p', { key: 'sum', className: 'text-caption text-on-surface-variant' }, `${specs.length} talla(s) con existencias · ${totalLabels} etiqueta(s) a imprimir`),
+        pdfError && h('div', { key: 'pdf-error', role: 'alert', 'data-testid': 'labels-pdf-error', className: 'p-3 rounded-lg bg-danger-soft text-danger text-caption' }, `${pdfError}. Puedes mantener abierta la vista imprimible e intentarlo de nuevo.`),
         riskyCodes.length > 0 && h('div', { key: 'warn', role: 'alert', 'data-testid': 'labels-legibility-warning', className: 'p-3 rounded-lg bg-warning-soft text-warning text-caption' }, `${riskyCodes.length} código(s) son demasiado largos para una lectura Code128 robusta en 60×40 mm. En V2 revisa el barcode logístico; en etiquetas V1 acorta el SKU o valida una muestra con tu lector.`),
       ]),
       h('div', { key: 'pv', className: 'border-t border-outline-variant pt-4' }, [

@@ -35,7 +35,7 @@ y `BLOQUEADO`.
 | H-88B | La impresión móvil de etiquetas depende de popup, autoimpresión y autocierre | RESUELTO Y PUBLICADO | Inventario / etiquetas / impresión |
 | H-89 | BALAM no tiene contrato de instalación PWA ni materialización demostrada del logo configurado | RESUELTO Y PUBLICADO | Cliente / PWA / build |
 | H-90 | La autoridad monetaria no conserva componentes configurables ni reembolsos exactos | RESUELTO Y PUBLICADO | Ventas / devoluciones / reportes / impresión |
-| H-99 | La vista previa no representa la composición imprimible 60×40 aprobada | RESUELTO Y PUBLICADO | Inventario / etiquetas / impresión |
+| H-99 | Preview, PDF e impresión de etiquetas deben compartir composición | RESUELTO, PENDIENTE DE PUBLICAR | Inventario / etiquetas / impresión |
 
 ## H-01 — Inventario concurrente
 
@@ -4918,7 +4918,7 @@ arranque precompilado 5/5. El smoke JSX de desarrollo agotó su espera Babel de
 
 ## H-99 - La etiqueta 60×40 perdió jerarquía visual
 
-**Estado:** RESUELTO Y PUBLICADO
+**Estado:** RESUELTO, PENDIENTE DE PUBLICAR
 **Fecha de registro:** 13/08/2026
 **Commit:** Pendiente de commit
 **Origen:** comparación visual solicitada contra `Etiquetas Balam.pdf`.
@@ -4982,6 +4982,32 @@ alterar ninguna medida maestra. Pages sirve el blob exacto
 `db7ef56081b81537ec086ef93ed75e127e65ff64` (8,971,523 bytes; SHA-256
 `9c4c79e0377c3d95253e29abc07b086873ae53aaeeed3048c1ab1e84c975449c`).
 H-99 sobre esa descarga pública: **12/12**.
+
+**Regresión funcional registrada (13/08/2026):** todos los accesos de
+etiquetas convergen en `LabelModal`, pero sus dos acciones de descarga crean
+un `Blob`/`File` `text/html` llamado `etiquetas-balam.html`. La vista
+imprimible comparte además ese HTML mediante Web Share. No existe un generador
+PDF en el módulo. H-99 permanece abierto hasta que la descarga y compartir
+entreguen un PDF real multipágina de 60×40 mm, construido desde la misma
+autoridad visual que preview e impresión, y se demuestren las rutas individual,
+inventario filtrado y cantidades sobre Pages. Punto Cero queda fuera de alcance.
+
+**Corrección PDF local (13/08/2026):** `labelSvg()` es la autoridad física
+única 60×40. Preview y vista imprimible insertan ese mismo SVG; el PDF
+rasteriza exactamente ese SVG a 720×480 y lo coloca, sin recomponerlo, en una
+página de `170.07874 × 113.38583 pt`. `buildLabelPdf()` crea un PDF 1.4 real,
+un solo archivo multipágina y una página por etiqueta. Descargar usa
+`application/pdf`; compartir sólo aparece cuando Web Share acepta archivos PDF
+y nunca vuelve a HTML. La generación secuencial limita canvas simultáneos en
+móvil. Las tres entradas vigentes siguen convergiendo en `LabelModal`.
+**Prueba roja de descarga:** **4/16**. **Pruebas verdes locales:** PDF H-99
+**23/23**; paridad visual H-99 **12/12**; móvil H-88B **19/19**; identidad
+H-94 **49/49**; navegación **15/15**; smoke bundle **17/17**; PWA H-89
+**19/19**; build offline correcto. El arnés valida firma, MIME, xref, cantidad
+de páginas, 60×40 mm, streams JPEG, presencia gráfica del Code128, SKU
+corto/típico/largo, precios variados, cantidades y equivalencia byte a byte
+entre el master del preview y la imagen de la primera página PDF.
+**Publicación:** pendiente de commit y verificación de los bytes de Pages.
 
 ## Regla de actualización
 
