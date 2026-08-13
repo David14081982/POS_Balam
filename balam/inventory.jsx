@@ -1180,10 +1180,19 @@
   // Las barras no imprimen su valor. El único texto técnico visible es el SKU comercial.
   const PRINT_OPTS = Object.assign({}, LBL_OPTS, { displayValue: false });
 
+  // La etiqueta reserva 56 mm útiles. En monospace, un carácter ocupa cerca de
+  // 0.62 em; este cálculo elige la mayor tipografía que cabe en una sola línea.
+  // No cambia, corta ni reinterpreta el SKU: sólo proyecta su longitud.
+  function labelSkuFontPt(sku) {
+    const chars = Math.max(1, Array.from(String(sku || '')).length);
+    const usablePx = 56 * 96 / 25.4;
+    return Math.min(12.5, usablePx * 0.75 / (chars * 0.62));
+  }
+
   function buildLabelDocument(rendered) {
-    const labels = rendered.map(item => `<div class="bx-label"><div class="bx-name">${escapeHtml(item.name)}</div><img class="bx-img" src="${item.image}"><div class="bx-meta">${escapeHtml(item.sku)}</div>${item.price ? `<div class="bx-price">${escapeHtml(item.price)}</div>` : ''}</div>`).join('');
+    const labels = rendered.map(item => `<div class="bx-label"><div class="bx-name">${escapeHtml(item.name)}</div><img class="bx-img" src="${item.image}"><div class="bx-meta" style="font-size:${labelSkuFontPt(item.sku).toFixed(2)}pt">${escapeHtml(item.sku)}</div>${item.price ? `<div class="bx-price">${escapeHtml(item.price)}</div>` : ''}</div>`).join('');
     return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Etiquetas Balam</title><style>
-      @page { size: 60mm 40mm; margin: 0; } *{box-sizing:border-box} body{margin:0;font-family:system-ui,sans-serif;background:#eef0f4}.bx-tools{position:sticky;top:0;z-index:2;display:flex;gap:8px;flex-wrap:wrap;padding:12px;background:#131b2e;color:white}.bx-tools button{min-height:44px;padding:0 16px;border:0;border-radius:8px;font-weight:700}.bx-sheet{display:flex;flex-wrap:wrap;gap:12px;padding:16px}.bx-label{width:60mm;height:40mm;padding:2mm;display:flex;flex-direction:column;align-items:center;justify-content:center;background:white;overflow:hidden;page-break-after:always}.bx-name{font-size:9pt;font-weight:700;text-align:center;line-height:1.05;max-height:2.3em;overflow:hidden;margin-bottom:.5mm}.bx-img{width:100%;max-height:18mm;object-fit:contain}.bx-meta{max-width:100%;font:8pt monospace;letter-spacing:.2px;margin-top:.3mm;overflow-wrap:anywhere;text-align:center}.bx-price{font-size:12pt;font-weight:800;margin-top:.3mm}@media(max-width:600px){.bx-sheet{padding:8px;justify-content:center}}@media print{body{background:white}.bx-tools{display:none}.bx-sheet{display:block;padding:0}.bx-label{margin:0}}
+      @page { size: 60mm 40mm; margin: 0; } *{box-sizing:border-box} body{margin:0;font-family:system-ui,sans-serif;background:#eef0f4}.bx-tools{position:sticky;top:0;z-index:2;display:flex;gap:8px;flex-wrap:wrap;padding:12px;background:#131b2e;color:white}.bx-tools button{min-height:44px;padding:0 16px;border:0;border-radius:8px;font-weight:700}.bx-sheet{display:flex;flex-wrap:wrap;gap:12px;padding:16px}.bx-label{width:60mm;height:40mm;padding:1.5mm 2mm 1.3mm;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;background:white;overflow:hidden;page-break-after:always}.bx-name{width:100%;height:5.3mm;font-size:14pt;font-weight:700;text-align:center;line-height:1;white-space:nowrap;overflow:hidden;margin:0 0 .5mm}.bx-img{display:block;width:100%;height:15mm;object-fit:contain;margin:0}.bx-meta{width:100%;height:5mm;font-family:monospace;font-weight:600;line-height:1;letter-spacing:0;text-align:center;white-space:nowrap;overflow:hidden;margin:.7mm 0 0}.bx-price{height:7.4mm;font-size:20pt;font-weight:900;line-height:1;text-align:center;white-space:nowrap;margin:.3mm 0 0}@media(max-width:600px){.bx-sheet{padding:8px;justify-content:center}}@media print{body{background:white}.bx-tools{display:none}.bx-sheet{display:block;padding:0}.bx-label{margin:0}}
     </style></head><body><div class="bx-tools"><button type="button" onclick="window.print()">Imprimir</button><button id="download" type="button">Descargar</button><button id="share" type="button" hidden>Compartir</button><span>${rendered.length} etiqueta(s) · 60×40 mm</span></div><main class="bx-sheet">${labels}</main><script>
       const source=document.documentElement.outerHTML;const file=()=>new File([source],'etiquetas-balam.html',{type:'text/html'});document.getElementById('download').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(file());a.download='etiquetas-balam.html';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};const share=document.getElementById('share');if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file()]})){share.hidden=false;share.onclick=()=>navigator.share({files:[file()],title:'Etiquetas Balam'})}
     </script></body></html>`;
@@ -1286,8 +1295,9 @@
         h('div', { key: 'g', className: 'grid grid-cols-2 gap-3' }, preview.map(s => h('div', { key: s.code, className: 'border border-outline-variant rounded-lg p-2 flex flex-col items-center gap-1 bg-white overflow-hidden' }, [
           h('div', { key: 'n', className: 'text-overline font-bold text-center text-primary truncate w-full' }, s.p.nombre),
           h('div', { key: 'b', className: 'w-full overflow-hidden', 'data-testid': 'label-preview-barcode' }, h(B.Barcode, { code: s.code, opts: Object.assign({}, LBL_OPTS, { displayValue: false }) })),
-          h('div', { key: 's', className: 'text-overline font-mono text-primary text-center break-all' }, s.p.sku),
-          withPrice && h('div', { key: 'p', className: 'text-caption font-bold text-primary' }, fmt(D.listPrice(s.p, s.talla)).replace('.00', '')),
+          h('div', { key: 's', className: 'font-mono font-semibold text-primary text-center whitespace-nowrap w-full overflow-hidden',
+            style: { fontSize: Math.max(7, labelSkuFontPt(s.p.sku)) + 'pt' } }, s.p.sku),
+          withPrice && h('div', { key: 'p', className: 'text-xl leading-none font-black text-primary' }, fmt(D.listPrice(s.p, s.talla)).replace('.00', '')),
         ]))),
         specs.length > preview.length && h('p', { key: 'm', className: 'text-caption text-on-surface-variant mt-2' }, `…y ${specs.length - preview.length} más`),
       ]),

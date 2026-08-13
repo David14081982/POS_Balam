@@ -35,6 +35,7 @@ y `BLOQUEADO`.
 | H-88B | La impresión móvil de etiquetas depende de popup, autoimpresión y autocierre | RESUELTO Y PUBLICADO | Inventario / etiquetas / impresión |
 | H-89 | BALAM no tiene contrato de instalación PWA ni materialización demostrada del logo configurado | RESUELTO Y PUBLICADO | Cliente / PWA / build |
 | H-90 | La autoridad monetaria no conserva componentes configurables ni reembolsos exactos | RESUELTO Y PUBLICADO | Ventas / devoluciones / reportes / impresión |
+| H-99 | La etiqueta 60×40 perdió jerarquía visual y concentra SKU/precio al pie | RESUELTO, PENDIENTE DE PUBLICACIÓN | Inventario / etiquetas / impresión |
 
 ## H-01 — Inventario concurrente
 
@@ -4913,6 +4914,37 @@ arranque precompilado 5/5. El smoke JSX de desarrollo agotó su espera Babel de
 30 s en dos intentos; no afectó el bundle precompilado publicado.
 **Protección verificada:** antes y después del RPC de lectura permanecieron
 1,378 productos y 3,334 piezas. Punto Cero no fue ejecutado.
+
+## H-99 - La etiqueta 60×40 perdió jerarquía visual
+
+**Estado:** RESUELTO, PENDIENTE DE PUBLICACIÓN
+**Fecha de registro:** 13/08/2026
+**Commit:** Pendiente de commit
+**Origen:** comparación visual solicitada contra `Etiquetas Balam.pdf`.
+**Reproducción:** la plantilla imprimible vigente usa nombre 9 pt, SKU 8 pt y
+precio 12 pt dentro de un contenedor centrado verticalmente. En una etiqueta
+60×40 el barcode conserva hasta 18 mm, pero SKU y precio pierden jerarquía y el
+bloque deja un hueco desproporcionado después del código.
+**Riesgo:** la etiqueta sigue siendo funcional y escaneable, pero nombre, SKU y
+precio dejan de poder identificarse con rapidez durante operación comercial.
+**Alcance:** composición visual de la plantilla y su preview; tipografía SKU
+responsiva sin truncar; conservación estricta de dimensiones, Code128,
+`barcode_code`, SKU, precio, stock e identidad H-94.
+**No alcance:** generación o resolución de códigos, inventario, CONFIG,
+Supabase, Punto Cero y contratos H-94/H-96/H-97/H-98.
+**Causa raíz:** `buildLabelDocument()` fijaba 9/8/12 pt para nombre/SKU/precio,
+permitía wrap mediante `overflow-wrap:anywhere` y centraba verticalmente un
+bloque cuyo barcode tenía sólo 60 px de alto. La identidad era correcta; la
+proyección CSS reducía y comprimía la información comercial.
+**Corrección:** nombre 14 pt, barcode 15 mm sin deformación, SKU monospace en
+una línea con cálculo tipográfico por longitud y precio independiente a 20 pt;
+el contenedor usa toda la altura útil desde el borde superior. `barcode_code`
+y `products.id` continúan ocultos y el Code128 sigue codificando el mismo valor.
+**Prueba roja:** H-99 4/9. **Prueba verde:** H-99 9/9; H-88B 19/19; H-94
+49/49; H-83 E2E 17/17; navegación 15/15; smoke bundle 17/17; build correcto.
+**Evidencia:** comparativa A/B/C y renders corto/típico/largo en
+`.evidence-label-visual/`. No se modificaron datos ni se requirió Supabase.
+**Corrección documentada:** `docs/fixes/jerarquia-visual-etiqueta-60x40.md`.
 
 ## Regla de actualización
 
