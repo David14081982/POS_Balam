@@ -3305,7 +3305,7 @@ bloqueada de vendedores permanecieron intactos.
 
 **Estado:** DISEÑO ACEPTADO - NO IMPLEMENTADO
 **Fecha de registro:** 01/08/2026
-**Commit:** Pendiente de commit
+**Commit técnico:** `80b5234`
 **Evidencia:** el catálogo `size_number` guarda identidades históricas —`s`, `0`,
 `A`…`H`— que no coinciden con la talla que representan: `0` es la 38, `A` la 40,
 `B` la 42. `stock[].talla` guarda esa identidad y el Excel compone sus
@@ -4870,8 +4870,8 @@ y segunda confirmación; producción bloquea tanto UI como servidor.
 navegación 15/15; contratos 42/42; registro 12/12; build 8/8; smoke bundle
 17/17. La verificación remota declaró estructura, permisos, plan, rollback y
 producción correctos.
-**Despliegue:** migraciones 13900/14000 aplicadas; cliente pendiente del commit
-de esta historia. No se invocó `execute_point_zero` y los 1,378 productos siguen
+**Despliegue:** migraciones 13900/14000 aplicadas; cliente `80b5234` enviado a
+`origin/main`. No se invocó `execute_point_zero` y los 1,378 productos siguen
 fuera del alcance autorizado.
 **Riesgo residual:** el respaldo no tiene restauración automática; todos los
 equipos registrados deben estar en línea y limpios para ejecutar.

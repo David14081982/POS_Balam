@@ -3,7 +3,7 @@
 **Riesgo:** H-98
 **Estado:** RESUELTO Y DESPLEGADO; BORRADO REAL DETENIDO
 **Fecha:** 12/08/2026
-**Commit:** Pendiente de commit
+**Commit técnico:** `80b5234`
 
 ## Problema y reproducción
 
@@ -96,7 +96,8 @@ configuración, catálogos, personal, Auth y las cuatro familias de permisos.
 ## Despliegue y punto de parada
 
 Las dos migraciones están aplicadas en el proyecto enlazado y su verificación
-no ejecutó Punto Cero sobre datos del negocio.
+no ejecutó Punto Cero sobre datos del negocio. El cliente del commit `80b5234`
+se envió a `origin/main` para publicación por GitHub Pages.
 
 No se llamó `execute_point_zero`, no se borraron los **1,378 productos**
 actuales, no se cargó inventario real, no se importó Excel, no se imprimieron
