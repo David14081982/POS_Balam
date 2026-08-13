@@ -3,7 +3,8 @@
 **Riesgo:** H-99
 **Estado:** RESUELTO Y PUBLICADO
 **Fecha:** 13/08/2026
-**Commit:** `c1ed627`
+**Commits:** `c1ed627` (jerarquía), `1f5785e` (paridad) y `4e0ff31`
+  (cierre documental)
 
 ## Problema y reproducción
 

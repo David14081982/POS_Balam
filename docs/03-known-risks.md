@@ -3997,7 +3997,7 @@ pueden restaurar inventario administrativo viejo.
 
 **Estado:** RESUELTO
 **Fecha de registro:** 06/08/2026
-**Commit:** Pendiente de commit
+**Commits:** `1f5785e` (código) y `4e0ff31` (cierre documental)
 **Origen:** cambiar de pestaña, minimizar o restaurar la ventana oscurece el POS
 y muestra «Cargando…» mientras vuelve a consultar permisos.
 **Reproducción:** `node test-auth-permissions.mjs` produjo 18 aprobaciones y 1
