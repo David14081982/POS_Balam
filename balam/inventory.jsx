@@ -1216,7 +1216,7 @@
     }, [item.image, item.name, item.sku, item.price]);
     return h('div', {
       ref: stageRef,
-      className: 'relative w-full overflow-hidden bg-white border border-outline-variant rounded-lg',
+      className: 'relative w-full overflow-hidden bg-white border border-outline-variant',
       style: { aspectRatio: '3 / 2' },
       'data-testid': 'label-preview-stage',
     }, h('div', {
