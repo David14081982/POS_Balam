@@ -4738,9 +4738,9 @@ puerta global de cola/bloqueos se trabajarán por separado.
 
 ## H-96 - El reintento de un Cambio confirmado entra en conflicto y no abandona la cola
 
-**Estado:** RESUELTO Y PUBLICABLE; PENDIENTE DE REVALIDACIÓN EN H94-PILOT
+**Estado:** RESUELTO Y PUBLICADO; PENDIENTE DE REVALIDACIÓN EN H94-PILOT
 **Fecha de registro:** 12/08/2026
-**Commit técnico:** Pendiente de commit
+**Commit técnico:** `b04d1ea`
 **Origen:** piloto remoto H-94 posterior a la migración 13800.
 **Reproducción:** confirmar un Cambio V2 A→B y reenviar el mismo documento con
 `STORE.pushExchange`. El servidor responde `exchange_id_conflict`; la cola lo
@@ -4777,8 +4777,11 @@ de cualquier efecto; payload distinto se bloquea; `exchange_id_conflict` queda
 comisión 30/30, identidad posventa 16/16, cobro 14/14, SQL H-94 10/10 y
 15/15, modelo V2 48/48, H-95 16/16, H-86 17/17 y 42/42, build, smoke 17/17 y
 navegación 15/15.
-**Pendiente:** publicar el cliente y revalidar la frontera remota dentro del
-H94-PILOT completo desde limpio. Esto ya forma parte del ciclo autorizado.
+**Publicación:** `b04d1ea` está en `origin/main`. El `index.html` servido por
+GitHub Pages coincide byte a byte con el blob Git: 8,962,127 bytes, SHA-256
+`08ab2fd2bfd3303e7bc3b1b12c12629404caaa4da8df93655d8f59eca5227454`.
+**Pendiente:** revalidar la frontera remota dentro del H94-PILOT completo desde
+limpio. Esto ya forma parte del ciclo autorizado.
 **Corrección documentada:**
 `docs/fixes/reintento-cambios-conflicto-cola.md`.
 

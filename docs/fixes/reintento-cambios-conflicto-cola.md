@@ -3,7 +3,7 @@
 **Riesgo:** H-96
 **Estado:** RESUELTO
 **Fecha:** 12/08/2026
-**Commit:** Pendiente de commit
+**Commit técnico:** `b04d1ea`
 
 ## Problema y reproducción
 
@@ -82,6 +82,12 @@ Ninguno conocido dentro de H-96. Un `exchange_id_conflict` genuino queda
 bloqueado para revisión y nunca entra en reintento automático. El piloto H-94
 debe ejecutarse nuevamente desde limpio para acreditar el recorrido remoto
 completo con el cliente publicado.
+
+## Publicación
+
+El commit `b04d1ea` quedó en `origin/main`. GitHub Pages sirve el blob de
+`index.html` idéntico byte a byte: 8,962,127 bytes, SHA-256
+`08ab2fd2bfd3303e7bc3b1b12c12629404caaa4da8df93655d8f59eca5227454`.
 
 ## Referencias
 
