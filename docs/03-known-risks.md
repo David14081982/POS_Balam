@@ -4841,8 +4841,8 @@ del manifiesto cero.
 
 **Estado:** RESUELTO Y DESPLEGADO; BORRADO REAL DETENIDO
 **Fecha de registro:** 12/08/2026
-**Commits:** `c1ed627` (jerarquía), `1f5785e` (paridad), `4e0ff31` y
-`c5e67ab` (cierre documental).
+**Commits técnicos:** `c1ed627` (jerarquía), `1f5785e` (paridad) y
+`0ca8a17` (marco físico del preview).
 **Origen:** cambio de enfoque aprobado para conservar una herramienta permanente
 durante las pruebas presenciales previas a producción.
 **Evidencia inicial:** H-68 ofrece una purga transaccional que conserva productos
@@ -4976,6 +4976,12 @@ SHA. Pages sirve el blob Git exacto `a87db4da74fc262586d955667342b0eeb5b9ad07`
 `c86f019e5d318bfcdcb7ebdd3491a16b95ae1ed434fe9e943a39b6c65c863e4e`).
 El arnés H-99 ejecutado sobre esos bytes públicos pasó **12/12**, incluidas las
 tres comparaciones explícitas preview/impresión.
+
+**Cierre visual publicado:** `0ca8a17` elimina el redondeo de tarjeta UI sin
+alterar ninguna medida maestra. Pages sirve el blob exacto
+`db7ef56081b81537ec086ef93ed75e127e65ff64` (8,971,523 bytes; SHA-256
+`9c4c79e0377c3d95253e29abc07b086873ae53aaeeed3048c1ab1e84c975449c`).
+H-99 sobre esa descarga pública: **12/12**.
 
 ## Regla de actualización
 

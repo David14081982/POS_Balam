@@ -3,8 +3,8 @@
 **Riesgo:** H-99
 **Estado:** RESUELTO Y PUBLICADO
 **Fecha:** 13/08/2026
-**Commits:** `c1ed627` (jerarquía), `1f5785e` (paridad) y `4e0ff31`
-  (cierre documental)
+**Commits técnicos:** `c1ed627` (jerarquía), `1f5785e` (paridad) y
+`0ca8a17` (marco físico del preview).
 
 ## Problema y reproducción
 
@@ -88,6 +88,12 @@ ese SHA y Pages entrega el blob Git exacto
 SHA-256 `c86f019e5d318bfcdcb7ebdd3491a16b95ae1ed434fe9e943a39b6c65c863e4e`).
 Sobre esos bytes públicos, el H-99 ampliado pasó **12/12**: contrato maestro
 **9/9** y paridad preview/impresión **3/3** para SKU corto, típico y largo.
+
+El cierre visual `0ca8a17` retiró el redondeo de tarjeta UI sin cambiar el
+layout maestro. Pages sirve su blob exacto
+`db7ef56081b81537ec086ef93ed75e127e65ff64` (8,971,523 bytes; SHA-256
+`9c4c79e0377c3d95253e29abc07b086873ae53aaeeed3048c1ab1e84c975449c`).
+H-99 volvió a pasar **12/12** directamente sobre esos bytes públicos.
 
 ## Referencias
 
