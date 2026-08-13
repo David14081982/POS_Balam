@@ -994,6 +994,11 @@ La cola está en `localStorage` bajo `balam_sync_queue`.
   bloqueos permanentes no se martillan en cada drenado.
 - `STORE.queueStatus()` expone un resumen sanitizado y
   `STORE.retryOperation(id)` permite el reintento explícito.
+- `STORE.discardOperation(id, guards)` permite retirar una sola operación
+  bloqueada. Exige coincidencia del `op.id` y, al menos, una guarda documental;
+  puede validar tipo, `op.key`, folio, ID de cabecera, estado y código. Nunca
+  equivale a vaciar la cola y persiste el resultado tanto en `localStorage`
+  como en el espejo durable.
 - La campana administrativa muestra operaciones fallidas y su causa. Una nueva
   sesión reanuda las operaciones detenidas por autenticación.
 - `flushQueue()` toma el candado antes de esperar al cliente de Supabase: nunca

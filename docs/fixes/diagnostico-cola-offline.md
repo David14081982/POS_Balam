@@ -5,6 +5,7 @@
 **Fecha:** 26/07/2026
 **Commit inicial:** `cabfccf`
 **Commit de cierre:** `6f6a874`
+**Corrección aditiva:** Pendiente de commit
 
 ## Problema y reproducción
 
@@ -70,6 +71,24 @@ almacenamientos persistentes. Si `localStorage` e IndexedDB fallan
 simultáneamente, la cola queda en memoria y se muestra una alerta crítica; no
 hay otro almacenamiento web durable disponible sin introducir infraestructura
 externa.
+
+## Retiro quirúrgico de una operación bloqueada
+
+H94-PILOT demostró una brecha operativa distinta de la clasificación: una
+entrada sintética reconstruida quedó bloqueada por `commit_mismatch`, pero la
+única primitiva de descarte era `clearQueue()`. Usarla habría podido borrar
+operaciones independientes.
+
+`STORE.discardOperation(id, guards)` exige escritor local, que la operación
+esté bloqueada y que coincidan el `op.id` más las guardas declaradas: tipo,
+`op.key`, folio, ID de cabecera, estado y código diagnóstico. Una discrepancia
+devuelve `guard_mismatch` y conserva la cola. Al acertar retira una sola entrada
+y usa `saveQ()`, por lo que también actualiza el espejo durable.
+
+Prueba roja: la nueva frontera terminó con `TypeError: S.discardOperation is not
+a function` después de 174 comprobaciones aprobadas. Prueba verde:
+`test-store-queue.mjs` 176/176, incluyendo operación independiente, guarda
+incorrecta sin efecto y retiro exacto. No requiere migración SQL.
 
 ## Referencias
 

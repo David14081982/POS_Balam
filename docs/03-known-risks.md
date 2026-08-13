@@ -540,6 +540,16 @@ declara falsamente como persistida.
 **Commit inicial:** `cabfccf`.
 **Commit de cierre:** `6f6a874`.
 
+**Corrección aditiva del 13/08/2026:** durante H94-PILOT una entrada sintética
+reconstruida quedó `blocked_conflict/commit_mismatch`. La única API disponible
+para retirarla era `clearQueue()`, que también habría descartado operaciones
+independientes. `STORE.discardOperation(id, guards)` retira exclusivamente una
+operación bloqueada cuando coinciden su identidad técnica y las guardas
+declaradas (`type`, `key`, `folio`, `headerId`, `status` y/o código). Una guarda
+distinta no modifica nada. Prueba roja: `discardOperation is not a function`
+después de 174 comprobaciones verdes; prueba verde: cola 176/176. Sin migración
+SQL ni cambio de datos remotos. Commit: Pendiente de commit.
+
 ## H-15 — Smoke E2E produce falsos negativos y no libera recursos al fallar
 
 **Estado:** RESUELTO

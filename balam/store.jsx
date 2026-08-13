@@ -578,6 +578,32 @@
     saveQ(q); flushQueue();
     return true;
   }
+  // H-14 · Retiro quirúrgico de una operación bloqueada. A diferencia de
+  // `clearQueue()`, exige que coincidan la identidad técnica y las guardas del
+  // documento antes de modificar la cola. Sirve para retirar un intento
+  // reconstruido o inválido sin perder operaciones independientes.
+  function discardOperation(id, expected) {
+    if (!hasLocalWriter(false)) return { ok: false, code: 'not_local_writer' };
+    const q = loadQ(), index = q.findIndex(op => op.id === id && opBelongsToActiveSession(op));
+    if (index < 0) return { ok: false, code: 'not_found' };
+    const op = q[index], guard = expected && typeof expected === 'object' ? expected : {};
+    const supplied = ['type', 'key', 'folio', 'headerId', 'status', 'diagnosticCode']
+      .some(field => Object.prototype.hasOwnProperty.call(guard, field));
+    if (!supplied) return { ok: false, code: 'guard_required' };
+    if (!/^blocked_/.test(op.status || '')) return { ok: false, code: 'not_blocked' };
+    const actual = {
+      type: op.type || null, key: op.key || null, folio: op.folio || null,
+      headerId: op.header && op.header.id || null, status: op.status || null,
+      diagnosticCode: op.diagnostic && op.diagnostic.code || null,
+    };
+    const mismatch = Object.keys(actual).some(field =>
+      Object.prototype.hasOwnProperty.call(guard, field)
+        && String(guard[field] == null ? '' : guard[field]) !== String(actual[field] == null ? '' : actual[field]));
+    if (mismatch) return { ok: false, code: 'guard_mismatch', actual };
+    q.splice(index, 1);
+    if (!saveQ(q)) return { ok: false, code: 'persistence_failed' };
+    return { ok: true, id: op.id, type: op.type, key: op.key || null, folio: op.folio || null };
+  }
   function resumeAuthenticatedOperations() {
     if (!hasLocalWriter(false)) return false;
     const q = loadQ(); let changed = false;
@@ -3246,6 +3272,6 @@
     }
   }
 
-  window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushClient, pushSale, settleLayaway, pushReturn, pushExchange, commitReferenceReclassification, ensureFolioBlock, deleteRow, settleCommission, closeCommissionPeriod, applyCommissionAdjustment, pushLoanOperation, migrateLocalLoans, pullDomain, fetchSaleByFolio, physicalCardAvailable, claimPhysicalCard, flushQueue, retryOperation, queueStatus, syncStatus, syncFleetStatus, updateSyncDevice, requestSyncRetry, markSyncActivityReviewed, decideSyncQuarantine, exportQuarantineReport, reconcileDomains, invalidateDomain, establishPointZero, rebootstrapFromCloud, exportSyncRecovery, hasPendingLayaway, clearQueue, markResetApplied, purgeTestData, applyRemotePurge, pruneQueueForPurge, readPurgeState, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
+  window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushClient, pushSale, settleLayaway, pushReturn, pushExchange, commitReferenceReclassification, ensureFolioBlock, deleteRow, settleCommission, closeCommissionPeriod, applyCommissionAdjustment, pushLoanOperation, migrateLocalLoans, pullDomain, fetchSaleByFolio, physicalCardAvailable, claimPhysicalCard, flushQueue, retryOperation, discardOperation, queueStatus, syncStatus, syncFleetStatus, updateSyncDevice, requestSyncRetry, markSyncActivityReviewed, decideSyncQuarantine, exportQuarantineReport, reconcileDomains, invalidateDomain, establishPointZero, rebootstrapFromCloud, exportSyncRecovery, hasPendingLayaway, clearQueue, markResetApplied, purgeTestData, applyRemotePurge, pruneQueueForPurge, readPurgeState, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
   window.CORE.registerSyncGateway(window.STORE);
 })();

@@ -1751,5 +1751,38 @@ console.log('H96) Cambio conserva clave comercial entre cola y replay');
   ok('44e. H-96: el arnes termina con cola limpia', S.pending === 0 && S.queueStatus().blocked === 0);
 }
 
+// 45) H-14: retiro acotado de una operacion bloqueada; nunca vacia la cola.
+{
+  const env = freshEnv();
+  env.setRpc(async name => name === 'commit_exchange_checked'
+    ? { data: { ok: false, error: 'commit_mismatch' }, error: null }
+    : { data: { ok: true }, error: null });
+  const S = loadStore(env);
+  await S.init({});
+  S.pushExchange({ id: 'cmb-h14-discard', _operationId: 'h14-discard', folio: 'CB-H14-DISCARD',
+    origenFolio: 'BG-H14', fecha: '2026-08-13 00:00', lineas: [
+      { lado: 'devuelto', productId: 'product-a', sku: 'SKU-A', nombre: 'A', talla: '40', qty: 1 },
+      { lado: 'entregado', productId: 'product-b', sku: 'SKU-B', nombre: 'B', talla: '40', qty: 1 },
+    ] });
+  S.pushRows('clients', [{ id: 'client-independent', nombre: 'Independiente' }]);
+  await sleep(50);
+  const blocked = S.queueStatus().operations.find(op => op.type === 'exchange');
+  ok('45a. H-14: el escenario conserva solo la operacion bloqueada relevante',
+    blocked && S.pending === 1 && blocked.diagnostic.code === 'commit_mismatch');
+  const wrong = S.discardOperation(blocked.id, {
+    type: 'exchange', key: 'otra-clave', folio: 'CB-H14-DISCARD',
+    status: 'blocked_conflict', diagnosticCode: 'commit_mismatch',
+  });
+  ok('45b. H-14: una guarda distinta no retira nada',
+    wrong && wrong.ok === false && wrong.code === 'guard_mismatch' && S.pending === 1);
+  const removed = S.discardOperation(blocked.id, {
+    type: 'exchange', key: 'h14-discard', folio: 'CB-H14-DISCARD',
+    headerId: 'cmb-h14-discard', status: 'blocked_conflict', diagnosticCode: 'commit_mismatch',
+  });
+  ok('45c. H-14: coincidencia total retira exactamente ese op.id',
+    removed && removed.ok === true && removed.id === blocked.id
+      && S.pending === 0 && S.queueStatus().blocked === 0);
+}
+
 console.log(`H96 total actualizado: ${pass} pasaron, ${fail} fallaron`);
 process.exit(fail ? 1 : 0);
