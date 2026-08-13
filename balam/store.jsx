@@ -230,6 +230,10 @@
         talla: r.talla || undefined,
         cant: Number(r.cant) || 0,
         ref: r.ref || '',
+        // H-97: la identidad de una reclasificacion debe sobrevivir al pull.
+        // DATA la usa para reconocer reintentos y validar la reversa exacta.
+        operationId: r.operation_id || undefined,
+        reversalOf: r.reversal_of || undefined,
       }),
     },
   };

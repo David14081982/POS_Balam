@@ -113,6 +113,9 @@ if (existsSync(new URL(migrationPath, import.meta.url))) {
 }
 ok('19. STORE sincroniza todos los campos V2 sin eliminar stock[] legacy',
   /record_model/.test(storeSrc) && /barcode_code/.test(storeSrc) && /stock_quantity/.test(storeSrc) && /stock:\s*p\.stock/.test(storeSrc));
+ok('19a. el pull de movimientos conserva la identidad idempotente de reclasificacion',
+  /operationId:\s*r\.operation_id\s*\|\|\s*undefined/.test(storeSrc)
+  && /reversalOf:\s*r\.reversal_of\s*\|\|\s*undefined/.test(storeSrc));
 ok('20. Excel V2 exporta identidad técnica/logística y stock escalar',
   /barcodeCode/.test(xlsxSrc) && /recordModel/.test(xlsxSrc) && /stockQuantity/.test(xlsxSrc));
 ok('21. SKU duplicado es advertencia y barcode/ID duplicado es bloqueo',

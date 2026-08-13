@@ -1029,6 +1029,9 @@ en una transacción. Ventas y devoluciones resuelven ese límite mediante
 - La acción local debe funcionar sin conexión y dejar una operación recuperable.
 - Un pull no debe pisar cambios locales pendientes.
 - Reintentar no debe duplicar ventas, pagos, devoluciones ni movimientos.
+- El pull de Movimientos conserva `operation_id` y `reversal_of` como
+  `operationId` y `reversalOf`: Reclasificación usa esa identidad para reconocer
+  reintentos y autorizar únicamente la reversa exacta.
 - Datos históricos sin campos nuevos deben seguir siendo legibles.
 - Una terminal con una versión antigua no puede sobrescribir ni revivir una
   entidad más reciente; el conflicto debe quedar registrado.

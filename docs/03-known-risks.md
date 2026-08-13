@@ -4795,6 +4795,29 @@ limpio. Esto ya forma parte del ciclo autorizado.
 **Corrección documentada:**
 `docs/fixes/reintento-cambios-conflicto-cola.md`.
 
+## H-97 - El pull de Movimientos retira la identidad idempotente de Reclasificación
+
+**Estado:** RESUELTO; PENDIENTE DE PUBLICACIÓN Y REVALIDACIÓN EN H94-PILOT
+**Fecha de registro:** 12/08/2026
+**Commit técnico:** Pendiente de commit
+**Origen:** piloto remoto H-94, ciclo D→E.
+**Reproducción:** aplicar una reclasificación con `operationId`, drenar y
+reconciliar Movimientos. El remoto conserva dos movimientos y stock único, pero
+el reintento local con el mismo ID deja de responder `idempotent=true`.
+**Causa raíz demostrada:** `STORE.MAP.movements.fromRow()` omitía
+`operation_id` y `reversal_of`; el pull reemplazaba los movimientos locales por
+objetos sin `operationId`/`reversalOf`, campos que `reclassifyReference()` usa
+para reconocer el reintento y validar la reversa.
+**Corrección:** mapeo aditivo de ambos campos remotos. No cambia base de datos,
+RPC, históricos, SKU ni productos V1.
+**Prueba roja:** modelo H-94 48/49, falla 19a.
+**Prueba verde:** modelo H-94 49/49.
+**Estado del piloto:** el primer commit permanece aplicado exactamente una vez
+(D=4, E=7), con cola 0 y bloqueos 0. Debe publicarse la corrección y retomar con
+los mismos IDs del manifiesto; no recrear la operación original.
+**Corrección documentada:**
+`docs/fixes/reclasificacion-idempotencia-tras-pull.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:
