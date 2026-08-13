@@ -35,7 +35,7 @@ y `BLOQUEADO`.
 | H-88B | La impresión móvil de etiquetas depende de popup, autoimpresión y autocierre | RESUELTO Y PUBLICADO | Inventario / etiquetas / impresión |
 | H-89 | BALAM no tiene contrato de instalación PWA ni materialización demostrada del logo configurado | RESUELTO Y PUBLICADO | Cliente / PWA / build |
 | H-90 | La autoridad monetaria no conserva componentes configurables ni reembolsos exactos | RESUELTO Y PUBLICADO | Ventas / devoluciones / reportes / impresión |
-| H-99 | La etiqueta 60×40 perdió jerarquía visual y concentra SKU/precio al pie | RESUELTO, PENDIENTE DE PUBLICACIÓN | Inventario / etiquetas / impresión |
+| H-99 | La etiqueta 60×40 perdió jerarquía visual y concentra SKU/precio al pie | RESUELTO Y PUBLICADO | Inventario / etiquetas / impresión |
 
 ## H-01 — Inventario concurrente
 
@@ -4917,7 +4917,7 @@ arranque precompilado 5/5. El smoke JSX de desarrollo agotó su espera Babel de
 
 ## H-99 - La etiqueta 60×40 perdió jerarquía visual
 
-**Estado:** RESUELTO, PENDIENTE DE PUBLICACIÓN
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha de registro:** 13/08/2026
 **Commit:** Pendiente de commit
 **Origen:** comparación visual solicitada contra `Etiquetas Balam.pdf`.
@@ -4944,6 +4944,10 @@ y `products.id` continúan ocultos y el Code128 sigue codificando el mismo valor
 49/49; H-83 E2E 17/17; navegación 15/15; smoke bundle 17/17; build correcto.
 **Evidencia:** comparativa A/B/C y renders corto/típico/largo en
 `.evidence-label-visual/`. No se modificaron datos ni se requirió Supabase.
+**Publicación:** commit `c1ed627`; Pages sirve el blob Git exacto
+`36753c63213031d2aac5d6a9caed0a641a7a1ae8` (8,970,967 bytes; SHA-256
+`c1adc6242a909bebea1ccff4bd7a046c22f1f34951e755db170443fa2fddaa8c`).
+Sobre esos bytes, H-99 pasó 9/9 y H-88B 19/19.
 **Corrección documentada:** `docs/fixes/jerarquia-visual-etiqueta-60x40.md`.
 
 ## Regla de actualización

@@ -1,9 +1,9 @@
 # Jerarquía visual de la etiqueta 60×40
 
 **Riesgo:** H-99
-**Estado:** RESUELTO, PENDIENTE DE PUBLICACIÓN
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha:** 13/08/2026
-**Commit:** Pendiente de commit
+**Commit:** `c1ed627`
 
 ## Problema y reproducción
 
@@ -55,8 +55,14 @@ La comparativa A/B/C y los renders están en `.evidence-label-visual/`.
 
 La impresión física depende de driver, calibración y densidad de la impresora.
 Se conservó la guarda mínima Code128 de H-88B; conviene validar una muestra
-física antes de imprimir un lote real. Falta publicar y comprobar los bytes de
-Pages.
+física antes de imprimir un lote real.
+
+## Publicación
+
+Pages sirve el blob Git exacto `36753c63213031d2aac5d6a9caed0a641a7a1ae8`:
+8,970,967 bytes y SHA-256
+`c1adc6242a909bebea1ccff4bd7a046c22f1f34951e755db170443fa2fddaa8c`.
+Sobre la descarga pública, H-99 pasó **9/9** y H-88B **19/19**.
 
 ## Referencias
 
