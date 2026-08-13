@@ -4797,9 +4797,9 @@ limpio. Esto ya forma parte del ciclo autorizado.
 
 ## H-97 - El pull de Movimientos retira la identidad idempotente de Reclasificación
 
-**Estado:** RESUELTO; PENDIENTE DE PUBLICACIÓN Y REVALIDACIÓN EN H94-PILOT
+**Estado:** RESUELTO Y PUBLICADO; PENDIENTE DE REVALIDACIÓN EN H94-PILOT
 **Fecha de registro:** 12/08/2026
-**Commit técnico:** Pendiente de commit
+**Commit técnico:** `ee1a236`
 **Origen:** piloto remoto H-94, ciclo D→E.
 **Reproducción:** aplicar una reclasificación con `operationId`, drenar y
 reconciliar Movimientos. El remoto conserva dos movimientos y stock único, pero
@@ -4812,6 +4812,10 @@ para reconocer el reintento y validar la reversa.
 RPC, históricos, SKU ni productos V1.
 **Prueba roja:** modelo H-94 48/49, falla 19a.
 **Prueba verde:** modelo H-94 49/49.
+**Regresiones:** cola 176/176, H96 36/36, E2E 37/37, pantalla 45/45,
+H95 16/16, H86 17/17, contratos 42/42, migraciones 31/31, préstamos
+69/69, H77 20/20, H80 7/7, navegación 15/15, responsive 492/492,
+build y smoke bundle 17/17.
 **Estado del piloto:** el primer commit permanece aplicado exactamente una vez
 (D=4, E=7), con cola 0 y bloqueos 0. Debe publicarse la corrección y retomar con
 los mismos IDs del manifiesto; no recrear la operación original.

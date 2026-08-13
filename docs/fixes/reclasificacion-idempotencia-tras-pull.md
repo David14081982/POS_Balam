@@ -1,9 +1,9 @@
 # Reclasificacion idempotente despues de reconciliar Movimientos
 
 **Riesgo:** H-97
-**Estado:** RESUELTO
+**Estado:** RESUELTO Y PUBLICADO; PENDIENTE DE REVALIDACION EN H94-PILOT
 **Fecha:** 12/08/2026
-**Commit:** Pendiente de commit
+**Commit:** `ee1a236`
 
 ## Problema y reproduccion
 
@@ -39,15 +39,21 @@ cambio aditivo de lectura; no modifica RPC, tablas, filas V1 ni payloads.
 
 - Roja: `node test-h94-reference-model-v2.mjs` → 48/49; falla 19a.
 - Verde: `node test-h94-reference-model-v2.mjs` → 49/49.
-- Regresiones y build: se registran al publicar el commit.
+- Regresiones: cola 176/176; H96 36/36; Cambio E2E 37/37; pantalla
+  45/45; H95 16/16; H86 17/17; contratos 42/42; migraciones 31/31;
+  préstamos 69/69; H77 20/20; H80 7/7; navegación 15/15 y responsive
+  492/492.
+- Build regenerado y smoke del bundle publicado 17/17. El smoke de la fuente
+  de desarrollo agotó su espera de arranque; no es el artefacto desplegable.
 - Revalidacion remota: pendiente de recargar el cliente publicado y continuar
   el mismo `operationId` del manifiesto H94-PILOT.
 
 ## Riesgo residual y pendientes
 
 El primer commit del piloto permanece aplicado una sola vez y registrado en el
-manifiesto. Falta publicar esta correccion y completar el reintento/reversa con
-esos mismos IDs; no debe recrearse la reclasificacion original.
+manifiesto. Falta recargar el cliente publicado y completar el
+reintento/reversa con esos mismos IDs; no debe recrearse la reclasificacion
+original.
 
 ## Referencias
 
