@@ -3,7 +3,7 @@
 **Riesgo:** H-98
 **Estado:** RESUELTO Y DESPLEGADO; BORRADO REAL DETENIDO
 **Fecha:** 12/08/2026
-**Commit técnico:** `80b5234`
+**Commits técnicos:** `80b5234`, `345b53d`
 
 ## Problema y reproducción
 
@@ -114,6 +114,48 @@ nueva autorización explícita del dueño.
   retirado debe revocarse administrativamente antes.
 - `purged_documents` conserva identidades mínimas contra resurrección, no el
   payload eliminado.
+
+## Corrección del diagnóstico invisible — 13/08/2026
+
+### Reproducción y causa raíz
+
+En los bytes publicados, «Actualizar diagnóstico» sí ejecutaba
+`STORE.pointZeroPreview()` y `setPreview(r)`. No había error de click, RPC, RLS
+ni transición de estado: la tarjeta jamás renderizaba `preview.counts`; sólo el
+modal del flujo destructivo incluía `PointZeroCounts`. Por eso el administrador
+no veía ningún cambio al pulsar el botón.
+
+### Cambio quirúrgico
+
+- la tarjeta renderiza el preview autoritativo completo bajo **Se eliminará** y
+  **Se conservará**, con `generated_at` del servidor;
+- el RPC de lectura enumera las 24 métricas del plan cerrado, incluidas
+  `sale_items`, `return_items`, `exchange_items`, reservas, commits y folios;
+- al iniciar una consulta o recibir un error se invalida el preview anterior;
+  el error queda visible y la continuación permanece deshabilitada;
+- el cliente rechaza respuestas incompletas; respaldo y ejecución conservan su
+  recálculo y comparación de `preview_token`, de modo que un cambio de datos
+  exige actualizar y aprobar otro preview.
+
+No cambió `execute_point_zero()` ni se llamó respaldo, ejecución o purga.
+
+### Pruebas y despliegue
+
+- prueba visual roja: 4/9; verde: **9/9**;
+- contrato H-98 **24/24** y wizard sintético **18/18**;
+- H-68 **53/53**, H-76 **38/38**, permisos **83/83**, navegación **15/15**,
+  migraciones **31/31**, arranque precompilado **5/5**;
+- migración remota 14200: preview real dentro de `ROLLBACK`; productos
+  **1,378 → 1,378** y piezas **3,334 → 3,334**;
+- Pages: commit `345b53d`, blob
+  `8122ef6696b2706981de32e0775fb6ea6f39780d`, 8,970,531 bytes, SHA-256
+  `179c0b03da8e3c6974a448fff60a843ce05f60e24cc7aa5420d3b4bc10a110c0`;
+- recorrido autenticado real: click exclusivo en «Actualizar diagnóstico»,
+  conteos remotos visibles, sello temporal visible, cero errores y cero
+  peticiones a respaldo/ejecución/purga.
+
+Evidencia: `.evidence-h98-visible-preview/resultado.json` y
+`.evidence-h98-visible-preview/diagnostico-pages.png`.
 
 ## Referencias
 

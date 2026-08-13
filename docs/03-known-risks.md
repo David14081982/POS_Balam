@@ -4879,6 +4879,41 @@ autorizado.
 equipos registrados deben estar en línea y limpios para ejecutar.
 **Corrección documentada:** `docs/fixes/punto-cero-administrativo.md`.
 
+**Regresión observada el 12/08/2026:** en Pages, «Actualizar diagnóstico»
+invoca `pointZeroPreview()` y guarda su respuesta en el estado React, pero la
+tarjeta administrativa no renderiza `preview.counts`; los conteos sólo existen
+dentro del wizard que abre el flujo de limpieza. El administrador no recibe
+confirmación visual ni fecha de actualización y un error puede pasar
+desapercibido si no se inspecciona la tarjeta. Hasta cerrar esta corrección, el
+flujo destructivo debe permanecer bloqueado y no se autoriza ninguna llamada a
+respaldo, ejecución o purga.
+
+**Cierre de la regresión (13/08/2026):** causa raíz confirmada en la capa de
+render: click, RPC y actualización de estado funcionaban; faltaba proyectar ese
+estado en la tarjeta. El commit técnico `345b53d` renderiza el preview completo
+con sello temporal, exige todas las claves del plan y descarta inmediatamente el
+preview anterior durante una actualización o ante error. La migración 14100
+amplía sólo `point_zero_preview()` con cada autoridad ya incluida en el plan; la
+14200 verificó el RPC remoto dentro de `ROLLBACK` sin invocar respaldo,
+ejecución ni purga.
+**Prueba publicada:** Pages sirvió el blob exacto `8122ef6696b2706981de32e0775fb6ea6f39780d`
+(8,970,531 bytes; SHA-256
+`179c0b03da8e3c6974a448fff60a843ce05f60e24cc7aa5420d3b4bc10a110c0`).
+Un Chrome autenticado pulsó realmente «Actualizar diagnóstico» y mostró los
+conteos remotos: 1,378 productos; 3,334 piezas; 1 venta; 1 `sale_item`; 1
+movimiento; 0 apartados; 1 pago; 0 devoluciones/`return_items`; 0
+cambios/`exchange_items`; 0 préstamos; 0 reclasificaciones; 0 liquidaciones y
+ajustes; 1 reserva; 4 documentos de venta; 2 de devolución; 1 de cambio; 1 de
+liquidación de apartado; 4 contadores y 7 clientes. No hubo errores de navegador
+ni solicitudes destructivas. La sincronización remota quedó visible como
+pendiente y la guarda de respaldo/ejecución permanece cerrada.
+**Pruebas de regresión:** diagnóstico visible 9/9; H-98 24/24; wizard 18/18;
+H-68 53/53; H-76 38/38; permisos 83/83; navegación 15/15; migraciones 31/31;
+arranque precompilado 5/5. El smoke JSX de desarrollo agotó su espera Babel de
+30 s en dos intentos; no afectó el bundle precompilado publicado.
+**Protección verificada:** antes y después del RPC de lectura permanecieron
+1,378 productos y 3,334 piezas. Punto Cero no fue ejecutado.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:
