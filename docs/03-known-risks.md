@@ -4836,6 +4836,47 @@ del manifiesto cero.
 **Corrección documentada:**
 `docs/fixes/reclasificacion-idempotencia-tras-pull.md`.
 
+## H-98 - La limpieza de pruebas no constituye un Punto Cero administrativo seguro
+
+**Estado:** RESUELTO Y DESPLEGADO; BORRADO REAL DETENIDO
+**Fecha de registro:** 12/08/2026
+**Commit:** Pendiente de commit
+**Origen:** cambio de enfoque aprobado para conservar una herramienta permanente
+durante las pruebas presenciales previas a producción.
+**Evidencia inicial:** H-68 ofrece una purga transaccional que conserva productos
+y existencias; `config.demo` también mantiene dos borrados locales directos. No
+existen una autoridad de modo preproducción/producción, un preview remoto sellado,
+un respaldo verificable ligado a la operación, confirmación fuerte ni comprobante
+administrativo. Por ello la capacidad vigente no puede dejar productos, stock y
+operaciones en cero con las guardas solicitadas.
+**Riesgo:** una limpieza incompleta deja datos sintéticos mezclados con la carga
+real; una limpieza directa o habilitada en producción puede borrar inventario y
+documentos reales sin una decisión inequívoca ni recuperación auditable.
+**Alcance:** Configuración → Administración / Datos; administrador activo;
+modo preproducción; preview desde PostgreSQL; respaldo obligatorio con huella;
+confirmación `PUNTO CERO`; verificación de cola, bloqueos, sincronía y preview;
+RPC atómica e idempotente; auditoría, comprobante, propagación de época y
+pruebas exclusivamente sintéticas.
+**No alcance:** ejecutar el Punto Cero sobre los datos actuales, cargar inventario
+real, importar el Excel real, imprimir etiquetas reales o cambiar el sistema a
+producción. El borrado real queda detenido hasta autorización explícita del dueño.
+**Corrección:** `system_manifest.system_mode` cierra el modo; preview, respaldo,
+ejecución y comprobante viven en RPC administrativas. La ejecución compone H-68,
+elimina inventario por plan condicionado, verifica la huella conservada y cambia
+la época en una transacción idempotente. El wizard exige respaldo, frase exacta
+y segunda confirmación; producción bloquea tanto UI como servidor.
+**Pruebas:** línea base 2/20; H-98 20/20 y E2E sintético 18/18; migraciones
+31/31; H-68 53/53; H-76 38/38; cola 176/176; permisos 21/21; roles 15/15;
+navegación 15/15; contratos 42/42; registro 12/12; build 8/8; smoke bundle
+17/17. La verificación remota declaró estructura, permisos, plan, rollback y
+producción correctos.
+**Despliegue:** migraciones 13900/14000 aplicadas; cliente pendiente del commit
+de esta historia. No se invocó `execute_point_zero` y los 1,378 productos siguen
+fuera del alcance autorizado.
+**Riesgo residual:** el respaldo no tiene restauración automática; todos los
+equipos registrados deben estar en línea y limpios para ejecutar.
+**Corrección documentada:** `docs/fixes/punto-cero-administrativo.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

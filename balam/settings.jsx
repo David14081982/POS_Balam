@@ -1745,8 +1745,167 @@
       ];
     },
     permisos: () => [h(window.PermissionAdminScreen, { key: 'permissions' })],
-    demo: () => [h(DemoPanel, { key: 'demo' })],
+    demo: () => [h(AdminDataPanel, { key: 'admin-data' })],
   };
+
+  // H-98 · Wizard administrativo permanente de Punto Cero. Los conteos y las
+  // guardas vienen de PostgreSQL; el DOM nunca decide qué se borra.
+  const N = v => Number(v || 0).toLocaleString('es-MX');
+  function Fila({ etiqueta, valor, tono }) {
+    return h('div', { className: 'flex items-baseline justify-between gap-4 py-1.5 border-b border-outline-variant/40 last:border-0' }, [
+      h('span', { key: 'l', className: 'text-caption text-on-surface-variant' }, etiqueta),
+      h('span', { key: 'v', className: 'font-mono text-body font-semibold ' + (tono || 'text-primary') }, valor),
+    ]);
+  }
+  const POINT_ZERO_ROWS = [
+    ['productos','Productos'], ['piezas','Piezas'], ['ventas','Ventas'],
+    ['movimientos','Movimientos'], ['apartados','Apartados'], ['pagos','Pagos'],
+    ['devoluciones','Devoluciones'], ['cambios','Cambios'], ['prestamos','Préstamos'],
+    ['reclasificaciones','Reclasificaciones'], ['comisiones','Comisiones transaccionales'],
+    ['clientes','Clientes de prueba'],
+  ];
+  const POINT_ZERO_KEPT = ['Configuración', 'Catálogos', 'Usuarios', 'Roles y permisos',
+    'Constructor de SKU', 'Métodos de pago', 'Logotipo', 'Configuración de tienda'];
+
+  function AdminDataPanel() {
+    const [preview, setPreview] = useState(null);
+    const [wizard, setWizard] = useState(null);
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState('');
+    const refresh = async open => {
+      setBusy(true); setError('');
+      try {
+        const r = await window.STORE.pointZeroPreview();
+        if (!r || !r.ok) throw new Error((r && r.error) || 'No se pudo obtener el diagnóstico');
+        setPreview(r); if (open) setWizard({ paso: 'diagnostico', preview: r, backup: null, confirmacion: '' });
+      } catch (e) { setError(e.message || String(e)); }
+      setBusy(false);
+    };
+    useEffect(() => { refresh(false); }, []);
+    const preproduction = preview && preview.system_mode === 'preproduction';
+    return [
+      h('div', { key: 'mode', className: 'flex items-center justify-between gap-3 flex-wrap p-4 rounded-xl border ' +
+        (preproduction ? 'border-warning/30 bg-warning-soft' : 'border-outline-variant bg-surface-container-low') }, [
+        h('div', { key: 'copy' }, [
+          h('div', { key: 'label', className: 'text-overline font-bold uppercase tracking-widest text-primary' }, 'Modo de operación'),
+          h('div', { key: 'value', 'data-testid': 'point-zero-mode', className: 'mt-1 font-semibold ' + (preproduction ? 'text-warning' : 'text-success') },
+            preview ? (preproduction ? 'PREPRODUCCIÓN / PRUEBAS' : 'PRODUCCIÓN') : 'Verificando…'),
+        ]),
+        preproduction && h('span', { key: 'notice', className: 'text-caption text-on-surface-variant' }, 'BALAM está utilizando datos de prueba.'),
+      ]),
+      h(GlassCard, { key: 'point-zero', className: 'p-6', 'data-testid': 'point-zero-card' }, [
+        h('div', { key: 'head', className: 'flex items-start gap-4' }, [
+          h('span', { key: 'icon', className: 'w-11 h-11 rounded-xl bg-danger-soft text-danger grid place-items-center shrink-0' }, h(MS, { name: 'trash', size: 22 })),
+          h('div', { key: 'copy', className: 'flex-1' }, [
+            h(SerifHeading, { key: 'title', children: 'Limpiar datos de prueba' }),
+            h('p', { key: 'sub', className: 'text-body text-on-surface-variant leading-relaxed mt-2' },
+              'Elimina inventario y operaciones de prueba para dejar BALAM listo para una nueva carga. La configuración del sistema se conserva.'),
+          ]),
+        ]),
+        error && h('div', { key: 'error', className: 'mt-4 p-3 rounded-lg bg-danger-soft text-danger text-caption' }, error),
+        preview && !preproduction && h('div', { key: 'locked', className: 'mt-5 p-4 rounded-lg bg-surface-container-low border border-outline-variant text-caption text-on-surface-variant' },
+          'Punto Cero está bloqueado porque BALAM está en PRODUCCIÓN. Sólo un procedimiento extraordinario fuera de esta pantalla puede cambiar ese modo.'),
+        h('div', { key: 'actions', className: 'mt-5 flex gap-3 flex-wrap' }, [
+          h('button', { key: 'open', 'data-testid': 'point-zero-open', disabled: busy || !preview || !preproduction,
+            onClick: () => refresh(true), className: 'inline-flex items-center gap-2 px-5 h-11 border border-danger text-danger font-label-sm uppercase tracking-widest text-caption rounded-lg disabled:opacity-40' },
+          [h(MS, { key: 'i', name: busy ? 'clock' : 'trash', size: 16 }), busy ? 'Verificando…' : 'Limpiar datos de prueba']),
+          h('button', { key: 'refresh', disabled: busy, onClick: () => refresh(false), className: 'px-4 h-11 border border-outline-variant rounded-lg text-caption disabled:opacity-40' }, 'Actualizar diagnóstico'),
+        ]),
+      ]),
+      wizard && h(PointZeroWizard, { key: 'wizard', estado: wizard, setEstado: setWizard, onClose: () => setWizard(null) }),
+    ];
+  }
+
+  function PointZeroCounts({ counts, tone }) {
+    return h('div', null, POINT_ZERO_ROWS.map(([key, label]) =>
+      h(Fila, { key, etiqueta: label, valor: N(counts && counts[key]), tono: tone })));
+  }
+
+  function PointZeroWizard({ estado, setEstado, onClose }) {
+    const { Modal } = window.UI;
+    const p = estado.preview || {};
+    const counts = p.counts || {};
+    const blocked = !p.ready;
+    const guardText = [];
+    if (!p.sync_complete || !p.client_ready) guardText.push('La sincronización o la cola todavía no están limpias.');
+    if (p.active_locks || p.local_locks) guardText.push('Existen bloqueos activos.');
+    if (p.active_operation) guardText.push('Ya existe otra ejecución de Punto Cero.');
+    const makeBackup = async () => {
+      setEstado(x => Object.assign({}, x, { paso: 'respaldando', error: '' }));
+      try {
+        const backup = await window.STORE.createPointZeroBackup(p);
+        window.STORE.downloadPointZeroDocument(backup.document, 'respaldo', backup.backup_id);
+        setEstado(x => Object.assign({}, x, { paso: 'confirmacion', backup, confirmacion: '' }));
+      } catch (e) { setEstado(x => Object.assign({}, x, { paso: 'diagnostico', error: e.message || String(e) })); }
+    };
+    const execute = async () => {
+      setEstado(x => Object.assign({}, x, { paso: 'ejecutando', error: '' }));
+      try {
+        const result = await window.STORE.executePointZero({
+          previewToken: p.preview_token, backupId: estado.backup.backup_id,
+          confirmation: estado.confirmacion,
+        });
+        setEstado(x => Object.assign({}, x, { paso: 'resultado', result }));
+      } catch (e) { setEstado(x => Object.assign({}, x, { paso: 'error', error: e.message || String(e) })); }
+    };
+    const receipt = async () => {
+      try {
+        const doc = await window.STORE.pointZeroReceipt(estado.result.operation_id);
+        window.STORE.downloadPointZeroDocument(doc, 'comprobante', estado.result.operation_id);
+      } catch (e) { toast(e.message || String(e), 'var(--danger)'); }
+    };
+    const footer = [];
+    if (!['ejecutando','resultado'].includes(estado.paso)) footer.push(h('button', { key: 'cancel', onClick: onClose, className: 'px-5 h-11 text-on-surface-variant rounded-lg' }, 'Cancelar'));
+    if (estado.paso === 'diagnostico') footer.push(h('button', { key: 'backup', disabled: blocked, onClick: makeBackup,
+      'data-testid': 'point-zero-backup', className: 'px-5 h-11 bg-primary text-on-primary rounded-lg disabled:opacity-40' }, 'Crear respaldo antes de continuar'));
+    if (estado.paso === 'confirmacion') footer.push(h('button', { key: 'continue', disabled: estado.confirmacion !== 'PUNTO CERO',
+      onClick: () => setEstado(x => Object.assign({}, x, { paso: 'final' })), className: 'px-5 h-11 bg-primary text-on-primary rounded-lg disabled:opacity-40' }, 'Continuar'));
+    if (estado.paso === 'final') footer.push(h('button', { key: 'execute', onClick: execute, 'data-testid': 'point-zero-execute',
+      className: 'px-5 h-11 bg-danger text-white font-bold rounded-lg' }, 'Ejecutar Punto Cero'));
+    if (estado.paso === 'resultado') footer.push(h('button', { key: 'receipt', onClick: receipt, className: 'px-5 h-11 border border-outline-variant rounded-lg' }, 'Descargar comprobante de Punto Cero'),
+      h('button', { key: 'close', onClick: onClose, className: 'px-5 h-11 bg-primary text-on-primary rounded-lg' }, 'Cerrar'));
+    if (estado.paso === 'error') footer.push(h('button', { key: 'close', onClick: onClose, className: 'px-5 h-11 bg-primary text-on-primary rounded-lg' }, 'Entendido'));
+
+    let body;
+    if (estado.paso === 'resultado') {
+      const result = estado.result || {};
+      body = [
+        h('div', { key: 'ok', className: 'p-4 rounded-lg bg-success-soft text-success font-semibold' }, 'PUNTO CERO COMPLETADO'),
+        h('div', { key: 'grid', className: 'grid grid-cols-1 md:grid-cols-2 gap-6 mt-5' }, [
+          h('div', { key: 'removed' }, [h('div', { className: 'text-overline font-bold text-danger mb-2' }, 'Eliminados'), h(PointZeroCounts, { counts: result.counts_before })]),
+          h('div', { key: 'kept' }, [h('div', { className: 'text-overline font-bold text-success mb-2' }, 'Conservados'), ...POINT_ZERO_KEPT.map(x => h('div', { key: x, className: 'text-caption text-success py-1' }, '✓ ' + x))]),
+        ]),
+        h('div', { key: 'status', className: 'mt-5 p-4 rounded-lg bg-surface-container-low text-caption' },
+          `Cola: 0 · Bloqueos: 0 · Sincronización: correcta · operation_id: ${result.operation_id}`),
+      ];
+    } else if (estado.paso === 'error') {
+      body = [h('div', { key: 'e', className: 'p-4 rounded-lg bg-danger-soft text-danger' }, estado.error || 'No se borró nada'),
+        h('p', { key: 'r', className: 'mt-3 text-caption text-on-surface-variant' }, 'La operación remota es transaccional. Un fallo revierte los cambios y conserva el respaldo.')];
+    } else if (estado.paso === 'final') {
+      body = h('div', { className: 'p-4 rounded-lg bg-danger-soft text-danger leading-relaxed' },
+        'Esta operación eliminará permanentemente los datos operativos seleccionados. La configuración del sistema se conservará.');
+    } else if (estado.paso === 'confirmacion') {
+      body = [h('p', { key: 'text', className: 'text-body text-on-surface-variant' }, 'Escribe exactamente PUNTO CERO para habilitar la confirmación final.'),
+        h('input', { key: 'input', autoFocus: true, value: estado.confirmacion, onChange: e => setEstado(x => Object.assign({}, x, { confirmacion: e.target.value })),
+          'data-testid': 'point-zero-confirmation', className: INPUT + ' mt-4 font-mono', placeholder: 'PUNTO CERO' }),
+        h('div', { key: 'backup', className: 'mt-4 text-caption text-success' }, `✓ Respaldo ${estado.backup.backup_id} creado y descargado · SHA-256 ${String(estado.backup.payload_hash).slice(0,16)}…`)];
+    } else {
+      body = [
+        estado.error && h('div', { key: 'error', className: 'mb-4 p-3 rounded-lg bg-danger-soft text-danger text-caption' }, estado.error),
+        guardText.length > 0 && h('div', { key: 'guards', className: 'mb-4 p-3 rounded-lg bg-warning-soft text-warning text-caption' }, guardText.join(' ')),
+        h('div', { key: 'grid', className: 'grid grid-cols-1 md:grid-cols-2 gap-6' }, [
+          h('div', { key: 'delete' }, [h('div', { className: 'text-overline font-bold text-danger mb-2' }, 'Se eliminará'), h(PointZeroCounts, { counts, tone: 'text-danger' })]),
+          h('div', { key: 'keep' }, [h('div', { className: 'text-overline font-bold text-success mb-2' }, 'Se conservará'), ...POINT_ZERO_KEPT.map(x => h('div', { key: x, className: 'text-caption text-success py-1' }, '✓ ' + x))]),
+        ]),
+        h('div', { key: 'guard-state', className: 'mt-5 text-caption text-on-surface-variant' },
+          `Cola: ${N(p.queue_pending)} · Bloqueos: ${N(p.active_locks)} · Sincronización: ${p.sync_complete && p.client_ready ? 'correcta' : 'pendiente'} · Esquema: ${p.schema_version}`),
+      ];
+    }
+    return h(Modal, { title: estado.paso === 'resultado' ? 'Punto Cero completado' : 'PUNTO CERO', large: true,
+      onClose: estado.paso === 'ejecutando' ? (() => {}) : onClose, footer },
+      estado.paso === 'respaldando' ? h('p', { className: 'py-8 text-center' }, 'Creando respaldo verificable…')
+        : estado.paso === 'ejecutando' ? h('p', { className: 'py-8 text-center' }, 'Ejecutando transacción Punto Cero…') : body);
+  }
 
   // ── Panel: datos de demostración (simulación local para pruebas) ───────────────
   function DemoPanel() {
@@ -1838,13 +1997,6 @@
   // Antes de ejecutar muestra QUÉ se va a borrar y qué se conserva; al terminar,
   // el informe por módulo con las piezas antes y después. Nada de esto se
   // adivina: son las mismas cuentas que la autoridad remota devuelve.
-  const N = v => Number(v || 0).toLocaleString('es-MX');
-  function Fila({ etiqueta, valor, tono }) {
-    return h('div', { className: 'flex items-baseline justify-between gap-4 py-1.5 border-b border-outline-variant/40 last:border-0' }, [
-      h('span', { key: 'l', className: 'text-caption text-on-surface-variant' }, etiqueta),
-      h('span', { key: 'v', className: 'font-mono text-body font-semibold ' + (tono || 'text-primary') }, valor),
-    ]);
-  }
   function PurgaModal({ estado, onEjecutar, onCerrar }) {
     const { Modal } = window.UI;
     const r = estado.resumen;

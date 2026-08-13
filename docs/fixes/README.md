@@ -77,6 +77,7 @@ sesión de chat.
 | `codigos-de-talla-reales.md` | H-74 | Los códigos de talla pasan a ser la talla real y todas sus referencias se migran en un solo acto verificado |
 | `cobro-del-cambio-por-forma-de-pago.md` | H-75 | La diferencia de un cambio se clasifica por su forma de pago real, no todo al cajón «otro» |
 | `vaciar-inventario.md` | H-76 | Vaciar el inventario entero para reemplazarlo, con respaldo obligatorio, guardas e invariante |
+| `punto-cero-administrativo.md` | H-98 | Punto Cero permanente con modo, preview, respaldo, RPC transaccional y auditoría |
 | `renovacion-sesion-sin-bloqueo.md` | H-78 | Renovar la sesión sin desmontar temporalmente el POS |
 | `centro-de-equipos.md` | H-79 | Supervisión central por instalación, actividad y reintentos administrativos |
 | `convergencia-centro-de-equipos.md` | H-80 | El historial operativo converge sin tráfico ni reconciliación comercial autorreferente |

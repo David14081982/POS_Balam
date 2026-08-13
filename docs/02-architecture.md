@@ -678,6 +678,28 @@ aprobación no escribe tablas comerciales: el equipo de origen restaura la misma
 operación en la cola y `flushQueue()` vuelve a ejecutar su RPC normal con todas
 sus defensas de permisos, inventario, época e idempotencia.
 
+### Punto Cero administrativo
+
+`pos.system_manifest.system_mode` es la autoridad de modo y sólo admite
+`preproduction` o `production`. PostgreSQL rechaza `execute_point_zero()` salvo
+en preproducción. No existe RPC ordinaria para volver desde producción: hacerlo
+es un procedimiento extraordinario fuera del flujo destructivo.
+
+`point_zero_preview()` cuenta desde las tablas remotas y sella contenido,
+esquema, época y sincronización. Todos los equipos registrados deben estar en
+la época vigente, en línea, sin cola ni bloqueos. El respaldo recalcula ese
+token, persiste el payload eliminable separado de la auditoría y devuelve un
+documento con SHA-256. La ejecución exige administrador activo,
+`settings.manage`, respaldo, token vigente y la frase exacta `PUNTO CERO`; toma
+candado, compone la purga H-68, elimina inventario y verifica cero operativo y
+huella conservada. Un fallo revierte el bloque completo y `operation_id` hace
+idempotente el reintento.
+
+El éxito aumenta `data_epoch` y obliga a las demás terminales a reconstruirse
+antes de escribir. `point_zero_operations` conserva actor, equipo, versiones,
+respaldo relacionado, conteos y resultado; el contenido eliminado vive en
+`point_zero_backups`.
+
 En el arranque, `STORE.init({ pull: true })`:
 
 1. Cuenta las operaciones que ya estaban pendientes.

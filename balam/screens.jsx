@@ -27,7 +27,9 @@
     // Reservada para H-56 Fase 4. Su identidad ya existe para que el servidor
     // pueda protegerla, pero no aparece ni monta UI antes de esa fase.
     { id: 'config.permisos', parentId: 'config', section: 'permisos', title: 'Permisos de visualización', icon: 'shield' },
-    { id: 'config.demo', parentId: 'config', section: 'demo', title: 'Datos de demostración', icon: 'star' },
+    // Se conserva `config.demo` como identidad de permiso histórica; su concepto
+    // visible evoluciona en H-98 a la administración segura de datos.
+    { id: 'config.demo', parentId: 'config', section: 'demo', title: 'Administración / Datos', icon: 'shield' },
   ];
 
   const ids = new Set();

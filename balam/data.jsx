@@ -5108,6 +5108,42 @@
     return true;
   }
 
+  // H-98 · Aplicación LOCAL del resultado ya confirmado por la RPC Punto Cero.
+  // No publica escrituras: la nube es la autoridad y ya terminó su transacción.
+  // Conserva CONFIG, promociones y personal; sólo reinicia sus acumulados
+  // transaccionales. La cola debe estar vacía antes de que STORE llegue aquí.
+  function applyPointZero() {
+    if (readLayawayProductLocks().length) {
+      return { ok: false, code: 'ACTIVE_LOCKS', error: 'Hay una liquidación local pendiente' };
+    }
+    const rollback = snapshotLocalDomain();
+    remoteApplying = true;
+    try {
+      products.length = 0; sales.length = 0; movements.length = 0;
+      returns.length = 0; payments.length = 0; liquidations.length = 0;
+      loans.length = 0; exchanges.length = 0;
+      clients.length = 0;
+      seedClients.forEach(c => clients.push(JSON.parse(JSON.stringify(c))));
+      sellers.forEach(s => { s.ventasMes = 0; s.ventasNum = 0; s.comisionAcum = 0; });
+      try {
+        localStorage.removeItem(LS_DEMO); localStorage.removeItem(LS_FOLIO);
+        localStorage.removeItem(LS_FOLIO_V2); localStorage.removeItem(LS_PERIODO);
+        localStorage.removeItem(LS_SALE_COMMIT_JOURNAL_LEGACY);
+        for (let i = Number(localStorage.length || 0) - 1; i >= 0; i--) {
+          const key = localStorage.key(i);
+          if (key && key.indexOf(LS_SALE_COMMIT_JOURNAL_PREFIX) === 0) localStorage.removeItem(key);
+        }
+      } catch (e) { /* almacenamiento opcional */ }
+      periodoInicio = ''; pendingSaleCommitJournal = null;
+      persistAllLocal();
+      return { ok: true, productos: products.length, piezas: totalPieces(),
+        ventas: sales.length, movimientos: movements.length };
+    } catch (e) {
+      try { restoreLocalDomain(rollback); persistAllLocal(); } catch (e2) { /* siguiente rebootstrap recupera */ }
+      return { ok: false, code: 'LOCAL_ROLLBACK', error: String((e && e.message) || e) };
+    } finally { remoteApplying = false; }
+  }
+
   // ── H-68 · Borrado de datos de prueba ───────────────────────────────────────
   // Deja el sistema como estaba ANTES de operar: sin ventas ni cobros, apartados,
   // abonos, devoluciones, cambios, préstamos, clientes de prueba, comisiones,
@@ -5541,7 +5577,7 @@
     commissionAdjustments, commissionAdjustmentPreview, commissionAdjustmentDraft,
     applyCommissionAdjustment,
     addPromo, updatePromo, removePromo, duplicatePromo,
-    seedDemo, resetEmpty, resetTestData, demoActive,
+    seedDemo, resetEmpty, resetTestData, applyPointZero, demoActive,
     testDataFootprint, configFingerprint, totalPieces, stockEntryByIdentity,
   };
   const localWriterMutators = [

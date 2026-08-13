@@ -101,6 +101,14 @@ una segunda forma de borrar un producto
 evidencia), `ADR-006` (la baja viaja por la cola)
 **Consumidores:** `grep -rn "inventoryFootprint\|clearInventory" balam/ test-*.mjs`
 
+## ¿Qué eliminará Punto Cero y puede ejecutarse ahora?
+**Autoridad:** `pos.point_zero_preview()` para el plan sellado y
+`pos.execute_point_zero()` para la decisión transaccional; el cliente no cuenta
+ni borra tablas
+**Definición:** migración `20260812013900` · `docs/02-architecture.md` § Punto Cero administrativo
+**Creada por:** H-98 · **Decisiones:** `ADR-005`, `ADR-006`, `ADR-012`
+**Consumidores:** `grep -rn "pointZeroPreview\|executePointZero\|point_zero_preview\|execute_point_zero" balam/ supabase/ test-h98-*.mjs`
+
 ## ¿Hay inventario para esta venta?
 **Autoridad:** `pos.reserve_sale_stock()`, invocada dentro de `pos.commit_sale()`
 **Definición:** migraciones `20260725001700`, `20260725001800`

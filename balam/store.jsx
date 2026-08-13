@@ -16,7 +16,7 @@
   const QKEY = 'balam_sync_queue';
   const QDB = 'balam_sync', QSTORE = 'durable_queue';
   const SYNC_PROTOCOL_VERSION = 1;
-  const SYNC_SCHEMA_VERSION = 20260810013500;
+  const SYNC_SCHEMA_VERSION = 20260812013900;
   const SYNC_CURSOR_KEY = 'balam_sync_domain_cursors_v1';
   const SYNC_DOMAINS = {
     permissions: { deps: [] }, config: { deps: ['permissions'] },
@@ -34,6 +34,7 @@
   // si la nube trae una más nueva, se limpia sola (ver applyResetMark).
   const RESET_MARK_KEY = '_resetMark';
   const RESET_SEEN = 'balam_reset_seen';
+  const POINT_ZERO_TICKET = 'balam_point_zero_ticket_v1';
 
   let sb = null, enabled = false, lastResetMark = null;
   let sessionIdentity = null, sessionManaged = false, onlineSubscribed = false,
@@ -2969,6 +2970,114 @@
     await reconcileDomains(); await heartbeatDevice(c);
     return result;
   }
+
+  // H-98 · Punto Cero administrativo. El navegador sólo coordina el wizard:
+  // preview, respaldo y borrado son RPC separadas, y la última conserva toda la
+  // atomicidad en PostgreSQL. No existe una secuencia cliente de DELETEs.
+  async function pointZeroPreview() {
+    if (!(window.AUTH && window.AUTH.isAdmin && window.AUTH.isAdmin())) {
+      return { ok: false, code: 'FORBIDDEN', error: 'Sólo un administrador puede usar Punto Cero' };
+    }
+    const c = await ensureClient();
+    if (!c || !(await hasSession())) return { ok: false, code: 'OFFLINE', error: 'Supabase no está accesible' };
+    try { await reconcileDomains(); } catch (e) { /* el estado queda visible */ }
+    const r = await c.rpc('point_zero_preview');
+    if (r.error) return { ok: false, code: 'REMOTE', error: r.error.message || String(r.error), detalle: r.error };
+    const preview = Array.isArray(r.data) ? r.data[0] : r.data;
+    const status = syncStatus();
+    const activity = window.CORE && window.CORE.activityStatus ? window.CORE.activityStatus() : { active: false };
+    const localLocks = !!(window.DATA && window.DATA.hasLayawayLiquidationLock && window.DATA.hasLayawayLiquidationLock());
+    const clientReady = status.synchronized && status.pending === 0 && status.blocked === 0
+      && !activity.active && !localLocks;
+    return Object.assign({}, preview || {}, {
+      ok: !!(preview && preview.ok), client_ready: clientReady,
+      client_status: status, local_activity: !!activity.active, local_locks: localLocks,
+      ready: !!(preview && preview.ok && preview.system_mode === 'preproduction'
+        && preview.sync_complete && !preview.active_operation && clientReady),
+    });
+  }
+
+  function requirePointZeroReady(preview) {
+    if (!preview || preview.system_mode !== 'preproduction') throw new Error('POINT_ZERO_PRODUCTION_LOCKED');
+    if (!preview.ready) throw new Error('POINT_ZERO_NOT_SYNCHRONIZED');
+    if (!preview.preview_token) throw new Error('POINT_ZERO_PREVIEW_REQUIRED');
+  }
+
+  async function createPointZeroBackup(approvedPreview) {
+    const current = await pointZeroPreview();
+    requirePointZeroReady(current);
+    if (!approvedPreview || current.preview_token !== approvedPreview.preview_token) {
+      throw new Error('POINT_ZERO_PREVIEW_CHANGED');
+    }
+    const c = await ensureClient();
+    const r = await c.rpc('create_point_zero_backup', {
+      p_preview_token: current.preview_token,
+      p_client_build: String(SYNC_SCHEMA_VERSION), p_device_id: window.CORE.getDeviceId(),
+    });
+    if (r.error) throw new Error(r.error.message || 'POINT_ZERO_BACKUP_FAILED');
+    const result = Array.isArray(r.data) ? r.data[0] : r.data;
+    if (!result || result.ok !== true) throw new Error((result && result.error) || 'POINT_ZERO_BACKUP_FAILED');
+    return result;
+  }
+
+  function downloadPointZeroDocument(document, kind, id) {
+    const body = JSON.stringify(document, null, 2);
+    const blob = new Blob([body], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob); const a = window.document.createElement('a');
+    a.href = url; a.download = `balam-punto-cero-${kind}-${id || Date.now()}.json`; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    return { bytes: new TextEncoder().encode(body).length, file: a.download };
+  }
+
+  async function executePointZero(options) {
+    const opts = options || {};
+    if (opts.confirmation !== 'PUNTO CERO') throw new Error('POINT_ZERO_CONFIRMATION_REQUIRED');
+    if (!opts.previewToken || !opts.backupId) throw new Error('POINT_ZERO_BACKUP_REQUIRED');
+    let reserved = null;
+    try { reserved = JSON.parse(localStorage.getItem(POINT_ZERO_TICKET) || 'null'); } catch (e) { reserved = null; }
+    if (!reserved || reserved.previewToken !== opts.previewToken || reserved.backupId !== opts.backupId) {
+      const current = await pointZeroPreview();
+      requirePointZeroReady(current);
+      if (current.preview_token !== opts.previewToken) throw new Error('POINT_ZERO_PREVIEW_CHANGED');
+      reserved = { operationId: opts.operationId || newOpId(), previewToken: opts.previewToken, backupId: opts.backupId };
+      try { localStorage.setItem(POINT_ZERO_TICKET, JSON.stringify(reserved)); } catch (e) { /* el RPC sigue siendo idempotente */ }
+    }
+    const c = await ensureClient();
+    let r;
+    try {
+      r = await c.rpc('execute_point_zero', {
+        p_operation_id: reserved.operationId, p_preview_token: reserved.previewToken,
+        p_backup_id: reserved.backupId, p_confirmation: opts.confirmation,
+        p_client_build: String(SYNC_SCHEMA_VERSION), p_device_id: window.CORE.getDeviceId(),
+      });
+    } catch (e) { throw new Error('POINT_ZERO_NETWORK:' + String((e && e.message) || e)); }
+    if (r.error) throw new Error(r.error.message || 'POINT_ZERO_FAILED');
+    const result = Array.isArray(r.data) ? r.data[0] : r.data;
+    if (!result || result.ok !== true) {
+      try { localStorage.removeItem(POINT_ZERO_TICKET); } catch (e) { /* */ }
+      throw new Error((result && result.error) || 'POINT_ZERO_FAILED');
+    }
+    const local = window.DATA && window.DATA.applyPointZero ? window.DATA.applyPointZero() : null;
+    if (!local || local.ok !== true) throw new Error((local && local.error) || 'POINT_ZERO_LOCAL_APPLY_FAILED');
+    if (syncManifest) syncManifest.data_epoch = Number(result.data_epoch) || syncManifest.data_epoch;
+    try {
+      localStorage.setItem('balam_sync_data_epoch', String(result.data_epoch));
+      localStorage.removeItem(POINT_ZERO_TICKET);
+    } catch (e) { /* */ }
+    syncInvalid.clear();
+    try { await pull(); } catch (e) { /* configuración local ya fue preservada */ }
+    try { await pullDomain('sellers', { authoritativeEmpty: true }); } catch (e) { /* */ }
+    try { await heartbeatDevice(c); } catch (e) { /* próximo latido */ }
+    try { window.dispatchEvent(new CustomEvent('configchange', { detail: { pointZero: true } })); } catch (e) { /* */ }
+    return Object.assign({}, result, { local });
+  }
+
+  async function pointZeroReceipt(operationId) {
+    const c = await ensureClient(); if (!c) throw new Error('OFFLINE');
+    const r = await c.rpc('point_zero_receipt', { p_operation_id: operationId });
+    if (r.error) throw new Error(r.error.message || 'POINT_ZERO_RECEIPT_FAILED');
+    return Array.isArray(r.data) ? r.data[0] : r.data;
+  }
   async function syncFleetStatus() {
     const c = await ensureClient();
     if (!c || !syncManifest) return { devices: [], activity: [], current: 0, stale: 0, attention: 0 };
@@ -3297,6 +3406,6 @@
     }
   }
 
-  window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushClient, pushSale, settleLayaway, pushReturn, pushExchange, commitReferenceReclassification, ensureFolioBlock, deleteRow, settleCommission, closeCommissionPeriod, applyCommissionAdjustment, pushLoanOperation, migrateLocalLoans, pullDomain, fetchSaleByFolio, physicalCardAvailable, claimPhysicalCard, flushQueue, retryOperation, discardOperation, queueStatus, syncStatus, syncFleetStatus, updateSyncDevice, requestSyncRetry, markSyncActivityReviewed, decideSyncQuarantine, exportQuarantineReport, reconcileDomains, invalidateDomain, establishPointZero, rebootstrapFromCloud, exportSyncRecovery, hasPendingLayaway, clearQueue, markResetApplied, purgeTestData, applyRemotePurge, pruneQueueForPurge, readPurgeState, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
+  window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushClient, pushSale, settleLayaway, pushReturn, pushExchange, commitReferenceReclassification, ensureFolioBlock, deleteRow, settleCommission, closeCommissionPeriod, applyCommissionAdjustment, pushLoanOperation, migrateLocalLoans, pullDomain, fetchSaleByFolio, physicalCardAvailable, claimPhysicalCard, flushQueue, retryOperation, discardOperation, queueStatus, syncStatus, syncFleetStatus, updateSyncDevice, requestSyncRetry, markSyncActivityReviewed, decideSyncQuarantine, exportQuarantineReport, reconcileDomains, invalidateDomain, establishPointZero, pointZeroPreview, createPointZeroBackup, executePointZero, pointZeroReceipt, downloadPointZeroDocument, rebootstrapFromCloud, exportSyncRecovery, hasPendingLayaway, clearQueue, markResetApplied, purgeTestData, applyRemotePurge, pruneQueueForPurge, readPurgeState, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
   window.CORE.registerSyncGateway(window.STORE);
 })();
