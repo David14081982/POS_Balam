@@ -4805,11 +4805,13 @@ limpio. Esto ya forma parte del ciclo autorizado.
 reconciliar Movimientos. El remoto conserva dos movimientos y stock único, pero
 el reintento local con el mismo ID deja de responder `idempotent=true`.
 **Causa raíz demostrada:** `STORE.MAP.movements.fromRow()` omitía
-`operation_id` y `reversal_of`; el pull reemplazaba los movimientos locales por
-objetos sin `operationId`/`reversalOf`, campos que `reclassifyReference()` usa
-para reconocer el reintento y validar la reversa.
-**Corrección:** mapeo aditivo de ambos campos remotos. No cambia base de datos,
-RPC, históricos, SKU ni productos V1.
+`movements.operation_id` y el pull no enriquecía
+`reference_reclassifications.reversal_of`; reemplazaba los movimientos locales
+por objetos sin `operationId`/`reversalOf`, campos que
+`reclassifyReference()` usa para reconocer el reintento y validar la reversa.
+**Corrección:** mapeo aditivo de `operation_id` y join de lectura por lotes con
+el ledger para `reversalOf`. No cambia base de datos, RPC, históricos, SKU ni
+productos V1.
 **Prueba roja:** modelo H-94 48/49, falla 19a.
 **Prueba verde:** modelo H-94 49/49.
 **Regresiones:** cola 176/176, H96 36/36, E2E 37/37, pantalla 45/45,

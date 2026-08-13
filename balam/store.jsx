@@ -2386,6 +2386,27 @@
     if (r.error) return { ok: false, error: r.error }; // tabla no existe aún → modo local
     if (hasPendingFor(m.table)) return { ok: true, skipped: true };
     if (r.data && r.data.length) {
+      // H-97: `operation_id` vive en movements, pero la relación de reversa
+      // pertenece al ledger de reclasificaciones. Rehidrata ambos como una sola
+      // evidencia local para que reintento y reversa sigan siendo idempotentes
+      // después de pull/reconexión. Un servidor anterior sin el ledger mantiene
+      // la lectura histórica de movimientos, sin inventar relaciones.
+      if (kind === 'movements') {
+        const operationIds = Array.from(new Set(r.data.map(row => row.operation_id).filter(Boolean)));
+        const reversalByOperation = {};
+        for (let i = 0; i < operationIds.length; i += 200) {
+          const ledger = await c.from('reference_reclassifications')
+            .select('operation_id,reversal_of')
+            .in('operation_id', operationIds.slice(i, i + 200));
+          if (ledger.error) break;
+          (ledger.data || []).forEach(row => { reversalByOperation[row.operation_id] = row.reversal_of || null; });
+        }
+        const rows = r.data.map(row => Object.assign({}, row, {
+          reversal_of: Object.prototype.hasOwnProperty.call(reversalByOperation, row.operation_id)
+            ? reversalByOperation[row.operation_id] : undefined,
+        }));
+        window.DATA.applyRemote(kind, rows.map(m.fromRow)); return { ok: true };
+      }
       if (kind === 'returns') {
         const itRows = await fetchItemsIn(c, 'return_items', 'return_id', r.data.map(x => x.id));
         const byRid = {};

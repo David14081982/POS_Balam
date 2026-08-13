@@ -15,8 +15,10 @@ ejecutar la reversa.
 
 ## Causa raiz
 
-`pos.movements` conserva `operation_id` y `reversal_of`, pero
-`STORE.MAP.movements.fromRow()` no los traducía a `operationId` y `reversalOf`.
+`pos.movements` conserva `operation_id`, pero
+`STORE.MAP.movements.fromRow()` no lo traducía a `operationId`. La relación
+`reversal_of` vive en `pos.reference_reclassifications` y tampoco se enriquecía
+desde ese ledger.
 La reconciliacion reemplazaba `DATA.movements` con filas sin identidad de
 operacion. `DATA.reclassifyReference()` depende de esos campos para reconocer
 el reintento exacto y autorizar una reversa.
@@ -26,14 +28,18 @@ el reintento exacto y autorizar una reversa.
 La autoridad remota no cambia. El pull debe ser un round-trip sin perdida:
 
 - `movements.operation_id` → `movement.operationId`;
-- `movements.reversal_of` → `movement.reversalOf`.
+- `reference_reclassifications.reversal_of` → `movement.reversalOf` para los
+  dos movimientos que comparten esa operación.
 
 No se resuelve por SKU, no se reescriben historicos y no se agrega migracion.
 
 ## Solucion
 
-`balam/store.jsx` conserva ambos campos al mapear Movimientos remotos. Es un
-cambio aditivo de lectura; no modifica RPC, tablas, filas V1 ni payloads.
+`balam/store.jsx` conserva `operation_id` al mapear Movimientos y consulta en
+lotes el ledger de reclasificaciones para enriquecer `reversalOf`. Es un cambio
+aditivo de lectura; no modifica RPC, tablas, filas V1 ni payloads. Si una base
+histórica no tiene el ledger, los movimientos siguen siendo legibles y no se
+infiere ninguna relación.
 
 ## Pruebas
 
