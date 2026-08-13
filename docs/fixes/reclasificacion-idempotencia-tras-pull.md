@@ -1,9 +1,9 @@
 # Reclasificacion idempotente despues de reconciliar Movimientos
 
 **Riesgo:** H-97
-**Estado:** RESUELTO Y PUBLICADO; PENDIENTE DE REVALIDACION EN H94-PILOT
+**Estado:** RESUELTO, PUBLICADO Y REVALIDADO EN H94-PILOT
 **Fecha:** 12/08/2026
-**Commit:** `ee1a236`
+**Commits:** `ee1a236`, `2381741`
 
 ## Problema y reproduccion
 
@@ -56,10 +56,10 @@ infiere ninguna relación.
 
 ## Riesgo residual y pendientes
 
-El primer commit del piloto permanece aplicado una sola vez y registrado en el
-manifiesto. Falta recargar el cliente publicado y completar el
-reintento/reversa con esos mismos IDs; no debe recrearse la reclasificacion
-original.
+El cliente publicado reconocio el mismo `operationId` como idempotente tras el
+pull y no agrego movimientos. La reversa preparada quedo enlazada en el ledger,
+creo exactamente dos movimientos y restauro D=5/E=6. La limpieza exacta dejo
+residuo cero, cola cero y bloqueos cero. Ninguno conocido dentro de H-97.
 
 ## Referencias
 

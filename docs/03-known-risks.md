@@ -4611,7 +4611,7 @@ artefacto público idéntico al build normalizado (8,931,332 bytes, SHA-256
 
 ## H-94 - Referencias físicas V2 carecen de identidad logística y stock propios
 
-**Estado:** MIGRACIONES 13700/13800 APLICADAS; PILOTO DETENIDO POR H-96 Y LIMPIO — NO PRODUCCIÓN
+**Estado:** RESUELTO Y PUBLICADO; PREPRODUCCIÓN VALIDADA — NO PRODUCCIÓN
 **Fecha de registro:** 10/08/2026
 **Commit técnico:** `136c8d0`
 **Origen:** contrato definitivo aprobado por el dueño para separar identidad
@@ -4704,8 +4704,17 @@ los siete IDs del manifiesto. Resultado remoto: 1,378 V1, V2=0, H94-PILOT=0,
 stock=3,334 y huella `d8bd3f2ed327f3e330c814d0bf9e8731`; cola y bloqueos
 quedaron en cero. No se ejecutó punto cero, carga real, SKU masivos ni etiquetas
 reales.
+El cierre del 12/08/2026 completó el piloto autorizado de 7 referencias, 5 SKU
+y 35 piezas: alta, lectura, etiquetas, Excel, estadísticas y todos los ciclos
+comerciales. H-96 y H-97 quedaron publicados y revalidados. La limpieza
+transaccional exacta retiró únicamente los IDs/folios del manifiesto y terminó
+con V1=1,378, V2=0, H94-PILOT=0, stock=3,334, cola/bloqueos=0/0 y huella V1
+`d8bd3f2ed327f3e330c814d0bf9e8731`; el residuo exacto fue cero. Migraciones
+locales/remotas coinciden. BALAM queda preparado para que una historia nueva
+inicie Punto Cero, sin haberlo ejecutado.
 **Corrección documentada:**
-`docs/fixes/modelo-referencias-fisicas-v2.md`.
+`docs/fixes/modelo-referencias-fisicas-v2.md` y
+`docs/fixes/cierre-h94-piloto-preproduccion.md`.
 
 ## H-95 - Una escritura acotada de productos puede expandirse al inventario local completo
 
@@ -4748,7 +4757,7 @@ puerta global de cola/bloqueos se trabajarán por separado.
 
 ## H-96 - El reintento de un Cambio confirmado entra en conflicto y no abandona la cola
 
-**Estado:** RESUELTO Y PUBLICADO; PENDIENTE DE REVALIDACIÓN EN H94-PILOT
+**Estado:** RESUELTO, PUBLICADO Y REVALIDADO EN H94-PILOT
 **Fecha de registro:** 12/08/2026
 **Commit técnico:** `b04d1ea`
 **Origen:** piloto remoto H-94 posterior a la migración 13800.
@@ -4790,16 +4799,18 @@ navegación 15/15.
 **Publicación:** `b04d1ea` está en `origin/main`. El `index.html` servido por
 GitHub Pages coincide byte a byte con el blob Git: 8,962,127 bytes, SHA-256
 `08ab2fd2bfd3303e7bc3b1b12c12629404caaa4da8df93655d8f59eca5227454`.
-**Pendiente:** revalidar la frontera remota dentro del H94-PILOT completo desde
-limpio. Esto ya forma parte del ciclo autorizado.
+**Revalidación final:** A→B conservó los dos `products.id`, creó un solo
+exchange, dos `exchange_items`, dos movimientos, un pago de diferencia y una
+comisión. Repetición local/remota no duplicó efectos; cola final 0/0. La
+limpieza por manifiesto dejó residuo cero.
 **Corrección documentada:**
 `docs/fixes/reintento-cambios-conflicto-cola.md`.
 
 ## H-97 - El pull de Movimientos retira la identidad idempotente de Reclasificación
 
-**Estado:** RESUELTO Y PUBLICADO; PENDIENTE DE REVALIDACIÓN EN H94-PILOT
+**Estado:** RESUELTO, PUBLICADO Y REVALIDADO EN H94-PILOT
 **Fecha de registro:** 12/08/2026
-**Commit técnico:** `ee1a236`
+**Commits técnicos:** `ee1a236`, `2381741`
 **Origen:** piloto remoto H-94, ciclo D→E.
 **Reproducción:** aplicar una reclasificación con `operationId`, drenar y
 reconciliar Movimientos. El remoto conserva dos movimientos y stock único, pero
@@ -4818,9 +4829,10 @@ productos V1.
 H95 16/16, H86 17/17, contratos 42/42, migraciones 31/31, préstamos
 69/69, H77 20/20, H80 7/7, navegación 15/15, responsive 492/492,
 build y smoke bundle 17/17.
-**Estado del piloto:** el primer commit permanece aplicado exactamente una vez
-(D=4, E=7), con cola 0 y bloqueos 0. Debe publicarse la corrección y retomar con
-los mismos IDs del manifiesto; no recrear la operación original.
+**Revalidación final:** el mismo `operationId` fue reconocido como idempotente
+después del pull; la reversa preparada creó exactamente dos movimientos
+enlazados y restauró D=5/E=6. La limpieza final dejó cola/bloqueos 0/0 y residuo
+del manifiesto cero.
 **Corrección documentada:**
 `docs/fixes/reclasificacion-idempotencia-tras-pull.md`.
 
