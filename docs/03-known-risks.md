@@ -35,7 +35,7 @@ y `BLOQUEADO`.
 | H-88B | La impresión móvil de etiquetas depende de popup, autoimpresión y autocierre | RESUELTO Y PUBLICADO | Inventario / etiquetas / impresión |
 | H-89 | BALAM no tiene contrato de instalación PWA ni materialización demostrada del logo configurado | RESUELTO Y PUBLICADO | Cliente / PWA / build |
 | H-90 | La autoridad monetaria no conserva componentes configurables ni reembolsos exactos | RESUELTO Y PUBLICADO | Ventas / devoluciones / reportes / impresión |
-| H-99 | Preview, PDF e impresión de etiquetas deben compartir composición | RESUELTO, PENDIENTE DE PUBLICAR | Inventario / etiquetas / impresión |
+| H-99 | Preview, PDF e impresión de etiquetas deben compartir composición | RESUELTO Y PUBLICADO | Inventario / etiquetas / impresión |
 
 ## H-01 — Inventario concurrente
 
@@ -4918,9 +4918,9 @@ arranque precompilado 5/5. El smoke JSX de desarrollo agotó su espera Babel de
 
 ## H-99 - La etiqueta 60×40 perdió jerarquía visual
 
-**Estado:** RESUELTO, PENDIENTE DE PUBLICAR
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha de registro:** 13/08/2026
-**Commit:** Pendiente de commit
+**Commit:** `e43c263c16b1ac73c0b59677beabb2558065e34c`
 **Origen:** comparación visual solicitada contra `Etiquetas Balam.pdf`.
 **Reproducción:** la plantilla imprimible vigente usa nombre 9 pt, SKU 8 pt y
 precio 12 pt dentro de un contenedor centrado verticalmente. En una etiqueta
@@ -5007,7 +5007,13 @@ H-94 **49/49**; navegación **15/15**; smoke bundle **17/17**; PWA H-89
 de páginas, 60×40 mm, streams JPEG, presencia gráfica del Code128, SKU
 corto/típico/largo, precios variados, cantidades y equivalencia byte a byte
 entre el master del preview y la imagen de la primera página PDF.
-**Publicación:** pendiente de commit y verificación de los bytes de Pages.
+**Publicación PDF:** commit `e43c263`; workflow Pages `31719749980`
+completado correctamente. La descarga pública con cache-buster coincide
+exactamente con el blob Git `744f3e2bb11dd40b55221e47fce9f7c5d5272c1a`
+(8,974,595 bytes; SHA-256
+`7c1eefbb38c18e58e6616f0ab93e08ca719cc642219ae445b2a0b9ad19b08e2b`).
+Sobre esos bytes públicos: PDF H-99 **23/23**, paridad visual H-99 **12/12** y
+móvil H-88B **19/19**.
 
 ## Regla de actualización
 

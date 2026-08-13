@@ -1,10 +1,10 @@
 # Jerarquía visual de la etiqueta 60×40
 
 **Riesgo:** H-99
-**Estado:** RESUELTO, PENDIENTE DE PUBLICAR
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha:** 13/08/2026
-**Commits técnicos:** `c1ed627` (jerarquía), `1f5785e` (paridad) y
-`0ca8a17` (marco físico del preview).
+**Commits técnicos:** `c1ed627` (jerarquía), `1f5785e` (paridad),
+`0ca8a17` (marco físico del preview) y `e43c263` (PDF físico).
 
 ## Problema y reproducción
 
@@ -130,7 +130,15 @@ páginas, medidas y compartir. La verde pasó PDF H-99 **23/23**, paridad visual
 **17/17** y PWA H-89 **19/19**. El PDF multipágina de evidencia está en
 `.evidence-label-visual/etiquetas-h99-multipagina.pdf`.
 
-Publicación y commit: pendientes.
+### Publicación verificada
+
+El commit técnico `e43c263c16b1ac73c0b59677beabb2558065e34c` quedó en
+`main` y el workflow Pages `31719749980` concluyó correctamente. El
+`index.html` descargado de Pages con cache-buster coincide exactamente con el
+blob Git `744f3e2bb11dd40b55221e47fce9f7c5d5272c1a`: 8,974,595 bytes y
+SHA-256 `7c1eefbb38c18e58e6616f0ab93e08ca719cc642219ae445b2a0b9ad19b08e2b`.
+Ejecutados directamente sobre esa descarga pública: PDF H-99 **23/23**,
+paridad visual H-99 **12/12** y móvil H-88B **19/19**.
 
 ## Referencias
 
