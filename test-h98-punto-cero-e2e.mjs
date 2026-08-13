@@ -31,9 +31,14 @@ await page.evaluate(() => {
     data_epoch: 7, preview_token: 'preview-sintetico-98', snapshot_hash: 'a'.repeat(64),
     queue_pending: 0, active_locks: 0, active_operation: 0, sync_complete: true,
     client_ready: true, ready: window.__h98.mode === 'preproduction',
-    counts: { productos: 57, piezas: 243, ventas: 18, movimientos: 61,
-      apartados: 3, pagos: 22, devoluciones: 2, cambios: 4, prestamos: 1,
-      reclasificaciones: 2, comisiones: 5, clientes: 7 },
+    generated_at: new Date().toISOString(),
+    counts: { productos: 57, piezas: 243, ventas: 18, sale_items: 25,
+      movimientos: 61, apartados: 3, pagos: 22, devoluciones: 2,
+      return_items: 2, cambios: 4, exchange_items: 6, prestamos: 1,
+      reclasificaciones: 2, liquidaciones: 3, commission_adjustments: 2,
+      physical_card_redemptions: 1, stock_reservations: 2, sale_commits: 18,
+      return_commits: 2, exchange_commits: 4, layaway_liquidation_commits: 1,
+      folio_counters: 2, clientes: 7 },
   });
   window.AUTH.canAccess = id => id === 'config' || id === 'config.demo';
   window.AUTH.isAdmin = () => true;
@@ -52,9 +57,7 @@ await page.evaluate(() => {
     if (opts.confirmation !== 'PUNTO CERO') throw new Error('confirmación inválida');
     return { ok: true, operation_id: 'h98-synthetic-operation',
       counts_before: syntheticPreview().counts,
-      counts_after: { productos: 0, piezas: 0, ventas: 0, movimientos: 0,
-        apartados: 0, pagos: 0, devoluciones: 0, cambios: 0, prestamos: 0,
-        reclasificaciones: 0, comisiones: 0, clientes: 0 } };
+      counts_after: Object.fromEntries(Object.keys(syntheticPreview().counts).map(key => [key, 0])) };
   };
   window.STORE.pointZeroReceipt = async id => {
     window.__h98.receiptCalls++; return { format: 'balam-point-zero-receipt-v1', operation_id: id };

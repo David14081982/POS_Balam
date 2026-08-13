@@ -1759,13 +1759,29 @@
   }
   const POINT_ZERO_ROWS = [
     ['productos','Productos'], ['piezas','Piezas'], ['ventas','Ventas'],
-    ['movimientos','Movimientos'], ['apartados','Apartados'], ['pagos','Pagos'],
-    ['devoluciones','Devoluciones'], ['cambios','Cambios'], ['prestamos','Préstamos'],
-    ['reclasificaciones','Reclasificaciones'], ['comisiones','Comisiones transaccionales'],
+    ['sale_items','Partidas de venta (sale_items)'], ['movimientos','Movimientos'],
+    ['apartados','Apartados'], ['pagos','Pagos transaccionales'],
+    ['devoluciones','Devoluciones'], ['return_items','Partidas de devolución (return_items)'],
+    ['cambios','Cambios'], ['exchange_items','Partidas de cambio (exchange_items)'],
+    ['prestamos','Préstamos'], ['reclasificaciones','Reclasificaciones'],
+    ['liquidaciones','Liquidaciones de comisión'],
+    ['commission_adjustments','Ajustes de comisión'],
+    ['physical_card_redemptions','Canjes de tarjeta física'],
+    ['stock_reservations','Reservas de stock'], ['sale_commits','Documentos de venta'],
+    ['return_commits','Documentos de devolución'], ['exchange_commits','Documentos de cambio'],
+    ['layaway_liquidation_commits','Documentos de liquidación de apartado'],
+    ['folio_counters','Contadores de folio'],
     ['clientes','Clientes de prueba'],
   ];
+  const POINT_ZERO_REQUIRED_COUNTS = POINT_ZERO_ROWS.map(x => x[0]);
   const POINT_ZERO_KEPT = ['Configuración', 'Catálogos', 'Usuarios', 'Roles y permisos',
     'Constructor de SKU', 'Métodos de pago', 'Logotipo', 'Configuración de tienda'];
+
+  function validPointZeroPreview(value) {
+    return !!(value && value.ok && value.preview_token && value.counts
+      && POINT_ZERO_REQUIRED_COUNTS.every(key => Object.prototype.hasOwnProperty.call(value.counts, key)
+        && Number.isFinite(Number(value.counts[key])) && Number(value.counts[key]) >= 0));
+  }
 
   function AdminDataPanel() {
     const [preview, setPreview] = useState(null);
@@ -1773,13 +1789,18 @@
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState('');
     const refresh = async open => {
-      setBusy(true); setError('');
+      setBusy(true); setError(''); setPreview(null);
       try {
         const r = await window.STORE.pointZeroPreview();
         if (!r || !r.ok) throw new Error((r && r.error) || 'No se pudo obtener el diagnóstico');
-        setPreview(r); if (open) setWizard({ paso: 'diagnostico', preview: r, backup: null, confirmacion: '' });
-      } catch (e) { setError(e.message || String(e)); }
-      setBusy(false);
+        if (!validPointZeroPreview(r)) throw new Error('El diagnóstico remoto está incompleto; no se habilitó la limpieza');
+        const visible = Object.assign({}, r, { diagnosed_at: r.generated_at || new Date().toISOString() });
+        setPreview(visible);
+        if (open) setWizard({ paso: 'diagnostico', preview: visible, backup: null, confirmacion: '' });
+      } catch (e) {
+        setPreview(null);
+        setError(e.message || String(e));
+      } finally { setBusy(false); }
     };
     useEffect(() => { refresh(false); }, []);
     const preproduction = preview && preview.system_mode === 'preproduction';
@@ -1789,7 +1810,7 @@
         h('div', { key: 'copy' }, [
           h('div', { key: 'label', className: 'text-overline font-bold uppercase tracking-widest text-primary' }, 'Modo de operación'),
           h('div', { key: 'value', 'data-testid': 'point-zero-mode', className: 'mt-1 font-semibold ' + (preproduction ? 'text-warning' : 'text-success') },
-            preview ? (preproduction ? 'PREPRODUCCIÓN / PRUEBAS' : 'PRODUCCIÓN') : 'Verificando…'),
+            preview ? (preproduction ? 'PREPRODUCCIÓN / PRUEBAS' : 'PRODUCCIÓN') : (busy ? 'Verificando…' : 'DIAGNÓSTICO NO DISPONIBLE')),
         ]),
         preproduction && h('span', { key: 'notice', className: 'text-caption text-on-surface-variant' }, 'BALAM está utilizando datos de prueba.'),
       ]),
@@ -1802,14 +1823,44 @@
               'Elimina inventario y operaciones de prueba para dejar BALAM listo para una nueva carga. La configuración del sistema se conserva.'),
           ]),
         ]),
-        error && h('div', { key: 'error', className: 'mt-4 p-3 rounded-lg bg-danger-soft text-danger text-caption' }, error),
+        error && h('div', { key: 'error', 'data-testid': 'point-zero-error', role: 'alert',
+          className: 'mt-4 p-3 rounded-lg bg-danger-soft text-danger text-caption' }, [
+          h('div', { key: 'title', className: 'font-bold' }, 'No se pudo actualizar el diagnóstico'),
+          h('div', { key: 'detail', className: 'mt-1' }, error),
+          h('div', { key: 'guard', className: 'mt-1' }, 'La limpieza permanece bloqueada.'),
+        ]),
+        preview && h('section', { key: 'diagnostic', 'data-testid': 'point-zero-diagnostic',
+          'aria-live': 'polite', className: 'mt-5 p-4 rounded-xl border border-outline-variant bg-surface-container-low' }, [
+          h('div', { key: 'status', className: 'flex items-start justify-between gap-3 flex-wrap' }, [
+            h('div', { key: 'title' }, [
+              h('div', { key: 'overline', className: 'text-overline font-bold uppercase tracking-widest text-primary' }, 'Diagnóstico autoritativo'),
+              h('div', { key: 'fresh', className: 'mt-1 text-caption text-success font-semibold' }, 'Actualización completada'),
+            ]),
+            h('time', { key: 'time', dateTime: preview.diagnosed_at, className: 'text-caption text-on-surface-variant' },
+              'Actualizado: ' + new Date(preview.diagnosed_at).toLocaleString('es-MX')),
+          ]),
+          h('div', { key: 'grid', className: 'grid grid-cols-1 md:grid-cols-2 gap-6 mt-4' }, [
+            h('div', { key: 'delete' }, [
+              h('div', { key: 'heading', className: 'text-overline font-bold text-danger mb-2' }, 'Se eliminará'),
+              h(PointZeroCounts, { key: 'counts', counts: preview.counts, tone: 'text-danger' }),
+            ]),
+            h('div', { key: 'keep' }, [
+              h('div', { key: 'heading', className: 'text-overline font-bold text-success mb-2' }, 'Se conservará'),
+              ...POINT_ZERO_KEPT.map(x => h('div', { key: x, className: 'text-caption text-success py-1' }, '✓ ' + x)),
+            ]),
+          ]),
+          h('div', { key: 'guard-state', className: 'mt-4 pt-3 border-t border-outline-variant text-caption text-on-surface-variant' },
+            `Cola: ${N(preview.queue_pending)} · Bloqueos: ${N(preview.active_locks)} · Sincronización: ${preview.sync_complete && preview.client_ready ? 'correcta' : 'pendiente'} · Esquema: ${preview.schema_version}`),
+          h('p', { key: 'freshness', className: 'mt-2 text-caption text-on-surface-variant' },
+            'Antes del respaldo y de la ejecución, el servidor vuelve a calcular este preview. Si los datos cambian, exige actualizarlo.'),
+        ]),
         preview && !preproduction && h('div', { key: 'locked', className: 'mt-5 p-4 rounded-lg bg-surface-container-low border border-outline-variant text-caption text-on-surface-variant' },
           'Punto Cero está bloqueado porque BALAM está en PRODUCCIÓN. Sólo un procedimiento extraordinario fuera de esta pantalla puede cambiar ese modo.'),
         h('div', { key: 'actions', className: 'mt-5 flex gap-3 flex-wrap' }, [
           h('button', { key: 'open', 'data-testid': 'point-zero-open', disabled: busy || !preview || !preproduction,
             onClick: () => refresh(true), className: 'inline-flex items-center gap-2 px-5 h-11 border border-danger text-danger font-label-sm uppercase tracking-widest text-caption rounded-lg disabled:opacity-40' },
           [h(MS, { key: 'i', name: busy ? 'clock' : 'trash', size: 16 }), busy ? 'Verificando…' : 'Limpiar datos de prueba']),
-          h('button', { key: 'refresh', disabled: busy, onClick: () => refresh(false), className: 'px-4 h-11 border border-outline-variant rounded-lg text-caption disabled:opacity-40' }, 'Actualizar diagnóstico'),
+          h('button', { key: 'refresh', 'data-testid': 'point-zero-refresh', disabled: busy, onClick: () => refresh(false), className: 'px-4 h-11 border border-outline-variant rounded-lg text-caption disabled:opacity-40' }, 'Actualizar diagnóstico'),
         ]),
       ]),
       wizard && h(PointZeroWizard, { key: 'wizard', estado: wizard, setEstado: setWizard, onClose: () => setWizard(null) }),
