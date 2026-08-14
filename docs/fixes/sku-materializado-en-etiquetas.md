@@ -1,9 +1,9 @@
 # SKU materializado por talla en etiquetas
 
 **Riesgo:** H-100
-**Estado:** RESUELTO LOCALMENTE
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha:** 13/08/2026
-**Commit:** Pendiente de commit
+**Commit:** `c63360d6c939d94b18674ee4f963a3c1feabd07e`
 
 ## Problema y reproducción
 
@@ -69,8 +69,9 @@ se modificaron `products.id`, `barcode_code`, precio, Code128 ni diseño H-99.
 - Excel H-86: **42/42**; atributos opcionales H-86: **17/17**.
 - Tallas: **9/9**; contratos de módulos: **42/42**.
 - Smoke del bundle: **17/17**; navegación: **15/15**.
-- Build offline correcto. `index.html`: 8,975,122 bytes, SHA-256
-  `d7fe250a29471d94a8b1377ad3f1a1e08179d4db35b6ce4bfec7dd0749710721`.
+- Build offline correcto. El objeto Git publicado de `index.html` tiene
+  8,974,951 bytes y SHA-256
+  `d515f3ef663ad20faf1137f2863fe902956b8d5ac1f324548fd08ff57bb8423a`.
 
 Evidencia: `.evidence-h100/etiquetas-adriano-multitalla.pdf`, 12 páginas
 (seis V1 y seis V2), 611,381 bytes, SHA-256
@@ -78,8 +79,12 @@ Evidencia: `.evidence-h100/etiquetas-adriano-multitalla.pdf`, 12 páginas
 
 ## Riesgo residual y pendientes
 
-Falta verificar que GitHub Pages sirva byte a byte el artefacto del commit. No
-hay migración ni cambio de datos remotos que desplegar.
+Ninguno conocido. No hay migración ni cambio de datos remotos que desplegar.
+`origin/main` confirmó `c63360d6c939d94b18674ee4f963a3c1feabd07e`; Pages
+workflow `31774802400` terminó en `success`. La descarga pública con cache-buster
+coincidió exactamente con el blob Git `d1ef483a245e9fef39995d4ba21ab2c54d3c08ce`
+(8,974,951 bytes; SHA-256
+`d515f3ef663ad20faf1137f2863fe902956b8d5ac1f324548fd08ff57bb8423a`).
 
 ## Referencias
 

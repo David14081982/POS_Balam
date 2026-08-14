@@ -5017,9 +5017,9 @@ móvil H-88B **19/19**.
 
 ## H-100 - El SKU visible de etiquetas conserva el marcador de talla
 
-**Estado:** RESUELTO LOCALMENTE
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha de registro:** 13/08/2026
-**Commit:** Pendiente de commit
+**Commit:** `c63360d6c939d94b18674ee4f963a3c1feabd07e`
 **Origen:** PDF de cinco etiquetas ADRIANO reportado por el dueño.
 **Reproducción:** un producto V1 con SKU base
 `1-ARO-MC-ALG-AMAR-TRA-ALF--T` y existencias en varias tallas entrega a
@@ -5048,7 +5048,11 @@ reescribieron productos V1 ni se modificaron ID/barcode/Code128.
 bundle **17/17**; navegación **15/15**; build offline correcto.
 **Evidencia:** `.evidence-h100/etiquetas-adriano-multitalla.pdf`, 12 páginas,
 SHA-256 `9ba27034464cffcb9b94d808ca0beb10016519493ebc5de0f3c3bb5173697f61`.
-**Riesgo residual:** falta verificación byte a byte en Pages; no hay migración.
+**Publicación:** `origin/main` y Pages contienen el commit `c63360d`; workflow
+`31774802400` exitoso. El archivo servido coincide con el blob Git
+`d1ef483a245e9fef39995d4ba21ab2c54d3c08ce` (8,974,951 bytes; SHA-256
+`d515f3ef663ad20faf1137f2863fe902956b8d5ac1f324548fd08ff57bb8423a`).
+**Riesgo residual:** ninguno conocido; no hubo migración ni cambio de datos.
 **Corrección documentada:** `docs/fixes/sku-materializado-en-etiquetas.md`.
 
 ## Regla de actualización
