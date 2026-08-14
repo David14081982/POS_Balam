@@ -5015,6 +5015,42 @@ exactamente con el blob Git `744f3e2bb11dd40b55221e47fce9f7c5d5272c1a`
 Sobre esos bytes públicos: PDF H-99 **23/23**, paridad visual H-99 **12/12** y
 móvil H-88B **19/19**.
 
+## H-100 - El SKU visible de etiquetas conserva el marcador de talla
+
+**Estado:** RESUELTO LOCALMENTE
+**Fecha de registro:** 13/08/2026
+**Commit:** Pendiente de commit
+**Origen:** PDF de cinco etiquetas ADRIANO reportado por el dueño.
+**Reproducción:** un producto V1 con SKU base
+`1-ARO-MC-ALG-AMAR-TRA-ALF--T` y existencias en varias tallas entrega a
+`LabelModal` un código Code128 materializado por talla, pero `labelItem()`
+proyecta `product.sku` sin materializar. Preview, PDF e impresión repiten por
+ello el marcador `T` y el segmento vacío en todas las piezas.
+**Riesgo:** una etiqueta físicamente asociada a una talla muestra otra identidad
+comercial; además, una referencia V2 creada desde un borrador con `sku` provisto
+puede conservar un SKU no derivado de su talla efectiva.
+**Alcance:** recorrido CONFIG → DATA → producto → etiqueta; V1 por talla y V2
+por referencia; paridad preview/PDF/impresión y serialización de segmentos
+opcionales vacíos. Se conservan `products.id`, `barcode_code`, Code128, precios,
+diseño H-99, cola offline y los 1,378 productos V1 persistidos.
+**No alcance:** regeneración masiva V1, Punto Cero, unicidad de SKU, cambios de
+CONFIG o del diseño 60×40.
+**Causa raíz:** `BARCODES.codeOf()` materializaba correctamente el código V1,
+pero `labelItem()` mostraba `product.sku`; `createReference()` aceptaba además
+un SKU V2 entrante, y `DATA.sku()` no omitía el `ornament_color` opcional vacío.
+**Corrección:** `DATA.materializedSku()` es la autoridad compartida de pieza;
+V1 recibe la talla explícita y V2 deriva el SKU desde `effectiveSize`. Preview,
+PDF, impresión y el adaptador Code128 V1 consumen esa autoridad. No se
+reescribieron productos V1 ni se modificaron ID/barcode/Code128.
+**Pruebas:** roja H-100 **3/10**; verde **10/10**; H-94 **49/49**; CONFIG H-94
+**30/30**; H-99 PDF **23/23**; visual **12/12**; móvil **19/19**; Excel H-86
+**42/42**; atributos H-86 **17/17**; tallas **9/9**; contratos **42/42**; smoke
+bundle **17/17**; navegación **15/15**; build offline correcto.
+**Evidencia:** `.evidence-h100/etiquetas-adriano-multitalla.pdf`, 12 páginas,
+SHA-256 `9ba27034464cffcb9b94d808ca0beb10016519493ebc5de0f3c3bb5173697f61`.
+**Riesgo residual:** falta verificación byte a byte en Pages; no hay migración.
+**Corrección documentada:** `docs/fixes/sku-materializado-en-etiquetas.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

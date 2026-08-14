@@ -285,7 +285,9 @@
     if (!size.valid) throw Object.assign(new Error('La talla no pertenece a la familia seleccionada'), { code: 'REFERENCE_SIZE_INVALID' });
     p.stock = [{ talla: p.sizeCode, escala: p.sizeScale, stock: p.stockQuantity }];
     p.barcodeCode = p.barcodeCode || barcodeFromId(p.id);
-    p.sku = p.sku || sku(p);
+    // En V2 el SKU es una proyección de la referencia exacta. Un valor recibido
+    // por Excel, caché o formulario no puede sustituir a la talla efectiva.
+    p.sku = sku(p);
     // La firma es siempre derivada de CONFIG; una columna importada nunca es autoridad.
     p.physicalSignature = physicalSignature(p);
     const diag = referenceDiagnostics(p, collection);
@@ -487,9 +489,25 @@
     const modTok = /^\d+$/.test(mod) ? mod.padStart(3, '0') : mod;
     // Respaldo para cuando CONFIG aún no cargó: orden fijo histórico (con modelo al final).
     if (!(C && typeof C.skuParts === 'function')) return [p.cat, p.manga, p.tela, p.color, modTok].join('-');
-    const parts = C.skuParts().map(x => skuPartToken(p, x.kind, Object.assign({}, C.catalogMeta(x.kind) || {}, x)));
+    const parts = C.skuParts()
+      .map(x => skuPartToken(p, x.kind, Object.assign({}, C.catalogMeta(x.kind) || {}, x)))
+      // Un segmento opcional sin valor no ocupa una posición ni aporta un
+      // separador. Éste es el mismo contrato que usa skuPreview().
+      .filter(value => value != null && value !== '');
     // Receta vacía → el modelo como respaldo: el SKU es el identificador y no puede quedar vacío.
     return parts.length ? parts.join('-') : modTok;
+  }
+  // Autoridad del SKU que corresponde a una pieza concreta. V2 ya persiste el
+  // SKU materializado por createReference(); V1 conserva su base histórica y
+  // se proyecta con la talla explícita seleccionada, nunca inferida del texto.
+  function materializedSku(p, explicitSize) {
+    if (isV2Reference(p)) return String(p.sku || sku(p));
+    const size = String(explicitSize == null ? '' : explicitSize).trim();
+    const tokens = String((p && p.sku) || '').split('-').filter(token => token !== '');
+    const markerIndex = tokens.findIndex(token => token.toUpperCase() === SIZE_MARK);
+    if (markerIndex >= 0) tokens[markerIndex] = size;
+    else if (size) tokens.push(size);
+    return tokens.filter(token => token !== '').join('-').toUpperCase();
   }
   function skuPreview(p, extraKinds) {
     const meta = C && C.allCatalogMeta ? C.allCatalogMeta() : {};
@@ -5532,7 +5550,7 @@
 
   window.DATA = {
     products, sellers, clients, sales, movements, promos, liquidations, returns, payments, exchanges, loans,
-    sku, regenerateSkus, totalStock, hydrate, mkStock, emptyStock, SIZE_MARK,
+    sku, materializedSku, regenerateSkus, totalStock, hydrate, mkStock, emptyStock, SIZE_MARK,
     isV2Reference, createReference, updateReference, physicalSignature, skuPreview,
     effectiveSize, ornamentColorMode, referenceDimensionStats, skuConfigurationImpact,
     canonicalReferenceOrnamentColors, canonicalProductAttrs, referenceDiagnostics, referenceDifferences,

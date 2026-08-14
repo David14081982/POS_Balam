@@ -122,8 +122,8 @@ ok('20. Excel V2 exporta identidad técnica/logística y stock escalar',
   /barcodeCode/.test(xlsxSrc) && /recordModel/.test(xlsxSrc) && /stockQuantity/.test(xlsxSrc));
 ok('21. SKU duplicado es advertencia y barcode/ID duplicado es bloqueo',
   /SKU_DUPLICATE_WARNING/.test(xlsxSrc) && /BARCODE_DUPLICATE/.test(xlsxSrc));
-ok('22. la etiqueta muestra SKU pero no barcode como texto',
-  /sku:\s*s\.p\.sku/.test(inventorySrc) && /barcode:\s*s\.code/.test(inventorySrc));
+ok('22. la etiqueta muestra el SKU materializado pero no barcode como texto',
+  /sku:\s*D\.materializedSku\(s\.p,\s*s\.talla\)/.test(inventorySrc) && /barcode:\s*s\.code/.test(inventorySrc));
 ok('22a. Constructor informa longitud y aptitud Code128 sin confundir SKU con barcode V2',
   /Longitud esperada/.test(settingsSrc) && /V2 siempre codifica el barcode logístico/.test(settingsSrc));
 
@@ -169,6 +169,9 @@ function v2Terminal() {
 
 console.log('\n── Combinaciones físicas ejecutables ──');
 const runtime = v2Terminal();
+// Colisiones comerciales deliberadas: Color de ornamento forma referencia,
+// pero el administrador puede excluirlo del SKU.
+runtime.C.setCatalogMeta('ornament_color', { inSku: false });
 const baseDraft = {
   cat: '21', modelo: 'DAN', manga: 'ML', tela: 'ALG', color: 'BL', cuello: 'MAO',
   orn: 'Bordado Eléctrico', ornamentColorCodes: ['DRO'], sizeCategoryId: 'size_number',
@@ -191,8 +194,8 @@ ok('24. mismo color de ornamento + distinto Material crea otra identidad',
 ok('25. distinto Cuello crea otra identidad',
   a.id !== neckDifferent.id && a.physicalSignature !== neckDifferent.physicalSignature);
 ok('26. los SKU iguales sólo producen advertencias comerciales',
-  [colorDifferent, materialDifferent, neckDifferent].every(ref =>
-    (ref.referenceWarnings || []).some(warning => warning.code === 'SKU_DUPLICATE_WARNING')));
+  colorDifferent.sku === a.sku
+  && (colorDifferent.referenceWarnings || []).some(warning => warning.code === 'SKU_DUPLICATE_WARNING'));
 const multiA = { ...baseDraft, ornamentColorCodes: ['PLT', 'DRO', 'AZL'] };
 const multiB = { ...baseDraft, ornamentColorCodes: ['AZL', 'PLT', 'DRO'] };
 ok('27. una combinación multicolor tiene orden canónico estable',

@@ -1373,7 +1373,7 @@
 
     function labelItem(s) {
       if (imageCache.current[s.code] === undefined) imageCache.current[s.code] = B.toPNGDataURL(s.code, PRINT_OPTS);
-      return { name: s.p.nombre, image: imageCache.current[s.code], barcode: s.code, sku: s.p.sku, price: withPrice ? fmt(D.listPrice(s.p, s.talla)).replace('.00', '') : '' };
+      return { name: s.p.nombre, image: imageCache.current[s.code], barcode: s.code, sku: D.materializedSku(s.p, s.talla), price: withPrice ? fmt(D.listPrice(s.p, s.talla)).replace('.00', '') : '' };
     }
 
     function renderItems() {

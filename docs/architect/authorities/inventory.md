@@ -1,7 +1,7 @@
 ---
 capa: conocimiento
 applies_to: [domain, database]
-related_histories: [H-01, H-36, H-46, H-57, H-59, H-61, H-94]
+related_histories: [H-01, H-36, H-46, H-57, H-59, H-61, H-94, H-100]
 severity_max: required
 no_alcance: "No define ninguna autoridad ni transcribe firmas. Sólo dice qué pregunta responde cada una y dónde vive."
 ---
@@ -22,6 +22,15 @@ Reglas de mantenimiento en `../README.md` § Registro de autoridades.
 **Definición:** `balam/data.jsx`, `balam/config.jsx` y migración H-94
 **Creada por:** H-94 · **Decisión:** `ADR-013`
 **Consumidores:** `grep -rn "physicalSignature\|barcodeCode\|productId" balam/`
+
+## ¿Qué SKU visible corresponde a esta pieza o referencia?
+**Autoridad:** `DATA.materializedSku(producto, tallaExplícita)`; en V1 proyecta
+el SKU base con la talla seleccionada y en V2 devuelve el SKU ya derivado por
+`createReference()` desde `DATA.effectiveSize()`
+**Definición:** `balam/data.jsx`; la etiqueta sólo consume el resultado y no
+infiere talla ni reescribe el texto
+**Creada por:** H-100 · **Decisión:** `ADR-013`
+**Consumidores:** `grep -rn "materializedSku" balam/ test-*.mjs`
 
 ## ¿Cuál es la representación canónica de los atributos custom de un producto?
 **Autoridad:** `DATA.canonicalProductAttrs(attrs, options)` omite únicamente los

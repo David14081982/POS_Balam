@@ -15,11 +15,7 @@
   // Respaldo (SKUs viejos sin marcador): la talla se pega al final, como antes.
   function codeOf(p, talla) {
     if (D && D.isV2Reference && D.isV2Reference(p)) return String(p.barcodeCode || '').toUpperCase();
-    const mark = (D && D.SIZE_MARK) || 'T';
-    const parts = String(p.sku).split('-');
-    const i = parts.findIndex(seg => seg.toUpperCase() === mark.toUpperCase());
-    if (i >= 0) { parts[i] = String(talla); return parts.join('-').toUpperCase(); }
-    return `${p.sku}-${talla}`.toUpperCase();
+    return D.materializedSku(p, talla);
   }
 
   // Parseo heurístico (solo para saber si algo "parece" un código): la talla suele ir después del
