@@ -1,10 +1,11 @@
 # Chips compactos de existencias familiares
 
 **Riesgo:** H-103
-**Estado:** RESUELTO LOCALMENTE
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha:** 15/08/2026
 **Commit técnico:** `55ae37d`
-**Commit documental:** Pendiente de commit
+**Commit documental:** `dfdb5c5`
+**Commit de validación pública:** `7da216c`
 
 ## Problema y reproducción
 
@@ -42,11 +43,15 @@ barcode, POS, persistencia, sincronización ni esquema.
 - Smoke bundle: 17/17.
 - Build offline correcto mediante `node build-offline.mjs`.
 - Evidencia visual: `.evidence-h103/`.
+- E2E ejecutado sobre el archivo descargado de GitHub Pages: 9/9.
+- Pages sirve exactamente el blob Git
+  `7280802218eebc03c559652c3fd781419bdcdb01` (8,986,937 bytes; SHA-256
+  `5e208557fd24409264da46cf4e928a0b43884f7851bd71e87e1aa23c0a72d682`).
 
 ## Riesgo residual y pendientes
 
-Ninguno conocido en local. Pendientes commit, publicación y validación de bytes,
-que requieren autorización explícita conforme a BALAM QA.
+Ninguno conocido. La versión pública conserva la proyección familiar completa,
+el desglose de referencias repetidas y el patrón compacto sin overflow.
 
 ## Rollback
 

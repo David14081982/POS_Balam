@@ -5157,10 +5157,11 @@ porque la proyección no se persiste.
 
 ## H-103 - El detalle familiar perdió los chips compactos de existencias
 
-**Estado:** RESUELTO LOCALMENTE
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha de registro:** 15/08/2026
 **Commit técnico:** `55ae37d`
-**Commit documental:** Pendiente de commit
+**Commit documental:** `dfdb5c5`
+**Commit de validación pública:** `7da216c`
 **Origen:** revisión visual de Inventario posterior a H-102.
 **Reproducción:** Inventario → Detalle de producto → Existencias por talla
 presenta cada `sizeGroup` familiar como una fila de ancho completo; antes de
@@ -5177,8 +5178,11 @@ chips históricos, conservando `referenceFamilyProjection.sizeGroups`. Una talla
 con varias referencias mantiene stock agregado y desglose DRO/AZL dentro del
 mismo chip. H-103 9/9, H-102 31/31, responsive 492/492, navegación 15/15 y
 smoke bundle 17/17.
-**Riesgo residual:** ninguno conocido localmente; pendientes commit,
-publicación y comprobación de bytes por falta de autorización explícita.
+**Publicación:** Pages sirve exactamente el blob Git
+`7280802218eebc03c559652c3fd781419bdcdb01` (8,986,937 bytes; SHA-256
+`5e208557fd24409264da46cf4e928a0b43884f7851bd71e87e1aa23c0a72d682`).
+El E2E sobre esos bytes quedó 9/9 en 320/360/390/430/1280 px.
+**Riesgo residual:** ninguno conocido.
 
 ## Regla de actualización
 
