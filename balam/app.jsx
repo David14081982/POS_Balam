@@ -22,7 +22,7 @@
       return () => window.removeEventListener('syncstatuschange', refresh);
     }, []);
     const low = window.CONFIG.get('stock.lowThreshold') || 4;
-    const criticos = D.products.filter(p => D.totalStock(p) <= low);
+    const criticos = D.commercialProducts().filter(p => D.totalStock(p) <= low);
     const apartados = D.sales.filter(s => s.estado === 'Apartado');
     const items = [];
     if (criticos.length) items.push({ icon: 'alert', tone: '#ba1a1a', title: `${criticos.length} modelo(s) con stock crítico`, sub: criticos.slice(0, 3).map(p => p.nombre).join(', '), page: 'inventario' });
@@ -237,7 +237,7 @@
         h('nav', { key: 'nav', className: 'flex-1 px-3 flex flex-col gap-1' },
           navigation.filter(n => canAccess(n.id)).map(n => {
             const active = visiblePage === n.id;
-            const badge = n.liveBadge ? String(D.products.length) : n.badge;
+            const badge = n.liveBadge ? String(D.commercialProducts().length) : n.badge;
             return h('button', {
               key: n.id,
               className: 'min-h-11 flex items-center gap-3 py-2.5 rounded-lg transition-colors text-left ' + (navCollapsed ? 'justify-center px-0 ' : 'px-4 ') + (active ? 'font-semibold' : ''),

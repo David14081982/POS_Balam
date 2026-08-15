@@ -70,10 +70,11 @@
     const hh = hoyD.getHours();
     const saludo = (hh < 12 ? 'Buenos días' : hh < 19 ? 'Buenas tardes' : 'Buenas noches') + (usr && usr.nombre ? ', ' + String(usr.nombre).split(' ')[0] : '');
     const low = window.CONFIG.get('stock.lowThreshold') || 4;
+    const commercial = D.commercialProducts();
     const estrella = D.products.find(p => p.pop) || D.products[0];
-    const criticos = D.products.filter(p => D.totalStock(p) <= low);
+    const criticos = commercial.filter(p => D.totalStock(p) <= low);
     const apartados = D.sales.filter(s => s.estado === 'Apartado');
-    const saludInv = D.products.length ? Math.round((D.products.length - criticos.length) / D.products.length * 100) : 100;
+    const saludInv = commercial.length ? Math.round((commercial.length - criticos.length) / commercial.length * 100) : 100;
     // Piezas vendidas del modelo estrella (de ventas con líneas reales).
     const ventasEstrella = estrella ? D.sales.reduce((a, s) => a + (s.lineas || []).filter(l => l.sku === estrella.sku).reduce((b, l) => b + (l.qty || 0), 0), 0) : 0;
 

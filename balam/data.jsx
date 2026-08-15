@@ -311,6 +311,76 @@
       && p.referenceFamilyId === familyId);
   }
 
+  // H-102: autoridad comercial derivada. Una familia se presenta junta, pero
+  // esta proyección nunca sustituye a una referencia en una operación.
+  function referenceFamilyProjection(referenceOrFamilyId, collection) {
+    const sourceRows = (collection || products).filter(row => row && !row._deletedAt);
+    const direct = typeof referenceOrFamilyId === 'object' && referenceOrFamilyId
+      ? referenceOrFamilyId : sourceRows.find(row => row.id === referenceOrFamilyId
+        || row.referenceFamilyId === referenceOrFamilyId);
+    if (!direct || !isV2Reference(direct) || !direct.referenceFamilyId) return null;
+    const references = referenceFamily(direct, sourceRows);
+    if (!references.length) return null;
+    const values = (field, normalize = value => value) => references.map(row => normalize(row[field]));
+    const common = (field, normalize) => {
+      const list = values(field, normalize);
+      return list.every(value => JSON.stringify(value) === JSON.stringify(list[0])) ? list[0] : null;
+    };
+    const attributeKeys = new Set();
+    references.forEach(row => Object.keys(row.attrs || {}).forEach(key => attributeKeys.add(key)));
+    const commonAttributes = {}, mixedAttributes = [];
+    attributeKeys.forEach(key => {
+      const value = common('attrs', attrs => (attrs || {})[key]);
+      if (value === null) mixedAttributes.push(key); else commonAttributes[key] = value;
+    });
+    const groups = new Map();
+    references.forEach(reference => {
+      const effective = effectiveSize(reference);
+      const key = [effective.categoryId || reference.sizeCategoryId || '', effective.scale || reference.sizeScale || '', String(reference.sizeCode || '')].join('::');
+      if (!groups.has(key)) groups.set(key, {
+        key, sizeCategoryId: effective.categoryId || reference.sizeCategoryId || '',
+        sizeScale: effective.scale || reference.sizeScale || '', sizeCode: String(reference.sizeCode || ''),
+        label: effective.label || String(reference.sizeCode || ''), references: [], stock: 0,
+      });
+      const group = groups.get(key);
+      group.references.push(reference); group.stock += Math.max(0, Number(reference.stockQuantity) || 0);
+    });
+    const sizeGroups = Array.from(groups.values());
+    const prices = references.map(row => Number(listPrice(row, row.sizeCode)) || 0);
+    const skus = [...new Set(references.map(row => String(row.sku || '')))];
+    const ornamentColorGroups = [...new Set(references.map(row => JSON.stringify(canonicalReferenceOrnamentColors(row.ornamentColorCodes || row.ornColors || []))))]
+      .map(value => JSON.parse(value));
+    const total = references.reduce((sum, row) => sum + Math.max(0, Number(row.stockQuantity) || 0), 0);
+    const projection = {
+      recordModel: 'v2', isFamilyProjection: true, referenceFamilyId: direct.referenceFamilyId,
+      commercialKey: 'family:' + direct.referenceFamilyId, references,
+      totalStock: total, availableReferences: references.filter(row => Number(row.stockQuantity) > 0),
+      availableSizes: sizeGroups.filter(group => group.stock > 0), sizeGroups,
+      priceMin: Math.min(...prices), priceMax: Math.max(...prices), singlePrice: prices.every(price => price === prices[0]) ? prices[0] : null,
+      hasMultiplePrices: !prices.every(price => price === prices[0]),
+      sku: skus.length === 1 ? skus[0] : null, skuLabel: skus.length === 1 ? skus[0] : 'Varios SKU',
+      ornamentColorGroups, commonAttributes, mixedAttributes, referenceCount: references.length,
+    };
+    ['nombre','modelo','cat','manga','tela','color','cuello','orn','costo','imagen'].forEach(field => { projection[field] = common(field); });
+    projection.pop = references.some(row => row.pop);
+    projection.attrs = commonAttributes;
+    projection.searchText = references.map(row => [row.nombre,row.modelo,row.sku,row.barcodeCode,row.sizeCode,
+      ...Object.values(row.attrs || {})].join(' ')).join(' ').toLowerCase();
+    return projection;
+  }
+  function commercialProducts(collection) {
+    const rows = (collection || products).filter(row => row && !row._deletedAt);
+    const out = [], seen = new Set();
+    rows.forEach(row => {
+      if (!isV2Reference(row)) { out.push(row); return; }
+      if (seen.has(row.referenceFamilyId)) return;
+      seen.add(row.referenceFamilyId);
+      const projection = referenceFamilyProjection(row, rows);
+      if (projection) out.push(projection);
+    });
+    return out;
+  }
+
   // Convierte una captura agrupada en N referencias exactas. La selección es
   // autoridad de existencia: stock cero no elimina ni impide materializar.
   function materializeReferenceFamily(common, rows, collection, familyId) {
@@ -574,6 +644,7 @@
     };
   }
   function totalStock(p) {
+    if (p && p.isFamilyProjection) return Math.max(0, Number(p.totalStock) || 0);
     if (isV2Reference(p)) return Math.max(0, Number(p.stockQuantity) || 0);
     return resolveProductSizes(p).sizes.reduce((sum, size) => sum + (Number(size.stock) || 0), 0);
   }
@@ -5589,7 +5660,7 @@
   window.DATA = {
     products, sellers, clients, sales, movements, promos, liquidations, returns, payments, exchanges, loans,
     sku, materializedSku, regenerateSkus, totalStock, hydrate, mkStock, emptyStock, SIZE_MARK,
-    isV2Reference, createReference, updateReference, referenceFamily, materializeReferenceFamily, physicalSignature, skuPreview,
+    isV2Reference, createReference, updateReference, referenceFamily, referenceFamilyProjection, commercialProducts, materializeReferenceFamily, physicalSignature, skuPreview,
     effectiveSize, ornamentColorMode, referenceDimensionStats, skuConfigurationImpact,
     canonicalReferenceOrnamentColors, canonicalProductAttrs, referenceDiagnostics, referenceDifferences,
     physicalSnapshot, barcodeFromId, referenceHasOperations, reclassifyReference,

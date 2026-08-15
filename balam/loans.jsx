@@ -30,7 +30,7 @@
 (function () {
   const { useState, useMemo, useEffect, useRef } = React;
   const { fmt, fechaCorta, fechaHora, toast, Modal, Segment, Badge } = window.UI;
-  const { MS, GlassCard, SerifHeading, ProductImage } = window.HX;
+  const { MS, GlassCard, SerifHeading, ProductImage, ReferenceFamilyPicker } = window.HX;
   const C = window.CONFIG;
   const D = window.DATA;
   const h = React.createElement;
@@ -494,7 +494,8 @@
     const catalogo = useMemo(() => {
       const t = busca.trim().toLowerCase();
       if (!t) return [];
-      return D.products.filter(p => (
+      return D.commercialProducts().filter(p => (
+        p.isFamilyProjection ? p.searchText.includes(t) :
         p.nombre.toLowerCase().includes(t) || p.sku.toLowerCase().includes(t) || String(p.colorName || '').toLowerCase().includes(t)
       )).slice(0, 8);
     }, [busca]);
@@ -636,7 +637,7 @@
             }),
             catalogo.length ? h('div', { key: 'dd', className: 'absolute z-30 left-0 right-0 mt-1 bg-surface-container-lowest border border-outline-variant rounded-lg shadow-e3 max-h-64 overflow-y-auto' },
               catalogo.map(p => h('button', {
-                key: p.id, 'data-testid': 'prestamo-producto-' + p.sku, type: 'button',
+                key: p.commercialKey || p.id, 'data-testid': 'prestamo-producto-' + (p.commercialKey || p.sku), type: 'button',
                 className: 'w-full flex items-center gap-3 px-3 py-2 hover:bg-surface-container-low text-left transition-colors',
                 // Elegir la prenda cierra el desplegable, como en el Punto de venta:
                 // el paso siguiente es la talla y no debe quedar tapado.
@@ -654,7 +655,7 @@
         // se ofrecen las tallas con existencia, como en el POS; prestar una talla que
         // el sistema cree agotada es posible pero se pide expresamente, porque implica
         // que la existencia registrada está mal.
-        picking ? h('div', { key: 'tz', className: 'p-4 rounded-lg bg-surface-container-low mb-3' }, [
+        picking && !picking.isFamilyProjection ? h('div', { key: 'tz', className: 'p-4 rounded-lg bg-surface-container-low mb-3' }, [
           h('div', { key: 'h', className: 'flex items-center justify-between gap-3 mb-3' }, [
             h('div', { key: 'n', className: 'text-body font-semibold text-primary truncate' }, picking.nombre + ' · elige la talla'),
             h('button', {
@@ -712,6 +713,11 @@
           ]))
           : h('p', { key: 'e', className: 'text-caption text-on-surface-variant' }, 'Todavía no hay piezas en este préstamo.'),
       ]),
+
+      picking && picking.isFamilyProjection && h(ReferenceFamilyPicker, {
+        key: 'family-picker', projection: picking, title: 'Selecciona referencia para préstamo',
+        onClose: () => setPicking(null), onPick: agregar,
+      }),
 
       // 2) Persona que recibe
       h('div', { key: 'pe', className: 'mb-5' }, [

@@ -94,11 +94,11 @@ try {
     window.AUTH.canAccess = () => true;
     document.body.innerHTML = '<div id="h99-pdf-root"></div>';
     ReactDOM.createRoot(document.getElementById('h99-pdf-root')).render(React.createElement(window.InventoryScreen));
-    return rows.map(row => ({ id: row.id, sku: row.sku, barcode: row.barcodeCode }));
+    return rows.map(row => ({ id: row.id, familyId: row.referenceFamilyId, sku: row.sku, barcode: row.barcodeCode }));
   });
 
   // Ruta individual y cantidad > 1.
-  await page.getByTestId(`inventory-product-${fixtures[0].id}`).click();
+  await page.getByTestId(`inventory-product-family:${fixtures[0].familyId}`).click();
   await page.getByTestId('product-detail-labels').click();
   await page.getByTestId('labels-copies-input').fill('3');
   const individualDownload = page.waitForEvent('download');

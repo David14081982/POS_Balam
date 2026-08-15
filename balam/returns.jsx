@@ -6,7 +6,7 @@
 (function () {
   const { useState, useMemo } = React;
   const { toast, fmt, StatusBadge, Segment } = window.UI;
-  const { MS, GlassCard, SerifHeading, ProductImage } = window.HX;
+  const { MS, GlassCard, SerifHeading, ProductImage, ReferenceFamilyPicker } = window.HX;
   const C = window.CONFIG;
   const D = window.DATA;
   const h = React.createElement;
@@ -503,8 +503,9 @@
 
     const catalogo = useMemo(() => {
       const t = query.trim().toLowerCase();
-      return D.products.filter(p => !p._deletedAt && (!t
-        || String(p.nombre).toLowerCase().includes(t) || String(p.sku).toLowerCase().includes(t)))
+      return D.commercialProducts().filter(p => !t
+        || (p.isFamilyProjection ? p.searchText.includes(t)
+          : String(p.nombre).toLowerCase().includes(t) || String(p.sku).toLowerCase().includes(t)))
         .slice(0, 24);
     }, [query]);
 
@@ -795,8 +796,8 @@
             className: 'flex-1 h-10 px-3 bg-surface-container-low border border-outline-variant rounded-lg text-body focus:ring-1 focus:ring-primary' }),
         ]),
         h('div', { key: 'g', className: 'grid grid-cols-2 md:grid-cols-4 gap-2' }, catalogo.map(p => {
-          const r = D.priceRange(p);
-          return h('button', { key: p.id, onClick: () => setPicking(p),
+          const r = p.isFamilyProjection ? { unico: !p.hasMultiplePrices, min: p.priceMin, max: p.priceMax } : D.priceRange(p);
+          return h('button', { key: p.commercialKey || p.id, onClick: () => setPicking(p),
             className: 'text-left p-3 border border-outline-variant rounded-lg hover:border-primary transition-colors' }, [
             h('div', { key: 'n', className: 'text-caption text-primary font-semibold truncate' }, p.nombre),
             h('div', { key: 'p', className: 'text-overline text-on-surface-variant' }, r.unico ? fmt(r.min) : fmt(r.min) + ' – ' + fmt(r.max)),
@@ -824,7 +825,9 @@
     return h('div', { className: (embedded ? 'flex-1 min-h-0 ' : 'flex-1 min-h-0 ') + 'bg-background font-body text-on-surface p-6 flex gap-6' }, [
       trabajo,
       panel,
-      picking && h(ExchangeSizeModal, { key: 'sz', p: picking, onClose: () => setPicking(null), onPick: agregar }),
+      picking && (picking.isFamilyProjection
+        ? h(ReferenceFamilyPicker, { key: 'fm', projection: picking, title: 'Selecciona referencia para cambio', onClose: () => setPicking(null), onPick: agregar })
+        : h(ExchangeSizeModal, { key: 'sz', p: picking, onClose: () => setPicking(null), onPick: agregar })),
       cobro && h(window.CheckoutModal, {
         key: 'co', total: diferencia, itemCount: ent.reduce((a, l) => a + l.qty, 0),
         client: { generic: true, nombre: sale.cliente }, onClose: () => setCobro(false),

@@ -52,7 +52,7 @@ try {
   });
   await page.reload();
   await page.waitForFunction(id => window.DATA?.products?.some(row => row.id === id), pilot.firstId);
-  await page.getByTestId('inventory-product-' + pilot.firstId).click();
+  await page.getByTestId('inventory-product-family:' + pilot.familyId).click();
   await page.getByTestId('product-detail-edit').click();
   await page.getByTestId('reference-family-grid').waitFor();
 

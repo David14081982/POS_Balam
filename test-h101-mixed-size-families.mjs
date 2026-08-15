@@ -69,7 +69,8 @@ try {
   await page.waitForFunction(id => window.DATA?.products?.some(row => row.id === id), seeded.mId);
 
   const openEdit = async id => {
-    await page.getByTestId('inventory-product-' + id).click();
+    const family = await page.evaluate(productId => window.DATA.products.find(row => row.id === productId)?.referenceFamilyId, id);
+    await page.getByTestId('inventory-product-family:' + family).click();
     await page.getByTestId('product-detail-edit').click();
     await page.getByTestId('reference-family-grid').waitFor();
   };
@@ -131,7 +132,7 @@ try {
       return { code: error.code, unchanged: before === JSON.stringify(current) };
     }
   }, seeded.lId);
-  await page.getByTestId('inventory-product-' + seeded.lId).click();
+  await page.getByTestId('inventory-product-family:' + seeded.familyId).click();
   const reclassAction = await page.getByTestId('product-detail-reclassify').count();
   await page.getByTestId('product-detail-close').click();
   ok('C. convertir el mismo ID sigue bloqueado sin exponer reclasificación en Inventario', directConversion.code === 'REFERENCE_RECLASSIFICATION_REQUIRED'
@@ -139,6 +140,7 @@ try {
 
   // D/F · el borrador puede cambiar antes de confirmar; una variante 40/AZL crea otro ID.
   await openEdit(numeric40.id);
+  await page.getByTestId('product-size-category').selectOption('size_number');
   await page.getByTestId('family-add-variant').click();
   const draftRowKey = await page.evaluate(() => {
     const container = [...document.querySelectorAll('[data-testid^="family-variant-"]')]

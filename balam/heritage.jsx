@@ -65,5 +65,31 @@
       }));
   }
 
-  window.HX = { MS, MS_MAP, GlassCard, SerifHeading, ProductImage };
+  function ReferenceFamilyPicker({ projection, onPick, onClose, title = 'Selecciona referencia', includeZero = false }) {
+    const h = React.createElement, D = window.DATA, fmt = window.UI.fmt;
+    const groups = (projection && projection.sizeGroups || []).filter(group => includeZero || group.stock > 0);
+    return h(window.UI.Modal, { title, onClose }, h('div', { className: 'space-y-4', 'data-testid': 'reference-family-picker' },
+      groups.map(group => h('section', { key: group.key, className: 'rounded-xl border border-outline-variant p-3' }, [
+        h('div', { key: 'h', className: 'flex items-center justify-between gap-3 mb-2' }, [
+          h('strong', { key: 's', className: 'font-headline text-h2 text-primary' }, group.label),
+          h('span', { key: 'n', className: 'text-caption text-on-surface-variant' }, group.stock + ' disponibles'),
+        ]),
+        h('div', { key: 'r', className: 'grid gap-2' }, group.references.map(reference => {
+          const stock = Math.max(0, Number(reference.stockQuantity) || 0);
+          const colors = D.canonicalReferenceOrnamentColors(reference.ornamentColorCodes || reference.ornColors || []);
+          const variant = colors.length ? colors.join(' + ') : reference.sku;
+          return h('button', {
+            key: reference.id, type: 'button', disabled: stock <= 0, onClick: () => onPick(reference, reference.sizeCode),
+            'data-testid': 'reference-family-pick-' + reference.id,
+            className: 'min-h-12 px-3 py-2 rounded-lg border border-outline-variant text-left flex items-center gap-3 hover:border-primary disabled:opacity-45 disabled:cursor-not-allowed',
+          }, [
+            h('span', { key: 'v', className: 'flex-1 min-w-0 text-body font-semibold text-primary [overflow-wrap:anywhere]' }, variant),
+            h('span', { key: 's', className: 'text-caption text-on-surface-variant whitespace-nowrap' }, stock + ' pz'),
+            h('span', { key: 'p', className: 'font-headline text-body text-primary whitespace-nowrap' }, fmt(D.listPrice(reference, reference.sizeCode))),
+          ]);
+        })),
+      ]))));
+  }
+
+  window.HX = { MS, MS_MAP, GlassCard, SerifHeading, ProductImage, ReferenceFamilyPicker };
 })();

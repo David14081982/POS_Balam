@@ -52,12 +52,12 @@ try {
     window.AUTH.canAccess = () => true;
     document.body.innerHTML = '<div id="h99-root"></div>';
     ReactDOM.createRoot(document.getElementById('h99-root')).render(React.createElement(window.InventoryScreen));
-    return rows.map(row => ({ id: row.id, sku: row.sku, barcodeCode: row.barcodeCode }));
+    return rows.map(row => ({ id: row.id, familyId: row.referenceFamilyId, sku: row.sku, barcodeCode: row.barcodeCode }));
   });
 
   const measurements = [];
   for (const fixture of fixtures) {
-    await page.getByTestId(`inventory-product-${fixture.id}`).click();
+    await page.getByTestId(`inventory-product-family:${fixture.familyId}`).click();
     await page.getByTestId('product-detail-labels').click();
     const unifiedPreview = page.getByTestId('label-preview-stage').first().locator('.bx-label');
     const legacyPreview = page.getByTestId('label-preview-barcode').first().locator('..');

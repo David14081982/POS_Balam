@@ -131,9 +131,9 @@ try {
     return { width: rect.width, height: rect.height, overflow: body.scrollWidth - body.clientWidth };
   });
   check('15. responsive móvil ocupa la pantalla sin desbordamiento horizontal', mobile.width <= 390 && mobile.height <= 844 && mobile.overflow <= 1, JSON.stringify(mobile));
-  check('16. una referencia V2 nueva captura exactamente una talla y un stock escalar',
-    await page.getByTestId('product-reference-size').count() === 1
-    && await page.getByTestId('product-reference-stock').count() === 1
+  check('16. una referencia V2 nueva usa la captura familiar compacta y no la matriz V1',
+    await page.getByTestId('reference-family-grid').count() === 1
+    && await page.getByTestId('family-compact-stock-grid').count() === 1
     && await page.locator('[data-testid^="product-stock-"]').count() === 0);
   await page.getByTestId('product-cancel').click(); await page.setViewportSize({ width: 1440, height: 900 });
 

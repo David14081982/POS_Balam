@@ -5,10 +5,11 @@
   // H-36: antes de elegir talla el catálogo anuncia un rango; el precio real de
   // la talla aparece al elegirla y es el que circula por resumen y ticket.
   const precioCatalogo = (p) => {
+    if (p && p.isFamilyProjection) return p.singlePrice != null ? fmt(p.singlePrice) : fmt(p.priceMin) + ' – ' + fmt(p.priceMax);
     const r = window.DATA.priceRange(p);
     return r.unico ? fmt(r.min) : fmt(r.min) + ' – ' + fmt(r.max);
   };
-  const { MS, ProductImage } = window.HX;
+  const { MS, ProductImage, ReferenceFamilyPicker } = window.HX;
   const D = window.DATA;
   const h = React.createElement;
 
@@ -64,13 +65,15 @@
 
     const filtered = useMemo(() => {
       const q = query.trim().toLowerCase();
-      return D.products.filter(p => {
-        if (onlyPop && !p.pop) return false;
-        if (cat !== 'all' && p.cat !== cat) return false;
-        if (!D.sizeFilterMatch(p, talla)) return false;
-        if (color !== 'all' && p.color !== color) return false;
+      return D.commercialProducts().filter(p => {
+        const candidates = p.isFamilyProjection ? p.references : [p];
+        if (onlyPop && !candidates.some(row => row.pop)) return false;
+        if (cat !== 'all' && !candidates.some(row => row.cat === cat)) return false;
+        if (!candidates.some(row => D.sizeFilterMatch(row, talla))) return false;
+        if (color !== 'all' && !candidates.some(row => row.color === color)) return false;
         if (!q) return true;
-        return p.nombre.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q) || p.colorName.toLowerCase().includes(q);
+        return p.isFamilyProjection ? p.searchText.includes(q)
+          : p.nombre.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q) || p.colorName.toLowerCase().includes(q);
       });
     }, [query, cat, talla, color, onlyPop]);
 
@@ -300,7 +303,9 @@
       viewportBand === 'desktop' && ticketPanel,
       compactCart,
       cartOverlay,
-      sizePick && h(SizeModal, { key: 'sm', p: sizePick, onClose: () => setSizePick(null), onPick: addToTicket }),
+      sizePick && (sizePick.isFamilyProjection
+        ? h(ReferenceFamilyPicker, { key: 'fm', projection: sizePick, onClose: () => setSizePick(null), onPick: addToTicket })
+        : h(SizeModal, { key: 'sm', p: sizePick, onClose: () => setSizePick(null), onPick: addToTicket })),
       discountOpen && h(window.AdditionalDiscountModal, {
         key: 'ad', ticket: resolved, existing: additionalDiscounts,
         onClose: () => setDiscountOpen(false),
@@ -442,7 +447,7 @@
 
   // Tarjeta de producto (grid) — ref: slate refined
   function ProductCard({ p, onAdd }) {
-    const total = D.totalStock(p);
+    const total = p.isFamilyProjection ? p.totalStock : D.totalStock(p);
     const out = total === 0;
     const subtitle = (p.orn && p.orn !== '—') ? p.orn : D.TELA[p.tela];
     return h('div', {
@@ -458,7 +463,7 @@
       h('div', { key: 'b', className: 'p-5 flex flex-col flex-1' }, [
         h('div', { key: 'h', className: 'mb-3' }, [
           h('h3', { key: 'n', className: 'font-headline text-h2 text-primary leading-tight' }, p.nombre),
-          h('p', { key: 's', className: 'text-overline uppercase text-on-surface-variant mt-1 truncate' }, subtitle),
+          h('p', { key: 's', className: 'text-overline uppercase text-on-surface-variant mt-1 truncate' }, p.isFamilyProjection ? `${p.referenceCount} referencias disponibles` : subtitle),
         ]),
         h('div', { key: 'm', className: 'mt-auto flex justify-between items-center' }, [
           h('span', { key: 'p', className: 'font-headline text-h2 text-primary' }, precioCatalogo(p)),
@@ -474,7 +479,7 @@
 
   // Fila de producto (lista)
   function ProductRow({ p, onAdd }) {
-    const total = D.totalStock(p);
+    const total = p.isFamilyProjection ? p.totalStock : D.totalStock(p);
     const out = total === 0;
     return h('div', {
       className: 'flex items-center gap-4 p-3 hover:bg-surface-container-low transition-colors ' + (out ? 'opacity-50' : 'cursor-pointer'),
@@ -483,7 +488,7 @@
       h(ProductImage, { key: 't', p, className: 'w-12 h-14 shrink-0 rounded-lg ring-1 ring-outline-variant/50' }),
       h('div', { key: 'n', className: 'flex-1 min-w-0' }, [
         h('div', { key: 'a', className: 'font-headline text-body text-primary truncate' }, p.nombre),
-        h('div', { key: 'b', className: 'text-overline uppercase text-on-surface-variant' }, p.sku),
+        h('div', { key: 'b', className: 'text-overline uppercase text-on-surface-variant' }, p.isFamilyProjection ? `${total} piezas · ${p.referenceCount} referencias` : p.sku),
       ]),
       h('span', { key: 'm', className: 'font-headline text-body text-primary w-28 text-right' }, precioCatalogo(p)),
       h('button', {
