@@ -4,8 +4,9 @@ import { createServer } from 'node:http';
 import { createReadStream, mkdirSync } from 'node:fs';
 import { resolve, extname } from 'node:path';
 const root=resolve('.'),evidence=resolve('.evidence-h103');mkdirSync(evidence,{recursive:true});
+const artifact=process.env.BALAM_ARTIFACT_PATH?resolve(process.env.BALAM_ARTIFACT_PATH):resolve(root,'index.html');
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css'};
-const server=createServer((req,res)=>{const path=resolve(root,decodeURIComponent(req.url.split('?')[0]).replace(/^\//,'')||'index.html');if(!path.startsWith(root)){res.writeHead(403);res.end();return;}res.writeHead(200,{'Content-Type':mime[extname(path)]||'application/octet-stream'});createReadStream(path).on('error',()=>{res.writeHead(404);res.end();}).pipe(res);});
+const server=createServer((req,res)=>{const relative=decodeURIComponent(req.url.split('?')[0]).replace(/^\//,'')||'index.html';const path=relative==='index.html'?artifact:resolve(root,relative);if(relative!=='index.html'&&!path.startsWith(root)){res.writeHead(403);res.end();return;}res.writeHead(200,{'Content-Type':mime[extname(path)]||'application/octet-stream'});createReadStream(path).on('error',()=>{res.writeHead(404);res.end();}).pipe(res);});
 await new Promise(done=>server.listen(8913,'127.0.0.1',done));let pass=0,fail=0;const ok=(name,value,detail='')=>{console.log(`${value?'✅':'❌'} ${name}${detail?` · ${detail}`:''}`);value?pass++:fail++;};let browser;
 try{
   browser=await chromium.launch({channel:'chrome',headless:true});
