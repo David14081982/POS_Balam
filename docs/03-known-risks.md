@@ -5155,6 +5155,31 @@ La matriz E2E sobre esos bytes quedó 16/16.
 **Riesgo residual:** ninguno conocido; no hay migración o rollback de datos
 porque la proyección no se persiste.
 
+## H-103 - El detalle familiar perdió los chips compactos de existencias
+
+**Estado:** RESUELTO LOCALMENTE
+**Fecha de registro:** 15/08/2026
+**Commit técnico:** `55ae37d`
+**Commit documental:** Pendiente de commit
+**Origen:** revisión visual de Inventario posterior a H-102.
+**Reproducción:** Inventario → Detalle de producto → Existencias por talla
+presenta cada `sizeGroup` familiar como una fila de ancho completo; antes de
+H-102 usaba chips compactos con talla y piezas distribuidos mediante flex-wrap.
+**Riesgo:** el desglose familiar es correcto, pero desperdicia espacio y rompe
+el idioma visual histórico del detalle, especialmente en móvil.
+**Alcance:** restaurar exclusivamente el patrón visual previo para existencias,
+manteniendo `referenceFamilyProjection`, sus grupos y el desglose de variantes.
+**No alcance:** DATA, `products.id`, `reference_family_id`, stock, SKU,
+barcode, POS, persistencia, sincronización o esquema.
+**Corrección documentada:** `docs/fixes/chips-existencias-familiares.md`.
+**Cierre local:** se restauraron exactamente el contenedor `flex-wrap` y los
+chips históricos, conservando `referenceFamilyProjection.sizeGroups`. Una talla
+con varias referencias mantiene stock agregado y desglose DRO/AZL dentro del
+mismo chip. H-103 9/9, H-102 31/31, responsive 492/492, navegación 15/15 y
+smoke bundle 17/17.
+**Riesgo residual:** ninguno conocido localmente; pendientes commit,
+publicación y comprobación de bytes por falta de autorización explícita.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:
