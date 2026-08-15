@@ -395,6 +395,12 @@
   function all(kind) { return (state.catalogs[kind] || []).slice(); }
   // Solo activos — para los consumidores de la app
   function list(kind) { return (state.catalogs[kind] || []).filter(it => it.active !== false); }
+  // Consumidores de captura: activos, más los inactivos que ya pertenecían al
+  // registro editado. Un valor histórico se resuelve, pero nunca nace de nuevo.
+  function selectable(kind, historicalCodes) {
+    const historical = new Set((historicalCodes || []).map(String));
+    return all(kind).filter(it => it.active !== false || historical.has(String(it.code)));
+  }
   // { code: label } de los activos, preservando orden — reemplaza los mapas viejos (D.CAT, etc.)
   function map(kind) {
     const o = {};
@@ -858,7 +864,7 @@
   }
 
   window.CONFIG = {
-    all, list, map, metaMap, codes, find, get, settings, inUse, sizeCodeReferences,
+    all, list, selectable, map, metaMap, codes, find, get, settings, inUse, sizeCodeReferences,
     catalogMeta, allCatalogMeta, sizeCategories, catalogLabel, fieldOf, skuParts, referenceParts, modeloKind,
     h94TargetSnapshot,
     addItem, updateItem, setActive, removeItem, move, setCatalogMeta, moveSkuOrder, addCatalog, removeCatalog, importCatalogs, setSetting, setSettings,

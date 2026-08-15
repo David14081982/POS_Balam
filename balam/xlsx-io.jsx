@@ -457,7 +457,7 @@
     const found = items.find(item => String(item.code) === value)
       || items.find(item => String(item.code).toLowerCase() === value.toLowerCase())
       || items.find(item => String(item.label).toLowerCase() === value.toLowerCase());
-    if (!found) {
+    if (!found || (kind === 'ornament_color' && found.active === false)) {
       if (unknowns) { unknowns.push({ kind, header, value }); return value; }
       rowError(idx, header, `el valor «${value}» no existe en el catálogo ${kind}.`);
     }
@@ -836,6 +836,7 @@
     const direct = { 'Categoría': 'cat', 'Manga': 'manga', 'Material': 'tela', 'Color Tela': 'color', 'Ornamento': 'orn', 'Cuello': 'cuello' };
     if (direct[issue.header]) return String(target[direct[issue.header]]) === String(issue.value);
     if (issue.header === 'Colores Orn.') return (target.ornColors || []).map(String).includes(String(issue.value));
+    if (issue.header === 'Colores de ornamento V2') return (target.ornamentColorCodes || []).map(String).includes(String(issue.value));
     if (issue.header === 'Colores Orn. por talla') {
       return Object.values(((target.attrs || {}).__ornamentColorsBySize) || {}).some(colors => (colors || []).map(String).includes(String(issue.value)));
     }

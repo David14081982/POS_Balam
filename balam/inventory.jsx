@@ -1040,10 +1040,11 @@
       onClose();
     };
 
-    const renderColorSelector = ({ pickerId, selected, onToggle, optionTestId, toggleTestId, closeTestId }) => {
+    const renderColorSelector = ({ pickerId, selected, historicalCodes, onToggle, optionTestId, toggleTestId, closeTestId }) => {
       const open = colorPicker === pickerId;
       const referenceColors = d.recordModel === 'v2';
-      const colorItems = window.CONFIG.all(referenceColors ? 'ornament_color' : 'color');
+      const kind = referenceColors ? 'ornament_color' : 'color';
+      const colorItems = window.CONFIG.selectable(kind, historicalCodes || []);
       const names = Object.fromEntries(colorItems.map(item => [item.code, item.label]));
       const hexes = Object.fromEntries(colorItems.map(item => [item.code, (item.meta || {}).hex || '#8b9099']));
       const selectedSet = new Set((selected || []).map(String));
@@ -1055,7 +1056,9 @@
           ...canonical.map(code => h('button', {
             key: code, type: 'button', onClick: () => onToggle(code), title: `Quitar ${names[code]}`,
             className: 'inline-flex items-center gap-1.5 min-h-9 px-2.5 border border-primary/40 bg-surface-container rounded-lg text-overline font-semibold text-primary',
-          }, [h('span', { key: 'sw', className: 'w-3.5 h-3.5 rounded-full border border-outline-variant', style: { background: hexes[code] } }), code, h(MS, { key: 'x', name: 'close', size: 13 })])),
+            }, [h('span', { key: 'sw', className: 'w-3.5 h-3.5 rounded-full border border-outline-variant', style: { background: hexes[code] } }), code,
+              (window.CONFIG.find(kind, code) || {}).active === false ? ' · Histórico' : null,
+              h(MS, { key: 'x', name: 'close', size: 13 })])),
           h('button', {
             key: 'toggle', type: 'button', 'data-testid': toggleTestId, 'aria-expanded': open ? 'true' : 'false',
             className: 'inline-flex items-center gap-2 min-h-10 px-3 border border-outline-variant rounded-lg text-caption font-semibold text-on-surface-variant hover:border-primary hover:text-primary transition-colors',
@@ -1159,9 +1162,15 @@
     const familyColorMap = () => expandirColoresOrnamento(d.ornamentColorRows.filter(row => (row.tallas || []).length), d.recordModel === 'v2');
     const effectiveFamilyPrice = row => row.precio !== '' && row.precio != null
       ? Number(row.precio) || 0 : Number(familyPriceMap()[referenceRowSizeKey(row, d.sizeCategoryId)] ?? d.precio) || 0;
-    const effectiveFamilyColors = row => Array.isArray(row.ornamentColorCodes)
-      ? D.canonicalReferenceOrnamentColors(row.ornamentColorCodes)
-      : D.canonicalReferenceOrnamentColors(familyColorMap()[referenceRowSizeKey(row, d.sizeCategoryId)] || d.ornColors || []);
+    const historicalFamilyColors = row => row && row.id
+      ? D.canonicalReferenceOrnamentColors(((row.source || {}).ornamentColorCodes) || ((row.source || {}).ornColors) || []) : [];
+    const effectiveFamilyColors = row => {
+      const values = Array.isArray(row.ornamentColorCodes)
+        ? D.canonicalReferenceOrnamentColors(row.ornamentColorCodes)
+        : D.canonicalReferenceOrnamentColors(familyColorMap()[referenceRowSizeKey(row, d.sizeCategoryId)] || d.ornColors || []);
+      const allowed = new Set(window.CONFIG.selectable('ornament_color', historicalFamilyColors(row)).map(item => String(item.code)));
+      return values.filter(code => allowed.has(String(code)));
+    };
     const physicalExceptionRows = standardFamilyRows.filter(row => referenceCaptureKinds.some(kind =>
       Object.prototype.hasOwnProperty.call(row.attrs || {}, kind)));
     const renderVariantEditor = (row, index, isAdditional) => h('div', {
@@ -1193,7 +1202,7 @@
           'data-testid': 'family-variant-price-' + row.rowKey, onChange: event => setFamilyRow(row.rowKey, { precio: event.target.value }) })),
         isAdditional && h('div', { key: 'colors', className: 'sm:col-span-2 lg:col-span-1 min-w-0' }, [
           h('p', { key: 'l', className: 'text-caption font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5' }, 'Colores de ornamento'),
-          renderColorSelector({ pickerId: 'variant-' + row.rowKey, selected: effectiveFamilyColors(row),
+          renderColorSelector({ pickerId: 'variant-' + row.rowKey, selected: effectiveFamilyColors(row), historicalCodes: historicalFamilyColors(row),
             onToggle: color => {
               const current = effectiveFamilyColors(row);
               setFamilyRow(row.rowKey, { ornamentColorCodes: current.includes(color) ? current.filter(value => value !== color) : current.concat(color) });
@@ -1458,7 +1467,9 @@
           }, false, 'product-ornament'), null, attemptedSubmit && errors.find(error => error.code === 'catalog-ornament')),
           D.ornamentSupportsColors(d) && h('div', { key: 'colors', className: 'lg:col-span-2' }, [
             h('p', { key: 'label', className: 'text-caption font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5' }, 'Colores generales del ornamento'),
-            renderColorSelector({ pickerId: 'general', selected: d.ornColors, onToggle: toggleOrn, optionTestId: code => `product-general-color-${code}`, toggleTestId: 'general-color-selector-toggle', closeTestId: 'general-color-selector-close' }),
+            renderColorSelector({ pickerId: 'general', selected: d.ornColors,
+              historicalCodes: mode === 'edit' ? (product.ornamentColorCodes || product.ornColors || []) : [],
+              onToggle: toggleOrn, optionTestId: code => `product-general-color-${code}`, toggleTestId: 'general-color-selector-toggle', closeTestId: 'general-color-selector-close' }),
             attemptedSubmit && errors.find(error => error.code === 'ornament-color-required')
               ? h('p', { key: 'required-error', className: 'mt-2 text-caption text-danger', role: 'alert' }, errors.find(error => error.code === 'ornament-color-required').message) : null,
             h('p', { key: 'help', className: 'text-overline text-on-surface-variant/70 mt-2' }, 'Todas las tallas heredan estos colores salvo que tengan una excepción.'),
