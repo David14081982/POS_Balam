@@ -457,16 +457,14 @@
                  }, sizeResolution.ambiguous
                    ? 'El producto conserva existencias en más de una categoría. Edítalo y elige una categoría antes de venderlo.'
                    : 'El producto no tiene una categoría por talla asignada. Edítalo para completar la relación.'),
-                  h('div', { key: 'g', className: 'grid gap-2' }, resolvedSizes.map(size =>
-                   h('div', { key: size.key || size.sizeId, className: 'min-w-[48px] px-3 py-2 border border-outline-variant rounded' }, [
-                     h('div', { key: 'sum', className: 'flex justify-between gap-3' }, [
-                       h('span', { key: 't', className: 'text-caption font-semibold text-primary' }, size.label),
-                       h('span', { key: 's', className: 'text-caption text-on-surface-variant' }, size.stock + ' pz'),
-                     ]),
-                     p.isFamilyProjection && size.references.length > 1 ? h('div', { key: 'variants', className: 'mt-2 space-y-1' }, size.references.map(ref =>
-                       h('div', { key: ref.id, className: 'flex justify-between gap-3 text-overline text-on-surface-variant' }, [
+                  h('div', { key: 'g', className: 'flex flex-wrap gap-2', 'data-testid': 'product-detail-size-stock' }, resolvedSizes.map(size =>
+                   h('div', { key: size.key || size.sizeId, className: 'flex flex-col items-center min-w-[48px] px-2 py-1.5 border border-outline-variant rounded', 'data-testid': 'product-detail-size-chip' }, [
+                     h('span', { key: 't', className: 'text-caption font-semibold text-primary' }, size.label),
+                     h('span', { key: 's', className: 'text-overline text-on-surface-variant' }, size.stock + ' pz'),
+                     p.isFamilyProjection && size.references.length > 1 ? h('div', { key: 'variants', className: 'mt-1 pt-1 border-t border-outline-variant space-y-0.5', 'data-testid': 'product-detail-size-variants' }, size.references.map(ref =>
+                       h('div', { key: ref.id, className: 'flex items-center justify-between gap-2 text-overline text-on-surface-variant' }, [
                          h('span', { key: 'v' }, D.canonicalReferenceOrnamentColors(ref.ornamentColorCodes || []).join(' + ') || ref.sku),
-                         h('span', { key: 'n' }, ref.stockQuantity + ' pz · ' + precioTexto(ref)),
+                         h('span', { key: 'n', className: 'whitespace-nowrap' }, ref.stockQuantity + ' pz · ' + precioTexto(ref)),
                        ]))) : null,
                    ]))),
               ]),
