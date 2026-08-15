@@ -616,6 +616,29 @@
     else if (size) tokens.push(size);
     return tokens.filter(token => token !== '').join('-').toUpperCase();
   }
+
+  // H-104: representación exclusivamente visual de una familia en la lista de
+  // Inventario. Deriva la receta vigente y sólo considera referencias con
+  // existencia; no altera ni sustituye ningún SKU persistido.
+  function familyVisualSku(product) {
+    if (!product || !product.isFamilyProjection) return String(product && product.sku || '');
+    const available = (product.availableReferences || (product.references || [])
+      .filter(reference => Number(reference.stockQuantity) > 0));
+    if (!available.length) return String(product.skuLabel || 'Sin existencias');
+    if (available.length === 1) return materializedSku(available[0]);
+    if (!(C && typeof C.skuParts === 'function')) return String(product.skuLabel || 'Varios SKU');
+    const parts = C.skuParts().map(part => {
+      const meta = Object.assign({}, C.catalogMeta(part.kind) || {}, part);
+      const tokens = available.map(reference => {
+        const value = skuPartToken(reference, part.kind, meta);
+        return value == null ? '' : String(value);
+      });
+      const common = tokens.every(token => token === tokens[0]);
+      if (common) return tokens[0];
+      return meta.effectiveSize || meta.sizeSlot ? SIZE_MARK : '[VAR]';
+    }).filter(value => value !== '');
+    return parts.join('-') || String(product.skuLabel || 'Varios SKU');
+  }
   function skuPreview(p, extraKinds) {
     const meta = C && C.allCatalogMeta ? C.allCatalogMeta() : {};
     return skuFromMeta(p, meta, extraKinds);
@@ -5659,7 +5682,7 @@
 
   window.DATA = {
     products, sellers, clients, sales, movements, promos, liquidations, returns, payments, exchanges, loans,
-    sku, materializedSku, regenerateSkus, totalStock, hydrate, mkStock, emptyStock, SIZE_MARK,
+    sku, materializedSku, familyVisualSku, regenerateSkus, totalStock, hydrate, mkStock, emptyStock, SIZE_MARK,
     isV2Reference, createReference, updateReference, referenceFamily, referenceFamilyProjection, commercialProducts, materializeReferenceFamily, physicalSignature, skuPreview,
     effectiveSize, ornamentColorMode, referenceDimensionStats, skuConfigurationImpact,
     canonicalReferenceOrnamentColors, canonicalProductAttrs, referenceDiagnostics, referenceDifferences,

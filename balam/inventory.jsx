@@ -332,7 +332,7 @@
                 h(ProductImage, { key: 'i', p, className: 'w-12 h-14 rounded shadow-e1 border border-outline-variant shrink-0' }),
                 h('div', { key: 'copy', className: 'flex-1 min-w-0' }, [
                   h('div', { key: 'name', className: 'font-bold text-body text-primary whitespace-normal [overflow-wrap:anywhere]' }, p.nombre),
-                  h('div', { key: 'sku', className: 'mt-1 text-overline font-mono text-on-surface-variant [overflow-wrap:anywhere]' }, p.isFamilyProjection ? `${p.referenceCount} referencias · ${p.skuLabel}` : p.sku),
+                  h('div', { key: 'sku', 'data-testid': 'inventory-sku-mobile', className: 'mt-1 text-overline font-mono text-on-surface-variant [overflow-wrap:anywhere]' }, p.isFamilyProjection ? `${p.referenceCount} referencias · ${D.familyVisualSku(p)}` : p.sku),
                   h('div', { key: 'meta', className: 'mt-2 flex flex-wrap items-center gap-2' }, [h(StockPill, { key: 'stock', n: total }), h('span', { key: 'price', className: 'font-headline text-body text-primary' }, precioTexto(p))]),
                 ]),
                 h(MS, { key: 'next', name: 'chevRight', size: 20, className: 'shrink-0 text-on-surface-variant' }),
@@ -350,7 +350,7 @@
                   h(ProductImage, { key: 'i', p, className: 'w-12 h-14 rounded shadow-e1 border border-outline-variant shrink-0' }),
                   h('span', { key: 'x', className: 'font-bold text-body text-primary' }, p.nombre),
                 ])),
-                h('td', { key: 's', className: 'px-4 py-4' }, h('span', { className: 'text-overline font-mono text-on-surface-variant' }, p.isFamilyProjection ? p.skuLabel : p.sku)),
+                h('td', { key: 's', className: 'px-4 py-4' }, h('span', { 'data-testid': 'inventory-sku-desktop', className: 'text-overline font-mono text-on-surface-variant' }, p.isFamilyProjection ? D.familyVisualSku(p) : p.sku)),
                 h('td', { key: 'a', className: 'px-4 py-4' }, h('div', { className: 'flex flex-wrap gap-1.5' },
                   [(D.MANGA[p.manga] || p.manga || '—').replace('Manga ', 'M. '), p.orn, D.CUELLO[p.cuello] || p.cuello].map((t, i) => h('span', { key: i, className: 'px-2 py-0.5 bg-surface-container-high rounded text-overline font-bold uppercase text-on-surface-variant' }, t)))),
                 h('td', { key: 'c', className: 'px-4 py-4' }, h('div', { className: 'flex flex-col gap-1.5' }, [
