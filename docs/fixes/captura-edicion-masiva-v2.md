@@ -4,6 +4,7 @@
 **Estado:** RESUELTO  
 **Fecha:** 14/08/2026  
 **Commit técnico:** `b2603e1ba20e9ab40e01fb3e18d5952f51a9fde7`  
+**Commit corrección UX:** `f4992dc1c4305ce6d26df3f83a7b43fdd6f14543`  
 **Commit documental:** Pendiente de commit
 
 ## Problema y reproducción
@@ -137,6 +138,10 @@ Corrección UX:
   360, 390, 430, 768, 1024 y 1280 px;
 - comparación visual: `.evidence-h101-ux/before-v1-stock.png`,
   `before-v2-stock.png` y `after-v2-stock.png`.
+- GitHub Pages run `31869801776`: `success` para `f4992dc`;
+- bytes UX publicados: 8,983,318; SHA-256
+  `3731d1114131bcd279f091141130cf1eba26623097345e5a23f68f55e60446cb`,
+  idénticos al blob Git.
 
 ## Despliegue y rollback
 

@@ -5101,6 +5101,9 @@ stock, precio/color general, excepciones agrupadas y resumen efectivo; las
 variantes físicas quedaron bajo divulgación progresiva. No cambió persistencia,
 RPC, Excel ni Supabase. Nuevo ADRIANO 10/10, Editar 12/12, responsive específico
 sin overflow en 320–1280 px y regresiones H-94/H-95/H-100 verdes.
+Commit UX `f4992dc`; Pages run `31869801776` exitoso; bytes publicados
+8,983,318, SHA-256
+`3731d1114131bcd279f091141130cf1eba26623097345e5a23f68f55e60446cb`.
 
 ## Regla de actualización
 
