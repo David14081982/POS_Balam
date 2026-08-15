@@ -5218,6 +5218,30 @@ son exactamente el blob H-104 tras la normalización CRLF→LF realizada por
 Pages. La columna SKU pública quedó verde 18/18 en 320/360/390/430/1280 px.
 **Riesgo residual:** ninguno conocido.
 
+## H-105 — Alias activos duplican colores de ornamento
+
+**Estado:** RESUELTO
+**Fecha de registro:** 15/08/2026
+**Evidencia:** `ornament_color` conserva AZL/NE activos mientras el catálogo
+autoritativo `color` publica AZ/NEG. AZL identifica 15 referencias V2 de cuatro
+familias; NE no tiene uso. El selector usa `CONFIG.all()` y permite reutilizar
+inactivos en altas nuevas.
+**Riesgo:** crear referencias físicamente artificiales o romper identidades
+históricas si un alias se reinterpreta silenciosamente.
+**Alcance:** espejo idempotente `color` → `ornament_color`, AZL histórico no
+seleccionable, eliminación de NE sin uso y compatibilidad exacta de Excel.
+**No alcance:** productos, stock, SKU, barcode, IDs, familias, firmas físicas,
+POS, etiquetas ni migración AZL→AZ.
+**Corrección documentada:** `docs/fixes/catalogo-color-ornamento-h105.md`.
+**Despliegue:** migraciones local/remoto `20260815014700` y
+`20260815014800`; la huella completa de `pos.products` permaneció idéntica.
+El contrato remoto confirma espejo activo exacto, AZL inactivo y NE ausente.
+**Pruebas:** H-105 6/6, H-101 26/26 + 12/12 + 10/10 + 10/10, Excel H-86
+42/42, H-102 31/31, H-103 15/15, responsive 492/492, smoke bundle 17/17 y
+migraciones local/remoto alineadas. Commit técnico `395f1d0`.
+**Riesgo residual:** ninguno conocido; AZL sigue resolviendo exclusivamente las
+15 referencias históricas existentes, sin reinterpretación.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:
