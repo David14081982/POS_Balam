@@ -5055,6 +5055,47 @@ SHA-256 `9ba27034464cffcb9b94d808ca0beb10016519493ebc5de0f3c3bb5173697f61`.
 **Riesgo residual:** ninguno conocido; no hubo migración ni cambio de datos.
 **Corrección documentada:** `docs/fixes/sku-materializado-en-etiquetas.md`.
 
+## H-101 - Captura y edición V2 obligan a operar una referencia por vez
+
+**Estado:** RESUELTO
+**Fecha de registro:** 14/08/2026
+**Commit:** Pendiente de commit
+**Origen:** brecha operativa confirmada entre el editor multitalle V1 y el
+modelo de referencias físicas V2 de H-94.
+**Reproducción:** «Nuevo producto» crea una sola referencia V2 y «Editar» abre
+únicamente el `products.id` seleccionado. Registrar o mantener un modelo con
+varias tallas, precios y colores exige repetir el formulario por cada referencia.
+El modelo tampoco persiste una identidad autoritativa que permita reconstruir
+qué referencias nacieron en la misma alta comercial.
+**Riesgo:** la identidad física V2 es correcta, pero su costo operativo induce
+capturas incompletas, omisión de referencias con stock cero y ediciones manuales
+inconsistentes entre tallas hermanas.
+**Alcance aprobado:** `reference_family_id` administrativo; alta y edición
+agrupadas; captura temporal de precio/color general y excepciones; misma talla
+con múltiples referencias; stock cero explícitamente seleccionable; escrituras
+por IDs exactos, concurrencia, auditoría, Excel, offline, Realtime,
+reclasificación y responsive.
+**No alcance:** convertir V2 a V1, reescribir los 1,378 productos V1, usar
+familia como identidad física/logística/comercial, ejecutar Punto Cero, cargar
+inventario real o modificar documentos POS/posventa.
+**Evidencia de causa:** `products.id`, `barcode_code` y `physical_signature`
+identifican una referencia individual; SKU/nombre/modelo no son identidad; el
+esquema, los mapeos STORE y Excel carecen de una relación administrativa
+persistente. No existe una heurística estable para inferir hermanos.
+**Contrato aprobado:** V1 como experiencia de captura y V2 como modelo de
+persistencia. Una combinación seleccionada puede materializarse con
+`stockQuantity = 0`; una referencia agotada conserva ID, barcode, SKU y familia.
+`captureScope` será metadata interna de CONFIG con defaults documentados y sin
+un nuevo control visible.
+**Corrección documentada:** `docs/fixes/captura-edicion-masiva-v2.md`.
+**Cierre:** familia UUID administrativa persistida extremo a extremo; alta y
+edición agrupadas conservan filas V2 independientes, stock cero y múltiples
+referencias de una misma talla. Las guardas remotas rechazan V1 y familias
+ajenas. Migraciones local/remoto alineadas hasta `20260814014600`; H-101 26/26,
+piloto 9/9 y regresiones H-94/H-95/H-100 verdes. Commit técnico `b2603e1`;
+Pages run `31857750206` exitoso y bytes publicados SHA-256
+`056d2565d43bc0d1ffe961795965df1f6443d70b823dea76892642c6b861f972`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

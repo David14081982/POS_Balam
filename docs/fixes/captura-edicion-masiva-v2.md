@@ -1,0 +1,118 @@
+# Captura y edición masiva de referencias V2
+
+**Riesgo:** H-101  
+**Estado:** RESUELTO  
+**Fecha:** 14/08/2026  
+**Commit técnico:** `b2603e1ba20e9ab40e01fb3e18d5952f51a9fde7`  
+**Commit documental:** Pendiente de commit
+
+## Problema y reproducción
+
+El editor exponía una sola referencia V2 por operación y no existía una
+identidad administrativa autoritativa para reconstruir las referencias nacidas
+en una misma alta. La administradora debía repetir manualmente talla, stock,
+precio y colores; además, una referencia deseada con stock cero no podía
+distinguirse de una combinación que no se deseaba crear.
+
+## Causa raíz
+
+H-94 separó correctamente cada combinación física en una fila, pero cliente,
+Supabase, Excel y caché sólo persistían identidad individual. SKU, nombre,
+modelo, atributos y firma física no permiten inferir parentesco sin errores. La
+UI V2 proyectaba literalmente esa granularidad técnica.
+
+## Diseño
+
+Se conserva el principio aprobado: **V1 como experiencia de captura; V2 como
+modelo de persistencia**. `reference_family_id` es un UUID administrativo que
+agrupa referencias sin sustituir `products.id`, `barcode_code`, SKU ni firma
+física. La relación nunca se infiere.
+
+Cada combinación seleccionada materializa una fila V2, incluso con
+`stockQuantity = 0`. Precio general, colores generales y sus excepciones se
+materializan en cada referencia. La misma talla puede repetirse con variantes
+físicas diferentes. `captureScope` permanece como metadata interna: categoría,
+modelo, manga, material, color de tela, cuello y ornamento son comunes por
+defecto; talla efectiva, color de ornamento, corte y características son por
+referencia. Precio y stock son estructuralmente por referencia.
+
+La edición abre únicamente los hermanos que comparten el UUID exacto y escribe
+IDs exactos. Una talla nueva recibe ID/barcode propios sin cambiar los anteriores.
+Una reclasificación no cambia de familia silenciosamente: el editor bloquea el
+cambio de categoría de referencias usadas y remite al flujo explícito de
+reclasificación. Excel V3 preserva la relación mediante la columna técnica
+oculta `_BALAM_REFERENCE_FAMILY_ID`, manteniendo `_BALAM_ID_PRODUCTO` como
+autoridad de actualización.
+
+## Solución
+
+- `balam/config.jsx`: contrato interno `captureScope`.
+- `balam/data.jsx`: creación, hidratación, consulta y materialización de familias.
+- `balam/inventory.jsx`: alta/edición agrupada, selección independiente del
+  stock, múltiples referencias por talla, excepciones y resumen efectivo.
+- `balam/store.jsx`: mapeo Realtime/pull, cola offline por IDs exactos y RPC
+  transaccional familiar.
+- `balam/xlsx-io.jsx`: esquema V3 y round-trip de familia sin sustituir ID.
+- `20260814014300/14400`: columna, singleton V2, índice, RPC auditado y
+  verificación estructural.
+- `20260814014500/14600`: guarda adicional que rechaza IDs V1 o V2 de otra
+  familia, oculta el RPC interno y verifica V1 con familia nula.
+
+El RPC exige `inventory.adjust`, protocolo/época vigentes, operación idempotente,
+IDs únicos, familia única y concurrencia optimista mediante el trigger existente.
+Un error conserva el lote en la cola local-first; no se fusionan referencias.
+
+## Integridad remota
+
+`supabase migration list --linked` alinea local/remoto hasta
+`20260814014600`; `supabase db push --dry-run --linked` respondió
+`Remote database is up to date`.
+
+La línea base autorizada permanece en **1,378 V1 y 3,334 piezas**. La prueba de
+impacto de las migraciones acredita:
+
+- ningún `INSERT` o `DELETE` sobre `pos.products`;
+- ningún `SET` de stock, SKU, attrs, barcode o ID;
+- el único backfill es `where record_model='v2' and reference_family_id is null`;
+- V2 previas reciben UUID singleton; ningún UUID no nulo se reemplaza;
+- `14400` y `14600` abortan ante cualquier V1 con familia no nula;
+- `14500/14600` son exclusivamente DDL/validación y no escriben filas.
+
+Por construcción transaccional, conteo, stock, SKU, attrs, barcode e IDs V1 no
+pueden variar por H-101. V1 permanece con `reference_family_id = NULL`. No se
+ejecutó Punto Cero, carga real ni conversión V1→V2.
+
+## Pruebas
+
+- H-101 contrato: 26/26.
+- Piloto local descartable ADRIANO: 9/9; cinco hermanas iniciales, talla 40 con
+  DRO/AZL independientes, CF+DRO, stock total 18, talla 40 total 7, referencia
+  44 en cero y alta posterior 46 en cero sin cambiar IDs previos.
+- H-94 runtime: 49/49; migraciones: 10/10 y 15/15.
+- H-95: 16/16; cola/sincronización acumulada: 176/176.
+- H-100: 10/10; Excel: 42/42; migraciones: 31/31.
+- Responsive: 492/492; navegación: 15/15; arranque: 5/5.
+- Build offline completado, sin Babel runtime.
+- GitHub Pages run `31857750206`: `success` para `b2603e1`.
+- Bytes publicados: 8,981,324; SHA-256
+  `056d2565d43bc0d1ffe961795965df1f6443d70b823dea76892642c6b861f972`,
+  idénticos al blob Git del commit técnico.
+
+## Despliegue y rollback
+
+El código está en `origin/main` y Pages. El rollback de interfaz consiste en
+revertir el commit técnico y regenerar artefactos. La columna/familias deben
+permanecer como cambio aditivo compatible: no se deben eliminar mientras existan
+clientes H-101. El RPC público puede revocarse si fuese necesario sin alterar
+productos; nunca se debe reconstruir familia mediante heurísticas.
+
+## Riesgo residual y pendientes
+
+Ningún defecto conocido dentro de H-101. La validación sintética no cargó
+inventario real y la familia administrativa no cambia la autoridad logística.
+
+## Referencias
+
+- Riesgo: `docs/03-known-risks.md#h-101---captura-y-edición-v2-obligan-a-operar-una-referencia-por-vez`
+- `docs/architect/decisions/ADR-013-identidad-de-referencia-fisica-v2.md`
+- `docs/06-contrato-config-referencias-fisicas-v2.md`
