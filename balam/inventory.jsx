@@ -1049,10 +1049,43 @@
       const hexes = Object.fromEntries(colorItems.map(item => [item.code, (item.meta || {}).hex || '#8b9099']));
       const selectedSet = new Set((selected || []).map(String));
       const canonical = colorItems.map(item => String(item.code)).filter(code => selectedSet.has(code));
-      const query = colorQuery.trim().toLowerCase();
-      const colors = Object.keys(names).filter(code => !query || code.toLowerCase().includes(query) || String(names[code]).toLowerCase().includes(query));
-      return h('div', { className: 'relative' }, [
-        h('div', { key: 'summary', className: 'flex flex-wrap items-center gap-2' }, [
+      const searchKey = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      const query = searchKey(colorQuery.trim());
+      const colors = colorItems.filter(item => !query || searchKey(`${item.code} ${item.label}`).includes(query));
+      const closePicker = () => {
+        setColorPicker(null);
+        requestAnimationFrame(() => document.querySelector(`[data-testid="${toggleTestId}"]`)?.focus());
+      };
+      const panel = h('div', {
+        key: 'panel',
+        className: 'fixed z-[180] left-4 right-4 top-1/2 -translate-y-1/2 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 sm:w-[30rem] max-w-[calc(100vw-2rem)] max-h-[min(34rem,calc(100dvh-2rem))] flex flex-col overflow-hidden p-3 border border-outline-variant rounded-xl bg-surface-container-lowest shadow-e3',
+        role: 'group', 'aria-label': 'Selector de colores de ornamento', 'data-testid': toggleTestId + '-panel',
+        onKeyDown: event => { if (event.key === 'Escape') { event.stopPropagation(); closePicker(); } },
+      }, [
+        h('div', { key: 'search', className: 'flex items-center gap-2 pb-3 bg-surface-container-lowest shrink-0' }, [
+          h('input', { key: 'q', type: 'search', value: colorQuery, autoFocus: true, onChange: event => setColorQuery(event.target.value), placeholder: 'Buscar código o color…', className: INPUT + ' flex-1 min-w-0', 'data-testid': toggleTestId + '-search' }),
+          h('button', { key: 'close', type: 'button', 'data-testid': closeTestId, className: 'min-w-11 h-11 grid place-items-center border border-outline-variant rounded-lg text-on-surface-variant', onClick: closePicker, 'aria-label': 'Cerrar selector de colores' }, h(MS, { name: 'close', size: 17 })),
+        ]),
+        h('div', { key: 'colors', className: 'grid grid-cols-1 gap-1.5 overflow-y-auto overscroll-contain min-h-0 pr-1' }, colors.map(item => {
+          const code = String(item.code);
+          const historical = item.active === false;
+          const active = canonical.includes(code);
+          const fullName = String(item.label) + (historical ? ' · Histórico' : '');
+          return h('button', {
+            key: code, type: 'button', 'data-testid': optionTestId(code), 'aria-pressed': active ? 'true' : 'false',
+            title: `${code} — ${fullName}`, onClick: () => onToggle(code),
+            className: 'w-full min-h-11 grid grid-cols-[1.25rem_4rem_minmax(0,1fr)_1.25rem] items-center gap-2 px-3 text-left border rounded-lg transition-colors ' + (active ? 'border-primary bg-surface-container text-primary' : 'border-outline-variant bg-surface hover:border-primary text-on-surface-variant'),
+          }, [
+            h('span', { key: 'sw', 'data-color-swatch': code, className: 'w-4 h-4 rounded-full border-2 border-outline shrink-0', style: { background: hexes[code] } }),
+            h('span', { key: 'c', className: 'text-overline font-bold font-mono' }, code),
+            h('span', { key: 'n', className: 'min-w-0 text-caption truncate', title: fullName }, fullName),
+            active ? h(MS, { key: 'ok', name: 'check', size: 15 }) : h('span', { key: 'space', 'aria-hidden': 'true' }),
+          ]);
+        })),
+        !colors.length && h('p', { key: 'empty', className: 'text-caption text-on-surface-variant py-3 text-center' }, 'No hay colores que coincidan.'),
+      ]);
+      return h(React.Fragment, null, [
+        h('div', { key: 'trigger', className: 'relative' }, h('div', { className: 'flex flex-wrap items-center gap-2' }, [
           ...canonical.map(code => h('button', {
             key: code, type: 'button', onClick: () => onToggle(code), title: `Quitar ${names[code]}`,
             className: 'inline-flex items-center gap-1.5 min-h-9 px-2.5 border border-primary/40 bg-surface-container rounded-lg text-overline font-semibold text-primary',
@@ -1064,21 +1097,8 @@
             className: 'inline-flex items-center gap-2 min-h-10 px-3 border border-outline-variant rounded-lg text-caption font-semibold text-on-surface-variant hover:border-primary hover:text-primary transition-colors',
             onClick: () => { setColorPicker(open ? null : pickerId); setColorQuery(''); },
           }, [h(MS, { key: 'i', name: 'palette', size: 16 }), canonical.length ? `${canonical.length} seleccionado${canonical.length === 1 ? '' : 's'}` : 'Elegir colores', h(MS, { key: 'c', name: 'chevDown', size: 15, style: { transform: open ? 'rotate(180deg)' : '' } })]),
-        ]),
-        open && h('div', { key: 'panel', className: 'mt-2 p-3 border border-outline-variant rounded-xl bg-surface-container-low shadow-e1', role: 'group', 'aria-label': 'Selector de colores de ornamento' }, [
-          h('div', { key: 'search', className: 'flex items-center gap-2 mb-3' }, [
-            h('input', { key: 'q', type: 'search', value: colorQuery, onChange: event => setColorQuery(event.target.value), placeholder: 'Buscar código o color…', className: INPUT + ' flex-1', 'data-testid': toggleTestId + '-search' }),
-            h('button', { key: 'close', type: 'button', 'data-testid': closeTestId, className: 'min-w-10 h-10 grid place-items-center border border-outline-variant rounded-lg text-on-surface-variant', onClick: () => setColorPicker(null), 'aria-label': 'Cerrar selector de colores' }, h(MS, { name: 'close', size: 17 })),
-          ]),
-          h('div', { key: 'colors', className: 'grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-8 gap-2 max-h-52 overflow-y-auto pr-1' }, colors.map(code => {
-            const active = canonical.includes(code);
-            return h('button', {
-              key: code, type: 'button', 'data-testid': optionTestId(code), 'aria-pressed': active ? 'true' : 'false', title: names[code], onClick: () => onToggle(code),
-              className: 'min-h-10 flex items-center gap-1.5 px-2 border rounded-lg transition-colors ' + (active ? 'border-primary bg-surface-container text-primary font-bold' : 'border-outline-variant bg-surface hover:border-primary text-on-surface-variant'),
-            }, [h('span', { key: 'sw', className: 'w-3.5 h-3.5 rounded-full border border-outline-variant shrink-0', style: { background: hexes[code] } }), h('span', { key: 'c', className: 'text-overline truncate' }, code), active && h(MS, { key: 'ok', name: 'check', size: 13 })]);
-          })),
-          !colors.length && h('p', { key: 'empty', className: 'text-caption text-on-surface-variant py-3 text-center' }, 'No hay colores que coincidan.'),
-        ]),
+        ])),
+        open && ReactDOM.createPortal(panel, document.body),
       ]);
     };
 
