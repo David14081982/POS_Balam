@@ -417,7 +417,11 @@
   function DetailDrawer({ p, onClose, onEdit, onDelete, onLabels }) {
     const open = !!p;
     const sizeResolution = p && !p.isFamilyProjection ? D.resolveProductSizes(p) : null;
-    const resolvedSizes = p && p.isFamilyProjection ? p.sizeGroups : sizeResolution
+    const resolvedSizes = p && p.isFamilyProjection ? p.sizeGroups.map(size => {
+      const references = size.references.filter(ref => ref.active !== false && Number(ref.stockQuantity) > 0);
+      return { ...size, references, hasMultipleReferences: size.references.length > 1,
+        stock: references.reduce((sum, ref) => sum + Number(ref.stockQuantity), 0) };
+    }).filter(size => size.stock > 0) : sizeResolution
       ? sizeResolution.sizes.filter(s => s.active && s.stock > 0)
       : [];
     return h(React.Fragment, {}, [
@@ -457,16 +461,16 @@
                  }, sizeResolution.ambiguous
                    ? 'El producto conserva existencias en más de una categoría. Edítalo y elige una categoría antes de venderlo.'
                    : 'El producto no tiene una categoría por talla asignada. Edítalo para completar la relación.'),
-                  h('div', { key: 'g', className: 'flex flex-wrap gap-2', 'data-testid': 'product-detail-size-stock' }, resolvedSizes.map(size =>
-                   h('div', { key: size.key || size.sizeId, className: 'flex flex-col items-center min-w-[48px] px-2 py-1.5 border border-outline-variant rounded', 'data-testid': 'product-detail-size-chip' }, [
-                     h('span', { key: 't', className: 'text-caption font-semibold text-primary' }, size.label),
-                     h('span', { key: 's', className: 'text-overline text-on-surface-variant' }, size.stock + ' pz'),
-                     p.isFamilyProjection && size.references.length > 1 ? h('div', { key: 'variants', className: 'mt-1 pt-1 border-t border-outline-variant space-y-0.5', 'data-testid': 'product-detail-size-variants' }, size.references.map(ref =>
-                       h('div', { key: ref.id, className: 'flex items-center justify-between gap-2 text-overline text-on-surface-variant' }, [
-                         h('span', { key: 'v' }, D.canonicalReferenceOrnamentColors(ref.ornamentColorCodes || []).join(' + ') || ref.sku),
-                         h('span', { key: 'n', className: 'whitespace-nowrap' }, ref.stockQuantity + ' pz · ' + precioTexto(ref)),
-                       ]))) : null,
-                   ]))),
+                   h('div', { key: 'g', className: 'flex flex-wrap gap-2', 'data-testid': 'product-detail-size-stock' }, resolvedSizes.length ? resolvedSizes.map(size =>
+                    h('div', { key: size.key || size.sizeId, className: 'flex flex-col items-center min-w-[48px] px-2 py-1.5 border border-outline-variant rounded', 'data-testid': 'product-detail-size-chip', 'data-size-code': size.label }, [
+                      h('span', { key: 't', className: 'text-caption font-semibold text-primary' }, size.label),
+                      h('span', { key: 's', className: 'text-overline text-on-surface-variant' }, size.stock + ' pz'),
+                      p.isFamilyProjection && size.hasMultipleReferences ? h('div', { key: 'variants', className: 'mt-1 pt-1 border-t border-outline-variant space-y-0.5', 'data-testid': 'product-detail-size-variants' }, size.references.map(ref =>
+                        h('div', { key: ref.id, className: 'flex items-center justify-between gap-2 text-overline text-on-surface-variant' }, [
+                          h('span', { key: 'v' }, D.canonicalReferenceOrnamentColors(ref.ornamentColorCodes || []).join(' + ') || ref.sku),
+                          h('span', { key: 'n', className: 'whitespace-nowrap' }, ref.stockQuantity + ' pz · ' + precioTexto(ref)),
+                        ]))) : null,
+                    ])) : h('p', { key: 'empty', className: 'text-caption text-on-surface-variant', 'data-testid': 'product-detail-size-empty' }, 'Sin existencias en ninguna talla.')),
               ]),
               // Acciones
               h('div', { key: 'ac', className: 'pt-4 space-y-3' }, [
