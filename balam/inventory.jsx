@@ -606,7 +606,7 @@
       : D.sanitizeOrnamentColorsBySize(mapa, product);
     const groups = {};
     const order = D.isV2Reference(product)
-      ? window.CONFIG.list(product.sizeCategoryId || (product.attrs || {}).__sizeCategoryId || '').map(item => String(Object.prototype.hasOwnProperty.call(item.meta || {}, 'value') ? item.meta.value : item.code))
+      ? Object.keys(clean)
       : D.resolveProductSizes(product).sizes.map(size => String(size.value));
     order.forEach(talla => {
       if (!clean[talla]) return;
@@ -636,6 +636,26 @@
     });
   }
 
+  // En H-101 la familia es administrativa: una misma familia puede contener
+  // referencias de categorías/escala distintas. La identidad de talla dentro
+  // del editor siempre incluye categoría + escala + código.
+  function referenceRowCategoryId(row, fallback) {
+    return (row && (row.sizeCategoryId || (row.attrs || {}).__sizeCategoryId)) || fallback || '';
+  }
+  function referenceRowSizeKey(row, fallback) {
+    return [referenceRowCategoryId(row, fallback), (row && row.sizeScale) || '', String((row && row.sizeCode) || '')].join('::');
+  }
+  function referenceRowSizeLabel(row, fallback) {
+    const categoryId = referenceRowCategoryId(row, fallback);
+    const item = window.CONFIG.list(categoryId).find(option => String(Object.prototype.hasOwnProperty.call(option.meta || {}, 'value') ? option.meta.value : option.code) === String((row && row.sizeCode) || ''));
+    return item ? item.label : String((row && row.sizeCode) || '');
+  }
+  function referenceDraftSignature(rows) {
+    return JSON.stringify((rows || []).filter(row => row.id || row.selectedForCreation).map(row => ({
+      ...row, source: row.source || null,
+    })));
+  }
+
   // ---------- Formulario de alta / edición ----------
   function ProductForm({ mode, product, onClose, onSave }) {
     const initialFamily = D.isV2Reference(product) && mode === 'edit'
@@ -644,7 +664,7 @@
     const initialVariantIds = new Set();
     const initialSizes = new Set();
     initialFamily.forEach(row => {
-      const size = String(row.sizeCode || '');
+      const size = referenceRowSizeKey(row);
       if (initialSizes.has(size)) initialVariantIds.add(row.id);
       else { initialSizes.add(size); initialPrimary.push(row); }
     });
@@ -664,11 +684,11 @@
       : (product.ornColors || []).slice();
     const initialPriceMap = Object.fromEntries(initialPrimary
       .filter(row => Number(row.precio) !== Number(initialGeneralPrice))
-      .map(row => [String(row.sizeCode), Number(row.precio) || 0]));
+      .map(row => [referenceRowSizeKey(row), Number(row.precio) || 0]));
     const initialColorMap = Object.fromEntries(initialPrimary
       .filter(row => JSON.stringify(D.canonicalReferenceOrnamentColors(row.ornamentColorCodes || row.ornColors || []))
         !== JSON.stringify(initialGeneralColors))
-      .map(row => [String(row.sizeCode), D.canonicalReferenceOrnamentColors(row.ornamentColorCodes || row.ornColors || [])]));
+      .map(row => [referenceRowSizeKey(row), D.canonicalReferenceOrnamentColors(row.ornamentColorCodes || row.ornColors || [])]));
     // Los códigos huérfanos NO se sustituyen al abrir: el select los muestra con aviso (sel() ya
     // lo maneja). Sustituirlos por el primer elemento activo reescribía el color/atributo real del
     // producto con solo abrir y guardar. La normalización masiva vive en Regenerar SKUs.
@@ -698,8 +718,9 @@
     const familyId = useRef(product.referenceFamilyId
       || (window.crypto && window.crypto.randomUUID ? window.crypto.randomUUID() : 'family-' + Date.now())).current;
     const rowFromReference = (row, index) => ({
-      rowKey: row.id || `draft-${index}-${row.sizeCode}`,
+      rowKey: row.id || `draft-${index}-${referenceRowSizeKey(row)}`,
       id: row.id || null, selectedForCreation: !!row.id,
+      sizeCategoryId: referenceRowCategoryId(row, product.sizeCategoryId),
       sizeCode: String(row.sizeCode || ''), sizeScale: row.sizeScale || '',
       stockQuantity: Math.max(0, Number(row.stockQuantity) || 0),
       precio: initialVariantIds.has(row.id) && Number(row.precio) !== Number(initialGeneralPrice)
@@ -718,7 +739,8 @@
     const emptyRowsForCategory = categoryId => {
       const category = (window.CONFIG.sizeCategories().find(item => item.id === categoryId) || {});
       return window.CONFIG.list(categoryId).map((item, index) => ({
-        rowKey: `draft-${index}-${item.code}`, id: null, selectedForCreation: false,
+        rowKey: `draft-${categoryId}-${index}-${item.code}`, id: null, selectedForCreation: false,
+        sizeCategoryId: categoryId,
         sizeCode: String(Object.prototype.hasOwnProperty.call(item.meta || {}, 'value') ? item.meta.value : item.code),
         sizeScale: category.scale || '', stockQuantity: 0, precio: '', ornamentColorCodes: null,
         attrs: {}, barcodeCode: null, physicalSignature: null, _syncVersion: 0,
@@ -728,12 +750,14 @@
       if (!D.isV2Reference(product)) return [];
       const siblings = D.referenceFamily(product);
       if (mode === 'edit' && siblings.length) {
-        const existing = new Set(siblings.map(row => String(row.sizeCode)));
+        const existing = new Set(siblings.map(row => referenceRowSizeKey(row)));
         return siblings.map(rowFromReference).concat(
-          emptyRowsForCategory(product.sizeCategoryId || '').filter(row => !existing.has(String(row.sizeCode))));
+          emptyRowsForCategory(product.sizeCategoryId || '').filter(row => !existing.has(referenceRowSizeKey(row))));
       }
       return emptyRowsForCategory(product.sizeCategoryId || D.inferSizeCategory(product, product.stock) || '');
     });
+    const [captureSizeCategoryId, setCaptureSizeCategoryId] = useState(
+      product.sizeCategoryId || D.inferSizeCategory(product, product.stock) || '');
     const initialSignature = useRef(productDraftSignature(d));
     const [exceptionsOpen, setExceptionsOpen] = useState(false);
     const initialHasPhysicalOverrides = initialFamily.some(row => Object.entries(row.attrs || {}).some(([kind, value]) => {
@@ -745,6 +769,7 @@
     const [colorPicker, setColorPicker] = useState(null);
     const [colorQuery, setColorQuery] = useState('');
     const [showAllSummary, setShowAllSummary] = useState(false);
+    const [zeroSizesOpen, setZeroSizesOpen] = useState(false);
     const [attemptedSubmit, setAttemptedSubmit] = useState(false);
     const set = (k, v) => setD(prev => ({ ...prev, [k]: v }));
     const setSizeCategory = categoryId => {
@@ -761,14 +786,19 @@
         })() : { stock: alignStock(prev, categoryId) }),
         precioRows: [], ornamentColorRows: [],
       }));
-      if (d.recordModel === 'v2') setReferenceRows(emptyRowsForCategory(categoryId));
     };
     const requestSizeCategory = categoryId => {
-      if (categoryId === d.sizeCategoryId) return;
-      if (mode === 'edit' && d.recordModel === 'v2' && referenceRows.some(row => row.id)) {
-        toast('Cambiar la familia de tallas modifica identidad física. Usa Reclasificar piezas.', 'var(--warning)');
+      if (d.recordModel === 'v2') {
+        if (categoryId === captureSizeCategoryId) return;
+        setCaptureSizeCategoryId(categoryId);
+        setZeroSizesOpen(false);
+        setReferenceRows(rows => {
+          const known = new Set(rows.map(row => referenceRowSizeKey(row)));
+          return rows.concat(emptyRowsForCategory(categoryId).filter(row => !known.has(referenceRowSizeKey(row))));
+        });
         return;
       }
+      if (categoryId === d.sizeCategoryId) return;
       const aligned = alignStock(d, categoryId);
       const preserved = new Set(aligned.map(row => `${row.escala}|${row.talla}`));
       const stockLost = d.stock.filter(row => Number(row.stock) > 0 && !preserved.has(`${row.escala}|${row.talla}`));
@@ -908,23 +938,31 @@
     }
     const imgSrc = d.imagen ? ((window.__IMG_MAP && window.__IMG_MAP[d.imagen]) || d.imagen) : '';
     const skuPrev = D.sku({ ...d, modelo: d.modelo || '000' }); // misma receta que el SKU real
+    const visibleReferenceRows = referenceRows.filter(row => row.id || row.selectedForCreation
+      || referenceRowCategoryId(row, d.sizeCategoryId) === captureSizeCategoryId);
     const standardFamilyRows = [], variantFamilyRows = [];
     const seenFamilySizes = new Set();
-    referenceRows.forEach(row => {
-      const size = String(row.sizeCode);
+    visibleReferenceRows.forEach(row => {
+      const size = referenceRowSizeKey(row, d.sizeCategoryId);
       if (seenFamilySizes.has(size)) variantFamilyRows.push(row);
       else { seenFamilySizes.add(size); standardFamilyRows.push(row); }
     });
     const selectedFamilyRows = referenceRows.filter(row => row.selectedForCreation);
     const exceptionSizeRows = d.recordModel === 'v2'
       ? standardFamilyRows.map(row => ({
-          talla: String(row.sizeCode), escala: row.sizeScale, stock: Number(row.stockQuantity) || 0,
+          talla: referenceRowSizeKey(row, d.sizeCategoryId), label: referenceRowSizeLabel(row, d.sizeCategoryId),
+          escala: row.sizeScale, stock: Number(row.stockQuantity) || 0,
         })) : d.stock;
+    const exceptionSizeLabel = size => {
+      const row = exceptionSizeRows.find(item => String(item.talla) === String(size));
+      return row && row.label ? row.label : tallaLabel(d, size);
+    };
     const total = d.recordModel === 'v2'
       ? selectedFamilyRows.reduce((sum, row) => sum + (Number(row.stockQuantity) || 0), 0)
       : d.stock.reduce((a, v) => a + v.stock, 0);
     const stockedSizes = d.recordModel === 'v2'
-      ? new Set(selectedFamilyRows.filter(row => Number(row.stockQuantity) > 0).map(row => row.sizeCode)).size
+      ? new Set(selectedFamilyRows.filter(row => Number(row.stockQuantity) > 0)
+        .map(row => referenceRowSizeKey(row, d.sizeCategoryId))).size
       : d.stock.filter(row => Number(row.stock) > 0).length;
     const modeloFinal = (modeloKind && modeloCode) ? modeloCode : String(d.modelo).trim();
     const previewPrices = expandirPrecios(d.precioRows.filter(row =>
@@ -938,7 +976,7 @@
       const out = [];
       if (!d.nombre.trim()) out.push({ code: 'name', target: 'product-name', message: 'Selecciona o escribe el nombre / modelo.' });
       if (!modeloKind && !modeloFinal) out.push({ code: 'model', target: 'product-model', message: 'Escribe el número de modelo.' });
-      if (!d.sizeCategoryId) out.push({ code: 'size-category', target: 'product-size-category', message: 'Selecciona la familia de tallas.' });
+      if (!(d.recordModel === 'v2' ? captureSizeCategoryId : d.sizeCategoryId)) out.push({ code: 'size-category', target: 'product-size-category', message: 'Selecciona la familia de tallas.' });
       if (d.recordModel === 'v2' && !selectedFamilyRows.length) out.push({ code: 'family-empty', target: 'reference-family-grid', message: 'Selecciona al menos una referencia para crear o conservar.' });
       const meta = window.CONFIG.allCatalogMeta ? window.CONFIG.allCatalogMeta() : {};
       Object.keys(meta).forEach(kind => {
@@ -948,7 +986,7 @@
             const value = (row.attrs || {})[kind] || (d.attrs || {})[kind];
             if (value == null || String(value).trim() === '') out.push({
               code: 'catalog-' + kind + '-' + row.rowKey, target: 'family-row-' + row.rowKey,
-              message: `Selecciona ${m.label} para talla ${tallaLabel(d, row.sizeCode)}.`,
+              message: `Selecciona ${m.label} para talla ${referenceRowSizeLabel(row, d.sizeCategoryId)}.`,
             });
           });
           return;
@@ -966,10 +1004,10 @@
       });
       if (d.recordModel === 'v2' && D.ornamentColorMode(d) === 'required') selectedFamilyRows.forEach(row => {
         const explicit = Array.isArray(row.ornamentColorCodes) ? row.ornamentColorCodes : null;
-        const grouped = previewOrnamentColors[String(row.sizeCode)];
+        const grouped = previewOrnamentColors[referenceRowSizeKey(row, d.sizeCategoryId)];
         const colors = D.canonicalReferenceOrnamentColors(explicit || grouped || d.ornColors || []);
         if (!colors.length) out.push({ code: 'ornament-color-required-' + row.rowKey,
-          target: 'general-color-selector-toggle', message: `Selecciona color de ornamento para talla ${tallaLabel(d, row.sizeCode)}.` });
+          target: 'general-color-selector-toggle', message: `Selecciona color de ornamento para talla ${referenceRowSizeLabel(row, d.sizeCategoryId)}.` });
       });
       const priceOwners = {};
       d.precioRows.forEach((row, index) => {
@@ -977,7 +1015,7 @@
           out.push({ code: 'price-empty-' + index, type: 'price', index, target: `price-group-${index}-value`, sizes: row.tallas.slice(), message: `Escribe el precio del grupo ${index + 1}.` });
         }
         (row.tallas || []).forEach(size => {
-          if (priceOwners[size] != null) out.push({ code: `price-overlap-${priceOwners[size]}-${index}-${size}`, type: 'price', index, target: `price-group-${index}-size-${size}`, sizes: [String(size)], message: `La talla ${tallaLabel(d, size)} está en dos precios especiales (grupos ${priceOwners[size] + 1} y ${index + 1}).` });
+          if (priceOwners[size] != null) out.push({ code: `price-overlap-${priceOwners[size]}-${index}-${size}`, type: 'price', index, target: `price-group-${index}-size-${size}`, sizes: [String(size)], message: `La talla ${exceptionSizeLabel(size)} está en dos precios especiales (grupos ${priceOwners[size] + 1} y ${index + 1}).` });
           else priceOwners[size] = index;
         });
       });
@@ -990,7 +1028,7 @@
         (row.tallas || []).forEach(size => {
           const previous = colorOwners[size];
           if (previous && JSON.stringify(previous.colors) !== JSON.stringify(colors)) {
-            out.push({ code: `color-overlap-${previous.index}-${index}-${size}`, type: 'color', index, target: `ornament-group-${index}-size-${size}`, sizes: [String(size)], message: `La talla ${tallaLabel(d, size)} tiene colores incompatibles en los grupos ${previous.index + 1} y ${index + 1}.` });
+            out.push({ code: `color-overlap-${previous.index}-${index}-${size}`, type: 'color', index, target: `ornament-group-${index}-size-${size}`, sizes: [String(size)], message: `La talla ${exceptionSizeLabel(size)} tiene colores incompatibles en los grupos ${previous.index + 1} y ${index + 1}.` });
           } else colorOwners[size] = { colors, index };
         });
       });
@@ -1023,9 +1061,9 @@
         if (target) { target.scrollIntoView({ block: 'center', behavior: 'smooth' }); target.focus(); }
       }));
     };
-    const initialReferenceSignature = useRef(JSON.stringify(referenceRows));
+    const initialReferenceSignature = useRef(referenceDraftSignature(referenceRows));
     const isDirty = productDraftSignature(d) !== initialSignature.current
-      || JSON.stringify(referenceRows) !== initialReferenceSignature.current;
+      || referenceDraftSignature(referenceRows) !== initialReferenceSignature.current;
     const requestClose = () => {
       if (isDirty && !window.confirm('Hay cambios sin guardar. ¿Deseas cerrar el formulario y descartarlos?')) return;
       onClose();
@@ -1090,7 +1128,7 @@
           h('div', { key: 'top', className: 'flex items-center gap-2' }, [
             h('button', { key: 'edit', type: 'button', 'data-testid': 'ornament-group-' + index + '-edit', 'aria-expanded': row.expanded ? 'true' : 'false', onClick: () => setOrnamentColorExpanded(index, !row.expanded), className: 'flex-1 min-w-0 text-left' }, [
               h('span', { key: 'label', className: 'block text-overline uppercase font-bold text-on-surface-variant' }, 'Grupo ' + (index + 1)),
-              h('span', { key: 'sum', className: 'block text-caption text-primary truncate' }, (row.tallas.length ? row.tallas.map(size => tallaLabel(d, size)).join('/') : 'Sin tallas') + ' → ' + (row.colores.length ? row.colores.join(' + ') : 'Sin colores')),
+              h('span', { key: 'sum', className: 'block text-caption text-primary truncate' }, (row.tallas.length ? row.tallas.map(exceptionSizeLabel).join('/') : 'Sin tallas') + ' → ' + (row.colores.length ? row.colores.join(' + ') : 'Sin colores')),
             ]),
             h('button', { key: 'x', type: 'button', title: 'Quitar grupo', 'aria-label': 'Eliminar grupo ' + (index + 1) + ' de colores', onClick: () => delOrnamentColorRow(index), 'data-testid': 'ornament-group-' + index + '-delete', className: 'w-10 h-10 grid place-items-center border border-outline-variant rounded-lg text-on-surface-variant hover:text-danger' }, h(MS, { name: 'trash', size: 16 })),
           ]),
@@ -1101,7 +1139,7 @@
               'data-testid': 'ornament-group-' + index + '-size-' + size.talla,
               'aria-pressed': row.tallas.includes(String(size.talla)) ? 'true' : 'false',
               className: 'min-h-10 px-3 border rounded-lg text-overline uppercase transition-colors ' + (row.tallas.includes(String(size.talla)) ? 'border-primary bg-surface-container text-primary font-bold' : 'border-outline-variant bg-surface text-on-surface-variant hover:border-primary'),
-            }, tallaLabel(d, size.talla) + (Number(size.stock) > 0 ? ' · ' + size.stock : '')))),
+            }, exceptionSizeLabel(size.talla) + (Number(size.stock) > 0 ? ' · ' + size.stock : '')))),
             h('p', { key: 'cl', className: 'text-overline uppercase tracking-widest text-on-surface-variant mb-1.5' }, 'Colores'),
             renderColorSelector({ pickerId: 'group-' + index, selected: row.colores, onToggle: color => toggleOrnamentColor(index, color), optionTestId: color => 'ornament-group-' + index + '-color-' + color, toggleTestId: 'ornament-group-' + index + '-color-toggle', closeTestId: 'ornament-group-' + index + '-color-close' }),
             ...rowErrors.map(error => h('p', { key: error.code, className: 'mt-2 text-caption text-danger', role: 'alert' }, error.message)),
@@ -1127,7 +1165,7 @@
           h('div', { key: 'top', className: 'flex items-center gap-2' }, [
             h('button', { key: 'edit', type: 'button', 'data-testid': 'price-group-' + index + '-edit', 'aria-expanded': row.expanded ? 'true' : 'false', onClick: () => setPrecioExpanded(index, !row.expanded), className: 'flex-1 min-w-0 text-left' }, [
               h('span', { key: 'label', className: 'block text-overline uppercase font-bold text-on-surface-variant' }, 'Grupo ' + (index + 1)),
-              h('span', { key: 'sum', className: 'block text-caption text-primary truncate' }, (row.tallas.length ? row.tallas.map(size => tallaLabel(d, size)).join('/') : 'Sin tallas') + ' → ' + (row.precio === '' ? 'Sin precio' : fmt(Number(row.precio) || 0).replace('.00', ''))),
+              h('span', { key: 'sum', className: 'block text-caption text-primary truncate' }, (row.tallas.length ? row.tallas.map(exceptionSizeLabel).join('/') : 'Sin tallas') + ' → ' + (row.precio === '' ? 'Sin precio' : fmt(Number(row.precio) || 0).replace('.00', ''))),
             ]),
             h('button', { key: 'x', type: 'button', title: 'Quitar grupo', 'aria-label': 'Eliminar grupo ' + (index + 1) + ' de precio', onClick: () => delPrecioRow(index), 'data-testid': 'price-group-' + index + '-delete', className: 'w-10 h-10 grid place-items-center border border-outline-variant rounded-lg text-on-surface-variant hover:text-danger' }, h(MS, { name: 'trash', size: 16 })),
           ]),
@@ -1138,7 +1176,7 @@
               key: size.talla, type: 'button', onClick: () => togglePrecioTalla(index, size.talla), 'data-testid': 'price-group-' + index + '-size-' + size.talla,
               'aria-pressed': row.tallas.includes(size.talla) ? 'true' : 'false',
               className: 'min-h-10 px-3 border rounded-lg text-overline uppercase transition-colors ' + (row.tallas.includes(size.talla) ? 'border-primary bg-surface-container text-primary font-bold' : 'border-outline-variant bg-surface text-on-surface-variant hover:border-primary'),
-            }, tallaLabel(d, size.talla) + (Number(size.stock) > 0 ? ' · ' + size.stock : '')))),
+            }, exceptionSizeLabel(size.talla) + (Number(size.stock) > 0 ? ' · ' + size.stock : '')))),
             ...rowErrors.filter(error => error.code.indexOf('price-empty') !== 0).map(error => h('p', { key: error.code, className: 'mt-2 text-caption text-danger', role: 'alert' }, error.message)),
             h('div', { key: 'donebar', className: 'flex justify-end mt-3' }, h('button', { type: 'button', 'data-testid': 'price-group-' + index + '-done', className: 'px-4 min-h-10 bg-primary text-on-primary rounded-lg text-overline font-bold uppercase', onClick: () => rowErrors.length ? focusError(rowErrors[0]) : setPrecioExpanded(index, false) }, 'Listo')),
           ]),
@@ -1149,10 +1187,10 @@
     const familyPriceMap = () => expandirPrecios(d.precioRows.filter(row => (row.tallas || []).length));
     const familyColorMap = () => expandirColoresOrnamento(d.ornamentColorRows.filter(row => (row.tallas || []).length));
     const effectiveFamilyPrice = row => row.precio !== '' && row.precio != null
-      ? Number(row.precio) || 0 : Number(familyPriceMap()[row.sizeCode] ?? d.precio) || 0;
+      ? Number(row.precio) || 0 : Number(familyPriceMap()[referenceRowSizeKey(row, d.sizeCategoryId)] ?? d.precio) || 0;
     const effectiveFamilyColors = row => Array.isArray(row.ornamentColorCodes)
       ? D.canonicalReferenceOrnamentColors(row.ornamentColorCodes)
-      : D.canonicalReferenceOrnamentColors(familyColorMap()[row.sizeCode] || d.ornColors || []);
+      : D.canonicalReferenceOrnamentColors(familyColorMap()[referenceRowSizeKey(row, d.sizeCategoryId)] || d.ornColors || []);
     const physicalExceptionRows = standardFamilyRows.filter(row => referenceCaptureKinds.some(kind =>
       Object.prototype.hasOwnProperty.call(row.attrs || {}, kind)));
     const renderVariantEditor = (row, index, isAdditional) => h('div', {
@@ -1161,7 +1199,7 @@
     }, [
       h('div', { key: 'head', className: 'flex items-center gap-2 mb-3' }, [
         h('strong', { key: 't', className: 'text-caption text-primary' }, isAdditional
-          ? `Variante adicional ${index + 1}` : `Excepción física · ${tallaLabel(d, row.sizeCode)}`),
+          ? `Variante adicional ${index + 1}` : `Excepción física · ${referenceRowSizeLabel(row, d.sizeCategoryId)}`),
         h('span', { key: 'sp', className: 'flex-1' }),
         isAdditional && !row.id && h('button', { key: 'del', type: 'button', onClick: () => removeFamilyVariant(row),
           className: 'min-h-10 px-3 inline-flex items-center gap-1 text-overline font-bold text-danger border border-outline-variant rounded-lg' }, [h(MS, { key: 'i', name: 'trash', size: 15 }), 'Quitar']),
@@ -1169,9 +1207,10 @@
       h('div', { key: 'grid', className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-start' }, [
         isAdditional && field('Talla', h('select', { className: SELECT, value: row.sizeCode, disabled: !!row.id,
           'data-testid': 'family-variant-size-' + row.rowKey, onChange: event => {
-            const item = window.CONFIG.list(d.sizeCategoryId).find(option => String(Object.prototype.hasOwnProperty.call(option.meta || {}, 'value') ? option.meta.value : option.code) === event.target.value) || {};
-            setFamilyRow(row.rowKey, { sizeCode: event.target.value, sizeScale: (window.CONFIG.sizeCategories().find(cat => cat.id === d.sizeCategoryId) || {}).scale || row.sizeScale });
-          } }, window.CONFIG.list(d.sizeCategoryId).map(item => {
+            const categoryId = referenceRowCategoryId(row, captureSizeCategoryId || d.sizeCategoryId);
+            setFamilyRow(row.rowKey, { sizeCode: event.target.value, sizeCategoryId: categoryId,
+              sizeScale: (window.CONFIG.sizeCategories().find(cat => cat.id === categoryId) || {}).scale || row.sizeScale });
+          } }, window.CONFIG.list(referenceRowCategoryId(row, captureSizeCategoryId || d.sizeCategoryId)).map(item => {
             const value = String(Object.prototype.hasOwnProperty.call(item.meta || {}, 'value') ? item.meta.value : item.code);
             return h('option', { key: item.code, value }, item.label);
           }))),
@@ -1179,7 +1218,7 @@
           value: row.stockQuantity, 'data-testid': 'family-variant-stock-' + row.rowKey,
           onFocus: event => event.currentTarget.select(), onChange: event => setFamilyRow(row.rowKey, { stockQuantity: event.target.value }) })),
         isAdditional && field('Precio especial', h('input', { className: INPUT + ' text-right font-mono', type: 'number', min: 0,
-          value: row.precio, placeholder: String(familyPriceMap()[row.sizeCode] ?? d.precio ?? 0),
+          value: row.precio, placeholder: String(familyPriceMap()[referenceRowSizeKey(row, d.sizeCategoryId)] ?? d.precio ?? 0),
           'data-testid': 'family-variant-price-' + row.rowKey, onChange: event => setFamilyRow(row.rowKey, { precio: event.target.value }) })),
         isAdditional && h('div', { key: 'colors', className: 'sm:col-span-2 lg:col-span-1 min-w-0' }, [
           h('p', { key: 'l', className: 'text-caption font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5' }, 'Colores de ornamento'),
@@ -1201,32 +1240,53 @@
         }),
       ]),
     ]);
+    const compactCategoryGroups = Array.from(new Set(standardFamilyRows.map(row => referenceRowCategoryId(row, d.sizeCategoryId)))).map(categoryId => ({
+      categoryId,
+      label: ((window.CONFIG.sizeCategories ? window.CONFIG.sizeCategories() : []).find(category => category.id === categoryId) || {}).label || categoryId,
+      rows: standardFamilyRows.filter(row => referenceRowCategoryId(row, d.sizeCategoryId) === categoryId),
+    }));
+    const zeroDraftRows = standardFamilyRows.filter(row => !row.id && Number(row.stockQuantity) === 0);
     const renderReferenceFamilyGrid = () => h('div', { key: 'family-grid', 'data-testid': 'reference-family-grid' }, [
-      h('p', { key: 'hint', className: 'mb-3 text-caption text-on-surface-variant' }, 'Captura varias existencias de forma rápida. Una talla existente permanece aunque llegue a cero; escribir una cantidad activa una talla nueva.'),
-      h('div', { key: 'sizes', className: 'grid grid-cols-3 sm:grid-cols-6 lg:grid-cols-10 gap-2', 'data-testid': 'family-compact-stock-grid' }, standardFamilyRows.map((row, index) => {
-        const active = !!row.selectedForCreation;
-        const existing = !!row.id;
-        return h('div', { key: row.rowKey, className: 'min-w-0 flex flex-col items-center gap-1', 'data-testid': 'family-row-' + row.rowKey }, [
-          h('label', { key: 'l', htmlFor: 'family-stock-' + row.rowKey, className: 'text-overline uppercase text-on-surface-variant font-semibold truncate max-w-full' }, tallaLabel(d, row.sizeCode)),
-          h('input', { key: 'i', id: 'family-stock-' + row.rowKey, type: 'number', inputMode: 'numeric', min: 0,
-            value: row.stockQuantity, 'data-testid': 'family-stock-' + row.rowKey,
-            className: 'w-full h-11 text-center bg-surface-container border focus:ring-2 focus:ring-primary text-body rounded-lg font-mono ' + (active ? 'border-outline-variant' : 'border-dashed border-outline-variant text-on-surface-variant'),
-            onFocus: event => event.currentTarget.select(),
-            onKeyDown: event => {
-              if (!['Enter', 'ArrowRight', 'ArrowLeft'].includes(event.key)) return;
-              event.preventDefault(); const next = standardFamilyRows[index + (event.key === 'ArrowLeft' ? -1 : 1)];
-              if (next) document.querySelector('[data-testid="family-stock-' + next.rowKey + '"]')?.focus();
-            },
-            onChange: event => setFamilyRow(row.rowKey, { stockQuantity: event.target.value,
-              selectedForCreation: active || Number(event.target.value) > 0 }),
-          }),
-          !existing && Number(row.stockQuantity) === 0 && h('button', { key: 'zero', type: 'button',
-            onClick: () => setFamilyRow(row.rowKey, { selectedForCreation: !active }),
-            'data-testid': 'family-zero-toggle-' + row.rowKey,
-            className: 'min-h-8 max-w-full px-1 text-[10px] leading-tight font-bold ' + (active ? 'text-accent' : 'text-primary underline') }, active ? 'Se creará en 0' : 'Crear en 0'),
-          existing && Number(row.stockQuantity) === 0 && h('span', { key: 'kept', className: 'min-h-8 text-[10px] leading-tight text-accent font-bold text-center' }, 'Existente en 0'),
-        ]);
-      })),
+      h('p', { key: 'hint', className: 'mb-3 text-caption text-on-surface-variant' }, 'El selector elige las tallas que deseas agregar. Las referencias existentes conservan su identidad; escribir una cantidad activa una talla nueva.'),
+      h('div', { key: 'sizes', className: 'space-y-4', 'data-testid': 'family-compact-stock-grid' }, compactCategoryGroups.map(group => h('div', {
+        key: group.categoryId, 'data-testid': 'family-size-group-' + group.categoryId,
+      }, [
+        h('p', { key: 'label', className: 'mb-2 text-overline uppercase tracking-widest text-on-surface-variant font-bold' }, group.label),
+        h('div', { key: 'grid', className: 'grid grid-cols-3 sm:grid-cols-6 lg:grid-cols-10 gap-2' }, group.rows.map(row => {
+          const index = standardFamilyRows.indexOf(row);
+          const active = !!row.selectedForCreation;
+          const existing = !!row.id;
+          return h('div', { key: row.rowKey, className: 'min-w-0 flex flex-col items-center gap-1', 'data-testid': 'family-row-' + row.rowKey }, [
+            h('label', { key: 'l', htmlFor: 'family-stock-' + row.rowKey, className: 'text-overline uppercase text-on-surface-variant font-semibold truncate max-w-full' }, referenceRowSizeLabel(row, d.sizeCategoryId)),
+            h('input', { key: 'i', id: 'family-stock-' + row.rowKey, type: 'number', inputMode: 'numeric', min: 0,
+              value: row.stockQuantity, 'data-testid': 'family-stock-' + row.rowKey,
+              className: 'w-full h-11 text-center bg-surface-container border focus:ring-2 focus:ring-primary text-body rounded-lg font-mono ' + (active ? 'border-outline-variant' : 'border-dashed border-outline-variant text-on-surface-variant'),
+              onFocus: event => event.currentTarget.select(),
+              onKeyDown: event => {
+                if (!['Enter', 'ArrowRight', 'ArrowLeft'].includes(event.key)) return;
+                event.preventDefault(); const next = standardFamilyRows[index + (event.key === 'ArrowLeft' ? -1 : 1)];
+                if (next) document.querySelector('[data-testid="family-stock-' + next.rowKey + '"]')?.focus();
+              },
+              onChange: event => setFamilyRow(row.rowKey, { stockQuantity: event.target.value,
+                selectedForCreation: active || Number(event.target.value) > 0 }),
+            }),
+            !existing && active && Number(row.stockQuantity) === 0 && h('span', { key: 'new-zero', className: 'min-h-8 text-[10px] leading-tight text-accent font-bold text-center' }, 'Nueva en 0'),
+            existing && Number(row.stockQuantity) === 0 && h('span', { key: 'kept', className: 'min-h-8 text-[10px] leading-tight text-accent font-bold text-center' }, 'Existente en 0'),
+          ]);
+        })),
+      ]))),
+      zeroDraftRows.length > 0 && h('div', { key: 'zero-sizes', className: 'mt-4' }, [
+        h('button', { key: 'toggle', type: 'button', onClick: () => setZeroSizesOpen(value => !value),
+          'aria-expanded': zeroSizesOpen ? 'true' : 'false', 'data-testid': 'family-zero-sizes-toggle',
+          className: 'inline-flex items-center gap-2 min-h-10 px-3 border border-outline-variant rounded-lg text-caption font-semibold text-primary' }, [
+          h(MS, { key: 'i', name: 'plus', size: 16 }), 'Agregar tallas sin existencia',
+        ]),
+        zeroSizesOpen && h('div', { key: 'panel', className: 'mt-2 p-3 flex flex-wrap gap-2 rounded-xl border border-outline-variant bg-surface-container-low', 'data-testid': 'family-zero-sizes-panel' }, zeroDraftRows.map(row => h('button', {
+          key: row.rowKey, type: 'button', onClick: () => setFamilyRow(row.rowKey, { selectedForCreation: !row.selectedForCreation }),
+          'aria-pressed': row.selectedForCreation ? 'true' : 'false', 'data-testid': 'family-zero-toggle-' + row.rowKey,
+          className: 'min-h-10 px-3 border rounded-lg text-overline font-bold ' + (row.selectedForCreation ? 'border-primary bg-surface-container text-primary' : 'border-outline-variant bg-surface text-on-surface-variant'),
+        }, referenceRowSizeLabel(row, d.sizeCategoryId)))),
+      ]),
       h('div', { key: 'variant-actions', className: 'mt-4 pt-4 border-t border-outline-variant' }, [
         h('div', { key: 'bar', className: 'flex flex-wrap items-center gap-2' }, [
           h('button', { key: 'toggle', type: 'button', onClick: () => setVariantsOpen(value => !value),
@@ -1235,7 +1295,10 @@
             h(MS, { key: 'i', name: 'tune', size: 16 }), 'Variantes y excepciones físicas',
             (variantFamilyRows.length + physicalExceptionRows.length) > 0 && h('span', { key: 'count', className: 'px-1.5 rounded-full bg-gold text-on-gold text-overline font-bold' }, variantFamilyRows.length + physicalExceptionRows.length),
           ]),
-          h('button', { key: 'add', type: 'button', onClick: () => addFamilyVariant(standardFamilyRows.find(row => row.selectedForCreation) || standardFamilyRows[0]),
+          h('button', { key: 'add', type: 'button', onClick: () => addFamilyVariant(
+            standardFamilyRows.find(row => row.selectedForCreation && referenceRowCategoryId(row, d.sizeCategoryId) === captureSizeCategoryId)
+              || standardFamilyRows.find(row => referenceRowCategoryId(row, d.sizeCategoryId) === captureSizeCategoryId)
+              || standardFamilyRows.find(row => row.selectedForCreation) || standardFamilyRows[0]),
             'data-testid': 'family-add-variant', className: 'inline-flex items-center gap-1 min-h-10 px-3 border border-primary rounded-lg text-overline font-bold text-primary' }, [h(MS, { key: 'i', name: 'plus', size: 14 }), 'Agregar variante física']),
         ]),
         variantsOpen && h('div', { key: 'body', className: 'mt-3 space-y-3' }, [
@@ -1259,14 +1322,15 @@
       ]),
       h('div', { key: 'columns', className: 'hidden md:grid grid-cols-[.7fr_.7fr_1.4fr_1fr] gap-3 px-3 py-2 text-overline uppercase tracking-widest text-on-surface-variant border-b border-outline-variant' }, ['Talla', 'Existencia', 'Color orn.', 'Precio'].map(label => h('span', { key: label }, label))),
       ...selectedFamilyRows.map((row, index) => {
-        const attrs = { ...(d.attrs || {}), ...(row.attrs || {}), __sizeCategoryId: d.sizeCategoryId };
-        const candidate = { ...d, ...row, attrs, sizeCategoryId: d.sizeCategoryId,
+        const rowCategoryId = referenceRowCategoryId(row, d.sizeCategoryId);
+        const attrs = { ...(d.attrs || {}), ...(row.attrs || {}), __sizeCategoryId: rowCategoryId };
+        const candidate = { ...d, ...row, attrs, sizeCategoryId: rowCategoryId,
           ornamentColorCodes: effectiveFamilyColors(row), precio: effectiveFamilyPrice(row), recordModel: 'v2' };
-        const sameSize = selectedFamilyRows.filter(item => item.sizeCode === row.sizeCode);
+        const sameSize = selectedFamilyRows.filter(item => referenceRowSizeKey(item, d.sizeCategoryId) === referenceRowSizeKey(row, d.sizeCategoryId));
         const variantLabel = sameSize.length > 1 ? ` · ${effectiveFamilyColors(row).join('+') || index + 1}` : '';
         return h('div', { key: row.rowKey, className: 'border-b last:border-0 border-outline-variant text-caption', 'data-testid': 'family-summary-' + row.rowKey }, [
           h('div', { key: 'main', className: 'grid grid-cols-2 md:grid-cols-[.7fr_.7fr_1.4fr_1fr] gap-2 md:gap-3 px-3 py-3 items-center' }, [
-          summaryCell('Talla', tallaLabel(d, row.sizeCode) + variantLabel, 'font-bold text-primary'),
+          summaryCell('Talla', referenceRowSizeLabel(row, d.sizeCategoryId) + variantLabel, 'font-bold text-primary'),
           summaryCell('Existencia', row.stockQuantity, 'font-mono'),
           summaryCell('Color orn.', effectiveFamilyColors(row).join(' + ') || 'Sin colores'),
           summaryCell('Precio', fmt(effectiveFamilyPrice(row)).replace('.00', ''), 'font-mono font-semibold'),
@@ -1315,6 +1379,7 @@
         delete attrs.__ornamentColorsBySize;
         const drafts = selectedFamilyRows.map(row => {
           const source = row.source || {};
+          const rowCategoryId = referenceRowCategoryId(row, d.sizeCategoryId);
           const candidate = mode === 'edit' && row.id ? { ...source } : { ...rest };
           const candidateAttrs = { ...((source && source.attrs) || attrs), ...(row.attrs || {}) };
           familyCaptureKinds.forEach(kind => {
@@ -1341,11 +1406,11 @@
             id: row.id || undefined, recordModel: 'v2', referenceFamilyId: familyId,
             barcodeCode: row.barcodeCode || undefined, physicalSignature: row.physicalSignature || undefined,
             physicalIdentityLocked: !!row.physicalIdentityLocked, _syncVersion: Number(row._syncVersion) || 0,
-            sizeCategoryId: d.sizeCategoryId, sizeCode: String(row.sizeCode), sizeScale: row.sizeScale,
+            sizeCategoryId: rowCategoryId, sizeCode: String(row.sizeCode), sizeScale: row.sizeScale,
             stockQuantity: Math.max(0, Math.round(Number(row.stockQuantity) || 0)),
             stock: [{ talla: String(row.sizeCode), escala: row.sizeScale, stock: Math.max(0, Math.round(Number(row.stockQuantity) || 0)) }],
             precio: effectiveFamilyPrice(row), preciosTalla: {}, ornamentColorCodes: colors, ornColors: colors,
-            attrs: { ...candidateAttrs, __sizeCategoryId: d.sizeCategoryId }, costo: Number(candidate.costo) || 0,
+            attrs: { ...candidateAttrs, __sizeCategoryId: rowCategoryId }, costo: Number(candidate.costo) || 0,
           };
         });
         onSave(drafts, mode === 'edit' ? 'family-edit' : 'family-new', { openLabels: afterSave === 'labels' });
@@ -1436,13 +1501,14 @@
           h('span', { key: 'sp', className: 'flex-1' }),
           h('span', { key: 'total', className: 'px-2.5 py-1 text-overline uppercase rounded bg-gold text-on-gold font-bold' }, total + ' pz en total'),
         ]),
-        h('div', { key: 'category', className: 'max-w-sm mb-4' }, field('Familia de tallas', h('select', {
-          className: SELECT, value: d.sizeCategoryId, 'data-testid': 'product-size-category',
+        h('div', { key: 'category', className: 'max-w-sm mb-4' }, field(d.recordModel === 'v2' ? 'Tallas para agregar' : 'Familia de tallas', h('select', {
+          className: SELECT, value: d.recordModel === 'v2' ? captureSizeCategoryId : d.sizeCategoryId, 'data-testid': 'product-size-category',
           onChange: event => requestSizeCategory(event.target.value),
         }, [
           h('option', { key: '', value: '' }, 'Selecciona…'),
           ...(window.CONFIG.sizeCategories ? window.CONFIG.sizeCategories() : []).map(category => h('option', { key: category.id, value: category.id }, category.label)),
-        ]), null, attemptedSubmit && errors.find(error => error.code === 'size-category'))),
+        ]), d.recordModel === 'v2' ? 'Cambiar este selector no modifica referencias existentes; sólo muestra otro conjunto para agregar.' : null,
+        attemptedSubmit && errors.find(error => error.code === 'size-category'))),
         d.recordModel === 'v2' ? renderReferenceFamilyGrid() : h('div', { key: d.sizeCategoryId || 'none', className: 'grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-10 gap-2' }, d.stock.map((row, index) => {
           const id = 'product-stock-' + row.talla;
           return h('div', { key: String(row.talla), className: 'flex flex-col items-center gap-1' }, [

@@ -76,16 +76,11 @@ try {
   ok('5. la segunda referencia talla 40 vive como variante avanzada', /1/.test(opened.variantCount));
 
   await page.getByTestId('product-general-price').fill('1250');
-  const added = await page.evaluate(() => {
-    const row = [...document.querySelectorAll('[data-testid^="family-row-"]')]
-      .find(item => /(^|\s)46(\s|$)/.test(item.innerText));
-    if (!row) return false;
-    const toggle = row.querySelector('[data-testid^="family-zero-toggle-"]');
-    toggle.click();
-    return toggle.dataset.testid;
-  });
-  if (added) await page.waitForFunction(testId => /Se creará en 0/.test(document.querySelector(`[data-testid="${testId}"]`)?.innerText || ''), added);
-  ok('6. una acción discreta crea una talla nueva con stock cero', !!added);
+  await page.getByTestId('family-zero-sizes-toggle').click();
+  const zero46 = page.getByTestId('family-zero-sizes-panel').getByRole('button', { name: '46', exact: true });
+  const added = await zero46.count();
+  if (added) await zero46.click();
+  ok('6. la acción agrupada crea una talla nueva con stock cero', !!added);
   await page.getByTestId('product-save').click();
   await page.waitForTimeout(600);
   const submitState = await page.evaluate(() => ({

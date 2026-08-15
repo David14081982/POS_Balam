@@ -60,19 +60,19 @@ try {
     const rowId = await rowTestId(size);
     await page.locator(`[data-testid="${rowId}"] [data-testid^="family-stock-"]`).fill(String(quantity));
   };
+  await page.getByTestId('family-zero-sizes-toggle').click();
   for (const size of ['XS', 'S']) {
-    const rowId = await rowTestId(size);
-    await page.locator(`[data-testid="${rowId}"] [data-testid^="family-zero-toggle-"]`).click();
+    await page.getByTestId('family-zero-sizes-panel').getByRole('button', { name: size, exact: true }).click();
   }
   await setStock('M', 3); await setStock('L', 5); await setStock('XL', 2); await setStock('2XL', 1);
 
   await page.getByTestId('product-exceptions-toggle').click();
   await page.getByTestId('add-price-by-size').click();
   await page.getByTestId('price-group-0-value').fill('1350');
-  await page.getByTestId('price-group-0-size-2XL').click();
+  await page.locator('[data-testid^="price-group-0-size-"]').filter({ hasText: /^2XL/ }).click();
   await page.getByTestId('price-group-0-done').click();
   await page.getByTestId('add-ornament-colors-by-size').click();
-  await page.getByTestId('ornament-group-0-size-XL').click();
+  await page.locator('[data-testid^="ornament-group-0-size-"]').filter({ hasText: /^XL/ }).click();
   await page.getByTestId('ornament-group-0-color-toggle').click();
   await page.getByTestId('ornament-group-0-color-DRO').click();
   await page.getByTestId('ornament-group-0-color-close').click();
