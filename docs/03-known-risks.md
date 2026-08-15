@@ -5095,6 +5095,12 @@ ajenas. Migraciones local/remoto alineadas hasta `20260814014600`; H-101 26/26,
 piloto 9/9 y regresiones H-94/H-95/H-100 verdes. Commit técnico `b2603e1`;
 Pages run `31857750206` exitoso y bytes publicados SHA-256
 `056d2565d43bc0d1ffe961795965df1f6443d70b823dea76892642c6b861f972`.
+**Corrección UX posterior:** la primera proyección agrupada seguía mostrando una
+card técnica por referencia. Se sustituyó por los patrones V1 de cuadrícula de
+stock, precio/color general, excepciones agrupadas y resumen efectivo; las
+variantes físicas quedaron bajo divulgación progresiva. No cambió persistencia,
+RPC, Excel ni Supabase. Nuevo ADRIANO 10/10, Editar 12/12, responsive específico
+sin overflow en 320–1280 px y regresiones H-94/H-95/H-100 verdes.
 
 ## Regla de actualización
 

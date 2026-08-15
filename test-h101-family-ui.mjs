@@ -58,28 +58,42 @@ try {
 
   const opened = await page.evaluate(() => {
     const rows = [...document.querySelectorAll('[data-testid^="family-row-"]')];
-    const selected = rows.filter(row => row.querySelector('input[type="checkbox"]')?.checked);
-    const summary = document.querySelectorAll('[data-testid^="family-summary-"]');
-    const zero = [...document.querySelectorAll('[data-testid^="family-stock-"]')].some(input => Number(input.value) === 0
-      && input.closest('[data-testid^="family-row-"]')?.querySelector('input[type="checkbox"]')?.checked);
-    return { rows: rows.length, selected: selected.length, summary: summary.length, zero };
+    const summary = [...document.querySelectorAll('[data-testid^="family-summary-"]')]
+      .filter(node => node.dataset.testid !== 'family-summary-details-toggle');
+    const zero = rows.some(row => Number(row.querySelector('[data-testid^="family-stock-"]')?.value) === 0
+      && /Existente en 0/.test(row.innerText));
+    const grid = document.querySelector('[data-testid="reference-family-grid"]');
+    return { rows: rows.length, summary: summary.length, zero,
+      checkboxes: grid.querySelectorAll('input[type="checkbox"]').length,
+      copyVisible: /\bCOPY\b/.test(grid.innerText),
+      compact: !!document.querySelector('[data-testid="family-compact-stock-grid"]'),
+      variantCount: document.querySelector('[data-testid="family-variants-toggle"]')?.innerText || '' };
   });
-  ok('1. Editar abre las cinco referencias hermanas', opened.selected === 5, JSON.stringify(opened));
+  ok('1. Editar proyecta la familia en una cuadrícula compacta', opened.compact && opened.rows === 10, JSON.stringify(opened));
   ok('2. la referencia existente con stock cero sigue visible', opened.zero);
   ok('3. el resumen efectivo contiene cinco referencias', opened.summary === 5);
+  ok('4. la ruta normal no expone checkboxes ni COPY', opened.checkboxes === 0 && !opened.copyVisible);
+  ok('5. la segunda referencia talla 40 vive como variante avanzada', /1/.test(opened.variantCount));
 
   await page.getByTestId('product-general-price').fill('1250');
   const added = await page.evaluate(() => {
     const row = [...document.querySelectorAll('[data-testid^="family-row-"]')]
       .find(item => /(^|\s)46(\s|$)/.test(item.innerText));
     if (!row) return false;
-    const box = row.querySelector('input[type="checkbox"]');
-    box.click();
-    return box.checked;
+    const toggle = row.querySelector('[data-testid^="family-zero-toggle-"]');
+    toggle.click();
+    return toggle.dataset.testid;
   });
-  ok('4. se puede seleccionar una talla nueva con stock cero', added);
+  if (added) await page.waitForFunction(testId => /Se creará en 0/.test(document.querySelector(`[data-testid="${testId}"]`)?.innerText || ''), added);
+  ok('6. una acción discreta crea una talla nueva con stock cero', !!added);
   await page.getByTestId('product-save').click();
-  await page.waitForFunction(() => !document.querySelector('[data-testid="product-form"]'));
+  await page.waitForTimeout(600);
+  const submitState = await page.evaluate(() => ({
+    open: !!document.querySelector('[data-testid="product-form"]'),
+    errors: document.querySelector('[data-testid="product-form-errors"]')?.innerText || '',
+    tail: document.body.innerText.slice(-800),
+  }));
+  ok('7. la familia se guarda sin pendientes', !submitState.open, submitState.open ? (submitState.errors || submitState.tail) : '');
   const saved = await page.evaluate(familyId => {
     const rows = window.DATA.products.filter(row => row.referenceFamilyId === familyId && !row._deletedAt);
     return {
@@ -89,13 +103,13 @@ try {
       ids: rows.map(row => row.id), barcodes: rows.map(row => row.barcodeCode),
     };
   }, pilot.familyId);
-  ok('5. agregar talla crea una sexta referencia sin cambiar las cinco existentes',
+  ok('8. agregar talla crea una sexta referencia sin cambiar las cinco existentes',
     saved.count === 6 && new Set(saved.ids).size === 6 && saved.ids.includes(pilot.firstId), JSON.stringify(saved));
-  ok('6. edición masiva materializa precio 1250 en los seis IDs', saved.prices.every(value => value === 1250));
-  ok('7. tallas 44 y 46 conservan referencias independientes en cero',
+  ok('9. el precio general se materializa en los seis IDs', saved.prices.every(value => value === 1250));
+  ok('10. tallas 44 y 46 conservan referencias independientes en cero',
     JSON.stringify(saved.zeroSizes) === JSON.stringify(['44', '46']));
-  ok('8. los seis barcodes son únicos', new Set(saved.barcodes).size === 6);
-  ok('9. no hubo errores de página', errors.length === 0, errors.join(' | '));
+  ok('11. los seis barcodes son únicos', new Set(saved.barcodes).size === 6);
+  ok('12. no hubo errores de página', errors.length === 0, errors.join(' | '));
 } finally {
   if (browser) await browser.close();
   await new Promise(done => server.close(done));

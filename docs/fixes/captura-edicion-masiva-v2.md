@@ -14,6 +14,12 @@ en una misma alta. La administradora debía repetir manualmente talla, stock,
 precio y colores; además, una referencia deseada con stock cero no podía
 distinguirse de una combinación que no se deseaba crear.
 
+La primera UI H-101 resolvió la persistencia, pero proyectó una card técnica por
+referencia con checkbox, talla, stock, precio, colores, Corte, Características y
+un botón COPY. En familias amplias repetía controles, desbordaba la composición
+y obligaba a pensar fila por fila. Esa experiencia no cumplía «V1 como
+experiencia de captura» aunque el modelo inferior fuese correcto.
+
 ## Causa raíz
 
 H-94 separó correctamente cada combinación física en una fila, pero cliente,
@@ -62,6 +68,28 @@ El RPC exige `inventory.adjust`, protocolo/época vigentes, operación idempoten
 IDs únicos, familia única y concurrencia optimista mediante el trigger existente.
 Un error conserva el lote en la cola local-first; no se fusionan referencias.
 
+### Corrección UX posterior
+
+Sin cambiar DATA, STORE, RPC, Excel, migraciones ni Supabase, `ProductForm`
+reutiliza ahora los patrones V1:
+
+- cuadrícula compacta de tallas y existencias con navegación por teclado;
+- precio general y grupos de precios especiales por talla;
+- colores generales y grupos de colores especiales por talla;
+- Corte y Características generales capturados una sola vez;
+- resumen efectivo compacto `talla / existencia / color / precio`, con
+  Corte, Características y SKU bajo «Mostrar detalles»;
+- talla V2 existente visible en cero; una nueva se activa al escribir stock o
+  mediante la acción discreta «Crear en 0»;
+- múltiples referencias de la misma talla viven bajo «Variantes y excepciones
+  físicas», cerrado en el caso normal;
+- se eliminaron de la ruta normal los checkboxes, cards repetidas y COPY.
+
+Nuevo y Editar comparten el mismo formulario. La proyección reconstruye precio
+y colores generales por valor predominante y conserva las excepciones físicas
+materializadas por ID. El guardado sigue entregando exactamente N filas V2 al
+lote familiar existente.
+
 ## Integridad remota
 
 `supabase migration list --linked` alinea local/remoto hasta
@@ -98,6 +126,18 @@ ejecutó Punto Cero, carga real ni conversión V1→V2.
   `056d2565d43bc0d1ffe961795965df1f6443d70b823dea76892642c6b861f972`,
   idénticos al blob Git del commit técnico.
 
+Corrección UX:
+
+- caso humano Nuevo ADRIANO: 10/10; XS0, S0, M3, L5, XL2 y 2XL1; precio
+  general 1,250, 2XL a 1,350, colores generales DRO+AZL y XL sólo DRO;
+- edición familiar y variante duplicada 40/DRO + 40/AZL: 12/12;
+- contrato H-101: 26/26; H-94: 49/49; H-95: 16/16; H-100: 10/10;
+- Excel 42/42; cola/sincronización 176/176; migraciones 31/31;
+- responsive general 492/492 y compuerta del formulario sin overflow en 320,
+  360, 390, 430, 768, 1024 y 1280 px;
+- comparación visual: `.evidence-h101-ux/before-v1-stock.png`,
+  `before-v2-stock.png` y `after-v2-stock.png`.
+
 ## Despliegue y rollback
 
 El código está en `origin/main` y Pages. El rollback de interfaz consiste en
@@ -105,6 +145,9 @@ revertir el commit técnico y regenerar artefactos. La columna/familias deben
 permanecer como cambio aditivo compatible: no se deben eliminar mientras existan
 clientes H-101. El RPC público puede revocarse si fuese necesario sin alterar
 productos; nunca se debe reconstruir familia mediante heurísticas.
+
+La corrección UX se revierte de forma independiente sobre `balam/inventory.jsx`
+y los artefactos generados; no requiere rollback de base de datos.
 
 ## Riesgo residual y pendientes
 

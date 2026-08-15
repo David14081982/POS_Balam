@@ -595,13 +595,19 @@
   // mismo conjunto de colores. El orden de los colores no crea otro grupo.
   function ordenarColoresOrnamento(colors) {
     const selected = new Set((colors || []).map(String));
-    return (window.CONFIG.all ? window.CONFIG.all('color') : window.CONFIG.list('color'))
+    const ornamentCodes = new Set((window.CONFIG.all ? window.CONFIG.all('ornament_color') : window.CONFIG.list('ornament_color')).map(item => String(item.code)));
+    const kind = Array.from(selected).some(code => ornamentCodes.has(code)) ? 'ornament_color' : 'color';
+    return (window.CONFIG.all ? window.CONFIG.all(kind) : window.CONFIG.list(kind))
       .map(item => String(item.code)).filter(code => selected.has(code));
   }
   function agruparColoresOrnamento(mapa, product) {
-    const clean = D.sanitizeOrnamentColorsBySize(mapa, product);
+    const clean = D.isV2Reference(product)
+      ? Object.fromEntries(Object.entries(mapa || {}).map(([size, colors]) => [size, D.canonicalReferenceOrnamentColors(colors)]).filter(([, colors]) => colors.length))
+      : D.sanitizeOrnamentColorsBySize(mapa, product);
     const groups = {};
-    const order = D.resolveProductSizes(product).sizes.map(size => String(size.value));
+    const order = D.isV2Reference(product)
+      ? window.CONFIG.list(product.sizeCategoryId || (product.attrs || {}).__sizeCategoryId || '').map(item => String(Object.prototype.hasOwnProperty.call(item.meta || {}, 'value') ? item.meta.value : item.code))
+      : D.resolveProductSizes(product).sizes.map(size => String(size.value));
     order.forEach(talla => {
       if (!clean[talla]) return;
       const key = JSON.stringify(clean[talla]);
@@ -632,6 +638,37 @@
 
   // ---------- Formulario de alta / edición ----------
   function ProductForm({ mode, product, onClose, onSave }) {
+    const initialFamily = D.isV2Reference(product) && mode === 'edit'
+      ? D.referenceFamily(product) : [];
+    const initialPrimary = [];
+    const initialVariantIds = new Set();
+    const initialSizes = new Set();
+    initialFamily.forEach(row => {
+      const size = String(row.sizeCode || '');
+      if (initialSizes.has(size)) initialVariantIds.add(row.id);
+      else { initialSizes.add(size); initialPrimary.push(row); }
+    });
+    const mostFrequent = (values, fallback, keyOf) => {
+      const counts = new Map();
+      (values || []).forEach(value => {
+        const key = keyOf ? keyOf(value) : String(value);
+        const current = counts.get(key) || { value, count: 0 };
+        current.count += 1; counts.set(key, current);
+      });
+      return Array.from(counts.values()).sort((a, b) => b.count - a.count)[0]?.value ?? fallback;
+    };
+    const initialGeneralPrice = mostFrequent(initialPrimary.map(row => Number(row.precio) || 0), Number(product.precio) || 0);
+    const initialGeneralColors = D.isV2Reference(product)
+      ? mostFrequent(initialPrimary.map(row => D.canonicalReferenceOrnamentColors(row.ornamentColorCodes || row.ornColors || [])),
+        D.canonicalReferenceOrnamentColors(product.ornamentColorCodes || product.ornColors || []), value => JSON.stringify(value))
+      : (product.ornColors || []).slice();
+    const initialPriceMap = Object.fromEntries(initialPrimary
+      .filter(row => Number(row.precio) !== Number(initialGeneralPrice))
+      .map(row => [String(row.sizeCode), Number(row.precio) || 0]));
+    const initialColorMap = Object.fromEntries(initialPrimary
+      .filter(row => JSON.stringify(D.canonicalReferenceOrnamentColors(row.ornamentColorCodes || row.ornColors || []))
+        !== JSON.stringify(initialGeneralColors))
+      .map(row => [String(row.sizeCode), D.canonicalReferenceOrnamentColors(row.ornamentColorCodes || row.ornColors || [])]));
     // Los códigos huérfanos NO se sustituyen al abrir: el select los muestra con aviso (sel() ya
     // lo maneja). Sustituirlos por el primer elemento activo reescribía el color/atributo real del
     // producto con solo abrir y guardar. La normalización masiva vive en Regenerar SKUs.
@@ -640,9 +677,9 @@
       physicalSignature: product.physicalSignature || null,
       id: product.id, cat: product.cat, manga: product.manga, tela: product.tela, color: product.color,
       modelo: product.modelo, nombre: product.nombre, orn: product.orn,
-      ornColors: (product.ornamentColorCodes || product.ornColors || []).slice(),
-      ornamentColorCodes: (product.ornamentColorCodes || []).slice(),
-      cuello: product.cuello, precio: product.precio, costo: product.costo != null ? product.costo : '', pop: !!product.pop,
+      ornColors: initialGeneralColors.slice(),
+      ornamentColorCodes: initialGeneralColors.slice(),
+      cuello: product.cuello, precio: initialGeneralPrice, costo: product.costo != null ? product.costo : '', pop: !!product.pop,
       imagen: product.imagen || '',
       attrs: product.attrs ? { ...product.attrs } : {}, // valores de catálogos custom (Fase 2)
       sizeCategoryId: product.sizeCategoryId || D.inferSizeCategory(product, product.stock) || '',
@@ -654,9 +691,9 @@
       // que es como el negocio ya expresa un alcance por tallas en Descuentos.
       // El dato guardado es el mapa canónico; la agrupación vive sólo aquí y se
       // reconstruye juntando las tallas que comparten precio.
-      precioRows: agruparPrecios(product.preciosTalla),
+      precioRows: D.isV2Reference(product) ? agruparPrecios(initialPriceMap) : agruparPrecios(product.preciosTalla),
       ornamentColorRows: agruparColoresOrnamento(
-        product.attrs && product.attrs.__ornamentColorsBySize, product),
+        D.isV2Reference(product) ? initialColorMap : product.attrs && product.attrs.__ornamentColorsBySize, product),
     }));
     const familyId = useRef(product.referenceFamilyId
       || (window.crypto && window.crypto.randomUUID ? window.crypto.randomUUID() : 'family-' + Date.now())).current;
@@ -665,11 +702,15 @@
       id: row.id || null, selectedForCreation: !!row.id,
       sizeCode: String(row.sizeCode || ''), sizeScale: row.sizeScale || '',
       stockQuantity: Math.max(0, Number(row.stockQuantity) || 0),
-      precio: Number(row.precio) === Number(product.precio) ? '' : (Number(row.precio) || 0),
-      ornamentColorCodes: JSON.stringify(D.canonicalReferenceOrnamentColors(row.ornamentColorCodes || row.ornColors || []))
-        === JSON.stringify(D.canonicalReferenceOrnamentColors(product.ornamentColorCodes || product.ornColors || []))
-        ? null : D.canonicalReferenceOrnamentColors(row.ornamentColorCodes || row.ornColors || []),
-      attrs: { ...(row.attrs || {}) }, barcodeCode: row.barcodeCode || null,
+      precio: initialVariantIds.has(row.id) && Number(row.precio) !== Number(initialGeneralPrice)
+        ? (Number(row.precio) || 0) : '',
+      ornamentColorCodes: initialVariantIds.has(row.id)
+        && JSON.stringify(D.canonicalReferenceOrnamentColors(row.ornamentColorCodes || row.ornColors || [])) !== JSON.stringify(initialGeneralColors)
+        ? D.canonicalReferenceOrnamentColors(row.ornamentColorCodes || row.ornColors || []) : null,
+      attrs: Object.fromEntries(Object.entries(row.attrs || {}).filter(([kind, value]) => {
+        const meta = window.CONFIG.catalogMeta(kind) || {};
+        return meta.captureScope === 'reference' && value !== (product.attrs || {})[kind];
+      })), barcodeCode: row.barcodeCode || null,
       physicalSignature: row.physicalSignature || null, _syncVersion: Number(row._syncVersion) || 0,
       physicalIdentityLocked: !!row.physicalIdentityLocked,
       source: JSON.parse(JSON.stringify(row)),
@@ -695,6 +736,12 @@
     });
     const initialSignature = useRef(productDraftSignature(d));
     const [exceptionsOpen, setExceptionsOpen] = useState(false);
+    const initialHasPhysicalOverrides = initialFamily.some(row => Object.entries(row.attrs || {}).some(([kind, value]) => {
+      const meta = window.CONFIG.catalogMeta(kind) || {};
+      return meta.captureScope === 'reference' && value !== (product.attrs || {})[kind];
+    }));
+    const [variantsOpen, setVariantsOpen] = useState(initialVariantIds.size > 0 || initialHasPhysicalOverrides);
+    const [summaryDetailsOpen, setSummaryDetailsOpen] = useState(false);
     const [colorPicker, setColorPicker] = useState(null);
     const [colorQuery, setColorQuery] = useState('');
     const [showAllSummary, setShowAllSummary] = useState(false);
@@ -771,11 +818,15 @@
       }
       return next;
     }));
-    const addFamilyVariant = source => setReferenceRows(rows => rows.concat([{
-      ...source, rowKey: `draft-${Date.now()}-${rows.length}`, id: null, barcodeCode: null,
-      physicalSignature: null, physicalIdentityLocked: false, _syncVersion: 0,
-      selectedForCreation: true, stockQuantity: 0,
-    }]));
+    const addFamilyVariant = source => {
+      setReferenceRows(rows => rows.concat([{
+        ...(source || rows[0] || {}), rowKey: `draft-${Date.now()}-${rows.length}`,
+        id: null, barcodeCode: null, physicalSignature: null,
+        physicalIdentityLocked: false, _syncVersion: 0, selectedForCreation: true,
+        stockQuantity: 0, precio: '', ornamentColorCodes: null, attrs: {},
+      }]));
+      setVariantsOpen(true);
+    };
     const removeFamilyVariant = row => {
       if (row.id) return;
       setReferenceRows(rows => rows.filter(item => item.rowKey !== row.rowKey));
@@ -857,11 +908,18 @@
     }
     const imgSrc = d.imagen ? ((window.__IMG_MAP && window.__IMG_MAP[d.imagen]) || d.imagen) : '';
     const skuPrev = D.sku({ ...d, modelo: d.modelo || '000' }); // misma receta que el SKU real
+    const standardFamilyRows = [], variantFamilyRows = [];
+    const seenFamilySizes = new Set();
+    referenceRows.forEach(row => {
+      const size = String(row.sizeCode);
+      if (seenFamilySizes.has(size)) variantFamilyRows.push(row);
+      else { seenFamilySizes.add(size); standardFamilyRows.push(row); }
+    });
     const selectedFamilyRows = referenceRows.filter(row => row.selectedForCreation);
     const exceptionSizeRows = d.recordModel === 'v2'
-      ? Array.from(new Map(referenceRows.map(row => [String(row.sizeCode), {
+      ? standardFamilyRows.map(row => ({
           talla: String(row.sizeCode), escala: row.sizeScale, stock: Number(row.stockQuantity) || 0,
-        }])).values()) : d.stock;
+        })) : d.stock;
     const total = d.recordModel === 'v2'
       ? selectedFamilyRows.reduce((sum, row) => sum + (Number(row.stockQuantity) || 0), 0)
       : d.stock.reduce((a, v) => a + v.stock, 0);
@@ -911,7 +969,7 @@
         const grouped = previewOrnamentColors[String(row.sizeCode)];
         const colors = D.canonicalReferenceOrnamentColors(explicit || grouped || d.ornColors || []);
         if (!colors.length) out.push({ code: 'ornament-color-required-' + row.rowKey,
-          target: 'family-colors-' + row.rowKey, message: `Selecciona color de ornamento para talla ${tallaLabel(d, row.sizeCode)}.` });
+          target: 'general-color-selector-toggle', message: `Selecciona color de ornamento para talla ${tallaLabel(d, row.sizeCode)}.` });
       });
       const priceOwners = {};
       d.precioRows.forEach((row, index) => {
@@ -965,7 +1023,9 @@
         if (target) { target.scrollIntoView({ block: 'center', behavior: 'smooth' }); target.focus(); }
       }));
     };
-    const isDirty = productDraftSignature(d) !== initialSignature.current;
+    const initialReferenceSignature = useRef(JSON.stringify(referenceRows));
+    const isDirty = productDraftSignature(d) !== initialSignature.current
+      || JSON.stringify(referenceRows) !== initialReferenceSignature.current;
     const requestClose = () => {
       if (isDirty && !window.confirm('Hay cambios sin guardar. ¿Deseas cerrar el formulario y descartarlos?')) return;
       onClose();
@@ -1093,70 +1153,129 @@
     const effectiveFamilyColors = row => Array.isArray(row.ornamentColorCodes)
       ? D.canonicalReferenceOrnamentColors(row.ornamentColorCodes)
       : D.canonicalReferenceOrnamentColors(familyColorMap()[row.sizeCode] || d.ornColors || []);
-    const renderReferenceFamilyGrid = () => h('div', { key: 'family-grid', className: 'space-y-2', 'data-testid': 'reference-family-grid' }, [
-      h('div', { key: 'hint', className: 'flex flex-wrap items-center gap-2 text-caption text-on-surface-variant' }, [
-        h(MS, { key: 'i', name: 'info', size: 16 }),
-        'Marca las referencias que deseas conservar o crear. Una referencia puede existir con existencia 0.',
+    const physicalExceptionRows = standardFamilyRows.filter(row => referenceCaptureKinds.some(kind =>
+      Object.prototype.hasOwnProperty.call(row.attrs || {}, kind)));
+    const renderVariantEditor = (row, index, isAdditional) => h('div', {
+      key: row.rowKey, className: 'p-3 sm:p-4 rounded-xl border border-outline-variant bg-surface-container-low',
+      'data-testid': 'family-variant-' + row.rowKey,
+    }, [
+      h('div', { key: 'head', className: 'flex items-center gap-2 mb-3' }, [
+        h('strong', { key: 't', className: 'text-caption text-primary' }, isAdditional
+          ? `Variante adicional ${index + 1}` : `Excepción física · ${tallaLabel(d, row.sizeCode)}`),
+        h('span', { key: 'sp', className: 'flex-1' }),
+        isAdditional && !row.id && h('button', { key: 'del', type: 'button', onClick: () => removeFamilyVariant(row),
+          className: 'min-h-10 px-3 inline-flex items-center gap-1 text-overline font-bold text-danger border border-outline-variant rounded-lg' }, [h(MS, { key: 'i', name: 'trash', size: 15 }), 'Quitar']),
       ]),
-      ...referenceRows.map(row => {
-        const selected = !!row.selectedForCreation;
-        const label = tallaLabel(d, row.sizeCode);
-        return h('div', { key: row.rowKey, className: 'rounded-xl border p-3 ' + (selected ? 'border-primary/50 bg-surface' : 'border-outline-variant bg-surface-container-low opacity-75'), 'data-testid': 'family-row-' + row.rowKey }, [
-          h('div', { key: 'main', className: 'grid grid-cols-[auto_1fr] sm:grid-cols-[auto_5rem_7rem_8rem_1fr_auto] gap-2 items-end' }, [
-            h('label', { key: 'pick', className: 'flex items-center gap-2 min-h-11 sm:self-center' }, [
-              h('input', { key: 'c', type: 'checkbox', checked: selected, disabled: !!row.id,
-                'data-testid': 'create-reference-selected-' + row.rowKey,
-                onChange: event => setFamilyRow(row.rowKey, { selectedForCreation: event.target.checked }) }),
-              h('span', { key: 'mobile', className: 'sm:hidden font-bold text-primary' }, label),
-            ]),
-            h('div', { key: 'size', className: 'hidden sm:block' }, [
-              h('span', { key: 'l', className: 'block text-overline uppercase text-on-surface-variant' }, 'Talla'),
-              h('strong', { key: 'v', className: 'block h-11 pt-3 text-primary' }, label),
-            ]),
-            field('Existencia', h('input', { type: 'number', min: 0, inputMode: 'numeric', value: row.stockQuantity,
-              'data-testid': 'family-stock-' + row.rowKey, className: INPUT + ' text-right font-mono',
-              onFocus: event => event.currentTarget.select(), onChange: event => setFamilyRow(row.rowKey, { stockQuantity: event.target.value }) })),
-            field('Precio', h('input', { type: 'number', min: 0, value: row.precio,
-              placeholder: String(familyPriceMap()[row.sizeCode] ?? d.precio ?? 0),
-              'data-testid': 'family-price-' + row.rowKey, className: INPUT + ' text-right font-mono',
-              onChange: event => setFamilyRow(row.rowKey, { precio: event.target.value }) })),
-            field('Colores de ornamento', h('input', { type: 'text',
-              value: Array.isArray(row.ornamentColorCodes) ? row.ornamentColorCodes.join(', ') : '',
-              placeholder: effectiveFamilyColors({ ...row, ornamentColorCodes: null }).join(', ') || 'General',
-              'data-testid': 'family-colors-' + row.rowKey, className: INPUT,
-              onChange: event => setFamilyRow(row.rowKey, { ornamentColorCodes: event.target.value.split(',').map(value => value.trim().toUpperCase()).filter(Boolean) }) })),
-            h('div', { key: 'actions', className: 'flex gap-1 col-span-2 sm:col-span-1' }, [
-              h('button', { key: 'dup', type: 'button', title: 'Otra variante de la misma talla', onClick: () => addFamilyVariant(row), className: 'w-10 h-10 border border-outline-variant rounded-lg text-primary', 'data-testid': 'family-duplicate-' + row.rowKey }, h(MS, { name: 'copy', size: 16 })),
-              !row.id && referenceRows.filter(item => item.sizeCode === row.sizeCode).length > 1 && h('button', { key: 'del', type: 'button', title: 'Quitar variante', onClick: () => removeFamilyVariant(row), className: 'w-10 h-10 border border-outline-variant rounded-lg text-danger' }, h(MS, { name: 'trash', size: 16 })),
-            ]),
-          ]),
-          selected && h('div', { key: 'attrs', className: 'grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 pl-0 sm:pl-8' }, referenceCaptureKinds.map(kind => {
-            const meta = window.CONFIG.catalogMeta(kind) || {};
-            return field(meta.label || kind, h('select', { className: SELECT, value: (row.attrs || {})[kind] || (d.attrs || {})[kind] || '', onChange: event => setFamilyRow(row.rowKey, { attrs: { ...(row.attrs || {}), [kind]: event.target.value } }) }, [
-              h('option', { key: '', value: '' }, 'Sin valor'),
-              ...window.CONFIG.list(kind).map(item => h('option', { key: item.code, value: item.code }, item.label)),
-            ]));
-          })),
+      h('div', { key: 'grid', className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-start' }, [
+        isAdditional && field('Talla', h('select', { className: SELECT, value: row.sizeCode, disabled: !!row.id,
+          'data-testid': 'family-variant-size-' + row.rowKey, onChange: event => {
+            const item = window.CONFIG.list(d.sizeCategoryId).find(option => String(Object.prototype.hasOwnProperty.call(option.meta || {}, 'value') ? option.meta.value : option.code) === event.target.value) || {};
+            setFamilyRow(row.rowKey, { sizeCode: event.target.value, sizeScale: (window.CONFIG.sizeCategories().find(cat => cat.id === d.sizeCategoryId) || {}).scale || row.sizeScale });
+          } }, window.CONFIG.list(d.sizeCategoryId).map(item => {
+            const value = String(Object.prototype.hasOwnProperty.call(item.meta || {}, 'value') ? item.meta.value : item.code);
+            return h('option', { key: item.code, value }, item.label);
+          }))),
+        isAdditional && field('Existencia', h('input', { className: INPUT + ' text-right font-mono', type: 'number', min: 0,
+          value: row.stockQuantity, 'data-testid': 'family-variant-stock-' + row.rowKey,
+          onFocus: event => event.currentTarget.select(), onChange: event => setFamilyRow(row.rowKey, { stockQuantity: event.target.value }) })),
+        isAdditional && field('Precio especial', h('input', { className: INPUT + ' text-right font-mono', type: 'number', min: 0,
+          value: row.precio, placeholder: String(familyPriceMap()[row.sizeCode] ?? d.precio ?? 0),
+          'data-testid': 'family-variant-price-' + row.rowKey, onChange: event => setFamilyRow(row.rowKey, { precio: event.target.value }) })),
+        isAdditional && h('div', { key: 'colors', className: 'sm:col-span-2 lg:col-span-1 min-w-0' }, [
+          h('p', { key: 'l', className: 'text-caption font-semibold text-on-surface-variant uppercase tracking-widest mb-1.5' }, 'Colores de ornamento'),
+          renderColorSelector({ pickerId: 'variant-' + row.rowKey, selected: effectiveFamilyColors(row),
+            onToggle: color => {
+              const current = effectiveFamilyColors(row);
+              setFamilyRow(row.rowKey, { ornamentColorCodes: current.includes(color) ? current.filter(value => value !== color) : current.concat(color) });
+            }, optionTestId: color => 'family-variant-' + row.rowKey + '-color-' + color,
+            toggleTestId: 'family-variant-' + row.rowKey + '-colors', closeTestId: 'family-variant-' + row.rowKey + '-colors-close' }),
+        ]),
+        ...referenceCaptureKinds.map(kind => {
+          const meta = window.CONFIG.catalogMeta(kind) || {};
+          return field((meta.label || kind) + ' especial', h('select', { className: SELECT,
+            value: (row.attrs || {})[kind] || '',
+            onChange: event => setFamilyRow(row.rowKey, { attrs: { ...(row.attrs || {}), [kind]: event.target.value } }) }, [
+            h('option', { key: '', value: '' }, 'Usar valor general'),
+            ...window.CONFIG.list(kind).map(item => h('option', { key: item.code, value: item.code }, item.label)),
+          ]));
+        }),
+      ]),
+    ]);
+    const renderReferenceFamilyGrid = () => h('div', { key: 'family-grid', 'data-testid': 'reference-family-grid' }, [
+      h('p', { key: 'hint', className: 'mb-3 text-caption text-on-surface-variant' }, 'Captura varias existencias de forma rápida. Una talla existente permanece aunque llegue a cero; escribir una cantidad activa una talla nueva.'),
+      h('div', { key: 'sizes', className: 'grid grid-cols-3 sm:grid-cols-6 lg:grid-cols-10 gap-2', 'data-testid': 'family-compact-stock-grid' }, standardFamilyRows.map((row, index) => {
+        const active = !!row.selectedForCreation;
+        const existing = !!row.id;
+        return h('div', { key: row.rowKey, className: 'min-w-0 flex flex-col items-center gap-1', 'data-testid': 'family-row-' + row.rowKey }, [
+          h('label', { key: 'l', htmlFor: 'family-stock-' + row.rowKey, className: 'text-overline uppercase text-on-surface-variant font-semibold truncate max-w-full' }, tallaLabel(d, row.sizeCode)),
+          h('input', { key: 'i', id: 'family-stock-' + row.rowKey, type: 'number', inputMode: 'numeric', min: 0,
+            value: row.stockQuantity, 'data-testid': 'family-stock-' + row.rowKey,
+            className: 'w-full h-11 text-center bg-surface-container border focus:ring-2 focus:ring-primary text-body rounded-lg font-mono ' + (active ? 'border-outline-variant' : 'border-dashed border-outline-variant text-on-surface-variant'),
+            onFocus: event => event.currentTarget.select(),
+            onKeyDown: event => {
+              if (!['Enter', 'ArrowRight', 'ArrowLeft'].includes(event.key)) return;
+              event.preventDefault(); const next = standardFamilyRows[index + (event.key === 'ArrowLeft' ? -1 : 1)];
+              if (next) document.querySelector('[data-testid="family-stock-' + next.rowKey + '"]')?.focus();
+            },
+            onChange: event => setFamilyRow(row.rowKey, { stockQuantity: event.target.value,
+              selectedForCreation: active || Number(event.target.value) > 0 }),
+          }),
+          !existing && Number(row.stockQuantity) === 0 && h('button', { key: 'zero', type: 'button',
+            onClick: () => setFamilyRow(row.rowKey, { selectedForCreation: !active }),
+            'data-testid': 'family-zero-toggle-' + row.rowKey,
+            className: 'min-h-8 max-w-full px-1 text-[10px] leading-tight font-bold ' + (active ? 'text-accent' : 'text-primary underline') }, active ? 'Se creará en 0' : 'Crear en 0'),
+          existing && Number(row.stockQuantity) === 0 && h('span', { key: 'kept', className: 'min-h-8 text-[10px] leading-tight text-accent font-bold text-center' }, 'Existente en 0'),
         ]);
-      }),
+      })),
+      h('div', { key: 'variant-actions', className: 'mt-4 pt-4 border-t border-outline-variant' }, [
+        h('div', { key: 'bar', className: 'flex flex-wrap items-center gap-2' }, [
+          h('button', { key: 'toggle', type: 'button', onClick: () => setVariantsOpen(value => !value),
+            'aria-expanded': variantsOpen ? 'true' : 'false', 'data-testid': 'family-variants-toggle',
+            className: 'inline-flex items-center gap-2 min-h-10 px-3 border border-outline-variant rounded-lg text-caption font-semibold text-primary' }, [
+            h(MS, { key: 'i', name: 'tune', size: 16 }), 'Variantes y excepciones físicas',
+            (variantFamilyRows.length + physicalExceptionRows.length) > 0 && h('span', { key: 'count', className: 'px-1.5 rounded-full bg-gold text-on-gold text-overline font-bold' }, variantFamilyRows.length + physicalExceptionRows.length),
+          ]),
+          h('button', { key: 'add', type: 'button', onClick: () => addFamilyVariant(standardFamilyRows.find(row => row.selectedForCreation) || standardFamilyRows[0]),
+            'data-testid': 'family-add-variant', className: 'inline-flex items-center gap-1 min-h-10 px-3 border border-primary rounded-lg text-overline font-bold text-primary' }, [h(MS, { key: 'i', name: 'plus', size: 14 }), 'Agregar variante física']),
+        ]),
+        variantsOpen && h('div', { key: 'body', className: 'mt-3 space-y-3' }, [
+          !variantFamilyRows.length && !physicalExceptionRows.length && h('p', { key: 'empty', className: 'p-3 rounded-lg bg-surface-container-low text-caption text-on-surface-variant' }, 'Sin variantes físicas adicionales.'),
+          ...physicalExceptionRows.map((row, index) => renderVariantEditor(row, index, false)),
+          ...variantFamilyRows.map((row, index) => renderVariantEditor(row, index, true)),
+        ]),
+      ]),
     ]);
     const renderFamilySummary = () => h('section', { key: 'family-summary', className: 'rounded-xl border border-outline-variant p-4 sm:p-5', 'data-testid': 'reference-family-summary' }, [
-      sectionHeading('6', 'product-section-family-summary', 'Resumen efectivo por referencia'),
+      h('div', { key: 'heading', className: 'flex flex-wrap items-center gap-2 mb-3' }, [
+        sectionHeading('6', 'product-section-family-summary', 'Resumen efectivo por talla'),
+        h('span', { key: 'sp', className: 'flex-1' }),
+        h('button', { key: 'details', type: 'button', onClick: () => setSummaryDetailsOpen(value => !value),
+          'aria-pressed': summaryDetailsOpen ? 'true' : 'false', 'data-testid': 'family-summary-details-toggle',
+          className: 'min-h-10 px-3 border border-outline-variant rounded-lg text-overline font-bold text-primary' }, summaryDetailsOpen ? 'Ocultar detalles' : 'Mostrar detalles'),
+      ]),
       h('div', { key: 'totals', className: 'flex flex-wrap gap-2 my-3' }, [
         h('span', { key: 'r', className: 'px-3 py-1 rounded-full bg-primary text-on-primary text-overline font-bold' }, `Referencias: ${selectedFamilyRows.length}`),
         h('span', { key: 'p', className: 'px-3 py-1 rounded-full bg-gold text-on-gold text-overline font-bold' }, `Piezas: ${total}`),
       ]),
-      ...selectedFamilyRows.map(row => {
+      h('div', { key: 'columns', className: 'hidden md:grid grid-cols-[.7fr_.7fr_1.4fr_1fr] gap-3 px-3 py-2 text-overline uppercase tracking-widest text-on-surface-variant border-b border-outline-variant' }, ['Talla', 'Existencia', 'Color orn.', 'Precio'].map(label => h('span', { key: label }, label))),
+      ...selectedFamilyRows.map((row, index) => {
         const attrs = { ...(d.attrs || {}), ...(row.attrs || {}), __sizeCategoryId: d.sizeCategoryId };
         const candidate = { ...d, ...row, attrs, sizeCategoryId: d.sizeCategoryId,
           ornamentColorCodes: effectiveFamilyColors(row), precio: effectiveFamilyPrice(row), recordModel: 'v2' };
-        return h('div', { key: row.rowKey, className: 'grid grid-cols-2 md:grid-cols-[.5fr_.6fr_.8fr_1fr_1fr_1.6fr] gap-2 py-2 border-b last:border-0 border-outline-variant text-caption', 'data-testid': 'family-summary-' + row.rowKey }, [
-          summaryCell('Talla', tallaLabel(d, row.sizeCode), 'font-bold text-primary'),
-          summaryCell('Stock', row.stockQuantity, 'font-mono'),
-          summaryCell('Precio', fmt(effectiveFamilyPrice(row)).replace('.00', ''), 'font-mono'),
+        const sameSize = selectedFamilyRows.filter(item => item.sizeCode === row.sizeCode);
+        const variantLabel = sameSize.length > 1 ? ` · ${effectiveFamilyColors(row).join('+') || index + 1}` : '';
+        return h('div', { key: row.rowKey, className: 'border-b last:border-0 border-outline-variant text-caption', 'data-testid': 'family-summary-' + row.rowKey }, [
+          h('div', { key: 'main', className: 'grid grid-cols-2 md:grid-cols-[.7fr_.7fr_1.4fr_1fr] gap-2 md:gap-3 px-3 py-3 items-center' }, [
+          summaryCell('Talla', tallaLabel(d, row.sizeCode) + variantLabel, 'font-bold text-primary'),
+          summaryCell('Existencia', row.stockQuantity, 'font-mono'),
           summaryCell('Color orn.', effectiveFamilyColors(row).join(' + ') || 'Sin colores'),
-          summaryCell('Corte / Características', [attrs.corte || '—', attrs.caracteristicas || '—'].join(' · ')),
-          summaryCell('SKU', D.sku(candidate), 'font-mono break-all'),
+          summaryCell('Precio', fmt(effectiveFamilyPrice(row)).replace('.00', ''), 'font-mono font-semibold'),
+          ]),
+          summaryDetailsOpen && h('div', { key: 'details', className: 'grid grid-cols-1 sm:grid-cols-3 gap-2 px-3 pb-3 text-on-surface-variant' }, [
+            summaryCell('Corte', attrs.corte || 'General'),
+            summaryCell('Características', attrs.caracteristicas || 'General'),
+            summaryCell('SKU', D.sku(candidate), 'font-mono break-all'),
+          ]),
         ]);
       }),
     ]);
@@ -1290,7 +1409,7 @@
             { kind: 'fabric', field: 'tela', map: D.TELA }, { kind: 'color', field: 'color', map: D.COLOR_NAME, useKeyAsValue: true },
             { kind: 'neck', field: 'cuello', map: D.CUELLO },
           ].filter(a => { const m = window.CONFIG.catalogMeta(a.kind); return !m || m.inForm; }).map(a => field(window.CONFIG.catalogLabel(a.kind), sel(d[a.field], a.map, value => set(a.field, value), a.useKeyAsValue, 'product-field-' + a.kind), null, attemptedSubmit && errors.find(error => error.code === 'catalog-' + a.kind))),
-          ...Object.keys(window.CONFIG.allCatalogMeta ? window.CONFIG.allCatalogMeta() : {}).filter(kind => { const meta = window.CONFIG.catalogMeta(kind); return meta && meta.custom && meta.inForm && kind !== modeloKind && (d.recordModel !== 'v2' || meta.captureScope !== 'reference'); }).map(kind => field(window.CONFIG.catalogLabel(kind), sel((d.attrs || {})[kind] || '', window.CONFIG.map(kind), value => setAttr(kind, value), false, 'product-field-' + kind), null, attemptedSubmit && errors.find(error => error.code === 'catalog-' + kind))),
+          ...Object.keys(window.CONFIG.allCatalogMeta ? window.CONFIG.allCatalogMeta() : {}).filter(kind => { const meta = window.CONFIG.catalogMeta(kind); return meta && meta.custom && meta.inForm && kind !== modeloKind; }).map(kind => field(window.CONFIG.catalogLabel(kind) + (d.recordModel === 'v2' && (window.CONFIG.catalogMeta(kind) || {}).captureScope === 'reference' ? ' general' : ''), sel((d.attrs || {})[kind] || '', window.CONFIG.map(kind), value => setAttr(kind, value), false, 'product-field-' + kind), null, attemptedSubmit && errors.find(error => error.code === 'catalog-' + kind), d.recordModel === 'v2' && (window.CONFIG.catalogMeta(kind) || {}).captureScope === 'reference' ? 'Se aplica a todas las tallas salvo una variante física.' : null)),
         ]),
       ]),
       h('section', { key: 'ornament', className: 'rounded-xl border border-outline-variant p-4 sm:p-5 mb-4', 'aria-labelledby': 'product-section-ornament' }, [
