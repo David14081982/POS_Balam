@@ -4,7 +4,7 @@
 **Estado:** RESUELTO Y PUBLICADO
 **Fecha:** 15/08/2026
 **Commit técnico:** `987df89`
-**Commit documental:** Pendiente de commit
+**Commit documental:** `47be306`
 
 ## Problema y reproducción
 

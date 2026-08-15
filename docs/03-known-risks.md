@@ -5272,7 +5272,7 @@ familias mixtas 10/10; responsive 492/492; navegación 15/15; smoke bundle
 17/17. Artefactos locales idénticos, SHA-256
 `5612916e6d6ef68b154ee9a0f924cbf1945f97b494625a7edde5a1d310f45e5b`.
 **Commit técnico:** `987df89`.
-**Commit documental:** Pendiente de commit.
+**Commit documental:** `47be306`.
 **Publicación:** `origin/main` contiene `987df89`; Pages run `31913351874`
 terminó en `success`. El `index.html` servido mide 8,989,182 bytes, SHA-256
 `2e2ff07c1cc4d1575e1b5648382ec86246a1facd658c586d39bfc2374fadf400`,
