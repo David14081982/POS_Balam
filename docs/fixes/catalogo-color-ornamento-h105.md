@@ -48,6 +48,9 @@ NE se elimina tras comprobar uso cero. No existe conversión AZL→AZ.
 - H-102 15/15 + 16/16; H-103 15/15; responsive H-87 492/492;
   smoke del bundle 17/17. El smoke del archivo de desarrollo agotó su espera de
   bootstrap; el bundle publicado, que es el artefacto entregable, quedó verde.
+- El bundle H-105 quedó integrado en `origin/main` mediante `ee8ddc6`. Pages sirve 8,988,041 bytes,
+  SHA-256 `d6ea77bd88d710f1cbe2e328107cf83dd0b642389dea29ebf1993cc3acd3223b`;
+  son exactamente `index.html` tras normalizar CRLF→LF.
 
 ## Riesgo residual y pendientes
 

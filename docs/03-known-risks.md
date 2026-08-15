@@ -5241,6 +5241,10 @@ El contrato remoto confirma espejo activo exacto, AZL inactivo y NE ausente.
 migraciones local/remoto alineadas. Commit técnico `395f1d0`.
 **Riesgo residual:** ninguno conocido; AZL sigue resolviendo exclusivamente las
 15 referencias históricas existentes, sin reinterpretación.
+**Publicación:** bundle H-105 integrado en `origin/main` mediante `ee8ddc6`;
+Pages sirve 8,988,041 bytes,
+SHA-256 `d6ea77bd88d710f1cbe2e328107cf83dd0b642389dea29ebf1993cc3acd3223b`,
+idénticos al bundle H-105 tras la normalización CRLF→LF.
 
 ## Regla de actualización
 
