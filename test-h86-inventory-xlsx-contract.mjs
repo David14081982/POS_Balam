@@ -223,7 +223,7 @@ check('Plantilla y Exportar tienen exactamente las mismas hojas', result.sheetsE
 check('Plantilla y Exportar tienen exactamente las mismas columnas', result.headersEqual);
 check('Plantilla contiene cero productos', result.templateRows === 0, String(result.templateRows));
 check('el contrato incluye todos los campos H-86 obligatorios', result.hasRequired);
-check('el archivo se reconoce como esquema canónico versionado', result.schema === 'current' && Number(result.metadata.schema_version) === 2);
+check('el archivo se reconoce como esquema canónico versionado', result.schema === 'current' && Number(result.metadata.schema_version) === 3);
 check('round-trip por ID produce una actualización sin cambios', result.planOk && result.planUpdates === 1 && result.noChanges);
 check('round-trip conserva el estado canónico completo', result.roundtripSame, JSON.stringify(result.appliedResult));
 check('round-trip V2 conserva products.id, barcode, talla única y stock escalar',

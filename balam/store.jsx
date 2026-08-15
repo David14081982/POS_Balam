@@ -16,7 +16,7 @@
   const QKEY = 'balam_sync_queue';
   const QDB = 'balam_sync', QSTORE = 'durable_queue';
   const SYNC_PROTOCOL_VERSION = 1;
-  const SYNC_SCHEMA_VERSION = 20260812013900;
+  const SYNC_SCHEMA_VERSION = 20260814014500;
   const SYNC_CURSOR_KEY = 'balam_sync_domain_cursors_v1';
   const SYNC_DOMAINS = {
     permissions: { deps: [] }, config: { deps: ['permissions'] },
@@ -124,10 +124,11 @@
           barcode_code: p.barcodeCode,
           ornament_color_codes: Array.isArray(p.ornamentColorCodes) ? p.ornamentColorCodes.slice() : [],
           physical_signature: p.physicalSignature,
+          reference_family_id: p.referenceFamilyId,
         });
         return row;
       },
-      fromRow: r => ({ id: r.id, recordModel: r.record_model || 'v1', cat: r.cat, manga: r.manga, tela: r.tela, color: r.color, cuello: r.cuello, modelo: r.modelo, nombre: r.nombre, orn: r.orn, ornColors: r.orn_colors || [], ornamentColorCodes: r.ornament_color_codes || [], precio: Number(r.precio) || 0, costo: Number(r.costo) || 0, pop: !!r.pop, stock: r.stock || [], stockQuantity: r.stock_quantity == null ? null : Number(r.stock_quantity), physicalIdentityLocked: !!r.physical_identity_locked, sizeCode: r.size_code || null, sizeScale: r.size_scale || null, barcodeCode: r.barcode_code || null, physicalSignature: r.physical_signature || null, imagen: r.imagen || undefined, barcodeUrls: r.barcode_urls || {}, attrs: r.attrs || {}, sizeCategoryId: r.size_category_id || (r.attrs || {}).__sizeCategoryId || null, preciosTalla: r.precios_talla || {}, _syncVersion: Number(r.sync_version) || 0, _deletedAt: r.deleted_at || null }),
+      fromRow: r => ({ id: r.id, recordModel: r.record_model || 'v1', referenceFamilyId: r.reference_family_id || null, cat: r.cat, manga: r.manga, tela: r.tela, color: r.color, cuello: r.cuello, modelo: r.modelo, nombre: r.nombre, orn: r.orn, ornColors: r.orn_colors || [], ornamentColorCodes: r.ornament_color_codes || [], precio: Number(r.precio) || 0, costo: Number(r.costo) || 0, pop: !!r.pop, stock: r.stock || [], stockQuantity: r.stock_quantity == null ? null : Number(r.stock_quantity), physicalIdentityLocked: !!r.physical_identity_locked, sizeCode: r.size_code || null, sizeScale: r.size_scale || null, barcodeCode: r.barcode_code || null, physicalSignature: r.physical_signature || null, imagen: r.imagen || undefined, barcodeUrls: r.barcode_urls || {}, attrs: r.attrs || {}, sizeCategoryId: r.size_category_id || (r.attrs || {}).__sizeCategoryId || null, preciosTalla: r.precios_talla || {}, _syncVersion: Number(r.sync_version) || 0, _deletedAt: r.deleted_at || null }),
     },
     clients: {
       table: 'clients', conflict: 'id', localKey: 'clients',
@@ -930,7 +931,15 @@
         }
         if (op.rowIds && (!Array.isArray(op.rows) || !op.rows.length)) return true;
         if (op.kind === 'products' && (!Array.isArray(op.rows) || !op.rows.length)) return true;
-        const r = op.kind === 'products'
+        const r = op.kind === 'products' && op.familyBatch
+          ? await c.rpc('commit_reference_family_batch', {
+              p_operation_id: op.id,
+              p_reference_family_id: op.referenceFamilyId,
+              p_rows: op.rows,
+              p_protocol_version: SYNC_PROTOCOL_VERSION,
+              p_data_epoch: Number(syncManifest && syncManifest.data_epoch),
+            })
+          : op.kind === 'products'
           ? await c.rpc(syncManifest ? 'save_products_checked_v2' : 'save_products_checked', {
               p_operation_id: op.id, p_rows: op.rows,
               ...(syncManifest ? {
@@ -943,7 +952,9 @@
         if (m && m.fromRow && window.DATA && window.DATA.applySyncResult) {
           const expected = {};
           op.rows.forEach(row => { expected[row.id] = Number(row.sync_base_version) || 0; });
-          const remote = (r.data || []).map(m.fromRow);
+          const authoritativeRows = op.familyBatch && r.data && !Array.isArray(r.data)
+            ? (r.data.rows || []) : (r.data || []);
+          const remote = authoritativeRows.map(m.fromRow);
           const result = window.DATA.applySyncResult(op.kind, remote, expected, 'upsert') || {};
           rebaseQueuedVersions(op.table, remote);
           if (result.conflicts && window.UI && window.UI.toast) {
@@ -1650,6 +1661,23 @@
       type: 'upsert', kind, table: m.table, conflict: m.conflict,
       ...(kind === 'products' ? { rowIds } : {}),
       rows: arr.map(m.toRow),
+    });
+  }
+  function pushProductFamilyBatch(referenceFamilyId, arr) {
+    if (!enabled) return;
+    const rows = Array.isArray(arr) ? arr : [];
+    if (!referenceFamilyId || !rows.length) return;
+    const rowIds = rows.map(row => String(row && row.id || '').trim());
+    if (rowIds.some(id => !id) || new Set(rowIds).size !== rowIds.length
+        || rows.some(row => row.referenceFamilyId !== referenceFamilyId || row.recordModel !== 'v2')) {
+      throw Object.assign(new Error('El lote familiar requiere referencias V2 e IDs exactos'), {
+        code: 'REFERENCE_FAMILY_SCOPE_MISMATCH',
+      });
+    }
+    return run({
+      type: 'upsert', kind: 'products', table: 'products', conflict: 'id',
+      familyBatch: true, referenceFamilyId, rowIds,
+      rows: rows.map(MAP.products.toRow),
     });
   }
   // H-70: la edición de una ficha viaja sola. Mismo upsert y mismo control de
@@ -3407,5 +3435,6 @@
   }
 
   window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushClient, pushSale, settleLayaway, pushReturn, pushExchange, commitReferenceReclassification, ensureFolioBlock, deleteRow, settleCommission, closeCommissionPeriod, applyCommissionAdjustment, pushLoanOperation, migrateLocalLoans, pullDomain, fetchSaleByFolio, physicalCardAvailable, claimPhysicalCard, flushQueue, retryOperation, discardOperation, queueStatus, syncStatus, syncFleetStatus, updateSyncDevice, requestSyncRetry, markSyncActivityReviewed, decideSyncQuarantine, exportQuarantineReport, reconcileDomains, invalidateDomain, establishPointZero, pointZeroPreview, createPointZeroBackup, executePointZero, pointZeroReceipt, downloadPointZeroDocument, rebootstrapFromCloud, exportSyncRecovery, hasPendingLayaway, clearQueue, markResetApplied, purgeTestData, applyRemotePurge, pruneQueueForPurge, readPurgeState, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
+  window.STORE.pushProductFamilyBatch = pushProductFamilyBatch;
   window.CORE.registerSyncGateway(window.STORE);
 })();

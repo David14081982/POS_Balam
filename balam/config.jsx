@@ -172,19 +172,19 @@
   //   struct    → estructural (swatch / matriz de stock): no se quita del alta ni del SKU por toggle
   //   formSelect→ se captura como menú desplegable en el alta (lo controla el toggle "En alta")
   const SEED_CATALOG_META = {
-    category:       { label: 'Categoría',             inForm: true, inReference: true, inSku: true,  required: true, skuOrder: 1, field: 'cat',    system: true, formSelect: true },
-    producto:       { label: 'Modelo',                inForm: true, inReference: true, inSku: true,  required: true, skuOrder: 2, field: null, custom: true, formSelect: true, system: false },
-    sleeve:         { label: 'Manga',                 inForm: true, inReference: true, inSku: true,  required: true, skuOrder: 3, field: 'manga',  system: true, formSelect: true },
-    fabric:         { label: 'Material',              inForm: true, inReference: true, inSku: true,  required: true, skuOrder: 4, field: 'tela',   system: true, formSelect: true, filterable: true },
-    color:          { label: 'Color Tela',            inForm: true, inReference: true, inSku: true,  required: true, skuOrder: 5, field: 'color',  system: true, struct: true, formSelect: true, filterable: true },
-    neck:           { label: 'Cuello',                inForm: true, inReference: true, inSku: true,  required: true, skuOrder: 6, field: 'cuello', system: true, formSelect: true },
-    ornament:       { label: 'Ornamento',             inForm: true, inReference: true, inSku: true,  required: true, skuOrder: 7, field: 'orn',    system: true, formSelect: true },
-    ornament_color: { label: 'Color de ornamento',    inForm: true, inReference: true, inSku: true,  required: false, skuOrder: 8, field: 'ornamentColorCodes', system: true, formSelect: true, multiselect: true, filterable: true },
-    effective_size: { label: 'Talla efectiva',        inForm: false, inReference: true, inSku: true, required: true, skuOrder: 9, system: true, struct: true, virtual: true, sizeSlot: true, effectiveSize: true },
-    size_letter:    { label: 'Talla (Letra)',         inForm: false, inReference: true, inSku: false, required: true, skuOrder: 9, system: true, struct: true, sizeCategory: true, sizeScale: 'L' },
-    size_number:    { label: 'Talla (Número)',        inForm: false, inReference: true, inSku: false, required: true, skuOrder: 9, system: true, struct: true, sizeCategory: true, sizeScale: 'N' },
-    corte:          { label: 'Corte',                 inForm: true, inReference: true, inSku: false, required: false, filterable: false, skuOrder: 10, field: null, custom: true, formSelect: true, system: false },
-    caracteristicas:{ label: 'Características',       inForm: true, inReference: true, inSku: false, required: false, filterable: true, skuOrder: 11, field: null, custom: true, formSelect: true, system: false },
+    category:       { label: 'Categoría',             inForm: true, inReference: true, inSku: true,  required: true, skuOrder: 1, field: 'cat',    system: true, formSelect: true, captureScope: 'family' },
+    producto:       { label: 'Modelo',                inForm: true, inReference: true, inSku: true,  required: true, skuOrder: 2, field: null, custom: true, formSelect: true, system: false, captureScope: 'family' },
+    sleeve:         { label: 'Manga',                 inForm: true, inReference: true, inSku: true,  required: true, skuOrder: 3, field: 'manga',  system: true, formSelect: true, captureScope: 'family' },
+    fabric:         { label: 'Material',              inForm: true, inReference: true, inSku: true,  required: true, skuOrder: 4, field: 'tela',   system: true, formSelect: true, filterable: true, captureScope: 'family' },
+    color:          { label: 'Color Tela',            inForm: true, inReference: true, inSku: true,  required: true, skuOrder: 5, field: 'color',  system: true, struct: true, formSelect: true, filterable: true, captureScope: 'family' },
+    neck:           { label: 'Cuello',                inForm: true, inReference: true, inSku: true,  required: true, skuOrder: 6, field: 'cuello', system: true, formSelect: true, captureScope: 'family' },
+    ornament:       { label: 'Ornamento',             inForm: true, inReference: true, inSku: true,  required: true, skuOrder: 7, field: 'orn',    system: true, formSelect: true, captureScope: 'family' },
+    ornament_color: { label: 'Color de ornamento',    inForm: true, inReference: true, inSku: true,  required: false, skuOrder: 8, field: 'ornamentColorCodes', system: true, formSelect: true, multiselect: true, filterable: true, captureScope: 'reference' },
+    effective_size: { label: 'Talla efectiva',        inForm: false, inReference: true, inSku: true, required: true, skuOrder: 9, system: true, struct: true, virtual: true, sizeSlot: true, effectiveSize: true, captureScope: 'reference' },
+    size_letter:    { label: 'Talla (Letra)',         inForm: false, inReference: true, inSku: false, required: true, skuOrder: 9, system: true, struct: true, sizeCategory: true, sizeScale: 'L', captureScope: 'reference' },
+    size_number:    { label: 'Talla (Número)',        inForm: false, inReference: true, inSku: false, required: true, skuOrder: 9, system: true, struct: true, sizeCategory: true, sizeScale: 'N', captureScope: 'reference' },
+    corte:          { label: 'Corte',                 inForm: true, inReference: true, inSku: false, required: false, filterable: false, skuOrder: 10, field: null, custom: true, formSelect: true, system: false, captureScope: 'reference' },
+    caracteristicas:{ label: 'Características',       inForm: true, inReference: true, inSku: false, required: false, filterable: true, skuOrder: 11, field: null, custom: true, formSelect: true, system: false, captureScope: 'reference' },
   };
 
   // Transformación pura de la CONFIG publicada al contrato H-94 aprobado.
@@ -716,7 +716,7 @@
     while (state.catalogMeta[kind] || state.catalogs[kind]) kind = base + '_' + (n++);
     const orders = Object.keys(state.catalogMeta).map(k => state.catalogMeta[k].skuOrder || 0);
     state.catalogs[kind] = [];
-    state.catalogMeta[kind] = { label: name, inForm: false, inReference: false, inSku: false, skuOrder: (orders.length ? Math.max.apply(null, orders) : 0) + 1, field: null, custom: true, formSelect: true, system: false };
+    state.catalogMeta[kind] = { label: name, inForm: false, inReference: false, inSku: false, skuOrder: (orders.length ? Math.max.apply(null, orders) : 0) + 1, field: null, custom: true, formSelect: true, system: false, captureScope: 'reference' };
     emit();
     return { ok: true, kind };
   }

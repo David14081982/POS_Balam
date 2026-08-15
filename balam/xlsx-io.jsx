@@ -16,7 +16,7 @@
   // oculta solamente para reducir ruido: ocultar no es una frontera de seguridad.
   const INVENTORY_XLSX_SCHEMA = Object.freeze({
     name: 'balam.inventory',
-    version: 2,
+    version: 3,
     sheets: Object.freeze(['Inventario', 'Catálogos', '_BALAM']),
     columns: Object.freeze([
       { key: 'sku', header: 'SKU', type: 'text', required: true },
@@ -46,12 +46,13 @@
       { key: 'recordModel', header: '_BALAM_MODELO_REFERENCIA', type: 'technical-model', required: true, hidden: true, since: 2 },
       { key: 'barcodeCode', header: '_BALAM_BARCODE_CODE', type: 'technical-barcode', required: true, hidden: true, since: 2 },
       { key: 'physicalSignature', header: '_BALAM_FIRMA_FISICA', type: 'technical-signature', required: true, hidden: true, since: 2 },
+      { key: 'referenceFamilyId', header: '_BALAM_REFERENCE_FAMILY_ID', type: 'technical-family', required: true, hidden: true, since: 3 },
     ]),
   });
   const BASE = INVENTORY_XLSX_SCHEMA.columns.map(column => column.header);
   // Compatibilidad pública para arneses anteriores. H-86 ya no aplica esta
   // lista directamente: el plan canónico decide presencia/PRESERVAR por columna.
-  const IMPORT_FIELDS = ['recordModel', 'barcodeCode', 'physicalSignature', 'sizeCode', 'stockQuantity', 'ornamentColorCodes', 'cat', 'sizeCategoryId', 'manga', 'tela', 'color', 'cuello', 'modelo', 'nombre', 'orn', 'ornColors', 'precio', 'costo', 'pop', 'preciosTalla', 'attrs', 'stock'];
+  const IMPORT_FIELDS = ['recordModel', 'barcodeCode', 'physicalSignature', 'referenceFamilyId', 'sizeCode', 'stockQuantity', 'ornamentColorCodes', 'cat', 'sizeCategoryId', 'manga', 'tela', 'color', 'cuello', 'modelo', 'nombre', 'orn', 'ornColors', 'precio', 'costo', 'pop', 'preciosTalla', 'attrs', 'stock'];
   // URL de la foto para el Excel: SOLO fotos reales accesibles por enlace.
   // Se omiten (a) las genéricas de relleno que asigna el sistema y (b) las incrustadas
   // (data:image/…), que son texto de decenas de miles de caracteres y no caben en una celda
@@ -358,6 +359,7 @@
       '_BALAM_MODELO_REFERENCIA': p.recordModel || 'v1',
       '_BALAM_BARCODE_CODE': p.barcodeCode || '',
       '_BALAM_FIRMA_FISICA': p.physicalSignature || '',
+      '_BALAM_REFERENCE_FAMILY_ID': p.recordModel === 'v2' ? (p.referenceFamilyId || '') : '',
       'Talla referencia': p.recordModel === 'v2' ? p.sizeCode : '',
       'Existencia referencia': p.recordModel === 'v2' ? Number(p.stockQuantity) || 0 : '',
       'Colores de ornamento V2': p.recordModel === 'v2'
@@ -595,9 +597,15 @@
     if (recordModel === 'v2' && !allowedSizes.has(sizeCode)) rowError(idx, 'Talla referencia', 'no pertenece a la categoría elegida.');
     const barcodeCode = present('_BALAM_BARCODE_CODE') ? String(row['_BALAM_BARCODE_CODE'] || '').trim().toUpperCase() : '';
     const physicalSignature = present('_BALAM_FIRMA_FISICA') ? String(row['_BALAM_FIRMA_FISICA'] || '').trim() : '';
+    const referenceFamilyId = present('_BALAM_REFERENCE_FAMILY_ID')
+      ? String(row['_BALAM_REFERENCE_FAMILY_ID'] || '').trim().toLowerCase() : '';
+    if (referenceFamilyId && !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(referenceFamilyId)) {
+      rowError(idx, '_BALAM_REFERENCE_FAMILY_ID', 'debe ser un UUID v4 válido.');
+    }
     const rawProduct = {
       id: sourceId || undefined, recordModel, barcodeCode: barcodeCode || undefined,
       physicalSignature: physicalSignature || undefined,
+      referenceFamilyId: referenceFamilyId || undefined,
       sizeCode, sizeScale: sizeCategory.scale, stockQuantity, ornamentColorCodes,
       cat, manga, tela, color, modelo, nombre,
       imagen: foto || undefined, orn, ornColors, cuello, precio, costo, pop, preciosTalla,
@@ -808,7 +816,7 @@
     return {
       id: product.id || '', version: Number(product._syncVersion) || 0, sku: product.sku || '',
       recordModel: product.recordModel || 'v1', barcodeCode: product.barcodeCode || '',
-      physicalSignature: product.physicalSignature || '', sizeCode: product.sizeCode || '',
+      physicalSignature: product.physicalSignature || '', referenceFamilyId: product.referenceFamilyId || '', sizeCode: product.sizeCode || '',
       stockQuantity: product.stockQuantity == null ? null : Number(product.stockQuantity),
       physicalIdentityLocked: !!product.physicalIdentityLocked,
       ornamentColorCodes: D.canonicalReferenceOrnamentColors(product.ornamentColorCodes || []),
@@ -853,6 +861,8 @@
         after.ornColors = clone(after.ornamentColorCodes);
       }
       after.barcodeCode = target.barcodeCode;
+      after.referenceFamilyId = present.has('_BALAM_REFERENCE_FAMILY_ID')
+        ? (incoming.referenceFamilyId || target.referenceFamilyId) : target.referenceFamilyId;
     }
     if (meta.imageProvided) after.imagen = incoming.imagen;
     const attrs = Object.assign({}, after.attrs || {});

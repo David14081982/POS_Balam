@@ -267,6 +267,7 @@
     const p = JSON.parse(JSON.stringify(draft || {}));
     p.id = p.id || newUuid();
     p.recordModel = 'v2';
+    p.referenceFamilyId = p.referenceFamilyId || newUuid();
     p.sizeCategoryId = p.sizeCategoryId || (p.attrs || {}).__sizeCategoryId || '';
     p.sizeCode = String(p.sizeCode == null ? p.talla == null ? '' : p.talla : p.sizeCode);
     p.sizeScale = p.sizeScale || categoryScale(p.sizeCategoryId) || '';
@@ -296,6 +297,42 @@
       : 'La identidad técnica o logística ya está en uso'), { code: diag.code, conflict: diag.conflict });
     p.referenceWarnings = diag.warnings;
     return hydrate(p);
+  }
+
+  // H-101: parentesco administrativo explícito. Nunca se infiere por SKU,
+  // nombre, modelo, atributos o firma física.
+  function referenceFamily(productOrId, collection) {
+    const sourceRows = collection || products;
+    const source = typeof productOrId === 'object' && productOrId
+      ? productOrId : sourceRows.find(p => String(p.id) === String(productOrId));
+    const familyId = source && source.referenceFamilyId;
+    if (!familyId) return [];
+    return sourceRows.filter(p => p && !p._deletedAt && isV2Reference(p)
+      && p.referenceFamilyId === familyId);
+  }
+
+  // Convierte una captura agrupada en N referencias exactas. La selección es
+  // autoridad de existencia: stock cero no elimina ni impide materializar.
+  function materializeReferenceFamily(common, rows, collection, familyId) {
+    const id = familyId || (common && common.referenceFamilyId) || newUuid();
+    const staged = [];
+    (rows || []).filter(row => row && (row.selectedForCreation === true
+      || row.createReferenceSelected === true)).forEach(row => {
+      const draft = Object.assign({}, common || {}, row, {
+        referenceFamilyId: id,
+        attrs: Object.assign({}, (common && common.attrs) || {}, row.attrs || {}),
+        stockQuantity: Math.max(0, Math.round(Number(row.stockQuantity) || 0)),
+      });
+      delete draft.selectedForCreation; delete draft.createReferenceSelected;
+      staged.push(createReference(draft, (collection || products).concat(staged)));
+    });
+    if (!staged.length) throw Object.assign(new Error('Selecciona al menos una referencia para crear'), {
+      code: 'REFERENCE_FAMILY_EMPTY',
+    });
+    return {
+      referenceFamilyId: id, references: staged,
+      totalPieces: staged.reduce((sum, row) => sum + row.stockQuantity, 0),
+    };
   }
 
   function inferSizeCategory(product, variants) {
@@ -579,6 +616,7 @@
     p.modelo = String(p.modelo);
     p.attrs = canonicalProductAttrs(p.attrs, { product: p });
     if (isV2Reference(p)) {
+      p.referenceFamilyId = p.referenceFamilyId || newUuid();
       p.sizeCategoryId = p.sizeCategoryId || p.attrs.__sizeCategoryId || '';
       p.attrs.__sizeCategoryId = p.sizeCategoryId;
       p.sizeCode = String(p.sizeCode == null ? p.talla == null ? '' : p.talla : p.sizeCode);
@@ -5551,7 +5589,7 @@
   window.DATA = {
     products, sellers, clients, sales, movements, promos, liquidations, returns, payments, exchanges, loans,
     sku, materializedSku, regenerateSkus, totalStock, hydrate, mkStock, emptyStock, SIZE_MARK,
-    isV2Reference, createReference, updateReference, physicalSignature, skuPreview,
+    isV2Reference, createReference, updateReference, referenceFamily, materializeReferenceFamily, physicalSignature, skuPreview,
     effectiveSize, ornamentColorMode, referenceDimensionStats, skuConfigurationImpact,
     canonicalReferenceOrnamentColors, canonicalProductAttrs, referenceDiagnostics, referenceDifferences,
     physicalSnapshot, barcodeFromId, referenceHasOperations, reclassifyReference,
