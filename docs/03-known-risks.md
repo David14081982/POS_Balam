@@ -5117,6 +5117,13 @@ H-100 10/10; Excel 42/42; sincronización 176/176; migraciones 31/31; responsive
 publicados 8,984,311, SHA-256
 `3a6c4951bb54f7d25774f9e761d75fe4ec95a562b519501fc9eabfdf48699a74`,
 idénticos.
+**Ajuste operativo 15/08/2026:** se retiraron del detalle de Inventario el botón
+«Reclasificar piezas» y su modal porque el negocio no utilizará esa operación.
+La guarda H-94 permanece: convertir el mismo ID bloqueado sigue devolviendo
+`REFERENCE_RECLASSIFICATION_REQUIRED` sin mutar el producto. La prueba A–G
+comprueba además que el control visible está ausente; H-101 26/26, edición
+familiar 12/12, H-94 49/49 y navegación 15/15 permanecen verdes. No se cambió
+DATA, esquema, RPC, stock, IDs, barcodes ni familias persistidas.
 
 ## Regla de actualización
 

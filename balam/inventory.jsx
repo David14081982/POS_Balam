@@ -103,8 +103,7 @@
     const [importPreview, setImportPreview] = useState(null);
     const [importResolutions, setImportResolutions] = useState({});
     const [labelTargets, setLabelTargets] = useState(null); // productos para imprimir etiquetas
-    const [reclassSource, setReclassSource] = useState(null);
-    window.UI.useSyncActivity(!!(editing || importPreview || reclassSource), ['products', 'config', 'promotions'], { screen: 'inventory' });
+    window.UI.useSyncActivity(!!(editing || importPreview), ['products', 'config', 'promotions'], { screen: 'inventory' });
     const [page, setPage] = useState(1);
     const fileRef = useRef(null);
     const [mobileTable, setMobileTable] = useState(() => window.matchMedia('(max-width: 767px)').matches);
@@ -368,7 +367,7 @@
           ]),
         ]),
         // Drawer detalle (siempre montado, slide-in)
-        h(DetailDrawer, { key: 'dr', p: detail, onClose: () => setDetail(null), onEdit: () => setEditing({ mode: 'edit', product: detail }), onDelete: () => deleteProduct(detail), onLabels: (prod) => setLabelTargets([prod]), onReclassify: prod => setReclassSource(prod) }),
+        h(DetailDrawer, { key: 'dr', p: detail, onClose: () => setDetail(null), onEdit: () => setEditing({ mode: 'edit', product: detail }), onDelete: () => deleteProduct(detail), onLabels: (prod) => setLabelTargets([prod]) }),
         labelTargets && h(LabelModal, { key: 'lbl', products: labelTargets, onClose: () => setLabelTargets(null) }),
         editing && h(ProductForm, { key: 'f-' + editing.mode + '-' + (editing.product.id || 'new'), mode: editing.mode, product: editing.product, onClose: () => setEditing(null), onSave: saveProduct }),
         importPreview && h(ImportModal, {
@@ -377,9 +376,6 @@
           onResolve: (rowKey, productId) => setImportResolutions(current => Object.assign({}, current, { [rowKey]: productId })),
           onClose: () => { setImportPreview(null); setImportResolutions({}); }, onConfirm: confirmImport,
         }),
-        reclassSource && h(ReclassificationModal, { key: 'reclass', source: reclassSource,
-          products: D.products, onClose: () => setReclassSource(null),
-          onCommitted: result => { setReclassSource(null); setDetail(null); refresh(); toast(`Reclasificación registrada · ${result.operationId}`, 'var(--accent)'); } }),
       ]));
   }
 
@@ -411,7 +407,7 @@
   }
 
   // ---------- Drawer de detalle ----------
-  function DetailDrawer({ p, onClose, onEdit, onDelete, onLabels, onReclassify }) {
+  function DetailDrawer({ p, onClose, onEdit, onDelete, onLabels }) {
     const open = !!p;
     const sizeResolution = p ? D.resolveProductSizes(p) : null;
     const resolvedSizes = sizeResolution
@@ -463,7 +459,6 @@
               // Acciones
               h('div', { key: 'ac', className: 'pt-4 space-y-3' }, [
                 h('button', { key: 'lb', 'data-testid': 'product-detail-labels', className: 'w-full py-3 rounded-xl border border-outline-variant text-primary hover:border-primary hover:bg-surface-container transition-all flex items-center justify-center gap-2 text-overline font-bold uppercase tracking-widest', onClick: () => onLabels && onLabels(p) }, [h(MS, { key: 'i', name: 'barcode', size: 18 }), 'Imprimir etiqueta']),
-                D.isV2Reference(p) && h('button', { key: 'rc', 'data-testid': 'product-detail-reclassify', className: 'w-full py-3 rounded-xl border border-warning/40 text-warning hover:bg-warning-soft transition-all flex items-center justify-center gap-2 text-overline font-bold uppercase tracking-widest', onClick: () => onReclassify && onReclassify(p) }, [h(MS, { key: 'i', name: 'swap', size: 18 }), 'Reclasificar piezas']),
                 h('div', { key: 'row', className: 'flex gap-4' }, [
                   h('button', { key: 'e', 'data-testid': 'product-detail-edit', className: 'flex-grow bg-primary text-on-primary py-3.5 rounded-xl text-overline font-bold uppercase tracking-widest hover:opacity-90 transition-all shadow-e2 active:scale-95 flex items-center justify-center gap-2', onClick: onEdit }, [h(MS, { key: 'i', name: 'edit', size: 18 }), 'Editar producto']),
                   h('button', { key: 'd', className: 'w-14 h-[52px] rounded-xl border border-outline-variant text-danger hover:bg-danger-soft hover:border-danger/30 transition-all flex items-center justify-center', onClick: onDelete, title: 'Eliminar' }, h(MS, { name: 'trash', size: 20 })),
@@ -475,47 +470,6 @@
     ]);
   }
 
-  function ReclassificationModal({ source, products, onClose, onCommitted }) {
-    const targets = (products || []).filter(p => D.isV2Reference(p) && p.id !== source.id && !p._deletedAt);
-    const [targetId, setTargetId] = useState(targets[0] ? targets[0].id : '');
-    const [quantity, setQuantity] = useState(1);
-    const [reason, setReason] = useState('');
-    const [reversalOf, setReversalOf] = useState('');
-    const target = targets.find(p => p.id === targetId);
-    const max = Math.max(0, Number(source.stockQuantity) || 0);
-    const valid = !!target && Number(quantity) > 0 && Number(quantity) <= max && reason.trim().length >= 3;
-    function commit() {
-      if (!valid) return;
-      const result = D.reclassifyReference({
-        sourceProductId: source.id, targetProductId: target.id, quantity: Number(quantity),
-        actor: 'Administrador', reason: reason.trim(), reversalOf: reversalOf.trim() || null,
-      });
-      if (!result.ok) { toast(result.error || 'No se pudo reclasificar', 'var(--danger)'); return; }
-      onCommitted(result);
-    }
-    const footer = [
-      h('button', { key: 'cancel', className: 'px-5 h-11 border border-outline-variant rounded-lg text-caption font-bold uppercase', onClick: onClose }, 'Cancelar'),
-      h('button', { key: 'commit', 'data-testid': 'reclassification-confirm', disabled: !valid, className: 'px-5 h-11 bg-primary text-on-primary rounded-lg text-caption font-bold uppercase disabled:opacity-40', onClick: commit }, 'Registrar movimiento'),
-    ];
-    return h(Modal, { title: 'Reclasificar piezas', onClose, footer }, [
-      h('p', { key: 'intro', className: 'text-caption text-on-surface-variant mb-4' }, 'Mueve stock entre dos referencias sin editar ni fusionar sus identidades. El movimiento queda auditado y puede revertirse con una operación inversa.'),
-      h('div', { key: 'source', className: 'p-3 mb-4 rounded-lg bg-surface-container text-caption' }, [
-        h('strong', { key: 'name' }, source.nombre + ' · ' + source.sku),
-        h('div', { key: 'id', className: 'font-mono text-overline mt-1' }, `${source.id} · ${max} pz disponibles`),
-      ]),
-      h('label', { key: 'target-label', className: 'block text-overline font-bold uppercase mb-1' }, 'Referencia destino'),
-      h('select', { key: 'target', 'data-testid': 'reclassification-target', className: SELECT + ' mb-4', value: targetId, onChange: e => setTargetId(e.target.value) }, [
-        !targets.length && h('option', { key: 'none', value: '' }, 'No hay otra referencia V2'),
-        ...targets.map(p => h('option', { key: p.id, value: p.id }, `${p.sku} · ${p.nombre} · ${p.sizeCode}`)),
-      ]),
-      h('label', { key: 'qty-label', className: 'block text-overline font-bold uppercase mb-1' }, 'Cantidad'),
-      h('input', { key: 'qty', 'data-testid': 'reclassification-quantity', type: 'number', min: 1, max, step: 1, className: INPUT + ' mb-4', value: quantity, onChange: e => setQuantity(e.target.value) }),
-      h('label', { key: 'reason-label', className: 'block text-overline font-bold uppercase mb-1' }, 'Motivo auditado'),
-      h('textarea', { key: 'reason', 'data-testid': 'reclassification-reason', className: 'w-full min-h-20 bg-surface border border-outline-variant rounded-lg p-3 text-body mb-4', value: reason, onChange: e => setReason(e.target.value), placeholder: 'Ej. Corrección de clasificación física verificada' }),
-      h('label', { key: 'reversal-label', className: 'block text-overline font-bold uppercase mb-1' }, 'Revierte operación (opcional)'),
-      h('input', { key: 'reversal', className: INPUT, value: reversalOf, onChange: e => setReversalOf(e.target.value), placeholder: 'ID de la operación original' }),
-    ]);
-  }
   function drawerField(label, control) {
     return h('div', { key: label, className: 'space-y-2' }, [
       h('label', { key: 'l', className: 'block text-overline uppercase font-bold text-on-surface-variant tracking-widest opacity-60' }, label),

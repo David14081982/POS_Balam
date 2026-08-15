@@ -8,6 +8,7 @@
 **Commit documental UX:** `8ec18bf54833f09ed7ad4e05b5c689a3190f59e6`
 **Commit corrección de escalas mixtas:** `7bdfa66`
 **Commit documental final:** Pendiente de commit
+**Commit retiro del botón de reclasificación:** Pendiente de commit
 
 ## Problema y reproducción
 
@@ -55,8 +56,9 @@ referencia. Precio y stock son estructuralmente por referencia.
 La edición abre únicamente los hermanos que comparten el UUID exacto y escribe
 IDs exactos. Una talla nueva recibe ID/barcode propios sin cambiar los anteriores.
 Una reclasificación no cambia de familia silenciosamente: cambiar la identidad
-de un ID existente sigue pasando por `updateReference`, que exige el flujo
-explícito de reclasificación cuando la referencia está bloqueada. Elegir otra
+de un ID existente sigue pasando por `updateReference`, que rechaza el cambio
+cuando la referencia está bloqueada. Inventario ya no expone un control de
+reclasificación. Elegir otra
 categoría en el selector sólo cambia las tallas disponibles para nuevas
 referencias; no edita filas persistidas. Excel V3 preserva la relación mediante la columna técnica
 oculta `_BALAM_REFERENCE_FAMILY_ID`, manteniendo `_BALAM_ID_PRODUCTO` como
@@ -125,6 +127,19 @@ Sin cambiar DATA, STORE, RPC, Excel, migraciones ni esquema remoto:
 Una misma `reference_family_id` puede contener, por ejemplo, M/L/XL/2XL y 40.
 Cada miembro continúa siendo una referencia V2 independiente con ID, barcode,
 firma, SKU y stock propios.
+
+### Retiro del control visible de reclasificación
+
+Por decisión operativa del 15/08/2026 se retiraron del detalle de Inventario el
+botón «Reclasificar piezas», su estado de pantalla y el modal asociado. La
+autoridad interna H-94 no cambió: `updateReference()` todavía impide modificar
+silenciosamente una identidad física bloqueada y `DATA.reclassifyReference()`
+permanece como contrato de datos, sin entrada visible en Inventario.
+
+La prueba A–G confirma simultáneamente que el botón no existe, que intentar
+convertir el mismo ID devuelve `REFERENCE_RECLASSIFICATION_REQUIRED` y que el
+producto permanece byte-equivalente en memoria. H-101 familia 12/12, contrato
+26/26, H-94 49/49 y navegación 15/15 también permanecen verdes.
 
 ## Integridad remota
 
@@ -212,6 +227,8 @@ persistidas siguen siendo válidas por contrato.
 
 Ningún defecto conocido dentro de H-101. La validación sintética no cargó
 inventario real y la familia administrativa no cambia la autoridad logística.
+Inventario no ofrece una operación manual para corregir piezas ya clasificadas;
+si el negocio vuelve a requerirla deberá autorizarse un flujo operativo nuevo.
 
 ## Referencias
 

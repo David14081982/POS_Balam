@@ -134,8 +134,8 @@ try {
   await page.getByTestId('inventory-product-' + seeded.lId).click();
   const reclassAction = await page.getByTestId('product-detail-reclassify').count();
   await page.getByTestId('product-detail-close').click();
-  ok('C. convertir el mismo ID bloqueado exige reclasificación explícita', directConversion.code === 'REFERENCE_RECLASSIFICATION_REQUIRED'
-    && directConversion.unchanged && reclassAction === 1, JSON.stringify(directConversion));
+  ok('C. convertir el mismo ID sigue bloqueado sin exponer reclasificación en Inventario', directConversion.code === 'REFERENCE_RECLASSIFICATION_REQUIRED'
+    && directConversion.unchanged && reclassAction === 0, JSON.stringify(directConversion));
 
   // D/F · el borrador puede cambiar antes de confirmar; una variante 40/AZL crea otro ID.
   await openEdit(numeric40.id);
