@@ -1,11 +1,12 @@
 # Chips compactos de existencias familiares
 
 **Riesgo:** H-103
-**Estado:** RESUELTO Y PUBLICADO
+**Estado:** RESUELTO LOCALMENTE
 **Fecha:** 15/08/2026
 **Commit técnico:** `55ae37d`
 **Commit documental:** `dfdb5c5`
 **Commit de validación pública:** `7da216c`
+**Ajuste stock cero:** `f607add`
 
 ## Problema y reproducción
 
@@ -32,6 +33,15 @@ piezas y precio.
 No se modificaron DATA, `products.id`, `reference_family_id`, stock, SKU,
 barcode, POS, persistencia, sincronización ni esquema.
 
+### Ajuste quirúrgico: referencias agotadas
+
+El detalle deriva una vista efímera desde cada `sizeGroup`: conserva sólo
+referencias activas con `stockQuantity > 0`, recalcula el total visible del chip
+y omite grupos cuyo resultado es cero. El arreglo original de la proyección no
+se modifica. Si no queda ningún grupo visible reutiliza el estado
+«Sin existencias en ninguna talla.»; Editar y los demás consumidores siguen
+recibiendo todas las referencias, incluidas las agotadas.
+
 ## Pruebas
 
 - Línea roja: el componente compacto no existía y el E2E agotó la espera.
@@ -47,11 +57,14 @@ barcode, POS, persistencia, sincronización ni esquema.
 - Pages sirve exactamente el blob Git
   `7280802218eebc03c559652c3fd781419bdcdb01` (8,986,937 bytes; SHA-256
   `5e208557fd24409264da46cf4e928a0b43884f7851bd71e87e1aa23c0a72d682`).
+- Ajuste stock cero, casos A–D: línea roja 10/15; verde 15/15.
+- Responsive del ajuste: 320, 360, 390, 430, 768 y 1280 px sin overflow.
+- Regresiones posteriores: H-102 31/31, responsive 492/492, navegación 15/15
+  y smoke bundle 17/17.
 
 ## Riesgo residual y pendientes
 
-Ninguno conocido. La versión pública conserva la proyección familiar completa,
-el desglose de referencias repetidas y el patrón compacto sin overflow.
+Pendiente validar y documentar los bytes públicos del ajuste `f607add`.
 
 ## Rollback
 

@@ -5157,7 +5157,7 @@ porque la proyección no se persiste.
 
 ## H-103 - El detalle familiar perdió los chips compactos de existencias
 
-**Estado:** RESUELTO Y PUBLICADO
+**Estado:** RESUELTO LOCALMENTE
 **Fecha de registro:** 15/08/2026
 **Commit técnico:** `55ae37d`
 **Commit documental:** `dfdb5c5`
@@ -5183,6 +5183,12 @@ smoke bundle 17/17.
 `5e208557fd24409264da46cf4e928a0b43884f7851bd71e87e1aa23c0a72d682`).
 El E2E sobre esos bytes quedó 9/9 en 320/360/390/430/1280 px.
 **Riesgo residual:** ninguno conocido.
+**Ajuste quirúrgico stock cero:** commit técnico `f607add`. El detalle filtra
+sólo el render final: chips con suma positiva, variantes positivas y estado
+vacío cuando toda la familia está agotada. `referenceFamilyProjection.sizeGroups`
+y todas las referencias administrativas se conservan completas. Línea roja
+10/15; verde 15/15; H-102 31/31; responsive 492/492; navegación 15/15; smoke
+17/17. Pendiente comprobación de bytes públicos.
 
 ## Regla de actualización
 
