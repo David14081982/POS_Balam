@@ -5104,6 +5104,19 @@ sin overflow en 320–1280 px y regresiones H-94/H-95/H-100 verdes.
 Commit UX `f4992dc`; Pages run `31869801776` exitoso; bytes publicados
 8,983,318, SHA-256
 `3731d1114131bcd279f091141130cf1eba26623097345e5a23f68f55e60446cb`.
+**Corrección quirúrgica de escalas mixtas:** la guarda del selector confundía
+elegir tallas para nuevas referencias con cambiar la identidad de IDs
+existentes; además, el borrador propagaba una única `sizeCategoryId` a toda la
+familia. El selector es ahora sólo alcance de captura y cada fila conserva su
+categoría/escala/talla. Una familia puede mezclar letra y número sin reclasificar
+hermanas existentes; convertir el mismo ID bloqueado sigue exigiendo
+reclasificación H-94. La alta en cero usa una única acción agrupada. Escenarios
+A–G 10/10; Nuevo 10/10; Editar 12/12; H-101 26/26; H-94 49/49; H-95 16/16;
+H-100 10/10; Excel 42/42; sincronización 176/176; migraciones 31/31; responsive
+492/492. Commit técnico `7bdfa66`; Pages run `31871518813` exitoso; blob y bytes
+publicados 8,984,311, SHA-256
+`3a6c4951bb54f7d25774f9e761d75fe4ec95a562b519501fc9eabfdf48699a74`,
+idénticos.
 
 ## Regla de actualización
 

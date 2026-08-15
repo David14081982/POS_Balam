@@ -5,7 +5,9 @@
 **Fecha:** 14/08/2026  
 **Commit técnico:** `b2603e1ba20e9ab40e01fb3e18d5952f51a9fde7`  
 **Commit corrección UX:** `f4992dc1c4305ce6d26df3f83a7b43fdd6f14543`  
-**Commit documental:** Pendiente de commit
+**Commit documental UX:** `8ec18bf54833f09ed7ad4e05b5c689a3190f59e6`
+**Commit corrección de escalas mixtas:** `7bdfa66`
+**Commit documental final:** Pendiente de commit
 
 ## Problema y reproducción
 
@@ -28,6 +30,13 @@ Supabase, Excel y caché sólo persistían identidad individual. SKU, nombre,
 modelo, atributos y firma física no permiten inferir parentesco sin errores. La
 UI V2 proyectaba literalmente esa granularidad técnica.
 
+La corrección UX inicial dejó una guarda demasiado amplia en `ProductForm`:
+si la familia contenía cualquier ID persistido, cambiar el selector «Familia de
+tallas» se interpretaba como cambio físico de esos IDs. Además, las filas y el
+guardado heredaban una sola `sizeCategoryId` común. Eso confundía elegir otro
+conjunto de captura con reclasificar y hacía inseguro habilitar familias
+administrativas con escalas mixtas.
+
 ## Diseño
 
 Se conserva el principio aprobado: **V1 como experiencia de captura; V2 como
@@ -45,9 +54,11 @@ referencia. Precio y stock son estructuralmente por referencia.
 
 La edición abre únicamente los hermanos que comparten el UUID exacto y escribe
 IDs exactos. Una talla nueva recibe ID/barcode propios sin cambiar los anteriores.
-Una reclasificación no cambia de familia silenciosamente: el editor bloquea el
-cambio de categoría de referencias usadas y remite al flujo explícito de
-reclasificación. Excel V3 preserva la relación mediante la columna técnica
+Una reclasificación no cambia de familia silenciosamente: cambiar la identidad
+de un ID existente sigue pasando por `updateReference`, que exige el flujo
+explícito de reclasificación cuando la referencia está bloqueada. Elegir otra
+categoría en el selector sólo cambia las tallas disponibles para nuevas
+referencias; no edita filas persistidas. Excel V3 preserva la relación mediante la columna técnica
 oculta `_BALAM_REFERENCE_FAMILY_ID`, manteniendo `_BALAM_ID_PRODUCTO` como
 autoridad de actualización.
 
@@ -81,7 +92,7 @@ reutiliza ahora los patrones V1:
 - resumen efectivo compacto `talla / existencia / color / precio`, con
   Corte, Características y SKU bajo «Mostrar detalles»;
 - talla V2 existente visible en cero; una nueva se activa al escribir stock o
-  mediante la acción discreta «Crear en 0»;
+  desde la acción agrupada «Agregar tallas sin existencia»;
 - múltiples referencias de la misma talla viven bajo «Variantes y excepciones
   físicas», cerrado en el caso normal;
 - se eliminaron de la ruta normal los checkboxes, cards repetidas y COPY.
@@ -90,6 +101,30 @@ Nuevo y Editar comparten el mismo formulario. La proyección reconstruye precio
 y colores generales por valor predominante y conserva las excepciones físicas
 materializadas por ID. El guardado sigue entregando exactamente N filas V2 al
 lote familiar existente.
+
+### Corrección quirúrgica de escalas mixtas
+
+Sin cambiar DATA, STORE, RPC, Excel, migraciones ni esquema remoto:
+
+- el control pasó a llamarse «Tallas para agregar» y es autoridad exclusiva del
+  conjunto de captura;
+- cada fila conserva su propia `sizeCategoryId`, `sizeScale` y `sizeCode` desde
+  la apertura hasta el lote de guardado;
+- agrupación normal, variantes, resumen, precios y colores usan la clave
+  compuesta `categoría + escala + talla`, no sólo el texto de talla;
+- las referencias existentes de otras escalas permanecen visibles y no se
+  reescriben al seleccionar otra categoría;
+- una referencia nueva puede cambiar de talla antes de confirmar; después de
+  existir, cualquier cambio de identidad conserva la guarda H-94;
+- las variantes físicas se agregan tomando una talla de la categoría de captura
+  activa y siguen representando únicamente diferencias físicas de la misma
+  talla;
+- el alta con stock cero se concentra en un panel multiselección, eliminando el
+  enlace repetido bajo cada casilla.
+
+Una misma `reference_family_id` puede contener, por ejemplo, M/L/XL/2XL y 40.
+Cada miembro continúa siendo una referencia V2 independiente con ID, barcode,
+firma, SKU y stock propios.
 
 ## Integridad remota
 
@@ -143,6 +178,21 @@ Corrección UX:
   `3731d1114131bcd279f091141130cf1eba26623097345e5a23f68f55e60446cb`,
   idénticos al blob Git.
 
+Corrección de escalas mixtas:
+
+- escenarios A–G: 10/10; alta 2XL, alta numérica 40 dentro de familia de letra,
+  selector sin mutación, conversión del mismo ID bloqueada, cambio de borrador,
+  XL nueva en cero y 40/DRO + 40/AZL con IDs/barcodes distintos;
+- Nuevo V2: 10/10; Editar familia: 12/12; contrato H-101: 26/26;
+- H-94: 49/49; H-95: 16/16; H-100: 10/10; Excel: 42/42;
+- cola/sincronización: 176/176; migraciones: 31/31;
+- responsive: 492/492; navegación: 15/15; arranque: 5/5;
+- `git diff --check` y build offline: verdes;
+- GitHub Pages run `31871518813`: `success` para `7bdfa66`;
+- blob y bytes publicados: 8,984,311; SHA-256
+  `3a6c4951bb54f7d25774f9e761d75fe4ec95a562b519501fc9eabfdf48699a74`,
+  idénticos.
+
 ## Despliegue y rollback
 
 El código está en `origin/main` y Pages. El rollback de interfaz consiste en
@@ -153,6 +203,10 @@ productos; nunca se debe reconstruir familia mediante heurísticas.
 
 La corrección UX se revierte de forma independiente sobre `balam/inventory.jsx`
 y los artefactos generados; no requiere rollback de base de datos.
+
+La corrección de escalas mixtas se revierte con `7bdfa66` y regenerando el
+bundle. No revierte migraciones ni toca productos; las familias mixtas ya
+persistidas siguen siendo válidas por contrato.
 
 ## Riesgo residual y pendientes
 
