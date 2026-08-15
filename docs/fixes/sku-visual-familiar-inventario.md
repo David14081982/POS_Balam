@@ -4,7 +4,8 @@
 **Estado:** RESUELTO
 **Fecha:** 15/08/2026
 **Commit técnico:** `b2ae4d6`
-**Commit documental:** Pendiente de commit
+**Commit documental:** `f483eb3`
+**Commit de validación pública:** Pendiente de commit
 
 ## Problema y reproducción
 
@@ -58,6 +59,13 @@ El resultado sólo se consume en la columna SKU móvil y escritorio de Inventari
 
 No hubo llamadas ni escrituras a Supabase. Las pruebas de navegador interceptan
 la nube y operan con fixtures locales.
+
+GitHub Pages sirve 8,987,601 bytes con SHA-256
+`fe35ddd43b41efda32943c2f67d8094dc8bf29ebd69d2e3b8219dbce50681c9b`.
+La diferencia frente al blob Git consiste exclusivamente en normalizar sus 171
+finales de línea CRLF a LF; después de esa normalización, tamaño y SHA-256 son
+idénticos. El E2E H-104 ejecutado sobre los bytes descargados quedó 18/18.
+`HEAD` y `origin/main` coinciden en `f483eb3`.
 
 ## Riesgo residual y pendientes
 

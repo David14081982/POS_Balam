@@ -5195,7 +5195,7 @@ casos A–D sobre esos bytes 15/15 en 320/360/390/430/768/1280 px.
 
 ## H-104 - Inventario muestra un SKU arbitrario para una familia V2
 
-**Estado:** RESUELTO LOCALMENTE
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha de registro:** 15/08/2026
 **Origen:** revisión visual posterior a H-102/H-103.
 **Reproducción:** la lista de Inventario resume una familia con `Varios SKU`,
@@ -5211,7 +5211,12 @@ Excel, Supabase o cualquier escritura.
 **Evidencia local:** línea roja 0/8; contrato verde 8/8; BALAM QA 18/18 en
 320/360/390/430/1280 px; H-100 10/10, H-101 48/48, H-102 31/31, H-103 15/15,
 responsive 492/492, navegación 15/15 y smoke bundle 17/17.
-**Riesgo residual:** ninguno conocido. Pendiente commit y publicación.
+**Publicación:** `HEAD` y `origin/main` coinciden en `f483eb3`. Pages sirve
+8,987,601 bytes, SHA-256
+`fe35ddd43b41efda32943c2f67d8094dc8bf29ebd69d2e3b8219dbce50681c9b`;
+son exactamente el blob H-104 tras la normalización CRLF→LF realizada por
+Pages. La columna SKU pública quedó verde 18/18 en 320/360/390/430/1280 px.
+**Riesgo residual:** ninguno conocido.
 
 ## Regla de actualización
 
