@@ -1,12 +1,13 @@
 # Chips compactos de existencias familiares
 
 **Riesgo:** H-103
-**Estado:** RESUELTO LOCALMENTE
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha:** 15/08/2026
 **Commit técnico:** `55ae37d`
 **Commit documental:** `dfdb5c5`
 **Commit de validación pública:** `7da216c`
 **Ajuste stock cero:** `f607add`
+**Documentación del ajuste:** `b4f5ff5`
 
 ## Problema y reproducción
 
@@ -64,7 +65,12 @@ recibiendo todas las referencias, incluidas las agotadas.
 
 ## Riesgo residual y pendientes
 
-Pendiente validar y documentar los bytes públicos del ajuste `f607add`.
+Ninguno conocido. El ajuste público conserva todas las referencias en la
+proyección administrativa y oculta únicamente chips/variantes con stock cero.
+Pages sirve exactamente el blob Git
+`0edb631e994b4f9003c92d68bff28339e80a6eef` (8,987,129 bytes; SHA-256
+`171aba650dd6baa926208d3c9ec2b8b717b5f6f2fb8006bee3346f91c86b96ac`).
+Los casos A–D sobre esos bytes quedaron 15/15.
 
 ## Rollback
 
