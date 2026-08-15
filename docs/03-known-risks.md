@@ -5193,6 +5193,26 @@ y todas las referencias administrativas se conservan completas. Línea roja
 `171aba650dd6baa926208d3c9ec2b8b717b5f6f2fb8006bee3346f91c86b96ac`);
 casos A–D sobre esos bytes 15/15 en 320/360/390/430/768/1280 px.
 
+## H-104 - Inventario muestra un SKU arbitrario para una familia V2
+
+**Estado:** RESUELTO LOCALMENTE
+**Fecha de registro:** 15/08/2026
+**Origen:** revisión visual posterior a H-102/H-103.
+**Reproducción:** la lista de Inventario resume una familia con `Varios SKU`,
+sin expresar qué segmentos son comunes ni si varían talla u otra dimensión.
+**Riesgo:** el operador no puede reconocer visualmente el SKU comercial de la
+familia y puede interpretar como identidad persistida un SKU de una hermana.
+**Alcance autorizado:** autoridad derivada pura del SKU visual familiar y su
+consumo exclusivo en las vistas móvil y escritorio de Inventario.
+**No alcance:** SKU persistido, IDs, barcode, familia, POS, detalle, etiquetas,
+Excel, Supabase o cualquier escritura.
+**Corrección documentada:** `docs/fixes/sku-visual-familiar-inventario.md`.
+**Commit técnico:** `b2ae4d6`.
+**Evidencia local:** línea roja 0/8; contrato verde 8/8; BALAM QA 18/18 en
+320/360/390/430/1280 px; H-100 10/10, H-101 48/48, H-102 31/31, H-103 15/15,
+responsive 492/492, navegación 15/15 y smoke bundle 17/17.
+**Riesgo residual:** ninguno conocido. Pendiente commit y publicación.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

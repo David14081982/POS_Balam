@@ -81,6 +81,7 @@ sesión de chat.
 | `jerarquia-visual-etiqueta-60x40.md` | H-99 | Jerarquía visual 60×40 con identidad V2 intacta |
 | `sku-materializado-en-etiquetas.md` | H-100 | SKU visible por talla con paridad preview/PDF/impresión |
 | `chips-existencias-familiares.md` | H-103 | Chips compactos con proyección familiar V2 intacta |
+| `sku-visual-familiar-inventario.md` | H-104 | SKU familiar derivado sólo para la lista de Inventario |
 | `renovacion-sesion-sin-bloqueo.md` | H-78 | Renovar la sesión sin desmontar temporalmente el POS |
 | `centro-de-equipos.md` | H-79 | Supervisión central por instalación, actividad y reintentos administrativos |
 | `convergencia-centro-de-equipos.md` | H-80 | El historial operativo converge sin tráfico ni reconciliación comercial autorreferente |
