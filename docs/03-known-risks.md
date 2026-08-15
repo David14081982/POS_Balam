@@ -5246,6 +5246,41 @@ Pages sirve 8,988,041 bytes,
 SHA-256 `d6ea77bd88d710f1cbe2e328107cf83dd0b642389dea29ebf1993cc3acd3223b`,
 idénticos al bundle H-105 tras la normalización CRLF→LF.
 
+## H-106 — El selector de Color de ornamento no escala al catálogo vigente
+
+**Estado:** RESUELTO Y PUBLICADO
+**Fecha de registro:** 15/08/2026
+**Origen:** revisión operativa posterior a H-105.
+**Reproducción:** en Editar producto, tanto la variante física como la
+excepción por talla muestran el catálogo en una cuadrícula de hasta ocho
+columnas. Cada opción contiene sólo muestra y código truncable, y el panel queda
+limitado por el ancho de la celda que contiene el disparador.
+**Riesgo:** con 68 colores activos el administrador no puede distinguir código
+y nombre con fiabilidad y puede seleccionar una referencia física equivocada.
+**Alcance autorizado:** presentación, búsqueda y comportamiento responsive del
+selector compartido de Color de ornamento en Editar producto.
+**No alcance:** catálogos `ornament_color`/`color`, códigos, nombres, HEX,
+H-105, identidades, SKU, barcode, stock, Excel, POS, persistencia o Supabase.
+**Corrección documentada:** `docs/fixes/selector-color-ornamento-legible.md`.
+**Cierre local:** el selector compartido presenta una lista de 44 px por opción
+con muestra, código y nombre; el panel tiene ancho propio, scroll interno y
+margen de viewport. La búsqueda normaliza mayúsculas y acentos. AZL sólo se
+incorpora cuando la variante editada ya lo contiene y se marca `Histórico`.
+**Pruebas:** línea roja 18/43; 25 fallos. Contrato H-106/BALAM QA 159/159 en
+320/360/390/430/768/1024/1280/1440 px; H-105 6/6; editor familiar 12/12;
+familias mixtas 10/10; responsive 492/492; navegación 15/15; smoke bundle
+17/17. Artefactos locales idénticos, SHA-256
+`5612916e6d6ef68b154ee9a0f924cbf1945f97b494625a7edde5a1d310f45e5b`.
+**Commit técnico:** `987df89`.
+**Commit documental:** Pendiente de commit.
+**Publicación:** `origin/main` contiene `987df89`; Pages run `31913351874`
+terminó en `success`. El `index.html` servido mide 8,989,182 bytes, SHA-256
+`2e2ff07c1cc4d1575e1b5648382ec86246a1facd658c586d39bfc2374fadf400`,
+idéntico al blob Git `c00217a77001b307497585394d2baf320f04f9e1` después de la
+normalización CRLF→LF de Pages. El E2E sobre esos bytes quedó 159/159.
+**Riesgo residual:** ninguno conocido dentro del selector; axe-core no forma
+parte de las dependencias del repositorio y no se instaló para esta corrección.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:
