@@ -1,10 +1,10 @@
 # Proyección comercial de familias V2
 
 **Riesgo:** H-102  
-**Estado:** RESUELTO LOCALMENTE  
+**Estado:** RESUELTO Y PUBLICADO  
 **Fecha:** 15/08/2026  
 **Commit técnico:** `4f09967`  
-**Commit documental:** Pendiente de commit
+**Commit documental:** `2987c84`
 
 ## Problema y reproducción
 
@@ -61,12 +61,16 @@ cola offline ni esquema.
 - H-100: 10/10; H-99 visual 12/12 y PDF 23/23.
 - Build offline reproducible: `node build-offline.mjs`.
 - Evidencia visual: `.evidence-h102/`.
+- GitHub Pages sirve el blob Git exacto `03f5e1af91504d205dcafc1376df33870a745b04`;
+  archivo publicado de 8,986,698 bytes y SHA-256
+  `977ae29e43386cc478fd833fe8d2eec605742268e5623716453f8b011dde6607`.
+- E2E sobre esos bytes publicados mediante `BALAM_ARTIFACT_PATH`: 16/16.
 
 ## Riesgo residual y pendientes
 
-Pendiente únicamente validar la misma matriz contra los bytes publicados. La
-proyección es deliberadamente derivada: si una referencia remota cambia, el
-siguiente pull/realtime recompone la familia desde las autoridades H-101.
+Ninguno conocido. La proyección es deliberadamente derivada: si una referencia
+remota cambia, el siguiente pull/realtime recompone la familia desde las
+autoridades H-101.
 
 ## Rollback
 

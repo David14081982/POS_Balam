@@ -5127,10 +5127,10 @@ DATA, esquema, RPC, stock, IDs, barcodes ni familias persistidas.
 
 ## H-102 - Los consumidores presentan una referencia V2 como producto comercial completo
 
-**Estado:** RESUELTO LOCALMENTE
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha de registro:** 15/08/2026
 **Commit técnico:** `4f09967`
-**Commit documental:** Pendiente de commit
+**Commit documental:** `2987c84`
 **Origen:** prueba operativa VICTOR posterior a H-101.
 **Reproducción:** Supabase conserva siete referencias, una familia y el stock
 exacto, pero Inventario y POS iteran `DATA.products`; detalle recibe el
@@ -5148,8 +5148,12 @@ familiar, transacciones exactas, V1, Punto Cero o conversión V1→V2.
 H-83 17/17, H-84 19/19, H-100 10/10 y H-99 35/35. VICTOR se proyecta
 como una familia de siete referencias y 70 piezas; la operación final conserva
 el `products.id` exacto. Sin migraciones ni escrituras remotas.
-**Riesgo residual:** pendiente validar los bytes publicados; no hay riesgo de
-migración o rollback de datos porque la proyección no se persiste.
+**Publicación:** `origin/main` en `2987c84`; Pages sirve exactamente el blob Git
+`03f5e1af91504d205dcafc1376df33870a745b04` (8,986,698 bytes; SHA-256
+`977ae29e43386cc478fd833fe8d2eec605742268e5623716453f8b011dde6607`).
+La matriz E2E sobre esos bytes quedó 16/16.
+**Riesgo residual:** ninguno conocido; no hay migración o rollback de datos
+porque la proyección no se persiste.
 
 ## Regla de actualización
 
