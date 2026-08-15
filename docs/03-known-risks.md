@@ -5125,6 +5125,32 @@ comprueba además que el control visible está ausente; H-101 26/26, edición
 familiar 12/12, H-94 49/49 y navegación 15/15 permanecen verdes. No se cambió
 DATA, esquema, RPC, stock, IDs, barcodes ni familias persistidas.
 
+## H-102 - Los consumidores presentan una referencia V2 como producto comercial completo
+
+**Estado:** RESUELTO LOCALMENTE
+**Fecha de registro:** 15/08/2026
+**Commit técnico:** `4f09967`
+**Commit documental:** Pendiente de commit
+**Origen:** prueba operativa VICTOR posterior a H-101.
+**Reproducción:** Supabase conserva siete referencias, una familia y el stock
+exacto, pero Inventario y POS iteran `DATA.products`; detalle recibe el
+`products.id` pulsado y proyecta sólo su talla, SKU, precio y existencia.
+**Riesgo:** una familia disponible puede aparecer agotada, duplicada o con el
+SKU/precio arbitrario de una hermana; selectores operativos inducen a elegir
+una referencia desconectada del producto comercial.
+**Alcance autorizado:** autoridad derivada de proyección familiar V2;
+Inventario, detalle, POS, Cambios, Préstamos, etiquetas, búsquedas y KPIs;
+selección final siempre por `products.id` exacto; Excel permanece por fila.
+**No alcance:** cambiar persistencia H-101, identidades, barcodes, escritura
+familiar, transacciones exactas, V1, Punto Cero o conversión V1→V2.
+**Corrección documentada:** `docs/fixes/proyeccion-comercial-familias-v2.md`.
+**Evidencia:** contrato H-102 15/15, E2E/BALAM QA 16/16, H-101 48/48,
+H-83 17/17, H-84 19/19, H-100 10/10 y H-99 35/35. VICTOR se proyecta
+como una familia de siete referencias y 70 piezas; la operación final conserva
+el `products.id` exacto. Sin migraciones ni escrituras remotas.
+**Riesgo residual:** pendiente validar los bytes publicados; no hay riesgo de
+migración o rollback de datos porque la proyección no se persiste.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:
