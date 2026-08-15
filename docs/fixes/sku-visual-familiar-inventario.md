@@ -5,7 +5,7 @@
 **Fecha:** 15/08/2026
 **Commit técnico:** `b2ae4d6`
 **Commit documental:** `f483eb3`
-**Commit de validación pública:** Pendiente de commit
+**Commit de validación pública:** `b584edc`
 
 ## Problema y reproducción
 
