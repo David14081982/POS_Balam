@@ -36,6 +36,7 @@ y `BLOQUEADO`.
 | H-89 | BALAM no tiene contrato de instalación PWA ni materialización demostrada del logo configurado | RESUELTO Y PUBLICADO | Cliente / PWA / build |
 | H-90 | La autoridad monetaria no conserva componentes configurables ni reembolsos exactos | RESUELTO Y PUBLICADO | Ventas / devoluciones / reportes / impresión |
 | H-99 | Preview, PDF e impresión de etiquetas deben compartir composición | RESUELTO Y PUBLICADO | Inventario / etiquetas / impresión |
+| H-111 | POS expone referencias V2 en lugar de una selección comercial por talla | RESUELTO | POS / UX / identidad V2 |
 
 ## H-01 — Inventario concurrente
 
@@ -5389,6 +5390,20 @@ Excel H-86 42/42 y contrato de entrada de arneses 8/8.
 **Commit:** `4831791`.
 **Riesgo residual:** Chrome headless no sustituye la comprobación manual de
 impresora, lector USB ni otros periféricos físicos.
+
+## H-111 — POS expone referencias V2 en lugar de una selección comercial por talla
+
+- **Estado:** RESUELTO.
+- **Fecha:** 16/08/2026.
+- **Módulo:** POS / UX / identidad V2.
+- **Descripción:** el POS V1 abre una selección comercial compacta por talla, pero una familia V2 abre directamente `ReferenceFamilyPicker` con el título “Selecciona referencia” y tarjetas técnicas. La divergencia agrega un paso conceptual innecesario, expone detalles de implementación y no presenta el stock agregado de cada talla.
+- **Evidencia:** `balam/pos.jsx` bifurca `sizePick.isFamilyProjection` hacia `ReferenceFamilyPicker`; `balam/heritage.jsx` renderiza inmediatamente cada referencia del grupo. `DATA.referenceFamilyProjection()` ya conserva grupos por talla, stock positivo agregado y referencias exactas, por lo que la capa comercial puede proyectarse sin perder identidad.
+- **Control requerido:** V1 debe permanecer sin cambios; V2 debe abrir primero el mismo patrón comercial por talla. Una talla con una sola referencia debe entregar su `products.id` exacto; una talla con varias referencias debe abrir un segundo nivel compacto con atributos humanos, stock y precio exactos y entregar después el `products.id` elegido. Ningún camino puede resolver por SKU, posición o primer elemento.
+- **Pruebas requeridas:** regresión A/B/C (V1, V2 simple y V2 compleja), identidad exacta en carrito/venta, ausencia de la referencia agotada del stock agregado, responsive 320/360/390/430/768/1280, build offline y verificación de artefactos.
+- **Solución:** el POS V2 reutiliza el patrón comercial “Selecciona talla”. Resuelve directamente la referencia única o abre “Selecciona variante” sólo ante varias referencias disponibles, con atributos catalogados, stock y precio exactos. Los selectores técnicos de Préstamos y Cambios permanecen intactos.
+- **Pruebas:** H-111 contrato 9/9; H-111 E2E 19/19 con carrito, venta y decremento exactos; H-102 15/15 y E2E 16/16; H-103 15/15; H-104 8/8 y E2E 18/18; certificación V2 H-110 20/20; responsive 320/360/390/430/768/1280 sin overflow; build offline correcto.
+- **Riesgo residual:** Chrome headless no sustituye validación manual de periféricos. El arnés smoke general conserva un timeout de cierre/arranque ajeno a H-111, documentado en la corrección.
+- **Commit:** Pendiente de commit.
 
 ## Regla de actualización
 

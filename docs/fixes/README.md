@@ -93,6 +93,7 @@ sesión de chat.
 | `autoridad-monetaria-y-reporte-por-metodo.md` | H-90 | Componentes monetarios dinámicos, reembolsos exactos, conciliación y reporte A4 |
 | `atributos-opcionales-canonicos.md` | H-86 | Representación única de atributos custom opcionales en DATA, firma, snapshots y Excel |
 | `certificacion-preproduccion-v2.md` | H-110 | Recorrido V2 transversal, aislado y con limpieza exacta |
+| `paridad-selector-tallas-pos-v1-v2.md` | H-111 | POS V1/V2 selecciona primero talla y preserva la referencia física exacta |
 
 Documentación financiera relacionada, creada antes de este índice:
 

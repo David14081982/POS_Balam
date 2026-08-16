@@ -621,9 +621,10 @@
     return tokens.filter(token => token !== '').join('-').toUpperCase();
   }
 
-  // H-104: representación exclusivamente visual de una familia en la lista de
-  // Inventario. Deriva la receta vigente y sólo considera referencias con
-  // existencia; no altera ni sustituye ningún SKU persistido.
+  // H-104/H-111: representación exclusivamente visual de una familia en
+  // Inventario y en la cabecera comercial del selector POS. Deriva la receta
+  // vigente y sólo considera referencias con existencia; no altera ni
+  // sustituye ningún SKU persistido.
   function familyVisualSku(product) {
     if (!product || !product.isFamilyProjection) return String(product && product.sku || '');
     const available = (product.availableReferences || (product.references || [])

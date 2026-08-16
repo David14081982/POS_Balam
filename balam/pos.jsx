@@ -9,7 +9,7 @@
     const r = window.DATA.priceRange(p);
     return r.unico ? fmt(r.min) : fmt(r.min) + ' – ' + fmt(r.max);
   };
-  const { MS, ProductImage, ReferenceFamilyPicker } = window.HX;
+  const { MS, ProductImage } = window.HX;
   const D = window.DATA;
   const h = React.createElement;
 
@@ -303,9 +303,7 @@
       viewportBand === 'desktop' && ticketPanel,
       compactCart,
       cartOverlay,
-      sizePick && (sizePick.isFamilyProjection
-        ? h(ReferenceFamilyPicker, { key: 'fm', projection: sizePick, onClose: () => setSizePick(null), onPick: addToTicket })
-        : h(SizeModal, { key: 'sm', p: sizePick, onClose: () => setSizePick(null), onPick: addToTicket })),
+      sizePick && h(SizeModal, { key: 'sm', p: sizePick, onClose: () => setSizePick(null), onPick: addToTicket }),
       discountOpen && h(window.AdditionalDiscountModal, {
         key: 'ad', ticket: resolved, existing: additionalDiscounts,
         onClose: () => setDiscountOpen(false),
@@ -410,7 +408,7 @@
     const lista = D.sellers.filter(D.isEligibleSeller);
     const footer = [
       h('button', {
-        key: 'k', className: 'w-full py-3.5 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-xl hover:opacity-90 transition disabled:opacity-40',
+        key: 'k', 'data-testid': 'seller-pick-confirm', className: 'w-full py-3.5 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-xl hover:opacity-90 transition disabled:opacity-40',
         disabled: !sel, onClick: () => sel && onConfirm(sel),
       }, 'Confirmar vendedor'),
     ];
@@ -418,7 +416,7 @@
       h('div', { key: 'g', className: 'grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 py-2' }, lista.map(s => {
         const on = sel === s.id;
         return h('button', {
-          key: s.id, className: 'flex flex-col items-center gap-2 group', onClick: () => setSel(s.id),
+          key: s.id, 'data-testid': 'seller-pick-' + s.id, className: 'flex flex-col items-center gap-2 group', onClick: () => setSel(s.id),
         }, [
           s.avatar
             ? h('img', { key: 'a', src: s.avatar, className: 'w-14 h-14 rounded-full object-cover border-2 transition-all ' + (on ? 'border-primary' : 'border-transparent group-hover:border-outline') })
@@ -451,6 +449,7 @@
     const out = total === 0;
     const subtitle = (p.orn && p.orn !== '—') ? p.orn : D.TELA[p.tela];
     return h('div', {
+      'data-testid': 'pos-product-' + (p.commercialKey || p.id),
       className: 'group flex flex-col bg-surface-container-lowest rounded-xl overflow-hidden transition-all duration-300 shadow-e1 ' +
         (out ? 'opacity-50' : 'cursor-pointer hover:-translate-y-0.5 hover:shadow-e2'),
       onClick: out ? null : onAdd,
@@ -482,6 +481,7 @@
     const total = p.isFamilyProjection ? p.totalStock : D.totalStock(p);
     const out = total === 0;
     return h('div', {
+      'data-testid': 'pos-product-' + (p.commercialKey || p.id),
       className: 'flex items-center gap-4 p-3 hover:bg-surface-container-low transition-colors ' + (out ? 'opacity-50' : 'cursor-pointer'),
       onClick: out ? null : onAdd,
     }, [
@@ -500,9 +500,10 @@
 
   // Modal de talla
   function SizeModal({ p, onClose, onPick }) {
+    if (p.isFamilyProjection) return h(FamilySizeModal, { p, onClose, onPick });
     const resolved = D.resolveProductSizes(p);
     const sizes = resolved.sizes.filter(size => size.active && size.stock > 0);
-    return h(Modal, { title: 'Selecciona talla', onClose }, [
+    return h(Modal, { title: 'Selecciona talla', onClose, testId: 'pos-size-picker' }, [
       h('div', { key: 'h', className: 'flex items-center gap-4 mb-5' }, [
         h(ProductImage, { key: 't', p, className: 'w-16 h-20 rounded-lg ring-1 ring-outline-variant/50' }),
         h('div', { key: 'i' }, [
@@ -522,6 +523,7 @@
           h('div', { key: 'sz', className: 'flex flex-wrap gap-2' },
             sizes.map(size => h('button', {
               key: size.sizeId,
+              'data-testid': 'legacy-size-pick-' + size.sizeId,
               className: 'flex flex-col items-center gap-0.5 min-w-[64px] px-3 py-2.5 border border-outline-variant hover:border-primary hover:bg-surface-container-low transition-colors rounded-lg',
               onClick: () => onPick(p, size.value),
             }, [
@@ -537,6 +539,100 @@
                 : null,
             ]))),
         ]),
+    ]);
+  }
+
+  function referencePartValue(reference, part) {
+    if (part.effectiveSize) return String(reference.sizeCode || '');
+    if (part.custom) {
+      const value = (reference.attrs || {})[part.kind];
+      return value == null && part.kind === window.CONFIG.modeloKind() ? reference.modelo : value;
+    }
+    return part.field ? reference[part.field] : undefined;
+  }
+
+  function humanCatalogValue(kind, value) {
+    const values = Array.isArray(value) ? value : [value];
+    return values.filter(item => item != null && item !== '').map(item => {
+      const found = window.CONFIG.find(kind, item);
+      return found ? found.label : String(item);
+    }).join(' + ');
+  }
+
+  function referenceVariantLabel(reference, references) {
+    const parts = window.CONFIG.referenceParts().filter(part => !part.effectiveSize).filter(part => {
+      const values = references.map(row => JSON.stringify(referencePartValue(row, part)));
+      return values.some(value => value !== values[0]);
+    });
+    const labels = parts.map(part => ({
+      field: window.CONFIG.catalogLabel(part.kind),
+      value: humanCatalogValue(part.kind, referencePartValue(reference, part)),
+    })).filter(item => item.value);
+    if (labels.length === 1) return labels[0].value;
+    return labels.map(item => `${item.field}: ${item.value}`).join(' · ');
+  }
+
+  function referencePriceLabel(references) {
+    const prices = references.map(reference => Number(D.listPrice(reference, reference.sizeCode)) || 0);
+    const min = Math.min(...prices), max = Math.max(...prices);
+    return min === max ? fmt(min) : fmt(min) + ' – ' + fmt(max);
+  }
+
+  // H-111: el POS proyecta familias V2 como una selección comercial por talla.
+  // La proyección sólo presenta; toda salida sigue siendo una referencia products.id exacta.
+  function FamilySizeModal({ p, onClose, onPick }) {
+    const [variantGroup, setVariantGroup] = useState(null);
+    const visualSku = D.familyVisualSku(p);
+    const availableGroups = p.sizeGroups.filter(group => group.stock > 0);
+    const availableFamilyReferences = p.availableReferences || [];
+    const pickSize = group => {
+      const availableReferences = group.references.filter(reference => Number(reference.stockQuantity) > 0);
+      if (availableReferences.length === 1) onPick(availableReferences[0], availableReferences[0].sizeCode);
+      else setVariantGroup({ ...group, availableReferences });
+    };
+    const title = variantGroup ? 'Selecciona variante' : 'Selecciona talla';
+    return h(Modal, { title, onClose, testId: variantGroup ? 'pos-family-variant-picker' : 'pos-family-size-picker' }, [
+      h('div', { key: 'root', 'data-testid': 'family-size-picker' }, [
+        h('div', { key: 'h', className: 'flex items-center gap-4 mb-5' }, [
+          h(ProductImage, { key: 't', p, className: 'w-16 h-20 rounded-lg ring-1 ring-outline-variant/50' }),
+          h('div', { key: 'i', className: 'min-w-0' }, [
+            h('div', { key: 'n', className: 'font-headline text-h2 text-primary' }, p.nombre),
+            h('div', { key: 's', className: 'text-overline uppercase text-on-surface-variant [overflow-wrap:anywhere]' }, visualSku),
+            h('div', { key: 'p', className: 'font-headline text-h2 text-primary mt-1' }, referencePriceLabel(availableFamilyReferences)),
+          ]),
+        ]),
+        variantGroup
+          ? h('div', { key: 'variants' }, [
+              h('div', { key: 'bar', className: 'flex items-center justify-between gap-3 mb-3' }, [
+                h('div', { key: 'lbl', className: 'text-overline uppercase text-on-surface-variant' }, `Talla ${variantGroup.label}`),
+                h('button', { key: 'back', type: 'button', onClick: () => setVariantGroup(null), 'data-testid': 'family-variant-back', className: 'text-caption font-semibold text-primary hover:underline' }, 'Volver a tallas'),
+              ]),
+              h('div', { key: 'list', className: 'grid gap-2' }, variantGroup.availableReferences.map(reference => h('button', {
+                key: reference.id, type: 'button', onClick: () => onPick(reference, reference.sizeCode),
+                'data-testid': 'family-variant-pick-' + reference.id,
+                className: 'min-h-12 px-3 py-2.5 rounded-lg border border-outline-variant text-left flex flex-wrap items-center gap-x-3 gap-y-1 hover:border-primary hover:bg-surface-container-low transition-colors',
+              }, [
+                h('span', { key: 'v', className: 'flex-1 min-w-[10rem] text-body font-semibold text-primary [overflow-wrap:anywhere]' }, referenceVariantLabel(reference, variantGroup.availableReferences)),
+                h('span', { key: 'p', className: 'font-headline text-body text-primary whitespace-nowrap' }, fmt(D.listPrice(reference, reference.sizeCode))),
+                h('span', { key: 's', className: 'text-caption text-muted whitespace-nowrap' }, reference.stockQuantity + ' pz'),
+              ]))),
+            ])
+          : h('div', { key: 'sizes' }, [
+              h('div', { key: 'lbl', className: 'text-overline uppercase text-on-surface-variant mb-3' }, 'Tallas disponibles'),
+              h('div', { key: 'list', className: 'flex flex-wrap gap-2' }, availableGroups.map(group => {
+                const availableReferences = group.references.filter(reference => Number(reference.stockQuantity) > 0);
+                return h('button', {
+                  key: group.key, type: 'button', onClick: () => pickSize(group),
+                  'data-testid': 'family-size-pick-' + group.key,
+                  className: 'flex flex-col items-center gap-0.5 min-w-[64px] px-3 py-2.5 border border-outline-variant hover:border-primary hover:bg-surface-container-low transition-colors rounded-lg',
+                }, [
+                  h('span', { key: 't', className: 'font-semibold text-body text-primary' }, group.label),
+                  h('span', { key: 'p', className: 'text-caption font-semibold text-gold-text' }, referencePriceLabel(availableReferences)),
+                  h('span', { key: 's', className: 'text-caption text-muted' }, group.stock + ' pz'),
+                ]);
+              })),
+            ]),
+      ]),
     ]);
   }
 

@@ -33,8 +33,10 @@ existencia. La línea roja H-104 reprodujo los ocho escenarios con 0/8.
 - Una familia agotada conserva el resumen neutral seguro y nunca toma la primera
   referencia como autoridad.
 
-El resultado sólo se consume en la columna SKU móvil y escritorio de Inventario.
-`skuLabel`, DetailDrawer, búsqueda e identidades reales permanecen intactos.
+H-104 introdujo el resultado para la columna SKU móvil y escritorio de
+Inventario. H-111 autoriza además su reutilización en la cabecera comercial del
+selector de talla del POS; sigue siendo presentación derivada. `skuLabel`,
+DetailDrawer, búsqueda e identidades reales permanecen intactos.
 
 ## Solución
 

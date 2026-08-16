@@ -155,7 +155,7 @@
         : h('div', { key: 'lines', className: 'flex-1 overflow-y-auto no-scrollbar px-6 py-3 space-y-2' },
             ticket.map((l, idx) => [
               idx > 0 && h('div', { key: 'd' + l.key, className: 'h-px bg-outline-variant/60' }),
-              h('div', { key: l.key, className: 'flex gap-4 rounded-lg transition-all duration-500 ' + (l.key === flashKey ? 'ring-2 ring-success bg-success-soft/50 -mx-2 px-2 py-1' : '') }, [
+              h('div', { key: l.key, 'data-testid': 'ticket-line-' + l.productId, className: 'flex gap-4 rounded-lg transition-all duration-500 ' + (l.key === flashKey ? 'ring-2 ring-success bg-success-soft/50 -mx-2 px-2 py-1' : '') }, [
                 h(ProductImage, { key: 't', p: l.p, className: 'w-12 h-16 shrink-0 rounded-lg ring-1 ring-outline-variant/50' }),
                 h('div', { key: 'i', className: 'flex-1 min-w-0 flex flex-col' }, [
                   h('div', { key: 'top', className: 'flex justify-between items-start mb-1' }, [
