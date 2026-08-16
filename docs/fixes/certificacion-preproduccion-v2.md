@@ -3,7 +3,7 @@
 **Riesgo:** H-110
 **Estado:** RESUELTO
 **Fecha:** 16/08/2026
-**Commit:** Pendiente de commit
+**Commit:** `4831791`
 
 ## Problema y reproducción
 

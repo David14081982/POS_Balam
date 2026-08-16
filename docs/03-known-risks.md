@@ -5386,7 +5386,7 @@ Regresiones: H-102 16/16, Cambio 37/37, Devoluciones 17/17, Préstamos 117/117,
 Excel H-86 42/42 y contrato de entrada de arneses 8/8.
 **Corrección documentada:**
 `docs/fixes/certificacion-preproduccion-v2.md`.
-**Commit:** Pendiente de commit.
+**Commit:** `4831791`.
 **Riesgo residual:** Chrome headless no sustituye la comprobación manual de
 impresora, lector USB ni otros periféricos físicos.
 
