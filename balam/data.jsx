@@ -362,6 +362,10 @@
       ornamentColorGroups, commonAttributes, mixedAttributes, referenceCount: references.length,
     };
     ['nombre','modelo','cat','manga','tela','color','cuello','orn','costo','imagen'].forEach(field => { projection[field] = common(field); });
+    // El detalle consume la misma presentación derivada que una referencia
+    // hidratada. Sólo se resuelve cuando Color tela es común: una familia
+    // mixta conserva `color = null` y no recibe un swatch inventado.
+    if (projection.color != null && projection.color !== '') colorDisplay(projection);
     projection.pop = references.some(row => row.pop);
     projection.attrs = commonAttributes;
     projection.searchText = references.map(row => [row.nombre,row.modelo,row.sku,row.barcodeCode,row.sizeCode,
