@@ -5281,6 +5281,39 @@ normalización CRLF→LF de Pages. El E2E sobre esos bytes quedó 159/159.
 **Riesgo residual:** ninguno conocido dentro del selector; axe-core no forma
 parte de las dependencias del repositorio y no se instaló para esta corrección.
 
+## H-107 — El detalle familiar V2 pierde la presentación del Color tela
+
+**Estado:** RESUELTO Y PUBLICADO
+**Fecha de registro:** 15/08/2026
+**Origen:** reproducción quirúrgica en Inventario → Detalle de producto tras H-102.
+**Reproducción:** una referencia V1 con `color = 'BL'` muestra «Blanco» y su
+swatch. Una familia V2 cuyas hermanas conservan el mismo `color = 'BL'` muestra
+la card «Color Tela» sin valor.
+**Riesgo:** la administradora puede interpretar como ausente un atributo físico
+que sí está persistido y es común a toda la familia.
+**Alcance autorizado:** rastreo Supabase→STORE→DATA→proyección→detalle,
+corrección mínima de la autoridad derivada, prueba V1/V2 y auditoría de los
+atributos ya mostrados por el detalle.
+**No alcance:** productos, stock, SKU, barcode, IDs, familias, catálogos, HEX,
+`ornament_color`, H-105/H-106, Excel, POS, persistencia, esquema o Punto Cero.
+**Evidencia inicial:** `referenceFamilyProjection()` conserva el código común
+en `projection.color`, pero no hidrata `colorName` ni `colorHex`; `DetailDrawer`
+lee exclusivamente esas dos propiedades derivadas para la card existente.
+La prueba roja H-107 obtuvo 3/5 antes de la corrección.
+**Cierre:** `referenceFamilyProjection()` aplica la autoridad existente
+`colorDisplay()` sólo cuando `color` es común. V1 y V2 BL muestran Blanco y
+`#f3f4f6`; una familia mixta conserva `color = null`; AZL continúa en
+`ornament_color`. H-107 17/17 en ocho viewports; H-101–H-106, responsive
+492/492, navegación 15/15 y smoke bundle 17/17 permanecen verdes.
+**Commit técnico:** `2594d27`.
+**Publicación:** `origin/main` contiene el commit técnico; validación de Pages
+y bytes pendiente de cierre documental.
+**Riesgo residual:** el SELECT remoto actual de VICTOR requiere una sesión con
+lectura de `pos.products`; los intentos dirigidos devolvieron 42501 y no se
+elevó el rol. No hubo escritura ni cambio de datos.
+**Corrección documentada:**
+`docs/fixes/color-tela-en-detalle-familiar-v2.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:
