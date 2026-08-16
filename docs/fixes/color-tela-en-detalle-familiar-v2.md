@@ -1,10 +1,10 @@
 # Color tela en el detalle familiar V2
 
 **Riesgo:** H-107
-**Estado:** RESUELTO
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha:** 15/08/2026
 **Commit técnico:** `2594d27`
-**Commit documental:** Pendiente de commit
+**Commit documental:** `31bc186`
 
 ## Problema y reproducción
 
@@ -92,6 +92,11 @@ La cadena ejecutable sí queda comprobada con referencias equivalentes:
   SHA-256 `b35b93f781ff9ebe139823d8120649c5b17c4423540fddbfd490ed388da3af17`.
 - Evidencia visual: `.evidence-h107/detail-v2-color-320.png` y
   `.evidence-h107/detail-v2-color-1440.png`.
+- GitHub Pages run `31916608231`: `success` para `2594d27`.
+- Pages sirve 8,989,338 bytes, SHA-256
+  `fafb91e77301f9beaf5a1911f636978112610e32f475bdc0aedabd823c0a7419`;
+  coincide exactamente con el artefacto técnico tras CRLF→LF.
+- El mismo H-107 ejecutado sobre esos bytes publicados obtuvo 17/17.
 
 ## Riesgo residual y pendientes
 

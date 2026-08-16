@@ -5306,8 +5306,11 @@ La prueba roja H-107 obtuvo 3/5 antes de la corrección.
 `ornament_color`. H-107 17/17 en ocho viewports; H-101–H-106, responsive
 492/492, navegación 15/15 y smoke bundle 17/17 permanecen verdes.
 **Commit técnico:** `2594d27`.
-**Publicación:** `origin/main` contiene el commit técnico; validación de Pages
-y bytes pendiente de cierre documental.
+**Publicación:** `origin/main` contiene el commit técnico; Pages run
+`31916608231` terminó en `success`. El `index.html` público mide 8,989,338
+bytes, SHA-256
+`fafb91e77301f9beaf5a1911f636978112610e32f475bdc0aedabd823c0a7419`,
+idéntico al artefacto técnico tras CRLF→LF. H-107 sobre esos bytes: 17/17.
 **Riesgo residual:** el SELECT remoto actual de VICTOR requiere una sesión con
 lectura de `pos.products`; los intentos dirigidos devolvieron 42501 y no se
 elevó el rol. No hubo escritura ni cambio de datos.
