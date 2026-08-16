@@ -429,7 +429,7 @@
           h('span', { key: 'v', className: 'font-bold' }, '− ' + fmt(a.discountAmount)),
         ]))),
       h('div', { key: 'ml', className: lbl }, 'Método de pago'),
-      h('div', { key: 'm', className: 'grid gap-2 mb-4', style: { gridTemplateColumns: `repeat(${Math.min(METODOS.length, 5)}, minmax(0, 1fr))` } },
+      h('div', { key: 'm', className: 'grid grid-cols-3 gap-2 mb-4' },
         METODOS.map(m => h('button', {
           key: m.id,
           'data-testid': `checkout-method-${m.id}`,
@@ -438,7 +438,7 @@
           onClick: () => setMetodo(m.id),
         }, [
           h(MS, { key: 'i', name: m.icon, size: 22, fill: metodo === m.id }),
-          h('span', { key: 't', className: 'text-[9px] leading-none tracking-tight uppercase w-full text-center truncate', title: m.id }, m.id),
+          h('span', { key: 't', className: 'text-[9px] leading-tight tracking-tight uppercase w-full text-center whitespace-normal', title: m.id }, m.id),
         ]))),
       metodo === 'Efectivo' && h('div', { key: 'efe' }, [
         h('div', { key: 'l', className: lbl }, 'Efectivo recibido'),
