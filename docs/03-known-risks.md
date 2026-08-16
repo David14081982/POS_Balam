@@ -5403,7 +5403,7 @@ impresora, lector USB ni otros periféricos físicos.
 - **Solución:** el POS V2 reutiliza el patrón comercial “Selecciona talla”. Resuelve directamente la referencia única o abre “Selecciona variante” sólo ante varias referencias disponibles, con atributos catalogados, stock y precio exactos. Los selectores técnicos de Préstamos y Cambios permanecen intactos.
 - **Pruebas:** H-111 contrato 9/9; H-111 E2E 19/19 con carrito, venta y decremento exactos; H-102 15/15 y E2E 16/16; H-103 15/15; H-104 8/8 y E2E 18/18; certificación V2 H-110 20/20; responsive 320/360/390/430/768/1280 sin overflow; build offline correcto.
 - **Riesgo residual:** Chrome headless no sustituye validación manual de periféricos. El arnés smoke general conserva un timeout de cierre/arranque ajeno a H-111, documentado en la corrección.
-- **Commit:** Pendiente de commit.
+- **Commit:** `8e554b1`.
 
 ## Regla de actualización
 
