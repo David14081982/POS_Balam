@@ -5317,6 +5317,43 @@ elevó el rol. No hubo escritura ni cambio de datos.
 **Corrección documentada:**
 `docs/fixes/color-tela-en-detalle-familiar-v2.md`.
 
+## H-108 — Los métodos de pago se truncan en el checkout móvil
+
+**Estado:** RESUELTO LOCALMENTE
+**Fecha de registro:** 16/08/2026
+**Origen:** BALAM QA posterior a H-107.
+**Reproducción:** en el modal Cobrar venta, la cuadrícula fuerza hasta cinco
+columnas y aplica truncado al nombre. «Transferencia» pierde contenido entre
+320 y 430 px; «Apartado» también se trunca a 320 px.
+**Riesgo:** la persona que cobra puede confundir el método de pago al no poder
+leer su nombre completo.
+**Alcance autorizado:** exclusivamente composición y presentación responsive
+de las opciones de método de pago.
+**No alcance:** lógica de cobro, catálogo o códigos de métodos, precios, ventas,
+stock, persistencia, Supabase y reglas de negocio.
+**Cierre local:** cuadrícula de tres columnas y nombres sin truncado. Línea roja
+**64/70**; verde **70/70** en 320/360/375/390/430 px.
+**Corrección documentada:**
+`docs/fixes/metodos-pago-legibles-checkout-movil.md`.
+**Commit técnico:** `ddca21d`.
+
+## H-109 — El toast se superpone al CTA Confirmar cobro en móvil
+
+**Estado:** RESUELTO LOCALMENTE
+**Fecha de registro:** 16/08/2026
+**Origen:** BALAM QA posterior a H-107.
+**Reproducción:** con el checkout abierto en móvil, un toast fijado al extremo
+inferior derecho cruza visualmente el botón «Confirmar cobro» y cubre su centro.
+**Riesgo:** el mensaje temporal oculta la acción primaria durante el cobro.
+**Alcance autorizado:** exclusivamente ubicación responsive del toast.
+**No alcance:** contenido o disparo de notificaciones, lógica de cobro, métodos,
+precios, ventas, stock, persistencia, Supabase y reglas de negocio.
+**Cierre local:** el host se ubica arriba en móvil y conserva abajo a la derecha
+desde `sm`. Línea roja **6/10**; verde **10/10** en los cinco anchos.
+**Corrección documentada:**
+`docs/fixes/toast-sin-superposicion-checkout-movil.md`.
+**Commit técnico:** `ddca21d`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:
