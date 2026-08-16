@@ -1,7 +1,7 @@
 # Métodos de pago legibles en el checkout móvil
 
 **Riesgo:** H-108
-**Estado:** RESUELTO
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha:** 16/08/2026
 **Commit:** `ddca21d`
 
@@ -40,6 +40,14 @@ normal. Sólo cambiaron clases de composición en `balam/pos-ticket.jsx`.
 
 Ninguno conocido dentro del alcance UI. No se modificaron métodos, importes,
 ventas, stock, persistencia, Supabase ni reglas de negocio.
+
+## Publicación
+
+Integrado en `main` mediante `62d6ed8`. Pages run `31950744444` terminó en
+`success`. El `index.html` servido mide 8,989,774 bytes, SHA-256
+`c4675f0a0c456c0942e784b1cd71bf4a2f1ece1410f77a384abd66b1b59a0f8e`,
+idéntico al blob Git `4781bdfa5e29eb4a251d8c470045cee23a27241b` tras normalizar
+CRLF→LF. H-108 volvió a pasar **70/70** sobre esos bytes.
 
 ## Referencias
 

@@ -5319,7 +5319,7 @@ elevó el rol. No hubo escritura ni cambio de datos.
 
 ## H-108 — Los métodos de pago se truncan en el checkout móvil
 
-**Estado:** RESUELTO LOCALMENTE
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha de registro:** 16/08/2026
 **Origen:** BALAM QA posterior a H-107.
 **Reproducción:** en el modal Cobrar venta, la cuadrícula fuerza hasta cinco
@@ -5336,10 +5336,14 @@ stock, persistencia, Supabase y reglas de negocio.
 **Corrección documentada:**
 `docs/fixes/metodos-pago-legibles-checkout-movil.md`.
 **Commit técnico:** `ddca21d`.
+**Commit documental:** `62d6ed8`.
+**Publicación:** Pages run `31950744444` terminó en `success`; los bytes
+publicados coinciden con el blob Git tras CRLF→LF y H-108 quedó **70/70** sobre
+el artefacto servido.
 
 ## H-109 — El toast se superpone al CTA Confirmar cobro en móvil
 
-**Estado:** RESUELTO LOCALMENTE
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha de registro:** 16/08/2026
 **Origen:** BALAM QA posterior a H-107.
 **Reproducción:** con el checkout abierto en móvil, un toast fijado al extremo
@@ -5353,6 +5357,9 @@ desde `sm`. Línea roja **6/10**; verde **10/10** en los cinco anchos.
 **Corrección documentada:**
 `docs/fixes/toast-sin-superposicion-checkout-movil.md`.
 **Commit técnico:** `ddca21d`.
+**Commit documental:** `62d6ed8`.
+**Publicación:** el mismo run `31950744444` sirvió el artefacto equivalente;
+H-109 quedó **10/10** y la regresión H-88A **30/30** sobre esos bytes.
 
 ## Regla de actualización
 

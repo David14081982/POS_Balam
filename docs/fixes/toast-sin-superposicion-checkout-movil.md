@@ -1,7 +1,7 @@
 # Toast sin superposición sobre el checkout móvil
 
 **Riesgo:** H-109
-**Estado:** RESUELTO
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha:** 16/08/2026
 **Commit:** `ddca21d`
 
@@ -43,6 +43,14 @@ clases de presentación en `balam/shared.jsx`.
 Ninguno conocido dentro del alcance UI. En móvil el toast ocupa temporalmente
 la franja superior; las pruebas confirman que queda dentro del viewport y no
 cubre el CTA. No se modificó lógica ni persistencia.
+
+## Publicación
+
+Integrado en `main` mediante `62d6ed8`. Pages run `31950744444` terminó en
+`success`. El `index.html` servido mide 8,989,774 bytes, SHA-256
+`c4675f0a0c456c0942e784b1cd71bf4a2f1ece1410f77a384abd66b1b59a0f8e`,
+idéntico al blob Git `4781bdfa5e29eb4a251d8c470045cee23a27241b` tras normalizar
+CRLF→LF. H-109 volvió a pasar **10/10** y H-88A **30/30** sobre esos bytes.
 
 ## Referencias
 
