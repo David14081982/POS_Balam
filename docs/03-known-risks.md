@@ -5428,7 +5428,8 @@ impresora, lector USB ni otros periféricos físicos.
   44×44 px sin cambiar icono, V1 ni selección H-111.
 - **Pruebas:** rojo H-112 con 8 aprobaciones y 12 fallos; verde 20/20; BALAM QA 28/28 en nueve anchos;
   H-111 28/28; H-102 31/31; responsive 492/492; H-109 10/10; H-110 20/20;
-  navegación 15/15; smoke bundle 17/17; reproducibilidad 8/8.
+  navegación 15/15; smoke bundle 17/17; reproducibilidad 8/8; Pages 20/20 y
+  coincidencia byte por byte con el blob publicado.
 - **Riesgo residual:** Chrome headless no sustituye una prueba manual de
   periféricos; Firefox y WebKit no están instalados. Sin riesgo conocido sobre
   identidad, stock, precios persistidos o V1.

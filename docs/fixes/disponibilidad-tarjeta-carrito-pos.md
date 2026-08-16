@@ -73,8 +73,11 @@ familias, precios, V1 ni identidad.
 - Guardián UX: 11 interacciones, 2 validaciones y recorrido completo, igual a
   su línea base.
 - `node build-offline.mjs`: correcto; 72 assets; artefactos idénticos de
-  8,991,475 bytes y SHA-256
-  `5C97F69623FC42DBB8AC7FDB7CD0FAD91E961E4105E625FB807A9FEB2ADC0C7F`.
+  trabajo de 8,991,475 bytes antes de la normalización Git.
+- GitHub Pages y el blob `index.html` de `b6e1829` coinciden byte por byte:
+  8,991,304 bytes y SHA-256
+  `194CA6C0864D99A31C0525AFCCD0B1ED17F82B4496AC558796EF97128F43373F`.
+- Validación pública H-112 sobre la descarga exacta de Pages: 20/20.
 
 ## Riesgo residual y pendientes
 
