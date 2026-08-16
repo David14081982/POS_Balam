@@ -92,6 +92,7 @@ sesión de chat.
 | `pwa-instalable-logo-dinamico.md` | H-89 | Instalación PWA, iconos derivados del logo configurado y actualización segura |
 | `autoridad-monetaria-y-reporte-por-metodo.md` | H-90 | Componentes monetarios dinámicos, reembolsos exactos, conciliación y reporte A4 |
 | `atributos-opcionales-canonicos.md` | H-86 | Representación única de atributos custom opcionales en DATA, firma, snapshots y Excel |
+| `certificacion-preproduccion-v2.md` | H-110 | Recorrido V2 transversal, aislado y con limpieza exacta |
 
 Documentación financiera relacionada, creada antes de este índice:
 

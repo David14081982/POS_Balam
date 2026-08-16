@@ -5361,6 +5361,35 @@ desde `sm`. Línea roja **6/10**; verde **10/10** en los cinco anchos.
 **Publicación:** el mismo run `31950744444` sirvió el artefacto equivalente;
 H-109 quedó **10/10** y la regresión H-88A **30/30** sobre esos bytes.
 
+## H-110 — No existía una certificación preproducción V2 transversal y autolimpiable
+
+**Estado:** RESUELTO
+**Fecha de registro:** 16/08/2026
+**Origen:** preparación de certificación preproducción V2.
+**Reproducción:** los contratos existentes ejercían alta familiar, proyecciones,
+venta, posventa, préstamo, etiquetas y Excel en sesiones y semillas separadas;
+`test-h110-preproduction-v2-certification.mjs` no existía.
+**Riesgo:** una regresión entre módulos podía conservar verdes aislados sin
+demostrar continuidad de identidad física ni ausencia de residuos de prueba.
+**Alcance autorizado:** arnés E2E sobre el bundle existente, una sola sesión,
+fixtures `CERT-PREPROD-V2-H110`, aislamiento total de Supabase y limpieza exacta.
+**No alcance:** funciones nuevas, código productivo, esquema, migraciones, datos
+reales, publicación o reinicialización administrativa del inventario.
+**Cierre local:** el arnés recorre alta V2, Inventario, Detalle, POS, venta,
+devolución, cambio, préstamo, etiquetas y Excel. Conserva `products.id` y
+barcode en las operaciones, valida PDF/XLSX en memoria y restaura exactamente
+todas las colecciones `DATA` y `localStorage`; no queda fixture en catálogo ni
+IndexedDB. Resultado 20/20. La corrida final interceptó 13 intentos Supabase y
+ninguna respuesta remota alcanzó el navegador; el número de intentos depende
+del ciclo de sincronización y no cambia la guarda.
+Regresiones: H-102 16/16, Cambio 37/37, Devoluciones 17/17, Préstamos 117/117,
+Excel H-86 42/42 y contrato de entrada de arneses 8/8.
+**Corrección documentada:**
+`docs/fixes/certificacion-preproduccion-v2.md`.
+**Commit:** Pendiente de commit.
+**Riesgo residual:** Chrome headless no sustituye la comprobación manual de
+impresora, lector USB ni otros periféricos físicos.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:
