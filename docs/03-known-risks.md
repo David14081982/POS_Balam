@@ -5432,7 +5432,7 @@ impresora, lector USB ni otros periféricos físicos.
 - **Riesgo residual:** Chrome headless no sustituye una prueba manual de
   periféricos; Firefox y WebKit no están instalados. Sin riesgo conocido sobre
   identidad, stock, precios persistidos o V1.
-- **Commit:** Pendiente de commit.
+- **Commit:** `0b59cc8`.
 
 ## Regla de actualización
 
