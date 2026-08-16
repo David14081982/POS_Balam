@@ -5,7 +5,13 @@
   // H-36: antes de elegir talla el catálogo anuncia un rango; el precio real de
   // la talla aparece al elegirla y es el que circula por resumen y ticket.
   const precioCatalogo = (p) => {
-    if (p && p.isFamilyProjection) return p.singlePrice != null ? fmt(p.singlePrice) : fmt(p.priceMin) + ' – ' + fmt(p.priceMax);
+    if (p && p.isFamilyProjection) {
+      const prices = (p.availableReferences || []).map(reference =>
+        Number(window.DATA.listPrice(reference, reference.sizeCode)) || 0);
+      if (!prices.length) return '—';
+      const min = Math.min(...prices), max = Math.max(...prices);
+      return min === max ? fmt(min) : fmt(min) + ' – ' + fmt(max);
+    }
     const r = window.DATA.priceRange(p);
     return r.unico ? fmt(r.min) : fmt(r.min) + ' – ' + fmt(r.max);
   };
@@ -217,7 +223,7 @@
     function onNewSale() { setSuccess(null); setTicket([]); setAdditionalDiscounts([]); setClient(D.clients.find(c => c.generic)); }
 
     // ---- Catálogo ----
-    const catalog = h('section', { key: 'catalog', className: 'pos-cat flex-1 flex flex-col min-w-0' }, [
+    const catalog = h('section', { key: 'catalog', className: 'pos-cat flex-1 flex flex-col min-w-0 min-h-0' }, [
       // Captura / scan
       h('div', { key: 'cap', className: 'flex flex-col sm:flex-row gap-3 mb-6' }, [
         h('div', { key: 'scan', className: 'relative flex-1' }, [
@@ -270,7 +276,7 @@
         h('span', { key: 'count', className: 'ml-auto text-muted text-caption whitespace-nowrap font-medium' }, `${filtered.length} productos`),
       ]),
       // Grid / Lista
-      h('div', { key: 'scroll', className: 'flex-1 overflow-y-auto no-scrollbar pr-2 -mr-2' },
+      h('div', { key: 'scroll', className: 'flex-1 min-h-0 overflow-y-auto no-scrollbar pr-2 -mr-2', 'data-testid': 'pos-catalog-scroll' },
         catalogView === 'list'
           ? h('div', { className: 'flex flex-col divide-y divide-outline-variant bg-surface-container-lowest rounded-xl overflow-hidden shadow-e1' },
               filtered.map(p => h(ProductRow, { key: p.id, p, onAdd: () => openSize(p) })))
@@ -462,13 +468,14 @@
       h('div', { key: 'b', className: 'p-5 flex flex-col flex-1' }, [
         h('div', { key: 'h', className: 'mb-3' }, [
           h('h3', { key: 'n', className: 'font-headline text-h2 text-primary leading-tight' }, p.nombre),
-          h('p', { key: 's', className: 'text-overline uppercase text-on-surface-variant mt-1 truncate' }, p.isFamilyProjection ? `${p.referenceCount} referencias disponibles` : subtitle),
+          h('p', { key: 's', className: 'text-overline uppercase text-on-surface-variant mt-1 truncate' }, p.isFamilyProjection ? `${p.availableReferences.length} referencias disponibles` : subtitle),
         ]),
         h('div', { key: 'm', className: 'mt-auto flex justify-between items-center' }, [
           h('span', { key: 'p', className: 'font-headline text-h2 text-primary' }, precioCatalogo(p)),
           out ? null : h('button', {
             key: 'add',
-            className: 'w-9 h-9 bg-surface-container-low text-primary rounded-xl flex items-center justify-center hover:bg-primary hover:text-on-primary transition-all',
+            className: 'w-11 h-11 bg-surface-container-low text-primary rounded-xl flex items-center justify-center hover:bg-primary hover:text-on-primary transition-all',
+            'data-testid': 'pos-product-add-' + (p.commercialKey || p.id),
             onClick: e => { e.stopPropagation(); onAdd(); }, title: 'Agregar',
           }, h(MS, { name: 'plus', size: 20 })),
         ]),

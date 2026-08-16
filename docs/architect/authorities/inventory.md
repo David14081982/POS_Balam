@@ -95,8 +95,12 @@ de opción: `{ sizeCategoryId, sizeId }`
 ## ¿Qué precio muestra este artículo en el catálogo?
 **Autoridad:** `DATA.priceRange(producto)` — **derivada** de `listPrice` sobre
 las tallas con existencias; no reimplementa la resolución
+**Familias V2 en POS:** la tarjeta deriva el mismo contrato de
+`availableReferences` y `DATA.listPrice(referencia, sizeCode)`; una referencia
+con `stockQuantity <= 0` permanece en la familia administrativa, pero no cuenta
+ni participa en el rango comercial disponible
 **Definición:** `balam/data.jsx`
-**Creada por:** H-36 · **Decisión:** `ADR-009`
+**Creada por:** H-36 · **Ampliada por:** H-112 · **Decisión:** `ADR-009`
 **Consumidores:** `grep -rn "priceRange" balam/`
 
 ## ¿Qué contiene el inventario y qué impide vaciarlo?

@@ -5405,6 +5405,35 @@ impresora, lector USB ni otros periféricos físicos.
 - **Riesgo residual:** Chrome headless no sustituye validación manual de periféricos. El arnés smoke general conserva un timeout de cierre/arranque ajeno a H-111, documentado en la corrección.
 - **Commit:** `8e554b1`.
 
+## H-112 — La tarjeta familiar y el carrito móvil contradicen la disponibilidad operable del POS
+
+- **Estado:** RESUELTO.
+- **Fecha:** 16/08/2026.
+- **Módulo:** POS / paridad V1-V2 / responsive / accesibilidad táctil.
+- **Descripción:** una tarjeta familiar V2 cuenta y cotiza referencias agotadas
+  aunque el selector posterior las excluye; en móvil, la barra fija del carrito
+  se superpone a las cards y sus CTA, cuyo target «Agregar» mide además 36 px de
+  ancho.
+- **Evidencia:** auditoría local de paridad UI/UX V1-V2 aprobada por el dueño,
+  hallazgos UI-PAR-01, 02 y 03; sus artefactos permanecen locales.
+- **Control requerido:** el POS debe derivar copy y rango familiar sólo de
+  `availableReferences`; V1 y la selección H-111 permanecen intactos. En
+  320/360/375/390/430 px, el carrito fijo no puede intersectar la región visible
+  de cards o controles, y «Agregar» debe medir al menos 44×44 px.
+- **Pruebas requeridas:** familia V2 con precio máximo agotado; V1 equivalente;
+  geometría de carrito/cards/CTA y target táctil en los cinco anchos; H-111,
+  responsive, build y validación del artefacto publicado.
+- **Solución:** el POS deriva copy y rango de `availableReferences`, confina el
+  scroll del catálogo al espacio anterior al carrito fijo y amplía «Agregar» a
+  44×44 px sin cambiar icono, V1 ni selección H-111.
+- **Pruebas:** rojo H-112 con 8 aprobaciones y 12 fallos; verde 20/20; BALAM QA 28/28 en nueve anchos;
+  H-111 28/28; H-102 31/31; responsive 492/492; H-109 10/10; H-110 20/20;
+  navegación 15/15; smoke bundle 17/17; reproducibilidad 8/8.
+- **Riesgo residual:** Chrome headless no sustituye una prueba manual de
+  periféricos; Firefox y WebKit no están instalados. Sin riesgo conocido sobre
+  identidad, stock, precios persistidos o V1.
+- **Commit:** Pendiente de commit.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:
