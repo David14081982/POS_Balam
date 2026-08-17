@@ -5437,7 +5437,7 @@ impresora, lector USB ni otros periféricos físicos.
 
 ## H-113 — La limpieza operativa no admite alcance selectivo seguro para V1/V2
 
-**Estado:** CAPACIDAD INSTALADA; CLIENTE CERTIFICADO Y PUBLICACIÓN AUTORIZADA
+**Estado:** CLIENTE PUBLICADO Y CERTIFICADO; LIMPIEZA REAL NO AUTORIZADA
 **Fecha de registro:** 17/08/2026
 **Origen:** ampliación aprobada de Configuración → Administración / Datos.
 **Evidencia inicial:** H-98 sólo expone el plan cerrado de Punto Cero y H-68
@@ -5480,15 +5480,20 @@ recorrido funcional con rollback aprobados (V1, V2, SKU duplicado, evidencia
 financiera retenida, respaldo completo, lápida de préstamo, cliente/folio e
 idempotencia); UI 21/21 responsive; H-68 53/53, H-69 90/90, H-98 24/24,
 cola 176/176, smoke del bundle 17/17; build offline y reproducibilidad 8/8.
-**Riesgo residual:** la capacidad existe y el cliente está certificado para la
-publicación autorizada, pero ninguna limpieza está autorizada. Cuatro terminales incompatibles
-bloquean correctamente el plan remoto. Existen seis commits idempotentes
+**Publicación:** commit funcional aislado `8b7042f`; GitHub Pages sirve el blob
+exacto de `index.html`, 8,999,907 bytes y SHA-256
+`f7388f3ee572395f9ea16bf3dc5ca49b2bf82a36d8c273bc94908a7097671db4`.
+UI pública read-only 13/13 y BALAM QA sin defectos críticos, altos ni medios.
+**Riesgo residual:** la capacidad y el cliente están publicados, pero ninguna
+limpieza está autorizada. Las cuatro terminales registradas aún reportan esquema
+anterior (0 compatibles, 4 incompatibles) y bloquean correctamente el plan hasta
+abrir/actualizar el cliente y emitir heartbeat. Existen seis commits idempotentes
 históricos sin documento vivo que H-113 deja intactos. La instalación sólo
 modificó metadatos técnicos (`system_manifest.schema_version/updated_at` e
 historial de migraciones), no datos de negocio. Toda limpieza real requiere una
 autorización separada.
 **Corrección:** `docs/fixes/limpieza-selectiva-datos-prueba.md`.
-**Commit:** Pendiente de commit.
+**Commit:** `8b7042f`.
 
 ## Regla de actualización
 

@@ -1,9 +1,9 @@
 # Limpieza selectiva segura de datos de prueba
 
 **Riesgo:** H-113
-**Estado:** CAPACIDAD INSTALADA; CLIENTE CERTIFICADO Y PUBLICACIÓN AUTORIZADA
+**Estado:** CLIENTE PUBLICADO Y CERTIFICADO; HARD STOP ANTES DE LIMPIEZA REAL
 **Fecha:** 17/08/2026
-**Commit:** Pendiente de commit
+**Commit:** `8b7042f`
 
 ## Problema y reproducción
 
@@ -155,15 +155,25 @@ fila de negocio, producto ni existencia.
 
 ## Riesgo residual y pendientes
 
-La capacidad está instalada y verificada en Supabase. El cliente H-113 quedó
-certificado en un árbol Git aislado y su publicación fue autorizada; la
-validación de bytes públicos se registra al concluir el despliegue. No se
+La capacidad está instalada y verificada en Supabase. El cliente H-113 se
+publicó desde el commit aislado `8b7042f`. El blob de Git y los bytes servidos
+por GitHub Pages coinciden exactamente: 8,999,907 bytes y SHA-256
+`f7388f3ee572395f9ea16bf3dc5ca49b2bf82a36d8c273bc94908a7097671db4`.
+La UI pública read-only aprobó 13/13; BALAM QA no encontró defectos críticos,
+altos ni medios. No se
 ejecutó Punto Cero, backup operativo ni RPC destructiva. Las cuatro terminales
 siguen reportando esquema anterior a H-113; el plan remoto de sólo lectura devuelve
 `executable=false`, `incompatible_devices=4` y la razón
 `client_schema_incompatible`. Instalar la capacidad no autoriza una limpieza
 posterior: la ejecución real exige una autorización separada. Históricos
 retenidos sin evidencia financiera completa continuarán bloqueados.
+
+Después de publicar, el registro remoto conserva 0 terminales compatibles y 4
+incompatibles (`20260808012700`: 1, `20260810013500`: 1,
+`20260814014500`: 2). El cliente publicado sí declara
+`SYNC_SCHEMA_VERSION=20260817014900`; cada terminal adoptará el protocolo cuando
+abra/actualice el build y emita su heartbeat. No se forzó ni editó ningún
+registro de terminal.
 
 ## Referencias
 
