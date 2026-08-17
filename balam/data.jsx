@@ -3786,7 +3786,7 @@
           vendedorId: id || null,
           vendedor: s ? s.nombre : (nombre || (id ? 'Vendedor histórico' : 'Sin vendedor')),
           activo: s ? isEligibleSeller(s) : false,
-          ventas: 0, cambios: 0, revertido: 0, liquidado: 0,
+          ventas: 0, cambios: 0, ajustes: 0, revertido: 0, liquidado: 0,
           base: 0, importeVendido: 0, pedidos: 0, repartoEstimado: false,
         };
       }
@@ -3844,13 +3844,21 @@
       });
     });
 
-    (liquidations || []).filter(l => l && dentro(l)).forEach(l => {
+    (commissionAdjustments || []).filter(a => a && dentro(a)).forEach(adjustment => {
+      (adjustment.porVendedor || adjustment.detalle || []).forEach(entry => {
+        const sellerId = entry.sellerId || entry.seller_id;
+        const row = ensure(sellerId, entry.vendedor || entry.seller);
+        row.ajustes = money(row.ajustes + (Number(entry.comision != null ? entry.comision : entry.monto) || 0));
+      });
+    });
+
+    (liquidations || []).filter(l => l && l.tipo !== 'ajuste' && dentro(l)).forEach(l => {
       const row = ensure(l.sellerId, l.seller);
       row.liquidado = money(row.liquidado + (Number(l.monto) || 0));
     });
 
     return Object.values(porId).map(row => {
-      const generado = money(row.ventas + row.cambios);
+      const generado = money(row.ventas + row.cambios + row.ajustes);
       const neto = money(generado - row.revertido);
       const seller = sellers.find(x => x.id === row.vendedorId);
       const acumulado = seller ? money(Number(seller.comisionAcum) || 0) : null;
@@ -5317,6 +5325,85 @@
   // productos detiene la operación ENTERA antes de tocar nada; una línea cuyo
   // producto ya no existe no tiene existencia que restaurar y se informa aparte.
   const PURGE_MOVE_TYPES = ['Venta', 'Devolución', 'Cambio (entra)', 'Cambio (sale)'];
+  // H-113: proyección local del resultado ya comprometido por PostgreSQL. No
+  // deriva dependencias ni resuelve SKU; consume identidades y stock objetivo.
+  function applySelectiveCleanup(result) {
+    const identities = result && result.identities || {};
+    const asSet = key => new Set(Array.isArray(identities[key])
+      ? identities[key].map(value => String(value)) : []);
+    const saleFolios = asSet('sale_folios');
+    const returnIds = asSet('return_ids');
+    const exchangeIds = asSet('exchange_ids');
+    const loanIds = asSet('loan_ids');
+    const liquidationIds = asSet('liquidation_ids');
+    const adjustmentIds = asSet('commission_adjustment_ids');
+    const reclassIds = asSet('reclassification_ids');
+    const customerIds = asSet('customer_ids');
+    const stockTargets = Array.isArray(result && result.stock) ? result.stock : [];
+    const rollback = snapshotLocalDomain();
+    const adjustmentRollback = JSON.stringify(commissionAdjustments);
+    const replaceKeeping = (arr, keep) => {
+      const next = arr.filter(keep); arr.length = 0; next.forEach(row => arr.push(row));
+    };
+    remoteApplying = true;
+    try {
+      stockTargets.forEach(target => {
+        const product = products.find(p => String(p.id) === String(target.product_id));
+        if (!product) throw new Error('CLEANUP_LOCAL_PRODUCT_MISSING:' + target.product_id);
+        const entry = stockEntryByIdentity(product, target.talla);
+        if (!entry) throw new Error('CLEANUP_LOCAL_SIZE_MISSING:' + target.product_id + ':' + target.talla);
+        const current = Number(entry.stock);
+        if (Number.isFinite(Number(target.current_stock)) && current !== Number(target.current_stock)) {
+          throw new Error('CLEANUP_LOCAL_PREVIEW_CHANGED:' + target.product_id + ':' + target.talla);
+        }
+        if (!Number.isFinite(Number(target.target_stock)) || Number(target.target_stock) < 0) {
+          throw new Error('CLEANUP_LOCAL_NEGATIVE_STOCK');
+        }
+        entry.stock = Number(target.target_stock);
+        if (product.recordModel === 'v2') product.stockQuantity = Number(target.target_stock);
+      });
+      const returnRefs = new Set(returns.filter(r => returnIds.has(String(r.id))).map(r => String(r.folio || r.id)));
+      const exchangeRefs = new Set(exchanges.filter(e => exchangeIds.has(String(e.id))).map(e => String(e.folio || e.id)));
+      replaceKeeping(payments, p => !saleFolios.has(String(p.folio)));
+      replaceKeeping(returns, r => !returnIds.has(String(r.id)));
+      replaceKeeping(exchanges, e => !exchangeIds.has(String(e.id)));
+      replaceKeeping(sales, s => !saleFolios.has(String(s.folio)));
+      replaceKeeping(loans, l => !loanIds.has(String(l.id)));
+      replaceKeeping(liquidations, l => !liquidationIds.has(String(l.id)));
+      replaceKeeping(commissionAdjustments, a => !adjustmentIds.has(String(a.operationId || a.operation_id)));
+      replaceKeeping(clients, c => !customerIds.has(String(c.id)));
+      replaceKeeping(movements, m => !(saleFolios.has(String(m.ref))
+        || returnRefs.has(String(m.ref)) || exchangeRefs.has(String(m.ref))
+        || returnIds.has(String(m.returnId || m.return_id))
+        || reclassIds.has(String(m.operationId || m.operation_id))));
+      const ledger = commissionLedger(() => true);
+      sellers.forEach(seller => {
+        const row = ledger.find(x => x.vendedorId === seller.id);
+        seller.comisionAcum = row ? row.pendiente : 0;
+        const retained = sales.filter(s => s.estado !== 'Cancelado'
+          && Array.isArray(s.vendedores) && s.vendedores.includes(seller.id));
+        seller.ventasNum = retained.length;
+        seller.ventasMes = money(retained.reduce((sum, sale) => {
+          const parts = Math.max(1, sale.vendedores.length);
+          return sum + (Number(sale.total) || 0) / parts;
+        }, 0));
+      });
+      persistAllLocal(); rawSave(LS_ADJUSTMENTS, commissionAdjustments);
+      return { ok: true, cleanupId: result.cleanup_id || null,
+        removed: { sales: saleFolios.size, returns: returnIds.size, exchanges: exchangeIds.size,
+          loans: loanIds.size, customers: customerIds.size }, products: products.length,
+        stockTargets: stockTargets.length };
+    } catch (e) {
+      try {
+        restoreLocalDomain(rollback);
+        commissionAdjustments.length = 0;
+        JSON.parse(adjustmentRollback).forEach(row => commissionAdjustments.push(row));
+        persistAllLocal(); rawSave(LS_ADJUSTMENTS, commissionAdjustments);
+      } catch (e2) { /* rebootstrap obligatorio recupera la copia remota */ }
+      return { ok: false, code: 'LOCAL_ROLLBACK', error: String((e && e.message) || e) };
+    } finally { remoteApplying = false; }
+  }
+
   const isPurgeMove = m => PURGE_MOVE_TYPES.indexOf(m && m.tipo) >= 0;
   // Una venta con estado Apartado o Cancelado NUNCA descontó existencias (ver
   // recordSale § 1). Es el mismo criterio que decide la reserva remota, así que
@@ -5732,7 +5819,7 @@
     commissionAdjustments, commissionAdjustmentPreview, commissionAdjustmentDraft,
     applyCommissionAdjustment,
     addPromo, updatePromo, removePromo, duplicatePromo,
-    seedDemo, resetEmpty, resetTestData, applyPointZero, demoActive,
+    seedDemo, resetEmpty, resetTestData, applyPointZero, applySelectiveCleanup, demoActive,
     testDataFootprint, configFingerprint, totalPieces, stockEntryByIdentity,
   };
   const localWriterMutators = [

@@ -350,8 +350,18 @@ const out = await page.evaluate(async () => {
   ck('22 · la vista previa NO paga', (Number(S('dos').comisionAcum) || 0) === accAntesAjuste);
   const draft = D.commissionAdjustmentDraft(prev, { motivo: 'H-69' });
   ck('22 · el borrador es un documento aparte', !!draft.id && !!draft.operationId && draft.estado === 'borrador');
+  const ledgerAntesAjuste = D.commissionLedger(() => true).find(x => x.vendedorId === base.dos.id);
   const ap1 = D.applyCommissionAdjustment(draft);
   ck('22 · el ajuste se aplica', ap1.ok === true, ap1.error || '');
+  const ledgerConAjuste = D.commissionLedger(() => true).find(x => x.vendedorId === base.dos.id);
+  const ajusteDos = draft.porVendedor.find(x => x.sellerId === base.dos.id).comision;
+  eq('22 · el ajuste retenido integra el saldo derivado',
+    ledgerConAjuste.pendiente - ledgerAntesAjuste.pendiente, ajusteDos);
+  D.liquidations.unshift({ id: 'adj-espejo-h69', sellerId: base.dos.id,
+    seller: S('dos').nombre, monto: ajusteDos, tipo: 'ajuste', fecha: draft.fecha });
+  eq('22 · la fila espejo tipo ajuste no se resta como pago',
+    D.commissionLedger(() => true).find(x => x.vendedorId === base.dos.id).pendiente,
+    ledgerConAjuste.pendiente);
   const ap2 = D.applyCommissionAdjustment(draft);
   ck('22 · el ajuste es idempotente', ap2.ok === false && ap2.idempotente === true);
   ck('22 · el ajuste NO reescribe la venta', D.sales.find(x => x.folio === vh.folio).comision === 0);

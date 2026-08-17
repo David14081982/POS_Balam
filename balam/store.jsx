@@ -16,7 +16,8 @@
   const QKEY = 'balam_sync_queue';
   const QDB = 'balam_sync', QSTORE = 'durable_queue';
   const SYNC_PROTOCOL_VERSION = 1;
-  const SYNC_SCHEMA_VERSION = 20260814014500;
+  const SYNC_SCHEMA_VERSION = 20260817014900;
+  const SELECTIVE_CLEANUP_PROTOCOL = 2;
   const SYNC_CURSOR_KEY = 'balam_sync_domain_cursors_v1';
   const SYNC_DOMAINS = {
     permissions: { deps: [] }, config: { deps: ['permissions'] },
@@ -35,6 +36,8 @@
   const RESET_MARK_KEY = '_resetMark';
   const RESET_SEEN = 'balam_reset_seen';
   const POINT_ZERO_TICKET = 'balam_point_zero_ticket_v1';
+  const SELECTIVE_CLEANUP_TICKET = 'balam_selective_cleanup_ticket_v2';
+  const SELECTIVE_CLEANUP_SEEN = 'balam_selective_cleanup_seen_v2';
 
   let sb = null, enabled = false, lastResetMark = null;
   let sessionIdentity = null, sessionManaged = false, onlineSubscribed = false,
@@ -144,7 +147,7 @@
       table: 'sales', conflict: 'folio',
       // H-65: el estado de una venta no prueba que el inventario se reservara.
       // Esa autoridad pertenece exclusivamente a la respuesta/consulta remota.
-      fromRow: r => ({ folio: r.folio, folioAliases: Array.isArray(r.folio_aliases) ? r.folio_aliases : undefined, _operationId: r.operation_id || undefined, _stockReserved: r.stock_reserved === true, _stockRequired: r.estado !== 'Apartado' && r.estado !== 'Cancelado', _stockIdempotent: r.stock_idempotent === true, _reservationOperationId: r.reservation_operation_id || undefined, _syncStatus: 'synced', fecha: String(r.fecha).replace('T', ' ').slice(0, 16), clienteId: r.cliente_id || undefined, cliente: r.cliente, vendedor: '', vendedores: r.vendedores || [], items: r.items || 0, subtotal: r.subtotal == null ? undefined : Number(r.subtotal), iva: r.iva == null ? undefined : Number(r.iva), total: Number(r.total) || 0, descuento: r.descuento == null ? undefined : Number(r.descuento), descuentoAdicional: r.descuento_adicional == null ? undefined : Number(r.descuento_adicional), totalAntesDescuentoAdicional: r.total_antes_descuento_adicional == null ? undefined : Number(r.total_antes_descuento_adicional), descuentosAdicionales: Array.isArray(r.descuentos_adicionales) ? r.descuentos_adicionales : undefined, ivaPct: r.iva_pct == null ? undefined : Number(r.iva_pct), ivaIncluded: r.iva_included == null ? undefined : !!r.iva_included, anticipo: r.anticipo == null ? undefined : Number(r.anticipo), saldo: r.saldo == null ? undefined : Number(r.saldo), pagoEfectivo: r.pago_efectivo == null ? undefined : Number(r.pago_efectivo), pagoOtro: r.pago_otro == null ? undefined : Number(r.pago_otro), metodo: r.metodo, estado: r.estado, comision: r.comision == null ? undefined : Number(r.comision), comisionBase: r.comision_base || undefined, comisiones: Array.isArray(r.comisiones) ? r.comisiones : undefined, valorRegalado: Number(r.valor_regalado) || 0, returnLimitDays: r.return_limit_days == null ? null : Number(r.return_limit_days), returnExpiresAt: r.return_expires_at || null, lineas: [] }),
+      fromRow: r => ({ folio: r.folio, folioAliases: Array.isArray(r.folio_aliases) ? r.folio_aliases : undefined, _operationId: r.operation_id || undefined, _stockReserved: r.stock_reserved === true, _stockRequired: r.estado !== 'Apartado' && r.estado !== 'Cancelado', _stockIdempotent: r.stock_idempotent === true, _reservationOperationId: r.reservation_operation_id || undefined, _syncStatus: 'synced', fecha: String(r.fecha).replace('T', ' ').slice(0, 16), clienteId: r.cliente_id || undefined, cliente: r.cliente, vendedor: '', vendedores: r.vendedores || [], items: r.items || 0, subtotal: r.subtotal == null ? undefined : Number(r.subtotal), iva: r.iva == null ? undefined : Number(r.iva), total: Number(r.total) || 0, descuento: r.descuento == null ? undefined : Number(r.descuento), descuentoAdicional: r.descuento_adicional == null ? undefined : Number(r.descuento_adicional), totalAntesDescuentoAdicional: r.total_antes_descuento_adicional == null ? undefined : Number(r.total_antes_descuento_adicional), descuentosAdicionales: Array.isArray(r.descuentos_adicionales) ? r.descuentos_adicionales : undefined, ivaPct: r.iva_pct == null ? undefined : Number(r.iva_pct), ivaIncluded: r.iva_included == null ? undefined : !!r.iva_included, anticipo: r.anticipo == null ? undefined : Number(r.anticipo), saldo: r.saldo == null ? undefined : Number(r.saldo), pagoEfectivo: r.pago_efectivo == null ? undefined : Number(r.pago_efectivo), pagoOtro: r.pago_otro == null ? undefined : Number(r.pago_otro), metodo: r.metodo, estado: r.estado, comision: r.comision == null ? undefined : Number(r.comision), comisionBase: r.comision_base || undefined, comisiones: Array.isArray(r.comisiones) ? r.comisiones : undefined, comisionesRevertidas: Array.isArray(r.comisiones_revertidas) ? r.comisiones_revertidas : undefined, valorRegalado: Number(r.valor_regalado) || 0, returnLimitDays: r.return_limit_days == null ? null : Number(r.return_limit_days), returnExpiresAt: r.return_expires_at || null, lineas: [] }),
     },
     promotions: {
       table: 'promotions', conflict: 'id', localKey: 'promos',
@@ -153,7 +156,7 @@
     },
     returns: {
       table: 'returns', conflict: 'id',
-      fromRow: r => ({ id: r.id, folio: r.folio, fecha: r.fecha || '', cliente: r.cliente, vendedores: r.vendedores || [], metodo: r.metodo, total: Number(r.total) || 0, components: Array.isArray(r.components) ? r.components : undefined, notas: r.notas || '', lineas: [] }),
+      fromRow: r => ({ id: r.id, folio: r.folio, fecha: r.fecha || '', cliente: r.cliente, vendedores: r.vendedores || [], metodo: r.metodo, total: Number(r.total) || 0, components: Array.isArray(r.components) ? r.components : undefined, comisiones: Array.isArray(r.comisiones) ? r.comisiones : undefined, notas: r.notas || '', lineas: [] }),
     },
     liquidations: {
       table: 'liquidations', conflict: 'id',
@@ -1792,6 +1795,7 @@
     // H-69: el desglose por vendedor viaja con la venta. Campo opcional, como el
     // resto de snapshots: una instalacion sin la migracion simplemente no lo manda.
     if (Array.isArray(sale.comisiones)) header.comisiones = sale.comisiones;
+    if (Array.isArray(sale.comisionesRevertidas)) header.comisiones_revertidas = sale.comisionesRevertidas;
     if (sale.descuentoAdicional != null) header.descuento_adicional = Number(sale.descuentoAdicional) || 0;
     if (sale.totalAntesDescuentoAdicional != null) header.total_antes_descuento_adicional = Number(sale.totalAntesDescuentoAdicional) || 0;
     if (Array.isArray(sale.descuentosAdicionales)) header.descuentos_adicionales = sale.descuentosAdicionales;
@@ -1942,7 +1946,7 @@
   function pushReturn(ret, effects) {
     if (!enabled) return;
     effects = effects || {};
-    const header = { id: ret.id, folio: ret.folio, fecha: ret.fecha || null, cliente: ret.cliente, vendedores: ret.vendedores || [], metodo: moneyWireMethod(ret.metodo || null, ret.components), total: Number(ret.total) || 0, notas: ret.notas || null };
+    const header = { id: ret.id, folio: ret.folio, fecha: ret.fecha || null, cliente: ret.cliente, vendedores: ret.vendedores || [], metodo: moneyWireMethod(ret.metodo || null, ret.components), total: Number(ret.total) || 0, notas: ret.notas || null, comisiones: Array.isArray(ret.comisiones) ? ret.comisiones : [] };
     const items = (ret.lineas || []).map(l => ({ return_id: ret.id, line_id: l.lineId || null,
       source_sale_line_id: l.sourceSaleLineId || null, product_id: l.productId || null,
       barcode_code: l.barcodeCode || null, physical_attrs: l.physicalAttrs || null,
@@ -2175,6 +2179,85 @@
   }
   // Limpieza propagada por época. Corre ANTES del flush del arranque: es lo único que
   // impide que un equipo apagado resucite en la nube lo que otro acaba de borrar.
+  // H-113 usa un canal distinto de H-68. Sólo el protocolo 2 aplica el alcance;
+  // una terminal anterior ve la nueva época y queda en must_rebootstrap, jamás
+  // llama resetTestData ni interpreta una limpieza selectiva como purga total.
+  async function readSelectiveCleanupEvent() {
+    const c = await ensureClient();
+    if (!c || !(await hasSession())) return null;
+    try {
+      const r = await c.from('selective_cleanup_events').select('*')
+        .order('data_epoch', { ascending: false }).limit(1);
+      if (r.error || !(r.data || []).length) return null;
+      return r.data[0];
+    } catch (e) { return null; }
+  }
+  function selectiveCleanupSeen() {
+    try { return localStorage.getItem(SELECTIVE_CLEANUP_SEEN); } catch (e) { return null; }
+  }
+  function identitySet(identities, key) {
+    return new Set(Array.isArray(identities && identities[key])
+      ? identities[key].map(value => String(value)) : []);
+  }
+  function pruneQueueForSelectiveCleanup(identities) {
+    const saleFolios = identitySet(identities, 'sale_folios');
+    const saleOps = identitySet(identities, 'sale_operation_ids');
+    const returnIds = identitySet(identities, 'return_ids');
+    const exchangeIds = identitySet(identities, 'exchange_ids');
+    const loanIds = identitySet(identities, 'loan_ids');
+    const liquidationIds = identitySet(identities, 'liquidation_ids');
+    const adjustmentIds = identitySet(identities, 'commission_adjustment_ids');
+    const reclassIds = identitySet(identities, 'reclassification_ids');
+    const customerIds = identitySet(identities, 'customer_ids');
+    const q = loadQ(), kept = [];
+    let dropped = 0;
+    q.forEach(op => {
+      const operationId = String(op.operationId || op.operation_id || op.key || '');
+      const folio = String(op.folio || (op.header && op.header.folio) || '');
+      const id = String(op.id || (op.header && op.header.id) || '');
+      const loanId = String((op.loan && op.loan.id) || id);
+      const exact = (op.type === 'sale' && (saleFolios.has(folio) || saleOps.has(operationId)))
+        || (op.type === 'return' && returnIds.has(id))
+        || (op.type === 'exchange' && exchangeIds.has(id))
+        || (op.type === 'loanOperation' && loanIds.has(loanId))
+        || ((op.type === 'commissionSettle' || op.type === 'commissionClose')
+          && (liquidationIds.has(id) || liquidationIds.has(operationId)))
+        || (op.type === 'commissionAdjustment' && adjustmentIds.has(operationId))
+        || (op.type === 'referenceReclassification' && reclassIds.has(operationId));
+      if (exact) { dropped++; return; }
+      if (op.type === 'upsert' && op.kind === 'clients' && Array.isArray(op.rows)) {
+        const rows = op.rows.filter(row => !customerIds.has(String(row.id)));
+        if (rows.length !== op.rows.length) {
+          dropped += op.rows.length - rows.length;
+          if (!rows.length) return;
+          kept.push(Object.assign({}, op, { rows, rowIds: rows.map(row => row.id) }));
+          return;
+        }
+      }
+      kept.push(op);
+    });
+    if (dropped) saveQ(kept);
+    return { dropped, kept: kept.length };
+  }
+  async function applyRemoteSelectiveCleanup() {
+    const event = await readSelectiveCleanupEvent();
+    if (!event || Number(event.protocol_version) > SELECTIVE_CLEANUP_PROTOCOL) return null;
+    if (selectiveCleanupSeen() === String(event.cleanup_id)) return null;
+    const remoteEpoch = syncManifest ? Number(syncManifest.data_epoch) : Number(event.data_epoch);
+    if (Number(event.data_epoch) !== remoteEpoch) return null;
+    if (!(window.DATA && window.DATA.applySelectiveCleanup)) return null;
+    const prune = pruneQueueForSelectiveCleanup(event.identities || {});
+    const local = window.DATA.applySelectiveCleanup({
+      cleanup_id: event.cleanup_id, identities: event.identities || {}, stock: [],
+    });
+    if (!local || local.ok !== true) return null;
+    try {
+      localStorage.setItem(SELECTIVE_CLEANUP_SEEN, String(event.cleanup_id));
+      localStorage.setItem('balam_sync_data_epoch', String(event.data_epoch));
+    } catch (e) { /* la nube sigue siendo autoridad */ }
+    syncCompatibility = 'ok';
+    return { event, local, prune };
+  }
   async function applyRemotePurge() {
     const state = await readPurgeState();
     if (!state) return null;
@@ -3106,6 +3189,113 @@
     if (r.error) throw new Error(r.error.message || 'POINT_ZERO_RECEIPT_FAILED');
     return Array.isArray(r.data) ? r.data[0] : r.data;
   }
+
+  // H-113 · Wizard selectivo. Las tres fases vuelven a consultar al servidor;
+  // los checks sólo expresan intención y nunca deciden tablas ni dependencias.
+  async function previewTestDataCleanup(preset, selection) {
+    if (!(window.AUTH && window.AUTH.isAdmin && window.AUTH.isAdmin())) {
+      return { ok: false, code: 'FORBIDDEN', error: 'Sólo un administrador puede limpiar datos' };
+    }
+    const c = await ensureClient();
+    if (!c || !(await hasSession())) return { ok: false, code: 'OFFLINE', error: 'Supabase no está accesible' };
+    try { await reconcileDomains(); } catch (e) { /* el diagnóstico remoto explica el bloqueo */ }
+    const r = await c.rpc('preview_test_data_cleanup', {
+      p_preset: preset || 'operations', p_selection: selection || {},
+      p_client_protocol: SELECTIVE_CLEANUP_PROTOCOL,
+    });
+    if (r.error) return { ok: false, code: 'REMOTE', error: r.error.message || String(r.error) };
+    const preview = Array.isArray(r.data) ? r.data[0] : r.data;
+    const status = syncStatus();
+    const clientReady = status.synchronized && status.pending === 0 && status.blocked === 0
+      && !(window.CORE && window.CORE.activityStatus && window.CORE.activityStatus().active);
+    return Object.assign({}, preview || {}, {
+      client_ready: clientReady,
+      ready: !!(preview && preview.ok && preview.executable && clientReady),
+      client_status: status,
+    });
+  }
+  function requireSelectiveCleanupReady(preview) {
+    if (!preview || preview.system_mode === 'production') throw new Error('CLEANUP_PRODUCTION_LOCKED');
+    if (!preview.ready || !preview.executable) throw new Error('CLEANUP_PLAN_NOT_EXECUTABLE');
+    if (!preview.plan_hash) throw new Error('CLEANUP_PREVIEW_REQUIRED');
+  }
+  async function createTestDataCleanupBackup(approvedPreview) {
+    const current = await previewTestDataCleanup(
+      approvedPreview && approvedPreview.preset_requested,
+      approvedPreview && approvedPreview.selection_requested,
+    );
+    requireSelectiveCleanupReady(current);
+    if (!approvedPreview || current.plan_hash !== approvedPreview.plan_hash) throw new Error('CLEANUP_PREVIEW_CHANGED');
+    const c = await ensureClient();
+    const r = await c.rpc('create_test_data_cleanup_backup', {
+      p_preset: current.preset_requested, p_selection: current.selection_requested,
+      p_plan_hash: current.plan_hash, p_client_protocol: SELECTIVE_CLEANUP_PROTOCOL,
+      p_client_build: String(SYNC_SCHEMA_VERSION), p_device_id: window.CORE.getDeviceId(),
+    });
+    if (r.error) throw new Error(r.error.message || 'CLEANUP_BACKUP_FAILED');
+    const result = Array.isArray(r.data) ? r.data[0] : r.data;
+    if (!result || result.ok !== true) throw new Error((result && result.error) || 'CLEANUP_BACKUP_FAILED');
+    return result;
+  }
+  async function executeTestDataCleanup(options) {
+    const opts = options || {};
+    if (opts.confirmation !== 'LIMPIAR OPERACIONES') throw new Error('CLEANUP_CONFIRMATION_REQUIRED');
+    if (!opts.preview || !opts.backupId) throw new Error('CLEANUP_BACKUP_REQUIRED');
+    let reserved = null;
+    try { reserved = JSON.parse(localStorage.getItem(SELECTIVE_CLEANUP_TICKET) || 'null'); } catch (e) { reserved = null; }
+    if (!reserved || reserved.planHash !== opts.preview.plan_hash || reserved.backupId !== opts.backupId) {
+      const current = await previewTestDataCleanup(opts.preview.preset_requested, opts.preview.selection_requested);
+      requireSelectiveCleanupReady(current);
+      if (current.plan_hash !== opts.preview.plan_hash) throw new Error('CLEANUP_PREVIEW_CHANGED');
+      reserved = { cleanupId: opts.cleanupId || newOpId(), planHash: current.plan_hash, backupId: opts.backupId };
+      try { localStorage.setItem(SELECTIVE_CLEANUP_TICKET, JSON.stringify(reserved)); } catch (e) { /* RPC idempotente */ }
+    }
+    const c = await ensureClient();
+    const r = await c.rpc('execute_test_data_cleanup', {
+      p_cleanup_id: reserved.cleanupId, p_preset: opts.preview.preset_requested,
+      p_selection: opts.preview.selection_requested, p_plan_hash: reserved.planHash,
+      p_backup_id: reserved.backupId, p_confirmation: opts.confirmation,
+      p_client_protocol: SELECTIVE_CLEANUP_PROTOCOL, p_client_build: String(SYNC_SCHEMA_VERSION),
+      p_device_id: window.CORE.getDeviceId(),
+    });
+    if (r.error) throw new Error(r.error.message || 'CLEANUP_FAILED');
+    const result = Array.isArray(r.data) ? r.data[0] : r.data;
+    if (!result || result.ok !== true) throw new Error((result && result.error) || 'CLEANUP_FAILED');
+    const prune = pruneQueueForSelectiveCleanup(result.identities || {});
+    const local = window.DATA && window.DATA.applySelectiveCleanup
+      ? window.DATA.applySelectiveCleanup(result) : null;
+    const localApplied = !!(local && local.ok === true);
+    if (syncManifest) syncManifest.data_epoch = Number(result.data_epoch) || syncManifest.data_epoch;
+    try {
+      localStorage.setItem('balam_sync_data_epoch', String(result.data_epoch));
+      if (localApplied) {
+        localStorage.setItem(SELECTIVE_CLEANUP_SEEN, String(result.cleanup_id));
+        localStorage.removeItem(SELECTIVE_CLEANUP_TICKET);
+      }
+    } catch (e) { /* */ }
+    if (!localApplied) syncCompatibility = 'must_rebootstrap';
+    syncInvalid.clear();
+    await Promise.all(['products','clients','sellers','sales','returns','exchanges','loans','liquidations','movements']
+      .map(k => pullDomain(k, { authoritativeEmpty: true }).catch(() => { /* opcional */ })));
+    try { await heartbeatDevice(c); } catch (e) { /* siguiente latido */ }
+    return Object.assign({}, result, { local, prune, remoteCommitted: true,
+      rebootstrapRequired: !localApplied,
+      localError: localApplied ? null : ((local && local.error) || 'CLEANUP_LOCAL_APPLY_FAILED') });
+  }
+  async function testDataCleanupReceipt(cleanupId) {
+    const c = await ensureClient(); if (!c) throw new Error('OFFLINE');
+    const r = await c.rpc('test_data_cleanup_receipt', { p_cleanup_id: cleanupId });
+    if (r.error) throw new Error(r.error.message || 'CLEANUP_RECEIPT_FAILED');
+    return Array.isArray(r.data) ? r.data[0] : r.data;
+  }
+  function downloadTestDataCleanupDocument(document, kind, id) {
+    const body = JSON.stringify(document, null, 2);
+    const blob = new Blob([body], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob); const a = window.document.createElement('a');
+    a.href = url; a.download = `balam-limpieza-selectiva-${kind}-${id || Date.now()}.json`; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    return { bytes: new TextEncoder().encode(body).length, file: a.download };
+  }
   async function syncFleetStatus() {
     const c = await ensureClient();
     if (!c || !syncManifest) return { devices: [], activity: [], current: 0, stale: 0, attention: 0 };
@@ -3248,7 +3438,8 @@
     // que estuvo apagado llega con operaciones de esos mismos datos en la cola; si se
     // flushara primero, las volvería a subir a la nube recién limpiada y reaparecerían
     // en todas las terminales al siguiente pull.
-    let purged = null;
+    let selective = null, purged = null;
+    try { selective = await applyRemoteSelectiveCleanup(); } catch (e) { /* queda must_rebootstrap */ }
     try { purged = await applyRemotePurge(); } catch (e) { /* nunca bloquear el arranque */ }
     const pendingAtBoot = loadQ().length;
     try { await flushQueue(); } catch (e) { /* offline: la cola queda para el reintento */ }
@@ -3278,6 +3469,11 @@
       // versión que la nube dejó tras restaurar. Antes del pull el control optimista las
       // rechazaría por versión vieja.
       if (purged && purged.prune && purged.prune.rebuild.length) rebuildPurgedUpserts(purged.prune.rebuild);
+      if (selective) {
+        try { await Promise.all(['products','clients','sellers','sales','returns','exchanges','loans','liquidations','movements']
+          .map(k => pullDomain(k, { authoritativeEmpty: true }).catch(() => { /* dominio opcional */ }))); }
+        catch (e) { /* rebootstrap sigue disponible */ }
+      }
       try { window.dispatchEvent(new CustomEvent('configchange', { detail: { domain: true } })); } catch (e) { /* */ }
       // H-62: adopción de los préstamos que nunca salieron de esta terminal. Va
       // DESPUÉS del pull a propósito: sólo entonces se distingue lo que la nube
@@ -3434,7 +3630,7 @@
     }
   }
 
-  window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushClient, pushSale, settleLayaway, pushReturn, pushExchange, commitReferenceReclassification, ensureFolioBlock, deleteRow, settleCommission, closeCommissionPeriod, applyCommissionAdjustment, pushLoanOperation, migrateLocalLoans, pullDomain, fetchSaleByFolio, physicalCardAvailable, claimPhysicalCard, flushQueue, retryOperation, discardOperation, queueStatus, syncStatus, syncFleetStatus, updateSyncDevice, requestSyncRetry, markSyncActivityReviewed, decideSyncQuarantine, exportQuarantineReport, reconcileDomains, invalidateDomain, establishPointZero, pointZeroPreview, createPointZeroBackup, executePointZero, pointZeroReceipt, downloadPointZeroDocument, rebootstrapFromCloud, exportSyncRecovery, hasPendingLayaway, clearQueue, markResetApplied, purgeTestData, applyRemotePurge, pruneQueueForPurge, readPurgeState, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
+  window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushClient, pushSale, settleLayaway, pushReturn, pushExchange, commitReferenceReclassification, ensureFolioBlock, deleteRow, settleCommission, closeCommissionPeriod, applyCommissionAdjustment, pushLoanOperation, migrateLocalLoans, pullDomain, fetchSaleByFolio, physicalCardAvailable, claimPhysicalCard, flushQueue, retryOperation, discardOperation, queueStatus, syncStatus, syncFleetStatus, updateSyncDevice, requestSyncRetry, markSyncActivityReviewed, decideSyncQuarantine, exportQuarantineReport, reconcileDomains, invalidateDomain, establishPointZero, pointZeroPreview, createPointZeroBackup, executePointZero, pointZeroReceipt, downloadPointZeroDocument, previewTestDataCleanup, createTestDataCleanupBackup, executeTestDataCleanup, testDataCleanupReceipt, downloadTestDataCleanupDocument, rebootstrapFromCloud, exportSyncRecovery, hasPendingLayaway, clearQueue, markResetApplied, purgeTestData, applyRemotePurge, applyRemoteSelectiveCleanup, pruneQueueForPurge, pruneQueueForSelectiveCleanup, readPurgeState, readSelectiveCleanupEvent, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
   window.STORE.pushProductFamilyBatch = pushProductFamilyBatch;
   window.CORE.registerSyncGateway(window.STORE);
 })();

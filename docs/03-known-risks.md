@@ -5435,6 +5435,61 @@ impresora, lector USB ni otros periféricos físicos.
   identidad, stock, precios persistidos o V1.
 - **Commit:** `0b59cc8`.
 
+## H-113 — La limpieza operativa no admite alcance selectivo seguro para V1/V2
+
+**Estado:** CAPACIDAD INSTALADA; CLIENTE CERTIFICADO Y PUBLICACIÓN AUTORIZADA
+**Fecha de registro:** 17/08/2026
+**Origen:** ampliación aprobada de Configuración → Administración / Datos.
+**Evidencia inicial:** H-98 sólo expone el plan cerrado de Punto Cero y H-68
+propaga una purga total por época. La restauración de cambios anterior a H-94
+no consume `exchange_items.product_id`; Punto Cero puede borrar
+reclasificaciones sin invertirlas porque después elimina los productos. Ninguno
+de esos contratos permite seleccionar operaciones y conservar inventario V1/V2
+sin riesgo de identidad, stock o resurrección offline.
+**Riesgo:** borrar documentos conservando sus efectos, resolver V2 por SKU,
+dejar pagos/commits/reservas huérfanos o hacer que un cliente antiguo interprete
+una limpieza selectiva como purga total.
+**Alcance autorizado:** migraciones locales aditivas, autoridad de preview,
+respaldo y ejecución selectiva; protocolo incompatible seguro; cola por identidad;
+UI por grupos semánticos; fixtures, rollback, multi-terminal, BALAM QA y build.
+**No alcance:** ejecutar Punto Cero o limpieza selectiva sobre datos actuales,
+modificar productos o stock real, reinterpretar históricos o descartar trabajo
+local ajeno.
+**Solución local:** H-98 permanece como Punto Cero completo. H-113 agrega un
+protocolo v2 separado con presets por grupos comerciales, preview normalizado
+por PostgreSQL, respaldo ligado al hash, ejecución transaccional e idempotente,
+tombstones, comprobante y rebootstrap obligatorio. La restauración usa SKU sólo
+para una identidad V1 inequívoca y `products.id` para V2; cualquier identidad,
+evidencia financiera u objetivo de stock no demostrable bloquea el plan.
+Además, una terminal no revocada con esquema anterior a H-113 bloquea aunque
+declare estado online.
+**Deploy remoto:** el preflight propuso sólo `20260817014900` y
+`20260817015000`; ambas se aplicaron el 17/08/2026. Historial local/remoto
+alineado y dry-run posterior sin pendientes. Auditoría real agregada y
+simulación de preview sin escrituras: 1 línea, 0 problemas de identidad, stock
+0+1=1 y 0 objetivos negativos. Las cuatro terminales tienen colas en cero, pero
+esquema anterior a H-113, por lo que la futura ejecución queda bloqueada.
+Huella pre/post idéntica: 1,472 filas operativas
+`1a627bb781a12bdf4e13b5ee77de3c29`; 1,420 productos
+`3eed4cc3f6ec717d403a2745426fc33b`; stock
+`ae164da7056ba5a76e38685affb2a386`, suma V1 14,221 y V2 58. Las tablas H-113
+quedaron vacías; RLS, ACL, propietarios, `search_path` y RPC fueron verificados.
+**Pruebas:** contrato 35/35; PostgreSQL aislado con clon exacto del esquema
+remoto: migración, verificación, permisos y
+recorrido funcional con rollback aprobados (V1, V2, SKU duplicado, evidencia
+financiera retenida, respaldo completo, lápida de préstamo, cliente/folio e
+idempotencia); UI 21/21 responsive; H-68 53/53, H-69 90/90, H-98 24/24,
+cola 176/176, smoke del bundle 17/17; build offline y reproducibilidad 8/8.
+**Riesgo residual:** la capacidad existe y el cliente está certificado para la
+publicación autorizada, pero ninguna limpieza está autorizada. Cuatro terminales incompatibles
+bloquean correctamente el plan remoto. Existen seis commits idempotentes
+históricos sin documento vivo que H-113 deja intactos. La instalación sólo
+modificó metadatos técnicos (`system_manifest.schema_version/updated_at` e
+historial de migraciones), no datos de negocio. Toda limpieza real requiere una
+autorización separada.
+**Corrección:** `docs/fixes/limpieza-selectiva-datos-prueba.md`.
+**Commit:** Pendiente de commit.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

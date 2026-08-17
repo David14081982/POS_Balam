@@ -1863,6 +1863,7 @@
           h('button', { key: 'refresh', 'data-testid': 'point-zero-refresh', disabled: busy, onClick: () => refresh(false), className: 'px-4 h-11 border border-outline-variant rounded-lg text-caption disabled:opacity-40' }, 'Actualizar diagnóstico'),
         ]),
       ]),
+      h(SelectiveCleanupCard, { key: 'selective', enabled: !!preproduction }),
       wizard && h(PointZeroWizard, { key: 'wizard', estado: wizard, setEstado: setWizard, onClose: () => setWizard(null) }),
     ];
   }
@@ -1959,6 +1960,153 @@
   }
 
   // ── Panel: datos de demostración (simulación local para pruebas) ───────────────
+  const CLEANUP_GROUPS = [
+    ['sales','Ventas, apartados y cobros','Incluye partidas, pagos, reservas, canjes, commits y movimientos asociados.','cleanup-group-sales'],
+    ['returns','Devoluciones','Revierte sus entradas de inventario y elimina evidencia dependiente.','cleanup-group-returns'],
+    ['exchanges','Cambios','Revierte exactamente las piezas que entraron y salieron.','cleanup-group-exchanges'],
+    ['loans','Préstamos','Elimina documentos; no inventa movimientos de stock.','cleanup-group-loans'],
+    ['commissions','Comisiones','Elimina liquidaciones y ajustes; recalcula vendedores desde documentos conservados.','cleanup-group-commissions'],
+    ['reclassifications','Reclasificaciones','Revierte origen y destino por products.id y elimina sus movimientos.','cleanup-group-reclassifications'],
+    ['customers','Clientes de prueba','Opción separada; bloquea clientes todavía referenciados.','cleanup-group-customers'],
+    ['inventory_products','Inventario y productos','Sólo está disponible mediante Punto Cero completo.','cleanup-group-inventory'],
+  ];
+  const CLEANUP_COUNT_LABELS = {
+    ventas: 'Ventas, apartados y cobros', devoluciones: 'Devoluciones', cambios: 'Cambios',
+    prestamos: 'Préstamos', comisiones: 'Comisiones', reclasificaciones: 'Reclasificaciones', clientes: 'Clientes de prueba',
+  };
+  function SelectiveCleanupCard({ enabled }) {
+    const defaultSelection = { sales: true, returns: true, exchanges: true, loans: true,
+      commissions: true, reclassifications: false, customers: false, inventory_products: false };
+    const [preset, setPreset] = useState('operations');
+    const [selection, setSelection] = useState(defaultSelection);
+    const [preview, setPreview] = useState(null);
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState('');
+    const [wizard, setWizard] = useState(null);
+    const requestPreview = async (nextPreset, nextSelection, open) => {
+      if (nextPreset === 'point-zero') { setPreview(null); setError(''); return; }
+      setBusy(true); setError('');
+      try {
+        const value = await window.STORE.previewTestDataCleanup(nextPreset, nextSelection);
+        if (!value || !value.ok) throw new Error((value && value.error) || 'No se pudo calcular el plan selectivo');
+        setPreview(value);
+        if (open) setWizard({ paso: 'preview', preview: value, backup: null, confirmation: '' });
+      } catch (e) { setPreview(null); setError(e.message || String(e)); }
+      finally { setBusy(false); }
+    };
+    useEffect(() => {
+      if (!enabled || preset === 'point-zero') return;
+      const timer = setTimeout(() => requestPreview(preset, selection, false), 180);
+      return () => clearTimeout(timer);
+    }, [enabled, preset, JSON.stringify(selection)]);
+    const choosePreset = value => {
+      setPreset(value);
+      if (value === 'operations') setSelection(defaultSelection);
+    };
+    const toggle = key => setSelection(current => Object.assign({}, current, { [key]: !current[key] }));
+    const counts = preview && preview.counts || {};
+    const stock = preview && Array.isArray(preview.stock) ? preview.stock : [];
+    const stockCurrent = stock.reduce((sum, row) => sum + Number(row.current_stock || 0), 0);
+    const stockAfter = stock.reduce((sum, row) => sum + Number(row.target_stock || 0), 0);
+    const forced = preview && Array.isArray(preview.forced_dependencies) ? preview.forced_dependencies : [];
+    const reasons = preview && Array.isArray(preview.blocked_reasons) ? preview.blocked_reasons : [];
+    return h(GlassCard, { className: 'p-6 mt-5', 'data-testid': 'selective-cleanup-card' }, [
+      h('div', { key: 'over', className: 'text-overline font-bold uppercase tracking-widest text-primary' }, '¿Qué deseas limpiar?'),
+      h(SerifHeading, { key: 'title', className: 'mt-1', children: 'Limpieza selectiva' }),
+      h('p', { key: 'copy', className: 'mt-2 text-body text-on-surface-variant leading-relaxed' },
+        'El servidor calcula dependencias e inventario. Productos, folios, configuración y clientes quedan conservados salvo selección explícita.'),
+      h('div', { key: 'presets', className: 'grid grid-cols-1 md:grid-cols-3 gap-3 mt-5', role: 'radiogroup', 'aria-label': 'Tipo de limpieza' }, [
+        ['point-zero','Punto Cero completo','Contrato H-98 actual','cleanup-preset-point-zero'],
+        ['operations','Operaciones de prueba','Restaura inventario','cleanup-preset-operations'],
+        ['custom','Personalizada','Grupos comerciales','cleanup-preset-custom'],
+      ].map(([value,label,desc,testid]) => h('button', { key: value, type: 'button', role: 'radio',
+        'aria-checked': preset === value, 'data-testid': testid, onClick: () => choosePreset(value),
+        className: 'text-left p-4 rounded-xl border transition ' + (preset === value
+          ? 'border-primary bg-primary-container/40' : 'border-outline-variant bg-surface-container-low') }, [
+        h('div', { key: 'l', className: 'font-semibold text-primary' }, label),
+        h('div', { key: 'd', className: 'mt-1 text-caption text-on-surface-variant' }, desc),
+      ]))),
+      preset === 'point-zero' && h('div', { key: 'pz', className: 'mt-5 p-4 rounded-lg bg-warning-soft text-on-surface text-caption' },
+        'Usa la tarjeta Punto Cero de arriba. Su alcance y sus cinco puertas permanecen separados.'),
+      preset === 'custom' && h('fieldset', { key: 'groups', className: 'mt-5 space-y-2' }, [
+        h('legend', { key: 'legend', className: 'text-label-sm font-bold text-primary mb-2' }, 'Grupos comerciales'),
+        ...CLEANUP_GROUPS.map(([key,label,desc,testid]) => h('label', { key, className: 'flex items-start gap-3 p-3 rounded-lg border border-outline-variant cursor-pointer' }, [
+          h('input', { key: 'i', type: 'checkbox', checked: !!selection[key], onChange: () => toggle(key),
+            'data-testid': testid, className: 'mt-1 accent-primary' }),
+          h('span', { key: 'c' }, [h('span', { key: 'l', className: 'block text-body font-semibold text-primary' }, label),
+            h('span', { key: 'd', className: 'block text-caption text-on-surface-variant' }, desc)]),
+        ])),
+      ]),
+      error && h('div', { key: 'error', role: 'alert', 'data-testid': 'selective-cleanup-error', className: 'mt-5 p-3 rounded-lg bg-danger-soft text-danger text-caption' }, error),
+      preview && preset !== 'point-zero' && h('section', { key: 'plan', className: 'mt-5 p-4 rounded-xl border border-outline-variant bg-surface-container-low', 'aria-live': 'polite' }, [
+        h('div', { key: 'grid', className: 'grid grid-cols-1 md:grid-cols-2 gap-6' }, [
+          h('div', { key: 'del' }, [h('div', { key: 'h', className: 'text-overline font-bold text-danger mb-2' }, 'Se eliminará'),
+            ...Object.keys(CLEANUP_COUNT_LABELS).map(key => h(Fila, { key, etiqueta: CLEANUP_COUNT_LABELS[key], valor: N(counts[key]), tono: 'text-danger' }))]),
+          h('div', { key: 'keep' }, [h('div', { key: 'h', className: 'text-overline font-bold text-success mb-2' }, 'Se conservará'),
+            ...['Productos e identidades','Contadores de folio','Configuración y permisos','Auditoría y respaldos'].map(label =>
+              h('div', { key: label, className: 'text-caption text-success py-1' }, '✓ ' + label))]),
+        ]),
+        h('div', { key: 'stock', className: 'mt-5 grid grid-cols-[1fr_auto_1fr] gap-3 items-center text-center' }, [
+          h('div', { key: 'a', className: 'p-3 rounded-lg bg-surface' }, [h('div', { className: 'text-overline text-on-surface-variant' }, 'Stock actual'), h('div', { className: 'font-mono text-title text-primary' }, N(stockCurrent))]),
+          h(MS, { key: 'arrow', name: 'arrow_forward', size: 20, className: 'text-on-surface-variant' }),
+          h('div', { key: 'b', className: 'p-3 rounded-lg bg-success-soft' }, [h('div', { className: 'text-overline text-on-surface-variant' }, 'Stock después'), h('div', { className: 'font-mono text-title text-success' }, N(stockAfter))]),
+        ]),
+        forced.length > 0 && h('div', { key: 'forced', className: 'mt-4 text-caption text-warning' }, 'Dependencias incluidas automáticamente: ' + forced.join(', ')),
+        reasons.length > 0 && h('div', { key: 'blocked', className: 'mt-4 p-3 rounded-lg bg-danger-soft text-danger text-caption' },
+          'Plan no ejecutable: ' + reasons.map(reason => typeof reason === 'string' ? reason : reason.code).join(', ')),
+      ]),
+      preset !== 'point-zero' && h('div', { key: 'actions', className: 'mt-5 flex flex-wrap gap-3' }, [
+        h('button', { key: 'refresh', type: 'button', disabled: busy || !enabled, onClick: () => requestPreview(preset, selection, false),
+          className: 'px-4 h-11 border border-outline-variant rounded-lg text-caption disabled:opacity-40' }, busy ? 'Calculando…' : 'Actualizar plan'),
+        h('button', { key: 'open', type: 'button', 'data-testid': 'selective-cleanup-open', disabled: busy || !preview || !preview.ready,
+          onClick: () => requestPreview(preset, selection, true), className: 'px-5 h-11 bg-danger text-white rounded-lg disabled:opacity-40' }, 'Revisar y continuar'),
+      ]),
+      wizard && h(SelectiveCleanupWizard, { key: 'wizard', estado: wizard, setEstado: setWizard, onClose: () => setWizard(null) }),
+    ]);
+  }
+
+  function SelectiveCleanupWizard({ estado, setEstado, onClose }) {
+    const { Modal } = window.UI;
+    const preview = estado.preview || {};
+    const makeBackup = async () => {
+      setEstado(x => Object.assign({}, x, { paso: 'backup', error: '' }));
+      try {
+        const backup = await window.STORE.createTestDataCleanupBackup(preview);
+        window.STORE.downloadTestDataCleanupDocument(backup.document, 'respaldo', backup.backup_id);
+        setEstado(x => Object.assign({}, x, { paso: 'confirmation', backup, confirmation: '' }));
+      } catch (e) { setEstado(x => Object.assign({}, x, { paso: 'preview', error: e.message || String(e) })); }
+    };
+    const execute = async () => {
+      setEstado(x => Object.assign({}, x, { paso: 'executing', error: '' }));
+      try {
+        const result = await window.STORE.executeTestDataCleanup({ preview,
+          backupId: estado.backup.backup_id, confirmation: estado.confirmation });
+        setEstado(x => Object.assign({}, x, { paso: 'result', result }));
+      } catch (e) { setEstado(x => Object.assign({}, x, { paso: 'error', error: e.message || String(e) })); }
+    };
+    const receipt = async () => {
+      try {
+        const doc = await window.STORE.testDataCleanupReceipt(estado.result.cleanup_id);
+        window.STORE.downloadTestDataCleanupDocument(doc, 'comprobante', estado.result.cleanup_id);
+      } catch (e) { toast(e.message || String(e), 'var(--danger)'); }
+    };
+    const footer = [];
+    if (!['executing','result'].includes(estado.paso)) footer.push(h('button', { key: 'cancel', onClick: onClose, className: 'px-5 h-11 text-on-surface-variant rounded-lg' }, 'Cancelar'));
+    if (estado.paso === 'preview') footer.push(h('button', { key: 'backup', onClick: makeBackup, 'data-testid': 'selective-cleanup-backup', className: 'px-5 h-11 bg-primary text-on-primary rounded-lg' }, 'Crear respaldo'));
+    if (estado.paso === 'confirmation') footer.push(h('button', { key: 'next', disabled: estado.confirmation !== 'LIMPIAR OPERACIONES', onClick: () => setEstado(x => Object.assign({}, x, { paso: 'warning' })), className: 'px-5 h-11 bg-primary text-on-primary rounded-lg disabled:opacity-40' }, 'Continuar'));
+    if (estado.paso === 'warning') footer.push(h('button', { key: 'execute', onClick: execute, 'data-testid': 'selective-cleanup-execute', className: 'px-5 h-11 bg-danger text-white font-bold rounded-lg' }, 'Ejecutar limpieza selectiva'));
+    if (estado.paso === 'result') footer.push(h('button', { key: 'receipt', onClick: receipt, className: 'px-5 h-11 border border-outline-variant rounded-lg' }, 'Descargar comprobante'), h('button', { key: 'close', onClick: onClose, className: 'px-5 h-11 bg-primary text-on-primary rounded-lg' }, 'Cerrar'));
+    if (estado.paso === 'error') footer.push(h('button', { key: 'close', onClick: onClose, className: 'px-5 h-11 bg-primary text-on-primary rounded-lg' }, 'Entendido'));
+    let body;
+    if (estado.paso === 'result') body = [h('div', { key: 'ok', className: 'p-4 rounded-lg bg-success-soft text-success font-semibold' }, estado.result.rebootstrapRequired ? 'LIMPIEZA COMPLETADA EN EL SERVIDOR' : 'LIMPIEZA SELECTIVA COMPLETADA'), estado.result.rebootstrapRequired && h('div', { key: 'local', role: 'alert', className: 'mt-3 p-4 rounded-lg bg-warning-soft text-warning' }, 'La copia local no pudo converger. Conserva el comprobante y recarga para reconstruirla desde el servidor; no vuelvas a ejecutar la limpieza.'), h('p', { key: 'id', className: 'mt-4 text-caption text-on-surface-variant break-all' }, 'Operación: ' + estado.result.cleanup_id)];
+    else if (estado.paso === 'error') body = [h('div', { key: 'e', role: 'alert', className: 'p-4 rounded-lg bg-danger-soft text-danger' }, estado.error), h('p', { key: 'n', className: 'mt-3 text-caption text-on-surface-variant' }, 'El servidor no confirmó el resultado. Conserva el respaldo y reintenta con la misma operación para obtener una respuesta idempotente.')];
+    else if (estado.paso === 'confirmation') body = [h('p', { key: 'p', id: 'selective-cleanup-confirmation-help', className: 'text-body' }, 'Escribe exactamente LIMPIAR OPERACIONES para habilitar la advertencia final.'), h('label', { key: 'l', htmlFor: 'selective-cleanup-confirmation-input', className: 'block mt-4 text-label-sm font-semibold text-primary' }, 'Frase de confirmación'), h('input', { key: 'i', id: 'selective-cleanup-confirmation-input', autoFocus: true, value: estado.confirmation, onChange: e => setEstado(x => Object.assign({}, x, { confirmation: e.target.value })), 'aria-describedby': 'selective-cleanup-confirmation-help', 'data-testid': 'selective-cleanup-confirmation', className: 'mt-2 w-full h-11 px-3 rounded-lg border border-outline-variant font-mono' })];
+    else if (estado.paso === 'warning') body = [h('div', { key: 'w', className: 'p-4 rounded-lg bg-danger-soft text-danger font-semibold' }, 'Advertencia final: se borrarán únicamente las identidades selladas en el respaldo. Esta acción no se puede deshacer desde la interfaz.')];
+    else if (estado.paso === 'backup' || estado.paso === 'executing') body = [h('div', { key: 'wait', role: 'status', className: 'py-8 text-center text-on-surface-variant' }, estado.paso === 'backup' ? 'Creando y descargando respaldo…' : 'Ejecutando transacción y comprobando resultado…')];
+    else body = [h('p', { key: 'p', className: 'text-body text-on-surface-variant' }, 'El preview autoritativo está vigente. El siguiente paso crea y descarga el respaldo ligado al plan.'), estado.error && h('div', { key: 'e', className: 'mt-3 p-3 rounded-lg bg-danger-soft text-danger text-caption' }, estado.error)];
+    return h(Modal, { title: 'Limpieza selectiva', testId: 'selective-cleanup-dialog', large: true, onClose: ['backup','executing'].includes(estado.paso) ? (() => {}) : onClose, footer }, body);
+  }
+
   function DemoPanel() {
     const [busy, setBusy] = useState(false);
     const [purga, setPurga] = useState(null);
