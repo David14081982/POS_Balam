@@ -5495,6 +5495,31 @@ autorización separada.
 **Corrección:** `docs/fixes/limpieza-selectiva-datos-prueba.md`.
 **Commit:** `8b7042f`.
 
+## H-115 — Editar V2 descarta Corte y Características generales con éxito falso
+
+**Estado:** RESUELTO
+**Fecha de registro:** 18/08/2026
+**Origen:** reconciliación independiente Codex ↔ Opus de guardas V2.
+**Reproducción:** sobre el bundle público exacto `37e83cc`, Editar V2 cambia
+Corte y Características, cierra el formulario y anuncia «1 referencias
+guardadas», pero cada `products.attrs` conserva los valores anteriores. Alta
+V2 y la excepción por referencia sí los persisten.
+**Causa:** `ProductForm.submit()` parte de `source.attrs` para cada referencia
+existente y sólo reaplica atributos `captureScope=family`; los valores generales
+`captureScope=reference` que viven en `d.attrs` nunca entran al draft.
+**Riesgo:** pérdida silenciosa de una edición de identidad y falso éxito; con
+stock o historia, el descarte también evita que la guarda física vea el cambio.
+**Alcance:** corregir sólo el ensamblado del draft y su feedback; conservar
+CONFIG `inReference`, firmas, candado, stock, IDs, barcodes y semántica de baja.
+**Pruebas:** reproducción publicada 13/13; H-115 contrato 7/7 y E2E 12/12;
+353 comprobaciones verdes únicas entre referencia V2, atributos, Excel, familias,
+POS, posventa, smoke, navegación, responsive 320–1440 px y build reproducible.
+`test-h84-product-form-ux-metrics.mjs` quedó no concluyente por un defecto previo
+del arnés (dejó abierto el modal de colores y un overlay interceptó el click),
+mientras `test-h84-product-form-ux-e2e.mjs` pasó 19/19. Sin escrituras Supabase.
+**Corrección:** `docs/fixes/persistencia-corte-caracteristicas-editar-v2.md`.
+**Commit:** `126e98e`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:
