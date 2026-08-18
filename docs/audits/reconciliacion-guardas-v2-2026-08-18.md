@@ -27,6 +27,13 @@ Recomendación: **mantener las altas en V2 y corregir V2**, no volver a V1. V1 p
 | Esquema | manifest `20260817014900`, data epoch 2 |
 | Última migración remota | `20260817015000`; lista local/remota alineada |
 
+Publicación verificada: `origin/main` alcanzó `04827ff`; GitHub Pages sirvió el
+`index.html` de ese commit byte a byte (9,000,475 bytes, SHA-256
+`F03DF3CB9FCFEA3509C22E3DC770423B51AF8B37364A1C6EF142DD5BAB586A9D`, blob
+`82167c1926680beb329d6046ee5f8020892d4650`). La lectura remota posterior conservó
+CONFIG 36/180, productos 395 (370 activos: 220 V1 y 150 V2) y migración
+`20260817015000`: no hubo mutaciones de datos ni contrato.
+
 La reproducción se ejecutó contra una copia byte-a-byte del bundle publicado y contra fixtures locales con Supabase interceptado. Las consultas a datos reales fueron agregadas y read-only.
 
 ## 2. Por qué aparece “tiene operaciones”

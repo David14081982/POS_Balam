@@ -45,6 +45,10 @@ La tercera regla evita que la opción vacía “Usar valor general” borre un a
   E2E funcional H-84 pasó 19/19 y el fallo no cruza el código H-115.
 - `node build-offline.mjs` y `node test-build-reproducibility.mjs`: build correcto,
   artefactos gemelos y 8/8 invariantes reproducibles.
+- Publicación: `origin/main` en `04827ff`; GitHub Pages coincide byte a byte con
+  el bundle del commit (SHA-256 `F03DF3CB9FCFEA3509C22E3DC770423B51AF8B37364A1C6EF142DD5BAB586A9D`).
+- Lectura Supabase posterior: CONFIG 36/180, productos 395, 370 activos y última
+  migración `20260817015000`, sin cambios respecto de la línea base.
 
 ## Riesgo residual y pendientes
 
