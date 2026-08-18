@@ -970,7 +970,7 @@
         if (target.recordModel === 'v2' && after.physicalSignature !== target.physicalSignature
             && (target.physicalIdentityLocked || (Number(target.stockQuantity) || 0) !== 0
               || (D.referenceHasOperations && D.referenceHasOperations(target.id)))) {
-          conflict = { code: 'REFERENCE_RECLASSIFICATION_REQUIRED', message: 'La fila intenta cambiar atributos físicos de una referencia con operaciones. Usa Reclasificación.' };
+          conflict = { code: 'REFERENCE_RECLASSIFICATION_REQUIRED', message: 'La fila intenta cambiar la identidad física de una referencia que tiene o tuvo existencias u operaciones. Los datos comerciales sí pueden actualizarse; los atributos físicos requieren un flujo de reclasificación.' };
           action = null; after = null;
         }
       }

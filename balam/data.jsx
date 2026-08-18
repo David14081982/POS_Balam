@@ -1199,7 +1199,7 @@
     next.physicalSignature = physicalSignature(next);
     if (next.physicalSignature !== current.physicalSignature
         && (current.physicalIdentityLocked || (Number(current.stockQuantity) || 0) !== 0 || referenceHasOperations(current.id))) {
-      throw Object.assign(new Error('Esta referencia ya tiene operaciones; reclasifica sus piezas en vez de cambiar atributos físicos'),
+      throw Object.assign(new Error('No se puede cambiar la identidad física de esta referencia porque tiene o tuvo existencias u operaciones. Puedes editar datos comerciales; para cambiar atributos físicos se requiere un flujo de reclasificación.'),
         { code: 'REFERENCE_RECLASSIFICATION_REQUIRED' });
     }
     const diag = referenceDiagnostics(next, products, current.id);

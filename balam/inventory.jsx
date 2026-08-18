@@ -1382,6 +1382,23 @@
           const rowCategoryId = referenceRowCategoryId(row, d.sizeCategoryId);
           const candidate = mode === 'edit' && row.id ? { ...source } : { ...rest };
           const candidateAttrs = { ...((source && source.attrs) || attrs), ...(row.attrs || {}) };
+          // Los atributos capturados por referencia tienen un valor general y
+          // pueden tener una excepción por fila. En edición `source.attrs`
+          // conserva el valor histórico, así que materializamos aquí el valor
+          // efectivo del formulario antes de entregar el candidate al dominio.
+          // Una excepción vacía significa «Usar valor general» cuando la
+          // familia sí tiene uno común. Si la proyección es mixta no existe
+          // esa autoridad: conservamos el valor fuente en vez de borrarlo.
+          referenceCaptureKinds.forEach(kind => {
+            const rowAttrs = row.attrs || {};
+            const override = Object.prototype.hasOwnProperty.call(rowAttrs, kind)
+              && String(rowAttrs[kind] || '').trim() !== '' ? rowAttrs[kind] : undefined;
+            const generalValue = (d.attrs || {})[kind];
+            const sourceValue = (source.attrs || {})[kind];
+            const nextValue = override !== undefined ? override
+              : (generalValue != null && String(generalValue).trim() !== '' ? generalValue : sourceValue);
+            if (nextValue != null && String(nextValue).trim() !== '') candidateAttrs[kind] = nextValue;
+          });
           familyCaptureKinds.forEach(kind => {
             const meta = window.CONFIG.catalogMeta(kind) || {};
             if (meta.custom) {
