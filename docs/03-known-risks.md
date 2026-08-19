@@ -5552,7 +5552,7 @@ mientras `test-h84-product-form-ux-e2e.mjs` pasó 19/19. Sin escrituras Supabase
 
 ## H-116 — H-113 confunde terminal apagada con terminal insegura
 
-**Estado:** SERVIDOR INSTALADO Y VERIFICADO — CLIENTE PENDIENTE DE PUBLICAR
+**Estado:** RESUELTO — SERVIDOR Y CLIENTE PUBLICADOS
 **Fecha de registro:** 18/08/2026
 **Origen:** requisito crítico adicional de operación multiterminal para H-113.
 **Evidencia inicial:** `pos.test_data_cleanup_plan()` suma la cola de toda la
@@ -5589,7 +5589,10 @@ BALAM QA 320–1440 px quedaron verdes. No se ejecutó limpieza ni se modificaro
 datos de negocio. Véase `docs/fixes/limpieza-h113-riesgo-real-equipos.md`.
 Las migraciones `20260818015300` y `20260818015400` están instaladas en el
 proyecto vinculado y el dry-run posterior informa `Remote database is up to date`.
-**Commit:** Pendiente de commit.
+GitHub Pages completó el deploy de `86011e7`; su `index.html` coincide con el
+blob Git en 9,006,415 bytes y SHA-256
+`11896105c98d3e8963786521bc0a5986ad4a951e868a6ce6450263e1094d5272`.
+**Commit:** `86011e7` (funcional); documentación final en commit posterior.
 
 ## Regla de actualización
 

@@ -1,9 +1,9 @@
 # Riesgo real de equipos para limpieza H-113
 
 **Riesgo:** H-116
-**Estado:** SERVIDOR INSTALADO Y VERIFICADO — CLIENTE PENDIENTE DE PUBLICAR
+**Estado:** RESUELTO — SERVIDOR Y CLIENTE PUBLICADOS
 **Fecha:** 18/08/2026
-**Commit:** Pendiente de commit
+**Commit:** `86011e7` (funcional); documentación final en commit posterior
 
 ## Problema y reproducción
 
@@ -97,9 +97,13 @@ No se ejecutó `execute_test_data_cleanup`, Punto Cero ni otra RPC destructiva.
 ## Riesgo residual y pendientes
 
 La limpieza real permanece fuera de alcance y requiere autorización separada.
-El servidor ya está instalado; falta publicar y comprobar los bytes del cliente.
+El servidor y el cliente ya están publicados. El workflow de GitHub Pages para
+`86011e7` terminó correctamente; la página pública y el blob Git de `index.html`
+coinciden en 9,006,415 bytes y SHA-256
+`11896105c98d3e8963786521bc0a5986ad4a951e868a6ce6450263e1094d5272`.
 Un cliente realmente anterior al cerco H-77 continúa bloqueando salvo retiro
-administrativo explícito.
+administrativo explícito. La limpieza real sigue requiriendo autorización
+separada y no fue ejecutada durante H-116.
 
 ## Referencias
 
