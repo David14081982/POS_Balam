@@ -49,9 +49,11 @@ localmente, pero no cruzaba completa la frontera SQL.
 - El evento vive en `selective_cleanup_events`, nunca en `test_data_purges`.
   Terminales incompatibles rebootstrap y la cola se poda por operación,
   documento o identidad exacta.
-- El preview cuenta como incompatible cualquier terminal no revocada cuyo
-  `schema_version` sea anterior a `20260817014900`. El estado `online` no basta:
-  un cliente anterior a H-113 siempre bloquea la ejecución.
+- H-116 reemplaza la incompatibilidad general por riesgo real de flota: una
+  terminal apagada compatible o cercable sin cola conflictiva no bloquea; una
+  operación intersectante, una cola sin detalle demostrable o un cliente
+  anterior al cerco H-77 sí bloquean. El manifiesto, la época, el rebootstrap,
+  la cuarentena y las lápidas siguen fallando cerrado.
 - El saldo de vendedores se deriva de ventas, cambios, devoluciones,
   cancelaciones, ajustes y liquidaciones retenidos. Una liquidación `tipo=ajuste`
   es evidencia espejo del crédito y no se resta como pago.
@@ -133,8 +135,8 @@ fila de negocio, producto ni existencia.
 
 ## Pruebas
 
-- `node test-h113-selective-cleanup.mjs`: 35/35, incluido bloqueo por terminal
-  con esquema anterior a H-113.
+- `node test-h113-selective-cleanup.mjs`: 35/35; H-116 sustituye el bloqueo
+  general por la clasificación de riesgo concreto sin alterar las guardas H-113.
 - PostgreSQL 18 aislado: migración reaplicable, verificación posterior y prueba
   funcional aprobadas; el fixture termina con `ROLLBACK`. Confirmó V1 8→10,
   V2 A 4→5, V2 B con SKU duplicado intacto en 9, guarda de evidencia retenida,
@@ -160,13 +162,13 @@ publicó desde el commit aislado `8b7042f`. El blob de Git y los bytes servidos
 por GitHub Pages coinciden exactamente: 8,999,907 bytes y SHA-256
 `f7388f3ee572395f9ea16bf3dc5ca49b2bf82a36d8c273bc94908a7097671db4`.
 La UI pública read-only aprobó 13/13; BALAM QA no encontró defectos críticos,
-altos ni medios. No se
-ejecutó Punto Cero, backup operativo ni RPC destructiva. Las cuatro terminales
-siguen reportando esquema anterior a H-113; el plan remoto de sólo lectura devuelve
-`executable=false`, `incompatible_devices=4` y la razón
-`client_schema_incompatible`. Instalar la capacidad no autoriza una limpieza
-posterior: la ejecución real exige una autorización separada. Históricos
-retenidos sin evidencia financiera completa continuarán bloqueados.
+altos ni medios. No se ejecutó Punto Cero, backup operativo ni RPC destructiva.
+El diagnóstico remoto descrito aquí corresponde al contrato anterior a H-116.
+Una vez publicada H-116, esos equipos se clasifican por capacidad de cerco y
+operaciones pendientes reales, no por estar apagados o por heartbeat antiguo.
+Instalar la capacidad no autoriza una limpieza posterior: la ejecución real
+exige una autorización separada. Históricos retenidos sin evidencia financiera
+completa continuarán bloqueados.
 
 Después de publicar, el registro remoto conserva 0 terminales compatibles y 4
 incompatibles (`20260808012700`: 1, `20260810013500`: 1,

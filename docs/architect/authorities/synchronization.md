@@ -68,6 +68,17 @@ continúa siendo la autoridad de lo pendiente; ausencia de señal es «desconoci
 y nunca prueba sincronía
 **Definición:** migración `20260807012000` · **Creada por:** H-79
 
+## ¿Qué equipo puede bloquear una limpieza selectiva H-113?
+**Autoridad:** `pos.test_data_cleanup_fleet_risk()` cruza dominios seleccionados,
+`pos.sync_activity`, cuarentena y capacidad de cerco por protocolo/época. Un
+heartbeat ausente no es un bloqueo; sólo lo es riesgo concreto no aislado.
+**Definición:** migración `20260818015300` · **Creada por:** H-116
+
+## ¿Una instalación retirada puede volver a activarse por heartbeat?
+**Autoridad:** `pos.admin_set_sync_device_retired()` y el estado durable
+`sync_devices.status='revoked'`; `report_sync_device()` no sobrescribe ese estado.
+**Definición:** migración `20260818015300` · **Creada por:** H-116
+
 ## ¿Qué se decide sobre una operación en cuarentena?
 **Autoridad:** `pos.sync_quarantine_cases` conserva huella, resumen y decisión;
 la operación completa permanece en el archivo local/JSON del equipo. Aprobar

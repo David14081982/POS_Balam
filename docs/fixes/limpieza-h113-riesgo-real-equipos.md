@@ -1,0 +1,109 @@
+# Riesgo real de equipos para limpieza H-113
+
+**Riesgo:** H-116
+**Estado:** SERVIDOR INSTALADO Y VERIFICADO — CLIENTE PENDIENTE DE PUBLICAR
+**Fecha:** 18/08/2026
+**Commit:** Pendiente de commit
+
+## Problema y reproducción
+
+El preview H-113 devolvía `cleanup_not_synchronized` si cualquier instalación
+estaba offline, llevaba más de dos minutos sin heartbeat o tenía una época
+distinta. También devolvía `client_schema_incompatible` para todo esquema
+anterior a H-113. La lectura directa de `pos.test_data_cleanup_plan()` confirmó
+que una computadora apagada con cola cero impedía el plan aunque no tuviera
+nada que aportar.
+
+## Causa raíz
+
+La guarda usaba disponibilidad reciente y versión declarada como sustitutos de
+riesgo. No cruzaba la cola proyectada con los dominios semánticos seleccionados,
+ni distinguía una terminal cercable por H-77 de un cliente tan antiguo que
+pudiera escribir sin obedecer `data_epoch`. Por eso mezclaba ausencia operativa,
+actualización pendiente y conflicto real bajo dos bloqueos generales.
+
+## Diseño
+
+Supabase es la autoridad vigente mediante `system_manifest`, protocolo, época,
+eventos, comandos, cuarentena y lápidas. La matriz es:
+
+| Caso | Estado | ¿Bloquea? | Retorno seguro |
+|---|---|---:|---|
+| Compatible y en línea | `ready` | No | Continúa normalmente |
+| Compatible y apagada | `compatible_offline` | No | Sin adaptación |
+| Vieja cercable, cola sin conflicto | `update_on_return` | No | Actualiza/aplica evento o rebootstrap |
+| Pendiente que intersecta | `attention` | Sí | Resolver o poner en cuarentena |
+| Cola sin proyección suficiente | `attention` | Sí | Revisar antes de limpiar |
+| Anterior al cerco H-77 | `unsafe_legacy` | Sí | Actualizar o retirar |
+| Retirada administrativamente | `retired` | No | No vuelve a activarse por heartbeat |
+
+Una operación pendiente conocida de un dominio ajeno no bloquea. Una ejecución
+selectiva futura eleva época y protocolo en la misma transacción y emite evento
+v3. El cliente consulta el manifiesto antes de `flushQueue()`; si no es
+compatible no envía. En el retorno, poda identidades exactas o archiva la cola,
+descarga la base autoritaria y adopta la época. Las lápidas rechazan la
+resurrección posterior del mismo documento.
+
+## Solución
+
+- `20260818015300_pos_h116_cleanup_fleet_risk.sql` agrega la autoridad de riesgo,
+  sustituye el preview público, cerca la ejecución futura, protege el retiro y
+  permite retirar/reactivar desde administración.
+- `20260818015400_pos_h116_cleanup_fleet_risk_verification.sql` prueba la matriz
+  aislada y termina con rollback; no llama a la ejecución destructiva.
+- `balam/store.jsx` adopta protocolos 2/3, vuelve a consultar el manifiesto tras
+  un evento y expone el retiro administrativo.
+- `balam/settings.jsx` muestra sólo listos, apagados no bloqueantes,
+  actualización al volver y pendientes que requieren atención; protocolo,
+  esquema y época quedan detrás de «Ver detalle».
+
+## Auditoría solicitada
+
+- No es necesario tener todas las terminales abiertas ni con heartbeat reciente.
+- Bloquean sólo una operación intersectante, una cola cuyo alcance se desconoce
+  o un cliente no cercable y no retirado.
+- No bloquean una terminal compatible apagada, una vieja cercable sin conflicto,
+  una pendiente demostrablemente ajena o una instalación retirada.
+- La computadora vieja queda protegida al volver porque el manifiesto se evalúa
+  antes de drenar, el evento v3 comunica identidades/época y el rebootstrap
+  conserva la cola en cuarentena antes de adoptar la verdad central.
+- `data_epoch` invalida la línea base; rebootstrap la reemplaza; cuarentena
+  conserva trabajo dudoso sin reproducirlo; las lápidas evitan resurrección.
+
+## Pruebas
+
+- `node test-h116-cleanup-fleet-risk.mjs`: 20/20.
+- PostgreSQL 18 temporal: migración y verificación H-116 completas,
+  `H116_FUNCTIONAL_OK`, con rollback y sin datos reales.
+- Casos obligatorios: apagada compatible; vieja sin cola; vieja con operación
+  intersectante en «Caja 2»; pendiente ajena; retirada sin encender.
+- `node test-h116-cleanup-fleet-risk-e2e.mjs`: 22/22 en 320, 360, 375, 390,
+  430, 768, 1024, 1280 y 1440 px; sin overflow ni errores de navegador.
+- Regresión: H-113 35/35 y UI 21/21; H-77 20/20; H-79 17/17; H-81 15/15;
+  cola 176/176; migraciones 31/31; contratos de módulos 42/42.
+- `node test-smoke.mjs bundle`: 17/17; build reproducible 8/8.
+
+## Instalación remota
+
+El dry-run propuso exclusivamente `20260818015300` y `20260818015400`. La
+primera migración aditiva se instaló sin tocar filas comerciales. El primer
+intento del verificador abortó porque su aserción del resumen esperaba una flota
+vacía fuera de los seis fixtures; su transacción revirtió los fixtures. Se
+corrigió para validar la contribución mínima de los casos identificados por
+prefijo, se repitió en PostgreSQL 18 aislado con `H116_FUNCTIONAL_OK` y después
+se aplicó remotamente. El dry-run final informó `Remote database is up to date`.
+No se ejecutó `execute_test_data_cleanup`, Punto Cero ni otra RPC destructiva.
+
+## Riesgo residual y pendientes
+
+La limpieza real permanece fuera de alcance y requiere autorización separada.
+El servidor ya está instalado; falta publicar y comprobar los bytes del cliente.
+Un cliente realmente anterior al cerco H-77 continúa bloqueando salvo retiro
+administrativo explícito.
+
+## Referencias
+
+- Riesgo: `docs/03-known-risks.md#h-116--h-113-confunde-terminal-apagada-con-terminal-insegura`
+- `docs/fixes/limpieza-selectiva-datos-prueba.md`
+- `docs/architect/authorities/synchronization.md`
+- `docs/architect/decisions/ADR-012-sincronizacion-en-vivo-coordinada.md`

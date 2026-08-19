@@ -60,9 +60,10 @@ check('evento selectivo no reutiliza test_data_purge_state',
   && !/create or replace function pos\.test_data_purge_state/.test(migration));
 check('cliente antiguo falla cerrado',
   /minimum_client_protocol/.test(migration) && /must_rebootstrap/.test(migration));
-check('terminal registrada anterior a H-113 bloquea el plan',
-  /schema_version[\s\S]*20260817014900/.test(migration)
-  && /client_schema_incompatible/.test(migration));
+check('H-116 sustituye el bloqueo general por riesgo concreto de flota',
+  fs.existsSync('supabase/migrations/20260818015300_pos_h116_cleanup_fleet_risk.sql')
+  && /pending_operation_intersects_cleanup/.test(read('supabase/migrations/20260818015300_pos_h116_cleanup_fleet_risk.sql'))
+  && /update_on_return/.test(read('supabase/migrations/20260818015300_pos_h116_cleanup_fleet_risk.sql')));
 check('tombstones y auditoría se conservan',
   /purged_documents/.test(migration) && /test_data_purges/.test(migration)
   && !/delete from pos\.(purged_documents|test_data_purges|capability_operation_audit)/.test(migration));

@@ -5461,8 +5461,9 @@ por PostgreSQL, respaldo ligado al hash, ejecución transaccional e idempotente,
 tombstones, comprobante y rebootstrap obligatorio. La restauración usa SKU sólo
 para una identidad V1 inequívoca y `products.id` para V2; cualquier identidad,
 evidencia financiera u objetivo de stock no demostrable bloquea el plan.
-Además, una terminal no revocada con esquema anterior a H-113 bloquea aunque
-declare estado online.
+H-116 sustituyó después el bloqueo general por esquema/heartbeat por una
+clasificación de riesgo concreto; el protocolo selectivo y sus guardas de
+identidad permanecen intactos.
 **Deploy remoto:** el preflight propuso sólo `20260817014900` y
 `20260817015000`; ambas se aplicaron el 17/08/2026. Historial local/remoto
 alineado y dry-run posterior sin pendientes. Auditoría real agregada y
@@ -5548,6 +5549,47 @@ del arnés (dejó abierto el modal de colores y un overlay interceptó el click)
 mientras `test-h84-product-form-ux-e2e.mjs` pasó 19/19. Sin escrituras Supabase.
 **Corrección:** `docs/fixes/persistencia-corte-caracteristicas-editar-v2.md`.
 **Commit:** `126e98e`.
+
+## H-116 — H-113 confunde terminal apagada con terminal insegura
+
+**Estado:** SERVIDOR INSTALADO Y VERIFICADO — CLIENTE PENDIENTE DE PUBLICAR
+**Fecha de registro:** 18/08/2026
+**Origen:** requisito crítico adicional de operación multiterminal para H-113.
+**Evidencia inicial:** `pos.test_data_cleanup_plan()` suma la cola de toda la
+flota y cuenta como no sincronizada cualquier terminal que no esté `online`,
+que no haya emitido heartbeat en dos minutos o que reporte un esquema anterior
+a H-113. Por ello una PC apagada con cola cero produce
+`cleanup_not_synchronized` y `client_schema_incompatible`, aunque H-77 ya
+dispone de `data_epoch`, bloqueo previo al `flushQueue()`, cuarentena y
+rebootstrap.
+**Riesgo:** obligar a encender todos los equipos para limpiar, o relajar la
+guarda sin distinguir una operación pendiente que intersecta el plan y permitir
+replay/resurrección desde una línea base antigua.
+**Control requerido:** clasificar por riesgo demostrado; una terminal apagada o
+actualizable sin cola conflictiva no bloquea. Sólo bloquean una operación
+conocida que intersecta los dominios seleccionados, una cola conocida sin
+proyección suficiente o un cliente tan antiguo que no pueda cercarse por
+protocolo/época. La ejecución debe elevar protocolo y época antes de que un
+cliente anterior vuelva a escribir; el Centro de equipos debe permitir retirar
+una instalación sin encenderla y conservar la evidencia administrativa.
+**Alcance autorizado:** auditoría, migración aditiva hacia adelante, preview y
+UI de riesgo, protocolo/rebootstrap/cuarentena/tombstones, retiro de terminal,
+fixtures aislados, pruebas, build y publicación segura.
+**No alcance:** ejecutar una limpieza real, modificar datos de negocio, falsear
+heartbeats, descartar colas ni reinterpretar históricos.
+**Corrección:** `pos.test_data_cleanup_fleet_risk()` clasifica cada instalación
+como lista, apagada compatible, actualización al volver, atención, legacy no
+cercable o retirada. Sólo una operación pendiente que intersecta los dominios,
+una cola sin proyección suficiente o un cliente anterior al cerco H-77 bloquean.
+La ejecución futura eleva `data_epoch` y el protocolo en la misma transacción;
+el cliente valida el manifiesto antes de drenar, aplica el evento v3 y reconstruye
+desde Supabase. El retiro administrativo es durable y el heartbeat no lo revierte.
+La matriz aislada de cinco casos, PostgreSQL 18, contratos, regresiones, build y
+BALAM QA 320–1440 px quedaron verdes. No se ejecutó limpieza ni se modificaron
+datos de negocio. Véase `docs/fixes/limpieza-h113-riesgo-real-equipos.md`.
+Las migraciones `20260818015300` y `20260818015400` están instaladas en el
+proyecto vinculado y el dry-run posterior informa `Remote database is up to date`.
+**Commit:** Pendiente de commit.
 
 ## Regla de actualización
 

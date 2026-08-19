@@ -1353,6 +1353,7 @@
     };
     const deviceLabel = device => device.display_name || `Equipo ${String(device.device_id || '').slice(-6).toUpperCase()}`;
     const deviceState = device => {
+      if (device.status === 'revoked') return { label: 'Retirado', cls: 'text-on-surface-variant bg-surface-container' };
       if (device.staleEpoch) return { label: 'Requiere resincronización', cls: 'text-danger bg-danger-soft' };
       if (Number(device.queue_blocked) > 0) return { label: 'Requiere atención', cls: 'text-danger bg-danger-soft' };
       if (device.connection === 'unknown') return { label: 'Estado actual desconocido', cls: 'text-on-surface-variant bg-surface-container' };
@@ -1368,6 +1369,19 @@
       await window.STORE.updateSyncDevice(editing, deviceName, deviceType);
       setEditing(null); toast('Equipo actualizado', 'var(--accent)');
     });
+    const setRetired = device => {
+      const retired = device.status !== 'revoked';
+      const message = retired
+        ? `Se retirará ${deviceLabel(device)} sin borrar su historial. Si reaparece, deberá reactivarse y resincronizarse. ¿Continuar?`
+        : `${deviceLabel(device)} volverá a requerir resincronización antes de operar. ¿Reactivar?`;
+      if (!window.confirm(message)) return;
+      const note = retired ? (window.prompt('Motivo del retiro (opcional):', '') || '') : '';
+      act(async () => {
+        await window.STORE.setSyncDeviceRetired(device.device_id, retired, note);
+        toast(retired ? 'Equipo retirado; la evidencia permanece en el Centro de equipos.'
+          : 'Equipo reactivado; deberá resincronizarse antes de operar.', 'var(--accent)');
+      });
+    };
     const retry = activity => act(async () => {
       await window.STORE.requestSyncRetry(activity.device_id, activity.operation_id);
       toast('Reintento solicitado. Se ejecutará cuando ese equipo vuelva a conectarse.', 'var(--accent)');
@@ -1438,7 +1452,13 @@
                 `${device.device_type === 'laptop' ? 'Laptop' : device.device_type === 'pc' ? 'PC' : 'Equipo'} · última señal ${relativeTime(device.last_seen_at)} · versión ${device.client_build || '—'}`),
             ]),
             h('span', { key: 'state', className: 'px-3 py-1 rounded-full text-overline font-bold ' + state.cls }, state.label),
-            window.AUTH.isAdmin() && h('button', { key: 'edit', onClick: () => beginEdit(device), className: 'px-3 h-9 border border-outline-variant rounded-lg text-caption' }, 'Identificar'),
+            window.AUTH.isAdmin() && h('div', { key: 'admin', className: 'flex flex-wrap gap-2' }, [
+              h('button', { key: 'edit', onClick: () => beginEdit(device), className: 'px-3 h-9 border border-outline-variant rounded-lg text-caption' }, 'Identificar'),
+              h('button', { key: 'retire', disabled: busy, onClick: () => setRetired(device),
+                'data-testid': `device-retire-${device.device_id}`,
+                className: 'px-3 h-9 border border-outline-variant rounded-lg text-caption disabled:opacity-40 ' + (device.status === 'revoked' ? 'text-primary' : 'text-danger') },
+              device.status === 'revoked' ? 'Reactivar' : 'Retirar'),
+            ]),
           ]),
           h('div', { key: 'counts', className: 'text-overline text-on-surface-variant mt-3' },
             `${Number(device.queue_pending) || 0} pendiente(s) · ${Number(device.queue_blocked) || 0} bloqueado(s) · última sincronización confirmada ${device.last_synced_at ? relativeTime(device.last_synced_at) : 'no disponible'}`),
@@ -2010,6 +2030,33 @@
     const stockAfter = stock.reduce((sum, row) => sum + Number(row.target_stock || 0), 0);
     const forced = preview && Array.isArray(preview.forced_dependencies) ? preview.forced_dependencies : [];
     const reasons = preview && Array.isArray(preview.blocked_reasons) ? preview.blocked_reasons : [];
+    const fleet = preview && preview.fleet || {};
+    const fleetSummary = fleet.summary || {};
+    const fleetDevices = Array.isArray(fleet.devices) ? fleet.devices : [];
+    const fleetAttention = Number(fleetSummary.attention || 0) + Number(fleetSummary.unsafe_legacy || 0);
+    const humanReason = reason => {
+      if (typeof reason === 'string') {
+        const labels = {
+          cleanup_production_locked: 'La limpieza sólo está disponible en preproducción.',
+          cleanup_empty_selection: 'Selecciona al menos un grupo comercial.',
+          minimum_client_protocol: 'Actualiza esta computadora antes de continuar.',
+        };
+        return labels[reason] || 'El plan necesita revisión antes de continuar.';
+      }
+      const name = reason.device_name || 'Un equipo';
+      if (reason.code === 'pending_operation_intersects_cleanup') {
+        return `Hay una operación pendiente en ${name} que podría afectar esta limpieza.`;
+      }
+      if (reason.code === 'pending_scope_unknown') {
+        return `${name} reportó operaciones pendientes sin detalle suficiente para demostrar que son ajenas a esta limpieza.`;
+      }
+      if (reason.code === 'client_cannot_be_fenced') {
+        return `${name} usa una versión anterior al control de época. Actualízalo o retíralo desde el Centro de equipos.`;
+      }
+      return reason.code === 'negative_stock'
+        ? 'La restitución produciría existencias negativas.'
+        : 'El servidor encontró un conflicto concreto que requiere atención.';
+    };
     return h(GlassCard, { className: 'p-6 mt-5', 'data-testid': 'selective-cleanup-card' }, [
       h('div', { key: 'over', className: 'text-overline font-bold uppercase tracking-widest text-primary' }, '¿Qué deseas limpiar?'),
       h(SerifHeading, { key: 'title', className: 'mt-1', children: 'Limpieza selectiva' }),
@@ -2052,8 +2099,25 @@
           h('div', { key: 'b', className: 'p-3 rounded-lg bg-success-soft' }, [h('div', { className: 'text-overline text-on-surface-variant' }, 'Stock después'), h('div', { className: 'font-mono text-title text-success' }, N(stockAfter))]),
         ]),
         forced.length > 0 && h('div', { key: 'forced', className: 'mt-4 text-caption text-warning' }, 'Dependencias incluidas automáticamente: ' + forced.join(', ')),
-        reasons.length > 0 && h('div', { key: 'blocked', className: 'mt-4 p-3 rounded-lg bg-danger-soft text-danger text-caption' },
-          'Plan no ejecutable: ' + reasons.map(reason => typeof reason === 'string' ? reason : reason.code).join(', ')),
+        fleetDevices.length > 0 && h('section', { key: 'fleet', className: 'mt-5 p-4 rounded-lg bg-surface', 'aria-label': 'Estado de equipos para la limpieza' }, [
+          h('div', { key: 'title', className: 'text-label-sm font-bold text-primary' }, 'Equipos'),
+          h('div', { key: 'ready', className: 'mt-2 text-caption text-success' },
+            `✓ ${N(fleetSummary.ready)} equipos listos`),
+          h('div', { key: 'offline', className: 'mt-1 text-caption text-on-surface-variant' },
+            `○ ${N(fleetSummary.compatible_offline)} equipo(s) apagado(s) — no bloquea`),
+          h('div', { key: 'update', className: 'mt-1 text-caption text-warning' },
+            `⚠ ${N(fleetSummary.update_on_return)} equipo(s) requiere actualización al volver a conectarse — no bloquea`),
+          h('div', { key: 'attention', className: 'mt-1 text-caption ' + (fleetAttention ? 'text-danger' : 'text-success') },
+            `⛔ ${N(fleetAttention)} operación pendiente requiere atención — sí bloquea`),
+          h('details', { key: 'details', className: 'mt-3', 'data-testid': 'cleanup-fleet-details' }, [
+            h('summary', { key: 'summary', className: 'text-caption font-semibold text-primary cursor-pointer' }, 'Ver detalle'),
+            h('div', { key: 'rows', className: 'mt-2 space-y-2' }, fleetDevices.map(device => h('div', {
+              key: device.device_id, className: 'p-2 rounded border border-outline-variant text-overline text-on-surface-variant break-words'
+            }, `${device.display_name} · ${device.state} · protocolo ${device.protocol_version} · esquema ${device.schema_version} · época ${device.data_epoch}`))),
+          ]),
+        ]),
+        reasons.length > 0 && h('div', { key: 'blocked', className: 'mt-4 p-3 rounded-lg bg-danger-soft text-danger text-caption space-y-1' },
+          reasons.map((reason, index) => h('div', { key: index }, humanReason(reason)))),
       ]),
       preset !== 'point-zero' && h('div', { key: 'actions', className: 'mt-5 flex flex-wrap gap-3' }, [
         h('button', { key: 'refresh', type: 'button', disabled: busy || !enabled, onClick: () => requestPreview(preset, selection, false),

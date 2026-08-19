@@ -700,6 +700,26 @@ antes de escribir. `point_zero_operations` conserva actor, equipo, versiones,
 respaldo relacionado, conteos y resultado; el contenido eliminado vive en
 `point_zero_backups`.
 
+### Limpieza selectiva y riesgo real de flota
+
+H-113 no usa la presencia en línea como prueba de seguridad. La autoridad
+`pos.test_data_cleanup_fleet_risk()` cruza el alcance semántico elegido con la
+proyección resumida de `sync_activity`, los expedientes de cuarentena y la
+capacidad de cada cliente para obedecer protocolo y época. Una terminal
+compatible apagada, una terminal cercable que deba actualizarse al volver o una
+operación pendiente conocida de otro dominio no detienen el plan. Sí lo hacen
+una operación que intersecta el alcance, una cola cuyo contenido no puede
+demostrarse o un cliente anterior al cerco H-77 que no haya sido retirado.
+
+Supabase sigue siendo la autoridad vigente. Una ejecución selectiva futura
+incrementa `data_epoch` y eleva `sync_protocol_min` dentro de la misma
+transacción antes de emitir el evento selectivo v3. `flushQueue()` consulta el
+manifiesto y falla cerrado antes de enviar; el retorno seguro aplica el evento
+por identidades exactas o archiva la cola en cuarentena, descarga la línea base
+autoritaria y adopta la época. Las lápidas impiden reinsertar documentos ya
+eliminados. `admin_set_sync_device_retired()` permite retirar una instalación
+sin encenderla, conserva actor/fecha/nota y el heartbeat no puede reactivarla.
+
 En el arranque, `STORE.init({ pull: true })`:
 
 1. Cuenta las operaciones que ya estaban pendientes.

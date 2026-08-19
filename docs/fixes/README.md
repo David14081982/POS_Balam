@@ -79,6 +79,7 @@ sesión de chat.
 | `vaciar-inventario.md` | H-76 | Vaciar el inventario entero para reemplazarlo, con respaldo obligatorio, guardas e invariante |
 | `punto-cero-administrativo.md` | H-98 | Punto Cero permanente con modo, preview, respaldo, RPC transaccional y auditoría |
 | `limpieza-selectiva-datos-prueba.md` | H-113 | Limpieza selectiva por grupos semánticos con restauración V1/V2 exacta y protocolo propio |
+| `limpieza-h113-riesgo-real-equipos.md` | H-116 | Riesgo real de flota para H-113 sin depender de equipos apagados |
 | `jerarquia-visual-etiqueta-60x40.md` | H-99 | Jerarquía visual 60×40 con identidad V2 intacta |
 | `sku-materializado-en-etiquetas.md` | H-100 | SKU visible por talla con paridad preview/PDF/impresión |
 | `chips-existencias-familiares.md` | H-103 | Chips compactos con proyección familiar V2 intacta |

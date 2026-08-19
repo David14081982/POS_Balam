@@ -15,9 +15,9 @@
   const SCHEMA = 'pos';
   const QKEY = 'balam_sync_queue';
   const QDB = 'balam_sync', QSTORE = 'durable_queue';
-  const SYNC_PROTOCOL_VERSION = 1;
-  const SYNC_SCHEMA_VERSION = 20260817014900;
-  const SELECTIVE_CLEANUP_PROTOCOL = 2;
+  const SYNC_PROTOCOL_VERSION = 2;
+  const SYNC_SCHEMA_VERSION = 20260818015300;
+  const SELECTIVE_CLEANUP_PROTOCOL = 3;
   const SYNC_CURSOR_KEY = 'balam_sync_domain_cursors_v1';
   const SYNC_DOMAINS = {
     permissions: { deps: [] }, config: { deps: ['permissions'] },
@@ -2298,7 +2298,11 @@
       localStorage.setItem(SELECTIVE_CLEANUP_SEEN, String(event.cleanup_id));
       localStorage.setItem('balam_sync_data_epoch', String(event.data_epoch));
     } catch (e) { /* la nube sigue siendo autoridad */ }
-    syncCompatibility = 'ok';
+    // Releer el manifiesto es obligatorio: aplicar el evento no concede por si
+    // solo compatibilidad de escritura. La epoca y el protocolo vigentes siguen
+    // siendo la autoridad antes de que flushQueue() pueda ejecutarse.
+    const protocolClient = await ensureClient();
+    if (protocolClient) await loadSyncProtocol(protocolClient);
     return { event, local, prune };
   }
   async function applyRemotePurge() {
@@ -3419,6 +3423,15 @@
     try { window.dispatchEvent(new CustomEvent('syncfleetchange')); } catch (e) { /* */ }
     return r.data;
   }
+  async function setSyncDeviceRetired(deviceId, retired, note) {
+    const c = await ensureClient(); if (!c) throw new Error('Sin conexión con la nube');
+    const r = await c.rpc('admin_set_sync_device_retired', {
+      p_device_id: deviceId, p_retired: retired === true, p_note: note || null,
+    });
+    if (r.error) throw new Error(r.error.message || 'No se pudo actualizar el retiro del equipo');
+    try { window.dispatchEvent(new CustomEvent('syncfleetchange')); } catch (e) { /* */ }
+    return Array.isArray(r.data) ? r.data[0] : r.data;
+  }
   async function requestSyncRetry(deviceId, operationId) {
     const c = await ensureClient(); if (!c) throw new Error('Sin conexión con la nube');
     const r = await c.rpc('admin_request_sync_retry', {
@@ -3673,7 +3686,7 @@
     }
   }
 
-  window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushClient, pushSale, settleLayaway, pushReturn, pushExchange, commitReferenceReclassification, ensureFolioBlock, deleteRow, deleteProductScope, settleCommission, closeCommissionPeriod, applyCommissionAdjustment, pushLoanOperation, migrateLocalLoans, pullDomain, fetchSaleByFolio, physicalCardAvailable, claimPhysicalCard, flushQueue, retryOperation, discardOperation, queueStatus, syncStatus, syncFleetStatus, updateSyncDevice, requestSyncRetry, markSyncActivityReviewed, decideSyncQuarantine, exportQuarantineReport, reconcileDomains, invalidateDomain, establishPointZero, pointZeroPreview, createPointZeroBackup, executePointZero, pointZeroReceipt, downloadPointZeroDocument, previewTestDataCleanup, createTestDataCleanupBackup, executeTestDataCleanup, testDataCleanupReceipt, downloadTestDataCleanupDocument, rebootstrapFromCloud, exportSyncRecovery, hasPendingLayaway, clearQueue, markResetApplied, purgeTestData, applyRemotePurge, applyRemoteSelectiveCleanup, pruneQueueForPurge, pruneQueueForSelectiveCleanup, readPurgeState, readSelectiveCleanupEvent, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
+  window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushClient, pushSale, settleLayaway, pushReturn, pushExchange, commitReferenceReclassification, ensureFolioBlock, deleteRow, deleteProductScope, settleCommission, closeCommissionPeriod, applyCommissionAdjustment, pushLoanOperation, migrateLocalLoans, pullDomain, fetchSaleByFolio, physicalCardAvailable, claimPhysicalCard, flushQueue, retryOperation, discardOperation, queueStatus, syncStatus, syncFleetStatus, updateSyncDevice, setSyncDeviceRetired, requestSyncRetry, markSyncActivityReviewed, decideSyncQuarantine, exportQuarantineReport, reconcileDomains, invalidateDomain, establishPointZero, pointZeroPreview, createPointZeroBackup, executePointZero, pointZeroReceipt, downloadPointZeroDocument, previewTestDataCleanup, createTestDataCleanupBackup, executeTestDataCleanup, testDataCleanupReceipt, downloadTestDataCleanupDocument, rebootstrapFromCloud, exportSyncRecovery, hasPendingLayaway, clearQueue, markResetApplied, purgeTestData, applyRemotePurge, applyRemoteSelectiveCleanup, pruneQueueForPurge, pruneQueueForSelectiveCleanup, readPurgeState, readSelectiveCleanupEvent, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
   window.STORE.pushProductFamilyBatch = pushProductFamilyBatch;
   window.CORE.registerSyncGateway(window.STORE);
 })();
