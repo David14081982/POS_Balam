@@ -5613,7 +5613,7 @@ modificados: no. Commit funcional: `4377378`. Pages run `32231813811` terminó
 en `success` y sirve el blob Git exacto
 `e3dda27ae013c9e4a2e599a9bbecbc4c5f365191`: 9,006,567 bytes, SHA-256
 `15d6a47288aeb02d06570adb8ee8705fe47fc37fde3b961537c19e4c2347177a`.
-Ajuste de exactitud de la fixture A: Pendiente de commit.
+Ajuste de exactitud de la fixture A: `2a7bc7b`.
 
 ## Regla de actualización
 
