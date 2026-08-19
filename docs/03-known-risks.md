@@ -5615,6 +5615,37 @@ en `success` y sirve el blob Git exacto
 `15d6a47288aeb02d06570adb8ee8705fe47fc37fde3b961537c19e4c2347177a`.
 Ajuste de exactitud de la fixture A: `2a7bc7b`.
 
+## H-117 — Limpiar datos de prueba expone el modelo técnico
+
+**Estado:** RESUELTO — CLIENTE LISTO PARA PUBLICAR
+**Fecha de registro:** 19/08/2026
+**Origen:** simplificación UX solicitada después del cierre H-116.
+**Evidencia inicial:** la pantalla publicada mezcla Punto Cero con dos modos de
+limpieza selectiva, oculta las casillas detrás de «Personalizada», expone
+«plan», dependencias y descripciones técnicas, y conserva «Actualizar plan»
+aunque el preview ya se recalcula automáticamente con debounce de 180 ms.
+**Riesgo:** que un dueño no identifique la acción normal, interprete como total
+de tienda un stock limitado a referencias afectadas o no entienda por qué la
+acción está bloqueada.
+**Alcance:** exclusivamente proyección y recorrido en `balam/settings.jsx`,
+arnés UX, BALAM QA, build y publicación.
+**No alcance:** H-98, H-113, H-116, SQL, cálculo de stock, dependencias,
+tombstones, identidad V1/V2, protocolo, época, rebootstrap, permisos, rollback,
+idempotencia o ejecución sobre datos reales.
+**Corrección:** la limpieza normal es ahora una sola tarjeta con siete casillas
+comerciales visibles y desmarcadas, preview automático, dependencias humanas,
+entradas/salidas/cambio neto de piezas, conservación explícita, flota resumida,
+estado exacto del CTA y una única acción «Continuar con la limpieza». Los
+detalles de stock no muestran UUID; los de flota reservan protocolo, esquema y
+época bajo detalle técnico. Punto Cero queda después, con máximo riesgo y sin
+cambio contractual. Rojo inicial: 6 fallos/1 aprobación. Verde: H-117 A–H 65/65
+con fixture, confirmación y reload; H-116 20/20 + UI 26/26; H-113 35/35 + UI
+21/21; H-98 24/24 + E2E 18/18 + diagnóstico 9/9; navegación 15/15; roles 15/15;
+smoke 17/17; módulos 42/42; migraciones 31/31; build reproducible 8/8. Sin
+Supabase ni limpieza real. Véase
+`docs/fixes/simplificacion-limpieza-datos-prueba.md`.
+**Commit:** Pendiente de commit.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

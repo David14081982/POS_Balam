@@ -43,8 +43,9 @@ await page.evaluate(()=>{
   document.body.innerHTML='<div id="h113-root"></div>';ReactDOM.createRoot(document.getElementById('h113-root')).render(React.createElement(window.SettingsScreen));
 });
 await page.getByTestId('settings-section-demo').click();await page.getByTestId('selective-cleanup-card').waitFor();
-check('presets A/B/C visibles',(await page.getByTestId('cleanup-preset-point-zero').count())===1&&(await page.getByTestId('cleanup-preset-operations').count())===1&&(await page.getByTestId('cleanup-preset-custom').count())===1);
-await page.getByTestId('cleanup-preset-custom').click();await page.getByTestId('cleanup-group-sales').waitFor();
+check('siete grupos comerciales visibles',(await page.getByTestId('selective-cleanup-card').locator('input[type=checkbox]').count())===7);
+for(const key of ['sales','returns','exchanges','loans','commissions'])await page.getByTestId('cleanup-group-'+key).check();
+await page.getByText('Todo está listo para limpiar.').waitFor();
 for(const width of [320,360,375,390,430,768,1024,1280,1440]){
   await page.setViewportSize({width,height:900});await page.waitForTimeout(30);
   const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth);
@@ -52,9 +53,9 @@ for(const width of [320,360,375,390,430,768,1024,1280,1440]){
   if(width===320||width===1440)await page.screenshot({path:path.join(EVIDENCE,`selective-cleanup-${width}.png`),fullPage:true});
 }
 check('grupos semánticos accesibles',await page.getByTestId('cleanup-group-returns').isVisible()&&await page.getByTestId('cleanup-group-exchanges').isVisible());
-check('preview muestra stock actual y posterior',(await page.locator('body').innerText()).includes('Stock actual')&&(await page.locator('body').innerText()).includes('Stock después'));
+check('preview muestra inventario antes y después',(await page.locator('body').innerText()).includes('Piezas afectadas antes')&&(await page.locator('body').innerText()).includes('Piezas afectadas después'));
 await page.getByTestId('selective-cleanup-open').click();
-check('modal tiene nombre accesible',await page.getByRole('dialog',{name:'Limpieza selectiva'}).isVisible());
+check('modal tiene nombre accesible',await page.getByRole('dialog',{name:'Confirmar limpieza'}).isVisible());
 await page.getByTestId('selective-cleanup-backup').click();
 await page.getByTestId('selective-cleanup-confirmation').waitFor();
 check('frase tiene label accesible',await page.getByLabel('Frase de confirmación').isVisible());
@@ -63,7 +64,7 @@ const next=page.getByRole('button',{name:'Continuar',exact:true});
 await page.getByTestId('selective-cleanup-confirmation').fill('LIMPIAR OPERACIONES ');check('frase inexacta bloquea',await next.isDisabled());
 await page.getByTestId('selective-cleanup-confirmation').fill('LIMPIAR OPERACIONES');check('frase exacta habilita',!(await next.isDisabled()));
 await next.click();check('advertencia final separada',(await page.locator('body').innerText()).includes('Advertencia final'));
-await page.getByTestId('selective-cleanup-execute').click();await page.getByText('LIMPIEZA SELECTIVA COMPLETADA',{exact:true}).waitFor();
+await page.getByTestId('selective-cleanup-execute').click();await page.getByText('LIMPIEZA COMPLETADA',{exact:true}).waitFor();
 check('ejecución única',(await page.evaluate(()=>window.__h113.execute))===1);
 await page.getByRole('button',{name:'Descargar comprobante',exact:true}).click();
 check('comprobante separado',(await page.evaluate(()=>window.__h113.receipt))===1&&(await page.evaluate(()=>window.__h113.downloads.map(x=>x.kind).join(',')))==='respaldo,comprobante');

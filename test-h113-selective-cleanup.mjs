@@ -91,11 +91,14 @@ check('DATA aplica alcance selectivo sin borrar productos',
 check('DATA incorpora ajustes retenidos sin restar su fila espejo',
   /commissionAdjustments[\s\S]*row\.ajustes/.test(data)
   && /l\.tipo !== 'ajuste'/.test(data));
-check('UI ofrece presets y grupos semánticos',
-  /cleanup-preset-operations/.test(settings) && /cleanup-group-sales/.test(settings)
-  && /cleanup-group-returns/.test(settings) && /cleanup-group-exchanges/.test(settings));
-check('UI muestra stock actual y objetivo',
-  /Stock actual/.test(settings) && /Stock después/.test(settings));
+check('UI ofrece directamente los siete grupos semánticos sin presets',
+  !/cleanup-preset-operations/.test(settings) && /cleanup-group-sales/.test(settings)
+  && /cleanup-group-returns/.test(settings) && /cleanup-group-exchanges/.test(settings)
+  && /cleanup-group-loans/.test(settings) && /cleanup-group-commissions/.test(settings)
+  && /cleanup-group-reclassifications/.test(settings) && /cleanup-group-customers/.test(settings));
+check('UI traduce entradas, salidas y objetivo de inventario afectado',
+  /piezas regresarán al inventario/.test(settings) && /piezas saldrán del inventario/.test(settings)
+  && /Piezas afectadas después/.test(settings));
 check('UI no expone tablas como checks',
   !/data-testid=['"]cleanup-group-(sale-items|return-items|exchange-items|commits)/.test(settings));
 check('confirmación selectiva conserva cinco puertas',
@@ -103,7 +106,7 @@ check('confirmación selectiva conserva cinco puertas',
   && /comprobante/.test(settings));
 check('éxito remoto y convergencia local se informan por separado',
   /remoteCommitted: true/.test(store) && /rebootstrapRequired/.test(store)
-  && /LIMPIEZA COMPLETADA EN EL SERVIDOR/.test(settings));
+  && /necesita recargarse para mostrar el resultado/.test(settings));
 check('modal y frase de confirmación tienen nombre accesible',
   /testId: 'selective-cleanup-dialog'/.test(settings)
   && /htmlFor: 'selective-cleanup-confirmation-input'/.test(settings));
