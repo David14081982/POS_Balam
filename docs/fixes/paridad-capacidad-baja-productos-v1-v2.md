@@ -3,7 +3,7 @@
 **Riesgo:** H-114
 **Estado:** RESUELTO
 **Fecha:** 18/08/2026
-**Commit:** Pendiente de commit
+**Commit funcional:** `52bb192c5f4ea04a5189569b88105b97ee755f6a`
 
 ## Problema y reproducción
 
@@ -78,6 +78,11 @@ exclusivamente `20260818015100` y `20260818015200`. Su ejecución sólo cambió
 funciones, permisos e historial técnico de migraciones: no hizo backfill ni
 modificó productos, stock, identidades o documentos comerciales. La verificación
 remota confirmó RPC, ACL, guardas, tombstone e idempotencia sin invocar una baja.
+GitHub Pages run `32213313076` terminó en `success`. El HTML público coincide
+byte a byte con el blob aprobado después de la normalización CRLF→LF de Pages:
+9,004,563 bytes y SHA-256
+`59c92c6d6561b3971fcf87f92e5681de5357e83bd44731338a0f374826e478ca`.
+La puerta H-115 de ciclo de vida se reabrió y aprobó 13/13.
 
 Firefox, WebKit, dos equipos físicos y periféricos continúan no verificados;
 Chrome aislado sí cubrió 320–1440 px, pull/reload, offline y convergencia por

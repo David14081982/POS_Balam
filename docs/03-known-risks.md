@@ -5511,16 +5511,18 @@ rutas comparten una operación durable, guardas locales, permiso
 tombstones sin borrar ventas, tickets, devoluciones, cambios, préstamos ni
 movimientos. La autoridad individual delega en la misma RPC.
 **Publicación:** migraciones `20260818015100` y `20260818015200` aplicadas sin
-backfill ni DML comercial; cliente productivo generado desde el mismo contrato.
+backfill ni DML comercial. Pages run `32213313076` terminó en `success` y
+sirve el blob normalizado exacto: 9,004,563 bytes, SHA-256
+`59c92c6d6561b3971fcf87f92e5681de5357e83bd44731338a0f374826e478ca`.
 **Pruebas:** contrato 13/13; E2E 5/5; BALAM QA 55/55 en 320–1440 px;
 migraciones 31/31; módulos 42/42; capacidades 40/40; cola 176/176; H-94
 49/49; H-101 26/26; H-102 15/15; H-111 28/28; H-115 19/19; plazos 38/38;
-préstamos 69/69; build reproducible 8/8.
+préstamos 69/69; build reproducible 8/8; puerta H-115 de ciclo de vida 13/13.
 **Riesgo residual:** Firefox, WebKit, dos equipos físicos y periféricos no se
 probaron; Chrome aislado cubrió responsive, offline, reload y convergencia. No
 se ejecutó ninguna baja real durante la validación.
 **Corrección:** `docs/fixes/paridad-capacidad-baja-productos-v1-v2.md`.
-**Commit:** incluido en el commit aislado H-114.
+**Commit funcional:** `52bb192c5f4ea04a5189569b88105b97ee755f6a`.
 
 ## H-115 — Editar V2 descarta Corte y Características generales con éxito falso
 
