@@ -5609,7 +5609,10 @@ y no se relajó ninguna guarda. Pruebas: H-116 20/20; PostgreSQL temporal con
 rollback `H116_RECONCILIATION_A_B_C_D_OK`; UI 26/26; H-113 35/35 y UI 21/21;
 H-77 20/20; H-79 17/17; H-81 15/15; cola 176/176; migraciones 31/31; módulos
 42/42; navegación 15/15; smoke 17/17; build reproducible 8/8. Datos reales
-modificados: no. Commit: Pendiente de commit.
+modificados: no. Commit funcional: `4377378`. Pages run `32231813811` terminó
+en `success` y sirve el blob Git exacto
+`e3dda27ae013c9e4a2e599a9bbecbc4c5f365191`: 9,006,567 bytes, SHA-256
+`15d6a47288aeb02d06570adb8ee8705fe47fc37fde3b961537c19e4c2347177a`.
 
 ## Regla de actualización
 

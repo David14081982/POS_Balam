@@ -132,7 +132,10 @@ bajo «Ver detalle». Pruebas: contrato H-116 20/20; PostgreSQL 18 temporal
 H-113 35/35 y UI 21/21; H-77 20/20; H-79 17/17; H-81 15/15; cola 176/176;
 migraciones 31/31; módulos 42/42; navegación 15/15; smoke bundle 17/17 y build
 reproducible 8/8. No se ejecutó limpieza, heartbeat, retiro ni cambio de cola
-real. Commit: Pendiente de commit.
+real. Commit funcional: `4377378`. Publicación: Pages run `32231813811`
+terminó en `success` y sirve el blob Git exacto
+`e3dda27ae013c9e4a2e599a9bbecbc4c5f365191`: 9,006,567 bytes, SHA-256
+`15d6a47288aeb02d06570adb8ee8705fe47fc37fde3b961537c19e4c2347177a`.
 
 ## Referencias
 
