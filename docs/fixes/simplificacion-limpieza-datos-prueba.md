@@ -1,9 +1,9 @@
 # Simplificación de Limpiar datos de prueba
 
 **Riesgo:** H-117
-**Estado:** RESUELTO — CLIENTE LISTO PARA PUBLICAR
+**Estado:** RESUELTO — CLIENTE PUBLICADO
 **Fecha:** 19/08/2026
-**Commit:** Pendiente de commit
+**Commit:** `47a5aba` (funcional); documentación final en commit posterior
 
 ## Problema y reproducción
 
@@ -90,7 +90,10 @@ anterior. Después de la corrección:
 El preview H-113 sólo contiene stock de referencias afectadas; por seguridad la
 UI no presenta esos subtotales como inventario total de la tienda. Punto Cero
 conserva su diagnóstico detallado visible porque es una guarda contractual H-98
-y no forma parte del recorrido normal.
+y no forma parte del recorrido normal. Pages run `32268509441` terminó en
+`success` y sirve el blob Git exacto
+`05fee95784f32e1247e3a86627922a6d17fd3799`: 9,007,471 bytes, SHA-256
+`de0ef356ed5d5ab89e54ec38f08d2726008ae3851210dd10efa24d1e72231cff`.
 
 ## Referencias
 

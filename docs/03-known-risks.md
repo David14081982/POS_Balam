@@ -5617,7 +5617,7 @@ Ajuste de exactitud de la fixture A: `2a7bc7b`.
 
 ## H-117 — Limpiar datos de prueba expone el modelo técnico
 
-**Estado:** RESUELTO — CLIENTE LISTO PARA PUBLICAR
+**Estado:** RESUELTO — CLIENTE PUBLICADO
 **Fecha de registro:** 19/08/2026
 **Origen:** simplificación UX solicitada después del cierre H-116.
 **Evidencia inicial:** la pantalla publicada mezcla Punto Cero con dos modos de
@@ -5644,7 +5644,10 @@ con fixture, confirmación y reload; H-116 20/20 + UI 26/26; H-113 35/35 + UI
 smoke 17/17; módulos 42/42; migraciones 31/31; build reproducible 8/8. Sin
 Supabase ni limpieza real. Véase
 `docs/fixes/simplificacion-limpieza-datos-prueba.md`.
-**Commit:** Pendiente de commit.
+Pages run `32268509441` terminó en `success`; el HTML público coincide con el
+blob Git `05fee95784f32e1247e3a86627922a6d17fd3799`: 9,007,471 bytes, SHA-256
+`de0ef356ed5d5ab89e54ec38f08d2726008ae3851210dd10efa24d1e72231cff`.
+**Commit:** `47a5aba` (funcional); documentación final en commit posterior.
 
 ## Regla de actualización
 
