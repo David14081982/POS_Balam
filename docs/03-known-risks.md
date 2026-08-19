@@ -5651,7 +5651,7 @@ blob Git `05fee95784f32e1247e3a86627922a6d17fd3799`: 9,007,471 bytes, SHA-256
 
 ## H-118 — `sync_activity` histórica bloquea H-113 sin cola reproducible
 
-**Estado:** ABIERTO — EN CORRECCIÓN
+**Estado:** RESUELTO — SERVIDOR Y CLIENTE PUBLICADOS
 **Fecha de registro:** 19/08/2026
 **Origen:** diagnóstico read-only del bloqueo informado para Equipo David.
 **Evidencia inicial:** Equipo David declara `queue_pending=0`,
@@ -5671,8 +5671,19 @@ presentación, verificar A–F, build y publicación segura.
 **No alcance:** modificar, reintentar, descartar, reconstruir o sincronizar
 operaciones reales; tocar stock, pagos, comisiones, movimientos, commits,
 tombstones o ejecutar H-113/Punto Cero.
-**Corrección:** Pendiente de implementación y pruebas.
-**Commit:** Pendiente de commit.
+**Corrección:** `sync_devices.queue_pending` decide si la observabilidad activa
+representa cola actual. Con cola cero, `sync_activity` queda visible como
+incidencia histórica sin replay y no bloquea; cuarentena, alcance desconocido y
+cliente pre-H-77 conservan sus guardas. La UI separa conteo actual e historial y
+nombra tipo, folio, fecha y estado. H-118 10/10; PostgreSQL H-116 A–D y H-118
+A–F con rollback; H-116 UI 29/29; H-117 65/65; regresión completa verde. El
+primer verificador remoto revirtió sus fixtures por dos `NOT NULL` omitidos; se
+alineó el arnés y el segundo intento pasó. Migraciones `15500/15600` aplicadas;
+dry-run final al día. Pages run `32308874312` publicó el blob exacto de 9,008,167
+bytes, SHA-256 `8f941529e958553a4b1664d7b0c31b98f6f5b7d92bd69ae74cb5009feaf4a1fe`.
+Datos reales modificados: no. Véase
+`docs/fixes/reconciliacion-sync-activity-historica.md`.
+**Commit:** `73b5b98` (funcional); documentación final en commit posterior.
 
 ## Regla de actualización
 
