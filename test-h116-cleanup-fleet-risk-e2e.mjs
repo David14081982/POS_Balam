@@ -22,18 +22,25 @@ await page.evaluate(()=>{
     {device_id:'ready',display_name:'Caja principal',state:'ready',protocol_version:2,schema_version:20260818015300,data_epoch:12},
     {device_id:'off',display_name:'Caja apagada',state:'compatible_offline',protocol_version:2,schema_version:20260818015300,data_epoch:12},
     {device_id:'old',display_name:'Laptop anterior',state:'update_on_return',protocol_version:1,schema_version:20260817014900,data_epoch:11},
+    {device_id:'david',display_name:'Equipo David',state:'ready',blocking:false,current_pending:0,
+      historical_incident_count:2,protocol_version:2,schema_version:20260818015300,data_epoch:12,
+      historical_incidents:[
+        {operation_id:'bg3',operation_type:'exchange',domain:'exchanges',reference:'BG-260812-0003',status:'retrying',updated_at:'2026-08-12T18:00:00Z'},
+        {operation_id:'bg6',operation_type:'exchange',domain:'exchanges',reference:'BG-260812-0006',status:'blocked',updated_at:'2026-08-12T19:00:00Z'},
+      ]},
   ];
   const preview=()=>({ok:true,system_mode:'preproduction',protocol_version:3,minimum_client_protocol:3,
     data_epoch:12,preset_requested:'operations',selection_requested:{sales:true},selection_normalized:{sales:true},
     forced_dependencies:[],counts:{ventas:3},documents:{sale_folios:['V-1']},stock:[],plan_hash:'b'.repeat(64),
-    fleet:{summary:{ready:1,compatible_offline:1,update_on_return:1,attention:window.__h116.blocked?1:0,unsafe_legacy:window.__h116.legacy?1:0,retired:0},
+    fleet:{summary:{ready:2,compatible_offline:1,update_on_return:1,attention:window.__h116.blocked?1:0,unsafe_legacy:window.__h116.legacy?1:0,retired:0,historical_incidents:2},
       devices:window.__h116.blocked
         ? devices.concat([{device_id:'pending',display_name:'Caja 2',state:'attention',blocking:true,protocol_version:1,schema_version:20260817014900,data_epoch:11}])
         : window.__h116.legacy
           ? devices.concat([{device_id:'legacy',display_name:'Caja heredada',state:'unsafe_legacy',blocking:true,protocol_version:0,schema_version:20260803011300,data_epoch:11}])
           : devices},
     blocked_reasons:window.__h116.blocked
-      ? [{code:'pending_operation_intersects_cleanup',device_name:'Caja 2',domains:['sales']}]
+      ? [{code:'pending_operation_intersects_cleanup',device_name:'Caja 2',domains:['sales'],
+          operations:[{operation_id:'h116-sale',operation_type:'sale',domain:'sales',reference:'H116-V-1',status:'pending'}]}]
       : window.__h116.legacy ? [{code:'client_cannot_be_fenced',device_name:'Caja heredada'}] : [],
     executable:!(window.__h116.blocked||window.__h116.legacy),client_ready:!window.__h116.localBlocked,
     ready:!(window.__h116.blocked||window.__h116.legacy||window.__h116.localBlocked)});
@@ -51,7 +58,8 @@ await page.evaluate(()=>{
 await page.getByTestId('settings-section-demo').click();await page.getByTestId('cleanup-group-sales').check();
 await page.getByTestId('cleanup-fleet-details').waitFor();
 let body=await page.locator('body').innerText();
-check('equipo vigente aparece en resumen',body.includes('1 listos'));
+check('equipos vigentes aparecen en resumen',body.includes('2 listos'));
+check('histórico se separa de pendientes actuales',body.includes('2 incidencias históricas — no bloquean'));
 check('apagado compatible no bloquea',body.includes('1 apagados — no bloquean'));
 check('equipo viejo se actualiza al volver y no bloquea',body.includes('1 se actualizarán al volver — no bloquean'));
 check('continuar habilitado',!(await page.getByTestId('selective-cleanup-open').isDisabled()));
@@ -61,6 +69,12 @@ check('esquema técnico oculto',!(await details.locator('div').first().isVisible
 await details.locator('summary').click();
 check('detalle técnico abre bajo demanda',await details.locator('div').first().isVisible());
 check('detalle contiene estado humano y protocolo/esquema/época',(await details.innerText()).includes('Caja apagada: Equipo apagado — no bloquea')&&(await details.innerText()).includes('protocolo 2')&&(await details.innerText()).includes('esquema 20260818015300')&&(await details.innerText()).includes('época 12'));
+check('Equipo David declara cero operaciones actuales',(await details.innerText()).includes('Equipo David: 0 operaciones pendientes actuales — no bloquea'));
+check('incidencias históricas conservan tipo, folio y estado',
+  (await details.innerText()).includes('un cambio BG-260812-0003')
+    && (await details.innerText()).includes('estado retrying')
+    && (await details.innerText()).includes('un cambio BG-260812-0006')
+    && (await details.innerText()).includes('estado blocked'));
 for(const width of [320,360,375,390,430,768,1024,1280,1440]){
   await page.setViewportSize({width,height:900});await page.waitForTimeout(30);
   const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth);
@@ -69,9 +83,9 @@ for(const width of [320,360,375,390,430,768,1024,1280,1440]){
 }
 await page.evaluate(()=>{window.__h116.blocked=true;});
 await page.getByTestId('cleanup-group-returns').check();
-await page.getByText('Hay una operación pendiente en Caja 2 que podría afectar esta limpieza.').waitFor();
+await page.getByText('Caja 2 tiene una venta H116-V-1 pendiente que afecta esta limpieza.').waitFor();
 body=await page.locator('body').innerText();
-check('bloqueo nombra el equipo y la causa humana',body.includes('Hay una operación pendiente en Caja 2'));
+check('bloqueo nombra equipo, tipo y folio',body.includes('Caja 2 tiene una venta H116-V-1 pendiente'));
 check('resumen marca equipo que requiere atención',body.includes('1 requieren atención — sí bloquean'));
 check('operación intersectante bloquea continuar',await page.getByTestId('selective-cleanup-open').isDisabled());
 await page.evaluate(()=>{window.__h116.blocked=false;window.__h116.legacy=true;});

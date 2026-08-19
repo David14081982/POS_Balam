@@ -2041,6 +2041,7 @@
     const fleet = preview && preview.fleet || {};
     const fleetSummary = fleet.summary || {};
     const fleetAttention = Number(fleetSummary.attention || 0) + Number(fleetSummary.unsafe_legacy || 0);
+    const fleetHistorical = Number(fleetSummary.historical_incidents || 0);
     const fleetDevices = Array.isArray(fleet.devices) ? fleet.devices : [];
     const products = window.DATA && Array.isArray(window.DATA.products) ? window.DATA.products : [];
     const productById = new Map(products.map(product => [String(product.id), product]));
@@ -2048,6 +2049,17 @@
       const product = productById.get(String(row.product_id));
       return [product && product.nombre || 'Producto afectado', product && product.sku ? `SKU ${product.sku}` : '',
         row.talla ? `Talla ${row.talla}` : ''].filter(Boolean).join(' · ');
+    };
+    const operationTypeLabel = operation => ({
+      sale: 'una venta', exchange: 'un cambio', return: 'una devolución',
+      loanOperation: 'un préstamo', loan: 'un préstamo', payment: 'un pago',
+      config: 'una configuración', upsert: 'una actualización de producto',
+    })[operation && operation.operation_type] || 'una operación';
+    const operationDetail = operation => {
+      const reference = operation && operation.reference ? ` ${operation.reference}` : '';
+      const moment = operation && operation.updated_at
+        ? ` del ${new Date(operation.updated_at).toLocaleString('es-MX')}` : '';
+      return `${operationTypeLabel(operation)}${reference}${moment}`;
     };
     const humanReason = reason => {
       if (typeof reason === 'string') {
@@ -2060,7 +2072,10 @@
       }
       const name = reason.device_name || 'Un equipo';
       if (reason.code === 'pending_operation_intersects_cleanup') {
-        return `Hay una operación pendiente en ${name} que podría afectar esta limpieza.`;
+        const operation = Array.isArray(reason.operations) && reason.operations[0];
+        return operation
+          ? `${name} tiene ${operationDetail(operation)} pendiente que afecta esta limpieza.`
+          : `${name} tiene una operación pendiente que afecta esta limpieza.`;
       }
       if (reason.code === 'pending_scope_unknown') {
         return `${name} reportó operaciones pendientes sin detalle suficiente para demostrar que son ajenas a esta limpieza.`;
@@ -2079,6 +2094,9 @@
       if (device.state === 'attention') return `${name}: Tiene una operación pendiente que afecta esta limpieza — bloquea`;
       if (device.state === 'unsafe_legacy') return `${name}: Equipo demasiado antiguo; actualízalo o retíralo — bloquea`;
       if (device.state === 'retired') return `${name}: Equipo retirado — no bloquea`;
+      if (Number(device.historical_incident_count || 0) > 0) {
+        return `${name}: 0 operaciones pendientes actuales — no bloquea`;
+      }
       return `${name}: Equipo listo — no bloquea`;
     };
     const dependencyMessages = [];
@@ -2146,13 +2164,26 @@
             h('div', { key: 'update', className: 'text-warning' }, `↻ ${N(fleetSummary.update_on_return)} se actualizarán al volver — no bloquean`),
             h('div', { key: 'attention', className: fleetAttention ? 'text-danger' : 'text-success' },
               `⛔ ${N(fleetAttention)} requieren atención — sí bloquean`),
+            fleetHistorical > 0 && h('div', { key: 'history', className: 'text-warning' },
+              `ℹ ${N(fleetHistorical)} incidencias históricas — no bloquean; quedan para revisión administrativa`),
           ]),
           h('details', { key: 'details', className: 'mt-3', 'data-testid': 'cleanup-fleet-details' }, [
             h('summary', { key: 'summary', className: 'text-caption font-semibold text-primary cursor-pointer' }, 'Ver detalle técnico'),
-            h('div', { key: 'rows', className: 'mt-2 space-y-2' }, fleetDevices.map(device => h('div', {
-              key: device.device_id, className: 'p-2 rounded border border-outline-variant text-caption text-on-surface-variant break-words'
-            }, [h('div', { key: 'human', className: device.blocking ? 'text-danger' : 'text-primary' }, fleetStateText(device)),
-              h('div', { key: 'technical', className: 'mt-1 text-overline' }, `${device.state} · protocolo ${device.protocol_version} · esquema ${device.schema_version} · época ${device.data_epoch}`)]))),
+            h('div', { key: 'rows', className: 'mt-2 space-y-2' }, fleetDevices.map(device => {
+              const historical = Array.isArray(device.historical_incidents) ? device.historical_incidents : [];
+              return h('div', {
+                key: device.device_id, className: 'p-2 rounded border border-outline-variant text-caption text-on-surface-variant break-words'
+              }, [h('div', { key: 'human', className: device.blocking ? 'text-danger' : 'text-primary' }, fleetStateText(device)),
+                h('div', { key: 'current', className: 'mt-1' },
+                  `Operaciones pendientes actuales: ${N(device.current_pending)}`),
+                historical.length > 0 && h('div', { key: 'history', className: 'mt-2 p-2 rounded bg-warning-soft text-warning' }, [
+                  h('div', { key: 'title', className: 'font-semibold' },
+                    `${N(historical.length)} incidencias históricas de la selección; no contienen una cola reproducible.`),
+                  ...historical.map(operation => h('div', { key: operation.operation_id, className: 'mt-1' },
+                    `${operationDetail(operation)} · estado ${operation.status || 'sin estado'}`)),
+                ]),
+                h('div', { key: 'technical', className: 'mt-1 text-overline' }, `${device.state} · protocolo ${device.protocol_version} · esquema ${device.schema_version} · época ${device.data_epoch}`)]);
+            })),
           ]),
         ]),
       ]),

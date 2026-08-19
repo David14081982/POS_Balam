@@ -72,7 +72,11 @@ y nunca prueba sincronía
 **Autoridad:** `pos.test_data_cleanup_fleet_risk()` cruza dominios seleccionados,
 `pos.sync_activity`, cuarentena y capacidad de cerco por protocolo/época. Un
 heartbeat ausente no es un bloqueo; sólo lo es riesgo concreto no aislado.
-**Definición:** migración `20260818015300` · **Creada por:** H-116
+La cola local declarada en `sync_devices.queue_pending` decide si una
+proyección activa es actual; con cola cero queda como incidencia histórica sin
+replay. La cuarentena conserva su bloqueo porque sí tiene ruta de restauración.
+**Definición:** migraciones `20260818015300`, `20260819015500` ·
+**Creada por:** H-116 · **Reconciliada por:** H-118
 
 ## ¿Una instalación retirada puede volver a activarse por heartbeat?
 **Autoridad:** `pos.admin_set_sync_device_retired()` y el estado durable

@@ -5649,6 +5649,31 @@ blob Git `05fee95784f32e1247e3a86627922a6d17fd3799`: 9,007,471 bytes, SHA-256
 `de0ef356ed5d5ab89e54ec38f08d2726008ae3851210dd10efa24d1e72231cff`.
 **Commit:** `47a5aba` (funcional); documentación final en commit posterior.
 
+## H-118 — `sync_activity` histórica bloquea H-113 sin cola reproducible
+
+**Estado:** ABIERTO — EN CORRECCIÓN
+**Fecha de registro:** 19/08/2026
+**Origen:** diagnóstico read-only del bloqueo informado para Equipo David.
+**Evidencia inicial:** Equipo David declara `queue_pending=0`,
+`queue_blocked=0`, protocolo 2, esquema H-116 y época vigente, pero conserva
+cuatro filas activas antiguas en `pos.sync_activity`. Dos son cambios de los
+folios BG-260812-0003 y BG-260812-0006. La función
+`pos.test_data_cleanup_fleet_risk()` cuenta todas esas filas como pendientes
+actuales y bloquea Cambios/Ventas, aunque `sync_activity` no contiene el payload
+durable y la cola local es la autoridad de lo pendiente.
+**Riesgo:** falso positivo que impide una limpieza segura y empuja al operador
+a descartar o reintentar operaciones históricas sin haber demostrado que exista
+un payload reproducible. La corrección inversa también sería peligrosa: una cola
+actual, cuarentena reproducible o cliente no cercable debe seguir bloqueando.
+**Alcance autorizado:** reconciliar únicamente la proyección de riesgo H-116,
+distinguir pendientes actuales de incidencias históricas, mejorar esa
+presentación, verificar A–F, build y publicación segura.
+**No alcance:** modificar, reintentar, descartar, reconstruir o sincronizar
+operaciones reales; tocar stock, pagos, comisiones, movimientos, commits,
+tombstones o ejecutar H-113/Punto Cero.
+**Corrección:** Pendiente de implementación y pruebas.
+**Commit:** Pendiente de commit.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

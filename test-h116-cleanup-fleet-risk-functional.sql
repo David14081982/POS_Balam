@@ -54,10 +54,12 @@ create table pos.sync_quarantine_cases(
   device_id text not null references pos.sync_devices(device_id),
   operation_id text not null,
   remote_epoch bigint not null,
+  user_id uuid not null,
   operation_type text not null,
   domain text,
   reference text,
   summary text not null,
+  payload_hash text not null,
   status text not null,
   updated_at timestamptz not null default now(),
   primary key(device_id,operation_id,remote_epoch)

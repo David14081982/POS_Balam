@@ -711,6 +711,14 @@ operación pendiente conocida de otro dominio no detienen el plan. Sí lo hacen
 una operación que intersecta el alcance, una cola cuyo contenido no puede
 demostrarse o un cliente anterior al cerco H-77 que no haya sido retirado.
 
+`sync_devices.queue_pending` es el conteo vigente de la cola durable declarada
+por el equipo; `sync_activity` sólo es su observabilidad resumida. Cuando el
+conteo vigente es cero, una proyección activa antigua no contiene payload ni
+tiene ruta propia de replay: se conserva como incidencia histórica visible y no
+bloquea H-113. La cuarentena sí conserva una ruta de replay autorizable y sigue
+bloqueando cuando intersecta. Con cola mayor que cero, una correspondencia
+incompleta entre conteo y proyecciones falla cerrada como alcance desconocido.
+
 Supabase sigue siendo la autoridad vigente. Una ejecución selectiva futura
 incrementa `data_epoch` y eleva `sync_protocol_min` dentro de la misma
 transacción antes de emitir el evento selectivo v3. `flushQueue()` consulta el
