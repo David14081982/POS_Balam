@@ -5594,6 +5594,23 @@ blob Git en 9,006,415 bytes y SHA-256
 `11896105c98d3e8963786521bc0a5986ad4a951e868a6ce6450263e1094d5272`.
 **Commit:** `86011e7` (funcional); documentación final en commit posterior.
 
+**Reconciliación 19/08/2026:** el resultado posterior de cuatro equipos
+«incompatibles» no fue una lectura del producto: combinó el arnés H-113 y su
+fixture histórico desde un checkout local `dc74757`, no el blob H-116 publicado.
+La autoridad remota sí tenía
+`20260818015300/15400`, y Pages coincidía con `86011e7` en 9,006,415 bytes y
+SHA-256 `11896105c98d3e8963786521bc0a5986ad4a951e868a6ce6450263e1094d5272`.
+Una nueva prueba funcional aislada fija A/B/C/D: apagada compatible no bloquea;
+antigua cercable con operación intersectante bloquea; antigua cercable con
+operación ajena aislable no bloquea; anterior a H-77 no retirada bloquea. La UI
+explica esos estados y la sincronización local con texto humano, dejando códigos,
+esquema, protocolo y época bajo «Ver detalle». La autoridad SQL H-116 no cambió
+y no se relajó ninguna guarda. Pruebas: H-116 20/20; PostgreSQL temporal con
+rollback `H116_RECONCILIATION_A_B_C_D_OK`; UI 26/26; H-113 35/35 y UI 21/21;
+H-77 20/20; H-79 17/17; H-81 15/15; cola 176/176; migraciones 31/31; módulos
+42/42; navegación 15/15; smoke 17/17; build reproducible 8/8. Datos reales
+modificados: no. Commit: Pendiente de commit.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

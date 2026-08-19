@@ -130,5 +130,6 @@ end $$;
 
 \ir supabase/migrations/20260818015300_pos_h116_cleanup_fleet_risk.sql
 \ir supabase/migrations/20260818015400_pos_h116_cleanup_fleet_risk_verification.sql
+\ir test-h116-reconciliation-functional.sql
 
 select 'H116_FUNCTIONAL_OK' as result;

@@ -2031,9 +2031,7 @@
     const forced = preview && Array.isArray(preview.forced_dependencies) ? preview.forced_dependencies : [];
     const reasons = preview && Array.isArray(preview.blocked_reasons) ? preview.blocked_reasons : [];
     const fleet = preview && preview.fleet || {};
-    const fleetSummary = fleet.summary || {};
     const fleetDevices = Array.isArray(fleet.devices) ? fleet.devices : [];
-    const fleetAttention = Number(fleetSummary.attention || 0) + Number(fleetSummary.unsafe_legacy || 0);
     const humanReason = reason => {
       if (typeof reason === 'string') {
         const labels = {
@@ -2056,6 +2054,15 @@
       return reason.code === 'negative_stock'
         ? 'La restitución produciría existencias negativas.'
         : 'El servidor encontró un conflicto concreto que requiere atención.';
+    };
+    const fleetStateText = device => {
+      const name = device.display_name || 'Equipo';
+      if (device.state === 'compatible_offline') return `${name}: Equipo apagado — no bloquea`;
+      if (device.state === 'update_on_return') return `${name}: Se actualizará al volver — no bloquea`;
+      if (device.state === 'attention') return `${name}: Tiene una operación pendiente que afecta esta limpieza — bloquea`;
+      if (device.state === 'unsafe_legacy') return `${name}: Equipo demasiado antiguo; actualízalo o retíralo — bloquea`;
+      if (device.state === 'retired') return `${name}: Equipo retirado — no bloquea`;
+      return `${name}: Equipo listo — no bloquea`;
     };
     return h(GlassCard, { className: 'p-6 mt-5', 'data-testid': 'selective-cleanup-card' }, [
       h('div', { key: 'over', className: 'text-overline font-bold uppercase tracking-widest text-primary' }, '¿Qué deseas limpiar?'),
@@ -2101,14 +2108,11 @@
         forced.length > 0 && h('div', { key: 'forced', className: 'mt-4 text-caption text-warning' }, 'Dependencias incluidas automáticamente: ' + forced.join(', ')),
         fleetDevices.length > 0 && h('section', { key: 'fleet', className: 'mt-5 p-4 rounded-lg bg-surface', 'aria-label': 'Estado de equipos para la limpieza' }, [
           h('div', { key: 'title', className: 'text-label-sm font-bold text-primary' }, 'Equipos'),
-          h('div', { key: 'ready', className: 'mt-2 text-caption text-success' },
-            `✓ ${N(fleetSummary.ready)} equipos listos`),
-          h('div', { key: 'offline', className: 'mt-1 text-caption text-on-surface-variant' },
-            `○ ${N(fleetSummary.compatible_offline)} equipo(s) apagado(s) — no bloquea`),
-          h('div', { key: 'update', className: 'mt-1 text-caption text-warning' },
-            `⚠ ${N(fleetSummary.update_on_return)} equipo(s) requiere actualización al volver a conectarse — no bloquea`),
-          h('div', { key: 'attention', className: 'mt-1 text-caption ' + (fleetAttention ? 'text-danger' : 'text-success') },
-            `⛔ ${N(fleetAttention)} operación pendiente requiere atención — sí bloquea`),
+          h('div', { key: 'states', className: 'mt-2 space-y-1' }, fleetDevices.map(device => h('div', {
+            key: device.device_id, className: 'text-caption ' + (device.blocking ? 'text-danger' :
+              (device.state === 'update_on_return' ? 'text-warning' : 'text-success')),
+            'data-testid': `cleanup-fleet-state-${device.state}`,
+          }, fleetStateText(device)))),
           h('details', { key: 'details', className: 'mt-3', 'data-testid': 'cleanup-fleet-details' }, [
             h('summary', { key: 'summary', className: 'text-caption font-semibold text-primary cursor-pointer' }, 'Ver detalle'),
             h('div', { key: 'rows', className: 'mt-2 space-y-2' }, fleetDevices.map(device => h('div', {
@@ -2118,6 +2122,9 @@
         ]),
         reasons.length > 0 && h('div', { key: 'blocked', className: 'mt-4 p-3 rounded-lg bg-danger-soft text-danger text-caption space-y-1' },
           reasons.map((reason, index) => h('div', { key: index }, humanReason(reason)))),
+        preview.client_ready === false && h('div', { key: 'local-sync', role: 'alert', 'data-testid': 'cleanup-local-sync-block',
+          className: 'mt-4 p-3 rounded-lg bg-warning-soft text-warning text-caption' },
+        'Esta computadora todavía está sincronizando sus cambios. Espera a que su cola y conflictos queden en cero; los equipos apagados no necesitan encenderse.'),
       ]),
       preset !== 'point-zero' && h('div', { key: 'actions', className: 'mt-5 flex flex-wrap gap-3' }, [
         h('button', { key: 'refresh', type: 'button', disabled: busy || !enabled, onClick: () => requestPreview(preset, selection, false),

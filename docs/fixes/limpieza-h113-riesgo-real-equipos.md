@@ -105,6 +105,35 @@ Un cliente realmente anterior al cerco H-77 continúa bloqueando salvo retiro
 administrativo explícito. La limpieza real sigue requiriendo autorización
 separada y no fue ejecutada durante H-116.
 
+## Reconciliación del cierre — 19/08/2026
+
+El diagnóstico que volvió a informar `client_schema_incompatible` no fue una
+lectura del producto H-116: combinó `test-h113-selective-cleanup-e2e.mjs` con
+el fixture histórico de cuatro incompatibles desde un checkout local en
+`dc74757`. El arnés sirve el `index.html` local por `127.0.0.1`; no abrió Pages
+ni verificó el blob H-116.
+En ese momento `origin/main` ya estaba en `0984df2`, Supabase registraba
+`20260818015300/15400` y Pages servía el blob H-116 exacto de 9,006,415 bytes,
+SHA-256 `11896105c98d3e8963786521bc0a5986ad4a951e868a6ce6450263e1094d5272`.
+
+La reproducción SQL A/B/C/D confirmó que la autoridad desplegada sí retira
+`cleanup_not_synchronized` y `client_schema_incompatible`: una terminal
+compatible apagada no bloquea; una antigua cercable con operación intersectante
+bloquea; una antigua cercable con operación ajena aislable no bloquea y queda
+`update_on_return`; un cliente anterior a H-77 no retirado bloquea como
+`unsafe_legacy`. El cierre original no ejercitaba directamente los dos últimos
+casos con esas precondiciones exactas; la regresión permanente ahora sí.
+
+La corrección de cliente no cambia la autoridad ni relaja seguridad. Traduce
+cada estado a una acción humana visible y explica también cuando sólo esta
+computadora continúa sincronizando. Protocolo, esquema, época y códigos quedan
+bajo «Ver detalle». Pruebas: contrato H-116 20/20; PostgreSQL 18 temporal
+`H116_RECONCILIATION_A_B_C_D_OK` con rollback; UI H-116 26/26 en 320–1440 px;
+H-113 35/35 y UI 21/21; H-77 20/20; H-79 17/17; H-81 15/15; cola 176/176;
+migraciones 31/31; módulos 42/42; navegación 15/15; smoke bundle 17/17 y build
+reproducible 8/8. No se ejecutó limpieza, heartbeat, retiro ni cambio de cola
+real. Commit: Pendiente de commit.
+
 ## Referencias
 
 - Riesgo: `docs/03-known-risks.md#h-116--h-113-confunde-terminal-apagada-con-terminal-insegura`

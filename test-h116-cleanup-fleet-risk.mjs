@@ -4,6 +4,7 @@ const read = path => fs.readFileSync(path, 'utf8');
 const exists = path => fs.existsSync(path) ? read(path) : '';
 const migration = exists('supabase/migrations/20260818015300_pos_h116_cleanup_fleet_risk.sql');
 const verification = exists('supabase/migrations/20260818015400_pos_h116_cleanup_fleet_risk_verification.sql');
+const reconciliation = exists('test-h116-reconciliation-functional.sql');
 const store = read('balam/store.jsx');
 const settings = read('balam/settings.jsx');
 const failures = [];
@@ -31,7 +32,8 @@ check('6. un cliente demasiado antiguo falla cerrado',
 check('7. una operacion conocida que intersecta el plan bloquea',
   /pending_operation_intersects_cleanup/i.test(migration));
 check('8. una operacion conocida ajena al plan no bloquea',
-  /pending_unrelated/i.test(verification) && /state='ready'\s+and blocking=false/i.test(verification));
+  /c-isolated/i.test(reconciliation)
+    && /state='update_on_return'\s+and blocking=false/i.test(reconciliation));
 check('9. una cola sin proyeccion suficiente falla cerrada',
   /pending_scope_unknown/i.test(migration));
 check('10. la cuarentena participa en la interseccion',
@@ -52,14 +54,17 @@ check('16. existe autoridad administrativa para retirar/reactivar equipos',
   /admin_set_sync_device_retired/i.test(migration) && /setSyncDeviceRetired/.test(store));
 check('17. el heartbeat no reactiva silenciosamente un equipo retirado',
   /status\s*<>\s*'revoked'/i.test(migration));
-check('18. la UI normal resume listos, apagados, actualizables y atencion',
-  /equipos listos/i.test(settings) && /apagado[^\n]*no bloquea/i.test(settings)
-    && /actualizaci[oó]n al volver/i.test(settings) && /operaci[oó]n pendiente requiere atenci[oó]n/i.test(settings));
+check('18. la UI traduce A/B/C/D sin exponer codigos como mensaje principal',
+  /Equipo apagado — no bloquea/i.test(settings)
+    && /Se actualizará al volver — no bloquea/i.test(settings)
+    && /Tiene una operación pendiente que afecta esta limpieza — bloquea/i.test(settings)
+    && /Equipo demasiado antiguo; actualízalo o retíralo — bloquea/i.test(settings));
 check('19. la UI reserva schema/protocolo para Ver detalle',
   /Ver detalle/i.test(settings) && /cleanup-fleet-details/.test(settings));
-check('20. la verificacion ejecuta los cinco casos obligatorios',
-  ['compatible_offline','old_empty_queue','old_intersecting','pending_unrelated','retired_device']
-    .every(token => verification.includes(token)));
+check('20. la verificacion ejecuta A/B/C/D y el retiro administrativo',
+  ['a-offline','b-intersects','c-isolated','d-pre-h77']
+    .every(token => reconciliation.includes(token))
+    && verification.includes('retired_device'));
 
 console.log(`\nH-116: ${passed} aprobadas, ${failures.length} fallidas`);
 if (failures.length) process.exit(1);
