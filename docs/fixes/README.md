@@ -96,6 +96,7 @@ sesión de chat.
 | `certificacion-preproduccion-v2.md` | H-110 | Recorrido V2 transversal, aislado y con limpieza exacta |
 | `paridad-selector-tallas-pos-v1-v2.md` | H-111 | POS V1/V2 selecciona primero talla y preserva la referencia física exacta |
 | `persistencia-corte-caracteristicas-editar-v2.md` | H-115 | Editar V2 materializa Corte y Características antes de validar/persistir cada referencia |
+| `paridad-capacidad-baja-productos-v1-v2.md` | H-114 | Baja V1/V2 exacta, familiar, durable y atómica sin reescribir históricos |
 
 Documentación financiera relacionada, creada antes de este índice:
 

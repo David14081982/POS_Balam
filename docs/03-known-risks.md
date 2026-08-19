@@ -5495,6 +5495,33 @@ autorización separada.
 **Corrección:** `docs/fixes/limpieza-selectiva-datos-prueba.md`.
 **Commit:** `8b7042f`.
 
+## H-114 — V2 carece de una capacidad de baja equivalente a V1
+
+**Estado:** RESUELTO
+**Fecha de registro:** 18/08/2026
+**Origen:** Certificación Maestra Integral de Producto.
+**Reproducción:** Inventario exponía `Eliminar` para V1, pero ninguna proyección
+familiar V2 podía iniciar una baja, ni siquiera una familia singleton.
+**Causa:** la proyección comercial H-102 no tiene un `products.id` propio y la
+acción individual fue retirada sin introducir una selección exacta de alcance.
+**Corrección:** V2 singleton termina en su ID exacto; una familia múltiple exige
+elegir una referencia humana concreta o el conjunto activo completo. Ambas
+rutas comparten una operación durable, guardas locales, permiso
+`inventory.delete` y la RPC atómica `pos.delete_products_checked_v2`, que crea
+tombstones sin borrar ventas, tickets, devoluciones, cambios, préstamos ni
+movimientos. La autoridad individual delega en la misma RPC.
+**Publicación:** migraciones `20260818015100` y `20260818015200` aplicadas sin
+backfill ni DML comercial; cliente productivo generado desde el mismo contrato.
+**Pruebas:** contrato 13/13; E2E 5/5; BALAM QA 55/55 en 320–1440 px;
+migraciones 31/31; módulos 42/42; capacidades 40/40; cola 176/176; H-94
+49/49; H-101 26/26; H-102 15/15; H-111 28/28; H-115 19/19; plazos 38/38;
+préstamos 69/69; build reproducible 8/8.
+**Riesgo residual:** Firefox, WebKit, dos equipos físicos y periféricos no se
+probaron; Chrome aislado cubrió responsive, offline, reload y convergencia. No
+se ejecutó ninguna baja real durante la validación.
+**Corrección:** `docs/fixes/paridad-capacidad-baja-productos-v1-v2.md`.
+**Commit:** incluido en el commit aislado H-114.
+
 ## H-115 — Editar V2 descarta Corte y Características generales con éxito falso
 
 **Estado:** RESUELTO

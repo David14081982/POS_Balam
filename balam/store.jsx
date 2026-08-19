@@ -482,6 +482,7 @@
   const needsUuidQueueId = op => op && (
     (op.type === 'upsert' && (op.kind === 'products' || op.table === 'products'))
     || (op.type === 'softDelete' && op.kind === 'products')
+    || op.type === 'productDeleteScope'
   );
   function enqueue(op) {
     const q = loadQ();
@@ -974,6 +975,31 @@
         return true;
       }
       if (op.type === 'delete') { const r = await c.from(op.table).delete().eq(op.col, op.val); return r.error ? failOp(r.error) : true; }
+      if (op.type === 'productDeleteScope') {
+        const r = await c.rpc('delete_products_checked_v2', {
+          p_operation_id: op.id,
+          p_scope: op.scope,
+          p_reference_family_id: op.referenceFamilyId || null,
+          p_targets: op.targets || [],
+          p_device_id: window.CORE.getDeviceId(),
+          p_protocol_version: SYNC_PROTOCOL_VERSION,
+          p_data_epoch: Number(syncManifest && syncManifest.data_epoch),
+        });
+        if (r.error || !r.data) return failOp(r.error || { code: 'empty_response', message: 'La baja no devolvió confirmación' });
+        const rawRows = Array.isArray(r.data) ? r.data : (r.data.rows || []);
+        const m = MAP.products;
+        if (rawRows.length && m && m.fromRow && window.DATA && window.DATA.applySyncResult) {
+          const expected = {};
+          (op.targets || []).forEach(target => { expected[target.id] = Number(target.baseVersion) || 0; });
+          const remote = rawRows.map(m.fromRow);
+          const result = window.DATA.applySyncResult('products', remote, expected, 'delete') || {};
+          rebaseQueuedVersions('products', remote);
+          if (result.conflicts && !(await resyncProductsAfterConflict(c, op.id))) {
+            return failOp({ code: 'product_resync_required', message: 'El inventario requiere resincronización antes de continuar' }, result);
+          }
+        }
+        return true;
+      }
       if (op.type === 'softDelete') {
         const r = op.kind === 'products'
           ? await c.rpc(syncManifest ? 'delete_product_checked_v2' : 'delete_product_checked', {
@@ -1697,6 +1723,23 @@
     const m = MAP[kind]; if (!m) return;
     if (m.localKey) return run({ type: 'softDelete', kind, table: m.table, col: m.conflict, val: id, baseVersion: Number(baseVersion) || 0 });
     return run({ type: 'delete', table: m.table, col: m.conflict, val: id });
+  }
+  function deleteProductScope(payload) {
+    if (!enabled || !hasLocalWriter(false)) {
+      throw Object.assign(new Error('La baja requiere una cola local durable disponible'), { code: 'PRODUCT_DELETE_QUEUE_UNAVAILABLE' });
+    }
+    payload = payload || {};
+    const targets = Array.isArray(payload.targets) ? payload.targets.map(target => ({
+      id: String(target.id || ''), baseVersion: Number(target.baseVersion) || 0,
+    })) : [];
+    if (!targets.length || targets.some(target => !target.id)) {
+      throw Object.assign(new Error('La baja requiere products.id exactos'), { code: 'PRODUCT_DELETE_SCOPE_INVALID' });
+    }
+    return run({
+      type: 'productDeleteScope', kind: 'products', table: 'products',
+      scope: payload.scope, referenceFamilyId: payload.referenceFamilyId || null,
+      rowIds: targets.map(target => target.id), targets,
+    });
   }
   function settleCommission({ operationId, sellerId }) {
     if (!enabled) return;
@@ -3630,7 +3673,7 @@
     }
   }
 
-  window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushClient, pushSale, settleLayaway, pushReturn, pushExchange, commitReferenceReclassification, ensureFolioBlock, deleteRow, settleCommission, closeCommissionPeriod, applyCommissionAdjustment, pushLoanOperation, migrateLocalLoans, pullDomain, fetchSaleByFolio, physicalCardAvailable, claimPhysicalCard, flushQueue, retryOperation, discardOperation, queueStatus, syncStatus, syncFleetStatus, updateSyncDevice, requestSyncRetry, markSyncActivityReviewed, decideSyncQuarantine, exportQuarantineReport, reconcileDomains, invalidateDomain, establishPointZero, pointZeroPreview, createPointZeroBackup, executePointZero, pointZeroReceipt, downloadPointZeroDocument, previewTestDataCleanup, createTestDataCleanupBackup, executeTestDataCleanup, testDataCleanupReceipt, downloadTestDataCleanupDocument, rebootstrapFromCloud, exportSyncRecovery, hasPendingLayaway, clearQueue, markResetApplied, purgeTestData, applyRemotePurge, applyRemoteSelectiveCleanup, pruneQueueForPurge, pruneQueueForSelectiveCleanup, readPurgeState, readSelectiveCleanupEvent, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
+  window.STORE = { init, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushClient, pushSale, settleLayaway, pushReturn, pushExchange, commitReferenceReclassification, ensureFolioBlock, deleteRow, deleteProductScope, settleCommission, closeCommissionPeriod, applyCommissionAdjustment, pushLoanOperation, migrateLocalLoans, pullDomain, fetchSaleByFolio, physicalCardAvailable, claimPhysicalCard, flushQueue, retryOperation, discardOperation, queueStatus, syncStatus, syncFleetStatus, updateSyncDevice, requestSyncRetry, markSyncActivityReviewed, decideSyncQuarantine, exportQuarantineReport, reconcileDomains, invalidateDomain, establishPointZero, pointZeroPreview, createPointZeroBackup, executePointZero, pointZeroReceipt, downloadPointZeroDocument, previewTestDataCleanup, createTestDataCleanupBackup, executeTestDataCleanup, testDataCleanupReceipt, downloadTestDataCleanupDocument, rebootstrapFromCloud, exportSyncRecovery, hasPendingLayaway, clearQueue, markResetApplied, purgeTestData, applyRemotePurge, applyRemoteSelectiveCleanup, pruneQueueForPurge, pruneQueueForSelectiveCleanup, readPurgeState, readSelectiveCleanupEvent, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
   window.STORE.pushProductFamilyBatch = pushProductFamilyBatch;
   window.CORE.registerSyncGateway(window.STORE);
 })();

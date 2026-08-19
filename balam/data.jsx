@@ -4808,6 +4808,72 @@
     };
   }
 
+  const PRODUCT_DELETE_ERROR = {
+    LAYAWAY_PRODUCT_LOCKED: 'La referencia está en una liquidación pendiente; espera su confirmación.',
+    LAYAWAY_ACTIVE: 'La referencia participa en un apartado activo. Liquídalo o cancélalo antes de eliminarla.',
+    PRODUCT_OPEN_LOAN: 'La referencia participa en un préstamo abierto. Registra su devolución o faltante antes de eliminarla.',
+    PRODUCT_QUEUE_PENDING: 'Hay operaciones pendientes de sincronizar. Conéctate y espera a que la cola quede vacía.',
+    PRODUCT_RETURNABLE_HISTORY: 'La referencia todavía puede necesitar restitución por una devolución o cambio vigente.',
+    PRODUCT_NOT_FOUND: 'La referencia ya no está activa en este inventario.',
+    REFERENCE_FAMILY_SCOPE_MISMATCH: 'La familia cambió en otra operación. Vuelve a abrirla antes de eliminar.',
+  };
+  function productDeletionGuard(productIds, { ignoreQueuePending = false } = {}) {
+    const ids = [...new Set((productIds || []).filter(Boolean).map(String))];
+    const targets = ids.map(id => products.find(row => String(row.id) === id)).filter(Boolean);
+    const fail = (code, detail) => ({ ok: false, code, error: PRODUCT_DELETE_ERROR[code] || code, detail });
+    if (!ids.length || targets.length !== ids.length) return fail('PRODUCT_NOT_FOUND');
+    try { assertLayawayProductsUnlocked(ids); } catch (error) { return fail(error.code || 'LAYAWAY_PRODUCT_LOCKED'); }
+    const wanted = new Set(ids);
+    if (sales.some(sale => sale.estado === 'Apartado'
+        && (sale.lineas || []).some(line => wanted.has(String(line.productId || ''))))) {
+      return fail('LAYAWAY_ACTIVE');
+    }
+    let pending = 0;
+    try {
+      const status = window.CORE.invokeSync('queueStatus');
+      pending = status && Array.isArray(status.operations) ? status.operations.length : Number(status && status.pending) || 0;
+    } catch (error) { pending = 0; }
+    if (!ignoreQueuePending && pending > 0) return fail('PRODUCT_QUEUE_PENDING', { pending });
+    if (targets.some(row => loanedQty(row.id) > 0)) return fail('PRODUCT_OPEN_LOAN');
+    const returnable = sales.some(sale => isReturnable(sale)
+      && returnDeadline(sale).status !== 'vencido'
+      && saleLineBalance(sale.folio).some(line => wanted.has(String(line.productId || '')) && Number(line.disponible) > 0));
+    if (returnable) return fail('PRODUCT_RETURNABLE_HISTORY');
+    return {
+      ok: true, targets,
+      stock: targets.reduce((sum, row) => sum + totalStock(row), 0),
+      history: targets.some(row => referenceHasOperations(row.id)),
+    };
+  }
+  function removeProductScope({ scope, referenceFamilyId, productIds, ignoreQueuePending = false } = {}) {
+    const ids = [...new Set((productIds || []).filter(Boolean).map(String))];
+    const guard = productDeletionGuard(ids, { ignoreQueuePending });
+    if (!guard.ok) return guard;
+    const familyId = referenceFamilyId == null ? null : String(referenceFamilyId);
+    if (scope === 'family') {
+      const activeFamilyIds = products.filter(row => isV2Reference(row)
+        && String(row.referenceFamilyId || '') === familyId).map(row => String(row.id)).sort();
+      if (!familyId || JSON.stringify(activeFamilyIds) !== JSON.stringify(ids.slice().sort())) {
+        return { ok: false, code: 'REFERENCE_FAMILY_SCOPE_MISMATCH', error: PRODUCT_DELETE_ERROR.REFERENCE_FAMILY_SCOPE_MISMATCH };
+      }
+    } else if (scope !== 'reference' || ids.length !== 1) {
+      return { ok: false, code: 'REFERENCE_FAMILY_SCOPE_MISMATCH', error: PRODUCT_DELETE_ERROR.REFERENCE_FAMILY_SCOPE_MISMATCH };
+    }
+    const targetSet = new Set(ids);
+    const backup = products.map(row => JSON.parse(JSON.stringify(row)));
+    const targets = guard.targets.map(row => ({ id: row.id, baseVersion: Number(row._syncVersion) || 0 }));
+    try {
+      for (let i = products.length - 1; i >= 0; i--) if (targetSet.has(String(products[i].id))) products.splice(i, 1);
+      persistProducts();
+      window.CORE.invokeSync('deleteProductScope', {
+        scope, referenceFamilyId: familyId, productIds: ids, targets,
+      });
+    } catch (error) {
+      products.splice(0, products.length, ...backup.map(row => hydrate(row))); persistProducts();
+      return { ok: false, code: error.code || 'PRODUCT_DELETE_FAILED', error: error.message || 'No se pudo eliminar la referencia.' };
+    }
+    return { ok: true, count: ids.length, stock: guard.stock, history: guard.history };
+  }
   function removeProduct(id) {
     const i = products.findIndex(x => x.id === id);
     if (i < 0) return false;
@@ -4836,6 +4902,8 @@
     LAYAWAY_LOCK: 'Hay una liquidación de apartado pendiente de reconciliar. Hasta que se confirme no se puede saber si esa pieza salió del inventario.',
     LAYAWAY_ACTIVE: 'Hay apartados vivos: esas piezas están comprometidas con un cliente. Liquídalos o cancélalos antes de vaciar el inventario.',
     QUEUE_PENDING: 'Hay operaciones sin subir a la nube. Conéctate y espera a que la cola quede vacía: una carga pendiente de productos volvería a crear lo que acabas de borrar.',
+    PRODUCT_OPEN_LOAN: 'Hay referencias en préstamos abiertos. Registra su devolución o faltante antes de vaciar el inventario.',
+    PRODUCT_RETURNABLE_HISTORY: 'Hay referencias que todavía pueden necesitar restitución por devolución o cambio. Espera a que termine su vigencia.',
     EMPTY: 'El inventario ya está vacío: no hay nada que borrar.',
   };
   function inventoryFootprint() {
@@ -4846,6 +4914,7 @@
       pendientes = q && Array.isArray(q.operations) ? q.operations.length : 0;
     } catch (e) { pendientes = 0; }
     const apartados = sales.filter(s => s.estado === 'Apartado').length;
+    const deleteGuard = products.length ? productDeletionGuard(products.map(product => product.id), { ignoreQueuePending: true }) : { ok: true };
     return {
       productos: products.length,
       piezas: totalPieces(),
@@ -4867,6 +4936,7 @@
       bloqueado: readLayawayProductLocks().length ? 'LAYAWAY_LOCK'
         : apartados > 0 ? 'LAYAWAY_ACTIVE'
           : pendientes > 0 ? 'QUEUE_PENDING'
+            : !deleteGuard.ok ? deleteGuard.code
             : products.length === 0 ? 'EMPTY' : null,
     };
   }
@@ -5781,7 +5851,7 @@
     physicalSnapshot, barcodeFromId, referenceHasOperations, reclassifyReference,
     migrateSizeCodes, liveDocumentCounts, inventoryFootprint, clearInventory,
     persistProducts, syncProducts, saveProducts, saveSellers, saveClients, saveSales, saveMovements, savePromos, saveReturns, savePayments,
-    removeProduct, remapOrphanCodes, catalogHealthReport, hexForColorName, previewOrphanFix, applyOrphanFix, get lastRemap() { return lastRemap; },
+    productDeletionGuard, removeProductScope, removeProduct, remapOrphanCodes, catalogHealthReport, hexForColorName, previewOrphanFix, applyOrphanFix, get lastRemap() { return lastRemap; },
     addClient, updateClient, removeClient, clientSalesSummary, clientSalesSummaries,
     recordSale, newOperationId, nextFolio, collisionSafeFolio, rekeySaleFolio,
     normalizeFolioPrefix, businessDate, folioFromParts, parseFolio, folioPreview,

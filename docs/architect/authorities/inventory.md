@@ -147,3 +147,18 @@ así que esta cifra se deriva de la colección y no del stock
 **Definición:** `balam/data.jsx` § préstamos
 **Creada por:** H-46 · **Decisión:** `ADR-002`
 **Consumidores:** `grep -rn "prestamoAtraso\|prestamosVencidos" balam/ test-*.mjs`
+
+## ¿Puede darse de baja esta referencia o familia V2?
+**Autoridad local:** `DATA.productDeletionGuard()` decide usando las colecciones
+vigentes si existen apartado activo, préstamo abierto, cola pendiente o saldo
+posventa restituible. `DATA.removeProductScope()` exige IDs exactos y conserva
+rollback hasta que la operación durable queda encolada
+**Autoridad remota:** `pos.delete_products_checked_v2()` exige
+`inventory.delete`, protocolo/época, versiones exactas y el conjunto activo
+completo para alcance familiar; crea tombstones e idempotencia en una sola
+transacción. `pos.delete_product_checked_v2()` delega la baja individual
+**Decisiones:** stock positivo conserva la regla V1; los históricos son
+snapshots y nunca se borran; ninguna familia se resuelve por SKU, posición o
+heurística
+**Creada por:** H-114 · **Decisiones:** `ADR-002`, `ADR-006`
+**Consumidores:** `grep -rn "productDeletionGuard\|removeProductScope\|delete_products_checked_v2" balam/ supabase/ test-h114-*.mjs`

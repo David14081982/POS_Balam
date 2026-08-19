@@ -25,6 +25,20 @@
   const StockPill = ({ n }) => h(window.UI.StockBadge, { n });
   const commercialStock = p => p && p.isFamilyProjection ? p.totalStock : D.totalStock(p);
   const commercialKey = p => p && (p.commercialKey || p.id);
+  const catalogValueLabel = (kind, value) => {
+    const one = raw => { const hit = window.CONFIG.find(kind, raw); return (hit && hit.label) || String(raw || 'Sin dato'); };
+    return Array.isArray(value) ? value.map(one).join(' + ') : one(value);
+  };
+  const referenceDeleteLabel = (reference, siblings) => {
+    const differences = [];
+    (siblings || []).filter(other => other.id !== reference.id).forEach(other => {
+      D.referenceDifferences(reference, other).forEach(field => {
+        if (!differences.some(saved => saved.kind === field.kind)) differences.push(field);
+      });
+    });
+    const size = tallaLabel(reference, reference.sizeCode || ((reference.stock || [])[0] || {}).talla || 'Sin talla');
+    return [`Talla ${size}`].concat(differences.map(field => `${field.label}: ${catalogValueLabel(field.kind, field.left)}`)).join(' · ');
+  };
   // H-36: cuando el artículo tiene excepciones por talla, las listas y la ficha
   // anuncian el rango en vez de un precio que no aplicaría a todas las tallas.
   const precioTexto = (p) => {
@@ -109,6 +123,7 @@
     const [importPreview, setImportPreview] = useState(null);
     const [importResolutions, setImportResolutions] = useState({});
     const [labelTargets, setLabelTargets] = useState(null); // productos para imprimir etiquetas
+    const [deletion, setDeletion] = useState(null);
     window.UI.useSyncActivity(!!(editing || importPreview), ['products', 'config', 'promotions'], { screen: 'inventory' });
     const [page, setPage] = useState(1);
     const fileRef = useRef(null);
@@ -209,14 +224,29 @@
       }
       if (options && options.openLabels) setLabelTargets([saved]);
     }
+    function confirmDeletion(product, scope, targets) {
+      const guard = D.productDeletionGuard(targets.map(row => row.id));
+      if (!guard.ok) { toast(guard.error, 'var(--danger)'); return; }
+      setDeletion({ stage: 'confirm', product, scope, targets, guard });
+    }
     function deleteProduct(p) {
-      if (!D.removeProduct(p.id)) {
-        toast('El producto tiene una liquidación pendiente; espera su confirmación', 'var(--danger)');
-        return;
-      }
+      const references = p.isFamilyProjection ? p.references.filter(row => row.active !== false) : [p];
+      if (references.length > 1) { setDeletion({ stage: 'scope', product: p, references }); return; }
+      confirmDeletion(p, 'reference', references);
+    }
+    function applyDeletion() {
+      if (!deletion || deletion.stage !== 'confirm') return;
+      const familyId = deletion.product.isFamilyProjection ? deletion.product.referenceFamilyId
+        : (deletion.targets[0] && deletion.targets[0].referenceFamilyId) || null;
+      const result = D.removeProductScope({
+        scope: deletion.scope, referenceFamilyId: familyId,
+        productIds: deletion.targets.map(row => row.id),
+      });
+      if (!result.ok) { toast(result.error, 'var(--danger)'); setDeletion(null); return; }
       refresh();
       setDetail(null);
-      toast('Producto eliminado', 'var(--danger)');
+      setDeletion(null);
+      toast(result.count > 1 ? `${result.count} referencias eliminadas` : 'Producto eliminado', 'var(--danger)');
     }
 
     const lowThreshold = window.CONFIG.get('stock.lowThreshold') || 4;
@@ -375,6 +405,13 @@
         ]),
         // Drawer detalle (siempre montado, slide-in)
         h(DetailDrawer, { key: 'dr', p: detail, onClose: () => setDetail(null), onEdit: () => setEditing({ mode: 'edit', product: detail }), onDelete: () => deleteProduct(detail), onLabels: (prod) => setLabelTargets(prod.isFamilyProjection ? prod.references.slice() : [prod]) }),
+        deletion && h(ProductDeleteModal, {
+          key: 'delete', deletion, onClose: () => setDeletion(null),
+          onReferenceScope: () => setDeletion({ ...deletion, stage: 'reference' }),
+          onFamilyScope: () => confirmDeletion(deletion.product, 'family', deletion.references),
+          onReference: reference => confirmDeletion(deletion.product, 'reference', [reference]),
+          onConfirm: applyDeletion,
+        }),
         labelTargets && h(LabelModal, { key: 'lbl', products: labelTargets, onClose: () => setLabelTargets(null) }),
         editing && h(ProductForm, { key: 'f-' + editing.mode + '-' + (editing.product.id || 'new'), mode: editing.mode, product: editing.product, onClose: () => setEditing(null), onSave: saveProduct }),
         importPreview && h(ImportModal, {
@@ -477,12 +514,50 @@
                 h('button', { key: 'lb', 'data-testid': 'product-detail-labels', className: 'w-full py-3 rounded-xl border border-outline-variant text-primary hover:border-primary hover:bg-surface-container transition-all flex items-center justify-center gap-2 text-overline font-bold uppercase tracking-widest', onClick: () => onLabels && onLabels(p) }, [h(MS, { key: 'i', name: 'barcode', size: 18 }), 'Imprimir etiqueta']),
                 h('div', { key: 'row', className: 'flex gap-4' }, [
                   h('button', { key: 'e', 'data-testid': 'product-detail-edit', className: 'flex-grow bg-primary text-on-primary py-3.5 rounded-xl text-overline font-bold uppercase tracking-widest hover:opacity-90 transition-all shadow-e2 active:scale-95 flex items-center justify-center gap-2', onClick: onEdit }, [h(MS, { key: 'i', name: 'edit', size: 18 }), 'Editar producto']),
-                  !p.isFamilyProjection && h('button', { key: 'd', className: 'w-14 h-[52px] rounded-xl border border-outline-variant text-danger hover:bg-danger-soft hover:border-danger/30 transition-all flex items-center justify-center', onClick: onDelete, title: 'Eliminar' }, h(MS, { name: 'trash', size: 20 })),
+                  h('button', { key: 'd', 'data-testid': 'product-detail-delete', 'aria-label': 'Eliminar', className: 'w-14 h-[52px] rounded-xl border border-outline-variant text-danger hover:bg-danger-soft hover:border-danger/30 transition-all flex items-center justify-center', onClick: onDelete, title: 'Eliminar' }, h(MS, { name: 'trash', size: 20 })),
                 ]),
               ]),
             ]),
           ]),
         ]),
+    ]);
+  }
+
+  function ProductDeleteModal({ deletion, onClose, onReferenceScope, onFamilyScope, onReference, onConfirm }) {
+    const product = deletion.product;
+    if (deletion.stage === 'scope') return h(Modal, { title: 'Eliminar producto', onClose, testId: 'product-delete-modal' }, [
+      h('p', { key: 'p', className: 'text-body text-on-surface-variant mb-4' }, 'Esta familia contiene varias referencias. Elige exactamente qué deseas eliminar.'),
+      h('div', { key: 'a', className: 'grid gap-3' }, [
+        h('button', { key: 'r', 'data-testid': 'product-delete-reference-scope', className: 'min-h-11 p-4 text-left rounded-xl border border-outline-variant hover:border-primary hover:bg-surface-container transition-colors', onClick: onReferenceScope }, [
+          h('strong', { key: 't', className: 'block text-primary' }, 'Eliminar una referencia'),
+          h('span', { key: 'd', className: 'block mt-1 text-caption text-on-surface-variant' }, 'Seleccionar una talla y sus atributos distintivos.'),
+        ]),
+        h('button', { key: 'f', 'data-testid': 'product-delete-family-scope', className: 'min-h-11 p-4 text-left rounded-xl border border-danger/40 text-danger hover:bg-danger-soft transition-colors', onClick: onFamilyScope }, [
+          h('strong', { key: 't', className: 'block' }, 'Eliminar toda la familia'),
+          h('span', { key: 'd', className: 'block mt-1 text-caption' }, `Afectará las ${deletion.references.length} referencias activas de esta familia.`),
+        ]),
+      ]),
+    ]);
+    if (deletion.stage === 'reference') return h(Modal, { title: 'Eliminar una referencia', onClose, testId: 'product-delete-modal' }, [
+      h('p', { key: 'p', className: 'text-body text-on-surface-variant mb-4' }, 'Selecciona la referencia exacta. Sólo se muestran los datos necesarios para distinguirla.'),
+      h('div', { key: 'refs', className: 'grid gap-2' }, deletion.references.map((reference, index) =>
+        h('button', { key: reference.id, 'data-testid': 'product-delete-reference-' + index, className: 'min-h-11 p-3 text-left rounded-lg border border-outline-variant hover:border-primary hover:bg-surface-container transition-colors', onClick: () => onReference(reference) }, [
+          h('span', { key: 'l', className: 'block font-bold text-primary' }, referenceDeleteLabel(reference, deletion.references)),
+          h('span', { key: 's', className: 'block mt-1 text-caption text-on-surface-variant' }, `${D.totalStock(reference)} pieza${D.totalStock(reference) === 1 ? '' : 's'} en existencia`),
+        ]))),
+    ]);
+    const count = deletion.targets.length;
+    const summary = deletion.scope === 'family'
+      ? `Se eliminarán todas las ${count} referencias activas de ${product.nombre}.`
+      : `Se eliminará ${referenceDeleteLabel(deletion.targets[0], product.references || deletion.targets)} de ${product.nombre}.`;
+    const footer = [
+      h('button', { key: 'c', className: 'h-11 px-5 rounded-lg border border-outline-variant font-bold', onClick: onClose }, 'Cancelar'),
+      h('button', { key: 'd', 'data-testid': 'product-delete-confirm', 'data-autofocus': true, className: 'h-11 px-5 rounded-lg bg-danger text-on-danger font-bold hover:opacity-90', onClick: onConfirm }, count > 1 ? 'Eliminar referencias' : 'Eliminar referencia'),
+    ];
+    return h(Modal, { title: 'Confirmar eliminación', onClose, footer, testId: 'product-delete-modal' }, [
+      h('p', { key: 's', className: 'text-body text-on-surface' }, summary),
+      deletion.guard.stock > 0 && h('p', { key: 'stock', className: 'mt-3 p-3 rounded-lg bg-warning-soft text-warning text-caption' }, `La baja incluye ${deletion.guard.stock} pieza${deletion.guard.stock === 1 ? '' : 's'} en existencia.`),
+      deletion.guard.history && h('p', { key: 'history', className: 'mt-3 text-caption text-on-surface-variant' }, 'Los tickets, ventas y demás documentos históricos permanecerán intactos.'),
     ]);
   }
 
