@@ -17,7 +17,7 @@ begin
     data_epoch, cursors, queue_pending, queue_blocked, status, last_seen_at,
     display_name, device_type)
   values
-    (v_prefix||'-a-offline', 2, 20260818015300, v_epoch, '{}', 0, 0,
+    (v_prefix||'-a-offline', 1, 20260810013500, v_epoch, '{}', 0, 0,
       'online', now()-interval '7 days', 'Caso A', 'pc'),
     (v_prefix||'-b-intersects', 1, 20260810013500, v_epoch, '{}', 1, 0,
       'online', now()-interval '7 days', 'Caso B', 'pc'),
@@ -53,7 +53,7 @@ begin
   if not exists(select 1 from jsonb_to_recordset(v_result->'fleet'->'devices')
       as x(device_id text,state text,blocking boolean)
       where device_id=v_prefix||'-a-offline'
-        and state='compatible_offline' and blocking=false) then
+        and state='update_on_return' and blocking=false) then
     raise exception 'H116R_A_OFFLINE_MUST_NOT_BLOCK';
   end if;
 

@@ -5600,8 +5600,8 @@ fixture histórico desde un checkout local `dc74757`, no el blob H-116 publicado
 La autoridad remota sí tenía
 `20260818015300/15400`, y Pages coincidía con `86011e7` en 9,006,415 bytes y
 SHA-256 `11896105c98d3e8963786521bc0a5986ad4a951e868a6ce6450263e1094d5272`.
-Una nueva prueba funcional aislada fija A/B/C/D: apagada compatible no bloquea;
-antigua cercable con operación intersectante bloquea; antigua cercable con
+Una nueva prueba funcional aislada fija A/B/C/D: antigua cercable posterior a
+H-77, apagada y con cola cero no bloquea; antigua cercable con operación intersectante bloquea; antigua cercable con
 operación ajena aislable no bloquea; anterior a H-77 no retirada bloquea. La UI
 explica esos estados y la sincronización local con texto humano, dejando códigos,
 esquema, protocolo y época bajo «Ver detalle». La autoridad SQL H-116 no cambió
@@ -5613,6 +5613,7 @@ modificados: no. Commit funcional: `4377378`. Pages run `32231813811` terminó
 en `success` y sirve el blob Git exacto
 `e3dda27ae013c9e4a2e599a9bbecbc4c5f365191`: 9,006,567 bytes, SHA-256
 `15d6a47288aeb02d06570adb8ee8705fe47fc37fde3b961537c19e4c2347177a`.
+Ajuste de exactitud de la fixture A: Pendiente de commit.
 
 ## Regla de actualización
 

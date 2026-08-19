@@ -117,8 +117,8 @@ En ese momento `origin/main` ya estaba en `0984df2`, Supabase registraba
 SHA-256 `11896105c98d3e8963786521bc0a5986ad4a951e868a6ce6450263e1094d5272`.
 
 La reproducción SQL A/B/C/D confirmó que la autoridad desplegada sí retira
-`cleanup_not_synchronized` y `client_schema_incompatible`: una terminal
-compatible apagada no bloquea; una antigua cercable con operación intersectante
+`cleanup_not_synchronized` y `client_schema_incompatible`: una terminal antigua
+cercable, posterior a H-77, apagada y con cola cero no bloquea; una antigua cercable con operación intersectante
 bloquea; una antigua cercable con operación ajena aislable no bloquea y queda
 `update_on_return`; un cliente anterior a H-77 no retirado bloquea como
 `unsafe_legacy`. El cierre original no ejercitaba directamente los dos últimos
@@ -136,6 +136,7 @@ real. Commit funcional: `4377378`. Publicación: Pages run `32231813811`
 terminó en `success` y sirve el blob Git exacto
 `e3dda27ae013c9e4a2e599a9bbecbc4c5f365191`: 9,006,567 bytes, SHA-256
 `15d6a47288aeb02d06570adb8ee8705fe47fc37fde3b961537c19e4c2347177a`.
+Ajuste de exactitud de la fixture A: Pendiente de commit.
 
 ## Referencias
 
