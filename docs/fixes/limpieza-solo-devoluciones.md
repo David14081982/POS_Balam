@@ -1,9 +1,9 @@
 # Limpieza selectiva exclusiva de Devoluciones
 
 **Riesgo:** H-119
-**Estado:** CORREGIDO Y VERIFICADO; PENDIENTE DE PUBLICACIÓN
+**Estado:** RESUELTO — SERVIDOR Y CLIENTE PUBLICADOS
 **Fecha:** 19/08/2026
-**Commit:** Pendiente de commit
+**Commit funcional:** `209b2c1`
 
 ## Problema y reproducción
 
@@ -81,6 +81,21 @@ limpieza producía el estado local que la misma limpieza prohíbe.
   Todos los fixtures comerciales H-119 son aislados; la funcional termina con
   rollback y el E2E limpia exclusivamente sus identidades prefijadas.
 
+## Publicación y certificación real
+
+- Las migraciones `20260819015700` y `20260819015800` se aplicaron al proyecto
+  vinculado. El dry-run posterior confirmó `Remote database is up to date`.
+- GitHub Pages run `32318296988` terminó en `success` para `209b2c1`. El HTML
+  servido coincide byte por byte con el blob Git: 9,008,603 bytes, SHA-256
+  `0fc59871029158c0f595ecbde8c58561e4c09f35e46ea39020aeecf168911962`.
+- La repetición administrativa publicada marcó exclusivamente Devoluciones:
+  conteo 0, inventario sin cambio, 2 equipos listos, 4 que se actualizarán al
+  volver y 0 que requieren atención. Mostró «No hay operaciones de la selección
+  para limpiar.», mantuvo el CTA deshabilitado y dejó
+  `STORE.syncStatus()` sincronizado con cola 0/0 y
+  `CORE.activityStatus().active=0`.
+- No se abrió la confirmación ni se invocaron backup, ejecución o Punto Cero.
+
 ## Riesgo residual y pendientes
 
 La base real conserva 0 devoluciones y 2 `return_commits` históricos sin
@@ -92,7 +107,9 @@ recalculo hasta reconciliar esa evidencia. H-119 sólo mejora su explicación.
 
 La auditoría real fue read-only: no ejecutó backup, limpieza, Punto Cero,
 heartbeat artificial, reintento, descarte, cuarentena, retiro ni escritura de
-stock o documentos comerciales.
+stock o documentos comerciales. La publicación servidor-first sólo reemplazó
+las definiciones técnicas de las RPC y registró las migraciones; no modificó
+filas comerciales.
 
 ## Referencias
 

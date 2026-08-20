@@ -5687,7 +5687,7 @@ Datos reales modificados: no. Véase
 
 ## H-119 — Limpiar sólo Devoluciones puede retirar el movimiento de la venta conservada
 
-**Estado:** CORREGIDO Y VERIFICADO; PENDIENTE DE PUBLICACIÓN
+**Estado:** RESUELTO — SERVIDOR Y CLIENTE PUBLICADOS
 **Fecha de registro:** 19/08/2026
 **Origen:** auditoría E2E quirúrgica de Configuración → Administración / Datos →
 Limpiar datos de prueba seleccionando únicamente Devoluciones.
@@ -5720,10 +5720,18 @@ stock 10→9, venta y movimiento de venta conservados, segunda terminal y no-op
 bloqueado. El respaldo incluye movimientos de Devolución modernos/legacy y
 excluye el movimiento Venta. H-113 35/35 + 21/21; H-116 20/20 + 29/29; H-117 65/65; H-118
 10/10; cola 176/176; smoke bundle 17/17; build 8/8.
-**Datos reales modificados:** no. La auditoría publicada y las consultas a
-Supabase fueron read-only; no se ejecutó limpieza, backup, Punto Cero, reintento,
-descarte, cuarentena ni retiro.
-**Commit:** Pendiente de commit.
+**Publicación:** migraciones `20260819015700/15800` instaladas y dry-run remoto
+al día. Pages run `32318296988` terminó en `success` para `209b2c1`; el HTML
+público coincide con el blob Git en 9,008,603 bytes, SHA-256
+`0fc59871029158c0f595ecbde8c58561e4c09f35e46ea39020aeecf168911962`.
+La comprobación real posterior seleccionó sólo Devoluciones, obtuvo conteo 0,
+inventario sin cambio, 0 equipos inseguros, mensaje explícito de no resultados,
+CTA deshabilitado, STORE sincronizado con cola 0/0 y actividad propia 0.
+**Datos comerciales reales modificados:** no. La auditoría y la comprobación
+publicada fueron read-only; no se ejecutó limpieza, backup, Punto Cero,
+reintento, descarte, cuarentena ni retiro. Sólo cambiaron definiciones técnicas
+de RPC y el historial de migraciones.
+**Commit funcional:** `209b2c1`; cierre documental en commit posterior.
 
 ## Regla de actualización
 
