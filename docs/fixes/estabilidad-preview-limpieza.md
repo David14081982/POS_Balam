@@ -85,6 +85,13 @@ Ninguno conocido dentro de H-124. Un cambio comercial o una nueva operación
 pendiente seguirá invalidando el plan por diseño y exigirá una nueva revisión.
 La venta `BG-260810-0011` no fue borrada ni modificada por esta corrección.
 
+## Despliegue
+
+Las migraciones 165–167 quedaron aplicadas antes del cliente. `origin/main`
+avanzó sin fuerza hasta `598afcd`. GitHub Pages coincide byte por byte con el
+blob publicado: 9,015,007 bytes y SHA-256
+`6778c0200178a105832a5755cd51f296c4d5d688412651094bcc242605a7cdca`.
+
 ## Referencias
 
 - Riesgo: `docs/03-known-risks.md#h-124--la-telemetría-invalida-una-limpieza-sin-cambios-comerciales`

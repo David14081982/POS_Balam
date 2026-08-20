@@ -5924,7 +5924,7 @@ fuera de alcance por corresponder a H-122.
 
 ## H-124 — La telemetría invalida una limpieza sin cambios comerciales
 
-**Estado:** RESUELTO Y DESPLEGADO EN SERVIDOR
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha de registro:** 20/08/2026
 **Origen:** al crear el respaldo de una limpieza ya revisada, la interfaz vuelve
 al primer paso y muestra únicamente `CLEANUP_PREVIEW_CHANGED`.
@@ -5953,6 +5953,9 @@ No se ejecutó ninguna limpieza ni se modificaron ventas, stock, pagos o
 comisiones. Corrección documentada en
 `docs/fixes/estabilidad-preview-limpieza.md`.
 **Commit funcional:** `69f7496`.
+**Despliegue:** `origin/main` avanzó por fast-forward hasta `598afcd`. GitHub
+Pages sirve exactamente el blob `index.html` de `main`: 9,015,007 bytes y
+SHA-256 `6778c0200178a105832a5755cd51f296c4d5d688412651094bcc242605a7cdca`.
 
 ## Regla de actualización
 
