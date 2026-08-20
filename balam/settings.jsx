@@ -1984,22 +1984,31 @@
 
   // ── Panel: datos de demostración (simulación local para pruebas) ───────────────
   const CLEANUP_GROUPS = [
-    ['sales','Ventas y apartados','También incluye sus cobros y movimientos relacionados.','cleanup-group-sales'],
-    ['returns','Devoluciones','Ajusta el inventario según las piezas devueltas.','cleanup-group-returns'],
-    ['exchanges','Cambios','Ajusta las piezas que entraron y salieron.','cleanup-group-exchanges'],
-    ['loans','Préstamos','Borra los préstamos seleccionados.','cleanup-group-loans'],
-    ['commissions','Comisiones','Borra liquidaciones y ajustes relacionados.','cleanup-group-commissions'],
-    ['reclassifications','Reclasificaciones','Revierte los movimientos de reclasificación seleccionados.','cleanup-group-reclassifications'],
-    ['customers','Clientes de prueba','Borra únicamente clientes sin operaciones conservadas.','cleanup-group-customers'],
+    ['sales','Ventas y apartados','Borra las ventas confirmadas, sus cobros y movimientos relacionados.','cleanup-group-sales'],
+    ['returns','Devoluciones','Borra devoluciones ya registradas; no las ventas disponibles para devolver.','cleanup-group-returns'],
+    ['exchanges','Cambios','Borra cambios ya realizados; no las ventas que aparecen como opciones para cambiar.','cleanup-group-exchanges'],
+    ['loans','Préstamos','Borra documentos de préstamo; no ventas ni movimientos de otros módulos.','cleanup-group-loans'],
+    ['commissions','Liquidaciones y ajustes de comisión','Borra pagos/cierres y ajustes. El saldo generado por ventas pertenece a Ventas y apartados.','cleanup-group-commissions'],
+    ['reclassifications','Reclasificaciones','Revierte documentos de reclasificación; no movimientos de venta o posventa.','cleanup-group-reclassifications'],
+    ['customers','Clientes de prueba','Borra únicamente clientes no genéricos sin operaciones conservadas.','cleanup-group-customers'],
   ];
   const CLEANUP_COUNT_ROWS = [
     ['sales','ventas','Ventas y apartados'], ['returns','devoluciones','Devoluciones'],
     ['exchanges','cambios','Cambios'], ['loans','prestamos','Préstamos'],
-    ['commissions','comisiones','Comisiones'], ['reclassifications','reclasificaciones','Reclasificaciones'],
+    ['commissions','comisiones','Liquidaciones y ajustes de comisión'], ['reclassifications','reclasificaciones','Reclasificaciones'],
     ['customers','clientes','Clientes de prueba'],
   ];
   const CLEANUP_KEPT = ['Productos', 'Inventario base', 'Configuración', 'Usuarios',
     'Permisos', 'Catálogos', 'Folios', 'Históricos que no formen parte de la selección'];
+  const CLEANUP_ZERO_EXPLANATIONS = {
+    sales: 'No existen documentos de venta o apartado para esta limpieza.',
+    returns: '0 devoluciones significa que no existen documentos de devolución. Las ventas que aparecen en Devoluciones son opciones de posventa; para borrar esos tickets selecciona Ventas y apartados.',
+    exchanges: '0 cambios significa que no existen documentos de cambio realizados. Las ventas que aparecen como opciones en Cambios siguen siendo ventas; para borrar esos tickets selecciona Ventas y apartados.',
+    loans: '0 préstamos significa que no existen documentos de préstamo. Los movimientos o ventas visibles en otros módulos no cuentan como préstamos.',
+    commissions: '0 aquí significa que no existen liquidaciones ni ajustes. “Comisiones por liquidar” es un saldo derivado de ventas; para retirar su venta fuente selecciona Ventas y apartados, y BALAM recalculará el saldo.',
+    reclassifications: '0 reclasificaciones significa que no existen documentos de reclasificación. Los movimientos de venta, devolución o cambio pertenecen a sus propios grupos.',
+    customers: '0 clientes significa que no hay clientes de prueba elegibles. Los clientes genéricos o vinculados a operaciones conservadas no se borran.',
+  };
   function SelectiveCleanupCard({ enabled }) {
     const defaultSelection = { sales: false, returns: false, exchanges: false, loans: false,
       commissions: false, reclassifications: false, customers: false, inventory_products: false };
@@ -2043,7 +2052,11 @@
     const orphanReturns = preview && preview.documents
       && Array.isArray(preview.documents.orphan_return_commits)
       ? preview.documents.orphan_return_commits : [];
+    const saleFolios = preview && preview.documents && Array.isArray(preview.documents.sale_folios)
+      ? preview.documents.sale_folios : [];
     const normalized = preview && preview.selection_normalized || selection;
+    const zeroExplanations = CLEANUP_COUNT_ROWS.filter(([domain,key]) => normalized[domain] && Number(counts[key]) === 0)
+      .map(([domain]) => ({ domain, message: CLEANUP_ZERO_EXPLANATIONS[domain] }));
     const fleet = preview && preview.fleet || {};
     const fleetSummary = fleet.summary || {};
     const fleetAttention = Number(fleetSummary.attention || 0) + Number(fleetSummary.unsafe_legacy || 0);
@@ -2167,6 +2180,15 @@
             ...CLEANUP_KEPT.map(label =>
               h('div', { key: label, className: 'text-caption text-success py-1' }, '✓ ' + label))]),
         ]),
+        zeroExplanations.length > 0 && h('section', { key: 'zero-meaning', className: 'mt-4 space-y-2',
+          'aria-label': 'Qué significa el conteo cero' }, zeroExplanations.map(item =>
+          h('div', { key: item.domain, 'data-testid': `cleanup-zero-explanation-${item.domain}`,
+            className: 'p-3 rounded-lg border border-outline-variant bg-surface text-caption text-on-surface-variant leading-relaxed' }, item.message))),
+        normalized.sales && h('div', { key: 'sales-derived', 'data-testid': 'cleanup-sales-derived-impact',
+          className: 'mt-4 p-3 rounded-lg bg-warning-soft text-warning text-caption leading-relaxed' },
+          [h('div', { key: 'impact' }, 'Al borrar Ventas y apartados, BALAM también recalculará Ventas del mes y Comisiones por liquidar usando únicamente los documentos que se conserven.'),
+            saleFolios.length > 0 && h('div', { key: 'folios', 'data-testid': 'cleanup-sale-folios', className: 'mt-1 font-semibold' },
+              `Ventas incluidas: ${saleFolios.slice(0,5).join(', ')}${saleFolios.length > 5 ? ` y ${N(saleFolios.length-5)} más` : ''}.`)]),
         dependencyMessages.length > 0 && h('div', { key: 'forced', className: 'mt-4 p-3 rounded-lg bg-warning-soft text-warning text-caption space-y-1' },
           dependencyMessages.map(message => h('div', { key: message }, message))),
         orphanReturns.length > 0 && h('section', { key: 'orphan-returns', 'data-testid': 'cleanup-orphan-return-evidence',

@@ -719,6 +719,21 @@ bloquea H-113. La cuarentena sí conserva una ruta de replay autorizable y sigue
 bloqueando cuando intersecta. Con cola mayor que cero, una correspondencia
 incompleta entre conteo y proyecciones falla cerrada como alcance desconocido.
 
+Los grupos de limpieza representan documentos autoritativos, no todas las
+proyecciones que los consumen. «Cambios» elimina documentos `exchanges`; una
+venta visible como candidata en la pantalla Cambios sigue perteneciendo a
+Ventas. «Liquidaciones y ajustes de comisión» elimina esos dos documentos; el
+saldo «Comisiones por liquidar» es una proyección derivada de ventas, cambios,
+ajustes y liquidaciones retenidos. El preview debe exponer los folios exactos y
+explicar un conteo cero sin convertir la caché o la proyección en autoridad.
+
+`test_data_cleanup_affects_financials(plan)` limita las guardas y la
+recomputación financiera a ventas, devoluciones, cambios y comisiones.
+Préstamos, reclasificaciones y clientes no cambian `comision_acum`; sólo una
+selección de ventas recompone además `ventas_mes` y `ventas_num`. Una limpieza
+de dominio ajeno no puede quedar bloqueada por evidencia de comisión que no
+consume ni puede reescribir esas proyecciones.
+
 Supabase sigue siendo la autoridad vigente. Una ejecución selectiva futura
 incrementa `data_epoch` y eleva `sync_protocol_min` dentro de la misma
 transacción antes de emitir el evento selectivo v3. `flushQueue()` consulta el

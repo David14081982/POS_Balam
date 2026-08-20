@@ -5833,6 +5833,47 @@ offline legítima, ajustes/periodo de comisiones y lectura multi-terminal.
 GitHub Pages sirve exactamente su blob `index.html`: 9,012,919 bytes y
 SHA-256 `927432a2e58de0e9dfa357a11380b5ca28791e7fea5db1d69e56a132e1145644`.
 
+## H-122 — La limpieza confunde documentos con candidatos y saldos derivados
+
+**Estado:** RESUELTO — publicado en Supabase; cliente pendiente de publicación
+**Fecha de registro:** 20/08/2026
+**Origen:** Configuración → Administración / Datos informa cero en Cambios y
+Comisiones mientras Cambios muestra una venta elegible y Vendedores muestra un
+saldo pendiente. Los nombres no explican que esos consumidores muestran
+conceptos distintos de los documentos borrables por cada grupo.
+**Evidencia inicial read-only:** Supabase y Equipo David coinciden: existe una
+venta autoritativa BG-260810-0011 por $1,150 y $57.50 de comisión; existen cero
+documentos de cambio, préstamos, liquidaciones, ajustes de comisión y
+reclasificaciones. El preview de Ventas selecciona exactamente BG-260810-0011 y
+restaura una pieza; Cambios y Comisiones seleccionan cero. No se ejecutó
+respaldo ni limpieza y se bloquearon todas las RPC de escritura.
+**Causa raíz:** la UI llama “Cambios” tanto al catálogo de ventas candidatas
+como al grupo que borra documentos `pos.exchanges`, y llama “Comisiones” al
+grupo que sólo borra liquidaciones/ajustes aunque el saldo visible se deriva de
+ventas. Además, `execute_test_data_cleanup()` recalcula siempre los contadores
+financieros de vendedores, incluso al borrar únicamente préstamos,
+reclasificaciones o clientes; por eso el plan exige evidencia histórica de
+comisiones ajena a esos dominios y puede bloquearlos permanentemente.
+**Impacto:** el conteo SQL es correcto para los datos actuales, pero la
+presentación induce a seleccionar el grupo equivocado; y un documento válido
+de préstamo/reclasificación/cliente podría quedar bloqueado por una venta
+histórica que ese borrado no modifica.
+**Corrección:** cada grupo define el documento borrable, explica su conteo cero
+y separa las proyecciones derivadas. Ventas muestra los folios exactos del
+preview. La recomputación y las guardas de evidencia financiera sólo se aplican
+a ventas, devoluciones, cambios o comisiones; `ventas_mes`/`ventas_num` sólo se
+recalculan al seleccionar ventas. Préstamos, reclasificaciones y clientes ya no
+tocan ni heredan esas proyecciones.
+**Commit:** Pendiente de commit.
+**Pruebas:** huella comercial Supabase pre/post idéntica
+`a3f4c49caf9d1459130ba9ffda3eb8b4a0d4ba21df3f18c62578f3ca55949a4c`;
+migraciones remotas 161/162 y dry-run al día; fixture funcional aislado;
+H-122 UI 21/21; contratos H-113/H-116/H-118 65/65; E2E de limpieza 152/152;
+colas, dominios comerciales, módulos, navegación, smoke y build correctos.
+**Riesgo residual:** BG-260810-0011 y su comisión derivada permanecen por
+diseño hasta una limpieza explícita de Ventas y apartados. Dos evidencias
+huérfanas de devolución siguen cerradas para revisión y no fueron alteradas.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

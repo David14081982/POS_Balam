@@ -1,5 +1,5 @@
 // Fuente del service worker H-89. build-offline.mjs sustituye el hash del shell.
-const BUILD_HASH = 'e6c52379f94bab0c552b';
+const BUILD_HASH = '033a7b55d07ad8e2fad6';
 const SHELL_CACHE = `balam-shell-${BUILD_HASH}`;
 const BRAND_CACHE = 'balam-pwa-brand-v1';
 const SCOPE_URL = new URL('./', self.location.href);

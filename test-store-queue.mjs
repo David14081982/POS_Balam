@@ -1806,7 +1806,7 @@ console.log('H96) Cambio conserva clave comercial entre cola y replay');
 {
   const env = freshEnv();
   env.cloud.rowsByTable.system_manifest = [{
-    singleton: true, schema_version: 20260819015900, sync_protocol_min: 2,
+    singleton: true, schema_version: 20260820016100, sync_protocol_min: 2,
     sync_protocol_current: 2, data_epoch: 1, domain_modes: { products: 'active' },
   }];
   env.cloud.rowsByTable.sync_domain_versions = [];

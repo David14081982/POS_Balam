@@ -85,6 +85,7 @@ sesión de chat.
 | `limpieza-solo-devoluciones.md` | H-119 | Alcance exacto, no-op y habilitación real al limpiar sólo Devoluciones |
 | `consistencia-devoluciones-limpieza.md` | H-120 | Documento de devolución, estado de venta y limpieza convergen sin reinterpretar históricos |
 | `autoridad-unica-datos-h121.md` | H-121 | Evidencia forense, rebootstrap controlado y una autoridad confirmada por dominio |
+| `claridad-dominios-limpieza.md` | H-122 | Documentos borrables separados de candidatos y saldos derivados |
 | `jerarquia-visual-etiqueta-60x40.md` | H-99 | Jerarquía visual 60×40 con identidad V2 intacta |
 | `sku-materializado-en-etiquetas.md` | H-100 | SKU visible por talla con paridad preview/PDF/impresión |
 | `chips-existencias-familiares.md` | H-103 | Chips compactos con proyección familiar V2 intacta |
