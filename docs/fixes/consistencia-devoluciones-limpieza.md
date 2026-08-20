@@ -1,9 +1,9 @@
 # Consistencia entre Devoluciones y limpieza selectiva
 
 **Riesgo:** H-120
-**Estado:** RESUELTO — PENDIENTE DE PUBLICACIÓN
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha:** 19/08/2026
-**Commit:** Pendiente de commit
+**Commit funcional:** `ad1b9715d4108a522c99af0112ffa41b57d0b281`
 
 ## Problema y reproducción
 
@@ -153,6 +153,23 @@ como guarda independiente y no se ocultó.
 - Responsive general 492/492; smoke bundle 17/17; build reproducible 8/8.
 - Revisión visual manual de evidencia huérfana y venta inconsistente a 390 y
   1440 px: jerarquía, texto, CTA, detalle técnico y scroll correctos.
+
+## Publicación y verificación
+
+- Supabase aplicó únicamente
+  `20260819015900_pos_h120_return_state_cleanup.sql` y
+  `20260819016000_pos_h120_return_state_cleanup_verification.sql`; el dry-run
+  posterior informó `Remote database is up to date`.
+- GitHub Pages publicó el commit funcional mediante la ejecución
+  `32327203765`, terminada correctamente el 20/08/2026 03:09:52Z.
+- `index.html` público y los dos blobs Git publicados coinciden: 9,011,107
+  bytes, SHA-256
+  `22791b72766cd00ffd5ff20fa9df458e7892d1dd5696bd174c84e83c13f9d2ee`.
+- Auditoría pública read-only: cliente sincronizado, esquema
+  `20260819015900`, época 2, cola 0 y bloqueos 0; Ventas=1 y plan de stock
+  1→2; Devoluciones=0 con los dos comprobantes huérfanos visibles y CTA
+  bloqueado; Cambios, Préstamos, Comisiones, Reclasificaciones y Clientes=0.
+- No se abrió el modal de respaldo ni se invocó ejecución de limpieza.
 
 ## Riesgo residual y pendientes
 

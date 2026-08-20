@@ -5735,7 +5735,7 @@ de RPC y el historial de migraciones.
 
 ## H-120 — Limpiar Devoluciones conserva un estado de venta sin evidencia
 
-**Estado:** RESUELTO — PENDIENTE DE PUBLICACIÓN
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha de registro:** 19/08/2026
 **Origen:** contradicción observada entre Devoluciones y Administración / Datos.
 **Evidencia inicial:** `DATA.recordReturn()` cambia la venta a `Devolución
@@ -5775,7 +5775,14 @@ smoke bundle 17/17; build reproducible 8/8.
 **Riesgo residual:** los dos commits huérfanos y la telemetría del tercer folio
 no contienen piezas, importes ni efectos suficientes para reconstruir historia.
 Permanecen sin tocar y requieren evidencia externa y autorización separada.
-**Commit:** Pendiente de commit.
+**Commit:** `ad1b9715d4108a522c99af0112ffa41b57d0b281`.
+**Despliegue:** migraciones H-120 aplicadas y verificadas; GitHub Pages
+`32327203765` publicó el mismo commit. El artefacto público tiene 9,011,107
+bytes y SHA-256
+`22791b72766cd00ffd5ff20fa9df458e7892d1dd5696bd174c84e83c13f9d2ee`.
+La auditoría pública read-only confirmó Devoluciones=0 más dos evidencias
+huérfanas visibles/no borrables, CTA bloqueado, siete grupos coherentes, esquema
+`20260819015900`, cola 0 y ninguna mutación comercial.
 
 ## Regla de actualización
 
