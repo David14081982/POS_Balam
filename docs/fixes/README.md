@@ -88,6 +88,7 @@ sesión de chat.
 | `claridad-dominios-limpieza.md` | H-122 | Documentos borrables separados de candidatos y saldos derivados |
 | `evidencias-huerfanas-devoluciones.md` | H-123 | Operación terminal exacta para comprobantes de devolución sin documento comercial |
 | `estabilidad-preview-limpieza.md` | H-124 | Huella comercial estable ante latidos y recuperación segura del preview cambiado |
+| `proyeccion-atencion-centro-equipos.md` | H-125 | Actividad historica separada de atencion y reintento vigente |
 | `jerarquia-visual-etiqueta-60x40.md` | H-99 | Jerarquía visual 60×40 con identidad V2 intacta |
 | `sku-materializado-en-etiquetas.md` | H-100 | SKU visible por talla con paridad preview/PDF/impresión |
 | `chips-existencias-familiares.md` | H-103 | Chips compactos con proyección familiar V2 intacta |

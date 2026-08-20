@@ -16,7 +16,7 @@
   const QKEY = 'balam_sync_queue';
   const QDB = 'balam_sync', QSTORE = 'durable_queue';
   const SYNC_PROTOCOL_VERSION = 2;
-  const SYNC_SCHEMA_VERSION = 20260820016500;
+  const SYNC_SCHEMA_VERSION = 20260820016800;
   const SELECTIVE_CLEANUP_PROTOCOL = 5;
   const SYNC_CURSOR_KEY = 'balam_sync_domain_cursors_v1';
   const SYNC_DOMAINS = {
@@ -3439,14 +3439,26 @@
       const connection = ageMs <= 120000 ? 'online' : (ageMs <= 86400000 ? 'disconnected' : 'unknown');
       return Object.assign({}, device, { ageMs, connection, staleEpoch });
     });
-    const activity = history.error ? [] : (history.data || []);
+    const devicesById = new Map(devices.map(device => [device.device_id, device]));
+    const activity = (history.error ? [] : (history.data || [])).map(item => {
+      const device = devicesById.get(item.device_id);
+      const requiresAttention = item.requires_action === true
+        && item.admin_action !== 'review'
+        && Number(device && device.queue_pending) > 0
+        && Number(device && device.queue_blocked) > 0;
+      return Object.assign({}, item, {
+        requires_attention: requiresAttention,
+        historical_incident: item.admin_action === 'review'
+          || (item.requires_action === true && !requiresAttention),
+      });
+    });
     const quarantineCases = quarantine.error ? [] : (quarantine.data || []);
     const epoch = Number(syncManifest.data_epoch);
     return {
       devices, activity, quarantine: quarantineCases,
       current: devices.filter(d => Number(d.data_epoch) === epoch && !d.staleEpoch).length,
       stale: devices.filter(d => d.staleEpoch).length,
-      attention: activity.filter(a => a.requires_action).length,
+      attention: activity.filter(a => a.requires_attention).length,
       disconnected: devices.filter(d => d.connection !== 'online').length,
     };
   }

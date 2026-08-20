@@ -1396,7 +1396,7 @@
     const devices = (fleet && fleet.devices) || [];
     const activity = (fleet && fleet.activity) || [];
     const quarantine = (fleet && fleet.quarantine) || [];
-    const attention = activity.filter(item => item.requires_action);
+    const attention = activity.filter(item => item.requires_attention);
     const quarantineAttention = quarantine.filter(item => item.status === 'pending_review' || item.status === 'failed');
     const attentionTotal = attention.length + quarantineAttention.length;
     const visibleActivity = tab === 'atencion' ? attention : activity;
@@ -1480,16 +1480,17 @@
       }) : h('p', { className: 'text-caption text-on-surface-variant py-6 text-center' }, 'Todavía no hay equipos reportados.')),
       (tab === 'actividad' || tab === 'atencion') && h('div', { key: 'activity', className: 'mt-4 space-y-2' }, visibleActivity.length ? visibleActivity.map(item => {
         const device = devices.find(d => d.device_id === item.device_id);
-        const actionable = item.requires_action;
+        const actionable = item.requires_attention;
+        const historical = item.historical_incident;
         return h('div', { key: item.device_id + ':' + item.operation_id, className: 'p-4 rounded-xl border border-outline-variant flex flex-col md:flex-row md:items-center gap-3' }, [
           h('div', { key: 'body', className: 'flex-1 min-w-0' }, [
             h('div', { key: 'title', className: 'font-semibold text-primary' }, item.summary),
             h('div', { key: 'meta', className: 'text-overline text-on-surface-variant mt-1' },
               `${device ? deviceLabel(device) : 'Equipo no identificado'} · ${item.user_email || 'usuario'} · ${relativeTime(item.updated_at)}`),
-            item.diagnostic && h('div', { key: 'reason', className: 'text-caption text-danger mt-2' }, item.diagnostic.message || item.diagnostic.code),
+            item.diagnostic && h('div', { key: 'reason', className: 'text-caption mt-2 ' + (historical ? 'text-on-surface-variant' : 'text-danger') }, item.diagnostic.message || item.diagnostic.code),
           ]),
-          h('span', { key: 'status', className: 'px-3 py-1 rounded-full text-overline font-bold ' + (item.status === 'synced' ? 'text-success bg-success-soft' : actionable ? 'text-danger bg-danger-soft' : 'text-warning bg-warning-soft') },
-            item.status === 'synced' ? 'Sincronizado' : actionable ? 'Requiere atención' : item.status === 'retrying' ? 'Reintentando' : 'Pendiente'),
+          h('span', { key: 'status', className: 'px-3 py-1 rounded-full text-overline font-bold ' + (item.status === 'synced' ? 'text-success bg-success-soft' : actionable ? 'text-danger bg-danger-soft' : historical ? 'text-on-surface-variant bg-surface-container' : 'text-warning bg-warning-soft') },
+            item.status === 'synced' ? 'Sincronizado' : actionable ? 'Requiere atención' : historical ? 'Incidencia histórica' : item.status === 'retrying' ? 'Reintentando' : 'Pendiente'),
           actionable && window.AUTH.isAdmin() && h('div', { key: 'actions', className: 'flex gap-2' }, [
             h('button', { key: 'retry', disabled: busy || item.action_status === 'requested' || item.action_status === 'delivered', onClick: () => retry(item), className: 'px-3 h-9 bg-primary text-on-primary rounded-lg disabled:opacity-40' }, item.action_status === 'requested' || item.action_status === 'delivered' ? 'Reintento solicitado' : 'Autorizar reintento'),
             h('button', { key: 'review', disabled: busy || item.admin_action === 'review', onClick: () => reviewed(item), className: 'px-3 h-9 border border-outline-variant rounded-lg disabled:opacity-40' }, item.admin_action === 'review' ? 'Revisado' : 'Marcar revisado'),

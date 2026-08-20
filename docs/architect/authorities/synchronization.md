@@ -76,6 +76,9 @@ conflictos, compatibilidad y época; offline nunca satisface el contrato
 continúa siendo la autoridad de lo pendiente; ausencia de señal es «desconocido»
 y nunca prueba sincronía
 **Definición:** migración `20260807012000` · **Creada por:** H-79
+**Corregida por:** H-125. El cliente deriva `requires_attention` unicamente
+cuando la incidencia no esta revisada y el heartbeat declara
+`queue_pending>0` y `queue_blocked>0`; lo demas permanece como historia.
 
 ## ¿Qué equipo puede bloquear una limpieza selectiva H-113?
 **Autoridad:** `pos.test_data_cleanup_fleet_risk()` cruza dominios seleccionados,
@@ -104,4 +107,6 @@ sólo autoriza que `STORE` la restaure en su cola y la ejecute por la RPC vigent
 **Autoridad:** `pos.admin_request_sync_retry()` crea la orden y la instalación
 de origen la consume mediante `pos.consume_sync_commands()`. La ejecución sigue
 perteneciendo a `STORE.retryOperation()` y conserva RLS, RPC e idempotencia
-**Definición:** migración `20260807012000` · **Creada por:** H-79
+**Definición:** migraciones `20260807012000`, `20260820016800` ·
+**Creada por:** H-79 · **Endurecida por:** H-125. Solicitud y entrega exigen
+una incidencia no revisada y cola pendiente/bloqueada declarada por el equipo.

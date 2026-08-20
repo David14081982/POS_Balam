@@ -5957,6 +5957,38 @@ comisiones. Corrección documentada en
 Pages sirve exactamente el blob `index.html` de `main`: 9,015,007 bytes y
 SHA-256 `6778c0200178a105832a5755cd51f296c4d5d688412651094bcc242605a7cdca`.
 
+## H-125 - Incidencia historica revisada sigue como atencion accionable
+
+**Estado:** RESUELTO EN SERVIDOR - CLIENTE LISTO PARA PUBLICAR
+**Fecha de registro:** 20/08/2026
+**Origen:** el Centro de equipos muestra `Cambio de mercancia -
+BG-260812-0006`, `commit_mismatch`, `Requiere atencion`, `Autorizar reintento`
+y `Revisado` aunque Equipo David declara `queue_pending=0` y
+`queue_blocked=0`.
+**Evidencia inicial:** `syncFleetStatus()` entrega `sync_activity` sin cruzarla
+con `sync_devices`; `settings.jsx` filtra directamente por `requires_action`;
+`admin_mark_sync_activity_reviewed()` no cierra esa bandera y
+`admin_request_sync_retry()` tampoco exige una cola local vigente.
+**Riesgo:** una proyeccion sin payload durable se presenta como trabajo actual y
+ofrece una orden que el equipo no puede reproducir.
+**Contrato de correccion:** la actividad permanece como historia auditable; solo
+requiere atencion operativa cuando no esta revisada y el heartbeat declara cola
+pendiente y bloqueada. Revisar cierra la alerta, y tanto solicitud como entrega
+del reintento vuelven a comprobar la cola vigente.
+**Correccion:** `syncFleetStatus()` deriva `requires_attention` con la cola
+declarada y el estado de revision; la UI conserva la fila como
+`Incidencia historica` sin contarla ni ofrecer reintento. Los RPC de revisar,
+solicitar y entregar aplican el mismo cierre. Migraciones 168-171 desplegadas.
+**Pruebas:** H-125 10/10 y E2E 10/10; H-79 17/17; H-80 7/7; H-116 20/20;
+H-118 10/10; cola 186/186; modulos 42/42; migraciones 31/31; navegacion 15/15;
+roles 15/15; responsive 492/492. La fila real verifico
+`H125_REAL_BG_260812_0006_OK rows=2 actionable=0`.
+**Commit:** Pendiente de commit.
+**Riesgo residual:** falta publicar y comprobar el blob cliente en GitHub Pages.
+No se alteraron ventas, stock, pagos, comisiones ni actividad historica.
+Correccion documentada en
+`docs/fixes/proyeccion-atencion-centro-equipos.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:
