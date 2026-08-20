@@ -5878,6 +5878,39 @@ fast-forward. GitHub Pages sirve exactamente el blob `index.html` funcional:
 9,014,011 bytes y SHA-256
 `06a4187597e7ebb017df3b8a01605ba24940c699199e9c2f684aafb1667af0c7`.
 
+## H-123 — Evidencias huérfanas de devolución sin operación terminal
+
+**Estado:** PARCIALMENTE RESUELTO — autoridad desplegada; ejecución real pendiente
+**Fecha de registro:** 20/08/2026
+**Origen:** Limpieza de datos detecta `return_commits` cuyo `return_id` ya no
+existe en `pos.returns`, los muestra como evidencia huérfana y bloquea
+Devoluciones, pero no ofrece una selección ni una ejecución autoritativa para
+retirar únicamente esa evidencia técnica.
+**Evidencia real:** el preview remoto identifica exactamente los commits de
+`BG-260811-0015` y `BG-260812-0001`; ambos carecen de cabecera comercial,
+renglones, movimientos, pagos y ventas vigentes. `return_commits` conserva
+identidad/hash, no payload ni autoridad para reconstruir inventario o dinero.
+**Causa raíz:** H-120 añadió detección y guarda cerrada, pero dejó huérfano el
+ciclo de vida: `test_data_cleanup_plan()` no normaliza un dominio seleccionable,
+`test_data_cleanup_payload()` no respalda esos commits como alcance autónomo y
+`execute_test_data_cleanup()` sólo elimina commits cuyo `return_id` pertenece a
+una devolución comercial seleccionada.
+**Impacto:** el administrador queda atrapado permanentemente en «Requiere
+revisión» aunque la evidencia sea de prueba; ignorar la guarda o tratarla como
+devolución inventaría efectos comerciales.
+**Corrección implementada:** dominio explícito `orphan_return_evidence`,
+preview/respaldo/plan hash/ejecución por `commit_id` exacto y sólo si sigue
+huérfano; advisory lock compartido con `commit_return`, cardinalidad exacta,
+lápida por `return_id`, cero stock, dinero o documento comercial y UI con ambos
+folios. Migraciones 163/164 desplegadas antes del cliente.
+**Commit:** Pendiente de commit.
+**Pruebas:** roja 0/1; PostgreSQL aislado y remoto
+`H123_ORPHAN_RETURN_OK`; fixture funcional `orphan=2 valid_return=preserved
+stock=7 finance=preserved`; UI 15/15; H-113 21/21, H-116 20/20 + 29/29,
+H-119 37/37, H-122 21/21, cola 186/186, migraciones 31/31 y smoke 17/17.
+**Pendiente:** publicar el cliente y ejecutar con respaldo la retirada exacta de
+los dos commits reales; después registrar hashes e invariantes y cerrar el riesgo.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

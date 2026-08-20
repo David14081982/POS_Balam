@@ -1986,6 +1986,7 @@
   const CLEANUP_GROUPS = [
     ['sales','Ventas y apartados','Borra las ventas confirmadas, sus cobros y movimientos relacionados.','cleanup-group-sales'],
     ['returns','Devoluciones','Borra devoluciones ya registradas; no las ventas disponibles para devolver.','cleanup-group-returns'],
+    ['orphan_return_evidence','Evidencias huérfanas de devoluciones','Borra únicamente comprobantes técnicos sin devolución comercial. No modifica inventario ni dinero.','cleanup-group-orphan-return-evidence'],
     ['exchanges','Cambios','Borra cambios ya realizados; no las ventas que aparecen como opciones para cambiar.','cleanup-group-exchanges'],
     ['loans','Préstamos','Borra documentos de préstamo; no ventas ni movimientos de otros módulos.','cleanup-group-loans'],
     ['commissions','Liquidaciones y ajustes de comisión','Borra pagos/cierres y ajustes. El saldo generado por ventas pertenece a Ventas y apartados.','cleanup-group-commissions'],
@@ -1994,6 +1995,7 @@
   ];
   const CLEANUP_COUNT_ROWS = [
     ['sales','ventas','Ventas y apartados'], ['returns','devoluciones','Devoluciones'],
+    ['orphan_return_evidence','evidencias_huerfanas_devolucion','Evidencias huérfanas de devoluciones'],
     ['exchanges','cambios','Cambios'], ['loans','prestamos','Préstamos'],
     ['commissions','comisiones','Liquidaciones y ajustes de comisión'], ['reclassifications','reclasificaciones','Reclasificaciones'],
     ['customers','clientes','Clientes de prueba'],
@@ -2003,6 +2005,7 @@
   const CLEANUP_ZERO_EXPLANATIONS = {
     sales: 'No existen documentos de venta o apartado para esta limpieza.',
     returns: '0 devoluciones significa que no existen documentos de devolución. Las ventas que aparecen en Devoluciones son opciones de posventa; para borrar esos tickets selecciona Ventas y apartados.',
+    orphan_return_evidence: '0 evidencias huérfanas significa que no existen comprobantes técnicos sin su devolución comercial correspondiente.',
     exchanges: '0 cambios significa que no existen documentos de cambio realizados. Las ventas que aparecen como opciones en Cambios siguen siendo ventas; para borrar esos tickets selecciona Ventas y apartados.',
     loans: '0 préstamos significa que no existen documentos de préstamo. Los movimientos o ventas visibles en otros módulos no cuentan como préstamos.',
     commissions: '0 aquí significa que no existen liquidaciones ni ajustes. “Comisiones por liquidar” es un saldo derivado de ventas; para retirar su venta fuente selecciona Ventas y apartados, y BALAM recalculará el saldo.',
@@ -2010,7 +2013,7 @@
     customers: '0 clientes significa que no hay clientes de prueba elegibles. Los clientes genéricos o vinculados a operaciones conservadas no se borran.',
   };
   function SelectiveCleanupCard({ enabled }) {
-    const defaultSelection = { sales: false, returns: false, exchanges: false, loans: false,
+    const defaultSelection = { sales: false, returns: false, orphan_return_evidence: false, exchanges: false, loans: false,
       commissions: false, reclassifications: false, customers: false, inventory_products: false };
     const [selection, setSelection] = useState(defaultSelection);
     const [preview, setPreview] = useState(null);
@@ -2117,7 +2120,7 @@
         const first = documents[0] || {};
         const reference = first.folio ? ` de la venta ${first.folio}` : '';
         const moment = first.created_at ? ` del ${new Date(first.created_at).toLocaleString('es-MX')}` : '';
-        return `Supabase conserva evidencia de ${documents.length || 'una'} devolución${documents.length === 1 ? '' : 'es'}${reference}${moment}, pero falta el documento comercial. Requiere revisión antes de limpiar Devoluciones.`;
+        return `Supabase conserva evidencia de ${documents.length || 'una'} devolución${documents.length === 1 ? '' : 'es'}${reference}${moment}, pero falta el documento comercial. Selecciona “Evidencias huérfanas de devoluciones” para retirar únicamente esos comprobantes técnicos.`;
       }
       if (reason.code === 'client_cannot_be_fenced') {
         return `${name} usa una versión demasiado antigua. Actualízalo o retíralo desde el Centro de equipos.`;
@@ -2194,9 +2197,11 @@
         orphanReturns.length > 0 && h('section', { key: 'orphan-returns', 'data-testid': 'cleanup-orphan-return-evidence',
           className: 'mt-4 p-4 rounded-lg border border-warning/40 bg-warning-soft/30' }, [
           h('div', { key: 'title', className: 'text-label-sm font-bold text-warning' },
-            'Evidencia de devoluciones que requiere revisión'),
+            `Evidencias huérfanas de devoluciones — ${N(orphanReturns.length)}`),
           h('p', { key: 'copy', className: 'mt-1 text-caption text-on-surface-variant' },
-            `Supabase conserva ${N(orphanReturns.length)} comprobante(s) transaccional(es), pero faltan las devoluciones comerciales correspondientes. No se cuentan como datos borrables y BALAM no inventará sus piezas ni importes.`),
+            normalized.orphan_return_evidence
+              ? 'Se eliminarán únicamente estos comprobantes técnicos. BALAM no inventará devoluciones, piezas, importes, movimientos ni efectos financieros.'
+              : 'Supabase conserva estos comprobantes transaccionales, pero faltan las devoluciones comerciales correspondientes. Selecciona el grupo de evidencias huérfanas para retirarlos sin inventar piezas ni importes.'),
           ...orphanReturns.map((row,index) => h('div', { key: row.commit_id || row.return_id || index,
             className: 'mt-2 p-2 rounded border border-warning/30 text-caption text-primary' }, [
             h('div', { key: 'folio', className: 'font-semibold' }, row.folio || 'Folio no disponible'),

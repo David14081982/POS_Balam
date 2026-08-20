@@ -46,8 +46,8 @@ check('12. el evento nuevo invalida clientes H-113 anteriores',
     && /values\s*\(p_cleanup_id,\s*3,\s*3/i.test(migration));
 check('13. el cliente vigente declara protocolo de escritura 2',
   /SYNC_PROTOCOL_VERSION\s*=\s*2/.test(store));
-check('14. el cliente vigente declara protocolo selectivo 4',
-  /SELECTIVE_CLEANUP_PROTOCOL\s*=\s*4/.test(store));
+check('14. el cliente vigente declara protocolo selectivo 5',
+  /SELECTIVE_CLEANUP_PROTOCOL\s*=\s*5/.test(store));
 check('15. una limpieza remota no fuerza compatibilidad sin releer manifiesto',
   !/applyRemoteSelectiveCleanup[\s\S]{0,2200}syncCompatibility\s*=\s*['"]ok['"]/.test(store));
 check('16. existe autoridad administrativa para retirar/reactivar equipos',

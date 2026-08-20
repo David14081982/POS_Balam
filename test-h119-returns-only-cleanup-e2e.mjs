@@ -385,7 +385,7 @@ check('UI separa comprobante huérfano de devolución borrable',
   /Devoluciones\s+0(?:\s|$)/.test(orphanUi)
   && orphanUi.includes('BG-H120-ORPHAN')
   && orphanUi.includes('pero faltan las devoluciones comerciales correspondientes')
-  && orphanUi.includes('Requiere revisión antes de limpiar Devoluciones')
+  && orphanUi.includes('Selecciona “Evidencias huérfanas de devoluciones”')
   && await second.page.getByTestId('selective-cleanup-open').isDisabled());
 for (const width of [320,360,375,390,430,768,1024,1280,1440]) {
   await second.page.setViewportSize({ width, height: 900 });

@@ -734,6 +734,14 @@ selección de ventas recompone además `ventas_mes` y `ventas_num`. Una limpieza
 de dominio ajeno no puede quedar bloqueada por evidencia de comisión que no
 consume ni puede reescribir esas proyecciones.
 
+Una fila de `return_commits` sin su `pos.returns` no es una devolución ni permite
+reconstruir piezas, dinero o movimientos. H-123 la trata como el dominio técnico
+opt-in `orphan_return_evidence`: el preview expone folio, fecha e identidades
+exactas; el respaldo conserva la fila; y la ejecución toma el lock del commit,
+revalida que continúe huérfano, exige cardinalidad exacta y coloca una lápida por
+`return_id`. No modifica stock ni finanzas. Si se selecciona Devoluciones sin
+seleccionar esta evidencia, la guarda permanece cerrada.
+
 Supabase sigue siendo la autoridad vigente. Una ejecución selectiva futura
 incrementa `data_epoch` y eleva `sync_protocol_min` dentro de la misma
 transacción antes de emitir el evento selectivo v3. `flushQueue()` consulta el

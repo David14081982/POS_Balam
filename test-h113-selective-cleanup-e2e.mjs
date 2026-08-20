@@ -43,7 +43,7 @@ await page.evaluate(()=>{
   document.body.innerHTML='<div id="h113-root"></div>';ReactDOM.createRoot(document.getElementById('h113-root')).render(React.createElement(window.SettingsScreen));
 });
 await page.getByTestId('settings-section-demo').click();await page.getByTestId('selective-cleanup-card').waitFor();
-check('siete grupos comerciales visibles',(await page.getByTestId('selective-cleanup-card').locator('input[type=checkbox]').count())===7);
+check('ocho dominios de limpieza visibles',(await page.getByTestId('selective-cleanup-card').locator('input[type=checkbox]').count())===8);
 for(const key of ['sales','returns','exchanges','loans','commissions'])await page.getByTestId('cleanup-group-'+key).check();
 await page.getByText('Todo está listo para limpiar.').waitFor();
 for(const width of [320,360,375,390,430,768,1024,1280,1440]){
