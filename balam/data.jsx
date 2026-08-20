@@ -1964,6 +1964,7 @@
   function saveMovements() { return save(LS_MOVES, movements); }
   function savePromos() { save(LS_PROMOS, promos); syncUp('promotions', promos); }
   function saveLiquidations() { save(LS_LIQ, liquidations); syncUp('liquidations', liquidations); } // historial — sincroniza a pos.liquidations
+  function saveCommissionAdjustments() { return save(LS_ADJUSTMENTS, commissionAdjustments); }
   function saveReturns() { save(LS_RETURNS, returns); }  // devoluciones suben vía recordReturn → STORE.pushReturn
   function savePayments(sync = true) { const ok = save(LS_PAYMENTS, payments); if (sync) syncUp('payments', payments); return ok; }
   function saveExchanges(sync = true) { save(LS_EXCHANGES, exchanges); if (sync) syncUp('exchanges', exchanges); }
@@ -1992,10 +1993,8 @@
 
   // Reemplaza un arreglo de dominio con datos de la nube (sin re-empujar).
   function applyRemote(kind, rows, opts) {
-    const M = { products: [products, saveProducts, hydrate], clients: [clients, saveClients], sellers: [sellers, saveSellers], sales: [sales, saveSales], movements: [movements, saveMovements], promotions: [promos, savePromos], returns: [returns, saveReturns], liquidations: [liquidations, saveLiquidations], payments: [payments, savePayments], exchanges: [exchanges, saveExchanges] };
-    // Los préstamos no se reemplazan: se fusionan conservando lo que la nube
-    // todavía no confirmó (H-62).
-    if (kind === 'loans') return applyRemoteLoans(rows);
+    const M = { products: [products, saveProducts, hydrate], clients: [clients, saveClients], sellers: [sellers, saveSellers], sales: [sales, saveSales], movements: [movements, saveMovements], promotions: [promos, savePromos], returns: [returns, saveReturns], liquidations: [liquidations, saveLiquidations], commissionAdjustments: [commissionAdjustments, saveCommissionAdjustments], payments: [payments, savePayments], exchanges: [exchanges, saveExchanges] };
+    if (kind === 'loans') return applyRemoteLoans(rows, opts);
     const m = M[kind]; if (!m) return;
     // Una respuesta vacía también puede ser una lectura parcial/fallida. Nunca
     // sacrifica un catálogo local existente; los borrados reales usan tombstones.
@@ -2019,10 +2018,20 @@
         clearCatalogResync('product-conflict');
       } else requireCatalogResync('El catálogo remoto no pudo persistirse en la caché local', 'products-cache');
     }
-    // La nube puede no tener admin aún (antes de pos_003). Garantiza uno local y súbelo.
-    if (kind === 'sellers' && !sellers.some(s => s.role === 'admin')) {
+    // Sólo un arranque legado no autoritativo puede sembrar un admin. Un
+    // snapshot completo vacío debe seguir vacío.
+    if (kind === 'sellers' && !(opts && opts.authoritative) && !sellers.some(s => s.role === 'admin')) {
       sellers.unshift(JSON.parse(JSON.stringify(seedSellers[0])));
       saveSellers();
+    }
+    if (kind === 'liquidations' && opts && opts.authoritative) {
+      const cortes = liquidations.filter(row => row && row.tipo === 'corte' && row.fecha)
+        .sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
+      periodoInicio = cortes.length ? String(cortes[0].fecha).slice(0, 10) : '';
+      try {
+        if (periodoInicio) localStorage.setItem(LS_PERIODO, periodoInicio);
+        else localStorage.removeItem(LS_PERIODO);
+      } catch (e) { /* la proyección en memoria sigue siendo válida */ }
     }
     return persisted;
   }
@@ -3930,7 +3939,9 @@
   function commissionAdjustmentPreview({ pred, pct } = {}) {
     const dentro = enPeriodo(pred);
     const yaAjustado = new Set();
+    let identityIncomplete = false;
     (commissionAdjustments || []).forEach(doc => {
+      if (doc && dentro(doc) && doc._identityIncomplete === true) identityIncomplete = true;
       (doc.renglones || []).forEach(r => { if (r && r.folio) yaAjustado.add(r.folio + '|' + r.sellerId); });
     });
     const forzado = commissionNumeric(pct);
@@ -3994,7 +4005,8 @@
       porVendedor: Object.values(porVendedor).sort((a, b) => b.comision - a.comision),
       totales,
       yaAjustados: yaAjustado.size,
-      aplicable: renglones.length > 0 && totales.comision > 0,
+      identityIncomplete,
+      aplicable: !identityIncomplete && renglones.length > 0 && totales.comision > 0,
     };
   }
 
@@ -4033,6 +4045,10 @@
         operationId: doc.operationId,
         rows: aplicado.porVendedor.map(r => ({
           seller_id: r.sellerId, monto: r.comision, ventas: r.ventas,
+          // La tabla conserva `detalle` como JSONB. La identidad por folio no
+          // cambia el cálculo de la RPC y permite reconstruir el ledger remoto.
+          folios: aplicado.renglones.filter(line => line.sellerId === r.sellerId)
+            .map(line => ({ folio: line.folio, comision: line.comision })),
         })),
         motivo: aplicado.motivo,
       });
@@ -5083,29 +5099,19 @@
     const tag = terminalCode();
     return base.endsWith('-' + tag) ? collisionSafeFolio(base, loanId) : base + '-' + tag;
   }
-  // Incorpora los préstamos bajados de la nube. NO es un reemplazo ciego: un
-  // préstamo local que el servidor todavía no confirmó —sin `_loanVersion`—
-  // sobrevive al pull, porque su envío puede seguir en la cola o estar pendiente
-  // de migrar. Perderlo aquí sería perder mercancía que está fuera del negocio.
-  // Un tombstone remoto sí retira el documento local (`R-CLI-04`).
+  // El pull sólo llega aquí después de que STORE verificó que no hay una
+  // intención durable de préstamo pendiente. Por eso el snapshot remoto
+  // completo —incluso vacío— sustituye la proyección; la cola, no `_loanVersion`,
+  // es la autoridad exclusiva de trabajo offline no confirmado.
   function applyRemoteLoans(rows) {
     const list = Array.isArray(rows) ? rows : [];
-    // Una lectura vacía nunca sacrifica la cartera local: puede ser una lectura
-    // parcial, o una nube a la que todavía no se migró nada. Mismo criterio que
-    // el catálogo de productos.
-    if (!list.length && loans.length) return false;
     remoteApplying = true;
     try {
-      const sinConfirmar = loans.filter(l => l && l._loanVersion == null);
-      const remotos = new Map();
-      list.forEach(r => { if (r && r.id) remotos.set(r.id, r); });
       loans.length = 0;
-      remotos.forEach(r => { if (!r._deletedAt) loans.push(r); });
-      sinConfirmar.forEach(l => { if (!remotos.has(l.id)) loans.push(l); });
+      list.forEach(r => { if (r && !r._deletedAt) loans.push(r); });
       loans.sort((a, b) => String(b.fecha || '').localeCompare(String(a.fecha || '')));
-      saveLoans();
+      return saveLoans() !== false;
     } finally { remoteApplying = false; }
-    return true;
   }
   // Reidentificación del folio de un préstamo todavía no confirmado por la nube.
   function rekeyLoanFolio(id, oldFolio, newFolio) {

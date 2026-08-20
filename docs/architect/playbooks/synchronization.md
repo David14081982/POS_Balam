@@ -1,7 +1,7 @@
 ---
 capa: reglas
 applies_to: [sync, client, database, realtime, offline]
-related_histories: [H-06, H-09, H-13, H-14, H-16, H-62, H-68, H-77, H-79]
+related_histories: [H-06, H-09, H-13, H-14, H-16, H-62, H-68, H-77, H-79, H-121]
 severity_max: blocking
 no_alcance: "Los dominios concretos viven en docs/02-architecture.md y el registro ejecutable."
 ---
@@ -46,3 +46,20 @@ pulls y conflictos en cero; cursores, protocolo y época vigentes. Offline no cu
 **R-SYNC-12 · BLOCKING · Un dominio nuevo trae prueba de evolución.** Cubre
 A→B, evento perdido, formulario, concurrencia, offline, cliente antiguo,
 permisos, volumen y datos históricos.
+
+**R-SYNC-13 · BLOCKING · Ningún caché es autoridad de un documento
+confirmado.** Supabase confirma; la cola durable conserva únicamente una
+intención offline exacta; `DATA`/`localStorage` son proyección reconstruible y
+la telemetría sólo observa. Una versión o bandera local nunca sustituye esos
+roles. Origen: H-121 · Decisión: `ADR-014`
+
+**R-SYNC-14 · BLOCKING · La ausencia remota sólo significa baja dentro de una
+cobertura demostrada.** Un snapshot completo —incluido el conjunto vacío—
+reemplaza; una ventana sólo reconcilia identidades dentro de sus límites; un
+incremental necesita tombstone o versión. Se prohíbe una poda global genérica.
+
+**R-SYNC-15 · BLOCKING · La regresión de autoridad es una puerta de entrega.**
+Antes de publicar cambios de pull, cola o rebootstrap se prueban: remoto vacío,
+ventana parcial, cursor que no avanza ante aplicación incompleta, mapa de todos
+los efectos pendientes, captura offline preservada, ajustes de comisión
+remotos, periodo derivado del cierre remoto y lectura multi-terminal.

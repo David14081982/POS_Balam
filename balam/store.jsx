@@ -27,7 +27,9 @@
     sales: { deps: ['sellers', 'products', 'clients'] },
     payments: { deps: ['sales'] }, returns: { deps: ['sales', 'products'] },
     exchanges: { deps: ['sales', 'products'] }, loans: { deps: ['products', 'clients'] },
-    liquidations: { deps: ['sellers', 'sales'] }, movements: { deps: ['sales', 'returns'] },
+    liquidations: { deps: ['sellers', 'sales'] },
+    commissionAdjustments: { deps: ['sellers', 'sales', 'liquidations'] },
+    movements: { deps: ['sales', 'returns'] },
     purges: { deps: [] }, devices: { deps: ['permissions'] },
   };
   // Marca de limpieza de datos de prueba: fila reservada de pos.settings que escribe
@@ -162,6 +164,32 @@
       table: 'liquidations', conflict: 'id',
       toRow: l => ({ id: l.id, seller_id: l.sellerId || null, seller: l.seller || null, monto: Number(l.monto) || 0, tipo: l.tipo || 'liquidacion', fecha: l.fecha || null }),
       fromRow: r => ({ id: r.id, sellerId: r.seller_id || '', seller: r.seller || '', monto: Number(r.monto) || 0, tipo: r.tipo || 'liquidacion', fecha: r.fecha || '' }),
+    },
+    commissionAdjustments: {
+      table: 'commission_adjustments', conflict: 'operation_id',
+      fromRow: r => {
+        const detalle = Array.isArray(r.detalle) ? r.detalle : [];
+        return {
+          id: r.operation_id, operationId: r.operation_id,
+          fecha: String(r.created_at || '').replace('T', ' ').slice(0, 16),
+          aplicadoEn: String(r.created_at || '').replace('T', ' ').slice(0, 16),
+          motivo: r.motivo || '', estado: 'aplicado',
+          // Una fila heredada puede probar el total pero no qué folios cubrió.
+          // Se conserva como autoridad económica y bloquea otro ajuste automático.
+          _identityIncomplete: detalle.some(row => Number(row.ventas) > 0
+            && (!Array.isArray(row.folios) || row.folios.length < Number(row.ventas))),
+          renglones: detalle.flatMap(row =>
+          (Array.isArray(row.folios) ? row.folios : []).map(line => ({
+            folio: line.folio, sellerId: row.seller_id,
+            comision: Number(line.comision) || 0,
+          }))),
+          porVendedor: detalle.map(row => ({
+            sellerId: row.seller_id, comision: Number(row.monto) || 0,
+            ventas: Number(row.ventas) || 0,
+          })),
+          totales: { comision: Number(r.total) || 0, vendedores: Number(r.vendedores) || 0 },
+        };
+      },
     },
     payments: {
       table: 'sale_payments', conflict: 'id',
@@ -626,13 +654,33 @@
     });
     if (changed) saveQ(q);
   }
-  // Ops pendientes que tocan una tabla: la copia LOCAL es más nueva que la nube.
+  // H-121: una sola matriz describe qué proyecciones protege cada intención
+  // durable. Así el pull directo y la reconciliación por cursores no pueden
+  // discrepar y borrar uno de los efectos todavía no confirmados.
+  const PENDING_DOMAIN_EFFECTS = {
+    config: ['config'],
+    sale: ['products','sales','payments','movements','sellers','liquidations','clients'],
+    return: ['products','sales','returns','payments','movements','sellers','clients'],
+    exchange: ['products','sales','exchanges','payments','movements','sellers','clients'],
+    loanOperation: ['loans','products','clients'],
+    commissionSettle: ['sellers','liquidations'],
+    commissionClose: ['sellers','liquidations','commissionAdjustments'],
+    commissionAdjustment: ['sellers','liquidations','commissionAdjustments'],
+    referenceReclassification: ['products','movements'],
+  };
+  function operationAffectsDomain(op, domain) {
+    if (!op || !domain) return false;
+    if ((PENDING_DOMAIN_EFFECTS[op.type] || []).includes(domain)) return true;
+    const mapped = MAP && MAP[domain];
+    return (op.type === 'upsert' || op.type === 'profileUpdate' || op.type === 'softDelete')
+      && (op.kind === domain || (mapped && op.table === mapped.table));
+  }
+  // La intención LOCAL no confirmada protege sólo sus dominios afectados; la
+  // caché confirmada restante sigue siendo reconstruible desde Supabase.
   function hasPendingFor(table) {
-    return loadQ().some(op => opBelongsToActiveSession(op) && (op.table === table
-      || (op.type === 'sale' && table === 'sales')
-      || (op.type === 'return' && table === 'returns')
-      || (op.type === 'loanOperation' && table === 'loan_documents')
-      || ((op.type === 'sale' || op.type === 'return') && table === 'movements')));
+    const domain = Object.keys(MAP).find(kind => MAP[kind].table === table) || table;
+    return loadQ().some(op => opBelongsToActiveSession(op)
+      && (op.table === table || operationAffectsDomain(op, domain)));
   }
 
   // ── H-33: contador diario de folios ─────────────────────────────────────────
@@ -2093,13 +2141,12 @@
       fetchAllRows(c, 'settings', 'key'),
       c.from('config_sync_state').select('*').eq('singleton', true),
     ]);
-    if (lk.error || st.error) return { ok: false, error: (lk.error || st.error).message };
-    if (!lk.data.length && !st.data.length) return { ok: false, error: 'vacío — ¿corriste la migración?' };
+    if (lk.error || st.error) return { ok: false, complete: false, applied: false, error: (lk.error || st.error).message };
     const mk = (st.data || []).find(r => r.key === RESET_MARK_KEY);
     lastResetMark = mk ? String(mk.value) : null;
     if (!cv.error && cv.data && cv.data[0]) configRemoteVersion = Number(cv.data[0].version) || 0;
     window.CONFIG.load(toConfigState(lk.data, st.data));
-    return { ok: true };
+    return { ok: true, complete: true, applied: true, coverage: 'full' };
   }
   // Registra la marca vigente como YA aplicada en esta terminal (sin limpiar nada). La usa el
   // botón manual de Configuración: si no, el siguiente arranque volvería a avisar la limpieza.
@@ -2374,7 +2421,7 @@
     const local = localPurgeApplied({ authority: 'remote' });
     markPurgeSeen({ epoch: report.epoch });
     try { localStorage.removeItem(PURGE_TICKET); } catch (e) { /* */ }
-    const domains = ['products', 'sellers', 'clients', 'promotions', 'liquidations', 'payments', 'movements', 'returns', 'loans'];
+    const domains = ['products', 'sellers', 'clients', 'promotions', 'liquidations', 'commissionAdjustments', 'payments', 'movements', 'returns', 'exchanges', 'loans'];
     await Promise.all(domains.map(k => pullDomain(k).catch(() => { /* tabla ausente */ })));
     try { await pullDomain('sales'); } catch (e) { /* */ }
     rebuildPurgedUpserts(prune.rebuild);
@@ -2467,29 +2514,50 @@
       });
     });
   }
-  // Ventas: pull PAGINADO — la ventana reciente (sync.salesWindowDays, def. 365 días) más
-  // TODOS los apartados (son pocos y el Panel/Notificaciones los necesitan para completarlos).
-  // El resultado se FUSIONA en lo local (mergeRemote): un equipo con meses de historial lo
-  // CONSERVA para reportes; reemplazar (applyRemote) lo borraría. Folios más viejos que la
-  // ventana se traen bajo demanda con fetchSaleByFolio (pantalla de Devoluciones).
-  async function pullSales(c) {
+  // Ventas tiene dos semánticas explícitas. El pull normal es una VENTANA
+  // autoritativa (recientes + todos los apartados): ausencia sólo retira filas
+  // demostrablemente cubiertas. El rebootstrap usa SNAPSHOT COMPLETO y no
+  // conserva documentos confirmados que sólo existan en caché.
+  async function pullSales(c, opts) {
     const days = Number(window.CONFIG && window.CONFIG.get && window.CONFIG.get('sync.salesWindowDays')) || 365;
-    const cutoff = new Date(Date.now() - days * 864e5).toISOString();
-    const [rec, apart] = await Promise.all([
-      fetchPages(() => c.from('sales').select('*').gte('fecha', cutoff)
-        .order('fecha', { ascending: true }).order('folio', { ascending: true })),
-      fetchPages(() => c.from('sales').select('*').eq('estado', 'Apartado')
-        .order('folio', { ascending: true })),
-    ]);
-    if (rec.error || apart.error) return; // tabla ausente / sin permiso → modo local
+    const boundary = new Date(Date.now() - days * 864e5);
+    boundary.setUTCHours(0, 0, 0, 0);
+    const cutoff = boundary.toISOString();
+    let rec, apart = { data: [], error: null };
+    if (opts && opts.fullSnapshot) {
+      rec = await fetchAllRows(c, 'sales', 'folio');
+    } else {
+      [rec, apart] = await Promise.all([
+        fetchPages(() => c.from('sales').select('*').gte('fecha', cutoff)
+          .order('fecha', { ascending: true }).order('folio', { ascending: true })),
+        fetchPages(() => c.from('sales').select('*').eq('estado', 'Apartado')
+          .order('folio', { ascending: true })),
+      ]);
+    }
+    if (rec.error || apart.error) return { ok: false, complete: false, applied: false, error: rec.error || apart.error };
     const uniq = {};
     (rec.data || []).concat(apart.data || []).forEach(x => { uniq[x.folio] = x; });
     let raws = Object.values(uniq);
-    if (!raws.length) return;
     raws = await attachSaleReservationStatus(c, raws);
-    const items = await fetchItemsIn(c, 'sale_items', 'folio', raws.map(x => x.folio));
-    if (hasPendingFor('sales')) return; // capturaron durante el vuelo: no pisar
-    window.DATA.mergeRemote('sales', saleRowsFrom(raws, items), 'folio');
+    let items;
+    try { items = await fetchItemsIn(c, 'sale_items', 'folio', raws.map(x => x.folio)); }
+    catch (error) { return { ok: false, complete: false, applied: false, error }; }
+    if (hasPendingFor('sales')) return { ok: true, complete: false, applied: false, skipped: 'pending' };
+    const remoteRows = saleRowsFrom(raws, items);
+    const remoteFolios = new Set(remoteRows.map(row => row.folio));
+    const preserved = opts && opts.fullSnapshot ? [] : ((window.DATA && window.DATA.sales) || [])
+      .filter(row => {
+        if (remoteFolios.has(row.folio)) return false;
+        if (row.estado === 'Apartado') return false;
+        const timestamp = Date.parse(String(row.fecha || '').replace(' ', 'T'));
+        return !Number.isFinite(timestamp) || timestamp < boundary.getTime();
+      });
+    const next = remoteRows.concat(preserved);
+    const persisted = window.DATA.applyRemote('sales', next, { authoritative: true });
+    return {
+      ok: persisted !== false, complete: true, applied: persisted !== false,
+      coverage: opts && opts.fullSnapshot ? 'full' : 'window', cutoff: opts && opts.fullSnapshot ? null : cutoff,
+    };
   }
   // Trae UNA venta (con renglones) por folio desde la nube y la fusiona en lo local.
   // Devuelve la venta o null. Tolerante a minúsculas (reintenta en MAYÚSCULAS) y,
@@ -2537,13 +2605,13 @@
     const m = MAP[kind]; const c = await ensureClient(); if (!c || !m) return { ok: false };
     // Cambios locales sin subir para esta tabla → NO aplicar la nube (la pisaría con datos
     // viejos). Se re-chequea tras el fetch: el usuario pudo capturar durante el vuelo.
-    if (hasPendingFor(m.table)) return { ok: true, skipped: true };
-    if (kind === 'sales') { await pullSales(c); return { ok: true }; }
+    if (hasPendingFor(m.table)) return { ok: true, complete: false, applied: false, skipped: 'pending' };
+    if (kind === 'sales') return pullSales(c, opts || {});
     const r = kind === 'movements'
       ? await fetchAllMovements(c)
       : await fetchAllRows(c, m.table, m.conflict);
     if (r.error) return { ok: false, error: r.error }; // tabla no existe aún → modo local
-    if (hasPendingFor(m.table)) return { ok: true, skipped: true };
+    if (hasPendingFor(m.table)) return { ok: true, complete: false, applied: false, skipped: 'pending' };
     if (r.data && r.data.length) {
       // H-97: `operation_id` vive en movements, pero la relación de reversa
       // pertenece al ledger de reclasificaciones. Rehidrata ambos como una sola
@@ -2552,19 +2620,21 @@
       // la lectura histórica de movimientos, sin inventar relaciones.
       if (kind === 'movements') {
         const operationIds = Array.from(new Set(r.data.map(row => row.operation_id).filter(Boolean)));
-        const reversalByOperation = {};
+        const reversalByOperation = {}; let ledgerComplete = true;
         for (let i = 0; i < operationIds.length; i += 200) {
           const ledger = await c.from('reference_reclassifications')
             .select('operation_id,reversal_of')
             .in('operation_id', operationIds.slice(i, i + 200));
-          if (ledger.error) break;
+          if (ledger.error) { ledgerComplete = false; break; }
           (ledger.data || []).forEach(row => { reversalByOperation[row.operation_id] = row.reversal_of || null; });
         }
+        if (!ledgerComplete) return { ok: false, complete: false, applied: false, error: 'MOVEMENT_LEDGER_INCOMPLETE' };
         const rows = r.data.map(row => Object.assign({}, row, {
           reversal_of: Object.prototype.hasOwnProperty.call(reversalByOperation, row.operation_id)
             ? reversalByOperation[row.operation_id] : undefined,
         }));
-        window.DATA.applyRemote(kind, rows.map(m.fromRow)); return { ok: true };
+        const applied = window.DATA.applyRemote(kind, rows.map(m.fromRow), { authoritative: true });
+        return { ok: applied !== false, complete: true, applied: applied !== false, coverage: 'full' };
       }
       if (kind === 'returns') {
         const itRows = await fetchItemsIn(c, 'return_items', 'return_id', r.data.map(x => x.id));
@@ -2574,7 +2644,8 @@
         // `saleItemFromRow` conserva la identidad de los renglones de venta.
         itRows.forEach(x => (byRid[x.return_id] || (byRid[x.return_id] = [])).push({ lineId: x.line_id || undefined, sourceSaleLineId: x.source_sale_line_id || undefined, productId: x.product_id || undefined, barcodeCode: x.barcode_code || undefined, physicalAttrs: x.physical_attrs || undefined, listPrice: x.list_price == null ? undefined : Number(x.list_price), effectivePrice: x.effective_price == null ? undefined : Number(x.effective_price), discountSnapshot: x.discount_snapshot || undefined, sku: x.sku, nombre: x.nombre, talla: x.talla, qty: x.qty, motivo: x.motivo || '', precio: Number(x.precio) || 0, ornamento: x.ornamento || undefined, ornColors: Array.isArray(x.orn_colors) ? x.orn_colors : undefined }));
         const rows = r.data.map(raw => { const s = m.fromRow(raw); s.lineas = byRid[raw.id] || []; return s; });
-        window.DATA.applyRemote('returns', rows); return { ok: true };
+        const applied = window.DATA.applyRemote('returns', rows, { authoritative: true });
+        return { ok: applied !== false, complete: true, applied: applied !== false, coverage: 'full' };
       }
       if (kind === 'exchanges') {
         const itRows = await fetchItemsIn(c, 'exchange_items', 'exchange_id', r.data.map(x => x.id));
@@ -2592,17 +2663,22 @@
           ornColors: Array.isArray(x.orn_colors) ? x.orn_colors : undefined,
         }));
         const rows = r.data.map(raw => { const value = m.fromRow(raw); value.lineas = byId[raw.id] || []; return value; });
-        window.DATA.applyRemote('exchanges', rows); return { ok: true };
+        const applied = window.DATA.applyRemote('exchanges', rows, { authoritative: true });
+        return { ok: applied !== false, complete: true, applied: applied !== false, coverage: 'full' };
       }
-      if (m.fromRow) window.DATA.applyRemote(kind, r.data.map(m.fromRow));
-    } else if (opts && opts.authoritativeEmpty && m.fromRow && window.DATA && window.DATA.applyRemote) {
-      window.DATA.applyRemote(kind, [], { authoritative: true });
+      if (m.fromRow) {
+        const applied = window.DATA.applyRemote(kind, r.data.map(m.fromRow), { authoritative: true });
+        return { ok: applied !== false, complete: true, applied: applied !== false, coverage: 'full' };
+      }
+    } else if (m.fromRow && window.DATA && window.DATA.applyRemote) {
+      const applied = window.DATA.applyRemote(kind, [], { authoritative: true });
+      return { ok: applied !== false, complete: true, applied: applied !== false, coverage: 'full' };
     }
     // Nube vacía: NO auto-subir lo local. (Antes un "bootstrap" re-subía window.DATA[kind] cuando la
     // nube estaba vacía, lo que hacía IMPOSIBLE vaciarla: cada recarga la repoblaba desde cualquier
     // equipo con datos locales. El sync local→nube ya ocurre por acciones explícitas (alta/edición,
     // ventas) vía la cola; un vaciado intencional de la nube ahora SÍ se respeta.)
-    return { ok: true };
+    return { ok: false, complete: false, applied: false, error: 'DOMAIN_NOT_APPLICABLE' };
   }
   function commitReferenceReclassification(payload) {
     if (!enabled || !payload) return;
@@ -2686,12 +2762,13 @@
 
   const DOMAIN_ORDER = ['permissions','config','sellers','products','clients',
     'promotions','sales','payments','returns','exchanges','loans','liquidations',
-    'movements','purges','devices'];
+    'commissionAdjustments','movements','purges','devices'];
   const DOMAIN_TABLE = {
     config: 'settings', products: 'products', clients: 'clients', sellers: 'sellers',
     promotions: 'promotions', sales: 'sales', payments: 'sale_payments',
     returns: 'returns', exchanges: 'exchanges', loans: 'loan_documents',
-    liquidations: 'liquidations', movements: 'movements',
+    liquidations: 'liquidations', commissionAdjustments: 'commission_adjustments',
+    movements: 'movements',
   };
   function domainMode(domain) {
     const modes = syncManifest && syncManifest.domain_modes;
@@ -2699,22 +2776,9 @@
   }
   function domainBlocked(domain) {
     if (window.CORE && window.CORE.domainBusy && window.CORE.domainBusy(domain)) return true;
-    const affected = {
-      config: ['config'],
-      sale: ['products','sales','payments','movements','sellers','liquidations'],
-      return: ['products','sales','returns','movements','sellers'],
-      exchange: ['products','sales','exchanges','payments','movements','sellers'],
-      loanOperation: ['loans'],
-      commissionSettle: ['sellers','liquidations'],
-      commissionClose: ['sellers','liquidations'],
-      commissionAdjustment: ['sellers','liquidations'],
-    };
     if (loadQ().some(op => {
       if (!opBelongsToActiveSession(op)) return false;
-      if ((affected[op.type] || []).includes(domain)) return true;
-      if ((op.type === 'upsert' || op.type === 'profileUpdate' || op.type === 'softDelete')
-          && (op.kind === domain || op.table === DOMAIN_TABLE[domain])) return true;
-      return false;
+      return operationAffectsDomain(op, domain);
     })) return true;
     const table = DOMAIN_TABLE[domain];
     return table ? hasPendingFor(table) : false;
@@ -2727,19 +2791,31 @@
   async function applyDomainPull(domain) {
     if (domain === 'devices') {
       try { window.dispatchEvent(new CustomEvent('syncfleetchange')); } catch (e) { /* */ }
-      return { ok: true };
+      return { ok: true, complete: true, applied: true };
     }
-    if (domain === 'config') return pull();
+    if (domain === 'config') {
+      return pull();
+    }
     if (domain === 'purges') {
       await applyRemotePurge();
-      return { ok: true };
+      return { ok: true, complete: true, applied: true };
     }
     if (domain === 'permissions') {
       if (window.AUTH && typeof window.AUTH.refreshPermissions === 'function') {
         await window.AUTH.refreshPermissions();
-        return { ok: true };
+        return { ok: true, complete: true, applied: true };
       }
-      return { ok: true, skipped: true };
+      return { ok: true, complete: false, applied: false, skipped: 'unavailable' };
+    }
+    // `commission_adjustments` nació antes del manifiesto H-77. Cada ajuste
+    // también actualiza sellers, cuyo trigger sí invalida este dominio; el
+    // cursor sólo avanza si ambos snapshots quedaron aplicados.
+    if (domain === 'sellers') {
+      const sellersResult = await pullDomain('sellers');
+      if (!sellersResult || sellersResult.ok !== true || sellersResult.complete !== true || sellersResult.applied !== true) return sellersResult;
+      const adjustmentsResult = await pullDomain('commissionAdjustments');
+      if (!adjustmentsResult || adjustmentsResult.ok !== true || adjustmentsResult.complete !== true || adjustmentsResult.applied !== true) return adjustmentsResult;
+      return { ok: true, complete: true, applied: true, coverage: 'full' };
     }
     return pullDomain(domain);
   }
@@ -2851,7 +2927,7 @@
         const mode = domainMode(domain);
         if (mode !== 'active' || domainBlocked(domain)) { deferred.push(domain); continue; }
         const result = await applyDomainPull(domain);
-        if (!result || result.ok !== false) {
+        if (result && result.ok === true && result.complete === true && result.applied === true) {
           syncCursors[domain] = target;
           if ((Number(syncInvalid.get(domain)) || 0) <= target) syncInvalid.delete(domain);
           else deferred.push(domain);
@@ -2929,14 +3005,15 @@
       cursors: Object.assign({}, syncCursors),
       reconciling: !!syncReconcilePromise,
       pending: q.pending, blocked: q.blocked,
-      synchronized: !!syncManifest && syncCompatibility === 'ok'
+      synchronized: (typeof navigator === 'undefined' || navigator.onLine !== false)
+        && !!syncManifest && syncCompatibility === 'ok'
         && !syncInvalid.size && !syncReconcilePromise && q.pending === 0 && q.blocked === 0,
     };
   }
   function recoverySnapshot() {
     const d = window.DATA || {};
-    const keys = ['products','clients','sellers','promotions','sales','returns',
-      'exchanges','loans','liquidations','movements'];
+    const keys = ['products','clients','sellers','promotions','sales','payments','returns',
+      'exchanges','loans','liquidations','commissionAdjustments','movements'];
     const data = {};
     keys.forEach(key => { if (Array.isArray(d[key])) data[key] = d[key]; });
     return {
@@ -3100,8 +3177,13 @@
       saveQ(queued.filter(op => !opBelongsToActiveSession(op)));
     }
     for (const domain of DOMAIN_ORDER) {
-      if (domain === 'config' || domain === 'permissions' || domain === 'purges') await applyDomainPull(domain);
-      else await pullDomain(domain, { authoritativeEmpty: true });
+      const result = (domain === 'config' || domain === 'permissions' || domain === 'purges' || domain === 'devices')
+        ? await applyDomainPull(domain)
+        : await pullDomain(domain, { authoritativeEmpty: true, fullSnapshot: true });
+      if (!result || result.ok !== true || result.complete !== true || result.applied !== true) {
+        const error = new Error('REBOOTSTRAP_DOMAIN_INCOMPLETE:' + domain);
+        error.domain = domain; error.result = result || null; throw error;
+      }
     }
     syncManifest = latest; syncCompatibility = 'ok'; syncInvalid.clear();
     try { localStorage.setItem('balam_sync_data_epoch', String(latest.data_epoch)); } catch (e) { /* */ }
@@ -3515,8 +3597,8 @@
       // concede la lectura a `pos.is_active_admin()`, así que pedirla con perfil
       // de vendedor devolvería siempre el conjunto vacío.
       const domains = seller
-        ? ['products', 'clients', 'sellers', 'promotions']
-        : ['products', 'clients', 'sellers', 'promotions', 'returns', 'liquidations', 'payments', 'movements', 'loans'];
+        ? ['products', 'clients', 'sellers', 'promotions', 'commissionAdjustments']
+        : ['products', 'clients', 'sellers', 'promotions', 'returns', 'exchanges', 'liquidations', 'commissionAdjustments', 'payments', 'movements', 'loans'];
       await Promise.all(domains.map(k => pullDomain(k).catch(() => { /* tabla ausente */ })));
       if (!seller) {
         try { await pullDomain('sales'); } catch (e) { /* tabla ausente */ }
@@ -3526,23 +3608,14 @@
       // rechazaría por versión vieja.
       if (purged && purged.prune && purged.prune.rebuild.length) rebuildPurgedUpserts(purged.prune.rebuild);
       if (selective) {
-        try { await Promise.all(['products','clients','sellers','sales','returns','exchanges','loans','liquidations','movements']
+        try { await Promise.all(['products','clients','sellers','sales','returns','exchanges','loans','liquidations','commissionAdjustments','movements']
           .map(k => pullDomain(k, { authoritativeEmpty: true }).catch(() => { /* dominio opcional */ }))); }
         catch (e) { /* rebootstrap sigue disponible */ }
       }
       try { window.dispatchEvent(new CustomEvent('configchange', { detail: { domain: true } })); } catch (e) { /* */ }
-      // H-62: adopción de los préstamos que nunca salieron de esta terminal. Va
-      // DESPUÉS del pull a propósito: sólo entonces se distingue lo que la nube
-      // ya conoce de lo que sólo vive aquí. Es idempotente y no borra nada, así
-      // que no exige que el dueño pulse ni escriba nada. Un vendedor no la
-      // ejecuta: no tiene la capacidad ni la lectura.
-      if (!seller) {
-        migrateLocalLoans().then(informe => {
-          if (informe && informe.confirmados > 0 && window.UI && window.UI.toast) {
-            window.UI.toast(`${informe.confirmados} préstamo(s) de esta terminal se respaldaron en la nube`, 'var(--accent)');
-          }
-        }).catch(() => { /* se reintenta al próximo arranque */ });
-      }
+      // La adopción H-62 sigue disponible como acción explícita, pero no corre
+      // durante un pull: reconstruir una proyección nunca autoriza crear
+      // documentos comerciales remotos a partir de caché heredada.
       // Migración de fotos incrustadas EN SEGUNDO PLANO (no se espera): sube las que quedaron en
       // formato viejo sin que el usuario tenga que pulsar nada. Va después del pull para operar
       // sobre el inventario ya sincronizado.

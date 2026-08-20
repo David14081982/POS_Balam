@@ -353,6 +353,10 @@ const out = await page.evaluate(async () => {
   const ledgerAntesAjuste = D.commissionLedger(() => true).find(x => x.vendedorId === base.dos.id);
   const ap1 = D.applyCommissionAdjustment(draft);
   ck('22 · el ajuste se aplica', ap1.ok === true, ap1.error || '');
+  ck('22 · la réplica conserva identidades por folio en el JSONB remoto',
+    sent.adj.length === 1 && sent.adj[0].rows.every(row => Array.isArray(row.folios))
+      && sent.adj[0].rows.some(row => row.folios.some(line => line.folio === vh.folio)),
+    JSON.stringify(sent.adj[0] || {}));
   const ledgerConAjuste = D.commissionLedger(() => true).find(x => x.vendedorId === base.dos.id);
   const ajusteDos = draft.porVendedor.find(x => x.sellerId === base.dos.id).comision;
   eq('22 · el ajuste retenido integra el saldo derivado',
@@ -378,6 +382,27 @@ const out = await page.evaluate(async () => {
   eq('23 · venta historica reconstruye su base', recon[0].base, 1000);
   ck('23 · venta historica se declara reconstruida', recon[0].reconstruida === true);
   ck('23 · venta historica NO usa el % de hoy', recon[0].source === 'historica');
+
+  // H-121 · El periodo es una proyección del último corte remoto, no una clave
+  // local independiente. Un snapshot remoto completo vacío también se aplica.
+  D.applyRemote('liquidations', [{
+    id: 'cut-h121-s1', sellerId: base.general.id, seller: S('gen').nombre,
+    monto: 10, tipo: 'corte', fecha: '2026-08-15 23:59',
+  }], { authoritative: true });
+  ck('H121 · periodo deriva del último corte confirmado', D.getPeriodoInicio() === '2026-08-15', D.getPeriodoInicio());
+  D.applyRemote('liquidations', [], { authoritative: true });
+  ck('H121 · liquidaciones remotas vacías retiran el periodo de caché', D.getPeriodoInicio() === '', D.getPeriodoInicio());
+  D.applyRemote('commissionAdjustments', [], { authoritative: true });
+  ck('H121 · ajustes remotos vacíos sustituyen la proyección local', D.commissionAdjustments.length === 0,
+    D.commissionAdjustments.length);
+  D.applyRemote('commissionAdjustments', [{
+    id: 'adj-legacy-h121', operationId: 'adj-legacy-h121', fecha: '2026-08-19 12:00',
+    porVendedor: [{ sellerId: base.general.id, comision: 30, ventas: 1 }],
+    renglones: [], _identityIncomplete: true,
+  }], { authoritative: true });
+  const legacyBlocked = D.commissionAdjustmentPreview();
+  ck('H121 · ajuste remoto legado sin folios bloquea otro ajuste automático',
+    legacyBlocked.identityIncomplete === true && legacyBlocked.aplicable === false);
 
   return R;
 });

@@ -60,7 +60,7 @@
     const [view, setView] = useState('grid');
     const [ajuste, setAjuste] = useState(false);
     const [, bump] = useState(0);
-    window.UI.useSyncActivity(!!ajuste, ['sellers','liquidations','sales','returns','exchanges'], { screen: 'sellers' });
+    window.UI.useSyncActivity(!!ajuste, ['sellers','liquidations','commissionAdjustments','sales','returns','exchanges'], { screen: 'sellers' });
     const refresh = () => bump(v => v + 1);
     const eligibleSellers = D.sellers.filter(D.isEligibleSeller);
     const periodo = D.currentPeriodPredicate();
@@ -328,7 +328,9 @@
       h('p', { key: 'i', className: 'text-body text-on-surface-variant leading-relaxed' },
         'Estas son las ventas que se cobraron sin comisión. Los tickets ya emitidos NO se modifican: lo que se registra es un documento de ajuste aparte, con su propio folio y auditoría.'),
       !preview.aplicable
-        ? h('div', { key: 'v', 'data-testid': 'commission-adjustment-empty', className: 'my-8 text-center text-on-surface-variant' }, preview.yaAjustados ? 'No queda nada por ajustar: todo lo pendiente ya se reconoció.' : 'No hay ventas sin comisión en el rango.')
+        ? h('div', { key: 'v', 'data-testid': preview.identityIncomplete ? 'commission-adjustment-review-required' : 'commission-adjustment-empty', className: 'my-8 text-center text-on-surface-variant' }, preview.identityIncomplete
+          ? 'Hay ajustes confirmados sin identidad completa por folio. No se puede proponer otro ajuste automático; requiere revisión administrativa.'
+          : (preview.yaAjustados ? 'No queda nada por ajustar: todo lo pendiente ya se reconoció.' : 'No hay ventas sin comisión en el rango.'))
         : h('div', { key: 'c' }, [
           h('div', { key: 'tot', className: 'grid grid-cols-2 md:grid-cols-4 gap-4 my-6' }, [
             stat('Ventas', preview.totales.ventas), stat('Venta neta', fmt(preview.totales.ventaNeta).replace('.00', '')),

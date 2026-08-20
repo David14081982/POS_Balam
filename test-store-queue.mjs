@@ -205,7 +205,14 @@ function freshEnv() {
       },
       releaseLayawayProductLock() { this.h65Released = true; return true; },
       saveSales() {},
-      applyRemote(kind, rows) { this.applied.push({ kind, n: rows.length, rows }); },
+      applyRemote(kind, rows, opts) {
+        this.applied.push({ kind, n: rows.length, rows, opts: opts || null });
+        if (kind === 'sales') {
+          this.sales.length = 0;
+          rows.forEach(row => this.sales.push(row));
+        }
+        return true;
+      },
       applySyncResult() { return { conflicts: 0 }; },
       markSaleSync(folio, status, detail) {
         const sale = this.sales.find(s => s.folio === folio);
@@ -379,14 +386,25 @@ function loadStore(env) {
   env.cloud.rowsByTable.sale_items = [
     { id: 81, folio: 'BG-1', sku: 'S1', nombre: 'P1', talla: 'M', qty: 1, precio: 100 },
   ];
-  await S.pullDomain('sales');
-  const merged = env.window.DATA.merged.find(m => m.kind === 'sales');
-  ok('8a. ventas van por mergeRemote (fusión), NUNCA por applyRemote (reemplazo)', !!merged && !env.window.DATA.applied.some(a => a.kind === 'sales'));
-  ok('8b. dedup ventana∪apartados: 2 folios únicos (el stub sirve ambos queries)', merged && merged.rows.length === 2 && merged.key === 'folio');
+  env.window.DATA.sales.push(
+    { folio: 'BG-GHOST', fecha: '2026-08-12 10:00', estado: 'Pagado' },
+    { folio: 'BG-OLD', fecha: '2020-01-01 10:00', estado: 'Pagado' },
+  );
+  const result = await S.pullDomain('sales');
+  const applied = env.window.DATA.applied.find(a => a.kind === 'sales');
+  ok('8a. la ventana se aplica como proyección autoritativa de su cobertura',
+    !!applied && applied.opts && applied.opts.authoritative === true
+      && result.ok === true && result.complete === true && result.applied === true);
+  ok('8b. remoto gana dentro de la ventana; histórico fuera de ella sobrevive',
+    applied && applied.rows.length === 3
+      && applied.rows.some(r => r.folio === 'BG-1')
+      && applied.rows.some(r => r.folio === 'BG-2')
+      && applied.rows.some(r => r.folio === 'BG-OLD')
+      && !applied.rows.some(r => r.folio === 'BG-GHOST'));
   ok('8c. la consulta de ventas filtra (gte fecha / eq estado), ya no baja todo', env.calls.some(c => c.table === 'sales' && /gte:fecha/.test(c.filtro)) && env.calls.some(c => c.table === 'sales' && /eq:estado:Apartado/.test(c.filtro)));
   ok('8d. sale_items se pide por folios (in), no la tabla completa', env.calls.some(c => c.table === 'sale_items' && /in:folio/.test(c.filtro)));
-  const bg1 = merged && merged.rows.find(r => r.folio === 'BG-1');
-  const bg2 = merged && merged.rows.find(r => r.folio === 'BG-2');
+  const bg1 = applied && applied.rows.find(r => r.folio === 'BG-1');
+  const bg2 = applied && applied.rows.find(r => r.folio === 'BG-2');
   ok('8e. los renglones se adjuntan a su venta', bg1 && bg1.lineas.length === 1 && bg1.lineas[0].sku === 'S1');
   ok('8f. el pull conserva identidad remota del renglón para adopción histórica',
     bg1 && bg1.lineas[0]._saleItemId === 81);
@@ -426,10 +444,10 @@ function loadStore(env) {
   ok('10a. pushSale envía total/anticipo/saldo exactos', row && row.total === 1000 && row.anticipo === 300 && row.saldo === 700);
   const item = (env.cloud.rowsByTable.sale_items || [])[0];
   ok('10b. descuento y precios explicativos llegan a la nube', row && row.descuento === 50 && item && item.precio === 1150 && item.precio_base === 1150 && item.precio_original === 1200);
-  env.window.DATA.merged.length = 0;
+  env.window.DATA.applied.length = 0;
   env.cloud.rowsByTable.sales = [row];
   await S.pullDomain('sales');
-  const back = env.window.DATA.merged[0] && env.window.DATA.merged[0].rows[0];
+  const back = env.window.DATA.applied[0] && env.window.DATA.applied[0].rows[0];
   ok('10c. otra terminal reconstruye el snapshot exacto', back && back.total === 1000 && back.anticipo === 300 && back.saldo === 700 && back.descuento === 50 && back.lineas[0].precioOrig === 1200);
 }
 
@@ -789,7 +807,7 @@ function loadStore(env) {
   }];
   const S = loadStore(env);
   await S.init({ pull: true });
-  const salePull = env.window.DATA.merged.find(x => x.kind === 'sales');
+  const salePull = env.window.DATA.applied.find(x => x.kind === 'sales');
   const returnPull = env.window.DATA.applied.find(x => x.kind === 'returns');
   const paymentPull = env.window.DATA.applied.find(x => x.kind === 'payments');
   const movementPull = env.window.DATA.applied.find(x => x.kind === 'movements');
@@ -996,7 +1014,7 @@ function loadStore(env) {
   }));
   const S = loadStore(env);
   await S.pullDomain('sales');
-  const pulled = env.window.DATA.merged.find(x => x.kind === 'sales');
+  const pulled = env.window.DATA.applied.find(x => x.kind === 'sales');
   ok('29c. H-16: ventas recupera más de 1 000 filas sin truncar',
     pulled && pulled.rows.length === 1001);
   ok('29d. H-16: consultas de ventas recorren todas sus páginas',
@@ -1044,7 +1062,7 @@ function loadStore(env) {
   }));
   const S = loadStore(env);
   await S.pullDomain('sales');
-  const pulled = env.window.DATA.merged.find(x => x.kind === 'sales');
+  const pulled = env.window.DATA.applied.find(x => x.kind === 'sales');
   const itemCount = pulled && pulled.rows.reduce((sum, sale) => sum + sale.lineas.length, 0);
   ok('29g. H-16: un lote recupera más de 1 000 renglones de venta',
     itemCount === 1100);
@@ -1296,8 +1314,8 @@ console.log(`\nSubtotal previo H-60: ${pass} pasaron, ${fail} fallaron`);
     q.length === 2 && !q.some(o => o.table === 'products'));
   ok('33b. H-60: conserva ventas y fotos pendientes sin alterarlas',
     q.some(o => o.id === 'venta-intacta') && q.some(o => o.id === 'foto-intacta'));
-  ok('33c. H-60: al quitar el bloqueo, el pull recupera el catálogo remoto',
-    env.window.DATA.applied.some(a => a.kind === 'products' && a.n === 1));
+  ok('33c. H-121: una venta pendiente también protege su efecto de inventario',
+    !env.window.DATA.applied.some(a => a.kind === 'products'));
 }
 
 // H-60: productos usan UUID y no generan operaciones vacías.
@@ -1784,5 +1802,123 @@ console.log('H96) Cambio conserva clave comercial entre cola y replay');
       && S.pending === 0 && S.queueStatus().blocked === 0);
 }
 
-console.log(`H96 total actualizado: ${pass} pasaron, ${fail} fallaron`);
+// H-121: ajuste remoto y protección financiera comparten la misma autoridad.
+{
+  const env = freshEnv();
+  env.cloud.rowsByTable.system_manifest = [{
+    singleton: true, schema_version: 20260819015900, sync_protocol_min: 2,
+    sync_protocol_current: 2, data_epoch: 1, domain_modes: { products: 'active' },
+  }];
+  env.cloud.rowsByTable.sync_domain_versions = [];
+  const S = loadStore(env);
+  await S.init({});
+  env.localStorage.setItem('balam_sync_queue', JSON.stringify([{
+    id: 'sale-pending-cursor-h121', ownerId: null, type: 'sale', folio: 'BG-OFFLINE-H121',
+  }]));
+  S.invalidateDomain('products', 121);
+  const result = await S.reconcileDomains();
+  const status = S.syncStatus();
+  ok('H121e. un dominio omitido por cola no avanza su cursor',
+    result.deferred.includes('products') && Number(status.cursors.products || 0) < 121
+      && status.invalidDomains.includes('products'));
+}
+
+{
+  const env = freshEnv();
+  const S = loadStore(env);
+  await S.init({});
+  env.cloud.rowsByTable.commission_adjustments = [{
+    operation_id: '00000000-0000-4000-8000-000000000121', created_at: '2026-08-19T12:00:00Z',
+    motivo: 'H121', total: 30, vendedores: 1,
+    detalle: [{ seller_id: 's1', monto: 30, ventas: 1, folios: [{ folio: 'BG-H121', comision: 30 }] }],
+  }, {
+    operation_id: '00000000-0000-4000-8000-000000000120', created_at: '2026-08-18T12:00:00Z',
+    motivo: 'H121 legacy', total: 20, vendedores: 1,
+    detalle: [{ seller_id: 's1', monto: 20, ventas: 1 }],
+  }];
+  const result = await S.pullDomain('commissionAdjustments');
+  const applied = env.window.DATA.applied.find(a => a.kind === 'commissionAdjustments');
+  const identified = applied && applied.rows.find(row => row.operationId === '00000000-0000-4000-8000-000000000121');
+  ok('H121c. ajustes confirmados se reconstruyen desde Supabase',
+    result.complete === true && identified && identified.renglones[0].folio === 'BG-H121');
+  ok('H121c2. ajuste legado sin folios queda marcado para revisión cerrada',
+    applied && applied.rows.some(row => row._identityIncomplete === true));
+}
+{
+  const env = freshEnv();
+  env.localStorage.setItem('balam_sync_queue', JSON.stringify([{
+    id: 'adj-pending-h121', ownerId: null, type: 'commissionAdjustment',
+    operationId: '00000000-0000-4000-8000-000000000122', rows: [],
+  }]));
+  const S = loadStore(env);
+  const result = await S.pullDomain('commissionAdjustments');
+  ok('H121d. un ajuste offline protege su proyección hasta confirmarse',
+    result.skipped === 'pending' && result.complete === false && result.applied === false
+      && !env.window.DATA.applied.some(a => a.kind === 'commissionAdjustments'));
+}
+
+// H-121: un snapshot completo exitoso puede estar vacío y debe retirar caché.
+{
+  const env = freshEnv();
+  const S = loadStore(env);
+  await S.init({});
+  env.window.DATA.sales.push({ folio: 'BG-LOCAL', fecha: '2026-08-12 10:00', estado: 'Pagado' });
+  const result = await S.pullDomain('sales', { fullSnapshot: true, authoritativeEmpty: true });
+  const applied = env.window.DATA.applied.find(a => a.kind === 'sales');
+  ok('H121a. snapshot completo remoto vacío se aplica, no es no-op',
+    !!applied && applied.n === 0 && applied.opts && applied.opts.authoritative === true);
+  ok('H121b. sólo una aplicación completa y persistida se declara aplicada',
+    result.ok === true && result.complete === true && result.applied === true);
+}
+
+{
+  const env = freshEnv();
+  const S = loadStore(env);
+  const result = await S.pull();
+  ok('H121g. configuración remota vacía también es snapshot aplicado',
+    result.ok === true && result.complete === true && result.applied === true
+      && env.window.CONFIG.loaded && Object.keys(env.window.CONFIG.loaded.settings).length === 0);
+}
+
+// H-121: la convergencia nunca elimina una captura offline legítima. La cola
+// durable protege el documento y todos sus efectos antes de aplicar el snapshot.
+{
+  const env = freshEnv();
+  env.window.DATA.sales.push({ folio: 'BG-OFFLINE-H121', fecha: '2026-08-19 20:00', estado: 'Pagado' });
+  env.localStorage.setItem('balam_sync_queue', JSON.stringify([{
+    id: 'sale-offline-h121', ownerId: null, type: 'sale', folio: 'BG-OFFLINE-H121',
+    operationId: '00000000-0000-4000-8000-000000000123',
+  }]));
+  const S = loadStore(env);
+  const result = await S.pullDomain('sales', { fullSnapshot: true, authoritativeEmpty: true });
+  ok('H121f. venta offline durable sobrevive al snapshot remoto vacío',
+    result.skipped === 'pending' && result.complete === false && result.applied === false
+      && env.window.DATA.sales.some(s => s.folio === 'BG-OFFLINE-H121')
+      && !env.window.DATA.applied.some(a => a.kind === 'sales'));
+}
+
+{
+  const env = freshEnv();
+  env.localStorage.setItem('balam_sync_queue', JSON.stringify([{
+    id: 'return-offline-h121', ownerId: null, type: 'return', folio: 'BG-OFFLINE-H121',
+  }]));
+  const S = loadStore(env);
+  const result = await S.pullDomain('payments');
+  ok('H121h. una devolución offline protege también su efecto de pago',
+    result.skipped === 'pending' && result.applied === false);
+}
+
+{
+  const env = freshEnv();
+  env.localStorage.setItem('balam_sync_queue', JSON.stringify([{
+    id: 'reclass-offline-h121', ownerId: null, type: 'referenceReclassification',
+    operationId: '00000000-0000-4000-8000-000000000124',
+  }]));
+  const S = loadStore(env);
+  const result = await S.pullDomain('movements');
+  ok('H121i. una reclasificación offline protege productos y movimientos',
+    result.skipped === 'pending' && result.applied === false);
+}
+
+console.log(`H121 total actualizado: ${pass} pasaron, ${fail} fallaron`);
 process.exit(fail ? 1 : 0);

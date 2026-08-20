@@ -37,6 +37,7 @@ y `BLOQUEADO`.
 | H-90 | La autoridad monetaria no conserva componentes configurables ni reembolsos exactos | RESUELTO Y PUBLICADO | Ventas / devoluciones / reportes / impresión |
 | H-99 | Preview, PDF e impresión de etiquetas deben compartir composición | RESUELTO Y PUBLICADO | Inventario / etiquetas / impresión |
 | H-111 | POS expone referencias V2 en lugar de una selección comercial por talla | RESUELTO | POS / UX / identidad V2 |
+| H-121 | La caché local puede actuar como segunda autoridad comercial | RESUELTO / PENDIENTE DE PUBLICACIÓN | Sincronización / persistencia / offline |
 
 ## H-01 — Inventario concurrente
 
@@ -5783,6 +5784,51 @@ bytes y SHA-256
 La auditoría pública read-only confirmó Devoluciones=0 más dos evidencias
 huérfanas visibles/no borrables, CTA bloqueado, siete grupos coherentes, esquema
 `20260819015900`, cola 0 y ninguna mutación comercial.
+
+## H-121 — La caché local puede actuar como segunda autoridad comercial
+
+**Estado:** RESUELTO / PENDIENTE DE PUBLICACIÓN
+**Fecha de registro:** 19/08/2026
+**Origen:** ventas y devoluciones ausentes de Supabase siguen operativas en
+Devoluciones desde `DATA`/`localStorage`, aunque Equipo David declara cola cero,
+misma época y sincronización terminal.
+**Evidencia inicial:** `STORE.pullSales()` baja una ventana reciente más todos
+los apartados y llama `DATA.mergeRemote()`. Esa fusión conserva por diseño toda
+venta local ausente. Los pulls completos tampoco aplican una respuesta vacía
+salvo durante un rebootstrap explícito; `applyRemoteLoans()` incluso rechaza una
+lectura vacía y conserva como no confirmado cualquier documento sin
+`_loanVersion`, aunque no demuestre una operación durable en cola. Finalmente,
+`reconcileDomains()` puede avanzar el cursor cuando el pull de Ventas ocultó un
+error, devolvió cero filas o se difirió por una captura concurrente.
+**Reproducción real read-only:** Supabase no contiene los folios locales
+BG-260812-0033, 0031, 0007, 0005, 0004 y 0002; la cola declarada es cero y el
+equipo está en la época vigente. `balam_pos_sales_v1` conserva esas ventas y
+`balam_pos_returns_v1` conserva la devolución de BG-260812-0004. `ReturnPicker`
+consume directamente `DATA.sales`, por lo que ambas copias se interpretan como
+documentos comerciales vigentes. BG-260810-0011 sí existe en Supabase y es el
+control positivo.
+**Impacto:** ventas, devoluciones, pagos, movimientos, comisiones, clientes,
+préstamos y existencias pueden diferir entre equipos; una UI puede habilitar una
+acción económica o de inventario sobre un documento que el servidor ya no
+reconoce. El indicador de sincronización no demuestra hoy la convergencia de la
+proyección.
+**Corrección:** los pulls completos aplican también el conjunto vacío; Ventas
+reconcilia sólo su ventana declarada o un snapshot completo durante rebootstrap;
+el cursor avanza únicamente tras resultado completo y persistido; una matriz
+única protege todos los efectos de la cola; préstamos dejan de usar
+`_loanVersion` como autoridad; ajustes y periodo de comisiones se reconstruyen
+desde Supabase. La migración heredada de préstamos ya no se ejecuta como efecto
+secundario de un pull.
+**Convergencia real:** la evidencia de Equipo David se exportó y selló antes de
+reconstruir la proyección mediante H-77/H-116. Los seis folios fantasma quedaron
+fuera de todos los consumidores; BG-260810-0011 se conservó; cola 0; protocolo
+2 y época 2 vigentes. El hash comercial remoto fue idéntico antes y después, por
+lo que no se modificaron documentos, stock, pagos ni comisiones en Supabase.
+**Puerta permanente:** `R-SYNC-13`–`R-SYNC-15` y `ADR-014`; fixtures cubren
+snapshot vacío, ventana parcial, cursor incompleto, mapa de efectos, captura
+offline legítima, ajustes/periodo de comisiones y lectura multi-terminal.
+**Corrección documentada:** `docs/fixes/autoridad-unica-datos-h121.md`.
+**Commit:** Pendiente de commit.
 
 ## Regla de actualización
 

@@ -1,7 +1,7 @@
 ---
 capa: conocimiento
 applies_to: [client, database]
-related_histories: [H-04, H-09, H-14, H-18, H-62, H-77, H-79]
+related_histories: [H-04, H-09, H-14, H-18, H-62, H-77, H-79, H-121]
 severity_max: required
 no_alcance: "No define ninguna autoridad ni transcribe firmas. Sólo dice qué pregunta responde cada una y dónde vive."
 ---
@@ -25,12 +25,21 @@ mismo papel por (`operation_id`, capacidad, hash)
 **Consumidores:** `grep -rn "flushQueue\|queueStatus" balam/`
 
 ## ¿Este préstamo ya está confirmado en la nube?
-**Autoridad:** `loan._loanVersion` — la versión que devolvió el servidor. Ausente
-significa «todavía no confirmado», y es el criterio que usa la migración de H-62
-y la fusión del pull para no perder un documento local
+**Autoridad:** presencia y versión en `pos.loan_documents`; si aún no existe,
+una operación `loanOperation` exacta en la cola durable. `_loanVersion` es sólo
+metadato de la proyección y no autoriza conservar ni migrar un documento.
 **Definición:** `balam/data.jsx` § préstamos · `balam/store.jsx` § `applyOp`
-**Creada por:** H-62 · **Decisión:** `ADR-006`
+**Creada por:** H-62 · **Corregida por:** H-121 · **Decisión:** `ADR-014`
 **Consumidores:** `grep -rn "_loanVersion" balam/ test-*.mjs`
+
+## ¿Puede una fila local ausente del snapshot remoto seguir operativa?
+**Autoridad:** sólo si una operación durable exacta la protege o si la lectura
+remota no cubrió esa identidad. En snapshot completo, ausencia sin cola retira;
+en ventana temporal sólo se retira dentro de la ventana; en incremental hace
+falta tombstone/versionado. `DATA`, `localStorage`, cursores y telemetría no
+pueden justificarla por sí solos.
+**Definición:** `ADR-014` · `playbooks/synchronization.md`
+**Creada por:** H-121
 
 ## ¿A qué préstamo corresponde este vale impreso?
 **Autoridad:** `DATA.findLoanByFolio()` — folio vigente primero, alias después,

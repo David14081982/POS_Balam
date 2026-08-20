@@ -24,7 +24,7 @@ reabre por accidente.
 | esquema, migraciones, persistencia | `playbooks/database.md` |
 | SQL, permisos, roles, RLS, vistas o funciones | `playbooks/security.md` |
 | `balam/`, build o artefactos | `playbooks/client.md` |
-| sincronización, cola, Realtime, offline o terminales | `playbooks/client.md` · `playbooks/synchronization.md` · `authorities/synchronization.md` · `ADR-006` · `ADR-012` |
+| sincronización, cola, Realtime, offline o terminales | `playbooks/client.md` · `playbooks/synchronization.md` · `authorities/synchronization.md` · `ADR-006` · `ADR-012` · `ADR-014` |
 | pruebas, cierre, commit o despliegue | `playbooks/delivery.md` |
 | ubicar quién responde una pregunta de negocio | `authorities/` — `sales` · `inventory` · `security` · `synchronization` |
 | *(sólo si una regla o un playbook lo cita)* | el `ADR-XXX` correspondiente |
@@ -117,3 +117,4 @@ descubre. Las historias que modificaron una autoridad se recuperan con
 | `ADR-011` | La identidad de una talla no es el código que se edita | vigente |
 | `ADR-012` | La sincronización entrante es un protocolo versionado | vigente |
 | `ADR-013` | Referencia física: products.id, barcode y SKU separados | vigente |
+| `ADR-014` | Autoridad confirmada, intención offline y caché son roles distintos | vigente; aplicada por H-121 |
