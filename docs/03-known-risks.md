@@ -5733,6 +5733,50 @@ reintento, descarte, cuarentena ni retiro. Sólo cambiaron definiciones técnica
 de RPC y el historial de migraciones.
 **Commit funcional:** `209b2c1`; cierre documental en commit posterior.
 
+## H-120 — Limpiar Devoluciones conserva un estado de venta sin evidencia
+
+**Estado:** RESUELTO — PENDIENTE DE PUBLICACIÓN
+**Fecha de registro:** 19/08/2026
+**Origen:** contradicción observada entre Devoluciones y Administración / Datos.
+**Evidencia inicial:** `DATA.recordReturn()` cambia la venta a `Devolución
+parcial` o `Devuelto`, pero la ejecución H-113/H-119 que elimina únicamente
+Devoluciones conserva la venta sin restaurar su estado anterior. Los arneses
+H-119 construyen una devolución junto a una venta todavía `Pagado`, por lo que
+no reproducen el ciclo real venta → devolución parcial → limpieza. En la nube
+real, `sync_activity` demuestra que tres devoluciones se sincronizaron, pero sus
+ventas y documentos ya no existen; sobreviven dos `return_commits` huérfanos y
+ninguna autoridad conserva piezas, importes o estado anterior suficientes para
+reconstruirlos sin inventar datos.
+**Riesgo:** la pantalla de Devoluciones puede presentar una venta como
+`Devolución parcial` aunque no exista el documento que sustenta ese estado, y la
+limpieza puede declarar cero devoluciones sin explicar la evidencia transaccional
+huérfana. Reprocesar esa venta podría duplicar inventario o dinero; restaurar
+`Pagado` por defecto podría reescribir estados históricos `Entregado` o `Enviado`.
+**Alcance autorizado:** evidencia read-only sobre los folios informados,
+snapshot aditivo y hacia adelante del estado previo, restauración exacta durante
+una limpieza futura, bloqueo cerrado cuando falta evidencia, presentación de
+inconsistencias, fixtures aislados, pruebas, build y publicación segura.
+**No alcance:** modificar o reconstruir los tres folios reales, ejecutar una
+limpieza real, descartar/reintentar colas, retirar equipos, alterar stock,
+reembolsos, pagos, comisiones o movimientos comerciales existentes.
+**Causa raíz:** la devolución cambiaba `sales.estado`, pero no congelaba el
+estado anterior; la limpieza sólo Devoluciones eliminaba el documento y
+conservaba esa proyección. La pantalla confiaba además en la proyección aunque
+faltara el documento, y el preview no presentaba `return_commits` huérfanos.
+**Corrección:** snapshot aditivo `returns.prior_sale_state`, restauración remota
+y local en la misma operación selectiva, protocolo 4, guardas cerradas para
+históricos incompletos/commits huérfanos y presentación no accionable de ambas
+inconsistencias. No existe backfill ni reparación automática.
+**Pruebas:** H-120 SQL con rollback; H-119 funcional; ciclo E2E real
+UI→STORE→PostgreSQL→limpieza→segunda terminal 37/37; Devoluciones 21/21;
+H-113 35/35 + 21/21; H-116 20/20 + 29/29; H-117 65/65; H-118 10/10;
+cola 176/176; migraciones 31/31; módulos 42/42; responsive 492/492;
+smoke bundle 17/17; build reproducible 8/8.
+**Riesgo residual:** los dos commits huérfanos y la telemetría del tercer folio
+no contienen piezas, importes ni efectos suficientes para reconstruir historia.
+Permanecen sin tocar y requieren evidencia externa y autorización separada.
+**Commit:** Pendiente de commit.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

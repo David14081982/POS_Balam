@@ -2040,6 +2040,9 @@
     const stockNet = stockReturns - stockLeaves;
     const forced = preview && Array.isArray(preview.forced_dependencies) ? preview.forced_dependencies : [];
     const reasons = preview && Array.isArray(preview.blocked_reasons) ? preview.blocked_reasons : [];
+    const orphanReturns = preview && preview.documents
+      && Array.isArray(preview.documents.orphan_return_commits)
+      ? preview.documents.orphan_return_commits : [];
     const normalized = preview && preview.selection_normalized || selection;
     const fleet = preview && preview.fleet || {};
     const fleetSummary = fleet.summary || {};
@@ -2092,6 +2095,17 @@
         }[reason.document] || 'un documento conservado';
         return `Falta la evidencia histórica de comisiones de ${documentLabel}; BALAM no puede recalcular los saldos con seguridad.`;
       }
+      if (reason.code === 'return_state_evidence_missing') {
+        const folios = Array.isArray(reason.folios) ? reason.folios.join(', ') : 'una venta conservada';
+        return `Falta el estado anterior exacto de ${folios}. No se puede borrar su devolución sin dejar una venta histórica incorrecta.`;
+      }
+      if (reason.code === 'orphan_return_evidence') {
+        const documents = Array.isArray(reason.documents) ? reason.documents : [];
+        const first = documents[0] || {};
+        const reference = first.folio ? ` de la venta ${first.folio}` : '';
+        const moment = first.created_at ? ` del ${new Date(first.created_at).toLocaleString('es-MX')}` : '';
+        return `Supabase conserva evidencia de ${documents.length || 'una'} devolución${documents.length === 1 ? '' : 'es'}${reference}${moment}, pero falta el documento comercial. Requiere revisión antes de limpiar Devoluciones.`;
+      }
       if (reason.code === 'client_cannot_be_fenced') {
         return `${name} usa una versión demasiado antigua. Actualízalo o retíralo desde el Centro de equipos.`;
       }
@@ -2122,7 +2136,12 @@
     else if (busy) readiness = 'BALAM está calculando qué se borrará y cómo quedará el inventario…';
     else if (error) readiness = 'No se puede continuar hasta que BALAM revise nuevamente la limpieza.';
     else if (preview && preview.ready) readiness = 'Todo está listo para limpiar.';
-    else if (preview) readiness = blockingMessages[0] || 'Esta limpieza requiere atención antes de continuar.';
+    else if (preview) {
+      const priority = reasons.find(reason => reason && typeof reason === 'object'
+        && ['orphan_return_evidence','return_state_evidence_missing'].includes(reason.code));
+      readiness = priority ? humanReason(priority)
+        : (blockingMessages[0] || 'Esta limpieza requiere atención antes de continuar.');
+    }
     const readinessOk = !!(preview && preview.ready && !busy);
     return h(GlassCard, { className: 'p-6 mt-5', 'data-testid': 'selective-cleanup-card' }, [
       h('div', { key: 'over', className: 'text-overline font-bold uppercase tracking-widest text-primary' }, '¿Qué quieres borrar?'),
@@ -2150,6 +2169,24 @@
         ]),
         dependencyMessages.length > 0 && h('div', { key: 'forced', className: 'mt-4 p-3 rounded-lg bg-warning-soft text-warning text-caption space-y-1' },
           dependencyMessages.map(message => h('div', { key: message }, message))),
+        orphanReturns.length > 0 && h('section', { key: 'orphan-returns', 'data-testid': 'cleanup-orphan-return-evidence',
+          className: 'mt-4 p-4 rounded-lg border border-warning/40 bg-warning-soft/30' }, [
+          h('div', { key: 'title', className: 'text-label-sm font-bold text-warning' },
+            'Evidencia de devoluciones que requiere revisión'),
+          h('p', { key: 'copy', className: 'mt-1 text-caption text-on-surface-variant' },
+            `Supabase conserva ${N(orphanReturns.length)} comprobante(s) transaccional(es), pero faltan las devoluciones comerciales correspondientes. No se cuentan como datos borrables y BALAM no inventará sus piezas ni importes.`),
+          ...orphanReturns.map((row,index) => h('div', { key: row.commit_id || row.return_id || index,
+            className: 'mt-2 p-2 rounded border border-warning/30 text-caption text-primary' }, [
+            h('div', { key: 'folio', className: 'font-semibold' }, row.folio || 'Folio no disponible'),
+            h('div', { key: 'date', className: 'text-on-surface-variant' }, row.created_at
+              ? new Date(row.created_at).toLocaleString('es-MX') : 'Fecha no disponible'),
+            h('details', { key: 'technical', className: 'mt-1 text-overline text-on-surface-variant' }, [
+              h('summary', { key: 's', className: 'cursor-pointer' }, 'Identidad técnica'),
+              h('div', { key: 'r', className: 'mt-1 break-all' }, `return_id: ${row.return_id || '—'}`),
+              h('div', { key: 'c', className: 'break-all' }, `commit_id: ${row.commit_id || '—'}`),
+            ]),
+          ])),
+        ]),
         h('section', { key: 'stock', className: 'mt-5 p-4 rounded-lg bg-surface', 'aria-label': 'Efecto en el inventario' }, [
           h('div', { key: 'title', className: 'text-label-sm font-bold text-primary' }, 'Inventario'),
           stock.length ? h('div', { key: 'summary', className: 'mt-2 space-y-1 text-caption text-on-surface-variant' }, [

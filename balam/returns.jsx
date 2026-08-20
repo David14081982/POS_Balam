@@ -97,6 +97,12 @@
         || String(s.cliente || '').toLowerCase().includes(term))
       .filter(s => plazo === 'todos' || deadlineOf(s).status === plazo)
       .slice(0, 40), [q, plazo, D.sales.length, buscando]);
+    const inconsistent = useMemo(() => D.sales
+      .filter(s => D.returnLifecycle && D.returnLifecycle(s).inconsistent)
+      .filter(s => !term
+        || String(s.folio).toLowerCase().includes(term)
+        || String(s.cliente || '').toLowerCase().includes(term))
+      .slice(0, 12), [q, D.sales.length, D.returns.length, buscando]);
     const recent = (D.returns || []).slice(0, 8);
     // El pull de ventas es paginado (ventana reciente): un folio más viejo puede no estar
     // en este equipo. Este botón lo trae de la nube y lo fusiona en lo local para devolverlo.
@@ -108,6 +114,7 @@
         const s = await window.STORE.fetchSaleByFolio(q.trim());
         const alias = s && D.folioAliasHit ? D.folioAliasHit(s, q.trim()) : null;
         if (!s) toast('No se encontró ese folio en la nube', 'var(--danger)');
+        else if (D.returnLifecycle && D.returnLifecycle(s).inconsistent) toast(`La venta ${s.folio} indica una devolución, pero falta el documento que la demuestra. No la reproceses; requiere revisión.`, 'var(--danger)');
         else if (!D.isReturnable(s)) toast(`La venta ${s.folio} no admite devolución (${s.estado})`, 'var(--danger)');
         else if (alias) toast(`Este ticket se registró posteriormente como ${s.folio}`, 'var(--accent)');
         else toast(`Venta ${s.folio} recuperada del histórico`, 'var(--accent)');
@@ -141,8 +148,17 @@
             ]),
             h('div', { key: 'pl', className: 'mt-3' }, h(Segment, { value: plazo, onChange: setPlazo, options: DEADLINE_FILTERS })),
           ]),
+          inconsistent.length > 0 && h(GlassCard, { key: 'inconsistent', className: 'p-4 border border-warning/40 bg-warning-soft/30', 'data-testid': 'return-lifecycle-inconsistent' }, [
+            h('div', { key: 't', className: 'text-label-sm font-bold text-warning' }, 'Ventas que requieren revisión'),
+            h('p', { key: 'p', className: 'mt-1 text-caption text-on-surface-variant' }, 'El estado de estas ventas y sus documentos de devolución no coinciden. No pueden reprocesarse ni mover inventario o dinero.'),
+            ...inconsistent.map(s => h('div', { key: s.folio, className: 'mt-2 p-2 rounded border border-warning/30 text-caption' }, [
+              h('div', { key: 'f', className: 'font-semibold text-primary' }, `${s.folio} · ${s.estado}`),
+              h('div', { key: 'a', className: 'text-on-surface-variant' }, 'Acción: resincronizar y revisar el historial autoritativo.'),
+            ])),
+          ]),
           h('div', { key: 'list', className: 'flex flex-col gap-2' }, sales.length ? sales.map(s => h('button', {
             key: s.folio,
+            'data-testid': `return-sale-${s.folio}`,
             className: 'group flex items-center gap-4 p-4 bg-surface-container-lowest rounded-lg shadow-e1 hover:shadow-e2 transition-all text-left',
             onClick: () => onPick(s.folio),
           }, [
@@ -340,6 +356,7 @@
                     // Checkbox
                     h('button', {
                       key: 'cb', disabled: done, onClick: () => toggle(row),
+                      'data-testid': `return-line-toggle-${row.k}`,
                       className: 'w-6 h-6 mt-0.5 shrink-0 grid place-items-center rounded border-2 transition-colors ' + (st.on ? 'bg-primary border-primary text-on-primary' : 'border-outline ' + (done ? '' : 'hover:border-primary')),
                     }, st.on && h(MS, { name: 'check', size: 16 })),
                     h('div', { key: 'info', className: 'flex-1 min-w-0' }, [
@@ -359,6 +376,7 @@
                           h('label', { key: 'l', className: 'block text-overline uppercase tracking-widest text-on-surface-variant mb-1.5' }, 'Motivo de devolución'),
                           h('select', {
                             key: 's', value: st.motivo || '', onChange: e => setRow(row.k, { motivo: e.target.value }),
+                            'data-testid': `return-line-reason-${row.k}`,
                             className: 'w-full h-10 px-3 bg-surface-container-low border border-outline-variant focus:ring-1 focus:ring-primary text-body rounded-lg',
                           }, [h('option', { key: '_', value: '', disabled: true }, 'Selecciona un motivo…')].concat(reasons.map(r => h('option', { key: r.code, value: r.code }, r.label)))),
                         ]),

@@ -16,8 +16,8 @@
   const QKEY = 'balam_sync_queue';
   const QDB = 'balam_sync', QSTORE = 'durable_queue';
   const SYNC_PROTOCOL_VERSION = 2;
-  const SYNC_SCHEMA_VERSION = 20260818015300;
-  const SELECTIVE_CLEANUP_PROTOCOL = 3;
+  const SYNC_SCHEMA_VERSION = 20260819015900;
+  const SELECTIVE_CLEANUP_PROTOCOL = 4;
   const SYNC_CURSOR_KEY = 'balam_sync_domain_cursors_v1';
   const SYNC_DOMAINS = {
     permissions: { deps: [] }, config: { deps: ['permissions'] },
@@ -156,7 +156,7 @@
     },
     returns: {
       table: 'returns', conflict: 'id',
-      fromRow: r => ({ id: r.id, folio: r.folio, fecha: r.fecha || '', cliente: r.cliente, vendedores: r.vendedores || [], metodo: r.metodo, total: Number(r.total) || 0, components: Array.isArray(r.components) ? r.components : undefined, comisiones: Array.isArray(r.comisiones) ? r.comisiones : undefined, notas: r.notas || '', lineas: [] }),
+      fromRow: r => ({ id: r.id, folio: r.folio, fecha: r.fecha || '', cliente: r.cliente, vendedores: r.vendedores || [], metodo: r.metodo, total: Number(r.total) || 0, components: Array.isArray(r.components) ? r.components : undefined, comisiones: Array.isArray(r.comisiones) ? r.comisiones : undefined, priorSaleState: r.prior_sale_state || null, notas: r.notas || '', lineas: [] }),
     },
     liquidations: {
       table: 'liquidations', conflict: 'id',
@@ -1989,7 +1989,7 @@
   function pushReturn(ret, effects) {
     if (!enabled) return;
     effects = effects || {};
-    const header = { id: ret.id, folio: ret.folio, fecha: ret.fecha || null, cliente: ret.cliente, vendedores: ret.vendedores || [], metodo: moneyWireMethod(ret.metodo || null, ret.components), total: Number(ret.total) || 0, notas: ret.notas || null, comisiones: Array.isArray(ret.comisiones) ? ret.comisiones : [] };
+    const header = { id: ret.id, folio: ret.folio, fecha: ret.fecha || null, cliente: ret.cliente, vendedores: ret.vendedores || [], metodo: moneyWireMethod(ret.metodo || null, ret.components), total: Number(ret.total) || 0, notas: ret.notas || null, comisiones: Array.isArray(ret.comisiones) ? ret.comisiones : [], prior_sale_state: ret.priorSaleState || null };
     const items = (ret.lineas || []).map(l => ({ return_id: ret.id, line_id: l.lineId || null,
       source_sale_line_id: l.sourceSaleLineId || null, product_id: l.productId || null,
       barcode_code: l.barcodeCode || null, physical_attrs: l.physicalAttrs || null,

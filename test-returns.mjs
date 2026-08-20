@@ -62,6 +62,7 @@ const r = await page.evaluate(() => {
     ventasMesRevertida: round(vmTrasVenta - seller.ventasMes),
     mov: D.movements[0] && { tipo: D.movements[0].tipo, cant: D.movements[0].cant, ref: D.movements[0].ref },
     returnsLen: D.returns.length, returnedQty: D.returnedQty(sale.folio, p.sku, talla),
+    priorSaleState: res1.ok ? res1.ret.priorSaleState : null,
   };
 
   // 3) Idempotencia/validación: intentar devolver 2 más (solo queda 1) → error
@@ -70,7 +71,9 @@ const r = await page.evaluate(() => {
 
   // 4) Devolver la última pieza → total 'Devuelto', stock restaurado completo
   const res3 = D.recordReturn({ folio: sale.folio, lineas: [{ sku: p.sku, nombre: p.nombre, talla, qty: 1, motivo: 'Defecto', precio: sale.lineas[0].precio }], metodo: 'Tarjeta' });
-  out.return2 = { ok: res3.ok, stock: D.stockOf(p, talla), estado: sale.estado, returnedQty: D.returnedQty(sale.folio, p.sku, talla) };
+  out.return2 = { ok: res3.ok, stock: D.stockOf(p, talla), estado: sale.estado,
+    returnedQty: D.returnedQty(sale.folio, p.sku, talla),
+    priorSaleState: res3.ok ? res3.ret.priorSaleState : null };
 
   // 5) reverseCommission OFF: nueva venta, devolver, comisión NO cambia
   C.setSetting('returns.reverseCommission', false);
@@ -83,6 +86,13 @@ const r = await page.evaluate(() => {
   out.reasons = C.codes('return_reason');
   const apart = { folio: 'X', estado: 'Apartado' };
   out.apartadoNoDevolvible = D.isReturnable(apart) === false;
+  const stale = { folio: 'STALE-WITHOUT-RETURN', estado: 'Devolución parcial' };
+  out.staleProjection = { lifecycle: D.returnLifecycle(stale), returnable: D.isReturnable(stale) };
+  const missingProjection = { folio: 'SALE-WITH-RETURN', estado: 'Pagado' };
+  D.returns.push({ id: 'RETURN-WITHOUT-STATE', folio: missingProjection.folio,
+    priorSaleState: 'Pagado', lineas: [] });
+  out.missingProjection = { lifecycle: D.returnLifecycle(missingProjection),
+    returnable: D.isReturnable(missingProjection) };
   out.pushedReturns = pushedReturns;
   return out;
 });
@@ -100,16 +110,26 @@ check('Venta descuenta stock (-2)', r.afterSale.stock === r.setup.stock0 - 2, `$
 check('Devolución parcial reingresa stock (+1)', r.return1.stock === r.setup.stock0 - 1);
 check('Reembolso = precio de 1 pieza', Math.abs(r.return1.refund - precio) < 0.01, `${r.return1.refund} vs ${precio}`);
 check('Estado venta → Devolución parcial', r.return1.estado === 'Devolución parcial');
+check('Primera devolución congela el estado Pagado', r.return1.priorSaleState === 'Pagado');
 check('Movimiento Devolución (+1)', r.return1.mov && r.return1.mov.tipo === 'Devolución' && r.return1.mov.cant === 1);
 check('Comisión revertida (>0, ~mitad de la ganada)', r.return1.comRevertida > 0 && Math.abs(r.return1.comRevertida - r.afterSale.ganada / 2) < 0.02, `rev=${r.return1.comRevertida} ganada=${r.afterSale.ganada}`);
 check('returnedQty = 1 tras parcial', r.return1.returnedQty === 1);
 check('Sobre-devolución rechazada', r.overReturn.ok === false && !!r.overReturn.error);
 check('Devolución total → Devuelto', r.return2.estado === 'Devuelto');
+check('Devolución posterior hereda el mismo estado previo', r.return2.priorSaleState === 'Pagado');
 check('Stock totalmente restaurado', r.return2.stock === r.setup.stock0);
 check('returnedQty = 2 tras total', r.return2.returnedQty === 2);
 check('reverseCommission OFF no toca comisión', r.reverseOff.sinCambio === true, `${r.reverseOff.comAntes}→${r.reverseOff.comDespues}`);
 check('Motivos seed presentes (Talla/Defecto)', r.reasons.includes('Talla') && r.reasons.includes('Defecto'));
 check('Apartado no es devolvible', r.apartadoNoDevolvible === true);
+check('Proyección parcial sin documento falla cerrada',
+  r.staleProjection.lifecycle.status === 'missing_return_document'
+  && r.staleProjection.lifecycle.inconsistent === true
+  && r.staleProjection.returnable === false);
+check('Documento sin proyección de venta también falla cerrado',
+  r.missingProjection.lifecycle.status === 'missing_sale_projection'
+  && r.missingProjection.lifecycle.inconsistent === true
+  && r.missingProjection.returnable === false);
 check('H-04 devolución lleva stock y reverso de comisión en un solo push',
   r.pushedReturns[0]?.effects.stockLines?.length === 1
   && r.pushedReturns[0]?.effects.sellerEffects?.length === 1);

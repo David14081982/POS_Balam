@@ -3379,9 +3379,39 @@
     return n;
   }
   function returnsForFolio(folio) { return returns.filter(r => r.folio === folio); }
+  const RETURN_BASE_STATES = ['Pagado', 'Entregado', 'Enviado'];
+  const RETURN_PROJECTED_STATES = ['Devolución parcial', 'Devuelto'];
+  // H-120: el estado de la venta es una proyección; el documento de devolución
+  // es la evidencia. Una proyección sin documento nunca habilita otra operación.
+  // `priorSaleState` sólo existe hacia adelante: un histórico sin snapshot se
+  // conserva como legacy, pero jamás se convierte por defecto en `Pagado`.
+  function returnLifecycle(sale) {
+    if (!sale) return { status: 'missing_sale', inconsistent: true, returns: [] };
+    const docs = returnsForFolio(sale.folio);
+    const evidence = Array.from(new Set(docs.map(r => r && r.priorSaleState)
+      .filter(state => RETURN_BASE_STATES.includes(state))));
+    if (RETURN_PROJECTED_STATES.includes(sale.estado) && docs.length === 0) {
+      return { status: 'missing_return_document', inconsistent: true,
+        returns: docs, priorSaleState: null };
+    }
+    if (docs.length > 0 && !RETURN_PROJECTED_STATES.includes(sale.estado)) {
+      return { status: 'missing_sale_projection', inconsistent: true,
+        returns: docs, priorSaleState: evidence[0] || null };
+    }
+    if (evidence.length > 1) {
+      return { status: 'conflicting_prior_state', inconsistent: true,
+        returns: docs, priorSaleState: null };
+    }
+    return {
+      status: docs.length && !evidence.length ? 'legacy_without_prior_state' : 'coherent',
+      inconsistent: false, returns: docs,
+      priorSaleState: evidence[0] || (RETURN_BASE_STATES.includes(sale.estado) ? sale.estado : null),
+    };
+  }
   // Solo se puede devolver una venta cobrada/entregada (no apartados, cancelados ni ya 100% devueltos).
   function isReturnable(sale) {
-    return !!sale && ['Pagado', 'Entregado', 'Enviado', 'Devolución parcial'].includes(sale.estado);
+    return !!sale && RETURN_BASE_STATES.concat('Devolución parcial').includes(sale.estado)
+      && !returnLifecycle(sale).inconsistent;
   }
 
   // Registra una devolución: reingresa stock (+ movimiento 'Devolución'), revierte comisión/ventas
@@ -4343,6 +4373,9 @@
   function recordReturn({ folio, lineas, metodo, refundComponents, notas, fecha: fechaIn }) {
     const sale = sales.find(s => s.folio === folio);
     if (!sale) return { ok: false, error: 'No se encontró la venta original' };
+    const lifecycle = returnLifecycle(sale);
+    if (lifecycle.inconsistent) return { ok: false, code: 'RETURN_LIFECYCLE_INCONSISTENT',
+      error: 'La venta indica una devolución, pero falta evidencia para continuar. Resincroniza y revisa el historial antes de mover inventario o dinero.' };
     if (!isReturnable(sale)) return { ok: false, error: 'Esa venta no admite devolución (apartado, cancelada o ya devuelta)' };
     // H-34: el plazo lo decide el snapshot de la venta, no la configuración de hoy.
     const plazo = returnDeadline(sale);
@@ -4489,6 +4522,9 @@
     const ret = {
       id, folio, fecha, cliente: sale.cliente, vendedores: ids.slice(),
       metodo: refundMethod, total: refund, components, notas: notas || '',
+      // Estado comercial anterior a la primera devolución. Todas las
+      // devoluciones posteriores heredan la misma evidencia exacta.
+      priorSaleState: lifecycle.priorSaleState,
       // H-69: lo que esta devolucion revirtio, por vendedor. Es la contrapartida
       // congelada de `sale.comisiones` y lo que los reportes restan.
       comisiones: comisionesRevertidas,
@@ -5410,6 +5446,8 @@
     const reclassIds = asSet('reclassification_ids');
     const customerIds = asSet('customer_ids');
     const stockTargets = Array.isArray(result && result.stock) ? result.stock : [];
+    const saleStates = Array.isArray(result && result.sale_states) ? result.sale_states
+      : (Array.isArray(identities.sale_state_restorations) ? identities.sale_state_restorations : []);
     const rollback = snapshotLocalDomain();
     const adjustmentRollback = JSON.stringify(commissionAdjustments);
     const replaceKeeping = (arr, keep) => {
@@ -5417,6 +5455,10 @@
     };
     remoteApplying = true;
     try {
+      saleStates.forEach(row => {
+        const state = row && (row.prior_state || row.priorSaleState);
+        if (!RETURN_BASE_STATES.includes(state)) throw new Error('CLEANUP_LOCAL_SALE_STATE_INVALID');
+      });
       stockTargets.forEach(target => {
         const product = products.find(p => String(p.id) === String(target.product_id));
         if (!product) throw new Error('CLEANUP_LOCAL_PRODUCT_MISSING:' + target.product_id);
@@ -5434,6 +5476,11 @@
       });
       const returnRefs = new Set(returns.filter(r => returnIds.has(String(r.id))).map(r => String(r.folio || r.id)));
       const exchangeRefs = new Set(exchanges.filter(e => exchangeIds.has(String(e.id))).map(e => String(e.folio || e.id)));
+      saleStates.forEach(row => {
+        if (saleFolios.has(String(row.folio))) return;
+        const sale = sales.find(item => String(item.folio) === String(row.folio));
+        if (sale) sale.estado = row.prior_state || row.priorSaleState;
+      });
       replaceKeeping(payments, p => !saleFolios.has(String(p.folio)));
       replaceKeeping(returns, r => !returnIds.has(String(r.id)));
       replaceKeeping(exchanges, e => !exchangeIds.has(String(e.id)));
@@ -5463,7 +5510,7 @@
       return { ok: true, cleanupId: result.cleanup_id || null,
         removed: { sales: saleFolios.size, returns: returnIds.size, exchanges: exchangeIds.size,
           loans: loanIds.size, customers: customerIds.size }, products: products.length,
-        stockTargets: stockTargets.length };
+        stockTargets: stockTargets.length, restoredSaleStates: saleStates.length };
     } catch (e) {
       try {
         restoreLocalDomain(rollback);
@@ -5862,7 +5909,7 @@
     listPrice, priceRange, sanitizePreciosTalla, resolveProductSizes,
     ornamentSupportsColors, sanitizeOrnamentColorsBySize, effectiveOrnamentColors,
     resolveSizeFilterGroups, resolveSizeFilterOptions, sizeFilterMatch, inferSizeCategory,
-    recordReturn, returnedQty, returnsForFolio, isReturnable, returnDeadline, saleLineBalance,
+    recordReturn, returnedQty, returnsForFolio, returnLifecycle, isReturnable, returnDeadline, saleLineBalance,
     paymentMethodReport, sameMethodRefundComponents,
     saleLineProduct,
     saveExchanges, recognizedValue, supplySources, recordExchange, reverseExchangeCommission,

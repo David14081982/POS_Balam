@@ -29,7 +29,7 @@ begin
   update pos.system_manifest set system_mode = 'preproduction' where singleton;
 
   v_preview := pos.preview_test_data_cleanup(
-    'custom', '{"returns":true}'::jsonb, 3
+    'custom', '{"returns":true}'::jsonb, 4
   );
   if coalesce((v_preview->>'executable')::boolean, true)
      or v_preview->'blocked_reasons'->>0 <> 'cleanup_no_matching_data'
@@ -50,7 +50,7 @@ begin
   insert into pos.sales(
     folio, cliente, vendedores, metodo, estado, items, total, operation_id, comisiones
   ) values(
-    'H119-SALE', 'Cliente H119', '[]', 'Efectivo', 'Pagado', 1, 100,
+    'H119-SALE', 'Cliente H119', '[]', 'Efectivo', 'Devolución parcial', 1, 100,
     'H119-SALE-OP', '[]'
   );
   alter table pos.sales enable trigger sales_require_stock_reservation;
@@ -59,10 +59,13 @@ begin
   values('H119-SALE', 'H119-PRODUCT', 'H119-SKU', 'Guayabera H119', 'M', 1, 100, 'H119-SALE-LINE');
   insert into pos.sale_commits(commit_id, operation_id, folio, payload_hash)
   values('H119-SALE-COMMIT', 'H119-SALE-OP', 'H119-SALE', repeat('a', 64));
+  insert into pos.stock_reservations(operation_id,folio,lines)
+  values('H119-SALE-OP','H119-SALE',
+    '[{"product_id":"H119-PRODUCT","talla":"M","qty":1}]');
 
-  insert into pos.returns(id, folio, cliente, vendedores, metodo, total, fecha, comisiones)
+  insert into pos.returns(id, folio, cliente, vendedores, metodo, total, fecha, comisiones, prior_sale_state)
   values('H119-RETURN', 'H119-SALE', 'Cliente H119', '[]', 'Efectivo', 100,
-    '2026-08-19 12:00:00-07', '[]');
+    '2026-08-19 12:00:00-07', '[]', 'Pagado');
   insert into pos.return_items(
     return_id, product_id, source_sale_line_id, sku, nombre, talla, qty, motivo, precio, line_id
   ) values(
@@ -83,7 +86,7 @@ begin
     'H119-PRODUCT', 'H119-SKU', 'M', 1, 'H119-SALE') returning id into v_legacy_return_movement_id;
 
   v_preview := pos.preview_test_data_cleanup(
-    'custom', '{"returns":true}'::jsonb, 3
+    'custom', '{"returns":true}'::jsonb, 4
   );
   if not coalesce((v_preview->>'executable')::boolean, false)
      or (v_preview->'selection_normalized'->>'returns')::boolean is not true
@@ -99,7 +102,7 @@ begin
   end if;
 
   v_backup := pos.create_test_data_cleanup_backup(
-    'custom', '{"returns":true}'::jsonb, v_preview->>'plan_hash', 3,
+    'custom', '{"returns":true}'::jsonb, v_preview->>'plan_hash', 4,
     'h119-fixture', 'h119-device'
   );
   if exists(select 1 from jsonb_array_elements(v_backup->'document'->'payload'->'movements') x
@@ -113,12 +116,13 @@ begin
   v_result := pos.execute_test_data_cleanup(
     'H119-CLEANUP', 'custom', '{"returns":true}'::jsonb,
     v_preview->>'plan_hash', (v_backup->>'backup_id')::uuid,
-    'LIMPIAR OPERACIONES', 3, 'h119-fixture', 'h119-device'
+    'LIMPIAR OPERACIONES', 4, 'h119-fixture', 'h119-device'
   );
 
   if not coalesce((v_result->>'ok')::boolean, false)
      or (select (stock->0->>'stock')::integer from pos.products where id = 'H119-PRODUCT') <> 9
      or not exists(select 1 from pos.sales where folio = 'H119-SALE')
+     or (select estado from pos.sales where folio = 'H119-SALE') <> 'Pagado'
      or not exists(select 1 from pos.sale_items where folio = 'H119-SALE' and line_id = 'H119-SALE-LINE')
      or not exists(select 1 from pos.sale_commits where commit_id = 'H119-SALE-COMMIT')
      or exists(select 1 from pos.returns where id = 'H119-RETURN')
@@ -133,7 +137,7 @@ begin
     raise exception 'H119_SALE_MOVEMENT_WAS_DELETED';
   end if;
 
-  raise notice 'H119_RETURNS_ONLY_OK return=deleted stock=9 sale=preserved sale_movement=preserved';
+  raise notice 'H119_RETURNS_ONLY_OK return=deleted stock=9 sale=Pagado sale_movement=preserved';
 end;
 $$;
 
