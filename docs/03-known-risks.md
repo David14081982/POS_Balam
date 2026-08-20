@@ -5880,7 +5880,7 @@ fast-forward. GitHub Pages sirve exactamente el blob `index.html` funcional:
 
 ## H-123 — Evidencias huérfanas de devolución sin operación terminal
 
-**Estado:** PARCIALMENTE RESUELTO — autoridad desplegada; ejecución real pendiente
+**Estado:** RESUELTO
 **Fecha de registro:** 20/08/2026
 **Origen:** Limpieza de datos detecta `return_commits` cuyo `return_id` ya no
 existe en `pos.returns`, los muestra como evidencia huérfana y bloquea
@@ -5903,13 +5903,24 @@ preview/respaldo/plan hash/ejecución por `commit_id` exacto y sólo si sigue
 huérfano; advisory lock compartido con `commit_return`, cardinalidad exacta,
 lápida por `return_id`, cero stock, dinero o documento comercial y UI con ambos
 folios. Migraciones 163/164 desplegadas antes del cliente.
-**Commit:** Pendiente de commit.
+**Commit:** `d365e8b`.
 **Pruebas:** roja 0/1; PostgreSQL aislado y remoto
 `H123_ORPHAN_RETURN_OK`; fixture funcional `orphan=2 valid_return=preserved
 stock=7 finance=preserved`; UI 15/15; H-113 21/21, H-116 20/20 + 29/29,
 H-119 37/37, H-122 21/21, cola 186/186, migraciones 31/31 y smoke 17/17.
-**Pendiente:** publicar el cliente y ejecutar con respaldo la retirada exacta de
-los dos commits reales; después registrar hashes e invariantes y cerrar el riesgo.
+**Ejecución real:** operación `0820e643-5b84-4bf0-b662-dfe7a845858a`, cola 0/0,
+cuarentena accionable 0/0 y época 2→3. Retiró exactamente los commits de
+`BG-260811-0015` y `BG-260812-0001`, creó sus dos lápidas y dejó vacíos todos los
+documentos comerciales relacionados. La huella de dominios no relacionados fue
+idéntica antes/después:
+`68a09bd1e6a2244f64fd5e1abd0e16fdbe02f64c4a3a43a1d447c359f3ae3126`.
+Stock, ventas, pagos, movimientos y comisiones no cambiaron. Respaldo inerte:
+452,159 bytes, SHA-256
+`d06376a60769fda39dc2b6749a6998de0d6ee67cfeebca814844b81fc8a0b142`;
+manifiesto SHA-256
+`50196dd485f459a467639a90e937898ef9128869b37125cacb71e674bf771772`.
+**Riesgo residual:** ninguno conocido dentro de H-123. `BG-260810-0011` sigue
+fuera de alcance por corresponder a H-122.
 
 ## Regla de actualización
 

@@ -1,9 +1,9 @@
 # Operación terminal para evidencias huérfanas de devoluciones
 
 **Riesgo:** H-123
-**Estado:** PARCIALMENTE RESUELTO — implementación desplegada; limpieza real pendiente
+**Estado:** RESUELTO — implementación y limpieza real verificadas
 **Fecha:** 20/08/2026
-**Commit:** Pendiente de commit
+**Commit:** `d365e8b`
 
 ## Problema y reproducción
 
@@ -69,20 +69,41 @@ guarda H-120 permanece cerrada.
 - Cola local-first: 186/186. Migraciones: 31/31. Navegación: 15/15.
 - Smoke del bundle productivo: 17/17. `node build-offline.mjs`: correcto.
 - Supabase: dry-run exacto 163/164; ambas migraciones aplicadas y verificación
-  remota correcta. La migración no elimina las evidencias reales.
+  remota correcta. La migración no eliminó las evidencias reales.
+- Ejecución real `0820e643-5b84-4bf0-b662-dfe7a845858a`: cola 0/0,
+  cuarentena accionable 0/0, preview exacto de dos commits y cero líneas de
+  stock. Retiró únicamente `BG-260811-0015` y `BG-260812-0001`; la época avanzó
+  una vez, de 2 a 3.
+- La huella SHA-256 de todos los dominios comerciales no relacionados fue
+  `68a09bd1e6a2244f64fd5e1abd0e16fdbe02f64c4a3a43a1d447c359f3ae3126`
+  antes y después. El postflight confirmó ausencia de cabeceras, renglones,
+  movimientos, pagos y ventas asociados, además de cola y cuarentena en cero.
 
 ## Despliegue
 
-Las migraciones 163/164 se aplicaron antes del cliente. La publicación del
-cliente y la ejecución exacta sobre los dos folios permanecen pendientes en este
-momento; se documentarán con hashes e invariantes al terminar.
+Las migraciones 163/164 se aplicaron antes del cliente. El cliente fue publicado
+desde `d365e8b` y su `index.html` servido coincidió byte por byte con el build.
+La ejecución exacta descargó el expediente inerte en
+`C:\Users\david\Documents\BALAM-respaldos\H-123-20260820-equipo-david`:
+
+- `01-preflight.json`: SHA-256
+  `fca2303fc43a531fc039cd418d0e0f429806f667e85b63230b264cab0e4ad9fb`;
+- `02-respaldo-autoritativo.json`: 452,159 bytes, SHA-256
+  `d06376a60769fda39dc2b6749a6998de0d6ee67cfeebca814844b81fc8a0b142`;
+- `03-comprobante.json`: SHA-256
+  `73952a7212bcc8e388e22c7319797563f24ea5938cd727706490018e16b0c366`;
+- `04-verificacion-post.json`: SHA-256
+  `3b719c50ae6f096d7e8e57e4ee769c25247b6738f59b6a1f70524fc8227b7b33`;
+- `SHA256SUMS.json`: SHA-256
+  `50196dd485f459a467639a90e937898ef9128869b37125cacb71e674bf771772`.
 
 ## Riesgo residual y pendientes
 
-Hasta ejecutar el flujo autorizado, los dos commits reales continúan en
-Supabase y la guarda permanece. No existe un efecto comercial conocido asociado;
-la retirada real exige respaldo descargado, selección exacta, `plan_hash`
-vigente y verificación posterior de dominios no relacionados.
+Ninguno conocido dentro de H-123. Las dos lápidas por `return_id` impiden
+resurrección y el expediente permanece fuera de toda colección operativa. La
+operación no reconstruyó históricos ni tocó stock, ventas, pagos, movimientos o
+comisiones. `BG-260810-0011` pertenece a H-122 y quedó deliberadamente fuera de
+este alcance.
 
 ## Referencias
 
