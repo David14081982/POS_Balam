@@ -16,7 +16,7 @@
   const QKEY = 'balam_sync_queue';
   const QDB = 'balam_sync', QSTORE = 'durable_queue';
   const SYNC_PROTOCOL_VERSION = 2;
-  const SYNC_SCHEMA_VERSION = 20260820016300;
+  const SYNC_SCHEMA_VERSION = 20260820016500;
   const SELECTIVE_CLEANUP_PROTOCOL = 5;
   const SYNC_CURSOR_KEY = 'balam_sync_domain_cursors_v1';
   const SYNC_DOMAINS = {

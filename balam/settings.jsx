@@ -2270,11 +2270,15 @@
         h('button', { key: 'open', type: 'button', 'data-testid': 'selective-cleanup-open', disabled: busy || !preview || !preview.ready,
           onClick: () => requestPreview(selection, true), className: 'px-5 h-11 bg-danger text-white rounded-lg disabled:opacity-40' }, 'Continuar con la limpieza'),
       ]),
-      wizard && h(SelectiveCleanupWizard, { key: 'wizard', estado: wizard, setEstado: setWizard, onClose: () => setWizard(null) }),
+      wizard && h(SelectiveCleanupWizard, { key: 'wizard', estado: wizard, setEstado: setWizard,
+        onClose: () => setWizard(null), onPreviewChanged: value => {
+          setPreview(value); setWizard(null);
+          setError('La información cambió mientras confirmabas. Revisa el resumen actualizado antes de continuar de nuevo. No se creó ningún respaldo ni se borró información.');
+        } }),
     ]);
   }
 
-  function SelectiveCleanupWizard({ estado, setEstado, onClose }) {
+  function SelectiveCleanupWizard({ estado, setEstado, onClose, onPreviewChanged }) {
     const { Modal } = window.UI;
     const preview = estado.preview || {};
     const makeBackup = async () => {
@@ -2283,7 +2287,22 @@
         const backup = await window.STORE.createTestDataCleanupBackup(preview);
         window.STORE.downloadTestDataCleanupDocument(backup.document, 'respaldo', backup.backup_id);
         setEstado(x => Object.assign({}, x, { paso: 'confirmation', backup, confirmation: '' }));
-      } catch (e) { setEstado(x => Object.assign({}, x, { paso: 'preview', error: e.message || String(e) })); }
+      } catch (e) {
+        const message = e && e.message ? e.message : String(e);
+        if (/cleanup_preview_changed/i.test(message)) {
+          try {
+            const refreshed = await window.STORE.previewTestDataCleanup(
+              preview.preset_requested, preview.selection_requested);
+            if (!refreshed || !refreshed.ok) throw new Error('refresh_failed');
+            onPreviewChanged(refreshed);
+          } catch (refreshError) {
+            setEstado(x => Object.assign({}, x, { paso: 'preview',
+              error: 'La información cambió y BALAM no pudo actualizar el resumen. Cierra esta ventana y vuelve a revisar la limpieza.' }));
+          }
+        } else {
+          setEstado(x => Object.assign({}, x, { paso: 'preview', error: message }));
+        }
+      }
     };
     const execute = async () => {
       setEstado(x => Object.assign({}, x, { paso: 'executing', error: '' }));
