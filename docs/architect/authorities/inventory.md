@@ -122,6 +122,18 @@ ni borra tablas
 **Creada por:** H-98 · **Decisiones:** `ADR-005`, `ADR-006`, `ADR-012`
 **Consumidores:** `grep -rn "pointZeroPreview\|executePointZero\|point_zero_preview\|execute_point_zero" balam/ supabase/ test-h98-*.mjs`
 
+## ¿Qué eliminará una limpieza selectiva y cómo revierte el inventario?
+**Autoridad:** `pos.preview_test_data_cleanup()` produce el plan sellado y
+`pos.execute_test_data_cleanup()` lo recalcula y ejecuta en una transacción;
+`DATA.applySelectiveCleanup()` aplica localmente el evento autoritativo
+**Identidad de Devoluciones:** `returns.id` / `movements.return_id`; para el
+movimiento legacy sin `return_id`, tipo `Devolución` + folio. El folio solo es
+referencia comercial y nunca autoriza borrar el movimiento de Venta. Una
+selección sin documentos es no ejecutable
+**Definición:** migraciones `20260817014900`, `20260819015700`
+**Creada por:** H-113 · **Endurecida por:** H-119 · **Decisiones:** `ADR-002`, `ADR-006`, `ADR-012`
+**Consumidores:** `grep -rn "previewTestDataCleanup\|executeTestDataCleanup\|applySelectiveCleanup" balam/ test-h11*.mjs`
+
 ## ¿Hay inventario para esta venta?
 **Autoridad:** `pos.reserve_sale_stock()`, invocada dentro de `pos.commit_sale()`
 **Definición:** migraciones `20260725001700`, `20260725001800`

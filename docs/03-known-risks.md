@@ -5685,6 +5685,46 @@ Datos reales modificados: no. Véase
 `docs/fixes/reconciliacion-sync-activity-historica.md`.
 **Commit:** `73b5b98` (funcional); documentación final en commit posterior.
 
+## H-119 — Limpiar sólo Devoluciones puede retirar el movimiento de la venta conservada
+
+**Estado:** CORREGIDO Y VERIFICADO; PENDIENTE DE PUBLICACIÓN
+**Fecha de registro:** 19/08/2026
+**Origen:** auditoría E2E quirúrgica de Configuración → Administración / Datos →
+Limpiar datos de prueba seleccionando únicamente Devoluciones.
+**Evidencia inicial:** `pos.execute_test_data_cleanup()` elimina movimientos por
+`m.return_id`, pero también por el `folio` de toda devolución seleccionada. La
+venta original y su devolución comparten ese folio, por lo que esa segunda
+condición alcanza potencialmente tanto el asiento `Devolución` como el asiento
+`Venta`, aunque la selección normalizada conserve Ventas.
+**Riesgo:** el stock puede quedar restaurado correctamente y la venta sobrevivir,
+pero su kardex histórico desaparecer; los arneses H-113/H-117 vigentes no fijan
+una ejecución exclusiva de Devoluciones que compruebe venta, movimiento de
+venta, `return_items`, commit y segunda terminal después de recargar.
+**Alcance autorizado:** reproducción PostgreSQL aislada con rollback, fixture
+E2E exclusiva de Devoluciones, corrección mínima de la identidad de movimientos,
+regresión, BALAM QA, migración hacia adelante y publicación segura si el fallo
+queda demostrado.
+**No alcance:** ejecutar una limpieza real, crear respaldos reales, modificar
+stock/ventas/devoluciones actuales, retirar equipos, alterar colas o relajar las
+guardas H-113/H-116/H-118.
+**Reproducción:** PostgreSQL 18 aislado falló con
+`H119_SALE_MOVEMENT_WAS_DELETED`. El recorrido publicado real encontró además
+0 devoluciones, un plan sin efecto, `STORE` sincronizado y actividad `config`
+creada por el foco del propio checkbox. El respaldo compartía el sobrealcance
+por folio y necesitaba la misma corrección, conservando compatibilidad legacy.
+**Corrección:** el servidor y DATA eliminan el movimiento de la devolución por
+`return_id`, nunca por el folio compartido; un plan sin documentos antepone
+`cleanup_no_matching_data`; Administración / Datos deja de crear actividad de
+borrador de configuración. E2E real UI→STORE→PostgreSQL aislado 14/14, con
+stock 10→9, venta y movimiento de venta conservados, segunda terminal y no-op
+bloqueado. El respaldo incluye movimientos de Devolución modernos/legacy y
+excluye el movimiento Venta. H-113 35/35 + 21/21; H-116 20/20 + 29/29; H-117 65/65; H-118
+10/10; cola 176/176; smoke bundle 17/17; build 8/8.
+**Datos reales modificados:** no. La auditoría publicada y las consultas a
+Supabase fueron read-only; no se ejecutó limpieza, backup, Punto Cero, reintento,
+descarte, cuarentena ni retiro.
+**Commit:** Pendiente de commit.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

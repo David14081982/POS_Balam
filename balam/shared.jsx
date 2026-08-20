@@ -205,15 +205,21 @@
       };
     }, [!!active, key]);
   }
-  function useSyncFocusActivity(domains, detail) {
+  function useSyncFocusActivity(domains, detail, enabled = true) {
     const token = React.useRef(null);
     const list = Array.isArray(domains) ? domains : [domains];
+    useEffect(() => {
+      if (!enabled && token.current && window.CORE && window.CORE.endActivity) {
+        window.CORE.endActivity(token.current); token.current = null;
+      }
+    }, [!!enabled]);
     useEffect(() => () => {
       if (token.current && window.CORE && window.CORE.endActivity) window.CORE.endActivity(token.current);
       token.current = null;
     }, []);
     return {
       onFocusCapture() {
+        if (!enabled) return;
         if (!token.current && window.CORE && window.CORE.beginActivity) token.current = window.CORE.beginActivity(list, detail || null);
       },
       onBlurCapture(event) {

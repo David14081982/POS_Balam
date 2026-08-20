@@ -82,6 +82,7 @@ sesión de chat.
 | `limpieza-h113-riesgo-real-equipos.md` | H-116 | Riesgo real de flota para H-113 sin depender de equipos apagados |
 | `simplificacion-limpieza-datos-prueba.md` | H-117 | Proyección humana y flujo principal único sobre H-113/H-116 |
 | `reconciliacion-sync-activity-historica.md` | H-118 | Pendientes actuales separados de incidencias históricas para H-113 |
+| `limpieza-solo-devoluciones.md` | H-119 | Alcance exacto, no-op y habilitación real al limpiar sólo Devoluciones |
 | `jerarquia-visual-etiqueta-60x40.md` | H-99 | Jerarquía visual 60×40 con identidad V2 intacta |
 | `sku-materializado-en-etiquetas.md` | H-100 | SKU visible por talla con paridad preview/PDF/impresión |
 | `chips-existencias-familiares.md` | H-103 | Chips compactos con proyección familiar V2 intacta |

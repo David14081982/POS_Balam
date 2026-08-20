@@ -20,7 +20,10 @@
     const [sec, setSec] = useState('negocio');
     const [addingUser, setAddingUser] = useState(false);
     window.UI.useSyncActivity(!!addingUser, ['sellers', 'permissions'], { screen: 'settings-user' });
-    const syncFocus = window.UI.useSyncFocusActivity(['config'], { screen: 'settings' });
+    // Administración / Datos no contiene un borrador de configuración. Su
+    // limpieza tiene guardas propias; marcar su mismo foco como actividad haría
+    // que `client_ready` se bloqueara por pulsar sus controles.
+    const syncFocus = window.UI.useSyncFocusActivity(['config'], { screen: 'settings' }, sec !== 'demo');
     // Re-render en vivo cuando cambia cualquier ajuste/catálogo (otra pestaña incluida).
     const [, bump] = useState(0);
     useEffect(() => {
@@ -2066,6 +2069,7 @@
         const labels = {
           cleanup_production_locked: 'La limpieza sólo está disponible en preproducción.',
           cleanup_empty_selection: 'Selecciona al menos un grupo comercial.',
+          cleanup_no_matching_data: 'No hay operaciones de la selección para limpiar.',
           minimum_client_protocol: 'Actualiza esta computadora antes de continuar.',
         };
         return labels[reason] || 'La limpieza necesita revisión antes de continuar.';
@@ -2079,6 +2083,14 @@
       }
       if (reason.code === 'pending_scope_unknown') {
         return `${name} reportó operaciones pendientes sin detalle suficiente para demostrar que son ajenas a esta limpieza.`;
+      }
+      if (reason.code === 'commission_evidence_missing') {
+        const documentLabel = {
+          sale: 'una venta conservada', return: 'una devolución conservada',
+          cancelled_sale: 'una venta cancelada conservada',
+          commission_adjustment: 'un ajuste de comisión conservado',
+        }[reason.document] || 'un documento conservado';
+        return `Falta la evidencia histórica de comisiones de ${documentLabel}; BALAM no puede recalcular los saldos con seguridad.`;
       }
       if (reason.code === 'client_cannot_be_fenced') {
         return `${name} usa una versión demasiado antigua. Actualízalo o retíralo desde el Centro de equipos.`;

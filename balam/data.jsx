@@ -5443,8 +5443,9 @@
       replaceKeeping(commissionAdjustments, a => !adjustmentIds.has(String(a.operationId || a.operation_id)));
       replaceKeeping(clients, c => !customerIds.has(String(c.id)));
       replaceKeeping(movements, m => !(saleFolios.has(String(m.ref))
-        || returnRefs.has(String(m.ref)) || exchangeRefs.has(String(m.ref))
+        || exchangeRefs.has(String(m.ref))
         || returnIds.has(String(m.returnId || m.return_id))
+        || (!String(m.returnId || m.return_id || '') && m.tipo === 'Devolución' && returnRefs.has(String(m.ref)))
         || reclassIds.has(String(m.operationId || m.operation_id))));
       const ledger = commissionLedger(() => true);
       sellers.forEach(seller => {
