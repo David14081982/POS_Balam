@@ -5835,7 +5835,7 @@ SHA-256 `927432a2e58de0e9dfa357a11380b5ca28791e7fea5db1d69e56a132e1145644`.
 
 ## H-122 — La limpieza confunde documentos con candidatos y saldos derivados
 
-**Estado:** RESUELTO — publicado en Supabase; cliente pendiente de publicación
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha de registro:** 20/08/2026
 **Origen:** Configuración → Administración / Datos informa cero en Cambios y
 Comisiones mientras Cambios muestra una venta elegible y Vendedores muestra un
@@ -5864,7 +5864,7 @@ preview. La recomputación y las guardas de evidencia financiera sólo se aplica
 a ventas, devoluciones, cambios o comisiones; `ventas_mes`/`ventas_num` sólo se
 recalculan al seleccionar ventas. Préstamos, reclasificaciones y clientes ya no
 tocan ni heredan esas proyecciones.
-**Commit:** Pendiente de commit.
+**Commit funcional:** `370c3870afe199efd83e7f6b92330c3fceac0e43`.
 **Pruebas:** huella comercial Supabase pre/post idéntica
 `a3f4c49caf9d1459130ba9ffda3eb8b4a0d4ba21df3f18c62578f3ca55949a4c`;
 migraciones remotas 161/162 y dry-run al día; fixture funcional aislado;
@@ -5873,6 +5873,10 @@ colas, dominios comerciales, módulos, navegación, smoke y build correctos.
 **Riesgo residual:** BG-260810-0011 y su comisión derivada permanecen por
 diseño hasta una limpieza explícita de Ventas y apartados. Dos evidencias
 huérfanas de devolución siguen cerradas para revisión y no fueron alteradas.
+**Despliegue:** migraciones 161/162 aplicadas; `origin/main` avanzó por
+fast-forward. GitHub Pages sirve exactamente el blob `index.html` funcional:
+9,014,011 bytes y SHA-256
+`06a4187597e7ebb017df3b8a01605ba24940c699199e9c2f684aafb1667af0c7`.
 
 ## Regla de actualización
 

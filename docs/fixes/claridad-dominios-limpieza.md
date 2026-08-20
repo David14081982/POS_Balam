@@ -3,7 +3,7 @@
 **Riesgo:** H-122
 **Estado:** RESUELTO
 **Fecha:** 20/08/2026
-**Commit:** Pendiente de commit
+**Commit:** `370c3870afe199efd83e7f6b92330c3fceac0e43`
 
 ## Problema y reproducción
 
@@ -109,6 +109,15 @@ pieza, de stock 1 a 2. Este trabajo no ejecutó esa limpieza.
 - Contratos de módulos 42/42, navegación 15/15, arranque productivo 5/5,
   smoke 15/15 y reproducibilidad 8/8.
 - `node build-offline.mjs`: correcto.
+
+## Despliegue
+
+- Supabase aplicó 161/162 antes de publicar el cliente; la huella comercial no
+  cambió.
+- `origin/main` avanzó por fast-forward de `eda58b0` a `370c387`.
+- GitHub Pages sirve exactamente el blob versionado `index.html`: 9,014,011
+  bytes y SHA-256
+  `06a4187597e7ebb017df3b8a01605ba24940c699199e9c2f684aafb1667af0c7`.
 
 ## Riesgo residual y pendientes
 
