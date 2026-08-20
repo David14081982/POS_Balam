@@ -1,9 +1,9 @@
 # Una autoridad de datos por dominio
 
 **Riesgo:** H-121
-**Estado:** RESUELTO / PENDIENTE DE PUBLICACIÓN
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha:** 19/08/2026
-**Commit:** Pendiente de commit
+**Commit funcional:** `5c8b34f79e43b21c52d34868a89676eda460de09`
 
 ## Resultado ejecutivo
 
@@ -147,6 +147,13 @@ regresión H-121. Su contrato estático H-113/H-116 sí pasó.
 Maintainer/QA: ningún caché puede ser autoridad de un documento confirmado y
 ningún cambio de convergencia se publica sin demostrar que conserva trabajo
 offline legítimo.
+
+## Publicación
+
+No hubo migraciones. `origin/main` avanzó por fast-forward al commit funcional.
+El blob `index.html` publicado y el servido por GitHub Pages coinciden byte a
+byte: **9,012,919 bytes**, SHA-256
+`927432a2e58de0e9dfa357a11380b5ca28791e7fea5db1d69e56a132e1145644`.
 
 ## Referencias
 

@@ -37,7 +37,7 @@ y `BLOQUEADO`.
 | H-90 | La autoridad monetaria no conserva componentes configurables ni reembolsos exactos | RESUELTO Y PUBLICADO | Ventas / devoluciones / reportes / impresión |
 | H-99 | Preview, PDF e impresión de etiquetas deben compartir composición | RESUELTO Y PUBLICADO | Inventario / etiquetas / impresión |
 | H-111 | POS expone referencias V2 en lugar de una selección comercial por talla | RESUELTO | POS / UX / identidad V2 |
-| H-121 | La caché local puede actuar como segunda autoridad comercial | RESUELTO / PENDIENTE DE PUBLICACIÓN | Sincronización / persistencia / offline |
+| H-121 | La caché local puede actuar como segunda autoridad comercial | RESUELTO Y PUBLICADO | Sincronización / persistencia / offline |
 
 ## H-01 — Inventario concurrente
 
@@ -5787,7 +5787,7 @@ huérfanas visibles/no borrables, CTA bloqueado, siete grupos coherentes, esquem
 
 ## H-121 — La caché local puede actuar como segunda autoridad comercial
 
-**Estado:** RESUELTO / PENDIENTE DE PUBLICACIÓN
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha de registro:** 19/08/2026
 **Origen:** ventas y devoluciones ausentes de Supabase siguen operativas en
 Devoluciones desde `DATA`/`localStorage`, aunque Equipo David declara cola cero,
@@ -5828,7 +5828,10 @@ lo que no se modificaron documentos, stock, pagos ni comisiones en Supabase.
 snapshot vacío, ventana parcial, cursor incompleto, mapa de efectos, captura
 offline legítima, ajustes/periodo de comisiones y lectura multi-terminal.
 **Corrección documentada:** `docs/fixes/autoridad-unica-datos-h121.md`.
-**Commit:** Pendiente de commit.
+**Commit funcional:** `5c8b34f79e43b21c52d34868a89676eda460de09`.
+**Despliegue:** `origin/main` avanzó por fast-forward al commit funcional.
+GitHub Pages sirve exactamente su blob `index.html`: 9,012,919 bytes y
+SHA-256 `927432a2e58de0e9dfa357a11380b5ca28791e7fea5db1d69e56a132e1145644`.
 
 ## Regla de actualización
 
