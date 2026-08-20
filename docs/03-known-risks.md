@@ -5922,6 +5922,38 @@ manifiesto SHA-256
 **Riesgo residual:** ninguno conocido dentro de H-123. `BG-260810-0011` sigue
 fuera de alcance por corresponder a H-122.
 
+## H-124 — La telemetría invalida una limpieza sin cambios comerciales
+
+**Estado:** RESUELTO Y DESPLEGADO EN SERVIDOR
+**Fecha de registro:** 20/08/2026
+**Origen:** al crear el respaldo de una limpieza ya revisada, la interfaz vuelve
+al primer paso y muestra únicamente `CLEANUP_PREVIEW_CHANGED`.
+**Evidencia inicial:** `test_data_cleanup_fleet_risk()` incorpora
+`fleet.devices[].last_seen_at` al objeto usado para calcular `plan_hash`.
+`previewTestDataCleanup()` reconcilia la terminal antes de cada preview, por lo
+que el latido puede cambiar esa marca entre la apertura del diálogo y la
+creación del respaldo aunque selección, documentos, stock, época y bloqueos
+sean idénticos. La guarda evita el borrado, pero la UI expone el código técnico
+y conserva el resumen obsoleto.
+**Riesgo:** una limpieza válida queda inutilizable por actividad normal del
+equipo; reintentar no garantiza progreso y el mensaje no permite distinguir
+telemetría de un cambio comercial real.
+**Contrato de corrección:** la telemetría seguirá visible, pero no será parte de
+la huella autoritativa. Un cambio comercial o de bloqueo sí debe invalidarla.
+Ante una invalidación real, el cliente debe refrescar el resumen y exigir una
+nueva revisión, sin crear respaldo ni ejecutar la limpieza con el plan anterior.
+**Corrección:** `test_data_cleanup_plan_hash()` excluye sólo `fleet`; selección,
+documentos, stock, época y bloqueos permanecen sellados. La UI refresca el plan,
+cierra el diálogo obsoleto y exige una revisión nueva sin reintentar respaldo o
+ejecución. Migraciones 165–167 desplegadas; la regresión remota confirmó hash
+estable ante heartbeat y hash distinto ante una venta pendiente intersectante.
+**Pruebas:** H-124 11/11 y E2E 11/11; H-113 35/35; H-116 20/20; H-118 10/10;
+cola 186/186; módulos 42/42; migraciones 31/31; build 8/8; smoke bundle 17/17.
+No se ejecutó ninguna limpieza ni se modificaron ventas, stock, pagos o
+comisiones. Corrección documentada en
+`docs/fixes/estabilidad-preview-limpieza.md`.
+**Commit funcional:** `69f7496`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:
