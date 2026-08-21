@@ -5959,7 +5959,7 @@ SHA-256 `6778c0200178a105832a5755cd51f296c4d5d688412651094bcc242605a7cdca`.
 
 ## H-125 - Incidencia historica revisada sigue como atencion accionable
 
-**Estado:** RESUELTO EN SERVIDOR - CLIENTE LISTO PARA PUBLICAR
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha de registro:** 20/08/2026
 **Origen:** el Centro de equipos muestra `Cambio de mercancia -
 BG-260812-0006`, `commit_mismatch`, `Requiere atencion`, `Autorizar reintento`
@@ -5983,9 +5983,12 @@ solicitar y entregar aplican el mismo cierre. Migraciones 168-171 desplegadas.
 H-118 10/10; cola 186/186; modulos 42/42; migraciones 31/31; navegacion 15/15;
 roles 15/15; responsive 492/492. La fila real verifico
 `H125_REAL_BG_260812_0006_OK rows=2 actionable=0`.
-**Commit:** Pendiente de commit.
-**Riesgo residual:** falta publicar y comprobar el blob cliente en GitHub Pages.
-No se alteraron ventas, stock, pagos, comisiones ni actividad historica.
+**Commit funcional:** `dc66c31`.
+**Despliegue:** GitHub Pages run `32445237525` termino en `success`; el blob
+crudo de `dc66c31:index.html` y Pages coinciden: 9,015,331 bytes, SHA-256
+`adafcbc28bd301b8cac50928abf017aed3963924aae44ca437f4bd16f030722c`.
+**Riesgo residual:** ninguno conocido dentro de H-125. No se alteraron ventas,
+stock, pagos, comisiones ni actividad historica.
 Correccion documentada en
 `docs/fixes/proyeccion-atencion-centro-equipos.md`.
 

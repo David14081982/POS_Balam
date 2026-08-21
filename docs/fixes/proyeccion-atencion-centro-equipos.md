@@ -1,9 +1,9 @@
 # Proyeccion vigente de atencion en Centro de equipos
 
 **Riesgo:** H-125
-**Estado:** RESUELTO EN SERVIDOR - CLIENTE LISTO PARA PUBLICAR
+**Estado:** RESUELTO - SERVIDOR Y CLIENTE PUBLICADOS
 **Fecha:** 20/08/2026
-**Commit:** Pendiente de commit
+**Commit:** `dc66c31`
 
 ## Problema y reproduccion
 
@@ -58,12 +58,13 @@ idempotencia, datos comerciales, stock, ventas, pagos, comisiones ni cuarentena.
 
 ## Riesgo residual y pendientes
 
-Servidor desplegado. Falta publicar y comprobar el blob del cliente en GitHub
-Pages. No se modificaron filas comerciales ni se borro actividad historica.
+Ninguno conocido dentro de H-125. No se modificaron filas comerciales ni se
+borro actividad historica. GitHub Pages run `32445237525` termino en `success`.
+El blob crudo de `dc66c31:index.html` y Pages coinciden: 9,015,331 bytes,
+SHA-256 `adafcbc28bd301b8cac50928abf017aed3963924aae44ca437f4bd16f030722c`.
 
 ## Referencias
 
 - Riesgo: `docs/03-known-risks.md#h-125---incidencia-historica-revisada-sigue-como-atencion-accionable`
 - `docs/fixes/reconciliacion-sync-activity-historica.md`
 - `docs/architect/authorities/synchronization.md`
-
