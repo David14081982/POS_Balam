@@ -31,9 +31,7 @@
   // Encuentra { p, talla } a partir de un código escaneado, buscando en memoria (sin red).
   // Por COINCIDENCIA: compara el código contra codeOf(p, talla) de cada producto/talla. Así funciona
   // con la talla en cualquier posición del SKU y sigue leyendo etiquetas viejas (talla al final).
-  function resolve(code) {
-    const s = String(code || '').trim().toUpperCase();
-    if (!s) return { ok: false, code: 'BARCODE_EMPTY', matches: [] };
+  function resolveExact(s) {
     const prods = D.products || [];
     const matches = [];
     prods.filter(p => p && !p._deletedAt).forEach(p => {
@@ -47,6 +45,19 @@
     });
     if (matches.length === 1) return { ok: true, hit: matches[0], matches };
     return { ok: false, code: matches.length > 1 ? 'BARCODE_AMBIGUOUS' : 'BARCODE_NOT_FOUND', matches };
+  }
+
+  function resolve(code) {
+    const s = String(code || '').trim().toUpperCase();
+    if (!s) return { ok: false, code: 'BARCODE_EMPTY', matches: [] };
+
+    // Los lectores USB HID emulan un teclado. Si la distribución del sistema no
+    // coincide con la configurada en el lector, la tecla física «-» puede llegar
+    // como "'". Primero se respeta SIEMPRE el código literal; sólo cuando no existe
+    // se intenta el equivalente con guiones. No se modifica ningún SKU ni producto.
+    const exact = resolveExact(s);
+    if (exact.code !== 'BARCODE_NOT_FOUND' || !s.includes("'")) return exact;
+    return resolveExact(s.split("'").join('-'));
   }
   let lastResolution = null;
   function find(code) {

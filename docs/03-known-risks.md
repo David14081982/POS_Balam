@@ -5992,6 +5992,49 @@ stock, pagos, comisiones ni actividad historica.
 Correccion documentada en
 `docs/fixes/proyeccion-atencion-centro-equipos.md`.
 
+## H-126 — El lector HID puede sustituir guiones por apóstrofes según el teclado
+
+**Estado:** RESUELTO LOCALMENTE — PENDIENTE DE PUBLICACIÓN
+**Fecha de registro:** 27/08/2026
+**Origen:** reporte de operación en Punto de venta.
+**Evidencia inicial:** las entradas directa y global del lector acumulan
+`KeyboardEvent.key` y entregan el texto sin adaptación a `BARCODES.resolve()`.
+Con una distribución de teclado que interpreta la tecla física del guion como
+apóstrofe, un código V1 materializado como `SKU-TALLA` llega como `SKU'TALLA` y
+la coincidencia exacta no encuentra la pieza.
+**Riesgo:** rechazar etiquetas válidas en POS, Préstamos o Cambios; una
+normalización global también podría reinterpretar un código real con apóstrofe
+o modificar por error SKU, etiquetas, inventario o datos históricos.
+**Alcance autorizado:** reproducir el defecto con datos sintéticos, adaptar sólo
+la resolución de lecturas con coincidencia exacta prioritaria, pruebas,
+documentación, build y publicación segura.
+**No alcance:** reescribir SKU, `products.id`, `barcode_code`, etiquetas,
+inventario, ventas, históricos, configuración del sistema operativo o firmware
+del lector.
+**Causa raíz:** las capturas directa y global entregaban correctamente
+`KeyboardEvent.key`, pero la autoridad compartida sólo ejecutaba una coincidencia
+literal. No existía un respaldo acotado para la sustitución de la tecla física
+del guion que introduce una distribución de teclado distinta.
+**Solución local:** `BARCODES.resolve()` conserva prioridad literal —incluido un
+código real con apóstrofe y cualquier ambigüedad— y sólo tras
+`BARCODE_NOT_FOUND` intenta el candidato cambiando `'` por `-`. `codeOf()`, SKU,
+`products.id`, `barcode_code`, etiquetas, existencias y persistencia quedan
+intactos. La autoridad beneficia por igual POS, Préstamos y Cambios.
+**Pruebas:** rojo H-126 5/8, con tres fallos deterministas; verde 8/8. BALAM QA
+E2E fuente y bundle 37/37 cada uno, en 320, 360, 390, 430, 768, 1024, 1280 y
+1440 px, sin overflow ni errores de página. Módulos 42/42; pantalla del Cambio
+45/45; Préstamos 115/117 por dos aserciones de cadencia del arnés histórico,
+cubiertas en verde por el E2E H-126 determinista; Cambio E2E 37/37; smoke bundle 17/17; navegación
+15/15; reproducibilidad 8/8. Build aislado correcto; `index.html` y
+`POS Balam (offline).html` son idénticos, 9,015,842 bytes y SHA-256
+`b9d6cef12b9308ca8091debb6768a221adc0f505e92a060a82f2f364832bbdc9`.
+**Riesgo residual:** no se probó un lector físico, Firefox ni WebKit. El arnés
+histórico de Préstamos conserva dos aserciones sensibles a que `setTimeout(5)`
+no exceda la ventana HID de 50 ms; la regresión H-126 ejerce la misma captura de
+forma determinista y aprobó.
+**Corrección:** `docs/fixes/lector-guiones-apostrofes.md`.
+**Commit:** Pendiente de commit.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

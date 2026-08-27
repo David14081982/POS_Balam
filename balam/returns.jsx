@@ -144,7 +144,8 @@
             ]),
             h('div', { key: 's', className: 'relative' }, [
               h(MS, { key: 'i', name: 'search', size: 18, className: 'absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant' }),
-              h('input', { key: 'in', value: q, onChange: e => setQ(e.target.value), placeholder: 'Buscar por folio o cliente…', autoFocus: true, className: 'w-full h-11 pl-10 pr-3 bg-surface-container-low border border-outline-variant focus:ring-1 focus:ring-primary text-body rounded-lg' }),
+              h('input', { key: 'in', value: q, onChange: e => setQ(e.target.value), placeholder: 'Buscar por folio o cliente…', autoFocus: true,
+                'data-testid': 'returns-sale-search', className: 'w-full h-11 pl-10 pr-3 bg-surface-container-low border border-outline-variant focus:ring-1 focus:ring-primary text-body rounded-lg' }),
             ]),
             h('div', { key: 'pl', className: 'mt-3' }, h(Segment, { value: plazo, onChange: setPlazo, options: DEADLINE_FILTERS })),
           ]),

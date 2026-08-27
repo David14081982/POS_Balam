@@ -230,6 +230,7 @@
           h('span', { key: 'i', className: 'absolute inset-y-0 left-0 pl-3.5 flex items-center text-on-surface-variant/50' }, h(MS, { name: 'barcode', size: 20 })),
           h('input', {
             key: 'in', ref: scanRef,
+            'data-testid': 'pos-barcode-input',
             className: 'block w-full pl-11 pr-4 h-12 bg-surface-container-low border border-outline-variant focus:ring-1 focus:ring-primary focus:border-primary text-sm rounded-xl transition-all placeholder:text-on-surface-variant/40',
             placeholder: 'Escanea código de barras o busca productos…',
             value: query, onChange: e => setQuery(e.target.value), onKeyDown: onScan, autoFocus: true,
