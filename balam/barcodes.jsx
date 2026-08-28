@@ -9,6 +9,19 @@
   // Opciones base Code 128B (legibles para etiqueta térmica).
   const BASE_OPTS = { format: 'CODE128', width: 2, height: 80, displayValue: true, fontSize: 14, margin: 10, font: 'monospace' };
 
+  // H-127: contrato físico único de la etiqueta. Preview, PNG, PDF,
+  // impresión y diagnóstico consumen estos mismos valores; no existe un
+  // canvas auxiliar con otra anchura o márgenes para decidir legibilidad.
+  const LABEL_60X40 = Object.freeze({
+    labelWidthMm: 60,
+    labelHeightMm: 40,
+    symbolBox: Object.freeze({ xMm: 2, yMm: 7.3, widthMm: 56, heightMm: 15, fit: 'xMidYMid meet' }),
+    barcodeOptions: Object.freeze({ format: 'CODE128', width: 2, height: 60, displayValue: false, fontSize: 13, margin: 4, font: 'monospace' }),
+    raster: Object.freeze({ widthPx: 720, heightPx: 480, jpegQuality: 0.96 }),
+    minModuleMm: 0.25,
+    nearModuleMm: 0.275,
+  });
+
   // String del código por pieza: reemplaza el marcador de talla del SKU base (SIZE_MARK, ver
   // data.jsx / Constructor de SKU) por la talla real, respetando la POSICIÓN que fijó el admin.
   // Ej. base "21-ML-ALG-T-128" + talla "38" → "21-ML-ALG-38-128".
@@ -110,23 +123,93 @@
     });
   }
 
-  // Legibilidad física para una etiqueta de 60×40 mm. El área útil del código
-  // es 56 mm; JsBarcode con width=1 entrega el número exacto de módulos. Un
-  // módulo menor de 0.25 mm se advierte porque la reducción deja de ser robusta
-  // para impresoras/lectores comerciales, aunque el PNG todavía pueda generarse.
-  function validateLabelCode(code, usableMm = 56, minModuleMm = 0.25) {
-    if (!ready()) return { ok: false, reason: 'JsBarcode no disponible', modules: 0, moduleMm: 0, minModuleMm };
+  const finite = (value, fallback) => Number.isFinite(Number(value)) ? Number(value) : fallback;
+  function physicalMargins(options) {
+    const margin = finite(options.margin, 0);
+    return {
+      left: finite(options.marginLeft, margin), right: finite(options.marginRight, margin),
+      top: finite(options.marginTop, margin), bottom: finite(options.marginBottom, margin),
+    };
+  }
+
+  // Inspecciona el PNG real que se contiene dentro del SVG maestro. `modules`
+  // excluye los márgenes de JsBarcode; X, alto y quiet zones ya incluyen la
+  // escala `meet` efectiva. El umbral contractual permanece en 0.25 mm.
+  function inspectLabelCode(code, contract = LABEL_60X40) {
+    const value = String(code == null ? '' : code);
+    const box = contract.symbolBox;
+    const raster = contract.raster;
+    const minModuleMm = finite(contract.minModuleMm, 0.25);
+    const nearModuleMm = Math.max(minModuleMm, finite(contract.nearModuleMm, minModuleMm));
+    const base = {
+      code: value,
+      chars: Array.from(value).length,
+      availableWidthMm: box.widthMm,
+      availableHeightMm: box.heightMm,
+      minModuleMm,
+      nearModuleMm,
+      pdfDpi: raster.widthPx / contract.labelWidthMm * 25.4,
+      pdfDpiX: raster.widthPx / contract.labelWidthMm * 25.4,
+      pdfDpiY: raster.heightPx / contract.labelHeightMm * 25.4,
+    };
+    if (!value) return Object.assign(base, {
+      ok: false, status: 'MISSING_BARCODE', reason: 'No hay texto Code128 para generar la etiqueta.',
+      modules: 0, moduleMm: 0, barHeightMm: 0, quietZoneLeftMm: 0, quietZoneRightMm: 0,
+    });
+    if (!ready()) return Object.assign(base, {
+      ok: false, status: 'GENERATION_ERROR', reason: 'JsBarcode no disponible.',
+      modules: 0, moduleMm: 0, barHeightMm: 0, quietZoneLeftMm: 0, quietZoneRightMm: 0,
+    });
+    const options = Object.assign({}, BASE_OPTS, contract.barcodeOptions);
+    const margins = physicalMargins(options);
     const canvas = document.createElement('canvas');
     try {
-      window.JsBarcode(canvas, String(code), Object.assign({}, BASE_OPTS, { width: 1, margin: 0, displayValue: false }));
-      const modules = canvas.width;
-      const moduleMm = modules ? usableMm / modules : 0;
-      return { ok: moduleMm >= minModuleMm, modules, moduleMm, minModuleMm, usableMm };
+      window.JsBarcode(canvas, value, options);
+      const moduleWidthPx = finite(options.width, BASE_OPTS.width);
+      const encodedWidthPx = canvas.width - margins.left - margins.right;
+      const modules = encodedWidthPx > 0 && moduleWidthPx > 0 ? Math.round(encodedWidthPx / moduleWidthPx) : 0;
+      const scaleMmPerPx = Math.min(box.widthMm / canvas.width, box.heightMm / canvas.height);
+      const renderedWidthMm = canvas.width * scaleMmPerPx;
+      const renderedHeightMm = canvas.height * scaleMmPerPx;
+      const centeredLeftMm = box.xMm + (box.widthMm - renderedWidthMm) / 2;
+      const centeredRightMm = contract.labelWidthMm - box.xMm - box.widthMm + (box.widthMm - renderedWidthMm) / 2;
+      const moduleMm = moduleWidthPx * scaleMmPerPx;
+      const embeddedQuietZoneLeftMm = margins.left * scaleMmPerPx;
+      const embeddedQuietZoneRightMm = margins.right * scaleMmPerPx;
+      const status = moduleMm < minModuleMm ? 'DENSE' : moduleMm < nearModuleMm ? 'NEAR' : 'OK';
+      return Object.assign(base, {
+        ok: status !== 'DENSE', status, modules, moduleMm,
+        canvasWidthPx: canvas.width, canvasHeightPx: canvas.height,
+        encodedWidthPx, moduleWidthPx, scaleMmPerPx,
+        renderedWidthMm, renderedHeightMm,
+        encodedWidthMm: modules * moduleMm,
+        barHeightMm: finite(options.height, BASE_OPTS.height) * scaleMmPerPx,
+        embeddedQuietZoneLeftMm, embeddedQuietZoneRightMm,
+        outerQuietZoneLeftMm: centeredLeftMm, outerQuietZoneRightMm: centeredRightMm,
+        quietZoneLeftMm: centeredLeftMm + embeddedQuietZoneLeftMm,
+        quietZoneRightMm: centeredRightMm + embeddedQuietZoneRightMm,
+        pdfModulePx: moduleMm * (raster.widthPx / contract.labelWidthMm),
+        pdfBarHeightPx: finite(options.height, BASE_OPTS.height) * scaleMmPerPx * (raster.heightPx / contract.labelHeightMm),
+      });
     } catch (error) {
-      return { ok: false, reason: error && error.message || 'Código inválido', modules: 0, moduleMm: 0, minModuleMm, usableMm };
+      return Object.assign(base, {
+        ok: false, status: 'ENCODING_ERROR', reason: error && error.message || 'El texto no se puede codificar en Code128.',
+        modules: 0, moduleMm: 0, barHeightMm: 0, quietZoneLeftMm: 0, quietZoneRightMm: 0,
+      });
     }
   }
 
-  window.BARCODES = { codeOf, parse, resolve, find, draw, Barcode, toPNGDataURL, toPNGBlob, validateLabelCode, BASE_OPTS, ready,
+  // Nombre histórico conservado para Configuración y consumidores externos.
+  // Con los valores estándar delega sin desviaciones al contrato 60×40.
+  function validateLabelCode(code, usableMm = LABEL_60X40.symbolBox.widthMm, minModuleMm = LABEL_60X40.minModuleMm) {
+    if (usableMm === LABEL_60X40.symbolBox.widthMm && minModuleMm === LABEL_60X40.minModuleMm) return inspectLabelCode(code);
+    return inspectLabelCode(code, Object.assign({}, LABEL_60X40, {
+      symbolBox: Object.assign({}, LABEL_60X40.symbolBox, { widthMm: usableMm }),
+      minModuleMm,
+    }));
+  }
+
+  window.BARCODES = { codeOf, parse, resolve, find, draw, Barcode, toPNGDataURL, toPNGBlob,
+    inspectLabelCode, validateLabelCode, LABEL_60X40, BASE_OPTS, ready,
     get lastResolution() { return lastResolution; } };
 })();

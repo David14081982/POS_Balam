@@ -6035,6 +6035,51 @@ forma determinista y aprobó.
 **Corrección:** `docs/fixes/lector-guiones-apostrofes.md`.
 **Commit:** Pendiente de commit.
 
+## H-127 — La validación Code128 no representa la geometría impresa
+
+**Estado:** RESUELTO LOCALMENTE — PENDIENTE DE PUBLICACIÓN
+**Fecha de registro:** 28/08/2026
+**Origen:** Inventario → Etiquetas advierte que ciertos códigos son
+«demasiado largos». La auditoría aceptada y las fotografías operativas
+demuestran que V1 codifica el SKU materializado por talla y V2 muestra ese SKU,
+pero codifica exclusivamente `barcode_code`.
+**Evidencia inicial:** `validateLabelCode()` mide un canvas auxiliar con
+`width=1` y `margin=0`, mientras preview, PDF e impresión usan `width=2`,
+`margin=4` y contienen el PNG completo dentro de 56×15 mm. Un símbolo de 222
+módulos obtiene falsamente 0.2523 mm y aprueba en el validador, pero su render
+real ocupa 452 px y se reduce a 0.2478 mm por módulo. La redacción agrupa por
+código, no identifica talla ni causa y recomienda acortar el SKU incluso para
+V2, donde el SKU visible no se codifica.
+**Riesgo:** aceptar como robusta una etiqueta físicamente densa, rechazar o
+explicar mal una referencia V2, y ocultar diferencias entre densidad,
+codificación, ambigüedad y fallo de generación. Esto puede trasladar al lector o
+a la impresora un defecto que la UI declaró apto.
+**Alcance autorizado:** auditoría read-only del export vigente, autoridad
+física única compartida por preview/PDF/impresión y validación, diagnóstico por
+etiqueta/talla, pruebas, documentación, build y publicación segura.
+**No alcance:** acortar o reescribir SKU, cambiar `products.id`, regenerar
+`barcode_code`, convertir V1/V2, alterar stock, inventario, Supabase o certificar
+hardware que no se probó físicamente.
+**Corrección local:** `BARCODES.LABEL_60X40` gobierna el render y su
+inspección física real. Mide módulos, X, alto, quiet zones y raster PDF; ningún
+X < 0.25 mm puede quedar OK. Inventario enumera por producto/talla densidad,
+banda preventiva, codificación, faltante, ambigüedad, barcode anómalo y fallo de
+generación sin mostrar UUID ni recomendar alterar identidades.
+**Auditoría vigente:** export 19/08, 370 filas, 960 etiquetas base y 3,584
+piezas: 23 OK, 105 NEAR, 828 DENSE y cuatro ENCODING_ERROR por `Ñ`; cero
+faltantes, ambigüedades, anomalías V2 o fallos de generación. Son 832 etiquetas
+V1 base en riesgo (3,254 por stock), todas con texto único. La fotografía 769
+corresponde exactamente a tallas 27/28/29, 233 módulos y X 0.236287 mm.
+**Pruebas:** H-127 rojo 3/9 y verde 9/9; UI 11/11; H-94 49/49 + 30/30;
+lector 8/8 + 37/37; H-88B 19/19; H-99 12/12 + 23/23; H-100 10/10;
+módulos 42/42; responsive 492/492; smoke 17/17; navegación 15/15;
+build reproducible 8/8 y regeneración correcta.
+**Riesgo residual:** software y PDF verificados, hardware no certificado. Las
+identidades y existencias reales no se modificaron; 832 V1 en riesgo y 105 V2
+NEAR requieren decisión operativa y, para certificación, prueba impresa real.
+**Corrección:** `docs/fixes/autoridad-fisica-code128-h127.md`.
+**Commit:** Pendiente de commit.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

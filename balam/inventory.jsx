@@ -1669,9 +1669,10 @@
 
   // ── Etiquetas de código de barras (impresión 6×4 cm + guardado opcional en Supabase) ──
   function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
-  const LBL_OPTS = { height: 60, fontSize: 13, margin: 4 }; // ajuste del código para la vista previa
-  // Las barras no imprimen su valor. El único texto técnico visible es el SKU comercial.
-  const PRINT_OPTS = Object.assign({}, LBL_OPTS, { displayValue: false });
+  // H-127: configuración física compartida con el inspector Code128. Las barras
+  // no imprimen su valor; el único texto técnico visible es el SKU comercial.
+  const LABEL_CONTRACT = window.BARCODES.LABEL_60X40;
+  const PRINT_OPTS = LABEL_CONTRACT.barcodeOptions;
 
   // La etiqueta reserva 56 mm útiles. En monospace, un carácter ocupa cerca de
   // 0.62 em; este cálculo elige la mayor tipografía que cabe en una sola línea.
@@ -1685,18 +1686,21 @@
   // H-99: ésta es la única autoridad visual de la etiqueta. El documento usa
   // estas dimensiones físicas y el preview escala el bloque completo, sin
   // recalcular ninguna zona ni tipografía.
+  const LABEL_WIDTH_MM = LABEL_CONTRACT.labelWidthMm;
+  const LABEL_HEIGHT_MM = LABEL_CONTRACT.labelHeightMm;
+  const LABEL_SYMBOL_BOX = LABEL_CONTRACT.symbolBox;
+  const LABEL_RASTER = LABEL_CONTRACT.raster;
   const LABEL_LAYOUT_CSS = `
-    .bx-label,.bx-label *{box-sizing:border-box}.bx-label{width:60mm;height:40mm;background:white;color:#111827;overflow:hidden;page-break-after:always;font-family:Arial,sans-serif}.bx-artwork{display:block;width:60mm;height:40mm}.bx-name{font-family:Arial,sans-serif;font-weight:700}.bx-img{display:block}.bx-meta{font-family:monospace;font-weight:600;white-space:nowrap}.bx-price{font-family:Arial,sans-serif;font-weight:900}`;
+    .bx-label,.bx-label *{box-sizing:border-box}.bx-label{width:${LABEL_WIDTH_MM}mm;height:${LABEL_HEIGHT_MM}mm;background:white;color:#111827;overflow:hidden;page-break-after:always;font-family:Arial,sans-serif}.bx-artwork{display:block;width:${LABEL_WIDTH_MM}mm;height:${LABEL_HEIGHT_MM}mm}.bx-name{font-family:Arial,sans-serif;font-weight:700}.bx-img{display:block}.bx-meta{font-family:monospace;font-weight:600;white-space:nowrap}.bx-price{font-family:Arial,sans-serif;font-weight:900}`;
 
-  const LABEL_WIDTH_MM = 60;
-  const LABEL_HEIGHT_MM = 40;
   const PDF_WIDTH_PT = LABEL_WIDTH_MM * 72 / 25.4;
   const PDF_HEIGHT_PT = LABEL_HEIGHT_MM * 72 / 25.4;
   const ptToMm = pt => Number(pt) * 25.4 / 72;
 
   function labelSvg(item) {
     const skuPt = labelSkuFontPt(item.sku).toFixed(2);
-    return `<svg class="bx-artwork" data-label-artwork="h99" xmlns="http://www.w3.org/2000/svg" width="60mm" height="40mm" viewBox="0 0 60 40" role="img" aria-label="Etiqueta ${escapeHtml(item.sku)}"><rect width="60" height="40" fill="#fff"/><text class="bx-name" data-label-part="name" data-font-pt="14" x="30" y="4.15" fill="#111827" font-family="Arial,sans-serif" font-size="${ptToMm(14).toFixed(5)}" font-weight="700" text-anchor="middle" dominant-baseline="middle">${escapeHtml(item.name)}</text><image class="bx-img" data-testid="label-preview-barcode" data-label-part="barcode" x="2" y="7.3" width="56" height="15" preserveAspectRatio="xMidYMid meet" href="${item.image}"/><text class="bx-meta" data-label-part="sku" data-font-pt="${skuPt}" x="30" y="25.5" fill="#111827" font-family="monospace" font-size="${ptToMm(skuPt).toFixed(5)}" font-weight="600" text-anchor="middle" dominant-baseline="middle">${escapeHtml(item.sku)}</text>${item.price ? `<text class="bx-price" data-label-part="price" data-font-pt="20" x="30" y="34" fill="#111827" font-family="Arial,sans-serif" font-size="${ptToMm(20).toFixed(5)}" font-weight="900" text-anchor="middle" dominant-baseline="middle">${escapeHtml(item.price)}</text>` : ''}</svg>`;
+    const centerX = LABEL_WIDTH_MM / 2;
+    return `<svg class="bx-artwork" data-label-artwork="h99" xmlns="http://www.w3.org/2000/svg" width="${LABEL_WIDTH_MM}mm" height="${LABEL_HEIGHT_MM}mm" viewBox="0 0 ${LABEL_WIDTH_MM} ${LABEL_HEIGHT_MM}" role="img" aria-label="Etiqueta ${escapeHtml(item.sku)}"><rect width="${LABEL_WIDTH_MM}" height="${LABEL_HEIGHT_MM}" fill="#fff"/><text class="bx-name" data-label-part="name" data-font-pt="14" x="${centerX}" y="4.15" fill="#111827" font-family="Arial,sans-serif" font-size="${ptToMm(14).toFixed(5)}" font-weight="700" text-anchor="middle" dominant-baseline="middle">${escapeHtml(item.name)}</text><image class="bx-img" data-testid="label-preview-barcode" data-label-part="barcode" x="${LABEL_SYMBOL_BOX.xMm}" y="${LABEL_SYMBOL_BOX.yMm}" width="${LABEL_SYMBOL_BOX.widthMm}" height="${LABEL_SYMBOL_BOX.heightMm}" preserveAspectRatio="${LABEL_SYMBOL_BOX.fit}" href="${item.image}"/><text class="bx-meta" data-label-part="sku" data-font-pt="${skuPt}" x="${centerX}" y="25.5" fill="#111827" font-family="monospace" font-size="${ptToMm(skuPt).toFixed(5)}" font-weight="600" text-anchor="middle" dominant-baseline="middle">${escapeHtml(item.sku)}</text>${item.price ? `<text class="bx-price" data-label-part="price" data-font-pt="20" x="${centerX}" y="34" fill="#111827" font-family="Arial,sans-serif" font-size="${ptToMm(20).toFixed(5)}" font-weight="900" text-anchor="middle" dominant-baseline="middle">${escapeHtml(item.price)}</text>` : ''}</svg>`;
   }
 
   function labelMarkup(item) {
@@ -1727,11 +1731,11 @@
         image.src = url;
       });
       const canvas = document.createElement('canvas');
-      canvas.width = 720; canvas.height = 480;
+      canvas.width = LABEL_RASTER.widthPx; canvas.height = LABEL_RASTER.heightPx;
       const context = canvas.getContext('2d');
       context.fillStyle = '#fff'; context.fillRect(0, 0, canvas.width, canvas.height);
       context.drawImage(image, 0, 0, canvas.width, canvas.height);
-      const jpeg = await new Promise((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('No se pudo codificar la etiqueta para PDF')), 'image/jpeg', 0.96));
+      const jpeg = await new Promise((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('No se pudo codificar la etiqueta para PDF')), 'image/jpeg', LABEL_RASTER.jpegQuality));
       return new Uint8Array(await jpeg.arrayBuffer());
     } finally {
       URL.revokeObjectURL(url);
@@ -1755,7 +1759,7 @@
       const content = asciiBytes(`q\n${PDF_WIDTH_PT.toFixed(5)} 0 0 ${PDF_HEIGHT_PT.toFixed(5)} 0 0 cm\n/Im0 Do\nQ\nBT /F1 1 Tf 3 Tr 1 0 0 1 0 0 Tm (${metadata}) Tj ET`);
       objects[pageId] = asciiBytes(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PDF_WIDTH_PT.toFixed(5)} ${PDF_HEIGHT_PT.toFixed(5)}] /Resources << /XObject << /Im0 ${imageId} 0 R >> /Font << /F1 3 0 R >> >> /Contents ${contentId} 0 R >>`);
       objects[imageId] = concatBytes([
-        asciiBytes(`<< /Type /XObject /Subtype /Image /Width 720 /Height 480 /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${images[index].length} >>\nstream\n`),
+        asciiBytes(`<< /Type /XObject /Subtype /Image /Width ${LABEL_RASTER.widthPx} /Height ${LABEL_RASTER.heightPx} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${images[index].length} >>\nstream\n`),
         images[index], asciiBytes('\nendstream'),
       ]);
       objects[contentId] = concatBytes([asciiBytes(`<< /Length ${content.length} >>\nstream\n`), content, asciiBytes('\nendstream')]);
@@ -1822,8 +1826,8 @@
   function buildLabelDocument(rendered) {
     const labels = rendered.map(labelMarkup).join('');
     return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Etiquetas Balam</title><style>
-      @page { size: 60mm 40mm; margin: 0; } *{box-sizing:border-box} body{margin:0;font-family:system-ui,sans-serif;background:#eef0f4}.bx-tools{position:sticky;top:0;z-index:2;display:flex;gap:8px;flex-wrap:wrap;padding:12px;background:#131b2e;color:white}.bx-tools button{min-height:44px;padding:0 16px;border:0;border-radius:8px;font-weight:700}.bx-sheet{display:flex;flex-wrap:wrap;gap:12px;padding:16px}${LABEL_LAYOUT_CSS}@media(max-width:600px){.bx-sheet{padding:8px;justify-content:center}}@media print{body{background:white}.bx-tools{display:none}.bx-sheet{display:block;padding:0}.bx-label{margin:0}}
-    </style></head><body><div class="bx-tools"><button id="print" type="button" onclick="window.print()">Imprimir</button><button type="button" onclick="window.close()">Cerrar</button><span>${rendered.length} etiqueta(s) · 60×40 mm</span></div><main class="bx-sheet">${labels}</main></body></html>`;
+      @page { size: ${LABEL_WIDTH_MM}mm ${LABEL_HEIGHT_MM}mm; margin: 0; } *{box-sizing:border-box} body{margin:0;font-family:system-ui,sans-serif;background:#eef0f4}.bx-tools{position:sticky;top:0;z-index:2;display:flex;gap:8px;flex-wrap:wrap;padding:12px;background:#131b2e;color:white}.bx-tools button{min-height:44px;padding:0 16px;border:0;border-radius:8px;font-weight:700}.bx-sheet{display:flex;flex-wrap:wrap;gap:12px;padding:16px}${LABEL_LAYOUT_CSS}@media(max-width:600px){.bx-sheet{padding:8px;justify-content:center}}@media print{body{background:white}.bx-tools{display:none}.bx-sheet{display:block;padding:0}.bx-label{margin:0}}
+    </style></head><body><div class="bx-tools"><button id="print" type="button" onclick="window.print()">Imprimir</button><button type="button" onclick="window.close()">Cerrar</button><span>${rendered.length} etiqueta(s) · ${LABEL_WIDTH_MM}×${LABEL_HEIGHT_MM} mm</span></div><main class="bx-sheet">${labels}</main></body></html>`;
   }
 
   function LabelModal({ products, onClose }) {
@@ -1865,9 +1869,12 @@
     if (!B || !B.ready()) return h(Modal, { title: 'Etiquetas', onClose }, h('p', { className: 'text-body text-on-surface-variant py-6 text-center' }, 'La librería de códigos de barras no cargó. Revisa tu conexión e inténtalo de nuevo.'));
     if (!specs.length) return h(Modal, { title: 'Etiquetas', onClose }, h('p', { className: 'text-body text-on-surface-variant py-6 text-center' }, 'No hay tallas con existencias para etiquetar.'));
 
-    function labelItem(s) {
+    function imageFor(s) {
       if (imageCache.current[s.code] === undefined) imageCache.current[s.code] = B.toPNGDataURL(s.code, PRINT_OPTS);
-      return { name: s.p.nombre, image: imageCache.current[s.code], barcode: s.code, sku: D.materializedSku(s.p, s.talla), price: withPrice ? fmt(D.listPrice(s.p, s.talla)).replace('.00', '') : '' };
+      return imageCache.current[s.code];
+    }
+    function labelItem(s) {
+      return { name: s.p.nombre, image: imageFor(s), barcode: s.code, sku: D.materializedSku(s.p, s.talla), price: withPrice ? fmt(D.listPrice(s.p, s.talla)).replace('.00', '') : '' };
     }
 
     function renderItems() {
@@ -1887,8 +1894,49 @@
       win.document.write(renderDocument());
       win.document.close();
     }
-    const validations = specs.map(s => ({ ...s, validation: B.validateLabelCode(s.code) }));
-    const riskyCodes = validations.filter(item => !item.validation.ok);
+    const diagnostics = specs.map(s => {
+      const physical = B.inspectLabelCode(s.code);
+      const visibleSku = D.materializedSku(s.p, s.talla);
+      const v2 = D.isV2Reference(s.p);
+      const resolution = s.code ? B.resolve(s.code) : { ok: false, code: 'BARCODE_EMPTY', matches: [] };
+      const issues = [];
+      if (physical.status === 'DENSE') issues.push({ type: 'DENSITY', message: `Densidad: X ${physical.moduleMm.toFixed(3)} mm < ${physical.minModuleMm.toFixed(3)} mm (${physical.modules} módulos; barras ${physical.barHeightMm.toFixed(1)} mm).` });
+      else if (physical.status === 'MISSING_BARCODE') issues.push({ type: 'MISSING_BARCODE', message: v2 ? 'Falta el barcode logístico V2; no hay texto Code128 para esta etiqueta.' : 'Falta el texto Code128 materializado para esta talla.' });
+      else if (physical.status === 'ENCODING_ERROR') issues.push({ type: 'ENCODING_ERROR', message: 'Codificación: el texto contiene caracteres que el generador Code128 actual no puede representar.' });
+      else if (physical.status === 'GENERATION_ERROR') issues.push({ type: 'GENERATION_ERROR', message: `Generación: ${physical.reason}` });
+      const image = !['MISSING_BARCODE', 'ENCODING_ERROR', 'GENERATION_ERROR'].includes(physical.status) ? imageFor(s) : '';
+      if (!image && !issues.some(issue => issue.type === 'MISSING_BARCODE' || issue.type === 'ENCODING_ERROR' || issue.type === 'GENERATION_ERROR')) {
+        issues.push({ type: 'GENERATION_ERROR', message: 'Generación: no se pudo producir el PNG usado por preview, PDF e impresión.' });
+      }
+      if (resolution.code === 'BARCODE_AMBIGUOUS') issues.push({ type: 'AMBIGUOUS', message: `Ambigüedad: el mismo Code128 coincide con ${resolution.matches.length} referencias y no identifica una pieza de forma única.` });
+      return {
+        s, code: s.code, visibleSku, physical, issues,
+        legacy: !v2,
+        anomalous: v2 && !!s.code && !/^B[A-F0-9]{15}$/.test(String(s.code).toUpperCase()),
+      };
+    });
+    const riskDiagnostics = diagnostics.filter(item => item.issues.length > 0);
+    const nearDiagnostics = diagnostics.filter(item => !item.issues.length && item.physical.status === 'NEAR');
+    const anomalousDiagnostics = diagnostics.filter(item => !item.issues.length && item.anomalous);
+    function diagnosticCount(items) {
+      const labels = items.reduce((total, item) => total + copiesOf(item.s), 0);
+      const codes = new Set(items.map(item => item.code).filter(Boolean)).size;
+      return `${labels} etiqueta(s)${codes && codes !== labels ? ` · ${codes} código(s) único(s)` : ''}`;
+    }
+    function diagnosticName(item) {
+      const product = item.s.p;
+      const name = String(product.nombre || product.modelo || 'Producto');
+      const model = String(product.modelo || '');
+      const identity = model && model !== name ? `${name} (${model})` : name;
+      const encoded = item.code && item.code !== item.visibleSku ? ` · Code128 ${item.code}` : '';
+      return `${identity} · talla ${item.s.talla} · SKU ${item.visibleSku}${encoded}`;
+    }
+    function diagnosticList(items, messageOf, testPrefix) {
+      return h('ul', { className: 'mt-2 space-y-2 list-disc pl-5' }, items.map((item, index) => h('li', {
+        key: `${item.s.p.id}:${item.s.talla}:${index}`,
+        'data-testid': `${testPrefix}-${index}`,
+      }, `${diagnosticName(item)} — ${messageOf(item)}`)));
+    }
 
     async function saveToSupabase() {
       if (saving) return;
@@ -1952,7 +2000,19 @@
         ]),
         h('p', { key: 'sum', className: 'text-caption text-on-surface-variant' }, `${specs.length} talla(s) con existencias · ${totalLabels} etiqueta(s) a imprimir`),
         pdfError && h('div', { key: 'pdf-error', role: 'alert', 'data-testid': 'labels-pdf-error', className: 'p-3 rounded-lg bg-danger-soft text-danger text-caption' }, `${pdfError}. Puedes mantener abierta la vista imprimible e intentarlo de nuevo.`),
-        riskyCodes.length > 0 && h('div', { key: 'warn', role: 'alert', 'data-testid': 'labels-legibility-warning', className: 'p-3 rounded-lg bg-warning-soft text-warning text-caption' }, `${riskyCodes.length} código(s) son demasiado largos para una lectura Code128 robusta en 60×40 mm. En V2 revisa el barcode logístico; en etiquetas V1 acorta el SKU o valida una muestra con tu lector.`),
+        riskDiagnostics.length > 0 && h('div', { key: 'warn', role: 'alert', 'data-testid': 'labels-legibility-warning', className: 'p-3 rounded-lg bg-warning-soft text-warning text-caption' }, [
+          h('p', { key: 'h', className: 'font-semibold' }, `${diagnosticCount(riskDiagnostics)} con problema físico, de identidad o de generación.`),
+          diagnosticList(riskDiagnostics, item => item.issues.map(issue => issue.message).join(' '), 'label-risk-detail'),
+          h('p', { key: 'scope', className: 'mt-2' }, 'La validación geométrica usa el mismo render del PDF y la impresión; no modifica SKU, barcode ni identidad y no sustituye una prueba con la impresora y el lector reales.'),
+        ]),
+        nearDiagnostics.length > 0 && h('div', { key: 'near', role: 'status', 'data-testid': 'labels-density-near', className: 'p-3 rounded-lg bg-surface-container-low text-on-surface-variant text-caption' }, [
+          h('p', { key: 'h', className: 'font-semibold text-primary' }, `${diagnosticCount(nearDiagnostics)} cerca del límite preventivo, sin caer bajo X = ${LABEL_CONTRACT.minModuleMm.toFixed(3)} mm.`),
+          diagnosticList(nearDiagnostics, item => `Densidad preventiva: X ${item.physical.moduleMm.toFixed(3)} mm · ${item.physical.modules} módulos · barras ${item.physical.barHeightMm.toFixed(1)} mm.`, 'label-near-detail'),
+        ]),
+        anomalousDiagnostics.length > 0 && h('div', { key: 'anomaly', role: 'status', 'data-testid': 'labels-barcode-anomaly', className: 'p-3 rounded-lg bg-surface-container-low text-on-surface-variant text-caption' }, [
+          h('p', { key: 'h', className: 'font-semibold text-primary' }, `${diagnosticCount(anomalousDiagnostics)} usan un barcode V2 personalizado.`),
+          diagnosticList(anomalousDiagnostics, item => `Barcode anómalo respecto del patrón generado por BALAM, pero codificable y con X ${item.physical.moduleMm.toFixed(3)} mm; confirma que su origen logístico sea intencional.`, 'label-anomaly-detail'),
+        ]),
       ]),
       h('div', { key: 'pv', className: 'border-t border-outline-variant pt-4' }, [
         h('style', { key: 'css' }, LABEL_LAYOUT_CSS),

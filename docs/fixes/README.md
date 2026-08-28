@@ -90,6 +90,7 @@ sesión de chat.
 | `estabilidad-preview-limpieza.md` | H-124 | Huella comercial estable ante latidos y recuperación segura del preview cambiado |
 | `proyeccion-atencion-centro-equipos.md` | H-125 | Actividad historica separada de atencion y reintento vigente |
 | `lector-guiones-apostrofes.md` | H-126 | Respaldo de distribución de teclado para lectores HID sin modificar SKU ni identidad |
+| `autoridad-fisica-code128-h127.md` | H-127 | Geometría Code128 única para preview/PDF/impresión y diagnóstico por etiqueta |
 | `jerarquia-visual-etiqueta-60x40.md` | H-99 | Jerarquía visual 60×40 con identidad V2 intacta |
 | `sku-materializado-en-etiquetas.md` | H-100 | SKU visible por talla con paridad preview/PDF/impresión |
 | `chips-existencias-familiares.md` | H-103 | Chips compactos con proyección familiar V2 intacta |
