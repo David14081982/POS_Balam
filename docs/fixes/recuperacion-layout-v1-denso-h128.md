@@ -1,9 +1,9 @@
 # Recuperación geométrica de etiquetas V1 densas sin cambiar identidad
 
 **Riesgo:** H-128
-**Estado:** RESUELTO — PENDIENTE DE PUBLICACIÓN
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha:** 28/08/2026
-**Commit funcional:** Pendiente de commit
+**Commit funcional:** `f32e668`
 
 ## Problema y reproducción
 
@@ -183,6 +183,23 @@ cola offline ni Supabase comercial.
 - Build reproducible: 8/8; `node build-offline.mjs` correcto.
 - El smoke de desarrollo con Babel agotó su espera de 30 s tanto en H-128 como
   en el commit H-127 intacto; el bundle precompilado arrancó en 3.44 s y pasó.
+
+## Despliegue
+
+`origin/main` avanzó por fast-forward de `2539d95` a `f32e668`, sin merge ni
+force-push. GitHub Pages run
+[`33200632457`](https://github.com/David14081982/POS_Balam/actions/runs/33200632457)
+terminó en `success` para el SHA funcional completo
+`f32e668c2926e0cac1ddcd5ecb2eca4bd6317923`.
+
+El `index.html` servido por Pages y el blob Git son idénticos: 9,019,427 bytes
+y SHA-256
+`3ac5e8e13078760dd96bbb240f618237f8f0c18763d01d225660248cadeb1dfb`.
+Los dos artefactos del worktree también son idénticos entre sí: 9,019,598 bytes
+y SHA-256
+`aef24fd374dba37d55a02a90eb156670419b7b431df63c064b838ac206acca7c`;
+la diferencia de 171 bytes frente al blob es sólo normalización CRLF→LF de
+Git, sin diferencia de contenido.
 
 ## Riesgo de alternativas y pendientes
 

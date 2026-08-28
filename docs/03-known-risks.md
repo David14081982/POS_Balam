@@ -38,7 +38,7 @@ y `BLOQUEADO`.
 | H-99 | Preview, PDF e impresión de etiquetas deben compartir composición | RESUELTO Y PUBLICADO | Inventario / etiquetas / impresión |
 | H-111 | POS expone referencias V2 en lugar de una selección comercial por talla | RESUELTO | POS / UX / identidad V2 |
 | H-121 | La caché local puede actuar como segunda autoridad comercial | RESUELTO Y PUBLICADO | Sincronización / persistencia / offline |
-| H-128 | La geometría 60×40 puede no recuperar etiquetas V1 densas sin cambiar identidad | RESUELTO | Inventario / etiquetas / impresión |
+| H-128 | La geometría 60×40 puede no recuperar etiquetas V1 densas sin cambiar identidad | RESUELTO Y PUBLICADO | Inventario / etiquetas / impresión |
 
 ## H-01 — Inventario concurrente
 
@@ -6086,7 +6086,7 @@ y SHA-256 `7c140a8c4fe268197de73cf9a5ae51042b3b384710aae0bf77fc394c8ef08678`.
 
 ## H-128 — La geometría 60×40 puede no recuperar etiquetas V1 densas sin cambiar identidad
 
-**Estado:** RESUELTO — PENDIENTE DE PUBLICACIÓN
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha de registro:** 28/08/2026
 **Origen:** H-127 dejó 828 etiquetas base V1 `DENSE` y cuatro
 `ENCODING_ERROR` en las 960 combinaciones con existencia del export vigente.
@@ -6131,7 +6131,10 @@ restricción 60×40 o cambiar el texto/simbología. Las cuatro `Ñ` requieren
 encoder + hardware o decisión de negocio. BALAM QA observó fuera de alcance
 `undefined · SKU` en la selección multiproducto V1; no fue corregido.
 **Corrección:** `docs/fixes/recuperacion-layout-v1-denso-h128.md`.
-**Commit:** Pendiente de commit.
+**Commit funcional:** `f32e668`.
+**Despliegue:** `origin/main` avanzó por fast-forward; Pages run `33200632457`
+terminó en `success`. Su `index.html` coincide con el blob Git: 9,019,427 bytes
+y SHA-256 `3ac5e8e13078760dd96bbb240f618237f8f0c18763d01d225660248cadeb1dfb`.
 
 ## Regla de actualización
 
