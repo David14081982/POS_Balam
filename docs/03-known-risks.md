@@ -6078,7 +6078,7 @@ build reproducible 8/8 y regeneración correcta.
 identidades y existencias reales no se modificaron; 832 V1 en riesgo y 105 V2
 NEAR requieren decisión operativa y, para certificación, prueba impresa real.
 **Corrección:** `docs/fixes/autoridad-fisica-code128-h127.md`.
-**Commit:** Pendiente de commit.
+**Commit funcional:** `d549441`.
 
 ## Regla de actualización
 

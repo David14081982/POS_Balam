@@ -3,7 +3,7 @@
 **Riesgo:** H-127
 **Estado:** RESUELTO LOCALMENTE — PENDIENTE DE PUBLICACIÓN
 **Fecha:** 28/08/2026
-**Commit:** Pendiente de commit
+**Commit funcional:** `d549441`
 
 ## Problema y reproducción
 
