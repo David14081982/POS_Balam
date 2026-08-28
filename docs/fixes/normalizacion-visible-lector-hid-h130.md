@@ -1,9 +1,9 @@
 # Guion visible desde la entrada del lector HID
 
 **Riesgo:** H-130
-**Estado:** RESUELTO LOCALMENTE — PENDIENTE DE PUBLICACIÓN
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha:** 28/08/2026
-**Commit:** Pendiente de commit
+**Commit funcional:** `636e24e`
 
 ## Problema y reproducción
 
@@ -77,9 +77,18 @@ regenerarlas. V2 sigue resolviendo su `barcode_code` sin cambios.
 - POS V1/V2: contrato 9/9 y E2E 19/19.
 - Contratos de módulos: 42/42; responsive: 492/492; arranque: 5/5;
   smoke bundle: 17/17; navegación: 15/15; reproducibilidad: 8/8.
-- `node build-offline.mjs` — correcto. `index.html` y
-  `POS Balam (offline).html` son idénticos: 9,020,870 bytes, SHA-256
-  `bece1824d2fdf5412d3afaef32a84192f0f8bce83ee87e082866243fb7ba2e27`.
+- `node build-offline.mjs` — correcto; los dos HTML generados son idénticos.
+  El blob publicado de `index.html` tiene 9,020,699 bytes y SHA-256
+  `7203511a1ee29791ac489a4c20bab2a79ca574c90d5ec5509dd72d2fc66209ef`.
+
+## Despliegue
+
+`636e24e` avanzó `origin/main`. GitHub Pages run
+[`33209687970`](https://github.com/David14081982/POS_Balam/actions/runs/33209687970)
+terminó en `success`. El `index.html` servido tiene exactamente los mismos
+9,020,699 bytes y SHA-256
+`7203511a1ee29791ac489a4c20bab2a79ca574c90d5ec5509dd72d2fc66209ef`
+que el blob del commit.
 
 ## Riesgo residual y pendientes
 

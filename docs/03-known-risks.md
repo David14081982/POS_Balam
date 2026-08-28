@@ -6138,7 +6138,7 @@ y SHA-256 `3ac5e8e13078760dd96bbb240f618237f8f0c18763d01d225660248cadeb1dfb`.
 
 ## H-130 — El lector resuelve apóstrofes pero los sigue escribiendo en pantalla
 
-**Estado:** RESUELTO LOCALMENTE — PENDIENTE DE PUBLICACIÓN
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha de registro:** 28/08/2026
 **Origen:** reporte operativo posterior al cierre H-126.
 **Evidencia inicial:** H-126 adapta `'` a `-` únicamente dentro de
@@ -6171,15 +6171,19 @@ la coincidencia literal prioritaria y todas las identidades permanecen.
 **Pruebas:** rojo H-130 1/7 y verde 7/7; H-126 8/8; BALAM QA fuente y bundle
 42/42 cada uno; Préstamos 117/117; Cambio 45/45 + 37/37; POS V1/V2 9/9 +
 19/19; módulos 42/42; responsive 492/492; arranque 5/5; smoke bundle 17/17;
-navegación 15/15; reproducibilidad 8/8. Build correcto; ambos HTML son
-idénticos, 9,020,870 bytes y SHA-256
-`bece1824d2fdf5412d3afaef32a84192f0f8bce83ee87e082866243fb7ba2e27`.
+navegación 15/15; reproducibilidad 8/8. Build correcto; el blob publicado de
+`index.html` tiene 9,020,699 bytes y SHA-256
+`7203511a1ee29791ac489a4c20bab2a79ca574c90d5ec5509dd72d2fc66209ef`.
 **Riesgo residual:** no hubo lector físico ni certificación Firefox/WebKit. Un
 lector que transmita físicamente `Quote` no puede reinterpretarse antes de
 Enter sin dañar códigos literales; H-126 todavía lo resuelve y limpia al
 confirmar. BALAM no cambia la salida del lector fuera de la aplicación.
 **Corrección:** `docs/fixes/normalizacion-visible-lector-hid-h130.md`.
-**Commit:** Pendiente de commit.
+**Commit funcional:** `636e24e`.
+**Despliegue:** `origin/main` avanzó por fast-forward; Pages run `33209687970`
+terminó en `success`. El `index.html` servido coincide byte a byte con el blob
+del commit: 9,020,699 bytes y SHA-256
+`7203511a1ee29791ac489a4c20bab2a79ca574c90d5ec5509dd72d2fc66209ef`.
 
 ## Regla de actualización
 
