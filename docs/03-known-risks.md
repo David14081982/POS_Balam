@@ -6136,6 +6136,51 @@ encoder + hardware o decisión de negocio. BALAM QA observó fuera de alcance
 terminó en `success`. Su `index.html` coincide con el blob Git: 9,019,427 bytes
 y SHA-256 `3ac5e8e13078760dd96bbb240f618237f8f0c18763d01d225660248cadeb1dfb`.
 
+## H-130 — El lector resuelve apóstrofes pero los sigue escribiendo en pantalla
+
+**Estado:** RESUELTO LOCALMENTE — PENDIENTE DE PUBLICACIÓN
+**Fecha de registro:** 28/08/2026
+**Origen:** reporte operativo posterior al cierre H-126.
+**Evidencia inicial:** H-126 adapta `'` a `-` únicamente dentro de
+`BARCODES.resolve()` y sólo después de presionar Enter. Los campos controlados
+de POS, Préstamos y Cambios guardan literalmente `event.target.value`, mientras
+las tres capturas globales acumulan literalmente `KeyboardEvent.key`. Por eso
+la referencia puede resolverse, pero el operador todavía ve un apóstrofe y una
+ráfaga global puede escribirlo temporalmente en el campo que tenga foco.
+**Riesgo:** una lectura válida parece incorrecta, puede contaminar captura
+humana fuera del buscador y deja contratos distintos entre entrada directa,
+captura global y resolución. Corregirlo con una sustitución indiscriminada de
+texto también podría impedir buscar manualmente una identidad histórica que
+contenga un apóstrofe literal.
+**Alcance autorizado:** normalizar en la autoridad compartida la tecla física
+del guion emitida por un lector HID, consumirla en todos los puntos de captura,
+probar POS, Préstamos y Cambios, documentar, construir y publicar.
+**No alcance:** reescribir SKU, `barcode_code`, `products.id`, etiquetas,
+inventario, históricos, Supabase o la configuración del lector/sistema
+operativo.
+**Contrato de corrección:** cuando el navegador reporte la tecla física
+`KeyboardEvent.code === "Minus"` como apóstrofe, BALAM debe consumirla como
+`-` antes de presentarla o resolverla. Una tecla de apóstrofe real conserva su
+valor y la coincidencia literal de H-126 mantiene prioridad.
+**Corrección local:** `BARCODES.scannerChar()` convierte exclusivamente
+`key === "'"` + `code === "Minus"` en `-`; `consumeScannerInputKey()` la
+intercepta antes del valor visible. Las tres capturas globales acumulan el
+código canónico y conservan aparte la ráfaga cruda para retirarla de otro input
+sólo cuando resuelve a una referencia conocida. El respaldo post-Enter H-126,
+la coincidencia literal prioritaria y todas las identidades permanecen.
+**Pruebas:** rojo H-130 1/7 y verde 7/7; H-126 8/8; BALAM QA fuente y bundle
+42/42 cada uno; Préstamos 117/117; Cambio 45/45 + 37/37; POS V1/V2 9/9 +
+19/19; módulos 42/42; responsive 492/492; arranque 5/5; smoke bundle 17/17;
+navegación 15/15; reproducibilidad 8/8. Build correcto; ambos HTML son
+idénticos, 9,020,870 bytes y SHA-256
+`bece1824d2fdf5412d3afaef32a84192f0f8bce83ee87e082866243fb7ba2e27`.
+**Riesgo residual:** no hubo lector físico ni certificación Firefox/WebKit. Un
+lector que transmita físicamente `Quote` no puede reinterpretarse antes de
+Enter sin dañar códigos literales; H-126 todavía lo resuelve y limpia al
+confirmar. BALAM no cambia la salida del lector fuera de la aplicación.
+**Corrección:** `docs/fixes/normalizacion-visible-lector-hid-h130.md`.
+**Commit:** Pendiente de commit.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

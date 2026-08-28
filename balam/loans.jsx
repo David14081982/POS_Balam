@@ -84,20 +84,6 @@
   // aquí no se parsea ni se reimplementa la resolución de etiquetas.
   const leerCodigo = raw => (window.BARCODES ? window.BARCODES.find(raw) : null);
   const pareceCodigo = raw => !!(window.BARCODES && window.BARCODES.parse(raw));
-  // Un lector HID teclea la ráfaga en el campo que tenga el foco. Cuando la ráfaga
-  // resulta ser un código conocido y no cayó en el buscador, se retira del campo lo
-  // que el lector acaba de escribir: si no, escanear con el foco en «quién recibe»
-  // dejaría el código metido dentro del nombre de la persona.
-  function retirarCodigoTecleado(el, code) {
-    if (!el || (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA')) return;
-    const valor = String(el.value == null ? '' : el.value);
-    if (!valor.toUpperCase().endsWith(String(code).toUpperCase())) return;
-    const proto = el.tagName === 'INPUT' ? window.HTMLInputElement.prototype : window.HTMLTextAreaElement.prototype;
-    const setter = Object.getOwnPropertyDescriptor(proto, 'value').set;
-    setter.call(el, valor.slice(0, valor.length - String(code).length));
-    el.dispatchEvent(new Event('input', { bubbles: true }));
-  }
-
   // Tallas ofrecidas al capturar desde la misma autoridad que Punto de venta.
   // Sin `incluirVacias` sólo se ofrecen las que tienen existencia.
   const tallaLbl = (escala, talla) => C.map(escala === 'N' ? 'size_number' : 'size_letter')[talla] || talla;
@@ -524,6 +510,7 @@
     //   2) SKU exacto → abre el selector de talla;
     //   3) texto libre → abre la primera coincidencia del catálogo.
     function onScan(e) {
+      if (window.BARCODES && window.BARCODES.consumeScannerInputKey(e, value => { setBusca(value); setPicking(null); })) return;
       if (e.key !== 'Enter') return;
       // El valor se lee del DOM, más confiable que el estado ante lectores muy rápidos.
       const raw = String(e.target && e.target.value != null ? e.target.value : busca).trim();
@@ -553,24 +540,25 @@
     scanRT.current = { agregar, buscador: buscaRef.current };
     useEffect(() => {
       if (editar) return undefined; // editando no entra mercancía nueva
-      let buf = '', ultima = 0;
+      let buf = '', typed = '', ultima = 0;
       function onKey(e) {
         const st = scanRT.current;
         if (document.activeElement === st.buscador) return; // lo atiende onScan
         if (e.key === 'Enter') {
-          const code = buf; buf = '';
+          const code = buf, rawCode = typed; buf = ''; typed = '';
           if (code.length < 4) return;
           const hit = leerCodigo(code);
           if (!hit) return; // no es un código conocido → no intervenir
           e.preventDefault();
-          retirarCodigoTecleado(document.activeElement, code);
+          if (window.BARCODES.removeScannerText) window.BARCODES.removeScannerText(document.activeElement, rawCode);
           st.agregar(hit.p, hit.talla);
           return;
         }
         if (e.key && e.key.length === 1) {
           const ahora = Date.now();
-          if (ahora - ultima > 50) buf = '';
-          buf += e.key; ultima = ahora;
+          if (ahora - ultima > 50) { buf = ''; typed = ''; }
+          buf += window.BARCODES ? window.BARCODES.scannerChar(e) : e.key;
+          typed += e.key; ultima = ahora;
         }
       }
       window.addEventListener('keydown', onKey);

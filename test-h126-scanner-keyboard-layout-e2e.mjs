@@ -48,6 +48,16 @@ async function responsive(page, surface, testId) {
   await page.setViewportSize({ width: 390, height: 844 });
 }
 
+async function physicalMinusIsVisibleAsHyphen(input) {
+  await input.fill('H130');
+  const prevented = await input.evaluate(element => {
+    const event = new KeyboardEvent('keydown', { key: "'", code: 'Minus', bubbles: true, cancelable: true });
+    return !element.dispatchEvent(event);
+  });
+  await input.page().waitForTimeout(30);
+  return { prevented, value: await input.inputValue() };
+}
+
 const browser = await chromium.launch({ channel: 'chrome', headless: true });
 async function pageWith(...sources) {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
@@ -91,6 +101,9 @@ try {
     });
     const input = page.getByTestId('pos-barcode-input');
     await input.waitFor();
+    const visible = await physicalMinusIsVisibleAsHyphen(input);
+    check('POS muestra guion, nunca apóstrofe, para la tecla física Minus',
+      visible.prevented && visible.value === 'H130-', JSON.stringify(visible));
     await input.fill(fixture.scanned);
     await input.press('Enter');
     await page.waitForTimeout(250);
@@ -98,16 +111,25 @@ try {
     check('POS acepta apóstrofes del lector y agrega la pieza exacta', /1 art[ií]culos/i.test(direct || ''), direct || 'sin carrito');
     check('POS deja el campo listo para la siguiente lectura', await input.inputValue() === '');
 
-    await page.evaluate(scanned => {
-      document.activeElement?.blur();
+    const otherValue = await page.evaluate(scanned => {
+      const element = document.createElement('input');
+      element.value = 'Manual';
+      element.setAttribute('data-testid', 'h130-pos-other');
+      document.body.appendChild(element);
+      element.focus();
+      const set = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
       for (const key of scanned) {
-        window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+        const event = new KeyboardEvent('keydown', { key, code: key === "'" ? 'Minus' : '', bubbles: true, cancelable: true });
+        element.dispatchEvent(event);
+        if (!event.defaultPrevented) set.call(element, element.value + key);
       }
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+      return element.value;
     }, fixture.scanned);
     await page.waitForTimeout(250);
     const global = await page.getByTestId('pos-cart-open').getAttribute('aria-label');
     check('POS global acepta la misma ráfaga aunque el buscador no tenga foco', /2 art[ií]culos/i.test(global || ''), global || 'sin carrito');
+    check('POS global no deja apóstrofes ni la ráfaga en otro campo', otherValue === 'Manual', otherValue);
     check('POS no altera el producto al resolver ambas lecturas', await page.evaluate(() => JSON.stringify(window.__h126Fixture.product) === window.__h126Fixture.snapshot));
     await responsive(page, 'POS', 'pos-barcode-input');
     await page.screenshot({ path: join(evidence, 'pos-lector-390.png'), fullPage: true });
@@ -129,6 +151,9 @@ try {
     });
     await page.getByTestId('loans-nuevo').click();
     const input = page.getByTestId('prestamo-buscar-producto');
+    const visible = await physicalMinusIsVisibleAsHyphen(input);
+    check('Préstamos muestra guion, nunca apóstrofe, para la tecla física Minus',
+      visible.prevented && visible.value === 'H130-', JSON.stringify(visible));
     await input.fill(fixture.scanned);
     await input.press('Enter');
     await page.waitForTimeout(250);
@@ -143,7 +168,7 @@ try {
       const element = document.querySelector('[data-testid="prestamo-persona"]');
       const set = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
       for (const key of scanned) {
-        window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+        window.dispatchEvent(new KeyboardEvent('keydown', { key, code: key === "'" ? 'Minus' : '', bubbles: true }));
         set.call(element, element.value + key);
         element.dispatchEvent(new Event('input', { bubbles: true }));
       }
@@ -183,11 +208,33 @@ try {
     await page.getByTestId('returns-sale-search').fill(fixture.folio);
     await page.getByTestId(`return-sale-${fixture.folio}`).click();
     const input = page.getByTestId('cambio-escaner');
+    const visible = await physicalMinusIsVisibleAsHyphen(input);
+    check('Cambios muestra guion, nunca apóstrofe, para la tecla física Minus',
+      visible.prevented && visible.value === 'H130-', JSON.stringify(visible));
     await input.fill(fixture.scanned);
     await input.press('Enter');
     await page.waitForTimeout(250);
     check('Cambios agrega la pieza escaneada con apóstrofes', await page.getByTestId('cambio-quitar').count() === 1);
     check('Cambios limpia el escáner después de resolver', await input.inputValue() === '');
+    const reviewer = page.getByTestId('cambio-revisor');
+    await reviewer.fill('Ana');
+    await reviewer.focus();
+    const reviewerValue = await page.evaluate(scanned => {
+      const element = document.querySelector('[data-testid="cambio-revisor"]');
+      const set = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+      for (const key of scanned) {
+        const event = new KeyboardEvent('keydown', { key, code: key === "'" ? 'Minus' : '', bubbles: true, cancelable: true });
+        element.dispatchEvent(event);
+        if (!event.defaultPrevented) {
+          set.call(element, element.value + key);
+          element.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      }
+      element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+      return element.value;
+    }, fixture.scanned);
+    await page.waitForTimeout(250);
+    check('Cambios global no deja apóstrofes ni la ráfaga en Revisor', reviewerValue === 'Ana', reviewerValue);
     check('Cambios no altera SKU ni producto al resolver', await page.evaluate(snapshot => JSON.stringify(window.__h126Fixture.product) === snapshot, fixture.snapshot));
     await responsive(page, 'Cambios', 'cambio-escaner');
     await page.screenshot({ path: join(evidence, 'cambios-lector-390.png'), fullPage: true });

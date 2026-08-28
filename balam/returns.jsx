@@ -543,6 +543,7 @@
 
     // Lectura de código de barras: mismo comportamiento que el Punto de venta.
     function onScan(e) {
+      if (window.BARCODES && window.BARCODES.consumeScannerInputKey(e, setQuery)) return;
       if (e.key !== 'Enter') return;
       const raw = String((e.target && e.target.value != null) ? e.target.value : query).trim();
       if (!raw) return;
@@ -563,25 +564,27 @@
     const scanRT = React.useRef({});
     scanRT.current = { agregar, scanEl: scanRef.current, blocked: !!(picking || cobro || vendedor || recibo || aviso) };
     React.useEffect(() => {
-      let buf = '', lt = 0;
+      let buf = '', typed = '', lt = 0;
       function onKey(e) {
         const st = scanRT.current;
         if (document.activeElement === st.scanEl) return;
         if (e.key === 'Enter') {
-          const code = buf; buf = '';
+          const code = buf, rawCode = typed; buf = ''; typed = '';
           if (st.blocked || code.length < 4) return;
           const result = window.BARCODES && window.BARCODES.resolve(code);
           if (result && result.code === 'BARCODE_AMBIGUOUS') { toast('Código ambiguo bloqueado. Resincroniza el inventario.', 'var(--danger)'); return; }
           const hit = result && result.ok ? result.hit : null;
           if (!hit) return;
           e.preventDefault();
+          if (window.BARCODES.removeScannerText) window.BARCODES.removeScannerText(document.activeElement, rawCode);
           st.agregar(hit.p, hit.talla);
           return;
         }
         if (e.key && e.key.length === 1) {
           const now = Date.now();
-          if (now - lt > 50) buf = '';
-          buf += e.key; lt = now;
+          if (now - lt > 50) { buf = ''; typed = ''; }
+          buf += window.BARCODES ? window.BARCODES.scannerChar(e) : e.key;
+          typed += e.key; lt = now;
         }
       }
       document.addEventListener('keydown', onKey, true);

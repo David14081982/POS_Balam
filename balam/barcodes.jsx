@@ -77,6 +77,56 @@
     if (exact.code !== 'BARCODE_NOT_FOUND' || !s.includes("'")) return exact;
     return resolveExact(s.split("'").join('-'));
   }
+
+  // Un lector HID envía posiciones físicas de teclado. En una distribución
+  // distinta, la posición `Minus` puede llegar como apóstrofe aunque el texto
+  // Code128 contenga un guion. La adaptación ocurre antes de pintar/acumular la
+  // tecla; `Quote` conserva el apóstrofe literal y ninguna identidad se reescribe.
+  function scannerChar(event) {
+    const key = String(event && event.key != null ? event.key : '');
+    const code = String(event && event.code != null ? event.code : '');
+    const legacyCode = Number(event && (event.keyCode || event.which)) || 0;
+    const physicalMinus = code === 'Minus' || (!code && legacyCode === 189);
+    return key === "'" && physicalMinus && !(event && (event.ctrlKey || event.metaKey || event.altKey)) ? '-' : key;
+  }
+
+  // Intercepta exclusivamente la sustitución física anterior en un input
+  // controlado por React. Devuelve true cuando consumió la tecla.
+  function consumeScannerInputKey(event, commit) {
+    const key = scannerChar(event);
+    const original = String(event && event.key != null ? event.key : '');
+    const target = event && (event.currentTarget || event.target);
+    if (!target || key === original || typeof commit !== 'function') return false;
+    const value = String(target.value == null ? '' : target.value);
+    const start = Number.isInteger(target.selectionStart) ? target.selectionStart : value.length;
+    const end = Number.isInteger(target.selectionEnd) ? target.selectionEnd : start;
+    const next = value.slice(0, start) + key + value.slice(end);
+    if (typeof event.preventDefault === 'function') event.preventDefault();
+    commit(next);
+    const caret = start + key.length;
+    if (typeof target.setSelectionRange === 'function' && typeof window.requestAnimationFrame === 'function') {
+      window.requestAnimationFrame(() => {
+        try { target.setSelectionRange(caret, caret); } catch (error) {}
+      });
+    }
+    return true;
+  }
+
+  // Una captura global puede caer en cualquier input antes de que Enter confirme
+  // que la ráfaga era un código conocido. Entonces retira exactamente el texto
+  // crudo que tecleó el lector; no interviene sobre ráfagas desconocidas.
+  function removeScannerText(el, rawCode) {
+    if (!el || (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA')) return false;
+    const code = String(rawCode == null ? '' : rawCode);
+    const value = String(el.value == null ? '' : el.value);
+    if (!code || !value.toUpperCase().endsWith(code.toUpperCase())) return false;
+    const proto = el.tagName === 'INPUT' ? window.HTMLInputElement.prototype : window.HTMLTextAreaElement.prototype;
+    const descriptor = Object.getOwnPropertyDescriptor(proto, 'value');
+    if (!descriptor || typeof descriptor.set !== 'function') return false;
+    descriptor.set.call(el, value.slice(0, value.length - code.length));
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    return true;
+  }
   let lastResolution = null;
   function find(code) {
     lastResolution = resolve(code);
@@ -214,7 +264,8 @@
     }));
   }
 
-  window.BARCODES = { codeOf, parse, resolve, find, draw, Barcode, toPNGDataURL, toPNGBlob,
+  window.BARCODES = { codeOf, parse, resolve, find, scannerChar, consumeScannerInputKey, removeScannerText,
+    draw, Barcode, toPNGDataURL, toPNGBlob,
     inspectLabelCode, validateLabelCode, LABEL_60X40, BASE_OPTS, ready,
     get lastResolution() { return lastResolution; } };
 })();

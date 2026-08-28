@@ -214,6 +214,14 @@ atraviesa SKU ni elige la primera coincidencia. La etiqueta muestra nombre,
 barras, SKU y precio; el texto técnico de `barcode_code` no se imprime. El SKU
 queda como representación humana configurable y no cambia al editar precio.
 
+`window.BARCODES` también es la autoridad única de entrada HID. Si el navegador
+reporta la posición física `Minus` como apóstrofe por una distribución de
+teclado incompatible, `scannerChar()` entrega `-` antes de presentar o acumular
+la tecla. POS, Préstamos y Cambios consumen el mismo contrato tanto en su campo
+directo como en la captura global. Esta adaptación no cambia el texto Code128,
+SKU, `barcode_code` ni identidad; una tecla física `Quote` conserva el
+apóstrofe literal y `resolve()` mantiene la coincidencia exacta prioritaria.
+
 Ventas, devoluciones, cambios y préstamos nuevos congelan `line_id`,
 `productId`, barcode, SKU, atributos físicos, talla, precio de lista, descuentos
 y precio efectivo. La posventa parte de la línea original. `SKU+talla` subsiste
@@ -316,8 +324,10 @@ movimiento de inventario:
 La captura consume `window.BARCODES` igual que el Punto de venta: V2 resuelve
 `barcode_code` directamente a `products.id`; `SKU-TALLA` queda como adaptador V1. La
 captura global HID —con la misma heurística de cadencia de `balam/pos.jsx`— funciona
-aunque el foco esté en otro campo, retirando del campo enfocado lo que el lector
-acabó de escribir. En el buscador de la cartera una lectura responde «¿quién tiene
+aunque el foco esté en otro campo. POS, Préstamos y Cambios retiran del campo
+enfocado exactamente la ráfaga cruda sólo después de resolverla como código
+conocido; una ráfaga desconocida no altera el tecleo humano. En el buscador de
+la cartera una lectura responde «¿quién tiene
 esta prenda?» y busca en todos los estados, ignorando el filtro a propósito.
 
 El préstamo **se replica** (H-62). No viaja como upsert de tabla: cada operación

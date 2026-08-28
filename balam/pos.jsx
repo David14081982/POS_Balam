@@ -85,6 +85,7 @@
 
     function flashLine(key) { setFlash(key); setTimeout(() => setFlash(k => (k === key ? null : k)), 900); }
     function onScan(e) {
+      if (window.BARCODES && window.BARCODES.consumeScannerInputKey(e, setQuery)) return;
       if (e.key !== 'Enter') return;
       // Lee el valor real del DOM (más confiable que el estado ante lectores muy rápidos).
       const raw = String(e.target && e.target.value != null ? e.target.value : query).trim();
@@ -116,12 +117,12 @@
     const scanRT = useRef({});
     scanRT.current = { addToTicket, flashLine, scanEl: scanRef.current, blocked: !!(sizePick || checkout || pendingMetodo || success) };
     useEffect(() => {
-      let buf = '', lt = 0;
+      let buf = '', typed = '', lt = 0;
       function onKey(e) {
         const st = scanRT.current;
         if (document.activeElement === st.scanEl) return; // si el campo tiene foco, lo maneja onScan
         if (e.key === 'Enter') {
-          const code = buf; buf = '';
+          const code = buf, rawCode = typed; buf = ''; typed = '';
           if (st.blocked || code.length < 4) return;       // hay un modal abierto o ráfaga muy corta
           const result = window.BARCODES && window.BARCODES.resolve(code);
           if (result && result.code === 'BARCODE_AMBIGUOUS') {
@@ -130,14 +131,16 @@
           const hit = result && result.ok ? result.hit : null;
           if (!hit) return;                                // no es un código conocido → no intervenir
           e.preventDefault();
+          if (window.BARCODES.removeScannerText) window.BARCODES.removeScannerText(document.activeElement, rawCode);
           st.addToTicket(hit.p, hit.talla);
           st.flashLine(hit.productId);
           return;
         }
         if (e.key && e.key.length === 1) {
           const now = Date.now();
-          if (now - lt > 50) buf = '';                     // pausa larga → tecleo humano, reinicia
-          buf += e.key; lt = now;
+          if (now - lt > 50) { buf = ''; typed = ''; }      // pausa larga → tecleo humano, reinicia
+          buf += window.BARCODES ? window.BARCODES.scannerChar(e) : e.key;
+          typed += e.key; lt = now;
         }
       }
       window.addEventListener('keydown', onKey);
