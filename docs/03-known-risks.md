@@ -5994,7 +5994,7 @@ Correccion documentada en
 
 ## H-126 — El lector HID puede sustituir guiones por apóstrofes según el teclado
 
-**Estado:** RESUELTO LOCALMENTE — PENDIENTE DE PUBLICACIÓN
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha de registro:** 27/08/2026
 **Origen:** reporte de operación en Punto de venta.
 **Evidencia inicial:** las entradas directa y global del lector acumulan
@@ -6079,6 +6079,9 @@ identidades y existencias reales no se modificaron; 832 V1 en riesgo y 105 V2
 NEAR requieren decisión operativa y, para certificación, prueba impresa real.
 **Corrección:** `docs/fixes/autoridad-fisica-code128-h127.md`.
 **Commit funcional:** `d549441`.
+**Despliegue:** `origin/main` avanzó por fast-forward; Pages run `33195416874`
+terminó en `success`. Su `index.html` coincide con el blob Git: 9,019,307 bytes
+y SHA-256 `7c140a8c4fe268197de73cf9a5ae51042b3b384710aae0bf77fc394c8ef08678`.
 
 ## Regla de actualización
 

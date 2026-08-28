@@ -1,7 +1,7 @@
 # Autoridad física Code128 para etiquetas 60×40
 
 **Riesgo:** H-127
-**Estado:** RESUELTO LOCALMENTE — PENDIENTE DE PUBLICACIÓN
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha:** 28/08/2026
 **Commit funcional:** `d549441`
 
@@ -131,8 +131,10 @@ La validación de software demuestra geometría y paridad del render, no lectura
 en papel. No se probó una impresora, ribbon/papel, temperatura, velocidad ni un
 lector físico; por tanto no existe certificación de hardware. Las 832 etiquetas
 V1 en riesgo y las 105 V2 NEAR siguen conservando su identidad real por diseño;
-esta corrección las informa y no las reescribe. Publicación y validación de
-GitHub Pages quedan pendientes.
+esta corrección las informa y no las reescribe. GitHub Pages run `33195416874`
+terminó correctamente. El blob Git y el archivo público `index.html` son
+idénticos: 9,019,307 bytes y SHA-256
+`7c140a8c4fe268197de73cf9a5ae51042b3b384710aae0bf77fc394c8ef08678`.
 
 ## Referencias
 
