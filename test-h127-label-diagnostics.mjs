@@ -89,7 +89,7 @@ try {
     warningText.includes('PVC10 · talla 34') && warningText.includes('PVC10 · talla 36')
       && !modalText.includes('h127-private-v1-primary'));
   check('la causa informa densidad, X, módulos y alto efectivo',
-    warningText.includes('Densidad: X 0.199 mm') && warningText.includes('277 módulos') && warningText.includes('barras 6.0 mm'));
+    warningText.includes('Densidad: X 0.199 mm') && warningText.includes('277 módulos') && warningText.includes('barras 10.0 mm'));
   check('V2 muestra SKU largo pero diagnostica el barcode logístico real',
     nearText.includes('SKU 1-VIC-ML-ALG-TRA-BL-40') && nearText.includes('Code128 B40728BF7CF1B48A')
       && nearText.includes('X 0.260 mm'));

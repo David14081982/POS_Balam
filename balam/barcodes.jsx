@@ -12,11 +12,16 @@
   // H-127: contrato físico único de la etiqueta. Preview, PNG, PDF,
   // impresión y diagnóstico consumen estos mismos valores; no existe un
   // canvas auxiliar con otra anchura o márgenes para decidir legibilidad.
+  // H-128 aumenta únicamente la altura de barras y elimina el margen vertical
+  // interno. Ancho, X, quiet zones horizontales e identidad quedan intactos.
   const LABEL_60X40 = Object.freeze({
     labelWidthMm: 60,
     labelHeightMm: 40,
     symbolBox: Object.freeze({ xMm: 2, yMm: 7.3, widthMm: 56, heightMm: 15, fit: 'xMidYMid meet' }),
-    barcodeOptions: Object.freeze({ format: 'CODE128', width: 2, height: 60, displayValue: false, fontSize: 13, margin: 4, font: 'monospace' }),
+    barcodeOptions: Object.freeze({
+      format: 'CODE128', width: 2, height: 100, displayValue: false,
+      fontSize: 13, margin: 4, marginTop: 0, marginBottom: 0, font: 'monospace',
+    }),
     raster: Object.freeze({ widthPx: 720, heightPx: 480, jpegQuality: 0.96 }),
     minModuleMm: 0.25,
     nearModuleMm: 0.275,

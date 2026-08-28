@@ -38,6 +38,7 @@ y `BLOQUEADO`.
 | H-99 | Preview, PDF e impresión de etiquetas deben compartir composición | RESUELTO Y PUBLICADO | Inventario / etiquetas / impresión |
 | H-111 | POS expone referencias V2 en lugar de una selección comercial por talla | RESUELTO | POS / UX / identidad V2 |
 | H-121 | La caché local puede actuar como segunda autoridad comercial | RESUELTO Y PUBLICADO | Sincronización / persistencia / offline |
+| H-128 | La geometría 60×40 puede no recuperar etiquetas V1 densas sin cambiar identidad | RESUELTO | Inventario / etiquetas / impresión |
 
 ## H-01 — Inventario concurrente
 
@@ -6037,7 +6038,7 @@ forma determinista y aprobó.
 
 ## H-127 — La validación Code128 no representa la geometría impresa
 
-**Estado:** RESUELTO LOCALMENTE — PENDIENTE DE PUBLICACIÓN
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha de registro:** 28/08/2026
 **Origen:** Inventario → Etiquetas advierte que ciertos códigos son
 «demasiado largos». La auditoría aceptada y las fotografías operativas
@@ -6082,6 +6083,55 @@ NEAR requieren decisión operativa y, para certificación, prueba impresa real.
 **Despliegue:** `origin/main` avanzó por fast-forward; Pages run `33195416874`
 terminó en `success`. Su `index.html` coincide con el blob Git: 9,019,307 bytes
 y SHA-256 `7c140a8c4fe268197de73cf9a5ae51042b3b384710aae0bf77fc394c8ef08678`.
+
+## H-128 — La geometría 60×40 puede no recuperar etiquetas V1 densas sin cambiar identidad
+
+**Estado:** RESUELTO — PENDIENTE DE PUBLICACIÓN
+**Fecha de registro:** 28/08/2026
+**Origen:** H-127 dejó 828 etiquetas base V1 `DENSE` y cuatro
+`ENCODING_ERROR` en las 960 combinaciones con existencia del export vigente.
+Se solicita determinar cuánto puede recuperarse exclusivamente mediante la
+geometría física 60×40, sin modificar SKU, barcode, `products.id`, stock,
+modelo V1/V2 ni Supabase comercial.
+**Evidencia inicial:** los 828 símbolos densos tienen entre 233 y 310 módulos.
+Con X contractual mínimo de 0.25 mm y quiet zones conservadoras de 10X por
+lado, una etiqueta completa de 60 mm sólo puede alojar 220 módulos:
+`floor(60 / 0.25 - 20)`. Incluso el caso menos denso excede la capacidad
+física antes de reservar tolerancia de corte. Los cuatro errores de
+codificación contienen literalmente `Ñ`; no existe autorización para
+normalizarla.
+**Riesgo:** declarar recuperada una etiqueta porque cabe al eliminar quiet
+zones, reducir X bajo el umbral o mejorar el medio PNG/SVG/PDF, aunque la
+geometría física siga siendo insuficiente. Una sustitución automática de
+`Ñ→N` cambiaría identidad sin evidencia de equivalencia histórica.
+**Alcance autorizado:** simulación read-only del inventario vigente, variantes
+de ancho/alto/quiet zones y medio, mejora visual compatible con H-99/H-100,
+pruebas, documentación, build y publicación segura.
+**No alcance:** cualquier cambio de identidad, SKU, barcode, `products.id`,
+stock, V1/V2, datos comerciales, Supabase o configuración de hardware.
+**Resultado:** cero de las 828 V1 DENSE pueden recuperarse mediante un layout
+60×40 conforme. Con X ≥ 0.25 mm y quiet zones 10X, la capacidad máxima es 220
+módulos y el inventario empieza en 233. Las siete variantes admisibles conservaron
+`0 OK · 0 NEAR · 828 DENSE · 4 ENCODING_ERROR`; el control inadmisible de 2X
+movió 42 a NEAR, pero no cuenta. Se implementó sólo altura 100 y márgenes
+verticales cero: las barras V1 densas suben de 5.350–7.089 a 8.917–11.814 mm
+sin alterar texto, módulos, X, quiet zones ni estado.
+**`Ñ`:** los cuatro textos contienen literalmente U+00D1 y JsBarcode 3.11.6
+falla. En 28 exports históricos, `AAÑ` aparece en 23 y `AAN` en cero. No se
+normalizó. Un encoder FNC4 exigiría prueba del lector; cualquier cambio de
+texto/barcode/V1→V2 queda bajo HARD STOP.
+**Hardware:** no se detectó impresora térmica ni lector; no hubo impresión ni
+tasa de lectura física. `NO MEDIDA` no se interpreta como cero ni aprobación.
+**Pruebas:** H-128 rojo 8/11 y verde 11/11; auditoría 960/960; BALAM QA 9/9 en
+320–1440; H-127 9/9 + 11/11; H-99 12/12 + 23/23; H-100 10/10; H-88B 19/19;
+H-94 49/49 + 30/30; H-126 8/8 + 37/37; módulos 42/42; responsive 492/492;
+smoke bundle 17/17; navegación 15/15; build reproducible 8/8.
+**Riesgo residual:** cero etiquetas salen de DENSE; 828 requieren salir de la
+restricción 60×40 o cambiar el texto/simbología. Las cuatro `Ñ` requieren
+encoder + hardware o decisión de negocio. BALAM QA observó fuera de alcance
+`undefined · SKU` en la selección multiproducto V1; no fue corregido.
+**Corrección:** `docs/fixes/recuperacion-layout-v1-denso-h128.md`.
+**Commit:** Pendiente de commit.
 
 ## Regla de actualización
 
