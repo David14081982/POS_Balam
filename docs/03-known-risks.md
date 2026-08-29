@@ -6185,6 +6185,51 @@ terminó en `success`. El `index.html` servido coincide byte a byte con el blob
 del commit: 9,020,699 bytes y SHA-256
 `7203511a1ee29791ac489a4c20bab2a79ca574c90d5ec5509dd72d2fc66209ef`.
 
+## H-131 — La diagonal configurada llega como guion desde el lector HID
+
+**Estado:** RESUELTO LOCALMENTE · PENDIENTE DE PUBLICACIÓN
+**Fecha de registro:** 28/08/2026
+**Origen:** reporte operativo posterior a H-130. Catorce SKU V1 que antes se
+leían contienen el código de categoría configurado `R/P`, pero el POS responde
+«Código no encontrado» al usar el lector.
+**Evidencia inicial:** una etiqueta materializa correctamente
+`5-PA1-R/P-NA-CAR-34`. Con el lector y la distribución de Windows observados,
+las posiciones físicas llegan como `{key:"'", code:"Minus"}` para `-` y
+`{key:"-", code:"Slash"}` para `/`. H-130 recuperaba los guiones, pero no la
+diagonal: la lectura quedaba `5-PA1-R-P-NA-CAR-34` y fallaba la identidad exacta.
+La regresión roja terminó 4/20; fallaron la entrada directa y los catorce códigos
+reportados.
+**Riesgo:** rechazar piezas existentes o resolver de forma divergente entre POS,
+Préstamos y Cambios. Sustituir texto almacenado o quitar `/` dañaría la categoría
+configurada, etiquetas, históricos e identidad comercial.
+**Alcance autorizado:** extender la autoridad HID compartida, comprobar los
+catorce códigos, preservar H-126/H-130, probar las tres superficies, documentar,
+construir y publicar de forma segura.
+**No alcance:** modificar códigos de categoría, SKU, `barcode_code`,
+`products.id`, inventario, históricos, Supabase, tamaño de etiqueta, simbología o
+configuración del lector/sistema operativo.
+**Corrección local:** `BARCODES.scannerChar()` convierte exclusivamente
+`key === "-"` + posición física `Slash` en `/`, antes de mostrar o acumular la
+tecla. Conserva caracteres correctos, teclas modificadas y la traducción
+`Minus`→`-` de H-130. POS, Préstamos y Cambios ya consumen la misma autoridad;
+ningún dato persistido se reescribe.
+**Pruebas:** rojo H-131 4/20 y verde 23/23; H-130 7/7; H-126 8/8; BALAM QA
+lector fuente y bundle 45/45 cada uno; módulos 42/42; POS V1/V2 9/9 + 19/19;
+Préstamos 115/117 por sus dos aserciones históricas de temporización, cubiertas
+en verde por el E2E determinista; Cambio 45/45 + 37/37; responsive 492/492;
+arranque 5/5; smoke bundle 17/17; navegación 15/15; reproducibilidad 8/8.
+H-127 9/9 + 11/11 y H-128 11/11 + 9/9 conservan el diagnóstico físico.
+Build correcto; ambos HTML son idénticos,
+9,020,958 bytes y SHA-256
+`000b1bb17a6275265c3fff35bff3d79847f3f1359ce726a2052403388c79b4ec`.
+**Riesgo residual:** no hubo lector físico ni certificación Firefox/WebKit. La
+alerta roja de PVC10 es independiente: H-127/H-128 mantienen correctamente su
+diagnóstico DENSE (277 módulos, X 0.199288 mm < 0.250 mm) y requiere una decisión
+operativa fuera de este alcance.
+**Corrección:** `docs/fixes/normalizacion-diagonal-lector-hid-h131.md`.
+**Commit funcional:** Pendiente de commit.
+**Despliegue:** Pendiente.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

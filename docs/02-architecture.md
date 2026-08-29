@@ -214,13 +214,15 @@ atraviesa SKU ni elige la primera coincidencia. La etiqueta muestra nombre,
 barras, SKU y precio; el texto técnico de `barcode_code` no se imprime. El SKU
 queda como representación humana configurable y no cambia al editar precio.
 
-`window.BARCODES` también es la autoridad única de entrada HID. Si el navegador
-reporta la posición física `Minus` como apóstrofe por una distribución de
-teclado incompatible, `scannerChar()` entrega `-` antes de presentar o acumular
-la tecla. POS, Préstamos y Cambios consumen el mismo contrato tanto en su campo
-directo como en la captura global. Esta adaptación no cambia el texto Code128,
-SKU, `barcode_code` ni identidad; una tecla física `Quote` conserva el
-apóstrofe literal y `resolve()` mantiene la coincidencia exacta prioritaria.
+`window.BARCODES` también es la autoridad única de entrada HID. Si una
+distribución de teclado incompatible hace que el navegador reporte la posición
+física `Minus` como apóstrofe o `Slash` como guion, `scannerChar()` entrega `-`
+o `/`, respectivamente, antes de presentar o acumular la tecla. POS, Préstamos
+y Cambios consumen el mismo contrato tanto en su campo directo como en la
+captura global. Esta adaptación no cambia el texto Code128, SKU, `barcode_code`
+ni identidad; los caracteres ya correctos se conservan, una tecla física
+`Quote` mantiene el apóstrofe literal y `resolve()` respeta la coincidencia
+exacta prioritaria.
 
 Ventas, devoluciones, cambios y préstamos nuevos congelan `line_id`,
 `productId`, barcode, SKU, atributos físicos, talla, precio de lista, descuentos

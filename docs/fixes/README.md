@@ -93,6 +93,7 @@ sesión de chat.
 | `autoridad-fisica-code128-h127.md` | H-127 | Geometría Code128 única para preview/PDF/impresión y diagnóstico por etiqueta |
 | `recuperacion-layout-v1-denso-h128.md` | H-128 | Límite físico 60×40, simulación V1, `Ñ` y mejora vertical sin cambiar identidad |
 | `normalizacion-visible-lector-hid-h130.md` | H-130 | Guion visible desde la tecla HID y limpieza global compartida sin cambiar identidad |
+| `normalizacion-diagonal-lector-hid-h131.md` | H-131 | Diagonal configurada recuperada desde la tecla física Slash sin cambiar identidad |
 | `jerarquia-visual-etiqueta-60x40.md` | H-99 | Jerarquía visual 60×40 con identidad V2 intacta |
 | `sku-materializado-en-etiquetas.md` | H-100 | SKU visible por talla con paridad preview/PDF/impresión |
 | `chips-existencias-familiares.md` | H-103 | Chips compactos con proyección familiar V2 intacta |

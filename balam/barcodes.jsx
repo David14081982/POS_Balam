@@ -79,18 +79,23 @@
   }
 
   // Un lector HID envía posiciones físicas de teclado. En una distribución
-  // distinta, la posición `Minus` puede llegar como apóstrofe aunque el texto
-  // Code128 contenga un guion. La adaptación ocurre antes de pintar/acumular la
-  // tecla; `Quote` conserva el apóstrofe literal y ninguna identidad se reescribe.
+  // distinta, `Minus` puede llegar como apóstrofe y `Slash` como guion aunque el
+  // texto Code128 contenga `-` y `/`, respectivamente. La adaptación ocurre antes
+  // de pintar/acumular la tecla; los caracteres ya correctos se conservan y
+  // ninguna identidad se reescribe.
   function scannerChar(event) {
     const key = String(event && event.key != null ? event.key : '');
     const code = String(event && event.code != null ? event.code : '');
     const legacyCode = Number(event && (event.keyCode || event.which)) || 0;
+    const modified = !!(event && (event.ctrlKey || event.metaKey || event.altKey));
     const physicalMinus = code === 'Minus' || (!code && legacyCode === 189);
-    return key === "'" && physicalMinus && !(event && (event.ctrlKey || event.metaKey || event.altKey)) ? '-' : key;
+    const physicalSlash = code === 'Slash' || (!code && legacyCode === 191);
+    if (!modified && key === "'" && physicalMinus) return '-';
+    if (!modified && key === '-' && physicalSlash) return '/';
+    return key;
   }
 
-  // Intercepta exclusivamente la sustitución física anterior en un input
+  // Intercepta exclusivamente las sustituciones físicas anteriores en un input
   // controlado por React. Devuelve true cuando consumió la tecla.
   function consumeScannerInputKey(event, commit) {
     const key = scannerChar(event);

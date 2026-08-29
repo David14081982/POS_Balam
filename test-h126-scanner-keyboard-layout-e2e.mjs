@@ -58,6 +58,16 @@ async function physicalMinusIsVisibleAsHyphen(input) {
   return { prevented, value: await input.inputValue() };
 }
 
+async function physicalSlashIsVisibleAsSlash(input) {
+  await input.fill('H131R');
+  const prevented = await input.evaluate(element => {
+    const event = new KeyboardEvent('keydown', { key: '-', code: 'Slash', bubbles: true, cancelable: true });
+    return !element.dispatchEvent(event);
+  });
+  await input.page().waitForTimeout(30);
+  return { prevented, value: await input.inputValue() };
+}
+
 const browser = await chromium.launch({ channel: 'chrome', headless: true });
 async function pageWith(...sources) {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
@@ -104,6 +114,9 @@ try {
     const visible = await physicalMinusIsVisibleAsHyphen(input);
     check('POS muestra guion, nunca apóstrofe, para la tecla física Minus',
       visible.prevented && visible.value === 'H130-', JSON.stringify(visible));
+    const visibleSlash = await physicalSlashIsVisibleAsSlash(input);
+    check('POS muestra diagonal, nunca guion, para la tecla física Slash',
+      visibleSlash.prevented && visibleSlash.value === 'H131R/', JSON.stringify(visibleSlash));
     await input.fill(fixture.scanned);
     await input.press('Enter');
     await page.waitForTimeout(250);
@@ -154,6 +167,9 @@ try {
     const visible = await physicalMinusIsVisibleAsHyphen(input);
     check('Préstamos muestra guion, nunca apóstrofe, para la tecla física Minus',
       visible.prevented && visible.value === 'H130-', JSON.stringify(visible));
+    const visibleSlash = await physicalSlashIsVisibleAsSlash(input);
+    check('Préstamos muestra diagonal, nunca guion, para la tecla física Slash',
+      visibleSlash.prevented && visibleSlash.value === 'H131R/', JSON.stringify(visibleSlash));
     await input.fill(fixture.scanned);
     await input.press('Enter');
     await page.waitForTimeout(250);
@@ -211,6 +227,9 @@ try {
     const visible = await physicalMinusIsVisibleAsHyphen(input);
     check('Cambios muestra guion, nunca apóstrofe, para la tecla física Minus',
       visible.prevented && visible.value === 'H130-', JSON.stringify(visible));
+    const visibleSlash = await physicalSlashIsVisibleAsSlash(input);
+    check('Cambios muestra diagonal, nunca guion, para la tecla física Slash',
+      visibleSlash.prevented && visibleSlash.value === 'H131R/', JSON.stringify(visibleSlash));
     await input.fill(fixture.scanned);
     await input.press('Enter');
     await page.waitForTimeout(250);
