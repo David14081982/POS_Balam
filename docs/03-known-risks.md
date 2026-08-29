@@ -6279,7 +6279,8 @@ demostrada para ANGEL. Faltan snapshot autenticado, caché de la terminal,
 lector/impresora físicos y autorización de migración V1→V2. La corrección no se
 publica todavía porque bloquearía etiquetas V1 antes de coordinar su migración.
 **Corrección:** `docs/fixes/certificacion-integral-identidad-barcode-h132.md`.
-**Commit:** Pendiente de commit.
+**Commit funcional:** `871d98a` en `h133-inventory-certification`; no fusionado
+a `main` ni desplegado.
 
 ## Regla de actualización
 

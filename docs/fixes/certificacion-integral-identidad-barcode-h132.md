@@ -3,7 +3,7 @@
 **Riesgo:** H-132
 **Estado:** CORRECCIÓN PREVENTIVA VERDE; CERTIFICACIÓN VIVA BLOQUEADA
 **Fecha:** 29/08/2026
-**Commit:** Pendiente de commit
+**Commit funcional:** `871d98a` (rama `h133-inventory-certification`; no fusionado a `main`)
 
 ## Problema y reproducción
 
