@@ -32,6 +32,18 @@ infiere talla ni reescribe el texto
 **Creada por:** H-100 · **Decisión:** `ADR-013`
 **Consumidores:** `grep -rn "materializedSku" balam/ test-*.mjs`
 
+## ¿Puede esta combinación vendible generar una etiqueta nueva?
+**Autoridad:** `BARCODES.certifySellableReference(producto, tallaExplícita)`;
+para el censo completo, `BARCODES.certifySellableInventory(productos)`
+**Contrato:** sólo autoriza V2 cuando `codeOf === barcode_code`, el barcode es
+único y `BARCODES.resolve()` devuelve exactamente el mismo `products.id` y
+talla. V1, ausencia, duplicidad, divergencia o error de Code128 bloquean el lote
+antes de PNG/PDF. SKU, nombre, familia, orden y caché nunca localizan la pieza
+**Definición:** `balam/barcodes.jsx`; puerta consumidora en
+`balam/inventory.jsx` y censo read-only en `audit-h132-live-inventory.mjs`
+**Creada por:** H-132 · **Decisión:** `ADR-013`
+**Consumidores:** `grep -rn "certifySellableReference\|certifySellableInventory" balam/ test-*.mjs audit-h132-live-inventory.mjs`
+
 ## ¿Cuál es la representación canónica de los atributos custom de un producto?
 **Autoridad:** `DATA.canonicalProductAttrs(attrs, options)` omite únicamente los
 kinds custom conocidos cuyo valor sea `null`, vacío o sólo espacios; preserva

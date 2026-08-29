@@ -6233,6 +6233,54 @@ terminó en `success`. El `index.html` público coincide byte a byte con el blob
 Git y Chrome público confirmó `Slash`→`/`, `Minus`→`-`, `Quote` y `/` literales,
 sin errores de página.
 
+## H-132 — Inventario vendible sin certificación integral de identidad y barcode
+
+**Estado:** MITIGACIÓN LOCAL VERDE — SNAPSHOT VIVO, MIGRACIÓN Y HARDWARE PENDIENTES
+**Fecha de registro:** 29/08/2026
+**Origen:** hallazgos simultáneos de operación posteriores a H-127/H-128/H-130/H-131:
+etiquetas V1 densas que codifican SKU materializado, SKU visibles repetidos entre
+referencias físicas y códigos impresos que el POS no resuelve.
+**Evidencia inicial:** H-127 clasificó desde el export del 19/08/2026 832
+combinaciones V1 vendibles (828 `DENSE` y cuatro `ENCODING_ERROR`) y 128 V2;
+esa evidencia no es un snapshot vivo ni compara autoridad remota, caché local,
+preview, PDF, entrada HID y resolución exacta para todo el inventario. El caso
+ANGEL reportado codifica todavía el SKU V1 completo, mientras otras etiquetas
+codifican un `barcode_code` V2 corto. H-129 no existe en el historial Git
+disponible y no se toma como evidencia.
+**Riesgo:** BALAM puede generar o conservar una etiqueta vendible cuya identidad
+no sea demostrable como `Supabase → barcode_code → etiqueta/PDF → lector →
+BARCODES.resolve() → products.id+talla` exactos. Si el PDF produce un código que
+el POS no conoce, el defecto es P0.
+**Alcance autorizado:** censo autenticado de sólo lectura sobre todas las
+referencias activas con existencia; comparación remota/local; grupos completos
+de SKU visible repetido; auditoría ANGEL; certificador permanente; primera capa
+incorrecta en cliente; pruebas, QA, documentación y publicación segura.
+**No alcance:** modificar filas reales, transferir stock, regenerar identidades,
+convertir V1 a V2, reinterpretar históricos o sustituir etiquetas físicas sin
+el HARD STOP y la autorización correspondiente.
+**Control requerido:** una autoridad ejecutable única debe certificar cada
+combinación vendible y bloquear cualquier salida de etiqueta/PDF que no use un
+barcode V2 técnico, único y resoluble a su `products.id` y talla exactos. El
+censo debe fallar ante ausencia, duplicidad, no resolución, discrepancia de
+etiqueta/PDF/POS o divergencia local/remota.
+**Corrección local:** `BARCODES.certifySellableReference()` y su censo completo
+son la autoridad única. Inventario bloquea el lote antes de PNG/PDF/impresión o
+upload si cualquier combinación no es V2, no tiene barcode único o no resuelve
+al mismo ID+talla. El nombre PDF sólo aporta reconocimiento humano. Un
+certificador read-only emite CSV/JSON y falla ante V1, duplicidad, no resolución,
+desalineación local/remota o falta del snapshot local. No se mutaron datos.
+**Pruebas:** rojo H-132 0/7; verde identidad 7/7; certificador 2/2 escenarios;
+H-127 9/9 + 11/11; H-128 11/11 + QA 9/9 en ocho viewports; H-99 12/12 +
+23/23; H-100 10/10; H-94 49/49; H-130 7/7; H-131 23/23; módulos 42/42;
+build correcto, reproducibilidad 8/8 y smoke del bundle 17/17. La consulta viva se detuvo con
+`SUPABASE_ACCESS_TOKEN_REQUIRED_FOR_READ_ONLY_QUERY` y no hubo snapshot local.
+**Riesgo residual:** no existen cifras vivas certificables ni causa remota
+demostrada para ANGEL. Faltan snapshot autenticado, caché de la terminal,
+lector/impresora físicos y autorización de migración V1→V2. La corrección no se
+publica todavía porque bloquearía etiquetas V1 antes de coordinar su migración.
+**Corrección:** `docs/fixes/certificacion-integral-identidad-barcode-h132.md`.
+**Commit:** Pendiente de commit.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

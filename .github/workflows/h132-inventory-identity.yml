@@ -1,0 +1,28 @@
+name: H-132 inventory identity
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  certification-contract:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: node build-offline.mjs
+      - run: node test-h132-inventory-identity-certification.mjs
+      - run: node test-h132-live-certifier.mjs
+      - run: node test-h127-label-diagnostics.mjs
+      - run: node test-h99-label-pdf.mjs
+      - run: node test-h100-materialized-label-sku.mjs

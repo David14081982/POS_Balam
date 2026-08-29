@@ -126,7 +126,10 @@ try {
   await writeFile(join(evidence, 'etiquetas-h99-multipagina.pdf'), multiBytes);
   const multiPdf = inspectPdf(multiBytes);
   const multiMime = await page.evaluate(() => window.__h99LastBlob && window.__h99LastBlob.type);
-  check('Inventario descarga un solo PDF', multi.suggestedFilename().startsWith('BALAM_Etiquetas_') && multi.suggestedFilename().endsWith('.pdf'), multi.suggestedFilename());
+  check('Inventario descarga un solo PDF distinguible',
+    multi.suggestedFilename().startsWith('BALAM_VARIOS_')
+      && multi.suggestedFilename().includes('_REFS-3_')
+      && multi.suggestedFilename().endsWith('.pdf'), multi.suggestedFilename());
   check('PDF múltiple usa MIME correcto', multiMime === 'application/pdf', multiMime);
   check('PDF múltiple contiene tres páginas', multiPdf.pages === 3, String(multiPdf.pages));
   check('cada página mide 60×40 mm', multiPdf.mediaBoxes.length === 3 && multiPdf.mediaBoxes.every(([w, h]) => Math.abs(w - 170.0787) < 0.02 && Math.abs(h - 113.3858) < 0.02), JSON.stringify(multiPdf.mediaBoxes));

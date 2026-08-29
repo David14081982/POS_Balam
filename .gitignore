@@ -22,3 +22,9 @@ supabase/.temp/
 .thumbnail
 *.lnk
 *.BACKUP.html
+
+# H-132: censos vivos contienen IDs, stock y barcodes reales; nunca se publican.
+.evidence-h132-live/
+
+# Capturas locales regenerables de la matriz responsive H-128/H-132.
+.evidence-h128-qa/

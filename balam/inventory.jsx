@@ -1787,8 +1787,19 @@
     return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
   }
   function labelPdfFileName(products) {
-    if ((products || []).length === 1) return `BALAM_${safeFilePart(products[0].nombre)}_${safeFilePart(products[0].sku)}.pdf`;
-    return `BALAM_Etiquetas_${localDateStamp(new Date())}.pdf`;
+    const rows = products || [];
+    if (!rows.length) return `BALAM_Etiquetas_${localDateStamp(new Date())}.pdf`;
+    const first = rows[0];
+    const names = [...new Set(rows.map(row => safeFilePart(row.nombre || row.modelo)))];
+    const skus = [...new Set(rows.map(row => safeFilePart(row.sku)))];
+    const sizes = [...new Set(rows.map(row => safeFilePart(row.sizeCode || 'SIN-TALLA')))].sort();
+    const suffixes = rows.map(row => safeFilePart(String(row.barcodeCode || row.id || '').slice(-6))).sort();
+    const human = [names.length === 1 ? names[0] : 'VARIOS', skus.length === 1 ? skus[0] : 'SKU-VARIADO'];
+    if (rows.length === 1) human.splice(1, 0, safeFilePart(first.modelo || first.nombre));
+    human.push(`T${sizes.join('-')}`, `REFS-${rows.length}`, suffixes.join('-'));
+    // El sufijo evita que Windows sea quien distinga con «(1)»; sólo ayuda a
+    // reconocer archivos. products.id/barcode siguen siendo las autoridades.
+    return `BALAM_${human.join('_').slice(0, 180)}.pdf`;
   }
   function downloadLabelPdf(asset) {
     const url = URL.createObjectURL(asset.blob);
@@ -1842,34 +1853,42 @@
     const imageCache = useRef({});
     const pdfGeneration = useRef(0);
 
+    const selectedProducts = (products || []).filter(p => selectedProductIds.has(p.id));
     const specs = [];
-    (products || []).filter(p => selectedProductIds.has(p.id)).forEach(p => D.resolveProductSizes(p).sizes.forEach(size => {
+    selectedProducts.forEach(p => D.resolveProductSizes(p).sizes.forEach(size => {
       if (size.active && size.stock > 0) {
-        specs.push({ p, talla: size.value, stock: size.stock, code: B.codeOf(p, size.value) });
+        const certification = B.certifySellableReference(p, size.value);
+        specs.push({ p, talla: size.value, stock: size.stock, code: certification.labelCode, certification });
       }
     }));
+    const certificationBlocks = specs.filter(spec => !spec.certification.ok);
+    const labelsCertified = certificationBlocks.length === 0;
     const copiesOf = s => copiesMode === 'stock' ? s.stock : Math.max(1, Number(copies) || 1);
     const totalLabels = specs.reduce((a, s) => a + copiesOf(s), 0);
     const uniqueCount = new Set(specs.map(s => s.code)).size;
     const pdfKey = [copiesMode, copies, withPrice ? 'price' : 'no-price', specs.map(s => `${s.p.id}:${s.talla}:${s.stock}:${s.code}:${D.listPrice(s.p, s.talla)}`).join('|')].join('::');
 
     useEffect(() => {
-      if (!B || !B.ready || !B.ready() || !specs.length) return undefined;
+      if (!B || !B.ready || !B.ready() || !specs.length || !labelsCertified) {
+        setPdfAsset(null);
+        return undefined;
+      }
       const generation = ++pdfGeneration.current;
       setPdfAsset(null); setPdfError('');
       const rendered = renderItems();
       buildLabelPdf(rendered).then(blob => {
-        if (generation === pdfGeneration.current) setPdfAsset({ blob, fileName: labelPdfFileName(products), rendered });
+        if (generation === pdfGeneration.current) setPdfAsset({ blob, fileName: labelPdfFileName(selectedProducts), rendered });
       }).catch(error => {
         if (generation === pdfGeneration.current) setPdfError((error && error.message) || 'No se pudo generar el PDF');
       });
       return () => { if (generation === pdfGeneration.current) pdfGeneration.current++; };
-    }, [pdfKey]);
+    }, [pdfKey, labelsCertified]);
 
     if (!B || !B.ready()) return h(Modal, { title: 'Etiquetas', onClose }, h('p', { className: 'text-body text-on-surface-variant py-6 text-center' }, 'La librería de códigos de barras no cargó. Revisa tu conexión e inténtalo de nuevo.'));
     if (!specs.length) return h(Modal, { title: 'Etiquetas', onClose }, h('p', { className: 'text-body text-on-surface-variant py-6 text-center' }, 'No hay tallas con existencias para etiquetar.'));
 
     function imageFor(s) {
+      if (!s.certification.ok || !labelsCertified) return '';
       if (imageCache.current[s.code] === undefined) imageCache.current[s.code] = B.toPNGDataURL(s.code, PRINT_OPTS);
       return imageCache.current[s.code];
     }
@@ -1878,6 +1897,7 @@
     }
 
     function renderItems() {
+      if (!labelsCertified) throw new Error('LABEL_IDENTITY_NOT_CERTIFIED');
       const rendered = [];
       specs.forEach(s => {
         const one = labelItem(s);
@@ -1889,6 +1909,7 @@
       return buildLabelDocument(renderItems());
     }
     function openPrintableView() {
+      if (!labelsCertified) return;
       const win = window.open('', '_blank', 'width=520,height=680');
       if (!win) { toast('El navegador bloqueó la vista imprimible. Usa Descargar.', 'var(--danger)'); return; }
       win.document.write(renderDocument());
@@ -1904,8 +1925,11 @@
       else if (physical.status === 'MISSING_BARCODE') issues.push({ type: 'MISSING_BARCODE', message: v2 ? 'Falta el barcode logístico V2; no hay texto Code128 para esta etiqueta.' : 'Falta el texto Code128 materializado para esta talla.' });
       else if (physical.status === 'ENCODING_ERROR') issues.push({ type: 'ENCODING_ERROR', message: 'Codificación: el texto contiene caracteres que el generador Code128 actual no puede representar.' });
       else if (physical.status === 'GENERATION_ERROR') issues.push({ type: 'GENERATION_ERROR', message: `Generación: ${physical.reason}` });
-      const image = !['MISSING_BARCODE', 'ENCODING_ERROR', 'GENERATION_ERROR'].includes(physical.status) ? imageFor(s) : '';
-      if (!image && !issues.some(issue => issue.type === 'MISSING_BARCODE' || issue.type === 'ENCODING_ERROR' || issue.type === 'GENERATION_ERROR')) {
+      const image = labelsCertified && !['MISSING_BARCODE', 'ENCODING_ERROR', 'GENERATION_ERROR'].includes(physical.status) ? imageFor(s) : '';
+      // Un lote bloqueado no debe generar PNG ni, por esa misma guarda,
+      // inventar un fallo de generación. La inspección geométrica pura sigue
+      // visible para explicar cada referencia antes de migrarla.
+      if (labelsCertified && !image && !issues.some(issue => issue.type === 'MISSING_BARCODE' || issue.type === 'ENCODING_ERROR' || issue.type === 'GENERATION_ERROR')) {
         issues.push({ type: 'GENERATION_ERROR', message: 'Generación: no se pudo producir el PNG usado por preview, PDF e impresión.' });
       }
       if (resolution.code === 'BARCODE_AMBIGUOUS') issues.push({ type: 'AMBIGUOUS', message: `Ambigüedad: el mismo Code128 coincide con ${resolution.matches.length} referencias y no identifica una pieza de forma única.` });
@@ -1939,7 +1963,7 @@
     }
 
     async function saveToSupabase() {
-      if (saving) return;
+      if (saving || !labelsCertified) return;
       if (!window.STORE) { toast('Sincronización con la nube no disponible', 'var(--danger)'); return; }
       if (!(await window.STORE.hasSession())) { toast('Inicia sesión para guardar imágenes en la nube', 'var(--danger)'); return; }
       setSaving(true);
@@ -1960,8 +1984,8 @@
     }
 
     const seg = (val, on, label) => h('button', { key: val, 'data-testid': `labels-copies-${val}`, onClick: () => setCopiesMode(val), className: 'px-3 py-1.5 rounded-md text-caption font-semibold transition-colors ' + (on ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:text-primary') }, label);
-    const preview = specs.slice(0, 4).map(labelItem);
-    const canSharePdf = !!(pdfAsset && navigator.share && navigator.canShare && navigator.canShare({ files: [new File([pdfAsset.blob], pdfAsset.fileName, { type: 'application/pdf' })] }));
+    const preview = labelsCertified ? specs.slice(0, 4).map(labelItem) : [];
+    const canSharePdf = !!(labelsCertified && pdfAsset && navigator.share && navigator.canShare && navigator.canShare({ files: [new File([pdfAsset.blob], pdfAsset.fileName, { type: 'application/pdf' })] }));
     function sharePdf() {
       if (!pdfAsset || !canSharePdf) return;
       const file = new File([pdfAsset.blob], pdfAsset.fileName, { type: 'application/pdf' });
@@ -1970,10 +1994,10 @@
       });
     }
     const footer = [
-      h('button', { key: 'sv', disabled: saving, onClick: saveToSupabase, className: 'px-5 py-3 border border-outline-variant rounded-xl text-caption font-bold uppercase tracking-widest text-primary hover:bg-surface-container transition disabled:opacity-50 flex items-center gap-2' }, [h(MS, { key: 'i', name: saving ? 'clock' : 'upload', size: 16 }), saving ? 'Guardando…' : `Guardar en Supabase (${uniqueCount})`]),
-      h('button', { key: 'dl', disabled: !pdfAsset, onClick: () => downloadLabelPdf(pdfAsset), 'data-testid': 'labels-download', className: 'px-5 py-3 border border-outline-variant rounded-xl text-caption font-bold uppercase tracking-widest text-primary hover:bg-surface-container transition disabled:opacity-50 flex items-center gap-2' }, [h(MS, { key: 'i', name: pdfAsset ? 'download' : 'clock', size: 16 }), pdfAsset ? 'Descargar PDF' : 'Generando PDF…']),
+      h('button', { key: 'sv', disabled: saving || !labelsCertified, onClick: saveToSupabase, className: 'px-5 py-3 border border-outline-variant rounded-xl text-caption font-bold uppercase tracking-widest text-primary hover:bg-surface-container transition disabled:opacity-50 flex items-center gap-2' }, [h(MS, { key: 'i', name: saving ? 'clock' : 'upload', size: 16 }), saving ? 'Guardando…' : `Guardar en Supabase (${uniqueCount})`]),
+      h('button', { key: 'dl', disabled: !labelsCertified || !pdfAsset, onClick: () => downloadLabelPdf(pdfAsset), 'data-testid': 'labels-download', className: 'px-5 py-3 border border-outline-variant rounded-xl text-caption font-bold uppercase tracking-widest text-primary hover:bg-surface-container transition disabled:opacity-50 flex items-center gap-2' }, [h(MS, { key: 'i', name: pdfAsset ? 'download' : 'clock', size: 16 }), !labelsCertified ? 'Identidad no certificada' : pdfAsset ? 'Descargar PDF' : 'Generando PDF…']),
       canSharePdf && h('button', { key: 'sh', onClick: sharePdf, 'data-testid': 'labels-share', className: 'px-5 py-3 border border-outline-variant rounded-xl text-caption font-bold uppercase tracking-widest text-primary hover:bg-surface-container transition flex items-center gap-2' }, [h(MS, { key: 'i', name: 'share', size: 16 }), 'Compartir PDF']),
-      h('button', { key: 'pr', onClick: openPrintableView, 'data-testid': 'labels-open-printable', className: 'px-6 py-3 bg-primary text-on-primary rounded-xl text-caption font-bold uppercase tracking-widest hover:opacity-90 transition flex items-center gap-2' }, [h(MS, { key: 'i', name: 'print', size: 16 }), `Abrir vista imprimible (${totalLabels})`]),
+      h('button', { key: 'pr', disabled: !labelsCertified, onClick: openPrintableView, 'data-testid': 'labels-open-printable', className: 'px-6 py-3 bg-primary text-on-primary rounded-xl text-caption font-bold uppercase tracking-widest hover:opacity-90 transition disabled:opacity-50 flex items-center gap-2' }, [h(MS, { key: 'i', name: 'print', size: 16 }), `Abrir vista imprimible (${totalLabels})`]),
     ].filter(Boolean);
 
     return h(Modal, { title: 'Etiquetas de código de barras', onClose, footer, testId: 'label-modal', large: true }, [
@@ -1999,6 +2023,13 @@
           h('input', { key: 'i', type: 'checkbox', checked: withPrice, onChange: e => setWithPrice(e.target.checked), className: 'w-5 h-5 rounded border-outline text-primary focus:ring-primary' }),
         ]),
         h('p', { key: 'sum', className: 'text-caption text-on-surface-variant' }, `${specs.length} talla(s) con existencias · ${totalLabels} etiqueta(s) a imprimir`),
+        certificationBlocks.length > 0 && h('div', { key: 'certification', role: 'alert', 'data-testid': 'labels-certification-block', className: 'p-3 rounded-lg bg-danger-soft text-danger text-caption' }, [
+          h('p', { key: 'h', className: 'font-semibold' }, 'Salida bloqueada: una etiqueta vendible requiere identidad logística V2 certificada.'),
+          h('ul', { key: 'l', className: 'mt-2 space-y-2 list-disc pl-5' }, certificationBlocks.map((spec, index) => h('li', {
+            key: `${spec.p.id}:${spec.talla}:${index}`,
+          }, `${spec.p.nombre || spec.p.modelo} · talla ${spec.talla} · ${spec.certification.recordModel} · ${spec.certification.issues.join(', ')}`))),
+          h('p', { key: 's', className: 'mt-2' }, 'No se generó PNG, PDF ni vista imprimible. Migra la referencia a V2; el SKU visible y los históricos no se reinterpretan.'),
+        ]),
         pdfError && h('div', { key: 'pdf-error', role: 'alert', 'data-testid': 'labels-pdf-error', className: 'p-3 rounded-lg bg-danger-soft text-danger text-caption' }, `${pdfError}. Puedes mantener abierta la vista imprimible e intentarlo de nuevo.`),
         riskDiagnostics.length > 0 && h('div', { key: 'warn', role: 'alert', 'data-testid': 'labels-legibility-warning', className: 'p-3 rounded-lg bg-warning-soft text-warning text-caption' }, [
           h('p', { key: 'h', className: 'font-semibold' }, `${diagnosticCount(riskDiagnostics)} con problema físico, de identidad o de generación.`),

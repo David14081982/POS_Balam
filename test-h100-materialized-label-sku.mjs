@@ -58,7 +58,7 @@ try {
     const base = { nombre: 'ADRIANO', modelo: 'ARO', cat: '10', manga: 'MC', tela: 'ALG',
       color: 'BL', cuello: 'NOR', orn: 'Alforza', ornamentColorCodes: [], precio: 1150, stockQuantity: 1 };
     const v2 = v1Sizes.map((sizeCode, index) => D.createReference({
-      ...base, id: `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+      ...base, id: `${String(index + 1).padStart(8, '0')}-0000-4000-8000-000000000100`,
       sizeCategoryId: numeric.includes(sizeCode) ? 'size_number' : 'size_letter',
       sizeCode,
       // Un import/borrador no es autoridad del SKU V2.
@@ -88,16 +88,29 @@ try {
 
   await page.getByTestId('inventory-labels').click();
   const previewSkus = await page.locator('[data-label-part="sku"]').allTextContents();
-  check('preview materializa las primeras tallas V1', fixture.v1Expected.slice(0, 4).every(sku => previewSkus.includes(sku)), JSON.stringify(previewSkus));
-  check('preview no contiene talla T ni segmento vacío', previewSkus.every(sku => !sku.split('-').includes('T') && !sku.includes('--')));
+  check('un lote mixto no genera preview ni salida V1',
+    previewSkus.length === 0
+      && await page.getByTestId('labels-certification-block').count() === 1
+      && await page.getByTestId('labels-download').isDisabled());
+
+  // Al retirar las dos referencias históricas del lote, la misma pantalla
+  // puede continuar con las seis referencias V2 certificadas.
+  await page.getByTestId('label-reference-select-h100-v1-adriano-number').click();
+  await page.getByTestId('label-reference-select-h100-v1-adriano-letter').click();
+  await page.waitForFunction(() => document.querySelector('[data-testid="labels-download"]')?.disabled === false);
+  const v2PreviewSkus = await page.locator('[data-label-part="sku"]').allTextContents();
+  check('preview V2 materializa tallas reales sin T ni segmento vacío',
+    fixture.v2Skus.slice(0, 4).every(sku => v2PreviewSkus.includes(sku))
+      && v2PreviewSkus.every(sku => !sku.split('-').includes('T') && !sku.includes('--')),
+    JSON.stringify(v2PreviewSkus));
 
   const downloadPromise = page.waitForEvent('download');
   await page.getByTestId('labels-download').click();
   const pdfBytes = await readDownload(await downloadPromise);
   await writeFile(join(evidence, 'etiquetas-adriano-multitalla.pdf'), pdfBytes);
   const pdf = pdfBytes.toString('latin1');
-  check('PDF contiene V1 numéricas 38/40/42 y letras M/L/XL', fixture.v1Expected.every(sku => pdf.includes(sku)));
   check('PDF contiene los seis SKU V2 efectivos', fixture.v2Skus.every(sku => pdf.includes(sku)));
+  check('PDF no reintroduce referencias V1 retiradas del lote', fixture.v1Expected.every(sku => !pdf.includes(sku)));
   check('PDF no contiene SKU final con T ni segmento vacío', !pdf.includes('ALF--T') && !pdf.includes('Alforza--'));
 
   const popupPromise = context.waitForEvent('page');
@@ -105,8 +118,8 @@ try {
   const popup = await popupPromise;
   await popup.waitForLoadState();
   const printSkus = await popup.locator('[data-label-part="sku"]').allTextContents();
-  check('impresión coincide con la materialización esperada',
-    fixture.v1Expected.every(sku => printSkus.includes(sku)) && fixture.v2Skus.every(sku => printSkus.includes(sku)));
+  check('impresión coincide con la materialización V2 esperada',
+    fixture.v2Skus.every(sku => printSkus.includes(sku)) && fixture.v1Expected.every(sku => !printSkus.includes(sku)));
   check('products.id permanece intacto', await page.evaluate(expected => window.DATA.products.slice(2).every((p, i) => p.id === expected[i]), fixture.v2Ids));
   await popup.close();
 } finally {

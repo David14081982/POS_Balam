@@ -214,6 +214,14 @@ atraviesa SKU ni elige la primera coincidencia. La etiqueta muestra nombre,
 barras, SKU y precio; el texto técnico de `barcode_code` no se imprime. El SKU
 queda como representación humana configurable y no cambia al editar precio.
 
+`BARCODES.certifySellableReference()` es la puerta ejecutable previa a toda
+etiqueta vendible nueva. Sólo una referencia V2 cuyo `barcode_code` sea único,
+codificable y resoluble al mismo `products.id+talla` puede producir preview,
+PNG, PDF, vista imprimible o upload. Un lote falla completo si una combinación
+no certifica: no hay salida parcial. V1 permanece legible mediante sus
+adaptadores históricos, pero no autoriza etiquetas vendibles nuevas; su stock
+debe migrarse explícitamente a V2 sin reinterpretar documentos anteriores.
+
 `window.BARCODES` también es la autoridad única de entrada HID. Si una
 distribución de teclado incompatible hace que el navegador reporte la posición
 física `Minus` como apóstrofe o `Slash` como guion, `scannerChar()` entrega `-`

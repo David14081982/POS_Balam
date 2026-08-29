@@ -259,6 +259,78 @@
     }
   }
 
+  // H-132: puerta única entre una combinación vendible y cualquier salida de
+  // etiqueta. No localiza por SKU, nombre, familia ni posición: exige que el
+  // barcode V2 persistido sea el generado y resuelva al products.id+talla
+  // exactos dentro del índice local vigente.
+  function certifySellableReference(product, explicitSize) {
+    const isV2 = !!(D && D.isV2Reference && D.isV2Reference(product));
+    const productId = String(product && product.id || '');
+    const size = String(explicitSize != null ? explicitSize : (product && product.sizeCode) || '');
+    const visibleSku = D && D.materializedSku ? D.materializedSku(product, size) : String(product && product.sku || '');
+    const barcodeCode = isV2 ? String(product && product.barcodeCode || '').trim().toUpperCase() : '';
+    const generated = String(codeOf(product, size) || '').trim().toUpperCase();
+    const labelCode = generated;
+    const physical = inspectLabelCode(labelCode);
+    const resolution = labelCode ? resolve(labelCode) : { ok: false, code: 'BARCODE_EMPTY', matches: [] };
+    const issues = [];
+    const warnings = [];
+    if (!isV2) issues.push('V1_OPERATIONAL');
+    if (isV2 && !barcodeCode) issues.push('BARCODE_MISSING');
+    if (isV2 && barcodeCode && !/^B[A-F0-9]{15}$/.test(barcodeCode)) warnings.push('BARCODE_FORMAT');
+    if (isV2 && generated !== barcodeCode) issues.push('CODE_OF_MISMATCH');
+    if (resolution.code === 'BARCODE_AMBIGUOUS') issues.push('BARCODE_DUPLICATE');
+    else if (!resolution.ok) issues.push('BARCODE_UNRESOLVED');
+    const hit = resolution.ok ? resolution.hit : null;
+    const resolvedProductId = String(hit && hit.productId || '');
+    const resolvedSize = String(hit && hit.talla != null ? hit.talla : '');
+    if (resolution.ok && resolvedProductId !== productId) issues.push('PRODUCT_ID_MISMATCH');
+    if (resolution.ok && resolvedSize !== size) issues.push('SIZE_MISMATCH');
+    if (physical.status === 'MISSING_BARCODE') issues.push('LABEL_CODE_MISSING');
+    else if (physical.status === 'ENCODING_ERROR' || physical.status === 'GENERATION_ERROR') issues.push(physical.status);
+    else if (physical.status === 'DENSE') issues.push('BARCODE_DENSE');
+    return {
+      ok: issues.length === 0,
+      issues: [...new Set(issues)],
+      warnings: [...new Set(warnings)],
+      productId,
+      referenceFamilyId: String(product && product.referenceFamilyId || ''),
+      recordModel: isV2 ? 'V2' : 'V1',
+      product: String(product && (product.nombre || product.modelo) || ''),
+      category: String(product && product.cat || ''),
+      size,
+      visibleSku,
+      barcodeCode,
+      codeOf: generated,
+      labelCode,
+      resolvedProductId,
+      resolvedSize,
+      resolveCode: resolution.ok ? 'OK' : resolution.code,
+      matches: (resolution.matches || []).map(match => ({
+        productId: String(match.productId || ''), talla: String(match.talla == null ? '' : match.talla),
+      })),
+      physical,
+    };
+  }
+
+  function certifySellableInventory(products = D.products || []) {
+    const rows = [];
+    (products || []).filter(product => product && !product._deletedAt).forEach(product => {
+      D.resolveProductSizes(product).sizes
+        .filter(size => size.active && Number(size.stock) > 0)
+        .forEach(size => rows.push(Object.assign(
+          { stock: Number(size.stock) || 0 },
+          certifySellableReference(product, size.value),
+        )));
+    });
+    return {
+      ok: rows.every(row => row.ok),
+      rows,
+      certified: rows.filter(row => row.ok).length,
+      failed: rows.filter(row => !row.ok).length,
+    };
+  }
+
   // Nombre histórico conservado para Configuración y consumidores externos.
   // Con los valores estándar delega sin desviaciones al contrato 60×40.
   function validateLabelCode(code, usableMm = LABEL_60X40.symbolBox.widthMm, minModuleMm = LABEL_60X40.minModuleMm) {
@@ -271,6 +343,7 @@
 
   window.BARCODES = { codeOf, parse, resolve, find, scannerChar, consumeScannerInputKey, removeScannerText,
     draw, Barcode, toPNGDataURL, toPNGBlob,
-    inspectLabelCode, validateLabelCode, LABEL_60X40, BASE_OPTS, ready,
+    inspectLabelCode, validateLabelCode, certifySellableReference, certifySellableInventory,
+    LABEL_60X40, BASE_OPTS, ready,
     get lastResolution() { return lastResolution; } };
 })();
