@@ -6187,7 +6187,7 @@ del commit: 9,020,699 bytes y SHA-256
 
 ## H-131 — La diagonal configurada llega como guion desde el lector HID
 
-**Estado:** RESUELTO LOCALMENTE · PENDIENTE DE PUBLICACIÓN
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha de registro:** 28/08/2026
 **Origen:** reporte operativo posterior a H-130. Catorce SKU V1 que antes se
 leían contienen el código de categoría configurado `R/P`, pero el POS responde
@@ -6219,16 +6219,19 @@ Préstamos 115/117 por sus dos aserciones históricas de temporización, cubiert
 en verde por el E2E determinista; Cambio 45/45 + 37/37; responsive 492/492;
 arranque 5/5; smoke bundle 17/17; navegación 15/15; reproducibilidad 8/8.
 H-127 9/9 + 11/11 y H-128 11/11 + 9/9 conservan el diagnóstico físico.
-Build correcto; ambos HTML son idénticos,
-9,020,958 bytes y SHA-256
-`000b1bb17a6275265c3fff35bff3d79847f3f1359ce726a2052403388c79b4ec`.
+Build correcto; los dos HTML locales son idénticos. El blob Git publicado tiene
+9,020,787 bytes y SHA-256
+`935a9d4c3b8bd5c51b24efc3ac4928f41e9a5cb97c1419ea82307396ed1cacf4`.
 **Riesgo residual:** no hubo lector físico ni certificación Firefox/WebKit. La
 alerta roja de PVC10 es independiente: H-127/H-128 mantienen correctamente su
 diagnóstico DENSE (277 módulos, X 0.199288 mm < 0.250 mm) y requiere una decisión
 operativa fuera de este alcance.
 **Corrección:** `docs/fixes/normalizacion-diagonal-lector-hid-h131.md`.
-**Commit funcional:** Pendiente de commit.
-**Despliegue:** Pendiente.
+**Commit funcional:** `ddf63af`.
+**Despliegue:** `origin/main` avanzó por fast-forward; Pages run `33239254916`
+terminó en `success`. El `index.html` público coincide byte a byte con el blob
+Git y Chrome público confirmó `Slash`→`/`, `Minus`→`-`, `Quote` y `/` literales,
+sin errores de página.
 
 ## Regla de actualización
 

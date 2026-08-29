@@ -1,9 +1,9 @@
 # Diagonal configurada desde la entrada del lector HID
 
 **Riesgo:** H-131
-**Estado:** RESUELTO LOCALMENTE · PENDIENTE DE PUBLICACIÓN
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha:** 28/08/2026
-**Commit funcional:** Pendiente de commit
+**Commit funcional:** `ddf63af`
 
 ## Problema y reproducción
 
@@ -93,9 +93,19 @@ directo como en la captura global, por lo que no se duplicó lógica en pantalla
 - Cambio: 45/45 + 37/37; responsive: 492/492; arranque: 5/5; smoke
   bundle: 17/17; navegación: 15/15; reproducibilidad: 8/8.
 - Diagnóstico físico sin regresión: H-127 9/9 + 11/11; H-128 11/11 + 9/9.
-- `node build-offline.mjs`: correcto; los dos HTML generados son idénticos,
-  9,020,958 bytes y SHA-256
-  `000b1bb17a6275265c3fff35bff3d79847f3f1359ce726a2052403388c79b4ec`.
+- `node build-offline.mjs`: correcto; los dos HTML locales son idénticos. El
+  blob Git de `index.html` tiene 9,020,787 bytes y SHA-256
+  `935a9d4c3b8bd5c51b24efc3ac4928f41e9a5cb97c1419ea82307396ed1cacf4`.
+
+## Despliegue
+
+`ddf63af` avanzó `origin/main` por fast-forward. GitHub Pages run
+[`33239254916`](https://github.com/David14081982/POS_Balam/actions/runs/33239254916)
+terminó en `success`. El `index.html` público coincide byte a byte con el blob
+Git: 9,020,787 bytes y SHA-256
+`935a9d4c3b8bd5c51b24efc3ac4928f41e9a5cb97c1419ea82307396ed1cacf4`.
+Chrome público confirmó `Slash`→`/`, `Minus`→`-`, `Quote` literal y `/` literal,
+sin errores de página.
 
 ## Riesgo residual y pendientes
 
