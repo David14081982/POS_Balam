@@ -6329,6 +6329,51 @@ contrato activo. No existe riesgo residual conocido de software en el censo vivo
 **Corrección:** `docs/fixes/migracion-inventario-barcode-v3-h133.md`.
 **Commit funcional:** `a01562e`.
 
+## H-134 — Mensajes operativos exponen implementación en lugar de orientar
+
+**Estado:** RESUELTO
+**Fecha de registro:** 29/08/2026
+**Origen:** auditoría integral autorizada de mensajes, alertas, errores,
+confirmaciones, bloqueos y estados vacíos visibles para personal no técnico.
+**Evidencia inicial:** `UI.ToastHost` imprime sin traducción cualquier cadena u
+objeto recibido; la campana administrativa muestra `diagnostic.message`; el
+Centro de equipos muestra diagnósticos, resultados y versiones internas; las
+etiquetas explican densidad, codificación e identidad con vocabulario de
+implementación; y la importación de inventario muestra conflictos internos del
+archivo. La reproducción estática localizó además consumidores directos de
+`r.error`, `e.message` y `safety.reason` en venta, posventa, préstamos, apartados,
+autenticación, actualización e impresión.
+**Riesgo:** una persona puede no entender qué ocurrió ni qué hacer, revelar
+detalles internos en mostrador o tomar una acción incorrecta ante un bloqueo.
+Un error remoto nuevo puede atravesar cualquier flujo porque no existe una
+autoridad central de presentación.
+**Alcance autorizado:** autoridad única `código → problema, explicación,
+acción, nivel y detalle técnico opcional`; traducción de todos los consumidores
+visibles; detalle técnico cerrado y exclusivo de administración/soporte;
+prueba anti-jerga, regresiones, QA visual, build y publicación segura.
+**No alcance:** cambiar reglas de negocio, identidades, inventario, documentos,
+permisos, persistencia, cola offline, contratos remotos o datos históricos.
+**Control requerido:** ningún mensaje normal puede depender de vocabulario de
+implementación; debe explicar el problema y la acción. Todo valor remoto o
+desconocido debe cruzar la autoridad común antes de llegar a pantalla.
+**Corrección:** se incorporó una autoridad central que traduce códigos,
+excepciones y respuestas remotas a título, explicación, acción y nivel. Todas
+las notificaciones pasan por esa autoridad; los consumidores directos fueron
+migrados y el detalle técnico queda cerrado por defecto exclusivamente para
+administración/soporte. Se reescribieron 36 de 333 superficies auditadas y la
+auditoría final no encontró exposiciones técnicas en la interfaz principal.
+Documento: `docs/fixes/autoridad-mensajes-humanos-h134.md`.
+**Pruebas:** H-134 estática 43/43 (333 superficies, 36 base, 36 reescritas, 0
+actuales); H-134 E2E 26/26; responsive 492/492; navegación 15/15; toast móvil
+10/10; login 8/8; smoke bundle 17/17; store/cola 186/186; coherencia de venta
+20/20; devoluciones 21/21; préstamos 117/117; apartados 55/55; cambios 45/45;
+PWA 19/19; Excel H-86 42/42 y seguridad 17/17; etiquetas H-127 11/11;
+identidad H-132 7/7; inventario H-133 8/8; reproducibilidad 8/8; build correcto
+de 72 recursos y 9.03 MB.
+**Riesgo residual:** ninguno conocido para H-134. La certificación física de
+impresora y lector continúa perteneciendo al riesgo heredado H-133.
+**Commit:** `b84a633`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:
