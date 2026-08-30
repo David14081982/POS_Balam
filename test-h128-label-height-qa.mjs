@@ -57,9 +57,10 @@ try {
       sizeCategoryId: /^\d+$/.test(size) ? 'size_number' : 'size_letter',
       stock: [{ talla: size, escala: /^\d+$/.test(size) ? 'N' : 'L', stock: 1 }],
     });
+    const v2Id = '00000000-0000-4000-8000-000000000128';
     const v2 = D.hydrate({
-      id: '00000000-0000-4000-8000-000000000128', recordModel: 'v2',
-      referenceFamilyId: 'h128-v2-family', barcodeCode: 'B40728BF7CF1B48A',
+      id: v2Id, recordModel: 'v2',
+      referenceFamilyId: '00000000-0000-4000-8000-000000000129', barcodeCode: D.barcodeFromId(v2Id),
       sku: '1-VIC-ML-ALG-TRA-BL-44', nombre: 'VICTOR', modelo: 'VIC', cat: '1', manga: 'ML',
       tela: 'ALG', color: 'BL', cuello: 'TRA', orn: '—', precio: 1250,
       attrs: { __sizeCategoryId: 'size_number' }, sizeCategoryId: 'size_number',
@@ -88,15 +89,15 @@ try {
     !warning.includes('acorta el SKU') && !warning.includes('cambia el barcode'));
   const heights = await page.evaluate(() => {
     const values = ['8-752-PIL-NA-CF-27', '8-769-PIL-NA-CF-27', '5-PVC10-R/P-NA-VCLA-32',
-      '1-LUC-MC-ALG-TRA-VMENF-38', 'B40728BF7CF1B48A'];
+      '1-LUC-MC-ALG-TRA-VMENF-38', DATA.barcodeFromId('00000000-0000-4000-8000-000000000128')];
     return values.map(code => ({ code, ...BARCODES.inspectLabelCode(code) }));
   });
   check('todos los símbolos codificables usan la autoridad vertical H-128',
     heights.every(item => item.canvasHeightPx === 108 && item.barHeightMm > 0), JSON.stringify(heights));
   check('la mejora no reclasifica las muestras V1',
-    heights.filter(item => !item.code.startsWith('B')).every(item => item.status === 'DENSE'));
-  check('la muestra V2 conserva su banda NEAR',
-    heights.find(item => item.code.startsWith('B'))?.status === 'NEAR');
+    heights.slice(0, 4).every(item => item.status === 'DENSE'));
+  check('la muestra V3 queda en banda OK',
+    heights.at(-1)?.status === 'OK');
 
   const viewports = [320, 360, 390, 430, 768, 1024, 1280, 1440];
   const layoutResults = [];

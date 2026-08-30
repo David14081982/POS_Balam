@@ -15,8 +15,8 @@
   const SCHEMA = 'pos';
   const QKEY = 'balam_sync_queue';
   const QDB = 'balam_sync', QSTORE = 'durable_queue';
-  const SYNC_PROTOCOL_VERSION = 2;
-  const SYNC_SCHEMA_VERSION = 20260820016800;
+  const SYNC_PROTOCOL_VERSION = 3;
+  const SYNC_SCHEMA_VERSION = 20260830017500;
   const SELECTIVE_CLEANUP_PROTOCOL = 5;
   const SYNC_CURSOR_KEY = 'balam_sync_domain_cursors_v1';
   const SYNC_DOMAINS = {
@@ -130,10 +130,12 @@
           ornament_color_codes: Array.isArray(p.ornamentColorCodes) ? p.ornamentColorCodes.slice() : [],
           physical_signature: p.physicalSignature,
           reference_family_id: p.referenceFamilyId,
+          barcode_contract: Number(p.barcodeContract) || 3,
+          barcode_aliases: Array.isArray(p.barcodeAliases) ? p.barcodeAliases.slice() : [],
         });
         return row;
       },
-      fromRow: r => ({ id: r.id, recordModel: r.record_model || 'v1', referenceFamilyId: r.reference_family_id || null, cat: r.cat, manga: r.manga, tela: r.tela, color: r.color, cuello: r.cuello, modelo: r.modelo, nombre: r.nombre, orn: r.orn, ornColors: r.orn_colors || [], ornamentColorCodes: r.ornament_color_codes || [], precio: Number(r.precio) || 0, costo: Number(r.costo) || 0, pop: !!r.pop, stock: r.stock || [], stockQuantity: r.stock_quantity == null ? null : Number(r.stock_quantity), physicalIdentityLocked: !!r.physical_identity_locked, sizeCode: r.size_code || null, sizeScale: r.size_scale || null, barcodeCode: r.barcode_code || null, physicalSignature: r.physical_signature || null, imagen: r.imagen || undefined, barcodeUrls: r.barcode_urls || {}, attrs: r.attrs || {}, sizeCategoryId: r.size_category_id || (r.attrs || {}).__sizeCategoryId || null, preciosTalla: r.precios_talla || {}, _syncVersion: Number(r.sync_version) || 0, _deletedAt: r.deleted_at || null }),
+      fromRow: r => ({ id: r.id, recordModel: r.record_model || 'v1', referenceFamilyId: r.reference_family_id || null, cat: r.cat, manga: r.manga, tela: r.tela, color: r.color, cuello: r.cuello, modelo: r.modelo, nombre: r.nombre, orn: r.orn, ornColors: r.orn_colors || [], ornamentColorCodes: r.ornament_color_codes || [], precio: Number(r.precio) || 0, costo: Number(r.costo) || 0, pop: !!r.pop, stock: r.stock || [], stockQuantity: r.stock_quantity == null ? null : Number(r.stock_quantity), physicalIdentityLocked: !!r.physical_identity_locked, sizeCode: r.size_code || null, sizeScale: r.size_scale || null, barcodeCode: r.barcode_code || null, barcodeContract: Number(r.barcode_contract) || (r.record_model === 'v2' ? 3 : 0), barcodeAliases: Array.isArray(r.barcode_aliases) ? r.barcode_aliases : [], physicalSignature: r.physical_signature || null, imagen: r.imagen || undefined, barcodeUrls: r.barcode_urls || {}, attrs: r.attrs || {}, sizeCategoryId: r.size_category_id || (r.attrs || {}).__sizeCategoryId || null, preciosTalla: r.precios_talla || {}, _syncVersion: Number(r.sync_version) || 0, _deletedAt: r.deleted_at || null }),
     },
     clients: {
       table: 'clients', conflict: 'id', localKey: 'clients',

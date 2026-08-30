@@ -58,7 +58,7 @@ try {
     const base = { nombre: 'ADRIANO', modelo: 'ARO', cat: '10', manga: 'MC', tela: 'ALG',
       color: 'BL', cuello: 'NOR', orn: 'Alforza', ornamentColorCodes: [], precio: 1150, stockQuantity: 1 };
     const v2 = v1Sizes.map((sizeCode, index) => D.createReference({
-      ...base, id: `${String(index + 1).padStart(8, '0')}-0000-4000-8000-000000000100`,
+      ...base, id: `${String(index + 1).padStart(8, '0')}-0000-4000-8000-${String(index + 100).padStart(12, '0')}`,
       sizeCategoryId: numeric.includes(sizeCode) ? 'size_number' : 'size_letter',
       sizeCode,
       // Un import/borrador no es autoridad del SKU V2.

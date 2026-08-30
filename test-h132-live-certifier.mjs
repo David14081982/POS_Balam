@@ -7,6 +7,10 @@ import { spawnSync } from 'node:child_process';
 
 const temp = mkdtempSync(join(tmpdir(), 'balam-h132-certifier-'));
 const uuid = suffix => `10000000-0000-4000-8000-${suffix.padStart(12, '0')}`;
+const barcodeV3 = id => {
+  const hex = String(id).replace(/-/g, '');
+  return '3' + BigInt(`0x${hex.slice(-20)}`).toString().padStart(25, '0');
+};
 const v2 = ({ id, size, stock, barcode, sku = '1-ANG-MC-AJSP-TRA-BL' }) => ({
   id: uuid(id),
   record_model: 'v2',
@@ -30,6 +34,8 @@ const v2 = ({ id, size, stock, barcode, sku = '1-ANG-MC-AJSP-TRA-BL' }) => ({
   size_category_id: null,
   sku,
   barcode_code: barcode,
+  barcode_contract: 3,
+  barcode_aliases: [],
   physical_signature: null,
   attrs: {},
   sync_version: 1,
@@ -58,6 +64,8 @@ const v1 = ({ id, stock = 1 }) => ({
   size_category_id: null,
   sku: '1-ANG-MC-AJSP-TRA-BL',
   barcode_code: null,
+  barcode_contract: null,
+  barcode_aliases: [],
   physical_signature: null,
   attrs: {},
   sync_version: 1,
@@ -69,6 +77,8 @@ const localShape = row => ({
   referenceFamilyId: row.reference_family_id,
   sku: row.sku,
   barcodeCode: row.barcode_code,
+  barcodeContract: row.barcode_contract,
+  barcodeAliases: row.barcode_aliases,
   sizeCode: row.size_code,
   stockQuantity: row.stock_quantity,
   stock: row.stock,
@@ -92,10 +102,10 @@ function run(name, remoteRows, localRows, reportedCode) {
 }
 
 const healthy = [
-  v2({ id: '1', size: '38', stock: 1, barcode: 'B000000000000101' }),
-  v2({ id: '2', size: '40', stock: 2, barcode: 'B000000000000102' }),
+  v2({ id: '1', size: '38', stock: 1, barcode: barcodeV3(uuid('1')) }),
+  v2({ id: '2', size: '40', stock: 2, barcode: barcodeV3(uuid('2')) }),
 ];
-const good = run('healthy', healthy, healthy.map(localShape), 'B000000000000101');
+const good = run('healthy', healthy, healthy.map(localShape), barcodeV3(uuid('1')));
 assert.equal(good.status, 0, good.stderr || good.stdout);
 assert.deepEqual({
   references: good.report.summary.totalReferences,
@@ -114,8 +124,8 @@ assert.equal(good.report.traces[0].cause, 'OK');
 
 const broken = [
   v1({ id: '3' }),
-  v2({ id: '4', size: '38', stock: 1, barcode: 'B000000000000104' }),
-  v2({ id: '5', size: '40', stock: 1, barcode: 'B000000000000104' }),
+  v2({ id: '4', size: '38', stock: 1, barcode: barcodeV3(uuid('4')) }),
+  v2({ id: '5', size: '40', stock: 1, barcode: barcodeV3(uuid('4')) }),
 ];
 const localBroken = structuredClone(broken);
 localBroken[1].stock_quantity = 9;

@@ -6,6 +6,7 @@ import { createServer } from 'node:http';
 import { createReadStream, existsSync, readFileSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { basename, resolve, join } from 'node:path';
+import { spawnSync } from 'node:child_process';
 
 const args = process.argv.slice(2);
 const option = name => {
@@ -13,6 +14,7 @@ const option = name => {
   return index >= 0 ? args[index + 1] : null;
 };
 const snapshotPath = option('--snapshot') ? resolve(option('--snapshot')) : null;
+const cliLinked = args.includes('--cli-linked');
 const localPath = option('--local') ? resolve(option('--local')) : null;
 const outputDir = resolve(option('--output') || '.evidence-h132-live');
 const projectRef = process.env.SUPABASE_PROJECT_REF
@@ -43,6 +45,8 @@ const INVENTORY_QUERY = `select
   p.size_category_id,
   p.sku,
   p.barcode_code,
+  p.barcode_contract,
+  p.barcode_aliases,
   p.physical_signature,
   p.attrs,
   p.sync_version,
@@ -50,6 +54,15 @@ const INVENTORY_QUERY = `select
 from pos.products p
 where p.deleted_at is null
 order by p.id`;
+const CONFIG_QUERY = `with catalog_rows as (
+  select kind, jsonb_agg(jsonb_build_object('code',code,'label',label,'active',active,
+    'meta',coalesce(meta,'{}'::jsonb)) order by sort_order,code) items
+  from pos.lookup group by kind
+), catalogs as (select coalesce(jsonb_object_agg(kind,items),'{}'::jsonb) value from catalog_rows),
+config_settings as (select coalesce(jsonb_object_agg(key,value) filter(where key not in('_catalogMeta','store.logo')),'{}'::jsonb) value from pos.settings),
+catalog_meta as (select coalesce((select value from pos.settings where key='_catalogMeta'),'{}'::jsonb) value)
+select jsonb_build_object('v',1,'catalogs',catalogs.value,'catalogMeta',catalog_meta.value,
+  'settings',config_settings.value) config from catalogs,config_settings,catalog_meta`;
 
 function asRows(payload) {
   if (Array.isArray(payload)) return payload;
@@ -64,18 +77,43 @@ async function fetchRemoteRows() {
   if (snapshotPath) {
     if (!existsSync(snapshotPath)) throw new Error(`SNAPSHOT_NOT_FOUND:${snapshotPath}`);
     const payload = JSON.parse(readFileSync(snapshotPath, 'utf8'));
-    return { rows: asRows(payload), source: `snapshot:${basename(snapshotPath)}`, capturedAt: payload.capturedAt || null };
+    return { rows: asRows(payload), config: payload.config || null, source: `snapshot:${basename(snapshotPath)}`, capturedAt: payload.capturedAt || null };
+  }
+  if (cliLinked) {
+    const command = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+    const query = file => {
+      const result = spawnSync(command, ['supabase', 'db', 'query', '--linked', '-o', 'json', '--file', resolve(file)], {
+        cwd: process.cwd(), encoding: 'utf8', timeout: 120000, maxBuffer: 32 * 1024 * 1024,
+        shell: process.platform === 'win32',
+      });
+      if (result.status !== 0) throw new Error(`SUPABASE_CLI_READ_ONLY_QUERY_FAILED:${String(result.error || result.stderr || result.stdout).slice(0, 500)}`);
+      const output = String(result.stdout || '');
+      const start = output.indexOf('{');
+      const end = output.lastIndexOf('}');
+      if (start < 0 || end < start) throw new Error('SUPABASE_CLI_QUERY_RESPONSE_UNRECOGNIZED');
+      return JSON.parse(output.slice(start, end + 1));
+    };
+    const payload = query('supabase/audits/h132_inventory_snapshot.sql');
+    const configPayload = query('supabase/audits/h132_config_snapshot.sql');
+    return { rows: asRows(payload), config: asRows(configPayload)[0]?.config || null,
+      source: 'supabase-cli:linked', capturedAt: new Date().toISOString() };
   }
   if (!projectRef) throw new Error('SUPABASE_PROJECT_REF_REQUIRED');
   if (!accessToken) throw new Error('SUPABASE_ACCESS_TOKEN_REQUIRED_FOR_READ_ONLY_QUERY');
-  const response = await fetch(`https://api.supabase.com/v1/projects/${encodeURIComponent(projectRef)}/database/query/read-only`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query: INVENTORY_QUERY, parameters: [] }),
-  });
-  const text = await response.text();
-  if (!response.ok) throw new Error(`REMOTE_QUERY_${response.status}:${text.slice(0, 300)}`);
-  return { rows: asRows(JSON.parse(text)), source: `supabase:${projectRef}`, capturedAt: new Date().toISOString() };
+  const query = async sql => {
+    const response = await fetch(`https://api.supabase.com/v1/projects/${encodeURIComponent(projectRef)}/database/query/read-only`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: sql, parameters: [] }),
+    });
+    const text = await response.text();
+    if (!response.ok) throw new Error(`REMOTE_QUERY_${response.status}:${text.slice(0, 300)}`);
+    return JSON.parse(text);
+  };
+  const payload = await query(INVENTORY_QUERY);
+  const configPayload = await query(CONFIG_QUERY);
+  return { rows: asRows(payload), config: asRows(configPayload)[0]?.config || null,
+    source: `supabase:${projectRef}`, capturedAt: new Date().toISOString() };
 }
 
 function readLocalRows() {
@@ -108,8 +146,9 @@ try {
   const page = await context.newPage();
   await page.goto(`http://127.0.0.1:${server.address().port}/`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.DATA && window.BARCODES?.ready());
-  audit = await page.evaluate(({ remoteRows, localRows, reportedCodes }) => {
+  audit = await page.evaluate(({ remoteRows, localRows, reportedCodes, config }) => {
     const D = window.DATA, B = window.BARCODES;
+    if (config) window.CONFIG.load(config);
     const clientRow = row => D.hydrate({
       id: row.id,
       recordModel: row.record_model || 'v1',
@@ -133,6 +172,8 @@ try {
       sizeCategoryId: row.size_category_id || (row.attrs || {}).__sizeCategoryId || null,
       sku: row.sku || '',
       barcodeCode: row.barcode_code || null,
+      barcodeContract: Number(row.barcode_contract) || (row.record_model === 'v2' ? 3 : 0),
+      barcodeAliases: Array.isArray(row.barcode_aliases) ? row.barcode_aliases : [],
       physicalSignature: row.physical_signature || null,
       attrs: row.attrs || {},
       _syncVersion: Number(row.sync_version) || 0,
@@ -150,6 +191,8 @@ try {
       reference_family_id: field(row, 'reference_family_id', 'referenceFamilyId') || null,
       sku: row.sku || '',
       barcode_code: field(row, 'barcode_code', 'barcodeCode') || null,
+      barcode_contract: Number(field(row, 'barcode_contract', 'barcodeContract')) || 0,
+      barcode_aliases: field(row, 'barcode_aliases', 'barcodeAliases') || [],
       size_code: field(row, 'size_code', 'sizeCode') || null,
       stock_quantity: field(row, 'stock_quantity', 'stockQuantity') == null
         ? null : Number(field(row, 'stock_quantity', 'stockQuantity')),
@@ -238,7 +281,7 @@ try {
       };
     };
     return { rows, traces: reportedCodes.map(traceCode) };
-  }, { remoteRows: remote.rows, localRows, reportedCodes });
+  }, { remoteRows: remote.rows, localRows, reportedCodes, config: remote.config });
 } finally {
   await Promise.race([browser.close(), new Promise(done => setTimeout(done, 5000))]);
   server.close();
@@ -319,7 +362,7 @@ const csvCell = value => `"${String(Array.isArray(value) ? value.join('|') : val
 const csv = [columns.map(csvCell).join(','), ...rows.map(row => columns.map(column => csvCell(row[column])).join(','))].join('\n') + '\n';
 await writeFile(join(outputDir, 'censo-inventario-vendible.csv'), csv, 'utf8');
 await writeFile(join(outputDir, 'resumen-inventario-vendible.json'), JSON.stringify(report, null, 2) + '\n', 'utf8');
-await writeFile(join(outputDir, 'snapshot-remoto-products.json'), JSON.stringify({ capturedAt: remote.capturedAt, source: remote.source, data: remote.rows }, null, 2) + '\n', 'utf8');
+await writeFile(join(outputDir, 'snapshot-remoto-products.json'), JSON.stringify({ capturedAt: remote.capturedAt, source: remote.source, config: remote.config, data: remote.rows }, null, 2) + '\n', 'utf8');
 
 console.log(JSON.stringify(summary, null, 2));
 // Certificación total exige snapshot local comparable y cero fallos. La prueba

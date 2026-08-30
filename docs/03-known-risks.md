@@ -6235,7 +6235,7 @@ sin errores de página.
 
 ## H-132 — Inventario vendible sin certificación integral de identidad y barcode
 
-**Estado:** MITIGACIÓN LOCAL VERDE — SNAPSHOT VIVO, MIGRACIÓN Y HARDWARE PENDIENTES
+**Estado:** RESUELTO POR H-133 EN SOFTWARE — HARDWARE PENDIENTE
 **Fecha de registro:** 29/08/2026
 **Origen:** hallazgos simultáneos de operación posteriores a H-127/H-128/H-130/H-131:
 etiquetas V1 densas que codifican SKU materializado, SKU visibles repetidos entre
@@ -6274,13 +6274,60 @@ H-127 9/9 + 11/11; H-128 11/11 + QA 9/9 en ocho viewports; H-99 12/12 +
 23/23; H-100 10/10; H-94 49/49; H-130 7/7; H-131 23/23; módulos 42/42;
 build correcto, reproducibilidad 8/8 y smoke del bundle 17/17. La consulta viva se detuvo con
 `SUPABASE_ACCESS_TOKEN_REQUIRED_FOR_READ_ONLY_QUERY` y no hubo snapshot local.
-**Riesgo residual:** no existen cifras vivas certificables ni causa remota
-demostrada para ANGEL. Faltan snapshot autenticado, caché de la terminal,
-lector/impresora físicos y autorización de migración V1→V2. La corrección no se
-publica todavía porque bloquearía etiquetas V1 antes de coordinar su migración.
+**Cierre posterior:** H-133 obtuvo el snapshot autenticado, migró todo el
+inventario operativo mediante una transacción sellada y dejó el certifier vivo
+en 948/948 referencias vendibles, ANGEL 5/5, V1 vendible 0 y fallos 0. La deuda
+de identidad/barcode de H-132 queda resuelta en software. Impresora y lector
+físicos permanecen `NOT_TESTED`, sin revertir la migración certificada.
 **Corrección:** `docs/fixes/certificacion-integral-identidad-barcode-h132.md`.
 **Commit funcional:** `871d98a` en `h133-inventory-certification`; no fusionado
 a `main` ni desplegado.
+
+## H-133 — Inventario operativo V2 único y BARCODE CONTRACT V3
+
+**Estado:** RESUELTO EN SOFTWARE — HARDWARE NOT_TESTED
+**Fecha de registro y cierre:** 29/08/2026
+**Origen:** autorización expresa para convertir quirúrgicamente todo el
+inventario operativo V1 a referencias V2 exactas, sustituir todas las
+identidades de etiqueta activas por un barcode numérico corto y preservar
+stock, presentación e históricos sin inferencias por SKU.
+**Evidencia de causa:** el censo remoto previo encontró 219 productos V1
+activos, 830 combinaciones V1 vendibles y 3,250 piezas bajo un formato que
+codificaba datos comerciales; coexistían con 138 V2 activas y 310 piezas. El
+modelo mixto impedía garantizar una identidad logística uniforme y producía
+barcodes `DENSE` o no resolubles. Dos ensayos de ejecución fueron abortados
+atómicamente por las guardas del manifiesto —normalización de claves JSON y
+colisión del generador inicial—; no hubo escritura parcial. La reproducción
+equivalente confirmó tanto el defecto como la capacidad real de rollback.
+**Corrección:** BARCODE CONTRACT V3 fija `3` + los 80 bits finales del UUID en
+decimal con relleno a 25 posiciones: 26 dígitos, Code Set C, inmutable y derivado
+exclusivamente de `products.id`. La RPC bloquea el lote, valida snapshot,
+backup restaurable, hash y epoch, crea 831 referencias V2 exactas y sus mapas
+V1+talla, conserva las 138 V2 anteriores con su código previo como alias,
+retira V1 sólo del ámbito operativo y vuelve a validar todo antes del commit.
+Ventas y posventa históricas traducen por `source_v1_product_id + size_scale +
+raw_size_value`; nunca por SKU, nombre, índice o primera coincidencia. Epoch 5→6,
+protocolo mínimo/actual 3 y toda la flota quedó `must_rebootstrap`.
+**Resultado vivo:** operación `42c03d11-9463-59d3-aecf-822d0bb6444a`, manifiesto
+`5e7193f0e7718fc9e92a17302041e042a55982b56f5e59742f8930900a50dab2`, backup
+restaurable `54abdb94-a2db-44cb-a9e7-a3b1d0248d08`. Productos activos V1 219→0;
+V2 activas 138→969; V2 vendibles 948; piezas 3,560→3,560; barcodes V3 969/969;
+aliases 138; mapas históricos 831; colisiones, barcodes ausentes, no resolubles,
+`DENSE`, `ENCODING_ERROR`, firmas duplicadas y mapeos ambiguos: 0.
+**Pruebas:** certifier SQL vivo `ok=true`; censo de aplicación remoto 948/948,
+ANGEL 5/5 y once grupos de SKU visible duplicado 11/11; geometría 178 módulos,
+X=0.277778 mm y estado `OK`; H-133 8/8 incluida lectura repetida 10→0 y bloqueo
+de la lectura 11; migraciones 31/31, módulos 42/42, cola 186/186, sync vivo
+20/20, navegación 15/15, arranque 5/5, reproducibilidad 8/8 y smoke productivo
+17/17. Las regresiones vigentes de venta, devolución, cambio, préstamo, apartado,
+offline/multiterminal, import/export, PDF y etiquetas quedaron verdes.
+**Riesgo residual:** deben reimprimirse 3,560 etiquetas físicas y cada terminal
+debe abrir la versión publicada para ejecutar el rebootstrap obligatorio. La
+certificación con impresora y lector reales permanece `HARDWARE_NOT_TESTED`.
+Las 28 V2 eliminadas se conservaron como tombstones históricos fuera del
+contrato activo. No existe riesgo residual conocido de software en el censo vivo.
+**Corrección:** `docs/fixes/migracion-inventario-barcode-v3-h133.md`.
+**Commit funcional:** Pendiente de commit.
 
 ## Regla de actualización
 

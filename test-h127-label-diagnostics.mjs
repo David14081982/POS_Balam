@@ -63,8 +63,9 @@ try {
         v2('30000000-0000-4000-8000-000000000127', 'h127-family-custom', 'CUSTOM123', 'SKU-CUSTOM', 'CUSTOM'),
       ];
     } else {
-      rows = [v2('40000000-0000-4000-8000-000000000127', 'h127-family-generation',
-        'B1234567890ABCDE', 'SKU-GENERACION', 'GENERACION')];
+      const generationId = '40000000-0000-4000-8000-000000000127';
+      rows = [v2(generationId, '40000000-0000-4000-8000-000000000128',
+        D.barcodeFromId(generationId), 'SKU-GENERACION', 'GENERACION')];
       if (!window.__h127OriginalPng) window.__h127OriginalPng = window.BARCODES.toPNGDataURL;
       window.BARCODES.toPNGDataURL = () => '';
     }
@@ -116,14 +117,14 @@ try {
 
   await mount('errors');
   await page.getByTestId('inventory-labels').click();
-  const errorsText = await page.getByTestId('labels-legibility-warning').innerText();
-  const anomalyNode = page.getByTestId('labels-barcode-anomaly');
-  const anomalyText = await anomalyNode.count() ? await anomalyNode.innerText() : '';
-  if (!anomalyText) console.log('Modal de errores:', await page.getByTestId('label-modal').innerText());
-  check('faltante y no codificable tienen causas separadas',
-    errorsText.includes('Falta el barcode logístico V2') && errorsText.includes('Codificación:'));
-  check('barcode V2 personalizado codificable se informa como anomalía, no densidad',
-    anomalyText.includes('CUSTOM123') && anomalyText.includes('barcode V2 personalizado') && !anomalyText.includes('Densidad:'));
+  const errorsText = await page.getByTestId('label-modal').innerText();
+  check('barcode ausente y no V3 fallan cerrados antes de generar',
+    await page.getByTestId('labels-certification-block').count() === 1
+      && errorsText.includes('SIN BARCODE') && errorsText.includes('NO CODIFICABLE')
+      && await page.getByTestId('labels-download').isDisabled());
+  check('barcode personalizado fuera de V3 también queda bloqueado',
+    errorsText.includes('CUSTOM') && await page.getByTestId('labels-certification-block').count() === 1
+      && await page.getByTestId('labels-download').isDisabled());
   await page.getByTestId('label-modal-close').click();
 
   await mount('generation');

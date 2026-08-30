@@ -36,23 +36,26 @@ try {
   const fixtures = await page.evaluate(() => {
     const D = window.DATA;
     const rows = [
-      ['short', '21-ADR-40', 'B000000000000991'],
-      ['typical', '21-ADR-ML-ALG-BL-40', 'B000000000000992'],
-      ['long', '21-ADR-ML-ALG-BL-MAO-DRO-REG-CARACTERISTICA-40', 'B000000000000993'],
-    ].map(([kind, sku, barcodeCode], index) => D.hydrate({
-      id: `h99-${kind}`, recordModel: 'v2', barcodeCode, sku,
+      ['short', '21-ADR-40'],
+      ['typical', '21-ADR-ML-ALG-BL-40'],
+      ['long', '21-ADR-ML-ALG-BL-MAO-DRO-REG-CARACTERISTICA-40'],
+    ].map(([kind, sku], index) => {
+      const id = `99000001-0000-4000-8000-${String(index + 1).padStart(12, '0')}`;
+      return D.hydrate({
+      id, recordModel: 'v2', barcodeCode: D.barcodeFromId(id), sku,
       nombre: 'ADRIANO', modelo: 'ADR', cat: '21', manga: 'ML', tela: 'ALG',
       color: 'BL', cuello: 'MAO', orn: '—', ornColors: [], ornamentColorCodes: [],
       precio: 1150, costo: 400, stockQuantity: 1, sizeCode: '40', sizeScale: 'N',
       sizeCategoryId: 'size_number', attrs: { __sizeCategoryId: 'size_number' }, stock: [],
       physicalSignature: `H99|${index}`, physicalIdentityLocked: true,
-    }));
+    }); });
     D.products.splice(0, D.products.length, ...rows);
     D.saveProducts = () => true;
     window.AUTH.canAccess = () => true;
     document.body.innerHTML = '<div id="h99-root"></div>';
     ReactDOM.createRoot(document.getElementById('h99-root')).render(React.createElement(window.InventoryScreen));
-    return rows.map(row => ({ id: row.id, familyId: row.referenceFamilyId, sku: row.sku, barcodeCode: row.barcodeCode }));
+    return rows.map((row, index) => ({ kind: ['short', 'typical', 'long'][index], id: row.id,
+      familyId: row.referenceFamilyId, sku: row.sku, barcodeCode: row.barcodeCode }));
   });
 
   const measurements = [];
@@ -112,9 +115,9 @@ try {
     await page.getByTestId('product-detail-close').click();
   }
 
-  const typical = measurements.find(item => item.expected.id === 'h99-typical');
-  const short = measurements.find(item => item.expected.id === 'h99-short');
-  const long = measurements.find(item => item.expected.id === 'h99-long');
+  const typical = measurements.find(item => item.expected.kind === 'typical');
+  const short = measurements.find(item => item.expected.kind === 'short');
+  const long = measurements.find(item => item.expected.kind === 'long');
   check('etiqueta conserva proporción física 60×40', Math.abs(typical.label.width / typical.label.height - 1.5) < 0.02,
     `${typical.label.width.toFixed(1)}×${typical.label.height.toFixed(1)} px`);
   check('nombre recupera presencia visual', typical.namePx >= 18, `${typical.namePx}px`);

@@ -79,16 +79,18 @@ try {
   const fixtures = await page.evaluate(() => {
     const D = window.DATA;
     const rows = [
-      ['one', 'ADRIÁNO / UNO', '21-ADR-40', 'B000000000000991', 850, 2],
-      ['two', 'BÁRBARA', '21-BAR-ML-ALG-AZ-MAO-40', 'B000000000000992', 1250, 1],
-      ['three', 'CATALINA', '21-CAT-ML-ALG-BL-MAO-DRO-REG-CARACTERISTICA-40', 'B000000000000993', 12345, 2],
-    ].map(([kind, nombre, sku, barcodeCode, precio, stock], index) => D.hydrate({
-      id: `h99-pdf-${kind}`, recordModel: 'v2', barcodeCode, sku, nombre,
+      ['one', 'ADRIÁNO / UNO', '21-ADR-40', 850, 2],
+      ['two', 'BÁRBARA', '21-BAR-ML-ALG-AZ-MAO-40', 1250, 1],
+      ['three', 'CATALINA', '21-CAT-ML-ALG-BL-MAO-DRO-REG-CARACTERISTICA-40', 12345, 2],
+    ].map(([kind, nombre, sku, precio, stock], index) => {
+      const id = `99000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`;
+      return D.hydrate({
+      id, recordModel: 'v2', barcodeCode: D.barcodeFromId(id), sku, nombre,
       modelo: kind.toUpperCase(), cat: '21', manga: 'ML', tela: 'ALG', color: 'BL', cuello: 'MAO',
       orn: '—', ornColors: [], ornamentColorCodes: [], precio, costo: 400, stockQuantity: stock,
       sizeCode: '40', sizeScale: 'N', sizeCategoryId: 'size_number', attrs: { __sizeCategoryId: 'size_number' },
       stock: [], physicalSignature: `H99PDF|${index}`, physicalIdentityLocked: true,
-    }));
+    }); });
     D.products.splice(0, D.products.length, ...rows);
     D.saveProducts = () => true;
     window.AUTH.canAccess = () => true;

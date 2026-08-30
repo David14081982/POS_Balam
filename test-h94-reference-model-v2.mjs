@@ -219,8 +219,9 @@ ok('30. un barcode ambiguo bloquea y no devuelve la primera coincidencia', (() =
   runtime.D.products.pop();
   return !result.ok && result.code === 'BARCODE_AMBIGUOUS' && result.matches.length === 2;
 })());
-ok('31. el código logístico V2 es estable y corto para Code128',
-  a.barcodeCode.length === 16 && runtime.B.codeOf(a, a.sizeCode) === a.barcodeCode, a.barcodeCode);
+ok('31. el código logístico V3 es numérico, estable y físicamente apto para Code128 C',
+  /^3[0-9]{25}$/.test(a.barcodeCode) && runtime.B.codeOf(a, a.sizeCode) === a.barcodeCode,
+  a.barcodeCode);
 ok('32. una referencia con stock no admite edición física silenciosa', (() => {
   try { runtime.D.updateReference({ ...a, cuello: 'ITA' }); return false; }
   catch (error) { return error.code === 'REFERENCE_RECLASSIFICATION_REQUIRED'; }

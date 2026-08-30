@@ -40,7 +40,7 @@
   // último guion. NO se usa para localizar el producto — de eso se encarga find() por coincidencia.
   function parse(code) {
     const s = String(code || '').trim().toUpperCase();
-    if (/^B[A-F0-9]{15}$/.test(s)) return { barcodeCode: s, model: 'v2' };
+    if (/^3[0-9]{25}$/.test(s)) return { barcodeCode: s, model: 'v2', contract: 3 };
     const i = s.lastIndexOf('-');
     if (i <= 0 || i === s.length - 1) return null;
     return { sku: s.slice(0, i), talla: s.slice(i + 1) };
@@ -54,7 +54,10 @@
     const matches = [];
     prods.filter(p => p && !p._deletedAt).forEach(p => {
       if (D.isV2Reference && D.isV2Reference(p)) {
-        if (String(p.barcodeCode || '').toUpperCase() === s) matches.push({ p, talla: p.sizeCode, productId: p.id });
+        const aliases = Array.isArray(p.barcodeAliases) ? p.barcodeAliases.map(code => String(code).toUpperCase()) : [];
+        if (String(p.barcodeCode || '').toUpperCase() === s || aliases.includes(s)) {
+          matches.push({ p, talla: p.sizeCode, productId: p.id, alias: aliases.includes(s) });
+        }
         return;
       }
       D.resolveProductSizes(p).sizes.filter(size => size.active && size.stock > 0).forEach(size => {
@@ -269,15 +272,19 @@
     const size = String(explicitSize != null ? explicitSize : (product && product.sizeCode) || '');
     const visibleSku = D && D.materializedSku ? D.materializedSku(product, size) : String(product && product.sku || '');
     const barcodeCode = isV2 ? String(product && product.barcodeCode || '').trim().toUpperCase() : '';
+    let expectedBarcode = '';
+    try { expectedBarcode = isV2 && D && D.barcodeFromId ? D.barcodeFromId(productId) : ''; } catch (error) {}
     const generated = String(codeOf(product, size) || '').trim().toUpperCase();
-    const labelCode = generated;
+    const labelCode = isV2 ? barcodeCode : generated;
     const physical = inspectLabelCode(labelCode);
     const resolution = labelCode ? resolve(labelCode) : { ok: false, code: 'BARCODE_EMPTY', matches: [] };
     const issues = [];
     const warnings = [];
     if (!isV2) issues.push('V1_OPERATIONAL');
     if (isV2 && !barcodeCode) issues.push('BARCODE_MISSING');
-    if (isV2 && barcodeCode && !/^B[A-F0-9]{15}$/.test(barcodeCode)) warnings.push('BARCODE_FORMAT');
+    if (isV2 && barcodeCode && !/^3[0-9]{25}$/.test(barcodeCode)) issues.push('BARCODE_CONTRACT_V3_REQUIRED');
+    if (isV2 && Number(product && product.barcodeContract) !== 3) issues.push('BARCODE_CONTRACT_VERSION');
+    if (isV2 && expectedBarcode !== barcodeCode) issues.push('BARCODE_ID_MISMATCH');
     if (isV2 && generated !== barcodeCode) issues.push('CODE_OF_MISMATCH');
     if (resolution.code === 'BARCODE_AMBIGUOUS') issues.push('BARCODE_DUPLICATE');
     else if (!resolution.ok) issues.push('BARCODE_UNRESOLVED');
@@ -301,6 +308,7 @@
       size,
       visibleSku,
       barcodeCode,
+      expectedBarcode,
       codeOf: generated,
       labelCode,
       resolvedProductId,

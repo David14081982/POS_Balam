@@ -67,9 +67,13 @@
   // 16 caracteres Code128B: prefijo humano de dominio + 60 bits del UUID.
   // Es corto para 60×40, se genera offline y la base conserva la garantía final.
   function barcodeFromId(id) {
-    const hex = String(id || '').replace(/[^a-f0-9]/gi, '').toUpperCase();
-    if (hex.length < 15) throw Object.assign(new Error('No se pudo generar el código logístico'), { code: 'BARCODE_SOURCE_INVALID' });
-    return 'B' + hex.slice(0, 15);
+    const raw = String(id || '');
+    const hex = raw.replace(/-/g, '').toLowerCase();
+    if (!/^[a-f0-9]{32}$/.test(hex)
+      || !/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(raw)) {
+      throw Object.assign(new Error('No se pudo generar el código logístico V3'), { code: 'BARCODE_SOURCE_INVALID' });
+    }
+    return '3' + BigInt(`0x${hex.slice(-20)}`).toString().padStart(25, '0');
   }
   function canonicalReferenceOrnamentColors(values) {
     const allowed = new Set((C && C.all ? C.all('ornament_color') : []).map(item => String(item.code)));
@@ -286,9 +290,11 @@
     if (!size.valid) throw Object.assign(new Error('La talla no pertenece a la familia seleccionada'), { code: 'REFERENCE_SIZE_INVALID' });
     p.stock = [{ talla: p.sizeCode, escala: p.sizeScale, stock: p.stockQuantity }];
     p.barcodeCode = p.barcodeCode || barcodeFromId(p.id);
+    p.barcodeContract = 3;
+    p.barcodeAliases = Array.isArray(p.barcodeAliases) ? [...new Set(p.barcodeAliases.map(String))] : [];
     // En V2 el SKU es una proyección de la referencia exacta. Un valor recibido
     // por Excel, caché o formulario no puede sustituir a la talla efectiva.
-    p.sku = sku(p);
+    p.sku = String(p.attrs.__legacyVisibleSku || sku(p));
     // La firma es siempre derivada de CONFIG; una columna importada nunca es autoridad.
     p.physicalSignature = physicalSignature(p);
     const diag = referenceDiagnostics(p, collection);
@@ -726,6 +732,8 @@
       p.ornColors = p.ornamentColorCodes.slice();
       p.stock = [{ talla: p.sizeCode, escala: p.sizeScale, stock: p.stockQuantity }];
       if (!p.barcodeCode) p.barcodeCode = barcodeFromId(p.id);
+      p.barcodeContract = Number(p.barcodeContract) || 3;
+      p.barcodeAliases = Array.isArray(p.barcodeAliases) ? [...new Set(p.barcodeAliases.map(String))] : [];
       if (!p.sku) p.sku = sku(p);
       p.physicalSignature = physicalSignature(p);
       if (p.costo == null || p.costo === '') p.costo = Math.round((Number(p.precio) || 0) * 0.45);

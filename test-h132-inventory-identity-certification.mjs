@@ -47,8 +47,10 @@ try {
       sizeCode, sizeScale: 'N', stockQuantity: 1, physicalSignature: `ANGEL|${sizeCode}`,
       physicalIdentityLocked: true,
     });
-    const v2a = makeV2('13200000-0000-4000-8000-000000000002', '38', 'B000000000001321');
-    const v2b = makeV2('13200000-0000-4000-8000-000000000003', '40', 'B000000000001322');
+    const v2aId = '13200000-0000-4000-8000-000000000002';
+    const v2bId = '13200000-0000-4000-8000-000000000003';
+    const v2a = makeV2(v2aId, '38', D.barcodeFromId(v2aId));
+    const v2b = makeV2(v2bId, '40', D.barcodeFromId(v2bId));
     D.products.splice(0, D.products.length, v1, v2a, v2b);
     const certify = typeof B.certifySellableReference === 'function'
       ? (product, size) => B.certifySellableReference(product, size) : () => null;
@@ -57,7 +59,7 @@ try {
     const three = certify(v2b, '40');
     v2b.barcodeCode = v2a.barcodeCode;
     const duplicated = certify(v2b, '40');
-    v2b.barcodeCode = 'B000000000001322';
+    v2b.barcodeCode = D.barcodeFromId(v2bId);
     return {
       hasAuthority: typeof B.certifySellableReference === 'function',
       v1: one,

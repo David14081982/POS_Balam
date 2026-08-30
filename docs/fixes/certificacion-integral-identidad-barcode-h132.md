@@ -1,9 +1,15 @@
 # Certificación integral de identidad y barcode del inventario vendible
 
 **Riesgo:** H-132
-**Estado:** CORRECCIÓN PREVENTIVA VERDE; CERTIFICACIÓN VIVA BLOQUEADA
+**Estado:** RESUELTO POR H-133 EN SOFTWARE; HARDWARE NOT_TESTED
 **Fecha:** 29/08/2026
 **Commit funcional:** `871d98a` (rama `h133-inventory-certification`; no fusionado a `main`)
+
+> Cierre posterior, 29/08/2026: H-133 ejecutó la migración autorizada completa,
+> obtuvo V1 vendible 0 y certificó 948/948 referencias vendibles desde datos
+> vivos. El plan no ejecutado y los pendientes descritos abajo son evidencia del
+> estado intermedio de H-132; su ejecución y recibos finales están en
+> `migracion-inventario-barcode-v3-h133.md`.
 
 ## Problema y reproducción
 
@@ -166,7 +172,7 @@ hardware firmado. Hasta entonces el estado no es «100 % certificado».
   artefacto productivo embebido no depende de ellos. Pendiente la auditoría
   contra datos vivos.
 
-## Riesgo residual y pendientes
+## Riesgo residual y pendientes al cierre original de H-132
 
 El intento vivo terminó con
 `SUPABASE_ACCESS_TOKEN_REQUIRED_FOR_READ_ONLY_QUERY`; no había una sesión
