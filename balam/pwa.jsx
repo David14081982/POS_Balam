@@ -242,7 +242,7 @@
     const activity = window.CORE && window.CORE.activityStatus ? window.CORE.activityStatus() : { active: 0 };
     if (activity.active) return { safe: false, reason: 'Termina la venta o el formulario antes de actualizar.' };
     const queue = window.STORE && window.STORE.queueStatus ? window.STORE.queueStatus() : null;
-    if (queue && queue.durability === 'memory') return { safe: false, reason: 'La cola no tiene almacenamiento durable. No cierres esta ventana.' };
+    if (queue && queue.durability === 'memory') return { safe: false, reason: 'Hay cambios que todavía no están protegidos. No cierres esta ventana; libera espacio y vuelve a intentarlo.' };
     if (document.querySelector('[role="dialog"][aria-modal="true"]')) return { safe: false, reason: 'Cierra el diálogo abierto antes de actualizar.' };
     const active = document.activeElement;
     if (active && /^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName)) return { safe: false, reason: 'Termina la captura antes de actualizar.' };
@@ -382,10 +382,10 @@
     if (!snapshot.ready && !snapshot.error) return h('p', { className: 'text-caption text-on-surface-variant mt-3' }, 'Preparando recursos de instalación…');
     if (snapshot.iconQuality === 'legacy-upscaled') return h('p', { className: 'text-caption text-warning mt-3', role: 'status', 'data-testid': 'pwa-logo-quality-warning' },
       `Este logotipo histórico mide ${snapshot.sourceSize.width}×${snapshot.sourceSize.height} px. Los iconos 512 px se generan con pérdida de calidad; sube una fuente de al menos 512 px.`);
-    if (snapshot.iconQuality === 'invalid-logo') return h('p', { className: 'text-caption text-warning mt-3', role: 'status' }, 'El logotipo no pudo convertirse; las instalaciones usarán temporalmente el icono fallback de BALAM.');
+    if (snapshot.iconQuality === 'invalid-logo') return h('p', { className: 'text-caption text-warning mt-3', role: 'status' }, 'El logotipo no pudo prepararse; las instalaciones usarán temporalmente el icono predeterminado de BALAM.');
     if (snapshot.iconSource === 'store.logo') return h('p', { className: 'text-caption text-success mt-3', role: 'status', 'data-testid': 'pwa-logo-ready' },
       `Iconos de instalación listos desde este logotipo (${snapshot.sourceSize.width}×${snapshot.sourceSize.height} px).${snapshot.standalone ? ' Chrome puede conservar el icono instalado anterior hasta aplicar su actualización de identidad.' : ''}`);
-    return h('p', { className: 'text-caption text-on-surface-variant mt-3', role: 'status' }, 'Sin logotipo configurado: las instalaciones usan el icono fallback de BALAM.');
+    return h('p', { className: 'text-caption text-on-surface-variant mt-3', role: 'status' }, 'Sin logotipo configurado: las instalaciones usan el icono predeterminado de BALAM.');
   }
 
   window.PWA = {

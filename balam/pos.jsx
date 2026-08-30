@@ -95,7 +95,7 @@
       const hit = barcodeResult && barcodeResult.ok ? barcodeResult.hit : null;
       if (hit) { addToTicket(hit.p, hit.talla); setQuery(''); flashLine(hit.productId); return; }
       if (barcodeResult && barcodeResult.code === 'BARCODE_AMBIGUOUS') {
-        toast('Código bloqueado: resuelve a más de una referencia. Resincroniza antes de vender.', 'var(--danger)'); return;
+        toast({ code: 'BARCODE_AMBIGUOUS', message: 'scanner resolved multiple product references' }, 'var(--danger)'); return;
       }
       // 2) Coincidencia exacta por SKU → abre el selector de talla.
       const q = raw.toLowerCase();
@@ -126,7 +126,7 @@
           if (st.blocked || code.length < 4) return;       // hay un modal abierto o ráfaga muy corta
           const result = window.BARCODES && window.BARCODES.resolve(code);
           if (result && result.code === 'BARCODE_AMBIGUOUS') {
-            toast('Código ambiguo bloqueado. Resincroniza el inventario.', 'var(--danger)'); return;
+            toast({ code: 'BARCODE_AMBIGUOUS', message: 'scanner resolved multiple product references' }, 'var(--danger)'); return;
           }
           const hit = result && result.ok ? result.hit : null;
           if (!hit) return;                                // no es un código conocido → no intervenir

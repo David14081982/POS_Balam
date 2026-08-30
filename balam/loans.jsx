@@ -519,7 +519,7 @@
       const hit = leerCodigo(raw);
       if (hit) { agregar(hit.p, hit.talla); return; }
       if (window.BARCODES && window.BARCODES.lastResolution && window.BARCODES.lastResolution.code === 'BARCODE_AMBIGUOUS') {
-        toast('Código ambiguo bloqueado. Resincroniza el inventario.', 'var(--danger)'); return;
+        toast({ code: 'BARCODE_AMBIGUOUS', message: 'scanner resolved multiple product references' }, 'var(--danger)'); return;
       }
       const q = raw.toLowerCase();
       const exactos = D.products.filter(p => p.sku.toLowerCase() === q);

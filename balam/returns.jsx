@@ -550,7 +550,7 @@
       const barcodeResult = window.BARCODES && window.BARCODES.resolve(raw);
       const hit = barcodeResult && barcodeResult.ok ? barcodeResult.hit : null;
       if (hit) { agregar(hit.p, hit.talla); setQuery(''); return; }
-      if (barcodeResult && barcodeResult.code === 'BARCODE_AMBIGUOUS') { toast('Código ambiguo bloqueado. Resincroniza el inventario.', 'var(--danger)'); return; }
+      if (barcodeResult && barcodeResult.code === 'BARCODE_AMBIGUOUS') { toast(barcodeResult, 'var(--danger)'); return; }
       const q = raw.toLowerCase();
       const exactMatches = D.products.filter(p => String(p.sku).toLowerCase() === q);
       if (exactMatches.length > 1) { toast(`${exactMatches.length} referencias comparten ese SKU. Selecciona una por sus atributos.`, 'var(--warning)'); return; }
@@ -572,7 +572,7 @@
           const code = buf, rawCode = typed; buf = ''; typed = '';
           if (st.blocked || code.length < 4) return;
           const result = window.BARCODES && window.BARCODES.resolve(code);
-          if (result && result.code === 'BARCODE_AMBIGUOUS') { toast('Código ambiguo bloqueado. Resincroniza el inventario.', 'var(--danger)'); return; }
+          if (result && result.code === 'BARCODE_AMBIGUOUS') { toast(result, 'var(--danger)'); return; }
           const hit = result && result.ok ? result.hit : null;
           if (!hit) return;
           e.preventDefault();

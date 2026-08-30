@@ -520,7 +520,7 @@
       h('div', { key: 'head', className: 'mb-6 flex flex-wrap items-end justify-between gap-4' }, [
         h('div', { key: 'title' }, [
           h('h2', { key: 'h', className: 'font-headline text-display-sm text-primary' }, 'Referencias físicas'),
-          h('p', { key: 'p', className: 'text-caption text-on-surface-variant mt-1' }, 'Existencia desde products.id y atributos; ventas desde snapshots. El SKU no se analiza.'),
+          h('p', { key: 'p', className: 'text-caption text-on-surface-variant mt-1' }, 'Las existencias provienen del inventario actual y las ventas de sus documentos registrados. BALAM no deduce resultados a partir del SKU.'),
         ]),
         h('div', { key: 'filters', className: 'flex flex-wrap gap-3' }, [
           h('label', { key: 'primary', className: 'text-overline uppercase text-on-surface-variant' }, [

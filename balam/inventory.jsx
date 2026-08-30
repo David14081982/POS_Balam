@@ -1,7 +1,7 @@
 // inventory.jsx — Inventario (Balam). Exporta window.InventoryScreen
 (function () {
   const { useState, useMemo, useRef, useEffect } = React;
-  const { fmt, Modal, toast, Pager, Segment, resizeImageFile } = window.UI;
+  const { fmt, Modal, toast, Pager, Segment, resizeImageFile, HumanMessage, messageText } = window.UI;
   const { MS, ProductImage } = window.HX;
   const D = window.DATA;
   const h = React.createElement;
@@ -595,9 +595,9 @@
         plan.updates > 0 && h('span', { key: 'u', 'data-testid': 'inventory-import-updates', className: 'px-2 py-1 bg-gold-soft text-gold-text font-bold rounded' }, `${plan.updates} actualizaciones`),
         plan.conflicts.length > 0 && h('span', { key: 'x', 'data-testid': 'inventory-import-conflicts', className: 'px-2 py-1 bg-danger-soft text-danger font-bold rounded' }, `${plan.conflicts.length} conflictos`),
         data.skipped > 0 && h('span', { key: 'b', className: 'px-2 py-1 bg-warning-soft text-warning font-bold rounded' }, `${data.skipped} omitidos`),
-        h('span', { key: 'c', className: 'text-on-surface-variant' }, `${data.total} filas leídas · ${data.schema === 'current' ? 'Esquema BALAM v' + data.metadata.schema_version : 'Archivo heredado'}`),
+        h('span', { key: 'c', className: 'text-on-surface-variant' }, `${data.total} filas leídas · ${data.schema === 'current' ? 'Plantilla actual' : 'Plantilla anterior compatible'}`),
       ]),
-      ...(plan.warnings || []).map((warning, index) => h('p', { key: 'w' + index, role: 'status', className: 'text-caption text-warning mb-2 p-2 rounded bg-warning-soft' }, warning)),
+      ...(plan.warnings || []).map((warning, index) => h(HumanMessage, { key: 'w' + index, message: warning, options: { level: 'warning' }, className: 'text-caption mb-2 p-2 rounded bg-warning-soft' })),
       plan.conflicts.length > 0 && h('p', { key: 'blocked', role: 'alert', className: 'text-caption font-semibold text-danger mb-3' }, 'Todo-o-nada: mientras exista un conflicto no se aplicará ninguna fila.'),
       h('div', { key: 'tbl', className: 'border border-outline-variant rounded-lg overflow-hidden max-h-80 overflow-y-auto' },
         h('table', { className: 'w-full' }, [
@@ -606,7 +606,7 @@
           h('tbody', { key: 'b', className: 'divide-y divide-outline-variant' }, plan.rows.slice(0, 60).map(row => h('tr', { key: row.rowKey, 'data-testid': 'inventory-import-row-' + row.rowNumber }, [
             h('td', { key: 'a', className: 'px-3 py-2 align-top' }, [
               h('span', { key: 'badge', className: 'px-2 py-0.5 text-overline font-bold rounded ' + (row.action === 'new' ? 'bg-success-soft text-success' : row.action === 'update' ? 'bg-gold-soft text-gold-text' : 'bg-danger-soft text-danger') }, row.action === 'new' ? 'Alta' : row.action === 'update' ? 'Actualiza' : 'Conflicto'),
-              row.conflict && h('p', { key: 'msg', className: 'mt-1 text-overline text-danger max-w-56' }, row.conflict.message),
+              row.conflict && h(HumanMessage, { key: 'msg', message: row.conflict, className: 'mt-1 text-overline max-w-56' }),
               row.conflict && row.conflict.resolvable && h('button', { key: 'resolve', type: 'button', 'data-testid': 'inventory-import-resolve-' + row.rowNumber, onClick: () => onResolve(row.rowKey, row.conflict.candidateId), className: 'mt-2 px-2 min-h-8 border border-danger/40 rounded text-overline font-bold text-danger' }, 'Confirmar producto existente'),
             ]),
             h('td', { key: 'n', className: 'px-3 py-2 align-top' }, [h('div', { key: 'name', className: 'text-body text-primary font-semibold' }, row.incoming.nombre), h('code', { key: 'sku', className: 'text-overline text-on-surface-variant' }, row.incoming.sku)]),
@@ -1921,22 +1921,22 @@
       const v2 = D.isV2Reference(s.p);
       const resolution = s.code ? B.resolve(s.code) : { ok: false, code: 'BARCODE_EMPTY', matches: [] };
       const issues = [];
-      if (physical.status === 'DENSE') issues.push({ type: 'DENSITY', message: `Densidad: X ${physical.moduleMm.toFixed(3)} mm < ${physical.minModuleMm.toFixed(3)} mm (${physical.modules} módulos; barras ${physical.barHeightMm.toFixed(1)} mm).` });
-      else if (physical.status === 'MISSING_BARCODE') issues.push({ type: 'MISSING_BARCODE', message: v2 ? 'Falta el barcode logístico V2; no hay texto Code128 para esta etiqueta.' : 'Falta el texto Code128 materializado para esta talla.' });
-      else if (physical.status === 'ENCODING_ERROR') issues.push({ type: 'ENCODING_ERROR', message: 'Codificación: el texto contiene caracteres que el generador Code128 actual no puede representar.' });
-      else if (physical.status === 'GENERATION_ERROR') issues.push({ type: 'GENERATION_ERROR', message: `Generación: ${physical.reason}` });
+      if (physical.status === 'DENSE') issues.push({ type: 'DENSITY', message: messageText({ code: 'LABEL_DENSITY', message: `X ${physical.moduleMm.toFixed(3)} mm; minimum ${physical.minModuleMm.toFixed(3)} mm; ${physical.modules} modules; bars ${physical.barHeightMm.toFixed(1)} mm` }) });
+      else if (physical.status === 'MISSING_BARCODE') issues.push({ type: 'MISSING_BARCODE', message: messageText({ code: 'MISSING_BARCODE', message: v2 ? 'missing barcode_code v2' : 'missing materialized Code128' }) });
+      else if (physical.status === 'ENCODING_ERROR') issues.push({ type: 'ENCODING_ERROR', message: messageText({ code: 'ENCODING_ERROR', message: 'Code128 encoding unsupported' }) });
+      else if (physical.status === 'GENERATION_ERROR') issues.push({ type: 'GENERATION_ERROR', message: messageText({ code: 'GENERATION_ERROR', message: physical.reason }) });
       const image = labelsCertified && !['MISSING_BARCODE', 'ENCODING_ERROR', 'GENERATION_ERROR'].includes(physical.status) ? imageFor(s) : '';
       // Un lote bloqueado no debe generar PNG ni, por esa misma guarda,
       // inventar un fallo de generación. La inspección geométrica pura sigue
       // visible para explicar cada referencia antes de migrarla.
       if (labelsCertified && !image && !issues.some(issue => issue.type === 'MISSING_BARCODE' || issue.type === 'ENCODING_ERROR' || issue.type === 'GENERATION_ERROR')) {
-        issues.push({ type: 'GENERATION_ERROR', message: 'Generación: no se pudo producir el PNG usado por preview, PDF e impresión.' });
+        issues.push({ type: 'GENERATION_ERROR', message: messageText({ code: 'GENERATION_ERROR', message: 'PNG generation failed for preview and PDF' }) });
       }
-      if (resolution.code === 'BARCODE_AMBIGUOUS') issues.push({ type: 'AMBIGUOUS', message: `Ambigüedad: el mismo Code128 coincide con ${resolution.matches.length} referencias y no identifica una pieza de forma única.` });
+      if (resolution.code === 'BARCODE_AMBIGUOUS') issues.push({ type: 'AMBIGUOUS', message: messageText({ code: 'BARCODE_AMBIGUOUS', message: `${resolution.matches.length} matches` }) });
       return {
         s, code: s.code, visibleSku, physical, issues,
         legacy: !v2,
-        anomalous: v2 && !!s.code && !/^B[A-F0-9]{15}$/.test(String(s.code).toUpperCase()),
+        anomalous: v2 && !!s.code && !/^3\d{25}$/.test(String(s.code)),
       };
     });
     const riskDiagnostics = diagnostics.filter(item => item.issues.length > 0);
@@ -1952,8 +1952,7 @@
       const name = String(product.nombre || product.modelo || 'Producto');
       const model = String(product.modelo || '');
       const identity = model && model !== name ? `${name} (${model})` : name;
-      const encoded = item.code && item.code !== item.visibleSku ? ` · Code128 ${item.code}` : '';
-      return `${identity} · talla ${item.s.talla} · SKU ${item.visibleSku}${encoded}`;
+      return `${identity} · talla ${item.s.talla} · SKU ${item.visibleSku}`;
     }
     function diagnosticList(items, messageOf, testPrefix) {
       return h('ul', { className: 'mt-2 space-y-2 list-disc pl-5' }, items.map((item, index) => h('li', {
@@ -1980,7 +1979,7 @@
       }
       D.saveProducts([...new Set(specs.map(spec => spec.p.id))]);
       setSaving(false);
-      toast(failN ? `Guardadas ${okN}, fallaron ${failN}. Error al guardar imagen del código; intenta regenerarlo.` : `${okN} ${okN === 1 ? 'imagen guardada' : 'imágenes guardadas'} en Supabase`, failN ? 'var(--danger)' : 'var(--accent)');
+      toast(failN ? `Se guardaron ${okN}; ${failN} no pudieron guardarse. Vuelve a generar las etiquetas pendientes.` : `${okN} ${okN === 1 ? 'imagen guardada' : 'imágenes guardadas'} en la cuenta del negocio`, failN ? 'var(--danger)' : 'var(--accent)');
     }
 
     const seg = (val, on, label) => h('button', { key: val, 'data-testid': `labels-copies-${val}`, onClick: () => setCopiesMode(val), className: 'px-3 py-1.5 rounded-md text-caption font-semibold transition-colors ' + (on ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:text-primary') }, label);
@@ -1994,7 +1993,7 @@
       });
     }
     const footer = [
-      h('button', { key: 'sv', disabled: saving || !labelsCertified, onClick: saveToSupabase, className: 'px-5 py-3 border border-outline-variant rounded-xl text-caption font-bold uppercase tracking-widest text-primary hover:bg-surface-container transition disabled:opacity-50 flex items-center gap-2' }, [h(MS, { key: 'i', name: saving ? 'clock' : 'upload', size: 16 }), saving ? 'Guardando…' : `Guardar en Supabase (${uniqueCount})`]),
+      h('button', { key: 'sv', disabled: saving || !labelsCertified, onClick: saveToSupabase, className: 'px-5 py-3 border border-outline-variant rounded-xl text-caption font-bold uppercase tracking-widest text-primary hover:bg-surface-container transition disabled:opacity-50 flex items-center gap-2' }, [h(MS, { key: 'i', name: saving ? 'clock' : 'upload', size: 16 }), saving ? 'Guardando…' : `Guardar en la cuenta (${uniqueCount})`]),
       h('button', { key: 'dl', disabled: !labelsCertified || !pdfAsset, onClick: () => downloadLabelPdf(pdfAsset), 'data-testid': 'labels-download', className: 'px-5 py-3 border border-outline-variant rounded-xl text-caption font-bold uppercase tracking-widest text-primary hover:bg-surface-container transition disabled:opacity-50 flex items-center gap-2' }, [h(MS, { key: 'i', name: pdfAsset ? 'download' : 'clock', size: 16 }), !labelsCertified ? 'Identidad no certificada' : pdfAsset ? 'Descargar PDF' : 'Generando PDF…']),
       canSharePdf && h('button', { key: 'sh', onClick: sharePdf, 'data-testid': 'labels-share', className: 'px-5 py-3 border border-outline-variant rounded-xl text-caption font-bold uppercase tracking-widest text-primary hover:bg-surface-container transition flex items-center gap-2' }, [h(MS, { key: 'i', name: 'share', size: 16 }), 'Compartir PDF']),
       h('button', { key: 'pr', disabled: !labelsCertified, onClick: openPrintableView, 'data-testid': 'labels-open-printable', className: 'px-6 py-3 bg-primary text-on-primary rounded-xl text-caption font-bold uppercase tracking-widest hover:opacity-90 transition disabled:opacity-50 flex items-center gap-2' }, [h(MS, { key: 'i', name: 'print', size: 16 }), `Abrir vista imprimible (${totalLabels})`]),
@@ -2024,25 +2023,26 @@
         ]),
         h('p', { key: 'sum', className: 'text-caption text-on-surface-variant' }, `${specs.length} talla(s) con existencias · ${totalLabels} etiqueta(s) a imprimir`),
         certificationBlocks.length > 0 && h('div', { key: 'certification', role: 'alert', 'data-testid': 'labels-certification-block', className: 'p-3 rounded-lg bg-danger-soft text-danger text-caption' }, [
-          h('p', { key: 'h', className: 'font-semibold' }, 'Salida bloqueada: una etiqueta vendible requiere identidad logística V2 certificada.'),
+          h('p', { key: 'h', className: 'font-semibold' }, 'Etiquetas bloqueadas: algunos productos no tienen una identificación segura.'),
           h('ul', { key: 'l', className: 'mt-2 space-y-2 list-disc pl-5' }, certificationBlocks.map((spec, index) => h('li', {
             key: `${spec.p.id}:${spec.talla}:${index}`,
-          }, `${spec.p.nombre || spec.p.modelo} · talla ${spec.talla} · ${spec.certification.recordModel} · ${spec.certification.issues.join(', ')}`))),
-          h('p', { key: 's', className: 'mt-2' }, 'No se generó PNG, PDF ni vista imprimible. Migra la referencia a V2; el SKU visible y los históricos no se reinterpretan.'),
+          }, `${spec.p.nombre || spec.p.modelo} · talla ${spec.talla} · revisa su identificación`))),
+          h('p', { key: 's', className: 'mt-2' }, 'No se creó ningún archivo. Abre cada producto indicado, corrige su identificación y vuelve a intentarlo.'),
         ]),
-        pdfError && h('div', { key: 'pdf-error', role: 'alert', 'data-testid': 'labels-pdf-error', className: 'p-3 rounded-lg bg-danger-soft text-danger text-caption' }, `${pdfError}. Puedes mantener abierta la vista imprimible e intentarlo de nuevo.`),
+        pdfError && h('div', { key: 'pdf-error', role: 'alert', 'data-testid': 'labels-pdf-error' },
+          h(HumanMessage, { message: pdfError, options: { title: 'No se pudo crear el archivo de etiquetas', explanation: 'La vista imprimible sigue disponible.', action: 'Mantén abierta la vista e inténtalo nuevamente.', level: 'danger' }, className: 'p-3 rounded-lg bg-danger-soft text-caption' })),
         riskDiagnostics.length > 0 && h('div', { key: 'warn', role: 'alert', 'data-testid': 'labels-legibility-warning', className: 'p-3 rounded-lg bg-warning-soft text-warning text-caption' }, [
-          h('p', { key: 'h', className: 'font-semibold' }, `${diagnosticCount(riskDiagnostics)} con problema físico, de identidad o de generación.`),
+          h('p', { key: 'h', className: 'font-semibold' }, `${diagnosticCount(riskDiagnostics)} no pueden imprimirse de forma segura.`),
           diagnosticList(riskDiagnostics, item => item.issues.map(issue => issue.message).join(' '), 'label-risk-detail'),
-          h('p', { key: 'scope', className: 'mt-2' }, 'La validación geométrica usa el mismo render del PDF y la impresión; no modifica SKU, barcode ni identidad y no sustituye una prueba con la impresora y el lector reales.'),
+          h('p', { key: 'scope', className: 'mt-2' }, 'BALAM no modificó los productos. Corrige los indicados y confirma una impresión de prueba antes de imprimir el lote.'),
         ]),
         nearDiagnostics.length > 0 && h('div', { key: 'near', role: 'status', 'data-testid': 'labels-density-near', className: 'p-3 rounded-lg bg-surface-container-low text-on-surface-variant text-caption' }, [
-          h('p', { key: 'h', className: 'font-semibold text-primary' }, `${diagnosticCount(nearDiagnostics)} cerca del límite preventivo, sin caer bajo X = ${LABEL_CONTRACT.minModuleMm.toFixed(3)} mm.`),
-          diagnosticList(nearDiagnostics, item => `Densidad preventiva: X ${item.physical.moduleMm.toFixed(3)} mm · ${item.physical.modules} módulos · barras ${item.physical.barHeightMm.toFixed(1)} mm.`, 'label-near-detail'),
+          h('p', { key: 'h', className: 'font-semibold text-primary' }, `${diagnosticCount(nearDiagnostics)} podrían ser difíciles de leer en algunas impresoras.`),
+          diagnosticList(nearDiagnostics, () => 'Haz una impresión de prueba y confirma la lectura antes de imprimir el lote.', 'label-near-detail'),
         ]),
         anomalousDiagnostics.length > 0 && h('div', { key: 'anomaly', role: 'status', 'data-testid': 'labels-barcode-anomaly', className: 'p-3 rounded-lg bg-surface-container-low text-on-surface-variant text-caption' }, [
-          h('p', { key: 'h', className: 'font-semibold text-primary' }, `${diagnosticCount(anomalousDiagnostics)} usan un barcode V2 personalizado.`),
-          diagnosticList(anomalousDiagnostics, item => `Barcode anómalo respecto del patrón generado por BALAM, pero codificable y con X ${item.physical.moduleMm.toFixed(3)} mm; confirma que su origen logístico sea intencional.`, 'label-anomaly-detail'),
+          h('p', { key: 'h', className: 'font-semibold text-primary' }, `${diagnosticCount(anomalousDiagnostics)} usan una identificación personalizada.`),
+          diagnosticList(anomalousDiagnostics, () => 'Confirma que la identificación personalizada sea intencional antes de imprimir.', 'label-anomaly-detail'),
         ]),
       ]),
       h('div', { key: 'pv', className: 'border-t border-outline-variant pt-4' }, [

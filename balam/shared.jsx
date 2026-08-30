@@ -167,15 +167,198 @@
     ]);
   }
 
+  // H-134: autoridad única de mensajes visibles. Los módulos pueden conservar
+  // códigos y diagnósticos para soporte, pero nunca deben imprimirlos como la
+  // explicación principal para quien opera BALAM.
+  const MESSAGE_LEVEL = {
+    neutral: { color: 'var(--outline)', tone: 'text-on-surface-variant' },
+    success: { color: 'var(--success)', tone: 'text-success' },
+    warning: { color: 'var(--warning)', tone: 'text-warning' },
+    danger: { color: 'var(--danger)', tone: 'text-danger' },
+  };
+  const TECHNICAL_JARGON = /\b(?:v[123]|products?\.id|uuid|barcode_code|reference_family_id|rpc|rls|supabase|tombstones?|epochs?|protocol(?:o)?|rebootstrap|cach[eé]|colas?|json|hid|code\s*128|m[oó]dulos?|encoding|namespace|manifest|hash|commit|sha(?:-?256)?|schemas?|payload|sql|localstorage|fallback|alias|resolver|sync_activity|pgrst\w*|jwt|http\s*\d{3})\b|\b[A-Z][A-Z0-9]+(?:_[A-Z0-9]+)+\b|\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/i;
+  const MESSAGE_CATALOG = {
+    inventory: {
+      title: 'No hay existencias suficientes',
+      explanation: 'La cantidad disponible cambió antes de completar la operación.',
+      action: 'Revisa las existencias y ajusta la cantidad.', level: 'warning',
+    },
+    auth: {
+      title: 'Tu sesión necesita renovarse',
+      explanation: 'BALAM no pudo confirmar tu acceso.',
+      action: 'Inicia sesión nuevamente y vuelve a intentarlo.', level: 'warning',
+    },
+    permission: {
+      title: 'No tienes permiso para esta acción',
+      explanation: 'La operación fue detenida para proteger la información.',
+      action: 'Pide a una persona administradora que revise tu acceso.', level: 'danger',
+    },
+    network: {
+      title: 'No hay conexión en este momento',
+      explanation: 'Tu cambio permanece protegido en este equipo.',
+      action: 'Puedes seguir trabajando; BALAM lo enviará cuando vuelva la conexión.', level: 'warning',
+    },
+    server: {
+      title: 'El servicio no respondió',
+      explanation: 'BALAM no pudo completar la comunicación en este momento.',
+      action: 'Espera un momento y vuelve a intentarlo.', level: 'warning',
+    },
+    service_configuration: {
+      title: 'El servicio necesita mantenimiento',
+      explanation: 'BALAM detuvo la operación porque una parte del servicio no está disponible.',
+      action: 'Pide a una persona administradora que reporte el problema a soporte.', level: 'danger',
+    },
+    compatibility: {
+      title: 'Este equipo necesita actualizar su información',
+      explanation: 'La información compartida cambió y BALAM detuvo nuevas escrituras para evitar errores.',
+      action: 'Abre Centro de equipos y elige “Actualizar este equipo”.', level: 'danger',
+    },
+    conflict: {
+      title: 'Otra terminal guardó un cambio primero',
+      explanation: 'BALAM detuvo esta operación para no sobrescribir información reciente.',
+      action: 'Actualiza la pantalla, revisa los datos y vuelve a intentarlo.', level: 'warning',
+    },
+    data: {
+      title: 'Hay información que necesita revisión',
+      explanation: 'BALAM detuvo la operación porque encontró datos incompletos o incompatibles.',
+      action: 'Revisa los campos marcados; si persiste, pide ayuda a una persona administradora.', level: 'danger',
+    },
+    storage: {
+      title: 'Este equipo tiene poco espacio disponible',
+      explanation: 'BALAM conserva el cambio abierto para evitar perderlo.',
+      action: 'No cierres esta pestaña, libera espacio y vuelve a intentarlo.', level: 'danger',
+    },
+    barcode_ambiguous: {
+      title: 'El código identifica más de un producto',
+      explanation: 'BALAM detuvo la selección para evitar mover la pieza equivocada.',
+      action: 'Busca el producto por nombre y confirma sus características.', level: 'warning',
+    },
+    barcode_missing: {
+      title: 'Esta pieza no tiene un código válido',
+      explanation: 'La etiqueta no puede generarse de forma segura.',
+      action: 'Abre el producto y corrige su identificación antes de imprimir.', level: 'danger',
+    },
+    label_density: {
+      title: 'El código quedaría demasiado apretado',
+      explanation: 'Algunas lectoras podrían no reconocer la etiqueta impresa.',
+      action: 'No imprimas esta etiqueta; corrige la identificación del producto.', level: 'danger',
+    },
+    label_encoding: {
+      title: 'El código contiene caracteres no admitidos',
+      explanation: 'BALAM no puede crear una etiqueta legible con ese valor.',
+      action: 'Corrige la identificación del producto y vuelve a generar la etiqueta.', level: 'danger',
+    },
+    label_generation: {
+      title: 'No se pudo crear la imagen de la etiqueta',
+      explanation: 'BALAM detuvo este archivo para no entregar una etiqueta incompleta.',
+      action: 'Vuelve a generar la etiqueta; si continúa, pide ayuda a soporte.', level: 'danger',
+    },
+    file_format: {
+      title: 'El archivo no tiene el formato esperado',
+      explanation: 'BALAM no puede relacionar algunas filas con el inventario de forma segura.',
+      action: 'Descarga una plantilla nueva, copia tus datos y vuelve a importarla.', level: 'danger',
+    },
+    update_safety: {
+      title: 'La actualización está en espera',
+      explanation: 'Hay trabajo pendiente que debe protegerse antes de actualizar.',
+      action: 'Termina o sincroniza los cambios pendientes y vuelve a intentarlo.', level: 'warning',
+    },
+    unknown: {
+      title: 'No se pudo completar la acción',
+      explanation: 'BALAM detuvo la operación para proteger la información.',
+      action: 'Inténtalo nuevamente; si continúa, pide ayuda a una persona administradora.', level: 'danger',
+    },
+  };
+  function technicalMessageViewer() {
+    try {
+      const role = window.AUTH && window.AUTH.role && window.AUTH.role();
+      return !!(window.AUTH && window.AUTH.isAdmin && window.AUTH.isAdmin()) || role === 'support';
+    } catch (error) { return false; }
+  }
+  function messageTechnicalText(input) {
+    if (input == null) return '';
+    if (typeof input === 'string') return input;
+    if (input instanceof Error) return [input.name, input.message, input.code].filter(Boolean).join(' · ');
+    try { return JSON.stringify(input, null, 2); } catch (error) { return String(input); }
+  }
+  function classifyUserMessage(input) {
+    const raw = typeof input === 'string' ? input : ((input && (input.message || input.error || input.reason)) || '');
+    const code = String((input && input.code) || '').toLowerCase();
+    const category = String((input && input.category) || '').toLowerCase();
+    const all = `${code} ${category} ${raw}`.toLowerCase();
+    if (/barcode.*ambiguous|identity_ambiguous|c[oó]digo ambiguo|m[aá]s de una referencia/.test(all)) return 'barcode_ambiguous';
+    if (/missing_barcode|barcode.*missing|falta.*(?:barcode|code128)|no tiene.*c[oó]digo/.test(all)) return 'barcode_missing';
+    if (/density|\bdense\b|m[oó]dulo|demasiado.*(?:denso|apretado)/.test(all)) return 'label_density';
+    if (/generation_error|png.*(?:failed|error)|no se pudo.*imagen/.test(all)) return 'label_generation';
+    if (/encoding|code128|codificaci[oó]n/.test(all)) return 'label_encoding';
+    if (/pgrst|schema cache|column .* does not exist|relation .* does not exist/.test(all) || category === 'schema') return 'service_configuration';
+    if (/xlsx|excel|json|uuid|reference_|duplicate_(?:id|sku)|id_(?:not|required)|catalog_value|archivo.*(?:incompatible|versi[oó]n)/.test(all)) return 'file_format';
+    if (/quota|storage|persist|durable|localstorage|indexeddb|espacio/.test(all)) return 'storage';
+    if (/rebootstrap|protocol|epoch|compatib|actualizaci[oó]n.*espera/.test(all)) return 'compatibility';
+    if (/update.*(?:unsafe|blocked)|service.worker|trabajo pendiente.*actualizar/.test(all)) return 'update_safety';
+    if (/insufficient_stock|waiting_inventory|sin stock|existencias? insuficientes?/.test(all) || category === 'inventory') return 'inventory';
+    if (/401|jwt|not authenticated|unauthorized|sesi[oó]n|sign.?in/.test(all) || category === 'auth') return 'auth';
+    if (/403|42501|rls|row.level|permission denied|forbidden|permiso/.test(all) || category === 'permission') return 'permission';
+    if (/failed to fetch|network|load failed|fetch failed|sin conexi[oó]n|offline/.test(all) || category === 'network') return 'network';
+    if (/http\s*5\d\d|server|servidor/.test(all) || category === 'server') return 'server';
+    if (/conflict|mismatch|otra terminal|already_liquidated|folio_conflict/.test(all) || category === 'conflict') return 'conflict';
+    if (/^23|constraint|invalid_|missing|not_found|incomplete|no existe/.test(all) || category === 'constraint' || category === 'data') return 'data';
+    return 'unknown';
+  }
+  function messageAuthority(input, options = {}) {
+    if (input && input.__humanMessage) return input;
+    const raw = typeof input === 'string' ? input : ((input && (input.message || input.error || input.reason)) || '');
+    const explicitCode = !!(input && typeof input === 'object' && (input.code || input.category || input.status));
+    const unsafe = TECHNICAL_JARGON.test(String(raw)) || TECHNICAL_JARGON.test(String((input && input.code) || ''));
+    const color = String(options.color || '');
+    const hintedLevel = options.level || (color.includes('danger') ? 'danger' : color.includes('warning') ? 'warning' : color.includes('accent') || color.includes('success') ? 'success' : null);
+    const customCopy = options.code || options.title || options.explanation || options.action;
+    if (raw && !explicitCode && !unsafe && !customCopy) {
+      return { __humanMessage: true, title: String(raw), explanation: '', action: '', level: hintedLevel || 'neutral', technicalDetails: '' };
+    }
+    const key = options.code && MESSAGE_CATALOG[options.code] ? options.code : classifyUserMessage(input);
+    const base = MESSAGE_CATALOG[key] || MESSAGE_CATALOG.unknown;
+    return {
+      __humanMessage: true,
+      title: options.title || base.title,
+      explanation: options.explanation || base.explanation,
+      action: options.action || base.action,
+      level: options.level || base.level,
+      technicalDetails: messageTechnicalText(input),
+    };
+  }
+  function messageText(input, options) {
+    const msg = messageAuthority(input, options);
+    return [msg.title, msg.explanation, msg.action].filter(Boolean).join(' ');
+  }
+  function HumanMessage({ message, options = {}, className = '' }) {
+    const msg = messageAuthority(message, options);
+    const style = MESSAGE_LEVEL[msg.level] || MESSAGE_LEVEL.neutral;
+    return React.createElement('div', { className, 'data-message-level': msg.level }, [
+      React.createElement('p', { key: 'title', className: 'font-semibold ' + style.tone }, msg.title),
+      msg.explanation && React.createElement('p', { key: 'explanation', className: 'mt-1 text-on-surface-variant' }, msg.explanation),
+      msg.action && React.createElement('p', { key: 'action', className: 'mt-1 font-medium text-on-surface' }, msg.action),
+      technicalMessageViewer() && msg.technicalDetails && React.createElement('details', {
+        key: 'technical', className: 'mt-2 text-overline text-on-surface-variant', 'data-technical-details': 'true',
+      }, [
+        React.createElement('summary', { key: 'summary', className: 'cursor-pointer font-semibold' }, 'Detalles técnicos'),
+        React.createElement('pre', { key: 'body', className: 'mt-1 whitespace-pre-wrap break-all font-mono' }, msg.technicalDetails),
+      ]),
+    ]);
+  }
+
   // Toast system
   let pushToastFn = null;
   function ToastHost() {
     const [toasts, setToasts] = useState([]);
     useEffect(() => {
-      pushToastFn = (msg, color = 'var(--success)') => {
+      pushToastFn = (input, color = 'var(--success)') => {
         const id = Math.random();
-        setToasts(t => [...t, { id, msg, color }]);
-        setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 2600);
+        const msg = messageAuthority(input, { color });
+        // Un error nuevo sustituye al anterior del mismo nivel: evita que una
+        // causa ya resuelta se mezcle visualmente con la siguiente acción.
+        setToasts(t => [...t.filter(existing => existing.msg.level !== msg.level), { id, msg, color: (MESSAGE_LEVEL[msg.level] || {}).color || color }]);
+        setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), msg.level === 'danger' || msg.level === 'warning' ? 5200 : 3000);
       };
     }, []);
     return React.createElement('div', { className: 'fixed top-4 inset-x-4 sm:inset-x-auto sm:top-auto sm:bottom-5 sm:right-5 z-[200] flex flex-col gap-2 items-stretch sm:items-end' },
@@ -185,7 +368,7 @@
         className: 'max-w-full flex items-center gap-2.5 px-4 py-3 bg-primary-container text-white text-sm rounded-lg shadow-e3',
       }, [
         React.createElement('span', { key: 'd', className: 'w-2 h-2 rounded-full shrink-0', style: { background: t.color } }),
-        React.createElement('span', { key: 'm' }, t.msg),
+        React.createElement(HumanMessage, { key: 'm', message: t.msg, className: 'min-w-0' }),
       ])));
   }
   function toast(msg, color) { if (pushToastFn) pushToastFn(msg, color); }
@@ -371,5 +554,5 @@
     ]);
   }
 
-  window.UI = { fmt, fechaCorta, fechaHora, Badge, StatusBadge, StockBadge, ProductThumb, ToastHost, toast, Page, Toolbar, ActionGroup, KPI, Drawer, Modal, BADGE_TONE, Pager, Segment, resizeImageFile, imageFileDimensions, useSyncActivity, useSyncFocusActivity, useReceiptAutoPrint };
+  window.UI = { fmt, fechaCorta, fechaHora, Badge, StatusBadge, StockBadge, ProductThumb, ToastHost, toast, HumanMessage, messageAuthority, messageText, technicalMessageViewer, Page, Toolbar, ActionGroup, KPI, Drawer, Modal, BADGE_TONE, MESSAGE_LEVEL, Pager, Segment, resizeImageFile, imageFileDimensions, useSyncActivity, useSyncFocusActivity, useReceiptAutoPrint };
 })();

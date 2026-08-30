@@ -89,11 +89,14 @@ try {
   check('el problema se lista por producto y talla sin UUID',
     warningText.includes('PVC10 · talla 34') && warningText.includes('PVC10 · talla 36')
       && !modalText.includes('h127-private-v1-primary'));
-  check('la causa informa densidad, X, módulos y alto efectivo',
-    warningText.includes('Densidad: X 0.199 mm') && warningText.includes('277 módulos') && warningText.includes('barras 10.0 mm'));
-  check('V2 muestra SKU largo pero diagnostica el barcode logístico real',
-    nearText.includes('SKU 1-VIC-ML-ALG-TRA-BL-40') && nearText.includes('Code128 B40728BF7CF1B48A')
-      && nearText.includes('X 0.260 mm'));
+  check('la causa explica el riesgo y la acción sin exigir medidas técnicas',
+    warningText.includes('El código quedaría demasiado apretado')
+      && warningText.includes('No imprimas esta etiqueta')
+      && !/Densidad:|\bX \d|módulos|barras \d/.test(warningText));
+  check('la advertencia preventiva identifica el producto y orienta una prueba',
+    nearText.includes('SKU 1-VIC-ML-ALG-TRA-BL-40')
+      && nearText.includes('Haz una impresión de prueba')
+      && !/Code128|\bX \d/.test(nearText));
   check('desaparecen la causa universal y la recomendación de alterar SKU',
     !modalText.includes('demasiado largos') && !modalText.includes('acorta el SKU'));
   await page.setViewportSize({ width: 360, height: 760 });
@@ -109,8 +112,9 @@ try {
   await mount('ambiguous');
   await page.getByTestId('inventory-labels').click();
   const ambiguousText = await page.getByTestId('labels-legibility-warning').innerText();
-  check('ambigüedad se distingue de densidad y no elige una referencia',
-    ambiguousText.includes('Ambigüedad:') && ambiguousText.includes('2 referencias') && ambiguousText.includes('Densidad:'));
+  check('ambigüedad se distingue del riesgo de impresión y no elige un producto',
+    ambiguousText.includes('El código identifica más de un producto')
+      && ambiguousText.includes('El código quedaría demasiado apretado'));
   check('la lista ambigua tampoco muestra identidades técnicas',
     !ambiguousText.includes('h127-private-v1-primary') && !ambiguousText.includes('h127-private-v1-duplicate'));
   await page.getByTestId('label-modal-close').click();
@@ -130,8 +134,9 @@ try {
   await mount('generation');
   await page.getByTestId('inventory-labels').click();
   const generationText = await page.getByTestId('labels-legibility-warning').innerText();
-  check('fallo de PNG se distingue como error de generación',
-    generationText.includes('Generación: no se pudo producir el PNG'));
+  check('fallo de imagen se distingue y explica qué hacer',
+    generationText.includes('No se pudo crear la imagen de la etiqueta')
+      && generationText.includes('Vuelve a generar la etiqueta'));
   await page.evaluate(() => { window.BARCODES.toPNGDataURL = window.__h127OriginalPng; });
 } finally {
   await Promise.race([browser.close(), new Promise(done => setTimeout(done, 5000))]);

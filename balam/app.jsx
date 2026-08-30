@@ -4,7 +4,7 @@
   const D = window.DATA;
   const { useTweaks } = window;
   const { MS } = window.HX;
-  const { fmt } = window.UI;
+  const { fmt, HumanMessage, messageAuthority } = window.UI;
   const h = React.createElement;
 
   // Campana de notificaciones: alertas reales (stock crítico, apartados por completar).
@@ -40,15 +40,13 @@
       items.push({
         icon: waiting ? 'clock' : 'alert',
         tone: waiting ? '#92760F' : '#ba1a1a',
-        title: waiting ? 'Cambio pendiente de sincronizar' : 'Cambio bloqueado en la nube',
-        sub: op.diagnostic.message,
+        message: op.diagnostic,
         action: () => window.STORE && window.STORE.retryOperation(op.id),
       });
     });
     if (syncStatus && syncStatus.durability === 'memory') items.unshift({
       icon: 'alert', tone: '#ba1a1a',
-      title: 'Cola sin almacenamiento durable',
-      sub: 'No cierres esta pestaña; libera espacio y vuelve a intentar.',
+      message: { code: 'storage_unavailable', message: 'queue_durability_memory' },
     });
     const n = items.length;
     return h('div', { className: 'relative' }, [
@@ -72,8 +70,10 @@
         }, [
           h('span', { key: 'i', className: 'mt-0.5 shrink-0', style: { color: it.tone } }, h(MS, { name: it.icon, size: 18 })),
           h('div', { key: 'd', className: 'min-w-0' }, [
-            h('p', { key: 't', className: 'text-caption font-semibold text-primary truncate' }, it.title),
-            it.sub && h('p', { key: 's', className: 'text-overline text-on-surface-variant truncate' }, it.sub),
+            it.message
+              ? h(HumanMessage, { key: 'message', message: it.message, className: 'text-caption' })
+              : h('p', { key: 't', className: 'text-caption font-semibold text-primary truncate' }, it.title),
+            !it.message && it.sub && h('p', { key: 's', className: 'text-overline text-on-surface-variant truncate' }, it.sub),
           ]),
         ])))
           : h('div', { key: 'e', className: 'px-4 py-10 text-center text-caption text-on-surface-variant' }, 'Sin notificaciones pendientes'),
@@ -349,7 +349,7 @@
     async function submit() {
       if (busy) return;
       if (!email.trim() || !pass) {
-        setError('Escribe correo y contraseña');
+        setError(messageAuthority('Escribe correo y contraseña', { color: 'var(--danger)' }));
         toast('Escribe correo y contraseña', 'var(--danger)');
         return;
       }
@@ -359,12 +359,12 @@
         const r = await window.AUTH.login(email, pass);
         if (r.ok) { toast('Sesión iniciada', 'var(--accent)'); return; }
         const motivo = r.error || 'No se pudo iniciar sesión';
-        setError(motivo);
+        setError(messageAuthority(motivo, { color: 'var(--danger)' }));
         toast(motivo, 'var(--danger)');
       } catch (e) {
         // Un fallo inesperado tampoco puede dejar la pantalla muda.
         const motivo = (e && e.message) || 'No se pudo iniciar sesión';
-        setError(motivo);
+        setError(messageAuthority(motivo, { color: 'var(--danger)' }));
         toast(motivo, 'var(--danger)');
       } finally { setBusy(false); }
     }
@@ -391,7 +391,7 @@
           style: { background: 'rgba(255,138,128,0.12)', color: '#FF8A80' },
         }, [
           h(MS, { key: 'i', name: 'lock', size: 16 }),
-          h('span', { key: 'm' }, error),
+          h(HumanMessage, { key: 'm', message: error, className: 'min-w-0' }),
         ]),
         h('button', {
           key: 'go', className: 'w-full h-12 rounded-lg font-label-sm uppercase tracking-widest text-xs flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50',

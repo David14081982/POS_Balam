@@ -24,8 +24,13 @@ check('la aplicación usa la copia local versionada', source.includes('balam/ven
 check('no queda la versión vulnerable en fuentes ni artefacto offline',
   !source.includes('xlsx@0.18.5') && !stableSource.includes('xlsx@0.18.5')
   && !ioSource.includes('xlsx@0.18.5') && !offlineSource.includes('xlsx@0.18.5'));
+const vendorBytes = fs.readFileSync(VENDOR);
+// Git puede materializar este JavaScript textual con CRLF en Windows. La suma
+// fijada pertenece al contenido canónico LF; sólo se normalizan finales de
+// línea, por lo que cualquier cambio de código continúa fallando.
+const canonicalVendorBytes = Buffer.from(vendorBytes.toString('utf8').replace(/\r\n/g, '\n'));
 check('la copia local conserva el SHA-256 fijado',
-  createHash('sha256').update(fs.readFileSync(VENDOR)).digest('hex') === EXPECTED_SHA256);
+  createHash('sha256').update(canonicalVendorBytes).digest('hex') === EXPECTED_SHA256);
 check('Configuración usa la frontera central de lectura',
   settingsSource.includes('IO.readWorkbook(file)') && !settingsSource.includes('X.read(reader.result'));
 

@@ -305,7 +305,7 @@
       h('div', { key: 'head', className: 'mb-5 flex flex-wrap items-end justify-between gap-3' }, [
         h('div', { key: 'copy' }, [
           h(SerifHeading, { key: 'title', children: 'Permisos de visualización' }),
-          h('p', { key: 'hint', className: 'mt-1 text-caption text-on-surface-variant' }, 'Los módulos se derivan de sus pantallas. Cada cambio se guarda por usuario.'),
+          h('p', { key: 'hint', className: 'mt-1 text-caption text-on-surface-variant' }, 'Las áreas se organizan por pantallas. Cada cambio se guarda por usuario.'),
         ]),
         dirty && h('span', { key: 'dirty', className: 'px-3 py-1.5 rounded-full bg-gold-soft text-gold-text text-overline font-bold uppercase' }, `${Object.keys(draft).length} cambios pendientes`),
       ]),
@@ -358,7 +358,7 @@
                 ]),
                 h('input', {
                   key: 'screen-search', value: screenSearch, onChange: e => setScreenSearch(e.target.value),
-                  placeholder: 'Buscar pantalla o módulo', 'data-testid': 'permission-screen-search',
+                  placeholder: 'Buscar pantalla o área', 'data-testid': 'permission-screen-search',
                   className: 'w-full h-11 px-3 rounded-lg bg-surface border border-outline-variant text-body',
                 }),
                 ...groups.map(group => h(GlassCard, { key: group.screen.id, className: 'p-4 min-w-0' }, [

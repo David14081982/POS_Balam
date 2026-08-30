@@ -3,7 +3,7 @@
 // Exporta window.SettingsScreen
 (function () {
   const { useState, useEffect, useRef } = React;
-  const { toast, resizeImageFile, imageFileDimensions } = window.UI;
+  const { toast, HumanMessage, resizeImageFile, imageFileDimensions } = window.UI;
   const { MS, GlassCard, SerifHeading } = window.HX;
   const C = window.CONFIG;
   const D = window.DATA;
@@ -255,7 +255,7 @@
     function regenerar() {
       const n = (D.products || []).length;
       if (!n) { toast('No hay productos que regenerar'); return; }
-      if (!window.confirm('¿Regenerar el SKU comercial de ' + n + ' producto(s) con la receta actual?\n\nLa identidad técnica no cambia, pero los documentos existentes conservarán el SKU anterior como snapshot. Úsalo durante la configuración inicial para evitar confusión visual.\n\nEsta acción no se puede deshacer.')) return;
+      if (!window.confirm('¿Regenerar el SKU comercial de ' + n + ' producto(s) con la receta actual?\n\nBALAM seguirá reconociendo los mismos productos y los documentos existentes conservarán el SKU anterior. Úsalo durante la configuración inicial para evitar confusión visual.\n\nEsta acción no se puede deshacer.')) return;
       const r = D.regenerateSkus();
       toast(r.changed + ' de ' + r.total + ' SKUs actualizados', 'var(--accent)');
     }
@@ -266,8 +266,6 @@
     };
     const preview = parts.map(p => sampleCode(p.kind)).join('-');
     const currentMaxSkuLength = (D.products || []).reduce((max, product) => Math.max(max, String(product.sku || '').length), 0);
-    const previewCode128 = window.BARCODES && window.BARCODES.validateLabelCode && preview
-      ? window.BARCODES.validateLabelCode(preview) : null;
     // El catálogo "Modelo" no cuenta como oculto: está cableado al campo Nombre / Modelo del alta.
     const modeloK = C.modeloKind ? C.modeloKind() : null;
     const hidden = parts.filter(x => x.kind !== modeloK).map(p => C.catalogMeta(p.kind)).filter(m => m && m.formSelect && !m.inForm);
@@ -290,14 +288,12 @@
         h('span', { key: 'v', className: 'font-mono text-body text-gold-text' }, preview),
       ]),
       h('div', { key: 'length', className: 'mt-2 text-caption text-on-surface-variant' }, [
-        h('span', { key: 'stats' }, `Longitud esperada: ${preview.length} caracteres · máximo actual: ${currentMaxSkuLength}. El SKU comercial no tiene un máximo técnico fijado.`),
-        h('span', { key: 'barcode', className: 'block mt-1' }, previewCode128
-          ? `Si se intentara codificar esta vista como Code128 60×40: ${previewCode128.ok ? 'apta' : 'no apta'} (${previewCode128.moduleMm.toFixed(3)} mm por módulo). V2 siempre codifica el barcode logístico de 16 caracteres, no este SKU.`
-          : 'V2 codifica un barcode logístico fijo de 16 caracteres; nunca el SKU comercial.'),
+        h('span', { key: 'stats' }, `Longitud esperada: ${preview.length} caracteres · máximo actual: ${currentMaxSkuLength}.`),
+        h('span', { key: 'barcode', className: 'block mt-1' }, 'El SKU es una clave comercial visible. BALAM usa otra identificación segura para reconocer cada producto al escanear.'),
       ]),
       hasSize ? h('div', { key: 'szn', className: 'mt-2 flex items-start gap-2 text-caption text-on-surface-variant' }, [
         h(MS, { key: 'i', name: 'barcode', size: 15, className: 'text-on-surface-variant/70 shrink-0 mt-0.5' }),
-        h('span', { key: 't' }, `En referencias V2, el SKU muestra la talla real. “${sizeMark}” sólo conserva el lugar de talla en productos V1 con matriz; el barcode logístico V2 es independiente del SKU.`),
+        h('span', { key: 't' }, `En productos nuevos, el SKU muestra la talla real. “${sizeMark}” sólo marca el lugar donde BALAM colocará la talla en productos anteriores.`),
       ]) : null,
       hidden.length ? h('div', { key: 'w', className: 'mt-3 flex items-start gap-2 text-caption text-on-surface-variant bg-gold/5 border border-gold/30 rounded-lg p-3' }, [
         h(MS, { key: 'i', name: 'alert', size: 16, className: 'text-gold-text shrink-0 mt-0.5' }),
@@ -320,16 +316,16 @@
             .find(key => C.catalogMeta(key).label === label)).filter(Boolean);
           return h('div', { key: group[0].sku, className: 'mt-2 text-overline text-on-surface-variant' }, [
             h('code', { key: 'sku', className: 'font-bold text-primary' }, group[0].sku),
-            h('span', { key: 'count' }, ` · ${group.length} referencias: ${group.map(p => p.id).join(', ')}`),
+            h('span', { key: 'count' }, ` · ${group.length} productos comparten esta clave`),
             uniqueDifferences.length ? h('div', { key: 'diff' }, 'Diferencias: ' + uniqueDifferences.map(d => `${d.label} (${Array.isArray(d.left) ? d.left.join('+') : d.left} / ${Array.isArray(d.right) ? d.right.join('+') : d.right})`).join(', ')) : null,
             off.length ? h('div', { key: 'off', className: 'font-semibold text-warning' }, 'EN SKU = OFF: ' + off.join(', ') + '. Actívalo para distinguirlas comercialmente.') : null,
-            offKinds.length && D.skuPreview ? h('div', { key: 'proposal', className: 'mt-1 font-mono text-primary' }, 'Si se incorporan: ' + group.map(p => `${p.id}: ${D.skuPreview(p, offKinds)}`).join(' · ')) : null,
+            offKinds.length && D.skuPreview ? h('div', { key: 'proposal', className: 'mt-1 font-mono text-primary' }, 'Claves sugeridas: ' + group.map(p => D.skuPreview(p, offKinds)).join(' · ')) : null,
           ]);
         }),
       ]) : null,
       // Regenerar SKUs de productos existentes (el SKU está congelado al crear).
       h('div', { key: 'rg', className: 'mt-4 pt-4 border-t border-outline-variant/60 flex items-center justify-between gap-3 flex-wrap' }, [
-        h('p', { key: 't', className: 'text-caption text-on-surface-variant max-w-md' }, 'El SKU se fija al crear cada producto. Una regeneración explícita cambia sólo su código comercial actual; products.id, barcode y snapshots de documentos no cambian.'),
+        h('p', { key: 't', className: 'text-caption text-on-surface-variant max-w-md' }, 'El SKU se fija al crear cada producto. Regenerarlo cambia sólo su clave comercial visible; BALAM seguirá reconociendo el mismo producto y conservará los documentos anteriores.'),
         h('button', { key: 'b', type: 'button', className: 'inline-flex items-center gap-2 px-4 h-10 border border-danger/40 text-danger text-caption font-bold uppercase tracking-widest rounded-lg hover:bg-danger-soft transition shrink-0', onClick: regenerar }, [h(MS, { key: 'i', name: 'repeat', size: 16 }), 'Regenerar SKUs']),
       ]),
     ]);
@@ -432,7 +428,7 @@
             h('p', { key: 'b' }, `Piezas antes y después: ${resultado.piezasTotales} · renglones de existencias: ${resultado.renglones} · productos tocados: ${resultado.efectos.productos} · precios por talla remapeados: ${resultado.efectos.precios} · códigos de barras: ${resultado.efectos.barcodes} · promociones: ${resultado.efectos.promociones}.`),
             h('p', { key: 'c', className: 'mt-1 font-semibold' }, `Reimprime ${resultado.efectos.etiquetas} etiqueta(s) en Inventario → Etiquetas.`),
           ]
-        : h('p', {}, resultado.error)) : null,
+        : h(HumanMessage, { message: resultado.error, className: 'text-caption' })) : null,
     ]);
   }
 
@@ -556,11 +552,11 @@
               `Renglones de existencias borrados: ${N(resultado.renglones)}. ` +
               (resultado.configIntacta
                 ? 'Catálogos, tallas, precios, descuentos, vendedores, usuarios y permisos quedaron intactos.'
-                : 'ATENCIÓN: la huella de configuración cambió; revisa Configuración antes de seguir.')),
+                : 'ATENCIÓN: la configuración cambió; revísala antes de seguir.')),
             h('p', { key: 'c', className: 'mt-1 font-semibold' },
               'Ahora importa el catálogo nuevo desde Inventario → Importar Excel.'),
           ]
-        : h('p', {}, resultado.error)) : null,
+        : h(HumanMessage, { message: resultado.error, className: 'text-caption' })) : null,
     ]);
   }
 
@@ -1341,10 +1337,10 @@
       catch (e) { toast(e.message || String(e), 'var(--danger)'); }
     };
     const pointZero = () => {
-      if (!window.confirm('Se fijará esta nube como inventario autoritativo. Las demás computadoras deberán resincronizarse antes de volver a escribir. ¿Continuar?')) return;
+      if (!window.confirm('Se tomará la información actual como el nuevo punto de partida. Los demás equipos deberán actualizarse antes de volver a guardar. ¿Continuar?')) return;
       act(async () => {
         const r = await window.STORE.establishPointZero();
-        toast(`Punto cero ${r.data_epoch}: ${r.product_count} productos · ${r.piece_count} piezas`, 'var(--accent)');
+        toast(`Nuevo punto de partida confirmado: ${r.product_count} productos · ${r.piece_count} piezas`, 'var(--accent)');
       });
     };
     const relativeTime = value => {
@@ -1452,7 +1448,7 @@
             h('div', { key: 'main', className: 'flex-1 min-w-0' }, [
               h('div', { key: 'name', className: 'font-semibold text-primary truncate' }, deviceLabel(device)),
               h('div', { key: 'meta', className: 'text-overline text-on-surface-variant mt-1' },
-                `${device.device_type === 'laptop' ? 'Laptop' : device.device_type === 'pc' ? 'PC' : 'Equipo'} · última señal ${relativeTime(device.last_seen_at)} · versión ${device.client_build || '—'}`),
+                `${device.device_type === 'laptop' ? 'Laptop' : device.device_type === 'pc' ? 'PC' : 'Equipo'} · última señal ${relativeTime(device.last_seen_at)}`),
             ]),
             h('span', { key: 'state', className: 'px-3 py-1 rounded-full text-overline font-bold ' + state.cls }, state.label),
             window.AUTH.isAdmin() && h('div', { key: 'admin', className: 'flex flex-wrap gap-2' }, [
@@ -1464,7 +1460,11 @@
             ]),
           ]),
           h('div', { key: 'counts', className: 'text-overline text-on-surface-variant mt-3' },
-            `${Number(device.queue_pending) || 0} pendiente(s) · ${Number(device.queue_blocked) || 0} bloqueado(s) · última sincronización confirmada ${device.last_synced_at ? relativeTime(device.last_synced_at) : 'no disponible'}`),
+            `${Number(device.queue_pending) || 0} cambio(s) pendiente(s) · ${Number(device.queue_blocked) || 0} bloqueado(s) · última actualización confirmada ${device.last_synced_at ? relativeTime(device.last_synced_at) : 'no disponible'}`),
+          window.UI.technicalMessageViewer() && h('details', { key: 'technical', className: 'mt-2 text-overline text-on-surface-variant', 'data-technical-details': 'true' }, [
+            h('summary', { key: 'summary', className: 'cursor-pointer font-semibold' }, 'Detalles técnicos'),
+            h('div', { key: 'build', className: 'mt-1 break-all font-mono' }, `Build: ${device.client_build || '—'} · Device: ${device.device_id}`),
+          ]),
           isEditing && h('div', { key: 'form', className: 'grid grid-cols-1 md:grid-cols-[1fr_160px_auto] gap-2 mt-3 p-3 bg-surface-container-low rounded-lg' }, [
             h('input', { key: 'name', value: deviceName, maxLength: 80, onChange: e => setDeviceName(e.target.value), placeholder: 'Ej. Laptop administración', className: 'h-10 px-3 rounded-lg border border-outline-variant bg-surface' }),
             h('select', { key: 'type', value: deviceType, onChange: e => setDeviceType(e.target.value), className: 'h-10 px-3 rounded-lg border border-outline-variant bg-surface' }, [
@@ -1487,7 +1487,7 @@
             h('div', { key: 'title', className: 'font-semibold text-primary' }, item.summary),
             h('div', { key: 'meta', className: 'text-overline text-on-surface-variant mt-1' },
               `${device ? deviceLabel(device) : 'Equipo no identificado'} · ${item.user_email || 'usuario'} · ${relativeTime(item.updated_at)}`),
-            item.diagnostic && h('div', { key: 'reason', className: 'text-caption mt-2 ' + (historical ? 'text-on-surface-variant' : 'text-danger') }, item.diagnostic.message || item.diagnostic.code),
+            item.diagnostic && h(HumanMessage, { key: 'reason', message: item.diagnostic, className: 'text-caption mt-2' }),
           ]),
           h('span', { key: 'status', className: 'px-3 py-1 rounded-full text-overline font-bold ' + (item.status === 'synced' ? 'text-success bg-success-soft' : actionable ? 'text-danger bg-danger-soft' : historical ? 'text-on-surface-variant bg-surface-container' : 'text-warning bg-warning-soft') },
             item.status === 'synced' ? 'Sincronizado' : actionable ? 'Requiere atención' : historical ? 'Incidencia histórica' : item.status === 'retrying' ? 'Reintentando' : 'Pendiente'),
@@ -1501,7 +1501,7 @@
         h('div', { key: 'tools', className: 'flex items-start justify-between gap-3 flex-wrap p-3 rounded-xl bg-surface-container-low border border-outline-variant' }, [
           h('div', { key: 'text' }, [
             h('div', { key: 'title', className: 'font-semibold text-primary' }, 'Expedientes de recuperación'),
-            h('div', { key: 'desc', className: 'text-caption text-on-surface-variant mt-1' }, 'El Excel es legible; el JSON técnico original permanece como respaldo del equipo.'),
+            h('div', { key: 'desc', className: 'text-caption text-on-surface-variant mt-1' }, 'El reporte explica cada caso y conserva la evidencia necesaria para soporte.'),
           ]),
           h('button', { key: 'xlsx', disabled: !quarantine.length, onClick: exportQuarantine, className: 'px-3 h-10 border border-outline-variant rounded-lg disabled:opacity-40' }, 'Exportar reporte Excel'),
         ]),
@@ -1516,28 +1516,30 @@
                 h('div', { key: 'title', className: 'font-semibold text-primary' }, item.summary),
                 h('div', { key: 'meta', className: 'text-overline text-on-surface-variant mt-1' },
                   `${device ? deviceLabel(device) : item.device_id} · ${item.reference || 'sin folio'} · ${detail.itemCount || 0} artículo(s) · $${Number(detail.total || 0).toFixed(2)}`),
-                h('div', { key: 'epoch', className: 'text-overline text-on-surface-variant mt-1' },
-                  `Línea base local ${item.local_epoch || '—'} → nube ${item.remote_epoch} · huella ${String(item.payload_hash || '').slice(0, 12)}…`),
                 item.decision_note && h('div', { key: 'note', className: 'text-caption mt-2' }, `Nota: ${item.decision_note}`),
-                item.execution_message && h('div', { key: 'execution', className: 'text-caption text-danger mt-2' }, item.execution_message),
+                item.execution_message && h(HumanMessage, { key: 'execution', message: item.execution_message, options: { level: 'danger' }, className: 'text-caption mt-2' }),
+                window.UI.technicalMessageViewer() && h('details', { key: 'technical', className: 'mt-2 text-overline text-on-surface-variant', 'data-technical-details': 'true' }, [
+                  h('summary', { key: 'summary', className: 'cursor-pointer font-semibold' }, 'Detalles técnicos'),
+                  h('div', { key: 'body', className: 'mt-1 break-all font-mono' }, `Local epoch ${item.local_epoch || '—'} → remote epoch ${item.remote_epoch} · payload hash ${String(item.payload_hash || '')}`),
+                ]),
               ]),
-              h('span', { key: 'status', className: 'px-3 py-1 rounded-full text-overline font-bold ' + (item.status === 'resolved' ? 'text-success bg-success-soft' : actionable ? 'text-danger bg-danger-soft' : 'text-warning bg-warning-soft') }, labels[item.status] || item.status),
+              h('span', { key: 'status', className: 'px-3 py-1 rounded-full text-overline font-bold ' + (item.status === 'resolved' ? 'text-success bg-success-soft' : actionable ? 'text-danger bg-danger-soft' : 'text-warning bg-warning-soft') }, labels[item.status] || 'Estado por revisar'),
             ]),
             actionable && window.AUTH.isAdmin() && h('div', { key: 'actions', className: 'flex gap-2 flex-wrap mt-3' }, [
-              h('button', { key: 'approve', 'data-testid': 'quarantine-approve-' + item.operation_id, disabled: busy, onClick: () => decideQuarantine(item, 'approve'), className: 'px-3 h-9 bg-primary text-on-primary rounded-lg disabled:opacity-40' }, 'Autorizar por RPC normal'),
+              h('button', { key: 'approve', 'data-testid': 'quarantine-approve-' + item.operation_id, disabled: busy, onClick: () => decideQuarantine(item, 'approve'), className: 'px-3 h-9 bg-primary text-on-primary rounded-lg disabled:opacity-40' }, 'Autorizar reintento seguro'),
               h('button', { key: 'reject', 'data-testid': 'quarantine-reject-' + item.operation_id, disabled: busy, onClick: () => decideQuarantine(item, 'reject'), className: 'px-3 h-9 border border-danger text-danger rounded-lg disabled:opacity-40' }, 'Rechazar'),
             ]),
           ]);
         }) : [h('p', { key: 'empty', className: 'text-caption text-on-surface-variant py-6 text-center' }, 'No existen operaciones en cuarentena.')]),
       ]),
-      h('details', { key: 'tools', className: 'mt-5 border-t border-outline-variant pt-4' }, [
-        h('summary', { key: 'summary', className: 'cursor-pointer text-caption font-semibold text-primary' }, 'Herramientas de verificación y recuperación'),
+      window.UI.technicalMessageViewer() && h('details', { key: 'tools', className: 'mt-5 border-t border-outline-variant pt-4', 'data-technical-details': 'true' }, [
+        h('summary', { key: 'summary', className: 'cursor-pointer text-caption font-semibold text-primary' }, 'Detalles técnicos'),
         h('p', { key: 'technical', className: 'text-overline text-on-surface-variant mt-3' },
           `Época ${status.dataEpoch == null ? '—' : status.dataEpoch} · tiempo real ${status.realtime} · ${status.pending} pendientes locales · ${status.blocked} bloqueados · ${status.invalidDomains.length} dominios por aplicar.`),
         h('div', { key: 'a', className: 'flex gap-2 flex-wrap mt-3' }, [
           h('button', { key: 'r', disabled: busy, onClick: () => act(() => window.STORE.reconcileDomains()), className: 'px-4 h-10 border border-outline-variant rounded-lg disabled:opacity-40' }, 'Verificar ahora'),
           h('button', { key: 'b', disabled: busy, onClick: exportBackup, className: 'px-4 h-10 border border-outline-variant rounded-lg disabled:opacity-40' }, backup ? 'Respaldo exportado' : 'Exportar recuperación'),
-          needsBootstrap && h('button', { key: 'rb', disabled: busy || !backup, onClick: () => act(() => window.STORE.rebootstrapFromCloud()), className: 'px-4 h-10 bg-primary text-on-primary rounded-lg disabled:opacity-40' }, 'Resincronizar desde la nube'),
+          needsBootstrap && h('button', { key: 'rb', disabled: busy || !backup, onClick: () => act(() => window.STORE.rebootstrapFromCloud()), className: 'px-4 h-10 bg-primary text-on-primary rounded-lg disabled:opacity-40' }, 'Actualizar este equipo'),
           window.AUTH.isAdmin() && h('button', { key: 'z', disabled: busy || !clean || !backup, onClick: pointZero, className: 'px-4 h-10 bg-danger text-white rounded-lg disabled:opacity-40' }, 'Establecer punto cero'),
         ]),
       ]),
@@ -1764,7 +1766,7 @@
               ])),
             ]))),
           ]),
-          h('p', { key: 'n', className: 'px-5 py-3 text-caption text-on-surface-variant' }, 'El administrador inicia sesión con correo y contraseña; los vendedores no inician sesión (se eligen al cobrar). Autenticación robusta (RLS/Supabase Auth) = fase posterior.'),
+          h('p', { key: 'n', className: 'px-5 py-3 text-caption text-on-surface-variant' }, 'El administrador inicia sesión con correo y contraseña; los vendedores se eligen al cobrar y no necesitan iniciar sesión.'),
         ]),
       ];
     },
@@ -1848,17 +1850,13 @@
               'Borra todo el inventario y todas las operaciones para dejar BALAM vacío.'),
           ]),
         ]),
-        error && h('div', { key: 'error', 'data-testid': 'point-zero-error', role: 'alert',
-          className: 'mt-4 p-3 rounded-lg bg-danger-soft text-danger text-caption' }, [
-          h('div', { key: 'title', className: 'font-bold' }, 'No se pudo actualizar el diagnóstico'),
-          h('div', { key: 'detail', className: 'mt-1' }, error),
-          h('div', { key: 'guard', className: 'mt-1' }, 'La limpieza permanece bloqueada.'),
-        ]),
+        error && h('div', { key: 'error', 'data-testid': 'point-zero-error', role: 'alert' },
+          h(HumanMessage, { message: error, options: { title: 'No se pudo revisar la limpieza', explanation: 'La limpieza permanece bloqueada y no se modificó información.', action: 'Espera un momento y vuelve a actualizar la revisión.', level: 'danger' }, className: 'mt-4 p-3 rounded-lg bg-danger-soft text-caption' })),
         preview && h('section', { key: 'diagnostic', 'data-testid': 'point-zero-diagnostic',
           'aria-live': 'polite', className: 'mt-5 p-4 rounded-xl border border-outline-variant bg-surface-container-low' }, [
           h('div', { key: 'status', className: 'flex items-start justify-between gap-3 flex-wrap' }, [
             h('div', { key: 'title' }, [
-              h('div', { key: 'overline', className: 'text-overline font-bold uppercase tracking-widest text-primary' }, 'Diagnóstico autoritativo'),
+              h('div', { key: 'overline', className: 'text-overline font-bold uppercase tracking-widest text-primary' }, 'Revisión de seguridad'),
               h('div', { key: 'fresh', className: 'mt-1 text-caption text-success font-semibold' }, 'Actualización completada'),
             ]),
             h('time', { key: 'time', dateTime: preview.diagnosed_at, className: 'text-caption text-on-surface-variant' },
@@ -1875,7 +1873,7 @@
             ]),
           ]),
           h('div', { key: 'guard-state', className: 'mt-4 pt-3 border-t border-outline-variant text-caption text-on-surface-variant' },
-            `Cola: ${N(preview.queue_pending)} · Bloqueos: ${N(preview.active_locks)} · Sincronización: ${preview.sync_complete && preview.client_ready ? 'correcta' : 'pendiente'} · Esquema: ${preview.schema_version}`),
+            `${N(preview.queue_pending)} cambio(s) pendiente(s) · ${N(preview.active_locks)} bloqueo(s) · actualización ${preview.sync_complete && preview.client_ready ? 'completa' : 'pendiente'}`),
           h('p', { key: 'freshness', className: 'mt-2 text-caption text-on-surface-variant' },
             'Antes del respaldo y de la ejecución, el servidor vuelve a calcular este preview. Si los datos cambian, exige actualizarlo.'),
         ]),
@@ -1903,7 +1901,7 @@
     const counts = p.counts || {};
     const blocked = !p.ready;
     const guardText = [];
-    if (!p.sync_complete || !p.client_ready) guardText.push('La sincronización o la cola todavía no están limpias.');
+    if (!p.sync_complete || !p.client_ready) guardText.push('La actualización entre equipos o los cambios pendientes todavía no están listos.');
     if (p.active_locks || p.local_locks) guardText.push('Existen bloqueos activos.');
     if (p.active_operation) guardText.push('Ya existe otra ejecución de Punto Cero.');
     const makeBackup = async () => {
@@ -1952,11 +1950,15 @@
           h('div', { key: 'kept' }, [h('div', { className: 'text-overline font-bold text-success mb-2' }, 'Conservados'), ...POINT_ZERO_KEPT.map(x => h('div', { key: x, className: 'text-caption text-success py-1' }, '✓ ' + x))]),
         ]),
         h('div', { key: 'status', className: 'mt-5 p-4 rounded-lg bg-surface-container-low text-caption' },
-          `Cola: 0 · Bloqueos: 0 · Sincronización: correcta · operation_id: ${result.operation_id}`),
+          'No quedan cambios pendientes ni bloqueos en los datos eliminados.'),
+        window.UI.technicalMessageViewer() && h('details', { key: 'technical', className: 'mt-3 text-overline text-on-surface-variant', 'data-technical-details': 'true' }, [
+          h('summary', { key: 'summary', className: 'cursor-pointer font-semibold' }, 'Detalles técnicos'),
+          h('div', { key: 'id', className: 'mt-1 break-all font-mono' }, `operation_id: ${result.operation_id}`),
+        ]),
       ];
     } else if (estado.paso === 'error') {
-      body = [h('div', { key: 'e', className: 'p-4 rounded-lg bg-danger-soft text-danger' }, estado.error || 'No se borró nada'),
-        h('p', { key: 'r', className: 'mt-3 text-caption text-on-surface-variant' }, 'La operación remota es transaccional. Un fallo revierte los cambios y conserva el respaldo.')];
+      body = [h(HumanMessage, { key: 'e', message: estado.error || 'No se borró nada', className: 'p-4 rounded-lg bg-danger-soft text-caption' }),
+        h('p', { key: 'r', className: 'mt-3 text-caption text-on-surface-variant' }, 'No se aplicó un resultado incompleto. Conserva el respaldo y vuelve a intentarlo.')];
     } else if (estado.paso === 'final') {
       body = h('div', { className: 'p-4 rounded-lg bg-danger-soft text-danger leading-relaxed' },
         'Esta operación eliminará permanentemente los datos operativos seleccionados. La configuración del sistema se conservará.');
@@ -1964,23 +1966,27 @@
       body = [h('p', { key: 'text', className: 'text-body text-on-surface-variant' }, 'Escribe exactamente PUNTO CERO para habilitar la confirmación final.'),
         h('input', { key: 'input', autoFocus: true, value: estado.confirmacion, onChange: e => setEstado(x => Object.assign({}, x, { confirmacion: e.target.value })),
           'data-testid': 'point-zero-confirmation', className: INPUT + ' mt-4 font-mono', placeholder: 'PUNTO CERO' }),
-        h('div', { key: 'backup', className: 'mt-4 text-caption text-success' }, `✓ Respaldo ${estado.backup.backup_id} creado y descargado · SHA-256 ${String(estado.backup.payload_hash).slice(0,16)}…`)];
+        h('div', { key: 'backup', className: 'mt-4 text-caption text-success' }, '✓ Respaldo creado y descargado'),
+        window.UI.technicalMessageViewer() && h('details', { key: 'technical', className: 'mt-2 text-overline text-on-surface-variant', 'data-technical-details': 'true' }, [
+          h('summary', { key: 'summary', className: 'cursor-pointer font-semibold' }, 'Detalles técnicos'),
+          h('div', { key: 'body', className: 'mt-1 break-all font-mono' }, `backup_id: ${estado.backup.backup_id} · SHA-256: ${estado.backup.payload_hash}`),
+        ])];
     } else {
       body = [
-        estado.error && h('div', { key: 'error', className: 'mb-4 p-3 rounded-lg bg-danger-soft text-danger text-caption' }, estado.error),
+        estado.error && h(HumanMessage, { key: 'error', message: estado.error, className: 'mb-4 p-3 rounded-lg bg-danger-soft text-caption' }),
         guardText.length > 0 && h('div', { key: 'guards', className: 'mb-4 p-3 rounded-lg bg-warning-soft text-warning text-caption' }, guardText.join(' ')),
         h('div', { key: 'grid', className: 'grid grid-cols-1 md:grid-cols-2 gap-6' }, [
           h('div', { key: 'delete' }, [h('div', { className: 'text-overline font-bold text-danger mb-2' }, 'Se eliminará'), h(PointZeroCounts, { counts, tone: 'text-danger' })]),
           h('div', { key: 'keep' }, [h('div', { className: 'text-overline font-bold text-success mb-2' }, 'Se conservará'), ...POINT_ZERO_KEPT.map(x => h('div', { key: x, className: 'text-caption text-success py-1' }, '✓ ' + x))]),
         ]),
         h('div', { key: 'guard-state', className: 'mt-5 text-caption text-on-surface-variant' },
-          `Cola: ${N(p.queue_pending)} · Bloqueos: ${N(p.active_locks)} · Sincronización: ${p.sync_complete && p.client_ready ? 'correcta' : 'pendiente'} · Esquema: ${p.schema_version}`),
+          `${N(p.queue_pending)} cambio(s) pendiente(s) · ${N(p.active_locks)} bloqueo(s) · actualización ${p.sync_complete && p.client_ready ? 'completa' : 'pendiente'}`),
       ];
     }
     return h(Modal, { title: estado.paso === 'resultado' ? 'Punto Cero completado' : 'PUNTO CERO', large: true,
       onClose: estado.paso === 'ejecutando' ? (() => {}) : onClose, footer },
       estado.paso === 'respaldando' ? h('p', { className: 'py-8 text-center' }, 'Creando respaldo verificable…')
-        : estado.paso === 'ejecutando' ? h('p', { className: 'py-8 text-center' }, 'Ejecutando transacción Punto Cero…') : body);
+        : estado.paso === 'ejecutando' ? h('p', { className: 'py-8 text-center' }, 'Aplicando la limpieza y comprobando el resultado…') : body);
   }
 
   // ── Panel: datos de demostración (simulación local para pruebas) ───────────────
@@ -1989,7 +1995,7 @@
     ['returns','Devoluciones','Borra devoluciones ya registradas; no las ventas disponibles para devolver.','cleanup-group-returns'],
     ['orphan_return_evidence','Evidencias huérfanas de devoluciones','Borra únicamente comprobantes técnicos sin devolución comercial. No modifica inventario ni dinero.','cleanup-group-orphan-return-evidence'],
     ['exchanges','Cambios','Borra cambios ya realizados; no las ventas que aparecen como opciones para cambiar.','cleanup-group-exchanges'],
-    ['loans','Préstamos','Borra documentos de préstamo; no ventas ni movimientos de otros módulos.','cleanup-group-loans'],
+    ['loans','Préstamos','Borra documentos de préstamo; no ventas ni movimientos de otras áreas.','cleanup-group-loans'],
     ['commissions','Liquidaciones y ajustes de comisión','Borra pagos/cierres y ajustes. El saldo generado por ventas pertenece a Ventas y apartados.','cleanup-group-commissions'],
     ['reclassifications','Reclasificaciones','Revierte documentos de reclasificación; no movimientos de venta o posventa.','cleanup-group-reclassifications'],
     ['customers','Clientes de prueba','Borra únicamente clientes no genéricos sin operaciones conservadas.','cleanup-group-customers'],
@@ -2008,7 +2014,7 @@
     returns: '0 devoluciones significa que no existen documentos de devolución. Las ventas que aparecen en Devoluciones son opciones de posventa; para borrar esos tickets selecciona Ventas y apartados.',
     orphan_return_evidence: '0 evidencias huérfanas significa que no existen comprobantes técnicos sin su devolución comercial correspondiente.',
     exchanges: '0 cambios significa que no existen documentos de cambio realizados. Las ventas que aparecen como opciones en Cambios siguen siendo ventas; para borrar esos tickets selecciona Ventas y apartados.',
-    loans: '0 préstamos significa que no existen documentos de préstamo. Los movimientos o ventas visibles en otros módulos no cuentan como préstamos.',
+    loans: '0 préstamos significa que no existen documentos de préstamo. Los movimientos o ventas visibles en otras áreas no cuentan como préstamos.',
     commissions: '0 aquí significa que no existen liquidaciones ni ajustes. “Comisiones por liquidar” es un saldo derivado de ventas; para retirar su venta fuente selecciona Ventas y apartados, y BALAM recalculará el saldo.',
     reclassifications: '0 reclasificaciones significa que no existen documentos de reclasificación. Los movimientos de venta, devolución o cambio pertenecen a sus propios grupos.',
     customers: '0 clientes significa que no hay clientes de prueba elegibles. Los clientes genéricos o vinculados a operaciones conservadas no se borran.',
@@ -2121,7 +2127,7 @@
         const first = documents[0] || {};
         const reference = first.folio ? ` de la venta ${first.folio}` : '';
         const moment = first.created_at ? ` del ${new Date(first.created_at).toLocaleString('es-MX')}` : '';
-        return `Supabase conserva evidencia de ${documents.length || 'una'} devolución${documents.length === 1 ? '' : 'es'}${reference}${moment}, pero falta el documento comercial. Selecciona “Evidencias huérfanas de devoluciones” para retirar únicamente esos comprobantes técnicos.`;
+        return `Se conserva evidencia de ${documents.length || 'una'} devolución${documents.length === 1 ? '' : 'es'}${reference}${moment}, pero falta el documento comercial. Selecciona “Evidencias huérfanas de devoluciones” para retirar únicamente esos comprobantes.`;
       }
       if (reason.code === 'client_cannot_be_fenced') {
         return `${name} usa una versión demasiado antigua. Actualízalo o retíralo desde el Centro de equipos.`;
@@ -2174,7 +2180,8 @@
             h('span', { key: 'd', className: 'block text-caption text-on-surface-variant' }, desc)]),
         ])),
       ]),
-      error && h('div', { key: 'error', role: 'alert', 'data-testid': 'selective-cleanup-error', className: 'mt-5 p-3 rounded-lg bg-danger-soft text-danger text-caption' }, error),
+      error && h('div', { key: 'error', role: 'alert', 'data-testid': 'selective-cleanup-error' },
+        h(HumanMessage, { message: error, options: { title: 'No se pudo revisar la selección', explanation: 'No se habilitó la limpieza y no se modificó información.', action: 'Actualiza la revisión antes de continuar.', level: 'danger' }, className: 'mt-5 p-3 rounded-lg bg-danger-soft text-caption' })),
       preview && h('section', { key: 'plan', className: 'mt-5 p-4 rounded-xl border border-outline-variant bg-surface-container-low', 'aria-live': 'polite' }, [
         h('div', { key: 'grid', className: 'grid grid-cols-1 md:grid-cols-2 gap-6' }, [
           h('div', { key: 'del' }, [h('div', { key: 'h', className: 'text-overline font-bold text-danger mb-2' }, 'Se eliminará'),
@@ -2202,14 +2209,14 @@
           h('p', { key: 'copy', className: 'mt-1 text-caption text-on-surface-variant' },
             normalized.orphan_return_evidence
               ? 'Se eliminarán únicamente estos comprobantes técnicos. BALAM no inventará devoluciones, piezas, importes, movimientos ni efectos financieros.'
-              : 'Supabase conserva estos comprobantes transaccionales, pero faltan las devoluciones comerciales correspondientes. Selecciona el grupo de evidencias huérfanas para retirarlos sin inventar piezas ni importes.'),
+              : 'Se conservan comprobantes de estas operaciones, pero faltan las devoluciones comerciales correspondientes. Selecciona el grupo de evidencias huérfanas para retirarlos sin inventar piezas ni importes.'),
           ...orphanReturns.map((row,index) => h('div', { key: row.commit_id || row.return_id || index,
             className: 'mt-2 p-2 rounded border border-warning/30 text-caption text-primary' }, [
             h('div', { key: 'folio', className: 'font-semibold' }, row.folio || 'Folio no disponible'),
             h('div', { key: 'date', className: 'text-on-surface-variant' }, row.created_at
               ? new Date(row.created_at).toLocaleString('es-MX') : 'Fecha no disponible'),
-            h('details', { key: 'technical', className: 'mt-1 text-overline text-on-surface-variant' }, [
-              h('summary', { key: 's', className: 'cursor-pointer' }, 'Identidad técnica'),
+            window.UI.technicalMessageViewer() && h('details', { key: 'technical', className: 'mt-1 text-overline text-on-surface-variant', 'data-technical-details': 'true' }, [
+              h('summary', { key: 's', className: 'cursor-pointer' }, 'Detalles técnicos'),
               h('div', { key: 'r', className: 'mt-1 break-all' }, `return_id: ${row.return_id || '—'}`),
               h('div', { key: 'c', className: 'break-all' }, `commit_id: ${row.commit_id || '—'}`),
             ]),
@@ -2244,8 +2251,8 @@
             fleetHistorical > 0 && h('div', { key: 'history', className: 'text-warning' },
               `ℹ ${N(fleetHistorical)} incidencias históricas — no bloquean; quedan para revisión administrativa`),
           ]),
-          h('details', { key: 'details', className: 'mt-3', 'data-testid': 'cleanup-fleet-details' }, [
-            h('summary', { key: 'summary', className: 'text-caption font-semibold text-primary cursor-pointer' }, 'Ver detalle técnico'),
+          window.UI.technicalMessageViewer() && h('details', { key: 'details', className: 'mt-3', 'data-testid': 'cleanup-fleet-details', 'data-technical-details': 'true' }, [
+            h('summary', { key: 'summary', className: 'text-caption font-semibold text-primary cursor-pointer' }, 'Detalles técnicos'),
             h('div', { key: 'rows', className: 'mt-2 space-y-2' }, fleetDevices.map(device => {
               const historical = Array.isArray(device.historical_incidents) ? device.historical_incidents : [];
               return h('div', {
@@ -2255,7 +2262,7 @@
                   `Operaciones pendientes actuales: ${N(device.current_pending)}`),
                 historical.length > 0 && h('div', { key: 'history', className: 'mt-2 p-2 rounded bg-warning-soft text-warning' }, [
                   h('div', { key: 'title', className: 'font-semibold' },
-                    `${N(historical.length)} incidencias históricas de la selección; no contienen una cola reproducible.`),
+                    `${N(historical.length)} incidencias históricas de la selección; se conservan sólo como evidencia.`),
                   ...historical.map(operation => h('div', { key: operation.operation_id, className: 'mt-1' },
                     `${operationDetail(operation)} · estado ${operation.status || 'sin estado'}`)),
                 ]),
@@ -2327,12 +2334,12 @@
     if (estado.paso === 'result') footer.push(h('button', { key: 'receipt', onClick: receipt, className: 'px-5 h-11 border border-outline-variant rounded-lg' }, 'Descargar comprobante'), h('button', { key: 'close', onClick: onClose, className: 'px-5 h-11 bg-primary text-on-primary rounded-lg' }, 'Cerrar'));
     if (estado.paso === 'error') footer.push(h('button', { key: 'close', onClick: onClose, className: 'px-5 h-11 bg-primary text-on-primary rounded-lg' }, 'Entendido'));
     let body;
-    if (estado.paso === 'result') body = [h('div', { key: 'ok', className: 'p-4 rounded-lg bg-success-soft text-success font-semibold' }, estado.result.rebootstrapRequired ? 'LIMPIEZA COMPLETADA; RECARGA ESTA COMPUTADORA' : 'LIMPIEZA COMPLETADA'), estado.result.rebootstrapRequired && h('div', { key: 'local', role: 'alert', className: 'mt-3 p-4 rounded-lg bg-warning-soft text-warning' }, 'La limpieza terminó en la nube, pero esta computadora necesita recargarse para mostrar el resultado. Conserva el comprobante y no repitas la limpieza.'), h('details', { key: 'detail', className: 'mt-4 text-caption text-on-surface-variant' }, [h('summary', { key: 'summary', className: 'font-semibold text-primary cursor-pointer' }, 'Ver detalle técnico'), h('div', { key: 'id', className: 'mt-2 break-all' }, 'Operación: ' + estado.result.cleanup_id)])];
-    else if (estado.paso === 'error') body = [h('div', { key: 'e', role: 'alert', className: 'p-4 rounded-lg bg-danger-soft text-danger' }, estado.error), h('p', { key: 'n', className: 'mt-3 text-caption text-on-surface-variant' }, 'BALAM no confirmó el resultado. Conserva el respaldo y vuelve a intentarlo para consultar la misma limpieza de forma segura.')];
+    if (estado.paso === 'result') body = [h('div', { key: 'ok', className: 'p-4 rounded-lg bg-success-soft text-success font-semibold' }, estado.result.rebootstrapRequired ? 'LIMPIEZA COMPLETADA; RECARGA ESTA COMPUTADORA' : 'LIMPIEZA COMPLETADA'), estado.result.rebootstrapRequired && h('div', { key: 'local', role: 'alert', className: 'mt-3 p-4 rounded-lg bg-warning-soft text-warning' }, 'La limpieza terminó, pero esta computadora necesita recargarse para mostrar el resultado. Conserva el comprobante y no repitas la limpieza.'), window.UI.technicalMessageViewer() && h('details', { key: 'detail', className: 'mt-4 text-caption text-on-surface-variant', 'data-technical-details': 'true' }, [h('summary', { key: 'summary', className: 'font-semibold text-primary cursor-pointer' }, 'Detalles técnicos'), h('div', { key: 'id', className: 'mt-2 break-all' }, 'Operación: ' + estado.result.cleanup_id)])];
+    else if (estado.paso === 'error') body = [h(HumanMessage, { key: 'e', message: estado.error, className: 'p-4 rounded-lg bg-danger-soft text-caption' }), h('p', { key: 'n', className: 'mt-3 text-caption text-on-surface-variant' }, 'BALAM no confirmó el resultado. Conserva el respaldo y vuelve a intentarlo para consultar la misma limpieza de forma segura.')];
     else if (estado.paso === 'confirmation') body = [h('p', { key: 'p', id: 'selective-cleanup-confirmation-help', className: 'text-body' }, 'Escribe exactamente LIMPIAR OPERACIONES para habilitar la advertencia final.'), h('label', { key: 'l', htmlFor: 'selective-cleanup-confirmation-input', className: 'block mt-4 text-label-sm font-semibold text-primary' }, 'Frase de confirmación'), h('input', { key: 'i', id: 'selective-cleanup-confirmation-input', autoFocus: true, value: estado.confirmation, onChange: e => setEstado(x => Object.assign({}, x, { confirmation: e.target.value })), 'aria-describedby': 'selective-cleanup-confirmation-help', 'data-testid': 'selective-cleanup-confirmation', className: 'mt-2 w-full h-11 px-3 rounded-lg border border-outline-variant font-mono' })];
     else if (estado.paso === 'warning') body = [h('div', { key: 'w', className: 'p-4 rounded-lg bg-danger-soft text-danger font-semibold' }, 'Advertencia final: se borrarán únicamente las operaciones mostradas y sus datos relacionados. Esta acción no se puede deshacer desde la interfaz.')];
     else if (estado.paso === 'backup' || estado.paso === 'executing') body = [h('div', { key: 'wait', role: 'status', className: 'py-8 text-center text-on-surface-variant' }, estado.paso === 'backup' ? 'Creando y descargando respaldo…' : 'Aplicando la limpieza y comprobando el resultado…')];
-    else body = [h('p', { key: 'p', className: 'text-body text-on-surface-variant' }, 'Revisa el resumen de la pantalla. El siguiente paso crea y descarga un respaldo antes de borrar.'), estado.error && h('div', { key: 'e', className: 'mt-3 p-3 rounded-lg bg-danger-soft text-danger text-caption' }, estado.error)];
+    else body = [h('p', { key: 'p', className: 'text-body text-on-surface-variant' }, 'Revisa el resumen de la pantalla. El siguiente paso crea y descarga un respaldo antes de borrar.'), estado.error && h(HumanMessage, { key: 'e', message: estado.error, className: 'mt-3 p-3 rounded-lg bg-danger-soft text-caption' })];
     return h(Modal, { title: 'Confirmar limpieza', testId: 'selective-cleanup-dialog', large: true, onClose: ['backup','executing'].includes(estado.paso) ? (() => {}) : onClose, footer }, body);
   }
 
@@ -2344,10 +2351,10 @@
       // La simulación es LOCAL. Con sesión iniciada se subiría a Supabase y contaminaría los datos
       // reales (justo lo que hay que limpiar después). Se bloquea: primero cerrar sesión.
       if (window.STORE && (await window.STORE.hasSession())) {
-        window.alert('Tienes una sesión iniciada.\n\nLa simulación es LOCAL y, con sesión, se subiría a tu Supabase y contaminaría tus datos reales.\n\nCierra sesión primero y vuelve a intentarlo.');
+        window.alert('Tienes una sesión iniciada.\n\nLa simulación sólo debe usarse sin conexión a la cuenta del negocio para evitar mezclar datos de prueba con datos reales.\n\nCierra sesión primero y vuelve a intentarlo.');
         return;
       }
-      if (!window.confirm('¿Generar la SIMULACIÓN de demostración?\n\nReemplaza los datos actuales por ~24 productos, 8 clientes, 4 vendedores y ~300 ventas de los últimos 90 días (con devoluciones). Todo se calcula con el motor real.\n\nEs LOCAL: NO toca tu base en la nube.')) return;
+      if (!window.confirm('¿Generar la SIMULACIÓN de demostración?\n\nReemplaza los datos actuales por ~24 productos, 8 clientes, 4 vendedores y ~300 ventas de los últimos 90 días (con devoluciones). Todo se calcula con el motor real.\n\nSólo cambia los datos de prueba de este navegador.')) return;
       setBusy(true);
       setTimeout(() => {
         const r = D.seedDemo();
@@ -2364,7 +2371,7 @@
         return;
       }
       if (online) {
-        window.alert('Datos locales vaciados.\n\n⚠ Tienes sesión iniciada: tu Supabase TODAVÍA conserva los datos y, al recargar, la app los volverá a descargar (la simulación "revivirá").\n\nPara vaciar la nube, hazlo desde Supabase, o cierra sesión para trabajar solo en local.');
+        window.alert('Los datos de prueba de este navegador se vaciaron.\n\n⚠ La cuenta del negocio todavía conserva su información y volverá a mostrarla al recargar.\n\nCierra sesión si necesitas seguir trabajando sólo con la simulación.');
       } else {
         toast('Datos vaciados — estado de producción', 'var(--accent)');
       }
@@ -2383,7 +2390,7 @@
       try {
         r = window.STORE && window.STORE.purgeTestData
           ? await window.STORE.purgeTestData()
-          : { ok: false, error: 'El módulo de sincronización no está disponible' };
+          : { ok: false, error: 'La actualización entre equipos no está disponible' };
       } catch (e) { r = { ok: false, error: String((e && e.message) || e) }; }
       if (!r || !r.ok) {
         setPurga({ paso: 'error', error: (r && r.error) || 'No se pudo borrar', detalle: r && r.detalle });
@@ -2412,7 +2419,7 @@
       h(GlassCard, { key: 'w', className: 'p-5 border-l-4 border-l-gold' }, [
         h('div', { key: 'h', className: 'flex items-center gap-2 mb-2' }, [h(MS, { key: 'i', name: 'alert', size: 18, className: 'text-gold-text' }), h('span', { key: 't', className: 'text-overline font-bold uppercase tracking-widest text-primary' }, 'Importante')]),
         h('ul', { key: 'l', className: 'text-caption text-on-surface-variant leading-relaxed list-disc pl-5 space-y-1' }, [
-          h('li', { key: '1' }, 'La simulación es LOCAL: se guarda solo en este navegador y NO se sube a tu Supabase de producción.'),
+          h('li', { key: '1' }, 'La simulación se guarda sólo en este navegador y no modifica la información de la cuenta del negocio.'),
           h('li', { key: '2' }, 'Para demos, comparte la app y úsala SIN iniciar sesión (con sesión, la app podría sincronizar y mezclar datos).'),
           h('li', { key: '3' }, 'Cuando termines de probar, usa “Limpiar / Resetear a vacío” para volver al estado de producción.'),
         ]),
@@ -2484,10 +2491,11 @@
       const det = estado.detalle && !Array.isArray(estado.detalle) ? estado.detalle : null;
       const traza = det ? Object.keys(det).filter(k => det[k] != null).map(k => `${k}: ${det[k]}`) : [];
       return h(Modal, { title: 'No se borró nada', onClose: onCerrar, footer: [h('button', { key: 'c', className: 'px-5 h-11 bg-primary text-on-primary font-label-sm uppercase tracking-widest text-caption rounded-lg', onClick: onCerrar }, 'Entendido')] }, [
-        h('p', { key: 'e', 'data-testid': 'purga-error', className: 'text-body text-on-surface leading-relaxed' }, estado.error),
-        // La respuesta del servidor, tal cual: sin esto un fallo remoto sólo deja
-        // una frase suelta y no se puede saber qué tabla ni qué sentencia falló.
-        traza.length > 0 && h('pre', { key: 'd', className: 'mt-3 p-3 rounded-lg bg-surface-container-low text-caption text-on-surface-variant whitespace-pre-wrap break-words' }, traza.join('\n')),
+        h('div', { key: 'e', 'data-testid': 'purga-error' }, h(HumanMessage, { message: estado.error, className: 'text-body leading-relaxed' })),
+        window.UI.technicalMessageViewer() && traza.length > 0 && h('details', { key: 'd', className: 'mt-3 p-3 rounded-lg bg-surface-container-low text-caption text-on-surface-variant', 'data-technical-details': 'true' }, [
+          h('summary', { key: 'summary', className: 'cursor-pointer font-semibold' }, 'Detalles técnicos'),
+          h('pre', { key: 'body', className: 'mt-2 whitespace-pre-wrap break-words' }, traza.join('\n')),
+        ]),
         h('p', { key: 'n', className: 'mt-3 text-caption text-on-surface-variant leading-relaxed' },
           'La operación es de todo o nada: ni la nube ni esta terminal cambiaron. Corrige lo indicado y vuelve a intentarlo.'),
       ]);
@@ -2510,7 +2518,7 @@
           : 'Sin sesión iniciada: se limpió SOLO esta terminal. Inicia sesión y vuelve a pulsar el botón para limpiar también la nube y las demás terminales.'),
       h('div', { key: 'g', className: 'grid grid-cols-1 md:grid-cols-2 gap-6' }, [
         h('div', { key: 'del' }, [
-          h('div', { key: 't', className: 'text-overline font-bold uppercase tracking-widest text-danger mb-2' }, 'Eliminado por módulo'),
+          h('div', { key: 't', className: 'text-overline font-bold uppercase tracking-widest text-danger mb-2' }, 'Eliminado por área'),
           h(Fila, { key: '1', etiqueta: 'Ventas y cobros', valor: N(del.ventas) }),
           h(Fila, { key: '2', etiqueta: 'Apartados', valor: N(del.apartados) }),
           h(Fila, { key: '3', etiqueta: 'Abonos y pagos', valor: N(del.abonos) }),
@@ -2536,15 +2544,15 @@
           }, [
             h(MS, { key: 'i', name: configIntacta ? 'check' : 'alert', size: 16 }),
             h('span', { key: 't' }, configIntacta
-              ? 'Configuración intacta: la huella de productos, catálogos, tallas, precios, descuentos, vendedores, usuarios y permisos es idéntica a la de antes de borrar.'
-              : 'Atención: la huella de configuración cambió. Revisa Configuración antes de seguir operando.'),
+              ? 'Configuración intacta: productos, catálogos, tallas, precios, descuentos, vendedores, usuarios y permisos conservan los mismos valores.'
+              : 'Atención: la configuración cambió. Revisa Configuración antes de seguir operando.'),
           ]),
         ]),
       ]),
       h('div', { key: 'ops', className: 'mt-5 text-caption text-on-surface-variant leading-relaxed' },
         inf.cola
-          ? `Cola de sincronización: ${N(inf.cola.dropped)} operación(es) de los datos borrados quedaron invalidadas; ${N(inf.cola.kept)} operación(es) ajenas siguen intactas.`
-          : 'Cola de sincronización sin operaciones pendientes de los datos borrados.'),
+          ? `${N(inf.cola.dropped)} cambio(s) pendiente(s) de los datos borrados se cancelaron; ${N(inf.cola.kept)} cambio(s) ajeno(s) siguen protegidos.`
+          : 'No quedaron cambios pendientes de los datos borrados.'),
     ]);
   }
 

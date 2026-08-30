@@ -98,7 +98,10 @@ try {
   const blockText = await block.count() ? await block.innerText() : '';
   check('una selección con V1 bloquea toda salida antes de PNG/PDF',
     await block.count() === 1
-      && blockText.includes('ANGEL') && blockText.includes('V1')
+      && blockText.includes('ANGEL')
+      && blockText.includes('algunos productos no tienen una identificación segura')
+      && blockText.includes('corrige su identificación')
+      && !/\bV1\b|products\.id|UUID|barcode_code|Code128/.test(blockText)
       && await page.getByTestId('labels-download').isDisabled()
       && await page.getByTestId('labels-open-printable').isDisabled(), blockText);
   await page.getByTestId('label-modal-close').click();

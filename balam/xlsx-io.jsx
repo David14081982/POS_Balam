@@ -314,10 +314,10 @@
     rows.push(['• Captura existencias únicamente en la escala de la categoría elegida. Una fila con ambas escalas se omite por ambigua.']);
     rows.push(['• Foto (URL): enlace http(s) a la imagen. Al importar se asigna al producto.']);
     rows.push(['   Vacío = se conserva la foto que ya tiene (o se le pone una genérica si es nuevo).']);
-    rows.push(['• El SKU identifica comercialmente; la actualización usa _BALAM_ID_PRODUCTO.']);
-    rows.push(['• Precios especiales por talla: JSON talla → precio (ej. {"XL":700}).']);
-    rows.push(['• Colores Orn. por talla: JSON talla → códigos de color.']);
-    rows.push(['• Destacado: usa SI o NO. Las columnas _BALAM_* son técnicas y no forman parte del SKU.']);
+    rows.push(['• BALAM reconoce cada producto aunque cambie su nombre o su clave comercial; no edites las columnas de control.']);
+    rows.push(['• Precios especiales por talla: conserva el contenido generado y realiza cambios desde la ficha del producto.']);
+    rows.push(['• Colores de ornamento por talla: conserva el contenido generado y realiza cambios desde la ficha del producto.']);
+    rows.push(['• Destacado: usa SI o NO. No edites las columnas de control ocultas.']);
     // El mapa va al FINAL y en filas contiguas: así se lee de corrido al importar.
     rows.push([], [SIZE_MAP_TITLE], SIZE_MAP_HEAD);
     cols.letters.concat(cols.numbers).forEach(item => {
