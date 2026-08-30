@@ -3,7 +3,7 @@
 **Riesgo:** H-133
 **Estado:** RESUELTO EN SOFTWARE — HARDWARE NOT_TESTED
 **Fecha:** 29/08/2026
-**Commit:** Pendiente de commit
+**Commit funcional:** `a01562e`
 
 ## Problema y reproducción
 

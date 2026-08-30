@@ -6327,7 +6327,7 @@ certificación con impresora y lector reales permanece `HARDWARE_NOT_TESTED`.
 Las 28 V2 eliminadas se conservaron como tombstones históricos fuera del
 contrato activo. No existe riesgo residual conocido de software en el censo vivo.
 **Corrección:** `docs/fixes/migracion-inventario-barcode-v3-h133.md`.
-**Commit funcional:** Pendiente de commit.
+**Commit funcional:** `a01562e`.
 
 ## Regla de actualización
 
