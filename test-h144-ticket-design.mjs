@@ -11,7 +11,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true });
 try {
   const context = await browser.newContext({ viewport: { width: 768, height: 1024 }, userAgent: 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/140.0.0.0 Safari/537.36', hasTouch: true });
   await context.route(/supabase\.co/, r => r.abort());
-  const page = await context.newPage(), errors = [], requests = [];
+  const page = await context.newPage(), errors = [], requests = [], cached = [];
   page.on('pageerror', e => errors.push(String(e)));
   await page.goto(remote || `http://127.0.0.1:${server.address().port}/`);
   await page.waitForFunction(() => window.BalamTicket && window.UI);
@@ -45,7 +45,10 @@ try {
     await page.emulateMedia({ media: 'screen' });
     check('PNG codificado íntegro', png.startsWith('data:image/png;base64,iVBORw0KGgo'));
   }
-  page.on('request', r => { if (/^https?:/.test(r.url()) && !r.url().includes('supabase.co')) requests.push(r.url()); });
+  page.on('response', r => {
+    if (/^https?:/.test(r.url()) && !r.url().includes('supabase.co')) (r.fromServiceWorker() ? cached : requests).push(r.url());
+  });
+  page.on('requestfailed', r => { if (/^https?:/.test(r.url()) && !r.url().includes('supabase.co')) requests.push(r.url()); });
   const metrics = [];
   async function compare(name, selector = '#balam-ticket') {
     const prepared = await page.evaluate(async selector => {
@@ -120,7 +123,7 @@ try {
     const value = await page.evaluate(async () => { const s = UI.prepareReceipt(); await s.promise; return { png: s.png, error: s.error?.message }; });
     check('offline ancho ' + width + ': gráfico completo', !!value.png, value.error || '');
   }
-  check('preparación sin solicitudes de red', requests.length === 0, requests);
+  check('preparación sin tráfico de red; recursos PWA en cache identificados', requests.length === 0, { network: requests, serviceWorker: cached });
   await page.evaluate(() => { __sale = { ...__sale, folio: 'BG-260905-0145' }; __render(); });
   await page.waitForFunction(() => document.querySelector('#balam-ticket')?.textContent.includes('BG-260905-0145'));
   const beforePrepare = await page.evaluate(() => __intents.length);

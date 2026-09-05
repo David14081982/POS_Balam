@@ -1,9 +1,9 @@
 # Mismo diseño de comprobantes en Chrome y Android
 
 **Riesgo:** H-144
-**Estado:** CORREGIDO EN SOFTWARE — PUBLICACIÓN EN CURSO
+**Estado:** CORREGIDO Y PUBLICADO — VALIDACIÓN FÍSICA DEL DISEÑO PENDIENTE
 **Fecha:** 05/09/2026
-**Commit:** Pendiente de commit
+**Commit:** `61c7579` (funcional); cierre documental en commit posterior.
 
 ## Problema y reproducción
 
@@ -82,6 +82,7 @@ durante preparación. Capturas y métricas regenerables `h144-*.png/json`.
 | `node test-smoke.mjs bundle` | 17/17 |
 | `node test-ui-navigation.mjs` | 15/15 |
 | `node test-build-reproducibility.mjs` | 8/8 |
+| H-144 y H-143 sobre GitHub Pages | 47/47 y 35/35 |
 | PNG con lector independiente Python stdlib | 11/11 firmas, CRC y DEFLATE válidos |
 | Build repetido | SHA-256 idéntico, 72 assets, 9.04 MB |
 
@@ -96,7 +97,18 @@ permanece interceptado en las suites; las impresoras no se contactan.
 
 Build local SHA-256:
 `a83d09a18449dd5c7f0ba52c34af69190395fad6254fb14365e0ef7e825cdeb2`.
-Publicación y bytes servidos pendientes; se compararán contra el blob Git.
+Pages run `33996318899` publicó `61c7579` y la API reporta `built`.
+El archivo servido devuelve HTTP 200 y coincide byte a byte con el blob Git:
+9,041,688 bytes, SHA-256
+`84a8a2f63de8ee5064ab8180a1f4ca839365239f5e87dfaae7ddbdef91ba6dd5`.
+H-132 CI run `33996319818` terminó en `success`.
+
+El primer pase público obtuvo 46/47: el arnés contaba la carga del icono PWA
+generado por el logo sintético como red. Se comprobó `response.fromServiceWorker()`
+para esa respuesta local; el arnés distingue cache del worker de red real y
+conserva la detección de solicitudes fallidas. El pase final obtiene 47/47,
+con `network: []` y el icono en la lista de cache. No se cambió el producto para
+eliminar este falso positivo. La prueba H-143 pública obtiene 35/35.
 
 ## Revisión
 

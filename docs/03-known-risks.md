@@ -6645,7 +6645,7 @@ operaciones únicas de otros equipos. No declarar toda la flota sincronizada aú
 
 ## H-143 — Tickets Android no llegan al transporte Bluetooth de RawBT
 
-**Estado:** CORREGIDO EN SOFTWARE Y PUBLICADO — VALIDACIÓN FÍSICA PENDIENTE.
+**Estado:** RESUELTO — IMPRESIÓN FÍSICA CONFIRMADA POR EL USUARIO.
 **Fecha:** 05/09/2026.
 **Evidencia:** usuario confirma POS 8360L Bluetooth, prueba de RawBT correcta
 y botones de POS/Reportes sin diálogo ni error. En `39c1cbd` sólo invocan
@@ -6662,8 +6662,8 @@ Cambio 37/37; smoke 17/17; navegación 15/15; build 8/8. QA visual inspeccionado
 **Publicación:** Pages run `33995416776` exitoso, estado `built`, HTTP 200;
 9,038,300 bytes idénticos al blob Git, SHA-256
 `3d7431ac06240db8bad120a8b0adcf12f0d69364a0b3878c8c2dc7857d38c4b4`.
-**Riesgo residual:** verificación física final pendiente; no confundir llamada
-al navegador, apertura de RawBT y papel impreso.
+**Riesgo residual:** H-143 entrega texto. La validación del formato gráfico
+solicitado posteriormente pertenece a H-144.
 **Corrección:** `docs/fixes/impresion-android-rawbt-h143.md`.
 **Commit:** `ee8d5bc` (funcional); cierre documental en commit posterior.
 
@@ -6672,7 +6672,7 @@ La evolución del texto al diseño gráfico solicitado se registra en H-144.
 
 ## H-144 — Paridad del diseño de tickets en Android y Chrome
 
-**Estado:** CORREGIDO EN SOFTWARE — PUBLICACIÓN EN CURSO.
+**Estado:** CORREGIDO Y PUBLICADO — VALIDACIÓN FÍSICA DEL DISEÑO PENDIENTE.
 **Fecha:** 05/09/2026.
 **Evidencia:** el usuario confirma que H-143 imprime físicamente y solicita el
 mismo diseño de Chrome. La proyección `receiptPrintText()` elimina imágenes,
@@ -6688,9 +6688,14 @@ alternativa del sistema para documentos excesivos o recursos no disponibles.
 17/17; H-135 PDF 61/61; smoke 17/17; navegación 15/15; build 8/8 y reproducible.
 QA visual de siete escenarios y Reportes, 24 prendas completas, largo→corto,
 logo, V1/V2, offline, error y cancelación. PNG independiente 11/11.
+**Publicación:** Pages `built`, run `33996318899`, HTTP 200; 9,041,688 bytes
+idénticos al blob Git, SHA-256
+`84a8a2f63de8ee5064ab8180a1f4ca839365239f5e87dfaae7ddbdef91ba6dd5`.
+H-144/H-143 sobre el sitio publicado: 47/47 y 35/35. El arnés distingue
+respuestas PWA desde el service worker de tráfico de red; red real observada 0.
 **Riesgo residual:** aceptación física del nuevo formato gráfico pendiente.
 **Documento:** `docs/fixes/diseno-ticket-android-h144.md`.
-**Commit:** Pendiente de commit.
+**Commit:** `61c7579` (funcional); cierre documental en commit posterior.
 
 ## Regla de actualización
 

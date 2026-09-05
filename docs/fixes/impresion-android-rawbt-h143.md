@@ -1,7 +1,7 @@
 # Tickets desde Android mediante RawBT
 
 **Riesgo:** H-143
-**Estado:** CORREGIDO EN SOFTWARE Y PUBLICADO — VALIDACIÓN FÍSICA PENDIENTE
+**Estado:** RESUELTO — IMPRESIÓN FÍSICA CONFIRMADA POR EL USUARIO
 **Fecha:** 05/09/2026
 **Commit:** `ee8d5bc` (funcional); cierre documental en commit posterior.
 
@@ -110,9 +110,10 @@ La publicación se compara con los bytes del blob Git normalizado.
 
 ## Riesgo residual y pendientes
 
-RawBT y los permisos Bluetooth deben estar disponibles en cada tablet. La
-entrega al sistema no acredita papel impreso. Aceptación final en la impresora
-física del usuario pendiente. Se trabaja en un worktree aislado desde
+RawBT y los permisos Bluetooth deben estar disponibles en cada tablet. El
+05/09/2026 el usuario confirma «ya imprime» y solicita conservar el diseño de
+Chrome. Esta evolución y su validación física se registran en H-144,
+`diseno-ticket-android-h144.md`. Se trabaja en un worktree aislado desde
 `origin/main`; se conserva el árbol original con cambios previos.
 La salida RawBT usa texto, sin logo ni barras decorativas; la impresión del
 sistema mantiene el diseño gráfico. Codificación física, corte y ancho se
