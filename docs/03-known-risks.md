@@ -6374,7 +6374,7 @@ impresora y lector continúa perteneciendo al riesgo heredado H-133.
 
 ## H-135 — El ticket térmico se divide en varias páginas del PDF
 
-**Estado:** RESUELTO LOCALMENTE — PUBLICACIÓN PENDIENTE
+**Estado:** RESUELTO EN SOFTWARE Y PUBLICADO — CORTE FÍSICO PENDIENTE
 **Fecha de registro:** 05/09/2026
 **Origen:** PDF proporcionado por el usuario: dos páginas carta; historial de
 pagos y despedida separados de la venta. Reproducción en `origin/main` d122f0d:
@@ -6404,7 +6404,11 @@ idéntico en d122f0d y H-135; busca un orden antiguo del destructuring aunque
 tamaño continuo y un corte al final. Se preserva un separador `Â·` preexistente
 en ornamento, ajeno a paginación. No se declara certificación de otros navegadores.
 **Corrección documentada:** `docs/fixes/ticket-termico-continuo-h135.md`.
-**Commit:** Pendiente de commit.
+**Despliegue:** Pages `built`, HTTP 200 y bytes idénticos al blob del commit;
+SHA-256 `2cccfd4af88f149defef9946f1a417fe0d5051ce601bb20235168107ac3bff85`.
+Prueba H-135 contra el sitio publicado: **61/61**, sin tráfico de negocio.
+**Fecha de cierre de software:** 05/09/2026.
+**Commit:** `c9aead97801127c7a49d13820eb0e9f33672586b`.
 
 ## Regla de actualización
 

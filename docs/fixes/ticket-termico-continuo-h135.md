@@ -1,9 +1,9 @@
 # Ticket térmico de una página y altura variable
 
 **Riesgo:** H-135
-**Estado:** RESUELTO LOCALMENTE — PUBLICACIÓN PENDIENTE
+**Estado:** RESUELTO EN SOFTWARE Y PUBLICADO — CORTE FÍSICO PENDIENTE
 **Fecha:** 05/09/2026
-**Commit:** Pendiente de commit
+**Commit:** `c9aead97801127c7a49d13820eb0e9f33672586b`
 
 ## Problema y reproducción
 
@@ -106,9 +106,22 @@ a impresión; no se altera para dar verde artificial. Registro de baseline:
 
 ## Despliegue
 
-Pendiente de commit y verificación publicada. No requiere migraciones.
-SHA-256 del bundle validado y reproducible:
-`80e839e882ede88aff00f08ba2885c369b77e875e91cb45199bca8a6a8e116ac`.
+Publicado en `https://david14081982.github.io/POS_Balam/`. GitHub Pages reportó
+`built` para `c9aead97801127c7a49d13820eb0e9f33672586b`. `HEAD` y
+`origin/main` coincidieron. No requiere migraciones.
+
+La respuesta HTTP 200 coincide byte a byte con `git show HEAD:index.html`:
+SHA-256 `2cccfd4af88f149defef9946f1a417fe0d5051ce601bb20235168107ac3bff85`.
+El build local reproducible tiene hash
+`80e839e882ede88aff00f08ba2885c369b77e875e91cb45199bca8a6a8e116ac`;
+Git normaliza 171 finales CRLF a LF al registrar el HTML. Se comprobó que ésa
+es la única diferencia y se verificó la versión publicada directamente.
+
+`node test-h135-continuous-ticket.mjs https://david14081982.github.io/POS_Balam/?h135=c9aead9`
+terminó **61/61**, con tráfico de negocio bloqueado. Evidencia:
+`C:/tmp/balam-h135-published/` y `C:/tmp/balam-h135-served.json`.
+El PDF sintético de tres prendas se copió sin sobrescribir archivos existentes a
+`C:/Users/david/Downloads/Ticket BALAM - prueba continua H135.pdf`.
 
 ## Riesgo residual y pendientes
 
