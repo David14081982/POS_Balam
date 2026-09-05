@@ -1,9 +1,9 @@
 # SKU comercial visible en el resumen de venta
 
 **Riesgo:** H-139; seguimiento de H-136.
-**Estado:** RESUELTO LOCALMENTE; publicación pendiente.
+**Estado:** RESUELTO Y PUBLICADO.
 **Fecha:** 05/09/2026
-**Commit:** Pendiente de commit.
+**Commit:** `7550ba89142f64533a7aea27d3ca41a9b57418f9`.
 
 ## Problema y reproducción
 
@@ -69,6 +69,12 @@ el mismo recorrido. No se escriben datos comerciales en Supabase.
 - H-135 ticket continuo: **61/61**; navegación: **15/15**.
 - Smoke desarrollo: **15/15**; smoke bundle: **17/17**.
 - `node build-offline.mjs`; reproducibilidad: **8/8**.
+
+Publicación: Pages `built`, HTTP 200, bytes idénticos al blob Git aprobado;
+SHA-256 `b653b424f4ac9a7fdcfe25feb07aa680566434201a3682ccccfe43fce6a15870`.
+El mismo comando con `https://david14081982.github.io/POS_Balam/` ejerció el
+sitio publicado: **43/43**, incluido PDF decodificado, lectura, recarga y ocho
+viewports. Red de negocio interceptada; SQL aislado. Sin migración nueva.
 
 ## Riesgo residual y pendientes
 
