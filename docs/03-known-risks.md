@@ -6588,7 +6588,7 @@ borradores; salir de la sección conserva el comportamiento previo.
 **Estado:** PARCIALMENTE RESUELTO — código verificado; recuperación y cliente pendientes.
 **Fecha:** 05/09/2026.
 **Commit de implementación:** `0fa6810`.
-**Commit S11:** Pendiente de commit.
+**Commit S11:** `9ea9142`.
 **Continuación:** recibido JSON de sucursal (62 pendientes); equipo reactivado
 por autorización explícita. S11 de alias V2 histórico corregido con SQL 18000/18100,
 16/16 pruebas SQL y 22/22 de idempotencia independiente. Recuperación completa

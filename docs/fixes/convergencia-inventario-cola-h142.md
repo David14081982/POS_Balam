@@ -4,7 +4,7 @@
 **Estado:** PARCIALMENTE RESUELTO — código verificado; recuperación y publicación del cliente pendientes
 **Fecha:** 05/09/2026
 **Commit de implementación:** `0fa6810`
-**Commit S11:** Pendiente de commit.
+**Commit S11:** `9ea9142`.
 
 ## Problema y reproducción
 
