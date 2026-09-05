@@ -220,6 +220,10 @@ a coincidencias comerciales por nombre o SKU. Los avisos sobre fondo oscuro
 usan la variante inversa de `HumanMessage`; el detalle técnico conserva su
 restricción administrativa.
 
+Los bloqueos de baja de Inventario entregan código y contexto `product_delete`
+al catálogo central de mensajes. Así se conserva el motivo operativo sin
+alterar las guardas ni reinterpretar errores iguales de otros flujos.
+
 `BARCODES.certifySellableReference()` es la puerta ejecutable previa a toda
 etiqueta vendible nueva. Sólo una referencia V2 cuyo `barcode_code` sea único,
 codificable y resoluble al mismo `products.id+talla` puede producir preview,

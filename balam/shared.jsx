@@ -233,6 +233,46 @@
       explanation: 'BALAM detuvo la selección para evitar mover la pieza equivocada.',
       action: 'Busca el producto por nombre y confirma sus características.', level: 'warning',
     },
+    product_queue_pending: {
+      title: 'Hay cambios pendientes de enviar',
+      explanation: 'Espera a que se guarden los cambios de este equipo antes de eliminar productos.',
+      action: 'Conéctate a internet. Si el aviso continúa, revisa los pendientes en Centro de equipos.', level: 'warning',
+    },
+    layaway_active: {
+      title: 'Este producto está en un apartado activo',
+      explanation: 'La pieza sigue comprometida con un cliente.',
+      action: 'Liquida o cancela el apartado antes de eliminar el producto.', level: 'warning',
+    },
+    layaway_product_locked: {
+      title: 'Se está confirmando el cobro de un apartado',
+      explanation: 'Todavía no se puede confirmar si la pieza salió del inventario.',
+      action: 'Espera a que termine la confirmación antes de eliminar el producto.', level: 'warning',
+    },
+    product_open_loan: {
+      title: 'Este producto está en un préstamo abierto',
+      explanation: 'Hay piezas prestadas que todavía no se han devuelto ni registrado como faltantes.',
+      action: 'Resuelve esas piezas en Préstamos antes de eliminar el producto.', level: 'warning',
+    },
+    product_returnable_history: {
+      title: 'Este producto aún admite devolución o cambio',
+      explanation: 'BALAM necesita conservarlo para poder recibir la pieza si el cliente la devuelve.',
+      action: 'Podrás eliminarlo cuando ya no queden piezas con devolución o cambio vigente.', level: 'warning',
+    },
+    product_not_found: {
+      title: 'El producto ya no está en el inventario',
+      explanation: 'No se encontró el producto que intentas eliminar.',
+      action: 'Cierra el detalle y vuelve a buscarlo en Inventario.', level: 'warning',
+    },
+    reference_family_scope_mismatch: {
+      title: 'Los productos de esta familia cambiaron',
+      explanation: 'La selección ya no coincide con la familia actual.',
+      action: 'Cierra el detalle y abre la familia de nuevo antes de eliminar.', level: 'warning',
+    },
+    product_delete_queue_unavailable: {
+      title: 'No se pudo guardar la eliminación en este equipo',
+      explanation: 'El producto permanece en el inventario.',
+      action: 'Revisa si tienes otra pestaña de BALAM abierta. Si continúa, pide ayuda a una persona administradora.', level: 'warning',
+    },
     barcode_not_found: {
       title: 'No encontramos un producto con este código',
       explanation: 'El código leído no coincide con los productos registrados en este equipo.',
@@ -291,6 +331,12 @@
     const code = String((input && input.code) || '').toLowerCase();
     const category = String((input && input.category) || '').toLowerCase();
     const all = `${code} ${category} ${raw}`.toLowerCase();
+    if (input && input.context === 'product_delete') {
+      if (['product_queue_pending', 'layaway_active', 'layaway_product_locked',
+        'product_open_loan', 'product_returnable_history', 'product_not_found',
+        'reference_family_scope_mismatch', 'product_delete_queue_unavailable'].includes(code)) return code;
+      if (code === 'product_active_layaway') return 'layaway_active';
+    }
     if (/barcode.*ambiguous|identity_ambiguous|c[oó]digo ambiguo|m[aá]s de una referencia/.test(all)) return 'barcode_ambiguous';
     if (/barcode.*not_found/.test(all)) return 'barcode_not_found';
     if (/missing_barcode|barcode.*missing|falta.*(?:barcode|code128)|no tiene.*c[oó]digo/.test(all)) return 'barcode_missing';

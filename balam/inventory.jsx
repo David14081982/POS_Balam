@@ -226,7 +226,7 @@
     }
     function confirmDeletion(product, scope, targets) {
       const guard = D.productDeletionGuard(targets.map(row => row.id));
-      if (!guard.ok) { toast(guard.error, 'var(--danger)'); return; }
+      if (!guard.ok) { toast({ context: 'product_delete', code: guard.code, message: guard.error }, 'var(--danger)'); return; }
       setDeletion({ stage: 'confirm', product, scope, targets, guard });
     }
     function deleteProduct(p) {
@@ -242,7 +242,7 @@
         scope: deletion.scope, referenceFamilyId: familyId,
         productIds: deletion.targets.map(row => row.id),
       });
-      if (!result.ok) { toast(result.error, 'var(--danger)'); setDeletion(null); return; }
+      if (!result.ok) { toast({ context: 'product_delete', code: result.code, message: result.error }, 'var(--danger)'); setDeletion(null); return; }
       refresh();
       setDetail(null);
       setDeletion(null);

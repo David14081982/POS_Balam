@@ -119,6 +119,8 @@ sesión de chat.
 
 | `lectura-desconocida-pos-h136.md` | H-136 | Lectura V3 desconocida sin selección comercial y avisos oscuros legibles; etiqueta real pendiente |
 
+| `baja-productos-motivos-humanos-h137.md` | H-137 | Motivos operativos de baja y prueba real individual/familiar; caso del usuario pendiente |
+
 Documentación financiera relacionada, creada antes de este índice:
 
 - `../H-03-coherencia-cobro.md`

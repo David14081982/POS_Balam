@@ -6440,6 +6440,28 @@ SHA-256 `83e7d331e50de67961109cbf10d0ca9cb90f46759cf62d5536b36716a65c4af9`.
 H-136 publicado 23/23; smoke 17/17; navegación 15/15; build 8/8 y dos iguales.
 **Commit:** `7889b5f120df0e6ccd4bcb0534614194a37fbe9a`.
 
+## H-137 — La baja bloqueada pierde su explicación operativa
+
+**Estado:** PARCIALMENTE RESUELTO
+**Fecha:** 05/09/2026
+**Origen:** el usuario no puede eliminar una referencia o familia. Sin familia
+exacta todavía. H-114 contrato 13/13 y QA 55/55; la baja familiar real funciona
+en navegador aislado y persiste la operación durable. Consulta remota sólo
+lectura: doce bajas recientes registradas como sincronizadas, sin diagnóstico.
+**Defecto acotado:** Inventario entrega sólo el texto de la guarda al aviso;
+el catálogo genérico oculta la causa cuando detecta jerga como «cola» o «durable».
+**Alcance:** mensajes de bloqueo claros y recorrido de baja real, sin cambiar
+permisos, guardas, históricos, identidad, SQL ni datos comerciales reales.
+**Corrección:** código/contexto de baja conservados hasta el catálogo central;
+motivos humanos específicos sin reinterpretar errores de otros flujos.
+**Pruebas:** H-137 rojo 36/39, verde ampliado 41/41: baja local real individual
+y familiar, guardas, stock, cola durable, históricos intactos y recarga;
+ocho viewports. H-114 contrato 13/13 y QA 55/55; H-134 mensajes 43/43.
+**Pendiente:** familia/aviso exactos del incidente real; no se borraron productos
+en producción. Publicación pendiente de verificar.
+**Corrección documentada:** `docs/fixes/baja-productos-motivos-humanos-h137.md`.
+**Commit:** Pendiente de commit.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:
