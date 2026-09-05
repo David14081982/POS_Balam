@@ -151,7 +151,9 @@ Evidencia en `../BALAM-sync-fix-evidence-20260905`: logs, capturas, SQL pre/post
 `recovery-preview.json` y `Recuperacion propuesta H142.xlsx`.
 La propuesta incluye 8 filas exportadas completas, 77 ajustes de stock con
 precondiciones de versión y las diferencias de las 89 filas comunes afectadas.
-No se aplicó ningún ajuste de negocio ni se eliminó producto alguno.
+La propuesta general no se aplicó. Posteriormente se ejecutó sólo la eliminación
+autorizada de las dos ventas de prueba y la reversa de sus efectos, descrita abajo.
+No se eliminó producto alguno.
 
 Snapshot remoto de campos de inventario, catálogo y configuración capturado
 a las 20:24:26 UTC del 05/09/2026. Excluye medios y NO respalda todos los
@@ -169,7 +171,9 @@ lotes son de fechas distintas; no se deben reenviar como existencias finales.
 
 El usuario autorizó reactivar este equipo; se aplicó la RPC administrativa
 existente y quedó `must_rebootstrap`. También confirmó que las dos ventas
-remotas adicionales por 3550 y 1250 son pruebas. Todavía NO se borraron.
+remotas adicionales por 3550 y 1250 son pruebas. En una autorización posterior
+limitó expresamente la ejecución a eliminar esas dos ventas; ya se ejecutó esa
+retirada y la reversa de sus efectos, sin la conciliación general.
 
 Preparada conciliación exacta: respaldo de esas dos ventas y sus hijos; reversa
 de cuatro piezas, dos ventas/4800/240 de comisión y un acumulado de cliente;
@@ -188,15 +192,30 @@ vendedores y clientes son idénticos. El SQL de aplicación preparado usa una
 única transacción y aborta entera ante cualquier error o precondición distinta;
 no contiene el manejo de errores que permite continuar una simulación.
 
-Pendiente autorización concreta para retirar las dos ventas de prueba y aplicar
-la conciliación: el SKILL de mantenimiento exige detenerse ante borrado de ventas
-y transformación masiva de existencias reales. Archivos externos revisables:
+El 05/09/2026 a las 21:18 UTC se aplicó exclusivamente la retirada autorizada:
+dos ventas, cuatro líneas, dos pagos, cuatro movimientos, dos commits y dos
+reservas. Se restituyeron cuatro piezas en tres referencias y se revirtieron
+4800/2/240 del vendedor y 1250/1 del cliente, preservando ambos perfiles.
+Cinco ventas reales conservadas por hash; productos ajenos a esas tres referencias,
+líneas/pagos/movimientos ajenos y demás clientes idénticos por hash.
+Dos marcas por operación impiden reintentar esas ventas como altas nuevas.
+Postflight remoto separado: cinco ventas, cinco pagos y cinco movimientos;
+inventario 250 familias/969 referencias/3560 piezas. No equivale al inventario
+final de sucursal. Scripts `authorized-test-cleanup-*` y recibos privados en
+la carpeta de evidencia. La prueba previa usó exactamente el mismo SQL con
+ROLLBACK; aplicación con COMMIT, precondiciones completas y bloqueos breves.
+
+La conciliación general sigue pendiente de autorización; el usuario autorizó
+exclusivamente retirar las dos ventas. La propuesta combinada anterior quedó
+SUPERADA: sus precondiciones corresponden a antes de esa retirada. Antes de una
+futura aplicación se debe preparar y probar la recuperación sin repetirla.
+Archivos de la propuesta histórica, conservados para auditoría:
 `targeted-test-cleanup-plan.json`, `recovery-stock-plan.json`,
 `recovery-apply-AWAITING-APPROVAL.sql` y `recovery-final-dry-run.json`.
 Informe revisable: `RECUPERACION-VALIDADA.md`; huellas en
 `recovery-plan-manifest.json`. El archivo final también se ejerció cambiando
 únicamente COMMIT por ROLLBACK; hashes completos posteriores idénticos.
-Luego: verificar aplicación, publicar cliente, reconstruir equipos preservando
+Luego de autorizar y verificar la conciliación: publicar cliente, reconstruir equipos preservando
 y archivando sus colas, comprobar datos y cursores reales. Otros equipos pueden
 conservar operaciones únicas; no descartar ninguna cola sin revisarla.
 Falta identificar inequívocamente los dos productos agotados mencionados antes

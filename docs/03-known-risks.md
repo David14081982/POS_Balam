@@ -6593,7 +6593,10 @@ borradores; salir de la sección conserva el comportamiento previo.
 por autorización explícita. S11 de alias V2 histórico corregido con SQL 18000/18100,
 16/16 pruebas SQL y 22/22 de idempotencia independiente. Recuperación completa
 probada con rollback: 253/977/3502, ocho ventas, nueve pagos, una devolución y
-un cambio; pendiente autorización para retirar dos ventas confirmadas de prueba.
+un cambio. Posteriormente el usuario autorizó exclusivamente retirar las dos
+ventas de prueba: aplicado y verificado el 05/09 a las 21:18 UTC, con reversa de
+cuatro piezas y 240 de comisión. Cinco ventas reales intactas por hash. Nube
+actual: 250/969/3560. Conciliación general pendiente; propuesta combinada superada.
 **Origen:** sucursal, autoridad indicada por el usuario, contiene 253 familias y
 977 referencias; laptop y Supabase contienen 250/969. Hay 77 diferencias de
 existencias, 74 con igual versión. La auditoría reprodujo diez defectos de cola,
@@ -6610,7 +6613,8 @@ SQL 17800/17900 aplicado y verificado remotamente sin alterar productos ni ACL.
 **Riesgo residual:** frontend sin publicar y reconciliación real pendiente.
 JSON de sucursal recibido y contrastado con commits/documentos remotos. Descargar
 ahora la nube incompleta puede retirar referencias locales. Conciliación por IDs
-preparada y probada, sin aplicar ajustes de negocio ni borrar las ventas de prueba.
+probada antes de la retirada; requiere actualizar precondiciones y excluir la
+limpieza ya ejecutada. No se ha aplicado la conciliación general ni publicado el cliente.
 **Documento:** `docs/fixes/convergencia-inventario-cola-h142.md`.
 
 ## Regla de actualización
