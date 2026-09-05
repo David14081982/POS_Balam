@@ -23,7 +23,7 @@
     // Administración / Datos no contiene un borrador de configuración. Su
     // limpieza tiene guardas propias; marcar su mismo foco como actividad haría
     // que `client_ready` se bloqueara por pulsar sus controles.
-    const syncFocus = window.UI.useSyncFocusActivity(['config'], { screen: 'settings' }, sec !== 'demo');
+    const syncFocus = window.UI.useSyncFocusActivity(['config'], { screen: 'settings' }, sec !== 'demo', '[data-testid="sync-health"]');
     // Re-render en vivo cuando cambia cualquier ajuste/catálogo (otra pestaña incluida).
     const [, bump] = useState(0);
     useEffect(() => {
@@ -896,7 +896,7 @@
     return h('div', { key: k, className: 'mb-4 ' + (wide ? 'col-span-2' : '') }, [
       h('div', { key: 'l', className: 'font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mb-1.5' }, label),
       h('input', {
-        key: 'in', type, min, max, defaultValue: v, className: INPUT,
+        key: 'in', 'data-testid': 'config-field-' + k, type, min, max, defaultValue: v, className: INPUT,
         onBlur: e => {
           let next = type === 'number' ? (Number(e.target.value) || 0) : e.target.value;
           if (type === 'number' && min != null) next = Math.max(Number(min), next);
@@ -1520,14 +1520,14 @@
           ]);
         }) : [h('p', { key: 'empty', className: 'text-caption text-on-surface-variant py-6 text-center' }, 'No existen operaciones en cuarentena.')]),
       ]),
-      window.UI.technicalMessageViewer() && h('details', { key: 'tools', className: 'mt-5 border-t border-outline-variant pt-4', 'data-technical-details': 'true' }, [
+      window.UI.technicalMessageViewer() && h('details', { key: 'tools', 'data-testid': 'sync-recovery-tools', className: 'mt-5 border-t border-outline-variant pt-4', 'data-technical-details': 'true' }, [
         h('summary', { key: 'summary', className: 'cursor-pointer text-caption font-semibold text-primary' }, 'Detalles técnicos'),
         h('p', { key: 'technical', className: 'text-overline text-on-surface-variant mt-3' },
           `Época ${status.dataEpoch == null ? '—' : status.dataEpoch} · tiempo real ${status.realtime} · ${status.pending} pendientes locales · ${status.blocked} bloqueados · ${status.invalidDomains.length} dominios por aplicar.`),
         h('div', { key: 'a', className: 'flex gap-2 flex-wrap mt-3' }, [
           h('button', { key: 'r', disabled: busy, onClick: () => act(() => window.STORE.reconcileDomains()), className: 'px-4 h-10 border border-outline-variant rounded-lg disabled:opacity-40' }, 'Verificar ahora'),
-          h('button', { key: 'b', disabled: busy, onClick: exportBackup, className: 'px-4 h-10 border border-outline-variant rounded-lg disabled:opacity-40' }, backup ? 'Respaldo exportado' : 'Exportar recuperación'),
-          needsBootstrap && h('button', { key: 'rb', disabled: busy || !backup, onClick: () => act(() => window.STORE.rebootstrapFromCloud()), className: 'px-4 h-10 bg-primary text-on-primary rounded-lg disabled:opacity-40' }, 'Actualizar este equipo'),
+          h('button', { key: 'b', 'data-testid': 'sync-recovery-export', disabled: busy, onClick: exportBackup, className: 'px-4 h-10 border border-outline-variant rounded-lg disabled:opacity-40' }, backup ? 'Respaldo exportado' : 'Exportar recuperación'),
+          needsBootstrap && h('button', { key: 'rb', 'data-testid': 'sync-recovery-update', disabled: busy || !backup, onClick: () => act(() => window.STORE.rebootstrapFromCloud()), className: 'px-4 h-10 bg-primary text-on-primary rounded-lg disabled:opacity-40' }, 'Actualizar este equipo'),
           window.AUTH.isAdmin() && h('button', { key: 'z', disabled: busy || !clean || !backup, onClick: pointZero, className: 'px-4 h-10 bg-danger text-white rounded-lg disabled:opacity-40' }, 'Establecer punto cero'),
         ]),
       ]),

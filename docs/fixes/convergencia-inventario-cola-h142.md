@@ -6,6 +6,7 @@
 **Commit de implementación:** `0fa6810`
 **Commit S11:** `9ea9142`.
 **Commit S12/S13:** `a26701d`.
+**Commit S14:** Pendiente de commit.
 **Integración en main:** `a111671` (PR #3).
 
 ## Problema y reproducción
@@ -288,6 +289,38 @@ confirmaciones de sincronización ni se accedió a sus perfiles de navegador.
 Instrucciones en `../BALAM-sync-fix-evidence-20260905/ACTUALIZACION-EQUIPOS.md`.
 Falta identificar inequívocamente los dos productos agotados mencionados antes
 de ejercer sus bajas reales. No se declara H142 resuelto ni ausencia de errores.
+
+## S14 — Actualizar este equipo se bloquea por su propio foco
+
+05/09/2026, corregido y pendiente de publicación; Pendiente de commit. Usuario comunica el código
+`ACTIVITY_ACTIVE`. Reproducción en Chrome con clics reales, SettingsScreen,
+hook de foco, CORE y guarda STORE reales: suite inicial 8/14, seis fallos;
+suite final ampliada 12/20, ocho fallos en 320/1280 px, contra `e7c56fb`.
+Exportar y pulsar Actualizar crea `config:1` antes de entrar en recuperación;
+no llega a leer el manifiesto. El contenedor trata sus controles de
+sincronización como edición de configuración. Los ensayos anteriores llamaban
+a STORE directamente y no cubrían este foco de la pantalla.
+
+Corrección: selector opcional para excluir sólo el Centro de equipos del hook;
+liberar únicamente el token propio al pasar de un campo a ese panel. Conservar
+la guarda ACTIVITY_ACTIVE y toda actividad externa; reutilizar el mensaje humano
+update_safety para bloqueos legítimos. Sin cambios a datos, cola o SQL.
+Criterio: exportar→actualizar alcanza la lectura de manifiesto; un formulario
+o actividad externa siguen protegidos y el tránsito de foco no deja un token
+propio obsoleto.
+
+Fuente corregida: `node test-h142-device-center-focus.mjs`, 20/20. Artefacto
+final con `BALAM_VERIFIED_HTML=index.html`, sin inyectar fuente: 20/20. Incluye
+campo real Nombre comercial, actividad externa de venta, reintento, mensaje
+humano con detalle técnico, tránsito a Administración / Datos y regreso.
+`node test-h134-human-messages.mjs`: 43/43; su E2E: 26/26.
+`node test-h113-selective-cleanup.mjs`: 35/35;
+`node test-ui-navigation.mjs`: 15/15;
+`node test-smoke.mjs bundle`: 17/17;
+`node test-build-reproducibility.mjs`: 8/8. Self-review: sólo cambia la
+clasificación de foco dentro del panel; guarda STORE, cola e identidades intactas.
+QA intercepta la red y detiene recuperación al leer manifiesto: demuestra el
+desbloqueo del botón, no una actualización de los equipos físicos.
 
 ## Referencias
 

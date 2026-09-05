@@ -6590,6 +6590,13 @@ borradores; salir de la sección conserva el comportamiento previo.
 **Commit de implementación:** `0fa6810`.
 **Commit S11:** `9ea9142`.
 **Commit S12/S13:** `a26701d`.
+**S14 corregido, publicación pendiente (05/09/2026):** clic real en «Actualizar este equipo»
+reproduce `ACTIVITY_ACTIVE`: el foco del Centro de equipos abre una actividad
+de configuración en su contenedor. Chrome 320/1280: reproducción final 12/20,
+ocho fallos. Se excluye únicamente ese panel del seguimiento de foco,
+conservando actividades de formularios y operaciones externas. Fuente y bundle
+20/20 cada uno; H134 43/43 y E2E 26/26; H113 35/35; navegación 15/15,
+smoke 17/17 y build 8/8. Commit: Pendiente de commit.
 **Integración main:** `a111671` (PR #3).
 **Continuación:** recibido JSON de sucursal (62 pendientes).
 S12 reproducido antes de publicar: rebootstrap aplica una purga histórica después

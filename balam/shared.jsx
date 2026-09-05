@@ -347,7 +347,7 @@
     if (/xlsx|excel|json|uuid|reference_|duplicate_(?:id|sku)|id_(?:not|required)|catalog_value|archivo.*(?:incompatible|versi[oó]n)/.test(all)) return 'file_format';
     if (/quota|storage|persist|durable|localstorage|indexeddb|espacio/.test(all)) return 'storage';
     if (/rebootstrap|protocol|epoch|compatib|actualizaci[oó]n.*espera/.test(all)) return 'compatibility';
-    if (/update.*(?:unsafe|blocked)|service.worker|trabajo pendiente.*actualizar/.test(all)) return 'update_safety';
+    if (/activity_active|update.*(?:unsafe|blocked)|service.worker|trabajo pendiente.*actualizar/.test(all)) return 'update_safety';
     if (/insufficient_stock|waiting_inventory|sin stock|existencias? insuficientes?/.test(all) || category === 'inventory') return 'inventory';
     if (/401|jwt|not authenticated|unauthorized|sesi[oó]n|sign.?in/.test(all) || category === 'auth') return 'auth';
     if (/403|42501|rls|row.level|permission denied|forbidden|permiso/.test(all) || category === 'permission') return 'permission';
@@ -440,9 +440,10 @@
       };
     }, [!!active, key]);
   }
-  function useSyncFocusActivity(domains, detail, enabled = true) {
+  function useSyncFocusActivity(domains, detail, enabled = true, passiveSelector = null) {
     const token = React.useRef(null);
     const list = Array.isArray(domains) ? domains : [domains];
+    const isPassive = target => !!(passiveSelector && target && target.closest && target.closest(passiveSelector));
     useEffect(() => {
       if (!enabled && token.current && window.CORE && window.CORE.endActivity) {
         window.CORE.endActivity(token.current); token.current = null;
@@ -453,14 +454,21 @@
       token.current = null;
     }, []);
     return {
-      onFocusCapture() {
+      onFocusCapture(event) {
         if (!enabled) return;
+        // Device recovery controls must not count as a configuration edit.
+        // Release only this hook's token; other forms/operations stay protected.
+        if (isPassive(event.target)) {
+          if (token.current && window.CORE && window.CORE.endActivity) window.CORE.endActivity(token.current);
+          token.current = null;
+          return;
+        }
         if (!token.current && window.CORE && window.CORE.beginActivity) token.current = window.CORE.beginActivity(list, detail || null);
       },
       onBlurCapture(event) {
         const root = event.currentTarget;
         setTimeout(() => {
-          if (root && root.contains && root.contains(document.activeElement)) return;
+          if (root && root.contains && root.contains(document.activeElement) && !isPassive(document.activeElement)) return;
           if (token.current && window.CORE && window.CORE.endActivity) window.CORE.endActivity(token.current);
           token.current = null;
         }, 0);
