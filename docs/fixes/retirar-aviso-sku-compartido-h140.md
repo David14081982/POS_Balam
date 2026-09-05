@@ -1,9 +1,9 @@
 # Retirar el aviso de SKU compartidos en Configuración
 
 **Riesgo:** H-140.
-**Estado:** RESUELTO LOCALMENTE; publicación pendiente.
+**Estado:** RESUELTO Y PUBLICADO.
 **Fecha:** 05/09/2026.
-**Commit:** Pendiente de commit.
+**Commit:** `161ae0b15902587584a2c076c3d38dbabab35103`.
 
 ## Problema y reproducción
 
@@ -44,7 +44,10 @@ de longitud y campos ocultos; las otras 29 pruebas mantienen sus contratos.
 
 ## Riesgo residual y pendientes
 
-Pendiente de verificar publicación. Los SKU compartidos permanecen tal como
+Pages `built`, HTTP 200 y bytes idénticos al blob Git del commit;
+SHA-256 `6716ed95b6491ad9bec62907646224bd7c66f81e3ef5fd15b6b47b2b78e7d757`.
+QA contra sitio publicado: **6/6**, con datos aislados y red comercial bloqueada.
+Sin pendientes conocidos para esta retirada. Los SKU compartidos permanecen tal como
 estaban; esta historia retira únicamente su aviso en Configuración. Ningún
 dato real ni ajuste de negocio se modifica.
 

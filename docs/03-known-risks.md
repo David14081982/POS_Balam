@@ -6539,7 +6539,7 @@ positivo en PostgreSQL aislado, guarda y permisos comprobados en servidor.
 
 ## H-140 — Retirar el aviso de SKU compartidos en Configuración
 
-**Estado:** RESUELTO LOCALMENTE; publicación pendiente.
+**Estado:** RESUELTO Y PUBLICADO.
 **Fecha:** 05/09/2026.
 **Origen:** petición explícita de retirar únicamente el bloque de advertencia,
 sin modificar configuración ni regenerar SKU. Captura del usuario y código
@@ -6551,9 +6551,12 @@ Prueba contractual antigua ajustada al alcance solicitado.
 **Pruebas:** H-94 configuración 30/30; QA Chrome aislado 6/6 con SKU repetidos,
 360/1280 px y configuración/productos intactos; navegación 15/15; smoke 17/17;
 build 8/8.
-**Pendiente:** publicación. Sin modificaciones de datos ni configuración real.
+**Despliegue:** Pages `built`, HTTP 200 y bytes idénticos al blob Git;
+SHA-256 `6716ed95b6491ad9bec62907646224bd7c66f81e3ef5fd15b6b47b2b78e7d757`;
+QA publicado 6/6. Sin modificaciones de datos ni configuración real.
+**Pendiente:** ninguno conocido para esta retirada.
 **Corrección documentada:** `docs/fixes/retirar-aviso-sku-compartido-h140.md`.
-**Commit:** Pendiente de commit.
+**Commit:** `161ae0b15902587584a2c076c3d38dbabab35103`.
 
 ## Regla de actualización
 
