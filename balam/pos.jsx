@@ -453,7 +453,7 @@
   function SuccessModal({ sale, onNew }) {
     window.UI.useReceiptAutoPrint();
     const footer = [
-      h('button', { key: 'p', className: 'flex-1 py-3.5 border border-outline-variant text-on-surface text-caption font-bold uppercase tracking-widest rounded-xl hover:bg-surface-container transition flex items-center justify-center gap-2', onClick: () => window.print() }, [h(MS, { key: 'i', name: 'print', size: 18 }), 'Imprimir ticket']),
+      h('button', { key: 'p', className: 'flex-1 py-3.5 border border-outline-variant text-on-surface text-caption font-bold uppercase tracking-widest rounded-xl hover:bg-surface-container transition flex items-center justify-center gap-2', 'data-testid': 'receipt-print', onClick: () => window.UI.printReceipt() }, [h(MS, { key: 'i', name: 'print', size: 18 }), 'Imprimir ticket']),
       h('button', { key: 'n', className: 'flex-1 py-3.5 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-xl hover:opacity-90 transition', onClick: onNew }, 'Nueva venta'),
     ];
     return h(Modal, { title: '', onClose: onNew, footer }, [
@@ -461,6 +461,7 @@
         h('div', { key: 'i', className: 'w-16 h-16 bg-success-soft text-success rounded-full grid place-items-center mx-auto mb-6' }, h(MS, { name: 'check', size: 32 })),
         h('h2', { key: 't', className: 'font-headline text-h1 text-primary mb-2' }, 'Venta exitosa'),
         h('p', { key: 'p', className: 'text-caption text-on-surface-variant leading-relaxed' }, `Folio ${sale.folio} · comprobante generado para ${sale.cliente}.`),
+        h(window.UI.ReceiptPrintHelp, { key: 'print-help' }),
       ]),
     ]);
   }

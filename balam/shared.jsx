@@ -476,13 +476,73 @@
     };
   }
 
+  // H-143: RawBT recibe texto UTF-8 mediante su esquema público. El contenido
+  // procede del comprobante histórico montado, nunca del catálogo vigente.
+  const usesBluetoothReceipt = () => /Android/i.test(navigator.userAgent || '');
+  function receiptPrintText(element) {
+    if (!element) throw new Error('El comprobante todavía no está disponible. Cierra y vuelve a abrirlo.');
+    const doc = element.ownerDocument;
+    const copy = element.cloneNode(true);
+    copy.removeAttribute('id');
+    copy.querySelectorAll('script,style,img,svg,button,.material-symbols-outlined,.material-symbols-rounded,.material-icons').forEach(node => node.remove());
+    copy.style.cssText = 'position:absolute;left:-100000px;top:0;width:80mm;display:block;visibility:visible;';
+    doc.body.appendChild(copy);
+    try {
+      // No permitir que campos históricos introduzcan comandos ESC/POS.
+      const text = copy.innerText.replace(/\r\n?/g, '\n').replace(/\t/g, '  ')
+        .replace(/[\x00-\x08\x0b-\x1f\x7f-\x9f]/g, '').replace(/\n{3,}/g, '\n\n').trim();
+      if (!text) throw new Error('El comprobante está vacío. Cierra y vuelve a abrirlo.');
+      return text + '\n\n\n';
+    } finally { copy.remove(); }
+  }
+  function printReceipt({ element, host = window, automatic = false, system = false } = {}) {
+    const notice = message => {
+      if (host === window) toast(message);
+      else {
+        let status = host.document.getElementById('receipt-print-status');
+        if (!status) {
+          status = host.document.createElement('p'); status.id = 'receipt-print-status';
+          status.setAttribute('role', 'status'); status.style.cssText = 'padding:12px;margin:0;background:white;color:#131b2e;';
+          host.document.querySelector('.tools').after(status);
+        }
+        status.textContent = message;
+      }
+    };
+    try {
+      if (!usesBluetoothReceipt() || system) { host.print(); return true; }
+      // Chrome bloquea intents iniciados desde timers. Conservar acción manual.
+      if (automatic) return false;
+      const receipt = element || host.document.querySelector('#balam-ticket, #balam-return-receipt');
+      const payload = encodeURIComponent(receiptPrintText(receipt));
+      if (payload.length > 500000) throw new Error('El comprobante es demasiado largo para Bluetooth. Usa Impresión del sistema.');
+      const link = host.document.createElement('a');
+      link.href = 'intent:' + payload + '#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;';
+      host.document.body.appendChild(link);
+      // Sin await, popup ni timer: conserva el gesto del botón original.
+      try { link.click(); } finally { link.remove(); }
+      notice('Abriendo RawBT. Si no se abre, comprueba que esté instalado y vuelve a pulsar Imprimir.');
+      return true;
+    } catch (error) {
+      notice(error.message || 'No se pudo abrir la impresión. Vuelve a intentarlo.');
+      return false;
+    }
+  }
+  function ReceiptPrintHelp() {
+    if (!usesBluetoothReceipt()) return null;
+    return React.createElement('p', { className: 'text-caption text-on-surface-variant mt-3' }, [
+      'Impresión Bluetooth mediante RawBT. ',
+      React.createElement('button', { key: 'system', type: 'button', 'data-testid': 'receipt-print-system',
+        className: 'underline py-2', onClick: () => printReceipt({ system: true }) }, 'Impresión del sistema'),
+    ]);
+  }
+
   // Autoridad unica de impresion automatica para comprobantes.
   function useReceiptAutoPrint(delay = 350) {
     const printed = useRef(false);
     useEffect(() => {
       if (printed.current || !window.CONFIG || !window.CONFIG.get('print.auto')) return undefined;
       printed.current = true;
-      const timer = setTimeout(() => window.print(), delay);
+      const timer = setTimeout(() => printReceipt({ automatic: true }), delay);
       return () => clearTimeout(timer);
     }, [delay]);
   }
@@ -614,5 +674,5 @@
     ]);
   }
 
-  window.UI = { fmt, fechaCorta, fechaHora, Badge, StatusBadge, StockBadge, ProductThumb, ToastHost, toast, HumanMessage, messageAuthority, messageText, technicalMessageViewer, Page, Toolbar, ActionGroup, KPI, Drawer, Modal, BADGE_TONE, MESSAGE_LEVEL, Pager, Segment, resizeImageFile, imageFileDimensions, useSyncActivity, useSyncFocusActivity, useReceiptAutoPrint };
+  window.UI = { fmt, fechaCorta, fechaHora, Badge, StatusBadge, StockBadge, ProductThumb, ToastHost, toast, HumanMessage, messageAuthority, messageText, technicalMessageViewer, Page, Toolbar, ActionGroup, KPI, Drawer, Modal, BADGE_TONE, MESSAGE_LEVEL, Pager, Segment, resizeImageFile, imageFileDimensions, useSyncActivity, useSyncFocusActivity, useReceiptAutoPrint, usesBluetoothReceipt, receiptPrintText, printReceipt, ReceiptPrintHelp };
 })();

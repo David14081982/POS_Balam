@@ -224,7 +224,7 @@
             onClick: () => { const t = String(tel).replace(/[^0-9+]/g, ''); if (t) window.location.href = 'tel:' + t; },
           }, h(MS, { name: 'phone', size: 18 })) : null,
           h('button', {
-            key: 'tk', title: 'Reimprimir el comprobante del apartado',
+            key: 'tk', title: 'Reimprimir el comprobante del apartado', 'data-testid': 'layaway-reprint-' + sale.folio,
             className: 'w-11 h-11 grid place-items-center rounded-lg border border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary transition',
             onClick: () => onTicket(sale.folio),
           }, h(MS, { name: 'print', size: 18 })),
@@ -399,11 +399,18 @@
     const ultimo = pagos.length ? pagos[pagos.length - 1] : null;
     useEffect(() => {
       if (!sale) { onDone(); return; }
+      if (window.UI.usesBluetoothReceipt()) return;
       const t = setTimeout(() => { window.print(); toast('Comprobante enviado a la impresora'); onDone(); }, 250);
       return () => clearTimeout(t);
     }, []);
     if (!sale) return null;
-    return h(window.BalamTicket, { sale, payment: ultimo });
+    return h(React.Fragment, null, [
+      h(window.BalamTicket, { key: 'ticket', sale, payment: ultimo }),
+      window.UI.usesBluetoothReceipt() && h(Modal, { key: 'modal', title: 'Reimpresión de apartado', onClose: onDone, footer: [
+        h('button', { key: 'print', 'data-testid': 'receipt-print', className: 'px-4 py-3 border border-outline-variant rounded-lg', onClick: () => window.UI.printReceipt() }, 'Imprimir comprobante'),
+        h('button', { key: 'close', 'data-testid': 'layaway-reprint-close', className: 'px-4 py-3 bg-primary text-on-primary rounded-lg', onClick: onDone }, 'Cerrar'),
+      ] }, h(window.UI.ReceiptPrintHelp)),
+    ]);
   }
 
   // ── Modal de comprobante ────────────────────────────────────────────────────
@@ -414,11 +421,12 @@
     const footer = [
       h('button', {
         key: 'p', className: 'flex-1 py-3.5 border border-outline-variant text-on-surface text-caption font-bold uppercase tracking-widest rounded-xl hover:bg-surface-container transition flex items-center justify-center gap-2',
-        onClick: () => window.print(),
+        'data-testid': 'receipt-print', onClick: () => window.UI.printReceipt(),
       }, [h(MS, { key: 'i', name: 'print', size: 18 }), 'Imprimir comprobante']),
       h('button', { key: 'n', className: 'flex-1 py-3.5 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-xl hover:opacity-90 transition', onClick: onClose }, 'Listo'),
     ];
     return h(Modal, { title: '', onClose, footer }, [
+      h(window.UI.ReceiptPrintHelp, { key: 'print-help' }),
       h('div', { key: 'b', className: 'text-center py-2' }, [
         h('div', { key: 'i', className: 'w-16 h-16 bg-success-soft text-success rounded-full grid place-items-center mx-auto mb-6' }, h(MS, { name: 'check', size: 32 })),
         h('h2', { key: 't', className: 'font-headline text-h1 text-primary mb-2' }, liquidado ? 'Apartado liquidado' : 'Abono registrado'),

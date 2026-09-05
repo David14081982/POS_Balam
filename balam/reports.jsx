@@ -72,8 +72,8 @@
       .tools{position:sticky;top:0;z-index:2;display:flex;gap:8px;align-items:center;padding:10px;background:#131b2e;color:#fff}.tools button{min-height:44px;padding:0 14px;border:0;border-radius:7px;font-weight:800}.tools .primary{background:#d4af38;color:#131b2e}.tools .secondary{background:#fff;color:#131b2e}
       main{width:80mm;max-width:100%;margin:12px auto;background:#fff;padding:5mm 4.5mm;font-size:9.5pt;line-height:1.3;overflow:visible}.tk-block{break-inside:avoid;page-break-inside:avoid}.brand{text-align:center;border-bottom:2px solid #131b2e;padding-bottom:3mm}.brand strong{display:block;font-size:14pt;letter-spacing:.2em}.brand h1{margin:1.5mm 0 0;font-size:11pt;letter-spacing:.04em}.meta{padding:3mm 0;border-bottom:1px dashed #596273}.meta p{margin:1mm 0;overflow-wrap:anywhere}.method{padding:3mm 0;border-bottom:1px dashed #596273}.method h2,.alert h2,.muted h2,.origins h2{margin:0 0 2mm;font-size:10pt;line-height:1.2;overflow-wrap:anywhere;word-break:break-word}.money,.count{display:grid;grid-template-columns:minmax(0,1fr) max-content;gap:3mm;align-items:baseline;margin:.8mm 0}.money span,.count span{min-width:0;overflow-wrap:anywhere}.money strong,.count strong{white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}.money.net{margin-top:1.5mm;padding-top:1.5mm;border-top:1px solid #c7cad1;font-weight:800}.totals{padding:3mm 0;border-bottom:2px solid #131b2e}.totals .grand{font-size:12pt;border-top:2px solid #131b2e;padding-top:2mm;margin-top:2mm}.summary,.origins,.muted,.alert,.reconciliation{padding:3mm 0;border-bottom:1px dashed #596273}.summary p,.muted p,.alert p,.reconciliation p{margin:1mm 0;overflow-wrap:anywhere}.alert{color:#7a4500}.alert>strong{display:block;font-size:12pt}.reconciliation{font-weight:800}.reconciliation.pending{color:#a32929}.empty{padding:5mm 0;text-align:center}.foot{text-align:center;padding-top:3mm;font-size:8pt;color:#596273}
       @media(max-width:360px){main{margin:0 auto;padding:4mm 3.5mm}.tools{flex-wrap:wrap}}
-      @media print{html,body{height:auto!important;min-height:0!important;background:#fff!important;overflow:visible!important}.tools{display:none!important}main{width:80mm;max-width:80mm;margin:0!important;padding:5mm 4.5mm!important}}
-    </style></head><body><div class="tools"><button type="button" class="primary" onclick="window.print()">Imprimir ticket</button><button type="button" class="secondary" onclick="window.close()">Cerrar</button><span>80 mm</span></div><main data-payment-method-ticket="true">
+      @media print{html,body{height:auto!important;min-height:0!important;background:#fff!important;overflow:visible!important}.tools,#receipt-print-status{display:none!important}main{width:80mm;max-width:80mm;margin:0!important;padding:5mm 4.5mm!important}}
+    </style></head><body><div class="tools"><button type="button" class="primary" data-testid="payment-ticket-print">Imprimir ticket</button><button type="button" class="secondary" onclick="window.close()">Cerrar</button><span>80 mm</span></div><main data-payment-method-ticket="true">
       <header class="brand tk-block"><strong>BALAM</strong><h1>REPORTE POR MÉTODO DE PAGO</h1></header>
       <section class="meta tk-block"><p><strong>Periodo:</strong><br>${escapeReport(view.period)}</p><p><strong>Generado:</strong><br>${escapeReport(view.generated)}</p></section>
       ${methodBlocks}
@@ -84,7 +84,20 @@
       <section class="reconciliation tk-block ${view.reconciliation.ok ? '' : 'pending'}"><p>CONCILIACIÓN: ${view.reconciliation.ok ? 'CORRECTA' : 'PENDIENTE'}</p><p>Σ métodos ${escapeReport(fmt(view.reconciliation.distributedNet))} + sin distribución ${escapeReport(fmt(view.undistributed))} = neto ${escapeReport(fmt(view.net))}</p>${view.reconciliation.ok ? '' : `<p>Diferencia: ${escapeReport(fmt(view.reconciliation.difference))}</p>`}</section>
       <footer class="foot tk-block">Reporte ejecutivo · BALAM</footer>
     </main></body></html>`;
-    openPrintableWindow(html, false);
+    const win = openPrintableWindow(html, false);
+    if (win) {
+      const ticket = win.document.querySelector('[data-payment-method-ticket]');
+      const button = win.document.querySelector('[data-testid="payment-ticket-print"]');
+      button.addEventListener('click', () => window.UI.printReceipt({ element: ticket, host: win }));
+      if (window.UI.usesBluetoothReceipt()) {
+        const system = win.document.createElement('button');
+        system.type = 'button'; system.textContent = 'Impresión del sistema';
+        system.setAttribute('data-testid', 'payment-ticket-system');
+        system.addEventListener('click', () => window.UI.printReceipt({ host: win, system: true }));
+        win.document.querySelector('.tools').appendChild(system);
+        win.document.querySelector('.tools').style.flexWrap = 'wrap';
+      }
+    }
   }
 
   function ReprintSaleModal({ sale, onClose }) {
@@ -92,14 +105,15 @@
     useEffect(() => {
       if (printed.current) return undefined;
       printed.current = true;
-      const timer = setTimeout(() => window.print(), 100);
+      const timer = setTimeout(() => window.UI.printReceipt({ automatic: true }), 100);
       return () => clearTimeout(timer);
     }, []);
     return h(window.UI.Modal, { title: 'Reimpresion de venta', onClose, footer: [
-      h('button', { key: 'p', onClick: () => window.print(), className: 'px-4 py-3 border border-outline-variant rounded-lg' }, 'Imprimir nuevamente'),
+      h('button', { key: 'p', 'data-testid': 'receipt-print', onClick: () => window.UI.printReceipt(), className: 'px-4 py-3 border border-outline-variant rounded-lg' }, 'Imprimir nuevamente'),
       h('button', { key: 'c', 'data-testid': 'sales-reprint-close', onClick: onClose, className: 'px-4 py-3 bg-primary text-on-primary rounded-lg' }, 'Cerrar'),
     ] }, [
       h('p', { key: 'm', className: 'text-caption text-on-surface-variant' }, `Documento historico ${sale.folio}. Esta accion no modifica la venta.`),
+      h(window.UI.ReceiptPrintHelp, { key: 'print-help' }),
       h(window.BalamTicket, { key: 't', sale }),
     ]);
   }

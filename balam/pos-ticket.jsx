@@ -228,7 +228,7 @@
           }, [h(MS, { key: 'i', name: 'save', size: 18 }), 'Diferir']),
           h('button', {
             key: 'c', className: 'col-span-2 py-3 bg-surface text-primary hover:opacity-90 rounded-lg text-caption font-bold uppercase tracking-wider transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-e2 disabled:opacity-40 disabled:cursor-not-allowed',
-            disabled: empty, onClick: onCobrar,
+            'data-testid': 'pos-checkout-open', disabled: empty, onClick: onCobrar,
           }, [h(MS, { key: 'i', name: 'shopping_cart_checkout', size: 18 }), 'Completar venta']),
         ]),
       ]),

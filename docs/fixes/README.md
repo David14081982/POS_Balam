@@ -13,6 +13,8 @@ sesión de chat.
 
 ## Correcciones registradas
 
+- `impresion-android-rawbt-h143.md` — H-143: envío de comprobantes a RawBT desde Android.
+
 | Archivo | Riesgo | Tema |
 |---|---|---|
 | `convergencia-inventario-cola-h142.md` | H-142 | Conservación de pendientes, conflictos, recepción y diagnóstico de equipos |

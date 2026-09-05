@@ -210,10 +210,11 @@
   function DirectReturnReceiptModal({ receipt, onClose }) {
     window.UI.useReceiptAutoPrint();
     return h(window.UI.Modal, { title: 'Devolucion registrada', onClose, footer: [
-      h('button', { key: 'p', onClick: () => window.print(), className: 'flex-1 py-3.5 border border-outline-variant text-caption font-bold uppercase tracking-widest rounded-xl' }, 'Imprimir comprobante'),
+      h('button', { key: 'p', 'data-testid': 'receipt-print', onClick: () => window.UI.printReceipt(), className: 'flex-1 py-3.5 border border-outline-variant text-caption font-bold uppercase tracking-widest rounded-xl' }, 'Imprimir comprobante'),
       h('button', { key: 'c', onClick: onClose, className: 'flex-1 py-3.5 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-xl' }, 'Listo'),
     ] }, [
       h('p', { key: 'm', className: 'text-caption text-on-surface-variant' }, `Reembolso ${receipt.returnDoc.id} · ${fmt(receipt.returnDoc.total)}`),
+      h(window.UI.ReceiptPrintHelp, { key: 'print-help' }),
       h(window.BalamReturnReceipt, { key: 'r', sale: receipt.sale, returnDoc: receipt.returnDoc }),
     ]);
   }
@@ -920,11 +921,12 @@
     return h(window.UI.Modal, {
       title: 'Cambio registrado', onClose,
       footer: [
-        h('button', { key: 'p', className: 'flex-1 py-3.5 border border-outline-variant text-caption font-bold uppercase tracking-widest rounded-xl', onClick: () => window.print() }, 'Imprimir comprobante'),
+        h('button', { key: 'p', className: 'flex-1 py-3.5 border border-outline-variant text-caption font-bold uppercase tracking-widest rounded-xl', 'data-testid': 'receipt-print', onClick: () => window.UI.printReceipt() }, 'Imprimir comprobante'),
         h('button', { key: 'n', className: 'flex-1 py-3.5 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-xl', onClick: onClose }, 'Listo'),
       ],
     }, h('div', { className: 'py-2 space-y-1 text-body' }, [
       h('div', { key: 'f' }, ['Cambio ', h('strong', { key: 'b' }, ex.folio)]),
+      h(window.UI.ReceiptPrintHelp, { key: 'print-help' }),
       h('div', { key: 'o', className: 'text-caption text-on-surface-variant' }, 'Sobre la venta ' + ex.origenFolio),
       ex.diferencia > 0 && h('div', { key: 'd', className: 'text-caption' }, 'Diferencia cobrada · ' + fmt(ex.diferencia)),
       ex.valorNoAprovechado > 0 && h('div', { key: 'n', className: 'text-caption' }, 'Sobrante no aprovechado · ' + fmt(ex.valorNoAprovechado)),

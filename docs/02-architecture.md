@@ -547,6 +547,19 @@ tipografía ni documentos; las ventanas propias de reportes y etiquetas no
 consumen este formato. Una configuración física de papel que lo fuerce puede
 requerir ajuste del controlador; el corte real se valida en la impresora.
 
+### Transporte de comprobantes en Android
+
+`UI.printReceipt()` entrega el texto del comprobante ya montado a RawBT en
+Android mediante un intent con paquete fijo y gesto directo. La extracción
+omite imágenes/iconos y comandos de control, sin consultar el catálogo ni
+modificar documentos. POS, reimpresión de ventas, ticket por método, abonos,
+cambios y devoluciones comparten el transporte. Un documento vacío o excesivo
+se rechaza completo con mensaje. Android conserva una acción alternativa de
+impresión del sistema; sus timers de autoimpresión no abren aplicaciones.
+Escritorio conserva la impresión y el PDF continuo existentes. La aplicación
+informa la solicitud de apertura, no acredita impresión física. Reportes A4,
+etiquetas y préstamos mantienen sus salidas independientes.
+
 ## AUTH
 
 Archivo: `balam/auth.jsx`. API: `window.AUTH`.
