@@ -1,10 +1,11 @@
 # Convergencia de inventario y conservación de la cola
 
 **Riesgo:** H-142
-**Estado:** PARCIALMENTE RESUELTO — código verificado; recuperación y publicación del cliente pendientes
+**Estado:** RECUPERACIÓN EN NUBE APLICADA — cliente y equipos pendientes de verificación
 **Fecha:** 05/09/2026
 **Commit de implementación:** `0fa6810`
 **Commit S11:** `9ea9142`.
+**Commit S12/S13:** Pendiente de commit.
 
 ## Problema y reproducción
 
@@ -16,6 +17,33 @@ Evidencia original preservada fuera del repositorio en
 `../BALAM-sync-evidence-20260905/INFORME.md` (relativa a Downloads).
 
 ## Causa raíz
+
+S13: el mismo navegador con la cola real de sucursal (62 operaciones, 2.06M
+caracteres) falla con `QUARANTINE_STORAGE_UNAVAILABLE`: duplicar cola y archivo
+en localStorage excede la cuota junto al inventario. Conserva los pendientes,
+pero impide completar recuperación. Debe reutilizar el IndexedDB de respaldo
+existente para archivos grandes y adaptar lectura/reporte/resolución de archivo;
+no quitar pendientes antes de confirmar almacenamiento durable.
+
+Corrección S13: archivos conservan formato; respaldo en el mismo objectStore
+IndexedDB bajo su clave de cuarentena si localStorage no alcanza. Lectores unen
+ambos almacenes, priorizan IDB y esperan todas las operaciones asíncronas.
+Reporte, restauración y resolución siguen funcionando tras recarga. La cola
+activa sólo se retira tras confirmar el archivo; abortos también fallan cerrado.
+
+S12 (recuperación real, 05/09): navegador aislado con respuesta remota capturada
+de ocho ventas y la purga histórica del 10/08 termina con cero ventas y
+`synchronized=true`. `DOMAIN_ORDER` aplica `purges` después de descargar ventas,
+pagos y comisiones; `applyRemotePurge` borra esa proyección recién confirmada
+cuando la marca local aún no existe. Debe aplicar la invalidación destructiva
+antes de reconstruir dominios comerciales. Evidencia: arnés externo
+`verify-recovered-browser.cjs`, rama c79a14b, sin escrituras reales.
+
+Corrección S12: purga antes de dominios comerciales; elimina cursores de las
+proyecciones que modifica y las invalida incluso si su versión no cambió. Ventas
+sin cursor se reconstruyen con snapshot completo, preservando históricos fuera
+de la ventana normal. Si falla una descarga, el cursor ausente queda persistido
+y el estado no declara sincronización completa.
 
 S01: cola leída antes de esperar telemetría y guardada después pierde capturas.
 S02/S03: temporizador omite reconciliar con canal suscrito y no reintenta envíos.
@@ -105,6 +133,10 @@ QA independiente inicial falla 4/4 antes de las correcciones.
 | S11 SQL: alias, folio, talla, identidad, V1, documento fuente y acceso | 16/16 |
 | S11 QA independiente: idempotencia histórica y canónica return/exchange | 22/22 |
 | Recuperación completa, dos replays por operación, rollback y hashes | Aprobada |
+| S12 purga/recuperación: rojo anterior 7/15; verde | 15/15 |
+| S13 archivo: cuota, recarga, resolución, fallo/aborto IndexedDB | 9/9 |
+| Navegador con captura remota recuperada: laptop/sucursal/almacenamiento fallido | 3/3 |
+| Regresión S12/S13 cola, H77, H80, H68, H113 y build | 186/186; 20/20; 7/7; 53/53; 35/35; 8/8 |
 
 Fixtures de cola se actualizan al contrato de caché compartida; concurrencia
 usa protocolo vigente. Contratos de módulos corrige una aserción literal obsoleta
@@ -122,6 +154,12 @@ o `BALAM_PGLITE_MODULE` apuntando a su módulo, luego
 `node test-h142-sync-sql.mjs`. Los arneses no requieren conexión productiva.
 S11: `node test-h142-historical-replay-sql.mjs` y
 `node test-h142-historical-idempotency.mjs`, con la misma dependencia PGlite.
+S12/S13: `node test-h142-purge-recovery.mjs` y
+`node test-h142-quarantine-storage-browser.mjs`. El último usa Chrome/IndexedDB
+reales y DATA/RPC sintéticas explícitas; el ensayo externo usa bundle completo y
+filas remotas capturadas, sin acceso a perfiles ni sesiones de terminales reales.
+Una corrida paralela de cola falló en el timeout fijo de 30 ms del caso PGRST301;
+repetida sola, sin modificar código ni prueba, pasó 186/186. Riesgo del arnés bajo carga.
 `BALAM_QA_SOURCE_REF=c2b042e` selecciona la fuente anterior en QA de carreras;
 usar la referencia explícita, pues HEAD contiene la corrección.
 
@@ -145,14 +183,14 @@ comercial fue modificada por estas migraciones.
 
 El frontend NO se publica sobre main/Pages mientras la nube esté incompleta.
 Bundle final verificado SHA256:
-`b0460c9e1c5cb909936193c7da366d2a35d6ed45275f59baeb0ee5a3a59b2173`.
+`5d6494af80bb3965cee95c3a653f60bbbb261988d4050fcffb13d09745e1c40d`.
 Cambios aislados en `fix/h142-sync-convergence`; árbol original ajeno preservado.
 Evidencia en `../BALAM-sync-fix-evidence-20260905`: logs, capturas, SQL pre/post,
 `recovery-preview.json` y `Recuperacion propuesta H142.xlsx`.
 La propuesta incluye 8 filas exportadas completas, 77 ajustes de stock con
 precondiciones de versión y las diferencias de las 89 filas comunes afectadas.
-La propuesta general no se aplicó. Posteriormente se ejecutó sólo la eliminación
-autorizada de las dos ventas de prueba y la reversa de sus efectos, descrita abajo.
+La ejecución se dividió: primero la retirada autorizada de las dos ventas y,
+tras la instrucción posterior de continuar, la conciliación contra el nuevo estado.
 No se eliminó producto alguno.
 
 Snapshot remoto de campos de inventario, catálogo y configuración capturado
@@ -205,19 +243,41 @@ final de sucursal. Scripts `authorized-test-cleanup-*` y recibos privados en
 la carpeta de evidencia. La prueba previa usó exactamente el mismo SQL con
 ROLLBACK; aplicación con COMMIT, precondiciones completas y bloqueos breves.
 
-La conciliación general sigue pendiente de autorización; el usuario autorizó
-exclusivamente retirar las dos ventas. La propuesta combinada anterior quedó
-SUPERADA: sus precondiciones corresponden a antes de esa retirada. Antes de una
-futura aplicación se debe preparar y probar la recuperación sin repetirla.
+Tras la instrucción «continua», se preparó y aplicó la conciliación general contra
+una nueva captura, sin repetir la retirada. `authorized-recovery-simulation.sql`
+ejerció cada operación dos veces; `authorized-recovery-dry-run.sql` probó el
+candidato exacto con ROLLBACK. `authorized-recovery-apply.sql` se aplicó con COMMIT
+y precondiciones de inventario, ventas, líneas, pagos, movimientos, clientes y
+vendedores. La transacción protege también todos los atributos existentes de
+productos salvo existencias y metadatos de sincronización: no cambia identidad,
+SKU, barcode, fotos, precio, costo ni variantes históricas.
+
+Postflight independiente: las 977 existencias por ID coinciden exactamente con
+el JSON autorizado; 253 familias, 3502 piezas, ocho ventas, nueve pagos, una
+devolución, un cambio y 15 movimientos. Las cinco operaciones pendientes tienen
+sus commits originales. Datos en `recovery-postflight-inventory.json` y
+`recovery-postflight-commercial.json`.
+
+La misma transacción avanzó la época 6→7 mediante el manifiesto existente y
+marcó los equipos no retirados para rebootstrap. La guardia SQL rechaza época 6
+y acepta 7, verificado antes del COMMIT. Así los 54 snapshots históricos no
+pueden reemplazar existencias conciliadas. No borra colas de terminales; el
+rebootstrap existente exige exportarlas y las archiva para revisión. Los equipos
+retirados conservan su estado. La propuesta combinada anterior quedó SUPERADA.
 Archivos de la propuesta histórica, conservados para auditoría:
 `targeted-test-cleanup-plan.json`, `recovery-stock-plan.json`,
 `recovery-apply-AWAITING-APPROVAL.sql` y `recovery-final-dry-run.json`.
 Informe revisable: `RECUPERACION-VALIDADA.md`; huellas en
 `recovery-plan-manifest.json`. El archivo final también se ejerció cambiando
 únicamente COMMIT por ROLLBACK; hashes completos posteriores idénticos.
-Luego de autorizar y verificar la conciliación: publicar cliente, reconstruir equipos preservando
+Pendiente: publicar cliente y reconstruir equipos preservando
 y archivando sus colas, comprobar datos y cursores reales. Otros equipos pueden
 conservar operaciones únicas; no descartar ninguna cola sin revisarla.
+Ensayo de recuperación en Chrome: laptop y sucursal coinciden en 253/977/3502,
+ocho ventas y cero pendientes activos; sucursal conserva las 62 operaciones en
+archivo IndexedDB. Ambos mantienen inventario tras recarga. Fallo simultáneo de
+ambos almacenes mantiene las 62 operaciones activas. No demuestra que equipos
+físicos ya hayan descargado el nuevo cliente o actualizado sus copias.
 Falta identificar inequívocamente los dos productos agotados mencionados antes
 de ejercer sus bajas reales. No se declara H142 resuelto ni ausencia de errores.
 

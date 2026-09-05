@@ -408,15 +408,15 @@
       req.onerror = () => reject(req.error || new Error('indexeddb_open_failed'));
     });
   }
-  async function queueBackup(mode, value) {
+  async function queueBackup(mode, value, key = QKEY) {
     const db = await openQueueDB();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(QSTORE, 'readwrite');
       const store = tx.objectStore(QSTORE);
-      const req = mode === 'put' ? store.put(value, QKEY) : store.delete(QKEY);
+      const req = mode === 'put' ? store.put(value, key) : store.delete(key);
       req.onerror = () => reject(req.error || new Error('indexeddb_write_failed'));
       tx.oncomplete = () => { db.close(); resolve(true); };
-      tx.onerror = () => { db.close(); reject(tx.error || new Error('indexeddb_tx_failed')); };
+      tx.onerror = tx.onabort = () => { db.close(); reject(tx.error || new Error('indexeddb_tx_failed')); };
     });
   }
   async function readQueueBackup() {
@@ -2433,6 +2433,16 @@
     const prune = pruneQueueForPurge(state.purged_at);
     const local = localPurgeApplied({ authority: 'remote' });
     if (!local) return null;   // liquidación pendiente: se reintenta al próximo arranque
+    // La limpieza local invalida estos snapshots aunque la versión remota ya
+    // estuviera confirmada. Retirar sus cursores también conserva el pendiente
+    // tras una recarga si alguna descarga posterior falla.
+    for (const domain of ['products','clients','sellers','sales','payments',
+      'returns','exchanges','loans','liquidations','movements']) {
+      delete syncCursors[domain];
+      const version = Number(syncRemoteVersions.find(row => row.domain === domain)?.version) || 0;
+      if (version) syncInvalid.set(domain, Math.max(version, Number(syncInvalid.get(domain)) || 0));
+    }
+    saveSyncCursors();
     markPurgeSeen(state);
     if (window.UI && window.UI.toast) {
       window.UI.toast('Datos de prueba borrados en esta terminal — inventario y configuración intactos', 'var(--accent)');
@@ -2833,9 +2843,11 @@
     return operations.length;
   }
 
-  const DOMAIN_ORDER = ['permissions','config','sellers','products','clients',
+  // Una purga invalida proyecciones: debe ocurrir antes de reconstruirlas.
+  // Aplicarla al final borraría documentos recién descargados con cursor vigente.
+  const DOMAIN_ORDER = ['permissions','purges','config','sellers','products','clients',
     'promotions','sales','payments','returns','exchanges','loans','liquidations',
-    'commissionAdjustments','movements','purges','devices'];
+    'commissionAdjustments','movements','devices'];
   const DOMAIN_TABLE = {
     config: 'settings', products: 'products', clients: 'clients', sellers: 'sellers',
     promotions: 'promotions', sales: 'sales', payments: 'sale_payments',
@@ -2891,7 +2903,10 @@
       if (!adjustmentsResult || adjustmentsResult.ok !== true || adjustmentsResult.complete !== true || adjustmentsResult.applied !== true) return adjustmentsResult;
       return { ok: true, complete: true, applied: true, coverage: 'full' };
     }
-    return pullDomain(domain);
+    // Sin cursor no existe cobertura local que conserve ventas fuera de ventana.
+    // Una purga elimina ese cursor durable antes de reconstruir la proyección.
+    return pullDomain(domain, domain === 'sales' && !Object.prototype.hasOwnProperty.call(syncCursors, domain)
+      ? { fullSnapshot: true } : undefined);
   }
   function invalidateDomain(domain, version) {
     if (!SYNC_DOMAINS[domain]) return false;
@@ -3177,7 +3192,18 @@
     }
     return cases;
   }
-  function quarantineArchives() {
+  async function writeQuarantineArchive(archive) {
+    if (archive.storage !== 'indexedDB') {
+      try { localStorage.setItem(archive.key, JSON.stringify(archive.value)); return; }
+      catch (e) { /* la cuota no debe impedir usar el respaldo existente */ }
+    }
+    try {
+      await queueBackup('put', archive.value, archive.key);
+      archive.storage = 'indexedDB';
+      try { localStorage.removeItem(archive.key); } catch (e) { /* lectura prioriza IndexedDB */ }
+    } catch (e) { throw new Error('QUARANTINE_STORAGE_UNAVAILABLE'); }
+  }
+  async function quarantineArchives() {
     const archives = [];
     try {
       for (let i = 0; i < localStorage.length; i++) {
@@ -3187,22 +3213,40 @@
         catch (e) { /* un archivo corrupto no oculta los demás */ }
       }
     } catch (e) { /* almacenamiento no disponible */ }
-    return archives;
+    try {
+      const db = await openQueueDB();
+      const durable = await new Promise((resolve, reject) => {
+        const rows = [], tx = db.transaction(QSTORE, 'readonly');
+        const req = tx.objectStore(QSTORE).openCursor();
+        req.onsuccess = () => {
+          const cursor = req.result;
+          if (!cursor) return;
+          if (String(cursor.key).startsWith('balam_sync_quarantine_')) {
+            rows.push({ key: cursor.key, value: cursor.value, storage: 'indexedDB' });
+          }
+          cursor.continue();
+        };
+        tx.oncomplete = () => { db.close(); resolve(rows); };
+        tx.onerror = tx.onabort = () => { db.close(); reject(tx.error || new Error('QUARANTINE_READ_FAILED')); };
+      });
+      const byKey = new Map(archives.map(archive => [archive.key, archive]));
+      durable.forEach(archive => byKey.set(archive.key, archive));
+      return Array.from(byKey.values());
+    } catch (e) { return archives; } // conserva compatibilidad sin IndexedDB
   }
   async function reportStoredQuarantineArchives(c) {
-    for (const archive of quarantineArchives()) {
+    for (const archive of await quarantineArchives()) {
       const value = archive.value || {};
       const operations = Array.isArray(value.operations)
         ? value.operations.filter(opBelongsToActiveSession) : [];
       if (value.reportedAt || !operations.length || !Number(value.epoch)) continue;
       const cases = await reportQuarantineCases(c, operations, value.localEpoch, Number(value.epoch));
       value.cases = cases; value.reportedAt = new Date().toISOString();
-      try { localStorage.setItem(archive.key, JSON.stringify(value)); }
-      catch (e) { throw new Error('QUARANTINE_STORAGE_UNAVAILABLE'); }
+      await writeQuarantineArchive(archive);
     }
   }
-  function restoreQuarantinedOperation(operationId, remoteEpoch) {
-    for (const archive of quarantineArchives()) {
+  async function restoreQuarantinedOperation(operationId, remoteEpoch) {
+    for (const archive of await quarantineArchives()) {
       if (Number(archive.value.epoch) !== Number(remoteEpoch)) continue;
       const op = (archive.value.operations || []).find(x => String(x.id) === String(operationId));
       if (!op) continue;
@@ -3217,11 +3261,11 @@
     }
     return null;
   }
-  function removeResolvedQuarantine(found, operationId) {
+  async function removeResolvedQuarantine(found, operationId) {
     if (!found) return;
     found.archive.value.operations = (found.archive.value.operations || [])
       .filter(x => String(x.id) !== String(operationId));
-    try { localStorage.setItem(found.archive.key, JSON.stringify(found.archive.value)); } catch (e) { /* evidencia original queda */ }
+    try { await writeQuarantineArchive(found.archive); } catch (e) { /* evidencia original queda */ }
   }
   async function consumeSyncQuarantineDecisions(c) {
     if (!c) return 0;
@@ -3231,7 +3275,7 @@
     if (result.error) return 0;
     let completed = 0;
     for (const command of (result.data || [])) {
-      const found = restoreQuarantinedOperation(command.operation_id, command.remote_epoch);
+      const found = await restoreQuarantinedOperation(command.operation_id, command.remote_epoch);
       if (!found) {
         await c.rpc('complete_sync_quarantine', {
           p_device_id: window.CORE.getDeviceId(), p_operation_id: command.operation_id,
@@ -3247,7 +3291,7 @@
         p_remote_epoch: command.remote_epoch, p_ok: !pending,
         p_message: pending ? 'La RPC normal rechazó o difirió la operación' : null,
       });
-      if (!pending) { removeResolvedQuarantine(found, command.operation_id); completed++; }
+      if (!pending) { await removeResolvedQuarantine(found, command.operation_id); completed++; }
     }
     return completed;
   }
@@ -3276,8 +3320,7 @@
         try { localEpoch = Number(localStorage.getItem('balam_sync_data_epoch')) || null; } catch (e) { /* */ }
         const cases = await reportQuarantineCases(c, stale, localEpoch, Number(latest.data_epoch));
         const key = `balam_sync_quarantine_${latest.data_epoch}_${Date.now()}`;
-        try { localStorage.setItem(key, JSON.stringify({ epoch: latest.data_epoch, localEpoch, cases, reportedAt: new Date().toISOString(), operations: stale })); }
-        catch (e) { throw new Error('QUARANTINE_STORAGE_UNAVAILABLE'); }
+        await writeQuarantineArchive({ key, value: { epoch: latest.data_epoch, localEpoch, cases, reportedAt: new Date().toISOString(), operations: stale } });
         const archivedIds = new Set(stale.map(op => op.id));
         saveQ(loadQ().filter(op => !archivedIds.has(op.id)));
       }
