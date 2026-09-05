@@ -6558,6 +6558,28 @@ QA publicado 6/6. Sin modificaciones de datos ni configuración real.
 **Corrección documentada:** `docs/fixes/retirar-aviso-sku-compartido-h140.md`.
 **Commit:** `161ae0b15902587584a2c076c3d38dbabab35103`.
 
+## H-141 — Paneles plegables en Catálogos de productos
+
+**Estado:** RESUELTO LOCALMENTE; pendiente de publicación.
+**Fecha:** 05/09/2026.
+**Origen:** propuesta aprobada: cada contenedor de esta sección empieza cerrado,
+cabecera pulsable con título/contador/flecha, apertura independiente, conserva
+borradores al plegar y vuelve cerrado al reingresar.
+**Alcance:** presentación local de Catálogos de productos; no cambiar reglas,
+configuración real, identidad, SKU, stock ni otras secciones de Configuración.
+**Riesgo:** perder borradores si se desmonta contenido, activar acciones al
+pulsar cabeceras o alterar el editor compartido en otras secciones.
+**Corrección:** paneles nativos independientes con contenido montado, cabecera
+pulsable y controles dentro del cuerpo. Sólo Catálogos de productos.
+**Pruebas:** rojo H-141 0/2; verde 22/22 con borradores, teclado, reingreso y
+320–1280 px; H-63 HTTP/offline 58/58; configuración 30/30; navegación 15/15;
+smoke 17/17; build reproducible 8/8. Capturas inspeccionadas y self-review.
+**Pendiente:** commit, publicación y QA publicado.
+**Riesgo residual:** ninguno conocido en el alcance probado. Plegar conserva
+borradores; salir de la sección conserva el comportamiento previo.
+**Corrección documentada:** `docs/fixes/paneles-plegables-catalogos-h141.md`.
+**Commit:** Pendiente de commit.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

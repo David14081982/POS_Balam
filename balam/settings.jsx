@@ -103,8 +103,24 @@
   }
 
   // ── Editor genérico de catálogos ───────────────────────────────────────────────
+  // details conserva los campos montados y su estado al plegar; no escribe CONFIG.
+  function CatalogPanel({ id, title, count, className = '', children }) {
+    return h(GlassCard, { className: 'overflow-hidden ' + className },
+      h('details', { className: 'group', 'data-testid': 'catalog-panel-' + id }, [
+        h('summary', {
+          key: 'header', 'data-testid': 'catalog-panel-toggle-' + id,
+          className: 'flex items-center gap-3 p-5 min-h-16 cursor-pointer list-none [&::-webkit-details-marker]:hidden focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:-outline-offset-2',
+        }, [
+          h('span', { key: 'title', className: 'font-headline text-h2 text-primary flex-1 min-w-0 break-words' }, title),
+          count != null && h('span', { key: 'count', className: 'text-overline uppercase text-on-surface-variant text-right shrink-0 max-w-[40%]' }, count),
+          h(MS, { key: 'arrow', name: 'chevRight', size: 18, className: 'shrink-0 text-on-surface-variant group-open:rotate-90' }),
+        ]),
+        h('div', { key: 'body', 'data-testid': 'catalog-panel-body-' + id, className: 'px-5 pb-5 min-w-0 overflow-x-auto' }, children),
+      ]));
+  }
+
   // metaFields: [{ key, label, type:'text'|'number'|'color'|'select', options? }]
-  function CatalogEditor({ kind, title, hint, metaFields = [], codePlaceholder = 'CÓD', labelPlaceholder = 'Nombre visible', lockCode = false }) {
+  function CatalogEditor({ kind, title, hint, metaFields = [], codePlaceholder = 'CÓD', labelPlaceholder = 'Nombre visible', lockCode = false, collapsible = false }) {
     const items = C.all(kind);
     const [code, setCode] = useState('');
     const [label, setLabel] = useState('');
@@ -182,16 +198,26 @@
     const structNote = (cmeta && cmeta.struct && !cmeta.field)
       ? h('span', { key: 'st', className: 'inline-flex items-center gap-1.5 text-overline uppercase text-on-surface-variant/70' }, [h(MS, { key: 'i', name: 'lock', size: 13 }), 'Atributo estructural (matriz de stock)'])
       : null;
-    // Encabezado: editable + toggles si es catálogo de producto; estático si no.
+    const nameInput = cmeta && h('input', {
+      key: 'nm', defaultValue: cmeta.label, title: 'Nombre del catálogo',
+      className: collapsible
+        ? 'w-full min-w-0 h-9 px-2 text-body text-primary bg-surface-container-low border border-outline-variant rounded'
+        : 'flex-1 min-w-0 font-headline text-h2 text-primary bg-transparent border-b border-transparent hover:border-outline-variant focus:border-primary focus:ring-0 px-0 py-0.5',
+      onBlur: e => C.setCatalogMeta(kind, { label: e.target.value }),
+    });
+    // La cabecera plegable no contiene controles de edición ni acciones de negocio.
     const header = cmeta
       ? h('div', { key: 'h', className: 'mb-3' }, [
           h('div', { key: 'tr', className: 'flex items-center justify-between gap-3 mb-2' }, [
             h('div', { key: 'l', className: 'flex items-center gap-2 flex-1 min-w-0' }, [
               cmeta.system && h(MS, { key: 'lk', name: 'lock', size: 14, className: 'text-on-surface-variant/60 shrink-0', title: 'Catálogo del sistema: se puede renombrar y editar, pero no borrar.' }),
-              h('input', { key: 'nm', defaultValue: cmeta.label, title: 'Nombre del catálogo', className: 'flex-1 min-w-0 font-headline text-h2 text-primary bg-transparent border-b border-transparent hover:border-outline-variant focus:border-primary focus:ring-0 px-0 py-0.5', onBlur: e => C.setCatalogMeta(kind, { label: e.target.value }) }),
+              collapsible ? h('label', { key: 'name', className: 'flex-1 min-w-0' }, [
+                h('span', { key: 'label', className: 'block text-overline text-on-surface-variant mb-1' }, 'Nombre del catálogo'),
+                nameInput,
+              ]) : nameInput,
             ]),
             h('div', { key: 'c', className: 'flex items-center gap-3 shrink-0' }, [
-              h('span', { key: 'n', className: 'text-overline uppercase text-on-surface-variant' }, countLabel),
+              !collapsible && h('span', { key: 'n', className: 'text-overline uppercase text-on-surface-variant' }, countLabel),
               cmeta.custom && h('button', { key: 'dc', type: 'button', className: 'inline-flex items-center gap-1 text-overline uppercase font-bold text-danger hover:opacity-70 transition-opacity', title: 'Eliminar este catálogo', onClick: delCatalog }, [h(MS, { key: 'i', name: 'trash', size: 14 }), 'Catálogo']),
             ]),
           ]),
@@ -202,12 +228,16 @@
           h('span', { key: 'c', className: 'text-overline uppercase text-on-surface-variant' }, countLabel),
         ]);
 
-    if (cmeta && cmeta.virtual) return h(GlassCard, { key: kind, className: 'p-5' }, [
+    const Card = collapsible ? CatalogPanel : GlassCard;
+    const cardProps = collapsible
+      ? { key: kind, id: kind, title: title || C.catalogLabel(kind), count: countLabel }
+      : { key: kind, className: 'p-5' };
+    if (cmeta && cmeta.virtual) return h(Card, cardProps, [
       header,
       h('p', { key: 'virtual', className: 'text-caption text-on-surface-variant' }, 'Segmento calculado: usa letra o número según la única familia elegida en la referencia. No tiene valores propios.'),
     ]);
 
-    return h(GlassCard, { key: kind, className: 'p-5' }, [
+    return h(Card, cardProps, [
       header,
       hint && h('p', { key: 'hint', className: 'text-caption text-on-surface-variant mb-3' }, hint),
       // Filas
@@ -272,11 +302,7 @@
       h('span', { key: 't', className: 'px-2 text-caption font-semibold text-primary whitespace-nowrap' }, C.catalogLabel(p.kind)),
       h('button', { key: 'r', className: 'w-7 h-9 grid place-items-center hover:bg-surface-container text-on-surface-variant disabled:opacity-30', disabled: i === parts.length - 1, title: 'Mover a la derecha', onClick: () => C.moveSkuOrder(p.kind, 1) }, h(MS, { name: 'chevRight', size: 14 })),
     ]);
-    return h(GlassCard, { key: 'skubuilder', className: 'p-5' }, [
-      h('div', { key: 'h', className: 'flex items-baseline justify-between mb-1' }, [
-        h(SerifHeading, { key: 't', children: 'Constructor de SKU' }),
-        h('span', { key: 'c', className: 'text-overline uppercase text-on-surface-variant' }, parts.length + ' segmentos'),
-      ]),
+    return h(CatalogPanel, { id: 'sku', title: 'Constructor de SKU', count: parts.length + ' segmentos' }, [
       h('p', { key: 'd', className: 'text-caption text-on-surface-variant mb-4' }, 'Activa “En SKU” en cada catálogo para incluirlo y reordena con ◀ ▶. El SKU se fija al crear el producto: cambiar la receta solo afecta a productos nuevos.'),
       h('div', { key: 'chips', className: 'flex flex-wrap items-center gap-2 mb-4' }, parts.map(chip)),
       h('div', { key: 'pv', className: 'flex items-center gap-2 flex-wrap' }, [
@@ -353,12 +379,7 @@
       className: 'flex items-start gap-2 p-3 rounded-lg text-caption leading-relaxed ' + tono,
     }, [h(MS, { key: 'i', name: icon, size: 16, className: 'shrink-0 mt-0.5' }), h('span', { key: 't' }, texto)]);
 
-    return h(GlassCard, { key: 'sizemig', className: 'p-5' }, [
-      h('div', { key: 'h', className: 'flex items-baseline justify-between mb-1' }, [
-        h(SerifHeading, { key: 't', children: 'Corregir códigos de talla' }),
-        h('span', { key: 'c', className: 'text-overline uppercase text-on-surface-variant' },
-          propuesta.length + (propuesta.length === 1 ? ' código' : ' códigos')),
-      ]),
+    return h(CatalogPanel, { id: 'sizemig', title: 'Corregir códigos de talla', count: propuesta.length + (propuesta.length === 1 ? ' código' : ' códigos') }, [
       h('p', { key: 'd', className: 'text-caption text-on-surface-variant mb-4 leading-relaxed' },
         'Algunas tallas se guardan con un código que no es la talla: el código «0» es en realidad la 38 y «A» es la 40. Eso hace que el código de barras de una prenda talla 38 termine en «-0». Aquí se corrigen de una vez, sin mover una sola pieza, y el catálogo queda ordenado.'),
       propuesta.length === 0
@@ -579,16 +600,12 @@
     const rep = D.catalogHealthReport();
     const campoLabel = (o) => o.campo === 'ornColors' ? C.catalogLabel('color') + ' (hilos bordado)' : C.catalogLabel(o.kind);
     if (!rep.orphans.length && !rep.duplicates.length) {
-      return h(GlassCard, { key: 'health', className: 'p-5' }, h('div', { className: 'flex items-center gap-2' }, [
+      return h(CatalogPanel, { id: 'health', title: 'Diagnóstico de catálogos' }, h('div', { className: 'flex items-center gap-2' }, [
         h(MS, { key: 'i', name: 'check', size: 18, className: 'text-success' }),
         h('span', { key: 't', className: 'text-body font-semibold text-success' }, 'Catálogos sanos: ningún producto con códigos huérfanos ni nombres repetidos.'),
       ]));
     }
-    return h(GlassCard, { key: 'health', className: 'p-5 border border-warning/40' }, [
-      h('div', { key: 'h', className: 'flex items-center gap-2 mb-1' }, [
-        h(MS, { key: 'i', name: 'alert', size: 18, className: 'text-warning' }),
-        h(SerifHeading, { key: 't', children: 'Diagnóstico de catálogos' }),
-      ]),
+    return h(CatalogPanel, { id: 'health', title: 'Diagnóstico de catálogos', className: 'border border-warning/40' }, [
       h('p', { key: 'd', className: 'text-caption text-on-surface-variant mb-3' }, 'Estos productos apuntan a códigos que ya no existen en el catálogo (el aviso "⚠ ya no existe" al editar). El sistema los reconecta solo cuando encuentra UN nombre igual; aquí se explica qué lo impide y cómo destrabarlo.'),
       // Nombres repetidos: la causa #1 de que la reconexión automática no proceda.
       rep.duplicates.length ? h('div', { key: 'dup', className: 'mb-4 border border-danger/40 bg-danger-soft rounded-lg p-3' }, [
@@ -647,10 +664,9 @@
       setUnknown(un);
       toast(`${fixed} color(es) con # corregido por nombre` + (un.length ? ` — ${un.length} sin reconocer` : ''), 'var(--accent)');
     }
-    return h(GlassCard, { key: 'colhex', className: 'p-5' }, [
+    return h(CatalogPanel, { id: 'colhex', title: 'Números de color (#)' }, [
       h('div', { key: 'r', className: 'flex items-center justify-between gap-4 flex-wrap' }, [
         h('div', { key: 't', className: 'flex-1 min-w-[240px]' }, [
-          h(SerifHeading, { key: 'h', children: 'Números de color (#)' }),
           h('p', { key: 'd', className: 'text-caption text-on-surface-variant mt-1' }, 'Si los # quedaron desfasados (p. ej. tras importar un Excel), este botón asigna a cada color activo el # que corresponde a su nombre. Los nombres que no se reconozcan se listan para que los ajustes con el selector visual del catálogo de arriba.'),
         ]),
         h('button', { key: 'b', type: 'button', className: 'inline-flex items-center gap-2 px-4 h-10 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-lg hover:opacity-90 transition shrink-0', onClick: run }, [h(MS, { key: 'i', name: 'edit', size: 16 }), 'Corregir # por nombre']),
@@ -827,10 +843,9 @@
         toast((err && err.message) || 'No se pudo leer el archivo', 'var(--danger)');
       });
     }
-    return h(GlassCard, { key: 'catxlsx', className: 'p-5' }, [
+    return h(CatalogPanel, { id: 'catxlsx', title: 'Catálogos en Excel' }, [
       h('div', { key: 'r', className: 'flex items-center justify-between gap-4 flex-wrap' }, [
         h('div', { key: 't', className: 'flex-1 min-w-[240px]' }, [
-          h(SerifHeading, { key: 'h', children: 'Catálogos en Excel' }),
           h('p', { key: 'd', className: 'text-caption text-on-surface-variant mt-1' }, 'Exporta todos los catálogos (una hoja por catálogo: código, nombre, activo) para editarlos en bloque y vuelve a importarlos. Al importar, el orden del archivo manda; los códigos que no vengan se desactivan (no se borran).'),
         ]),
         h('div', { key: 'b', className: 'flex items-center gap-2 shrink-0' }, [
@@ -866,8 +881,7 @@
       setName('');
       toast('Catálogo creado — agrega sus elementos y actívalo en alta/SKU', 'var(--accent)');
     }
-    return h(GlassCard, { key: 'newcat', className: 'p-5 border border-dashed border-outline-variant' }, [
-      h(SerifHeading, { key: 't', children: 'Crear catálogo nuevo' }),
+    return h(CatalogPanel, { id: 'newcat', title: 'Crear catálogo nuevo', className: 'border border-dashed border-outline-variant' }, [
       h('p', { key: 'd', className: 'text-caption text-on-surface-variant mt-1 mb-3' }, 'Crea tu propio catálogo (p. ej. Temporada, Colección, Estilo). Después agrega sus elementos y decide si aparece en el alta de producto y/o forma parte del SKU.'),
       h('div', { key: 'r', className: 'flex items-center gap-2' }, [
         h('input', { key: 'i', value: name, placeholder: 'Nombre del catálogo', className: 'flex-1 min-w-0 h-10 px-3 bg-surface-container-low border border-outline-variant rounded-lg text-body', onChange: e => setName(e.target.value), onKeyDown: e => { if (e.key === 'Enter') create(); } }),
@@ -1593,7 +1607,7 @@
       ...Object.keys(C.allCatalogMeta ? C.allCatalogMeta() : {}).filter(k => { const m = C.catalogMeta(k); return m && m.custom; })
         .map(k => h(CatalogEditor, { key: k, kind: k, codePlaceholder: 'CÓD' })),
       h(NewCatalogCard, { key: 'newcat' }),
-    ],
+    ].map(panel => panel.type === CatalogEditor ? React.cloneElement(panel, { collapsible: true }) : panel),
     ventas: () => [
       h(CatalogEditor, { key: 'pm', kind: 'payment_method', title: 'Métodos de pago', codePlaceholder: 'Efectivo', labelPlaceholder: 'Efectivo', metaFields: [{ key: 'icon', label: 'Ícono', type: 'select', options: ICON_OPTS, def: 'cash' }] }),
       h(CatalogEditor, { key: 'ss', kind: 'sale_status', title: 'Estatus de venta', codePlaceholder: 'Pagado', labelPlaceholder: 'Pagado', metaFields: [{ key: 'tone', label: 'Tono', type: 'select', options: TONE_OPTS, def: 'neutral' }] }),

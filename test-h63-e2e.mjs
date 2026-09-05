@@ -135,6 +135,13 @@ async function abrir(destino) {
   await page.goto(destino.url, { waitUntil: 'load' });
   await page.waitForFunction(() => window.CONFIG && window.DATA && window.SettingsScreen, null, { timeout: 60000 });
   await page.click('[data-testid="settings-section-producto"]').catch(() => {});
+  // H-141: abrir los paneles que este recorrido de edición/importación utiliza.
+  for (const id of ['size_number', 'size_letter', 'catxlsx']) {
+    const panel = page.getByTestId('catalog-panel-' + id);
+    if (await panel.count() && !(await panel.evaluate(node => node.open))) {
+      await page.getByTestId('catalog-panel-toggle-' + id).click();
+    }
+  }
   // Sin contrato de pruebas —artefacto anterior a H-63— la batería debe poder
   // reportar sus fallos uno a uno en vez de abortar con una excepción.
   const contrato = await page.waitForSelector('[data-testid="catalog-toggle-size_number-B"]', { timeout: 30000 })

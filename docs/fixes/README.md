@@ -15,6 +15,7 @@ sesión de chat.
 
 | Archivo | Riesgo | Tema |
 |---|---|---|
+| `paneles-plegables-catalogos-h141.md` | H-141 | Paneles independientes con borradores conservados al plegar |
 | `admin-users-auth.md` | H-05 | Autorización de usuarios mediante Edge Function |
 | `concurrencia-multi-terminal.md` | H-06 | Versionado optimista, conflictos y tombstones |
 | `rls-administrador-activo.md` | H-07 | Acceso al dominio sólo para administrador activo |
