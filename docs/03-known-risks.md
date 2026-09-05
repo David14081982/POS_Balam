@@ -6702,7 +6702,7 @@ respuestas PWA desde el service worker de tráfico de red; red real observada 0.
 
 ## H-145 — Ancho útil y contraste del ticket gráfico Android
 
-**Estado:** EN CURSO.
+**Estado:** CORREGIDO Y PUBLICADO — VALIDACIÓN FÍSICA PENDIENTE.
 **Fecha:** 05/09/2026.
 **Evidencia:** usuario confirma rollo de 80 mm, formato gráfico correcto,
 contenido de unos 60 mm y letras pálidas; la autoprueba de la impresora es oscura.
@@ -6714,10 +6714,14 @@ bordes negros. Ancho de tinta final 571 puntos (71.375 mm) sin grises.
 **Invariantes:** conservar plantilla, contenido, gesto, escritorio y negocio.
 **Pruebas:** rojo 47/61, verde H-144 61/61 y H-143 37/37; H-135 61/61,
 H-85 20/20, H-90 17/17 y E2E 21/21, build 8/8. QA visual de tickets y Reportes.
-Smoke 15/15, navegación 15/15; build reproducible. Publicación pendiente.
+Smoke 15/15, navegación 15/15; build reproducible; PNG independiente 9/9.
+**Publicación:** Pages run `33997273400` exitoso, `built`, HTTP 200;
+9,042,072 bytes iguales al blob Git, SHA-256
+`2896c0dddb74564a2a888426a769bf8d8406923d778a7afd873c79a1d3c1d6d6`.
+H-144 61/61 y H-143 37/37 sobre Pages; CI H-132 `33997274650` exitoso.
 **Riesgo residual:** calibración física de RawBT/impresora pendiente.
 **Documento:** `docs/fixes/ancho-contraste-ticket-android-h145.md`.
-**Commit:** Pendiente de commit.
+**Commit:** `2c352c2` (funcional); cierre documental en commit posterior.
 
 ## Regla de actualización
 

@@ -1,9 +1,9 @@
 # Ancho útil y negro sólido en el ticket Android
 
 **Riesgo:** H-145
-**Estado:** EN CURSO
+**Estado:** CORREGIDO Y PUBLICADO — VALIDACIÓN FÍSICA PENDIENTE
 **Fecha:** 05/09/2026
-**Commit:** Pendiente de commit
+**Commit:** `2c352c2` (funcional); cierre documental en commit posterior.
 
 ## Problema y reproducción
 
@@ -81,7 +81,18 @@ las autoridades de POS, pagos, documentos, identidad y permisos no cambian.
 V1/V2 usan el mismo recorrido de preparación, clic, error, reintento y cierre.
 Excel, etiquetas y préstamos no consumen esta salida y no cambian.
 
-Publicación: pendiente de registrar.
+Validación independiente con Python (`struct`/`zlib`): 9 PNG con firma,
+CRC, descompresión, dimensiones y valores exclusivamente 0/255 correctos.
+
+Publicación: Pages run `33997273400` exitoso, estado `built`, HTTP 200;
+9,042,072 bytes idénticos al blob Git del commit funcional. SHA-256 servido:
+`2896c0dddb74564a2a888426a769bf8d8406923d778a7afd873c79a1d3c1d6d6`.
+La diferencia frente al hash local es la normalización de saltos de línea
+de Git; la comparación pública se hace contra los bytes del commit.
+Pruebas sobre Pages: H-144 61/61 y H-143 37/37. CI H-132
+`33997274650` exitoso. HEAD y origin/main coinciden con el commit funcional
+antes del cierre documental. La siguiente comprobación es una reimpresión
+física del usuario después de actualizar BALAM; no requiere otra venta.
 
 ## Riesgo residual y pendientes
 
