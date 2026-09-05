@@ -97,6 +97,11 @@
       if (barcodeResult && barcodeResult.code === 'BARCODE_AMBIGUOUS') {
         toast({ code: 'BARCODE_AMBIGUOUS', message: 'scanner resolved multiple product references' }, 'var(--danger)'); return;
       }
+      // Un código logístico completo no puede caer en coincidencias por nombre
+      // o SKU: otra prenda podría tener ese texto sin ser la pieza escaneada.
+      if (window.BARCODES && window.BARCODES.parse(raw)?.model === 'v2') {
+        toast({ code: 'BARCODE_NOT_FOUND', scannedCode: raw }, 'var(--danger)'); return;
+      }
       // 2) Coincidencia exacta por SKU → abre el selector de talla.
       const q = raw.toLowerCase();
       const exactMatches = D.products.filter(p => p.sku.toLowerCase() === q);
@@ -129,7 +134,14 @@
             toast({ code: 'BARCODE_AMBIGUOUS', message: 'scanner resolved multiple product references' }, 'var(--danger)'); return;
           }
           const hit = result && result.ok ? result.hit : null;
-          if (!hit) return;                                // no es un código conocido → no intervenir
+          if (!hit) {
+            // Sólo el formato logístico inequívoco produce aviso. Una búsqueda
+            // o un Enter escrito en otro campo conservan su comportamiento.
+            if (window.BARCODES && window.BARCODES.parse(code)?.model === 'v2') {
+              toast({ code: 'BARCODE_NOT_FOUND', scannedCode: code }, 'var(--danger)');
+            }
+            return;
+          }
           e.preventDefault();
           if (window.BARCODES.removeScannerText) window.BARCODES.removeScannerText(document.activeElement, rawCode);
           st.addToTicket(hit.p, hit.talla);

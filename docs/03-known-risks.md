@@ -6410,6 +6410,34 @@ Prueba H-135 contra el sitio publicado: **61/61**, sin tráfico de negocio.
 **Fecha de cierre de software:** 05/09/2026.
 **Commit:** `c9aead97801127c7a49d13820eb0e9f33672586b`.
 
+## H-136 — El POS no orienta ante una etiqueta numérica desconocida
+
+**Estado:** PARCIALMENTE RESUELTO
+**Fecha de registro:** 05/09/2026
+**Origen:** producto nuevo cuya etiqueta escribe números y no se agrega a la
+venta. El artículo y la lectura exacta se solicitaron; aún no están disponibles.
+**Evidencia acotada:** alta real por formulario → PDF → decodificación ZXing
+→ POS agrega la referencia correcta en una copia aislada; H-133 8/8 y H-132
+7/7. La consulta remota fue sólo lectura. No se ha atribuido una causa al caso
+real. El manejador global del POS ignora `BARCODE_NOT_FOUND`, y el buscador
+permite que una lectura desconocida continúe por la búsqueda comercial.
+**Alcance:** respuesta explícita y humana para códigos V3 desconocidos en POS,
+sin adivinar otra referencia; pruebas del alta/etiqueta y transferencia exacta.
+**Invariantes:** conservar códigos válidos/históricos, teclado humano, filtros,
+identidades, stock y cola. Sin escrituras a datos reales ni migraciones.
+**Corrección:** aviso humano ante código V3 desconocido en las dos entradas;
+sin caída a nombre/SKU. Contraste claro en avisos oscuros, conservando detalles
+técnicos restringidos. Sin modificaciones remotas de negocio.
+**Pruebas:** H-136 rojo inicial 8/12; verde ampliado 23/23. Alta real, traslado
+de dos piezas, PDF, escaneo exacto, recarga, teclado humano y ocho viewports.
+Contraste rojo 1.17–2.91:1, verde 12.10–14.63:1. H-132 7/7, H-133 8/8,
+H-130 7/7, H-131 23/23, H-134 43/43 y E2E 26/26, H-109 10/10.
+**Pendiente:** identificar la etiqueta reportada; el recorrido aislado funciona
+y no demuestra la causa de ese incidente real. Impresora/lector físico no disponible.
+**Corrección documentada:** `docs/fixes/lectura-desconocida-pos-h136.md`.
+**Fecha:** 05/09/2026. Despliegue pendiente de verificación.
+**Commit:** Pendiente de commit.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

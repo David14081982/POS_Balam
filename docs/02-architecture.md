@@ -214,6 +214,12 @@ atraviesa SKU ni elige la primera coincidencia. La etiqueta muestra nombre,
 barras, SKU y precio; el texto técnico de `barcode_code` no se imprime. El SKU
 queda como representación humana configurable y no cambia al editar precio.
 
+En POS, una lectura de formato logístico V3 sin coincidencia termina con un
+aviso humano tanto en el campo de búsqueda como en la captura global. No pasa
+a coincidencias comerciales por nombre o SKU. Los avisos sobre fondo oscuro
+usan la variante inversa de `HumanMessage`; el detalle técnico conserva su
+restricción administrativa.
+
 `BARCODES.certifySellableReference()` es la puerta ejecutable previa a toda
 etiqueta vendible nueva. Sólo una referencia V2 cuyo `barcode_code` sea único,
 codificable y resoluble al mismo `products.id+talla` puede producir preview,

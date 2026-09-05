@@ -233,6 +233,11 @@
       explanation: 'BALAM detuvo la selección para evitar mover la pieza equivocada.',
       action: 'Busca el producto por nombre y confirma sus características.', level: 'warning',
     },
+    barcode_not_found: {
+      title: 'No encontramos un producto con este código',
+      explanation: 'El código leído no coincide con los productos registrados en este equipo.',
+      action: 'Busca el producto por nombre y revisa su etiqueta antes de intentar de nuevo.', level: 'warning',
+    },
     barcode_missing: {
       title: 'Esta pieza no tiene un código válido',
       explanation: 'La etiqueta no puede generarse de forma segura.',
@@ -287,6 +292,7 @@
     const category = String((input && input.category) || '').toLowerCase();
     const all = `${code} ${category} ${raw}`.toLowerCase();
     if (/barcode.*ambiguous|identity_ambiguous|c[oó]digo ambiguo|m[aá]s de una referencia/.test(all)) return 'barcode_ambiguous';
+    if (/barcode.*not_found/.test(all)) return 'barcode_not_found';
     if (/missing_barcode|barcode.*missing|falta.*(?:barcode|code128)|no tiene.*c[oó]digo/.test(all)) return 'barcode_missing';
     if (/density|\bdense\b|m[oó]dulo|demasiado.*(?:denso|apretado)/.test(all)) return 'label_density';
     if (/generation_error|png.*(?:failed|error)|no se pudo.*imagen/.test(all)) return 'label_generation';
@@ -331,15 +337,15 @@
     const msg = messageAuthority(input, options);
     return [msg.title, msg.explanation, msg.action].filter(Boolean).join(' ');
   }
-  function HumanMessage({ message, options = {}, className = '' }) {
+  function HumanMessage({ message, options = {}, className = '', inverse = false }) {
     const msg = messageAuthority(message, options);
     const style = MESSAGE_LEVEL[msg.level] || MESSAGE_LEVEL.neutral;
     return React.createElement('div', { className, 'data-message-level': msg.level }, [
-      React.createElement('p', { key: 'title', className: 'font-semibold ' + style.tone }, msg.title),
-      msg.explanation && React.createElement('p', { key: 'explanation', className: 'mt-1 text-on-surface-variant' }, msg.explanation),
-      msg.action && React.createElement('p', { key: 'action', className: 'mt-1 font-medium text-on-surface' }, msg.action),
+      React.createElement('p', { key: 'title', className: 'font-semibold ' + (inverse ? 'text-white' : style.tone) }, msg.title),
+      msg.explanation && React.createElement('p', { key: 'explanation', className: 'mt-1 ' + (inverse ? 'text-white/90' : 'text-on-surface-variant') }, msg.explanation),
+      msg.action && React.createElement('p', { key: 'action', className: 'mt-1 font-medium ' + (inverse ? 'text-white' : 'text-on-surface') }, msg.action),
       technicalMessageViewer() && msg.technicalDetails && React.createElement('details', {
-        key: 'technical', className: 'mt-2 text-overline text-on-surface-variant', 'data-technical-details': 'true',
+        key: 'technical', className: 'mt-2 text-overline ' + (inverse ? 'text-white/90' : 'text-on-surface-variant'), 'data-technical-details': 'true',
       }, [
         React.createElement('summary', { key: 'summary', className: 'cursor-pointer font-semibold' }, 'Detalles técnicos'),
         React.createElement('pre', { key: 'body', className: 'mt-1 whitespace-pre-wrap break-all font-mono' }, msg.technicalDetails),
@@ -368,7 +374,7 @@
         className: 'max-w-full flex items-center gap-2.5 px-4 py-3 bg-primary-container text-white text-sm rounded-lg shadow-e3',
       }, [
         React.createElement('span', { key: 'd', className: 'w-2 h-2 rounded-full shrink-0', style: { background: t.color } }),
-        React.createElement(HumanMessage, { key: 'm', message: t.msg, className: 'min-w-0' }),
+        React.createElement(HumanMessage, { key: 'm', message: t.msg, className: 'min-w-0', inverse: true }),
       ])));
   }
   function toast(msg, color) { if (pushToastFn) pushToastFn(msg, color); }

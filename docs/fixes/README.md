@@ -117,6 +117,8 @@ sesión de chat.
 | `persistencia-corte-caracteristicas-editar-v2.md` | H-115 | Editar V2 materializa Corte y Características antes de validar/persistir cada referencia |
 | `paridad-capacidad-baja-productos-v1-v2.md` | H-114 | Baja V1/V2 exacta, familiar, durable y atómica sin reescribir históricos |
 
+| `lectura-desconocida-pos-h136.md` | H-136 | Lectura V3 desconocida sin selección comercial y avisos oscuros legibles; etiqueta real pendiente |
+
 Documentación financiera relacionada, creada antes de este índice:
 
 - `../H-03-coherencia-cobro.md`
