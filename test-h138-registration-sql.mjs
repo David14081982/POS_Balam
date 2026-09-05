@@ -95,6 +95,7 @@ try{
   await db.exec(read('20260905017700_pos_h138_registration_v3_verification.sql'));
   check('verificación de migración ejecutada y tabla temporal retirada',(await db.query("select to_regclass('pg_temp.h138_registration_probe') absent")).rows[0].absent===null);
  }
+ if(process.argv.includes('--delete-cycle'))await (await import('./test-h137-delete-sql.mjs')).testDeleteCycle({db,check,read,functionSql});
 }catch(error){check('ejecución SQL completa',false,{message:error.message,detail:error.detail});}
 finally{await db.close();}
-console.log(`H-138 SQL: ${checks.filter(x=>x.ok).length}/${checks.length}`);process.exitCode=checks.some(x=>!x.ok)?1:0;
+console.log(`${process.argv.includes('--delete-cycle')?'H-138 + H-137':'H-138 SQL'}: ${checks.filter(x=>x.ok).length}/${checks.length}`);process.exitCode=checks.some(x=>!x.ok)?1:0;

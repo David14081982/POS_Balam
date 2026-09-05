@@ -6474,6 +6474,13 @@ H-137 publicado 41/41; H-134 E2E 26/26; H-136 23/23; smoke 17/17;
 navegación 15/15; build 8/8 y dos builds idénticos.
 **Corrección documentada:** `docs/fixes/baja-productos-motivos-humanos-h137.md`.
 **Commit:** `bf1b8cdd6e8a0537afe494fe2ad16a2efd671efb`.
+**Ampliación 05/09/2026:** alta por formulario → sincronización SQL local → baja
+individual/familiar → recarga y pull desde caché vacía: 55/55 junto con H-138;
+H-114 contrato 13/13. Funciones remotas actuales leídas y ejercitadas en PGlite,
+sin bajas remotas. Bloqueo mientras el alta está en vuelo y liberación al
+confirmarse demostrados. Sin defecto adicional reproducido ni cambio de
+aplicación; permisos/red real simulados. El incidente específico sigue pendiente.
+**Commit de la ampliación:** Pendiente de commit.
 
 ## H-138 — Las altas SQL omiten metadatos del contrato V3
 

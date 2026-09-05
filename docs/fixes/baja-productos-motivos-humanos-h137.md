@@ -61,6 +61,51 @@ No se eliminó ningún producto real ni se invocó una RPC remota de baja. La
 prueba verifica la solicitud local durable y H-114 cubre tombstone/pull;
 no se afirma haber certificado una nueva eliminación en producción.
 
+## Ampliación: alta, sincronización y baja — 05/09/2026
+
+**Commit de la ampliación:** Pendiente de commit.
+
+El recorrido nuevo tampoco reproduce el incidente: formulario de alta con dos
+tallas → envío durable → confirmación SQL → baja individual/familiar → recarga
+y pull. Mientras el alta está en vuelo se impide la baja y se explica que hay
+cambios pendientes de enviar. Al confirmarse, ambas opciones funcionan sin
+reabrir el selector. Esto demuestra una condición de bloqueo legítima; no
+demuestra que haya sido la causa del caso reportado.
+
+Se añadieron `test-h137-delete-sql.mjs` y `test-h137-delete-sync.mjs`, ejecutados
+mediante una opción de la prueba H-138. Reutilizan PostgreSQL local PGlite 0.5.8
+y las funciones de alta vigentes después de H-138; no agregan lógica de negocio.
+Las definiciones actuales de baja/versionado se obtuvieron mediante una consulta
+remota de sólo lectura y también se ejecutaron localmente.
+
+Prueba final: **55/55** (18 altas H-138, 23 comprobaciones SQL de baja y 14 de
+navegador). Regresión contractual H-114: **13/13**. Comando reproducible, con
+`BALAM_PGLITE_MODULE` apuntando a `dist/index.js` de PGlite instalado externamente:
+
+```powershell
+node test-h138-registration-sql.mjs --delete-cycle --delete-browser
+```
+
+La ejecución contrastada añadió `--live-defs=C:/tmp/balam-h138-server-after-defs.json`
+y `--delete-live-defs=C:/tmp/balam-h137-delete-defs.json`, exportaciones de
+`pg_get_functiondef` (consultas de sólo lectura). Sin esas opciones carga las
+migraciones del repositorio. Los errores iniciales del arnés —sentencia preparada
+con dos comandos, cliente capturado antes de sustituir transporte y operaciones
+auxiliares sin simular— se corrigieron en las pruebas, no en BALAM.
+
+La prueba SQL verifica versión obsoleta, alcance incompleto, apartados,
+préstamos, devolución vigente, idempotencia, tombstones versionados, otras
+familias e históricos intactos. El navegador usa UI, DATA, STORE e IndexedDB
+reales; el transporte de alta/baja ejecuta esas funciones en PGlite. Tras la
+baja vacía deliberadamente la caché de productos del contexto aislado y exige
+que el pull reconstruya el inventario sin resucitar los eliminados.
+
+Límites: autenticación/capacidades/protocolo son fixtures; catálogos y telemetría
+se simulan. No certifica RLS, red real, otra terminal ni la familia concreta del
+usuario. No hubo cambio de aplicación, migración nueva ni modificación de datos
+comerciales. H-137 conserva estado parcial: la explicación ya está corregida;
+el incidente exacto de eliminación sigue sin reproducirse.
+
 ## Referencias
 
 - `docs/03-known-risks.md`, H-137.
