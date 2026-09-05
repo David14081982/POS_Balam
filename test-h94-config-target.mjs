@@ -219,9 +219,9 @@ ok('16. formulario usa canonicalización y valida colorMode condicional',
   && /ornamentColorMode/.test(inventorySrc) && /ornament-color-required/.test(inventorySrc));
 ok('17. Excel consume la misma autoridad multicolor',
   /canonicalReferenceOrnamentColors/.test(xlsxSrc));
-ok('18. Constructor conserva diagnóstico de omitidos, colisiones y longitud',
-  /sku-duplicate-warning/.test(settingsSrc) && /Longitud esperada/.test(settingsSrc)
-  && /EN SKU = OFF/.test(settingsSrc));
+// H-140 retira por petición del usuario el bloque informativo de colisiones.
+ok('18. Constructor conserva diagnóstico de campos ocultos y longitud',
+  /Longitud esperada/.test(settingsSrc) && /En el SKU pero oculto del alta/.test(settingsSrc));
 ok('19. identidad y etiqueta no se redefinen en esta fase',
   !/variantId\s*=/.test(dataSrc) && /barcodeCode/.test(dataSrc));
 

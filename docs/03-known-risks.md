@@ -6537,6 +6537,24 @@ positivo en PostgreSQL aislado, guarda y permisos comprobados en servidor.
 **Corrección documentada:** `docs/fixes/altas-servidor-contrato-v3-h138.md`.
 **Commit:** `79fd5036dd73af7f4d9f556c647a83dd5012b47f`.
 
+## H-140 — Retirar el aviso de SKU compartidos en Configuración
+
+**Estado:** RESUELTO LOCALMENTE; publicación pendiente.
+**Fecha:** 05/09/2026.
+**Origen:** petición explícita de retirar únicamente el bloque de advertencia,
+sin modificar configuración ni regenerar SKU. Captura del usuario y código
+`SkuBuilder` confirman el bloque y sus sugerencias.
+**Alcance:** retirar la presentación y su agrupación privada sin consumidores.
+Conservar configuración, receta, SKU persistidos, barcode y guardas de identidad.
+**Corrección:** se retira el bloque y su agrupación privada en `SkuBuilder`.
+Prueba contractual antigua ajustada al alcance solicitado.
+**Pruebas:** H-94 configuración 30/30; QA Chrome aislado 6/6 con SKU repetidos,
+360/1280 px y configuración/productos intactos; navegación 15/15; smoke 17/17;
+build 8/8.
+**Pendiente:** publicación. Sin modificaciones de datos ni configuración real.
+**Corrección documentada:** `docs/fixes/retirar-aviso-sku-compartido-h140.md`.
+**Commit:** Pendiente de commit.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

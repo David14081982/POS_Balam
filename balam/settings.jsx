@@ -248,10 +248,6 @@
   // modelo fijo al final, con vista previa en vivo. Reordena vía CONFIG.moveSkuOrder.
   function SkuBuilder() {
     const parts = C.skuParts();
-    const skuCollisions = Object.values((D.products || []).reduce((groups, product) => {
-      const key = String(product.sku || '');
-      (groups[key] || (groups[key] = [])).push(product); return groups;
-    }, {})).filter(group => group.length > 1);
     function regenerar() {
       const n = (D.products || []).length;
       if (!n) { toast('No hay productos que regenerar'); return; }
@@ -298,30 +294,6 @@
       hidden.length ? h('div', { key: 'w', className: 'mt-3 flex items-start gap-2 text-caption text-on-surface-variant bg-gold/5 border border-gold/30 rounded-lg p-3' }, [
         h(MS, { key: 'i', name: 'alert', size: 16, className: 'text-gold-text shrink-0 mt-0.5' }),
         h('span', { key: 't' }, 'En el SKU pero oculto del alta: ' + hidden.map(m => m.label).join(', ') + '. Los productos nuevos no podrán elegir ese valor.'),
-      ]) : null,
-      skuCollisions.length ? h('div', { key: 'duplicates', role: 'alert', 'data-testid': 'sku-duplicate-warning', className: 'mt-3 border border-warning/50 bg-warning-soft rounded-lg p-3' }, [
-        h('p', { key: 'title', className: 'text-caption font-bold text-warning' }, `Advertencia: ${skuCollisions.reduce((sum, group) => sum + group.length, 0)} referencias físicas comparten ${skuCollisions.length} SKU visible(s).`),
-        ...skuCollisions.slice(0, 8).map(group => {
-          const differences = D.referenceDifferences
-            ? group.slice(1).flatMap(product => D.referenceDifferences(group[0], product)) : [];
-          const uniqueDifferences = differences.filter((diff, index) =>
-            differences.findIndex(item => item.label === diff.label
-              && JSON.stringify(item.left) === JSON.stringify(diff.left)
-              && JSON.stringify(item.right) === JSON.stringify(diff.right)) === index);
-          const off = [...new Set(uniqueDifferences.map(diff => diff.label).filter(label => {
-            const kind = Object.keys(C.allCatalogMeta()).find(key => C.catalogMeta(key).label === label);
-            return kind && !C.catalogMeta(kind).inSku;
-          }))];
-          const offKinds = off.map(label => Object.keys(C.allCatalogMeta())
-            .find(key => C.catalogMeta(key).label === label)).filter(Boolean);
-          return h('div', { key: group[0].sku, className: 'mt-2 text-overline text-on-surface-variant' }, [
-            h('code', { key: 'sku', className: 'font-bold text-primary' }, group[0].sku),
-            h('span', { key: 'count' }, ` · ${group.length} productos comparten esta clave`),
-            uniqueDifferences.length ? h('div', { key: 'diff' }, 'Diferencias: ' + uniqueDifferences.map(d => `${d.label} (${Array.isArray(d.left) ? d.left.join('+') : d.left} / ${Array.isArray(d.right) ? d.right.join('+') : d.right})`).join(', ')) : null,
-            off.length ? h('div', { key: 'off', className: 'font-semibold text-warning' }, 'EN SKU = OFF: ' + off.join(', ') + '. Actívalo para distinguirlas comercialmente.') : null,
-            offKinds.length && D.skuPreview ? h('div', { key: 'proposal', className: 'mt-1 font-mono text-primary' }, 'Claves sugeridas: ' + group.map(p => D.skuPreview(p, offKinds)).join(' · ')) : null,
-          ]);
-        }),
       ]) : null,
       // Regenerar SKUs de productos existentes (el SKU está congelado al crear).
       h('div', { key: 'rg', className: 'mt-4 pt-4 border-t border-outline-variant/60 flex items-center justify-between gap-3 flex-wrap' }, [

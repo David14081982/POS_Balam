@@ -121,6 +121,7 @@ sesión de chat.
 
 | `baja-productos-motivos-humanos-h137.md` | H-137 | Motivos operativos de baja y prueba real individual/familiar; caso del usuario pendiente |
 | `sku-comercial-resumen-venta-h139.md` | H-139 / H-136 | SKU visible y recorrido alta/ajuste, SQL, etiqueta, lectura y recarga |
+| `retirar-aviso-sku-compartido-h140.md` | H-140 | Retira únicamente la advertencia de SKU compartidos de Configuración |
 
 | `altas-servidor-contrato-v3-h138.md` | H-138 | Altas SQL conservan contrato V3 y familia; rechazo de contrato ausente sin backfill |
 
