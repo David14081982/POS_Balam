@@ -1,9 +1,9 @@
 # Tickets desde Android mediante RawBT
 
 **Riesgo:** H-143
-**Estado:** CORREGIDO EN SOFTWARE — PUBLICACIÓN EN CURSO
+**Estado:** CORREGIDO EN SOFTWARE Y PUBLICADO — VALIDACIÓN FÍSICA PENDIENTE
 **Fecha:** 05/09/2026
-**Commit:** Pendiente de commit
+**Commit:** `ee8d5bc` (funcional); cierre documental en commit posterior.
 
 ## Problema y reproducción
 
@@ -66,6 +66,7 @@ El build regenera ambos artefactos y el identificador del service worker.
 |---|---|
 | H-143 sobre `39c1cbd` | Rojo: 1/4; Android llama al navegador y falta salida manual RawBT |
 | `node test-h143-android-tickets.mjs` | 35/35; POS completo, Reportes y reimpresión de Apartados |
+| H-143 contra GitHub Pages publicado | 35/35; Supabase bloqueado e intents interceptados |
 | `node test-h85-receipts.mjs` | 20/20 |
 | `node test-h90-payment-method-ticket-e2e.mjs` | 21/21 |
 | `node test-h90-payment-method-ticket.mjs` | 17/17 |
@@ -97,7 +98,12 @@ y después del envío. Impresión no exige cambios SQL ni verificaciones remotas
 
 El aprendizaje de H-143 es probar la frontera de transporte y sus restricciones
 de gesto: incrementar un contador de `window.print()` no verifica Bluetooth.
-El arnés nuevo queda como regresión. Publicación y hash servido pendientes.
+El arnés nuevo queda como regresión. Pages run `33995416776` terminó en
+`success` sobre `ee8d5bc`; la API de Pages confirma `built`. El workflow
+H-132 `33995417341` también terminó en `success`.
+El archivo público devuelve HTTP 200, mide 9,038,300 bytes y coincide byte a
+byte con `ee8d5bc:index.html`; SHA-256
+`3d7431ac06240db8bad120a8b0adcf12f0d69364a0b3878c8c2dc7857d38c4b4`.
 Dos ejecuciones del build con las mismas fuentes produjeron el mismo SHA-256
 local: `6bb72c44b1af4ee171638688cdcdac7c456b26a4fb4b99d4ba0d71c94ac76420`.
 La publicación se compara con los bytes del blob Git normalizado.

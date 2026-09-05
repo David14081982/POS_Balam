@@ -6645,7 +6645,7 @@ operaciones únicas de otros equipos. No declarar toda la flota sincronizada aú
 
 ## H-143 — Tickets Android no llegan al transporte Bluetooth de RawBT
 
-**Estado:** CORREGIDO EN SOFTWARE — PUBLICACIÓN EN CURSO.
+**Estado:** CORREGIDO EN SOFTWARE Y PUBLICADO — VALIDACIÓN FÍSICA PENDIENTE.
 **Fecha:** 05/09/2026.
 **Evidencia:** usuario confirma POS 8360L Bluetooth, prueba de RawBT correcta
 y botones de POS/Reportes sin diálogo ni error. En `39c1cbd` sólo invocan
@@ -6655,13 +6655,17 @@ sin modificar datos comerciales, identidades V1/V2, cola, permisos o Supabase.
 **Solución:** transporte compartido de texto histórico hacia RawBT por gesto
 directo, alternativa del sistema, reintento y errores visibles; sin autoabrir
 aplicaciones desde timers ni afirmar papel impreso.
-**Pruebas:** rojo 1/4; verde H-143 35/35 (POS, Reportes y Apartados); H-85
+**Pruebas:** rojo 1/4; verde H-143 35/35 local y 35/35 sobre Pages
+(POS, Reportes y Apartados); H-85
 20/20; H-90 17/17 y E2E 21/21; H-135 PDF 61/61; Apartados 55/55;
 Cambio 37/37; smoke 17/17; navegación 15/15; build 8/8. QA visual inspeccionado.
+**Publicación:** Pages run `33995416776` exitoso, estado `built`, HTTP 200;
+9,038,300 bytes idénticos al blob Git, SHA-256
+`3d7431ac06240db8bad120a8b0adcf12f0d69364a0b3878c8c2dc7857d38c4b4`.
 **Riesgo residual:** verificación física final pendiente; no confundir llamada
 al navegador, apertura de RawBT y papel impreso.
 **Corrección:** `docs/fixes/impresion-android-rawbt-h143.md`.
-**Commit:** Pendiente de commit.
+**Commit:** `ee8d5bc` (funcional); cierre documental en commit posterior.
 
 ## Regla de actualización
 
