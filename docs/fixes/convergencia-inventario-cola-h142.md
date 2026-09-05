@@ -3,7 +3,7 @@
 **Riesgo:** H-142
 **Estado:** PARCIALMENTE RESUELTO — código verificado; recuperación y publicación del cliente pendientes
 **Fecha:** 05/09/2026
-**Commit:** Pendiente de commit
+**Commit de implementación:** `0fa6810`
 
 ## Problema y reproducción
 
@@ -100,6 +100,14 @@ QA usó perfiles sintéticos y red interceptada: no certifica todavía equipos
 físicos ni la recuperación de transacciones reales. Revisión independiente
 también verificó un lote mixto aceptado/conflictivo y edición posterior del ID
 aceptado, sin bloqueo indebido.
+
+Repetición: `node test-h142-sync-convergence.mjs`,
+`node test-h142-sync-browser.mjs`, `node test-h142-qa-races.mjs` y
+`node test-h142-qa-browser.mjs`. SQL requiere `@electric-sql/pglite` instalado
+o `BALAM_PGLITE_MODULE` apuntando a su módulo, luego
+`node test-h142-sync-sql.mjs`. Los arneses no requieren conexión productiva.
+`BALAM_QA_SOURCE_REF=c2b042e` selecciona la fuente anterior en QA de carreras;
+usar la referencia explícita, pues HEAD contiene la corrección.
 
 ## Despliegue y evidencia
 

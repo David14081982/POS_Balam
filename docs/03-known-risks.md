@@ -6587,7 +6587,7 @@ borradores; salir de la sección conserva el comportamiento previo.
 
 **Estado:** PARCIALMENTE RESUELTO — código verificado; recuperación y cliente pendientes.
 **Fecha:** 05/09/2026.
-**Commit:** Pendiente de commit.
+**Commit de implementación:** `0fa6810`.
 **Origen:** sucursal, autoridad indicada por el usuario, contiene 253 familias y
 977 referencias; laptop y Supabase contienen 250/969. Hay 77 diferencias de
 existencias, 74 con igual versión. La auditoría reprodujo diez defectos de cola,
