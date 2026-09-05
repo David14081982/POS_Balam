@@ -15,6 +15,13 @@ const server = remote ? null : createServer((req, res) => {
 });
 if (server) await new Promise(r => server.listen(0, '127.0.0.1', r));
 const url = remote || `http://127.0.0.1:${server.address().port}/`;
+async function printButton(page, button, android) {
+  const before = await page.evaluate(() => window.__intents.length);
+  await button.click();
+  if (!android) return;
+  await page.waitForFunction(n => __intents.length > n || /Diseño listo|vacío|demasiado largo|No se pudo abrir RawBT/.test(document.body.innerText), before);
+  if (await page.evaluate(n => __intents.length === n && /Diseño listo/.test(document.body.innerText), before)) await button.click();
+}
 const browser = await chromium.launch({ channel: 'chrome', headless: true });
 try {
   for (const android of [true, false]) {
@@ -57,16 +64,16 @@ try {
     const button = page.getByTestId('receipt-print');
     check(`${android}: acción manual accesible`, await button.count() === 1);
     if (!await button.count()) { await context.close(); continue; }
-    await button.click();
+    await printButton(page, button, android);
     const sent = await page.evaluate(() => ({ intents: window.__intents, prints: window.__nativePrints }));
     check(`${android}: botón entrega al transporte correcto`, android ? sent.intents.length === 1 && sent.prints === 0 : sent.prints === 2 && !sent.intents.length);
     if (android) {
       const intent = sent.intents[0];
-      const text = decodeURIComponent(intent.href.slice(7).split('#Intent;')[0]);
+      const text = await page.evaluate(() => UI.receiptPrintText(document.querySelector('#balam-ticket')));
       check('RawBT: gesto activo y paquete explícito', intent.active && intent.href.endsWith('#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;'));
-      check('RawBT: conserva V1/V2, acentos, folio y total', ['GUAYABERA HISTÓRICA Ñ', 'GUAYABERA V2', 'SKU-V1-XS', 'SKU-V2-M', 'José Muñoz', 'BG-260905-0143', '$1,000.00', 'BALAMGUAYABERAS.COM'].every(v => text.includes(v)));
-      check('RawBT: sin iconos técnicos', !/landscape|payments|account_balance|credit_card/.test(text));
-      await button.click();
+      check('Documento gráfico: origen conserva V1/V2, acentos, folio y total', ['GUAYABERA HISTÓRICA Ñ', 'GUAYABERA V2', 'SKU-V1-XS', 'SKU-V2-M', 'José Muñoz', 'BG-260905-0143', '$1,000.00', 'BALAMGUAYABERAS.COM'].every(v => text.includes(v)));
+      check('RawBT: entrega PNG en lugar de ligaduras de texto', intent.href.startsWith('intent:data:image/png;base64,iVBORw0KGgo'));
+      await printButton(page, button, android);
       check('RawBT: reintento entrega exactamente el mismo documento', await page.evaluate(() => window.__intents.length === 2 && window.__intents[0].href === window.__intents[1].href));
       for (const width of [320, 360, 390, 430, 768, 1024, 1280, 1440]) {
         await page.setViewportSize({ width, height: 900 });
@@ -81,7 +88,7 @@ try {
       await page.getByTestId('receipt-print-system').click();
       check('Android: alternativa del sistema disponible', await page.evaluate(() => window.__nativePrints === 1));
       await context.setOffline(true);
-      await button.click();
+      await printButton(page, button, android);
       check('Android: transporte funciona sin internet', await page.evaluate(() => window.__intents.length === 3));
       await context.setOffline(false);
       await page.screenshot({ path: path.join(root, 'h143-tablet-qa.png') });
@@ -97,23 +104,28 @@ try {
       const a = e.target.closest('a[href^="intent:"]');
       if (a) { e.preventDefault(); window.__intents.push({ href: a.href, active: navigator.userActivation.isActive }); }
     }, true));
-    await popup.getByTestId('payment-ticket-print').click();
+    await printButton(popup, popup.getByTestId('payment-ticket-print'), android);
     check(`${android}: ticket por método comparte transporte`, await popup.evaluate(a => a ? window.__intents.length === 1 && window.__nativePrints === 0 : window.__nativePrints === 1, android));
     if (android) {
-      const reportPayload = await popup.evaluate(() => decodeURIComponent(window.__intents[0].href.slice(7).split('#Intent;')[0]));
-      check('Reportes: payload incluye neto y conciliación', /NETO/.test(reportPayload) && /CONCILIACIÓN/.test(reportPayload));
+      const reportPayload = await popup.locator('main').innerText();
+      check('Reportes: origen gráfico incluye neto y conciliación', /NETO/.test(reportPayload) && /CONCILIACIÓN/.test(reportPayload));
       check('Reportes: alternativa del sistema legible', await popup.getByTestId('payment-ticket-system').textContent() === 'Impresión del sistema');
+      const reportImage = await popup.evaluate(() => __intents.at(-1).href.slice(7).split('#Intent;')[0]);
+      fs.writeFileSync('h144-reporte-android.png', Buffer.from(reportImage.split(',')[1], 'base64'));
+      await popup.emulateMedia({ media: 'print' });
+      await popup.locator('main').screenshot({ path: 'h144-reporte-chrome.png' });
+      await popup.emulateMedia({ media: 'screen' });
       await popup.evaluate(() => { document.querySelector('main').textContent = ''; });
-      await popup.getByTestId('payment-ticket-print').click();
+      await printButton(popup, popup.getByTestId('payment-ticket-print'), android);
       check('documento vacío: error visible y ningún envío', await popup.evaluate(() => __intents.length === 1 && /vacío/.test(document.getElementById('receipt-print-status').textContent)));
       await popup.evaluate(() => { document.querySelector('main').textContent = 'A'.repeat(500001); });
-      await popup.getByTestId('payment-ticket-print').click();
+      await printButton(popup, popup.getByTestId('payment-ticket-print'), android);
       check('documento excesivo: se bloquea completo, nunca se trunca', await popup.evaluate(() => __intents.length === 1 && /demasiado largo/.test(document.getElementById('receipt-print-status').textContent)));
       await popup.evaluate(() => {
         document.querySelector('main').textContent = 'Folio prueba de error';
         HTMLAnchorElement.prototype.click = () => { throw new Error('No se pudo abrir RawBT'); };
       });
-      await popup.getByTestId('payment-ticket-print').click();
+      await printButton(popup, popup.getByTestId('payment-ticket-print'), android);
       check('fallo al abrir: error visible y sin falso éxito', await popup.evaluate(() => __intents.length === 1 && /No se pudo abrir RawBT/.test(document.getElementById('receipt-print-status').textContent)));
       await popup.close();
       await page.setViewportSize({ width: 768, height: 1024 });
@@ -139,9 +151,9 @@ try {
       await page.getByTestId('seller-pick-confirm').click();
       await page.getByTestId('receipt-print').waitFor();
       const before = await page.evaluate(() => ({ sent: __intents.length, business: JSON.stringify([DATA.sales,DATA.payments,DATA.products,DATA.movements]) }));
-      await page.getByTestId('receipt-print').click();
+      await printButton(page, page.getByTestId('receipt-print'), android);
       check('POS: cobro → vendedor → botón envía venta correcta sin duplicar', await page.evaluate(before => {
-        const payload = decodeURIComponent(__intents.at(-1).href.slice(7).split('#Intent;')[0]);
+        const payload = UI.receiptPrintText(document.querySelector('#balam-ticket'));
         return __intents.length === before.sent + 1 && payload.includes('VENTA POS ANDROID') && payload.includes('$500.00')
           && before.business === JSON.stringify([DATA.sales,DATA.payments,DATA.products,DATA.movements]);
       }, before));
@@ -153,7 +165,7 @@ try {
       await page.getByTestId('layaway-reprint-BG-260905-0143').click();
       await page.getByTestId('receipt-print').waitFor();
       const beforeLayaway = await page.evaluate(() => __intents.length);
-      await page.getByTestId('receipt-print').click();
+      await printButton(page, page.getByTestId('receipt-print'), android);
       check('apartados Android: reimpresión manual permanece abierta', await page.evaluate(n => __intents.length === n + 1 && !!document.getElementById('balam-ticket'), beforeLayaway));
       await page.getByTestId('layaway-reprint-close').click();
       check('apartados Android: cerrar retira comprobante', await page.locator('#balam-ticket').count() === 0);

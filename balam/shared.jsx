@@ -476,9 +476,117 @@
     };
   }
 
-  // H-143: RawBT recibe texto UTF-8 mediante su esquema público. El contenido
-  // procede del comprobante histórico montado, nunca del catálogo vigente.
+  // H-143/H-144: salida RawBT del comprobante histórico montado. El PNG
+  // conserva el diseño existente; nunca se reconstruye desde el catálogo.
   const usesBluetoothReceipt = () => /Android/i.test(navigator.userAgent || '');
+  const receiptGraphics = new WeakMap();
+  const receiptResourceData = new Map();
+  async function receiptLocalData(url) {
+    if (url.startsWith('data:')) return url;
+    if (!url.startsWith('blob:')) throw new Error('El diseño contiene un recurso que no está disponible sin conexión. Usa Impresión del sistema.');
+    if (!receiptResourceData.has(url)) {
+      const work = fetch(url).then(r => r.blob()).then(blob => new Promise((resolve, reject) => {
+        const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(blob);
+      }));
+      receiptResourceData.set(url, work);
+      work.catch(() => receiptResourceData.delete(url));
+    }
+    return receiptResourceData.get(url);
+  }
+  async function receiptGraphic(element) {
+    const doc = element.ownerDocument;
+    // Aplicar las mismas reglas de impresión, incluidas fuentes y Tailwind.
+    const rules = [];
+    const visit = list => Array.from(list).forEach(rule => {
+      if (rule.type === 4 && /\bprint\b/.test(rule.conditionText)) visit(rule.cssRules);
+      else rules.push(rule.cssText);
+    });
+    Array.from(doc.styleSheets).forEach(sheet => visit(sheet.cssRules));
+    let css = rules.join('\n');
+    const urls = [...new Set(Array.from(css.matchAll(/url\(["']?([^"')]+)["']?\)/g), m => m[1]))];
+    for (const url of urls) css = css.split(url).join(await receiptLocalData(url));
+    const copy = element.cloneNode(true);
+    copy.querySelectorAll('script,iframe,object,embed,button').forEach(node => node.remove());
+    for (const node of [copy, ...copy.querySelectorAll('*')]) {
+      for (const attr of Array.from(node.attributes)) if (/^on/i.test(attr.name)) node.removeAttribute(attr.name);
+      if (node.tagName === 'IMG') { node.removeAttribute('srcset'); node.src = await receiptLocalData(node.currentSrc || node.src); }
+    }
+    // La caja física no depende del tamaño de pantalla ni del scroll del POS.
+    copy.style.setProperty('position', 'static', 'important');
+    copy.style.setProperty('margin', '0', 'important');
+    css += '\nhtml,body{width:80mm!important;margin:0!important;padding:0!important;height:auto!important;min-height:0!important;overflow:visible!important;background:white!important}';
+    const frame = doc.createElement('iframe');
+    frame.setAttribute('aria-hidden', 'true'); frame.setAttribute('sandbox', 'allow-same-origin');
+    frame.style.cssText = 'position:absolute;left:-100000px;top:0;width:80mm;height:1px;border:0;';
+    doc.body.appendChild(frame);
+    try {
+      const rendered = frame.contentDocument;
+      const style = rendered.createElement('style'); style.textContent = css; rendered.head.appendChild(style);
+      rendered.body.appendChild(rendered.importNode(copy, true));
+      await rendered.fonts.ready;
+      await Promise.all(Array.from(rendered.images, img => img.decode()));
+      const box = rendered.body.firstElementChild.getBoundingClientRect();
+      const width = 576, height = Math.ceil(Math.max(box.height, rendered.body.scrollHeight) * width / box.width);
+      if (!height || height > 24000) throw new Error('El comprobante es demasiado largo para Bluetooth. Usa Impresión del sistema.');
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${box.width} ${height * box.width / width}"><foreignObject width="100%" height="100%">${new XMLSerializer().serializeToString(rendered.documentElement)}</foreignObject></svg>`;
+      const image = new Image();
+      image.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+      await image.decode();
+      const canvas = doc.createElement('canvas'); canvas.width = width; canvas.height = height;
+      const ctx = canvas.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, width, height); ctx.drawImage(image, 0, 0);
+      // PNG gris de 8 bits: conserva suavizado y tonos del documento. Sub por
+      // fila reduce el intent sin recortar ni degradar texto, logos o bordes.
+      const pixels = ctx.getImageData(0, 0, width, height).data;
+      const rows = new Uint8Array((width + 1) * height);
+      for (let y = 0; y < height; y++) {
+        rows[y * (width + 1)] = 1;
+        let previous = 0;
+        for (let x = 0; x < width; x++) {
+          const i = (y * width + x) * 4;
+          const gray = Math.round(pixels[i] * 0.2126 + pixels[i + 1] * 0.7152 + pixels[i + 2] * 0.0722);
+          rows[y * (width + 1) + x + 1] = (gray - previous) & 255;
+          previous = gray;
+        }
+      }
+      const compressed = new Uint8Array(await new Response(new Blob([rows]).stream().pipeThrough(new CompressionStream('deflate'))).arrayBuffer());
+      const chunk = (type, data) => {
+        const bytes = new Uint8Array(data.length + 12), view = new DataView(bytes.buffer);
+        view.setUint32(0, data.length); bytes.set(new TextEncoder().encode(type), 4); bytes.set(data, 8);
+        let crc = 0xffffffff;
+        for (let i = 4; i < bytes.length - 4; i++) {
+          crc ^= bytes[i];
+          for (let bit = 0; bit < 8; bit++) crc = (crc >>> 1) ^ ((crc & 1) ? 0xedb88320 : 0);
+        }
+        view.setUint32(bytes.length - 4, (crc ^ 0xffffffff) >>> 0);
+        return bytes;
+      };
+      const header = new Uint8Array(13), size = new DataView(header.buffer);
+      size.setUint32(0, width); size.setUint32(4, height); header[8] = 8;
+      const file = new Blob([new Uint8Array([137,80,78,71,13,10,26,10]), chunk('IHDR', header), chunk('IDAT', compressed), chunk('IEND', new Uint8Array())], { type: 'image/png' });
+      const png = await new Promise((resolve, reject) => {
+        const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(file);
+      });
+      if (png.length > 500000) throw new Error('El comprobante es demasiado largo para Bluetooth. Usa Impresión del sistema.');
+      return png;
+    } finally { frame.remove(); }
+  }
+  function prepareReceipt(element = document.querySelector('#balam-ticket, #balam-return-receipt')) {
+    if (!element) return null;
+    const key = element.outerHTML;
+    const previous = receiptGraphics.get(element);
+    if (previous && previous.key === key && !previous.error) return previous;
+    const state = { key, png: null, error: null, promise: null };
+    receiptGraphics.set(element, state);
+    state.promise = Promise.resolve().then(() => {
+      // Mantener las guardas de documento vacío y tamaño antes de rasterizar.
+      if (receiptPrintText(element).length > 500000) throw new Error('El comprobante es demasiado largo para Bluetooth. Usa Impresión del sistema.');
+      return receiptGraphic(element);
+    }).then(png => { state.png = png; }, error => {
+      state.error = new Error(/^El (comprobante|diseño)/.test(error.message || '') ? error.message
+        : 'No se pudo preparar el diseño. Vuelve a pulsar Imprimir o usa Impresión del sistema.');
+    });
+    return state;
+  }
   function receiptPrintText(element) {
     if (!element) throw new Error('El comprobante todavía no está disponible. Cierra y vuelve a abrirlo.');
     const doc = element.ownerDocument;
@@ -513,8 +621,17 @@
       // Chrome bloquea intents iniciados desde timers. Conservar acción manual.
       if (automatic) return false;
       const receipt = element || host.document.querySelector('#balam-ticket, #balam-return-receipt');
-      const payload = encodeURIComponent(receiptPrintText(receipt));
-      if (payload.length > 500000) throw new Error('El comprobante es demasiado largo para Bluetooth. Usa Impresión del sistema.');
+      if (!receipt) throw new Error('El comprobante todavía no está disponible. Cierra y vuelve a abrirlo.');
+      const graphic = prepareReceipt(receipt);
+      if (!graphic.png) {
+        notice('Preparando el diseño del ticket…');
+        graphic.promise.then(() => {
+          if (!receipt.isConnected || host.closed || receiptGraphics.get(receipt) !== graphic) return;
+          notice(graphic.error ? graphic.error.message : 'Diseño listo. Pulsa Imprimir para enviarlo a RawBT.');
+        });
+        return false;
+      }
+      const payload = graphic.png;
       const link = host.document.createElement('a');
       link.href = 'intent:' + payload + '#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;';
       host.document.body.appendChild(link);
@@ -528,9 +645,17 @@
     }
   }
   function ReceiptPrintHelp() {
+    const [status, setStatus] = React.useState('Preparando el diseño del ticket…');
+    React.useEffect(() => {
+      if (!usesBluetoothReceipt()) return undefined;
+      let active = true;
+      const graphic = prepareReceipt();
+      if (graphic) graphic.promise.then(() => { if (active) setStatus(graphic.error ? graphic.error.message : 'Impresión Bluetooth con el diseño del ticket.'); });
+      return () => { active = false; };
+    }, []);
     if (!usesBluetoothReceipt()) return null;
-    return React.createElement('p', { className: 'text-caption text-on-surface-variant mt-3' }, [
-      'Impresión Bluetooth mediante RawBT. ',
+    return React.createElement('p', { className: 'text-caption text-on-surface-variant mt-3', 'data-testid': 'receipt-design-status' }, [
+      status + ' ',
       React.createElement('button', { key: 'system', type: 'button', 'data-testid': 'receipt-print-system',
         className: 'underline py-2', onClick: () => printReceipt({ system: true }) }, 'Impresión del sistema'),
     ]);
@@ -674,5 +799,5 @@
     ]);
   }
 
-  window.UI = { fmt, fechaCorta, fechaHora, Badge, StatusBadge, StockBadge, ProductThumb, ToastHost, toast, HumanMessage, messageAuthority, messageText, technicalMessageViewer, Page, Toolbar, ActionGroup, KPI, Drawer, Modal, BADGE_TONE, MESSAGE_LEVEL, Pager, Segment, resizeImageFile, imageFileDimensions, useSyncActivity, useSyncFocusActivity, useReceiptAutoPrint, usesBluetoothReceipt, receiptPrintText, printReceipt, ReceiptPrintHelp };
+  window.UI = { fmt, fechaCorta, fechaHora, Badge, StatusBadge, StockBadge, ProductThumb, ToastHost, toast, HumanMessage, messageAuthority, messageText, technicalMessageViewer, Page, Toolbar, ActionGroup, KPI, Drawer, Modal, BADGE_TONE, MESSAGE_LEVEL, Pager, Segment, resizeImageFile, imageFileDimensions, useSyncActivity, useSyncFocusActivity, useReceiptAutoPrint, usesBluetoothReceipt, receiptPrintText, prepareReceipt, printReceipt, ReceiptPrintHelp };
 })();

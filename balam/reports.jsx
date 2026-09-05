@@ -90,6 +90,7 @@
       const button = win.document.querySelector('[data-testid="payment-ticket-print"]');
       button.addEventListener('click', () => window.UI.printReceipt({ element: ticket, host: win }));
       if (window.UI.usesBluetoothReceipt()) {
+        window.UI.prepareReceipt(ticket);
         const system = win.document.createElement('button');
         system.type = 'button'; system.textContent = 'Impresión del sistema';
         system.setAttribute('data-testid', 'payment-ticket-system');

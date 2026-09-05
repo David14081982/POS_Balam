@@ -6667,6 +6667,31 @@ al navegador, apertura de RawBT y papel impreso.
 **Corrección:** `docs/fixes/impresion-android-rawbt-h143.md`.
 **Commit:** `ee8d5bc` (funcional); cierre documental en commit posterior.
 
+**Aceptación posterior:** el usuario confirma «ya imprime» el 05/09/2026.
+La evolución del texto al diseño gráfico solicitado se registra en H-144.
+
+## H-144 — Paridad del diseño de tickets en Android y Chrome
+
+**Estado:** CORREGIDO EN SOFTWARE — PUBLICACIÓN EN CURSO.
+**Fecha:** 05/09/2026.
+**Evidencia:** el usuario confirma que H-143 imprime físicamente y solicita el
+mismo diseño de Chrome. La proyección `receiptPrintText()` elimina imágenes,
+tipografía y estructura; el transporte actual no puede conservar el diseño.
+**Alcance:** rasterizar el mismo documento montado, con sus estilos de impresión,
+y enviarlo a RawBT sin red. POS, reimpresión, Reportes y comprobantes compartidos.
+**Invariantes:** datos históricos V1/V2, importes, permisos, cola y escritorio.
+**Solución:** PNG gris de 8 bits del mismo HTML/CSS y recursos locales; preparación
+anticipada y envío por gesto directo. Compresión sin pérdida, sin trama impuesta,
+otra plantilla, datos persistidos ni dependencia de red. Errores explícitos y
+alternativa del sistema para documentos excesivos o recursos no disponibles.
+**Pruebas:** rojo 0/1; H-144 47/47 y H-143 35/35; H-85 20/20; H-90 21/21 y
+17/17; H-135 PDF 61/61; smoke 17/17; navegación 15/15; build 8/8 y reproducible.
+QA visual de siete escenarios y Reportes, 24 prendas completas, largo→corto,
+logo, V1/V2, offline, error y cancelación. PNG independiente 11/11.
+**Riesgo residual:** aceptación física del nuevo formato gráfico pendiente.
+**Documento:** `docs/fixes/diseno-ticket-android-h144.md`.
+**Commit:** Pendiente de commit.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

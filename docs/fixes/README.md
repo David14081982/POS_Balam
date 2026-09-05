@@ -13,6 +13,7 @@ sesión de chat.
 
 ## Correcciones registradas
 
+- `diseno-ticket-android-h144.md` — H-144: PNG del mismo diseño de Chrome para RawBT.
 - `impresion-android-rawbt-h143.md` — H-143: envío de comprobantes a RawBT desde Android.
 
 | Archivo | Riesgo | Tema |

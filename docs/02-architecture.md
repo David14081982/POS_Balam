@@ -549,12 +549,19 @@ requerir ajuste del controlador; el corte real se valida en la impresora.
 
 ### Transporte de comprobantes en Android
 
-`UI.printReceipt()` entrega el texto del comprobante ya montado a RawBT en
-Android mediante un intent con paquete fijo y gesto directo. La extracción
-omite imágenes/iconos y comandos de control, sin consultar el catálogo ni
-modificar documentos. POS, reimpresión de ventas, ticket por método, abonos,
+`UI.printReceipt()` entrega a RawBT una imagen del comprobante ya montado en
+Android mediante un intent con paquete fijo y gesto directo. `prepareReceipt()`
+reutiliza el HTML y CSS de impresión, incluidas fuentes, logo e iconos locales,
+sin consultar el catálogo ni modificar documentos. El PNG de 576 puntos conserva
+la geometría de 80 mm y los tonos en escala de grises; su compresión sin pérdida
+usa las APIs del navegador y no agrega dependencias ni red. La preparación se
+anticipa al clic; si aún no termina, se informa y se requiere otro clic, nunca
+se abre RawBT desde una continuación asíncrona. La imagen se conserva sólo en
+memoria por elemento y contenido; cambiar de documento invalida la anterior.
+POS, reimpresión de ventas, ticket por método, abonos,
 cambios y devoluciones comparten el transporte. Un documento vacío o excesivo
-se rechaza completo con mensaje. Android conserva una acción alternativa de
+se rechaza completo con mensaje, igual que un recurso no disponible localmente.
+Android conserva una acción alternativa de
 impresión del sistema; sus timers de autoimpresión no abren aplicaciones.
 Escritorio conserva la impresión y el PDF continuo existentes. La aplicación
 informa la solicitud de apertura, no acredita impresión física. Reportes A4,
