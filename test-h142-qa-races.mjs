@@ -73,7 +73,10 @@ async function finish(promise) {
   S.pushRows('products', [p]); await until(() => entered);
   const recovery = S.rebootstrapFromCloud().then(value => ({ value }), error => ({ error: error.message }));
   await wait(160);
-  const overlapping = await S.rebootstrapFromCloud().then(() => 'unexpected', error => error.message);
+  const overlapping = await Promise.race([
+    S.rebootstrapFromCloud().then(() => 'unexpected', error => error.message),
+    wait(100).then(() => 'overlap-not-rejected'),
+  ]);
   const beforeRelease = {
     quarantines, pending: queue(env).map(op => op.rowIds),
     localIds: env.window.DATA.products.map(row => row.id),
