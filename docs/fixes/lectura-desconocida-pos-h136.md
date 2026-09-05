@@ -3,7 +3,7 @@
 **Riesgo:** H-136
 **Estado:** PARCIALMENTE RESUELTO
 **Fecha:** 05/09/2026
-**Commit:** Pendiente de commit
+**Commit:** `7889b5f120df0e6ccd4bcb0534614194a37fbe9a`
 
 ## Problema y reproducción
 
@@ -46,7 +46,10 @@ Se regeneran los dos HTML y service worker desde fuentes.
 - H-132 identidad 7/7; H-133 V3 8/8; H-130 guion 7/7; H-131 diagonal 23/23.
 - H-134 mensajes 43/43 y E2E 26/26; H-109 aviso móvil 10/10.
 - `node build-offline.mjs`; smoke bundle 17/17; navegación 15/15;
-  `node test-build-reproducibility.mjs` 8/8. Validación pública pendiente.
+  `node test-build-reproducibility.mjs` 8/8 y dos builds idénticos.
+- Pages `built`, HTTP 200, bytes iguales al blob Git de `index.html`;
+  SHA-256 `83e7d331e50de67961109cbf10d0ca9cb90f46759cf62d5536b36716a65c4af9`.
+  H-136 publicado 23/23, con red de negocio bloqueada.
 
 ## Riesgo residual y pendientes
 

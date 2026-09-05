@@ -6435,8 +6435,10 @@ H-130 7/7, H-131 23/23, H-134 43/43 y E2E 26/26, H-109 10/10.
 **Pendiente:** identificar la etiqueta reportada; el recorrido aislado funciona
 y no demuestra la causa de ese incidente real. Impresora/lector físico no disponible.
 **Corrección documentada:** `docs/fixes/lectura-desconocida-pos-h136.md`.
-**Fecha:** 05/09/2026. Despliegue pendiente de verificación.
-**Commit:** Pendiente de commit.
+**Fecha:** 05/09/2026. Pages `built`; HTTP 200 y bytes iguales al blob Git;
+SHA-256 `83e7d331e50de67961109cbf10d0ca9cb90f46759cf62d5536b36716a65c4af9`.
+H-136 publicado 23/23; smoke 17/17; navegación 15/15; build 8/8 y dos iguales.
+**Commit:** `7889b5f120df0e6ccd4bcb0534614194a37fbe9a`.
 
 ## Regla de actualización
 
