@@ -39,8 +39,11 @@ try {
   const startupContext = await browser.newContext();
   await startupContext.addInitScript(() => {
     const request = navigator.locks.request.bind(navigator.locks);
-    navigator.locks.request = (...args) => new Promise((resolve, reject) => {
-      setTimeout(() => request(...args).then(resolve, reject), 450);
+    navigator.locks.request = (...args) => args[0] !== 'balam-pos-local-writer-v1'
+      ? request(...args) : new Promise((resolve, reject) => {
+      // El test libera la solicitud después de observar el gate; 450 ms podía
+      // vencer durante el arranque del bundle y perder el estado transitorio.
+      window.__releaseWriterStartup = () => request(...args).then(resolve, reject);
     });
   });
   const startup = await startupContext.newPage();
@@ -52,6 +55,7 @@ try {
     (await startupGate.getAttribute('data-writer-state')) === 'waiting'
       && (await startupGate.getAttribute('data-writer-contended')) === 'false'
       && (await startupGate.textContent()).includes('Preparando almacenamiento local'));
+  await startup.evaluate(() => { window.__releaseWriterStartup(); });
   await startup.waitForFunction(() => window.DATA.localWriterState === 'writer');
   check('la preparación desaparece sola al concederse el lock',
     await startupGate.count() === 0);

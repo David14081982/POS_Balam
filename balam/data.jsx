@@ -6017,16 +6017,18 @@
   }
 
   let localWriterRequestActive = false;
+  let localWriterPageHidden = false;
   function startLocalWriterLease() {
     if (!localWriterLeaseSupported) {
       setLocalWriterState('unsupported');
       try { remapOrphanCodes(); } catch (e) { /* mejor arrancar que bloquear */ }
       return;
     }
-    if (localWriterRequestActive || localWriterState === 'writer') return;
+    if (localWriterPageHidden || localWriterRequestActive || localWriterState === 'writer' || localWriterState === 'blocked') return;
     localWriterRequestActive = true;
     scheduleLocalWriterContentionCheck();
     Promise.resolve(window.navigator.locks.request(LOCAL_WRITER_LOCK, { mode: 'exclusive' }, async () => {
+      if (localWriterPageHidden) return;
       clearLocalWriterContentionCheck();
       setLocalWriterContended(false);
       setLocalWriterState('rebasing');
@@ -6043,22 +6045,35 @@
           if (released) return;
           released = true;
           localWriterRelease = null;
+          setLocalWriterState('waiting');
           resolve();
         };
-        window.addEventListener('pagehide', localWriterRelease, { once: true });
-        window.addEventListener('beforeunload', localWriterRelease, { once: true });
       });
-      setLocalWriterState('waiting');
     })).catch(() => {
       clearLocalWriterContentionCheck();
       setLocalWriterContended(false);
       setLocalWriterState('blocked');
     }).finally(() => {
       localWriterRequestActive = false;
+      // pageshow puede llegar antes de que termine la solicitud anterior.
+      if (!localWriterPageHidden && localWriterState === 'waiting') startLocalWriterLease();
     });
   }
-  window.addEventListener('pageshow', () => {
-    if (localWriterState === 'waiting') startLocalWriterLease();
+  // beforeunload es cancelable: abrir RawBT no significa cerrar esta página.
+  window.addEventListener('pagehide', () => {
+    localWriterPageHidden = true;
+    if (localWriterRelease) localWriterRelease();
   });
+  function resumeLocalWriterLease() {
+    localWriterPageHidden = false;
+    if (localWriterState === 'waiting') startLocalWriterLease();
+  }
+  window.addEventListener('pageshow', resumeLocalWriterLease);
+  window.addEventListener('focus', () => {
+    if (document.visibilityState !== 'hidden') resumeLocalWriterLease();
+  });
+  window.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') resumeLocalWriterLease();
+  }, true);
   startLocalWriterLease();
 })();

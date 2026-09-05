@@ -33,7 +33,11 @@ try {
       window.print = () => { window.__nativePrints++; };
       document.addEventListener('click', e => {
         const a = e.target.closest('a[href^="intent:"]');
-        if (a) { e.preventDefault(); window.__intents.push({ href: a.href, active: navigator.userActivation.isActive }); }
+        if (a) {
+          e.preventDefault(); window.__intents.push({ href: a.href, active: navigator.userActivation.isActive });
+          // H-147: la aplicación externa puede dejar vivo el documento tras intentar salir.
+          window.dispatchEvent(new Event('beforeunload', { cancelable: true }));
+        }
       }, true);
     });
     const page = await context.newPage(), errors = [];
@@ -73,6 +77,8 @@ try {
       check('RawBT: gesto activo y paquete explícito', intent.active && intent.href.endsWith('#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;'));
       check('Documento gráfico: origen conserva V1/V2, acentos, folio y total', ['GUAYABERA HISTÓRICA Ñ', 'GUAYABERA V2', 'SKU-V1-XS', 'SKU-V2-M', 'José Muñoz', 'BG-260905-0143', '$1,000.00', 'BALAMGUAYABERAS.COM'].every(v => text.includes(v)));
       check('RawBT: entrega PNG en lugar de ligaduras de texto', intent.href.startsWith('intent:data:image/png;base64,iVBORw0KGgo'));
+      await page.evaluate(() => { dispatchEvent(new Event('focus')); document.dispatchEvent(new Event('visibilitychange')); });
+      check('H147: regresar de RawBT conserva escritor y pantalla', await page.evaluate(() => DATA.isLocalWriter && !document.querySelector('[data-testid="local-writer-gate"]')));
       await printButton(page, button, android);
       check('RawBT: reintento entrega exactamente el mismo documento', await page.evaluate(() => window.__intents.length === 2 && window.__intents[0].href === window.__intents[1].href));
       for (const width of [320, 360, 390, 430, 768, 1024, 1280, 1440]) {

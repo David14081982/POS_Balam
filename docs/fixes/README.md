@@ -13,6 +13,7 @@ sesión de chat.
 
 ## Correcciones registradas
 
+- `regreso-rawbt-escritor-local-h147.md` — H-147: recupera el escritor al volver de impresión y evita espera huérfana.
 - `salida-android-ancho-rawbt-h146.md` — H-146: elimina alternativa inoperante y orienta el ancho de RawBT.
 - `ancho-contraste-ticket-android-h145.md` — H-145: ancho útil para rollo de 80 mm y negro sólido.
 - `diseno-ticket-android-h144.md` — H-144: PNG del mismo diseño de Chrome para RawBT.

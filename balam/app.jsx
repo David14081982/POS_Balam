@@ -188,7 +188,7 @@
       const blocked = writerState === 'blocked';
       const rebasing = writerState === 'rebasing';
       const contended = writerState === 'waiting' && window.DATA.localWriterContended === true;
-      const icon = blocked ? 'sync_problem' : (contended ? 'tab' : (rebasing ? 'sync' : 'hourglass_top'));
+      const icon = blocked ? 'alert' : (contended ? 'users' : (rebasing ? 'repeat' : 'clock'));
       const title = blocked ? 'Caché local bloqueada'
         : (contended ? 'Otra pestaña está operando'
           : (rebasing ? 'Actualizando datos locales' : 'Preparando almacenamiento local'));
@@ -207,7 +207,7 @@
         'data-writer-contended': contended ? 'true' : 'false',
       },
         h('div', { className: 'max-w-md text-center' }, [
-          h('div', { key: 'i', className: 'material-symbols-rounded text-4xl mb-3', style: { color: blocked ? '#ff8a80' : '#FFE088' } }, icon),
+          h(window.Icon, { key: 'i', name: icon, size: 36, className: 'mx-auto mb-3', 'aria-hidden': true, style: { color: blocked ? '#ff8a80' : '#FFE088' } }),
           h('div', { key: 't', className: 'font-headline text-xl text-white mb-2' }, title),
           h('div', { key: 'd', className: 'text-sm', style: { color: '#AEB4C5' } }, description),
         ]));

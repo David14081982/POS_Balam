@@ -549,6 +549,14 @@ requerir ajuste del controlador; el corte real se valida en la impresora.
 
 ### Transporte de comprobantes en Android
 
+El escritor local conserva su Web Lock ante `beforeunload` (salida cancelable)
+y al cambiar a una aplicación externa. Sólo `pagehide` libera voluntariamente
+el lock. El regreso por `pageshow`, foco o visibilidad solicita el mismo lock
+si está esperando, sin robarlo ni duplicar solicitudes. El cierre asíncrono
+recoge un regreso adelantado; una página que salió no vuelve a adquirir hasta
+regresar. El rebase durable sigue siendo previo a `writer`; `blocked` no se
+recupera por estos eventos. El gate usa SVG locales, sin ligaduras de fuentes.
+
 `UI.printReceipt()` entrega a RawBT una imagen del comprobante ya montado en
 Android mediante un intent con paquete fijo y gesto directo. `prepareReceipt()`
 reutiliza el HTML y CSS de impresión, incluidas fuentes, logo e iconos locales,

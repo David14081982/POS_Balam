@@ -6746,6 +6746,26 @@ H-143 publicado 39/39; CI H-132 `33997901217` exitoso.
 **Residual:** ninguno reportado; no se leyó el valor de RawBT en la tablet.
 **Documento:** `docs/fixes/salida-android-ancho-rawbt-h146.md`.
 
+## H-147 — Escritor local detenido al regresar de la impresión Android
+
+**Estado:** CORREGIDO Y VALIDADO — PUBLICACIÓN PENDIENTE. **Fecha:** 05/09/2026.
+**Evidencia:** usuario confirma bloqueo al regresar de RawBT, con el gate
+«Preparando almacenamiento local» y ligadura `hourglass_top` visible.
+El lease se libera en `beforeunload` y sólo vuelve a solicitarse en `pageshow`;
+una navegación que no abandona el documento puede dejar `waiting` sin petición.
+**Alcance:** ciclo de vida del escritor local e icono del gate. Reproducir antes
+de corregir; conservar Web Lock exclusivo, rebase y cola durable.
+**Solución:** liberar sólo en `pagehide`; recuperar con el mismo lock y rebase
+por `pageshow`/foco/visibilidad, sin perder un regreso adelantado al `finally`.
+Páginas salidas no readquieren; `blocked` no se omite. SVG local en el gate.
+**Pruebas:** rojo 7/13; H-147 final 16/16; impresión H-143 40/40; H-82 13/13;
+H-65 E2E 28/28 y contrato 35/35; cola 186/186 tras repetir una clasificación
+intermitente (control 186/186); concurrencia 15 sin fallos; AUTH 19/19; módulos
+42/42; smoke bundle 17/17; navegación 15/15; build 8/8 y reproducible.
+**Commit:** Pendiente de commit.
+**Documento:** `docs/fixes/regreso-rawbt-escritor-local-h147.md`.
+**Residual:** aceptación física del regreso desde RawBT pendiente.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:
