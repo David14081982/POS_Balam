@@ -6,7 +6,7 @@
 **Commit de implementación:** `0fa6810`
 **Commit S11:** `9ea9142`.
 **Commit S12/S13:** `a26701d`.
-**Commit S14:** Pendiente de commit.
+**Commit S14:** `6e8df6c`.
 **Integración en main:** `a111671` (PR #3).
 
 ## Problema y reproducción
@@ -292,7 +292,7 @@ de ejercer sus bajas reales. No se declara H142 resuelto ni ausencia de errores.
 
 ## S14 — Actualizar este equipo se bloquea por su propio foco
 
-05/09/2026, corregido y pendiente de publicación; Pendiente de commit. Usuario comunica el código
+05/09/2026, corregido en `6e8df6c`. Usuario comunica el código
 `ACTIVITY_ACTIVE`. Reproducción en Chrome con clics reales, SettingsScreen,
 hook de foco, CORE y guarda STORE reales: suite inicial 8/14, seis fallos;
 suite final ampliada 12/20, ocho fallos en 320/1280 px, contra `e7c56fb`.
@@ -321,6 +321,13 @@ humano con detalle técnico, tránsito a Administración / Datos y regreso.
 clasificación de foco dentro del panel; guarda STORE, cola e identidades intactas.
 QA intercepta la red y detiene recuperación al leer manifiesto: demuestra el
 desbloqueo del botón, no una actualización de los equipos físicos.
+Publicación: Pages `built`, commit `6e8df6c`. Archivo servido 9,035,796 bytes,
+idéntico al blob Git `index.html`, SHA256
+`da155862e2b25cc9bd9e5bd9b7360cccce71e2ec33177b6b4252c75505cec187`.
+`BALAM_VERIFIED_HTML` apuntando al archivo descargado del sitio: 20/20.
+La prueba monta Settings aisladamente; smoke y navegación cubren el contenedor
+general. S14 cerrado en este alcance. H142 mantiene pendiente confirmar los
+equipos físicos y revisar operaciones únicas de otras colas.
 
 ## Referencias
 

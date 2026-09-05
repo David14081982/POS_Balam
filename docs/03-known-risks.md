@@ -6590,13 +6590,16 @@ borradores; salir de la sección conserva el comportamiento previo.
 **Commit de implementación:** `0fa6810`.
 **Commit S11:** `9ea9142`.
 **Commit S12/S13:** `a26701d`.
-**S14 corregido, publicación pendiente (05/09/2026):** clic real en «Actualizar este equipo»
+**S14 corregido y publicado (05/09/2026):** clic real en «Actualizar este equipo»
 reproduce `ACTIVITY_ACTIVE`: el foco del Centro de equipos abre una actividad
 de configuración en su contenedor. Chrome 320/1280: reproducción final 12/20,
 ocho fallos. Se excluye únicamente ese panel del seguimiento de foco,
 conservando actividades de formularios y operaciones externas. Fuente y bundle
 20/20 cada uno; H134 43/43 y E2E 26/26; H113 35/35; navegación 15/15,
-smoke 17/17 y build 8/8. Commit: Pendiente de commit.
+smoke 17/17 y build 8/8. Commit: `6e8df6c`.
+Pages `built`; archivo servido coincide byte a byte con el blob de ese commit,
+SHA256 `da155862e2b25cc9bd9e5bd9b7360cccce71e2ec33177b6b4252c75505cec187`.
+Prueba del botón sobre archivo servido: 20/20. Flota física aún pendiente.
 **Integración main:** `a111671` (PR #3).
 **Continuación:** recibido JSON de sucursal (62 pendientes).
 S12 reproducido antes de publicar: rebootstrap aplica una purga histórica después
@@ -6631,7 +6634,7 @@ Chromium (diez defectos distintos), sobre el artefacto exacto de `c2b042e`.
 **Verificación:** H142 fuente 8/8, navegador 4/4, carreras 5/5, QA V1/V2 22/22;
 cola 186/186, regresiones comerciales, smoke/navegación y build aprobados.
 SQL 17800/17900 aplicado y verificado remotamente sin alterar productos ni ACL.
-**Despliegue:** Pages `built`, artefacto servido idéntico al blob de main:
+**Despliegue S12/S13:** Pages `built`, artefacto servido idéntico al blob de main:
 SHA256 `7d38677e343b5ad02b51c883c6ee2154b7bc15ef054cf4f6d8edc55b9cbabe58`.
 Recuperación y recarga del artefacto servido aprobadas con respuestas capturadas.
 **Riesgo residual:** equipos físicos pendientes. Nube
