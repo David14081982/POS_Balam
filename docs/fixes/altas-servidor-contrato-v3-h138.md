@@ -3,7 +3,7 @@
 **Riesgo:** H-138
 **Estado:** RESUELTO
 **Fecha:** 05/09/2026
-**Commit:** Pendiente de commit
+**Commit:** `79fd5036dd73af7f4d9f556c647a83dd5012b47f`
 
 ## Problema y reproducción
 

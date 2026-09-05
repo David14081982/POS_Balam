@@ -6501,7 +6501,7 @@ antes/después `12d7cc06a38073d116ec63213414f806`, idéntica. Sin nuevos HTML.
 **Riesgo residual:** no se efectuó una venta/alta comercial real; guardado
 positivo en PostgreSQL aislado, guarda y permisos comprobados en servidor.
 **Corrección documentada:** `docs/fixes/altas-servidor-contrato-v3-h138.md`.
-**Commit:** Pendiente de commit.
+**Commit:** `79fd5036dd73af7f4d9f556c647a83dd5012b47f`.
 
 ## Regla de actualización
 
