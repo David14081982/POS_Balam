@@ -1621,7 +1621,7 @@ ok('34c. H-60: la escritura válida termina sin pendientes', S.pending === 0);
     !!subido && subido.product_id === 'P-ALFA');
 }
 
-// 42) H-77: una configuración histórica de otra sesión no es pendiente actual.
+// 42) H-142: una intención de otra sesión protege CONFIG compartida sin enviarse.
 {
   const env = freshEnv();
   const profile = { email: 'admin-vigente@balam.test', role: 'admin' };
@@ -1637,10 +1637,10 @@ ok('34c. H-60: la escritura válida termina sin pendientes', S.pending === 0);
   const S = loadStore(env);
   await S.setSession(profile);
   await sleep(30);
-  ok('42a. H-77: una config ajena bloqueada no muestra cambios locales pendientes',
-    !env.window.UI.toasts.some(msg => msg.includes('Cambios locales pendientes')));
-  ok('42b. H-77: la config ajena no impide descargar la configuración remota',
-    !!env.window.CONFIG.loaded && env.window.CONFIG.loaded.settings.currency === 'MXN');
+  ok('42a. H-142: una config ajena bloqueada declara datos locales protegidos',
+    env.window.UI.toasts.some(msg => msg.includes('Cambios locales pendientes')));
+  ok('42b. H-142: la config compartida no se reemplaza mientras otra cuenta tiene una intención pendiente',
+    !env.window.CONFIG.loaded && S.queueStatus().devicePending === 1 && S.queueStatus().pending === 0);
   ok('42c. H-77: la operación histórica permanece intacta para su propietario',
     JSON.parse(env.localStorage.getItem('balam_sync_queue')).some(op => op.id === 'config-ajena'));
 }

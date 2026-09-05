@@ -68,6 +68,9 @@ PostgreSQL valida las operaciones que reemplazan una línea base
 ## ¿Está completamente sincronizada?
 **Autoridad:** `STORE.syncStatus()`: cola, cursores, invalidaciones, pulls,
 conflictos, compatibilidad y época; offline nunca satisface el contrato
+La cola considerada para proteger la caché es la de todo el equipo; la cuenta
+sólo puede enviar operaciones propias. Sincronizado exige además una lectura
+reciente de versiones. La flota compara cursores y confirmación, no sólo conteos.
 **Definición:** `playbooks/synchronization.md` · **Creada por:** H-77
 
 ## ¿Qué equipo requiere atención y qué intentó sincronizar?

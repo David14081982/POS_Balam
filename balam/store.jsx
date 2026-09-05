@@ -17,6 +17,7 @@
   const QDB = 'balam_sync', QSTORE = 'durable_queue';
   const SYNC_PROTOCOL_VERSION = 3;
   const SYNC_SCHEMA_VERSION = 20260830017500;
+  const SYNC_CLIENT_BUILD = '2026-09-05-h142';
   const SELECTIVE_CLEANUP_PROTOCOL = 5;
   const SYNC_CURSOR_KEY = 'balam_sync_domain_cursors_v1';
   const SYNC_DOMAINS = {
@@ -50,6 +51,7 @@
   let syncRealtimeState = 'off', syncPollTimer = null, syncHeartbeatTimer = null,
     syncLifecycleSubscribed = false;
   let syncCompatibility = 'legacy';
+  let syncRecovering = false, syncLastVersionCheck = 0, syncRemoteVersions = [];
   const syncInvalid = new Map();
   function loadSyncCursors() {
     try { return JSON.parse(localStorage.getItem(SYNC_CURSOR_KEY) || '{}') || {}; }
@@ -373,7 +375,7 @@
   }
   async function resyncProductsAfterConflict(c, currentOpId) {
     const hasOtherPendingProductChange = () => loadQ().some(op => op.id !== currentOpId
-      && opBelongsToActiveSession(op) && op.table === 'products');
+      && operationAffectsDomain(op, 'products'));
     if (!window.DATA || typeof window.DATA.applyRemote !== 'function'
         || hasOtherPendingProductChange()) return false;
     const refreshed = await fetchAllRows(c, 'products', 'id');
@@ -406,15 +408,15 @@
       req.onerror = () => reject(req.error || new Error('indexeddb_open_failed'));
     });
   }
-  async function queueBackup(mode, value) {
+  async function queueBackup(mode, value, key = QKEY) {
     const db = await openQueueDB();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(QSTORE, 'readwrite');
       const store = tx.objectStore(QSTORE);
-      const req = mode === 'put' ? store.put(value, QKEY) : store.delete(QKEY);
+      const req = mode === 'put' ? store.put(value, key) : store.delete(key);
       req.onerror = () => reject(req.error || new Error('indexeddb_write_failed'));
       tx.oncomplete = () => { db.close(); resolve(true); };
-      tx.onerror = () => { db.close(); reject(tx.error || new Error('indexeddb_tx_failed')); };
+      tx.onerror = tx.onabort = () => { db.close(); reject(tx.error || new Error('indexeddb_tx_failed')); };
     });
   }
   async function readQueueBackup() {
@@ -528,7 +530,9 @@
     // sí puede pisar a cualquiera —como siempre—: su cuerpo se reconstruye del
     // arreglo local justo antes de volar y ya las contiene a todas.
     const opScope = (x) => (x.rowIds ? x.rowIds.slice().sort().join('|') : null);
-    if (op.type === 'upsert' || op.type === 'profileUpdate') { const scope = opScope(op); const i = q.findIndex(x => (x.type === 'upsert' || x.type === 'profileUpdate') && x.table === op.table && x.ownerId === op.ownerId && (scope === null || opScope(x) === scope)); if (i >= 0) q[i] = op; else q.push(op); }
+    // Una escritura ya enviada conserva su clave y payload hasta conocer su
+    // resultado; una edición nueva no puede sustituir una confirmación perdida.
+    if (op.type === 'upsert' || op.type === 'profileUpdate') { const scope = opScope(op); const i = q.findIndex(x => !x.submittedRows && (x.type === 'upsert' || x.type === 'profileUpdate') && x.table === op.table && x.ownerId === op.ownerId && (scope === null || opScope(x) === scope)); if (i >= 0) q[i] = op; else q.push(op); }
     else if (op.type === 'config') { const i = q.findIndex(x => x.type === 'config' && x.ownerId === op.ownerId); if (i >= 0) q[i] = op; else q.push(op); }
     else q.push(op); // sale / delete: idempotentes, se conservan en orden
     saveQ(q);
@@ -556,7 +560,7 @@
       category = 'constraint'; status = 'blocked_data'; policy = 'review_data'; retryable = false;
     } else if (/sync_protocol_outdated|rebootstrap_required/.test(lower)) {
       category = 'compatibility'; status = 'quarantined'; policy = 'rebootstrap'; retryable = false;
-    } else if (/config_version_conflict|config_commit_mismatch|commit_mismatch|operation_mismatch|operation_id_conflict|operation_adoption_conflict|item_adoption_conflict|exchange_id_conflict|seller_effects_mismatch|payment_id_conflict|payment_balance_mismatch|layaway_not_pending|layaway_already_liquidated|layaway_local_state_conflict|legacy_.*conflict|legacy_context_incomplete|invalid_return|folio_conflict|loan_version_conflict|loan_operation_conflict|operation_purged/.test(lower)) {
+    } else if (/product_version_conflict|config_version_conflict|config_commit_mismatch|commit_mismatch|operation_mismatch|operation_id_conflict|operation_adoption_conflict|item_adoption_conflict|exchange_id_conflict|seller_effects_mismatch|payment_id_conflict|payment_balance_mismatch|layaway_not_pending|layaway_already_liquidated|layaway_local_state_conflict|legacy_.*conflict|legacy_context_incomplete|invalid_return|folio_conflict|loan_version_conflict|loan_operation_conflict|operation_purged/.test(lower)) {
       // H-68: `operation_purged` es la última defensa contra la resurrección. El
       // documento que esta operación quiere escribir fue borrado a propósito; reintentar
       // no lo va a hacer válido, así que se detiene y se muestra en el panel de sincronía.
@@ -596,7 +600,8 @@
     op.status = diagnostic.status;
   }
   function queueStatus() {
-    const operations = loadQ().filter(opBelongsToActiveSession).map(op => ({
+    const deviceQueue = loadQ();
+    const operations = deviceQueue.filter(opBelongsToActiveSession).map(op => ({
       id: op.id, type: op.type, table: op.table || null, folio: op.folio || null,
       status: op.status || 'pending', attempts: Number(op.attempts) || 0,
       createdAt: op.createdAt || null, lastAttemptAt: op.lastAttemptAt || null,
@@ -604,6 +609,9 @@
     }));
     return {
       durability: queueDurability,
+      devicePending: deviceQueue.length,
+      deviceBlocked: deviceQueue.filter(op => /^blocked_/.test(op.status || '') || op.status === 'auth_required' || op.status === 'quarantined').length,
+      otherSessionPending: deviceQueue.length - operations.length,
       pending: operations.length,
       blocked: operations.filter(op => /^blocked_/.test(op.status || '')).length,
       retrying: operations.filter(op => op.status === 'retry_wait' || op.status === 'waiting_inventory').length,
@@ -681,8 +689,8 @@
   // caché confirmada restante sigue siendo reconstruible desde Supabase.
   function hasPendingFor(table) {
     const domain = Object.keys(MAP).find(kind => MAP[kind].table === table) || table;
-    return loadQ().some(op => opBelongsToActiveSession(op)
-      && (op.table === table || operationAffectsDomain(op, domain)));
+    // La caché es compartida; la autorización de ENVÍO sigue siendo por sesión.
+    return loadQ().some(op => op.table === table || operationAffectsDomain(op, domain));
   }
 
   // ── H-33: contador diario de folios ─────────────────────────────────────────
@@ -793,6 +801,44 @@
   }
 
   // Ejecuta una operación contra Supabase. Devuelve true si quedó persistida.
+  // H-142: base+1 puede pertenecer a OTRA escritura. La confirmación de un
+  // snapshot exige también el contenido enviado, usando los mismos adaptadores.
+  // El marcador sólo vive en la respuesta; DATA no lo persiste.
+  function confirmedWriteRows(m, rawRows, sentRows) {
+    const canonical = value => JSON.stringify(value, function (_key, item) {
+      if (item && typeof item === 'object' && !Array.isArray(item)) {
+        return Object.keys(item).sort().reduce((out, key) => { out[key] = item[key]; return out; }, {});
+      }
+      return item;
+    });
+    return rawRows.map(raw => {
+      const remote = m.fromRow(raw), sent = sentRows.find(row => String(row.id) === String(raw.id));
+      const normalize = row => m.toRow(m.fromRow(row));
+      const expected = sent && normalize(sent), actual = normalize(raw);
+      remote._syncAccepted = !!sent && !raw.deleted_at && Object.keys(sent).every(key =>
+        key === 'sync_base_version' || key === 'sync_device_id'
+        || canonical(expected[key]) === canonical(actual[key]));
+      return remote;
+    });
+  }
+  function protectQueuedWritesAfterConflict(current, remote) {
+    const rejected = new Set(remote.filter(row => !row._syncAccepted
+      || Number(row._syncVersion) !== Number((current.rows.find(sent => sent.id === row.id) || {}).sync_base_version || 0) + 1)
+      .map(row => String(row.id)));
+    if (!rejected.size) return;
+    const queue = loadQ(); let changed = false;
+    queue.forEach(later => {
+      if (later.id === current.id || later.table !== current.table) return;
+      const ids = later.rowIds || (later.rows || []).map(row => row.id);
+      if (!ids.some(id => rejected.has(String(id)))) return;
+      // La edición posterior conserva su payload; no reconstruirlo desde la
+      // proyección que el conflicto acaba de reemplazar.
+      later.diagnostic = classifyFailure({ code: 'product_version_conflict',
+        message: 'Otra terminal cambió estos registros. La edición pendiente se conserva para revisión.' });
+      later.status = 'blocked_conflict'; later.retry = true; changed = true;
+    });
+    if (changed) saveQ(queue);
+  }
   async function applyOp(c, op) {
     lastApplyFailure = null;
     try {
@@ -901,7 +947,7 @@
           if (!(r.data || []).length) {
             return failOp({ code: 'empty_response', message: 'El perfil no devolvió la fila esperada' });
           }
-          remote.push.apply(remote, r.data.map(m.fromRow));
+          remote.push.apply(remote, confirmedWriteRows(m, r.data, [row]));
         }
         if (m && window.DATA && window.DATA.applySyncResult) {
           const expected = {};
@@ -934,7 +980,7 @@
           const r = await c.from(op.table).update(patch)
             .eq(op.conflict, row[op.conflict]).select('*');
           if (r.error || !(r.data || []).length) return failOp(r.error || { code: 'empty_response', message: 'La actualización no devolvió la fila esperada' });
-          remote.push.apply(remote, r.data.map(m.fromRow));
+          remote.push.apply(remote, confirmedWriteRows(m, r.data, [row]));
         }
         if (m && window.DATA && window.DATA.applySyncResult) {
           const expected = {};
@@ -965,7 +1011,7 @@
         }
         // Reconstituye el snapshot justo antes de enviarlo. Si otra operación en
         // vuelo confirmó una versión, la op compactada usa esa versión nueva.
-        if (m && m.localKey && window.DATA && Array.isArray(window.DATA[m.localKey])) {
+        if (!op.submittedRows && m && m.localKey && window.DATA && Array.isArray(window.DATA[m.localKey])) {
           const local = window.DATA[m.localKey];
           // H-70: una op acotada se reconstruye SÓLO con sus filas. Reconstruirla
           // con el arreglo entero era justo lo que se quería evitar al enviarla
@@ -985,6 +1031,17 @@
         }
         if (op.rowIds && (!Array.isArray(op.rows) || !op.rows.length)) return true;
         if (op.kind === 'products' && (!Array.isArray(op.rows) || !op.rows.length)) return true;
+        if (op.kind === 'products') {
+          // operation_id es idempotente por payload: después del primer intento
+          // un reintento no incorpora otra edición ni otra versión de DATA.
+          if (!op.submittedRows) {
+            op.submittedRows = JSON.parse(JSON.stringify(op.rows));
+            const queue = loadQ(), pending = queue.find(item => item.id === op.id);
+            if (pending) { pending.submittedRows = op.submittedRows; pending.rows = op.rows; saveQ(queue); }
+            await backupChain;
+          }
+          op.rows = op.submittedRows;
+        }
         const r = op.kind === 'products' && op.familyBatch
           ? await c.rpc('commit_reference_family_batch', {
               p_operation_id: op.id,
@@ -1008,8 +1065,9 @@
           op.rows.forEach(row => { expected[row.id] = Number(row.sync_base_version) || 0; });
           const authoritativeRows = op.familyBatch && r.data && !Array.isArray(r.data)
             ? (r.data.rows || []) : (r.data || []);
-          const remote = authoritativeRows.map(m.fromRow);
+          const remote = confirmedWriteRows(m, authoritativeRows, op.rows);
           const result = window.DATA.applySyncResult(op.kind, remote, expected, 'upsert') || {};
+          if (result.conflicts) protectQueuedWritesAfterConflict(op, remote);
           rebaseQueuedVersions(op.table, remote);
           if (result.conflicts && window.UI && window.UI.toast) {
             window.UI.toast(`${result.conflicts} cambio(s) no se aplicaron porque otra terminal guardó una versión más reciente`, 'var(--danger)');
@@ -1017,8 +1075,8 @@
           if (op.kind === 'products' && result.conflicts
               && !(await resyncProductsAfterConflict(c, op.id))) {
             return failOp({
-              code: 'product_resync_required',
-              message: 'El inventario requiere resincronización antes de continuar',
+              code: 'product_version_conflict',
+              message: 'La escritura fue rechazada por conflicto. Los pendientes se conservan para revisión antes de resincronizar.',
             }, result);
           }
         }
@@ -1442,6 +1500,7 @@
   }
   async function flushQueue() {
     if (!hasLocalWriter(false)) return;
+    if (syncRecovering) return;
     // Una terminal fuera de protocolo o epoca no escribe ningun dominio. Asi,
     // tampoco una RPC transaccional historica puede colarse durante rebootstrap.
     if (syncManifest && syncCompatibility !== 'ok') return;
@@ -1637,6 +1696,15 @@
     let recovered = false;
     try {
       const c = await ensureClient(); if (!c) return;
+      if (syncManifest) {
+        const manifest = await c.from('system_manifest').select('*').eq('singleton', true);
+        if (manifest.error || !manifest.data?.[0]) { syncLastVersionCheck = 0; return; }
+        const latest = manifest.data[0];
+        const changedEpoch = Number(latest.data_epoch) !== Number(syncManifest.data_epoch);
+        syncManifest = latest;
+        syncCompatibility = changedEpoch ? 'must_rebootstrap' : manifestCompatibility(latest);
+        if (syncCompatibility !== 'ok') return;
+      }
       // Una op a la vez, releyendo la cola de storage en cada paso: run() puede encolar
       // o reemplazar ops mientras una subida está en vuelo, y el viejo "saveQ(rest)"
       // final las pisaba. El retiro por id nunca borra una op reemplazada (id nuevo).
@@ -1670,11 +1738,11 @@
           && !(o.type === 'return' && salesInFlight.has(o.folio)));
         if (!op) break;
         const ok = await applyOp(c, op);
-        const cur = loadQ();
         if (ok) {
           await recordSyncActivity(c, op, 'synced');
           if (op.retry) recovered = true;
-          const remaining = cur.filter(o => o.id !== op.id);
+          // Capturas y coalescencias pueden ocurrir mientras se registra actividad.
+          const remaining = loadQ().filter(o => o.id !== op.id);
           if (op.type === 'sale' && op.mode === 'layaway_liquidation') {
             remaining.forEach(later => {
               if (later.type !== 'sale' || later.mode === 'layaway_liquidation'
@@ -1690,6 +1758,7 @@
           saveQ(remaining);
         } else {
           failed.add(op.id);
+          const cur = loadQ();
           const t = cur.find(o => o.id === op.id);
           if (t) {
             t.retry = true;
@@ -2137,6 +2206,7 @@
     return { v: 1, catalogs, catalogMeta, settings: s };
   }
   async function pull() {
+    if (domainBlocked('config')) return { ok: true, complete: false, applied: false, skipped: 'pending' };
     const c = await ensureClient(); if (!c) return { ok: false, error: 'sin cliente' };
     const [lk, st, cv] = await Promise.all([
       fetchAllRows(c, 'lookup', 'id'),
@@ -2144,6 +2214,7 @@
       c.from('config_sync_state').select('*').eq('singleton', true),
     ]);
     if (lk.error || st.error) return { ok: false, complete: false, applied: false, error: (lk.error || st.error).message };
+    if (domainBlocked('config')) return { ok: true, complete: false, applied: false, skipped: 'pending' };
     const mk = (st.data || []).find(r => r.key === RESET_MARK_KEY);
     lastResetMark = mk ? String(mk.value) : null;
     if (!cv.error && cv.data && cv.data[0]) configRemoteVersion = Number(cv.data[0].version) || 0;
@@ -2362,6 +2433,16 @@
     const prune = pruneQueueForPurge(state.purged_at);
     const local = localPurgeApplied({ authority: 'remote' });
     if (!local) return null;   // liquidación pendiente: se reintenta al próximo arranque
+    // La limpieza local invalida estos snapshots aunque la versión remota ya
+    // estuviera confirmada. Retirar sus cursores también conserva el pendiente
+    // tras una recarga si alguna descarga posterior falla.
+    for (const domain of ['products','clients','sellers','sales','payments',
+      'returns','exchanges','loans','liquidations','movements']) {
+      delete syncCursors[domain];
+      const version = Number(syncRemoteVersions.find(row => row.domain === domain)?.version) || 0;
+      if (version) syncInvalid.set(domain, Math.max(version, Number(syncInvalid.get(domain)) || 0));
+    }
+    saveSyncCursors();
     markPurgeSeen(state);
     if (window.UI && window.UI.toast) {
       window.UI.toast('Datos de prueba borrados en esta terminal — inventario y configuración intactos', 'var(--accent)');
@@ -2762,9 +2843,11 @@
     return operations.length;
   }
 
-  const DOMAIN_ORDER = ['permissions','config','sellers','products','clients',
+  // Una purga invalida proyecciones: debe ocurrir antes de reconstruirlas.
+  // Aplicarla al final borraría documentos recién descargados con cursor vigente.
+  const DOMAIN_ORDER = ['permissions','purges','config','sellers','products','clients',
     'promotions','sales','payments','returns','exchanges','loans','liquidations',
-    'commissionAdjustments','movements','purges','devices'];
+    'commissionAdjustments','movements','devices'];
   const DOMAIN_TABLE = {
     config: 'settings', products: 'products', clients: 'clients', sellers: 'sellers',
     promotions: 'promotions', sales: 'sales', payments: 'sale_payments',
@@ -2779,7 +2862,6 @@
   function domainBlocked(domain) {
     if (window.CORE && window.CORE.domainBusy && window.CORE.domainBusy(domain)) return true;
     if (loadQ().some(op => {
-      if (!opBelongsToActiveSession(op)) return false;
       return operationAffectsDomain(op, domain);
     })) return true;
     const table = DOMAIN_TABLE[domain];
@@ -2787,7 +2869,9 @@
   }
   async function readRemoteVersions(c) {
     const r = await c.from('sync_domain_versions').select('*').order('domain', { ascending: true });
-    if (r.error) return { ok: false, error: r.error, rows: [] };
+    if (r.error) { syncLastVersionCheck = 0; return { ok: false, error: r.error, rows: [] }; }
+    syncRemoteVersions = r.data || [];
+    syncLastVersionCheck = Date.now();
     return { ok: true, rows: r.data || [] };
   }
   async function applyDomainPull(domain) {
@@ -2819,7 +2903,10 @@
       if (!adjustmentsResult || adjustmentsResult.ok !== true || adjustmentsResult.complete !== true || adjustmentsResult.applied !== true) return adjustmentsResult;
       return { ok: true, complete: true, applied: true, coverage: 'full' };
     }
-    return pullDomain(domain);
+    // Sin cursor no existe cobertura local que conserve ventas fuera de ventana.
+    // Una purga elimina ese cursor durable antes de reconstruir la proyección.
+    return pullDomain(domain, domain === 'sales' && !Object.prototype.hasOwnProperty.call(syncCursors, domain)
+      ? { fullSnapshot: true } : undefined);
   }
   function invalidateDomain(domain, version) {
     if (!SYNC_DOMAINS[domain]) return false;
@@ -2842,19 +2929,19 @@
     if (domainMode(domain) === 'active') Promise.resolve(reconcileDomains()).catch(() => { /* estado visible */ });
     return true;
   }
+  function manifestCompatibility(manifest) {
+    const min = Number(manifest.sync_protocol_min) || 1;
+    const max = Number(manifest.sync_protocol_current) || min;
+    if (Number(manifest.schema_version) < SYNC_SCHEMA_VERSION || SYNC_PROTOCOL_VERSION > max) return 'server_outdated';
+    return SYNC_PROTOCOL_VERSION < min ? 'client_outdated' : 'ok';
+  }
   async function loadSyncProtocol(c) {
     const manifest = await c.from('system_manifest').select('*').eq('singleton', true);
     if (manifest.error || !(manifest.data || []).length) {
       syncManifest = null; syncCompatibility = 'legacy'; return { ok: false, legacy: true };
     }
     syncManifest = manifest.data[0];
-    const min = Number(syncManifest.sync_protocol_min) || 1;
-    const max = Number(syncManifest.sync_protocol_current) || min;
-    const serverSchema = Number(syncManifest.schema_version) || 0;
-    if (serverSchema < SYNC_SCHEMA_VERSION) syncCompatibility = 'server_outdated';
-    else if (SYNC_PROTOCOL_VERSION < min) syncCompatibility = 'client_outdated';
-    else if (SYNC_PROTOCOL_VERSION > max) syncCompatibility = 'server_outdated';
-    else syncCompatibility = 'ok';
+    syncCompatibility = manifestCompatibility(syncManifest);
     const epochKey = 'balam_sync_data_epoch';
     let localEpoch = null;
     try { localEpoch = Number(localStorage.getItem(epochKey)) || null; } catch (e) { /* */ }
@@ -2874,11 +2961,11 @@
     const q = queueStatus();
     const clean = syncStatus().synchronized;
     await c.rpc('report_sync_device', {
-      p_device_id: window.CORE.getDeviceId(), p_client_build: String(SYNC_SCHEMA_VERSION),
+      p_device_id: window.CORE.getDeviceId(), p_client_build: SYNC_CLIENT_BUILD,
       p_protocol_version: SYNC_PROTOCOL_VERSION, p_schema_version: SYNC_SCHEMA_VERSION,
       p_data_epoch: Number(syncManifest.data_epoch) || 1, p_cursors: syncCursors,
-      p_queue_pending: q.pending, p_queue_blocked: q.blocked,
-      p_status: syncCompatibility === 'ok' ? (q.blocked ? 'pending' : 'online')
+      p_queue_pending: q.devicePending, p_queue_blocked: q.deviceBlocked,
+      p_status: syncCompatibility === 'ok' ? (q.devicePending ? 'pending' : (clean ? 'online' : 'behind'))
         : (syncCompatibility === 'must_rebootstrap' ? 'must_rebootstrap' : 'quarantined'),
       p_last_synced_at: clean ? new Date().toISOString() : null,
     });
@@ -2905,11 +2992,16 @@
     return consumed;
   }
   async function reconcileDomains() {
+    if (syncRecovering) return { ok: false, deferred: ['recovery'] };
     if (syncReconcilePromise) return syncReconcilePromise;
     syncReconcilePromise = (async () => {
       const c = await ensureClient();
       if (!c || !syncManifest || syncCompatibility !== 'ok') return { ok: false, compatibility: syncCompatibility };
       const latestManifest = await c.from('system_manifest').select('*').eq('singleton', true);
+      if (latestManifest.error || !latestManifest.data?.[0]) {
+        syncLastVersionCheck = 0;
+        return { ok: false, error: 'MANIFEST_UNAVAILABLE' };
+      }
       if (!latestManifest.error && (latestManifest.data || []).length) {
         const latest = latestManifest.data[0];
         if (syncManifest && Number(latest.data_epoch) !== Number(syncManifest.data_epoch)) {
@@ -2918,6 +3010,8 @@
           return { ok: false, compatibility: syncCompatibility };
         }
         syncManifest = latest;
+        syncCompatibility = manifestCompatibility(latest);
+        if (syncCompatibility !== 'ok') return { ok: false, compatibility: syncCompatibility };
       }
       const versions = await readRemoteVersions(c);
       if (!versions.ok) return versions;
@@ -2937,16 +3031,16 @@
           saveSyncCursors();
         } else deferred.push(domain);
       }
-      await heartbeatDevice(c);
       try { window.dispatchEvent(new CustomEvent('syncstatuschange', { detail: syncStatus() })); } catch (e) { /* */ }
       return { ok: true, applied, deferred };
-    })().finally(() => {
+    })().finally(async () => {
       syncReconcilePromise = null;
       const again = syncReconcileAgain; syncReconcileAgain = false;
       // El evento emitido dentro de la reconciliación todavía veía la promesa
       // activa. Publica el estado final para que el panel salga de
       // «Reconciliando» cuando ya no queda trabajo.
       try { window.dispatchEvent(new CustomEvent('syncstatuschange', { detail: syncStatus() })); } catch (e) { /* */ }
+      if (sb && syncManifest) await heartbeatDevice(sb).catch(() => {});
       if (again && Array.from(syncInvalid.keys()).some(domain =>
         domainMode(domain) === 'active' && !domainBlocked(domain))) {
         Promise.resolve().then(() => reconcileDomains()).catch(() => { /* siguiente timbre reintenta */ });
@@ -2961,8 +3055,8 @@
     syncChannel = null; syncRealtimeState = 'off';
   }
   function startLiveSync(c) {
-    if (!syncManifest || syncCompatibility !== 'ok') return;
-    if (!syncChannel && typeof c.channel === 'function') {
+    if (!syncManifest) return;
+    if (syncCompatibility === 'ok' && !syncChannel && typeof c.channel === 'function') {
       syncChannel = c.channel('balam-sync-domain-versions')
         .on('postgres_changes', { event: '*', schema: 'pos', table: 'sync_domain_versions' }, payload => {
           const row = payload && (payload.new || payload.record);
@@ -2973,11 +3067,19 @@
           if (status === 'SUBSCRIBED') reconcileDomains().catch(() => { /* */ });
         });
     }
-    if (!syncPollTimer) syncPollTimer = setInterval(() => {
-      if (syncRealtimeState !== 'subscribed') reconcileDomains().catch(() => { /* */ });
+    if (!syncPollTimer) syncPollTimer = setInterval(async () => {
+      if (!enabled || !hasLocalWriter(false) || syncRecovering || document.hidden
+          || (typeof navigator !== 'undefined' && navigator.onLine === false)) return;
+      try {
+        if (syncCompatibility !== 'ok') await loadSyncProtocol(c);
+        if (syncCompatibility !== 'ok') return;
+        await flushQueue();
+        await waitForFlushIdle();
+        await reconcileDomains();
+      } catch (e) { /* el siguiente ciclo reintenta sin descartar la cola */ }
     }, 60000);
     if (!syncHeartbeatTimer) syncHeartbeatTimer = setInterval(() => {
-      if (document.hidden || (typeof navigator !== 'undefined' && !navigator.onLine)) return;
+      if (!enabled || !hasLocalWriter(false) || document.hidden || (typeof navigator !== 'undefined' && !navigator.onLine)) return;
       heartbeatDevice(c).catch(() => { /* el siguiente latido reintenta */ });
     }, 60000);
     if (!syncLifecycleSubscribed) {
@@ -3006,10 +3108,15 @@
       invalidDomains: Array.from(syncInvalid.keys()),
       cursors: Object.assign({}, syncCursors),
       reconciling: !!syncReconcilePromise,
-      pending: q.pending, blocked: q.blocked,
+      pending: q.devicePending, blocked: q.deviceBlocked,
       synchronized: (typeof navigator === 'undefined' || navigator.onLine !== false)
         && !!syncManifest && syncCompatibility === 'ok'
-        && !syncInvalid.size && !syncReconcilePromise && q.pending === 0 && q.blocked === 0,
+        && syncLastVersionCheck > 0 && Date.now() - syncLastVersionCheck <= 120000
+        && syncRemoteVersions.every(row => domainMode(row.domain) !== 'active'
+          || (Number(syncCursors[row.domain]) || 0) >= Number(row.version))
+        && !syncRecovering && !syncInvalid.size && !syncReconcilePromise
+        && q.devicePending === 0 && q.deviceBlocked === 0,
+      devicePending: q.devicePending, otherSessionPending: q.otherSessionPending,
     };
   }
   function recoverySnapshot() {
@@ -3085,7 +3192,18 @@
     }
     return cases;
   }
-  function quarantineArchives() {
+  async function writeQuarantineArchive(archive) {
+    if (archive.storage !== 'indexedDB') {
+      try { localStorage.setItem(archive.key, JSON.stringify(archive.value)); return; }
+      catch (e) { /* la cuota no debe impedir usar el respaldo existente */ }
+    }
+    try {
+      await queueBackup('put', archive.value, archive.key);
+      archive.storage = 'indexedDB';
+      try { localStorage.removeItem(archive.key); } catch (e) { /* lectura prioriza IndexedDB */ }
+    } catch (e) { throw new Error('QUARANTINE_STORAGE_UNAVAILABLE'); }
+  }
+  async function quarantineArchives() {
     const archives = [];
     try {
       for (let i = 0; i < localStorage.length; i++) {
@@ -3095,22 +3213,40 @@
         catch (e) { /* un archivo corrupto no oculta los demás */ }
       }
     } catch (e) { /* almacenamiento no disponible */ }
-    return archives;
+    try {
+      const db = await openQueueDB();
+      const durable = await new Promise((resolve, reject) => {
+        const rows = [], tx = db.transaction(QSTORE, 'readonly');
+        const req = tx.objectStore(QSTORE).openCursor();
+        req.onsuccess = () => {
+          const cursor = req.result;
+          if (!cursor) return;
+          if (String(cursor.key).startsWith('balam_sync_quarantine_')) {
+            rows.push({ key: cursor.key, value: cursor.value, storage: 'indexedDB' });
+          }
+          cursor.continue();
+        };
+        tx.oncomplete = () => { db.close(); resolve(rows); };
+        tx.onerror = tx.onabort = () => { db.close(); reject(tx.error || new Error('QUARANTINE_READ_FAILED')); };
+      });
+      const byKey = new Map(archives.map(archive => [archive.key, archive]));
+      durable.forEach(archive => byKey.set(archive.key, archive));
+      return Array.from(byKey.values());
+    } catch (e) { return archives; } // conserva compatibilidad sin IndexedDB
   }
   async function reportStoredQuarantineArchives(c) {
-    for (const archive of quarantineArchives()) {
+    for (const archive of await quarantineArchives()) {
       const value = archive.value || {};
       const operations = Array.isArray(value.operations)
         ? value.operations.filter(opBelongsToActiveSession) : [];
       if (value.reportedAt || !operations.length || !Number(value.epoch)) continue;
       const cases = await reportQuarantineCases(c, operations, value.localEpoch, Number(value.epoch));
       value.cases = cases; value.reportedAt = new Date().toISOString();
-      try { localStorage.setItem(archive.key, JSON.stringify(value)); }
-      catch (e) { throw new Error('QUARANTINE_STORAGE_UNAVAILABLE'); }
+      await writeQuarantineArchive(archive);
     }
   }
-  function restoreQuarantinedOperation(operationId, remoteEpoch) {
-    for (const archive of quarantineArchives()) {
+  async function restoreQuarantinedOperation(operationId, remoteEpoch) {
+    for (const archive of await quarantineArchives()) {
       if (Number(archive.value.epoch) !== Number(remoteEpoch)) continue;
       const op = (archive.value.operations || []).find(x => String(x.id) === String(operationId));
       if (!op) continue;
@@ -3125,11 +3261,11 @@
     }
     return null;
   }
-  function removeResolvedQuarantine(found, operationId) {
+  async function removeResolvedQuarantine(found, operationId) {
     if (!found) return;
     found.archive.value.operations = (found.archive.value.operations || [])
       .filter(x => String(x.id) !== String(operationId));
-    try { localStorage.setItem(found.archive.key, JSON.stringify(found.archive.value)); } catch (e) { /* evidencia original queda */ }
+    try { await writeQuarantineArchive(found.archive); } catch (e) { /* evidencia original queda */ }
   }
   async function consumeSyncQuarantineDecisions(c) {
     if (!c) return 0;
@@ -3139,7 +3275,7 @@
     if (result.error) return 0;
     let completed = 0;
     for (const command of (result.data || [])) {
-      const found = restoreQuarantinedOperation(command.operation_id, command.remote_epoch);
+      const found = await restoreQuarantinedOperation(command.operation_id, command.remote_epoch);
       if (!found) {
         await c.rpc('complete_sync_quarantine', {
           p_device_id: window.CORE.getDeviceId(), p_operation_id: command.operation_id,
@@ -3155,46 +3291,77 @@
         p_remote_epoch: command.remote_epoch, p_ok: !pending,
         p_message: pending ? 'La RPC normal rechazó o difirió la operación' : null,
       });
-      if (!pending) { removeResolvedQuarantine(found, command.operation_id); completed++; }
+      if (!pending) { await removeResolvedQuarantine(found, command.operation_id); completed++; }
     }
     return completed;
   }
   async function rebootstrapFromCloud() {
     if (window.CORE.activityStatus().active) throw new Error('ACTIVITY_ACTIVE');
-    const c = await ensureClient(); if (!c) throw new Error('OFFLINE');
-    const manifest = await c.from('system_manifest').select('*').eq('singleton', true);
-    if (manifest.error || !(manifest.data || []).length) throw new Error('MANIFEST_UNAVAILABLE');
-    const latest = manifest.data[0];
-    // Las operaciones de una época anterior nunca se ejecutan contra la nueva.
-    // Se apartan de la cola activa, pero quedan en un archivo durable local y en
-    // el JSON que la interfaz obliga a exportar antes de permitir esta acción.
-    const queued = loadQ(); const stale = queued.filter(opBelongsToActiveSession);
-    if (stale.length) {
-      let localEpoch = null;
-      try { localEpoch = Number(localStorage.getItem('balam_sync_data_epoch')) || null; } catch (e) { /* */ }
-      const cases = await reportQuarantineCases(c, stale, localEpoch, Number(latest.data_epoch));
-      const key = `balam_sync_quarantine_${latest.data_epoch}_${Date.now()}`;
-      try { localStorage.setItem(key, JSON.stringify({ epoch: latest.data_epoch, localEpoch, cases, reportedAt: new Date().toISOString(), operations: stale })); }
-      catch (e) { throw new Error('QUARANTINE_STORAGE_UNAVAILABLE'); }
-      saveQ(queued.filter(op => !opBelongsToActiveSession(op)));
-    }
-    for (const domain of DOMAIN_ORDER) {
-      const result = (domain === 'config' || domain === 'permissions' || domain === 'purges' || domain === 'devices')
-        ? await applyDomainPull(domain)
-        : await pullDomain(domain, { authoritativeEmpty: true, fullSnapshot: true });
-      if (!result || result.ok !== true || result.complete !== true || result.applied !== true) {
-        const error = new Error('REBOOTSTRAP_DOMAIN_INCOMPLETE:' + domain);
-        error.domain = domain; error.result = result || null; throw error;
+    if (syncRecovering) throw new Error('RECOVERY_IN_PROGRESS');
+    if (loadQ().some(op => !opBelongsToActiveSession(op))) throw new Error('OTHER_SESSION_PENDING');
+    syncRecovering = true;
+    let c;
+    try {
+      await waitForFlushIdle();
+      if (syncReconcilePromise) await syncReconcilePromise;
+      c = await ensureClient(); if (!c) throw new Error('OFFLINE');
+      const manifest = await c.from('system_manifest').select('*').eq('singleton', true);
+      if (manifest.error || !(manifest.data || []).length) throw new Error('MANIFEST_UNAVAILABLE');
+      const latest = manifest.data[0];
+      if (SYNC_PROTOCOL_VERSION < Number(latest.sync_protocol_min)
+          || SYNC_PROTOCOL_VERSION > Number(latest.sync_protocol_current)
+          || Number(latest.schema_version) < SYNC_SCHEMA_VERSION) throw new Error('SYNC_PROTOCOL_OUTDATED');
+      // Las operaciones de una época anterior nunca se ejecutan contra la nueva.
+      // Se apartan de la cola activa, pero quedan en un archivo durable local y en
+      // el JSON que la interfaz obliga a exportar antes de permitir esta acción.
+      const queued = loadQ(); const stale = queued.filter(opBelongsToActiveSession);
+      if (stale.length) {
+        let localEpoch = null;
+        try { localEpoch = Number(localStorage.getItem('balam_sync_data_epoch')) || null; } catch (e) { /* */ }
+        const cases = await reportQuarantineCases(c, stale, localEpoch, Number(latest.data_epoch));
+        const key = `balam_sync_quarantine_${latest.data_epoch}_${Date.now()}`;
+        await writeQuarantineArchive({ key, value: { epoch: latest.data_epoch, localEpoch, cases, reportedAt: new Date().toISOString(), operations: stale } });
+        const archivedIds = new Set(stale.map(op => op.id));
+        saveQ(loadQ().filter(op => !archivedIds.has(op.id)));
       }
+      const before = await readRemoteVersions(c);
+      if (!before.ok) throw new Error('REMOTE_VERSIONS_UNAVAILABLE');
+      const targets = Object.fromEntries(before.rows.map(row => [row.domain, Number(row.version) || 0]));
+      for (const domain of DOMAIN_ORDER) {
+        const result = (domain === 'config' || domain === 'permissions' || domain === 'purges' || domain === 'devices')
+          ? await applyDomainPull(domain)
+          : await pullDomain(domain, { authoritativeEmpty: true, fullSnapshot: true });
+        if (!result || result.ok !== true || result.complete !== true || result.applied !== true) {
+          const error = new Error('REBOOTSTRAP_DOMAIN_INCOMPLETE:' + domain);
+          error.domain = domain; error.result = result || null; throw error;
+        }
+        if (Object.prototype.hasOwnProperty.call(targets, domain)) {
+          syncCursors[domain] = targets[domain];
+          if ((Number(syncInvalid.get(domain)) || 0) <= targets[domain]) syncInvalid.delete(domain);
+        }
+      }
+      const manifestAfter = await c.from('system_manifest').select('*').eq('singleton', true);
+      if (manifestAfter.error || !manifestAfter.data?.[0]
+          || Number(manifestAfter.data[0].data_epoch) !== Number(latest.data_epoch)) {
+        throw new Error('REBOOTSTRAP_MANIFEST_CHANGED');
+      }
+      syncManifest = latest; syncCompatibility = 'ok';
+      localStorage.setItem('balam_sync_data_epoch', String(latest.data_epoch));
+      saveSyncCursors();
+      const versions = await readRemoteVersions(c);
+      if (!versions.ok) throw new Error('REMOTE_VERSIONS_UNAVAILABLE');
+      versions.rows.forEach(row => invalidateDomain(row.domain, row.version));
+    } catch (error) {
+      syncCompatibility = 'must_rebootstrap';
+      throw error;
+    } finally {
+      syncRecovering = false;
+      try { window.dispatchEvent(new CustomEvent('syncstatuschange', { detail: syncStatus() })); } catch (e) { /* */ }
     }
-    syncManifest = latest; syncCompatibility = 'ok'; syncInvalid.clear();
-    try { localStorage.setItem('balam_sync_data_epoch', String(latest.data_epoch)); } catch (e) { /* */ }
-    const versions = await readRemoteVersions(c);
-    if (versions.ok) versions.rows.forEach(row => { syncCursors[row.domain] = Number(row.version) || 0; });
-    saveSyncCursors(); await heartbeatDevice(c);
-    try { window.dispatchEvent(new CustomEvent('syncstatuschange', { detail: syncStatus() })); } catch (e) { /* */ }
+    await reconcileDomains();
     return syncStatus();
   }
+
   async function establishPointZero() {
     await reconcileDomains();
     const before = syncStatus();
@@ -3434,12 +3601,23 @@
     if (r.error) return { devices: [], current: 0, stale: 0, error: r.error.message };
     const history = await c.from('sync_activity').select('*').order('updated_at', { ascending: false }).limit(200);
     const quarantine = await c.from('sync_quarantine_cases').select('*').order('updated_at', { ascending: false }).limit(500);
+    const versions = await readRemoteVersions(c);
     const now = Date.now(), devices = (r.data || []).map(device => {
       const ageMs = Math.max(0, now - new Date(device.last_seen_at || 0).getTime());
       const staleEpoch = Number(device.data_epoch) !== Number(syncManifest.data_epoch)
         || device.status === 'must_rebootstrap' || device.status === 'quarantined';
       const connection = ageMs <= 120000 ? 'online' : (ageMs <= 86400000 ? 'disconnected' : 'unknown');
-      return Object.assign({}, device, { ageMs, connection, staleEpoch });
+      const incompatible = Number(device.protocol_version) < Number(syncManifest.sync_protocol_min)
+        || Number(device.protocol_version) > Number(syncManifest.sync_protocol_current)
+        || Number(device.schema_version) < SYNC_SCHEMA_VERSION;
+      const behind = !versions.ok || versions.rows.some(row => row.domain !== 'devices'
+        && domainMode(row.domain) === 'active'
+        && (Number((device.cursors || {})[row.domain]) || 0) < Number(row.version));
+      const synchronized = device.status === 'online' && connection === 'online'
+        && !staleEpoch && !incompatible && !behind && !!device.last_synced_at
+        && Math.abs(now - new Date(device.last_synced_at).getTime()) <= 120000
+        && Number(device.queue_pending) === 0 && Number(device.queue_blocked) === 0;
+      return Object.assign({}, device, { ageMs, connection, staleEpoch, incompatible, behind, synchronized });
     });
     const devicesById = new Map(devices.map(device => [device.device_id, device]));
     const activity = (history.error ? [] : (history.data || [])).map(item => {
@@ -3458,7 +3636,7 @@
     const epoch = Number(syncManifest.data_epoch);
     return {
       devices, activity, quarantine: quarantineCases,
-      current: devices.filter(d => Number(d.data_epoch) === epoch && !d.staleEpoch).length,
+      current: devices.filter(d => d.synchronized).length,
       stale: devices.filter(d => d.staleEpoch).length,
       attention: activity.filter(a => a.requires_attention).length,
       disconnected: devices.filter(d => d.connection !== 'online').length,
@@ -3565,6 +3743,11 @@
     await hydrateDurableQueue();
     const protocolClient = await ensureClient();
     if (protocolClient) await loadSyncProtocol(protocolClient);
+    if (syncManifest && syncCompatibility !== 'ok') {
+      startLiveSync(protocolClient);
+      await heartbeatDevice(protocolClient).catch(() => {});
+      return { ok: false, compatibility: syncCompatibility };
+    }
     const layawayOpsAtBoot = loadQ().filter(op =>
       op.type === 'sale' && op.mode === 'layaway_liquidation'
       && isAutomaticallyEligible(op));
@@ -3597,8 +3780,7 @@
     try { await flushQueue(); } catch (e) { /* offline: la cola queda para el reintento */ }
     if (opts.pull) {
       // Config local sin subir (op 'config' aún en cola): conservarla, no pisarla con la nube.
-      const cfgPending = loadQ().some(op => op.type === 'config'
-        && opBelongsToActiveSession(op) && isAutomaticallyEligible(op));
+      const cfgPending = hasPendingFor('settings');
       const r = cfgPending ? { ok: true, skipped: true } : await pull();
       if (window.UI && window.UI.toast) window.UI.toast(r.skipped ? 'Cambios locales pendientes de subir — se conservan' : (r.ok ? 'Configuración sincronizada (nube)' : 'Nube no disponible — modo local'), r.ok ? 'var(--accent)' : 'var(--danger)');
       // Limpieza pendiente de otra terminal: se aplica AQUÍ antes de bajar el dominio.

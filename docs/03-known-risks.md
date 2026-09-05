@@ -6583,6 +6583,52 @@ borradores; salir de la sección conserva el comportamiento previo.
 **Corrección documentada:** `docs/fixes/paneles-plegables-catalogos-h141.md`.
 **Commit:** `6a15756bbf5794366554fea283a1b85c951cd11f`.
 
+## H-142 — Divergencia silenciosa de inventario y cola entre equipos
+
+**Estado:** RECUPERACIÓN EN NUBE APLICADA — cliente y equipos pendientes de verificación.
+**Fecha:** 05/09/2026.
+**Commit de implementación:** `0fa6810`.
+**Commit S11:** `9ea9142`.
+**Commit S12/S13:** `a26701d`.
+**Continuación:** recibido JSON de sucursal (62 pendientes).
+S12 reproducido antes de publicar: rebootstrap aplica una purga histórica después
+de descargar ventas y queda con cero ventas locales pese a ocho remotas y estado
+sincronizado. Corregido orden, invalidación durable y cobertura completa de ventas;
+15/15 pruebas (rojo anterior 7/15).
+S13 reproducido con esa cola: archivo en localStorage excede cuota y bloquea
+rebootstrap. Corregido usando respaldo IndexedDB y todos sus consumidores async;
+9/9 pruebas reales de almacenamiento, recarga, resolución y fallos. Ensayo con
+62 operaciones conserva el archivo y recupera 253/977/3502 y ocho ventas.
+Equipo reactivado
+por autorización explícita. S11 de alias V2 histórico corregido con SQL 18000/18100,
+16/16 pruebas SQL y 22/22 de idempotencia independiente. Recuperación completa
+probada con rollback: 253/977/3502, ocho ventas, nueve pagos, una devolución y
+un cambio. Posteriormente el usuario autorizó exclusivamente retirar las dos
+ventas de prueba: aplicado y verificado el 05/09 a las 21:18 UTC, con reversa de
+cuatro piezas y 240 de comisión. Cinco ventas reales intactas por hash. Nube
+en ese paso: 250/969/3560. Tras «continua», aplicada la conciliación separada:
+253/977/3502, ocho ventas, nueve pagos, una devolución y un cambio. Postflight
+verifica todas las existencias por ID. Época 7 protege contra snapshots antiguos;
+no se borran colas locales. Propuesta combinada inicial superada.
+**Origen:** sucursal, autoridad indicada por el usuario, contiene 253 familias y
+977 referencias; laptop y Supabase contienen 250/969. Hay 77 diferencias de
+existencias, 74 con igual versión. La auditoría reprodujo diez defectos de cola,
+confirmación, recepción, sesiones, recuperación y proyección del estado.
+**Alcance:** corregir las causas reproducidas manteniendo identidad V1/V2,
+transacciones comerciales, autorización, durabilidad y protecciones de baja.
+Preparar recuperación por IDs con evidencia de sucursal; no reconstruirla desde
+la copia incompleta de nube ni sobrescribir datos comerciales sin validación.
+**Pruebas iniciales:** ocho reproducciones de fuente y cuatro observaciones en
+Chromium (diez defectos distintos), sobre el artefacto exacto de `c2b042e`.
+**Verificación:** H142 fuente 8/8, navegador 4/4, carreras 5/5, QA V1/V2 22/22;
+cola 186/186, regresiones comerciales, smoke/navegación y build aprobados.
+SQL 17800/17900 aplicado y verificado remotamente sin alterar productos ni ACL.
+**Riesgo residual:** frontend sin publicar y equipos físicos pendientes. Nube
+recuperada con las operaciones originales, sin duplicar la retirada anterior.
+Rebootstrap debe conservar el respaldo y archivo de cada cola para revisar
+operaciones únicas de otros equipos. No declarar toda la flota sincronizada aún.
+**Documento:** `docs/fixes/convergencia-inventario-cola-h142.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

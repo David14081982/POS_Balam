@@ -1340,10 +1340,12 @@
     const deviceState = device => {
       if (device.status === 'revoked') return { label: 'Retirado', cls: 'text-on-surface-variant bg-surface-container' };
       if (device.staleEpoch) return { label: 'Requiere resincronización', cls: 'text-danger bg-danger-soft' };
+      if (device.incompatible) return { label: 'Requiere actualización', cls: 'text-danger bg-danger-soft' };
       if (Number(device.queue_blocked) > 0) return { label: 'Requiere atención', cls: 'text-danger bg-danger-soft' };
       if (device.connection === 'unknown') return { label: 'Estado actual desconocido', cls: 'text-on-surface-variant bg-surface-container' };
       if (device.connection === 'disconnected') return { label: 'Desconectado', cls: 'text-warning bg-warning-soft' };
       if (Number(device.queue_pending) > 0) return { label: 'Sincronizando', cls: 'text-warning bg-warning-soft' };
+      if (device.synchronized !== true) return { label: 'Actualización sin confirmar', cls: 'text-warning bg-warning-soft' };
       return { label: 'Sincronizado', cls: 'text-success bg-success-soft' };
     };
     const beginEdit = device => {
