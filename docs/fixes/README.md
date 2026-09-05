@@ -120,6 +120,7 @@ sesión de chat.
 | `lectura-desconocida-pos-h136.md` | H-136 | Lectura V3 desconocida sin selección comercial y avisos oscuros legibles; etiqueta real pendiente |
 
 | `baja-productos-motivos-humanos-h137.md` | H-137 | Motivos operativos de baja y prueba real individual/familiar; caso del usuario pendiente |
+| `sku-comercial-resumen-venta-h139.md` | H-139 / H-136 | SKU visible y recorrido alta/ajuste, SQL, etiqueta, lectura y recarga |
 
 | `altas-servidor-contrato-v3-h138.md` | H-138 | Altas SQL conservan contrato V3 y familia; rechazo de contrato ausente sin backfill |
 

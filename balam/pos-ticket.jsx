@@ -163,6 +163,7 @@
                     h('button', { key: 'x', className: 'text-on-surface-variant hover:text-danger transition-colors shrink-0', onClick: () => onRemove(l.key), title: 'Quitar' }, h(MS, { name: 'trash', size: 18 })),
                   ]),
                   h('p', { key: 'sz', className: 'text-overline uppercase text-on-surface-variant' }, 'Talla ' + tallaLbl(l.talla, l.p) + ' • ' + l.p.colorName),
+                  l.p.sku && h('p', { key: 'sku', 'data-testid': 'ticket-line-sku-' + l.productId, className: 'text-caption text-on-surface-variant break-words' }, 'SKU: ' + l.p.sku),
                   D.effectiveOrnamentColors(l.p, l.talla).length
                     ? h('p', { key: 'oc', className: 'text-overline uppercase text-on-surface-variant/80' },
                         (l.p.orn || '') + ' · ' + D.effectiveOrnamentColors(l.p, l.talla).join(' + '))

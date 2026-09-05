@@ -6482,6 +6482,30 @@ confirmarse demostrados. Sin defecto adicional reproducido ni cambio de
 aplicación; permisos/red real simulados. El incidente específico sigue pendiente.
 **Commit de la ampliación:** `f3e4d58`.
 
+## H-139 — El resumen de venta omite el SKU comercial
+
+**Estado:** RESUELTO LOCALMENTE; publicación pendiente.
+**Fecha:** 05/09/2026
+**Origen:** se solicita ver el SKU legible después de escanear una referencia.
+**Reproducción:** formulario alta 5 piezas → editar a 3 → nuevo producto 2 →
+sincronizar SQL aislado → etiquetas → escanear → recargar con pull. Las dos
+referencias se agregan correctamente, pero ambas líneas omiten el SKU comercial.
+Rojo 27/31 junto con las 18 comprobaciones SQL de H-138; cuatro fallos de
+presentación (dos productos, antes/después de recarga).
+**Causa:** el resumen renderiza nombre/talla/color y no `l.p.sku`.
+**Alcance:** mostrar el SKU persistido de la referencia exacta. No regenerar
+identidades ni cambiar lectura, stock, sincronización o documentos históricos.
+**Corrección:** renderizar el SKU persistido de `l.p`, con ajuste de texto al
+ancho disponible. Sin sustituir barcode ni generar SKU nuevo.
+**Pruebas:** verde ampliado 43/43: altas/edición SQL, PDF decodificado con ZXing,
+lectura exacta, stock 3/2, recarga/pull, SKU y ocho viewports; H-136 24/24;
+H-132 7/7; H-135 61/61; navegación 15/15; smoke dev 15/15, bundle 17/17;
+build reproducible 8/8. Datos aislados; autenticación/red real simuladas.
+**Pendiente:** publicación. El barcode real `30328899392999898742908026` sigue
+sin identificar; esto no explica ese incidente ni certifica lector físico.
+**Corrección documentada:** `docs/fixes/sku-comercial-resumen-venta-h139.md`.
+**Commit:** Pendiente de commit.
+
 ## H-138 — Las altas SQL omiten metadatos del contrato V3
 
 **Estado:** RESUELTO

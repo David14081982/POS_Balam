@@ -80,6 +80,12 @@ recorrido local; no certifica aceptación remota ni reproduce el incidente real.
 
 ## Referencias
 
+Seguimiento 05/09/2026: `sku-comercial-resumen-venta-h139.md` documenta el ciclo
+por formularios con SQL aislado, decodificación independiente de PDF y recarga
+con pull: 43/43 junto con H-138. La lectura agrega ambas referencias correctas;
+se corrige por separado la omisión del SKU en el resumen. La cadena real sigue
+sin asociar a un producto; H-136 no cambia a resuelto por esta evidencia.
+
 - `docs/03-known-risks.md`, H-136.
 - `docs/02-architecture.md`, identidad y entrada HID.
 - `docs/fixes/autoridad-mensajes-humanos-h134.md`.
