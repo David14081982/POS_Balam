@@ -6415,7 +6415,8 @@ Prueba H-135 contra el sitio publicado: **61/61**, sin tráfico de negocio.
 **Estado:** PARCIALMENTE RESUELTO
 **Fecha de registro:** 05/09/2026
 **Origen:** producto nuevo cuya etiqueta escribe números y no se agrega a la
-venta. El artículo y la lectura exacta se solicitaron; aún no están disponibles.
+venta. El artículo sigue sin identificar; la lectura exacta se recibió en el
+seguimiento registrado abajo.
 **Evidencia acotada:** alta real por formulario → PDF → decodificación ZXing
 → POS agrega la referencia correcta en una copia aislada; H-133 8/8 y H-132
 7/7. La consulta remota fue sólo lectura. No se ha atribuido una causa al caso
@@ -6435,6 +6436,13 @@ H-130 7/7, H-131 23/23, H-134 43/43 y E2E 26/26, H-109 10/10.
 **Pendiente:** identificar la etiqueta reportada; el recorrido aislado funciona
 y no demuestra la causa de ese incidente real. Impresora/lector físico no disponible.
 **Corrección documentada:** `docs/fixes/lectura-desconocida-pos-h136.md`.
+**Seguimiento de altas (05/09/2026):** se recibió el código
+`30328899392999898742908026`; no se encontró en la consulta remota ni en los
+snapshots locales examinados. El usuario confirma que otros productos se leen
+bien. No se atribuye el fallo al lector ni se cambia el barcode numérico.
+Regresión ampliada 24/24: STORE real con red bloqueada, SKU/barcode iguales en
+producto guardado y solicitud durable, alta/traslado/etiqueta/escaneo/recarga.
+La causa del incidente permanece pendiente; ampliación: Pendiente de commit.
 **Fecha:** 05/09/2026. Pages `built`; HTTP 200 y bytes iguales al blob Git;
 SHA-256 `83e7d331e50de67961109cbf10d0ca9cb90f46759cf62d5536b36716a65c4af9`.
 H-136 publicado 23/23; smoke 17/17; navegación 15/15; build 8/8 y dos iguales.

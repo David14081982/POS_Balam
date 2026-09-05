@@ -22,7 +22,8 @@ try{
  });
  await p.goto(remote||`http://127.0.0.1:${server.address().port}/`);
  await p.waitForFunction(()=>window.InventoryScreen&&window.DATA&&window.BARCODES);
- await p.evaluate(()=>{
+ await p.evaluate(async()=>{
+   await STORE.init({pull:false});
    DATA.products.splice(0);DATA.persistProducts();AUTH.canAccess=()=>true;
    for(const kind of ['producto','corte','caracteristicas'])CONFIG.addItem(kind,{code:'H136',label:'PRUEBA '+kind,active:true});
    document.body.innerHTML='<div id="h136-toast"></div><div id="h136-root"></div>';
@@ -47,10 +48,18 @@ try{
    const totalBefore=DATA.products.reduce((sum,row)=>sum+DATA.totalStock(row),0);
    const transfer=DATA.reclassifyReference({sourceProductId:source.id,targetProductId:target.id,quantity:2,reason:'Prueba aislada H-136'});
    window.dispatchEvent(new CustomEvent('configchange'));
-   return {id:target.id,barcode:target.barcodeCode,familyId:target.referenceFamilyId,sourceId:source.id,sourceBarcode:source.barcodeCode,
+   return {id:target.id,sku:target.sku,barcode:target.barcodeCode,familyId:target.referenceFamilyId,sourceId:source.id,sourceBarcode:source.barcodeCode,
      transfer:{ok:transfer.ok,operationId:transfer.operationId},sourceStock:DATA.totalStock(source),targetStock:DATA.totalStock(target),totalBefore,
      totalAfter:DATA.products.reduce((sum,row)=>sum+DATA.totalStock(row),0)};
  });
+ const registration=await p.evaluate(id=>{
+   const row=JSON.parse(localStorage.getItem('balam_sync_queue')||'[]').flatMap(op=>op.rows||[]).find(row=>row.id===id);
+   const local=JSON.parse(localStorage.getItem('balam_pos_products_v2')||'[]').find(row=>row.id===id);
+   return {queued:row&&{id:row.id,sku:row.sku,barcode:row.barcode_code},saved:local&&{id:local.id,sku:local.sku,barcode:local.barcodeCode}};
+ },created.id);
+ check('alta guarda el mismo SKU y barcode en producto y solicitud durable',registration.queued&&registration.saved
+   &&registration.queued.sku===created.sku&&registration.saved.sku===created.sku
+   &&registration.queued.barcode===created.barcode&&registration.saved.barcode===created.barcode,registration);
  check('alta por formulario y separación conservan stock e identidad',created.transfer.ok&&created.targetStock===2&&created.sourceStock===3&&created.totalBefore===created.totalAfter,created);
  await p.getByTestId('inventory-product-family:'+created.familyId).click();
  await p.getByTestId('product-detail-labels').click();

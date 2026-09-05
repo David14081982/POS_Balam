@@ -8,7 +8,7 @@
 ## Problema y reproducción
 
 El usuario reportó una etiqueta nueva que escribe números sin agregar producto.
-No se dispone todavía del artículo/código exacto. Se reprodujo otro defecto
+Al iniciar no se disponía del artículo/código exacto. Se reprodujo otro defecto
 concreto: un V3 desconocido queda silencioso en captura global; en búsqueda
 puede abrir una prenda cuyo nombre coincida con el número. Esperado: informar
 sin seleccionar otra identidad. Las pruebas usan datos aislados y bloquean red
@@ -53,9 +53,30 @@ Se regeneran los dos HTML y service worker desde fuentes.
 
 ## Riesgo residual y pendientes
 
-La etiqueta real reportada sigue pendiente de identificar. Alta/traslado/etiqueta
+El producto asociado a la etiqueta real sigue pendiente de identificar. Alta/traslado/etiqueta
 funcionan en la reproducción aislada; no se afirma resolver ese incidente ni
 certificar el lector físico. No se borraron ni modificaron datos reales.
+
+## Seguimiento de altas futuras — 05/09/2026
+
+El usuario proporcionó `30328899392999898742908026` y aclaró que la lectora
+funciona con los demás productos. El formato numérico pertenece al barcode
+interno; no sustituye el SKU comercial. Las altas guardan ambos y el lector
+localiza por barcode/alias exacto. Esta ampliación no modifica hardware, formato,
+SKU ni UI.
+
+Consultas sólo lectura no encontraron ese código en productos remotos,
+aliases almacenados ni filas eliminadas. Tampoco apareció en los snapshots
+de inventario de Chrome examinados; esas copias no demuestran el estado que
+existía durante el incidente. El registro remoto de reclasificaciones consultado
+estaba vacío. No se atribuye una causa de pérdida, sincronización o lectura.
+
+Se amplió la regresión H-136 habilitando STORE real, con red externa bloqueada:
+el alta por formulario debe guardar el mismo SKU/barcode en producto local y
+fila de la solicitud durable; luego separar stock, descargar etiqueta, escanear
+y recargar. Resultado ampliado: 24/24. Esto comprueba futuras regresiones del
+recorrido local; no certifica aceptación remota ni reproduce el incidente real.
+**Commit de la ampliación:** Pendiente de commit.
 
 ## Referencias
 
