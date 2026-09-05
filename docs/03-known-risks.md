@@ -6588,6 +6588,12 @@ borradores; salir de la sección conserva el comportamiento previo.
 **Estado:** PARCIALMENTE RESUELTO — código verificado; recuperación y cliente pendientes.
 **Fecha:** 05/09/2026.
 **Commit de implementación:** `0fa6810`.
+**Commit S11:** Pendiente de commit.
+**Continuación:** recibido JSON de sucursal (62 pendientes); equipo reactivado
+por autorización explícita. S11 de alias V2 histórico corregido con SQL 18000/18100,
+16/16 pruebas SQL y 22/22 de idempotencia independiente. Recuperación completa
+probada con rollback: 253/977/3502, ocho ventas, nueve pagos, una devolución y
+un cambio; pendiente autorización para retirar dos ventas confirmadas de prueba.
 **Origen:** sucursal, autoridad indicada por el usuario, contiene 253 familias y
 977 referencias; laptop y Supabase contienen 250/969. Hay 77 diferencias de
 existencias, 74 con igual versión. La auditoría reprodujo diez defectos de cola,
@@ -6602,9 +6608,9 @@ Chromium (diez defectos distintos), sobre el artefacto exacto de `c2b042e`.
 cola 186/186, regresiones comerciales, smoke/navegación y build aprobados.
 SQL 17800/17900 aplicado y verificado remotamente sin alterar productos ni ACL.
 **Riesgo residual:** frontend sin publicar y reconciliación real pendiente.
-Los Excel no contienen colas/documentos comerciales; falta JSON de recuperación
-de sucursal. Descargar ahora la nube incompleta puede retirar referencias cuya
-cola se perdió. Propuesta por IDs preparada, sin aplicar ajustes de negocio.
+JSON de sucursal recibido y contrastado con commits/documentos remotos. Descargar
+ahora la nube incompleta puede retirar referencias locales. Conciliación por IDs
+preparada y probada, sin aplicar ajustes de negocio ni borrar las ventas de prueba.
 **Documento:** `docs/fixes/convergencia-inventario-cola-h142.md`.
 
 ## Regla de actualización
