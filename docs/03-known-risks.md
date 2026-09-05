@@ -6475,6 +6475,34 @@ navegación 15/15; build 8/8 y dos builds idénticos.
 **Corrección documentada:** `docs/fixes/baja-productos-motivos-humanos-h137.md`.
 **Commit:** `bf1b8cdd6e8a0537afe494fe2ad16a2efd671efb`.
 
+## H-138 — Las altas SQL omiten metadatos del contrato V3
+
+**Estado:** RESUELTO
+**Fecha:** 05/09/2026
+**Evidencia inicial:** las definiciones remotas de `save_products_checked` y
+`commit_reference_family_batch_h101_internal` no insertan `barcode_contract`;
+la primera tampoco inserta `reference_family_id`. H-133 migró los productos
+existentes con esos datos, pero no actualizó estas autoridades de alta.
+La guarda compara `NULL <> 3`, que no rechaza un contrato ausente.
+**Alcance:** altas futuras y conservación de familia/versión, sin regenerar
+barcodes/SKU, sin backfill ni cambios de stock, documentos o permisos.
+**Causa confirmada:** SQL reproduce omisión de contrato y familia; la comparación
+nullable permite insertar V2 sin versión. Barcode/SKU conservados: no se atribuye
+el incidente del código 30328899392999898742908026 a esta omisión.
+**Corrección:** ambas inserciones transportan contrato; la individual conserva
+familia recibida al crear. Guarda con `IS DISTINCT FROM 3`. Sin cambios a ramas
+de edición, aliases existentes, permisos, cola, SKU ni barcodes.
+**Pruebas:** rojo SQL 11/16, verde ampliado 18/18; mismas funciones publicadas
+18/18 en PostgreSQL aislado. H-136 24/24; migraciones 31/31. Permisos remotos
+antes/después aprobados; guarda real ejercida sobre tabla temporal.
+**Despliegue:** migraciones `20260905017600` y `20260905017700` aplicadas y
+verificadas. Propietarios/ACL/search_path intactos; huella completa de productos
+antes/después `12d7cc06a38073d116ec63213414f806`, idéntica. Sin nuevos HTML.
+**Riesgo residual:** no se efectuó una venta/alta comercial real; guardado
+positivo en PostgreSQL aislado, guarda y permisos comprobados en servidor.
+**Corrección documentada:** `docs/fixes/altas-servidor-contrato-v3-h138.md`.
+**Commit:** Pendiente de commit.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

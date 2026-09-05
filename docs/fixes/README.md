@@ -121,6 +121,8 @@ sesión de chat.
 
 | `baja-productos-motivos-humanos-h137.md` | H-137 | Motivos operativos de baja y prueba real individual/familiar; caso del usuario pendiente |
 
+| `altas-servidor-contrato-v3-h138.md` | H-138 | Altas SQL conservan contrato V3 y familia; rechazo de contrato ausente sin backfill |
+
 Documentación financiera relacionada, creada antes de este índice:
 
 - `../H-03-coherencia-cobro.md`

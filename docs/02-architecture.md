@@ -214,6 +214,12 @@ atraviesa SKU ni elige la primera coincidencia. La etiqueta muestra nombre,
 barras, SKU y precio; el texto técnico de `barcode_code` no se imprime. El SKU
 queda como representación humana configurable y no cambia al editar precio.
 
+Las autoridades SQL de alta individual y familiar conservan `barcode_contract`
+y la familia enviada en la creación. Una referencia activa sin contrato 3 se
+rechaza explícitamente, incluso si el valor es NULL. Las ediciones conservan
+los códigos y aliases históricos; estos metadatos no se reparan mediante una
+regeneración de SKU o de códigos de barras.
+
 En POS, una lectura de formato logístico V3 sin coincidencia termina con un
 aviso humano tanto en el campo de búsqueda como en la captura global. No pasa
 a coincidencias comerciales por nombre o SKU. Los avisos sobre fondo oscuro
