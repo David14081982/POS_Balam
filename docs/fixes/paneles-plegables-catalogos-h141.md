@@ -1,9 +1,9 @@
 # Paneles plegables en Catálogos de productos
 
 **Riesgo:** H-141.
-**Estado:** RESUELTO LOCALMENTE; pendiente de publicación.
+**Estado:** RESUELTO Y PUBLICADO.
 **Fecha:** 05/09/2026.
-**Commit:** Pendiente de commit.
+**Commit:** `6a15756bbf5794366554fea283a1b85c951cd11f`.
 
 ## Problema y reproducción
 
@@ -58,7 +58,12 @@ Los recorridos usan datos aislados y bloquean la red comercial.
 
 ## Riesgo residual y pendientes
 
-Pendiente: commit, publicación, comparación del artefacto servido y QA publicado.
+Pages `built`, HTTP 200 y bytes idénticos al blob Git del commit funcional;
+SHA-256 `b6793780b105ca07b94aa3ccffb60e2bdbdaa5b243de07346ea586bedee915a9`.
+`node test-h141-catalog-panels.mjs https://david14081982.github.io/POS_Balam/`:
+**22/22** con datos aislados y red comercial bloqueada. Evidencia temporal:
+`C:/Users/david/AppData/Local/Temp/balam-h141-bIuUsA`.
+Sin pendientes conocidos para esta historia.
 Sin riesgos funcionales conocidos en el alcance probado. Los borradores se
 conservan al plegar, no se promete conservarlos al abandonar la sección.
 

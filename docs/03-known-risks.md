@@ -6560,7 +6560,7 @@ QA publicado 6/6. Sin modificaciones de datos ni configuración real.
 
 ## H-141 — Paneles plegables en Catálogos de productos
 
-**Estado:** RESUELTO LOCALMENTE; pendiente de publicación.
+**Estado:** RESUELTO Y PUBLICADO.
 **Fecha:** 05/09/2026.
 **Origen:** propuesta aprobada: cada contenedor de esta sección empieza cerrado,
 cabecera pulsable con título/contador/flecha, apertura independiente, conserva
@@ -6574,11 +6574,14 @@ pulsable y controles dentro del cuerpo. Sólo Catálogos de productos.
 **Pruebas:** rojo H-141 0/2; verde 22/22 con borradores, teclado, reingreso y
 320–1280 px; H-63 HTTP/offline 58/58; configuración 30/30; navegación 15/15;
 smoke 17/17; build reproducible 8/8. Capturas inspeccionadas y self-review.
-**Pendiente:** commit, publicación y QA publicado.
+**Despliegue:** Pages `built`, HTTP 200 y bytes idénticos al blob Git;
+SHA-256 `b6793780b105ca07b94aa3ccffb60e2bdbdaa5b243de07346ea586bedee915a9`;
+QA publicado 22/22. Sin modificaciones de datos ni configuración real.
+**Pendiente:** ninguno conocido para esta historia.
 **Riesgo residual:** ninguno conocido en el alcance probado. Plegar conserva
 borradores; salir de la sección conserva el comportamiento previo.
 **Corrección documentada:** `docs/fixes/paneles-plegables-catalogos-h141.md`.
-**Commit:** Pendiente de commit.
+**Commit:** `6a15756bbf5794366554fea283a1b85c951cd11f`.
 
 ## Regla de actualización
 
