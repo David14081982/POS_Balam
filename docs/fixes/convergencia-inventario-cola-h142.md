@@ -5,7 +5,7 @@
 **Fecha:** 05/09/2026
 **Commit de implementación:** `0fa6810`
 **Commit S11:** `9ea9142`.
-**Commit S12/S13:** Pendiente de commit.
+**Commit S12/S13:** `a26701d`.
 
 ## Problema y reproducción
 
