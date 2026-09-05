@@ -138,11 +138,15 @@
     function refresh() { setProducts(D.products.slice()); }
     // El pull de la nube reemplaza D.products DESPUÉS de montar esta pantalla (y un import
     // de catálogos también lo muta); sin esto los KPIs y la tabla se quedaban con la copia
-    // vieja hasta cambiar de pestaña. 'configchange' se dispara al terminar el pull.
+    // vieja hasta cambiar de pestaña. Productos notifica datachange; CONFIG, configchange.
     useEffect(() => {
       const onCfg = () => setProducts(D.products.slice());
       window.addEventListener('configchange', onCfg);
-      return () => window.removeEventListener('configchange', onCfg);
+      window.addEventListener('datachange', onCfg);
+      return () => {
+        window.removeEventListener('configchange', onCfg);
+        window.removeEventListener('datachange', onCfg);
+      };
     }, []);
 
     function onPickFile(e) {

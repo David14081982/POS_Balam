@@ -6583,6 +6583,30 @@ borradores; salir de la sección conserva el comportamiento previo.
 **Corrección documentada:** `docs/fixes/paneles-plegables-catalogos-h141.md`.
 **Commit:** `6a15756bbf5794366554fea283a1b85c951cd11f`.
 
+## H-142 — Divergencia silenciosa de inventario y cola entre equipos
+
+**Estado:** PARCIALMENTE RESUELTO — código verificado; recuperación y cliente pendientes.
+**Fecha:** 05/09/2026.
+**Commit:** Pendiente de commit.
+**Origen:** sucursal, autoridad indicada por el usuario, contiene 253 familias y
+977 referencias; laptop y Supabase contienen 250/969. Hay 77 diferencias de
+existencias, 74 con igual versión. La auditoría reprodujo diez defectos de cola,
+confirmación, recepción, sesiones, recuperación y proyección del estado.
+**Alcance:** corregir las causas reproducidas manteniendo identidad V1/V2,
+transacciones comerciales, autorización, durabilidad y protecciones de baja.
+Preparar recuperación por IDs con evidencia de sucursal; no reconstruirla desde
+la copia incompleta de nube ni sobrescribir datos comerciales sin validación.
+**Pruebas iniciales:** ocho reproducciones de fuente y cuatro observaciones en
+Chromium (diez defectos distintos), sobre el artefacto exacto de `c2b042e`.
+**Verificación:** H142 fuente 8/8, navegador 4/4, carreras 5/5, QA V1/V2 22/22;
+cola 186/186, regresiones comerciales, smoke/navegación y build aprobados.
+SQL 17800/17900 aplicado y verificado remotamente sin alterar productos ni ACL.
+**Riesgo residual:** frontend sin publicar y reconciliación real pendiente.
+Los Excel no contienen colas/documentos comerciales; falta JSON de recuperación
+de sucursal. Descargar ahora la nube incompleta puede retirar referencias cuya
+cola se perdió. Propuesta por IDs preparada, sin aplicar ajustes de negocio.
+**Documento:** `docs/fixes/convergencia-inventario-cola-h142.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

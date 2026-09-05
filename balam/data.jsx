@@ -2340,8 +2340,8 @@
   }
 
   // Confirma el resultado devuelto por el servidor versionado. Una versión
-  // expected+1 fue aceptada: conserva cambios locales posteriores y solo avanza
-  // el reloj. Cualquier otra versión significa conflicto y la fila remota gana.
+  // expected+1 sólo confirma un upsert cuando STORE comprobó su contenido.
+  // Así conserva cambios locales posteriores sin adoptar como propia una versión ajena.
   function applySyncResult(kind, rows, expected, operation) {
     const M = {
       products: [products, saveProducts, hydrate],
@@ -2353,10 +2353,13 @@
     let conflicts = 0;
     remoteApplying = true;
     try {
-      rows.forEach(remote => {
+      rows.forEach(incoming => {
+        const remote = { ...incoming };
         const i = m[0].findIndex(x => x.id === remote.id);
         const base = Number(expected && expected[remote.id]) || 0;
-        const accepted = Number(remote._syncVersion) === base + 1;
+        const accepted = Number(remote._syncVersion) === base + 1
+          && (operation !== 'upsert' || remote._syncAccepted === true);
+        delete remote._syncAccepted;
         if (accepted) {
           if (i >= 0) {
             m[0][i]._syncVersion = remote._syncVersion;

@@ -100,7 +100,7 @@ check('Configuración consume el procesador para logo y avatar', (
   && (settings.match(/resizeImageFile\(/g) || []).length === 2
 ));
 check('Inventario consume el procesador para foto de producto', (
-  inventory.includes('resizeImageFile } = window.UI')
+  /const \{[^}]*\bresizeImageFile\b[^}]*\} = window\.UI/.test(inventory)
   && (inventory.match(/resizeImageFile\(/g) || []).length === 1
 ));
 check('FileReader tiene una sola implementación compartida', (
