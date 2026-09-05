@@ -6672,7 +6672,7 @@ La evolución del texto al diseño gráfico solicitado se registra en H-144.
 
 ## H-144 — Paridad del diseño de tickets en Android y Chrome
 
-**Estado:** CORREGIDO Y PUBLICADO — VALIDACIÓN FÍSICA DEL DISEÑO PENDIENTE.
+**Estado:** CORREGIDO Y PUBLICADO — DISEÑO CONFIRMADO; ANCHO/CONTRASTE EN H-145.
 **Fecha:** 05/09/2026.
 **Evidencia:** el usuario confirma que H-143 imprime físicamente y solicita el
 mismo diseño de Chrome. La proyección `receiptPrintText()` elimina imágenes,
@@ -6696,6 +6696,28 @@ respuestas PWA desde el service worker de tráfico de red; red real observada 0.
 **Riesgo residual:** aceptación física del nuevo formato gráfico pendiente.
 **Documento:** `docs/fixes/diseno-ticket-android-h144.md`.
 **Commit:** `61c7579` (funcional); cierre documental en commit posterior.
+
+**Aceptación posterior H-144:** el usuario confirma el diseño impreso el
+05/09/2026. El ancho y la intensidad se atienden en H-145.
+
+## H-145 — Ancho útil y contraste del ticket gráfico Android
+
+**Estado:** EN CURSO.
+**Fecha:** 05/09/2026.
+**Evidencia:** usuario confirma rollo de 80 mm, formato gráfico correcto,
+contenido de unos 60 mm y letras pálidas; la autoprueba de la impresora es oscura.
+H-144 incluye 24 px de margen por lado dentro de sus 576 puntos y transmite
+grises. Medición reproducida: tinta de 485 puntos (60.625 mm) y 195406 píxeles
+grises en el caso histórico. La copia térmica ahora excluye el padding exterior
+salvo 1 px de resguardo por lado y binariza a negro/blanco con umbral 200;
+bordes negros. Ancho de tinta final 571 puntos (71.375 mm) sin grises.
+**Invariantes:** conservar plantilla, contenido, gesto, escritorio y negocio.
+**Pruebas:** rojo 47/61, verde H-144 61/61 y H-143 37/37; H-135 61/61,
+H-85 20/20, H-90 17/17 y E2E 21/21, build 8/8. QA visual de tickets y Reportes.
+Smoke 15/15, navegación 15/15; build reproducible. Publicación pendiente.
+**Riesgo residual:** calibración física de RawBT/impresora pendiente.
+**Documento:** `docs/fixes/ancho-contraste-ticket-android-h145.md`.
+**Commit:** Pendiente de commit.
 
 ## Regla de actualización
 

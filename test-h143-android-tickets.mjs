@@ -111,6 +111,20 @@ try {
       check('Reportes: origen gráfico incluye neto y conciliación', /NETO/.test(reportPayload) && /CONCILIACIÓN/.test(reportPayload));
       check('Reportes: alternativa del sistema legible', await popup.getByTestId('payment-ticket-system').textContent() === 'Impresión del sistema');
       const reportImage = await popup.evaluate(() => __intents.at(-1).href.slice(7).split('#Intent;')[0]);
+      const thermal = await popup.evaluate(async src => {
+        const img = new Image(); img.src = src; await img.decode();
+        const canvas = document.createElement('canvas'); canvas.width = img.width; canvas.height = img.height;
+        const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0);
+        const data = ctx.getImageData(0, 0, img.width, img.height).data;
+        let left = img.width, right = 0, grays = 0;
+        for (let i = 0; i < data.length; i += 4) {
+          if (data[i] > 0 && data[i] < 255) grays++;
+          if (data[i] < 200) { const x = i / 4 % img.width; left = Math.min(left, x); right = Math.max(right, x); }
+        }
+        return { width: img.width, inkWidth: right - left + 1, grays };
+      }, reportImage);
+      check('Reportes H145: ancho útil de 71 mm o más', thermal.width === 576 && thermal.inkWidth >= 568, thermal);
+      check('Reportes H145: negro sólido sin grises', thermal.grays === 0, thermal);
       fs.writeFileSync('h144-reporte-android.png', Buffer.from(reportImage.split(',')[1], 'base64'));
       await popup.emulateMedia({ media: 'print' });
       await popup.locator('main').screenshot({ path: 'h144-reporte-chrome.png' });

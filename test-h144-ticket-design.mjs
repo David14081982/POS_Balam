@@ -9,7 +9,8 @@ const server = remote ? null : createServer((req, res) => { res.setHeader('Conte
 if (server) await new Promise(r => server.listen(0, '127.0.0.1', r));
 const browser = await chromium.launch({ channel: 'chrome', headless: true });
 try {
-  const context = await browser.newContext({ viewport: { width: 768, height: 1024 }, userAgent: 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/140.0.0.0 Safari/537.36', hasTouch: true });
+  // Referencia a 3x: evita ampliar letras ya rasterizadas a 1x antes de binarizar.
+  const context = await browser.newContext({ viewport: { width: 768, height: 1024 }, deviceScaleFactor: 3, userAgent: 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/140.0.0.0 Safari/537.36', hasTouch: true });
   await context.route(/supabase\.co/, r => r.abort());
   const page = await context.newPage(), errors = [], requests = [], cached = [];
   page.on('pageerror', e => errors.push(String(e)));
@@ -63,25 +64,53 @@ try {
     check(name + ': botón envía exactamente la imagen preparada con gesto', await page.evaluate(({ before, png }) => __intents.length === before + 1 && __intents.at(-1).active && __intents.at(-1).href === 'intent:' + png + '#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;', { before, png: prepared.png }));
     await page.emulateMedia({ media: 'print' });
     const box = await page.locator(selector).boundingBox();
+    const crop = await page.locator(selector).evaluate(root => {
+      const content = root.matches('#balam-ticket, #balam-return-receipt') ? root.firstElementChild : root;
+      const padding = getComputedStyle(content);
+      return { left: Math.max(0, parseFloat(padding.paddingLeft) - 1), right: Math.max(0, parseFloat(padding.paddingRight) - 1) };
+    });
+    const printStyle = await page.addStyleTag({ content: `${selector} * { border-color: #000 !important }` });
     const reference = await page.locator(selector).screenshot();
+    await printStyle.evaluate(el => el.remove());
     await page.emulateMedia({ media: 'screen' });
-    const metric = await page.evaluate(async ({ actual, reference, box }) => {
+    const metric = await page.evaluate(async ({ actual, reference, box, crop }) => {
       const a = new Image(), b = new Image(); a.src = actual; b.src = reference;
       await Promise.all([a.decode(), b.decode()]);
       const canvas = document.createElement('canvas'); canvas.width = a.width; canvas.height = a.height;
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
       ctx.drawImage(a, 0, 0); const aa = ctx.getImageData(0, 0, a.width, a.height).data;
-      ctx.clearRect(0, 0, a.width, a.height); ctx.drawImage(b, 0, 0, a.width, a.height);
+      ctx.clearRect(0, 0, a.width, a.height);
+      ctx.drawImage(b, crop.left * b.width / box.width, 0, (box.width - crop.left - crop.right) * b.width / box.width, b.height, 0, 0, a.width, a.height);
       const bb = ctx.getImageData(0, 0, a.width, a.height).data;
-      let delta = 0, ink = 0;
+      let delta = 0, ink = 0, grayPixels = 0, inkLeft = a.width, inkRight = 0;
       for (let i = 0; i < aa.length; i += 4) {
+        const black = bb[i] * 0.2126 + bb[i + 1] * 0.7152 + bb[i + 2] * 0.0722 < 200 ? 0 : 255;
+        bb[i] = bb[i + 1] = bb[i + 2] = black;
         delta += Math.abs(aa[i] - bb[i]) + Math.abs(aa[i + 1] - bb[i + 1]) + Math.abs(aa[i + 2] - bb[i + 2]);
-        if (aa[i] < 220) ink++;
+        if (aa[i] > 0 && aa[i] < 255) grayPixels++;
+        if (aa[i] < 200) { ink++; const x = (i / 4) % a.width; inkLeft = Math.min(inkLeft, x); inkRight = Math.max(inkRight, x); }
       }
-      return { width: a.width, height: a.height, expectedHeight: box.height * 576 / box.width, meanError: delta / (a.width * a.height * 3), ink, bytes: actual.length };
-    }, { actual: prepared.png, reference: 'data:image/png;base64,' + reference.toString('base64'), box });
+      // SVG y screenshot redondean a píxeles distintos. Comparación bidireccional
+      // con tolerancia espacial de 2 puntos, sin tolerar contenido ausente.
+      let missing = 0, referenceInk = 0;
+      for (let y = 0; y < a.height; y++) for (let x = 0; x < a.width; x++) {
+        const i = (y * a.width + x) * 4;
+        if (bb[i] === 0) referenceInk++;
+        if (aa[i] !== bb[i]) {
+          const target = aa[i] === 0 ? bb : aa;
+          let found = false;
+          for (let dy = -2; dy <= 2 && !found; dy++) for (let dx = -2; dx <= 2; dx++) {
+            if (x + dx >= 0 && x + dx < a.width && y + dy >= 0 && y + dy < a.height && target[((y + dy) * a.width + x + dx) * 4] === 0) { found = true; break; }
+          }
+          if (!found) missing++;
+        }
+      }
+      return { width: a.width, height: a.height, expectedHeight: box.height * 576 / (box.width - crop.left - crop.right), meanError: delta / (a.width * a.height * 3), missingRatio: missing / (ink + referenceInk), inkRatio: ink / referenceInk, ink, grayPixels, inkWidth: inkRight - inkLeft + 1, bytes: actual.length };
+    }, { actual: prepared.png, reference: 'data:image/png;base64,' + reference.toString('base64'), box, crop });
     check(name + ': geometría coincide con Chrome sin recortar', metric.width === 576 && Math.abs(metric.height - metric.expectedHeight) < 3, metric);
-    check(name + ': paridad visual con raster de Chrome', metric.meanError < 12 && metric.ink > 3000, metric.meanError);
+    check(name + ': paridad visual con raster de Chrome', metric.missingRatio < 0.01 && Math.abs(metric.inkRatio - 1) < 0.1 && metric.ink > 3000, metric);
+    check(name + ': H145 aprovecha al menos 71 mm del cabezal', metric.inkWidth >= 568, metric.inkWidth / 8);
+    check(name + ': H145 texto con negro sólido sin grises', metric.grayPixels === 0, metric.grayPixels);
     fs.writeFileSync('h144-' + name + '.png', Buffer.from(prepared.png.split(',')[1], 'base64'));
     metrics.push({ name, ...metric });
     return prepared.png;

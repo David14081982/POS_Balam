@@ -552,8 +552,11 @@ requerir ajuste del controlador; el corte real se valida en la impresora.
 `UI.printReceipt()` entrega a RawBT una imagen del comprobante ya montado en
 Android mediante un intent con paquete fijo y gesto directo. `prepareReceipt()`
 reutiliza el HTML y CSS de impresión, incluidas fuentes, logo e iconos locales,
-sin consultar el catálogo ni modificar documentos. El PNG de 576 puntos conserva
-la geometría de 80 mm y los tonos en escala de grises; su compresión sin pérdida
+sin consultar el catálogo ni modificar documentos. Para el rollo de 80 mm, el PNG
+de 576 puntos aprovecha el cabezal de 72 mm: excluye el padding horizontal
+exterior salvo 1 px de resguardo por lado y escala la composición proporcionalmente.
+La copia térmica usa bordes negros y binarización de luminancia a umbral 200
+(sólo 0/255), evitando texto gris tramado por el controlador. Su compresión sin pérdida
 usa las APIs del navegador y no agrega dependencias ni red. La preparación se
 anticipa al clic; si aún no termina, se informa y se requiere otro clic, nunca
 se abre RawBT desde una continuación asíncrona. La imagen se conserva sólo en

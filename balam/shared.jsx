@@ -515,6 +515,8 @@
     copy.style.setProperty('position', 'static', 'important');
     copy.style.setProperty('margin', '0', 'important');
     css += '\nhtml,body{width:80mm!important;margin:0!important;padding:0!important;height:auto!important;min-height:0!important;overflow:visible!important;background:white!important}';
+    // H-145: separadores negros en la copia térmica; Chrome conserva su diseño.
+    css += '\nbody *{border-color:#000!important}';
     const frame = doc.createElement('iframe');
     frame.setAttribute('aria-hidden', 'true'); frame.setAttribute('sandbox', 'allow-same-origin');
     frame.style.cssText = 'position:absolute;left:-100000px;top:0;width:80mm;height:1px;border:0;';
@@ -526,16 +528,25 @@
       await rendered.fonts.ready;
       await Promise.all(Array.from(rendered.images, img => img.decode()));
       const box = rendered.body.firstElementChild.getBoundingClientRect();
-      const width = 576, height = Math.ceil(Math.max(box.height, rendered.body.scrollHeight) * width / box.width);
+      // El rollo es de 80 mm, el cabezal de 576 puntos (72 mm a 203 dpi).
+      // No gastar esos puntos en los márgenes de la hoja CSS. Conservar 1 px
+      // de resguardo por lado y ampliar el contenido de forma proporcional.
+      const root = rendered.body.firstElementChild;
+      const content = root.matches('#balam-ticket, #balam-return-receipt') ? root.firstElementChild : root;
+      const padding = rendered.defaultView.getComputedStyle(content);
+      const left = Math.max(0, parseFloat(padding.paddingLeft) - 1);
+      const right = Math.max(0, parseFloat(padding.paddingRight) - 1);
+      const usable = box.width - left - right;
+      const width = 576, height = Math.ceil(Math.max(box.height, rendered.body.scrollHeight) * width / usable);
       if (!height || height > 24000) throw new Error('El comprobante es demasiado largo para Bluetooth. Usa Impresión del sistema.');
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${box.width} ${height * box.width / width}"><foreignObject width="100%" height="100%">${new XMLSerializer().serializeToString(rendered.documentElement)}</foreignObject></svg>`;
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="${left} 0 ${usable} ${height * usable / width}"><foreignObject width="${box.width}" height="100%">${new XMLSerializer().serializeToString(rendered.documentElement)}</foreignObject></svg>`;
       const image = new Image();
       image.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
       await image.decode();
       const canvas = doc.createElement('canvas'); canvas.width = width; canvas.height = height;
       const ctx = canvas.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, width, height); ctx.drawImage(image, 0, 0);
-      // PNG gris de 8 bits: conserva suavizado y tonos del documento. Sub por
-      // fila reduce el intent sin recortar ni degradar texto, logos o bordes.
+      // Negro/blanco sólidos: evitar letras grises tramadas por RawBT. Sub por
+      // fila conserva un PNG pequeño sin reducir geometría ni contenido.
       const pixels = ctx.getImageData(0, 0, width, height).data;
       const rows = new Uint8Array((width + 1) * height);
       for (let y = 0; y < height; y++) {
@@ -543,7 +554,7 @@
         let previous = 0;
         for (let x = 0; x < width; x++) {
           const i = (y * width + x) * 4;
-          const gray = Math.round(pixels[i] * 0.2126 + pixels[i + 1] * 0.7152 + pixels[i + 2] * 0.0722);
+          const gray = pixels[i] * 0.2126 + pixels[i + 1] * 0.7152 + pixels[i + 2] * 0.0722 < 200 ? 0 : 255;
           rows[y * (width + 1) + x + 1] = (gray - previous) & 255;
           previous = gray;
         }

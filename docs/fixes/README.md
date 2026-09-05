@@ -13,6 +13,7 @@ sesión de chat.
 
 ## Correcciones registradas
 
+- `ancho-contraste-ticket-android-h145.md` — H-145: ancho útil para rollo de 80 mm y negro sólido.
 - `diseno-ticket-android-h144.md` — H-144: PNG del mismo diseño de Chrome para RawBT.
 - `impresion-android-rawbt-h143.md` — H-143: envío de comprobantes a RawBT desde Android.
 

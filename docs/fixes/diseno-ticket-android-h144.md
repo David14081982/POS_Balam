@@ -1,7 +1,7 @@
 # Mismo diseño de comprobantes en Chrome y Android
 
 **Riesgo:** H-144
-**Estado:** CORREGIDO Y PUBLICADO — VALIDACIÓN FÍSICA DEL DISEÑO PENDIENTE
+**Estado:** CORREGIDO Y PUBLICADO — DISEÑO CONFIRMADO; ANCHO/CONTRASTE EN H-145
 **Fecha:** 05/09/2026
 **Commit:** `61c7579` (funcional); cierre documental en commit posterior.
 
@@ -122,6 +122,10 @@ o invocaciones de impresión. Roles, reversas y multiterminal no tienen cambios
 de contrato que requieran verificación remota.
 
 ## Riesgo residual y pendientes
+
+El 05/09/2026 el usuario confirma el diseño impreso. El ancho y contraste
+reportados después se atienden en `ancho-contraste-ticket-android-h145.md`;
+esa corrección sustituye la escala de grises y el margen térmico descritos aquí.
 
 La impresora térmica convierte los tonos a blanco y negro según su controlador.
 Hardware, ancho configurado y ajuste físico del formato gráfico pendientes;
