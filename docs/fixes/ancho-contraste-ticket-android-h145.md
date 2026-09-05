@@ -1,7 +1,7 @@
 # Ancho útil y negro sólido en el ticket Android
 
 **Riesgo:** H-145
-**Estado:** CORREGIDO Y PUBLICADO — VALIDACIÓN FÍSICA PENDIENTE
+**Estado:** RESUELTO — IMPRESIÓN CONFIRMADA POR EL USUARIO
 **Fecha:** 05/09/2026
 **Commit:** `2c352c2` (funcional); cierre documental en commit posterior.
 
@@ -96,9 +96,17 @@ física del usuario después de actualizar BALAM; no requiere otra venta.
 
 ## Riesgo residual y pendientes
 
+Aceptación posterior: el usuario confirma letras más oscuras, pero sigue
+reportando margen derecho. Seguimiento en `salida-android-ancho-rawbt-h146.md`;
+no se considera aceptado el ancho físico por haber validado el PNG.
+
+Aceptación final del 05/09/2026: tras la orientación de H-146, el usuario
+confirma «QUEDÓ PERFECTO» y solicita guardar. Queda aceptada la impresión
+física por el usuario; no se afirma haber leído la configuración de RawBT.
+
 No se puede configurar RawBT remotamente. El controlador debe corresponder a
 rollo de 80 mm y ancho de 576 puntos; el cabezal no imprime 80 mm de tinta.
-La aceptación física final pertenece al usuario. No se atribuye avería a la
+La aceptación física final fue confirmada por el usuario. No se atribuye avería a la
 impresora por un fallo de la proyección de BALAM.
 
 ## Referencias

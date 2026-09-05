@@ -6702,7 +6702,7 @@ respuestas PWA desde el service worker de tráfico de red; red real observada 0.
 
 ## H-145 — Ancho útil y contraste del ticket gráfico Android
 
-**Estado:** CORREGIDO Y PUBLICADO — VALIDACIÓN FÍSICA PENDIENTE.
+**Estado:** RESUELTO — IMPRESIÓN CONFIRMADA POR EL USUARIO.
 **Fecha:** 05/09/2026.
 **Evidencia:** usuario confirma rollo de 80 mm, formato gráfico correcto,
 contenido de unos 60 mm y letras pálidas; la autoprueba de la impresora es oscura.
@@ -6719,9 +6719,28 @@ Smoke 15/15, navegación 15/15; build reproducible; PNG independiente 9/9.
 9,042,072 bytes iguales al blob Git, SHA-256
 `2896c0dddb74564a2a888426a769bf8d8406923d778a7afd873c79a1d3c1d6d6`.
 H-144 61/61 y H-143 37/37 sobre Pages; CI H-132 `33997274650` exitoso.
-**Riesgo residual:** calibración física de RawBT/impresora pendiente.
+**Riesgo residual:** ninguno reportado tras la confirmación «QUEDÓ PERFECTO»
+del usuario el 05/09/2026; seguimiento de la ayuda en H-146.
 **Documento:** `docs/fixes/ancho-contraste-ticket-android-h145.md`.
 **Commit:** `2c352c2` (funcional); cierre documental en commit posterior.
+
+## H-146 — Salida Android sin opción inoperante y diagnóstico de ancho
+
+**Estado:** CORREGIDO Y VALIDADO — PUBLICACIÓN PENDIENTE. **Fecha:** 05/09/2026.
+**Evidencia:** usuario confirma contraste mejorado y botón principal funcional,
+pero «Impresión del sistema» no responde y persiste margen derecho en papel.
+Ese enlace usa `host.print()`; el botón principal entrega el PNG a RawBT.
+El artefacto H-145 tiene 576 puntos, tinta entre x=2 y x=572; no demuestra
+la configuración física aplicada por RawBT, cuyo ancho sigue sin conocerse.
+**Alcance:** aclarar la salida Android y guiar el ajuste de ancho del controlador.
+**Invariantes:** PNG, diseño, negro sólido, gesto, escritorio, documentos y negocio.
+**Pruebas:** rojo H-143 35/39; verde 39/39; H-144 61/61; smoke bundle 17/17;
+navegación 15/15; H-90 E2E 21/21; build 8/8 y reproducible; siete PNG idénticos
+a H-145. QA visual de venta exitosa y reimpresión, ocho viewports.
+**Commit:** Pendiente de commit.
+**Aceptación:** usuario confirma «QUEDÓ PERFECTO» y pide guardar, 05/09/2026.
+**Residual:** ninguno reportado; no se leyó el valor de RawBT en la tablet.
+**Documento:** `docs/fixes/salida-android-ancho-rawbt-h146.md`.
 
 ## Regla de actualización
 

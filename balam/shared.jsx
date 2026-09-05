@@ -479,11 +479,12 @@
   // H-143/H-144: salida RawBT del comprobante histórico montado. El PNG
   // conserva el diseño existente; nunca se reconstruye desde el catálogo.
   const usesBluetoothReceipt = () => /Android/i.test(navigator.userAgent || '');
+  const receiptBluetoothHelp = 'Para papel de 80 mm: abre los ajustes de tu impresora en RawBT y selecciona 576 puntos en el ancho de impresión.';
   const receiptGraphics = new WeakMap();
   const receiptResourceData = new Map();
   async function receiptLocalData(url) {
     if (url.startsWith('data:')) return url;
-    if (!url.startsWith('blob:')) throw new Error('El diseño contiene un recurso que no está disponible sin conexión. Usa Impresión del sistema.');
+    if (!url.startsWith('blob:')) throw new Error('El diseño contiene un recurso que no está disponible sin conexión. Reimprime el comprobante desde una computadora.');
     if (!receiptResourceData.has(url)) {
       const work = fetch(url).then(r => r.blob()).then(blob => new Promise((resolve, reject) => {
         const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(blob);
@@ -538,7 +539,7 @@
       const right = Math.max(0, parseFloat(padding.paddingRight) - 1);
       const usable = box.width - left - right;
       const width = 576, height = Math.ceil(Math.max(box.height, rendered.body.scrollHeight) * width / usable);
-      if (!height || height > 24000) throw new Error('El comprobante es demasiado largo para Bluetooth. Usa Impresión del sistema.');
+      if (!height || height > 24000) throw new Error('El comprobante es demasiado largo para Bluetooth. Reimprime el comprobante desde una computadora.');
       const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="${left} 0 ${usable} ${height * usable / width}"><foreignObject width="${box.width}" height="100%">${new XMLSerializer().serializeToString(rendered.documentElement)}</foreignObject></svg>`;
       const image = new Image();
       image.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
@@ -577,7 +578,7 @@
       const png = await new Promise((resolve, reject) => {
         const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(file);
       });
-      if (png.length > 500000) throw new Error('El comprobante es demasiado largo para Bluetooth. Usa Impresión del sistema.');
+      if (png.length > 500000) throw new Error('El comprobante es demasiado largo para Bluetooth. Reimprime el comprobante desde una computadora.');
       return png;
     } finally { frame.remove(); }
   }
@@ -590,11 +591,11 @@
     receiptGraphics.set(element, state);
     state.promise = Promise.resolve().then(() => {
       // Mantener las guardas de documento vacío y tamaño antes de rasterizar.
-      if (receiptPrintText(element).length > 500000) throw new Error('El comprobante es demasiado largo para Bluetooth. Usa Impresión del sistema.');
+      if (receiptPrintText(element).length > 500000) throw new Error('El comprobante es demasiado largo para Bluetooth. Reimprime el comprobante desde una computadora.');
       return receiptGraphic(element);
     }).then(png => { state.png = png; }, error => {
       state.error = new Error(/^El (comprobante|diseño)/.test(error.message || '') ? error.message
-        : 'No se pudo preparar el diseño. Vuelve a pulsar Imprimir o usa Impresión del sistema.');
+        : 'No se pudo preparar el diseño. Vuelve a pulsar Imprimir o reimprime el comprobante desde una computadora.');
     });
     return state;
   }
@@ -667,8 +668,7 @@
     if (!usesBluetoothReceipt()) return null;
     return React.createElement('p', { className: 'text-caption text-on-surface-variant mt-3', 'data-testid': 'receipt-design-status' }, [
       status + ' ',
-      React.createElement('button', { key: 'system', type: 'button', 'data-testid': 'receipt-print-system',
-        className: 'underline py-2', onClick: () => printReceipt({ system: true }) }, 'Impresión del sistema'),
+      React.createElement('span', { key: 'width', className: 'block mt-2' }, receiptBluetoothHelp),
     ]);
   }
 
@@ -810,5 +810,5 @@
     ]);
   }
 
-  window.UI = { fmt, fechaCorta, fechaHora, Badge, StatusBadge, StockBadge, ProductThumb, ToastHost, toast, HumanMessage, messageAuthority, messageText, technicalMessageViewer, Page, Toolbar, ActionGroup, KPI, Drawer, Modal, BADGE_TONE, MESSAGE_LEVEL, Pager, Segment, resizeImageFile, imageFileDimensions, useSyncActivity, useSyncFocusActivity, useReceiptAutoPrint, usesBluetoothReceipt, receiptPrintText, prepareReceipt, printReceipt, ReceiptPrintHelp };
+  window.UI = { fmt, fechaCorta, fechaHora, Badge, StatusBadge, StockBadge, ProductThumb, ToastHost, toast, HumanMessage, messageAuthority, messageText, technicalMessageViewer, Page, Toolbar, ActionGroup, KPI, Drawer, Modal, BADGE_TONE, MESSAGE_LEVEL, Pager, Segment, resizeImageFile, imageFileDimensions, useSyncActivity, useSyncFocusActivity, useReceiptAutoPrint, usesBluetoothReceipt, receiptBluetoothHelp, receiptPrintText, prepareReceipt, printReceipt, ReceiptPrintHelp };
 })();

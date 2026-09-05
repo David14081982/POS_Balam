@@ -564,8 +564,11 @@ memoria por elemento y contenido; cambiar de documento invalida la anterior.
 POS, reimpresión de ventas, ticket por método, abonos,
 cambios y devoluciones comparten el transporte. Un documento vacío o excesivo
 se rechaza completo con mensaje, igual que un recurso no disponible localmente.
-Android conserva una acción alternativa de
-impresión del sistema; sus timers de autoimpresión no abren aplicaciones.
+Android ofrece sólo el botón principal hacia RawBT; la ayuda indica 576 puntos
+para rollos de 80 mm. No expone `window.print()` como alternativa Bluetooth,
+pues invocarlo no acredita un diálogo nativo ni salida física. Para errores
+de recursos o longitud indica reimprimir desde computadora. Sus timers de
+autoimpresión no abren aplicaciones.
 Escritorio conserva la impresión y el PDF continuo existentes. La aplicación
 informa la solicitud de apertura, no acredita impresión física. Reportes A4,
 etiquetas y préstamos mantienen sus salidas independientes.

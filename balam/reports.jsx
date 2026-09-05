@@ -91,11 +91,10 @@
       button.addEventListener('click', () => window.UI.printReceipt({ element: ticket, host: win }));
       if (window.UI.usesBluetoothReceipt()) {
         window.UI.prepareReceipt(ticket);
-        const system = win.document.createElement('button');
-        system.type = 'button'; system.textContent = 'Impresión del sistema';
-        system.setAttribute('data-testid', 'payment-ticket-system');
-        system.addEventListener('click', () => window.UI.printReceipt({ host: win, system: true }));
-        win.document.querySelector('.tools').appendChild(system);
+        const help = win.document.createElement('span');
+        help.textContent = window.UI.receiptBluetoothHelp;
+        help.style.cssText = 'flex-basis:100%;font-size:12px;line-height:1.5;';
+        win.document.querySelector('.tools').appendChild(help);
         win.document.querySelector('.tools').style.flexWrap = 'wrap';
       }
     }

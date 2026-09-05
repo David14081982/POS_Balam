@@ -78,15 +78,16 @@ try {
       for (const width of [320, 360, 390, 430, 768, 1024, 1280, 1440]) {
         await page.setViewportSize({ width, height: 900 });
         const box = await button.boundingBox();
-        check(`Android ${width}: botón visible y pulsable`, !!box && box.x >= 0 && box.x + box.width <= width + 1 && box.height >= 44);
+        const help = await page.getByTestId('receipt-design-status').boundingBox();
+        check(`Android ${width}: botón pulsable y ayuda sin desbordar`, !!box && box.x >= 0 && box.x + box.width <= width + 1 && box.height >= 44 && !!help && help.x >= 0 && help.x + help.width <= width + 1);
       }
       const safe = await page.evaluate(() => {
         const el = document.createElement('div'); el.textContent = 'José #Intent;package=evil; \u001b@\u0000 $50'; document.body.appendChild(el);
         const value = UI.receiptPrintText(el); el.remove(); return value;
       });
       check('texto no introduce comandos de impresora', !/[\x00-\x08\x0b-\x1f\x7f]/.test(safe) && safe.includes('José'));
-      await page.getByTestId('receipt-print-system').click();
-      check('Android: alternativa del sistema disponible', await page.evaluate(() => window.__nativePrints === 1));
+      check('Android H146: sin enlace de impresión inoperante', await page.getByTestId('receipt-print-system').count() === 0);
+      check('Android H146: ayuda para ancho físico de 80 mm', /RawBT.*576/.test(await page.getByTestId('receipt-design-status').innerText()));
       await context.setOffline(true);
       await printButton(page, button, android);
       check('Android: transporte funciona sin internet', await page.evaluate(() => window.__intents.length === 3));
@@ -109,7 +110,8 @@ try {
     if (android) {
       const reportPayload = await popup.locator('main').innerText();
       check('Reportes: origen gráfico incluye neto y conciliación', /NETO/.test(reportPayload) && /CONCILIACIÓN/.test(reportPayload));
-      check('Reportes: alternativa del sistema legible', await popup.getByTestId('payment-ticket-system').textContent() === 'Impresión del sistema');
+      check('Reportes H146: sin enlace de impresión inoperante', await popup.getByTestId('payment-ticket-system').count() === 0);
+      check('Reportes H146: ayuda para ancho físico de 80 mm', /RawBT.*576/.test(await popup.locator('.tools').innerText()));
       const reportImage = await popup.evaluate(() => __intents.at(-1).href.slice(7).split('#Intent;')[0]);
       const thermal = await popup.evaluate(async src => {
         const img = new Image(); img.src = src; await img.decode();
