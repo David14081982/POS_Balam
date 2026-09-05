@@ -1,9 +1,9 @@
 # Recuperación del escritor local al volver de RawBT
 
 **Riesgo:** H-147
-**Estado:** CORREGIDO Y VALIDADO — PUBLICACIÓN PENDIENTE
+**Estado:** CORREGIDO Y PUBLICADO — VALIDACIÓN FÍSICA PENDIENTE
 **Fecha:** 05/09/2026
-**Commit:** Pendiente de commit
+**Commit:** `2ea1a43` (funcional); cierre documental en commit posterior.
 
 ## Problema y reproducción
 
@@ -88,7 +88,17 @@ Dos builds finales coinciden: SHA-256 local
 `d1d7a7bad86c88d8bc4d49a6b79038d5684e87c1cc548039c0e176c049563f49`.
 Un intento intermedio falló al abrir el HTML generado (`UNKNOWN` de Windows);
 el reintento terminó y la verificación final del build dio 8/8.
-Publicación pendiente de registrar.
+Publicación: Pages run `33998479281` exitoso, HTTP 200; 9,042,328 bytes
+idénticos al blob Git. SHA-256 servido
+`b073f464e2629249e0861af0863b09068ec23c594a7ae0b34b8b229b3ab9ad4e`.
+La comparación usa el blob normalizado de Git, no los saltos de línea locales.
+Pages: H-143 40/40 y H-147 16/16; CI H-132 `33998479964` exitoso.
+El primer H-147 público dio 14/16 porque su stub de AUTH se instalaba antes
+de cargar el módulo asíncrono, dejando la UI en login. El arnés ahora espera
+AUTH antes de simularlo; las dos comprobaciones visuales pasaron sin modificar
+producto. La simulación sólo vive en el contexto aislado con Supabase bloqueado.
+HEAD y origin/main se verificaron contra el commit funcional; el commit de
+cierre registra evidencia y la corrección del arnés público.
 
 ## Riesgo residual y pendientes
 

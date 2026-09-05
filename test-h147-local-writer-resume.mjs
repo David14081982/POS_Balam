@@ -13,18 +13,17 @@ const errors = [];
 try {
   const context = await browser.newContext({ viewport: { width: 768, height: 1024 }, userAgent: 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/140.0.0.0 Safari/537.36', hasTouch: true });
   await context.route(/supabase\.co/, r => r.abort());
-  // Sólo el gate de AUTH de la prueba pública: nunca se autentica ni escribe en nube.
-  await context.addInitScript(() => {
-    document.addEventListener('DOMContentLoaded', () => {
-      if (!window.AUTH) return;
+  async function open() {
+    const p = await context.newPage(); p.on('pageerror', e => errors.push(String(e)));
+    await p.goto(url); await p.waitForFunction(() => window.DATA && window.App && window.AUTH);
+    // El loader del bundle puede terminar después de DOMContentLoaded.
+    // Simular AUTH sólo cuando exista; nunca autenticar ni escribir en nube.
+    await p.evaluate(() => {
       AUTH.isReady = () => true; AUTH.hasSession = () => true;
       AUTH.current = () => ({ id: 'h147-local-test', role: 'admin' });
       window.dispatchEvent(new Event('authchange'));
     });
-  });
-  async function open() {
-    const p = await context.newPage(); p.on('pageerror', e => errors.push(String(e)));
-    await p.goto(url); await p.waitForFunction(() => window.DATA && window.App);
+    await p.waitForFunction(() => document.getElementById('balam-navigation') || document.querySelector('[data-testid="local-writer-gate"]'));
     return p;
   }
   const page = await open(); await page.waitForFunction(() => DATA.isLocalWriter);
