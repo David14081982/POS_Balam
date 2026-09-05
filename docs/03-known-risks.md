@@ -6726,7 +6726,7 @@ del usuario el 05/09/2026; seguimiento de la ayuda en H-146.
 
 ## H-146 — Salida Android sin opción inoperante y diagnóstico de ancho
 
-**Estado:** CORREGIDO Y VALIDADO — PUBLICACIÓN PENDIENTE. **Fecha:** 05/09/2026.
+**Estado:** RESUELTO Y PUBLICADO. **Fecha:** 05/09/2026.
 **Evidencia:** usuario confirma contraste mejorado y botón principal funcional,
 pero «Impresión del sistema» no responde y persiste margen derecho en papel.
 Ese enlace usa `host.print()`; el botón principal entrega el PNG a RawBT.
@@ -6737,8 +6737,12 @@ la configuración física aplicada por RawBT, cuyo ancho sigue sin conocerse.
 **Pruebas:** rojo H-143 35/39; verde 39/39; H-144 61/61; smoke bundle 17/17;
 navegación 15/15; H-90 E2E 21/21; build 8/8 y reproducible; siete PNG idénticos
 a H-145. QA visual de venta exitosa y reimpresión, ocho viewports.
-**Commit:** Pendiente de commit.
+**Commit:** `8a11d74` (funcional); cierre documental en commit posterior.
 **Aceptación:** usuario confirma «QUEDÓ PERFECTO» y pide guardar, 05/09/2026.
+**Publicación:** Pages run `33997900680` exitoso, `built`, HTTP 200;
+9,042,084 bytes iguales al blob Git; SHA-256
+`c3f25619d0a926ad6e91d2504634f68cfa64ed253f19136e9ec516f7d3c1fb96`.
+H-143 publicado 39/39; CI H-132 `33997901217` exitoso.
 **Residual:** ninguno reportado; no se leyó el valor de RawBT en la tablet.
 **Documento:** `docs/fixes/salida-android-ancho-rawbt-h146.md`.
 

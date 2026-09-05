@@ -1,9 +1,9 @@
 # Salida Android y ajuste de ancho en RawBT
 
 **Riesgo:** H-146
-**Estado:** CORREGIDO Y VALIDADO — PUBLICACIÓN PENDIENTE
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha:** 05/09/2026
-**Commit:** Pendiente de commit
+**Commit:** `8a11d74` (funcional); cierre documental en commit posterior.
 
 ## Problema y reproducción
 
@@ -73,13 +73,21 @@ en Chromium para evitar impresiones y escrituras comerciales durante las pruebas
 Dos builds idénticos, SHA-256 local
 `0fecb93f0fdcee0efc0a9a7dd1ebaa8a35a9157788fcefad1df243d59d7ec99c`.
 
+Publicación: Pages run `33997900680` exitoso, estado `built`, HTTP 200.
+9,042,084 bytes idénticos al blob Git del commit funcional; SHA-256 servido
+`c3f25619d0a926ad6e91d2504634f68cfa64ed253f19136e9ec516f7d3c1fb96`.
+HEAD y origin/main coinciden. Se compara contra el blob para respetar la
+normalización de saltos de línea de Git.
+`node test-h143-android-tickets.mjs https://david14081982.github.io/POS_Balam/?h146=8a11d74`:
+39/39 sobre Pages. CI H-132 `33997901217` exitoso.
+
 ## Riesgo residual y pendientes
 
 El 05/09/2026, después de orientar el ancho en RawBT, el usuario confirma
 «QUEDÓ PERFECTO» y pide guardar los cambios. Se registra aceptación de la
 impresión física, sin atribuir un valor de configuración no leído en la tablet.
 BALAM no puede leer ni cambiar los ajustes de RawBT desde el navegador.
-No quedan fallos reportados; la publicación de la ayuda está pendiente.
+No quedan fallos reportados. La ayuda y la eliminación del enlace están publicadas.
 
 ## Referencias
 
