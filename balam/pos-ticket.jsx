@@ -489,6 +489,42 @@
     ]);
   }
 
+  // H-135: `size: 80mm auto` no define un tamaño de página válido. Chrome caía
+  // en carta y dividía el PDF. Ambos comprobantes comparten esta medición;
+  // el nombre de página limita la regla al documento montado, no a la app.
+  function useReceiptPageSize(pageName) {
+    const ref = React.useRef(null);
+    React.useLayoutEffect(() => {
+      const node = ref.current;
+      if (!node) return undefined;
+      const style = document.createElement('style');
+      document.head.appendChild(style);
+      let active = true;
+      const measure = () => {
+        if (!active) return;
+        // Medir la caja física, también antes de imprimir. 1 mm absorbe el
+        // redondeo CSS→PDF sin encoger letras ni fijar un máximo de renglones.
+        const height = Math.ceil(Math.max(node.scrollHeight, node.getBoundingClientRect().height) * 25.4 / 96) + 1;
+        // El body hereda la misma página: un portal vacío previo al ticket no
+        // debe crear una hoja inicial con el tamaño por defecto del navegador.
+        const rule = `@page ${pageName} { size: 80mm ${height}mm; margin: 0; } @media print { body { page: ${pageName}; } }`;
+        if (style.textContent !== rule) style.textContent = rule;
+      };
+      measure();
+      const observer = new ResizeObserver(measure);
+      observer.observe(node);
+      window.addEventListener('beforeprint', measure);
+      if (document.fonts) document.fonts.ready.then(measure);
+      return () => {
+        active = false;
+        observer.disconnect();
+        window.removeEventListener('beforeprint', measure);
+        style.remove();
+      };
+    });
+    return ref;
+  }
+
   // ---- Ticket térmico 80mm (comprobante de venta) ----
   // Se renderiza fuera de pantalla (#balam-ticket) y se imprime con window.print().
   //
@@ -497,6 +533,7 @@
   // del pago recibido y conserva intacto el resto del documento. Sin `payment` el
   // ticket es exactamente el de siempre.
   function BalamTicket({ sale, payment, exchange }) {
+    const printRef = useReceiptPageSize('balam-ticket');
     if (!sale) return null;
     const C = window.CONFIG;
     const hasSnapshot = sale.subtotal != null || sale.iva != null;
@@ -580,7 +617,7 @@
     // la pantalla quedaba atrapado en contenedores con `overflow-y: auto` y altura de
     // ventana, así que al imprimir el navegador no podía repartirlo en varias hojas.
     // La clase `tk-block` marca lo que nunca debe partirse entre una hoja y la otra.
-    const documento = h('div', { id: 'balam-ticket' },
+    const documento = h('div', { id: 'balam-ticket', ref: printRef, style: { page: 'balam-ticket' } },
       h('div', { className: 'px-6 py-7 flex flex-col items-center text-center font-body text-on-surface', style: { width: '80mm', boxSizing: 'border-box' } }, [
         // Encabezado
         h('div', { key: 'h', className: 'tk-block w-full mb-8 flex flex-col items-center' }, [
@@ -751,6 +788,7 @@
   // Documento termico propio de una devolucion directa. No reutiliza el
   // vocabulario de Cambio y consume solo la venta/retorno ya congelados.
   function BalamReturnReceipt({ sale, returnDoc }) {
+    const printRef = useReceiptPageSize('balam-return-receipt');
     if (!sale || !returnDoc) return null;
     const snapshot = sale.receiptSnapshot && sale.receiptSnapshot.version === 1 ? sale.receiptSnapshot : null;
     const store = snapshot && snapshot.store ? snapshot.store : {};
@@ -764,7 +802,7 @@
         ? snapshot.lines[saleIndex >= 0 ? saleIndex : index] : null;
       return sold || { name: line.nombre || '', sku: line.sku || '', sizeLabel: line.talla || '' };
     };
-    const documentNode = h('div', { id: 'balam-return-receipt' },
+    const documentNode = h('div', { id: 'balam-return-receipt', ref: printRef, style: { page: 'balam-return-receipt' } },
       h('div', { className: 'px-6 py-7 font-body text-on-surface', style: { width: '80mm', boxSizing: 'border-box' } }, [
         h('div', { key: 'h', className: 'tk-block text-center border-b border-outline-variant pb-5 mb-5' }, [
           h('h1', { key: 'b', className: 'font-headline text-primary', style: { fontSize: '28px' } }, 'BALAM'),

@@ -5,6 +5,12 @@
 **Fecha:** 28/07/2026
 **Commit:** `ce235ff`
 
+**Actualización 05/09/2026 — H-135:** se conserva la solución de H-41 contra
+recortes, pero su contrato de paginación fue reemplazado por una página térmica
+de altura medida. La afirmación histórica de que `size: 80mm auto` produce una
+tira continua era incorrecta: el PDF real cae en carta. Ver
+`ticket-termico-continuo-h135.md` para la evidencia y el contrato vigente.
+
 ## Problema y reproducción
 
 Reportado por el dueño tras usar la cobranza de apartados en producción: al imprimir
@@ -89,9 +95,9 @@ La pregunta del dueño era si el sobrante puede continuar «como hoja 2» en vez
 perderse. Con este cambio, sí: es exactamente lo que hace ahora el navegador. Dos
 matices que conviene tener escritos:
 
-- **En impresora térmica de rollo de 80 mm no hay hoja 2.** `@page { size: 80mm auto }`
-  produce una tira continua: el comprobante sale entero de corrido, largo o corto.
-  Es el caso normal del mostrador.
+- **Supuesto original, corregido por H-135:** `@page { size: 80mm auto }` no
+  garantiza una tira continua; el PDF observado usa páginas carta. H-135 fija
+  ancho y altura explícitos a partir del comprobante renderizado.
 - **En impresora de hojas** (o «Guardar como PDF») el comprobante continúa en la hoja
   siguiente sin cortar ningún bloque. Lo que **no** se puede hacer con CSS soportado
   por el navegador es numerar las hojas («Hoja 2 de 2») ni repetir el encabezado sólo

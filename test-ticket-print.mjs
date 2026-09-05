@@ -8,7 +8,7 @@
 //
 // Este arnés mide sobre el BUNDLE distribuido (index.html) en medio `print` e imprime
 // a PDF de verdad. Comprueba que el ticket está en el flujo, que el documento tiene
-// las hojas necesarias para contenerlo entero y que nada del contenido queda fuera.
+// una página de altura variable (H-135) y que nada del contenido queda fuera.
 //
 // Uso: node test-ticket-print.mjs
 import { chromium } from 'playwright-core';
@@ -27,8 +27,10 @@ await new Promise(r => server.listen(8833, '127.0.0.1', r));
 
 let pass = 0, fail = 0; const errs = [];
 const check = (n, c, e = '') => { console.log(`${c ? '✅' : '❌'} ${n}${e ? ' · ' + e : ''}`); c ? pass++ : fail++; };
-// Altura de página que usa Chrome con `@page { size: 80mm auto }` (carta: 11in a 96dpi).
+// Altura carta previa al arreglo: conserva el umbral del caso largo de H-41.
 const ALTO_HOJA = 1056;
+const cabeEntero = m => m.hojas === 1 && Math.abs(m.anchoMm - 80) < 0.4
+  && m.altoMm * 96 / 25.4 >= m.alturaTicket - 2;
 
 const b = await chromium.launch({ channel: 'chrome', headless: true });
 try {
@@ -58,10 +60,13 @@ try {
         texto: t.innerText,
       };
     });
-    const pdf = await page.pdf({ width: '80mm', printBackground: true });
+    const pdf = await page.pdf({ preferCSSPageSize: true, printBackground: true });
     const raw = pdf.toString('latin1');
     const counts = [...raw.matchAll(/\/Count\s+(\d+)/g)].map(x => Number(x[1]));
     m.hojas = counts.length ? Math.max(...counts) : 0;
+    const box = raw.match(/\/MediaBox\s*\[\s*0\s+0\s+([\d.]+)\s+([\d.]+)\s*\]/);
+    m.anchoMm = box ? Number(box[1]) * 25.4 / 72 : 0;
+    m.altoMm = box ? Number(box[2]) * 25.4 / 72 : 0;
     await page.emulateMedia({ media: 'screen' });
     await page.waitForTimeout(150);
     console.log(`   · ${etiqueta}: ticket ${m.alturaTicket}px · documento ${m.alturaDocumento}px · ${m.hojas} hoja(s)`);
@@ -131,9 +136,8 @@ try {
 
   console.log('\n── B) Nada del comprobante se queda fuera del papel ──────');
   check('el comprobante es más alto que una hoja (caso del defecto)', m1.alturaTicket > ALTO_HOJA, `${m1.alturaTicket}px > ${ALTO_HOJA}px`);
-  check('el PDF trae las hojas necesarias para contenerlo entero',
-    m1.hojas >= Math.ceil(m1.alturaTicket / ALTO_HOJA) && m1.hojas * ALTO_HOJA >= m1.alturaTicket,
-    `${m1.hojas} hoja(s) · ${m1.hojas * ALTO_HOJA}px de papel para ${m1.alturaTicket}px`);
+  check('el PDF contiene todo en una página térmica continua', cabeEntero(m1),
+    `${m1.hojas} hoja(s) · ${m1.anchoMm.toFixed(2)} × ${m1.altoMm.toFixed(2)} mm`);
   check('el historial de pagos entra en lo impreso', /historial de pagos/i.test(m1.texto) && /total pagado/i.test(m1.texto));
   check('el pie del comprobante entra en lo impreso', /balamguayaberas\.com/i.test(m1.texto));
   await cerrar();
@@ -145,14 +149,14 @@ try {
   check('el 2º comprobante lista los tres movimientos',
     /anticipo · efectivo/i.test(m2.texto) && /abono · tarjeta/i.test(m2.texto) && /abono · transferencia/i.test(m2.texto));
   check('el 2º comprobante suma los tres', /total pagado \(3 movimientos\)/i.test(m2.texto) && /\$3,700\.00/.test(m2.texto));
-  check('el 2º comprobante sigue cabiendo entero', m2.hojas * ALTO_HOJA >= m2.alturaTicket, `${m2.hojas} hoja(s) para ${m2.alturaTicket}px`);
+  check('el 2º comprobante sigue cabiendo entero', cabeEntero(m2), `${m2.hojas} hoja(s) para ${m2.alturaTicket}px`);
   await cerrar();
 
   await abonar(900, 'efectivo');
   const m3 = await medirImpresion('3er abono');
   check('el 3er comprobante trae los cuatro movimientos', /total pagado \(4 movimientos\)/i.test(m3.texto) && /\$4,600\.00/.test(m3.texto));
   check('el 3er comprobante marca el pago de hoy', /\(este pago\)/i.test(m3.texto));
-  check('el 3er comprobante sigue cabiendo entero', m3.hojas * ALTO_HOJA >= m3.alturaTicket, `${m3.hojas} hoja(s) para ${m3.alturaTicket}px`);
+  check('el 3er comprobante sigue cabiendo entero', cabeEntero(m3), `${m3.hojas} hoja(s) para ${m3.alturaTicket}px`);
   check('el comprobante crece con cada abono y no se recorta', m3.alturaTicket > m1.alturaTicket,
     `${m1.alturaTicket}px → ${m3.alturaTicket}px`);
   await cerrar();
@@ -181,7 +185,7 @@ try {
   await page.waitForTimeout(600);
   const mv = await medirImpresion('venta de 6 renglones');
   check('el ticket de venta también cuelga de <body>', mv.hijoDeBody);
-  check('el ticket de venta cabe entero en el papel', mv.hojas * ALTO_HOJA >= mv.alturaTicket,
+  check('el ticket de venta cabe entero en el papel', cabeEntero(mv),
     `${mv.hojas} hoja(s) para ${mv.alturaTicket}px`);
   check('el ticket de venta conserva su formato de siempre',
     /detalle de compra/i.test(mv.texto) && /total a pagar/i.test(mv.texto) && /método de pago/i.test(mv.texto));

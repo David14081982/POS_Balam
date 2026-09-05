@@ -111,14 +111,14 @@
        lo que sobrepasaba —historial de pagos incluido— se perdía. */
     #balam-ticket, #balam-return-receipt { position: absolute; left: -99999px; top: 0; width: 80mm; background: #fff; color: #131B2E; }
     @media print {
-      /* La app entera sale del layout: así la altura del documento es la del ticket
-         y el navegador reparte el contenido en las hojas que hagan falta. */
+      /* La app sale del layout. H-135 mide el comprobante y le asigna una página
+         térmica de altura variable desde pos-ticket.jsx, sin perder contenido. */
       html, body { height: auto !important; min-height: 0 !important; overflow: visible !important; background: #fff !important; }
       #root { display: none !important; }
       #balam-ticket, #balam-return-receipt { position: static !important; left: auto !important; top: auto !important; margin: 0 auto !important; }
       /* Ningún bloque se parte a la mitad entre una hoja y la siguiente. */
       .tk-block { break-inside: avoid; page-break-inside: avoid; }
-      @page { size: 80mm auto; margin: 0; }
+      @page { margin: 0; }
     }
 </style>
 </head>

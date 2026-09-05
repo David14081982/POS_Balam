@@ -520,6 +520,17 @@ La reimpresión sólo monta ese documento: no registra pagos, movimientos ni otr
 documento. Reportes imprime en una ventana A4 autocontenida, separada del modo
 térmico de 80 mm.
 
+`BalamTicket` y `BalamReturnReceipt` comparten `useReceiptPageSize()` dentro de
+`pos-ticket.jsx`. El hook mide el comprobante de 80 mm y define una página CSS
+nombrada con altura explícita, redondeada hacia arriba con 1 mm adicional. Se
+actualiza al renderizar, cambiar sus dimensiones, terminar de cargar fuentes y
+antes de imprimir. El cuerpo hereda la misma página durante impresión para
+evitar una hoja inicial vacía por el portal. Al desmontar se retiran regla,
+observador y evento. El PDF conserva una página continua sin cambiar contenido,
+tipografía ni documentos; las ventanas propias de reportes y etiquetas no
+consumen este formato. Una configuración física de papel que lo fuerce puede
+requerir ajuste del controlador; el corte real se valida en la impresora.
+
 ## AUTH
 
 Archivo: `balam/auth.jsx`. API: `window.AUTH`.

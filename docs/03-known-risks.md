@@ -1806,15 +1806,13 @@ regresión de cliente: `test-smoke.mjs` 15/15, `test-ui-navigation.mjs` 14/14,
 `https://david14081982.github.io/POS_Balam/`. El artefacto servido se verificó
 idéntico byte a byte al `index.html` del commit, SHA-256
 `7466A9A493569A89B0C06E079A4A0148D0CD05A40B078E0785BEF416BE71A6C0`. Sin migración.
-**Pendiente:** no hay numeración de hojas («Hoja 2 de 2») ni encabezado repetido a
-partir de la segunda: las cajas de margen de `@page` y los contadores de página no
-están implementados en Chrome. En impresora térmica de rollo la cuestión no se
-plantea —`size: 80mm auto` produce una tira continua—; en impresora de hojas el
-comprobante continúa en la siguiente sin cortar bloques.
-**Riesgo residual:** la altura de hoja de referencia del arnés (1056 px) es la que
-Chrome usa con altura `auto`; si cambiara, el arnés sigue siendo válido —compara
-papel disponible contra alto del comprobante— pero el número de hojas esperado
-variaría.
+**Actualización 05/09/2026:** H-135 conserva la defensa contra recortes y
+reemplaza la paginación por una página térmica de altura medida. La afirmación
+anterior de que `size: 80mm auto` produce una tira continua era incorrecta:
+la reproducción a PDF usa páginas carta. El arnés conserva sus 23 controles,
+pero valida una página de 80 mm y mide su altura real en el PDF.
+**Riesgo residual:** validación del corte físico en la impresora, registrada en
+H-135. La numeración multipágina no forma parte del contrato térmico vigente.
 **Corrección documentada:** `docs/fixes/ticket-impreso-paginado.md`.
 
 ## H-42 - El cambio no era alcanzable por el usuario (C6)
@@ -6373,6 +6371,40 @@ de 72 recursos y 9.03 MB.
 **Riesgo residual:** ninguno conocido para H-134. La certificación física de
 impresora y lector continúa perteneciendo al riesgo heredado H-133.
 **Commit:** `b84a633`.
+
+## H-135 — El ticket térmico se divide en varias páginas del PDF
+
+**Estado:** RESUELTO LOCALMENTE — PUBLICACIÓN PENDIENTE
+**Fecha de registro:** 05/09/2026
+**Origen:** PDF proporcionado por el usuario: dos páginas carta; historial de
+pagos y despedida separados de la venta. Reproducción en `origin/main` d122f0d:
+`node test-ticket-print.mjs` pasa 23/23, pero genera dos páginas para un ticket
+de venta de 1,820 px y para tres comprobantes de abonos de 1,607–1,682 px.
+**Riesgo:** cada página puede provocar un corte distinto al imprimir el PDF.
+**Alcance:** una página térmica de 80 mm con altura medida del contenido;
+venta, reimpresión y comprobantes que comparten el documento térmico.
+**Invariantes:** contenido histórico completo y legible, importes e identidades
+intactos; sin escrituras de negocio ni cambios de sincronización. Reportes y
+etiquetas conservan sus formatos propios.
+**Causa:** `size: 80mm auto` no define ambas dimensiones de página; el PDF
+cae en carta. H-41 comprobaba que no faltara papel, pero aceptaba varias hojas.
+**Corrección:** medición compartida de la altura renderizada en `BalamTicket` y
+`BalamReturnReceipt`; página nominal de 80 mm con altura explícita y margen de
+redondeo. El body hereda esa página para evitar una hoja inicial vacía. Regla,
+observador y evento se retiran al cerrar. Sin cambios de datos ni migraciones.
+**Pruebas:** H-135 rojo 28/61, verde 61/61; PDF real 16/16 con una página,
+texto idéntico al previo y ninguna palabra fuera de página; H-41 23/23; H-85
+20/20; H-73 29/29; Apartados 55/55; Cambios E2E 37/37; smoke bundle 17/17;
+navegación 15/15; reproducibilidad 8/8 y dos builds idénticos. QA visual de
+PDFs de venta/devolución y geometría en ocho viewports de 320–1440 px.
+**Hallazgo colateral P3:** contrato estático de foto de Inventario 41/42,
+idéntico en d122f0d y H-135; busca un orden antiguo del destructuring aunque
+`resizeImageFile` sigue conectado. No se modificó ese arnés ni Inventario.
+**Riesgo residual:** impresora física no disponible; comprobar aceptación del
+tamaño continuo y un corte al final. Se preserva un separador `Â·` preexistente
+en ornamento, ajeno a paginación. No se declara certificación de otros navegadores.
+**Corrección documentada:** `docs/fixes/ticket-termico-continuo-h135.md`.
+**Commit:** Pendiente de commit.
 
 ## Regla de actualización
 
