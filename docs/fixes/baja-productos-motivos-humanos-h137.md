@@ -3,7 +3,7 @@
 **Riesgo:** H-137
 **Estado:** PARCIALMENTE RESUELTO
 **Fecha:** 05/09/2026
-**Commit:** Pendiente de commit
+**Commit:** `bf1b8cdd6e8a0537afe494fe2ad16a2efd671efb`
 
 ## Problema y reproducción
 
@@ -49,7 +49,10 @@ Artefactos regenerados desde fuentes.
 - Ocho viewports 320–1440 px; capturas de aviso/modal móvil inspeccionadas.
 - H-114 contrato 13/13 y QA 55/55; H-134 mensajes 43/43.
 - H-134 E2E 26/26; H-136 lector 23/23; smoke bundle 17/17; navegación 15/15;
-  build desde fuentes y reproducibilidad 8/8. Publicación pendiente.
+  build desde fuentes, reproducibilidad 8/8 y dos builds idénticos.
+- Pages `built`, HTTP 200, bytes idénticos al blob Git aprobado;
+  SHA-256 `22e697ba7ed69a663a3ce11c3c859c132cd50127844e59224e4d83a609f444c7`.
+  H-137 contra el sitio publicado: 41/41, datos aislados y red de negocio bloqueada.
 
 ## Riesgo residual y pendientes
 

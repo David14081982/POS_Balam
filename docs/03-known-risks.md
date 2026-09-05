@@ -6458,9 +6458,13 @@ motivos humanos específicos sin reinterpretar errores de otros flujos.
 y familiar, guardas, stock, cola durable, históricos intactos y recarga;
 ocho viewports. H-114 contrato 13/13 y QA 55/55; H-134 mensajes 43/43.
 **Pendiente:** familia/aviso exactos del incidente real; no se borraron productos
-en producción. Publicación pendiente de verificar.
+en producción.
+**Publicación:** Pages `built`, HTTP 200 y bytes idénticos al blob Git;
+SHA-256 `22e697ba7ed69a663a3ce11c3c859c132cd50127844e59224e4d83a609f444c7`.
+H-137 publicado 41/41; H-134 E2E 26/26; H-136 23/23; smoke 17/17;
+navegación 15/15; build 8/8 y dos builds idénticos.
 **Corrección documentada:** `docs/fixes/baja-productos-motivos-humanos-h137.md`.
-**Commit:** Pendiente de commit.
+**Commit:** `bf1b8cdd6e8a0537afe494fe2ad16a2efd671efb`.
 
 ## Regla de actualización
 
