@@ -76,7 +76,7 @@ el alta por formulario debe guardar el mismo SKU/barcode en producto local y
 fila de la solicitud durable; luego separar stock, descargar etiqueta, escanear
 y recargar. Resultado ampliado: 24/24. Esto comprueba futuras regresiones del
 recorrido local; no certifica aceptación remota ni reproduce el incidente real.
-**Commit de la ampliación:** Pendiente de commit.
+**Commit de la ampliación:** `6673a0630ef6973863b8bd0d97f635f20d235a99`.
 
 ## Referencias
 

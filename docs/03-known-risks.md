@@ -6442,7 +6442,8 @@ snapshots locales examinados. El usuario confirma que otros productos se leen
 bien. No se atribuye el fallo al lector ni se cambia el barcode numérico.
 Regresión ampliada 24/24: STORE real con red bloqueada, SKU/barcode iguales en
 producto guardado y solicitud durable, alta/traslado/etiqueta/escaneo/recarga.
-La causa del incidente permanece pendiente; ampliación: Pendiente de commit.
+La causa del incidente permanece pendiente; ampliación:
+`6673a0630ef6973863b8bd0d97f635f20d235a99`.
 **Fecha:** 05/09/2026. Pages `built`; HTTP 200 y bytes iguales al blob Git;
 SHA-256 `83e7d331e50de67961109cbf10d0ca9cb90f46759cf62d5536b36716a65c4af9`.
 H-136 publicado 23/23; smoke 17/17; navegación 15/15; build 8/8 y dos iguales.
