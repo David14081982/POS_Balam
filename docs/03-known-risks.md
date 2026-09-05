@@ -6585,11 +6585,12 @@ borradores; salir de la sección conserva el comportamiento previo.
 
 ## H-142 — Divergencia silenciosa de inventario y cola entre equipos
 
-**Estado:** RECUPERACIÓN EN NUBE APLICADA — cliente y equipos pendientes de verificación.
+**Estado:** RECUPERACIÓN APLICADA Y CLIENTE PUBLICADO — verificación física pendiente.
 **Fecha:** 05/09/2026.
 **Commit de implementación:** `0fa6810`.
 **Commit S11:** `9ea9142`.
 **Commit S12/S13:** `a26701d`.
+**Integración main:** `a111671` (PR #3).
 **Continuación:** recibido JSON de sucursal (62 pendientes).
 S12 reproducido antes de publicar: rebootstrap aplica una purga histórica después
 de descargar ventas y queda con cero ventas locales pese a ocho remotas y estado
@@ -6623,7 +6624,10 @@ Chromium (diez defectos distintos), sobre el artefacto exacto de `c2b042e`.
 **Verificación:** H142 fuente 8/8, navegador 4/4, carreras 5/5, QA V1/V2 22/22;
 cola 186/186, regresiones comerciales, smoke/navegación y build aprobados.
 SQL 17800/17900 aplicado y verificado remotamente sin alterar productos ni ACL.
-**Riesgo residual:** frontend sin publicar y equipos físicos pendientes. Nube
+**Despliegue:** Pages `built`, artefacto servido idéntico al blob de main:
+SHA256 `7d38677e343b5ad02b51c883c6ee2154b7bc15ef054cf4f6d8edc55b9cbabe58`.
+Recuperación y recarga del artefacto servido aprobadas con respuestas capturadas.
+**Riesgo residual:** equipos físicos pendientes. Nube
 recuperada con las operaciones originales, sin duplicar la retirada anterior.
 Rebootstrap debe conservar el respaldo y archivo de cada cola para revisar
 operaciones únicas de otros equipos. No declarar toda la flota sincronizada aún.

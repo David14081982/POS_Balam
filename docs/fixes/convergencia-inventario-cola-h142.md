@@ -1,11 +1,12 @@
 # Convergencia de inventario y conservación de la cola
 
 **Riesgo:** H-142
-**Estado:** RECUPERACIÓN EN NUBE APLICADA — cliente y equipos pendientes de verificación
+**Estado:** RECUPERACIÓN APLICADA Y CLIENTE PUBLICADO — verificación de equipos físicos pendiente
 **Fecha:** 05/09/2026
 **Commit de implementación:** `0fa6810`
 **Commit S11:** `9ea9142`.
 **Commit S12/S13:** `a26701d`.
+**Integración en main:** `a111671` (PR #3).
 
 ## Problema y reproducción
 
@@ -181,8 +182,12 @@ la verificación de despliegue. Rollback funcional: restaurar los dos wrappers
 previos; la sobrecarga interna puede permanecer sin consumidores. Ninguna fila
 comercial fue modificada por estas migraciones.
 
-El frontend NO se publica sobre main/Pages mientras la nube esté incompleta.
-Bundle final verificado SHA256:
+La recuperación se aplicó antes de publicar. PR #3 integrada en main mediante
+`a111671`; GitHub Pages `built`. SHA256 del archivo servido idéntico al blob Git:
+`7d38677e343b5ad02b51c883c6ee2154b7bc15ef054cf4f6d8edc55b9cbabe58`.
+Ensayo del artefacto servido con captura remota: recuperación 253/977/3502,
+ocho ventas, cero pendientes y persistencia tras recarga aprobadas.
+Bundle local de build SHA256 (CRLF; Git normaliza a LF):
 `5d6494af80bb3965cee95c3a653f60bbbb261988d4050fcffb13d09745e1c40d`.
 Cambios aislados en `fix/h142-sync-convergence`; árbol original ajeno preservado.
 Evidencia en `../BALAM-sync-fix-evidence-20260905`: logs, capturas, SQL pre/post,
@@ -270,7 +275,7 @@ Archivos de la propuesta histórica, conservados para auditoría:
 Informe revisable: `RECUPERACION-VALIDADA.md`; huellas en
 `recovery-plan-manifest.json`. El archivo final también se ejerció cambiando
 únicamente COMMIT por ROLLBACK; hashes completos posteriores idénticos.
-Pendiente: publicar cliente y reconstruir equipos preservando
+Pendiente: actualizar y reconstruir equipos físicos preservando
 y archivando sus colas, comprobar datos y cursores reales. Otros equipos pueden
 conservar operaciones únicas; no descartar ninguna cola sin revisarla.
 Ensayo de recuperación en Chrome: laptop y sucursal coinciden en 253/977/3502,
@@ -278,6 +283,9 @@ ocho ventas y cero pendientes activos; sucursal conserva las 62 operaciones en
 archivo IndexedDB. Ambos mantienen inventario tras recarga. Fallo simultáneo de
 ambos almacenes mantiene las 62 operaciones activas. No demuestra que equipos
 físicos ya hayan descargado el nuevo cliente o actualizado sus copias.
+Última consulta de flota conserva equipos `must_rebootstrap`; no se fabricaron
+confirmaciones de sincronización ni se accedió a sus perfiles de navegador.
+Instrucciones en `../BALAM-sync-fix-evidence-20260905/ACTUALIZACION-EQUIPOS.md`.
 Falta identificar inequívocamente los dos productos agotados mencionados antes
 de ejercer sus bajas reales. No se declara H142 resuelto ni ausencia de errores.
 
