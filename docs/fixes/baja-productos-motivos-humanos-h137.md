@@ -63,7 +63,7 @@ no se afirma haber certificado una nueva eliminación en producción.
 
 ## Ampliación: alta, sincronización y baja — 05/09/2026
 
-**Commit de la ampliación:** Pendiente de commit.
+**Commit de la ampliación:** `f3e4d58`.
 
 El recorrido nuevo tampoco reproduce el incidente: formulario de alta con dos
 tallas → envío durable → confirmación SQL → baja individual/familiar → recarga

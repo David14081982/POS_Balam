@@ -6480,7 +6480,7 @@ H-114 contrato 13/13. Funciones remotas actuales leídas y ejercitadas en PGlite
 sin bajas remotas. Bloqueo mientras el alta está en vuelo y liberación al
 confirmarse demostrados. Sin defecto adicional reproducido ni cambio de
 aplicación; permisos/red real simulados. El incidente específico sigue pendiente.
-**Commit de la ampliación:** Pendiente de commit.
+**Commit de la ampliación:** `f3e4d58`.
 
 ## H-138 — Las altas SQL omiten metadatos del contrato V3
 
