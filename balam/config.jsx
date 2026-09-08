@@ -864,6 +864,10 @@
     return emit({ sync: false });
   }
 
+  const guardedMutation = fn => function (...args) {
+    window.CORE.invokeSync('assertBusinessReady');
+    return fn.apply(this, args);
+  };
   window.CONFIG = {
     all, list, selectable, map, metaMap, codes, find, get, settings, inUse, sizeCodeReferences,
     catalogMeta, allCatalogMeta, sizeCategories, catalogLabel, fieldOf, skuParts, referenceParts, modeloKind,
@@ -874,4 +878,7 @@
     get version() { return version; },
     KINDS: Object.keys(SEED_CATALOGS),
   };
+  ['addItem','updateItem','setActive','removeItem','move','setCatalogMeta','moveSkuOrder',
+    'addCatalog','removeCatalog','importCatalogs','setSetting','setSettings','renameSizeCodes','reset']
+    .forEach(name=>{ window.CONFIG[name] = guardedMutation(window.CONFIG[name]); });
 })();

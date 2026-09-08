@@ -28,6 +28,8 @@ function freshEnv() {
   const idb = new Map();
   const storageFailures = new Set();
   const localStorage = {
+    get length() { return store.size; },
+    key: i => Array.from(store.keys())[i] ?? null,
     getItem: k => (store.has(k) ? store.get(k) : null),
     setItem: (k, v) => {
       if (storageFailures.has(k)) throw new DOMException('Quota exceeded', 'QuotaExceededError');
@@ -140,7 +142,11 @@ function freshEnv() {
   }
   const client = {
     from: mkQuery,
-    rpc: async (name, args) => { rpcCalls.push({ name, args }); return rpcHandler(name, args); },
+    rpc: async (name, args) => {
+      rpcCalls.push({ name, args });
+      if (name === 'get_sync_device_recovery' && !cloud.directedRecoveryEnabled) return { data: null, error: null };
+      return rpcHandler(name, args);
+    },
     auth: { getSession: async () => ({ data: { session: null } }) },
     storage: { from: () => ({}) },
   };
@@ -158,7 +164,10 @@ function freshEnv() {
                 return {
                   put(value, key) {
                     const r = {};
-                    setTimeout(() => { idb.set(key, structuredClone(value)); if (tx.oncomplete) tx.oncomplete(); }, 0);
+                    setTimeout(() => {
+                      if (cloud.failQueueBackupWrite) { r.error = new Error('indexeddb_write_failed'); if (r.onerror) r.onerror(); return; }
+                      idb.set(key, structuredClone(value)); if (tx.oncomplete) tx.oncomplete();
+                    }, 0);
                     return r;
                   },
                   delete(key) {
@@ -1460,8 +1469,8 @@ ok('34c. H-60: la escritura válida termina sin pendientes', S.pending === 0);
     ventasMes: 4321, ventasNum: 9, comisionAcum: 777.77,
     role: 'vendedor', active: true,
   }];
-  S.pushRows('sellers', env.window.DATA.sellers);
-  await sleep(40);
+  await S.pushRows('sellers', env.window.DATA.sellers);
+  await S.flushQueue();
   const op = (JSON.parse(env.localStorage.getItem('balam_sync_queue') || '[]'))[0];
   const enviado = (env.cloud.rowsByTable.sellers || [])[0] || {};
   const update = env.calls.find(c => c.table === 'sellers' && c.metodo === 'update');

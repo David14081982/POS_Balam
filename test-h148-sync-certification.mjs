@@ -4,6 +4,8 @@ import {createHash} from 'node:crypto';
 import assert from 'node:assert/strict';
 const REQUIRED_CASES=[
  'Bootstrap A/B/C from real authority',
+ 'H149 directed boot 10: discard, remote convergence, replay fence and new operation',
+ 'H149 directed boot 17: discard, remote convergence, replay fence and new operation',
  'Create references A -> B/C/Supabase',
  'Edit reference with immutable identity',
  'Delete reference A -> B/C/Supabase tombstone',
@@ -37,6 +39,14 @@ function validate(r,{htmlHash,certifierHash,project,now=Date.now()}) {
  const age=now-Date.parse(r.finishedAt);assert.ok(Number.isFinite(age)&&age>=0&&age<86400000,'certificate must be from last 24 hours');
  assert.deepEqual(r.cases.map(c=>c.name).sort(),[...REQUIRED_CASES].sort());
  for(const c of r.cases)assert.equal(c.ok,true,c.name);
+ for(const count of [10,17]) {
+  const evidence=r.cases.find(c=>c.name.startsWith(`H149 directed boot ${count}:`)).evidence;
+  assert.equal(evidence.pendingBefore,count);assert.equal(evidence.pendingAfter,0);
+  assert.equal(evidence.legacyUploads,0);assert.equal(evidence.commercialRecoveryChanges,0);
+  assert.equal(evidence.serverReplayRejected,true);assert.equal(evidence.repeatedDirectiveDeletes,0);
+  assert.equal(evidence.newOperation,true);assert.equal(evidence.deviceCenterTruthful,true);
+  assert.equal(evidence.damagedProjectionRebuilt,true);assert.equal(evidence.viewports,8);
+ }
  assert.deepEqual([...r.domains].sort(),[...REQUIRED_DOMAINS].sort());
  assert.equal(r.pendingLost,0);assert.equal(r.finalDivergences,0);
  assert.equal(r.cleanup?.ok,true);assert.deepEqual(r.cleanup.errors,[]);
@@ -50,8 +60,14 @@ function validate(r,{htmlHash,certifierHash,project,now=Date.now()}) {
 if(process.argv[2]==='--self-test'){
  const now=Date.now(),business=Object.fromEntries(Array.from({length:17},(_,i)=>['table'+i,'hash']));
  const valid={project:'test',sourceSha256:'html',certifierSha256:'code',partial:false,profiles:3,transport:'Real HTTPS Supabase;',manifest:{system_mode:'preproduction',data_epoch:7},finishedAt:new Date(now).toISOString(),cases:REQUIRED_CASES.map(name=>({name,ok:true,evidence:{devices:['A','B','C'].map(device_id=>({device_id,queue_pending:0,queue_blocked:0,data_epoch:7}))}})),domains:REQUIRED_DOMAINS,pendingLost:0,finalDivergences:0,cleanup:{ok:true,errors:[]},businessPreservation:{ok:true,before:business,after:{...business}}};
+ for(const count of [10,17])valid.cases.find(c=>c.name.startsWith(`H149 directed boot ${count}:`)).evidence={
+  pendingBefore:count,pendingAfter:0,legacyUploads:0,commercialRecoveryChanges:0,serverReplayRejected:true,
+  repeatedDirectiveDeletes:0,newOperation:true,deviceCenterTruthful:true,damagedProjectionRebuilt:true,viewports:8,
+ };
  const args={htmlHash:'html',certifierHash:'code',project:'test',now};validate(valid,args);
  const mutations=[r=>r.partial=true,r=>r.profiles=1,r=>r.cases.pop(),r=>r.cases[0].ok=false,r=>r.domains=[],r=>r.sourceSha256='stale',r=>r.certifierSha256='old',r=>r.cleanup.ok=false,r=>r.businessPreservation.after.table0='changed',r=>r.pendingLost=1,r=>r.finalDivergences=1,r=>r.finishedAt='2000-01-01',r=>r.transport='mock',r=>r.cases.at(-1).evidence.devices[0].queue_pending=1];
+ mutations.push(r=>r.cases.find(c=>c.name.startsWith('H149 directed boot 10:')).evidence.legacyUploads=1,
+  r=>r.cases.find(c=>c.name.startsWith('H149 directed boot 17:')).evidence.damagedProjectionRebuilt=false);
  for(const mutate of mutations){const r=structuredClone(valid);mutate(r);assert.throws(()=>validate(r,args));}
  console.log(`PASS gate contract: ${mutations.length} false certificates rejected. No live certification performed.`);
 }else if(!process.argv[2]){console.error('NOT CERTIFIED: supply matrix.json from the complete live run');process.exitCode=2;}
@@ -59,5 +75,5 @@ else {
  const r=JSON.parse(readFileSync(process.argv[2],'utf8'));
  const project=new URL(readFileSync('balam/store.jsx','utf8').match(/const SUPABASE_URL = '([^']+)'/)[1]).hostname.split('.')[0];
  validate(r,{htmlHash:sha(readFileSync(process.env.BALAM_VERIFIED_HTML||'index.html')),certifierHash:sha(readFileSync('test-h148-live-convergence.mjs')),project});
- console.log(`CERTIFIED ${r.domains.length}/16 domains, ${r.cases.length}/21 real A/B/C cases; no lost pending operations or final divergences.`);
+ console.log(`CERTIFIED ${r.domains.length}/16 domains, ${r.cases.length}/${REQUIRED_CASES.length} real A/B/C cases; no lost pending operations or final divergences.`);
 }

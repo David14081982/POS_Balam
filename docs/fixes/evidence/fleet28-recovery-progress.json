@@ -1,0 +1,683 @@
+{
+  "status": "PARTIAL_NOT_FLEET_CERTIFICATION",
+  "capturedAt": "2026-09-08T14:05:02.023Z",
+  "scope": "Real terminal C recovered; A/B server-directed recovery armed; physical execution pending next use",
+  "initialReportedPending": 28,
+  "discarded": 1,
+  "remainingReportedPending": 27,
+  "fleetSynchronized": false,
+  "devices": [
+    {
+      "deviceId": "dev-mtov9u6i-lvz9esb6",
+      "build": "2026-09-05-h142",
+      "epoch": 7,
+      "protocol": 3,
+      "pendingReported": 17,
+      "lastSeen": "2026-09-07T23:33:01.714667+00:00",
+      "lastSynced": null,
+      "status": "must_rebootstrap",
+      "locallyInspected": false
+    },
+    {
+      "deviceId": "dev-ms3il7ts-7jsbewuw",
+      "build": "2026-09-05-h142",
+      "epoch": 7,
+      "protocol": 3,
+      "pendingReported": 10,
+      "lastSeen": "2026-09-08T02:52:41.781496+00:00",
+      "lastSynced": "2026-08-29T17:20:21.42+00:00",
+      "status": "must_rebootstrap",
+      "locallyInspected": false
+    },
+    {
+      "deviceId": "dev-mtny3o3e-rwa6o1na",
+      "build": "2026-09-07-h148",
+      "epoch": 7,
+      "protocol": 3,
+      "pendingReported": 0,
+      "lastSeen": "2026-09-08T14:00:24.465953+00:00",
+      "lastSynced": "2026-09-08T14:00:24.924+00:00",
+      "status": "online",
+      "locallyInspected": true
+    }
+  ],
+  "C": {
+    "diagnosticBefore": {
+      "capturedAt": "2026-09-08T13:51:14.485Z",
+      "deviceId": "dev-mtny3o3e-rwa6o1na",
+      "build": [
+        "2026-09-05-h142"
+      ],
+      "protocol": 3,
+      "localEpoch": "6",
+      "remoteEpoch": 7,
+      "compatibility": "must_rebootstrap",
+      "pending": 1,
+      "durability": "localStorage",
+      "queueHash": "a4bc68b9b3ead7b50bfef6ee6543c97ab3ac09e97e0f69a2f5b3686115048938",
+      "operations": [
+        {
+          "id": "62ba2e98-03f0-4605-94d1-5d46fbf4978b",
+          "domain": "products",
+          "type": "productDeleteScope",
+          "status": "pending",
+          "quarantine": false,
+          "createdAt": "2026-09-05T22:06:09.447Z",
+          "lastAttemptAt": null,
+          "attempts": 0,
+          "protocol": 3,
+          "epoch": 7,
+          "rowIds": [
+            "0ca233f1-c1ba-458d-9cb5-839bff9a471e",
+            "845c1a90-48e9-4fc0-bb95-51773933569e",
+            "bac2a0b0-802f-46a3-a99d-a709335a96e1"
+          ],
+          "hash": "5ed045d1b6fc66bb3ba55dea63d77f1458ebb54ffebcd4d2d52bc09850bec78a"
+        }
+      ],
+      "durable": {
+        "keys": [],
+        "count": 0,
+        "hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+      },
+      "cursors": {
+        "devices": 16628,
+        "config": 265,
+        "sellers": 76,
+        "products": 634,
+        "sales": 282,
+        "payments": 62,
+        "returns": 49,
+        "exchanges": 39,
+        "loans": 7,
+        "liquidations": 4,
+        "movements": 81,
+        "purges": 17,
+        "clients": 36
+      },
+      "configHash": "fcef4304b52230bf0c6872f9ccd941029616bbc8b2b535c69faf7dbcf492024f",
+      "deviceIdentityHash": "f2cdff76ae2731f08b08f50c379a6bcbb25383dffaac00046d2c181b4f145303",
+      "buildEvidence": "Supabase sync_devices, same device, live heartbeat; runtime syncStatus does not expose clientBuild"
+    },
+    "discard": {
+      "capturedAt": "2026-09-08T13:52:14.710Z",
+      "deviceId": "dev-mtny3o3e-rwa6o1na",
+      "discardedIds": [
+        "62ba2e98-03f0-4605-94d1-5d46fbf4978b"
+      ],
+      "discarded": 1,
+      "pendingBefore": 1,
+      "pendingAfter": 0,
+      "authorizedQueueHash": "a4bc68b9b3ead7b50bfef6ee6543c97ab3ac09e97e0f69a2f5b3686115048938",
+      "durableAfter": {
+        "keys": [],
+        "queue": null
+      },
+      "configPreserved": true,
+      "devicePreserved": true,
+      "epochPreserved": true,
+      "method": "Existing STORE.clearQueue after exact singleton ID/hash + empty alternate durable storage checks; no flush/retry/rebootstrap invoked"
+    },
+    "bootstrap": {
+      "capturedAt": "2026-09-08T13:53:45.951Z",
+      "result": {
+        "ok": true,
+        "status": {
+          "compatibility": "ok",
+          "protocolVersion": 3,
+          "schemaVersion": 20260830017500,
+          "clientBuild": "2026-09-07-h148",
+          "lastSuccess": "2026-09-08T13:54:08.778Z",
+          "lastVersionCheck": "2026-09-08T13:54:08.659Z",
+          "connection": "online",
+          "errors": [],
+          "checkpointError": null,
+          "dataEpoch": 7,
+          "realtime": "off",
+          "operations": [],
+          "durability": "localStorage",
+          "invalidDomains": [],
+          "cursors": {
+            "devices": 16635,
+            "config": 290,
+            "sellers": 141,
+            "products": 797,
+            "sales": 622,
+            "payments": 136,
+            "returns": 101,
+            "exchanges": 79,
+            "loans": 22,
+            "liquidations": 16,
+            "movements": 182,
+            "purges": 18,
+            "clients": 58,
+            "permissions": 131,
+            "promotions": 20
+          },
+          "reconciling": false,
+          "pending": 0,
+          "blocked": 0,
+          "synchronized": true,
+          "devicePending": 0,
+          "otherSessionPending": 0
+        },
+        "message": "Todo actualizado"
+      },
+      "queue": {
+        "durability": "localStorage",
+        "devicePending": 0,
+        "deviceBlocked": 0,
+        "otherSessionPending": 0,
+        "pending": 0,
+        "blocked": 0,
+        "retrying": 0,
+        "operations": []
+      },
+      "localEpoch": "7",
+      "uiStatus": "Todo actualizado"
+    },
+    "projections": {
+      "capturedAt": "2026-09-08T14:02:07.343Z",
+      "deviceId": "dev-mtny3o3e-rwa6o1na",
+      "evidence": [
+        {
+          "domain": "products",
+          "table": "products",
+          "remote": 973,
+          "local": 973,
+          "ok": true,
+          "remoteHash": "f1f22ceb09649ecf2b10cd273e2f59c3ea835959457cc3b4abc5fa13556e46b7",
+          "localHash": "f1f22ceb09649ecf2b10cd273e2f59c3ea835959457cc3b4abc5fa13556e46b7",
+          "diffs": [],
+          "extraIds": []
+        },
+        {
+          "domain": "clients",
+          "table": "clients",
+          "remote": 4,
+          "local": 4,
+          "ok": true,
+          "remoteHash": "1b7cb45bd85be64345de03f7ad4f07400f85fbcab9f6b92a2c8565c4b98fea29",
+          "localHash": "1b7cb45bd85be64345de03f7ad4f07400f85fbcab9f6b92a2c8565c4b98fea29",
+          "diffs": [],
+          "extraIds": []
+        },
+        {
+          "domain": "sellers",
+          "table": "sellers",
+          "remote": 5,
+          "local": 5,
+          "ok": true,
+          "remoteHash": "1097c78be71256c96612156afeeb436f350d2bcf07139f07f64fc4768a89d152",
+          "localHash": "1097c78be71256c96612156afeeb436f350d2bcf07139f07f64fc4768a89d152",
+          "diffs": [],
+          "extraIds": []
+        },
+        {
+          "domain": "sales",
+          "table": "sales",
+          "remote": 8,
+          "local": 8,
+          "ok": true,
+          "remoteHash": "dde48ef33b8776f0e64660a6e986c7838fdf9c4774d8ef74d0d16462ac91a53b",
+          "localHash": "dde48ef33b8776f0e64660a6e986c7838fdf9c4774d8ef74d0d16462ac91a53b",
+          "diffs": [],
+          "extraIds": []
+        },
+        {
+          "domain": "promotions",
+          "table": "promotions",
+          "remote": 2,
+          "local": 2,
+          "ok": true,
+          "remoteHash": "271b6de8bcbf3524fad4b61c245b60d64cd0edf72f70aeb2f95754aa3e41935c",
+          "localHash": "271b6de8bcbf3524fad4b61c245b60d64cd0edf72f70aeb2f95754aa3e41935c",
+          "diffs": [],
+          "extraIds": []
+        },
+        {
+          "domain": "returns",
+          "table": "returns",
+          "remote": 1,
+          "local": 1,
+          "ok": true,
+          "remoteHash": "a5d17e00dd3d3af54ce5781f597b1698e295a5f5a9cd0917b31438105cf60aae",
+          "localHash": "a5d17e00dd3d3af54ce5781f597b1698e295a5f5a9cd0917b31438105cf60aae",
+          "diffs": [],
+          "extraIds": []
+        },
+        {
+          "domain": "liquidations",
+          "table": "liquidations",
+          "remote": 0,
+          "local": 0,
+          "ok": true,
+          "remoteHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "localHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "diffs": [],
+          "extraIds": []
+        },
+        {
+          "domain": "commissionAdjustments",
+          "table": "commission_adjustments",
+          "remote": 0,
+          "local": 0,
+          "ok": true,
+          "remoteHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "localHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "diffs": [],
+          "extraIds": []
+        },
+        {
+          "domain": "payments",
+          "table": "sale_payments",
+          "remote": 9,
+          "local": 9,
+          "ok": true,
+          "remoteHash": "9b1f376fed787411b1e67ac64e9447e2ba571615d175ad140f0233078427dd99",
+          "localHash": "9b1f376fed787411b1e67ac64e9447e2ba571615d175ad140f0233078427dd99",
+          "diffs": [],
+          "extraIds": []
+        },
+        {
+          "domain": "exchanges",
+          "table": "exchanges",
+          "remote": 1,
+          "local": 1,
+          "ok": true,
+          "remoteHash": "1a2d5f097d691872e9426e32027a604d49070d9f1b35014a5a93d3e887d76f1f",
+          "localHash": "1a2d5f097d691872e9426e32027a604d49070d9f1b35014a5a93d3e887d76f1f",
+          "diffs": [],
+          "extraIds": []
+        },
+        {
+          "domain": "loans",
+          "table": "loan_documents",
+          "remote": 0,
+          "local": 0,
+          "ok": true,
+          "remoteHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "localHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "diffs": [],
+          "extraIds": []
+        },
+        {
+          "domain": "movements",
+          "table": "movements",
+          "remote": 15,
+          "local": 15,
+          "ok": true,
+          "remoteHash": "51d72d922bb88d767bb174e8dbf62372fa57b88755bc1e0cde2ed0c0aed29096",
+          "localHash": "51d72d922bb88d767bb174e8dbf62372fa57b88755bc1e0cde2ed0c0aed29096",
+          "diffs": [],
+          "extraIds": []
+        }
+      ],
+      "v1Operational": 0,
+      "barcodeContracts": [
+        3
+      ],
+      "stock": 3493,
+      "families": 251,
+      "tombstonesAbsent": true,
+      "queue": {
+        "durability": "localStorage",
+        "devicePending": 0,
+        "deviceBlocked": 0,
+        "otherSessionPending": 0,
+        "pending": 0,
+        "blocked": 0,
+        "retrying": 0,
+        "operations": []
+      },
+      "sync": {
+        "compatibility": "ok",
+        "protocolVersion": 3,
+        "schemaVersion": 20260830017500,
+        "clientBuild": "2026-09-07-h148",
+        "lastSuccess": "2026-09-08T14:00:24.924Z",
+        "lastVersionCheck": "2026-09-08T14:01:49.921Z",
+        "connection": "online",
+        "errors": [],
+        "checkpointError": null,
+        "dataEpoch": 7,
+        "realtime": "subscribed",
+        "operations": [],
+        "durability": "localStorage",
+        "invalidDomains": [],
+        "cursors": {
+          "devices": 16637,
+          "config": 290,
+          "sellers": 141,
+          "products": 797,
+          "sales": 622,
+          "payments": 136,
+          "returns": 101,
+          "exchanges": 79,
+          "loans": 22,
+          "liquidations": 16,
+          "movements": 182,
+          "purges": 18,
+          "clients": 58,
+          "permissions": 131,
+          "promotions": 20
+        },
+        "reconciling": false,
+        "pending": 0,
+        "blocked": 0,
+        "synchronized": true,
+        "devicePending": 0,
+        "otherSessionPending": 0
+      }
+    },
+    "extra": {
+      "capturedAt": "2026-09-08T13:59:27.012Z",
+      "deviceId": "dev-mtny3o3e-rwa6o1na",
+      "children": [
+        {
+          "table": "sale_items",
+          "remote": 12,
+          "local": 12,
+          "ok": true,
+          "diffs": []
+        },
+        {
+          "table": "return_items",
+          "remote": 1,
+          "local": 1,
+          "ok": true,
+          "diffs": []
+        },
+        {
+          "table": "exchange_items",
+          "remote": 2,
+          "local": 2,
+          "ok": true,
+          "diffs": []
+        }
+      ],
+      "config": {
+        "ok": true,
+        "catalogs": 22,
+        "settings": 38,
+        "diffs": []
+      },
+      "permissions": {
+        "ok": true,
+        "checked": 23,
+        "version": "3c1405b97ac7983a23d83f5839ea0c2c",
+        "diffs": []
+      },
+      "sync": {
+        "compatibility": "ok",
+        "protocolVersion": 3,
+        "schemaVersion": 20260830017500,
+        "clientBuild": "2026-09-07-h148",
+        "lastSuccess": "2026-09-08T13:54:08.778Z",
+        "lastVersionCheck": "2026-09-08T13:59:26.347Z",
+        "connection": "online",
+        "errors": [],
+        "checkpointError": null,
+        "dataEpoch": 7,
+        "realtime": "off",
+        "operations": [],
+        "durability": "localStorage",
+        "invalidDomains": [],
+        "cursors": {
+          "devices": 16635,
+          "config": 290,
+          "sellers": 141,
+          "products": 797,
+          "sales": 622,
+          "payments": 136,
+          "returns": 101,
+          "exchanges": 79,
+          "loans": 22,
+          "liquidations": 16,
+          "movements": 182,
+          "purges": 18,
+          "clients": 58,
+          "permissions": 131,
+          "promotions": 20
+        },
+        "reconciling": false,
+        "pending": 0,
+        "blocked": 0,
+        "synchronized": true,
+        "devicePending": 0,
+        "otherSessionPending": 0
+      }
+    },
+    "final": {
+      "capturedAt": "2026-09-08T14:03:11.562Z",
+      "deviceId": "dev-mtny3o3e-rwa6o1na",
+      "update": {
+        "ok": true,
+        "status": {
+          "compatibility": "ok",
+          "protocolVersion": 3,
+          "schemaVersion": 20260830017500,
+          "clientBuild": "2026-09-07-h148",
+          "lastSuccess": "2026-09-08T14:03:11.123Z",
+          "lastVersionCheck": "2026-09-08T14:03:11.011Z",
+          "connection": "online",
+          "errors": [],
+          "checkpointError": null,
+          "dataEpoch": 7,
+          "realtime": "subscribed",
+          "operations": [],
+          "durability": "localStorage",
+          "invalidDomains": [],
+          "cursors": {
+            "devices": 16637,
+            "config": 290,
+            "sellers": 141,
+            "products": 797,
+            "sales": 622,
+            "payments": 136,
+            "returns": 101,
+            "exchanges": 79,
+            "loans": 22,
+            "liquidations": 16,
+            "movements": 182,
+            "purges": 18,
+            "clients": 58,
+            "permissions": 131,
+            "promotions": 20
+          },
+          "reconciling": false,
+          "pending": 0,
+          "blocked": 0,
+          "synchronized": true,
+          "devicePending": 0,
+          "otherSessionPending": 0
+        },
+        "message": "Todo actualizado"
+      },
+      "queue": {
+        "durability": "localStorage",
+        "devicePending": 0,
+        "deviceBlocked": 0,
+        "otherSessionPending": 0,
+        "pending": 0,
+        "blocked": 0,
+        "retrying": 0,
+        "operations": []
+      },
+      "durable": {
+        "keys": [],
+        "pending": 0
+      },
+      "localEpoch": "7",
+      "quarantineKeys": [],
+      "discardedOperationPresent": false,
+      "deletedTargetsPresent": 0,
+      "uiStatus": "Todo actualizado"
+    }
+  },
+  "businessPreservation": {
+    "verifiedTables": 17,
+    "before": {
+      "captured_at": "2026-09-08T13:50:09.435949+00:00",
+      "clients": {
+        "count": 11,
+        "hash": "9d6f3b3f15b93e2a536311d205b4e578"
+      },
+      "commission_adjustments": {
+        "count": 0,
+        "hash": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "exchange_items": {
+        "count": 2,
+        "hash": "11f9b203562bab94783ff7b62b3f7c3a"
+      },
+      "exchanges": {
+        "count": 1,
+        "hash": "2ff5c2aa8e9a0ecdc8ca6fa9f4f36d1f"
+      },
+      "liquidations": {
+        "count": 0,
+        "hash": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "loan_documents": {
+        "count": 0,
+        "hash": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "lookup": {
+        "count": 551,
+        "hash": "f782f9c62756935d63e0b77f6f166175"
+      },
+      "movements": {
+        "count": 15,
+        "hash": "e9acb71750bd6d272d75797f550c9fdf"
+      },
+      "products": {
+        "count": 2383,
+        "hash": "b6a359b82e9f4b9a06c26c7f13f8bbe0"
+      },
+      "promotions": {
+        "count": 2,
+        "hash": "062495e9ecfbd2be13bdc33f09768199"
+      },
+      "return_items": {
+        "count": 1,
+        "hash": "45b8833e8f057a233496932a6254d1eb"
+      },
+      "returns": {
+        "count": 1,
+        "hash": "8e4c6689f45235c5f89fde4e7a04ff73"
+      },
+      "sale_items": {
+        "count": 12,
+        "hash": "7447d47eacbeca941164b0728ca8956a"
+      },
+      "sale_payments": {
+        "count": 9,
+        "hash": "a16a316a47ea4866a412c1efb2172947"
+      },
+      "sales": {
+        "count": 8,
+        "hash": "341a9ff1e4896bcb94b032423ebf77cb"
+      },
+      "sellers": {
+        "count": 5,
+        "hash": "e08848e0eff10c4e81a1d3e40ae63fd4"
+      },
+      "settings": {
+        "count": 40,
+        "hash": "45c1da3765035e4f93756648a4b93e17"
+      }
+    },
+    "after": {
+      "captured_at": "2026-09-08T13:59:50.693123+00:00",
+      "clients": {
+        "count": 11,
+        "hash": "9d6f3b3f15b93e2a536311d205b4e578"
+      },
+      "commission_adjustments": {
+        "count": 0,
+        "hash": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "exchange_items": {
+        "count": 2,
+        "hash": "11f9b203562bab94783ff7b62b3f7c3a"
+      },
+      "exchanges": {
+        "count": 1,
+        "hash": "2ff5c2aa8e9a0ecdc8ca6fa9f4f36d1f"
+      },
+      "liquidations": {
+        "count": 0,
+        "hash": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "loan_documents": {
+        "count": 0,
+        "hash": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "lookup": {
+        "count": 551,
+        "hash": "f782f9c62756935d63e0b77f6f166175"
+      },
+      "movements": {
+        "count": 15,
+        "hash": "e9acb71750bd6d272d75797f550c9fdf"
+      },
+      "products": {
+        "count": 2383,
+        "hash": "b6a359b82e9f4b9a06c26c7f13f8bbe0"
+      },
+      "promotions": {
+        "count": 2,
+        "hash": "062495e9ecfbd2be13bdc33f09768199"
+      },
+      "return_items": {
+        "count": 1,
+        "hash": "45b8833e8f057a233496932a6254d1eb"
+      },
+      "returns": {
+        "count": 1,
+        "hash": "8e4c6689f45235c5f89fde4e7a04ff73"
+      },
+      "sale_items": {
+        "count": 12,
+        "hash": "7447d47eacbeca941164b0728ca8956a"
+      },
+      "sale_payments": {
+        "count": 9,
+        "hash": "a16a316a47ea4866a412c1efb2172947"
+      },
+      "sales": {
+        "count": 8,
+        "hash": "341a9ff1e4896bcb94b032423ebf77cb"
+      },
+      "sellers": {
+        "count": 5,
+        "hash": "e08848e0eff10c4e81a1d3e40ae63fd4"
+      },
+      "settings": {
+        "count": 40,
+        "hash": "45c1da3765035e4f93756648a4b93e17"
+      }
+    },
+    "allExactHashesEqual": true
+  },
+  "newQAOperationsCreated": 0,
+  "notExecuted": [
+    "A discard 17",
+    "B discard 10",
+    "A bootstrap",
+    "B bootstrap",
+    "A=B=C=Supabase",
+    "new multidevice CRUD",
+    "new multidevice stock",
+    "new offline exactly once",
+    "new multidevice reconciliation without Realtime",
+    "new fixture cleanup"
+  ],
+  "serverRecovery": {
+    "prepared": true,
+    "history": "H149",
+    "evidence": "h149-server-recovery.json",
+    "physicalCompletionPending": true
+  }
+}

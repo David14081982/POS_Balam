@@ -115,6 +115,89 @@ try {
   return states;
  });
  const [A,B,C]=terminals;
+ for(const [terminal,count] of [[B,10],[C,17]])await verify(`H149 directed boot ${count}: discard, remote convergence, replay fence and new operation`,async()=>{
+  const device=`${prefix}-${terminal.name}`;
+  const queue=Array.from({length:count},(_,i)=>{
+   const id=randomUUID();operations.add(id);
+   const type=count===17||i<5?'sale':i===9?'config':'upsert';
+   return {id,operationId:id,type,kind:type==='upsert'?'products':undefined,table:type==='upsert'?'products':undefined,
+    rows:type==='upsert'?[{id:productIds[0],nombre:'Must never upload',sync_device_id:device}]:undefined,
+    header:type==='sale'?{folio:`${prefix}-discard-${i}`,operation_id:id}:undefined,
+    folio:type==='sale'?`${prefix}-discard-${i}`:undefined,items:[],moves:[],payments:[],stockLines:[],
+    ownerId:email,protocolVersion:3,dataEpoch:Number(manifest.data_epoch)-1,status:'pending'};
+  });
+  check(await serverClient.from('sync_devices').update({queue_pending:count}).eq('device_id',device));
+  check(await serverClient.from('sync_activity').insert(queue.map(op=>({device_id:device,operation_id:op.id,user_id:userId,
+   user_email:email,operation_type:op.type,domain:op.type==='sale'?'sales':op.type==='config'?'config':'products',
+   status:'pending',summary:'H149 authorized isolated test queue'}))));
+  check(await serverClient.rpc('prepare_sync_device_recovery',{p_device_id:device,p_expected_count:count,
+   p_epoch:Number(manifest.data_epoch),p_protocol:3,p_minimum_build:'2026-09-08-h149',
+   p_authorization:'H149 explicitly authorized isolated boot certification; discard exact test candidates'}));
+  const pendingDevice=await A.page.evaluate(async device=>(await window.STORE.syncFleetStatus()).devices.find(d=>d.device_id===device),device);
+  assert.equal(pendingDevice.recoveryPending,true);assert.equal(pendingDevice.synchronized,false);
+  const recoveryHash=rows=>createHash('sha256').update(JSON.stringify(rows)).digest('hex');
+  const beforeRecovery=Object.fromEntries(await Promise.all(safetyTables.map(async table=>[table,recoveryHash(await rawRows(table))])));
+  const ids=new Set(queue.map(o=>o.id)),attempts=[];
+  const observer=request=>{try{const b=request.postDataJSON();if(ids.has(b?.p_operation_id)||ids.has(b?.p_commit_id))attempts.push(request.url());}catch{}};
+  terminal.page.on('request',observer);
+  let releaseCapture,enteredCapture;
+  const captureHeld=new Promise(r=>releaseCapture=r),captureEntered=new Promise(r=>enteredCapture=r);
+  const capturePattern=url+'/rest/v1/rpc/capture_sync_device_recovery';
+  await terminal.context.route(capturePattern,async route=>{enteredCapture();await captureHeld;await route.continue();});
+  await terminal.page.evaluate(queue=>{
+   const localReference=window.DATA.products.find(p=>p.recordModel==='v2');
+   if(!localReference)throw Error('Missing local projection to corrupt for recovery certification');
+   localReference.stockQuantity+=12345;
+   window.DATA.saveProducts(); // persistence only: never emits inventory intent without IDs
+   localStorage.setItem('balam_sync_queue',JSON.stringify(queue));
+   localStorage.setItem('balam-sidebar','1');
+  },queue);
+  await terminal.page.reload();
+  await Promise.race([captureEntered,new Promise((_,reject)=>setTimeout(()=>reject(Error('Recovery never reached capture')),60000))]);
+  try {
+   await terminal.page.getByTestId('device-recovery-gate').waitFor({timeout:20000});
+   for(const width of [320,360,390,430,768,1024,1280,1440]){
+    await terminal.page.setViewportSize({width,height:900});
+    const gate=terminal.page.getByTestId('device-recovery-gate');
+    assert.equal(await gate.innerText(),'Estamos actualizando la información de este equipo.');
+    assert.ok(await terminal.page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+    if(width===320||width===1280)await terminal.page.screenshot({path:join(out,`h149-${count}-${width}.png`)});
+   }
+   assert.equal(await terminal.page.evaluate(()=>{try{window.DATA.addClient({nombre:'Forbidden during recovery'});return false;}catch(e){return e.code==='DEVICE_RECOVERY_REQUIRED';}}),true);
+  } finally {releaseCapture();}
+  await terminal.page.waitForFunction(()=>window.STORE?.syncStatus().recoveryPhase==='ready',null,{timeout:120000});
+  await terminal.context.unroute(capturePattern);
+  await terminal.page.evaluate(()=>window.STORE.synchronizeNow());await converge();
+  assert.deepEqual(attempts,[],'Legacy queue reached a write RPC');
+  assert.equal(await terminal.page.evaluate(()=>window.STORE.pending),0);
+  const row=check(await serverClient.from('sync_device_recoveries').select('state,discarded_ids,evidence,completed_at').eq('device_id',device))[0];
+  assert.equal(row.state,'completed');assert.equal(row.discarded_ids.length,count);
+  assert.ok(row.evidence.operations.every(op=>op.epoch===Number(manifest.data_epoch)-1));
+  assert.deepEqual(Object.fromEntries(await Promise.all(safetyTables.map(async table=>[table,recoveryHash(await rawRows(table))]))),beforeRecovery,'Recovery changed remote business, including timestamps');
+  const legacy=createClient(url,publishable,{auth:{persistSession:false,autoRefreshToken:false},db:{schema:'pos'}});
+  check(await legacy.auth.signInWithPassword({email,password}));
+  for(const op of queue.filter(o=>o.type==='sale')){
+   const rejected=await legacy.rpc('commit_sale_checked',{p_commit_id:op.id,p_operation_id:op.id,p_sale:{},p_items:[],p_moves:[],
+    p_payments:[],p_stock_lines:[],p_reserve_stock:true,p_client_effect:null,p_seller_effects:[]});
+   assert.equal(rejected.error?.details,'TEST_PENDING_DISCARDED');
+  }
+  const directId=randomUUID();createdClients.push(directId);
+  const direct=await legacy.from('clients').insert({id:directId,nombre:'Forbidden legacy direct write',sync_device_id:device});
+  assert.equal(direct.error?.details,'DEVICE_RECOVERY_REQUIRED');
+  assert.equal(check(await serverClient.from('sale_commits').select('commit_id').in('commit_id',[...ids])).length,0);
+  const receiptTime=row.completed_at;
+  await terminal.page.reload();await terminal.page.waitForFunction(()=>window.AUTH?.hasSession()&&window.STORE?.syncStatus().recoveryPhase==='ready',null,{timeout:120000});
+  assert.equal(await terminal.page.evaluate(()=>localStorage.getItem('balam-sidebar')),'1');
+  const fresh=await terminal.page.evaluate(prefix=>window.DATA.addClient({nombre:prefix+' recovered',tel:prefix+' recovered'}),prefix);createdClients.push(fresh.id);
+  await terminal.page.evaluate(()=>window.STORE.synchronizeNow());await converge();
+  assert.equal(check(await serverClient.from('clients').select('id').eq('id',fresh.id)).length,1);
+  assert.equal(check(await serverClient.from('sync_device_recoveries').select('completed_at').eq('device_id',device))[0].completed_at,receiptTime);
+  assert.equal(await A.page.evaluate(async device=>(await window.STORE.syncFleetStatus()).devices.find(d=>d.device_id===device).recoveryPending,device),false);
+  terminal.page.off('request',observer);
+  return {pendingBefore:count,pendingAfter:0,legacyUploads:0,commercialRecoveryChanges:0,
+   evidenceEpoch:Number(manifest.data_epoch)-1,serverReplayRejected:true,repeatedDirectiveDeletes:0,newOperation:true,viewports:8,deviceCenterTruthful:true,damagedProjectionRebuilt:true};
+ });
+
  await verify('Create references A -> B/C/Supabase',async()=>{
   await A.page.evaluate(({ids,prefix})=>{
    const D=window.DATA,C=window.CONFIG;
@@ -348,6 +431,7 @@ finally {
  // Only IDs created by this exact run. No cleanup by label, age or broad prefix.
  const devices=terminals.map(t=>`${prefix}-${t.name}`), cleanupErrors=[];
  const clean=async(name,fn)=>{try{check(await fn());}catch(error){cleanupErrors.push({name,error:error.message});}};
+ if(devices.length)await clean('recovery directives',()=>serverClient.from('sync_device_recoveries').delete().in('device_id',devices));
  if(devices.length)await clean('devices',()=>serverClient.from('sync_devices').delete().in('device_id',devices));
  if(createdReturns.length){await clean('return receipts',()=>serverClient.from('return_commits').delete().in('return_id',createdReturns));await clean('returns',()=>serverClient.from('returns').delete().in('id',createdReturns));}
  if(createdExchanges.length){await clean('exchange receipts',()=>serverClient.from('exchange_commits').delete().in('exchange_id',createdExchanges));await clean('exchanges',()=>serverClient.from('exchanges').delete().in('id',createdExchanges));}

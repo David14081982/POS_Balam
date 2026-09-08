@@ -1,0 +1,207 @@
+{
+  "candidate_ids_fenced": 29,
+  "captured_at": "2026-09-08T15:21:30.258362+00:00",
+  "commercial_writes_executed": 0,
+  "declared_pending": 27,
+  "directives": [
+    {
+      "completed_at": null,
+      "created_at": "2026-09-08T15:00:10.027453+00:00",
+      "device_id": "dev-ms3il7ts-7jsbewuw",
+      "expected_count": 10,
+      "id": "70c1d6b8-5ce0-4cbb-b6e2-3f393d1e46b8",
+      "minimum_build": "2026-09-08-h149",
+      "protocol": 3,
+      "source_epoch": 7,
+      "state": "pending"
+    },
+    {
+      "completed_at": null,
+      "created_at": "2026-09-08T15:00:10.027453+00:00",
+      "device_id": "dev-mtov9u6i-lvz9esb6",
+      "expected_count": 17,
+      "id": "4ddd6086-3b27-4d1a-8bff-27ebd27699d7",
+      "minimum_build": "2026-09-08-h149",
+      "protocol": 3,
+      "source_epoch": 7,
+      "state": "pending"
+    }
+  ],
+  "rejections": [
+    {
+      "detail": "TEST_PENDING_DISCARDED",
+      "device_id": "dev-ms3il7ts-7jsbewuw",
+      "operation_id": "0a9dad63-478c-4d55-b0b9-b5d914981807",
+      "rejected": true
+    },
+    {
+      "detail": "TEST_PENDING_DISCARDED",
+      "device_id": "dev-ms3il7ts-7jsbewuw",
+      "operation_id": "0e4fb60c-0053-40e3-bfc9-e00adcaf3473",
+      "rejected": true
+    },
+    {
+      "detail": "TEST_PENDING_DISCARDED",
+      "device_id": "dev-ms3il7ts-7jsbewuw",
+      "operation_id": "49131f16-9870-4c8d-bee1-33e97b28ea90",
+      "rejected": true
+    },
+    {
+      "detail": "TEST_PENDING_DISCARDED",
+      "device_id": "dev-ms3il7ts-7jsbewuw",
+      "operation_id": "69c46c08-0a2f-4060-80f3-1671f1c67a13",
+      "rejected": true
+    },
+    {
+      "detail": "TEST_PENDING_DISCARDED",
+      "device_id": "dev-ms3il7ts-7jsbewuw",
+      "operation_id": "850c8c9e-6ad9-436b-80c8-b9ae8d8b6307",
+      "rejected": true
+    },
+    {
+      "detail": "TEST_PENDING_DISCARDED",
+      "device_id": "dev-ms3il7ts-7jsbewuw",
+      "operation_id": "93c23a63-7fb4-45cd-9641-a17cfb3b197f",
+      "rejected": true
+    },
+    {
+      "detail": "TEST_PENDING_DISCARDED",
+      "device_id": "dev-ms3il7ts-7jsbewuw",
+      "operation_id": "966e70d8-49c7-40bb-9b17-6ff55ae6b780",
+      "rejected": true
+    },
+    {
+      "detail": "TEST_PENDING_DISCARDED",
+      "device_id": "dev-ms3il7ts-7jsbewuw",
+      "operation_id": "a715dfd4-ab85-40f1-8ed3-66d023e4f200",
+      "rejected": true
+    },
+    {
+      "detail": "TEST_PENDING_DISCARDED",
+      "device_id": "dev-ms3il7ts-7jsbewuw",
+      "operation_id": "a97baa1a-4ec0-4553-aed4-f06054cc20ff",
+      "rejected": true
+    },
+    {
+      "detail": "TEST_PENDING_DISCARDED",
+      "device_id": "dev-ms3il7ts-7jsbewuw",
+      "operation_id": "da084ff7-2bcc-4c66-a28b-48cee6064fff",
+      "rejected": true
+    },
+    {
+      "detail": "TEST_PENDING_DISCARDED",
+      "device_id": "dev-ms3il7ts-7jsbewuw",
+      "operation_id": "e2b8d593-61d5-430c-b81a-66ccddef6544",
+      "rejected": true
+    },
+    {
+      "detail": "TEST_PENDING_DISCARDED",
+      "device_id": "dev-ms3il7ts-7jsbewuw",
+      "operation_id": "f604ffae-3649-46c1-a8a7-1985017d767c",
+      "rejected": true
+    },
+    {
+      "detail": "TEST_PENDING_DISCARDED",
+      "device_id": "dev-mtov9u6i-lvz9esb6",
+      "operation_id": "00a82cdb-e6b5-4772-a72c-4e017423d095",
+      "rejected": true
+    },
+    {
+      "detail": "TEST_PENDING_DISCARDED",
+      "device_id": "dev-mtov9u6i-lvz9esb6",
+      "operation_id": "06ef8cc9-422e-4f68-9364-3a8ba5998dd1",
+      "rejected": true
+    },
+    {
+      "detail": "TEST_PENDING_DISCARDED",
+      "device_id": "dev-mtov9u6i-lvz9esb6",
+      "operation_id": "0899bc90-a78e-40b6-9d8a-a08dc2873ee2",
+      "rejected": true
+    },
+    {
+      "detail": "TEST_PENDING_DISCARDED",
+      "device_id": "dev-mtov9u6i-lvz9esb6",
+      "operation_id": "0df10fab-9972-4881-b475-5f319a5113d9",
+      "rejected": true
+    },
+    {
+      "detail": "TEST_PENDING_DISCARDED",
+      "device_id": "dev-mtov9u6i-lvz9esb6",
+      "operation_id": "2d801f77-dcb9-4631-93df-5b736617a182",
+      "rejected": true
+    },
+    {
+      "detail": "TEST_PENDING_DISCARDED",
+      "device_id": "dev-mtov9u6i-lvz9esb6",
+      "operation_id": "30316a7f-72e7-4253-acb8-4bad199f48a6",
+      "rejected": true
+    },
+    {
+      "detail": "TEST_PENDING_DISCARDED",
+      "device_id": "dev-mtov9u6i-lvz9esb6",
+      "operation_id": "345bcf17-8ce7-4436-88a1-6a276377d780",
+      "rejected": true
+    },
+    {
+      "detail": "TEST_PENDING_DISCARDED",
+      "device_id": "dev-mtov9u6i-lvz9esb6",
+      "operation_id": "354c448c-6ff7-4da9-b2f1-90464bd943f3",
+      "rejected": true
+    },
+    {
+      "detail": "TEST_PENDING_DISCARDED",
+      "device_id": "dev-mtov9u6i-lvz9esb6",
+      "operation_id": "35d82923-b0df-41c4-b01b-5d50d7e60efe",
+      "rejected": true
+    },
+    {
+      "detail": "TEST_PENDING_DISCARDED",
+      "device_id": "dev-mtov9u6i-lvz9esb6",
+      "operation_id": "3e0a19e3-740d-44f5-8056-acf6cb4af95d",
+      "rejected": true
+    },
+    {
+      "detail": "TEST_PENDING_DISCARDED",
+      "device_id": "dev-mtov9u6i-lvz9esb6",
+      "operation_id": "5ea3e72c-e0d2-43b5-a500-0df52bbb82a9",
+      "rejected": true
+    },
+    {
+      "detail": "TEST_PENDING_DISCARDED",
+      "device_id": "dev-mtov9u6i-lvz9esb6",
+      "operation_id": "662e261c-70ba-4acc-94fd-6a9ec6a010e5",
+      "rejected": true
+    },
+    {
+      "detail": "TEST_PENDING_DISCARDED",
+      "device_id": "dev-mtov9u6i-lvz9esb6",
+      "operation_id": "7ffea27e-b5d8-4407-9857-79d60e233a37",
+      "rejected": true
+    },
+    {
+      "detail": "TEST_PENDING_DISCARDED",
+      "device_id": "dev-mtov9u6i-lvz9esb6",
+      "operation_id": "c436a175-5e80-4bbf-9b5a-683f1f6bf184",
+      "rejected": true
+    },
+    {
+      "detail": "TEST_PENDING_DISCARDED",
+      "device_id": "dev-mtov9u6i-lvz9esb6",
+      "operation_id": "c9642984-185a-4862-85a7-c4bafa29a0f3",
+      "rejected": true
+    },
+    {
+      "detail": "TEST_PENDING_DISCARDED",
+      "device_id": "dev-mtov9u6i-lvz9esb6",
+      "operation_id": "e4245f5b-295c-40ef-9b9b-f0711ff56b5c",
+      "rejected": true
+    },
+    {
+      "detail": "TEST_PENDING_DISCARDED",
+      "device_id": "dev-mtov9u6i-lvz9esb6",
+      "operation_id": "ede44907-b163-4deb-a19f-699e73e616c8",
+      "rejected": true
+    }
+  ],
+  "unreported_legacy_sale_rejected": true
+}

@@ -5976,10 +5976,15 @@
     'duplicatePromo', 'seedDemo', 'resetEmpty', 'resetTestData',
     'reverseSaleCommission', 'applyCommissionAdjustment', 'reclassifyReference',
   ];
+  const remoteProjectionMutators = new Set(['applyRemote', 'applySyncResult', 'applySaleCommitResult',
+    'mergeRemote', 'markSaleSync', 'applyRemoteLoans', 'applyFolioBlock']);
   localWriterMutators.forEach(name => {
     const original = window.DATA[name];
     if (typeof original !== 'function') return;
     window.DATA[name] = function (...args) {
+      if (!remoteProjectionMutators.has(name) && !(name === 'resetTestData' && args[0]?.authority === 'remote')) {
+        window.CORE.invokeSync('assertBusinessReady');
+      }
       assertLocalWriter(false);
       return original.apply(window.DATA, args);
     };

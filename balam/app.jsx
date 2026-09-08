@@ -147,6 +147,12 @@
     // Auth real (Supabase) + nube. Solo una sesión autenticada sincroniza pos.* (RLS).
     const [, bumpCfg] = useState(0);
     const [, bumpWriter] = useState(0);
+    const [recovery, setRecovery] = useState(()=>window.STORE?.syncStatus()?.recoveryPhase);
+    useEffect(()=>{
+      const update = ()=>setRecovery(window.STORE?.syncStatus()?.recoveryPhase);
+      window.addEventListener('syncstatuschange', update); update();
+      return ()=>window.removeEventListener('syncstatuschange', update);
+    }, []);
     useEffect(() => {
       const onWriter = () => bumpWriter(value => value + 1);
       window.addEventListener('localwriterchange', onWriter);
@@ -189,6 +195,24 @@
       return true;
     }
     const navCollapsed = collapsed && !mobileNavOpen;
+    if (window.AUTH.hasSession() && recovery && recovery !== 'ready') {
+      return h('main', { 'data-testid': 'device-recovery-gate', role: 'status', 'aria-live': 'polite',
+        className: 'min-h-screen flex items-center justify-center p-6 bg-surface text-on-surface' },
+        h('div', { className: 'w-full max-w-md text-center space-y-6' }, [
+          h('p', { key: 'message', className: 'text-lg' }, recovery === 'update'
+            ? 'BALAM necesita actualizarse antes de continuar.'
+            : 'Estamos actualizando la información de este equipo.'),
+          (recovery === 'waiting' || recovery === 'update') && h('button', {
+            key: 'update', className: 'min-h-12 rounded-lg px-6 py-3 bg-primary text-on-primary',
+            onClick: async ()=> {
+              if (recovery !== 'update') return window.STORE.init({ pull: true });
+              if (window.PWA?.reloadSafety().safe === false) return;
+              const activated = await window.PWA?.activateUpdate();
+              if (!activated?.safe) location.reload();
+            },
+          }, recovery === 'update' ? 'Actualizar BALAM' : 'Actualizar ahora'),
+        ]));
+    }
 
     // Gate de seguridad SOLO en dominio real: sin sesión no se muestra la app (RLS protege).
     if (REQUIRE_AUTH) {

@@ -215,10 +215,19 @@ distribuidas. Las pruebas con mocks siguen siendo regresión, nunca sustituto.
 
 ## Riesgo residual y pendientes
 
+Seguimiento operativo posterior a esta entrega: el dueño autorizó descartar
+las 28 intenciones de prueba. C real ya se recuperó; A/B y certificación de
+flota siguen pendientes. Estado y evidencia actuales en
+[recuperacion-flota-real-28-pruebas.md](recuperacion-flota-real-28-pruebas.md).
+Los párrafos siguientes conservan el residual al entregar el motor, antes de
+esa autorización y de la intervención física.
+
 Sin divergencias conocidas en el artefacto certificado y publicado.
-Las instalaciones físicas antiguas deberán reconectarse con su almacenamiento
-original para procesar/revisar sus intenciones; 17/10/1 declaradas no equivalen
-a 28 payloads recuperados. No se descartaron ni se inventaron esas operaciones.
+Actualización 08/09/2026: C real completó el descarte autorizado de su única
+intención y quedó actualizado. H149 registra las directivas remotas para los
+otros 17+10 pendientes y bloquea su replay. Se reconstruirán automáticamente
+en su próximo uso; no se presenta esa preparación como ejecución física.
+Véanse `recuperacion-flota-real-28-pruebas.md` y `recuperacion-dirigida-h149.md`.
 Un conflicto comercial real permanece visible y requiere revisión; no se
 resuelve sobrescribiendo otra venta o existencia. Cuota insuficiente conserva
 el bloqueo hasta poder persistir.

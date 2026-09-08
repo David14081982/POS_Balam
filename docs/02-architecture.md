@@ -739,6 +739,32 @@ identidad administrativa auxiliar.
 
 ## Sincronización
 
+La recuperación dirigida de pruebas usa `pos.sync_device_recoveries` como
+control por ID exacto: `pending → captured → completed`. La autorización fija
+conteo, candidatos, propietario, época máxima y protocolo; no cambia negocio,
+protocolo global ni época remota. La captura guarda sólo metadatos y hash de
+los originales. STORE la consulta antes del arranque y de drenar intención,
+retira únicamente los IDs capturados, comprueba durabilidad y reutiliza el
+snapshot completo/reconciliación antes del recibo remoto de finalización.
+Las copias autorizadas que una build antigua ya archivó pueden aportar sus
+originales; una discrepancia conserva la directiva y las operaciones ajenas.
+
+Las RPC financieras verifican la barrera antes del ACK; las escrituras directas
+y las bajas con permisos del invocador la verifican mediante trigger. Un ID
+descartado nunca se acepta otra vez. Los clientes actuales identifican cada
+petición; los antiguos pueden identificarse por actividad inequívoca. Una
+petición sin origen de una cuenta con recuperación no ejecuta negocio hasta
+identificarse. Esto cubre también intenciones aún no reportadas. La función
+interna mantiene sus permisos privados; RLS y permisos comerciales no cambian.
+
+Una instalación recuperada envía el token de su recibo para nuevas escrituras;
+éste no se expone en Centro de equipos ni en evidencia pública. Una directiva
+completada no vuelve a borrar una cola. El primer uso de esta puerta exige
+consulta remota; una instalación ya comprobada conserva uso offline y vuelve
+a consultar al reconectar. La captura permanece bloqueada mientras haya una
+recuperación pendiente. Centro de equipos muestra «Pendiente de actualización»
+hasta recibir la finalización real, incluso si un heartbeat antiguo dice otra cosa.
+
 `STORE.synchronizeNow()` es la acción de actualización de la cabecera y del
 Centro de equipos: carga manifiesto, recupera si corresponde, envía la cola
 válida, espera confirmación, descarga y verifica todas las proyecciones. Una

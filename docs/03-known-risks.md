@@ -6797,11 +6797,46 @@ previos conservados. Certificado permanente en `docs/fixes/evidence/h148-live-ma
 durabilidad del HTML publicado **32/32**. HTML SHA-256
 `2ef20021e02fb3d704eb8a314818fa18e40ae17148d74d460df68b33881a921d`.
 CI H148/H132 y despliegue aprobados para `31d5aca`.
-**Residual:** las tres instalaciones H142 requieren reconexión con su
-almacenamiento original; sus 17/10/1 pendientes declarados no son payloads
-recuperados por telemetría. Conflictos reales se conservan para revisión.
+**Residual actualizado, 08/09/2026:** el dueño autorizó descartar las 28
+intenciones de prueba. C real (`dev-mtny3o3e-rwa6o1na`) fue diagnosticado,
+su única intención retirada con guarda exacta de ID/hash y reconstruido con
+H148: cola 0, época 7, «Todo actualizado» y recarga comprobada. Doce colecciones,
+líneas, configuración y permisos coinciden; 17 tablas comerciales conservan
+sus hashes. **Descartadas físicamente 1/28; A/B preparados para recuperación
+automática H149.** La instrucción posterior autoriza certificación aislada y
+publicación sin esperar a A/B. Seguimiento:
+`docs/fixes/recuperacion-flota-real-28-pruebas.md`;
+documentación operativa **Pendiente de commit**. No confundir el certificado
+del motor con la incorporación de estas tres instalaciones.
 Árbol original intacto; trabajo aislado en `fix/h148-sync-authority`.
 **Documento:** `docs/fixes/convergencia-autoritativa-h148.md`.
+
+## H-149 — Recuperación automática dirigida y cerco de replay por equipo
+
+**Estado:** RESUELTO en implementación; publicación pendiente de verificar.
+**Fecha:** 08/09/2026.
+**Commit:** Pendiente de commit.
+**Problema demostrado:** H142/H148 sólo consume órdenes de reintento y no
+posee una directiva durable de descarte/reconstrucción por equipo. Las RPC
+financieras antiguas no siempre incluyen device_id; el protocolo/época por sí
+solo no distingue las 27 intenciones de prueba autorizadas. Los dos IDs son
+inequívocos; comparten cuenta con otras instalaciones, por lo que bloquear la
+cuenta completa sería excesivo. La actividad de B incluye dos pendientes
+históricos adicionales: no equivale a la cola activa de diez.
+**Alcance:** directiva auditable e idempotente por ID exacto; protección SQL
+previa al cliente, diagnóstico sin secretos antes del descarte local, gate de
+arranque, rebootstrap y confirmación posterior. Pruebas de 10/17, replay viejo,
+reinicio intermedio, segunda ejecución inocua y operación nueva aceptada.
+**Protegidos:** negocio confirmado, otras instalaciones, credenciales,
+configuración legítima, identidad V2/barcode y datos históricos.
+**Cierre:** publicación autorizada tras regresiones; la ejecución física de
+A/B queda pendiente y se certifica por su próximo arranque, sin acceso remoto.
+**Pruebas:** recuperación dirigida 15/15, cola 186/186; certificación real
+HTTPS/Chrome 23/23 y 16/16 dominios; smoke 15/15, responsive 492/492.
+**Servidor:** migraciones 18400–19100 aplicadas; matriz final de seguridad
+20/20, directivas exactas 10/17 registradas y replay rechazado sin cambios
+comerciales. El certificado conserva el hash del artefacto final.
+**Documento:** `docs/fixes/recuperacion-dirigida-h149.md`.
 
 ## Regla de actualización
 

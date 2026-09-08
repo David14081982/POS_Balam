@@ -17,7 +17,7 @@
   const QDB = 'balam_sync', QSTORE = 'durable_queue';
   const SYNC_PROTOCOL_VERSION = 3;
   const SYNC_SCHEMA_VERSION = 20260830017500;
-  const SYNC_CLIENT_BUILD = '2026-09-07-h148';
+  const SYNC_CLIENT_BUILD = '2026-09-08-h149';
   const SELECTIVE_CLEANUP_PROTOCOL = 5;
   const SYNC_CURSOR_KEY = 'balam_sync_domain_cursors_v1';
   const SYNC_DOMAINS = {
@@ -41,6 +41,137 @@
   const POINT_ZERO_TICKET = 'balam_point_zero_ticket_v1';
   const SELECTIVE_CLEANUP_TICKET = 'balam_selective_cleanup_ticket_v2';
   const SELECTIVE_CLEANUP_SEEN = 'balam_selective_cleanup_seen_v2';
+
+  const RECOVERY_KEY = 'balam_device_recovery_v1';
+  let directedRecovery = null, recoveryPromise = null, recoveryPhase = 'checking';
+  let recoveryError = null;
+  function recoveryLocal() {
+    try { const value = JSON.parse(localStorage.getItem(RECOVERY_KEY) || 'null');
+      return value?.device_id === window.CORE.getDeviceId() ? value : null;
+    } catch (e) { return null; }
+  }
+  function saveRecoveryLocal(value) {
+    const encoded = JSON.stringify(value);
+    localStorage.setItem(RECOVERY_KEY, encoded);
+    if (localStorage.getItem(RECOVERY_KEY) !== encoded) throw new Error('RECOVERY_RECEIPT_NOT_DURABLE');
+  }
+  function setRecoveryPhase(phase) {
+    recoveryPhase = phase;
+    try { window.dispatchEvent(new CustomEvent('syncstatuschange', { detail: syncStatus() })); } catch (e) { /* startup */ }
+  }
+  function assertBusinessReady() {
+    if (recoveryPhase === 'ready') return true;
+    const error = new Error('Estamos actualizando la información de este equipo.');
+    error.code = 'DEVICE_RECOVERY_REQUIRED'; throw error;
+  }
+  // Called before queue migration, replay, bootstrap or business capture. A failed
+  // lookup never authorizes a first boot; previously checked devices retain offline use.
+  async function recoverDirectedDevice() {
+    if (!hasLocalWriter(false)) return false;
+    if (recoveryPromise) return recoveryPromise;
+    recoveryPromise = (async () => {
+      const device = window.CORE.getDeviceId(), cached = recoveryLocal();
+      try {
+        const c = await ensureClient();
+        if (!c || !(await hasSession())) { setRecoveryPhase('ready'); return true; }
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+          if (cached?.state === 'ready' || cached?.state === 'completed') {
+            setRecoveryPhase('ready'); return true;
+          }
+          throw new Error('RECOVERY_CHECK_OFFLINE');
+        }
+        const response = await c.rpc('get_sync_device_recovery', { p_device_id: device });
+        if (response.error) throw response.error;
+        let plan = response.data;
+        if (!plan) {
+          if (cached?.id && cached.state !== 'ready') throw new Error('RECOVERY_DIRECTIVE_MISSING');
+          saveRecoveryLocal({ device_id: device, state: 'ready' });
+          recoveryError = null; setRecoveryPhase('ready'); return true;
+        }
+        if (plan.device_id !== device || !plan.id || Number(plan.protocol_version) !== SYNC_PROTOCOL_VERSION
+            || SYNC_CLIENT_BUILD < plan.minimum_build) {
+          setRecoveryPhase('update'); return false;
+        }
+        if (plan.state === 'completed') {
+          // No queue deletion on a consumed instruction. Permanent SQL IDs fence
+          // any resurrected legacy payload; fresh operations remain untouched.
+          saveRecoveryLocal(plan); recoveryError = null; setRecoveryPhase('ready'); return true;
+        }
+        directedRecovery = plan; setRecoveryPhase('recovering');
+        await hydrateDurableQueue(); await backupChain;
+        let queued = loadQ();
+        if (plan.state === 'pending') {
+          const candidates = new Set(plan.candidate_ids || []);
+          // An older bootstrap may already have archived these same IDs. Reuse
+          // their original evidence; never manufacture replacement operations.
+          if (queued.length < Number(plan.expected_count)) {
+            const original = new Map(queued.map(op=>[op.id,op]));
+            for (const archive of await quarantineArchives()) for (const op of archive.value.operations || []) {
+              if (candidates.has(op.id) && !original.has(op.id)) original.set(op.id,op);
+            }
+            queued = Array.from(original.values());
+          }
+          if (queued.length !== Number(plan.expected_count) || queued.some(op => !candidates.has(op.id)
+              || !(Number(op.dataEpoch) >= 1 && Number(op.dataEpoch) <= Number(plan.source_epoch))
+              || !(Number(op.protocolVersion) >= 1 && Number(op.protocolVersion) <= Number(plan.protocol_version)))) throw new Error('RECOVERY_SCOPE_MISMATCH');
+          const digest = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(queued)));
+          const evidence = { build: SYNC_CLIENT_BUILD, protocol: SYNC_PROTOCOL_VERSION, epoch: Number(plan.source_epoch),
+            queue_hash: Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join(''),
+            operations: queued.map(op=>({ id: op.id, type: op.type, epoch: Number(op.dataEpoch), protocol: Number(op.protocolVersion) })) };
+          const captured = await c.rpc('capture_sync_device_recovery', {
+            p_device_id: device, p_recovery_id: plan.id, p_evidence: evidence,
+          });
+          if (captured.error) throw captured.error;
+          plan = captured.data;
+        }
+        if (plan?.state !== 'captured' || !Array.isArray(plan.discarded_ids)
+            || plan.discarded_ids.length !== Number(plan.expected_count)) throw new Error('RECOVERY_CAPTURE_INVALID');
+        // Server capture survives losing this local receipt or an interrupted write.
+        if (!hasLocalWriter(false)) throw new Error('LOCAL_WRITER_REQUIRED');
+        saveRecoveryLocal(plan);
+        const authorized = new Set(plan.discarded_ids);
+        if (loadQ().some(op=>!authorized.has(op.id))) throw new Error('RECOVERY_UNAUTHORIZED_PENDING');
+        saveQ(loadQ().filter(op=>!authorized.has(op.id)));
+        await backupChain;
+        if (queueDurability === 'memory' || queueDurability === 'indexedDB-pending') throw new Error('RECOVERY_QUEUE_NOT_DURABLE');
+        const backup = await readQueueBackup();
+        if (loadQ().length || (backup && backup.length)) throw new Error('RECOVERY_QUEUE_NOT_EMPTY');
+        for (const archive of await quarantineArchives()) {
+          const previous = archive.value.operations || [];
+          const kept = previous.filter(op=>!authorized.has(op.id));
+          if (kept.length !== previous.length) {
+            archive.value.operations = kept;
+            await writeQuarantineArchive(archive);
+          }
+        }
+        // Existing H148 full snapshot applies only confirmed remote projections.
+        await rebootstrapFromCloud();
+        await reconcileDomains({ force: true });
+        const status = syncStatus();
+        if (status.pending || status.checkpointError || status.errors.length || status.invalidDomains.length
+            || status.reconciling || syncFullDomains.size) throw new Error('RECOVERY_NOT_CONVERGED');
+        const completed = await c.rpc('complete_sync_device_recovery', {
+          p_device_id: device, p_recovery_id: plan.id, p_cursors: status.cursors,
+          p_epoch: status.dataEpoch, p_protocol: SYNC_PROTOCOL_VERSION, p_pending: 0,
+        });
+        if (completed.error || completed.data?.state !== 'completed') throw completed.error || new Error('RECOVERY_ACK_MISSING');
+        saveRecoveryLocal(completed.data);
+        recoveryError = null; setRecoveryPhase('ready');
+        if (window.UI?.toast) window.UI.toast('Todo actualizado. Puedes continuar trabajando.', 'var(--accent)');
+        return true;
+      } catch (error) {
+        recoveryError = error?.code || error?.message || 'RECOVERY_FAILED';
+        const networkFailure = /failed to fetch|fetch failed|network|timeout|aborterror|load failed/i.test(String(error?.message || error));
+        if (!directedRecovery && networkFailure && (cached?.state === 'ready' || cached?.state === 'completed')) {
+          // Preserve local-first capture on a previously checked installation.
+          // Returning false still fences every upload until the remote check works.
+          syncLastVersionCheck = 0; setRecoveryPhase('ready'); return false;
+        }
+        setRecoveryPhase('waiting'); return false;
+      } finally { directedRecovery = null; }
+    })().finally(()=>{ recoveryPromise = null; });
+    return recoveryPromise;
+  }
 
   let sb = null, enabled = false, lastResetMark = null;
   let sessionIdentity = null, sessionManaged = false, onlineSubscribed = false,
@@ -86,6 +217,14 @@
     if (!window.supabase || typeof window.supabase.createClient !== 'function') return null;
     sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
       db: { schema: SCHEMA },
+      global: { fetch: (input, init = {}) => {
+        const headers = new Headers(init.headers || (typeof Request !== 'undefined' && input instanceof Request ? input.headers : undefined));
+        headers.set('x-balam-device-id', window.CORE.getDeviceId());
+        headers.set('x-balam-client-build', SYNC_CLIENT_BUILD);
+        const receipt = recoveryLocal();
+        if (receipt?.state === 'completed' && receipt.write_token) headers.set('x-balam-recovery-token', receipt.write_token);
+        return fetch(input, Object.assign({}, init, { headers }));
+      } },
       auth: { persistSession: true, autoRefreshToken: true, storageKey: 'balam_auth' },
     });
     return sb;
@@ -1504,6 +1643,7 @@
   // en vuelo, la operación moría sin rastro y el pull del siguiente arranque pisaba lo
   // capturado. Persistida antes de volar, sobrevive al refresh y se reintenta sola.
   async function run(op, delay = 0) {
+    assertBusinessReady();
     if (!enabled || !hasLocalWriter(false)) return;
     op.id = newOpId();
     op.ownerId = activeOwnerId();
@@ -1533,7 +1673,12 @@
     waiters.forEach(resolve => resolve());
   }
   async function flushQueue(opts = {}) {
+    // An empty background drain must not retry an operation captured later
+    // while the asynchronous control-plane lookup is in flight.
+    if (!loadQ().length) return;
+    if (directedRecovery) return;
     if (!hasLocalWriter(false)) return;
+    if (!(await recoverDirectedDevice())) return;
     if (syncRecovering && !opts.recovery) return;
     // Una terminal fuera de protocolo o epoca no escribe ningun dominio. Asi,
     // tampoco una RPC transaccional historica puede colarse durante rebootstrap.
@@ -2213,6 +2358,7 @@
   }
   let pushTimer = null, configRemoteVersion = 0;
   function pushConfig(state) {
+    assertBusinessReady();
     if (!enabled) return;
       const lookup = [];
       Object.keys(state.catalogs).forEach(kind => state.catalogs[kind].forEach((it, i) =>
@@ -2453,6 +2599,7 @@
     // solo compatibilidad de escritura. La epoca y el protocolo vigentes siguen
     // siendo la autoridad antes de que flushQueue() pueda ejecutarse.
     const protocolClient = await ensureClient();
+    if (!(await recoverDirectedDevice())) return { ok: false, recoveryRequired: true };
     if (protocolClient) await loadSyncProtocol(protocolClient);
     return { event, local, prune };
   }
@@ -3172,6 +3319,7 @@
   function syncStatus() {
     const q = queueStatus();
     return {
+      recoveryPhase, recoveryError,
       compatibility: syncCompatibility,
       protocolVersion: SYNC_PROTOCOL_VERSION,
       schemaVersion: SYNC_SCHEMA_VERSION,
@@ -3188,7 +3336,7 @@
       cursors: Object.assign({}, syncCursors),
       reconciling: !!syncReconcilePromise,
       pending: q.devicePending, blocked: q.deviceBlocked,
-      synchronized: (typeof navigator === 'undefined' || navigator.onLine !== false)
+      synchronized: recoveryPhase === 'ready' && (typeof navigator === 'undefined' || navigator.onLine !== false)
         && !!syncManifest && syncCompatibility === 'ok'
         && syncLastVersionCheck > 0 && Date.now() - syncLastVersionCheck <= 120000
         && syncRemoteVersions.length > 0
@@ -3329,6 +3477,7 @@
     }
   }
   async function restoreQuarantinedOperation(operationId, remoteEpoch) {
+    if ((recoveryLocal()?.candidate_ids || []).includes(String(operationId))) return null;
     for (const archive of await quarantineArchives()) {
       if (Number(archive.value.epoch) !== Number(remoteEpoch)) continue;
       const op = (archive.value.operations || []).find(x => String(x.id) === String(operationId));
@@ -3727,7 +3876,11 @@
     const history = await c.from('sync_activity').select('*').order('updated_at', { ascending: false }).limit(200);
     const quarantine = await c.from('sync_quarantine_cases').select('*').order('updated_at', { ascending: false }).limit(500);
     const versions = await readRemoteVersions(c);
+    const recoveryRows = await c.from('sync_device_recoveries').select('device_id,state,completed_at');
+    const recoveryById = new Map((recoveryRows.data || []).map(row=>[row.device_id,row]));
     const now = Date.now(), devices = (r.data || []).map(device => {
+      const recovery = recoveryById.get(device.device_id);
+      const recoveryPending = !!recovery && recovery.state !== 'completed';
       const ageMs = Math.max(0, now - new Date(device.last_seen_at || 0).getTime());
       const staleEpoch = Number(device.data_epoch) !== Number(syncManifest.data_epoch)
         || device.status === 'must_rebootstrap' || device.status === 'quarantined';
@@ -3738,11 +3891,11 @@
       const behind = !versions.ok || versions.rows.some(row => row.domain !== 'devices'
         && domainMode(row.domain) === 'active'
         && (Number((device.cursors || {})[row.domain]) || 0) < Number(row.version));
-      const synchronized = device.status === 'online' && connection === 'online'
+      const synchronized = !recoveryPending && device.status === 'online' && connection === 'online'
         && !staleEpoch && !incompatible && !behind && !!device.last_synced_at
         && Math.abs(now - new Date(device.last_synced_at).getTime()) <= 120000
         && Number(device.queue_pending) === 0 && Number(device.queue_blocked) === 0;
-      return Object.assign({}, device, { ageMs, connection, staleEpoch, incompatible, behind, synchronized });
+      return Object.assign({}, device, { ageMs, connection, staleEpoch, incompatible, behind, synchronized, recoveryPending, recovery });
     });
     const devicesById = new Map(devices.map(device => [device.device_id, device]));
     const activity = (history.error ? [] : (history.data || [])).map(item => {
@@ -3867,6 +4020,7 @@
     if (!hasLocalWriter(false)) return { ok: false, readOnly: true };
     await hydrateDurableQueue();
     const protocolClient = await ensureClient();
+    if (!(await recoverDirectedDevice())) return { ok: false, recoveryRequired: true };
     if (protocolClient) await loadSyncProtocol(protocolClient);
     if (syncManifest && !syncLastFullCheck) Object.keys(SYNC_DOMAINS)
       .filter(domain => domain !== 'devices' && domainMode(domain) === 'active')
@@ -3876,6 +4030,7 @@
       await heartbeatDevice(protocolClient).catch(() => {});
       return { ok: false, compatibility: syncCompatibility };
     }
+    resumeAuthenticatedOperations();
     const layawayOpsAtBoot = loadQ().filter(op =>
       op.type === 'sale' && op.mode === 'layaway_liquidation'
       && isAutomaticallyEligible(op));
@@ -3975,7 +4130,7 @@
       return Promise.resolve({ ok: true, unchanged: true });
     }
     sessionIdentity = next;
-    resumeAuthenticatedOperations();
+    setRecoveryPhase('checking');
     const seq = ++sessionSeq;
     enabled = true;
     return init({ pull: true }).then(() => ({
@@ -4083,7 +4238,13 @@
     }
   }
 
-  window.STORE = { init, synchronizeNow, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushClient, pushSale, settleLayaway, pushReturn, pushExchange, commitReferenceReclassification, ensureFolioBlock, deleteRow, deleteProductScope, settleCommission, closeCommissionPeriod, applyCommissionAdjustment, pushLoanOperation, migrateLocalLoans, pullDomain, fetchSaleByFolio, physicalCardAvailable, claimPhysicalCard, flushQueue, retryOperation, discardOperation, queueStatus, syncStatus, syncFleetStatus, updateSyncDevice, setSyncDeviceRetired, requestSyncRetry, markSyncActivityReviewed, decideSyncQuarantine, exportQuarantineReport, reconcileDomains, invalidateDomain, establishPointZero, pointZeroPreview, createPointZeroBackup, executePointZero, pointZeroReceipt, downloadPointZeroDocument, previewTestDataCleanup, createTestDataCleanupBackup, executeTestDataCleanup, testDataCleanupReceipt, downloadTestDataCleanupDocument, rebootstrapFromCloud, exportSyncRecovery, hasPendingLayaway, clearQueue, markResetApplied, purgeTestData, applyRemotePurge, applyRemoteSelectiveCleanup, pruneQueueForPurge, pruneQueueForSelectiveCleanup, readPurgeState, readSelectiveCleanupEvent, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
+  window.addEventListener('online', () => {
+    if (enabled && recoveryPhase !== 'ready') init({ pull: true }).catch(()=>{});
+  });
+  setInterval(() => {
+    if (enabled && recoveryPhase === 'waiting' && hasLocalWriter(false)) init({ pull: true }).catch(()=>{});
+  }, 15000);
+  window.STORE = { assertBusinessReady, recoverDirectedDevice, init, synchronizeNow, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushClient, pushSale, settleLayaway, pushReturn, pushExchange, commitReferenceReclassification, ensureFolioBlock, deleteRow, deleteProductScope, settleCommission, closeCommissionPeriod, applyCommissionAdjustment, pushLoanOperation, migrateLocalLoans, pullDomain, fetchSaleByFolio, physicalCardAvailable, claimPhysicalCard, flushQueue, retryOperation, discardOperation, queueStatus, syncStatus, syncFleetStatus, updateSyncDevice, setSyncDeviceRetired, requestSyncRetry, markSyncActivityReviewed, decideSyncQuarantine, exportQuarantineReport, reconcileDomains, invalidateDomain, establishPointZero, pointZeroPreview, createPointZeroBackup, executePointZero, pointZeroReceipt, downloadPointZeroDocument, previewTestDataCleanup, createTestDataCleanupBackup, executeTestDataCleanup, testDataCleanupReceipt, downloadTestDataCleanupDocument, rebootstrapFromCloud, exportSyncRecovery, hasPendingLayaway, clearQueue, markResetApplied, purgeTestData, applyRemotePurge, applyRemoteSelectiveCleanup, pruneQueueForPurge, pruneQueueForSelectiveCleanup, readPurgeState, readSelectiveCleanupEvent, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
   window.STORE.pushProductFamilyBatch = pushProductFamilyBatch;
   window.CORE.registerSyncGateway(window.STORE);
 })();

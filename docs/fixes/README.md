@@ -13,6 +13,8 @@ sesión de chat.
 
 ## Correcciones registradas
 
+- `recuperacion-flota-real-28-pruebas.md` — H-148, seguimiento operativo: descarte autorizado y reconstrucción de C real; A/B y certificación de flota pendientes.
+
 - `convergencia-autoritativa-h148.md` — H-148: autoridad confirmada, cola durable, checkpoint y certificación real A/B/C.
 
 - `regreso-rawbt-escritor-local-h147.md` — H-147: recupera el escritor al volver de impresión y evita espera huérfana.
@@ -142,3 +144,5 @@ Documentación financiera relacionada, creada antes de este índice:
 
 Cuando H-03 vuelva a modificarse, su nuevo documento de corrección debe crearse
 en este directorio; los documentos anteriores se conservan como evidencia.
+
+- [H149 · Recuperación dirigida de pruebas](recuperacion-dirigida-h149.md): directivas por equipo, cerco SQL y arranque automático.

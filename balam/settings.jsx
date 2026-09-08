@@ -1339,6 +1339,7 @@
     const deviceLabel = device => device.display_name || `Equipo ${String(device.device_id || '').slice(-6).toUpperCase()}`;
     const deviceState = device => {
       if (device.status === 'revoked') return { label: 'Retirado', cls: 'text-on-surface-variant bg-surface-container' };
+      if (device.recoveryPending) return { label: 'Pendiente de actualización', cls: 'text-warning bg-warning-soft' };
       if (device.staleEpoch) return { label: 'Requiere resincronización', cls: 'text-danger bg-danger-soft' };
       if (device.incompatible) return { label: 'Requiere actualización', cls: 'text-danger bg-danger-soft' };
       if (Number(device.queue_blocked) > 0) return { label: 'Requiere atención', cls: 'text-danger bg-danger-soft' };
