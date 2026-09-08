@@ -11,6 +11,10 @@ on:
       - 'supabase/migrations/**'
       - 'package*.json'
       - 'test-h148-*.mjs'
+      - 'test-store-queue.mjs'
+      - 'test-concurrency.mjs'
+      - 'test-h142-*.mjs'
+      - 'test-migrations.mjs'
       - 'docs/fixes/evidence/h148-live-matrix.json'
       - '.github/workflows/h148-sync-authority.yml'
   push:
@@ -24,6 +28,10 @@ on:
       - 'supabase/migrations/**'
       - 'package*.json'
       - 'test-h148-*.mjs'
+      - 'test-store-queue.mjs'
+      - 'test-concurrency.mjs'
+      - 'test-h142-*.mjs'
+      - 'test-migrations.mjs'
       - 'docs/fixes/evidence/h148-live-matrix.json'
       - '.github/workflows/h148-sync-authority.yml'
   workflow_dispatch:

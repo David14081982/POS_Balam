@@ -1579,14 +1579,19 @@ ok('34c. H-60: la escritura válida termina sin pendientes', S.pending === 0);
   await S.init({});
   env.window.DATA.clients = [{ id: 'c1', nombre: 'Ana', tel: '1' }];
   const release = env.hold();
-  S.pushClient(env.window.DATA.clients[0]);
-  await sleep(10);
+  const first = S.pushClient(env.window.DATA.clients[0]);
+  const started = () => env.calls.some(c => c.table === 'clients' && c.metodo === 'upsert');
+  const deadline = Date.now() + 5000;
+  while (!started() && Date.now() < deadline) await sleep(1);
+  if (!started()) { release(); throw new Error('40f: first upload did not reach the transport'); }
   env.window.DATA.clients[0].nombre = 'Ana Ruiz'; // nueva intención durante un envío
-  S.pushClient(env.window.DATA.clients[0]);
-  await sleep(10);
-  ok('40f. H-148: un envío iniciado conserva su payload y la siguiente intención', S.pending === 2);
+  const second = S.pushClient(env.window.DATA.clients[0]);
+  while (S.pending !== 2 && Date.now() < deadline) await sleep(1);
+  const queued = JSON.parse(env.localStorage.getItem('balam_sync_queue'));
+  ok('40f. H-148: un envío iniciado conserva su payload y la siguiente intención',
+    S.pending === 2 && queued[0].submittedRows[0].nombre === 'Ana' && queued[1].rows[0].nombre === 'Ana Ruiz');
   release();
-  await sleep(60);
+  await Promise.all([first, second]);await S.flushQueue();
   const filas = env.cloud.rowsByTable.clients || [];
   ok('40g. H-70: vuela el último estado de esa ficha',
     filas.length === 1 && filas[0].nombre === 'Ana Ruiz');
