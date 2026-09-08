@@ -80,7 +80,7 @@ check('el producto queda bloqueado mientras la liquidacion esta pendiente',
 // ninguna limpieza —manual, propagada por epoca o por marca— avanza con un lock.
 check('la limpieza remota no ignora un lock de liquidacion',
   /function localPurgeApplied/.test(store) && /local === false/.test(store)
-  && /if \(!localPurgeApplied\(\)\) return false;/.test(store)
+  && /if \(!localPurgeApplied\(\{ authority: 'remote' \}\)\) return false;/.test(store)
   && /if \(!local\) return null;/.test(store));
 check('el reintento devuelve el pago autoritativo original',
   /layawayResults/.test(store) && /paymentId/.test(store)

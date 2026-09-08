@@ -1169,8 +1169,11 @@
   // sincronización sucede únicamente cuando el llamador aporta IDs/filas.
   function saveProducts(targets) {
     const ids = productSyncIds(targets);
+    // Un bloqueo de negocio sí impide enviar; una caché sin espacio no debe
+    // perder una intención que la cola puede conservar en IndexedDB.
+    if (!remoteApplying && !protectLayawayLockedProducts()) return false;
     const persisted = persistProducts();
-    if (persisted && ids.length) syncProducts(ids);
+    if (ids.length) syncProducts(ids);
     return persisted;
   }
 
@@ -1940,8 +1943,8 @@
     if (remoteApplying) return;
     try { window.CORE.invokeSync('pushRows', kind, arr); } catch (e) { /* offline */ }
   }
-  function saveSellers(sync = true) { const ok = save(LS_SELLERS, sellers); if (sync) syncUp('sellers', sellers); return ok; }
-  function saveClients(sync = true) { const ok = save(LS_CLIENTS, clients); if (sync) syncUp('clients', clients); return ok; }
+  function saveSellers(sync = true, ids = []) { const ok = save(LS_SELLERS, sellers); if (sync && ids.length) syncUp('sellers', sellers.filter(row => ids.includes(row.id))); return ok; }
+  function saveClients(sync = true, ids = []) { const ok = save(LS_CLIENTS, clients); if (sync && ids.length) syncUp('clients', clients.filter(row => ids.includes(row.id))); return ok; }
   // Alta rápida de cliente (desde el POS): nombre obligatorio, teléfono opcional. Si el teléfono ya
   // existe en otro cliente, REUSA ese (evita duplicados). Devuelve el cliente (nuevo o existente) o null.
   function addClient({ nombre, tel }) {
@@ -1950,7 +1953,7 @@
     const phone = String(tel || '').trim();
     if (phone) { const ex = clients.find(c => !c.generic && String(c.tel || '').trim() === phone); if (ex) return ex; }
     const c = { id: 'cli-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6), nombre: name, tel: phone || '—', compras: 0, total: 0, ultima: '', talla: '', notas: '', generic: false };
-    clients.unshift(c); saveClients();
+    clients.unshift(c); saveClients(true, [c.id]);
     return c;
   }
   function saveSales() { return save(LS_SALES, sales); }       // ventas suben vía recordSale → STORE.pushSale
@@ -1970,17 +1973,17 @@
     return changed;
   }
   function saveMovements() { return save(LS_MOVES, movements); }
-  function savePromos() { save(LS_PROMOS, promos); syncUp('promotions', promos); }
-  function saveLiquidations() { save(LS_LIQ, liquidations); syncUp('liquidations', liquidations); } // historial — sincroniza a pos.liquidations
+  function savePromos(ids = []) { const ok = save(LS_PROMOS, promos); if (ids.length) syncUp('promotions', promos.filter(row => ids.includes(row.id))); return ok; }
+  function saveLiquidations() { const ok = save(LS_LIQ, liquidations); syncUp('liquidations', liquidations); return ok; } // historial — sincroniza a pos.liquidations
   function saveCommissionAdjustments() { return save(LS_ADJUSTMENTS, commissionAdjustments); }
-  function saveReturns() { save(LS_RETURNS, returns); }  // devoluciones suben vía recordReturn → STORE.pushReturn
+  function saveReturns() { return save(LS_RETURNS, returns); }  // devoluciones suben vía recordReturn → STORE.pushReturn
   function savePayments(sync = true) { const ok = save(LS_PAYMENTS, payments); if (sync) syncUp('payments', payments); return ok; }
-  function saveExchanges(sync = true) { save(LS_EXCHANGES, exchanges); if (sync) syncUp('exchanges', exchanges); }
+  function saveExchanges(sync = true) { const ok = save(LS_EXCHANGES, exchanges); if (sync) syncUp('exchanges', exchanges); return ok; }
   // Sin `syncUp`: un préstamo NO viaja como upsert de tabla. Cada operación
   // —entrega, devolución, faltante, edición, baja, reapertura— viaja por su
   // propia transacción idempotente `pos.commit_loan_operation()`, igual que la
   // venta viaja por `commit_sale`. Ver `pushLoanOperation` en `balam/store.jsx`.
-  function saveLoans() { save(LS_LOANS, loans); }
+  function saveLoans() { return save(LS_LOANS, loans); }
   // Fusiona filas de la nube en el arreglo local por clave (upsert: actualiza las que
   // coinciden, agrega las nuevas, CONSERVA las no incluidas). Para pulls PARCIALES —
   // el pull de ventas es paginado (ventana reciente + apartados) — reemplazar el
@@ -2039,7 +2042,7 @@
       try {
         if (periodoInicio) localStorage.setItem(LS_PERIODO, periodoInicio);
         else localStorage.removeItem(LS_PERIODO);
-      } catch (e) { /* la proyección en memoria sigue siendo válida */ }
+      } catch (e) { persisted = false; }
     }
     return persisted;
   }
@@ -2358,7 +2361,8 @@
         const i = m[0].findIndex(x => x.id === remote.id);
         const base = Number(expected && expected[remote.id]) || 0;
         const accepted = Number(remote._syncVersion) === base + 1
-          && (operation !== 'upsert' || remote._syncAccepted === true);
+          && (operation !== 'upsert' || remote._syncAccepted === true)
+          && (operation !== 'delete' || !!remote._deletedAt);
         delete remote._syncAccepted;
         if (accepted) {
           if (i >= 0) {
@@ -4598,7 +4602,7 @@
       role: u.role || 'vendedor', email: (u.email || '').trim() || null,
       passwordHash: u.passwordHash || null, avatar: u.avatar || null, active: true,
     };
-    sellers.push(s); saveSellers();
+    sellers.push(s); saveSellers(true, [s.id]);
     return s;
   }
   // H-69: `updateUser` escribe PERFIL. Las tres columnas financieras
@@ -4625,7 +4629,7 @@
     }
     Object.assign(s, clean);
     if (clean.nombre) s.iniciales = iniDe(clean.nombre);
-    saveSellers();
+    saveSellers(true, [s.id]);
     return s;
   }
   function removeUser(id) {
@@ -4683,13 +4687,13 @@
   // ---- Promociones / Descuentos ----
   function addPromo(p) {
     const np = Object.assign({ id: 'promo-' + Date.now(), creado: Date.now(), pausado: false, scope: {} }, p);
-    promos.unshift(np); savePromos();
+    promos.unshift(np); savePromos([np.id]);
     return np;
   }
   function updatePromo(id, patch) {
     const p = promos.find(x => x.id === id);
     if (!p) return null;
-    Object.assign(p, patch); savePromos();
+    Object.assign(p, patch); savePromos([p.id]);
     return p;
   }
   function removePromo(id) {
@@ -4704,7 +4708,7 @@
     if (!p) return null;
     const c = JSON.parse(JSON.stringify(p));
     c.id = 'promo-' + Date.now(); c.nombre = p.nombre + ' (copia)'; c.creado = Date.now(); c.pausado = true;
-    promos.unshift(c); savePromos();
+    promos.unshift(c); savePromos([c.id]);
     return c;
   }
 
@@ -4863,7 +4867,8 @@
       };
     }
 
-    saveProducts([...changedProductIds]); if (typeof savePromos === 'function') savePromos();
+    saveProducts([...changedProductIds]);
+    savePromos(promos.filter(pr => JSON.stringify(pr) !== JSON.stringify(snapPromos.find(row => row.id === pr.id))).map(pr => pr.id));
     return {
       ok: true, aplicado: rc.aplicado, efectos,
       piezasTotales: despues.total, renglones: despues.renglones,

@@ -7,6 +7,35 @@
   const { fmt, HumanMessage, messageAuthority } = window.UI;
   const h = React.createElement;
 
+  function SyncControl() {
+    const [status, setStatus] = useState(() => window.STORE?.syncStatus());
+    const [busy, setBusy] = useState(false);
+    useEffect(() => {
+      const refresh = () => setStatus(window.STORE?.syncStatus());
+      ['syncstatuschange','online','offline'].forEach(event => window.addEventListener(event, refresh));
+      const timer = setInterval(refresh, 30000);
+      return () => { clearInterval(timer); ['syncstatuschange','online','offline'].forEach(event => window.removeEventListener(event, refresh)); };
+    }, []);
+    if (!status) return null;
+    const label = status.connection === 'offline' ? 'Sin conexión'
+      : status.synchronized ? 'Todo actualizado'
+      : status.blocked || (status.errors || []).length ? 'Requiere atención'
+      : busy || status.reconciling ? 'Actualizando'
+      : status.pending ? `${status.pending} pendiente(s)` : 'Por actualizar';
+    const update = async () => {
+      setBusy(true);
+      try {
+        const result = await window.STORE.synchronizeNow();
+        window.UI.toast(result.message, result.ok ? 'var(--accent)' : 'var(--warning)');
+      } catch (error) { window.UI.toast(error.message || String(error), 'var(--danger)'); }
+      finally { setStatus(window.STORE.syncStatus()); setBusy(false); }
+    };
+    const last = status.lastSuccess ? new Date(status.lastSuccess).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : 'sin confirmar';
+    return h('button', { onClick: update, disabled: busy, 'data-testid': 'sync-update',
+      'aria-label': `${label}. Actualizar este equipo`, title: `${status.pending} pendiente(s). Última actualización: ${last}. Actualizar este equipo`,
+      className: 'min-h-11 shrink-0 px-2 rounded-lg text-overline border border-outline-variant disabled:opacity-60 ' + (status.synchronized ? 'text-success' : 'text-on-surface-variant') }, label);
+  }
+
   // Campana de notificaciones: alertas reales (stock crítico, apartados por completar).
   function NotificationsBell({ go }) {
     const [open, setOpen] = useState(false);
@@ -289,6 +318,7 @@
             'aria-label': 'Nueva venta',
           }, [h(MS, { key: 'i', name: 'pos', size: 18 }), h('span', { key: 'l', className: 'hidden lg:inline' }, 'Nueva venta')]),
           window.PWA && h(window.PWA.Control, { key: 'pwa' }),
+          h(SyncControl, { key: 'sync' }),
           isAdmin && h(NotificationsBell, { key: 'b', go }),
           h('div', { key: 'date', className: 'hidden xl:flex items-center gap-1.5 text-xs text-on-surface-variant capitalize' }, [h(MS, { key: 'i', name: 'calendar', size: 16 }), new Date().toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })]),
         ]),

@@ -320,6 +320,7 @@ function loadStore(env) {
   env.setFail('clients');
   S.pushRows('clients', [{ id: 'c1', nombre: 'Ana' }]);
   await sleep(30);
+  await S.flushQueue();
   ok('5a. sin toast mientras sigue fallando', env.window.UI.toasts.length === 0);
   env.clearFail('clients');
   await S.flushQueue();
@@ -886,6 +887,7 @@ function loadStore(env) {
   S.pushSale(sale);
   S.pushRows('clients', [{ id: 'c-independent', nombre: 'Independiente' }]);
   await sleep(60);
+  await S.flushQueue();
   const q = JSON.parse(env.localStorage.getItem('balam_sync_queue') || '[]');
   const pendingSale = q.find(op => op.type === 'sale');
   ok('25a. H-14: red caída queda como reintento automático',
@@ -978,6 +980,7 @@ function loadStore(env) {
     await S.init({});
     S.pushRows('products', [{ id: expectedStatus, nombre: expectedStatus }]);
     await sleep(30);
+    await S.flushQueue();
     const op = S.queueStatus().operations[0];
     ok(`28. H-14: ${error.code} usa ${expectedStatus}/${expectedPolicy}`,
       op && op.status === expectedStatus && op.diagnostic.policy === expectedPolicy);
@@ -1578,10 +1581,10 @@ ok('34c. H-60: la escritura válida termina sin pendientes', S.pending === 0);
   const release = env.hold();
   S.pushClient(env.window.DATA.clients[0]);
   await sleep(10);
-  env.window.DATA.clients[0].nombre = 'Ana Ruiz'; // se reconstituye al volar
+  env.window.DATA.clients[0].nombre = 'Ana Ruiz'; // nueva intención durante un envío
   S.pushClient(env.window.DATA.clients[0]);
   await sleep(10);
-  ok('40f. H-70: dos ediciones de la MISMA ficha se coalescen', S.pending === 1);
+  ok('40f. H-148: un envío iniciado conserva su payload y la siguiente intención', S.pending === 2);
   release();
   await sleep(60);
   const filas = env.cloud.rowsByTable.clients || [];
@@ -1784,6 +1787,7 @@ console.log('H96) Cambio conserva clave comercial entre cola y replay');
     ] });
   S.pushRows('clients', [{ id: 'client-independent', nombre: 'Independiente' }]);
   await sleep(50);
+  await S.flushQueue();
   const blocked = S.queueStatus().operations.find(op => op.type === 'exchange');
   ok('45a. H-14: el escenario conserva solo la operacion bloqueada relevante',
     blocked && S.pending === 1 && blocked.diagnostic.code === 'commit_mismatch');

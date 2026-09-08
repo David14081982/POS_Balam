@@ -82,12 +82,13 @@
     }
 
     function saveNewClient(data) {
-      D.clients.push({
+      const client = {
         id: 'c-' + Date.now(), nombre: data.nombre.trim(), tel: data.tel, compras: 0, total: 0,
         ultima: '', talla: data.tallaCamisa || '', notas: data.notas,
         email: data.email, direccion: data.direccion, nacimiento: data.nacimiento || '',
-      });
-      D.saveClients();
+      };
+      D.clients.push(client);
+      D.saveClients(true, [client.id]);
       setAdding(false); setRefreshKey(k => k + 1);
       toast('Cliente registrado en Balam', 'var(--accent)');
     }

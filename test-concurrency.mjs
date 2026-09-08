@@ -15,7 +15,7 @@ function cloudEnv() {
   const rows = { products: new Map(), clients: new Map(), sellers: new Map(), promotions: new Map() };
   const conflicts = [];
   const listeners = new Set();
-  const versions = new Map(['products','clients','sellers','promotions'].map(x => [x, 0]));
+  const versions = new Map(['config','products','clients','sellers','promotions','sales','payments','returns','exchanges','loans','liquidations','movements','permissions','purges'].map(x => [x, 0]));
   // Debe representar el contrato de esquema que exige el cliente actual. Un
   // manifest anterior deja la terminal deliberadamente en cuarentena y no es
   // un escenario de concurrencia válido.
@@ -77,7 +77,7 @@ function terminal(cloud) {
     setItem: (k, v) => storage.set(k, String(v)),
     removeItem: k => storage.delete(k),
   };
-  const local = { products: [], clients: [], sellers: [], promotions: [] };
+  const local = Object.fromEntries(['products','clients','sellers','promotions','sales','payments','returns','exchanges','loans','liquidations','commissionAdjustments','movements'].map(kind => [kind, []]));
 
   function query(table) {
     return {
@@ -150,6 +150,7 @@ function terminal(cloud) {
     supabase: { createClient: () => client },
     UI: { toasts: [], toast(msg) { this.toasts.push(msg); } },
     CONFIG: { load() {}, get() { return null; } },
+    AUTH: { refreshPermissions: async () => true },
     DATA: {
       ...local, movements: [], sales: [], applied: [], merged: [],
       applyRemote(kind, incoming) {

@@ -60,14 +60,16 @@ try {
         return { select: empty, upsert: empty, update: empty };
       };
       client.rpc = async () => ({ data: [], error: null });
-      const recovery = S.rebootstrapFromCloud;
-      S.rebootstrapFromCloud = async () => {
+      const recovery = S.rebootstrapFromCloud, update = S.synchronizeNow;
+      const observe = fn => async () => {
         const entry = { activity: window.CORE.activityStatus(), readsBefore: qa.manifestReads };
         qa.calls.push(entry);
-        try { return await recovery(); }
+        try { const result = await fn(); entry.error = result?.code || (result?.ok === false ? 'MANIFEST_UNAVAILABLE' : null); return result; }
         catch (error) { entry.error = error.message; throw error; }
         finally { entry.readsAfter = qa.manifestReads; }
       };
+      S.rebootstrapFromCloud = observe(recovery);
+      S.synchronizeNow = observe(update);
       if (!artifactOnly) {
         window.UI.useSyncFocusActivity = new Function('React','window','useEffect', hook + '\nreturn useSyncFocusActivity;')(React, window, React.useEffect);
         window.UI.messageAuthority = new Function('window', messages + '\nreturn messageAuthority;')(window);

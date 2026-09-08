@@ -13,6 +13,13 @@ Auditar BALAM como usuario real para encontrar errores en funcionalidades YA EXI
 
 **PROBAR LO EXISTENTE. NO INVENTAR FUNCIONALIDAD.**
 
+Para funciones compartidas, sincronizadas u offline, aplicar
+`docs/architect/playbooks/synchronization.md`, reglas `R-SYNC-16` y `R-SYNC-17`.
+Exigir A/B/C independientes contra Supabase real y la puerta
+`test-h148-sync-certification.mjs` sobre el artefacto final. Un test unitario,
+mock, prueba parcial o una sola terminal no certifica convergencia. Registrar
+NO CERTIFICADO si falta esa evidencia; no convertir omisiones en PASS.
+
 Si una pantalla o flujo parece incorrecto:
 1. reproducirlo;
 2. identificar la autoridad/código existente;

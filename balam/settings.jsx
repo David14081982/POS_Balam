@@ -1413,7 +1413,7 @@
             'Supervisa cada instalación de BALAM y atiende excepciones desde un solo lugar.'),
         ]),
         h('span', { key: 's', className: 'text-overline font-bold uppercase ' + (clean ? 'text-success' : 'text-danger') },
-          clean ? 'Este equipo sincronizado' : needsBootstrap ? 'Reinicio requerido' : 'Reconciliando'),
+          clean ? 'Todo actualizado' : status.connection === 'offline' ? 'Sin conexión' : needsBootstrap ? 'Requiere actualización' : status.blocked || (status.errors || []).length ? 'Requiere atención' : 'Actualizando'),
       ]),
       h('div', { key: 'summary', className: 'grid grid-cols-2 md:grid-cols-4 gap-3 mt-5' }, [
         ['Equipos registrados', devices.length, 'text-primary'],
@@ -1525,9 +1525,8 @@
         h('p', { key: 'technical', className: 'text-overline text-on-surface-variant mt-3' },
           `Época ${status.dataEpoch == null ? '—' : status.dataEpoch} · tiempo real ${status.realtime} · ${status.pending} pendientes locales · ${status.blocked} bloqueados · ${status.invalidDomains.length} dominios por aplicar.`),
         h('div', { key: 'a', className: 'flex gap-2 flex-wrap mt-3' }, [
-          h('button', { key: 'r', disabled: busy, onClick: () => act(() => window.STORE.reconcileDomains()), className: 'px-4 h-10 border border-outline-variant rounded-lg disabled:opacity-40' }, 'Verificar ahora'),
+          h('button', { key: 'r', 'data-testid': 'sync-recovery-update', disabled: busy, onClick: () => act(async () => { const result = await window.STORE.synchronizeNow(); toast(result.message, result.ok ? 'var(--accent)' : 'var(--warning)'); }), className: 'px-4 h-10 border border-outline-variant rounded-lg disabled:opacity-40' }, 'Actualizar este equipo'),
           h('button', { key: 'b', 'data-testid': 'sync-recovery-export', disabled: busy, onClick: exportBackup, className: 'px-4 h-10 border border-outline-variant rounded-lg disabled:opacity-40' }, backup ? 'Respaldo exportado' : 'Exportar recuperación'),
-          needsBootstrap && h('button', { key: 'rb', 'data-testid': 'sync-recovery-update', disabled: busy || !backup, onClick: () => act(() => window.STORE.rebootstrapFromCloud()), className: 'px-4 h-10 bg-primary text-on-primary rounded-lg disabled:opacity-40' }, 'Actualizar este equipo'),
           window.AUTH.isAdmin() && h('button', { key: 'z', disabled: busy || !clean || !backup, onClick: pointZero, className: 'px-4 h-10 bg-danger text-white rounded-lg disabled:opacity-40' }, 'Establecer punto cero'),
         ]),
       ]),

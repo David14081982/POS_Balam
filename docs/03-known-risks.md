@@ -6770,6 +6770,37 @@ iguales al blob Git, SHA-256
 H-143 público 40/40 y H-147 16/16; CI H-132 `33998479964` exitoso.
 **Residual:** aceptación física del regreso desde RawBT pendiente.
 
+## H-148 — Convergencia verificable de todas las proyecciones y cola durable
+
+**Estado:** RESUELTO — publicación en verificación. **Fecha:** 08/09/2026.
+**Commit:** Pendiente de commit.
+**Alcance:** completar el contrato Supabase confirmado / intención durable /
+proyección reconstruible en todos los dominios operativos, sin cambiar negocio,
+identidades ni datos históricos. Certificación A/B/C con Supabase real.
+**Evidencia inicial:** consulta remota de manifiesto, versiones y flota desde
+`02f95ba`: protocolo 3, época 7, 15 dominios publicados; tres instalaciones con
+build H142, estado `must_rebootstrap` y 17/10/1 pendientes declarados. La
+telemetría no contiene esos payloads y no permite decidir su contenido.
+**Causas reproducidas:** persistencia fallida no propagada; versión cero y
+cursor adelantado; intención reconstruida desde caché o retenida sólo por
+debounce; recuperación que archiva pendientes válidos; bajas/conflictos sin
+confirmación efectiva; versión base de snapshots alterada por recibos
+financieros; liquidación SQL que pierde identidad congelada V2.
+**Corrección:** cola exacta con confirmación completa, recuperación selectiva,
+checkpoint tras persistencia, snapshots completos y actualización única.
+Migraciones `20260908018200/018300` aplicadas y verificadas sin alterar ACL.
+**Pruebas:** reconciliación 15/15, durabilidad 32/32, cola 186/186,
+bajas SQL/UI 55/55, checkpoint/actividad y SQL real comprobados. Matriz real
+A/B/C **21/21**, **16/16** proyecciones, cero pérdidas/divergencias y datos
+previos conservados. Certificado permanente en `docs/fixes/evidence/h148-live-matrix.json`.
+**Publicación:** pendiente de verificar Pages; HTML SHA-256
+`2ef20021e02fb3d704eb8a314818fa18e40ae17148d74d460df68b33881a921d`.
+**Residual:** las tres instalaciones H142 requieren reconexión con su
+almacenamiento original; sus 17/10/1 pendientes declarados no son payloads
+recuperados por telemetría. Conflictos reales se conservan para revisión.
+Árbol original intacto; trabajo aislado en `fix/h148-sync-authority`.
+**Documento:** `docs/fixes/convergencia-autoritativa-h148.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

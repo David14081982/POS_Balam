@@ -95,7 +95,7 @@ async function finish(promise) {
   const { env, S } = await ready();
   const old = product('qa-old'); env.window.DATA.products.push(old);
   env.localStorage.setItem('balam_sync_queue', JSON.stringify([{
-    id: '14200000-0000-4000-8000-000000000071', ownerId: null,
+    id: '14200000-0000-4000-8000-000000000071', ownerId: null, dataEpoch: 0,
     type: 'upsert', kind: 'products', table: 'products', rowIds: [old.id],
     rows: [{ id: old.id, nombre: old.nombre }], status: 'blocked_conflict',
   }]));

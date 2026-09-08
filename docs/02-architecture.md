@@ -5,8 +5,11 @@
 POS BALAM es una aplicación React cargada directamente en el navegador, sin
 bundler en tiempo de ejecución. Los módulos en `balam/` publican APIs globales
 en `window`. La aplicación es **local-first**: opera con datos en memoria y
-`localStorage`; Supabase replica y comparte la información cuando hay sesión y
-conectividad.
+`localStorage`. Supabase es la autoridad de los datos confirmados. La cola
+durable conserva intenciones aún no confirmadas; `DATA`, `localStorage` e
+IndexedDB contienen proyecciones reconstruibles cuando almacenan colecciones
+confirmadas. Las colas, borradores y credenciales locales no son cachés
+descartables. La operación offline sigue disponible con ese límite explícito.
 
 Flujo principal:
 
@@ -14,12 +17,10 @@ Flujo principal:
 Interfaz React
     ↓
 CONFIG / DATA / AUTH
-    ↓ cambios locales inmediatos
-localStorage
-    ↓ push asíncrono
-STORE → cola offline → Supabase (esquema pos)
-    ↑                    ↓
-    └──── pull/merge al iniciar y sincronizar
+    ↓ intención explícita y durable + proyección optimista
+STORE → cola offline → RPC/RLS → Supabase (autoridad confirmada)
+    ↑                                ↓
+    └── snapshot completo → aplicar → persistir → avanzar cursor
 ```
 
 `POS Balam.html` carga los módulos fuente. `build-offline.mjs` genera
@@ -608,7 +609,8 @@ Es la frontera entre el dominio local y Supabase:
 - Traduce objetos locales a filas SQL y viceversa mediante `MAP`.
 - Hace `push` de configuración, colecciones, ventas y devoluciones.
 - Hace `pull` de configuración y dominio.
-- Fusiona ventas remotas; no borra ventas locales ausentes en la ventana remota.
+- Reconcilia snapshots completos de ventas en el coordinador. Una consulta
+  parcial de la interfaz sólo fusiona su cobertura, sin podar el resto.
 - Pagina ventas recientes y permite recuperar una venta por folio.
 - Sube fotos y códigos de barras a Supabase Storage.
 - Invoca Edge Functions con el token real y conserva el cuerpo del error.
@@ -737,6 +739,34 @@ identidad administrativa auxiliar.
 
 ## Sincronización
 
+`STORE.synchronizeNow()` es la acción de actualización de la cabecera y del
+Centro de equipos: carga manifiesto, recupera si corresponde, envía la cola
+válida, espera confirmación, descarga y verifica todas las proyecciones. Una
+captura activa impide sustituir sus datos. Hay reconciliación periódica cada
+minuto aunque Realtime esté conectado, y snapshots completos al iniciar,
+actualizar manualmente y cada cinco minutos. Realtime sólo invalida dominios.
+
+La versión cero también requiere una primera aplicación. Un cursor adelantado
+fuerza reconstrucción; el nuevo cursor sólo se publica tras persistir la
+proyección y comprobar el checkpoint. Una lectura incompleta, cuota agotada,
+cola bloqueada o manifiesto/versión incompatibles impide «Todo actualizado».
+El estado incluye hora de última comprobación y diagnóstico administrativo.
+`devices` observa heartbeats: su versión móvil no equivale a una divergencia
+comercial ni permite certificar una instalación ausente.
+
+La cola almacena IDs y payload exactos. Tras el primer envío se congela el
+payload para un replay idempotente; sólo el ACK de una escritura anterior de
+la misma clase puede actualizar la versión base de otra aún no enviada. Un
+recibo de venta/devolución no habilita un snapshot de stock obsoleto. Una confirmación
+incompleta o un conflicto conserva la intención. Las ediciones de clientes,
+vendedores y promociones envían sólo IDs modificados. Configuración se guarda
+en cola inmediatamente; el debounce retrasa el envío, nunca su persistencia.
+
+La recuperación envía pendientes válidos de la sesión y época actuales;
+archiva de forma durable los incompatibles antes de reconstruir. Las colas de
+otras sesiones permanecen protegidas. La certificación distribuida y el mapa
+de tablas están en `docs/fixes/convergencia-autoritativa-h148.md`.
+
 El dominio operativo `devices` no transporta datos comerciales. Proyecta el
 estado de cada instalación en `pos.sync_devices` y el ciclo resumido de su cola
 en `pos.sync_activity`: equipo, usuario, tipo de operación, referencia, estado y
@@ -850,9 +880,9 @@ local.
 
 Un arranque administrativo recupera desde Supabase productos, clientes,
 vendedores, promociones, devoluciones con sus renglones, liquidaciones, pagos,
-movimientos y ventas con sus renglones. Las ventas recientes usan la ventana
-configurable de 365 días y se agregan todos los apartados; un folio anterior se
-puede recuperar bajo demanda.
+movimientos y ventas con sus renglones. El coordinador H-148 descarga el
+historial completo; la consulta de ventas recientes de la interfaz conserva
+su ventana de 365 días y la búsqueda por folio bajo demanda.
 
 `pos.movements` es un historial de sólo lectura para el cliente: las escrituras
 de venta y devolución se realizan exclusivamente dentro de sus commits SQL
@@ -878,8 +908,8 @@ Las ventas recientes se ordenan por `fecha, folio` y los apartados por `folio`.
 La migración `20260725003200_pos_h16_sync_indexes.sql` respalda esas consultas
 con `sales_fecha_folio_idx` y el índice parcial
 `sales_apartado_folio_idx`. Las ventas fuera de la ventana permanecen
-disponibles mediante búsqueda por folio y el pull continúa fusionando, no
-reemplazando, el historial local.
+disponibles mediante búsqueda por folio. Esa consulta parcial fusiona su
+cobertura; la reconciliación completa reemplaza la proyección confirmada.
 
 ### Versionado multi-terminal
 
@@ -899,9 +929,9 @@ Productos, clientes, vendedores y promociones usan el contrato introducido por
 
 La política es primera escritura confirmada gana. El cliente pide la
 representación resultante del `upsert`: si fue aceptado, guarda la versión nueva;
-si fue rechazado, restaura la fila vigente y avisa. Las operaciones compactadas
-se reconstruyen justo antes de enviarse para incorporar versiones confirmadas
-mientras otra operación estaba en vuelo.
+si fue rechazado, restaura la fila vigente, avisa y conserva la intención
+bloqueada para revisión. La compactación sólo reúne intenciones aún no
+enviadas sobre los mismos IDs; nunca reconstruye el payload desde la caché.
 
 La migración de verificación
 `20260725002600_pos_h06_concurrency_verification.sql` comprobó este contrato en

@@ -379,15 +379,16 @@
 
   let version = 0;
   function persist() {
-    try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (e) { /* cuota */ }
+    try { localStorage.setItem(LS_KEY, JSON.stringify(state)); return true; } catch (e) { return false; }
   }
   function emit(opts) {
     version++;
-    persist();
+    const persisted = persist();
     try { window.dispatchEvent(new CustomEvent('configchange', { detail: { version } })); } catch (e) { /* SSR */ }
     if (!(opts && opts.sync === false)) {
       try { window.CORE.invokeSync('pushConfig', state); } catch (e) { /* offline */ }
     }
+    return persisted;
   }
 
   // ── API de lectura ────────────────────────────────────────────────────────────
@@ -860,7 +861,7 @@
     // Inyecta ítems nuevos que la nube no trae. Una aplicación remota persiste y
     // notifica, pero no vuelve a subir el mismo snapshot (evita bucle Realtime).
     backfillState(state, { remoteAuthority: true });
-    emit({ sync: false });
+    return emit({ sync: false });
   }
 
   window.CONFIG = {

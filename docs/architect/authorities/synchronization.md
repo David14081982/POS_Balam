@@ -24,6 +24,16 @@ mismo papel por (`operation_id`, capacidad, hash)
 **Creada por:** H-09, H-14 · **Decisión:** `ADR-006`
 **Consumidores:** `grep -rn "flushQueue\|queueStatus" balam/`
 
+## ¿Qué hace Actualizar este equipo y qué acredita su resultado?
+**Autoridad:** `STORE.synchronizeNow()` coordina envío, recepción y
+verificación. `STORE.syncStatus()` sólo informa actual cuando la cola y los
+dominios están comprobados y sus checkpoints son durables. La certificación
+de entrega es `test-h148-sync-certification.mjs` con evidencia real A/B/C del
+mismo artefacto; la telemetría de una instalación ausente no la sustituye.
+**Definición:** `docs/02-architecture.md` § Sincronización · `R-SYNC-16/17`
+**Creada por:** H-148 · **Decisión:** `ADR-014`
+**Consumidores:** cabecera de `balam/app.jsx`, administración de `balam/settings.jsx`
+
 ## ¿Este préstamo ya está confirmado en la nube?
 **Autoridad:** presencia y versión en `pos.loan_documents`; si aún no existe,
 una operación `loanOperation` exacta en la cola durable. `_loanVersion` es sólo

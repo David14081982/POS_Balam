@@ -52,3 +52,11 @@ Estas instrucciones aplican a todo el repositorio y a cualquier agente de IA.
   tabla de enrutamiento del `README.md` indique. No leer el sistema completo.
 - Autorizar una historia autoriza su ciclo completo. Las seis condiciones de
   detención y el formato del informe viven en `WORKFLOW.md`.
+
+## Certificación de funciones distribuidas
+
+Una función compartida, sincronizada u offline no se declara resuelta con
+pruebas aisladas. Aplicar `R-SYNC-16` y `R-SYNC-17` de
+`docs/architect/playbooks/synchronization.md`: A/B/C independientes contra
+Supabase real, comparación de autoridad y cero pérdidas/divergencias, con
+evidencia del artefacto final. Sin ejecución completa, declarar NO CERTIFICADO.

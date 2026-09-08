@@ -63,3 +63,20 @@ Antes de publicar cambios de pull, cola o rebootstrap se prueban: remoto vacío,
 ventana parcial, cursor que no avanza ante aplicación incompleta, mapa de todos
 los efectos pendientes, captura offline preservada, ajustes de comisión
 remotos, periodo derivado del cierre remoto y lectura multi-terminal.
+
+**R-SYNC-16 · BLOCKING · Una función distribuida se certifica contra su
+autoridad real en A/B/C independientes.** Las pruebas unitarias, mocks y
+pruebas de una sola terminal no certifican convergencia. El caso completo
+incluye escrituras concurrentes, pérdida de eventos y confirmaciones, cola
+offline con recarga, reapertura, bajas sin resurrección y comparación final
+de documentos y stock contra Supabase. Una omisión se declara NO CERTIFICADO.
+El artefacto probado y el certificador se identifican por hash; la puerta
+`test-h148-sync-certification.mjs` rechaza cobertura parcial, evidencia vieja,
+pendientes perdidos, divergencias o limpieza incompleta. No usar datos de
+negocio como semillas. Origen: H-148.
+
+**R-SYNC-17 · BLOCKING · El checkpoint exige persistencia comprobada.** Recibir,
+validar cobertura y versión, aplicar, verificar persistencia y sólo entonces
+avanzar el cursor. Una respuesta vacía sin confirmación de escritura no es ACK.
+La intención rechazada se conserva para revisión; recuperar la proyección no
+convierte el rechazo en aceptación. Origen: H-148.

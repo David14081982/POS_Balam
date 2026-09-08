@@ -124,8 +124,25 @@ ok('21. SKU duplicado es advertencia y barcode/ID duplicado es bloqueo',
   /SKU_DUPLICATE_WARNING/.test(xlsxSrc) && /BARCODE_DUPLICATE/.test(xlsxSrc));
 ok('22. la etiqueta muestra el SKU materializado pero no barcode como texto',
   /sku:\s*D\.materializedSku\(s\.p,\s*s\.talla\)/.test(inventorySrc) && /barcode:\s*s\.code/.test(inventorySrc));
-ok('22a. Constructor informa longitud y aptitud Code128 sin confundir SKU con barcode V2',
-  /Longitud esperada/.test(settingsSrc) && /V2 siempre codifica el barcode logístico/.test(settingsSrc));
+// H-134 retiró el copy técnico. Verificar cálculo e identidad del componente
+// real, sin exigir una frase antigua que ya fallaba en la línea base.
+{
+  const start = settingsSrc.indexOf('  function SkuBuilder()');
+  const body = settingsSrc.slice(start, settingsSrc.indexOf('\n  function ', start + 1));
+  const nodes = [], product = { sku: 'ABC-12345', barcodeCode: '30302240678275694148452353' };
+  const catalog = { skuParts: () => [{ kind: 'model' }, { kind: 'color' }],
+    catalogMeta: kind => ({ label: kind, inForm: true }),
+    list: kind => [{ code: kind === 'model' ? 'AA' : 'BBB' }],
+    modeloKind: () => 'model', catalogLabel: kind => kind };
+  const h = (type, props, children) => { const node = { type, props, children }; nodes.push(node); return node; };
+  new Function('C','D','window','h','CatalogPanel','MS','toast', body + '\nreturn SkuBuilder();')(
+    catalog, { products: [product] }, { DATA: {} }, h, () => {}, () => {}, () => {});
+  const numbers = String(nodes.find(node => node.props?.key === 'stats')?.children).match(/\d+/g);
+  ok('22a. Constructor calcula longitud comercial sin modificar identidad',
+    JSON.stringify(numbers) === JSON.stringify(['6','9'])
+      && nodes.some(node => node.props?.key === 'v' && node.children === 'AA-BBB')
+      && product.sku === 'ABC-12345' && product.barcodeCode === '30302240678275694148452353');
+}
 
 function v2Terminal() {
   const memory = new Map();

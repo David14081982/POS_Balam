@@ -125,7 +125,8 @@
     try {
       const document = cacheDocument(nextProfile, nextAccess, nextSession);
       localStorage.setItem(CACHE_KEY, JSON.stringify(document));
-    } catch (e) { /* almacenamiento no disponible */ }
+      return true;
+    } catch (e) { return false; }
   }
   function cachedAccess(nextSession) {
     try {
@@ -298,10 +299,10 @@
         && remote.snapshot.profile) {
       const nextProfile = normalizeProfile(remote.snapshot.profile, session.user.email);
       applyResolved(nextProfile, remote.snapshot.access, 'remote');
-      saveAccess(profile, access, session);
+      const persisted = saveAccess(profile, access, session);
       ready = true;
       emit();
-      return true;
+      return persisted;
     }
     if (remote.snapshot && remote.snapshot.profileStatus === 'user_inactive') {
       clearStoredAccess();
