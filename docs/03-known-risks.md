@@ -6772,8 +6772,8 @@ H-143 público 40/40 y H-147 16/16; CI H-132 `33998479964` exitoso.
 
 ## H-148 — Convergencia verificable de todas las proyecciones y cola durable
 
-**Estado:** RESUELTO — publicación en verificación. **Fecha:** 08/09/2026.
-**Commit:** Pendiente de commit.
+**Estado:** RESUELTO. **Fecha:** 08/09/2026.
+**Commit:** `acf53bf` (corrección y certificado), `31d5aca` (regresión determinista de CI).
 **Alcance:** completar el contrato Supabase confirmado / intención durable /
 proyección reconstruible en todos los dominios operativos, sin cambiar negocio,
 identidades ni datos históricos. Certificación A/B/C con Supabase real.
@@ -6793,8 +6793,10 @@ Migraciones `20260908018200/018300` aplicadas y verificadas sin alterar ACL.
 bajas SQL/UI 55/55, checkpoint/actividad y SQL real comprobados. Matriz real
 A/B/C **21/21**, **16/16** proyecciones, cero pérdidas/divergencias y datos
 previos conservados. Certificado permanente en `docs/fixes/evidence/h148-live-matrix.json`.
-**Publicación:** pendiente de verificar Pages; HTML SHA-256
+**Publicación:** Pages comprobado byte a byte y en Chrome 320/1280, sin errores;
+durabilidad del HTML publicado **32/32**. HTML SHA-256
 `2ef20021e02fb3d704eb8a314818fa18e40ae17148d74d460df68b33881a921d`.
+CI H148/H132 y despliegue aprobados para `31d5aca`.
 **Residual:** las tres instalaciones H142 requieren reconexión con su
 almacenamiento original; sus 17/10/1 pendientes declarados no son payloads
 recuperados por telemetría. Conflictos reales se conservan para revisión.

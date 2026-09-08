@@ -1,0 +1,28 @@
+{
+  "commit": "acf53bfe385d7ba3aedf8c8a14359302c5c6c79b",
+  "url": "https://david14081982.github.io/POS_Balam/",
+  "files": [
+    {
+      "file": "index.html",
+      "sha256": "2ef20021e02fb3d704eb8a314818fa18e40ae17148d74d460df68b33881a921d",
+      "bytes": 9045359
+    },
+    {
+      "file": "POS Balam (offline).html",
+      "sha256": "2ef20021e02fb3d704eb8a314818fa18e40ae17148d74d460df68b33881a921d",
+      "bytes": 9045359
+    },
+    {
+      "file": "sw.js",
+      "sha256": "ee8b61616176649fc78da4e89f27c05251f32e677b792180220baff81fc7db05",
+      "bytes": 2709
+    }
+  ],
+  "clientBuild": "2026-09-07-h148",
+  "viewports": [
+    320,
+    1280
+  ],
+  "pageErrors": [],
+  "verifiedAt": "2026-09-08T07:59:14.024Z"
+}

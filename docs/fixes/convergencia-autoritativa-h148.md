@@ -1,9 +1,9 @@
 # Convergencia autoritativa y cola durable
 
 **Riesgo:** H-148
-**Estado:** RESUELTO — publicación en verificación
+**Estado:** RESUELTO
 **Fecha:** 08/09/2026
-**Commit:** Pendiente de commit
+**Commit:** `acf53bf` (motor, SQL y certificación), `31d5aca` (espera determinista de CI)
 
 ## Problema y reproducción
 
@@ -161,6 +161,26 @@ marcan `NOT CERTIFIED / SKIP`; no acreditan la matriz completa.
 - Etiquetas/identidad: H132 **7/7**, su certificador **2/2**, H127 **11/11**,
   H99 **23/23**, H100 **10/10**. Cambio **36/36**, devolución **29/29**,
   identidad posventa **16/16**.
+- CI detectó que el caso 40f de cola suponía un envío iniciado tras 10 ms:
+  **185/186**. Ahora espera la llamada real retenida por el transporte,
+  comprueba ambos payloads y espera el drenado: **186/186**. Esta corrección
+  sólo cambia la prueba; el HTML y el certificador real permanecen idénticos.
+- El HTML descargado de Pages pasó **32/32** comprobaciones de durabilidad.
+
+### Publicación
+
+Publicado en [GitHub Pages](https://david14081982.github.io/POS_Balam/).
+Comprobado el 08/09/2026 a las 07:59 UTC: `index.html` y
+`POS Balam (offline).html` coinciden byte a byte con el artefacto certificado
+(9 045 359 bytes, SHA-256 arriba). `sw.js` coincide con
+`ee8b61616176649fc78da4e89f27c05251f32e677b792180220baff81fc7db05`.
+Chrome cargó el build H148 servido por Pages en 320/1280 px, sin overflow ni
+excepciones de página. Supabase confirmó ambas migraciones y el dry-run final
+indicó que la base está al día.
+Evidencia: [h148-pages.json](evidence/h148-pages.json).
+CI del commit `31d5aca`: [H148 aprobado](https://github.com/David14081982/POS_Balam/actions/runs/34202215121),
+[H132 aprobado](https://github.com/David14081982/POS_Balam/actions/runs/34202215259)
+y [Pages aprobado](https://github.com/David14081982/POS_Balam/actions/runs/34202213562).
 
 ### Certificador permanente
 
@@ -195,7 +215,7 @@ distribuidas. Las pruebas con mocks siguen siendo regresión, nunca sustituto.
 
 ## Riesgo residual y pendientes
 
-Pendiente sólo verificar la publicación de los bytes certificados.
+Sin divergencias conocidas en el artefacto certificado y publicado.
 Las instalaciones físicas antiguas deberán reconectarse con su almacenamiento
 original para procesar/revisar sus intenciones; 17/10/1 declaradas no equivalen
 a 28 payloads recuperados. No se descartaron ni se inventaron esas operaciones.
