@@ -1,8 +1,8 @@
 # H149 — Recuperación dirigida de pendientes de prueba
 
 **Riesgo:** H-149. **Fecha:** 08/09/2026.
-**Estado:** RESUELTO en implementación; publicación pendiente de verificar.
-**Commit:** Pendiente de commit.
+**Estado:** RESUELTO; publicado y verificado. Recibos físicos de A/B pendientes de su próximo uso.
+**Commit:** `2fc891242809261e861f8ecdc7730293442b649f`.
 
 ## Problema y reproducción
 
@@ -117,6 +117,21 @@ Evidencia: [h149-server-recovery.json](evidence/h149-server-recovery.json).
   durante la recuperación, incluidos timestamps.
   Certificado: [h148-live-matrix.json](evidence/h148-live-matrix.json).
   HTML SHA-256: `49aabdb7513d88b1548f8a22930281d25016d5d8eab1902bcff4037582c73e15`.
+
+## Publicación
+
+Build `2026-09-08-h149` publicada el **08/09/2026** en
+[GitHub Pages](https://david14081982.github.io/POS_Balam/).
+`index.html`, HTML offline y `sw.js` coinciden byte a byte con `2fc8912`.
+Chrome público a 320/1280 muestra acceso correcto, sin overflow ni errores
+de ejecución. Evidencia: [h149-publication.json](evidence/h149-publication.json).
+
+- [CI de sincronización aprobado](https://github.com/David14081982/POS_Balam/actions/runs/34248994821).
+- [CI de identidad aprobado](https://github.com/David14081982/POS_Balam/actions/runs/34248994879).
+- [Despliegue aprobado](https://github.com/David14081982/POS_Balam/actions/runs/34248993368).
+
+La implementación queda cerrada. Las dos directivas reales permanecen
+pendientes hasta su consumo; no se certifica ejecución física anticipada.
 
 ## Riesgo residual
 

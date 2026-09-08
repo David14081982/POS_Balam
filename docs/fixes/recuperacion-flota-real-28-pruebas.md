@@ -3,7 +3,7 @@
 **Riesgo:** H-148, seguimiento de instalaciones físicas.
 **Estado:** PARCIALMENTE RESUELTO; flota todavía NO CERTIFICADA.
 **Fecha:** 08/09/2026.
-**Commit:** Pendiente de commit.
+**Commit:** `2fc891242809261e861f8ecdc7730293442b649f`.
 
 ## Problema y reproducción
 

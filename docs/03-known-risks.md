@@ -6806,16 +6806,16 @@ sus hashes. **Descartadas físicamente 1/28; A/B preparados para recuperación
 automática H149.** La instrucción posterior autoriza certificación aislada y
 publicación sin esperar a A/B. Seguimiento:
 `docs/fixes/recuperacion-flota-real-28-pruebas.md`;
-documentación operativa **Pendiente de commit**. No confundir el certificado
+documentación operativa en `2fc8912`. No confundir el certificado
 del motor con la incorporación de estas tres instalaciones.
 Árbol original intacto; trabajo aislado en `fix/h148-sync-authority`.
 **Documento:** `docs/fixes/convergencia-autoritativa-h148.md`.
 
 ## H-149 — Recuperación automática dirigida y cerco de replay por equipo
 
-**Estado:** RESUELTO en implementación; publicación pendiente de verificar.
+**Estado:** RESUELTO; publicado y verificado. Recibos físicos de A/B pendientes de su próximo uso.
 **Fecha:** 08/09/2026.
-**Commit:** Pendiente de commit.
+**Commit:** `2fc891242809261e861f8ecdc7730293442b649f`.
 **Problema demostrado:** H142/H148 sólo consume órdenes de reintento y no
 posee una directiva durable de descarte/reconstrucción por equipo. Las RPC
 financieras antiguas no siempre incluyen device_id; el protocolo/época por sí
@@ -6836,6 +6836,10 @@ HTTPS/Chrome 23/23 y 16/16 dominios; smoke 15/15, responsive 492/492.
 **Servidor:** migraciones 18400–19100 aplicadas; matriz final de seguridad
 20/20, directivas exactas 10/17 registradas y replay rechazado sin cambios
 comerciales. El certificado conserva el hash del artefacto final.
+**Publicación:** `2fc8912`, build `2026-09-08-h149`; CI H148/H132 y Pages
+aprobados. HTML/HTML offline/SW públicos idénticos al commit; Chrome 320/1280
+sin overflow ni errores de ejecución. HTML SHA-256
+`49aabdb7513d88b1548f8a22930281d25016d5d8eab1902bcff4037582c73e15`.
 **Documento:** `docs/fixes/recuperacion-dirigida-h149.md`.
 
 ## Regla de actualización

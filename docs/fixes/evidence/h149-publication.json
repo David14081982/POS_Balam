@@ -1,0 +1,37 @@
+{
+  "checkedAt": "2026-09-08T16:07:48.091Z",
+  "base": "https://david14081982.github.io/POS_Balam/",
+  "files": [
+    {
+      "file": "index.html",
+      "sha256": "49aabdb7513d88b1548f8a22930281d25016d5d8eab1902bcff4037582c73e15",
+      "bytes": 9050062
+    },
+    {
+      "file": "POS Balam (offline).html",
+      "sha256": "49aabdb7513d88b1548f8a22930281d25016d5d8eab1902bcff4037582c73e15",
+      "bytes": 9050062
+    },
+    {
+      "file": "sw.js",
+      "sha256": "bb90f4262e0ac77f722777b330de7ffd3b663c04fb655e0776ff29d525cb738c",
+      "bytes": 2709
+    }
+  ],
+  "screens": [
+    {
+      "width": 320,
+      "overflow": false,
+      "build": "2026-09-08-h149",
+      "login": true
+    },
+    {
+      "width": 1280,
+      "overflow": false,
+      "build": "2026-09-08-h149",
+      "login": true
+    }
+  ],
+  "pageErrors": [],
+  "ok": true
+}
