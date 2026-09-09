@@ -115,6 +115,48 @@ try {
   return states;
  });
  const [A,B,C]=terminals;
+ await verify('H151 idle A/B/C automatically apply the confirmed cleanup epoch',async()=>{
+  const event=check(await serverClient.from('selective_cleanup_events').select('*').order('data_epoch',{ascending:false}).limit(1))[0];
+  assert.equal(Number(event?.data_epoch),Number(manifest.data_epoch),'Requires an existing confirmed cleanup; never creates a destructive fixture');
+  const before=Object.fromEntries(await Promise.all(safetyTables.map(async table=>[table,semanticHash(await rawRows(table))])));
+  const cleanupCacheId=randomUUID();
+  const writes=[];
+  const observer=request=>{if(/\/rest\/v1\/rpc\/(commit_|save_products|delete_product)/.test(request.url()))writes.push(request.url());};
+  for(const t of terminals)t.page.on('request',observer);
+  try {
+   await Promise.all(terminals.map(async t=>{
+    await t.page.evaluate(({epoch,ghost})=>{
+     if(window.STORE.pending)throw Error('Test requires an empty terminal');
+     const template=window.DATA.products.find(p=>p.recordModel==='v2');
+     if(!template)throw Error('Missing valid V2 reference for the obsolete cache fixture');
+     window.DATA.products.push({...structuredClone(template),id:ghost,referenceFamilyId:ghost,
+      nombre:'Cache-only deleted reference',barcodeCode:window.DATA.barcodeFromId(ghost),barcodeAliases:[],stockQuantity:999});
+     window.DATA.saveProducts();
+     localStorage.setItem('balam_sync_data_epoch',String(epoch-1));
+     localStorage.removeItem('balam_selective_cleanup_seen_v2');
+    },{epoch:Number(manifest.data_epoch),ghost:cleanupCacheId});
+    await t.page.reload();
+    await t.page.waitForFunction(({epoch,id,ghost})=>window.STORE?.syncStatus().synchronized
+     && localStorage.getItem('balam_sync_data_epoch')===String(epoch)
+     && localStorage.getItem('balam_selective_cleanup_seen_v2')===id
+     && !window.DATA.products.some(p=>p.id===ghost),
+     {epoch:Number(manifest.data_epoch),id:event.cleanup_id,ghost:cleanupCacheId},{timeout:120000});
+   }));
+   const states=await Promise.all(terminals.map(async t=>({terminal:t.name,...await t.page.evaluate(()=>({
+    pending:window.STORE.pending,epoch:Number(localStorage.getItem('balam_sync_data_epoch')),synchronized:window.STORE.syncStatus().synchronized,
+   }))})));
+   assert.deepEqual(writes,[],'Automatic cleanup recovery uploaded a business operation');
+   const after=Object.fromEntries(await Promise.all(safetyTables.map(async table=>[table,semanticHash(await rawRows(table))])));
+   assert.deepEqual(after,before,'Automatic recovery changed confirmed business data');
+   return {automatic:true,cleanupId:event.cleanup_id,epoch:Number(manifest.data_epoch),states,businessWrites:0,businessChanges:0};
+  } catch(error) {
+   for(const t of terminals)writeFileSync(join(out,`h151-failure-${t.name}.json`),JSON.stringify({errors:t.errors,...await t.page.evaluate(()=>({
+    authReady:window.AUTH?.isReady(),hasSession:window.AUTH?.hasSession(),writer:window.DATA?.isLocalWriter,
+    status:window.STORE?.syncStatus(),text:document.body.innerText.slice(-2500),
+   }))},null,2));
+   throw error;
+  } finally {for(const t of terminals)t.page.off('request',observer);}
+ });
  for(const [terminal,count] of [[B,10],[C,17]])await verify(`H149 directed boot ${count}: discard, remote convergence, replay fence and new operation`,async()=>{
   const device=`${prefix}-${terminal.name}`;
   const queue=Array.from({length:count},(_,i)=>{

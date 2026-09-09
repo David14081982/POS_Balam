@@ -4,6 +4,7 @@ import {createHash} from 'node:crypto';
 import assert from 'node:assert/strict';
 const REQUIRED_CASES=[
  'Bootstrap A/B/C from real authority',
+ 'H151 idle A/B/C automatically apply the confirmed cleanup epoch',
  'H149 directed boot 10: discard, remote convergence, replay fence and new operation',
  'H149 directed boot 17: discard, remote convergence, replay fence and new operation',
  'Create references A -> B/C/Supabase',
@@ -48,6 +49,10 @@ function validate(r,{htmlHash,certifierHash,project,now=Date.now()}) {
   assert.equal(evidence.damagedProjectionRebuilt,true);assert.equal(evidence.viewports,8);
  }
  assert.deepEqual([...r.domains].sort(),[...REQUIRED_DOMAINS].sort());
+ const cleanupEpoch=r.cases.find(c=>c.name.startsWith('H151 idle')).evidence;
+ assert.equal(cleanupEpoch.automatic,true);assert.equal(cleanupEpoch.businessWrites,0);assert.equal(cleanupEpoch.businessChanges,0);
+ assert.deepEqual(cleanupEpoch.states.map(s=>s.terminal).sort(),['A','B','C']);
+ for(const s of cleanupEpoch.states){assert.equal(s.pending,0);assert.equal(s.synchronized,true);assert.equal(s.epoch,Number(r.manifest.data_epoch));}
  assert.equal(r.pendingLost,0);assert.equal(r.finalDivergences,0);
  assert.equal(r.cleanup?.ok,true);assert.deepEqual(r.cleanup.errors,[]);
  assert.equal(r.businessPreservation?.ok,true);
@@ -64,10 +69,14 @@ if(process.argv[2]==='--self-test'){
   pendingBefore:count,pendingAfter:0,legacyUploads:0,commercialRecoveryChanges:0,serverReplayRejected:true,
   repeatedDirectiveDeletes:0,newOperation:true,deviceCenterTruthful:true,damagedProjectionRebuilt:true,viewports:8,
  };
+ valid.cases.find(c=>c.name.startsWith('H151 idle')).evidence={automatic:true,businessWrites:0,businessChanges:0,
+  states:['A','B','C'].map(terminal=>({terminal,pending:0,synchronized:true,epoch:7}))};
  const args={htmlHash:'html',certifierHash:'code',project:'test',now};validate(valid,args);
  const mutations=[r=>r.partial=true,r=>r.profiles=1,r=>r.cases.pop(),r=>r.cases[0].ok=false,r=>r.domains=[],r=>r.sourceSha256='stale',r=>r.certifierSha256='old',r=>r.cleanup.ok=false,r=>r.businessPreservation.after.table0='changed',r=>r.pendingLost=1,r=>r.finalDivergences=1,r=>r.finishedAt='2000-01-01',r=>r.transport='mock',r=>r.cases.at(-1).evidence.devices[0].queue_pending=1];
  mutations.push(r=>r.cases.find(c=>c.name.startsWith('H149 directed boot 10:')).evidence.legacyUploads=1,
   r=>r.cases.find(c=>c.name.startsWith('H149 directed boot 17:')).evidence.damagedProjectionRebuilt=false);
+ mutations.push(r=>r.cases.find(c=>c.name.startsWith('H151 idle')).evidence.businessWrites=1,
+  r=>r.cases.find(c=>c.name.startsWith('H151 idle')).evidence.states[0].epoch=6);
  for(const mutate of mutations){const r=structuredClone(valid);mutate(r);assert.throws(()=>validate(r,args));}
  console.log(`PASS gate contract: ${mutations.length} false certificates rejected. No live certification performed.`);
 }else if(!process.argv[2]){console.error('NOT CERTIFIED: supply matrix.json from the complete live run');process.exitCode=2;}

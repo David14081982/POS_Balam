@@ -17,7 +17,7 @@
   const QDB = 'balam_sync', QSTORE = 'durable_queue';
   const SYNC_PROTOCOL_VERSION = 3;
   const SYNC_SCHEMA_VERSION = 20260830017500;
-  const SYNC_CLIENT_BUILD = '2026-09-09-h150';
+  const SYNC_CLIENT_BUILD = '2026-09-09-h151';
   const SELECTIVE_CLEANUP_PROTOCOL = 6;
   const SYNC_CURSOR_KEY = 'balam_sync_domain_cursors_v1';
   const SYNC_DOMAINS = {
@@ -2580,11 +2580,23 @@
     return { dropped, kept: kept.length };
   }
   async function applyRemoteSelectiveCleanup() {
+    if (!hasLocalWriter(false) || recoveryPhase !== 'ready' || syncRecovering
+        || syncReconcilePromise || window.CORE.activityStatus().active) return null;
     const event = await readSelectiveCleanupEvent();
-    if (!event || Number(event.protocol_version) > SELECTIVE_CLEANUP_PROTOCOL) return null;
+    if (!event || Number(event.protocol_version) > SELECTIVE_CLEANUP_PROTOCOL
+        || Number(event.minimum_client_protocol) > SELECTIVE_CLEANUP_PROTOCOL) return null;
     if (selectiveCleanupSeen() === String(event.cleanup_id)) return null;
     const remoteEpoch = syncManifest ? Number(syncManifest.data_epoch) : Number(event.data_epoch);
     if (Number(event.data_epoch) !== remoteEpoch) return null;
+    // H151: a confirmed cleanup can rebuild an idle, empty terminal without
+    // asking it to repeat the deletion. Pending intents never enter this path.
+    if (!loadQ().length && syncManifest && manifestCompatibility(syncManifest) === 'ok') {
+      await rebootstrapFromCloud({ requireEmptyQueue: true, expectedEpoch: remoteEpoch });
+      localStorage.setItem(SELECTIVE_CLEANUP_SEEN, String(event.cleanup_id));
+      if (localStorage.getItem(SELECTIVE_CLEANUP_SEEN) !== String(event.cleanup_id)) throw new Error('CHECKPOINT_NOT_DURABLE');
+      return { event, local: { ok: true }, prune: { dropped: 0, kept: 0 } };
+    }
+    if (syncCompatibility !== 'ok') return null;
     if (!(window.DATA && window.DATA.applySelectiveCleanup)) return null;
     const prune = pruneQueueForSelectiveCleanup(event.identities || {});
     const local = window.DATA.applySelectiveCleanup({
@@ -3261,6 +3273,9 @@
       // «Reconciliando» cuando ya no queda trabajo.
       try { window.dispatchEvent(new CustomEvent('syncstatuschange', { detail: syncStatus() })); } catch (e) { /* */ }
       if (sb && syncManifest) await heartbeatDevice(sb).catch(() => {});
+      if (syncCompatibility === 'must_rebootstrap' && !syncRecovering) {
+        Promise.resolve().then(() => applyRemoteSelectiveCleanup()).catch(() => { /* polling retries */ });
+      }
       if (again && Array.from(syncInvalid.keys()).some(domain =>
         domainMode(domain) === 'active' && !domainBlocked(domain))) {
         Promise.resolve().then(() => reconcileDomains()).catch(() => { /* siguiente timbre reintenta */ });
@@ -3292,6 +3307,7 @@
           || (typeof navigator !== 'undefined' && navigator.onLine === false)) return;
       try {
         if (syncCompatibility !== 'ok') await loadSyncProtocol(c);
+        if (syncCompatibility === 'must_rebootstrap') await applyRemoteSelectiveCleanup();
         if (syncCompatibility !== 'ok') return;
         await flushQueue();
         await waitForFlushIdle();
@@ -3528,7 +3544,7 @@
     }
     return completed;
   }
-  async function rebootstrapFromCloud() {
+  async function rebootstrapFromCloud(options = {}) {
     if (window.CORE.activityStatus().active) throw new Error('ACTIVITY_ACTIVE');
     if (syncRecovering) throw new Error('RECOVERY_IN_PROGRESS');
     if (loadQ().some(op => !opBelongsToActiveSession(op))) throw new Error('OTHER_SESSION_PENDING');
@@ -3550,6 +3566,8 @@
       let localEpoch = null;
       try { localEpoch = Number(localStorage.getItem('balam_sync_data_epoch')) || null; } catch (e) { /* desconocida */ }
       const queued = loadQ();
+      if (options.requireEmptyQueue && (queued.length || window.CORE.activityStatus().active)) throw new Error('CLEANUP_RECOVERY_BUSY');
+      if (options.expectedEpoch != null && Number(latest.data_epoch) !== Number(options.expectedEpoch)) throw new Error('CLEANUP_RECOVERY_EPOCH_CHANGED');
       const stale = queued.filter(op => opBelongsToActiveSession(op)
         && Number(op.dataEpoch ?? localEpoch) !== Number(latest.data_epoch));
       if (stale.length) {
@@ -4023,6 +4041,9 @@
     const protocolClient = await ensureClient();
     if (!(await recoverDirectedDevice())) return { ok: false, recoveryRequired: true };
     if (protocolClient) await loadSyncProtocol(protocolClient);
+    if (syncCompatibility === 'must_rebootstrap') {
+      try { await applyRemoteSelectiveCleanup(); } catch (e) { /* preserve recovery state for polling */ }
+    }
     if (syncManifest && !syncLastFullCheck) Object.keys(SYNC_DOMAINS)
       .filter(domain => domain !== 'devices' && domainMode(domain) === 'active')
       .forEach(domain => syncFullDomains.add(domain));

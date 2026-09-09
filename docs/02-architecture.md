@@ -888,6 +888,13 @@ autoritaria y adopta la época. Las lápidas impiden reinsertar documentos ya
 eliminados. `admin_set_sync_device_retired()` permite retirar una instalación
 sin encenderla, conserva actor/fecha/nota y el heartbeat no puede reactivarla.
 
+H-151 conecta arranque, reconciliación y polling con la reconstrucción existente
+cuando hay un evento de limpieza compatible de la época vigente. Sólo se aplica
+automáticamente sin cola de ninguna sesión ni captura activa; vuelve a comprobar
+ambas condiciones y la época antes de modificar las proyecciones. Marca el evento
+recibido después del checkpoint durable. Si falla la descarga, permanece pendiente
+para reintentar; no vuelve a ejecutar el borrado comercial.
+
 En el arranque, `STORE.init({ pull: true })`:
 
 1. Cuenta las operaciones que ya estaban pendientes.

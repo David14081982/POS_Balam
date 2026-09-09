@@ -6873,6 +6873,32 @@ A/B/C 23/23 en 16 dominios; evidencia enlazada en el documento.
 respaldo y confirmación del usuario; archivos locales no inspeccionados.
 **Documento:** `docs/fixes/limpieza-pendientes-cuarentena-h150.md`.
 
+## H-151 — Equipos vacíos quedan detenidos tras una limpieza remota
+
+**Estado:** RESUELTO; publicación en curso.
+**Fecha:** 09/09/2026.
+**Commit:** Pendiente de commit.
+**Evidencia:** limpieza `8d996563-96db-4537-9930-032e86de15bd` completada,
+época 8 y cero ventas/devoluciones/cambios en Supabase. EIFBB1 y Z9ESB6
+reportan cola vacía y `must_rebootstrap`, con cursores anteriores al borrado.
+El arranque retorna por incompatibilidad de época antes de aplicar el evento;
+la reconciliación y el polling también retornan sin reconstruir proyecciones.
+**Reproducción:** `test-h151-cleanup-propagation.mjs` ejerce arranque, equipo
+abierto y polling frente a una limpieza remota sin pendientes locales.
+**Alcance:** aplicar automáticamente el estado confirmado únicamente en
+equipos sin cola ni captura activa y con evento compatible. Preservar toda
+intención local pendiente; no repetir borrados ni modificar negocio remoto.
+**Pruebas:** regresión específica 12/12 (antes: 2/12); caso real A/B/C de
+recarga automática aprobado, con cola cero, época 8 y datos comerciales
+intactos. Cola 186/186, humo 17/17 y navegación 15/15.
+Matriz real A/B/C 24/24 en 16 dominios; cero pendientes perdidos/divergencias,
+fixtures retirados y 17 huellas comerciales intactas. Certificado vigente:
+`docs/fixes/evidence/h148-live-matrix.json`.
+**Pendiente:** commit y verificación publicada.
+**Riesgo residual:** cada instalación debe cargar el nuevo cliente y tener
+conexión; capturas activas y colas pendientes conservan sus guardas.
+**Documento:** `docs/fixes/propagacion-limpieza-equipos-h151.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:
