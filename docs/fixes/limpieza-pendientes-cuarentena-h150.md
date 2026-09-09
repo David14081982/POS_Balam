@@ -6,7 +6,7 @@
 
 **Fecha:** 09/09/2026
 
-**Commit:** `fc5f6be` (implementación inicial); corrección de orden: Pendiente de commit
+**Commit:** `fc5f6be` (implementación inicial); `fafdfc0` (corrección de orden)
 
 ## Reapertura: bloqueo al confirmar (09/09/2026)
 

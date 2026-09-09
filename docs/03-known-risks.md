@@ -6846,7 +6846,7 @@ sin overflow ni errores de ejecución. HTML SHA-256
 
 **Estado:** RESUELTO — corrección de orden aplicada tras reapertura.
 **Fecha:** 09/09/2026.
-**Commit:** `fc5f6be`; corrección de orden: Pendiente de commit.
+**Commit:** `fc5f6be`; corrección de orden: `fafdfc0`.
 **Reapertura corregida:** el rechazo prematuro bloqueaba el DELETE del
 comprobante coincidente. Se movió el mismo bloque de descarte al final de las
 mutaciones comerciales, manteniendo transacción, lock, ACL y protección contra
