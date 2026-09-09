@@ -6844,9 +6844,9 @@ sin overflow ni errores de ejecución. HTML SHA-256
 
 ## H-150 — Limpieza con descarte respaldado de cuarentena
 
-**Estado:** CORREGIDO Y VERIFICADO; publicación del cliente pendiente.
+**Estado:** RESUELTO Y PUBLICADO.
 **Fecha:** 09/09/2026.
-**Commit:** Pendiente de commit.
+**Commit:** `fc5f6be`.
 **Causa:** flota mezclaba expedientes archivados con cola ejecutable; la
 limpieza no tenía descarte atómico ni protección contra su reactivación.
 **Solución:** preview/respaldo/confirmación explícitos para archivos sin
@@ -6859,7 +6859,9 @@ de permisos/replay local y real OK. Cola 186/186, migraciones 31/31, módulos
 42/42; regresiones y matriz real A/B/C detalladas en el documento.
 **Despliegue:** migraciones 19200/19300 aplicadas; 18 huellas/conteos intactos.
 Preview real ejecutable, sin bloqueos, incluye 62 archivos además de los
-documentos seleccionados. Cliente protocolo de limpieza 6; publicación pendiente.
+documentos seleccionados. Cliente protocolo de limpieza 6 publicado desde
+`fc5f6be`: HTML/HTML offline/SW idénticos, E2E público 20/20 y matriz real
+A/B/C 23/23 en 16 dominios; evidencia enlazada en el documento.
 **Riesgo residual:** no se ejecuta la limpieza real: requiere revisión,
 respaldo y confirmación del usuario; archivos locales no inspeccionados.
 **Documento:** `docs/fixes/limpieza-pendientes-cuarentena-h150.md`.

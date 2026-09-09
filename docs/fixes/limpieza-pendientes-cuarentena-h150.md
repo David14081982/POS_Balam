@@ -2,11 +2,11 @@
 
 **Riesgo:** H-150
 
-**Estado:** CORREGIDO Y VERIFICADO; publicación del cliente pendiente
+**Estado:** RESUELTO Y PUBLICADO
 
 **Fecha:** 09/09/2026
 
-**Commit:** Pendiente de commit
+**Commit:** `fc5f6be` (implementación)
 
 ## Problema y reproducción
 
@@ -119,10 +119,20 @@ descartar, junto a 9 ventas, 1 devolución, 2 cambios y 3 clientes elegibles.
 Dos archivos ajenos, configuración y promoción, quedan fuera. Evidencia
 resumida: `evidence/h150-verification.json`.
 
+Cliente publicado en GitHub Pages desde `fc5f6be`. HTML, HTML offline y SW
+públicos coinciden byte por byte con el commit (`evidence/h150-public.json`).
+E2E contra la URL pública, con backend aislado para no borrar datos: 20/20.
+Pages (run `34378412029`), CI H-132 (`34378413317`) y CI H-148
+(`34378413273`, intento 2) aprobados. El primer intento CI falló en cuatro
+afirmaciones de los casos 4/34 de cola, tras esperas fijas de 60/40 ms. La
+repetición local pasó 186/186 y la repetición CI pasó sin modificar producto
+ni arnés. Se conserva este límite temporal del arnés como riesgo residual de
+verificación; la matriz A/B/C real y el certificado del mismo HTML pasaron.
+
 ## Riesgo residual y pendientes
 
-Falta publicar y verificar el cliente. El usuario debe revisar el resumen,
-descargar respaldo y confirmar su limpieza. Los conteos pueden cambiar con
+El usuario debe actualizar BALAM, revisar el resumen, descargar respaldo y
+confirmar su limpieza. Los conteos pueden cambiar con
 nueva actividad; el hash exige recalcular el plan cuando corresponde. No se
 inspeccionó físicamente el archivo local de EIFBB1 ni se borró: el rechazo
 servidor impide ejecutar las identidades descartadas. Se conserva evidencia
