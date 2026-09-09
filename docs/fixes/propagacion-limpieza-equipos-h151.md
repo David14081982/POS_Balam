@@ -1,9 +1,9 @@
 # Propagación de una limpieza confirmada a los demás equipos
 
 **Riesgo:** H-151
-**Estado:** RESUELTO; publicación en curso
+**Estado:** RESUELTO y publicado
 **Fecha:** 09/09/2026
-**Commit:** Pendiente de commit
+**Commit:** `d5989bb6bd1f3aa22d555ce725183d6afabed754`
 
 ## Problema y reproducción
 
@@ -66,6 +66,7 @@ No requiere migraciones ni repite la limpieza del usuario.
 | `node test-build-reproducibility.mjs` | 8/8 |
 | `BALAM_SYNC_LIVE=1 node test-h148-live-convergence.mjs` | 24/24 reales, 16 dominios |
 | `node test-h148-sync-certification.mjs docs/fixes/evidence/h148-live-matrix.json` | CERTIFIED |
+| `BALAM_TEST_URL=https://david14081982.github.io/POS_Balam/ node test-h150-cleanup-quarantine-sql-ui.mjs` | 12/12 sobre el cliente público, PostgreSQL local aislado y rollback |
 
 La prueba específica real aprobó en los tres perfiles A/B/C: epoch 8, cola cero,
 sincronizados, caché obsoleta retirada, cero RPC comerciales y 17 tablas sin
@@ -90,7 +91,23 @@ las capturas de 320 y 1280: aviso completo y legible, sin recorte ni overflow.
 
 Los equipos deben cargar el nuevo cliente y tener conexión. Una cola pendiente,
 una captura activa o un evento incompatible impiden la reconstrucción automática.
-Publicación y verificación de bytes pendientes; no volver a ejecutar la limpieza.
+No se ha inspeccionado el almacenamiento local de las instalaciones físicas del
+usuario. No volver a ejecutar la limpieza: basta cargar el nuevo cliente en cada
+equipo; los pendientes reales conservan sus guardas.
+
+## Publicación
+
+Cliente `2026-09-09-h151` publicado en GitHub Pages desde `d5989bb` el
+09/09/2026. HTML, HTML offline y service worker coinciden byte a byte con el
+commit; evidencia en `docs/fixes/evidence/h151-public.json`. La comprobación
+del flujo público de limpieza aprobó 12/12 contra PostgreSQL local aislado,
+con rollback; no ejecutó una segunda limpieza en Supabase.
+
+GitHub Actions del commit técnico: H148 sincronización
+[`34386364457`](https://github.com/David14081982/POS_Balam/actions/runs/34386364457),
+H132 identidad [`34386364374`](https://github.com/David14081982/POS_Balam/actions/runs/34386364374)
+y Pages [`34386363657`](https://github.com/David14081982/POS_Balam/actions/runs/34386363657)
+terminaron correctamente.
 
 SHA-256 del HTML certificado:
 `859c56a7811622399e30a2eeb7b0f14cfdfe22b11811c7a379a0c55cc7258ab8`.

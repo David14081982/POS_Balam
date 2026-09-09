@@ -6875,9 +6875,9 @@ respaldo y confirmación del usuario; archivos locales no inspeccionados.
 
 ## H-151 — Equipos vacíos quedan detenidos tras una limpieza remota
 
-**Estado:** RESUELTO; publicación en curso.
+**Estado:** RESUELTO y publicado.
 **Fecha:** 09/09/2026.
-**Commit:** Pendiente de commit.
+**Commit:** `d5989bb6bd1f3aa22d555ce725183d6afabed754`.
 **Evidencia:** limpieza `8d996563-96db-4537-9930-032e86de15bd` completada,
 época 8 y cero ventas/devoluciones/cambios en Supabase. EIFBB1 y Z9ESB6
 reportan cola vacía y `must_rebootstrap`, con cursores anteriores al borrado.
@@ -6894,7 +6894,9 @@ intactos. Cola 186/186, humo 17/17 y navegación 15/15.
 Matriz real A/B/C 24/24 en 16 dominios; cero pendientes perdidos/divergencias,
 fixtures retirados y 17 huellas comerciales intactas. Certificado vigente:
 `docs/fixes/evidence/h148-live-matrix.json`.
-**Pendiente:** commit y verificación publicada.
+**Despliegue:** cliente `2026-09-09-h151` publicado; HTML, offline y SW
+idénticos al commit. Flujo público contra PostgreSQL local: 12/12.
+Evidencia: `docs/fixes/evidence/h151-public.json`. Sin migraciones nuevas.
 **Riesgo residual:** cada instalación debe cargar el nuevo cliente y tener
 conexión; capturas activas y colas pendientes conservan sus guardas.
 **Documento:** `docs/fixes/propagacion-limpieza-equipos-h151.md`.
