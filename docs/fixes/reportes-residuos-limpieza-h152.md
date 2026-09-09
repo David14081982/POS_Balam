@@ -1,9 +1,9 @@
 # Cobros de cambios y vendedores obsoletos después de limpiar
 
 **Riesgo:** H-152
-**Estado:** RESUELTO y certificado; publicación del cliente pendiente
+**Estado:** RESUELTO, certificado y publicado
 **Fecha:** 09/09/2026
-**Commit:** Pendiente de commit
+**Commit:** `b4e1097878ab5190cbec84cc3596d0a216546b52`
 
 ## Problema y reproducción
 
@@ -74,6 +74,9 @@ compañero `62bfa353-4b95-49c8-9036-9521a7632c95`, SHA-256
 `dfab99c23aba9d2b73a66b447635a4f3f5e07f7a1c2004a38efee6238fb9267e`.
 El respaldo original permanece intacto. Los dos vendedores citados no están en
 Supabase. Evidencia sanitizada: `docs/fixes/evidence/h152-repair.json`.
+Consulta final después de retirar los fixtures de la certificación:
+`2026-09-09T18:47:26.530935Z`, cero pagos/$0, cero vendedores del ensayo citado
+y del ensayo H152, época 8. `docs/fixes/evidence/h152-final-state.json`.
 
 ## Pruebas
 
@@ -127,7 +130,12 @@ respaldo, hash y acceso denegado aprobada. `db push --linked --dry-run` final:
 
 Cliente generado `2026-09-09-h152`; SHA-256 de `index.html`:
 `38978740c0ba3295e4dab4e37dd03fdb90e686467af4b5f606059b1332f4f586`.
-Publicación y comprobación del artefacto servido pendientes.
+Publicado en `https://david14081982.github.io/POS_Balam/`; HTML principal,
+offline y service worker idénticos byte a byte, **3/3**, y Reportes desde la
+URL pública **9/9** con Supabase bloqueado. Evidencia:
+`docs/fixes/evidence/h152-public.json`.
+Pages aprobado: ejecución `34391329941`. CI H148 `34391331261` e inventario
+H132 `34391331278` aprobados sobre el commit técnico.
 
 ## Riesgo residual y pendientes
 

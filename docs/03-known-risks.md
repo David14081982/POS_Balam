@@ -6903,9 +6903,9 @@ conexión; capturas activas y colas pendientes conservan sus guardas.
 
 ## H-152 — Reportes conserva cobros de cambios eliminados y filas obsoletas
 
-**Estado:** RESUELTO y certificado; publicación del cliente pendiente.
+**Estado:** RESUELTO, certificado y publicado.
 **Fecha:** 09/09/2026.
-**Commit:** Pendiente de commit.
+**Commit:** `b4e1097878ab5190cbec84cc3596d0a216546b52`.
 **Evidencia inicial:** Supabase conservaba dos pagos `tipo=cambio`, $790 y $100, cuyos
 cambios exactos figuran en el respaldo sellado de la limpieza completada
 `8d996563-96db-4537-9930-032e86de15bd`. El borrado y el respaldo de pagos
@@ -6932,7 +6932,12 @@ proyección 32/32, propagación 12/12, migraciones 31/31 y build 8/8.
 Matriz real A/B/C: 25/25, 16 dominios, cero pendientes perdidos y divergencias,
 fixtures retirados y 17 huellas comerciales intactas. Reportes abierto actualiza
 las tres sesiones. Certificado: `docs/fixes/evidence/h148-live-matrix.json`.
-**Pendiente:** publicación del cliente.
+**Despliegue:** cliente `2026-09-09-h152` publicado en Pages; HTML principal,
+offline y SW idénticos 3/3. Reportes público 9/9. Evidencia:
+`docs/fixes/evidence/h152-public.json`. Consulta final remota: cero pagos/$0
+y cero perfiles de ambos ensayos, `docs/fixes/evidence/h152-final-state.json`.
+CI sincronización `34391331261`, inventario `34391331278` y Pages
+`34391329941` aprobados sobre el commit técnico.
 **Riesgo residual:** cada equipo debe cargar la actualización; no se eliminaron
 otros pagos sin evidencia de pertenencia. Respaldo original conservado.
 **Documento:** `docs/fixes/reportes-residuos-limpieza-h152.md`.
