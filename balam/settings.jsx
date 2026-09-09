@@ -2007,6 +2007,31 @@
     reclassifications: '0 reclasificaciones significa que no existen documentos de reclasificación. Los movimientos de venta, devolución o cambio pertenecen a sus propios grupos.',
     customers: '0 clientes significa que no hay clientes de prueba elegibles. Los clientes genéricos o vinculados a operaciones conservadas no se borran.',
   };
+  function CleanupQuarantineSummary({ rows = [] }) {
+    if (!rows.length) return null;
+    const label = row => ({ sale: 'Venta', return: 'Devolución', exchange: 'Cambio',
+      productDeleteScope: 'Solicitud de baja de producto', softDelete: 'Solicitud de baja',
+      referenceReclassification: 'Reclasificación', loanOperation: 'Préstamo',
+      commissionSettle: 'Liquidación', commissionClose: 'Cierre de comisión',
+      commissionAdjustment: 'Ajuste de comisión', payment: 'Pago',
+      upsert: row.domain === 'products' ? 'Actualización de producto' : 'Actualización de registros',
+    })[row.operation_type] || 'Operación archivada';
+    const groups = new Map();
+    rows.forEach(row => groups.set(label(row), (groups.get(label(row)) || 0) + 1));
+    return h('section', { 'data-testid': 'cleanup-quarantine-summary',
+      className: 'mt-4 p-4 rounded-lg border border-warning/40 bg-warning-soft/30 text-caption text-primary' }, [
+      h('div', { key: 'title', className: 'font-semibold' }, `${N(rows.length)} operaciones archivadas se descartarán`),
+      h('p', { key: 'copy', className: 'mt-2 leading-relaxed' },
+        'Estos intentos están en cuarentena, fuera de los pendientes de sincronización. Se descartarán para que no vuelvan a modificar esta selección. No se ejecutarán las ventas, ediciones ni bajas archivadas; se conservará su evidencia de revisión en el respaldo.'),
+      ...Array.from(groups, ([name, count]) => h('div', { key: name, className: 'mt-1' }, `${name}: ${N(count)}`)),
+      h('details', { key: 'details', 'data-testid': 'cleanup-quarantine-details', className: 'mt-3' }, [
+        h('summary', { key: 's', className: 'font-semibold cursor-pointer' }, 'Ver operaciones archivadas'),
+        ...rows.map(row => h('div', { key: `${row.device_id}:${row.operation_id}:${row.remote_epoch}`,
+          className: 'mt-2 break-words' }, `${row.device_name || 'Equipo'} · ${label(row)}${row.reference ? ' · ' + row.reference : ''}`)),
+      ]),
+    ]);
+  }
+
   function SelectiveCleanupCard({ enabled }) {
     const defaultSelection = { sales: false, returns: false, orphan_return_evidence: false, exchanges: false, loans: false,
       commissions: false, reclassifications: false, customers: false, inventory_products: false };
@@ -2071,6 +2096,7 @@
       sale: 'una venta', exchange: 'un cambio', return: 'una devolución',
       loanOperation: 'un préstamo', loan: 'un préstamo', payment: 'un pago',
       config: 'una configuración', upsert: 'una actualización de producto',
+      productDeleteScope: 'una solicitud de baja de producto',
     })[operation && operation.operation_type] || 'una operación';
     const operationDetail = operation => {
       const reference = operation && operation.reference ? ` ${operation.reference}` : '';
@@ -2091,6 +2117,12 @@
       const name = reason.device_name || 'Un equipo';
       if (reason.code === 'pending_operation_intersects_cleanup') {
         const operation = Array.isArray(reason.operations) && reason.operations[0];
+        if (operation && ['approved', 'delivered'].includes(operation.status)) {
+          return `${name} tiene ${operationDetail(operation)} en cuarentena con un reintento autorizado. Espera a que termine antes de limpiar.`;
+        }
+        if (operation && ['pending_review', 'failed'].includes(operation.status)) {
+          return `${name} conserva ${operationDetail(operation)} en cuarentena sin información suficiente para descartarla con seguridad. Revísala desde el Centro de equipos.`;
+        }
         return operation
           ? `${name} tiene ${operationDetail(operation)} pendiente que afecta esta limpieza.`
           : `${name} tiene una operación pendiente que afecta esta limpieza.`;
@@ -2179,6 +2211,7 @@
             ...CLEANUP_KEPT.map(label =>
               h('div', { key: label, className: 'text-caption text-success py-1' }, '✓ ' + label))]),
         ]),
+        h(CleanupQuarantineSummary, { key: 'quarantine', rows: preview.quarantine_discard || [] }),
         zeroExplanations.length > 0 && h('section', { key: 'zero-meaning', className: 'mt-4 space-y-2',
           'aria-label': 'Qué significa el conteo cero' }, zeroExplanations.map(item =>
           h('div', { key: item.domain, 'data-testid': `cleanup-zero-explanation-${item.domain}`,
@@ -2328,6 +2361,13 @@
     else if (estado.paso === 'warning') body = [h('div', { key: 'w', className: 'p-4 rounded-lg bg-danger-soft text-danger font-semibold' }, 'Advertencia final: se borrarán únicamente las operaciones mostradas y sus datos relacionados. Esta acción no se puede deshacer desde la interfaz.')];
     else if (estado.paso === 'backup' || estado.paso === 'executing') body = [h('div', { key: 'wait', role: 'status', className: 'py-8 text-center text-on-surface-variant' }, estado.paso === 'backup' ? 'Creando y descargando respaldo…' : 'Aplicando la limpieza y comprobando el resultado…')];
     else body = [h('p', { key: 'p', className: 'text-body text-on-surface-variant' }, 'Revisa el resumen de la pantalla. El siguiente paso crea y descarga un respaldo antes de borrar.'), estado.error && h(HumanMessage, { key: 'e', message: estado.error, className: 'mt-3 p-3 rounded-lg bg-danger-soft text-caption' })];
+    if (['preview', 'confirmation', 'warning'].includes(estado.paso)) {
+      body.push(h(CleanupQuarantineSummary, { key: 'quarantine', rows: preview.quarantine_discard || [] }));
+    }
+    if (estado.paso === 'result' && estado.result.quarantine_discard && estado.result.quarantine_discard.length) {
+      body.push(h('p', { key: 'discarded', className: 'mt-3 text-caption text-success' },
+        `${N(estado.result.quarantine_discard.length)} operaciones archivadas descartadas. No volverán a ejecutarse.`));
+    }
     return h(Modal, { title: 'Confirmar limpieza', testId: 'selective-cleanup-dialog', large: true, onClose: ['backup','executing'].includes(estado.paso) ? (() => {}) : onClose, footer }, body);
   }
 

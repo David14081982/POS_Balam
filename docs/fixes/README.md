@@ -25,6 +25,7 @@ sesión de chat.
 
 | Archivo | Riesgo | Tema |
 |---|---|---|
+| `limpieza-pendientes-cuarentena-h150.md` | H-150 | Descarte respaldado de cuarentena con rechazo atómico y protección contra replay |
 | `convergencia-inventario-cola-h142.md` | H-142 | Conservación de pendientes, conflictos, recepción y diagnóstico de equipos |
 | `paneles-plegables-catalogos-h141.md` | H-141 | Paneles independientes con borradores conservados al plegar |
 | `admin-users-auth.md` | H-05 | Autorización de usuarios mediante Edge Function |

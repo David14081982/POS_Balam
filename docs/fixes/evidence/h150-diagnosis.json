@@ -1,0 +1,41 @@
+{
+  "history": "H-150",
+  "date": "2026-09-09",
+  "sourceCommit": "22fca32",
+  "transport": "Supabase linked CLI SQL; BEGIN READ ONLY",
+  "deviceId": "dev-ms0nu9o4-yfeifbb1",
+  "queuePending": 0,
+  "queueBlocked": 0,
+  "clientBuild": "2026-09-08-h149",
+  "lastSeenAt": "2026-09-08T19:05:33.484769+00:00",
+  "quarantineStatus": "pending_review",
+  "quarantineTotal": 64,
+  "quarantineCounts": [
+    {"domain": "products", "type": "upsert", "count": 54},
+    {"domain": "products", "type": "productDeleteScope", "count": 1},
+    {"domain": "sales", "type": "sale", "count": 4},
+    {"domain": "returns", "type": "return", "count": 1},
+    {"domain": "exchanges", "type": "exchange", "count": 1},
+    {"domain": "clients", "type": "upsert", "count": 1},
+    {"domain": "promotions", "type": "upsert", "count": 1},
+    {"domain": "config", "type": "config", "count": 1}
+  ],
+  "reportedOperation": {
+    "id": "0b5c2c8d-2cff-4daa-99eb-3d6945e01d5a",
+    "type": "productDeleteScope",
+    "domain": "products",
+    "status": "pending_review",
+    "updatedAt": "2026-09-05T22:08:26.250483+00:00",
+    "payloadDate": "2026-09-05T22:07:40.278Z"
+  },
+  "matrix": [
+    {"selection": {}, "blockingDevices": 0, "conflicts": 0},
+    {"selection": {"sales": true}, "blockingDevices": 1, "conflicts": 6},
+    {"selection": {"returns": true}, "blockingDevices": 1, "conflicts": 1},
+    {"selection": {"reclassifications": true}, "blockingDevices": 1, "conflicts": 55}
+  ],
+  "physicalLocalStorageInspected": false,
+  "businessWrites": 0,
+  "cleanupExecuted": false,
+  "correctionImplemented": false
+}

@@ -1234,6 +1234,22 @@ La cola mejora durabilidad, pero por sí sola no convierte varias escrituras SQL
 en una transacción. Ventas y devoluciones resuelven ese límite mediante
 `commit_sale` y `commit_return`, respectivamente.
 
+## Limpieza y archivos de cuarentena
+
+La limpieza selectiva protocolo 6 distingue cola ejecutable de expedientes
+archivados. El plan incluye en `quarantine_discard` los archivos sin reintento
+autorizado que afectan los dominios elegidos, con snapshot exacto en el hash
+y en el respaldo. La UI explica y confirma su descarte por separado.
+Una solicitud archivada de baja/edición no se ejecuta al descartarla.
+
+El rechazo y la limpieza comercial comparten transacción y lock de recuperación.
+`discarded_by_cleanup` vincula evidencia al recibo y evita reabrir/reautorizar;
+la guarda servidor rechaza replay por identidad y alias comerciales. Archivos
+antiguos sin claves verificables y reintentos autorizados siguen bloqueando.
+Los eventos mantienen protocolo 5 para reconstruir las proyecciones al volver;
+el ejecutor exige protocolo 6 cuando hay descartes. No cambia el protocolo
+general de sincronización ni se borra físicamente la evidencia de cuarentena.
+
 ## Contratos que no deben romperse
 
 - La acción local debe funcionar sin conexión y dejar una operación recuperable.

@@ -30,8 +30,8 @@ check('6. un latido distinto debe conservar el hash',
 check('7. una operación intersectante debe invalidarlo',
   /pending_operation_intersects_cleanup/.test(functional)
     && /H124_BLOCKING_CHANGE_DID_NOT_INVALIDATE_HASH/.test(functional));
-check('8. el cliente exige el esquema H-124',
-  /SYNC_SCHEMA_VERSION\s*=\s*20260820016500/.test(store));
+check('8. el cliente exige el esquema H-124 o posterior',
+  Number(store.match(/SYNC_SCHEMA_VERSION\s*=\s*(\d+)/)?.[1]) >= 20260820016500);
 check('9. la UI reconoce ambas formas del código',
   /\/cleanup_preview_changed\/i/.test(settings));
 check('10. la UI refresca y no continúa con el plan viejo',

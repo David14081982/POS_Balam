@@ -17,8 +17,8 @@
   const QDB = 'balam_sync', QSTORE = 'durable_queue';
   const SYNC_PROTOCOL_VERSION = 3;
   const SYNC_SCHEMA_VERSION = 20260830017500;
-  const SYNC_CLIENT_BUILD = '2026-09-08-h149';
-  const SELECTIVE_CLEANUP_PROTOCOL = 5;
+  const SYNC_CLIENT_BUILD = '2026-09-09-h150';
+  const SELECTIVE_CLEANUP_PROTOCOL = 6;
   const SYNC_CURSOR_KEY = 'balam_sync_domain_cursors_v1';
   const SYNC_DOMAINS = {
     permissions: { deps: [] }, config: { deps: ['permissions'] },
@@ -3392,6 +3392,7 @@
     }));
     const header = op.header && typeof op.header === 'object' ? op.header : {};
     return {
+      operationIds: [...new Set([op.id, op.key, op.operationId, header.id].filter(Boolean).map(String))],
       folio: op.folio || header.folio || null,
       date: header.fecha || op.fecha || op.createdAt || null,
       total: Number(header.total ?? op.total) || 0,

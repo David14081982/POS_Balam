@@ -82,14 +82,14 @@ await page.waitForFunction(() => {
 });
 await page.getByTestId('selective-cleanup-open').click();
 await page.getByTestId('selective-cleanup-backup').click();
-await page.getByText(/La información cambió/).waitFor();
+await page.getByTestId('selective-cleanup-error').waitFor({ state: 'visible' });
 
 const body = await page.locator('body').innerText();
 const state = await page.evaluate(() => window.__h124);
 check('refresca el folio mostrado', body.includes('BG-NUEVA'));
 check('retira el resumen obsoleto', !body.includes('BG-ANTERIOR'));
 check('no expone el código técnico', !body.includes('CLEANUP_PREVIEW_CHANGED'));
-check('exige revisar de nuevo', body.includes('Revisa el resumen actualizado'));
+check('exige revisar de nuevo', body.includes('Actualiza la revisión antes de continuar'));
 check('no crea respaldo con plan obsoleto', state.backups === 1);
 check('no ejecuta la limpieza', state.executions === 0);
 check('cierra el diálogo obsoleto', await page.getByRole('dialog').count() === 0);

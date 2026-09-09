@@ -44,10 +44,10 @@ check('11. la ejecucion eleva protocolo y epoca en la misma transaccion',
 check('12. el evento nuevo invalida clientes H-113 anteriores',
   /minimum_client_protocol'\s*,\s*3/i.test(migration)
     && /values\s*\(p_cleanup_id,\s*3,\s*3/i.test(migration));
-check('13. el cliente vigente declara protocolo de escritura 2',
-  /SYNC_PROTOCOL_VERSION\s*=\s*2/.test(store));
-check('14. el cliente vigente declara protocolo selectivo 5',
-  /SELECTIVE_CLEANUP_PROTOCOL\s*=\s*5/.test(store));
+check('13. el cliente conserva el cerco de escritura H-116 o posterior',
+  Number(store.match(/SYNC_PROTOCOL_VERSION\s*=\s*(\d+)/)?.[1]) >= 2);
+check('14. el cliente declara protocolo selectivo 6 para el descarte H-150',
+  /SELECTIVE_CLEANUP_PROTOCOL\s*=\s*6/.test(store));
 check('15. una limpieza remota no fuerza compatibilidad sin releer manifiesto',
   !/applyRemoteSelectiveCleanup[\s\S]{0,2200}syncCompatibility\s*=\s*['"]ok['"]/.test(store));
 check('16. existe autoridad administrativa para retirar/reactivar equipos',

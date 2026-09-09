@@ -6842,6 +6842,28 @@ sin overflow ni errores de ejecución. HTML SHA-256
 `49aabdb7513d88b1548f8a22930281d25016d5d8eab1902bcff4037582c73e15`.
 **Documento:** `docs/fixes/recuperacion-dirigida-h149.md`.
 
+## H-150 — Limpieza con descarte respaldado de cuarentena
+
+**Estado:** CORREGIDO Y VERIFICADO; publicación del cliente pendiente.
+**Fecha:** 09/09/2026.
+**Commit:** Pendiente de commit.
+**Causa:** flota mezclaba expedientes archivados con cola ejecutable; la
+limpieza no tenía descarte atómico ni protección contra su reactivación.
+**Solución:** preview/respaldo/confirmación explícitos para archivos sin
+reintento autorizado que afectan los dominios elegidos. Rechazo transaccional,
+idempotente y bloqueo servidor de replay por identidad/alias. Cola activa,
+reintentos aprobados y archivos antiguos sin identidad verificable conservan
+su guarda. Descartar ediciones/bajas archivadas no las ejecuta.
+**Pruebas:** H150 SQL 10/10, ejecución aislada 13/13, UI 20/20; verificación
+de permisos/replay local y real OK. Cola 186/186, migraciones 31/31, módulos
+42/42; regresiones y matriz real A/B/C detalladas en el documento.
+**Despliegue:** migraciones 19200/19300 aplicadas; 18 huellas/conteos intactos.
+Preview real ejecutable, sin bloqueos, incluye 62 archivos además de los
+documentos seleccionados. Cliente protocolo de limpieza 6; publicación pendiente.
+**Riesgo residual:** no se ejecuta la limpieza real: requiere revisión,
+respaldo y confirmación del usuario; archivos locales no inspeccionados.
+**Documento:** `docs/fixes/limpieza-pendientes-cuarentena-h150.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

@@ -1,0 +1,214 @@
+{
+  "date": "2026-09-09",
+  "build": "2026-09-09-h150",
+  "migrations": [
+    "20260909019200",
+    "20260909019300"
+  ],
+  "remoteVerification": "H150_REMOTE_VERIFICATION_OK",
+  "realCleanupExecuted": false,
+  "businessPreservation": {
+    "ok": true,
+    "before": {
+      "clients": {
+        "count": 11,
+        "hash": "ae7b55da1a434eb892c351d379ccea92"
+      },
+      "commission_adjustments": {
+        "count": 0,
+        "hash": "d751713988987e9331980363e24189ce"
+      },
+      "exchange_items": {
+        "count": 4,
+        "hash": "96d80cf9f3f6f36c4a09121636284010"
+      },
+      "exchanges": {
+        "count": 2,
+        "hash": "95e4c6c84a6b2d865871f800d9ae3d20"
+      },
+      "liquidations": {
+        "count": 0,
+        "hash": "d751713988987e9331980363e24189ce"
+      },
+      "loan_documents": {
+        "count": 0,
+        "hash": "d751713988987e9331980363e24189ce"
+      },
+      "lookup": {
+        "count": 551,
+        "hash": "3b2cf3e15ecc71c63e3335b7d52af976"
+      },
+      "movements": {
+        "count": 18,
+        "hash": "09ab87bf7bc8125b6ee3d74ce999e0c8"
+      },
+      "products": {
+        "count": 2383,
+        "hash": "165bf853e56f7463bc5a8668a660820c"
+      },
+      "promotions": {
+        "count": 2,
+        "hash": "f0cc85c4db2620ccc3ac2af5e424d8ef"
+      },
+      "quarantine": {
+        "count": 64,
+        "hash": "aedc7ccbd5ac9e00aa5e6d29b058352a"
+      },
+      "return_items": {
+        "count": 1,
+        "hash": "b1705c1f555078c1487a9363b293dddd"
+      },
+      "returns": {
+        "count": 1,
+        "hash": "f42826d1d2b7e21a90499d10f39d36c6"
+      },
+      "sale_items": {
+        "count": 13,
+        "hash": "17523f6da13acbe4a8afc18afd4a94b8"
+      },
+      "sale_payments": {
+        "count": 11,
+        "hash": "829a00aeb45e429d3f89bc63a5bb3d07"
+      },
+      "sales": {
+        "count": 9,
+        "hash": "e1643f901b233888ccc58e6cd9696368"
+      },
+      "sellers": {
+        "count": 5,
+        "hash": "9aac65f9477f9db03965b76fc8d0ba00"
+      },
+      "settings": {
+        "count": 40,
+        "hash": "45b20074b3ae6940cfd948151c800d18"
+      }
+    },
+    "after": {
+      "clients": {
+        "count": 11,
+        "hash": "ae7b55da1a434eb892c351d379ccea92"
+      },
+      "commission_adjustments": {
+        "count": 0,
+        "hash": "d751713988987e9331980363e24189ce"
+      },
+      "exchange_items": {
+        "count": 4,
+        "hash": "96d80cf9f3f6f36c4a09121636284010"
+      },
+      "exchanges": {
+        "count": 2,
+        "hash": "95e4c6c84a6b2d865871f800d9ae3d20"
+      },
+      "liquidations": {
+        "count": 0,
+        "hash": "d751713988987e9331980363e24189ce"
+      },
+      "loan_documents": {
+        "count": 0,
+        "hash": "d751713988987e9331980363e24189ce"
+      },
+      "lookup": {
+        "count": 551,
+        "hash": "3b2cf3e15ecc71c63e3335b7d52af976"
+      },
+      "movements": {
+        "count": 18,
+        "hash": "09ab87bf7bc8125b6ee3d74ce999e0c8"
+      },
+      "products": {
+        "count": 2383,
+        "hash": "165bf853e56f7463bc5a8668a660820c"
+      },
+      "promotions": {
+        "count": 2,
+        "hash": "f0cc85c4db2620ccc3ac2af5e424d8ef"
+      },
+      "quarantine": {
+        "count": 64,
+        "hash": "aedc7ccbd5ac9e00aa5e6d29b058352a"
+      },
+      "return_items": {
+        "count": 1,
+        "hash": "b1705c1f555078c1487a9363b293dddd"
+      },
+      "returns": {
+        "count": 1,
+        "hash": "f42826d1d2b7e21a90499d10f39d36c6"
+      },
+      "sale_items": {
+        "count": 13,
+        "hash": "17523f6da13acbe4a8afc18afd4a94b8"
+      },
+      "sale_payments": {
+        "count": 11,
+        "hash": "829a00aeb45e429d3f89bc63a5bb3d07"
+      },
+      "sales": {
+        "count": 9,
+        "hash": "e1643f901b233888ccc58e6cd9696368"
+      },
+      "sellers": {
+        "count": 5,
+        "hash": "9aac65f9477f9db03965b76fc8d0ba00"
+      },
+      "settings": {
+        "count": 40,
+        "hash": "45b20074b3ae6940cfd948151c800d18"
+      }
+    }
+  },
+  "preview": {
+    "archived_by_type": [
+      {
+        "count": 55,
+        "type": "upsert"
+      },
+      {
+        "count": 1,
+        "type": "return"
+      },
+      {
+        "count": 4,
+        "type": "sale"
+      },
+      {
+        "count": 1,
+        "type": "productDeleteScope"
+      },
+      {
+        "count": 1,
+        "type": "exchange"
+      }
+    ],
+    "blocked_reasons": [],
+    "counts": {
+      "cambios": 2,
+      "clientes": 3,
+      "comisiones": 0,
+      "devoluciones": 1,
+      "evidencias_huerfanas_devolucion": 0,
+      "operaciones_archivadas": 62,
+      "prestamos": 0,
+      "reclasificaciones": 0,
+      "ventas": 9
+    },
+    "executable": true,
+    "fleet": {
+      "attention": 0,
+      "compatible_offline": 4,
+      "historical_incidents": 135,
+      "ready": 0,
+      "retired": 5,
+      "unsafe_legacy": 0,
+      "update_on_return": 1
+    },
+    "minimum_client_protocol": 6
+  },
+  "isolatedTests": {
+    "fleet": 10,
+    "execute": 13,
+    "ui": 20
+  },
+  "limitation": "H150 destructive cleanup executed only in an isolated local database; remote verification uses rolled-back technical fixtures. Existing full A/B/C certifier tests synchronization, not a real destructive H150 cleanup."
+}
