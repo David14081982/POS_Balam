@@ -4,7 +4,7 @@
 **Estado:** SOFTWARE PUBLICADO REVALIDADO; INCIDENCIA FÍSICA ACTUAL PENDIENTE.
 **Fecha:** 09/09/2026.
 **Commit auditado:** `efcec1218ecc70b91a8158adf9e7aedc5a2987ac`.
-**Commit de este registro:** Pendiente de commit.
+**Commit de este registro y sus evidencias:** `5900a5c`.
 
 ## Problema y reproducción
 

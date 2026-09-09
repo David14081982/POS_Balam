@@ -6378,7 +6378,7 @@ impresora y lector continúa perteneciendo al riesgo heredado H-133.
 el reporte físico actual sigue pendiente de identificar dispositivo y transporte.
 No se atribuye su causa al controlador ni se certifica el corte físico.
 Registro: `docs/fixes/revalidacion-impresion-2026-09-09.md`.
-Commit de la revalidación: Pendiente de commit.
+Commit de la revalidación: `5900a5c`.
 
 **Estado:** RESUELTO EN SOFTWARE Y PUBLICADO — CORTE FÍSICO PENDIENTE
 **Fecha de registro:** 05/09/2026
@@ -6714,7 +6714,7 @@ escritorio conserva sus tonos. La incidencia de las nuevas fotos requiere
 identificar el transporte y comprobar en papel; la aceptación histórica no
 resuelve automáticamente este reporte. Registro:
 `docs/fixes/revalidacion-impresion-2026-09-09.md`.
-Commit de la revalidación: Pendiente de commit.
+Commit de la revalidación: `5900a5c`.
 
 **Estado:** RESUELTO — IMPRESIÓN CONFIRMADA POR EL USUARIO.
 **Fecha:** 05/09/2026.
