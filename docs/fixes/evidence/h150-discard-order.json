@@ -1,0 +1,208 @@
+{
+  "date": "2026-09-09",
+  "incident": {
+    "backups": 4,
+    "cleanups": [
+      {
+        "completed_at": "2026-08-20T18:53:52.118811+00:00",
+        "epoch": 3,
+        "id": "0820e643-5b84-4bf0-b662-dfe7a845858a",
+        "status": "completed"
+      },
+      {
+        "completed_at": "2026-08-20T19:42:51.238003+00:00",
+        "epoch": 4,
+        "id": "d5e59c70-1e0a-4008-af1e-c17d078572fb",
+        "status": "completed"
+      },
+      {
+        "completed_at": "2026-08-20T19:54:59.888853+00:00",
+        "epoch": 5,
+        "id": "9dbcd23c-4512-4606-90c8-50fe6fecd2d5",
+        "status": "completed"
+      }
+    ],
+    "discarded": 0,
+    "epoch": 7,
+    "exchanges": 2,
+    "quarantine": {
+      "pending_review": 64
+    },
+    "returns": 1,
+    "sales": 9
+  },
+  "cause": {
+    "saleCommitOverlap": 3,
+    "saleOperationOverlap": 0,
+    "error": "TEST_PENDING_DISCARDED",
+    "statement": "delete from pos.sale_commits",
+    "originalFunctionMd5": "7bd1552fed0944c62d5015735b8ba168",
+    "correctedFunctionMd5": "24f041bd3105cc8e7e6ca79259256ac8"
+  },
+  "migrations": [
+    "20260909019400",
+    "20260909019500"
+  ],
+  "remoteVerification": "H150_ORDER_REMOTE_VERIFICATION_OK",
+  "preservedTables": 18,
+  "before": {
+    "clients": {
+      "count": 11,
+      "hash": "ae7b55da1a434eb892c351d379ccea92"
+    },
+    "commission_adjustments": {
+      "count": 0,
+      "hash": "d751713988987e9331980363e24189ce"
+    },
+    "exchange_items": {
+      "count": 4,
+      "hash": "96d80cf9f3f6f36c4a09121636284010"
+    },
+    "exchanges": {
+      "count": 2,
+      "hash": "95e4c6c84a6b2d865871f800d9ae3d20"
+    },
+    "liquidations": {
+      "count": 0,
+      "hash": "d751713988987e9331980363e24189ce"
+    },
+    "loan_documents": {
+      "count": 0,
+      "hash": "d751713988987e9331980363e24189ce"
+    },
+    "lookup": {
+      "count": 551,
+      "hash": "81a1af4a2d69328e7a24cc1fc89ecb96"
+    },
+    "movements": {
+      "count": 18,
+      "hash": "09ab87bf7bc8125b6ee3d74ce999e0c8"
+    },
+    "products": {
+      "count": 2383,
+      "hash": "f903c2c8f65a9557f2e9d531b903f517"
+    },
+    "promotions": {
+      "count": 2,
+      "hash": "f0cc85c4db2620ccc3ac2af5e424d8ef"
+    },
+    "quarantine": {
+      "count": 64,
+      "hash": "aedc7ccbd5ac9e00aa5e6d29b058352a"
+    },
+    "return_items": {
+      "count": 1,
+      "hash": "b1705c1f555078c1487a9363b293dddd"
+    },
+    "returns": {
+      "count": 1,
+      "hash": "f42826d1d2b7e21a90499d10f39d36c6"
+    },
+    "sale_items": {
+      "count": 13,
+      "hash": "17523f6da13acbe4a8afc18afd4a94b8"
+    },
+    "sale_payments": {
+      "count": 11,
+      "hash": "829a00aeb45e429d3f89bc63a5bb3d07"
+    },
+    "sales": {
+      "count": 9,
+      "hash": "e1643f901b233888ccc58e6cd9696368"
+    },
+    "sellers": {
+      "count": 5,
+      "hash": "9aac65f9477f9db03965b76fc8d0ba00"
+    },
+    "settings": {
+      "count": 40,
+      "hash": "528e7ddc95a5c8cb2547cb5901a757bd"
+    }
+  },
+  "after": {
+    "clients": {
+      "count": 11,
+      "hash": "ae7b55da1a434eb892c351d379ccea92"
+    },
+    "commission_adjustments": {
+      "count": 0,
+      "hash": "d751713988987e9331980363e24189ce"
+    },
+    "exchange_items": {
+      "count": 4,
+      "hash": "96d80cf9f3f6f36c4a09121636284010"
+    },
+    "exchanges": {
+      "count": 2,
+      "hash": "95e4c6c84a6b2d865871f800d9ae3d20"
+    },
+    "liquidations": {
+      "count": 0,
+      "hash": "d751713988987e9331980363e24189ce"
+    },
+    "loan_documents": {
+      "count": 0,
+      "hash": "d751713988987e9331980363e24189ce"
+    },
+    "lookup": {
+      "count": 551,
+      "hash": "81a1af4a2d69328e7a24cc1fc89ecb96"
+    },
+    "movements": {
+      "count": 18,
+      "hash": "09ab87bf7bc8125b6ee3d74ce999e0c8"
+    },
+    "products": {
+      "count": 2383,
+      "hash": "f903c2c8f65a9557f2e9d531b903f517"
+    },
+    "promotions": {
+      "count": 2,
+      "hash": "f0cc85c4db2620ccc3ac2af5e424d8ef"
+    },
+    "quarantine": {
+      "count": 64,
+      "hash": "aedc7ccbd5ac9e00aa5e6d29b058352a"
+    },
+    "return_items": {
+      "count": 1,
+      "hash": "b1705c1f555078c1487a9363b293dddd"
+    },
+    "returns": {
+      "count": 1,
+      "hash": "f42826d1d2b7e21a90499d10f39d36c6"
+    },
+    "sale_items": {
+      "count": 13,
+      "hash": "17523f6da13acbe4a8afc18afd4a94b8"
+    },
+    "sale_payments": {
+      "count": 11,
+      "hash": "829a00aeb45e429d3f89bc63a5bb3d07"
+    },
+    "sales": {
+      "count": 9,
+      "hash": "e1643f901b233888ccc58e6cd9696368"
+    },
+    "sellers": {
+      "count": 5,
+      "hash": "9aac65f9477f9db03965b76fc8d0ba00"
+    },
+    "settings": {
+      "count": 40,
+      "hash": "528e7ddc95a5c8cb2547cb5901a757bd"
+    }
+  },
+  "realCleanupExecutedByAgent": false,
+  "tests": {
+    "red": "Local exact reproduction fails at sale_commits trigger before the intended receipt-failure injection",
+    "green": {
+      "commercialOverlap": 13,
+      "archiveOnly": 13,
+      "fleet": 10,
+      "chromeWithLocalPostgreSQL": 12,
+      "migrations": 31
+    }
+  },
+  "limitation": "Browser uses the public HTML with a test transport to loopback PostgreSQL. No cleanup is executed against shared Supabase business data. Existing A/B/C certificate binds the unchanged client; no new A/B/C cleanup run."
+}

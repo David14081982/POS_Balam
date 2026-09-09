@@ -6844,9 +6844,16 @@ sin overflow ni errores de ejecución. HTML SHA-256
 
 ## H-150 — Limpieza con descarte respaldado de cuarentena
 
-**Estado:** RESUELTO Y PUBLICADO.
+**Estado:** RESUELTO — corrección de orden aplicada tras reapertura.
 **Fecha:** 09/09/2026.
-**Commit:** `fc5f6be`.
+**Commit:** `fc5f6be`; corrección de orden: Pendiente de commit.
+**Reapertura corregida:** el rechazo prematuro bloqueaba el DELETE del
+comprobante coincidente. Se movió el mismo bloque de descarte al final de las
+mutaciones comerciales, manteniendo transacción, lock, ACL y protección contra
+replay. Migraciones 19400/19500 aplicadas. Rojo SQL exacto; verde de superposición
+13/13, UI con PostgreSQL 12/12 local y HTML público, regresiones SQL 23/23,
+migraciones 31/31 y verificación remota OK. Huellas de 18 tablas intactas.
+Las pruebas iniciales no cubrían documentos confirmados con reintento archivado.
 **Causa:** flota mezclaba expedientes archivados con cola ejecutable; la
 limpieza no tenía descarte atómico ni protección contra su reactivación.
 **Solución:** preview/respaldo/confirmación explícitos para archivos sin

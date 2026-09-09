@@ -6,7 +6,59 @@
 
 **Fecha:** 09/09/2026
 
-**Commit:** `fc5f6be` (implementación)
+**Commit:** `fc5f6be` (implementación inicial); corrección de orden: Pendiente de commit
+
+## Reapertura: bloqueo al confirmar (09/09/2026)
+
+Después de publicar, el usuario llegó a la advertencia final y recibió «Esta
+operación se descartó al limpiar los datos de prueba». No era un éxito ni una
+confirmación perdida: el servidor conservaba época 7, las 9 ventas, 1 devolución,
+2 cambios, 64 archivos `pending_review` y cero descartes. Los tres recibos de
+limpieza existentes eran anteriores a esta incidencia.
+
+Se reprodujo el mismo `TEST_PENDING_DISCARDED` en PostgreSQL: H150 marcaba
+primero el archivo como rechazado; al borrar después `sale_commits`, el trigger
+`guard_device_recovery_row` interpretaba su identidad histórica como replay.
+La lectura real encontró tres coincidencias entre cuarentena y `sale_commits`,
+aunque ninguna coincidía con `sales.operation_id`. La prueba inicial de
+ejecución tenía cuarentena y productos, pero ninguna venta/comprobante
+coincidente; el E2E inicial simulaba el éxito de la RPC. Esa cobertura fue
+insuficiente y no debía presentarse como validación completa del caso del usuario.
+
+Migración `20260909019400`: mueve el bloque de descarte, sin cambiarlo, después
+de las mutaciones comerciales y antes del resultado. Todo sigue dentro de la
+misma transacción y el mismo lock exclusivo. No hay excepción ni bypass en
+triggers, ACL o protección contra replay. La migración se generó desde la
+definición remota con guarda MD5; no se reescribieron migraciones aplicadas.
+La verificación `20260909019500` comprueba definición, privilegios y defensas
+reales con fixtures técnicos revertidos. Ambas ya están aplicadas; no ejecutan
+una limpieza comercial ni cambian filas de negocio durante la instalación.
+
+Pruebas adicionales:
+
+- `test-h150-cleanup-quarantine-overlap.sql`: rojo exacto en DELETE de
+  `sale_commits`; verde 13/13 con dos ventas confirmadas V1/V2 y sus reintentos
+  archivados, respaldo, borrado de hijos, stock exacto, idempotencia, protección
+  de replay y rollback por fallo inyectado al actualizar el recibo final.
+- Regresión SQL: descarte sin documentos 13/13 y flota 10/10.
+- `test-h150-cleanup-quarantine-sql-ui.mjs`: 12/12, Chrome con UI real y
+  transporte de prueba hacia PostgreSQL local. Preview, respaldo descargado,
+  frase bloqueada/liberada, ejecución SQL y recibo verdadero; confirma stock,
+  documentos ausentes y pantalla LIMPIEZA COMPLETADA a 320/1280 px. También
+  12/12 usando el HTML público. No simula éxito de la limpieza.
+- Migraciones: 31/31. Verificación remota:
+  `H150_ORDER_REMOTE_VERIFICATION_OK`. Huellas/conteos antes/después: 18/18
+  idénticos, sin limpieza real ejecutada por el agente.
+
+Evidencia: `evidence/h150-discard-order.json`. El cliente y su SHA-256 no
+cambiaron; el certificado A/B/C previo sigue ligado al mismo artefacto. No se
+declara una nueva certificación A/B/C de limpieza destructiva real. El ajuste
+del servidor permite reintentar desde la pantalla existente. Ante un error
+anterior, cerrar el aviso y volver a preparar/respaldar/confirmar la selección.
+
+Aprendizaje: los archivos pueden representar reintentos de documentos ya
+confirmados. La regresión debe ejercer esa superposición, además de archivos
+sin documento; los conteos de suites independientes no prueban su interacción.
 
 ## Problema y reproducción
 
