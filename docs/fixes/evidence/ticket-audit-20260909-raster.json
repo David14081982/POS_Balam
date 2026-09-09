@@ -1,0 +1,93 @@
+[
+  {
+    "name": "historico-v1",
+    "width": 576,
+    "height": 2499,
+    "expectedHeight": 2498.2117388919364,
+    "meanError": 10.11267006802721,
+    "missingRatio": 0.0013094718463553033,
+    "inkRatio": 1.0060548476041433,
+    "ink": 108002,
+    "grayPixels": 0,
+    "inkWidth": 571,
+    "bytes": 35174
+  },
+  {
+    "name": "logo-personalizado",
+    "width": 576,
+    "height": 2499,
+    "expectedHeight": 2498.2117388919364,
+    "meanError": 10.150403911564625,
+    "missingRatio": 0.0018591337672897064,
+    "inkRatio": 1.0046228339401795,
+    "ink": 105399,
+    "grayPixels": 0,
+    "inkWidth": 571,
+    "bytes": 34966
+  },
+  {
+    "name": "larga-v2",
+    "width": 576,
+    "height": 9534,
+    "expectedHeight": 9533.366977509599,
+    "meanError": 11.431152651038389,
+    "missingRatio": 0.0024436919554862865,
+    "inkRatio": 0.9910386954298707,
+    "ink": 364397,
+    "grayPixels": 0,
+    "inkWidth": 571,
+    "bytes": 182310
+  },
+  {
+    "name": "corta-despues",
+    "width": 576,
+    "height": 2369,
+    "expectedHeight": 2367.0521119034556,
+    "meanError": 9.833955519206416,
+    "missingRatio": 0.0019911423062576507,
+    "inkRatio": 0.9930369408611157,
+    "ink": 94839,
+    "grayPixels": 0,
+    "inkWidth": 571,
+    "bytes": 30986
+  },
+  {
+    "name": "abono",
+    "width": 576,
+    "height": 4382,
+    "expectedHeight": 4381.34942402633,
+    "meanError": 11.543453094097064,
+    "missingRatio": 0.0015593192172937641,
+    "inkRatio": 0.9914452601446198,
+    "ink": 179752,
+    "grayPixels": 0,
+    "inkWidth": 571,
+    "bytes": 73482
+  },
+  {
+    "name": "cambio",
+    "width": 576,
+    "height": 4505,
+    "expectedHeight": 4504.925946242458,
+    "meanError": 10.994202044025156,
+    "missingRatio": 0.0010882405180701491,
+    "inkRatio": 0.9907338811063219,
+    "ink": 176525,
+    "grayPixels": 0,
+    "inkWidth": 571,
+    "bytes": 75222
+  },
+  {
+    "name": "devolucion",
+    "width": 576,
+    "height": 3780,
+    "expectedHeight": 3779.1947339550193,
+    "meanError": 16.320360725308642,
+    "missingRatio": 0.005704352871994011,
+    "inkRatio": 0.9875245852684041,
+    "ink": 191799,
+    "grayPixels": 0,
+    "inkWidth": 571,
+    "bytes": 73070
+  }
+]

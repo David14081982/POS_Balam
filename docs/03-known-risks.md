@@ -6374,6 +6374,12 @@ impresora y lector continúa perteneciendo al riesgo heredado H-133.
 
 ## H-135 — El ticket térmico se divide en varias páginas del PDF
 
+**Revalidación 09/09/2026:** publicación `efcec12`, PDF 61/61 sobre Pages;
+el reporte físico actual sigue pendiente de identificar dispositivo y transporte.
+No se atribuye su causa al controlador ni se certifica el corte físico.
+Registro: `docs/fixes/revalidacion-impresion-2026-09-09.md`.
+Commit de la revalidación: Pendiente de commit.
+
 **Estado:** RESUELTO EN SOFTWARE Y PUBLICADO — CORTE FÍSICO PENDIENTE
 **Fecha de registro:** 05/09/2026
 **Origen:** PDF proporcionado por el usuario: dos páginas carta; historial de
@@ -6701,6 +6707,14 @@ respuestas PWA desde el service worker de tráfico de red; red real observada 0.
 05/09/2026. El ancho y la intensidad se atienden en H-145.
 
 ## H-145 — Ancho útil y contraste del ticket gráfico Android
+
+**Revalidación 09/09/2026:** siete PNG de la publicación `efcec12` conservan
+576 puntos de ancho y cero píxeles grises. La binarización aplica a Android;
+escritorio conserva sus tonos. La incidencia de las nuevas fotos requiere
+identificar el transporte y comprobar en papel; la aceptación histórica no
+resuelve automáticamente este reporte. Registro:
+`docs/fixes/revalidacion-impresion-2026-09-09.md`.
+Commit de la revalidación: Pendiente de commit.
 
 **Estado:** RESUELTO — IMPRESIÓN CONFIRMADA POR EL USUARIO.
 **Fecha:** 05/09/2026.

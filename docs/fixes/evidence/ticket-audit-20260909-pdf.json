@@ -1,0 +1,569 @@
+{
+  "metrics": [
+    {
+      "name": "venta-tres-productos",
+      "pages": 1,
+      "widths": [
+        80.09466313888888
+      ],
+      "heights": [
+        359.8333333333333
+      ],
+      "layout": {
+        "width": 79.99925130208332,
+        "height": 358.3450520833333,
+        "text": "landscape\nBALAM\n\nBalam Guayaberas\n\nRFC: XAXX010101000\n\nC. Guerrero, Av. Jalisco esquina Centro, Cp. 83000\n\n662 473 3832\n\nTRANSACCIÓN\nPRUEBA-H135\nFECHA\n2026-09-05 12:00\nATENDIDO POR\nPRUEBA\nDETALLE DE COMPRA\nPRENDA DE PRUEBA 1\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-38 · Talla: 38 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 2\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-39 · Talla: 39 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 3\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-40 · Talla: 40 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nImporte\n$3,232.76\nIVA (16%)\n$517.24\nTOTAL A PAGAR\n$3,750.00\npayments\n\nMÉTODO DE PAGO\n\nEfectivo\n\n¡Gracias por su compra! Máximo 7 días para cambios.\n\nPiezas artesanales únicas, cuidando la tradición y el detalle en cada fibra.\n\nBALAMGUAYABERAS.COM",
+        "parent": "BODY",
+        "hiddenApp": true,
+        "overflow": false
+      }
+    },
+    {
+      "name": "venta-larga",
+      "pages": 1,
+      "widths": [
+        80.09466313888888
+      ],
+      "heights": [
+        1006.0939647222222
+      ],
+      "layout": {
+        "width": 79.99925130208332,
+        "height": 1004.4575520833332,
+        "text": "landscape\nBALAM\n\nBalam Guayaberas\n\nRFC: XAXX010101000\n\nC. Guerrero, Av. Jalisco esquina Centro, Cp. 83000\n\n662 473 3832\n\nTRANSACCIÓN\nPRUEBA-H135\nFECHA\n2026-09-05 12:00\nATENDIDO POR\nPRUEBA\nDETALLE DE COMPRA\nPRENDA DE PRUEBA 1\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-38 · Talla: 38 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 2\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-39 · Talla: 39 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 3\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-40 · Talla: 40 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 4\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-41 · Talla: 41 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 5\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-42 · Talla: 42 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 6\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-43 · Talla: 43 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 7\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-44 · Talla: 44 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 8\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-45 · Talla: 45 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 9\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-46 · Talla: 46 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 10\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-47 · Talla: 47 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 11\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-48 · Talla: 48 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 12\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-49 · Talla: 49 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 13\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-50 · Talla: 50 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 14\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-51 · Talla: 51 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 15\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-52 · Talla: 52 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 16\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-53 · Talla: 53 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 17\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-54 · Talla: 54 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 18\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-55 · Talla: 55 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 19\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-56 · Talla: 56 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 20\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-57 · Talla: 57 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 21\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-58 · Talla: 58 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 22\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-59 · Talla: 59 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 23\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-60 · Talla: 60 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 24\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-61 · Talla: 61 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nImporte\n$25,862.07\nIVA (16%)\n$4,137.93\nTOTAL A PAGAR\n$30,000.00\npayments\n\nMÉTODO DE PAGO\n\nEfectivo\n\n¡Gracias por su compra! Máximo 7 días para cambios.\n\nPiezas artesanales únicas, cuidando la tradición y el detalle en cada fibra.\n\nBALAMGUAYABERAS.COM",
+        "parent": "BODY",
+        "hiddenApp": true,
+        "overflow": false
+      }
+    },
+    {
+      "name": "venta-corta-despues-de-larga",
+      "pages": 1,
+      "widths": [
+        80.09466313888888
+      ],
+      "heights": [
+        299.1273262777778
+      ],
+      "layout": {
+        "width": 79.99925130208332,
+        "height": 297.4908854166667,
+        "text": "landscape\nBALAM\n\nBalam Guayaberas\n\nRFC: XAXX010101000\n\nC. Guerrero, Av. Jalisco esquina Centro, Cp. 83000\n\n662 473 3832\n\nTRANSACCIÓN\nPRUEBA-H135\nFECHA\n2026-09-05 12:00\nATENDIDO POR\nPRUEBA\nDETALLE DE COMPRA\nPRENDA DE PRUEBA 1\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-38 · Talla: 38 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nImporte\n$1,077.59\nIVA (16%)\n$172.41\nTOTAL A PAGAR\n$1,250.00\npayments\n\nMÉTODO DE PAGO\n\nEfectivo\n\n¡Gracias por su compra! Máximo 7 días para cambios.\n\nPiezas artesanales únicas, cuidando la tradición y el detalle en cada fibra.\n\nBALAMGUAYABERAS.COM",
+        "parent": "BODY",
+        "hiddenApp": true,
+        "overflow": false
+      }
+    },
+    {
+      "name": "venta-historica-v1",
+      "pages": 1,
+      "widths": [
+        80.09466313888888
+      ],
+      "heights": [
+        438.8273051111111
+      ],
+      "layout": {
+        "width": 79.99925130208332,
+        "height": 437.7200520833333,
+        "text": "landscape\nBALAM\n\nBalam Guayaberas\n\nRFC: XAXX010101000\n\nCalle 60 #412, Centro, Mérida, Yuc.\n\n999 924 0011\n\nTRANSACCIÓN\nPRUEBA-H135\nFECHA\n2026-09-05 12:00\nATENDIDO POR\nPRUEBA\nDETALLE DE COMPRA\nPRENDA DE PRUEBA 1\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-38 · Talla: 38\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 2\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-39 · Talla: 39\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 3\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-40 · Talla: 40\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 4\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-41 · Talla: 41\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 5\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-42 · Talla: 42\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 6\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-43 · Talla: 43\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nImporte\n$6,465.52\nIVA (16%)\n$1,034.48\nTOTAL A PAGAR\n$7,500.00\npayments\n\nMÉTODO DE PAGO\n\nEfectivo\n\nGracias por ser parte de nuestra herencia.\n\nPiezas artesanales únicas, cuidando la tradición y el detalle en cada fibra.\n\nBALAMGUAYABERAS.COM",
+        "parent": "BODY",
+        "hiddenApp": true,
+        "overflow": false
+      }
+    },
+    {
+      "name": "abono",
+      "pages": 1,
+      "widths": [
+        80.09466313888888
+      ],
+      "heights": [
+        505.8833333333333
+      ],
+      "layout": {
+        "width": 79.99925130208332,
+        "height": 504.92421874999997,
+        "text": "landscape\nBALAM\n\nBalam Guayaberas\n\nRFC: XAXX010101000\n\nC. Guerrero, Av. Jalisco esquina Centro, Cp. 83000\n\n662 473 3832\n\nABONO A APARTADO\n$100.00\nRecibido en Efectivo · 2026-09-05 12:00\nAPARTADO\nPRUEBA-H135\nFECHA\n2026-09-05 12:00\nATENDIDO POR\nPRUEBA\nCLIENTE\nPúblico en general\nESTADO\nApartado\nMERCANCÍA APARTADA\nPRENDA DE PRUEBA 1\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-38 · Talla: 38 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 2\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-39 · Talla: 39 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 3\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-40 · Talla: 40 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 4\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-41 · Talla: 41 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 5\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-42 · Talla: 42 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 6\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-43 · Talla: 43 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nImporte\n$6,465.52\nIVA (16%)\n$1,034.48\nTOTAL A PAGAR\n$7,500.00\nPagado a la fecha\n$100.00\nSaldo pendiente\n$7,400.00\nConserva este comprobante. La mercancía se entrega al liquidar el saldo.\n\n¡Gracias por su compra! Máximo 7 días para cambios.\n\nPiezas artesanales únicas, cuidando la tradición y el detalle en cada fibra.\n\nBALAMGUAYABERAS.COM",
+        "parent": "BODY",
+        "hiddenApp": true,
+        "overflow": false
+      }
+    },
+    {
+      "name": "cambio",
+      "pages": 1,
+      "widths": [
+        80.09466313888888
+      ],
+      "heights": [
+        511.2173333333333
+      ],
+      "layout": {
+        "width": 79.99925130208332,
+        "height": 509.3229166666667,
+        "text": "landscape\nBALAM\n\nBalam Guayaberas\n\nRFC: XAXX010101000\n\nC. Guerrero, Av. Jalisco esquina Centro, Cp. 83000\n\n662 473 3832\n\nCAMBIO DE MERCANCIA\nCMB-PRUEBA-H135\nSobre la venta PRUEBA-H135\nENTREGA\n1 × PRENDA DE PRUEBA 1 · talla 38 · ALFORZAS · AZUL MARINO · $1,250.00\nRECIBE\n1 × PRENDA DE PRUEBA 1 · talla 38 · ALFORZAS · AZUL MARINO · $1,250.00\nTRANSACCIÓN\nPRUEBA-H135\nFECHA\n2026-09-05 12:00\nATENDIDO POR\nPRUEBA\nDETALLE DE COMPRA\nPRENDA DE PRUEBA 1\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-38 · Talla: 38 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 2\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-39 · Talla: 39 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 3\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-40 · Talla: 40 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 4\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-41 · Talla: 41 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 5\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-42 · Talla: 42 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nPRENDA DE PRUEBA 6\n$1,250.00\nSKU: 1-PRE-ML-POL-TRA-AMAR-43 · Talla: 43 · AZUL MARINO\nCant: 1\nOrnamento: ALFORZAS Â· AZUL MARINO\nImporte\n$6,465.52\nIVA (16%)\n$1,034.48\nTOTAL A PAGAR\n$7,500.00\npayments\n\nMÉTODO DE PAGO\n\nEfectivo\n\n¡Gracias por su compra! Máximo 7 días para cambios.\n\nPiezas artesanales únicas, cuidando la tradición y el detalle en cada fibra.\n\nBALAMGUAYABERAS.COM",
+        "parent": "BODY",
+        "hiddenApp": true,
+        "overflow": false
+      }
+    },
+    {
+      "name": "devolucion",
+      "pages": 1,
+      "widths": [
+        80.09466313888888
+      ],
+      "heights": [
+        450.84999999999997
+      ],
+      "layout": {
+        "width": 79.99925130208332,
+        "height": 449.7916666666667,
+        "text": "BALAM\nBalam Guayaberas\nCOMPROBANTE DE DEVOLUCIÓN\nFolio de devolución: DEV-PRUEBA-H135\nVenta original: PRUEBA-H135\nFecha: 2026-09-05 12:00\nVendedor: PRUEBA\nCliente: Público en general\nMétodo de devolución: Efectivo\nReferencia de operación: DEV-PRUEBA-H135\nPRENDA DE PRUEBA 1\nSKU: 1-PRE-ML-POL-TRA-AMAR-38 · Talla: 38\nCantidad: 1 · Importe: $1,250.00\nPRENDA DE PRUEBA 2\nSKU: 1-PRE-ML-POL-TRA-AMAR-39 · Talla: 39\nCantidad: 1 · Importe: $1,250.00\nPRENDA DE PRUEBA 3\nSKU: 1-PRE-ML-POL-TRA-AMAR-40 · Talla: 40\nCantidad: 1 · Importe: $1,250.00\nPRENDA DE PRUEBA 4\nSKU: 1-PRE-ML-POL-TRA-AMAR-41 · Talla: 41\nCantidad: 1 · Importe: $1,250.00\nPRENDA DE PRUEBA 5\nSKU: 1-PRE-ML-POL-TRA-AMAR-42 · Talla: 42\nCantidad: 1 · Importe: $1,250.00\nPRENDA DE PRUEBA 6\nSKU: 1-PRE-ML-POL-TRA-AMAR-43 · Talla: 43\nCantidad: 1 · Importe: $1,250.00\nPRENDA DE PRUEBA 7\nSKU: 1-PRE-ML-POL-TRA-AMAR-44 · Talla: 44\nCantidad: 1 · Importe: $1,250.00\nPRENDA DE PRUEBA 8\nSKU: 1-PRE-ML-POL-TRA-AMAR-45 · Talla: 45\nCantidad: 1 · Importe: $1,250.00\nPRENDA DE PRUEBA 9\nSKU: 1-PRE-ML-POL-TRA-AMAR-46 · Talla: 46\nCantidad: 1 · Importe: $1,250.00\nPRENDA DE PRUEBA 10\nSKU: 1-PRE-ML-POL-TRA-AMAR-47 · Talla: 47\nCantidad: 1 · Importe: $1,250.00\nPRENDA DE PRUEBA 11\nSKU: 1-PRE-ML-POL-TRA-AMAR-48 · Talla: 48\nCantidad: 1 · Importe: $1,250.00\nPRENDA DE PRUEBA 12\nSKU: 1-PRE-ML-POL-TRA-AMAR-49 · Talla: 49\nCantidad: 1 · Importe: $1,250.00\nREEMBOLSO\n$15,000.00",
+        "parent": "BODY",
+        "hiddenApp": true,
+        "overflow": false
+      }
+    }
+  ],
+  "results": [
+    {
+      "name": "venta-tres-productos: una página de ancho 80 mm",
+      "ok": true,
+      "detail": {
+        "pages": 1,
+        "widths": [
+          80.09466313888888
+        ],
+        "heights": [
+          359.8333333333333
+        ]
+      }
+    },
+    {
+      "name": "venta-tres-productos: altura ajustada sin recortar ni reducir contenido",
+      "ok": true,
+      "detail": {
+        "ticketMm": 358.3450520833333
+      }
+    },
+    {
+      "name": "venta-tres-productos: documento completo y sin desbordamiento",
+      "ok": true
+    },
+    {
+      "name": "venta-larga: una página de ancho 80 mm",
+      "ok": true,
+      "detail": {
+        "pages": 1,
+        "widths": [
+          80.09466313888888
+        ],
+        "heights": [
+          1006.0939647222222
+        ]
+      }
+    },
+    {
+      "name": "venta-larga: altura ajustada sin recortar ni reducir contenido",
+      "ok": true,
+      "detail": {
+        "ticketMm": 1004.4575520833332
+      }
+    },
+    {
+      "name": "venta-larga: documento completo y sin desbordamiento",
+      "ok": true
+    },
+    {
+      "name": "venta-corta-despues-de-larga: una página de ancho 80 mm",
+      "ok": true,
+      "detail": {
+        "pages": 1,
+        "widths": [
+          80.09466313888888
+        ],
+        "heights": [
+          299.1273262777778
+        ]
+      }
+    },
+    {
+      "name": "venta-corta-despues-de-larga: altura ajustada sin recortar ni reducir contenido",
+      "ok": true,
+      "detail": {
+        "ticketMm": 297.4908854166667
+      }
+    },
+    {
+      "name": "venta-corta-despues-de-larga: documento completo y sin desbordamiento",
+      "ok": true
+    },
+    {
+      "name": "venta-historica-v1: una página de ancho 80 mm",
+      "ok": true,
+      "detail": {
+        "pages": 1,
+        "widths": [
+          80.09466313888888
+        ],
+        "heights": [
+          438.8273051111111
+        ]
+      }
+    },
+    {
+      "name": "venta-historica-v1: altura ajustada sin recortar ni reducir contenido",
+      "ok": true,
+      "detail": {
+        "ticketMm": 437.7200520833333
+      }
+    },
+    {
+      "name": "venta-historica-v1: documento completo y sin desbordamiento",
+      "ok": true
+    },
+    {
+      "name": "abono: una página de ancho 80 mm",
+      "ok": true,
+      "detail": {
+        "pages": 1,
+        "widths": [
+          80.09466313888888
+        ],
+        "heights": [
+          505.8833333333333
+        ]
+      }
+    },
+    {
+      "name": "abono: altura ajustada sin recortar ni reducir contenido",
+      "ok": true,
+      "detail": {
+        "ticketMm": 504.92421874999997
+      }
+    },
+    {
+      "name": "abono: documento completo y sin desbordamiento",
+      "ok": true
+    },
+    {
+      "name": "cambio: una página de ancho 80 mm",
+      "ok": true,
+      "detail": {
+        "pages": 1,
+        "widths": [
+          80.09466313888888
+        ],
+        "heights": [
+          511.2173333333333
+        ]
+      }
+    },
+    {
+      "name": "cambio: altura ajustada sin recortar ni reducir contenido",
+      "ok": true,
+      "detail": {
+        "ticketMm": 509.3229166666667
+      }
+    },
+    {
+      "name": "cambio: documento completo y sin desbordamiento",
+      "ok": true
+    },
+    {
+      "name": "devolucion: una página de ancho 80 mm",
+      "ok": true,
+      "detail": {
+        "pages": 1,
+        "widths": [
+          80.09466313888888
+        ],
+        "heights": [
+          450.84999999999997
+        ]
+      }
+    },
+    {
+      "name": "devolucion: altura ajustada sin recortar ni reducir contenido",
+      "ok": true,
+      "detail": {
+        "ticketMm": 449.7916666666667
+      }
+    },
+    {
+      "name": "devolucion: documento completo y sin desbordamiento",
+      "ok": true
+    },
+    {
+      "name": "la altura vuelve a reducirse al cambiar de venta",
+      "ok": true
+    },
+    {
+      "name": "reimpresion: una página de ancho 80 mm",
+      "ok": true,
+      "detail": {
+        "pages": 1,
+        "widths": [
+          80.09466313888888
+        ],
+        "heights": [
+          359.8333333333333
+        ]
+      }
+    },
+    {
+      "name": "reimpresion: altura ajustada sin recortar ni reducir contenido",
+      "ok": true,
+      "detail": {
+        "ticketMm": 358.3450520833333
+      }
+    },
+    {
+      "name": "reimpresion: documento completo y sin desbordamiento",
+      "ok": true
+    },
+    {
+      "name": "reimpresión conserva las dimensiones",
+      "ok": true
+    },
+    {
+      "name": "ancho-pantalla-320: una página de ancho 80 mm",
+      "ok": true,
+      "detail": {
+        "pages": 1,
+        "widths": [
+          80.09466313888888
+        ],
+        "heights": [
+          359.8333333333333
+        ]
+      }
+    },
+    {
+      "name": "ancho-pantalla-320: altura ajustada sin recortar ni reducir contenido",
+      "ok": true,
+      "detail": {
+        "ticketMm": 358.3450520833333
+      }
+    },
+    {
+      "name": "ancho-pantalla-320: documento completo y sin desbordamiento",
+      "ok": true
+    },
+    {
+      "name": "pantalla 320: mismo tamaño físico",
+      "ok": true
+    },
+    {
+      "name": "ancho-pantalla-360: una página de ancho 80 mm",
+      "ok": true,
+      "detail": {
+        "pages": 1,
+        "widths": [
+          80.09466313888888
+        ],
+        "heights": [
+          359.8333333333333
+        ]
+      }
+    },
+    {
+      "name": "ancho-pantalla-360: altura ajustada sin recortar ni reducir contenido",
+      "ok": true,
+      "detail": {
+        "ticketMm": 358.3450520833333
+      }
+    },
+    {
+      "name": "ancho-pantalla-360: documento completo y sin desbordamiento",
+      "ok": true
+    },
+    {
+      "name": "pantalla 360: mismo tamaño físico",
+      "ok": true
+    },
+    {
+      "name": "ancho-pantalla-390: una página de ancho 80 mm",
+      "ok": true,
+      "detail": {
+        "pages": 1,
+        "widths": [
+          80.09466313888888
+        ],
+        "heights": [
+          359.8333333333333
+        ]
+      }
+    },
+    {
+      "name": "ancho-pantalla-390: altura ajustada sin recortar ni reducir contenido",
+      "ok": true,
+      "detail": {
+        "ticketMm": 358.3450520833333
+      }
+    },
+    {
+      "name": "ancho-pantalla-390: documento completo y sin desbordamiento",
+      "ok": true
+    },
+    {
+      "name": "pantalla 390: mismo tamaño físico",
+      "ok": true
+    },
+    {
+      "name": "ancho-pantalla-430: una página de ancho 80 mm",
+      "ok": true,
+      "detail": {
+        "pages": 1,
+        "widths": [
+          80.09466313888888
+        ],
+        "heights": [
+          359.8333333333333
+        ]
+      }
+    },
+    {
+      "name": "ancho-pantalla-430: altura ajustada sin recortar ni reducir contenido",
+      "ok": true,
+      "detail": {
+        "ticketMm": 358.3450520833333
+      }
+    },
+    {
+      "name": "ancho-pantalla-430: documento completo y sin desbordamiento",
+      "ok": true
+    },
+    {
+      "name": "pantalla 430: mismo tamaño físico",
+      "ok": true
+    },
+    {
+      "name": "ancho-pantalla-768: una página de ancho 80 mm",
+      "ok": true,
+      "detail": {
+        "pages": 1,
+        "widths": [
+          80.09466313888888
+        ],
+        "heights": [
+          359.8333333333333
+        ]
+      }
+    },
+    {
+      "name": "ancho-pantalla-768: altura ajustada sin recortar ni reducir contenido",
+      "ok": true,
+      "detail": {
+        "ticketMm": 358.3450520833333
+      }
+    },
+    {
+      "name": "ancho-pantalla-768: documento completo y sin desbordamiento",
+      "ok": true
+    },
+    {
+      "name": "pantalla 768: mismo tamaño físico",
+      "ok": true
+    },
+    {
+      "name": "ancho-pantalla-1024: una página de ancho 80 mm",
+      "ok": true,
+      "detail": {
+        "pages": 1,
+        "widths": [
+          80.09466313888888
+        ],
+        "heights": [
+          359.8333333333333
+        ]
+      }
+    },
+    {
+      "name": "ancho-pantalla-1024: altura ajustada sin recortar ni reducir contenido",
+      "ok": true,
+      "detail": {
+        "ticketMm": 358.3450520833333
+      }
+    },
+    {
+      "name": "ancho-pantalla-1024: documento completo y sin desbordamiento",
+      "ok": true
+    },
+    {
+      "name": "pantalla 1024: mismo tamaño físico",
+      "ok": true
+    },
+    {
+      "name": "ancho-pantalla-1280: una página de ancho 80 mm",
+      "ok": true,
+      "detail": {
+        "pages": 1,
+        "widths": [
+          80.09466313888888
+        ],
+        "heights": [
+          359.8333333333333
+        ]
+      }
+    },
+    {
+      "name": "ancho-pantalla-1280: altura ajustada sin recortar ni reducir contenido",
+      "ok": true,
+      "detail": {
+        "ticketMm": 358.3450520833333
+      }
+    },
+    {
+      "name": "ancho-pantalla-1280: documento completo y sin desbordamiento",
+      "ok": true
+    },
+    {
+      "name": "pantalla 1280: mismo tamaño físico",
+      "ok": true
+    },
+    {
+      "name": "ancho-pantalla-1440: una página de ancho 80 mm",
+      "ok": true,
+      "detail": {
+        "pages": 1,
+        "widths": [
+          80.09466313888888
+        ],
+        "heights": [
+          359.8333333333333
+        ]
+      }
+    },
+    {
+      "name": "ancho-pantalla-1440: altura ajustada sin recortar ni reducir contenido",
+      "ok": true,
+      "detail": {
+        "ticketMm": 358.3450520833333
+      }
+    },
+    {
+      "name": "ancho-pantalla-1440: documento completo y sin desbordamiento",
+      "ok": true
+    },
+    {
+      "name": "pantalla 1440: mismo tamaño físico",
+      "ok": true
+    },
+    {
+      "name": "imprimir no modifica ventas, pagos, stock ni movimientos",
+      "ok": true
+    },
+    {
+      "name": "cerrar el comprobante retira el formato temporal",
+      "ok": true
+    },
+    {
+      "name": "sin excepciones de navegador",
+      "ok": true,
+      "detail": []
+    }
+  ]
+}
