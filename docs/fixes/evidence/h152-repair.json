@@ -1,0 +1,22 @@
+[
+  {
+    "receipt": {
+      "epoch": 8,
+      "payment_count": 0,
+      "payment_total": 0,
+      "receipt": {
+        "backup_id": "62bfa353-4b95-49c8-9036-9521a7632c95",
+        "payload_hash": "dfab99c23aba9d2b73a66b447635a4f3f5e07f7a1c2004a38efee6238fb9267e",
+        "products_unchanged": true,
+        "removed_amount": 890,
+        "removed_ids": [
+          "pay-cmb-2ae5650d-be20-4047-b647-9f14004cf69c",
+          "pay-cmb-de5ce05f-ac06-4834-9905-89f19ba30f49"
+        ],
+        "sealed": true,
+        "sellers_unchanged": true
+      },
+      "test_sellers_remaining": 0
+    }
+  }
+]

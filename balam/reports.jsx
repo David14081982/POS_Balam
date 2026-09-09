@@ -561,6 +561,13 @@
   // ── Shell con pestañas ─────────────────────────────────────────────────────
   function ReportsScreen({ onNav }) {
     const [tab, setTab] = useState('resumen');
+    const [, refreshData] = useState(0);
+    useEffect(() => {
+      const onData = () => refreshData(revision => revision + 1);
+      window.addEventListener('datachange', onData);
+      onData();
+      return () => window.removeEventListener('datachange', onData);
+    }, []);
     const TABS = [['resumen', 'Resumen', 'chart'], ['referencias', 'Referencias', 'inventory'], ['metodos', 'Ingresos por método', 'cash'], ['ventas', 'Ventas', 'receipt'], ['cambios', 'Cambios', 'swap'], ['devoluciones', 'Devoluciones', 'undo']];
     return h('div', { className: 'flex-1 overflow-y-auto bg-background font-body text-on-surface' },
       h('div', { className: 'w-full min-w-0 px-4 py-6 sm:px-6 lg:p-10 max-w-container-max mx-auto' }, [

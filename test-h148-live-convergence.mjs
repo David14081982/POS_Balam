@@ -33,6 +33,7 @@ const serverClient=createClient(url,key,{auth:{persistSession:false,autoRefreshT
 const authAdmin=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
 const email=`${prefix}@example.test`, password=randomBytes(32).toString('base64url');
 const sellerId=`${prefix}-seller`, adminId=`${prefix}-admin`;
+const reportSellerId=`${prefix}-report-seller`;
 let userId,browser,server,watchdog;
 const terminals=[];
 const productIds=[randomUUID(),randomUUID(),randomUUID()];
@@ -457,6 +458,31 @@ try {
   }
   return converge();
  });
+ await verify('H152 open reports remove deleted fixture sellers on A/B/C',async()=>{
+  const reportName=prefix+' report witness';
+  check(await serverClient.from('sellers').insert({id:reportSellerId,nombre:reportName,role:'vendedor',active:true,comision_pct:0,sync_base_version:0}));
+  for(const t of terminals){
+   await t.page.evaluate(()=>window.STORE.synchronizeNow());
+   await t.page.evaluate(()=>{
+    const host=document.createElement('div');host.id='h152-live-reports';host.style.cssText='position:fixed;inset:0;z-index:999;background:white;overflow:auto';document.body.appendChild(host);
+    window.h152ReportsRoot=ReactDOM.createRoot(host);window.h152ReportsRoot.render(React.createElement(window.ReportsScreen,{}));
+   });
+   await t.page.locator('#h152-live-reports').getByText(reportName,{exact:true}).waitFor();
+  }
+  check(await serverClient.from('sellers').delete().eq('id',reportSellerId));
+  for(const t of terminals){
+   await t.page.evaluate(()=>window.STORE.reconcileDomains());
+   await t.page.waitForFunction(({id,name})=>!window.DATA.sellers.some(s=>s.id===id)
+    && !document.querySelector('#h152-live-reports').innerText.includes(name)
+    && window.STORE.syncStatus().synchronized,{id:reportSellerId,name:reportName},{timeout:120000});
+  }
+  const total=check(await serverClient.from('sale_payments').select('monto')).reduce((sum,p)=>sum+Number(p.monto),0);
+  for(const t of terminals){
+   assert.equal(await t.page.evaluate(()=>window.DATA.payments.reduce((sum,p)=>sum+Number(p.monto),0)),total);
+   await t.page.evaluate(()=>{window.h152ReportsRoot.unmount();document.getElementById('h152-live-reports').remove();});
+  }
+  return {liveReports:true,profiles:3,staleRows:0,paymentsAgree:true};
+ });
  await verify('Final projections and device checkpoints agree with authority',async()=>{
   await converge();const projected=await documents();
   const devices=check(await serverClient.from('sync_devices').select('device_id,queue_pending,queue_blocked,data_epoch').in('device_id',terminals.map(t=>`${prefix}-${t.name}`)));
@@ -495,7 +521,7 @@ finally {
  await clean('products',()=>serverClient.from('products').delete().in('id',productIds));
  await clean('fixture conflicts',()=>serverClient.from('sync_conflicts').delete().in('entity_id',productIds));
  if(operations.size)await clean('operation audit',()=>serverClient.from('capability_operation_audit').delete().in('operation_id',[...operations]));
- await clean('sellers',()=>serverClient.from('sellers').delete().in('id',[adminId,sellerId]));
+ await clean('sellers',()=>serverClient.from('sellers').delete().in('id',[adminId,sellerId,reportSellerId]));
  if(userId)await clean('auth identity',()=>authAdmin.auth.admin.deleteUser(userId));
  result.cleanup={ok:cleanupErrors.length===0,ids:[adminId,sellerId],devices,errors:cleanupErrors};
  if(baseline){const after=Object.fromEntries(await Promise.all(safetyTables.map(async table=>[table,semanticHash(await rawRows(table))])));result.businessPreservation={ok:JSON.stringify(after)===JSON.stringify(baseline),before:baseline,after};if(!result.businessPreservation.ok)process.exitCode=1;}

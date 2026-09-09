@@ -6901,6 +6901,42 @@ Evidencia: `docs/fixes/evidence/h151-public.json`. Sin migraciones nuevas.
 conexión; capturas activas y colas pendientes conservan sus guardas.
 **Documento:** `docs/fixes/propagacion-limpieza-equipos-h151.md`.
 
+## H-152 — Reportes conserva cobros de cambios eliminados y filas obsoletas
+
+**Estado:** RESUELTO y certificado; publicación del cliente pendiente.
+**Fecha:** 09/09/2026.
+**Commit:** Pendiente de commit.
+**Evidencia inicial:** Supabase conservaba dos pagos `tipo=cambio`, $790 y $100, cuyos
+cambios exactos figuran en el respaldo sellado de la limpieza completada
+`8d996563-96db-4537-9930-032e86de15bd`. El borrado y el respaldo de pagos
+seleccionaban únicamente folios de ventas, omitiendo pagos de cambios seleccionados
+con otros folios. Reportes sumaba correctamente esos pagos que aún existían.
+Los vendedores del ensayo `27fe0e17-7773-444d-9b55-7832723a077b` ya no existen
+en Supabase; Reportes no se suscribía al aviso `datachange` de DATA.
+**Alcance:** cierre íntegro del pago dependiente en preview/respaldo/borrado de
+cambios, actualización de Reportes ante cambios de datos y evidencia de limpieza
+de fixtures en la interfaz. Identidad exacta; conservar pagos no seleccionados,
+históricos, inventario y cola.
+**Corrección:** plan, respaldo, ejecución y proyección local consumen IDs exactos
+de pagos. Su huella monetaria invalida respaldos obsoletos. Reportes reacciona al
+pull confirmado sin reiniciar pestañas. Sin filtros por nombres o ventas ausentes.
+**Reparación aplicada:** exactamente dos pagos/$890 retirados con respaldo
+sellado compañero, con pertenencia probada a la limpieza ya confirmada.
+Verificación remota: cero pagos/$0, productos y vendedores intactos, época 8.
+Migraciones `19600/19700` aplicadas; `db push --linked --dry-run` sin pendientes.
+**Pruebas:** UI 9/9 escritorio y 9/9 móvil; SQL 10/10; reparación 5/5;
+verificación remota de selección, respaldo, huella y acceso denegado aprobada.
+Antes: UI 4/7, proyección 8/9 y SQL 3/10. Cola 186/186, navegación 15/15,
+Reportes 24/24, métodos 24/24, ticket 21/21, limpieza SQL/UI 12/12,
+proyección 32/32, propagación 12/12, migraciones 31/31 y build 8/8.
+Matriz real A/B/C: 25/25, 16 dominios, cero pendientes perdidos y divergencias,
+fixtures retirados y 17 huellas comerciales intactas. Reportes abierto actualiza
+las tres sesiones. Certificado: `docs/fixes/evidence/h148-live-matrix.json`.
+**Pendiente:** publicación del cliente.
+**Riesgo residual:** cada equipo debe cargar la actualización; no se eliminaron
+otros pagos sin evidencia de pertenencia. Respaldo original conservado.
+**Documento:** `docs/fixes/reportes-residuos-limpieza-h152.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

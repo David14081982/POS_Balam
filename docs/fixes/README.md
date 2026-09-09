@@ -148,3 +148,4 @@ en este directorio; los documentos anteriores se conservan como evidencia.
 
 - [H149 · Recuperación dirigida de pruebas](recuperacion-dirigida-h149.md): directivas por equipo, cerco SQL y arranque automático.
 - [H151 · Propagación de limpieza](propagacion-limpieza-equipos-h151.md): reconstrucción automática de equipos vacíos después de una limpieza confirmada.
+- [H152 · Residuos en Reportes](reportes-residuos-limpieza-h152.md): pagos dependientes de cambios, reparación exacta y actualización de la pantalla abierta.

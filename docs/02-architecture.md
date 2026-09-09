@@ -1257,6 +1257,17 @@ Los eventos mantienen protocolo 5 para reconstruir las proyecciones al volver;
 el ejecutor exige protocolo 6 cuando hay descartes. No cambia el protocolo
 general de sincronización ni se borra físicamente la evidencia de cuarentena.
 
+El plan también congela `payment_ids` y la huella de sus filas completas: los
+pagos de ventas seleccionadas y los de tipo cambio con folio propio de un cambio
+seleccionado. Respaldo, ejecución y proyección local consumen esos mismos IDs;
+los eventos históricos sin esa lista conservan la selección por folio de venta.
+Cambiar el importe de un pago invalida el plan y su respaldo previo.
+
+Reportes se suscribe a `datachange` de DATA para actualizar cobros y comisiones
+cuando llega un snapshot confirmado, conservando pestañas y filtros abiertos.
+`sale_payments` sigue siendo la autoridad monetaria; no se ocultan pagos por
+ausencia de ventas ni vendedores por el texto de su nombre.
+
 ## Contratos que no deben romperse
 
 - La acción local debe funcionar sin conexión y dejar una operación recuperable.

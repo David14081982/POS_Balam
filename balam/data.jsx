@@ -5460,6 +5460,7 @@
     const asSet = key => new Set(Array.isArray(identities[key])
       ? identities[key].map(value => String(value)) : []);
     const saleFolios = asSet('sale_folios');
+    const paymentIds = asSet('payment_ids');
     const returnIds = asSet('return_ids');
     const exchangeIds = asSet('exchange_ids');
     const loanIds = asSet('loan_ids');
@@ -5503,7 +5504,8 @@
         const sale = sales.find(item => String(item.folio) === String(row.folio));
         if (sale) sale.estado = row.prior_state || row.priorSaleState;
       });
-      replaceKeeping(payments, p => !saleFolios.has(String(p.folio)));
+      replaceKeeping(payments, p => Array.isArray(identities.payment_ids)
+        ? !paymentIds.has(String(p.id)) : !saleFolios.has(String(p.folio)));
       replaceKeeping(returns, r => !returnIds.has(String(r.id)));
       replaceKeeping(exchanges, e => !exchangeIds.has(String(e.id)));
       replaceKeeping(sales, s => !saleFolios.has(String(s.folio)));

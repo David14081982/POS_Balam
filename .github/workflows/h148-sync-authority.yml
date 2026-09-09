@@ -13,6 +13,7 @@ on:
       - 'test-h148-*.mjs'
       - 'test-h149-*.mjs'
       - 'test-h151-*.mjs'
+      - 'test-h152-*.mjs'
       - 'test-store-queue.mjs'
       - 'test-concurrency.mjs'
       - 'test-h142-*.mjs'
@@ -32,6 +33,7 @@ on:
       - 'test-h148-*.mjs'
       - 'test-h149-*.mjs'
       - 'test-h151-*.mjs'
+      - 'test-h152-*.mjs'
       - 'test-store-queue.mjs'
       - 'test-concurrency.mjs'
       - 'test-h142-*.mjs'
@@ -68,6 +70,7 @@ jobs:
       - run: node test-h148-reconciliation.mjs
       - run: node test-h149-directed-recovery.mjs
       - run: node test-h151-cleanup-propagation.mjs
+      - run: node test-h152-reports-refresh.mjs
       - run: node test-h148-projection-durability.mjs
       - run: node test-store-queue.mjs
       - run: node test-concurrency.mjs
