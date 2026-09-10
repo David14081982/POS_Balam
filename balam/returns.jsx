@@ -210,7 +210,7 @@
   function DirectReturnReceiptModal({ receipt, onClose }) {
     window.UI.useReceiptAutoPrint();
     return h(window.UI.Modal, { title: 'Devolucion registrada', onClose, footer: [
-      h('button', { key: 'p', 'data-testid': 'receipt-print', onClick: () => window.UI.printReceipt(), className: 'flex-1 py-3.5 border border-outline-variant text-caption font-bold uppercase tracking-widest rounded-xl' }, 'Imprimir comprobante'),
+      h('button', { key: 'p', 'data-testid': 'receipt-print', onClick: () => window.UI.printReceipt({ source: 'posventa' }), className: 'flex-1 py-3.5 border border-outline-variant text-caption font-bold uppercase tracking-widest rounded-xl' }, 'Imprimir comprobante'),
       h('button', { key: 'c', onClick: onClose, className: 'flex-1 py-3.5 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-xl' }, 'Listo'),
     ] }, [
       h('p', { key: 'm', className: 'text-caption text-on-surface-variant' }, `Reembolso ${receipt.returnDoc.id} · ${fmt(receipt.returnDoc.total)}`),
@@ -921,7 +921,7 @@
     return h(window.UI.Modal, {
       title: 'Cambio registrado', onClose,
       footer: [
-        h('button', { key: 'p', className: 'flex-1 py-3.5 border border-outline-variant text-caption font-bold uppercase tracking-widest rounded-xl', 'data-testid': 'receipt-print', onClick: () => window.UI.printReceipt() }, 'Imprimir comprobante'),
+        h('button', { key: 'p', className: 'flex-1 py-3.5 border border-outline-variant text-caption font-bold uppercase tracking-widest rounded-xl', 'data-testid': 'receipt-print', onClick: () => window.UI.printReceipt({ source: 'posventa' }) }, 'Imprimir comprobante'),
         h('button', { key: 'n', className: 'flex-1 py-3.5 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-xl', onClick: onClose }, 'Listo'),
       ],
     }, h('div', { className: 'py-2 space-y-1 text-body' }, [

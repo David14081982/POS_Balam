@@ -29,6 +29,10 @@ Estas instrucciones aplican a todo el repositorio y a cualquier agente de IA.
   `POS Balam (offline).html` como fuente. Modificar `balam/` y regenerarlos con
   `node build-offline.mjs` cuando corresponda.
 - No marcar un riesgo como resuelto sin pruebas verificables.
+- En impresión, verificar el artefacto completo y la frontera de transporte;
+  contar llamadas a `window.print()` o RawBT no certifica integridad. Probar
+  trabajos consecutivos, aislamiento y ciclo de recursos. Distinguir entrega
+  al sistema de confirmación física; sin hardware, declarar NOT_TESTED.
 
 ## Antes de cerrar
 

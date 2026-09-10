@@ -413,8 +413,10 @@
         setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), msg.level === 'danger' || msg.level === 'warning' ? 5200 : 3000);
       };
     }, []);
-    return React.createElement('div', { className: 'fixed top-4 inset-x-4 sm:inset-x-auto sm:top-auto sm:bottom-5 sm:right-5 z-[200] flex flex-col gap-2 items-stretch sm:items-end' },
+    return React.createElement('div', { style: { pointerEvents: 'none' }, className: 'fixed top-4 inset-x-4 sm:inset-x-auto sm:top-auto sm:bottom-5 sm:right-5 z-[200] flex flex-col gap-2 items-stretch sm:items-end' },
+      window.PrintManager && React.createElement(window.PrintManager.PrintStatus),
       toasts.map(t => React.createElement('div', {
+        style: { pointerEvents: 'auto' },
         key: t.id,
         'data-testid': 'toast',
         className: 'max-w-full flex items-center gap-2.5 px-4 py-3 bg-primary-container text-white text-sm rounded-lg shadow-e3',
@@ -494,7 +496,8 @@
     }
     return receiptResourceData.get(url);
   }
-  async function receiptGraphic(element) {
+  function captureReceipt(element) {
+    if (!element) throw new Error('El comprobante todavía no está disponible. Cierra y vuelve a abrirlo.');
     const doc = element.ownerDocument;
     // Aplicar las mismas reglas de impresión, incluidas fuentes y Tailwind.
     const rules = [];
@@ -503,31 +506,74 @@
       else rules.push(rule.cssText);
     });
     Array.from(doc.styleSheets).forEach(sheet => visit(sheet.cssRules));
-    let css = rules.join('\n');
+    let copy = element.cloneNode(true);
+    if (copy.tagName === 'BODY') {
+      const wrapper = doc.createElement('div');
+      while (copy.firstChild) wrapper.append(copy.firstChild);
+      copy = wrapper;
+    }
+    copy.querySelectorAll('script,iframe,object,embed,button').forEach(node => node.remove());
+    for (const node of [copy, ...copy.querySelectorAll('*')]) {
+      for (const attr of Array.from(node.attributes)) if (/^on/i.test(attr.name)) node.removeAttribute(attr.name);
+    }
+    return { html: copy.outerHTML, css: rules.join('\n'), text: receiptPrintText(element) };
+  }
+  async function receiptFrame(snapshot, { thermal = false, continuous = true, audit = () => {}, signal } = {}) {
+    const doc = document;
+    let css = snapshot.css;
     const urls = [...new Set(Array.from(css.matchAll(/url\(["']?([^"')]+)["']?\)/g), m => m[1]))];
     for (const url of urls) css = css.split(url).join(await receiptLocalData(url));
-    const copy = element.cloneNode(true);
-    copy.querySelectorAll('script,iframe,object,embed,button').forEach(node => node.remove());
+    const template = doc.createElement('template'); template.innerHTML = snapshot.html;
+    const copy = template.content.firstElementChild;
     for (const node of [copy, ...copy.querySelectorAll('*')]) {
       for (const attr of Array.from(node.attributes)) if (/^on/i.test(attr.name)) node.removeAttribute(attr.name);
       if (node.tagName === 'IMG') { node.removeAttribute('srcset'); node.src = await receiptLocalData(node.currentSrc || node.src); }
     }
     // La caja física no depende del tamaño de pantalla ni del scroll del POS.
-    copy.style.setProperty('position', 'static', 'important');
-    copy.style.setProperty('margin', '0', 'important');
-    css += '\nhtml,body{width:80mm!important;margin:0!important;padding:0!important;height:auto!important;min-height:0!important;overflow:visible!important;background:white!important}';
+    if (continuous) {
+      copy.style.setProperty('position', 'static', 'important');
+      copy.style.setProperty('margin', '0', 'important');
+      css += '\nhtml,body{width:80mm!important;margin:0!important;padding:0!important;height:auto!important;min-height:0!important;overflow:visible!important;background:white!important}';
+    }
     // H-145: separadores negros en la copia térmica; Chrome conserva su diseño.
-    css += '\nbody *{border-color:#000!important}';
+    if (thermal) css += '\nbody *{border-color:#000!important}';
+    if (signal && signal.aborted) throw new DOMException('Cancelled', 'AbortError');
     const frame = doc.createElement('iframe');
-    frame.setAttribute('aria-hidden', 'true'); frame.setAttribute('sandbox', 'allow-same-origin');
-    frame.style.cssText = 'position:absolute;left:-100000px;top:0;width:80mm;height:1px;border:0;';
+    frame.setAttribute('aria-hidden', 'true'); frame.setAttribute('sandbox', 'allow-same-origin allow-modals');
+    frame.style.cssText = `position:absolute;left:-100000px;top:0;width:${continuous ? '80mm' : '210mm'};height:1px;border:0;`;
     doc.body.appendChild(frame);
     try {
       const rendered = frame.contentDocument;
       const style = rendered.createElement('style'); style.textContent = css; rendered.head.appendChild(style);
       rendered.body.appendChild(rendered.importNode(copy, true));
-      await rendered.fonts.ready;
-      await Promise.all(Array.from(rendered.images, img => img.decode()));
+      audit('ASSETS_WAITING');
+      // Force layout/font discovery before observing FontFaceSet.ready.
+      rendered.body.getBoundingClientRect();
+      await new Promise((resolve, reject) => {
+        const abort = () => reject(new DOMException('Cancelled', 'AbortError'));
+        if (signal) signal.addEventListener('abort', abort, { once: true });
+        Promise.all([rendered.fonts.ready, ...Array.from(rendered.images, img => img.decode())])
+          .then(resolve, reject).finally(() => { if (signal) signal.removeEventListener('abort', abort); });
+        if (signal && signal.aborted) abort();
+      });
+      audit('ASSETS_READY');
+      if (continuous) {
+        const root = rendered.body.firstElementChild;
+        const height = Math.ceil(Math.max(root.scrollHeight, root.getBoundingClientRect().height) * 25.4 / 96) + 1;
+        if (!Number.isFinite(height) || height <= 1 || height > 5000) throw new Error('El comprobante es demasiado largo para imprimir completo.');
+        const page = rendered.createElement('style');
+        page.textContent = `@page balam-job{size:80mm ${height}mm;margin:0} html,body,body>*,#balam-ticket,#balam-return-receipt{page:balam-job!important}`;
+        rendered.head.append(page);
+        frame.dataset.pageHeight = height;
+      }
+      return frame;
+    } catch (error) { frame.remove(); throw error; }
+  }
+  async function receiptGraphic(snapshot, audit = () => {}, signal) {
+    const doc = document;
+    const frame = await receiptFrame(snapshot, { thermal: true, audit, signal });
+    try {
+      const rendered = frame.contentDocument;
       const box = rendered.body.firstElementChild.getBoundingClientRect();
       // El rollo es de 80 mm, el cabezal de 576 puntos (72 mm a 203 dpi).
       // No gastar esos puntos en los márgenes de la hoja CSS. Conservar 1 px
@@ -539,7 +585,7 @@
       const right = Math.max(0, parseFloat(padding.paddingRight) - 1);
       const usable = box.width - left - right;
       const width = 576, height = Math.ceil(Math.max(box.height, rendered.body.scrollHeight) * width / usable);
-      if (!height || height > 24000) throw new Error('El comprobante es demasiado largo para Bluetooth. Reimprime el comprobante desde una computadora.');
+      if (!Number.isFinite(height) || height <= 0 || usable <= 0 || height > 24000) throw new Error('El comprobante es demasiado largo para Bluetooth. Reimprime el comprobante desde una computadora.');
       const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="${left} 0 ${usable} ${height * usable / width}"><foreignObject width="${box.width}" height="100%">${new XMLSerializer().serializeToString(rendered.documentElement)}</foreignObject></svg>`;
       const image = new Image();
       image.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
@@ -579,6 +625,7 @@
         const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(file);
       });
       if (png.length > 500000) throw new Error('El comprobante es demasiado largo para Bluetooth. Reimprime el comprobante desde una computadora.');
+      audit('RENDER_FINISHED', { pixelWidth: width, pixelHeight: height, pageWidth: 80, pageHeight: Number(frame.dataset.pageHeight), renderHash: await receiptHash(svg) });
       return png;
     } finally { frame.remove(); }
   }
@@ -587,13 +634,22 @@
     const key = element.outerHTML;
     const previous = receiptGraphics.get(element);
     if (previous && previous.key === key && !previous.error) return previous;
-    const state = { key, png: null, error: null, promise: null };
+    const state = { key, png: null, error: null, promise: null, snapshot: null, controller: new AbortController() };
     receiptGraphics.set(element, state);
+    // Freeze DOM and styles now, before the first promise or resource read.
+    try {
+      if (element.textContent.length > 500000) throw new Error('El comprobante es demasiado largo para Bluetooth. Reimprime el comprobante desde una computadora.');
+      state.snapshot = captureReceipt(element);
+    } catch (error) { state.error = error; }
     state.promise = Promise.resolve().then(() => {
       // Mantener las guardas de documento vacío y tamaño antes de rasterizar.
-      if (receiptPrintText(element).length > 500000) throw new Error('El comprobante es demasiado largo para Bluetooth. Reimprime el comprobante desde una computadora.');
-      return receiptGraphic(element);
-    }).then(png => { state.png = png; }, error => {
+      if (state.error) throw state.error;
+      if (state.snapshot.text.length > 500000) throw new Error('El comprobante es demasiado largo para Bluetooth. Reimprime el comprobante desde una computadora.');
+      return receiptGraphic(state.snapshot, (stage, detail) => { if (detail) state.metrics = detail; }, state.controller.signal);
+    }).then(async png => {
+      state.hashes = { documentHash: await receiptHash(state.snapshot.html), renderHash: state.metrics.renderHash, payloadHash: await receiptHash(png) };
+      state.png = png;
+    }).catch(error => {
       state.error = new Error(/^El (comprobante|diseño)/.test(error.message || '') ? error.message
         : 'No se pudo preparar el diseño. Vuelve a pulsar Imprimir o reimprime el comprobante desde una computadora.');
     });
@@ -615,46 +671,14 @@
       return text + '\n\n\n';
     } finally { copy.remove(); }
   }
-  function printReceipt({ element, host = window, automatic = false, system = false } = {}) {
-    const notice = message => {
-      if (host === window) toast(message);
-      else {
-        let status = host.document.getElementById('receipt-print-status');
-        if (!status) {
-          status = host.document.createElement('p'); status.id = 'receipt-print-status';
-          status.setAttribute('role', 'status'); status.style.cssText = 'padding:12px;margin:0;background:white;color:#131b2e;';
-          host.document.querySelector('.tools').after(status);
-        }
-        status.textContent = message;
-      }
-    };
-    try {
-      if (!usesBluetoothReceipt() || system) { host.print(); return true; }
-      // Chrome bloquea intents iniciados desde timers. Conservar acción manual.
-      if (automatic) return false;
-      const receipt = element || host.document.querySelector('#balam-ticket, #balam-return-receipt');
-      if (!receipt) throw new Error('El comprobante todavía no está disponible. Cierra y vuelve a abrirlo.');
-      const graphic = prepareReceipt(receipt);
-      if (!graphic.png) {
-        notice('Preparando el diseño del ticket…');
-        graphic.promise.then(() => {
-          if (!receipt.isConnected || host.closed || receiptGraphics.get(receipt) !== graphic) return;
-          notice(graphic.error ? graphic.error.message : 'Diseño listo. Pulsa Imprimir para enviarlo a RawBT.');
-        });
-        return false;
-      }
-      const payload = graphic.png;
-      const link = host.document.createElement('a');
-      link.href = 'intent:' + payload + '#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;';
-      host.document.body.appendChild(link);
-      // Sin await, popup ni timer: conserva el gesto del botón original.
-      try { link.click(); } finally { link.remove(); }
-      notice('Abriendo RawBT. Si no se abre, comprueba que esté instalado y vuelve a pulsar Imprimir.');
-      return true;
-    } catch (error) {
-      notice(error.message || 'No se pudo abrir la impresión. Vuelve a intentarlo.');
-      return false;
-    }
+  function printReceipt(options = {}) {
+    if (window.event && window.event.type === 'click' && window.event.detail > 1) return false;
+    return window.PrintManager.enqueue(options);
+  }
+  async function receiptHash(value) {
+    const bytes = new TextEncoder().encode(value);
+    const digest = await crypto.subtle.digest('SHA-256', bytes);
+    return Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
   }
   function ReceiptPrintHelp() {
     const [status, setStatus] = React.useState('Preparando el diseño del ticket…');
@@ -673,14 +697,13 @@
   }
 
   // Autoridad unica de impresion automatica para comprobantes.
-  function useReceiptAutoPrint(delay = 350) {
+  function useReceiptAutoPrint() {
     const printed = useRef(false);
     useEffect(() => {
       if (printed.current || !window.CONFIG || !window.CONFIG.get('print.auto')) return undefined;
       printed.current = true;
-      const timer = setTimeout(() => printReceipt({ automatic: true }), delay);
-      return () => clearTimeout(timer);
-    }, [delay]);
+      printReceipt({ automatic: true });
+    }, []);
   }
 
   // Primitivas de composición H-87. No contienen reglas de negocio: únicamente
@@ -810,5 +833,5 @@
     ]);
   }
 
-  window.UI = { fmt, fechaCorta, fechaHora, Badge, StatusBadge, StockBadge, ProductThumb, ToastHost, toast, HumanMessage, messageAuthority, messageText, technicalMessageViewer, Page, Toolbar, ActionGroup, KPI, Drawer, Modal, BADGE_TONE, MESSAGE_LEVEL, Pager, Segment, resizeImageFile, imageFileDimensions, useSyncActivity, useSyncFocusActivity, useReceiptAutoPrint, usesBluetoothReceipt, receiptBluetoothHelp, receiptPrintText, prepareReceipt, printReceipt, ReceiptPrintHelp };
+  window.UI = { fmt, fechaCorta, fechaHora, Badge, StatusBadge, StockBadge, ProductThumb, ToastHost, toast, HumanMessage, messageAuthority, messageText, technicalMessageViewer, Page, Toolbar, ActionGroup, KPI, Drawer, Modal, BADGE_TONE, MESSAGE_LEVEL, Pager, Segment, resizeImageFile, imageFileDimensions, useSyncActivity, useSyncFocusActivity, useReceiptAutoPrint, usesBluetoothReceipt, receiptBluetoothHelp, receiptPrintText, captureReceipt, receiptFrame, receiptGraphic, receiptHash, prepareReceipt, printReceipt, ReceiptPrintHelp };
 })();

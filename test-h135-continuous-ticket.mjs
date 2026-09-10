@@ -1,3 +1,4 @@
+import { installPrintTransport } from './test-print-transport.mjs';
 // H-135: PDF real de una sola página, longitud variable y contenido completo.
 // La app corre aislada; toda petición remota se bloquea. No usa datos productivos.
 import { chromium } from 'playwright-core';
@@ -35,6 +36,7 @@ try {
     return route.abort();
   });
   await page.addInitScript(() => { window.print = () => { window.__printCalls = (window.__printCalls || 0) + 1; }; });
+  await page.addInitScript(installPrintTransport, { counter: '__printCalls' });
   await page.goto(remote || `http://127.0.0.1:${server.address().port}/index.html`);
   await page.waitForFunction(() => window.BalamTicket && window.BalamReturnReceipt && window.DATA);
   await page.evaluate(() => {

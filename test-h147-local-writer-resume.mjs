@@ -5,7 +5,7 @@ import fs from 'node:fs';
 const results = [];
 const check = (name, ok, detail = '') => { results.push(ok); console.log(`${ok ? 'OK' : 'FAIL'} ${name} ${JSON.stringify(detail)}`); };
 const remote = process.argv.find(a => /^https?:/.test(a));
-const server = remote ? null : createServer((req, res) => { res.setHeader('Content-Type', 'text/html'); res.end(fs.readFileSync('index.html')); });
+const server = remote ? null : createServer((req, res) => { res.setHeader('Content-Type', 'text/html'); res.end(fs.readFileSync(process.env.BALAM_VERIFIED_HTML || 'index.html')); });
 if (server) await new Promise(r => server.listen(0, '127.0.0.1', r));
 const url = remote || `http://127.0.0.1:${server.address().port}/`;
 const browser = await chromium.launch({ channel: 'chrome', headless: true });
@@ -21,6 +21,11 @@ try {
     await p.evaluate(() => {
       AUTH.isReady = () => true; AUTH.hasSession = () => true;
       AUTH.current = () => ({ id: 'h147-local-test', role: 'admin' });
+      // H149 recovery needs a real server and now precedes the writer gate.
+      // This isolated H147 harness tests real Web Locks, not cloud recovery.
+      const syncStatus = STORE.syncStatus.bind(STORE);
+      STORE.syncStatus = () => ({ ...syncStatus(), recoveryPhase: 'ready' });
+      window.dispatchEvent(new Event('syncstatuschange'));
       window.dispatchEvent(new Event('authchange'));
     });
     await p.waitForFunction(() => document.getElementById('balam-navigation') || document.querySelector('[data-testid="local-writer-gate"]'));

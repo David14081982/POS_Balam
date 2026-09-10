@@ -1,3 +1,4 @@
+import { installPrintTransport } from './test-print-transport.mjs';
 // test-cambio-e2e.mjs — H-42 (C6): recorrido completo del cambio sobre el BUNDLE.
 //
 // Ejercita `index.html` —el artefacto distribuido— de punta a punta: localizar la
@@ -33,6 +34,7 @@ try {
   page.on('pageerror', e => errs.push(String(e)));
   await page.addInitScript(() => { window.__printed = 0; window.print = () => { window.__printed++; }; });
   await page.route(/supabase\.co/, r => r.abort());
+  await page.addInitScript(installPrintTransport, { counter: '__printed' });
   await page.goto('http://127.0.0.1:8841/index.html', { waitUntil: 'load' });
   await page.waitForFunction(() => window.DATA && window.CONFIG, null, { timeout: 25000 });
 

@@ -992,9 +992,9 @@
       .firma div { flex: 1; border-top: .8pt solid #131B2E; padding-top: 5pt; font-family: Arial, Helvetica, sans-serif; font-size: 8pt; color: #5b6478; text-align: center; }
       .aviso { font-family: Arial, Helvetica, sans-serif; font-size: 8.5pt; border: 1px solid #d8dbe3; border-radius: 6pt; padding: 8pt 10pt; margin-top: 14pt; line-height: 1.45; }
     </style></head><body>${cuerpo}
-      <scr` + `ipt>window.onload=function(){window.focus();window.print();setTimeout(function(){window.close();},400);};</scr` + `ipt>
     </body></html>`);
     win.document.close();
+    window.UI.printReceipt({ element: win.document.body, host: win, automatic: true, system: true, continuous: false, source: 'loans-a4', documentType: 'report' });
     return true;
   }
 

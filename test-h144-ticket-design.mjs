@@ -52,6 +52,7 @@ try {
   page.on('requestfailed', r => { if (/^https?:/.test(r.url()) && !r.url().includes('supabase.co')) requests.push(r.url()); });
   const metrics = [];
   async function compare(name, selector = '#balam-ticket') {
+    await page.evaluate(() => PrintManager.acknowledgeReturn());
     const prepared = await page.evaluate(async selector => {
       const state = UI.prepareReceipt(document.querySelector(selector));
       await state.promise;
@@ -153,7 +154,7 @@ try {
     check('offline ancho ' + width + ': gráfico completo', !!value.png, value.error || '');
   }
   check('preparación sin tráfico de red; recursos PWA en cache identificados', requests.length === 0, { network: requests, serviceWorker: cached });
-  await page.evaluate(() => { __sale = { ...__sale, folio: 'BG-260905-0145' }; __render(); });
+  await page.evaluate(() => { PrintManager.acknowledgeReturn(); __sale = { ...__sale, folio: 'BG-260905-0145' }; __render(); });
   await page.waitForFunction(() => document.querySelector('#balam-ticket')?.textContent.includes('BG-260905-0145'));
   const beforePrepare = await page.evaluate(() => __intents.length);
   await page.getByTestId('h144-print').click();
@@ -161,7 +162,7 @@ try {
   check('clic durante preparación no abre aplicaciones después de perder el gesto', await page.evaluate(n => __intents.length === n, beforePrepare));
   await page.getByTestId('h144-print').click();
   check('clic posterior envía el nuevo folio preparado', await page.evaluate(n => __intents.length === n + 1 && __intents.at(-1).active, beforePrepare));
-  await page.evaluate(() => { document.querySelector('#balam-ticket img').src = 'data:image/png;base64,invalid'; });
+  await page.evaluate(() => { PrintManager.acknowledgeReturn(); document.querySelector('#balam-ticket img').src = 'data:image/png;base64,invalid'; });
   const broken = await page.evaluate(async () => { const s = UI.prepareReceipt(); await s.promise; return { png: s.png, error: s.error?.message }; });
   check('logo inválido bloquea imagen incompleta con error legible', !broken.png && /No se pudo preparar el diseño/.test(broken.error || ''));
   await page.evaluate(logo => { document.querySelector('#balam-ticket img').src = logo; }, logoPNG);

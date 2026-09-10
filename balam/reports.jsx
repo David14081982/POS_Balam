@@ -17,7 +17,7 @@
     if (!win) { toast('El navegador bloqueo la ventana de impresion', 'var(--danger)'); return null; }
     try { win.opener = null; } catch (error) { /* ventana aislada cuando el navegador lo permite */ }
     win.document.write(html); win.document.close();
-    if (autoPrint) setTimeout(() => { win.focus(); win.print(); }, 100);
+    if (autoPrint) window.UI.printReceipt({ element: win.document.body, host: win, automatic: true, system: true, continuous: false, source: 'reportes-a4', documentType: 'report' });
     return win;
   }
   function openReportDocument(model) {
@@ -88,7 +88,7 @@
     if (win) {
       const ticket = win.document.querySelector('[data-payment-method-ticket]');
       const button = win.document.querySelector('[data-testid="payment-ticket-print"]');
-      button.addEventListener('click', () => window.UI.printReceipt({ element: ticket, host: win }));
+      button.addEventListener('click', event => { if (event.detail <= 1) window.UI.printReceipt({ element: ticket, host: win, source: 'reportes-metodos', documentType: 'payment-method-report' }); });
       if (window.UI.usesBluetoothReceipt()) {
         window.UI.prepareReceipt(ticket);
         const help = win.document.createElement('span');
@@ -105,11 +105,10 @@
     useEffect(() => {
       if (printed.current) return undefined;
       printed.current = true;
-      const timer = setTimeout(() => window.UI.printReceipt({ automatic: true }), 100);
-      return () => clearTimeout(timer);
+      window.UI.printReceipt({ automatic: true, source: 'reportes-reimpresion' });
     }, []);
     return h(window.UI.Modal, { title: 'Reimpresion de venta', onClose, footer: [
-      h('button', { key: 'p', 'data-testid': 'receipt-print', onClick: () => window.UI.printReceipt(), className: 'px-4 py-3 border border-outline-variant rounded-lg' }, 'Imprimir nuevamente'),
+      h('button', { key: 'p', 'data-testid': 'receipt-print', onClick: () => window.UI.printReceipt({ source: 'reportes-reimpresion' }), className: 'px-4 py-3 border border-outline-variant rounded-lg' }, 'Imprimir nuevamente'),
       h('button', { key: 'c', 'data-testid': 'sales-reprint-close', onClick: onClose, className: 'px-4 py-3 bg-primary text-on-primary rounded-lg' }, 'Cerrar'),
     ] }, [
       h('p', { key: 'm', className: 'text-caption text-on-surface-variant' }, `Documento historico ${sale.folio}. Esta accion no modifica la venta.`),

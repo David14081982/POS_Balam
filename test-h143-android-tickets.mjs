@@ -1,3 +1,4 @@
+import { installPrintTransport } from './test-print-transport.mjs';
 // H-143: transporte real del botón, interceptado sólo en la frontera Android.
 // No comunica con Supabase ni con una impresora real.
 import { chromium } from 'playwright-core';
@@ -16,11 +17,17 @@ const server = remote ? null : createServer((req, res) => {
 if (server) await new Promise(r => server.listen(0, '127.0.0.1', r));
 const url = remote || `http://127.0.0.1:${server.address().port}/`;
 async function printButton(page, button, android) {
+  const owner = (await Promise.all(page.context().pages().map(async p => ({ p, manager: await p.evaluate(() => !!window.PrintManager) })))).find(x => x.manager).p;
+  // Model a completed prior external interaction, independently of click timing.
+  await owner.evaluate(() => PrintManager.acknowledgeReturn());
   const before = await page.evaluate(() => window.__intents.length);
   await button.click();
-  if (!android) return;
-  await page.waitForFunction(n => __intents.length > n || /Diseño listo|vacío|demasiado largo|No se pudo abrir RawBT/.test(document.body.innerText), before);
-  if (await page.evaluate(n => __intents.length === n && /Diseño listo/.test(document.body.innerText), before)) await button.click();
+  if (!android) { await owner.waitForFunction(() => PrintManager.history().at(-1)?.stage === 'COMPLETED'); return; }
+  await owner.waitForFunction(() => {
+    const job = PrintManager.history().at(-1);
+    return job && (['SEND_STARTED', 'FAILED'].includes(job.stage) || (job.stage === 'WAITING_TURN' && job.payloadHash));
+  });
+  if (await owner.evaluate(() => PrintManager.history().at(-1)?.stage === 'WAITING_TURN')) await button.click();
 }
 const browser = await chromium.launch({ channel: 'chrome', headless: true });
 try {
@@ -40,6 +47,7 @@ try {
         }
       }, true);
     });
+    await context.addInitScript(installPrintTransport, { counter: '__nativePrints' });
     const page = await context.newPage(), errors = [];
     page.on('pageerror', e => errors.push(String(e)));
     await page.goto(url);
@@ -63,7 +71,7 @@ try {
     await page.getByTestId('reports-tab-sales').click();
     await page.getByTestId('sales-reprint-BG-260905-0143').click();
     await page.locator('#balam-ticket').waitFor({ state: 'attached' });
-    await page.waitForTimeout(250);
+    if (!android) await page.waitForFunction(() => PrintManager.history().at(-1)?.stage === 'COMPLETED');
     check(`${android}: autoimpresión respeta plataforma`, await page.evaluate(a => window.__nativePrints === (a ? 0 : 1) && !window.__intents.length, android));
     const button = page.getByTestId('receipt-print');
     check(`${android}: acción manual accesible`, await button.count() === 1);
@@ -77,7 +85,7 @@ try {
       check('RawBT: gesto activo y paquete explícito', intent.active && intent.href.endsWith('#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;'));
       check('Documento gráfico: origen conserva V1/V2, acentos, folio y total', ['GUAYABERA HISTÓRICA Ñ', 'GUAYABERA V2', 'SKU-V1-XS', 'SKU-V2-M', 'José Muñoz', 'BG-260905-0143', '$1,000.00', 'BALAMGUAYABERAS.COM'].every(v => text.includes(v)));
       check('RawBT: entrega PNG en lugar de ligaduras de texto', intent.href.startsWith('intent:data:image/png;base64,iVBORw0KGgo'));
-      await page.evaluate(() => { dispatchEvent(new Event('focus')); document.dispatchEvent(new Event('visibilitychange')); });
+      await page.evaluate(() => { dispatchEvent(new Event('focus')); document.dispatchEvent(new Event('visibilitychange')); PrintManager.acknowledgeReturn(); });
       check('H147: regresar de RawBT conserva escritor y pantalla', await page.evaluate(() => DATA.isLocalWriter && !document.querySelector('[data-testid="local-writer-gate"]')));
       await printButton(page, button, android);
       check('RawBT: reintento entrega exactamente el mismo documento', await page.evaluate(() => window.__intents.length === 2 && window.__intents[0].href === window.__intents[1].href));
@@ -85,7 +93,11 @@ try {
         await page.setViewportSize({ width, height: 900 });
         const box = await button.boundingBox();
         const help = await page.getByTestId('receipt-design-status').boundingBox();
-        check(`Android ${width}: botón pulsable y ayuda sin desbordar`, !!box && box.x >= 0 && box.x + box.width <= width + 1 && box.height >= 44 && !!help && help.x >= 0 && help.x + help.width <= width + 1);
+        const queue = await page.getByTestId('print-status').boundingBox();
+        const queueButtons = await page.getByTestId('print-status').locator('button').evaluateAll(buttons => buttons.every(button => {
+          const b = button.getBoundingClientRect(); return b.height >= 44 && b.x >= 0 && b.right <= innerWidth;
+        }));
+        check(`Android ${width}: botón, ayuda y cola sin desbordar`, !!box && box.x >= 0 && box.x + box.width <= width + 1 && box.height >= 44 && !!help && help.x >= 0 && help.x + help.width <= width + 1 && !!queue && queue.x >= 0 && queue.x + queue.width <= width && queueButtons);
       }
       const safe = await page.evaluate(() => {
         const el = document.createElement('div'); el.textContent = 'José #Intent;package=evil; \u001b@\u0000 $50'; document.body.appendChild(el);
@@ -112,7 +124,15 @@ try {
       if (a) { e.preventDefault(); window.__intents.push({ href: a.href, active: navigator.userActivation.isActive }); }
     }, true));
     await printButton(popup, popup.getByTestId('payment-ticket-print'), android);
-    check(`${android}: ticket por método comparte transporte`, await popup.evaluate(a => a ? window.__intents.length === 1 && window.__nativePrints === 0 : window.__nativePrints === 1, android));
+    check(`${android}: ticket por método comparte transporte`, android
+      ? await popup.evaluate(() => window.__intents.length === 1 && window.__nativePrints === 0)
+      : await page.evaluate(() => __printArtifacts.at(-1)?.text.includes('NETO')));
+    if (!android) {
+      const before = await page.evaluate(() => PrintManager.history().length);
+      await popup.getByTestId('payment-ticket-print').dblclick();
+      await page.waitForFunction(() => PrintManager.history().at(-1)?.stage === 'COMPLETED');
+      check('Ventana hija: doble clic crea un solo trabajo nativo', await page.evaluate(n => PrintManager.history().length === n + 1, before));
+    }
     if (android) {
       const reportPayload = await popup.locator('main').innerText();
       check('Reportes: origen gráfico incluye neto y conciliación', /NETO/.test(reportPayload) && /CONCILIACIÓN/.test(reportPayload));
@@ -148,7 +168,7 @@ try {
         HTMLAnchorElement.prototype.click = () => { throw new Error('No se pudo abrir RawBT'); };
       });
       await printButton(popup, popup.getByTestId('payment-ticket-print'), android);
-      check('fallo al abrir: error visible y sin falso éxito', await popup.evaluate(() => __intents.length === 1 && /No se pudo abrir RawBT/.test(document.getElementById('receipt-print-status').textContent)));
+      check('fallo al abrir: error visible y sin falso éxito', await popup.evaluate(() => __intents.length === 1 && /No se pudo enviar/.test(document.getElementById('receipt-print-status').textContent)));
       await popup.close();
       await page.setViewportSize({ width: 768, height: 1024 });
       const code = await page.evaluate(() => {

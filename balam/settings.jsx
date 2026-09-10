@@ -1712,6 +1712,7 @@
       h(CatalogEditor, { key: 'mt', kind: 'movement_type', title: 'Tipos de movimiento', codePlaceholder: 'Entrada', labelPlaceholder: 'Entrada' }),
     ],
     impresion: () => [
+      h(window.PrintManager.PrintHistory, { key: 'history' }),
       h(GlassCard, { key: 'tk', className: 'p-6' }, [
         h(SerifHeading, { key: 't', className: 'mb-2', children: 'Tickets e impresión' }),
         h(CfgToggle, { key: 'au', k: 'print.auto', title: 'Imprimir ticket automáticamente', desc: 'Envía a la impresora al confirmar el cobro' }),

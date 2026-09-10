@@ -1,3 +1,4 @@
+import { installPrintTransport } from './test-print-transport.mjs';
 // H-85: comprobantes históricos, reimpresión y superficies de impresión.
 // Ejecuta el bundle distribuido. Supabase queda interceptado: ninguna prueba
 // escribe datos remotos.
@@ -36,6 +37,7 @@ try {
     window.print = () => { window.__printed += 1; };
   });
   await page.route(/supabase\.co/, route => route.abort());
+  await page.addInitScript(installPrintTransport, { counter: '__printed' });
   await page.goto(REMOTE_URL || 'http://127.0.0.1:8871/index.html', { waitUntil: 'load' });
   await page.waitForFunction(() => window.DATA && window.CONFIG && window.BalamTicket, null, { timeout: 25000 });
 
@@ -115,7 +117,7 @@ try {
     stock: JSON.stringify(window.DATA.products.map(p => [p.id, p.stock])), printed: window.__printed,
   }));
   if (await reprint.count()) await reprint.click();
-  await page.waitForTimeout(500);
+  await page.waitForFunction(() => PrintManager.history().at(-1)?.stage === 'COMPLETED');
   const effectsAfter = await page.evaluate(() => ({
     sales: window.DATA.sales.length, returns: window.DATA.returns.length,
     payments: window.DATA.payments.length, movements: window.DATA.movements.length,
@@ -131,18 +133,7 @@ try {
   if (await closeReprint.count()) await closeReprint.click();
 
   console.log('\n── C) Reportes tiene documento propio ──');
-  await page.evaluate(() => {
-    window.__reportDocs = [];
-    window.open = () => {
-      const record = { html: '', printed: 0, focused: 0, closed: 0 };
-      window.__reportDocs.push(record);
-      return {
-        document: { write: html => { record.html += html; }, close: () => {} },
-        focus: () => { record.focused += 1; }, print: () => { record.printed += 1; },
-        close: () => { record.closed += 1; },
-      };
-    };
-  });
+  const reportStart = await page.evaluate(() => __printArtifacts.length);
   // Volver a Resumen para sus dos salidas.
   const summaryTab = page.getByTestId('reports-tab-summary');
   if (await summaryTab.count()) await summaryTab.click();
@@ -150,10 +141,10 @@ try {
   const reportPrint = page.getByTestId('report-print');
   const reportPdf = page.getByTestId('report-pdf');
   if (await reportPrint.count()) await reportPrint.click();
-  await page.waitForTimeout(450);
+  await page.waitForFunction(() => PrintManager.history().at(-1)?.stage === 'COMPLETED');
   if (await reportPdf.count()) await reportPdf.click();
-  await page.waitForTimeout(450);
-  const reportDocs = await page.evaluate(() => window.__reportDocs || []);
+  await page.waitForFunction(() => PrintManager.history().at(-1)?.stage === 'COMPLETED');
+  const reportDocs = await page.evaluate(n => __printArtifacts.slice(n).map(a => ({ html: a.html, printed: 1 })), reportStart);
   check('4. Reportes → Imprimir genera contenido visible propio', reportDocs[0] && /Reporte Balam|Ventas brutas/i.test(reportDocs[0].html) && reportDocs[0].printed === 1);
   check('5. Reportes → PDF genera contenido visible propio', reportDocs[1] && /Reporte Balam|Ventas brutas/i.test(reportDocs[1].html) && reportDocs[1].printed === 1);
   const methodTab = page.getByTestId('reports-tab-metodos');
@@ -162,12 +153,12 @@ try {
   const methodPrint = page.getByTestId('payment-method-print');
   const methodPdf = page.getByTestId('payment-method-pdf');
   if (await methodPrint.count()) await methodPrint.click();
-  await page.waitForTimeout(450);
+  await page.waitForFunction(() => PrintManager.history().at(-1)?.stage === 'COMPLETED');
   if (await methodPdf.count()) await methodPdf.click();
-  await page.waitForTimeout(450);
-  const methodDocs = await page.evaluate(() => (window.__reportDocs || []).slice(2));
+  await page.waitForFunction(() => PrintManager.history().at(-1)?.stage === 'COMPLETED');
+  const methodDocs = await page.evaluate(n => __printArtifacts.slice(n + 2).map(a => ({ html: a.html, printed: 1 })), reportStart);
   check('5b. Ingresos por método imprime documento A4 ejecutivo', methodDocs[0]
-    && /size:A4/.test(methodDocs[0].html) && /Ingresos por método de pago/i.test(methodDocs[0].html)
+    && /size:\s*a4/i.test(methodDocs[0].html) && /Ingresos por método de pago/i.test(methodDocs[0].html)
     && /Entradas|Devoluciones|Conciliaci/.test(methodDocs[0].html) && methodDocs[0].printed === 1, JSON.stringify(methodDocs.map(x => ({ len: x.html.length, printed: x.printed, title: (x.html.match(/<title>(.*?)<\/title>/) || [])[1] }))));
   check('5c. Ingresos por método genera PDF desde el mismo contrato', methodDocs[1]
     && /BALAM/.test(methodDocs[1].html) && /TOTAL/.test(methodDocs[1].html) && methodDocs[1].printed === 1, `documentos=${methodDocs.length}`);

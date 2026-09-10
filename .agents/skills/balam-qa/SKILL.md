@@ -362,6 +362,15 @@ NO debe usarse automáticamente para:
 
 ---
 
+## Auditoría de impresión de tickets
+
+Para tickets, ninguna impresión se certifica sólo porque `window.print()` o
+RawBT fueron llamados. Verificar el artefacto completo y la frontera de
+transporte: hashes por trabajo, contenido final, secuencias de 3/5 copias,
+aislamiento al cambiar/cerrar el documento, cancelación y reintento. Distinguir
+regreso/cierre del diálogo de confirmación física. Sin impresora, registrar
+HARDWARE NOT_TESTED. Consultar `docs/fixes/arquitectura-impresion-confiable-h153.md`.
+
 ## Auditoría de etiquetas
 
 Verificar paridad:

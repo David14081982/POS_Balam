@@ -618,7 +618,7 @@
     // la pantalla quedaba atrapado en contenedores con `overflow-y: auto` y altura de
     // ventana, así que al imprimir el navegador no podía repartirlo en varias hojas.
     // La clase `tk-block` marca lo que nunca debe partirse entre una hoja y la otra.
-    const documento = h('div', { id: 'balam-ticket', ref: printRef, style: { page: 'balam-ticket' } },
+    const documento = h('div', { id: 'balam-ticket', 'data-document-id': exchange ? exchange.folio : sale.folio, 'data-document-type': exchange ? 'exchange' : payment ? 'payment' : sale.estado === 'Apartado' ? 'layaway' : 'sale', ref: printRef, style: { page: 'balam-ticket' } },
       h('div', { className: 'px-6 py-7 flex flex-col items-center text-center font-body text-on-surface', style: { width: '80mm', boxSizing: 'border-box' } }, [
         // Encabezado
         h('div', { key: 'h', className: 'tk-block w-full mb-8 flex flex-col items-center' }, [
@@ -803,7 +803,7 @@
         ? snapshot.lines[saleIndex >= 0 ? saleIndex : index] : null;
       return sold || { name: line.nombre || '', sku: line.sku || '', sizeLabel: line.talla || '' };
     };
-    const documentNode = h('div', { id: 'balam-return-receipt', ref: printRef, style: { page: 'balam-return-receipt' } },
+    const documentNode = h('div', { id: 'balam-return-receipt', 'data-document-id': returnDoc.id, 'data-document-type': 'return', ref: printRef, style: { page: 'balam-return-receipt' } },
       h('div', { className: 'px-6 py-7 font-body text-on-surface', style: { width: '80mm', boxSizing: 'border-box' } }, [
         h('div', { key: 'h', className: 'tk-block text-center border-b border-outline-variant pb-5 mb-5' }, [
           h('h1', { key: 'b', className: 'font-headline text-primary', style: { fontSize: '28px' } }, 'BALAM'),

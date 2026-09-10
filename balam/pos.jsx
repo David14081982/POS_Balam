@@ -453,7 +453,7 @@
   function SuccessModal({ sale, onNew }) {
     window.UI.useReceiptAutoPrint();
     const footer = [
-      h('button', { key: 'p', className: 'flex-1 py-3.5 border border-outline-variant text-on-surface text-caption font-bold uppercase tracking-widest rounded-xl hover:bg-surface-container transition flex items-center justify-center gap-2', 'data-testid': 'receipt-print', onClick: () => window.UI.printReceipt() }, [h(MS, { key: 'i', name: 'print', size: 18 }), 'Imprimir ticket']),
+      h('button', { key: 'p', className: 'flex-1 py-3.5 border border-outline-variant text-on-surface text-caption font-bold uppercase tracking-widest rounded-xl hover:bg-surface-container transition flex items-center justify-center gap-2', 'data-testid': 'receipt-print', onClick: () => window.UI.printReceipt({ source: 'pos' }) }, [h(MS, { key: 'i', name: 'print', size: 18 }), 'Imprimir ticket']),
       h('button', { key: 'n', className: 'flex-1 py-3.5 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-xl hover:opacity-90 transition', onClick: onNew }, 'Nueva venta'),
     ];
     return h(Modal, { title: '', onClose: onNew, footer }, [

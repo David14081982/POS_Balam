@@ -544,8 +544,9 @@ actualiza al renderizar, cambiar sus dimensiones, terminar de cargar fuentes y
 antes de imprimir. El cuerpo hereda la misma página durante impresión para
 evitar una hoja inicial vacía por el portal. Al desmontar se retiran regla,
 observador y evento. El PDF conserva una página continua sin cambiar contenido,
-tipografía ni documentos; las ventanas propias de reportes y etiquetas no
-consumen este formato. Una configuración física de papel que lo fuerce puede
+tipografía ni documentos. H-153 congela esa vista y vuelve a medirla en un frame
+exclusivo antes de enviarla; el ticket por método también recibe página continua.
+Reportes A4 y etiquetas conservan su formato propio. Una configuración física de papel que lo fuerce puede
 requerir ajuste del controlador; el corte real se valida en la impresora.
 
 ### Transporte de comprobantes en Android
@@ -558,9 +559,11 @@ recoge un regreso adelantado; una página que salió no vuelve a adquirir hasta
 regresar. El rebase durable sigue siendo previo a `writer`; `blocked` no se
 recupera por estos eventos. El gate usa SVG locales, sin ligaduras de fuentes.
 
-`UI.printReceipt()` entrega a RawBT una imagen del comprobante ya montado en
-Android mediante un intent con paquete fijo y gesto directo. `prepareReceipt()`
-reutiliza el HTML y CSS de impresión, incluidas fuentes, logo e iconos locales,
+`UI.printReceipt()` crea un trabajo en `window.PrintManager`, cargado después de
+`shared.jsx`. Congela documento y estilos antes de cualquier espera; cada trabajo
+conserva ID, origen, tipo, copia, hashes y recursos propios. La cola entrega sólo
+un trabajo por vez. Android recibe un PNG mediante intent con paquete fijo y
+gesto directo. `prepareReceipt()` captura el HTML y CSS de impresión, incluidas fuentes, logo e iconos locales,
 sin consultar el catálogo ni modificar documentos. Para el rollo de 80 mm, el PNG
 de 576 puntos aprovecha el cabezal de 72 mm: excluye el padding horizontal
 exterior salvo 1 px de resguardo por lado y escala la composición proporcionalmente.
@@ -576,11 +579,22 @@ se rechaza completo con mensaje, igual que un recurso no disponible localmente.
 Android ofrece sólo el botón principal hacia RawBT; la ayuda indica 576 puntos
 para rollos de 80 mm. No expone `window.print()` como alternativa Bluetooth,
 pues invocarlo no acredita un diálogo nativo ni salida física. Para errores
-de recursos o longitud indica reimprimir desde computadora. Sus timers de
-autoimpresión no abren aplicaciones.
-Escritorio conserva la impresión y el PDF continuo existentes. La aplicación
-informa la solicitud de apertura, no acredita impresión física. Reportes A4,
-etiquetas y préstamos mantienen sus salidas independientes.
+de recursos o longitud indica reimprimir desde computadora. La autoimpresión
+no abre aplicaciones externas.
+
+El transporte nativo conserva su iframe hasta `afterprint` y el retorno de
+`print()`. RawBT conserva exclusión hasta ocultamiento seguido de regreso visible
+o confirmación explícita del operador. El siguiente intent exige otro gesto;
+foco por sí solo no libera la cola. Hay cancelación antes del envío y reintento
+del mismo documento. Ningún temporizador constituye la garantía del ciclo.
+Reportes A4, listados de Apartados y Préstamos comparten la cola conservando sus
+plantillas. Etiquetas mantiene su generador y ventana independientes.
+
+El historial de sesión en Configuración → Impresión distingue entrega, regreso
+y error; nunca acredita salida en papel. No persiste contenido comercial ni
+se mezcla con DATA/STORE o la cola durable. Recargar no repite impresiones.
+La exclusión corresponde a la instancia de BALAM y sus ventanas hijas; no
+coordina impresoras compartidas entre equipos. Véase H-153.
 
 ## AUTH
 

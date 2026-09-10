@@ -1,3 +1,4 @@
+import { installPrintTransport } from './test-print-transport.mjs';
 // H-90 · salida térmica ejecutiva sobre el bundle distribuido.
 // Supabase queda bloqueado; no existe escritura remota.
 import { chromium } from 'playwright-core';
@@ -35,6 +36,7 @@ try {
   const page = await context.newPage();
   page.on('pageerror', error => errors.push(String(error)));
   await page.route(/supabase\.co/, route => route.abort());
+  await page.addInitScript(installPrintTransport, { counter: '__printed' });
   await page.goto(REMOTE_URL || 'http://127.0.0.1:8875/index.html', { waitUntil: 'load' });
   await page.waitForFunction(() => window.DATA && window.ReportsScreen && window.UI, null, { timeout: 30000 });
 
@@ -106,9 +108,10 @@ try {
 
   const a4Promise = context.waitForEvent('page');
   await page.getByTestId('payment-method-print').click();
-  const a4 = await a4Promise; await a4.waitForLoadState('domcontentloaded'); await a4.waitForTimeout(250);
+  const a4 = await a4Promise; await a4.waitForLoadState('domcontentloaded');
+  await page.waitForFunction(() => PrintManager.history().at(-1)?.stage === 'COMPLETED');
   const a4Text = await a4.locator('body').innerText();
-  check('5. A4 conserva el contrato y autoimpresión existente', [expected.entries, expected.refunds, expected.net, expected.undistributed, expected.exchangeEntries].every(value => a4Text.includes(value)) && await a4.evaluate(() => window.__printed) === 1);
+  check('5. A4 conserva el contrato y autoimpresión existente', [expected.entries, expected.refunds, expected.net, expected.undistributed, expected.exchangeEntries].every(value => a4Text.includes(value)) && await page.evaluate(() => __printArtifacts.some(a => a.html.includes('data-report-printable'))));
   check('6. A4 imprime el periodo personalizado exacto', a4Text.includes('2026-08-01 – 2026-08-09'));
 
   const ticketPromise = context.waitForEvent('page');
@@ -124,12 +127,14 @@ try {
   check('12. importe histórico sin distribución y motivo son explícitos', /IMPORTE SIN DISTRIBUCIÓN/.test(ticketText) && /Detalle histórico insuficiente/.test(ticketText));
   check('13. cortesía informa cero ingreso', /OPERACIONES SIN INGRESO/.test(ticketText) && /Ingreso: \$0\.00/.test(ticketText));
 
-  const beforePrint = await ticket.evaluate(() => window.__printed);
+  const beforePrint = await page.evaluate(() => __printArtifacts.filter(a => a.html.includes('data-payment-method-ticket')).length);
   const callsBeforePrint = await page.evaluate(() => window.__reportCalls);
   check('14. abrir ticket no autoimprime', beforePrint === 0, String(beforePrint));
-  await ticket.getByRole('button', { name: 'Imprimir ticket' }).click();
-  await ticket.getByRole('button', { name: 'Imprimir ticket' }).click();
-  const afterPrint = await ticket.evaluate(() => window.__printed);
+  await ticket.getByTestId('payment-ticket-print').click();
+  await page.waitForFunction(() => PrintManager.history().at(-1)?.stage === 'COMPLETED');
+  await ticket.getByTestId('payment-ticket-print').click();
+  await page.waitForFunction(() => PrintManager.history().at(-1)?.stage === 'COMPLETED');
+  const afterPrint = await page.evaluate(() => __printArtifacts.filter(a => a.html.includes('data-payment-method-ticket')).length);
   const callsAfterPrint = await page.evaluate(() => window.__reportCalls);
   check('15. cancelar/reintentar permite imprimir otra vez', afterPrint === 2, String(afterPrint));
   check('16. reimprimir el snapshot no recalcula H-90', callsAfterPrint === callsBeforePrint, `${callsBeforePrint}→${callsAfterPrint}`);

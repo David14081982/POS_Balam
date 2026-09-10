@@ -13,6 +13,8 @@ sesión de chat.
 
 ## Correcciones registradas
 
+- `arquitectura-impresion-confiable-h153.md` — H-153: documento congelado, cola secuencial, ciclo de transporte y certificación de artefactos consecutivos.
+
 - `recuperacion-flota-real-28-pruebas.md` — H-148, seguimiento operativo: descarte autorizado y reconstrucción de C real; A/B y certificación de flota pendientes.
 
 - `convergencia-autoritativa-h148.md` — H-148: autoridad confirmada, cola durable, checkpoint y certificación real A/B/C.

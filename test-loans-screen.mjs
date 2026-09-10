@@ -17,6 +17,7 @@
 //
 // Uso: node test-loans-screen.mjs
 import { chromium } from 'playwright-core';
+import { installPrintTransport } from './test-print-transport.mjs';
 import http from 'http'; import fs from 'fs'; import path from 'path';
 
 const ROOT = path.resolve('.');
@@ -43,6 +44,7 @@ try {
   page.on('pageerror', e => errs.push(String(e)));
   await page.route(/supabase\.co/, r => r.abort());
   await page.addInitScript(() => { window.print = () => { window.__printed = (window.__printed || 0) + 1; }; });
+  await page.addInitScript(installPrintTransport);
   await page.goto('http://127.0.0.1:8825/index.html', { waitUntil: 'load' });
   await page.waitForFunction(() => window.DATA && window.CONFIG, null, { timeout: 25000 });
 
@@ -478,14 +480,9 @@ try {
   await page.waitForTimeout(400);
   check('existe la exportación a Excel de préstamos', await page.evaluate(() => typeof window.XLSXIO.exportLoans === 'function'));
 
-  const vale = await page.evaluate(folio => {
-    let html = '';
-    const real = window.open;
-    window.open = () => ({ document: { write: s => { html += s; }, close: () => {} } });
-    const btn = document.querySelector(`[data-testid="loan-vale-${folio}"]`);
-    if (btn) btn.click();
-    return new Promise(res => setTimeout(() => { window.open = real; res(html); }, 400));
-  }, alta.folio);
+  await page.getByTestId('loan-vale-' + alta.folio).click();
+  await page.waitForFunction(() => PrintManager.history().at(-1)?.stage === 'COMPLETED');
+  const vale = await page.evaluate(() => __printArtifacts.at(-1).html);
   check('el vale impreso se genera en su propia ventana', /vale de pr[eé]stamo/i.test(vale), vale ? '' : 'documento vacío');
   check('el vale identifica folio, persona y fechas',
     vale.includes(alta.folio) && /rodrigo prestatario/i.test(vale) && /devoluci[oó]n esperada/i.test(vale));
@@ -497,21 +494,17 @@ try {
   check('el vale aclara que no es un comprobante de venta', /no es un comprobante de venta/i.test(vale));
   check('el vale no pide red', !/<script[^>]*src=/i.test(vale) && !/https?:\/\//.test(vale));
 
-  const listado = await page.evaluate(() => {
+  const printStart = await page.evaluate(() => __printArtifacts.length);
+  await page.evaluate(() => {
     const D = window.DATA;
     D.loans[0].persona.nombre = 'Persona <script>alert(1)</script>';
     D.saveLoans();
     window.dispatchEvent(new Event('configchange'));
-    let html = '';
-    const real = window.open;
-    window.open = () => ({ document: { write: s => { html += s; }, close: () => {} } });
-    return new Promise(res => setTimeout(() => {
-      const btn = document.querySelector('[data-testid="loans-imprimir"]');
-      if (btn) btn.click();
-      window.open = real;
-      setTimeout(() => res(html), 120);
-    }, 500));
   });
+  await page.getByText('Persona <script>alert(1)</script>', { exact: true }).waitFor();
+  await page.getByTestId('loans-imprimir').click();
+  await page.waitForFunction(n => __printArtifacts.length > n && PrintManager.history().at(-1)?.stage === 'COMPLETED', printStart);
+  const listado = await page.evaluate(() => __printArtifacts.at(-1).html);
   check('el listado impreso trae encabezado, totales y filas',
     /mercanc[ií]a prestada/i.test(listado) && /piezas fuera/i.test(listado) && /totales/i.test(listado) && listado.includes(alta.folio));
   check('el listado impreso escapa el contenido del negocio', /Persona &lt;script&gt;/.test(listado) && !/<script>alert/.test(listado));

@@ -6956,6 +6956,33 @@ CI sincronización `34391331261`, inventario `34391331278` y Pages
 otros pagos sin evidencia de pertenencia. Respaldo original conservado.
 **Documento:** `docs/fixes/reportes-residuos-limpieza-h152.md`.
 
+## H-153 — Impresiones consecutivas sin aislamiento ni ciclo de transporte
+
+**Estado:** RESUELTO EN SOFTWARE — publicación pendiente; hardware NOT_TESTED
+**Fecha:** 10/09/2026
+**Commit:** Pendiente de commit
+**Origen:** tickets consecutivos o copias físicamente incompletos reportados.
+**Reproducción:** `test-h153-print-races.mjs` sobre `9b7dcbe`: preparación de A
+seguida de mutación síncrona a B produce el mismo PNG que B; tres solicitudes
+entregan tres intents sin regreso. La ruta nativa tampoco tiene exclusión.
+**Alcance:** congelación, preparación, cola, lifecycle, diagnóstico y transporte
+de todos los tickets; inventario de salidas A4/etiquetas sin rediseñarlas.
+**Invariantes:** plantillas e importes históricos, V1/V2, identidad, datos,
+sincronización y escritor H-147 intactos. Sin migraciones ni datos reales.
+**Solución:** snapshot anterior a toda espera, PrintManager central, trabajos con
+hashes y recursos propios, cola por instancia y finalización según el acuse
+disponible. Cancelación aborta preparación; reintento conserva el documento.
+El gesto de una ventana hija se verifica en esa ventana, no en el padre.
+**Pruebas:** rojo inicial 0/3, final 3/3; H-153 secuencias 80/80, errores 12/12
+(gesto de ventana hija rojo 11/12), artefactos independientes 26/26. H-135 61/61,
+H-143 41/41, H-144 61/61, H-147 16/16, H-148 15/15 y 32/32, cola 186/186,
+Apartados 55/55, Préstamos 117/117, Etiquetas 23/23; matriz completa en corrección.
+**Pendiente:** commit y comprobación byte a byte de Pages.
+**Riesgo residual:** no existe evidencia de hardware de esta misión; no se
+atribuye todavía el incidente físico a impresora, driver, Bluetooth o corte.
+Sin certificación nueva de flota A/B/C ni exclusión de impresoras entre equipos.
+**Documento:** `docs/fixes/arquitectura-impresion-confiable-h153.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

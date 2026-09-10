@@ -109,7 +109,7 @@
           h('div', { key: 'act', className: 'flex flex-wrap gap-2 sm:gap-3' }, [
             h('button', {
               key: 'p', className: 'flex items-center gap-2 px-4 py-2 border border-outline-variant rounded-lg hover:bg-surface-container-low transition-all text-body font-semibold',
-              onClick: () => imprimirListado(rows),
+              'data-testid': 'layaway-print-list', onClick: () => imprimirListado(rows),
             }, [h(MS, { key: 'i', name: 'print', size: 16 }), 'Imprimir listado']),
             h('button', {
               key: 'x', className: 'flex items-center gap-2 px-6 py-2 bg-primary text-on-primary rounded-lg hover:opacity-90 transition-all text-body font-semibold shadow-e2',
@@ -400,14 +400,14 @@
     useEffect(() => {
       if (!sale) { onDone(); return; }
       if (window.UI.usesBluetoothReceipt()) return;
-      const t = setTimeout(() => { window.print(); toast('Comprobante enviado a la impresora'); onDone(); }, 250);
-      return () => clearTimeout(t);
+      window.UI.printReceipt({ automatic: true, source: 'apartados-reimpresion' });
+      onDone();
     }, []);
     if (!sale) return null;
     return h(React.Fragment, null, [
       h(window.BalamTicket, { key: 'ticket', sale, payment: ultimo }),
       window.UI.usesBluetoothReceipt() && h(Modal, { key: 'modal', title: 'Reimpresión de apartado', onClose: onDone, footer: [
-        h('button', { key: 'print', 'data-testid': 'receipt-print', className: 'px-4 py-3 border border-outline-variant rounded-lg', onClick: () => window.UI.printReceipt() }, 'Imprimir comprobante'),
+        h('button', { key: 'print', 'data-testid': 'receipt-print', className: 'px-4 py-3 border border-outline-variant rounded-lg', onClick: () => window.UI.printReceipt({ source: 'apartados' }) }, 'Imprimir comprobante'),
         h('button', { key: 'close', 'data-testid': 'layaway-reprint-close', className: 'px-4 py-3 bg-primary text-on-primary rounded-lg', onClick: onDone }, 'Cerrar'),
       ] }, h(window.UI.ReceiptPrintHelp)),
     ]);
@@ -421,7 +421,7 @@
     const footer = [
       h('button', {
         key: 'p', className: 'flex-1 py-3.5 border border-outline-variant text-on-surface text-caption font-bold uppercase tracking-widest rounded-xl hover:bg-surface-container transition flex items-center justify-center gap-2',
-        'data-testid': 'receipt-print', onClick: () => window.UI.printReceipt(),
+        'data-testid': 'receipt-print', onClick: () => window.UI.printReceipt({ source: 'apartados' }),
       }, [h(MS, { key: 'i', name: 'print', size: 18 }), 'Imprimir comprobante']),
       h('button', { key: 'n', className: 'flex-1 py-3.5 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-xl hover:opacity-90 transition', onClick: onClose }, 'Listo'),
     ];
@@ -528,9 +528,9 @@
         <tfoot><tr><td colspan="4">Totales</td><td class="num">${escapeHtml(fmt(totTotal))}</td><td class="num">${escapeHtml(fmt(totPagado))}</td><td class="num">${escapeHtml(fmt(totSaldo))}</td></tr></tfoot>
       </table>
       <div class="foot">Un apartado no descuenta inventario mientras tenga saldo: la pieza se entrega y se descuenta al liquidarlo.</div>
-      <scr` + `ipt>window.onload=function(){window.focus();window.print();setTimeout(function(){window.close();},400);};</scr` + `ipt>
     </body></html>`);
     win.document.close();
+    window.UI.printReceipt({ element: win.document.body, host: win, automatic: true, system: true, continuous: false, source: 'layaway-a4', documentType: 'report' });
   }
 
   window.LayawayScreen = LayawayScreen;

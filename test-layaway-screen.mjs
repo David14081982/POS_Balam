@@ -1,3 +1,4 @@
+import { installPrintTransport } from './test-print-transport.mjs';
 // test-layaway-screen.mjs — H-40: recorrido funcional de la pantalla de Apartados
 // sobre el BUNDLE distribuido (index.html), no sobre la fuente.
 //
@@ -37,6 +38,7 @@ try {
   await page.route(/supabase\.co/, r => r.abort());
   // La impresión abriría un diálogo nativo que bloquea el navegador headless.
   await page.addInitScript(() => { window.print = () => { window.__printed = (window.__printed || 0) + 1; }; });
+  await page.addInitScript(installPrintTransport, { counter: '__printed' });
   await page.goto('http://127.0.0.1:8821/index.html', { waitUntil: 'load' });
   await page.waitForFunction(() => window.DATA && window.CONFIG, null, { timeout: 25000 });
 
@@ -177,7 +179,7 @@ try {
     if (b) b.click();
     return !!b;
   });
-  await page.waitForTimeout(600);
+  await page.waitForFunction(() => PrintManager.history().at(-1)?.stage === 'COMPLETED');
   const trasReimprimir = await page.evaluate(() => ({
     impresiones: window.__printed || 0,
     montado: !!document.querySelector('#balam-ticket'),
@@ -295,9 +297,9 @@ try {
   check('la pantalla ofrece exportar a Excel', salidas.botonExcel);
   check('la pantalla ofrece imprimir el listado', salidas.botonPrint);
 
-  // El listado impreso se arma en una ventana propia (mismo idioma que las etiquetas
-  // de Inventario). Se intercepta window.open para verificar el documento generado.
-  const listado = await page.evaluate(() => {
+  // Inspect the complete document at the real transport boundary.
+  const printStart = await page.evaluate(() => __printArtifacts.length);
+  await page.evaluate(() => {
     const D = window.DATA;
     const base = D.sales[0];
     D.sales.push(Object.assign({}, base, {
@@ -305,17 +307,12 @@ try {
       cliente: 'Cliente Impreso <script>', items: 1,
     }));
     D.saveSales();
-    let html = '';
-    const real = window.open;
-    window.open = () => ({ document: { write: s => { html += s; }, close: () => {} } });
     window.dispatchEvent(new Event('configchange'));
-    return new Promise(res => setTimeout(() => {
-      const b = [...document.querySelectorAll('button')].find(x => /imprimir listado/i.test(x.innerText));
-      if (b) b.click();
-      window.open = real;
-      setTimeout(() => res(html), 100);
-    }, 500));
   });
+  await page.getByText('H40-PRINT', { exact: true }).waitFor();
+  await page.getByTestId('layaway-print-list').click();
+  await page.waitForFunction(n => __printArtifacts.length > n && PrintManager.history().at(-1)?.stage === 'COMPLETED', printStart);
+  const listado = await page.evaluate(() => __printArtifacts.at(-1).html);
   check('el listado impreso trae encabezado, totales y filas',
     /apartados por cobrar/i.test(listado) && /saldo por cobrar/i.test(listado) && /H40-PRINT/.test(listado) && /totales/i.test(listado),
     listado ? '' : 'documento vacío');
