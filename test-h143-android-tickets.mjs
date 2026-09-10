@@ -52,6 +52,13 @@ try {
     page.on('pageerror', e => errors.push(String(e)));
     await page.goto(url);
     await page.waitForFunction(() => window.DATA && window.ReportsScreen && window.BalamTicket);
+    // Directly mounted fixtures do not pass through the signed-in App boot.
+    // Complete the real no-session recovery branch before synthetic business
+    // operations; keep the production readiness guard and renderer intact.
+    await page.evaluate(async () => {
+      await DATA.awaitLocalWriter(3000);
+      if (!await STORE.recoverDirectedDevice()) throw new Error('Fixture recovery did not finish');
+    });
     await page.evaluate(() => {
       const D = window.DATA;
       D.sales.length = 0; D.payments.length = 0; D.returns.length = 0;

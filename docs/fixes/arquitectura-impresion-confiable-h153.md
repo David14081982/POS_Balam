@@ -1,9 +1,9 @@
 # Impresión consecutiva con documento aislado y ciclo controlado
 
 **Riesgo:** H-153
-**Estado:** RESUELTO EN SOFTWARE — publicación pendiente; hardware NOT_TESTED
+**Estado:** RESUELTO EN SOFTWARE Y PUBLICADO — hardware NOT_TESTED
 **Fecha:** 10/09/2026
-**Commit:** Pendiente de commit
+**Commit técnico:** `81f29a89a648e060e3ed78d21101b34518c7271b`
 
 ## Problema y reproducción
 
@@ -192,6 +192,11 @@ su fixture declara sólo recuperación terminada, conservando Web Locks, DATA y
 las 16 verificaciones reales de escritor. H-144 usa un getter de configuración
 sintético para el logo, pues el setter administrativo rechaza una sesión sin
 autenticación. Ninguna de esas adaptaciones modifica autorización productiva.
+En Pages, el arnés H-143 monta POS directamente sin iniciar sesión: su primer
+intento se detuvo con `DEVICE_RECOVERY_REQUIRED`, antes de generar el ticket.
+Se inicializa explícitamente `STORE.recoverDirectedDevice()` y se conserva su
+guardia real; la rama sin sesión concluye sin escribir en Supabase. El mismo
+recorrido se repite localmente y en Pages. No se modifica código de negocio.
 
 ## Revisión y entrega
 
@@ -208,7 +213,28 @@ inactivos y `service_role` no reciben nuevas facultades por esta historia.
 Se revisó el diff de fuentes y consumidores y se recorrieron flujos comerciales
 con red de negocio interceptada. El aprendizaje queda en las instrucciones:
 probar la integridad del artefacto y el ciclo, no sólo contar llamadas.
-Commit técnico, hash servido y comprobación Pages se registran tras publicar.
+La matriz final fija y comprueba el bundle durante toda la ejecución:
+SHA-256 `cf872aa8848ead631fc6984b253d5f4242b10f063b919f3d0365480999ed9ce8`,
+9,061,629 bytes. Se conservan 36 registros de trabajos (incluidos cancelados y
+doble clic), 80 verificaciones de ciclo y 26 de archivos en
+`evidence/h153-print-certification.json`. Artefactos completos regenerables:
+`C:/tmp/balam-h153-final-evidence`.
+
+El commit técnico se publica por push normal a `main` desde la copia aislada.
+El hook heredado de auto-push se omite sólo en estos commits para no publicar
+una rama auxiliar; el push explícito conserva la puerta de verificación.
+Pages terminó el build de `81f29a8` sin error. El 10/09/2026 a las 07:38 UTC,
+`index.html` y `sw.js` servidos coinciden **byte a byte** con el commit:
+
+- HTML: `cf872aa8848ead631fc6984b253d5f4242b10f063b919f3d0365480999ed9ce8`.
+- Service worker: `413b5208fb7b2131160d423dd2c938ec16b98a4bae521baf0f492f7825ed51e0`.
+
+Evidencia: `evidence/h153-pages.json`.
+Publicación: <https://david14081982.github.io/POS_Balam/>.
+La publicación ejecuta H-143 **41/41** y H-147 **16/16**, con las peticiones de
+negocio interceptadas. H-143 vuelve a pasar **41/41** local tras ajustar la
+inicialización del arnés. El commit de cierre registra evidencia y ese ajuste;
+no altera el bundle ya validado.
 
 ## Riesgo residual y pendientes
 

@@ -6958,9 +6958,9 @@ otros pagos sin evidencia de pertenencia. Respaldo original conservado.
 
 ## H-153 — Impresiones consecutivas sin aislamiento ni ciclo de transporte
 
-**Estado:** RESUELTO EN SOFTWARE — publicación pendiente; hardware NOT_TESTED
+**Estado:** RESUELTO EN SOFTWARE Y PUBLICADO — hardware NOT_TESTED
 **Fecha:** 10/09/2026
-**Commit:** Pendiente de commit
+**Commit técnico:** `81f29a89a648e060e3ed78d21101b34518c7271b`
 **Origen:** tickets consecutivos o copias físicamente incompletos reportados.
 **Reproducción:** `test-h153-print-races.mjs` sobre `9b7dcbe`: preparación de A
 seguida de mutación síncrona a B produce el mismo PNG que B; tres solicitudes
@@ -6977,7 +6977,11 @@ El gesto de una ventana hija se verifica en esa ventana, no en el padre.
 (gesto de ventana hija rojo 11/12), artefactos independientes 26/26. H-135 61/61,
 H-143 41/41, H-144 61/61, H-147 16/16, H-148 15/15 y 32/32, cola 186/186,
 Apartados 55/55, Préstamos 117/117, Etiquetas 23/23; matriz completa en corrección.
-**Pendiente:** commit y comprobación byte a byte de Pages.
+**Publicación:** Pages `81f29a8`, HTML y service worker idénticos byte a byte;
+HTML SHA-256 `cf872aa8848ead631fc6984b253d5f4242b10f063b919f3d0365480999ed9ce8`.
+H-143 en Pages 41/41 y H-147 en Pages 16/16; evidencia versionada en
+`docs/fixes/evidence/h153-pages.json` y `h153-print-certification.json`.
+**Pendiente:** aceptación física en impresora real; ninguno de software conocido.
 **Riesgo residual:** no existe evidencia de hardware de esta misión; no se
 atribuye todavía el incidente físico a impresora, driver, Bluetooth o corte.
 Sin certificación nueva de flota A/B/C ni exclusión de impresoras entre equipos.

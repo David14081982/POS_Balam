@@ -1,0 +1,29 @@
+{
+  "url": "https://david14081982.github.io/POS_Balam/",
+  "commit": "81f29a89a648e060e3ed78d21101b34518c7271b",
+  "checkedAt": "2026-09-10T07:38:22.979175+00:00",
+  "artifacts": [
+    {
+      "file": "index.html",
+      "matches": true,
+      "sha256": "cf872aa8848ead631fc6984b253d5f4242b10f063b919f3d0365480999ed9ce8",
+      "expectedSHA256": "cf872aa8848ead631fc6984b253d5f4242b10f063b919f3d0365480999ed9ce8",
+      "bytes": 9061629
+    },
+    {
+      "file": "sw.js",
+      "matches": true,
+      "sha256": "413b5208fb7b2131160d423dd2c938ec16b98a4bae521baf0f492f7825ed51e0",
+      "expectedSHA256": "413b5208fb7b2131160d423dd2c938ec16b98a4bae521baf0f492f7825ed51e0",
+      "bytes": 2709
+    }
+  ],
+  "browserVerification": {
+    "completedAt": "2026-09-10T07:44:30.526660+00:00",
+    "H143": "41/41",
+    "H147": "16/16",
+    "localH143AfterFixtureInitialization": "41/41",
+    "businessNetwork": "intercepted",
+    "hardware": "NOT_TESTED"
+  }
+}
