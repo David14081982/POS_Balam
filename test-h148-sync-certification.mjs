@@ -10,6 +10,10 @@ const REQUIRED_CASES=[
  'H149 directed boot 17: discard, remote convergence, replay fence and new operation',
  'Create references A -> B/C/Supabase',
  'Edit reference with immutable identity',
+ 'H155 ornament order edits are acknowledged through both product RPCs',
+ 'H155 failed boot recovers automatically and open POS receives current values',
+ 'H155 rejected reference retains its original without blocking confirmed products',
+ 'H155 stale edits cannot restore stock or overwrite a newer terminal',
  'Delete reference A -> B/C/Supabase tombstone',
  'Reload cannot resurrect a deleted reference',
  'Old protocol and stale payload cannot resurrect a tombstone',
@@ -36,6 +40,7 @@ function validate(r,{htmlHash,certifierHash,project,now=Date.now()}) {
  assert.equal(r.sourceSha256,htmlHash,'tested build differs from delivery');
  assert.equal(r.certifierSha256,certifierHash,'certifier changed after run');
  assert.equal(r.partial,false,'partial run');assert.equal(r.error,undefined);
+ assert.equal(r.watchdogExpiredAt,undefined,'run exceeded its deadline');
  assert.equal(r.manifest?.system_mode,'preproduction');assert.equal(r.profiles,3);
  assert.ok(r.transport?.startsWith('Real HTTPS Supabase;'));
  const age=now-Date.parse(r.finishedAt);assert.ok(Number.isFinite(age)&&age>=0&&age<86400000,'certificate must be from last 24 hours');
@@ -55,6 +60,24 @@ function validate(r,{htmlHash,certifierHash,project,now=Date.now()}) {
  assert.deepEqual(cleanupEpoch.states.map(s=>s.terminal).sort(),['A','B','C']);
  for(const s of cleanupEpoch.states){assert.equal(s.pending,0);assert.equal(s.synchronized,true);assert.equal(s.epoch,Number(r.manifest.data_epoch));}
  assert.equal(r.pendingLost,0);assert.equal(r.finalDivergences,0);
+ const automatic=r.cases.find(c=>c.name.startsWith('H155 failed boot')).evidence;
+ const ornament=r.cases.find(c=>c.name.startsWith('H155 ornament order')).evidence;
+ assert.equal(ornament.profiles,3);
+ assert.deepEqual(ornament.routes.map(r=>r.rpc).sort(),['commit_reference_family_batch','save_products_checked_v2']);
+ for(const route of ornament.routes)for(const field of ['submittedOrderAcknowledged','stockPreserved','versionAdvancedOnce'])assert.equal(route[field],true);
+ assert.equal(automatic.automatic,true);assert.equal(automatic.manualCalls,0);assert.equal(automatic.profiles,3);
+ assert.deepEqual(automatic.attempts.map(a=>a.failedPrerequisite).sort(),['rpc/get_sync_device_recovery','system_manifest']);
+ for(const attempt of automatic.attempts){assert.equal(attempt.failedRequests,1);
+  assert.deepEqual(attempt.states.map(s=>s.terminal).sort(),['A','B','C']);
+  for(const s of attempt.states){assert.equal(s.manualCalls,0);assert.equal(s.visiblePrice,true);}}
+ const rejected=r.cases.find(c=>c.name.startsWith('H155 rejected reference')).evidence;
+ for(const field of ['originalPreserved','submittedPayloadPreserved','remoteReceipt','otherProductReceivedAutomatically','reloadPreserved'])assert.equal(rejected[field],true);
+ assert.equal(rejected.falseGreen,false);assert.equal(rejected.businessChanges,0);assert.equal(rejected.pendingAfter,0);
+ const stale=r.cases.find(c=>c.name.startsWith('H155 stale edits')).evidence;
+ assert.equal(stale.staleWritePreservedAuthority,true);assert.equal(stale.stockNotRestored,true);assert.equal(stale.profiles,3);assert.equal(stale.fixtureOnly,true);
+ assert.equal(stale.originalPreserved,true);assert.equal(stale.reviewRequired,true);assert.equal(stale.otherProductReceivedAutomatically,true);
+ const configuration=r.cases.find(c=>c.name==='Configuration and permission invalidations reach every terminal').evidence;
+ assert.equal(configuration.automatic,true);assert.equal(configuration.profiles,3);assert.equal(configuration.configurationWriteScope,'one isolated setting');
  const reports=r.cases.find(c=>c.name.startsWith('H152 open reports')).evidence;
  assert.equal(reports.liveReports,true);assert.equal(reports.profiles,3);assert.equal(reports.staleRows,0);assert.equal(reports.paymentsAgree,true);
  assert.equal(r.cleanup?.ok,true);assert.deepEqual(r.cleanup.errors,[]);
@@ -75,14 +98,32 @@ if(process.argv[2]==='--self-test'){
  valid.cases.find(c=>c.name.startsWith('H151 idle')).evidence={automatic:true,businessWrites:0,businessChanges:0,
   states:['A','B','C'].map(terminal=>({terminal,pending:0,synchronized:true,epoch:7}))};
  valid.cases.find(c=>c.name.startsWith('H152 open reports')).evidence={liveReports:true,profiles:3,staleRows:0,paymentsAgree:true};
+ valid.cases.find(c=>c.name.startsWith('H155 failed boot')).evidence={automatic:true,manualCalls:0,profiles:3,
+  attempts:['system_manifest','rpc/get_sync_device_recovery'].map(failedPrerequisite=>({failedPrerequisite,failedRequests:1,states:['A','B','C'].map(terminal=>({terminal,manualCalls:0,visiblePrice:true}))}))};
+ valid.cases.find(c=>c.name.startsWith('H155 ornament order')).evidence={profiles:3,
+  routes:['save_products_checked_v2','commit_reference_family_batch'].map(rpc=>({rpc,submittedOrderAcknowledged:true,stockPreserved:true,versionAdvancedOnce:true}))};
+ valid.cases.find(c=>c.name.startsWith('H155 rejected reference')).evidence={originalPreserved:true,submittedPayloadPreserved:true,remoteReceipt:true,
+  otherProductReceivedAutomatically:true,reloadPreserved:true,falseGreen:false,businessChanges:0,pendingAfter:0};
+ valid.cases.find(c=>c.name.startsWith('H155 stale edits')).evidence={staleWritePreservedAuthority:true,stockNotRestored:true,profiles:3,fixtureOnly:true,
+  originalPreserved:true,reviewRequired:true,otherProductReceivedAutomatically:true};
+ valid.cases.find(c=>c.name==='Configuration and permission invalidations reach every terminal').evidence={configuration:true,permissions:true,
+  automatic:true,profiles:3,configurationWriteScope:'one isolated setting',configCommitRpcExercised:false};
  const args={htmlHash:'html',certifierHash:'code',project:'test',now};validate(valid,args);
  const mutations=[r=>r.partial=true,r=>r.profiles=1,r=>r.cases.pop(),r=>r.cases[0].ok=false,r=>r.domains=[],r=>r.sourceSha256='stale',r=>r.certifierSha256='old',r=>r.cleanup.ok=false,r=>r.businessPreservation.after.table0='changed',r=>r.pendingLost=1,r=>r.finalDivergences=1,r=>r.finishedAt='2000-01-01',r=>r.transport='mock',r=>r.cases.at(-1).evidence.devices[0].queue_pending=1];
  mutations.push(r=>r.cases.find(c=>c.name.startsWith('H149 directed boot 10:')).evidence.legacyUploads=1,
   r=>r.cases.find(c=>c.name.startsWith('H149 directed boot 17:')).evidence.damagedProjectionRebuilt=false);
  mutations.push(r=>r.cases.find(c=>c.name.startsWith('H151 idle')).evidence.businessWrites=1,
-  r=>r.cases.find(c=>c.name.startsWith('H151 idle')).evidence.states[0].epoch=6);
+  r=>r.cases.find(c=>c.name.startsWith('H151 idle')).evidence.states[0].epoch=6,
+  r=>r.cases.find(c=>c.name.startsWith('H151 idle')).evidence.states[0].synchronized=false);
  mutations.push(r=>r.cases.find(c=>c.name.startsWith('H152 open reports')).evidence.staleRows=1,
   r=>r.cases.find(c=>c.name.startsWith('H152 open reports')).evidence.profiles=2);
+ mutations.push(r=>r.watchdogExpiredAt='expired',r=>r.cases.find(c=>c.name.startsWith('H155 failed boot')).evidence.manualCalls=1,
+  r=>r.cases.find(c=>c.name.startsWith('H155 failed boot')).evidence.attempts[0].failedRequests=0,
+  r=>r.cases.find(c=>c.name.startsWith('H155 failed boot')).evidence.attempts[0].states[0].visiblePrice=false,
+  r=>r.cases.find(c=>c.name.startsWith('H155 rejected reference')).evidence.submittedPayloadPreserved=false,
+  r=>r.cases.find(c=>c.name.startsWith('H155 rejected reference')).evidence.falseGreen=true,
+  r=>r.cases.find(c=>c.name.startsWith('H155 stale edits')).evidence.stockNotRestored=false);
+ mutations.push(r=>r.cases.find(c=>c.name.startsWith('H155 ornament order')).evidence.routes[0].submittedOrderAcknowledged=false);
  for(const mutate of mutations){const r=structuredClone(valid);mutate(r);assert.throws(()=>validate(r,args));}
  console.log(`PASS gate contract: ${mutations.length} false certificates rejected. No live certification performed.`);
 }else if(!process.argv[2]){console.error('NOT CERTIFIED: supply matrix.json from the complete live run');process.exitCode=2;}

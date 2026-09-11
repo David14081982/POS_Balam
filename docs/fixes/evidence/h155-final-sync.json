@@ -1,0 +1,142 @@
+{
+  "at": "2026-09-11T15:27:37.314Z",
+  "scope": "Final local regressions after H155 managed-session review guard; synthetic transport or remote network blocked",
+  "sourceAggregateSha256": "1c0fc17e14239192685e39dd59cc08fa277b3002548649a93e2703a20c6b44d5",
+  "storeSha256": "6acd2605836b3ac99a7209da1a85270e86399fc2696359344a9b3fd7379db23b",
+  "bundleSha256": "8883393ca53d880e5af59ad34113e4c912e886308ec8f697df09a9e4b5ae32d0",
+  "bundleWrittenAt": "2026-09-11T15:24:50.085Z",
+  "tests": [
+    {
+      "test": "test-h155-auto-sync.mjs",
+      "passed": 23,
+      "failed": 0,
+      "exitCode": 0,
+      "log": ".evidence-h155-live/local-sync-auth/h155-green.log",
+      "runtime": "Node with current source and synthetic transport"
+    },
+    {
+      "test": "test-h148-reconciliation.mjs",
+      "passed": 15,
+      "failed": 0,
+      "exitCode": 0,
+      "started": "2026-09-11T15:25:02.829Z",
+      "finished": "2026-09-11T15:25:08.533Z",
+      "log": ".evidence-h155-live/local-sync-auth/test-h148-reconciliation.log",
+      "runtime": "Node with current source and synthetic transport"
+    },
+    {
+      "test": "test-h149-directed-recovery.mjs",
+      "passed": 15,
+      "failed": 0,
+      "exitCode": 0,
+      "started": "2026-09-11T15:25:08.536Z",
+      "finished": "2026-09-11T15:25:16.289Z",
+      "log": ".evidence-h155-live/local-sync-auth/test-h149-directed-recovery.log",
+      "runtime": "Node with current source and synthetic transport"
+    },
+    {
+      "test": "test-store-queue.mjs",
+      "passed": 186,
+      "failed": 0,
+      "exitCode": 0,
+      "started": "2026-09-11T15:25:16.290Z",
+      "finished": "2026-09-11T15:25:24.406Z",
+      "log": ".evidence-h155-live/local-sync-auth/test-store-queue.log",
+      "runtime": "Node with current source and synthetic transport"
+    },
+    {
+      "test": "test-h148-projection-durability.mjs",
+      "passed": 32,
+      "failed": 0,
+      "exitCode": 0,
+      "started": "2026-09-11T15:25:37.513Z",
+      "finished": "2026-09-11T15:25:41.268Z",
+      "log": ".evidence-h155-live/local-sync-auth/test-h148-projection-durability.log",
+      "runtime": "Chromium with current source and blocked remote requests"
+    },
+    {
+      "test": "test-h151-cleanup-propagation.mjs",
+      "passed": 12,
+      "failed": 0,
+      "exitCode": 0,
+      "started": "2026-09-11T15:25:24.407Z",
+      "finished": "2026-09-11T15:25:29.246Z",
+      "log": ".evidence-h155-live/local-sync-auth/test-h151-cleanup-propagation.log",
+      "runtime": "Node with current source and synthetic transport"
+    },
+    {
+      "test": "test-h152-reports-refresh.mjs",
+      "passed": 9,
+      "failed": 0,
+      "exitCode": 0,
+      "started": "2026-09-11T15:25:41.272Z",
+      "finished": "2026-09-11T15:25:54.400Z",
+      "log": ".evidence-h155-live/local-sync-auth/test-h152-reports-refresh.log",
+      "runtime": "generated index.html on blocked-network loopback"
+    },
+    {
+      "test": "test-concurrency.mjs",
+      "passed": 15,
+      "failed": 0,
+      "exitCode": 0,
+      "started": "2026-09-11T15:25:29.247Z",
+      "finished": "2026-09-11T15:25:31.529Z",
+      "log": ".evidence-h155-live/local-sync-auth/test-concurrency.log",
+      "runtime": "Node with current source and synthetic transport"
+    },
+    {
+      "test": "test-h142-qa-races.mjs",
+      "passed": 5,
+      "failed": 0,
+      "exitCode": 0,
+      "started": "2026-09-11T15:25:31.530Z",
+      "finished": "2026-09-11T15:25:33.926Z",
+      "log": ".evidence-h155-live/local-sync-auth/test-h142-qa-races.log",
+      "runtime": "Node with current source and synthetic transport"
+    },
+    {
+      "test": "test-h142-device-center-focus.mjs",
+      "passed": 20,
+      "failed": 0,
+      "exitCode": 0,
+      "started": "2026-09-11T15:25:54.402Z",
+      "finished": "2026-09-11T15:26:06.547Z",
+      "log": ".evidence-h155-live/local-sync-auth/test-h142-device-center-focus.log",
+      "runtime": "Chromium with current source and blocked remote requests"
+    },
+    {
+      "test": "test-module-contracts.mjs",
+      "passed": 42,
+      "failed": 0,
+      "exitCode": 0,
+      "started": "2026-09-11T15:25:33.928Z",
+      "finished": "2026-09-11T15:25:35.743Z",
+      "log": ".evidence-h155-live/local-sync-auth/test-module-contracts.log",
+      "runtime": "Node with current source and synthetic transport"
+    }
+  ],
+  "finalTotal": {
+    "passed": 374,
+    "failed": 0
+  },
+  "previousCandidate": {
+    "storeSha256": "632da59516c7e295eef1ffea9d16ab2b2a42c7746af2d61defabcd43e48ca016",
+    "bundleSha256": "cb11eefcd25d3641df6966cb117e4f34c2a48dc6ffaf280581d18b696eb086d3",
+    "additionalTotal": {
+      "passed": 135,
+      "failed": 0
+    },
+    "evidence": ".evidence-h155-live/local-sync/summary.json",
+    "h151InitialRun": {
+      "passed": 10,
+      "failed": 2,
+      "log": "h151-cleanup.log",
+      "failures": [
+        "open empty terminal recovers after epoch change: terminal did not finish applying the cleanup",
+        "poll repairs a terminal already waiting for rebootstrap: terminal did not finish applying the cleanup"
+      ]
+    },
+    "note": "Previous initial H151 timeouts retained; isolated repeat and final-source run both passed unchanged timeouts"
+  },
+  "certification": "Local regressions only; remote A/B/C certification is recorded separately by the coordinator"
+}

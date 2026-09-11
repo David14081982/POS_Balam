@@ -34,10 +34,16 @@
     const [color, setColor] = useState('all');
     const [onlyPop, setOnlyPop] = useState(false);
     const [catalogVersion, setCatalogVersion] = useState(() => window.CONFIG.version || 0);
+    const [dataVersion, setDataVersion] = useState(0);
     useEffect(() => {
-      const refreshCatalogs = () => setCatalogVersion(window.CONFIG.version || Date.now());
+      const refreshCatalogs = () => setCatalogVersion(version => version + 1);
+      const refreshData = () => setDataVersion(version => version + 1);
       window.addEventListener('configchange', refreshCatalogs);
-      return () => window.removeEventListener('configchange', refreshCatalogs);
+      window.addEventListener('datachange', refreshData);
+      return () => {
+        window.removeEventListener('configchange', refreshCatalogs);
+        window.removeEventListener('datachange', refreshData);
+      };
     }, []);
     // Estructura por categoría tal como la define Configuración → Catálogos de
     // producto: un grupo por categoría, sus tallas en el orden configurado y
@@ -81,7 +87,7 @@
         return p.isFamilyProjection ? p.searchText.includes(q)
           : p.nombre.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q) || p.colorName.toLowerCase().includes(q);
       });
-    }, [query, cat, talla, color, onlyPop]);
+    }, [query, cat, talla, color, onlyPop, dataVersion, catalogVersion]);
 
     function flashLine(key) { setFlash(key); setTimeout(() => setFlash(k => (k === key ? null : k)), 900); }
     function onScan(e) {
@@ -120,7 +126,11 @@
     // no tenga el foco. Distingue lector de tecleo humano por la cadencia entre teclas
     // (un lector teclea < ~30 ms/carácter; si hay una pausa > 50 ms, se reinicia el búfer).
     const scanRT = useRef({});
-    scanRT.current = { addToTicket, flashLine, scanEl: scanRef.current, blocked: !!(sizePick || checkout || pendingMetodo || success) };
+    const currentSizePick = sizePick && currentCatalogProduct(sizePick);
+    useEffect(() => {
+      if (sizePick && !currentCatalogProduct(sizePick)) setSizePick(null);
+    }, [sizePick, dataVersion, catalogVersion]);
+    scanRT.current = { addToTicket, flashLine, scanEl: scanRef.current, blocked: !!(currentSizePick || checkout || pendingMetodo || success) };
     useEffect(() => {
       let buf = '', typed = '', lt = 0;
       function onKey(e) {
@@ -158,9 +168,17 @@
       window.addEventListener('keydown', onKey);
       return () => window.removeEventListener('keydown', onKey);
     }, []);
-    function openSize(p) { setSizePick(p); }
+    // El pull reemplaza objetos. Las selecciones nuevas resuelven su identidad
+    // vigente; los objetos de renglones ya iniciados conservan su precio pactado.
+    function currentCatalogProduct(p) {
+      return p.isFamilyProjection ? D.referenceFamilyProjection(p.referenceFamilyId)
+        : D.products.find(row => row.id === p.id && !row._deletedAt) || null;
+    }
+    function openSize(p) { setSizePick(currentCatalogProduct(p)); }
     const validateStock = () => window.CONFIG.get('pos.validateStock');
     function addToTicket(p, talla) {
+      p = currentCatalogProduct(p);
+      if (!p) { toast('El producto ya no está disponible en el catálogo', 'var(--danger)'); return; }
       const key = p.id + '-' + talla;
       if (validateStock()) {
         const ex = ticket.find(l => l.key === key);
@@ -186,9 +204,13 @@
       setAdditionalDiscounts([]);
       setTicket(prev => prev.flatMap(l => {
         if (l.key !== key) return [l];
-        if (d > 0 && validateStock() && l.qty + d > D.stockOf(l.p, l.talla)) {
-          toast(`Sin stock: ${D.stockOf(l.p, l.talla)} pz disponibles`, 'var(--danger)');
-          return [l];
+        if (d > 0) {
+          const current = currentCatalogProduct(l.p);
+          if (!current) { toast('El producto ya no está disponible en el catálogo', 'var(--danger)'); return [l]; }
+          if (validateStock() && l.qty + d > D.stockOf(current, l.talla)) {
+            toast(`Sin stock: ${D.stockOf(current, l.talla)} pz disponibles`, 'var(--danger)');
+            return [l];
+          }
         }
         const q = l.qty + d;
         return q <= 0 ? [] : [{ ...l, qty: q }];
@@ -325,7 +347,7 @@
       viewportBand === 'desktop' && ticketPanel,
       compactCart,
       cartOverlay,
-      sizePick && h(SizeModal, { key: 'sm', p: sizePick, onClose: () => setSizePick(null), onPick: addToTicket }),
+      currentSizePick && h(SizeModal, { key: 'sm', p: currentSizePick, onClose: () => setSizePick(null), onPick: addToTicket }),
       discountOpen && h(window.AdditionalDiscountModal, {
         key: 'ad', ticket: resolved, existing: additionalDiscounts,
         onClose: () => setDiscountOpen(false),
@@ -598,6 +620,7 @@
 
   function referencePriceLabel(references) {
     const prices = references.map(reference => Number(D.listPrice(reference, reference.sizeCode)) || 0);
+    if (!prices.length) return '—';
     const min = Math.min(...prices), max = Math.max(...prices);
     return min === max ? fmt(min) : fmt(min) + ' – ' + fmt(max);
   }
@@ -605,14 +628,16 @@
   // H-111: el POS proyecta familias V2 como una selección comercial por talla.
   // La proyección sólo presenta; toda salida sigue siendo una referencia products.id exacta.
   function FamilySizeModal({ p, onClose, onPick }) {
-    const [variantGroup, setVariantGroup] = useState(null);
+    const [variantGroupKey, setVariantGroupKey] = useState(null);
     const visualSku = D.familyVisualSku(p);
     const availableGroups = p.sizeGroups.filter(group => group.stock > 0);
+    const variantGroup = availableGroups.find(group => group.key === variantGroupKey);
+    const variantReferences = variantGroup ? variantGroup.references.filter(reference => Number(reference.stockQuantity) > 0) : [];
     const availableFamilyReferences = p.availableReferences || [];
     const pickSize = group => {
       const availableReferences = group.references.filter(reference => Number(reference.stockQuantity) > 0);
       if (availableReferences.length === 1) onPick(availableReferences[0], availableReferences[0].sizeCode);
-      else setVariantGroup({ ...group, availableReferences });
+      else setVariantGroupKey(group.key);
     };
     const title = variantGroup ? 'Selecciona variante' : 'Selecciona talla';
     return h(Modal, { title, onClose, testId: variantGroup ? 'pos-family-variant-picker' : 'pos-family-size-picker' }, [
@@ -629,14 +654,14 @@
           ? h('div', { key: 'variants' }, [
               h('div', { key: 'bar', className: 'flex items-center justify-between gap-3 mb-3' }, [
                 h('div', { key: 'lbl', className: 'text-overline uppercase text-on-surface-variant' }, `Talla ${variantGroup.label}`),
-                h('button', { key: 'back', type: 'button', onClick: () => setVariantGroup(null), 'data-testid': 'family-variant-back', className: 'text-caption font-semibold text-primary hover:underline' }, 'Volver a tallas'),
+                h('button', { key: 'back', type: 'button', onClick: () => setVariantGroupKey(null), 'data-testid': 'family-variant-back', className: 'text-caption font-semibold text-primary hover:underline' }, 'Volver a tallas'),
               ]),
-              h('div', { key: 'list', className: 'grid gap-2' }, variantGroup.availableReferences.map(reference => h('button', {
+              h('div', { key: 'list', className: 'grid gap-2' }, variantReferences.map(reference => h('button', {
                 key: reference.id, type: 'button', onClick: () => onPick(reference, reference.sizeCode),
                 'data-testid': 'family-variant-pick-' + reference.id,
                 className: 'min-h-12 px-3 py-2.5 rounded-lg border border-outline-variant text-left flex flex-wrap items-center gap-x-3 gap-y-1 hover:border-primary hover:bg-surface-container-low transition-colors',
               }, [
-                h('span', { key: 'v', className: 'flex-1 min-w-[10rem] text-body font-semibold text-primary [overflow-wrap:anywhere]' }, referenceVariantLabel(reference, variantGroup.availableReferences)),
+                h('span', { key: 'v', className: 'flex-1 min-w-[10rem] text-body font-semibold text-primary [overflow-wrap:anywhere]' }, referenceVariantLabel(reference, variantReferences)),
                 h('span', { key: 'p', className: 'font-headline text-body text-primary whitespace-nowrap' }, fmt(D.listPrice(reference, reference.sizeCode))),
                 h('span', { key: 's', className: 'text-caption text-muted whitespace-nowrap' }, reference.stockQuantity + ' pz'),
               ]))),

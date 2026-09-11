@@ -1,8 +1,9 @@
 {
-  "run": "c7c69ea1-2b2c-4e48-9c47-34e5714a7cd2",
+  "run": "d604289c-8a1c-4770-9d09-5de0c917c12e",
   "project": "telohdbvbvsfmwyriflz",
-  "sourceSha256": "38978740c0ba3295e4dab4e37dd03fdb90e686467af4b5f606059b1332f4f586",
-  "certifierSha256": "26add16bb07762a9108882450ba1f35eff416decdcf605c3eef151ec69d077df",
+  "startedAt": "2026-09-11T16:05:39.031Z",
+  "sourceSha256": "8883393ca53d880e5af59ad34113e4c912e886308ec8f697df09a9e4b5ae32d0",
+  "certifierSha256": "85c4c222c393239c8de546dcca2d46b77d38d5ea0f4afa1d75a04e7b27dcc865",
   "transport": "Real HTTPS Supabase; transport failures injected only for offline/lost ACK; no invented responses or service role in browser",
   "cases": [
     {
@@ -11,16 +12,17 @@
       "evidence": [
         {
           "terminal": "A",
-          "count": 973,
+          "count": 975,
           "status": {
             "recoveryPhase": "ready",
             "recoveryError": null,
+            "reviewPending": 0,
             "compatibility": "ok",
             "protocolVersion": 3,
             "schemaVersion": 20260830017500,
-            "clientBuild": "2026-09-09-h152",
-            "lastSuccess": "2026-09-09T18:32:17.374Z",
-            "lastVersionCheck": "2026-09-09T18:32:17.248Z",
+            "clientBuild": "2026-09-11-h155",
+            "lastSuccess": "2026-09-11T16:06:35.877Z",
+            "lastVersionCheck": "2026-09-11T16:06:35.023Z",
             "connection": "online",
             "errors": [],
             "checkpointError": null,
@@ -30,21 +32,21 @@
             "durability": "localStorage",
             "invalidDomains": [],
             "cursors": {
-              "devices": 19648,
-              "permissions": 228,
+              "devices": 23851,
+              "permissions": 365,
               "purges": 22,
-              "config": 348,
-              "sellers": 204,
-              "products": 983,
-              "clients": 105,
-              "promotions": 55,
-              "sales": 1013,
-              "payments": 221,
-              "returns": 158,
-              "exchanges": 129,
-              "loans": 41,
-              "liquidations": 35,
-              "movements": 299
+              "config": 377,
+              "sellers": 280,
+              "products": 1238,
+              "clients": 170,
+              "promotions": 90,
+              "sales": 1387,
+              "payments": 300,
+              "returns": 210,
+              "exchanges": 174,
+              "loans": 58,
+              "liquidations": 57,
+              "movements": 416
             },
             "reconciling": false,
             "pending": 0,
@@ -56,16 +58,17 @@
         },
         {
           "terminal": "B",
-          "count": 973,
+          "count": 975,
           "status": {
             "recoveryPhase": "ready",
             "recoveryError": null,
+            "reviewPending": 0,
             "compatibility": "ok",
             "protocolVersion": 3,
             "schemaVersion": 20260830017500,
-            "clientBuild": "2026-09-09-h152",
-            "lastSuccess": "2026-09-09T18:32:24.758Z",
-            "lastVersionCheck": "2026-09-09T18:32:24.530Z",
+            "clientBuild": "2026-09-11-h155",
+            "lastSuccess": "2026-09-11T16:06:50.368Z",
+            "lastVersionCheck": "2026-09-11T16:06:49.423Z",
             "connection": "online",
             "errors": [],
             "checkpointError": null,
@@ -75,21 +78,21 @@
             "durability": "localStorage",
             "invalidDomains": [],
             "cursors": {
-              "devices": 19651,
-              "permissions": 228,
+              "devices": 23852,
+              "permissions": 365,
               "purges": 22,
-              "config": 348,
-              "sellers": 204,
-              "products": 983,
-              "clients": 105,
-              "promotions": 55,
-              "sales": 1013,
-              "payments": 221,
-              "returns": 158,
-              "exchanges": 129,
-              "loans": 41,
-              "liquidations": 35,
-              "movements": 299
+              "config": 377,
+              "sellers": 280,
+              "products": 1238,
+              "clients": 170,
+              "promotions": 90,
+              "sales": 1387,
+              "payments": 300,
+              "returns": 210,
+              "exchanges": 174,
+              "loans": 58,
+              "liquidations": 57,
+              "movements": 416
             },
             "reconciling": false,
             "pending": 0,
@@ -101,16 +104,17 @@
         },
         {
           "terminal": "C",
-          "count": 973,
+          "count": 975,
           "status": {
             "recoveryPhase": "ready",
             "recoveryError": null,
+            "reviewPending": 0,
             "compatibility": "ok",
             "protocolVersion": 3,
             "schemaVersion": 20260830017500,
-            "clientBuild": "2026-09-09-h152",
-            "lastSuccess": "2026-09-09T18:32:31.761Z",
-            "lastVersionCheck": "2026-09-09T18:32:31.657Z",
+            "clientBuild": "2026-09-11-h155",
+            "lastSuccess": "2026-09-11T16:07:06.047Z",
+            "lastVersionCheck": "2026-09-11T16:07:04.649Z",
             "connection": "online",
             "errors": [],
             "checkpointError": null,
@@ -120,21 +124,21 @@
             "durability": "localStorage",
             "invalidDomains": [],
             "cursors": {
-              "devices": 19654,
-              "permissions": 228,
+              "devices": 23858,
+              "permissions": 365,
               "purges": 22,
-              "config": 348,
-              "sellers": 204,
-              "products": 983,
-              "clients": 105,
-              "promotions": 55,
-              "sales": 1013,
-              "payments": 221,
-              "returns": 158,
-              "exchanges": 129,
-              "loans": 41,
-              "liquidations": 35,
-              "movements": 299
+              "config": 377,
+              "sellers": 280,
+              "products": 1238,
+              "clients": 170,
+              "promotions": 90,
+              "sales": 1387,
+              "payments": 300,
+              "returns": 210,
+              "exchanges": 174,
+              "loans": 58,
+              "liquidations": 57,
+              "movements": 416
             },
             "reconciling": false,
             "pending": 0,
@@ -144,7 +148,9 @@
             "otherSessionPending": 0
           }
         }
-      ]
+      ],
+      "startedAt": "2026-09-11T16:06:18.942Z",
+      "elapsedMs": 47277
     },
     {
       "name": "H151 idle A/B/C automatically apply the confirmed cleanup epoch",
@@ -158,24 +164,35 @@
             "terminal": "A",
             "pending": 0,
             "epoch": 8,
-            "synchronized": true
+            "synchronized": true,
+            "authReady": true,
+            "recoveryPhase": "ready",
+            "observedAt": "2026-09-11T16:07:38.718Z"
           },
           {
             "terminal": "B",
             "pending": 0,
             "epoch": 8,
-            "synchronized": true
+            "synchronized": true,
+            "authReady": true,
+            "recoveryPhase": "ready",
+            "observedAt": "2026-09-11T16:07:39.469Z"
           },
           {
             "terminal": "C",
             "pending": 0,
             "epoch": 8,
-            "synchronized": true
+            "synchronized": true,
+            "authReady": true,
+            "recoveryPhase": "ready",
+            "observedAt": "2026-09-11T16:07:39.469Z"
           }
         ],
         "businessWrites": 0,
         "businessChanges": 0
-      }
+      },
+      "startedAt": "2026-09-11T16:07:06.222Z",
+      "elapsedMs": 35291
     },
     {
       "name": "H149 directed boot 10: discard, remote convergence, replay fence and new operation",
@@ -192,7 +209,9 @@
         "viewports": 8,
         "deviceCenterTruthful": true,
         "damagedProjectionRebuilt": true
-      }
+      },
+      "startedAt": "2026-09-11T16:07:41.525Z",
+      "elapsedMs": 86989
     },
     {
       "name": "H149 directed boot 17: discard, remote convergence, replay fence and new operation",
@@ -209,7 +228,9 @@
         "viewports": 8,
         "deviceCenterTruthful": true,
         "damagedProjectionRebuilt": true
-      }
+      },
+      "startedAt": "2026-09-11T16:09:08.518Z",
+      "elapsedMs": 100407
     },
     {
       "name": "Create references A -> B/C/Supabase",
@@ -218,25 +239,27 @@
         "clients": [
           {
             "terminal": "A",
-            "rows": 976,
+            "rows": 978,
             "pending": 0,
-            "hash": "2b46b2c91423cda51945088feac7583b78e9753164dbd974cfe5aa168aff69ea"
+            "hash": "c8941c1e536ab6e7f2c8988dc36819cad0f16cb4e7c78831e233c73e115bfca5"
           },
           {
             "terminal": "B",
-            "rows": 976,
+            "rows": 978,
             "pending": 0,
-            "hash": "2b46b2c91423cda51945088feac7583b78e9753164dbd974cfe5aa168aff69ea"
+            "hash": "c8941c1e536ab6e7f2c8988dc36819cad0f16cb4e7c78831e233c73e115bfca5"
           },
           {
             "terminal": "C",
-            "rows": 976,
+            "rows": 978,
             "pending": 0,
-            "hash": "2b46b2c91423cda51945088feac7583b78e9753164dbd974cfe5aa168aff69ea"
+            "hash": "c8941c1e536ab6e7f2c8988dc36819cad0f16cb4e7c78831e233c73e115bfca5"
           }
         ],
-        "remote": 976
-      }
+        "remote": 978
+      },
+      "startedAt": "2026-09-11T16:10:48.929Z",
+      "elapsedMs": 34117
     },
     {
       "name": "Edit reference with immutable identity",
@@ -245,25 +268,144 @@
         "clients": [
           {
             "terminal": "A",
-            "rows": 976,
+            "rows": 978,
             "pending": 0,
-            "hash": "7ca23e19f6ea813afad1a1984fd9f0c10bd849e27135b51e53a2eb3c4b56efc6"
+            "hash": "8f593181c7d8c1aad73cc006d519802ddb8905f282697ee65b9fda0690326b8d"
           },
           {
             "terminal": "B",
-            "rows": 976,
+            "rows": 978,
             "pending": 0,
-            "hash": "7ca23e19f6ea813afad1a1984fd9f0c10bd849e27135b51e53a2eb3c4b56efc6"
+            "hash": "8f593181c7d8c1aad73cc006d519802ddb8905f282697ee65b9fda0690326b8d"
           },
           {
             "terminal": "C",
-            "rows": 976,
+            "rows": 978,
             "pending": 0,
-            "hash": "7ca23e19f6ea813afad1a1984fd9f0c10bd849e27135b51e53a2eb3c4b56efc6"
+            "hash": "8f593181c7d8c1aad73cc006d519802ddb8905f282697ee65b9fda0690326b8d"
           }
         ],
-        "remote": 976
-      }
+        "remote": 978
+      },
+      "startedAt": "2026-09-11T16:11:23.051Z",
+      "elapsedMs": 40617
+    },
+    {
+      "name": "H155 ornament order edits are acknowledged through both product RPCs",
+      "ok": true,
+      "evidence": {
+        "routes": [
+          {
+            "rpc": "save_products_checked_v2",
+            "submittedOrderAcknowledged": true,
+            "stockPreserved": true,
+            "versionAdvancedOnce": true
+          },
+          {
+            "rpc": "commit_reference_family_batch",
+            "submittedOrderAcknowledged": true,
+            "stockPreserved": true,
+            "versionAdvancedOnce": true
+          }
+        ],
+        "profiles": 3
+      },
+      "startedAt": "2026-09-11T16:12:03.673Z",
+      "elapsedMs": 18333
+    },
+    {
+      "name": "H155 failed boot recovers automatically and open POS receives current values",
+      "ok": true,
+      "evidence": {
+        "automatic": true,
+        "manualCalls": 0,
+        "profiles": 3,
+        "attempts": [
+          {
+            "failedPrerequisite": "system_manifest",
+            "failedRequests": 1,
+            "recoveredTerminal": "B",
+            "states": [
+              {
+                "terminal": "A",
+                "price": 207,
+                "manualCalls": 0,
+                "visiblePrice": true
+              },
+              {
+                "terminal": "B",
+                "price": 207,
+                "manualCalls": 0,
+                "visiblePrice": true
+              },
+              {
+                "terminal": "C",
+                "price": 207,
+                "manualCalls": 0,
+                "visiblePrice": true
+              }
+            ]
+          },
+          {
+            "failedPrerequisite": "rpc/get_sync_device_recovery",
+            "failedRequests": 1,
+            "recoveredTerminal": "C",
+            "states": [
+              {
+                "terminal": "A",
+                "price": 208,
+                "manualCalls": 0,
+                "visiblePrice": true
+              },
+              {
+                "terminal": "B",
+                "price": 208,
+                "manualCalls": 0,
+                "visiblePrice": true
+              },
+              {
+                "terminal": "C",
+                "price": 208,
+                "manualCalls": 0,
+                "visiblePrice": true
+              }
+            ]
+          }
+        ]
+      },
+      "startedAt": "2026-09-11T16:12:22.012Z",
+      "elapsedMs": 84241
+    },
+    {
+      "name": "H155 rejected reference retains its original without blocking confirmed products",
+      "ok": true,
+      "evidence": {
+        "originalPreserved": true,
+        "submittedPayloadPreserved": true,
+        "remoteReceipt": true,
+        "falseGreen": false,
+        "businessChanges": 0,
+        "pendingAfter": 0,
+        "otherProductReceivedAutomatically": true,
+        "reloadPreserved": true
+      },
+      "startedAt": "2026-09-11T16:13:46.256Z",
+      "elapsedMs": 79086
+    },
+    {
+      "name": "H155 stale edits cannot restore stock or overwrite a newer terminal",
+      "ok": true,
+      "evidence": {
+        "staleWritePreservedAuthority": true,
+        "stockNotRestored": true,
+        "profiles": 3,
+        "fixtureOnly": true,
+        "originalPreserved": true,
+        "reviewRequired": true,
+        "otherProductReceivedAutomatically": true
+      },
+      "startedAt": "2026-09-11T16:15:05.345Z",
+      "elapsedMs": 46692
     },
     {
       "name": "Delete reference A -> B/C/Supabase tombstone",
@@ -272,25 +414,27 @@
         "clients": [
           {
             "terminal": "A",
-            "rows": 975,
+            "rows": 977,
             "pending": 0,
-            "hash": "7b91a8b20676688405b7a6921bca19127b39c921dc48acd5abb6844c3f234433"
+            "hash": "3bcfad1d6fd2e66763c5e0d2ce0a4b97a729a02ded8fa5eaa3979e57af61393c"
           },
           {
             "terminal": "B",
-            "rows": 975,
+            "rows": 977,
             "pending": 0,
-            "hash": "7b91a8b20676688405b7a6921bca19127b39c921dc48acd5abb6844c3f234433"
+            "hash": "3bcfad1d6fd2e66763c5e0d2ce0a4b97a729a02ded8fa5eaa3979e57af61393c"
           },
           {
             "terminal": "C",
-            "rows": 975,
+            "rows": 977,
             "pending": 0,
-            "hash": "7b91a8b20676688405b7a6921bca19127b39c921dc48acd5abb6844c3f234433"
+            "hash": "3bcfad1d6fd2e66763c5e0d2ce0a4b97a729a02ded8fa5eaa3979e57af61393c"
           }
         ],
-        "remote": 975
-      }
+        "remote": 977
+      },
+      "startedAt": "2026-09-11T16:15:52.040Z",
+      "elapsedMs": 31485
     },
     {
       "name": "Reload cannot resurrect a deleted reference",
@@ -299,25 +443,27 @@
         "clients": [
           {
             "terminal": "A",
-            "rows": 975,
+            "rows": 977,
             "pending": 0,
-            "hash": "7b91a8b20676688405b7a6921bca19127b39c921dc48acd5abb6844c3f234433"
+            "hash": "3bcfad1d6fd2e66763c5e0d2ce0a4b97a729a02ded8fa5eaa3979e57af61393c"
           },
           {
             "terminal": "B",
-            "rows": 975,
+            "rows": 977,
             "pending": 0,
-            "hash": "7b91a8b20676688405b7a6921bca19127b39c921dc48acd5abb6844c3f234433"
+            "hash": "3bcfad1d6fd2e66763c5e0d2ce0a4b97a729a02ded8fa5eaa3979e57af61393c"
           },
           {
             "terminal": "C",
-            "rows": 975,
+            "rows": 977,
             "pending": 0,
-            "hash": "7b91a8b20676688405b7a6921bca19127b39c921dc48acd5abb6844c3f234433"
+            "hash": "3bcfad1d6fd2e66763c5e0d2ce0a4b97a729a02ded8fa5eaa3979e57af61393c"
           }
         ],
-        "remote": 975
-      }
+        "remote": 977
+      },
+      "startedAt": "2026-09-11T16:16:23.653Z",
+      "elapsedMs": 40027
     },
     {
       "name": "Old protocol and stale payload cannot resurrect a tombstone",
@@ -326,25 +472,27 @@
         "clients": [
           {
             "terminal": "A",
-            "rows": 975,
+            "rows": 977,
             "pending": 0,
-            "hash": "7b91a8b20676688405b7a6921bca19127b39c921dc48acd5abb6844c3f234433"
+            "hash": "3bcfad1d6fd2e66763c5e0d2ce0a4b97a729a02ded8fa5eaa3979e57af61393c"
           },
           {
             "terminal": "B",
-            "rows": 975,
+            "rows": 977,
             "pending": 0,
-            "hash": "7b91a8b20676688405b7a6921bca19127b39c921dc48acd5abb6844c3f234433"
+            "hash": "3bcfad1d6fd2e66763c5e0d2ce0a4b97a729a02ded8fa5eaa3979e57af61393c"
           },
           {
             "terminal": "C",
-            "rows": 975,
+            "rows": 977,
             "pending": 0,
-            "hash": "7b91a8b20676688405b7a6921bca19127b39c921dc48acd5abb6844c3f234433"
+            "hash": "3bcfad1d6fd2e66763c5e0d2ce0a4b97a729a02ded8fa5eaa3979e57af61393c"
           }
         ],
-        "remote": 975
-      }
+        "remote": 977
+      },
+      "startedAt": "2026-09-11T16:17:03.687Z",
+      "elapsedMs": 12466
     },
     {
       "name": "Realtime disconnected: periodic reconciliation converges",
@@ -353,25 +501,27 @@
         "clients": [
           {
             "terminal": "A",
-            "rows": 975,
+            "rows": 977,
             "pending": 0,
-            "hash": "daf8b879e78b0607533dd8c36a556e590f31d44c420bee956461f5b97cecdfe7"
+            "hash": "3fc6fbd26fdc577c16d23b35cf525dfb1251ce5f7579cf082b6ef3d3fb9ed05e"
           },
           {
             "terminal": "B",
-            "rows": 975,
+            "rows": 977,
             "pending": 0,
-            "hash": "daf8b879e78b0607533dd8c36a556e590f31d44c420bee956461f5b97cecdfe7"
+            "hash": "3fc6fbd26fdc577c16d23b35cf525dfb1251ce5f7579cf082b6ef3d3fb9ed05e"
           },
           {
             "terminal": "C",
-            "rows": 975,
+            "rows": 977,
             "pending": 0,
-            "hash": "daf8b879e78b0607533dd8c36a556e590f31d44c420bee956461f5b97cecdfe7"
+            "hash": "3fc6fbd26fdc577c16d23b35cf525dfb1251ce5f7579cf082b6ef3d3fb9ed05e"
           }
         ],
-        "remote": 975
-      }
+        "remote": 977
+      },
+      "startedAt": "2026-09-11T16:17:16.156Z",
+      "elapsedMs": 27096
     },
     {
       "name": "Offline intent survives reload and uploads once",
@@ -380,27 +530,29 @@
         "clients": [
           {
             "terminal": "A",
-            "rows": 975,
+            "rows": 977,
             "pending": 0,
-            "hash": "22f99b25c9b175a408b4fb9e1223a6808b4a3189079b6cdb4e1c89cf47ff4ed0"
+            "hash": "28194c07b4ef2cc72a19ebc2d1d849bf3a66395b0a0014282784f3d37a1fd202"
           },
           {
             "terminal": "B",
-            "rows": 975,
+            "rows": 977,
             "pending": 0,
-            "hash": "22f99b25c9b175a408b4fb9e1223a6808b4a3189079b6cdb4e1c89cf47ff4ed0"
+            "hash": "28194c07b4ef2cc72a19ebc2d1d849bf3a66395b0a0014282784f3d37a1fd202"
           },
           {
             "terminal": "C",
-            "rows": 975,
+            "rows": 977,
             "pending": 0,
-            "hash": "22f99b25c9b175a408b4fb9e1223a6808b4a3189079b6cdb4e1c89cf47ff4ed0"
+            "hash": "28194c07b4ef2cc72a19ebc2d1d849bf3a66395b0a0014282784f3d37a1fd202"
           }
         ],
-        "remote": 975,
+        "remote": 977,
         "pendingBefore": 1,
         "pendingLost": 0
-      }
+      },
+      "startedAt": "2026-09-11T16:17:43.255Z",
+      "elapsedMs": 63415
     },
     {
       "name": "Sale decrements authoritative stock exactly once",
@@ -408,13 +560,13 @@
       "evidence": [
         {
           "domain": "clients",
-          "rows": 2,
-          "hash": "489d93b99b754f34a73c0e278f027d916e0c4d84f0415c6ab527df723fdd3e66"
+          "rows": 4,
+          "hash": "c4dda870073a6567cb874f4aa7d0e757346faf73f560c45926604c6f5bbd052b"
         },
         {
           "domain": "sellers",
-          "rows": 7,
-          "hash": "9553939c2d177531027820dbbab5607b3e294ab50c7457074400654d11342de5"
+          "rows": 9,
+          "hash": "551c0cad85978f3a8c8218730818f096960ccd9d14f6a5322aef14cc3e86761b"
         },
         {
           "domain": "promos",
@@ -423,35 +575,37 @@
         },
         {
           "domain": "sales",
-          "rows": 1,
-          "hash": "b1b1328649ca79b2102ad15fbb84295b825b3c4b521a48047ebd3a3befb61a7d"
+          "rows": 6,
+          "hash": "d314d6e0d9cd0f456a03884d1338c0b2db994ca2f561e6bfc4c2008706477c71"
         },
         {
           "domain": "payments",
-          "rows": 1,
-          "hash": "ac622802bc6eb177df8b86687147f419e72973484df1c01e7e40bddadac03f07"
+          "rows": 8,
+          "hash": "8f7d7241557068507cb70281606187f5beb74fcb3cbcf1c312cd84b0038d604f"
         },
         {
           "domain": "returns",
-          "rows": 0,
-          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          "rows": 1,
+          "hash": "5a098ef39ece0aac533b275e53f279e64c0f99c0e1863916276b9b249bc83db3"
         },
         {
           "domain": "exchanges",
-          "rows": 0,
-          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          "rows": 2,
+          "hash": "651aa0bd3bee96c2fc3ce65124b7f2cae5af05d4788733fae2e97595c47b32e3"
         },
         {
           "domain": "liquidations",
-          "rows": 0,
-          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          "rows": 2,
+          "hash": "7cc053da04d2b4ef23d4a13246f8ccd60dbb72399e1262438ddf3a8dd704dd49"
         },
         {
           "domain": "movements",
-          "rows": 1,
-          "hash": "78885fd127205b12bff2163e6e1377d132b6ce44fc034559b2de9c35aba969c0"
+          "rows": 11,
+          "hash": "1f597cf701054232ccec64f34a9c3d2b6820a2be2274207f6bf9e0bf319be312"
         }
-      ]
+      ],
+      "startedAt": "2026-09-11T16:18:46.675Z",
+      "elapsedMs": 40705
     },
     {
       "name": "Concurrent sales A/B preserve both stock deltas",
@@ -459,13 +613,13 @@
       "evidence": [
         {
           "domain": "clients",
-          "rows": 2,
-          "hash": "489d93b99b754f34a73c0e278f027d916e0c4d84f0415c6ab527df723fdd3e66"
+          "rows": 4,
+          "hash": "c4dda870073a6567cb874f4aa7d0e757346faf73f560c45926604c6f5bbd052b"
         },
         {
           "domain": "sellers",
-          "rows": 7,
-          "hash": "bd732e522e5e8ba171ab650b0aba67d15a6cef78837d6f90bb9255a0ed5cf1d7"
+          "rows": 9,
+          "hash": "77e21076c87269246794cd6e03aeeea60aaf9b6b6683e489d33aae1746438800"
         },
         {
           "domain": "promos",
@@ -474,35 +628,37 @@
         },
         {
           "domain": "sales",
-          "rows": 3,
-          "hash": "155ae9147a9d5765796d6a8cd8169fae6286efb720ec2379a8a87096feae5681"
+          "rows": 8,
+          "hash": "babcb05ab7a10c336b0e61f7d2171717458617d5f9832677c6be1fc2cdfba8ce"
         },
         {
           "domain": "payments",
-          "rows": 3,
-          "hash": "838087dcf0fb20857ed8f009af9918bb5ae7ffe7a47fb421383016a4786516b5"
+          "rows": 10,
+          "hash": "b8d685c6979562b340495c28d34ad4f77c0786b5d94cabe65356abcee2014367"
         },
         {
           "domain": "returns",
-          "rows": 0,
-          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          "rows": 1,
+          "hash": "5a098ef39ece0aac533b275e53f279e64c0f99c0e1863916276b9b249bc83db3"
         },
         {
           "domain": "exchanges",
-          "rows": 0,
-          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          "rows": 2,
+          "hash": "651aa0bd3bee96c2fc3ce65124b7f2cae5af05d4788733fae2e97595c47b32e3"
         },
         {
           "domain": "liquidations",
-          "rows": 0,
-          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          "rows": 2,
+          "hash": "7cc053da04d2b4ef23d4a13246f8ccd60dbb72399e1262438ddf3a8dd704dd49"
         },
         {
           "domain": "movements",
-          "rows": 3,
-          "hash": "65497f690a168dc365d8d63601cba93a5c2ff0a3d75c4c719574647a43c92c93"
+          "rows": 13,
+          "hash": "bc480456e9c797d6cf1a2eec02f0ce5a28cce76e2ed1b3e0b1b7a8a6358a426f"
         }
-      ]
+      ],
+      "startedAt": "2026-09-11T16:19:27.383Z",
+      "elapsedMs": 35999
     },
     {
       "name": "Return restores the exact reference and financial document",
@@ -510,13 +666,13 @@
       "evidence": [
         {
           "domain": "clients",
-          "rows": 2,
-          "hash": "489d93b99b754f34a73c0e278f027d916e0c4d84f0415c6ab527df723fdd3e66"
+          "rows": 4,
+          "hash": "c4dda870073a6567cb874f4aa7d0e757346faf73f560c45926604c6f5bbd052b"
         },
         {
           "domain": "sellers",
-          "rows": 7,
-          "hash": "110324b4536ca765b3cdbf2f65a094db52dbeb372d4935a8aa37ab03f1cb93be"
+          "rows": 9,
+          "hash": "055f40193338833e60af3cdb88bf2a4d313789dde26ceff975a83fd01a194b7d"
         },
         {
           "domain": "promos",
@@ -525,35 +681,37 @@
         },
         {
           "domain": "sales",
-          "rows": 3,
-          "hash": "7916ea7f09285ab10d6cbf9d71381c65a6d4588c598713b29fe768b9b4f1569b"
+          "rows": 8,
+          "hash": "b5ca3b24a82ca7d734e8f669cd44ccfeaf15d332428d8ba75de6791896d3e8b1"
         },
         {
           "domain": "payments",
-          "rows": 3,
-          "hash": "838087dcf0fb20857ed8f009af9918bb5ae7ffe7a47fb421383016a4786516b5"
+          "rows": 10,
+          "hash": "b8d685c6979562b340495c28d34ad4f77c0786b5d94cabe65356abcee2014367"
         },
         {
           "domain": "returns",
-          "rows": 1,
-          "hash": "df8e9ffbb58c382601f7a8d83a6bc079a91c928601309046fc7d7d4e9823e167"
+          "rows": 2,
+          "hash": "691e0dfd7e4d757275bf40070bc6ba7f2a3b0d825a4f6af2ef9b5af955a951e7"
         },
         {
           "domain": "exchanges",
-          "rows": 0,
-          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          "rows": 2,
+          "hash": "651aa0bd3bee96c2fc3ce65124b7f2cae5af05d4788733fae2e97595c47b32e3"
         },
         {
           "domain": "liquidations",
-          "rows": 0,
-          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          "rows": 2,
+          "hash": "7cc053da04d2b4ef23d4a13246f8ccd60dbb72399e1262438ddf3a8dd704dd49"
         },
         {
           "domain": "movements",
-          "rows": 4,
-          "hash": "ca54cfd3fd740349884d3c7b268f02b1c0cb69fe8f3fde9e6d5bb6042c92c7c9"
+          "rows": 14,
+          "hash": "55519a2f6b95da40d10c81ad44df28be2eee3fe814ff083c3b994e6ded7dfed1"
         }
-      ]
+      ],
+      "startedAt": "2026-09-11T16:20:03.384Z",
+      "elapsedMs": 28608
     },
     {
       "name": "Exchange preserves original sale and both reference identities",
@@ -561,13 +719,13 @@
       "evidence": [
         {
           "domain": "clients",
-          "rows": 2,
-          "hash": "489d93b99b754f34a73c0e278f027d916e0c4d84f0415c6ab527df723fdd3e66"
+          "rows": 4,
+          "hash": "c4dda870073a6567cb874f4aa7d0e757346faf73f560c45926604c6f5bbd052b"
         },
         {
           "domain": "sellers",
-          "rows": 7,
-          "hash": "110324b4536ca765b3cdbf2f65a094db52dbeb372d4935a8aa37ab03f1cb93be"
+          "rows": 9,
+          "hash": "055f40193338833e60af3cdb88bf2a4d313789dde26ceff975a83fd01a194b7d"
         },
         {
           "domain": "promos",
@@ -576,35 +734,37 @@
         },
         {
           "domain": "sales",
-          "rows": 3,
-          "hash": "7916ea7f09285ab10d6cbf9d71381c65a6d4588c598713b29fe768b9b4f1569b"
+          "rows": 8,
+          "hash": "b5ca3b24a82ca7d734e8f669cd44ccfeaf15d332428d8ba75de6791896d3e8b1"
         },
         {
           "domain": "payments",
-          "rows": 3,
-          "hash": "838087dcf0fb20857ed8f009af9918bb5ae7ffe7a47fb421383016a4786516b5"
+          "rows": 10,
+          "hash": "b8d685c6979562b340495c28d34ad4f77c0786b5d94cabe65356abcee2014367"
         },
         {
           "domain": "returns",
-          "rows": 1,
-          "hash": "df8e9ffbb58c382601f7a8d83a6bc079a91c928601309046fc7d7d4e9823e167"
+          "rows": 2,
+          "hash": "691e0dfd7e4d757275bf40070bc6ba7f2a3b0d825a4f6af2ef9b5af955a951e7"
         },
         {
           "domain": "exchanges",
-          "rows": 1,
-          "hash": "cfd81fb2e1990dfbe1cbd976eb64eaa58bcf007879224286c46638308ce02f62"
+          "rows": 3,
+          "hash": "9d4b0b28e0a0b708b4bb1bd3467e71471b10e2624aa891abb2c8017495247450"
         },
         {
           "domain": "liquidations",
-          "rows": 0,
-          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          "rows": 2,
+          "hash": "7cc053da04d2b4ef23d4a13246f8ccd60dbb72399e1262438ddf3a8dd704dd49"
         },
         {
           "domain": "movements",
-          "rows": 6,
-          "hash": "615491f478fdb381f0aef4281af2edc90cb1ece9f3f9a774ef1c26fa1baa645c"
+          "rows": 16,
+          "hash": "59109ae2d44eab05a4d7edcb30e38c4e1a3d5f35ac2c10d81777cdefadd75bab"
         }
-      ]
+      ],
+      "startedAt": "2026-09-11T16:20:31.994Z",
+      "elapsedMs": 28865
     },
     {
       "name": "Loan and return retain their frozen document",
@@ -612,13 +772,13 @@
       "evidence": [
         {
           "domain": "clients",
-          "rows": 2,
-          "hash": "489d93b99b754f34a73c0e278f027d916e0c4d84f0415c6ab527df723fdd3e66"
+          "rows": 4,
+          "hash": "c4dda870073a6567cb874f4aa7d0e757346faf73f560c45926604c6f5bbd052b"
         },
         {
           "domain": "sellers",
-          "rows": 7,
-          "hash": "110324b4536ca765b3cdbf2f65a094db52dbeb372d4935a8aa37ab03f1cb93be"
+          "rows": 9,
+          "hash": "055f40193338833e60af3cdb88bf2a4d313789dde26ceff975a83fd01a194b7d"
         },
         {
           "domain": "promos",
@@ -627,35 +787,37 @@
         },
         {
           "domain": "sales",
-          "rows": 3,
-          "hash": "7916ea7f09285ab10d6cbf9d71381c65a6d4588c598713b29fe768b9b4f1569b"
+          "rows": 8,
+          "hash": "b5ca3b24a82ca7d734e8f669cd44ccfeaf15d332428d8ba75de6791896d3e8b1"
         },
         {
           "domain": "payments",
-          "rows": 3,
-          "hash": "838087dcf0fb20857ed8f009af9918bb5ae7ffe7a47fb421383016a4786516b5"
+          "rows": 10,
+          "hash": "b8d685c6979562b340495c28d34ad4f77c0786b5d94cabe65356abcee2014367"
         },
         {
           "domain": "returns",
-          "rows": 1,
-          "hash": "df8e9ffbb58c382601f7a8d83a6bc079a91c928601309046fc7d7d4e9823e167"
+          "rows": 2,
+          "hash": "691e0dfd7e4d757275bf40070bc6ba7f2a3b0d825a4f6af2ef9b5af955a951e7"
         },
         {
           "domain": "exchanges",
-          "rows": 1,
-          "hash": "cfd81fb2e1990dfbe1cbd976eb64eaa58bcf007879224286c46638308ce02f62"
+          "rows": 3,
+          "hash": "9d4b0b28e0a0b708b4bb1bd3467e71471b10e2624aa891abb2c8017495247450"
         },
         {
           "domain": "liquidations",
-          "rows": 0,
-          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          "rows": 2,
+          "hash": "7cc053da04d2b4ef23d4a13246f8ccd60dbb72399e1262438ddf3a8dd704dd49"
         },
         {
           "domain": "movements",
-          "rows": 6,
-          "hash": "615491f478fdb381f0aef4281af2edc90cb1ece9f3f9a774ef1c26fa1baa645c"
+          "rows": 16,
+          "hash": "59109ae2d44eab05a4d7edcb30e38c4e1a3d5f35ac2c10d81777cdefadd75bab"
         }
-      ]
+      ],
+      "startedAt": "2026-09-11T16:21:00.863Z",
+      "elapsedMs": 50152
     },
     {
       "name": "Layaway partial payment and liquidation converge",
@@ -663,13 +825,13 @@
       "evidence": [
         {
           "domain": "clients",
-          "rows": 2,
-          "hash": "489d93b99b754f34a73c0e278f027d916e0c4d84f0415c6ab527df723fdd3e66"
+          "rows": 4,
+          "hash": "c4dda870073a6567cb874f4aa7d0e757346faf73f560c45926604c6f5bbd052b"
         },
         {
           "domain": "sellers",
-          "rows": 7,
-          "hash": "d7ad51a08247b7cd05b6d5b81f3ce679cf61af6bc090021d96d90b9e7ebabb6c"
+          "rows": 9,
+          "hash": "90779a1535a20524b585c2236db2f2758050b710381acc5b163360d8ee442a67"
         },
         {
           "domain": "promos",
@@ -678,35 +840,37 @@
         },
         {
           "domain": "sales",
-          "rows": 4,
-          "hash": "ab3df925112201ef0c88b14da68af0a2ad5dad7f5e988179978ad0537c5fe89a"
+          "rows": 9,
+          "hash": "7560c299bb1d7bf81375a5cbda9c899d7e06fca4b76ebfefecbc00ee393964fb"
         },
         {
           "domain": "payments",
-          "rows": 6,
-          "hash": "d53ab61ce5ac9051f76de19e81b7af0e9ae56839467959442bf4b622a04c2532"
+          "rows": 13,
+          "hash": "e2d6bbd0edc04de5aeef1a0c07657fadebe8c65753d9452099da4ef8f6751bf0"
         },
         {
           "domain": "returns",
-          "rows": 1,
-          "hash": "df8e9ffbb58c382601f7a8d83a6bc079a91c928601309046fc7d7d4e9823e167"
+          "rows": 2,
+          "hash": "691e0dfd7e4d757275bf40070bc6ba7f2a3b0d825a4f6af2ef9b5af955a951e7"
         },
         {
           "domain": "exchanges",
-          "rows": 1,
-          "hash": "cfd81fb2e1990dfbe1cbd976eb64eaa58bcf007879224286c46638308ce02f62"
+          "rows": 3,
+          "hash": "9d4b0b28e0a0b708b4bb1bd3467e71471b10e2624aa891abb2c8017495247450"
         },
         {
           "domain": "liquidations",
-          "rows": 0,
-          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          "rows": 2,
+          "hash": "7cc053da04d2b4ef23d4a13246f8ccd60dbb72399e1262438ddf3a8dd704dd49"
         },
         {
           "domain": "movements",
-          "rows": 7,
-          "hash": "04562f4a984706e461748449ef00a7df1bebbd65ab4bf971fdc98dbf7514bdde"
+          "rows": 17,
+          "hash": "fc18567e7614bf76d3cc1bc1f2832fb61e2ca9e55f9b36b7477014dcc1137a55"
         }
-      ]
+      ],
+      "startedAt": "2026-09-11T16:21:51.022Z",
+      "elapsedMs": 87752
     },
     {
       "name": "Client create/edit/delete and inactive promotion remain scoped",
@@ -714,13 +878,13 @@
       "evidence": [
         {
           "domain": "clients",
-          "rows": 2,
-          "hash": "489d93b99b754f34a73c0e278f027d916e0c4d84f0415c6ab527df723fdd3e66"
+          "rows": 4,
+          "hash": "c4dda870073a6567cb874f4aa7d0e757346faf73f560c45926604c6f5bbd052b"
         },
         {
           "domain": "sellers",
-          "rows": 7,
-          "hash": "d7ad51a08247b7cd05b6d5b81f3ce679cf61af6bc090021d96d90b9e7ebabb6c"
+          "rows": 9,
+          "hash": "90779a1535a20524b585c2236db2f2758050b710381acc5b163360d8ee442a67"
         },
         {
           "domain": "promos",
@@ -729,35 +893,37 @@
         },
         {
           "domain": "sales",
-          "rows": 4,
-          "hash": "ab3df925112201ef0c88b14da68af0a2ad5dad7f5e988179978ad0537c5fe89a"
+          "rows": 9,
+          "hash": "7560c299bb1d7bf81375a5cbda9c899d7e06fca4b76ebfefecbc00ee393964fb"
         },
         {
           "domain": "payments",
-          "rows": 6,
-          "hash": "d53ab61ce5ac9051f76de19e81b7af0e9ae56839467959442bf4b622a04c2532"
+          "rows": 13,
+          "hash": "e2d6bbd0edc04de5aeef1a0c07657fadebe8c65753d9452099da4ef8f6751bf0"
         },
         {
           "domain": "returns",
-          "rows": 1,
-          "hash": "df8e9ffbb58c382601f7a8d83a6bc079a91c928601309046fc7d7d4e9823e167"
+          "rows": 2,
+          "hash": "691e0dfd7e4d757275bf40070bc6ba7f2a3b0d825a4f6af2ef9b5af955a951e7"
         },
         {
           "domain": "exchanges",
-          "rows": 1,
-          "hash": "cfd81fb2e1990dfbe1cbd976eb64eaa58bcf007879224286c46638308ce02f62"
+          "rows": 3,
+          "hash": "9d4b0b28e0a0b708b4bb1bd3467e71471b10e2624aa891abb2c8017495247450"
         },
         {
           "domain": "liquidations",
-          "rows": 0,
-          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          "rows": 2,
+          "hash": "7cc053da04d2b4ef23d4a13246f8ccd60dbb72399e1262438ddf3a8dd704dd49"
         },
         {
           "domain": "movements",
-          "rows": 7,
-          "hash": "04562f4a984706e461748449ef00a7df1bebbd65ab4bf971fdc98dbf7514bdde"
+          "rows": 17,
+          "hash": "fc18567e7614bf76d3cc1bc1f2832fb61e2ca9e55f9b36b7477014dcc1137a55"
         }
-      ]
+      ],
+      "startedAt": "2026-09-11T16:23:18.778Z",
+      "elapsedMs": 85653
     },
     {
       "name": "Commission settlement affects only the test seller",
@@ -765,13 +931,13 @@
       "evidence": [
         {
           "domain": "clients",
-          "rows": 2,
-          "hash": "489d93b99b754f34a73c0e278f027d916e0c4d84f0415c6ab527df723fdd3e66"
+          "rows": 4,
+          "hash": "c4dda870073a6567cb874f4aa7d0e757346faf73f560c45926604c6f5bbd052b"
         },
         {
           "domain": "sellers",
-          "rows": 7,
-          "hash": "78614736688ab7af77ab135b41c180f4b07b94ece169e10a1c4f5a1c0f13706f"
+          "rows": 9,
+          "hash": "5fedbed81d1f246facbf814ed3d5d788c66de7c7d33467c5a49e8cfa2c7b064b"
         },
         {
           "domain": "promos",
@@ -780,43 +946,51 @@
         },
         {
           "domain": "sales",
-          "rows": 4,
-          "hash": "ab3df925112201ef0c88b14da68af0a2ad5dad7f5e988179978ad0537c5fe89a"
+          "rows": 9,
+          "hash": "7560c299bb1d7bf81375a5cbda9c899d7e06fca4b76ebfefecbc00ee393964fb"
         },
         {
           "domain": "payments",
-          "rows": 6,
-          "hash": "d53ab61ce5ac9051f76de19e81b7af0e9ae56839467959442bf4b622a04c2532"
+          "rows": 13,
+          "hash": "e2d6bbd0edc04de5aeef1a0c07657fadebe8c65753d9452099da4ef8f6751bf0"
         },
         {
           "domain": "returns",
-          "rows": 1,
-          "hash": "df8e9ffbb58c382601f7a8d83a6bc079a91c928601309046fc7d7d4e9823e167"
+          "rows": 2,
+          "hash": "691e0dfd7e4d757275bf40070bc6ba7f2a3b0d825a4f6af2ef9b5af955a951e7"
         },
         {
           "domain": "exchanges",
-          "rows": 1,
-          "hash": "cfd81fb2e1990dfbe1cbd976eb64eaa58bcf007879224286c46638308ce02f62"
+          "rows": 3,
+          "hash": "9d4b0b28e0a0b708b4bb1bd3467e71471b10e2624aa891abb2c8017495247450"
         },
         {
           "domain": "liquidations",
-          "rows": 2,
-          "hash": "f658020351f4e52f095605d914d6b681d8f7968cb741c80d4ce3cc486f430c85"
+          "rows": 4,
+          "hash": "b64aaf16204c3e44ba248f93b4070e6cff0206c6e4a51ab098aeee2e5ca39aa9"
         },
         {
           "domain": "movements",
-          "rows": 7,
-          "hash": "04562f4a984706e461748449ef00a7df1bebbd65ab4bf971fdc98dbf7514bdde"
+          "rows": 17,
+          "hash": "fc18567e7614bf76d3cc1bc1f2832fb61e2ca9e55f9b36b7477014dcc1137a55"
         }
-      ]
+      ],
+      "startedAt": "2026-09-11T16:24:44.438Z",
+      "elapsedMs": 49986
     },
     {
       "name": "Configuration and permission invalidations reach every terminal",
       "ok": true,
       "evidence": {
         "configuration": true,
-        "permissions": true
-      }
+        "permissions": true,
+        "automatic": true,
+        "profiles": 3,
+        "configurationWriteScope": "one isolated setting",
+        "configCommitRpcExercised": false
+      },
+      "startedAt": "2026-09-11T16:25:34.426Z",
+      "elapsedMs": 68810
     },
     {
       "name": "Lost acknowledgement replays the identical operation once",
@@ -825,25 +999,27 @@
         "clients": [
           {
             "terminal": "A",
-            "rows": 975,
+            "rows": 977,
             "pending": 0,
-            "hash": "4b9038847d8734ca7d49d3f42d3fde929c22f507d9caa0ac2179879e6e9484c6"
+            "hash": "b011cfc5042865aea057c5e15e3db027694136542529d5d11b9d527d9eee87f2"
           },
           {
             "terminal": "B",
-            "rows": 975,
+            "rows": 977,
             "pending": 0,
-            "hash": "4b9038847d8734ca7d49d3f42d3fde929c22f507d9caa0ac2179879e6e9484c6"
+            "hash": "b011cfc5042865aea057c5e15e3db027694136542529d5d11b9d527d9eee87f2"
           },
           {
             "terminal": "C",
-            "rows": 975,
+            "rows": 977,
             "pending": 0,
-            "hash": "4b9038847d8734ca7d49d3f42d3fde929c22f507d9caa0ac2179879e6e9484c6"
+            "hash": "b011cfc5042865aea057c5e15e3db027694136542529d5d11b9d527d9eee87f2"
           }
         ],
-        "remote": 975
-      }
+        "remote": 977
+      },
+      "startedAt": "2026-09-11T16:26:43.239Z",
+      "elapsedMs": 24113
     },
     {
       "name": "Closed terminal reopens to authority and repairs damaged cache",
@@ -851,13 +1027,13 @@
       "evidence": [
         {
           "domain": "clients",
-          "rows": 2,
-          "hash": "489d93b99b754f34a73c0e278f027d916e0c4d84f0415c6ab527df723fdd3e66"
+          "rows": 4,
+          "hash": "c4dda870073a6567cb874f4aa7d0e757346faf73f560c45926604c6f5bbd052b"
         },
         {
           "domain": "sellers",
-          "rows": 7,
-          "hash": "78614736688ab7af77ab135b41c180f4b07b94ece169e10a1c4f5a1c0f13706f"
+          "rows": 9,
+          "hash": "5fedbed81d1f246facbf814ed3d5d788c66de7c7d33467c5a49e8cfa2c7b064b"
         },
         {
           "domain": "promos",
@@ -866,35 +1042,37 @@
         },
         {
           "domain": "sales",
-          "rows": 4,
-          "hash": "ab3df925112201ef0c88b14da68af0a2ad5dad7f5e988179978ad0537c5fe89a"
+          "rows": 9,
+          "hash": "7560c299bb1d7bf81375a5cbda9c899d7e06fca4b76ebfefecbc00ee393964fb"
         },
         {
           "domain": "payments",
-          "rows": 6,
-          "hash": "d53ab61ce5ac9051f76de19e81b7af0e9ae56839467959442bf4b622a04c2532"
+          "rows": 13,
+          "hash": "e2d6bbd0edc04de5aeef1a0c07657fadebe8c65753d9452099da4ef8f6751bf0"
         },
         {
           "domain": "returns",
-          "rows": 1,
-          "hash": "df8e9ffbb58c382601f7a8d83a6bc079a91c928601309046fc7d7d4e9823e167"
+          "rows": 2,
+          "hash": "691e0dfd7e4d757275bf40070bc6ba7f2a3b0d825a4f6af2ef9b5af955a951e7"
         },
         {
           "domain": "exchanges",
-          "rows": 1,
-          "hash": "cfd81fb2e1990dfbe1cbd976eb64eaa58bcf007879224286c46638308ce02f62"
+          "rows": 3,
+          "hash": "9d4b0b28e0a0b708b4bb1bd3467e71471b10e2624aa891abb2c8017495247450"
         },
         {
           "domain": "liquidations",
-          "rows": 2,
-          "hash": "f658020351f4e52f095605d914d6b681d8f7968cb741c80d4ce3cc486f430c85"
+          "rows": 4,
+          "hash": "b64aaf16204c3e44ba248f93b4070e6cff0206c6e4a51ab098aeee2e5ca39aa9"
         },
         {
           "domain": "movements",
-          "rows": 7,
-          "hash": "04562f4a984706e461748449ef00a7df1bebbd65ab4bf971fdc98dbf7514bdde"
+          "rows": 17,
+          "hash": "fc18567e7614bf76d3cc1bc1f2832fb61e2ca9e55f9b36b7477014dcc1137a55"
         }
-      ]
+      ],
+      "startedAt": "2026-09-11T16:27:07.357Z",
+      "elapsedMs": 81620
     },
     {
       "name": "Visible update control reconciles and fits mobile and desktop",
@@ -903,25 +1081,27 @@
         "clients": [
           {
             "terminal": "A",
-            "rows": 975,
+            "rows": 977,
             "pending": 0,
-            "hash": "4c74001430bbf6f590e6050a8ced83a5da0de807df456b54c193218cbf5773d2"
+            "hash": "38e4dbc7a85f9b4378a53084803f1e4f6ae2a3779803de48dd662ad1571779c7"
           },
           {
             "terminal": "B",
-            "rows": 975,
+            "rows": 977,
             "pending": 0,
-            "hash": "4c74001430bbf6f590e6050a8ced83a5da0de807df456b54c193218cbf5773d2"
+            "hash": "38e4dbc7a85f9b4378a53084803f1e4f6ae2a3779803de48dd662ad1571779c7"
           },
           {
             "terminal": "C",
-            "rows": 975,
+            "rows": 977,
             "pending": 0,
-            "hash": "4c74001430bbf6f590e6050a8ced83a5da0de807df456b54c193218cbf5773d2"
+            "hash": "38e4dbc7a85f9b4378a53084803f1e4f6ae2a3779803de48dd662ad1571779c7"
           }
         ],
-        "remote": 975
-      }
+        "remote": 977
+      },
+      "startedAt": "2026-09-11T16:28:28.985Z",
+      "elapsedMs": 31380
     },
     {
       "name": "H152 open reports remove deleted fixture sellers on A/B/C",
@@ -931,7 +1111,9 @@
         "profiles": 3,
         "staleRows": 0,
         "paymentsAgree": true
-      }
+      },
+      "startedAt": "2026-09-11T16:29:00.373Z",
+      "elapsedMs": 55023
     },
     {
       "name": "Final projections and device checkpoints agree with authority",
@@ -940,13 +1122,13 @@
         "projected": [
           {
             "domain": "clients",
-            "rows": 2,
-            "hash": "489d93b99b754f34a73c0e278f027d916e0c4d84f0415c6ab527df723fdd3e66"
+            "rows": 4,
+            "hash": "c4dda870073a6567cb874f4aa7d0e757346faf73f560c45926604c6f5bbd052b"
           },
           {
             "domain": "sellers",
-            "rows": 7,
-            "hash": "78614736688ab7af77ab135b41c180f4b07b94ece169e10a1c4f5a1c0f13706f"
+            "rows": 9,
+            "hash": "5fedbed81d1f246facbf814ed3d5d788c66de7c7d33467c5a49e8cfa2c7b064b"
           },
           {
             "domain": "promos",
@@ -955,68 +1137,70 @@
           },
           {
             "domain": "sales",
-            "rows": 4,
-            "hash": "ab3df925112201ef0c88b14da68af0a2ad5dad7f5e988179978ad0537c5fe89a"
+            "rows": 9,
+            "hash": "7560c299bb1d7bf81375a5cbda9c899d7e06fca4b76ebfefecbc00ee393964fb"
           },
           {
             "domain": "payments",
-            "rows": 6,
-            "hash": "d53ab61ce5ac9051f76de19e81b7af0e9ae56839467959442bf4b622a04c2532"
+            "rows": 13,
+            "hash": "e2d6bbd0edc04de5aeef1a0c07657fadebe8c65753d9452099da4ef8f6751bf0"
           },
           {
             "domain": "returns",
-            "rows": 1,
-            "hash": "df8e9ffbb58c382601f7a8d83a6bc079a91c928601309046fc7d7d4e9823e167"
+            "rows": 2,
+            "hash": "691e0dfd7e4d757275bf40070bc6ba7f2a3b0d825a4f6af2ef9b5af955a951e7"
           },
           {
             "domain": "exchanges",
-            "rows": 1,
-            "hash": "cfd81fb2e1990dfbe1cbd976eb64eaa58bcf007879224286c46638308ce02f62"
+            "rows": 3,
+            "hash": "9d4b0b28e0a0b708b4bb1bd3467e71471b10e2624aa891abb2c8017495247450"
           },
           {
             "domain": "liquidations",
-            "rows": 2,
-            "hash": "f658020351f4e52f095605d914d6b681d8f7968cb741c80d4ce3cc486f430c85"
+            "rows": 4,
+            "hash": "b64aaf16204c3e44ba248f93b4070e6cff0206c6e4a51ab098aeee2e5ca39aa9"
           },
           {
             "domain": "movements",
-            "rows": 7,
-            "hash": "04562f4a984706e461748449ef00a7df1bebbd65ab4bf971fdc98dbf7514bdde"
+            "rows": 17,
+            "hash": "fc18567e7614bf76d3cc1bc1f2832fb61e2ca9e55f9b36b7477014dcc1137a55"
           }
         ],
         "devices": [
           {
-            "device_id": "qa-h148-c7c69ea1-2b2c-4e48-9c47-34e5714a7cd2-A",
+            "device_id": "qa-h148-d604289c-8a1c-4770-9d09-5de0c917c12e-A",
             "queue_pending": 0,
             "queue_blocked": 0,
             "data_epoch": 8
           },
           {
-            "device_id": "qa-h148-c7c69ea1-2b2c-4e48-9c47-34e5714a7cd2-B",
+            "device_id": "qa-h148-d604289c-8a1c-4770-9d09-5de0c917c12e-B",
             "queue_pending": 0,
             "queue_blocked": 0,
             "data_epoch": 8
           },
           {
-            "device_id": "qa-h148-c7c69ea1-2b2c-4e48-9c47-34e5714a7cd2-C",
+            "device_id": "qa-h148-d604289c-8a1c-4770-9d09-5de0c917c12e-C",
             "queue_pending": 0,
             "queue_blocked": 0,
             "data_epoch": 8
           }
         ]
-      }
+      },
+      "startedAt": "2026-09-11T16:29:55.399Z",
+      "elapsedMs": 6189
     }
   ],
   "cleanup": {
     "ok": true,
     "ids": [
-      "qa-h148-c7c69ea1-2b2c-4e48-9c47-34e5714a7cd2-admin",
-      "qa-h148-c7c69ea1-2b2c-4e48-9c47-34e5714a7cd2-seller"
+      "qa-h148-d604289c-8a1c-4770-9d09-5de0c917c12e-admin",
+      "qa-h148-d604289c-8a1c-4770-9d09-5de0c917c12e-seller"
     ],
     "devices": [
-      "qa-h148-c7c69ea1-2b2c-4e48-9c47-34e5714a7cd2-A",
-      "qa-h148-c7c69ea1-2b2c-4e48-9c47-34e5714a7cd2-B",
-      "qa-h148-c7c69ea1-2b2c-4e48-9c47-34e5714a7cd2-C"
+      "qa-h148-d604289c-8a1c-4770-9d09-5de0c917c12e-A",
+      "qa-h148-d604289c-8a1c-4770-9d09-5de0c917c12e-B",
+      "qa-h148-d604289c-8a1c-4770-9d09-5de0c917c12e-C"
     ],
     "errors": []
   },
@@ -1072,43 +1256,43 @@
   "businessPreservation": {
     "ok": true,
     "before": {
-      "products": "9d8a6ff28cf435e24ea247f26f5c6a4ef8737537e7d5925eed4683f9d22aeeae",
-      "clients": "7a05b6d88769e13c120d53a42017c6665262333563ba4f897b80fd644bf17ec3",
-      "sellers": "556cfa009653fc19a66729ecb29090c2fd6da8dfd6eac6867f454bfdd4e197d7",
-      "promotions": "a729fcf865b289bfb3e56e8adebe8f456a4694f75d3256d8f9a6402350a69706",
-      "sales": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "sale_items": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "returns": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "return_items": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "exchanges": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "exchange_items": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "sale_payments": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "loan_documents": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "liquidations": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "commission_adjustments": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "movements": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "products": "b5a94799451095dfc70fe5ec972318d7f5fe2e682f8379dc8814214cf2a2dda0",
+      "clients": "80b215a7cd1b7c69925b4a36f556d02115048cc6b46af0843c5a16e00c0432a0",
+      "sellers": "99acde1e890d5e617d2c922f7612defcd462df5da83fb4694e73a051b9e6b529",
+      "promotions": "ba17e3c23effbab1c41d004f4cda1fea33e0089633bdcba6f77e44867bfd6493",
+      "sales": "c027579b66832e0d813a44e49996203a0e56ee55ec352d77df002cee7e640b4f",
+      "sale_items": "f57ca91414fc131d6b9ffc433f71d24d7396a69743152a88f731d034359f6740",
+      "returns": "42b6f58afe45b9a7d691fa030f8024a7f33ae8ff24c4d2dd9a1aca04853a55f4",
+      "return_items": "2e21d1648f2029d853fd3f4b4ad23bf1377deab7980cf4870fde454086b51033",
+      "exchanges": "a60d5e54c3d0c472c4abb4102c2f0b96240a1be750246d650409ca9f67a6f04b",
+      "exchange_items": "3fe28ee652b12fdaee76889cffa48fb610d6f55a9de7924fe69aa4882dde9b4f",
+      "sale_payments": "ea560a060e54af83d8754224e1d0137bf90bd4d04b38b19ffdc0048481ea0070",
+      "loan_documents": "54196bc91497b5268dbc7890ae4a1b66ff53778f7205ae0df707c4df3d962cfb",
+      "liquidations": "80a4696a8a0dd7f269b37d22eea2c097745caa0e789566beaf85c6986afa9dea",
+      "commission_adjustments": "5fbeb0dafd156cba7471aa51f567d1fd58efe11aff3b8bc93a205e6260921c11",
+      "movements": "908c876e9da5c8cf877af5b5b505d960e457f612c78bea4ed60ed52b1754fcb0",
       "lookup": "fe2560cf14b22720660d7548ac80d90f5ec9b9ccb063ee6bea7f25a46e46888d",
-      "settings": "b7bbb2a747e7c6136254c7414c148d91da8874f66f76b6622dd398f382ceabf5"
+      "settings": "36cbc2c5441ec45859bd7f7c7af9e3e8d085f952bfcc1aa7a1cef12c284c05c2"
     },
     "after": {
-      "products": "9d8a6ff28cf435e24ea247f26f5c6a4ef8737537e7d5925eed4683f9d22aeeae",
-      "clients": "7a05b6d88769e13c120d53a42017c6665262333563ba4f897b80fd644bf17ec3",
-      "sellers": "556cfa009653fc19a66729ecb29090c2fd6da8dfd6eac6867f454bfdd4e197d7",
-      "promotions": "a729fcf865b289bfb3e56e8adebe8f456a4694f75d3256d8f9a6402350a69706",
-      "sales": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "sale_items": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "returns": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "return_items": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "exchanges": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "exchange_items": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "sale_payments": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "loan_documents": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "liquidations": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "commission_adjustments": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "movements": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "products": "b5a94799451095dfc70fe5ec972318d7f5fe2e682f8379dc8814214cf2a2dda0",
+      "clients": "80b215a7cd1b7c69925b4a36f556d02115048cc6b46af0843c5a16e00c0432a0",
+      "sellers": "99acde1e890d5e617d2c922f7612defcd462df5da83fb4694e73a051b9e6b529",
+      "promotions": "ba17e3c23effbab1c41d004f4cda1fea33e0089633bdcba6f77e44867bfd6493",
+      "sales": "c027579b66832e0d813a44e49996203a0e56ee55ec352d77df002cee7e640b4f",
+      "sale_items": "f57ca91414fc131d6b9ffc433f71d24d7396a69743152a88f731d034359f6740",
+      "returns": "42b6f58afe45b9a7d691fa030f8024a7f33ae8ff24c4d2dd9a1aca04853a55f4",
+      "return_items": "2e21d1648f2029d853fd3f4b4ad23bf1377deab7980cf4870fde454086b51033",
+      "exchanges": "a60d5e54c3d0c472c4abb4102c2f0b96240a1be750246d650409ca9f67a6f04b",
+      "exchange_items": "3fe28ee652b12fdaee76889cffa48fb610d6f55a9de7924fe69aa4882dde9b4f",
+      "sale_payments": "ea560a060e54af83d8754224e1d0137bf90bd4d04b38b19ffdc0048481ea0070",
+      "loan_documents": "54196bc91497b5268dbc7890ae4a1b66ff53778f7205ae0df707c4df3d962cfb",
+      "liquidations": "80a4696a8a0dd7f269b37d22eea2c097745caa0e789566beaf85c6986afa9dea",
+      "commission_adjustments": "5fbeb0dafd156cba7471aa51f567d1fd58efe11aff3b8bc93a205e6260921c11",
+      "movements": "908c876e9da5c8cf877af5b5b505d960e457f612c78bea4ed60ed52b1754fcb0",
       "lookup": "fe2560cf14b22720660d7548ac80d90f5ec9b9ccb063ee6bea7f25a46e46888d",
-      "settings": "b7bbb2a747e7c6136254c7414c148d91da8874f66f76b6622dd398f382ceabf5"
+      "settings": "36cbc2c5441ec45859bd7f7c7af9e3e8d085f952bfcc1aa7a1cef12c284c05c2"
     }
   },
-  "finishedAt": "2026-09-09T18:45:36.062Z"
+  "finishedAt": "2026-09-11T16:30:12.105Z"
 }

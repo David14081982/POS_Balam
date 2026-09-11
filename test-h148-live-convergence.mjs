@@ -23,22 +23,36 @@ const run=randomUUID(), prefix=`qa-h148-${run}`;
 const out=process.env.BALAM_TEST_OUTPUT || join(tmpdir(),prefix);
 mkdirSync(out,{recursive:true});
 const html=readFileSync(process.env.BALAM_VERIFIED_HTML || 'index.html');
-const result={run,project,sourceSha256:createHash('sha256').update(html).digest('hex'),certifierSha256:createHash('sha256').update(readFileSync(import.meta.filename)).digest('hex'),transport:'Real HTTPS Supabase; transport failures injected only for offline/lost ACK; no invented responses or service role in browser',cases:[],cleanup:null};
+const result={run,project,startedAt:new Date().toISOString(),sourceSha256:createHash('sha256').update(html).digest('hex'),certifierSha256:createHash('sha256').update(readFileSync(import.meta.filename)).digest('hex'),transport:'Real HTTPS Supabase; transport failures injected only for offline/lost ACK; no invented responses or service role in browser',cases:[],cleanup:null};
 result.partial=!!process.env.BALAM_CASE_FILTER;
 result.profiles=3;
 const keys=JSON.parse(execFileSync(process.execPath,[resolve('node_modules/supabase/dist/supabase.js'),'projects','api-keys','--project-ref',project,'--output','json'],{encoding:'utf8',stdio:['ignore','pipe','pipe']}));
 const key=(Array.isArray(keys)?keys:keys.rows).find(k=>k.name==='service_role')?.api_key;
 if(!key)throw Error('Server provisioning key unavailable through authenticated CLI');
-const serverClient=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}}).schema('pos');
-const authAdmin=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
+// A real stalled request must abort, including teardown; timing out a Promise
+// alone would leave the DELETE running and never complete preservation evidence.
+const boundedFetch=(input,options={})=>fetch(input,{...options,signal:options.signal
+ ?AbortSignal.any([options.signal,AbortSignal.timeout(30000)]):AbortSignal.timeout(30000)});
+const clientOptions={auth:{persistSession:false,autoRefreshToken:false},global:{fetch:boundedFetch}};
+const serverClient=createClient(url,key,clientOptions).schema('pos');
+const authAdmin=createClient(url,key,clientOptions);
 const email=`${prefix}@example.test`, password=randomBytes(32).toString('base64url');
 const sellerId=`${prefix}-seller`, adminId=`${prefix}-admin`;
 const reportSellerId=`${prefix}-report-seller`;
-let userId,browser,server,watchdog;
+let userId,browser,server,watchdog,deadline;
 const terminals=[];
 const productIds=[randomUUID(),randomUUID(),randomUUID()];
 const createdSales=[],createdReturns=[],createdExchanges=[],createdLoans=[],createdClients=[],createdPromos=[],createdAdjustments=[];
 const operations=new Set(), productPayloads=new Map();
+// Persist exact fixture identities before and after every case. Recovery must
+// never infer ownership from age, display labels or a broad SQL LIKE prefix.
+const journal=()=>writeFileSync(join(out,'fixtures.json'),JSON.stringify({run,prefix,email,userId,
+ productIds,adminId,sellerId,reportSellerId,createdSales,createdReturns,createdExchanges,createdLoans,
+ createdClients,createdPromos,createdAdjustments,operations:[...operations],devices:['A','B','C'].map(n=>`${prefix}-${n}`)},null,2));
+journal();
+for(const ids of [createdSales,createdReturns,createdExchanges,createdLoans,createdClients,createdPromos,createdAdjustments]){
+ ids.push=function(...values){const length=Array.prototype.push.apply(this,values);journal();return length;};
+}
 const check=(response)=>{if(response.error)throw Error(response.error.message);return response.data;};
 let baseline;
 const safetyTables=['products','clients','sellers','promotions','sales','sale_items','returns','return_items','exchanges','exchange_items','sale_payments','loan_documents','liquidations','commission_adjustments','movements','lookup','settings'];
@@ -47,9 +61,10 @@ const semanticHash=rows=>createHash('sha256').update(JSON.stringify(rows,(_key,v
 async function verify(name,fn) {
  if(process.env.BALAM_CASE_FILTER && !new RegExp(process.env.BALAM_CASE_FILTER).test(name)){console.log('NOT CERTIFIED / SKIP '+name);return;}
  console.log('START '+name);
- try {const evidence=await fn();result.cases.push({name,ok:true,evidence});console.log('PASS '+name);}
- catch(error){result.cases.push({name,ok:false,error:error.message});console.log('FAIL '+name+': '+error.message);throw error;}
- finally{writeFileSync(join(out,'matrix.json'),JSON.stringify(result,null,2));}
+ const startedAt=new Date().toISOString(),started=Date.now();journal();
+ try {const evidence=await fn();result.cases.push({name,ok:true,evidence,startedAt,elapsedMs:Date.now()-started});console.log('PASS '+name);}
+ catch(error){result.cases.push({name,ok:false,error:error.message,startedAt,elapsedMs:Date.now()-started});console.log('FAIL '+name+': '+error.message);throw error;}
+ finally{journal();writeFileSync(join(out,'matrix.json'),JSON.stringify(result,null,2));}
 }
 try {
   const manifest=check(await serverClient.from('system_manifest').select('*').eq('singleton',true))[0];
@@ -59,6 +74,7 @@ try {
  assert.equal(manifest.system_mode,'preproduction','Live fixtures require the existing preproduction environment');
  baseline=Object.fromEntries(await Promise.all(safetyTables.map(async table=>[table,semanticHash(await rawRows(table))])));
  const created=check(await authAdmin.auth.admin.createUser({email,password,email_confirm:true,user_metadata:{balam_sync_test:run}}));userId=created.user.id;
+ journal();
  check(await serverClient.from('sellers').insert([
   {id:adminId,nombre:prefix+' Admin',email,role:'admin',active:true,comision_pct:0,sync_base_version:0},
   {id:sellerId,nombre:prefix+' Seller',email:null,role:'vendedor',active:true,comision_pct:5,sync_base_version:0},
@@ -67,22 +83,24 @@ try {
  server=http.createServer((req,res)=>{res.writeHead(200,{'Content-Type':'text/html','Cache-Control':'no-store'});res.end(html);});
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
  const address=`http://127.0.0.1:${server.address().port}/`;
- browser=await chromium.launch({channel:'chrome',headless:true});
+ browser=await chromium.launch({...process.env.BALAM_CHROME_EXECUTABLE?{executablePath:process.env.BALAM_CHROME_EXECUTABLE}:{channel:'chrome'},headless:true});
  watchdog=setInterval(async()=>{
   for(const t of terminals){try{const s=await t.page.evaluate(()=>({status:window.STORE?.syncStatus(),queue:JSON.parse(localStorage.getItem('balam_sync_queue')||'[]').map(o=>({id:o.id,type:o.type,status:o.status}))}));writeFileSync(join(out,`state-${t.name}.json`),JSON.stringify(s,null,2));}catch{}}
  },10000);
- setTimeout(()=>browser?.close(),1200000).unref();
+ deadline=setTimeout(()=>{result.watchdogExpiredAt=new Date().toISOString();
+  browser?.close().catch(()=>{});},3600000).unref();
  for(const name of ['A','B','C']) {
   const context=await browser.newContext({viewport:{width:1280,height:900}});
   const page=await context.newPage();
+  page.setDefaultNavigationTimeout(120000);
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   page.on('request',request=>{
    if(!request.url().startsWith(url+'/rest/v1/rpc/'))return;
-   try{const body=request.postDataJSON();for(const field of ['p_operation_id','p_commit_id'])if(body?.[field])operations.add(body[field]);for(const row of body?.p_rows||[])if(productIds.includes(row.id))productPayloads.set(row.id,row);}catch{}
+   try{const body=request.postDataJSON();for(const field of ['p_operation_id','p_commit_id'])if(body?.[field])operations.add(body[field]);for(const row of body?.p_rows||[])if(productIds.includes(row.id))productPayloads.set(row.id,row);journal();}catch{}
   });
   terminals.push({name,context,page,errors});
   await page.addInitScript(({device})=>{if(location.hostname==='127.0.0.1')localStorage.setItem('balam_device_id',device);},{device:`${prefix}-${name}`});
-  await page.goto(address);
+  await page.goto(address,{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>window.AUTH?.isReady() && window.STORE?.enabled);
   const login=await page.evaluate(async({email,password})=>window.AUTH.login(email,password),{email,password});
   assert.ok(login.ok,`Login ${name}: ${JSON.stringify(login)}`);
@@ -125,7 +143,7 @@ try {
   const observer=request=>{if(/\/rest\/v1\/rpc\/(commit_|save_products|delete_product)/.test(request.url()))writes.push(request.url());};
   for(const t of terminals)t.page.on('request',observer);
   try {
-   await Promise.all(terminals.map(async t=>{
+   const states=await Promise.all(terminals.map(async t=>{
     await t.page.evaluate(({epoch,ghost})=>{
      if(window.STORE.pending)throw Error('Test requires an empty terminal');
      const template=window.DATA.products.find(p=>p.recordModel==='v2');
@@ -136,16 +154,24 @@ try {
      localStorage.setItem('balam_sync_data_epoch',String(epoch-1));
      localStorage.removeItem('balam_selective_cleanup_seen_v2');
     },{epoch:Number(manifest.data_epoch),ghost:cleanupCacheId});
-    await t.page.reload();
-    await t.page.waitForFunction(({epoch,id,ghost})=>window.STORE?.syncStatus().synchronized
-     && localStorage.getItem('balam_sync_data_epoch')===String(epoch)
-     && localStorage.getItem('balam_selective_cleanup_seen_v2')===id
-     && !window.DATA.products.some(p=>p.id===ghost),
-     {epoch:Number(manifest.data_epoch),id:event.cleanup_id,ghost:cleanupCacheId},{timeout:120000});
+    await t.page.reload({waitUntil:'domcontentloaded'});
+    // Capture the exact observation that satisfies the predicate. Reading again
+    // after every terminal has finished can instead capture a later poll or the
+    // managed bootstrap following localhost's preliminary legacy initialization.
+    const observed=await t.page.waitForFunction(({epoch,id,ghost,email})=>{
+     const status=window.STORE?.syncStatus();
+     if(!window.AUTH?.isReady()||window.AUTH.current()?.email!==email
+      ||!window.DATA?.isLocalWriter||!window.STORE?.enabled||!status?.synchronized
+      ||status.recoveryPhase!=='ready'||localStorage.getItem('balam_sync_data_epoch')!==String(epoch)
+      ||localStorage.getItem('balam_selective_cleanup_seen_v2')!==id
+      ||window.DATA.products.some(p=>p.id===ghost))return false;
+     return {pending:window.STORE.pending,epoch:Number(localStorage.getItem('balam_sync_data_epoch')),
+      synchronized:status.synchronized,authReady:window.AUTH.isReady(),recoveryPhase:status.recoveryPhase,
+      observedAt:new Date().toISOString()};
+    },{epoch:Number(manifest.data_epoch),id:event.cleanup_id,ghost:cleanupCacheId,email},{timeout:120000});
+    try{return {terminal:t.name,...await observed.jsonValue()};}finally{await observed.dispose();}
    }));
-   const states=await Promise.all(terminals.map(async t=>({terminal:t.name,...await t.page.evaluate(()=>({
-    pending:window.STORE.pending,epoch:Number(localStorage.getItem('balam_sync_data_epoch')),synchronized:window.STORE.syncStatus().synchronized,
-   }))})));
+   for(const state of states){assert.equal(state.pending,0);assert.equal(state.synchronized,true);assert.equal(state.epoch,Number(manifest.data_epoch));}
    assert.deepEqual(writes,[],'Automatic cleanup recovery uploaded a business operation');
    const after=Object.fromEntries(await Promise.all(safetyTables.map(async table=>[table,semanticHash(await rawRows(table))])));
    assert.deepEqual(after,before,'Automatic recovery changed confirmed business data');
@@ -195,7 +221,7 @@ try {
    localStorage.setItem('balam_sync_queue',JSON.stringify(queue));
    localStorage.setItem('balam-sidebar','1');
   },queue);
-  await terminal.page.reload();
+  await terminal.page.reload({waitUntil:'domcontentloaded'});
   await Promise.race([captureEntered,new Promise((_,reject)=>setTimeout(()=>reject(Error('Recovery never reached capture')),60000))]);
   try {
    await terminal.page.getByTestId('device-recovery-gate').waitFor({timeout:20000});
@@ -229,7 +255,15 @@ try {
   assert.equal(direct.error?.details,'DEVICE_RECOVERY_REQUIRED');
   assert.equal(check(await serverClient.from('sale_commits').select('commit_id').in('commit_id',[...ids])).length,0);
   const receiptTime=row.completed_at;
-  await terminal.page.reload();await terminal.page.waitForFunction(()=>window.AUTH?.hasSession()&&window.STORE?.syncStatus().recoveryPhase==='ready',null,{timeout:120000});
+  await terminal.page.reload({waitUntil:'domcontentloaded'});
+  // localhost starts the legacy STORE alongside AUTH. Its early ready phase
+  // precedes the resolved profile and must not authorize the test's next action.
+  // Wait for the authenticated terminal and its actual UI gate, then perform
+  // the new operation once; never retry or suppress a business-guard failure.
+  await terminal.page.waitForFunction(email=>window.AUTH?.isReady()&&window.AUTH?.hasSession()
+   &&window.AUTH.current()?.email===email&&window.DATA?.isLocalWriter&&window.STORE?.enabled
+   &&window.STORE.syncStatus().recoveryPhase==='ready'&&window.STORE.syncStatus().synchronized
+   &&!document.querySelector('[data-testid="device-recovery-gate"]'),email,{timeout:120000});
   assert.equal(await terminal.page.evaluate(()=>localStorage.getItem('balam-sidebar')),'1');
   const fresh=await terminal.page.evaluate(prefix=>window.DATA.addClient({nombre:prefix+' recovered',tel:prefix+' recovered'}),prefix);createdClients.push(fresh.id);
   await terminal.page.evaluate(()=>window.STORE.synchronizeNow());await converge();
@@ -244,7 +278,8 @@ try {
  await verify('Create references A -> B/C/Supabase',async()=>{
   await A.page.evaluate(({ids,prefix})=>{
    const D=window.DATA,C=window.CONFIG;
-   const template=D.products.find(p=>p.recordModel==='v2');
+   const template=D.products.find(p=>p.recordModel==='v2'&&p.ornamentColorCodes?.length>=2);
+   if(!template)throw Error('Requires an existing valid multicolor template for the order regression');
    if(!template)throw Error('No V2 contract template');
    const prepared=[];
    for(const id of ids){
@@ -269,6 +304,136 @@ try {
   await A.page.evaluate(id=>{const D=window.DATA;D.updateReference({id,precio:120});D.saveProducts([id]);},productIds[0]);
   await A.page.evaluate(()=>window.STORE.synchronizeNow());return converge();
  });
+ await verify('H155 ornament order edits are acknowledged through both product RPCs',async()=>{
+  const routes=[];
+  for(const [index,rpcName] of ['save_products_checked_v2','commit_reference_family_batch'].entries()){
+   const before=check(await serverClient.from('products').select('*').eq('id',productIds[index]))[0];
+   assert.ok(before.ornament_color_codes?.length>=2);
+   const row={...before,ornament_color_codes:[...before.ornament_color_codes].reverse(),precio:201+index,
+    sync_base_version:Number(before.sync_version),sync_device_id:`${prefix}-A`};
+   const operationId=randomUUID();operations.add(operationId);journal();
+   const response=await A.page.evaluate(async({rpcName,row,operationId})=>(await window.STORE.getClient()).rpc(rpcName,{
+    p_operation_id:operationId,p_rows:[row],p_protocol_version:3,p_data_epoch:window.STORE.syncStatus().dataEpoch,
+    ...(rpcName==='commit_reference_family_batch'?{p_reference_family_id:row.reference_family_id}:{})}),{rpcName,row,operationId});
+   const value=check(response),saved=(Array.isArray(value)?value:value.rows)[0];
+   assert.deepEqual(saved.ornament_color_codes,row.ornament_color_codes);
+   assert.equal(Number(saved.precio),row.precio);assert.equal(Number(saved.sync_version),Number(before.sync_version)+1);
+   assert.equal(Number(saved.stock_quantity),Number(before.stock_quantity));
+   routes.push({rpc:rpcName,submittedOrderAcknowledged:true,stockPreserved:true,versionAdvancedOnce:true});
+  }
+  await converge();return {routes,profiles:3};
+ });
+ await verify('H155 failed boot recovers automatically and open POS receives current values',async()=>{
+  const attempts=[];
+  for(const [terminal,path,price] of [[B,'system_manifest',207],[C,'rpc/get_sync_device_recovery',208]]){
+   let aborted=0;
+   const pattern=url+'/rest/v1/'+path+'*';
+   await terminal.context.route(pattern,async route=>{if(!aborted){aborted++;await route.abort('failed');}else await route.continue();});
+   await terminal.page.reload({waitUntil:'domcontentloaded'});
+   await terminal.page.waitForFunction(()=>window.AUTH?.isReady()&&window.AUTH?.current()?.email
+    &&window.DATA?.isLocalWriter&&window.STORE?.syncStatus().synchronized,null,{timeout:180000});
+   assert.equal(aborted,1,'Initial prerequisite was not actually interrupted');
+   await terminal.context.unroute(pattern);
+   // Neither the harness nor a user calls synchronizeNow/reconcileDomains on
+   // any receiver. A new write must arrive after the failed boot has recovered.
+   for(const t of terminals)await t.page.evaluate(()=>{
+    window.__h155ManualCalls=0;window.__h155OriginalMethods={};
+    for(const name of ['synchronizeNow','reconcileDomains']){const original=window.STORE[name];
+     window.__h155OriginalMethods[name]=original;window.STORE[name]=function(...args){window.__h155ManualCalls++;return original.apply(this,args);};}
+    const host=document.createElement('div');host.id='h155-live-pos';
+    host.style.cssText='position:fixed;inset:0;z-index:999;background:white';document.body.appendChild(host);
+    window.__h155POSRoot=ReactDOM.createRoot(host);window.__h155POSRoot.render(React.createElement(window.POSScreen,{layout:'side',catalogView:'list'}));
+   });
+   try {
+    for(const t of terminals){await t.page.locator('#h155-live-pos').getByTestId('pos-barcode-input').fill(prefix);}
+    await A.page.evaluate(({id,price})=>{window.DATA.updateReference({id,precio:price});window.DATA.saveProducts([id]);},{id:productIds[0],price});
+    await Promise.all(terminals.map(t=>t.page.waitForFunction(({id,price})=>window.DATA.products.find(p=>p.id===id)?.precio===price
+     &&window.STORE.syncStatus().synchronized,{id:productIds[0],price},{timeout:180000})));
+    assert.equal(Number(check(await serverClient.from('products').select('precio').eq('id',productIds[0]))[0].precio),price);
+    const states=[];
+    for(const t of terminals){const card=t.page.locator('#h155-live-pos').getByTestId('pos-product-family:'+productIds[0]);
+     await card.waitFor();assert.ok((await card.innerText()).includes(price.toFixed(2)),`${t.name}: open POS retained the old price`);
+     const manualCalls=await t.page.evaluate(()=>window.__h155ManualCalls);assert.equal(manualCalls,0);
+     states.push({terminal:t.name,price,manualCalls,visiblePrice:true});}
+    attempts.push({failedPrerequisite:path,failedRequests:aborted,recoveredTerminal:terminal.name,states});
+   } finally {for(const t of terminals)await t.page.evaluate(()=>{
+     window.__h155POSRoot?.unmount();document.getElementById('h155-live-pos')?.remove();
+     for(const [name,original] of Object.entries(window.__h155OriginalMethods||{}))window.STORE[name]=original;
+   });}
+  }
+  return {automatic:true,manualCalls:0,profiles:3,attempts};
+ });
+ await verify('H155 rejected reference retains its original without blocking confirmed products',async()=>{
+  const before=check(await serverClient.from('products').select('*').eq('id',productIds[0]))[0];
+  await A.page.evaluate(async id=>{const p=window.DATA.products.find(p=>p.id===id);
+   await window.STORE.pushRows('products',[{...p,attrs:{...p.attrs,__h155Rejected:true}}]);
+  },productIds[0]);
+  await A.page.waitForFunction(()=>window.STORE.pending===0&&window.STORE.syncStatus().reviewPending>0,null,{timeout:180000});
+  const cases=check(await serverClient.from('sync_quarantine_cases').select('*').eq('device_id',`${prefix}-A`));
+  assert.equal(cases.length,1);const item=cases[0];assert.equal(item.status,'pending_review');
+  assert.equal(item.payload_summary.diagnostic.policy,'review_reference');
+  assert.equal(await A.page.evaluate(()=>window.STORE.syncStatus().synchronized),false);
+  assert.equal(semanticHash([check(await serverClient.from('products').select('*').eq('id',productIds[0]))[0]]),semanticHash([before]));
+  await B.page.evaluate(id=>{window.DATA.updateReference({id,precio:209});window.DATA.saveProducts([id]);},productIds[1]);
+  await A.page.waitForFunction(id=>window.DATA.products.find(p=>p.id===id)?.precio===209,productIds[1],{timeout:180000});
+  await A.page.reload({waitUntil:'domcontentloaded'});
+  await A.page.waitForFunction(()=>window.AUTH?.isReady()&&window.DATA?.isLocalWriter&&window.STORE?.syncStatus().reviewPending>0,null,{timeout:180000});
+  const preserved=await A.page.evaluate(id=>{
+   for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);if(key.startsWith('balam_sync_quarantine_reference_')){
+    const original=JSON.parse(localStorage.getItem(key)).operations.find(op=>op.id===id);
+    if(original)return original.rows[0].attrs.__h155Rejected===true&&original.submittedRows?.[0]?.attrs?.__h155Rejected===true;
+   }}return false;
+  },item.operation_id);assert.equal(preserved,true);
+  await A.page.evaluate(async item=>window.STORE.decideSyncQuarantine(item,'reject','H155 intentionally invalid isolated fixture; retain original'),item);
+  await A.page.waitForFunction(()=>window.STORE.syncStatus().synchronized,null,{timeout:180000});
+  return {originalPreserved:true,submittedPayloadPreserved:true,remoteReceipt:true,falseGreen:false,
+   businessChanges:0,pendingAfter:0,otherProductReceivedAutomatically:true,reloadPreserved:true};
+ });
+ await verify('H155 stale edits cannot restore stock or overwrite a newer terminal',async()=>{
+  const initial=check(await serverClient.from('products').select('*').eq('id',productIds[0]))[0];
+  const stale=await B.page.evaluate(id=>structuredClone(window.DATA.products.find(p=>p.id===id)),productIds[0]);
+  assert.equal(stale._syncVersion,Number(initial.sync_version));
+  const rpc=async(t,row)=>{const operationId=randomUUID();operations.add(operationId);journal();
+   return t.page.evaluate(async({row,operationId})=>(await window.STORE.getClient()).rpc('save_products_checked_v2',{
+    p_operation_id:operationId,p_rows:[row],p_protocol_version:3,p_data_epoch:window.STORE.syncStatus().dataEpoch}),{row,operationId});};
+  check(await rpc(A,{...initial,stock_quantity:Number(initial.stock_quantity)-1,sync_base_version:Number(initial.sync_version),sync_device_id:`${prefix}-A`}));
+  const current=check(await serverClient.from('products').select('*').eq('id',productIds[0]))[0];
+  assert.equal(Number(current.stock_quantity),Number(initial.stock_quantity)-1);
+  const staleOperation=await B.page.evaluate(async snapshot=>{
+   const saving=window.STORE.pushRows('products',[{...snapshot,precio:999}]);
+   const operation=JSON.parse(localStorage.getItem('balam_sync_queue')||'[]').find(op=>
+    op.type==='upsert'&&op.kind==='products'&&op.rows?.some(r=>r.id===snapshot.id&&r.precio===999));
+   if(!operation)throw Error('Stale intention was not durably queued');
+   await saving;return {id:operation.id,rows:operation.rows};
+  },stale);operations.add(staleOperation.id);journal();
+  await B.page.waitForFunction(()=>window.STORE.pending===0&&window.STORE.syncStatus().reviewPending>0,null,{timeout:180000});
+  const item=check(await serverClient.from('sync_quarantine_cases').select('*')
+   .eq('device_id',`${prefix}-B`).eq('operation_id',staleOperation.id).eq('remote_epoch',Number(manifest.data_epoch)))[0];
+  assert.ok(item);assert.equal(item.payload_summary.diagnostic.code,'product_version_conflict');
+  assert.equal(await B.page.evaluate(()=>window.STORE.syncStatus().synchronized),false);
+  const originalPreserved=await B.page.evaluate(({operationId,base,stock})=>{
+   for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);if(!key.startsWith('balam_sync_quarantine_reference_'))continue;
+    const op=JSON.parse(localStorage.getItem(key)).operations.find(op=>op.id===operationId);
+    if(op)return op.submittedRows[0].sync_base_version===base&&Number(op.submittedRows[0].stock_quantity)===stock&&op.submittedRows[0].precio===999;
+   }return false;
+  },{operationId:staleOperation.id,base:Number(initial.sync_version),stock:Number(initial.stock_quantity)});
+  assert.equal(originalPreserved,true);
+  const after=check(await serverClient.from('products').select('*').eq('id',productIds[0]))[0];
+  assert.equal(semanticHash([after]),semanticHash([current]),'A stale price edit changed confirmed stock or values');
+  await A.page.evaluate(id=>{window.DATA.updateReference({id,precio:210});window.DATA.saveProducts([id]);},productIds[1]);
+  await B.page.waitForFunction(id=>window.DATA.products.find(p=>p.id===id)?.precio===210,productIds[1],{timeout:180000});
+  await Promise.all(terminals.map(t=>t.page.waitForFunction(({id,stock,price})=>{
+   const p=window.DATA.products.find(p=>p.id===id);return p?.stockQuantity===stock&&p?.precio===price;
+  },{id:productIds[0],stock:Number(current.stock_quantity),price:Number(current.precio)},{timeout:180000})));
+  // Restore only this exact fixture through a new versioned operation.
+  await A.page.evaluate(async item=>window.STORE.decideSyncQuarantine(item,'reject','H155 isolated obsolete fixture; preserve its original'),item);
+  assert.equal(check(await serverClient.from('sync_quarantine_cases').select('status').eq('device_id',item.device_id)
+   .eq('operation_id',item.operation_id).eq('remote_epoch',item.remote_epoch))[0].status,'rejected');
+  check(await rpc(A,{...after,stock_quantity:Number(initial.stock_quantity),sync_base_version:Number(after.sync_version),sync_device_id:`${prefix}-A`}));
+  await B.page.waitForFunction(()=>window.STORE.syncStatus().synchronized,null,{timeout:180000});
+  await converge();return {staleWritePreservedAuthority:true,stockNotRestored:true,profiles:3,fixtureOnly:true,
+   originalPreserved,reviewRequired:true,otherProductReceivedAutomatically:true};
+ });
  await verify('Delete reference A -> B/C/Supabase tombstone',async()=>{
   const removed=await A.page.evaluate(id=>window.DATA.removeProductScope({scope:'reference',productIds:[id]}),productIds[2]);
   assert.ok(removed.ok,JSON.stringify(removed));
@@ -277,7 +442,7 @@ try {
   return converge();
  });
  await verify('Reload cannot resurrect a deleted reference',async()=>{
-  await Promise.all(terminals.map(async t=>{await t.page.reload();await t.page.waitForFunction(()=>window.AUTH?.isReady() && window.AUTH.hasSession() && window.DATA?.isLocalWriter);}));
+  await Promise.all(terminals.map(async t=>{await t.page.reload({waitUntil:'domcontentloaded'});await t.page.waitForFunction(()=>window.AUTH?.isReady() && window.AUTH.hasSession() && window.DATA?.isLocalWriter);}));
   return converge();
  });
  await verify('Old protocol and stale payload cannot resurrect a tombstone',async()=>{
@@ -302,7 +467,7 @@ try {
   await A.page.evaluate(id=>{window.DATA.updateReference({id,precio:102});window.DATA.saveProducts([id]);},productIds[1]);
   await A.page.evaluate(()=>window.STORE.synchronizeNow());
   await B.context.route(url+'/**',route=>route.abort());
-  await B.context.setOffline(false);await B.page.reload();
+  await B.context.setOffline(false);await B.page.reload({waitUntil:'domcontentloaded'});
   await B.page.waitForFunction(()=>window.DATA?.isLocalWriter && window.STORE?.enabled);
   const restored=await B.page.evaluate(()=>JSON.parse(localStorage.getItem('balam_sync_queue')));
   assert.ok(pending.every(op=>restored.some(r=>r.id===op.id)),'Pending intent lost on reload');
@@ -413,19 +578,18 @@ try {
   await A.page.evaluate(id=>window.DATA.liquidarComision(id),sellerId);await A.page.evaluate(()=>window.STORE.synchronizeNow());await converge();return documents();
  });
  await verify('Configuration and permission invalidations reach every terminal',async()=>{
-  const [lookup,settings]=await Promise.all([rawRows('lookup'),rawRows('settings')]);
-  const config={catalogs:{},catalogMeta:undefined,settings:{}};
-  for(const row of lookup.sort((a,b)=>a.sort_order-b.sort_order))(config.catalogs[row.kind]||=[]).push({code:row.code,label:row.label,active:row.active,meta:row.meta});
-  for(const row of lookup)assert.equal(config.catalogs[row.kind].findIndex(item=>item.code===row.code),row.sort_order,'Test cannot renumber existing catalog positions');
-  for(const row of settings){if(row.key==='_catalogMeta')config.catalogMeta=row.value;else if(row.key!=='_resetMark')config.settings[row.key]=row.value;}
-  config.settings[prefix]='QA';
-  await A.page.evaluate(config=>window.STORE.pushConfig(config),config);await A.page.evaluate(()=>window.STORE.synchronizeNow());await converge();
+  // Only this fixture key changes. Replaying a settings/catalog snapshot read
+  // by Node could overwrite a concurrent operator's edit. This case certifies
+  // real automatic reception, not the unchanged commit_config write RPC.
+  check(await serverClient.from('settings').insert({key:prefix,value:'QA'}));
+  await Promise.all(terminals.map(t=>t.page.waitForFunction(key=>window.CONFIG.get(key)==='QA',prefix,{timeout:180000})));
   for(const t of terminals)assert.equal(await t.page.evaluate(key=>window.CONFIG.get(key),prefix),'QA');
   check(await serverClient.from('user_screen_permission_overrides').upsert({user_id:userId,screen_key:'dashboard',effect:'deny'}));
   await converge();for(const t of terminals)assert.equal(await t.page.evaluate(()=>window.AUTH.canAccess('dashboard')),false);
   check(await serverClient.from('user_screen_permission_overrides').delete().eq('user_id',userId).eq('screen_key','dashboard'));
   await converge();for(const t of terminals)assert.equal(await t.page.evaluate(()=>window.AUTH.canAccess('dashboard')),true);
-  return {configuration:true,permissions:true};
+  return {configuration:true,permissions:true,automatic:true,profiles:3,
+   configurationWriteScope:'one isolated setting',configCommitRpcExercised:false};
  });
  await verify('Lost acknowledgement replays the identical operation once',async()=>{
   const pattern=url+'/rest/v1/rpc/save_products_checked_v2',requests=[];let lost=false;
@@ -443,9 +607,9 @@ try {
   await A.page.evaluate(ids=>{window.DATA.updateReference({id:ids[0],precio:149});window.DATA.updateReference({id:ids[1],precio:103});window.DATA.saveProducts(ids);},productIds.slice(0,2));
   await A.page.evaluate(()=>window.STORE.synchronizeNow());
   await A.page.evaluate(id=>{window.DATA.updateReference({id,precio:150});window.DATA.saveProducts([id]);},productIds[0]);await A.page.evaluate(()=>window.STORE.synchronizeNow());
-  await C.page.goto(address);await C.page.waitForFunction(()=>window.AUTH?.hasSession()&&window.DATA?.isLocalWriter);await converge();
+  await C.page.goto(address,{waitUntil:'domcontentloaded'});await C.page.waitForFunction(()=>window.AUTH?.hasSession()&&window.DATA?.isLocalWriter);await converge();
   await C.page.evaluate(id=>{window.DATA.products.find(p=>p.id===id).stockQuantity=999;window.DATA.saveProducts();localStorage.setItem('balam_sync_domain_cursors_v1',JSON.stringify({products:999999999}));},productIds[0]);
-  await C.page.reload();await C.page.waitForFunction(()=>window.AUTH?.hasSession()&&window.DATA?.isLocalWriter);await converge();return documents();
+  await C.page.reload({waitUntil:'domcontentloaded'});await C.page.waitForFunction(()=>window.AUTH?.hasSession()&&window.DATA?.isLocalWriter);await converge();return documents();
  });
  await verify('Visible update control reconciles and fits mobile and desktop',async()=>{
   for(const width of [320,1280]){
@@ -494,11 +658,21 @@ try {
 } catch(error) {result.error=error.message;process.exitCode=1;console.error(error.message);}
 finally {
  clearInterval(watchdog);
- if(browser)await browser.close();
- if(server)await new Promise(r=>server.close(r));
+ clearTimeout(deadline);
  // Only IDs created by this exact run. No cleanup by label, age or broad prefix.
  const devices=terminals.map(t=>`${prefix}-${t.name}`), cleanupErrors=[];
  const clean=async(name,fn)=>{try{check(await fn());}catch(error){cleanupErrors.push({name,error:error.message});}};
+ // A keep-alive HTTP connection must not prevent fixture cleanup or leave an
+ // apparently green matrix without its conservation evidence (observed H154).
+ for(const t of terminals)try {if(!t.page.isClosed())await Promise.race([t.context.setOffline(true),new Promise((_,reject)=>{
+   const timer=setTimeout(()=>reject(Error('Context isolation exceeded 5s')),5000);timer.unref();
+  })]);}catch(error){cleanupErrors.push({name:`isolate ${t.name}`,error:error.message});}
+ try {if(browser)await Promise.race([browser.close(),new Promise((_,reject)=>{
+   const timer=setTimeout(()=>reject(Error('Browser close exceeded 15s')),15000);timer.unref();
+  })]);}catch(error){cleanupErrors.push({name:'browser close',error:error.message});}
+ if(server){server.closeAllConnections();server.close();}
+ journal();
+ if(devices.length)await clean('fixture quarantine',()=>serverClient.from('sync_quarantine_cases').delete().in('device_id',devices));
  if(devices.length)await clean('recovery directives',()=>serverClient.from('sync_device_recoveries').delete().in('device_id',devices));
  if(devices.length)await clean('devices',()=>serverClient.from('sync_devices').delete().in('device_id',devices));
  if(createdReturns.length){await clean('return receipts',()=>serverClient.from('return_commits').delete().in('return_id',createdReturns));await clean('returns',()=>serverClient.from('returns').delete().in('id',createdReturns));}
@@ -524,7 +698,8 @@ finally {
  await clean('sellers',()=>serverClient.from('sellers').delete().in('id',[adminId,sellerId,reportSellerId]));
  if(userId)await clean('auth identity',()=>authAdmin.auth.admin.deleteUser(userId));
  result.cleanup={ok:cleanupErrors.length===0,ids:[adminId,sellerId],devices,errors:cleanupErrors};
- if(baseline){const after=Object.fromEntries(await Promise.all(safetyTables.map(async table=>[table,semanticHash(await rawRows(table))])));result.businessPreservation={ok:JSON.stringify(after)===JSON.stringify(baseline),before:baseline,after};if(!result.businessPreservation.ok)process.exitCode=1;}
+ try {if(baseline){const after=Object.fromEntries(await Promise.all(safetyTables.map(async table=>[table,semanticHash(await rawRows(table))])));result.businessPreservation={ok:JSON.stringify(after)===JSON.stringify(baseline),before:baseline,after};if(!result.businessPreservation.ok)process.exitCode=1;}}
+ catch(error){result.businessPreservation={ok:false,error:error.message};process.exitCode=1;}
  result.finishedAt=new Date().toISOString();
  if(cleanupErrors.length)process.exitCode=1;
  writeFileSync(join(out,'matrix.json'),JSON.stringify(result,null,2));

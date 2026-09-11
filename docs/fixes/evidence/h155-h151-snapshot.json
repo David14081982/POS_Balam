@@ -1,0 +1,125 @@
+{
+  "createdAt": "2026-09-11T16:06:38.373Z",
+  "scope": "Read-only review and four assertions in one isolated Chromium page; no application source edits or live execution by this reviewer",
+  "sources": {
+    "certifier": {
+      "file": "test-h148-live-convergence.mjs",
+      "sha256": "85c4c222c393239c8de546dcca2d46b77d38d5ea0f4afa1d75a04e7b27dcc865",
+      "reviewedLines": [
+        161,
+        174
+      ]
+    },
+    "gate": {
+      "file": "test-h148-sync-certification.mjs",
+      "sha256": "b0cb42f5e0f4cff2de13c2618c16159eff94ae20fd388d2ffd60ceabfc1fc709"
+    },
+    "html": {
+      "file": "index.html",
+      "sha256": "8883393ca53d880e5af59ad34113e4c912e886308ec8f697df09a9e4b5ae32d0"
+    },
+    "rejectedMatrix": {
+      "file": ".evidence-h155-live/abc-final-03/matrix.json",
+      "sha256": "cb20bb89a3c9f5cd95e1fc9154fac4aee5c313a954d1b0dc5f98779c771fe041"
+    }
+  },
+  "reproduction": {
+    "observedAt": "2026-09-11T16:05:04.045Z",
+    "passed": 4,
+    "failed": 0,
+    "runtime": "Chromium executable C:/Users/david/AppData/Local/ms-playwright/chromium-1228/chrome-win64/chrome.exe",
+    "method": "Extract the exact current H151 waitForFunction callback in memory. Run it against explicitly synthetic mutable STORE/AUTH/DATA state. Intercept the sole local page request with in-memory HTML and abort any other request.",
+    "externalRequests": 0,
+    "supabaseRequests": 0,
+    "cases": [
+      {
+        "name": "Separate capture can differ from the successful wait",
+        "pass": true,
+        "waitResult": true,
+        "laterSeparateCapture": {
+          "pending": 0,
+          "epoch": 8,
+          "synchronized": false
+        }
+      },
+      {
+        "name": "Primitive snapshot preserves the actual validated observation",
+        "pass": true,
+        "snapshot": {
+          "pending": 0,
+          "epoch": 8,
+          "synchronized": true,
+          "authReady": true,
+          "recoveryPhase": "ready",
+          "observedAt": "2026-09-11T16:05:04.045Z"
+        },
+        "laterMutableState": {
+          "synchronized": false,
+          "pending": 3,
+          "epoch": 9
+        }
+      },
+      {
+        "name": "Unresolved authentication is rejected by the actual callback",
+        "pass": true,
+        "callbackResult": false
+      },
+      {
+        "name": "A context without the local writer is rejected by the actual callback",
+        "pass": true,
+        "callbackResult": false
+      }
+    ]
+  },
+  "abc03": {
+    "certified": false,
+    "caseCount": 29,
+    "casesMarkedPass": 29,
+    "h151States": [
+      {
+        "terminal": "A",
+        "pending": 0,
+        "epoch": 8,
+        "synchronized": false
+      },
+      {
+        "terminal": "B",
+        "pending": 0,
+        "epoch": 8,
+        "synchronized": false
+      },
+      {
+        "terminal": "C",
+        "pending": 0,
+        "epoch": 8,
+        "synchronized": true
+      }
+    ],
+    "cleanupOk": true,
+    "businessPreservationOk": true,
+    "businessTables": 17,
+    "explanation": "The run marked all 29 cases PASS, but H151 evidence captured synchronized=false for A and B after the earlier successful waits. The strict gate rejected this matrix; 29 PASS does not make it certified."
+  },
+  "review": {
+    "requirementsNotRelaxed": true,
+    "statesNotInvented": true,
+    "gateRequires": {
+      "terminals": [
+        "A",
+        "B",
+        "C"
+      ],
+      "pending": 0,
+      "synchronized": true,
+      "epoch": "exact manifest data_epoch"
+    },
+    "finalAuthorityComparisonRetained": true,
+    "explanation": "The callback returns a new object of observed primitive values only when the full predicate succeeds. jsonValue reads that retained observation. Added authentication, writer and ready checks narrow acceptance; immediate assertions preserve pending, synchronized and epoch requirements."
+  },
+  "limits": [
+    "This reproduction proves the separate-read timing mechanism. It does not identify whether an actual A/B transition in ABC03 came from a later poll or managed bootstrap.",
+    "The snapshot fixes the observation that satisfied the predicate; it does not guarantee the live state remains continuously unchanged or synchronized.",
+    "The final matrix case still compares terminal projections and device checkpoints with real authority. This local reproduction does not replace that case or the complete A/B/C run.",
+    "ABC03 remains rejected. A new complete run must match the changed certifier hash; this evidence does not certify ABC04."
+  ]
+}

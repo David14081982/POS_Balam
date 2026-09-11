@@ -1,0 +1,150 @@
+{
+  "scope": "Final bundle after H155 managed-session false-green correction; local isolated Chromium; no production writes",
+  "htmlSha256": "8883393ca53d880e5af59ad34113e4c912e886308ec8f697df09a9e4b5ae32d0",
+  "swSha256": "aba921105c7f43946b922d2110f4c86e9da95734c9e51aa91a4570d28c32ce16",
+  "tests": [
+    {
+      "exitCode": 0,
+      "name": "h155-ui",
+      "script": "test-h155-ui-sync.mjs",
+      "log": ".evidence-h155-live/local-ui-final/h155-ui.log",
+      "elapsedMs": 52035,
+      "startedAt": "2026-09-11T15:27:37.1262355Z",
+      "group": "local-ui-final",
+      "error": null,
+      "scriptSHA256": "9f4d760d9e12a5d42e24c045bcd45ac036434b68f9c5a92ea39556aefc837a5e",
+      "logSHA256": "1a17f1f07e1d60ddfd8098ce641047eba6d573f450903dd4a79bc390e5e66cc2",
+      "passed": 17,
+      "failed": 0,
+      "results": [
+        {
+          "name": "v1 grid refreshes an open catalog from datachange without changing filters",
+          "pass": true
+        },
+        {
+          "name": "v2 list refreshes an open catalog from datachange without changing filters",
+          "pass": true
+        },
+        {
+          "name": "remote removal clears catalog and an open size selection",
+          "pass": true
+        },
+        {
+          "name": "a new selection uses the current identity while an existing ticket retains its price",
+          "pass": true
+        },
+        {
+          "name": "V2 variant selection follows current references without resetting the chosen size",
+          "pass": true
+        },
+        {
+          "name": "a click before React processes datachange still resolves the current product",
+          "pass": true
+        },
+        {
+          "name": "a click racing a confirmed deletion cannot add the removed reference",
+          "pass": true
+        },
+        {
+          "name": "increasing an existing line validates current stock without changing its agreed price",
+          "pass": true
+        },
+        {
+          "name": "an open V2 selection removes unavailable references and never displays an infinite price",
+          "pass": true
+        },
+        {
+          "name": "previously edited text follows remote CONFIG and untouched blur cannot rewrite it",
+          "pass": true
+        },
+        {
+          "name": "focus without edits follows remote text and creates no configuration intent",
+          "pass": true
+        },
+        {
+          "name": "remote changes preserve an active draft and its deliberate blur saves once",
+          "pass": true
+        },
+        {
+          "name": "an abandoned edit returning to its original text does not overwrite concurrent CONFIG",
+          "pass": true
+        },
+        {
+          "name": "numeric settings preserve number type, clamp bounds and avoid unchanged writes",
+          "pass": true
+        },
+        {
+          "name": "folio prefix remote update survives an untouched blur without a new intent",
+          "pass": true
+        },
+        {
+          "name": "folio prefix draft and normalization survive concurrent configuration",
+          "pass": true
+        },
+        {
+          "name": "unmount releases activity and consumers have no runtime errors",
+          "pass": true
+        }
+      ],
+      "mode": "final-bundle",
+      "htmlSha256": "8883393ca53d880e5af59ad34113e4c912e886308ec8f697df09a9e4b5ae32d0"
+    },
+    {
+      "exitCode": 0,
+      "name": "smoke-bundle",
+      "script": "test-smoke.mjs",
+      "log": ".evidence-h155-live/local-ui-final/smoke-bundle.log",
+      "elapsedMs": 92080,
+      "startedAt": "2026-09-11T15:28:29.5637884Z",
+      "group": "local-ui-final",
+      "error": null,
+      "scriptSHA256": "4b50be6a5a99653970c4f2be7bdbccd1b9d76fa639dc65a3294c1b121cc1a122",
+      "logSHA256": "328e09cb3bf5e26def752e85597c59d716896a600918c4de581f6cb866a4ba79",
+      "passed": 17,
+      "failed": 0
+    },
+    {
+      "exitCode": 0,
+      "name": "ui-navigation",
+      "script": "test-ui-navigation.mjs",
+      "log": ".evidence-h155-live/local-ui-final/ui-navigation.log",
+      "elapsedMs": 70953,
+      "startedAt": "2026-09-11T15:30:01.6605896Z",
+      "group": "local-ui-final",
+      "error": null,
+      "scriptSHA256": "fa03dbd674fa9861724de716ea1df7ac0d22cc5b1f330f4c7ad47b3d457ace0b",
+      "logSHA256": "5f1a8ace39ed599a49ba49f6a859c1dffe2b887bc867fe9296192cd28bd599a1",
+      "passed": 15,
+      "failed": 0
+    },
+    {
+      "exitCode": 0,
+      "name": "h89-pwa",
+      "script": "test-h89-pwa.mjs",
+      "log": ".evidence-h155-live/local-ui-final/h89-pwa.log",
+      "elapsedMs": 43222,
+      "startedAt": "2026-09-11T15:31:12.6708083Z",
+      "group": "local-ui-final",
+      "error": null,
+      "scriptSHA256": "5c253a7128507509ceb45dc1562df5cc6e8764d90d2ce07433314fec8462fa15",
+      "logSHA256": "8a3d929248829c2d9610138f1c94694911516624f01075fa7a52ed67dad0491e",
+      "passed": 19,
+      "failed": 0,
+      "environmentAdapter": "Persistent-context executable override; external HTTP blocked; localhost, blobs, data and service worker behavior retained",
+      "networkCage": {
+        "blockedCount": 46,
+        "externalHosts": [
+          "telohdbvbvsfmwyriflz.supabase.co"
+        ]
+      }
+    }
+  ],
+  "htmlSha256After": "8883393ca53d880e5af59ad34113e4c912e886308ec8f697df09a9e4b5ae32d0",
+  "swSha256After": "aba921105c7f43946b922d2110f4c86e9da95734c9e51aa91a4570d28c32ce16",
+  "finishedAt": "2026-09-11T15:36:18.706Z",
+  "passed": 68,
+  "failed": 0,
+  "artifactUnchanged": true,
+  "allPassed": true,
+  "liveCertification": false
+}

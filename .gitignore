@@ -28,3 +28,6 @@ supabase/.temp/
 
 # Capturas locales regenerables de la matriz responsive H-128/H-132.
 .evidence-h128-qa/
+
+# H-155: evidence may contain private operational identifiers.
+.evidence-h155-live/

@@ -6987,6 +6987,68 @@ atribuye todavía el incidente físico a impresora, driver, Bluetooth o corte.
 Sin certificación nueva de flota A/B/C ni exclusión de impresoras entre equipos.
 **Documento:** `docs/fixes/arquitectura-impresion-confiable-h153.md`.
 
+## H-155 — Sincronización automática consistente entre equipos
+
+**Estado:** CORRECCIÓN VERIFICADA — matriz A/B/C aceptada; publicación pendiente. **Fecha:** 11/09/2026.
+**Commit:** Pendiente de commit.
+**Problema:** siete rechazos permanentes de productos tratados como reintentos
+temporales bloquean el catálogo en EIFBB1 mientras otros valores avanzan.
+Un fallo inicial deja sin servicio automático; POS y configuración pueden
+retener valores anteriores después del pull.
+**Evidencia:** Supabase 11/09 08:40 UTC y reproducciones CORE/STORE/Chromium.
+64 de 975 V2 no eliminadas cambian sólo orden de colores al hidratar; no se
+atribuyen a los siete intents originales ni se excluyeron datos de prueba.
+**Alcance:** permutación de colores, rechazo durable, recuperación del arranque
+y consumidores coherentes; conservar autoridad, identidad, stock e históricos.
+**Avance:** SQL 200–203 aplicado y verificado en Supabase; regresión SQL local
+41/41, motor 374/374, UI/inventario 121/121 e impresión/artefactos 144/144.
+Matriz final 29/29 en 16 dominios, cleanup y conservación 17/17 correctos,
+aceptada por el filtro estricto el 11/09 a las 16:30 UTC.
+HTML `8883393ca53d880e5af59ad34113e4c912e886308ec8f697df09a9e4b5ae32d0`;
+evidencia `docs/fixes/evidence/h148-live-matrix.json`.
+**Pendiente:** publicación y carga de H155 en instalaciones físicas; revisión
+de los siete originales desde su dispositivo. Sin descarte de pendientes reales.
+**Residual:** H-156 conserva un defecto previo de concurrencia en clientes y
+promociones; esta matriz no implica aprobación global de BALAM.
+**Documento:** `docs/fixes/sincronizacion-automatica-h155.md`.
+H-154 está reservado por el trabajo previo de flota no publicado.
+
+**Evidencia adicional H-155 (11/09/2026, local):** PostgreSQL ejecutando ambas
+RPC vigentes reproduce pérdida del control de versión en UPSERT. BEFORE
+INSERT de H133 borra `sync_base_version` y ON CONFLICT acepta un snapshot
+obsoleto: stock 4/v2 vuelve a 5/v3. UPDATE directo sí conserva la autoridad.
+Regresión 2/4 sin H155; 4/4 tras corrección. Migraciones remotas verificadas;
+el escenario A/B/C final también preservó stock y precio ante la edición obsoleta.
+
+## H-156 — UPSERT obsoleto de clientes y promociones
+
+**Estado:** CONFIRMADO — NO RESUELTO. **Prioridad:** P1.
+**Fecha:** 11/09/2026. **Commit del registro:** Pendiente de commit.
+**Problema:** una edición obsoleta puede sobrescribir un cambio confirmado de
+la misma ficha de cliente o promoción; el ACK detecta el conflicto después de
+la escritura y conserva una operación que bloquea la recepción de ese dominio.
+**Primera capa incorrecta:** STORE sigue usando UPSERT REST para esos dos
+dominios. `guard_entity_version` H133 consume `sync_base_version` en BEFORE
+INSERT; EXCLUDED llega sin base al UPDATE del UPSERT. Las migraciones 200–203
+de H155 corrigen únicamente las RPC de productos y no modifican esta guarda.
+**Evidencia:** PGlite con funciones reales H133: nombre vigente/v2, UPSERT con
+nombre obsoleto/base1 produce nombre obsoleto/v3 y cero conflictos SQL. El ACK
+real STORE/DATA detecta un conflicto después, sin revertir la fila. Control
+UPDATE usado por vendedores conserva nombre/v2 y registra el conflicto.
+`test-concurrency.mjs` compara la base original en un simulador que omite el
+BEFORE INSERT; su verde no demuestra esta autoridad SQL.
+**Alcance:** clientes (`DATA.updateClient` → `STORE.pushClient`) y promociones
+(`DATA.updatePromo` → `STORE.pushRows`), no extender automáticamente a vendedores
+porque su consumidor vigente usa `profileUpdate`. Defecto preexistente a H155;
+no se demostró una pérdida monetaria ni se reprodujo contra filas comerciales.
+**Corrección recomendada:** una autoridad atómica de escritura que compruebe
+la base original antes de modificar cada fila, con RLS/capacidades, replay,
+intención durable y conflictos conservados; probar concurrencia de ambas
+entidades con PostgreSQL real y A/B/C antes de declarar resuelto.
+**Evidencia detallada:** `docs/fixes/evidence/h156-entity-upsert-residual.json`.
+Este riesgo impide declarar BALAM globalmente aprobado por los 29 escenarios
+representativos de la matriz H155.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

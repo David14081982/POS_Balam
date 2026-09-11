@@ -1,0 +1,111 @@
+{
+  "createdAt": "2026-09-11T15:36:19.063Z",
+  "artifactSHA256": "8883393ca53d880e5af59ad34113e4c912e886308ec8f697df09a9e4b5ae32d0",
+  "swSHA256": "aba921105c7f43946b922d2110f4c86e9da95734c9e51aa91a4570d28c32ce16",
+  "passed": 53,
+  "total": 53,
+  "tests": [
+    {
+      "script": "test-h132-inventory-identity-certification.mjs",
+      "passed": 7,
+      "total": 7,
+      "exitCode": 0,
+      "scriptSHA256": "da4c76f2c5cf606f10bbf2dc481b0698caed343c5de7c6988cf38c625cc6f9f9",
+      "log": ".evidence-h155-live/inventory-ci-final/test-h132-inventory-identity-certification.mjs.log",
+      "startedAt": "2026-09-11T15:31:55.8978806Z",
+      "elapsedMs": 16498
+    },
+    {
+      "script": "test-h132-live-certifier.mjs",
+      "passed": 2,
+      "total": 2,
+      "exitCode": 0,
+      "scriptSHA256": "c6be7061558c06947133efdff7f85a28d631a97a68bf1fb94c83d18dd35c5444",
+      "log": ".evidence-h155-live/inventory-ci-final/test-h132-live-certifier.mjs.log",
+      "startedAt": "2026-09-11T15:32:12.4066115Z",
+      "elapsedMs": 45818
+    },
+    {
+      "script": "test-h127-label-diagnostics.mjs",
+      "passed": 11,
+      "total": 11,
+      "exitCode": 0,
+      "scriptSHA256": "7a616353ce5e775a6d84b87e232ec8c89684891b765845cf54cd4f5fb943eed3",
+      "log": ".evidence-h155-live/inventory-ci-final/test-h127-label-diagnostics.mjs.log",
+      "startedAt": "2026-09-11T15:32:58.4922152Z",
+      "elapsedMs": 41476
+    },
+    {
+      "script": "test-h99-label-pdf.mjs",
+      "passed": 23,
+      "total": 23,
+      "exitCode": 0,
+      "scriptSHA256": "70327525267de326be1dab2aa5c2d46aff6ef7787927af5ae1046dea60e1ad77",
+      "log": ".evidence-h155-live/inventory-ci-final/test-h99-label-pdf.mjs.log",
+      "startedAt": "2026-09-11T15:33:39.9948963Z",
+      "elapsedMs": 53165
+    },
+    {
+      "script": "test-h100-materialized-label-sku.mjs",
+      "passed": 10,
+      "total": 10,
+      "exitCode": 0,
+      "scriptSHA256": "bd7fabf1ac37006303a14d3c59537a1687b431be7b79202fcb358bc5a9ca715a",
+      "log": ".evidence-h155-live/inventory-ci-final/test-h100-materialized-label-sku.mjs.log",
+      "startedAt": "2026-09-11T15:34:33.1714165Z",
+      "elapsedMs": 20501
+    }
+  ],
+  "isolation": "Sequential synthetic fixtures; browser Supabase requests blocked; H132 certifier executes --snapshot, never CLI/live queries",
+  "runtime": {
+    "node": "v24.14.0",
+    "adapter": ".evidence-h155-live/chromium-runtime.mjs",
+    "adapterSHA256": "53d156f40a1a1c388071abff38ddfb0abdc8e5e5c9d9dbdd34e87a5f7bab0db8",
+    "childAdapterInheritedVia": "NODE_OPTIONS",
+    "chromiumExecutable": "C:/Users/david/AppData/Local/ms-playwright/chromium-1228/chrome-win64/chrome.exe"
+  },
+  "restoredTrackedFixtureArtifacts": [
+    {
+      "file": ".evidence-h100/etiquetas-adriano-multitalla.pdf",
+      "source": "HEAD",
+      "sha256": "a9083aa7bb2dd8781718d45126b1d14caf66422d1c2f611ebbee5a941184ab29",
+      "verified": true
+    },
+    {
+      "file": ".evidence-label-visual/etiquetas-h99-multipagina.pdf",
+      "source": "HEAD",
+      "sha256": "2f49d6c82735424002fab39c5f7eb9e6ebd897e588153dc94da14a0a302cdcf9",
+      "verified": true
+    }
+  ],
+  "artifacts": [
+    {
+      "file": "etiquetas-adriano-multitalla.pdf",
+      "sha256": "d6c060791054476a12b6af0b6331cc4a47385a2fd0af58ca00c6582c4611779a"
+    },
+    {
+      "file": "etiquetas-h99-multipagina.pdf",
+      "sha256": "8b5ab3ca07a3886be1204f950e74c167e3c6ed189587cccdb865a220ad80f4c8"
+    },
+    {
+      "file": "test-h100-materialized-label-sku.mjs.log",
+      "sha256": "20a14b3ae71057b4aaefc4329f5d792d775260e026db696e960eb6fd05026bb8"
+    },
+    {
+      "file": "test-h127-label-diagnostics.mjs.log",
+      "sha256": "5c1c4b70282fc95dafd5da9f2e3e8c8d301d7080a7704b1e1fb8919cef3de05b"
+    },
+    {
+      "file": "test-h132-inventory-identity-certification.mjs.log",
+      "sha256": "11e21f65141638760f42539bb28b6e4440451b701293c26e345e4c4f7a736f84"
+    },
+    {
+      "file": "test-h132-live-certifier.mjs.log",
+      "sha256": "ecc5730aa504f91a24031188dc4f33a762ba4139ba9a4f56fa5249d435087597"
+    },
+    {
+      "file": "test-h99-label-pdf.mjs.log",
+      "sha256": "c1c4765d69c1088f590effd615de57e4e6aeb3c15f57ff4b1ace6ab0463a12b3"
+    }
+  ]
+}

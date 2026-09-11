@@ -17,7 +17,7 @@
   const QDB = 'balam_sync', QSTORE = 'durable_queue';
   const SYNC_PROTOCOL_VERSION = 3;
   const SYNC_SCHEMA_VERSION = 20260830017500;
-  const SYNC_CLIENT_BUILD = '2026-09-09-h152';
+  const SYNC_CLIENT_BUILD = '2026-09-11-h155';
   const SELECTIVE_CLEANUP_PROTOCOL = 6;
   const SYNC_CURSOR_KEY = 'balam_sync_domain_cursors_v1';
   const SYNC_DOMAINS = {
@@ -181,6 +181,9 @@
   let syncReconcileAgain = false;
   let syncRealtimeState = 'off', syncPollTimer = null, syncHeartbeatTimer = null,
     syncLifecycleSubscribed = false;
+  let syncAutoPromise = null, syncInitPromise = null, syncInitSession = null;
+  let syncBootstrapComplete = false;
+  let syncReviewPending = null, syncHeartbeatPromise = null;
   let syncCompatibility = 'legacy';
   let syncRecovering = false, syncLastVersionCheck = 0, syncRemoteVersions = [];
   let syncLastFullCheck = 0, syncLastSuccess = null, syncCheckpointError = null;
@@ -688,7 +691,7 @@
     const code = String(raw.code || raw.error || (details && details.error) || 'unknown_error');
     const message = String(raw.message || raw.error_description || (details && details.message) || code);
     const httpStatus = Number(raw.status || raw.statusCode || 0) || null;
-    const lower = (code + ' ' + message).toLowerCase();
+    const lower = (code + ' ' + message + ' ' + (raw.details || '')).toLowerCase();
     let category = 'unknown', status = 'retry_wait', policy = 'auto_retry', retryable = true;
     if (code === 'insufficient_stock') {
       category = 'inventory'; status = 'waiting_inventory'; policy = 'wait_inventory';
@@ -716,6 +719,8 @@
       category = 'constraint'; status = 'blocked_data'; policy = 'review_data'; retryable = false;
     } else if (/invalid_loan_|loan_not_found/.test(lower)) {
       category = 'constraint'; status = 'blocked_data'; policy = 'review_data'; retryable = false;
+    } else if (/reference_reclassification_required|reference_model_immutable|barcode_immutable/.test(lower)) {
+      category = 'conflict'; status = 'blocked_conflict'; policy = 'review_reference'; retryable = false;
     } else if (httpStatus >= 500) {
       category = 'server';
     } else if (raw instanceof TypeError || /failed to fetch|network|load failed|fetch failed/.test(lower)) {
@@ -2387,6 +2392,7 @@
     return { v: 1, catalogs, catalogMeta, settings: s };
   }
   async function pull() {
+    const seq = sessionSeq;
     if (domainBlocked('config')) return { ok: true, complete: false, applied: false, skipped: 'pending' };
     const c = await ensureClient(); if (!c) return { ok: false, error: 'sin cliente' };
     const [lk, st, cv] = await Promise.all([
@@ -2395,6 +2401,7 @@
       c.from('config_sync_state').select('*').eq('singleton', true),
     ]);
     if (lk.error || st.error) return { ok: false, complete: false, applied: false, error: (lk.error || st.error).message };
+    if (seq !== sessionSeq || (sessionManaged && !sessionIdentity) || !hasLocalWriter(false)) return { ok: false, complete: false, applied: false, skipped: 'session_changed' };
     if (domainBlocked('config')) return { ok: true, complete: false, applied: false, skipped: 'pending' };
     const mk = (st.data || []).find(r => r.key === RESET_MARK_KEY);
     lastResetMark = mk ? String(mk.value) : null;
@@ -2792,6 +2799,7 @@
   // demostrablemente cubiertas. El rebootstrap usa SNAPSHOT COMPLETO y no
   // conserva documentos confirmados que sólo existan en caché.
   async function pullSales(c, opts) {
+    const seq = sessionSeq;
     const days = Number(window.CONFIG && window.CONFIG.get && window.CONFIG.get('sync.salesWindowDays')) || 365;
     const boundary = new Date(Date.now() - days * 864e5);
     boundary.setUTCHours(0, 0, 0, 0);
@@ -2815,7 +2823,7 @@
     let items;
     try { items = await fetchItemsIn(c, 'sale_items', 'folio', raws.map(x => x.folio)); }
     catch (error) { return { ok: false, complete: false, applied: false, error }; }
-    if (domainBlocked('sales')) return { ok: true, complete: false, applied: false, skipped: 'pending' };
+    if (seq !== sessionSeq || (sessionManaged && !sessionIdentity) || !hasLocalWriter(false) || domainBlocked('sales')) return { ok: true, complete: false, applied: false, skipped: 'pending' };
     const remoteRows = saleRowsFrom(raws, items);
     const remoteFolios = new Set(remoteRows.map(row => row.folio));
     const preserved = opts && opts.fullSnapshot ? [] : ((window.DATA && window.DATA.sales) || [])
@@ -2875,16 +2883,18 @@
   }
 
   async function pullDomain(kind, opts) {
+    const seq = sessionSeq;
+    const blocked = () => seq !== sessionSeq || (sessionManaged && !sessionIdentity) || !hasLocalWriter(false) || domainBlocked(kind);
     const m = MAP[kind]; const c = await ensureClient(); if (!c || !m) return { ok: false };
     // Cambios locales sin subir para esta tabla → NO aplicar la nube (la pisaría con datos
     // viejos). Se re-chequea tras el fetch: el usuario pudo capturar durante el vuelo.
-    if (domainBlocked(kind)) return { ok: true, complete: false, applied: false, skipped: 'pending' };
+    if (blocked()) return { ok: true, complete: false, applied: false, skipped: 'pending' };
     if (kind === 'sales') return pullSales(c, opts || {});
     const r = kind === 'movements'
       ? await fetchAllMovements(c)
       : await fetchAllRows(c, m.table, m.conflict);
     if (r.error) return { ok: false, error: r.error }; // tabla no existe aún → modo local
-    if (domainBlocked(kind)) return { ok: true, complete: false, applied: false, skipped: 'pending' };
+    if (blocked()) return { ok: true, complete: false, applied: false, skipped: 'pending' };
     if (r.data && r.data.length) {
       // H-97: `operation_id` vive en movements, pero la relación de reversa
       // pertenece al ledger de reclasificaciones. Rehidrata ambos como una sola
@@ -2902,7 +2912,7 @@
           (ledger.data || []).forEach(row => { reversalByOperation[row.operation_id] = row.reversal_of || null; });
         }
         if (!ledgerComplete) return { ok: false, complete: false, applied: false, error: 'MOVEMENT_LEDGER_INCOMPLETE' };
-        if (domainBlocked(kind)) return { ok: true, complete: false, applied: false, skipped: 'pending' };
+        if (blocked()) return { ok: true, complete: false, applied: false, skipped: 'pending' };
         const rows = r.data.map(row => Object.assign({}, row, {
           reversal_of: Object.prototype.hasOwnProperty.call(reversalByOperation, row.operation_id)
             ? reversalByOperation[row.operation_id] : undefined,
@@ -2912,7 +2922,7 @@
       }
       if (kind === 'returns') {
         const itRows = await fetchItemsIn(c, 'return_items', 'return_id', r.data.map(x => x.id));
-        if (domainBlocked(kind)) return { ok: true, complete: false, applied: false, skipped: 'pending' };
+        if (blocked()) return { ok: true, complete: false, applied: false, skipped: 'pending' };
         const byRid = {};
         // H-72: `pushReturn` escribe `product_id`; el pull debe leerlo de vuelta o
         // la devolución local queda peor identificada que la remota, igual que
@@ -2924,7 +2934,7 @@
       }
       if (kind === 'exchanges') {
         const itRows = await fetchItemsIn(c, 'exchange_items', 'exchange_id', r.data.map(x => x.id));
-        if (domainBlocked(kind)) return { ok: true, complete: false, applied: false, skipped: 'pending' };
+        if (blocked()) return { ok: true, complete: false, applied: false, skipped: 'pending' };
         const byId = {};
         itRows.forEach(x => (byId[x.exchange_id] || (byId[x.exchange_id] = [])).push({
           lineId: x.line_id || undefined, sourceSaleLineId: x.source_sale_line_id || undefined,
@@ -3148,24 +3158,53 @@
     if (versions.ok) versions.rows.forEach(row => invalidateDomain(row.domain, row.version));
     return { ok: syncCompatibility === 'ok', compatibility: syncCompatibility };
   }
-  async function heartbeatDevice(c) {
-    if (!syncManifest) return;
-    const user = await syncActivityUser(c);
-    if (!user || !user.id) return;
-    const q = queueStatus();
-    const clean = syncStatus().synchronized;
-    await c.rpc('report_sync_device', {
-      p_device_id: window.CORE.getDeviceId(), p_client_build: SYNC_CLIENT_BUILD,
-      p_protocol_version: SYNC_PROTOCOL_VERSION, p_schema_version: SYNC_SCHEMA_VERSION,
-      p_data_epoch: Number(syncManifest.data_epoch) || 1, p_cursors: syncCursors,
-      p_queue_pending: q.devicePending, p_queue_blocked: q.deviceBlocked,
-      p_status: syncCompatibility === 'ok' ? (q.devicePending ? 'pending' : (clean ? 'online' : 'behind'))
-        : (syncCompatibility === 'must_rebootstrap' ? 'must_rebootstrap' : 'quarantined'),
-      p_last_synced_at: clean ? new Date().toISOString() : null,
+  function heartbeatDevice(c) {
+    if (syncHeartbeatPromise) return syncHeartbeatPromise;
+    const seq = sessionSeq;
+    const current = () => seq === sessionSeq && enabled && hasLocalWriter(false);
+    syncHeartbeatPromise = (async () => {
+      if (!c || !syncManifest || !current()) return;
+      syncReviewPending = null;
+      const user = await syncActivityUser(c);
+      if (!current()) return;
+      // Only unmanaged legacy transport lacks a remote review owner. A managed
+      // session lookup failure leaves its existing cases unconfirmed.
+      if (!user || !user.id) { if (!sessionManaged) syncReviewPending = 0; return; }
+      try {
+        await reportStoredQuarantineArchives(c);
+        if (!current()) return;
+        await consumeSyncCommands(c);
+        if (!current()) return;
+        await consumeSyncQuarantineDecisions(c);
+        if (!current()) return;
+        const review = await c.from('sync_quarantine_cases').select('operation_id,status')
+          .eq('device_id', window.CORE.getDeviceId()).in('status', ['pending_review','approved','delivered','failed']);
+        if (!current()) return;
+        if (review.error || !Array.isArray(review.data)) throw new Error('QUARANTINE_REVIEW_UNCONFIRMED');
+        syncReviewPending = review.data.length;
+        const q = queueStatus(), clean = syncStatus().synchronized;
+        const report = await c.rpc('report_sync_device', {
+          p_device_id: window.CORE.getDeviceId(), p_client_build: SYNC_CLIENT_BUILD,
+          p_protocol_version: SYNC_PROTOCOL_VERSION, p_schema_version: SYNC_SCHEMA_VERSION,
+          p_data_epoch: Number(syncManifest.data_epoch) || 1, p_cursors: syncCursors,
+          p_queue_pending: q.devicePending, p_queue_blocked: q.deviceBlocked,
+          p_status: syncCompatibility === 'ok' ? (q.devicePending ? 'pending' : (clean ? 'online' : 'behind'))
+            : (syncCompatibility === 'must_rebootstrap' ? 'must_rebootstrap' : 'quarantined'),
+          p_last_synced_at: clean ? new Date().toISOString() : null,
+        });
+        if (report.error) throw report.error;
+      } catch (error) {
+        if (current()) syncReviewPending = null;
+        throw error;
+      }
+    })().finally(() => {
+      syncHeartbeatPromise = null;
+      if (current()) {
+        if (syncStatus().synchronized) syncLastSuccess = new Date().toISOString();
+        try { window.dispatchEvent(new CustomEvent('syncstatuschange', { detail: syncStatus() })); } catch (e) { /* startup */ }
+      }
     });
-    await reportStoredQuarantineArchives(c);
-    await consumeSyncCommands(c);
-    await consumeSyncQuarantineDecisions(c);
+    return syncHeartbeatPromise;
   }
   async function consumeSyncCommands(c) {
     if (!c) return 0;
@@ -3186,6 +3225,9 @@
     return consumed;
   }
   async function reconcileDomains(opts = {}) {
+    const seq = sessionSeq;
+    const currentSession = () => seq === sessionSeq && (!sessionManaged || !!sessionIdentity) && hasLocalWriter(false);
+    if (!currentSession()) return { ok: false, skipped: 'session_changed' };
     if (syncRecovering) return { ok: false, deferred: ['recovery'] };
     if (syncReconcilePromise) {
       if (opts.force) { await syncReconcilePromise; return reconcileDomains(opts); }
@@ -3201,6 +3243,7 @@
       const c = await ensureClient();
       if (!c || !syncManifest || syncCompatibility !== 'ok') return { ok: false, compatibility: syncCompatibility };
       const latestManifest = await c.from('system_manifest').select('*').eq('singleton', true);
+      if (!currentSession()) return { ok: false, skipped: 'session_changed' };
       if (latestManifest.error || !latestManifest.data?.[0]) {
         syncLastVersionCheck = 0;
         return { ok: false, error: 'MANIFEST_UNAVAILABLE' };
@@ -3218,6 +3261,9 @@
       }
       const versions = await readRemoteVersions(c);
       if (!versions.ok) return versions;
+      if (!currentSession()) return { ok: false, skipped: 'session_changed' };
+      await archiveRejectedReferences(c);
+      if (!currentSession()) return { ok: false, skipped: 'session_changed' };
       for (const row of versions.rows) {
         if (!SYNC_DOMAINS[row.domain]) continue;
         if (syncFullDomains.has(row.domain) || !Object.prototype.hasOwnProperty.call(syncCursors, row.domain)
@@ -3236,6 +3282,7 @@
         let result;
         try { result = await applyDomainPull(domain, { fullSnapshot: syncFullDomains.has(domain) }); }
         catch (error) { result = { ok: false, error: error.message || 'DOWNLOAD_FAILED' }; }
+        if (!currentSession()) return { ok: false, skipped: 'session_changed' };
         if (result && result.ok === true && result.complete === true && result.applied === true) {
           const next = Object.assign({}, syncCursors, { [domain]: target });
           if (!saveSyncCursors(next)) { syncPullErrors.set(domain, syncCheckpointError); deferred.push(domain); continue; }
@@ -3252,8 +3299,10 @@
       }
       const after = await readRemoteVersions(c);
       if (!after.ok) return after;
+      if (!currentSession()) return { ok: false, skipped: 'session_changed' };
       after.rows.forEach(row => invalidateDomain(row.domain, row.version));
       const manifestAfter = await c.from('system_manifest').select('*').eq('singleton', true);
+      if (!currentSession()) return { ok: false, skipped: 'session_changed' };
       if (manifestAfter.error || !manifestAfter.data?.[0]) {
         syncLastVersionCheck = 0; return { ok: false, error: 'MANIFEST_UNAVAILABLE' };
       }
@@ -3266,13 +3315,17 @@
       return { ok: true, applied, deferred };
     })().finally(async () => {
       syncReconcilePromise = null;
-      if (syncStatus().synchronized) syncLastSuccess = new Date().toISOString();
       const again = syncReconcileAgain; syncReconcileAgain = false;
+      if (!currentSession()) return;
+      // A heartbeat may itself be consuming a recovery that reconciles domains.
+      // Never wait on that same outer heartbeat; its final event confirms review.
+      if (sb && syncManifest && !syncHeartbeatPromise) await heartbeatDevice(sb).catch(() => {});
+      if (!currentSession()) return;
+      if (syncStatus().synchronized) syncLastSuccess = new Date().toISOString();
       // El evento emitido dentro de la reconciliación todavía veía la promesa
       // activa. Publica el estado final para que el panel salga de
       // «Reconciliando» cuando ya no queda trabajo.
       try { window.dispatchEvent(new CustomEvent('syncstatuschange', { detail: syncStatus() })); } catch (e) { /* */ }
-      if (sb && syncManifest) await heartbeatDevice(sb).catch(() => {});
       if (syncCompatibility === 'must_rebootstrap' && !syncRecovering) {
         Promise.resolve().then(() => applyRemoteSelectiveCleanup()).catch(() => { /* polling retries */ });
       }
@@ -3289,46 +3342,82 @@
     if (syncChannel && sb && typeof sb.removeChannel === 'function') sb.removeChannel(syncChannel);
     syncChannel = null; syncRealtimeState = 'off';
   }
+  function automaticSyncAllowed(seq = sessionSeq) {
+    return enabled && seq === sessionSeq && hasLocalWriter(false) && !syncRecovering
+      && !document.hidden && (typeof navigator === 'undefined' || navigator.onLine !== false);
+  }
+  function runAutomaticSync() {
+    if (!automaticSyncAllowed()) return Promise.resolve({ ok: false, deferred: true });
+    if (syncAutoPromise) return syncAutoPromise;
+    const seq = sessionSeq;
+    syncAutoPromise = (async () => {
+      // A bootstrap owns queue hydration/migrations. Its failure still leaves this
+      // coordinator installed; subsequent signals retry the missing remote checks.
+      if (syncInitPromise) await syncInitPromise;
+      if (!automaticSyncAllowed(seq)) return { ok: false, deferred: true };
+      if (!syncBootstrapComplete) {
+        await init({ pull: true });
+        if (!syncBootstrapComplete || !automaticSyncAllowed(seq)) return { ok: false, bootstrapRequired: true };
+      }
+      const c = await ensureClient();
+      if (!c || !automaticSyncAllowed(seq)) return { ok: false, deferred: true };
+      if (!(await recoverDirectedDevice()) || !automaticSyncAllowed(seq)) return { ok: false, recoveryRequired: true };
+      await loadSyncProtocol(c);
+      if (!automaticSyncAllowed(seq)) return { ok: false, deferred: true };
+      startLiveSync(c);
+      if (syncCompatibility === 'must_rebootstrap') {
+        if (window.CORE.activityStatus().active) return { ok: false, deferred: true };
+        await applyRemoteSelectiveCleanup();
+      }
+      if (!automaticSyncAllowed(seq) || syncCompatibility !== 'ok') return { ok: false, compatibility: syncCompatibility };
+      await flushQueue(); await waitForFlushIdle();
+      if (!automaticSyncAllowed(seq)) return { ok: false, deferred: true };
+      return reconcileDomains({ force: !syncLastFullCheck || Date.now() - syncLastFullCheck >= 300000 });
+    })().finally(() => { syncAutoPromise = null; });
+    return syncAutoPromise;
+  }
   function startLiveSync(c) {
-    if (!syncManifest) return;
-    if (syncCompatibility === 'ok' && !syncChannel && typeof c.channel === 'function') {
+    if (!enabled) return;
+    if (c && syncManifest && syncCompatibility === 'ok' && !syncChannel && typeof c.channel === 'function') {
       syncChannel = c.channel('balam-sync-domain-versions')
         .on('postgres_changes', { event: '*', schema: 'pos', table: 'sync_domain_versions' }, payload => {
+          if (!automaticSyncAllowed()) return;
           const row = payload && (payload.new || payload.record);
           if (row) invalidateDomain(row.domain, row.version);
         })
         .subscribe(status => {
+          if (!enabled) return;
           syncRealtimeState = String(status || '').toLowerCase();
-          if (status === 'SUBSCRIBED') reconcileDomains().catch(() => { /* */ });
+          if (status === 'SUBSCRIBED') runAutomaticSync().catch(() => { /* */ });
         });
     }
-    if (!syncPollTimer) syncPollTimer = setInterval(async () => {
-      if (!enabled || !hasLocalWriter(false) || syncRecovering || document.hidden
-          || (typeof navigator !== 'undefined' && navigator.onLine === false)) return;
-      try {
-        if (syncCompatibility !== 'ok') await loadSyncProtocol(c);
-        if (syncCompatibility === 'must_rebootstrap') await applyRemoteSelectiveCleanup();
-        if (syncCompatibility !== 'ok') return;
-        await flushQueue();
-        await waitForFlushIdle();
-        await reconcileDomains({ force: !syncLastFullCheck || Date.now() - syncLastFullCheck >= 300000 });
-      } catch (e) { /* el siguiente ciclo reintenta sin descartar la cola */ }
+    if (!syncPollTimer) syncPollTimer = setInterval(() => {
+      return runAutomaticSync().catch(() => { /* el siguiente ciclo conserva y reintenta */ });
     }, 60000);
     if (!syncHeartbeatTimer) syncHeartbeatTimer = setInterval(() => {
-      if (!enabled || !hasLocalWriter(false) || document.hidden || (typeof navigator !== 'undefined' && !navigator.onLine)) return;
-      heartbeatDevice(c).catch(() => { /* el siguiente latido reintenta */ });
+      if (!automaticSyncAllowed()) return;
+      return heartbeatDevice(sb).catch(() => { /* el siguiente latido reintenta */ });
     }, 60000);
+    if (!onlineSubscribed) {
+      onlineSubscribed = true;
+      window.addEventListener('online', () => {
+        runAutomaticSync().then(result => {
+          if (result?.ok && automaticSyncAllowed()) {
+            ensureFolioBlock(); autoMigratePhotos().catch(() => {});
+          }
+        }).catch(() => { /* polling retries failed startup too */ });
+      });
+    }
     if (!syncLifecycleSubscribed) {
       syncLifecycleSubscribed = true;
-      window.addEventListener('visibilitychange', () => {
-        if (!document.hidden) {
-          reconcileDomains().catch(() => { /* */ });
-          heartbeatDevice(c).catch(() => { /* */ });
-        }
+      const visibilityTarget = typeof document.addEventListener === 'function' ? document : window;
+      visibilityTarget.addEventListener('visibilitychange', () => {
+        if (!document.hidden) runAutomaticSync().catch(() => { /* */ });
       });
       window.addEventListener('syncactivitychange', () => {
+        if (!automaticSyncAllowed()) return;
         if (syncReconcilePromise) syncReconcileAgain = true;
-        reconcileDomains().catch(() => { /* */ });
+        runAutomaticSync().catch(() => { /* */ });
       });
     }
   }
@@ -3336,6 +3425,7 @@
     const q = queueStatus();
     return {
       recoveryPhase, recoveryError,
+      reviewPending: syncReviewPending,
       compatibility: syncCompatibility,
       protocolVersion: SYNC_PROTOCOL_VERSION,
       schemaVersion: SYNC_SCHEMA_VERSION,
@@ -3352,7 +3442,7 @@
       cursors: Object.assign({}, syncCursors),
       reconciling: !!syncReconcilePromise,
       pending: q.devicePending, blocked: q.deviceBlocked,
-      synchronized: recoveryPhase === 'ready' && (typeof navigator === 'undefined' || navigator.onLine !== false)
+      synchronized: syncReviewPending === 0 && recoveryPhase === 'ready' && (typeof navigator === 'undefined' || navigator.onLine !== false)
         && !!syncManifest && syncCompatibility === 'ok'
         && syncLastVersionCheck > 0 && Date.now() - syncLastVersionCheck <= 120000
         && syncRemoteVersions.length > 0
@@ -3416,6 +3506,7 @@
       itemCount: sourceItems.length,
       itemsTruncated: sourceItems.length > items.length,
       items,
+      ...(op.referenceReview ? { referenceReview: op.referenceReview } : {}),
       diagnostic: op.diagnostic ? {
         category: op.diagnostic.category || null, code: op.diagnostic.code || null,
         message: op.diagnostic.message || null, policy: op.diagnostic.policy || null,
@@ -3436,13 +3527,19 @@
         p_payload_summary: payloadSummary,
       });
       if (result.error) throw new Error(result.error.message || 'QUARANTINE_REPORT_FAILED');
+      if (result.data !== true) throw new Error('QUARANTINE_REPORT_UNCONFIRMED');
       cases.push({ operationId: String(op.id), remoteEpoch: Number(remoteEpoch), payloadHash });
     }
     return cases;
   }
   async function writeQuarantineArchive(archive) {
     if (archive.storage !== 'indexedDB') {
-      try { localStorage.setItem(archive.key, JSON.stringify(archive.value)); return; }
+      try {
+        const encoded = JSON.stringify(archive.value);
+        localStorage.setItem(archive.key, encoded);
+        if (localStorage.getItem(archive.key) !== encoded) throw new Error('QUARANTINE_NOT_DURABLE');
+        return;
+      }
       catch (e) { /* la cuota no debe impedir usar el respaldo existente */ }
     }
     try {
@@ -3450,6 +3547,75 @@
       archive.storage = 'indexedDB';
       try { localStorage.removeItem(archive.key); } catch (e) { /* lectura prioriza IndexedDB */ }
     } catch (e) { throw new Error('QUARANTINE_STORAGE_UNAVAILABLE'); }
+  }
+  function isArchivableProductRejection(op) {
+    return op?.type === 'upsert' && op.kind === 'products' && op.status === 'blocked_conflict'
+      && op.diagnostic?.retryable === false
+      && (op.diagnostic.policy === 'review_reference'
+        || (op.diagnostic.policy === 'review_conflict' && op.diagnostic.code === 'product_version_conflict'));
+  }
+  async function archiveRejectedReferences(c) {
+    if (!hasLocalWriter(false) || window.CORE.activityStatus().active) return;
+    const seq = sessionSeq;
+    const rejected = loadQ().filter(op => opBelongsToActiveSession(op) && !op.quarantineReplay
+      && isArchivableProductRejection(op));
+    if (!rejected.length || !(await syncActivityUser(c))?.id) return;
+    for (const op of rejected) {
+      try {
+        if (seq !== sessionSeq || !enabled || !hasLocalWriter(false)) return;
+        const epoch = Number(syncManifest.data_epoch);
+        const key = `balam_sync_quarantine_reference_${epoch}_${op.id}`;
+        let archive = (await quarantineArchives()).find(value => value.key === key);
+        if (!archive) {
+          const fields = ['sync_version','precio','stock','stock_quantity','record_model','physical_signature','barcode_code','cat','manga','tela','color','cuello','modelo','orn','ornament_color_codes','size_category_id','size_code','size_scale','attrs'];
+          const original = JSON.parse(JSON.stringify(op));
+          const rows = original.submittedRows || original.rows;
+          const remoteRows = [];
+          // Keep the complete original, while bounding PostgREST comparison URLs.
+          for (let offset = 0; offset < rows.length; offset += 100) {
+            const remote = await c.from('products').select(['id', ...fields].join(','))
+              .in('id', rows.slice(offset, offset + 100).map(row => row.id));
+            if (remote.error) throw remote.error;
+            remoteRows.push(...(remote.data || []));
+          }
+          const canonical = value => JSON.stringify(value, (_key, item) => item && typeof item === 'object' && !Array.isArray(item)
+            ? Object.fromEntries(Object.keys(item).sort().map(key => [key,item[key]])) : item);
+          const differences = rows.map(row => {
+            const confirmed = remoteRows.find(item => item.id === row.id);
+            const compared = fields.filter(field => Object.prototype.hasOwnProperty.call(row, field)
+              && canonical(row[field]) !== canonical(confirmed?.[field]))
+              .map(field => ({ field, requested: row[field], confirmed: confirmed?.[field] ?? null }));
+            if (Object.prototype.hasOwnProperty.call(row, 'sync_base_version')
+                && canonical(row.sync_base_version) !== canonical(confirmed?.sync_version)) {
+              compared.unshift({ field: 'sync_base_version', requested: row.sync_base_version, confirmed: confirmed?.sync_version ?? null });
+            }
+            return { id: row.id, name: row.nombre || row.id, missingRemote: !confirmed, fields: compared };
+          });
+          original.referenceReview = { rowCount: rows.length, rows: [], truncated: false };
+          for (const difference of differences) {
+            if (new TextEncoder().encode(JSON.stringify(original.referenceReview) + JSON.stringify(difference)).length > 24000) { original.referenceReview.truncated = true; break; }
+            original.referenceReview.rows.push(difference);
+          }
+          archive = { key, value: { epoch, localEpoch: op.dataEpoch,
+            reason: op.diagnostic.code === 'product_version_conflict' ? 'product_version_rejected' : 'reference_rejected', operations: [original] } };
+          await writeQuarantineArchive(archive);
+        }
+        if (seq !== sessionSeq || !enabled || !hasLocalWriter(false)) return;
+        if (!archive.value.reportedAt) {
+          const cases = await reportQuarantineCases(c, archive.value.operations, archive.value.localEpoch, epoch);
+          archive.value.cases = cases; archive.value.reportedAt = new Date().toISOString();
+          await writeQuarantineArchive(archive);
+        }
+        // This is an unresolved archive, never a successful commercial ACK.
+        const current = loadQ().find(item => item.id === op.id);
+        if (seq !== sessionSeq || !enabled || !hasLocalWriter(false) || flushing
+            || !current || !opBelongsToActiveSession(current)
+            || !isArchivableProductRejection(current)) continue;
+        syncReviewPending = (Number(syncReviewPending) || 0) + 1;
+        saveQ(loadQ().filter(item => item.id !== op.id)); await backupChain;
+        syncFullDomains.add('products'); syncInvalid.set('products', Number(syncCursors.products) || 0);
+      } catch (error) { /* Keep the active operation until original and remote receipt are durable. */ }
+    }
   }
   async function quarantineArchives() {
     const archives = [];
@@ -3498,10 +3664,11 @@
     for (const archive of await quarantineArchives()) {
       if (Number(archive.value.epoch) !== Number(remoteEpoch)) continue;
       const op = (archive.value.operations || []).find(x => String(x.id) === String(operationId));
-      if (!op) continue;
+      if (!op || !opBelongsToActiveSession(op)) continue;
       const active = loadQ();
       if (!active.some(x => String(x.id) === String(op.id))) {
         const restored = JSON.parse(JSON.stringify(op));
+        restored.quarantineReplay = true;
         restored.status = 'retry_wait'; restored.nextAttemptAt = 0;
         delete restored.diagnostic;
         saveQ(active.concat(restored));
@@ -3518,13 +3685,16 @@
   }
   async function consumeSyncQuarantineDecisions(c) {
     if (!c) return 0;
+    const seq = sessionSeq;
+    const current = () => seq === sessionSeq && enabled && hasLocalWriter(false);
     const result = await c.rpc('consume_sync_quarantine_decisions', {
       p_device_id: window.CORE.getDeviceId(),
     });
-    if (result.error) return 0;
+    if (result.error || !current()) return 0;
     let completed = 0;
     for (const command of (result.data || [])) {
       const found = await restoreQuarantinedOperation(command.operation_id, command.remote_epoch);
+      if (!current()) return completed;
       if (!found) {
         await c.rpc('complete_sync_quarantine', {
           p_device_id: window.CORE.getDeviceId(), p_operation_id: command.operation_id,
@@ -3534,13 +3704,24 @@
         continue;
       }
       await flushQueue();
+      if (!current()) return completed;
       const pending = loadQ().some(op => String(op.id) === String(command.operation_id));
-      await c.rpc('complete_sync_quarantine', {
+      const completion = await c.rpc('complete_sync_quarantine', {
         p_device_id: window.CORE.getDeviceId(), p_operation_id: command.operation_id,
         p_remote_epoch: command.remote_epoch, p_ok: !pending,
         p_message: pending ? 'La RPC normal rechazó o difirió la operación' : null,
       });
-      if (!pending) { await removeResolvedQuarantine(found, command.operation_id); completed++; }
+      if (!current()) return completed;
+      if (!pending && !completion.error && completion.data === true) { await removeResolvedQuarantine(found, command.operation_id); completed++; }
+      else if (!completion.error && completion.data === true) {
+        const rejected = loadQ().find(op => String(op.id) === String(command.operation_id));
+        if (found && isArchivableProductRejection(rejected)) {
+          // A rejected authorized replay still has its original and failed case.
+          saveQ(loadQ().filter(op => String(op.id) !== String(command.operation_id)));
+          await backupChain;
+          syncFullDomains.add('products'); syncInvalid.set('products', Number(syncCursors.products) || 0);
+        }
+      }
     }
     return completed;
   }
@@ -3629,6 +3810,8 @@
   let syncUpdatePromise = null;
   function synchronizeNow() {
     if (syncUpdatePromise) return syncUpdatePromise;
+    const seq = sessionSeq;
+    startLiveSync(sb);
     syncUpdatePromise = (async () => {
       if (window.CORE.activityStatus().active) return { ok: false, code: 'ACTIVITY_ACTIVE',
         message: 'Termina la operación abierta para completar la actualización.', status: syncStatus() };
@@ -3636,8 +3819,14 @@
       if (!c || typeof navigator !== 'undefined' && navigator.onLine === false) {
         return { ok: false, message: 'Conéctate a internet para terminar de guardar y actualizar este equipo.', status: syncStatus() };
       }
+      if (!enabled || seq !== sessionSeq || !hasLocalWriter(false)) return { ok: false, message: 'La sesión de este equipo cambió.', status: syncStatus() };
+      if (syncInitPromise) await syncInitPromise;
+      if (!syncBootstrapComplete && enabled && seq === sessionSeq) await init({ pull: true });
+      if (!(await recoverDirectedDevice()) || !enabled || seq !== sessionSeq) return { ok: false, message: 'Estamos comprobando la recuperación de este equipo.', status: syncStatus() };
       await hydrateDurableQueue();
       await loadSyncProtocol(c);
+      if (!enabled || seq !== sessionSeq || !hasLocalWriter(false)) return { ok: false, status: syncStatus() };
+      startLiveSync(c);
       if (syncCompatibility === 'must_rebootstrap') await rebootstrapFromCloud();
       if (syncCompatibility !== 'ok') return { ok: false, message: 'Esta computadora necesita actualizar BALAM antes de continuar.', status: syncStatus() };
       await flushQueue();
@@ -3648,6 +3837,8 @@
       }
       const status = syncStatus();
       return { ok: status.synchronized, status, message: status.synchronized ? 'Todo actualizado'
+        : status.reviewPending ? `Hay ${status.reviewPending} expediente(s) que administración debe revisar. Los originales están conservados.`
+        : status.reviewPending == null ? 'Falta confirmar la revisión de los cambios conservados. Se reintentará automáticamente.'
         : status.pending ? 'Hay movimientos pendientes por enviar. Sus datos siguen guardados en este equipo.'
         : window.CORE.activityStatus().active ? 'Termina la operación abierta para completar la actualización.'
         : 'Este equipo tiene información pendiente de actualizar. Vuelve a intentarlo; si continúa, revisa los detalles con administración.' };
@@ -4020,8 +4211,22 @@
     return true;
   }
 
-  async function init(opts = {}) {
+  function init(opts = {}) {
+    const seq = sessionSeq;
+    if (syncInitPromise) {
+      if (syncInitSession === seq) return syncInitPromise;
+      return syncInitPromise.catch(() => {}).then(() => seq === sessionSeq && enabled
+        ? init(opts) : { ok: false, stale: true });
+    }
+    syncInitSession = seq;
+    syncInitPromise = initializeStore(opts, seq).finally(() => { syncInitPromise = null; syncInitSession = null; });
+    return syncInitPromise;
+  }
+  async function initializeStore(opts, seq) {
     enabled = true;
+    syncBootstrapComplete = false;
+    // These signals must survive unavailable recovery/manifest endpoints.
+    startLiveSync(sb);
     if (!writerSubscribed) {
       writerSubscribed = true;
       window.addEventListener('localwriterchange', event => {
@@ -4038,9 +4243,12 @@
     }
     if (!hasLocalWriter(false)) return { ok: false, readOnly: true };
     await hydrateDurableQueue();
+    if (!enabled || seq !== sessionSeq) return { ok: false, stale: true };
     const protocolClient = await ensureClient();
     if (!(await recoverDirectedDevice())) return { ok: false, recoveryRequired: true };
+    if (!enabled || seq !== sessionSeq) return { ok: false, stale: true };
     if (protocolClient) await loadSyncProtocol(protocolClient);
+    if (!enabled || seq !== sessionSeq) return { ok: false, stale: true };
     if (syncCompatibility === 'must_rebootstrap') {
       try { await applyRemoteSelectiveCleanup(); } catch (e) { /* preserve recovery state for polling */ }
     }
@@ -4059,16 +4267,6 @@
     if (window.DATA && typeof window.DATA.reconcileLayawayProductLocks === 'function') {
       window.DATA.reconcileLayawayProductLocks(layawayOpsAtBoot);
     }
-    // Al reconectar: drena la cola y, además, migra fotos incrustadas que hayan quedado.
-    if (!onlineSubscribed) {
-      onlineSubscribed = true;
-      window.addEventListener('online', () => {
-        flushQueue();
-        ensureFolioBlock();
-        autoMigratePhotos().catch(() => { /* */ });
-        reconcileDomains().catch(() => { /* la siguiente señal reintenta */ });
-      });
-    }
     // Drenar la cola ANTES del pull: los cambios de la sesión anterior llegan primero a la
     // nube y el pull ya regresa el estado completo. (Antes el pull corría primero y
     // reemplazaba lo local, "des-haciendo" capturas cuya subida quedó pendiente.)
@@ -4083,6 +4281,7 @@
     try { purged = await applyRemotePurge(); } catch (e) { /* nunca bloquear el arranque */ }
     const pendingAtBoot = loadQ().length;
     try { await flushQueue(); } catch (e) { /* offline: la cola queda para el reintento */ }
+    if (!enabled || seq !== sessionSeq) return { ok: false, stale: true };
     if (opts.pull) {
       // Config local sin subir (op 'config' aún en cola): conservarla, no pisarla con la nube.
       const cfgPending = hasPendingFor('settings');
@@ -4104,6 +4303,7 @@
       if (!seller) {
         try { await pullDomain('sales'); } catch (e) { /* tabla ausente */ }
       }
+      if (!enabled || seq !== sessionSeq) return { ok: false, stale: true };
       // H-68: las cargas masivas que la limpieza invalidó se reencolan AQUÍ, ya con la
       // versión que la nube dejó tras restaurar. Antes del pull el control optimista las
       // rechazaría por versión vieja.
@@ -4126,6 +4326,8 @@
     // Deja la terminal con folios del día ya reservados: si pierde la red después,
     // sigue emitiendo folios cortos definitivos.
     ensureFolioBlock();
+    if (!enabled || seq !== sessionSeq || !hasLocalWriter(false)) return { ok: false, stale: true };
+    syncBootstrapComplete = true;
     if (protocolClient) {
       startLiveSync(protocolClient);
       reconcileDomains().catch(() => { /* modo local */ });
@@ -4143,15 +4345,22 @@
         sessionSeq++;
         sessionIdentity = null;
         enabled = false;
+        syncBootstrapComplete = false;
+        syncReviewPending = null;
         stopLiveSync();
       }
       return Promise.resolve({ ok: true, signedOut: true });
     }
     sessionManaged = true;
     if (next === sessionIdentity && enabled) {
+      startLiveSync(sb);
+      runAutomaticSync().catch(() => {});
       return Promise.resolve({ ok: true, unchanged: true });
     }
     sessionIdentity = next;
+    syncBootstrapComplete = false;
+    syncReviewPending = null;
+    stopLiveSync();
     setRecoveryPhase('checking');
     const seq = ++sessionSeq;
     enabled = true;
@@ -4260,11 +4469,10 @@
     }
   }
 
-  window.addEventListener('online', () => {
-    if (enabled && recoveryPhase !== 'ready') init({ pull: true }).catch(()=>{});
-  });
   setInterval(() => {
-    if (enabled && recoveryPhase === 'waiting' && hasLocalWriter(false)) init({ pull: true }).catch(()=>{});
+    if (enabled && (!syncManifest || recoveryPhase !== 'ready' || recoveryError)) {
+      return runAutomaticSync().catch(() => {});
+    }
   }, 15000);
   window.STORE = { assertBusinessReady, recoverDirectedDevice, init, synchronizeNow, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushClient, pushSale, settleLayaway, pushReturn, pushExchange, commitReferenceReclassification, ensureFolioBlock, deleteRow, deleteProductScope, settleCommission, closeCommissionPeriod, applyCommissionAdjustment, pushLoanOperation, migrateLocalLoans, pullDomain, fetchSaleByFolio, physicalCardAvailable, claimPhysicalCard, flushQueue, retryOperation, discardOperation, queueStatus, syncStatus, syncFleetStatus, updateSyncDevice, setSyncDeviceRetired, requestSyncRetry, markSyncActivityReviewed, decideSyncQuarantine, exportQuarantineReport, reconcileDomains, invalidateDomain, establishPointZero, pointZeroPreview, createPointZeroBackup, executePointZero, pointZeroReceipt, downloadPointZeroDocument, previewTestDataCleanup, createTestDataCleanupBackup, executeTestDataCleanup, testDataCleanupReceipt, downloadTestDataCleanupDocument, rebootstrapFromCloud, exportSyncRecovery, hasPendingLayaway, clearQueue, markResetApplied, purgeTestData, applyRemotePurge, applyRemoteSelectiveCleanup, pruneQueueForPurge, pruneQueueForSelectiveCleanup, readPurgeState, readSelectiveCleanupEvent, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
   window.STORE.pushProductFamilyBatch = pushProductFamilyBatch;

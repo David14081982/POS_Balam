@@ -1,0 +1,232 @@
+{
+  "createdAt": "2026-09-11T15:35:49.425Z",
+  "artifactSHA256": "8883393ca53d880e5af59ad34113e4c912e886308ec8f697df09a9e4b5ae32d0",
+  "serviceWorkerSHA256": "aba921105c7f43946b922d2110f4c86e9da95734c9e51aa91a4570d28c32ce16",
+  "artifactUnchanged": true,
+  "passed": 144,
+  "failed": 0,
+  "tests": [
+    {
+      "script": "test-h153-print-lifecycle.mjs",
+      "passed": 80,
+      "total": 80,
+      "exitCode": 0,
+      "error": null,
+      "elapsedMs": 221914,
+      "sha256": "9897ee63ef8a69b9c8d6febef63ca333f383cc26f701ac46cce72f3089d62420",
+      "log": "C:\\Users\\david\\Downloads\\POS-BALAM-ticket-h134\\h155-sync\\.evidence-h155-live\\printing-final\\lifecycle.log"
+    },
+    {
+      "script": "test-h153-print-races.mjs",
+      "passed": 3,
+      "total": 3,
+      "exitCode": 0,
+      "error": null,
+      "elapsedMs": 39990,
+      "sha256": "8e73c7d3f4f5853b8da0338a2c60a31a9358d21f1e57914b5790dd152952e1e2",
+      "log": "C:\\Users\\david\\Downloads\\POS-BALAM-ticket-h134\\h155-sync\\.evidence-h155-live\\printing-final\\races.log"
+    },
+    {
+      "script": "test-h153-print-errors.mjs",
+      "passed": 12,
+      "total": 12,
+      "exitCode": 0,
+      "error": null,
+      "elapsedMs": 33259,
+      "sha256": "203d74e9d5b19624073b9690f7319448199c7a87ac352c21a68665d67e370533",
+      "log": "C:\\Users\\david\\Downloads\\POS-BALAM-ticket-h134\\h155-sync\\.evidence-h155-live\\printing-final\\errors.log"
+    },
+    {
+      "script": "test-ticket-print.mjs",
+      "passed": 23,
+      "total": 23,
+      "exitCode": 0,
+      "error": null,
+      "elapsedMs": 117393,
+      "sha256": "887134b611c399fd958e4b465e57ca9257a3028464f34bb0d56d5733601bc222",
+      "log": "C:\\Users\\david\\Downloads\\POS-BALAM-ticket-h134\\h155-sync\\.evidence-h155-live\\printing-final\\ticket.log"
+    },
+    {
+      "script": "test-h153-artifacts.py",
+      "passed": 26,
+      "total": 26,
+      "exitCode": 0,
+      "sha256": "10bc86ecafef73723133de9143d8dca7e440ad8d842d517257213fa76cc91470",
+      "log": "C:\\Users\\david\\Downloads\\POS-BALAM-ticket-h134\\h155-sync\\.evidence-h155-live\\printing-final\\independent.log"
+    }
+  ],
+  "runtime": {
+    "node": "v24.14.0",
+    "chromiumExecutable": "C:/Users/david/AppData/Local/ms-playwright/chromium-1228/chrome-win64/chrome.exe",
+    "pymupdf": "1.28.2"
+  },
+  "limits": [
+    "Supabase blocked by every harness",
+    "Synthetic documents and transport boundary; no physical printer or RawBT installation tested",
+    "Android user agent emulated in desktop Chromium"
+  ],
+  "executionNotes": [
+    "Sequential browser harnesses; same executable adapter as previous pass",
+    "Races ran from evidence directory against an identical HTML copy to confine its JSON output",
+    "Independent PNG/PDF verification used existing PyMuPDF without installing dependencies"
+  ],
+  "artifactDirectory": ".evidence-h155-live/printing-final",
+  "artifacts": [
+    {
+      "file": "android-3-copies-1.png",
+      "sha256": "6b5117d8a036fd85d6219107a55c44179e52434e359ae076b78b6c42f65dc13f"
+    },
+    {
+      "file": "android-3-copies-2.png",
+      "sha256": "6b5117d8a036fd85d6219107a55c44179e52434e359ae076b78b6c42f65dc13f"
+    },
+    {
+      "file": "android-3-copies-3.png",
+      "sha256": "6b5117d8a036fd85d6219107a55c44179e52434e359ae076b78b6c42f65dc13f"
+    },
+    {
+      "file": "android-5-copies-1.png",
+      "sha256": "cf0864154e481689b1145baa7018ded9bb56eaddf7bd3924b8e894dc73b6fd35"
+    },
+    {
+      "file": "android-5-copies-2.png",
+      "sha256": "cf0864154e481689b1145baa7018ded9bb56eaddf7bd3924b8e894dc73b6fd35"
+    },
+    {
+      "file": "android-5-copies-3.png",
+      "sha256": "cf0864154e481689b1145baa7018ded9bb56eaddf7bd3924b8e894dc73b6fd35"
+    },
+    {
+      "file": "android-5-copies-4.png",
+      "sha256": "cf0864154e481689b1145baa7018ded9bb56eaddf7bd3924b8e894dc73b6fd35"
+    },
+    {
+      "file": "android-5-copies-5.png",
+      "sha256": "cf0864154e481689b1145baa7018ded9bb56eaddf7bd3924b8e894dc73b6fd35"
+    },
+    {
+      "file": "android-CORTO-B.png",
+      "sha256": "285db01d23f06e3ca018c326cbd7f72e9938eb2e596c65423a92416c360b82a6"
+    },
+    {
+      "file": "android-exchange.png",
+      "sha256": "f5d8e6ce6185809f9ac8c52d65d86c84aa730cc8b4258ac12e3a4c53e94d9bc8"
+    },
+    {
+      "file": "android-LARGO-A.png",
+      "sha256": "9f089fc645dd6a4b0acb157d601564c0770104bd0735caee541796e7e5b4e953"
+    },
+    {
+      "file": "android-LARGO-C.png",
+      "sha256": "492f7017f8540103092a0a8c69b3800f75aeac5184f9707246b9fda89f59a2de"
+    },
+    {
+      "file": "android-layaway.png",
+      "sha256": "ad52b3db07a8e0f96cdac6a5c7e677b9071f6db5daccc32d33ab09133ebd2003"
+    },
+    {
+      "file": "android-offline.png",
+      "sha256": "86182e118a86f2337d32c574a231e5ed5ba2e2fa1ce0f228b11f444376c7e93e"
+    },
+    {
+      "file": "android-payment.png",
+      "sha256": "9f80050b1b4167dbbe022653fd2473db70e4846acff22f3dede2ab59d195e682"
+    },
+    {
+      "file": "android-return.png",
+      "sha256": "6b51561c6ff558e269776256985fd2dce59195547affcd83a7525b11cffba82b"
+    },
+    {
+      "file": "Browser-history.json",
+      "sha256": "98fd23ccdb29014dd5d148b02bcdbb1ffef737a96dd39f490036c4dcf575d92c"
+    },
+    {
+      "file": "desktop-3-copies-1.pdf",
+      "sha256": "5ad346eca877bbc8df0e0352416e6767e109c95dd748280c2e79e2f890e0969c"
+    },
+    {
+      "file": "desktop-5-copies-1.pdf",
+      "sha256": "862323c0b87b01f7e61f08b4ed46100f233dc6c10b37ecaa086785333d8fbba6"
+    },
+    {
+      "file": "desktop-CORTO-B.pdf",
+      "sha256": "05e1340c53b67b75df66d8fb03f804a74ec248697ee6ba1637e2b345955a49a6"
+    },
+    {
+      "file": "desktop-exchange.pdf",
+      "sha256": "1c2ec343da103aa62c0f34d6a9591c3337422091bdd33e4f60c5746659fb7ada"
+    },
+    {
+      "file": "desktop-LARGO-A.pdf",
+      "sha256": "46bc74f8b0341cd201e6b04bdd9dbde21af5afcfdeba2c400c99420fda99b84a"
+    },
+    {
+      "file": "desktop-LARGO-A.pdf.png",
+      "sha256": "9c3b3acdfbefbed181fe513615e8c656c2a43ac60cb4df1aee46cdd5f28d85a0"
+    },
+    {
+      "file": "desktop-LARGO-C.pdf",
+      "sha256": "e6c4f273cdb9e8e5cdd201287c7134fbfba5dd00069ec4171926cc630ab18d0c"
+    },
+    {
+      "file": "desktop-layaway.pdf",
+      "sha256": "be272c5dd88fe8df478752e7c284bc8eebbd47f7c1daab0aaafcec275e02986d"
+    },
+    {
+      "file": "desktop-offline.pdf",
+      "sha256": "3329adfbd2d67c7d8e088bbd7f03df69f8d1c54beee95dfbe39ea3f54099ea06"
+    },
+    {
+      "file": "desktop-payment.pdf",
+      "sha256": "4a15fc46dd3194d4c74c602628cc71cc9c640df0df450b636ddf92ad814ce44a"
+    },
+    {
+      "file": "desktop-return.pdf",
+      "sha256": "39b46147e08f3e360de9010a14c7e45502033e310d053d1320b3c0beb47cd3f9"
+    },
+    {
+      "file": "desktop-return.pdf.png",
+      "sha256": "9a3def673ed4882d13ae56bdd0c7e911b0612090c5db1eb745f33404f7329db7"
+    },
+    {
+      "file": "errors.log",
+      "sha256": "ab5333f86c614150ad721558bc2539fa44cf65d0854aa13e5c5fe5887cdfda00"
+    },
+    {
+      "file": "h153-races.json",
+      "sha256": "a7c3852d40c9ab276a9f04df9e3cb504131bd8ee15e9259165b0573dfa8fb280"
+    },
+    {
+      "file": "independent-artifacts.json",
+      "sha256": "e72ce9459e5546585d1db7c2b93aa1004074035693fc64c89ea94c7b809dbd7b"
+    },
+    {
+      "file": "independent.log",
+      "sha256": "c82faafcec8d73fe73f472e75983eb5a726d840caee3a5a80269639c5a1abd1c"
+    },
+    {
+      "file": "lifecycle.log",
+      "sha256": "39286410b776d30a318e71125093c7ccef15baef623737543e97ded1daeaaa7c"
+    },
+    {
+      "file": "races.log",
+      "sha256": "64de6c34961011e9d88f9130c724106dfb6a0627cad6715bff02a2509d4fb6ac"
+    },
+    {
+      "file": "RawBT-history.json",
+      "sha256": "18e545bf16140c4f30f63302f47ae2227cf9dc678821681f808c91b890712e08"
+    },
+    {
+      "file": "results.json",
+      "sha256": "060b672fe6eeac74101ba35438155fc5632f93d80d519a6c89fa798077b559b8"
+    },
+    {
+      "file": "run-summary.json",
+      "sha256": "a4dd25e3262db8e8af6427ae0c6890782935dc29c40b3519ee85d0c08dae9cf5"
+    },
+    {
+      "file": "ticket.log",
+      "sha256": "7a434272be98bcf3a62ca12c59bdb4f368c6d0ce9a70e5c9ef46191826a57dbe"
+    }
+  ]
+}

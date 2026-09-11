@@ -893,16 +893,30 @@
   // ── Controles de ajustes (parámetros sueltos) ──────────────────────────────────
   function CfgText({ k, label, hint, type = 'text', wide, min, max }) {
     const v = C.get(k);
+    const text = value => value == null ? '' : String(value);
+    const [draft, setDraft] = useState(() => text(v));
+    const baseline = useRef(text(v));
+    const dirty = useRef(false);
+    useEffect(() => {
+      if (!dirty.current) { baseline.current = text(v); setDraft(text(v)); }
+    }, [k, v]);
     return h('div', { key: k, className: 'mb-4 ' + (wide ? 'col-span-2' : '') }, [
       h('div', { key: 'l', className: 'font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mb-1.5' }, label),
       h('input', {
-        key: 'in', 'data-testid': 'config-field-' + k, type, min, max, defaultValue: v, className: INPUT,
+        key: 'in', 'data-testid': 'config-field-' + k, type, min, max, value: draft, className: INPUT,
+        onChange: e => { dirty.current = e.target.value !== baseline.current; setDraft(e.target.value); },
         onBlur: e => {
+          // Recibir configuración no es una edición. Un blur sin cambio (o un
+          // borrador deshecho) muestra la autoridad actual sin volver a enviarla.
+          if (!dirty.current) {
+            baseline.current = text(C.get(k)); setDraft(baseline.current); return;
+          }
+          dirty.current = false;
           let next = type === 'number' ? (Number(e.target.value) || 0) : e.target.value;
           if (type === 'number' && min != null) next = Math.max(Number(min), next);
           if (type === 'number' && max != null) next = Math.min(Number(max), next);
-          if (type === 'number') e.target.value = next;
-          C.setSetting(k, next);
+          baseline.current = text(next); setDraft(baseline.current);
+          if (next !== C.get(k)) C.setSetting(k, next);
         },
       }),
       hint && h('div', { key: 'h', className: 'text-caption text-on-surface-variant mt-1' }, hint),
@@ -915,17 +929,25 @@
     const guardado = C.get('folio.prefix');
     const norm = (v) => (D.normalizeFolioPrefix ? D.normalizeFolioPrefix(v) : String(v || 'BG').toUpperCase());
     const [pref, setPref] = useState(norm(guardado));
+    const baseline = useRef(norm(guardado));
+    const dirty = useRef(false);
+    useEffect(() => {
+      if (!dirty.current) { baseline.current = norm(guardado); setPref(baseline.current); }
+    }, [guardado]);
     const vista = D.folioPreview ? D.folioPreview(pref) : pref;
     return h('div', { key: 'folio', className: 'mb-4' }, [
       h('div', { key: 'l', className: 'font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mb-1.5' }, 'Prefijo de folio'),
       h('input', {
-        key: 'in', type: 'text', maxLength: 6, defaultValue: pref, className: INPUT,
-        onChange: e => setPref(norm(e.target.value)),
+        key: 'in', 'data-testid': 'config-field-folio.prefix', type: 'text', maxLength: 6, value: pref, className: INPUT,
+        onChange: e => { dirty.current = e.target.value !== baseline.current; setPref(e.target.value); },
         onBlur: e => {
+          if (!dirty.current) {
+            baseline.current = norm(C.get('folio.prefix')); setPref(baseline.current); return;
+          }
+          dirty.current = false;
           const next = norm(e.target.value);
-          e.target.value = next;
-          setPref(next);
-          if (next !== guardado) C.setSetting('folio.prefix', next);
+          baseline.current = next; setPref(next);
+          if (next !== C.get('folio.prefix')) C.setSetting('folio.prefix', next);
         },
       }),
       h('div', { key: 'p', className: 'text-caption text-on-surface-variant mt-1' }, [

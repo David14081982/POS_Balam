@@ -1,0 +1,109 @@
+{
+  "risk": "H-155",
+  "scope": "Read-only diagnosis of H149 certifier readiness; deterministic in-memory CORE + STORE + AUTH with synthetic transport",
+  "at": "2026-09-11T15:36:22.591Z",
+  "sourceSha256": {
+    "balam/core.jsx": "1b8b0673378831d8d78e4bc0c2c15f4f8f77250134849611d6da263dc34f73d4",
+    "balam/store.jsx": "6acd2605836b3ac99a7209da1a85270e86399fc2696359344a9b3fd7379db23b",
+    "balam/auth.jsx": "15722cd73472cd73d0c7d0af58c7b995879f44354fa1bffb0dfac3298c09eb99",
+    "balam/app.jsx": "a77b70f4cf6606318d13c3f3624243aab90e5f71ea3aa0481745294c4c7e82d3",
+    "test-h155-auto-sync.mjs": "a06e0798b049a64a3d407a2cc79e7aef46eaf203eb9660f555dba55d195611ae"
+  },
+  "abc02": {
+    "run": "ff47eb77-d162-4f5d-9069-0e346c94ad74",
+    "artifactSha256": "8883393ca53d880e5af59ad34113e4c912e886308ec8f697df09a9e4b5ae32d0",
+    "certifierSha256": "7363a5dd2fe8a0adddebed330400fe877e4273b64c37f686f567fa0ab6d73c8a",
+    "failedCase": {
+      "name": "H149 directed boot 17: discard, remote convergence, replay fence and new operation",
+      "ok": false,
+      "error": "page.evaluate: Error: Estamos actualizando la información de este equipo.\n    at Object.assertBusinessReady (blob:http://127.0.0.1:50891/9404a165-8ad5-4d57-9d58-5a81b763b54d:113:19)\n    at Object.invokeSync (blob:http://127.0.0.1:50891/5410b424-c195-4ed1-8720-1e5e389c4fdf:66:42)\n    at window.DATA.<computed> [as addClient] (blob:http://127.0.0.1:50891/009dc26e-b92b-4db1-b7e4-c79c2eef6656:8025:21)\n    at eval (eval at evaluate (:302:30), <anonymous>:1:21)\n    at UtilityScript.evaluate (<anonymous>:304:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)",
+      "startedAt": "2026-09-11T15:29:20.036Z",
+      "elapsedMs": 72277
+    },
+    "businessPreservation": true,
+    "cleanup": {
+      "ok": false,
+      "ids": [
+        "qa-h148-ff47eb77-d162-4f5d-9069-0e346c94ad74-admin",
+        "qa-h148-ff47eb77-d162-4f5d-9069-0e346c94ad74-seller"
+      ],
+      "devices": [
+        "qa-h148-ff47eb77-d162-4f5d-9069-0e346c94ad74-A",
+        "qa-h148-ff47eb77-d162-4f5d-9069-0e346c94ad74-B",
+        "qa-h148-ff47eb77-d162-4f5d-9069-0e346c94ad74-C"
+      ],
+      "errors": [
+        {
+          "name": "browser close",
+          "error": "Browser close exceeded 15s"
+        }
+      ]
+    },
+    "limitation": "The periodic state-C snapshot records ready/synchronized before the final reload; it does not record AUTH state at the failing addClient call. Browser close timeout is separate from the readiness assertion."
+  },
+  "cause": {
+    "layer": "test-h148-live-convergence.mjs final reload before the new operation",
+    "evidence": [
+      "app.jsx:175-177 starts AUTH.init and localhost STORE.init concurrently",
+      "auth.jsx:191 assigns session before awaiting the permission/profile snapshot at line195",
+      "auth.jsx:217-218 marks AUTH ready and emits only after profile resolution",
+      "app.jsx:167-168 passes the resolved profile into STORE.setSession",
+      "store.jsx:4364 changes recoveryPhase to checking when binding the managed identity",
+      "The old certifier line250 accepted hasSession plus the earlier unmanaged recoveryPhase ready, omitting AUTH readiness and the resolved owner"
+    ],
+    "conclusion": "The certifier predicate permits a demonstrated premature success followed by a correctly blocked capture. No commercial guard was weakened and no product mutation was needed to repair this test precondition."
+  },
+  "reproduction": {
+    "fixture": "setup({start:false}) from test-h155-auto-sync.mjs; load complete balam/auth.jsx alongside fixture CORE and STORE; install App onAuth handoff to STORE.setSession",
+    "transport": "Synthetic getSession and current_permission_snapshot only; no Supabase connections or writes",
+    "steps": [
+      "Retain the current_permission_snapshot response behind a Promise",
+      "Start AUTH.init and STORE.init concurrently, matching localhost App startup",
+      "Observe the old wait predicate while AUTH has a session but no resolved profile",
+      "Release the snapshot, synchronously pass AUTH.current() to STORE.setSession during authchange, and call the real STORE.assertBusinessReady",
+      "Wait for STORE.init completion and observe the authenticated ready state"
+    ],
+    "observations": [
+      {
+        "stage": "premature gate",
+        "hasSession": true,
+        "authReady": false,
+        "profile": null,
+        "recoveryPhase": "ready",
+        "oldHarnessPredicate": true
+      },
+      {
+        "stage": "resolved profile handoff",
+        "hasSession": true,
+        "authReady": true,
+        "profile": "h155-a@example.test",
+        "recoveryPhase": "checking",
+        "captureError": "DEVICE_RECOVERY_REQUIRED"
+      },
+      {
+        "stage": "settled managed bootstrap",
+        "hasSession": true,
+        "authReady": true,
+        "profile": "h155-a@example.test",
+        "recoveryPhase": "ready"
+      }
+    ]
+  },
+  "review": {
+    "oldPredicate": "window.AUTH?.hasSession() && window.STORE?.syncStatus().recoveryPhase === 'ready'",
+    "newPredicate": "window.AUTH?.isReady() && window.AUTH?.hasSession() && window.AUTH.current()?.email === email && window.DATA?.isLocalWriter && window.STORE?.enabled && window.STORE.syncStatus().recoveryPhase === 'ready' && window.STORE.syncStatus().synchronized && !document.querySelector('[data-testid=\"device-recovery-gate\"]')",
+    "timeoutMs": 120000,
+    "afterCertifierSha256": "d4aa1fdf1611ee013561b50b73cffb69daab65d377656467c7e5efec2e3b740f",
+    "onlyReadinessDelta": true,
+    "comparison": "Reconstructing the former reload/wait line and removing only the new readiness block yields exactly the ABC02 certifier SHA256.",
+    "businessChecksPreserved": [
+      "DATA.addClient runs once without retry or caught rejection",
+      "Supabase client existence remains asserted",
+      "Completed recovery receipt timestamp remains unchanged",
+      "A/B/C convergence and truthful device state remain asserted",
+      "Browser close timeout remains15 seconds"
+    ],
+    "verdict": "The new wait strengthens the authoritative precondition; it does not soften the commercial assertions."
+  },
+  "limits": "This diagnosis does not make failed ABC02 certified. The full matrix must pass again against the unchanged final product artifact. No product, harness, SQL, browser profile or remote data was modified by this diagnostic agent."
+}

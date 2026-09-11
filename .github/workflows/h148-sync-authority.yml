@@ -14,6 +14,7 @@ on:
       - 'test-h149-*.mjs'
       - 'test-h151-*.mjs'
       - 'test-h152-*.mjs'
+      - 'test-h155-*.mjs'
       - 'test-store-queue.mjs'
       - 'test-concurrency.mjs'
       - 'test-h142-*.mjs'
@@ -34,6 +35,7 @@ on:
       - 'test-h149-*.mjs'
       - 'test-h151-*.mjs'
       - 'test-h152-*.mjs'
+      - 'test-h155-*.mjs'
       - 'test-store-queue.mjs'
       - 'test-concurrency.mjs'
       - 'test-h142-*.mjs'
@@ -62,7 +64,33 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - name: Install isolated H155 SQL test runtime
+        env:
+          BALAM_PGLITE_ROOT: ${{ runner.temp }}/balam-h155-pglite
+        run: npm install --prefix "$env:BALAM_PGLITE_ROOT" --no-save --package-lock=false --ignore-scripts --no-audit --no-fund @electric-sql/pglite@0.5.8
+      - name: Install Chromium for the H155 bundle regression
+        run: |
+          node node_modules/playwright-core/cli.js install chromium
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $balamBrowserPath = node --input-type=module -e "import { chromium } from 'playwright-core'; process.stdout.write(chromium.executablePath());"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          "BALAM_CHROME_EXECUTABLE=$balamBrowserPath" >> $env:GITHUB_ENV
       - run: node build-offline.mjs
+      - run: node test-h155-build-eol.mjs
+      - run: node test-h155-auto-sync.mjs
+      - name: Verify H155 SQL guards and STORE acknowledgements
+        env:
+          BALAM_PGLITE_MODULE: ${{ runner.temp }}/balam-h155-pglite/node_modules/@electric-sql/pglite/dist/index.js
+        run: node test-h155-ornament-order-sql.mjs
+      - name: Verify H155 consumers in the generated bundle
+        env:
+          BALAM_VERIFIED_HTML: index.html
+        run: node test-h155-ui-sync.mjs
+      - run: node test-h132-inventory-identity-certification.mjs
+      - run: node test-h132-live-certifier.mjs
+      - run: node test-h127-label-diagnostics.mjs
+      - run: node test-h99-label-pdf.mjs
+      - run: node test-h100-materialized-label-sku.mjs
       - name: Require a complete live certificate for this delivery
         if: github.event_name != 'workflow_dispatch' || !inputs.live
         run: node test-h148-sync-certification.mjs docs/fixes/evidence/h148-live-matrix.json
@@ -77,12 +105,41 @@ jobs:
       - run: node test-h142-qa-races.mjs
       - run: node test-h142-device-center-focus.mjs
       - run: node test-migrations.mjs
+      - run: node test-h155-publication.mjs
+      - name: Stage verified Pages files
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && !inputs.live
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path _site
+          Copy-Item -LiteralPath index.html, 'POS Balam (offline).html', sw.js, manifest.webmanifest -Destination _site
+          Copy-Item -LiteralPath pwa -Destination _site -Recurse
+      - uses: actions/upload-pages-artifact@v3
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && !inputs.live
+        with:
+          path: _site
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && !inputs.live
+    needs: regression
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: balam-pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deployment
 
   live-certification:
     # Never expose provisioning credentials to a pull request or arbitrary ref.
     if: github.event_name == 'workflow_dispatch' && inputs.live && github.ref == 'refs/heads/main'
     runs-on: windows-latest
-    timeout-minutes: 35
+    timeout-minutes: 75
     concurrency:
       group: balam-live-supabase-certification
       cancel-in-progress: false

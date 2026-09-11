@@ -1,0 +1,61 @@
+{
+  "risk": "H-155",
+  "severity": "P1",
+  "at": "2026-09-11T15:27:37.314Z",
+  "problem": "Managed auth session lookup failure was interpreted as an unauthenticated legacy transport, reporting zero review cases and a synchronized local state while an archived case remained pending_review.",
+  "source": "balam/store.jsx",
+  "function": "heartbeatDevice",
+  "cause": "syncActivityUser catches getSession errors and returns null; the previous !user branch set syncReviewPending=0 for managed sessions too.",
+  "fix": "Only !sessionManaged permits reviewPending=0 without a user. Managed null/error results retain unknown review state.",
+  "reproduction": {
+    "fixture": "test-h155-auto-sync.mjs setup() using real CORE and STORE; synthetic Supabase only",
+    "steps": [
+      "Start with one product upsert and create its durable pending_review archive",
+      "Bind STORE.setSession to the fixture owner and confirm reviewPending=1 and synchronized=false",
+      "Replace client.auth.getSession with a thrown lookup error or a null session, then run the normal automatic timer"
+    ],
+    "beforeFix": {
+      "reviewPending": 0,
+      "synchronized": true,
+      "activeQueue": 0,
+      "remoteCaseStatus": "pending_review"
+    },
+    "afterFix": {
+      "reviewPending": null,
+      "synchronized": false,
+      "activeQueue": 0,
+      "remoteCaseStatus": "pending_review",
+      "original": "unchanged"
+    },
+    "legacyControl": "An explicitly unmanaged transport without an authenticated owner still reaches reviewPending=0 and synchronized=true."
+  },
+  "red": {
+    "scope": "synthetic transport; no production writes",
+    "passed": 21,
+    "failed": 2,
+    "storeSha256": "632da59516c7e295eef1ffea9d16ab2b2a42c7746af2d61defabcd43e48ca016",
+    "failures": [
+      "FAIL managed auth lookup throw keeps archived review unknown and never clean: Expected values to be strictly ",
+      "FAIL managed auth lookup null keeps archived review unknown and never clean: Expected values to be strictly equal:"
+    ]
+  },
+  "green": {
+    "scope": "synthetic transport; no production writes",
+    "passed": 23,
+    "failed": 0,
+    "storeSha256": "6acd2605836b3ac99a7209da1a85270e86399fc2696359344a9b3fd7379db23b",
+    "exitCode": 0
+  },
+  "logDirectory": ".evidence-h155-live/local-sync-auth/",
+  "tests": [
+    "managed auth lookup throw keeps archived review unknown and never clean",
+    "managed auth lookup null keeps archived review unknown and never clean",
+    "explicit unmanaged legacy transport remains usable without an authenticated review owner"
+  ],
+  "otherRegressions": {
+    "evidence": "h155-final-sync.json",
+    "passed": 351,
+    "failed": 0
+  },
+  "limits": "Local deterministic reproduction and regressions; no remote writes, build, SQL changes or Git mutation by this agent. Remote certification belongs to the coordinator."
+}

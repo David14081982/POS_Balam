@@ -1,0 +1,318 @@
+{
+  "scope": "Isolated Chromium; synthetic fixtures; no Supabase network or business writes",
+  "baseline": {
+    "at": "2026-09-11T14:34:51.425Z",
+    "exitCode": 1,
+    "passed": 1,
+    "failed": 14,
+    "results": [
+      {
+        "name": "v1 grid refreshes an open catalog from datachange without changing filters",
+        "pass": false,
+        "error": "The input did not match the regular expression /H155 remote/. Input:\n\n'STOCK: 4\\nH155 initial\\n\\nBEL\\n\\n$100.00\\nadd'\n"
+      },
+      {
+        "name": "v2 list refreshes an open catalog from datachange without changing filters",
+        "pass": false,
+        "error": "The input did not match the regular expression /H155 remote/. Input:\n\n'H155 initial\\n8 PIEZAS · 2 REFERENCIAS\\n$100.00\\nadd'\n"
+      },
+      {
+        "name": "remote removal clears catalog and an open size selection",
+        "pass": false,
+        "error": "Expected values to be strictly equal:\n\n1 !== 0\n"
+      },
+      {
+        "name": "a new selection uses the current identity while an existing ticket retains its price",
+        "pass": false,
+        "error": "The input did not match the regular expression /300/. Input:\n\n'M\\n$100.00\\n4 pz'\n"
+      },
+      {
+        "name": "V2 variant selection follows current references without resetting the chosen size",
+        "pass": false,
+        "error": "The input did not match the regular expression /325/. Input:\n\n'Blanco\\n$100.00\\n4 pz'\n"
+      },
+      {
+        "name": "a click before React processes datachange still resolves the current product",
+        "pass": false,
+        "error": "The input did not match the regular expression /H155 race current/. Input:\n\n'H155 initial\\n' +\n  'delete\\n' +\n  '\\n' +\n  'TALLA M • BLANCO\\n' +\n  '\\n' +\n  'SKU: H155-LEGACY-T\\n' +\n  '\\n' +\n  'remove\\n' +\n  '1\\n' +\n  'add\\n' +\n  '$100.00'\n"
+      },
+      {
+        "name": "a click racing a confirmed deletion cannot add the removed reference",
+        "pass": false,
+        "error": "Expected values to be strictly equal:\n\n1 !== 0\n"
+      },
+      {
+        "name": "increasing an existing line validates current stock without changing its agreed price",
+        "pass": false,
+        "error": "Expected values to be strictly equal:\n+ actual - expected\n... Skipped lines\n\n  'H155 initial\\n' +\n    'delete\\n' +\n    '\\n' +\n    'TALLA M • BLANCO\\n' +\n    '\\n' +\n...\n    'remove\\n' +\n+   '2\\n' +\n-   '1\\n' +\n    'add\\n' +\n+   '$200.00'\n-   '$100.00'\n"
+      },
+      {
+        "name": "an open V2 selection removes unavailable references and never displays an infinite price",
+        "pass": false,
+        "error": "Expected values to be strictly equal:\n\n2 !== 0\n"
+      },
+      {
+        "name": "previously edited text follows remote CONFIG and untouched blur cannot rewrite it",
+        "pass": false,
+        "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'H155 local saved'\n- 'H155 remote store'\n        ^\n"
+      },
+      {
+        "name": "focus without edits follows remote text and creates no configuration intent",
+        "pass": false,
+        "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'H155 initial store'\n- 'H155 remote focused'\n        ^\n"
+      },
+      {
+        "name": "remote changes preserve an active draft and its deliberate blur saves once",
+        "pass": false,
+        "error": "Expected values to be strictly equal:\n\n2 !== 1\n"
+      },
+      {
+        "name": "an abandoned edit returning to its original text does not overwrite concurrent CONFIG",
+        "pass": false,
+        "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'H155 initial store'\n- 'H155 remote wins'\n        ^\n"
+      },
+      {
+        "name": "numeric settings preserve number type, clamp bounds and avoid unchanged writes",
+        "pass": false,
+        "error": "Expected values to be strictly equal:\n\n'12.5' !== '45'\n"
+      },
+      {
+        "name": "unmount releases activity and consumers have no runtime errors",
+        "pass": true
+      }
+    ],
+    "mode": "final-bundle",
+    "htmlSha256": "cf872aa8848ead631fc6984b253d5f4242b10f063b919f3d0365480999ed9ce8"
+  },
+  "currentSources": {
+    "at": "2026-09-11T14:45:18.452Z",
+    "exitCode": 0,
+    "passed": 17,
+    "failed": 0,
+    "results": [
+      {
+        "name": "v1 grid refreshes an open catalog from datachange without changing filters",
+        "pass": true
+      },
+      {
+        "name": "v2 list refreshes an open catalog from datachange without changing filters",
+        "pass": true
+      },
+      {
+        "name": "remote removal clears catalog and an open size selection",
+        "pass": true
+      },
+      {
+        "name": "a new selection uses the current identity while an existing ticket retains its price",
+        "pass": true
+      },
+      {
+        "name": "V2 variant selection follows current references without resetting the chosen size",
+        "pass": true
+      },
+      {
+        "name": "a click before React processes datachange still resolves the current product",
+        "pass": true
+      },
+      {
+        "name": "a click racing a confirmed deletion cannot add the removed reference",
+        "pass": true
+      },
+      {
+        "name": "increasing an existing line validates current stock without changing its agreed price",
+        "pass": true
+      },
+      {
+        "name": "an open V2 selection removes unavailable references and never displays an infinite price",
+        "pass": true
+      },
+      {
+        "name": "previously edited text follows remote CONFIG and untouched blur cannot rewrite it",
+        "pass": true
+      },
+      {
+        "name": "focus without edits follows remote text and creates no configuration intent",
+        "pass": true
+      },
+      {
+        "name": "remote changes preserve an active draft and its deliberate blur saves once",
+        "pass": true
+      },
+      {
+        "name": "an abandoned edit returning to its original text does not overwrite concurrent CONFIG",
+        "pass": true
+      },
+      {
+        "name": "numeric settings preserve number type, clamp bounds and avoid unchanged writes",
+        "pass": true
+      },
+      {
+        "name": "folio prefix remote update survives an untouched blur without a new intent",
+        "pass": true
+      },
+      {
+        "name": "folio prefix draft and normalization survive concurrent configuration",
+        "pass": true
+      },
+      {
+        "name": "unmount releases activity and consumers have no runtime errors",
+        "pass": true
+      }
+    ],
+    "mode": "current-sources",
+    "htmlSha256": "cf872aa8848ead631fc6984b253d5f4242b10f063b919f3d0365480999ed9ce8",
+    "sourceSha256": {
+      "balam/pos.jsx": "e7c613ba88d0553ac880604cbaad9d9334328d8d3fdbe5459fb17fccd07312df",
+      "balam/settings.jsx": "44c446d0c72f399bf7956ca130dc5aa1eba6fc663aeb5b35204b50035e6d0e8a"
+    }
+  },
+  "certified": false,
+  "limits": "UI source regression only. Final bundle verification and real independent A/B/C convergence remain required.",
+  "folioBaseline": {
+    "at": "2026-09-11T14:42:59.266Z",
+    "exitCode": 1,
+    "passed": 15,
+    "failed": 2,
+    "results": [
+      {
+        "name": "v1 grid refreshes an open catalog from datachange without changing filters",
+        "pass": true
+      },
+      {
+        "name": "v2 list refreshes an open catalog from datachange without changing filters",
+        "pass": true
+      },
+      {
+        "name": "remote removal clears catalog and an open size selection",
+        "pass": true
+      },
+      {
+        "name": "a new selection uses the current identity while an existing ticket retains its price",
+        "pass": true
+      },
+      {
+        "name": "V2 variant selection follows current references without resetting the chosen size",
+        "pass": true
+      },
+      {
+        "name": "a click before React processes datachange still resolves the current product",
+        "pass": true
+      },
+      {
+        "name": "a click racing a confirmed deletion cannot add the removed reference",
+        "pass": true
+      },
+      {
+        "name": "increasing an existing line validates current stock without changing its agreed price",
+        "pass": true
+      },
+      {
+        "name": "an open V2 selection removes unavailable references and never displays an infinite price",
+        "pass": true
+      },
+      {
+        "name": "previously edited text follows remote CONFIG and untouched blur cannot rewrite it",
+        "pass": true
+      },
+      {
+        "name": "focus without edits follows remote text and creates no configuration intent",
+        "pass": true
+      },
+      {
+        "name": "remote changes preserve an active draft and its deliberate blur saves once",
+        "pass": true
+      },
+      {
+        "name": "an abandoned edit returning to its original text does not overwrite concurrent CONFIG",
+        "pass": true
+      },
+      {
+        "name": "numeric settings preserve number type, clamp bounds and avoid unchanged writes",
+        "pass": true
+      },
+      {
+        "name": "folio prefix remote update survives an untouched blur without a new intent",
+        "pass": false,
+        "error": "Expected values to be strictly equal:\n\n'QA155A' !== 'QA155B'\n"
+      },
+      {
+        "name": "folio prefix draft and normalization survive concurrent configuration",
+        "pass": false,
+        "error": "Expected values to be strictly equal:\n\n'XY9' !== 'AFTER'\n"
+      },
+      {
+        "name": "unmount releases activity and consumers have no runtime errors",
+        "pass": true
+      }
+    ],
+    "mode": "current-sources",
+    "htmlSha256": "cf872aa8848ead631fc6984b253d5f4242b10f063b919f3d0365480999ed9ce8",
+    "sourceSha256": {
+      "balam/pos.jsx": "e7c613ba88d0553ac880604cbaad9d9334328d8d3fdbe5459fb17fccd07312df",
+      "balam/settings.jsx": "e2fab1cb94b819676f1db9cf76cc4d36528fb141bd6f47624bab1302b41e0869"
+    }
+  },
+  "checkoutVerification": {
+    "scope": "Isolated temporary Git repositories and two real application builds; source checkout and its generated files untouched",
+    "baseline": {
+      "differentBuildInputs": 36,
+      "exitCode": 1,
+      "configuration": "Before text=auto eol=lf"
+    },
+    "fixed": {
+      "equalBuildInputs": 38,
+      "differentBuildInputs": 0,
+      "exitCode": 0,
+      "configuration": "text=auto eol=lf; generated -text exceptions preserved"
+    },
+    "builds": {
+      "startedAt": "2026-09-11T15:35:52.354Z",
+      "finishedAt": "2026-09-11T15:36:56.942Z",
+      "passed": true,
+      "exitCode": 0,
+      "error": null,
+      "builds": 2,
+      "autocrlf": [
+        "false",
+        "true"
+      ],
+      "finalDelivery": true,
+      "htmlSha256": "8883393ca53d880e5af59ad34113e4c912e886308ec8f697df09a9e4b5ae32d0",
+      "offlineHtmlSha256": "8883393ca53d880e5af59ad34113e4c912e886308ec8f697df09a9e4b5ae32d0",
+      "serviceWorkerSha256": "aba921105c7f43946b922d2110f4c86e9da95734c9e51aa91a4570d28c32ce16",
+      "sourceCheckoutArtifactsUnchanged": true,
+      "matchesFinalArtifact": true,
+      "note": "Isolated Git checkouts and real builds of final sources, including managed-session failure guard.",
+      "log": ".evidence-h155-live/printing-final/eol-final.log"
+    }
+  },
+  "publicationContract": {
+    "passed": 5,
+    "failed": 0,
+    "scope": "Static CI graph and deliberate invalid graph mutations",
+    "cases": [
+      "regression and exact-artifact certificate precede upload; main-only non-live deployment",
+      "reject always() bypass of failed regression",
+      "reject softened certificate failure",
+      "reject artifact upload before certificate",
+      "reject missing H132 inventory guard"
+    ],
+    "externalSettingsChanged": false,
+    "checkedAt": "2026-09-11T15:36:58.002Z",
+    "requiredInventoryGuards": [
+      "test-h132-inventory-identity-certification.mjs",
+      "test-h132-live-certifier.mjs",
+      "test-h127-label-diagnostics.mjs",
+      "test-h99-label-pdf.mjs",
+      "test-h100-materialized-label-sku.mjs"
+    ],
+    "guardRegression": {
+      "baselineExitCode": 1,
+      "baselineError": "inventory guard must run before publication: test-h132-inventory-identity-certification.mjs",
+      "fixedExitCode": 0
+    },
+    "artifactSHA256": "8883393ca53d880e5af59ad34113e4c912e886308ec8f697df09a9e4b5ae32d0",
+    "exitCode": 0,
+    "log": ".evidence-h155-live/printing-final/publication.log"
+  }
+}
