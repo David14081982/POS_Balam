@@ -302,8 +302,17 @@ sirviendo H155, con HTML y SW distintos de H157.
 
 ## Riesgo residual, despliegue y commits
 
+El 11/09/2026 el usuario ordenó expresamente publicar esta entrega sin exigir
+los 29 escenarios automáticos. La publicación puntual de H157 queda autorizada
+con los cuatro escenarios ya aprobados, como excepción a la puerta de entrega;
+no se declara una certificación real A/B/C ni se modifica la evidencia H148.
+Se preparará un workflow manual exclusivo de este artefacto, ligado al commit
+técnico `f985820e86d22d3234e87f219f8ffe1ff13d34d9` y a su SHA-256. La excepción
+no habilita artefactos diferentes ni sustituye el workflow general. El criterio
+de cierre es verificar el HTML y SW públicos contra los archivos aprobados.
+
 - Integración local validada y commit/push a main confirmados desde el checkout aislado.
-  Pages requiere el certificado real del artefacto final; no se afirma despliegue.
+  Publicación puntual autorizada; pendiente de ejecución y verificación pública.
 - **NO CERTIFICADO** contra Supabase real/A/B/C: la cobertura de esta corrección
   permanece acotada por el usuario. No ejecuta borrados ni escrituras
   comerciales remotas.

@@ -7106,6 +7106,13 @@ preview real de la terminal del usuario. Sin borrado remoto por esta corrección
 **Certificación:** NO CERTIFICADO contra Supabase real/A/B/C.
 **Documento:** `docs/fixes/auditoria-eliminacion-selectiva-h157.md`.
 
+**Excepción de entrega autorizada (11/09/2026):** el usuario exige publicar H157
+sin ejecutar los 29 escenarios automáticos. Se conserva la validación 4/4 y se
+prepara publicación manual ligada exclusivamente al artefacto aprobado de
+`f985820e86d22d3234e87f219f8ffe1ff13d34d9`; el workflow general y el certificado
+H148 permanecen intactos. No equivale a certificación real. Pendiente de ejecutar
+y verificar la publicación puntual, sin cambios nuevos en el producto.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:
