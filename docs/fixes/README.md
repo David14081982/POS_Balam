@@ -13,7 +13,7 @@ sesión de chat.
 
 ## Correcciones registradas
 
-- `sincronizacion-automatica-h155.md` — H-155: arranque recuperable, rechazos durables, control de versión de inventario y consumidores actualizados; matriz A/B/C final aceptada. Publicación y adopción física pendientes; H156 sigue abierto.
+- `sincronizacion-automatica-h155.md` — H-155: arranque recuperable, rechazos durables, control de versión de inventario y consumidores actualizados; matriz A/B/C final aceptada y publicación verificada. Adopción física pendiente; H156 sigue abierto.
 
 - `arquitectura-impresion-confiable-h153.md` — H-153: documento congelado, cola secuencial, ciclo de transporte y certificación de artefactos consecutivos.
 

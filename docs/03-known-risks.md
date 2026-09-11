@@ -6989,8 +6989,8 @@ Sin certificación nueva de flota A/B/C ni exclusión de impresoras entre equipo
 
 ## H-155 — Sincronización automática consistente entre equipos
 
-**Estado:** CORRECCIÓN VERIFICADA — matriz A/B/C aceptada; publicación pendiente. **Fecha:** 11/09/2026.
-**Commit:** Pendiente de commit.
+**Estado:** CORRECCIÓN VERIFICADA Y PUBLICADA — matriz A/B/C aceptada; adopción física pendiente. **Fecha:** 11/09/2026.
+**Commit técnico y desplegado:** `be333e16627b42a2dee6cfd280244fe2894cc31e`.
 **Problema:** siete rechazos permanentes de productos tratados como reintentos
 temporales bloquean el catálogo en EIFBB1 mientras otros valores avanzan.
 Un fallo inicial deja sin servicio automático; POS y configuración pueden
@@ -7006,8 +7006,13 @@ Matriz final 29/29 en 16 dominios, cleanup y conservación 17/17 correctos,
 aceptada por el filtro estricto el 11/09 a las 16:30 UTC.
 HTML `8883393ca53d880e5af59ad34113e4c912e886308ec8f697df09a9e4b5ae32d0`;
 evidencia `docs/fixes/evidence/h148-live-matrix.json`.
-**Pendiente:** publicación y carga de H155 en instalaciones físicas; revisión
-de los siete originales desde su dispositivo. Sin descarte de pendientes reales.
+**Publicación:** CI H148 `34622914116` y H132 `34622914156` correctos; Pages
+desplegó a las 16:39:07 UTC. Verificación pública a las 16:40:27 UTC: 10/10
+archivos idénticos al commit; evidencia `docs/fixes/evidence/h155-pages.json`.
+**Pendiente:** carga de H155 en instalaciones físicas y revisión de los siete
+originales desde su dispositivo. La lectura remota posterior conserva la
+última señal de EIFBB1 en H152 con siete pendientes; no demuestra adopción.
+Sin descarte de pendientes reales.
 **Residual:** H-156 conserva un defecto previo de concurrencia en clientes y
 promociones; esta matriz no implica aprobación global de BALAM.
 **Documento:** `docs/fixes/sincronizacion-automatica-h155.md`.
@@ -7023,7 +7028,7 @@ el escenario A/B/C final también preservó stock y precio ante la edición obso
 ## H-156 — UPSERT obsoleto de clientes y promociones
 
 **Estado:** CONFIRMADO — NO RESUELTO. **Prioridad:** P1.
-**Fecha:** 11/09/2026. **Commit del registro:** Pendiente de commit.
+**Fecha:** 11/09/2026. **Commit del registro:** `be333e16627b42a2dee6cfd280244fe2894cc31e`.
 **Problema:** una edición obsoleta puede sobrescribir un cambio confirmado de
 la misma ficha de cliente o promoción; el ACK detecta el conflicto después de
 la escritura y conserva una operación que bloquea la recepción de ese dominio.

@@ -1,9 +1,9 @@
 # H-155 — Sincronización automática consistente entre equipos
 
 **Riesgo:** H-155; H-154 reservado por el trabajo previo no publicado.
-**Estado:** CORRECCIÓN VERIFICADA — matriz A/B/C aceptada; publicación pendiente.
+**Estado:** CORRECCIÓN VERIFICADA Y PUBLICADA — matriz A/B/C aceptada; adopción física pendiente.
 **Fecha:** 11/09/2026.
-**Commit:** Pendiente de commit.
+**Commit técnico y desplegado:** `be333e16627b42a2dee6cfd280244fe2894cc31e`.
 
 ## Problema y reproducción
 
@@ -201,11 +201,41 @@ el RPC de escritura `commit_config`, que no se modifica en esta historia.
 Su evidencia declara `configCommitRpcExercised:false`. Los consumidores y sus
 intenciones de edición se verifican por separado en las 17 pruebas de UI.
 
+## Publicación verificada
+
+El commit técnico está en `main`. El flujo
+[H148, ejecución 34622914116](https://github.com/David14081982/POS_Balam/actions/runs/34622914116)
+terminó correctamente: regresiones a las 16:38:53 UTC y despliegue a las
+16:39:07 UTC del 11/09/2026. H132 también terminó correctamente en la
+[ejecución 34622914156](https://github.com/David14081982/POS_Balam/actions/runs/34622914156).
+La certificación real se ejecutó previamente desde este entorno y CI validó
+su evidencia completa contra la entrega; el job manual `live-certification`
+de ese push fue omitido y no se atribuye a GitHub una segunda ejecución A/B/C.
+
+Pages utiliza ahora `build_type=workflow`: el despliegue depende del éxito de
+las regresiones y del certificado del mismo artefacto. Se conservó la política
+del entorno `github-pages`, que permite la rama `main`.
+
+La lectura HTTP de las URL canónicas de
+[BALAM publicado](https://david14081982.github.io/POS_Balam/) terminó a las
+16:40:27 UTC: 10/10 respuestas 200 y SHA-256 idéntico al archivo local del
+commit, incluidos raíz, ambos HTML, service worker, manifiesto y cinco iconos.
+Evidencia: `docs/fixes/evidence/h155-pages.json`. No se reconstruyó ni cambió
+el HTML certificado después de las pruebas.
+
+La consulta PostgREST de sólo lectura de las 16:40:27 UTC sigue mostrando
+EIFBB1 en `2026-09-09-h152`, con siete pendientes y última señal del
+10/09 a las 21:31:32 UTC. La otra señal comercial más reciente también es
+H152, del 11/09 a las 01:54:04 UTC. Son registros históricos, no una medición
+de equipos conectados ahora ni evidencia de adopción de H155. Permanecen
+57 expedientes `pending_review` y ocho `rejected`; no se descartaron pendientes
+reales ni se modificó el mínimo global de versión.
+
 ## Riesgo residual y pendientes
 
-Publicación del cliente y adopción física pendientes. Implementación y
+Cliente publicado y verificado; adopción física pendiente. Implementación y
 migraciones completas; regresiones y matriz A/B/C aceptadas sobre el artefacto
-final. A/B/C son tres perfiles independientes de Chromium contra Supabase
+final publicado. A/B/C son tres perfiles independientes de Chromium contra Supabase
 real, no una certificación de todos los equipos físicos instalados.
 Los siete intents originales sólo pueden compararse desde su instalación.
 No aceptar cambios físicos inválidos ni borrar pendientes para indicar verde.

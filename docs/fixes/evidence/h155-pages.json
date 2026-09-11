@@ -1,0 +1,611 @@
+{
+  "at": "2026-09-11T16:40:16.749Z",
+  "commit": "be333e16627b42a2dee6cfd280244fe2894cc31e",
+  "base": "https://david14081982.github.io/POS_Balam/",
+  "checks": [
+    {
+      "path": "",
+      "status": 200,
+      "expectedSha256": "8883393ca53d880e5af59ad34113e4c912e886308ec8f697df09a9e4b5ae32d0",
+      "actualSha256": "8883393ca53d880e5af59ad34113e4c912e886308ec8f697df09a9e4b5ae32d0",
+      "ok": true
+    },
+    {
+      "path": "index.html",
+      "status": 200,
+      "expectedSha256": "8883393ca53d880e5af59ad34113e4c912e886308ec8f697df09a9e4b5ae32d0",
+      "actualSha256": "8883393ca53d880e5af59ad34113e4c912e886308ec8f697df09a9e4b5ae32d0",
+      "ok": true
+    },
+    {
+      "path": "POS Balam (offline).html",
+      "status": 200,
+      "expectedSha256": "8883393ca53d880e5af59ad34113e4c912e886308ec8f697df09a9e4b5ae32d0",
+      "actualSha256": "8883393ca53d880e5af59ad34113e4c912e886308ec8f697df09a9e4b5ae32d0",
+      "ok": true
+    },
+    {
+      "path": "sw.js",
+      "status": 200,
+      "expectedSha256": "aba921105c7f43946b922d2110f4c86e9da95734c9e51aa91a4570d28c32ce16",
+      "actualSha256": "aba921105c7f43946b922d2110f4c86e9da95734c9e51aa91a4570d28c32ce16",
+      "ok": true
+    },
+    {
+      "path": "manifest.webmanifest",
+      "status": 200,
+      "expectedSha256": "43417f79b56bf52969b2d04d1c70ee0a6ae67673b2acd8f673b0fbebf6986afd",
+      "actualSha256": "43417f79b56bf52969b2d04d1c70ee0a6ae67673b2acd8f673b0fbebf6986afd",
+      "ok": true
+    },
+    {
+      "path": "pwa/icon-192.png",
+      "status": 200,
+      "expectedSha256": "72184e55164ce1c4e67a1013724a3b83947503356a487e055f0d022d01dcb64e",
+      "actualSha256": "72184e55164ce1c4e67a1013724a3b83947503356a487e055f0d022d01dcb64e",
+      "ok": true
+    },
+    {
+      "path": "pwa/icon-512.png",
+      "status": 200,
+      "expectedSha256": "c42b6fa17510f7bb91358bbe9e04f714cb15e816fd26875f86d0bbcc5bc08319",
+      "actualSha256": "c42b6fa17510f7bb91358bbe9e04f714cb15e816fd26875f86d0bbcc5bc08319",
+      "ok": true
+    },
+    {
+      "path": "pwa/icon-maskable-512.png",
+      "status": 200,
+      "expectedSha256": "f0d29a6e593ba7d79286f755179b4c984d0a6634a4b97954cc8f4daa2c693e47",
+      "actualSha256": "f0d29a6e593ba7d79286f755179b4c984d0a6634a4b97954cc8f4daa2c693e47",
+      "ok": true
+    },
+    {
+      "path": "pwa/apple-touch-icon.png",
+      "status": 200,
+      "expectedSha256": "137651bbb5489c1fadbc75e1c1375d163d3be59a2c26f79161d46351a9991608",
+      "actualSha256": "137651bbb5489c1fadbc75e1c1375d163d3be59a2c26f79161d46351a9991608",
+      "ok": true
+    },
+    {
+      "path": "pwa/favicon-64.png",
+      "status": 200,
+      "expectedSha256": "12437629c6e64b955db23fa773b2a4ceba407f9cf7510d268b2f11a0606f1ad0",
+      "actualSha256": "12437629c6e64b955db23fa773b2a4ceba407f9cf7510d268b2f11a0606f1ad0",
+      "ok": true
+    }
+  ],
+  "ok": true,
+  "finishedAt": "2026-09-11T16:40:27.907Z",
+  "githubActions": [
+    {
+      "conclusion": "success",
+      "headSha": "be333e16627b42a2dee6cfd280244fe2894cc31e",
+      "jobs": [
+        {
+          "completedAt": "2026-09-11T16:38:53Z",
+          "conclusion": "success",
+          "databaseId": 103340966661,
+          "name": "regression",
+          "startedAt": "2026-09-11T16:35:58Z",
+          "status": "completed",
+          "steps": [
+            {
+              "completedAt": "2026-09-11T16:36:04Z",
+              "conclusion": "success",
+              "name": "Set up job",
+              "number": 1,
+              "startedAt": "2026-09-11T16:36:00Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:36:06Z",
+              "conclusion": "success",
+              "name": "Run git config --global core.autocrlf true",
+              "number": 2,
+              "startedAt": "2026-09-11T16:36:04Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:36:18Z",
+              "conclusion": "success",
+              "name": "Run actions/checkout@v4",
+              "number": 3,
+              "startedAt": "2026-09-11T16:36:06Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:36:25Z",
+              "conclusion": "success",
+              "name": "Run actions/setup-node@v4",
+              "number": 4,
+              "startedAt": "2026-09-11T16:36:18Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:36:33Z",
+              "conclusion": "success",
+              "name": "Run npm ci",
+              "number": 5,
+              "startedAt": "2026-09-11T16:36:25Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:36:35Z",
+              "conclusion": "success",
+              "name": "Install isolated H155 SQL test runtime",
+              "number": 6,
+              "startedAt": "2026-09-11T16:36:33Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:36:55Z",
+              "conclusion": "success",
+              "name": "Install Chromium for the H155 bundle regression",
+              "number": 7,
+              "startedAt": "2026-09-11T16:36:35Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:37:01Z",
+              "conclusion": "success",
+              "name": "Run node build-offline.mjs",
+              "number": 8,
+              "startedAt": "2026-09-11T16:36:55Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:37:14Z",
+              "conclusion": "success",
+              "name": "Run node test-h155-build-eol.mjs",
+              "number": 9,
+              "startedAt": "2026-09-11T16:37:01Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:37:30Z",
+              "conclusion": "success",
+              "name": "Run node test-h155-auto-sync.mjs",
+              "number": 10,
+              "startedAt": "2026-09-11T16:37:14Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:37:32Z",
+              "conclusion": "success",
+              "name": "Verify H155 SQL guards and STORE acknowledgements",
+              "number": 11,
+              "startedAt": "2026-09-11T16:37:30Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:37:40Z",
+              "conclusion": "success",
+              "name": "Verify H155 consumers in the generated bundle",
+              "number": 12,
+              "startedAt": "2026-09-11T16:37:32Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:37:49Z",
+              "conclusion": "success",
+              "name": "Run node test-h132-inventory-identity-certification.mjs",
+              "number": 13,
+              "startedAt": "2026-09-11T16:37:40Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:37:54Z",
+              "conclusion": "success",
+              "name": "Run node test-h132-live-certifier.mjs",
+              "number": 14,
+              "startedAt": "2026-09-11T16:37:49Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:37:57Z",
+              "conclusion": "success",
+              "name": "Run node test-h127-label-diagnostics.mjs",
+              "number": 15,
+              "startedAt": "2026-09-11T16:37:54Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:38:02Z",
+              "conclusion": "success",
+              "name": "Run node test-h99-label-pdf.mjs",
+              "number": 16,
+              "startedAt": "2026-09-11T16:37:57Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:38:06Z",
+              "conclusion": "success",
+              "name": "Run node test-h100-materialized-label-sku.mjs",
+              "number": 17,
+              "startedAt": "2026-09-11T16:38:02Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:38:07Z",
+              "conclusion": "success",
+              "name": "Require a complete live certificate for this delivery",
+              "number": 18,
+              "startedAt": "2026-09-11T16:38:06Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:38:07Z",
+              "conclusion": "success",
+              "name": "Run node test-h148-sync-certification.mjs --self-test",
+              "number": 19,
+              "startedAt": "2026-09-11T16:38:07Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:38:12Z",
+              "conclusion": "success",
+              "name": "Run node test-h148-reconciliation.mjs",
+              "number": 20,
+              "startedAt": "2026-09-11T16:38:07Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:38:18Z",
+              "conclusion": "success",
+              "name": "Run node test-h149-directed-recovery.mjs",
+              "number": 21,
+              "startedAt": "2026-09-11T16:38:12Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:38:21Z",
+              "conclusion": "success",
+              "name": "Run node test-h151-cleanup-propagation.mjs",
+              "number": 22,
+              "startedAt": "2026-09-11T16:38:18Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:38:24Z",
+              "conclusion": "success",
+              "name": "Run node test-h152-reports-refresh.mjs",
+              "number": 23,
+              "startedAt": "2026-09-11T16:38:21Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:38:27Z",
+              "conclusion": "success",
+              "name": "Run node test-h148-projection-durability.mjs",
+              "number": 24,
+              "startedAt": "2026-09-11T16:38:24Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:38:33Z",
+              "conclusion": "success",
+              "name": "Run node test-store-queue.mjs",
+              "number": 25,
+              "startedAt": "2026-09-11T16:38:27Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:38:35Z",
+              "conclusion": "success",
+              "name": "Run node test-concurrency.mjs",
+              "number": 26,
+              "startedAt": "2026-09-11T16:38:33Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:38:38Z",
+              "conclusion": "success",
+              "name": "Run node test-h142-qa-races.mjs",
+              "number": 27,
+              "startedAt": "2026-09-11T16:38:35Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:38:42Z",
+              "conclusion": "success",
+              "name": "Run node test-h142-device-center-focus.mjs",
+              "number": 28,
+              "startedAt": "2026-09-11T16:38:38Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:38:43Z",
+              "conclusion": "success",
+              "name": "Run node test-migrations.mjs",
+              "number": 29,
+              "startedAt": "2026-09-11T16:38:42Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:38:43Z",
+              "conclusion": "success",
+              "name": "Run node test-h155-publication.mjs",
+              "number": 30,
+              "startedAt": "2026-09-11T16:38:43Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:38:44Z",
+              "conclusion": "success",
+              "name": "Stage verified Pages files",
+              "number": 31,
+              "startedAt": "2026-09-11T16:38:43Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:38:47Z",
+              "conclusion": "success",
+              "name": "Run actions/upload-pages-artifact@v3",
+              "number": 32,
+              "startedAt": "2026-09-11T16:38:44Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:38:48Z",
+              "conclusion": "success",
+              "name": "Post Run actions/setup-node@v4",
+              "number": 63,
+              "startedAt": "2026-09-11T16:38:47Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:38:50Z",
+              "conclusion": "success",
+              "name": "Post Run actions/checkout@v4",
+              "number": 64,
+              "startedAt": "2026-09-11T16:38:48Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:38:51Z",
+              "conclusion": "success",
+              "name": "Complete job",
+              "number": 65,
+              "startedAt": "2026-09-11T16:38:50Z",
+              "status": "completed"
+            }
+          ],
+          "url": "https://github.com/David14081982/POS_Balam/actions/runs/34622914116/job/103340966661"
+        },
+        {
+          "completedAt": "2026-09-11T16:35:54Z",
+          "conclusion": "skipped",
+          "databaseId": 103340968460,
+          "name": "live-certification",
+          "startedAt": "2026-09-11T16:35:55Z",
+          "status": "completed",
+          "steps": [],
+          "url": "https://github.com/David14081982/POS_Balam/actions/runs/34622914116/job/103340968460"
+        },
+        {
+          "completedAt": "2026-09-11T16:39:07Z",
+          "conclusion": "success",
+          "databaseId": 103341899243,
+          "name": "deploy",
+          "startedAt": "2026-09-11T16:38:57Z",
+          "status": "completed",
+          "steps": [
+            {
+              "completedAt": "2026-09-11T16:38:59Z",
+              "conclusion": "success",
+              "name": "Set up job",
+              "number": 1,
+              "startedAt": "2026-09-11T16:38:57Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:39:05Z",
+              "conclusion": "success",
+              "name": "Run actions/deploy-pages@v4",
+              "number": 2,
+              "startedAt": "2026-09-11T16:38:59Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:39:05Z",
+              "conclusion": "success",
+              "name": "Complete job",
+              "number": 3,
+              "startedAt": "2026-09-11T16:39:05Z",
+              "status": "completed"
+            }
+          ],
+          "url": "https://github.com/David14081982/POS_Balam/actions/runs/34622914116/job/103341899243"
+        }
+      ],
+      "status": "completed",
+      "url": "https://github.com/David14081982/POS_Balam/actions/runs/34622914116"
+    },
+    {
+      "conclusion": "success",
+      "headSha": "be333e16627b42a2dee6cfd280244fe2894cc31e",
+      "jobs": [
+        {
+          "completedAt": "2026-09-11T16:37:09Z",
+          "conclusion": "success",
+          "databaseId": 103340967090,
+          "name": "certification-contract",
+          "startedAt": "2026-09-11T16:35:56Z",
+          "status": "completed",
+          "steps": [
+            {
+              "completedAt": "2026-09-11T16:35:58Z",
+              "conclusion": "success",
+              "name": "Set up job",
+              "number": 1,
+              "startedAt": "2026-09-11T16:35:57Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:36:04Z",
+              "conclusion": "success",
+              "name": "Run actions/checkout@v4",
+              "number": 2,
+              "startedAt": "2026-09-11T16:35:58Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:36:10Z",
+              "conclusion": "success",
+              "name": "Run actions/setup-node@v4",
+              "number": 3,
+              "startedAt": "2026-09-11T16:36:04Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:36:31Z",
+              "conclusion": "success",
+              "name": "Run npm ci",
+              "number": 4,
+              "startedAt": "2026-09-11T16:36:10Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:36:37Z",
+              "conclusion": "success",
+              "name": "Run node build-offline.mjs",
+              "number": 5,
+              "startedAt": "2026-09-11T16:36:31Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:36:46Z",
+              "conclusion": "success",
+              "name": "Run node test-h132-inventory-identity-certification.mjs",
+              "number": 6,
+              "startedAt": "2026-09-11T16:36:37Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:36:51Z",
+              "conclusion": "success",
+              "name": "Run node test-h132-live-certifier.mjs",
+              "number": 7,
+              "startedAt": "2026-09-11T16:36:46Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:36:54Z",
+              "conclusion": "success",
+              "name": "Run node test-h127-label-diagnostics.mjs",
+              "number": 8,
+              "startedAt": "2026-09-11T16:36:51Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:36:59Z",
+              "conclusion": "success",
+              "name": "Run node test-h99-label-pdf.mjs",
+              "number": 9,
+              "startedAt": "2026-09-11T16:36:54Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:37:03Z",
+              "conclusion": "success",
+              "name": "Run node test-h100-materialized-label-sku.mjs",
+              "number": 10,
+              "startedAt": "2026-09-11T16:36:59Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:37:06Z",
+              "conclusion": "success",
+              "name": "Post Run actions/setup-node@v4",
+              "number": 19,
+              "startedAt": "2026-09-11T16:37:03Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:37:08Z",
+              "conclusion": "success",
+              "name": "Post Run actions/checkout@v4",
+              "number": 20,
+              "startedAt": "2026-09-11T16:37:06Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-09-11T16:37:08Z",
+              "conclusion": "success",
+              "name": "Complete job",
+              "number": 21,
+              "startedAt": "2026-09-11T16:37:08Z",
+              "status": "completed"
+            }
+          ],
+          "url": "https://github.com/David14081982/POS_Balam/actions/runs/34622914156/job/103340967090"
+        }
+      ],
+      "status": "completed",
+      "url": "https://github.com/David14081982/POS_Balam/actions/runs/34622914156"
+    }
+  ],
+  "pagesConfiguration": {
+    "buildType": "workflow",
+    "url": "https://david14081982.github.io/POS_Balam/",
+    "source": {
+      "branch": "main",
+      "path": "/"
+    }
+  },
+  "installations": {
+    "checkedAt": "2026-09-11T16:40:27.280Z",
+    "access": "Official Supabase CLI authentication; read-only PostgREST requests",
+    "physicalAdoptionCertified": false,
+    "scope": "Read-only sample of the eight most recently reported devices; QA devices excluded below. Last-seen records are historical and do not prove current connectivity.",
+    "observed": [
+      {
+        "device_id": "dev-ms3il7ts-7jsbewuw",
+        "client_build": "2026-09-09-h152",
+        "last_seen_at": "2026-09-11T01:54:04.851039+00:00",
+        "last_synced_at": "2026-09-11T01:54:05.033+00:00",
+        "queue_pending": 0,
+        "queue_blocked": 0
+      },
+      {
+        "device_id": "dev-ms0nu9o4-yfeifbb1",
+        "client_build": "2026-09-09-h152",
+        "last_seen_at": "2026-09-10T21:31:32.365329+00:00",
+        "last_synced_at": "2026-09-09T19:00:14.829+00:00",
+        "queue_pending": 7,
+        "queue_blocked": 0
+      },
+      {
+        "device_id": "dev-mtov9u6i-lvz9esb6",
+        "client_build": "2026-09-09-h152",
+        "last_seen_at": "2026-09-10T19:41:01.185689+00:00",
+        "last_synced_at": "2026-09-10T19:41:02.612+00:00",
+        "queue_pending": 0,
+        "queue_blocked": 0
+      },
+      {
+        "device_id": "dev-mtny3o3e-rwa6o1na",
+        "client_build": "2026-09-09-h152",
+        "last_seen_at": "2026-09-10T17:31:09.61259+00:00",
+        "last_synced_at": "2026-09-10T17:31:09.438+00:00",
+        "queue_pending": 0,
+        "queue_blocked": 0
+      },
+      {
+        "device_id": "dev-ms40ac73-07fnos14",
+        "client_build": "20260820016800",
+        "last_seen_at": "2026-08-29T07:03:23.537046+00:00",
+        "last_synced_at": null,
+        "queue_pending": 0,
+        "queue_blocked": 0
+      }
+    ],
+    "quarantineCounts": {
+      "pending_review": 57,
+      "rejected": 8
+    },
+    "minimumClientBuild": null,
+    "dataEpoch": 8,
+    "systemMode": "preproduction"
+  }
+}
