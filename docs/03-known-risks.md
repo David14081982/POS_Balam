@@ -7165,9 +7165,9 @@ La certificación no resuelve riesgos ajenos como H156 UPSERT.
 
 ## H-159 — Punto Cero no recupera el respaldo y cuenta estado retirado como operativo
 
-**Estado:** CORREGIDO; convergencia certificada. Publicación en curso.
+**Estado:** CORREGIDO Y PUBLICADO; convergencia certificada. Punto Cero global pendiente.
 **Fecha:** 11/09/2026.
-**Commit:** Pendiente de commit.
+**Commit técnico:** `5f9eb63639182494a953b5e7f6e85aa636b94550`.
 **Origen:** respaldo deshabilitado con cero cambios y bloqueos, sin acción
 recuperable en el diálogo. La revisión del asistente permanece congelada.
 **Evidencia remota de lectura:** 14 equipos, todos con cola y bloqueos cero;
@@ -7190,7 +7190,15 @@ Certificación A/B/C final: 29/29 y 16 dominios; limpieza y conservación de
 una barrera prematura del arnés al reabrir; se corrigió la espera y se repitió
 la matriz completa sin cambiar el artefacto. Evidencia:
 `docs/fixes/evidence/h148-live-matrix.json` y expediente H159.
-**Pendiente:** commit/push y entrega.
+Lectura final 11/09/2026 22:46:39 UTC: mismos 2,386 productos y 3,502 piezas;
+ocho retirados y seis equipos activos pendientes. El agente no ejecutó retiros.
+Evidencia: `docs/fixes/evidence/h159-final-preview.json`.
+**Publicación:** commit técnico en `main`; H148 `34655403188` y H132
+`34655403158` correctos en el primer intento. Pages verificado el 11/09/2026
+a las 22:50:54 UTC: 10/10 archivos HTTP 200 idénticos, incluida la raíz sin
+parámetros. Evidencia: `docs/fixes/evidence/h159-pages.json`.
+**Pendiente:** identificar/sincronizar las instalaciones activas y completar
+el respaldo y la ejecución operativa de Punto Cero.
 La convergencia del artefacto no certifica un Punto Cero global: ese recorrido
 queda **NO CERTIFICADO** hasta el respaldo y la ejecución operativa reales.
 **Riesgo residual:** las instalaciones activas ausentes requieren revisión

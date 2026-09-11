@@ -1,9 +1,9 @@
 # Punto Cero: respaldo recuperable y diagnóstico operativo
 
 **Riesgo:** H-159
-**Estado:** CORREGIDO; convergencia certificada. Publicación en curso.
+**Estado:** CORREGIDO Y PUBLICADO; convergencia certificada. Punto Cero global pendiente.
 **Fecha:** 11/09/2026
-**Commit:** Pendiente de commit
+**Commit técnico:** `5f9eb63639182494a953b5e7f6e85aa636b94550`
 
 ## Problema y reproducción
 
@@ -146,6 +146,11 @@ La comparación de `pg_get_functiondef` confirma cinco funciones idénticas ante
 y después: respaldo, ejecución, payload, huella conservada y purga. Sólo cambia
 el preview (MD5 `facb9404…` → `ce5b00b4…`); evidencia:
 `evidence/h159-sql-deployment.json`.
+La lectura final del 11/09/2026 a las 22:46:39 UTC conserva esos productos y
+piezas, cola y bloqueos cero y ningún Punto Cero activo. En ese momento la flota
+mostraba ocho retirados y seis instalaciones activas pendientes. El agente no
+ejecutó retiros; ese estado se registra sin atribuir la variación a esta
+corrección. Evidencia de sólo lectura: `evidence/h159-final-preview.json`.
 
 Evidencias: `evidence/h159-ui-before.json`, `h159-ui-after-390.json`,
 `h159-ui-after-1280.json`, `h159-sql-before.json`, `h159-sql-after.json` y
@@ -158,7 +163,12 @@ SHA-256 del HTML/offline probado:
 
 ## Riesgo residual y pendientes
 
-Faltan commit/push y comprobación pública de esta entrega.
+Entrega publicada desde `main`: H148 `34655403188` (regresión y Pages) y H132
+`34655403158` concluyeron correctamente, sin repetir CI. Pages verificado el
+11/09/2026 a las 22:50:54 UTC: 10/10 respuestas HTTP 200 idénticas al commit,
+incluida la raíz sin parámetros. Evidencia: `evidence/h159-pages.json`.
+El HTML, el offline y el certificador conservan los hashes registrados arriba.
+
 La ejecución operativa requiere resolver las instalaciones activas pendientes;
 se pidió identificar los equipos/navegadores vigentes antes de alterar su estado.
 La revisión operativa está en Configuración → Negocio → Centro de equipos →
@@ -167,8 +177,10 @@ una instalación reconocida que ya no se usa puede retirarse mediante el flujo
 administrativo existente. Después se vuelve a Administración / Datos → Abrir
 Punto Cero → Revisar de nuevo. La herramienta «Establecer punto cero» del centro
 de sincronización tiene otro propósito y no sustituye esta limpieza.
-No se retiró ninguna instalación ni se borraron datos comerciales en esta historia.
+El agente no retiró instalaciones ni borró datos comerciales; sólo creó y
+eliminó los registros temporales de sus pruebas autorizadas.
 El respaldo es JSON sellado; H98 no proporciona una restauración automática.
+Una pestaña abierta puede seguir ejecutando el cliente anterior hasta actualizarse.
 
 ## Decisiones verificables
 
