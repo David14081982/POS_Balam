@@ -1,0 +1,117 @@
+{
+  "date": "2026-09-11T21:48:32.781Z",
+  "artifact": "index.html",
+  "artifactSHA256": "6678d9d1c2eac11f1b670017e8fec4c716e7f9b763c1f26e631e423aab22fd85",
+  "width": 390,
+  "scope": "Actual bundled UI and STORE preview/backup with local controlled transport; no SQL or live A/B/C certification.",
+  "remoteBusinessWrites": 0,
+  "passed": 11,
+  "total": 11,
+  "results": [
+    {
+      "name": "1. Modal abierto se recupera con cero pendientes y bloqueos",
+      "passed": true,
+      "evidence": {
+        "before": 2,
+        "after": 3,
+        "recoveredWithoutClosing": true,
+        "noAutomaticWrites": true
+      }
+    },
+    {
+      "name": "2. Sincronía remota pendiente conserva el bloqueo real",
+      "passed": true,
+      "evidence": {
+        "remoteSync": false,
+        "pending": 0,
+        "locks": 0,
+        "blocked": true,
+        "kept": 8
+      }
+    },
+    {
+      "name": "3. Fallo de red invalida diagnóstico y permite reintento directo",
+      "passed": true,
+      "evidence": {
+        "recoveredInOpenDialog": true,
+        "noAutomaticWrites": true
+      }
+    },
+    {
+      "name": "4. Preview cambiado antes del respaldo vuelve a diagnóstico vigente",
+      "passed": true,
+      "evidence": {
+        "staleRejectedBeforeBackup": true,
+        "retryUsesNewToken": true
+      }
+    },
+    {
+      "name": "5. Cambio después del respaldo exige respaldo nuevo y otra confirmación",
+      "passed": true,
+      "evidence": {
+        "backups": 2,
+        "attempts": 2,
+        "executions": 1,
+        "confirmationReset": true
+      }
+    },
+    {
+      "name": "6. Respaldo, frase exacta y doble confirmación conservan el flujo",
+      "passed": true,
+      "evidence": {
+        "backups": 1,
+        "executions": 1,
+        "exactPhrase": true,
+        "twoConfirmationSteps": true
+      }
+    },
+    {
+      "name": "7. Carrera del RPC con error SQL minúsculo exige diagnóstico nuevo",
+      "passed": true,
+      "evidence": {
+        "error": "point_zero_preview_changed",
+        "rpcAttempts": 2,
+        "backups": 1,
+        "staleTokenRejected": true
+      }
+    },
+    {
+      "name": "8. Cerrar durante revisión no vuelve a abrir el modal",
+      "passed": true,
+      "evidence": {
+        "closedWhilePending": true,
+        "remainsClosed": true,
+        "downloads": 0
+      }
+    },
+    {
+      "name": "9. Cerrar durante respaldo no descarga ni revive confirmación",
+      "passed": true,
+      "evidence": {
+        "backupRequestedByUser": 1,
+        "remainsClosed": true,
+        "downloads": 0,
+        "executions": 0
+      }
+    },
+    {
+      "name": "10. Respuesta anterior no sobrescribe una revisión nueva",
+      "passed": true,
+      "evidence": {
+        "completedOutOfOrder": true,
+        "approvedToken": "h159-preview-3",
+        "stalePreviewIgnored": true
+      }
+    },
+    {
+      "name": "11. Equipos bloqueantes muestran nombre y todos sus motivos",
+      "passed": true,
+      "evidence": {
+        "activeDevices": 2,
+        "actionableReasons": 4,
+        "revokedExcluded": true,
+        "blocked": true
+      }
+    }
+  ]
+}

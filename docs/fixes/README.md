@@ -13,6 +13,8 @@ sesión de chat.
 
 ## Correcciones registradas
 
+- `punto-cero-respaldo-recuperable-h159.md` — H-159: revisión recuperable del respaldo, equipos retirados excluidos y conteo de clientes activos.
+
 - `refresco-permisos-sin-intermitencia-h158.md` — H-158: refresco de permisos sin desmontar la pantalla.
 
 - `auditoria-eliminacion-selectiva-h157.md` — H-157, PARCIALMENTE RESUELTO: revisión recuperable y nombre por categorías; publicado con 4/4 y excepción autorizada a la matriz real, archivos públicos verificados byte a byte.

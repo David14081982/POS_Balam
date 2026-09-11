@@ -7162,3 +7162,37 @@ La primera ejecución de CI falló en dos aserciones de cola con espera fija;
 la repetición local y el segundo intento completo aprobaron sin cambios.
 La certificación no resuelve riesgos ajenos como H156 UPSERT.
 **Documento:** `docs/fixes/refresco-permisos-sin-intermitencia-h158.md`.
+
+## H-159 — Punto Cero no recupera el respaldo y cuenta estado retirado como operativo
+
+**Estado:** CORREGIDO; convergencia certificada. Publicación en curso.
+**Fecha:** 11/09/2026.
+**Commit:** Pendiente de commit.
+**Origen:** respaldo deshabilitado con cero cambios y bloqueos, sin acción
+recuperable en el diálogo. La revisión del asistente permanece congelada.
+**Evidencia remota de lectura:** 14 equipos, todos con cola y bloqueos cero;
+seis retirados aún entran en la condición de sincronización de H98. Los
+13 clientes no genéricos conservan `deleted_at`, pero el preview los cuenta.
+**Alcance:** recuperar el diagnóstico de Punto Cero, explicar impedimentos
+reales y corregir conteos compatibles con retiro/lápidas. Conservar respaldo,
+frase exacta, confirmación final, atomicidad, huellas y todas las categorías
+protegidas por el usuario. No declarar sincronizados los equipos ausentes.
+**Solución:** diagnóstico recuperable en el asistente, nuevos respaldos ante
+cambios, motivos por equipo; SQL excluye retirados y cuenta clientes activos.
+Respaldo, purga, ejecución, payload y huella preservada remotos siguen idénticos.
+**Pruebas:** navegador 11/11 en 390 y 1280 px; SQL aislado 15/15 (antes 10/15),
+H98 contrato/wizard 24/24 y 18/18, H157 4/4, AUTH 28/28, H158 8/8,
+contratos 42/42, cola 186/186, navegación 15/15, smoke 17/17 y migraciones 31/31.
+204/205 aplicadas y verificación real de lectura aprobada. Conservación remota:
+2,386 productos y 3,502 piezas; cero clientes activos y ocho equipos pendientes.
+Certificación A/B/C final: 29/29 y 16 dominios; limpieza y conservación de
+17 tablas correctas, cero pérdidas y divergencias. Primer intento 25/26 por
+una barrera prematura del arnés al reabrir; se corrigió la espera y se repitió
+la matriz completa sin cambiar el artefacto. Evidencia:
+`docs/fixes/evidence/h148-live-matrix.json` y expediente H159.
+**Pendiente:** commit/push y entrega.
+La convergencia del artefacto no certifica un Punto Cero global: ese recorrido
+queda **NO CERTIFICADO** hasta el respaldo y la ejecución operativa reales.
+**Riesgo residual:** las instalaciones activas ausentes requieren revisión
+operativa; no se retiran equipos ni se ejecuta un borrado durante el diagnóstico.
+**Documento:** `docs/fixes/punto-cero-respaldo-recuperable-h159.md`.

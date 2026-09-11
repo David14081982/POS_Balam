@@ -1908,30 +1908,149 @@
 
   function PointZeroWizard({ estado, setEstado, onClose }) {
     const { Modal } = window.UI;
+    const [reviewing, setReviewing] = useState(false);
+    const previewRequest = useRef(0), previewTimer = useRef(null);
+    const previewInFlight = useRef(0), reviewedStatus = useRef('');
+    const pendingReview = useRef(false), mounted = useRef(true);
+    // Ignore heartbeat timestamps and the device cursor: checking readiness can
+    // update them itself. Business cursors and local guards still invalidate it.
+    const reviewStatus = () => {
+      const status = window.STORE.syncStatus();
+      return JSON.stringify([status.synchronized, status.connection, status.compatibility,
+        status.recoveryPhase, status.pending, status.blocked, status.checkpointError,
+        status.errors, status.dataEpoch,
+        Object.keys(status.cursors || {}).filter(key => key !== 'devices').sort().map(key => [key, status.cursors[key]]),
+        !!(window.CORE && window.CORE.activityStatus && window.CORE.activityStatus().active),
+        !!(window.DATA && window.DATA.hasLayawayLiquidationLock && window.DATA.hasLayawayLiquidationLock())]);
+    };
+    const requestPreview = async (notice = '', followup = false) => {
+      const requestId = ++previewRequest.current;
+      clearTimeout(previewTimer.current);
+      previewInFlight.current = requestId; pendingReview.current = false;
+      setReviewing(true);
+      setEstado(x => x && Object.assign({}, x, { error: notice }));
+      try {
+        const value = await window.STORE.pointZeroPreview();
+        if (!mounted.current || requestId !== previewRequest.current) return;
+        if (!value || !value.ok) throw new Error((value && value.error) || 'No se pudo obtener el diagnóstico');
+        if (!validPointZeroPreview(value)) throw new Error('El diagnóstico remoto está incompleto; no se habilitó la limpieza');
+        setEstado(x => x && x.paso === 'diagnostico' ? Object.assign({}, x, {
+          preview: Object.assign({}, value, { diagnosed_at: value.generated_at || new Date().toISOString() }),
+          backup: null, confirmacion: '', error: notice,
+        }) : x);
+      } catch (e) {
+        if (mounted.current && requestId === previewRequest.current) setEstado(x => x && Object.assign({}, x, {
+          preview: Object.assign({}, x.preview, { ready: false, preview_token: null }),
+          backup: null, confirmacion: '', error: e.message || String(e),
+        }));
+      } finally {
+        if (previewInFlight.current === requestId) previewInFlight.current = 0;
+        if (mounted.current && requestId === previewRequest.current) {
+          reviewedStatus.current = reviewStatus();
+          // Coalesce external changes during the RPC once; our own reconciliation
+          // must never become an endless chain of preview requests.
+          if (pendingReview.current && !followup) {
+            previewTimer.current = setTimeout(() => requestPreview(notice, true), 180);
+          } else setReviewing(false);
+        }
+      }
+    };
+    useEffect(() => {
+      mounted.current = true;
+      return () => { mounted.current = false; ++previewRequest.current; clearTimeout(previewTimer.current); };
+    }, []);
+    useEffect(() => {
+      // A downloaded backup and its confirmation keep their approved snapshot.
+      // Backup/execute RPCs revalidate it; background events cannot replace it.
+      if (estado.paso !== 'diagnostico') return;
+      const onChange = event => {
+        const current = reviewStatus(), changed = current !== reviewedStatus.current;
+        reviewedStatus.current = current;
+        const localEvent = ['syncstatuschange', 'syncactivitychange'].includes(event.type);
+        if (previewInFlight.current && previewInFlight.current === previewRequest.current) {
+          if (!localEvent) pendingReview.current = true;
+          return;
+        }
+        if (document.visibilityState === 'hidden' || (localEvent && !changed)) return;
+        ++previewRequest.current; clearTimeout(previewTimer.current);
+        setReviewing(true);
+        previewTimer.current = setTimeout(() => requestPreview(), 180);
+      };
+      const events = ['syncstatuschange', 'syncactivitychange', 'syncfleetchange',
+        'datachange', 'online', 'offline', 'focus'];
+      reviewedStatus.current = reviewStatus();
+      events.forEach(type => window.addEventListener(type, onChange));
+      document.addEventListener('visibilitychange', onChange);
+      return () => {
+        ++previewRequest.current; clearTimeout(previewTimer.current);
+        events.forEach(type => window.removeEventListener(type, onChange));
+        document.removeEventListener('visibilitychange', onChange);
+      };
+    }, [estado.paso === 'diagnostico']);
+    const close = () => {
+      mounted.current = false; ++previewRequest.current; clearTimeout(previewTimer.current); onClose();
+    };
+    const recoverPreview = error => {
+      const message = error.message || String(error);
+      if (!/POINT_ZERO_(PREVIEW_CHANGED|NOT_SYNCHRONIZED)/i.test(message)) return false;
+      const notice = 'Los datos o las condiciones de seguridad cambiaron. Revisa el diagnóstico y crea un respaldo nuevo antes de continuar.';
+      setEstado(x => x && Object.assign({}, x, { paso: 'diagnostico',
+        preview: Object.assign({}, x.preview, { ready: false, preview_token: null }),
+        backup: null, confirmacion: '', error: notice }));
+      requestPreview(notice);
+      return true;
+    };
     const p = estado.preview || {};
     const counts = p.counts || {};
-    const blocked = !p.ready;
+    const blocked = reviewing || !p.ready || !validPointZeroPreview(p);
     const guardText = [];
-    if (!p.sync_complete || !p.client_ready) guardText.push('La actualización entre equipos o los cambios pendientes todavía no están listos.');
-    if (p.active_locks || p.local_locks) guardText.push('Existen bloqueos activos.');
+    const status = p.client_status || {};
+    if (p.system_mode !== 'preproduction') guardText.push('Punto Cero sólo está disponible en preproducción.');
+    if (!p.client_ready) {
+      if (status.connection === 'offline') guardText.push('Este equipo no tiene conexión. Conéctalo a internet y revisa de nuevo.');
+      else if (status.compatibility && status.compatibility !== 'ok') guardText.push('Este equipo necesita actualizar BALAM antes de continuar.');
+      else if (Number(status.blocked) > 0 || status.checkpointError || (status.errors || []).length) guardText.push('Este equipo tiene cambios o errores que requieren atención. Revísalos en el panel de sincronización.');
+      else if (p.local_activity || p.local_locks) guardText.push('Termina la operación o captura abierta en este equipo antes de continuar.');
+      else if (Number(status.pending) > 0) guardText.push(`Este equipo tiene ${N(status.pending)} cambio(s) pendiente(s) de enviar.`);
+      else guardText.push('La actualización de este equipo todavía no está confirmada. Espera a que termine o pulsa Revisar de nuevo.');
+    }
+    const blockedDevices = Array.isArray(p.blocked_devices) ? p.blocked_devices.filter(device => device.status !== 'revoked') : [];
+    const deviceReasons = { epoch: 'necesita resincronizarse', pending: 'tiene cambios pendientes de enviar',
+      blocked: 'tiene cambios bloqueados que requieren atención', offline: 'debe conectarse y completar su actualización',
+      stale: 'no tiene una señal reciente; conéctalo y revisa de nuevo' };
+    blockedDevices.forEach(device => {
+      const reasons = (Array.isArray(device.reasons) ? device.reasons : []).map(reason => deviceReasons[reason]).filter(Boolean);
+      guardText.push(`${device.display_name || 'Equipo ' + String(device.device_id || '').slice(-6).toUpperCase()}: ${reasons.join('; ') || 'su actualización todavía no está confirmada'}.`);
+    });
+    if (!p.sync_complete && !blockedDevices.length) guardText.push('La actualización de los equipos activos todavía no está confirmada. Revísalos en el panel de sincronización; un equipo activo desconectado sigue bloqueando Punto Cero.');
+    if (p.active_locks) guardText.push('Existen bloqueos activos en el servidor.');
     if (p.active_operation) guardText.push('Ya existe otra ejecución de Punto Cero.');
     const makeBackup = async () => {
-      setEstado(x => Object.assign({}, x, { paso: 'respaldando', error: '' }));
+      if (blocked) return;
+      ++previewRequest.current; clearTimeout(previewTimer.current);
+      setEstado(x => x && Object.assign({}, x, { paso: 'respaldando', error: '' }));
       try {
         const backup = await window.STORE.createPointZeroBackup(p);
+        if (!mounted.current) return;
         window.STORE.downloadPointZeroDocument(backup.document, 'respaldo', backup.backup_id);
-        setEstado(x => Object.assign({}, x, { paso: 'confirmacion', backup, confirmacion: '' }));
-      } catch (e) { setEstado(x => Object.assign({}, x, { paso: 'diagnostico', error: e.message || String(e) })); }
+        setEstado(x => x && Object.assign({}, x, { paso: 'confirmacion', backup, confirmacion: '' }));
+      } catch (e) {
+        if (!mounted.current || recoverPreview(e)) return;
+        setEstado(x => x && Object.assign({}, x, { paso: 'diagnostico', error: e.message || String(e) }));
+      }
     };
     const execute = async () => {
-      setEstado(x => Object.assign({}, x, { paso: 'ejecutando', error: '' }));
+      setEstado(x => x && Object.assign({}, x, { paso: 'ejecutando', error: '' }));
       try {
         const result = await window.STORE.executePointZero({
           previewToken: p.preview_token, backupId: estado.backup.backup_id,
           confirmation: estado.confirmacion,
         });
-        setEstado(x => Object.assign({}, x, { paso: 'resultado', result }));
-      } catch (e) { setEstado(x => Object.assign({}, x, { paso: 'error', error: e.message || String(e) })); }
+        if (mounted.current) setEstado(x => x && Object.assign({}, x, { paso: 'resultado', result }));
+      } catch (e) {
+        if (!mounted.current || recoverPreview(e)) return;
+        setEstado(x => x && Object.assign({}, x, { paso: 'error', error: e.message || String(e) }));
+      }
     };
     const receipt = async () => {
       try {
@@ -1940,16 +2059,19 @@
       } catch (e) { toast(e.message || String(e), 'var(--danger)'); }
     };
     const footer = [];
-    if (!['ejecutando','resultado'].includes(estado.paso)) footer.push(h('button', { key: 'cancel', onClick: onClose, className: 'px-5 h-11 text-on-surface-variant rounded-lg' }, 'Cancelar'));
+    if (!['ejecutando','resultado'].includes(estado.paso)) footer.push(h('button', { key: 'cancel', onClick: close, className: 'px-5 h-11 text-on-surface-variant rounded-lg' }, 'Cancelar'));
+    if (estado.paso === 'diagnostico') footer.push(h('button', { key: 'refresh', disabled: reviewing,
+      'data-testid': 'point-zero-dialog-refresh', onClick: () => requestPreview(),
+      className: 'px-4 h-11 border border-outline-variant rounded-lg text-caption disabled:opacity-40' }, reviewing ? 'Revisando…' : 'Revisar de nuevo'));
     if (estado.paso === 'diagnostico') footer.push(h('button', { key: 'backup', disabled: blocked, onClick: makeBackup,
       'data-testid': 'point-zero-backup', className: 'px-5 h-11 bg-primary text-on-primary rounded-lg disabled:opacity-40' }, 'Crear respaldo antes de continuar'));
-    if (estado.paso === 'confirmacion') footer.push(h('button', { key: 'continue', disabled: estado.confirmacion !== 'PUNTO CERO',
+    if (estado.paso === 'confirmacion') footer.push(h('button', { key: 'continue', disabled: estado.confirmacion !== 'PUNTO CERO', 'data-testid': 'point-zero-next',
       onClick: () => setEstado(x => Object.assign({}, x, { paso: 'final' })), className: 'px-5 h-11 bg-primary text-on-primary rounded-lg disabled:opacity-40' }, 'Continuar'));
     if (estado.paso === 'final') footer.push(h('button', { key: 'execute', onClick: execute, 'data-testid': 'point-zero-execute',
       className: 'px-5 h-11 bg-danger text-white font-bold rounded-lg' }, 'Ejecutar Punto Cero'));
     if (estado.paso === 'resultado') footer.push(h('button', { key: 'receipt', onClick: receipt, className: 'px-5 h-11 border border-outline-variant rounded-lg' }, 'Descargar comprobante de Punto Cero'),
-      h('button', { key: 'close', onClick: onClose, className: 'px-5 h-11 bg-primary text-on-primary rounded-lg' }, 'Cerrar'));
-    if (estado.paso === 'error') footer.push(h('button', { key: 'close', onClick: onClose, className: 'px-5 h-11 bg-primary text-on-primary rounded-lg' }, 'Entendido'));
+      h('button', { key: 'close', onClick: close, className: 'px-5 h-11 bg-primary text-on-primary rounded-lg' }, 'Cerrar'));
+    if (estado.paso === 'error') footer.push(h('button', { key: 'close', onClick: close, className: 'px-5 h-11 bg-primary text-on-primary rounded-lg' }, 'Entendido'));
 
     let body;
     if (estado.paso === 'resultado') {
@@ -1985,7 +2107,9 @@
     } else {
       body = [
         estado.error && h(HumanMessage, { key: 'error', message: estado.error, className: 'mb-4 p-3 rounded-lg bg-danger-soft text-caption' }),
-        guardText.length > 0 && h('div', { key: 'guards', className: 'mb-4 p-3 rounded-lg bg-warning-soft text-warning text-caption' }, guardText.join(' ')),
+        reviewing && h('p', { key: 'reviewing', role: 'status', className: 'mb-3 text-caption text-on-surface-variant' }, 'Revisando datos, cambios pendientes y equipos…'),
+        guardText.length > 0 && h('div', { key: 'guards', className: 'mb-4 p-3 rounded-lg bg-warning-soft text-warning text-caption space-y-2' },
+          guardText.map((text, i) => h('p', { key: i }, text))),
         h('div', { key: 'grid', className: 'grid grid-cols-1 md:grid-cols-2 gap-6' }, [
           h('div', { key: 'delete' }, [h('div', { className: 'text-overline font-bold text-danger mb-2' }, 'Se eliminará'), h(PointZeroCounts, { counts, tone: 'text-danger' })]),
           h('div', { key: 'keep' }, [h('div', { className: 'text-overline font-bold text-success mb-2' }, 'Se conservará'), ...POINT_ZERO_KEPT.map(x => h('div', { key: x, className: 'text-caption text-success py-1' }, '✓ ' + x))]),
@@ -1995,7 +2119,7 @@
       ];
     }
     return h(Modal, { title: estado.paso === 'resultado' ? 'Punto Cero completado' : 'PUNTO CERO', large: true,
-      onClose: estado.paso === 'ejecutando' ? (() => {}) : onClose, footer },
+      testId: 'point-zero-dialog', onClose: estado.paso === 'ejecutando' ? (() => {}) : close, footer },
       estado.paso === 'respaldando' ? h('p', { className: 'py-8 text-center' }, 'Creando respaldo verificable…')
         : estado.paso === 'ejecutando' ? h('p', { className: 'py-8 text-center' }, 'Aplicando la limpieza y comprobando el resultado…') : body);
   }

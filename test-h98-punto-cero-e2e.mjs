@@ -17,7 +17,8 @@ const check = (name, ok, detail = '') => {
   console.log(`${ok ? '✅' : '❌'} ${name}${detail ? ' · ' + detail : ''}`);
   ok ? pass++ : fail++;
 };
-const browser = await chromium.launch({ channel: 'chrome', headless: true });
+const browser = await chromium.launch({ headless: true, ...(process.env.BALAM_CHROME_EXECUTABLE
+  ? { executablePath: process.env.BALAM_CHROME_EXECUTABLE } : { channel: 'chrome' }) });
 const page = await browser.newPage();
 page.on('pageerror', e => errors.push(String(e)));
 await page.route(/supabase\.co/, route => route.abort());
@@ -88,6 +89,7 @@ check('segunda confirmación muestra advertencia permanente', (await page.locato
 await page.getByTestId('point-zero-execute').click();
 await page.getByText('PUNTO CERO COMPLETADO', { exact: true }).waitFor();
 check('ejecución única completada', (await page.evaluate(() => window.__h98.executeCalls)) === 1);
+await page.getByTestId('point-zero-dialog').locator('details[data-technical-details="true"] > summary').click();
 check('resultado muestra operation_id', (await page.locator('body').innerText()).includes('h98-synthetic-operation'));
 await page.getByRole('button', { name: 'Descargar comprobante de Punto Cero' }).click();
 check('comprobante se obtiene de su autoridad', (await page.evaluate(() => window.__h98.receiptCalls)) === 1);

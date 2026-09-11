@@ -1,0 +1,44 @@
+H159 baseline regression of unchanged H68 harness
+Source: test-h68-purga-datos-prueba.mjs
+Temporary changes: ROOT=process.cwd(); serve HEAD:index.html at /index.html
+Commit: 57de0589a8559943743227721c942a82f6693148
+Artifact SHA256: 1e477db25a4732507efcfc9fd481f068155a32b2241e424eda9ea00b09c56f03
+✅ la venta cobrada descontó existencias · 20→16
+✅ el apartado NO descontó existencias · 16→16
+✅ el apartado liquidado descontó una vez · 14
+✅ la devolución reingresó su pieza · 15
+✅ el cambio movió inventario en los dos sentidos · A=16 B=19 err=-
+✅ el préstamo no movió existencias · 19 err=-
+✅ la configuración no cambió al operar
+✅ el resumen previo cuenta ventas, apartados, cambios y préstamos · {"v":2,"a":1,"c":1,"p":1,"d":1}
+✅ el resumen no está bloqueado ni tiene identidad ambigua · null
+✅ un fallo de la autoridad remota no borra nada · {"ventas":3,"piezas":35,"huella":"4e2d3b67-14777","clientes":1}
+✅ descarta ventas, devoluciones, cambios, préstamos y comisiones pendientes · ["q9","q10","q11"]
+✅ descarta las cargas masivas de datos borrados (clientes, liquidaciones)
+✅ CONSERVA la configuración y las bajas de catálogo pendientes · ["q9","q10","q11"]
+✅ CONSERVA lo capturado DESPUÉS de la limpieza
+✅ reconstruye productos, vendedores y clientes en vez de perderlos · ["clients","products"]
+❌ la limpieza remota se ejecutó · Error: page.evaluate: TypeError: Cannot read properties of undefined (reading 'stock')
+    at eval (eval at evaluate (:302:30), <anonymous>:32:18)
+    at async <anonymous>:328:30
+❌ BORRA ventas, apartados y sus cobros · ventas=undefined pagos=undefined
+❌ BORRA devoluciones y cambios · dev=undefined cam=undefined
+❌ BORRA préstamos · undefined
+❌ BORRA comisiones y cierres · undefined
+❌ BORRA los clientes de prueba y deja el genérico · undefined
+❌ BORRA los movimientos de venta, devolución y cambio
+❌ CONSERVA el movimiento de inventario
+❌ RESTAURA las existencias al valor previo a las pruebas · A=undefined/20 B=undefined/20
+❌ el total de piezas vuelve al inicial · undefined vs 40
+❌ CONSERVA los productos idénticos
+
+file:///C:/Users/david/Downloads/POS-BALAM-ticket-h134/.h156-release/.evidence-h158-live/test-h68-before-h159.mjs:324
+  JSON.stringify(d.promos) === JSON.stringify(purga.antes.promos), JSON.stringify(d.promos));
+                                                          ^
+
+TypeError: Cannot read properties of undefined (reading 'promos')
+    at file:///C:/Users/david/Downloads/POS-BALAM-ticket-h134/.h156-release/.evidence-h158-live/test-h68-before-h159.mjs:324:59
+
+Node.js v24.14.0
+
+exitCode=1

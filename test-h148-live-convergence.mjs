@@ -603,13 +603,22 @@ try {
   return converge();
  });
  await verify('Closed terminal reopens to authority and repairs damaged cache',async()=>{
+  // A restored AUTH session precedes managed STORE initialization on localhost.
+  // Require automatic bootstrap before asking the reconciler to compare data;
+  // three immediate calls while the manifest is null do not await that startup.
+  const awaitReopened=()=>C.page.waitForFunction(({email,epoch})=>{
+   const state=window.STORE?.syncStatus();
+   return window.AUTH?.isReady() && window.AUTH.current()?.email===email
+    && window.DATA?.isLocalWriter && state?.compatibility==='ok'
+    && Number(state.dataEpoch)===epoch && state.synchronized;
+  },{email,epoch:Number(manifest.data_epoch)},{timeout:120000});
   await C.page.goto('about:blank');
   await A.page.evaluate(ids=>{window.DATA.updateReference({id:ids[0],precio:149});window.DATA.updateReference({id:ids[1],precio:103});window.DATA.saveProducts(ids);},productIds.slice(0,2));
   await A.page.evaluate(()=>window.STORE.synchronizeNow());
   await A.page.evaluate(id=>{window.DATA.updateReference({id,precio:150});window.DATA.saveProducts([id]);},productIds[0]);await A.page.evaluate(()=>window.STORE.synchronizeNow());
-  await C.page.goto(address,{waitUntil:'domcontentloaded'});await C.page.waitForFunction(()=>window.AUTH?.hasSession()&&window.DATA?.isLocalWriter);await converge();
+  await C.page.goto(address,{waitUntil:'domcontentloaded'});await awaitReopened();await converge();
   await C.page.evaluate(id=>{window.DATA.products.find(p=>p.id===id).stockQuantity=999;window.DATA.saveProducts();localStorage.setItem('balam_sync_domain_cursors_v1',JSON.stringify({products:999999999}));},productIds[0]);
-  await C.page.reload({waitUntil:'domcontentloaded'});await C.page.waitForFunction(()=>window.AUTH?.hasSession()&&window.DATA?.isLocalWriter);await converge();return documents();
+  await C.page.reload({waitUntil:'domcontentloaded'});await awaitReopened();await converge();return documents();
  });
  await verify('Visible update control reconciles and fits mobile and desktop',async()=>{
   for(const width of [320,1280]){

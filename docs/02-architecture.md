@@ -845,8 +845,12 @@ en preproducción. No existe RPC ordinaria para volver desde producción: hacerl
 es un procedimiento extraordinario fuera del flujo destructivo.
 
 `point_zero_preview()` cuenta desde las tablas remotas y sella contenido,
-esquema, época y sincronización. Todos los equipos registrados deben estar en
-la época vigente, en línea, sin cola ni bloqueos. El respaldo recalcula ese
+esquema, época y sincronización. Los equipos activos deben estar en
+la época vigente, en línea, sin cola ni bloqueos. Los retirados conservan el
+cerco de escritura y su evidencia, pero no participan en esta comprobación.
+El diagnóstico identifica cada equipo bloqueante y cuenta clientes no genéricos
+activos; las lápidas históricas se preservan y no cuentan como operación.
+El respaldo recalcula ese
 token, persiste el payload eliminable separado de la auditoría y devuelve un
 documento con SHA-256. La ejecución exige administrador activo,
 `settings.manage`, respaldo, token vigente y la frase exacta `PUNTO CERO`; toma
@@ -858,6 +862,12 @@ El éxito aumenta `data_epoch` y obliga a las demás terminales a reconstruirse
 antes de escribir. `point_zero_operations` conserva actor, equipo, versiones,
 respaldo relacionado, conteos y resultado; el contenido eliminado vive en
 `point_zero_backups`.
+
+El diálogo de Punto Cero revisa su diagnóstico ante cambios relevantes de
+sincronización, datos y conectividad, con reintento explícito y respuestas
+secuenciadas. Sólo lo hace en la fase de diagnóstico. Respaldo y confirmaciones
+conservan su snapshot; si el servidor lo rechaza por cambio de datos o seguridad,
+se vuelve a revisar y se exige un respaldo nuevo y otra confirmación.
 
 ### Limpieza selectiva y riesgo real de flota
 

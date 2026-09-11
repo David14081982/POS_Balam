@@ -1,0 +1,322 @@
+{
+  "run": "bb29b5b9-3444-4de6-b5a3-5ef154f9151f",
+  "project": "telohdbvbvsfmwyriflz",
+  "startedAt": "2026-09-11T22:14:00.392Z",
+  "sourceSha256": "6678d9d1c2eac11f1b670017e8fec4c716e7f9b763c1f26e631e423aab22fd85",
+  "certifierSha256": "82081ebea74289347429ee3a0d6ed6febdfa54451c62013d1deac8f1fdae1096",
+  "transport": "Real HTTPS Supabase; transport failures injected only for offline/lost ACK; no invented responses or service role in browser",
+  "cases": [
+    {
+      "name": "Bootstrap A/B/C from real authority",
+      "ok": true,
+      "evidence": [
+        {
+          "terminal": "A",
+          "count": 975,
+          "status": {
+            "recoveryPhase": "ready",
+            "recoveryError": null,
+            "reviewPending": 0,
+            "compatibility": "ok",
+            "protocolVersion": 3,
+            "schemaVersion": 20260830017500,
+            "clientBuild": "2026-09-11-h155",
+            "lastSuccess": "2026-09-11T22:14:55.918Z",
+            "lastVersionCheck": "2026-09-11T22:14:54.923Z",
+            "connection": "online",
+            "errors": [],
+            "checkpointError": null,
+            "dataEpoch": 9,
+            "realtime": "subscribed",
+            "operations": [],
+            "durability": "localStorage",
+            "invalidDomains": [],
+            "cursors": {
+              "devices": 25765,
+              "permissions": 404,
+              "purges": 26,
+              "config": 383,
+              "sellers": 314,
+              "products": 1387,
+              "clients": 198,
+              "promotions": 108,
+              "sales": 1575,
+              "payments": 340,
+              "returns": 240,
+              "exchanges": 198,
+              "loans": 68,
+              "liquidations": 67,
+              "movements": 472
+            },
+            "reconciling": false,
+            "pending": 0,
+            "blocked": 0,
+            "synchronized": true,
+            "devicePending": 0,
+            "otherSessionPending": 0
+          }
+        },
+        {
+          "terminal": "B",
+          "count": 975,
+          "status": {
+            "recoveryPhase": "ready",
+            "recoveryError": null,
+            "reviewPending": 0,
+            "compatibility": "ok",
+            "protocolVersion": 3,
+            "schemaVersion": 20260830017500,
+            "clientBuild": "2026-09-11-h155",
+            "lastSuccess": "2026-09-11T22:15:17.183Z",
+            "lastVersionCheck": "2026-09-11T22:15:16.024Z",
+            "connection": "online",
+            "errors": [],
+            "checkpointError": null,
+            "dataEpoch": 9,
+            "realtime": "subscribed",
+            "operations": [],
+            "durability": "localStorage",
+            "invalidDomains": [],
+            "cursors": {
+              "devices": 25768,
+              "permissions": 404,
+              "purges": 26,
+              "config": 383,
+              "sellers": 314,
+              "products": 1387,
+              "clients": 198,
+              "promotions": 108,
+              "sales": 1575,
+              "payments": 340,
+              "returns": 240,
+              "exchanges": 198,
+              "loans": 68,
+              "liquidations": 67,
+              "movements": 472
+            },
+            "reconciling": false,
+            "pending": 0,
+            "blocked": 0,
+            "synchronized": true,
+            "devicePending": 0,
+            "otherSessionPending": 0
+          }
+        },
+        {
+          "terminal": "C",
+          "count": 975,
+          "status": {
+            "recoveryPhase": "ready",
+            "recoveryError": null,
+            "reviewPending": 0,
+            "compatibility": "ok",
+            "protocolVersion": 3,
+            "schemaVersion": 20260830017500,
+            "clientBuild": "2026-09-11-h155",
+            "lastSuccess": "2026-09-11T22:15:33.076Z",
+            "lastVersionCheck": "2026-09-11T22:15:32.185Z",
+            "connection": "online",
+            "errors": [],
+            "checkpointError": null,
+            "dataEpoch": 9,
+            "realtime": "subscribed",
+            "operations": [],
+            "durability": "localStorage",
+            "invalidDomains": [],
+            "cursors": {
+              "devices": 25772,
+              "permissions": 404,
+              "purges": 26,
+              "config": 383,
+              "sellers": 314,
+              "products": 1387,
+              "clients": 198,
+              "promotions": 108,
+              "sales": 1575,
+              "payments": 340,
+              "returns": 240,
+              "exchanges": 198,
+              "loans": 68,
+              "liquidations": 67,
+              "movements": 472
+            },
+            "reconciling": false,
+            "pending": 0,
+            "blocked": 0,
+            "synchronized": true,
+            "devicePending": 0,
+            "otherSessionPending": 0
+          }
+        }
+      ],
+      "startedAt": "2026-09-11T22:14:38.781Z",
+      "elapsedMs": 54403
+    },
+    {
+      "name": "Create references A -> B/C/Supabase",
+      "ok": true,
+      "evidence": {
+        "clients": [
+          {
+            "terminal": "A",
+            "rows": 978,
+            "pending": 0,
+            "hash": "bff333ec246f500b68bbc5e42490b52a2330a83327577567336200d4b08542ef"
+          },
+          {
+            "terminal": "B",
+            "rows": 978,
+            "pending": 0,
+            "hash": "bff333ec246f500b68bbc5e42490b52a2330a83327577567336200d4b08542ef"
+          },
+          {
+            "terminal": "C",
+            "rows": 978,
+            "pending": 0,
+            "hash": "bff333ec246f500b68bbc5e42490b52a2330a83327577567336200d4b08542ef"
+          }
+        ],
+        "remote": 978
+      },
+      "startedAt": "2026-09-11T22:15:33.188Z",
+      "elapsedMs": 22644
+    },
+    {
+      "name": "Closed terminal reopens to authority and repairs damaged cache",
+      "ok": true,
+      "evidence": [
+        {
+          "domain": "clients",
+          "rows": 1,
+          "hash": "2397355fa74542455eff8d02022948c219e9c5f293fe60a72f1a306ee9585185"
+        },
+        {
+          "domain": "sellers",
+          "rows": 9,
+          "hash": "c2d52c6d07d24f5ee7cddeed00e5a372c23565bac1a7fce8e02e7dfc9ad451db"
+        },
+        {
+          "domain": "promos",
+          "rows": 2,
+          "hash": "177ddb91d20912c6173fa6b208e5a7f1d2bb64ef6408ca20b91f68e61a83495c"
+        },
+        {
+          "domain": "sales",
+          "rows": 0,
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "domain": "payments",
+          "rows": 0,
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "domain": "returns",
+          "rows": 0,
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "domain": "exchanges",
+          "rows": 0,
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "domain": "liquidations",
+          "rows": 0,
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "domain": "movements",
+          "rows": 0,
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        }
+      ],
+      "startedAt": "2026-09-11T22:15:55.837Z",
+      "elapsedMs": 95901
+    }
+  ],
+  "cleanup": {
+    "ok": true,
+    "ids": [
+      "qa-h148-bb29b5b9-3444-4de6-b5a3-5ef154f9151f-admin",
+      "qa-h148-bb29b5b9-3444-4de6-b5a3-5ef154f9151f-seller"
+    ],
+    "devices": [
+      "qa-h148-bb29b5b9-3444-4de6-b5a3-5ef154f9151f-A",
+      "qa-h148-bb29b5b9-3444-4de6-b5a3-5ef154f9151f-B",
+      "qa-h148-bb29b5b9-3444-4de6-b5a3-5ef154f9151f-C"
+    ],
+    "errors": []
+  },
+  "partial": true,
+  "profiles": 3,
+  "manifest": {
+    "singleton": true,
+    "schema_version": 20260830017500,
+    "sync_protocol_min": 3,
+    "sync_protocol_current": 3,
+    "minimum_client_build": null,
+    "data_epoch": 9,
+    "domain_modes": {
+      "loans": "active",
+      "sales": "active",
+      "config": "active",
+      "purges": "active",
+      "clients": "active",
+      "devices": "active",
+      "returns": "active",
+      "sellers": "active",
+      "payments": "active",
+      "products": "active",
+      "exchanges": "active",
+      "movements": "active",
+      "promotions": "active",
+      "permissions": "active",
+      "liquidations": "active"
+    },
+    "updated_at": "2026-09-11T19:14:13.396367+00:00",
+    "system_mode": "preproduction"
+  },
+  "businessPreservation": {
+    "ok": true,
+    "before": {
+      "products": "9e755d6cf778cd281c6c4c0d46a1ea25b675b4122cb2f81cf28819179849b4fb",
+      "clients": "4d354be43934b10031fcaf0374cc21c45ff3118b1e00652ae1885025e6aaa08c",
+      "sellers": "fe17ce563d5e1052fa12508d6f26fd2b18fd2f10b3d1037a5b38246c3c9e2f98",
+      "promotions": "ba17e3c23effbab1c41d004f4cda1fea33e0089633bdcba6f77e44867bfd6493",
+      "sales": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "sale_items": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "returns": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "return_items": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "exchanges": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "exchange_items": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "sale_payments": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "loan_documents": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "liquidations": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "commission_adjustments": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "movements": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "lookup": "fe2560cf14b22720660d7548ac80d90f5ec9b9ccb063ee6bea7f25a46e46888d",
+      "settings": "36cbc2c5441ec45859bd7f7c7af9e3e8d085f952bfcc1aa7a1cef12c284c05c2"
+    },
+    "after": {
+      "products": "9e755d6cf778cd281c6c4c0d46a1ea25b675b4122cb2f81cf28819179849b4fb",
+      "clients": "4d354be43934b10031fcaf0374cc21c45ff3118b1e00652ae1885025e6aaa08c",
+      "sellers": "fe17ce563d5e1052fa12508d6f26fd2b18fd2f10b3d1037a5b38246c3c9e2f98",
+      "promotions": "ba17e3c23effbab1c41d004f4cda1fea33e0089633bdcba6f77e44867bfd6493",
+      "sales": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "sale_items": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "returns": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "return_items": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "exchanges": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "exchange_items": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "sale_payments": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "loan_documents": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "liquidations": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "commission_adjustments": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "movements": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "lookup": "fe2560cf14b22720660d7548ac80d90f5ec9b9ccb063ee6bea7f25a46e46888d",
+      "settings": "36cbc2c5441ec45859bd7f7c7af9e3e8d085f952bfcc1aa7a1cef12c284c05c2"
+    }
+  },
+  "finishedAt": "2026-09-11T22:17:37.351Z"
+}

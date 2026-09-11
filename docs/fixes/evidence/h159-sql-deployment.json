@@ -1,0 +1,46 @@
+{
+  "date": "2026-09-11T21:53:53.285Z",
+  "migrations": [
+    "20260911020400",
+    "20260911020500"
+  ],
+  "verification": "authority, negative access and preservation passed; read-only rollback",
+  "results": [
+    {
+      "name": "create_point_zero_backup",
+      "before": "366c8cd7e7aefbf8b7872f2dd39622b8",
+      "after": "366c8cd7e7aefbf8b7872f2dd39622b8",
+      "unchanged": true
+    },
+    {
+      "name": "execute_point_zero",
+      "before": "7bbcd91094d2c62167892c3c701eacd6",
+      "after": "7bbcd91094d2c62167892c3c701eacd6",
+      "unchanged": true
+    },
+    {
+      "name": "point_zero_payload",
+      "before": "80ecd36acac5c871d43b1adb83b2de96",
+      "after": "80ecd36acac5c871d43b1adb83b2de96",
+      "unchanged": true
+    },
+    {
+      "name": "point_zero_preserved_hash",
+      "before": "5b951795306d3c197c36e9bdb88aa3d0",
+      "after": "5b951795306d3c197c36e9bdb88aa3d0",
+      "unchanged": true
+    },
+    {
+      "name": "point_zero_preview",
+      "before": "facb9404079a65caccedaad47d6ff73d",
+      "after": "ce5b00b45ad34c923e93eb7be3350fdb",
+      "unchanged": false
+    },
+    {
+      "name": "purge_test_data",
+      "before": "bcb539235f0263f825b87c4345a7bceb",
+      "after": "bcb539235f0263f825b87c4345a7bceb",
+      "unchanged": true
+    }
+  ]
+}

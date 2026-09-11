@@ -15,6 +15,7 @@ on:
       - 'test-h151-*.mjs'
       - 'test-h152-*.mjs'
       - 'test-h155-*.mjs'
+      - 'test-h159-*.mjs'
       - 'test-store-queue.mjs'
       - 'test-concurrency.mjs'
       - 'test-h142-*.mjs'
@@ -36,6 +37,7 @@ on:
       - 'test-h151-*.mjs'
       - 'test-h152-*.mjs'
       - 'test-h155-*.mjs'
+      - 'test-h159-*.mjs'
       - 'test-store-queue.mjs'
       - 'test-concurrency.mjs'
       - 'test-h142-*.mjs'
@@ -78,6 +80,12 @@ jobs:
       - run: node build-offline.mjs
       - run: node test-auth-permissions.mjs
       - run: node test-h158-auth-refresh-browser.mjs
+      - run: node test-h98-punto-cero.mjs
+      - run: node test-h159-point-zero-readiness.mjs
+      - name: Verify Punto Cero backup, preservation and rollback
+        env:
+          BALAM_PGLITE_MODULE: ${{ runner.temp }}/balam-h155-pglite/node_modules/@electric-sql/pglite/dist/index.js
+        run: node test-h159-point-zero-sql.mjs
       - run: node test-h155-build-eol.mjs
       - run: node test-h155-auto-sync.mjs
       - name: Verify H155 SQL guards and STORE acknowledgements

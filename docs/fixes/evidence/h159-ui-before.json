@@ -1,0 +1,238 @@
+{
+  "date": "2026-09-11T21:37:48.448Z",
+  "artifact": "index.html",
+  "artifactSHA256": "1e477db25a4732507efcfc9fd481f068155a32b2241e424eda9ea00b09c56f03",
+  "width": 390,
+  "scope": "Actual bundled UI and STORE preview/backup with local controlled transport; no SQL or live A/B/C certification.",
+  "remoteBusinessWrites": 0,
+  "passed": 1,
+  "total": 6,
+  "results": [
+    {
+      "name": "1. Modal abierto se recupera con cero pendientes y bloqueos",
+      "passed": false,
+      "error": "page.waitForFunction: Timeout 4000ms exceeded.",
+      "observed": {
+        "state": {
+          "synchronized": true,
+          "remoteSync": true,
+          "activeLocks": 0,
+          "queuePending": 0,
+          "reconciling": false,
+          "active": false,
+          "token": "h159-preview-1",
+          "productCount": 2386,
+          "failures": 0,
+          "previews": 2,
+          "backups": 0,
+          "executions": 0,
+          "attempts": 0,
+          "approvedTokens": [],
+          "backupTokens": [],
+          "downloads": []
+        },
+        "disabled": true,
+        "dialog": "PUNTO CERO\nclose\nLa actualización entre equipos o los cambios pendientes todavía no están listos.\nSe eliminará\nProductos\n2,386\nPiezas\n3,502\nVentas\n0\nPartidas de venta (sale_items)\n0\nMovimientos\n0\nApartados\n0\nPagos transaccionales\n0\nDevoluciones\n0\nPartidas de devolución (return_items)\n0\nCambios\n0\nPartidas de cambio (exchange_items)\n0\nPréstamos\n0\nReclasificaciones\n0\nLiquidaciones de comisión\n0\nAjustes de comisión\n0\nCanjes de tarjeta física\n0\nReservas de stock\n0\nDocumentos de venta\n0\nDocumentos de devolución\n0\nDocumentos de cambio\n0\nDocumentos de liquidación de apartado\n0\nContadores de folio\n0\nClientes de prueba\n13\nSe conservará\n✓ Configuración\n✓ Catálogos\n✓ Usuarios\n✓ Roles y permisos\n✓ Constructor de SKU\n✓ Métodos de pago\n✓ Logotipo\n✓ Configuración de tienda\n0 cambio(s) pendiente(s) · 0 bloqueo(s) · actualización pendiente\nCancelar\nCrear respaldo antes de continuar"
+      }
+    },
+    {
+      "name": "2. Sincronía remota pendiente conserva el bloqueo real",
+      "passed": true,
+      "evidence": {
+        "remoteSync": false,
+        "pending": 0,
+        "locks": 0,
+        "blocked": true,
+        "kept": 8
+      }
+    },
+    {
+      "name": "3. Fallo de red invalida diagnóstico y permite reintento directo",
+      "passed": false,
+      "error": "locator.click: Timeout 4000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('point-zero-dialog-refresh')\u001b[22m\n",
+      "observed": {
+        "state": {
+          "synchronized": true,
+          "remoteSync": true,
+          "activeLocks": 0,
+          "queuePending": 0,
+          "reconciling": false,
+          "active": false,
+          "token": "h159-preview-1",
+          "productCount": 2386,
+          "failures": 1,
+          "previews": 2,
+          "backups": 0,
+          "executions": 0,
+          "attempts": 0,
+          "approvedTokens": [],
+          "backupTokens": [],
+          "downloads": []
+        },
+        "disabled": false,
+        "dialog": "PUNTO CERO\nclose\nSe eliminará\nProductos\n2,386\nPiezas\n3,502\nVentas\n0\nPartidas de venta (sale_items)\n0\nMovimientos\n0\nApartados\n0\nPagos transaccionales\n0\nDevoluciones\n0\nPartidas de devolución (return_items)\n0\nCambios\n0\nPartidas de cambio (exchange_items)\n0\nPréstamos\n0\nReclasificaciones\n0\nLiquidaciones de comisión\n0\nAjustes de comisión\n0\nCanjes de tarjeta física\n0\nReservas de stock\n0\nDocumentos de venta\n0\nDocumentos de devolución\n0\nDocumentos de cambio\n0\nDocumentos de liquidación de apartado\n0\nContadores de folio\n0\nClientes de prueba\n13\nSe conservará\n✓ Configuración\n✓ Catálogos\n✓ Usuarios\n✓ Roles y permisos\n✓ Constructor de SKU\n✓ Métodos de pago\n✓ Logotipo\n✓ Configuración de tienda\n0 cambio(s) pendiente(s) · 0 bloqueo(s) · actualización completa\nCancelar\nCrear respaldo antes de continuar"
+      }
+    },
+    {
+      "name": "4. Preview cambiado antes del respaldo vuelve a diagnóstico vigente",
+      "passed": false,
+      "error": "page.waitForFunction: Timeout 4000ms exceeded.",
+      "observed": {
+        "state": {
+          "synchronized": true,
+          "remoteSync": true,
+          "activeLocks": 0,
+          "queuePending": 0,
+          "reconciling": false,
+          "active": false,
+          "token": "h159-preview-2",
+          "productCount": 2400,
+          "failures": 0,
+          "previews": 3,
+          "backups": 0,
+          "executions": 0,
+          "attempts": 0,
+          "approvedTokens": [
+            "h159-preview-1"
+          ],
+          "backupTokens": [],
+          "downloads": []
+        },
+        "disabled": false,
+        "dialog": "PUNTO CERO\nclose\n\nNo se pudo completar la acción\n\nBALAM detuvo la operación para proteger la información.\n\nInténtalo nuevamente; si continúa, pide ayuda a una persona administradora.\n\nDetalles técnicos\nSe eliminará\nProductos\n2,386\nPiezas\n3,502\nVentas\n0\nPartidas de venta (sale_items)\n0\nMovimientos\n0\nApartados\n0\nPagos transaccionales\n0\nDevoluciones\n0\nPartidas de devolución (return_items)\n0\nCambios\n0\nPartidas de cambio (exchange_items)\n0\nPréstamos\n0\nReclasificaciones\n0\nLiquidaciones de comisión\n0\nAjustes de comisión\n0\nCanjes de tarjeta física\n0\nReservas de stock\n0\nDocumentos de venta\n0\nDocumentos de devolución\n0\nDocumentos de cambio\n0\nDocumentos de liquidación de apartado\n0\nContadores de folio\n0\nClientes de prueba\n13\nSe conservará\n✓ Configuración\n✓ Catálogos\n✓ Usuarios\n✓ Roles y permisos\n✓ Constructor de SKU\n✓ Métodos de pago\n✓ Logotipo\n✓ Configuración de tienda\n0 cambio(s) pendiente(s) · 0 bloqueo(s) · actualización completa\nCancelar\nCrear respaldo antes de continuar"
+      }
+    },
+    {
+      "name": "5. Cambio después del respaldo exige respaldo nuevo y otra confirmación",
+      "passed": false,
+      "error": "locator.click: Timeout 4000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('point-zero-next')\u001b[22m\n",
+      "observed": {
+        "state": {
+          "synchronized": true,
+          "remoteSync": true,
+          "activeLocks": 0,
+          "queuePending": 0,
+          "reconciling": false,
+          "active": false,
+          "token": "h159-preview-1",
+          "productCount": 2386,
+          "failures": 0,
+          "previews": 3,
+          "backups": 1,
+          "executions": 0,
+          "attempts": 0,
+          "approvedTokens": [
+            "h159-preview-1"
+          ],
+          "backupTokens": [
+            {
+              "id": "h159-backup-1",
+              "token": "h159-preview-1"
+            }
+          ],
+          "downloads": [
+            {
+              "document": {
+                "synthetic": true,
+                "counts": {
+                  "productos": 2386,
+                  "piezas": 3502,
+                  "ventas": 0,
+                  "sale_items": 0,
+                  "movimientos": 0,
+                  "apartados": 0,
+                  "pagos": 0,
+                  "devoluciones": 0,
+                  "return_items": 0,
+                  "cambios": 0,
+                  "exchange_items": 0,
+                  "prestamos": 0,
+                  "reclasificaciones": 0,
+                  "liquidaciones": 0,
+                  "commission_adjustments": 0,
+                  "physical_card_redemptions": 0,
+                  "stock_reservations": 0,
+                  "sale_commits": 0,
+                  "return_commits": 0,
+                  "exchange_commits": 0,
+                  "layaway_liquidation_commits": 0,
+                  "folio_counters": 0,
+                  "clientes": 13
+                }
+              },
+              "kind": "respaldo",
+              "id": "h159-backup-1"
+            }
+          ]
+        },
+        "dialog": "PUNTO CERO\nclose\n\nEscribe exactamente PUNTO CERO para habilitar la confirmación final.\n\n✓ Respaldo creado y descargado\nDetalles técnicos\nCancelar\nContinuar"
+      }
+    },
+    {
+      "name": "6. Respaldo, frase exacta y doble confirmación conservan el flujo",
+      "passed": false,
+      "error": "locator.isDisabled: Timeout 4000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('point-zero-next')\u001b[22m\n",
+      "observed": {
+        "state": {
+          "synchronized": true,
+          "remoteSync": true,
+          "activeLocks": 0,
+          "queuePending": 0,
+          "reconciling": false,
+          "active": false,
+          "token": "h159-preview-1",
+          "productCount": 2386,
+          "failures": 0,
+          "previews": 3,
+          "backups": 1,
+          "executions": 0,
+          "attempts": 0,
+          "approvedTokens": [
+            "h159-preview-1"
+          ],
+          "backupTokens": [
+            {
+              "id": "h159-backup-1",
+              "token": "h159-preview-1"
+            }
+          ],
+          "downloads": [
+            {
+              "document": {
+                "synthetic": true,
+                "counts": {
+                  "productos": 2386,
+                  "piezas": 3502,
+                  "ventas": 0,
+                  "sale_items": 0,
+                  "movimientos": 0,
+                  "apartados": 0,
+                  "pagos": 0,
+                  "devoluciones": 0,
+                  "return_items": 0,
+                  "cambios": 0,
+                  "exchange_items": 0,
+                  "prestamos": 0,
+                  "reclasificaciones": 0,
+                  "liquidaciones": 0,
+                  "commission_adjustments": 0,
+                  "physical_card_redemptions": 0,
+                  "stock_reservations": 0,
+                  "sale_commits": 0,
+                  "return_commits": 0,
+                  "exchange_commits": 0,
+                  "layaway_liquidation_commits": 0,
+                  "folio_counters": 0,
+                  "clientes": 13
+                }
+              },
+              "kind": "respaldo",
+              "id": "h159-backup-1"
+            }
+          ]
+        },
+        "dialog": "PUNTO CERO\nclose\n\nEscribe exactamente PUNTO CERO para habilitar la confirmación final.\n\n✓ Respaldo creado y descargado\nDetalles técnicos\nCancelar\nContinuar"
+      }
+    }
+  ]
+}
