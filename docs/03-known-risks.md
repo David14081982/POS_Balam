@@ -7056,7 +7056,7 @@ representativos de la matriz H155.
 
 ## H-157 — La eliminación selectiva conserva un diagnóstico obsoleto y se presenta como datos de prueba
 
-**Estado:** PARCIALMENTE RESUELTO — integrado y subido a main; web y certificación real A/B/C pendientes.
+**Estado:** PARCIALMENTE RESUELTO — publicado y verificado; validación local 4/4, sin certificación real A/B/C por excepción autorizada.
 **Fecha:** 11/09/2026.
 **Commit técnico:** `f985820e86d22d3234e87f219f8ffe1ff13d34d9`.
 **Evidencia:** Chrome sobre el artefacto H152, con transporte/estado controlados
@@ -7090,7 +7090,7 @@ código 0 el 11/09/2026 a las 18:36 UTC; mismos cuatro escenarios, sin ampliar
 a los 30 por instrucción explícita del usuario. Build código 0; HTML/offline
 SHA-256 `80de96831e1f37a26bfeab36ddedca768ff2d1ee1281b0a4ee0449cf075dbe71`.
 Evidencia: `docs/fixes/evidence/h157-correction.json`.
-**Publicación:** commit técnico confirmado en main el 11/09/2026 a las 18:40 UTC;
+**Bloqueo inicial de publicación:** commit técnico confirmado en main el 11/09/2026 a las 18:40 UTC;
 la lectura pública aún recibe HTML y SW de H155. Evidencia:
 `docs/fixes/evidence/h157-publication.json`. Pages requiere que el
 SHA-256 del certificado real H148 coincida con el artefacto entregado; el de
@@ -7108,10 +7108,15 @@ preview real de la terminal del usuario. Sin borrado remoto por esta corrección
 
 **Excepción de entrega autorizada (11/09/2026):** el usuario exige publicar H157
 sin ejecutar los 29 escenarios automáticos. Se conserva la validación 4/4 y se
-prepara publicación manual ligada exclusivamente al artefacto aprobado de
+implementó publicación manual ligada exclusivamente al artefacto aprobado de
 `f985820e86d22d3234e87f219f8ffe1ff13d34d9`; el workflow general y el certificado
-H148 permanecen intactos. No equivale a certificación real. Pendiente de ejecutar
-y verificar la publicación puntual, sin cambios nuevos en el producto.
+H148 permanecen intactos. No equivale a certificación real ni cambia el producto.
+**Publicación final:** commit `cb41e972ab02f4cba3df2b72df41a13165853d75`,
+workflow H157 `34635913062` correcto. El 11/09/2026 a las 18:55:41 UTC,
+10/10 archivos públicos coinciden byte a byte con la entrega aprobada,
+incluidos HTML `80de9683…` y SW `464c11af…`. Evidencia:
+`docs/fixes/evidence/h157-pages.json`. No se ejecutó la matriz de 29 escenarios
+ni se escribieron datos comerciales en Supabase. Adopción física pendiente.
 
 ## Regla de actualización
 

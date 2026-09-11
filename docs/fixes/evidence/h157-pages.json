@@ -1,0 +1,87 @@
+{
+  "at": "2026-09-11T18:55:41.934Z",
+  "technicalCommit": "f985820e86d22d3234e87f219f8ffe1ff13d34d9",
+  "workflowCommit": "cb41e972ab02f4cba3df2b72df41a13165853d75",
+  "run": 34635913062,
+  "workflowConclusion": "success",
+  "remoteMain": "cb41e972ab02f4cba3df2b72df41a13165853d75",
+  "base": "https://david14081982.github.io/POS_Balam/",
+  "checks": [
+    {
+      "path": "",
+      "status": 200,
+      "expectedSha256": "80de96831e1f37a26bfeab36ddedca768ff2d1ee1281b0a4ee0449cf075dbe71",
+      "actualSha256": "80de96831e1f37a26bfeab36ddedca768ff2d1ee1281b0a4ee0449cf075dbe71",
+      "matches": true
+    },
+    {
+      "path": "index.html",
+      "status": 200,
+      "expectedSha256": "80de96831e1f37a26bfeab36ddedca768ff2d1ee1281b0a4ee0449cf075dbe71",
+      "actualSha256": "80de96831e1f37a26bfeab36ddedca768ff2d1ee1281b0a4ee0449cf075dbe71",
+      "matches": true
+    },
+    {
+      "path": "POS Balam (offline).html",
+      "status": 200,
+      "expectedSha256": "80de96831e1f37a26bfeab36ddedca768ff2d1ee1281b0a4ee0449cf075dbe71",
+      "actualSha256": "80de96831e1f37a26bfeab36ddedca768ff2d1ee1281b0a4ee0449cf075dbe71",
+      "matches": true
+    },
+    {
+      "path": "sw.js",
+      "status": 200,
+      "expectedSha256": "464c11af2bffda8993500ea82c189810bb97b636356535aa88866ea2a1c51f0c",
+      "actualSha256": "464c11af2bffda8993500ea82c189810bb97b636356535aa88866ea2a1c51f0c",
+      "matches": true
+    },
+    {
+      "path": "manifest.webmanifest",
+      "status": 200,
+      "expectedSha256": "43417f79b56bf52969b2d04d1c70ee0a6ae67673b2acd8f673b0fbebf6986afd",
+      "actualSha256": "43417f79b56bf52969b2d04d1c70ee0a6ae67673b2acd8f673b0fbebf6986afd",
+      "matches": true
+    },
+    {
+      "path": "pwa/apple-touch-icon.png",
+      "status": 200,
+      "expectedSha256": "137651bbb5489c1fadbc75e1c1375d163d3be59a2c26f79161d46351a9991608",
+      "actualSha256": "137651bbb5489c1fadbc75e1c1375d163d3be59a2c26f79161d46351a9991608",
+      "matches": true
+    },
+    {
+      "path": "pwa/favicon-64.png",
+      "status": 200,
+      "expectedSha256": "12437629c6e64b955db23fa773b2a4ceba407f9cf7510d268b2f11a0606f1ad0",
+      "actualSha256": "12437629c6e64b955db23fa773b2a4ceba407f9cf7510d268b2f11a0606f1ad0",
+      "matches": true
+    },
+    {
+      "path": "pwa/icon-192.png",
+      "status": 200,
+      "expectedSha256": "72184e55164ce1c4e67a1013724a3b83947503356a487e055f0d022d01dcb64e",
+      "actualSha256": "72184e55164ce1c4e67a1013724a3b83947503356a487e055f0d022d01dcb64e",
+      "matches": true
+    },
+    {
+      "path": "pwa/icon-512.png",
+      "status": 200,
+      "expectedSha256": "c42b6fa17510f7bb91358bbe9e04f714cb15e816fd26875f86d0bbcc5bc08319",
+      "actualSha256": "c42b6fa17510f7bb91358bbe9e04f714cb15e816fd26875f86d0bbcc5bc08319",
+      "matches": true
+    },
+    {
+      "path": "pwa/icon-maskable-512.png",
+      "status": 200,
+      "expectedSha256": "f0d29a6e593ba7d79286f755179b4c984d0a6634a4b97954cc8f4daa2c693e47",
+      "actualSha256": "f0d29a6e593ba7d79286f755179b4c984d0a6634a4b97954cc8f4daa2c693e47",
+      "matches": true
+    }
+  ],
+  "deployment": "VERIFIED",
+  "ownerAuthorizedLimitedPublication": true,
+  "localScenariosPassed": 4,
+  "additionalLiveScenariosExecuted": 0,
+  "supabaseBusinessWrites": 0,
+  "distributedCertification": "NO CERTIFICADO"
+}

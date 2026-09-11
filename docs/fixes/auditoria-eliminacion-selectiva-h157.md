@@ -1,9 +1,10 @@
 # Eliminación selectiva: recuperación del botón y alcance
 
 **Riesgo:** H-157
-**Estado:** PARCIALMENTE RESUELTO — integrado y subido a main; web y certificación real A/B/C pendientes.
+**Estado:** PARCIALMENTE RESUELTO — publicado y verificado; validación local 4/4, sin certificación real A/B/C por excepción autorizada.
 **Fecha:** 11/09/2026
 **Commit técnico:** `f985820e86d22d3234e87f219f8ffe1ff13d34d9`
+**Commit de publicación:** `cb41e972ab02f4cba3df2b72df41a13165853d75`
 
 ## Problema y reproducción
 
@@ -280,14 +281,14 @@ bloqueo antes de confirmar y propagación en tres entornos STORE locales.
 **Commit y push:** `f985820e86d22d3234e87f219f8ffe1ff13d34d9`, confirmado en
 `origin/main` mediante GitHub a las 18:40 UTC del 11/09/2026. La integración
 avanzó main desde `0e1aa7d` sin sobrescribir su historia. La comprobación
-pública todavía recibe HTML y SW de H155; no se atribuye despliegue a H157.
+pública de ese momento recibió HTML y SW de H155; aún no se había desplegado H157.
 Evidencia: [h157-publication.json](evidence/h157-publication.json).
 
 El workflow `h148-sync-authority.yml` exige un certificado real del mismo
 artefacto antes de desplegar Pages. `test-h148-sync-certification.mjs` compara
 el SHA-256 certificado con el HTML que se entrega. El certificado de H155
-no cubre este HTML modificado; por tanto, la publicación automática queda
-pendiente de una certificación nueva. No se modifica el filtro ni se reutiliza
+no cubre este HTML modificado; por tanto, esa publicación automática quedó
+bloqueada. No se modifica el filtro ni se reutiliza
 el certificado atribuyéndolo a H157. La petición del usuario limita la prueba
 a los cuatro escenarios y no se ejecutó la matriz real adicional. Esta
 condición contractual de CI no invalida los cuatro escenarios locales aprobados.
@@ -300,19 +301,39 @@ terminó correctamente. Son comprobaciones automáticas del push, no escenarios
 manuales añadidos a los cuatro autorizados. A las 18:43 UTC Pages seguía
 sirviendo H155, con HTML y SW distintos de H157.
 
-## Riesgo residual, despliegue y commits
+## Publicación puntual autorizada y verificada
 
 El 11/09/2026 el usuario ordenó expresamente publicar esta entrega sin exigir
 los 29 escenarios automáticos. La publicación puntual de H157 queda autorizada
 con los cuatro escenarios ya aprobados, como excepción a la puerta de entrega;
 no se declara una certificación real A/B/C ni se modifica la evidencia H148.
-Se preparará un workflow manual exclusivo de este artefacto, ligado al commit
+Se implementó un workflow manual exclusivo de este artefacto, ligado al commit
 técnico `f985820e86d22d3234e87f219f8ffe1ff13d34d9` y a su SHA-256. La excepción
-no habilita artefactos diferentes ni sustituye el workflow general. El criterio
-de cierre es verificar el HTML y SW públicos contra los archivos aprobados.
+no habilita artefactos diferentes ni sustituye el workflow general. El checkout
+de main actual, la comparación de fuentes y archivos de entrega y los hashes
+fijos impiden reutilizar esta excepción para otra versión. La ejecución completa
+usa la misma exclusión `balam-pages` que el despliegue general.
 
-- Integración local validada y commit/push a main confirmados desde el checkout aislado.
-  Publicación puntual autorizada; pendiente de ejecución y verificación pública.
+El commit `cb41e972ab02f4cba3df2b72df41a13165853d75` incorpora
+`.github/workflows/h157-cleanup-publication.yml`. La ejecución manual
+[34635913062](https://github.com/David14081982/POS_Balam/actions/runs/34635913062)
+terminó correctamente y publicó la entrega. A las **18:55:41 UTC del 11/09/2026**
+se comprobaron **10/10 respuestas HTTP 200 con bytes idénticos**: raíz, index,
+HTML offline, service worker, manifiesto y cinco iconos. Evidencia:
+[h157-pages.json](evidence/h157-pages.json).
+
+El HTML público tiene SHA-256
+`80de96831e1f37a26bfeab36ddedca768ff2d1ee1281b0a4ee0449cf075dbe71` y el SW
+`464c11af2bffda8993500ea82c189810bb97b636356535aa88866ea2a1c51f0c`.
+Se conservan los cuatro escenarios aprobados; el workflow valida sus resultados
+y los archivos sin repetirlos. No se ejecutaron los 29 escenarios reales ni
+se realizaron escrituras comerciales en Supabase. La comprobación de bytes
+publicados no se presenta como certificación distribuida.
+
+## Riesgo residual, despliegue y commits
+
+- Integración, commit/push a main y publicación puntual verificados.
+  La adopción de esta versión en cada instalación física depende de su actualización.
 - **NO CERTIFICADO** contra Supabase real/A/B/C: la cobertura de esta corrección
   permanece acotada por el usuario. No ejecuta borrados ni escrituras
   comerciales remotas.
