@@ -1,0 +1,415 @@
+{
+  "date": "2026-09-11T17:10:15.808Z",
+  "artifactSHA256": "38978740c0ba3295e4dab4e37dd03fdb90e686467af4b5f606059b1332f4f586",
+  "scope": "Real HTML UI and unchanged STORE preview function, controlled RPC/status dependencies, all external requests blocked; no Supabase certification",
+  "results": [
+    {
+      "name": "All eight selected: enabled with ready preview",
+      "reproduced": true,
+      "detail": {
+        "calls": 2,
+        "disabled": false,
+        "message": "Todo está listo para limpiar.",
+        "enabledButtons": [
+          "Continuar con la limpieza"
+        ],
+        "checks": [
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true
+        ],
+        "text": "¿QUÉ QUIERES BORRAR?\nLimpiar datos de prueba\n\nElige qué operaciones de prueba deseas borrar. BALAM calculará automáticamente cómo debe quedar el inventario.\n\nOperaciones de prueba que se borrarán\nVentas y apartados\nBorra las ventas confirmadas, sus cobros y movimientos relacionados.\nDevoluciones\nBorra devoluciones ya registradas; no las ventas disponibles para devolver.\nEvidencias huérfanas de devoluciones\nBorra únicamente comprobantes técnicos sin devolución comercial. No modifica inventario ni dinero.\nCambios\nBorra cambios ya realizados; no las ventas que aparecen como opciones para cambiar.\nPréstamos\nBorra documentos de préstamo; no ventas ni movimientos de otras áreas.\nLiquidaciones y ajustes de comisión\nBorra pagos/cierres y ajustes. El saldo generado por ventas pertenece a Ventas y apartados.\nReclasificaciones\nRevierte documentos de reclasificación; no movimientos de venta o posventa.\nClientes de prueba\nBorra únicamente clientes no genéricos sin operaciones conservadas.\nSe eliminará\nVentas y apartados\n1\nDevoluciones\n0\nEvidencias huérfanas de devoluciones\n0\nCambios\n0\nPréstamos\n0\nLiquidaciones y ajustes de comisión\n0\nReclasificaciones\n0\nClientes de prueba\n0\nSe conservará\n✓ Productos\n✓ Inventario base\n✓ Configuración\n✓ Usuarios\n✓ Permisos\n✓ Catálogos\n✓ Folios\n✓ Históricos que no formen parte de la selección\n0 devoluciones significa que no existen documentos de devolución. Las ventas que aparecen en Devoluciones son opciones de posventa; para borrar esos tickets selecciona Ventas y apartados.\n0 cambios significa que no existen documentos de cambio realizados. Las ventas que aparecen como opciones en Cambios siguen siendo ventas; para borrar esos tickets selecciona Ventas y apartados.\n0 préstamos significa que no existen documentos de préstamo. Los movimientos o ventas visibles en otras áreas no cuentan como préstamos.\n0 aquí significa que no existen liquidaciones ni ajustes. “Comisiones por liquidar” es un saldo derivado de ventas; para retirar su venta fuente selecciona Ventas y apartados, y BALAM recalculará el saldo.\n0 reclasificaciones significa que no existen documentos de reclasificación. Los movimientos de venta, devolución o cambio pertenecen a sus propios grupos.\n0 clientes significa que no hay clientes de prueba elegibles. Los clientes genéricos o vinculados a operaciones conservadas no se borran.\nAl borrar Ventas y apartados, BALAM también recalculará Ventas del mes y Comisiones por liquidar usando únicamente los documentos que se conserven.\nVentas incluidas: AUDIT-ONLY.\nAl borrar estas ventas también se eliminarán sus pagos y movimientos relacionados.\nInventario\nEsta selección no cambia el inventario.\nTodo está listo para limpiar.\nContinuar con la limpieza",
+        "backups": 0,
+        "executions": 0
+      }
+    },
+    {
+      "name": "No horizontal overflow 320",
+      "reproduced": true,
+      "detail": {
+        "width": 320,
+        "scroll": 320
+      }
+    },
+    {
+      "name": "No horizontal overflow 360",
+      "reproduced": true,
+      "detail": {
+        "width": 360,
+        "scroll": 360
+      }
+    },
+    {
+      "name": "No horizontal overflow 390",
+      "reproduced": true,
+      "detail": {
+        "width": 390,
+        "scroll": 390
+      }
+    },
+    {
+      "name": "No horizontal overflow 430",
+      "reproduced": true,
+      "detail": {
+        "width": 430,
+        "scroll": 430
+      }
+    },
+    {
+      "name": "No horizontal overflow 768",
+      "reproduced": true,
+      "detail": {
+        "width": 768,
+        "scroll": 768
+      }
+    },
+    {
+      "name": "No horizontal overflow 1024",
+      "reproduced": true,
+      "detail": {
+        "width": 1024,
+        "scroll": 1024
+      }
+    },
+    {
+      "name": "No horizontal overflow 1280",
+      "reproduced": true,
+      "detail": {
+        "width": 1280,
+        "scroll": 1280
+      }
+    },
+    {
+      "name": "No horizontal overflow 1440",
+      "reproduced": true,
+      "detail": {
+        "width": 1440,
+        "scroll": 1440
+      }
+    },
+    {
+      "name": "Stale sync block after recovery events",
+      "reproduced": true,
+      "detail": {
+        "before": {
+          "calls": 2,
+          "disabled": true,
+          "message": "Esta computadora todavía está sincronizando. Espera a que termine.",
+          "enabledButtons": [],
+          "checks": [
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
+          ],
+          "text": "¿QUÉ QUIERES BORRAR?\nLimpiar datos de prueba\n\nElige qué operaciones de prueba deseas borrar. BALAM calculará automáticamente cómo debe quedar el inventario.\n\nOperaciones de prueba que se borrarán\nVentas y apartados\nBorra las ventas confirmadas, sus cobros y movimientos relacionados.\nDevoluciones\nBorra devoluciones ya registradas; no las ventas disponibles para devolver.\nEvidencias huérfanas de devoluciones\nBorra únicamente comprobantes técnicos sin devolución comercial. No modifica inventario ni dinero.\nCambios\nBorra cambios ya realizados; no las ventas que aparecen como opciones para cambiar.\nPréstamos\nBorra documentos de préstamo; no ventas ni movimientos de otras áreas.\nLiquidaciones y ajustes de comisión\nBorra pagos/cierres y ajustes. El saldo generado por ventas pertenece a Ventas y apartados.\nReclasificaciones\nRevierte documentos de reclasificación; no movimientos de venta o posventa.\nClientes de prueba\nBorra únicamente clientes no genéricos sin operaciones conservadas.\nSe eliminará\nVentas y apartados\n1\nDevoluciones\n0\nEvidencias huérfanas de devoluciones\n0\nCambios\n0\nPréstamos\n0\nLiquidaciones y ajustes de comisión\n0\nReclasificaciones\n0\nClientes de prueba\n0\nSe conservará\n✓ Productos\n✓ Inventario base\n✓ Configuración\n✓ Usuarios\n✓ Permisos\n✓ Catálogos\n✓ Folios\n✓ Históricos que no formen parte de la selección\n0 devoluciones significa que no existen documentos de devolución. Las ventas que aparecen en Devoluciones son opciones de posventa; para borrar esos tickets selecciona Ventas y apartados.\n0 cambios significa que no existen documentos de cambio realizados. Las ventas que aparecen como opciones en Cambios siguen siendo ventas; para borrar esos tickets selecciona Ventas y apartados.\n0 préstamos significa que no existen documentos de préstamo. Los movimientos o ventas visibles en otras áreas no cuentan como préstamos.\n0 aquí significa que no existen liquidaciones ni ajustes. “Comisiones por liquidar” es un saldo derivado de ventas; para retirar su venta fuente selecciona Ventas y apartados, y BALAM recalculará el saldo.\n0 reclasificaciones significa que no existen documentos de reclasificación. Los movimientos de venta, devolución o cambio pertenecen a sus propios grupos.\n0 clientes significa que no hay clientes de prueba elegibles. Los clientes genéricos o vinculados a operaciones conservadas no se borran.\nAl borrar Ventas y apartados, BALAM también recalculará Ventas del mes y Comisiones por liquidar usando únicamente los documentos que se conserven.\nVentas incluidas: AUDIT-ONLY.\nAl borrar estas ventas también se eliminarán sus pagos y movimientos relacionados.\nInventario\nEsta selección no cambia el inventario.\nEsta computadora todavía está sincronizando. Espera a que termine.\nContinuar con la limpieza",
+          "backups": 0,
+          "executions": 0
+        },
+        "after": {
+          "calls": 2,
+          "disabled": true,
+          "message": "Esta computadora todavía está sincronizando. Espera a que termine.",
+          "enabledButtons": [],
+          "checks": [
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
+          ],
+          "text": "¿QUÉ QUIERES BORRAR?\nLimpiar datos de prueba\n\nElige qué operaciones de prueba deseas borrar. BALAM calculará automáticamente cómo debe quedar el inventario.\n\nOperaciones de prueba que se borrarán\nVentas y apartados\nBorra las ventas confirmadas, sus cobros y movimientos relacionados.\nDevoluciones\nBorra devoluciones ya registradas; no las ventas disponibles para devolver.\nEvidencias huérfanas de devoluciones\nBorra únicamente comprobantes técnicos sin devolución comercial. No modifica inventario ni dinero.\nCambios\nBorra cambios ya realizados; no las ventas que aparecen como opciones para cambiar.\nPréstamos\nBorra documentos de préstamo; no ventas ni movimientos de otras áreas.\nLiquidaciones y ajustes de comisión\nBorra pagos/cierres y ajustes. El saldo generado por ventas pertenece a Ventas y apartados.\nReclasificaciones\nRevierte documentos de reclasificación; no movimientos de venta o posventa.\nClientes de prueba\nBorra únicamente clientes no genéricos sin operaciones conservadas.\nSe eliminará\nVentas y apartados\n1\nDevoluciones\n0\nEvidencias huérfanas de devoluciones\n0\nCambios\n0\nPréstamos\n0\nLiquidaciones y ajustes de comisión\n0\nReclasificaciones\n0\nClientes de prueba\n0\nSe conservará\n✓ Productos\n✓ Inventario base\n✓ Configuración\n✓ Usuarios\n✓ Permisos\n✓ Catálogos\n✓ Folios\n✓ Históricos que no formen parte de la selección\n0 devoluciones significa que no existen documentos de devolución. Las ventas que aparecen en Devoluciones son opciones de posventa; para borrar esos tickets selecciona Ventas y apartados.\n0 cambios significa que no existen documentos de cambio realizados. Las ventas que aparecen como opciones en Cambios siguen siendo ventas; para borrar esos tickets selecciona Ventas y apartados.\n0 préstamos significa que no existen documentos de préstamo. Los movimientos o ventas visibles en otras áreas no cuentan como préstamos.\n0 aquí significa que no existen liquidaciones ni ajustes. “Comisiones por liquidar” es un saldo derivado de ventas; para retirar su venta fuente selecciona Ventas y apartados, y BALAM recalculará el saldo.\n0 reclasificaciones significa que no existen documentos de reclasificación. Los movimientos de venta, devolución o cambio pertenecen a sus propios grupos.\n0 clientes significa que no hay clientes de prueba elegibles. Los clientes genéricos o vinculados a operaciones conservadas no se borran.\nAl borrar Ventas y apartados, BALAM también recalculará Ventas del mes y Comisiones por liquidar usando únicamente los documentos que se conserven.\nVentas incluidas: AUDIT-ONLY.\nAl borrar estas ventas también se eliminarán sus pagos y movimientos relacionados.\nInventario\nEsta selección no cambia el inventario.\nEsta computadora todavía está sincronizando. Espera a que termine.\nContinuar con la limpieza",
+          "backups": 0,
+          "executions": 0
+        }
+      }
+    },
+    {
+      "name": "Point Zero refresh indirectly recovers sync selection",
+      "reproduced": true,
+      "detail": {
+        "calls": 3,
+        "disabled": false,
+        "message": "Todo está listo para limpiar.",
+        "enabledButtons": [
+          "Continuar con la limpieza"
+        ],
+        "checks": [
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true
+        ],
+        "text": "¿QUÉ QUIERES BORRAR?\nLimpiar datos de prueba\n\nElige qué operaciones de prueba deseas borrar. BALAM calculará automáticamente cómo debe quedar el inventario.\n\nOperaciones de prueba que se borrarán\nVentas y apartados\nBorra las ventas confirmadas, sus cobros y movimientos relacionados.\nDevoluciones\nBorra devoluciones ya registradas; no las ventas disponibles para devolver.\nEvidencias huérfanas de devoluciones\nBorra únicamente comprobantes técnicos sin devolución comercial. No modifica inventario ni dinero.\nCambios\nBorra cambios ya realizados; no las ventas que aparecen como opciones para cambiar.\nPréstamos\nBorra documentos de préstamo; no ventas ni movimientos de otras áreas.\nLiquidaciones y ajustes de comisión\nBorra pagos/cierres y ajustes. El saldo generado por ventas pertenece a Ventas y apartados.\nReclasificaciones\nRevierte documentos de reclasificación; no movimientos de venta o posventa.\nClientes de prueba\nBorra únicamente clientes no genéricos sin operaciones conservadas.\nSe eliminará\nVentas y apartados\n1\nDevoluciones\n0\nEvidencias huérfanas de devoluciones\n0\nCambios\n0\nPréstamos\n0\nLiquidaciones y ajustes de comisión\n0\nReclasificaciones\n0\nClientes de prueba\n0\nSe conservará\n✓ Productos\n✓ Inventario base\n✓ Configuración\n✓ Usuarios\n✓ Permisos\n✓ Catálogos\n✓ Folios\n✓ Históricos que no formen parte de la selección\n0 devoluciones significa que no existen documentos de devolución. Las ventas que aparecen en Devoluciones son opciones de posventa; para borrar esos tickets selecciona Ventas y apartados.\n0 cambios significa que no existen documentos de cambio realizados. Las ventas que aparecen como opciones en Cambios siguen siendo ventas; para borrar esos tickets selecciona Ventas y apartados.\n0 préstamos significa que no existen documentos de préstamo. Los movimientos o ventas visibles en otras áreas no cuentan como préstamos.\n0 aquí significa que no existen liquidaciones ni ajustes. “Comisiones por liquidar” es un saldo derivado de ventas; para retirar su venta fuente selecciona Ventas y apartados, y BALAM recalculará el saldo.\n0 reclasificaciones significa que no existen documentos de reclasificación. Los movimientos de venta, devolución o cambio pertenecen a sus propios grupos.\n0 clientes significa que no hay clientes de prueba elegibles. Los clientes genéricos o vinculados a operaciones conservadas no se borran.\nAl borrar Ventas y apartados, BALAM también recalculará Ventas del mes y Comisiones por liquidar usando únicamente los documentos que se conserven.\nVentas incluidas: AUDIT-ONLY.\nAl borrar estas ventas también se eliminarán sus pagos y movimientos relacionados.\nInventario\nEsta selección no cambia el inventario.\nTodo está listo para limpiar.\nContinuar con la limpieza",
+        "backups": 0,
+        "executions": 0
+      }
+    },
+    {
+      "name": "Reselect recovers sync case",
+      "reproduced": true,
+      "detail": {
+        "calls": 5,
+        "disabled": false,
+        "message": "Todo está listo para limpiar.",
+        "enabledButtons": [
+          "Continuar con la limpieza"
+        ],
+        "checks": [
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true
+        ],
+        "text": "¿QUÉ QUIERES BORRAR?\nLimpiar datos de prueba\n\nElige qué operaciones de prueba deseas borrar. BALAM calculará automáticamente cómo debe quedar el inventario.\n\nOperaciones de prueba que se borrarán\nVentas y apartados\nBorra las ventas confirmadas, sus cobros y movimientos relacionados.\nDevoluciones\nBorra devoluciones ya registradas; no las ventas disponibles para devolver.\nEvidencias huérfanas de devoluciones\nBorra únicamente comprobantes técnicos sin devolución comercial. No modifica inventario ni dinero.\nCambios\nBorra cambios ya realizados; no las ventas que aparecen como opciones para cambiar.\nPréstamos\nBorra documentos de préstamo; no ventas ni movimientos de otras áreas.\nLiquidaciones y ajustes de comisión\nBorra pagos/cierres y ajustes. El saldo generado por ventas pertenece a Ventas y apartados.\nReclasificaciones\nRevierte documentos de reclasificación; no movimientos de venta o posventa.\nClientes de prueba\nBorra únicamente clientes no genéricos sin operaciones conservadas.\nSe eliminará\nVentas y apartados\n1\nDevoluciones\n0\nEvidencias huérfanas de devoluciones\n0\nCambios\n0\nPréstamos\n0\nLiquidaciones y ajustes de comisión\n0\nReclasificaciones\n0\nClientes de prueba\n0\nSe conservará\n✓ Productos\n✓ Inventario base\n✓ Configuración\n✓ Usuarios\n✓ Permisos\n✓ Catálogos\n✓ Folios\n✓ Históricos que no formen parte de la selección\n0 devoluciones significa que no existen documentos de devolución. Las ventas que aparecen en Devoluciones son opciones de posventa; para borrar esos tickets selecciona Ventas y apartados.\n0 cambios significa que no existen documentos de cambio realizados. Las ventas que aparecen como opciones en Cambios siguen siendo ventas; para borrar esos tickets selecciona Ventas y apartados.\n0 préstamos significa que no existen documentos de préstamo. Los movimientos o ventas visibles en otras áreas no cuentan como préstamos.\n0 aquí significa que no existen liquidaciones ni ajustes. “Comisiones por liquidar” es un saldo derivado de ventas; para retirar su venta fuente selecciona Ventas y apartados, y BALAM recalculará el saldo.\n0 reclasificaciones significa que no existen documentos de reclasificación. Los movimientos de venta, devolución o cambio pertenecen a sus propios grupos.\n0 clientes significa que no hay clientes de prueba elegibles. Los clientes genéricos o vinculados a operaciones conservadas no se borran.\nAl borrar Ventas y apartados, BALAM también recalculará Ventas del mes y Comisiones por liquidar usando únicamente los documentos que se conserven.\nVentas incluidas: AUDIT-ONLY.\nAl borrar estas ventas también se eliminarán sus pagos y movimientos relacionados.\nInventario\nEsta selección no cambia el inventario.\nTodo está listo para limpiar.\nContinuar con la limpieza",
+        "backups": 0,
+        "executions": 0
+      }
+    },
+    {
+      "name": "Stale remote block after recovery events",
+      "reproduced": true,
+      "detail": {
+        "before": {
+          "calls": 1,
+          "disabled": true,
+          "message": "Caja auditada reportó operaciones pendientes sin detalle suficiente para demostrar que son ajenas a esta limpieza.",
+          "enabledButtons": [],
+          "checks": [
+            true,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "text": "¿QUÉ QUIERES BORRAR?\nLimpiar datos de prueba\n\nElige qué operaciones de prueba deseas borrar. BALAM calculará automáticamente cómo debe quedar el inventario.\n\nOperaciones de prueba que se borrarán\nVentas y apartados\nBorra las ventas confirmadas, sus cobros y movimientos relacionados.\nDevoluciones\nBorra devoluciones ya registradas; no las ventas disponibles para devolver.\nEvidencias huérfanas de devoluciones\nBorra únicamente comprobantes técnicos sin devolución comercial. No modifica inventario ni dinero.\nCambios\nBorra cambios ya realizados; no las ventas que aparecen como opciones para cambiar.\nPréstamos\nBorra documentos de préstamo; no ventas ni movimientos de otras áreas.\nLiquidaciones y ajustes de comisión\nBorra pagos/cierres y ajustes. El saldo generado por ventas pertenece a Ventas y apartados.\nReclasificaciones\nRevierte documentos de reclasificación; no movimientos de venta o posventa.\nClientes de prueba\nBorra únicamente clientes no genéricos sin operaciones conservadas.\nSe eliminará\nVentas y apartados\n1\nSe conservará\n✓ Productos\n✓ Inventario base\n✓ Configuración\n✓ Usuarios\n✓ Permisos\n✓ Catálogos\n✓ Folios\n✓ Históricos que no formen parte de la selección\nAl borrar Ventas y apartados, BALAM también recalculará Ventas del mes y Comisiones por liquidar usando únicamente los documentos que se conserven.\nVentas incluidas: AUDIT-ONLY.\nAl borrar estas ventas también se eliminarán sus pagos y movimientos relacionados.\nInventario\nEsta selección no cambia el inventario.\nCaja auditada reportó operaciones pendientes sin detalle suficiente para demostrar que son ajenas a esta limpieza.\nContinuar con la limpieza",
+          "backups": 0,
+          "executions": 0
+        },
+        "after": {
+          "calls": 1,
+          "disabled": true,
+          "message": "Caja auditada reportó operaciones pendientes sin detalle suficiente para demostrar que son ajenas a esta limpieza.",
+          "enabledButtons": [],
+          "checks": [
+            true,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "text": "¿QUÉ QUIERES BORRAR?\nLimpiar datos de prueba\n\nElige qué operaciones de prueba deseas borrar. BALAM calculará automáticamente cómo debe quedar el inventario.\n\nOperaciones de prueba que se borrarán\nVentas y apartados\nBorra las ventas confirmadas, sus cobros y movimientos relacionados.\nDevoluciones\nBorra devoluciones ya registradas; no las ventas disponibles para devolver.\nEvidencias huérfanas de devoluciones\nBorra únicamente comprobantes técnicos sin devolución comercial. No modifica inventario ni dinero.\nCambios\nBorra cambios ya realizados; no las ventas que aparecen como opciones para cambiar.\nPréstamos\nBorra documentos de préstamo; no ventas ni movimientos de otras áreas.\nLiquidaciones y ajustes de comisión\nBorra pagos/cierres y ajustes. El saldo generado por ventas pertenece a Ventas y apartados.\nReclasificaciones\nRevierte documentos de reclasificación; no movimientos de venta o posventa.\nClientes de prueba\nBorra únicamente clientes no genéricos sin operaciones conservadas.\nSe eliminará\nVentas y apartados\n1\nSe conservará\n✓ Productos\n✓ Inventario base\n✓ Configuración\n✓ Usuarios\n✓ Permisos\n✓ Catálogos\n✓ Folios\n✓ Históricos que no formen parte de la selección\nAl borrar Ventas y apartados, BALAM también recalculará Ventas del mes y Comisiones por liquidar usando únicamente los documentos que se conserven.\nVentas incluidas: AUDIT-ONLY.\nAl borrar estas ventas también se eliminarán sus pagos y movimientos relacionados.\nInventario\nEsta selección no cambia el inventario.\nCaja auditada reportó operaciones pendientes sin detalle suficiente para demostrar que son ajenas a esta limpieza.\nContinuar con la limpieza",
+          "backups": 0,
+          "executions": 0
+        }
+      }
+    },
+    {
+      "name": "Point Zero refresh indirectly recovers remote selection",
+      "reproduced": true,
+      "detail": {
+        "calls": 2,
+        "disabled": false,
+        "message": "Todo está listo para limpiar.",
+        "enabledButtons": [
+          "Continuar con la limpieza"
+        ],
+        "checks": [
+          true,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "text": "¿QUÉ QUIERES BORRAR?\nLimpiar datos de prueba\n\nElige qué operaciones de prueba deseas borrar. BALAM calculará automáticamente cómo debe quedar el inventario.\n\nOperaciones de prueba que se borrarán\nVentas y apartados\nBorra las ventas confirmadas, sus cobros y movimientos relacionados.\nDevoluciones\nBorra devoluciones ya registradas; no las ventas disponibles para devolver.\nEvidencias huérfanas de devoluciones\nBorra únicamente comprobantes técnicos sin devolución comercial. No modifica inventario ni dinero.\nCambios\nBorra cambios ya realizados; no las ventas que aparecen como opciones para cambiar.\nPréstamos\nBorra documentos de préstamo; no ventas ni movimientos de otras áreas.\nLiquidaciones y ajustes de comisión\nBorra pagos/cierres y ajustes. El saldo generado por ventas pertenece a Ventas y apartados.\nReclasificaciones\nRevierte documentos de reclasificación; no movimientos de venta o posventa.\nClientes de prueba\nBorra únicamente clientes no genéricos sin operaciones conservadas.\nSe eliminará\nVentas y apartados\n1\nSe conservará\n✓ Productos\n✓ Inventario base\n✓ Configuración\n✓ Usuarios\n✓ Permisos\n✓ Catálogos\n✓ Folios\n✓ Históricos que no formen parte de la selección\nAl borrar Ventas y apartados, BALAM también recalculará Ventas del mes y Comisiones por liquidar usando únicamente los documentos que se conserven.\nVentas incluidas: AUDIT-ONLY.\nAl borrar estas ventas también se eliminarán sus pagos y movimientos relacionados.\nInventario\nEsta selección no cambia el inventario.\nTodo está listo para limpiar.\nContinuar con la limpieza",
+        "backups": 0,
+        "executions": 0
+      }
+    },
+    {
+      "name": "Reselect recovers remote case",
+      "reproduced": true,
+      "detail": {
+        "calls": 3,
+        "disabled": false,
+        "message": "Todo está listo para limpiar.",
+        "enabledButtons": [
+          "Continuar con la limpieza"
+        ],
+        "checks": [
+          true,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "text": "¿QUÉ QUIERES BORRAR?\nLimpiar datos de prueba\n\nElige qué operaciones de prueba deseas borrar. BALAM calculará automáticamente cómo debe quedar el inventario.\n\nOperaciones de prueba que se borrarán\nVentas y apartados\nBorra las ventas confirmadas, sus cobros y movimientos relacionados.\nDevoluciones\nBorra devoluciones ya registradas; no las ventas disponibles para devolver.\nEvidencias huérfanas de devoluciones\nBorra únicamente comprobantes técnicos sin devolución comercial. No modifica inventario ni dinero.\nCambios\nBorra cambios ya realizados; no las ventas que aparecen como opciones para cambiar.\nPréstamos\nBorra documentos de préstamo; no ventas ni movimientos de otras áreas.\nLiquidaciones y ajustes de comisión\nBorra pagos/cierres y ajustes. El saldo generado por ventas pertenece a Ventas y apartados.\nReclasificaciones\nRevierte documentos de reclasificación; no movimientos de venta o posventa.\nClientes de prueba\nBorra únicamente clientes no genéricos sin operaciones conservadas.\nSe eliminará\nVentas y apartados\n1\nSe conservará\n✓ Productos\n✓ Inventario base\n✓ Configuración\n✓ Usuarios\n✓ Permisos\n✓ Catálogos\n✓ Folios\n✓ Históricos que no formen parte de la selección\nAl borrar Ventas y apartados, BALAM también recalculará Ventas del mes y Comisiones por liquidar usando únicamente los documentos que se conserven.\nVentas incluidas: AUDIT-ONLY.\nAl borrar estas ventas también se eliminarán sus pagos y movimientos relacionados.\nInventario\nEsta selección no cambia el inventario.\nTodo está listo para limpiar.\nContinuar con la limpieza",
+        "backups": 0,
+        "executions": 0
+      }
+    },
+    {
+      "name": "Stale error block after recovery events",
+      "reproduced": true,
+      "detail": {
+        "before": {
+          "calls": 1,
+          "disabled": true,
+          "message": "No se puede continuar hasta que BALAM revise nuevamente la limpieza.",
+          "enabledButtons": [],
+          "checks": [
+            true,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "text": "¿QUÉ QUIERES BORRAR?\nLimpiar datos de prueba\n\nElige qué operaciones de prueba deseas borrar. BALAM calculará automáticamente cómo debe quedar el inventario.\n\nOperaciones de prueba que se borrarán\nVentas y apartados\nBorra las ventas confirmadas, sus cobros y movimientos relacionados.\nDevoluciones\nBorra devoluciones ya registradas; no las ventas disponibles para devolver.\nEvidencias huérfanas de devoluciones\nBorra únicamente comprobantes técnicos sin devolución comercial. No modifica inventario ni dinero.\nCambios\nBorra cambios ya realizados; no las ventas que aparecen como opciones para cambiar.\nPréstamos\nBorra documentos de préstamo; no ventas ni movimientos de otras áreas.\nLiquidaciones y ajustes de comisión\nBorra pagos/cierres y ajustes. El saldo generado por ventas pertenece a Ventas y apartados.\nReclasificaciones\nRevierte documentos de reclasificación; no movimientos de venta o posventa.\nClientes de prueba\nBorra únicamente clientes no genéricos sin operaciones conservadas.\n\nNo se pudo revisar la selección\n\nNo se habilitó la limpieza y no se modificó información.\n\nActualiza la revisión antes de continuar.\n\nDetalles técnicos\nNo se puede continuar hasta que BALAM revise nuevamente la limpieza.\nContinuar con la limpieza",
+          "backups": 0,
+          "executions": 0
+        },
+        "after": {
+          "calls": 1,
+          "disabled": true,
+          "message": "No se puede continuar hasta que BALAM revise nuevamente la limpieza.",
+          "enabledButtons": [],
+          "checks": [
+            true,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "text": "¿QUÉ QUIERES BORRAR?\nLimpiar datos de prueba\n\nElige qué operaciones de prueba deseas borrar. BALAM calculará automáticamente cómo debe quedar el inventario.\n\nOperaciones de prueba que se borrarán\nVentas y apartados\nBorra las ventas confirmadas, sus cobros y movimientos relacionados.\nDevoluciones\nBorra devoluciones ya registradas; no las ventas disponibles para devolver.\nEvidencias huérfanas de devoluciones\nBorra únicamente comprobantes técnicos sin devolución comercial. No modifica inventario ni dinero.\nCambios\nBorra cambios ya realizados; no las ventas que aparecen como opciones para cambiar.\nPréstamos\nBorra documentos de préstamo; no ventas ni movimientos de otras áreas.\nLiquidaciones y ajustes de comisión\nBorra pagos/cierres y ajustes. El saldo generado por ventas pertenece a Ventas y apartados.\nReclasificaciones\nRevierte documentos de reclasificación; no movimientos de venta o posventa.\nClientes de prueba\nBorra únicamente clientes no genéricos sin operaciones conservadas.\n\nNo se pudo revisar la selección\n\nNo se habilitó la limpieza y no se modificó información.\n\nActualiza la revisión antes de continuar.\n\nDetalles técnicos\nNo se puede continuar hasta que BALAM revise nuevamente la limpieza.\nContinuar con la limpieza",
+          "backups": 0,
+          "executions": 0
+        }
+      }
+    },
+    {
+      "name": "Point Zero refresh indirectly recovers error selection",
+      "reproduced": true,
+      "detail": {
+        "calls": 2,
+        "disabled": false,
+        "message": "Todo está listo para limpiar.",
+        "enabledButtons": [
+          "Continuar con la limpieza"
+        ],
+        "checks": [
+          true,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "text": "¿QUÉ QUIERES BORRAR?\nLimpiar datos de prueba\n\nElige qué operaciones de prueba deseas borrar. BALAM calculará automáticamente cómo debe quedar el inventario.\n\nOperaciones de prueba que se borrarán\nVentas y apartados\nBorra las ventas confirmadas, sus cobros y movimientos relacionados.\nDevoluciones\nBorra devoluciones ya registradas; no las ventas disponibles para devolver.\nEvidencias huérfanas de devoluciones\nBorra únicamente comprobantes técnicos sin devolución comercial. No modifica inventario ni dinero.\nCambios\nBorra cambios ya realizados; no las ventas que aparecen como opciones para cambiar.\nPréstamos\nBorra documentos de préstamo; no ventas ni movimientos de otras áreas.\nLiquidaciones y ajustes de comisión\nBorra pagos/cierres y ajustes. El saldo generado por ventas pertenece a Ventas y apartados.\nReclasificaciones\nRevierte documentos de reclasificación; no movimientos de venta o posventa.\nClientes de prueba\nBorra únicamente clientes no genéricos sin operaciones conservadas.\nSe eliminará\nVentas y apartados\n1\nSe conservará\n✓ Productos\n✓ Inventario base\n✓ Configuración\n✓ Usuarios\n✓ Permisos\n✓ Catálogos\n✓ Folios\n✓ Históricos que no formen parte de la selección\nAl borrar Ventas y apartados, BALAM también recalculará Ventas del mes y Comisiones por liquidar usando únicamente los documentos que se conserven.\nVentas incluidas: AUDIT-ONLY.\nAl borrar estas ventas también se eliminarán sus pagos y movimientos relacionados.\nInventario\nEsta selección no cambia el inventario.\nTodo está listo para limpiar.\nContinuar con la limpieza",
+        "backups": 0,
+        "executions": 0
+      }
+    },
+    {
+      "name": "Reselect recovers error case",
+      "reproduced": true,
+      "detail": {
+        "calls": 3,
+        "disabled": false,
+        "message": "Todo está listo para limpiar.",
+        "enabledButtons": [
+          "Continuar con la limpieza"
+        ],
+        "checks": [
+          true,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "text": "¿QUÉ QUIERES BORRAR?\nLimpiar datos de prueba\n\nElige qué operaciones de prueba deseas borrar. BALAM calculará automáticamente cómo debe quedar el inventario.\n\nOperaciones de prueba que se borrarán\nVentas y apartados\nBorra las ventas confirmadas, sus cobros y movimientos relacionados.\nDevoluciones\nBorra devoluciones ya registradas; no las ventas disponibles para devolver.\nEvidencias huérfanas de devoluciones\nBorra únicamente comprobantes técnicos sin devolución comercial. No modifica inventario ni dinero.\nCambios\nBorra cambios ya realizados; no las ventas que aparecen como opciones para cambiar.\nPréstamos\nBorra documentos de préstamo; no ventas ni movimientos de otras áreas.\nLiquidaciones y ajustes de comisión\nBorra pagos/cierres y ajustes. El saldo generado por ventas pertenece a Ventas y apartados.\nReclasificaciones\nRevierte documentos de reclasificación; no movimientos de venta o posventa.\nClientes de prueba\nBorra únicamente clientes no genéricos sin operaciones conservadas.\nSe eliminará\nVentas y apartados\n1\nSe conservará\n✓ Productos\n✓ Inventario base\n✓ Configuración\n✓ Usuarios\n✓ Permisos\n✓ Catálogos\n✓ Folios\n✓ Históricos que no formen parte de la selección\nAl borrar Ventas y apartados, BALAM también recalculará Ventas del mes y Comisiones por liquidar usando únicamente los documentos que se conserven.\nVentas incluidas: AUDIT-ONLY.\nAl borrar estas ventas también se eliminarán sus pagos y movimientos relacionados.\nInventario\nEsta selección no cambia el inventario.\nTodo está listo para limpiar.\nContinuar con la limpieza",
+        "backups": 0,
+        "executions": 0
+      }
+    },
+    {
+      "name": "Only first of two SQL blockers shown",
+      "reproduced": true,
+      "detail": {
+        "calls": 1,
+        "disabled": true,
+        "message": "La restitución produciría existencias negativas.",
+        "enabledButtons": [],
+        "checks": [
+          true,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "text": "¿QUÉ QUIERES BORRAR?\nLimpiar datos de prueba\n\nElige qué operaciones de prueba deseas borrar. BALAM calculará automáticamente cómo debe quedar el inventario.\n\nOperaciones de prueba que se borrarán\nVentas y apartados\nBorra las ventas confirmadas, sus cobros y movimientos relacionados.\nDevoluciones\nBorra devoluciones ya registradas; no las ventas disponibles para devolver.\nEvidencias huérfanas de devoluciones\nBorra únicamente comprobantes técnicos sin devolución comercial. No modifica inventario ni dinero.\nCambios\nBorra cambios ya realizados; no las ventas que aparecen como opciones para cambiar.\nPréstamos\nBorra documentos de préstamo; no ventas ni movimientos de otras áreas.\nLiquidaciones y ajustes de comisión\nBorra pagos/cierres y ajustes. El saldo generado por ventas pertenece a Ventas y apartados.\nReclasificaciones\nRevierte documentos de reclasificación; no movimientos de venta o posventa.\nClientes de prueba\nBorra únicamente clientes no genéricos sin operaciones conservadas.\nSe eliminará\nVentas y apartados\n1\nSe conservará\n✓ Productos\n✓ Inventario base\n✓ Configuración\n✓ Usuarios\n✓ Permisos\n✓ Catálogos\n✓ Folios\n✓ Históricos que no formen parte de la selección\nAl borrar Ventas y apartados, BALAM también recalculará Ventas del mes y Comisiones por liquidar usando únicamente los documentos que se conserven.\nVentas incluidas: AUDIT-ONLY.\nAl borrar estas ventas también se eliminarán sus pagos y movimientos relacionados.\nInventario\nEsta selección no cambia el inventario.\nLa restitución produciría existencias negativas.\nContinuar con la limpieza",
+        "backups": 0,
+        "executions": 0
+      }
+    },
+    {
+      "name": "No backup or deletion attempted",
+      "reproduced": true,
+      "detail": {
+        "backups": 0,
+        "executions": 0
+      }
+    },
+    {
+      "name": "No uncaught browser errors",
+      "reproduced": true,
+      "detail": []
+    }
+  ],
+  "errors": []
+}

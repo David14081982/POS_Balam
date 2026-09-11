@@ -1,0 +1,72 @@
+{
+  "date": "2026-09-11T17:44:12.526Z",
+  "artifactSHA256": "70f3649d0a2c07793f209e0f6cdd892cb6486720fba8eb95be0db6e6ad09c5ac",
+  "testLimit": "One scenario per group, four total, requested by user",
+  "remoteBusinessWrites": 0,
+  "distributedCertification": "NO CERTIFICADO",
+  "results": [
+    {
+      "name": "1. Botón: recuperación con selección conservada y reintento directo",
+      "passed": true,
+      "evidence": {
+        "autoRecoveredWithoutReselection": true,
+        "retryRecovered": true,
+        "requestsAfterRecovery": 2
+      }
+    },
+    {
+      "name": "2. Categoría: eliminar un préstamo y conservar venta, pago e inventario",
+      "passed": true,
+      "evidence": {
+        "loans": 0,
+        "sale": "H153-KEEP",
+        "payment": "h153-payment",
+        "stock": 4,
+        "products": 1,
+        "persistedLoans": 0,
+        "backups": 1,
+        "executions": 1,
+        "scope": "Real local DATA application; controlled execution response, no SQL deletion"
+      }
+    },
+    {
+      "name": "3. Protección: un plan que se bloquea al continuar no abre confirmación",
+      "passed": true,
+      "evidence": {
+        "bothBlockersVisible": true,
+        "backupCalls": 0,
+        "executionCalls": 0
+      }
+    },
+    {
+      "name": "4. Propagación: tres terminales locales adoptan un evento confirmado",
+      "passed": true,
+      "evidence": {
+        "terminals": [
+          {
+            "name": "A",
+            "synchronized": true,
+            "epoch": 2,
+            "stock": 12,
+            "pending": 0
+          },
+          {
+            "name": "B",
+            "synchronized": true,
+            "epoch": 2,
+            "stock": 12,
+            "pending": 0
+          },
+          {
+            "name": "C",
+            "synchronized": true,
+            "epoch": 2,
+            "stock": 12,
+            "pending": 0
+          }
+        ],
+        "scope": "Local independent STORE harnesses. NO CERTIFICADO against real Supabase A/B/C."
+      }
+    }
+  ]
+}

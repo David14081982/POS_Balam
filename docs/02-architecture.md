@@ -853,6 +853,14 @@ respaldo relacionado, conteos y resultado; el contenido eliminado vive en
 
 ### Limpieza selectiva y riesgo real de flota
 
+La tarjeta administrativa «Eliminar datos por categoría» revisa la selección
+al cambiar las casillas o el estado de sincronización, flota, datos y conexión.
+Ofrece reintento directo, muestra todos los bloqueos e invalida respuestas
+obsoletas. Los eventos de su propia consulta se agrupan para evitar bucles;
+el asistente conserva su snapshot y revalida al respaldar y ejecutar. El nombre
+describe selección por categorías sin clasificar registros como prueba/real;
+la disponibilidad continúa restringida al modo preproducción por el contrato SQL.
+
 H-113 no usa la presencia en línea como prueba de seguridad. La autoridad
 `pos.test_data_cleanup_fleet_risk()` cruza el alcance semántico elegido con la
 proyección resumida de `sync_activity`, los expedientes de cuarentena y la

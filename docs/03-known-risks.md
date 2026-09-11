@@ -7054,6 +7054,53 @@ entidades con PostgreSQL real y A/B/C antes de declarar resuelto.
 Este riesgo impide declarar BALAM globalmente aprobado por los 29 escenarios
 representativos de la matriz H155.
 
+## H-157 — La eliminación selectiva conserva un diagnóstico obsoleto y se presenta como datos de prueba
+
+**Estado:** PARCIALMENTE RESUELTO — integración local validada; push y publicación pendientes, sin certificación real A/B/C.
+**Fecha:** 11/09/2026.
+**Commit:** Pendiente de commit.
+**Evidencia:** Chrome sobre el artefacto H152, con transporte/estado controlados
+y tráfico externo bloqueado: ocho categorías seleccionadas durante sincronización
+conservan el botón deshabilitado cuando la condición se libera. El número de
+consultas permanece 2→2 tras eventos de recuperación. Error de consulta y bloqueo
+remoto resuelto también permanecen obsoletos. Desmarcar/marcar o Actualizar
+diagnóstico de Punto Cero provocan una nueva revisión y recuperan la acción.
+**Causa:** el efecto de `SelectiveCleanupCard` sólo depende de modo y selección;
+no reacciona a sincronización/conectividad/flota. El error solicita actualizar,
+pero la tarjeta no tiene reintento independiente. De varios bloqueos muestra
+sólo uno. SQL selecciona registros por categorías sin marca prueba/real, aunque
+la interfaz afirma «datos de prueba» y conserva el bloqueo por modo producción.
+**Corrección integrada:** se trasladó exclusivamente el cambio de
+`balam/settings.jsx` ya validado sobre H152: reacciones a estado/conectividad,
+Revisar de nuevo, invalidación de peticiones obsoletas, señales agrupadas sin
+bucle, resumen del asistente y recuperación H124 conservados, todos los motivos
+y nombre Eliminar datos por categoría/Clientes. SQL, permisos, modo, respaldo,
+hash, confirmación, stock, cola e idempotencia conservan su contrato.
+**Pruebas históricas:** reproducción local 21/21 observaciones; H116 UI 29/29;
+H124 UI 11/11; H113 contrato 35/35, H116 contrato 20/20, H124 contrato 11/11,
+H151 12/12. Corrección local anterior: cuatro escenarios, 4/4; SHA-256
+`70f3649d0a2c07793f209e0f6cdd892cb6486720fba8eb95be0db6e6ad09c5ac`.
+Esta evidencia corresponde a la base H152; la integración tiene evidencia propia.
+**Integración:** checkout aislado desde `origin/main` (`0e1aa7d`), base H155,
+preservando impresión H153 y sincronización H155. El identificador local inicial
+H153 ya pertenecía a impresión; esta corrección se registra como H157 antes de
+implementar en main. El enlace Git roto se recuperó mediante este checkout.
+**Validación de integración:** `node test-h157-cleanup-readiness.mjs`, **4/4**,
+código 0 el 11/09/2026 a las 18:36 UTC; mismos cuatro escenarios, sin ampliar
+a los 30 por instrucción explícita del usuario. Build código 0; HTML/offline
+SHA-256 `80de96831e1f37a26bfeab36ddedca768ff2d1ee1281b0a4ee0449cf075dbe71`.
+Evidencia: `docs/fixes/evidence/h157-correction.json`.
+**Publicación:** commit/push autorizados y pendientes. Pages requiere que el
+SHA-256 del certificado real H148 coincida con el artefacto entregado; el de
+H155 no cubre este nuevo HTML. No se modifica el filtro ni el certificado ni
+se ejecuta la matriz adicional. Despliegue pendiente de nueva certificación;
+esta condición de CI no invalida los cuatro escenarios locales aprobados.
+**Riesgo residual:** nueva invalidación durante la revisión posterior puede
+requerir reintento directo; las RPC revalidan antes de escribir. No se obtuvo el
+preview real de la terminal del usuario. Sin borrado remoto por esta corrección.
+**Certificación:** NO CERTIFICADO contra Supabase real/A/B/C.
+**Documento:** `docs/fixes/auditoria-eliminacion-selectiva-h157.md`.
+
 ## Regla de actualización
 
 Al cerrar cualquier trabajo:

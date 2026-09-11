@@ -1849,7 +1849,7 @@
           h('div', { key: 'value', 'data-testid': 'point-zero-mode', className: 'mt-1 font-semibold ' + (preproduction ? 'text-warning' : 'text-success') },
             preview ? (preproduction ? 'PREPRODUCCIÓN / PRUEBAS' : 'PRODUCCIÓN') : (busy ? 'Verificando…' : 'DIAGNÓSTICO NO DISPONIBLE')),
         ]),
-        preproduction && h('span', { key: 'notice', className: 'text-caption text-on-surface-variant' }, 'BALAM está utilizando datos de prueba.'),
+        preproduction && h('span', { key: 'notice', className: 'text-caption text-on-surface-variant' }, 'La eliminación se aplica a todos los registros de las categorías seleccionadas.'),
       ]),
       h(SelectiveCleanupCard, { key: 'selective', enabled: !!preproduction }),
       h(GlassCard, { key: 'point-zero', className: 'p-6 mt-8 border border-danger/40 bg-danger-soft/20', 'data-testid': 'point-zero-card' }, [
@@ -2009,14 +2009,14 @@
     ['loans','Préstamos','Borra documentos de préstamo; no ventas ni movimientos de otras áreas.','cleanup-group-loans'],
     ['commissions','Liquidaciones y ajustes de comisión','Borra pagos/cierres y ajustes. El saldo generado por ventas pertenece a Ventas y apartados.','cleanup-group-commissions'],
     ['reclassifications','Reclasificaciones','Revierte documentos de reclasificación; no movimientos de venta o posventa.','cleanup-group-reclassifications'],
-    ['customers','Clientes de prueba','Borra únicamente clientes no genéricos sin operaciones conservadas.','cleanup-group-customers'],
+    ['customers','Clientes','Borra únicamente clientes no genéricos sin operaciones conservadas.','cleanup-group-customers'],
   ];
   const CLEANUP_COUNT_ROWS = [
     ['sales','ventas','Ventas y apartados'], ['returns','devoluciones','Devoluciones'],
     ['orphan_return_evidence','evidencias_huerfanas_devolucion','Evidencias huérfanas de devoluciones'],
     ['exchanges','cambios','Cambios'], ['loans','prestamos','Préstamos'],
     ['commissions','comisiones','Liquidaciones y ajustes de comisión'], ['reclassifications','reclasificaciones','Reclasificaciones'],
-    ['customers','clientes','Clientes de prueba'],
+    ['customers','clientes','Clientes'],
   ];
   const CLEANUP_KEPT = ['Productos', 'Inventario base', 'Configuración', 'Usuarios',
     'Permisos', 'Catálogos', 'Folios', 'Históricos que no formen parte de la selección'];
@@ -2028,7 +2028,7 @@
     loans: '0 préstamos significa que no existen documentos de préstamo. Los movimientos o ventas visibles en otras áreas no cuentan como préstamos.',
     commissions: '0 aquí significa que no existen liquidaciones ni ajustes. “Comisiones por liquidar” es un saldo derivado de ventas; para retirar su venta fuente selecciona Ventas y apartados, y BALAM recalculará el saldo.',
     reclassifications: '0 reclasificaciones significa que no existen documentos de reclasificación. Los movimientos de venta, devolución o cambio pertenecen a sus propios grupos.',
-    customers: '0 clientes significa que no hay clientes de prueba elegibles. Los clientes genéricos o vinculados a operaciones conservadas no se borran.',
+    customers: '0 clientes significa que no hay clientes elegibles. Los clientes genéricos o vinculados a operaciones conservadas no se borran.',
   };
   function CleanupQuarantineSummary({ rows = [] }) {
     if (!rows.length) return null;
@@ -2064,28 +2064,96 @@
     const [error, setError] = useState('');
     const [wizard, setWizard] = useState(null);
     const previewRequest = useRef(0);
+    const previewTimer = useRef(null);
+    const previewInFlight = useRef(0);
+    const reviewedStatus = useRef('');
+    const pendingReview = useRef(false);
+    const preserveReview = useRef(false);
     const hasSelection = CLEANUP_GROUPS.some(([key]) => !!selection[key]);
-    const requestPreview = async (nextSelection, open) => {
+    // Only readiness changes matter here; heartbeat timestamps would cause a loop.
+    const reviewStatus = () => {
+      const status = window.STORE.syncStatus();
+      return JSON.stringify([status.synchronized, status.connection, status.compatibility,
+        status.recoveryPhase, status.pending, status.blocked, status.checkpointError,
+        status.errors, status.dataEpoch, status.cursors,
+        !!(window.CORE && window.CORE.activityStatus && window.CORE.activityStatus().active)]);
+    };
+    const requestPreview = async (nextSelection, open, followup = false) => {
       const requestId = ++previewRequest.current;
+      clearTimeout(previewTimer.current);
+      previewInFlight.current = requestId;
+      pendingReview.current = false;
       setBusy(true); setError('');
       try {
         const value = await window.STORE.previewTestDataCleanup('custom', nextSelection);
         if (requestId !== previewRequest.current) return;
         if (!value || !value.ok) throw new Error((value && value.error) || 'No se pudo revisar la limpieza');
         setPreview(value);
-        if (open) setWizard({ paso: 'preview', preview: value, backup: null, confirmation: '' });
+        if (open && value.ready) setWizard({ paso: 'preview', preview: value, backup: null, confirmation: '' });
       } catch (e) {
         if (requestId === previewRequest.current) { setPreview(null); setError(e.message || String(e)); }
-      } finally { if (requestId === previewRequest.current) setBusy(false); }
+      } finally {
+        if (previewInFlight.current === requestId) previewInFlight.current = 0;
+        if (requestId === previewRequest.current) {
+          reviewedStatus.current = reviewStatus();
+          // A fleet/data notification can arrive after the server took its
+          // snapshot. Coalesce it into one follow-up, never a self-refresh loop.
+          if (pendingReview.current && !followup && !open) {
+            pendingReview.current = false;
+            setPreview(null);
+            previewTimer.current = setTimeout(() => requestPreview(nextSelection, false, true), 180);
+          } else setBusy(false);
+        }
+      }
     };
     useEffect(() => {
+      ++previewRequest.current;
       if (!enabled || !hasSelection) {
-        ++previewRequest.current; setPreview(null); setError(''); setBusy(false); return;
+        setPreview(null); setError(''); setBusy(false); return;
       }
-      const timer = setTimeout(() => requestPreview(selection, false), 180);
-      return () => clearTimeout(timer);
-    }, [enabled, JSON.stringify(selection)]);
-    const toggle = key => setSelection(current => Object.assign({}, current, { [key]: !current[key] }));
+      // The confirmation keeps its approved snapshot; its own RPCs revalidate it.
+      if (wizard) return;
+      const scheduleReview = () => {
+        ++previewRequest.current;
+        clearTimeout(previewTimer.current);
+        setPreview(null); setBusy(true); setError('');
+        previewTimer.current = setTimeout(() => requestPreview(selection, false), 180);
+      };
+      const onChange = event => {
+        const current = reviewStatus();
+        const changed = current !== reviewedStatus.current;
+        reviewedStatus.current = current;
+        // Reconciliation inside preview emits these same events. Its final status
+        // becomes the baseline in finally, so it never schedules itself again.
+        if (previewInFlight.current === previewRequest.current) {
+          if (!['syncstatuschange', 'syncactivitychange'].includes(event.type)) pendingReview.current = true;
+          return;
+        }
+        if (document.visibilityState === 'hidden') return;
+        if (['syncstatuschange', 'syncactivitychange'].includes(event.type) && !changed) return;
+        scheduleReview();
+      };
+      const events = ['syncstatuschange', 'syncactivitychange', 'syncfleetchange',
+        'datachange', 'online', 'offline', 'focus'];
+      reviewedStatus.current = reviewStatus();
+      events.forEach(type => window.addEventListener(type, onChange));
+      document.addEventListener('visibilitychange', onChange);
+      if (preserveReview.current) preserveReview.current = false;
+      else scheduleReview();
+      return () => {
+        ++previewRequest.current;
+        clearTimeout(previewTimer.current);
+        events.forEach(type => window.removeEventListener(type, onChange));
+        document.removeEventListener('visibilitychange', onChange);
+      };
+    }, [enabled, JSON.stringify(selection), !!wizard]);
+    const toggle = key => {
+      // Invalidate immediately, before the debounce or a previous RPC can finish.
+      ++previewRequest.current;
+      clearTimeout(previewTimer.current);
+      setPreview(null); setBusy(true);
+      setSelection(current => Object.assign({}, current, { [key]: !current[key] }));
+    };
     const counts = preview && preview.counts || {};
     const stock = preview && Array.isArray(preview.stock) ? preview.stock : [];
     const stockCurrent = stock.reduce((sum, row) => sum + Number(row.current_stock || 0), 0);
@@ -2196,9 +2264,18 @@
     if (forced.includes('returns:dependent_on_sales')) dependencyMessages.push('BALAM también incluirá las devoluciones relacionadas con estas ventas.');
     if (forced.includes('exchanges:dependent_on_sales')) dependencyMessages.push('BALAM también incluirá los cambios relacionados con estas ventas.');
     const blockingMessages = reasons.map(humanReason);
-    if (preview && preview.client_ready === false) blockingMessages.push('Esta computadora todavía está sincronizando. Espera a que termine.');
+    if (preview && preview.client_ready === false) {
+      const status = preview.client_status || {};
+      let message = 'Esta computadora todavía está sincronizando. Espera a que termine.';
+      if (status.connection === 'offline') message = 'Esta computadora está sin conexión. Conéctala y vuelve a revisar.';
+      else if (status.compatibility && status.compatibility !== 'ok') message = 'Esta computadora necesita actualizarse. Revisa su estado en el Centro de equipos antes de continuar.';
+      else if (status.checkpointError || status.recoveryError || (status.errors || []).length) message = 'No se pudo completar la actualización de esta computadora. Revisa el error en el Centro de equipos y vuelve a revisar.';
+      else if (status.blocked > 0) message = 'Hay operaciones bloqueadas en esta computadora. Revísalas en el Centro de equipos antes de continuar.';
+      else if (window.CORE && window.CORE.activityStatus && window.CORE.activityStatus().active) message = 'Termina o cancela la captura abierta antes de continuar.';
+      blockingMessages.push(message);
+    }
     let readiness = 'Selecciona al menos una opción para revisar la limpieza.';
-    if (!enabled) readiness = 'La limpieza sólo está disponible cuando BALAM usa datos de prueba.';
+    if (!enabled) readiness = 'La eliminación requiere un diagnóstico disponible y el modo preproducción.';
     else if (busy) readiness = 'BALAM está calculando qué se borrará y cómo quedará el inventario…';
     else if (error) readiness = 'No se puede continuar hasta que BALAM revise nuevamente la limpieza.';
     else if (preview && preview.ready) readiness = 'Todo está listo para limpiar.';
@@ -2211,11 +2288,11 @@
     const readinessOk = !!(preview && preview.ready && !busy);
     return h(GlassCard, { className: 'p-6 mt-5', 'data-testid': 'selective-cleanup-card' }, [
       h('div', { key: 'over', className: 'text-overline font-bold uppercase tracking-widest text-primary' }, '¿Qué quieres borrar?'),
-      h(SerifHeading, { key: 'title', className: 'mt-1', children: 'Limpiar datos de prueba' }),
+      h(SerifHeading, { key: 'title', className: 'mt-1', children: 'Eliminar datos por categoría' }),
       h('p', { key: 'copy', className: 'mt-2 text-body text-on-surface-variant leading-relaxed' },
-        'Elige qué operaciones de prueba deseas borrar. BALAM calculará automáticamente cómo debe quedar el inventario.'),
+        'Se eliminarán todos los registros de las categorías seleccionadas y sus dependencias indicadas en el resumen. BALAM calculará cómo debe quedar el inventario.'),
       h('fieldset', { key: 'groups', className: 'mt-5 space-y-2' }, [
-        h('legend', { key: 'legend', className: 'sr-only' }, 'Operaciones de prueba que se borrarán'),
+        h('legend', { key: 'legend', className: 'sr-only' }, 'Categorías de datos que se eliminarán'),
         ...CLEANUP_GROUPS.map(([key,label,desc,testid]) => h('label', { key, className: 'flex items-start gap-3 p-3 rounded-lg border border-outline-variant cursor-pointer' }, [
           h('input', { key: 'i', type: 'checkbox', checked: !!selection[key], onChange: () => toggle(key),
             'data-testid': testid, className: 'mt-1 accent-primary' }),
@@ -2317,13 +2394,22 @@
       ]),
       h('div', { key: 'readiness', role: readinessOk ? 'status' : 'alert',
         'data-testid': preview && preview.client_ready === false ? 'cleanup-local-sync-block' : 'cleanup-readiness',
-        className: 'mt-5 p-3 rounded-lg text-caption ' + (readinessOk ? 'bg-success-soft text-success' : 'bg-warning-soft text-warning') }, readiness),
+        className: 'mt-5 p-3 rounded-lg text-caption ' + (readinessOk ? 'bg-success-soft text-success' : 'bg-warning-soft text-warning') }, [
+          h('div', { key: 'status' }, readiness),
+          !busy && !error && !readinessOk && blockingMessages.filter(message => message !== readiness)
+            .map((message, index) => h('div', { key: index, className: 'mt-2' }, message)),
+        ]),
       h('div', { key: 'actions', className: 'mt-3 flex flex-wrap gap-3' }, [
+        h('button', { key: 'refresh', type: 'button', 'data-testid': 'selective-cleanup-refresh',
+          disabled: busy || !enabled || !hasSelection || !!wizard,
+          onClick: () => requestPreview(selection, false),
+          className: 'px-5 h-11 border border-outline-variant rounded-lg disabled:opacity-40' }, 'Revisar de nuevo'),
         h('button', { key: 'open', type: 'button', 'data-testid': 'selective-cleanup-open', disabled: busy || !preview || !preview.ready,
           onClick: () => requestPreview(selection, true), className: 'px-5 h-11 bg-danger text-white rounded-lg disabled:opacity-40' }, 'Continuar con la limpieza'),
       ]),
       wizard && h(SelectiveCleanupWizard, { key: 'wizard', estado: wizard, setEstado: setWizard,
         onClose: () => setWizard(null), onPreviewChanged: value => {
+          preserveReview.current = true;
           setPreview(value); setWizard(null);
           setError('La información cambió mientras confirmabas. Revisa el resumen actualizado antes de continuar de nuevo. No se creó ningún respaldo ni se borró información.');
         } }),
@@ -2373,7 +2459,7 @@
     const footer = [];
     if (!['executing','result'].includes(estado.paso)) footer.push(h('button', { key: 'cancel', onClick: onClose, className: 'px-5 h-11 text-on-surface-variant rounded-lg' }, 'Cancelar'));
     if (estado.paso === 'preview') footer.push(h('button', { key: 'backup', onClick: makeBackup, 'data-testid': 'selective-cleanup-backup', className: 'px-5 h-11 bg-primary text-on-primary rounded-lg' }, 'Crear respaldo y continuar'));
-    if (estado.paso === 'confirmation') footer.push(h('button', { key: 'next', disabled: estado.confirmation !== 'LIMPIAR OPERACIONES', onClick: () => setEstado(x => Object.assign({}, x, { paso: 'warning' })), className: 'px-5 h-11 bg-primary text-on-primary rounded-lg disabled:opacity-40' }, 'Continuar'));
+    if (estado.paso === 'confirmation') footer.push(h('button', { key: 'next', 'data-testid': 'selective-cleanup-next', disabled: estado.confirmation !== 'LIMPIAR OPERACIONES', onClick: () => setEstado(x => Object.assign({}, x, { paso: 'warning' })), className: 'px-5 h-11 bg-primary text-on-primary rounded-lg disabled:opacity-40' }, 'Continuar'));
     if (estado.paso === 'warning') footer.push(h('button', { key: 'execute', onClick: execute, 'data-testid': 'selective-cleanup-execute', className: 'px-5 h-11 bg-danger text-white font-bold rounded-lg' }, 'Confirmar y limpiar'));
     if (estado.paso === 'result') footer.push(h('button', { key: 'receipt', onClick: receipt, className: 'px-5 h-11 border border-outline-variant rounded-lg' }, 'Descargar comprobante'), h('button', { key: 'close', onClick: onClose, className: 'px-5 h-11 bg-primary text-on-primary rounded-lg' }, 'Cerrar'));
     if (estado.paso === 'error') footer.push(h('button', { key: 'close', onClick: onClose, className: 'px-5 h-11 bg-primary text-on-primary rounded-lg' }, 'Entendido'));
