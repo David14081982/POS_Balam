@@ -7056,9 +7056,9 @@ representativos de la matriz H155.
 
 ## H-157 — La eliminación selectiva conserva un diagnóstico obsoleto y se presenta como datos de prueba
 
-**Estado:** PARCIALMENTE RESUELTO — integración local validada; push y publicación pendientes, sin certificación real A/B/C.
+**Estado:** PARCIALMENTE RESUELTO — integrado y subido a main; web y certificación real A/B/C pendientes.
 **Fecha:** 11/09/2026.
-**Commit:** Pendiente de commit.
+**Commit técnico:** `f985820e86d22d3234e87f219f8ffe1ff13d34d9`.
 **Evidencia:** Chrome sobre el artefacto H152, con transporte/estado controlados
 y tráfico externo bloqueado: ocho categorías seleccionadas durante sincronización
 conservan el botón deshabilitado cuando la condición se libera. El número de
@@ -7090,11 +7090,16 @@ código 0 el 11/09/2026 a las 18:36 UTC; mismos cuatro escenarios, sin ampliar
 a los 30 por instrucción explícita del usuario. Build código 0; HTML/offline
 SHA-256 `80de96831e1f37a26bfeab36ddedca768ff2d1ee1281b0a4ee0449cf075dbe71`.
 Evidencia: `docs/fixes/evidence/h157-correction.json`.
-**Publicación:** commit/push autorizados y pendientes. Pages requiere que el
+**Publicación:** commit técnico confirmado en main el 11/09/2026 a las 18:40 UTC;
+la lectura pública aún recibe HTML y SW de H155. Evidencia:
+`docs/fixes/evidence/h157-publication.json`. Pages requiere que el
 SHA-256 del certificado real H148 coincida con el artefacto entregado; el de
 H155 no cubre este nuevo HTML. No se modifica el filtro ni el certificado ni
 se ejecuta la matriz adicional. Despliegue pendiente de nueva certificación;
 esta condición de CI no invalida los cuatro escenarios locales aprobados.
+CI confirmó el bloqueo: H148 `34634501502` falló en el certificado con
+`tested build differs from delivery`; despliegue omitido. H132 `34634501513`
+terminó correctamente. Pages todavía sirve H155, verificado a las 18:43 UTC.
 **Riesgo residual:** nueva invalidación durante la revisión posterior puede
 requerir reintento directo; las RPC revalidan antes de escribir. No se obtuvo el
 preview real de la terminal del usuario. Sin borrado remoto por esta corrección.

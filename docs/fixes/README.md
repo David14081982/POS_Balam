@@ -13,7 +13,7 @@ sesión de chat.
 
 ## Correcciones registradas
 
-- `auditoria-eliminacion-selectiva-h157.md` — H-157, PARCIALMENTE RESUELTO: revisión recuperable y nombre por categorías; integrado sobre H155, cuatro escenarios 4/4. Push pendiente; Pages requiere nueva certificación real del artefacto.
+- `auditoria-eliminacion-selectiva-h157.md` — H-157, PARCIALMENTE RESUELTO: revisión recuperable y nombre por categorías; integrado sobre H155, cuatro escenarios 4/4 y subido a main; Pages requiere nueva certificación real del artefacto.
 
 - `sincronizacion-automatica-h155.md` — H-155: arranque recuperable, rechazos durables, control de versión de inventario y consumidores actualizados; matriz A/B/C final aceptada y publicación verificada. Adopción física pendiente; H156 sigue abierto.
 

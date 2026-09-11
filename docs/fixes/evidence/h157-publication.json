@@ -1,0 +1,49 @@
+{
+  "at": "2026-09-11T18:43:20.933Z",
+  "technicalCommit": "f985820e86d22d3234e87f219f8ffe1ff13d34d9",
+  "remoteMain": "f985820e86d22d3234e87f219f8ffe1ff13d34d9",
+  "pushedToMain": true,
+  "base": "https://david14081982.github.io/POS_Balam/",
+  "checks": [
+    {
+      "path": "index.html",
+      "status": 200,
+      "expectedSha256": "80de96831e1f37a26bfeab36ddedca768ff2d1ee1281b0a4ee0449cf075dbe71",
+      "actualSha256": "8883393ca53d880e5af59ad34113e4c912e886308ec8f697df09a9e4b5ae32d0",
+      "matches": false
+    },
+    {
+      "path": "sw.js",
+      "status": 200,
+      "expectedSha256": "464c11af2bffda8993500ea82c189810bb97b636356535aa88866ea2a1c51f0c",
+      "actualSha256": "aba921105c7f43946b922d2110f4c86e9da95734c9e51aa91a4570d28c32ce16",
+      "matches": false
+    }
+  ],
+  "workflows": [
+    {
+      "id": 34634501513,
+      "name": "H-132 inventory identity",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/David14081982/POS_Balam/actions/runs/34634501513"
+    },
+    {
+      "id": 34634501502,
+      "name": "H-148 synchronization authority",
+      "status": "completed",
+      "conclusion": "failure",
+      "url": "https://github.com/David14081982/POS_Balam/actions/runs/34634501502"
+    }
+  ],
+  "distributedCertification": "NO CERTIFICADO",
+  "deployment": "NOT_DEPLOYED",
+  "blocker": {
+    "workflowRun": 34634501502,
+    "step": "Require a complete live certificate for this delivery",
+    "error": "tested build differs from delivery",
+    "certifiedSha256": "8883393ca53d880e5af59ad34113e4c912e886308ec8f697df09a9e4b5ae32d0",
+    "deliverySha256": "80de96831e1f37a26bfeab36ddedca768ff2d1ee1281b0a4ee0449cf075dbe71",
+    "deployment": "skipped"
+  }
+}

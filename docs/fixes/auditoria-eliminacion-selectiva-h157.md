@@ -1,9 +1,9 @@
 # Eliminación selectiva: recuperación del botón y alcance
 
 **Riesgo:** H-157
-**Estado:** PARCIALMENTE RESUELTO — integración local validada; push y publicación pendientes, sin certificación real A/B/C.
+**Estado:** PARCIALMENTE RESUELTO — integrado y subido a main; web y certificación real A/B/C pendientes.
 **Fecha:** 11/09/2026
-**Commit:** Pendiente de commit
+**Commit técnico:** `f985820e86d22d3234e87f219f8ffe1ff13d34d9`
 
 ## Problema y reproducción
 
@@ -277,7 +277,11 @@ bloqueo antes de confirmar y propagación en tres entornos STORE locales.
 **Artefacto integrado y SHA-256:** HTML y offline
 `80de96831e1f37a26bfeab36ddedca768ff2d1ee1281b0a4ee0449cf075dbe71`.
 **Evidencia final:** [h157-correction.json](evidence/h157-correction.json).
-**Commit y publicación:** pendientes; no se atribuye despliegue a la evidencia local.
+**Commit y push:** `f985820e86d22d3234e87f219f8ffe1ff13d34d9`, confirmado en
+`origin/main` mediante GitHub a las 18:40 UTC del 11/09/2026. La integración
+avanzó main desde `0e1aa7d` sin sobrescribir su historia. La comprobación
+pública todavía recibe HTML y SW de H155; no se atribuye despliegue a H157.
+Evidencia: [h157-publication.json](evidence/h157-publication.json).
 
 El workflow `h148-sync-authority.yml` exige un certificado real del mismo
 artefacto antes de desplegar Pages. `test-h148-sync-certification.mjs` compara
@@ -288,9 +292,17 @@ el certificado atribuyéndolo a H157. La petición del usuario limita la prueba
 a los cuatro escenarios y no se ejecutó la matriz real adicional. Esta
 condición contractual de CI no invalida los cuatro escenarios locales aprobados.
 
+La ejecución automática confirmó este bloqueo: [H148, run 34634501502](https://github.com/David14081982/POS_Balam/actions/runs/34634501502)
+terminó con error en `Require a complete live certificate for this delivery`,
+`tested build differs from delivery`; compara el hash H155 `8883393c…` con
+el nuevo `80de9683…`. El despliegue fue omitido. [H132, run 34634501513](https://github.com/David14081982/POS_Balam/actions/runs/34634501513)
+terminó correctamente. Son comprobaciones automáticas del push, no escenarios
+manuales añadidos a los cuatro autorizados. A las 18:43 UTC Pages seguía
+sirviendo H155, con HTML y SW distintos de H157.
+
 ## Riesgo residual, despliegue y commits
 
-- Integración local validada; commit/push pendientes desde el checkout aislado.
+- Integración local validada y commit/push a main confirmados desde el checkout aislado.
   Pages requiere el certificado real del artefacto final; no se afirma despliegue.
 - **NO CERTIFICADO** contra Supabase real/A/B/C: la cobertura de esta corrección
   permanece acotada por el usuario. No ejecuta borrados ni escrituras
@@ -302,8 +314,8 @@ condición contractual de CI no invalida los cuatro escenarios locales aprobados
   código; no se añaden escenarios separados fuera de los cuatro autorizados.
 - No se amplía la operación al modo producción; permanece su restricción
   contractual. No se reconstruye ni altera la sesión del usuario.
-- **Pendiente de commit**. El enlace Git roto del directorio original ya no
-  impide la integración: se trabaja en el checkout aislado de main.
+- Commit técnico `f985820e86d22d3234e87f219f8ffe1ff13d34d9`. El enlace Git roto
+  del directorio original se evitó trabajando en el checkout aislado de main.
 
 ## Referencias
 
