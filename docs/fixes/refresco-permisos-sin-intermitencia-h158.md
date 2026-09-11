@@ -1,9 +1,9 @@
 # Refresco de permisos sin interrumpir la pantalla
 
 **Riesgo:** H-158
-**Estado:** CORREGIDO Y CERTIFICADO — publicación en curso.
+**Estado:** CORREGIDO, CERTIFICADO Y PUBLICADO — adopción física pendiente.
 **Fecha:** 11/09/2026
-**Commit:** Pendiente de commit
+**Commit:** `06ffb89de43c54a5c64aa1d0e9fe2e75c09fac30`
 
 ## Problema y reproducción
 
@@ -92,9 +92,30 @@ SHA-256 del arnés navegador:
 SHA-256 del artefacto final:
 `1e477db25a4732507efcfc9fd481f068155a32b2241e424eda9ea00b09c56f03`.
 
+El primer intento de CI `34647824445` aprobó AUTH, H158 y el certificado, pero
+falló en 24a/24b de `test-store-queue.mjs` (184/186). Esas aserciones leen la cola
+tras una espera fija de 40 ms; las siguientes 24c/24d sí observaron el bloqueo
+y un único intento persistido. La repetición local dio 186/186. Se reejecutó
+el job completo sin modificar el producto, las aserciones ni las guardas.
+El segundo intento aprobó todas las regresiones y publicó Pages. Queda como
+riesgo del arnés la dependencia de esa espera fija; no se cambió en esta historia.
+
+## Publicación
+
+Commit técnico `06ffb89de43c54a5c64aa1d0e9fe2e75c09fac30`, push a `main`
+completado. Workflow H148 `34647824445`, intento 2: regresión y despliegue
+correctos; workflow H132 `34647824452` correcto. El certificado real se ejecutó
+localmente antes del commit y CI verificó su correspondencia estricta con el
+artefacto; el job manual de certificación remota no se solicitó en Actions.
+
+El 11/09/2026 a las 21:15:55 UTC, la raíz pública sin parámetros y los nueve
+archivos de entrega respondieron HTTP 200 y coincidieron byte a byte con el
+commit: **10/10**. HTML/offline: `1e477db2…`; SW: `4db44295…`.
+Evidencia completa: `evidence/h158-pages.json`.
+
 ## Riesgo residual y pendientes
 
-La corrección no está en el sitio público. La referencia Git rota de la carpeta
+La corrección está en el sitio público. La referencia Git rota de la carpeta
 original se salvó preparando un checkout limpio `.h156-release`, conectado a
 `origin/main` de `David14081982/POS_Balam`. Se conserva intacta la carpeta
 original y el trabajo separado de `h155-sync/`.
@@ -106,8 +127,10 @@ comparación de **17/17 tablas** sin cambios en sus datos previos. Terminó el
 11/09/2026 a las 21:05:22 UTC y pasó el filtro estricto de entrega. Evidencia:
 `docs/fixes/evidence/h148-live-matrix.json`. No se hicieron migraciones ni cambios
 de RLS/RPC; sólo se crearon y retiraron las semillas autorizadas.
-Faltan commit/push, publicación y comprobación del artefacto servido/terminal
-del usuario. No se recomienda borrar almacenamiento para resolver este fallo.
+Commit, push, publicación y comprobación del artefacto servido están completos.
+Falta observar la adopción de la actualización en la terminal física del usuario;
+una pestaña abierta puede conservar la versión anterior hasta actualizarse.
+No se recomienda borrar almacenamiento para resolver este fallo.
 
 La revisión automática rechazó el 11/09/2026 la ejecución de
 `BALAM_SYNC_LIVE=1 node test-h148-live-convergence.mjs`: el arnés crea y elimina
@@ -118,7 +141,7 @@ de conservación. El workflow general, su certificado y las guardas permanecen
 vigentes; la excepción de H157 no se amplía a este artefacto.
 
 El usuario autorizó después expresamente crear y eliminar únicamente registros
-temporales de prueba. La certificación completa se inició con esa autorización
+temporales de prueba. La certificación completa terminó con esa autorización
 en preproducción, con journal de IDs exactos y verificación de conservación.
 
 ## Decisiones verificables

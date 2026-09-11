@@ -7131,8 +7131,8 @@ Al cerrar cualquier trabajo:
 
 ## H-158 — El refresco de permisos interrumpe la pantalla activa
 
-**Estado:** CORREGIDO Y CERTIFICADO — publicación en curso.
-**Fecha:** 11/09/2026. **Commit:** Pendiente de commit.
+**Estado:** CORREGIDO, CERTIFICADO Y PUBLICADO — adopción física pendiente.
+**Fecha:** 11/09/2026. **Commit:** `06ffb89de43c54a5c64aa1d0e9fe2e75c09fac30`.
 **Origen:** apariencia de refresh periódico en la publicación; refrescar permisos
 activa el gate oscuro y desmonta la pantalla. Reproducción publicada 4/8 y
 corrección local 8/8 en escritorio/móvil.
@@ -7152,7 +7152,13 @@ Limpieza sin errores y conservación exacta de 17/17 tablas. Terminó el
 Evidencia: `docs/fixes/evidence/h148-live-matrix.json`.
 El usuario autorizó expresamente crear/eliminar únicamente los registros
 temporales de prueba después del rechazo inicial del revisor automático.
-**Pendiente:** commit, push y Pages.
-**Riesgo residual:** el sitio conserva H157 hasta publicar; adopción física
-pendiente. La certificación no resuelve riesgos ajenos como H156 UPSERT.
+**Publicación:** commit técnico en `main`, workflow H148 `34647824445`
+(intento 2) y H132 `34647824452` correctos. Pages verificado el 11/09/2026
+a las 21:15:55 UTC: 10/10 respuestas HTTP 200 idénticas al commit, incluida
+la raíz sin parámetros. Evidencia: `docs/fixes/evidence/h158-pages.json`.
+**Pendiente:** observar adopción de la actualización en la terminal del usuario.
+**Riesgo residual:** una pestaña abierta puede conservar la versión anterior.
+La primera ejecución de CI falló en dos aserciones de cola con espera fija;
+la repetición local y el segundo intento completo aprobaron sin cambios.
+La certificación no resuelve riesgos ajenos como H156 UPSERT.
 **Documento:** `docs/fixes/refresco-permisos-sin-intermitencia-h158.md`.
