@@ -1,0 +1,43 @@
+{
+  "artifact": "C:\\Users\\david\\AppData\\Local\\Temp/balam-h156-published.html",
+  "sha256": "80de96831e1f37a26bfeab36ddedca768ff2d1ee1281b0a4ee0449cf075dbe71",
+  "scope": "Chrome, real bundle and AUTH, controlled permission RPC; NOT Supabase certification",
+  "results": [
+    {
+      "name": "1280: mantiene pantalla, nodo, foco y borrador durante la consulta",
+      "ok": false,
+      "error": "Expected values to be strictly deep-equal:\n+ actual - expected\n\n  {\n+   focused: false,\n+   loading: true,\n+   mounted: false,\n+   ready: false,\n+   value: undefined\n-   focused: true,\n-   loading: false,\n-   mounted: true,\n-   ready: true,\n-   value: 'borrador H156'\n  }\n"
+    },
+    {
+      "name": "1280: conserva borrador y confirma caché tras la respuesta",
+      "ok": false,
+      "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ ''\n- 'borrador H156'\n"
+    },
+    {
+      "name": "1280: revocación real del snapshot retira acceso y pantalla",
+      "ok": true
+    },
+    {
+      "name": "1280: sin navegación completa ni excepciones",
+      "ok": true
+    },
+    {
+      "name": "390: mantiene pantalla, nodo, foco y borrador durante la consulta",
+      "ok": false,
+      "error": "Expected values to be strictly deep-equal:\n+ actual - expected\n\n  {\n+   focused: false,\n+   loading: true,\n+   mounted: false,\n+   ready: false,\n+   value: undefined\n-   focused: true,\n-   loading: false,\n-   mounted: true,\n-   ready: true,\n-   value: 'borrador H156'\n  }\n"
+    },
+    {
+      "name": "390: conserva borrador y confirma caché tras la respuesta",
+      "ok": false,
+      "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ ''\n- 'borrador H156'\n"
+    },
+    {
+      "name": "390: revocación real del snapshot retira acceso y pantalla",
+      "ok": true
+    },
+    {
+      "name": "390: sin navegación completa ni excepciones",
+      "ok": true
+    }
+  ]
+}

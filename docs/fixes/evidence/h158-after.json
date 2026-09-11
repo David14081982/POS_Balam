@@ -1,0 +1,39 @@
+{
+  "artifact": "index.html",
+  "sha256": "1e477db25a4732507efcfc9fd481f068155a32b2241e424eda9ea00b09c56f03",
+  "scope": "Chrome, real bundle and AUTH, controlled permission RPC; NOT Supabase certification",
+  "results": [
+    {
+      "name": "1280: mantiene pantalla, nodo, foco y borrador durante la consulta",
+      "ok": true
+    },
+    {
+      "name": "1280: conserva borrador y confirma caché tras la respuesta",
+      "ok": true
+    },
+    {
+      "name": "1280: revocación real del snapshot retira acceso y pantalla",
+      "ok": true
+    },
+    {
+      "name": "1280: sin navegación completa ni excepciones",
+      "ok": true
+    },
+    {
+      "name": "390: mantiene pantalla, nodo, foco y borrador durante la consulta",
+      "ok": true
+    },
+    {
+      "name": "390: conserva borrador y confirma caché tras la respuesta",
+      "ok": true
+    },
+    {
+      "name": "390: revocación real del snapshot retira acceso y pantalla",
+      "ok": true
+    },
+    {
+      "name": "390: sin navegación completa ni excepciones",
+      "ok": true
+    }
+  ]
+}

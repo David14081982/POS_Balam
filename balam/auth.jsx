@@ -193,6 +193,8 @@
 
     if (session && session.user && session.user.email && session.user.id && c) {
       const remote = await fetchPermissionSnapshot(c);
+      // A newer resolution or logout owns the state now; never apply an old reply.
+      if (seq !== resolveSeq) return;
       if (remote.snapshot && remote.snapshot.profileStatus === 'active'
           && remote.snapshot.profile) {
         const nextProfile = normalizeProfile(remote.snapshot.profile, session.user.email);
@@ -290,11 +292,13 @@
   }
   async function refreshPermissions() {
     if (!session || !profile) return false;
+    const seq = ++resolveSeq;
     const c = await client();
-    if (!c) return false;
-    ready = false;
-    emit();
+    if (!c || seq !== resolveSeq) return false;
+    // Keep the verified screen mounted while the same identity refreshes.
+    // The response still replaces permissions (including revocations/errors).
     const remote = await fetchPermissionSnapshot(c);
+    if (seq !== resolveSeq) return false;
     if (remote.snapshot && remote.snapshot.profileStatus === 'active'
         && remote.snapshot.profile) {
       const nextProfile = normalizeProfile(remote.snapshot.profile, session.user.email);

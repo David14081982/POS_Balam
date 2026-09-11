@@ -13,6 +13,8 @@ sesión de chat.
 
 ## Correcciones registradas
 
+- `refresco-permisos-sin-intermitencia-h158.md` — H-158: refresco de permisos sin desmontar la pantalla.
+
 - `auditoria-eliminacion-selectiva-h157.md` — H-157, PARCIALMENTE RESUELTO: revisión recuperable y nombre por categorías; publicado con 4/4 y excepción autorizada a la matriz real, archivos públicos verificados byte a byte.
 
 - `sincronizacion-automatica-h155.md` — H-155: arranque recuperable, rechazos durables, control de versión de inventario y consumidores actualizados; matriz A/B/C final aceptada y publicación verificada. Adopción física pendiente; H156 sigue abierto.

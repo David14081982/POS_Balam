@@ -121,7 +121,7 @@ function harness(options = {}) {
       if (delayedRpc) delayedRpc.release();
       delayedRpc = null;
     },
-    emitAuth(event) { return authCallback && authCallback(event, session); },
+    emitAuth(event, nextSession = session) { return authCallback && authCallback(event, nextSession); },
   };
 }
 
@@ -158,6 +158,61 @@ check('renovar el token no desmonta la sesion ni muestra el gate de carga',
     && online.AUTH.current()?.email === 'user@example.com'
     && online.AUTH.canAccess('pos') === true);
 online.releaseRpc();
+await new Promise(resolve => setTimeout(resolve, 0));
+
+online.delayRpc();
+const backgroundRefresh = online.AUTH.refreshPermissions();
+await new Promise(resolve => setTimeout(resolve, 0));
+check('refrescar permisos no activa Cargando ni retira la identidad verificada',
+  online.AUTH.isReady() === true && online.AUTH.canAccess('pos') === true
+    && online.AUTH.current()?.email === 'user@example.com');
+online.releaseRpc();
+check('refresco en segundo plano termina y confirma persistencia', await backgroundRefresh === true);
+
+online.setOffline(true);
+check('fallo de red no confirma sincronización de permisos', await online.AUTH.refreshPermissions() === false);
+check('fallo de red conserva permisos verificados y la aplicación lista',
+  online.AUTH.isReady() && online.AUTH.canAccess('pos') && online.AUTH.permissionReason('pos').cached);
+online.setOffline(false);
+
+const logoutDuringRefresh = harness({ snapshot: snapshot([
+  { screen_key: 'pos', allowed: true, source: 'role', role_code: 'vendedor', effect: null },
+]) });
+await logoutDuringRefresh.AUTH.init();
+logoutDuringRefresh.delayRpc();
+const pendingLogoutRefresh = logoutDuringRefresh.AUTH.refreshPermissions().catch(() => 'threw');
+await new Promise(resolve => setTimeout(resolve, 0));
+await logoutDuringRefresh.AUTH.logout();
+logoutDuringRefresh.releaseRpc();
+check('respuesta pendiente tras logout se descarta sin excepción ni confirmación',
+  await pendingLogoutRefresh === false);
+check('respuesta tardía no restaura sesión ni permisos tras logout',
+  !logoutDuringRefresh.AUTH.hasSession() && !logoutDuringRefresh.AUTH.current()
+    && !logoutDuringRefresh.AUTH.canAccess('pos') && logoutDuringRefresh.AUTH.isReady());
+
+const inactiveRefresh = harness({ snapshot: snapshot([
+  { screen_key: 'pos', allowed: true, source: 'role', role_code: 'vendedor', effect: null },
+]) });
+await inactiveRefresh.AUTH.init();
+inactiveRefresh.setProfile({ id: 'inactive', email: 'user@example.com', role: 'vendedor', active: false });
+await inactiveRefresh.AUTH.refreshPermissions();
+check('refresco de perfil desactivado retira identidad y permisos',
+  !inactiveRefresh.AUTH.current() && !inactiveRefresh.AUTH.canAccess('pos')
+    && inactiveRefresh.AUTH.permissionReason('pos').code === 'user_inactive');
+
+const switched = harness({ snapshot: snapshot([
+  { screen_key: 'pos', allowed: true, source: 'role', role_code: 'vendedor', effect: null },
+]) });
+await switched.AUTH.init();
+switched.delayRpc();
+const previousRefresh = switched.AUTH.refreshPermissions().catch(() => 'threw');
+await new Promise(resolve => setTimeout(resolve, 0));
+switched.emitAuth('SIGNED_IN', { user: { id: 'other-user', email: 'other@example.com' } });
+check('identidad distinta conserva gate restrictivo durante verificación',
+  !switched.AUTH.isReady() && !switched.AUTH.current() && !switched.AUTH.canAccess('pos'));
+switched.releaseRpc();
+check('refresco de identidad anterior no confirma el snapshot para otra sesión',
+  await previousRefresh === false);
 await new Promise(resolve => setTimeout(resolve, 0));
 
 const deny = harness({

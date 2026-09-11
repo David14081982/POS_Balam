@@ -608,6 +608,14 @@ Archivo: `balam/auth.jsx`. API: `window.AUTH`.
 - Expone usuario actual, estado de sesión y comprobación de administrador.
 - Emite `authchange` para que la interfaz reaccione.
 
+Una actualización de permisos de una identidad ya verificada conserva el estado
+listo y la pantalla montada mientras espera la RPC. La respuesta vigente sigue
+reemplazando permisos y aplicando revocaciones; un fallo de red conserva sólo el
+acceso verificado con la política offline existente. Resoluciones de sesión y
+refrescos comparten una secuencia: una respuesta anterior a otro refresco,
+cambio de identidad o logout no aplica estado ni confirma persistencia.
+El arranque y una identidad nueva mantienen el gate hasta verificarse (H-158).
+
 La administración de cuentas no se realiza directamente desde el navegador:
 usa la Edge Function `admin-users`.
 

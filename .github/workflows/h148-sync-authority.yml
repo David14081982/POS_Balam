@@ -76,6 +76,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           "BALAM_CHROME_EXECUTABLE=$balamBrowserPath" >> $env:GITHUB_ENV
       - run: node build-offline.mjs
+      - run: node test-auth-permissions.mjs
+      - run: node test-h158-auth-refresh-browser.mjs
       - run: node test-h155-build-eol.mjs
       - run: node test-h155-auto-sync.mjs
       - name: Verify H155 SQL guards and STORE acknowledgements
