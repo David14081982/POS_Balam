@@ -7247,3 +7247,55 @@ los mismos bytes de H159; la corrección del servidor está aplicada.
 reactivarse y sincronizarse antes de reutilizarlos. El respaldo JSON no dispone
 de una restauración automática H98. No se cambió el HTML publicado.
 **Documento:** `docs/fixes/punto-cero-enlaces-inventario-h160.md`.
+
+## H-161 — Importar rechaza las familias UUID v5 que BALAM exporta
+
+**Estado:** PARCIALMENTE RESUELTO — corregido localmente, sin publicación.
+**Fecha:** 11/09/2026. **Commit:** Pendiente de commit.
+**Origen:** Inventario rechaza los Excel exportados el 09/09 y 11/09/2026
+antes de abrir la vista previa, con el mensaje «El archivo no tiene el formato
+esperado».
+**Evidencia inicial:** los archivos contienen 973 y 975 productos; ambos
+incluyen 830 filas cuya `_BALAM_REFERENCE_FAMILY_ID` es UUID v5. El primer
+producto, PRESIDENCIAL, activa la validación que exige exclusivamente UUID v4.
+H-133 generó esas familias deterministas; el escritor Excel conserva su valor.
+**Causa:** `buildProduct()`, llamado por `parseFile()` en `balam/xlsx-io.jsx`,
+restringía la familia administrativa a versión 4, aunque H-101 exige un UUID y
+H-133 persiste familias versión 5. H-134 traduce el rechazo, sin originarlo.
+**Alcance:** admitir familias válidas v4/v5 sin cambiar su identidad; conservar
+rechazo de valores malformados, actualización por ID, versiones, barcode,
+conflictos y aplicación atómica. Sin migraciones ni importación de los Excel
+sobre datos comerciales reales.
+**Corrección:** sólo la guarda de familia acepta ahora v4/v5, con el mismo
+formato y variante; el detalle técnico describe ambas versiones. Prueba H-86
+ampliada con siete comprobaciones, incluidos seis UUID inválidos y defensas de
+identidad/versión/barcode sin mutaciones.
+**Pruebas previas:** H-86 vigente 42/42. Sobre `eef071d`, las siete nuevas
+comprobaciones dejan la suite en 44 aprobadas/5 fallidas, código 1. Ambos Excel
+reproducen el rechazo de UUID v4 en la fila 2 mediante `parseFile()`, sin
+mutaciones y con hashes originales intactos.
+**Pruebas finales:** H-86 49/49, seguridad XLSX 17/17, smoke bundle 17/17 y
+navegación 15/15: 98 comprobaciones aprobadas. Ambos archivos abren preview con
+973/975 filas, cero omitidas, identidad/stock/precios/versiones exactos y cero
+mutaciones. Ante inventario vacío, 973/975 conflictos `ID_NOT_FOUND` mantienen
+Confirmar deshabilitado. Catálogos reconstruidos sólo desde cada Excel; sin red
+de negocio ni comparación con la configuración Supabase actual.
+**Artefacto local:** build 73 recursos, 72 idénticos a la base; sólo cambia el
+módulo XLSX. HTML y offline idénticos, SHA-256
+`ece24479d2ef006c0c6de50f680a7fcb487800ee56c5c048b8f7434ff4185a14`.
+**Contexto vigente:** H-160 documenta Punto Cero ejecutado y productos remotos
+en cero. Leer un export anterior no autoriza restaurar sus productos; IDs que
+ya no existan deben conservar el conflicto de identidad del preflight.
+**Despliegue:** pendiente. El filtro H148 rechaza el certificado anterior por
+`tested build differs from delivery`; no se modificó el filtro ni se atribuye
+su certificación a este artefacto. Commit pendiente.
+**Riesgo residual y pendientes:** matriz real A/B/C no ejecutada; certificar el
+artefacto, publicar y comprobar la terminal del usuario. La compatibilidad de
+lectura no restaura los IDs retirados por Punto Cero.
+La revisión del runner real encontró precondiciones de V2 existentes y evento
+de limpieza selectiva que no corresponden al estado documentado tras H-160;
+además puede reservar folios fuera de sus huellas de conservación. No se
+ejecutó ni se amplió el runner como parte de esta corrección.
+**Certificación:** NO CERTIFICADO.
+**Documento:** `docs/fixes/importacion-familias-uuid-v5-h161.md`.
+**Evidencia:** `docs/fixes/evidence/h161-local-verification.json`.

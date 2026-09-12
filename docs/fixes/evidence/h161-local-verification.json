@@ -1,0 +1,87 @@
+{
+  "risk": "H-161",
+  "status": "PARTIALLY_RESOLVED_LOCAL_ONLY",
+  "localDate": "2026-09-11",
+  "baseCommit": "eef071d",
+  "commit": "Pendiente de commit",
+  "scope": "Inventory Excel family UUID v4/v5 compatibility",
+  "baseline": {
+    "artifactSha256": "6678d9d1c2eac11f1b670017e8fec4c716e7f9b763c1f26e631e423aab22fd85",
+    "previousSuite": { "passed": 42, "failed": 0 },
+    "expandedSuite": { "passed": 44, "failed": 5, "exitCode": 1 },
+    "bothOriginalWorkbooksRejected": true,
+    "firstRejectedRow": 2,
+    "reason": "_BALAM_REFERENCE_FAMILY_ID requires UUID v4",
+    "noInventoryMutations": true
+  },
+  "finalTests": [
+    { "command": "node test-h86-inventory-xlsx-contract.mjs", "passed": 49, "failed": 0, "exitCode": 0 },
+    { "command": "node test-xlsx-security.mjs", "passed": 17, "failed": 0, "exitCode": 0 },
+    { "command": "node test-smoke.mjs bundle", "passed": 17, "failed": 0, "exitCode": 0 },
+    { "command": "node test-ui-navigation.mjs", "passed": 15, "failed": 0, "exitCode": 0 }
+  ],
+  "totalFinalChecks": 98,
+  "workbookVerification": {
+    "finishedAt": "2026-09-12T00:59:20.932Z",
+    "configuration": "Reconstructed only from each workbook catalogs; not current Supabase authority",
+    "remoteRequestsAllowed": 0,
+    "files": [
+      {
+        "file": "Inventario_Balam_2026-09-09 (1) (1).xlsx",
+        "sha256": "a9245ec35779992c888e72fb97dcdbf57e6780bd22d8cbb2498bfa424de3b4f1",
+        "rows": 973,
+        "skipped": 0,
+        "read": true,
+        "identitiesStockAndPricesExact": true,
+        "previewVisible": true,
+        "emptyInventoryConflictCode": "ID_NOT_FOUND",
+        "emptyInventoryConflicts": 973,
+        "confirmDisabled": true,
+        "noInventoryMutations": true,
+        "originalUnchanged": true
+      },
+      {
+        "file": "Inventario_Balam_2026-09-11.xlsx",
+        "sha256": "6d04e8474be384700dc19bdf393bcd98828e399ebfd23c22baa43ba7e8a60889",
+        "rows": 975,
+        "skipped": 0,
+        "read": true,
+        "identitiesStockAndPricesExact": true,
+        "previewVisible": true,
+        "emptyInventoryConflictCode": "ID_NOT_FOUND",
+        "emptyInventoryConflicts": 975,
+        "confirmDisabled": true,
+        "noInventoryMutations": true,
+        "originalUnchanged": true
+      }
+    ]
+  },
+  "build": {
+    "command": "node build-offline.mjs",
+    "exitCode": 0,
+    "assetCount": 73,
+    "unchangedAssets": 72,
+    "onlyXlsxModuleChanged": true,
+    "indexSha256": "ece24479d2ef006c0c6de50f680a7fcb487800ee56c5c048b8f7434ff4185a14",
+    "offlineSha256": "ece24479d2ef006c0c6de50f680a7fcb487800ee56c5c048b8f7434ff4185a14",
+    "identicalArtifacts": true,
+    "serviceWorkerSha256": "51cdbbb33d1a6fdd07b7a0db8560352d3c5eac368962e80f566dc717c9cf6d1c"
+  },
+  "distributedCertification": {
+    "status": "NO CERTIFICADO",
+    "realABCRunExecuted": false,
+    "previousCertificateGateExitCode": 1,
+    "previousCertificateGateReason": "tested build differs from delivery",
+    "gateModified": false,
+    "runnerReviewedNotExecuted": true,
+    "runnerLimitations": [
+      "Requires a current-epoch selective cleanup event and preexisting V2 products; these do not match the post-H160 documented state",
+      "Startup may reserve folio blocks outside the runner's 17 protected table fingerprints and cleanup"
+    ],
+    "runnerModified": false,
+    "folioNumbersConsumedOrReverted": false
+  },
+  "deployment": "PENDING",
+  "commercialDataWritten": false,
+  "inventoryRestorationIncluded": false
+}

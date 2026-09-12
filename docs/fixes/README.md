@@ -13,6 +13,10 @@ sesión de chat.
 
 ## Correcciones registradas
 
+- `importacion-familias-uuid-v5-h161.md` — H-161, PARCIALMENTE RESUELTO:
+  familias UUID v5 compatibles, 98 comprobaciones locales y ambos Excel con
+  vista previa; certificación real y publicación pendientes.
+
 - `punto-cero-respaldo-recuperable-h159.md` — H-159: revisión recuperable del respaldo, equipos retirados excluidos y conteo de clientes activos.
 
 - `refresco-permisos-sin-intermitencia-h158.md` — H-158: refresco de permisos sin desmontar la pantalla.

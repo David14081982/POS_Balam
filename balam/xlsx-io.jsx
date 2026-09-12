@@ -599,8 +599,9 @@
     const physicalSignature = present('_BALAM_FIRMA_FISICA') ? String(row['_BALAM_FIRMA_FISICA'] || '').trim() : '';
     const referenceFamilyId = present('_BALAM_REFERENCE_FAMILY_ID')
       ? String(row['_BALAM_REFERENCE_FAMILY_ID'] || '').trim().toLowerCase() : '';
-    if (referenceFamilyId && !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(referenceFamilyId)) {
-      rowError(idx, '_BALAM_REFERENCE_FAMILY_ID', 'debe ser un UUID v4 válido.');
+    // H-161: H-133 conserva familias migradas v5; las altas nuevas usan v4.
+    if (referenceFamilyId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[45][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(referenceFamilyId)) {
+      rowError(idx, '_BALAM_REFERENCE_FAMILY_ID', 'debe ser un UUID v4 o v5 válido.');
     }
     const rawProduct = {
       id: sourceId || undefined, recordModel, barcodeCode: barcodeCode || undefined,

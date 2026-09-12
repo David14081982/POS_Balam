@@ -88,6 +88,58 @@ const result = await page.evaluate(async () => {
   if (v2Plan.ok) IO.applyImportPlan(v2Plan, v2Applied);
   const v2RoundtripSame = JSON.stringify(IO.__test.canonicalProductState(reference))
     === JSON.stringify(IO.__test.canonicalProductState(v2Applied[0]));
+  // H-161: H-133 produjo familias UUID v5; conservarlas sin relajar otras guardas.
+  const migrated = D.createReference(Object.assign({}, clone(reference), {
+    id: undefined, barcodeCode: undefined, referenceFamilyId: 'bfdb4fe0-5227-5cee-bfa0-6408495e7e9d',
+    sizeCode: '42', stockQuantity: 9, _syncVersion: 9,
+    precio: 1123.45, costo: 432.10, preciosTalla: { '42': 1250.75 },
+  }), []);
+  const mixed = [reference, migrated];
+  const familyChecks = { v4: v2Parsed.products[0].referenceFamilyId === reference.referenceFamilyId
+    && reference.referenceFamilyId.split('-')[2][0] === '4', invalid: [] };
+  const parseProducts = products => IO.parseFile(toFile(IO.__test.inventoryWorkbook(products).wb, 'h161.xlsx'));
+  const fingerprint = products => IO.__test.inventoryStateFingerprint(products);
+  const originalFingerprint = fingerprint(D.products);
+  const invalidFamilies = [migrated.referenceFamilyId.slice(1), migrated.referenceFamilyId.replace(/^b/, 'g'),
+    migrated.referenceFamilyId.replace('-bfa0-', '-cfa0-'), migrated.referenceFamilyId.replace('-5cee-', '-3cee-'),
+    migrated.referenceFamilyId.replace('-5cee-', '-7cee-'), '00000000-0000-0000-0000-000000000000'];
+  for (const familyId of invalidFamilies) {
+    const wb = IO.__test.inventoryWorkbook(mixed).wb;
+    const rows = X.utils.sheet_to_json(wb.Sheets.Inventario, { defval: '' });
+    rows[1]._BALAM_REFERENCE_FAMILY_ID = familyId;
+    wb.Sheets.Inventario = X.utils.json_to_sheet(rows, { header: Object.keys(rows[0]) });
+    let blocked = false;
+    try { await IO.parseFile(toFile(wb, 'h161-invalid-last-row.xlsx')); }
+    catch (error) { blocked = /Fila 3.*_BALAM_REFERENCE_FAMILY_ID/.test(error.message); }
+    familyChecks.invalid.push(blocked && fingerprint(D.products) === originalFingerprint);
+  }
+  try {
+    const mixedParsed = await parseProducts(mixed);
+    const mixedPlan = IO.planImport(mixedParsed, mixed, {});
+    const mixedApplied = clone(mixed);
+    if (mixedPlan.ok) IO.applyImportPlan(mixedPlan, mixedApplied);
+    familyChecks.roundtrip = mixedPlan.ok && mixedPlan.updates === 2 && mixedPlan.creates === 0
+      && mixedPlan.rows.every(row => row.fields.length === 0)
+      && fingerprint(mixedApplied) === fingerprint(mixed)
+      && mixedParsed.products[1].referenceFamilyId === migrated.referenceFamilyId
+      && mixedParsed.products[1].__xlsx.sourceVersion === migrated._syncVersion;
+    const blockedWithoutMutation = (parsedFile, current, code) => {
+      const before = fingerprint(current), guardPlan = IO.planImport(parsedFile, current, {});
+      let blocked = false;
+      try { IO.applyImportPlan(guardPlan, current); } catch (error) { blocked = true; }
+      return !guardPlan.ok && guardPlan.conflicts.some(row => row.conflict.code === code)
+        && blocked && fingerprint(current) === before && fingerprint(D.products) === originalFingerprint;
+    };
+    const v5Parsed = await parseProducts([migrated]);
+    familyChecks.version = blockedWithoutMutation(v5Parsed,
+      [Object.assign(clone(migrated), { _syncVersion: 10 })], 'VERSION_CONFLICT');
+    familyChecks.missing = blockedWithoutMutation(v5Parsed, [], 'ID_NOT_FOUND');
+    familyChecks.duplicateId = blockedWithoutMutation(await parseProducts([migrated, migrated]),
+      [clone(migrated)], 'DUPLICATE_ID_FILE');
+    const duplicateBarcode = Object.assign(clone(reference), { barcodeCode: migrated.barcodeCode });
+    familyChecks.duplicateBarcode = blockedWithoutMutation(await parseProducts([migrated, duplicateBarcode]),
+      clone(mixed), 'BARCODE_DUPLICATE');
+  } catch (error) { familyChecks.error = error.message; }
   const wrongModel = clone(product); wrongModel.id = reference.id; wrongModel._syncVersion = 0;
   const modelMismatchPlan = IO.planImport(v2Parsed, [wrongModel], {});
   const samePhysical = D.createReference(Object.assign({}, clone(reference), {
@@ -194,7 +246,7 @@ const result = await page.evaluate(async () => {
     metadata: parsed.metadata, schema: parsed.schema, planOk: plan.ok, planUpdates: plan.updates,
     noChanges: plan.rows[0] && plan.rows[0].fields.length === 0,
     roundtripSame: JSON.stringify(beforeState) === JSON.stringify(afterState), appliedResult,
-    v2PlanOk: v2Plan.ok, v2RoundtripSame, v2Conflicts: v2Plan.conflicts,
+    v2PlanOk: v2Plan.ok, v2RoundtripSame, v2Conflicts: v2Plan.conflicts, familyChecks,
     v2Before: IO.__test.canonicalProductState(reference),
     v2After: IO.__test.canonicalProductState(v2Applied[0]),
     v2Identity: v2Applied[0] && { id: v2Applied[0].id, barcodeCode: v2Applied[0].barcodeCode,
@@ -226,6 +278,15 @@ check('el contrato incluye todos los campos H-86 obligatorios', result.hasRequir
 check('el archivo se reconoce como esquema canónico versionado', result.schema === 'current' && Number(result.metadata.schema_version) === 3);
 check('round-trip por ID produce una actualización sin cambios', result.planOk && result.planUpdates === 1 && result.noChanges);
 check('round-trip conserva el estado canónico completo', result.roundtripSame, JSON.stringify(result.appliedResult));
+check('H-161 conserva la familia UUID v4 exportada', result.familyChecks.v4);
+check('H-161 libro mixto v4/v5 conserva familia, ID, versión, barcode, tallas, stock y precios',
+  result.familyChecks.roundtrip, result.familyChecks.error || '');
+check('H-161 seis UUID inválidos en la última fila rechazan el libro sin mutar inventario',
+  result.familyChecks.invalid.length === 6 && result.familyChecks.invalid.every(Boolean));
+check('H-161 v5 no sobrescribe versiones posteriores', result.familyChecks.version);
+check('H-161 v5 no recrea IDs ausentes del inventario', result.familyChecks.missing);
+check('H-161 v5 bloquea IDs duplicados sin mutaciones', result.familyChecks.duplicateId);
+check('H-161 v5 bloquea barcodes duplicados sin mutaciones', result.familyChecks.duplicateBarcode);
 check('round-trip V2 conserva products.id, barcode, talla única y stock escalar',
   result.v2PlanOk && result.v2RoundtripSame && result.v2Identity.recordModel === 'v2'
   && !!result.v2Identity.id && !!result.v2Identity.barcodeCode
