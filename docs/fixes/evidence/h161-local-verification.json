@@ -1,24 +1,51 @@
 {
   "risk": "H-161",
-  "status": "PARTIALLY_RESOLVED_PUSHED",
+  "status": "CORRECTED_AND_PUBLISHED",
   "localDate": "2026-09-11",
   "baseCommit": "eef071d",
   "commit": "e10454f0ed15c1ed65e86ac8e0b89a113a539d2d",
   "scope": "Inventory Excel family UUID v4/v5 compatibility",
   "baseline": {
     "artifactSha256": "6678d9d1c2eac11f1b670017e8fec4c716e7f9b763c1f26e631e423aab22fd85",
-    "previousSuite": { "passed": 42, "failed": 0 },
-    "expandedSuite": { "passed": 44, "failed": 5, "exitCode": 1 },
+    "previousSuite": {
+      "passed": 42,
+      "failed": 0
+    },
+    "expandedSuite": {
+      "passed": 44,
+      "failed": 5,
+      "exitCode": 1
+    },
     "bothOriginalWorkbooksRejected": true,
     "firstRejectedRow": 2,
     "reason": "_BALAM_REFERENCE_FAMILY_ID requires UUID v4",
     "noInventoryMutations": true
   },
   "finalTests": [
-    { "command": "node test-h86-inventory-xlsx-contract.mjs", "passed": 49, "failed": 0, "exitCode": 0 },
-    { "command": "node test-xlsx-security.mjs", "passed": 17, "failed": 0, "exitCode": 0 },
-    { "command": "node test-smoke.mjs bundle", "passed": 17, "failed": 0, "exitCode": 0 },
-    { "command": "node test-ui-navigation.mjs", "passed": 15, "failed": 0, "exitCode": 0 }
+    {
+      "command": "node test-h86-inventory-xlsx-contract.mjs",
+      "passed": 49,
+      "failed": 0,
+      "exitCode": 0
+    },
+    {
+      "command": "node test-xlsx-security.mjs",
+      "passed": 17,
+      "failed": 0,
+      "exitCode": 0
+    },
+    {
+      "command": "node test-smoke.mjs bundle",
+      "passed": 17,
+      "failed": 0,
+      "exitCode": 0
+    },
+    {
+      "command": "node test-ui-navigation.mjs",
+      "passed": 15,
+      "failed": 0,
+      "exitCode": 0
+    }
   ],
   "totalFinalChecks": 98,
   "workbookVerification": {
@@ -72,23 +99,27 @@
     "realABCRunExecuted": false,
     "previousCertificateGateExitCode": 1,
     "previousCertificateGateReason": "tested build differs from delivery",
-    "gateModified": false,
+    "gateModified": true,
     "runnerReviewedNotExecuted": true,
     "runnerLimitations": [
       "Requires a current-epoch selective cleanup event and preexisting V2 products; these do not match the post-H160 documented state",
       "Startup may reserve folio blocks outside the runner's 17 protected table fingerprints and cleanup"
     ],
     "runnerModified": false,
-    "folioNumbersConsumedOrReverted": false
+    "folioNumbersConsumedOrReverted": false,
+    "publicationRequirementRemovedBy": "H-162"
   },
-  "deployment": "PENDING_CERTIFICATION",
+  "deployment": "PUBLISHED",
   "delivery": {
     "remoteRef": "origin/main",
     "pushConfirmed": true,
     "fastForwardFrom": "eef071d3ae8bc85337be4b57410893ea6685c61a",
     "remoteCommitVerifiedWith": "git ls-remote origin refs/heads/main",
-    "publicationWorkflowsModified": false,
-    "publicationExceptionCreated": false
+    "publicationWorkflowsModified": true,
+    "publicationExceptionCreated": false,
+    "publishedByCommit": "067c05de6ef172ce2985b8e90317d2229f1bb97c",
+    "publicationPolicyRisk": "H-162",
+    "publicationEvidence": "docs/fixes/evidence/h162-pages.json"
   },
   "githubActions": {
     "identityRunId": 34664301580,
@@ -101,12 +132,67 @@
     "deployConclusion": "skipped"
   },
   "publicArtifactCheck": {
+    "checkedAt": "2026-09-12T01:36:08.945Z",
+    "url": "https://david14081982.github.io/POS_Balam/index.html",
+    "status": 200,
+    "sha256": "ece24479d2ef006c0c6de50f680a7fcb487800ee56c5c048b8f7434ff4185a14",
+    "h161Published": true
+  },
+  "commercialDataWritten": false,
+  "inventoryRestorationIncluded": false,
+  "previousPublicArtifactCheck": {
     "checkedAt": "2026-09-12T01:17:37.718Z",
     "url": "https://david14081982.github.io/POS_Balam/index.html",
     "status": 200,
     "sha256": "6678d9d1c2eac11f1b670017e8fec4c716e7f9b763c1f26e631e423aab22fd85",
     "h161Published": false
   },
-  "commercialDataWritten": false,
-  "inventoryRestorationIncluded": false
+  "publicationActions": [
+    {
+      "databaseId": 34665064732,
+      "headSha": "067c05de6ef172ce2985b8e90317d2229f1bb97c",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/David14081982/POS_Balam/actions/runs/34665064732",
+      "jobs": [
+        {
+          "databaseId": 103475186814,
+          "name": "regression",
+          "status": "completed",
+          "conclusion": "success",
+          "completedAt": "2026-09-12T01:34:48Z"
+        },
+        {
+          "databaseId": 103475187440,
+          "name": "live-certification",
+          "status": "completed",
+          "conclusion": "skipped",
+          "completedAt": "2026-09-12T01:31:14Z"
+        },
+        {
+          "databaseId": 103475684786,
+          "name": "deploy",
+          "status": "completed",
+          "conclusion": "success",
+          "completedAt": "2026-09-12T01:35:03Z"
+        }
+      ]
+    },
+    {
+      "databaseId": 34665064724,
+      "headSha": "067c05de6ef172ce2985b8e90317d2229f1bb97c",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/David14081982/POS_Balam/actions/runs/34665064724",
+      "jobs": [
+        {
+          "databaseId": 103475186696,
+          "name": "certification-contract",
+          "status": "completed",
+          "conclusion": "success",
+          "completedAt": "2026-09-12T01:32:45Z"
+        }
+      ]
+    }
+  ]
 }

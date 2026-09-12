@@ -1,17 +1,17 @@
 # Publicación sin certificación real obligatoria
 
 **Riesgo:** H-162
-**Estado:** PARCIALMENTE RESUELTO — corregido localmente; publicación pendiente
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha:** 11/09/2026
-**Commit:** Pendiente de commit
+**Commit técnico:** `067c05de6ef172ce2985b8e90317d2229f1bb97c`
 
 ## Problema y reproducción
 
 La corrección H-161 llegó a `origin/main` con sus 98 comprobaciones locales
 aprobadas, pero GitHub Pages siguió sirviendo el HTML anterior. La ejecución
-H148 `34664301574` falla en `Require a complete live certificate for this
+H148 `34664301574` falló en `Require a complete live certificate for this
 delivery`: `tested build differs from delivery`, código 1. El job `deploy`
-queda omitido aunque las comprobaciones anteriores a esa puerta aprobaron.
+quedó omitido aunque las comprobaciones anteriores a esa puerta aprobaron.
 
 El usuario autorizó expresamente retirar las condiciones de certificación
 real que impiden publicar en GitHub. La decisión aplica al requisito de entrega;
@@ -19,21 +19,21 @@ no declara ejecutadas las pruebas reales ni autoriza operaciones comerciales.
 
 ## Causa raíz
 
-`.github/workflows/h148-sync-authority.yml` valida obligatoriamente el archivo
+`.github/workflows/h148-sync-authority.yml` validaba obligatoriamente el archivo
 `docs/fixes/evidence/h148-live-matrix.json` contra el nuevo HTML en cada push o
-pull request. Cualquier cambio del bundle invalida ese certificado, lo que
-convierte la matriz real en una dependencia universal de publicación.
+pull request. Cualquier cambio del bundle invalidaba ese certificado, lo que
+convertía la matriz real en una dependencia universal de publicación.
 
-`test-h155-publication.mjs` exige la misma puerta, por lo que retirar sólo el
+`test-h155-publication.mjs` exigía la misma puerta, por lo que retirar sólo el
 paso YAML dejaría una regresión obligatoria fallando. Los tests H132 utilizan
 fixtures o snapshots sintéticos y no requieren certificación remota; permanecen.
 La consulta API de protección de `main` respondió 404, `Branch not protected`;
-el bloqueo observado procede del workflow. Local y remoto estaban alineados en
+el bloqueo observado procedía del workflow. Local y remoto estaban alineados en
 `a0fdb78` antes de esta corrección.
 
-AGENTS y las reglas arquitectónicas vigentes exigen esa misma certificación.
-Deben actualizarse junto con el workflow para reflejar la instrucción actual
-del usuario y evitar restablecer automáticamente la condición retirada.
+AGENTS y las reglas arquitectónicas anteriores exigían esa misma certificación.
+Se actualizaron junto con el workflow para reflejar la instrucción actual del
+usuario y evitar restablecer automáticamente la condición retirada.
 
 ## Diseño
 
@@ -50,7 +50,7 @@ el despliegue.
 ## Solución
 
 En `.github/workflows/h148-sync-authority.yml` se retiró únicamente el paso que
-exige el certificado real en la regresión automática. Se conserva el self-test
+exigía el certificado real en la regresión automática. Se conserva el self-test
 del validador, el resto de las regresiones, `deploy.needs: regression` y las
 condiciones de publicación exclusiva desde `main`. El modo real sigue siendo
 manual, con `live=false` predeterminado, y valida estrictamente su matriz.
@@ -87,8 +87,20 @@ vigente y nueve mutaciones rechazadas. Logs locales:
 falsos**, código 0. La certificación opcional conserva sus controles estrictos.
 `node --check` del test y `git diff --check`: correctos.
 
-La ejecución de GitHub Actions y la igualdad de los archivos públicos con la
-entrega permanecen pendientes; no se contabilizan como pruebas aprobadas.
+GitHub Actions H148 `34665064732` terminó correctamente sobre `067c05d`:
+regresión a las 01:34:48 UTC del 12/09/2026 y despliegue a las 01:35:03 UTC.
+El job `live-certification` quedó omitido, como corresponde a la publicación
+normal. H132 `34665064724` también aprobó.
+
+La verificación pública terminó a las **01:36:08.945 UTC del 12/09/2026**
+(11/09 en Hermosillo): **10/10 rutas HTTP 200**, todas con SHA-256 idéntico al
+archivo del commit. Se comprobaron raíz, `index.html`, HTML
+offline, `sw.js`, manifest y cinco iconos. H-161 quedó publicado con los mismos
+bytes que superaron sus pruebas locales. Las consultas usaron un parámetro
+de versión para evitar respuestas de caché anteriores.
+
+Evidencia: `docs/fixes/evidence/h162-pages.json`, con los hashes esperados y
+recibidos, las ejecuciones de Actions y el estado real de cada job.
 
 ## Riesgo residual y pendientes
 
@@ -97,8 +109,12 @@ permanece opcional y sólo puede declararse cuando se ejecute completa sobre
 el artefacto correspondiente. La petición no autoriza una restauración de
 inventario ni omitir los conflictos `ID_NOT_FOUND` de H-161.
 
-Commit, push y verificación pública pendientes. No se declara H-161 publicado
-antes de comprobar el resultado de Pages.
+El commit técnico `067c05de6ef172ce2985b8e90317d2229f1bb97c` está en
+`origin/main` y su publicación fue verificada. No queda pendiente conocido
+dentro de la retirada del requisito. La certificación distribuida permanece
+**NO CERTIFICADO**: no se solicitó ni se ejecutó una matriz real, y no hubo
+escrituras comerciales en Supabase. Una terminal abierta puede requerir cargar
+la actualización publicada; su adopción física no fue observada.
 
 ## Referencias
 
@@ -107,3 +123,4 @@ antes de comprobar el resultado de Pages.
 - `.github/workflows/h148-sync-authority.yml`.
 - `test-h148-sync-certification.mjs`.
 - `AGENTS.md` y `docs/architect/playbooks/synchronization.md`.
+- `docs/fixes/evidence/h162-pages.json`.

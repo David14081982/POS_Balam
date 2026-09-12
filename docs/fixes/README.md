@@ -13,13 +13,13 @@ sesión de chat.
 
 ## Correcciones registradas
 
-- `publicacion-sin-certificado-obligatorio-h162.md` — H-162, PARCIALMENTE
-  RESUELTO: publicación independiente del certificado real, regresiones y
-  modo A/B/C opcional conservados; despliegue pendiente.
+- `publicacion-sin-certificado-obligatorio-h162.md` — H-162, RESUELTO Y
+  PUBLICADO: regresiones conservadas, A/B/C opcional y diez rutas públicas
+  verificadas; incluye la publicación de H-161.
 
-- `importacion-familias-uuid-v5-h161.md` — H-161, PARCIALMENTE RESUELTO:
+- `importacion-familias-uuid-v5-h161.md` — H-161, RESUELTO Y PUBLICADO:
   familias UUID v5 compatibles, 98 comprobaciones locales y ambos Excel con
-  vista previa; certificación real y publicación pendientes.
+  vista previa; certificación real opcional no ejecutada.
 
 - `punto-cero-respaldo-recuperable-h159.md` — H-159: revisión recuperable del respaldo, equipos retirados excluidos y conteo de clientes activos.
 

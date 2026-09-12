@@ -7250,7 +7250,7 @@ de una restauración automática H98. No se cambió el HTML publicado.
 
 ## H-161 — Importar rechaza las familias UUID v5 que BALAM exporta
 
-**Estado:** PARCIALMENTE RESUELTO — enviado a main, publicación pendiente.
+**Estado:** RESUELTO — corrección de lectura publicada; certificación real opcional no ejecutada.
 **Fecha:** 11/09/2026. **Commit técnico:** `e10454f0ed15c1ed65e86ac8e0b89a113a539d2d`.
 **Origen:** Inventario rechaza los Excel exportados el 09/09 y 11/09/2026
 antes de abrir la vista previa, con el mensaje «El archivo no tiene el formato
@@ -7286,41 +7286,42 @@ módulo XLSX. HTML y offline idénticos, SHA-256
 **Contexto vigente:** H-160 documenta Punto Cero ejecutado y productos remotos
 en cero. Leer un export anterior no autoriza restaurar sus productos; IDs que
 ya no existan deben conservar el conflicto de identidad del preflight.
-**Despliegue:** pendiente. El filtro H148 rechaza el certificado anterior por
-`tested build differs from delivery`; no se modificó el filtro ni se atribuye
-su certificación a este artefacto. Commit técnico enviado a `origin/main` por
-solicitud expresa del usuario, mediante avance directo desde `eef071d`, y hash
-confirmado con `git ls-remote`. Los workflows H148/H157 permanecen intactos;
-no se creó una excepción de publicación.
-H132 aprobó el commit (`34664301580`); H148 (`34664301574`) falló en la puerta de
-certificado con `tested build differs from delivery`, código 1; `deploy`
-omitido. Las comprobaciones anteriores a esa puerta aprobaron. Pages seguía sirviendo
-el SHA anterior `6678d9…` a las 01:17:37 UTC del 12/09/2026.
-**Riesgo residual y pendientes:** matriz real A/B/C no ejecutada; certificar el
-artefacto, publicar y comprobar la terminal del usuario. La compatibilidad de
-lectura no restaura los IDs retirados por Punto Cero.
+**Bloqueo inicial de publicación:** H132 aprobó el commit (`34664301580`), pero
+H148 (`34664301574`) rechazó el certificado anterior por `tested build differs
+from delivery`, código 1, y omitió el despliegue. H-161 no cambió esa puerta.
+**Despliegue final:** H-162 retiró el requisito automático por autorización del
+usuario y publicó el mismo artefacto probado de H-161 desde
+`067c05de6ef172ce2985b8e90317d2229f1bb97c`. H148 `34665064732` y H132
+`34665064724` aprobaron; Pages terminó el 12/09/2026 a las 01:35:03 UTC.
+A las 01:36:08.945 UTC, diez rutas públicas devolvieron HTTP 200 y bytes
+idénticos al commit, incluidos raíz, HTML, offline y SW. Evidencia:
+`docs/fixes/evidence/h162-pages.json`.
+**Riesgo residual y pendientes:** adopción de la actualización en la terminal
+del usuario no comprobada. La compatibilidad de lectura no restaura los IDs
+retirados por Punto Cero. La matriz real A/B/C es opcional tras H-162 y no se
+ejecutó para este artefacto.
 La revisión del runner real encontró precondiciones de V2 existentes y evento
 de limpieza selectiva que no corresponden al estado documentado tras H-160;
 además puede reservar folios fuera de sus huellas de conservación. No se
 ejecutó ni se amplió el runner como parte de esta corrección.
-**Certificación:** NO CERTIFICADO.
+**Certificación:** NO CERTIFICADO — opcional, sin bloquear la publicación.
 **Documento:** `docs/fixes/importacion-familias-uuid-v5-h161.md`.
 **Evidencia:** `docs/fixes/evidence/h161-local-verification.json`.
 
 ## H-162 — La publicación exige una certificación real ajena al cambio
 
-**Estado:** PARCIALMENTE RESUELTO — corregido localmente; publicación pendiente.
-**Fecha:** 11/09/2026. **Commit:** Pendiente de commit.
+**Estado:** RESUELTO Y PUBLICADO.
+**Fecha:** 11/09/2026. **Commit técnico:** `067c05de6ef172ce2985b8e90317d2229f1bb97c`.
 **Origen:** autorización explícita del usuario para retirar la certificación
 real A/B/C como requisito automático de publicación en GitHub Pages.
 **Reproducción:** H-161 está en `main` y tiene 98 comprobaciones locales verdes;
-la ejecución H148 `34664301574` falla en
+la ejecución H148 `34664301574` falló en
 `Require a complete live certificate for this delivery`, con
-`tested build differs from delivery`, y omite el job `deploy`.
-**Causa:** `.github/workflows/h148-sync-authority.yml` exige a cada entrega un
+`tested build differs from delivery`, y omitió el job `deploy`.
+**Causa:** `.github/workflows/h148-sync-authority.yml` exigía a cada entrega un
 certificado real vinculado al hash exacto del nuevo HTML, incluso cuando el
-cambio acotado ya superó su regresión. Las reglas vigentes imponen el mismo
-requisito y deben reflejar la nueva decisión del usuario.
+cambio acotado ya había superado su regresión. Las reglas anteriores imponían
+el mismo requisito y se actualizaron conforme a la nueva decisión del usuario.
 **Alcance:** retirar esa puerta de la publicación automática, conservar las
 regresiones y la certificación real como ejecución opcional bajo petición;
 actualizar las reglas y publicar la corrección H-161 ya autorizada.
@@ -7338,9 +7339,14 @@ falsos, código 0. `node --check` y `git diff --check` correctos.
 `ece24479d2ef006c0c6de50f680a7fcb487800ee56c5c048b8f7434ff4185a14`;
 SW `51cdbbb33d1a6fdd07b7a0db8560352d3c5eac368962e80f566dc717c9cf6d1c`.
 Sin diff productivo en `balam/` ni SQL.
-**Despliegue:** commit, push y comprobación de Pages pendientes; no se declara
-publicado H-161 antes de verificar los bytes públicos.
-**Riesgo residual:** la entrega automática dejará de acreditar convergencia
-contra Supabase real; las regresiones permanecen exigibles y la certificación
-se informa separadamente cuando sea solicitada y ejecutada.
+**Despliegue:** commit técnico en `origin/main`; H148 `34665064732` completó
+regresión y despliegue, y omitió correctamente el modo real opcional. H132
+`34665064724` aprobó. Pages terminó el 12/09/2026 a las 01:35:03 UTC.
+Verificación final a las 01:36:08.945 UTC (11/09 en Hermosillo): diez rutas,
+todas HTTP 200 y SHA-256 idénticos al commit, incluida la raíz; las consultas
+usaron un parámetro de versión para evitar respuestas de caché anteriores.
+**Riesgo residual:** ninguno conocido en la retirada del requisito. La entrega
+no acredita convergencia contra Supabase real; conserva regresiones y deja la
+certificación opcional bajo petición. No hubo escrituras comerciales remotas.
 **Documento:** `docs/fixes/publicacion-sin-certificado-obligatorio-h162.md`.
+**Evidencia:** `docs/fixes/evidence/h162-pages.json`.

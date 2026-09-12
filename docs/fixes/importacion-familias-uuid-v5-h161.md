@@ -1,9 +1,10 @@
 # Importación de familias UUID v5 exportadas por BALAM
 
 **Riesgo:** H-161
-**Estado:** PARCIALMENTE RESUELTO — enviado a main, publicación pendiente
+**Estado:** RESUELTO — corrección de lectura publicada; certificación real opcional no ejecutada
 **Fecha:** 11/09/2026
 **Commit técnico:** `e10454f0ed15c1ed65e86ac8e0b89a113a539d2d`
+**Commit de publicación:** `067c05de6ef172ce2985b8e90317d2229f1bb97c` (H-162)
 
 ## Problema y reproducción
 
@@ -128,12 +129,14 @@ H-160 registra un Punto Cero ejecutado, con inventario remoto en cero y época
 condición es un conflicto de preflight legítimo, no otro error de formato.
 Esta corrección no restaura inventario ni autoriza recrear identidades borradas.
 
-Certificación distribuida **NO CERTIFICADO** mientras no se complete la matriz
-real A/B/C y se identifique por hash el artefacto final, conforme a R-SYNC-16 y
-R-SYNC-17. `test-h148-sync-certification.mjs` rechazó el certificado anterior,
+Certificación distribuida **NO CERTIFICADO**. H-162 la convirtió en opcional
+bajo petición; no condiciona la publicación. Afirmar certificación sigue
+requiriendo una matriz real completa del artefacto conforme a R-SYNC-16 y
+R-SYNC-17. Antes de H-162, `test-h148-sync-certification.mjs` rechazó el certificado anterior,
 código 1: `tested build differs from delivery`. Ese resultado demuestra que la
 puerta exige evidencia de este HTML; no demuestra una divergencia del importador.
-No se cambió la puerta ni se reutilizó el certificado como aprobación.
+H-161 no cambió la puerta ni reutilizó el certificado como aprobación. La
+retirada posterior del requisito se implementó y documentó en H-162.
 
 La revisión del runner real encontró que exige un evento de limpieza selectiva
 para la época vigente y productos V2 preexistentes antes de crear las semillas.
@@ -148,10 +151,11 @@ El commit técnico `e10454f` se envió a `origin/main` mediante avance directo
 desde `eef071d`; `git ls-remote` confirmó el hash completo. Sólo se incluyeron
 la corrección, las pruebas, los artefactos y la documentación de H-161.
 
-Publicación pendiente: el workflow H148 exige el certificado del HTML exacto
-antes de desplegar Pages. El workflow manual H157 está limitado a su propio
-commit y artefacto; no admite H-161. No se modificaron estos workflows ni se
-creó una excepción de publicación. Commit y push no certifican A/B/C.
+Bloqueo inicial de publicación: el workflow H148 exigía el certificado del HTML
+exacto antes de desplegar Pages. El workflow manual H157 está limitado a su
+propio commit y artefacto; no admitía H-161. La corrección H-161 no modificó
+esos workflows ni creó una excepción de publicación. Commit y push no
+certifican A/B/C.
 
 GitHub Actions H132 aprobó el commit técnico en la ejecución `34664301580`.
 H148 terminó con fallo en la ejecución `34664301574`: la comprobación
@@ -162,6 +166,16 @@ no se ejecutaron y no se contabilizan como aprobados. La lectura HTTP de Pages
 el 12/09/2026 a las 01:17:37 UTC todavía devolvió el HTML anterior:
 `6678d9d1c2eac11f1b670017e8fec4c716e7f9b763c1f26e631e423aab22fd85`.
 Por tanto, esa comprobación no acredita publicación de H-161.
+
+Publicación final verificada: H-162 retiró el requisito automático por
+autorización del usuario y entregó el artefacto de H-161 desde `067c05d`.
+GitHub Actions H148 `34665064732` y H132 `34665064724` aprobaron; el despliegue
+terminó el 12/09/2026 a las 01:35:03 UTC. A las 01:36:08.945 UTC, diez rutas
+públicas devolvieron HTTP 200 y bytes idénticos al commit, incluidos raíz,
+HTML principal, offline y SW. Los SHA-256 son los mismos registrados arriba.
+Esta comprobación de entrega se conserva separada de las 98 pruebas locales
+de H-161 y no equivale a ejecutar la matriz A/B/C.
+Evidencia: `docs/fixes/evidence/h162-pages.json`.
 
 No se ejecutó una importación sobre Supabase real ni se modificaron productos
 comerciales. La adopción de la actualización por la terminal del usuario
@@ -181,3 +195,5 @@ cambiar el esquema Excel ni ampliar el alcance a restauración de inventario.
 - `docs/fixes/autoridad-mensajes-humanos-h134.md`.
 - `docs/fixes/punto-cero-enlaces-inventario-h160.md`.
 - `docs/architect/playbooks/synchronization.md`.
+- `docs/fixes/publicacion-sin-certificado-obligatorio-h162.md`.
+- `docs/fixes/evidence/h162-pages.json`.
