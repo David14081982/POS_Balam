@@ -3,7 +3,7 @@
 **Riesgo:** H-167
 **Estado:** PARCIALMENTE RESUELTO — corrección del bloqueo verificada; publicación pendiente. Guardado real y flota NO CERTIFICADO.
 **Fecha:** 12/09/2026
-**Commit:** Pendiente de commit
+**Commit técnico:** `fdb74b6c24587266feb5e6a808e8cfde71ef0c6f`
 
 ## Problema y reproducción
 
@@ -134,7 +134,15 @@ HTML final, ambos archivos:
 HTML preliminar de las dos regresiones H-99:
 `c4a05f90d3b3897a8428ce43a4fbaa44bd9b2ec9eca657ef43512e4c8cc21101`.
 La diferencia final es la invalidación selectiva, probada en lifecycle y en las
-pruebas H-164 repetidas. Commit, ejecución Pages y comparación pública pendientes.
+pruebas H-164 repetidas. El commit técnico está creado localmente; ejecución
+Pages y comparación pública pendientes.
+
+La revisión automática rechazó `git push origin HEAD:main`: considera que el
+reporte y las instrucciones generales no autorizan explícitamente publicar en
+la rama principal y desplegar a producción. La operación no se ejecutó y no se
+intentó por otra vía. Se requiere autorización explícita del usuario para ese
+destino antes de publicar. Código, documentación, baseline y workflow están
+preparados para continuar desde este commit.
 
 ## Riesgo residual y pendientes
 

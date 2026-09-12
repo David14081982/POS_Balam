@@ -7636,7 +7636,7 @@ adopción de puestos físicos ausentes no certificados.
 
 **Estado:** PARCIALMENTE RESUELTO — bloqueo corregido y verificado; publicación pendiente.
 **Fecha:** 12/09/2026.
-**Commit:** Pendiente de commit.
+**Commit técnico:** `fdb74b6c24587266feb5e6a808e8cfde71ef0c6f`.
 **Origen:** el usuario reporta más de diez minutos sin respuesta al abrir
 Inventario → Etiquetas, antes de poder guardar las imágenes en Supabase.
 **Causa comprobada:** cada render certifica y vuelve a diagnosticar todo el lote,
@@ -7662,5 +7662,7 @@ garantías y completitud; logs y baselines enlazados en el documento.
 `e0d1abbd98ca207143a20e5a376b8c550af41967f67feae80de3d3ac751c837c`.
 **Riesgo residual:** upload real, flota A/B/C y hardware NO CERTIFICADO;
 transporte controlado en pruebas, sin escrituras remotas ni migraciones.
-Cada instalación requiere el cliente nuevo. Commit/publicación pendientes.
+Cada instalación requiere el cliente nuevo. Publicación pendiente: la revisión
+automática rechazó el push a main por requerir autorización explícita para
+desplegar a producción. No se modificó la web ni se intentó por otra vía.
 **Documento:** `docs/fixes/apertura-etiquetas-sin-bloqueo-h167.md`.
