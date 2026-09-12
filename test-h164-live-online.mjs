@@ -61,6 +61,7 @@ function stable(value) {
 }
 if(preflightOnly){console.log(JSON.stringify({preflight:true,build,project,artifactSha256:digest(html),embeddedStoreSha256:digest(embeddedStore),authRequests:0,businessWrites:0}));process.exit(0);}
 mkdirSync(out, { recursive: true });
+if(!resumeDir) writeFileSync(join(out,'verified-artifact.html'),html);
 const result = resumeDir ? JSON.parse(readFileSync(join(out,'matrix.json'),'utf8')) : { run, project, build, artifactPath, artifactSha256: digest(html), certifierSha256: digest(readFileSync(import.meta.filename)),
   startedAt: new Date().toISOString(), profiles: 3, certified: false, cases: [],
   method: 'Real HTTPS RPC/authority; isolated Chromium A/B/C; failures abort real transport only; no mocked authority or service_role in browser',
@@ -139,6 +140,21 @@ async function replaceRejectedRaceCheckpoint(key,checkpoint){
 async function once(label, action, recover) {
   const key=(currentCase||'bootstrap')+' / '+label;let existing=fixtures.checkpoints[key];
   if(retryRejectedCase===currentCase&&label==='Concurrent request outcomes'&&existing?.complete)existing=await replaceRejectedRaceCheckpoint(key,existing);
+  // Resume this sale preflight only after verifying its folio-only receipts.
+  // Existing reservations remain immutable; no sale/payment is replayed.
+  if(currentCase==='Two terminals sell the last unit'&&label==='Concurrent request outcomes'&&existing?.complete&&existing.value?.arrived===0){
+    assert.deepEqual(existing.value.requestIds,[]);
+    assert.equal(existing.requestIds.length,2);
+    assert.equal(existing.value.outcomes.length,2);
+    for(const outcome of existing.value.outcomes){assert.equal(outcome.status,'rejected');assert.match(outcome.reason.message,/BALAM se está actualizando/);}
+    const receipts=check(await db.from('online_requests').select('actor_id,request_id,command_kind,state,response').in('request_id',existing.requestIds));
+    assert.equal(receipts.length,2,'Both original folio receipts must exist');
+    for(const row of receipts){assert.equal(row.actor_id,userId);assert.equal(row.command_kind,'folio');assert.equal(row.state,'confirmed');assert.equal(row.response.ok,true);assert.ok(row.response.result.folio);}
+    const sales=check(await db.from('sales').select('folio').in('folio',receipts.map(r=>r.response.result.folio)));
+    assert.deepEqual(sales,[],'Neither reserved folio became a sale');
+    fixtures.unsentPreflights ||= [];fixtures.unsentPreflights.push({key,checkpoint:structuredClone(existing),receipts:structuredClone(receipts),verifiedAt:new Date().toISOString(),serverSales:0});save();
+    existing={startedAt:new Date().toISOString(),requestIds:[]};fixtures.checkpoints[key]=existing;save();
+  }
   if(existing?.complete)return existing.value;
   if(existing?.requestIds?.length){
     const receipts=check(await db.from('online_requests').select('request_id,state,response').in('request_id',existing.requestIds));
@@ -198,7 +214,17 @@ const specs = [
   ['movements','movements','id',[['tipo','tipo'],['cant','cant'],['sku','sku'],['ref','ref'],['productId','product_id'],['operationId','operation_id']]],
 ];
 async function converge(active = terminals) {
-  await Promise.all(active.map(terminal => terminal.page.evaluate(() => window.STORE.refresh())));
+  await Promise.all(active.map(async terminal => {
+    for(let attempt=0;attempt<3;attempt++){
+      try{return await terminal.page.evaluate(()=>window.STORE.refresh());}
+      catch(error){
+        if(attempt===2||!/canceling statement due to statement timeout|Failed to fetch|NetworkError/.test(error.message))throw error;
+        result.readRetries ||= [];result.readRetries.push({terminal:terminal.name,case:currentCase,attempt:attempt+1,at:new Date().toISOString()});save();
+        // Read-only retry. Never repeat a commercial command or unresolved request.
+        await new Promise(resolve=>setTimeout(resolve,1000));
+      }
+    }
+  }));
   const remote = Object.fromEntries(await Promise.all(tables.map(async table => [table, await rawRows(table)])));
   const reserved = new Set(remote.stock_reservations.map(row => String(row.operation_id)));
   remote.sales = remote.sales.map(row=>({...row,stock_reserved:reserved.has(String(row.operation_id))}));
@@ -269,6 +295,7 @@ async function race(...args){
   result.lastRace={requestIds:checkpoint.requestIds,rejection:rejected.response.error};return checkpoint.outcomes;
 }
 async function performRace(first, second, actionFirst, actionSecond, predicate) {
+  await Promise.all([ready(first),ready(second)]);
   const pattern = url + '/rest/v1/rpc/execute_online_command';
   let arrived = 0, release; const requestIds = [];
   const gate = new Promise(resolve => { release = resolve; });
@@ -370,7 +397,12 @@ try {
   for (const [index,name] of ['A','B','C'].entries()) {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const page = await context.newPage(), errors = [];
-    const terminal = { name, context, page, errors, sellerId: sellerIds[index] }; terminals.push(terminal);
+    const terminal = { name, context, page, errors, sellerId: sellerIds[index], revisionSignals: 0 }; terminals.push(terminal);
+    page.on('websocket', socket => socket.on('framereceived', frame => {
+      try { const message=JSON.parse(String(frame.payload)); const payload=Array.isArray(message)?message[4]:message.payload;
+        if(payload?.data?.table==='online_snapshot_revision') terminal.revisionSignals++;
+      } catch (_) { /* non-JSON transport frame */ }
+    }));
     page.setDefaultTimeout(60000); page.on('pageerror', error => errors.push(error.message));
     page.on('request', request => {
       if (request.headers().apikey === serviceKey) errors.push('Provisioning key crossed the browser boundary');
@@ -386,10 +418,10 @@ try {
     const login = await page.evaluate(({email,password}) => window.AUTH.login(email,password), {email,password});
     assert.equal(login.ok, true, 'independent authenticated login ' + name); await ready(terminal);
     // Realtime remains disabled for the entire matrix: refresh must recover every domain.
-    await page.evaluate(async () => (await window.STORE.ensureClient()).removeAllChannels());
+    if(!build.includes('h166')) await page.evaluate(async () => (await window.STORE.ensureClient()).removeAllChannels());
   }
   const [A,B,C] = terminals, [sourceId,targetId,lastId,deleteId,editId,reclassId,reclassTargetId] = fixtures.products;
-  await verify('A/B/C bootstrap and Realtime disabled', () => converge());
+  await verify('A/B/C bootstrap from authoritative snapshot', () => converge());
   await verify('Create V2 products with barcode V3', async () => {
     await once('Create seven exact references',()=>A.page.evaluate(async ({ids,prefix}) => {
       const D=window.DATA,C=window.CONFIG,meta=C.allCatalogMeta(),modelKind=C.modeloKind();
@@ -408,6 +440,33 @@ try {
       await D.saveProductRows(prepared);
     }, { ids: fixtures.products, prefix }));
     return converge();
+  });
+  await verify('H166 conditional reads and real Realtime invalidation', async () => {
+    if(!build.includes('h166')) return {notApplicable:true};
+    const observed=[];
+    const waitObserved=async()=>{const deadline=Date.now()+10000;while(observed.length<3&&Date.now()<deadline)await new Promise(resolve=>setTimeout(resolve,50));};
+    const watchers=terminals.map(terminal=>{
+      const watcher=async response=>{
+        if(!response.url().includes('/rpc/online_snapshot_if_changed'))return;
+        try{const body=await response.json();observed.push({terminal:terminal.name,unchanged:body.unchanged,hasProducts:Object.hasOwn(body,'products')});}catch(_){}
+      };terminal.page.on('response',watcher);return watcher;
+    });
+    try {
+      await Promise.all(terminals.map(t=>t.page.evaluate(()=>window.STORE.init())));
+      await waitObserved();
+      assert.equal(observed.filter(row=>row.hasProducts).length,0,'Same revision never downloads commercial collections');
+      assert.ok(observed.length>=3,'Three initial conditional responses: '+JSON.stringify(observed));observed.length=0;
+      const name=prefix+' realtime';
+      await once('Edit exact QA product through online authority',()=>A.page.evaluate(async({id,name})=>window.DATA.saveProductRows([window.DATA.updateReference({id,nombre:name})]),{id:sourceId,name}));
+      await Promise.all([B,C].map(t=>t.page.waitForFunction(({id,name})=>window.DATA.products.find(p=>p.id===id)?.nombre===name,{id:sourceId,name},{timeout:30000})));
+      assert.ok(B.revisionSignals>0&&C.revisionSignals>0,'Both independent terminals received real revision signals');
+      for(const terminal of terminals)await terminal.page.evaluate(async()=>(await window.STORE.ensureClient()).removeAllChannels());
+      await converge();observed.length=0;
+      // Actual 15-second lifecycle, not a manual refresh surrogate.
+      await new Promise(resolve=>setTimeout(resolve,17000));
+      await waitObserved();assert.ok(observed.length>=3,'Three actual interval responses: '+JSON.stringify(observed));assert.equal(observed.filter(row=>row.hasProducts).length,0);
+      return {realtimeSignals:[B.revisionSignals,C.revisionSignals],idleChecks:observed.length,idleFullSnapshots:0,stale:0};
+    } finally {terminals.forEach((terminal,index)=>terminal.page.off('response',watchers[index]));}
   });
   await verify('Client and customer profile', async () => {
     const client = await once('Create exact client',()=>A.page.evaluate(prefix => window.DATA.addClient({nombre:prefix,tel:prefix,notas:'QA H164 retained test history'}), prefix));

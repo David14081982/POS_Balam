@@ -99,6 +99,12 @@ try{
   await migration('20260912021900_pos_h164_point_zero_preservation_verification.sql','H164 Point Zero preservation verification');
   pointZero=await (await import('./test-h164-point-zero.mjs')).verifyPointZero(db);
  }
+ if(!focused){
+  await migration('20260912022000_pos_h166_conditional_snapshot.sql','H166 conditional snapshot');
+  await migration('20260912022100_pos_h166_conditional_snapshot_verification.sql','H166 conditional snapshot verification');
+  await migration('20260912022200_pos_h166_adoption_build.sql','H166 adoption build');
+  await migration('20260912022300_pos_h166_adoption_build_verification.sql','H166 adoption build verification');
+ }
  const checked=await db.query(`select p.proname from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='pos' and p.proname like '%online%' order by p.proname`);
  const verificationMode=pointZeroOnly?'point-zero-only':legacyScanOnly?'legacy-scan-only':adoptionOnly?'adoption-only':nullableOnly?'nullable-only':fs.existsSync(verification);
  fs.mkdirSync('.evidence-h164',{recursive:true});fs.writeFileSync('.evidence-h164/'+(pointZeroOnly?'online-point-zero-sql-local.json':legacyScanOnly?'online-legacy-scan-sql-local.json':adoptionOnly?'online-adoption-sql-local.json':nullableOnly?'online-null-sql-local.json':'online-sql-local.json'),JSON.stringify({at:new Date().toISOString(),engine:'PGlite PostgreSQL',source:'live catalog including schema/PUBLIC ACL, no production rows',migrations:executedVersions,verification:verificationMode,pointZero,functions:checked.rows},null,2)+'\n');

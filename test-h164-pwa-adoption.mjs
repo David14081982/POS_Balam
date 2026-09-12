@@ -17,6 +17,7 @@ const html = `<!doctype html><meta charset="utf-8"><meta name="fixture-generatio
   window.fixture = {activity:0,busy:false,reconciling:false,message:'',errors:[]};
   window.CORE = {activityStatus:()=>({active:fixture.activity})};
   window.STORE = {syncStatus:()=>({...fixture})};
+  window.CONFIG = {ready:true,get:()=>""}; // confirmed empty logo, not pending authority
   Object.defineProperty(navigator,'standalone',{value:true});
   navigator.serviceWorker.addEventListener('controllerchange',()=>{
     if(window.beginConfirmationOnControllerChange){fixture.busy=true;window.raceObserved=true;}

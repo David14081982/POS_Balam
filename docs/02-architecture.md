@@ -1243,3 +1243,35 @@ ausencia de ventas ni vendedores por el texto de su nombre.
   entidad más reciente; el conflicto debe quedar registrado.
 - `sales.total` es el total final con IVA; el desglose fiscal y los pagos son
   snapshots históricos, no cálculos con configuración vigente.
+
+
+### H-166: revisión confirmada y lectura condicional
+
+La carga inicial usa `online_snapshot_if_changed(null)`, que incluye el mismo
+snapshot completo autorizado de `online_snapshot()` y su revisión. Las lecturas
+posteriores envían exclusivamente ese token efímero. PostgreSQL compara revisión
+y contenido dentro del mismo snapshot MVCC; si coinciden devuelve sólo revisión
+y hora, sin recorrer ni devolver las colecciones comerciales. El token incluye
+actor, dispositivo, día comercial y fase temporal de promociones. Una revisión
+incompatible, una sesión distinta o una respuesta incompleta nunca se adoptan.
+
+Los triggers de `online_snapshot_revision` avanzan con las dependencias de datos,
+CONFIG y permisos en la misma transacción. Esta tabla sólo contiene metadatos;
+no es un cursor de adopción, una cola ni una réplica comercial. Realtime se limita
+a su señal, seguida de lectura autoritativa. El intervalo de seguridad de 15 s,
+foco y reconexión conservan las comprobaciones de permisos y dispositivo; una
+pérdida de Realtime no impide detectar cambios. Las confirmaciones de comandos
+siguen requiriendo lectura completa. Ningún resultado comercial se persiste localmente.
+
+DATA identifica la proyección derivada mediante `productRevision:CONFIG.version`.
+Productos iguales y CONFIG idéntica reutilizan hidratación, índice de familias y
+proyección comercial en memoria. Un borrador CONFIG nunca contamina esa revisión;
+las colecciones públicas de productos siguen siendo copias independientes. POS,
+Inventario, Panel, contador, campana y demás consumidores comparten la proyección.
+El POS conserva el filtro y scanner sobre el catálogo completo; sólo monta tarjetas
+por bloques progresivos durante el desplazamiento.
+
+Mientras CONFIG no está confirmada, el logo y favicon son neutros. Los PNG de
+marca se materializan por contenido y sólo se conservan como recursos visuales
+permitidos. Cambiar otros ajustes no los regenera. Las escrituras de dos logos
+concurrentes se serializan y una generación obsoleta no publica su presentación.

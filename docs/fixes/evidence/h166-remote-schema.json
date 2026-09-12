@@ -1,0 +1,18 @@
+{
+  "checkedAt": "2026-09-12T20:03:03.240557+00:00",
+  "project": "telohdbvbvsfmwyriflz",
+  "migrations": [
+    "20260912022000",
+    "20260912022100",
+    "20260912022200",
+    "20260912022300"
+  ],
+  "revisionTable": "pos.online_snapshot_revision",
+  "triggers": 29,
+  "realtime": true,
+  "authenticatedExecute": true,
+  "anonExecute": false,
+  "localMigrationVerification": "PASS",
+  "remoteReversibleRoles": "PASS",
+  "finalDryRun": "Remote database is up to date; no pending migrations"
+}

@@ -1,0 +1,61 @@
+﻿const fs=require('fs'),path=require('path'),os=require('os'),crypto=require('crypto'),http=require('http');
+const {chromium}=require('playwright-core');
+const repo=process.cwd();
+const out=fs.mkdtempSync(path.join(os.tmpdir(),'balam-navigation-brand-'));console.log('EVIDENCE '+out);
+const evidence={startedAt:new Date().toISOString(),scope:'Read-only public artifact; private synthetic browser fixtures; no production login or commercial writes',public:{},branding:[],navigation:[],errors:[],blockedNetwork:[],productionWrites:0};
+const save=()=>fs.writeFileSync(path.join(out,'results.json'),JSON.stringify(evidence,null,2));
+let browser,server;
+(async()=>{
+ browser=await chromium.launch({headless:true,...(process.env.BALAM_CHROME_EXECUTABLE ? {executablePath:process.env.BALAM_CHROME_EXECUTABLE}:{channel:'chrome'})});
+ const html=fs.readFileSync(process.env.BALAM_VERIFIED_HTML||'index.html');evidence.public={artifactSha256:crypto.createHash('sha256').update(html).digest('hex')};
+ server=http.createServer((req,res)=>{let relative=decodeURIComponent(req.url.split('?')[0]).replace(/^\/POS_Balam\//,'').replace(/^\//,'');if(relative==='/'||relative==='')relative='index.html';const target=path.resolve(repo,relative);if(!target.startsWith(path.resolve(repo)+path.sep)){res.writeHead(403);res.end();return;}try{const data=relative==='index.html'?html:fs.readFileSync(target);const ext=path.extname(relative);res.writeHead(200,{'Content-Type':ext==='.html'?'text/html':ext==='.js'?'text/javascript':ext==='.png'?'image/png':ext==='.webmanifest'?'application/manifest+json':'application/octet-stream'});res.end(data);}catch{res.writeHead(404);res.end();}});
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const base='http://127.0.0.1:'+server.address().port;
+ const context=await browser.newContext({viewport:{width:1280,height:900}});
+ await context.route('**/*',route=>{const u=route.request().url();if(u.startsWith(base)&&route.request().method()==='GET')return route.continue();evidence.blockedNetwork.push({url:u.split('?')[0],method:route.request().method()});return route.abort();});
+ if(context.routeWebSocket)await context.routeWebSocket('**/*',ws=>ws.close());
+ await context.addInitScript(()=>{
+  window.__qa={roots:[],longTasks:[],pngCalls:[],icons:[]};
+  new PerformanceObserver(list=>list.getEntries().forEach(e=>__qa.longTasks.push({start:e.startTime,duration:e.duration}))).observe({type:'longtask',buffered:true});
+  const toBlob=HTMLCanvasElement.prototype.toBlob;HTMLCanvasElement.prototype.toBlob=function(...args){__qa.pngCalls.push({at:performance.now(),width:this.width,height:this.height});return toBlob.apply(this,args);};
+  new MutationObserver(()=>{const href=document.querySelector('link[rel="icon"]')?.getAttribute('href');if(href&&__qa.icons.at(-1)?.href!==href)__qa.icons.push({at:performance.now(),href});}).observe(document,{subtree:true,childList:true,attributes:true,attributeFilter:['href']});
+  let reactDom;Object.defineProperty(window,'ReactDOM',{configurable:true,get:()=>reactDom,set:value=>{reactDom=value;let createRoot;Object.defineProperty(value,'createRoot',{configurable:true,get:()=>createRoot,set:implementation=>{createRoot=(...args)=>{const root=implementation(...args);__qa.roots.push(root);return root;};}});}});
+ });
+ const page=await context.newPage();page.on('pageerror',e=>evidence.errors.push(e.message));await page.goto(base+'/POS_Balam/',{waitUntil:'load',timeout:60000});await page.waitForFunction(()=>window.AUTH?.isReady()&&window.PWA&&window.CONFIG,{timeout:30000});
+ await page.waitForFunction(()=>window.PWA.snapshot?.().ready||document.querySelector('link[rel="manifest"]'),{timeout:20000}).catch(()=>{});
+ evidence.initial=await page.evaluate(()=>({configReady:CONFIG.ready,logoEmpty:!CONFIG.get('store.logo'),icon:document.querySelector('link[rel="icon"]')?.href,icons:__qa.icons,nav:performance.getEntriesByType('navigation')[0].toJSON(),longTasks:__qa.longTasks}));await page.screenshot({path:path.join(out,'initial-fallback.png')});
+ await page.evaluate(()=>{const canvas=document.createElement('canvas');canvas.width=canvas.height=1024;const g=canvas.getContext('2d');g.fillStyle='#18794e';g.fillRect(0,0,1024,1024);g.fillStyle='white';g.font='bold 200px sans-serif';g.fillText('QA',300,580);const cfg=CONFIG.snapshot();cfg.settings['store.logo']=canvas.toDataURL();CONFIG.load(cfg);});
+ await page.waitForFunction(()=>document.querySelector('link[rel="icon"]')?.href.includes('/runtime/icon-'),{timeout:20000});await page.screenshot({path:path.join(out,'configured-logo.png')});
+ for(let i=0;i<3;i++){const before=await page.evaluate(()=>({png:__qa.pngCalls.length,at:performance.now()}));await page.evaluate(()=>CONFIG.load(CONFIG.snapshot()));await page.waitForTimeout(500);const after=await page.evaluate(()=>({png:__qa.pngCalls.length,at:performance.now(),icon:document.querySelector('link[rel="icon"]')?.href}));evidence.branding.push({sameConfigurationReload:i+1,pngEncodes:after.png-before.png,elapsedObservationMs:after.at-before.at,sameIconUrl:after.icon});}
+ evidence.brandSequence=await page.evaluate(()=>__qa.icons);console.log('BRAND '+JSON.stringify(evidence.branding));save();
+ const assert=require('assert/strict');
+ assert.ok(evidence.initial.icon.startsWith('data:image/svg+xml'),'initial favicon must be neutral');
+ for(const sample of evidence.branding)assert.equal(sample.pngEncodes,0,'same confirmed logo encodes zero PNG');
+ const before=await page.evaluate(()=>({png:__qa.pngCalls.length,icon:document.querySelector('link[rel="icon"]').href}));
+ await page.evaluate(()=>{const canvas=document.createElement('canvas');canvas.width=canvas.height=512;const g=canvas.getContext('2d');g.fillStyle='#563199';g.fillRect(0,0,512,512);const cfg=CONFIG.snapshot();cfg.settings['store.logo']=canvas.toDataURL();CONFIG.load(cfg);});
+ await page.waitForFunction(old=>document.querySelector('link[rel="icon"]').href!==old,before.icon);
+ const changed=await page.evaluate(()=>({png:__qa.pngCalls.length,icon:document.querySelector('link[rel="icon"]').href}));
+ assert.equal(changed.png-before.png,5,'changed logo regenerates all five PNG');
+
+ const rapid=await page.evaluate(async()=>{
+  const original=Cache.prototype.put;let entered;const firstPut=new Promise(resolve=>entered=resolve);
+  Cache.prototype.put=async function(...args){if(String(args[0]).includes('/runtime/')){entered();await new Promise(resolve=>setTimeout(resolve,70));}return original.apply(this,args);};
+  const setLogo=color=>{const canvas=document.createElement('canvas');canvas.width=canvas.height=512;const g=canvas.getContext('2d');g.fillStyle=color;g.fillRect(0,0,512,512);const cfg=CONFIG.snapshot();cfg.settings['store.logo']=canvas.toDataURL();CONFIG.load(cfg);return cfg.settings['store.logo'];};
+  setLogo('#992211');await firstPut;
+  const logo=setLogo('#116699');await PWA.applyBrand();
+  Cache.prototype.put=original;
+  const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(logo));const hash=[...new Uint8Array(digest)].map(n=>n.toString(16).padStart(2,'0')).join('').slice(0,20);
+  const entry=JSON.parse(localStorage.getItem('balam_pwa_brand_v1')).find(e=>e.hash===hash);
+  const cache=await caches.open('balam-pwa-brand-v1');return {icon:document.querySelector('link[rel="icon"]').href,hash,complete:(await Promise.all(entry.urls.map(url=>cache.match(url)))).every(Boolean)};
+ });
+ assert.ok(rapid.icon.includes(rapid.hash)&&rapid.complete,'rapid confirmed logos retain every resource of the latest revision');
+ changed.icon=rapid.icon;evidence.rapidLogoResourcesComplete=true;
+ await page.evaluate(()=>{const key='balam_pwa_brand_v1';localStorage.setItem(key,JSON.stringify(JSON.parse(localStorage.getItem(key)).map(({hash,urls})=>({hash,urls}))));});
+ const cfg=await page.evaluate(()=>CONFIG.snapshot());
+ await page.reload();await page.waitForFunction(()=>window.CONFIG&&window.PWA);
+ await page.evaluate(cfg=>CONFIG.load(cfg),cfg);
+ await page.waitForFunction(icon=>document.querySelector('link[rel="icon"]')?.href===icon,changed.icon);
+ assert.equal(await page.evaluate(()=>__qa.pngCalls.length),0,'same logo after H164 metadata upgrade reuses materialized resources');
+ evidence.changedLogoPngs=5;evidence.reloadPngs=0;assert.deepEqual(evidence.errors,[]);
+ await context.close();
+ evidence.completedAt=new Date().toISOString();save();console.log('DONE '+out);
+})().catch(e=>{evidence.failure=e.stack;save();console.error(e.stack);process.exitCode=1;}).finally(async()=>{await browser?.close();if(server)await new Promise(r=>server.close(r));});

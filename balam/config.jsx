@@ -744,7 +744,9 @@
   // Única aplicación de autoridad. No lee almacenamiento ni repara/publica datos.
   function load(next) {
     if (!next || !next.catalogs || !next.settings) throw new Error('CONFIG_REMOTE_INCOMPLETE');
-    state = deepClone({ ...next, catalogMeta: next.catalogMeta || {} });
+    const confirmed = deepClone({ ...next, catalogMeta: next.catalogMeta || {} });
+    if (remoteReady && JSON.stringify(confirmed) === JSON.stringify(state)) return true;
+    state = confirmed;
     remoteReady = true;
     return emit();
   }
@@ -793,6 +795,7 @@
     renameSizeCodes,
     reset, snapshot, load, clearRemote, prepareMutation,
     get ready() { return remoteReady; },
+    get preparing() { return preparing; },
     get version() { return version; },
     KINDS: Object.keys(SEED_CATALOGS),
   };

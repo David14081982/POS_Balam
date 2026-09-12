@@ -7605,3 +7605,28 @@ cero pérdidas, divergencias o pendientes fantasma globales en instalaciones
 físicas no inspeccionadas. H156 sigue independiente.
 **Documento vigente:** [online-only-h164.md](fixes/online-only-h164.md).
 **Histórico:** [evaluación inicial](fixes/evaluacion-arquitectura-sincronizacion-h164.md).
+
+## H-166 — Navegación, proyección comercial y eficiencia online-only
+
+**Estado:** Corregido y verificado; publicación pendiente. **Fecha:** 2026-09-12. **Commit:** Pendiente de commit.
+**Riesgo:** QA-NAV-01, QA-BRAND-01 y QA-BRAND-02: familias recalculadas por
+consumidor, catálogo POS montado completo, snapshot completo cada 15 segundos,
+marca provisional y cinco PNG regenerados por CONFIG idéntica.
+**Evidencia previa:** benchmark Chromium 100/500/1500 referencias, dos recorridos
+POS/Inventario/Clientes/Reportes/Panel. Con 1500: POS 19691 nodos y 5510–6106 ms.
+**Contrato aprobado:** Supabase autoridad única; derivados sólo en memoria por
+revisión exacta productos+CONFIG; Realtime como señal y revalidación remota;
+sin cambios de negocio, identidad, UI o persistencia comercial local.
+**Pruebas:** invalidaciones 12/12; transporte 5/5; benchmark 100/500/1500;
+UI 6/6, PWA 2/2, adopción 4/4 y regresiones H164 PASS. SQL 220–223 aplicado
+y verificado; dry-run sin pendientes. A/B/C real final 21/21, filas previas
+intactas y cuentas QA retiradas. Cero divergencias observadas.
+**Resultado:** una proyección por revisión productos+CONFIG, sólo en memoria;
+POS 19691 → 816–1440 nodos y 48 tarjetas iniciales; recorrido de cinco pantallas
+con 1500 referencias 19424 → 600 ms. PNG del mismo logo: 0.
+**Estrategia:** carga inicial, Realtime como señal y revalidación condicional
+cada 15 s/foco/reconexión, sin snapshot completo cuando no cambió.
+**Residual:** Publicación pendiente de verificar por hash. Punto Cero completo
+aislado y verificación remota reversible; no se purgó la tienda. Hardware y
+adopción de puestos físicos ausentes no certificados.
+**Documento:** [navegacion-online-h166.md](fixes/navegacion-online-h166.md).

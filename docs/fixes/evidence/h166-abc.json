@@ -1,0 +1,158 @@
+{
+  "project": "telohdbvbvsfmwyriflz",
+  "build": "2026-09-12-h166-online",
+  "artifactSha256": "6759af519a2cc451d3b203afaf3bde5c46d2ebae53870d1644a8e8caf2894c81",
+  "certifierSha256": "53af015e7284457f53bfcb227a7dd1d299e17ed221b7fff3ffb365fd1dc251db",
+  "startedAt": "2026-09-12T19:54:53.945Z",
+  "finishedAt": "2026-09-12T20:12:40.302Z",
+  "certified": true,
+  "uniqueScenarios": 21,
+  "cases": [
+    {
+      "name": "A/B/C bootstrap from authoritative snapshot",
+      "pass": true,
+      "elapsedMs": 20825
+    },
+    {
+      "name": "Create V2 products with barcode V3",
+      "pass": true,
+      "elapsedMs": 22837
+    },
+    {
+      "name": "H166 conditional reads and real Realtime invalidation",
+      "pass": true,
+      "elapsedMs": 51309
+    },
+    {
+      "name": "Client and customer profile",
+      "pass": true,
+      "elapsedMs": 32294
+    },
+    {
+      "name": "Concurrent product edit rejects stale version",
+      "pass": true,
+      "elapsedMs": 19025
+    },
+    {
+      "name": "Delete while another terminal uses product",
+      "pass": true,
+      "elapsedMs": 39809
+    },
+    {
+      "name": "Stock movement / reference reclassification",
+      "pass": true,
+      "elapsedMs": 20652
+    },
+    {
+      "name": "Promotion and isolated commercial configuration",
+      "pass": true,
+      "elapsedMs": 51451
+    },
+    {
+      "name": "Auth account gateway creates one exact QA account and profile",
+      "pass": true,
+      "elapsedMs": 32997
+    },
+    {
+      "name": "Permission mutation affects only the exact QA account",
+      "pass": true,
+      "elapsedMs": 39805
+    },
+    {
+      "name": "Sale / payment / commission / lost response after COMMIT",
+      "pass": true,
+      "elapsedMs": 44177
+    },
+    {
+      "name": "Two terminals sell the last unit",
+      "pass": true,
+      "elapsedMs": 26405
+    },
+    {
+      "name": "Concurrent return consumes a sale line once",
+      "pass": true,
+      "elapsedMs": 31974
+    },
+    {
+      "name": "Concurrent exchange consumes remaining line once",
+      "pass": true,
+      "elapsedMs": 36529
+    },
+    {
+      "name": "Loan / concurrent return preserves document version",
+      "pass": true,
+      "elapsedMs": 46304
+    },
+    {
+      "name": "Layaway / concurrent payment / settlement",
+      "pass": true,
+      "elapsedMs": 71936
+    },
+    {
+      "name": "Commission settlement for the isolated seller",
+      "pass": true,
+      "elapsedMs": 18263
+    },
+    {
+      "name": "No Internet blocks operation, stock, success, pending; reconnect reads authority",
+      "pass": true,
+      "elapsedMs": 15660
+    },
+    {
+      "name": "Reload and close/reopen rebuild only from Supabase",
+      "pass": true,
+      "elapsedMs": 42599
+    },
+    {
+      "name": "Existing commercial history preserved",
+      "pass": true,
+      "elapsedMs": 7325
+    },
+    {
+      "name": "Equipment history separates exact retired QA installations",
+      "pass": true,
+      "elapsedMs": 11941
+    }
+  ],
+  "preservation": {
+    "unchangedExistingRows": {
+      "products": 980,
+      "clients": 16,
+      "sellers": 17,
+      "promotions": 5,
+      "sales": 3,
+      "sale_items": 3,
+      "returns": 1,
+      "return_items": 1,
+      "exchanges": 1,
+      "exchange_items": 2,
+      "sale_payments": 6,
+      "loan_documents": 1,
+      "liquidations": 1,
+      "commission_adjustments": 0,
+      "movements": 8,
+      "lookup": 552,
+      "settings": 43,
+      "stock_reservations": 3
+    },
+    "lost": 0
+  },
+  "qaAccount": "retained inactive",
+  "failedHistoricalAttempts": [
+    {
+      "name": "Two terminals sell the last unit",
+      "error": "both requests must reach the real server boundary\n\n0 !== 2\n"
+    },
+    {
+      "name": "Two terminals sell the last unit",
+      "error": "Unsent preflight must have zero server receipts\n+ actual - expected\n\n+ [\n+   {\n+     request_id: 'b6de4ffa-f8bc-5b94-8cd5-94b069bd1d71'\n+   },\n+   {\n+     request_id: 'd84fe69d-b4e1-5c5a-8c8b-e79bd0f1cb81'\n+   }\n+ ]\n- []\n"
+    },
+    {
+      "name": "Two terminals sell the last unit",
+      "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'folio'\n- 'allocateFolio'\n"
+    }
+  ],
+  "readRetries": [],
+  "method": "Real HTTPS RPC/authority; isolated Chromium A/B/C; failures abort real transport only; no mocked authority or service_role in browser",
+  "scope": "Domain APIs on the final browser artifact plus rendered offline/recovery screen. Visual workflows have separate UI regression evidence."
+}

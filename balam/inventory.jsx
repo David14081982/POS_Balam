@@ -271,7 +271,7 @@
       .filter(k => { const m = window.CONFIG.catalogMeta(k); return m && m.filterable; });
     const rows = useMemo(() => {
       const q = query.trim().toLowerCase();
-      return D.commercialProducts(products).filter(p => {
+      return D.commercialProducts().filter(p => {
         const candidates = p.isFamilyProjection ? p.references : [p];
         for (let i = 0; i < filterableKinds.length; i++) {
           const fk = filterableKinds[i], selv = filters[fk];

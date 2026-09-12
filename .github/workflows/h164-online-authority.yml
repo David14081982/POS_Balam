@@ -41,6 +41,8 @@ jobs:
       - run: npm run test:online:adoption
       - run: npm run test:online:startup
       - run: npm run test:online:data
+      - run: npm run test:h166:projections
+      - run: npm run test:h166:transport
       - run: npm run test:online:config
       - run: npm run test:online:account
       - run: npm run test:online:messages
@@ -62,6 +64,9 @@ jobs:
       - run: npm run test:online:pwa-adoption
         env:
           BALAM_VERIFIED_HTML: index.html
+      - run: npm run test:h166:pos
+      - run: npm run test:h166:brand
+      - run: npm run test:h166:navigation
       - name: Stage the tested client
         shell: pwsh
         run: |

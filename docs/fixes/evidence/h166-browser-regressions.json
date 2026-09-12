@@ -1,0 +1,93 @@
+[
+  {
+    "suite": "online-ui",
+    "artifactSha256": "6759af519a2cc451d3b203afaf3bde5c46d2ebae53870d1644a8e8caf2894c81",
+    "sourceSha256": {
+      "test-h164-online-ui.mjs": "87311ade12c6148b0ef7d35b0583a8aac5d2fc514c9bacc8c8f9f1ce665b6c90",
+      "balam/data.jsx": "deb99c4cfe9c68481a9452a00b355037f1f6a0334ccfe0a5db6b064afae342e2",
+      "balam/inventory.jsx": "f2424fc0e12993ee3562c097979788514d502b4b1d657830fa9177ae4c762f98",
+      "balam/clients.jsx": "debf80ac60d43bb1ea84044364d0a47d9371092e511b088fd6b8e1cdfef2674f",
+      "balam/reports.jsx": "543e9d59c72fc2fc72b9ada2abf817f99bff21ae560f4d05c9e71127f91a1bde",
+      "balam/shared.jsx": "a07c5dc3237fc589f7ca04f952e2d4869ec5d24f371e4232ef80e6582dbf2062",
+      "balam/pos-ticket.jsx": "df5f01e2659489779a82d170e24515f7080a90441b6b50fbf2e0dd8ebfcc3c83",
+      "balam/xlsx-io.jsx": "6397ab5ca15eae666c1e941c5359c167412ff306147af6de3ae3decbf76904b2",
+      "balam/app.jsx": "04a9a9bc81c4f8800c4dbdf545bd4078e6646a7ddbb7ab0b0f48c611a24e63ff"
+    },
+    "startedAt": "2026-09-12T20:00:32.386Z",
+    "completedAt": "2026-09-12T20:00:52.839Z",
+    "cases": [
+      {
+        "name": "Inventario: cajón cerrado permite actualizar",
+        "pass": true
+      },
+      {
+        "name": "V2/barcode V3/etiqueta: identidad, PNG y PDF conservados",
+        "pass": true
+      },
+      {
+        "name": "Excel: vista previa no modifica DATA; export conserva identidad",
+        "pass": true
+      },
+      {
+        "name": "Clientes: cajón cerrado permite actualizar",
+        "pass": true
+      },
+      {
+        "name": "Reportes: reimpresión conserva documento histórico confirmado",
+        "pass": true
+      },
+      {
+        "name": "Conexión: App conserva el formulario oculto e inerte hasta confirmar",
+        "pass": true
+      }
+    ],
+    "errors": [],
+    "remoteBusinessWrites": 0
+  },
+  {
+    "suite": "online-pwa",
+    "artifactSha256": "6759af519a2cc451d3b203afaf3bde5c46d2ebae53870d1644a8e8caf2894c81",
+    "serviceWorkerSha256": "84489b8746d799ac967dc67c77c492534b9bd1d9b1200ba0d37e115dab7af4a5",
+    "startedAt": "2026-09-12T20:00:59.023Z",
+    "completedAt": "2026-09-12T20:01:11.504Z",
+    "cases": [
+      {
+        "name": "PWA: caché estática; API directa; corte y recuperación de Internet",
+        "pass": true
+      },
+      {
+        "name": "PWA: activación preserva evidencia comercial antigua y retira sólo recursos estáticos",
+        "pass": true
+      }
+    ],
+    "errors": [],
+    "remoteBusinessWrites": 0
+  },
+  {
+    "suite": "pwa-adoption-all",
+    "sourceSha256": {
+      "client": "37889be21d2135f96ac4d3543b613f4337f191a9fccb52246c68b1f2841c9560",
+      "worker": "2e7d057c0f9ef1500e9b2992192c2c4b8fe348ef3b1bdd275f0b9afdc0f4a048"
+    },
+    "cases": [
+      {
+        "name": "PWA HTTP freshness: precache and navigation bypass stale cache at the same URL",
+        "pass": true
+      },
+      {
+        "name": "PWA guards: remote reconstruction and uncertain receipt prevent reload",
+        "pass": true
+      },
+      {
+        "name": "PWA automatic adoption: two pages agree; an unknown historical page is never forced",
+        "pass": true
+      },
+      {
+        "name": "PWA controller change: a newly started confirmation postpones reload; identity and legacy evidence survive",
+        "pass": true
+      }
+    ],
+    "errors": [],
+    "remoteBusinessWrites": 0
+  }
+]

@@ -10,7 +10,7 @@ const collections = ['products','clients','sellers','promotions','sales','saleIt
 function fixture(options = {}) {
   const storage = new Map(Object.entries(options.storage || {})), calls = [], states = [], handlers = new Map();
   let projected = null;
-  const snapshot = { contractVersion:1, configVersion:1, serverTime:new Date().toISOString(),
+  const snapshot = { contractVersion:1, snapshotRevision: "test-revision", unchanged: false, configVersion:1, serverTime:new Date().toISOString(),
     commercialQuote:{configVersion:1,promotionsFingerprint:'fixture',sellersFingerprint:'fixture'},
     commissionContext:{periodStart:'',sellerBases:[]}, legacyReviewCount:1,
     ...Object.fromEntries(collections.map(key => [key, []])) };
@@ -23,7 +23,7 @@ function fixture(options = {}) {
       const custom = await options.rpc?.(name,args,{storage,states});
       if (custom !== undefined) return custom;
       if (name === 'online_presence' || name === 'online_connectivity') return {data:{ok:true}};
-      if (name === 'online_snapshot') return {data:structuredClone(snapshot)};
+      if (name === 'online_snapshot_if_changed') return {data:structuredClone(snapshot)};
       if (name === 'archive_online_legacy') return {data:{ok:true,entries:args.p_entries.map(row => ({sourceKey:row.sourceKey,hash:row.hash,archived:true,classification:'needs_review'}))}};
       if (name === 'online_adoption_report') return {data:{ok:true,revision:1,state:args.p_report.state,serverTime:new Date().toISOString()}};
       throw new Error('Unexpected RPC '+name);
@@ -59,7 +59,7 @@ const cases = {
     await f.S.refresh();assert.equal(f.S.syncStatus().ready,true);
   },
   async sql() {
-    const f=fixture({rpc:name => name==='online_snapshot'?{status:403,error:{code:'42501',message:'permission denied'}}:undefined});
+    const f=fixture({rpc:name => name==='online_snapshot_if_changed'?{status:403,error:{code:'42501',message:'permission denied'}}:undefined});
     await assert.rejects(f.S.setSession({}),/permission denied/);
     assert.equal(f.S.syncStatus().connection,'error');
     assert.doesNotMatch(f.S.syncStatus().message,/Sin conexión/);
@@ -81,7 +81,7 @@ const cases = {
     assert.equal(f.storage.get('balam_sync_queue'),original);
     assert.equal(f.storage.get('balam_auth'),'keep');
     assert.equal(f.S.syncStatus().connection,'error');
-    assert.equal(f.calls.some(c=>c.name==='online_snapshot'),false);
+    assert.equal(f.calls.some(c=>c.name==='online_snapshot_if_changed'),false);
   },
   async adoption() {
     const original='[{"id":"legacy-real","type":"sale"}]';
@@ -126,7 +126,7 @@ const cases = {
     const f=fixture({indexedDB:blocked});
     await assert.rejects(f.S.setSession({}),e=>e.code==='LEGACY_STORAGE_BLOCKED');
     assert.equal(f.S.syncStatus().connection,'error');
-    assert.equal(f.calls.some(c=>c.name==='online_snapshot'),false);
+    assert.equal(f.calls.some(c=>c.name==='online_snapshot_if_changed'),false);
   },
   async legacy_other_tab() {
     const f=fixture();await f.S.setSession({});

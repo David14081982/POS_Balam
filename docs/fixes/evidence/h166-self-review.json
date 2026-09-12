@@ -1,0 +1,31 @@
+{
+  "date": "2026-09-12T20:08:56.767Z",
+  "review": "Primary agent review of final diff and dependency coverage",
+  "contracts": {
+    "onlineOnly": true,
+    "supabaseOnlyAuthority": true,
+    "ephemeralProjectionRevision": "productRevision:CONFIG.version",
+    "snapshotDependencies": 29,
+    "conditionalToken": "revision+actor+device+businessDate+promotionPhase",
+    "noCommercialCache": true,
+    "unchangedUiAndBusinessRules": true,
+    "publicProductCopiesPreserved": true,
+    "draftConfigDoesNotContaminateMemo": true
+  },
+  "files": {
+    "balam/data.jsx": "deb99c4cfe9c68481a9452a00b355037f1f6a0334ccfe0a5db6b064afae342e2",
+    "balam/config.jsx": "fb7db96c1b48992550da6efa9ce4d26f1e427729fc056d4d46605faba73c3c67",
+    "balam/store.jsx": "3dbb8982a3a5a919ed9728d974a361f8ccc5732047fa435d9268537cc299b431",
+    "balam/pos.jsx": "d0af9ba72b56041bd5d00b2c5a50fa1e98e537d049ffcf68e658ee3b3d28433d",
+    "balam/inventory.jsx": "f2424fc0e12993ee3562c097979788514d502b4b1d657830fa9177ae4c762f98",
+    "balam/pwa.jsx": "37889be21d2135f96ac4d3543b613f4337f191a9fccb52246c68b1f2841c9560",
+    "balam/app.jsx": "01872e54368b4248f1f571b9c171e0a7bf52355af81ac8bfdfcb07f9c9ed6999",
+    "index.html": "6759af519a2cc451d3b203afaf3bde5c46d2ebae53870d1644a8e8caf2894c81",
+    "sw.js": "84489b8746d799ac967dc67c77c492534b9bd1d9b1200ba0d37e115dab7af4a5"
+  },
+  "residual": [
+    "Progressive rendering can mount all cards after full scrolling.",
+    "Physical scanner/printer and absent terminal adoption are outside browser certification.",
+    "Network failures still block business operations."
+  ]
+}

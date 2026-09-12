@@ -368,7 +368,7 @@
     // desvanece en 2,6 s y en una caja eso equivale a no haber dicho nada.
     const [error, setError] = useState('');
     const logo = window.CONFIG.get('store.logo');
-    const nombre = window.CONFIG.get('store.name') || 'Balam Guayaberas';
+    const nombre = window.CONFIG.ready ? (window.CONFIG.get('store.name') || 'Balam Guayaberas') : '';
 
     const input = 'w-full border-0 border-b py-3 text-body bg-transparent focus:ring-0 px-0 transition-all';
     const lbl = 'block text-overline uppercase font-bold tracking-widest mb-1';
@@ -400,7 +400,7 @@
       h('div', { className: 'w-full max-w-sm rounded-2xl p-6 sm:p-8 my-auto shadow-2xl', style: { background: '#0E1424' } }, [
         h('div', { key: 'br', className: 'flex flex-col items-center mb-8' }, [
           h('div', { key: 'm', className: 'w-16 h-16 rounded-2xl grid place-items-center overflow-hidden mb-4', style: { background: '#1C2437', color: '#FFE088' } },
-            logo ? h('img', { src: logo, className: 'w-full h-full object-cover' }) : h(JaguarMark, { size: 34 })),
+            logo ? h('img', { src: logo, className: 'w-full h-full object-cover' }) : window.CONFIG.ready ? h(JaguarMark, { size: 34 }) : null),
           h('h1', { key: 't', className: 'font-headline', style: { fontSize: '30px', letterSpacing: '0.12em', color: '#fff' } }, 'BALAM'),
           h('p', { key: 's', className: 'text-overline uppercase tracking-widest mt-1', style: { color: '#5D637B' } }, nombre),
         ]),

@@ -13,7 +13,7 @@ const localStorage = {
 };
 const keys = ['products','clients','sellers','promotions','sales','saleItems','payments','returns','returnItems',
   'exchanges','exchangeItems','loans','movements','liquidations','commissionAdjustments','lookup','settings'];
-const raw = { contractVersion: 1, configVersion: 2, serverTime: '2026-09-12T00:00:00Z',
+const raw = { contractVersion: 1, snapshotRevision: "test-revision", unchanged: false, configVersion: 2, serverTime: '2026-09-12T00:00:00Z',
   commercialQuote: {configVersion:2,promotionsFingerprint:'test',sellersFingerprint:'test'},
   commissionContext:{periodStart:'',sellerBases:[]},
   ...Object.fromEntries(keys.map(key => [key, []])) };
@@ -28,7 +28,7 @@ const client = {
     if (name === 'online_presence') return { data: presence ? { ok:true } : false };
     if (name === 'online_adoption_report') return { data: { ok:true, revision:1, state:args.p_report.state } };
     if (name === 'online_connectivity') { if(connectivityHook) await connectivityHook();return { data: { ok:true } }; }
-    if (name === 'online_snapshot') return { data: snapshotHook ? await snapshotHook() : clone(raw) };
+    if (name === 'online_snapshot_if_changed') return { data: snapshotHook ? await snapshotHook() : clone(raw) };
     if (name === 'archive_online_legacy') {
       archived.push(...args.p_entries);
       return { data: { ok:true, entries: args.p_entries.map(row => ({ ...row, archived:true, classification:'needs_review' })) } };

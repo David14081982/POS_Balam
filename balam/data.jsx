@@ -307,25 +307,54 @@
 
   // H-101: parentesco administrativo explícito. Nunca se infiere por SKU,
   // nombre, modelo, atributos o firma física.
+  // H166: confirmed products + CONFIG revision identify an ephemeral projection.
+  // Arbitrary draft collections never borrow the confirmed projection.
+  let productRevision = 0, productSnapshot = null, hydratedConfigRevision = -1;
+  let commercialMemo = null, commercialCalculations = 0, hydrationMemo = null;
+  function currentProductRows() {
+    // Draft CONFIG must never contaminate the confirmed memo.
+    if (C.preparing) return products.map(row => hydrate(clone(row)));
+    if (hydratedConfigRevision === C.version) return products;
+    if (!hydrationMemo || hydrationMemo.productRevision !== productRevision || hydrationMemo.configRevision !== C.version) {
+      hydrationMemo = { productRevision, configRevision: C.version, rows: products.map(row => hydrate(clone(row))) };
+    }
+    return hydrationMemo.rows;
+  }
+  function familyIndex(collection) {
+    const confirmed = (!collection || collection === products) && !C.preparing;
+    const configRevision = C.version;
+    if (confirmed && commercialMemo && commercialMemo.productRevision === productRevision
+      && commercialMemo.configRevision === configRevision) return commercialMemo;
+    const rows = (collection || currentProductRows()).filter(row => row && !row._deletedAt);
+    const index = { productRevision, configRevision, rows, ids: new Map(), families: new Map(),
+      projections: new Map(), commercial: null };
+    rows.forEach(row => {
+      index.ids.set(String(row.id), row);
+      if (isV2Reference(row) && row.referenceFamilyId) {
+        if (!index.families.has(row.referenceFamilyId)) index.families.set(row.referenceFamilyId, []);
+        index.families.get(row.referenceFamilyId).push(row);
+      }
+    });
+    if (confirmed) commercialMemo = index;
+    return index;
+  }
   function referenceFamily(productOrId, collection) {
-    const sourceRows = collection || products;
+    const index = familyIndex(collection);
     const source = typeof productOrId === 'object' && productOrId
-      ? productOrId : sourceRows.find(p => String(p.id) === String(productOrId));
-    const familyId = source && source.referenceFamilyId;
-    if (!familyId) return [];
-    return sourceRows.filter(p => p && !p._deletedAt && isV2Reference(p)
-      && p.referenceFamilyId === familyId);
+      ? productOrId : index.ids.get(String(productOrId));
+    return source ? (index.families.get(source.referenceFamilyId) || []).slice() : [];
   }
 
   // H-102: autoridad comercial derivada. Una familia se presenta junta, pero
   // esta proyección nunca sustituye a una referencia en una operación.
   function referenceFamilyProjection(referenceOrFamilyId, collection) {
-    const sourceRows = (collection || products).filter(row => row && !row._deletedAt);
+    const index = familyIndex(collection);
     const direct = typeof referenceOrFamilyId === 'object' && referenceOrFamilyId
-      ? referenceOrFamilyId : sourceRows.find(row => row.id === referenceOrFamilyId
-        || row.referenceFamilyId === referenceOrFamilyId);
+      ? referenceOrFamilyId : index.ids.get(String(referenceOrFamilyId))
+        || (index.families.get(referenceOrFamilyId) || [])[0];
     if (!direct || !isV2Reference(direct) || !direct.referenceFamilyId) return null;
-    const references = referenceFamily(direct, sourceRows);
+    if (index.projections.has(direct.referenceFamilyId)) return index.projections.get(direct.referenceFamilyId);
+    const references = index.families.get(direct.referenceFamilyId) || [];
     if (!references.length) return null;
     const values = (field, normalize = value => value) => references.map(row => normalize(row[field]));
     const common = (field, normalize) => {
@@ -376,18 +405,23 @@
     projection.attrs = commonAttributes;
     projection.searchText = references.map(row => [row.nombre,row.modelo,row.sku,row.barcodeCode,row.sizeCode,
       ...Object.values(row.attrs || {})].join(' ')).join(' ').toLowerCase();
+    index.projections.set(direct.referenceFamilyId, projection);
     return projection;
   }
   function commercialProducts(collection) {
-    const rows = (collection || products).filter(row => row && !row._deletedAt);
+    const index = familyIndex(collection);
+    if (index.commercial) return index.commercial;
+    const rows = index.rows;
     const out = [], seen = new Set();
     rows.forEach(row => {
       if (!isV2Reference(row)) { out.push(row); return; }
       if (seen.has(row.referenceFamilyId)) return;
       seen.add(row.referenceFamilyId);
-      const projection = referenceFamilyProjection(row, rows);
+      const projection = referenceFamilyProjection(row, (!collection || collection === products) ? undefined : index.families.get(row.referenceFamilyId));
       if (projection) out.push(projection);
     });
+    index.commercial = out;
+    if (!collection || collection === products) commercialCalculations++;
     return out;
   }
 
@@ -1426,7 +1460,11 @@
   function replaceFromOnline(snapshot) {
     validateOnlineSnapshot(snapshot);
     const next = {};
+    const productSignature = JSON.stringify(snapshot.products);
+    const productsChanged = productSignature !== productSnapshot;
+    const hydrateProducts = productsChanged || hydratedConfigRevision !== C.version;
     Object.keys(domainCollections).forEach(kind => {
+      if (kind === 'products' && !hydrateProducts) return;
       next[kind] = snapshot[kind].filter(row => row && !row._deletedAt && !row.deleted_at)
         .map(row => kind === 'products' ? hydrate(clone(row)) : clone(row));
     });
@@ -1434,9 +1472,12 @@
     Object.keys(next).forEach(kind => {
       const target = domainCollections[kind]; target.splice(0, target.length, ...next[kind]);
     });
+    if (productsChanged) productRevision++;
+    productSnapshot = productSignature;
+    hydratedConfigRevision = C.version;
     remoteCommissionContext = clone(context);
     periodoInicio = context.periodStart;
-    remapOrphanCodes();
+    if (hydrateProducts) remapOrphanCodes();
     bumpRevision();
     return true;
   }
@@ -4237,6 +4278,9 @@
 
   window.DATA = {
     get revision() { return dataRevision; },
+    get productRevision() { return productRevision; },
+    get commercialProjectionRevision() { return productRevision + ':' + C.version; },
+    get commercialProjectionCalculations() { return commercialCalculations; },
     get commissionContext() { return clone(remoteCommissionContext); },
     saveProductRows, saveProductFamily, validateOnlineSnapshot, replaceFromOnline,
     products, sellers, clients, sales, movements, promos, liquidations, returns, payments, exchanges, loans,
@@ -4275,7 +4319,7 @@
   Object.entries(domainCollections).forEach(([kind, collection]) => {
     const name = kind === 'promotions' ? 'promos' : kind;
     Object.defineProperty(window.DATA, name, { enumerable: true, configurable: false,
-      get: () => collection.map(row => kind === 'products' ? hydrate(clone(row)) : clone(row)) });
+      get: () => clone(kind === 'products' ? currentProductRows() : collection) });
   });
   // Catálogos retrocompatibles: D.CAT[code], Object.entries(D.TELA), D.SIZES_LETRA, …
   // ahora se resuelven EN VIVO desde CONFIG en cada acceso (reflejan ediciones del admin).

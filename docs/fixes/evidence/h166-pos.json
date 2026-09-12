@@ -1,0 +1,21 @@
+{
+  "artifact": {
+    "artifactSha256": "6759af519a2cc451d3b203afaf3bde5c46d2ebae53870d1644a8e8caf2894c81"
+  },
+  "initialMounted": 48,
+  "logicalReferences": 1500,
+  "progressiveScroll": true,
+  "searchLast": true,
+  "scannerExactIdentity": true,
+  "globalScanner": true,
+  "sizeFilter": true,
+  "prices": true,
+  "cartAndSizes": true,
+  "remoteEmpty": true,
+  "responsive": [
+    390,
+    768,
+    1280
+  ],
+  "errors": []
+}

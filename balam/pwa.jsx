@@ -9,6 +9,8 @@
   let installPrompt = null;
   let registration = null;
   let generation = 0;
+  let appliedLogo = null, pendingLogo = null, pendingBrand = null;
+  let materialization = Promise.resolve();
   let reloading = false;
   let activationRequest = null;
   let reloadPending = false;
@@ -128,11 +130,42 @@
     await Promise.all(requests.filter(request => !keep.has(request.url)).map(request => cache.delete(request)));
   }
 
-  async function materializeLogo(dataUrl, currentGeneration) {
-    const image = await decodeLogo(dataUrl);
+  function materializeLogo(dataUrl, currentGeneration) {
+    // Serialize technical cache writes: an obsolete logo must not remove files
+    // belonging to a newer materialization while its PNGs are being written.
+    const task = materialization.catch(() => {}).then(() => {
+      if (currentGeneration !== generation) return null;
+      return materializeConfirmedLogo(dataUrl, currentGeneration);
+    });
+    materialization = task;
+    return task;
+  }
+
+  async function materializeConfirmedLogo(dataUrl, currentGeneration) {
     const fullHash = await sha256(dataUrl);
     const hash = fullHash.slice(0, 20);
     const base = scopeUrl();
+    const cache = await caches.open(BRAND_CACHE);
+    const previous = readMeta().find(entry => entry.hash === hash);
+    if (previous && previous.urls.length === 6
+      && (await Promise.all(previous.urls.map(url => cache.match(url)))).every(Boolean)) {
+      if (currentGeneration !== generation) return null;
+      // H164 metadata did not record dimensions. Reuse its verified PNGs too;
+      // decoding an unchanged source is presentation only and encodes zero PNG.
+      const decoded = previous.sourceSize ? null : await decodeLogo(dataUrl);
+      const sourceSize = previous.sourceSize || { width: decoded.naturalWidth, height: decoded.naturalHeight };
+      const quality = previous.quality || (Math.max(sourceSize.width, sourceSize.height) >= 512 ? 'sufficient' : 'legacy-upscaled');
+      if (currentGeneration !== generation) return null;
+      const manifestUrl = new URL('manifest-' + hash + '.webmanifest', base).href;
+      setLink('manifest', manifestUrl);
+      setLink('apple-touch-icon', new URL('pwa/runtime/icon-' + hash + '-apple-180.png', base).href, '180x180');
+      setLink('icon', new URL('pwa/runtime/icon-' + hash + '-64.png', base).href, '64x64');
+      publish({ ready: true, iconSource: 'store.logo', iconQuality: quality,
+        sourceSize, manifestUrl, error: '' });
+      exposeInstallWhenReady();
+      return previous;
+    }
+    const image = await decodeLogo(dataUrl);
     const sourceSize = { width: image.naturalWidth, height: image.naturalHeight };
     const quality = Math.max(sourceSize.width, sourceSize.height) >= 512 ? 'sufficient' : 'legacy-upscaled';
     const paths = {
@@ -150,7 +183,6 @@
       favicon: await renderPng(image, 64, { boxRatio: .86 }),
     };
     if (currentGeneration !== generation) return null;
-    const cache = await caches.open(BRAND_CACHE);
     const urls = [];
     for (const key of Object.keys(paths)) {
       const url = new URL(paths[key], base).href;
@@ -179,7 +211,7 @@
       headers: { 'Content-Type': 'application/manifest+json', 'Cache-Control': 'no-cache' },
     }));
     urls.push(manifestUrl);
-    const entries = [{ hash, urls }, ...readMeta().filter(entry => entry.hash !== hash)].slice(0, 2);
+    const entries = [{ hash, urls, sourceSize, quality }, ...readMeta().filter(entry => entry.hash !== hash)].slice(0, 2);
     writeMeta(entries);
     await removeOldBrandResources(cache, entries);
     if (currentGeneration !== generation) return null;
@@ -198,7 +230,27 @@
     return { hash, quality, sourceSize, manifestUrl };
   }
 
-  async function applyBrand() {
+  function applyBrand() {
+    if (!window.CONFIG?.ready) {
+      generation++; appliedLogo = null; pendingLogo = null; pendingBrand = null;
+      setLink('icon', 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"/>');
+      publish({ ready: false, iconSource: 'pending', error: '' });
+      return Promise.resolve();
+    }
+    const logo = window.CONFIG.get('store.logo') || '';
+    if (pendingBrand && pendingLogo !== logo) { generation++; pendingBrand = null; pendingLogo = null; }
+    if (appliedLogo === logo) return Promise.resolve();
+    if (pendingBrand && pendingLogo === logo) return pendingBrand;
+    pendingLogo = logo;
+    const task = applyConfirmedBrand().then(() => {
+      if (pendingBrand === task && window.CONFIG.ready && window.CONFIG.get('store.logo') === logo
+        && !state.error && state.iconSource === (logo ? 'store.logo' : 'fallback')) appliedLogo = logo;
+    }).finally(() => { if (pendingBrand === task) { pendingBrand = null; pendingLogo = null; } });
+    pendingBrand = task;
+    return task;
+  }
+
+  async function applyConfirmedBrand() {
     const currentGeneration = ++generation;
     const logo = window.CONFIG && window.CONFIG.get ? window.CONFIG.get('store.logo') : '';
     if (!logo) {

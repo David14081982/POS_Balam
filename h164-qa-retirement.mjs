@@ -7,7 +7,7 @@ export function qaRetirementPlan(fixtures,{project,build}){
   assert.match(fixtures.run,uuid);assert.equal(fixtures.prefix,'qa-h164-'+fixtures.run);
   assert.match(fixtures.userId,uuid);assert.match(fixtures.accountRequestId,uuid);
   assert.equal(fixtures.email,fixtures.prefix+'@example.test');assert.match(project,/^[a-z0-9]{20}$/);
-  assert.match(build,/^\d{4}-\d{2}-\d{2}-h164-online$/);
+  assert.match(build,/^\d{4}-\d{2}-\d{2}-h(?:164|166)-online$/);
   assert.equal(fixtures.createdAccountIds.length,1,'This matrix created exactly one additional QA access account');
   const accountId=fixtures.createdAccountIds[0];assert.match(accountId,uuid);assert.notEqual(accountId,fixtures.userId);
   const prefix=fixtures.prefix;

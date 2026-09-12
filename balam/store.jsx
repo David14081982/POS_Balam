@@ -3,7 +3,7 @@
 (function () {
   const SUPABASE_URL = 'https://telohdbvbvsfmwyriflz.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_-skU6PI0VrYa91UPHAEaIg_dhsi1l_I';
-  const BUILD = '2026-09-12-h164-online';
+  const BUILD = '2026-09-12-h166-online';
   const OFFLINE = 'Sin conexión. BALAM necesita internet para continuar.';
   const CONFIRMING = 'Estamos confirmando la operación. No la repitas.';
   const UPDATING = 'BALAM se está actualizando.';
@@ -18,6 +18,7 @@
   let refreshPromise = null, refreshAgain = false, lifecycleStarted = false, channel = null;
   let writeInFlight = false, configRemoteVersion = 0, legacyReviewCount = 0;
   let quoteContext = null, serverClock = null, configLookup = [];
+  let snapshotRevision = null;
   let adoptionComplete = false;
   let legacyGeneration = 0;
   let adoption = { revision: 1, state: 'working', stage: 'presence', remainingLegacy: 0, archivedCount: 0 };
@@ -800,13 +801,28 @@
       try {
         const userId = await currentUserId();
         const resolved = writeInFlight ? [] : await resolveOutstanding(userId);
-        const raw = await readRpc('online_snapshot');
+        const requestedRevision = options.internal || options.force || resolved.length ? null : snapshotRevision;
+        const raw = await readRpc('online_snapshot_if_changed', { p_revision: requestedRevision });
+        if (seq !== sessionSeq || !enabled) throw error('SESSION_CHANGED', 'La sesión cambió.');
+        if (!raw || typeof raw.snapshotRevision !== 'string' || !raw.snapshotRevision
+          || !Number.isFinite(Date.parse(raw.serverTime))) throw error('ONLINE_SNAPSHOT_INVALID', STARTUP_FAILED);
+        if (raw.unchanged === true) {
+          if (!requestedRevision || requestedRevision !== snapshotRevision || raw.snapshotRevision !== snapshotRevision
+            || !quoteContext || !serverClock) throw error('ONLINE_REVISION_MISMATCH', STARTUP_FAILED);
+          // The server checked the exact confirmed snapshot; no DATA/CONFIG event.
+          serverClock = { time: Date.parse(raw.serverTime), observed: performance.now() };
+          ready = adoptionComplete; connection = ready ? 'online' : 'checking'; lastSuccess = raw.serverTime; failure = null;
+          emit();
+          return { ok: true, unchanged: true, message: 'Todo actualizado', status: syncStatus() };
+        }
+        if (raw.unchanged !== false) throw error('ONLINE_SNAPSHOT_INVALID', STARTUP_FAILED);
         const next = mappedSnapshot(raw);
         window.DATA.validateOnlineSnapshot(next);
         if (seq !== sessionSeq || !enabled) throw error('SESSION_CHANGED', 'La sesión cambió.');
         // Todo se valida antes de aplicar; eventos React ocurren después de la sustitución completa.
         window.CONFIG.load(toConfigState(raw.lookup, raw.settings));
         window.DATA.replaceFromOnline(next);
+        snapshotRevision = raw.snapshotRevision;
         configLookup = copy(raw.lookup);
         configRemoteVersion = Number(raw.configVersion) || 0;
         quoteContext = copy(raw.commercialQuote);
@@ -854,7 +870,8 @@
         ready = false; failure = error('ONLINE_RESULT_UNKNOWN', CONFIRMING); emit();
       } else if (event.key?.startsWith(RECEIPT_PREFIX)) reconnect();
     });
-    // Realtime sólo adelanta esta misma lectura; perderlo no afecta la recuperación por consulta.
+    // H166: 15s safety check is a conditional authoritative read, never a
+    // periodic full catalog download. Focus/reconnect retain permission checks.
     setInterval(reconnect, 15000);
   }
   let initializing = null;
@@ -902,7 +919,7 @@
           // Realtime is only an accelerator. Its failure cannot invalidate confirmed HTTP authority.
           try {
             channel = sb.channel('balam-online-' + window.CORE.getDeviceId())
-              .on('postgres_changes', { event: '*', schema: 'pos' }, () => {
+              .on('postgres_changes', { event: 'UPDATE', schema: 'pos', table: 'online_snapshot_revision' }, () => {
                 if (writeInFlight) { refreshAgain = true; return; }
                 refresh().catch(() => {});
               }).subscribe();
@@ -926,7 +943,7 @@
     window.DATA?.replaceFromOnline({ ...Object.fromEntries(Object.keys(MAP).map(kind => [kind, []])),
       commissionContext: { periodStart: '', sellerBases: [] } });
     window.CONFIG?.clearRemote();
-    quoteContext = null; serverClock = null; configLookup = [];
+    quoteContext = null; serverClock = null; configLookup = []; snapshotRevision = null;
     ready = false; lastSuccess = null;
   }
   async function setSession(profile) {

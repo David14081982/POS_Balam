@@ -99,6 +99,24 @@
       });
     }, [query, cat, talla, color, onlyPop, dataVersion, catalogVersion]);
 
+    // H166: filtering/scanning keep the complete authoritative projection.
+    // Only presentation is progressive; a changed result starts a fresh window.
+    const catalogScrollRef = useRef(null), catalogEndRef = useRef(null);
+    const [catalogWindow, setCatalogWindow] = useState({ rows: null, limit: 48 });
+    const catalogLimit = catalogWindow.rows === filtered ? catalogWindow.limit : 48;
+    const growCatalog = () => setCatalogWindow(previous => ({ rows: filtered,
+      limit: Math.min(filtered.length, (previous.rows === filtered ? previous.limit : 48) + 48) }));
+    useEffect(() => {
+      if (catalogWindow.rows !== filtered && catalogScrollRef.current) catalogScrollRef.current.scrollTop = 0;
+      if (catalogLimit >= filtered.length || !catalogEndRef.current) return;
+      const observer = new IntersectionObserver(entries => {
+        if (entries.some(entry => entry.isIntersecting)) growCatalog();
+      }, { root: catalogScrollRef.current, rootMargin: '300px' });
+      observer.observe(catalogEndRef.current);
+      return () => observer.disconnect();
+    }, [filtered, catalogLimit, catalogView]);
+    const renderedProducts = filtered.slice(0, catalogLimit);
+
     function flashLine(key) { setFlash(key); setTimeout(() => setFlash(k => (k === key ? null : k)), 900); }
     function onScan(e) {
       if (window.BARCODES && window.BARCODES.consumeScannerInputKey(e, setQuery)) return;
@@ -332,12 +350,19 @@
         h('span', { key: 'count', className: 'ml-auto text-muted text-caption whitespace-nowrap font-medium' }, `${filtered.length} productos`),
       ]),
       // Grid / Lista
-      h('div', { key: 'scroll', className: 'flex-1 min-h-0 overflow-y-auto no-scrollbar pr-2 -mr-2', 'data-testid': 'pos-catalog-scroll' },
+      h('div', { key: 'scroll', ref: catalogScrollRef,
+        onFocusCapture: event => {
+          const cards = catalogScrollRef.current.querySelectorAll('[data-testid^="pos-product-"]');
+          if (catalogLimit < filtered.length && [...cards].slice(-8).some(card => card.contains(event.target))) growCatalog();
+        },
+        className: 'flex-1 min-h-0 overflow-y-auto no-scrollbar pr-2 -mr-2', 'data-testid': 'pos-catalog-scroll' }, [
         catalogView === 'list'
           ? h('div', { className: 'flex flex-col divide-y divide-outline-variant bg-surface-container-lowest rounded-xl overflow-hidden shadow-e1' },
-              filtered.map(p => h(ProductRow, { key: p.id, p, onAdd: () => openSize(p) })))
+              renderedProducts.map(p => h(ProductRow, { key: p.commercialKey || p.id, p, onAdd: () => openSize(p) })))
           : h('div', { className: 'pos-cat-grid grid gap-8' },
-              filtered.map(p => h(ProductCard, { key: p.id, p, onAdd: () => openSize(p) })))),
+              renderedProducts.map(p => h(ProductCard, { key: p.commercialKey || p.id, p, onAdd: () => openSize(p) }))),
+        catalogLimit < filtered.length && h('div', { key: 'next', ref: catalogEndRef, 'aria-hidden': true, style: { height: 1 } }),
+      ]),
     ]);
 
     const ticketPanel = h(window.TicketPanel, {

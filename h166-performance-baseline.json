@@ -1,0 +1,14 @@
+{
+  "sourceArtifactSha256": "6759af519a2cc451d3b203afaf3bde5c46d2ebae53870d1644a8e8caf2894c81",
+  "references": [
+    100,
+    500,
+    1500
+  ],
+  "navigationSamples": 30,
+  "pos1500MaxNodes": 1440,
+  "additionalCommercialCalculationsPerNavigation": 0,
+  "projectionCalculationsPerRevision": 1,
+  "unchangedLogoPngs": 0,
+  "note": "Measured H166 baseline; timing evidence retained separately, not an artificial cross-machine SLA."
+}

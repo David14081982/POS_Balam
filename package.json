@@ -17,7 +17,12 @@
     "test:online:callbacks": "node test-h164-ui-callbacks.mjs",
     "test:online:pwa": "node test-h164-online-pwa.mjs",
     "test:online:ui": "node test-h164-online-ui.mjs",
-    "test:online:live": "node test-h164-live-online.mjs"
+    "test:online:live": "node test-h164-live-online.mjs",
+    "test:h166:projections": "node test-h166-projections.mjs",
+    "test:h166:transport": "node test-h166-online-revisions.mjs",
+    "test:h166:pos": "node test-h166-pos.cjs",
+    "test:h166:brand": "node test-h166-brand.cjs",
+    "test:h166:navigation": "node test-h166-navigation.cjs"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.8",
