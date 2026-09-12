@@ -1,0 +1,39 @@
+{
+    "format":  "balam-h164-device-adoption-v1",
+    "verifiedAt":  "2026-09-12T08:32:19.260578+00:00",
+    "source":  "Supabase pos.sync_devices; one read-only aggregate query",
+    "registry":  {
+                     "businessInstallations":  14,
+                     "nonRetiredBusinessInstallations":  1,
+                     "retiredBusinessInstallations":  13,
+                     "onlineBuildBusinessInstallations":  0,
+                     "expectedOnlineBuild":  "2026-09-12-h164-online",
+                     "activeQaInstallations":  0,
+                     "legacyArchives":  0,
+                     "legacyOperationsNeedingReview":  0
+                 },
+    "scope":  {
+                  "physicalStationCountVerified":  false,
+                  "physicalBrowserStorageInventoried":  false,
+                  "physicalInstallationsCertified":  false,
+                  "note":  "Registry installations do not establish the number of physical stations. Zero remote legacy archives or review rows does not prove that uninspected browsers contain no pending operations."
+              },
+    "existingBrowserDiagnosticAccess":  {
+                                            "method":  "Existing CDP only; no browser launch or profile copy",
+                                            "chromeAdvertisedPort":  9222,
+                                            "edgePortFilePresent":  false,
+                                            "checkedHosts":  [
+                                                                 "127.0.0.1",
+                                                                 "localhost"
+                                                             ],
+                                            "checkedPorts":  [
+                                                                 9222,
+                                                                 9223
+                                                             ],
+                                            "available":  false,
+                                            "outcome":  "No CDP response; localhost probes timed out after two seconds each. The advertised port alone does not prove an active debugging session.",
+                                            "deviceIdentityRead":  false,
+                                            "browserStorageRead":  false,
+                                            "browserStorageModified":  false
+                                        }
+}

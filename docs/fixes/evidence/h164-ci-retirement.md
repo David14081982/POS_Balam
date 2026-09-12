@@ -1,9 +1,9 @@
 # H164 — retiro de rutas CI local-first
 
 El workflow vigente es `.github/workflows/h164-online-authority.yml`.
-Este registro describe configuración de CI, no una ejecución aprobada ni un
-certificado de las instalaciones reales. Los resultados verificables se registran
-en la corrección H164 y los artifacts de cada ejecución.
+Este registro describe configuración y retiro de CI. La ejecución aprobada
+se identifica al final; no certifica las instalaciones reales. Los resultados
+verificables se registran en la corrección H164 y los artifacts de cada ejecución.
 
 | Ruta retirada | Motivo | Conservación |
 |---|---|---|
@@ -41,3 +41,24 @@ La ejecución live requiere dispatch explícito, `main` y secretos servidor. No 
 ejecuta con secretos en PRs. Conserva evidencia aun ante fallos y no realiza Punto
 Cero ni limpieza por prefijos. Esa matriz acredita sólo los casos y contextos
 que ejecuta: no demuestra adopción ni reconciliación de equipos reales ausentes.
+
+## Entrega comprobada
+
+[CI 34683481979](https://github.com/David14081982/POS_Balam/actions/runs/34683481979)
+del commit `df4965b1269239665594eca722c38c9adb86cb68` terminó con regresiones y
+despliegue SUCCESS. El artifact `online-ui.json` registra seis escenarios PASS;
+`online-pwa.json`, dos escenarios PASS con `activationUsesSource:false`.
+Ambos corresponden al HTML
+`25bc985dce9bbe92e83f8dc9c61c6f1cf90fd0b1904dfe09d7bdfd594201d96f` y PWA usa
+el SW `5b43e72ad8fe5ca2a398f75530057010420ddfbdb4ccf730fcc4f535424d06b1`.
+La copia descargada está en `.evidence-h164/ci-34683481979/`.
+CI 34681857847 y el commit anterior `0f05350` permanecen como historia de la
+primera entrega aprobada; el HTML y Service Worker no cambiaron de bytes.
+
+La [verificación de Pages](h164-online-pages.json) contrastó ambos archivos
+contra el commit a las 08:34:42.109 UTC del 12/09/2026: MATCH. El job live se
+omitió intencionalmente: la [matriz comercial A/B/C, resumen público](h164-live-online.json)
+ya terminó 20/20 PASS, certified=true y retiro QA completado; no se repitió.
+Adopción e inventario de equipos físicos siguen pendientes. La entrega
+documental posterior se refiere a este commit técnico y no ejecuta otra vez
+las pruebas por cambios únicamente de prosa o evidencia.

@@ -4,7 +4,8 @@
 **Estado de este documento:** HISTÓRICO — evaluación inicial y decisión
 propuesta, superadas por la conversión online-only expresamente aprobada.
 **Seguimiento vigente:** [online-only-h164.md](online-only-h164.md),
-EN IMPLEMENTACIÓN; publicación y certificación distribuidas pendientes.
+IMPLEMENTADO Y PUBLICADO; activo en Supabase. A/B/C técnico tiene 20/20
+escenarios PASS y retiro QA completado; certificación física pendiente.
 **Fecha:** 11/09/2026, Hermosillo; consultas del 12/09/2026 UTC.
 **Commit de evaluación:** `2d47d7b` (local, sin publicación).
 **Certificación distribuida:** NO CERTIFICADO.

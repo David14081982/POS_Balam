@@ -3,11 +3,18 @@ begin read only;
 set local statement_timeout='30s';
 -- BEGIN SHARED READ-ONLY VERIFICATION
 do $verify$
-declare r record; n integer;
+declare r record; n integer; dispatcher text;
 begin
- if exists(select 1 from unnest(array['20260911020800','20260911020900','20260912021000','20260912021100']) v(version)
+ if exists(select 1 from unnest(array['20260911020800','20260911020900','20260912021000','20260912021100','20260912021200','20260912021300']) v(version)
  where not exists(select 1 from supabase_migrations.schema_migrations m where m.version=v.version)) then raise exception 'H164_REQUIRED_MIGRATION_MISSING'; end if;
  if not exists(select 1 from pos.online_runtime where singleton and enabled and contract_version=1 and activated_at is not null) then raise exception 'H164_ONLINE_NOT_ACTIVE'; end if;
+ select pg_get_functiondef('pos.dispatch_online_command(uuid,jsonb,integer)'::regprocedure) into dispatcher;
+ if (length(dispatcher)-length(replace(dispatcher,'nullif(p_command->''clientEffect'',''null''::jsonb)','')))
+     /length('nullif(p_command->''clientEffect'',''null''::jsonb)')<>3
+   or (length(dispatcher)-length(replace(dispatcher,'nullif(p_command->''payment'',''null''::jsonb)','')))
+     /length('nullif(p_command->''payment'',''null''::jsonb)')<>1
+   or position('p_command->''payment'',coalesce(p_command->''sellerEffects'',''[]'')' in dispatcher)=0 then
+  raise exception 'H164_OPTIONAL_JSON_NULL_CONTRACT_CHANGED'; end if;
  select count(*) into n from pg_class c join pg_namespace ns on ns.oid=c.relnamespace where ns.nspname='pos' and c.relkind='r';
  if n<>63 then raise exception 'H164_TABLE_INVENTORY_DRIFT: %',n; end if;
  select count(*) into n from pg_proc p join pg_namespace ns on ns.oid=p.pronamespace where ns.nspname='pos';
@@ -43,6 +50,16 @@ begin
 end $verify$;
 -- END SHARED READ-ONLY VERIFICATION
 select jsonb_build_object('ok',true,'onlineOnly',r.enabled,'contractVersion',r.contract_version,'activatedAt',r.activated_at,'posTables',63,'posFunctions',152,'retiredFunctions',19,'retiredCursorTriggers',26,'legacyRpcBrowserGrants',0,'directWriteGrants',0,'gatewayFences',35,
+ 'verifiedMigrations',(select jsonb_agg(version order by version) from supabase_migrations.schema_migrations
+  where version=any(array['20260911020800','20260911020900','20260912021000','20260912021100','20260912021200','20260912021300'])),
+ 'optionalJsonNullConversions',jsonb_build_object('saleClientEffect',2,'returnClientEffect',1,'exchangePayment',1,'requiredLayawayPaymentPreserved',true),
+ 'dispatchDefinitionSha256',encode(extensions.digest(convert_to(pg_get_functiondef('pos.dispatch_online_command(uuid,jsonb,integer)'::regprocedure),'UTF8'),'sha256'),'hex'),
+ 'schemaUsage',jsonb_build_object('anon',has_schema_privilege('anon','pos','usage'),'authenticated',has_schema_privilege('authenticated','pos','usage'),'serviceRole',has_schema_privilege('service_role','pos','usage')),
+ 'fencedTables',(select jsonb_agg(c.relname order by c.relname) from pg_trigger t join pg_class c on c.oid=t.tgrelid
+  join pg_namespace ns on ns.oid=c.relnamespace where ns.nspname='pos' and t.tgname='h164_online_authority' and t.tgenabled='O'),
+ 'onlineEndpointAcl',(select jsonb_agg(jsonb_build_object('name',p.proname,'authenticated',has_function_privilege('authenticated',p.oid,'execute'),
+  'anon',has_function_privilege('anon',p.oid,'execute'),'public',exists(select 1 from aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a where a.grantee=0 and a.privilege_type='EXECUTE')) order by p.proname)
+  from pg_proc p join pg_namespace ns on ns.oid=p.pronamespace where ns.nspname='pos' and p.proname=any(array['execute_online_command','resolve_online_request','online_request_result','online_presence','online_connectivity','online_account_result','online_legacy_review_count','online_quote_context','online_commission_context','online_snapshot','archive_online_legacy'])),
  'legacyEvidenceSources',(select count(*) from pos.online_legacy_archives),'legacyOperationsNeedingReview',(select count(*) from pos.online_legacy_operations where classification='needs_review'),
  'unknownLegacySourcesNeedingReview',(select count(*) from pos.online_legacy_archives a where a.classification='needs_review' and not exists(select 1 from pos.online_legacy_intents(a.original))),
  'accountRequestsNeedingConfirmation',(select count(*) from pos.online_account_requests where state not in('completed','rejected','cancelled')),'serverTime',clock_timestamp()) as activation_verification from pos.online_runtime r where singleton;

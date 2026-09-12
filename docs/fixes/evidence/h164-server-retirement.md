@@ -1,6 +1,12 @@
 # H164 - Retiro de infraestructura comercial local-first en servidor
 
-Fecha de evidencia: 2026-09-12 UTC. Fuente: catalogo pos del servidor hasta migracion 20260911020700, conservado como esquema sin filas comerciales en test-fixtures/h164/sql-authority-baseline.json, mas los ACL reales de pos/auth/extensions. Cambio y verificacion: migraciones 208, 209, 210 y 211. Este inventario no certifica publicacion ni A/B/C.
+Fecha de evidencia: 2026-09-12 UTC. Fuente: catalogo pos del servidor hasta migracion 20260911020700, conservado como esquema sin filas comerciales en test-fixtures/h164/sql-authority-baseline.json, mas los ACL reales de pos/auth/extensions. Cambio y verificacion: migraciones 208, 209, 210 y 211. La entrega y activacion remotas estan verificadas en los registros enlazados; este inventario no certifica A/B/C ni adopcion fisica.
+
+Estado remoto: online-only ACTIVO desde 07:56:55.112624 UTC, con verificacion independiente de solo lectura PASS a las 07:57:26.320080 UTC. Commit tecnico publicado final: `df4965b1269239665594eca722c38c9adb86cb68`, Pages verificado a las 08:34:42.109 UTC. Evidencias: [Pages](h164-online-pages.json) y [activacion Supabase](h164-server-activation.json). La activacion inicial uso el cliente `0f05350`, con los mismos bytes HTML/SW finales. La lectura encontro cero fuentes legacy recibidas; no equivale a cero pendientes en navegadores aun no inventariados.
+
+Correccion posterior de gateway: 212/213 aplicadas y verificadas en Supabase. Normalizan cuatro objetos opcionales JSON null a SQL NULL conforme a contratos existentes, sin cambio del cliente publicado ni de grants. El caso live de apartado/abono concurrente/liquidacion, rechazado inicialmente sin confirmar cobros, paso despues de esta correccion. La [matriz tecnica live](h164-live-online.json) termino 20/20 PASS, certified=true y retiro QA completado; la adopcion fisica sigue pendiente.
+
+La [verificacion final de solo lectura](h164-server-final-verification.json), a las 08:22:40.462767 UTC, comprobo 208-213 aplicadas, online-only activo, 35 guardas, 63 tablas/152 funciones, grants directos/legacy cero y exactamente cuatro conversiones JSON opcionales; no ejecuto operaciones comerciales. La certificacion de la matriz se informa en la correccion principal, separada de esta inspeccion de servidor.
 
 ## Alcance y conteos reproducibles
 
@@ -23,7 +29,9 @@ La ejecucion revisable vive en [h164-activation.sql](h164-activation.sql): SQL p
 
 Una vez libre la ventana, activacion, revocaciones, retiros y comprobaciones ocurren en una transaccion, con timeout de sentencia de 30 segundos. Se verifica que los conteos de filas de las 63 tablas no cambien. Un error anterior a COMMIT revierte la activacion completa; una respuesta perdida se resuelve leyendo el estado, no repitiendo a ciegas. [h164-activation-verification.sql](h164-activation-verification.sql) ejecuta las comprobaciones independientes en BEGIN READ ONLY y reporta tambien operaciones/fuentes legadas y cuentas que aun necesitan revision.
 
-El bloqueo puede pausar brevemente lecturas, reportes y presencia; no crea colas. Su semantica y liberacion al terminar la transaccion estan descritas en la documentacion de [bloqueos explicitos de PostgreSQL](https://www.postgresql.org/docs/current/explicit-locking.html). La activacion tecnica se ejecuto una vez en PostgreSQL local con el esquema/grants reales y sin fixtures o casos comerciales: PASS. No equivale a haber activado Supabase ni haber certificado A/B/C.
+El bloqueo puede pausar brevemente lecturas, reportes y presencia; no crea colas. Su semantica y liberacion al terminar la transaccion estan descritas en la documentacion de [bloqueos explicitos de PostgreSQL](https://www.postgresql.org/docs/current/explicit-locking.html). La preparacion tecnica se verifico una vez en PostgreSQL local con el esquema/grants reales y sin fixtures o casos comerciales: PASS.
+
+Despues se verificaron los bytes publicados en Pages y se ejecuto la activacion transaccional en Supabase. La comprobacion independiente de las 07:57:26.320080 UTC confirmo onlineOnly=true, contrato 1, 35 guardas de gateway, 19 funciones y 26 triggers retirados, 63 tablas y 152 funciones restantes, cero grants de escritura directa y cero grants de RPC legacy para navegadores. El registro [h164-server-activation.json](h164-server-activation.json) conserva ese resultado. Son pruebas del retiro tecnico activo, no una certificacion de concurrencia comercial A/B/C ni de colas fisicas conciliadas.
 
 ## Rutas permitidas y protecciones
 
@@ -63,6 +71,8 @@ Auth requiere una saga porque GoTrue y PostgreSQL no comparten transaccion. onli
 | supabase/migrations/20260911020900_pos_h164_online_authority_verification.sql | SIGUE SIENDO NECESARIO | Verificacion PostgreSQL con rollback de fixtures |
 | supabase/migrations/20260912021000_pos_h164_legacy_exact_discard.sql | SIGUE SIENDO NECESARIO | Autorizar solo discarded_ids capturados/completados; fuentes desconocidas permanecen visibles en revision |
 | supabase/migrations/20260912021100_pos_h164_legacy_exact_discard_verification.sql | SIGUE SIENDO NECESARIO | Candidato no capturado permanece needs_review y journal no reconocido no desaparece del contador |
+| supabase/migrations/20260912021200_pos_h164_optional_json_null.sql | SIGUE SIENDO NECESARIO | Normaliza solo objetos SQL opcionales del gateway; conserva arrays, liquidacion obligatoria, hashes, CAS y ACL |
+| supabase/migrations/20260912021300_pos_h164_optional_json_null_verification.sql | SIGUE SIENDO NECESARIO | Regresion focalizada con autoridades financieras reales y rollback de fixtures |
 | docs/fixes/evidence/h164-activation.sql | SIGUE SIENDO NECESARIO | Cutover transaccional tras verificar Pages; locks NOWAIT y comprobaciones antes de COMMIT |
 | docs/fixes/evidence/h164-activation-verification.sql | SIGUE SIENDO NECESARIO | Comprobacion independiente de solo lectura; no ejecuta activacion |
 | test-h164-online-sql.mjs | SIGUE SIENDO NECESARIO | Reconstruye esquema real y ejecuta 208/209 en PostgreSQL PGlite sin datos productivos |
@@ -330,6 +340,8 @@ Todas las siguientes siguen necesarias. Los unicos endpoints de escritura comerc
 | activate_online_only | SIGUE SIENDO NECESARIO |
 
 ## Evidencia y limites
+
+CI final 34683481979, commit df4965b1269239665594eca722c38c9adb86cb68: online-sql-local.json confirma cadena PGlite completa 208-213 PASS. La inspeccion Supabase real se conserva por separado; este resultado no inventaria navegadores fisicos.
 
 Ultima ejecucion local de test-h164-online-sql.mjs: PASS, 23 funciones nuevas, 208/209/210/211 completas, con ACL reales de esquema y EXECUTE PUBLIC (incluido ACL NULL), ademas de una sesion NOINHERIT que asume el rol efectivo de migracion. Un caso por garantia: recibo tras respuesta perdida, cancelacion contra llegada tardia, CAS cliente/promocion, batch atomico, perfil sin sobrescribir dinero, REST/legacy cerrados, actor cruzado bloqueado, roles/RLS, agregado de comision privado consistente, cotizacion obsoleta rechazada, saga de perfil exacta y objetivo reservado, archivo legado con hash y cero replay, guardas fantasmas de Punto Cero/cleanup retiradas, descarte solo del subconjunto capturado y journal desconocido visible en revision. La verificacion de migraciones general previa termino 31 PASS; no se repitio sin causa.
 

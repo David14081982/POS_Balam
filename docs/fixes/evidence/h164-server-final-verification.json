@@ -1,0 +1,150 @@
+{
+  "verification": {
+    "mode": "READ ONLY",
+    "source": "Supabase real",
+    "sql": "docs/fixes/evidence/h164-activation-verification.sql",
+    "sqlSha256": "10e92312832513cf72184fd39c8770dbdfd3de2d2f9957e59e523b7879a431ba",
+    "commercialOperationsExecuted": 0
+  },
+  "accountRequestsNeedingConfirmation": 0,
+  "activatedAt": "2026-09-12T07:56:55.112624+00:00",
+  "contractVersion": 1,
+  "directWriteGrants": 0,
+  "dispatchDefinitionSha256": "3f899800d9caba54e61025ddd3dc5f67975471a380a4ab1c61c179014b665d94",
+  "fencedTables": [
+    "clients",
+    "commission_adjustments",
+    "config_commits",
+    "config_sync_state",
+    "exchange_commits",
+    "exchange_items",
+    "exchanges",
+    "folio_counters",
+    "layaway_liquidation_commits",
+    "liquidations",
+    "loan_documents",
+    "lookup",
+    "movements",
+    "permission_roles",
+    "physical_card_redemptions",
+    "products",
+    "promotions",
+    "reference_reclassifications",
+    "return_commits",
+    "return_items",
+    "returns",
+    "role_capability_permissions",
+    "role_screen_permissions",
+    "sale_commits",
+    "sale_items",
+    "sale_payments",
+    "sales",
+    "screen_permission_catalog",
+    "screen_permission_catalog_state",
+    "sellers",
+    "settings",
+    "stock_reservations",
+    "user_capability_overrides",
+    "user_permission_role_assignments",
+    "user_screen_permission_overrides"
+  ],
+  "gatewayFences": 35,
+  "legacyEvidenceSources": 0,
+  "legacyOperationsNeedingReview": 0,
+  "legacyRpcBrowserGrants": 0,
+  "ok": true,
+  "onlineEndpointAcl": [
+    {
+      "anon": false,
+      "authenticated": true,
+      "name": "archive_online_legacy",
+      "public": false
+    },
+    {
+      "anon": false,
+      "authenticated": true,
+      "name": "execute_online_command",
+      "public": false
+    },
+    {
+      "anon": false,
+      "authenticated": true,
+      "name": "online_account_result",
+      "public": false
+    },
+    {
+      "anon": false,
+      "authenticated": true,
+      "name": "online_commission_context",
+      "public": false
+    },
+    {
+      "anon": false,
+      "authenticated": true,
+      "name": "online_connectivity",
+      "public": false
+    },
+    {
+      "anon": false,
+      "authenticated": true,
+      "name": "online_legacy_review_count",
+      "public": false
+    },
+    {
+      "anon": false,
+      "authenticated": true,
+      "name": "online_presence",
+      "public": false
+    },
+    {
+      "anon": false,
+      "authenticated": true,
+      "name": "online_quote_context",
+      "public": false
+    },
+    {
+      "anon": false,
+      "authenticated": true,
+      "name": "online_request_result",
+      "public": false
+    },
+    {
+      "anon": false,
+      "authenticated": true,
+      "name": "online_snapshot",
+      "public": false
+    },
+    {
+      "anon": false,
+      "authenticated": true,
+      "name": "resolve_online_request",
+      "public": false
+    }
+  ],
+  "onlineOnly": true,
+  "optionalJsonNullConversions": {
+    "exchangePayment": 1,
+    "requiredLayawayPaymentPreserved": true,
+    "returnClientEffect": 1,
+    "saleClientEffect": 2
+  },
+  "posFunctions": 152,
+  "posTables": 63,
+  "retiredCursorTriggers": 26,
+  "retiredFunctions": 19,
+  "schemaUsage": {
+    "anon": false,
+    "authenticated": true,
+    "serviceRole": true
+  },
+  "serverTime": "2026-09-12T08:22:40.462767+00:00",
+  "unknownLegacySourcesNeedingReview": 0,
+  "verifiedMigrations": [
+    "20260911020800",
+    "20260911020900",
+    "20260912021000",
+    "20260912021100",
+    "20260912021200",
+    "20260912021300"
+  ]
+}

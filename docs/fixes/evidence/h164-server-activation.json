@@ -1,0 +1,25 @@
+{
+  "project": "telohdbvbvsfmwyriflz",
+  "clientCommit": "0f05350fd286f175fce7bfcab5c04159cc01cb02",
+  "artifactSha256": "25bc985dce9bbe92e83f8dc9c61c6f1cf90fd0b1904dfe09d7bdfd594201d96f",
+  "method": "Transactional activation followed by independent BEGIN READ ONLY verification against Supabase.",
+  "result": {
+    "accountRequestsNeedingConfirmation": 0,
+    "activatedAt": "2026-09-12T07:56:55.112624+00:00",
+    "contractVersion": 1,
+    "directWriteGrants": 0,
+    "gatewayFences": 35,
+    "legacyEvidenceSources": 0,
+    "legacyOperationsNeedingReview": 0,
+    "legacyRpcBrowserGrants": 0,
+    "ok": true,
+    "onlineOnly": true,
+    "posFunctions": 152,
+    "posTables": 63,
+    "retiredCursorTriggers": 26,
+    "retiredFunctions": 19,
+    "serverTime": "2026-09-12T07:57:26.32008+00:00",
+    "unknownLegacySourcesNeedingReview": 0
+  },
+  "limitation": "Zero archived sources means no physical browser has been inventoried yet. It does not certify zero legacy pending operations."
+}

@@ -7432,10 +7432,15 @@ escrituras comerciales remotas; adopción en la terminal del usuario pendiente.
 
 ## H-164 — Estados de equipos y recuperación sin salida operativa
 
-**Estado:** EN IMPLEMENTACIÓN — conversión online-only aprobada explícitamente;
-sin rediseñar UI. Activación, publicación y adopción física pendientes.
-**Certificación:** NO CERTIFICADO. **Publicado:** NO.
-**Fecha:** 12/09/2026, Hermosillo. **Commit:** Pendiente de commit.
+**Estado:** IMPLEMENTADO Y PUBLICADO; CERTIFICACIÓN FÍSICA PENDIENTE.
+Conversión online-only activa, sin rediseñar UI.
+**Certificación técnica A/B/C:** PASS; 20/20 escenarios y retiro QA completos.
+**Equipos físicos:** NO CERTIFICADO. **Publicado:** SÍ.
+**Fecha:** 12/09/2026, Hermosillo.
+**Commit de implementación base:** `95714cfdcb5324fe71dd23f9bf4a57632bfb325b`.
+**Commit técnico publicado:** `df4965b1269239665594eca722c38c9adb86cb68`.
+**Corrección histórica del arnés PDF:** `0f05350fd286f175fce7bfcab5c04159cc01cb02`.
+**Evidencia documental:** referida al commit técnico publicado; entrega documental separada.
 **Commit de evaluación inicial:** `2d47d7b` (local).
 **Origen:** 14 equipos reportados frente a tres puestos operativos, cola 1/1
 después de Punto Cero, actualización de cliente mal indicada y diálogo invisible.
@@ -7472,9 +7477,12 @@ fuentes de operación no interpretables conservan revisión explícita.
 Las tablas y funciones financieras/históricas con consumidores siguen vigentes.
 **Pruebas de implementación registradas:** DATA 34 casos distintos PASS;
 CONFIG/AUTH/PWA, mensajes, recibo de cuenta y guardas de arquitectura PASS.
+La verificación de cadena tras 212/213 conserva 31 comprobaciones PASS.
 La cuenta rechaza sesión cruzada antes de Auth/perfil. PostgreSQL local
-208→209 corregida→210→211 PASS con ACL reales. Resultados UI/PWA se conservan
-por escenario y hash; el informe central detalla sus límites. No se repiten
+208–213 PASS con ACL reales en CI final. CI 34683481979 terminó con
+regresiones y despliegue SUCCESS; UI 6/6 y PWA 2/2 PASS sobre el artefacto final.
+Resultados conservados por escenario y hash; el informe detalla sus límites.
+No se repiten
 escenarios aprobados salvo cambio de contrato, fallo o artefacto final distinto.
 Revisión final: tres casos focalizados Settings PASS (Enter, error de logo,
 retiro/reactivación), callbacks cliente PASS y transporte 13 casos finales
@@ -7483,17 +7491,60 @@ ajena a la intención. La revisión de esquema confirma que sólo status=revoked
 retira un equipo; una fecha de retiro histórica en metadata no invalida una
 reactivación. La regresión de flota usa ese contrato real.
 **Despliegue al corte:** 208/209/210/211 aplicadas en Supabase mediante `db push`;
-verificaciones reales 209/211 PASS, cerco enabled=false. El fallo inicial se
+verificaciones reales 209/211 PASS. El fallo inicial se
 reprodujo con migrador NOINHERIT: RESET ROLE perdía su rol efectivo. Las pruebas
-conservan/restauran migration_owner sin ampliar ACL. Inspección posterior:
-cero requests, archives, operaciones legacy y fixtures filtrados. Edge
-admin-users desplegada vía API con JWT habilitado; activación y Pages pendientes.
-**Pendientes y residual:** completar activación remota y publicar
-artefacto probado; inventariar y conciliar cada navegador real; una operación
+conservan/restauran migration_owner sin ampliar ACL. La inspección de preparación
+no encontró requests, archives, operaciones legacy ni fixtures filtrados. Edge
+admin-users desplegada vía API con JWT habilitado. CI 34683481979 aprobó
+regresiones y despliegue; omitió live intencionalmente, conservando su matriz
+certificada sin repetirla. Pages verificado a las
+08:34:42.109 UTC: HTML `25bc985dce9bbe92e83f8dc9c61c6f1cf90fd0b1904dfe09d7bdfd594201d96f`
+y SW `5b43e72ad8fe5ca2a398f75530057010420ddfbdb4ccf730fcc4f535424d06b1`
+coinciden con el commit publicado. Supabase activado a las 07:56:55.112624 UTC;
+verificación independiente a las 07:57:26.320080 UTC PASS: onlineOnly=true,
+35 guardas, 19 funciones y 26 triggers retirados, cero grants comerciales
+directos o RPC legacy para navegadores. Evidencia:
+[Pages](fixes/evidence/h164-online-pages.json) y
+[activación](fixes/evidence/h164-server-activation.json).
+La [inspección final](fixes/evidence/h164-server-final-verification.json) de
+las 08:22:40.462767 UTC confirmó 208–213, autoridad activa, ACL cerradas y
+cuatro conversiones JSON opcionales, sin ejecutar operaciones comerciales.
+Cero fuentes legacy archivadas no demuestra cero pendientes en equipos físicos.
+La [lectura de adopción](fixes/evidence/h164-device-adoption.json) de las
+08:32:19.260578 UTC conserva 14 instalaciones comerciales, 13 retiradas y una
+no retirada; cero instalaciones comerciales declararon el build nuevo,
+cero QA activas y cero archivos legacy recibidos. Los registros no identifican
+los tres puestos físicos. El cerco impide las RPC antiguas; una copia H163/PWA
+no adoptada todavía puede conservar código y almacenamiento local anteriores.
+No se afirma cero colas o éxitos locales en esas copias. Falta cargar el build
+publicado en cada puesto y archivar/conciliar sin borrar almacenamiento a mano.
+**Pendientes y residual:** inventariar y conciliar cada navegador real; una operación
 real no reconciliable exige decisión específica, sin borrado indiscriminado.
-Certificar A/B/C sobre artefacto final, concurrencia, ACK perdido, Internet
-perdido/restaurado, recarga y Realtime ausente. Los contextos QA no demuestran
-adopción de los tres puestos físicos. No se acreditan aún cero pérdidas,
-divergencias o pendientes fantasma. H156 sigue independiente.
+Validar los tres puestos físicos y conciliar su almacenamiento legacy;
+la matriz técnica A/B/C ya pasó. Los contextos QA no demuestran
+adopción de los tres puestos físicos. Tras corregir la comprobación del marcador
+de build del arnés, la ejecución live registró 14 casos PASS. El caso 15, abonos
+concurrentes de apartado, rechazó las dos solicitudes sin confirmar ningún
+cobro. El diagnóstico comprobó `null` JSONB frente a `NULL` SQL en el parámetro
+opcional `p_client_effect`; el cliente existe. 212/213 aditivas aplicadas en
+Supabase y verificadas PASS, sin cambio del HTML publicado. Se normalizaron
+únicamente objetos opcionales; arrays, CAS, recibos y permisos se preservan.
+La continuación omitió los 14 PASS anteriores y aprobó el caso afectado de
+apartado/abono concurrente/liquidación y la liquidación de comisión. También
+pasaron Internet/reconexión, recarga/reapertura, historia y equipos: 20/20
+escenarios funcionales PASS. El historial privado conserva 21 filas incluyendo el
+rechazo inicial de abonos. El retiro final de perfiles QA falló inicialmente
+por el helper is_active_seller bajo service_role y se completó mediante la
+finalización exacta corregida: cinco perfiles desactivados y dos cuentas Auth
+bloqueadas, sin repetir los 20 casos, abrir navegador o reactivar cuentas.
+El arnés terminó `certified:true`; otros perfiles e historia financiera
+permanecieron sin cambios. El [resumen público live](fixes/evidence/h164-live-online.json)
+conserva resultados, hash del artefacto, conteos y constancia del rechazo
+resuelto; declara `scope.physical:false`. Recibos, identificadores internos y
+detalles de operaciones permanecen en la evidencia local privada.
+El acceso de sólo lectura por CDP no encontró un navegador físico accesible;
+la adopción e inventario de los tres puestos siguen pendientes. No se acreditan
+cero pérdidas, divergencias o pendientes fantasma globales en instalaciones
+físicas no inspeccionadas. H156 sigue independiente.
 **Documento vigente:** [online-only-h164.md](fixes/online-only-h164.md).
 **Histórico:** [evaluación inicial](fixes/evaluacion-arquitectura-sincronizacion-h164.md).

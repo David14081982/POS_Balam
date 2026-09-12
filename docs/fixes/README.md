@@ -13,10 +13,13 @@ sesión de chat.
 
 ## Correcciones registradas
 
-- [online-only-h164.md](online-only-h164.md) — H-164, EN IMPLEMENTACIÓN:
+- [online-only-h164.md](online-only-h164.md) — H-164, IMPLEMENTADO Y PUBLICADO;
+  CERTIFICACIÓN FÍSICA PENDIENTE:
   conversión online-only aprobada, 19 familias servidor, 32 entradas DATA y
   14 mutadores CONFIG; retiro local-first y conciliación legacy conservadora.
-  Activación, publicación y certificación real pendientes; no rediseña UI.
+  Activo en Supabase; CI, UI 6/6 y PWA 2/2 PASS. A/B/C técnico: 20/20 PASS
+  y retiro QA completado; certificado versionado. Adopción
+  física y colas legacy pendientes; no rediseña UI.
 
 - [evaluacion-arquitectura-sincronizacion-h164.md](evaluacion-arquitectura-sincronizacion-h164.md)
   — H-164, HISTÓRICO: diagnóstico inicial de flota, reactivación y diálogo

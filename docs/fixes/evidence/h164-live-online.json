@@ -1,0 +1,116 @@
+{
+  "build": "2026-09-12-h164-online",
+  "artifactSha256": "25bc985dce9bbe92e83f8dc9c61c6f1cf90fd0b1904dfe09d7bdfd594201d96f",
+  "date": "2026-09-12",
+  "technicalCertification": "PASS",
+  "scenarios": {
+    "unique": 20,
+    "passed": 20,
+    "cases": [
+      {
+        "name": "A/B/C bootstrap and Realtime disabled",
+        "result": "PASS"
+      },
+      {
+        "name": "Create V2 products with barcode V3",
+        "result": "PASS"
+      },
+      {
+        "name": "Client and customer profile",
+        "result": "PASS"
+      },
+      {
+        "name": "Concurrent product edit rejects stale version",
+        "result": "PASS"
+      },
+      {
+        "name": "Delete while another terminal uses product",
+        "result": "PASS"
+      },
+      {
+        "name": "Stock movement / reference reclassification",
+        "result": "PASS"
+      },
+      {
+        "name": "Promotion and isolated commercial configuration",
+        "result": "PASS"
+      },
+      {
+        "name": "Auth account gateway creates one exact QA account and profile",
+        "result": "PASS"
+      },
+      {
+        "name": "Permission mutation affects only the exact QA account",
+        "result": "PASS"
+      },
+      {
+        "name": "Sale / payment / commission / lost response after COMMIT",
+        "result": "PASS"
+      },
+      {
+        "name": "Two terminals sell the last unit",
+        "result": "PASS"
+      },
+      {
+        "name": "Concurrent return consumes a sale line once",
+        "result": "PASS"
+      },
+      {
+        "name": "Concurrent exchange consumes remaining line once",
+        "result": "PASS"
+      },
+      {
+        "name": "Loan / concurrent return preserves document version",
+        "result": "PASS"
+      },
+      {
+        "name": "Layaway / concurrent payment / settlement",
+        "result": "PASS"
+      },
+      {
+        "name": "Commission settlement for the isolated seller",
+        "result": "PASS"
+      },
+      {
+        "name": "No Internet blocks operation, stock, success, pending; reconnect reads authority",
+        "result": "PASS"
+      },
+      {
+        "name": "Reload and close/reopen rebuild only from Supabase",
+        "result": "PASS"
+      },
+      {
+        "name": "Existing commercial history preserved",
+        "result": "PASS"
+      },
+      {
+        "name": "Equipment history separates exact retired QA installations",
+        "result": "PASS"
+      }
+    ]
+  },
+  "history": {
+    "totalEntriesInPrivateEvidence": 21,
+    "initialRejectedScenarioAttempts": 1,
+    "cause": "JSON null versus SQL NULL in an optional argument",
+    "resolution": "Corrected and verified by additive SQL migrations 212 and 213; only the affected scenario was repeated."
+  },
+  "scope": {
+    "physical": false,
+    "description": "Independent QA browser contexts against real Supabase using the published artifact. Physical workstation adoption and uninspected legacy browser operations are not certified."
+  },
+  "qaRetirement": {
+    "profilesRetired": 5,
+    "authAccountsBlocked": 2,
+    "qaInstallationsRetired": 3,
+    "confirmed": true,
+    "otherProfilesUnchanged": true,
+    "financialHistoryUnchanged": true,
+    "retirementPreservedDeviceRegistry": true,
+    "existingInstallationsUnchanged": true
+  },
+  "baselinePreservation": {
+    "lostRows": 0,
+    "scope": "Only original remote baseline rows inspected by this QA matrix; excludes uninspected physical browser storage."
+  }
+}
