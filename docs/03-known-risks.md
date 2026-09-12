@@ -7452,7 +7452,10 @@ las operaciones legacy y los estados de equipos. Precio, comisión, barcode y
 autorización administrativa siguen protegidos. Control de migraciones: 31 PASS.
 No se ha ejecutado una limpieza global desde el agente en este incidente.
 UI y bytes del cliente sin cambios; falta observar el nuevo intento del usuario.
-Commit: Pendiente de commit. CI y registro de publicación en preparación.
+Commit: `c4dfab96ce33cafa0da50b721a2b6c0d429e1cee`.
+CI 34706014494: regresiones/despliegue SUCCESS; SQL hasta 219 y caso completo
+Punto Cero PASS. Pages verificado byte a byte a las 16:44:02.615 UTC, sin cambios
+de cliente. Corrección publicada; ejecución física del propietario no observada.
 Evidencia: `docs/fixes/evidence/h164-point-zero-preservation-verification.json`.
 
 **Continuación de adopción física:** el usuario reportó un falso «Sin conexión»

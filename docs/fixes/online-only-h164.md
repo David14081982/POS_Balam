@@ -491,7 +491,8 @@ La [lectura final de adopción](evidence/h164-physical-adoption-final.json) de l
 
 ## Punto Cero: preservar configuración sin confundir existencias
 
-**Fecha:** 12/09/2026. **Commit:** Pendiente de commit.
+**Fecha:** 12/09/2026. **Estado:** CORREGIDO Y PUBLICADO.
+**Commit:** `c4dfab96ce33cafa0da50b721a2b6c0d429e1cee`.
 
 Después de adoptar el primer equipo, el propietario reportó inventario ausente,
 operaciones QA visibles y el rechazo `purge_changed_configuration` al ejecutar
@@ -551,7 +552,15 @@ legacy, runtime y estados de equipos idénticos; cero reactivaciones QA. Guardas
 ACL, 35 cercos comerciales y contrato V3 activos. El [resumen verificable](evidence/h164-point-zero-preservation-verification.json)
 contiene resultados y hashes de fuente; los datos comerciales permanecen privados.
 
-CI y registro de publicación: en preparación. La UI, HTML, PWA y build
+El [CI 34706014494](https://github.com/David14081982/POS_Balam/actions/runs/34706014494)
+terminó con regresiones y despliegue SUCCESS, incluida la cadena SQL hasta 219
+y el caso completo versionado de Punto Cero. El job comercial live quedó
+omitido. Pages se comprobó byte a byte a las **16:44:02.615 UTC**: HTML
+`4057532d8dba1fce2ee1b01e595f0f602d0cc2ebc764863075801fdecef9ce09` y SW
+`b572046849dd2a0c97be2fa147bac6d684df7422e9fd396c374376c34b423a24` coinciden
+con el commit. La [evidencia de entrega](evidence/h164-point-zero-delivery.json)
+registra ese corte; los artifacts de CI permanecen en su run y en la copia
+privada `.evidence-h164/ci-34706014494/`. La UI, HTML, PWA y build
 `2026-09-12-h164-online` conservan sus fuentes y bytes. La operación rechazada
 mantiene su recibo original; el usuario debe cerrar el error y abrir de nuevo
 Punto Cero para generar preview, respaldo e identidad de operación nuevos.

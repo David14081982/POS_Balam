@@ -1,0 +1,46 @@
+{
+  "commit": "c4dfab96ce33cafa0da50b721a2b6c0d429e1cee",
+  "build": "2026-09-12-h164-online",
+  "ci": {
+    "url": "https://github.com/David14081982/POS_Balam/actions/runs/34706014494",
+    "regression": "SUCCESS",
+    "deploy": "SUCCESS",
+    "liveCertification": "SKIPPED",
+    "sqlMigrationsVerifiedThrough": "20260912021900",
+    "pointZero": {
+      "completePointZero": true,
+      "configurationPreserved": true,
+      "inventoryContractEnforced": true,
+      "retiredDevicesPreserved": 13,
+      "authenticatedRecovery": true,
+      "folioAfterResetUsable": true,
+      "commercialCases": 1,
+      "remotePointZeroExecuted": false
+    },
+    "artifactMatchesCommittedBuild": true
+  },
+  "pages": {
+    "commit": "c4dfab96ce33cafa0da50b721a2b6c0d429e1cee",
+    "url": "https://david14081982.github.io/POS_Balam/",
+    "verifiedAt": "2026-09-12T16:44:02.615Z",
+    "ok": true,
+    "files": [
+      {
+        "path": "index.html",
+        "bytes": 8974368,
+        "expectedSha256": "4057532d8dba1fce2ee1b01e595f0f602d0cc2ebc764863075801fdecef9ce09",
+        "publishedSha256": "4057532d8dba1fce2ee1b01e595f0f602d0cc2ebc764863075801fdecef9ce09",
+        "match": true
+      },
+      {
+        "path": "sw.js",
+        "bytes": 4477,
+        "expectedSha256": "b572046849dd2a0c97be2fa147bac6d684df7422e9fd396c374376c34b423a24",
+        "publishedSha256": "b572046849dd2a0c97be2fa147bac6d684df7422e9fd396c374376c34b423a24",
+        "match": true
+      }
+    ]
+  },
+  "clientBytesUnchanged": true,
+  "scope": "Point Zero blocker corrected on the server. Complete scenario in isolated PostgreSQL; scoped remote verification rolled back. No global Point Zero executed by agent; physical user retry not yet observed."
+}
