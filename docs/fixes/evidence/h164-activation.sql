@@ -145,4 +145,6 @@ begin
 end $preserved$;
 commit;
 select jsonb_build_object('ok',true,'onlineOnly',r.enabled,'contractVersion',r.contract_version,'activatedAt',r.activated_at,'posTables',63,'posFunctions',152,'retiredFunctions',19,'retiredCursorTriggers',26,'legacyRpcBrowserGrants',0,'directWriteGrants',0,'gatewayFences',35,
- 'legacyEvidenceSources',(select count(*) from pos.online_legacy_archives),'legacyOperationsNeedingReview',(select count(*) from pos.online_legacy_operations where classification='needs_review'),'accountRequestsNeedingConfirmation',(select count(*) from pos.online_account_requests where state not in('completed','rejected','cancelled')),'serverTime',clock_timestamp()) as activation_verification from pos.online_runtime r where singleton;
+ 'legacyEvidenceSources',(select count(*) from pos.online_legacy_archives),'legacyOperationsNeedingReview',(select count(*) from pos.online_legacy_operations where classification='needs_review'),
+ 'unknownLegacySourcesNeedingReview',(select count(*) from pos.online_legacy_archives a where a.classification='needs_review' and not exists(select 1 from pos.online_legacy_intents(a.original))),
+ 'accountRequestsNeedingConfirmation',(select count(*) from pos.online_account_requests where state not in('completed','rejected','cancelled')),'serverTime',clock_timestamp()) as activation_verification from pos.online_runtime r where singleton;

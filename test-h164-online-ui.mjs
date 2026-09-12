@@ -82,6 +82,12 @@ try {
     assert.equal(barcode.cert.resolvedProductId,fixture.id);assert.ok(barcode.bytes>100);assert.equal(barcode.mime,'image/png');
     await page.getByTestId('inventory-labels').click();
     await page.getByTestId('labels-download').waitFor();
+    // The modal is visible before its asynchronous buildLabelPdf result exists.
+    // Certification and the prepared PDF must both enable the actual control.
+    await page.waitForFunction(()=>{
+      const button=document.querySelector('[data-testid="labels-download"]');
+      return button && !button.disabled;
+    },null,{timeout:30000});
     assert.equal(await page.getByTestId('labels-download').isEnabled(),true);
     const downloaded=page.waitForEvent('download');await page.getByTestId('labels-download').click();
     const download=await downloaded,bytes=await fs.readFile(await download.path());

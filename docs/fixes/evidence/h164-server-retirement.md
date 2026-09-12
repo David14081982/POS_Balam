@@ -19,6 +19,12 @@ Fecha de evidencia: 2026-09-12 UTC. Fuente: catalogo pos del servidor hasta migr
 4. Activar elimina los endpoints y grants anteriores, retira los triggers de cursores y notifica recarga de esquema a PostgREST. La segunda llamada es idempotente. El cliente antiguo no puede volver a enviar operaciones: su RPC ya no existe o carece de EXECUTE y REST carece de escritura.
 5. No existe rollback operativo hacia offline. Volver a enabled=false manualmente no recrea funciones ni grants retirados y no es un fallback soportado. Un rollback requiere una migracion correctiva revisada que preserve recibos y datos ya confirmados; no restaurar ciegamente un respaldo comercial.
 
+La ejecucion revisable vive en [h164-activation.sql](h164-activation.sql): SQL puro para db query, sin instrucciones psql. Requiere reemplazar en memoria el marcador de SHA256 por el hash real de Pages ya contrastado, despues de verificar admin-users. Obtiene ACCESS EXCLUSIVE NOWAIT sobre las 63 tablas pos y luego el advisory comercial sin espera; si hay una consulta u operacion en curso, revierte inmediatamente y permite que esa operacion termine normalmente. Esto evita invertir el orden del gateway, que consulta perfil/equipo e inserta su recibo antes del advisory. No se cancelan sesiones ni se reintentan operaciones comerciales.
+
+Una vez libre la ventana, activacion, revocaciones, retiros y comprobaciones ocurren en una transaccion, con timeout de sentencia de 30 segundos. Se verifica que los conteos de filas de las 63 tablas no cambien. Un error anterior a COMMIT revierte la activacion completa; una respuesta perdida se resuelve leyendo el estado, no repitiendo a ciegas. [h164-activation-verification.sql](h164-activation-verification.sql) ejecuta las comprobaciones independientes en BEGIN READ ONLY y reporta tambien operaciones/fuentes legadas y cuentas que aun necesitan revision.
+
+El bloqueo puede pausar brevemente lecturas, reportes y presencia; no crea colas. Su semantica y liberacion al terminar la transaccion estan descritas en la documentacion de [bloqueos explicitos de PostgreSQL](https://www.postgresql.org/docs/current/explicit-locking.html). La activacion tecnica se ejecuto una vez en PostgreSQL local con el esquema/grants reales y sin fixtures o casos comerciales: PASS. No equivale a haber activado Supabase ni haber certificado A/B/C.
+
 ## Rutas permitidas y protecciones
 
 | Familia | Entrada nominal | Proteccion relevante |
@@ -57,6 +63,8 @@ Auth requiere una saga porque GoTrue y PostgreSQL no comparten transaccion. onli
 | supabase/migrations/20260911020900_pos_h164_online_authority_verification.sql | SIGUE SIENDO NECESARIO | Verificacion PostgreSQL con rollback de fixtures |
 | supabase/migrations/20260912021000_pos_h164_legacy_exact_discard.sql | SIGUE SIENDO NECESARIO | Autorizar solo discarded_ids capturados/completados; fuentes desconocidas permanecen visibles en revision |
 | supabase/migrations/20260912021100_pos_h164_legacy_exact_discard_verification.sql | SIGUE SIENDO NECESARIO | Candidato no capturado permanece needs_review y journal no reconocido no desaparece del contador |
+| docs/fixes/evidence/h164-activation.sql | SIGUE SIENDO NECESARIO | Cutover transaccional tras verificar Pages; locks NOWAIT y comprobaciones antes de COMMIT |
+| docs/fixes/evidence/h164-activation-verification.sql | SIGUE SIENDO NECESARIO | Comprobacion independiente de solo lectura; no ejecuta activacion |
 | test-h164-online-sql.mjs | SIGUE SIENDO NECESARIO | Reconstruye esquema real y ejecuta 208/209 en PostgreSQL PGlite sin datos productivos |
 | test-fixtures/h164/sql-authority-baseline.json | SE CONSERVA POR HISTORICO | Esquema base reproducible hasta 207; sin filas comerciales o secretos |
 | supabase/functions/admin-users/index.ts | SIGUE SIENDO NECESARIO | Saga online Auth/perfil; propiedad de la unidad config |

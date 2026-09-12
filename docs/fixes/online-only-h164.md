@@ -265,6 +265,21 @@ corrección de fuente a los bytes anteriores.
 activación con `activationUsesSource:true`, para verificar la fuente nueva
 sin repetir el caso general que ya había pasado.
 
+El run CI `34681661766` del commit `95714cf` detectó una espera insuficiente
+del arnés V2: se comprobaba `isEnabled()` inmediatamente después de que el
+botón de PDF fuera visible. `LabelModal` prepara el PDF mediante
+`buildLabelPdf(...).then(...)`; mientras tanto muestra «Generando PDF…» y
+mantiene el botón deshabilitado. La captura de CI conservó ese estado, el
+barcode visible y `errors: []`. Se corrigió únicamente el arnés para esperar
+hasta 30 segundos a que el botón real esté habilitado, manteniendo las
+aserciones de certificación, identidad, PNG, encabezado PDF y SKU contenido.
+La ejecución focalizada `BALAM_UI_CASE=V2/barcode` obtuvo **1 PASS** sobre el
+HTML `25bc985dce9bbe92e83f8dc9c61c6f1cf90fd0b1904dfe09d7bdfd594201d96f`,
+sin build ni cambio comercial. Evidencia:
+`.evidence-h164/online-ui-2026-09-12T07-50-42-130Z.json`; el fallo de CI se
+conserva en `.evidence-h164/ci-34681661766/`. Este PASS focalizado no acredita
+por sí solo el resto del pipeline ni la matriz remota A/B/C.
+
 ## Riesgo residual y pendientes
 
 1. Activar el cerco y publicar después de completar la entrega del artefacto
