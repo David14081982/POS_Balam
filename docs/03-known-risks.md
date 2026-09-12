@@ -7217,11 +7217,11 @@ haber borrado el almacenamiento de equipos apagados.
 ## H-160 — Punto Cero omite los enlaces de inventario V3
 
 **Estado:** CORREGIDO, APLICADO Y EJECUTADO; adopción física NO CERTIFICADA.
-**Fecha:** 11/09/2026. **Commit:** Pendiente de commit.
+**Fecha:** 11/09/2026. **Commit:** `fa978f5f5295054435ee8e013d233c3e7fe5bdd2`.
 **Reproducción real:** después de retirar las seis instalaciones autorizadas y
 guardar el respaldo sellado, `execute_point_zero` devolvió `failed`,
-`rolled_back=true` y `barcode_aliases_product_id_fkey`. Permanecen los 2,386
-productos y 3,502 piezas; la huella protegida no cambió.
+`rolled_back=true` y `barcode_aliases_product_id_fkey`. Tras ese fallo permanecieron
+los 2,386 productos y 3,502 piezas; la huella protegida no cambió.
 **Causa:** el payload y el borrado H98 no incorporan `barcode_aliases` ni
 `inventory_v1_v2_map`, hijos de productos con FK RESTRICT introducidos por H133.
 **Alcance:** incluir ambos enlaces en el respaldo y eliminarlos antes de sus
@@ -7238,6 +7238,11 @@ sus huellas; las 14 instalaciones permanecen retiradas. Comprobación posterior:
 14/14 rechazos `DEVICE_RETIRED`, revisiones/reintentos centrales cero.
 **Evidencia:** `docs/fixes/evidence/h160-operation.json`,
 `h160-final-authority.json` y pruebas SQL enlazadas en el expediente.
+**Publicación:** commit técnico enviado a `main`; H148 `34660905743` y H132
+`34660905740` aprobaron en el primer intento. Pages verificado el 12/09/2026
+00:17:41 UTC: 10/10 rutas HTTP 200 idénticas al artefacto del commit.
+Evidencia: `docs/fixes/evidence/h160-pages.json`. HTML/offline y SW conservan
+los mismos bytes de H159; la corrección del servidor está aplicada.
 **Residual:** la época 10 no se observó en los equipos apagados; deben
 reactivarse y sincronizarse antes de reutilizarlos. El respaldo JSON no dispone
 de una restauración automática H98. No se cambió el HTML publicado.

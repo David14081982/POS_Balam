@@ -1,0 +1,77 @@
+{
+  "commit": "fa978f5f5295054435ee8e013d233c3e7fe5bdd2",
+  "verifiedAt": "2026-09-12T00:17:41.156Z",
+  "base": "https://david14081982.github.io/POS_Balam/",
+  "results": [
+    {
+      "path": "/",
+      "status": 200,
+      "expected": "6678d9d1c2eac11f1b670017e8fec4c716e7f9b763c1f26e631e423aab22fd85",
+      "actual": "6678d9d1c2eac11f1b670017e8fec4c716e7f9b763c1f26e631e423aab22fd85",
+      "ok": true
+    },
+    {
+      "path": "index.html",
+      "status": 200,
+      "expected": "6678d9d1c2eac11f1b670017e8fec4c716e7f9b763c1f26e631e423aab22fd85",
+      "actual": "6678d9d1c2eac11f1b670017e8fec4c716e7f9b763c1f26e631e423aab22fd85",
+      "ok": true
+    },
+    {
+      "path": "POS Balam (offline).html",
+      "status": 200,
+      "expected": "6678d9d1c2eac11f1b670017e8fec4c716e7f9b763c1f26e631e423aab22fd85",
+      "actual": "6678d9d1c2eac11f1b670017e8fec4c716e7f9b763c1f26e631e423aab22fd85",
+      "ok": true
+    },
+    {
+      "path": "sw.js",
+      "status": 200,
+      "expected": "8cb2ba1d9c065bd6f1573042e05d351a49c9f9c3758d1d8e03a34da9abdab786",
+      "actual": "8cb2ba1d9c065bd6f1573042e05d351a49c9f9c3758d1d8e03a34da9abdab786",
+      "ok": true
+    },
+    {
+      "path": "manifest.webmanifest",
+      "status": 200,
+      "expected": "43417f79b56bf52969b2d04d1c70ee0a6ae67673b2acd8f673b0fbebf6986afd",
+      "actual": "43417f79b56bf52969b2d04d1c70ee0a6ae67673b2acd8f673b0fbebf6986afd",
+      "ok": true
+    },
+    {
+      "path": "pwa/apple-touch-icon.png",
+      "status": 200,
+      "expected": "137651bbb5489c1fadbc75e1c1375d163d3be59a2c26f79161d46351a9991608",
+      "actual": "137651bbb5489c1fadbc75e1c1375d163d3be59a2c26f79161d46351a9991608",
+      "ok": true
+    },
+    {
+      "path": "pwa/favicon-64.png",
+      "status": 200,
+      "expected": "12437629c6e64b955db23fa773b2a4ceba407f9cf7510d268b2f11a0606f1ad0",
+      "actual": "12437629c6e64b955db23fa773b2a4ceba407f9cf7510d268b2f11a0606f1ad0",
+      "ok": true
+    },
+    {
+      "path": "pwa/icon-192.png",
+      "status": 200,
+      "expected": "72184e55164ce1c4e67a1013724a3b83947503356a487e055f0d022d01dcb64e",
+      "actual": "72184e55164ce1c4e67a1013724a3b83947503356a487e055f0d022d01dcb64e",
+      "ok": true
+    },
+    {
+      "path": "pwa/icon-512.png",
+      "status": 200,
+      "expected": "c42b6fa17510f7bb91358bbe9e04f714cb15e816fd26875f86d0bbcc5bc08319",
+      "actual": "c42b6fa17510f7bb91358bbe9e04f714cb15e816fd26875f86d0bbcc5bc08319",
+      "ok": true
+    },
+    {
+      "path": "pwa/icon-maskable-512.png",
+      "status": 200,
+      "expected": "f0d29a6e593ba7d79286f755179b4c984d0a6634a4b97954cc8f4daa2c693e47",
+      "actual": "f0d29a6e593ba7d79286f755179b4c984d0a6634a4b97954cc8f4daa2c693e47",
+      "ok": true
+    }
+  ]
+}

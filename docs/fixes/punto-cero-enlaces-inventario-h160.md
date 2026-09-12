@@ -3,7 +3,7 @@
 **Riesgo:** [H-160](../03-known-risks.md#h-160--punto-cero-omite-los-enlaces-de-inventario-v3)
 **Estado:** CORREGIDO, APLICADO Y EJECUTADO; adopción de la nueva época en terminales ausentes NO CERTIFICADA.
 **Fecha:** 11/09/2026
-**Commit:** Pendiente de commit
+**Commit técnico:** `fa978f5f5295054435ee8e013d233c3e7fe5bdd2`
 
 ## Problema y reproducción
 
@@ -170,6 +170,15 @@ Los privilegios de las dos funciones conservan sus ACL previas. Evidencia:
 [`h160-final-authority.json`](evidence/h160-final-authority.json).
 No se infiere de este comprobante el estado físico del almacenamiento en los
 equipos ausentes.
+
+El commit técnico se envió a `main`. Los workflows H148 **34660905743**
+(regresión y Pages) y H132 **34660905740** terminaron correctamente en el primer
+intento, incluido el nuevo arnés H160. La publicación se verificó el
+**12/09/2026 00:17:41 UTC**: **10/10** rutas HTTP 200 idénticas al artefacto
+del commit, incluida la raíz sin parámetros. Evidencia:
+[`h160-pages.json`](evidence/h160-pages.json). HTML/offline conservan SHA-256
+`6678d9d1c2eac11f1b670017e8fec4c716e7f9b763c1f26e631e423aab22fd85`;
+la corrección reside en las funciones del servidor ya aplicadas.
 
 ## Riesgo residual y pendientes
 

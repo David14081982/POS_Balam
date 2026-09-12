@@ -858,6 +858,13 @@ candado, compone la purga H-68, elimina inventario y verifica cero operativo y
 huella conservada. Un fallo revierte el bloque completo y `operation_id` hace
 idempotente el reintento.
 
+El payload incluye los alias de códigos y los mapas históricos V1/V2 ligados
+a productos. Esos hijos se eliminan antes de sus padres dentro de la misma
+transacción; la excepción interna de inmutabilidad se limita al borrado de
+alias y se restaura inmediatamente. Contrato V3, respaldos y auditoría de la
+migración de inventario permanecen conservados. Los equipos retirados siguen
+retirados al avanzar la época.
+
 El éxito aumenta `data_epoch` y obliga a las demás terminales a reconstruirse
 antes de escribir. `point_zero_operations` conserva actor, equipo, versiones,
 respaldo relacionado, conteos y resultado; el contenido eliminado vive en
