@@ -7718,3 +7718,7 @@ Sin cambios a STORE, AUTH, SQL ni datos. La pestaña debe adoptar el cliente nue
 Ambos HTML y SW públicos HTTP 200 e idénticos byte a byte: 3/3.
 Evidencia: `docs/fixes/evidence/h169-publication.json` y `h169-workflow.json`.
 **Documento:** `docs/fixes/confirmacion-sin-bloqueo-h169.md`.
+
+**Certificación solicitada:** A/B/C real en curso. El certificador conservaba
+una aserción del texto bloqueante anterior; se adapta al contrato H-169 antes
+de ejecutar la matriz, sin cambiar el artefacto ni relajar las garantías remotas.

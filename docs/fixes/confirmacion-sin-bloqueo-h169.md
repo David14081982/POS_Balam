@@ -110,6 +110,11 @@ No se aplicaron migraciones ni se modificaron operaciones comerciales reales.
 
 ## Referencias
 
+Certificación real solicitada tras publicar: se adapta la aserción visual del
+certificador H-164 (texto anterior → franja visible, ausencia de gate, navegación
+no inerte y consulta habilitada). Conserva el mismo HTML y todas las aserciones
+remotas de la matriz. Resultado pendiente de ejecución A/B/C.
+
 - `docs/03-known-risks.md`, H-169.
 - `docs/02-architecture.md`, STORE y syncStatus.
 - `docs/fixes/refresco-permisos-sin-intermitencia-h158.md`.

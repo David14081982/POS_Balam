@@ -548,7 +548,10 @@ try {
     try {
       await A.page.waitForFunction(()=>window.STORE.syncStatus().message==='Estamos confirmando la operación. No la repitas.');
       assert.equal(finished,false,'Original confirmation remains unresolved while outcome cannot be read');
-      await A.page.getByText('Estamos confirmando la operación. No la repitas.',{exact:true}).waitFor();
+      await A.page.getByTestId('online-status').waitFor({state:'visible'});
+      assert.equal(await A.page.getByTestId('online-gate').count(),0,'Pending receipt must not replace the application');
+      assert.equal(await A.page.getByTestId('nav-pos').evaluate(el=>!!el.closest('[inert],[aria-hidden="true"]')),false);
+      assert.equal(await A.page.getByTestId('online-status-retry').isEnabled(),true,'Status query remains available');
     }
     finally { await A.context.unroute(pattern,lose); await A.context.unroute(resolvePattern,holdResolve); }
     await A.page.evaluate(() => window.STORE.refresh()); await ready(A);
