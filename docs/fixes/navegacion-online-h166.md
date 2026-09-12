@@ -1,7 +1,7 @@
 # Navegación y eficiencia de la autoridad online
 
 **Riesgo:** H-166; QA-NAV-01, QA-BRAND-01, QA-BRAND-02.
-**Estado:** VERIFICADO: QA-NAV-01, QA-BRAND-01 y QA-BRAND-02 corregidos; publicación pendiente.
+**Estado:** CERRADO Y PUBLICADO: QA-NAV-01, QA-BRAND-01 y QA-BRAND-02.
 **Fecha:** 12/09/2026, Hermosillo.
 **Commit técnico:** `69b5054d4696cfe9d99d679d1da1714949f4a380`.
 
@@ -125,9 +125,11 @@ La base del guardián se refijó tras las regresiones locales: máximo medido de
 La repetición del guardián pasó sin cambiar el artefacto; se conserva la primera
 medición final en la tabla, no se escoge la repetición más rápida.
 
-## Riesgo residual y pendientes
+## Riesgo residual y despliegue
 
-Pendiente: registrar commits y verificar publicación por SHA-256. Las cuentas y operaciones QA tienen identidades
+Publicación verificada el 12/09/2026 a las 20:19 UTC: GitHub Actions
+34716573314 completó regresiones y despliegue. HTML y service worker públicos
+coinciden por SHA-256 con el artefacto certificado. No quedan pendientes de H166. Las cuentas y operaciones QA tienen identidades
 exactas; la historia de prueba se preserva. No se ejecutó Punto Cero sobre la tienda.
 Punto Cero se prueba completo en PostgreSQL aislado y con comprobaciones remotas
 reversibles. La matriz técnica no certifica adopción de puestos físicos ausentes,
@@ -148,3 +150,7 @@ Artefacto certificado: `6759af519a2cc451d3b203afaf3bde5c46d2ebae53870d1644a8e8ca
 Evidencia adicional: [A/B/C](evidence/h166-abc.json), [regresiones de navegador](evidence/h166-browser-regressions.json),
 [Supabase](evidence/h166-remote-schema.json), [guardián](evidence/h166-performance-guardian.json)
 y [self-review](evidence/h166-self-review.json).
+
+[Publicación verificada](evidence/h166-publication.json). Commit documental previo
+al despliegue: `c06287f096ce828cc256e573457066d5c631bc54`. El cierre posterior
+sólo registra evidencia y conserva los mismos bytes publicados.

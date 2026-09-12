@@ -7608,7 +7608,7 @@ físicas no inspeccionadas. H156 sigue independiente.
 
 ## H-166 — Navegación, proyección comercial y eficiencia online-only
 
-**Estado:** Corregido y verificado; publicación pendiente. **Fecha:** 2026-09-12. **Commit:** `69b5054d4696cfe9d99d679d1da1714949f4a380`.
+**Estado:** CERRADO Y PUBLICADO. **Fecha:** 2026-09-12. **Commit:** `69b5054d4696cfe9d99d679d1da1714949f4a380`.
 **Riesgo:** QA-NAV-01, QA-BRAND-01 y QA-BRAND-02: familias recalculadas por
 consumidor, catálogo POS montado completo, snapshot completo cada 15 segundos,
 marca provisional y cinco PNG regenerados por CONFIG idéntica.
@@ -7626,7 +7626,8 @@ POS 19691 → 816–1440 nodos y 48 tarjetas iniciales; recorrido de cinco panta
 con 1500 referencias 19424 → 600 ms. PNG del mismo logo: 0.
 **Estrategia:** carga inicial, Realtime como señal y revalidación condicional
 cada 15 s/foco/reconexión, sin snapshot completo cuando no cambió.
-**Residual:** Publicación pendiente de verificar por hash. Punto Cero completo
+**Despliegue:** Actions 34716573314 PASS; HTML y SW públicos verificados por SHA-256.
+**Residual:** Punto Cero completo
 aislado y verificación remota reversible; no se purgó la tienda. Hardware y
 adopción de puestos físicos ausentes no certificados.
 **Documento:** [navegacion-online-h166.md](fixes/navegacion-online-h166.md).

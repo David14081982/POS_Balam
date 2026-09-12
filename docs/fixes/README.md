@@ -13,8 +13,8 @@ sesión de chat.
 
 ## Correcciones registradas
 
-- [navegacion-online-h166.md](navegacion-online-h166.md) — H-166, VERIFICADO;
-  publicación pendiente. Proyección por revisión, POS progresivo, lecturas
+- [navegacion-online-h166.md](navegacion-online-h166.md) — H-166, CERRADO Y PUBLICADO;
+  HTML/SW verificados por hash. Proyección por revisión, POS progresivo, lecturas
   condicionales de Supabase y marca sin regeneración redundante; A/B/C 21/21 PASS.
 
 - [online-only-h164.md](online-only-h164.md) — H-164, IMPLEMENTADO Y PUBLICADO;

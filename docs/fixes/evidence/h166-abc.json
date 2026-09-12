@@ -154,5 +154,14 @@
   ],
   "readRetries": [],
   "method": "Real HTTPS RPC/authority; isolated Chromium A/B/C; failures abort real transport only; no mocked authority or service_role in browser",
-  "scope": "Domain APIs on the final browser artifact plus rendered offline/recovery screen. Visual workflows have separate UI regression evidence."
+  "scope": "Domain APIs on the final browser artifact plus rendered offline/recovery screen. Visual workflows have separate UI regression evidence.",
+  "conditionalSnapshot": {
+    "realtimeSignals": [
+      4,
+      4
+    ],
+    "idleChecks": 4,
+    "idleFullSnapshots": 0,
+    "stale": 0
+  }
 }

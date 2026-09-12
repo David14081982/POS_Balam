@@ -1,0 +1,25 @@
+{
+  "verifiedAt": "2026-09-12T20:19:30.619Z",
+  "runId": 34716573314,
+  "runUrl": "https://github.com/David14081982/POS_Balam/actions/runs/34716573314",
+  "deployedCommit": "c06287f096ce828cc256e573457066d5c631bc54",
+  "technicalCommit": "69b5054",
+  "regression": "PASS",
+  "deploy": "PASS",
+  "files": [
+    {
+      "file": "index.html",
+      "url": "https://david14081982.github.io/POS_Balam/",
+      "sha256": "6759af519a2cc451d3b203afaf3bde5c46d2ebae53870d1644a8e8caf2894c81",
+      "bytes": 8977362,
+      "status": 200
+    },
+    {
+      "file": "sw.js",
+      "url": "https://david14081982.github.io/POS_Balam/sw.js",
+      "sha256": "84489b8746d799ac967dc67c77c492534b9bd1d9b1200ba0d37e115dab7af4a5",
+      "bytes": 4477,
+      "status": 200
+    }
+  ]
+}
