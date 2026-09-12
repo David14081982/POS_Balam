@@ -7434,7 +7434,7 @@ escrituras comerciales remotas; adopción en la terminal del usuario pendiente.
 
 **Estado:** ABIERTO — diagnóstico y evaluación arquitectónica completados;
 corrección y adopción física pendientes. **Certificación:** NO CERTIFICADO.
-**Fecha:** 11/09/2026, Hermosillo. **Commit:** Pendiente de commit.
+**Fecha:** 11/09/2026, Hermosillo. **Commit de evaluación:** `2d47d7b` (local).
 **Origen:** 14 equipos reportados frente a tres puestos operativos, cola 1/1
 después de Punto Cero, actualización de cliente mal indicada y diálogo invisible.
 **Evidencia actual:** Pages H163 SHA-256

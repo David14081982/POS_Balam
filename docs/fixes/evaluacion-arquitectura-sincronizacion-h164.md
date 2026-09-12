@@ -3,7 +3,7 @@
 **Riesgo:** H-164, un problema de coherencia y recuperación entre capas.
 **Estado:** ABIERTO. Diagnóstico y comparación completados; defectos sin corregir.
 **Fecha:** 11/09/2026, Hermosillo; consultas del 12/09/2026 UTC.
-**Commit:** Pendiente de commit.
+**Commit de evaluación:** `2d47d7b` (local, sin publicación).
 **Certificación distribuida:** NO CERTIFICADO.
 
 ## Problema y reproducción
