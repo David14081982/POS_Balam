@@ -1,0 +1,76 @@
+{
+  "verifiedAt": "2026-09-12T00:09:39.850187+00:00",
+  "counts": {
+    "apartados": 0,
+    "bloqueos": 0,
+    "cambios": 0,
+    "clientes": 0,
+    "cola": 0,
+    "commission_adjustments": 0,
+    "devoluciones": 0,
+    "exchange_commits": 0,
+    "exchange_items": 0,
+    "folio_counters": 0,
+    "layaway_liquidation_commits": 0,
+    "liquidaciones": 0,
+    "movimientos": 0,
+    "pagos": 0,
+    "physical_card_redemptions": 0,
+    "piezas": 0,
+    "prestamos": 0,
+    "productos": 0,
+    "reclasificaciones": 0,
+    "return_commits": 0,
+    "return_items": 0,
+    "sale_commits": 0,
+    "sale_items": 0,
+    "stock_reservations": 0,
+    "ventas": 0
+  },
+  "aliases": 0,
+  "maps": 0,
+  "epoch": 10,
+  "retiredDevices": 14,
+  "retiredWriteAttemptsRejected": 14,
+  "pendingReviews": 0,
+  "actionableActivity": 0,
+  "preservedHash": "3334c3500d8fe4af3c4b565752042cf9a55b692fa7575d4ef8c7012aa730c8d0",
+  "inventoryEvidenceHashes": {
+    "backups": "2c0700821bfb2e733c185b7feb5a4f395c5730c090fd5c362c063958397af629",
+    "contract": "666f40db63fb9595712976e5cd7eef654f660734245596674d4972875e63b824",
+    "operations": "eed844a766453891b177bdb9b5884122f5d32ddff3afdd1b6dbfa837b470d7e1"
+  },
+  "migrations": [
+    "20260911020600",
+    "20260911020700"
+  ],
+  "functions": [
+    {
+      "name": "point_zero_payload",
+      "beforeMD5": "80ecd36acac5c871d43b1adb83b2de96",
+      "afterMD5": "63f7084940cf49431f4c4e19dc665498",
+      "exactDefinition": true,
+      "grantsPreserved": true
+    },
+    {
+      "name": "execute_point_zero",
+      "beforeMD5": "7bbcd91094d2c62167892c3c701eacd6",
+      "afterMD5": "50e582383960e44aae96c766d4aa89c3",
+      "exactDefinition": true,
+      "grantsPreserved": true
+    },
+    {
+      "name": "point_zero_preview",
+      "unchanged": true,
+      "md5": "ce5b00b45ad34c923e93eb7be3350fdb"
+    },
+    {
+      "name": "create_point_zero_backup",
+      "unchanged": true,
+      "md5": "366c8cd7e7aefbf8b7872f2dd39622b8"
+    }
+  ],
+  "aliasGuardUnchanged": true,
+  "businessWritesDuringVerification": 0,
+  "physicalOfflineAdoption": "NO CERTIFICADO"
+}

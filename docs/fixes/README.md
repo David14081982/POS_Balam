@@ -35,6 +35,7 @@ sesión de chat.
 
 | Archivo | Riesgo | Tema |
 |---|---|---|
+| `punto-cero-enlaces-inventario-h160.md` | H-160 | Respaldo completo y Punto Cero real ejecutado con alias/mapas V3; conservación verificada, adopción offline pendiente |
 | `limpieza-pendientes-cuarentena-h150.md` | H-150 | Descarte respaldado de cuarentena con rechazo atómico y protección contra replay |
 | `convergencia-inventario-cola-h142.md` | H-142 | Conservación de pendientes, conflictos, recepción y diagnóstico de equipos |
 | `paneles-plegables-catalogos-h141.md` | H-141 | Paneles independientes con borradores conservados al plegar |

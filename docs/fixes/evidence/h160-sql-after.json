@@ -1,0 +1,172 @@
+{
+  "baseline": false,
+  "certification": "Isolated PostgreSQL behavior; no real Supabase/RLS/A/B/C certification",
+  "migration": "supabase/migrations/20260911020600_pos_h160_point_zero_inventory_links.sql",
+  "migrationSHA256": "9b2effbf4be7f64c946be2c1ad7d6aed99d5f3b839a2b7adf2c5a0795df34ed1",
+  "baselineSources": [
+    {
+      "name": "h133_internal_enabled",
+      "file": "20260830017200_pos_h133_inventory_v3_contract.sql",
+      "sha256": "cba9f654770a1e319a22c8bd275737bbbdc8549c883b5261174f58a20cf35d29"
+    },
+    {
+      "name": "h133_alias_immutable",
+      "file": "20260830017200_pos_h133_inventory_v3_contract.sql",
+      "sha256": "e0ec53b7cd7d3d851a2483d0c8950ad86c3871d3049828fc58635d7ef718bcc4"
+    },
+    {
+      "name": "config_fingerprint",
+      "file": "20260802010500_pos_h68_purge_test_data.sql",
+      "sha256": "46b79ebc6a118a8be43941d075e762b74626a3e0804eeed2bfee144c43bad1bc"
+    },
+    {
+      "name": "total_stock_pieces",
+      "file": "20260802010500_pos_h68_purge_test_data.sql",
+      "sha256": "c9a0e97fb2b84e2fb271c7e4084c07f28736637511e117f7f36b8917d828e713"
+    },
+    {
+      "name": "purge_test_data",
+      "file": "20260802010700_pos_h68_purge_where_clause.sql",
+      "sha256": "d6fde644eeeea3d54a2e71b57279d23c3b1cf10a8ea74d9423541250a2206a79"
+    },
+    {
+      "name": "point_zero_payload",
+      "file": "20260812013900_pos_h98_point_zero.sql",
+      "sha256": "66926d7edc69dbcc24f8d8efcb5420e70222a66db534fbc7b9ec7819b3e8731e"
+    },
+    {
+      "name": "point_zero_sha256",
+      "file": "20260812013900_pos_h98_point_zero.sql",
+      "sha256": "1c9f8d63fda1ce4ee8a5f49e33db0ce63f2ccbf9c9d7831c19d9cafb3b98dda8"
+    },
+    {
+      "name": "point_zero_preserved_hash",
+      "file": "20260812013900_pos_h98_point_zero.sql",
+      "sha256": "02f0552d47f699b05a40ddba0e6b4e59350edb386da6eaf131d5def2c45d668f"
+    },
+    {
+      "name": "point_zero_preview",
+      "file": "20260911020400_pos_h159_point_zero_readiness.sql",
+      "sha256": "5a584e787bba59a1d2f4175ed629cc1554616e8a0d476b593aef6c97dacdcb71"
+    },
+    {
+      "name": "create_point_zero_backup",
+      "file": "20260812013900_pos_h98_point_zero.sql",
+      "sha256": "f13da1dce47a71ddc71d4a986776596eed0ad896dee41c6ffcfbba1ac36e86f7"
+    },
+    {
+      "name": "execute_point_zero",
+      "file": "20260910019800_pos_h154_device_retirement.sql",
+      "sha256": "8aedef73b3dbbeab793b693213112aa85d3f5b5d81e169ec72779d36e46809ec"
+    },
+    {
+      "name": "point_zero_receipt",
+      "file": "20260812013900_pos_h98_point_zero.sql",
+      "sha256": "79cd7240f378e71b2e28c596a088afa139f1032c0b6c494895db805dcacd7387"
+    }
+  ],
+  "passed": 11,
+  "total": 11,
+  "checks": [
+    {
+      "name": "pre-H160 real alias FK reproduces failure and full rollback",
+      "passed": true,
+      "evidence": {
+        "error": "update or delete on table \"products\" violates RESTRICT setting of foreign key constraint \"barcode_aliases_product_id_fkey\" on table \"barcode_aliases\"",
+        "rolledBack": true,
+        "beforeAndAfter": {
+          "products": 2,
+          "aliases": 1,
+          "mappings": 1
+        }
+      }
+    },
+    {
+      "name": "pre-H160 map FK independently rejects deletion without aliases",
+      "passed": true,
+      "evidence": {
+        "error": "update or delete on table \"products\" violates RESTRICT setting of foreign key constraint \"inventory_v1_v2_map_target_v2_product_id_fkey\" on table \"inventory_v1_v2_map\"",
+        "rolledBack": true
+      }
+    },
+    {
+      "name": "backup seals all 23 families including both inventory dependencies",
+      "passed": true,
+      "evidence": {
+        "families": 23,
+        "aliases": 1,
+        "mappings": 1,
+        "businessUnchanged": true
+      }
+    },
+    {
+      "name": "successful execution deletes children before products and preserves protected state",
+      "passed": true,
+      "evidence": {
+        "childrenAndProductsZero": true,
+        "protectedHashUnchanged": true,
+        "retirementPreserved": true,
+        "idempotent": true
+      }
+    },
+    {
+      "name": "failure after child deletion rolls back children, operations and protected data",
+      "passed": true,
+      "evidence": {
+        "childrenRestored": true,
+        "protectedHashRestored": true,
+        "gucRestored": true
+      }
+    },
+    {
+      "name": "internal exception is scoped to aliases and restores the caller GUC",
+      "passed": true,
+      "evidence": {
+        "restoredBeforeProducts": true,
+        "ordinaryDeleteBlocked": true,
+        "ordinaryUpdateBlocked": true
+      }
+    },
+    {
+      "name": "a caller already using the internal scope keeps its original value",
+      "passed": true,
+      "evidence": {
+        "callerValueRestored": "on"
+      }
+    },
+    {
+      "name": "failure while the alias exception is active rolls back data and GUC",
+      "passed": true,
+      "evidence": {
+        "childrenRestored": true,
+        "gucRestored": "off",
+        "ordinaryGuardStillActive": true
+      }
+    },
+    {
+      "name": "ordinary aliases remain immutable outside Punto Cero",
+      "passed": true,
+      "evidence": {
+        "updateBlocked": true,
+        "deleteBlocked": true
+      }
+    },
+    {
+      "name": "map-only inventory also completes without an alias row",
+      "passed": true,
+      "evidence": {
+        "aliasesBefore": 0,
+        "mappingsBefore": 1,
+        "childrenAndProductsAfter": 0
+      }
+    },
+    {
+      "name": "changes to either dependency invalidate the previous backup token",
+      "passed": true,
+      "evidence": {
+        "aliasChangeInvalidates": true,
+        "mapChangeInvalidates": true
+      }
+    }
+  ]
+}

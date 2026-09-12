@@ -1,0 +1,26 @@
+{
+    "operation":  "Descartar pendientes registrados, sin retiro de equipos ni Punto Cero",
+    "result":  {
+                   "at":  "2026-09-11T23:46:03.008324+00:00",
+                   "business_unchanged":  true,
+                   "devices_active":  6,
+                   "fleet_unchanged":  true,
+                   "pending_quarantine":  0,
+                   "preserved_hash":  "3334c3500d8fe4af3c4b565752042cf9a55b692fa7575d4ef8c7012aa730c8d0",
+                   "registered_blocks":  0,
+                   "registered_queue":  0,
+                   "rejected":  60,
+                   "retry_commands":  0,
+                   "reviewed":  193
+               },
+    "preflight_backup":  {
+                             "bytes":  18086369,
+                             "sha256":  "803166f47a602349ece8f739a4f9133789c56aa8e455ad010784a52452b4075d",
+                             "payload_hash":  "b63395b23d0f10864d0b6f9d610731ddc71f910caacf0b2115986c33efd0bc3c",
+                             "private_file":  "RESPALDO-PREVIO-PUNTO-CERO-20260911.json"
+                         },
+    "global_point_zero_executed":  false,
+    "device_retirement_executed":  false,
+    "history_preserved":  true,
+    "offline_storage_observed":  false
+}

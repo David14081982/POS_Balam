@@ -1,7 +1,7 @@
 # Punto Cero: respaldo recuperable y diagnóstico operativo
 
 **Riesgo:** H-159
-**Estado:** CORREGIDO Y PUBLICADO; convergencia certificada. Punto Cero global pendiente.
+**Estado:** CORREGIDO Y PUBLICADO; convergencia certificada. Punto Cero global ejecutado tras H160.
 **Fecha:** 11/09/2026
 **Commit técnico:** `5f9eb63639182494a953b5e7f6e85aa636b94550`
 
@@ -169,16 +169,10 @@ Entrega publicada desde `main`: H148 `34655403188` (regresión y Pages) y H132
 incluida la raíz sin parámetros. Evidencia: `evidence/h159-pages.json`.
 El HTML, el offline y el certificador conservan los hashes registrados arriba.
 
-La ejecución operativa requiere resolver las instalaciones activas pendientes;
-se pidió identificar los equipos/navegadores vigentes antes de alterar su estado.
-La revisión operativa está en Configuración → Negocio → Centro de equipos →
-Equipos. Una instalación vigente debe conectarse y completar su actualización;
-una instalación reconocida que ya no se usa puede retirarse mediante el flujo
-administrativo existente. Después se vuelve a Administración / Datos → Abrir
-Punto Cero → Revisar de nuevo. La herramienta «Establecer punto cero» del centro
-de sincronización tiene otro propósito y no sustituye esta limpieza.
-El agente no retiró instalaciones ni borró datos comerciales; sólo creó y
-eliminó los registros temporales de sus pruebas autorizadas.
+La continuación operativa quedó autorizada y ejecutada según el apartado
+siguiente y H160. Las 14 instalaciones anteriores permanecen retiradas; para
+reutilizar una terminal debe reactivarse administrativamente y completar la
+sincronización. La adopción física de la nueva época permanece NO CERTIFICADA.
 El respaldo es JSON sellado; H98 no proporciona una restauración automática.
 Una pestaña abierta puede seguir ejecutando el cliente anterior hasta actualizarse.
 
@@ -193,6 +187,55 @@ escritura H154, verificado también por su matriz real histórica. La ampliació
 del preview es aditiva para los clientes anteriores. Administrador/capacidad y
 modo se verifican otra vez en servidor. La nueva prueba recorre las transiciones
 que los mocks siempre listos de H98/H157 omitían, además del éxito SQL completo.
+
+## Ejecución operativa autorizada — 11/09/2026
+
+El dueño ordenó descartar todo lo pendiente de sincronizar y retirar las
+instalaciones anteriores sin conservar intenciones offline; mantiene su petición
+de vaciar inventario/operaciones preservando las ocho categorías protegidas.
+La lectura inicial encontró 14 instalaciones (seis activas), 60 casos pendientes
+de revisión, 193 actividades no confirmadas y 41 conflictos históricos. La cola
+declarada por los equipos era cero. Se exportó evidencia privada y se emplearon
+las RPC administrativas para cerrar revisiones/reintentos y retirar la flota.
+La definición vigente de Punto Cero conserva expresamente `status <> 'revoked'`
+al solicitar actualización a los equipos; el retiro permanece al cambiar época.
+La revisión automática rechazó el retiro de las seis instalaciones aún activas
+por requerir autorización explícita para ese alcance. La transacción rechazada
+no se ejecutó. Se solicitó esa autorización al dueño y se completó la alternativa
+acotada que sí estaba autorizada: guardar copia previa, rechazar 60 casos mediante
+`admin_decide_sync_quarantine` y revisar 193 actividades mediante
+`admin_mark_sync_activity_reviewed`, cancelando sus reintentos.
+
+Resultado remoto 23:46:03 UTC: cola declarada 0, bloqueos 0, revisiones pendientes
+0 y órdenes de reintento 0. La flota conserva sus seis instalaciones activas;
+la huella protegida y el payload comercial son idénticos antes/después. Las
+actividades conservan sus estados históricos: no se marcaron como sincronizadas
+ni se inventaron confirmaciones. Los 41 conflictos históricos se conservan.
+No se ejecutó Punto Cero ni se retiró ningún equipo en esta operación.
+
+La copia privada `RESPALDO-PREVIO-PUNTO-CERO-20260911.json` está en la raíz del
+workspace, fuera del repositorio publicado: 18,086,369 bytes, SHA-256
+`803166f47a602349ece8f739a4f9133789c56aa8e455ad010784a52452b4075d`.
+Es una exportación previa de lectura; no sustituye el respaldo sellado obligatorio
+del RPC. Evidencia pública sin payload: `evidence/h159-pending-discard.json`.
+La limpieza física del almacenamiento de navegadores apagados no fue observada.
+
+El dueño respondió después: «Sí, retirar las seis y completar Punto Cero».
+Se retiraron esas seis instalaciones mediante la RPC existente, quedando 14
+retiradas. El primer respaldo sellado y la ejecución real descubrieron H160:
+el borrado falló por `barcode_aliases_product_id_fkey`, con rollback completo,
+2,386 productos/3,502 piezas intactos y la misma huella protegida.
+
+H160 incorporó los aliases y mapas al respaldo y al borrado transaccional.
+Se creó un respaldo nuevo de 23 familias, se guardó y verificó localmente, y
+Punto Cero terminó el 12/09/2026 a las 00:07:48 UTC (11/09 en Hermosillo).
+Todos los conteos operativos quedaron en cero, aliases/mapas en cero, época
+9→10 y las ocho categorías protegidas conservaron su huella. Permanecen 14
+equipos retirados; la verificación posterior rechazó sus 14/14 intentos contra
+la guarda de escritura. Revisiones pendientes y reintentos centrales: cero.
+Evidencia: `evidence/h160-operation.json` y `evidence/h160-final-authority.json`.
+La adopción de época 10 en equipos físicos apagados sigue **NO CERTIFICADA**;
+el certificado A/B/C previo corresponde a la convergencia del mismo HTML.
 
 ## Referencias
 

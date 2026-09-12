@@ -7165,7 +7165,7 @@ La certificación no resuelve riesgos ajenos como H156 UPSERT.
 
 ## H-159 — Punto Cero no recupera el respaldo y cuenta estado retirado como operativo
 
-**Estado:** CORREGIDO Y PUBLICADO; convergencia certificada. Punto Cero global pendiente.
+**Estado:** CORREGIDO Y PUBLICADO; convergencia certificada. Punto Cero global ejecutado tras H160.
 **Fecha:** 11/09/2026.
 **Commit técnico:** `5f9eb63639182494a953b5e7f6e85aa636b94550`.
 **Origen:** respaldo deshabilitado con cero cambios y bloqueos, sin acción
@@ -7197,10 +7197,48 @@ Evidencia: `docs/fixes/evidence/h159-final-preview.json`.
 `34655403158` correctos en el primer intento. Pages verificado el 11/09/2026
 a las 22:50:54 UTC: 10/10 archivos HTTP 200 idénticos, incluida la raíz sin
 parámetros. Evidencia: `docs/fixes/evidence/h159-pages.json`.
-**Pendiente:** identificar/sincronizar las instalaciones activas y completar
-el respaldo y la ejecución operativa de Punto Cero.
-La convergencia del artefacto no certifica un Punto Cero global: ese recorrido
-queda **NO CERTIFICADO** hasta el respaldo y la ejecución operativa reales.
-**Riesgo residual:** las instalaciones activas ausentes requieren revisión
-operativa; no se retiran equipos ni se ejecuta un borrado durante el diagnóstico.
+**Continuación operativa 11/09/2026 23:46:03 UTC:** el dueño ordenó descartar
+todos los pendientes. Se guardó copia privada de 18 MB, se rechazaron 60
+revisiones y se cerraron reintentos de 193 actividades por RPC. Cola declarada,
+bloqueos, revisiones y órdenes de reintento: 0. Payload comercial, configuración
+y flota conservados. Evidencia: `docs/fixes/evidence/h159-pending-discard.json`.
+La revisión automática rechazó inicialmente el retiro; el dueño autorizó
+después expresamente retirar las seis y completar Punto Cero. Se retiraron y
+el primer borrado se revirtió íntegramente por la FK descrita en H160.
+Tras corregir H160, crear y verificar el respaldo de 23 familias, la ejecución
+real terminó el 12/09/2026 00:07:48 UTC: inventario y operaciones cero, huella
+protegida idéntica, época 10 y 14 instalaciones retiradas. Revisiones/reintentos
+centrales cero; 14/14 intentos ante la guarda de escritura fueron rechazados.
+**Pendiente/residual:** reactivación y sincronización de las terminales que se
+vuelvan a usar. Adopción física de época 10 **NO CERTIFICADA**; no se afirma
+haber borrado el almacenamiento de equipos apagados.
 **Documento:** `docs/fixes/punto-cero-respaldo-recuperable-h159.md`.
+
+## H-160 — Punto Cero omite los enlaces de inventario V3
+
+**Estado:** CORREGIDO, APLICADO Y EJECUTADO; adopción física NO CERTIFICADA.
+**Fecha:** 11/09/2026. **Commit:** Pendiente de commit.
+**Reproducción real:** después de retirar las seis instalaciones autorizadas y
+guardar el respaldo sellado, `execute_point_zero` devolvió `failed`,
+`rolled_back=true` y `barcode_aliases_product_id_fkey`. Permanecen los 2,386
+productos y 3,502 piezas; la huella protegida no cambió.
+**Causa:** el payload y el borrado H98 no incorporan `barcode_aliases` ni
+`inventory_v1_v2_map`, hijos de productos con FK RESTRICT introducidos por H133.
+**Alcance:** incluir ambos enlaces en el respaldo y eliminarlos antes de sus
+productos dentro de la transacción existente. Conservar la inmutabilidad normal
+de aliases, contrato V3, configuración, catálogos, usuarios, permisos y auditoría.
+**Pruebas:** SQL H160 11/11 (baseline 3/11), H159 15/15, H98 24/24,
+H133 8/8 y migraciones 31/31. 206/207 aplicadas; verificación real de payload,
+permisos, identidad, confirmación y FK aprobada sin escrituras comerciales.
+**Ejecución:** 12/09/2026 00:07:48 UTC, respaldo completo de 23 familias
+`72a5453d-98b2-439a-8239-26d707711d9e` descargado y verificado. Todos los
+conteos operativos cero, aliases 138→0, mapas 831→0 y época 9→10.
+Las ocho categorías protegidas, contrato V3 y evidencia histórica mantuvieron
+sus huellas; las 14 instalaciones permanecen retiradas. Comprobación posterior:
+14/14 rechazos `DEVICE_RETIRED`, revisiones/reintentos centrales cero.
+**Evidencia:** `docs/fixes/evidence/h160-operation.json`,
+`h160-final-authority.json` y pruebas SQL enlazadas en el expediente.
+**Residual:** la época 10 no se observó en los equipos apagados; deben
+reactivarse y sincronizarse antes de reutilizarlos. El respaldo JSON no dispone
+de una restauración automática H98. No se cambió el HTML publicado.
+**Documento:** `docs/fixes/punto-cero-enlaces-inventario-h160.md`.

@@ -13,9 +13,12 @@ import { createHash } from 'node:crypto';
 const { PGlite } = await import(process.env.BALAM_PGLITE_MODULE
   ? pathToFileURL(process.env.BALAM_PGLITE_MODULE).href : '@electric-sql/pglite');
 const db = new PGlite();
-const baseline = process.argv.includes('--baseline');
+const setupOnly = process.env.BALAM_H159_SETUP_ONLY === '1';
+const baseline = !setupOnly && process.argv.includes('--baseline');
+let setupComplete = false;
 const migrationDir = path.resolve('supabase/migrations');
 const sources = fs.readdirSync(migrationDir).filter(file => file.endsWith('.sql')
+  && (!process.env.BALAM_SQL_MIGRATION_MAX || file.slice(0,14) <= process.env.BALAM_SQL_MIGRATION_MAX)
   && !/verification/.test(file) && (!baseline || !file.includes('_h159_')))
   .sort().map(file => ({ file, text: fs.readFileSync(path.join(migrationDir, file), 'utf8').replace(/\r\n/g, '\n') }));
 const definitions = [];
@@ -110,6 +113,18 @@ try {
     create table pos.purged_documents(kind text,identity text,purge_id text,primary key(kind,identity));
     create table pos.point_zero_backups(backup_id uuid primary key default gen_random_uuid(),created_at timestamptz default now(),created_by uuid,actor_email text,device_id text,client_build text,schema_version bigint,preview_token text,payload_hash text,counts jsonb,payload jsonb);
     create table pos.point_zero_operations(operation_id text primary key,backup_id uuid,status text,started_at timestamptz default now(),completed_at timestamptz,actor_user_id uuid,actor_email text,device_id text,client_build text,schema_version bigint,preview_token text,counts_before jsonb,counts_after jsonb,result jsonb default '{}');`);
+  // H133's real RESTRICT relationships and immutable alias trigger are part of
+  // Punto Cero's deletion boundary, including in the shared H160 fixture.
+  const h133 = fs.readFileSync(path.join(migrationDir, '20260830017200_pos_h133_inventory_v3_contract.sql'), 'utf8');
+  for (const name of ['barcode_aliases', 'inventory_v1_v2_map']) {
+    const start = h133.indexOf('create table if not exists pos.' + name + ' (');
+    const end = h133.indexOf('\n);', start);
+    assert.ok(start >= 0 && end > start, 'Missing real H133 table ' + name);
+    await db.exec(h133.slice(start, end + 3));
+  }
+  for (const name of ['h133_internal_enabled','h133_alias_immutable']) await db.exec(actualFunction(name));
+  await db.exec(`create trigger h133_alias_immutable before update or delete on pos.barcode_aliases
+    for each row execute function pos.h133_alias_immutable()`);
   for (const name of ['config_fingerprint','total_stock_pieces','purge_test_data','point_zero_payload',
     'point_zero_sha256','point_zero_preserved_hash','point_zero_preview','create_point_zero_backup','execute_point_zero','point_zero_receipt']) {
     await db.exec(actualFunction(name));
@@ -153,8 +168,14 @@ try {
     insert into pos.stock_reservations values('reservation','SYNTHETIC-SALE','[{"product_id":"v1","talla":"M","qty":2}]');
     insert into pos.sale_commits values('sale-commit'); insert into pos.return_commits values('return-commit');
     insert into pos.exchange_commits values('exchange-commit'); insert into pos.layaway_liquidation_commits values('layaway-commit');
-    insert into pos.folio_counters values('V',current_date);`);
+    insert into pos.folio_counters values('V',current_date);
+    insert into pos.barcode_aliases(alias_code,product_id,contract_version,source,operation_id)
+      values('H160-LEGACY','v2',2,'h133-migration','16000000-0000-4000-8000-000000000001');
+    insert into pos.inventory_v1_v2_map(source_v1_product_id,size_scale,raw_size_value,target_v2_product_id,source_stock,operation_id)
+      values('v1','alpha','M','v2',10,'16000000-0000-4000-8000-000000000001');`);
+  setupComplete = true;
 
+  if (!setupOnly) {
   await scenario('retired equipment with 0/0 does not block the active clean fleet', async () => {
     const p = await preview(); assert.equal(p.queue_pending, 0); assert.equal(p.active_locks, 0);
     assert.equal(p.sync_complete, true); assert.equal(p.unsynchronized_devices, 0);
@@ -182,7 +203,7 @@ try {
     const payload = await scalar('select pos.point_zero_payload()'); const b = await backup(p);
     assert.equal(b.ok, true); assert.deepEqual(b.document.payload, payload); assert.equal(b.payload_hash, p.snapshot_hash);
     assert.equal(await preserved(), before); assert.deepEqual(await scalar('select pos.point_zero_payload()'), payload);
-    assert.equal(Object.keys(payload).length, 21); assert.ok(Object.values(payload).every(rows => rows.length > 0));
+    assert.equal(Object.keys(payload).length, 23); assert.ok(Object.values(payload).every(rows => rows.length > 0));
   });
   await scenario('production, admin and capability guards remain enforced', async () => {
     await cleanFleet(); const p = await preview();
@@ -242,11 +263,16 @@ try {
     assert.ok(Object.entries(after).every(([key,rows]) => key==='clients' ? rows.length===13 : rows.length===0));
     assert.equal(await scalar("select status from pos.sync_devices where device_id='retired'"),'revoked');
   });
+  }
 } finally {
-  await db.close();
+  if (!setupOnly || !setupComplete) await db.close();
+  if (!setupOnly) {
   const report = { baseline, certification: 'Isolated SQL behavior only; no real Supabase A/B/C or RLS certification',
     sources: definitions, passed: checks.filter(check => check.passed).length, total: checks.length, checks };
   if (process.env.BALAM_H159_SQL_OUTPUT) fs.writeFileSync(process.env.BALAM_H159_SQL_OUTPUT, JSON.stringify(report,null,2));
   console.log(`H159 SQL: ${report.passed}/${report.total}`);
   if (checks.some(check => !check.passed)) process.exitCode=1;
+  }
 }
+
+export { db, scalar, preview, backup, execute, preserved, denied, cleanFleet, definitions };

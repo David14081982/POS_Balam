@@ -16,6 +16,7 @@ on:
       - 'test-h152-*.mjs'
       - 'test-h155-*.mjs'
       - 'test-h159-*.mjs'
+      - 'test-h160-*.mjs'
       - 'test-store-queue.mjs'
       - 'test-concurrency.mjs'
       - 'test-h142-*.mjs'
@@ -38,6 +39,7 @@ on:
       - 'test-h152-*.mjs'
       - 'test-h155-*.mjs'
       - 'test-h159-*.mjs'
+      - 'test-h160-*.mjs'
       - 'test-store-queue.mjs'
       - 'test-concurrency.mjs'
       - 'test-h142-*.mjs'
@@ -86,6 +88,10 @@ jobs:
         env:
           BALAM_PGLITE_MODULE: ${{ runner.temp }}/balam-h155-pglite/node_modules/@electric-sql/pglite/dist/index.js
         run: node test-h159-point-zero-sql.mjs
+      - name: Verify Punto Cero inventory dependencies and immutability
+        env:
+          BALAM_PGLITE_MODULE: ${{ runner.temp }}/balam-h155-pglite/node_modules/@electric-sql/pglite/dist/index.js
+        run: node test-h160-point-zero-sql.mjs
       - run: node test-h155-build-eol.mjs
       - run: node test-h155-auto-sync.mjs
       - name: Verify H155 SQL guards and STORE acknowledgements
