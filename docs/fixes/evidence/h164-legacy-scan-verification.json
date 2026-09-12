@@ -1,0 +1,114 @@
+{
+  "ok": true,
+  "verifiedAt": "2026-09-12T15:27:05.519469+00:00",
+  "baselineAt": "2026-09-12T15:24:04.978973+00:00",
+  "scope": "H164 legacy parser correction only; no QA reactivation, Auth changes or business commands",
+  "migrations": [
+    {
+      "file": "20260912021600_pos_h164_legacy_container_scan.sql",
+      "sha256": "d42a320b1ba98d42c9e949bc7ba2a83bf73c9caba2d3b1b227bf3743e49b41f9"
+    },
+    {
+      "file": "20260912021700_pos_h164_legacy_container_scan_verification.sql",
+      "sha256": "7844cac1eb2b75042d14ec9b535bf2b286a6eddb03c3e0e8c4be94bee6e7ea01"
+    }
+  ],
+  "localVerification": "PASS --legacy-scan-only; one composite intake; no previously successful commercial matrix repeated",
+  "remoteVerification": "PASS migration217 fixture rollback",
+  "preservation": {
+    "commercialTables": 35,
+    "commercialFingerprintsUnchanged": true,
+    "priorArchiveCount": 15,
+    "priorArchivedRowsUnchanged": true,
+    "newlyArchivedSources": 6,
+    "allOriginalHashesValid": true,
+    "unconfirmedOperationsUnchanged": true,
+    "unconfirmedOperationCount": 1,
+    "runtimeUnchanged": true,
+    "deviceIdentityStatusUnchanged": true,
+    "businessInstallations": 14,
+    "retiredBusinessInstallations": 13,
+    "nonRetiredBusinessInstallations": 1,
+    "activeQaInstallations": 0
+  },
+  "acl": {
+    "at": "2026-09-12T15:27:05.519469+00:00",
+    "browserWriteTableCount": 0,
+    "fenceCount": 35,
+    "functions": [
+      {
+        "anon": false,
+        "authenticated": true,
+        "definitionHash": "2c7cbf75f189e554ed92d99fea26ccf0",
+        "name": "archive_online_legacy",
+        "owner": "postgres",
+        "public": false,
+        "securityDefiner": true
+      },
+      {
+        "anon": false,
+        "authenticated": false,
+        "definitionHash": "aeb9e6b7a32ea1747a47e50cf833b919",
+        "name": "classify_online_legacy",
+        "owner": "postgres",
+        "public": false,
+        "securityDefiner": true
+      },
+      {
+        "anon": false,
+        "authenticated": false,
+        "definitionHash": "78958224d7ec4c36fd06303c65b45370",
+        "name": "online_legacy_intents",
+        "owner": "postgres",
+        "public": false,
+        "securityDefiner": false
+      },
+      {
+        "anon": false,
+        "authenticated": true,
+        "definitionHash": "8b6b4103713f345c63039f6912b817c5",
+        "name": "online_legacy_review_count",
+        "owner": "postgres",
+        "public": false,
+        "securityDefiner": true
+      },
+      {
+        "anon": false,
+        "authenticated": false,
+        "definitionHash": "83f0b2e029ec1a2efc4e486934d86ff9",
+        "name": "online_legacy_scan",
+        "owner": "postgres",
+        "public": false,
+        "securityDefiner": false
+      },
+      {
+        "anon": false,
+        "authenticated": false,
+        "definitionHash": "0998887f180ab0ecbecd669797d154bc",
+        "name": "online_legacy_technical_kind",
+        "owner": "postgres",
+        "public": false,
+        "securityDefiner": false
+      }
+    ],
+    "invalidOriginalHashes": 0,
+    "operationsWithClassificationIssue": 0,
+    "sourcesWithScanIssues": 0
+  },
+  "observedAdoption": {
+    "installations": 1,
+    "state": "ready",
+    "stage": "complete",
+    "remainingLegacy": 0,
+    "archivedCount": 6,
+    "code": null,
+    "reportedAt": "2026-09-12T15:25:26.57923+00:00",
+    "observedAt": "2026-09-12T15:25:57.545576+00:00",
+    "latestHeartbeat": "2026-09-12T15:25:49.592187+00:00"
+  },
+  "limitations": [
+    "Adoption is telemetry from one physical installation; it does not certify three physical terminals.",
+    "The existing unconfirmed inventory operation remains isolated for individual decision. No replay, confirmation or discard was inferred.",
+    "Detailed business fingerprints, identifiers and archived payloads remain private; this artifact contains aggregates and source-code hashes only."
+  ]
+}

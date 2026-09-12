@@ -1,0 +1,21 @@
+{
+  "verifiedAt": "2026-09-12T15:31:33.675Z",
+  "scope": "Exact physical-device legacy source, read-only diagnosis; no accounts or operations changed",
+  "sourceFamily": "localStorage:balam_pos_products_v2",
+  "physicalOriginalSha256Verified": true,
+  "sqlState": "22003",
+  "cause": "The old legacy parser treated ordinary product identifier text as a JSON number. The exact problematic strings found in the newly archived physical cache match the real payload already reproduced locally.",
+  "localEvidence": "legacy-real-payload-local-reproduction.json",
+  "originalPreservedInSupabase": true,
+  "archivedSourcesCompleted": 6,
+  "remainingLegacySourcesReported": 0,
+  "physicalAdoptionState": "ready",
+  "physicalAdoptionStage": "complete",
+  "commercialReplayExecuted": 0,
+  "additionalSqlTestsExecuted": 0,
+  "newQaMatrixExecuted": false,
+  "limitations": [
+    "One physical installation observed; this is not a new A/B/C certification.",
+    "The previously isolated unconfirmed commercial operation remains preserved for its individual decision."
+  ]
+}

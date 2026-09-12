@@ -1,0 +1,26 @@
+{
+  "commit": "67ccb325ce988e36a565e4e3baf992a348d16d32",
+  "build": "2026-09-12-h164-online",
+  "ci": {
+    "url": "https://github.com/David14081982/POS_Balam/actions/runs/34701043823",
+    "regression": "SUCCESS",
+    "deploy": "SUCCESS",
+    "artifactMatchesCommittedBuild": true,
+    "adoptionStoreCases": 10,
+    "startupAuthAppCases": 5,
+    "pwaAdoptionCases": 4,
+    "finalArtifactUiCases": 6,
+    "finalArtifactPwaCases": 2,
+    "sqlMigrationsVerifiedThrough": "20260912021500"
+  },
+  "pages": {
+    "url": "https://david14081982.github.io/POS_Balam/",
+    "verifiedAt": "2026-09-12T15:06:10.520Z",
+    "htmlBytes": 8974368,
+    "htmlSha256": "4057532d8dba1fce2ee1b01e595f0f602d0cc2ebc764863075801fdecef9ce09",
+    "workerBytes": 4477,
+    "workerSha256": "b572046849dd2a0c97be2fa147bac6d684df7422e9fd396c374376c34b423a24",
+    "matchesCommit": true
+  },
+  "scope": "Software delivery only. Physical adoption and the isolated unconfirmed legacy operation require separate evidence."
+}

@@ -7441,17 +7441,32 @@ Realtime y referencias de otro actor ya no bloquean la lectura confirmada.
 PWA coordina recarga segura y omite caché HTTP obsoleta. SQL 214/215 aplicado y
 verificado: 35 tablas comerciales y 15 originales intactos, 13 instalaciones
 retiradas sin cambios. Sólo queda una operación legacy no confirmada aislada
-para decisión. Pruebas dirigidas PASS; publicación del nuevo bundle y adopción
-física pendientes en este corte. Commit: **Pendiente de commit**.
-La excepción concreta del navegador físico aún no está demostrada.
+para decisión. Cliente publicado en `67ccb325ce988e36a565e4e3baf992a348d16d32`;
+CI 34701043823 y Pages PASS, HTML `4057532d8dba1fce2ee1b01e595f0f602d0cc2ebc764863075801fdecef9ce09`.
+La telemetría del equipo físico del 12/09/2026 a las 15:11:38 UTC ya localizó
+su fallo: `SQL_22003` en inventario, seis fuentes conservadas y ninguna retirada
+en ese intento. Causa reproducida y confirmada en el original del caché físico:
+el extractor interpretaba dos UUID como números JSON fuera de rango. SQL 216/217
+aplicado y verificado: sólo interpreta contenedores; cualquier contenido dañado
+permanece archivado para revisión sin reproducir operaciones. A las 15:25:26 UTC
+el equipo completó automáticamente la adopción: seis fuentes archivadas,
+cero fuentes locales restantes, snapshot remoto y ACK confirmados. Corte de
+15:27:05 UTC: 35 tablas comerciales y 15 archivos anteriores intactos; seis
+nuevos originales con hash válido; una operación no confirmada aislada.
+13 instalaciones retiradas, una activa, QA activos cero. Adopción física
+observada **1/3**; dos puestos y la decisión del lote siguen pendientes.
+La prueba adicional de arranque QA A/B/C no se ejecutó: la revisión automática
+rechazó reactivar cuentas retiradas. Se corrigió y observó el equipo físico
+sin eludir esa restricción. Commit SQL 216/217: **Pendiente de commit**.
 
 **Estado:** IMPLEMENTADO Y PUBLICADO; CERTIFICACIÓN FÍSICA PENDIENTE.
 Conversión online-only activa, sin rediseñar UI.
-**Certificación técnica A/B/C:** PASS; 20/20 escenarios y retiro QA completos.
+**Certificación técnica A/B/C histórica:** PASS; 20/20 escenarios y retiro QA completos
+sobre HTML `25bc985dce9bbe92e83f8dc9c61c6f1cf90fd0b1904dfe09d7bdfd594201d96f`.
 **Equipos físicos:** NO CERTIFICADO. **Publicado:** SÍ.
 **Fecha:** 12/09/2026, Hermosillo.
 **Commit de implementación base:** `95714cfdcb5324fe71dd23f9bf4a57632bfb325b`.
-**Commit técnico publicado:** `df4965b1269239665594eca722c38c9adb86cb68`.
+**Commit del cliente publicado:** `67ccb325ce988e36a565e4e3baf992a348d16d32`.
 **Corrección histórica del arnés PDF:** `0f05350fd286f175fce7bfcab5c04159cc01cb02`.
 **Evidencia documental:** referida al commit técnico publicado; entrega documental separada.
 **Commit de evaluación inicial:** `2d47d7b` (local).

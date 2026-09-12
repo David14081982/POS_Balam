@@ -8,15 +8,15 @@
 
 **Commit de implementación base:** `95714cfdcb5324fe71dd23f9bf4a57632bfb325b`
 
-**Commit técnico publicado:** `df4965b1269239665594eca722c38c9adb86cb68`
+**Commit del cliente publicado:** `67ccb325ce988e36a565e4e3baf992a348d16d32`
 
 **Corrección histórica del arnés PDF:** `0f05350fd286f175fce7bfcab5c04159cc01cb02`
 
-**Evidencia documental:** referida al commit técnico publicado; entrega documental separada
+**Evidencia documental:** cada corte identifica su commit y artefacto; registro documental separado
 
 **Publicado:** SÍ; Pages y activación Supabase verificadas
 
-**Certificación técnica A/B/C:** PASS; 20/20 escenarios y retiro QA completos
+**Certificación técnica A/B/C histórica:** PASS; 20/20 escenarios sobre HTML `25bc985dce9bbe92e83f8dc9c61c6f1cf90fd0b1904dfe09d7bdfd594201d96f` y retiro QA completo. No certifica la adopción del cliente posterior.
 
 **Certificación de los equipos físicos:** NO CERTIFICADO
 
@@ -235,10 +235,10 @@ dominios, configuración, Auth, mensajes y artefacto UI. Publicación y A/B/C
 consumen el artefacto construido y probado. El retiro y sus límites están en
 [la evidencia CI](evidence/h164-ci-retirement.md).
 
-### Entrega verificada
+### Entrega histórica verificada antes de la adopción física
 
 El commit base `95714cf` contiene la conversión; `0f05350` corrigió la espera
-del arnés PDF y su CI 34681857847 pasó. El commit técnico definitivo publicado
+del arnés PDF y su CI 34681857847 pasó. El commit técnico publicado en ese corte
 es **`df4965b1269239665594eca722c38c9adb86cb68`**, que incorpora 212/213 y el
 cierre del arnés. [CI 34683481979](https://github.com/David14081982/POS_Balam/actions/runs/34683481979)
 terminó con regresiones y despliegue **SUCCESS**. UI 6/6 y PWA 2/2 pasaron
@@ -273,10 +273,11 @@ directos/legacy y las cuatro conversiones JSON opcionales. No ejecutó ninguna
 operación comercial. Conserva el mismo límite: cero fuentes recibidas no
 certifica el contenido de los navegadores físicos.
 
-## Pruebas
+## Pruebas históricas de la conversión inicial
 
-No se ejecutaron suites durante esta actualización documental. Se registra
-la evidencia ya producida, con una ejecución por escenario distinto; sólo los
+Este corte registra la evidencia de la entrega `df4965b` anterior a la adopción
+física. Las pruebas posteriores se documentan en su sección. Se conserva
+una ejecución por escenario distinto; sólo los
 casos afectados se repiten cuando cambia su contrato o aparece un fallo.
 
 | Evidencia | Resultado registrado | Límite |
@@ -384,12 +385,13 @@ build, hash del artefacto, fecha, nombres y resultados de los 20 escenarios,
 el rechazo inicial resuelto y los conteos de retiro QA; declara
 `scope.physical:false`. Los recibos, identificadores internos, comparaciones
 detalladas y las 21 entradas originales permanecen en evidencia local privada.
-La certificación técnica usa A/B/C Chromium contra Supabase real, con el HTML publicado
+La certificación técnica histórica usó A/B/C Chromium contra Supabase real, con el HTML
 `25bc985dce9bbe92e83f8dc9c61c6f1cf90fd0b1904dfe09d7bdfd594201d96f`.
 
-212/213 y el cierre del arnés están incluidos en el commit técnico publicado
+212/213 y el cierre del arnés están incluidos en el commit técnico de ese corte
 `df4965b1269239665594eca722c38c9adb86cb68`. Su CI y verificación Pages pasaron;
-el HTML comercial conserva los mismos bytes certificados por la matriz.
+el HTML de esa entrega conservó los bytes certificados por la matriz. El cliente
+de adopción posterior tiene otro hash, documentado en la sección siguiente.
 
 ## Adopción física: arranque y mensaje de conexión
 
@@ -397,7 +399,16 @@ El siguiente arranque físico reportó «Sin conexión» desde la URL publicada,
 aunque Supabase recibía su presencia y evidencia legacy. La inspección de
 permisos y snapshot del mismo actor pasó; el arranque con esos payloads también
 pasó en Chromium y en la integración de módulos, sin escrituras comerciales.
-Todavía no se atribuye una excepción concreta al navegador físico.
+El parche publicado permitió observar la excepción física a las 15:11:38 UTC:
+`SQL_22003`, etapa de inventario, seis fuentes por procesar y cero retiradas
+en ese intento. Ese diagnóstico reemplaza la hipótesis genérica de desconexión.
+El extractor SQL intentaba interpretar cada cadena como JSON. Dos UUID de
+productos empiezan por una secuencia que PostgreSQL interpreta como un exponente
+numérico antes de rechazar el resto del texto: arroja `22003`, distinto del
+`22P02` que el código anterior capturaba. Se reprodujo con las filas reales
+preservadas y se confirmó después en el caché físico recién archivado, cuyo
+original y hash coinciden. La [evidencia causal pública](evidence/h164-physical-legacy-cause.json)
+omite los identificadores y el contenido comercial.
 
 Las reproducciones demostraron cuatro fallos: rechazo SQL presentado como red,
 cuenta inactiva oculta detrás de la barrera comercial, fallo al iniciar Realtime
@@ -432,14 +443,47 @@ individuales Realtime y recibo ajeno PASS; App/Auth 5 comportamientos PASS;
 PWA 4 comportamientos PASS; migraciones 31 PASS; SQL local y remoto 215 PASS.
 Sobre el nuevo bundle: reconexión/formulario 1 PASS y PWA 2 PASS. La matriz de
 20 operaciones comerciales no se repite por esta corrección del arranque.
-La CI del artefacto final y el arranque A/B/C dirigido se registrarán antes
-del cierre. Commit de esta continuación: **Pendiente de commit**.
+CI 34701043823 terminó con regresiones y Pages SUCCESS. El HTML publicado
+`4057532d8dba1fce2ee1b01e595f0f602d0cc2ebc764863075801fdecef9ce09`
+coincide byte a byte con el commit `67ccb325ce988e36a565e4e3baf992a348d16d32`.
+La [evidencia de entrega](evidence/h164-adoption-delivery.json) registra sus
+pruebas completas, tiempos y hashes. El nuevo arranque A/B/C contra Supabase
+no se ejecutó: la revisión automática rechazó reactivar temporalmente las
+cuentas e instalaciones QA retiradas. No hubo activación ni mutación remota por
+ese arnés; su integración no forma parte de esta entrega. La comprobación
+continuó sobre la instalación física, sin eludir ese rechazo.
+
+### Corrección del inventario físico y adopción observada
+
+Las migraciones aditivas [216](../../supabase/migrations/20260912021600_pos_h164_legacy_container_scan.sql)
+y [217](../../supabase/migrations/20260912021700_pos_h164_legacy_container_scan_verification.sql)
+están aplicadas y verificadas en Supabase. El extractor sólo interpreta cadenas
+que pueden contener estructuras JSON; no convierte identificadores ordinarios
+a números. Una estructura dañada queda archivada íntegra para revisión y no
+oculta las operaciones válidas de otras partes del mismo origen. Los errores
+de formato de una intención no prueban su confirmación. Autenticación, permisos,
+hash original y ACK exacto conservan sus contratos; no existe reproducción de cola.
+
+Una comprobación compuesta local y remota pasó: UUID numérico aparente, estructura
+anidada, versión malformada, número fuera de rango, Unicode inválido y cola vacía.
+Los fixtures remotos se revirtieron dentro de la verificación. No se repitió
+la matriz comercial de 20 escenarios ni se reactivaron cuentas QA.
+
+A las **15:25:26 UTC** del 12/09/2026, el mismo equipo físico completó el
+reintento automático: `ready/complete`, seis fuentes archivadas, `remainingLegacy=0`,
+permisos y snapshot remoto cargados, sin código de error. No necesitó otro
+HTML ni limpieza manual. El corte de preservación de **15:27:05 UTC** confirma
+35 tablas comerciales sin cambios, los 15 archivos anteriores intactos, seis
+nuevos originales con hash válido y la única operación no confirmada intacta.
+Los detalles y límites constan en la [verificación SQL y física](evidence/h164-legacy-scan-verification.json).
+La entrega SQL conserva los bytes publicados del cliente `67ccb325`.
+Commit de esta corrección SQL: **Pendiente de commit**.
 
 ## Riesgo residual y pendientes
 
-La lectura remota de **14:55:29 UTC** encontró 14 instalaciones comerciales:
-13 retiradas y una no retirada; ésta ya declaró el build online. Se recibieron
-15 fuentes legacy. Una fuente contiene un lote de inventario no confirmado;
+La lectura remota de **15:27:05 UTC** encontró 14 instalaciones comerciales:
+13 retiradas y una no retirada; ésta completó la adopción del build online.
+Se conservan 21 fuentes legacy. Una fuente contiene un lote de inventario no confirmado;
 su decisión sigue pendiente y su original permanece íntegro. Estos números
 describen registros, no identifican los tres puestos físicos.
 
@@ -449,26 +493,28 @@ puede conservar su código y almacenamiento anteriores. Sin adoptarla e
 inventariarla no se puede afirmar que produzca cero colas o cero mensajes de
 éxito locales. El despliegue físico completo sigue pendiente.
 
-1. Obtener el reporte de adopción terminada de cada navegador físico. Los
-   permisos y el snapshot observados del primer actor funcionan; falta demostrar
-   qué excepción concreta produjo su pantalla antes de la corrección.
+1. Obtener el reporte de adopción terminada de los dos puestos físicos restantes.
+   El primer equipo ya completó inventario, permisos, snapshot y ACK; su causa
+   original y recuperación están demostradas. Esto acredita **1/3**, no tres.
 2. Resolver únicamente la clasificación del lote no confirmado. Es posterior
    a Punto Cero y no hay autorización exacta de descarte ni recibo coincidente.
    Se solicitó decisión al propietario; el resto del equipo puede adoptar y operar.
 3. Completar la adopción y comprobación de los puestos físicos A/B/C sobre el
    artefacto publicado y Supabase. La matriz técnica independiente ya pasó sus
    20 escenarios; no demuestra acceso a los navegadores reales ausentes.
-4. Identificar y adoptar los tres puestos físicos. Tres contextos QA no prueban
+4. Identificar y adoptar los puestos físicos restantes. Tres contextos QA no prueban
    qué instalaciones antiguas corresponden a esos puestos ni resuelven sus
    datos locales por sí solos. El intento de acceso de sólo lectura al navegador
    físico mediante CDP no encontró un endpoint accesible. No se inventariaron
-   directamente sus almacenamientos ni se acredita adopción completa de los tres.
+   directamente sus almacenamientos por CDP; sí se recibió el inventario y ACK
+   automático del primer equipo. No se acredita adopción completa de los tres.
    Cargar el build publicado en cada puesto, archivar y conciliar su evidencia
    mediante el procedimiento implementado; no borrar almacenamiento manualmente.
 
 La matriz verificó que las filas originales de su baseline permanecieran
-sin cambios y conservó la historia comercial QA. Ese resultado no inspecciona
-los originales legacy de los puestos físicos. Sin ese inventario,
+sin cambios y conservó la historia comercial QA. La corrección actual demuestra
+también la preservación de los originales recibidos del primer equipo físico.
+Sin el inventario de los otros dos,
 **DATOS PERDIDOS: 0** global y **COLAS LEGACY RESUELTAS** siguen sin certificarse.
 El objetivo de cierre continúa siendo online-only completo, autoridad Supabase
 y cero divergencias demostradas; **BALAM CERRABLE: NO** en este corte.
