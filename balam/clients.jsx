@@ -5,6 +5,15 @@
   const { MS } = window.HX;
   const D = window.DATA;
   const h = React.createElement;
+  const runningOnlineActions = new Set();
+  async function onlineAction(key, action) {
+    if (runningOnlineActions.has(key)) return;
+    runningOnlineActions.add(key);
+    try { return await action(); }
+    catch (error) { toast(error.message || 'No se pudo confirmar la operación', 'var(--danger)'); }
+    finally { runningOnlineActions.delete(key); }
+  }
+
   const CARD = 'bg-surface-container-lowest rounded-xl shadow-e1';
 
   const CHIP = {
@@ -64,33 +73,38 @@
     const detail = detailId ? reales.find(c => c.id === detailId) || null : null;
     const editC = editId ? reales.find(c => c.id === editId) || null : null;
 
-    function saveEditClient(patch) {
+    async function saveEditClient(patch) {
+      return onlineAction('saveEditClient', async () => {
       // `D.updateClient` localiza al cliente VIGENTE por id y sube sólo ese
       // registro. Antes se escribía sobre el objeto capturado al abrir el modal,
       // que después de un pull ya no pertenecía a `D.clients`.
-      if (!D.updateClient(editId, patch)) { toast('Ese cliente ya no existe en este dispositivo', 'var(--danger)'); setEditId(null); return; }
+      if (!(await D.updateClient(editId, patch))) { toast('Ese cliente ya no existe en este dispositivo', 'var(--danger)'); setEditId(null); return; }
       setEditId(null); setRefreshKey(k => k + 1);
       toast('Cliente actualizado', 'var(--accent)');
+      });
     }
 
-    function deleteClient(c) {
+    async function deleteClient(c) {
+      return onlineAction('deleteClient', async () => {
       if (!window.confirm(`¿Eliminar a «${c.nombre}»?\n\nSe quita de este dispositivo y de la nube. Su historial de ventas se conserva. No se puede deshacer.`)) return;
-      const r = D.removeClient(c.id);
+      const r = await D.removeClient(c.id);
       if (!r.ok) { toast(r.error, 'var(--danger)'); return; }
       setDetailId(null); setRefreshKey(k => k + 1);
       toast('Cliente eliminado', 'var(--danger)');
+      });
     }
 
-    function saveNewClient(data) {
+    async function saveNewClient(data) {
+      return onlineAction('saveNewClient', async () => {
       const client = {
         id: 'c-' + Date.now(), nombre: data.nombre.trim(), tel: data.tel, compras: 0, total: 0,
         ultima: '', talla: data.tallaCamisa || '', notas: data.notas,
         email: data.email, direccion: data.direccion, nacimiento: data.nacimiento || '',
       };
-      D.clients.push(client);
-      D.saveClients(true, [client.id]);
+      await D.addClient(client);
       setAdding(false); setRefreshKey(k => k + 1);
       toast('Cliente registrado en Balam', 'var(--accent)');
+      });
     }
 
     if (adding) return h(NewClientForm, { onCancel: () => setAdding(false), onSave: saveNewClient });
@@ -187,7 +201,8 @@
     const historial = resumen ? resumen.ventas : [];
     return h(React.Fragment, {}, [
       h('div', { key: 'ov', className: 'fixed inset-0 bg-primary-container/40 backdrop-blur-sm z-[55] transition-opacity duration-300 ' + (open ? 'opacity-100' : 'opacity-0 pointer-events-none'), onClick: onClose }),
-      h('div', { key: 'dr', 'data-testid': 'client-drawer', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Detalle del cliente', className: 'fixed inset-0 sm:inset-y-0 sm:left-auto sm:right-0 w-full sm:w-[460px] max-w-full bg-surface border-l border-outline-variant z-[60] shadow-e3 flex flex-col transition-transform duration-300 ' + (open ? 'translate-x-0' : 'translate-x-full') },
+      h('div', { key: 'dr', 'data-testid': 'client-drawer', role: open ? 'dialog' : undefined, 'aria-modal': open ? 'true' : undefined,
+        'aria-hidden': !open, inert: open ? undefined : '', 'data-dialog-open': String(open), 'aria-label': 'Detalle del cliente', className: 'fixed inset-0 sm:inset-y-0 sm:left-auto sm:right-0 w-full sm:w-[460px] max-w-full bg-surface border-l border-outline-variant z-[60] shadow-e3 flex flex-col transition-transform duration-300 ' + (open ? 'translate-x-0' : 'translate-x-full') },
         c && [
           h('div', { key: 'h', className: 'px-8 py-6 border-b border-outline-variant flex justify-between items-center' }, [
             h('div', { key: 't' }, [
@@ -248,7 +263,7 @@
     const set = (k, v) => setF(p => ({ ...p, [k]: v }));
     const inp = 'w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2.5 text-body focus:ring-1 focus:ring-primary focus:border-primary';
     const field = (label, ctrl) => h('div', { key: label }, [h('label', { key: 'l', className: 'block text-overline uppercase font-bold text-on-surface-variant tracking-widest mb-1.5' }, label), ctrl]);
-    function save() { if (!f.nombre.trim()) { toast('El nombre es obligatorio', 'var(--danger)'); return; } onSave(f); }
+    function save() { if (!f.nombre.trim()) { toast('El nombre es obligatorio', 'var(--danger)'); return; } return onSave(f); }
     const footer = [
       h('button', { key: 'c', className: 'px-5 py-3 border border-outline-variant rounded-xl text-caption font-bold uppercase tracking-widest text-on-surface hover:bg-surface-container transition', onClick: onClose }, 'Cancelar'),
       h('button', { key: 's', 'data-testid': 'client-edit-save', className: 'px-6 py-3 bg-primary text-on-primary rounded-xl text-caption font-bold uppercase tracking-widest hover:opacity-90 transition flex items-center gap-2', onClick: save }, [h(MS, { key: 'i', name: 'check', size: 16 }), 'Guardar cambios']),
@@ -293,7 +308,7 @@
       if (!f.nombre.trim()) { toast('Escribe el nombre del cliente', 'var(--danger)'); return; }
       const direccion = [f.calle, f.ciudad, f.estado, f.cp, f.pais].filter(Boolean).join(', ');
       const notas = `Talla ${f.tallaCamisa} · Pantalón ${f.tallaPantalon} · Fit ${f.fit}` + (f.telas.length ? ` · Telas: ${f.telas.join(', ')}` : '');
-      onSave({ nombre: f.nombre, tel: f.tel ? f.cod + ' ' + f.tel : '—', email: f.email, direccion, notas, tallaCamisa: f.tallaCamisa, nacimiento: f.nacimiento });
+      return onSave({ nombre: f.nombre, tel: f.tel ? f.cod + ' ' + f.tel : '—', email: f.email, direccion, notas, tallaCamisa: f.tallaCamisa, nacimiento: f.nacimiento });
     }
 
     return h('div', { className: 'flex-1 overflow-y-auto bg-background font-body text-on-surface' },

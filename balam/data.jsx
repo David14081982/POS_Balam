@@ -1,5 +1,5 @@
 // data.jsx — Datos de Balam Guayaberas. Exporta a window.DATA
-// Persiste el catálogo de productos en localStorage (clave balam_pos_products_v2).
+// Proyección efímera y preparación comercial. Supabase confirma cada escritura.
 // Los CATÁLOGOS (colores, telas, mangas, categorías, cuellos, tallas) ya NO viven aquí:
 // son administrables desde window.CONFIG (balam/config.jsx). Aquí solo se leen en vivo.
 (function () {
@@ -567,7 +567,6 @@
 
   // Catálogo de productos. VACÍO en producción: la tienda captura su inventario
   // desde Inventario → "Nuevo producto" (o importando un Excel con la plantilla).
-  const seed = [];
 
   // Marcador del segmento de talla (número) dentro del SKU base. El SKU del modelo NO tiene una
   // talla única (es una matriz), así que reserva este marcador en su posición; la etiqueta/código
@@ -922,7 +921,7 @@
   }
   // Segunda fase: sólo acepta el plan exacto devuelto por previewOrphanFix. La
   // confirmación visible vive en Configuración antes de llamar esta función.
-  function applyOrphanFix(plan) {
+  async function applyOrphanFix(plan) {
     if (!plan || plan.type !== 'orphan_fix') {
       return { ok: false, code: 'ORPHAN_FIX_PREVIEW_REQUIRED', error: 'Primero revisa y confirma la corrección' };
     }
@@ -930,9 +929,7 @@
     if (!checked.ok) return checked;
     if (checked.token !== plan.token) return { ok: false, code: 'ORPHAN_FIX_STALE', error: 'La vista previa ya no es válida' };
     const id = checked.productId, campo = checked.campo, from = checked.from, to = checked.to;
-    const p = products.find(x => String(x.id) === id);
-    try { assertLayawayProductsUnlocked([id]); }
-    catch (e) { return { ok: false, error: e.message, code: e.code }; }
+    const p = clone(products.find(x => String(x.id) === id));
     const sys = REMAP_FIELDS.find(x => x[1] === campo);
     if (campo === 'ornColors') {
       const seen = {};
@@ -943,7 +940,7 @@
       p.attrs = Object.assign({}, p.attrs, { [campo]: to });
     }
     colorDisplay(p);
-    saveProducts([id]);
+    await saveProductRows([p]);
     return { ok: true, productId: id, campo, from, to };
   }
 
@@ -983,199 +980,43 @@
   }
 
   // ---- Persistencia ----
-  const LS_KEY = 'balam_pos_products_v2';
-  const LS_SALE_COMMIT_JOURNAL_LEGACY = 'balam_pos_sale_commit_journal_v1';
-  const LS_SALE_COMMIT_JOURNAL_PREFIX = 'balam_pos_sale_commit_journal_v2:';
-  const LS_LAYAWAY_PRODUCT_LOCKS = 'balam_pos_layaway_product_locks_v1';
-  const LOCAL_WRITER_LOCK = 'balam-pos-local-writer-v1';
-  const localWriterLeaseSupported = !!(window.navigator && window.navigator.locks
-    && typeof window.navigator.locks.request === 'function');
-  let localWriterState = localWriterLeaseSupported ? 'waiting' : 'unsupported';
-  let localWriterContended = false;
-  let localWriterContentionTimer = null;
-  let localWriterRelease = null;
-  let localWriterWarningShown = false;
-  const localWriterWaiters = [];
-  function setLocalWriterState(state) {
-    localWriterState = state;
-    if (state === 'writer' || state === 'unsupported' || state === 'blocked') {
-      const waiters = localWriterWaiters.splice(0);
-      waiters.forEach(resolve => resolve(state === 'writer' || state === 'unsupported'));
+  const products = [];
+  const clone = value => value == null ? value : JSON.parse(JSON.stringify(value));
+  async function confirmCommand(name, ...args) {
+    window.CORE.invokeSync('assertBusinessReady');
+    const response = await window.CORE.invokeSync(name, ...args);
+    if (!response || response.ok !== true) {
+      throw Object.assign(new Error((response && response.error) || 'Sin conexión. BALAM necesita internet para continuar.'), {
+        code: (response && response.code) || 'ONLINE_CONFIRMATION_REQUIRED',
+      });
     }
-    try { window.dispatchEvent(new CustomEvent('localwriterchange', { detail: { state } })); }
-    catch (e) { /* navegador/arnés sin CustomEvent */ }
+    return response;
   }
-  function setLocalWriterContended(contended) {
-    const next = contended === true;
-    if (localWriterContended === next) return;
-    localWriterContended = next;
-    try {
-      window.dispatchEvent(new CustomEvent('localwriterchange', {
-        detail: { state: localWriterState, contended: next },
-      }));
-    } catch (e) { /* navegador/arnés sin CustomEvent */ }
+  function confirmed(collection, id, field = 'id') {
+    const row = collection.find(item => String(item[field]) === String(id));
+    if (!row) throw Object.assign(new Error('Estamos confirmando la operación. No la repitas.'), { code: 'ONLINE_RESULT_UNKNOWN' });
+    return row;
   }
-  function clearLocalWriterContentionCheck() {
-    if (localWriterContentionTimer != null) clearTimeout(localWriterContentionTimer);
-    localWriterContentionTimer = null;
-  }
-  function scheduleLocalWriterContentionCheck() {
-    clearLocalWriterContentionCheck();
-    setLocalWriterContended(false);
-    if (!window.navigator.locks || typeof window.navigator.locks.query !== 'function') return;
-    localWriterContentionTimer = setTimeout(async () => {
-      localWriterContentionTimer = null;
-      if (localWriterState !== 'waiting') return;
-      try {
-        const snapshot = await window.navigator.locks.query();
-        if (localWriterState !== 'waiting') return;
-        const anotherOwner = (snapshot.held || []).some(lock => lock.name === LOCAL_WRITER_LOCK);
-        setLocalWriterContended(anotherOwner);
-      } catch (e) {
-        // La consulta sólo mejora el diagnóstico visual. Nunca concede escritura.
-      }
-    }, 250);
-  }
-  function localWriterAllowed(requireLease) {
-    return localWriterState === 'writer'
-      || (!requireLease && localWriterState === 'unsupported');
-  }
-  function assertLocalWriter(requireLease = false) {
-    if (localWriterAllowed(requireLease)) return true;
-    const error = new Error(requireLease && !localWriterLeaseSupported
-      ? 'Este navegador no puede garantizar una liquidación segura entre pestañas'
-      : 'Otra pestaña tiene el control de escritura; ciérrala o espera el relevo automático');
-    error.code = requireLease && !localWriterLeaseSupported
-      ? 'LOCAL_WRITER_UNSUPPORTED' : 'LOCAL_WRITER_REQUIRED';
-    if (!localWriterWarningShown && window.UI && window.UI.toast) {
-      localWriterWarningShown = true;
-      window.UI.toast(error.message, 'var(--danger)');
-    }
-    throw error;
-  }
-  function awaitLocalWriter(timeout = 250) {
-    if (localWriterAllowed(false)) return Promise.resolve(true);
-    if (localWriterState === 'blocked') return Promise.resolve(false);
-    return new Promise(resolve => {
-      let settled = false;
-      const finish = value => { if (!settled) { settled = true; resolve(value); } };
-      localWriterWaiters.push(finish);
-      setTimeout(() => finish(localWriterAllowed(false)), Math.max(0, Number(timeout) || 0));
+  async function saveProductRows(rows) {
+    const proposed = (rows || []).map(row => {
+      const copy = clone(row);
+      copy.attrs = canonicalProductAttrs(copy.attrs, { validateRequired: true, product: copy });
+      return hydrate(copy);
     });
+    if (!proposed.length) return [];
+    await confirmCommand('pushRows', 'products', proposed);
+    return proposed.map(row => confirmed(products, row.id));
   }
-  function saleCommitJournalKey(commitId) {
-    return LS_SALE_COMMIT_JOURNAL_PREFIX + String(commitId || '').trim();
+  async function saveProductFamily(rows) {
+    const proposed = (rows || []).map(row => hydrate(clone(row)));
+    if (!proposed.length) return [];
+    await confirmCommand('pushProductFamilyBatch', proposed[0].referenceFamilyId, proposed);
+    return proposed.map(row => confirmed(products, row.id));
   }
-  function readPendingSaleCommitJournal() {
-    const found = [];
-    try {
-      const legacy = localStorage.getItem(LS_SALE_COMMIT_JOURNAL_LEGACY);
-      if (legacy) found.push({ key: LS_SALE_COMMIT_JOURNAL_LEGACY, raw: legacy });
-      for (let i = 0; i < Number(localStorage.length || 0); i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith(LS_SALE_COMMIT_JOURNAL_PREFIX)) {
-          found.push({ key, raw: localStorage.getItem(key) });
-        }
-      }
-      if (!found.length) return null;
-      if (found.length !== 1) return { version: 0, invalid: true, multiple: true };
-      const parsed = JSON.parse(found[0].raw);
-      if (!parsed || parsed.version !== 1) return { version: 0, invalid: true, key: found[0].key };
-      parsed.key = found[0].key;
-      return parsed;
-    } catch (e) {
-      // Un journal ilegible significa que una confirmación pudo quedar a medias.
-      // No se adivina el estado: la cola remota debe reconciliarlo.
-      return { version: 0, invalid: true };
-    }
-  }
-  let pendingSaleCommitJournal = readPendingSaleCommitJournal();
-  let products;
-  try {
-    const raw = localStorage.getItem(LS_KEY);
-    if (raw) {
-      const saved = JSON.parse(raw);
-      if (Array.isArray(saved) && saved.length) products = saved.map(hydrate);
-    }
-  } catch (e) { /* ignora storage corrupto */ }
-  if (!products) products = seed.map(hydrate);
-
-  // colorHex/colorName se congelan al hidratar, pero el catálogo de color puede cambiar DESPUÉS
-  // (pull de la nube tras el login, import de catálogos, edición del hex). Sin esto, el inventario
-  // se queda con puntos grises (#8b9099) y el código crudo en vez del nombre. OJO: solo se
-  // recalculan estos dos campos de display — el SKU sigue congelado por diseño.
   window.addEventListener('configchange', () => {
     products.forEach(colorDisplay);
-    // Recalcula únicamente el diagnóstico de referencias huérfanas cuando el
-    // catálogo cambia. Nunca muta ni guarda productos; una reparación requiere
-    // preview y confirmación administrativa por ID concreto.
-    if (!remoteApplying) { try { remapOrphanCodes(); } catch (e) { /* catálogo a medio cargar */ } }
+    remapOrphanCodes();
   });
-
-  const catalogResyncReasons = new Map();
-  if (pendingSaleCommitJournal) {
-    catalogResyncReasons.set('h65-cache', 'Una liquidación confirmada requiere reconciliar su caché local');
-  }
-  let catalogResyncRequired = catalogResyncReasons.size > 0;
-  let catalogResyncReason = [...catalogResyncReasons.values()].join(' ');
-  function refreshCatalogResync() {
-    catalogResyncRequired = catalogResyncReasons.size > 0;
-    catalogResyncReason = [...catalogResyncReasons.values()].join(' ');
-  }
-  function requireCatalogResync(reason, token = 'general') {
-    catalogResyncReasons.set(token,
-      reason || 'No se pudo conservar la respuesta autoritativa del inventario');
-    refreshCatalogResync();
-  }
-  function clearCatalogResync(token = 'general') {
-    if (token === 'h65-cache' && pendingSaleCommitJournal) return false;
-    catalogResyncReasons.delete(token);
-    refreshCatalogResync();
-    return !catalogResyncReasons.has(token);
-  }
-  function productSyncIds(targets) {
-    if (targets === undefined || targets === null || targets === false) return [];
-    const source = Array.isArray(targets) ? targets : [targets];
-    const ids = [];
-    source.forEach(target => {
-      const id = String(target && typeof target === 'object' ? target.id : target || '').trim();
-      if (!id) throw Object.assign(new Error('La intención remota de productos exige IDs concretos'), { code: 'PRODUCT_SYNC_SCOPE_REQUIRED' });
-      if (!ids.includes(id)) ids.push(id);
-    });
-    const missing = ids.filter(id => !products.some(product => String(product.id) === id));
-    if (missing.length) throw Object.assign(new Error('El alcance contiene productos que ya no existen'), {
-      code: 'PRODUCT_SYNC_TARGET_MISSING', productIds: missing,
-    });
-    return ids;
-  }
-  // Persistencia local y permiso remoto son actos separados. Persistir nunca
-  // implica sincronizar; syncProducts exige siempre un conjunto explícito.
-  function persistProducts() {
-    if (!remoteApplying && !protectLayawayLockedProducts()) return false;
-    products.forEach(product => { product.attrs = canonicalProductAttrs(product.attrs, { product }); });
-    bumpRevision(); // el inventario no pasa por `save()`; su aviso se emite aquí
-    let persisted = true;
-    try { localStorage.setItem(LS_KEY, JSON.stringify(products)); }
-    catch (e) { persisted = false; requireCatalogResync('La caché local del inventario no se pudo actualizar', 'products-cache'); }
-    return persisted;
-  }
-  function syncProducts(targets) {
-    const ids = productSyncIds(targets);
-    if (!ids.length || remoteApplying) return 0;
-    syncUp('products', ids.map(id => products.find(product => String(product.id) === id)));
-    return ids.length;
-  }
-  // Compatibilidad de llamada: sin alcance sólo persiste localmente. Una
-  // sincronización sucede únicamente cuando el llamador aporta IDs/filas.
-  function saveProducts(targets) {
-    const ids = productSyncIds(targets);
-    // Un bloqueo de negocio sí impide enviar; una caché sin espacio no debe
-    // perder una intención que la cola puede conservar en IndexedDB.
-    if (!remoteApplying && !protectLayawayLockedProducts()) return false;
-    const persisted = persistProducts();
-    if (ids.length) syncProducts(ids);
-    return persisted;
-  }
 
   function referenceHasOperations(productId) {
     const id = String(productId || '');
@@ -1185,7 +1026,7 @@
   }
 
   function updateReference(candidate) {
-    const current = products.find(product => product.id === candidate.id);
+    const current = clone(products.find(product => product.id === candidate.id));
     if (!current) throw Object.assign(new Error('La referencia ya no existe'), { code: 'REFERENCE_NOT_FOUND' });
     if (!isV2Reference(current)) {
       if (candidate.recordModel === 'v2') throw Object.assign(new Error('Una fila V1 no se convierte automáticamente; crea referencias V2 nuevas'), { code: 'REFERENCE_MODEL_IMMUTABLE' });
@@ -1220,7 +1061,7 @@
     return hydrate(current);
   }
 
-  function reclassifyReference({ sourceProductId, targetProductId, quantity, actor, reason, operationId, reversalOf }) {
+  async function reclassifyReference({ sourceProductId, targetProductId, quantity, actor, reason, operationId, reversalOf }) {
     const source = products.find(p => p.id === sourceProductId);
     const target = products.find(p => p.id === targetProductId);
     const qty = Math.round(Number(quantity) || 0);
@@ -1237,14 +1078,12 @@
         && prior.some(move => String(move.productId) === String(source.id) && Number(move.cant) === -qty)
         && prior.some(move => String(move.productId) === String(target.id) && Number(move.cant) === qty)
         && prior.every(move => (move.reversalOf || null) === (reversalOf || null));
-      return same
-        ? { ok: true, idempotent: true, operationId: op }
-        : { ok: false, code: 'RECLASSIFICATION_OPERATION_CONFLICT', error: 'Ese ID de operación ya pertenece a otra reclasificación' };
+      if (!same) return { ok: false, code: 'RECLASSIFICATION_OPERATION_CONFLICT', error: 'Ese ID de operación ya pertenece a otra reclasificación' };
     }
-    if (qty > stockOf(source, source.sizeCode)) {
+    if (!prior.length && qty > stockOf(source, source.sizeCode)) {
       return { ok: false, code: 'INSUFFICIENT_REFERENCE_STOCK', error: 'La cantidad no está disponible en la referencia origen' };
     }
-    if (reversalOf) {
+    if (reversalOf && !prior.length) {
       const original = movements.filter(move => move.operationId === reversalOf);
       const alreadyReversed = movements.some(move => move.reversalOf === reversalOf);
       const inverse = original.length === 2 && !alreadyReversed
@@ -1252,30 +1091,11 @@
         && original.some(move => String(move.productId) === String(source.id) && Number(move.cant) === qty);
       if (!inverse) return { ok: false, code: 'RECLASSIFICATION_NOT_REVERSIBLE', error: 'La operación indicada no admite esta reversión' };
     }
-    const sourceEntry = stockVariantOf(source, source.sizeCode);
-    const targetEntry = stockVariantOf(target, target.sizeCode);
-    const sourceBefore = sourceEntry.stock, targetBefore = targetEntry.stock;
-    sourceEntry.stock -= qty; targetEntry.stock += qty;
-    const fecha = now();
-    movements.unshift(
-      { fecha, tipo: 'Reclasificación', producto: source.nombre, productId: source.id, sku: source.sku, talla: source.sizeCode, cant: -qty, ref: reason, operationId: op, reversalOf: reversalOf || null },
-      { fecha, tipo: 'Reclasificación', producto: target.nombre, productId: target.id, sku: target.sku, talla: target.sizeCode, cant: qty, ref: reason, operationId: op, reversalOf: reversalOf || null },
-    );
-    const productsSaved = persistProducts();
-    const movementsSaved = saveMovements();
-    if (!productsSaved || !movementsSaved) {
-      sourceEntry.stock = sourceBefore; targetEntry.stock = targetBefore;
-      movements.splice(0, 2);
-      persistProducts(); saveMovements();
-      return { ok: false, code: 'LOCAL_PERSISTENCE_FAILED', error: 'No se pudo guardar la reclasificación completa; no se movió ninguna pieza' };
-    }
-    try {
-      window.CORE.invokeSync('commitReferenceReclassification', {
-        operationId: op, sourceProductId: source.id, targetProductId: target.id,
-        quantity: qty, actor: actor || 'Administrador', reason: reason || 'Reclasificación', reversalOf: reversalOf || null,
-      });
-    } catch (error) { /* la cola local-first reintenta desde STORE */ }
-    return { ok: true, idempotent: false, operationId: op, source, target };
+    await confirmCommand('commitReferenceReclassification', {
+      operationId: op, sourceProductId: source.id, targetProductId: target.id,
+      quantity: qty, actor: actor || 'Administrador', reason: reason || 'Reclasificación', reversalOf: reversalOf || null,
+    });
+    return { ok: true, idempotent: false, operationId: op, source: confirmed(products, source.id), target: confirmed(products, target.id) };
   }
 
   // Recalcula el SKU de TODOS los productos con la receta vigente (acción explícita del admin).
@@ -1285,11 +1105,12 @@
   //      borra); si su etiqueta coincide con un elemento activo (re-codificación del catálogo,
   //      p. ej. color '15'→'AMAR' ambos "AZUL MARINO"), remapea a ese código;
   //   2) si no hay coincidencia, primer elemento activo — el que el alta mostraba seleccionado.
-  function regenerateSkus() {
+  async function regenerateSkus() {
     const FIX = [['category', 'cat'], ['sleeve', 'manga'], ['fabric', 'tela'], ['color', 'color'], ['neck', 'cuello']];
     const normTxt = (s) => String(s == null ? '' : s).trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     let changed = 0, fixed = 0;
-    products.forEach(p => {
+    const proposed = clone(products);
+    proposed.forEach(p => {
       FIX.forEach(([kind, field]) => {
         const l = (C && typeof C.list === 'function') ? C.list(kind) : [];
         if (l.length && !l.some(x => x.code === String(p[field]))) {
@@ -1302,325 +1123,14 @@
       const n = sku(p);
       if (n !== p.sku) { p.sku = n; changed++; }
     });
-    if (changed || fixed) saveProducts(products.map(product => product.id));
+    if (changed || fixed) await saveProductRows(proposed);
     return { total: products.length, changed };
   }
 
-  // Solo el administrador. Los vendedores se dan de alta en Configuración → Usuarios.
-  const seedSellers = [
-    { id: 's0', nombre: 'Administrador', iniciales: 'AD', color: '#131B2E', comisionPct: 0, ventasMes: 0, metaMes: 0, ventasNum: 0, comisionAcum: 0, bono: 'Sin bono', role: 'admin', email: 'admin@balam.com', passwordHash: null, active: true },
-  ];
-
-  // Solo el cliente genérico de mostrador (requerido por el POS). El resto se da de alta en Clientes.
-  const seedClients = [
-    { id: 'c7', nombre: 'Público en general', tel: '—', compras: 0, total: 0, ultima: '', talla: '', notas: 'Venta de mostrador sin registro.', generic: true },
-  ];
-
-  const seedSales = []; // sin ventas de ejemplo — se generan al cobrar en el POS
-
-  const seedMovements = []; // sin movimientos de ejemplo — se generan al vender/ajustar inventario
-
-  // Carga persistida o semilla (in-place para conservar la referencia del arreglo).
-  function loadArr(key, seedArr) {
-    const a = [];
-    try {
-      const raw = localStorage.getItem(key);
-      const saved = raw ? JSON.parse(raw) : null;
-      (Array.isArray(saved) && saved.length ? saved : seedArr).forEach(x => a.push(x));
-    } catch (e) { seedArr.forEach(x => a.push(x)); }
-    if (!a.length) seedArr.forEach(x => a.push(x));
-    return a;
-  }
-  // Promociones/Descuentos (se aplican automáticamente en el POS).
-  // scope: dimensión vacía = sin restricción (todas). tipo: 'pct' | 'fijo'.
-  const seedPromos = []; // sin promociones de ejemplo — se crean en Descuentos
-
-  const seedReturns = []; // sin devoluciones de ejemplo — se generan en la pantalla Devoluciones
-
-  const LS_SELLERS = 'balam_pos_sellers_v1', LS_CLIENTS = 'balam_pos_clients_v1',
-        LS_SALES = 'balam_pos_sales_v1', LS_MOVES = 'balam_pos_moves_v1',
-        // LS_FOLIO: contador global anterior a H-33 (sólo se limpia). LS_FOLIO_V2:
-        // reserva diaria vigente { prefix, date, used, next, until }.
-        LS_FOLIO = 'balam_pos_folio_v1', LS_FOLIO_V2 = 'balam_pos_folio_v2',
-        LS_PROMOS = 'balam_pos_promos_v1', LS_LIQ = 'balam_pos_liq_v1', LS_PERIODO = 'balam_pos_periodo_v1',
-        LS_RETURNS = 'balam_pos_returns_v1', LS_PAYMENTS = 'balam_pos_payments_v1',
-        LS_EXCHANGES = 'balam_pos_exchanges_v1', LS_LOANS = 'balam_pos_loans_v1',
-        // H-69: ajustes historicos de comision. Documento SEPARADO de la venta:
-        // no reescribe tickets ya emitidos (ADR-002), solo reconoce lo no pagado.
-        LS_ADJUSTMENTS = 'balam_pos_commission_adjustments_v1';
-  const sellers = loadArr(LS_SELLERS, seedSellers);
-  const clients = loadArr(LS_CLIENTS, seedClients);
-  const sales = loadArr(LS_SALES, seedSales);
-  const movements = loadArr(LS_MOVES, seedMovements);
-  const promos = loadArr(LS_PROMOS, seedPromos);
-  const liquidations = loadArr(LS_LIQ, []); // historial de pagos de comisión (corte/liquidación) — local
-  const returns = loadArr(LS_RETURNS, seedReturns); // devoluciones (cabecera + renglones) — sincroniza a pos.returns
-  const payments = loadArr(LS_PAYMENTS, []); // movimientos reales de dinero por venta
-  // H-37 (C4): documentos de cambio. Cada renglon lleva `lado`: 'devuelto' consume
-  // unidades de la venta origen y 'entregado' las suministra. Ver
-  // docs/04-contrato-del-cambio.md y ADR-010. Esta fase define el modelo; el
-  // commit transaccional (C5) y la interfaz (C6) son historias posteriores.
-  const exchanges = loadArr(LS_EXCHANGES, []);
-  // H-46: préstamos de mercancía. Colección local sin contrato remoto todavía; su
-  // modelo y sus autoridades viven más abajo, en la sección «préstamos».
-  const loans = loadArr(LS_LOANS, []);
-  // H-69: ajustes historicos de comision aplicados. Cada uno es un documento con
-  // su propio identificador de operacion, y su presencia es lo que hace la
-  // propuesta IDEMPOTENTE: un folio ya reconocido no vuelve a proponerse.
-  const commissionAdjustments = loadArr(LS_ADJUSTMENTS, []);
-
-  function indexedSnapshots(arr, predicate) {
-    const snapshots = [];
-    arr.forEach((value, index) => {
-      if (predicate(value)) snapshots.push({ index, value: JSON.parse(JSON.stringify(value)) });
-    });
-    return snapshots;
-  }
-  function restoreIndexedSnapshots(arr, predicate, snapshots) {
-    for (let i = arr.length - 1; i >= 0; i--) if (predicate(arr[i])) arr.splice(i, 1);
-    (snapshots || []).slice().sort((a, b) => a.index - b.index).forEach(entry => {
-      const value = JSON.parse(JSON.stringify(entry.value));
-      arr.splice(Math.max(0, Math.min(Number(entry.index) || 0, arr.length)), 0, value);
-    });
-  }
-  function restoreSaleCommitJournal(journal) {
-    if (!journal || journal.version !== 1 || !journal.folio) return false;
-    const productIds = new Set(journal.productIds || []);
-    const sellerIds = new Set(journal.sellerIds || []);
-    restoreIndexedSnapshots(products, p => productIds.has(p.id), journal.products);
-    restoreIndexedSnapshots(sales, s => s.folio === journal.folio, journal.sales);
-    restoreIndexedSnapshots(payments, p => p.folio === journal.folio, journal.payments);
-    restoreIndexedSnapshots(movements,
-      m => m.ref === journal.folio && m.tipo === 'Venta', journal.movements);
-    restoreIndexedSnapshots(sellers, s => sellerIds.has(s.id), journal.sellers);
-    return true;
-  }
-  function makeSaleCommitJournal(commitId, folio, reservationOperationId, remoteProducts, remoteSellers) {
-    const productIds = [...new Set((remoteProducts || []).map(p => p.id).filter(Boolean))];
-    const sellerIds = [...new Set((remoteSellers || []).map(s => s.id).filter(Boolean))];
-    const productSet = new Set(productIds), sellerSet = new Set(sellerIds);
-    return {
-      version: 1,
-      commitId,
-      folio,
-      reservationOperationId,
-      productIds,
-      sellerIds,
-      products: indexedSnapshots(products, p => productSet.has(p.id)),
-      sales: indexedSnapshots(sales, s => s.folio === folio),
-      payments: indexedSnapshots(payments, p => p.folio === folio),
-      movements: indexedSnapshots(movements, m => m.ref === folio && m.tipo === 'Venta'),
-      sellers: indexedSnapshots(sellers, s => sellerSet.has(s.id)),
-    };
-  }
-
-  function readLayawayProductLocks() {
-    try {
-      const parsed = JSON.parse(localStorage.getItem(LS_LAYAWAY_PRODUCT_LOCKS) || '[]');
-      return Array.isArray(parsed) ? parsed.filter(lock => lock && lock.operationId) : [];
-    } catch (e) { return []; }
-  }
-  function writeLayawayProductLocks(locks) {
-    try {
-      if (locks.length) localStorage.setItem(LS_LAYAWAY_PRODUCT_LOCKS, JSON.stringify(locks));
-      else localStorage.removeItem(LS_LAYAWAY_PRODUCT_LOCKS);
-      return true;
-    } catch (e) { return false; }
-  }
-  function layawayProductIds(sale) {
-    return [...new Set(((sale && sale.lineas) || []).map(line => line.productId).filter(Boolean))];
-  }
-  function cachedLayawayProducts(productIds) {
-    try {
-      const parsed = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
-      if (!Array.isArray(parsed) || !parsed.length) return null;
-      const snapshots = productIds.map(id => parsed.find(product => product.id === id));
-      return snapshots.every(Boolean)
-        ? snapshots.map(product => JSON.parse(JSON.stringify(product))) : null;
-    } catch (e) { return null; }
-  }
-  function acquireLayawayProductLock(sale) {
-    try { assertLocalWriter(true); } catch (e) { return false; }
-    const operationId = sale && sale._operationId;
-    const productIds = layawayProductIds(sale);
-    if (!operationId || !productIds.length) return false;
-    const locks = readLayawayProductLocks();
-    const own = locks.find(lock => lock.operationId === operationId);
-    if (own) {
-      if ((own.productIds || []).length !== productIds.length
-          || !own.productIds.every(id => productIds.includes(id))) return false;
-      const cached = cachedLayawayProducts(productIds);
-      if (!cached || productIds.some(id => {
-        const memory = products.find(product => product.id === id);
-        const stored = cached.find(product => product.id === id);
-        return !memory || !stored || JSON.stringify(memory) !== JSON.stringify(stored);
-      })) return false;
-      // Un pull remoto puede avanzar el producto mientras la RPC se reintenta.
-      // El lock sigue protegiendo la identidad, pero su snapshot debe rebajarse
-      // al cache durable para no restaurar una versión anterior en saveProducts().
-      own.productSnapshots = cached;
-      own.refreshedAt = new Date().toISOString();
-      return writeLayawayProductLocks([own]);
-    }
-    // H-65 serializa todas las liquidaciones locales. Aunque usen productos
-    // distintos, las cinco colecciones se persisten como una sola unidad.
-    if (locks.length) return false;
-
-    // Otra pestaña pudo persistir una edición justo antes de esta acción.
-    // No se inicia la RPC sobre una copia que ya difiere del cache compartido.
-    const productSnapshots = cachedLayawayProducts(productIds);
-    if (!productSnapshots || productIds.some(id => {
-      const memory = products.find(product => product.id === id);
-      const cached = productSnapshots.find(product => product.id === id);
-      return !memory || !cached || JSON.stringify(memory) !== JSON.stringify(cached);
-    })) return false;
-    if (productSnapshots.length !== productIds.length) return false;
-    const next = [{
-      operationId, folio: sale.folio, productIds, productSnapshots,
-      createdAt: new Date().toISOString(),
-    }];
-    if (!writeLayawayProductLocks(next)) return false;
-    const verified = readLayawayProductLocks().find(lock => lock.operationId === operationId);
-    return !!verified && verified.productIds.length === productIds.length;
-  }
-  function releaseLayawayProductLock(operationId) {
-    const locks = readLayawayProductLocks();
-    const next = locks.filter(lock => lock.operationId !== operationId);
-    return next.length === locks.length || writeLayawayProductLocks(next);
-  }
-  function reconcileLayawayProductLocks(operations) {
-    try { assertLocalWriter(true); } catch (e) { return false; }
-    const active = (operations || []).filter(op => op && op.operationId);
-    const current = readLayawayProductLocks();
-    const chosen = active.find(op => current.some(lock => lock.operationId === op.operationId))
-      || active[0];
-    if (!chosen) return writeLayawayProductLocks([]);
-    const retained = current.find(lock => lock.operationId === chosen.operationId);
-    if (retained && !writeLayawayProductLocks([retained])) return false;
-    if (!retained && !writeLayawayProductLocks([])) return false;
-    return ensureLayawayProductLockFromOperation(chosen);
-  }
-  function ensureLayawayProductLockFromOperation(op) {
-    try { assertLocalWriter(true); } catch (e) { return false; }
-    if (!op || !op.operationId) return false;
-    const productIds = [...new Set((op.productIds || (op.itemIdentities || [])
-      .map(item => item.product_id)).filter(Boolean))];
-    if (!productIds.length) return false;
-    const own = readLayawayProductLocks().find(lock => lock.operationId === op.operationId);
-    if (!own) {
-      const expected = Array.isArray(op.productSnapshots) ? op.productSnapshots : [];
-      const cached = cachedLayawayProducts(productIds);
-      if (expected.length !== productIds.length || !cached
-          || productIds.some(id => JSON.stringify(expected.find(p => p.id === id))
-            !== JSON.stringify(cached.find(p => p.id === id)))) return false;
-    }
-    return acquireLayawayProductLock({
-      _operationId: op.operationId, folio: op.folio,
-      lineas: productIds.map(productId => ({ productId })),
-    });
-  }
-  function layawayProductLockSnapshot(operationId) {
-    const lock = readLayawayProductLocks().find(entry => entry.operationId === operationId);
-    return lock ? JSON.parse(JSON.stringify(lock)) : null;
-  }
-  function hasLayawayLiquidationLock(folio, operationId) {
-    return readLayawayProductLocks().some(lock =>
-      (folio && lock.folio === folio) || (operationId && lock.operationId === operationId));
-  }
-  function refreshLayawayProductLockSnapshots() {
-    const locks = readLayawayProductLocks();
-    if (!locks.length) return true;
-    const refreshed = locks.map(lock => Object.assign({}, lock, {
-      productSnapshots: (lock.productIds || []).map(id => products.find(p => p.id === id))
-        .filter(Boolean).map(product => JSON.parse(JSON.stringify(product))),
-      refreshedAt: new Date().toISOString(),
-    }));
-    if (refreshed.some(lock => lock.productSnapshots.length !== (lock.productIds || []).length)) return false;
-    return writeLayawayProductLocks(refreshed);
-  }
-  function assertLayawayProductsUnlocked(productIds) {
-    const wanted = new Set((productIds || []).filter(Boolean));
-    const conflict = readLayawayProductLocks().find(lock =>
-      (lock.productIds || []).some(id => wanted.has(id)));
-    if (!conflict) return true;
-    const error = new Error(`El producto está en una liquidación pendiente (${conflict.folio}); espera su confirmación`);
-    error.code = 'LAYAWAY_PRODUCT_LOCKED';
-    throw error;
-  }
-  let layawayLockWarned = false;
-  function protectLayawayLockedProducts() {
-    const locks = readLayawayProductLocks();
-    let restored = false;
-    locks.forEach(lock => (lock.productSnapshots || []).forEach(snapshot => {
-      const index = products.findIndex(p => p.id === snapshot.id);
-      if (index >= 0 && JSON.stringify(products[index]) !== JSON.stringify(snapshot)) {
-        products[index] = hydrate(JSON.parse(JSON.stringify(snapshot)));
-        restored = true;
-      }
-    }));
-    if (restored && !layawayLockWarned) {
-      layawayLockWarned = true;
-      if (window.UI && window.UI.toast) {
-        window.UI.toast('Ese producto tiene una liquidación pendiente; no se modificó hasta reconciliarla', 'var(--danger)');
-      }
-    }
-    return !restored;
-  }
-  if (pendingSaleCommitJournal) {
-    restoreSaleCommitJournal(pendingSaleCommitJournal);
-    requireCatalogResync('Una liquidación confirmada requiere reconciliar su caché local', 'h65-cache');
-  }
+  const sellers = [], clients = [], sales = [], movements = [], promos = [], liquidations = [];
+  const returns = [], payments = [], exchanges = [], loans = [], commissionAdjustments = [];
   let periodoInicio = '';
-  try { periodoInicio = localStorage.getItem(LS_PERIODO) || ''; } catch (e) { /* sin storage */ }
-
-  // Normaliza personas guardadas antes de unificar usuarios/vendedores.
-  sellers.forEach(s => { if (!s.role) s.role = 'vendedor'; if (s.active === undefined) s.active = true; });
-  if (!sellers.some(s => s.role === 'admin')) sellers.unshift(seedSellers[0]);
-
-  // Un solo dueño de escritura evita que dos pestañas persistan arreglos
-  // completos a partir de memorias distintas. Al recibir el relevo se descarta
-  // toda copia en memoria y se reconstruye desde el cache durable antes de
-  // habilitar mutadores o drenar la cola.
-  const localWriterCollections = [
-    [LS_KEY, products, seed, hydrate], [LS_SELLERS, sellers, seedSellers],
-    [LS_CLIENTS, clients, seedClients], [LS_SALES, sales, seedSales],
-    [LS_MOVES, movements, seedMovements], [LS_PROMOS, promos, seedPromos],
-    [LS_LIQ, liquidations, []], [LS_RETURNS, returns, seedReturns],
-    [LS_PAYMENTS, payments, []], [LS_EXCHANGES, exchanges, []], [LS_LOANS, loans, []],
-    [LS_ADJUSTMENTS, commissionAdjustments, []],
-  ];
-  const localWriterFallbacks = new Map(localWriterCollections.map(([key, , fallback]) =>
-    [key, JSON.parse(JSON.stringify(fallback || []))]));
-  function rebaseLocalWriterCollections() {
-    try {
-      localWriterCollections.forEach(([key, target, , mapper]) => {
-        const raw = localStorage.getItem(key);
-        const parsed = raw == null
-          ? JSON.parse(JSON.stringify(localWriterFallbacks.get(key) || []))
-          : JSON.parse(raw);
-        if (!Array.isArray(parsed)) throw new Error(`invalid_local_cache:${key}`);
-        target.splice(0, target.length,
-          ...parsed.map(row => mapper ? mapper(row) : row));
-      });
-      sellers.forEach(s => {
-        if (!s.role) s.role = 'vendedor';
-        if (s.active === undefined) s.active = true;
-      });
-      if (!sellers.some(s => s.role === 'admin')) sellers.unshift(JSON.parse(JSON.stringify(seedSellers[0])));
-      pendingSaleCommitJournal = readPendingSaleCommitJournal();
-      if (pendingSaleCommitJournal) {
-        if (pendingSaleCommitJournal.invalid
-            || !restoreSaleCommitJournal(pendingSaleCommitJournal)) {
-          throw new Error('invalid_sale_commit_journal');
-        }
-        requireCatalogResync('Una liquidación confirmada requiere reconciliar su caché local', 'h65-cache');
-      } else clearCatalogResync('h65-cache');
-      return true;
-    } catch (e) {
-      requireCatalogResync('La caché local no pudo reconstruirse para tomar el control de escritura', 'h65-cache');
-      return false;
-    }
-  }
+  let remoteCommissionContext = { periodStart: '', sellerBases: [] };
 
   // Una persona pertenece al catálogo comercial sólo si conserva el contrato
   // activo de vendedor. Acepta ambos nombres del tombstone para cubrir filas
@@ -1761,33 +1271,20 @@
     return { monto, pctEfectivo: pct2(ponderada), tramos };
   }
 
-  // Base comisionable que un vendedor lleva acumulada en el periodo vigente,
-  // DERIVADA de la evidencia congelada. No hay contador que mantener: si una
-  // venta se devuelve o se cancela, su base deja de contar sola.
+  // Base del periodo agregada por servidor a partir de evidencia congelada,
+  // incluidas devoluciones/cortes que el permiso de una caja no permite leer.
   // `exceptFolio` evita que una venta que se esta registrando ahora se cuente a
   // si misma durante un reintento.
   function sellerPeriodBase(sellerId, exceptFolio) {
     if (!sellerId) return 0;
+    const aggregate = remoteCommissionContext.sellerBases.find(row => row.sellerId === sellerId);
+    if (!aggregate) throw Object.assign(new Error('No se pudo confirmar la base de comisión del vendedor.'), { code: 'ONLINE_COMMISSION_CONTEXT_INCOMPLETE' });
     const desde = periodoInicio || '';
     const dentro = doc => !desde || String((doc && doc.fecha) || '') >= desde;
-    let total = 0;
-    (sales || []).forEach(sale => {
-      if (!sale || sale.estado === 'Cancelado' || !dentro(sale)) return;
-      if (exceptFolio && sale.folio === exceptFolio) return;
-      (sale.comisiones || []).forEach(row => {
-        if (row && row.sellerId === sellerId) total += Number(row.base) || 0;
-      });
-    });
-    (exchanges || []).forEach(exch => {
-      if (!exch || !dentro(exch) || exch.comisionRevertida) return;
-      if (exch.vendedorId !== sellerId) return;
-      total += Number(exch.comisionBaseImporte) || 0;
-    });
-    (returns || []).forEach(ret => {
-      if (!ret || !dentro(ret)) return;
-      (ret.comisiones || []).forEach(row => {
-        if (row && row.sellerId === sellerId) total -= Number(row.base) || 0;
-      });
+    let total = Number(aggregate.baseRaw);
+    const excluded = exceptFolio && sales.find(sale => sale.folio === exceptFolio && sale.estado !== 'Cancelado' && dentro(sale));
+    if (excluded) (excluded.comisiones || []).forEach(row => {
+      if (row && row.sellerId === sellerId) total -= Number(row.base) || 0;
     });
     return Math.max(0, cents(total));
   }
@@ -1900,197 +1397,79 @@
     return acc;
   }
 
-  let quotaWarned = false, bulkMode = false; // bulkMode: omite escrituras por-llamada durante una generación masiva
-  // ── H-70 · Señal de cambio de los datos de dominio ──────────────────────────
-  //
-  // Las pantallas memoizan listas derivadas de estos arreglos y hasta ahora no
-  // tenían forma de enterarse de que la nube los había reemplazado: `applyRemote`
-  // vacía el arreglo y mete objetos NUEVOS, así que un `useMemo` con dependencias
-  // de interfaz seguía pintando los de antes del pull —KPIs actualizados y tabla
-  // congelada—. `revision` es un contador monótono y `datachange` su aviso; se
-  // emiten desde el ÚNICO punto por el que pasa toda escritura de dominio, para
-  // que ninguna ruta nueva tenga que acordarse de avisar.
-  let dataRevision = 0, revisionQueued = false;
+  let dataRevision = 0;
   function bumpRevision() {
     dataRevision++;
-    if (revisionQueued) return;
-    if (typeof window === 'undefined' || typeof window.dispatchEvent !== 'function') return;
-    revisionQueued = true;
-    // Coalescido: una venta guarda productos, movimientos, ventas, pagos y
-    // cliente. Son cinco escrituras y un solo aviso.
-    Promise.resolve().then(() => {
-      revisionQueued = false;
-      try { window.dispatchEvent(new CustomEvent('datachange', { detail: { revision: dataRevision } })); }
-      catch (e) { /* entorno de prueba sin CustomEvent */ }
+    window.dispatchEvent(new CustomEvent('datachange', { detail: { revision: dataRevision } }));
+  }
+  const domainCollections = { products, sellers, clients, sales, movements, promotions: promos,
+    liquidations, returns, payments, exchanges, loans, commissionAdjustments };
+  function validateOnlineSnapshot(snapshot) {
+    Object.keys(domainCollections).forEach(kind => {
+      if (!Array.isArray(snapshot && snapshot[kind])) throw new Error('ONLINE_SNAPSHOT_INCOMPLETE:' + kind);
+      snapshot[kind].filter(row => row && !row._deletedAt && !row.deleted_at)
+        .forEach(row => {
+          if (kind === 'products' && isV2Reference(row) && !row.referenceFamilyId) {
+            throw Object.assign(new Error('La referencia remota no tiene identidad de familia. No se puede reconstruir el inventario.'), { code: 'ONLINE_PRODUCT_IDENTITY_INCOMPLETE' });
+          }
+        });
     });
+    const context = snapshot.commissionContext;
+    if (!context || typeof context.periodStart !== 'string'
+      || (context.periodStart !== '' && !/^\d{4}-\d{2}-\d{2}$/.test(context.periodStart))
+      || !Array.isArray(context.sellerBases) || context.sellerBases.some(row => !row || !row.sellerId || row.baseRaw == null || !Number.isFinite(Number(row.baseRaw)))
+      || new Set(context.sellerBases.map(row => row.sellerId)).size !== context.sellerBases.length) {
+      throw Object.assign(new Error('No se pudo confirmar el contexto de comisiones.'), { code: 'ONLINE_COMMISSION_CONTEXT_INCOMPLETE' });
+    }
+    return true;
   }
-  const save = (key, arr) => {
-    bumpRevision(); // el dato ya cambió en memoria, se persista o no
-    if (bulkMode) return true; // se persiste todo de una vez al final (ver seedDemo)
-    try { localStorage.setItem(key, JSON.stringify(arr)); return true; }
-    catch (e) {
-      // Cuota de localStorage excedida (típico con muchas imágenes en base64): avisar una vez.
-      if (!quotaWarned) {
-        quotaWarned = true;
-        if (window.UI && window.UI.toast) window.UI.toast('Almacenamiento local lleno. Reduce el peso de las imágenes de productos o inicia sesión para respaldar en la nube; algunos cambios podrían no guardarse en este dispositivo.', 'var(--danger)');
+  function replaceFromOnline(snapshot) {
+    validateOnlineSnapshot(snapshot);
+    const next = {};
+    Object.keys(domainCollections).forEach(kind => {
+      next[kind] = snapshot[kind].filter(row => row && !row._deletedAt && !row.deleted_at)
+        .map(row => kind === 'products' ? hydrate(clone(row)) : clone(row));
+    });
+    const context = snapshot.commissionContext;
+    Object.keys(next).forEach(kind => {
+      const target = domainCollections[kind]; target.splice(0, target.length, ...next[kind]);
+    });
+    remoteCommissionContext = clone(context);
+    periodoInicio = context.periodStart;
+    remapOrphanCodes();
+    bumpRevision();
+    return true;
+  }
+  async function addClient(input) {
+    const name = String(input && input.nombre || '').trim();
+    if (!name) throw Object.assign(new Error('Escribe el nombre del cliente'), { code: 'CLIENT_NAME_REQUIRED' });
+    const phone = String(input.tel || '').trim();
+    if (phone && phone !== '—') {
+      const existing = clients.find(row => !row.generic && String(row.tel || '').trim() === phone);
+      if (existing) {
+        await confirmCommand('refresh');
+        const current = clients.find(row => !row.generic && String(row.tel || '').trim() === phone);
+        if (current) return clone(current);
       }
-      return false;
     }
-  };
-  // Sube cambios a la nube si el seam está activo (no durante aplicación de datos remotos).
-  let remoteApplying = false;
-  function syncUp(kind, arr) {
-    if (remoteApplying) return;
-    try { window.CORE.invokeSync('pushRows', kind, arr); } catch (e) { /* offline */ }
-  }
-  function saveSellers(sync = true, ids = []) { const ok = save(LS_SELLERS, sellers); if (sync && ids.length) syncUp('sellers', sellers.filter(row => ids.includes(row.id))); return ok; }
-  function saveClients(sync = true, ids = []) { const ok = save(LS_CLIENTS, clients); if (sync && ids.length) syncUp('clients', clients.filter(row => ids.includes(row.id))); return ok; }
-  // Alta rápida de cliente (desde el POS): nombre obligatorio, teléfono opcional. Si el teléfono ya
-  // existe en otro cliente, REUSA ese (evita duplicados). Devuelve el cliente (nuevo o existente) o null.
-  function addClient({ nombre, tel }) {
-    const name = String(nombre || '').trim();
-    if (!name) return null;
-    const phone = String(tel || '').trim();
-    if (phone) { const ex = clients.find(c => !c.generic && String(c.tel || '').trim() === phone); if (ex) return ex; }
-    const c = { id: 'cli-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6), nombre: name, tel: phone || '—', compras: 0, total: 0, ultima: '', talla: '', notas: '', generic: false };
-    clients.unshift(c); saveClients(true, [c.id]);
-    return c;
-  }
-  function saveSales() { return save(LS_SALES, sales); }       // ventas suben vía recordSale → STORE.pushSale
-  function markSaleSync(folio, status, detail) {
-    const sale = sales.find(s => s.folio === folio);
-    if (!sale) return false;
-    const changed = sale._syncStatus !== status
-      || JSON.stringify(sale._syncDetail || null) !== JSON.stringify(detail || null);
-    sale._syncStatus = status;
-    if (detail) sale._syncDetail = detail;
-    else delete sale._syncDetail;
-    if (status === 'synced' && detail
-        && (detail.stockReserved === true || detail.stock_reserved === true)) {
-      sale._stockReserved = true;
-    }
-    saveSales();
-    return changed;
-  }
-  function saveMovements() { return save(LS_MOVES, movements); }
-  function savePromos(ids = []) { const ok = save(LS_PROMOS, promos); if (ids.length) syncUp('promotions', promos.filter(row => ids.includes(row.id))); return ok; }
-  function saveLiquidations() { const ok = save(LS_LIQ, liquidations); syncUp('liquidations', liquidations); return ok; } // historial — sincroniza a pos.liquidations
-  function saveCommissionAdjustments() { return save(LS_ADJUSTMENTS, commissionAdjustments); }
-  function saveReturns() { return save(LS_RETURNS, returns); }  // devoluciones suben vía recordReturn → STORE.pushReturn
-  function savePayments(sync = true) { const ok = save(LS_PAYMENTS, payments); if (sync) syncUp('payments', payments); return ok; }
-  function saveExchanges(sync = true) { const ok = save(LS_EXCHANGES, exchanges); if (sync) syncUp('exchanges', exchanges); return ok; }
-  // Sin `syncUp`: un préstamo NO viaja como upsert de tabla. Cada operación
-  // —entrega, devolución, faltante, edición, baja, reapertura— viaja por su
-  // propia transacción idempotente `pos.commit_loan_operation()`, igual que la
-  // venta viaja por `commit_sale`. Ver `pushLoanOperation` en `balam/store.jsx`.
-  function saveLoans() { return save(LS_LOANS, loans); }
-  // Fusiona filas de la nube en el arreglo local por clave (upsert: actualiza las que
-  // coinciden, agrega las nuevas, CONSERVA las no incluidas). Para pulls PARCIALES —
-  // el pull de ventas es paginado (ventana reciente + apartados) — reemplazar el
-  // arreglo (applyRemote) borraría el histórico local que Reportes, Clientes y
-  // Devoluciones consultan. La fila de la nube gana en conflicto (es la verdad de ese folio).
-  function mergeRemote(kind, rows, key) {
-    const M = { sales: [sales, saveSales], returns: [returns, saveReturns] };
-    const m = M[kind]; if (!m || !rows || !rows.length) return;
-    remoteApplying = true;
-    try {
-      const arr = m[0];
-      const idx = {}; arr.forEach((x, i) => { idx[x[key]] = i; });
-      rows.forEach(r => { const i = idx[r[key]]; if (i !== undefined) arr[i] = r; else arr.push(r); });
-      arr.sort((a, b) => String(b.fecha || '').localeCompare(String(a.fecha || '')));
-      m[1]();
-    } finally { remoteApplying = false; }
-  }
-
-  // Reemplaza un arreglo de dominio con datos de la nube (sin re-empujar).
-  function applyRemote(kind, rows, opts) {
-    const M = { products: [products, saveProducts, hydrate], clients: [clients, saveClients], sellers: [sellers, saveSellers], sales: [sales, saveSales], movements: [movements, saveMovements], promotions: [promos, savePromos], returns: [returns, saveReturns], liquidations: [liquidations, saveLiquidations], commissionAdjustments: [commissionAdjustments, saveCommissionAdjustments], payments: [payments, savePayments], exchanges: [exchanges, saveExchanges] };
-    if (kind === 'loans') return applyRemoteLoans(rows, opts);
-    const m = M[kind]; if (!m) return;
-    // Una respuesta vacía también puede ser una lectura parcial/fallida. Nunca
-    // sacrifica un catálogo local existente; los borrados reales usan tombstones.
-    if (kind === 'products' && products.length && (!Array.isArray(rows) || !rows.length)
-        && !(opts && opts.authoritative)) return false;
-    let persisted = true;
-    remoteApplying = true;
-    try {
-      m[0].length = 0;
-      rows.filter(r => !r._deletedAt).forEach(r => m[0].push(m[2] ? m[2](r) : r));
-      persisted = m[1]() !== false;
-    }
-    finally { remoteApplying = false; }
-    if (kind === 'products') {
-      if (persisted) {
-        if (!refreshLayawayProductLockSnapshots()) {
-          requireCatalogResync('El lock de una liquidación pendiente no pudo rebajarse al catálogo remoto', 'h65-cache');
-          return false;
-        }
-        clearCatalogResync('products-cache');
-        clearCatalogResync('product-conflict');
-      } else requireCatalogResync('El catálogo remoto no pudo persistirse en la caché local', 'products-cache');
-    }
-    // Sólo un arranque legado no autoritativo puede sembrar un admin. Un
-    // snapshot completo vacío debe seguir vacío.
-    if (kind === 'sellers' && !(opts && opts.authoritative) && !sellers.some(s => s.role === 'admin')) {
-      sellers.unshift(JSON.parse(JSON.stringify(seedSellers[0])));
-      saveSellers();
-    }
-    if (kind === 'liquidations' && opts && opts.authoritative) {
-      const cortes = liquidations.filter(row => row && row.tipo === 'corte' && row.fecha)
-        .sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
-      periodoInicio = cortes.length ? String(cortes[0].fecha).slice(0, 10) : '';
-      try {
-        if (periodoInicio) localStorage.setItem(LS_PERIODO, periodoInicio);
-        else localStorage.removeItem(LS_PERIODO);
-      } catch (e) { persisted = false; }
-    }
-    return persisted;
+    const draft = { id: 'cli-' + newOperationId(), nombre: name, tel: phone || '—',
+      compras: 0, total: 0, ultima: '', generic: false };
+    ['email','direccion','talla','notas','nacimiento'].forEach(key => { if (input[key] != null) draft[key] = input[key]; });
+    await confirmCommand('pushRows', 'clients', [draft]);
+    return confirmed(clients, draft.id);
   }
 
   // ---- Motor de venta ----
   function now() {
-    const d = new Date(), p = n => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+    const instant = window.CORE.invokeSync('serverNow');
+    if (!instant || !Number.isFinite(instant.getTime())) throw new Error('Sin conexión. BALAM necesita internet para continuar.');
+    return new Date(instant.getTime() - 7 * 3600000).toISOString().slice(0, 16).replace('T', ' ');
   }
   function newOperationId() {
-    try {
-      if (window.crypto && window.crypto.randomUUID) return window.crypto.randomUUID();
-    } catch (e) { /* fallback portable */ }
-    return 'sale-' + window.CORE.getDeviceId() + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
-  }
-  // Representación compacta y estable del ID inmutable. Un UUID completo conserva
-  // sus 128 bits en base 36; el fallback conserva toda su entropía alfanumérica.
-  function operationToken(operationId) {
-    const raw = String(operationId || newOperationId());
-    const hex = raw.replace(/-/g, '');
-    if (/^[0-9a-f]{32}$/i.test(hex) && typeof BigInt !== 'undefined') {
-      return BigInt('0x' + hex).toString(36).toUpperCase().padStart(25, '0');
-    }
-    return raw.replace(/[^a-z0-9]/gi, '').toUpperCase();
-  }
-  function collisionSafeFolio(folio, operationId) {
-    const token = operationToken(operationId);
-    const current = String(folio || '').trim();
-    return current.endsWith('-' + token) ? current : current + '-' + token;
+    return newUuid();
   }
 
-  // ── H-33: folio comercial corto ─────────────────────────────────────────────
-  // El folio VISIBLE es {PREFIJO}-{YYMMDD}-{CONSECUTIVO}. No lleva identidad
-  // técnica: ésa vive en `sale._operationId` (UUID inmutable) y nunca se deriva
-  // del folio. La unicidad entre terminales la da un contador diario en Supabase:
-  // cada terminal RESERVA un bloque de números y los entrega localmente, así una
-  // venta offline conserva un folio corto y definitivo.
-  //
-  // CONTRATO DEL FOLIO IMPRESO: el valor que se imprime no cambia nunca. Cuando
-  // no hay bloque reservado (sin red y sin reserva vigente) el folio incorpora un
-  // CUARTO segmento con el código corto de esta terminal —`BG-260727-0001-K7Q`—,
-  // que lo distingue de cualquier otra terminal y lo vuelve definitivo: no se
-  // renombra al sincronizar. `folio_conflict` sobrevive como última defensa para
-  // el residuo (dos terminales con el mismo código, u operaciones heredadas de
-  // H-02); en ese caso el folio impreso se conserva para siempre en
-  // `sale.folioAliases` y sigue sirviendo para buscar, devolver y reimprimir.
-  const FOLIO_BLOCK = 10;     // números que se piden por reserva
-  const FOLIO_REFILL_AT = 3;  // se repone cuando quedan estos o menos
+  // Folio comercial: asignación online; formato y aliases históricos se conservan.
   const FOLIO_RE = /^([A-Z0-9]{1,6})-(\d{6})-(\d{4,})(?:-([A-Z0-9]{2,4}))?$/;
   // Prefijo comercial seguro: mayúsculas, sólo A-Z0-9 y longitud acotada.
   function normalizeFolioPrefix(raw) {
@@ -2108,21 +1487,10 @@
       const m = date.match(/^(\d{4})-(\d{2})-(\d{2})/);
       if (m) return m[1].slice(2) + m[2] + m[3];
     }
-    const d = date instanceof Date ? date : new Date();
+    if (!(date instanceof Date)) return businessDate(now());
+    const d = date;
     const p = n => String(n).padStart(2, '0');
     return p(d.getFullYear() % 100) + p(d.getMonth() + 1) + p(d.getDate());
-  }
-  // Código corto y estable de esta terminal (3 caracteres base 36). Sólo aparece
-  // en folios provisionales; es lo que impide que dos terminales sin bloque
-  // impriman la misma cadena.
-  function terminalCode(deviceId) {
-    const id = String(deviceId == null ? window.CORE.getDeviceId() : deviceId);
-    let hash = 2166136261; // FNV-1a de 32 bits
-    for (let i = 0; i < id.length; i++) {
-      hash ^= id.charCodeAt(i);
-      hash = Math.imul(hash, 16777619);
-    }
-    return ((hash >>> 0).toString(36).toUpperCase() + '00').slice(0, 3);
   }
   // Cuatro dígitos mínimos; a partir de 10000 crece sin truncarse ni repetirse.
   // `terminal` sólo se agrega en folios provisionales.
@@ -2141,80 +1509,13 @@
   function folioPreview(prefix, date) {
     return folioFromParts(normalizeFolioPrefix(prefix), date || businessDate(), 1);
   }
-  // Reserva vigente de esta terminal. `used` es el piso local: un número entregado
-  // no se vuelve a entregar aunque se borre la venta.
-  function loadFolioState() {
-    try {
-      const raw = JSON.parse(localStorage.getItem(LS_FOLIO_V2));
-      if (raw && typeof raw === 'object') {
-        return {
-          prefix: String(raw.prefix || ''), date: String(raw.date || ''),
-          used: Number(raw.used) || 0, next: Number(raw.next) || 0, until: Number(raw.until) || 0,
-        };
-      }
-    } catch (e) { /* sin storage o dato dañado */ }
-    return { prefix: '', date: '', used: 0, next: 0, until: 0 };
-  }
-  function saveFolioState(state) {
-    try { localStorage.setItem(LS_FOLIO_V2, JSON.stringify(state)); } catch (e) { /* cuota */ }
-  }
-  function folioStateFor(prefix, date) {
-    const st = loadFolioState();
-    return (st.prefix === prefix && st.date === date) ? st : { prefix, date, used: 0, next: 0, until: 0 };
-  }
-  // Mayor consecutivo del día ya conocido localmente, incluidas las ventas bajadas
-  // de la nube: sirve de piso para no repetir un número de otra terminal.
-  function maxKnownFolioSeq(prefix, date) {
-    return sales.reduce((m, s) => {
-      const p = parseFolio(s.folio);
-      return p && p.prefix === prefix && p.date === date && p.seq > m ? p.seq : m;
-    }, 0);
-  }
-  function takeFolioSeq(prefix, date) {
-    const st = folioStateFor(prefix, date);
-    let seq, reserved;
-    if (st.next && st.next <= st.until) { seq = st.next; st.next = seq + 1; reserved = true; }
-    else { seq = Math.max(st.used, maxKnownFolioSeq(prefix, date)) + 1; reserved = false; }
-    if (seq > st.used) st.used = seq;
-    saveFolioState(st);
-    return { seq, reserved };
-  }
-  // Contrato con STORE: qué bloque hace falta y desde qué piso pedirlo.
-  function folioBlockRequest() {
-    const prefix = folioPrefix(), date = businessDate();
-    const st = folioStateFor(prefix, date);
-    const left = st.next && st.next <= st.until ? st.until - st.next + 1 : 0;
-    return {
-      prefix, date, left, count: FOLIO_BLOCK,
-      floor: Math.max(st.used, maxKnownFolioSeq(prefix, date)),
-      needed: left <= FOLIO_REFILL_AT,
-    };
-  }
-  // Adopta un bloque confirmado por el servidor. Sólo avanza: nunca vuelve a un
-  // número ya entregado por esta terminal.
-  function applyFolioBlock(prefix, date, from, to) {
-    const p = normalizeFolioPrefix(prefix), d = String(date || '');
-    const f = Math.floor(Number(from) || 0), t = Math.floor(Number(to) || 0);
-    if (!/^\d{6}$/.test(d) || !(f > 0) || !(t >= f)) return false;
-    const st = folioStateFor(p, d);
-    if (f <= st.used) return false;
-    st.next = f; st.until = t;
-    if (f - 1 > st.used) st.used = f - 1;
-    saveFolioState(st);
-    return true;
-  }
-  // Autoridad ÚNICA del folio comercial. `operationId` no participa en el valor
-  // visible; se conserva en la firma porque el llamador ya generó la identidad.
-  // Con bloque reservado devuelve el formato limpio; sin bloque agrega el código
-  // de terminal y el resultado sigue siendo DEFINITIVO: no se renombra después.
-  function nextFolio(operationId, fecha) {
-    const prefix = folioPrefix(), date = businessDate(fecha);
-    const taken = takeFolioSeq(prefix, date);
-    const device = window.CORE.getDeviceId(); // identidad de terminal siempre presente
-    const tag = taken.reserved ? null : terminalCode(device);
-    // Reposición en segundo plano: jamás bloquea el cobro.
-    try { window.CORE.invokeSync('ensureFolioBlock'); } catch (e) { /* offline */ }
-    return folioFromParts(prefix, date, taken.seq, tag);
+  async function nextFolio(operationId, fecha) {
+    const response = await confirmCommand('allocateFolio', {
+      prefix: folioPrefix(), date: businessDate(fecha), operationId,
+    });
+    const folio = response.folio || (response.result && response.result.folio);
+    if (!folio) throw new Error('ONLINE_FOLIO_REQUIRED');
+    return folio;
   }
   // ── Resolución por folio o alias ────────────────────────────────────────────
   // Autoridad única de "¿qué venta es este folio?". Un folio impreso que después
@@ -2324,243 +1625,18 @@
     });
     return { ...parts, components };
   }
-  // Reidentificación de último recurso. El folio anterior YA ESTÁ IMPRESO, así que
-  // no se pierde: queda como alias histórico de la venta y sigue resolviendo
-  // búsqueda, devolución y reimpresión. Sólo ocurre en el residuo (colisión de
-  // códigos de terminal u operaciones heredadas de H-02).
-  function rekeySaleFolio(operationId, oldFolio, newFolio) {
-    const sale = sales.find(s => s._operationId === operationId && s.folio === oldFolio);
-    if (!sale || sale._syncStatus === 'synced' || !newFolio || newFolio === oldFolio) return false;
-    const aliases = (sale.folioAliases || []).slice();
-    if (oldFolio && !aliases.includes(oldFolio)) aliases.push(oldFolio);
-    sale.folioAliases = aliases.filter(a => a !== newFolio);
-    sale.folio = newFolio;
-    payments.forEach(p => { if (p.folio === oldFolio) p.folio = newFolio; });
-    movements.forEach(m => { if (m.ref === oldFolio) m.ref = newFolio; });
-    returns.forEach(r => { if (r.folio === oldFolio) r.folio = newFolio; });
-    saveSales(); savePayments(false); saveMovements(); saveReturns();
-    return true;
-  }
-
-  // Confirma el resultado devuelto por el servidor versionado. Una versión
-  // expected+1 sólo confirma un upsert cuando STORE comprobó su contenido.
-  // Así conserva cambios locales posteriores sin adoptar como propia una versión ajena.
-  function applySyncResult(kind, rows, expected, operation) {
-    const M = {
-      products: [products, saveProducts, hydrate],
-      clients: [clients, saveClients],
-      sellers: [sellers, saveSellers],
-      promotions: [promos, savePromos],
-    };
-    const m = M[kind]; if (!m) return { conflicts: 0 };
-    let conflicts = 0;
-    remoteApplying = true;
-    try {
-      rows.forEach(incoming => {
-        const remote = { ...incoming };
-        const i = m[0].findIndex(x => x.id === remote.id);
-        const base = Number(expected && expected[remote.id]) || 0;
-        const accepted = Number(remote._syncVersion) === base + 1
-          && (operation !== 'upsert' || remote._syncAccepted === true)
-          && (operation !== 'delete' || !!remote._deletedAt);
-        delete remote._syncAccepted;
-        if (accepted) {
-          if (i >= 0) {
-            m[0][i]._syncVersion = remote._syncVersion;
-            m[0][i]._deletedAt = remote._deletedAt || null;
-          }
-          return;
-        }
-        conflicts++;
-        if (remote._deletedAt) {
-          if (i >= 0) m[0].splice(i, 1);
-        } else if (i >= 0) {
-          m[0][i] = m[2] ? m[2](remote) : remote;
-        } else {
-          m[0].push(m[2] ? m[2](remote) : remote);
-        }
-      });
-      m[1]();
-    } finally { remoteApplying = false; }
-    if (kind === 'products' && conflicts) {
-      requireCatalogResync('Otra terminal confirmó una versión distinta del inventario; se requiere resincronización', 'product-conflict');
-    }
-    return { conflicts, operation, requiresResync: kind === 'products' && conflicts > 0 };
-  }
-
-  // H-65: aplica como una sola unidad el snapshot que devolvió la liquidación
-  // transaccional. No usa la heurística expected+1: para venta, productos,
-  // pagos y movimiento de este folio la respuesta del servidor es la autoridad.
-  // Si alguna escritura de caché falla, la operación permanece en cola y nuevas
-  // ventas se bloquean hasta que un pull completo pueda persistir el catálogo.
-  function applySaleCommitResult(commitId, folio, result) {
-    try { assertLocalWriter(true); }
-    catch (e) { return { ok: false, error: e.code || 'LOCAL_WRITER_REQUIRED' }; }
-    commitId = String(commitId || '').trim();
-    result = result || {};
-    const authoritativeSale = result.sale;
-    const stockReserved = result.stockReserved === true || result.stock_reserved === true;
-    const reservationOperationId = result.reservationOperationId || result.reservation_operation_id || null;
-    if (!commitId || !authoritativeSale || authoritativeSale.folio !== folio
-        || authoritativeSale.estado !== 'Pagado') {
-      return { ok: false, error: 'AUTHORITATIVE_SALE_MISSING' };
-    }
-    if (!stockReserved || !reservationOperationId) {
-      return { ok: false, error: 'STOCK_RESERVATION_NOT_CONFIRMED' };
-    }
-
-    const remoteProducts = Array.isArray(result.products) ? result.products : [];
-    const remoteSellers = Array.isArray(result.sellers) ? result.sellers : [];
-    const requiredIds = new Set((authoritativeSale.lineas || [])
-      .map(line => line.productId).filter(Boolean));
-    if (!requiredIds.size
-        || [...requiredIds].some(id => !remoteProducts.some(p => p.id === id))) {
-      return { ok: false, error: 'AUTHORITATIVE_PRODUCTS_INCOMPLETE' };
-    }
-
-    // Bajo el lease cross-tab, toda colección se relee antes del journal. Así
-    // los cambios no relacionados que otra pestaña confirmó antes del relevo no
-    // se pierden al persistir la respuesta H-65.
-    if (!rebaseLocalWriterCollections()) {
-      return { ok: false, error: 'CACHE_REBASE_REQUIRED' };
-    }
-    const current = sales.find(s => s.folio === folio);
-    const expectedOperationId = current && current._operationId;
-    if (expectedOperationId && reservationOperationId !== expectedOperationId) {
-      return { ok: false, error: 'STOCK_RESERVATION_NOT_CONFIRMED' };
-    }
-
-    const durableJournal = pendingSaleCommitJournal;
-    const legacyReplay = durableJournal
-      && durableJournal.key === LS_SALE_COMMIT_JOURNAL_LEGACY
-      && !durableJournal.commitId
-      && durableJournal.folio === folio
-      && durableJournal.reservationOperationId === reservationOperationId;
-    if (durableJournal && (durableJournal.invalid
-        || (!legacyReplay && durableJournal.commitId !== commitId))) {
-      requireCatalogResync('Otra liquidación espera reconciliar su caché local', 'h65-cache');
-      return { ok: false, error: 'CACHE_JOURNAL_CONFLICT' };
-    }
-    const journalKey = durableJournal ? durableJournal.key : saleCommitJournalKey(commitId);
-    const journal = durableJournal || makeSaleCommitJournal(
-      commitId, folio, reservationOperationId, remoteProducts, remoteSellers
-    );
-    journal.key = journalKey;
-    journal.commitId = journal.commitId || commitId;
-    try {
-      if (!durableJournal || legacyReplay) localStorage.setItem(journalKey, JSON.stringify(journal));
-      const storedJournal = JSON.parse(localStorage.getItem(journalKey) || 'null');
-      if (!storedJournal || storedJournal.commitId !== commitId
-          || storedJournal.reservationOperationId !== reservationOperationId) {
-        throw new Error('journal_not_verified');
-      }
-      pendingSaleCommitJournal = Object.assign(storedJournal, { key: journalKey });
-    } catch (e) {
-      requireCatalogResync('No se pudo preparar la confirmación local de la liquidación', 'h65-cache');
-      return { ok: false, error: 'CACHE_JOURNAL_UNAVAILABLE' };
-    }
-
-    const restoreAfterCacheFailure = error => {
-      restoreSaleCommitJournal(journal);
-      try {
-        if (!localStorage.getItem(journalKey)) {
-          localStorage.setItem(journalKey, JSON.stringify(journal));
-        }
-        pendingSaleCommitJournal = Object.assign({}, journal, { key: journalKey });
-      } catch (e) { /* el gate h65 conserva el bloqueo aunque storage esté lleno */ }
-      // Restauración best-effort: el journal permanece como autoridad de
-      // recuperación si una de estas claves sigue sin poder escribirse.
-      persistProducts(); saveSales(); savePayments(false); saveMovements(); saveSellers(false);
-      requireCatalogResync('La confirmación remota de la liquidación no pudo persistirse completa', 'h65-cache');
-      return { ok: false, error };
-    };
-
-    remoteApplying = true;
-    try {
-      remoteProducts.forEach(remote => {
-        const i = products.findIndex(p => p.id === remote.id);
-        const row = hydrate(remote);
-        if (i >= 0) products[i] = row; else products.push(row);
-      });
-
-      const confirmedSale = Object.assign({}, authoritativeSale, {
-        _stockRequired: true,
-        _stockReserved: true,
-        _syncStatus: 'synced',
-        _syncDetail: {
-          stockReserved: true,
-          stockIdempotent: result.stockIdempotent === true || result.stock_idempotent === true,
-          reservationOperationId,
-        },
-      });
-      const saleIndex = sales.findIndex(s => s.folio === folio);
-      if (saleIndex >= 0) sales[saleIndex] = confirmedSale;
-      else sales.unshift(confirmedSale);
-
-      payments.splice(0, payments.length,
-        ...payments.filter(p => p.folio !== folio),
-        ...(Array.isArray(result.payments) ? result.payments.slice().reverse() : []));
-      payments.sort((a, b) => String(b.fecha || '').localeCompare(String(a.fecha || '')));
-
-      movements.splice(0, movements.length,
-        ...movements.filter(m => !(m.ref === folio && m.tipo === 'Venta')),
-        ...(Array.isArray(result.movements) ? result.movements.slice().reverse() : []));
-      movements.sort((a, b) => String(b.fecha || '').localeCompare(String(a.fecha || '')));
-
-      remoteSellers.forEach(remote => {
-        const i = sellers.findIndex(s => s.id === remote.id);
-        if (i >= 0) sellers[i] = remote; else sellers.push(remote);
-      });
-
-      const persisted = [
-        persistProducts(), saveSales(), savePayments(false), saveMovements(), saveSellers(false),
-      ].every(Boolean);
-      let verified = false;
-      if (persisted) {
-        try {
-          verified = localStorage.getItem(LS_KEY) === JSON.stringify(products)
-            && localStorage.getItem(LS_SALES) === JSON.stringify(sales)
-            && localStorage.getItem(LS_PAYMENTS) === JSON.stringify(payments)
-            && localStorage.getItem(LS_MOVES) === JSON.stringify(movements)
-            && localStorage.getItem(LS_SELLERS) === JSON.stringify(sellers);
-        } catch (e) { verified = false; }
-      }
-      if (!verified) return restoreAfterCacheFailure('CACHE_RESYNC_REQUIRED');
-      try {
-        localStorage.removeItem(journalKey);
-        if (localStorage.getItem(journalKey) !== null) {
-          throw new Error('journal_not_cleared');
-        }
-      } catch (e) { return restoreAfterCacheFailure('CACHE_JOURNAL_NOT_CLEARED'); }
-      pendingSaleCommitJournal = null;
-      releaseLayawayProductLock(reservationOperationId);
-      clearCatalogResync('h65-cache');
-      clearCatalogResync('products-cache');
-      const confirmedPayment = (Array.isArray(result.payments) ? result.payments : [])
-        .find(p => p.tipo === 'liquidacion') || null;
-      return {
-        ok: true, sale: confirmedSale,
-        paymentId: confirmedPayment && confirmedPayment.id,
-      };
-    } finally { remoteApplying = false; }
-  }
-  function salePaymentDraft(sale, { monto, metodo, tipo, detalle, fecha }) {
+  function salePaymentDraft(sale, { monto, metodo, tipo, detalle, fecha, operationId }) {
     const amount = money(monto);
     if (!(amount > 0)) return null;
     const parts = paymentParts(metodo, amount, detalle);
+    const paymentOperationId = operationId || newOperationId();
     return {
-      id: 'pay-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+      id: 'pay-' + paymentOperationId, _operationId: paymentOperationId,
       folio: sale.folio, fecha: fecha || now(), tipo: tipo || 'pago',
       metodo, monto: amount, ...parts,
     };
   }
-  function addSalePayment(sale, spec, sync = true) {
-    const p = salePaymentDraft(sale, spec);
-    if (!p) return null;
-    payments.unshift(p);
-    savePayments(sync);
-    return p;
-  }
+
   function paymentsForSale(folio) { return payments.filter(p => p.folio === folio).reverse().sort((a, b) => String(a.fecha).localeCompare(String(b.fecha))); }
   function hasFinancialSnapshot(sale) { return !!sale && sale.subtotal != null && sale.iva != null && sale.descuento != null; }
   // H-32: resolución de descuento de un renglón. Devuelve el precio unitario efectivo y la
@@ -2759,6 +1835,7 @@
     const subtotal = money(finalTotal / 1.16);
     const iva = money(finalTotal - subtotal);
     return {
+      quoteContext: clone(window.CORE.invokeSync('getQuoteContext')),
       originalTotal, configuredDiscountTotal, beforeAdditionalTotal,
       additionalDiscountTotal: money(beforeAdditionalTotal - finalTotal),
       subtotal, iva, ivaPct: 16, ivaIncluded: true, finalTotal,
@@ -2781,12 +1858,11 @@
     if (metodo !== 'Apartado' && metodo !== 'Cortesía' && Math.abs(money(pagoEfectivo + pagoOtro) - money(total)) > 0.009) throw new Error('La suma de pagos no coincide con el total');
     if (pagoEfectivo < 0 || pagoEfectivo > total || pagoOtro < 0 || pagoOtro > total) throw new Error('El desglose de pago es inválido');
   }
-  function recordSale({ ticket, additionalDiscounts, quote: quoteIn, sellerIds, client, metodo, estado, subtotal: subtotalIn, iva: ivaIn, total: totalIn, anticipo: anticipoIn, pagoEfectivo: pagoEfectivoIn, pagoOtro: pagoOtroIn, pagoDetalle, metodoPago, ivaPct: ivaPctIn, ivaIncluded: ivaIncludedIn, itemCount, fecha: fechaIn }) {
-    if (catalogResyncRequired) {
-      throw new Error(`El inventario requiere resincronización antes de continuar vendiendo. ${catalogResyncReason}`);
-    }
+  async function recordSale({ ticket, additionalDiscounts, quote: quoteIn, sellerIds, client, metodo, estado, subtotal: subtotalIn, iva: ivaIn, total: totalIn, anticipo: anticipoIn, pagoEfectivo: pagoEfectivoIn, pagoOtro: pagoOtroIn, pagoDetalle, metodoPago, ivaPct: ivaPctIn, ivaIncluded: ivaIncludedIn, itemCount, fecha: fechaIn, operationId: requestedOperationId }) {
     const quoteTicket = (ticket || []).map(l => l.res ? l : Object.assign({}, l, { res: resolveLineDiscount(l.p, l.talla) }));
     const quote = quoteIn || saleQuote(quoteTicket, additionalDiscounts || []);
+    const quoteContext = clone(quote.quoteContext);
+    if (!quoteContext) throw Object.assign(new Error('La cotización ya no está vigente. Revisa el importe antes de confirmar.'), { code: 'ONLINE_QUOTE_CONTEXT_REQUIRED' });
     const total = money(quote.finalTotal);
     const ivaPct = quote.ivaPct;
     const ivaIncluded = quote.ivaIncluded;
@@ -2796,12 +1872,11 @@
     const pagoEfectivo = pagoEfectivoIn == null ? (metodo === 'Efectivo' ? total : 0) : money(pagoEfectivoIn);
     const pagoOtro = pagoOtroIn == null ? (metodo === 'Efectivo' || metodo === 'Apartado' ? 0 : total) : money(pagoOtroIn);
     assertSaleAmounts({ ticket, metodo, estado, subtotal, iva, total, anticipo, pagoEfectivo, pagoOtro, ivaIncluded });
-    const operationId = newOperationId();
+    const operationId = requestedOperationId || newOperationId();
     const fecha = fechaIn || now(); // permite fecha pasada (simulación)
     // El folio toma su día de la MISMA fecha que se guarda en la venta.
-    const folio = nextFolio(operationId, fecha);
+    const folio = await nextFolio(operationId, fecha);
     const cobrada = estado !== 'Apartado' && estado !== 'Cancelado';
-    if (cobrada) assertLayawayProductsUnlocked((ticket || []).map(line => line.p && line.p.id));
     // H-34: el plazo se congela con la política vigente AHORA y cuenta desde la
     // misma fecha de la venta. El apartado todavía no entrega mercancía: su
     // plazo arranca al liquidarse (ver finalizarApartado).
@@ -2815,18 +1890,9 @@
     const totalCobrado = cortesia ? 0 : total;
     let clientEffect = null;
     const sellerEffects = [];
-    // 1) Descuento de stock + movimientos (solo si la venta se cobró/entregó)
-    if (cobrada) {
-      ticket.forEach(l => {
-        const e = stockVariantOf(l.p, l.talla);
-        if (e) e.stock = Math.max(0, e.stock - l.qty);
-        movements.unshift({ fecha, tipo: 'Venta', producto: l.p.nombre, productId: l.p.id, sku: l.p.sku, talla: l.talla, cant: -l.qty, ref: folio });
-      });
-      persistProducts(); saveMovements();
-    }
     // 2) Cliente (agregados) — solo registrados y NO en cortesía (no pagó nada).
     if (client && !client.generic && !cortesia) {
-      const c = clients.find(x => x.id === client.id);
+      const c = clone(clients.find(x => x.id === client.id));
       if (c) {
         const beforeCompras = Number(c.compras) || 0;
         const beforeTotal = Number(c.total) || 0;
@@ -2836,7 +1902,7 @@
           compras_delta: 1, total_delta: total, ultima: c.ultima,
           after_compras: c.compras, after_total: c.total,
         };
-        saveClients(false);
+
       }
     }
     // 3) Vendedores (reparto de venta y comisión).
@@ -2852,7 +1918,7 @@
       // verdad se pago y no lo que la configuracion de hoy diria (AP-06).
       comisionesVenta = saleCommissionEntries(ids, saleCommissionBase(total, iva, { cortesia }), { exceptFolio: folio });
       comisionesVenta.forEach(entry => {
-        const s = sellers.find(x => x.id === entry.sellerId);
+        const s = clone(sellers.find(x => x.id === entry.sellerId));
         if (!s) return;
         const baseVersion = Number(s._syncVersion) || 0;
         comisionVenta += entry.monto;
@@ -2866,7 +1932,7 @@
           after_comision_acum: s.comisionAcum,
         });
       });
-      saveSellers(false);
+
     }
     comisionVenta = Math.round(comisionVenta * 100) / 100;
     // 4) Registro de venta (al frente = más reciente). Precio cobrado = con descuentos del POS.
@@ -2944,28 +2010,29 @@
       comisiones: comisionesVenta,
       // H-34: snapshot del plazo. null = sin límite, igual que las ventas previas.
       returnLimitDays, returnExpiresAt, receiptSnapshot,
-      _operationId: operationId, _stockRequired: cobrada, _syncStatus: 'pending',
+      _operationId: operationId, _stockRequired: cobrada,
       // En cortesía cada línea queda en $0 (no se cobró); el valor vive en precioOrig y valorRegalado.
       // promos: evidencia histórica inmutable de H-32. Un arreglo vacío significa "sin promoción";
       // su AUSENCIA significa "venta anterior a H-32", que nunca imprime porcentaje.
       lineas: saleLines,
     };
-    sales.unshift(sale);
-    saveSales();
+    const salePayments = [];
     if (!cortesia) {
       const paidNow = estado === 'Apartado' ? anticipo : total;
       const tender = metodoPago || (metodo === 'Apartado' ? 'Efectivo' : metodo);
-      if (paidNow > 0) addSalePayment(sale, { monto: paidNow, metodo: tender, tipo: estado === 'Apartado' ? 'anticipo' : 'venta', detalle: pagoDetalle, fecha }, false);
+      if (paidNow > 0) salePayments.push(salePaymentDraft(sale, {
+        monto: paidNow, metodo: tender, tipo: estado === 'Apartado' ? 'anticipo' : 'venta', detalle: pagoDetalle, fecha,
+      }));
     }
-    if (!remoteApplying) {
-      try {
-        window.CORE.invokeSync('pushSale', sale, {
-          clientId: client && !client.generic ? client.id : null,
-          clientEffect, sellerEffects, payments: paymentsForSale(sale.folio),
-        });
-      } catch (e) { /* offline */ }
-    }
-    return sale;
+    await confirmCommand('pushSale', sale, {
+      clientId: client && !client.generic ? client.id : null,
+      quoteContext,
+      productVersions: [...new Map(ticket.map(line => [String(line.p.id), {
+        id: String(line.p.id), baseVersion: Number(line.p._syncVersion) || 0,
+      }])).values()],
+      clientEffect, sellerEffects, payments: salePayments,
+    });
+    return confirmed(sales, operationId, '_operationId');
   }
 
   // H-65: prepara la intención de liquidación SIN mutar ningún agregado local.
@@ -2975,7 +2042,7 @@
     const productId = String(line && line.productId || '').trim();
     if (productId) {
       const product = products.find(p => p.id === productId);
-      if (!product) throw new Error(`El producto ${productId} ya no está en el catálogo; resincroniza antes de liquidar`);
+      if (!product) throw new Error(`El producto ${productId} ya no está en el catálogo; vuelve a consultar antes de liquidar`);
       return product;
     }
     const skuValue = String(line && line.sku || '').trim();
@@ -3001,7 +2068,7 @@
       const qty = Number(line.qty);
       if (!Number.isInteger(qty) || qty <= 0) throw new Error('El apartado contiene una cantidad inválida');
       if (!stockVariantOf(product, line.talla)) {
-        throw new Error(`La talla ${line.talla} ya no existe en ${product.nombre || product.id}; resincroniza antes de liquidar`);
+        throw new Error(`La talla ${line.talla} ya no existe en ${product.nombre || product.id}; vuelve a consultar antes de liquidar`);
       }
       return Object.assign({}, line, { productId: product.id });
     });
@@ -3048,71 +2115,24 @@
         ? addDays(dayOf(fecha2), sale.returnLimitDays) : sale.returnExpiresAt,
       _operationId: sale._operationId || newOperationId(),
       _stockRequired: true,
-      _syncStatus: 'pending',
     });
     return { sale: saleDraft, payment, sellerEffects };
   }
 
   async function liquidarApartado(sale, payment) {
-    let prepared;
-    try { prepared = finalizarApartado(sale, payment); }
-    catch (e) { return { ok: false, error: e.message || 'No se pudo identificar la mercancía del apartado', code: e.code }; }
-    if (!acquireLayawayProductLock(prepared.sale)) {
-      return {
-        ok: false,
-        error: 'El producto cambió o ya tiene una liquidación pendiente; resincroniza antes de continuar',
-        code: 'LAYAWAY_PRODUCT_LOCKED',
-      };
-    }
-    let remote;
-    try {
-      remote = await Promise.resolve(window.CORE.invokeSync('settleLayaway', prepared.sale, {
-        payment: prepared.payment,
-        sellerEffects: prepared.sellerEffects,
-      }));
-    } catch (e) {
-      return { ok: false, pending: true, error: e.message || 'La liquidación quedó pendiente de confirmación' };
-    }
-    if (!remote || remote.ok !== true) {
-      const remoteError = remote && remote.error;
-      if (!remote || remote.pending !== true) releaseLayawayProductLock(prepared.sale._operationId);
-      return {
-        ok: false,
-        pending: !!(remote && remote.pending),
-        error: (typeof remoteError === 'string' ? remoteError : remoteError && remoteError.message)
-          || (remote && (remote.diagnostic || {}).message)
-          || 'La liquidación quedó pendiente de confirmación; no entregues la mercancía',
-      };
-    }
-    const confirmedSale = sales.find(s => s.folio === sale.folio);
-    const authoritativePaymentId = remote.paymentId || remote.payment_id || payment.id;
-    const confirmedPayment = payments.find(p => p.id === authoritativePaymentId);
-    if (!confirmedSale || confirmedSale.estado !== 'Pagado' || !confirmedPayment
-        || confirmedSale._stockReserved !== true) {
-      requireCatalogResync('La confirmación remota no quedó reconciliada en esta terminal');
-      return { ok: false, error: 'La terminal debe resincronizar antes de entregar la mercancía' };
-    }
+    const prepared = finalizarApartado(sale, payment);
+    await confirmCommand('settleLayaway', prepared.sale, {
+      commitId: payment._operationId, payment: prepared.payment, sellerEffects: prepared.sellerEffects,
+    });
+    const confirmedSale = confirmed(sales, sale.folio, 'folio');
+    const confirmedPayment = confirmed(payments, payment.id);
+    if (confirmedSale.estado !== 'Pagado') throw Object.assign(new Error('Estamos confirmando la operación. No la repitas.'), { code: 'ONLINE_RESULT_UNKNOWN' });
     return { ok: true, sale: confirmedSale, payment: confirmedPayment, liquidado: true };
   }
 
-  function registrarPagoApartado(folio, { monto, metodo, detalle, fecha } = {}) {
-    const sale = sales.find(s => s.folio === folio);
+  async function registrarPagoApartado(folio, { monto, metodo, detalle, fecha, operationId } = {}) {
+    const sale = clone(sales.find(s => s.folio === folio));
     if (!sale || sale.estado !== 'Apartado') return { ok: false, error: 'El apartado no está pendiente' };
-    // La cola durable se consulta por el gateway de sincronización: DATA no
-    // conoce a STORE. Si esa consulta falla se asume liquidación pendiente; un
-    // abono de más sobre un apartado ya liquidado no se puede deshacer.
-    let queuedLiquidation = false;
-    try { queuedLiquidation = window.CORE.invokeSync('hasPendingLayaway', folio) === true; }
-    catch (e) { queuedLiquidation = true; }
-    if (hasLayawayLiquidationLock(folio, sale._operationId) || queuedLiquidation) {
-      return {
-        ok: false, pending: true, code: 'LAYAWAY_LIQUIDATION_PENDING',
-        error: 'Este apartado ya tiene una liquidación pendiente; no captures otro abono hasta reconciliarla',
-      };
-    }
-    if (catalogResyncRequired) {
-      return { ok: false, error: `La terminal requiere resincronizar antes de registrar otro pago. ${catalogResyncReason}` };
-    }
     const saldo = sale.saldo != null ? money(sale.saldo) : money((Number(sale.total) || 0) - (Number(sale.anticipo) || 0));
     const amount = money(monto);
     if (!Number.isFinite(amount) || amount <= 0) return { ok: false, error: 'El abono debe ser mayor a cero' };
@@ -3120,62 +2140,48 @@
     if (!window.CONFIG.list('payment_method').some(item => item.code === metodo)
         || ['Apartado', 'Cortesía'].includes(metodo)) return { ok: false, error: 'Método de pago inválido para el abono' };
     let payment;
-    try { payment = salePaymentDraft(sale, { monto: amount, metodo, tipo: amount === saldo ? 'liquidacion' : 'abono', detalle, fecha }); }
+    try { payment = salePaymentDraft(sale, { monto: amount, metodo, tipo: amount === saldo ? 'liquidacion' : 'abono', detalle, fecha, operationId }); }
     catch (e) { return { ok: false, error: e.message || 'El desglose del pago no cuadra' }; }
     if (amount === saldo) return liquidarApartado(sale, payment);
-    payments.unshift(payment);
-    savePayments(false);
+    const expectedSale = { estado: sale.estado, anticipo: Number(sale.anticipo) || 0,
+      saldo, pagoEfectivo: Number(sale.pagoEfectivo) || 0, pagoOtro: Number(sale.pagoOtro) || 0,
+      operationId: sale._operationId || null };
     sale.anticipo = money((Number(sale.anticipo) || 0) + amount);
     sale.saldo = money((Number(sale.total) || 0) - sale.anticipo);
     sale.pagoEfectivo = money((Number(sale.pagoEfectivo) || 0) + payment.efectivo);
     sale.pagoOtro = money((Number(sale.pagoOtro) || 0) + payment.tarjeta + payment.transferencia + payment.otro);
-    saveSales();
-    try { window.CORE.invokeSync('pushSale', sale, { sellerEffects: [], payments: paymentsForSale(sale.folio) }); } catch (e) { /* offline */ }
-    return { ok: true, sale, payment, liquidado: false };
+    await confirmCommand('pushSale', sale, { mode: 'payment', expectedSale,
+      commitId: payment._operationId, sellerEffects: [], payments: [...paymentsForSale(sale.folio), payment] });
+    return { ok: true, sale: confirmed(sales, folio, 'folio'), payment: confirmed(payments, payment.id), liquidado: false };
   }
   async function completarApartado(folio) {
     const sale = sales.find(s => s.folio === folio);
-    if (!sale || sale.estado !== 'Apartado') return null;
+    if (!sale || sale.estado !== 'Apartado') throw Object.assign(new Error('El apartado ya no está pendiente'), { code: 'LAYAWAY_NOT_OPEN' });
     const saldo = sale.saldo != null ? Number(sale.saldo) || 0 : Math.max(0, (Number(sale.total) || 0) - (Number(sale.anticipo) || 0));
     const r = await Promise.resolve(registrarPagoApartado(folio, { monto: saldo, metodo: 'Efectivo', detalle: { efectivo: saldo } }));
     return r.ok ? r.sale : null;
   }
 
-  // Registra un pago de comisión en el historial (local).
-  function addLiquidacion(s, monto, tipo, operationId) {
-    const prefix = tipo === 'corte' ? 'cut-' : 'liq-';
-    liquidations.unshift({ id: prefix + operationId + (tipo === 'corte' ? '-' + s.id : ''), fecha: now(), sellerId: s.id, seller: s.nombre, monto: Math.round((Number(monto) || 0) * 100) / 100, tipo });
-  }
   // Liquida (paga) la comisión acumulada de un vendedor: la registra en el historial, la pone en
-  // cero y persiste/sincroniza. Devuelve el monto liquidado, o null si el vendedor no existe.
-  function liquidarComision(id) {
-    const s = sellers.find(x => x.id === id);
-    if (!s) return null;
+  // cero en una transacción SQL. Devuelve el monto confirmado, o null si no existe.
+  async function liquidarComision(id) {
+    const seller = sellers.find(row => row.id === id);
+    if (!seller) throw Object.assign(new Error('El vendedor ya no existe'), { code: 'SELLER_NOT_FOUND' });
     const operationId = newOperationId();
-    const monto = Number(s.comisionAcum) || 0;
-    if (monto > 0) addLiquidacion(s, monto, 'liquidacion', operationId);
-    s.comisionAcum = 0;
-    save(LS_LIQ, liquidations);
-    saveSellers(false);
-    window.CORE.invokeSync('settleCommission', { operationId, sellerId: id });
-    return monto;
+    const response = await confirmCommand('settleCommission', { operationId, sellerId: id });
+    const result = response.result || response;
+    const rows = liquidations.filter(row => row.id === 'liq-' + operationId);
+    return result.amount != null ? Number(result.amount) : result.monto != null ? Number(result.monto) : rows.reduce((total, row) => total + Number(row.monto || 0), 0);
   }
   // Corte de mes: paga la comisión pendiente de TODOS los vendedores y reinicia los acumulados del
   // periodo (ventasMes, ventasNum, comisionAcum). metaMes NO se toca. Marca el inicio del nuevo periodo.
-  function cerrarMes() {
+  async function cerrarMes() {
     const operationId = newOperationId();
-    let total = 0, n = 0;
-    sellers.forEach(s => {
-      const pend = Number(s.comisionAcum) || 0;
-      if (pend > 0) { addLiquidacion(s, pend, 'corte', operationId); total += pend; n++; }
-      s.comisionAcum = 0; s.ventasMes = 0; s.ventasNum = 0;
-    });
-    periodoInicio = now().slice(0, 10);
-    try { localStorage.setItem(LS_PERIODO, periodoInicio); } catch (e) { /* sin storage */ }
-    save(LS_LIQ, liquidations);
-    saveSellers(false);
-    window.CORE.invokeSync('closeCommissionPeriod', { operationId });
-    return { total: Math.round(total * 100) / 100, vendedores: n, periodoInicio };
+    const response = await confirmCommand('closeCommissionPeriod', { operationId });
+    const rows = liquidations.filter(row => String(row.id).startsWith('cut-' + operationId + '-'));
+    const result = response.result || response;
+    return { total: result.total != null ? Number(result.total) : money(rows.reduce((total, row) => total + Number(row.monto || 0), 0)),
+      vendedores: result.sellers != null ? Number(result.sellers) : result.vendedores != null ? Number(result.vendedores) : rows.length, periodoInicio: result.period_started || periodoInicio };
   }
   function getPeriodoInicio() { return periodoInicio; }
 
@@ -3202,7 +2208,8 @@
       const m = date.match(/^(\d{4})-(\d{2})-(\d{2})/);
       if (m) return m[1] + '-' + m[2] + '-' + m[3];
     }
-    const d = date instanceof Date ? date : new Date();
+    if (!(date instanceof Date)) return now().slice(0, 10);
+    const d = date;
     const p = n => String(n).padStart(2, '0');
     return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
   }
@@ -3438,22 +2445,11 @@
       && !returnLifecycle(sale).inconsistent;
   }
 
-  // Registra una devolución: reingresa stock (+ movimiento 'Devolución'), revierte comisión/ventas
-  // del vendedor en proporción a lo devuelto (si returns.reverseCommission), ajusta el total del
-  // cliente, marca la venta original (Devuelto / Devolución parcial) y sincroniza.
-  // arg: { folio, lineas:[{sku,nombre,talla,qty,motivo,precio}], metodo, notas }
-  // ---- Cambios (H-38 / C5) ----
-  // Registra un cambio local y lo entrega a la autoridad transaccional
-  // pos.commit_exchange(). Gobernado por docs/04-contrato-del-cambio.md.
-  //
-  // El DINERO no se calcula aqui: el servidor resuelve valor reconocido y precio
-  // vigente, y valida el cobro contra su propio calculo. Aqui se anticipa el
-  // mismo resultado con las autoridades locales para que la terminal pueda
-  // operar offline, pero la cifra que manda es la del commit.
-  //
-  // El cambio NUNCA devuelve efectivo: si lo entregado vale menos, el sobrante
-  // se registra como valor no aprovechado (Contrato del Cambio, seccion 4).
-  function recordExchange({ origenFolio, lineas, usuario, vendedorId, revisadoPor, notas, metodoPago, pagoDetalle, fecha: fechaIn, operationId }) {
+  // Cambio: prepara evidencia y efectos; la transacción SQL decide su confirmación.
+  // Contrato: nunca reembolsa efectivo y conserva la venta original.
+  async function recordExchange({ origenFolio, lineas, usuario, vendedorId, revisadoPor, notas, metodoPago, pagoDetalle, fecha: fechaIn, operationId, quoteContext: quoteContextIn }) {
+    const quoteContext = clone(quoteContextIn || window.CORE.invokeSync('getQuoteContext'));
+    if (!quoteContext) throw Object.assign(new Error('La cotización ya no está vigente. Revisa el importe antes de confirmar.'), { code: 'ONLINE_QUOTE_CONTEXT_REQUIRED' });
     const sale = findSaleByFolio(origenFolio);
     if (!sale) return { ok: false, error: 'sale_not_found' };
     const items = (lineas || []).filter(l => l && (l.lado === 'devuelto' || l.lado === 'entregado'));
@@ -3473,9 +2469,12 @@
         const id = String((l && l.productId) || '').trim();
         const p = id ? products.find(x => x.id === id) : null;
         if (!p) {
-          const error = new Error(`No se pudo identificar la prenda que se entrega (${l.nombre || l.sku || '—'}); no puede valorarse. Resincroniza el inventario antes de registrar el cambio.`);
+          const error = new Error(`No se pudo identificar la prenda que se entrega (${l.nombre || l.sku || '—'}); no puede valorarse. Vuelve a consultar el inventario antes de registrar el cambio.`);
           error.code = 'PRODUCT_NOT_FOUND';
           throw error;
+        }
+        if (l.expectedProductVersion != null && Number(l.expectedProductVersion) !== Number(p._syncVersion)) {
+          throw Object.assign(new Error('La prenda cambió desde que se cotizó. Vuelve a seleccionarla antes de confirmar el cambio.'), { code: 'ONLINE_PRODUCT_CHANGED' });
         }
         identidad.set(l, p);
       });
@@ -3499,19 +2498,6 @@
         qty: Number(l.qty) || 0, motivo: l.motivo || null, condicion: l.condicion || null,
       })),
     });
-    const existing = exchanges.find(e => e && (e._operationId === opId || e.id === 'cmb-' + opId));
-    if (existing) {
-      if (existing._operationFingerprint !== operationFingerprint) {
-        return { ok: false, error: 'operation_mismatch', operationId: opId };
-      }
-      const priorPayment = payments.find(p => p && (p.id === 'pay-' + existing.id
-        || (p.folio === existing.folio && p.tipo === 'cambio'))) || null;
-      return { ok: true, idempotent: true, operationId: opId, exchange: existing, payment: priorPayment };
-    }
-    try {
-      assertLayawayProductsUnlocked(items.map(line => identidad.get(line).id));
-    } catch (e) { return { ok: false, error: e.message, code: e.code }; }
-
     // Plazo de posventa (H-34): compuerta, no se reinicia ni se hereda aparte.
     const plazo = returnDeadline(sale);
     if (plazo && plazo.status === 'vencido') return { ok: false, error: 'exchange_window_closed' };
@@ -3550,7 +2536,7 @@
     // configuración de hoy diría. Sin eso, cambiar `commission.base` o el
     // porcentaje de alguien descuadraría la reversa (AP-06).
     const comisionBase = window.CONFIG.get('commission.base') === 'bruto' ? 'bruto' : 'neto';
-    const vendedorCambio = vendedorId ? sellers.find(x => x.id === vendedorId) : null;
+    const vendedorCambio = vendedorId ? clone(sellers.find(x => x.id === vendedorId)) : null;
     // El excedente viene con IVA incluido al 16%, misma convención que `recordSale`
     // fija en su cálculo de subtotal.
     const baseComisionable = comisionBase === 'bruto' ? diferencia : money(diferencia / 1.16);
@@ -3564,7 +2550,7 @@
 
     const id = 'cmb-' + opId;
     const exch = {
-      id, folio: nextFolio(id, fecha), origenFolio: sale.folio, fecha,
+      id, folio: await nextFolio(opId, fecha), origenFolio: sale.folio, fecha,
       _operationId: opId, _operationFingerprint: operationFingerprint,
       usuario: usuario || '', vendedorId: vendedorId || undefined,
       revisadoPor: revisadoPor || undefined, notas: notas || '',
@@ -3612,21 +2598,6 @@
       }),
     };
 
-    // Inventario local en dos sentidos: entra lo devuelto, sale lo entregado.
-    exch.lineas.forEach(l => {
-      const p = products.find(x => x.id === l.productId);
-      if (!p) return;
-      const e = stockVariantOf(p, l.talla);
-      if (!e) return;
-      e.stock = Math.max(0, e.stock + (l.lado === 'devuelto' ? 1 : -1) * l.qty);
-      movements.unshift({
-        fecha, tipo: l.lado === 'devuelto' ? 'Cambio (entra)' : 'Cambio (sale)',
-        producto: l.nombre, productId: p.id, sku: l.sku, talla: l.talla,
-        cant: (l.lado === 'devuelto' ? 1 : -1) * l.qty, ref: exch.folio,
-      });
-    });
-    persistProducts(); saveMovements();
-
     // H-75 · El cobro de la diferencia se clasifica con la MISMA autoridad que
     // cualquier otro cobro (`paymentParts`). Antes se armaba a mano y sólo
     // reconocía el efectivo: tarjeta, transferencia y mixto caían todos en el
@@ -3649,8 +2620,6 @@
         id: 'pay-' + id, folio: exch.folio, fecha, tipo: 'cambio',
         metodo: metodoCobro, monto: diferencia,
       }, partes);
-      payments.unshift(payment);
-      savePayments(false);
     }
 
     // Acreditación de la comisión del excedente. Mismo patrón de concurrencia
@@ -3666,103 +2635,17 @@
         comision_acum_delta: comisionMonto,
         after_comision_acum: vendedorCambio.comisionAcum,
       });
-      saveSellers(false);
     }
 
-    exchanges.unshift(exch);
-    saveExchanges(false);
-    if (!remoteApplying) {
-      try { window.CORE.invokeSync('pushExchange', exch, { payment, sellerEffects }); } catch (e) { /* offline */ }
-    }
-    return { ok: true, idempotent: false, operationId: opId, exchange: exch, payment };
-  }
-
-  // H-47 · Reversa de la comisión del excedente.
-  //
-  // Hoy NO existe ninguna forma de cancelar ni modificar un cambio: `pos.exchanges`
-  // no tiene estado y nada lo revierte. Esta es la COSTURA DECLARADA para cuando
-  // exista, y está probada para que no sea código muerto (ADR-003).
-  //
-  // Resta el monto CONGELADO, no uno recalculado: si el dueño cambió la base de
-  // comisión o el porcentaje de alguien entre el registro y la reversa, lo que se
-  // devuelve sigue siendo lo que de verdad se pagó.
-  function reverseExchangeCommission(exchangeId, { fecha: fechaIn } = {}) {
-    const e = exchanges.find(x => x.id === exchangeId);
-    if (!e) return { ok: false, error: 'exchange_not_found' };
-    if (e.comisionRevertida) return { ok: false, error: 'comision_ya_revertida' };
-    const monto = money(Number(e.comisionMonto) || 0);
-    const s = e.vendedorId ? sellers.find(x => x.id === e.vendedorId) : null;
-    const sellerEffects = [];
-    if (s && monto > 0) {
-      const baseVersion = Number(s._syncVersion) || 0;
-      const before = Number(s.comisionAcum) || 0;
-      // Nunca deja el acumulado en negativo: si ya se liquidó el periodo, la
-      // comisión no se puede "des-pagar" restando de un saldo que no existe.
-      s.comisionAcum = Math.max(0, money(before - monto));
-      sellerEffects.push({
-        id: s.id, base_version: baseVersion,
-        comision_acum_delta: s.comisionAcum - before,
-        after_comision_acum: s.comisionAcum,
-      });
-      saveSellers(false);
-    }
-    e.comisionRevertida = fechaIn || now();
-    saveExchanges(false);
-    if (!remoteApplying) {
-      try { window.CORE.invokeSync('pushExchange', e, { sellerEffects }); } catch (err) { /* offline */ }
-    }
-    return { ok: true, monto, vendedorId: e.vendedorId || null };
-  }
-
-  // H-69 · Reversa de la comision de una VENTA cancelada.
-  //
-  // Resta el saldo CONGELADO que siga vivo -lo ya revertido por devoluciones
-  // parciales no se resta dos veces- y deja la venta en `Cancelado`, que es el
-  // estado que todos los reportes ya excluyen.
-  //
-  // NO ALCANCE: esta funcion revierte COMISION. La cancelacion como operacion de
-  // negocio -reingreso de inventario, reverso de cobros- sigue sin contrato
-  // funcional (`docs/03-known-risks.md` H-56), asi que no se inventa aqui: quien
-  // la construya consumira esta autoridad en vez de recalcular.
-  function reverseSaleCommission(folio, { fecha: fechaIn, motivo } = {}) {
-    const sale = sales.find(s => s.folio === folio);
-    if (!sale) return { ok: false, error: 'sale_not_found' };
-    if (sale.comisionRevertida) return { ok: false, error: 'comision_ya_revertida' };
-    const congeladas = saleFrozenCommissions(sale);
-    const yaRevertido = returnedCommissionBySeller(folio);
-    const sellerEffects = [];
-    const revertidas = [];
-    congeladas.forEach(entry => {
-      const s = sellers.find(x => x.id === entry.sellerId);
-      if (!s) return;
-      const previo = yaRevertido[entry.sellerId] || { base: 0, monto: 0 };
-      const monto = Math.max(0, money((Number(entry.monto) || 0) - previo.monto));
-      const base = Math.max(0, money((Number(entry.base) || 0) - previo.base));
-      if (monto <= 0 && base <= 0) return;
-      const baseVersion = Number(s._syncVersion) || 0;
-      const before = Number(s.comisionAcum) || 0;
-      s.comisionAcum = Math.max(0, money(before - monto));
-      revertidas.push({
-        sellerId: entry.sellerId, vendedor: entry.vendedor || s.nombre,
-        base, monto, pct: entry.pct, source: entry.source,
-        policyVersion: entry.policyVersion, origen: 'cancelacion',
-      });
-      sellerEffects.push({
-        id: s.id, base_version: baseVersion,
-        comision_acum_delta: s.comisionAcum - before,
-        after_comision_acum: s.comisionAcum,
-      });
+    await confirmCommand('pushExchange', exch, {
+      productVersions: [...new Map(entregados.map(line => [String(identidad.get(line).id), {
+        id: String(identidad.get(line).id), baseVersion: Number(identidad.get(line)._syncVersion) || 0,
+      }])).values()],
+      quoteContext, payment, sellerEffects,
     });
-    if (sellerEffects.length) saveSellers(false);
-    sale.estado = 'Cancelado';
-    sale.comisionRevertida = fechaIn || now();
-    sale.comisionRevertidaMotivo = motivo || '';
-    sale.comisionesRevertidas = revertidas;
-    saveSales();
-    if (!remoteApplying) {
-      try { window.CORE.invokeSync('pushSale', sale, { sellerEffects, payments: paymentsForSale(sale.folio) }); } catch (err) { /* offline */ }
-    }
-    return { ok: true, folio, revertidas, monto: money(revertidas.reduce((a, r) => a + r.monto, 0)) };
+    const authoritative = confirmed(exchanges, id);
+    return { ok: true, idempotent: false, operationId: opId, exchange: authoritative,
+      payment: payment ? confirmed(payments, payment.id) : null };
   }
 
   // ── H-49 · Autoridad del ingreso del periodo ────────────────────────────────
@@ -4044,8 +2927,8 @@
 
   // Aplica el ajuste. Idempotente por `operationId`: repetirlo no vuelve a pagar.
   // El acumulado NO se toca aqui -esa columna es exclusiva de las RPC-; la nube
-  // decide y esta terminal solo registra el documento y encola la operacion.
-  function applyCommissionAdjustment(draft) {
+  // decide; la terminal espera el documento confirmado antes de mostrar éxito.
+  async function applyCommissionAdjustment(draft) {
     const doc = draft || {};
     if (!doc.operationId) return { ok: false, error: 'ajuste_sin_operacion' };
     if ((commissionAdjustments || []).some(x => x.operationId === doc.operationId)) {
@@ -4053,10 +2936,7 @@
     }
     if (!doc.renglones || !doc.renglones.length) return { ok: false, error: 'ajuste_vacio' };
     const aplicado = Object.assign({}, doc, { estado: 'aplicado', aplicadoEn: now() });
-    commissionAdjustments.unshift(aplicado);
-    save(LS_ADJUSTMENTS, commissionAdjustments);
-    try {
-      window.CORE.invokeSync('applyCommissionAdjustment', {
+    await confirmCommand('applyCommissionAdjustment', {
         operationId: doc.operationId,
         rows: aplicado.porVendedor.map(r => ({
           seller_id: r.sellerId, monto: r.comision, ventas: r.ventas,
@@ -4067,8 +2947,7 @@
         })),
         motivo: aplicado.motivo,
       });
-    } catch (e) { /* offline: queda en la cola */ }
-    return { ok: true, ajuste: aplicado };
+    return { ok: true, ajuste: confirmed(commissionAdjustments, doc.operationId, 'operationId') };
   }
 
   function revenueSummary(pred) {
@@ -4340,7 +3219,7 @@
   // mensaje al vocabulario de la devolución, conservando su `code` (R-DOM-01).
   const RETURN_IDENTITY_MESSAGE = {
     PRODUCT_SKU_AMBIGUOUS: sku => `El SKU ${sku} corresponde a más de un producto: esta devolución no puede saber a cuál regresar la pieza. Corrige el SKU duplicado en Inventario.`,
-    PRODUCT_NOT_FOUND: sku => `El producto del SKU ${sku} ya no está en el catálogo; no se puede regresar la pieza al inventario. Resincroniza o restitúyelo antes de devolver.`,
+    PRODUCT_NOT_FOUND: sku => `El producto del SKU ${sku} ya no está en el catálogo; no se puede regresar la pieza al inventario. Consulta el inventario vigente o restitúyelo antes de devolver.`,
   };
   function resolveReturnProduct(sale, line) {
     const sold = line && line.sourceSaleLineId
@@ -4395,18 +3274,18 @@
     const nombre = (product && (product.nombre || product.id)) || '—';
     const n = ((product && product.stock) || []).filter(v => String(v.talla) === String(talla)).length;
     const error = new Error(n === 0
-      ? `La talla ${talla} ya no existe en ${nombre}: no hay a dónde regresar la pieza. Resincroniza el inventario antes de devolver.`
+      ? `La talla ${talla} ya no existe en ${nombre}: no hay a dónde regresar la pieza. Consulta el inventario vigente antes de devolver.`
       : `La talla ${talla} de ${nombre} tiene ${n} renglones de existencias equivalentes: no se puede decidir a cuál regresar la pieza. Corrige el inventario antes de devolver.`);
     error.code = 'STOCK_IDENTITY_AMBIGUOUS';
     throw error;
   }
 
-  function recordReturn({ folio, lineas, metodo, refundComponents, notas, fecha: fechaIn }) {
-    const sale = sales.find(s => s.folio === folio);
+  async function recordReturn({ folio, lineas, metodo, refundComponents, notas, fecha: fechaIn, operationId: requestedOperationId }) {
+    const sale = clone(sales.find(s => s.folio === folio));
     if (!sale) return { ok: false, error: 'No se encontró la venta original' };
     const lifecycle = returnLifecycle(sale);
     if (lifecycle.inconsistent) return { ok: false, code: 'RETURN_LIFECYCLE_INCONSISTENT',
-      error: 'La venta indica una devolución, pero falta evidencia para continuar. Resincroniza y revisa el historial antes de mover inventario o dinero.' };
+      error: 'La venta indica una devolución, pero falta evidencia para continuar. Revisa el historial confirmado antes de mover inventario o dinero.' };
     if (!isReturnable(sale)) return { ok: false, error: 'Esa venta no admite devolución (apartado, cancelada o ya devuelta)' };
     // H-34: el plazo lo decide el snapshot de la venta, no la configuración de hoy.
     const plazo = returnDeadline(sale);
@@ -4427,9 +3306,6 @@
         return { product, entry: resolveReturnStockEntry(product, line.talla) };
       });
     } catch (e) { return { ok: false, error: e.message, code: e.code }; }
-    try {
-      assertLayawayProductsUnlocked(resolved.map(x => x.product.id));
-    } catch (e) { return { ok: false, error: e.message, code: e.code }; }
     // H-35: el disponible lo decide la autoridad única, que ya descuenta
     // devoluciones previas y, cuando existan, los cambios de esta venta.
     const saldo = saleLineBalance(folio);
@@ -4449,7 +3325,8 @@
       if ((Number(l.qty) || 0) > (row ? row.disponible : 0)) return { ok: false, error: `Cantidad inválida en ${l.nombre} (talla ${l.talla})` };
     }
     const fecha = fechaIn || now(); // permite fecha pasada (simulación)
-    const id = 'ret-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+    const operationId = requestedOperationId || newOperationId();
+    const id = 'ret-' + operationId;
     const stockLines = [];
     const sellerEffects = [];
     let clientEffect = null;
@@ -4487,11 +3364,8 @@
       // identidad; aquí no se busca nada y no hay camino silencioso.
       const p = resolved[i].product;
       const e = resolved[i].entry;
-      e.stock = (Number(e.stock) || 0) + (Number(l.qty) || 0);
       stockLines.push({ product_id: p.id, talla: l.talla, qty: Number(l.qty) || 0 });
-      movements.unshift({ fecha, tipo: 'Devolución', producto: l.nombre, productId: p.id, sku: l.sku, talla: l.talla, cant: Number(l.qty) || 0, ref: folio });
     });
-    persistProducts(); saveMovements();
     // 3) Reversión proporcional de comisión/ventas del vendedor (configurable en Configuración)
     const ids = sale.vendedores || [];
     const comisionesRevertidas = [];
@@ -4506,7 +3380,7 @@
       const proporcion = totalVenta > 0 ? Math.min(1, refund / totalVenta) : 0;
       const yaRevertido = returnedCommissionBySeller(folio);
       congeladas.forEach(entry => {
-        const s = sellers.find(x => x.id === entry.sellerId);
+        const s = clone(sellers.find(x => x.id === entry.sellerId));
         if (!s) return;
         const previo = yaRevertido[entry.sellerId] || { base: 0, monto: 0 };
         const topeMonto = Math.max(0, money((Number(entry.monto) || 0) - previo.monto));
@@ -4531,11 +3405,11 @@
           after_ventas_mes: s.ventasMes, after_comision_acum: s.comisionAcum,
         });
       });
-      saveSellers(false);
+
     }
     // 4) Ajuste del total del cliente (best-effort por nombre; los apartados/genéricos no aplican)
     if (refund > 0 && sale.cliente) {
-      const c = clients.find(x => !x.generic && ((sale.clienteId && x.id === sale.clienteId) || (!sale.clienteId && x.nombre === sale.cliente)));
+      const c = clone(clients.find(x => !x.generic && ((sale.clienteId && x.id === sale.clienteId) || (!sale.clienteId && x.nombre === sale.cliente))));
       if (c) {
         const beforeTotal = Number(c.total) || 0;
         c.total = Math.max(0, Math.round((beforeTotal - refund) * 100) / 100);
@@ -4543,15 +3417,15 @@
           id: c.id, base_version: Number(c._syncVersion) || 0,
           total_delta: c.total - beforeTotal, after_total: c.total,
         };
-        saveClients(false);
+
       }
     }
     // 5) Estado de la venta original: total vs parcial
     sale.estado = allReturned ? 'Devuelto' : 'Devolución parcial';
-    saveSales();
+
     // 6) Registro de la devolución (al frente = más reciente) + sincronización
     const ret = {
-      id, folio, fecha, cliente: sale.cliente, vendedores: ids.slice(),
+      id, _operationId: operationId, folio, fecha, cliente: sale.cliente, vendedores: ids.slice(),
       metodo: refundMethod, total: refund, components, notas: notas || '',
       // Estado comercial anterior a la primera devolución. Todas las
       // devoluciones posteriores heredan la misma evidencia exacta.
@@ -4581,16 +3455,14 @@
         })(),
       })),
     };
-    returns.unshift(ret);
-    saveReturns();
-    if (!remoteApplying) try { window.CORE.invokeSync('pushReturn', ret, { stockLines, clientEffect, sellerEffects }); } catch (e) { /* offline */ }
-    return { ok: true, ret };
+    await confirmCommand('pushReturn', ret, { stockLines, clientEffect, sellerEffects });
+    return { ok: true, ret: confirmed(returns, id) };
   }
 
   // ---- Usuarios (= personas en sellers; admin y/o vendedor) ----
-  function addUser(u) {
+  async function addUser(u) {
     const s = {
-      id: 'u-' + Date.now(), nombre: (u.nombre || '').trim(), iniciales: iniDe(u.nombre),
+      id: 'u-' + newOperationId(), nombre: (u.nombre || '').trim(), iniciales: iniDe(u.nombre),
       color: u.color || '#64748b', comisionPct: Number(u.comisionPct) || 0,
       // H-69: el alta ya puede nacer con su politica. `null` sigue significando
       // "sin decision" y hace que caiga en el porcentaje base de la tienda, que
@@ -4602,8 +3474,8 @@
       role: u.role || 'vendedor', email: (u.email || '').trim() || null,
       passwordHash: u.passwordHash || null, avatar: u.avatar || null, active: true,
     };
-    sellers.push(s); saveSellers(true, [s.id]);
-    return s;
+    await confirmCommand('pushRows', 'sellers', [s]);
+    return confirmed(sellers, s.id);
   }
   // H-69: `updateUser` escribe PERFIL. Las tres columnas financieras
   // -comisionAcum, ventasMes, ventasNum- son exclusivas de las RPC y se
@@ -4611,9 +3483,9 @@
   // que el trigger `restrict_direct_commission_writes` defiende en la nube, y
   // conviene que el cliente la respete ANTES de intentar la red.
   const SELLER_FINANCIAL_FIELDS = ['comisionAcum', 'ventasMes', 'ventasNum'];
-  function updateUser(id, patch) {
-    const s = sellers.find(x => x.id === id);
-    if (!s) return null;
+  async function updateUser(id, patch) {
+    const s = clone(sellers.find(x => x.id === id));
+    if (!s) throw Object.assign(new Error('El usuario ya no existe'), { code: 'USER_NOT_FOUND' });
     const clean = Object.assign({}, patch || {});
     SELLER_FINANCIAL_FIELDS.forEach(k => { delete clean[k]; });
     if ('commissionOverridePct' in clean) clean.commissionOverridePct = commissionNumeric(clean.commissionOverridePct);
@@ -4629,17 +3501,15 @@
     }
     Object.assign(s, clean);
     if (clean.nombre) s.iniciales = iniDe(clean.nombre);
-    saveSellers(true, [s.id]);
-    return s;
+    await confirmCommand('pushRows', 'sellers', [s]);
+    return confirmed(sellers, s.id);
   }
-  function removeUser(id) {
+  async function removeUser(id) {
     const s = sellers.find(x => x.id === id);
     if (!s) return { ok: false, error: 'No existe' };
     if (s.role === 'admin' && sellers.filter(x => x.role === 'admin').length <= 1) return { ok: false, error: 'Debe existir al menos un administrador' };
     const version = Number(s._syncVersion) || 0;
-    const i = sellers.findIndex(x => x.id === id);
-    sellers.splice(i, 1); saveSellers();
-    try { window.CORE.invokeSync('deleteRow', 'sellers', id, version); } catch (e) { /* offline */ }
+    await confirmCommand('deleteRow', 'sellers', id, version);
     return { ok: true };
   }
   // H-70 · Edición de la ficha del cliente. Recibe el ID, nunca el objeto: la
@@ -4654,67 +3524,62 @@
   // pisaba con esta copia local lo que otras terminales hubieran cambiado en
   // cualquier otro cliente.
   const CLIENT_PROFILE_FIELDS = ['nombre', 'tel', 'email', 'direccion', 'talla', 'notas', 'nacimiento'];
-  function updateClient(id, patch) {
-    const c = clients.find(x => x.id === id);
-    if (!c) return null;
+  async function updateClient(id, patch) {
+    const c = clone(clients.find(x => x.id === id));
+    if (!c) throw Object.assign(new Error('El cliente ya no existe'), { code: 'CLIENT_NOT_FOUND' });
     const clean = {};
     CLIENT_PROFILE_FIELDS.forEach(k => { if (patch && k in patch) clean[k] = patch[k]; });
     if ('nombre' in clean) {
       const nombre = String(clean.nombre || '').trim();
-      if (!nombre) return null; // el nombre es la identidad visible: no se vacía
+      if (!nombre) throw Object.assign(new Error('Escribe el nombre del cliente'), { code: 'CLIENT_NAME_REQUIRED' });
       clean.nombre = nombre;
     }
     if ('tel' in clean) clean.tel = String(clean.tel || '').trim() || '—';
     Object.assign(c, clean);
-    save(LS_CLIENTS, clients); // la caché local siempre guarda el arreglo entero
-    try { window.CORE.invokeSync('pushClient', c); } catch (e) { /* offline: queda en la cola */ }
-    return c;
+    await confirmCommand('pushRows', 'clients', [c]);
+    return confirmed(clients, c.id);
   }
-  // Borra un cliente de local Y de la nube (mismo patrón que removeUser/removeProduct). El cliente
+  // Solicita la baja remota conservando el historial. El cliente
   // genérico de mostrador no se puede borrar (lo requiere el POS).
-  function removeClient(id) {
+  async function removeClient(id) {
     const c = clients.find(x => x.id === id);
     if (!c) return { ok: false, error: 'No existe' };
     if (c.generic) return { ok: false, error: 'El cliente genérico no se puede borrar' };
     const version = Number(c._syncVersion) || 0;
-    const i = clients.findIndex(x => x.id === id);
-    clients.splice(i, 1); saveClients();
-    try { window.CORE.invokeSync('deleteRow', 'clients', id, version); } catch (e) { /* offline */ }
+    await confirmCommand('deleteRow', 'clients', id, version);
     return { ok: true };
   }
   function iniDe(nombre) { return String(nombre || '').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase(); }
 
   // ---- Promociones / Descuentos ----
-  function addPromo(p) {
-    const np = Object.assign({ id: 'promo-' + Date.now(), creado: Date.now(), pausado: false, scope: {} }, p);
-    promos.unshift(np); savePromos([np.id]);
-    return np;
+  async function addPromo(p) {
+    const np = Object.assign({ id: 'promo-' + newOperationId(), creado: Date.now(), pausado: false, scope: {} }, p);
+    await confirmCommand('pushRows', 'promotions', [np]);
+    return confirmed(promos, np.id);
   }
-  function updatePromo(id, patch) {
-    const p = promos.find(x => x.id === id);
-    if (!p) return null;
-    Object.assign(p, patch); savePromos([p.id]);
-    return p;
+  async function updatePromo(id, patch) {
+    const p = clone(promos.find(x => x.id === id));
+    if (!p) throw Object.assign(new Error('La promoción ya no existe'), { code: 'PROMOTION_NOT_FOUND' });
+    Object.assign(p, patch);
+    await confirmCommand('pushRows', 'promotions', [p]);
+    return confirmed(promos, p.id);
   }
-  function removePromo(id) {
+  async function removePromo(id) {
     const i = promos.findIndex(x => x.id === id);
-    if (i < 0) return;
+    if (i < 0) throw Object.assign(new Error('La promoción ya no existe'), { code: 'PROMOTION_NOT_FOUND' });
     const version = Number(promos[i]._syncVersion) || 0;
-    promos.splice(i, 1); savePromos();
-    try { window.CORE.invokeSync('deleteRow', 'promotions', id, version); } catch (e) { /* offline */ }
+    await confirmCommand('deleteRow', 'promotions', id, version);
   }
-  function duplicatePromo(id) {
-    const p = promos.find(x => x.id === id);
-    if (!p) return null;
+  async function duplicatePromo(id) {
+    const p = clone(promos.find(x => x.id === id));
+    if (!p) throw Object.assign(new Error('La promoción ya no existe'), { code: 'PROMOTION_NOT_FOUND' });
     const c = JSON.parse(JSON.stringify(p));
-    c.id = 'promo-' + Date.now(); c.nombre = p.nombre + ' (copia)'; c.creado = Date.now(); c.pausado = true;
-    promos.unshift(c); savePromos([c.id]);
-    return c;
+    c.id = 'promo-' + newOperationId(); c.nombre = p.nombre + ' (copia)'; c.creado = Date.now(); c.pausado = true;
+    delete c._syncVersion;
+    await confirmCommand('pushRows', 'promotions', [c]);
+    return confirmed(promos, c.id);
   }
 
-  // Borra un producto de local Y de la nube. Antes solo se hacía splice + saveProducts (upsert),
-  // que NO elimina la fila en Supabase: el producto "revivía" en el siguiente pull. Mismo patrón
-  // que removeUser/removePromo.
   // ── H-74 · Migración de códigos de talla ────────────────────────────────────
   // El catálogo guarda identidades históricas que no son la talla que
   // representan (`0` es la 38, `A` la 40, `s` la 0). Esta autoridad las cambia
@@ -4726,11 +3591,11 @@
   // número de renglones— debe ser idéntica antes y después, y si no lo es se
   // revierte todo. No existe camino en el que quede a medias.
   const SIZE_SCALE_OF = { size_letter: 'L', size_number: 'N' };
-  function sizeMigrationFingerprint(kind) {
+  function sizeMigrationFingerprint(kind, collection = products) {
     const scale = SIZE_SCALE_OF[kind];
     let total = 0, renglones = 0;
     const porProducto = {};
-    products.forEach(p => {
+    collection.forEach(p => {
       if (inferSizeCategory(p, p.stock) !== kind) return;
       let suma = 0;
       (p.stock || []).forEach(v => {
@@ -4752,7 +3617,7 @@
       pagos: payments.length,
     };
   }
-  function migrateSizeCodes({ kind, map, reorder } = {}) {
+  async function migrateSizeCodes({ kind, map, reorder } = {}) {
     if (!SIZE_SCALE_OF[kind]) return { ok: false, code: 'INVALID_KIND', error: 'Sólo se migran categorías de talla' };
     const pares = Object.keys(map || {}).map(from => [String(from), String(map[from])]).filter(p => p[0] !== p[1]);
     if (!pares.length) return { ok: false, code: 'EMPTY_MAP', error: 'No hay códigos que cambiar' };
@@ -4767,32 +3632,14 @@
         error: 'Hay documentos registrados que citan los códigos actuales. Borra los datos de prueba o migra también los documentos antes de continuar.',
       };
     }
-    // 2) Guarda: nada pendiente de sincronizar ni caché por reconciliar.
-    if (catalogResyncRequired) return { ok: false, code: 'RESYNC_REQUIRED', error: catalogResyncReason };
-    let pendientes = 0;
-    try {
-      const q = window.CORE.invokeSync('queueStatus');
-      pendientes = q && Array.isArray(q.operations) ? q.operations.length : 0;
-    } catch (e) { pendientes = 0; }
-    if (pendientes > 0) {
-      return { ok: false, code: 'QUEUE_PENDING', pendientes,
-        error: `Hay ${pendientes} operación(es) sin sincronizar. Conéctate y espera a que la cola quede vacía.` };
-    }
-
-    // 3) Reversa completa antes de tocar nada.
-    const snapCfg = C.snapshot();
-    const snapProd = JSON.parse(JSON.stringify(products));
-    const snapPromos = JSON.parse(JSON.stringify(promos));
-    const antes = sizeMigrationFingerprint(kind);
-    const revertir = () => {
-      C.load(snapCfg);
-      products.length = 0; snapProd.forEach(p => products.push(p));
-      promos.length = 0; snapPromos.forEach(x => promos.push(x));
-    };
-
-    // 4) Catálogo. Resuelve el orden y rechaza mapas imposibles.
-    const rc = C.renameSizeCodes(kind, pares, { reorder: !!reorder });
-    if (!rc.ok) { revertir(); return { ok: false, code: rc.code || 'RENAME_REJECTED', error: rc.error }; }
+    const products = clone(window.DATA.products);
+    const promos = clone(window.DATA.promos);
+    const originalPromos = clone(promos);
+    const beforeFingerprint = sizeMigrationFingerprint(kind, products);
+    const preparedConfig = C.prepareMutation('renameSizeCodes', [kind, pares, { reorder: !!reorder }]);
+    const rc = preparedConfig.result;
+    if (!rc || !rc.ok) return { ok: false, code: rc && rc.code || 'RENAME_REJECTED', error: rc && rc.error };
+    const antes = beforeFingerprint;
 
     // 5) Inventario, precios por talla, códigos de barras y promociones.
     const destino = {}; pares.forEach(([from, to]) => { destino[from] = to; });
@@ -4840,12 +3687,11 @@
         if (cambio) efectos.promociones++;
       });
     } catch (e) {
-      revertir();
       return { ok: false, code: 'MIGRATION_FAILED', error: e.message || 'No se pudo reescribir el inventario' };
     }
 
     // 6) Invariantes. Cualquier diferencia revierte TODO.
-    const despues = sizeMigrationFingerprint(kind);
+    const despues = sizeMigrationFingerprint(kind, products);
     // Sobrante = renglón que todavía usa un código de ORIGEN. Un código puede ser
     // origen y destino a la vez (`0` es el origen de la 38 y el destino de `s`),
     // así que un renglón con un código que también es destino NO es sobrante.
@@ -4858,7 +3704,6 @@
     }, 0);
     if (antes.total !== despues.total || antes.renglones !== despues.renglones
       || antes.porProducto !== despues.porProducto || residuo > 0) {
-      revertir();
       return {
         ok: false, code: 'INVARIANT_BROKEN',
         error: 'La comprobación de existencias no cuadró: no se cambió nada.',
@@ -4867,8 +3712,11 @@
       };
     }
 
-    saveProducts([...changedProductIds]);
-    savePromos(promos.filter(pr => JSON.stringify(pr) !== JSON.stringify(snapPromos.find(row => row.id === pr.id))).map(pr => pr.id));
+    await confirmCommand('commitSizeMigration', {
+      kind, map, reorder: !!reorder, config: preparedConfig.state,
+      products: products.filter(row => changedProductIds.has(row.id)),
+      promotions: promos.filter(row => JSON.stringify(row) !== JSON.stringify(originalPromos.find(prior => prior.id === row.id))),
+    });
     return {
       ok: true, aplicado: rc.aplicado, efectos,
       piezasTotales: despues.total, renglones: despues.renglones,
@@ -4877,31 +3725,22 @@
   }
 
   const PRODUCT_DELETE_ERROR = {
-    LAYAWAY_PRODUCT_LOCKED: 'La referencia está en una liquidación pendiente; espera su confirmación.',
     LAYAWAY_ACTIVE: 'La referencia participa en un apartado activo. Liquídalo o cancélalo antes de eliminarla.',
     PRODUCT_OPEN_LOAN: 'La referencia participa en un préstamo abierto. Registra su devolución o faltante antes de eliminarla.',
-    PRODUCT_QUEUE_PENDING: 'Hay operaciones pendientes de sincronizar. Conéctate y espera a que la cola quede vacía.',
     PRODUCT_RETURNABLE_HISTORY: 'La referencia todavía puede necesitar restitución por una devolución o cambio vigente.',
     PRODUCT_NOT_FOUND: 'La referencia ya no está activa en este inventario.',
     REFERENCE_FAMILY_SCOPE_MISMATCH: 'La familia cambió en otra operación. Vuelve a abrirla antes de eliminar.',
   };
-  function productDeletionGuard(productIds, { ignoreQueuePending = false } = {}) {
+  function productDeletionGuard(productIds) {
     const ids = [...new Set((productIds || []).filter(Boolean).map(String))];
     const targets = ids.map(id => products.find(row => String(row.id) === id)).filter(Boolean);
     const fail = (code, detail) => ({ ok: false, code, error: PRODUCT_DELETE_ERROR[code] || code, detail });
     if (!ids.length || targets.length !== ids.length) return fail('PRODUCT_NOT_FOUND');
-    try { assertLayawayProductsUnlocked(ids); } catch (error) { return fail(error.code || 'LAYAWAY_PRODUCT_LOCKED'); }
     const wanted = new Set(ids);
     if (sales.some(sale => sale.estado === 'Apartado'
         && (sale.lineas || []).some(line => wanted.has(String(line.productId || ''))))) {
       return fail('LAYAWAY_ACTIVE');
     }
-    let pending = 0;
-    try {
-      const status = window.CORE.invokeSync('queueStatus');
-      pending = status && Array.isArray(status.operations) ? status.operations.length : Number(status && status.pending) || 0;
-    } catch (error) { pending = 0; }
-    if (!ignoreQueuePending && pending > 0) return fail('PRODUCT_QUEUE_PENDING', { pending });
     if (targets.some(row => loanedQty(row.id) > 0)) return fail('PRODUCT_OPEN_LOAN');
     const returnable = sales.some(sale => isReturnable(sale)
       && returnDeadline(sale).status !== 'vencido'
@@ -4913,7 +3752,7 @@
       history: targets.some(row => referenceHasOperations(row.id)),
     };
   }
-  function removeProductScope({ scope, referenceFamilyId, productIds, ignoreQueuePending = false } = {}) {
+  async function removeProductScope({ scope, referenceFamilyId, productIds, ignoreQueuePending = false } = {}) {
     const ids = [...new Set((productIds || []).filter(Boolean).map(String))];
     const guard = productDeletionGuard(ids, { ignoreQueuePending });
     if (!guard.ok) return guard;
@@ -4927,60 +3766,24 @@
     } else if (scope !== 'reference' || ids.length !== 1) {
       return { ok: false, code: 'REFERENCE_FAMILY_SCOPE_MISMATCH', error: PRODUCT_DELETE_ERROR.REFERENCE_FAMILY_SCOPE_MISMATCH };
     }
-    const targetSet = new Set(ids);
-    const backup = products.map(row => JSON.parse(JSON.stringify(row)));
     const targets = guard.targets.map(row => ({ id: row.id, baseVersion: Number(row._syncVersion) || 0 }));
-    try {
-      for (let i = products.length - 1; i >= 0; i--) if (targetSet.has(String(products[i].id))) products.splice(i, 1);
-      persistProducts();
-      window.CORE.invokeSync('deleteProductScope', {
-        scope, referenceFamilyId: familyId, productIds: ids, targets,
-      });
-    } catch (error) {
-      products.splice(0, products.length, ...backup.map(row => hydrate(row))); persistProducts();
-      return { ok: false, code: error.code || 'PRODUCT_DELETE_FAILED', error: error.message || 'No se pudo eliminar la referencia.' };
-    }
+    await confirmCommand('deleteProductScope', { scope, referenceFamilyId: familyId, productIds: ids, targets });
     return { ok: true, count: ids.length, stock: guard.stock, history: guard.history };
   }
-  function removeProduct(id) {
-    const i = products.findIndex(x => x.id === id);
-    if (i < 0) return false;
-    try { assertLayawayProductsUnlocked([id]); } catch (e) { return false; }
-    const version = Number(products[i]._syncVersion) || 0;
-    products.splice(i, 1); persistProducts();
-    try { window.CORE.invokeSync('deleteRow', 'products', id, version); } catch (e) { /* offline */ }
-    return true;
+  async function removeProduct(id) {
+    const result = await removeProductScope({ scope: 'reference', productIds: [id] });
+    return result.ok;
   }
 
-  // ── H-76 · Vaciar el inventario para reemplazarlo entero ────────────────────
-  // Reemplazar el catálogo completo no tenía autoridad. La importación de Excel
-  // ACTUALIZA por SKU y jamás borra (`inventory.jsx` § confirmImport), la purga de
-  // datos de prueba conserva el inventario por diseño (`resetTestData`), y quedaba
-  // borrar producto por producto: eso no es una operación, son N operaciones sin
-  // cuenta, sin respaldo y sin garantía de terminar.
-  //
-  // Vaciar NO reimplementa el borrado: cada producto sale por `removeProduct`, que
-  // ya es la autoridad de «cómo se borra un producto» —baja local, soft delete
-  // remoto por `delete_product_checked` y cola durable—. Esta función sólo añade lo
-  // que faltaba: las guardas, la cuenta y la invariante.
-  //
-  // La decisión es todo o nada: las guardas se resuelven ANTES de tocar el primer
-  // producto, porque medio inventario borrado es peor que ninguno.
+  // Vaciado atómico: el servidor comprueba alcance, versiones y documentos vivos.
   const CLEAR_INVENTORY_ERROR = {
-    LAYAWAY_LOCK: 'Hay una liquidación de apartado pendiente de reconciliar. Hasta que se confirme no se puede saber si esa pieza salió del inventario.',
     LAYAWAY_ACTIVE: 'Hay apartados vivos: esas piezas están comprometidas con un cliente. Liquídalos o cancélalos antes de vaciar el inventario.',
-    QUEUE_PENDING: 'Hay operaciones sin subir a la nube. Conéctate y espera a que la cola quede vacía: una carga pendiente de productos volvería a crear lo que acabas de borrar.',
     PRODUCT_OPEN_LOAN: 'Hay referencias en préstamos abiertos. Registra su devolución o faltante antes de vaciar el inventario.',
     PRODUCT_RETURNABLE_HISTORY: 'Hay referencias que todavía pueden necesitar restitución por devolución o cambio. Espera a que termine su vigencia.',
     EMPTY: 'El inventario ya está vacío: no hay nada que borrar.',
   };
   function inventoryFootprint() {
     const documentos = liveDocumentCounts();
-    let pendientes = 0;
-    try {
-      const q = window.CORE.invokeSync('queueStatus');
-      pendientes = q && Array.isArray(q.operations) ? q.operations.length : 0;
-    } catch (e) { pendientes = 0; }
     const apartados = sales.filter(s => s.estado === 'Apartado').length;
     const deleteGuard = products.length ? productDeletionGuard(products.map(product => product.id), { ignoreQueuePending: true }) : { ok: true };
     return {
@@ -4994,29 +3797,26 @@
       documentosVivos: documentos.ventas + documentos.devoluciones + documentos.cambios
         + documentos.prestamos + documentos.movimientos + documentos.pagos,
       apartados,
-      pendientes,
       // Lo que NO se toca; el informe lo compara antes y después.
       descuentos: promos.length,
       vendedores: sellers.length,
       // Sin los productos: son justo lo que este vaciado borra, así que
       // compararlos no probaría nada. Lo que debe seguir idéntico es TODO lo demás.
       configHuella: configFingerprint({ omitProductos: true }),
-      bloqueado: readLayawayProductLocks().length ? 'LAYAWAY_LOCK'
-        : apartados > 0 ? 'LAYAWAY_ACTIVE'
-          : pendientes > 0 ? 'QUEUE_PENDING'
+      bloqueado: apartados > 0 ? 'LAYAWAY_ACTIVE'
             : !deleteGuard.ok ? deleteGuard.code
             : products.length === 0 ? 'EMPTY' : null,
     };
   }
-  function clearInventory() {
+  async function clearInventory() {
     const antes = inventoryFootprint();
     if (antes.bloqueado) {
       return { ok: false, code: antes.bloqueado, error: CLEAR_INVENTORY_ERROR[antes.bloqueado], antes };
     }
     const ids = products.map(p => p.id);
-    const fallidos = [];
-    let borrados = 0;
-    ids.forEach(id => { if (removeProduct(id)) borrados++; else fallidos.push(id); });
+    await confirmCommand('clearInventory', { productIds: ids, targets: products.map(row => ({ id: row.id, baseVersion: Number(row._syncVersion) || 0 })) });
+    const fallidos = products.filter(row => ids.includes(row.id)).map(row => row.id);
+    const borrados = ids.length - fallidos.length;
     const despues = inventoryFootprint();
     // Invariante: no queda ningún producto y se borraron todos los que había. Si
     // no cuadra se informa con los que sobrevivieron, nunca con un «listo».
@@ -5034,36 +3834,10 @@
   }
 
   // Restaura el catálogo original de fábrica
-  function resetProducts() {
-    if (readLayawayProductLocks().length) return false;
-    products.length = 0;
-    seed.map(hydrate).forEach(p => products.push(p));
-    saveProducts(products.map(product => product.id));
-    return products;
-  }
 
-  // ── H-46: préstamos de mercancía ─────────────────────────────────────────────
-  // Un préstamo es un documento propio: mercancía que SALE del negocio y tiene que
-  // volver. No es una venta de $0 ni un movimiento de inventario, y por eso no
-  // reutiliza ninguno de los dos:
-  //   · `pos.movements` es historial de sólo lectura para el cliente —cada pull
-  //     reemplaza el arreglo—, así que un movimiento local de préstamo se borraría
-  //     solo en la siguiente sincronización;
-  //   · el consecutivo diario de la venta vive en `pos.folio_counters` y gastar un
-  //     número aquí movería la numeración comercial de las ventas (`ADR-001`).
-  // El documento CONGELA su propia evidencia —nombre, SKU, talla y persona— para
-  // seguir siendo explicable si el producto o el cliente se editan o se borran
-  // después (`R-DOM-02`).
-  //
-  // H-62: el préstamo SÍ se replica. Cada operación viaja por la cola offline y
-  // se confirma con `pos.commit_loan_operation()`, una transacción idempotente
-  // por (operación, payload) sobre `pos.loan_documents`, donde el documento se
-  // guarda entero: la evidencia congelada viaja tal cual, sin normalizar. La
-  // terminal conserva en `_loanVersion` la versión confirmada por el servidor, y
-  // ése es también el indicador de «esto ya está en la nube».
-  //
-  // Los préstamos NO mueven existencias. La cifra «unidades fuera» se deriva de
-  // esta colección mediante `loanedQty()`, que es su única autoridad.
+
+  // Préstamos: documentos online con evidencia congelada, versionados por SQL.
+  // No mueven stock; unidades fuera y atraso se derivan de los documentos.
   const LOAN_ESTADOS = ['pendiente', 'devuelto', 'no_devuelto'];
   const LOAN_PERSONA_TIPOS = ['cliente', 'empleado', 'otro'];
   // H-62: el cuarto segmento OPCIONAL es el código corto de la terminal, igual
@@ -5075,13 +3849,9 @@
   const soloDia = v => String(v == null ? '' : v).slice(0, 10);
   const horaActual = () => now().slice(11, 16);
   const diaActual = () => now().slice(0, 10);
-  // Identidad técnica del préstamo. No se reutiliza `newOperationId()`: su valor de
-  // respaldo se identifica como venta y estas dos identidades no son la misma cosa.
+  // Identidad técnica del préstamo; siempre UUID aceptado por el servidor.
   function newLoanId() {
-    try {
-      if (window.crypto && window.crypto.randomUUID) return window.crypto.randomUUID();
-    } catch (e) { /* respaldo portable */ }
-    return 'loan-' + window.CORE.getDeviceId() + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+    return newUuid();
   }
   function parseLoanFolio(folio) {
     const m = String(folio == null ? '' : folio).trim().toUpperCase().match(LOAN_FOLIO_RE);
@@ -5104,53 +3874,14 @@
       || loans.find(l => loanFolioAliases(l).some(a => String(a).toUpperCase() === up))
       || null;
   }
-  // Folio seguro entre terminales. El primer intento añade el código corto de
-  // ESTA terminal —tres caracteres base 36, el mismo `terminalCode()` que usa el
-  // folio provisional de venta—; si aun así chocara (dos terminales con el mismo
-  // código, una en 46 656) se cae al token de la identidad técnica, que es único
-  // por construcción.
-  function collisionSafeLoanFolio(folio, loanId, intento) {
-    const base = String(folio || '').trim().toUpperCase();
-    if (Number(intento) > 1) return collisionSafeFolio(base, loanId);
-    const tag = terminalCode();
-    return base.endsWith('-' + tag) ? collisionSafeFolio(base, loanId) : base + '-' + tag;
-  }
-  // El pull sólo llega aquí después de que STORE verificó que no hay una
-  // intención durable de préstamo pendiente. Por eso el snapshot remoto
-  // completo —incluso vacío— sustituye la proyección; la cola, no `_loanVersion`,
-  // es la autoridad exclusiva de trabajo offline no confirmado.
-  function applyRemoteLoans(rows) {
-    const list = Array.isArray(rows) ? rows : [];
-    remoteApplying = true;
-    try {
-      loans.length = 0;
-      list.forEach(r => { if (r && !r._deletedAt) loans.push(r); });
-      loans.sort((a, b) => String(b.fecha || '').localeCompare(String(a.fecha || '')));
-      return saveLoans() !== false;
-    } finally { remoteApplying = false; }
-  }
-  // Reidentificación del folio de un préstamo todavía no confirmado por la nube.
-  function rekeyLoanFolio(id, oldFolio, newFolio) {
-    const loan = loans.find(l => l.id === id && l.folio === oldFolio);
-    if (!loan || loan._loanVersion != null || !newFolio || newFolio === oldFolio) return false;
-    const aliases = loanFolioAliases(loan).slice();
-    if (oldFolio && !aliases.includes(oldFolio)) aliases.push(oldFolio);
-    loan.folioAliases = aliases.filter(a => a !== newFolio);
-    loan.folio = newFolio;
-    saveLoans();
-    return true;
-  }
-  // Referencia comercial del préstamo: `PR-{AAMMDD}-{CONSECUTIVO}`. El día sale de la
-  // MISMA fecha que se guarda en el documento, nunca de una segunda lectura del reloj
-  // (`R-DOM-03`), y el consecutivo se deriva de los préstamos que esta terminal ya
-  // conoce de ese día.
-  function nextLoanFolio(fecha) {
-    const date = businessDate(fecha);
-    const seq = loans.reduce((m, l) => {
-      const p = parseLoanFolio(l.folio);
-      return p && p.date === date && p.seq > m ? p.seq : m;
-    }, 0) + 1;
-    return 'PR-' + date + '-' + String(seq).padStart(3, '0');
+  // Folio de préstamo asignado online, independiente del folio de venta.
+  async function nextLoanFolio(fecha, operationId) {
+    const response = await confirmCommand('allocateFolio', {
+      prefix: 'PR', date: businessDate(fecha), operationId, kind: 'loan',
+    });
+    const folio = response.folio || (response.result && response.result.folio);
+    if (!folio) throw new Error('ONLINE_FOLIO_REQUIRED');
+    return folio;
   }
   function normalizeLoanPersona(raw) {
     const p = raw || {};
@@ -5204,7 +3935,7 @@
       ), 0)
     ), 0);
   }
-  function registrarPrestamo(input) {
+  async function registrarPrestamo(input) {
     const d = input || {};
     const dia = soloDia(d.fecha) || diaActual();
     if (!DIA_RE.test(dia)) return { ok: false, error: 'La fecha del préstamo no es válida' };
@@ -5253,18 +3984,17 @@
       notaCierre: '',
       usuario: String(d.usuario || '').trim(),
     };
-    loan.folio = nextLoanFolio(loan.fecha);
-    loans.unshift(loan); saveLoans();
-    try { window.CORE.invokeSync('pushLoanOperation', 'deliver', loan, 0); } catch (e) { /* offline */ }
-    return { ok: true, loan };
+    loan.folio = await nextLoanFolio(loan.fecha, loan.id);
+    await confirmCommand('pushLoanOperation', 'deliver', loan, 0);
+    return { ok: true, loan: confirmed(loans, loan.id) };
   }
   // Devolución total o parcial. Cada entrega deja su propio asiento en
   // `loan.devoluciones`; `fechaDevolucion` —la fecha REAL que pide el negocio— se
   // fija con el asiento que completa el préstamo. Un préstamo dado por perdido que
   // finalmente regresa se acepta: vuelve a `pendiente` o cierra como `devuelto`.
-  function registrarDevolucionPrestamo(id, input) {
+  async function registrarDevolucionPrestamo(id, input) {
     const d = input || {};
-    const loan = loans.find(x => x.id === id);
+    const loan = clone(loans.find(x => x.id === id));
     if (!loan) return { ok: false, error: 'El préstamo no existe' };
     if (loan.estado === 'devuelto') return { ok: false, error: 'Este préstamo ya está devuelto por completo' };
     const baseVersion = Number(loan._loanVersion) || 0;
@@ -5301,15 +4031,14 @@
     loan.estado = completo ? 'devuelto' : 'pendiente';
     loan.fechaDevolucion = completo ? asiento.fecha : null;
     if (completo && asiento.nota) loan.notaCierre = asiento.nota;
-    saveLoans();
-    try { window.CORE.invokeSync('pushLoanOperation', 'return', loan, baseVersion); } catch (e) { /* offline */ }
-    return { ok: true, loan, cerrado: completo };
+    await confirmCommand('pushLoanOperation', 'return', loan, baseVersion);
+    return { ok: true, loan: confirmed(loans, loan.id), cerrado: completo };
   }
   // Declarar la pérdida. No mueve existencias —el préstamo nunca las movió— pero
   // deja el desenlace escrito y saca al préstamo de la lista de vencidos.
-  function marcarPrestamoNoDevuelto(id, input) {
+  async function marcarPrestamoNoDevuelto(id, input) {
     const d = input || {};
-    const loan = loans.find(x => x.id === id);
+    const loan = clone(loans.find(x => x.id === id));
     if (!loan) return { ok: false, error: 'El préstamo no existe' };
     if (loan.estado === 'devuelto') return { ok: false, error: 'Este préstamo ya está devuelto' };
     if (!prestamoPendientes(loan)) return { ok: false, error: 'Este préstamo no tiene piezas fuera' };
@@ -5319,14 +4048,13 @@
     loan.estado = 'no_devuelto';
     loan.fechaCierre = dia + ' ' + horaActual();
     loan.notaCierre = String(d.nota || '').trim();
-    saveLoans();
-    try { window.CORE.invokeSync('pushLoanOperation', 'shortage', loan, baseVersion); } catch (e) { /* offline */ }
-    return { ok: true, loan };
+    await confirmCommand('pushLoanOperation', 'shortage', loan, baseVersion);
+    return { ok: true, loan: confirmed(loans, loan.id) };
   }
   // Corregir la captura. Sólo mientras nada haya regresado: con devoluciones
   // asentadas el documento ya tiene consecuencias y se corrige hacia adelante.
-  function actualizarPrestamo(id, patch) {
-    const loan = loans.find(x => x.id === id);
+  async function actualizarPrestamo(id, patch) {
+    const loan = clone(loans.find(x => x.id === id));
     if (!loan) return { ok: false, error: 'El préstamo no existe' };
     if ((loan.devoluciones || []).length) return { ok: false, error: 'Ya hay devoluciones registradas: no se puede editar' };
     const p = patch || {};
@@ -5345,206 +4073,21 @@
     }
     if (p.nota !== undefined) loan.nota = String(p.nota || '').trim();
     if (p.estado !== undefined && p.estado === 'pendiente' && loan.estado === 'no_devuelto') loan.estado = 'pendiente';
-    saveLoans();
-    try { window.CORE.invokeSync('pushLoanOperation', wasShortage && loan.estado === 'pendiente' ? 'reopen' : 'edit', loan, baseVersion); } catch (e) { /* offline */ }
-    return { ok: true, loan };
+    await confirmCommand('pushLoanOperation', wasShortage && loan.estado === 'pendiente' ? 'reopen' : 'edit', loan, baseVersion);
+    return { ok: true, loan: confirmed(loans, loan.id) };
   }
-  function eliminarPrestamo(id) {
+  async function eliminarPrestamo(id) {
     const i = loans.findIndex(x => x.id === id);
     if (i < 0) return { ok: false, error: 'El préstamo no existe' };
     if ((loans[i].devoluciones || []).length) return { ok: false, error: 'Ya hay devoluciones registradas: no se puede eliminar' };
-    const loan = loans[i];
+    const loan = clone(loans[i]);
     const baseVersion = Number(loan._loanVersion) || 0;
-    loans.splice(i, 1); saveLoans();
-    try { window.CORE.invokeSync('pushLoanOperation', 'delete', loan, baseVersion); } catch (e) { /* offline */ }
+    await confirmCommand('pushLoanOperation', 'delete', loan, baseVersion);
     return { ok: true };
   }
 
-  // ── Simulación de demostración (LOCAL-ONLY: nunca toca la nube) ─────────────────
-  // Genera catálogo, clientes, vendedores y ~300 ventas (+ devoluciones) PASADAS por el
-  // motor real, así TODO lo calculado (stock, comisiones, totales, reportes) se deriva solo.
-  // Durante toda la operación remoteApplying=true ⇒ no sincroniza nada.
-  const LS_DEMO = 'balam_demo';
-  function demoActive() { try { return localStorage.getItem(LS_DEMO) === '1'; } catch (e) { return false; } }
-  const rawSave = (key, arr) => { try { localStorage.setItem(key, JSON.stringify(arr)); } catch (e) { /* cuota */ } };
-  function persistAllLocal() {
-    rawSave(LS_KEY, products); rawSave(LS_CLIENTS, clients); rawSave(LS_SELLERS, sellers);
-    rawSave(LS_SALES, sales); rawSave(LS_MOVES, movements); rawSave(LS_RETURNS, returns);
-    rawSave(LS_PROMOS, promos); rawSave(LS_LIQ, liquidations); rawSave(LS_PAYMENTS, payments);
-    rawSave(LS_LOANS, loans); rawSave(LS_EXCHANGES, exchanges);
-  }
-  function clearAllLocal() {
-    products.length = 0; sales.length = 0; movements.length = 0; returns.length = 0; payments.length = 0;
-    promos.length = 0; liquidations.length = 0; loans.length = 0;
-    clients.length = 0; seedClients.forEach(c => clients.push(JSON.parse(JSON.stringify(c)))); // solo el genérico
-    sellers.length = 0; seedSellers.forEach(s => sellers.push(JSON.parse(JSON.stringify(s)))); // solo el admin
-    try {
-      localStorage.removeItem(LS_FOLIO); localStorage.removeItem(LS_FOLIO_V2);
-      localStorage.removeItem(LS_PERIODO);
-    } catch (e) { /* */ }
-    periodoInicio = '';
-  }
-
-  // Vacía a estado de producción (sin datos). Local-only: NO borra la nube. Si hay sesión, el llamador
-  // (DemoPanel) avisa que Supabase conserva los datos y se repoblarán al recargar.
-  function resetEmpty() {
-    if (readLayawayProductLocks().length) return false;
-    remoteApplying = true;
-    try {
-      clearAllLocal(); persistAllLocal();
-      try { localStorage.removeItem(LS_DEMO); } catch (e) { /* */ }
-      // Descarta lo pendiente de sincronizar para que no se reenvíe nada de la simulación.
-      try { window.CORE.invokeSync('clearQueue'); } catch (e) { /* */ }
-    } finally { remoteApplying = false; }
-    return true;
-  }
-
-  // H-98 · Aplicación LOCAL del resultado ya confirmado por la RPC Punto Cero.
-  // No publica escrituras: la nube es la autoridad y ya terminó su transacción.
-  // Conserva CONFIG, promociones y personal; sólo reinicia sus acumulados
-  // transaccionales. La cola debe estar vacía antes de que STORE llegue aquí.
-  function applyPointZero() {
-    if (readLayawayProductLocks().length) {
-      return { ok: false, code: 'ACTIVE_LOCKS', error: 'Hay una liquidación local pendiente' };
-    }
-    const rollback = snapshotLocalDomain();
-    remoteApplying = true;
-    try {
-      products.length = 0; sales.length = 0; movements.length = 0;
-      returns.length = 0; payments.length = 0; liquidations.length = 0;
-      loans.length = 0; exchanges.length = 0;
-      clients.length = 0;
-      seedClients.forEach(c => clients.push(JSON.parse(JSON.stringify(c))));
-      sellers.forEach(s => { s.ventasMes = 0; s.ventasNum = 0; s.comisionAcum = 0; });
-      try {
-        localStorage.removeItem(LS_DEMO); localStorage.removeItem(LS_FOLIO);
-        localStorage.removeItem(LS_FOLIO_V2); localStorage.removeItem(LS_PERIODO);
-        localStorage.removeItem(LS_SALE_COMMIT_JOURNAL_LEGACY);
-        for (let i = Number(localStorage.length || 0) - 1; i >= 0; i--) {
-          const key = localStorage.key(i);
-          if (key && key.indexOf(LS_SALE_COMMIT_JOURNAL_PREFIX) === 0) localStorage.removeItem(key);
-        }
-      } catch (e) { /* almacenamiento opcional */ }
-      periodoInicio = ''; pendingSaleCommitJournal = null;
-      persistAllLocal();
-      return { ok: true, productos: products.length, piezas: totalPieces(),
-        ventas: sales.length, movimientos: movements.length };
-    } catch (e) {
-      try { restoreLocalDomain(rollback); persistAllLocal(); } catch (e2) { /* siguiente rebootstrap recupera */ }
-      return { ok: false, code: 'LOCAL_ROLLBACK', error: String((e && e.message) || e) };
-    } finally { remoteApplying = false; }
-  }
-
-  // ── H-68 · Borrado de datos de prueba ───────────────────────────────────────
-  // Deja el sistema como estaba ANTES de operar: sin ventas ni cobros, apartados,
-  // abonos, devoluciones, cambios, préstamos, clientes de prueba, comisiones,
-  // liquidaciones, cierres ni los movimientos que esas operaciones generaron; y con
-  // las existencias que movieron de vuelta en su lugar.
-  //
-  // NADA de Configuración se toca: productos, SKU, catálogos y códigos de talla,
-  // precios, vendedores con sus porcentajes y metas, reglas de comisión, DESCUENTOS
-  // configurados, reglas de devolución, usuarios, contraseñas, permisos e impresión
-  // sobreviven idénticos. `configFingerprint()` lo vuelve comprobable: se toma antes
-  // y después y debe coincidir.
-  //
-  // La reversión de existencias se DERIVA de los documentos —nunca de cifras
-  // capturadas— y se identifica por `productId` + identidad interna de talla
-  // (`ADR-011`), no por SKU ni por la etiqueta visible. Un SKU que resuelve a dos
-  // productos detiene la operación ENTERA antes de tocar nada; una línea cuyo
-  // producto ya no existe no tiene existencia que restaurar y se informa aparte.
   const PURGE_MOVE_TYPES = ['Venta', 'Devolución', 'Cambio (entra)', 'Cambio (sale)'];
-  // H-113: proyección local del resultado ya comprometido por PostgreSQL. No
-  // deriva dependencias ni resuelve SKU; consume identidades y stock objetivo.
-  function applySelectiveCleanup(result) {
-    const identities = result && result.identities || {};
-    const asSet = key => new Set(Array.isArray(identities[key])
-      ? identities[key].map(value => String(value)) : []);
-    const saleFolios = asSet('sale_folios');
-    const paymentIds = asSet('payment_ids');
-    const returnIds = asSet('return_ids');
-    const exchangeIds = asSet('exchange_ids');
-    const loanIds = asSet('loan_ids');
-    const liquidationIds = asSet('liquidation_ids');
-    const adjustmentIds = asSet('commission_adjustment_ids');
-    const reclassIds = asSet('reclassification_ids');
-    const customerIds = asSet('customer_ids');
-    const stockTargets = Array.isArray(result && result.stock) ? result.stock : [];
-    const saleStates = Array.isArray(result && result.sale_states) ? result.sale_states
-      : (Array.isArray(identities.sale_state_restorations) ? identities.sale_state_restorations : []);
-    const rollback = snapshotLocalDomain();
-    const adjustmentRollback = JSON.stringify(commissionAdjustments);
-    const replaceKeeping = (arr, keep) => {
-      const next = arr.filter(keep); arr.length = 0; next.forEach(row => arr.push(row));
-    };
-    remoteApplying = true;
-    try {
-      saleStates.forEach(row => {
-        const state = row && (row.prior_state || row.priorSaleState);
-        if (!RETURN_BASE_STATES.includes(state)) throw new Error('CLEANUP_LOCAL_SALE_STATE_INVALID');
-      });
-      stockTargets.forEach(target => {
-        const product = products.find(p => String(p.id) === String(target.product_id));
-        if (!product) throw new Error('CLEANUP_LOCAL_PRODUCT_MISSING:' + target.product_id);
-        const entry = stockEntryByIdentity(product, target.talla);
-        if (!entry) throw new Error('CLEANUP_LOCAL_SIZE_MISSING:' + target.product_id + ':' + target.talla);
-        const current = Number(entry.stock);
-        if (Number.isFinite(Number(target.current_stock)) && current !== Number(target.current_stock)) {
-          throw new Error('CLEANUP_LOCAL_PREVIEW_CHANGED:' + target.product_id + ':' + target.talla);
-        }
-        if (!Number.isFinite(Number(target.target_stock)) || Number(target.target_stock) < 0) {
-          throw new Error('CLEANUP_LOCAL_NEGATIVE_STOCK');
-        }
-        entry.stock = Number(target.target_stock);
-        if (product.recordModel === 'v2') product.stockQuantity = Number(target.target_stock);
-      });
-      const returnRefs = new Set(returns.filter(r => returnIds.has(String(r.id))).map(r => String(r.folio || r.id)));
-      const exchangeRefs = new Set(exchanges.filter(e => exchangeIds.has(String(e.id))).map(e => String(e.folio || e.id)));
-      saleStates.forEach(row => {
-        if (saleFolios.has(String(row.folio))) return;
-        const sale = sales.find(item => String(item.folio) === String(row.folio));
-        if (sale) sale.estado = row.prior_state || row.priorSaleState;
-      });
-      replaceKeeping(payments, p => Array.isArray(identities.payment_ids)
-        ? !paymentIds.has(String(p.id)) : !saleFolios.has(String(p.folio)));
-      replaceKeeping(returns, r => !returnIds.has(String(r.id)));
-      replaceKeeping(exchanges, e => !exchangeIds.has(String(e.id)));
-      replaceKeeping(sales, s => !saleFolios.has(String(s.folio)));
-      replaceKeeping(loans, l => !loanIds.has(String(l.id)));
-      replaceKeeping(liquidations, l => !liquidationIds.has(String(l.id)));
-      replaceKeeping(commissionAdjustments, a => !adjustmentIds.has(String(a.operationId || a.operation_id)));
-      replaceKeeping(clients, c => !customerIds.has(String(c.id)));
-      replaceKeeping(movements, m => !(saleFolios.has(String(m.ref))
-        || exchangeRefs.has(String(m.ref))
-        || returnIds.has(String(m.returnId || m.return_id))
-        || (!String(m.returnId || m.return_id || '') && m.tipo === 'Devolución' && returnRefs.has(String(m.ref)))
-        || reclassIds.has(String(m.operationId || m.operation_id))));
-      const ledger = commissionLedger(() => true);
-      sellers.forEach(seller => {
-        const row = ledger.find(x => x.vendedorId === seller.id);
-        seller.comisionAcum = row ? row.pendiente : 0;
-        const retained = sales.filter(s => s.estado !== 'Cancelado'
-          && Array.isArray(s.vendedores) && s.vendedores.includes(seller.id));
-        seller.ventasNum = retained.length;
-        seller.ventasMes = money(retained.reduce((sum, sale) => {
-          const parts = Math.max(1, sale.vendedores.length);
-          return sum + (Number(sale.total) || 0) / parts;
-        }, 0));
-      });
-      persistAllLocal(); rawSave(LS_ADJUSTMENTS, commissionAdjustments);
-      return { ok: true, cleanupId: result.cleanup_id || null,
-        removed: { sales: saleFolios.size, returns: returnIds.size, exchanges: exchangeIds.size,
-          loans: loanIds.size, customers: customerIds.size }, products: products.length,
-        stockTargets: stockTargets.length, restoredSaleStates: saleStates.length };
-    } catch (e) {
-      try {
-        restoreLocalDomain(rollback);
-        commissionAdjustments.length = 0;
-        JSON.parse(adjustmentRollback).forEach(row => commissionAdjustments.push(row));
-        persistAllLocal(); rawSave(LS_ADJUSTMENTS, commissionAdjustments);
-      } catch (e2) { /* rebootstrap obligatorio recupera la copia remota */ }
-      return { ok: false, code: 'LOCAL_ROLLBACK', error: String((e && e.message) || e) };
-    } finally { remoteApplying = false; }
-  }
+
 
   const isPurgeMove = m => PURGE_MOVE_TYPES.indexOf(m && m.tipo) >= 0;
   // Una venta con estado Apartado o Cancelado NUNCA descontó existencias (ver
@@ -5592,7 +4135,7 @@
     const index = {};
     const bump = (hit, delta) => {
       if (!hit || !delta) return;
-      const key = hit.product.id + ' ' + hit.talla;
+      const key = hit.product.id + '\0' + hit.talla;
       let entry = index[key];
       if (!entry) {
         entry = { productId: hit.product.id, product: hit.product, talla: hit.talla, delta: 0 };
@@ -5688,233 +4231,14 @@
       piezasAQuitar: deltas.reduce((a, d) => a + Math.max(0, -d.delta), 0),
       identidadAmbigua: issues.ambiguos,
       lineasSinProducto: issues.sinProducto,
-      bloqueado: issues.ambiguos.length > 0 ? 'IDENTITY_AMBIGUOUS'
-        : (readLayawayProductLocks().length ? 'LAYAWAY_LOCK' : null),
+      bloqueado: issues.ambiguos.length > 0 ? 'IDENTITY_AMBIGUOUS' : null,
     };
-  }
-
-  function snapshotLocalDomain() {
-    return JSON.stringify({
-      products, sales, returns, exchanges, payments, liquidations, loans,
-      movements, clients, sellers, periodoInicio,
-    });
-  }
-  function restoreLocalDomain(raw) {
-    const snap = JSON.parse(raw);
-    const swap = (arr, next) => { arr.length = 0; (next || []).forEach(x => arr.push(x)); };
-    swap(products, snap.products); swap(sales, snap.sales); swap(returns, snap.returns);
-    swap(exchanges, snap.exchanges); swap(payments, snap.payments);
-    swap(liquidations, snap.liquidations); swap(loans, snap.loans);
-    swap(movements, snap.movements); swap(clients, snap.clients); swap(sellers, snap.sellers);
-    periodoInicio = snap.periodoInicio || '';
-  }
-
-  // Complemento local de la autoridad remota `pos.purge_test_data()`. La app nunca
-  // borra lo local cuando la nube llega vacía (ver store.jsx pullDomain: una caída
-  // de red no debe vaciar una terminal), así que sin esto las pruebas reaparecerían
-  // e incluso se re-subirían — saveClients/savePayments suben el arreglo COMPLETO.
-  //
-  // `opts.authority === 'remote'` significa que el servidor ya restauró existencias
-  // y contadores: entonces NO se re-suben, se pulan después. En modo local (sin
-  // sesión) esta función es la única autoridad y sí sube lo restaurado.
-  //
-  // Devuelve el informe; `false` mantiene el contrato histórico de los llamadores
-  // que sólo miran `=== true` (store.jsx applyResetMark, settings.jsx).
-  function resetTestData(opts) {
-    const options = opts || {};
-    if (readLayawayProductLocks().length) return false;
-    const antes = testDataFootprint();
-    if (antes.identidadAmbigua.length) {
-      return { ok: false, code: 'IDENTITY_AMBIGUOUS', identidadAmbigua: antes.identidadAmbigua };
-    }
-    const rollback = snapshotLocalDomain();
-    const eliminados = {
-      ventas: antes.ventas, apartados: antes.apartados, abonos: antes.abonos,
-      devoluciones: antes.devoluciones, cambios: antes.cambios, prestamos: antes.prestamos,
-      clientes: antes.clientes, movimientos: antes.movimientos,
-      comisiones: antes.comisiones, cierres: antes.cierres,
-    };
-    remoteApplying = true; // vaciado local: que no encole nada a medias
-    let report = null;
-    try {
-      // 1) Revertir existencias ANTES de borrar: los documentos son la única fuente
-      //    del efecto que hay que deshacer.
-      const issues = { ambiguos: [], sinProducto: [] };
-      const deltas = purgeStockDeltas(issues);
-      const ajustes = [];
-      deltas.forEach(d => {
-        if (!d.delta) return;
-        const entry = stockEntryByIdentity(d.product, d.talla);
-        if (!entry) { issues.sinProducto.push({ ref: 'talla', productId: d.productId, talla: d.talla }); return; }
-        const before = Number(entry.stock) || 0;
-        entry.stock = Math.max(0, before + d.delta);
-        ajustes.push({ productId: d.productId, talla: d.talla, delta: d.delta, antes: before, despues: entry.stock });
-      });
-
-      // 2) Vaciar lo operativo. De movimientos SÓLO los que produjeron las
-      //    operaciones borradas: 'Entrada'/'Ajuste'/'Transferencia' son historial de
-      //    inventario y se conservan.
-      sales.length = 0; returns.length = 0; exchanges.length = 0;
-      liquidations.length = 0; payments.length = 0; loans.length = 0;
-      const keepMoves = movements.filter(m => !isPurgeMove(m));
-      movements.length = 0; keepMoves.forEach(m => movements.push(m));
-
-      // 3) Clientes: sólo el genérico de mostrador, con sus contadores en cero.
-      clients.length = 0; seedClients.forEach(c => clients.push(JSON.parse(JSON.stringify(c))));
-
-      // 4) Vendedores: se CONSERVAN enteros (usuario, contraseña, %, meta, nivel,
-      //    política de comisión); sólo se ponen en cero los acumulados del periodo.
-      sellers.forEach(s => { s.ventasMes = 0; s.ventasNum = 0; s.comisionAcum = 0; });
-
-      // 5) Los DESCUENTOS configurados NO se borran: son configuración. Lo operativo
-      //    de un descuento —su aplicación— vivía dentro de las ventas, que ya no están.
-
-      // 6) Folio, periodo de comisiones y rastros de commits a medias vuelven a
-      //    empezar: el complemento remoto vacía pos.folio_counters y los diarios.
-      try {
-        localStorage.removeItem(LS_FOLIO); localStorage.removeItem(LS_FOLIO_V2);
-        localStorage.removeItem(LS_PERIODO);
-        localStorage.removeItem(LS_SALE_COMMIT_JOURNAL_LEGACY);
-        for (let i = Number(localStorage.length || 0) - 1; i >= 0; i--) {
-          const key = localStorage.key(i);
-          if (key && key.indexOf(LS_SALE_COMMIT_JOURNAL_PREFIX) === 0) localStorage.removeItem(key);
-        }
-      } catch (e) { /* */ }
-      periodoInicio = '';
-      pendingSaleCommitJournal = null;
-      persistAllLocal();
-      report = {
-        ok: true, eliminados, ajustes,
-        piezasAntes: antes.piezas, piezasDespues: totalPieces(),
-        productos: products.length, descuentos: promos.length, vendedores: sellers.length,
-        movimientosInventario: movements.filter(m => !isPurgeMove(m)).length,
-        lineasSinProducto: issues.sinProducto,
-        configHuellaAntes: antes.configHuella, configHuellaDespues: configFingerprint(),
-      };
-      report.configIntacta = report.configHuellaAntes === report.configHuellaDespues;
-    } catch (e) {
-      // Atomicidad local: o queda todo limpio, o queda todo como estaba.
-      try { restoreLocalDomain(rollback); persistAllLocal(); } catch (e2) { /* */ }
-      remoteApplying = false;
-      return { ok: false, code: 'LOCAL_ROLLBACK', error: String((e && e.message) || e) };
-    } finally { remoteApplying = false; }
-    if (options.authority !== 'remote') {
-      // Modo local: esta terminal es la única autoridad, así que sube lo restaurado.
-      // Con autoridad remota NO se sube: el servidor ya lo hizo y sus filas traen una
-      // versión más nueva; re-subir las locales chocaría con el control de versión.
-      syncUp('products', products); syncUp('sellers', sellers); syncUp('clients', clients);
-    }
-    return report;
-  }
-
-  function seedDemo() {
-    if (readLayawayProductLocks().length) {
-      return { ok: false, error: 'Hay una liquidación pendiente; reconcíliala antes de reemplazar los datos locales' };
-    }
-    remoteApplying = true; bulkMode = true; // LOCAL-ONLY y rápido (persiste al final)
-    try {
-      clearAllLocal();
-      const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
-      const pick = arr => arr[Math.floor(Math.random() * arr.length)];
-      const C2 = window.CONFIG, p2 = n => String(n).padStart(2, '0');
-      const cats = C2.codes('category'), colors = C2.codes('color'), telas = C2.codes('fabric'),
-        mangas = C2.codes('sleeve'), cuellos = C2.codes('neck'), orns = C2.codes('ornament');
-      const NOMS = ['Tira Red', 'Panal Tadeo', 'Presidencial', 'Clásica Lisa', 'Hexágonos', 'Café Capuchino',
-        'Rombitos', 'Alforza Doble', 'Líneas Cruzadas', 'Pirámide', 'Manta Lisa', 'Esferas Doradas',
-        'Nuditos', 'Pestañas Finas', 'Marino', 'Crucecitas', 'Moñitos', 'Serpiente', 'Capuchino',
-        'Bordado Real', 'Tira X', 'Alforza Ancha', 'Doble Línea', 'Heritage'];
-
-      // 1) Productos (~24) con stock en tallas centrales
-      for (let i = 0; i < 24; i++) {
-        const numberSizes = Math.random() < 0.35;
-        const letras = numberSizes ? [] : SIZES_LETRA().map((_, k) => (k >= 1 && k <= 6 ? rnd(0, 14) : 0));
-        const nums = numberSizes ? SIZES_NUM().map((_, k) => (k >= 2 && k <= 7 ? rnd(0, 10) : 0)) : [];
-        const sizeCategoryId = numberSizes ? 'size_number' : 'size_letter';
-        products.push(hydrate({
-          id: 'dp' + i, cat: pick(cats), manga: pick(mangas), tela: pick(telas), color: pick(colors),
-          cuello: pick(cuellos), modelo: String(100 + i), nombre: NOMS[i % NOMS.length],
-          orn: (orns && orns.length ? pick(orns) : '—'), ornColors: [], precio: rnd(8, 28) * 50,
-          pop: Math.random() < 0.25,
-          sizeCategoryId, attrs: { __sizeCategoryId: sizeCategoryId },
-          stock: mkStock(letras, nums).filter(v => v.escala === (numberSizes ? 'N' : 'L')),
-        }));
-      }
-
-      // 2) Clientes (8) — el genérico ya está; con fecha de nacimiento (para cumpleaños)
-      const CNOMS = ['José Luis Aguilar', 'María Fernanda Rosado', 'Carlos Manuel Uc', 'Ana Patricia Canul',
-        'Roberto Sansores', 'Gabriela Couoh', 'Luis Ángel Pat', 'Diana Carolina Be'];
-      const TL = SIZES_LETRA();
-      CNOMS.forEach((nombre, i) => {
-        const by = rnd(1975, 2002), bm = rnd(1, 12), bd = rnd(1, 28);
-        clients.push({ id: 'dc' + i, nombre, tel: `999 ${rnd(100, 999)} ${rnd(1000, 9999)}`, compras: 0, total: 0,
-          ultima: '', talla: (TL.length ? pick(TL) : 'M'), notas: '', email: '',
-          nacimiento: `${by}-${p2(bm)}-${p2(bd)}` });
-      });
-
-      // 3) Vendedores (4) — el admin ya está
-      [['Rocío Méndez', '#b8f040'], ['Iván Castro', '#3b82f6'], ['Diana Pérez', '#f59e0b'], ['Mateo Ríos', '#ef4444']]
-        .forEach(([nombre, color], i) => sellers.push({ id: 'ds' + i, nombre, iniciales: iniDe(nombre), color,
-          comisionPct: rnd(4, 6), metaMes: rnd(30, 50) * 5000, ventasMes: 0, ventasNum: 0, comisionAcum: 0,
-          bono: 'Sin bono', role: 'vendedor', email: null, passwordHash: null, active: true }));
-
-      const realClients = clients.filter(c => !c.generic);
-      const realSellers = sellers.filter(s => s.role === 'vendedor');
-      const generico = clients.find(c => c.generic);
-      const metodos = (C2.codes('payment_method') || []).length ? C2.codes('payment_method') : ['Efectivo', 'Tarjeta', 'Transferencia'];
-
-      // 4) ~300 ventas en 90 días — fechas ascendentes (folios alineados a la fecha)
-      const dates = [];
-      for (let i = 0; i < 300; i++) { const d = new Date(); d.setDate(d.getDate() - Math.floor(Math.random() * 90)); d.setHours(rnd(9, 20), rnd(0, 59), 0, 0); dates.push(d); }
-      dates.sort((a, b) => a - b);
-      dates.forEach(d => {
-        const fecha = `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}`;
-        const r = Math.random();
-        const estado = r < 0.05 ? 'Cancelado' : r < 0.13 ? 'Apartado' : 'Pagado';
-        const seller = pick(realSellers);
-        const client = (Math.random() < 0.4 && generico) ? generico : pick(realClients);
-        const ticket = [];
-        for (let k = 0, n = rnd(1, 3); k < n; k++) {
-          const p = pick(products);
-          const avail = resolveProductSizes(p).sizes
-            .filter(size => size.active && size.stock > 0)
-            .map(size => ({ talla: size.value, escala: size.scale, stock: size.stock }));
-          if (!avail.length) continue;
-          const v = pick(avail);
-          if (ticket.some(t => t.p.id === p.id && t.talla === v.talla)) continue;
-          // H-32: el generador resuelve igual que el POS, para que recordSale nunca vuelva a evaluar.
-          ticket.push({ p, talla: v.talla, qty: Math.min(rnd(1, 3), v.stock), res: resolveLineDiscount(p, v.talla) });
-        }
-        if (!ticket.length) return;
-        const total = ticket.reduce((a, t) => a + (Number(t.p.precio) || 0) * t.qty, 0);
-        const itemCount = ticket.reduce((a, t) => a + t.qty, 0);
-        recordSale({ ticket, sellerIds: [seller.id], client, metodo: pick(metodos), estado, total, itemCount, fecha });
-      });
-
-      // 5) Devoluciones (~6% de ventas pagadas con líneas)
-      const reasons = (C2.codes('return_reason') || []).length ? C2.codes('return_reason') : ['Talla', 'Defecto'];
-      const pagadas = sales.filter(s => s.estado === 'Pagado' && (s.lineas || []).length);
-      const nRet = Math.round(pagadas.length * 0.06);
-      for (let i = 0; i < nRet && pagadas.length; i++) {
-        const s = pick(pagadas);
-        const linea = pick(s.lineas);
-        const sd = new Date(String(s.fecha).replace(' ', 'T')); sd.setDate(sd.getDate() + rnd(1, 10));
-        if (sd > new Date()) continue;
-        const fecha = `${sd.getFullYear()}-${p2(sd.getMonth() + 1)}-${p2(sd.getDate())} ${p2(rnd(9, 19))}:${p2(rnd(0, 59))}`;
-        recordReturn({ folio: s.folio, lineas: [{ sku: linea.sku, nombre: linea.nombre, talla: linea.talla, qty: 1, motivo: pick(reasons), precio: linea.precio }], metodo: s.metodo, fecha });
-      }
-
-      // 6) Orden por fecha desc para listados + persistir local
-      sales.sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
-      movements.sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
-      returns.sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
-      bulkMode = false;
-      persistAllLocal();
-      try { localStorage.setItem(LS_DEMO, '1'); } catch (e) { /* */ }
-    } finally { remoteApplying = false; bulkMode = false; }
-    return { ok: true, products: products.length, clients: clients.length, sellers: sellers.length, sales: sales.length, returns: returns.length };
   }
 
   window.DATA = {
+    get revision() { return dataRevision; },
+    get commissionContext() { return clone(remoteCommissionContext); },
+    saveProductRows, saveProductFamily, validateOnlineSnapshot, replaceFromOnline,
     products, sellers, clients, sales, movements, promos, liquidations, returns, payments, exchanges, loans,
     sku, materializedSku, familyVisualSku, regenerateSkus, totalStock, hydrate, mkStock, emptyStock, SIZE_MARK,
     isV2Reference, createReference, updateReference, referenceFamily, referenceFamilyProjection, commercialProducts, materializeReferenceFamily, physicalSignature, skuPreview,
@@ -5922,13 +4246,10 @@
     canonicalReferenceOrnamentColors, canonicalProductAttrs, referenceDiagnostics, referenceDifferences,
     physicalSnapshot, barcodeFromId, referenceHasOperations, reclassifyReference,
     migrateSizeCodes, liveDocumentCounts, inventoryFootprint, clearInventory,
-    persistProducts, syncProducts, saveProducts, saveSellers, saveClients, saveSales, saveMovements, savePromos, saveReturns, savePayments,
     productDeletionGuard, removeProductScope, removeProduct, remapOrphanCodes, catalogHealthReport, hexForColorName, previewOrphanFix, applyOrphanFix, get lastRemap() { return lastRemap; },
     addClient, updateClient, removeClient, clientSalesSummary, clientSalesSummaries,
-    recordSale, newOperationId, nextFolio, collisionSafeFolio, rekeySaleFolio,
-    normalizeFolioPrefix, businessDate, folioFromParts, parseFolio, folioPreview,
-    folioBlockRequest, applyFolioBlock, terminalCode,
-    findSaleByFolio, saleFolioAliases, folioAliasHit, stockOf, isAutoImg, resetProducts, applyRemote, applySyncResult, applySaleCommitResult, mergeRemote, markSaleSync, liquidarComision,
+    recordSale, newOperationId, nextFolio, normalizeFolioPrefix, businessDate, folioFromParts, parseFolio, folioPreview,
+    findSaleByFolio, saleFolioAliases, folioAliasHit, stockOf, isAutoImg, liquidarComision,
     completarApartado, registrarPagoApartado, paymentsForSale, hasFinancialSnapshot, resolveLineDiscount, saleQuote, cerrarMes, getPeriodoInicio,
     listPrice, priceRange, sanitizePreciosTalla, resolveProductSizes,
     ornamentSupportsColors, sanitizeOrnamentColorsBySize, effectiveOrnamentColors,
@@ -5936,60 +4257,25 @@
     recordReturn, returnedQty, returnsForFolio, returnLifecycle, isReturnable, returnDeadline, saleLineBalance,
     paymentMethodReport, sameMethodRefundComponents,
     saleLineProduct,
-    saveExchanges, recognizedValue, supplySources, recordExchange, reverseExchangeCommission,
-    revenueSummary, exchangeRevenue, exchangeUnusedValue, exchangeReport, sellerCommissionReport,
-    saveLoans, registrarPrestamo, registrarDevolucionPrestamo, marcarPrestamoNoDevuelto,
+    recognizedValue, supplySources, recordExchange, revenueSummary, exchangeRevenue, exchangeUnusedValue, exchangeReport, sellerCommissionReport,
+    registrarPrestamo, registrarDevolucionPrestamo, marcarPrestamoNoDevuelto,
     actualizarPrestamo, eliminarPrestamo, prestamoPiezas, prestamoPendientes,
     prestamoAtraso, prestamosVencidos, loanedQty, parseLoanFolio, nextLoanFolio, LOAN_ESTADOS,
-    applyRemoteLoans, findLoanByFolio, loanFolioAliases, rekeyLoanFolio, collisionSafeLoanFolio,
-    requireCatalogResync, clearCatalogResync,
-    acquireLayawayProductLock, releaseLayawayProductLock,
-    reconcileLayawayProductLocks, ensureLayawayProductLockFromOperation,
-    layawayProductLockSnapshot, hasLayawayLiquidationLock,
-    assertLayawayProductsUnlocked, assertLocalWriter, awaitLocalWriter,
-    get localWriterState() { return localWriterState; },
-    get isLocalWriter() { return localWriterAllowed(false); },
-    get localWriterLeaseSupported() { return localWriterLeaseSupported; },
-    get localWriterContended() { return localWriterContended; },
-    get catalogResyncRequired() { return catalogResyncRequired; },
+    findLoanByFolio, loanFolioAliases,
     addUser, updateUser, removeUser, isEligibleSeller, resolveSellerCommission,
     // H-69 · autoridad de comisión y su evidencia congelada
     commissionLadderFor, commissionTiers, commissionEntryFor, commissionSourceLabel,
     saleCommissionBase, saleCommissionEntries, saleFrozenCommissions,
     returnedCommissionBySeller, sellerPeriodBase, commissionLedger,
-    currentPeriodPredicate, reverseSaleCommission,
-    commissionAdjustments, commissionAdjustmentPreview, commissionAdjustmentDraft,
+    currentPeriodPredicate, commissionAdjustments, commissionAdjustmentPreview, commissionAdjustmentDraft,
     applyCommissionAdjustment,
     addPromo, updatePromo, removePromo, duplicatePromo,
-    seedDemo, resetEmpty, resetTestData, applyPointZero, applySelectiveCleanup, demoActive,
     testDataFootprint, configFingerprint, totalPieces, stockEntryByIdentity,
   };
-  const localWriterMutators = [
-    'regenerateSkus', 'persistProducts', 'syncProducts', 'saveProducts', 'saveSellers', 'saveClients', 'saveSales',
-    'saveMovements', 'savePromos', 'saveReturns', 'savePayments', 'removeProduct',
-    'applyOrphanFix', 'addClient', 'removeClient', 'recordSale', 'rekeySaleFolio',
-    'applyFolioBlock', 'resetProducts', 'applyRemote', 'applySyncResult',
-    'applySaleCommitResult', 'mergeRemote', 'markSaleSync', 'liquidarComision',
-    'completarApartado', 'registrarPagoApartado', 'cerrarMes', 'recordReturn',
-    'saveExchanges', 'recordExchange', 'reverseExchangeCommission', 'saveLoans',
-    'registrarPrestamo', 'registrarDevolucionPrestamo', 'marcarPrestamoNoDevuelto',
-    'actualizarPrestamo', 'eliminarPrestamo', 'applyRemoteLoans', 'rekeyLoanFolio',
-    'addUser', 'updateUser', 'removeUser', 'addPromo', 'updatePromo', 'removePromo',
-    'duplicatePromo', 'seedDemo', 'resetEmpty', 'resetTestData',
-    'reverseSaleCommission', 'applyCommissionAdjustment', 'reclassifyReference',
-  ];
-  const remoteProjectionMutators = new Set(['applyRemote', 'applySyncResult', 'applySaleCommitResult',
-    'mergeRemote', 'markSaleSync', 'applyRemoteLoans', 'applyFolioBlock']);
-  localWriterMutators.forEach(name => {
-    const original = window.DATA[name];
-    if (typeof original !== 'function') return;
-    window.DATA[name] = function (...args) {
-      if (!remoteProjectionMutators.has(name) && !(name === 'resetTestData' && args[0]?.authority === 'remote')) {
-        window.CORE.invokeSync('assertBusinessReady');
-      }
-      assertLocalWriter(false);
-      return original.apply(window.DATA, args);
-    };
+  Object.entries(domainCollections).forEach(([kind, collection]) => {
+    const name = kind === 'promotions' ? 'promos' : kind;
+    Object.defineProperty(window.DATA, name, { enumerable: true, configurable: false,
+      get: () => collection.map(row => kind === 'products' ? hydrate(clone(row)) : clone(row)) });
   });
   // Catálogos retrocompatibles: D.CAT[code], Object.entries(D.TELA), D.SIZES_LETRA, …
   // ahora se resuelven EN VIVO desde CONFIG en cada acceso (reflejan ediciones del admin).
@@ -6005,8 +4291,8 @@
     SIZES: { enumerable: true, get: SIZES_LETRA }, // alias de compatibilidad
   });
   window.CORE.registerCatalogProducts({
-    list: () => products,
-    save: productIds => window.DATA.saveProducts(productIds),
+    list: () => clone(products),
+    save: rows => saveProductRows(rows),
   });
   // H-63: CONFIG necesita saber si una talla está referenciada por el alcance de una
   // promoción antes de dejar que se desactive. Sólo lectura, por el gateway de CORE.
@@ -6016,7 +4302,7 @@
   // dos puntas del gateway sigan cableadas, así que la guarda no puede esconder su
   // desaparición.
   if (typeof window.CORE.registerCatalogPromotions === 'function') {
-    window.CORE.registerCatalogPromotions({ list: () => promos });
+    window.CORE.registerCatalogPromotions({ list: () => clone(promos) });
   }
   if (typeof window.CORE.registerMonetaryDocuments === 'function') {
     window.CORE.registerMonetaryDocuments({
@@ -6028,64 +4314,4 @@
     });
   }
 
-  let localWriterRequestActive = false;
-  let localWriterPageHidden = false;
-  function startLocalWriterLease() {
-    if (!localWriterLeaseSupported) {
-      setLocalWriterState('unsupported');
-      try { remapOrphanCodes(); } catch (e) { /* mejor arrancar que bloquear */ }
-      return;
-    }
-    if (localWriterPageHidden || localWriterRequestActive || localWriterState === 'writer' || localWriterState === 'blocked') return;
-    localWriterRequestActive = true;
-    scheduleLocalWriterContentionCheck();
-    Promise.resolve(window.navigator.locks.request(LOCAL_WRITER_LOCK, { mode: 'exclusive' }, async () => {
-      if (localWriterPageHidden) return;
-      clearLocalWriterContentionCheck();
-      setLocalWriterContended(false);
-      setLocalWriterState('rebasing');
-      if (!rebaseLocalWriterCollections()) {
-        setLocalWriterState('blocked');
-        return;
-      }
-      setLocalWriterState('writer');
-      localWriterWarningShown = false;
-      try { remapOrphanCodes(); } catch (e) { /* el catálogo sigue disponible */ }
-      await new Promise(resolve => {
-        let released = false;
-        localWriterRelease = () => {
-          if (released) return;
-          released = true;
-          localWriterRelease = null;
-          setLocalWriterState('waiting');
-          resolve();
-        };
-      });
-    })).catch(() => {
-      clearLocalWriterContentionCheck();
-      setLocalWriterContended(false);
-      setLocalWriterState('blocked');
-    }).finally(() => {
-      localWriterRequestActive = false;
-      // pageshow puede llegar antes de que termine la solicitud anterior.
-      if (!localWriterPageHidden && localWriterState === 'waiting') startLocalWriterLease();
-    });
-  }
-  // beforeunload es cancelable: abrir RawBT no significa cerrar esta página.
-  window.addEventListener('pagehide', () => {
-    localWriterPageHidden = true;
-    if (localWriterRelease) localWriterRelease();
-  });
-  function resumeLocalWriterLease() {
-    localWriterPageHidden = false;
-    if (localWriterState === 'waiting') startLocalWriterLease();
-  }
-  window.addEventListener('pageshow', resumeLocalWriterLease);
-  window.addEventListener('focus', () => {
-    if (document.visibilityState !== 'hidden') resumeLocalWriterLease();
-  });
-  window.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') resumeLocalWriterLease();
-  }, true);
-  startLocalWriterLease();
 })();

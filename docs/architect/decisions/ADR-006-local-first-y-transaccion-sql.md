@@ -2,6 +2,9 @@
 
 **Estado:** vigente · **Historias:** H-01, H-04 (origen), H-09, H-13, H-14
 
+> Decisión histórica: reemplazada por ADR-015 para el producto online-only.
+> No autoriza nuevas colas ni operación comercial offline.
+
 ## Contexto
 
 Una venta se traducía en cabecera, renglones, movimientos y pagos enviados como

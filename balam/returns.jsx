@@ -10,6 +10,18 @@
   const C = window.CONFIG;
   const D = window.DATA;
   const h = React.createElement;
+  const runningOnlineActions = new Set();
+  async function onlineAction(key, action, operationRef) {
+    if (runningOnlineActions.has(key)) return;
+    runningOnlineActions.add(key);
+    try { return await action(); }
+    catch (error) {
+      if (operationRef && error.code !== 'ONLINE_RESULT_UNKNOWN') operationRef.current = null;
+      toast(error.message || 'No se pudo confirmar la operación', 'var(--danger)');
+    }
+    finally { runningOnlineActions.delete(key); }
+  }
+
 
   // C6: el TIPO DE OPERACIÓN se decide al inicio, sobre la venta ya localizada.
   // El flujo de Devoluciones queda intacto: `ReturnDetail` no cambia una línea.
@@ -96,13 +108,13 @@
         || (D.saleFolioAliases ? D.saleFolioAliases(s) : []).some(a => String(a).toLowerCase().includes(term))
         || String(s.cliente || '').toLowerCase().includes(term))
       .filter(s => plazo === 'todos' || deadlineOf(s).status === plazo)
-      .slice(0, 40), [q, plazo, D.sales.length, buscando]);
+      .slice(0, 40), [q, plazo, D.revision, buscando]);
     const inconsistent = useMemo(() => D.sales
       .filter(s => D.returnLifecycle && D.returnLifecycle(s).inconsistent)
       .filter(s => !term
         || String(s.folio).toLowerCase().includes(term)
         || String(s.cliente || '').toLowerCase().includes(term))
-      .slice(0, 12), [q, D.sales.length, D.returns.length, buscando]);
+      .slice(0, 12), [q, D.revision, buscando]);
     const recent = (D.returns || []).slice(0, 8);
     // El pull de ventas es paginado (ventana reciente): un folio más viejo puede no estar
     // en este equipo. Este botón lo trae de la nube y lo fusiona en lo local para devolverlo.
@@ -241,7 +253,7 @@
         x.max = b ? b.disponible : Math.max(0, x.qty - x.returned);
         return x;
       });
-    }, [sale.folio]);
+    }, [sale.folio, D.revision]);
 
     const reasons = C.list('return_reason');
     const monetaryMethods = C.list('payment_method').filter(item => !['Apartado', 'Cortesía'].includes(item.code));
@@ -252,6 +264,7 @@
     const [refundParts, setRefundParts] = useState(() => realMethods.slice(0, 2).map(item => ({ methodCode: item.code, amount: '0' })));
     const [notas, setNotas] = useState('');
     const [receipt, setReceipt] = useState(null);
+    const returnOperationRef = React.useRef(null);
 
     const setRow = (k, patch) => setSel(p => ({ ...p, [k]: { ...(p[k] || { on: false, motivo: '', qty: 1 }), ...patch } }));
     const toggle = (row) => { const cur = sel[row.k] || {}; setRow(row.k, { on: !cur.on, qty: cur.qty || 1, motivo: cur.motivo || '' }); };
@@ -267,7 +280,8 @@
     const sameParts = metodo === 'Mismo método' && D.sameMethodRefundComponents
       ? D.sameMethodRefundComponents(sale, refund) : null;
 
-    function confirm() {
+    async function confirm() {
+      return onlineAction('confirm', async () => {
       if (vencida) { toast(`Esta venta ya no admite devolución · ${plazo.label.toLowerCase()}`, 'var(--danger)'); return; }
       if (!chosen.length) { toast('Selecciona al menos un artículo', 'var(--danger)'); return; }
       for (const r of chosen) { if (!sel[r.k].motivo) { toast(`Elige el motivo para ${r.nombre}`, 'var(--danger)'); return; } }
@@ -287,10 +301,12 @@
         }
       } else components = snapshotParts([{ methodCode: metodo, amount: refund }]);
       const nominal = metodo === 'Mismo método' ? (components.length > 1 ? 'Mixto' : components[0].methodCode) : metodo;
-      const res = D.recordReturn({ folio: sale.folio, lineas, metodo: nominal, refundComponents: components, notas });
-      if (!res.ok) { toast(res.error, 'var(--danger)'); return; }
+      if (!returnOperationRef.current) returnOperationRef.current = D.newOperationId();
+      const res = await D.recordReturn({ operationId: returnOperationRef.current, folio: sale.folio, lineas, metodo: nominal, refundComponents: components, notas });
+      if (!res.ok) { returnOperationRef.current = null; toast(res.error, 'var(--danger)'); return; }
       toast(`Devolución registrada · ${fmt(res.ret.total)}`, 'var(--accent)');
       setReceipt({ sale, returnDoc: res.ret });
+      }, returnOperationRef);
     }
 
     const reverseOn = !!C.get('returns.reverseCommission');
@@ -516,6 +532,7 @@
     const valorEntregado = ent.reduce((a, l) => a + D.listPrice(l.p, l.talla) * l.qty, 0);
     const diferencia = Math.max(0, Math.round((valorEntregado - valorReconocido) * 100) / 100);
     const noAprovechado = Math.max(0, Math.round((valorReconocido - valorEntregado) * 100) / 100);
+    const valuationContext = window.CORE.invokeSync('getQuoteContext');
     // Mismo desglose que el POS: importe e IVA describen lo que se cobra.
     const ivaPct = 16;
     const importe = Math.round((diferencia / (1 + ivaPct / 100)) * 100) / 100;
@@ -527,7 +544,7 @@
         || (p.isFamilyProjection ? p.searchText.includes(t)
           : String(p.nombre).toLowerCase().includes(t) || String(p.sku).toLowerCase().includes(t)))
         .slice(0, 24);
-    }, [query]);
+    }, [query, D.revision]);
 
     function flashLine(key) { setFlash(key); setTimeout(() => setFlash(k => (k === key ? null : k)), 900); }
     function agregar(p, talla) {
@@ -627,13 +644,14 @@
         setAviso({
           titulo: 'El cliente pierde ' + fmt(noAprovechado),
           cuerpo: 'Se lleva ' + fmt(noAprovechado) + ' menos de lo que entrega. Ese saldo NO se devuelve en efectivo y NO queda a favor del cliente: se pierde.',
-          onSi: () => { setAviso(null); setVendedor({ metodo: null }); },
+          onSi: () => { setAviso(null); setVendedor({ metodo: null, quoteContext: valuationContext }); },
         });
         return;
       }
-      setVendedor({ metodo: null });
+      setVendedor({ metodo: null, quoteContext: valuationContext });
     }
-    function registrar(sellerId, metodo, pagoDetalle) {
+    async function registrar(sellerId, metodo, pagoDetalle, quoteContext) {
+      return onlineAction('registrar', async () => {
       if (!operationIdRef.current) operationIdRef.current = D.newOperationId();
       const lineas = marcados.map(r => ({
         lado: 'devuelto', sku: r.sku, nombre: r.nombre, talla: r.talla,
@@ -641,19 +659,22 @@
         sourceSaleLineId: r.lineId || null, productId: r.p ? r.p.id : r.productId,
       })).concat(ent.map(l => ({
         lado: 'entregado', sku: l.p.sku, nombre: l.p.nombre, talla: l.talla,
+        expectedProductVersion: Number(l.p._syncVersion) || 0,
         qty: l.qty, productId: l.p.id, barcodeCode: l.p.barcodeCode || null,
       })));
-      const res = D.recordExchange({
+      const res = await D.recordExchange({
         origenFolio: sale.folio, lineas, notas,
         usuario: (window.AUTH && window.AUTH.current && (window.AUTH.current() || {}).email) || '',
         vendedorId: sellerId, revisadoPor: revisor, metodoPago: metodo,
         pagoDetalle: pagoDetalle || undefined,
         operationId: operationIdRef.current,
+        quoteContext,
       });
-      if (!res.ok) { toast(res.error, 'var(--danger)'); return; }
+      if (!res.ok) { operationIdRef.current = null; toast(res.error, 'var(--danger)'); return; }
       toast('Cambio registrado · ' + res.exchange.folio, 'var(--accent)');
       setVendedor(null); setCobro(false);
       setRecibo({ sale, exchange: res.exchange, payment: res.payment });
+      }, operationIdRef);
     }
 
     // ── Renglón del panel: mismo lenguaje que el ticket del POS ───────────────
@@ -862,6 +883,7 @@
           setVendedor({
             metodo: (pago && pago.metodo) ? pago.metodo : 'Efectivo',
             detalle: (pago && pago.pagoDetalle) || null,
+            quoteContext: valuationContext,
           });
         },
       }),
@@ -877,7 +899,7 @@
             className: 'flex-1 py-3.5 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-xl' }, 'Sí, registrar'),
         ],
       }, h('p', { className: 'py-2 text-body text-on-surface' }, aviso.cuerpo)),
-      vendedor && h(SellerModal, { key: 'sv', sellers: elegibles, onClose: () => setVendedor(null), onPick: (id) => registrar(id, vendedor.metodo, vendedor.detalle) }),
+      vendedor && h(SellerModal, { key: 'sv', sellers: elegibles, onClose: () => setVendedor(null), onPick: (id) => registrar(id, vendedor.metodo, vendedor.detalle, vendedor.quoteContext) }),
       recibo && h(ExchangeReceipt, { key: 'rc', recibo, onClose: () => { setRecibo(null); onDone(); } }),
       // Comprobante térmico: la MISMA autoridad del Punto de venta, con el cambio
       // como costura. Vive fuera de pantalla y sólo él queda visible al imprimir.

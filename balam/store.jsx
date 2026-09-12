@@ -1,253 +1,225 @@
-// store.jsx — Seam de nube (Supabase). LOCAL-FIRST + cola offline.
-// Supabase confirma; la cola conserva intención; CONFIG/DATA proyectan ese estado.
-//   - init({pull}): jala config + dominio (nube gana al abrir) y drena la cola.
-//   - push*: intentan subir; si no hay red o falla, ENCOLAN (localStorage) y
-//     reintentan al reconectar (evento 'online') o en el próximo init.
-// Requiere migraciones pos_001/002/003 corridas. Sin clave secreta no hay DDL.
+// H164 — una autoridad comercial: Supabase. DATA/CONFIG sólo proyectan memoria.
+// Las referencias locales de resultado contienen identidad técnica, nunca payload/replay.
 (function () {
-  const MONEY_WIRE_MARKER = '__BALAM_MONEY_V1__';
-  function moneyWireMethod(method, components) {
-    if (!Array.isArray(components) || !components.length) return method;
-    return MONEY_WIRE_MARKER + JSON.stringify({ nominalMethod: method, components });
-  }
   const SUPABASE_URL = 'https://telohdbvbvsfmwyriflz.supabase.co';
-  const SUPABASE_KEY = 'sb_publishable_-skU6PI0VrYa91UPHAEaIg_dhsi1l_I'; // publicable (anon), no secreta
-  const SCHEMA = 'pos';
-  const QKEY = 'balam_sync_queue';
-  const QDB = 'balam_sync', QSTORE = 'durable_queue';
-  const SYNC_PROTOCOL_VERSION = 3;
-  const SYNC_SCHEMA_VERSION = 20260830017500;
-  const SYNC_CLIENT_BUILD = '2026-09-11-h155';
-  const SELECTIVE_CLEANUP_PROTOCOL = 6;
-  const SYNC_CURSOR_KEY = 'balam_sync_domain_cursors_v1';
-  const SYNC_DOMAINS = {
-    permissions: { deps: [] }, config: { deps: ['permissions'] },
-    sellers: { deps: ['permissions', 'config'] },
-    products: { deps: ['config'] }, clients: { deps: ['config'] },
-    promotions: { deps: ['config', 'products'] },
-    sales: { deps: ['sellers', 'products', 'clients'] },
-    payments: { deps: ['sales'] }, returns: { deps: ['sales', 'products'] },
-    exchanges: { deps: ['sales', 'products'] }, loans: { deps: ['products', 'clients'] },
-    liquidations: { deps: ['sellers', 'sales'] },
-    commissionAdjustments: { deps: ['sellers', 'sales', 'liquidations'] },
-    movements: { deps: ['sales', 'returns'] },
-    purges: { deps: [] }, devices: { deps: ['permissions'] },
-  };
-  // Marca de limpieza de datos de prueba: fila reservada de pos.settings que escribe
-  // supabase/LIMPIAR-PRUEBAS.sql. Cada terminal recuerda en RESET_SEEN la última que aplicó;
-  // si la nube trae una más nueva, se limpia sola (ver applyResetMark).
+  const SUPABASE_KEY = 'sb_publishable_-skU6PI0VrYa91UPHAEaIg_dhsi1l_I';
+  const BUILD = '2026-09-12-h164-online';
+  const OFFLINE = 'Sin conexión. BALAM necesita internet para continuar.';
+  const CONFIRMING = 'Estamos confirmando la operación. No la repitas.';
+  const RECEIPT_PREFIX = 'balam_online_request_v1:';
   const RESET_MARK_KEY = '_resetMark';
-  const RESET_SEEN = 'balam_reset_seen';
-  const POINT_ZERO_TICKET = 'balam_point_zero_ticket_v1';
-  const SELECTIVE_CLEANUP_TICKET = 'balam_selective_cleanup_ticket_v2';
-  const SELECTIVE_CLEANUP_SEEN = 'balam_selective_cleanup_seen_v2';
-
-  const RECOVERY_KEY = 'balam_device_recovery_v1';
-  let directedRecovery = null, recoveryPromise = null, recoveryPhase = 'checking';
-  let recoveryError = null;
-  function recoveryLocal() {
-    try { const value = JSON.parse(localStorage.getItem(RECOVERY_KEY) || 'null');
-      return value?.device_id === window.CORE.getDeviceId() ? value : null;
-    } catch (e) { return null; }
+  const MONEY_WIRE_MARKER = '__BALAM_MONEY_V1__';
+  const moneyWireMethod = (method, components) => Array.isArray(components) && components.length
+    ? MONEY_WIRE_MARKER + JSON.stringify({ nominalMethod: method, components }) : method;
+  let sb = null, identity = null, sessionSeq = 0, enabled = false;
+  let ready = false, connection = 'checking', lastSuccess = null, failure = null;
+  let refreshPromise = null, refreshAgain = false, lifecycleStarted = false, channel = null;
+  let writeInFlight = false, configRemoteVersion = 0, legacyReviewCount = 0;
+  let quoteContext = null, serverClock = null, configLookup = [];
+  // Sólo continuaciones de solicitudes ya enviadas: no guardan comandos ni los reenvían.
+  const resultWaiters = new Map();
+  const newRequestId = () => crypto.randomUUID();
+  const copy = value => JSON.parse(JSON.stringify(value));
+  function error(code, message) { return Object.assign(new Error(message), { code }); }
+  function emit() { window.dispatchEvent(new CustomEvent('syncstatuschange', { detail: syncStatus() })); }
+  function syncStatus() {
+    return { ready, synchronized: ready, connection, lastSuccess, build: BUILD,
+      busy: writeInFlight, reconciling: !!refreshPromise, message: failure?.message || (ready ? 'Todo actualizado' : OFFLINE),
+      legacyReviewCount, errors: failure ? [failure] : [] };
   }
-  function saveRecoveryLocal(value) {
-    const encoded = JSON.stringify(value);
-    localStorage.setItem(RECOVERY_KEY, encoded);
-    if (localStorage.getItem(RECOVERY_KEY) !== encoded) throw new Error('RECOVERY_RECEIPT_NOT_DURABLE');
-  }
-  function setRecoveryPhase(phase) {
-    recoveryPhase = phase;
-    try { window.dispatchEvent(new CustomEvent('syncstatuschange', { detail: syncStatus() })); } catch (e) { /* startup */ }
+  function markUnavailable(reason) {
+    ready = false; connection = 'offline'; failure = reason || error('ONLINE_UNAVAILABLE', OFFLINE); emit();
   }
   function assertBusinessReady() {
-    if (recoveryPhase === 'ready') return true;
-    const error = new Error('Estamos actualizando la información de este equipo.');
-    error.code = 'DEVICE_RECOVERY_REQUIRED'; throw error;
+    if (!enabled || !ready || navigator.onLine === false) throw error('ONLINE_UNAVAILABLE', OFFLINE);
+    if (writeInFlight) throw error('ONLINE_RESULT_UNKNOWN', CONFIRMING);
+    return true;
   }
-  // Called before queue migration, replay, bootstrap or business capture. A failed
-  // lookup never authorizes a first boot; previously checked devices retain offline use.
-  async function recoverDirectedDevice() {
-    if (!hasLocalWriter(false)) return false;
-    if (recoveryPromise) return recoveryPromise;
-    recoveryPromise = (async () => {
-      const device = window.CORE.getDeviceId(), cached = recoveryLocal();
-      try {
-        const c = await ensureClient();
-        if (!c || !(await hasSession())) { setRecoveryPhase('ready'); return true; }
-        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-          if (cached?.state === 'ready' || cached?.state === 'completed') {
-            setRecoveryPhase('ready'); return true;
-          }
-          throw new Error('RECOVERY_CHECK_OFFLINE');
-        }
-        const response = await c.rpc('get_sync_device_recovery', { p_device_id: device });
-        if (response.error) throw response.error;
-        let plan = response.data;
-        if (!plan) {
-          if (cached?.id && cached.state !== 'ready') throw new Error('RECOVERY_DIRECTIVE_MISSING');
-          saveRecoveryLocal({ device_id: device, state: 'ready' });
-          recoveryError = null; setRecoveryPhase('ready'); return true;
-        }
-        if (plan.device_id !== device || !plan.id || Number(plan.protocol_version) !== SYNC_PROTOCOL_VERSION
-            || SYNC_CLIENT_BUILD < plan.minimum_build) {
-          setRecoveryPhase('update'); return false;
-        }
-        if (plan.state === 'completed') {
-          // No queue deletion on a consumed instruction. Permanent SQL IDs fence
-          // any resurrected legacy payload; fresh operations remain untouched.
-          saveRecoveryLocal(plan); recoveryError = null; setRecoveryPhase('ready'); return true;
-        }
-        directedRecovery = plan; setRecoveryPhase('recovering');
-        await hydrateDurableQueue(); await backupChain;
-        let queued = loadQ();
-        if (plan.state === 'pending') {
-          const candidates = new Set(plan.candidate_ids || []);
-          // An older bootstrap may already have archived these same IDs. Reuse
-          // their original evidence; never manufacture replacement operations.
-          if (queued.length < Number(plan.expected_count)) {
-            const original = new Map(queued.map(op=>[op.id,op]));
-            for (const archive of await quarantineArchives()) for (const op of archive.value.operations || []) {
-              if (candidates.has(op.id) && !original.has(op.id)) original.set(op.id,op);
-            }
-            queued = Array.from(original.values());
-          }
-          if (queued.length !== Number(plan.expected_count) || queued.some(op => !candidates.has(op.id)
-              || !(Number(op.dataEpoch) >= 1 && Number(op.dataEpoch) <= Number(plan.source_epoch))
-              || !(Number(op.protocolVersion) >= 1 && Number(op.protocolVersion) <= Number(plan.protocol_version)))) throw new Error('RECOVERY_SCOPE_MISMATCH');
-          const digest = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(queued)));
-          const evidence = { build: SYNC_CLIENT_BUILD, protocol: SYNC_PROTOCOL_VERSION, epoch: Number(plan.source_epoch),
-            queue_hash: Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join(''),
-            operations: queued.map(op=>({ id: op.id, type: op.type, epoch: Number(op.dataEpoch), protocol: Number(op.protocolVersion) })) };
-          const captured = await c.rpc('capture_sync_device_recovery', {
-            p_device_id: device, p_recovery_id: plan.id, p_evidence: evidence,
-          });
-          if (captured.error) throw captured.error;
-          plan = captured.data;
-        }
-        if (plan?.state !== 'captured' || !Array.isArray(plan.discarded_ids)
-            || plan.discarded_ids.length !== Number(plan.expected_count)) throw new Error('RECOVERY_CAPTURE_INVALID');
-        // Server capture survives losing this local receipt or an interrupted write.
-        if (!hasLocalWriter(false)) throw new Error('LOCAL_WRITER_REQUIRED');
-        saveRecoveryLocal(plan);
-        const authorized = new Set(plan.discarded_ids);
-        if (loadQ().some(op=>!authorized.has(op.id))) throw new Error('RECOVERY_UNAUTHORIZED_PENDING');
-        saveQ(loadQ().filter(op=>!authorized.has(op.id)));
-        await backupChain;
-        if (queueDurability === 'memory' || queueDurability === 'indexedDB-pending') throw new Error('RECOVERY_QUEUE_NOT_DURABLE');
-        const backup = await readQueueBackup();
-        if (loadQ().length || (backup && backup.length)) throw new Error('RECOVERY_QUEUE_NOT_EMPTY');
-        for (const archive of await quarantineArchives()) {
-          const previous = archive.value.operations || [];
-          const kept = previous.filter(op=>!authorized.has(op.id));
-          if (kept.length !== previous.length) {
-            archive.value.operations = kept;
-            await writeQuarantineArchive(archive);
-          }
-        }
-        // Existing H148 full snapshot applies only confirmed remote projections.
-        await rebootstrapFromCloud();
-        await reconcileDomains({ force: true });
-        const status = syncStatus();
-        if (status.pending || status.checkpointError || status.errors.length || status.invalidDomains.length
-            || status.reconciling || syncFullDomains.size) throw new Error('RECOVERY_NOT_CONVERGED');
-        const completed = await c.rpc('complete_sync_device_recovery', {
-          p_device_id: device, p_recovery_id: plan.id, p_cursors: status.cursors,
-          p_epoch: status.dataEpoch, p_protocol: SYNC_PROTOCOL_VERSION, p_pending: 0,
-        });
-        if (completed.error || completed.data?.state !== 'completed') throw completed.error || new Error('RECOVERY_ACK_MISSING');
-        saveRecoveryLocal(completed.data);
-        recoveryError = null; setRecoveryPhase('ready');
-        if (window.UI?.toast) window.UI.toast('Todo actualizado. Puedes continuar trabajando.', 'var(--accent)');
-        return true;
-      } catch (error) {
-        recoveryError = error?.code || error?.message || 'RECOVERY_FAILED';
-        const networkFailure = /failed to fetch|fetch failed|network|timeout|aborterror|load failed/i.test(String(error?.message || error));
-        if (!directedRecovery && networkFailure && (cached?.state === 'ready' || cached?.state === 'completed')) {
-          // Preserve local-first capture on a previously checked installation.
-          // Returning false still fences every upload until the remote check works.
-          syncLastVersionCheck = 0; setRecoveryPhase('ready'); return false;
-        }
-        setRecoveryPhase('waiting'); return false;
-      } finally { directedRecovery = null; }
-    })().finally(()=>{ recoveryPromise = null; });
-    return recoveryPromise;
-  }
-
-  let sb = null, enabled = false, lastResetMark = null;
-  let sessionIdentity = null, sessionManaged = false, onlineSubscribed = false,
-    writerSubscribed = false, legacyWarned = false;
-  let sessionSeq = 0;
-  let syncManifest = null, syncChannel = null, syncReconcilePromise = null;
-  let syncReconcileAgain = false;
-  let syncRealtimeState = 'off', syncPollTimer = null, syncHeartbeatTimer = null,
-    syncLifecycleSubscribed = false;
-  let syncAutoPromise = null, syncInitPromise = null, syncInitSession = null;
-  let syncBootstrapComplete = false;
-  let syncReviewPending = null, syncHeartbeatPromise = null;
-  let syncCompatibility = 'legacy';
-  let syncRecovering = false, syncLastVersionCheck = 0, syncRemoteVersions = [];
-  let syncLastFullCheck = 0, syncLastSuccess = null, syncCheckpointError = null;
-  const syncPullErrors = new Map(), syncFullDomains = new Set();
-  const syncInvalid = new Map();
-  function loadSyncCursors() {
-    try { return JSON.parse(localStorage.getItem(SYNC_CURSOR_KEY) || '{}') || {}; }
-    catch (e) { return {}; }
-  }
-  let syncCursors = loadSyncCursors();
-  function saveSyncCursors(next = syncCursors) {
-    try {
-      const encoded = JSON.stringify(next);
-      localStorage.setItem(SYNC_CURSOR_KEY, encoded);
-      if (localStorage.getItem(SYNC_CURSOR_KEY) !== encoded) throw new Error('CHECKPOINT_NOT_DURABLE');
-      syncCheckpointError = null;
-      return true;
-    } catch (e) { syncCheckpointError = 'CHECKPOINT_NOT_DURABLE'; return false; }
-  }
-  function activeOwnerId() {
-    if (sessionIdentity) return sessionIdentity;
-    try {
-      const p = window.AUTH && window.AUTH.current && window.AUTH.current();
-      return p && p.email ? String(p.email).trim().toLowerCase() : null;
-    } catch (e) { return null; }
-  }
-  function opBelongsToActiveSession(op) {
-    return (op.ownerId == null ? null : String(op.ownerId).toLowerCase())
-      === activeOwnerId();
-  }
-
   async function ensureClient() {
     if (sb) return sb;
-    if (!window.supabase || typeof window.supabase.createClient !== 'function') return null;
+    if (!window.supabase?.createClient) throw error('ONLINE_UNAVAILABLE', OFFLINE);
     sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-      db: { schema: SCHEMA },
+      db: { schema: 'pos' },
       global: { fetch: (input, init = {}) => {
-        const headers = new Headers(init.headers || (typeof Request !== 'undefined' && input instanceof Request ? input.headers : undefined));
+        const headers = new Headers(init.headers || (input instanceof Request ? input.headers : undefined));
         headers.set('x-balam-device-id', window.CORE.getDeviceId());
-        headers.set('x-balam-client-build', SYNC_CLIENT_BUILD);
-        const receipt = recoveryLocal();
-        if (receipt?.state === 'completed' && receipt.write_token) headers.set('x-balam-recovery-token', receipt.write_token);
-        return fetch(input, Object.assign({}, init, { headers }));
+        headers.set('x-balam-client-build', BUILD);
+        headers.set('x-balam-runtime', 'online-v1');
+        const deadline = AbortSignal.timeout(20000);
+        const signal = init.signal ? AbortSignal.any([init.signal, deadline]) : deadline;
+        return fetch(input, { ...init, signal, headers, cache: 'no-store' });
       } },
       auth: { persistSession: true, autoRefreshToken: true, storageKey: 'balam_auth' },
     });
     return sb;
   }
-  // Sesión activa de Supabase Auth (la terminal está autenticada).
   async function hasSession() {
-    const c = await ensureClient(); if (!c) return false;
-    try { const { data } = await c.auth.getSession(); return !!(data && data.session); } catch (e) { return false; }
+    try { const { data, error: failure } = await (await ensureClient()).auth.getSession();
+      return !failure && !!data?.session; } catch (_) { return false; }
   }
-
-  // ── Mappers local↔fila SQL ──────────────────────────────────────────────────
-  // H-69 · Frontera de escritura del vendedor.
-  //
-  // `comision_acum`, `ventas_mes` y `ventas_num` son EXCLUSIVAS de las RPC
-  // financieras: la nube las protege con el trigger
-  // `pos.restrict_direct_commission_writes`, que responde 42501
-  // COMMISSION_RPC_REQUIRED a cualquier escritura directa como `authenticated`.
-  // El cliente respeta la misma frontera ANTES de intentar la red, así que un
-  // guardado de perfil -nombre, foto, estado, porcentaje, nivel, meta- ya no
-  // puede quedar bloqueado por un acumulado que divergió.
+  async function currentUserId() {
+    const { data, error: failure } = await (await ensureClient()).auth.getSession();
+    if (failure || !data?.session?.user?.id) throw error('AUTH_REQUIRED', 'Inicia sesión para continuar.');
+    return data.session.user.id;
+  }
+  async function readRpc(name, args = {}) {
+    if (navigator.onLine === false) { markUnavailable(); throw error('ONLINE_UNAVAILABLE', OFFLINE); }
+    try {
+      const { data, error: failure } = await (await ensureClient()).rpc(name, args);
+      if (failure) throw Object.assign(new Error(failure.message), failure);
+      return data;
+    } catch (failure) { markUnavailable(error('ONLINE_UNAVAILABLE', OFFLINE)); throw failure; }
+  }
+  function stable(value) {
+    if (Array.isArray(value)) return '[' + value.map(stable).join(',') + ']';
+    if (value && typeof value === 'object') return '{' + Object.keys(value).sort().map(key => JSON.stringify(key) + ':' + stable(value[key])).join(',') + '}';
+    return JSON.stringify(value);
+  }
+  async function hash(value) {
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+    return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+  }
+  function references(userId) {
+    const result = [];
+    for (let index = 0; index < localStorage.length; index++) {
+      const key = localStorage.key(index); if (!key?.startsWith(RECEIPT_PREFIX)) continue;
+      const entry = JSON.parse(localStorage.getItem(key));
+      if (entry?.userId === userId) result.push({ ...entry, key });
+    }
+    return result;
+  }
+  function remember(reference) {
+    const key = RECEIPT_PREFIX + reference.requestId, encoded = JSON.stringify(reference);
+    try {
+      localStorage.setItem(key, encoded);
+      if (localStorage.getItem(key) !== encoded) throw new Error('unavailable');
+    } catch (_) { throw error('ONLINE_RECEIPT_UNAVAILABLE', 'No se pudo proteger la confirmación. La operación no se envió.'); }
+    return key;
+  }
+  async function resolveReference(reference) {
+    // La resolución cancela atómicamente IDs ausentes; una solicitud atrasada no puede confirmar después.
+    if (reference.kind === 'account') return accountRequest({ action: 'resolve', requestId: reference.requestId, expectedActorId: reference.userId });
+    return readRpc('resolve_online_request', { p_request_id: reference.requestId });
+  }
+  function terminal(receipt) {
+    return receipt && (receipt.ok === true || receipt.ok === false)
+      && !['processing','pending','unknown','prepared','auth_confirmed','profile_confirmed','needs_review'].includes(receipt.status || receipt.state);
+  }
+  async function resolveOutstanding(userId) {
+    const refs = references(userId), resolved = [];
+    for (const ref of refs) {
+      const result = await resolveReference(ref);
+      if (ref.kind === 'account' && result?.uncertain === true) continue;
+      if (!terminal(result)) throw error('ONLINE_RESULT_UNKNOWN', CONFIRMING);
+      resolved.push({ ...ref, receipt: result });
+    }
+    return resolved;
+  }
+  function getQuoteContext() {
+    if (!quoteContext) throw error('ONLINE_UNAVAILABLE', OFFLINE);
+    return copy(quoteContext);
+  }
+  function serverNow() {
+    return serverClock ? new Date(serverClock.time + performance.now() - serverClock.observed) : null;
+  }
+  function receiptError(receipt) {
+    return error(receipt.error?.code || receipt.code || 'ONLINE_REJECTED',
+      receipt.error?.message || receipt.message || 'La operación no fue confirmada.');
+  }
+  function deliverResolved(ref) {
+    const waiter = resultWaiters.get(ref.requestId);
+    if (waiter) {
+      resultWaiters.delete(ref.requestId);
+      if (ref.receipt.ok === true) waiter.resolve({ ok: true, requestId: ref.requestId, result: ref.receipt.result });
+      else waiter.reject(receiptError(ref.receipt));
+    } else {
+      window.dispatchEvent(new CustomEvent('onlineoperationresolved', { detail: ref }));
+      const label = ref.receipt.result?.folio || ref.receipt.result?.id || ref.requestId;
+      window.UI?.toast(ref.receipt.ok === true
+        ? ref.kind === 'folio' ? 'Se reservó el folio ' + label + '. La reserva no confirma una venta.'
+          : 'Supabase confirmó la operación ' + label + '. Consulta el resultado antes de repetirla.'
+        : 'La operación ' + label + ' no se realizó. Puedes volver a intentarla.',
+        ref.receipt.ok === true ? 'var(--accent)' : 'var(--warning)');
+    }
+  }
+  function wireConfig(command) {
+    const state = command.state;
+    if (!state) return command;
+    const lookup = Object.entries(state.catalogs || {}).flatMap(([kind, rows]) => {
+      const original = configLookup.filter(row => row.kind === kind);
+      const sameOrder = original.length === rows.length && original.every((row, index) => row.code === rows[index].code);
+      return rows.map((it, index) => ({ kind, code: it.code, label: it.label,
+        active: it.active !== false, meta: it.meta || {},
+        // Guardar otro ajuste no renumera catálogos históricos (p. ej. 10, 30).
+        sort_order: sameOrder ? original[index].sort_order : index,
+      }));
+    });
+    const settings = Object.entries(state.settings || {}).filter(([key]) => !key.startsWith('_')).map(([key, value]) => ({ key, value }));
+    if (state.catalogMeta) settings.push({ key: '_catalogMeta', value: state.catalogMeta });
+    const { state: omitted, ...rest } = command;
+    return { ...rest, lookup, settings, expectedVersion: configRemoteVersion,
+      productUpdates: (command.productUpdates || []).map(MAP.products.toRow) };
+  }
+  async function execute(command) {
+    assertBusinessReady();
+    writeInFlight = true; emit();
+    let key = null, sent = false, receipt = null, requestId = null;
+    const seq = sessionSeq, expectedActor = identity;
+    try {
+      command = copy(command.type === 'config' ? wireConfig(command) : command);
+      const userId = await currentUserId();
+      if (!expectedActor || userId !== expectedActor || seq !== sessionSeq) {
+        throw error('SESSION_CHANGED', 'La sesión cambió. Consulta la operación con su usuario.');
+      }
+      command.expectedActorId = userId;
+      requestId = command.requestId || command.operationId || newRequestId();
+      if (references(userId).some(ref => ref.kind !== 'account' || ref.requestId === requestId)) {
+        throw error('ONLINE_RESULT_UNKNOWN', CONFIRMING);
+      }
+      // Una lectura iniciada antes del commit no puede certificar su resultado.
+      if (refreshPromise) await refreshPromise;
+      // El probe valida Supabase/autorización antes de reservar referencia o enviar el comando.
+      const probe = await readRpc('online_connectivity');
+      if (probe !== true && probe?.ok !== true) { markUnavailable(); throw error('ONLINE_UNAVAILABLE', OFFLINE); }
+      // Consultar una identidad repetida no compara nuevos UUIDs de partidas ni genera otro cobro.
+      const prior = command.type === 'account' ? null
+        : await readRpc('online_request_result', { p_request_id: requestId });
+      if (seq !== sessionSeq || userId !== await currentUserId()) {
+        throw error('SESSION_CHANGED', 'La sesión cambió. Consulta la operación con su usuario.');
+      }
+      const fingerprintData = command.type === 'account'
+        ? { type: command.type, ...command.payload, password: undefined } : command;
+      const reference = { requestId, userId, kind: command.type, fingerprint: await hash(stable(fingerprintData)) };
+      if (seq !== sessionSeq) throw error('SESSION_CHANGED', 'La sesión cambió. Consulta la operación con su usuario.');
+      key = remember(reference);
+      sent = true;
+      try { receipt = prior?.found === true ? prior.receipt : command.type === 'account'
+        ? await accountRequest({ ...command.payload, requestId, expectedActorId: userId })
+        : await readRpc('execute_online_command', { p_request_id: requestId, p_command: command }); }
+      catch (_) { receipt = await resolveReference(reference); }
+      if (!terminal(receipt)) throw error('ONLINE_RESULT_UNKNOWN', CONFIRMING);
+      if (seq !== sessionSeq) throw error('SESSION_CHANGED', 'La sesión cambió. Consulta la operación con su usuario.');
+      if (receipt.ok !== true) {
+        localStorage.removeItem(key); key = null;
+        await refresh({ internal: true });
+        throw receiptError(receipt);
+      }
+      // Un commit conocido no habilita un segundo intento si falta reconstruir la pantalla.
+      await refresh({ internal: true });
+      if (seq !== sessionSeq) throw error('SESSION_CHANGED', 'La sesión cambió. Consulta la operación con su usuario.');
+      localStorage.removeItem(key); key = null;
+      return { ok: true, requestId, result: receipt.result };
+    } catch (failure) {
+      if (seq !== sessionSeq) throw error('SESSION_CHANGED', 'La sesión cambió. Consulta la operación con su usuario.');
+      if (sent && key) {
+        markUnavailable(error('ONLINE_RESULT_UNKNOWN', CONFIRMING));
+        // El formulario sigue esperando su resultado; sólo se reconsulta la autoridad.
+        // return sin await libera writeInFlight en finally para permitir esa consulta.
+        return new Promise((resolve, reject) => resultWaiters.set(requestId, { resolve, reject }));
+      }
+      throw failure;
+    } finally { writeInFlight = false; emit(); }
+  }
   const SELLER_RPC_ONLY_COLUMNS = ['comision_acum', 'ventas_mes', 'ventas_num'];
   const sellerRow = s => ({ id: s.id, nombre: s.nombre, iniciales: s.iniciales, color: s.color, comision_pct: Number(s.comisionPct) || 0, commission_override_pct: s.commissionOverridePct == null || !Number.isFinite(Number(s.commissionOverridePct)) ? null : Number(s.commissionOverridePct), seller_level_code: s.sellerLevelCode == null ? null : String(s.sellerLevelCode), commission_policy_version: Number(s.commissionPolicyVersion) || 0, meta_mes: Number(s.metaMes) || 0, ventas_mes: Number(s.ventasMes) || 0, ventas_num: s.ventasNum || 0, comision_acum: Number(s.comisionAcum) || 0, bono: s.bono || null, email: s.email || null, password_hash: s.passwordHash || null, role: s.role || 'vendedor', avatar_url: s.avatar || null, active: s.active !== false, sync_base_version: Number(s._syncVersion) || 0, sync_device_id: window.CORE.getDeviceId() });
   const sellerProfileRow = s => {
@@ -303,7 +275,7 @@
       table: 'sales', conflict: 'folio',
       // H-65: el estado de una venta no prueba que el inventario se reservara.
       // Esa autoridad pertenece exclusivamente a la respuesta/consulta remota.
-      fromRow: r => ({ folio: r.folio, folioAliases: Array.isArray(r.folio_aliases) ? r.folio_aliases : undefined, _operationId: r.operation_id || undefined, _stockReserved: r.stock_reserved === true, _stockRequired: r.estado !== 'Apartado' && r.estado !== 'Cancelado', _stockIdempotent: r.stock_idempotent === true, _reservationOperationId: r.reservation_operation_id || undefined, _syncStatus: 'synced', fecha: String(r.fecha).replace('T', ' ').slice(0, 16), clienteId: r.cliente_id || undefined, cliente: r.cliente, vendedor: '', vendedores: r.vendedores || [], items: r.items || 0, subtotal: r.subtotal == null ? undefined : Number(r.subtotal), iva: r.iva == null ? undefined : Number(r.iva), total: Number(r.total) || 0, descuento: r.descuento == null ? undefined : Number(r.descuento), descuentoAdicional: r.descuento_adicional == null ? undefined : Number(r.descuento_adicional), totalAntesDescuentoAdicional: r.total_antes_descuento_adicional == null ? undefined : Number(r.total_antes_descuento_adicional), descuentosAdicionales: Array.isArray(r.descuentos_adicionales) ? r.descuentos_adicionales : undefined, ivaPct: r.iva_pct == null ? undefined : Number(r.iva_pct), ivaIncluded: r.iva_included == null ? undefined : !!r.iva_included, anticipo: r.anticipo == null ? undefined : Number(r.anticipo), saldo: r.saldo == null ? undefined : Number(r.saldo), pagoEfectivo: r.pago_efectivo == null ? undefined : Number(r.pago_efectivo), pagoOtro: r.pago_otro == null ? undefined : Number(r.pago_otro), metodo: r.metodo, estado: r.estado, comision: r.comision == null ? undefined : Number(r.comision), comisionBase: r.comision_base || undefined, comisiones: Array.isArray(r.comisiones) ? r.comisiones : undefined, comisionesRevertidas: Array.isArray(r.comisiones_revertidas) ? r.comisiones_revertidas : undefined, valorRegalado: Number(r.valor_regalado) || 0, returnLimitDays: r.return_limit_days == null ? null : Number(r.return_limit_days), returnExpiresAt: r.return_expires_at || null, lineas: [] }),
+      fromRow: r => ({ folio: r.folio, folioAliases: Array.isArray(r.folio_aliases) ? r.folio_aliases : undefined, _operationId: r.operation_id || undefined, _stockReserved: r.stock_reserved === true, _stockRequired: r.estado !== 'Apartado' && r.estado !== 'Cancelado', _stockIdempotent: r.stock_idempotent === true, _reservationOperationId: r.reservation_operation_id || undefined, fecha: String(r.fecha).replace('T', ' ').slice(0, 16), clienteId: r.cliente_id || undefined, cliente: r.cliente, vendedor: '', vendedores: r.vendedores || [], items: r.items || 0, subtotal: r.subtotal == null ? undefined : Number(r.subtotal), iva: r.iva == null ? undefined : Number(r.iva), total: Number(r.total) || 0, descuento: r.descuento == null ? undefined : Number(r.descuento), descuentoAdicional: r.descuento_adicional == null ? undefined : Number(r.descuento_adicional), totalAntesDescuentoAdicional: r.total_antes_descuento_adicional == null ? undefined : Number(r.total_antes_descuento_adicional), descuentosAdicionales: Array.isArray(r.descuentos_adicionales) ? r.descuentos_adicionales : undefined, ivaPct: r.iva_pct == null ? undefined : Number(r.iva_pct), ivaIncluded: r.iva_included == null ? undefined : !!r.iva_included, anticipo: r.anticipo == null ? undefined : Number(r.anticipo), saldo: r.saldo == null ? undefined : Number(r.saldo), pagoEfectivo: r.pago_efectivo == null ? undefined : Number(r.pago_efectivo), pagoOtro: r.pago_otro == null ? undefined : Number(r.pago_otro), metodo: r.metodo, estado: r.estado, comision: r.comision == null ? undefined : Number(r.comision), comisionBase: r.comision_base || undefined, comisiones: Array.isArray(r.comisiones) ? r.comisiones : undefined, comisionesRevertidas: Array.isArray(r.comisiones_revertidas) ? r.comisiones_revertidas : undefined, valorRegalado: Number(r.valor_regalado) || 0, returnLimitDays: r.return_limit_days == null ? null : Number(r.return_limit_days), returnExpiresAt: r.return_expires_at || null, lineas: [] }),
     },
     promotions: {
       table: 'promotions', conflict: 'id', localKey: 'promos',
@@ -429,18 +401,6 @@
     receiptSnapshot: row.receipt_snapshot && typeof row.receipt_snapshot === 'object'
       ? row.receipt_snapshot : undefined,
   });
-  function kindForTable(table) {
-    return Object.keys(MAP).find(kind => MAP[kind].table === table) || null;
-  }
-  function hasLocalWriter(requireLease = false) {
-    const data = window.DATA;
-    if (!data || typeof data.assertLocalWriter !== 'function') return true;
-    try { data.assertLocalWriter(requireLease); return true; }
-    catch (e) { return false; }
-  }
-
-  // H-65: un SKU no es identidad. Sólo se admite como puente para documentos
-  // históricos cuando identifica exactamente un producto del catálogo local.
   function productIdentityError(code, line, context, matches) {
     const sku = String((line && line.sku) || '').trim();
     const error = new Error(code === 'product_identity_ambiguous'
@@ -485,1649 +445,9 @@
       promos: Array.isArray(x.promos) ? x.promos : undefined,
     };
   }
-  function mappedSaleCommitResult(raw, op) {
-    const payload = Array.isArray(raw) ? raw[0] : raw;
-    if (!payload || typeof payload !== 'object') return null;
-    const saleRaw = Array.isArray(payload.sale) ? payload.sale[0] : payload.sale;
-    const itemRows = Array.isArray(payload.items) ? payload.items : [];
-    let sale = null;
-    if (saleRaw) {
-      sale = MAP.sales.fromRow(saleRaw);
-      if (sale.comision == null && op && op.commissionSnapshot) {
-        sale.comision = Number(op.commissionSnapshot.amount) || 0;
-        sale.comisionBase = op.commissionSnapshot.base || undefined;
-      }
-      sale.lineas = itemRows.map(saleItemFromRow);
-      sale._stockReserved = payload.stock_reserved === true;
-      sale._stockIdempotent = payload.stock_idempotent === true;
-      sale._reservationOperationId = payload.reservation_operation_id || undefined;
-      const vid = (saleRaw.vendedores || [])[0];
-      const sellers = (window.DATA && window.DATA.sellers) || [];
-      sale.vendedor = (sellers.find(x => x.id === vid) || {}).nombre || sale.vendedor || '';
-    }
-    return {
-      ok: payload.ok === true,
-      idempotent: payload.idempotent === true,
-      stockReserved: payload.stock_reserved === true,
-      stockIdempotent: payload.stock_idempotent === true,
-      reservationOperationId: payload.reservation_operation_id || null,
-      stock_reserved: payload.stock_reserved === true,
-      stock_idempotent: payload.stock_idempotent === true,
-      reservation_operation_id: payload.reservation_operation_id || null,
-      products: (payload.products || []).map(MAP.products.fromRow),
-      sale,
-      items: itemRows.map(saleItemFromRow),
-      payments: (payload.payments || []).map(MAP.payments.fromRow),
-      movements: (payload.movements || []).map(MAP.movements.fromRow),
-      sellers: (payload.sellers || []).map(MAP.sellers.fromRow),
-      commit: payload.commit || null,
-    };
-  }
-  async function resyncProductsAfterConflict(c, currentOpId) {
-    const hasOtherPendingProductChange = () => loadQ().some(op => op.id !== currentOpId
-      && operationAffectsDomain(op, 'products'));
-    if (!window.DATA || typeof window.DATA.applyRemote !== 'function'
-        || hasOtherPendingProductChange()) return false;
-    const refreshed = await fetchAllRows(c, 'products', 'id');
-    if (refreshed.error || hasOtherPendingProductChange()
-        || !Array.isArray(refreshed.data) || !refreshed.data.length) return false;
-    return window.DATA.applyRemote('products', refreshed.data.map(MAP.products.fromRow), { authoritative: true }) !== false;
-  }
-
-  // ── Cola offline ────────────────────────────────────────────────────────────
-  let volatileQueue = null, queueDurability = 'localStorage', storageWarned = false, backupNotified = false;
-  let backupChain = Promise.resolve(), queueHydrated = false;
-  const layawayResults = new Map();
-  function rememberLayawayResult(op, authoritative) {
-    const payment = (authoritative.payments || []).find(row => row.tipo === 'liquidacion') || null;
-    layawayResults.set(op.id, {
-      paymentId: payment && payment.id,
-      reservationOperationId: authoritative.reservationOperationId,
-    });
-    while (layawayResults.size > 50) layawayResults.delete(layawayResults.keys().next().value);
-  }
-  function openQueueDB() {
-    return new Promise((resolve, reject) => {
-      if (!window.indexedDB) return reject(new Error('indexeddb_unavailable'));
-      const req = window.indexedDB.open(QDB, 1);
-      req.onupgradeneeded = () => {
-        if (!req.result.objectStoreNames.contains(QSTORE)) req.result.createObjectStore(QSTORE);
-      };
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error || new Error('indexeddb_open_failed'));
-    });
-  }
-  async function queueBackup(mode, value, key = QKEY) {
-    const db = await openQueueDB();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(QSTORE, 'readwrite');
-      const store = tx.objectStore(QSTORE);
-      const req = mode === 'put' ? store.put(value, key) : store.delete(key);
-      req.onerror = () => reject(req.error || new Error('indexeddb_write_failed'));
-      tx.oncomplete = () => { db.close(); resolve(true); };
-      tx.onerror = tx.onabort = () => { db.close(); reject(tx.error || new Error('indexeddb_tx_failed')); };
-    });
-  }
-  async function readQueueBackup() {
-    const db = await openQueueDB();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(QSTORE, 'readonly');
-      const req = tx.objectStore(QSTORE).get(QKEY);
-      req.onsuccess = () => resolve(req.result || null);
-      req.onerror = () => reject(req.error || new Error('indexeddb_read_failed'));
-      tx.oncomplete = () => db.close();
-    });
-  }
-  function persistQueueBackup(q) {
-    const snapshot = JSON.parse(JSON.stringify(q));
-    queueDurability = 'indexedDB-pending';
-    backupChain = backupChain.catch(() => {}).then(() => queueBackup('put', snapshot))
-      .then(() => {
-        if (volatileQueue) queueDurability = 'indexedDB';
-        if (!backupNotified && window.UI && window.UI.toast) {
-          backupNotified = true;
-          window.UI.toast('Almacenamiento principal lleno: la cola quedó protegida en el respaldo local.', 'var(--accent)');
-        }
-        emitSyncStatus();
-        return true;
-      }).catch(() => {
-        queueDurability = 'memory';
-        if (!storageWarned && window.UI && window.UI.toast) {
-          storageWarned = true;
-          window.UI.toast('No hay espacio durable para la cola. No cierres esta pestaña; libera almacenamiento y reintenta.', 'var(--danger)');
-        }
-        emitSyncStatus();
-        return false;
-      });
-    return backupChain;
-  }
-  async function hydrateDurableQueue() {
-    if (queueHydrated) return;
-    queueHydrated = true;
-    await backupChain;
-    try {
-      const backup = await readQueueBackup();
-      if (Array.isArray(backup)) {
-        volatileQueue = backup;
-        queueDurability = 'indexedDB';
-      }
-    } catch (e) { /* IndexedDB no disponible: localStorage conserva el contrato histórico */ }
-  }
-  function emitSyncStatus() {
-    try { window.dispatchEvent(new CustomEvent('syncstatuschange', { detail: queueStatus() })); } catch (e) { /* */ }
-  }
-  function loadStoredQ() { try { return JSON.parse(localStorage.getItem(QKEY)) || []; } catch (e) { return []; } }
-  function loadQ() { return volatileQueue || loadStoredQ(); }
-  // Si la cuota impide persistir, conserva la cola completa en memoria y avisa:
-  // nunca degrada silenciosamente a una escritura de red sin respaldo.
-  function saveQ(q) {
-    try {
-      localStorage.setItem(QKEY, JSON.stringify(q));
-      volatileQueue = null; queueDurability = 'localStorage';
-      backupChain = backupChain.catch(() => {}).then(() => queueBackup('delete')).catch(() => false);
-      emitSyncStatus();
-      return true;
-    } catch (e) {
-      volatileQueue = q;
-      persistQueueBackup(q);
-      emitSyncStatus();
-      return false;
-    }
-  }
-  // Descarta operaciones pendientes sin enviarlas (lo usa el reset de la simulación local).
-  function clearQueue() {
-    volatileQueue = null; queueDurability = 'localStorage';
-    try { localStorage.removeItem(QKEY); } catch (e) { /* */ }
-    backupChain = backupChain.catch(() => {}).then(() => queueBackup('delete')).catch(() => false);
-    emitSyncStatus();
-  }
-  function newOpId() {
-    try {
-      if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
-      if (window.crypto && typeof window.crypto.getRandomValues === 'function') {
-        const b = new Uint8Array(16); window.crypto.getRandomValues(b);
-        b[6] = (b[6] & 0x0f) | 0x40; b[8] = (b[8] & 0x3f) | 0x80;
-        const h = Array.from(b, x => x.toString(16).padStart(2, '0')).join('');
-        return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
-      }
-    } catch (e) { /* fallback portable */ }
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-      const r = Math.floor(Math.random() * 16);
-      return (c === 'x' ? r : ((r & 3) | 8)).toString(16);
-    });
-  }
-  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  const isEmptyProductUpsert = op => op && op.type === 'upsert'
-    && (op.kind === 'products' || op.table === 'products')
-    && (!Array.isArray(op.rows) || op.rows.length === 0);
-  const needsUuidQueueId = op => op && (
-    (op.type === 'upsert' && (op.kind === 'products' || op.table === 'products'))
-    || (op.type === 'softDelete' && op.kind === 'products')
-    || op.type === 'productDeleteScope'
-  );
-  function enqueue(op) {
-    const q = loadQ();
-    if (op.ownerId === undefined) op.ownerId = activeOwnerId();
-    op.status = 'pending';
-    op.attempts = Number(op.attempts) || 0;
-    op.createdAt = op.createdAt || new Date().toISOString();
-    delete op.diagnostic;
-    // Sólo se compactan intenciones aún no enviadas sobre los mismos IDs.
-    // Una colección más amplia no prueba que contenga otra intención pendiente.
-    const opScope = x => JSON.stringify((x.rowIds || (x.rows || []).map(row => row.id)).map(String).sort());
-    // Una escritura ya enviada conserva su clave y payload hasta conocer su
-    // resultado; una edición nueva no puede sustituir una confirmación perdida.
-    if (op.type === 'upsert' || op.type === 'profileUpdate') { const scope = opScope(op); const i = q.findIndex(x => !x.submittedRows && (x.type === 'upsert' || x.type === 'profileUpdate') && x.table === op.table && x.ownerId === op.ownerId && opScope(x) === scope); if (i >= 0) q[i] = op; else q.push(op); }
-    else if (op.type === 'config') { const i = q.findIndex(x => x.type === 'config' && !x.submitted && x.ownerId === op.ownerId); if (i >= 0) q[i] = op; else q.push(op); }
-    else q.push(op); // sale / delete: idempotentes, se conservan en orden
-    saveQ(q);
-    // La cola sigue siendo la autoridad local. El historial remoto es sólo una
-    // proyección operativa y nunca recibe el payload comercial de la operación.
-    recordSyncActivity(null, op).catch(() => {});
-    return true;
-  }
-  function classifyFailure(error, details) {
-    const raw = error || {};
-    const code = String(raw.code || raw.error || (details && details.error) || 'unknown_error');
-    const message = String(raw.message || raw.error_description || (details && details.message) || code);
-    const httpStatus = Number(raw.status || raw.statusCode || 0) || null;
-    const lower = (code + ' ' + message + ' ' + (raw.details || '')).toLowerCase();
-    let category = 'unknown', status = 'retry_wait', policy = 'auto_retry', retryable = true;
-    if (code === 'insufficient_stock') {
-      category = 'inventory'; status = 'waiting_inventory'; policy = 'wait_inventory';
-    } else if (httpStatus === 401 || /jwt|not authenticated|unauthorized/.test(lower)) {
-      category = 'auth'; status = 'auth_required'; policy = 'sign_in'; retryable = false;
-    } else if (httpStatus === 403 || code === '42501' || /row-level security|permission denied|forbidden/.test(lower)) {
-      category = 'permission'; status = 'blocked_permission'; policy = 'review_permissions'; retryable = false;
-    } else if (/^(42p01|42703|pgrst)/i.test(code) || /schema cache|column .* does not exist|relation .* does not exist/.test(lower)) {
-      category = 'schema'; status = 'blocked_schema'; policy = 'apply_migration'; retryable = false;
-    } else if (/^23/.test(code)) {
-      category = 'constraint'; status = 'blocked_data'; policy = 'review_data'; retryable = false;
-    } else if (/sync_protocol_outdated|rebootstrap_required/.test(lower)) {
-      category = 'compatibility'; status = 'quarantined'; policy = 'rebootstrap'; retryable = false;
-    } else if (/product_version_conflict|config_version_conflict|config_commit_mismatch|commit_mismatch|operation_mismatch|operation_id_conflict|operation_adoption_conflict|item_adoption_conflict|exchange_id_conflict|seller_effects_mismatch|payment_id_conflict|payment_balance_mismatch|layaway_not_pending|layaway_already_liquidated|layaway_local_state_conflict|legacy_.*conflict|legacy_context_incomplete|invalid_return|folio_conflict|loan_version_conflict|loan_operation_conflict|operation_purged/.test(lower)) {
-      // H-68: `operation_purged` es la última defensa contra la resurrección. El
-      // documento que esta operación quiere escribir fue borrado a propósito; reintentar
-      // no lo va a hacer válido, así que se detiene y se muestra en el panel de sincronía.
-      // H-62: los conflictos de préstamo son PERMANENTES pese a llegar con el
-      // código 40001, que por sí solo significa «serialización» y se reintentaría
-      // en bucle. Una versión esperada que ya no coincide no va a coincidir en el
-      // siguiente intento: necesita revisión, no martilleo.
-      category = 'conflict'; status = 'blocked_conflict'; policy = 'review_conflict'; retryable = false;
-    } else if (/product_identity_(missing|ambiguous)|layaway_items_(missing_product_id|identity_ambiguous|invalid)|layaway_item_(identity_(missing|ambiguous|mismatch)|product_missing|sku_ambiguous)|layaway_not_found|invalid_(request|context|commission_snapshot|payment|payment_parts|layaway_liquidation)|reservation_confirmation_missing|invalid_commit_response/.test(lower)
-        || (code.toUpperCase() === 'P0001' && /seller|vendedor|inactive|inactivo|no existe/.test(lower))) {
-      category = 'constraint'; status = 'blocked_data'; policy = 'review_data'; retryable = false;
-    } else if (/invalid_loan_|loan_not_found/.test(lower)) {
-      category = 'constraint'; status = 'blocked_data'; policy = 'review_data'; retryable = false;
-    } else if (/reference_reclassification_required|reference_model_immutable|barcode_immutable/.test(lower)) {
-      category = 'conflict'; status = 'blocked_conflict'; policy = 'review_reference'; retryable = false;
-    } else if (httpStatus >= 500) {
-      category = 'server';
-    } else if (raw instanceof TypeError || /failed to fetch|network|load failed|fetch failed/.test(lower)) {
-      category = 'network';
-    }
-    return {
-      category, code, message, httpStatus, status, policy, retryable,
-      details: details || raw.details || null,
-      at: new Date().toISOString(),
-    };
-  }
-  let lastApplyFailure = null;
-  function failOp(error, details) {
-    lastApplyFailure = classifyFailure(error, details);
-    return false;
-  }
-  function isAutomaticallyEligible(op) {
-    return !/^blocked_/.test(op.status || '') && op.status !== 'auth_required';
-  }
-  function blockQueueForIdentity(op, error) {
-    const diagnostic = classifyFailure(error);
-    op.retry = true;
-    op.diagnostic = diagnostic;
-    op.status = diagnostic.status;
-  }
-  function queueStatus() {
-    const deviceQueue = loadQ();
-    const operations = deviceQueue.filter(opBelongsToActiveSession).map(op => ({
-      id: op.id, type: op.type, table: op.table || null, folio: op.folio || null,
-      status: op.status || 'pending', attempts: Number(op.attempts) || 0,
-      createdAt: op.createdAt || null, lastAttemptAt: op.lastAttemptAt || null,
-      diagnostic: op.diagnostic || null,
-    }));
-    return {
-      durability: queueDurability,
-      devicePending: deviceQueue.length,
-      deviceBlocked: deviceQueue.filter(op => /^blocked_/.test(op.status || '') || op.status === 'auth_required' || op.status === 'quarantined').length,
-      otherSessionPending: deviceQueue.length - operations.length,
-      pending: operations.length,
-      blocked: operations.filter(op => /^blocked_/.test(op.status || '')).length,
-      retrying: operations.filter(op => op.status === 'retry_wait' || op.status === 'waiting_inventory').length,
-      operations,
-    };
-  }
-  function retryOperation(id) {
-    if (!hasLocalWriter(false)) return false;
-    const q = loadQ(), op = q.find(x => x.id === id && opBelongsToActiveSession(x));
-    if (!op) return false;
-    op.status = 'pending'; delete op.diagnostic;
-    saveQ(q); flushQueue();
-    return true;
-  }
-  // H-14 · Retiro quirúrgico de una operación bloqueada. A diferencia de
-  // `clearQueue()`, exige que coincidan la identidad técnica y las guardas del
-  // documento antes de modificar la cola. Sirve para retirar un intento
-  // reconstruido o inválido sin perder operaciones independientes.
-  function discardOperation(id, expected) {
-    if (!hasLocalWriter(false)) return { ok: false, code: 'not_local_writer' };
-    const q = loadQ(), index = q.findIndex(op => op.id === id && opBelongsToActiveSession(op));
-    if (index < 0) return { ok: false, code: 'not_found' };
-    const op = q[index], guard = expected && typeof expected === 'object' ? expected : {};
-    const supplied = ['type', 'key', 'folio', 'headerId', 'status', 'diagnosticCode']
-      .some(field => Object.prototype.hasOwnProperty.call(guard, field));
-    if (!supplied) return { ok: false, code: 'guard_required' };
-    if (!/^blocked_/.test(op.status || '')) return { ok: false, code: 'not_blocked' };
-    const actual = {
-      type: op.type || null, key: op.key || null, folio: op.folio || null,
-      headerId: op.header && op.header.id || null, status: op.status || null,
-      diagnosticCode: op.diagnostic && op.diagnostic.code || null,
-    };
-    const mismatch = Object.keys(actual).some(field =>
-      Object.prototype.hasOwnProperty.call(guard, field)
-        && String(guard[field] == null ? '' : guard[field]) !== String(actual[field] == null ? '' : actual[field]));
-    if (mismatch) return { ok: false, code: 'guard_mismatch', actual };
-    q.splice(index, 1);
-    if (!saveQ(q)) return { ok: false, code: 'persistence_failed' };
-    return { ok: true, id: op.id, type: op.type, key: op.key || null, folio: op.folio || null };
-  }
-  function resumeAuthenticatedOperations() {
-    if (!hasLocalWriter(false)) return false;
-    const q = loadQ(); let changed = false;
-    q.forEach(op => {
-      if (opBelongsToActiveSession(op) && op.status === 'auth_required') {
-        op.status = 'pending';
-        delete op.diagnostic;
-        changed = true;
-      }
-    });
-    if (changed) saveQ(q);
-  }
-  // H-121: una sola matriz describe qué proyecciones protege cada intención
-  // durable. Así el pull directo y la reconciliación por cursores no pueden
-  // discrepar y borrar uno de los efectos todavía no confirmados.
-  const PENDING_DOMAIN_EFFECTS = {
-    config: ['config'],
-    sale: ['products','sales','payments','movements','sellers','liquidations','clients'],
-    return: ['products','sales','returns','payments','movements','sellers','clients'],
-    exchange: ['products','sales','exchanges','payments','movements','sellers','clients'],
-    loanOperation: ['loans','products','clients'],
-    commissionSettle: ['sellers','liquidations'],
-    commissionClose: ['sellers','liquidations','commissionAdjustments'],
-    commissionAdjustment: ['sellers','liquidations','commissionAdjustments'],
-    referenceReclassification: ['products','movements'],
-  };
-  function operationAffectsDomain(op, domain) {
-    if (!op || !domain) return false;
-    if ((PENDING_DOMAIN_EFFECTS[op.type] || []).includes(domain)) return true;
-    const mapped = MAP && MAP[domain];
-    return (op.type === 'upsert' || op.type === 'profileUpdate' || op.type === 'softDelete')
-      && (op.kind === domain || (mapped && op.table === mapped.table));
-  }
-  // La intención LOCAL no confirmada protege sólo sus dominios afectados; la
-  // caché confirmada restante sigue siendo reconstruible desde Supabase.
-  function hasPendingFor(table) {
-    const domain = Object.keys(MAP).find(kind => MAP[kind].table === table) || table;
-    // La caché es compartida; la autorización de ENVÍO sigue siendo por sesión.
-    return loadQ().some(op => op.table === table || operationAffectsDomain(op, domain));
-  }
-
-  // ── H-33: contador diario de folios ─────────────────────────────────────────
-  // `pos.reserve_folio_block()` incrementa atómicamente el contador de
-  // (prefijo, día) y devuelve un rango exclusivo para esta terminal. Con bloque
-  // reservado, una venta offline ya nace con folio corto y definitivo.
-  function folioDateIso(yymmdd) {
-    const d = String(yymmdd || '');
-    return /^\d{6}$/.test(d) ? '20' + d.slice(0, 2) + '-' + d.slice(2, 4) + '-' + d.slice(4, 6) : null;
-  }
-  async function reserveFolioNumbers(c, prefix, date, count, floor) {
-    const iso = folioDateIso(date);
-    if (!c || !iso) return null;
-    const r = await c.rpc('reserve_folio_block', {
-      p_prefix: prefix, p_business_date: iso,
-      p_count: Math.max(1, Number(count) || 1), p_floor: Math.max(0, Number(floor) || 0),
-    });
-    if (r.error || !r.data || !r.data.ok) return null;
-    const from = Number(r.data.from) || 0, to = Number(r.data.to) || 0;
-    return from > 0 && to >= from ? { from, to } : null;
-  }
-  let folioReserving = null;
-  // Repone el bloque cuando queda poco o cambió el día. Nunca bloquea una venta:
-  // si no hay red o el contador no existe, la terminal sigue con folio provisional.
-  function ensureFolioBlock(force) {
-    if (!enabled || folioReserving) return folioReserving || Promise.resolve(null);
-    const D = window.DATA;
-    if (!D || !D.folioBlockRequest || !D.applyFolioBlock) return Promise.resolve(null);
-    const req = D.folioBlockRequest();
-    if (!req.needed && !force) return Promise.resolve(null);
-    folioReserving = (async () => {
-      try {
-        const c = await ensureClient();
-        if (!c || !(await hasSession())) return null;
-        const range = await reserveFolioNumbers(c, req.prefix, req.date, req.count, req.floor);
-        if (!range) return null;
-        D.applyFolioBlock(req.prefix, req.date, range.from, range.to);
-        return range;
-      } catch (e) { return null; } finally { folioReserving = null; }
-    })();
-    return folioReserving;
-  }
-  // Folio de reemplazo cuando la nube rechaza el actual. Un folio con formato
-  // H-33 recibe otro número del contador (corto y único); un folio histórico
-  // conserva la reidentificación por token de H-02.
-  async function replacementFolio(c, op) {
-    const D = window.DATA || {};
-    const parsed = D.parseFolio && D.parseFolio(op.folio);
-    if (parsed && D.folioFromParts) {
-      const range = await reserveFolioNumbers(c, parsed.prefix, parsed.date, 1, parsed.seq);
-      if (range) return D.folioFromParts(parsed.prefix, parsed.date, range.from);
-    }
-    return D.collisionSafeFolio ? D.collisionSafeFolio(op.folio, op.operationId) : null;
-  }
-
-  function rekeyQueuedSaleFolio(operationId, oldFolio, newFolio) {
-    const q = loadQ();
-    let changed = false;
-    q.forEach(pending => {
-      if (pending.type === 'sale' && pending.operationId === operationId && pending.folio === oldFolio) {
-        pending.folio = newFolio;
-        pending.header.folio = newFolio;
-        (pending.items || []).forEach(x => { x.folio = newFolio; });
-        (pending.moves || []).forEach(x => { x.ref = newFolio; });
-        (pending.payments || []).forEach(x => { x.folio = newFolio; });
-        pending.folioRekeyed = true;
-        changed = true;
-      } else if (pending.type === 'return' && pending.folio === oldFolio) {
-        pending.folio = newFolio;
-        pending.header.folio = newFolio;
-        (pending.moves || []).forEach(x => { x.ref = newFolio; });
-        changed = true;
-      }
-    });
-    if (changed) saveQ(q);
-    return changed;
-  }
-
-  // H-62 · Reidentificación del folio en las operaciones que este mismo préstamo
-  // dejó encoladas: todas llevan una copia del documento con el folio anterior.
-  function rekeyQueuedLoanFolio(loanId, newFolio) {
-    const q = loadQ();
-    let changed = false;
-    q.forEach(pending => {
-      if (pending.type === 'loanOperation' && pending.loan && pending.loan.id === loanId
-          && pending.loan.folio !== newFolio) {
-        pending.loan.folio = newFolio;
-        changed = true;
-      }
-    });
-    if (changed) saveQ(q);
-    return changed;
-  }
-
-  // H-62 · Reajuste de la versión esperada. Sólo la SIGUIENTE operación de ese
-  // préstamo se reajusta: al confirmarse, ella reajustará a la que venga detrás.
-  // Reajustarlas todas de golpe pondría la misma versión base a dos operaciones
-  // consecutivas y la segunda volvería a chocar.
-  function rebaseQueuedLoanVersions(currentOpId, loanId, version) {
-    const q = loadQ();
-    const next = q.find(pending => pending.type === 'loanOperation'
-      && pending.id !== currentOpId
-      && pending.loan && pending.loan.id === loanId);
-    if (!next || Number(next.expectedVersion) === version) return false;
-    next.expectedVersion = version;
-    saveQ(q);
-    return true;
-  }
-
-  // Ejecuta una operación contra Supabase. Devuelve true si quedó persistida.
-  // H-142: base+1 puede pertenecer a OTRA escritura. La confirmación de un
-  // snapshot exige también el contenido enviado, usando los mismos adaptadores.
-  // El marcador sólo vive en la respuesta; DATA no lo persiste.
-  function confirmedWriteRows(m, rawRows, sentRows) {
-    const canonical = value => JSON.stringify(value, function (_key, item) {
-      if (item && typeof item === 'object' && !Array.isArray(item)) {
-        return Object.keys(item).sort().reduce((out, key) => { out[key] = item[key]; return out; }, {});
-      }
-      return item;
-    });
-    return rawRows.map(raw => {
-      const remote = m.fromRow(raw), sent = sentRows.find(row => String(row.id) === String(raw.id));
-      const normalize = row => m.toRow(m.fromRow(row));
-      const expected = sent && normalize(sent), actual = normalize(raw);
-      remote._syncAccepted = !!sent && !raw.deleted_at && Object.keys(sent).every(key =>
-        key === 'sync_base_version' || key === 'sync_device_id'
-        || canonical(expected[key]) === canonical(actual[key]));
-      return remote;
-    });
-  }
-  function protectQueuedWritesAfterConflict(current, remote) {
-    const rejected = new Set(remote.filter(row => !row._syncAccepted
-      || Number(row._syncVersion) !== Number((current.rows.find(sent => sent.id === row.id) || {}).sync_base_version || 0) + 1)
-      .map(row => String(row.id)));
-    if (!rejected.size) return;
-    const queue = loadQ(); let changed = false;
-    queue.forEach(later => {
-      if (later.id === current.id || later.table !== current.table) return;
-      const ids = later.rowIds || (later.rows || []).map(row => row.id);
-      if (!ids.some(id => rejected.has(String(id)))) return;
-      // La edición posterior conserva su payload; no reconstruirlo desde la
-      // proyección que el conflicto acaba de reemplazar.
-      later.diagnostic = classifyFailure({ code: 'product_version_conflict',
-        message: 'Otra terminal cambió estos registros. La edición pendiente se conserva para revisión.' });
-      later.status = 'blocked_conflict'; later.retry = true; changed = true;
-    });
-    if (changed) saveQ(queue);
-  }
-  async function applyOp(c, op) {
-    lastApplyFailure = null;
-    try {
-      if (op.type === 'referenceReclassification') {
-        const r = await c.rpc('commit_reference_reclassification', {
-          p_operation_id: op.operationId,
-          p_source_product_id: op.sourceProductId,
-          p_target_product_id: op.targetProductId,
-          p_quantity: op.quantity,
-          p_actor: op.actor,
-          p_reason: op.reason,
-          p_reversal_of: op.reversalOf || null,
-        });
-        if (r.error || !r.data || r.data.ok === false) return failOp(r.error || r.data || { message: 'Reclasificación sin confirmación' });
-        await pullDomain('products'); await pullDomain('movements');
-        return true;
-      }
-      if (op.type === 'commissionSettle' || op.type === 'commissionClose') {
-        const name = op.type === 'commissionSettle'
-          ? 'settle_commission_checked'
-          : 'close_commission_period_checked';
-        const args = { p_operation_id: op.operationId };
-        if (op.type === 'commissionSettle') args.p_seller_id = op.sellerId;
-        const r = await c.rpc(name, args);
-        if (r.error) return failOp(r.error);
-        await pullDomain('sellers');
-        await pullDomain('liquidations');
-        return true;
-      }
-      if (op.type === 'loanOperation') {
-        const committed = await c.rpc('commit_loan_operation', {
-          p_operation_id: op.id,
-          p_action: op.action,
-          p_loan: op.loan,
-          p_expected_version: Number(op.expectedVersion) || 0,
-        });
-        if (committed.error || !committed.data) {
-          return failOp(committed.error || { code: 'empty_response', message: 'El préstamo no devolvió confirmación' });
-        }
-        // H-62: choque de folio entre terminales. Mismo contrato que la venta
-        // (`folio_conflict`): se pide un folio libre, el YA IMPRESO en el vale se
-        // conserva como alias y se reintenta con la MISMA operación —el servidor
-        // no auditó el intento fallido, así que la idempotencia sigue limpia—.
-        if (committed.data.ok === false) {
-          const rekeys = Number(op.folioRekeys) || 0;
-          if (committed.data.error === 'folio_conflict' && rekeys < 3
-              && window.DATA && window.DATA.rekeyLoanFolio) {
-            const newFolio = window.DATA.collisionSafeLoanFolio(op.loan.folio, op.loan.id, rekeys + 1);
-            if (newFolio && window.DATA.rekeyLoanFolio(op.loan.id, op.loan.folio, newFolio)) {
-              op.loan.folio = newFolio;
-              op.folioRekeys = rekeys + 1;
-              rekeyQueuedLoanFolio(op.loan.id, newFolio);
-              if (window.UI && window.UI.toast) {
-                window.UI.toast(`Este préstamo se registró en la nube como ${newFolio}`, 'var(--accent)');
-              }
-              return applyOp(c, op);
-            }
-          }
-          return failOp({ code: committed.data.error || 'loan_rejected', message: committed.data.error || 'El préstamo fue rechazado' }, committed.data);
-        }
-        const version = Number(committed.data._loanVersion) || 0;
-        const local = window.DATA && (window.DATA.loans || []).find(x => x.id === op.loan.id);
-        if (local && committed.data._loanVersion != null) {
-          local._loanVersion = version;
-          if (window.DATA.saveLoans) window.DATA.saveLoans();
-        }
-        // Rebase: las operaciones que este mismo préstamo dejó encoladas detrás
-        // leyeron la versión que había ANTES de confirmar ésta. Sin reajustarlas
-        // la siguiente choca con `LOAN_VERSION_CONFLICT` y no vuelve a pasar
-        // nunca. Es el equivalente de `rebaseQueuedVersions` para documentos.
-        if (committed.data._loanVersion != null) rebaseQueuedLoanVersions(op.id, op.loan.id, version);
-        return true;
-      }
-      // H-69 · Escritura acotada del perfil del vendedor.
-      //
-      // Se usa `update` y NUNCA `upsert`: un upsert con `on conflict do update`
-      // rellenaría las columnas ausentes con su valor por defecto, y el trigger
-      // vería un `comision_acum` distinto del guardado y volvería a responder
-      // 42501. Un `update` sólo escribe las columnas enviadas, así que el
-      // acumulado remoto se conserva intacto por construcción.
-      if (op.type === 'profileUpdate') {
-        const m = MAP[op.kind] || MAP.sellers;
-        if (!op.submittedRows) {
-          op.submittedRows = JSON.parse(JSON.stringify(op.rows));
-          const q = loadQ(), pending = q.find(item => item.id === op.id);
-          if (pending) { pending.submittedRows = op.submittedRows; saveQ(q); }
-          await backupChain;
-        }
-        op.rows = op.submittedRows;
-        const remote = [];
-        for (const row of op.rows) {
-          const patch = Object.assign({}, row);
-          delete patch[op.conflict];
-          let r = await c.from(op.table).update(patch).eq(op.conflict, row[op.conflict]).select('*');
-          if (r.error) return failOp(r.error);
-          // Perfil que todavía no existe en la nube (alta local sin sesión
-          // administrada): se inserta. El INSERT no pasa por el trigger, que
-          // sólo vigila `before update`, y los acumulados nacen en cero.
-          if (!(r.data || []).length) {
-            r = await c.from(op.table).insert(row).select('*');
-            if (r.error) return failOp(r.error);
-          }
-          if (!(r.data || []).length) {
-            return failOp({ code: 'empty_response', message: 'El perfil no devolvió la fila esperada' });
-          }
-          remote.push.apply(remote, confirmedWriteRows(m, r.data, [row]));
-        }
-        if (m && window.DATA && window.DATA.applySyncResult) {
-          const expected = {};
-          op.rows.forEach(row => { expected[row.id] = Number(row.sync_base_version) || 0; });
-          const result = window.DATA.applySyncResult(op.kind, remote, expected, 'upsert') || {};
-          rebaseQueuedVersions(op.table, remote);
-          if (result.conflicts && window.UI && window.UI.toast) {
-            window.UI.toast(`${result.conflicts} cambio(s) de personal no se aplicaron porque otra terminal guardó una versión más reciente`, 'var(--danger)');
-          }
-          if (result.conflicts) {
-            protectQueuedWritesAfterConflict(op, remote);
-            return failOp({ code: 'product_version_conflict', message: 'La edición no fue aceptada. Se conserva para revisión.' }, result);
-          }
-        }
-        return true;
-      }
-      if (op.type === 'commissionAdjustment') {
-        const r = await c.rpc('apply_commission_adjustment_checked', {
-          p_operation_id: op.operationId,
-          p_rows: op.rows || [],
-          p_motivo: op.motivo || '',
-        });
-        if (r.error) return failOp(r.error);
-        await pullDomain('sellers');
-        await pullDomain('liquidations');
-        return true;
-      }
-      if (op.type === 'staffUpdate') {
-        const m = MAP[op.kind];
-        const remote = [];
-        for (const row of op.rows) {
-          const patch = { ...row };
-          delete patch[op.conflict];
-          const r = await c.from(op.table).update(patch)
-            .eq(op.conflict, row[op.conflict]).select('*');
-          if (r.error || !(r.data || []).length) return failOp(r.error || { code: 'empty_response', message: 'La actualización no devolvió la fila esperada' });
-          remote.push.apply(remote, confirmedWriteRows(m, r.data, [row]));
-        }
-        if (m && window.DATA && window.DATA.applySyncResult) {
-          const expected = {};
-          op.rows.forEach(row => { expected[row.id] = Number(row.sync_base_version) || 0; });
-          const result = window.DATA.applySyncResult(op.kind, remote, expected, 'upsert') || {};
-          rebaseQueuedVersions(op.table, remote);
-          if (result.conflicts && window.UI && window.UI.toast) {
-            window.UI.toast(`${result.conflicts} cambio(s) no se aplicaron porque otra terminal guardó una versión más reciente`, 'var(--danger)');
-          }
-          if (result.conflicts) {
-            if (op.kind === 'products') await resyncProductsAfterConflict(c, op.id);
-            return failOp({
-              code: 'product_version_conflict',
-              message: 'El cambio no fue aceptado. Se conserva para revisión.',
-            }, result);
-          }
-        }
-        return true;
-      }
-      if (op.type === 'upsert') {
-        op.kind = op.kind || kindForTable(op.table);
-        const m = MAP[op.kind];
-        if (op.kind === 'products' && (!Array.isArray(op.rowIds) || !op.rowIds.length)) {
-          return failOp({
-            code: 'product_scope_required',
-            message: 'Una escritura de productos sin IDs concretos fue bloqueada',
-          });
-        }
-        // El payload durable es la intención. Una caché ausente, reconstruida o
-        // corrupta nunca puede cambiarlo. Sólo una confirmación de una operación
-        // anterior de esta cola puede reajustar su versión base.
-        if (op.rowIds && (op.rows?.length !== op.rowIds.length
-            || op.rowIds.some(id => !op.rows.some(row => String(row.id) === String(id))))) {
-          return failOp({ code: 'product_scope_incomplete', message: 'La intención guardada no contiene todos sus IDs' });
-        }
-        if (op.rowIds && (!Array.isArray(op.rows) || !op.rows.length)) return true;
-        if (op.kind === 'products' && (!Array.isArray(op.rows) || !op.rows.length)) return true;
-        if (m && m.localKey) {
-          // operation_id es idempotente por payload: después del primer intento
-          // un reintento no incorpora otra edición ni otra versión de DATA.
-          if (!op.submittedRows) {
-            op.submittedRows = JSON.parse(JSON.stringify(op.rows));
-            const queue = loadQ(), pending = queue.find(item => item.id === op.id);
-            if (pending) { pending.submittedRows = op.submittedRows; pending.rows = op.rows; saveQ(queue); }
-            await backupChain;
-          }
-          op.rows = op.submittedRows;
-        }
-        const r = op.kind === 'products' && op.familyBatch
-          ? await c.rpc('commit_reference_family_batch', {
-              p_operation_id: op.id,
-              p_reference_family_id: op.referenceFamilyId,
-              p_rows: op.rows,
-              p_protocol_version: SYNC_PROTOCOL_VERSION,
-              p_data_epoch: Number(syncManifest && syncManifest.data_epoch),
-            })
-          : op.kind === 'products'
-          ? await c.rpc(syncManifest ? 'save_products_checked_v2' : 'save_products_checked', {
-              p_operation_id: op.id, p_rows: op.rows,
-              ...(syncManifest ? {
-                p_protocol_version: SYNC_PROTOCOL_VERSION,
-                p_data_epoch: Number(syncManifest.data_epoch),
-              } : {}),
-            })
-          : await c.from(op.table).upsert(op.rows, { onConflict: op.conflict }).select('*');
-        if (r.error) return failOp(r.error);
-        if (m && m.fromRow && window.DATA && window.DATA.applySyncResult) {
-          const expected = {};
-          op.rows.forEach(row => { expected[row.id] = Number(row.sync_base_version) || 0; });
-          const authoritativeRows = op.familyBatch && r.data && !Array.isArray(r.data)
-            ? (r.data.rows || []) : (r.data || []);
-          if (authoritativeRows.length !== op.rows.length
-              || op.rows.some(row => !authoritativeRows.some(remote => String(remote.id) === String(row.id)))) {
-            return failOp({ code: 'empty_response', message: 'Falta la confirmación de uno o más registros; se conserva la intención para reintentar.' });
-          }
-          const remote = confirmedWriteRows(m, authoritativeRows, op.rows);
-          const result = window.DATA.applySyncResult(op.kind, remote, expected, 'upsert') || {};
-          if (result.conflicts) protectQueuedWritesAfterConflict(op, remote);
-          rebaseQueuedVersions(op.table, remote);
-          if (result.conflicts && window.UI && window.UI.toast) {
-            window.UI.toast(`${result.conflicts} cambio(s) no se aplicaron porque otra terminal guardó una versión más reciente`, 'var(--danger)');
-          }
-          if (result.conflicts) {
-            if (op.kind === 'products') await resyncProductsAfterConflict(c, op.id);
-            return failOp({
-              code: 'product_version_conflict',
-              message: 'La escritura fue rechazada por conflicto. Los pendientes se conservan para revisión antes de resincronizar.',
-            }, result);
-          }
-        }
-        return true;
-      }
-      if (op.type === 'delete') { const r = await c.from(op.table).delete().eq(op.col, op.val); return r.error ? failOp(r.error) : true; }
-      if (op.type === 'productDeleteScope') {
-        const r = await c.rpc('delete_products_checked_v2', {
-          p_operation_id: op.id,
-          p_scope: op.scope,
-          p_reference_family_id: op.referenceFamilyId || null,
-          p_targets: op.targets || [],
-          p_device_id: window.CORE.getDeviceId(),
-          p_protocol_version: SYNC_PROTOCOL_VERSION,
-          p_data_epoch: Number(syncManifest && syncManifest.data_epoch),
-        });
-        if (r.error || !r.data) return failOp(r.error || { code: 'empty_response', message: 'La baja no devolvió confirmación' });
-        const rawRows = Array.isArray(r.data) ? r.data : (r.data.rows || []);
-        if (!(op.targets || []).length || (op.targets || []).some(target => !rawRows.some(row => String(row.id) === String(target.id)))) {
-          return failOp({ code: 'empty_response', message: 'La baja no confirmó todas las referencias; se conserva para reintentar.' });
-        }
-        const m = MAP.products;
-        if (rawRows.length && m && m.fromRow && window.DATA && window.DATA.applySyncResult) {
-          const expected = {};
-          (op.targets || []).forEach(target => { expected[target.id] = Number(target.baseVersion) || 0; });
-          const remote = rawRows.map(m.fromRow);
-          const result = window.DATA.applySyncResult('products', remote, expected, 'delete') || {};
-          rebaseQueuedVersions('products', remote);
-          if (result.conflicts) {
-            await resyncProductsAfterConflict(c, op.id);
-            return failOp({ code: 'product_version_conflict', message: 'La baja no fue aceptada. Se conserva para revisión.' }, result);
-          }
-        }
-        return true;
-      }
-      if (op.type === 'softDelete') {
-        if (!op.submitted) {
-          op.submitted = true;
-          const q = loadQ(), pending = q.find(item => item.id === op.id);
-          if (pending) { pending.submitted = true; saveQ(q); }
-          await backupChain;
-        }
-        const r = op.kind === 'products'
-          ? await c.rpc(syncManifest ? 'delete_product_checked_v2' : 'delete_product_checked', {
-              p_operation_id: op.id, p_id: op.val,
-              p_base_version: Number(op.baseVersion) || 0,
-              p_device_id: window.CORE.getDeviceId(),
-              ...(syncManifest ? {
-                p_protocol_version: SYNC_PROTOCOL_VERSION,
-                p_data_epoch: Number(syncManifest.data_epoch),
-              } : {}),
-            })
-          : await c.rpc('soft_delete_entity', {
-              p_entity: op.table, p_id: op.val,
-              p_base_version: Number(op.baseVersion) || 0,
-              p_device_id: window.CORE.getDeviceId(),
-            });
-        if (r.error) return failOp(r.error);
-        const m = MAP[op.kind];
-        const raw = Array.isArray(r.data) ? r.data[0] : r.data;
-        if (!raw || String(raw.id) !== String(op.val)) {
-          return failOp({ code: 'empty_response', message: 'La baja no devolvió confirmación; se conserva para reintentar.' });
-        }
-        if (raw && m && m.fromRow && window.DATA && window.DATA.applySyncResult) {
-          const remote = m.fromRow(raw);
-          const result = window.DATA.applySyncResult(op.kind, [remote], { [op.val]: Number(op.baseVersion) || 0 }, 'delete') || {};
-          rebaseQueuedVersions(op.table, [remote]);
-          if (result.conflicts && window.UI && window.UI.toast) {
-            window.UI.toast('No se eliminó: otra terminal modificó el registro. Se resincronizará el inventario.', 'var(--danger)');
-          }
-          if (result.conflicts) {
-            if (op.kind === 'products') await resyncProductsAfterConflict(c, op.id);
-            return failOp({
-              code: 'product_version_conflict',
-              message: 'La baja no fue aceptada. Se conserva para revisión.',
-            }, result);
-          }
-        }
-        return true;
-      }
-      if (op.type === 'config') {
-        if (!op.submitted) {
-          op.submitted = true;
-          const q = loadQ(), pending = q.find(item => item.id === op.id);
-          if (pending) { pending.submitted = true; saveQ(q); }
-          await backupChain;
-        }
-        const committed = await c.rpc('commit_config', {
-          p_operation_id: op.id,
-          p_expected_version: Number(op.expectedVersion) || 0,
-          p_device_id: window.CORE.getDeviceId(),
-          p_lookup: op.lookup,
-          p_settings: op.settings,
-          p_protocol_version: Number(op.protocolVersion) || SYNC_PROTOCOL_VERSION,
-          p_data_epoch: Number(op.dataEpoch) || 1,
-        });
-        if (committed.error || !committed.data) {
-          // Compatibilidad de despliegue: antes de aplicar H-77 se conserva el
-          // comportamiento anterior. Tras el manifiesto, la RPC es obligatoria.
-          if (!syncManifest && committed.error && /commit_config|could not find/i.test(committed.error.message || '')) {
-            const a = await c.from('lookup').upsert(op.lookup, { onConflict: 'kind,code' });
-            if (a.error) return failOp(a.error);
-            const b = await c.from('settings').upsert(op.settings, { onConflict: 'key' });
-            return b.error ? failOp(b.error) : true;
-          }
-          return failOp(committed.error || { code: 'empty_response', message: 'commit_config sin respuesta' });
-        }
-        if (committed.data.ok === false) {
-          return failOp({ code: committed.data.error || 'config_version_conflict', message: committed.data.error || 'Configuración obsoleta' }, committed.data);
-        }
-        configRemoteVersion = Number(committed.data.version) || configRemoteVersion;
-        const q = loadQ(); let changed = false;
-        q.forEach(next => {
-          if (next.type === 'config' && next.id !== op.id && !next.submitted
-              && next.ownerId === op.ownerId && next.dataEpoch === op.dataEpoch) {
-            next.expectedVersion = configRemoteVersion; changed = true;
-          }
-        });
-        if (changed) saveQ(q);
-        return true;
-      }
-      if (op.type === 'sale' && op.mode === 'layaway_liquidation') {
-        const failLayaway = (error, details) => {
-          const failed = failOp(error, details);
-          if (lastApplyFailure && lastApplyFailure.retryable === false
-              && window.DATA && typeof window.DATA.releaseLayawayProductLock === 'function') {
-            window.DATA.releaseLayawayProductLock(op.operationId);
-          }
-          return failed;
-        };
-        if (!hasLocalWriter(true)
-            || !window.DATA
-            || typeof window.DATA.ensureLayawayProductLockFromOperation !== 'function'
-            || window.DATA.ensureLayawayProductLockFromOperation(op) !== true) {
-          return failLayaway({
-            code: 'layaway_local_state_conflict',
-            message: 'La identidad local del inventario cambió; resincroniza antes de reintentar',
-          });
-        }
-        const committed = await c.rpc('commit_layaway_liquidation_checked', {
-          p_commit_id: op.id,
-          p_operation_id: op.operationId,
-          p_folio: op.folio,
-          p_payment: op.payment,
-          p_seller_effects: op.sellerEffects || [],
-          p_context: {
-            item_identities: op.itemIdentities || [],
-            commission_amount: Number((op.commissionSnapshot || {}).amount) || 0,
-            commission_base: (op.commissionSnapshot || {}).base || 'neto',
-            // H-69: el apartado comisiona al liquidarse, así que su desglose
-            // congelado por vendedor viaja con la confirmación del pago.
-            commission_rows: (op.commissionSnapshot || {}).rows || [],
-          },
-        });
-        const payload = Array.isArray(committed.data) ? committed.data[0] : committed.data;
-        if (committed.error || !payload) {
-          return failLayaway(committed.error || {
-            code: 'empty_response', message: 'La liquidación no devolvió confirmación',
-          });
-        }
-        if (payload.ok !== true) {
-          return failLayaway({
-            code: payload.error || 'layaway_liquidation_rejected',
-            message: payload.message || payload.error || 'La liquidación fue rechazada',
-          }, payload);
-        }
-        if (payload.stock_reserved !== true
-            || payload.reservation_operation_id !== op.operationId) {
-          return failLayaway({
-            code: 'reservation_confirmation_missing',
-            message: 'La liquidación no confirmó la reserva de inventario',
-          }, payload);
-        }
-        if (!window.DATA || typeof window.DATA.applySaleCommitResult !== 'function') {
-          return failLayaway({
-            code: 'local_commit_apply_unavailable',
-            message: 'La terminal no puede aplicar la respuesta autoritativa de la liquidación',
-          }, payload);
-        }
-        const authoritative = mappedSaleCommitResult(payload, op);
-        if (!authoritative || !authoritative.sale) {
-          return failLayaway({
-            code: 'invalid_commit_response',
-            message: 'La liquidación no devolvió la venta autoritativa',
-          }, payload);
-        }
-        // DATA persiste venta, pago, movimientos, vendedores y productos como
-        // una sola respuesta coherente. Si la persistencia falla, el commit
-        // permanece en cola y su reintento remoto es idempotente.
-        const applied = await Promise.resolve(window.DATA.applySaleCommitResult(op.id, op.folio, authoritative));
-        if (applied === false || (applied && applied.ok === false)) {
-          return failLayaway({
-            code: 'local_commit_persistence_failed',
-            message: 'No se pudo persistir localmente la liquidación confirmada',
-          }, applied || payload);
-        }
-        rememberLayawayResult(op, authoritative);
-        return true;
-      }
-      if (op.type === 'sale') {
-        const expectedProducts = {};
-        (window.DATA && window.DATA.products || []).forEach(p => {
-          if ((op.stockLines || []).some(l => l.product_id === p.id)) expectedProducts[p.id] = Number(p._syncVersion) || 0;
-        });
-        const saleRpc = Array.isArray(op.header && op.header.descuentos_adicionales)
-          ? 'commit_sale_with_additional_discount_checked' : 'commit_sale_checked';
-        const committed = await c.rpc(saleRpc, {
-          p_commit_id: op.id,
-          p_operation_id: op.operationId,
-          p_sale: op.header,
-          p_items: op.items || [],
-          p_moves: op.moves || [],
-          p_payments: op.payments || [],
-          p_stock_lines: op.stockLines || [],
-          p_reserve_stock: !!op.reserveStock,
-          p_client_effect: op.clientEffect || null,
-          p_seller_effects: op.sellerEffects || [],
-        });
-        if (committed.error || !committed.data) return failOp(committed.error || { code: 'empty_response', message: 'La venta no devolvió confirmación' });
-        if (!committed.data.ok) {
-          const rekeys = Number(op.folioRekeys) || (op.folioRekeyed ? 1 : 0);
-          if (committed.data.error === 'folio_conflict'
-              && rekeys < 3
-              && window.DATA && window.DATA.rekeySaleFolio) {
-            const newFolio = await replacementFolio(c, op);
-            if (newFolio && window.DATA.rekeySaleFolio(op.operationId, op.folio, newFolio)
-                && rekeyQueuedSaleFolio(op.operationId, op.folio, newFolio)) {
-              op.folio = newFolio;
-              op.header.folio = newFolio;
-              (op.items || []).forEach(x => { x.folio = newFolio; });
-              (op.moves || []).forEach(x => { x.ref = newFolio; });
-              (op.payments || []).forEach(x => { x.folio = newFolio; });
-              op.folioRekeyed = true;
-              op.folioRekeys = rekeys + 1;
-              if (window.UI && window.UI.toast) {
-                window.UI.toast(`Este ticket se registró posteriormente como ${newFolio}`, 'var(--accent)');
-              }
-              return applyOp(c, op);
-            }
-          }
-          const stockPending = committed.data.error === 'insufficient_stock';
-          const changed = window.DATA && window.DATA.markSaleSync
-            ? window.DATA.markSaleSync(op.folio, stockPending ? 'stock_pending' : 'sync_error', committed.data)
-            : false;
-          if (changed && window.UI && window.UI.toast) {
-            window.UI.toast(stockPending
-              ? 'Venta pendiente: la nube ya no tiene existencias suficientes'
-              : 'Venta pendiente: existe un conflicto que requiere revisión', 'var(--danger)');
-          }
-          return failOp({ code: committed.data.error, message: committed.data.error }, committed.data);
-        }
-        if (op.reserveStock === true
-            && (committed.data.stock_reserved !== true
-              || committed.data.reservation_operation_id !== op.operationId)) {
-          return failOp({
-            code: 'reservation_confirmation_missing',
-            message: 'La venta no devolvió una confirmación verificable de inventario',
-          }, committed.data);
-        }
-        const reconcile = async (kind, rows, expected) => {
-          const m = MAP[kind];
-          if (!rows.length || !m || !m.fromRow || !window.DATA || !window.DATA.applySyncResult) return true;
-          const remote = rows.map(m.fromRow);
-          const result = window.DATA.applySyncResult(kind, remote, expected, 'sale') || {};
-          // A financial receipt does not authorize an unrelated replacement:
-          // its stored stock/counters may precede another terminal's sale.
-          if (kind === 'products' && result.conflicts) {
-            if (window.UI && window.UI.toast) {
-              window.UI.toast('El inventario cambió en otra terminal; se está resincronizando', 'var(--danger)');
-            }
-            return resyncProductsAfterConflict(c, op.id);
-          }
-          return true;
-        };
-        if (!(await reconcile('products', committed.data.products || [], expectedProducts))) {
-          return failOp({
-            code: 'product_resync_required',
-            message: 'El inventario requiere resincronización antes de confirmar la venta',
-          }, committed.data);
-        }
-        const expectedClient = {};
-        if (op.clientEffect) expectedClient[op.clientEffect.id] = Number(op.clientEffect.base_version) || 0;
-        await reconcile('clients', committed.data.clients || [], expectedClient);
-        const expectedSellers = {};
-        (op.sellerEffects || []).forEach(e => { expectedSellers[e.id] = Number(e.base_version) || 0; });
-        await reconcile('sellers', committed.data.sellers || [], expectedSellers);
-        // Alias histórico: el folio ya impreso se lee de la venta local —la fuente
-        // durable— y se persiste ANTES de dar la venta por sincronizada, así la
-        // operación permanece en cola hasta que la nube conserve el ticket del
-        // cliente. Reintentar es inocuo: el commit es idempotente por hash.
-        const aliases = (window.DATA && window.DATA.saleFolioAliases
-          ? window.DATA.saleFolioAliases((window.DATA.sales || []).find(s => s.folio === op.folio))
-          : []);
-        if (aliases.length) {
-          const aliased = await c.from('sales')
-            .update({ folio_aliases: aliases })
-            .eq('folio', op.folio).select('folio');
-          if (aliased.error || !(aliased.data || []).length) {
-            return failOp(aliased.error || { code: 'alias_not_stored', message: 'No se pudo conservar el folio impreso como alias' });
-          }
-        }
-        if (window.DATA && window.DATA.markSaleSync) {
-          window.DATA.markSaleSync(op.folio, 'synced', {
-            stockReserved: committed.data.stock_reserved === true,
-            stockIdempotent: committed.data.stock_idempotent === true,
-            reservationOperationId: committed.data.reservation_operation_id || null,
-            stock_reserved: committed.data.stock_reserved === true,
-            stock_idempotent: committed.data.stock_idempotent === true,
-            reservation_operation_id: committed.data.reservation_operation_id || null,
-          });
-        }
-        return true;
-      }
-      // H-38 (C5): el cambio viaja como UNA operacion durable y se confirma con
-      // una sola llamada a pos.commit_exchange_checked(). El dinero lo calcula el
-      // servidor: el cliente no envia valores, solo lo que entrega y recibe.
-      if (op.type === 'exchange') {
-        const committed = await c.rpc('commit_exchange_checked', {
-          p_commit_id: op.key || op.id,
-          p_exchange: op.header,
-          p_items: op.items || [],
-          p_moves: op.moves || [],
-          p_payment: op.payment || null,
-          // H-47: la comision del excedente se acredita DENTRO de la misma
-          // transaccion que el cambio, con guarda de version por vendedor.
-          p_seller_effects: op.seller_effects || [],
-        });
-        if (committed.error || !committed.data || !committed.data.ok) {
-          return failOp(committed.error || {
-            code: (committed.data && committed.data.error) || 'empty_response',
-            message: (committed.data && committed.data.error) || 'El cambio no devolvio confirmacion',
-          });
-        }
-        if (window.DATA && window.DATA.applySyncResult) {
-          window.DATA.applySyncResult({ products: committed.data.products || [] });
-        }
-        return true;
-      }
-      if (op.type === 'return') {
-        const expectedProducts = {};
-        const productSources = op.legacy
-          ? ((op.legacyTargets && op.legacyTargets.products) || [])
-          : ((window.DATA && window.DATA.products) || []).filter(p => (op.stockLines || []).some(l => l.product_id === p.id));
-        productSources.forEach(p => { expectedProducts[p.id] = Number(p.base_version ?? p._syncVersion) || 0; });
-        const common = {
-          p_commit_id: op.id,
-          p_return: op.header,
-          p_items: op.items || [],
-          p_moves: op.moves || [],
-        };
-        const committed = op.legacy
-          ? await c.rpc('commit_legacy_return', {
-              ...common, p_targets: op.legacyTargets || { complete: false },
-            })
-          : await c.rpc('commit_return_checked', {
-              ...common,
-              p_stock_lines: op.stockLines || [],
-              p_client_effect: op.clientEffect || null,
-              p_seller_effects: op.sellerEffects || [],
-              p_legacy: false,
-            });
-        if (committed.error || !committed.data || !committed.data.ok) {
-          return failOp(committed.error || {
-            code: committed.data && committed.data.error || 'empty_response',
-            message: committed.data && committed.data.error || 'La devolución no devolvió confirmación',
-          }, committed.data);
-        }
-        const reconcile = async (kind, rows, expected) => {
-          const m = MAP[kind];
-          if (!rows.length || !m || !m.fromRow || !window.DATA || !window.DATA.applySyncResult) return true;
-          const remote = rows.map(m.fromRow);
-          const result = window.DATA.applySyncResult(kind, remote, expected, 'return') || {};
-          if (kind === 'products' && result.conflicts) {
-            if (window.UI && window.UI.toast) {
-              window.UI.toast('El inventario cambió en otra terminal; se está resincronizando', 'var(--danger)');
-            }
-            return resyncProductsAfterConflict(c, op.id);
-          }
-          return true;
-        };
-        if (!(await reconcile('products', committed.data.products || [], expectedProducts))) {
-          return failOp({
-            code: 'product_resync_required',
-            message: 'El inventario requiere resincronización antes de confirmar la devolución',
-          }, committed.data);
-        }
-        const expectedClient = {};
-        const clientSource = op.legacy ? op.legacyTargets && op.legacyTargets.client : op.clientEffect;
-        if (clientSource) expectedClient[clientSource.id] = Number(clientSource.base_version) || 0;
-        await reconcile('clients', committed.data.clients || [], expectedClient);
-        const expectedSellers = {};
-        const sellerSources = op.legacy ? ((op.legacyTargets && op.legacyTargets.sellers) || []) : (op.sellerEffects || []);
-        sellerSources.forEach(e => { expectedSellers[e.id] = Number(e.base_version) || 0; });
-        await reconcile('sellers', committed.data.sellers || [], expectedSellers);
-        if (committed.data.sale_state && window.DATA) {
-          const sale = (window.DATA.sales || []).find(x => x.folio === op.folio);
-          if (sale) { sale.estado = committed.data.sale_state; window.DATA.saveSales(); }
-        }
-        return true;
-      }
-    } catch (e) { return failOp(e); }
-    return failOp({ code: 'unsupported_operation', message: `Operación no soportada: ${op.type || 'sin tipo'}` });
-  }
-
-  function rebaseQueuedVersions(table, remoteRows) {
-    if (!remoteRows || !remoteRows.length) return;
-    const versions = {};
-    remoteRows.filter(r => r._syncAccepted !== false && !r._deletedAt)
-      .forEach(r => { versions[r.id] = Number(r._syncVersion ?? r.sync_version) || 0; });
-    const q = loadQ(); let changed = false;
-    q.forEach(op => {
-      if (!opBelongsToActiveSession(op)) return;
-      if ((op.type === 'upsert' || op.type === 'profileUpdate') && op.table === table && !op.submittedRows && !/^blocked_/.test(op.status || '')) {
-        (op.rows || []).forEach(row => {
-          if (versions[row.id] > (Number(row.sync_base_version) || 0)) {
-            row.sync_base_version = versions[row.id]; changed = true;
-          }
-        });
-      }
-      if (op.type === 'softDelete' && !op.submitted && !/^blocked_/.test(op.status || '')
-          && op.table === table && versions[op.val] > (Number(op.baseVersion) || 0)) {
-        op.baseVersion = versions[op.val]; changed = true;
-      }
-    });
-    if (changed) saveQ(q);
-  }
-
-  // Encola PRIMERO y luego sube vía flushQueue (ejecutor único). Antes se intentaba la
-  // red primero y solo se encolaba al fallar: si la página se recargaba con la subida
-  // en vuelo, la operación moría sin rastro y el pull del siguiente arranque pisaba lo
-  // capturado. Persistida antes de volar, sobrevive al refresh y se reintenta sola.
-  async function run(op, delay = 0) {
-    assertBusinessReady();
-    if (!enabled || !hasLocalWriter(false)) return;
-    op.id = newOpId();
-    op.ownerId = activeOwnerId();
-    op.protocolVersion = SYNC_PROTOCOL_VERSION;
-    let localEpoch = 1;
-    try { localEpoch = Number(localStorage.getItem('balam_sync_data_epoch')) || 1; } catch (e) { /* primera instalación */ }
-    op.dataEpoch = Number(syncManifest && syncManifest.data_epoch) || localEpoch;
-    enqueue(op);
-    await backupChain;
-    if (delay) { clearTimeout(pushTimer); pushTimer = setTimeout(() => flushQueue(), delay); }
-    else flushQueue();
-  }
-
-  let flushing = false, flushAgain = false, flushIdleWaiters = [];
-  function waitForFlushIdle() {
-    if (!flushing && !flushAgain) return Promise.resolve();
-    return new Promise(resolve => { flushIdleWaiters.push(resolve); });
-  }
-  function hasPendingLayaway(folio) {
-    const wanted = String(folio || '').trim();
-    return !!wanted && loadQ().some(op => op && op.type === 'sale'
-      && op.mode === 'layaway_liquidation' && op.folio === wanted);
-  }
-  function releaseFlushIdleWaiters() {
-    if (flushing || flushAgain) return;
-    const waiters = flushIdleWaiters.splice(0);
-    waiters.forEach(resolve => resolve());
-  }
-  async function flushQueue(opts = {}) {
-    // An empty background drain must not retry an operation captured later
-    // while the asynchronous control-plane lookup is in flight.
-    if (!loadQ().length) return;
-    if (directedRecovery) return;
-    if (!hasLocalWriter(false)) return;
-    if (!(await recoverDirectedDevice())) return;
-    if (syncRecovering && !opts.recovery) return;
-    // Una terminal fuera de protocolo o epoca no escribe ningun dominio. Asi,
-    // tampoco una RPC transaccional historica puede colarse durante rebootstrap.
-    if (syncManifest && syncCompatibility !== 'ok') return;
-    if (flushing) { flushAgain = true; return waitForFlushIdle(); } // esperar también la pasada solicitada
-    { // migra ops persistidas por una versión anterior (sin id)
-      const stored = loadQ(), q0 = []; let mig = false;
-      stored.forEach(o => {
-        // Descarta exclusivamente upserts vacíos de productos. Ninguna venta,
-        // cambio, devolución, foto u otra operación se toca.
-        if (isEmptyProductUpsert(o)) { mig = true; return; }
-        if (!o.id) { o.id = newOpId(); mig = true; }
-        if (!o.status) { o.status = 'pending'; mig = true; }
-        if (o.attempts == null) { o.attempts = o.retry ? 1 : 0; mig = true; }
-        if (!o.createdAt) { o.createdAt = new Date().toISOString(); mig = true; }
-        // Una cola histórica no permite saber qué cuenta la creó. Con sesión
-        // administrada se pone en cuarentena: nunca se atribuye automáticamente.
-        if (o.ownerId === undefined && activeOwnerId()) {
-          o.ownerId = '__legacy_unclaimed__'; mig = true;
-        }
-        if (o.type === 'upsert' && !o.kind) {
-          o.kind = kindForTable(o.table); mig = true;
-        }
-        // H-69 · Cierre auditado de la operación bloqueada por
-        // COMMISSION_RPC_REQUIRED.
-        //
-        // No se borra: se DETERMINA que quedó obsoleta y se sustituye por la
-        // forma que sí puede aplicarse. Quedó obsoleta porque su cuerpo se
-        // reconstruye desde `DATA.sellers` en cada intento —nunca fue una
-        // captura histórica, sino un espejo del estado local— y porque las tres
-        // columnas que la bloqueaban dejaron de pertenecer al cliente. Lo que
-        // esa operación quería guardar era el PERFIL, y eso viaja íntegro.
-        //
-        // La supersesión queda registrada en la propia operación (`supersededOp`,
-        // `supersededReason`, `supersededDiagnostic`) para que el cierre de la
-        // historia pueda demostrar qué se convirtió y por qué.
-        if ((o.type === 'upsert' || o.type === 'staffUpdate')
-            && (o.kind === 'sellers' || o.table === 'sellers')) {
-          const previo = o.diagnostic || null;
-          o.supersededOp = o.type;
-          o.supersededReason = 'commission_columns_are_rpc_only';
-          if (previo) o.supersededDiagnostic = previo;
-          o.type = 'profileUpdate';
-          o.kind = 'sellers';
-          o.conflict = o.conflict || 'id';
-          o.rows = (o.rows || []).map(row => {
-            const clean = Object.assign({}, row);
-            SELLER_RPC_ONLY_COLUMNS.forEach(col => { delete clean[col]; });
-            return clean;
-          });
-          o.status = 'pending';
-          o.retry = true;
-          delete o.diagnostic;
-          mig = true;
-        }
-        if (needsUuidQueueId(o) && !UUID_RE.test(String(o.id || ''))) {
-          o.id = newOpId(); mig = true;
-        }
-        if (o.type === 'sale') {
-          if (!o.operationId) { o.operationId = o.id; mig = true; }
-          if (o.header && !o.header.operation_id) {
-            o.header.operation_id = o.operationId; mig = true;
-          }
-          if (o.mode !== 'layaway_liquidation') {
-            const previousIdentityState = JSON.stringify({
-              stockLines: o.stockLines, reserveStock: o.reserveStock,
-              status: o.status, diagnostic: o.diagnostic,
-              productIds: (o.items || []).map(item => item.product_id || null),
-            });
-            try {
-              o.stockLines = (o.items || []).map(item => {
-                const productId = resolveLineProductId(item, 'legacy_sale_queue');
-                if (!item.product_id) item.product_id = productId;
-                return Number(item.qty) > 0
-                  ? { product_id: productId, talla: item.talla, qty: Number(item.qty) }
-                  : null;
-              }).filter(Boolean);
-              if (o.diagnostic && /product_identity_(missing|ambiguous)/.test(String(o.diagnostic.code || ''))) {
-                o.status = 'pending'; delete o.diagnostic;
-              }
-            } catch (identityError) {
-              o.stockLines = [];
-              o.reserveStock = false;
-              blockQueueForIdentity(o, identityError);
-            }
-            const state = o.header && o.header.estado;
-            if (state === 'Apartado' || state === 'Cancelado') o.reserveStock = false;
-            else if (typeof o.reserveStock !== 'boolean') o.reserveStock = o.stockLines.length > 0;
-            if (previousIdentityState !== JSON.stringify({
-              stockLines: o.stockLines, reserveStock: o.reserveStock,
-              status: o.status, diagnostic: o.diagnostic,
-              productIds: (o.items || []).map(item => item.product_id || null),
-            })) mig = true;
-          }
-          if (!Array.isArray(o.payments)) { o.payments = []; mig = true; }
-          if (!o.clientEffect) { o.clientEffect = null; mig = true; }
-          if (!Array.isArray(o.sellerEffects)) { o.sellerEffects = []; mig = true; }
-        }
-        if (o.type === 'return') {
-          if (!Array.isArray(o.stockLines)) { o.stockLines = []; o.legacy = true; mig = true; }
-          if (!o.clientEffect) { o.clientEffect = null; mig = true; }
-          if (!Array.isArray(o.sellerEffects)) { o.sellerEffects = []; mig = true; }
-          if (o.legacy && !o.legacyTargets) {
-            const data = window.DATA || {};
-            const sale = (data.sales || []).find(s => s.folio === o.folio);
-            const products = [];
-            const seenProducts = new Set();
-            let identityComplete = true;
-            (o.items || []).forEach(item => {
-              if (!identityComplete) return;
-              try {
-                const productId = resolveLineProductId(item, 'legacy_return_queue');
-                const exact = (data.products || []).filter(p => p.id === productId);
-                if (exact.length !== 1) {
-                  throw productIdentityError('product_identity_missing', item, 'legacy_return_queue', exact);
-                }
-                const product = exact[0];
-                if (seenProducts.has(product.id)) return;
-                seenProducts.add(product.id);
-                products.push({
-                  id: product.id, base_version: Number(product._syncVersion) || 0,
-                  stock: product.stock || [],
-                });
-                if (!item.product_id) item.product_id = product.id;
-              } catch (identityError) {
-                identityComplete = false;
-                blockQueueForIdentity(o, identityError);
-              }
-            });
-            let client = null;
-            if (sale && sale.cliente) {
-              const row = (data.clients || []).find(c => !c.generic
-                && ((sale.clienteId && c.id === sale.clienteId)
-                  || (!sale.clienteId && c.nombre === sale.cliente)));
-              if (row) client = {
-                id: row.id, base_version: Number(row._syncVersion) || 0,
-                total: Number(row.total) || 0,
-              };
-            }
-            const sellers = ((sale && sale.vendedores) || []).map(id => {
-              const row = (data.sellers || []).find(s => s.id === id);
-              return row ? {
-                id: row.id, base_version: Number(row._syncVersion) || 0,
-                ventas_mes: Number(row.ventasMes) || 0,
-                comision_acum: Number(row.comisionAcum) || 0,
-              } : null;
-            }).filter(Boolean);
-            o.legacyTargets = {
-              products, client, sellers,
-              complete: identityComplete && !!sale && products.length === new Set((o.items || []).map(i => i.product_id).filter(Boolean)).size
-                && (o.items || []).every(i => !!i.product_id),
-            };
-            mig = true;
-          }
-        }
-        // H-95: una operación histórica conserva los IDs contenidos en su
-        // payload original. La falta de rowIds nunca autoriza reconstruirla
-        // desde el inventario local completo del momento del reintento.
-        if (o.type === 'upsert' && (o.kind === 'products' || o.table === 'products')
-            && (!Array.isArray(o.rowIds) || !o.rowIds.length)) {
-          const ids = Array.isArray(o.rows)
-            ? o.rows.map(row => String(row && row.id || '').trim()).filter(Boolean)
-            : [];
-          if (ids.length && ids.length === o.rows.length && new Set(ids).size === ids.length) {
-            o.kind = 'products'; o.rowIds = ids; mig = true;
-          } else {
-            blockQueueForIdentity(o, {
-              code: 'product_scope_required',
-              message: 'La operación histórica de productos no declara IDs verificables',
-            });
-            mig = true;
-          }
-        }
-        // Las colas antiguas borraban físicamente. Se convierten a tombstone;
-        // base 0 coincide con las filas históricas al instalar la migración.
-        if (o.type === 'delete') {
-          const kind = kindForTable(o.table);
-          if (kind && MAP[kind].localKey) {
-            o.type = 'softDelete'; o.kind = kind; o.baseVersion = 0; mig = true;
-          }
-        }
-        q0.push(o);
-      });
-      if (mig) saveQ(q0);
-      if (!legacyWarned && q0.some(o => o.ownerId === '__legacy_unclaimed__')) {
-        legacyWarned = true;
-        if (window.UI && window.UI.toast) {
-          window.UI.toast('Hay cambios antiguos en cuarentena; un administrador debe revisar y reclamarlos.', 'var(--danger)');
-        }
-      }
-    }
-    if (!loadQ().length) return;
-    flushing = true;
-    let recovered = false;
-    try {
-      const c = await ensureClient(); if (!c) return;
-      if (syncManifest) {
-        const manifest = await c.from('system_manifest').select('*').eq('singleton', true);
-        if (manifest.error || !manifest.data?.[0]) { syncLastVersionCheck = 0; return; }
-        const latest = manifest.data[0];
-        const changedEpoch = Number(latest.data_epoch) !== Number(syncManifest.data_epoch);
-        syncManifest = latest;
-        syncCompatibility = changedEpoch ? 'must_rebootstrap' : manifestCompatibility(latest);
-        if (syncCompatibility !== 'ok') return;
-      }
-      // Una op a la vez, releyendo la cola de storage en cada paso: run() puede encolar
-      // o reemplazar ops mientras una subida está en vuelo, y el viejo "saveQ(rest)"
-      // final las pisaba. El retiro por id nunca borra una op reemplazada (id nuevo).
-      const failed = new Set(); // fallidas en esta pasada: se saltan, quedan para reintento
-      for (;;) {
-        const queue = loadQ();
-        // Una devolución NO puede adelantarse a la venta que la origina: mientras
-        // esa venta siga en cola —pendiente, fallida o con folio sin resolver— la
-        // nube podría atribuirla a otra venta que comparta el folio impreso.
-        const salesInFlight = new Set(queue
-          .filter(o => o.type === 'sale' && opBelongsToActiveSession(o))
-          .map(o => o.folio));
-        const genericSalesBehindLayaway = new Set();
-        const layawaysBehindGenericSale = new Set();
-        queue.forEach((candidate, index) => {
-          if (candidate.type !== 'sale') return;
-          if (candidate.mode === 'layaway_liquidation') {
-            if (queue.slice(0, index).some(prior => prior.type === 'sale'
-                && prior.mode !== 'layaway_liquidation' && prior.folio === candidate.folio)) {
-              layawaysBehindGenericSale.add(candidate.id);
-            }
-          } else if (queue.slice(0, index).some(prior => prior.type === 'sale'
-            && prior.mode === 'layaway_liquidation' && prior.folio === candidate.folio)) {
-            genericSalesBehindLayaway.add(candidate.id);
-          }
-        });
-        const op = queue.find(o => opBelongsToActiveSession(o)
-          && isAutomaticallyEligible(o) && !failed.has(o.id)
-          && !genericSalesBehindLayaway.has(o.id)
-          && !layawaysBehindGenericSale.has(o.id)
-          && !(o.type === 'return' && salesInFlight.has(o.folio)));
-        if (!op) break;
-        const staleEpoch = syncManifest && op.dataEpoch != null
-          && Number(op.dataEpoch) !== Number(syncManifest.data_epoch);
-        const ok = staleEpoch
-          ? failOp({ code: 'rebootstrap_required', message: 'La operación pertenece a una versión anterior de los datos y se conserva para revisión' })
-          : await applyOp(c, op);
-        if (ok) {
-          await recordSyncActivity(c, op, 'synced');
-          if (op.retry) recovered = true;
-          // Capturas y coalescencias pueden ocurrir mientras se registra actividad.
-          const remaining = loadQ().filter(o => o.id !== op.id);
-          if (op.type === 'sale' && op.mode === 'layaway_liquidation') {
-            remaining.forEach(later => {
-              if (later.type !== 'sale' || later.mode === 'layaway_liquidation'
-                  || later.folio !== op.folio) return;
-              later.retry = true;
-              later.status = 'blocked_conflict';
-              later.diagnostic = classifyFailure({
-                code: 'layaway_already_liquidated',
-                message: 'Una liquidación autoritativa anterior ya cerró este apartado',
-              });
-            });
-          }
-          saveQ(remaining);
-        } else {
-          failed.add(op.id);
-          const cur = loadQ();
-          const t = cur.find(o => o.id === op.id);
-          if (t) {
-            t.retry = true;
-            t.attempts = (Number(t.attempts) || 0) + 1;
-            t.lastAttemptAt = new Date().toISOString();
-            t.diagnostic = lastApplyFailure || classifyFailure({ code: 'unknown_error' });
-            t.status = t.diagnostic.status;
-            saveQ(cur);
-            await recordSyncActivity(c, t);
-          }
-        }
-      }
-      // Mismo aviso de siempre, solo cuando se recuperó un pendiente (no en cada guardado).
-      if (recovered && !loadQ().some(opBelongsToActiveSession) && window.UI && window.UI.toast) window.UI.toast('Cambios sincronizados con la nube', 'var(--accent)');
-    } finally {
-      flushing = false;
-      if (flushAgain) {
-        flushAgain = false;
-        Promise.resolve(flushQueue()).finally(releaseFlushIdleWaiters);
-      } else releaseFlushIdleWaiters();
-    }
-  }
-
-  // ── API de escritura (encolable) ────────────────────────────────────────────
-  function pushRows(kind, arr) {
-    if (!enabled) return;
-    const m = MAP[kind]; if (!m || !m.toRow) return;
-    if (kind === 'products' && (!Array.isArray(arr) || !arr.length)) return;
-    const seller = window.AUTH && window.AUTH.role && window.AUTH.role() === 'vendedor';
-    if (seller && kind === 'products') return;
-    // H-69: el vendedor NUNCA viaja como upsert de tabla completa. Va como
-    // actualización acotada de perfil, sin las tres columnas que sólo las RPC
-    // financieras pueden escribir. Vale para administrador y para vendedor: la
-    // frontera es de datos, no de rol.
-    if (kind === 'sellers') {
-      return run({ type: 'profileUpdate', kind, table: m.table, conflict: m.conflict, rows: arr.map(m.profileRow) });
-    }
-    const rowIds = kind === 'products'
-      ? arr.map(row => String(row && row.id || '').trim())
-      : null;
-    if (kind === 'products'
-        && (rowIds.some(id => !id) || new Set(rowIds).size !== rowIds.length)) {
-      throw Object.assign(new Error('Cada producto del alcance debe tener un ID único'), {
-        code: 'PRODUCT_SCOPE_INVALID',
-      });
-    }
-    return run({
-      type: 'upsert', kind, table: m.table, conflict: m.conflict,
-      ...(kind === 'products' ? { rowIds } : {}),
-      rows: arr.map(m.toRow),
-    });
-  }
-  function pushProductFamilyBatch(referenceFamilyId, arr) {
-    if (!enabled) return;
-    const rows = Array.isArray(arr) ? arr : [];
-    if (!referenceFamilyId || !rows.length) return;
-    const rowIds = rows.map(row => String(row && row.id || '').trim());
-    if (rowIds.some(id => !id) || new Set(rowIds).size !== rowIds.length
-        || rows.some(row => row.referenceFamilyId !== referenceFamilyId || row.recordModel !== 'v2')) {
-      throw Object.assign(new Error('El lote familiar requiere referencias V2 e IDs exactos'), {
-        code: 'REFERENCE_FAMILY_SCOPE_MISMATCH',
-      });
-    }
-    return run({
-      type: 'upsert', kind: 'products', table: 'products', conflict: 'id',
-      familyBatch: true, referenceFamilyId, rowIds,
-      rows: rows.map(MAP.products.toRow),
-    });
-  }
-  // H-70: la edición de una ficha viaja sola. Mismo upsert y mismo control de
-  // versión que `pushRows`, pero con una fila: el arreglo completo pisaba con
-  // esta copia local a cualquier otro cliente que otra terminal hubiera tocado
-  // mientras tanto.
-  function pushClient(c) {
-    if (!enabled || !c || !c.id) return;
-    const m = MAP.clients;
-    return run({ type: 'upsert', kind: 'clients', table: m.table, conflict: m.conflict, rowIds: [c.id], rows: [m.toRow(c)] });
-  }
-  function deleteRow(kind, id, baseVersion) {
-    if (!enabled) return;
-    const m = MAP[kind]; if (!m) return;
-    if (m.localKey) return run({ type: 'softDelete', kind, table: m.table, col: m.conflict, val: id, baseVersion: Number(baseVersion) || 0 });
-    return run({ type: 'delete', table: m.table, col: m.conflict, val: id });
-  }
-  function deleteProductScope(payload) {
-    if (!enabled || !hasLocalWriter(false)) {
-      throw Object.assign(new Error('La baja requiere una cola local durable disponible'), { code: 'PRODUCT_DELETE_QUEUE_UNAVAILABLE' });
-    }
-    payload = payload || {};
-    const targets = Array.isArray(payload.targets) ? payload.targets.map(target => ({
-      id: String(target.id || ''), baseVersion: Number(target.baseVersion) || 0,
-    })) : [];
-    if (!targets.length || targets.some(target => !target.id)) {
-      throw Object.assign(new Error('La baja requiere products.id exactos'), { code: 'PRODUCT_DELETE_SCOPE_INVALID' });
-    }
-    return run({
-      type: 'productDeleteScope', kind: 'products', table: 'products',
-      scope: payload.scope, referenceFamilyId: payload.referenceFamilyId || null,
-      rowIds: targets.map(target => target.id), targets,
-    });
-  }
-  function settleCommission({ operationId, sellerId }) {
-    if (!enabled) return;
-    return run({ type: 'commissionSettle', operationId, sellerId });
-  }
-  // H-69: el ajuste histórico es un documento propio. Viaja por la cola como una
-  // RPC más —idempotente por `operationId`— y jamás escribe `comision_acum`
-  // desde el cliente.
-  function applyCommissionAdjustment({ operationId, rows, motivo }) {
-    if (!enabled) return;
-    return run({ type: 'commissionAdjustment', operationId, rows: rows || [], motivo: motivo || '' });
-  }
-  function closeCommissionPeriod({ operationId }) {
-    if (!enabled) return;
-    return run({ type: 'commissionClose', operationId });
-  }
-  function pushLoanOperation(action, loan, expectedVersion) {
-    if (!enabled) return;
-    return run({
-      type: 'loanOperation',
-      action,
-      loan: JSON.parse(JSON.stringify(loan)),
-      expectedVersion: Number(expectedVersion) || 0,
-    });
-  }
-
-  // ── H-62 · Migración de los préstamos que sólo vivían en esta terminal ──────
-  // Antes de H-62 un préstamo se enviaba únicamente al mutarlo, así que los
-  // registrados antes de que existiera la réplica —o mientras no había sesión—
-  // nunca salieron del navegador. Esta rutina los adopta en la nube UNA sola vez
-  // conservando folio, fechas, líneas y devoluciones.
-  //
-  // No borra nada. Antes de encolar deja una copia congelada de la cartera en
-  // `balam_pos_loans_premigracion_v1`, que sobrevive a la migración y sólo se
-  // retira a mano: mientras exista, el estado anterior es reconstruible.
-  const LOAN_BACKUP_KEY = 'balam_pos_loans_premigracion_v1';
-  function migrateLocalLoans() {
-    const D = window.DATA || {};
-    const todos = Array.isArray(D.loans) ? D.loans : [];
-    // No sincronizado = el servidor nunca confirmó una versión para él.
-    const pendientes = todos.filter(l => l && l.id && l._loanVersion == null);
-    const enCola = new Set(loadQ()
-      .filter(op => op.type === 'loanOperation' && op.loan)
-      .map(op => op.loan.id));
-    const informe = {
-      detectados: pendientes.length, encolados: 0, yaEnCola: 0,
-      confirmados: 0, sinConfirmar: 0, fallidos: [], respaldo: false,
-    };
-    if (!pendientes.length) return Promise.resolve(informe);
-    if (!enabled) { informe.fallidos.push({ folio: '—', motivo: 'sin_conexion' }); return Promise.resolve(informe); }
-    try {
-      if (!localStorage.getItem(LOAN_BACKUP_KEY)) {
-        localStorage.setItem(LOAN_BACKUP_KEY, JSON.stringify({
-          fecha: new Date().toISOString(), motivo: 'H-62 migración a Supabase', loans: todos,
-        }));
-      }
-      informe.respaldo = true;
-    } catch (e) { informe.fallidos.push({ folio: '—', motivo: 'sin_respaldo_local' }); }
-    pendientes.forEach(loan => {
-      if (enCola.has(loan.id)) { informe.yaEnCola++; return; }
-      informe.encolados++;
-      pushLoanOperation('deliver', loan, 0);
-    });
-    return flushQueue().then(() => {
-      pendientes.forEach(loan => {
-        const vivo = (D.loans || []).find(l => l.id === loan.id);
-        if (vivo && vivo._loanVersion != null) informe.confirmados++;
-        else informe.sinConfirmar++;
-      });
-      loadQ().forEach(op => {
-        if (op.type === 'loanOperation' && op.diagnostic && /^blocked_/.test(op.status || '')) {
-          informe.fallidos.push({ folio: (op.loan || {}).folio || '—', motivo: op.diagnostic.code });
-        }
-      });
-      return informe;
-    });
-  }
   function pushSale(sale, effects) {
-    if (!enabled) return;
     effects = effects || {};
-    const operationId = sale._operationId || newOpId();
+    const operationId = sale._operationId || newRequestId();
     const header = { folio: sale.folio, operation_id: operationId, fecha: (sale.fecha || '').replace(' ', 'T'), cliente_id: effects.clientId || sale.clienteId || null, cliente: sale.cliente, vendedores: sale.vendedores || [], metodo: sale.metodo, estado: sale.estado, items: sale.items || 0, total: Number(sale.total) || 0 };
     // No rellena snapshots ausentes en ventas históricas: sólo las ventas creadas con el
     // contrato H-03 escriben estos campos.
@@ -2175,126 +495,35 @@
       if (l.discountSnapshot) row.discount_snapshot = l.discountSnapshot;
       return row;
     });
-    const moves = ((window.DATA && window.DATA.movements) || [])
+    const preparedMoves = effects.movements || (sale._stockRequired === true && sale._stockReserved !== true
+      ? (sale.lineas || []).map(line => ({ tipo: 'Venta', ref: sale.folio, fecha: sale.fecha,
+        producto: line.nombre, productId: line.productId, sku: line.sku, talla: line.talla, cant: -Number(line.qty) })) : []);
+    const moves = preparedMoves
       .filter(m => m.tipo === 'Venta' && m.ref === sale.folio)
       .map(m => ({ fecha: String(m.fecha || '').replace(' ', 'T'), tipo: 'Venta', producto: m.producto, product_id: m.productId || m.product_id || null, sku: m.sku, talla: m.talla || null, cant: Number(m.cant) || 0, ref: sale.folio }));
     const stockLines = items
       .filter(row => row.product_id && Number(row.qty) > 0)
       .map(row => ({ product_id: row.product_id, talla: row.talla, qty: Number(row.qty) }));
-    const payments = (effects.payments || ((window.DATA && window.DATA.paymentsForSale) ? window.DATA.paymentsForSale(sale.folio) : []))
+    const payments = (effects.payments || [])
       .map(MAP.payments.toRow);
-    return run({
+    return execute({
       type: 'sale', folio: sale.folio, header, items, moves, payments,
-      operationId,
+      quoteContext: effects.quoteContext,
+      operationId, requestId: effects.commitId || operationId,
+      ...(effects.mode ? { mode: effects.mode } : {}),
+      expectedProducts: (effects.productVersions || []).map(row => ({ id: row.id, version: row.baseVersion })),
+      ...(effects.expectedSale ? { expectedSale: {
+        estado: effects.expectedSale.estado, anticipo: effects.expectedSale.anticipo ?? null,
+        saldo: effects.expectedSale.saldo ?? null, pago_efectivo: effects.expectedSale.pagoEfectivo ?? null,
+        pago_otro: effects.expectedSale.pagoOtro ?? null, operation_id: effects.expectedSale.operationId ?? null,
+      } } : {}),
       reserveStock: sale._stockRequired === true && sale._stockReserved !== true,
       stockLines,
       clientEffect: effects.clientEffect || null,
       sellerEffects: effects.sellerEffects || [],
     });
   }
-  function liquidationQueueResult(commitId, folio) {
-    const pendingOp = loadQ().find(op => op.id === commitId && opBelongsToActiveSession(op));
-    if (!pendingOp) {
-      const applied = layawayResults.get(commitId) || {};
-      return {
-        ok: true, pending: false, commitId, folio,
-        paymentId: applied.paymentId || null,
-        reservationOperationId: applied.reservationOperationId || null,
-      };
-    }
-    const diagnostic = pendingOp.diagnostic || null;
-    const blocked = /^blocked_/.test(pendingOp.status || '') || pendingOp.status === 'auth_required';
-    return {
-      ok: false,
-      pending: !blocked,
-      queued: true,
-      commitId,
-      folio,
-      error: diagnostic,
-    };
-  }
-  async function settleLayaway(draft, effects) {
-    draft = draft || {};
-    effects = effects || {};
-    if (!enabled) {
-      return { ok: false, pending: false, error: { code: 'store_disabled', message: 'La sincronización no está inicializada' } };
-    }
-    if (!hasLocalWriter(true)) {
-      return {
-        ok: false, pending: false,
-        error: { code: 'local_writer_required', message: 'La liquidación requiere la pestaña activa de escritura' },
-      };
-    }
-    const sale = draft.sale || draft;
-    const folio = String(draft.folio || sale.folio || '').trim();
-    const operationId = draft.operationId || draft.operation_id
-      || sale._operationId || sale.operationId || sale.operation_id;
-    const payment = draft.payment || effects.payment;
-    if (!folio || !operationId || !payment || typeof payment !== 'object') {
-      return {
-        ok: false, pending: false,
-        error: {
-          code: 'invalid_layaway_liquidation',
-          message: 'La liquidación requiere folio, operación original y pago final',
-        },
-      };
-    }
-    const ownerId = activeOwnerId();
-    const existing = loadQ().find(op => opBelongsToActiveSession(op)
-      && op.type === 'sale' && op.mode === 'layaway_liquidation'
-      && op.folio === folio);
-    if (existing) {
-      await backupChain;
-      await flushQueue();
-      await waitForFlushIdle();
-      return liquidationQueueResult(existing.id, folio);
-    }
-    const clone = value => JSON.parse(JSON.stringify(value));
-    const productIds = [...new Set((sale.lineas || []).map(line => line.productId).filter(Boolean))];
-    const durableLock = window.DATA && typeof window.DATA.layawayProductLockSnapshot === 'function'
-      ? window.DATA.layawayProductLockSnapshot(String(operationId)) : null;
-    if (window.DATA && typeof window.DATA.layawayProductLockSnapshot === 'function'
-        && (!durableLock || JSON.stringify((durableLock.productIds || []).slice().sort())
-          !== JSON.stringify(productIds.slice().sort()))) {
-      return {
-        ok: false, pending: false,
-        error: { code: 'layaway_local_state_conflict', message: 'No existe un lock durable para esta liquidación' },
-      };
-    }
-    const productSnapshots = durableLock ? durableLock.productSnapshots
-      : productIds.map(id => (window.DATA && window.DATA.products || []).find(product => product.id === id)).filter(Boolean);
-    const op = {
-      id: newOpId(),
-      ownerId,
-      type: 'sale',
-      mode: 'layaway_liquidation',
-      table: 'sales',
-      folio,
-      operationId: String(operationId),
-      productIds: clone(productIds),
-      productSnapshots: clone(productSnapshots),
-      payment: clone(MAP.payments.toRow(payment)),
-      sellerEffects: clone(effects.sellerEffects || effects.seller_effects || []),
-      itemIdentities: (sale.lineas || []).map(line => ({
-        sale_item_id: line._saleItemId == null ? null : Number(line._saleItemId),
-        product_id: line.productId || null,
-        sku: line.sku || null,
-        talla: line.talla || null,
-      })),
-      commissionSnapshot: {
-        amount: Number(sale.comision) || 0,
-        base: sale.comisionBase || 'neto',
-        rows: Array.isArray(sale.comisiones) ? sale.comisiones : [],
-      },
-    };
-    enqueue(op);
-    await backupChain;
-    await flushQueue();
-    await waitForFlushIdle();
-    return liquidationQueueResult(op.id, folio);
-  }
   function pushReturn(ret, effects) {
-    if (!enabled) return;
     effects = effects || {};
     const header = { id: ret.id, folio: ret.folio, fecha: ret.fecha || null, cliente: ret.cliente, vendedores: ret.vendedores || [], metodo: moneyWireMethod(ret.metodo || null, ret.components), total: Number(ret.total) || 0, notas: ret.notas || null, comisiones: Array.isArray(ret.comisiones) ? ret.comisiones : [], prior_sale_state: ret.priorSaleState || null };
     const items = (ret.lineas || []).map(l => ({ return_id: ret.id, line_id: l.lineId || null,
@@ -2307,8 +536,8 @@
       precio: Number(l.precio) || 0, ornamento: l.ornamento || null,
       orn_colors: Array.isArray(l.ornColors) ? l.ornColors.slice() : null }));
     const moves = (ret.lineas || []).map(l => ({ return_id: ret.id, fecha: String(ret.fecha || '').replace(' ', 'T'), tipo: 'Devolución', producto: l.nombre, product_id: l.productId || null, sku: l.sku, talla: l.talla, cant: Number(l.qty) || 0, ref: ret.folio }));
-    return run({
-      type: 'return', id: ret.id, folio: ret.folio, header, items, moves,
+    return execute({
+      type: 'return', operationId: ret._operationId || ret.operationId, id: ret.id, folio: ret.folio, header, items, moves,
       stockLines: effects.stockLines || [],
       clientEffect: effects.clientEffect || null,
       sellerEffects: effects.sellerEffects || [],
@@ -2319,7 +548,6 @@
   // resuelve valor reconocido y precio vigente, asi que aqui no viaja dinero
   // salvo el cobro de la diferencia, que el propio RPC valida contra su calculo.
   function pushExchange(exch, effects) {
-    if (!enabled) return;
     effects = effects || {};
     const header = {
       id: exch.id, folio: exch.folio, origen_folio: exch.origenFolio,
@@ -2352,8 +580,10 @@
       producto: l.nombre, product_id: l.productId || null, sku: l.sku, talla: l.talla,
       cant: (l.lado === 'devuelto' ? 1 : -1) * (Number(l.qty) || 0), ref: exch.folio,
     }));
-    return run({
-      type: 'exchange', id: exch.id, folio: exch.folio,
+    return execute({
+      type: 'exchange', operationId: exch._operationId || exch.operationId, id: exch.id, folio: exch.folio,
+      expectedProducts: (effects.productVersions || []).map(row => ({ id: row.id, version: row.baseVersion })),
+      quoteContext: effects.quoteContext,
       // `id` identifica esta entrada de cola; `key` identifica la intenciÃ³n
       // comercial y sobrevive timeout, replay, reconexiÃ³n y una cola nueva.
       key: exch._operationId || exch.operationId || exch.id,
@@ -2361,21 +591,6 @@
       seller_effects: effects.sellerEffects || [],
     });
   }
-  let pushTimer = null, configRemoteVersion = 0;
-  function pushConfig(state) {
-    assertBusinessReady();
-    if (!enabled) return;
-      const lookup = [];
-      Object.keys(state.catalogs).forEach(kind => state.catalogs[kind].forEach((it, i) =>
-        lookup.push({ kind, code: it.code, label: it.label, active: it.active !== false, meta: it.meta || {}, sort_order: i, updated_at: new Date().toISOString() })));
-      const settings = Object.keys(state.settings).map(key => ({ key, value: state.settings[key], updated_at: new Date().toISOString() }));
-      // Metadatos de catálogo (label / inForm / inSku / orden del SKU) viajan como una fila
-      // reservada de settings (value jsonb), así persisten en la nube sin tocar el esquema.
-      if (state.catalogMeta) settings.push({ key: '_catalogMeta', value: state.catalogMeta, updated_at: new Date().toISOString() });
-      return run({ type: 'config', lookup, settings, expectedVersion: configRemoteVersion }, 600);
-  }
-
-  // ── Lectura / pull ──────────────────────────────────────────────────────────
   function toConfigState(lookup, settings) {
     const catalogs = {};
     (lookup || []).sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)).forEach(r => {
@@ -2391,2090 +606,402 @@
     });
     return { v: 1, catalogs, catalogMeta, settings: s };
   }
-  async function pull() {
-    const seq = sessionSeq;
-    if (domainBlocked('config')) return { ok: true, complete: false, applied: false, skipped: 'pending' };
-    const c = await ensureClient(); if (!c) return { ok: false, error: 'sin cliente' };
-    const [lk, st, cv] = await Promise.all([
-      fetchAllRows(c, 'lookup', 'id'),
-      fetchAllRows(c, 'settings', 'key'),
-      c.from('config_sync_state').select('*').eq('singleton', true),
-    ]);
-    if (lk.error || st.error) return { ok: false, complete: false, applied: false, error: (lk.error || st.error).message };
-    if (seq !== sessionSeq || (sessionManaged && !sessionIdentity) || !hasLocalWriter(false)) return { ok: false, complete: false, applied: false, skipped: 'session_changed' };
-    if (domainBlocked('config')) return { ok: true, complete: false, applied: false, skipped: 'pending' };
-    const mk = (st.data || []).find(r => r.key === RESET_MARK_KEY);
-    lastResetMark = mk ? String(mk.value) : null;
-    if (!cv.error && cv.data && cv.data[0]) configRemoteVersion = Number(cv.data[0].version) || 0;
-    if (cv.error) return { ok: false, complete: false, applied: false, error: cv.error };
-    const applied = window.CONFIG.load(toConfigState(lk.data, st.data)) !== false;
-    return { ok: applied, complete: true, applied, coverage: 'full' };
-  }
-  // Registra la marca vigente como YA aplicada en esta terminal (sin limpiar nada). La usa el
-  // botón manual de Configuración: si no, el siguiente arranque volvería a avisar la limpieza.
-  function markResetApplied() {
-    try { if (lastResetMark) localStorage.setItem(RESET_SEEN, lastResetMark); } catch (e) { /* */ }
-  }
-  // Marca histórica remota: limpia sólo la proyección antes de reconstruirla
-  // desde Supabase. No restaura stock ni publica colecciones desde este equipo.
-  // pendingAtBoot = cuántas ops había en la cola ANTES del flushQueue de este arranque.
-  async function applyResetMark(pendingAtBoot) {
-    if (!lastResetMark) return false;                  // instalación sin marca → nada que hacer
-    let seen = null;
-    try { seen = localStorage.getItem(RESET_SEEN); } catch (e) { return false; } // sin storage: no tocar
-    if (seen === lastResetMark) return false;          // ya aplicada aquí
-    // Había trabajo local sin subir al arrancar = se capturó sin internet. NO se limpia:
-    //   1) resetTestData descarta la cola y esas ventas —que pueden ser REALES— se perderían;
-    //   2) el flushQueue de este arranque ya las subió a la nube recién limpiada, así que
-    //      borrarlas aquí las dejaría vivas allá y volverían en el siguiente pull.
-    // Se pospone al próximo arranque: la cola ya estará vacía y la limpieza se aplicará
-    // entera. Quien quiera forzarla usa el botón de Configuración.
-    // (H-68: la marca es el camino HISTÓRICO. Una limpieza hecha con la autoridad
-    // remota trae además su época y se aplica en `applyRemotePurge`, ANTES del
-    // flush, así que ya no depende de que la cola estuviera vacía.)
-    if (pendingAtBoot || loadQ().length) return false;
-    if (!(window.DATA && window.DATA.resetTestData)) return false;
-    if (!localPurgeApplied({ authority: 'remote' })) return false;
-    try { localStorage.setItem(RESET_SEEN, lastResetMark); } catch (e) { /* */ }
-    try { await flushQueue(); } catch (e) { /* el trabajo pendiente conserva su cola */ }
-    if (window.UI && window.UI.toast) window.UI.toast('Datos de prueba borrados en esta terminal — inventario intacto', 'var(--accent)');
-    return true;
-  }
-
-  // ── H-68 · Borrado de datos de prueba con autoridad transaccional ───────────
-  // El borrado NO es una secuencia de borrados desde el navegador: `pos.purge_test_data()`
-  // hace todo —revertir existencias, vaciar lo operativo, poner acumulados en cero y
-  // sellar la época— dentro de UNA transacción. Si algo falla, la nube no cambia y esta
-  // terminal tampoco toca nada.
-  //
-  // La época sellada es lo que hace que la limpieza VIAJE a los equipos apagados: al
-  // encender, cada terminal la lee ANTES de drenar su cola (`applyRemotePurge`), invalida
-  // sus operaciones pendientes de datos ya borrados y se limpia sola. Sin ese orden, el
-  // flush del arranque volvería a subir las ventas de prueba a la nube recién limpiada.
-  const PURGE_SEEN = 'balam_purge_seen';       // época ya aplicada en esta terminal
-  const PURGE_TICKET = 'balam_purge_ticket';   // id reservado: un reintento no purga dos veces
-  // Documentos: se descartan. Cada uno vive de un registro que la limpieza borró.
-  const PURGE_DOCUMENT_OPS = {
-    sale: 1, return: 1, exchange: 1, loanOperation: 1,
-    commissionSettle: 1, commissionClose: 1, commissionAdjustment: 1,
-  };
-  // Cargas masivas que suben el arreglo COMPLETO: no se descartan a ciegas ni se dejan
-  // pasar. Se reconstruyen desde el estado ya limpio, así una alta de catálogo capturada
-  // sin red sobrevive y las filas borradas no vuelven.
-  const PURGE_REBUILT_UPSERTS = { products: 1, sellers: 1, clients: 1 };
-  const PURGE_DROPPED_UPSERTS = { liquidations: 1, payments: 1, exchanges: 1 };
-  function localPurgeApplied(opts) {
-    let local;
-    try { local = window.DATA.resetTestData(opts); } catch (e) { return null; }
-    // `false` = hay una liquidación de apartado pendiente: no se limpia NADA.
-    if (local === false) return null;
-    if (local === true) return { ok: true };           // contrato histórico
-    return local && local.ok === true ? local : null;
-  }
-  // Invalida SÓLO lo vinculado con lo borrado. Una operación creada DESPUÉS de la
-  // limpieza es ajena y queda intacta; una sin fecha se trata como anterior porque no
-  // puede demostrar que no lo es.
-  function pruneQueueForPurge(cutoffIso) {
-    const cutoff = Date.parse(cutoffIso || '');
-    const limit = Number.isFinite(cutoff) ? cutoff : Date.now();
-    const q = loadQ();
-    const kept = [];
-    const rebuild = {};
-    let dropped = 0;
-    q.forEach(op => {
-      const at = Date.parse(op.createdAt || '');
-      if (Number.isFinite(at) && at > limit) { kept.push(op); return; }
-      if (PURGE_DOCUMENT_OPS[op.type]) { dropped++; return; }
-      if (op.type === 'upsert' || op.type === 'staffUpdate' || op.type === 'profileUpdate') {
-        const kind = op.kind || op.table;
-        if (PURGE_REBUILT_UPSERTS[kind]) { rebuild[kind] = true; dropped++; return; }
-        if (PURGE_DROPPED_UPSERTS[kind]) { dropped++; return; }
-      }
-      kept.push(op); // config, bajas de catálogo y todo lo ajeno: intacto
+  function mappedSnapshot(raw) {
+    if (Number(raw?.contractVersion) !== 1) throw error('ONLINE_CONTRACT_REQUIRED', 'No se pudo confirmar la información de BALAM.');
+    if (!raw.commercialQuote || typeof raw.commercialQuote !== 'object' || !Number.isFinite(Date.parse(raw.serverTime))) {
+      throw error('ONLINE_SNAPSHOT_INCOMPLETE', 'No se pudo confirmar la información de BALAM.');
+    }
+    if (typeof raw.commissionContext?.periodStart !== 'string' || !Array.isArray(raw.commissionContext.sellerBases)
+        || raw.commissionContext.sellerBases.some(row => !row.sellerId || !Number.isFinite(Number(row.baseRaw)))) {
+      throw error('ONLINE_SNAPSHOT_INCOMPLETE', 'No se pudo confirmar la información de BALAM.');
+    }
+    const next = { commissionContext: copy(raw.commissionContext) };
+    for (const [kind, mapper] of Object.entries(MAP)) {
+      if (!Array.isArray(raw[kind])) throw error('ONLINE_SNAPSHOT_INCOMPLETE', 'No se pudo confirmar la información de BALAM.');
+      next[kind] = raw[kind].map(mapper.fromRow);
+    }
+    for (const key of ['lookup','settings','saleItems','returnItems','exchangeItems']) {
+      if (!Array.isArray(raw[key])) throw error('ONLINE_SNAPSHOT_INCOMPLETE', 'No se pudo confirmar la información de BALAM.');
+    }
+    next.sales.forEach(sale => {
+      sale.lineas = raw.saleItems.filter(line => line.folio === sale.folio).map(saleItemFromRow);
+      sale.vendedor = next.sellers.find(row => row.id === sale.vendedores[0])?.nombre || '';
     });
-    if (dropped) saveQ(kept);
-    return { dropped, kept: kept.length, rebuild: Object.keys(rebuild) };
+    next.returns.forEach(doc => { doc.lineas = raw.returnItems.filter(row => row.return_id === doc.id)
+      .map(row => ({ ...saleItemFromRow(row), sourceSaleLineId: row.source_sale_line_id || undefined, motivo: row.motivo || '' })); });
+    next.exchanges.forEach(doc => { doc.lineas = raw.exchangeItems.filter(row => row.exchange_id === doc.id)
+      .map(row => ({ ...saleItemFromRow(row), sourceSaleLineId: row.source_sale_line_id || undefined,
+        lado: row.lado, condicion: row.condicion || undefined, motivo: row.motivo || undefined,
+        valorUnitario: Number(row.valor_unitario) || 0, valorTotal: Number(row.valor_total) || 0 })); });
+    return next;
   }
-  // Se reencolan DESPUÉS de bajar el dominio: sólo entonces las filas locales llevan la
-  // versión que la limpieza dejó en la nube y el control optimista las acepta.
-  function rebuildPurgedUpserts(kinds) {
-    (kinds || []).forEach(kind => {
-      const rows = window.DATA && window.DATA[kind === 'products' ? 'products' : kind];
-      if (Array.isArray(rows) && rows.length) pushRows(kind, rows);
-    });
-  }
-  async function readPurgeState() {
-    const c = await ensureClient();
-    if (!c || !(await hasSession())) return null;
-    try {
-      const r = await c.rpc('test_data_purge_state');
-      if (r.error || !r.data) return null;
-      const state = Array.isArray(r.data) ? r.data[0] : r.data;
-      return state && state.epoch ? state : null;
-    } catch (e) { return null; }
-  }
-  function purgeSeen() {
-    try { return localStorage.getItem(PURGE_SEEN); } catch (e) { return null; }
-  }
-  function markPurgeSeen(state) {
-    try {
-      localStorage.setItem(PURGE_SEEN, String(state.epoch));
-      // La marca histórica queda saldada a la vez: `applyResetMark` no debe volver a
-      // limpiar por el camino viejo lo que esta época ya limpió.
-      if (lastResetMark) localStorage.setItem(RESET_SEEN, lastResetMark);
-    } catch (e) { /* */ }
-  }
-  // Limpieza propagada por época. Corre ANTES del flush del arranque: es lo único que
-  // impide que un equipo apagado resucite en la nube lo que otro acaba de borrar.
-  // H-113 usa un canal distinto de H-68. Sólo el protocolo 2 aplica el alcance;
-  // una terminal anterior ve la nueva época y queda en must_rebootstrap, jamás
-  // llama resetTestData ni interpreta una limpieza selectiva como purga total.
-  async function readSelectiveCleanupEvent() {
-    const c = await ensureClient();
-    if (!c || !(await hasSession())) return null;
-    try {
-      const r = await c.from('selective_cleanup_events').select('*')
-        .order('data_epoch', { ascending: false }).limit(1);
-      if (r.error || !(r.data || []).length) return null;
-      return r.data[0];
-    } catch (e) { return null; }
-  }
-  function selectiveCleanupSeen() {
-    try { return localStorage.getItem(SELECTIVE_CLEANUP_SEEN); } catch (e) { return null; }
-  }
-  function identitySet(identities, key) {
-    return new Set(Array.isArray(identities && identities[key])
-      ? identities[key].map(value => String(value)) : []);
-  }
-  function pruneQueueForSelectiveCleanup(identities) {
-    const saleFolios = identitySet(identities, 'sale_folios');
-    const saleOps = identitySet(identities, 'sale_operation_ids');
-    const returnIds = identitySet(identities, 'return_ids');
-    const exchangeIds = identitySet(identities, 'exchange_ids');
-    const loanIds = identitySet(identities, 'loan_ids');
-    const liquidationIds = identitySet(identities, 'liquidation_ids');
-    const adjustmentIds = identitySet(identities, 'commission_adjustment_ids');
-    const reclassIds = identitySet(identities, 'reclassification_ids');
-    const customerIds = identitySet(identities, 'customer_ids');
-    const q = loadQ(), kept = [];
-    let dropped = 0;
-    q.forEach(op => {
-      const operationId = String(op.operationId || op.operation_id || op.key || '');
-      const folio = String(op.folio || (op.header && op.header.folio) || '');
-      const id = String(op.id || (op.header && op.header.id) || '');
-      const loanId = String((op.loan && op.loan.id) || id);
-      const exact = (op.type === 'sale' && (saleFolios.has(folio) || saleOps.has(operationId)))
-        || (op.type === 'return' && returnIds.has(id))
-        || (op.type === 'exchange' && exchangeIds.has(id))
-        || (op.type === 'loanOperation' && loanIds.has(loanId))
-        || ((op.type === 'commissionSettle' || op.type === 'commissionClose')
-          && (liquidationIds.has(id) || liquidationIds.has(operationId)))
-        || (op.type === 'commissionAdjustment' && adjustmentIds.has(operationId))
-        || (op.type === 'referenceReclassification' && reclassIds.has(operationId));
-      if (exact) { dropped++; return; }
-      if (op.type === 'upsert' && op.kind === 'clients' && Array.isArray(op.rows)) {
-        const rows = op.rows.filter(row => !customerIds.has(String(row.id)));
-        if (rows.length !== op.rows.length) {
-          dropped += op.rows.length - rows.length;
-          if (!rows.length) return;
-          kept.push(Object.assign({}, op, { rows, rowIds: rows.map(row => row.id) }));
-          return;
-        }
-      }
-      kept.push(op);
-    });
-    if (dropped) saveQ(kept);
-    return { dropped, kept: kept.length };
-  }
-  async function applyRemoteSelectiveCleanup() {
-    if (!hasLocalWriter(false) || recoveryPhase !== 'ready' || syncRecovering
-        || syncReconcilePromise || window.CORE.activityStatus().active) return null;
-    const event = await readSelectiveCleanupEvent();
-    if (!event || Number(event.protocol_version) > SELECTIVE_CLEANUP_PROTOCOL
-        || Number(event.minimum_client_protocol) > SELECTIVE_CLEANUP_PROTOCOL) return null;
-    if (selectiveCleanupSeen() === String(event.cleanup_id)) return null;
-    const remoteEpoch = syncManifest ? Number(syncManifest.data_epoch) : Number(event.data_epoch);
-    if (Number(event.data_epoch) !== remoteEpoch) return null;
-    // H151: a confirmed cleanup can rebuild an idle, empty terminal without
-    // asking it to repeat the deletion. Pending intents never enter this path.
-    if (!loadQ().length && syncManifest && manifestCompatibility(syncManifest) === 'ok') {
-      await rebootstrapFromCloud({ requireEmptyQueue: true, expectedEpoch: remoteEpoch });
-      localStorage.setItem(SELECTIVE_CLEANUP_SEEN, String(event.cleanup_id));
-      if (localStorage.getItem(SELECTIVE_CLEANUP_SEEN) !== String(event.cleanup_id)) throw new Error('CHECKPOINT_NOT_DURABLE');
-      return { event, local: { ok: true }, prune: { dropped: 0, kept: 0 } };
-    }
-    if (syncCompatibility !== 'ok') return null;
-    if (!(window.DATA && window.DATA.applySelectiveCleanup)) return null;
-    const prune = pruneQueueForSelectiveCleanup(event.identities || {});
-    const local = window.DATA.applySelectiveCleanup({
-      cleanup_id: event.cleanup_id, identities: event.identities || {}, stock: [],
-    });
-    if (!local || local.ok !== true) return null;
-    try {
-      localStorage.setItem(SELECTIVE_CLEANUP_SEEN, String(event.cleanup_id));
-      localStorage.setItem('balam_sync_data_epoch', String(event.data_epoch));
-    } catch (e) { /* la nube sigue siendo autoridad */ }
-    // Releer el manifiesto es obligatorio: aplicar el evento no concede por si
-    // solo compatibilidad de escritura. La epoca y el protocolo vigentes siguen
-    // siendo la autoridad antes de que flushQueue() pueda ejecutarse.
-    const protocolClient = await ensureClient();
-    if (!(await recoverDirectedDevice())) return { ok: false, recoveryRequired: true };
-    if (protocolClient) await loadSyncProtocol(protocolClient);
-    return { event, local, prune };
-  }
-  async function applyRemotePurge() {
-    const state = await readPurgeState();
-    if (!state) return null;
-    if (purgeSeen() === String(state.epoch)) return null;   // ya aplicada aquí
-    if (!(window.DATA && window.DATA.resetTestData)) return null;
-    const prune = pruneQueueForPurge(state.purged_at);
-    const local = localPurgeApplied({ authority: 'remote' });
-    if (!local) return null;   // liquidación pendiente: se reintenta al próximo arranque
-    // La limpieza local invalida estos snapshots aunque la versión remota ya
-    // estuviera confirmada. Retirar sus cursores también conserva el pendiente
-    // tras una recarga si alguna descarga posterior falla.
-    for (const domain of ['products','clients','sellers','sales','payments',
-      'returns','exchanges','loans','liquidations','movements']) {
-      delete syncCursors[domain];
-      const version = Number(syncRemoteVersions.find(row => row.domain === domain)?.version) || 0;
-      if (version) syncInvalid.set(domain, Math.max(version, Number(syncInvalid.get(domain)) || 0));
-    }
-    saveSyncCursors();
-    markPurgeSeen(state);
-    if (window.UI && window.UI.toast) {
-      window.UI.toast('Datos de prueba borrados en esta terminal — inventario y configuración intactos', 'var(--accent)');
-    }
-    return { state, local, prune };
-  }
-  // Autoridad del botón «Borrar datos de prueba». Con sesión, la transacción remota
-  // manda: si falla, no se borra nada aquí. Sin sesión (uso local/demostración) la
-  // terminal es su propia autoridad y sólo puede limpiarse a sí misma.
-  async function purgeTestData() {
-    if (!(window.DATA && window.DATA.resetTestData)) return { ok: false, error: 'DATA no disponible' };
-    const footprint = window.DATA.testDataFootprint();
-    if (footprint.bloqueado === 'LAYAWAY_LOCK') {
-      return { ok: false, code: 'LAYAWAY_LOCK', error: 'Hay una liquidación de apartado pendiente; reconcíliala antes de borrar los datos de prueba' };
-    }
-    if (footprint.bloqueado === 'IDENTITY_AMBIGUOUS') {
-      return { ok: false, code: 'IDENTITY_AMBIGUOUS', error: 'Hay renglones cuyo SKU resuelve a más de un producto: no se puede saber a qué producto devolver esas piezas', detalle: footprint.identidadAmbigua };
-    }
-    const c = await ensureClient();
-    const online = !!c && (await hasSession());
-    if (!online) {
-      const local = localPurgeApplied();
-      if (!local) return { ok: false, code: 'LAYAWAY_LOCK', error: 'No se pudo limpiar esta terminal' };
-      return { ok: true, mode: 'local', antes: footprint, local };
-    }
-    // Un identificador reservado y persistido: si la respuesta se pierde por red, el
-    // reintento entra con el MISMO id y la transacción remota lo reconoce como repetición
-    // en vez de volver a borrar y restaurar.
-    let ticket = null;
-    try { ticket = localStorage.getItem(PURGE_TICKET); } catch (e) { ticket = null; }
-    if (!ticket) {
-      ticket = newOpId();
-      try { localStorage.setItem(PURGE_TICKET, ticket); } catch (e) { /* */ }
-    }
-    let remote;
-    try { remote = await c.rpc('purge_test_data', { p_purge_id: ticket }); }
-    catch (e) { return { ok: false, code: 'NETWORK', error: String((e && e.message) || e) }; }
-    if (remote.error) {
-      // La respuesta COMPLETA viaja al informe: código, detalle y pista. Un
-      // «DELETE requires a WHERE clause» sin más contexto costó una sesión
-      // entera de diagnóstico (H-68); el siguiente fallo se lee en el acto.
-      const e = remote.error;
-      return {
-        ok: false, code: 'REMOTE',
-        error: e.message || String(e),
-        detalle: {
-          code: e.code || null, details: e.details || null,
-          hint: e.hint || null, status: e.status || null,
-        },
-        diagnostic: classifyFailure(e),
-      };
-    }
-    const report = remote.data || {};
-    if (report.ok !== true) {
-      return { ok: false, code: String(report.error || 'REMOTE'), error: report.message || report.error || 'La limpieza remota no se completó', detalle: report };
-    }
-    // A partir de aquí la nube YA quedó limpia y restaurada en una sola transacción.
-    const prune = pruneQueueForPurge(report.purged_at);
-    const local = localPurgeApplied({ authority: 'remote' });
-    markPurgeSeen({ epoch: report.epoch });
-    try { localStorage.removeItem(PURGE_TICKET); } catch (e) { /* */ }
-    const domains = ['products', 'sellers', 'clients', 'promotions', 'liquidations', 'commissionAdjustments', 'payments', 'movements', 'returns', 'exchanges', 'loans'];
-    await Promise.all(domains.map(k => pullDomain(k).catch(() => { /* tabla ausente */ })));
-    try { await pullDomain('sales'); } catch (e) { /* */ }
-    rebuildPurgedUpserts(prune.rebuild);
-    try { await flushQueue(); } catch (e) { /* se reintenta al reconectar */ }
-    try { window.dispatchEvent(new CustomEvent('configchange', { detail: { domain: true } })); } catch (e) { /* */ }
-    return { ok: true, mode: 'remote', antes: footprint, remoto: report, local: local || null, cola: prune };
-  }
-  // Ejecuta una consulta en páginas explícitas. PostgREST limita cada respuesta;
-  // una página llena nunca se interpreta como el conjunto completo.
-  async function fetchPages(makeQuery, pageSize = 1000) {
-    const out = [];
-    for (let from = 0; ; from += pageSize) {
-      const r = await makeQuery().range(from, from + pageSize - 1);
-      if (r.error) return { data: null, error: r.error };
-      const rows = r.data || [];
-      out.push.apply(out, rows);
-      if (rows.length < pageSize) return { data: out, error: null };
-    }
-  }
-  function fetchAllRows(c, table, orderCol) {
-    return fetchPages(() => c.from(table).select('*')
-      .order(orderCol, { ascending: true }));
-  }
-  // Renglones (sale_items/return_items) SOLO de las claves bajadas, en lotes de 100.
-  // Cada lote también se pagina: cien ventas pueden contener más de mil renglones.
-  async function fetchItemsIn(c, table, col, keys) {
-    const out = [];
-    for (let i = 0; i < keys.length; i += 100) {
-      const batch = keys.slice(i, i + 100);
-      const r = await fetchPages(() => c.from(table).select('*')
-        .in(col, batch).order('id', { ascending: true }));
-      if (r.error) throw r.error;
-      if (r.data) out.push.apply(out, r.data);
-    }
-    return out;
-  }
-  // Movimientos es un historial completo e inmutable. Se pagina por su identidad
-  // creciente para que el límite de filas de PostgREST nunca produzca un reemplazo
-  // local parcial disfrazado de pull completo.
-  async function fetchAllMovements(c) {
-    return fetchAllRows(c, 'movements', 'id');
-  }
-  // Filas de venta locales desde filas SQL + sus renglones (compartido: pull y fetch por folio).
-  function saleRowsFrom(raws, itemRows) {
-    const byFolio = {};
-    (itemRows || []).forEach(x => (byFolio[x.folio] || (byFolio[x.folio] = [])).push(saleItemFromRow(x)));
-    return raws.map(raw => {
-      const s = MAP.sales.fromRow(raw); s.lineas = byFolio[raw.folio] || [];
-      const vid = (raw.vendedores || [])[0];
-      s.vendedor = (window.DATA.sellers.find(x => x.id === vid) || {}).nombre || s.vendedor || '';
-      return s;
-    });
-  }
-  function reservationStatusRows(data) {
-    if (Array.isArray(data)) return data;
-    if (!data || typeof data !== 'object') return [];
-    if (Array.isArray(data.statuses)) return data.statuses;
-    if (Array.isArray(data.reservations)) return data.reservations;
-    if (Array.isArray(data.data)) return data.data;
-    return data.operation_id || data.reservation_operation_id ? [data] : [];
-  }
-  async function attachSaleReservationStatus(c, raws) {
-    const operations = Array.from(new Set((raws || [])
-      .map(row => row.operation_id).filter(Boolean)));
-    if (!operations.length) return raws || [];
-    const statuses = [];
-    for (let i = 0; i < operations.length; i += 200) {
-      const status = await c.rpc('sale_stock_reservation_status', {
-        p_operation_ids: operations.slice(i, i + 200),
-      });
-      // Compatibilidad durante el despliegue: si la función aún no existe,
-      // no se infiere nada por estado; simplemente se conserva `false`.
-      if (status.error) return raws || [];
-      statuses.push.apply(statuses, reservationStatusRows(status.data));
-    }
-    const byOperation = {}, byFolio = {};
-    statuses.forEach(status => {
-      const operationId = status.operation_id || status.reservation_operation_id;
-      if (operationId) byOperation[operationId] = status;
-      if (status.folio) byFolio[status.folio] = status;
-    });
-    return (raws || []).map(raw => {
-      const status = byOperation[raw.operation_id] || byFolio[raw.folio];
-      if (!status) return raw;
-      return Object.assign({}, raw, {
-        stock_reserved: status.stock_reserved === true,
-        stock_idempotent: status.stock_idempotent === true,
-        reservation_operation_id: status.stock_reserved === true
-          ? (status.reservation_operation_id || null) : null,
-      });
-    });
-  }
-  // Ventas tiene dos semánticas explícitas. El pull normal es una VENTANA
-  // autoritativa (recientes + todos los apartados): ausencia sólo retira filas
-  // demostrablemente cubiertas. El rebootstrap usa SNAPSHOT COMPLETO y no
-  // conserva documentos confirmados que sólo existan en caché.
-  async function pullSales(c, opts) {
-    const seq = sessionSeq;
-    const days = Number(window.CONFIG && window.CONFIG.get && window.CONFIG.get('sync.salesWindowDays')) || 365;
-    const boundary = new Date(Date.now() - days * 864e5);
-    boundary.setUTCHours(0, 0, 0, 0);
-    const cutoff = boundary.toISOString();
-    let rec, apart = { data: [], error: null };
-    if (opts && opts.fullSnapshot) {
-      rec = await fetchAllRows(c, 'sales', 'folio');
-    } else {
-      [rec, apart] = await Promise.all([
-        fetchPages(() => c.from('sales').select('*').gte('fecha', cutoff)
-          .order('fecha', { ascending: true }).order('folio', { ascending: true })),
-        fetchPages(() => c.from('sales').select('*').eq('estado', 'Apartado')
-          .order('folio', { ascending: true })),
-      ]);
-    }
-    if (rec.error || apart.error) return { ok: false, complete: false, applied: false, error: rec.error || apart.error };
-    const uniq = {};
-    (rec.data || []).concat(apart.data || []).forEach(x => { uniq[x.folio] = x; });
-    let raws = Object.values(uniq);
-    raws = await attachSaleReservationStatus(c, raws);
-    let items;
-    try { items = await fetchItemsIn(c, 'sale_items', 'folio', raws.map(x => x.folio)); }
-    catch (error) { return { ok: false, complete: false, applied: false, error }; }
-    if (seq !== sessionSeq || (sessionManaged && !sessionIdentity) || !hasLocalWriter(false) || domainBlocked('sales')) return { ok: true, complete: false, applied: false, skipped: 'pending' };
-    const remoteRows = saleRowsFrom(raws, items);
-    const remoteFolios = new Set(remoteRows.map(row => row.folio));
-    const preserved = opts && opts.fullSnapshot ? [] : ((window.DATA && window.DATA.sales) || [])
-      .filter(row => {
-        if (remoteFolios.has(row.folio)) return false;
-        if (row.estado === 'Apartado') return false;
-        const timestamp = Date.parse(String(row.fecha || '').replace(' ', 'T'));
-        return !Number.isFinite(timestamp) || timestamp < boundary.getTime();
-      });
-    const next = remoteRows.concat(preserved);
-    const persisted = window.DATA.applyRemote('sales', next, { authoritative: true });
-    return {
-      ok: persisted !== false, complete: true, applied: persisted !== false,
-      coverage: opts && opts.fullSnapshot ? 'full' : 'window', cutoff: opts && opts.fullSnapshot ? null : cutoff,
-    };
-  }
-  // Trae UNA venta (con renglones) por folio desde la nube y la fusiona en lo local.
-  // Devuelve la venta o null. Tolerante a minúsculas (reintenta en MAYÚSCULAS) y,
-  // como última consulta, busca el término entre los folios impresos conservados
-  // como alias: un ticket reidentificado nunca deja de encontrarse.
-  async function fetchSaleByFolio(folio) {
-    const c = await ensureClient(); if (!c) return null;
-    const f = String(folio || '').trim(); if (!f) return null;
-    let r = await c.from('sales').select('*').eq('folio', f);
-    if ((r.error || !(r.data || []).length) && f !== f.toUpperCase()) r = await c.from('sales').select('*').eq('folio', f.toUpperCase());
-    if (r.error || !(r.data || []).length) {
-      const alias = await c.from('sales').select('*').contains('folio_aliases', [f.toUpperCase()]);
-      if (!alias.error && (alias.data || []).length) r = alias;
-    }
-    if (r.error || !(r.data || []).length) return null;
-    const remoteSales = await attachSaleReservationStatus(c, r.data);
-    const items = await fetchItemsIn(c, 'sale_items', 'folio', remoteSales.map(x => x.folio));
-    const rows = saleRowsFrom(remoteSales, items);
-    if (!hasPendingFor('sales')) window.DATA.mergeRemote('sales', rows, 'folio');
-    return window.DATA.sales.find(s => s.folio === rows[0].folio) || rows[0];
-  }
-  async function physicalCardAvailable(folio) {
-    const c = await ensureClient();
-    if (!c || !navigator.onLine || !(await hasSession())) {
-      throw new Error('Conéctate para validar la tarjeta física');
-    }
-    const r = await c.rpc('physical_card_available', { p_folio: String(folio || '').trim() });
-    if (r.error) throw new Error(r.error.message || 'No se pudo validar la tarjeta física');
-    return r.data === true;
-  }
-  async function claimPhysicalCard(folio, claimToken) {
-    const c = await ensureClient();
-    if (!c || !navigator.onLine || !(await hasSession())) {
-      throw new Error('ConÃ©ctate para validar la tarjeta fÃ­sica');
-    }
-    const r = await c.rpc('claim_physical_card', {
-      p_folio: String(folio || '').trim(),
-      p_claim_token: String(claimToken || '').trim(),
-    });
-    if (r.error) throw new Error(r.error.message || 'No se pudo reservar la tarjeta fÃ­sica');
-    return r.data === true;
-  }
-
-  async function pullDomain(kind, opts) {
-    const seq = sessionSeq;
-    const blocked = () => seq !== sessionSeq || (sessionManaged && !sessionIdentity) || !hasLocalWriter(false) || domainBlocked(kind);
-    const m = MAP[kind]; const c = await ensureClient(); if (!c || !m) return { ok: false };
-    // Cambios locales sin subir para esta tabla → NO aplicar la nube (la pisaría con datos
-    // viejos). Se re-chequea tras el fetch: el usuario pudo capturar durante el vuelo.
-    if (blocked()) return { ok: true, complete: false, applied: false, skipped: 'pending' };
-    if (kind === 'sales') return pullSales(c, opts || {});
-    const r = kind === 'movements'
-      ? await fetchAllMovements(c)
-      : await fetchAllRows(c, m.table, m.conflict);
-    if (r.error) return { ok: false, error: r.error }; // tabla no existe aún → modo local
-    if (blocked()) return { ok: true, complete: false, applied: false, skipped: 'pending' };
-    if (r.data && r.data.length) {
-      // H-97: `operation_id` vive en movements, pero la relación de reversa
-      // pertenece al ledger de reclasificaciones. Rehidrata ambos como una sola
-      // evidencia local para que reintento y reversa sigan siendo idempotentes
-      // después de pull/reconexión. Un servidor anterior sin el ledger mantiene
-      // la lectura histórica de movimientos, sin inventar relaciones.
-      if (kind === 'movements') {
-        const operationIds = Array.from(new Set(r.data.map(row => row.operation_id).filter(Boolean)));
-        const reversalByOperation = {}; let ledgerComplete = true;
-        for (let i = 0; i < operationIds.length; i += 200) {
-          const ledger = await c.from('reference_reclassifications')
-            .select('operation_id,reversal_of')
-            .in('operation_id', operationIds.slice(i, i + 200));
-          if (ledger.error) { ledgerComplete = false; break; }
-          (ledger.data || []).forEach(row => { reversalByOperation[row.operation_id] = row.reversal_of || null; });
-        }
-        if (!ledgerComplete) return { ok: false, complete: false, applied: false, error: 'MOVEMENT_LEDGER_INCOMPLETE' };
-        if (blocked()) return { ok: true, complete: false, applied: false, skipped: 'pending' };
-        const rows = r.data.map(row => Object.assign({}, row, {
-          reversal_of: Object.prototype.hasOwnProperty.call(reversalByOperation, row.operation_id)
-            ? reversalByOperation[row.operation_id] : undefined,
-        }));
-        const applied = window.DATA.applyRemote(kind, rows.map(m.fromRow), { authoritative: true });
-        return { ok: applied !== false, complete: true, applied: applied !== false, coverage: 'full' };
-      }
-      if (kind === 'returns') {
-        const itRows = await fetchItemsIn(c, 'return_items', 'return_id', r.data.map(x => x.id));
-        if (blocked()) return { ok: true, complete: false, applied: false, skipped: 'pending' };
-        const byRid = {};
-        // H-72: `pushReturn` escribe `product_id`; el pull debe leerlo de vuelta o
-        // la devolución local queda peor identificada que la remota, igual que
-        // `saleItemFromRow` conserva la identidad de los renglones de venta.
-        itRows.forEach(x => (byRid[x.return_id] || (byRid[x.return_id] = [])).push({ lineId: x.line_id || undefined, sourceSaleLineId: x.source_sale_line_id || undefined, productId: x.product_id || undefined, barcodeCode: x.barcode_code || undefined, physicalAttrs: x.physical_attrs || undefined, listPrice: x.list_price == null ? undefined : Number(x.list_price), effectivePrice: x.effective_price == null ? undefined : Number(x.effective_price), discountSnapshot: x.discount_snapshot || undefined, sku: x.sku, nombre: x.nombre, talla: x.talla, qty: x.qty, motivo: x.motivo || '', precio: Number(x.precio) || 0, ornamento: x.ornamento || undefined, ornColors: Array.isArray(x.orn_colors) ? x.orn_colors : undefined }));
-        const rows = r.data.map(raw => { const s = m.fromRow(raw); s.lineas = byRid[raw.id] || []; return s; });
-        const applied = window.DATA.applyRemote('returns', rows, { authoritative: true });
-        return { ok: applied !== false, complete: true, applied: applied !== false, coverage: 'full' };
-      }
-      if (kind === 'exchanges') {
-        const itRows = await fetchItemsIn(c, 'exchange_items', 'exchange_id', r.data.map(x => x.id));
-        if (blocked()) return { ok: true, complete: false, applied: false, skipped: 'pending' };
-        const byId = {};
-        itRows.forEach(x => (byId[x.exchange_id] || (byId[x.exchange_id] = [])).push({
-          lineId: x.line_id || undefined, sourceSaleLineId: x.source_sale_line_id || undefined,
-          lado: x.lado, productId: x.product_id || undefined, barcodeCode: x.barcode_code || undefined,
-          physicalAttrs: x.physical_attrs || undefined, sku: x.sku, nombre: x.nombre, talla: x.talla,
-          qty: Number(x.qty) || 0, precio: Number(x.precio) || 0,
-          listPrice: x.list_price == null ? undefined : Number(x.list_price),
-          effectivePrice: x.effective_price == null ? undefined : Number(x.effective_price),
-          discountSnapshot: x.discount_snapshot || undefined,
-          motivo: x.motivo || '', condicion: x.condicion || undefined,
-          ornamento: x.ornamento || undefined,
-          ornColors: Array.isArray(x.orn_colors) ? x.orn_colors : undefined,
-        }));
-        const rows = r.data.map(raw => { const value = m.fromRow(raw); value.lineas = byId[raw.id] || []; return value; });
-        const applied = window.DATA.applyRemote('exchanges', rows, { authoritative: true });
-        return { ok: applied !== false, complete: true, applied: applied !== false, coverage: 'full' };
-      }
-      if (m.fromRow) {
-        const applied = window.DATA.applyRemote(kind, r.data.map(m.fromRow), { authoritative: true });
-        return { ok: applied !== false, complete: true, applied: applied !== false, coverage: 'full' };
-      }
-    } else if (m.fromRow && window.DATA && window.DATA.applyRemote) {
-      const applied = window.DATA.applyRemote(kind, [], { authoritative: true });
-      return { ok: applied !== false, complete: true, applied: applied !== false, coverage: 'full' };
-    }
-    // Nube vacía: NO auto-subir lo local. (Antes un "bootstrap" re-subía window.DATA[kind] cuando la
-    // nube estaba vacía, lo que hacía IMPOSIBLE vaciarla: cada recarga la repoblaba desde cualquier
-    // equipo con datos locales. El sync local→nube ya ocurre por acciones explícitas (alta/edición,
-    // ventas) vía la cola; un vaciado intencional de la nube ahora SÍ se respeta.)
-    return { ok: false, complete: false, applied: false, error: 'DOMAIN_NOT_APPLICABLE' };
-  }
-  function commitReferenceReclassification(payload) {
-    if (!enabled || !payload) return;
-    return run({ type: 'referenceReclassification', operationId: payload.operationId,
-      sourceProductId: payload.sourceProductId, targetProductId: payload.targetProductId,
-      quantity: Number(payload.quantity) || 0, actor: payload.actor || '',
-      reason: payload.reason || '', reversalOf: payload.reversalOf || null });
-  }
-  function syncActivityDomain(op) {
-    if (!op) return null;
-    if (op.type === 'config') return 'config';
-    if (op.type === 'sale') return 'sales';
-    if (op.type === 'return') return 'returns';
-    if (op.type === 'exchange') return 'exchanges';
-    if (op.type === 'loanOperation') return 'loans';
-    if (op.type === 'referenceReclassification') return 'products';
-    if (/^commission/.test(op.type || '')) return 'liquidations';
-    return op.kind || kindForTable(op.table) || null;
-  }
-  function syncActivitySummary(op) {
-    const labels = {
-      config: 'Actualización de configuración', sale: 'Venta', return: 'Devolución',
-      exchange: 'Cambio de mercancía', loanOperation: 'Movimiento de préstamo',
-      commissionSettle: 'Liquidación de comisión', commissionClose: 'Cierre de comisiones',
-      commissionAdjustment: 'Ajuste de comisión', upsert: 'Actualización de registros',
-      profileUpdate: 'Actualización de perfil', softDelete: 'Baja de registro',
-    };
-    labels.referenceReclassification = 'Reclasificación de referencia';
-    const base = labels[op.type] || 'Operación local';
-    const ref = op.folio || op.reference || null;
-    return ref ? `${base} · ${String(ref).slice(0, 80)}` : base;
-  }
-  function syncActivityStatus(op, forced) {
-    if (forced) return forced;
-    if (op.status === 'quarantined') return 'quarantined';
-    if (/^blocked_/.test(op.status || '') || op.status === 'auth_required') return 'blocked';
-    if (op.status === 'retry_wait' || op.status === 'waiting_inventory') return 'retrying';
-    return 'pending';
-  }
-  async function syncActivityUser(c) {
-    try {
-      const result = await c.auth.getSession();
-      return result && result.data && result.data.session && result.data.session.user;
-    } catch (e) { return null; }
-  }
-  let syncActivityChain = Promise.resolve();
-  function recordSyncActivity(c, op, forcedStatus) {
-    if (!op || !op.id) return Promise.resolve(false);
-    // Congela sólo la forma operativa. La cadena conserva el orden pending →
-    // blocked/synced aun si la red responde antes que el primer reporte.
-    const snapshot = JSON.parse(JSON.stringify(op));
-    const task = syncActivityChain.catch(() => {}).then(async () => {
-      const client = c || await ensureClient(); if (!client) return false;
-      const user = await syncActivityUser(client); if (!user || !user.id) return false;
-      const status = syncActivityStatus(snapshot, forcedStatus);
-      const diagnostic = snapshot.diagnostic ? {
-        category: snapshot.diagnostic.category || null, code: snapshot.diagnostic.code || null,
-        message: snapshot.diagnostic.message || null, policy: snapshot.diagnostic.policy || null,
-      } : null;
-      const row = {
-        device_id: window.CORE.getDeviceId(), operation_id: String(snapshot.id),
-        user_id: user.id, user_email: user.email || activeOwnerId(),
-        operation_type: snapshot.type || 'unknown', domain: syncActivityDomain(snapshot),
-        reference: snapshot.folio ? String(snapshot.folio).slice(0, 80) : null,
-        summary: syncActivitySummary(snapshot), status,
-        requires_action: status === 'blocked' || status === 'quarantined',
-        diagnostic, updated_at: new Date().toISOString(),
-        completed_at: status === 'synced' ? new Date().toISOString() : null,
-      };
-      const result = await client.from('sync_activity').upsert(row, { onConflict: 'device_id,operation_id' });
-      return !result.error;
-    });
-    syncActivityChain = task.catch(() => false);
-    return task;
-  }
-  async function reportQueueActivity(c) {
-    const operations = loadQ().filter(opBelongsToActiveSession);
-    for (const op of operations) await recordSyncActivity(c, op);
-    return operations.length;
-  }
-
-  // Una purga invalida proyecciones: debe ocurrir antes de reconstruirlas.
-  // Aplicarla al final borraría documentos recién descargados con cursor vigente.
-  const DOMAIN_ORDER = ['permissions','purges','config','sellers','products','clients',
-    'promotions','sales','payments','returns','exchanges','loans','liquidations',
-    'commissionAdjustments','movements','devices'];
-  const DOMAIN_TABLE = {
-    config: 'settings', products: 'products', clients: 'clients', sellers: 'sellers',
-    promotions: 'promotions', sales: 'sales', payments: 'sale_payments',
-    returns: 'returns', exchanges: 'exchanges', loans: 'loan_documents',
-    liquidations: 'liquidations', commissionAdjustments: 'commission_adjustments',
-    movements: 'movements',
-  };
-  function domainMode(domain) {
-    const modes = syncManifest && syncManifest.domain_modes;
-    return modes && modes[domain] ? modes[domain] : 'off';
-  }
-  function domainBlocked(domain) {
-    if (window.CORE && window.CORE.domainBusy && window.CORE.domainBusy(domain)) return true;
-    if (loadQ().some(op => {
-      return operationAffectsDomain(op, domain);
-    })) return true;
-    const table = DOMAIN_TABLE[domain];
-    return table ? hasPendingFor(table) : false;
-  }
-  async function readRemoteVersions(c) {
-    const r = await c.from('sync_domain_versions').select('*').order('domain', { ascending: true });
-    if (r.error) { syncLastVersionCheck = 0; return { ok: false, error: r.error, rows: [] }; }
-    syncRemoteVersions = r.data || [];
-    syncLastVersionCheck = Date.now();
-    return { ok: true, rows: r.data || [] };
-  }
-  async function applyDomainPull(domain, opts) {
-    if (domain === 'devices') {
-      try { window.dispatchEvent(new CustomEvent('syncfleetchange')); } catch (e) { /* */ }
-      return { ok: true, complete: true, applied: true };
-    }
-    if (domain === 'config') {
-      return pull();
-    }
-    if (domain === 'purges') {
-      await applyRemotePurge();
-      return { ok: true, complete: true, applied: true };
-    }
-    if (domain === 'permissions') {
-      if (window.AUTH && typeof window.AUTH.refreshPermissions === 'function') {
-        const applied = await window.AUTH.refreshPermissions() !== false;
-        return { ok: applied, complete: applied, applied };
-      }
-      return { ok: true, complete: false, applied: false, skipped: 'unavailable' };
-    }
-    // `commission_adjustments` nació antes del manifiesto H-77. Cada ajuste
-    // también actualiza sellers, cuyo trigger sí invalida este dominio; el
-    // cursor sólo avanza si ambos snapshots quedaron aplicados.
-    if (domain === 'sellers') {
-      const sellersResult = await pullDomain('sellers');
-      if (!sellersResult || sellersResult.ok !== true || sellersResult.complete !== true || sellersResult.applied !== true) return sellersResult;
-      const adjustmentsResult = await pullDomain('commissionAdjustments');
-      if (!adjustmentsResult || adjustmentsResult.ok !== true || adjustmentsResult.complete !== true || adjustmentsResult.applied !== true) return adjustmentsResult;
-      return { ok: true, complete: true, applied: true, coverage: 'full' };
-    }
-    // Sin cursor no existe cobertura local que conserve ventas fuera de ventana.
-    // Una purga elimina ese cursor durable antes de reconstruir la proyección.
-    return pullDomain(domain, domain === 'sales'
-      ? { fullSnapshot: true } : opts);
-  }
-  function invalidateDomain(domain, version) {
-    if (!SYNC_DOMAINS[domain]) return false;
-    const next = Number(version) || 0;
-    if (next <= (Number(syncCursors[domain]) || 0)) return false;
-    if (syncInvalid.has(domain) && next <= Number(syncInvalid.get(domain))) return false;
-    // La flota es observabilidad, no estado comercial. Su versión sólo pide
-    // refrescar el centro de equipos; no abre una reconciliación global ni
-    // convierte el indicador del POS en «Reconciliando».
-    if (domain === 'devices' && domainMode(domain) === 'active') {
-      syncCursors[domain] = next;
-      syncInvalid.delete(domain);
-      saveSyncCursors();
-      try { window.dispatchEvent(new CustomEvent('syncfleetchange')); } catch (e) { /* */ }
-      try { window.dispatchEvent(new CustomEvent('syncstatuschange', { detail: syncStatus() })); } catch (e) { /* */ }
-      return true;
-    }
-    syncInvalid.set(domain, Math.max(next, Number(syncInvalid.get(domain)) || 0));
-    if (syncReconcilePromise) syncReconcileAgain = true;
-    try { window.dispatchEvent(new CustomEvent('syncstatuschange', { detail: syncStatus() })); } catch (e) { /* */ }
-    if (domainMode(domain) === 'active') Promise.resolve(reconcileDomains()).catch(() => { /* estado visible */ });
-    return true;
-  }
-  function manifestCompatibility(manifest) {
-    const min = Number(manifest.sync_protocol_min) || 1;
-    const max = Number(manifest.sync_protocol_current) || min;
-    if (Number(manifest.schema_version) < SYNC_SCHEMA_VERSION || SYNC_PROTOCOL_VERSION > max) return 'server_outdated';
-    return SYNC_PROTOCOL_VERSION < min ? 'client_outdated' : 'ok';
-  }
-  async function loadSyncProtocol(c) {
-    const manifest = await c.from('system_manifest').select('*').eq('singleton', true);
-    if (manifest.error || !(manifest.data || []).length) {
-      syncManifest = null; syncCompatibility = 'legacy'; return { ok: false, legacy: true };
-    }
-    syncManifest = manifest.data[0];
-    syncCompatibility = manifestCompatibility(syncManifest);
-    const epochKey = 'balam_sync_data_epoch';
-    let localEpoch = null;
-    try { localEpoch = Number(localStorage.getItem(epochKey)) || null; } catch (e) { /* */ }
-    const remoteEpoch = Number(syncManifest.data_epoch) || 1;
-    if (!localEpoch) {
-      if (remoteEpoch > 1 && loadQ().some(opBelongsToActiveSession)) syncCompatibility = 'must_rebootstrap';
-      else { try { localStorage.setItem(epochKey, String(remoteEpoch)); } catch (e) { /* */ } }
-    } else if (localEpoch !== remoteEpoch) syncCompatibility = 'must_rebootstrap';
-    const versions = await readRemoteVersions(c);
-    if (versions.ok) versions.rows.forEach(row => invalidateDomain(row.domain, row.version));
-    return { ok: syncCompatibility === 'ok', compatibility: syncCompatibility };
-  }
-  function heartbeatDevice(c) {
-    if (syncHeartbeatPromise) return syncHeartbeatPromise;
-    const seq = sessionSeq;
-    const current = () => seq === sessionSeq && enabled && hasLocalWriter(false);
-    syncHeartbeatPromise = (async () => {
-      if (!c || !syncManifest || !current()) return;
-      syncReviewPending = null;
-      const user = await syncActivityUser(c);
-      if (!current()) return;
-      // Only unmanaged legacy transport lacks a remote review owner. A managed
-      // session lookup failure leaves its existing cases unconfirmed.
-      if (!user || !user.id) { if (!sessionManaged) syncReviewPending = 0; return; }
-      try {
-        await reportStoredQuarantineArchives(c);
-        if (!current()) return;
-        await consumeSyncCommands(c);
-        if (!current()) return;
-        await consumeSyncQuarantineDecisions(c);
-        if (!current()) return;
-        const review = await c.from('sync_quarantine_cases').select('operation_id,status')
-          .eq('device_id', window.CORE.getDeviceId()).in('status', ['pending_review','approved','delivered','failed']);
-        if (!current()) return;
-        if (review.error || !Array.isArray(review.data)) throw new Error('QUARANTINE_REVIEW_UNCONFIRMED');
-        syncReviewPending = review.data.length;
-        const q = queueStatus(), clean = syncStatus().synchronized;
-        const report = await c.rpc('report_sync_device', {
-          p_device_id: window.CORE.getDeviceId(), p_client_build: SYNC_CLIENT_BUILD,
-          p_protocol_version: SYNC_PROTOCOL_VERSION, p_schema_version: SYNC_SCHEMA_VERSION,
-          p_data_epoch: Number(syncManifest.data_epoch) || 1, p_cursors: syncCursors,
-          p_queue_pending: q.devicePending, p_queue_blocked: q.deviceBlocked,
-          p_status: syncCompatibility === 'ok' ? (q.devicePending ? 'pending' : (clean ? 'online' : 'behind'))
-            : (syncCompatibility === 'must_rebootstrap' ? 'must_rebootstrap' : 'quarantined'),
-          p_last_synced_at: clean ? new Date().toISOString() : null,
-        });
-        if (report.error) throw report.error;
-      } catch (error) {
-        if (current()) syncReviewPending = null;
-        throw error;
-      }
-    })().finally(() => {
-      syncHeartbeatPromise = null;
-      if (current()) {
-        if (syncStatus().synchronized) syncLastSuccess = new Date().toISOString();
-        try { window.dispatchEvent(new CustomEvent('syncstatuschange', { detail: syncStatus() })); } catch (e) { /* startup */ }
-      }
-    });
-    return syncHeartbeatPromise;
-  }
-  async function consumeSyncCommands(c) {
-    if (!c) return 0;
-    const result = await c.rpc('consume_sync_commands', { p_device_id: window.CORE.getDeviceId() });
-    if (result.error) return 0;
-    let consumed = 0;
-    for (const command of (result.data || [])) {
-      if (command.action !== 'retry') continue;
-      const accepted = retryOperation(command.operation_id);
-      if (accepted) await waitForFlushIdle();
-      const synchronized = accepted && !loadQ().some(op => op.id === command.operation_id);
-      await c.rpc('complete_sync_command', {
-        p_device_id: window.CORE.getDeviceId(), p_operation_id: command.operation_id,
-        p_ok: synchronized,
-      });
-      if (synchronized) consumed++;
-    }
-    return consumed;
-  }
-  async function reconcileDomains(opts = {}) {
-    const seq = sessionSeq;
-    const currentSession = () => seq === sessionSeq && (!sessionManaged || !!sessionIdentity) && hasLocalWriter(false);
-    if (!currentSession()) return { ok: false, skipped: 'session_changed' };
-    if (syncRecovering) return { ok: false, deferred: ['recovery'] };
-    if (syncReconcilePromise) {
-      if (opts.force) { await syncReconcilePromise; return reconcileDomains(opts); }
-      return syncReconcilePromise;
-    }
-    if (opts.force) {
-      Object.keys(SYNC_DOMAINS).filter(domain => domain !== 'devices' && domainMode(domain) === 'active')
-        .forEach(domain => syncFullDomains.add(domain));
-      syncLastFullCheck = 0;
-      if (syncReconcilePromise) syncReconcileAgain = true;
-    }
-    syncReconcilePromise = (async () => {
-      const c = await ensureClient();
-      if (!c || !syncManifest || syncCompatibility !== 'ok') return { ok: false, compatibility: syncCompatibility };
-      const latestManifest = await c.from('system_manifest').select('*').eq('singleton', true);
-      if (!currentSession()) return { ok: false, skipped: 'session_changed' };
-      if (latestManifest.error || !latestManifest.data?.[0]) {
-        syncLastVersionCheck = 0;
-        return { ok: false, error: 'MANIFEST_UNAVAILABLE' };
-      }
-      if (!latestManifest.error && (latestManifest.data || []).length) {
-        const latest = latestManifest.data[0];
-        if (syncManifest && Number(latest.data_epoch) !== Number(syncManifest.data_epoch)) {
-          syncManifest = latest; syncCompatibility = 'must_rebootstrap';
-          await heartbeatDevice(c);
-          return { ok: false, compatibility: syncCompatibility };
-        }
-        syncManifest = latest;
-        syncCompatibility = manifestCompatibility(latest);
-        if (syncCompatibility !== 'ok') return { ok: false, compatibility: syncCompatibility };
-      }
-      const versions = await readRemoteVersions(c);
-      if (!versions.ok) return versions;
-      if (!currentSession()) return { ok: false, skipped: 'session_changed' };
-      await archiveRejectedReferences(c);
-      if (!currentSession()) return { ok: false, skipped: 'session_changed' };
-      for (const row of versions.rows) {
-        if (!SYNC_DOMAINS[row.domain]) continue;
-        if (syncFullDomains.has(row.domain) || !Object.prototype.hasOwnProperty.call(syncCursors, row.domain)
-            || Number(syncCursors[row.domain]) > Number(row.version)) {
-          syncInvalid.set(row.domain, Number(row.version));
-          syncFullDomains.add(row.domain);
-        } else invalidateDomain(row.domain, row.version);
-      }
-      const applied = [], deferred = [];
-      const fullPass = syncFullDomains.size > 0;
-      for (const domain of DOMAIN_ORDER) {
-        const target = Number(syncInvalid.get(domain)) || 0;
-        if (!syncInvalid.has(domain)) continue;
-        const mode = domainMode(domain);
-        if (mode !== 'active' || domainBlocked(domain)) { deferred.push(domain); continue; }
-        let result;
-        try { result = await applyDomainPull(domain, { fullSnapshot: syncFullDomains.has(domain) }); }
-        catch (error) { result = { ok: false, error: error.message || 'DOWNLOAD_FAILED' }; }
-        if (!currentSession()) return { ok: false, skipped: 'session_changed' };
-        if (result && result.ok === true && result.complete === true && result.applied === true) {
-          const next = Object.assign({}, syncCursors, { [domain]: target });
-          if (!saveSyncCursors(next)) { syncPullErrors.set(domain, syncCheckpointError); deferred.push(domain); continue; }
-          syncCursors = next;
-          syncFullDomains.delete(domain);
-          syncPullErrors.delete(domain);
-          if ((Number(syncInvalid.get(domain)) || 0) <= target) syncInvalid.delete(domain);
-          else deferred.push(domain);
-          applied.push(domain);
-        } else {
-          syncPullErrors.set(domain, String(result?.error?.message || result?.error || result?.skipped || 'PROJECTION_NOT_DURABLE'));
-          deferred.push(domain);
-        }
-      }
-      const after = await readRemoteVersions(c);
-      if (!after.ok) return after;
-      if (!currentSession()) return { ok: false, skipped: 'session_changed' };
-      after.rows.forEach(row => invalidateDomain(row.domain, row.version));
-      const manifestAfter = await c.from('system_manifest').select('*').eq('singleton', true);
-      if (!currentSession()) return { ok: false, skipped: 'session_changed' };
-      if (manifestAfter.error || !manifestAfter.data?.[0]) {
-        syncLastVersionCheck = 0; return { ok: false, error: 'MANIFEST_UNAVAILABLE' };
-      }
-      if (Number(manifestAfter.data[0].data_epoch) !== Number(syncManifest.data_epoch)) {
-        syncCompatibility = 'must_rebootstrap'; return { ok: false, compatibility: syncCompatibility };
-      }
-      syncCompatibility = manifestCompatibility(manifestAfter.data[0]);
-      if (fullPass && !syncFullDomains.size && !deferred.length) syncLastFullCheck = Date.now();
-      try { window.dispatchEvent(new CustomEvent('syncstatuschange', { detail: syncStatus() })); } catch (e) { /* */ }
-      return { ok: true, applied, deferred };
-    })().finally(async () => {
-      syncReconcilePromise = null;
-      const again = syncReconcileAgain; syncReconcileAgain = false;
-      if (!currentSession()) return;
-      // A heartbeat may itself be consuming a recovery that reconciles domains.
-      // Never wait on that same outer heartbeat; its final event confirms review.
-      if (sb && syncManifest && !syncHeartbeatPromise) await heartbeatDevice(sb).catch(() => {});
-      if (!currentSession()) return;
-      if (syncStatus().synchronized) syncLastSuccess = new Date().toISOString();
-      // El evento emitido dentro de la reconciliación todavía veía la promesa
-      // activa. Publica el estado final para que el panel salga de
-      // «Reconciliando» cuando ya no queda trabajo.
-      try { window.dispatchEvent(new CustomEvent('syncstatuschange', { detail: syncStatus() })); } catch (e) { /* */ }
-      if (syncCompatibility === 'must_rebootstrap' && !syncRecovering) {
-        Promise.resolve().then(() => applyRemoteSelectiveCleanup()).catch(() => { /* polling retries */ });
-      }
-      if (again && Array.from(syncInvalid.keys()).some(domain =>
-        domainMode(domain) === 'active' && !domainBlocked(domain))) {
-        Promise.resolve().then(() => reconcileDomains()).catch(() => { /* siguiente timbre reintenta */ });
-      }
-    });
-    return syncReconcilePromise;
-  }
-  function stopLiveSync() {
-    if (syncPollTimer) { clearInterval(syncPollTimer); syncPollTimer = null; }
-    if (syncHeartbeatTimer) { clearInterval(syncHeartbeatTimer); syncHeartbeatTimer = null; }
-    if (syncChannel && sb && typeof sb.removeChannel === 'function') sb.removeChannel(syncChannel);
-    syncChannel = null; syncRealtimeState = 'off';
-  }
-  function automaticSyncAllowed(seq = sessionSeq) {
-    return enabled && seq === sessionSeq && hasLocalWriter(false) && !syncRecovering
-      && !document.hidden && (typeof navigator === 'undefined' || navigator.onLine !== false);
-  }
-  function runAutomaticSync() {
-    if (!automaticSyncAllowed()) return Promise.resolve({ ok: false, deferred: true });
-    if (syncAutoPromise) return syncAutoPromise;
-    const seq = sessionSeq;
-    syncAutoPromise = (async () => {
-      // A bootstrap owns queue hydration/migrations. Its failure still leaves this
-      // coordinator installed; subsequent signals retry the missing remote checks.
-      if (syncInitPromise) await syncInitPromise;
-      if (!automaticSyncAllowed(seq)) return { ok: false, deferred: true };
-      if (!syncBootstrapComplete) {
-        await init({ pull: true });
-        if (!syncBootstrapComplete || !automaticSyncAllowed(seq)) return { ok: false, bootstrapRequired: true };
-      }
-      const c = await ensureClient();
-      if (!c || !automaticSyncAllowed(seq)) return { ok: false, deferred: true };
-      if (!(await recoverDirectedDevice()) || !automaticSyncAllowed(seq)) return { ok: false, recoveryRequired: true };
-      await loadSyncProtocol(c);
-      if (!automaticSyncAllowed(seq)) return { ok: false, deferred: true };
-      startLiveSync(c);
-      if (syncCompatibility === 'must_rebootstrap') {
-        if (window.CORE.activityStatus().active) return { ok: false, deferred: true };
-        await applyRemoteSelectiveCleanup();
-      }
-      if (!automaticSyncAllowed(seq) || syncCompatibility !== 'ok') return { ok: false, compatibility: syncCompatibility };
-      await flushQueue(); await waitForFlushIdle();
-      if (!automaticSyncAllowed(seq)) return { ok: false, deferred: true };
-      return reconcileDomains({ force: !syncLastFullCheck || Date.now() - syncLastFullCheck >= 300000 });
-    })().finally(() => { syncAutoPromise = null; });
-    return syncAutoPromise;
-  }
-  function startLiveSync(c) {
-    if (!enabled) return;
-    if (c && syncManifest && syncCompatibility === 'ok' && !syncChannel && typeof c.channel === 'function') {
-      syncChannel = c.channel('balam-sync-domain-versions')
-        .on('postgres_changes', { event: '*', schema: 'pos', table: 'sync_domain_versions' }, payload => {
-          if (!automaticSyncAllowed()) return;
-          const row = payload && (payload.new || payload.record);
-          if (row) invalidateDomain(row.domain, row.version);
-        })
-        .subscribe(status => {
-          if (!enabled) return;
-          syncRealtimeState = String(status || '').toLowerCase();
-          if (status === 'SUBSCRIBED') runAutomaticSync().catch(() => { /* */ });
-        });
-    }
-    if (!syncPollTimer) syncPollTimer = setInterval(() => {
-      return runAutomaticSync().catch(() => { /* el siguiente ciclo conserva y reintenta */ });
-    }, 60000);
-    if (!syncHeartbeatTimer) syncHeartbeatTimer = setInterval(() => {
-      if (!automaticSyncAllowed()) return;
-      return heartbeatDevice(sb).catch(() => { /* el siguiente latido reintenta */ });
-    }, 60000);
-    if (!onlineSubscribed) {
-      onlineSubscribed = true;
-      window.addEventListener('online', () => {
-        runAutomaticSync().then(result => {
-          if (result?.ok && automaticSyncAllowed()) {
-            ensureFolioBlock(); autoMigratePhotos().catch(() => {});
-          }
-        }).catch(() => { /* polling retries failed startup too */ });
-      });
-    }
-    if (!syncLifecycleSubscribed) {
-      syncLifecycleSubscribed = true;
-      const visibilityTarget = typeof document.addEventListener === 'function' ? document : window;
-      visibilityTarget.addEventListener('visibilitychange', () => {
-        if (!document.hidden) runAutomaticSync().catch(() => { /* */ });
-      });
-      window.addEventListener('syncactivitychange', () => {
-        if (!automaticSyncAllowed()) return;
-        if (syncReconcilePromise) syncReconcileAgain = true;
-        runAutomaticSync().catch(() => { /* */ });
-      });
-    }
-  }
-  function syncStatus() {
-    const q = queueStatus();
-    return {
-      recoveryPhase, recoveryError,
-      reviewPending: syncReviewPending,
-      compatibility: syncCompatibility,
-      protocolVersion: SYNC_PROTOCOL_VERSION,
-      schemaVersion: SYNC_SCHEMA_VERSION,
-      clientBuild: SYNC_CLIENT_BUILD,
-      lastSuccess: syncLastSuccess,
-      lastVersionCheck: syncLastVersionCheck ? new Date(syncLastVersionCheck).toISOString() : null,
-      connection: typeof navigator !== 'undefined' && navigator.onLine === false ? 'offline' : (syncLastVersionCheck ? 'online' : 'unknown'),
-      errors: Array.from(syncPullErrors, ([domain, error]) => ({ domain, error })),
-      checkpointError: syncCheckpointError,
-      dataEpoch: syncManifest ? Number(syncManifest.data_epoch) || 1 : null,
-      realtime: syncRealtimeState,
-      operations: q.operations, durability: q.durability,
-      invalidDomains: Array.from(syncInvalid.keys()),
-      cursors: Object.assign({}, syncCursors),
-      reconciling: !!syncReconcilePromise,
-      pending: q.devicePending, blocked: q.deviceBlocked,
-      synchronized: syncReviewPending === 0 && recoveryPhase === 'ready' && (typeof navigator === 'undefined' || navigator.onLine !== false)
-        && !!syncManifest && syncCompatibility === 'ok'
-        && syncLastVersionCheck > 0 && Date.now() - syncLastVersionCheck <= 120000
-        && syncRemoteVersions.length > 0
-        && Object.keys(syncManifest.domain_modes || {}).filter(domain => domainMode(domain) === 'active')
-          .every(domain => syncRemoteVersions.some(row => row.domain === domain))
-        && syncRemoteVersions.every(row => row.domain === 'devices' || domainMode(row.domain) !== 'active'
-          || (Object.prototype.hasOwnProperty.call(syncCursors, row.domain) && Number(syncCursors[row.domain]) === Number(row.version)))
-        && !syncCheckpointError && !syncPullErrors.size && !syncFullDomains.size
-        && !syncRecovering && !syncInvalid.size && !syncReconcilePromise
-        && q.devicePending === 0 && q.deviceBlocked === 0,
-      devicePending: q.devicePending, otherSessionPending: q.otherSessionPending,
-    };
-  }
-  function recoverySnapshot() {
-    const d = window.DATA || {};
-    const keys = ['products','clients','sellers','promotions','sales','payments','returns',
-      'exchanges','loans','liquidations','commissionAdjustments','movements'];
-    const data = {};
-    keys.forEach(key => { if (Array.isArray(d[key])) data[key] = d[key]; });
-    return {
-      format: 'balam-sync-recovery-v1', createdAt: new Date().toISOString(),
-      deviceId: window.CORE.getDeviceId(), status: syncStatus(), queue: loadQ(),
-      config: window.CONFIG && window.CONFIG.snapshot ? window.CONFIG.snapshot() : null,
-      data,
-    };
-  }
-  function exportSyncRecovery() {
-    const snapshot = recoverySnapshot();
-    const blob = new Blob([JSON.stringify(snapshot)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob); const a = document.createElement('a');
-    a.href = url; a.download = `balam-recuperacion-${Date.now()}.json`; a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    return snapshot;
-  }
-  async function sha256Hex(value) {
-    if (!window.crypto || !window.crypto.subtle || typeof TextEncoder === 'undefined') {
-      throw new Error('CRYPTO_UNAVAILABLE');
-    }
-    const bytes = new TextEncoder().encode(String(value));
-    const digest = await window.crypto.subtle.digest('SHA-256', bytes);
-    return Array.from(new Uint8Array(digest)).map(x => x.toString(16).padStart(2, '0')).join('');
-  }
-  function quarantinePayloadSummary(op) {
-    const sourceItems = Array.isArray(op.items) ? op.items
-      : (Array.isArray(op.stockLines) ? op.stockLines : []);
-    const items = sourceItems.slice(0, 100).map(item => ({
-      sku: item.sku || item.product_sku || null,
-      productId: item.product_id || item.productId || null,
-      description: item.nombre || item.product_name || item.descripcion || null,
-      size: item.talla || item.size || null,
-      quantity: Number(item.qty ?? item.cantidad) || 0,
-      amount: Number(item.total ?? item.importe ?? item.precio) || 0,
-    }));
-    const header = op.header && typeof op.header === 'object' ? op.header : {};
-    return {
-      operationIds: [...new Set([op.id, op.key, op.operationId, header.id].filter(Boolean).map(String))],
-      folio: op.folio || header.folio || null,
-      date: header.fecha || op.fecha || op.createdAt || null,
-      total: Number(header.total ?? op.total) || 0,
-      paymentMethod: header.metodo || op.metodo || null,
-      itemCount: sourceItems.length,
-      itemsTruncated: sourceItems.length > items.length,
-      items,
-      ...(op.referenceReview ? { referenceReview: op.referenceReview } : {}),
-      diagnostic: op.diagnostic ? {
-        category: op.diagnostic.category || null, code: op.diagnostic.code || null,
-        message: op.diagnostic.message || null, policy: op.diagnostic.policy || null,
-      } : null,
-    };
-  }
-  async function reportQuarantineCases(c, operations, localEpoch, remoteEpoch) {
-    const cases = [];
-    for (const op of operations) {
-      const payloadHash = await sha256Hex(JSON.stringify(op));
-      const payloadSummary = quarantinePayloadSummary(op);
-      const result = await c.rpc('report_sync_quarantine', {
-        p_device_id: window.CORE.getDeviceId(), p_operation_id: String(op.id),
-        p_remote_epoch: Number(remoteEpoch), p_local_epoch: Number(localEpoch) || null,
-        p_operation_type: op.type || 'unknown', p_domain: syncActivityDomain(op),
-        p_reference: op.folio || (op.header && op.header.folio) || null,
-        p_summary: syncActivitySummary(op), p_payload_hash: payloadHash,
-        p_payload_summary: payloadSummary,
-      });
-      if (result.error) throw new Error(result.error.message || 'QUARANTINE_REPORT_FAILED');
-      if (result.data !== true) throw new Error('QUARANTINE_REPORT_UNCONFIRMED');
-      cases.push({ operationId: String(op.id), remoteEpoch: Number(remoteEpoch), payloadHash });
-    }
-    return cases;
-  }
-  async function writeQuarantineArchive(archive) {
-    if (archive.storage !== 'indexedDB') {
-      try {
-        const encoded = JSON.stringify(archive.value);
-        localStorage.setItem(archive.key, encoded);
-        if (localStorage.getItem(archive.key) !== encoded) throw new Error('QUARANTINE_NOT_DURABLE');
-        return;
-      }
-      catch (e) { /* la cuota no debe impedir usar el respaldo existente */ }
-    }
-    try {
-      await queueBackup('put', archive.value, archive.key);
-      archive.storage = 'indexedDB';
-      try { localStorage.removeItem(archive.key); } catch (e) { /* lectura prioriza IndexedDB */ }
-    } catch (e) { throw new Error('QUARANTINE_STORAGE_UNAVAILABLE'); }
-  }
-  function isArchivableProductRejection(op) {
-    return op?.type === 'upsert' && op.kind === 'products' && op.status === 'blocked_conflict'
-      && op.diagnostic?.retryable === false
-      && (op.diagnostic.policy === 'review_reference'
-        || (op.diagnostic.policy === 'review_conflict' && op.diagnostic.code === 'product_version_conflict'));
-  }
-  async function archiveRejectedReferences(c) {
-    if (!hasLocalWriter(false) || window.CORE.activityStatus().active) return;
-    const seq = sessionSeq;
-    const rejected = loadQ().filter(op => opBelongsToActiveSession(op) && !op.quarantineReplay
-      && isArchivableProductRejection(op));
-    if (!rejected.length || !(await syncActivityUser(c))?.id) return;
-    for (const op of rejected) {
-      try {
-        if (seq !== sessionSeq || !enabled || !hasLocalWriter(false)) return;
-        const epoch = Number(syncManifest.data_epoch);
-        const key = `balam_sync_quarantine_reference_${epoch}_${op.id}`;
-        let archive = (await quarantineArchives()).find(value => value.key === key);
-        if (!archive) {
-          const fields = ['sync_version','precio','stock','stock_quantity','record_model','physical_signature','barcode_code','cat','manga','tela','color','cuello','modelo','orn','ornament_color_codes','size_category_id','size_code','size_scale','attrs'];
-          const original = JSON.parse(JSON.stringify(op));
-          const rows = original.submittedRows || original.rows;
-          const remoteRows = [];
-          // Keep the complete original, while bounding PostgREST comparison URLs.
-          for (let offset = 0; offset < rows.length; offset += 100) {
-            const remote = await c.from('products').select(['id', ...fields].join(','))
-              .in('id', rows.slice(offset, offset + 100).map(row => row.id));
-            if (remote.error) throw remote.error;
-            remoteRows.push(...(remote.data || []));
-          }
-          const canonical = value => JSON.stringify(value, (_key, item) => item && typeof item === 'object' && !Array.isArray(item)
-            ? Object.fromEntries(Object.keys(item).sort().map(key => [key,item[key]])) : item);
-          const differences = rows.map(row => {
-            const confirmed = remoteRows.find(item => item.id === row.id);
-            const compared = fields.filter(field => Object.prototype.hasOwnProperty.call(row, field)
-              && canonical(row[field]) !== canonical(confirmed?.[field]))
-              .map(field => ({ field, requested: row[field], confirmed: confirmed?.[field] ?? null }));
-            if (Object.prototype.hasOwnProperty.call(row, 'sync_base_version')
-                && canonical(row.sync_base_version) !== canonical(confirmed?.sync_version)) {
-              compared.unshift({ field: 'sync_base_version', requested: row.sync_base_version, confirmed: confirmed?.sync_version ?? null });
-            }
-            return { id: row.id, name: row.nombre || row.id, missingRemote: !confirmed, fields: compared };
-          });
-          original.referenceReview = { rowCount: rows.length, rows: [], truncated: false };
-          for (const difference of differences) {
-            if (new TextEncoder().encode(JSON.stringify(original.referenceReview) + JSON.stringify(difference)).length > 24000) { original.referenceReview.truncated = true; break; }
-            original.referenceReview.rows.push(difference);
-          }
-          archive = { key, value: { epoch, localEpoch: op.dataEpoch,
-            reason: op.diagnostic.code === 'product_version_conflict' ? 'product_version_rejected' : 'reference_rejected', operations: [original] } };
-          await writeQuarantineArchive(archive);
-        }
-        if (seq !== sessionSeq || !enabled || !hasLocalWriter(false)) return;
-        if (!archive.value.reportedAt) {
-          const cases = await reportQuarantineCases(c, archive.value.operations, archive.value.localEpoch, epoch);
-          archive.value.cases = cases; archive.value.reportedAt = new Date().toISOString();
-          await writeQuarantineArchive(archive);
-        }
-        // This is an unresolved archive, never a successful commercial ACK.
-        const current = loadQ().find(item => item.id === op.id);
-        if (seq !== sessionSeq || !enabled || !hasLocalWriter(false) || flushing
-            || !current || !opBelongsToActiveSession(current)
-            || !isArchivableProductRejection(current)) continue;
-        syncReviewPending = (Number(syncReviewPending) || 0) + 1;
-        saveQ(loadQ().filter(item => item.id !== op.id)); await backupChain;
-        syncFullDomains.add('products'); syncInvalid.set('products', Number(syncCursors.products) || 0);
-      } catch (error) { /* Keep the active operation until original and remote receipt are durable. */ }
-    }
-  }
-  async function quarantineArchives() {
-    const archives = [];
-    try {
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (!key || !key.startsWith('balam_sync_quarantine_')) continue;
-        try { archives.push({ key, value: JSON.parse(localStorage.getItem(key) || '{}') }); }
-        catch (e) { /* un archivo corrupto no oculta los demás */ }
-      }
-    } catch (e) { /* almacenamiento no disponible */ }
-    try {
-      const db = await openQueueDB();
-      const durable = await new Promise((resolve, reject) => {
-        const rows = [], tx = db.transaction(QSTORE, 'readonly');
-        const req = tx.objectStore(QSTORE).openCursor();
-        req.onsuccess = () => {
-          const cursor = req.result;
-          if (!cursor) return;
-          if (String(cursor.key).startsWith('balam_sync_quarantine_')) {
-            rows.push({ key: cursor.key, value: cursor.value, storage: 'indexedDB' });
-          }
-          cursor.continue();
+  const LEGACY_LOCAL = /^(?:balam_pos_(?:products_v2|sellers_v1|clients_v1|sales_v1|moves_v1|promos_v1|liq_v1|returns_v1|payments_v1|exchanges_v1|loans_v1|loans_premigracion_v1|commission_adjustments_v1|periodo_v1|folio_v[12]|sale_commit_journal_v1|sale_commit_journal_v2:.*|layaway_product_locks_v1)|balam_sync_.*|balam_auth_access_v2|balam_device_recovery_v1|balam_reset_seen|balam_point_zero_ticket_v1|balam_selective_cleanup_.*|balam_config_v\d+|balam_cfg_v\d+|balam_demo)$/;
+  async function legacyIndexedDB() {
+    if (!window.indexedDB) return [];
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open('balam_sync');
+      request.onupgradeneeded = () => { request.transaction.abort(); resolve([]); };
+      request.onerror = () => { if (request.error?.name === 'AbortError') resolve([]); else reject(request.error); };
+      request.onsuccess = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains('durable_queue')) { db.close(); resolve([]); return; }
+        const tx = db.transaction('durable_queue', 'readonly'), rows = [];
+        const cursor = tx.objectStore('durable_queue').openCursor();
+        cursor.onsuccess = () => {
+          const row = cursor.result; if (!row) return;
+          rows.push({ sourceKey: 'indexedDB:balam_sync/durable_queue/' + String(row.key),
+            original: JSON.stringify(row.value), idbKey: row.key });
+          row.continue();
         };
         tx.oncomplete = () => { db.close(); resolve(rows); };
-        tx.onerror = tx.onabort = () => { db.close(); reject(tx.error || new Error('QUARANTINE_READ_FAILED')); };
-      });
-      const byKey = new Map(archives.map(archive => [archive.key, archive]));
-      durable.forEach(archive => byKey.set(archive.key, archive));
-      return Array.from(byKey.values());
-    } catch (e) { return archives; } // conserva compatibilidad sin IndexedDB
+        tx.onerror = () => { db.close(); reject(tx.error); };
+      };
+    });
   }
-  async function reportStoredQuarantineArchives(c) {
-    for (const archive of await quarantineArchives()) {
-      const value = archive.value || {};
-      const operations = Array.isArray(value.operations)
-        ? value.operations.filter(opBelongsToActiveSession) : [];
-      if (value.reportedAt || !operations.length || !Number(value.epoch)) continue;
-      const cases = await reportQuarantineCases(c, operations, value.localEpoch, Number(value.epoch));
-      value.cases = cases; value.reportedAt = new Date().toISOString();
-      await writeQuarantineArchive(archive);
-    }
+  async function removeArchivedIndexedDB(entry) {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open('balam_sync');
+      request.onupgradeneeded = () => { request.transaction.abort(); resolve(); };
+      request.onerror = () => request.error?.name === 'AbortError' ? resolve() : reject(request.error);
+      request.onsuccess = () => {
+        const db = request.result, tx = db.transaction('durable_queue', 'readwrite');
+        const store = tx.objectStore('durable_queue'), current = store.get(entry.idbKey);
+        current.onsuccess = () => { if (JSON.stringify(current.result) === entry.original) store.delete(entry.idbKey); };
+        tx.oncomplete = () => { db.close(); resolve(); };
+        tx.onerror = () => { db.close(); reject(tx.error); };
+      };
+    });
   }
-  async function restoreQuarantinedOperation(operationId, remoteEpoch) {
-    if ((recoveryLocal()?.candidate_ids || []).includes(String(operationId))) return null;
-    for (const archive of await quarantineArchives()) {
-      if (Number(archive.value.epoch) !== Number(remoteEpoch)) continue;
-      const op = (archive.value.operations || []).find(x => String(x.id) === String(operationId));
-      if (!op || !opBelongsToActiveSession(op)) continue;
-      const active = loadQ();
-      if (!active.some(x => String(x.id) === String(op.id))) {
-        const restored = JSON.parse(JSON.stringify(op));
-        restored.quarantineReplay = true;
-        restored.status = 'retry_wait'; restored.nextAttemptAt = 0;
-        delete restored.diagnostic;
-        saveQ(active.concat(restored));
+  async function legacyCommercialCaches() {
+    if (!window.caches) return [];
+    const entries = [];
+    for (const name of await caches.keys()) {
+      if (!name.startsWith('balam-')) continue;
+      const cache = await caches.open(name);
+      for (const request of await cache.keys()) {
+        const url = new URL(request.url);
+        if (url.origin !== SUPABASE_URL || !/^\/(?:rest|functions|graphql)\/v1(?:\/|$)/.test(url.pathname)) continue;
+        const response = await cache.match(request);
+        if (!response || response.type === 'opaque') throw error('LEGACY_EVIDENCE_NOT_ARCHIVED', 'No se pudo leer la evidencia anterior.');
+        entries.push({ sourceKey: 'cacheStorage:' + name + '/' + request.url,
+          original: await response.text(), cacheName: name, cacheRequest: request });
       }
-      return { archive, operation: op };
     }
-    return null;
+    return entries;
   }
-  async function removeResolvedQuarantine(found, operationId) {
-    if (!found) return;
-    found.archive.value.operations = (found.archive.value.operations || [])
-      .filter(x => String(x.id) !== String(operationId));
-    try { await writeQuarantineArchive(found.archive); } catch (e) { /* evidencia original queda */ }
+  async function archiveLegacy() {
+    // Única lectura del almacenamiento comercial antiguo: traslado de evidencia sin ejecutar intenciones.
+    const entries = [];
+    for (let index = 0; index < localStorage.length; index++) {
+      const key = localStorage.key(index);
+      if (LEGACY_LOCAL.test(key) || ['balam_purge_seen','balam_purge_ticket'].includes(key)) {
+        entries.push({ sourceKey: 'localStorage:' + key, localKey: key, original: localStorage.getItem(key) });
+      }
+    }
+    entries.push(...await legacyIndexedDB());
+    entries.push(...await legacyCommercialCaches());
+    for (const entry of entries) {
+      entry.hash = await hash(entry.original);
+      const result = await readRpc('archive_online_legacy', {
+        p_device_id: window.CORE.getDeviceId(),
+        p_entries: [{ sourceKey: entry.sourceKey, hash: entry.hash, original: entry.original,
+          kind: /queue|quarantine|journal|locks|ticket|recovery/.test(entry.sourceKey) ? 'operation' : 'cache' }],
+      });
+      const ack = (result?.entries || result?.acknowledged || []).find(row => row.sourceKey === entry.sourceKey && row.hash === entry.hash && row.archived === true);
+      if (!result?.ok || !ack) throw error('LEGACY_EVIDENCE_NOT_ARCHIVED', 'No se pudo conservar la evidencia anterior. Vuelve a conectar BALAM.');
+      if ((ack.classification || ack.status) === 'needs_review') legacyReviewCount++;
+      if (entry.localKey) {
+        if (localStorage.getItem(entry.localKey) === entry.original) localStorage.removeItem(entry.localKey);
+      } else if (entry.cacheName) {
+        const cache = await caches.open(entry.cacheName), current = await cache.match(entry.cacheRequest);
+        if (current && await current.text() === entry.original) await cache.delete(entry.cacheRequest);
+      } else await removeArchivedIndexedDB(entry);
+    }
   }
-  async function consumeSyncQuarantineDecisions(c) {
-    if (!c) return 0;
+  async function refresh(options = {}) {
+    if (!enabled) throw error('AUTH_REQUIRED', 'Inicia sesión para continuar.');
+    if (writeInFlight && !options.internal) {
+      refreshAgain = true;
+      throw error('ONLINE_RESULT_UNKNOWN', CONFIRMING);
+    }
+    if (refreshPromise) { if (!options.internal) refreshAgain = true; return refreshPromise; }
     const seq = sessionSeq;
-    const current = () => seq === sessionSeq && enabled && hasLocalWriter(false);
-    const result = await c.rpc('consume_sync_quarantine_decisions', {
-      p_device_id: window.CORE.getDeviceId(),
+    refreshPromise = (async () => {
+      try {
+        const userId = await currentUserId();
+        const resolved = writeInFlight ? [] : await resolveOutstanding(userId);
+        const raw = await readRpc('online_snapshot');
+        const next = mappedSnapshot(raw);
+        window.DATA.validateOnlineSnapshot(next);
+        if (seq !== sessionSeq || !enabled) throw error('SESSION_CHANGED', 'La sesión cambió.');
+        // Todo se valida antes de aplicar; eventos React ocurren después de la sustitución completa.
+        window.CONFIG.load(toConfigState(raw.lookup, raw.settings));
+        window.DATA.replaceFromOnline(next);
+        configLookup = copy(raw.lookup);
+        configRemoteVersion = Number(raw.configVersion) || 0;
+        quoteContext = copy(raw.commercialQuote);
+        serverClock = { time: Date.parse(raw.serverTime), observed: performance.now() };
+        legacyReviewCount = Number(raw.legacyReviewCount) || 0;
+        for (const ref of resolved) localStorage.removeItem(ref.key);
+        ready = true; connection = 'online'; lastSuccess = raw.serverTime || new Date().toISOString(); failure = null;
+        emit();
+        for (const ref of resolved) deliverResolved(ref);
+        return { ok: true, message: 'Todo actualizado', status: syncStatus() };
+      } catch (cause) {
+        markUnavailable(cause.code === 'ONLINE_RESULT_UNKNOWN' ? cause : error('ONLINE_UNAVAILABLE', OFFLINE));
+        throw cause;
+      }
+    })().finally(() => {
+      refreshPromise = null; emit();
+      if (refreshAgain && enabled && !writeInFlight) {
+        refreshAgain = false; queueMicrotask(() => refresh().catch(() => {}));
+      }
     });
-    if (result.error || !current()) return 0;
-    let completed = 0;
-    for (const command of (result.data || [])) {
-      const found = await restoreQuarantinedOperation(command.operation_id, command.remote_epoch);
-      if (!current()) return completed;
-      if (!found) {
-        await c.rpc('complete_sync_quarantine', {
-          p_device_id: window.CORE.getDeviceId(), p_operation_id: command.operation_id,
-          p_remote_epoch: command.remote_epoch, p_ok: false,
-          p_message: 'La operación original no está disponible en este equipo',
-        });
-        continue;
-      }
-      await flushQueue();
-      if (!current()) return completed;
-      const pending = loadQ().some(op => String(op.id) === String(command.operation_id));
-      const completion = await c.rpc('complete_sync_quarantine', {
-        p_device_id: window.CORE.getDeviceId(), p_operation_id: command.operation_id,
-        p_remote_epoch: command.remote_epoch, p_ok: !pending,
-        p_message: pending ? 'La RPC normal rechazó o difirió la operación' : null,
-      });
-      if (!current()) return completed;
-      if (!pending && !completion.error && completion.data === true) { await removeResolvedQuarantine(found, command.operation_id); completed++; }
-      else if (!completion.error && completion.data === true) {
-        const rejected = loadQ().find(op => String(op.id) === String(command.operation_id));
-        if (found && isArchivableProductRejection(rejected)) {
-          // A rejected authorized replay still has its original and failed case.
-          saveQ(loadQ().filter(op => String(op.id) !== String(command.operation_id)));
-          await backupChain;
-          syncFullDomains.add('products'); syncInvalid.set('products', Number(syncCursors.products) || 0);
-        }
-      }
-    }
-    return completed;
+    return refreshPromise;
   }
-  async function rebootstrapFromCloud(options = {}) {
-    if (window.CORE.activityStatus().active) throw new Error('ACTIVITY_ACTIVE');
-    if (syncRecovering) throw new Error('RECOVERY_IN_PROGRESS');
-    if (loadQ().some(op => !opBelongsToActiveSession(op))) throw new Error('OTHER_SESSION_PENDING');
-    syncRecovering = true;
-    let c;
-    try {
-      await waitForFlushIdle();
-      if (syncReconcilePromise) await syncReconcilePromise;
-      c = await ensureClient(); if (!c) throw new Error('OFFLINE');
-      const manifest = await c.from('system_manifest').select('*').eq('singleton', true);
-      if (manifest.error || !(manifest.data || []).length) throw new Error('MANIFEST_UNAVAILABLE');
-      const latest = manifest.data[0];
-      if (SYNC_PROTOCOL_VERSION < Number(latest.sync_protocol_min)
-          || SYNC_PROTOCOL_VERSION > Number(latest.sync_protocol_current)
-          || Number(latest.schema_version) < SYNC_SCHEMA_VERSION) throw new Error('SYNC_PROTOCOL_OUTDATED');
-      // Las operaciones de una época anterior nunca se ejecutan contra la nueva.
-      // Se apartan de la cola activa después de escribir un archivo durable
-      // local, que también puede exportarse desde administración.
-      let localEpoch = null;
-      try { localEpoch = Number(localStorage.getItem('balam_sync_data_epoch')) || null; } catch (e) { /* desconocida */ }
-      const queued = loadQ();
-      if (options.requireEmptyQueue && (queued.length || window.CORE.activityStatus().active)) throw new Error('CLEANUP_RECOVERY_BUSY');
-      if (options.expectedEpoch != null && Number(latest.data_epoch) !== Number(options.expectedEpoch)) throw new Error('CLEANUP_RECOVERY_EPOCH_CHANGED');
-      const stale = queued.filter(op => opBelongsToActiveSession(op)
-        && Number(op.dataEpoch ?? localEpoch) !== Number(latest.data_epoch));
-      if (stale.length) {
-        const cases = await reportQuarantineCases(c, stale, localEpoch, Number(latest.data_epoch));
-        const key = `balam_sync_quarantine_${latest.data_epoch}_${Date.now()}`;
-        await writeQuarantineArchive({ key, value: { epoch: latest.data_epoch, localEpoch, cases, reportedAt: new Date().toISOString(), operations: stale } });
-        const archivedIds = new Set(stale.map(op => op.id));
-        saveQ(loadQ().filter(op => !archivedIds.has(op.id)));
-        await backupChain;
-      }
-      // Intenciones vigentes sobreviven a la reconstrucción y se envían por su
-      // contrato normal. Nunca se convierten en cuarentena por pulsar Actualizar.
-      syncManifest = latest; syncCompatibility = 'ok';
-      await flushQueue({ recovery: true });
-      await waitForFlushIdle();
-      const before = await readRemoteVersions(c);
-      if (!before.ok) throw new Error('REMOTE_VERSIONS_UNAVAILABLE');
-      const targets = Object.fromEntries(before.rows.map(row => [row.domain, Number(row.version) || 0]));
-      const nextCursors = Object.assign({}, syncCursors);
-      for (const domain of DOMAIN_ORDER) {
-        const result = (domain === 'config' || domain === 'permissions' || domain === 'purges' || domain === 'devices')
-          ? await applyDomainPull(domain)
-          : await pullDomain(domain, { authoritativeEmpty: true, fullSnapshot: true });
-        if (!result || result.ok !== true || result.complete !== true || result.applied !== true) {
-          const error = new Error('REBOOTSTRAP_DOMAIN_INCOMPLETE:' + domain);
-          error.domain = domain; error.result = result || null; throw error;
-        }
-        if (Object.prototype.hasOwnProperty.call(targets, domain)) {
-          nextCursors[domain] = targets[domain];
-        }
-      }
-      const manifestAfter = await c.from('system_manifest').select('*').eq('singleton', true);
-      if (manifestAfter.error || !manifestAfter.data?.[0]
-          || Number(manifestAfter.data[0].data_epoch) !== Number(latest.data_epoch)) {
-        throw new Error('REBOOTSTRAP_MANIFEST_CHANGED');
-      }
-      syncManifest = latest; syncCompatibility = 'ok';
-      localStorage.setItem('balam_sync_data_epoch', String(latest.data_epoch));
-      if (!saveSyncCursors(nextCursors)) throw new Error('CHECKPOINT_NOT_DURABLE');
-      syncCursors = nextCursors;
-      DOMAIN_ORDER.forEach(domain => {
-        if (Object.prototype.hasOwnProperty.call(targets, domain)
-            && (Number(syncInvalid.get(domain)) || 0) <= targets[domain]) syncInvalid.delete(domain);
-      });
-      const versions = await readRemoteVersions(c);
-      if (!versions.ok) throw new Error('REMOTE_VERSIONS_UNAVAILABLE');
-      versions.rows.forEach(row => invalidateDomain(row.domain, row.version));
-    } catch (error) {
-      syncCompatibility = 'must_rebootstrap';
-      throw error;
-    } finally {
-      syncRecovering = false;
-      try { window.dispatchEvent(new CustomEvent('syncstatuschange', { detail: syncStatus() })); } catch (e) { /* */ }
+  async function heartbeatDevice() {
+    if (!enabled) return false;
+    const result = await readRpc('online_presence', { p_device_id: window.CORE.getDeviceId(), p_client_build: BUILD });
+    if (result === false || result?.ok === false) {
+      ready = false; failure = error('DEVICE_RETIRED', 'Este equipo está retirado. Un administrador puede reactivarlo en Equipos.'); emit();
+      throw failure;
     }
-    await reconcileDomains();
-    return syncStatus();
+    if (result !== true && result?.ok !== true) throw error('DEVICE_REPORT_UNCONFIRMED', 'No se pudo confirmar el equipo.');
+    return true;
   }
-
-  let syncUpdatePromise = null;
-  function synchronizeNow() {
-    if (syncUpdatePromise) return syncUpdatePromise;
+  function startLifecycle() {
+    if (lifecycleStarted) return; lifecycleStarted = true;
+    const reconnect = () => { if (enabled && !writeInFlight) init().catch(() => {}); };
+    window.addEventListener('offline', () => markUnavailable());
+    window.addEventListener('online', reconnect);
+    window.addEventListener('focus', reconnect);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) reconnect(); });
+    window.addEventListener('storage', event => {
+      if (event.key?.startsWith(RECEIPT_PREFIX) && event.newValue) {
+        ready = false; failure = error('ONLINE_RESULT_UNKNOWN', CONFIRMING); emit();
+      } else if (event.key?.startsWith(RECEIPT_PREFIX)) reconnect();
+    });
+    // Realtime sólo adelanta esta misma lectura; perderlo no afecta la recuperación por consulta.
+    setInterval(reconnect, 15000);
+  }
+  let initializing = null;
+  async function init() {
+    if (initializing) return initializing;
+    initializing = (async () => {
+      try { window.CORE.getDeviceId(); }
+      catch (cause) { markUnavailable(cause); throw cause; }
+      if (!(await hasSession())) throw error('AUTH_REQUIRED', 'Inicia sesión para continuar.');
+      enabled = true; startLifecycle();
+      try {
+        await heartbeatDevice();
+        await archiveLegacy();
+        if (window.AUTH?.refreshPermissions && !(await window.AUTH.refreshPermissions())) {
+          throw error('AUTH_REQUIRED', 'No se pudo confirmar el acceso de tu usuario.');
+        }
+        const result = await refresh();
+        if (!channel) {
+          const c = await ensureClient();
+          channel = c.channel('balam-online-' + window.CORE.getDeviceId())
+            .on('postgres_changes', { event: '*', schema: 'pos' }, () => {
+              if (writeInFlight) { refreshAgain = true; return; }
+              refresh().catch(() => {});
+            }).subscribe();
+        }
+        return result;
+      } catch (cause) {
+        if (cause.code !== 'DEVICE_RETIRED') markUnavailable(cause.code === 'ONLINE_RESULT_UNKNOWN' ? cause : error('ONLINE_UNAVAILABLE', OFFLINE));
+        throw cause;
+      }
+    })().finally(() => { initializing = null; });
+    return initializing;
+  }
+  function clearMemory() {
+    window.DATA?.replaceFromOnline({ ...Object.fromEntries(Object.keys(MAP).map(kind => [kind, []])),
+      commissionContext: { periodStart: '', sellerBases: [] } });
+    window.CONFIG?.clearRemote();
+    quoteContext = null; serverClock = null; configLookup = [];
+    ready = false; lastSuccess = null;
+  }
+  async function setSession(profile) {
+    const next = window.AUTH?.hasSession() ? await currentUserId() : null;
+    if (next === identity && enabled) return { ok: true, unchanged: true };
+    sessionSeq++; identity = next; enabled = false;
+    for (const waiter of resultWaiters.values()) waiter.reject(error('SESSION_CHANGED', 'La sesión cambió. Consulta la operación con su usuario.'));
+    resultWaiters.clear();
+    if (channel && sb) { sb.removeChannel(channel); channel = null; }
+    clearMemory(); connection = next ? 'checking' : 'offline'; emit();
+    if (!next) return { ok: true, signedOut: true };
+    return init();
+  }
+  function pushRows(kind, rows) {
+    const mapper = MAP[kind];
+    if (!mapper?.toRow && kind !== 'sellers') throw error('ONLINE_COMMAND_INVALID', 'Ese registro requiere su operación comercial específica.');
+    if (!Array.isArray(rows) || !rows.length) throw error('ONLINE_COMMAND_EMPTY', 'No hay registros que guardar.');
+    const ids = rows.map(row => String(row.id || ''));
+    if (ids.some(id => !id) || new Set(ids).size !== ids.length) throw error('ONLINE_COMMAND_INVALID', 'Cada registro debe tener una identidad única.');
+    return execute({ type: kind === 'sellers' ? 'profileUpdate' : 'upsert', kind,
+      table: mapper.table, conflict: mapper.conflict, rowIds: ids,
+      rows: rows.map(kind === 'sellers' ? sellerProfileRow : mapper.toRow) });
+  }
+  function pushProductFamilyBatch(referenceFamilyId, rows) {
+    if (!rows?.length || rows.some(row => row.referenceFamilyId !== referenceFamilyId || row.recordModel !== 'v2'))
+      throw error('REFERENCE_FAMILY_SCOPE_MISMATCH', 'Las referencias no pertenecen a la misma familia.');
+    return execute({ type: 'upsert', kind: 'products', table: 'products', conflict: 'id', familyBatch: true,
+      referenceFamilyId, rowIds: rows.map(row => row.id), rows: rows.map(MAP.products.toRow) });
+  }
+  const pushClient = client => pushRows('clients', [client]);
+  const pushConfig = state => execute({ type: 'config', state });
+  function deleteRow(kind, id, baseVersion) {
+    const mapper = MAP[kind];
+    if (!mapper) throw error('ONLINE_COMMAND_INVALID', 'Registro no válido.');
+    return execute({ type: mapper.localKey ? 'softDelete' : 'delete', kind, table: mapper.table,
+      col: mapper.conflict, val: id, baseVersion: Number(baseVersion) || 0 });
+  }
+  const deleteProductScope = payload => execute({ type: 'productDeleteScope', kind: 'products', table: 'products',
+    ...payload, rowIds: (payload.targets || []).map(row => row.id) });
+  const settleCommission = args => execute({ type: 'commissionSettle', ...args });
+  const closeCommissionPeriod = args => execute({ type: 'commissionClose', ...args });
+  const applyCommissionAdjustment = args => execute({ type: 'commissionAdjustment', ...args });
+  const pushLoanOperation = (action, loan, expectedVersion) => execute({ type: 'loanOperation', action, loan, expectedVersion });
+  const commitReferenceReclassification = args => execute({ type: 'referenceReclassification', ...args });
+  async function allocateFolio(args) {
     const seq = sessionSeq;
-    startLiveSync(sb);
-    syncUpdatePromise = (async () => {
-      if (window.CORE.activityStatus().active) return { ok: false, code: 'ACTIVITY_ACTIVE',
-        message: 'Termina la operación abierta para completar la actualización.', status: syncStatus() };
-      const c = await ensureClient();
-      if (!c || typeof navigator !== 'undefined' && navigator.onLine === false) {
-        return { ok: false, message: 'Conéctate a internet para terminar de guardar y actualizar este equipo.', status: syncStatus() };
-      }
-      if (!enabled || seq !== sessionSeq || !hasLocalWriter(false)) return { ok: false, message: 'La sesión de este equipo cambió.', status: syncStatus() };
-      if (syncInitPromise) await syncInitPromise;
-      if (!syncBootstrapComplete && enabled && seq === sessionSeq) await init({ pull: true });
-      if (!(await recoverDirectedDevice()) || !enabled || seq !== sessionSeq) return { ok: false, message: 'Estamos comprobando la recuperación de este equipo.', status: syncStatus() };
-      await hydrateDurableQueue();
-      await loadSyncProtocol(c);
-      if (!enabled || seq !== sessionSeq || !hasLocalWriter(false)) return { ok: false, status: syncStatus() };
-      startLiveSync(c);
-      if (syncCompatibility === 'must_rebootstrap') await rebootstrapFromCloud();
-      if (syncCompatibility !== 'ok') return { ok: false, message: 'Esta computadora necesita actualizar BALAM antes de continuar.', status: syncStatus() };
-      await flushQueue();
-      await waitForFlushIdle();
-      for (let attempt = 0; attempt < 3; attempt++) {
-        await reconcileDomains({ force: attempt === 0 });
-        if (syncStatus().synchronized || queueStatus().devicePending || window.CORE.activityStatus().active) break;
-      }
-      const status = syncStatus();
-      return { ok: status.synchronized, status, message: status.synchronized ? 'Todo actualizado'
-        : status.reviewPending ? `Hay ${status.reviewPending} expediente(s) que administración debe revisar. Los originales están conservados.`
-        : status.reviewPending == null ? 'Falta confirmar la revisión de los cambios conservados. Se reintentará automáticamente.'
-        : status.pending ? 'Hay movimientos pendientes por enviar. Sus datos siguen guardados en este equipo.'
-        : window.CORE.activityStatus().active ? 'Termina la operación abierta para completar la actualización.'
-        : 'Este equipo tiene información pendiente de actualizar. Vuelve a intentarlo; si continúa, revisa los detalles con administración.' };
-    })().finally(() => { syncUpdatePromise = null; });
-    return syncUpdatePromise;
+    const digest = await hash('folio:' + args.operationId);
+    if (seq !== sessionSeq) throw error('SESSION_CHANGED', 'La sesión cambió. Consulta la operación con su usuario.');
+    const requestId = digest.slice(0,8) + '-' + digest.slice(8,12) + '-5' + digest.slice(13,16) + '-8' + digest.slice(17,20) + '-' + digest.slice(20,32);
+    return execute({ type: 'folio', requestId, prefix: args.prefix, businessDate: args.date, documentKind: args.kind, floor: 0 });
   }
-
-  async function establishPointZero() {
-    await reconcileDomains();
-    const before = syncStatus();
-    if (!before.synchronized) throw new Error('SYNC_NOT_CLEAN');
-    if (window.CORE.activityStatus().active) throw new Error('ACTIVITY_ACTIVE');
-    const c = await ensureClient(); if (!c) throw new Error('OFFLINE');
-    const r = await c.rpc('establish_sync_point_zero', {
-      p_protocol_version: SYNC_PROTOCOL_VERSION,
-      p_expected_epoch: Number(syncManifest.data_epoch),
-    });
-    if (r.error) throw new Error(r.error.message || 'POINT_ZERO_FAILED');
-    const result = Array.isArray(r.data) ? r.data[0] : r.data;
-    syncManifest.data_epoch = Number(result.data_epoch);
-    try { localStorage.setItem('balam_sync_data_epoch', String(result.data_epoch)); } catch (e) { /* */ }
-    await reconcileDomains(); await heartbeatDevice(c);
-    return result;
+  function settleLayaway(draft, effects = {}) {
+    const sale = draft.sale || draft, payment = draft.payment || effects.payment;
+    return execute({ type: 'sale', mode: 'layaway_liquidation', folio: draft.folio || sale.folio,
+      operationId: draft.commitId || effects.commitId || newRequestId(), saleOperationId: draft.operationId || sale._operationId,
+      payment: MAP.payments.toRow(payment), sellerEffects: effects.sellerEffects || [],
+      itemIdentities: (sale.lineas || []).map(line => ({ sale_item_id: line._saleItemId,
+        product_id: line.productId, sku: line.sku, talla: line.talla })),
+      commissionSnapshot: { amount: Number(sale.comision) || 0, base: sale.comisionBase || 'neto', rows: sale.comisiones || [] } });
   }
-
-  // H-98 · Punto Cero administrativo. El navegador sólo coordina el wizard:
-  // preview, respaldo y borrado son RPC separadas, y la última conserva toda la
-  // atomicidad en PostgreSQL. No existe una secuencia cliente de DELETEs.
-  async function pointZeroPreview() {
-    if (!(window.AUTH && window.AUTH.isAdmin && window.AUTH.isAdmin())) {
-      return { ok: false, code: 'FORBIDDEN', error: 'Sólo un administrador puede usar Punto Cero' };
-    }
-    const c = await ensureClient();
-    if (!c || !(await hasSession())) return { ok: false, code: 'OFFLINE', error: 'Supabase no está accesible' };
-    try { await reconcileDomains(); } catch (e) { /* el estado queda visible */ }
-    const r = await c.rpc('point_zero_preview');
-    if (r.error) return { ok: false, code: 'REMOTE', error: r.error.message || String(r.error), detalle: r.error };
-    const preview = Array.isArray(r.data) ? r.data[0] : r.data;
-    const status = syncStatus();
-    const activity = window.CORE && window.CORE.activityStatus ? window.CORE.activityStatus() : { active: false };
-    const localLocks = !!(window.DATA && window.DATA.hasLayawayLiquidationLock && window.DATA.hasLayawayLiquidationLock());
-    const clientReady = status.synchronized && status.pending === 0 && status.blocked === 0
-      && !activity.active && !localLocks;
-    return Object.assign({}, preview || {}, {
-      ok: !!(preview && preview.ok), client_ready: clientReady,
-      client_status: status, local_activity: !!activity.active, local_locks: localLocks,
-      ready: !!(preview && preview.ok && preview.system_mode === 'preproduction'
-        && preview.sync_complete && !preview.active_operation && clientReady),
-    });
+  const clearInventory = args => execute({ type: 'clearInventory', ...args });
+  function commitSizeMigration(args) {
+    return execute({ type: 'sizeMigration', commands: [wireConfig({ type: 'config', state: args.config }),
+      ...(args.products?.length ? [{ type: 'upsert', kind: 'products', rows: args.products.map(MAP.products.toRow) }] : []),
+      ...(args.promotions?.length ? [{ type: 'upsert', kind: 'promotions', rows: args.promotions.map(MAP.promotions.toRow) }] : [])] });
   }
-
-  function requirePointZeroReady(preview) {
-    if (!preview || preview.system_mode !== 'preproduction') throw new Error('POINT_ZERO_PRODUCTION_LOCKED');
-    if (!preview.ready) throw new Error('POINT_ZERO_NOT_SYNCHRONIZED');
-    if (!preview.preview_token) throw new Error('POINT_ZERO_PREVIEW_REQUIRED');
+  async function fetchSaleByFolio(folio) {
+    await refresh();
+    const key = String(folio || '').trim().toUpperCase();
+    return window.DATA.sales.find(row => String(row.folio).toUpperCase() === key)
+      || window.DATA.sales.find(row => row.folioAliases?.some(alias => String(alias).toUpperCase() === key)) || null;
   }
-
-  async function createPointZeroBackup(approvedPreview) {
-    const current = await pointZeroPreview();
-    requirePointZeroReady(current);
-    if (!approvedPreview || current.preview_token !== approvedPreview.preview_token) {
-      throw new Error('POINT_ZERO_PREVIEW_CHANGED');
-    }
-    const c = await ensureClient();
-    const r = await c.rpc('create_point_zero_backup', {
-      p_preview_token: current.preview_token,
-      p_client_build: String(SYNC_SCHEMA_VERSION), p_device_id: window.CORE.getDeviceId(),
-    });
-    if (r.error) throw new Error(r.error.message || 'POINT_ZERO_BACKUP_FAILED');
-    const result = Array.isArray(r.data) ? r.data[0] : r.data;
-    if (!result || result.ok !== true) throw new Error((result && result.error) || 'POINT_ZERO_BACKUP_FAILED');
-    return result;
-  }
-
-  function downloadPointZeroDocument(document, kind, id) {
-    const body = JSON.stringify(document, null, 2);
-    const blob = new Blob([body], { type: 'application/json;charset=utf-8' });
-    const url = URL.createObjectURL(blob); const a = window.document.createElement('a');
-    a.href = url; a.download = `balam-punto-cero-${kind}-${id || Date.now()}.json`; a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    return { bytes: new TextEncoder().encode(body).length, file: a.download };
-  }
-
-  async function executePointZero(options) {
-    const opts = options || {};
-    if (opts.confirmation !== 'PUNTO CERO') throw new Error('POINT_ZERO_CONFIRMATION_REQUIRED');
-    if (!opts.previewToken || !opts.backupId) throw new Error('POINT_ZERO_BACKUP_REQUIRED');
-    let reserved = null;
-    try { reserved = JSON.parse(localStorage.getItem(POINT_ZERO_TICKET) || 'null'); } catch (e) { reserved = null; }
-    if (!reserved || reserved.previewToken !== opts.previewToken || reserved.backupId !== opts.backupId) {
-      const current = await pointZeroPreview();
-      requirePointZeroReady(current);
-      if (current.preview_token !== opts.previewToken) throw new Error('POINT_ZERO_PREVIEW_CHANGED');
-      reserved = { operationId: opts.operationId || newOpId(), previewToken: opts.previewToken, backupId: opts.backupId };
-      try { localStorage.setItem(POINT_ZERO_TICKET, JSON.stringify(reserved)); } catch (e) { /* el RPC sigue siendo idempotente */ }
-    }
-    const c = await ensureClient();
-    let r;
-    try {
-      r = await c.rpc('execute_point_zero', {
-        p_operation_id: reserved.operationId, p_preview_token: reserved.previewToken,
-        p_backup_id: reserved.backupId, p_confirmation: opts.confirmation,
-        p_client_build: String(SYNC_SCHEMA_VERSION), p_device_id: window.CORE.getDeviceId(),
-      });
-    } catch (e) { throw new Error('POINT_ZERO_NETWORK:' + String((e && e.message) || e)); }
-    if (r.error) throw new Error(r.error.message || 'POINT_ZERO_FAILED');
-    const result = Array.isArray(r.data) ? r.data[0] : r.data;
-    if (!result || result.ok !== true) {
-      try { localStorage.removeItem(POINT_ZERO_TICKET); } catch (e) { /* */ }
-      throw new Error((result && result.error) || 'POINT_ZERO_FAILED');
-    }
-    const local = window.DATA && window.DATA.applyPointZero ? window.DATA.applyPointZero() : null;
-    if (!local || local.ok !== true) throw new Error((local && local.error) || 'POINT_ZERO_LOCAL_APPLY_FAILED');
-    if (syncManifest) syncManifest.data_epoch = Number(result.data_epoch) || syncManifest.data_epoch;
-    try {
-      localStorage.setItem('balam_sync_data_epoch', String(result.data_epoch));
-      localStorage.removeItem(POINT_ZERO_TICKET);
-    } catch (e) { /* */ }
-    syncInvalid.clear();
-    try { await pull(); } catch (e) { /* configuración local ya fue preservada */ }
-    try { await pullDomain('sellers', { authoritativeEmpty: true }); } catch (e) { /* */ }
-    try { await heartbeatDevice(c); } catch (e) { /* próximo latido */ }
-    try { window.dispatchEvent(new CustomEvent('configchange', { detail: { pointZero: true } })); } catch (e) { /* */ }
-    return Object.assign({}, result, { local });
-  }
-
-  async function pointZeroReceipt(operationId) {
-    const c = await ensureClient(); if (!c) throw new Error('OFFLINE');
-    const r = await c.rpc('point_zero_receipt', { p_operation_id: operationId });
-    if (r.error) throw new Error(r.error.message || 'POINT_ZERO_RECEIPT_FAILED');
-    return Array.isArray(r.data) ? r.data[0] : r.data;
-  }
-
-  // H-113 · Wizard selectivo. Las tres fases vuelven a consultar al servidor;
-  // los checks sólo expresan intención y nunca deciden tablas ni dependencias.
-  async function previewTestDataCleanup(preset, selection) {
-    if (!(window.AUTH && window.AUTH.isAdmin && window.AUTH.isAdmin())) {
-      return { ok: false, code: 'FORBIDDEN', error: 'Sólo un administrador puede limpiar datos' };
-    }
-    const c = await ensureClient();
-    if (!c || !(await hasSession())) return { ok: false, code: 'OFFLINE', error: 'Supabase no está accesible' };
-    try { await reconcileDomains(); } catch (e) { /* el diagnóstico remoto explica el bloqueo */ }
-    const r = await c.rpc('preview_test_data_cleanup', {
-      p_preset: preset || 'operations', p_selection: selection || {},
-      p_client_protocol: SELECTIVE_CLEANUP_PROTOCOL,
-    });
-    if (r.error) return { ok: false, code: 'REMOTE', error: r.error.message || String(r.error) };
-    const preview = Array.isArray(r.data) ? r.data[0] : r.data;
-    const status = syncStatus();
-    const clientReady = status.synchronized && status.pending === 0 && status.blocked === 0
-      && !(window.CORE && window.CORE.activityStatus && window.CORE.activityStatus().active);
-    return Object.assign({}, preview || {}, {
-      client_ready: clientReady,
-      ready: !!(preview && preview.ok && preview.executable && clientReady),
-      client_status: status,
-    });
-  }
-  function requireSelectiveCleanupReady(preview) {
-    if (!preview || preview.system_mode === 'production') throw new Error('CLEANUP_PRODUCTION_LOCKED');
-    if (!preview.ready || !preview.executable) throw new Error('CLEANUP_PLAN_NOT_EXECUTABLE');
-    if (!preview.plan_hash) throw new Error('CLEANUP_PREVIEW_REQUIRED');
-  }
-  async function createTestDataCleanupBackup(approvedPreview) {
-    const current = await previewTestDataCleanup(
-      approvedPreview && approvedPreview.preset_requested,
-      approvedPreview && approvedPreview.selection_requested,
-    );
-    requireSelectiveCleanupReady(current);
-    if (!approvedPreview || current.plan_hash !== approvedPreview.plan_hash) throw new Error('CLEANUP_PREVIEW_CHANGED');
-    const c = await ensureClient();
-    const r = await c.rpc('create_test_data_cleanup_backup', {
-      p_preset: current.preset_requested, p_selection: current.selection_requested,
-      p_plan_hash: current.plan_hash, p_client_protocol: SELECTIVE_CLEANUP_PROTOCOL,
-      p_client_build: String(SYNC_SCHEMA_VERSION), p_device_id: window.CORE.getDeviceId(),
-    });
-    if (r.error) throw new Error(r.error.message || 'CLEANUP_BACKUP_FAILED');
-    const result = Array.isArray(r.data) ? r.data[0] : r.data;
-    if (!result || result.ok !== true) throw new Error((result && result.error) || 'CLEANUP_BACKUP_FAILED');
-    return result;
-  }
-  async function executeTestDataCleanup(options) {
-    const opts = options || {};
-    if (opts.confirmation !== 'LIMPIAR OPERACIONES') throw new Error('CLEANUP_CONFIRMATION_REQUIRED');
-    if (!opts.preview || !opts.backupId) throw new Error('CLEANUP_BACKUP_REQUIRED');
-    let reserved = null;
-    try { reserved = JSON.parse(localStorage.getItem(SELECTIVE_CLEANUP_TICKET) || 'null'); } catch (e) { reserved = null; }
-    if (!reserved || reserved.planHash !== opts.preview.plan_hash || reserved.backupId !== opts.backupId) {
-      const current = await previewTestDataCleanup(opts.preview.preset_requested, opts.preview.selection_requested);
-      requireSelectiveCleanupReady(current);
-      if (current.plan_hash !== opts.preview.plan_hash) throw new Error('CLEANUP_PREVIEW_CHANGED');
-      reserved = { cleanupId: opts.cleanupId || newOpId(), planHash: current.plan_hash, backupId: opts.backupId };
-      try { localStorage.setItem(SELECTIVE_CLEANUP_TICKET, JSON.stringify(reserved)); } catch (e) { /* RPC idempotente */ }
-    }
-    const c = await ensureClient();
-    const r = await c.rpc('execute_test_data_cleanup', {
-      p_cleanup_id: reserved.cleanupId, p_preset: opts.preview.preset_requested,
-      p_selection: opts.preview.selection_requested, p_plan_hash: reserved.planHash,
-      p_backup_id: reserved.backupId, p_confirmation: opts.confirmation,
-      p_client_protocol: SELECTIVE_CLEANUP_PROTOCOL, p_client_build: String(SYNC_SCHEMA_VERSION),
-      p_device_id: window.CORE.getDeviceId(),
-    });
-    if (r.error) throw new Error(r.error.message || 'CLEANUP_FAILED');
-    const result = Array.isArray(r.data) ? r.data[0] : r.data;
-    if (!result || result.ok !== true) throw new Error((result && result.error) || 'CLEANUP_FAILED');
-    const prune = pruneQueueForSelectiveCleanup(result.identities || {});
-    const local = window.DATA && window.DATA.applySelectiveCleanup
-      ? window.DATA.applySelectiveCleanup(result) : null;
-    const localApplied = !!(local && local.ok === true);
-    if (syncManifest) syncManifest.data_epoch = Number(result.data_epoch) || syncManifest.data_epoch;
-    try {
-      localStorage.setItem('balam_sync_data_epoch', String(result.data_epoch));
-      if (localApplied) {
-        localStorage.setItem(SELECTIVE_CLEANUP_SEEN, String(result.cleanup_id));
-        localStorage.removeItem(SELECTIVE_CLEANUP_TICKET);
-      }
-    } catch (e) { /* */ }
-    if (!localApplied) syncCompatibility = 'must_rebootstrap';
-    syncInvalid.clear();
-    await Promise.all(['products','clients','sellers','sales','returns','exchanges','loans','liquidations','movements']
-      .map(k => pullDomain(k, { authoritativeEmpty: true }).catch(() => { /* opcional */ })));
-    try { await heartbeatDevice(c); } catch (e) { /* siguiente latido */ }
-    return Object.assign({}, result, { local, prune, remoteCommitted: true,
-      rebootstrapRequired: !localApplied,
-      localError: localApplied ? null : ((local && local.error) || 'CLEANUP_LOCAL_APPLY_FAILED') });
-  }
-  async function testDataCleanupReceipt(cleanupId) {
-    const c = await ensureClient(); if (!c) throw new Error('OFFLINE');
-    const r = await c.rpc('test_data_cleanup_receipt', { p_cleanup_id: cleanupId });
-    if (r.error) throw new Error(r.error.message || 'CLEANUP_RECEIPT_FAILED');
-    return Array.isArray(r.data) ? r.data[0] : r.data;
-  }
-  function downloadTestDataCleanupDocument(document, kind, id) {
-    const body = JSON.stringify(document, null, 2);
-    const blob = new Blob([body], { type: 'application/json;charset=utf-8' });
-    const url = URL.createObjectURL(blob); const a = window.document.createElement('a');
-    a.href = url; a.download = `balam-limpieza-selectiva-${kind}-${id || Date.now()}.json`; a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    return { bytes: new TextEncoder().encode(body).length, file: a.download };
+  const physicalCardAvailable = folio => readRpc('physical_card_available', { p_folio: String(folio || '').trim() });
+  async function claimPhysicalCard(folio, claimToken) {
+    const response = await execute({ type: 'physicalCardClaim', folio, claimToken });
+    return response.result === true;
   }
   async function syncFleetStatus() {
-    const c = await ensureClient();
-    if (!c || !syncManifest) return { devices: [], activity: [], current: 0, stale: 0, attention: 0 };
-    const r = await c.from('sync_devices').select('*').order('last_seen_at', { ascending: false });
-    if (r.error) return { devices: [], current: 0, stale: 0, error: r.error.message };
-    const history = await c.from('sync_activity').select('*').order('updated_at', { ascending: false }).limit(200);
-    const quarantine = await c.from('sync_quarantine_cases').select('*').order('updated_at', { ascending: false }).limit(500);
-    const versions = await readRemoteVersions(c);
-    const recoveryRows = await c.from('sync_device_recoveries').select('device_id,state,completed_at');
-    const recoveryById = new Map((recoveryRows.data || []).map(row=>[row.device_id,row]));
-    const now = Date.now(), devices = (r.data || []).map(device => {
-      const recovery = recoveryById.get(device.device_id);
-      const recoveryPending = !!recovery && recovery.state !== 'completed';
-      const ageMs = Math.max(0, now - new Date(device.last_seen_at || 0).getTime());
-      const staleEpoch = Number(device.data_epoch) !== Number(syncManifest.data_epoch)
-        || device.status === 'must_rebootstrap' || device.status === 'quarantined';
-      const connection = ageMs <= 120000 ? 'online' : (ageMs <= 86400000 ? 'disconnected' : 'unknown');
-      const incompatible = Number(device.protocol_version) < Number(syncManifest.sync_protocol_min)
-        || Number(device.protocol_version) > Number(syncManifest.sync_protocol_current)
-        || Number(device.schema_version) < SYNC_SCHEMA_VERSION;
-      const behind = !versions.ok || versions.rows.some(row => row.domain !== 'devices'
-        && domainMode(row.domain) === 'active'
-        && (Number((device.cursors || {})[row.domain]) || 0) < Number(row.version));
-      const synchronized = !recoveryPending && device.status === 'online' && connection === 'online'
-        && !staleEpoch && !incompatible && !behind && !!device.last_synced_at
-        && Math.abs(now - new Date(device.last_synced_at).getTime()) <= 120000
-        && Number(device.queue_pending) === 0 && Number(device.queue_blocked) === 0;
-      return Object.assign({}, device, { ageMs, connection, staleEpoch, incompatible, behind, synchronized, recoveryPending, recovery });
-    });
-    const devicesById = new Map(devices.map(device => [device.device_id, device]));
-    const activity = (history.error ? [] : (history.data || [])).map(item => {
-      const device = devicesById.get(item.device_id);
-      const requiresAttention = item.requires_action === true
-        && item.admin_action !== 'review'
-        && Number(device && device.queue_pending) > 0
-        && Number(device && device.queue_blocked) > 0;
-      return Object.assign({}, item, {
-        requires_attention: requiresAttention,
-        historical_incident: item.admin_action === 'review'
-          || (item.requires_action === true && !requiresAttention),
-      });
-    });
-    const quarantineCases = quarantine.error ? [] : (quarantine.data || []);
-    const epoch = Number(syncManifest.data_epoch);
-    return {
-      devices, activity, quarantine: quarantineCases,
-      current: devices.filter(d => d.synchronized).length,
-      stale: devices.filter(d => d.staleEpoch).length,
-      attention: activity.filter(a => a.requires_attention).length,
-      disconnected: devices.filter(d => d.connection !== 'online').length,
-    };
-  }
-  async function decideSyncQuarantine(item, decision, note) {
-    const c = await ensureClient(); if (!c) throw new Error('Sin conexión con la nube');
-    const r = await c.rpc('admin_decide_sync_quarantine', {
-      p_device_id: item.device_id, p_operation_id: item.operation_id,
-      p_remote_epoch: Number(item.remote_epoch), p_decision: decision,
-      p_note: note || null,
-    });
-    if (r.error) throw new Error(r.error.message || 'No se pudo registrar la decisión');
-    return true;
-  }
-  function exportQuarantineReport(cases) {
-    if (!window.XLSX) throw new Error('No se pudo cargar el motor de Excel');
-    const rows = Array.isArray(cases) ? cases : [];
-    const X = window.XLSX, wb = X.utils.book_new();
-    const summary = rows.map(item => ({
-      'Equipo': item.display_name || item.device_id,
-      'Operación': item.operation_id, 'Tipo': item.operation_type,
-      'Folio / referencia': item.reference || '', 'Estado': item.status,
-      'Época local': item.local_epoch || '', 'Época nube': item.remote_epoch,
-      'Total': Number(item.payload_summary && item.payload_summary.total) || 0,
-      'Artículos': Number(item.payload_summary && item.payload_summary.itemCount) || 0,
-      'Fecha operación': item.payload_summary && item.payload_summary.date || '',
-      'Huella SHA-256': item.payload_hash, 'Decisión / nota': item.decision_note || '',
-      'Resultado': item.execution_message || '', 'Actualizado': item.updated_at || '',
-    }));
-    const itemRows = [];
-    rows.forEach(item => ((item.payload_summary && item.payload_summary.items) || []).forEach(line => itemRows.push({
-      'Equipo': item.display_name || item.device_id, 'Operación': item.operation_id,
-      'Folio': item.reference || '', 'SKU': line.sku || '', 'Producto': line.description || '',
-      'Talla': line.size || '', 'Cantidad': Number(line.quantity) || 0,
-      'Importe': Number(line.amount) || 0,
-    })));
-    const totals = [{
-      'Expedientes': rows.length,
-      'Pendientes de revisar': rows.filter(x => x.status === 'pending_review').length,
-      'Aprobados/en ejecución': rows.filter(x => x.status === 'approved' || x.status === 'delivered').length,
-      'Resueltos': rows.filter(x => x.status === 'resolved').length,
-      'Rechazados': rows.filter(x => x.status === 'rejected').length,
-      'Fallidos': rows.filter(x => x.status === 'failed').length,
-    }];
-    X.utils.book_append_sheet(wb, X.utils.json_to_sheet(totals), 'Resumen');
-    X.utils.book_append_sheet(wb, X.utils.json_to_sheet(summary), 'Operaciones');
-    X.utils.book_append_sheet(wb, X.utils.json_to_sheet(itemRows), 'Artículos');
-    X.writeFile(wb, `cuarentena-balam-${Date.now()}.xlsx`, { bookType: 'xlsx' });
-    return { cases: rows.length, items: itemRows.length };
+    const { data, error: cause } = await (await ensureClient()).from('sync_devices').select('*').order('last_seen_at', { ascending: false });
+    if (cause) throw cause;
+    const installations = (data || []).map(row => ({ ...row,
+      connection: Date.now() - Date.parse(row.last_seen_at) <= 120000 ? 'online' : 'disconnected' }));
+    // status es la autoridad de retiro; metadata conserva fechas históricas de reactivaciones.
+    const retired = row => row.status === 'revoked';
+    const devices = installations.filter(row => !retired(row)), history = installations.filter(retired);
+    return { devices, history, activity: [], current: devices.filter(row => row.connection === 'online').length,
+      disconnected: devices.filter(row => row.connection !== 'online').length, attention: 0, stale: 0 };
   }
   async function updateSyncDevice(deviceId, displayName, deviceType) {
-    const c = await ensureClient(); if (!c) throw new Error('Sin conexión con la nube');
-    const r = await c.rpc('admin_update_sync_device', {
-      p_device_id: deviceId, p_display_name: displayName, p_device_type: deviceType,
-    });
-    if (r.error) throw new Error(r.error.message || 'No se pudo actualizar el equipo');
-    try { window.dispatchEvent(new CustomEvent('syncfleetchange')); } catch (e) { /* */ }
-    return r.data;
+    const response = await execute({ type: 'deviceUpdate', deviceId, displayName, deviceType });
+    window.dispatchEvent(new CustomEvent('syncfleetchange')); return response.result;
   }
   async function setSyncDeviceRetired(deviceId, retired, note) {
-    const c = await ensureClient(); if (!c) throw new Error('Sin conexión con la nube');
-    const r = await c.rpc('admin_set_sync_device_retired', {
-      p_device_id: deviceId, p_retired: retired === true, p_note: note || null,
-    });
-    if (r.error) throw new Error(r.error.message || 'No se pudo actualizar el retiro del equipo');
-    try { window.dispatchEvent(new CustomEvent('syncfleetchange')); } catch (e) { /* */ }
-    return Array.isArray(r.data) ? r.data[0] : r.data;
+    const response = await execute({ type: 'deviceRetire', deviceId, retired, note });
+    window.dispatchEvent(new CustomEvent('syncfleetchange')); return response.result;
   }
-  async function requestSyncRetry(deviceId, operationId) {
-    const c = await ensureClient(); if (!c) throw new Error('Sin conexión con la nube');
-    const r = await c.rpc('admin_request_sync_retry', {
-      p_device_id: deviceId, p_operation_id: operationId,
-    });
-    if (r.error) throw new Error(r.error.message || 'No se pudo solicitar el reintento');
-    return true;
+  async function pointZeroPreview() {
+    await refresh(); const preview = await readRpc('point_zero_preview');
+    return { ...preview, client_ready: ready, client_status: syncStatus(), local_activity: writeInFlight,
+      local_locks: false, ready: !!(preview?.ok && preview.system_mode === 'preproduction' && !preview.active_operation && ready && !writeInFlight) };
   }
-  async function markSyncActivityReviewed(deviceId, operationId) {
-    const c = await ensureClient(); if (!c) throw new Error('Sin conexión con la nube');
-    const r = await c.rpc('admin_mark_sync_activity_reviewed', {
-      p_device_id: deviceId, p_operation_id: operationId,
-    });
-    if (r.error) throw new Error(r.error.message || 'No se pudo marcar como revisado');
-    return true;
+  async function createPointZeroBackup(approvedPreview) {
+    const current = await pointZeroPreview();
+    if (!current.ready || current.preview_token !== approvedPreview?.preview_token) throw error('POINT_ZERO_PREVIEW_CHANGED', 'Actualiza la revisión antes de continuar.');
+    const response = await execute({ type: 'pointZeroBackup', previewToken: current.preview_token }); return response.result;
   }
-
-  function init(opts = {}) {
-    const seq = sessionSeq;
-    if (syncInitPromise) {
-      if (syncInitSession === seq) return syncInitPromise;
-      return syncInitPromise.catch(() => {}).then(() => seq === sessionSeq && enabled
-        ? init(opts) : { ok: false, stale: true });
-    }
-    syncInitSession = seq;
-    syncInitPromise = initializeStore(opts, seq).finally(() => { syncInitPromise = null; syncInitSession = null; });
-    return syncInitPromise;
+  async function executePointZero(opts) {
+    if (opts.confirmation !== 'PUNTO CERO' || !opts.backupId || !opts.previewToken) throw error('POINT_ZERO_CONFIRMATION_REQUIRED', 'Falta la confirmación y el respaldo.');
+    const response = await execute({ type: 'pointZero', ...opts }); return { ...response.result, local: { ok: true } };
   }
-  async function initializeStore(opts, seq) {
-    enabled = true;
-    syncBootstrapComplete = false;
-    // These signals must survive unavailable recovery/manifest endpoints.
-    startLiveSync(sb);
-    if (!writerSubscribed) {
-      writerSubscribed = true;
-      window.addEventListener('localwriterchange', event => {
-        if (event && event.detail && event.detail.state === 'writer') {
-          queueHydrated = false;
-          volatileQueue = null;
-          Promise.resolve(init({ pull: true })).catch(() => { /* relevo best-effort */ });
-        }
-      });
-    }
-    if (window.DATA && typeof window.DATA.awaitLocalWriter === 'function'
-        && !(await window.DATA.awaitLocalWriter(300))) {
-      return { ok: false, readOnly: true };
-    }
-    if (!hasLocalWriter(false)) return { ok: false, readOnly: true };
-    await hydrateDurableQueue();
-    if (!enabled || seq !== sessionSeq) return { ok: false, stale: true };
-    const protocolClient = await ensureClient();
-    if (!(await recoverDirectedDevice())) return { ok: false, recoveryRequired: true };
-    if (!enabled || seq !== sessionSeq) return { ok: false, stale: true };
-    if (protocolClient) await loadSyncProtocol(protocolClient);
-    if (!enabled || seq !== sessionSeq) return { ok: false, stale: true };
-    if (syncCompatibility === 'must_rebootstrap') {
-      try { await applyRemoteSelectiveCleanup(); } catch (e) { /* preserve recovery state for polling */ }
-    }
-    if (syncManifest && !syncLastFullCheck) Object.keys(SYNC_DOMAINS)
-      .filter(domain => domain !== 'devices' && domainMode(domain) === 'active')
-      .forEach(domain => syncFullDomains.add(domain));
-    if (syncManifest && syncCompatibility !== 'ok') {
-      startLiveSync(protocolClient);
-      await heartbeatDevice(protocolClient).catch(() => {});
-      return { ok: false, compatibility: syncCompatibility };
-    }
-    resumeAuthenticatedOperations();
-    const layawayOpsAtBoot = loadQ().filter(op =>
-      op.type === 'sale' && op.mode === 'layaway_liquidation'
-      && isAutomaticallyEligible(op));
-    if (window.DATA && typeof window.DATA.reconcileLayawayProductLocks === 'function') {
-      window.DATA.reconcileLayawayProductLocks(layawayOpsAtBoot);
-    }
-    // Drenar la cola ANTES del pull: los cambios de la sesión anterior llegan primero a la
-    // nube y el pull ya regresa el estado completo. (Antes el pull corría primero y
-    // reemplazaba lo local, "des-haciendo" capturas cuya subida quedó pendiente.)
-    // Se mide la cola ANTES de drenarla: la limpieza propagada la necesita para saber si
-    // había capturas sin subir (ver applyResetMark); después del flush ya no se distingue.
-    // H-68: la limpieza de datos de prueba se aplica ANTES de drenar nada. Un equipo
-    // que estuvo apagado llega con operaciones de esos mismos datos en la cola; si se
-    // flushara primero, las volvería a subir a la nube recién limpiada y reaparecerían
-    // en todas las terminales al siguiente pull.
-    let selective = null, purged = null;
-    try { selective = await applyRemoteSelectiveCleanup(); } catch (e) { /* queda must_rebootstrap */ }
-    try { purged = await applyRemotePurge(); } catch (e) { /* nunca bloquear el arranque */ }
-    const pendingAtBoot = loadQ().length;
-    try { await flushQueue(); } catch (e) { /* offline: la cola queda para el reintento */ }
-    if (!enabled || seq !== sessionSeq) return { ok: false, stale: true };
-    if (opts.pull) {
-      // Config local sin subir (op 'config' aún en cola): conservarla, no pisarla con la nube.
-      const cfgPending = hasPendingFor('settings');
-      const r = cfgPending ? { ok: true, skipped: true } : await pull();
-      if (window.UI && window.UI.toast) window.UI.toast(r.skipped ? 'Cambios locales pendientes de subir — se conservan' : (r.ok ? 'Configuración sincronizada (nube)' : 'Nube no disponible — modo local'), r.ok ? 'var(--accent)' : 'var(--danger)');
-      // Limpieza pendiente de otra terminal: se aplica AQUÍ antes de bajar el dominio.
-      try { await applyResetMark(pendingAtBoot); } catch (e) { /* nunca bloquear el arranque */ }
-      // Dominios en PARALELO (antes: 7 round-trips en serie; con red lenta el número de
-      // inventario tardaba en llegar). 'sales' va después: su fromRow resuelve el nombre
-      // del vendedor contra DATA.sellers, que debe estar ya sincronizado.
-      const seller = window.AUTH && window.AUTH.role && window.AUTH.role() === 'vendedor';
-      // `loans` sólo lo baja un administrador: la RLS de `pos.loan_documents`
-      // concede la lectura a `pos.is_active_admin()`, así que pedirla con perfil
-      // de vendedor devolvería siempre el conjunto vacío.
-      const domains = seller
-        ? ['products', 'clients', 'sellers', 'promotions', 'commissionAdjustments']
-        : ['products', 'clients', 'sellers', 'promotions', 'returns', 'exchanges', 'liquidations', 'commissionAdjustments', 'payments', 'movements', 'loans'];
-      await Promise.all(domains.map(k => pullDomain(k).catch(() => { /* tabla ausente */ })));
-      if (!seller) {
-        try { await pullDomain('sales'); } catch (e) { /* tabla ausente */ }
-      }
-      if (!enabled || seq !== sessionSeq) return { ok: false, stale: true };
-      // H-68: las cargas masivas que la limpieza invalidó se reencolan AQUÍ, ya con la
-      // versión que la nube dejó tras restaurar. Antes del pull el control optimista las
-      // rechazaría por versión vieja.
-      if (purged && purged.prune && purged.prune.rebuild.length) rebuildPurgedUpserts(purged.prune.rebuild);
-      if (selective) {
-        try { await Promise.all(['products','clients','sellers','sales','returns','exchanges','loans','liquidations','commissionAdjustments','movements']
-          .map(k => pullDomain(k, { authoritativeEmpty: true }).catch(() => { /* dominio opcional */ }))); }
-        catch (e) { /* rebootstrap sigue disponible */ }
-      }
-      try { window.dispatchEvent(new CustomEvent('configchange', { detail: { domain: true } })); } catch (e) { /* */ }
-      // La adopción H-62 sigue disponible como acción explícita, pero no corre
-      // durante un pull: reconstruir una proyección nunca autoriza crear
-      // documentos comerciales remotos a partir de caché heredada.
-      // Migración de fotos incrustadas EN SEGUNDO PLANO (no se espera): sube las que quedaron en
-      // formato viejo sin que el usuario tenga que pulsar nada. Va después del pull para operar
-      // sobre el inventario ya sincronizado.
-      autoMigratePhotos().catch(() => { /* se reintenta al próximo arranque */ });
-    }
-    flushQueue(); // por si algo quedó pendiente (p. ej. un fallo durante el arranque)
-    // Deja la terminal con folios del día ya reservados: si pierde la red después,
-    // sigue emitiendo folios cortos definitivos.
-    ensureFolioBlock();
-    if (!enabled || seq !== sessionSeq || !hasLocalWriter(false)) return { ok: false, stale: true };
-    syncBootstrapComplete = true;
-    if (protocolClient) {
-      startLiveSync(protocolClient);
-      reconcileDomains().catch(() => { /* modo local */ });
-    }
+  const pointZeroReceipt = operationId => readRpc('point_zero_receipt', { p_operation_id: operationId });
+  async function previewTestDataCleanup(preset, selection) {
+    await refresh();
+    const preview = await readRpc('preview_test_data_cleanup', { p_preset: preset || 'operations', p_selection: selection || {}, p_client_protocol: 6 });
+    return { ...preview, client_ready: ready, client_status: syncStatus(), ready: !!(preview?.ok && preview.executable && ready && !writeInFlight) };
   }
-
-  // Asocia STORE a la identidad efectiva. Cambiar de cuenta fuerza el mismo
-  // pull que una apertura limpia; logout detiene pushes sin borrar la cola.
-  function setSession(profile) {
-    const next = profile && profile.email
-      ? String(profile.email).trim().toLowerCase()
-      : null;
-    if (!next) {
-      if (sessionManaged) {
-        sessionSeq++;
-        sessionIdentity = null;
-        enabled = false;
-        syncBootstrapComplete = false;
-        syncReviewPending = null;
-        stopLiveSync();
-      }
-      return Promise.resolve({ ok: true, signedOut: true });
-    }
-    sessionManaged = true;
-    if (next === sessionIdentity && enabled) {
-      startLiveSync(sb);
-      runAutomaticSync().catch(() => {});
-      return Promise.resolve({ ok: true, unchanged: true });
-    }
-    sessionIdentity = next;
-    syncBootstrapComplete = false;
-    syncReviewPending = null;
-    stopLiveSync();
-    setRecoveryPhase('checking');
-    const seq = ++sessionSeq;
-    enabled = true;
-    return init({ pull: true }).then(() => ({
-      ok: seq === sessionSeq,
-      stale: seq !== sessionSeq,
-    }));
+  async function createTestDataCleanupBackup(approvedPreview) {
+    const current = await previewTestDataCleanup(approvedPreview?.preset_requested, approvedPreview?.selection_requested);
+    if (!current.ready || current.plan_hash !== approvedPreview?.plan_hash) throw error('CLEANUP_PREVIEW_CHANGED', 'Actualiza la revisión antes de continuar.');
+    const response = await execute({ type: 'cleanupBackup', preset: current.preset_requested, selection: current.selection_requested, planHash: current.plan_hash });
+    return response.result;
   }
-
-  // Las operaciones creadas antes de H-09 no tienen identidad verificable.
-  // Sólo un administrador puede atribuirlas expresamente a su sesión actual.
-  function claimLegacyQueue() {
-    const profile = window.AUTH && window.AUTH.current && window.AUTH.current();
-    const ownerId = activeOwnerId();
-    if (!ownerId || !profile || String(profile.role || '').toLowerCase() !== 'admin') {
-      return { ok: false, error: 'admin_required' };
-    }
-    const q = loadQ(); let claimed = 0;
-    q.forEach(op => {
-      if (op.ownerId === '__legacy_unclaimed__') {
-        op.ownerId = ownerId;
-        claimed++;
-      }
-    });
-    if (claimed) {
-      saveQ(q);
-      legacyWarned = false;
-      flushQueue();
-    }
-    return { ok: true, claimed };
+  async function executeTestDataCleanup(opts) {
+    if (opts.confirmation !== 'LIMPIAR OPERACIONES' || !opts.backupId || !opts.preview) throw error('CLEANUP_CONFIRMATION_REQUIRED', 'Falta la confirmación y el respaldo.');
+    const response = await execute({ type: 'cleanup', operationId: opts.cleanupId,
+      preset: opts.preview.preset_requested, selection: opts.preview.selection_requested, planHash: opts.preview.plan_hash,
+      backupId: opts.backupId, confirmation: opts.confirmation });
+    return { ...response.result, local: { ok: true }, remoteCommitted: true };
   }
-
-  // Sube una imagen a un bucket de Storage y devuelve su URL pública.
-  // Requiere sesión (las políticas de los buckets exigen usuario autenticado). Lanza si falla.
+  const testDataCleanupReceipt = cleanupId => readRpc('test_data_cleanup_receipt', { p_cleanup_id: cleanupId });
+  function downloadDocument(document, kind, id) {
+    const body = JSON.stringify(document, null, 2), url = URL.createObjectURL(new Blob([body], { type: 'application/json;charset=utf-8' }));
+    const anchor = window.document.createElement('a'); anchor.href = url;
+    anchor.download = `balam-${kind}-${id || Date.now()}.json`; anchor.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    return { bytes: new TextEncoder().encode(body).length, file: anchor.download };
+  }
   async function uploadImage(bucket, path, blob, contentType) {
+    assertBusinessReady();
+    const seq = sessionSeq;
     const c = await ensureClient();
-    if (!c) throw new Error('Sin conexión con la nube');
-    if (!(await hasSession())) throw new Error('Inicia sesión para guardar imágenes en la nube');
-    const { error } = await c.storage.from(bucket).upload(path, blob, { upsert: true, contentType });
-    if (error) throw new Error(error.message || 'Error al subir la imagen');
-    const { data } = c.storage.from(bucket).getPublicUrl(path);
-    return (data && data.publicUrl) || null;
+    const probe = await readRpc('online_connectivity');
+    if (probe !== true && probe?.ok !== true) throw error('ONLINE_UNAVAILABLE', OFFLINE);
+    const { error: cause } = await c.storage.from(bucket).upload(path, blob, { upsert: true, contentType });
+    if (cause) throw cause;
+    if (seq !== sessionSeq) throw error('SESSION_CHANGED', 'La sesión cambió. Vuelve a seleccionar la imagen con tu usuario.');
+    const url = c.storage.from(bucket).getPublicUrl(path)?.data?.publicUrl;
+    if (!url) throw error('IMAGE_UPLOAD_UNCONFIRMED', 'No se pudo confirmar la imagen.');
+    return url;
   }
-  // Migra AUTOMÁTICAMENTE a la nube las fotos que quedaron incrustadas (data:image/…): las que
-  // se subieron antes de esta función o cuando no había sesión/red. Corre solo en segundo plano
-  // al arrancar (y al reconectar), así el usuario ya no tiene que pulsar "Migrar fotos" nunca.
-  // Idempotente y reanudable: ruta prod-<id>.jpg con upsert; una foto ya migrada no se repite y
-  // un fallo se reintenta en el siguiente arranque. No bloquea el arranque ni interrumpe nada.
-  let migratingPhotos = false;
-  async function autoMigratePhotos() {
-    if (migratingPhotos || !enabled) return 0;
-    const D = window.DATA; if (!D || !Array.isArray(D.products)) return 0;
-    const pend = D.products.filter(p => /^data:image\//.test(p.imagen || ''));
-    if (!pend.length) return 0;
-    // Sin cliente o sin sesión no se puede subir a Storage: se deja para un próximo arranque
-    // (el usuario ya está autenticado en la terminal; esto solo salta si abrió sin sesión).
-    const c = await ensureClient(); if (!c) return 0;
-    if (!(await hasSession())) return 0;
-    migratingPhotos = true;
-    let ok = 0; const changedIds = [];
-    try {
-      for (const p of pend) {
-        try {
-          const blob = await (await fetch(p.imagen)).blob();
-          const url = await uploadProductPhoto('prod-' + p.id + '.jpg', blob);
-          if (!url) continue;
-          p.imagen = url; ok++; changedIds.push(p.id);
-          if (changedIds.length === 5 && D.saveProducts) {
-            D.saveProducts(changedIds.splice(0)); // persiste y sincroniza sólo estas filas
-          }
-        } catch (e) { /* una foto falló: se reintenta en el próximo arranque */ }
-      }
-      if (changedIds.length && D.saveProducts) D.saveProducts(changedIds.splice(0));
-      if (ok && window.UI && window.UI.toast) window.UI.toast(`${ok} foto(s) de producto guardadas en la nube`, 'var(--accent)');
-    } finally { migratingPhotos = false; }
-    return ok;
+  const uploadBarcode = (path, blob) => uploadImage('barcodes', path, blob, 'image/png');
+  const uploadProductPhoto = (path, blob) => uploadImage('product-photos', path, blob, 'image/jpeg');
+  async function accountRequest(payload) {
+    const c = await ensureClient(), { data } = await c.auth.getSession();
+    const response = await fetch(SUPABASE_URL + '/functions/v1/admin-users', {
+      method: 'POST', cache: 'no-store', signal: AbortSignal.timeout(20000), headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY,
+        Authorization: 'Bearer ' + data.session.access_token, 'x-balam-device-id': window.CORE.getDeviceId() },
+      body: JSON.stringify(payload),
+    });
+    const body = await response.json();
+    if (response.status === 202 && body.uncertain === true) return body;
+    if (!response.ok || body.error || body.ok === false) {
+      if (body.terminal === true) return { ok: false, error: {
+        code: body.error?.code || body.code, message: body.error?.message || body.message } };
+      throw error('ONLINE_RESULT_UNKNOWN', CONFIRMING);
+    }
+    return body;
   }
-
-  // PNG de etiqueta de código de barras → bucket 'barcodes' (mismo contrato de siempre).
-  function uploadBarcode(path, blob) { return uploadImage('barcodes', path, blob, 'image/png'); }
-  // Foto de producto (JPEG 600px del alta) → bucket 'product-photos' (migración pos_010).
-  // El producto guarda solo la URL; la foto deja de viajar incrustada en cada guardado.
-  function uploadProductPhoto(path, blob) { return uploadImage('product-photos', path, blob, 'image/jpeg'); }
-
-  // Llama una Edge Function con fetch DIRECTO y devuelve SIEMPRE el cuerpo real de la respuesta.
-  // A diferencia de supabase-js .invoke(), aquí leemos el JSON aunque el status sea 4xx/5xx, así el
-  // usuario ve el mensaje verdadero de la función ("Solo un administrador…", "Sesión inválida", etc.)
-  // y nunca el genérico "Edge Function returned a non-2xx status code".
-  // Devuelve { ok, status, body } — body.error trae el motivo si falló.
   async function callFunction(name, payload) {
-    const c = await ensureClient();
-    if (!c) return { ok: false, status: 0, body: { error: 'Sin conexión con la nube' } };
-    let token = SUPABASE_KEY;
-    try { const { data } = await c.auth.getSession(); if (data && data.session && data.session.access_token) token = data.session.access_token; } catch (e) { /* sin sesión: se envía la anon y la función responderá 401 */ }
-    try {
-      const resp = await fetch(SUPABASE_URL + '/functions/v1/' + name, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + token },
-        body: JSON.stringify(payload || {}),
-      });
-      let body = {};
-      try { body = await resp.json(); } catch (e) { body = { error: 'La función respondió algo que no se pudo leer (código ' + resp.status + ')' }; }
-      return { ok: resp.ok, status: resp.status, body: body || {} };
-    } catch (e) {
-      return { ok: false, status: 0, body: { error: 'No se pudo conectar con la función "' + name + '": ' + (e.message || e) } };
-    }
+    if (name !== 'admin-users') throw error('ONLINE_COMMAND_INVALID', 'Función no autorizada.');
+    const response = await execute({ type: 'account', requestId: payload?.requestId, payload });
+    return { ok: true, status: 200, body: response.result };
   }
-
-  setInterval(() => {
-    if (enabled && (!syncManifest || recoveryPhase !== 'ready' || recoveryError)) {
-      return runAutomaticSync().catch(() => {});
-    }
-  }, 15000);
-  window.STORE = { assertBusinessReady, recoverDirectedDevice, init, synchronizeNow, setSession, claimLegacyQueue, pull, pushConfig, pushRows, pushClient, pushSale, settleLayaway, pushReturn, pushExchange, commitReferenceReclassification, ensureFolioBlock, deleteRow, deleteProductScope, settleCommission, closeCommissionPeriod, applyCommissionAdjustment, pushLoanOperation, migrateLocalLoans, pullDomain, fetchSaleByFolio, physicalCardAvailable, claimPhysicalCard, flushQueue, retryOperation, discardOperation, queueStatus, syncStatus, syncFleetStatus, updateSyncDevice, setSyncDeviceRetired, requestSyncRetry, markSyncActivityReviewed, decideSyncQuarantine, exportQuarantineReport, reconcileDomains, invalidateDomain, establishPointZero, pointZeroPreview, createPointZeroBackup, executePointZero, pointZeroReceipt, downloadPointZeroDocument, previewTestDataCleanup, createTestDataCleanupBackup, executeTestDataCleanup, testDataCleanupReceipt, downloadTestDataCleanupDocument, rebootstrapFromCloud, exportSyncRecovery, hasPendingLayaway, clearQueue, markResetApplied, purgeTestData, applyRemotePurge, applyRemoteSelectiveCleanup, pruneQueueForPurge, pruneQueueForSelectiveCleanup, readPurgeState, readSelectiveCleanupEvent, autoMigratePhotos, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, get enabled() { return enabled; }, get pending() { return loadQ().filter(opBelongsToActiveSession).length; } };
-  window.STORE.pushProductFamilyBatch = pushProductFamilyBatch;
+  window.STORE = { assertBusinessReady, execute, init, refresh, setSession, getQuoteContext, serverNow,
+    synchronizeNow: refresh, pull: refresh, pullDomain: refresh, invalidateDomain: () => refresh().catch(() => {}),
+    pushConfig, pushRows, pushClient, pushProductFamilyBatch, pushSale, pushReturn, pushExchange, settleLayaway,
+    deleteRow, deleteProductScope, settleCommission, closeCommissionPeriod, applyCommissionAdjustment,
+    pushLoanOperation, commitReferenceReclassification, allocateFolio, clearInventory, commitSizeMigration,
+    fetchSaleByFolio, physicalCardAvailable, claimPhysicalCard, syncStatus, syncFleetStatus, updateSyncDevice, setSyncDeviceRetired,
+    pointZeroPreview, createPointZeroBackup, executePointZero, pointZeroReceipt, downloadPointZeroDocument: downloadDocument,
+    previewTestDataCleanup, createTestDataCleanupBackup, executeTestDataCleanup, testDataCleanupReceipt, downloadTestDataCleanupDocument: downloadDocument,
+    heartbeatDevice, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto,
+    get enabled() { return enabled; } };
   window.CORE.registerSyncGateway(window.STORE);
 })();

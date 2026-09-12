@@ -16,7 +16,7 @@
 // El saldo mostrado es el persistido en la venta; sólo se deriva cuando falta (ventas
 // anteriores a que `saldo` existiera), con la misma fórmula que usa DATA.
 (function () {
-  const { useState, useMemo, useEffect } = React;
+  const { useState, useMemo, useEffect, useRef } = React;
   const { fmt, toast, Modal, Segment } = window.UI;
   const { MS, GlassCard, SerifHeading } = window.HX;
   const C = window.CONFIG;
@@ -77,7 +77,7 @@
       })
       // Más antiguo primero: es el que reclama gestión.
       .sort((a, b) => String(a.fecha || '').localeCompare(String(b.fecha || ''))),
-    [term, filtro, D.sales.length, abonando, recibo]);
+    [term, filtro, D.revision, abonando, recibo]);
 
     // KPIs de la cartera completa (no del filtro): el dueño pregunta «cuánto me deben».
     const todos = D.sales.filter(s => s.estado === 'Apartado');
@@ -277,6 +277,8 @@
     const realMethods = METODOS.filter(item => item.id !== 'Mixto');
     const [components, setComponents] = useState(() => realMethods.slice(0, 2).map((item, index) => ({ methodCode: item.id, amount: index ? String(saldo) : '0' })));
     const [confirmando, setConfirmando] = useState(false);
+    const paymentOperationRef = useRef(null);
+    const submittingRef = useRef(false);
 
     const inputCls = 'block w-full h-12 px-4 bg-surface-container-low border border-outline-variant focus:ring-1 focus:ring-primary focus:border-primary text-base rounded-xl font-mono';
     const lbl = 'text-overline uppercase tracking-widest text-on-surface-variant mb-2';
@@ -295,24 +297,28 @@
     const nuevoSaldo = montoValido ? Math.max(0, Math.round((saldo - amount) * 100) / 100) : saldo;
 
     async function confirmar() {
-      if (confirmando) return;
+      if (submittingRef.current) return;
       if (!montoValido) { toast('El abono debe ser mayor a cero y no exceder el saldo.', 'var(--danger)'); return; }
       if (!mixtoValido) { toast('El desglose del pago mixto no cuadra con el monto.', 'var(--danger)'); return; }
       const current = C.find('payment_method', metodo);
       const detalle = metodo === 'Mixto' ? exactComponents
         : [{ methodCode: metodo, methodLabel: (current && current.label) || metodo, amount: Math.round(amount * 100) / 100 }];
+      submittingRef.current = true;
       setConfirmando(true);
+      paymentOperationRef.current = paymentOperationRef.current || D.newOperationId();
       try {
-        const r = await Promise.resolve(D.registrarPagoApartado(sale.folio, { monto: amount, metodo, detalle }));
+        const r = await D.registrarPagoApartado(sale.folio, { monto: amount, metodo, detalle, operationId: paymentOperationRef.current });
         if (!r || !r.ok) {
-          toast((r && r.error) || (r && r.pending
-            ? 'Liquidación pendiente de confirmación; no entregues la mercancía.'
-            : 'No se pudo registrar el pago.'), 'var(--danger)');
+          paymentOperationRef.current = null;
+          toast((r && r.error) || 'No se pudo registrar el pago.', 'var(--danger)');
           return;
         }
         toast(r.liquidado ? 'Apartado liquidado · venta pagada' : 'Abono registrado · saldo ' + fmt(r.sale.saldo), 'var(--accent)');
         onDone({ sale: r.sale, payment: r.payment, liquidado: r.liquidado });
-      } finally { setConfirmando(false); }
+      } catch (error) {
+        if (error.code !== 'ONLINE_RESULT_UNKNOWN') paymentOperationRef.current = null;
+        toast(error.message || 'No se pudo registrar el pago.', 'var(--danger)');
+      } finally { submittingRef.current = false; setConfirmando(false); }
     }
 
     const footer = [

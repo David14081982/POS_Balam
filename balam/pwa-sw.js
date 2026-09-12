@@ -24,7 +24,12 @@ self.addEventListener('activate', event => {
     const names = await caches.keys();
     await Promise.all(names
       .filter(name => name.startsWith('balam-shell-') && name !== SHELL_CACHE)
-      .map(name => caches.delete(name)));
+      .map(async name => {
+        const entries = await (await caches.open(name)).keys();
+        // La adopción online conserva cualquier evidencia comercial antes de retirarla.
+        if (entries.some(entry => /\.supabase\.co\/(?:rest|functions|graphql)\/v1(?:\/|$)/.test(entry.url))) return;
+        await caches.delete(name);
+      }));
     await self.clients.claim();
   })());
 });

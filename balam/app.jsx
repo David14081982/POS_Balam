@@ -1,6 +1,6 @@
 // app.jsx — Shell principal (Balam): sidebar, topbar, router. Exporta window.App
 (function () {
-  const { useState, useEffect } = React;
+  const { useState, useEffect, useRef } = React;
   const D = window.DATA;
   const { useTweaks } = window;
   const { MS } = window.HX;
@@ -17,11 +17,8 @@
       return () => { clearInterval(timer); ['syncstatuschange','online','offline'].forEach(event => window.removeEventListener(event, refresh)); };
     }, []);
     if (!status) return null;
-    const label = status.connection === 'offline' ? 'Sin conexión'
-      : status.synchronized ? 'Todo actualizado'
-      : status.blocked || (status.errors || []).length ? 'Requiere atención'
-      : busy || status.reconciling ? 'Actualizando'
-      : status.pending ? `${status.pending} pendiente(s)` : 'Por actualizar';
+    const label = status.ready ? 'Todo actualizado'
+      : busy || status.reconciling ? 'Actualizando' : 'Sin conexión';
     const update = async () => {
       setBusy(true);
       try {
@@ -32,24 +29,13 @@
     };
     const last = status.lastSuccess ? new Date(status.lastSuccess).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : 'sin confirmar';
     return h('button', { onClick: update, disabled: busy, 'data-testid': 'sync-update',
-      'aria-label': `${label}. Actualizar este equipo`, title: `${status.pending} pendiente(s). Última actualización: ${last}. Actualizar este equipo`,
+      'aria-label': `${label}. Consultar Supabase`, title: `Última consulta: ${last}. Consultar Supabase`,
       className: 'min-h-11 shrink-0 px-2 rounded-lg text-overline border border-outline-variant disabled:opacity-60 ' + (status.synchronized ? 'text-success' : 'text-on-surface-variant') }, label);
   }
 
   // Campana de notificaciones: alertas reales (stock crítico, apartados por completar).
   function NotificationsBell({ go }) {
     const [open, setOpen] = useState(false);
-    const [syncStatus, setSyncStatus] = useState(() => (
-      window.STORE && window.STORE.syncStatus ? window.STORE.syncStatus() : null
-    ));
-    useEffect(() => {
-      const refresh = () => setSyncStatus(
-        window.STORE && window.STORE.syncStatus ? window.STORE.syncStatus() : null
-      );
-      window.addEventListener('syncstatuschange', refresh);
-      refresh();
-      return () => window.removeEventListener('syncstatuschange', refresh);
-    }, []);
     const low = window.CONFIG.get('stock.lowThreshold') || 4;
     const criticos = D.commercialProducts().filter(p => D.totalStock(p) <= low);
     const apartados = D.sales.filter(s => s.estado === 'Apartado');
@@ -63,20 +49,6 @@
       sub: `${(l.persona || {}).nombre || '—'} · ${D.prestamoPendientes(l)} pieza(s) sin regresar desde ${l.fechaEsperada}`,
       page: 'prestamos',
     }));
-    ((syncStatus && syncStatus.operations) || []).forEach(op => {
-      if (!op.diagnostic) return;
-      const waiting = op.status === 'retry_wait' || op.status === 'waiting_inventory';
-      items.push({
-        icon: waiting ? 'clock' : 'alert',
-        tone: waiting ? '#92760F' : '#ba1a1a',
-        message: op.diagnostic,
-        action: () => window.STORE && window.STORE.retryOperation(op.id),
-      });
-    });
-    if (syncStatus && syncStatus.durability === 'memory') items.unshift({
-      icon: 'alert', tone: '#ba1a1a',
-      message: { code: 'storage_unavailable', message: 'queue_durability_memory' },
-    });
     const n = items.length;
     return h('div', { className: 'relative' }, [
       h('button', { key: 'btn', onClick: () => setOpen(o => !o), className: 'relative w-11 h-11 grid place-items-center text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-colors', title: 'Notificaciones', 'aria-label': 'Notificaciones', 'aria-expanded': open ? 'true' : 'false' }, [
@@ -110,15 +82,7 @@
     ]);
   }
 
-  // Exigir login SOLO en dominio real (https). En local (file:// o localhost) la app
-  // abre directo para desarrollo; la seguridad real de datos la da RLS en el servidor.
-  const REQUIRE_AUTH = (() => {
-    try {
-      const hn = location.hostname;
-      const dev = location.protocol === 'file:' || hn === 'localhost' || hn === '127.0.0.1' || hn === '';
-      return !dev;
-    } catch (e) { return false; }
-  })();
+  const REQUIRE_AUTH = true;
   // Solo tweaks que siguen vigentes con Balam (layout de POS)
   const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
     "ticketPos": "right",
@@ -126,6 +90,7 @@
   }/*EDITMODE-END*/;
 
   function App() {
+    const lastShell = useRef(null);
     const [t] = useTweaks(TWEAK_DEFAULTS);
     const [page, setPage] = useState(() => localStorage.getItem('balam-page') || 'dashboard');
     useEffect(() => { localStorage.setItem('balam-page', page); }, [page]);
@@ -146,35 +111,26 @@
     }, [mobileNavOpen]);
     // Auth real (Supabase) + nube. Solo una sesión autenticada sincroniza pos.* (RLS).
     const [, bumpCfg] = useState(0);
-    const [, bumpWriter] = useState(0);
-    const [recovery, setRecovery] = useState(()=>window.STORE?.syncStatus()?.recoveryPhase);
+    const [online, setOnline] = useState(()=>window.STORE?.syncStatus());
     useEffect(()=>{
-      const update = ()=>setRecovery(window.STORE?.syncStatus()?.recoveryPhase);
+      const update = ()=>setOnline(window.STORE?.syncStatus());
       window.addEventListener('syncstatuschange', update); update();
       return ()=>window.removeEventListener('syncstatuschange', update);
-    }, []);
-    useEffect(() => {
-      const onWriter = () => bumpWriter(value => value + 1);
-      window.addEventListener('localwriterchange', onWriter);
-      return () => window.removeEventListener('localwriterchange', onWriter);
     }, []);
     useEffect(() => {
       const onCfg = () => bumpCfg(v => v + 1);
       const onAuth = () => {
         bumpCfg(v => v + 1);
-        // Cada cambio entrega la identidad efectiva a STORE. Un usuario nuevo
-        // fuerza pull y sólo drena sus operaciones; logout detiene los pushes.
+        // La identidad efectiva determina la lectura remota y descarta la proyección anterior.
         if (window.STORE && window.STORE.setSession) {
-          window.STORE.setSession(window.AUTH.current());
+          window.STORE.setSession(window.AUTH.current()).catch(() => {});
         } else if (window.AUTH.hasSession() && window.STORE) {
-          window.STORE.init({ pull: true });
+          window.STORE.init().catch(() => {});
         }
       };
       window.addEventListener('configchange', onCfg);
       window.addEventListener('authchange', onAuth);
       if (window.AUTH.init) window.AUTH.init(); // carga sesión persistida → dispara authchange
-      // En dev (sin gate de login) sincroniza la nube aunque no haya sesión (anon), como antes.
-      if (!REQUIRE_AUTH && window.STORE) window.STORE.init({ pull: true });
       return () => { window.removeEventListener('configchange', onCfg); window.removeEventListener('authchange', onAuth); };
     }, []);
 
@@ -195,23 +151,22 @@
       return true;
     }
     const navCollapsed = collapsed && !mobileNavOpen;
-    if (window.AUTH.hasSession() && recovery && recovery !== 'ready') {
-      return h('main', { 'data-testid': 'device-recovery-gate', role: 'status', 'aria-live': 'polite',
+    if (window.AUTH.hasSession() && online && !online.ready) {
+      const gate = h('main', { key: 'online-gate', 'data-testid': 'online-gate', role: 'status', 'aria-live': 'polite',
+        style: { position: 'fixed', inset: 0, zIndex: 10000 },
         className: 'min-h-screen flex items-center justify-center p-6 bg-surface text-on-surface' },
         h('div', { className: 'w-full max-w-md text-center space-y-6' }, [
-          h('p', { key: 'message', className: 'text-lg' }, recovery === 'update'
-            ? 'BALAM necesita actualizarse antes de continuar.'
-            : 'Estamos actualizando la información de este equipo.'),
-          (recovery === 'waiting' || recovery === 'update') && h('button', {
+          h('p', { key: 'message', className: 'text-lg' }, online.message),
+          online.connection !== 'checking' && h('button', {
             key: 'update', className: 'min-h-12 rounded-lg px-6 py-3 bg-primary text-on-primary',
             onClick: async ()=> {
-              if (recovery !== 'update') return window.STORE.init({ pull: true });
-              if (window.PWA?.reloadSafety().safe === false) return;
-              const activated = await window.PWA?.activateUpdate();
-              if (!activated?.safe) location.reload();
+              await window.STORE.init().catch(() => {});
             },
-          }, recovery === 'update' ? 'Actualizar BALAM' : 'Actualizar ahora'),
+          }, 'Actualizar ahora'),
         ]));
+      // El formulario y su await siguen vivos. La proyección anterior queda oculta e inerte.
+      return h(React.Fragment, null, [lastShell.current && React.cloneElement(lastShell.current,
+        { inert: '', 'aria-hidden': true, style: { visibility: 'hidden' } }), gate]);
     }
 
     // Gate de seguridad SOLO en dominio real: sin sesión no se muestra la app (RLS protege).
@@ -224,6 +179,7 @@
       // se emitían contra un host sin montar y se perdían en silencio: la pantalla
       // de Login no podía explicar por qué no dejaba pasar. Va con cada rama previa.
       if (!window.AUTH.hasSession()) {
+        lastShell.current = null;
         return h(React.Fragment, null, [
           h(LoginScreen, { key: 'login' }),
           h(window.UI.ToastHost, { key: 'toast' }),
@@ -236,37 +192,7 @@
         ]);
       }
     }
-    if (window.DATA && window.DATA.localWriterLeaseSupported && !window.DATA.isLocalWriter) {
-      const writerState = window.DATA.localWriterState;
-      const blocked = writerState === 'blocked';
-      const rebasing = writerState === 'rebasing';
-      const contended = writerState === 'waiting' && window.DATA.localWriterContended === true;
-      const icon = blocked ? 'alert' : (contended ? 'users' : (rebasing ? 'repeat' : 'clock'));
-      const title = blocked ? 'Caché local bloqueada'
-        : (contended ? 'Otra pestaña está operando'
-          : (rebasing ? 'Actualizando datos locales' : 'Preparando almacenamiento local'));
-      const description = blocked
-        ? 'Recarga esta pestaña para reconstruir los datos antes de continuar.'
-        : (contended
-          ? 'Esta pestaña permanece en lectura. Al cerrar la pestaña activa, tomará el control automáticamente.'
-          : (rebasing
-            ? 'Estamos incorporando los datos locales más recientes antes de habilitar operaciones.'
-            : 'Estamos preparando esta pestaña para operar de forma segura.'));
-      return h('div', {
-        className: 'h-full grid place-items-center p-6',
-        style: { background: '#131B2E' },
-        'data-testid': 'local-writer-gate',
-        'data-writer-state': writerState,
-        'data-writer-contended': contended ? 'true' : 'false',
-      },
-        h('div', { className: 'max-w-md text-center' }, [
-          h(window.Icon, { key: 'i', name: icon, size: 36, className: 'mx-auto mb-3', 'aria-hidden': true, style: { color: blocked ? '#ff8a80' : '#FFE088' } }),
-          h('div', { key: 't', className: 'font-headline text-xl text-white mb-2' }, title),
-          h('div', { key: 'd', className: 'text-sm', style: { color: '#AEB4C5' } }, description),
-        ]));
-    }
-
-    return h('div', { className: 'flex h-full min-w-0 bg-background font-body text-on-surface' }, [
+    lastShell.current = h('div', { key: 'shell', className: 'flex h-full min-w-0 bg-background font-body text-on-surface' }, [
       mobileNavOpen && h('button', {
         key: 'nav-backdrop', className: 'fixed inset-0 z-[80] bg-on-surface/45 backdrop-blur-sm md:hidden',
         onClick: () => setMobileNavOpen(false), 'aria-label': 'Cerrar navegación', tabIndex: -1,
@@ -317,13 +243,13 @@
             onMouseEnter: e => { e.currentTarget.style.background = '#1C2437'; },
             onMouseLeave: e => { e.currentTarget.style.background = 'transparent'; },
             onClick: () => { if (user) window.AUTH.logout(); },
-            title: user ? 'Cerrar sesión' : 'Modo local',
+            title: 'Cerrar sesión',
           }, [
             h('div', { key: 'a', className: 'w-9 h-9 rounded-full grid place-items-center text-xs font-bold shrink-0', style: { background: user ? '#FFE088' : '#1C2437', color: user ? '#131B2E' : '#5D637B' } },
               user ? (user.iniciales || 'US') : h(MS, { name: 'user', size: 18 })),
             !navCollapsed && h('div', { key: 'm', className: 'flex-1 text-left min-w-0' }, [
-              h('div', { key: 'n', className: 'text-sm font-medium text-white truncate' }, user ? user.nombre : 'Modo local'),
-              h('div', { key: 'r', className: 'text-[10px] uppercase tracking-widest', style: { color: '#5D637B' } }, user ? (isAdmin ? 'Administrador' : 'Vendedor') : 'Sin candado'),
+              h('div', { key: 'n', className: 'text-sm font-medium text-white truncate' }, user ? user.nombre : ''),
+              h('div', { key: 'r', className: 'text-[10px] uppercase tracking-widest', style: { color: '#5D637B' } }, user ? (isAdmin ? 'Administrador' : 'Vendedor') : ''),
             ]),
             !navCollapsed && h(MS, { key: 'i', name: user ? 'logout' : 'arrowUpRight', size: 18, style: { color: '#5D637B' } }),
           ])),
@@ -334,7 +260,6 @@
         h('header', { key: 'tb', className: 'min-h-16 shrink-0 flex items-center gap-2 sm:gap-4 px-3 sm:px-6 py-2 bg-surface/80 backdrop-blur-md border-b border-outline-variant' }, [
           h('button', { key: 'menu', className: 'md:hidden w-11 h-11 shrink-0 grid place-items-center rounded-lg hover:bg-surface-container focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary', onClick: () => setMobileNavOpen(true), 'aria-label': 'Abrir navegación', 'aria-controls': 'balam-navigation', 'aria-expanded': mobileNavOpen ? 'true' : 'false' }, h(MS, { name: 'menu', size: 22 })),
           h('h1', { key: 't', className: 'min-w-0 truncate font-headline text-lg sm:text-headline-md text-primary' }, visibleScreen ? visibleScreen.title : 'Balam'),
-          D.demoActive && D.demoActive() && h('span', { key: 'demo', className: 'hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gold-soft text-gold-text text-overline font-bold uppercase tracking-widest', title: 'Datos de demostración (local, no afecta producción)' }, [h(MS, { key: 'i', name: 'star', size: 13, fill: true }), 'Demo']),
           h('div', { key: 's', className: 'flex-1' }),
           visiblePage !== 'pos' && canAccess('pos') && h('button', {
             key: 'pos', className: 'inline-flex items-center justify-center gap-2 px-3 sm:px-4 min-w-11 h-11 bg-secondary-container text-on-secondary-container font-label-sm uppercase tracking-widest text-xs rounded-lg hover:opacity-90 transition',
@@ -357,6 +282,7 @@
       // Toasts
       h(window.UI.ToastHost, { key: 'toast' }),
     ]);
+    return h(React.Fragment, null, [lastShell.current]);
   }
 
   function RestrictedAccessScreen() {

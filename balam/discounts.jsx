@@ -13,17 +13,27 @@
   const D = window.DATA;
   const C = window.CONFIG;
   const h = React.createElement;
+  const runningOnlineActions = new Set();
+  async function onlineAction(key, action) {
+    if (runningOnlineActions.has(key)) return;
+    runningOnlineActions.add(key);
+    try { return await action(); }
+    catch (error) { toast(error.message || 'No se pudo confirmar la operación', 'var(--danger)'); }
+    finally { runningOnlineActions.delete(key); }
+  }
+
 
   // ── Motor ───────────────────────────────────────────────────────────────────
   function parseDT(d, t, isEnd) {
     if (!d) return null;
     const time = t || (isEnd ? '23:59' : '00:00');
-    const dt = new Date(d + 'T' + time + ':00');
+    const dt = new Date(d + 'T' + time + ':00-07:00');
     return isNaN(dt.getTime()) ? null : dt;
   }
   function estado(p) {
     if (p.pausado) return 'Pausado';
-    const now = new Date();
+    const now = window.CORE.invokeSync('serverNow');
+    if (!now || !Number.isFinite(now.getTime())) return 'Sin conexión';
     const s = parseDT(p.inicio, p.horaInicio, false);
     const e = parseDT(p.fin, p.horaFin, true);
     if (s && now < s) return 'Programado';
@@ -174,9 +184,9 @@
     const nActivas = promos.filter(p => estado(p) === 'Activo').length;
     const nProg = promos.filter(p => estado(p) === 'Programado').length;
 
-    function togglePause(p) { D.updatePromo(p.id, { pausado: !p.pausado }); refresh(); toast(p.pausado ? 'Promoción reanudada' : 'Promoción pausada'); }
-    function dup(p) { D.duplicatePromo(p.id); refresh(); toast('Promoción duplicada (en pausa)'); }
-    function del(p) { if (window.confirm('¿Eliminar la promoción "' + p.nombre + '"?')) { D.removePromo(p.id); refresh(); toast('Promoción eliminada', 'var(--danger)'); } }
+    async function togglePause(p) { return onlineAction('togglePause', async () => { await D.updatePromo(p.id, { pausado: !p.pausado }); refresh(); toast(p.pausado ? 'Promoción reanudada' : 'Promoción pausada'); }); }
+    async function dup(p) { return onlineAction('dup', async () => { await D.duplicatePromo(p.id); refresh(); toast('Promoción duplicada (en pausa)'); }); }
+    async function del(p) { return onlineAction('del', async () => { if (window.confirm('¿Eliminar la promoción "' + p.nombre + '"?')) { await D.removePromo(p.id); refresh(); toast('Promoción eliminada', 'var(--danger)'); } }); }
 
     return h('div', { className: 'flex-1 min-h-0 min-w-0 overflow-y-auto bg-background font-body text-on-surface px-4 py-6 sm:p-8' }, [
       // Encabezado
@@ -269,7 +279,7 @@
     // universo activo y su orden desde la misma autoridad que POS e Inventario.
     const tallas = D.resolveSizeFilterOptions().map(size => size.value);
     const customCats = Object.keys(C.allCatalogMeta ? C.allCatalogMeta() : {}).filter(k => { const m = C.catalogMeta(k); return m && m.custom; }).map(k => ({ kind: k, label: C.catalogLabel(k), items: C.list(k) }));
-    const modelos = useMemo(() => [...new Set(D.products.map(p => String(p.modelo)))].sort((a, b) => a.localeCompare(b, 'es', { numeric: true })), []);
+    const modelos = useMemo(() => [...new Set(D.products.map(p => String(p.modelo)))].sort((a, b) => a.localeCompare(b, 'es', { numeric: true })), [D.revision]);
 
     // "Todas" = interruptor seleccionar/quitar TODO el grupo (con feedback visible en los chips).
     // En el matching, tanto vacío como "todo seleccionado" = SIN filtro (aplica a todas, incl. sin valor).
@@ -286,9 +296,10 @@
     }
 
     const draftForPreview = Object.assign({}, d, { valor: Number(d.valor) || 0 });
-    const preview = useMemo(() => window.PROMOS.previewDraft(draftForPreview), [JSON.stringify(d)]);
+    const preview = useMemo(() => window.PROMOS.previewDraft(draftForPreview), [JSON.stringify(d), D.revision]);
 
-    function submit() {
+    async function submit() {
+      return onlineAction('submit', async () => {
       if (!d.nombre.trim()) { toast('Escribe el nombre de la promoción', 'var(--danger)'); return; }
       if (!(Number(d.valor) > 0)) { toast('El valor del descuento debe ser mayor a 0', 'var(--danger)'); return; }
       if (d.inicio && d.fin && d.fin < d.inicio) { toast('La fecha fin no puede ser anterior al inicio', 'var(--danger)'); return; }
@@ -297,9 +308,10 @@
         inicio: d.inicio || '', fin: d.fin || '', horaInicio: d.horaInicio || '', horaFin: d.horaFin || '',
         pausado: !!d.pausado, scope: d.scope,
       };
-      if (isEdit) D.updatePromo(d.id, payload); else D.addPromo(payload);
+      if (isEdit) await D.updatePromo(d.id, payload); else await D.addPromo(payload);
       toast(isEdit ? 'Promoción actualizada' : 'Promoción creada');
       onSaved();
+      });
     }
 
     const lblCls = 'font-label-sm text-on-surface-variant';

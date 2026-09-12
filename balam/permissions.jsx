@@ -6,8 +6,13 @@
   const PAGE_SIZE = 100;
 
   async function rpc(name, args) {
+    if (['admin_sync_screen_permission_catalog', 'admin_apply_user_screen_permissions_checked'].includes(name)) {
+      const receipt = await window.CORE.invokeSync('execute', { type: 'permissions', rpc: name, args: args || {} });
+      if (!receipt || receipt.ok !== true) throw new Error('PERMISSION_CONFIRMATION_MISSING');
+      return receipt.result;
+    }
     const client = await window.CORE.invokeSync('getClient');
-    if (!client) throw new Error('NETWORK_UNAVAILABLE');
+    if (!client) throw new Error('Sin conexión. BALAM necesita internet para continuar.');
     const { data, error } = await client.schema('pos').rpc(name, args || {});
     if (error) throw error;
     return data;
@@ -75,7 +80,8 @@
     if (/TARGET_USER_NOT_FOUND/.test(text)) return { kind: 'missing', text: 'La cuenta seleccionada ya no existe.' };
     if (/TARGET_USER_INACTIVE/.test(text)) return { kind: 'inactive', text: 'La cuenta seleccionada está inactiva y no puede modificarse.' };
     if (/LAST_PERMISSION_ADMIN_REQUIRED|LAST_PERMISSION_ADMIN/.test(text)) return { kind: 'last-admin', text: 'Este cambio dejaría la plataforma sin un administrador capaz de gestionar usuarios y permisos.' };
-    if (/NETWORK|Failed to fetch|fetch/i.test(text)) return { kind: 'network', text: 'No fue posible conectar con Supabase. El borrador se conserva para reintentar.' };
+    if (/NETWORK|Failed to fetch|fetch|Sin conexión/i.test(text)) return { kind: 'network', text: 'Sin conexión. BALAM necesita internet para continuar.' };
+    if (/Estamos confirmando|ONLINE_RESULT_UNCERTAIN/.test(text)) return { kind: 'network', text: 'Estamos confirmando la operación. No la repitas.' };
     return { kind: 'server', text: 'No fue posible guardar los permisos. El borrador se conserva.' };
   }
 

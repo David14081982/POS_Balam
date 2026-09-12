@@ -194,9 +194,12 @@
       action: 'Pide a una persona administradora que revise tu acceso.', level: 'danger',
     },
     network: {
-      title: 'No hay conexión en este momento',
-      explanation: 'Tu cambio permanece protegido en este equipo.',
-      action: 'Puedes seguir trabajando; BALAM lo enviará cuando vuelva la conexión.', level: 'warning',
+      title: 'Sin conexión. BALAM necesita internet para continuar.',
+      explanation: '', action: '', level: 'warning',
+    },
+    confirming: {
+      title: 'Estamos confirmando la operación. No la repitas.',
+      explanation: '', action: '', level: 'warning',
     },
     server: {
       title: 'El servicio no respondió',
@@ -209,9 +212,9 @@
       action: 'Pide a una persona administradora que reporte el problema a soporte.', level: 'danger',
     },
     compatibility: {
-      title: 'Este equipo necesita actualizar su información',
-      explanation: 'La información compartida cambió y BALAM detuvo nuevas escrituras para evitar errores.',
-      action: 'Abre Centro de equipos y elige “Actualizar este equipo”.', level: 'danger',
+      title: 'Esta versión no es compatible con el servicio',
+      explanation: 'El servicio rechazó el contrato de esta versión de BALAM.',
+      action: 'Instala la actualización disponible para continuar.', level: 'danger',
     },
     conflict: {
       title: 'Otra terminal guardó un cambio primero',
@@ -224,19 +227,14 @@
       action: 'Revisa los campos marcados; si persiste, pide ayuda a una persona administradora.', level: 'danger',
     },
     storage: {
-      title: 'Este equipo tiene poco espacio disponible',
-      explanation: 'BALAM conserva el cambio abierto para evitar perderlo.',
-      action: 'No cierres esta pestaña, libera espacio y vuelve a intentarlo.', level: 'danger',
+      title: 'No se pudo proteger la confirmación',
+      explanation: 'La operación no se envió.',
+      action: 'Libera espacio o habilita el almacenamiento del navegador antes de intentar de nuevo.', level: 'danger',
     },
     barcode_ambiguous: {
       title: 'El código identifica más de un producto',
       explanation: 'BALAM detuvo la selección para evitar mover la pieza equivocada.',
       action: 'Busca el producto por nombre y confirma sus características.', level: 'warning',
-    },
-    product_queue_pending: {
-      title: 'Hay cambios pendientes de enviar',
-      explanation: 'Espera a que se guarden los cambios de este equipo antes de eliminar productos.',
-      action: 'Conéctate a internet. Si el aviso continúa, revisa los pendientes en Centro de equipos.', level: 'warning',
     },
     layaway_active: {
       title: 'Este producto está en un apartado activo',
@@ -267,11 +265,6 @@
       title: 'Los productos de esta familia cambiaron',
       explanation: 'La selección ya no coincide con la familia actual.',
       action: 'Cierra el detalle y abre la familia de nuevo antes de eliminar.', level: 'warning',
-    },
-    product_delete_queue_unavailable: {
-      title: 'No se pudo guardar la eliminación en este equipo',
-      explanation: 'El producto permanece en el inventario.',
-      action: 'Revisa si tienes otra pestaña de BALAM abierta. Si continúa, pide ayuda a una persona administradora.', level: 'warning',
     },
     barcode_not_found: {
       title: 'No encontramos un producto con este código',
@@ -333,11 +326,6 @@
       explanation: 'La importación no puede elegir con seguridad cuál de esos productos actualizar.',
       action: 'Revisa los productos repetidos en Inventario antes de volver a importar.', level: 'danger',
     },
-    import_storage_pending: {
-      title: 'La importación necesita completar el guardado',
-      explanation: 'Este equipo no pudo actualizar su copia local del inventario.',
-      action: 'Mantén BALAM abierto y revisa el aviso de almacenamiento y el estado de sincronización.', level: 'warning',
-    },
     import_product_locked: {
       title: 'Se está confirmando el cobro de un apartado',
       explanation: 'Las existencias de este producto están pendientes de confirmación.',
@@ -380,8 +368,8 @@
     },
     update_safety: {
       title: 'La actualización está en espera',
-      explanation: 'Hay trabajo pendiente que debe protegerse antes de actualizar.',
-      action: 'Termina o sincroniza los cambios pendientes y vuelve a intentarlo.', level: 'warning',
+      explanation: 'Hay una operación o captura abierta.',
+      action: 'Termina la operación o cierra la captura antes de actualizar.', level: 'warning',
     },
     unknown: {
       title: 'No se pudo completar la acción',
@@ -406,6 +394,9 @@
     const code = String((input && input.code) || '').toLowerCase();
     const category = String((input && input.category) || '').toLowerCase();
     const all = `${code} ${category} ${raw}`.toLowerCase();
+    if (/online_result_(?:unknown|uncertain)|request_result_uncertain|estamos confirmando la operaci[oó]n/.test(all)) return 'confirming';
+    if (/online_unavailable|failed to fetch|network|load failed|fetch failed|sin conexi[oó]n|offline/.test(all) || category === 'network') return 'network';
+    if (code === 'online_receipt_unavailable') return 'storage';
     if (code === 'sku_duplicate_warning' || /^sku_duplicate_warning:/.test(String(raw).toLowerCase())) return 'import_sku_shared';
     if (input && input.context === 'inventory_import') {
       if (code === 'id_not_found') return 'import_product_missing';
@@ -413,7 +404,6 @@
       if (['unknown_catalog_value', 'reference_size_invalid'].includes(code)) return 'import_catalog_value';
       if (code === 'duplicate_sku_current') return 'import_current_sku_ambiguous';
       if (['duplicate_id_file', 'duplicate_sku_file', 'barcode_duplicate', 'reference_signature_duplicate'].includes(code)) return 'import_duplicate_product';
-      if (code === 'inventory_import_storage_pending') return 'import_storage_pending';
       if (code === 'layaway_product_locked') return 'import_product_locked';
       if (code === 'reference_reclassification_required') return 'import_physical_change';
       if (['reference_model_mismatch', 'sku_id_mismatch', 'reference_barcode_immutable'].includes(code)) return 'import_identity_mismatch';
@@ -424,9 +414,9 @@
     }
     if (input && ['inventory_template', 'inventory_export'].includes(input.context) && code === 'inventory_export_failed') return 'inventory_export_failed';
     if (input && input.context === 'product_delete') {
-      if (['product_queue_pending', 'layaway_active', 'layaway_product_locked',
+      if (['layaway_active', 'layaway_product_locked',
         'product_open_loan', 'product_returnable_history', 'product_not_found',
-        'reference_family_scope_mismatch', 'product_delete_queue_unavailable'].includes(code)) return code;
+        'reference_family_scope_mismatch'].includes(code)) return code;
       if (code === 'product_active_layaway') return 'layaway_active';
     }
     if (/barcode.*ambiguous|identity_ambiguous|c[oó]digo ambiguo|m[aá]s de una referencia/.test(all)) return 'barcode_ambiguous';
@@ -438,12 +428,11 @@
     if (/pgrst|schema cache|column .* does not exist|relation .* does not exist/.test(all) || category === 'schema') return 'service_configuration';
     if (/xlsx|excel|json|uuid|reference_|duplicate_(?:id|sku)|id_(?:not|required)|catalog_value|archivo.*(?:incompatible|versi[oó]n)/.test(all)) return 'file_format';
     if (/quota|storage|persist|durable|localstorage|indexeddb|espacio/.test(all)) return 'storage';
-    if (/rebootstrap|protocol|epoch|compatib|actualizaci[oó]n.*espera/.test(all)) return 'compatibility';
+    if (/online_contract_unsupported|client_version_unsupported/.test(all)) return 'compatibility';
     if (/activity_active|update.*(?:unsafe|blocked)|service.worker|trabajo pendiente.*actualizar/.test(all)) return 'update_safety';
     if (/insufficient_stock|waiting_inventory|sin stock|existencias? insuficientes?/.test(all) || category === 'inventory') return 'inventory';
     if (/401|jwt|not authenticated|unauthorized|sesi[oó]n|sign.?in/.test(all) || category === 'auth') return 'auth';
     if (/403|42501|rls|row.level|permission denied|forbidden|permiso/.test(all) || category === 'permission') return 'permission';
-    if (/failed to fetch|network|load failed|fetch failed|sin conexi[oó]n|offline/.test(all) || category === 'network') return 'network';
     if (/http\s*5\d\d|server|servidor/.test(all) || category === 'server') return 'server';
     if (/conflict|mismatch|otra terminal|already_liquidated|folio_conflict/.test(all) || category === 'conflict') return 'conflict';
     if (/^23|constraint|invalid_|missing|not_found|incomplete|no existe/.test(all) || category === 'constraint' || category === 'data') return 'data';
@@ -452,6 +441,10 @@
   function messageAuthority(input, options = {}) {
     if (input && input.__humanMessage) return input;
     const raw = typeof input === 'string' ? input : ((input && (input.message || input.error || input.reason)) || '');
+    const requiredState = classifyUserMessage(input);
+    if (requiredState === 'network' || requiredState === 'confirming') {
+      return { __humanMessage: true, ...MESSAGE_CATALOG[requiredState], technicalDetails: '' };
+    }
     const explicitCode = !!(input && typeof input === 'object' && (input.code || input.category || input.status));
     const unsafe = TECHNICAL_JARGON.test(String(raw)) || TECHNICAL_JARGON.test(String((input && input.code) || ''));
     const color = String(options.color || '');

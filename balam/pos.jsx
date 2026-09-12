@@ -18,6 +18,15 @@
   const { MS, ProductImage } = window.HX;
   const D = window.DATA;
   const h = React.createElement;
+  const runningOnlineActions = new Set();
+  async function onlineAction(key, action) {
+    if (runningOnlineActions.has(key)) return;
+    runningOnlineActions.add(key);
+    try { return await action(); }
+    catch (error) { toast(error.message || 'No se pudo confirmar la operación', 'var(--danger)'); }
+    finally { runningOnlineActions.delete(key); }
+  }
+
 
   // Filtros derivados del catálogo de categorías (administrable en Configuración).
   function catFilters() {
@@ -35,6 +44,7 @@
     const [onlyPop, setOnlyPop] = useState(false);
     const [catalogVersion, setCatalogVersion] = useState(() => window.CONFIG.version || 0);
     const [dataVersion, setDataVersion] = useState(0);
+    const saleOperationRef = useRef(null);
     useEffect(() => {
       const refreshCatalogs = () => setCatalogVersion(version => version + 1);
       const refreshData = () => setDataVersion(version => version + 1);
@@ -239,13 +249,20 @@
     const iva = quote.iva;
 
     // Paso 1→2: confirmar cobro abre el selector "¿quién realizó esta venta?"
-    function onCobrar(pago) { setCheckout(false); setPendingMetodo(pago); }
+    function onCobrar(pago) {
+      setCheckout(false);
+      setPendingMetodo({ ...pago, quote: JSON.parse(JSON.stringify(quote)), ticket: JSON.parse(JSON.stringify(resolved)) });
+    }
     // Paso 2→3: con el vendedor elegido se registra la venta y se muestra el éxito
-    function onSellerConfirm(sellerId) {
+    async function onSellerConfirm(sellerId) {
+      if (runningOnlineActions.has('sale')) return;
+      runningOnlineActions.add('sale');
+      if (!saleOperationRef.current) saleOperationRef.current = D.newOperationId();
       const estado = pendingMetodo.metodo === 'Apartado' ? 'Apartado' : 'Pagado';
       try {
-        const sale = D.recordSale({
-          ticket: resolved, additionalDiscounts, quote, sellerIds: [sellerId], client, metodo: pendingMetodo.metodo, estado,
+        const sale = await D.recordSale({
+          operationId: saleOperationRef.current,
+          ticket: pendingMetodo.ticket, additionalDiscounts, quote: pendingMetodo.quote, sellerIds: [sellerId], client, metodo: pendingMetodo.metodo, estado,
           subtotal: importe, iva, total: grandTotal, anticipo: pendingMetodo.anticipo,
           pagoEfectivo: pendingMetodo.pagoEfectivo, pagoOtro: pendingMetodo.pagoOtro,
           pagoDetalle: pendingMetodo.pagoDetalle, metodoPago: pendingMetodo.metodoPago,
@@ -254,10 +271,11 @@
         setPendingMetodo(null);
         setSuccess(sale);
       } catch (e) {
+        if (e.code !== 'ONLINE_RESULT_UNKNOWN') saleOperationRef.current = null;
         toast(e.message || 'Los importes de la venta no cuadran', 'var(--danger)');
-      }
+      } finally { runningOnlineActions.delete('sale'); }
     }
-    function onNewSale() { setSuccess(null); setTicket([]); setAdditionalDiscounts([]); setClient(D.clients.find(c => c.generic)); }
+    function onNewSale() { saleOperationRef.current = null; setSuccess(null); setTicket([]); setAdditionalDiscounts([]); setClient(D.clients.find(c => c.generic)); }
 
     // ---- Catálogo ----
     const catalog = h('section', { key: 'catalog', className: 'pos-cat flex-1 flex flex-col min-w-0 min-h-0' }, [

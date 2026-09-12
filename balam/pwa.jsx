@@ -241,9 +241,11 @@
   function reloadSafety() {
     const activity = window.CORE && window.CORE.activityStatus ? window.CORE.activityStatus() : { active: 0 };
     if (activity.active) return { safe: false, reason: 'Termina la venta o el formulario antes de actualizar.' };
-    const queue = window.STORE && window.STORE.queueStatus ? window.STORE.queueStatus() : null;
-    if (queue && queue.durability === 'memory') return { safe: false, reason: 'Hay cambios que todavía no están protegidos. No cierres esta ventana; libera espacio y vuelve a intentarlo.' };
-    if (document.querySelector('[role="dialog"][aria-modal="true"]')) return { safe: false, reason: 'Cierra el diálogo abierto antes de actualizar.' };
+    const commercial = window.STORE && window.STORE.syncStatus ? window.STORE.syncStatus() : null;
+    if (commercial && commercial.busy) return { safe: false, reason: 'Estamos confirmando la operación. No la repitas.' };
+    const openDialog = Array.from(document.querySelectorAll('[role="dialog"][aria-modal="true"]'))
+      .some(dialog => !dialog.closest('[hidden],[inert],[aria-hidden="true"],[data-open="false"]'));
+    if (openDialog) return { safe: false, reason: 'Cierra el diálogo abierto antes de actualizar.' };
     const active = document.activeElement;
     if (active && /^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName)) return { safe: false, reason: 'Termina la captura antes de actualizar.' };
     return { safe: true, reason: '' };

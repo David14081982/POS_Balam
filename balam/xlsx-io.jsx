@@ -1034,13 +1034,6 @@
       }
       if (!conflict && action === 'update') {
         beforeState = canonicalProductState(target); afterState = canonicalProductState(after);
-        if (JSON.stringify(beforeState) !== JSON.stringify(afterState)) {
-          try { D.assertLayawayProductsUnlocked([target.id]); }
-          catch (error) {
-            conflict = { code: error.code || 'REFERENCE_UPDATE_BLOCKED', message: error.message || 'El producto no puede modificarse en este momento.' };
-            action = null; after = null; afterState = null;
-          }
-        }
         if (!conflict) { fields = changeSummary(beforeState, afterState); nextById[target.id] = after; }
       } else if (!conflict && action === 'new') {
         try {
@@ -1077,11 +1070,9 @@
       .filter(row => row.action === 'new' || (row.action === 'update' && !row.unchanged))
       .map(row => row.targetId || (row.after && row.after.id))
       .filter(Boolean);
-    // La liquidación puede adquirir un bloqueo después de generar la vista previa.
-    if (productIds.length) D.assertLayawayProductsUnlocked(productIds);
     const clean = plan.nextProducts.map(product => { const copy = clone(product); delete copy.__xlsx; return copy; });
-    products.splice(0, products.length, ...clean);
-    return { nuevos: plan.creates, actualizados: plan.updates, productIds };
+    return { nuevos: plan.creates, actualizados: plan.updates, productIds,
+      products: clean.filter(product => productIds.includes(product.id)) };
   }
 
   // Exporta el historial de devoluciones (a nivel renglón) a un .xlsx descargable.

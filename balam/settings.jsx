@@ -1,5 +1,5 @@
 // settings.jsx — Módulo de Configuración (Balam). Cataloga y parametriza TODO lo que
-// antes estaba hardcodeado. Lee/escribe en window.CONFIG (balam/config.jsx), local-first.
+// antes estaba hardcodeado. Las escrituras esperan confirmación de Supabase.
 // Exporta window.SettingsScreen
 (function () {
   const { useState, useEffect, useRef } = React;
@@ -7,7 +7,22 @@
   const { MS, GlassCard, SerifHeading } = window.HX;
   const C = window.CONFIG;
   const D = window.DATA;
-  const h = React.createElement;
+  // Conserva el DOM y captura errores asíncronos de acciones y campos existentes.
+  function h(type, props, ...children) {
+    const next = props ? { ...props } : props;
+    if (next) Object.keys(next).forEach(key => {
+      if (!/^on[A-Z]/.test(key) || typeof next[key] !== 'function') return;
+      const action = next[key];
+      next[key] = (...args) => {
+        try {
+          const result = action(...args);
+          if (result && typeof result.catch === 'function') return result.catch(error => toast(error, 'var(--danger)'));
+          return result;
+        } catch (error) { toast(error, 'var(--danger)'); }
+      };
+    });
+    return React.createElement(type, next, ...children);
+  }
 
   const TONE_OPTS = ['success', 'warning', 'info', 'danger', 'neutral', 'gold'];
   const ICON_OPTS = ['cash', 'card', 'transfer', 'split', 'clock', 'receipt', 'tag', 'star'];
@@ -127,23 +142,23 @@
     // Metadatos del catálogo (solo los catálogos de producto los tienen). null = catálogo simple.
     const cmeta = C.catalogMeta ? C.catalogMeta(kind) : null;
 
-    function add() {
+    async function add() {
       const meta = {};
       metaFields.forEach(f => { if (f.def !== undefined) meta[f.key] = f.def; });
-      const r = C.addItem(kind, { code: code.trim(), label: label.trim() || code.trim(), meta });
+      const r = await C.addItem(kind, { code: code.trim(), label: label.trim() || code.trim(), meta });
       if (!r.ok) { toast(r.error, 'var(--danger)'); return; }
       setCode(''); setLabel('');
     }
-    function commitLabel(it, v) { if (v !== it.label) C.updateItem(kind, it.code, { label: v }); }
-    function commitMeta(it, key, v) { C.updateItem(kind, it.code, { meta: { [key]: v } }); }
-    function del(it) { const r = C.removeItem(kind, it.code); if (!r.ok) toast(r.error, 'var(--danger)'); }
+    async function commitLabel(it, v) { if (v !== it.label) await C.updateItem(kind, it.code, { label: v }); }
+    async function commitMeta(it, key, v) { await C.updateItem(kind, it.code, { meta: { [key]: v } }); }
+    async function del(it) { const r = await C.removeItem(kind, it.code); if (!r.ok) toast(r.error, 'var(--danger)'); }
     // H-63: el interruptor puede negarse (una talla con existencias vivas). Sin este
     // aviso el botón parecería no responder y el administrador insistiría a ciegas.
-    function toggle(it) {
-      const r = C.setActive(kind, it.code, it.active === false);
+    async function toggle(it) {
+      const r = await C.setActive(kind, it.code, it.active === false);
       if (r && !r.ok) toast(r.error, 'var(--danger)');
     }
-    function setMeta(patch) {
+    async function setMeta(patch) {
       if (Object.prototype.hasOwnProperty.call(patch, 'inSku') && !!patch.inSku !== !!cmeta.inSku
           && D.skuConfigurationImpact) {
         const impact = D.skuConfigurationImpact(kind, !!patch.inSku);
@@ -159,12 +174,12 @@
         ].filter(Boolean).join('\n');
         if (!window.confirm(message)) return;
       }
-      const r = C.setCatalogMeta(kind, patch);
+      const r = await C.setCatalogMeta(kind, patch);
       if (r && !r.ok) toast(r.error, 'var(--danger)');
     }
-    function delCatalog() {
+    async function delCatalog() {
       if (!window.confirm('¿Eliminar el catálogo "' + (cmeta ? cmeta.label : kind) + '" y todos sus elementos? Si algún producto tiene un valor de este catálogo, se quitará (su SKU ya asignado no cambia). Esta acción no se puede deshacer.')) return;
-      const r = C.removeCatalog(kind); if (!r.ok) toast(r.error, 'var(--danger)'); else toast('Catálogo eliminado', 'var(--danger)');
+      const r = await C.removeCatalog(kind); if (!r.ok) toast(r.error, 'var(--danger)'); else toast('Catálogo eliminado', 'var(--danger)');
     }
 
     const metaInput = (it, f) => {
@@ -203,7 +218,7 @@
       className: collapsible
         ? 'w-full min-w-0 h-9 px-2 text-body text-primary bg-surface-container-low border border-outline-variant rounded'
         : 'flex-1 min-w-0 font-headline text-h2 text-primary bg-transparent border-b border-transparent hover:border-outline-variant focus:border-primary focus:ring-0 px-0 py-0.5',
-      onBlur: e => C.setCatalogMeta(kind, { label: e.target.value }),
+      onBlur: async e => await C.setCatalogMeta(kind, { label: e.target.value }),
     });
     // La cabecera plegable no contiene controles de edición ni acciones de negocio.
     const header = cmeta
@@ -254,8 +269,8 @@
           h('span', { key: 'cd', className: 'font-mono text-caption text-on-surface-variant w-16 shrink-0 truncate', title: it.code }, it.code),
           h('input', { key: 'lb', defaultValue: it.label, className: 'flex-1 min-w-0 h-8 px-2 bg-surface border border-outline-variant rounded text-body focus:ring-1 focus:ring-primary', onBlur: e => commitLabel(it, e.target.value) }),
           ...metaFields.map(f => h('span', { key: f.key, className: 'shrink-0' }, metaInput(it, f))),
-          h('button', { key: 'up', className: 'w-7 h-7 grid place-items-center rounded hover:bg-surface-container text-on-surface-variant shrink-0', title: 'Subir', onClick: () => C.move(kind, it.code, -1) }, h(MS, { name: 'chevDown', size: 16, style: { transform: 'rotate(180deg)' } })),
-          h('button', { key: 'dn', className: 'w-7 h-7 grid place-items-center rounded hover:bg-surface-container text-on-surface-variant shrink-0', title: 'Bajar', onClick: () => C.move(kind, it.code, 1) }, h(MS, { name: 'chevDown', size: 16 })),
+          h('button', { key: 'up', className: 'w-7 h-7 grid place-items-center rounded hover:bg-surface-container text-on-surface-variant shrink-0', title: 'Subir', onClick: async () => await C.move(kind, it.code, -1) }, h(MS, { name: 'chevDown', size: 16, style: { transform: 'rotate(180deg)' } })),
+          h('button', { key: 'dn', className: 'w-7 h-7 grid place-items-center rounded hover:bg-surface-container text-on-surface-variant shrink-0', title: 'Bajar', onClick: async () => await C.move(kind, it.code, 1) }, h(MS, { name: 'chevDown', size: 16 })),
           h('button', {
             key: 'tg', 'data-testid': 'catalog-toggle-' + kind + '-' + it.code,
             className: 'px-2 h-7 rounded text-overline uppercase font-bold shrink-0 ' + (off ? 'bg-surface-container text-on-surface-variant' : 'bg-success-soft text-success'),
@@ -266,8 +281,8 @@
       })),
       // Alta
       h('div', { key: 'add', className: 'flex items-center gap-2 pt-3 border-t border-outline-variant' }, [
-        h('input', { key: 'c', value: code, placeholder: codePlaceholder, disabled: lockCode, className: 'font-mono w-16 h-9 px-2 bg-surface-container-low border border-outline-variant rounded text-caption disabled:opacity-40', onChange: e => setCode(e.target.value), onKeyDown: e => { if (e.key === 'Enter') add(); } }),
-        h('input', { key: 'l', value: label, placeholder: labelPlaceholder, className: 'flex-1 min-w-0 h-9 px-2 bg-surface-container-low border border-outline-variant rounded text-body', onChange: e => setLabel(e.target.value), onKeyDown: e => { if (e.key === 'Enter') add(); } }),
+        h('input', { key: 'c', value: code, placeholder: codePlaceholder, disabled: lockCode, className: 'font-mono w-16 h-9 px-2 bg-surface-container-low border border-outline-variant rounded text-caption disabled:opacity-40', onChange: e => setCode(e.target.value), onKeyDown: e => { if (e.key === 'Enter') return add(); } }),
+        h('input', { key: 'l', value: label, placeholder: labelPlaceholder, className: 'flex-1 min-w-0 h-9 px-2 bg-surface-container-low border border-outline-variant rounded text-body', onChange: e => setLabel(e.target.value), onKeyDown: e => { if (e.key === 'Enter') return add(); } }),
         h('button', { key: 'b', className: 'inline-flex items-center gap-1.5 px-4 h-9 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-lg hover:opacity-90 transition', onClick: add }, [h(MS, { key: 'i', name: 'plus', size: 16 }), 'Agregar']),
       ]),
     ]);
@@ -278,11 +293,11 @@
   // modelo fijo al final, con vista previa en vivo. Reordena vía CONFIG.moveSkuOrder.
   function SkuBuilder() {
     const parts = C.skuParts();
-    function regenerar() {
+    async function regenerar() {
       const n = (D.products || []).length;
       if (!n) { toast('No hay productos que regenerar'); return; }
       if (!window.confirm('¿Regenerar el SKU comercial de ' + n + ' producto(s) con la receta actual?\n\nBALAM seguirá reconociendo los mismos productos y los documentos existentes conservarán el SKU anterior. Úsalo durante la configuración inicial para evitar confusión visual.\n\nEsta acción no se puede deshacer.')) return;
-      const r = D.regenerateSkus();
+      const r = await D.regenerateSkus();
       toast(r.changed + ' de ' + r.total + ' SKUs actualizados', 'var(--accent)');
     }
     const sampleCode = (kind) => {
@@ -298,9 +313,9 @@
     const sizeMark = (window.DATA && window.DATA.SIZE_MARK) || 'T';
     const hasSize = parts.some(p => { const m = C.catalogMeta(p.kind); return m && m.sizeSlot; });
     const chip = (p, i) => h('div', { key: p.kind, className: 'inline-flex items-center rounded-lg border border-outline-variant bg-surface-container-low overflow-hidden' }, [
-      h('button', { key: 'l', className: 'w-7 h-9 grid place-items-center hover:bg-surface-container text-on-surface-variant disabled:opacity-30', disabled: i === 0, title: 'Mover a la izquierda', onClick: () => C.moveSkuOrder(p.kind, -1) }, h(MS, { name: 'chevRight', size: 14, style: { transform: 'rotate(180deg)' } })),
+      h('button', { key: 'l', className: 'w-7 h-9 grid place-items-center hover:bg-surface-container text-on-surface-variant disabled:opacity-30', disabled: i === 0, title: 'Mover a la izquierda', onClick: async () => await C.moveSkuOrder(p.kind, -1) }, h(MS, { name: 'chevRight', size: 14, style: { transform: 'rotate(180deg)' } })),
       h('span', { key: 't', className: 'px-2 text-caption font-semibold text-primary whitespace-nowrap' }, C.catalogLabel(p.kind)),
-      h('button', { key: 'r', className: 'w-7 h-9 grid place-items-center hover:bg-surface-container text-on-surface-variant disabled:opacity-30', disabled: i === parts.length - 1, title: 'Mover a la derecha', onClick: () => C.moveSkuOrder(p.kind, 1) }, h(MS, { name: 'chevRight', size: 14 })),
+      h('button', { key: 'r', className: 'w-7 h-9 grid place-items-center hover:bg-surface-container text-on-surface-variant disabled:opacity-30', disabled: i === parts.length - 1, title: 'Mover a la derecha', onClick: async () => await C.moveSkuOrder(p.kind, 1) }, h(MS, { name: 'chevRight', size: 14 })),
     ]);
     return h(CatalogPanel, { id: 'sku', title: 'Constructor de SKU', count: parts.length + ' segmentos' }, [
       h('p', { key: 'd', className: 'text-caption text-on-surface-variant mb-4' }, 'Activa “En SKU” en cada catálogo para incluirlo y reordena con ◀ ▶. El SKU se fija al crear el producto: cambiar la receta solo afecta a productos nuevos.'),
@@ -352,7 +367,7 @@
         + documentos.prestamos + documentos.movimientos + documentos.pagos
       : 0;
 
-    function aplicar() {
+    async function aplicar() {
       const mapa = {};
       propuesta.forEach(p => { mapa[p.from] = p.to; });
       const detalle = propuesta.map(p => `  ${p.from}  →  ${p.to}`).join('\n');
@@ -364,7 +379,7 @@
         '¿Continuar?')) return;
       setBusy(true);
       try {
-        const r = D.migrateSizeCodes({ kind: KIND, map: mapa, reorder: true });
+        const r = await D.migrateSizeCodes({ kind: KIND, map: mapa, reorder: true });
         setResultado(r);
         if (r.ok) toast(`${r.aplicado.length} códigos corregidos · ${r.piezasTotales} piezas intactas`, 'var(--accent)');
         else toast(r.error, 'var(--danger)');
@@ -574,7 +589,7 @@
       opts.forEach(x => { const d = hexDist(o.oldHex, x.meta && x.meta.hex); if (d < bd) { bd = d; best = x.code; } });
     }
     const [sel, setSel] = useState(best);
-    function apply() {
+    async function apply() {
       const plan = D.previewOrphanFix(o.id, o.campo, o.code, sel);
       if (!plan.ok) { toast(plan.error, 'var(--danger)'); return; }
       if (!window.confirm(
@@ -582,7 +597,7 @@
         + `${C.catalogLabel(plan.kind)}: ${plan.from} → ${plan.to}\n\n`
         + `Se modificará únicamente la referencia ${plan.productId}. ¿Aplicar?`
       )) return;
-      const r = D.applyOrphanFix(plan);
+      const r = await D.applyOrphanFix(plan);
       if (!r.ok) { toast(r.error, 'var(--danger)'); return; }
       toast('Producto corregido', 'var(--accent)');
       onDone();
@@ -647,7 +662,7 @@
   // orden y activos); los nombres no reconocidos no se tocan y se listan para ajuste manual.
   function ColorHexFixCard() {
     const [unknown, setUnknown] = useState(null); // nombres no reconocidos del último ajuste
-    function run() {
+    async function run() {
       const items = C.all('color');
       if (!items.filter(it => it.active !== false).length) { toast('No hay colores activos', 'var(--danger)'); return; }
       if (!window.confirm('Se asignará a cada color ACTIVO el # que corresponde a su NOMBRE (se sobrescribe el # actual). Los nombres no reconocidos no se tocan. ¿Aplicar?')) return;
@@ -660,7 +675,7 @@
         }
         return r;
       });
-      C.importCatalogs({ color: rows });
+      await C.importCatalogs({ color: rows });
       setUnknown(un);
       toast(`${fixed} color(es) con # corregido por nombre` + (un.length ? ` — ${un.length} sin reconocer` : ''), 'var(--accent)');
     }
@@ -719,7 +734,7 @@
       const X = window.XLSX;
       const IO = window.XLSXIO;
       if (!X || !IO) { toast('No se pudo cargar el motor de Excel', 'var(--danger)'); return; }
-      IO.readWorkbook(file).then(wb => {
+      IO.readWorkbook(file).then(async wb => {
         // Hoja → kind: por el nombre visible del catálogo o por su kind interno,
         // sin distinguir mayúsculas ni acentos ("categoria" también vale).
         const byName = {};
@@ -788,7 +803,7 @@
         if (!window.confirm(guideMode
           ? 'Este es un Excel de INVENTARIO: los catálogos se leerán de su hoja "Catálogos" (guía de códigos). El orden del archivo manda y los códigos que no vengan se DESACTIVAN (no se borran). OJO: esto NO importa productos ni existencias — eso se hace con el botón Importar de la pantalla Inventario. ¿Aplicar?'
           : '¿Aplicar el Excel a los catálogos? El orden del archivo manda y los códigos que no vengan en él se DESACTIVAN (no se borran).')) return;
-        const r = C.importCatalogs(map);
+        const r = await C.importCatalogs(map);
         // H-63: el archivo dejaría sin punto de venta tallas con existencias vivas. No se
         // aplicó NADA (la importación es atómica); se explica cuáles y con cuánto inventario.
         if (r.ok === false && Array.isArray(r.blocked) && r.blocked.length) {
@@ -875,8 +890,8 @@
   // ── Crear catálogo nuevo (Fase 2) ───────────────────────────────────────────────
   function NewCatalogCard() {
     const [name, setName] = useState('');
-    function create() {
-      const r = C.addCatalog(name);
+    async function create() {
+      const r = await C.addCatalog(name);
       if (!r.ok) { toast(r.error, 'var(--danger)'); return; }
       setName('');
       toast('Catálogo creado — agrega sus elementos y actívalo en alta/SKU', 'var(--accent)');
@@ -884,7 +899,7 @@
     return h(CatalogPanel, { id: 'newcat', title: 'Crear catálogo nuevo', className: 'border border-dashed border-outline-variant' }, [
       h('p', { key: 'd', className: 'text-caption text-on-surface-variant mt-1 mb-3' }, 'Crea tu propio catálogo (p. ej. Temporada, Colección, Estilo). Después agrega sus elementos y decide si aparece en el alta de producto y/o forma parte del SKU.'),
       h('div', { key: 'r', className: 'flex items-center gap-2' }, [
-        h('input', { key: 'i', value: name, placeholder: 'Nombre del catálogo', className: 'flex-1 min-w-0 h-10 px-3 bg-surface-container-low border border-outline-variant rounded-lg text-body', onChange: e => setName(e.target.value), onKeyDown: e => { if (e.key === 'Enter') create(); } }),
+        h('input', { key: 'i', value: name, placeholder: 'Nombre del catálogo', className: 'flex-1 min-w-0 h-10 px-3 bg-surface-container-low border border-outline-variant rounded-lg text-body', onChange: e => setName(e.target.value), onKeyDown: e => { if (e.key === 'Enter') return create(); } }),
         h('button', { key: 'b', className: 'inline-flex items-center gap-1.5 px-5 h-10 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-lg hover:opacity-90 transition', onClick: create }, [h(MS, { key: 'i', name: 'plus', size: 16 }), 'Crear']),
       ]),
     ]);
@@ -905,7 +920,7 @@
       h('input', {
         key: 'in', 'data-testid': 'config-field-' + k, type, min, max, value: draft, className: INPUT,
         onChange: e => { dirty.current = e.target.value !== baseline.current; setDraft(e.target.value); },
-        onBlur: e => {
+        onBlur: async e => {
           // Recibir configuración no es una edición. Un blur sin cambio (o un
           // borrador deshecho) muestra la autoridad actual sin volver a enviarla.
           if (!dirty.current) {
@@ -916,7 +931,7 @@
           if (type === 'number' && min != null) next = Math.max(Number(min), next);
           if (type === 'number' && max != null) next = Math.min(Number(max), next);
           baseline.current = text(next); setDraft(baseline.current);
-          if (next !== C.get(k)) C.setSetting(k, next);
+          if (next !== C.get(k)) await C.setSetting(k, next);
         },
       }),
       hint && h('div', { key: 'h', className: 'text-caption text-on-surface-variant mt-1' }, hint),
@@ -940,14 +955,14 @@
       h('input', {
         key: 'in', 'data-testid': 'config-field-folio.prefix', type: 'text', maxLength: 6, value: pref, className: INPUT,
         onChange: e => { dirty.current = e.target.value !== baseline.current; setPref(e.target.value); },
-        onBlur: e => {
+        onBlur: async e => {
           if (!dirty.current) {
             baseline.current = norm(C.get('folio.prefix')); setPref(baseline.current); return;
           }
           dirty.current = false;
           const next = norm(e.target.value);
           baseline.current = next; setPref(next);
-          if (next !== C.get('folio.prefix')) C.setSetting('folio.prefix', next);
+          if (next !== C.get('folio.prefix')) await C.setSetting('folio.prefix', next);
         },
       }),
       h('div', { key: 'p', className: 'text-caption text-on-surface-variant mt-1' }, [
@@ -967,7 +982,7 @@
       ]),
       h('button', {
         key: 'sw', className: 'relative w-11 h-6 rounded-full transition-colors shrink-0 ' + (on ? '' : 'bg-surface-container-highest'),
-        style: on ? { background: '#D4AF38' } : null, onClick: () => C.setSetting(k, !on),
+        style: on ? { background: '#D4AF38' } : null, onClick: async () => await C.setSetting(k, !on),
       }, h('span', { className: 'absolute top-0.5 w-5 h-5 bg-surface rounded-full shadow transition-all ' + (on ? 'left-[22px]' : 'left-0.5') })),
     ]);
   }
@@ -983,7 +998,7 @@
           className: 'px-4 py-1.5 rounded-md text-caption font-semibold uppercase tracking-wider transition-colors ' +
             (cur === o.value ? 'text-primary shadow-e1' : 'text-on-surface-variant hover:text-primary'),
           style: cur === o.value ? { background: '#fff' } : null,
-          onClick: () => C.setSetting(k, o.value),
+          onClick: async () => await C.setSetting(k, o.value),
         }, o.label))),
     ]);
   }
@@ -1003,10 +1018,10 @@
           toast('El logotipo debe medir al menos 512 px en su lado mayor', 'var(--danger)');
           return;
         }
-        C.setSetting('store.logo', await resizeImageFile(file, { max: 1024, type: 'image/png' }));
+        await C.setSetting('store.logo', await resizeImageFile(file, { max: 1024, type: 'image/png' }));
         toast('Logotipo actualizado', 'var(--accent)');
       } catch (error) {
-        toast('No se pudo leer la imagen', 'var(--danger)');
+        toast(error, 'var(--danger)');
       }
     }
     return h(GlassCard, { className: 'p-6' }, [
@@ -1019,7 +1034,7 @@
           h('input', { key: 'f', ref: fileRef, type: 'file', accept: 'image/*', className: 'hidden', onChange: onPick, 'data-testid': 'logo-file-input' }),
           h('div', { key: 'btns', className: 'flex gap-3' }, [
             h('button', { key: 'u', className: 'inline-flex items-center gap-2 px-4 h-10 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-lg hover:opacity-90 transition', onClick: () => fileRef.current && fileRef.current.click(), 'data-testid': 'logo-upload-action' }, [h(MS, { key: 'i', name: 'upload', size: 16 }), 'Subir logo']),
-            logo && h('button', { key: 'x', className: 'inline-flex items-center gap-2 px-4 h-10 border border-outline-variant text-on-surface-variant text-caption font-bold uppercase tracking-widest rounded-lg hover:bg-surface-container transition', onClick: () => { C.setSetting('store.logo', ''); toast('Logotipo eliminado'); } }, [h(MS, { key: 'i', name: 'trash', size: 16 }), 'Quitar']),
+            logo && h('button', { key: 'x', className: 'inline-flex items-center gap-2 px-4 h-10 border border-outline-variant text-on-surface-variant text-caption font-bold uppercase tracking-widest rounded-lg hover:bg-surface-container transition', onClick: async () => { await C.setSetting('store.logo', ''); toast('Logotipo eliminado'); } }, [h(MS, { key: 'i', name: 'trash', size: 16 }), 'Quitar']),
           ]),
           window.PWA && h(window.PWA.BrandStatus, { key: 'pwa-status' }),
         ]),
@@ -1043,19 +1058,18 @@
       if (!window.STORE || !window.STORE.uploadProductPhoto) { toast('Sincronización con la nube no disponible', 'var(--danger)'); return; }
       if (!(await window.STORE.hasSession())) { toast('Inicia sesión para subir las fotos a la nube', 'var(--danger)'); return; }
       setBusy(true);
-      const total = pend.length; let ok = 0, fallo = 0; const changedIds = [];
+      const total = pend.length; let ok = 0, fallo = 0;
       setProg({ done: 0, total, fail: 0 });
       for (const p of pend) {
         try {
           const blob = await (await fetch(p.imagen)).blob();
           const url = await window.STORE.uploadProductPhoto('prod-' + p.id + '.jpg', blob);
           if (!url) throw new Error('sin URL');
-          p.imagen = url; ok++; changedIds.push(p.id);
-          if (changedIds.length === 5) D.saveProducts(changedIds.splice(0));
+          await D.saveProductRows([{ ...p, imagen: url }]);
+          ok++;
         } catch (e) { fallo++; }
         setProg({ done: ok, total, fail: fallo });
       }
-      if (changedIds.length) D.saveProducts(changedIds.splice(0));
       setBusy(false); setTick(t => t + 1);
       toast(fallo
         ? `Migradas ${ok} de ${total}; fallaron ${fallo}. Verifica conexión y que corriste la migración pos_010 (bucket product-photos); al reintentar continúa donde se quedó.`
@@ -1066,7 +1080,7 @@
       pend.length === 0
         ? h('p', { key: 'okd', className: 'text-body text-success flex items-center gap-2' }, [h(MS, { key: 'i', name: 'check', size: 18 }), 'Todas las fotos de producto ya viven en la nube (o no hay fotos guardadas).'])
         : h('p', { key: 'd', className: 'text-body text-on-surface-variant leading-relaxed mb-4' },
-            `Las fotos se guardan en la nube AUTOMÁTICAMENTE. Quedan ${pend.length} en formato antiguo (~${pesoMB.toFixed(1)} MB) que se subirán solas al abrir el sistema con sesión y conexión. Si quieres, puedes forzarlo ahora con el botón; si algo falla, continúa donde se quedó.`),
+            `Quedan ${pend.length} fotos en formato antiguo (~${pesoMB.toFixed(1)} MB). El botón sube cada imagen y confirma su referencia en la cuenta del negocio.`),
       pend.length > 0 && h('button', {
         key: 'b', type: 'button', disabled: busy,
         className: 'inline-flex items-center gap-2 px-5 h-11 bg-primary text-on-primary font-label-sm uppercase tracking-widest text-caption rounded-lg hover:opacity-90 transition disabled:opacity-50',
@@ -1099,7 +1113,7 @@
     const scopeLabels = { ticket: 'Toda la venta', item: 'Un artículo' };
     const origins = ['Promoción especial', 'Empleado', 'Cliente frecuente', 'Tarjeta física', 'Cortesía', 'Otro'];
     const fieldClass = 'block w-full h-10 px-3 bg-surface-container-low border border-outline-variant rounded-lg text-body';
-    const update = (it, patch) => C.updateItem('additional_benefit', it.code, patch);
+    const update = async (it, patch) => await C.updateItem('additional_benefit', it.code, patch);
     const updateMeta = (it, patch) => update(it, { meta: patch });
     const toggle = (it, key) => updateMeta(it, { [key]: !isOn(meta(it)[key]) });
     const Switch = ({ it, field, label, description }) => {
@@ -1118,14 +1132,14 @@
         }, h('span', { className: 'block w-5 h-5 bg-white rounded-full shadow transition-transform ' + (on ? 'translate-x-5' : '') })),
       ]);
     };
-    function addBenefit() {
+    async function addBenefit() {
       const name = newName.trim();
       if (!name) { toast('Escribe el nombre que verá el vendedor', 'var(--danger)'); return; }
       const base = 'BENEFICIO_' + name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/gi, '_').replace(/^_|_$/g, '').toUpperCase();
       let code = base || ('BENEFICIO_' + Date.now());
       let suffix = 2;
       while (C.find('additional_benefit', code)) code = base + '_' + suffix++;
-      const r = C.addItem('additional_benefit', {
+      const r = await C.addItem('additional_benefit', {
         code, label: name,
         meta: {
           origin: 'Promoción especial', benefitType: newType, value: 0,
@@ -1137,17 +1151,17 @@
       if (!r.ok) { toast(r.error, 'var(--danger)'); return; }
       setNewName(''); setAdding(false); setOpen(code);
     }
-    function remove(it) {
+    async function remove(it) {
       if (!window.confirm(`¿Eliminar “${it.label}”? Las ventas anteriores conservarán el beneficio que utilizaron.`)) return;
-      const r = C.removeItem('additional_benefit', it.code);
+      const r = await C.removeItem('additional_benefit', it.code);
       if (!r.ok) toast(r.error, 'var(--danger)');
     }
-    function duplicateBenefit(it) {
+    async function duplicateBenefit(it) {
       const base = it.code + '_COPIA';
       let code = base;
       let suffix = 2;
       while (C.find('additional_benefit', code)) code = base + '_' + suffix++;
-      const r = C.addItem('additional_benefit', {
+      const r = await C.addItem('additional_benefit', {
         code,
         label: 'Copia de ' + it.label,
         active: true,
@@ -1156,7 +1170,7 @@
       if (!r.ok) { toast(r.error, 'var(--danger)'); return; }
       const originalIndex = items.findIndex(current => current.code === it.code);
       const moves = Math.max(0, items.length - originalIndex - 1);
-      for (let i = 0; i < moves; i++) C.move('additional_benefit', code, -1);
+      for (let i = 0; i < moves; i++) await C.move('additional_benefit', code, -1);
       setOpen(code);
       toast('Opción duplicada. Ya puedes modificar la copia.', 'var(--accent)');
     }
@@ -1225,8 +1239,8 @@
         h('div', { key: 'actions', className: 'mt-4 pt-4 border-t border-outline-variant/60 flex flex-wrap items-center justify-between gap-3' }, [
           h('div', { key: 'move', className: 'flex items-center gap-2' }, [
             h('span', { key: 'l', className: 'text-caption text-on-surface-variant' }, 'Orden en el Punto de Venta:'),
-            h('button', { key: 'up', type: 'button', className: 'px-3 h-9 border border-outline-variant rounded-lg', onClick: () => C.move('additional_benefit', it.code, -1) }, 'Subir'),
-            h('button', { key: 'down', type: 'button', className: 'px-3 h-9 border border-outline-variant rounded-lg', onClick: () => C.move('additional_benefit', it.code, 1) }, 'Bajar'),
+            h('button', { key: 'up', type: 'button', className: 'px-3 h-9 border border-outline-variant rounded-lg', onClick: async () => await C.move('additional_benefit', it.code, -1) }, 'Subir'),
+            h('button', { key: 'down', type: 'button', className: 'px-3 h-9 border border-outline-variant rounded-lg', onClick: async () => await C.move('additional_benefit', it.code, 1) }, 'Bajar'),
           ]),
           h('div', { key: 'right', className: 'flex items-center gap-2' }, [
             h('button', {
@@ -1285,7 +1299,7 @@
               key: 'active', type: 'button',
               className: 'px-3 h-8 rounded-full text-caption font-semibold shrink-0 ' +
                 (off ? 'bg-surface-container text-on-surface-variant' : 'bg-success-soft text-success'),
-              onClick: () => C.setActive('additional_benefit', it.code, off),
+              onClick: async () => await C.setActive('additional_benefit', it.code, off),
             }, off ? 'Desactivada' : 'Activa'),
             h('button', {
               key: 'edit', type: 'button', 'aria-expanded': expanded,
@@ -1305,7 +1319,6 @@
     const statusNow = () => window.STORE && window.STORE.syncStatus ? window.STORE.syncStatus() : null;
     const [status, setStatus] = useState(statusNow);
     const [busy, setBusy] = useState(false);
-    const [backup, setBackup] = useState(false);
     const [fleet, setFleet] = useState(null);
     const [tab, setTab] = useState('equipos');
     const [editing, setEditing] = useState(null);
@@ -1329,8 +1342,7 @@
       };
     }, []);
     if (!status) return null;
-    const clean = status.synchronized;
-    const needsBootstrap = status.compatibility === 'must_rebootstrap';
+    const clean = status.ready;
     const act = async fn => {
       setBusy(true);
       try {
@@ -1340,17 +1352,6 @@
       catch (e) { toast(e.message || String(e), 'var(--danger)'); }
       setBusy(false);
     };
-    const exportBackup = () => {
-      try { window.STORE.exportSyncRecovery(); setBackup(true); toast('Respaldo de recuperación exportado', 'var(--accent)'); }
-      catch (e) { toast(e.message || String(e), 'var(--danger)'); }
-    };
-    const pointZero = () => {
-      if (!window.confirm('Se tomará la información actual como el nuevo punto de partida. Los demás equipos deberán actualizarse antes de volver a guardar. ¿Continuar?')) return;
-      act(async () => {
-        const r = await window.STORE.establishPointZero();
-        toast(`Nuevo punto de partida confirmado: ${r.product_count} productos · ${r.piece_count} piezas`, 'var(--accent)');
-      });
-    };
     const relativeTime = value => {
       const seconds = Math.max(0, Math.floor((Date.now() - new Date(value || 0).getTime()) / 1000));
       if (seconds < 60) return 'Ahora';
@@ -1359,17 +1360,10 @@
       return `Hace ${Math.floor(seconds / 86400)} día(s)`;
     };
     const deviceLabel = device => device.display_name || `Equipo ${String(device.device_id || '').slice(-6).toUpperCase()}`;
+    const isRetired = device => device.status === 'revoked';
     const deviceState = device => {
-      if (device.status === 'revoked') return { label: 'Retirado', cls: 'text-on-surface-variant bg-surface-container' };
-      if (device.recoveryPending) return { label: 'Pendiente de actualización', cls: 'text-warning bg-warning-soft' };
-      if (device.staleEpoch) return { label: 'Requiere resincronización', cls: 'text-danger bg-danger-soft' };
-      if (device.incompatible) return { label: 'Requiere actualización', cls: 'text-danger bg-danger-soft' };
-      if (Number(device.queue_blocked) > 0) return { label: 'Requiere atención', cls: 'text-danger bg-danger-soft' };
-      if (device.connection === 'unknown') return { label: 'Estado actual desconocido', cls: 'text-on-surface-variant bg-surface-container' };
-      if (device.connection === 'disconnected') return { label: 'Desconectado', cls: 'text-warning bg-warning-soft' };
-      if (Number(device.queue_pending) > 0) return { label: 'Sincronizando', cls: 'text-warning bg-warning-soft' };
-      if (device.synchronized !== true) return { label: 'Actualización sin confirmar', cls: 'text-warning bg-warning-soft' };
-      return { label: 'Sincronizado', cls: 'text-success bg-success-soft' };
+      if (isRetired(device)) return { label: 'Retirado', cls: 'text-on-surface-variant bg-surface-container' };
+      return { label: 'Activo', cls: 'text-success bg-success-soft' };
     };
     const beginEdit = device => {
       setEditing(device.device_id); setDeviceName(deviceLabel(device));
@@ -1380,78 +1374,44 @@
       setEditing(null); toast('Equipo actualizado', 'var(--accent)');
     });
     const setRetired = device => {
-      const retired = device.status !== 'revoked';
+      const retired = !isRetired(device);
       const message = retired
-        ? `Se retirará ${deviceLabel(device)} sin borrar su historial. Si reaparece, deberá reactivarse y resincronizarse. ¿Continuar?`
-        : `${deviceLabel(device)} volverá a requerir resincronización antes de operar. ¿Reactivar?`;
+        ? `Se retirará ${deviceLabel(device)} sin borrar su historial. Podrá reactivarse desde este historial. ¿Continuar?`
+        : `${deviceLabel(device)} volverá a consultar Supabase antes de operar. ¿Reactivar?`;
       if (!window.confirm(message)) return;
       const note = retired ? (window.prompt('Motivo del retiro (opcional):', '') || '') : '';
-      act(async () => {
+      return act(async () => {
         await window.STORE.setSyncDeviceRetired(device.device_id, retired, note);
         toast(retired ? 'Equipo retirado; la evidencia permanece en el Centro de equipos.'
-          : 'Equipo reactivado; deberá resincronizarse antes de operar.', 'var(--accent)');
+          : 'Equipo reactivado.', 'var(--accent)');
       });
     };
-    const retry = activity => act(async () => {
-      await window.STORE.requestSyncRetry(activity.device_id, activity.operation_id);
-      toast('Reintento solicitado. Se ejecutará cuando ese equipo vuelva a conectarse.', 'var(--accent)');
-    });
-    const reviewed = activity => act(async () => {
-      await window.STORE.markSyncActivityReviewed(activity.device_id, activity.operation_id);
-      toast('Incidencia marcada como revisada', 'var(--accent)');
-    });
     const devices = (fleet && fleet.devices) || [];
-    const activity = (fleet && fleet.activity) || [];
-    const quarantine = (fleet && fleet.quarantine) || [];
-    const attention = activity.filter(item => item.requires_attention);
-    const quarantineAttention = quarantine.filter(item => item.status === 'pending_review' || item.status === 'failed');
-    const attentionTotal = attention.length + quarantineAttention.length;
-    const visibleActivity = tab === 'atencion' ? attention : activity;
-    const decideQuarantine = (item, decision) => {
-      const verb = decision === 'approve' ? 'autorizar el reintento' : 'rechazar';
-      if (!window.confirm(`Se va a ${verb} de esta operación. La aprobación conservará todas las validaciones normales de BALAM. ¿Continuar?`)) return;
-      const note = window.prompt('Nota de la decisión (opcional):', '') || '';
-      act(async () => {
-        await window.STORE.decideSyncQuarantine(item, decision, note);
-        toast(decision === 'approve'
-          ? 'Aprobada. El equipo de origen la intentará por su cola normal.'
-          : 'Operación rechazada; su evidencia permanece conservada.', 'var(--accent)');
-      });
-    };
-    const exportQuarantine = () => {
-      try {
-        const rows = quarantine.map(item => {
-          const device = devices.find(d => d.device_id === item.device_id);
-          return Object.assign({}, item, { display_name: device ? deviceLabel(device) : item.device_id });
-        });
-        const result = window.STORE.exportQuarantineReport(rows);
-        toast(`Reporte exportado: ${result.cases} expediente(s)`, 'var(--accent)');
-      } catch (e) { toast(e.message || String(e), 'var(--danger)'); }
-    };
+    const history = (fleet && fleet.history) || [];
+    const visibleDevices = tab === 'historial' ? history : devices;
     return h(GlassCard, { key: 'sync-health', className: 'p-6', 'data-testid': 'sync-health' }, [
       h('div', { key: 'h', className: 'flex items-center justify-between gap-3' }, [
         h('div', { key: 'titles' }, [
           h(SerifHeading, { key: 't', children: 'Centro de equipos' }),
           h('p', { key: 'sub', className: 'text-caption text-on-surface-variant mt-1' },
-            'Supervisa cada instalación de BALAM y atiende excepciones desde un solo lugar.'),
+            'Equipos activos e historial de instalaciones de BALAM.'),
         ]),
         h('span', { key: 's', className: 'text-overline font-bold uppercase ' + (clean ? 'text-success' : 'text-danger') },
-          clean ? 'Todo actualizado' : status.connection === 'offline' ? 'Sin conexión' : needsBootstrap ? 'Requiere actualización' : status.blocked || (status.errors || []).length ? 'Requiere atención' : 'Actualizando'),
+          clean ? 'Conectado' : status.message || 'Sin conexión. BALAM necesita internet para continuar.'),
       ]),
       h('div', { key: 'summary', className: 'grid grid-cols-2 md:grid-cols-4 gap-3 mt-5' }, [
-        ['Equipos registrados', devices.length, 'text-primary'],
+        ['Equipos activos', devices.length, 'text-primary'],
         ['En línea', devices.filter(d => d.connection === 'online').length, 'text-success'],
         ['Desconectados', (fleet && fleet.disconnected) || 0, 'text-warning'],
-        ['Requiere atención', attentionTotal, attentionTotal ? 'text-danger' : 'text-success'],
+        ['Historial de instalaciones', history.length, 'text-on-surface-variant'],
       ].map((item, index) => h('div', { key: index, className: 'p-3 rounded-xl bg-surface-container-low border border-outline-variant' }, [
         h('div', { key: 'n', className: 'text-2xl font-bold ' + item[2] }, String(item[1])),
         h('div', { key: 'l', className: 'text-overline text-on-surface-variant mt-1' }, item[0]),
       ]))),
       h('div', { key: 'tabs', className: 'flex gap-2 mt-5 border-b border-outline-variant' }, [
-        ['equipos','Equipos'], ['actividad','Actividad reciente'], ['atencion',`Requiere atención${attention.length ? ` (${attention.length})` : ''}`],
-        ['cuarentena',`Cuarentena${quarantineAttention.length ? ` (${quarantineAttention.length})` : ''}`]
+        ['equipos','Equipos activos'], ['historial','Historial de instalaciones']
       ].map(item => h('button', { key: item[0], onClick: () => setTab(item[0]), className: 'px-3 py-2 text-caption font-semibold border-b-2 ' + (tab === item[0] ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant') }, item[1]))),
-      tab === 'equipos' && h('div', { key: 'devices', className: 'mt-4 space-y-3' }, devices.length ? devices.map(device => {
+      h('div', { key: 'devices', className: 'mt-4 space-y-3' }, visibleDevices.length ? visibleDevices.map(device => {
         const state = deviceState(device), isEditing = editing === device.device_id;
         return h('div', { key: device.device_id, className: 'p-4 rounded-xl border border-outline-variant bg-surface' }, [
           h('div', { key: 'row', className: 'flex flex-col md:flex-row md:items-center gap-3' }, [
@@ -1466,12 +1426,12 @@
               h('button', { key: 'edit', onClick: () => beginEdit(device), className: 'px-3 h-9 border border-outline-variant rounded-lg text-caption' }, 'Identificar'),
               h('button', { key: 'retire', disabled: busy, onClick: () => setRetired(device),
                 'data-testid': `device-retire-${device.device_id}`,
-                className: 'px-3 h-9 border border-outline-variant rounded-lg text-caption disabled:opacity-40 ' + (device.status === 'revoked' ? 'text-primary' : 'text-danger') },
-              device.status === 'revoked' ? 'Reactivar' : 'Retirar'),
+                className: 'px-3 h-9 border border-outline-variant rounded-lg text-caption disabled:opacity-40 ' + (isRetired(device) ? 'text-primary' : 'text-danger') },
+              isRetired(device) ? 'Reactivar' : 'Retirar'),
             ]),
           ]),
           h('div', { key: 'counts', className: 'text-overline text-on-surface-variant mt-3' },
-            `${Number(device.queue_pending) || 0} cambio(s) pendiente(s) · ${Number(device.queue_blocked) || 0} bloqueado(s) · última actualización confirmada ${device.last_synced_at ? relativeTime(device.last_synced_at) : 'no disponible'}`),
+            `${device.user_email || device.last_user_email || 'Usuario no disponible'} · versión ${device.client_build || 'No disponible'}`),
           window.UI.technicalMessageViewer() && h('details', { key: 'technical', className: 'mt-2 text-overline text-on-surface-variant', 'data-technical-details': 'true' }, [
             h('summary', { key: 'summary', className: 'cursor-pointer font-semibold' }, 'Detalles técnicos'),
             h('div', { key: 'build', className: 'mt-1 break-all font-mono' }, `Build: ${device.client_build || '—'} · Device: ${device.device_id}`),
@@ -1489,68 +1449,12 @@
           ]),
         ]);
       }) : h('p', { className: 'text-caption text-on-surface-variant py-6 text-center' }, 'Todavía no hay equipos reportados.')),
-      (tab === 'actividad' || tab === 'atencion') && h('div', { key: 'activity', className: 'mt-4 space-y-2' }, visibleActivity.length ? visibleActivity.map(item => {
-        const device = devices.find(d => d.device_id === item.device_id);
-        const actionable = item.requires_attention;
-        const historical = item.historical_incident;
-        return h('div', { key: item.device_id + ':' + item.operation_id, className: 'p-4 rounded-xl border border-outline-variant flex flex-col md:flex-row md:items-center gap-3' }, [
-          h('div', { key: 'body', className: 'flex-1 min-w-0' }, [
-            h('div', { key: 'title', className: 'font-semibold text-primary' }, item.summary),
-            h('div', { key: 'meta', className: 'text-overline text-on-surface-variant mt-1' },
-              `${device ? deviceLabel(device) : 'Equipo no identificado'} · ${item.user_email || 'usuario'} · ${relativeTime(item.updated_at)}`),
-            item.diagnostic && h(HumanMessage, { key: 'reason', message: item.diagnostic, className: 'text-caption mt-2' }),
-          ]),
-          h('span', { key: 'status', className: 'px-3 py-1 rounded-full text-overline font-bold ' + (item.status === 'synced' ? 'text-success bg-success-soft' : actionable ? 'text-danger bg-danger-soft' : historical ? 'text-on-surface-variant bg-surface-container' : 'text-warning bg-warning-soft') },
-            item.status === 'synced' ? 'Sincronizado' : actionable ? 'Requiere atención' : historical ? 'Incidencia histórica' : item.status === 'retrying' ? 'Reintentando' : 'Pendiente'),
-          actionable && window.AUTH.isAdmin() && h('div', { key: 'actions', className: 'flex gap-2' }, [
-            h('button', { key: 'retry', disabled: busy || item.action_status === 'requested' || item.action_status === 'delivered', onClick: () => retry(item), className: 'px-3 h-9 bg-primary text-on-primary rounded-lg disabled:opacity-40' }, item.action_status === 'requested' || item.action_status === 'delivered' ? 'Reintento solicitado' : 'Autorizar reintento'),
-            h('button', { key: 'review', disabled: busy || item.admin_action === 'review', onClick: () => reviewed(item), className: 'px-3 h-9 border border-outline-variant rounded-lg disabled:opacity-40' }, item.admin_action === 'review' ? 'Revisado' : 'Marcar revisado'),
-          ]),
-        ]);
-      }) : h('p', { className: 'text-caption text-on-surface-variant py-6 text-center' }, tab === 'atencion' ? 'No hay incidencias que requieran intervención.' : 'Todavía no hay actividad registrada.')),
-      tab === 'cuarentena' && h('div', { key: 'quarantine', className: 'mt-4 space-y-3', 'data-testid': 'sync-quarantine' }, [
-        h('div', { key: 'tools', className: 'flex items-start justify-between gap-3 flex-wrap p-3 rounded-xl bg-surface-container-low border border-outline-variant' }, [
-          h('div', { key: 'text' }, [
-            h('div', { key: 'title', className: 'font-semibold text-primary' }, 'Expedientes de recuperación'),
-            h('div', { key: 'desc', className: 'text-caption text-on-surface-variant mt-1' }, 'El reporte explica cada caso y conserva la evidencia necesaria para soporte.'),
-          ]),
-          h('button', { key: 'xlsx', disabled: !quarantine.length, onClick: exportQuarantine, className: 'px-3 h-10 border border-outline-variant rounded-lg disabled:opacity-40' }, 'Exportar reporte Excel'),
-        ]),
-        ...(quarantine.length ? quarantine.map(item => {
-          const device = devices.find(d => d.device_id === item.device_id);
-          const detail = item.payload_summary || {};
-          const actionable = item.status === 'pending_review' || item.status === 'failed';
-          const labels = { pending_review: 'Pendiente de revisión', approved: 'Aprobada', delivered: 'En ejecución', rejected: 'Rechazada', resolved: 'Resuelta', failed: 'Falló al reintentar' };
-          return h('article', { key: item.device_id + ':' + item.operation_id + ':' + item.remote_epoch, className: 'p-4 rounded-xl border border-outline-variant bg-surface' }, [
-            h('div', { key: 'row', className: 'flex flex-col md:flex-row md:items-start gap-3' }, [
-              h('div', { key: 'body', className: 'flex-1 min-w-0' }, [
-                h('div', { key: 'title', className: 'font-semibold text-primary' }, item.summary),
-                h('div', { key: 'meta', className: 'text-overline text-on-surface-variant mt-1' },
-                  `${device ? deviceLabel(device) : item.device_id} · ${item.reference || 'sin folio'} · ${detail.itemCount || 0} artículo(s) · $${Number(detail.total || 0).toFixed(2)}`),
-                item.decision_note && h('div', { key: 'note', className: 'text-caption mt-2' }, `Nota: ${item.decision_note}`),
-                item.execution_message && h(HumanMessage, { key: 'execution', message: item.execution_message, options: { level: 'danger' }, className: 'text-caption mt-2' }),
-                window.UI.technicalMessageViewer() && h('details', { key: 'technical', className: 'mt-2 text-overline text-on-surface-variant', 'data-technical-details': 'true' }, [
-                  h('summary', { key: 'summary', className: 'cursor-pointer font-semibold' }, 'Detalles técnicos'),
-                  h('div', { key: 'body', className: 'mt-1 break-all font-mono' }, `Local epoch ${item.local_epoch || '—'} → remote epoch ${item.remote_epoch} · payload hash ${String(item.payload_hash || '')}`),
-                ]),
-              ]),
-              h('span', { key: 'status', className: 'px-3 py-1 rounded-full text-overline font-bold ' + (item.status === 'resolved' ? 'text-success bg-success-soft' : actionable ? 'text-danger bg-danger-soft' : 'text-warning bg-warning-soft') }, labels[item.status] || 'Estado por revisar'),
-            ]),
-            actionable && window.AUTH.isAdmin() && h('div', { key: 'actions', className: 'flex gap-2 flex-wrap mt-3' }, [
-              h('button', { key: 'approve', 'data-testid': 'quarantine-approve-' + item.operation_id, disabled: busy, onClick: () => decideQuarantine(item, 'approve'), className: 'px-3 h-9 bg-primary text-on-primary rounded-lg disabled:opacity-40' }, 'Autorizar reintento seguro'),
-              h('button', { key: 'reject', 'data-testid': 'quarantine-reject-' + item.operation_id, disabled: busy, onClick: () => decideQuarantine(item, 'reject'), className: 'px-3 h-9 border border-danger text-danger rounded-lg disabled:opacity-40' }, 'Rechazar'),
-            ]),
-          ]);
-        }) : [h('p', { key: 'empty', className: 'text-caption text-on-surface-variant py-6 text-center' }, 'No existen operaciones en cuarentena.')]),
-      ]),
       window.UI.technicalMessageViewer() && h('details', { key: 'tools', 'data-testid': 'sync-recovery-tools', className: 'mt-5 border-t border-outline-variant pt-4', 'data-technical-details': 'true' }, [
         h('summary', { key: 'summary', className: 'cursor-pointer text-caption font-semibold text-primary' }, 'Detalles técnicos'),
         h('p', { key: 'technical', className: 'text-overline text-on-surface-variant mt-3' },
-          `Época ${status.dataEpoch == null ? '—' : status.dataEpoch} · tiempo real ${status.realtime} · ${status.pending} pendientes locales · ${status.blocked} bloqueados · ${status.invalidDomains.length} dominios por aplicar.`),
+          `Versión ${status.build || '—'} · última consulta ${status.lastSuccess ? relativeTime(status.lastSuccess) : 'no disponible'}`),
         h('div', { key: 'a', className: 'flex gap-2 flex-wrap mt-3' }, [
           h('button', { key: 'r', 'data-testid': 'sync-recovery-update', disabled: busy, onClick: () => act(async () => { const result = await window.STORE.synchronizeNow(); toast(result.message, result.ok ? 'var(--accent)' : 'var(--warning)'); }), className: 'px-4 h-10 border border-outline-variant rounded-lg disabled:opacity-40' }, 'Actualizar este equipo'),
-          h('button', { key: 'b', 'data-testid': 'sync-recovery-export', disabled: busy, onClick: exportBackup, className: 'px-4 h-10 border border-outline-variant rounded-lg disabled:opacity-40' }, backup ? 'Respaldo exportado' : 'Exportar recuperación'),
-          window.AUTH.isAdmin() && h('button', { key: 'z', disabled: busy || !clean || !backup, onClick: pointZero, className: 'px-4 h-10 bg-danger text-white rounded-lg disabled:opacity-40' }, 'Establecer punto cero'),
         ]),
       ]),
     ]);
@@ -1744,11 +1648,11 @@
         h(SerifHeading, { key: 't', className: 'mb-4', children: 'Pie de ticket' }),
         h('div', { key: 'f1', className: 'mb-4' }, [
           h('div', { key: 'l', className: 'font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mb-1.5' }, 'Mensaje principal (cursiva)'),
-          h('textarea', { key: 'ta', defaultValue: C.get('ticket.footer'), rows: 2, className: 'block w-full px-3 py-2 bg-surface-container-low border border-outline-variant focus:ring-1 focus:ring-primary text-body rounded-lg resize-none', onBlur: e => C.setSetting('ticket.footer', e.target.value) }),
+          h('textarea', { key: 'ta', defaultValue: C.get('ticket.footer'), rows: 2, className: 'block w-full px-3 py-2 bg-surface-container-low border border-outline-variant focus:ring-1 focus:ring-primary text-body rounded-lg resize-none', onBlur: async e => await C.setSetting('ticket.footer', e.target.value) }),
         ]),
         h('div', { key: 'f2' }, [
           h('div', { key: 'l', className: 'font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mb-1.5' }, 'Descripción (texto pequeño)'),
-          h('textarea', { key: 'ta', defaultValue: C.get('ticket.tagline'), rows: 2, className: 'block w-full px-3 py-2 bg-surface-container-low border border-outline-variant focus:ring-1 focus:ring-primary text-body rounded-lg resize-none', onBlur: e => C.setSetting('ticket.tagline', e.target.value) }),
+          h('textarea', { key: 'ta', defaultValue: C.get('ticket.tagline'), rows: 2, className: 'block w-full px-3 py-2 bg-surface-container-low border border-outline-variant focus:ring-1 focus:ring-primary text-body rounded-lg resize-none', onBlur: async e => await C.setSetting('ticket.tagline', e.target.value) }),
         ]),
       ]),
     ],
@@ -1773,7 +1677,7 @@
               h('td', { key: 's', className: 'px-5 py-3' }, h('span', { className: 'px-2 py-1 text-overline font-bold rounded ' + (s.active === false ? 'bg-surface-container text-on-surface-variant' : 'bg-success-soft text-success') }, s.active === false ? 'Inactivo' : 'Activo')),
               h('td', { key: 'x', className: 'px-5 py-3 text-right' }, h('div', { className: 'flex items-center justify-end gap-4' }, [
                 h('button', { key: 'e', className: 'text-overline uppercase font-bold text-on-surface-variant hover:text-primary', onClick: () => ctx.setAddingUser(s) }, 'Editar'),
-                h('button', { key: 'a', className: 'text-overline uppercase font-bold text-on-surface-variant hover:text-primary', onClick: () => { D.updateUser(s.id, { active: s.active === false }); ctx.refresh(); } }, s.active === false ? 'Activar' : 'Desactivar'),
+                h('button', { key: 'a', className: 'text-overline uppercase font-bold text-on-surface-variant hover:text-primary', onClick: async () => { await D.updateUser(s.id, { active: s.active === false }); ctx.refresh(); } }, s.active === false ? 'Activar' : 'Desactivar'),
               ])),
             ]))),
           ]),
@@ -1884,7 +1788,7 @@
             ]),
           ]),
           h('div', { key: 'guard-state', className: 'mt-4 pt-3 border-t border-outline-variant text-caption text-on-surface-variant' },
-            `${N(preview.queue_pending)} cambio(s) pendiente(s) · ${N(preview.active_locks)} bloqueo(s) · actualización ${preview.sync_complete && preview.client_ready ? 'completa' : 'pendiente'}`),
+            `Autoridad Supabase ${preview.client_ready ? 'consultada' : 'sin confirmar'} · ${N(preview.active_locks)} operación(es) en curso`),
           h('p', { key: 'freshness', className: 'mt-2 text-caption text-on-surface-variant' },
             'Antes del respaldo y de la ejecución, el servidor vuelve a calcular este preview. Si los datos cambian, exige actualizarlo.'),
         ]),
@@ -1916,12 +1820,8 @@
     // update them itself. Business cursors and local guards still invalidate it.
     const reviewStatus = () => {
       const status = window.STORE.syncStatus();
-      return JSON.stringify([status.synchronized, status.connection, status.compatibility,
-        status.recoveryPhase, status.pending, status.blocked, status.checkpointError,
-        status.errors, status.dataEpoch,
-        Object.keys(status.cursors || {}).filter(key => key !== 'devices').sort().map(key => [key, status.cursors[key]]),
-        !!(window.CORE && window.CORE.activityStatus && window.CORE.activityStatus().active),
-        !!(window.DATA && window.DATA.hasLayawayLiquidationLock && window.DATA.hasLayawayLiquidationLock())]);
+      return JSON.stringify([status.ready, status.connection, status.busy, status.legacyReviewCount,
+        !!(window.CORE && window.CORE.activityStatus && window.CORE.activityStatus().active)]);
     };
     const requestPreview = async (notice = '', followup = false) => {
       const requestId = ++previewRequest.current;
@@ -2007,22 +1907,9 @@
     const status = p.client_status || {};
     if (p.system_mode !== 'preproduction') guardText.push('Punto Cero sólo está disponible en preproducción.');
     if (!p.client_ready) {
-      if (status.connection === 'offline') guardText.push('Este equipo no tiene conexión. Conéctalo a internet y revisa de nuevo.');
-      else if (status.compatibility && status.compatibility !== 'ok') guardText.push('Este equipo necesita actualizar BALAM antes de continuar.');
-      else if (Number(status.blocked) > 0 || status.checkpointError || (status.errors || []).length) guardText.push('Este equipo tiene cambios o errores que requieren atención. Revísalos en el panel de sincronización.');
-      else if (p.local_activity || p.local_locks) guardText.push('Termina la operación o captura abierta en este equipo antes de continuar.');
-      else if (Number(status.pending) > 0) guardText.push(`Este equipo tiene ${N(status.pending)} cambio(s) pendiente(s) de enviar.`);
-      else guardText.push('La actualización de este equipo todavía no está confirmada. Espera a que termine o pulsa Revisar de nuevo.');
+      if (p.local_activity) guardText.push('Termina la operación o captura abierta en este equipo antes de continuar.');
+      else guardText.push(status.message || 'Sin conexión. BALAM necesita internet para continuar.');
     }
-    const blockedDevices = Array.isArray(p.blocked_devices) ? p.blocked_devices.filter(device => device.status !== 'revoked') : [];
-    const deviceReasons = { epoch: 'necesita resincronizarse', pending: 'tiene cambios pendientes de enviar',
-      blocked: 'tiene cambios bloqueados que requieren atención', offline: 'debe conectarse y completar su actualización',
-      stale: 'no tiene una señal reciente; conéctalo y revisa de nuevo' };
-    blockedDevices.forEach(device => {
-      const reasons = (Array.isArray(device.reasons) ? device.reasons : []).map(reason => deviceReasons[reason]).filter(Boolean);
-      guardText.push(`${device.display_name || 'Equipo ' + String(device.device_id || '').slice(-6).toUpperCase()}: ${reasons.join('; ') || 'su actualización todavía no está confirmada'}.`);
-    });
-    if (!p.sync_complete && !blockedDevices.length) guardText.push('La actualización de los equipos activos todavía no está confirmada. Revísalos en el panel de sincronización; un equipo activo desconectado sigue bloqueando Punto Cero.');
     if (p.active_locks) guardText.push('Existen bloqueos activos en el servidor.');
     if (p.active_operation) guardText.push('Ya existe otra ejecución de Punto Cero.');
     const makeBackup = async () => {
@@ -2115,7 +2002,7 @@
           h('div', { key: 'keep' }, [h('div', { className: 'text-overline font-bold text-success mb-2' }, 'Se conservará'), ...POINT_ZERO_KEPT.map(x => h('div', { key: x, className: 'text-caption text-success py-1' }, '✓ ' + x))]),
         ]),
         h('div', { key: 'guard-state', className: 'mt-5 text-caption text-on-surface-variant' },
-          `${N(p.queue_pending)} cambio(s) pendiente(s) · ${N(p.active_locks)} bloqueo(s) · actualización ${p.sync_complete && p.client_ready ? 'completa' : 'pendiente'}`),
+          `Autoridad Supabase ${p.client_ready ? 'consultada' : 'sin confirmar'} · ${N(p.active_locks)} operación(es) en curso`),
       ];
     }
     return h(Modal, { title: estado.paso === 'resultado' ? 'Punto Cero completado' : 'PUNTO CERO', large: true,
@@ -2197,9 +2084,7 @@
     // Only readiness changes matter here; heartbeat timestamps would cause a loop.
     const reviewStatus = () => {
       const status = window.STORE.syncStatus();
-      return JSON.stringify([status.synchronized, status.connection, status.compatibility,
-        status.recoveryPhase, status.pending, status.blocked, status.checkpointError,
-        status.errors, status.dataEpoch, status.cursors,
+      return JSON.stringify([status.ready, status.connection, status.busy, status.legacyReviewCount,
         !!(window.CORE && window.CORE.activityStatus && window.CORE.activityStatus().active)]);
     };
     const requestPreview = async (nextSelection, open, followup = false) => {
@@ -2390,12 +2275,8 @@
     const blockingMessages = reasons.map(humanReason);
     if (preview && preview.client_ready === false) {
       const status = preview.client_status || {};
-      let message = 'Esta computadora todavía está sincronizando. Espera a que termine.';
-      if (status.connection === 'offline') message = 'Esta computadora está sin conexión. Conéctala y vuelve a revisar.';
-      else if (status.compatibility && status.compatibility !== 'ok') message = 'Esta computadora necesita actualizarse. Revisa su estado en el Centro de equipos antes de continuar.';
-      else if (status.checkpointError || status.recoveryError || (status.errors || []).length) message = 'No se pudo completar la actualización de esta computadora. Revisa el error en el Centro de equipos y vuelve a revisar.';
-      else if (status.blocked > 0) message = 'Hay operaciones bloqueadas en esta computadora. Revísalas en el Centro de equipos antes de continuar.';
-      else if (window.CORE && window.CORE.activityStatus && window.CORE.activityStatus().active) message = 'Termina o cancela la captura abierta antes de continuar.';
+      let message = status.message || 'Sin conexión. BALAM necesita internet para continuar.';
+      if (window.CORE && window.CORE.activityStatus && window.CORE.activityStatus().active) message = 'Termina o cancela la captura abierta antes de continuar.';
       blockingMessages.push(message);
     }
     let readiness = 'Selecciona al menos una opción para revisar la limpieza.';
@@ -2588,7 +2469,7 @@
     if (estado.paso === 'result') footer.push(h('button', { key: 'receipt', onClick: receipt, className: 'px-5 h-11 border border-outline-variant rounded-lg' }, 'Descargar comprobante'), h('button', { key: 'close', onClick: onClose, className: 'px-5 h-11 bg-primary text-on-primary rounded-lg' }, 'Cerrar'));
     if (estado.paso === 'error') footer.push(h('button', { key: 'close', onClick: onClose, className: 'px-5 h-11 bg-primary text-on-primary rounded-lg' }, 'Entendido'));
     let body;
-    if (estado.paso === 'result') body = [h('div', { key: 'ok', className: 'p-4 rounded-lg bg-success-soft text-success font-semibold' }, estado.result.rebootstrapRequired ? 'LIMPIEZA COMPLETADA; RECARGA ESTA COMPUTADORA' : 'LIMPIEZA COMPLETADA'), estado.result.rebootstrapRequired && h('div', { key: 'local', role: 'alert', className: 'mt-3 p-4 rounded-lg bg-warning-soft text-warning' }, 'La limpieza terminó, pero esta computadora necesita recargarse para mostrar el resultado. Conserva el comprobante y no repitas la limpieza.'), window.UI.technicalMessageViewer() && h('details', { key: 'detail', className: 'mt-4 text-caption text-on-surface-variant', 'data-technical-details': 'true' }, [h('summary', { key: 'summary', className: 'font-semibold text-primary cursor-pointer' }, 'Detalles técnicos'), h('div', { key: 'id', className: 'mt-2 break-all' }, 'Operación: ' + estado.result.cleanup_id)])];
+    if (estado.paso === 'result') body = [h('div', { key: 'ok', className: 'p-4 rounded-lg bg-success-soft text-success font-semibold' }, 'LIMPIEZA COMPLETADA'), window.UI.technicalMessageViewer() && h('details', { key: 'detail', className: 'mt-4 text-caption text-on-surface-variant', 'data-technical-details': 'true' }, [h('summary', { key: 'summary', className: 'font-semibold text-primary cursor-pointer' }, 'Detalles técnicos'), h('div', { key: 'id', className: 'mt-2 break-all' }, 'Operación: ' + estado.result.cleanup_id)])];
     else if (estado.paso === 'error') body = [h(HumanMessage, { key: 'e', message: estado.error, className: 'p-4 rounded-lg bg-danger-soft text-caption' }), h('p', { key: 'n', className: 'mt-3 text-caption text-on-surface-variant' }, 'BALAM no confirmó el resultado. Conserva el respaldo y vuelve a intentarlo para consultar la misma limpieza de forma segura.')];
     else if (estado.paso === 'confirmation') body = [h('p', { key: 'p', id: 'selective-cleanup-confirmation-help', className: 'text-body' }, 'Escribe exactamente LIMPIAR OPERACIONES para habilitar la advertencia final.'), h('label', { key: 'l', htmlFor: 'selective-cleanup-confirmation-input', className: 'block mt-4 text-label-sm font-semibold text-primary' }, 'Frase de confirmación'), h('input', { key: 'i', id: 'selective-cleanup-confirmation-input', autoFocus: true, value: estado.confirmation, onChange: e => setEstado(x => Object.assign({}, x, { confirmation: e.target.value })), 'aria-describedby': 'selective-cleanup-confirmation-help', 'data-testid': 'selective-cleanup-confirmation', className: 'mt-2 w-full h-11 px-3 rounded-lg border border-outline-variant font-mono' })];
     else if (estado.paso === 'warning') body = [h('div', { key: 'w', className: 'p-4 rounded-lg bg-danger-soft text-danger font-semibold' }, 'Advertencia final: se borrarán únicamente las operaciones mostradas y sus datos relacionados. Esta acción no se puede deshacer desde la interfaz.')];
@@ -2604,95 +2485,7 @@
     return h(Modal, { title: 'Confirmar limpieza', testId: 'selective-cleanup-dialog', large: true, onClose: ['backup','executing'].includes(estado.paso) ? (() => {}) : onClose, footer }, body);
   }
 
-  function DemoPanel() {
-    const [busy, setBusy] = useState(false);
-    const [purga, setPurga] = useState(null);
-    const active = D.demoActive();
-    async function generar() {
-      // La simulación es LOCAL. Con sesión iniciada se subiría a Supabase y contaminaría los datos
-      // reales (justo lo que hay que limpiar después). Se bloquea: primero cerrar sesión.
-      if (window.STORE && (await window.STORE.hasSession())) {
-        window.alert('Tienes una sesión iniciada.\n\nLa simulación sólo debe usarse sin conexión a la cuenta del negocio para evitar mezclar datos de prueba con datos reales.\n\nCierra sesión primero y vuelve a intentarlo.');
-        return;
-      }
-      if (!window.confirm('¿Generar la SIMULACIÓN de demostración?\n\nReemplaza los datos actuales por ~24 productos, 8 clientes, 4 vendedores y ~300 ventas de los últimos 90 días (con devoluciones). Todo se calcula con el motor real.\n\nSólo cambia los datos de prueba de este navegador.')) return;
-      setBusy(true);
-      setTimeout(() => {
-        const r = D.seedDemo();
-        if (!r || r.ok === false) { setBusy(false); toast((r && r.error) || 'No se pudo generar la simulación', 'var(--danger)'); return; }
-        toast(`Simulación lista: ${r.sales} ventas · ${r.products} productos · ${r.returns} devoluciones`, 'var(--accent)');
-        setTimeout(() => location.reload(), 700);
-      }, 30);
-    }
-    async function limpiar() {
-      if (!window.confirm('¿Limpiar TODO y volver al estado vacío de producción?\n\nBorra productos, clientes, ventas, devoluciones, etc. de ESTE dispositivo. No se puede deshacer.')) return;
-      const online = !!(window.STORE && (await window.STORE.hasSession()));
-      if (!D.resetEmpty()) {
-        toast('Hay una liquidación pendiente; reconcíliala antes de borrar los datos', 'var(--danger)');
-        return;
-      }
-      if (online) {
-        window.alert('Los datos de prueba de este navegador se vaciaron.\n\n⚠ La cuenta del negocio todavía conserva su información y volverá a mostrarla al recargar.\n\nCierra sesión si necesitas seguir trabajando sólo con la simulación.');
-      } else {
-        toast('Datos vaciados — estado de producción', 'var(--accent)');
-      }
-      setTimeout(() => location.reload(), 800);
-    }
-    // H-68 · Borra lo OPERATIVO de prueba —ventas, cobros, apartados, abonos,
-    // devoluciones, cambios, préstamos, clientes, comisiones, cierres y sus
-    // movimientos— y devuelve al inventario las piezas que esas operaciones
-    // movieron. La configuración entera (productos, catálogos, tallas, precios,
-    // descuentos, vendedores, usuarios, permisos) NO se toca, y el informe final
-    // lo demuestra con una huella tomada antes y después.
-    function limpiarPruebas() { setPurga({ paso: 'confirmar', resumen: D.testDataFootprint() }); }
-    async function ejecutarPurga() {
-      setPurga(p => Object.assign({}, p, { paso: 'ejecutando' }));
-      let r;
-      try {
-        r = window.STORE && window.STORE.purgeTestData
-          ? await window.STORE.purgeTestData()
-          : { ok: false, error: 'La actualización entre equipos no está disponible' };
-      } catch (e) { r = { ok: false, error: String((e && e.message) || e) }; }
-      if (!r || !r.ok) {
-        setPurga({ paso: 'error', error: (r && r.error) || 'No se pudo borrar', detalle: r && r.detalle });
-        return;
-      }
-      try { if (window.STORE && window.STORE.markResetApplied) window.STORE.markResetApplied(); } catch (e) { /* */ }
-      setPurga({ paso: 'informe', informe: r, despues: D.testDataFootprint() });
-    }
-    return [
-      active && h('div', { key: 'badge', className: 'inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gold-soft text-gold-text text-overline font-bold uppercase tracking-widest w-fit' }, [h(MS, { key: 'i', name: 'star', size: 14, fill: true }), 'Modo demostración activo']),
-      h(GlassCard, { key: 'clean', className: 'p-6' }, [
-        h(SerifHeading, { key: 't', className: 'mb-2', children: 'Borrar datos de prueba' }),
-        h('p', { key: 'd', className: 'text-body text-on-surface-variant leading-relaxed mb-5' }, 'Deja el sistema listo para operar de verdad: borra las ventas, devoluciones, descuentos, liquidaciones y clientes que capturaste probando, y devuelve al inventario las piezas que esas ventas descontaron. Tu inventario, tus usuarios y tu configuración NO se tocan.'),
-        h('div', { key: 'b' }, [
-          h('button', { key: 'x', 'data-testid': 'purga-abrir', className: 'inline-flex items-center gap-2 px-5 h-11 border border-outline-variant text-danger font-label-sm uppercase tracking-widest text-caption rounded-lg hover:bg-danger-soft hover:border-danger/30 transition', onClick: limpiarPruebas }, [h(MS, { key: 'i', name: 'trash', size: 16 }), 'Borrar datos de prueba (conserva inventario)']),
-        ]),
-      ]),
-      h(GlassCard, { key: 'c', className: 'p-6' }, [
-        h(SerifHeading, { key: 't', className: 'mb-2', children: 'Simulación de datos' }),
-        h('p', { key: 'd', className: 'text-body text-on-surface-variant leading-relaxed mb-5' }, 'Genera una operación ficticia completa (productos, clientes, vendedores y ~300 ventas de 90 días, con devoluciones) para PROBAR reportes, comisiones, inventario y devoluciones con números REALES — todo se calcula con el motor del sistema, nada está inventado. Ideal para demostraciones.'),
-        h('div', { key: 'b', className: 'flex flex-wrap gap-3' }, [
-          h('button', { key: 'g', disabled: busy, className: 'inline-flex items-center gap-2 px-5 h-11 bg-primary text-on-primary font-label-sm uppercase tracking-widest text-caption rounded-lg hover:opacity-90 transition disabled:opacity-50', onClick: generar }, [h(MS, { key: 'i', name: busy ? 'clock' : 'star', size: 16 }), busy ? 'Generando…' : 'Generar simulación']),
-          h('button', { key: 'r', className: 'inline-flex items-center gap-2 px-5 h-11 border border-outline-variant text-danger font-label-sm uppercase tracking-widest text-caption rounded-lg hover:bg-danger-soft hover:border-danger/30 transition', onClick: limpiar }, [h(MS, { key: 'i', name: 'trash', size: 16 }), 'Limpiar / Resetear a vacío']),
-        ]),
-      ]),
-      h(GlassCard, { key: 'w', className: 'p-5 border-l-4 border-l-gold' }, [
-        h('div', { key: 'h', className: 'flex items-center gap-2 mb-2' }, [h(MS, { key: 'i', name: 'alert', size: 18, className: 'text-gold-text' }), h('span', { key: 't', className: 'text-overline font-bold uppercase tracking-widest text-primary' }, 'Importante')]),
-        h('ul', { key: 'l', className: 'text-caption text-on-surface-variant leading-relaxed list-disc pl-5 space-y-1' }, [
-          h('li', { key: '1' }, 'La simulación se guarda sólo en este navegador y no modifica la información de la cuenta del negocio.'),
-          h('li', { key: '2' }, 'Para demos, comparte la app y úsala SIN iniciar sesión (con sesión, la app podría sincronizar y mezclar datos).'),
-          h('li', { key: '3' }, 'Cuando termines de probar, usa “Limpiar / Resetear a vacío” para volver al estado de producción.'),
-        ]),
-      ]),
-      purga && h(PurgaModal, { key: 'purga', estado: purga, onEjecutar: ejecutarPurga, onCerrar: () => setPurga(null) }),
-    ];
-  }
 
-  // ── H-68 · Modal de «Borrar datos de prueba» ────────────────────────────────
-  // Antes de ejecutar muestra QUÉ se va a borrar y qué se conserva; al terminar,
-  // el informe por módulo con las piezas antes y después. Nada de esto se
-  // adivina: son las mismas cuentas que la autoridad remota devuelve.
   function PurgaModal({ estado, onEjecutar, onCerrar }) {
     const { Modal } = window.UI;
     const r = estado.resumen;
@@ -2862,6 +2655,7 @@
       toast('Contraseña generada — cópiala antes de guardar');
     }
     async function submit() {
+      window.CORE.invokeSync('assertBusinessReady');
       if (!f.nombre.trim()) { toast('Escribe el nombre completo', 'var(--danger)'); return; }
       // H-69: la comision se guarda SIEMPRE por la escritura de perfil, nunca por
       // la Edge Function, porque `admin-users` solo administra la cuenta de
@@ -2884,7 +2678,7 @@
         // SIN la Edge Function admin-users. Así renombrar / cambiar rol / foto funciona aunque la
         // función no esté desplegada. (Crear usuarios y cambiar email/contraseña sí la requieren, por Auth.)
         if (editing && !f.password && f.email.trim() === (user.email || '')) {
-          D.updateUser(user.id, Object.assign({ nombre: f.nombre.trim(), role: f.role, avatar: f.avatar || null }, comision));
+          await D.updateUser(user.id, Object.assign({ nombre: f.nombre.trim(), role: f.role, avatar: f.avatar || null }, comision));
           toast('Usuario actualizado', 'var(--accent)');
           onSaved();
           return;
@@ -2893,8 +2687,8 @@
         if (editing && f.password && f.password.length < 6) { toast('La nueva contraseña debe tener al menos 6 caracteres', 'var(--danger)'); return; }
         try {
           const payload = editing
-            ? { action: 'update', id: user.id, email: f.email.trim(), nombre: f.nombre.trim(), role: f.role, avatar: f.avatar || '', password: f.password || undefined }
-            : { action: 'create', email: f.email.trim(), password: f.password, nombre: f.nombre.trim(), role: f.role, avatar: f.avatar || '' };
+            ? { action: 'update', id: user.id, baseVersion: user._syncVersion, email: f.email.trim(), nombre: f.nombre.trim(), role: f.role, avatar: f.avatar || '', password: f.password || undefined, ...comision }
+            : { action: 'create', email: f.email.trim(), password: f.password, nombre: f.nombre.trim(), role: f.role, avatar: f.avatar || '', ...comision };
           // callFunction lee SIEMPRE el cuerpo real de la respuesta, así el usuario ve el motivo
           // exacto ("Solo un administrador…", "Sesión inválida", "correo ya registrado…") en vez del
           // genérico "returned a non-2xx status code" que da supabase-js .invoke() en errores.
@@ -2904,40 +2698,27 @@
             return;
           }
           await window.STORE.pullDomain('sellers');
-          // La cuenta ya existe; la politica de comision se escribe despues, por
-          // la ruta de perfil, que es la unica que la nube deja tocar.
-          const destino = editing ? user : (D.sellers || []).find(x => String(x.email || '').toLowerCase() === f.email.trim().toLowerCase());
-          if (destino) D.updateUser(destino.id, comision);
+          // La cuenta y su perfil/comisión están confirmados en el recibo remoto.
           toast(editing ? 'Usuario actualizado' : 'Usuario acreditado', 'var(--accent)');
           onSaved();
         } catch (e) { toast('Error: ' + (e.message || e), 'var(--danger)'); }
         return;
       }
-      // Dev / local: solo perfil (sin cuenta de acceso real; el login real va en producción).
-      if (editing) {
-        D.updateUser(user.id, Object.assign({ nombre: f.nombre, email: f.email.trim() || null, role: f.role, avatar: f.avatar || null }, comision));
-        toast('Usuario actualizado (local)', 'var(--accent)');
-      } else {
-        D.addUser(Object.assign({ nombre: f.nombre, email: f.email, role: f.role, avatar: f.avatar || null }, comision));
-        toast('Usuario creado (local)', 'var(--accent)');
-      }
-      onSaved();
+      toast('Sin conexión. BALAM necesita internet para continuar.', 'var(--danger)');
     }
     async function eliminar() {
+      window.CORE.invokeSync('assertBusinessReady');
       const online = !!(window.STORE && (await window.STORE.hasSession()));
       if (online) {
         try {
-          const r = await window.STORE.callFunction('admin-users', { action: 'delete', id: user.id });
+          const r = await window.STORE.callFunction('admin-users', { action: 'delete', id: user.id, baseVersion: user._syncVersion });
           if (!r.ok || (r.body && r.body.error)) { toast((r.body && r.body.error) || ('No se pudo eliminar (código ' + r.status + ')'), 'var(--danger)'); return; }
           await window.STORE.pullDomain('sellers');
           toast('Usuario eliminado', 'var(--danger)'); onSaved();
         } catch (e) { toast('Error: ' + (e.message || e), 'var(--danger)'); }
         return;
       }
-      const r = D.removeUser(user.id);
-      if (!r.ok) { toast(r.error, 'var(--danger)'); return; }
-      toast('Usuario eliminado', 'var(--danger)');
-      onSaved();
+      toast('Sin conexión. BALAM necesita internet para continuar.', 'var(--danger)');
     }
 
     const under = 'w-full border-0 border-b border-outline-variant bg-transparent py-3 text-body focus:border-primary focus:ring-0 px-0 transition-all';

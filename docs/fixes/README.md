@@ -13,10 +13,15 @@ sesión de chat.
 
 ## Correcciones registradas
 
-- `evaluacion-arquitectura-sincronizacion-h164.md` — H-164, ABIERTO:
-  diagnóstico de flota, ciclo de reactivación y actualización bloqueada;
-  comparación local-first/cloud-first/online-only. Evaluación entregada,
-  sin corrección funcional ni certificación distribuida.
+- [online-only-h164.md](online-only-h164.md) — H-164, EN IMPLEMENTACIÓN:
+  conversión online-only aprobada, 19 familias servidor, 32 entradas DATA y
+  14 mutadores CONFIG; retiro local-first y conciliación legacy conservadora.
+  Activación, publicación y certificación real pendientes; no rediseña UI.
+
+- [evaluacion-arquitectura-sincronizacion-h164.md](evaluacion-arquitectura-sincronizacion-h164.md)
+  — H-164, HISTÓRICO: diagnóstico inicial de flota, reactivación y diálogo
+  cerrado. Su comparación de alternativas quedó sustituida por ADR-015 y
+  la implementación online-only autorizada.
 
 - `flujo-excel-inventario-h163.md` — H-163, RESUELTO Y PUBLICADO:
   plantilla V2, mensajes por causa y reimportación sin escrituras

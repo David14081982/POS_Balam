@@ -1,10 +1,8 @@
 // config.jsx — Motor de configuración del POS (catálogos + parámetros).
-// Fuente única de verdad para todo lo que un administrador gestiona dinámicamente.
-// Local-first: persiste en localStorage (balam_config_v1). El seam de nube (Supabase)
-// se engancha aparte en store.jsx y empuja/jala estos mismos datos.
+// Proyección efímera de la configuración confirmada por Supabase.
+// Las mutaciones preparan una copia; sólo la lectura remota reemplaza el estado.
 // Carga ANTES de data.jsx. Exporta window.CONFIG.
 (function () {
-  const LS_KEY = 'balam_config_v1';
 
   // Compatibilidad de CONFIG: instalaciones antiguas publicaron el catálogo
   // Modelo con kind `modelo`; H-94 encontró `producto` en BALAM vigente. Nunca
@@ -295,107 +293,22 @@
     return { v: 1, catalogs, catalogMeta: deepClone(SEED_CATALOG_META), settings: deepClone(SEED_SETTINGS) };
   }
 
-  let state;
-  try {
-    const raw = localStorage.getItem(LS_KEY);
-    state = raw ? JSON.parse(raw) : null;
-  } catch (e) { state = null; }
-  if (!state || !state.catalogs || !state.settings) state = seed();
-
-  // Rellena catálogos/ajustes/ítems nuevos ausentes en un estado (guardado local viejo O traído de la
-  // nube). Muta el estado in situ y devuelve si cambió. Se usa al arrancar (datos locales) y dentro de
-  // load() (datos de Supabase), para que una config vieja en la nube se auto-repare y se vuelva a subir.
-  function backfillState(st, options) {
-    const fresh = seed();
-    const remoteAuthority = !!(options && options.remoteAuthority);
-    let changed = false;
-    const existingModelKind = modelKindInState(st);
-    const preserveLegacyModel = existingModelKind && existingModelKind !== 'producto';
-    const needsManualOptions = !Object.prototype.hasOwnProperty.call(st.settings, 'benefits.manualOptionsV1');
-    Object.keys(fresh.catalogs).forEach(k => {
-      if (k === 'producto' && preserveLegacyModel) return;
-      if (k === 'ornament_color' && remoteAuthority) return;
-      if (!st.catalogs[k]) { st.catalogs[k] = fresh.catalogs[k]; changed = true; }
-    });
-    // H-83: rellena sólo el metadato ausente de ornamentos históricos.
-    const ornaments = st.catalogs.ornament || [];
-    (fresh.catalogs.ornament || []).forEach(seedItem => {
-      const current = ornaments.find(item => item.code === seedItem.code);
-      if (!current || !seedItem.meta || !Object.prototype.hasOwnProperty.call(seedItem.meta, 'allowsColors')) return;
-      if (!current.meta || !Object.prototype.hasOwnProperty.call(current.meta, 'allowsColors')) {
-        current.meta = Object.assign({}, current.meta || {}, { allowsColors: seedItem.meta.allowsColors });
-        changed = true;
-      }
-    });
-    // H-93: migra únicamente la etiqueta predeterminada histórica; cualquier
-    // nombre personalizado por el negocio se conserva sin cambios.
-    const seniorRole = (st.catalogs.seller_role || []).find(item => item.code === 'senior');
-    if (seniorRole && seniorRole.label === 'Heritage Senior Associate') {
-      seniorRole.label = 'Balam Senior Associate';
-      changed = true;
-    }
-    if (needsManualOptions) {
-      const benefits = st.catalogs.additional_benefit || (st.catalogs.additional_benefit = []);
-      fresh.catalogs.additional_benefit
-        .filter(item => ['MANUAL_PERCENT', 'MANUAL_AMOUNT'].includes(item.code))
-        .forEach(item => {
-          if (!benefits.some(current => current.code === item.code)) {
-            benefits.unshift(deepClone(item));
-            changed = true;
-          }
-        });
-    }
-    Object.keys(fresh.settings).forEach(k => { if (!(k in st.settings)) { st.settings[k] = fresh.settings[k]; changed = true; } });
-    // Metadatos por catálogo: rellena el mapa entero o entradas-por-kind ausentes (estados viejos).
-    if (!st.catalogMeta) { st.catalogMeta = fresh.catalogMeta; changed = true; }
-    else Object.keys(fresh.catalogMeta).forEach(k => {
-      if (k === 'producto' && preserveLegacyModel) return;
-      if (k === 'ornament_color' && remoteAuthority && !st.catalogMeta[k]) return;
-      if (!st.catalogMeta[k]) { st.catalogMeta[k] = fresh.catalogMeta[k]; changed = true; return; }
-      Object.keys(fresh.catalogMeta[k]).forEach(field => {
-        if (!Object.prototype.hasOwnProperty.call(st.catalogMeta[k], field)) {
-          st.catalogMeta[k][field] = deepClone(fresh.catalogMeta[k][field]); changed = true;
-        }
-      });
-    });
-    // Corrección exacta de las etiquetas heredadas; nombres personalizados se conservan.
-    if (st.catalogMeta.fabric && st.catalogMeta.fabric.label === 'Tela') { st.catalogMeta.fabric.label = 'Material'; changed = true; }
-    if (st.catalogMeta.color && st.catalogMeta.color.label === 'Color') { st.catalogMeta.color.label = 'Color Tela'; changed = true; }
-    // H-94: el Constructor usa un único slot virtual; las dos familias sólo
-    // aportan valores y escala. Un cache anterior puede conservar sizeSlot.
-    ['size_letter', 'size_number'].forEach(kind => {
-      if (st.catalogMeta[kind] && Object.prototype.hasOwnProperty.call(st.catalogMeta[kind], 'sizeSlot')) {
-        delete st.catalogMeta[kind].sizeSlot; changed = true;
-      }
-    });
-    // Asegura el método 'Cortesía' (regalos/giveaways) aunque payment_method ya exista (local o nube).
-    const pm = st.catalogs.payment_method;
-    if (pm && !pm.some(it => it.code === 'Cortesía')) { pm.push({ code: 'Cortesía', label: 'Cortesía', active: true, meta: { icon: 'tag' } }); changed = true; }
-    return changed;
-  }
-
-  // Rellena catálogos/ajustes nuevos que no estuvieran en un estado guardado viejo (datos locales)
-  if (backfillState(state)) persist();
-
+  let state = seed();
   let version = 0;
-  function persist() {
-    try { localStorage.setItem(LS_KEY, JSON.stringify(state)); return true; } catch (e) { return false; }
-  }
-  function emit(opts) {
+  let remoteReady = false;
+  let preparing = false;
+  let productUpdates = [];
+  function emit() {
+    if (preparing) return true;
     version++;
-    const persisted = persist();
     try { window.dispatchEvent(new CustomEvent('configchange', { detail: { version } })); } catch (e) { /* SSR */ }
-    if (!(opts && opts.sync === false)) {
-      try { window.CORE.invokeSync('pushConfig', state); } catch (e) { /* offline */ }
-    }
-    return persisted;
+    return true;
   }
 
-  // ── API de lectura ────────────────────────────────────────────────────────────
   // Lista completa (incluye inactivos) — para el editor del admin
-  function all(kind) { return (state.catalogs[kind] || []).slice(); }
+  function all(kind) { return deepClone(state.catalogs[kind] || []); }
   // Solo activos — para los consumidores de la app
-  function list(kind) { return (state.catalogs[kind] || []).filter(it => it.active !== false); }
+  function list(kind) { return deepClone((state.catalogs[kind] || []).filter(it => it.active !== false)); }
   // Consumidores de captura: activos, más los inactivos que ya pertenecían al
   // registro editado. Un valor histórico se resuelve, pero nunca nace de nuevo.
   function selectable(kind, historicalCodes) {
@@ -416,13 +329,13 @@
   }
   // Arreglo de codes activos (ej. codes('size_letter') → SIZES_LETRA)
   function codes(kind) { return list(kind).map(it => it.code); }
-  function find(kind, code) { return (state.catalogs[kind] || []).find(it => it.code === code) || null; }
+  function find(kind, code) { const item = (state.catalogs[kind] || []).find(it => it.code === code) || null; return preparing ? item : deepClone(item); }
 
   function get(key) { return state.settings[key]; }
   function settings() { return deepClone(state.settings); }
 
   // ── Metadatos por catálogo (label / inForm / inSku / orden) ───────────────────
-  function catalogMeta(kind) { return state.catalogMeta[kind] || null; }
+  function catalogMeta(kind) { return deepClone(state.catalogMeta[kind] || null); }
   function allCatalogMeta() { return deepClone(state.catalogMeta); }
   // Categorías por talla: son los catálogos estructurales ya administrados por
   // Configuración. No se mantiene una lista paralela en POS ni Inventario.
@@ -732,7 +645,7 @@
     const m = state.catalogMeta[kind];
     if (!m) return { ok: false, error: 'No existe' };
     if (!m.custom) return { ok: false, error: 'Un catálogo del sistema no se puede borrar' };
-    const prods = window.CORE.catalogProducts();
+    const prods = deepClone(window.CORE.catalogProducts());
     const referencedByV2 = prods.filter(p => p && p.recordModel === 'v2'
       && p.attrs && Object.prototype.hasOwnProperty.call(p.attrs, kind));
     if (m.inReference && referencedByV2.length) {
@@ -748,7 +661,7 @@
     prods.forEach(p => {
       if (p.attrs && (kind in p.attrs)) { delete p.attrs[kind]; touchedIds.push(p.id); }
     });
-    if (touchedIds.length) window.CORE.saveCatalogProducts(touchedIds);
+    if (touchedIds.length) productUpdates.push(...prods.filter(p => touchedIds.includes(p.id)));
     delete state.catalogMeta[kind];
     delete state.catalogs[kind];
     emit();
@@ -828,57 +741,62 @@
   // ── Reset / import-export (para sync y respaldo) ──────────────────────────────
   function reset() { state = seed(); emit(); }
   function snapshot() { return deepClone(state); }
-  // Aplica estado remoto. Los AJUSTES se fusionan sobre los defaults (la nube gana por
-  // clave que tenga), así las claves nuevas del código no desaparecen tras un pull.
+  // Única aplicación de autoridad. No lee almacenamiento ni repara/publica datos.
   function load(next) {
-    if (!next || !next.catalogs || !next.settings) return;
-    // Migra el estado remoto ANTES de fusionar defaults; de otro modo una
-    // bandera nueva parecería ya presente y no podría inyectar sus ítems una vez.
-    backfillState(next, { remoteAuthority: true });
-    // Backfill de catálogos NUEVOS aún ausentes en la nube (p. ej. return_reason): si la nube no
-    // trae el kind, conserva la semilla local para que no desaparezca tras el pull.
-    // OJO: si el kind SÍ figura en los metadatos de la nube (_catalogMeta) pero llega sin filas,
-    // es que el admin vació el catálogo a propósito (p. ej. Talla Letra) — se respeta vacío en
-    // vez de resucitar la semilla (bug: las tallas "revivían" en cada recarga).
-    const cats = next.catalogs, fresh = seed();
-    const remoteModelKind = modelKindInState(next);
-    Object.keys(fresh.catalogs).forEach(k => {
-      if (k === 'producto' && remoteModelKind && remoteModelKind !== 'producto') return;
-      const known = !!(next.catalogMeta && next.catalogMeta[k]);
-      if (k === 'ornament_color') {
-        if (!cats[k]) cats[k] = [];
-        return;
-      }
-      if (!cats[k]) cats[k] = known ? [] : fresh.catalogs[k];
-      else if (!cats[k].length && !known) cats[k] = fresh.catalogs[k];
-    });
-    // Metadatos: fusiona sobre los defaults (la nube gana por kind presente; los kinds nuevos del código no desaparecen).
-    const defaultMeta = deepClone(SEED_CATALOG_META);
-    if (remoteModelKind && remoteModelKind !== 'producto') delete defaultMeta.producto;
-    if (!(next.catalogMeta && next.catalogMeta.ornament_color)) delete defaultMeta.ornament_color;
-    const meta = Object.assign({}, defaultMeta, next.catalogMeta || {});
-    state = { v: next.v || 1, catalogs: cats, catalogMeta: meta, settings: Object.assign({}, deepClone(SEED_SETTINGS), next.settings) };
-    // Inyecta ítems nuevos que la nube no trae. Una aplicación remota persiste y
-    // notifica, pero no vuelve a subir el mismo snapshot (evita bucle Realtime).
-    backfillState(state, { remoteAuthority: true });
-    return emit({ sync: false });
+    if (!next || !next.catalogs || !next.settings) throw new Error('CONFIG_REMOTE_INCOMPLETE');
+    state = deepClone({ ...next, catalogMeta: next.catalogMeta || {} });
+    remoteReady = true;
+    return emit();
+  }
+  function clearRemote() {
+    state = { v: 1, catalogs: {}, catalogMeta: {}, settings: {} };
+    remoteReady = false;
+    emit();
   }
 
-  const guardedMutation = fn => function (...args) {
+  const mutations = { addItem, updateItem, setActive, removeItem, move, setCatalogMeta,
+    moveSkuOrder, addCatalog, removeCatalog, importCatalogs, setSetting, setSettings,
+    renameSizeCodes, reset };
+  function prepareMutation(name, args) {
+    const mutate = mutations[name];
+    if (!mutate) throw new Error('CONFIG_MUTATION_UNKNOWN');
+    const confirmed = state;
+    if (preparing) throw new Error('CONFIG_MUTATION_REENTRANT');
+    state = deepClone(confirmed);
+    productUpdates = [];
+    preparing = true;
+    try {
+      const result = mutate(...(args || [])) || { ok: true };
+      return { state: deepClone(state), result, productUpdates: deepClone(productUpdates) };
+    } finally {
+      state = confirmed;
+      productUpdates = [];
+      preparing = false;
+    }
+  }
+  async function commitMutation(name, args) {
     window.CORE.invokeSync('assertBusinessReady');
-    return fn.apply(this, args);
-  };
+    if (!remoteReady) throw new Error('Sin conexión. BALAM necesita internet para continuar.');
+    const prepared = prepareMutation(name, args);
+    if (prepared.result.ok === false) return prepared.result;
+    const confirmed = await window.CORE.invokeSync('execute', {
+      type: 'config', state: prepared.state, productUpdates: prepared.productUpdates,
+    });
+    if (!confirmed || confirmed.ok !== true) throw new Error('CONFIG_CONFIRMATION_MISSING');
+    return prepared.result;
+  }
   window.CONFIG = {
     all, list, selectable, map, metaMap, codes, find, get, settings, inUse, sizeCodeReferences,
     catalogMeta, allCatalogMeta, sizeCategories, catalogLabel, fieldOf, skuParts, referenceParts, modeloKind,
     h94TargetSnapshot,
     addItem, updateItem, setActive, removeItem, move, setCatalogMeta, moveSkuOrder, addCatalog, removeCatalog, importCatalogs, setSetting, setSettings,
     renameSizeCodes,
-    reset, snapshot, load,
+    reset, snapshot, load, clearRemote, prepareMutation,
+    get ready() { return remoteReady; },
     get version() { return version; },
     KINDS: Object.keys(SEED_CATALOGS),
   };
   ['addItem','updateItem','setActive','removeItem','move','setCatalogMeta','moveSkuOrder',
     'addCatalog','removeCatalog','importCatalogs','setSetting','setSettings','renameSizeCodes','reset']
-    .forEach(name=>{ window.CONFIG[name] = guardedMutation(window.CONFIG[name]); });
+    .forEach(name => { window.CONFIG[name] = (...args) => commitMutation(name, args); });
 })();

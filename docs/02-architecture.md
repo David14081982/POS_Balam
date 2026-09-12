@@ -4,28 +4,30 @@
 
 POS BALAM es una aplicación React cargada directamente en el navegador, sin
 bundler en tiempo de ejecución. Los módulos en `balam/` publican APIs globales
-en `window`. La aplicación es **local-first**: opera con datos en memoria y
-`localStorage`. Supabase es la autoridad de los datos confirmados. La cola
-durable conserva intenciones aún no confirmadas; `DATA`, `localStorage` e
-IndexedDB contienen proyecciones reconstruibles cuando almacenan colecciones
-confirmadas. Las colas, borradores y credenciales locales no son cachés
-descartables. La operación offline sigue disponible con ese límite explícito.
-
-Flujo principal:
+en `window`. El contrato comercial aprobado en H-164 es **online-only**:
+Supabase es la única autoridad comercial y toda escritura requiere confirmación
+del servidor. `DATA` y `CONFIG` contienen exclusivamente proyecciones efímeras;
+una recarga las reconstruye desde remoto. No existe una cola comercial nueva
+ni fallback offline. La decisión y sus límites viven en `ADR-015`.
 
 ```text
-Interfaz React
-    ↓
-CONFIG / DATA / AUTH
-    ↓ intención explícita y durable + proyección optimista
-STORE → cola offline → RPC/RLS → Supabase (autoridad confirmada)
-    ↑                                ↓
-    └── snapshot completo → aplicar → persistir → avanzar cursor
+Usuario → solicitud con identidad estable → CORE → STORE.execute
+    → Supabase / RPC → confirmación autoritativa → consulta remota
+    → sustituir proyección de memoria → actualizar UI → mostrar éxito
 ```
+
+Sin conexión real con Supabase, se bloquean las escrituras y se muestra:
+«Sin conexión. BALAM necesita internet para continuar.» Una respuesta incierta
+se consulta por su identidad antes de permitir repetir: «Estamos confirmando
+la operación. No la repitas.» La recepción perdida nunca autoriza reenviar
+automáticamente una operación comercial.
 
 `POS Balam.html` carga los módulos fuente. `build-offline.mjs` genera
 `index.html` y `POS Balam (offline).html`; estos dos archivos son artefactos, no
-la fuente primaria.
+la fuente primaria. Sus nombres históricos describen el empaquetado de recursos,
+no una capacidad comercial sin Internet. Esta documentación describe el código
+de H-164; aplicación SQL, publicación y certificación se acreditan por separado
+en `docs/fixes/evaluacion-arquitectura-sincronizacion-h164.md`.
 
 ## Build offline
 
@@ -57,19 +59,28 @@ lo que prueban el artefacto distribuido sin Babel ni CDN. Pueden seguir leyendo
 
 ## Publicación en GitHub Pages
 
-El workflow `h148-sync-authority.yml` construye y ejecuta las regresiones antes
-de publicar desde `main`. La publicación no lee ni exige un certificado A/B/C.
-La certificación remota se conserva como ejecución manual opcional con
-`live=true`, separada del despliegue y desactivada por defecto. Su ausencia
-no equivale a certificación aprobada ni bloquea publicar. Decisión H-162.
+El workflow `h164-online-authority.yml` verifica consumidores y almacenamiento,
+contratos online, SQL y la UI del artefacto generado antes de publicar desde
+`main`. PGlite está fijado en el lockfile; la ejecución SQL local no descarga una
+dependencia paralela. Las rutas activas de H-148/H-132 y la excepción de publicación
+H-157 se retiran; sus pruebas y evidencia históricas permanecen en el repositorio.
+
+La matriz remota se ejecuta manualmente con `live=true`, separada del despliegue
+y desactivada por defecto. Reutiliza exactamente el artefacto probado y conserva
+las identidades de QA. Las credenciales de provisión sólo se cargan en ese job
+desde `main`. Su ausencia no equivale a certificación; la publicación sigue
+separada de esa evidencia según la decisión H-162.
+H-164 exige la certificación A/B/C solicitada por el usuario antes de declarar
+cerrado este frente; publicar y certificar siguen siendo resultados distintos.
 
 ## Instalación PWA
 
 La publicación HTTP bajo `/POS_Balam/` registra `sw.js` con ese mismo scope.
 El worker conserva sólo el shell autocontenido, el manifest y los iconos; no
-intercepta Supabase, APIs ni datos de dominio. `STORE`, `localStorage` y la cola
-offline siguen siendo las únicas autoridades operativas. La primera carga
-requiere red y una navegación posterior puede usar el shell ya instalado.
+intercepta Supabase, APIs ni datos de dominio. `localStorage` y la cola
+comercial anterior ya no participan como persistencia operativa. Supabase es la única
+autoridad comercial. La primera carga requiere red; una navegación posterior
+puede abrir el shell instalado, pero no confirma negocio sin consultar Supabase.
 
 `CONFIG.get('store.logo')` es la única autoridad visual administrable. Una vez
 que el worker controla la página, `window.PWA` deriva PNG 180, 192, 512 y
@@ -89,8 +100,11 @@ escalado.
 
 Una versión nueva del worker queda en espera. Sólo una acción explícita envía
 `BALAM_SKIP_WAITING`, y se bloquea mientras exista actividad de negocio,
-captura, diálogo o una cola únicamente en memoria. `POS Balam (offline).html`
-no registra worker y permanece como artefacto independiente.
+captura o un diálogo realmente abierto. Las guardas usan el estado explícito
+de apertura; un drawer cerrado no equivale a diálogo activo. Una solicitud de
+resultado incierto conserva su referencia técnica antes de cualquier recarga.
+`POS Balam (offline).html` no registra worker y permanece como artefacto
+independiente, con el mismo requisito de conexión comercial.
 
 `window.PWA.InstallAction` es la única superficie que inicia instalación. El
 login y el topbar la montan con composiciones distintas, pero ambos consumen el
@@ -127,12 +141,13 @@ garantiza que `DATA` y `STORE` usen una sola identidad durante la sesión,
 incluso cuando `localStorage` no está disponible.
 
 También aloja el adaptador de productos usado por las guardas de catálogos:
-`DATA` registra funciones para listar y guardar su arreglo real; `CONFIG`
-consulta esas funciones sin depender de `window.DATA`. `CORE` no conserva una
-copia de productos ni asume su estructura más allá de entregar el arreglo.
+`DATA` registra el acceso a los productos confirmados; `CONFIG` consulta
+ese adaptador sin depender de `window.DATA` y prepara filas separadas para
+cualquier modificación. `CORE` no mantiene otra colección comercial.
 
 El gateway evita que `DATA`, `CONFIG` y `AUTH` conozcan directamente a `STORE`:
-antes del registro es no-op y, después de que `STORE` publica su API, reenvía
+antes del registro rechaza una llamada no disponible y, después de que
+`STORE` publica su API, reenvía
 método, argumentos y resultado sin transformación. Además de escrituras
 salientes, `AUTH` obtiene por esa frontera el cliente Supabase compartido.
 `STORE` puede seguir leyendo los modelos y la identidad efectiva, por lo que
@@ -169,19 +184,19 @@ conserva las iniciales y el color del perfil como representación histórica.
 
 Archivo: `balam/config.jsx`. API: `window.CONFIG`.
 
-- Contiene ajustes, catálogos y reglas administrables.
-- La copia local vive en `localStorage` bajo `balam_config_v1`.
-- Expone lecturas y mutaciones; al guardar emite `configchange`.
-- Tras persistir y emitir el evento, el gateway solicita `pushConfig()` para
-  replicar configuración y catálogos cuando `STORE` está disponible.
-- `DATA` lee ciertos catálogos mediante getters para reflejar cambios sin
-  recargar módulos.
-- Las guardas de borrado consultan productos mediante el adaptador de `CORE`;
-  `CONFIG` no depende directamente de `DATA`.
+- Mantiene en memoria ajustes, catálogos y reglas administrables confirmados.
+- Las lecturas públicas entregan copias; no exponen el estado mutable real.
+- `prepareMutation()` aplica el reductor a un borrador separado, sin emitir
+  cambios ni persistir. Devuelve configuración y productos afectados juntos.
+- Las mutaciones públicas son asíncronas: esperan `CORE` → `STORE.execute()`.
+  La configuración y los productos asociados se confirman en una transacción.
+- `load()` reemplaza la proyección con `settings` y `lookup` de Supabase y
+  emite `configchange`; `clearRemote()` retira esa proyección al cambiar sesión.
+- No lee ni escribe configuración comercial en `localStorage`. Los valores de
+  arranque no permiten escribir antes de verificar el estado remoto.
 
-Supabase separa esta información en tablas de configuración (`settings` y
-`lookup`). Si existe configuración pendiente en la cola al arrancar, el pull se
-omite para impedir que una copia remota anterior pise cambios locales.
+El servidor valida la versión esperada de configuración. Un conflicto no
+modifica la proyección confirmada ni se convierte en una operación pendiente.
 
 ## DATA
 
@@ -190,12 +205,14 @@ Archivo: `balam/data.jsx`. API: `window.DATA`.
 - Es el modelo de dominio usado por la interfaz.
 - Mantiene en memoria productos, vendedores, clientes, ventas, promociones,
   liquidaciones, devoluciones, pagos y movimientos.
-- Persiste cada colección en claves propias de `localStorage`.
-- Ejecuta reglas de negocio como folios, ventas, pagos, devoluciones,
-  comisiones, inventario y datos de prueba.
-- Las mutaciones guardan primero localmente y después invocan el gateway de
-  sincronización de `CORE`.
-- `applyRemote()` incorpora datos recibidos de la nube sin volver a enviarlos.
+- No persiste colecciones comerciales en el navegador.
+- Conserva cálculos, contratos históricos y preparación de comandos para ventas,
+  pagos, devoluciones, comisiones, préstamos, inventario y otros dominios.
+- Las mutaciones preparan copias separadas y esperan confirmación por `CORE`.
+  `confirmCommand()` exige una respuesta válida; no hay éxito local anticipado.
+- `replaceFromOnline()` sustituye en memoria el conjunto recibido de Supabase.
+  `saveProductRows()` y `saveProductFamily()` envían sólo filas propuestas,
+  con identidad y versión base, sin guardar una segunda realidad local.
 - `DATA.canonicalProductAttrs()` es la autoridad de representación para atributos
   de catálogos custom conocidos. Un opcional `null`, vacío o con sólo espacios se
   omite; claves `__*` y atributos históricos desconocidos se preservan. Las
@@ -264,7 +281,7 @@ y precio efectivo. La posventa parte de la línea original. `SKU+talla` subsiste
 único; toda ambigüedad bloquea.
 
 Una referencia V2 con stock o documentos no admite edición silenciosa de su
-firma. `DATA.reclassifyReference()` anticipa offline la operación y
+firma. `DATA.reclassifyReference()` espera la confirmación online de la operación y
 `pos.commit_reference_reclassification()` mueve cantidad entre dos IDs con
 bloqueo, auditoría, idempotencia y reversa exacta. Nunca reescribe documentos.
 
@@ -344,8 +361,8 @@ movimiento de inventario:
   atributos, `talla`, `qty` y precios—, más una copia de la persona que recibió, de modo
   que editar el producto o el cliente después no altera un préstamo registrado;
 - su referencia comercial es `PR-{AAMMDD}-{CONSECUTIVO}`, con consecutivo propio
-  derivado de los préstamos del día que conoce la terminal. **No** consume
-  `pos.folio_counters`: la identidad técnica es un UUID separado;
+  asignado online mediante `STORE.allocateFolio()` y `pos.folio_counters`.
+  No consume una reserva local: la identidad técnica es un UUID separado;
 - sus estados son `pendiente`, `devuelto` y `no_devuelto`. No son un catálogo
   administrable: son el contrato del módulo;
 - la devolución puede ser parcial. Cada entrega deja su asiento y la fecha real de
@@ -365,29 +382,23 @@ conocido; una ráfaga desconocida no altera el tecleo humano. En el buscador de
 la cartera una lectura responde «¿quién tiene
 esta prenda?» y busca en todos los estados, ignorando el filtro a propósito.
 
-El préstamo **se replica** (H-62). No viaja como upsert de tabla: cada operación
-—entrega, devolución, faltante, edición, baja y reapertura— se conserva en la
-cola offline y se confirma con `pos.commit_loan_operation()`, transacción
-idempotente por (operación, payload) auditada en
-`pos.capability_operation_audit`. `pos.loan_documents` guarda el documento
-**entero** en `document jsonb`: la evidencia congelada viaja tal cual y no se
-normaliza, de modo que no existe una segunda representación del préstamo.
-`_loanVersion` es la versión confirmada por el servidor y, a la vez, el
-indicador de «esto ya está en la nube».
+El préstamo se confirma exclusivamente en servidor. Entrega, devolución,
+faltante, edición, baja y reapertura pasan por `STORE.execute()` y la autoridad
+transaccional `pos.commit_loan_operation()`, con identidad y versión esperada.
+`pos.loan_documents` conserva el documento completo en `document jsonb`, con su
+evidencia congelada, y `pos.capability_operation_audit` conserva la idempotencia
+de la operación. `_loanVersion` describe la versión recibida; no acredita por
+sí sola un documento ausente de Supabase.
 
-El pull sólo lo ejecuta un administrador, porque la RLS de `pos.loan_documents`
-concede la lectura a `pos.is_active_admin()`. `DATA.applyRemoteLoans()` fusiona
-en vez de reemplazar: un préstamo local que el servidor todavía no confirmó
-sobrevive al pull —su envío puede seguir en la cola o estar pendiente de
-migrar—, y un tombstone remoto sí retira el documento local.
+`online_snapshot()` reconstruye la colección que la sesión está autorizada a
+leer. No se rescatan préstamos de una caché local ni se fusionan documentos
+pendientes. Un expediente legacy sin confirmación se conserva para decisión
+individual fuera de la colección operativa, sin reproducción automática.
 
-El folio de préstamo es único entre terminales por el mismo contrato que el de
-venta (`ADR-001`). Cuando dos terminales sin conexión emiten el mismo
-`PR-{AAMMDD}-{NNN}`, la nube responde `folio_conflict`, la terminal añade su
-código corto —`PR-260731-003-K7Q`— y **conserva el folio ya impreso** en
-`loan.folioAliases`; `DATA.findLoanByFolio()` resuelve por folio vigente
-primero y por alias después. El vale que firmó el cliente nunca deja de
-localizar su préstamo.
+Los folios y alias históricos siguen localizando vales ya impresos.
+`DATA.findLoanByFolio()` busca primero folio vigente y después alias. Las nuevas
+operaciones reciben el folio del servidor antes de confirmarse y sólo pueden
+imprimirse después de la confirmación autoritativa.
 
 La exportación a `.xlsx`, el listado impreso y el vale firmado se conservan como
 herramientas operativas y de auditoría; ya no son el único respaldo.
@@ -487,19 +498,17 @@ ambigüedad legacy que bloquea el plan. La autoridad de mensajes recibe el
 contexto de importación y separa problemas de formato, identidad, catálogo,
 versión y bloqueo de negocio.
 
-Las referencias modificadas deben superar
-`DATA.assertLayawayProductsUnlocked()` en el preflight y antes de aplicar.
-`applyImportPlan()` vuelve a comprobar la huella de base y reemplaza el estado
-en una sola operación sólo si el plan entero sigue válido. Su conjunto de IDs
-incluye exclusivamente altas y actualizaciones con cambios canónicos; las filas
-sin cambios no autorizan escritura. Si el archivo entero coincide, la UI cierra
-con el resultado «Sin cambios» sin aplicar ni llamar a `DATA.saveProducts()`.
+`applyImportPlan()` vuelve a comprobar la huella de base y prepara filas
+separadas sólo si el plan entero sigue válido. Su conjunto de IDs incluye
+exclusivamente altas y actualizaciones con cambios canónicos; las filas sin
+cambios no autorizan escritura. Si el archivo entero coincide, la UI cierra
+con «Sin cambios» sin ejecutar una mutación.
 
-La confirmación entrega únicamente los IDs modificados a la persistencia vigente.
-Un retorno falso de `saveProducts()` se comunica como guardado pendiente; no
-equivale a éxito ni autoriza revertir ciegamente una intención que pudo quedar
-conservada en la cola. STORE, Supabase y sus contratos de sincronización no se
-reimplementan dentro del adaptador Excel. Contrato precisado por H-163.
+La confirmación espera `DATA.saveProductRows()` y la transacción del gateway.
+Las versiones, identidades y restricciones de uso de las referencias se
+verifican en servidor. Un rechazo no instala el plan en DATA; una respuesta
+incierta mantiene la referencia técnica y consulta el recibo antes de repetir.
+Excel no implementa persistencia, cola ni reglas de concurrencia paralelas.
 
 ### Resolución del descuento por renglón
 
@@ -585,13 +594,10 @@ requerir ajuste del controlador; el corte real se valida en la impresora.
 
 ### Transporte de comprobantes en Android
 
-El escritor local conserva su Web Lock ante `beforeunload` (salida cancelable)
-y al cambiar a una aplicación externa. Sólo `pagehide` libera voluntariamente
-el lock. El regreso por `pageshow`, foco o visibilidad solicita el mismo lock
-si está esperando, sin robarlo ni duplicar solicitudes. El cierre asíncrono
-recoge un regreso adelantado; una página que salió no vuelve a adquirir hasta
-regresar. El rebase durable sigue siendo previo a `writer`; `blocked` no se
-recupera por estos eventos. El gate usa SVG locales, sin ligaduras de fuentes.
+La exclusión de impresión es técnica y efímera. No existe un escritor comercial
+local ni rebase durable al volver de una aplicación externa. La aplicación
+reconsulta Supabase al recuperar foco o conectividad. Un comprobante comercial
+nuevo sólo llega al transporte después de confirmarse su operación.
 
 `UI.printReceipt()` crea un trabajo en `window.PrintManager`, cargado después de
 `shared.jsx`. Congela documento y estilos antes de cualquier espera; cada trabajo
@@ -626,7 +632,7 @@ plantillas. Etiquetas mantiene su generador y ventana independientes.
 
 El historial de sesión en Configuración → Impresión distingue entrega, regreso
 y error; nunca acredita salida en papel. No persiste contenido comercial ni
-se mezcla con DATA/STORE o la cola durable. Recargar no repite impresiones.
+se mezcla con la persistencia comercial de Supabase. Recargar no repite impresiones.
 La exclusión corresponde a la instancia de BALAM y sus ventanas hijas; no
 coordina impresoras compartidas entre equipos. Véase H-153.
 
@@ -634,46 +640,45 @@ coordina impresoras compartidas entre equipos. Véase H-153.
 
 Archivo: `balam/auth.jsx`. API: `window.AUTH`.
 
-- Obtiene mediante el gateway de `CORE` el cliente compartido que crea `STORE`.
-- Inicializa y observa la sesión de Supabase Auth.
-- Supabase JS persiste el token en `localStorage` y renueva la sesión.
-- Después del login, relaciona el correo autenticado con un vendedor de
-  `DATA.sellers`.
-- Expone usuario actual, estado de sesión y comprobación de administrador.
-- Emite `authchange` para que la interfaz reaccione.
+- Obtiene por `CORE` el cliente compartido de Supabase y observa la sesión Auth.
+- Supabase JS puede conservar y renovar tokens de sesión en el navegador.
+- El perfil activo y los permisos se consultan en servidor; no se habilitan
+  operaciones con perfiles o permisos guardados en caché ni con un modo demo.
+- Expone identidad, acceso y `authchange`. Un fallo de verificación remota
+  deniega acceso; `refreshPermissions()` vuelve a verificar al reconectar.
+- Una secuencia compartida descarta respuestas de una identidad anterior,
+  otro refresco o una sesión cerrada. La revocación remota sigue siendo efectiva.
 
-Una actualización de permisos de una identidad ya verificada conserva el estado
-listo y la pantalla montada mientras espera la RPC. La respuesta vigente sigue
-reemplazando permisos y aplicando revocaciones; un fallo de red conserva sólo el
-acceso verificado con la política offline existente. Resoluciones de sesión y
-refrescos comparten una secuencia: una respuesta anterior a otro refresco,
-cambio de identidad o logout no aplica estado ni confirma persistencia.
-El arranque y una identidad nueva mantienen el gate hasta verificarse (H-158).
-
-La administración de cuentas no se realiza directamente desde el navegador:
-usa la Edge Function `admin-users`.
+La navegación consume `AUTH.canAccess()` y cada operación comercial vuelve a
+ser autorizada en servidor. La administración de cuentas usa `admin-users`;
+el navegador no invoca la API administrativa Auth con privilegios de servidor.
 
 ## STORE
 
 Archivo: `balam/store.jsx`. API: `window.STORE`.
 
-Es la frontera entre el dominio local y Supabase:
+Es el coordinador de una única ruta de escritura online:
 
-- Crea un único cliente Supabase configurado para el esquema `pos` mediante el
-  SDK local previamente cargado; si éste falta, conserva el modo local sin
-  intentar una descarga remota.
-- Traduce objetos locales a filas SQL y viceversa mediante `MAP`.
-- Hace `push` de configuración, colecciones, ventas y devoluciones.
-- Hace `pull` de configuración y dominio.
-- Reconcilia snapshots completos de ventas en el coordinador. Una consulta
-  parcial de la interfaz sólo fusiona su cobertura, sin podar el resto.
-- Pagina ventas recientes y permite recuperar una venta por folio.
-- Sube fotos y códigos de barras a Supabase Storage.
-- Invoca Edge Functions con el token real y conserva el cuerpo del error.
+- Crea el cliente Supabase con el SDK local fijado, esquema `pos` y peticiones
+  `cache: no-store`. Si el SDK o Supabase no están disponibles, falla cerrado.
+- Traduce documentos y filas mediante `MAP`; no persiste esos datos localmente.
+- `execute()` verifica disponibilidad, sesión y conectividad real; conserva una
+  referencia técnica sin payload, envía el comando idempotente y espera recibo.
+- `execute_online_command()` autoriza y despacha las transacciones comerciales.
+  Las cuentas Auth usan el flujo servidor de `admin-users` por el mismo coordinador.
+- Si se pierde la respuesta, consulta el resultado por request ID. Un ID ausente
+  se cancela atómicamente para impedir que una petición atrasada confirme después.
+- Tras la confirmación exige `online_snapshot()` y aplica toda la proyección
+  antes de devolver éxito. El cambio de sesión invalida respuestas anteriores.
+- Realtime, actualización manual, foco, visibilidad y reconexión provocan una
+  consulta autoritativa; no aplican eventos comerciales directamente.
+- Sube recursos a Storage y sólo guarda su referencia comercial por el gateway.
 
-`STORE.enabled` indica disponibilidad del cliente; no significa que todas las
-operaciones pendientes ya estén sincronizadas. `STORE.pending` es el tamaño de
-la cola.
+`syncStatus()` conserva el nombre por sus consumidores de interfaz: `ready`
+significa lectura remota verificada, `busy` impide repetir una solicitud en
+curso y `lastSuccess` identifica la última comprobación. `pending` y `blocked`
+son cero; no representan colas ocultas. `legacyReviewCount` cuenta expedientes
+históricos para revisión, fuera de la operación nueva.
 
 ## Supabase
 
@@ -720,12 +725,14 @@ El acceso directo de navegador al esquema sigue el contrato de las migraciones
 - `anon` no tiene acceso al esquema ni a sus tablas;
 - una sesión `authenticated` se relaciona por correo con un perfil activo y no
   eliminado;
-- el administrador puede operar todo el dominio;
-- el vendedor puede leer catálogo, configuración de cobro, clientes y
-  vendedores, y escribir únicamente el conjunto operativo de una venta;
-- el vendedor no puede actualizar productos directamente; las salidas de stock
-  de venta sólo atraviesan `pos.reserve_sale_stock()`;
-- sus cambios directos de vendedores se limitan a métricas de venta;
+- las capacidades determinan qué comandos comerciales puede solicitar cada rol;
+- el vendedor puede leer los conjuntos permitidos y solicitar únicamente las
+  acciones operativas autorizadas;
+- el gateway online es la frontera de escritura del navegador. Las salidas de
+  stock y las métricas financieras se modifican dentro de las transacciones SQL,
+  nunca mediante snapshots directos enviados por una pantalla;
+- la activación H-164 cerca las rutas de clientes anteriores en servidor; una
+  cabecera o un lock del navegador no sustituyen esa defensa;
 - un perfil inactivo o una cuenta Auth sin perfil recibe conjuntos vacíos y
   RLS rechaza sus escrituras;
 - `service_role` conserva permisos técnicos sobre el esquema y omite RLS, por
@@ -742,11 +749,10 @@ pantalla navegable exige registrarla una sola vez y los consumidores no
 mantienen catálogos paralelos.
 El snapshot de autorización procede de
 `pos.current_permission_snapshot(text[])`, usa exclusivamente `auth.uid()` y
-resuelve cada hoja mediante las funciones de Fase 2. La caché local contiene
-versión de esquema, modelo, registro, permisos y fecha de verificación; sólo se
-usa ante indisponibilidad remota y cualquier dato desconocido, incompleto,
-corrupto o de otra identidad se deniega. Al reconectar, el snapshot remoto
-reemplaza la caché atómicamente.
+resuelve cada hoja mediante las funciones de Fase 2. No se conserva una caché
+de autorización para operar sin servidor. Una respuesta desconocida, incompleta,
+corrupta o de otra identidad se deniega. La reconexión verifica perfil y permisos
+antes de habilitar nuevamente la operación comercial.
 
 H-56 completó las fases 1 a 4. Administrador y vendedor conservan su conducta
 inicial mediante permisos sembrados por rol, no por una excepción paralela en
@@ -776,100 +782,69 @@ antes de ejecutarlos se debe revisar alcance y entorno.
 
 ## Edge Functions
 
-Actualmente `supabase/functions/admin-users/index.ts`:
+`supabase/functions/admin-users/index.ts` verifica JWT, capacidad
+`sellers.manage` y conectividad real. Antes de modificar Auth prepara un recibo
+servidor en `pos.online_account_requests` con actor, identidad estable, huella
+y comando de perfil congelado; nunca persiste contraseña ni token en ese recibo.
 
-- Recibe el JWT del usuario.
-- Usa un cliente con ese JWT y esquema `pos` para comprobar que sea
-  administrador y operar sobre `pos.sellers` bajo RLS.
-- Reserva `service_role` para crear, actualizar o eliminar usuarios en
-  Supabase Auth.
-- Nunca debe exponer la clave `service_role` al navegador.
+La API administrativa Auth usa `service_role` sólo en servidor. La identidad
+de solicitud en `app_metadata` permite comprobar un resultado Auth cuya
+respuesta se perdió. El perfil comercial se confirma por el gateway con el
+JWT original y una identidad derivada estable. Una baja retira primero el
+perfil operativo y después la cuenta Auth. No hay éxito hasta confirmar ambos.
+
+`action: resolve` consulta o completa pasos demostrados; no repite una contraseña
+incierta ni adopta cuentas ajenas por coincidencia de correo. Un rechazo
+definitivo devuelve un recibo terminal; una operación que necesita decisión
+permanece como expediente individual. El navegador conserva sólo su referencia.
 
 Una Edge Function desplegada puede diferir del archivo local. Toda corrección
-debe registrar versión/despliegue y verificar el comportamiento remoto.
-La versión 8 de `admin-users` quedó verificada mediante creación de una identidad
-temporal, autenticación, cambio real de contraseña, invalidación de la anterior,
-autenticación con la nueva y eliminación completa. Las migraciones
-`20260725002700` y `20260725002800` encapsulan la preparación y limpieza de la
-identidad administrativa auxiliar.
+debe registrar versión/despliegue y verificar el comportamiento remoto; las
+pruebas históricas de otra versión no certifican este flujo.
 
 ## Sincronización
 
-La recuperación dirigida de pruebas usa `pos.sync_device_recoveries` como
-control por ID exacto: `pending → captured → completed`. La autorización fija
-conteo, candidatos, propietario, época máxima y protocolo; no cambia negocio,
-protocolo global ni época remota. La captura guarda sólo metadatos y hash de
-los originales. STORE la consulta antes del arranque y de drenar intención,
-retira únicamente los IDs capturados, comprueba durabilidad y reutiliza el
-snapshot completo/reconciliación antes del recibo remoto de finalización.
-Las copias autorizadas que una build antigua ya archivó pueden aportar sus
-originales; una discrepancia conserva la directiva y las operaciones ajenas.
+El nombre identifica la actualización visual entre equipos. H-164 retira el
+Sync Engine comercial local-first: no hay `flushQueue`, replay, cursores
+durables, escritor local ni rebootstrap comercial. Los contratos anteriores
+de ADR-006/012/014 y las migraciones que los implementaron se conservan como
+historia; ADR-015 gobierna la operación nueva.
 
-Las RPC financieras verifican la barrera antes del ACK; las escrituras directas
-y las bajas con permisos del invocador la verifican mediante trigger. Un ID
-descartado nunca se acepta otra vez. Los clientes actuales identifican cada
-petición; los antiguos pueden identificarse por actividad inequívoca. Una
-petición sin origen de una cuenta con recuperación no ejecuta negocio hasta
-identificarse. Esto cubre también intenciones aún no reportadas. La función
-interna mantiene sus permisos privados; RLS y permisos comerciales no cambian.
+En el arranque, `STORE.init()` verifica sesión y presencia, archiva evidencia
+legacy con recibo verificable, refresca permisos, resuelve referencias técnicas
+de resultado y consulta `online_snapshot()`. Sólo una lectura completa válida
+habilita operaciones. El cambio de identidad vacía la proyección en memoria.
 
-Una instalación recuperada envía el token de su recibo para nuevas escrituras;
-éste no se expone en Centro de equipos ni en evidencia pública. Una directiva
-completada no vuelve a borrar una cola. El primer uso de esta puerta exige
-consulta remota; una instalación ya comprobada conserva uso offline y vuelve
-a consultar al reconectar. La captura permanece bloqueada mientras haya una
-recuperación pendiente. Centro de equipos muestra «Pendiente de actualización»
-hasta recibir la finalización real, incluso si un heartbeat antiguo dice otra cosa.
+Una pérdida de Internet, Supabase o autorización detiene escrituras. El retorno
+a la aplicación y la comprobación periódica vuelven a consultar la autoridad;
+no intentan drenar nada. Realtime adelanta esa misma lectura. Perder un evento
+no impide corregir una pantalla mediante una consulta posterior.
 
-`STORE.synchronizeNow()` es la acción de actualización de la cabecera y del
-Centro de equipos: carga manifiesto, recupera si corresponde, envía la cola
-válida, espera confirmación, descarga y verifica todas las proyecciones. Una
-captura activa impide sustituir sus datos. Hay reconciliación periódica cada
-minuto aunque Realtime esté conectado, y snapshots completos al iniciar,
-actualizar manualmente y cada cinco minutos. Realtime sólo invalida dominios.
+`execute_online_command()` conserva identidad y hash del comando en servidor,
+autoriza dentro de la transacción y serializa los efectos. La resolución de
+solicitud usa el mismo candado: recibir una ausencia definitiva cancela el ID
+antes de habilitar otro intento. Los comandos financieros mantienen además sus
+recibos históricos de dominio. La referencia local no contiene datos que puedan
+reproducir el negocio y se retira sólo tras resultado terminal y lectura remota.
 
-La versión cero también requiere una primera aplicación. Un cursor adelantado
-fuerza reconstrucción; el nuevo cursor sólo se publica tras persistir la
-proyección y comprobar el checkpoint. Una lectura incompleta, cuota agotada,
-cola bloqueada o manifiesto/versión incompatibles impide «Todo actualizado».
-El estado incluye hora de última comprobación y diagnóstico administrativo.
-`devices` observa heartbeats: su versión móvil no equivale a una divergencia
-comercial ni permite certificar una instalación ausente.
+El Centro de equipos conserva su presentación y separa equipos activos de
+historial de instalaciones retiradas. Muestra nombre, usuario, última conexión,
+versión y estado activo/retirado. No administra pendientes comerciales, época,
+protocolo ni rebootstrap. Un heartbeat `false` no es confirmación y un equipo
+retirado no se reactiva al emitir presencia. La antigüedad de una instalación
+o su ausencia de señal no demuestra una divergencia ni un cliente incompatible.
 
-La cola almacena IDs y payload exactos. Tras el primer envío se congela el
-payload para un replay idempotente; sólo el ACK de una escritura anterior de
-la misma clase puede actualizar la versión base de otra aún no enviada. Un
-recibo de venta/devolución no habilita un snapshot de stock obsoleto. Una confirmación
-incompleta o un conflicto conserva la intención. Las ediciones de clientes,
-vendedores y promociones envían sólo IDs modificados. Configuración se guarda
-en cola inmediatamente; el debounce retrasa el envío, nunca su persistencia.
+Los archivos locales legacy se leen únicamente para inventariar y trasladar
+evidencia íntegra al servidor. El hash y el recibo se comprueban antes de retirar
+cada origen exacto; no se limpia todo el navegador. Una operación confirmada se
+reconoce sin ejecutarla; una no reconciliable queda para decisión individual.
+Los datos de prueba sólo admiten descarte bajo autorización demostrada. Ningún
+expediente de cuarentena vuelve a una cola comercial.
 
-La recuperación envía pendientes válidos de la sesión y época actuales;
-archiva de forma durable los incompatibles antes de reconstruir. Las colas de
-otras sesiones permanecen protegidas. La certificación distribuida y el mapa
-de tablas están en `docs/fixes/convergencia-autoritativa-h148.md`.
-
-El dominio operativo `devices` no transporta datos comerciales. Proyecta el
-estado de cada instalación en `pos.sync_devices` y el ciclo resumido de su cola
-en `pos.sync_activity`: equipo, usuario, tipo de operación, referencia, estado y
-diagnóstico acotado. Nunca persiste el payload de ventas, inventario o clientes.
-Un heartbeat de un equipo conectado se publica cada minuto; una ausencia de
-heartbeat significa estado actual desconocido, no «sincronizado».
-
-El Centro de equipos es una lectura administrativa de esa proyección. Nombrar
-una instalación no cambia su `device_id`. «Autorizar reintento» crea una orden
-para la instalación de origen; cuando vuelva a conectarse, reutiliza
-`STORE.retryOperation()` sobre la misma operación durable. La orden no concede
-permisos, no altera documentos y no sustituye las RPC de negocio.
-
-Una operación separada por cambio de época conserva dos representaciones con
-responsabilidades distintas. El JSON y el archivo local guardan la operación
-completa como evidencia recuperable; `pos.sync_quarantine_cases` guarda en la
-nube sólo huella SHA-256, resumen, artículos acotados y la decisión auditada.
-El administrador puede exportar esa proyección a Excel, aprobar o rechazar. Una
-aprobación no escribe tablas comerciales: el equipo de origen restaura la misma
-operación en la cola y `flushQueue()` vuelve a ejecutar su RPC normal con todas
-sus defensas de permisos, inventario, época e idempotencia.
+El estado de publicación y la certificación A/B/C contra Supabase real son
+evidencias separadas. H-164 exige la certificación solicitada por el usuario:
+un mock, un heartbeat o un conteo cero no prueban que tres equipos adoptaron el
+artefacto ni que no divergen. Véanse `R-SYNC-16/17` y el documento de corrección.
 
 ### Punto Cero administrativo
 
@@ -878,12 +853,12 @@ sus defensas de permisos, inventario, época e idempotencia.
 en preproducción. No existe RPC ordinaria para volver desde producción: hacerlo
 es un procedimiento extraordinario fuera del flujo destructivo.
 
-`point_zero_preview()` cuenta desde las tablas remotas y sella contenido,
-esquema, época y sincronización. Los equipos activos deben estar en
-la época vigente, en línea, sin cola ni bloqueos. Los retirados conservan el
-cerco de escritura y su evidencia, pero no participan en esta comprobación.
-El diagnóstico identifica cada equipo bloqueante y cuenta clientes no genéricos
-activos; las lápidas históricas se preservan y no cuentan como operación.
+`point_zero_preview()` cuenta desde las tablas remotas y sella el contenido
+y las condiciones servidor de la operación. El gateway online exige conexión,
+permisos y ausencia de una escritura incompatible. Los conteos viejos de colas
+o heartbeats no prueban riesgo comercial vigente; los expedientes reales sin
+resolver sí requieren decisión. Las instalaciones retiradas mantienen el cerco.
+Las lápidas históricas se preservan y no cuentan como operación activa.
 El respaldo recalcula ese
 token, persiste el payload eliminable separado de la auditoría y devuelve un
 documento con SHA-256. La ejecución exige administrador activo,
@@ -899,8 +874,9 @@ alias y se restaura inmediatamente. Contrato V3, respaldos y auditoría de la
 migración de inventario permanecen conservados. Los equipos retirados siguen
 retirados al avanzar la época.
 
-El éxito aumenta `data_epoch` y obliga a las demás terminales a reconstruirse
-antes de escribir. `point_zero_operations` conserva actor, equipo, versiones,
+El SQL conserva el avance histórico de `data_epoch` para cercar clientes
+anteriores; las terminales online reconstruyen su pantalla consultando Supabase.
+`point_zero_operations` conserva actor, equipo, versiones,
 respaldo relacionado, conteos y resultado; el contenido eliminado vive en
 `point_zero_backups`.
 
@@ -920,22 +896,12 @@ el asistente conserva su snapshot y revalida al respaldar y ejecutar. El nombre
 describe selección por categorías sin clasificar registros como prueba/real;
 la disponibilidad continúa restringida al modo preproducción por el contrato SQL.
 
-H-113 no usa la presencia en línea como prueba de seguridad. La autoridad
-`pos.test_data_cleanup_fleet_risk()` cruza el alcance semántico elegido con la
-proyección resumida de `sync_activity`, los expedientes de cuarentena y la
-capacidad de cada cliente para obedecer protocolo y época. Una terminal
-compatible apagada, una terminal cercable que deba actualizarse al volver o una
-operación pendiente conocida de otro dominio no detienen el plan. Sí lo hacen
-una operación que intersecta el alcance, una cola cuyo contenido no puede
-demostrarse o un cliente anterior al cerco H-77 que no haya sido retirado.
-
-`sync_devices.queue_pending` es el conteo vigente de la cola durable declarada
-por el equipo; `sync_activity` sólo es su observabilidad resumida. Cuando el
-conteo vigente es cero, una proyección activa antigua no contiene payload ni
-tiene ruta propia de replay: se conserva como incidencia histórica visible y no
-bloquea H-113. La cuarentena sí conserva una ruta de replay autorizable y sigue
-bloqueando cuando intersecta. Con cola mayor que cero, una correspondencia
-incompleta entre conteo y proyecciones falla cerrada como alcance desconocido.
+La seguridad de limpieza se decide sobre el alcance exacto del plan y la
+evidencia servidor. Con el cerco online activo, `sync_activity`, los conteos
+legacy y la falta de heartbeat no generan una autoridad comercial alternativa.
+Los expedientes no reconciliados deben conservarse y evaluarse por su impacto;
+una incidencia antigua sin payload ni ruta de ejecución es historia, no un
+pendiente nuevo. Los controles financieros y el respaldo siguen siendo obligatorios.
 
 Los grupos de limpieza representan documentos autoritativos, no todas las
 proyecciones que los consumen. «Cambios» elimina documentos `exchanges`; una
@@ -960,70 +926,37 @@ revalida que continúe huérfano, exige cardinalidad exacta y coloca una lápida
 `return_id`. No modifica stock ni finanzas. Si se selecciona Devoluciones sin
 seleccionar esta evidencia, la guarda permanece cerrada.
 
-Supabase sigue siendo la autoridad vigente. Una ejecución selectiva futura
-incrementa `data_epoch` y eleva `sync_protocol_min` dentro de la misma
-transacción antes de emitir el evento selectivo v3. `flushQueue()` consulta el
-manifiesto y falla cerrado antes de enviar; el retorno seguro aplica el evento
-por identidades exactas o archiva la cola en cuarentena, descarga la línea base
-autoritaria y adopta la época. Las lápidas impiden reinsertar documentos ya
-eliminados. `admin_set_sync_device_retired()` permite retirar una instalación
-sin encenderla, conserva actor/fecha/nota y el heartbeat no puede reactivarla.
-
-H-151 conecta arranque, reconciliación y polling con la reconstrucción existente
-cuando hay un evento de limpieza compatible de la época vigente. Sólo se aplica
-automáticamente sin cola de ninguna sesión ni captura activa; vuelve a comprobar
-ambas condiciones y la época antes de modificar las proyecciones. Marca el evento
-recibido después del checkpoint durable. Si falla la descarga, permanece pendiente
-para reintentar; no vuelve a ejecutar el borrado comercial.
-
-En el arranque, `STORE.init({ pull: true })`:
-
-1. Cuenta las operaciones que ya estaban pendientes.
-2. Intenta drenar la cola antes de descargar.
-3. Procesa la marca de reset, si existe.
-4. Descarga configuración, salvo que haya configuración local pendiente.
-5. Descarga y aplica colecciones de dominio.
-6. Descarga ventas por ventana temporal y las fusiona.
-7. Vuelve a intentar la cola.
-
-También se drena al evento del navegador `online`. La sincronización es
-eventual; la interfaz no espera confirmación remota para aceptar una mutación
-local.
+Supabase sigue siendo la autoridad vigente. El servidor conserva las lápidas,
+identidades exactas y cercos de compatibilidad históricos de las limpiezas. El
+cliente online no consume eventos de limpieza para rehacer una realidad local:
+espera el recibo y reconstruye desde `online_snapshot()`. Una reconexión no vuelve
+a ejecutar el borrado comercial. Retirar una instalación conserva actor, fecha
+y nota; el heartbeat no puede deshacer esa decisión.
 
 ### Recuperación transaccional de terminal
 
-Un arranque administrativo recupera desde Supabase productos, clientes,
-vendedores, promociones, devoluciones con sus renglones, liquidaciones, pagos,
-movimientos y ventas con sus renglones. El coordinador H-148 descarga el
-historial completo; la consulta de ventas recientes de la interfaz conserva
-su ventana de 365 días y la búsqueda por folio bajo demanda.
+`online_snapshot()` devuelve en una sola sentencia los conjuntos autorizados
+de productos, configuración, clientes, vendedores, promociones, ventas y
+renglones, devoluciones, cambios, préstamos, pagos, comisiones y movimientos.
+STORE valida el contrato completo antes de sustituir DATA y CONFIG; el conjunto
+vacío es válido, una respuesta incompleta o fallida no habilita operaciones.
 
-`pos.movements` es un historial de sólo lectura para el cliente: las escrituras
-de venta y devolución se realizan exclusivamente dentro de sus commits SQL
-transaccionales. El pull recorre la tabla por `id` ascendente en páginas de
-1 000 y sólo reemplaza `DATA.movements` después de completar la lectura. Si una
-venta o devolución de la sesión activa sigue en la cola, se omite ese pull para
-no pisar movimientos locales todavía no confirmados.
-
-Los campos financieros de una venta se reconstruyen desde su snapshot remoto y
-los pagos desde `sale_payments`. Un registro histórico sin esos campos conserva
-su total conocido y no recibe valores inventados.
+`pos.movements` es un historial de sólo lectura para el cliente: venta,
+devolución y reclasificación lo escriben dentro de sus transacciones SQL.
+Los importes y pagos se reconstruyen desde documentos remotos, sin recalcular
+el pasado con configuración actual ni inventar campos históricos ausentes.
 
 ### Paginación y volumen
 
-Toda lectura que pretende reconstruir un conjunto completo recorre páginas
-explícitas de 1 000 filas y mantiene un orden estable. Esto incluye
-configuración, catálogos, dominios administrativos, movimientos, ventas,
-apartados y los lotes de renglones de ventas/devoluciones. Una página llena
-nunca se interpreta como fin del conjunto; un error intermedio impide aplicar
-un resultado parcial.
+La lectura H-164 obtiene un snapshot JSON consistente, sin componer páginas
+parciales de distintos instantes. La interfaz puede paginar o filtrar ese
+resultado efímero. Una consulta por folio es de lectura y no habilita podar otras
+identidades. Los índices y adaptadores históricos siguen conservados.
 
-Las ventas recientes se ordenan por `fecha, folio` y los apartados por `folio`.
-La migración `20260725003200_pos_h16_sync_indexes.sql` respalda esas consultas
-con `sales_fecha_folio_idx` y el índice parcial
-`sales_apartado_folio_idx`. Las ventas fuera de la ventana permanecen
-disponibles mediante búsqueda por folio. Esa consulta parcial fusiona su
-cobertura; la reconciliación completa reemplaza la proyección confirmada.
+El tamaño y la latencia del snapshot completo requieren medición con volumen
+representativo; no se presume capacidad ilimitada. Una futura lectura paginada
+debe probar cobertura, orden estable y consistencia antes de sustituir el
+snapshot completo, sin volver a persistir datos comerciales en el navegador.
 
 ### Versionado multi-terminal
 
@@ -1041,11 +974,11 @@ Productos, clientes, vendedores y promociones usan el contrato introducido por
 - cada navegador conserva un `balam_device_id` para relacionar conflictos con
   la terminal que los originó.
 
-La política es primera escritura confirmada gana. El cliente pide la
-representación resultante del `upsert`: si fue aceptado, guarda la versión nueva;
-si fue rechazado, restaura la fila vigente, avisa y conserva la intención
-bloqueada para revisión. La compactación sólo reúne intenciones aún no
-enviadas sobre los mismos IDs; nunca reconstruye el payload desde la caché.
+La política es primera escritura confirmada gana. H-164 valida la base en el
+gateway servidor y rechaza el comando completo si es obsoleta. La interfaz
+todavía no ha aplicado el borrador a DATA: consulta la fila vigente e informa
+el conflicto. No compacta ni conserva operaciones para enviar después. El
+formulario puede conservar el borrador sin efectos para que el usuario decida.
 
 La migración de verificación
 `20260725002600_pos_h06_concurrency_verification.sql` comprobó este contrato en
@@ -1063,18 +996,17 @@ Las migraciones `20260725001700_pos_atomic_stock_reservation.sql` y
 `20260725001800_pos_require_stock_reservation.sql` separan el descuento de una
 venta de la sincronización de snapshots:
 
-1. Cada venta local recibe un `operation_id` estable.
-2. `STORE` conserva la operación en la cola y llama `pos.commit_sale()`; esta
-   función invoca internamente `pos.reserve_sale_stock()` cuando corresponde.
+1. Cada solicitud de venta recibe un `operation_id` estable.
+2. `STORE.execute()` solicita el commit online; la transacción de venta invoca
+   internamente `pos.reserve_sale_stock()` cuando corresponde.
 3. La función serializa el mismo `operation_id`, bloquea productos en orden
    estable, agrupa por producto/talla y valida todo antes de descontar.
 4. `pos.stock_reservations` registra la operación confirmada; repetirla
    devuelve éxito idempotente sin descontar otra vez.
 5. Un trigger impide insertar una venta cobrada nueva sin una reserva que
    coincida en `operation_id` y folio.
-6. Si falta inventario, la operación permanece en cola y la venta local queda
-   `stock_pending`; no aparece como venta autoritativa hasta un reintento
-   exitoso.
+6. Si falta inventario, el servidor rechaza la operación completa. No se crea
+   venta local, pendiente ni comprobante; la UI consulta el estado vigente.
 
 Los apartados no reservan inventario al crearse; la reserva se exige cuando se
 liquidan y pasan a estado cobrado. Las ventas históricas sin `operation_id`
@@ -1094,8 +1026,8 @@ Las migraciones `20260725001900_pos_transactional_sale.sql` y
 `20260725002000_pos_transactional_sale_verification.sql` establecen el contrato
 remoto de H-04 para ventas:
 
-1. La clave de la operación durable de la cola se usa como `commit_id`; la clave
-   estable de la venta continúa como `operation_id` de la reserva.
+1. El gateway asigna una identidad estable de solicitud al `commit_id`; la clave
+   de la venta continúa como `operation_id` de la reserva.
 2. Una única llamada `pos.commit_sale()` procesa reserva, cabecera, renglones,
    movimientos, historial completo de pagos y deltas de cliente/vendedores.
 3. PostgreSQL confirma todos los componentes o revierte todos ante cualquier
@@ -1110,25 +1042,21 @@ remoto de H-04 para ventas:
    liquidación reutiliza el `operation_id` de la venta para reservar stock una
    sola vez.
 
-Las operaciones de venta creadas por versiones anteriores de la aplicación se
-migran en la cola con pagos/efectos vacíos y conservan su identificador. Las
-ventas históricas siguen siendo legibles.
+Las ventas históricas siguen siendo legibles. Las operaciones locales de
+versiones anteriores se inventarían y reconcilian como evidencia, sin
+migrarlas a otra cola ni ejecutarlas automáticamente.
 
 ### Identidad idempotente del Cambio
 
-Cada intención de Cambio recibe un `operationId` estable antes de aplicar su
-primer efecto. `DATA.recordExchange()` lo congela en `_operationId` y
-materializa el documento como `cmb-{operationId}`. La identidad técnica de una
-entrada de cola sigue siendo `op.id`; `STORE.pushExchange()` transporta la
-identidad comercial separada en `op.key`, y ésa es la que llega como
-`p_commit_id` a `pos.commit_exchange_checked()` y `pos.exchange_commits`.
+Cada solicitud de Cambio recibe un `operationId` estable antes de enviarse.
+`DATA.recordExchange()` conserva esa identidad en el documento
+`cmb-{operationId}`; `STORE.execute()` la entrega a
+`pos.commit_exchange_checked()` y `pos.exchange_commits` por el gateway online.
 
-Repetir clave y payload devuelve `idempotent=true` sin volver a mover stock,
-crear documentos, movimientos, pagos ni comisión. La misma clave con payload
-distinto es un conflicto permanente. Un `exchange_id_conflict` tampoco es un
-error transitorio: queda `blocked_conflict` y nunca se reintenta en bucle. Los
-renglones continúan identificándose por `products.id`; SKU no participa en la
-idempotencia ni en la resolución física.
+Repetir clave y payload devuelve el recibo sin volver a mover stock, crear
+documentos, movimientos, pagos ni comisión. La misma clave con otro payload o
+un documento incompatible se rechaza; no existe `blocked_conflict` local ni
+bucle de reintento. Los renglones se identifican por `products.id`, nunca por SKU.
 
 ### Identidad y folio de venta
 
@@ -1136,13 +1064,13 @@ Cada venta nueva tiene dos identificadores con responsabilidades **separadas**;
 ninguno se deriva del otro:
 
 - `_operationId` / `sales.operation_id` es la identidad técnica inmutable: UUID
-  usado por reserva de stock, commit idempotente, conflictos y cola offline. No
+  usado por reserva de stock, commit idempotente y resolución de resultados. No
   se muestra al usuario.
 - `folio` / `sales.folio` es la referencia comercial visible en ticket, tablas,
   búsquedas, devoluciones y reportes. Desde H-33 su formato es
   `{PREFIJO}-{AAMMDD}-{CONSECUTIVO}`, por ejemplo `BG-260727-0001`.
 
-`DATA.nextFolio()` es la única autoridad que lo construye. El prefijo proviene
+`DATA.nextFolio()` solicita su asignación a la autoridad SQL mediante STORE. El prefijo proviene
 de `folio.prefix` y se normaliza a A-Z0-9, máximo seis caracteres; el día es el
 del negocio y sale de la **misma** fecha que se guarda en la venta, no de una
 segunda lectura del reloj; el consecutivo usa cuatro dígitos y crece a cinco
@@ -1150,50 +1078,25 @@ después de 10000 sin truncarse. Cambiar el prefijo no altera ninguna venta ya
 registrada: el folio se copia dentro de la venta al crearla.
 
 La unicidad entre terminales la aporta `pos.folio_counters`, un contador
-atómico por (prefijo, día) que sólo escribe `pos.reserve_folio_block()`. Cada
-terminal reserva un bloque de diez números y lo consume **sin red**, por lo que
-una venta offline ya nace con folio corto y definitivo; repone cuando le quedan
-tres o menos, al arrancar, al reconectar y después de cada venta. El día nuevo
-pide un bloque nuevo y la numeración reinicia en `0001`. `DATA` conserva la
-reserva en `balam_pos_folio_v2` y la pide a `STORE` por el gateway de `CORE`.
+atómico por (prefijo, día). `STORE.allocateFolio()` solicita una asignación
+online idempotente para la operación; no reserva bloques consumibles offline
+ni escribe `balam_pos_folio_v2`. El día nuevo inicia su propia secuencia. Una
+asignación sin documento confirmado puede dejar un hueco; no se reutiliza para
+otra operación ni acredita una venta.
 
 ### El folio impreso no cambia
 
-Sin bloque vigente y sin red, la terminal emite un folio **provisional** que
-lleva un cuarto segmento con su código de terminal —`BG-260727-0001-K7Q`, tres
-caracteres base 36 derivados de `balam_device_id`—. Ese sufijo lo distingue de
-cualquier otra terminal, así que el folio provisional es **definitivo**: no se
-renombra al sincronizar. El consecutivo toma como piso el mayor del día que la
-terminal conoce, incluidas las ventas bajadas de la nube, y el cobro nunca se
-bloquea. En cuanto llega un bloque, las ventas siguientes vuelven al formato
-limpio; las provisionales ya emitidas conservan su folio.
+No se emiten nuevos folios provisionales sin conexión. Sólo se imprime una
+operación confirmada con su folio remoto. Una venta confirmada no se renombra.
 
-Supabase conserva `commit_sale()` → `folio_conflict` para el residuo: dos
-terminales que compartan código —una en 46 656— u operaciones heredadas de H-02
-todavía en cola. Sólo en ese caso `STORE` pide otro número del contador y cambia
-conjuntamente renglones, pagos, movimientos, devoluciones y entradas de cola,
-con la misma identidad técnica. El folio ya impreso **no se pierde**: pasa a
-`sale.folioAliases` / `pos.sales.folio_aliases` (índice GIN) y sigue resolviendo
-búsqueda, devolución, reimpresión y `fetchSaleByFolio` desde cualquier terminal.
-La operación permanece en la cola hasta que la nube conserve ese alias.
+Los folios anteriores y `folio_aliases` siguen válidos para búsqueda,
+devolución, reportes y reimpresión. `DATA.findSaleByFolio()` prioriza coincidencia
+exacta del folio vigente y sólo después busca alias del documento que realmente
+lo imprimió. `fetchSaleByFolio()` conserva esa consulta contra Supabase.
 
-`DATA.findSaleByFolio()` es la autoridad de resolución: la coincidencia exacta
-por folio vigente tiene prioridad y el alias sólo se consulta después, contra la
-venta que realmente lo imprimió, de modo que un ticket nunca ofrece la venta
-ajena que casualmente comparta la cadena. Cuando la búsqueda resuelve por alias,
-la interfaz lo dice: «este ticket se registró posteriormente como …».
-
-Una devolución no sale de la cola mientras la venta que la origina siga en ella
-—pendiente, fallida o con folio sin resolver—, para que la nube no pueda
-atribuirla a otra venta con el mismo folio impreso.
-
-Una venta ya confirmada en la nube no se renombra nunca.
-
-Los folios anteriores a H-33 —`prefijo + consecutivo + token base 36 del UUID`—
-permanecen válidos, buscables, reimprimibles y devolvibles. No se migran, no se
-interpretan como formato nuevo y no participan en el consecutivo diario. Una
-operación antigua todavía en cola conserva la reidentificación por token de
-H-02.
+Los alias históricos no autorizan reidentificar ni reproducir una operación
+local pendiente. Sus expedientes se reconcilian por identidad y evidencia remota
+antes de cualquier decisión, sin inferir deltas ni crear un documento nuevo.
 
 ### Plazo de posventa
 
@@ -1227,8 +1130,8 @@ sin plazo no borra el ya registrado.
 Las migraciones `20260725002100_pos_transactional_return.sql` y
 `20260725002200_pos_transactional_return_verification.sql` completan H-04:
 
-1. La devolución completa permanece como una operación durable en la cola y
-   viaja mediante una sola llamada `pos.commit_return()`.
+1. La solicitud completa viaja por `STORE.execute()` a la transacción online
+   que conserva la autoridad de `pos.commit_return()`.
 2. La función bloquea la venta original y valida cantidades contra
    `sale_items` menos todas las devoluciones ya confirmadas. Dos terminales no
    pueden devolver la misma unidad.
@@ -1242,101 +1145,64 @@ Las migraciones `20260725002100_pos_transactional_return.sql` y
    versionadas para reconciliar la copia local.
 
 Las migraciones `20260725002300_pos_legacy_return_adoption.sql` y
-`20260725002400_pos_legacy_return_adoption_verification.sql` cierran la
-adopción de operaciones antiguas que ya estaban en cola. La migración local
-captura desde `DATA` los objetivos exactos y su versión base para producto,
-cliente y vendedores. `pos.commit_legacy_return()` valida todos los objetivos
-antes de escribir: los aplica sólo sobre la versión base, reconoce sin duplicar
-un objetivo ya aplicado en `base_version + 1` y deja en cola cualquier tercera
-versión como `legacy_version_conflict`. Cabecera, renglones, movimientos y
-objetivos se confirman o revierten juntos. No se infieren deltas históricos.
-Los datos históricos sin `product_id` o `return_id` siguen siendo legibles.
+`20260725002400_pos_legacy_return_adoption_verification.sql` documentan la
+adopción histórica de devoluciones antiguas. H-164 no vuelve a invocar esa
+adopción desde una cola: los originales existentes se archivan y comparan con
+la evidencia autoritativa antes de resolver cada expediente. No se infieren
+deltas históricos. Los registros sin `product_id` o `return_id` siguen legibles.
 
-## localStorage
+## Almacenamiento del navegador
 
-Es persistencia operativa, no un caché descartable. Aloja:
+`localStorage` e IndexedDB no son autoridades comerciales. No conservan como
+estado operativo stock, productos, clientes, ventas, pagos, devoluciones,
+cambios, préstamos, apartados, movimientos, catálogos ni configuración comercial.
 
-- configuración;
-- colecciones de dominio;
-- reserva diaria de folios (`balam_pos_folio_v2`);
-- préstamos de mercancía (`balam_pos_loans_v1`), caché local de
-  `pos.loan_documents`: lo ya sincronizado se reconstruye desde la nube, lo que
-  todavía no salió de la cola no;
-- copia congelada previa a la migración de H-62
-  (`balam_pos_loans_premigracion_v1`), que sólo se retira a mano;
-- periodo y banderas de datos de prueba;
-- sesión administrada por Supabase JS;
-- cola `balam_sync_queue`.
+Se permiten tokens Auth, identidad técnica de instalación, preferencias de
+presentación y recursos técnicos. Un borrador sin confirmar no produce efectos.
+DATA y CONFIG viven en memoria y se reconstruyen desde remoto al recargar; una
+proyección sin verificación vigente no habilita escrituras ni se declara actual.
 
-Consecuencias:
+Las referencias `balam_online_request_v1:*` contienen request ID, usuario, tipo
+y huella, sin payload comercial ni secretos. Sirven exclusivamente para consultar
+un resultado incierto tras recargar. Antes del envío se comprueba su persistencia;
+si no puede protegerse la referencia, no se envía la solicitud. Borrarlas sin
+resolver su resultado destruye evidencia técnica y no es un mecanismo de reparación.
 
-- Borrar datos del navegador puede eliminar cambios aún no sincronizados.
-- La cuota puede agotarse, especialmente con imágenes base64.
-- Dos pestañas o dos terminales no comparten coordinación atómica local.
-- Cambiar claves o formatos exige compatibilidad o migración explícita.
+La PWA sólo cachea recursos estáticos y técnicos. Las solicitudes Supabase usan
+`no-store`; una caché HTTP o el shell instalado no habilitan operación offline.
 
-## Cola offline
+## Retiro de la cola offline
 
-La cola está en `localStorage` bajo `balam_sync_queue`.
+La cola comercial, su espejo IndexedDB, replay, compactación, locks de escritor,
+cursores y recuperación local-first se eliminan del runtime H-164. No tienen
+fallback ni consumidores operativos nuevos. La cola técnica de impresión es
+efímera, transporta documentos ya confirmados y no reejecuta negocio.
 
-- Toda operación se encola **antes** de intentar enviarse.
-- `flushQueue()` es el ejecutor único y procesa en orden.
-- Los `upsert` de una misma tabla y la configuración se compactan al estado más
-  reciente.
-- Ventas y eliminaciones se conservan en orden y deben ser idempotentes.
-- Una operación solo sale de la cola después de éxito remoto.
-- Cada operación conserva `status`, `attempts`, fechas y un diagnóstico con
-  categoría, código, mensaje y política de recuperación.
-- Red y errores de servidor permanecen en reintento automático. Autenticación,
-  RLS, esquema, restricciones y conflictos se clasifican por separado; los
-  bloqueos permanentes no se martillan en cada drenado.
-- `STORE.queueStatus()` expone un resumen sanitizado y
-  `STORE.retryOperation(id)` permite el reintento explícito.
-- `STORE.discardOperation(id, guards)` permite retirar una sola operación
-  bloqueada. Exige coincidencia del `op.id` y, al menos, una guarda documental;
-  puede validar tipo, `op.key`, folio, ID de cabecera, estado y código. Nunca
-  equivale a vaciar la cola y persiste el resultado tanto en `localStorage`
-  como en el espejo durable.
-- La campana administrativa muestra operaciones fallidas y su causa. Una nueva
-  sesión reanuda las operaciones detenidas por autenticación.
-- `flushQueue()` toma el candado antes de esperar al cliente de Supabase: nunca
-  hay dos ejecutores de cola concurrentes dentro de la misma pestaña.
-- Si `localStorage` rechaza la escritura por cuota, la cola completa se refleja
-  en IndexedDB (`balam_sync/durable_queue`) antes de enviarse. El arranque
-  hidrata ese espejo antes de drenar o hacer pull. Cuando `localStorage` vuelve
-  a aceptar escrituras, recupera la autoridad y elimina el espejo para no
-  restaurar snapshots obsoletos. Sólo si ambos almacenamientos fallan se
-  conserva en memoria y se muestra la alerta crítica de no cerrar la pestaña.
-- Cada operación nueva conserva el correo normalizado de la sesión que la creó.
-  `flushQueue()` sólo ejecuta operaciones cuyo propietario coincide con la
-  sesión activa; la compactación y el reajuste de versiones respetan el mismo
-  límite.
-- `AUTH` entrega cada cambio de identidad a `STORE.setSession()`. El logout
-  suspende sincronización sin borrar pendientes y cada identidad distinta
-  vuelve a drenar su propia cola antes de realizar un pull.
-- Las operaciones históricas sin propietario se ponen en cuarentena. No se
-  atribuyen al primer login: un administrador debe revisarlas y reclamarlas
-  expresamente con `STORE.claimLegacyQueue()`.
+`archiveLegacy()` inventaría claves comerciales conocidas y cada registro de
+`balam_sync/durable_queue`. Conserva original y SHA-256 mediante
+`archive_online_legacy()` antes de retirar únicamente el origen que aún coincide.
+Un fallo de archivo o confirmación conserva ese origen. No se vacía el navegador
+ni se descartan preferencias, credenciales o almacenamiento ajeno.
 
-La cola mejora durabilidad, pero por sí sola no convierte varias escrituras SQL
-en una transacción. Ventas y devoluciones resuelven ese límite mediante
-`commit_sale` y `commit_return`, respectivamente.
+El servidor clasifica evidencia confirmada, caché histórica y expedientes que
+requieren revisión. Una operación comercial real sin confirmación se conserva
+íntegra para decisión individual; no se reproduce y no es un pendiente nuevo.
+El conteo y resolución reales de las instalaciones A/B/C requieren comprobar
+sus originales y sus recibos; el código de migración no acredita por sí solo
+que las colas de equipos todavía ausentes estén resueltas.
 
 ## Limpieza y archivos de cuarentena
 
-La limpieza selectiva protocolo 6 distingue cola ejecutable de expedientes
-archivados. El plan incluye en `quarantine_discard` los archivos sin reintento
-autorizado que afectan los dominios elegidos, con snapshot exacto en el hash
-y en el respaldo. La UI explica y confirma su descarte por separado.
-Una solicitud archivada de baja/edición no se ejecuta al descartarla.
+El protocolo 6 de limpieza distinguió históricamente cola ejecutable de
+expedientes archivados y conservó `quarantine_discard`, recibos y lápidas.
+H-164 mantiene esa evidencia y los controles de respaldo de los documentos,
+pero retira la restauración/reproducción comercial del cliente. Una autorización
+antigua de reintento no habilita una ruta local-first tras activar el cerco.
 
-El rechazo y la limpieza comercial comparten transacción y lock de recuperación.
-`discarded_by_cleanup` vincula evidencia al recibo y evita reabrir/reautorizar;
-la guarda servidor rechaza replay por identidad y alias comerciales. Archivos
-antiguos sin claves verificables y reintentos autorizados siguen bloqueando.
-Los eventos mantienen protocolo 5 para reconstruir las proyecciones al volver;
-el ejecutor exige protocolo 6 cuando hay descartes. No cambia el protocolo
-general de sincronización ni se borra físicamente la evidencia de cuarentena.
+Toda decisión sobre evidencia real no reconciliada exige alcance e identidades
+demostrables. El archivo servidor preserva los originales; no se declara cero
+pérdidas por haber eliminado una clave local ni se borra cuarentena de forma
+indiscriminada. Rechazo, descarte autorizado y confirmación son estados distintos.
 
 El plan también congela `payment_ids` y la huella de sus filas completas: los
 pagos de ventas seleccionadas y los de tipo cambio con folio propio de un cambio
@@ -1351,10 +1217,12 @@ ausencia de ventas ni vendedores por el texto de su nombre.
 
 ## Contratos que no deben romperse
 
-- La acción local debe funcionar sin conexión y dejar una operación recuperable.
-- Un pull no debe pisar cambios locales pendientes.
+- Sin conexión real con Supabase no se crea ni confirma una operación comercial.
+- Una solicitud sólo muestra éxito después del commit y la consulta autoritativa.
+- No se crean colas comerciales ni se persisten colecciones como segunda autoridad.
+- Los borradores permanecen separados; un refresco no los confirma ni los descarta.
 - Reintentar no debe duplicar ventas, pagos, devoluciones ni movimientos.
-- El pull de Movimientos conserva `movements.operation_id` como `operationId` y
+- La lectura remota de Movimientos conserva `movements.operation_id` como `operationId` y
   enriquece `reversalOf` desde `reference_reclassifications.reversal_of`:
   Reclasificación usa esa identidad compuesta para reconocer reintentos y
   autorizar únicamente la reversa exacta.

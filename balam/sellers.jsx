@@ -11,6 +11,15 @@
   const { MS } = window.HX;
   const D = window.DATA;
   const h = React.createElement;
+  const runningOnlineActions = new Set();
+  async function onlineAction(key, action) {
+    if (runningOnlineActions.has(key)) return;
+    runningOnlineActions.add(key);
+    try { return await action(); }
+    catch (error) { toast(error.message || 'No se pudo confirmar la operación', 'var(--danger)'); }
+    finally { runningOnlineActions.delete(key); }
+  }
+
   const SHADOW = 'shadow-e1';
   const SHADOW_HOVER = 'hover:shadow-e2';
 
@@ -70,18 +79,22 @@
     const totalVentas = filas.reduce((a, x) => a + x.row.importeVendido, 0);
     const descuadres = filas.filter(x => x.row.descuadre != null && Math.abs(x.row.descuadre) >= 0.01);
 
-    function liquidar(s) {
+    async function liquidar(s) {
+      return onlineAction('liquidar', async () => {
       const row = ledgerRow(ledger, s);
       if (!window.confirm('¿Liquidar la comisión acumulada de ' + s.nombre + ' (' + fmt(row.pendiente) + ')? Quedará en cero.')) return;
-      const monto = D.liquidarComision(s.id);
+      const monto = await D.liquidarComision(s.id);
       setDetail(null); refresh();
       toast('Comisión de ' + s.nombre + ' liquidada: ' + fmt(monto || 0), 'var(--accent)');
+      });
     }
-    function cerrarMes() {
+    async function cerrarMes() {
+      return onlineAction('cerrarMes', async () => {
       if (!window.confirm('¿Cerrar el periodo?\nSe pagará la comisión pendiente de TODOS los vendedores (' + fmt(totalComision) + ') y arrancará un periodo nuevo. Las ventas y las comisiones ya generadas NO se borran: siguen en el reporte.')) return;
-      const r = D.cerrarMes();
+      const r = await D.cerrarMes();
       setDetail(null); refresh();
       toast('Periodo cerrado · ' + fmt(r.total) + ' liquidados a ' + r.vendedores + ' vendedor(es)', 'var(--accent)');
+      });
     }
     function exportar() {
       window.XLSXIO.exportSellers(D.sellers.map(s => {
@@ -307,12 +320,14 @@
     const [confirmando, setConfirmando] = useState(false);
     const [resultado, setResultado] = useState(null);
 
-    function aplicar() {
+    async function aplicar() {
+      return onlineAction('aplicar', async () => {
       const draft = D.commissionAdjustmentDraft(preview, { motivo });
-      const r = D.applyCommissionAdjustment(draft);
+      const r = await D.applyCommissionAdjustment(draft);
       if (!r.ok) { toast(r.idempotente ? 'Este ajuste ya se aplicó' : 'No se pudo aplicar el ajuste', 'var(--danger)'); return; }
       setResultado(r.ajuste);
       toast('Ajuste histórico registrado: ' + fmt(r.ajuste.totales.comision), 'var(--accent)');
+      });
     }
 
     const footer = resultado ? [

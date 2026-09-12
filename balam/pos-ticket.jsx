@@ -5,6 +5,15 @@
   const { MS, ProductImage } = window.HX;
   const D = window.DATA;
   const h = React.createElement;
+  const runningOnlineActions = new Set();
+  async function onlineAction(key, action) {
+    if (runningOnlineActions.has(key)) return;
+    runningOnlineActions.add(key);
+    try { return await action(); }
+    catch (error) { toast(error.message || 'No se pudo confirmar la operación', 'var(--danger)'); }
+    finally { runningOnlineActions.delete(key); }
+  }
+
   // Nombre visible de una talla según el catálogo (refleja renombres de Configuración).
   const tallaLbl = (t, product) => {
     const D = window.DATA;
@@ -75,12 +84,14 @@
     const matches = has ? D.clients.filter(c => !c.generic && (
       (qN && c.nombre.toLowerCase().includes(qN.toLowerCase())) || (qT && String(c.tel || '').includes(qT))
     )).slice(0, 8) : [];
-    function crear() {
-      const c = D.addClient({ nombre: qN, tel: qT });
+    async function crear() {
+      return onlineAction('crear', async () => {
+      const c = await D.addClient({ nombre: qN, tel: qT });
       if (!c) { toast('Escribe el nombre del cliente', 'var(--danger)'); return; }
       const reuse = qT && String(c.tel || '') === qT && c.nombre !== qN;
       onPick(c);
       toast(reuse ? ('Ya existía con ese teléfono: ' + c.nombre) : ('Cliente «' + c.nombre + '» creado'), 'var(--accent)');
+      });
     }
     const inp = 'h-9 px-3 bg-surface-container-low border border-outline-variant focus:ring-1 focus:ring-primary text-sm rounded-lg w-full';
     return h('div', { className: 'relative' }, [

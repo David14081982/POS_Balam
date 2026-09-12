@@ -24,13 +24,12 @@ reabre por accidente.
 | esquema, migraciones, persistencia | `playbooks/database.md` |
 | SQL, permisos, roles, RLS, vistas o funciones | `playbooks/security.md` |
 | `balam/`, build o artefactos | `playbooks/client.md` |
-| sincronización, cola, Realtime, offline o terminales | `playbooks/client.md` · `playbooks/synchronization.md` · `authorities/synchronization.md` · `ADR-006` · `ADR-012` · `ADR-014` |
+| sincronización, cola, Realtime, offline o terminales | `playbooks/client.md` · `playbooks/synchronization.md` · `authorities/synchronization.md` · `ADR-015` (contrato vigente); `ADR-006/012/014` sólo para historia legacy |
 | pruebas, cierre, commit o despliegue | `playbooks/delivery.md` |
 | ubicar quién responde una pregunta de negocio | `authorities/` — `sales` · `inventory` · `security` · `synchronization` |
 | *(sólo si una regla o un playbook lo cita)* | el `ADR-XXX` correspondiente |
 
-No se lee el sistema completo. La carga típica son cuatro archivos base y uno
-o dos playbooks.
+No se lee el sistema completo. La carga típica son cuatro archivos base y uno o dos playbooks.
 
 ## Severidad
 
@@ -109,12 +108,13 @@ descubre. Las historias que modificaron una autoridad se recuperan con
 | `ADR-003` | Una pregunta tiene una autoridad; las extensiones entran por una costura | vigente |
 | `ADR-004` | Toda migración funcional relevante lleva verificación autocontenida | vigente |
 | `ADR-005` | La autorización vive en RLS y en el perfil activo | vigente |
-| `ADR-006` | Local-first: la cola da durabilidad, la transacción vive en SQL | vigente |
+| `ADR-006` | Local-first: la cola da durabilidad, la transacción vive en SQL | histórico; reemplazado por ADR-015 en operación comercial |
 | `ADR-007` | Cero red en runtime y en el build normal | vigente |
 | `ADR-008` | El artefacto generado no es fuente y se verifica al publicarse | vigente |
 | `ADR-009` | El precio por talla es un mapa de excepciones dentro del artículo | vigente |
 | `ADR-010` | El cambio es un documento autónomo con liquidación económica propia | vigente |
 | `ADR-011` | La identidad de una talla no es el código que se edita | vigente |
-| `ADR-012` | La sincronización entrante es un protocolo versionado | vigente |
+| `ADR-012` | La sincronización entrante es un protocolo versionado | histórico; reemplazado por ADR-015 en operación comercial |
 | `ADR-013` | Referencia física: products.id, barcode y SKU separados | vigente |
-| `ADR-014` | Autoridad confirmada, intención offline y caché son roles distintos | vigente; aplicada por H-121 |
+| `ADR-014` | Autoridad confirmada, intención offline y caché son roles distintos | histórico; reemplazado por ADR-015 en operación comercial |
+| `ADR-015` | Supabase como única autoridad comercial; operación únicamente online | aprobado; evidencia de implementación y certificación en H-164 |

@@ -1,5 +1,23 @@
 {
+  "scripts": {
+    "build": "node build-offline.mjs",
+    "test:migrations": "node test-migrations.mjs",
+    "test:online:architecture": "node test-h164-online-architecture.mjs",
+    "test:online:sql": "node test-h164-online-sql.mjs",
+    "test:online:transport": "node test-h164-online-transport.mjs",
+    "test:online:data": "node test-h164-data-online.mjs",
+    "test:online:config": "node test-h164-online-config.mjs",
+    "test:online:account": "node test-h164-online-account.mjs",
+    "test:online:messages": "node test-h164-online-messages.mjs",
+    "test:online:identity": "node test-h164-online-identity.mjs",
+    "test:online:settings": "node test-h164-online-settings.mjs",
+    "test:online:callbacks": "node test-h164-ui-callbacks.mjs",
+    "test:online:pwa": "node test-h164-online-pwa.mjs",
+    "test:online:ui": "node test-h164-online-ui.mjs",
+    "test:online:live": "node test-h164-live-online.mjs"
+  },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
     "playwright-core": "^1.60.0",
     "supabase": "^2.105.0",
     "tailwindcss": "3.4.17"

@@ -168,7 +168,7 @@
     }
     // H-86: la vista previa es un plan completo. Ninguna fila toca DATA mientras
     // exista un conflicto y la actualización localiza por el ID técnico exportado.
-    function confirmImport() {
+    async function confirmImport() {
       const plan = window.XLSXIO.planImport(importPreview, D.products, importResolutions);
       if (!plan.ok) {
         toast(`Importación bloqueada: ${plan.conflicts.length} conflicto(s). No se modificó el inventario.`, 'var(--danger)');
@@ -182,47 +182,34 @@
         toast(message, 'var(--accent)');
         return;
       }
-      const backup = D.products.map(product => JSON.parse(JSON.stringify(product)));
       try {
         const result = window.XLSXIO.applyImportPlan(plan, D.products);
-        const persisted = result.productIds.length ? D.saveProducts(result.productIds) : true;
+        await D.saveProductRows(result.products);
         refresh();
         setImportPreview(null); setImportResolutions({});
-        if (persisted === false) {
-          const message = { context: 'inventory_import', code: 'INVENTORY_IMPORT_STORAGE_PENDING' };
-          setImportFeedback({ message, error: true });
-          toast(message, 'var(--warning)');
-          return;
-        }
         const message = `${result.nuevos} nuevos · ${changedUpdates} actualizados${plan.unchangedCount ? ` · ${plan.unchangedCount} sin cambios` : ''}`;
         setImportFeedback({ message });
         toast(message, 'var(--accent)');
       } catch (error) {
-        D.products.splice(0, D.products.length, ...backup); refresh();
         const message = { ...error, context: 'inventory_import', message: (error && error.message) || 'No se pudo aplicar la importación; no se modificó el inventario' };
         setImportFeedback({ message, error: true });
         toast(message, 'var(--danger)');
       }
     }
-    function saveProduct(draft, mode, options) {
+    async function saveProduct(draft, mode, options) {
       if (Array.isArray(draft)) {
-        const backup = D.products.map(row => JSON.parse(JSON.stringify(row)));
-        const saved = [];
+        let saved;
         try {
-          draft.forEach(rawCandidate => {
+          const proposed = D.products;
+          const rows = draft.map(rawCandidate => {
             const candidate = { ...rawCandidate };
             delete candidate.rowKey; delete candidate.selectedForCreation;
-            const current = D.products.find(row => row.id === candidate.id);
-            if (current) saved.push(D.updateReference(candidate));
-            else { const created = D.createReference(candidate, D.products); D.products.push(created); saved.push(created); }
+            const current = proposed.find(row => row.id === candidate.id);
+            if (current) return D.updateReference(candidate);
+            const created = D.createReference(candidate, proposed); proposed.push(created); return created;
           });
-          D.persistProducts();
-          if (window.STORE && typeof window.STORE.pushProductFamilyBatch === 'function') {
-            window.STORE.pushProductFamilyBatch(saved[0].referenceFamilyId, saved);
-          } else D.syncProducts(saved.map(row => row.id));
+          saved = await D.saveProductFamily(rows);
         } catch (error) {
-          D.products.splice(0, D.products.length, ...backup.map(row => D.hydrate(row)));
-          D.persistProducts();
           toast((error && error.message) || 'No se pudo guardar la familia; no se aplicaron cambios', 'var(--danger)');
           return;
         }
@@ -235,15 +222,15 @@
       try {
         if (mode === 'edit') saved = D.updateReference && D.isV2Reference(draft)
           ? D.updateReference(draft)
-          : (() => { const target = D.products.find(p => p.id === draft.id); if (target) { Object.assign(target, draft); D.hydrate(target); } return target || draft; })();
+          : D.hydrate({ ...draft });
         else {
-          const p = D.createReference(draft, D.products);
-          D.products.push(p); saved = p;
+          saved = D.createReference(draft, D.products);
         }
+        [saved] = await D.saveProductRows([saved]);
       } catch (error) {
         toast((error && error.message) || 'No se pudo guardar la referencia', 'var(--danger)'); return;
       }
-      D.saveProducts([saved.id]); refresh();
+      refresh();
       setEditing(null); setDetail(null);
       toast(mode === 'edit' ? 'Producto actualizado' : 'Producto agregado al inventario', 'var(--accent)');
       if ((saved.referenceWarnings || []).some(w => w.code === 'SKU_DUPLICATE_WARNING')) {
@@ -261,11 +248,12 @@
       if (references.length > 1) { setDeletion({ stage: 'scope', product: p, references }); return; }
       confirmDeletion(p, 'reference', references);
     }
-    function applyDeletion() {
+    async function applyDeletion() {
       if (!deletion || deletion.stage !== 'confirm') return;
+      try {
       const familyId = deletion.product.isFamilyProjection ? deletion.product.referenceFamilyId
         : (deletion.targets[0] && deletion.targets[0].referenceFamilyId) || null;
-      const result = D.removeProductScope({
+      const result = await D.removeProductScope({
         scope: deletion.scope, referenceFamilyId: familyId,
         productIds: deletion.targets.map(row => row.id),
       });
@@ -274,6 +262,7 @@
       setDetail(null);
       setDeletion(null);
       toast(result.count > 1 ? `${result.count} referencias eliminadas` : 'Producto eliminado', 'var(--danger)');
+      } catch (error) { toast(error.message || String(error), 'var(--danger)'); }
     }
 
     const lowThreshold = window.CONFIG.get('stock.lowThreshold') || 4;
@@ -491,7 +480,7 @@
       : [];
     return h(React.Fragment, {}, [
       h('div', { key: 'ov', className: 'fixed inset-0 bg-primary-container/40 backdrop-blur-sm z-[55] transition-opacity duration-300 ' + (open ? 'opacity-100' : 'opacity-0 pointer-events-none'), onClick: onClose }),
-      h('div', { key: 'dr', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Detalle del producto', className: 'fixed inset-0 sm:inset-y-0 sm:left-auto sm:right-0 w-full sm:w-[460px] max-w-full bg-surface border-l border-outline-variant z-[60] shadow-e3 flex flex-col transition-transform duration-300 ' + (open ? 'translate-x-0' : 'translate-x-full') },
+      h('div', { key: 'dr', role: open ? 'dialog' : undefined, 'aria-modal': open ? 'true' : undefined, 'aria-hidden': open ? undefined : 'true', inert: open ? undefined : '', 'data-dialog-open': open ? 'true' : 'false', 'aria-label': 'Detalle del producto', className: 'fixed inset-0 sm:inset-y-0 sm:left-auto sm:right-0 w-full sm:w-[460px] max-w-full bg-surface border-l border-outline-variant z-[60] shadow-e3 flex flex-col transition-transform duration-300 ' + (open ? 'translate-x-0' : 'translate-x-full') },
         p && [
           h('div', { key: 'h', className: 'px-8 py-6 border-b border-outline-variant flex justify-between items-center' }, [
             h('div', { key: 't' }, [
@@ -2004,23 +1993,22 @@
 
     async function saveToSupabase() {
       if (saving || !labelsCertified) return;
-      if (!window.STORE) { toast('Sincronización con la nube no disponible', 'var(--danger)'); return; }
-      if (!(await window.STORE.hasSession())) { toast('Inicia sesión para guardar imágenes en la nube', 'var(--danger)'); return; }
       setSaving(true);
-      let okN = 0, failN = 0; const seen = {};
-      for (const s of specs) {
-        if (seen[s.code]) continue; seen[s.code] = true;
-        try {
-          const blob = await B.toPNGBlob(s.code, PRINT_OPTS);
-          const urlPub = await window.STORE.uploadBarcode(s.code + '.png', blob);
-          if (!s.p.barcodeUrls) s.p.barcodeUrls = {};
-          s.p.barcodeUrls[s.talla] = urlPub;
-          okN++;
-        } catch (e) { failN++; }
-      }
-      D.saveProducts([...new Set(specs.map(spec => spec.p.id))]);
-      setSaving(false);
-      toast(failN ? `Se guardaron ${okN}; ${failN} no pudieron guardarse. Vuelve a generar las etiquetas pendientes.` : `${okN} ${okN === 1 ? 'imagen guardada' : 'imágenes guardadas'} en la cuenta del negocio`, failN ? 'var(--danger)' : 'var(--accent)');
+      try {
+        window.STORE.assertBusinessReady();
+        const rows = new Map(), seen = new Set();
+        for (const spec of specs) {
+          if (seen.has(spec.code)) continue; seen.add(spec.code);
+          const blob = await B.toPNGBlob(spec.code, PRINT_OPTS);
+          const url = await window.STORE.uploadBarcode(spec.code + '.png', blob);
+          const product = rows.get(spec.p.id) || JSON.parse(JSON.stringify(spec.p));
+          product.barcodeUrls = { ...(product.barcodeUrls || {}), [spec.talla]: url };
+          rows.set(product.id, product);
+        }
+        await D.saveProductRows([...rows.values()]);
+        toast(`${seen.size} ${seen.size === 1 ? 'imagen guardada' : 'imágenes guardadas'} en la cuenta del negocio`, 'var(--accent)');
+      } catch (error) { toast(error.message || String(error), 'var(--danger)'); }
+      finally { setSaving(false); }
     }
 
     const seg = (val, on, label) => h('button', { key: val, 'data-testid': `labels-copies-${val}`, onClick: () => setCopiesMode(val), className: 'px-3 py-1.5 rounded-md text-caption font-semibold transition-colors ' + (on ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:text-primary') }, label);

@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+const source = fs.readFileSync('balam/shared.jsx', 'utf8');
+const start = source.indexOf('  const TECHNICAL_JARGON');
+const end = source.indexOf('  function HumanMessage(', start);
+const context = vm.createContext({ window: {} });
+vm.runInContext(source.slice(start, end) + '\nglobalThis.authority = messageAuthority;', context);
+const network = context.authority('Failed to fetch');
+assert.equal(network.title, 'Sin conexión. BALAM necesita internet para continuar.');
+assert.equal(network.explanation + network.action, '');
+const uncertain = context.authority({ code: 'ONLINE_RESULT_UNKNOWN', message: 'Failed to fetch after COMMIT' });
+assert.equal(uncertain.title, 'Estamos confirmando la operación. No la repitas.');
+assert.equal(uncertain.explanation + uncertain.action, '');
+console.log('PASS H164 mensajes: desconexión exacta y resultado incierto prioritario, sin promesa de envío posterior ni invitación a repetir');

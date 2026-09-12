@@ -34,6 +34,15 @@
   const C = window.CONFIG;
   const D = window.DATA;
   const h = React.createElement;
+  const runningOnlineActions = new Set();
+  async function onlineAction(key, action) {
+    if (runningOnlineActions.has(key)) return;
+    runningOnlineActions.add(key);
+    try { return await action(); }
+    catch (error) { toast(error.message || 'No se pudo confirmar la operación', 'var(--danger)'); }
+    finally { runningOnlineActions.delete(key); }
+  }
+
 
   const CARD = 'bg-surface-container-lowest rounded-lg shadow-e1';
   const ESTADOS = {
@@ -70,8 +79,8 @@
   const mercanciaDe = l => (l.lineas || []).map(x => `${x.nombre} T${x.talla} x${x.qty}`).join(' · ');
   // Día LOCAL del negocio (el del mostrador), nunca UTC.
   function hoyISO() {
-    const d = new Date(), p = n => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+    const d = window.CORE.invokeSync('serverNow');
+    return d ? new Date(d.getTime() - 7 * 3600000).toISOString().slice(0, 10) : '';
   }
   function sumaDias(dia, dias) {
     const t = Date.parse(String(dia) + 'T00:00:00');
@@ -133,7 +142,7 @@
     // H-48: un código leído en el buscador responde «¿quién tiene esta prenda?». Se
     // resuelve con la autoridad del Punto de venta y busca en TODOS los estados: si la
     // prenda ya volvió, la respuesta útil sigue siendo el préstamo que la sacó.
-    const escaneo = useMemo(() => (q.trim() ? leerCodigo(q.trim()) : null), [q]);
+    const escaneo = useMemo(() => (q.trim() ? leerCodigo(q.trim()) : null), [q, D.revision]);
     const rows = useMemo(() => D.loans
       .filter(l => {
         if (escaneo) return (l.lineas || []).some(x => (
@@ -161,7 +170,7 @@
         if (abiertoA) return String(a.fechaEsperada || '').localeCompare(String(b.fechaEsperada || ''));
         return String(b.fecha || '').localeCompare(String(a.fecha || ''));
       }),
-    [term, escaneo, filtro, D.loans.length, nuevo, devolviendo, confirmando, editando]);
+    [term, escaneo, filtro, D.revision, nuevo, devolviendo, confirmando, editando]);
 
     // Los indicadores describen la cartera completa, no el filtro: la pregunta del
     // dueño es «qué tengo fuera», no «qué estoy viendo».
@@ -179,19 +188,21 @@
     const enConfirmacion = confirmando ? loanDe(confirmando.folio) : null;
 
     function cerrarConfirmacion() { setConfirmando(null); refresh(); }
-    function ejecutarConfirmacion(nota) {
+    async function ejecutarConfirmacion(nota) {
+      return onlineAction('ejecutarConfirmacion', async () => {
       const loan = enConfirmacion;
       if (!loan) { cerrarConfirmacion(); return; }
       if (confirmando.tipo === 'perdido') {
-        const r = D.marcarPrestamoNoDevuelto(loan.id, { nota });
+        const r = await D.marcarPrestamoNoDevuelto(loan.id, { nota });
         if (!r.ok) { toast(r.error, 'var(--danger)'); return; }
         toast('Préstamo declarado no devuelto', 'var(--danger)');
       } else {
-        const r = D.eliminarPrestamo(loan.id);
+        const r = await D.eliminarPrestamo(loan.id);
         if (!r.ok) { toast(r.error, 'var(--danger)'); return; }
         toast('Préstamo eliminado');
       }
       cerrarConfirmacion();
+      });
     }
 
     return h('div', { className: 'flex-1 overflow-y-auto bg-background font-body text-on-surface' },
@@ -475,7 +486,7 @@
         ? D.clients.filter(c => !c.generic).map(c => ({ id: c.id, nombre: c.nombre, tel: c.tel === '—' ? '' : (c.tel || ''), sub: `${c.compras || 0} compras` }))
         : D.sellers.filter(s => s.active !== false && s._deletedAt == null).map(s => ({ id: s.id, nombre: s.nombre, tel: s.tel || '', sub: s.role === 'admin' ? 'Administrador' : 'Vendedor' }));
       return base.filter(x => String(x.nombre).toLowerCase().includes(term)).slice(0, 6);
-    }, [tipo, term, personaId]);
+    }, [tipo, term, personaId, D.revision]);
 
     const catalogo = useMemo(() => {
       const t = busca.trim().toLowerCase();
@@ -484,7 +495,7 @@
         p.isFamilyProjection ? p.searchText.includes(t) :
         p.nombre.toLowerCase().includes(t) || p.sku.toLowerCase().includes(t) || String(p.colorName || '').toLowerCase().includes(t)
       )).slice(0, 8);
-    }, [busca]);
+    }, [busca, D.revision]);
 
     const piezas = lineas.reduce((a, l) => a + (Number(l.qty) || 0), 0);
     const valor = lineas.reduce((a, l) => a + (Number(l.qty) || 0) * (Number(l.precio) || 0), 0);
@@ -575,23 +586,25 @@
       setPersonaId(c.id); setNombre(c.nombre);
       if (c.tel) setTel(c.tel);
     }
-    function confirmar() {
+    async function confirmar() {
+      return onlineAction('confirmar', async () => {
       const persona = { tipo, id: personaId, nombre: nombre.trim(), tel: tel.trim() };
       if (editar) {
-        const r = D.actualizarPrestamo(loan.id, { persona, fechaEsperada: esperada, nota });
+        const r = await D.actualizarPrestamo(loan.id, { persona, fechaEsperada: esperada, nota });
         if (!r.ok) { toast(r.error, 'var(--danger)'); return; }
         toast('Préstamo actualizado');
         onDone(r.loan);
         return;
       }
       const usuario = (window.AUTH && window.AUTH.current() && window.AUTH.current().nombre) || '';
-      const r = D.registrarPrestamo({
+      const r = await D.registrarPrestamo({
         lineas: lineas.map(x => ({ productId: x.productId, sku: x.sku, talla: x.talla, qty: x.qty })),
         persona, fecha, fechaEsperada: esperada, nota, usuario,
       });
       if (!r.ok) { toast(r.error, 'var(--danger)'); return; }
       toast(`Préstamo ${r.loan.folio} registrado · ${piezas} pieza(s) fuera`, 'var(--accent)');
       onDone(r.loan);
+      });
     }
 
     const footer = [
@@ -822,14 +835,16 @@
       const n = Math.max(0, Math.min(resta, Math.floor(Number(valor) || 0)));
       setCant(prev => Object.assign({}, prev, { [key]: n }));
     }
-    function confirmar() {
-      const r = D.registrarDevolucionPrestamo(loan.id, {
+    async function confirmar() {
+      return onlineAction('confirmar', async () => {
+      const r = await D.registrarDevolucionPrestamo(loan.id, {
         lineas: Object.keys(cant).map(k => ({ key: k, qty: Number(cant[k]) || 0 })),
         fecha, nota,
       });
       if (!r.ok) { toast(r.error, 'var(--danger)'); return; }
       toast(r.cerrado ? 'Préstamo devuelto por completo' : `Devolución parcial · quedan ${D.prestamoPendientes(r.loan)} pieza(s) fuera`, 'var(--accent)');
       onDone(r.loan);
+      });
     }
 
     const footer = [

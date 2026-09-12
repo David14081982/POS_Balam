@@ -13,13 +13,16 @@
   function getDeviceId() {
     if (deviceId) return deviceId;
     try {
-      deviceId = localStorage.getItem(DEVICE_KEY);
-      if (!deviceId) {
-        deviceId = 'dev-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
-        localStorage.setItem(DEVICE_KEY, deviceId);
+      let stored = localStorage.getItem(DEVICE_KEY);
+      if (!stored) {
+        stored = 'dev-' + crypto.randomUUID();
+        localStorage.setItem(DEVICE_KEY, stored);
+        if (localStorage.getItem(DEVICE_KEY) !== stored) throw new Error('DEVICE_ID_NOT_STORED');
       }
+      deviceId = stored;
     } catch (e) {
-      deviceId = 'dev-volatile-' + Math.random().toString(36).slice(2, 10);
+      throw Object.assign(new Error('Permite el almacenamiento de este sitio para identificar el equipo y confirmar sus operaciones.'),
+        { code: 'DEVICE_IDENTITY_UNAVAILABLE' });
     }
     return deviceId;
   }
@@ -36,7 +39,8 @@
     return Array.isArray(products) ? products : [];
   }
   function saveCatalogProducts(productIds) {
-    if (catalogProductsAdapter) catalogProductsAdapter.save(productIds);
+    if (!catalogProductsAdapter) throw new Error('Sin conexión. BALAM necesita internet para continuar.');
+    return catalogProductsAdapter.save(productIds);
   }
   // H-63: las promociones referencian tallas por valor dentro de scope.tallas, así que
   // una guarda de catálogo necesita leerlas. Va por el mismo gateway que los productos
@@ -65,7 +69,8 @@
   }
   function invokeSync(method, ...args) {
     const fn = syncGateway && syncGateway[method];
-    return typeof fn === 'function' ? fn.apply(syncGateway, args) : undefined;
+    if (typeof fn !== 'function') throw new Error('Sin conexión. BALAM necesita internet para continuar.');
+    return fn.apply(syncGateway, args);
   }
   function beginActivity(domains, detail) {
     const list = (Array.isArray(domains) ? domains : [domains]).filter(Boolean);

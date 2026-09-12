@@ -1,5 +1,5 @@
 // Fuente del service worker H-89. build-offline.mjs sustituye el hash del shell.
-const BUILD_HASH = 'a68d115f9771c648d5ee';
+const BUILD_HASH = '25bc985dce9bbe92e83f';
 const SHELL_CACHE = `balam-shell-${BUILD_HASH}`;
 const BRAND_CACHE = 'balam-pwa-brand-v1';
 const SCOPE_URL = new URL('./', self.location.href);
@@ -24,7 +24,12 @@ self.addEventListener('activate', event => {
     const names = await caches.keys();
     await Promise.all(names
       .filter(name => name.startsWith('balam-shell-') && name !== SHELL_CACHE)
-      .map(name => caches.delete(name)));
+      .map(async name => {
+        const entries = await (await caches.open(name)).keys();
+        // La adopción online conserva cualquier evidencia comercial antes de retirarla.
+        if (entries.some(entry => /\.supabase\.co\/(?:rest|functions|graphql)\/v1(?:\/|$)/.test(entry.url))) return;
+        await caches.delete(name);
+      }));
     await self.clients.claim();
   })());
 });

@@ -1,10 +1,43 @@
 # Sincronización, identidad y recuperación: evaluación arquitectónica
 
 **Riesgo:** H-164, un problema de coherencia y recuperación entre capas.
-**Estado:** ABIERTO. Diagnóstico y comparación completados; defectos sin corregir.
+**Estado de este documento:** HISTÓRICO — evaluación inicial y decisión
+propuesta, superadas por la conversión online-only expresamente aprobada.
+**Seguimiento vigente:** [online-only-h164.md](online-only-h164.md),
+EN IMPLEMENTACIÓN; publicación y certificación distribuidas pendientes.
 **Fecha:** 11/09/2026, Hermosillo; consultas del 12/09/2026 UTC.
 **Commit de evaluación:** `2d47d7b` (local, sin publicación).
 **Certificación distribuida:** NO CERTIFICADO.
+
+## Decisión posterior aprobada y trabajo vigente
+
+El propietario aprobó retirar completamente la operación comercial offline y
+autorizó código, SQL, migraciones, pruebas, CI y publicación bajo H-164. La
+última instrucción exige implementación quirúrgica sin rediseñar la UI. Esta
+decisión reemplaza la comparación inicial siguiente; no se vuelve a consultar
+si debe conservarse offline. Contrato vigente: ADR-015.
+
+Este documento conserva el corte de evaluación y sus primeras notas de
+implementación; no es el estado actual del despliegue. El informe enlazado
+arriba registra los cambios y verificaciones posteriores al 12/09/2026 local.
+
+Se trabaja sobre `analysis/h164-sync-architecture`, desde el artefacto H163.
+Inventarios previos: DATA y sus consumidores, CONFIG/permisos/usuarios, STORE
+y catálogo real de funciones/triggers/RLS SQL. Se encontraron escrituras
+anticipadas fuera del POS en Excel, imágenes, catálogos y comisiones.
+
+En desarrollo: coordinador online con recibos idempotentes, proyección completa
+efímera, comandos de dominio sin efectos anticipados, migración conservadora de
+evidencia legacy, correcciones de heartbeat y diálogos, y separación del retiro
+de instalaciones. Ninguna cola física se ha descartado. No se ha activado el
+cerco remoto ni publicado el nuevo artefacto. Commit técnico: Pendiente de commit.
+
+La prueba de DATA aislado ejecuta una vez cada frontera seleccionada, con
+30 comprobaciones PASS. No constituye certificación Supabase ni de A/B/C.
+La validación SQL inicial reconstruye el esquema desde las definiciones reales
+sin cargar datos comerciales y sólo acredita preparación del entorno.
+
+## Evaluación inicial conservada como histórico
 
 ## Problema y reproducción
 

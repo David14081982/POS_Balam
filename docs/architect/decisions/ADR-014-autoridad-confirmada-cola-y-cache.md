@@ -3,6 +3,9 @@
 **Estado:** vigente · aplicada por H-121
 **Historia:** H-121 · **Fecha:** 19/08/2026
 
+> Decisión histórica: reemplazada por ADR-015 para el producto online-only.
+> No autoriza nuevas colas ni operación comercial offline.
+
 ## Contexto
 
 BALAM necesita memoria, persistencia local y cola para operar sin red. Eso no

@@ -1,126 +1,109 @@
 ---
 capa: conocimiento
 applies_to: [client, database]
-related_histories: [H-04, H-09, H-14, H-18, H-62, H-77, H-79, H-121]
+related_histories: [H-04, H-09, H-14, H-18, H-62, H-77, H-79, H-121, H-148, H-164]
 severity_max: required
-no_alcance: "No define ninguna autoridad ni transcribe firmas. Sólo dice qué pregunta responde cada una y dónde vive."
+no_alcance: "No define autoridades ni transcribe firmas. Identifica la pregunta y su fuente ejecutable."
 ---
 
-# Autoridades · Sincronización e identidad
+# Autoridades · Operación online, terminales e identidad
 
-Reglas de mantenimiento en `../README.md` § Registro de autoridades.
+Mantenimiento: `../README.md` § Registro de autoridades. `ADR-015` reemplaza
+las rutas local-first de ADR-006/012/014; su evidencia permanece histórica.
 
 ## ¿Esta operación ya se aplicó?
-**Autoridad:** `pos.sale_commits` / `pos.return_commits`, por clave + hash del
-payload. Para préstamos y capacidades, `pos.capability_operation_audit` cumple el
-mismo papel por (`operation_id`, capacidad, hash)
-**Definición:** migraciones `20260725001900`, `20260725002100`, `20260730008000`
-**Creada por:** H-04 · **Extendida por:** H-56 Fase 5 · **Decisión:** `ADR-006`
-**Consumidores:** `grep -rn "sale_commits\|return_commits\|capability_operation_audit" supabase/ balam/`
+**Autoridad:** recibo de `execute_online_command()` y resolución de
+`resolve_online_request()`. Los recibos financieros de `sale_commits`,
+`return_commits`, `exchange_commits` y `capability_operation_audit` conservan
+su autoridad de dominio. Una ausencia definitiva cancela el request ID.
+**Definición:** migración H-164 `20260911020800` y transacciones de cada dominio.
+**Consumidores:** `rg -n "execute_online_command|resolve_online_request" balam/ supabase/`
 
 ## ¿Qué falta por sincronizar y en qué orden?
-**Autoridad:** `STORE.flushQueue()` — ejecutor único, con candado
-**Definición:** `docs/02-architecture.md` § Cola offline
-**Creada por:** H-09, H-14 · **Decisión:** `ADR-006`
-**Consumidores:** `grep -rn "flushQueue\|queueStatus" balam/`
+**Autoridad actual:** no existe una cola comercial nueva. `STORE.execute()`
+espera la confirmación online; una referencia técnica pendiente consulta un
+resultado y no contiene una operación para enviar. `flushQueue()` queda retirado.
+**Definición:** `docs/02-architecture.md` § Retiro de la cola offline · `ADR-015`
 
 ## ¿Qué hace Actualizar este equipo y qué acredita su resultado?
-**Autoridad:** `STORE.synchronizeNow()` coordina envío, recepción y
-verificación. `STORE.syncStatus()` sólo informa actual cuando la cola y los
-dominios están comprobados y sus checkpoints son durables. La certificación
-de convergencia, opcional y separada de la publicación por H-162, se valida con
-`test-h148-sync-certification.mjs` y evidencia real A/B/C del mismo artefacto;
-la telemetría de una instalación ausente no la sustituye.
-**Definición:** `docs/02-architecture.md` § Sincronización · `R-SYNC-16/17`
-**Creada por:** H-148 · **Decisión:** `ADR-014`
-**Consumidores:** cabecera de `balam/app.jsx`, administración de `balam/settings.jsx`
+**Autoridad:** la consulta de `STORE.refresh()` reconstruye DATA/CONFIG desde
+`online_snapshot()`. `syncStatus().ready` exige lectura completa comprobada;
+no acredita por sí solo otras instalaciones. Certificar A/B/C requiere evidencia
+contra Supabase real del mismo artefacto, conforme a `R-SYNC-16/17`.
+**Definición:** `balam/store.jsx` · `docs/02-architecture.md` § Sincronización
 
 ## ¿Este préstamo ya está confirmado en la nube?
-**Autoridad:** presencia y versión en `pos.loan_documents`; si aún no existe,
-una operación `loanOperation` exacta en la cola durable. `_loanVersion` es sólo
-metadato de la proyección y no autoriza conservar ni migrar un documento.
-**Definición:** `balam/data.jsx` § préstamos · `balam/store.jsx` § `applyOp`
-**Creada por:** H-62 · **Corregida por:** H-121 · **Decisión:** `ADR-014`
-**Consumidores:** `grep -rn "_loanVersion" balam/ test-*.mjs`
+**Autoridad:** `pos.loan_documents` y el recibo de su operación SQL. Ni
+`_loanVersion`, una caché ni un expediente legacy sustituyen la presencia remota.
+**Definición:** `balam/data.jsx` § préstamos · `pos.commit_loan_operation()`
 
 ## ¿Puede una fila local ausente del snapshot remoto seguir operativa?
-**Autoridad:** sólo si una operación durable exacta la protege o si la lectura
-remota no cubrió esa identidad. En snapshot completo, ausencia sin cola retira;
-en ventana temporal sólo se retira dentro de la ventana; en incremental hace
-falta tombstone/versionado. `DATA`, `localStorage`, cursores y telemetría no
-pueden justificarla por sí solos.
-**Definición:** `ADR-014` · `playbooks/synchronization.md`
-**Creada por:** H-121
+**Autoridad:** la cobertura del snapshot autorizado. Ausencia en un conjunto
+completo retira la proyección; una consulta parcial no prueba baja global. Un
+borrador o un expediente se conserva separado, sin efectos comerciales.
+**Definición:** `ADR-015` · `R-SYNC-13/14`
 
 ## ¿A qué préstamo corresponde este vale impreso?
-**Autoridad:** `DATA.findLoanByFolio()` — folio vigente primero, alias después,
-igual que `findSaleByFolio()`
-**Definición:** `balam/data.jsx` · `docs/02-architecture.md` § Préstamos de mercancía
-**Creada por:** H-62 · **Decisión:** `ADR-001`
-**Consumidores:** `grep -rn "findLoanByFolio\|loanFolioAliases" balam/ test-*.mjs`
+**Autoridad:** `DATA.findLoanByFolio()`: folio vigente primero, alias después.
+Los alias históricos no habilitan reejecución ni renombrado de otro documento.
+**Definición:** `balam/data.jsx` · `ADR-001`
 
 ## ¿Cuál es esta terminal?
-**Autoridad:** `CORE.getDeviceId()` — clave histórica `balam_device_id`
-**Definición:** `balam/core.jsx` · `docs/02-architecture.md` § CORE
-**Creada por:** H-18
-**Consumidores:** `grep -rn "getDeviceId" balam/`
+**Autoridad:** `CORE.getDeviceId()` conserva `balam_device_id`; la presencia
+servidor distingue la instalación activa de su historia. El nombre es una etiqueta.
+**Definición:** `balam/core.jsx` y `online_presence()`
 
 ## ¿Qué estado remoto desconoce esta terminal?
-**Autoridad:** `pos.sync_domain_versions` frente a los cursores durables de
-`STORE`; Realtime sólo invalida
-**Definición:** `ADR-012` · **Creada por:** H-77
-**Consumidores:** registro de dominios y coordinador de `balam/store.jsx`
+**Autoridad:** la nueva consulta `online_snapshot()`; Realtime sólo la adelanta.
+No existe un cursor comercial durable cuya posición pueda sustituir esa lectura.
+**Definición:** `balam/store.jsx` § ciclo de consulta y reconexión · `ADR-015`
 
-## ¿Puede esta terminal escribir o debe reconstruirse?
-**Autoridad:** `pos.system_manifest` + versión/época de `pos.sync_devices`;
-PostgreSQL valida las operaciones que reemplazan una línea base
-**Definición:** `ADR-012` · **Creada por:** H-77
+## ¿Puede esta terminal escribir o debe reconstruir su pantalla?
+**Autoridad:** el servidor valida contrato online, perfil/capacidades, dispositivo
+y versiones dentro de la operación. STORE habilita UI tras verificar acceso y
+snapshot. Un lock, versión o estado local no concede permiso comercial.
+**Definición:** migración H-164 y `AUTH.refreshPermissions()`
 
 ## ¿Está completamente sincronizada?
-**Autoridad:** `STORE.syncStatus()`: cola, cursores, invalidaciones, pulls,
-conflictos, compatibilidad y época; offline nunca satisface el contrato
-La cola considerada para proteger la caché es la de todo el equipo; la cuenta
-sólo puede enviar operaciones propias. Sincronizado exige además una lectura
-reciente de versiones. La flota compara cursores y confirmación, no sólo conteos.
-**Definición:** `playbooks/synchronization.md` · **Creada por:** H-77
+**Autoridad actual:** `STORE.syncStatus()` describe conexión y última lectura;
+no hay sincronización comercial pendiente. Sin conexión o recibo sin resolver
+no se declara una nueva operación confirmada. La certificación de convergencia
+exige comparar cada instalación con Supabase, no contar heartbeats.
+**Definición:** `R-SYNC-11/16/17`
 
 ## ¿Qué equipo requiere atención y qué intentó sincronizar?
-**Autoridad:** `pos.sync_devices` para la última señal declarada y
-`pos.sync_activity` para la proyección resumida de cada operación. La cola local
-continúa siendo la autoridad de lo pendiente; ausencia de señal es «desconocido»
-y nunca prueba sincronía
-**Definición:** migración `20260807012000` · **Creada por:** H-79
-**Corregida por:** H-125. El cliente deriva `requires_attention` unicamente
-cuando la incidencia no esta revisada y el heartbeat declara
-`queue_pending>0` y `queue_blocked>0`; lo demas permanece como historia.
+**Autoridad actual:** equipos activos e historial proceden del servidor.
+`sync_activity` conserva historia/telemetría, sin autoridad comercial ni replay.
+Los expedientes legacy íntegros identifican operaciones que requieren decisión;
+los conteos viejos de `pending`/`blocked` no crean incidencias nuevas.
+**Definición:** `syncFleetStatus()` y archivo H-164 de evidencia legacy
 
-## ¿Qué equipo puede bloquear una limpieza selectiva H-113?
-**Autoridad:** `pos.test_data_cleanup_fleet_risk()` cruza dominios seleccionados,
-`pos.sync_activity`, cuarentena y capacidad de cerco por protocolo/época. Un
-heartbeat ausente no es un bloqueo; sólo lo es riesgo concreto no aislado.
-La cola local declarada en `sync_devices.queue_pending` decide si una
-proyección activa es actual; con cola cero queda como incidencia histórica sin
-replay. La cuarentena conserva su bloqueo porque sí tiene ruta de restauración.
-**Definición:** migraciones `20260818015300`, `20260819015500` ·
-**Creada por:** H-116 · **Reconciliada por:** H-118
+## ¿Qué equipo puede bloquear una limpieza selectiva?
+**Autoridad:** el plan servidor y riesgo concreto sobre su alcance, incluidas
+operaciones reales no reconciliadas. Una instalación ausente o una proyección
+técnica obsoleta no sustituye ese riesgo. Respaldo y controles financieros permanecen.
+**Definición:** `pos.test_data_cleanup_fleet_risk()` y gateway H-164
 
 ## ¿Una instalación retirada puede volver a activarse por heartbeat?
-**Autoridad:** `pos.admin_set_sync_device_retired()` y el estado durable
-`sync_devices.status='revoked'`; `report_sync_device()` no sobrescribe ese estado.
-**Definición:** migración `20260818015300` · **Creada por:** H-116
+**Autoridad:** retiro administrativo servidor. `online_presence()` no revierte
+una retirada y `false` no es confirmación. Activos e historial se consultan separados.
+**Definición:** migración H-164 · `STORE.heartbeatDevice()`
 
 ## ¿Qué se decide sobre una operación en cuarentena?
-**Autoridad:** `pos.sync_quarantine_cases` conserva huella, resumen y decisión;
-la operación completa permanece en el archivo local/JSON del equipo. Aprobar
-sólo autoriza que `STORE` la restaure en su cola y la ejecute por la RPC vigente
-**Definición:** migración `20260807012400` · **Creada por:** H-81
-**Consumidores:** `grep -rn "sync_quarantine_cases\|decideSyncQuarantine" balam/ supabase/`
-**Consumidores:** `grep -rn "syncFleetStatus\|sync_activity" balam/`
+**Autoridad:** expediente servidor con original verificable, hash y resolución.
+Antes de retirar el origen, `archive_online_legacy()` confirma su conservación.
+Una operación confirmada se reconoce sin repetir; una no reconciliada exige
+decisión individual. Las autorizaciones antiguas no restauran una cola comercial.
+**Definición:** `ADR-015` · `STORE.archiveLegacy()`
 
 ## ¿Puede un administrador ordenar un reintento remoto?
-**Autoridad:** `pos.admin_request_sync_retry()` crea la orden y la instalación
-de origen la consume mediante `pos.consume_sync_commands()`. La ejecución sigue
-perteneciendo a `STORE.retryOperation()` y conserva RLS, RPC e idempotencia
-**Definición:** migraciones `20260807012000`, `20260820016800` ·
-**Creada por:** H-79 · **Endurecida por:** H-125. Solicitud y entrega exigen
-una incidencia no revisada y cola pendiente/bloqueada declarada por el equipo.
+**Autoridad actual:** no existe reproducción comercial desde otra instalación.
+Las órdenes históricas de retry no habilitan escritura tras el cerco H-164.
+Un resultado incierto se consulta; no se vuelve a enviar su payload.
+**Definición:** `ADR-015` · resolución de recibos online
+
+## ¿La cuenta Auth y su perfil comercial quedaron confirmados?
+**Autoridad:** recibo servidor de `pos.online_account_requests` y resolución de
+`admin-users`. El marcador Auth protegido y el commit del perfil acreditan cada
+paso. Un resultado incierto no equivale a éxito ni permite repetir una contraseña.
+**Definición:** `supabase/functions/admin-users/index.ts` y migración H-164

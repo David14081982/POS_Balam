@@ -3,6 +3,9 @@
 **Estado:** decisión arquitectónica aceptada · implementación en curso
 **Historia:** H-77 · **Fecha:** 06/08/2026
 
+> Decisión histórica: reemplazada por ADR-015 para el producto online-only.
+> No autoriza nuevas colas ni operación comercial offline.
+
 ## Contexto
 
 BALAM conserva operaciones salientes en una cola durable, pero sólo baja el

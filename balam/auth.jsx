@@ -8,8 +8,6 @@
   let subscribed = false;
   let resolveSeq = 0;
 
-  const CACHE_KEY = 'balam_auth_access_v2';
-  const CACHE_SCHEMA_VERSION = 2;
   const PERMISSION_MODEL_VERSION = 'h56-screen-permissions-v1';
 
   function emit() {
@@ -21,18 +19,6 @@
   function normalizeEmail(value) {
     return String(value || '').trim().toLowerCase();
   }
-  function localDevelopmentMode() {
-    try {
-      const hn = location.hostname;
-      return location.protocol === 'file:' || hn === 'localhost'
-        || hn === '127.0.0.1' || hn === '';
-    } catch (e) { return false; }
-  }
-  function registryVersion() {
-    return window.SCREENS && window.SCREENS.version
-      ? window.SCREENS.version()
-      : 'missing-registry';
-  }
   function registeredScreens() {
     return window.SCREENS && window.SCREENS.all ? window.SCREENS.all() : [];
   }
@@ -43,9 +29,6 @@
     return window.SCREENS && window.SCREENS.get
       ? window.SCREENS.get(screenKey)
       : null;
-  }
-  function clearStoredAccess() {
-    try { localStorage.removeItem(CACHE_KEY); } catch (e) { /* */ }
   }
   function isRemoteUnavailable(error) {
     const code = String((error && error.code) || '').toUpperCase();
@@ -107,64 +90,6 @@
       },
     };
   }
-  function cacheDocument(nextProfile, nextAccess, nextSession) {
-    return {
-      schemaVersion: CACHE_SCHEMA_VERSION,
-      modelVersion: PERMISSION_MODEL_VERSION,
-      registryVersion: registryVersion(),
-      userId: nextSession.user.id,
-      email: normalizeEmail(nextSession.user.email),
-      profile: { ...nextProfile, baseRole: nextAccess.baseRole || nextProfile.role || null },
-      permissions: nextAccess.permissions,
-      permissionVersion: nextAccess.permissionVersion,
-      verifiedAt: nextAccess.verifiedAt,
-      knownScreenKeys: requestedScreenKeys(),
-    };
-  }
-  function saveAccess(nextProfile, nextAccess, nextSession) {
-    try {
-      const document = cacheDocument(nextProfile, nextAccess, nextSession);
-      localStorage.setItem(CACHE_KEY, JSON.stringify(document));
-      return true;
-    } catch (e) { return false; }
-  }
-  function cachedAccess(nextSession) {
-    try {
-      const raw = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
-      if (!raw || raw.schemaVersion !== CACHE_SCHEMA_VERSION
-          || raw.modelVersion !== PERMISSION_MODEL_VERSION
-          || raw.registryVersion !== registryVersion()
-          || raw.userId !== nextSession.user.id
-          || normalizeEmail(raw.email) !== normalizeEmail(nextSession.user.email)
-          || !raw.profile || raw.profile.active === false
-          || !raw.permissionVersion || !raw.verifiedAt
-          || !Array.isArray(raw.knownScreenKeys)) return null;
-      const permissions = normalizePermissions(
-        Object.entries(raw.permissions || {}).map(([screen_key, value]) => ({
-          screen_key,
-          allowed: value && value.allowed,
-          source: value && value.source,
-          role_code: value && value.roleCode,
-          effect: value && value.effect,
-        }))
-      );
-      if (!permissions) return null;
-      return {
-        profile: raw.profile,
-        access: {
-          modelVersion: raw.modelVersion,
-          permissionVersion: raw.permissionVersion,
-          verifiedAt: raw.verifiedAt,
-          baseRole: raw.profile.baseRole || raw.profile.role || null,
-          permissions,
-          cached: true,
-        },
-      };
-    } catch (e) {
-      clearStoredAccess();
-      return null;
-    }
-  }
   function applyResolved(nextProfile, nextAccess, state) {
     profile = nextProfile ? { ...nextProfile, baseRole: nextAccess ? nextAccess.baseRole : null } : null;
     access = nextAccess;
@@ -199,19 +124,13 @@
           && remote.snapshot.profile) {
         const nextProfile = normalizeProfile(remote.snapshot.profile, session.user.email);
         applyResolved(nextProfile, remote.snapshot.access, 'remote');
-        saveAccess(profile, access, session);
       } else if (remote.snapshot && remote.snapshot.profileStatus === 'user_inactive') {
-        clearStoredAccess();
         applyResolved(null, null, 'user_inactive');
       } else if (remote.snapshot && remote.snapshot.profileStatus === 'profile_missing') {
-        clearStoredAccess();
         applyResolved(null, null, 'profile_missing');
       } else if (isRemoteUnavailable(remote.error)) {
-        const cached = cachedAccess(session);
-        if (cached) applyResolved(cached.profile, cached.access, 'offline_cache');
-        else applyResolved(null, null, 'remote_unavailable');
+        applyResolved(null, null, 'remote_unavailable');
       } else {
-        clearStoredAccess();
         applyResolved(null, null, 'permissions_unavailable');
       }
     }
@@ -224,7 +143,7 @@
     const m = String(msg || '').toLowerCase();
     if (m.includes('invalid login')) return 'Correo o contraseña incorrectos';
     if (m.includes('email not confirmed')) return 'La cuenta aún no está confirmada';
-    if (m.includes('failed to fetch') || m.includes('network')) return 'Sin conexión con la nube';
+    if (m.includes('failed to fetch') || m.includes('network')) return 'Sin conexión. BALAM necesita internet para continuar.';
     return msg || 'No se pudo iniciar sesión';
   }
   async function init() {
@@ -253,7 +172,7 @@
   }
   async function login(email, password) {
     const c = await client();
-    if (!c) return { ok: false, error: 'Sin conexión con la nube' };
+    if (!c) return { ok: false, error: 'Sin conexión. BALAM necesita internet para continuar.' };
     try {
       const { data, error } = await c.auth.signInWithPassword({
         email: String(email).trim(), password: String(password),
@@ -291,7 +210,7 @@
     emit();
   }
   async function refreshPermissions() {
-    if (!session || !profile) return false;
+    if (!session) return false;
     const seq = ++resolveSeq;
     const c = await client();
     if (!c || seq !== resolveSeq) return false;
@@ -303,22 +222,17 @@
         && remote.snapshot.profile) {
       const nextProfile = normalizeProfile(remote.snapshot.profile, session.user.email);
       applyResolved(nextProfile, remote.snapshot.access, 'remote');
-      const persisted = saveAccess(profile, access, session);
       ready = true;
       emit();
-      return persisted;
+      return true;
     }
     if (remote.snapshot && remote.snapshot.profileStatus === 'user_inactive') {
-      clearStoredAccess();
       applyResolved(null, null, 'user_inactive');
     } else if (remote.snapshot && remote.snapshot.profileStatus === 'profile_missing') {
-      clearStoredAccess();
       applyResolved(null, null, 'profile_missing');
-    } else if (isRemoteUnavailable(remote.error) && access) {
-      access = { ...access, cached: true };
-      accessState = 'offline_cache';
+    } else if (isRemoteUnavailable(remote.error)) {
+      applyResolved(null, null, 'remote_unavailable');
     } else {
-      clearStoredAccess();
       access = null;
       accessState = 'permissions_unavailable';
     }
@@ -333,8 +247,8 @@
   function permissionReason(screenKey) {
     const screen = registeredScreen(screenKey);
     if (!screen) return { code: 'unknown_screen', allowed: false, cached: false };
-    if (localDevelopmentMode() && !session) {
-      return { code: 'local_development', allowed: screen.enabled !== false, cached: false };
+    if (accessState === 'remote_unavailable' || accessState === 'permissions_unavailable') {
+      return { code: accessState, allowed: false, cached: false };
     }
     if (accessState === 'profile_missing') {
       return { code: 'profile_missing', allowed: false, cached: false };
@@ -403,5 +317,6 @@
     init, login, logout, current, role, isAdmin,
     canAccess, requireAccess, allowedScreens, defaultScreen,
     permissionReason, refreshPermissions, hasSession, isReady,
+    get accessState() { return accessState; },
   };
 })();

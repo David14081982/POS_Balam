@@ -15,24 +15,25 @@ como fuente.**
 Son artefactos. Se modifica `balam/` y se regeneran con `node build-offline.mjs`.
 Origen: `AGENTS.md` · Decisión: `ADR-008`
 
-**R-CLI-02 · BLOCKING · Cero red en runtime y en el build normal.**
+**R-CLI-02 · BLOCKING · Recursos ejecutables locales y build normal sin red.**
 Ni CDN, ni descargas dinámicas, ni dependencias sin fijar. La actualización
 deliberada del almacén de recursos requiere `BALAM_REFRESH_BUILD_RESOURCES=1` y
-revisión del diff.
+revisión del diff. Esto no prohíbe la red comercial: Supabase es obligatorio
+para operar conforme a `ADR-015`.
 Origen: H-20, H-27, H-28 · Decisión: `ADR-007`
 
-**R-CLI-03 · BLOCKING · La acción local funciona sin conexión y deja una
-operación recuperable e idempotente.**
-Toda operación se encola **antes** de intentar enviarse; sale de la cola sólo
-tras éxito remoto.
-Origen: `docs/02-architecture.md` § Contratos que no deben romperse ·
-Decisión: `ADR-006`
+**R-CLI-03 · BLOCKING · Una operación comercial requiere confirmación remota.**
+Solicitud → Supabase/RPC → confirmación → lectura autoritativa → UI → éxito.
+Sin conexión no se crea operación, cola, efecto ni comprobante. El contrato
+local-first anterior de esta regla queda reemplazado por `ADR-015`.
+Origen: H-164 · `docs/02-architecture.md` § Contratos que no deben romperse
 
-**R-CLI-04 · REQUIRED · Un pull no pisa cambios locales pendientes, y una
-página llena nunca es fin de conjunto.**
-Toda lectura que reconstruye un conjunto completo pagina explícitamente y
-mantiene orden estable; un error intermedio impide aplicar un resultado parcial.
-Origen: H-13, H-16
+**R-CLI-04 · REQUIRED · La proyección remota y el borrador son estados separados.**
+Una lectura completa válida sustituye la proyección, incluido un conjunto vacío;
+no confirma ni descarta el borrador. Un error no aplica una respuesta parcial.
+Si una lectura necesita páginas, demuestra cobertura y orden estable antes de
+aplicar; una página llena nunca significa fin del conjunto.
+Origen: H-13, H-16; contrato offline reemplazado por H-164 / `ADR-015`
 
 **R-CLI-05 · REQUIRED · `DATA`, `CONFIG` y `AUTH` no referencian `window.STORE`.**
 Sólo el gateway de `CORE`. `STORE → DATA/CONFIG/AUTH` queda como dependencia

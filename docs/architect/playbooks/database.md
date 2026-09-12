@@ -82,9 +82,12 @@ dominio dentro de la misma transacción. Decisión: `ADR-012`
 protocolo, época y versión esperada en PostgreSQL.** El cliente no es defensa;
 una versión anterior se rechaza y conserva para cuarentena. Origen: H-77
 
-**R-DB-13 · REQUIRED · Una evolución incompatible actualiza el manifiesto y
-trae migración de cola o rebootstrap explícito.** Un campo ausente en un cliente
-anterior no borra el valor vigente. Decisión: `ADR-012`
+**R-DB-13 · REQUIRED · Una evolución incompatible declara contrato y transición.**
+Verificar cliente y servidor, activar el cerco de versiones anteriores y
+reconstruir desde autoridad remota. Inventariar y archivar evidencia legacy antes
+de retirar su origen, sin migrarla a otra cola ni reproducirla. Un campo ausente
+en un cliente anterior no borra el valor vigente. `ADR-015` reemplaza la
+obligación anterior de migración de cola o rebootstrap de `ADR-012`.
 
 ---
 
