@@ -7634,7 +7634,7 @@ adopción de puestos físicos ausentes no certificados.
 
 ## H-167 — Abrir Etiquetas bloquea el navegador con lotes grandes
 
-**Estado:** PARCIALMENTE RESUELTO — bloqueo corregido y verificado; publicación pendiente.
+**Estado:** PARCIALMENTE RESUELTO — bloqueo corregido, publicado y verificado.
 **Fecha:** 12/09/2026.
 **Commit técnico:** `fdb74b6c24587266feb5e6a808e8cfde71ef0c6f`.
 **Origen:** el usuario reporta más de diez minutos sin respuesta al abrir
@@ -7662,7 +7662,10 @@ garantías y completitud; logs y baselines enlazados en el documento.
 `e0d1abbd98ca207143a20e5a376b8c550af41967f67feae80de3d3ac751c837c`.
 **Riesgo residual:** upload real, flota A/B/C y hardware NO CERTIFICADO;
 transporte controlado en pruebas, sin escrituras remotas ni migraciones.
-Cada instalación requiere el cliente nuevo. Publicación pendiente: la revisión
-automática rechazó el push a main por requerir autorización explícita para
-desplegar a producción. No se modificó la web ni se intentó por otra vía.
+Cada instalación requiere el cliente nuevo.
+**Despliegue:** autorizado explícitamente por el usuario el 12/09/2026; push a
+main del commit `34995b2767c4434f012844fc6fade7fc22faaea1`. Actions 34721040537:
+regresiones y Pages SUCCESS. Ambos HTML y `sw.js` públicos coinciden byte a byte
+con el commit. Evidencia: `docs/fixes/evidence/h167-publication.json` y
+`docs/fixes/evidence/h167-workflow.json`. Sin certificación live en este workflow.
 **Documento:** `docs/fixes/apertura-etiquetas-sin-bloqueo-h167.md`.

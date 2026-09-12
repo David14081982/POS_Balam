@@ -13,8 +13,10 @@ sesión de chat.
 
 ## Correcciones registradas
 
-- `apertura-etiquetas-sin-bloqueo-h167.md` — H-167: preparación de etiquetas
-  cancelable, índice efímero de identidad y guardián de coste y garantías.
+- [apertura-etiquetas-sin-bloqueo-h167.md](apertura-etiquetas-sin-bloqueo-h167.md) —
+  H-167: corrección del bloqueo PUBLICADA, CI y archivos públicos verificados.
+  Preparación cancelable, índice efímero y guardián de coste y garantías.
+  Guardado real, A/B/C y hardware NO CERTIFICADO.
 
 - [navegacion-online-h166.md](navegacion-online-h166.md) — H-166, CERRADO Y PUBLICADO;
   HTML/SW verificados por hash. Proyección por revisión, POS progresivo, lecturas

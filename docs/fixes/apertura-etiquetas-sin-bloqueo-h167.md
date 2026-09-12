@@ -1,9 +1,10 @@
 # Apertura de etiquetas sin bloquear el navegador
 
 **Riesgo:** H-167
-**Estado:** PARCIALMENTE RESUELTO — corrección del bloqueo verificada; publicación pendiente. Guardado real y flota NO CERTIFICADO.
+**Estado:** PARCIALMENTE RESUELTO — corrección del bloqueo publicada y verificada. Guardado real y flota NO CERTIFICADO.
 **Fecha:** 12/09/2026
 **Commit técnico:** `fdb74b6c24587266feb5e6a808e8cfde71ef0c6f`
+**Commit desplegado:** `34995b2767c4434f012844fc6fade7fc22faaea1`
 
 ## Problema y reproducción
 
@@ -134,15 +135,23 @@ HTML final, ambos archivos:
 HTML preliminar de las dos regresiones H-99:
 `c4a05f90d3b3897a8428ce43a4fbaa44bd9b2ec9eca657ef43512e4c8cc21101`.
 La diferencia final es la invalidación selectiva, probada en lifecycle y en las
-pruebas H-164 repetidas. El commit técnico está creado localmente; ejecución
-Pages y comparación pública pendientes.
+pruebas H-164 repetidas.
 
-La revisión automática rechazó `git push origin HEAD:main`: considera que el
-reporte y las instrucciones generales no autorizan explícitamente publicar en
-la rama principal y desplegar a producción. La operación no se ejecutó y no se
-intentó por otra vía. Se requiere autorización explícita del usuario para ese
-destino antes de publicar. Código, documentación, baseline y workflow están
-preparados para continuar desde este commit.
+El usuario autorizó explícitamente publicar, hacer commit y push el 12/09/2026,
+superando el bloqueo previo de autorización. Se envió `34995b2` a `main` y el
+[workflow 34721040537](https://github.com/David14081982/POS_Balam/actions/runs/34721040537)
+terminó con regresiones y despliegue Pages en SUCCESS. Incluye las tres pruebas
+H-167 sobre el cliente final y la comprobación de que el build coincide con el
+artefacto del commit. La certificación live no se ejecutó.
+
+Se descargaron desde [la web publicada](https://david14081982.github.io/POS_Balam/)
+`index.html`, `POS Balam (offline).html` y `sw.js`, con HTTP 200. Los tres coinciden
+byte a byte tanto con los archivos locales probados como con los blobs del
+commit desplegado. Ambos HTML tienen el SHA-256 final indicado arriba; `sw.js`:
+`0964802f86f73d3de000943ae9f8a2f67e4f266eb5601bf32cba0a60c84bc08b`.
+La evidencia conserva fecha UTC, URLs exactas, tamaños, hashes y alcance:
+[`h167-publication.json`](evidence/h167-publication.json) y
+[`h167-workflow.json`](evidence/h167-workflow.json).
 
 ## Riesgo residual y pendientes
 

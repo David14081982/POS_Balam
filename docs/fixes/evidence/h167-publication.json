@@ -1,0 +1,54 @@
+{
+  "story": "H-167",
+  "verifiedAt": "2026-09-12T21:53:46.835Z",
+  "technicalCommit": "fdb74b6c24587266feb5e6a808e8cfde71ef0c6f",
+  "publishedCommit": "34995b2767c4434f012844fc6fade7fc22faaea1",
+  "authorization": "User explicitly requested publication, commit and push on 2026-09-12.",
+  "workflow": {
+    "id": "34721040537",
+    "url": "https://github.com/David14081982/POS_Balam/actions/runs/34721040537",
+    "conclusion": "success",
+    "regression": "success",
+    "deploy": "success"
+  },
+  "site": "https://david14081982.github.io/POS_Balam/",
+  "files": [
+    {
+      "file": "index.html",
+      "url": "https://david14081982.github.io/POS_Balam/index.html?verify=h167-1789250018739",
+      "status": 200,
+      "expectedBytes": 8979502,
+      "publishedBytes": 8979502,
+      "committedSha256": "e0d1abbd98ca207143a20e5a376b8c550af41967f67feae80de3d3ac751c837c",
+      "publishedSha256": "e0d1abbd98ca207143a20e5a376b8c550af41967f67feae80de3d3ac751c837c",
+      "match": true
+    },
+    {
+      "file": "POS Balam (offline).html",
+      "url": "https://david14081982.github.io/POS_Balam/POS%20Balam%20(offline).html?verify=h167-1789250023641",
+      "status": 200,
+      "expectedBytes": 8979502,
+      "publishedBytes": 8979502,
+      "committedSha256": "e0d1abbd98ca207143a20e5a376b8c550af41967f67feae80de3d3ac751c837c",
+      "publishedSha256": "e0d1abbd98ca207143a20e5a376b8c550af41967f67feae80de3d3ac751c837c",
+      "match": true
+    },
+    {
+      "file": "sw.js",
+      "url": "https://david14081982.github.io/POS_Balam/sw.js?verify=h167-1789250026715",
+      "status": 200,
+      "expectedBytes": 4477,
+      "publishedBytes": 4477,
+      "committedSha256": "0964802f86f73d3de000943ae9f8a2f67e4f266eb5601bf32cba0a60c84bc08b",
+      "publishedSha256": "0964802f86f73d3de000943ae9f8a2f67e4f266eb5601bf32cba0a60c84bc08b",
+      "match": true
+    }
+  ],
+  "exactPublishedBytes": true,
+  "scope": {
+    "publishedArtifact": true,
+    "realSupabaseUpload": false,
+    "independentABC": false,
+    "physicalHardware": false
+  }
+}
