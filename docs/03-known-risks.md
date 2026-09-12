@@ -7429,3 +7429,37 @@ IndexedDB ni convergencia real. Cero solicitudes externas permitidas y cero
 escrituras comerciales remotas; adopción en la terminal del usuario pendiente.
 **Certificación:** NO CERTIFICADO — A/B/C real opcional conforme a H-162.
 **Documento:** `docs/fixes/flujo-excel-inventario-h163.md`.
+
+## H-164 — Estados de equipos y recuperación sin salida operativa
+
+**Estado:** ABIERTO — diagnóstico y evaluación arquitectónica completados;
+corrección y adopción física pendientes. **Certificación:** NO CERTIFICADO.
+**Fecha:** 11/09/2026, Hermosillo. **Commit:** Pendiente de commit.
+**Origen:** 14 equipos reportados frente a tres puestos operativos, cola 1/1
+después de Punto Cero, actualización de cliente mal indicada y diálogo invisible.
+**Evidencia actual:** Pages H163 SHA-256
+`a68d115f9771c648d5ee3a17a79302ba7e5dd35ca580843debb4e4301b4061e0`.
+Supabase leído el 12/09/2026 a las 05:03:47 UTC: 14 instalaciones, 13 retiradas,
+una no retirada; tres IDs QA. La no retirada declara 1 pendiente/1 bloqueado,
+`must_rebootstrap`, `reactivation_requires_sync=true`, protocolo/esquema
+compatibles y rechazo de inventario «Este equipo debe actualizar su información
+antes de guardar.». No se inspeccionó su cola física ni se probó que fuera fantasma.
+**Causas respaldadas:** la guarda SQL impide escribir antes de reconstruir;
+el heartbeat exige cola cero para liberar la reactivación; la intención pendiente
+impide aplicar el dominio durante la reconstrucción. El Centro suma historia y
+retirados; el cliente ignora el ACK `false` del retiro y clasifica ese rechazo
+como reintentable. Mensajes mezclan build, protocolo, época y recuperación.
+PWA detecta como abierto el drawer cerrado de Inventario/Clientes.
+**Pruebas:** lectura remota sin escrituras; sonda de funciones reales con
+transporte sintético; Chromium en el HTML H163 demuestra dos bloqueos falsos
+en cuatro estados; H155 23/23 y H151 12/12 existentes pasan sin cubrirlos.
+**Diseño propuesto:** cerrar primero identidad, aceptación de heartbeat,
+recuperación conservando intención y guardas reales. Cloud-first para confirmar
+operaciones es preferible si se acepta detenerlas sin red; conservar caché de
+lectura/borradores. Online-only integral no muestra beneficio adicional medido.
+**Cambios entregados:** documentación y evidencia; sin cambios de aplicación,
+SQL, datos, cola o política offline. **Despliegue:** ninguno.
+**Pendientes y residual:** corregir y probar el ciclo con la intención original,
+medir el valor de offline, decidir su contrato y certificar A/B/C real sobre el
+artefacto final, incluida adopción de los tres puestos. H156 sigue independiente.
+**Documento:** `docs/fixes/evaluacion-arquitectura-sincronizacion-h164.md`.

@@ -1,0 +1,284 @@
+{
+  "risk": "H-164",
+  "status": "EVALUATION COMPLETE; DEFECTS OPEN; NO DISTRIBUTED CERTIFICATION",
+  "baseCommit": "9c70ac2",
+  "businessWrites": 0,
+  "applicationChanges": 0,
+  "artifact": {
+    "sha256": "a68d115f9771c648d5ee3a17a79302ba7e5dd35ca580843debb4e4301b4061e0",
+    "publicURL": "https://david14081982.github.io/POS_Balam/",
+    "publicReadAt": "2026-09-12T04:56:19.842Z",
+    "httpStatus": 200,
+    "bytes": 9075086
+  },
+  "remote": {
+    "readAt": "2026-09-12T05:03:47.246Z",
+    "scope": "server telemetry only; no browser storage read; latest 20 activity records per installation reporting pending",
+    "summary": {
+      "total": 14,
+      "retired": 13,
+      "notRetired": 1,
+      "qaNamed": 3,
+      "withReportedPending": 1
+    },
+    "manifest": [
+      {
+        "singleton": true,
+        "data_epoch": 10,
+        "system_mode": "preproduction",
+        "schema_version": 20260830017500,
+        "sync_protocol_min": 3,
+        "sync_protocol_current": 3,
+        "minimum_client_build": null
+      }
+    ],
+    "affectedInstallation": {
+      "status": "must_rebootstrap",
+      "epochReported": 10,
+      "pending": 1,
+      "blocked": 1,
+      "lastSeen": "2026-09-12T05:03:43.822616+00:00",
+      "reactivationRequiresSync": "true"
+    },
+    "incident": {
+      "operationType": "upsert",
+      "domain": "products",
+      "status": "quarantined",
+      "code": "P0001",
+      "category": "compatibility",
+      "policy": "rebootstrap",
+      "message": "Este equipo debe actualizar su información antes de guardar.",
+      "firstRemoteObservation": "2026-09-12T02:49:57.604359+00:00"
+    },
+    "limitations": [
+      "Local durable queue and payload not inspected",
+      "Heartbeat epoch derives from server manifest, not local reconstruction proof",
+      "First remote observation is not local capture time",
+      "Reads are not an atomic cross-table snapshot"
+    ]
+  },
+  "ui": {
+    "at": "2026-09-12T05:00:54.686Z",
+    "artifactSha256": "a68d115f9771c648d5ee3a17a79302ba7e5dd35ca580843debb4e4301b4061e0",
+    "cases": [
+      {
+        "id": "dashboard",
+        "header": "Panel de control",
+        "safety": {
+          "safe": true,
+          "reason": ""
+        },
+        "activity": {
+          "active": 0,
+          "domains": {}
+        },
+        "queue": "localStorage",
+        "dialogs": []
+      },
+      {
+        "id": "inventario",
+        "header": "Inventario",
+        "safety": {
+          "safe": false,
+          "reason": "Cierra el diálogo abierto antes de actualizar."
+        },
+        "activity": {
+          "active": 0,
+          "domains": {}
+        },
+        "queue": "localStorage",
+        "dialogs": [
+          {
+            "label": "Detalle del producto",
+            "text": "",
+            "rect": {
+              "x": 1280,
+              "y": 0,
+              "width": 460,
+              "height": 900
+            },
+            "withinViewport": false,
+            "closeButtons": 0,
+            "transform": "matrix(1, 0, 0, 1, 460, 0)"
+          }
+        ]
+      },
+      {
+        "id": "clientes",
+        "header": "Clientes",
+        "safety": {
+          "safe": false,
+          "reason": "Cierra el diálogo abierto antes de actualizar."
+        },
+        "activity": {
+          "active": 0,
+          "domains": {}
+        },
+        "queue": "localStorage",
+        "dialogs": [
+          {
+            "label": "Detalle del cliente",
+            "text": "",
+            "rect": {
+              "x": 1280,
+              "y": 0,
+              "width": 460,
+              "height": 900
+            },
+            "withinViewport": false,
+            "closeButtons": 0,
+            "transform": "matrix(1, 0, 0, 1, 460, 0)"
+          }
+        ]
+      },
+      {
+        "id": "dashboard",
+        "header": "Panel de control",
+        "safety": {
+          "safe": true,
+          "reason": ""
+        },
+        "activity": {
+          "active": 0,
+          "domains": {}
+        },
+        "queue": "localStorage",
+        "dialogs": []
+      }
+    ],
+    "errors": [],
+    "externalBlocked": 6
+  },
+  "cycle": {
+    "at": "2026-09-12T05:06:30.529Z",
+    "mode": "actual-client-functions-synthetic-current-epoch-intent",
+    "networkReads": 0,
+    "networkWrites": 0,
+    "sourceSHA256": "6acd2605836b3ac99a7209da1a85270e86399fc2696359344a9b3fd7379db23b",
+    "sourceFunctions": [
+      "rebootstrapFromCloud",
+      "pullDomain",
+      "domainBlocked",
+      "operationAffectsDomain",
+      "hasPendingFor",
+      "classifyFailure",
+      "isArchivableProductRejection"
+    ],
+    "attempts": [
+      {
+        "error": "REBOOTSTRAP_DOMAIN_INCOMPLETE:products",
+        "domain": "products",
+        "result": {
+          "ok": true,
+          "complete": false,
+          "applied": false,
+          "skipped": "pending"
+        }
+      },
+      {
+        "error": "REBOOTSTRAP_DOMAIN_INCOMPLETE:products",
+        "domain": "products",
+        "result": {
+          "ok": true,
+          "complete": false,
+          "applied": false,
+          "skipped": "pending"
+        }
+      }
+    ],
+    "metrics": {
+      "writeAttempts": 2,
+      "archived": 0,
+      "productFetches": 0,
+      "checkpointWrites": 0
+    },
+    "remainingIntent": {
+      "count": 1,
+      "epoch": 10,
+      "status": "quarantined",
+      "policy": "rebootstrap",
+      "autoArchivable": false
+    },
+    "conclusion": "Retrying recovery does not break the pending-write / reactivation-proof cycle.",
+    "limitations": "SQL denial is a transport fixture grounded in observed server diagnostics; one products domain isolates the blocking subgraph. This does not inspect local payload, prove the actual intent creation date or certify a repair."
+  },
+  "mechanism": {
+    "checkedAt": "2026-09-12T05:00:53.691Z",
+    "mode": "synthetic-in-memory-actual-functions",
+    "productionReads": 0,
+    "productionWrites": 0,
+    "userProfileReads": 0,
+    "limitations": "These checks reproduce client mechanisms; they do not diagnose the current physical device or certify distributed convergence.",
+    "sourceSHA256": {
+      "core.jsx": "1b8b0673378831d8d78e4bc0c2c15f4f8f77250134849611d6da263dc34f73d4",
+      "store.jsx": "6acd2605836b3ac99a7209da1a85270e86399fc2696359344a9b3fd7379db23b",
+      "settings.jsx": "61390c84fc870d76c9349c1b1292b4849ed61e66c980875bf51046134377bf16"
+    },
+    "identity": {
+      "function": "CORE.getDeviceId",
+      "sameStorageReloadStable": true,
+      "differentStorageCreatesDifferentInstallation": true,
+      "clearedStorageCreatesDifferentInstallation": true,
+      "unavailableStorageStableWithinPageOnly": true,
+      "hardwareIdentityExists": false
+    },
+    "fleet": {
+      "function": "STORE.syncFleetStatus",
+      "syntheticActive": 3,
+      "syntheticRetired": 11,
+      "returnedRegisteredCount": 14,
+      "retiredIncludedInDefaultList": true,
+      "staleRetiredCounts": {
+        "pending": 1,
+        "blocked": 1
+      },
+      "staleRetiredIncidentStillActionable": true,
+      "expected": "Distinguish operating devices, historical installations, and unverified stale counters."
+    },
+    "retiredHeartbeat": {
+      "functions": [
+        "STORE.heartbeatDevice",
+        "STORE.syncStatus"
+      ],
+      "simulatedServerResponse": {
+        "data": false,
+        "error": null
+      },
+      "actual": {
+        "synchronized": true,
+        "compatibility": "ok",
+        "lastSuccessRecorded": true,
+        "emittedSynchronized": true
+      },
+      "expected": "A rejected retired-device heartbeat must not produce a successful operational synchronization status.",
+      "serverContract": "20260910019800_pos_h154_device_retirement.sql:678 returns false for revoked; :585 rejects business writes with DEVICE_RETIRED."
+    },
+    "retiredWriteClassification": {
+      "function": "STORE.classifyFailure",
+      "serverCode": "P0001",
+      "serverDetail": "DEVICE_RETIRED",
+      "actual": {
+        "category": "unknown",
+        "status": "retry_wait",
+        "policy": "auto_retry",
+        "retryable": true
+      },
+      "expected": "Administrative retirement is a non-transient device state requiring an explicit administrative recovery action."
+    },
+    "status": "CLIENT DEFECT MECHANISMS REPRODUCED; NO FIX APPLIED; DISTRIBUTED CERTIFICATION NOT RUN"
+  },
+  "existingRegressions": [
+    {
+      "command": "node test-h155-auto-sync.mjs",
+      "passed": 23,
+      "failed": 0,
+      "transport": "synthetic"
+    },
+    {
+      "command": "node test-h151-cleanup-propagation.mjs",
+      "passed": 12,
+      "failed": 0,
+      "transport": "synthetic"
+    }
+  ]
+}

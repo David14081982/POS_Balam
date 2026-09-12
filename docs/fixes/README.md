@@ -13,6 +13,11 @@ sesión de chat.
 
 ## Correcciones registradas
 
+- `evaluacion-arquitectura-sincronizacion-h164.md` — H-164, ABIERTO:
+  diagnóstico de flota, ciclo de reactivación y actualización bloqueada;
+  comparación local-first/cloud-first/online-only. Evaluación entregada,
+  sin corrección funcional ni certificación distribuida.
+
 - `flujo-excel-inventario-h163.md` — H-163, RESUELTO Y PUBLICADO:
   plantilla V2, mensajes por causa y reimportación sin escrituras
   innecesarias; E2E final sintético 37/37 y archivo de 973 referencias 14/14.
