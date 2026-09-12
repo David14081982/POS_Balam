@@ -3,7 +3,7 @@
 **Riesgo:** H-166; QA-NAV-01, QA-BRAND-01, QA-BRAND-02.
 **Estado:** VERIFICADO: QA-NAV-01, QA-BRAND-01 y QA-BRAND-02 corregidos; publicación pendiente.
 **Fecha:** 12/09/2026, Hermosillo.
-**Commit:** Pendiente de commit.
+**Commit técnico:** `69b5054d4696cfe9d99d679d1da1714949f4a380`.
 
 ## Problema y reproducción
 
