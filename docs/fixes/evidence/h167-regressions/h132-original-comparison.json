@@ -1,0 +1,13 @@
+{
+  "sameBrowser": true,
+  "resultsIdentical": true,
+  "currentCatalogEmpty": true,
+  "originalCatalogEmpty": true,
+  "originalSha256": "c6ae29060f3a56dd6aadfa8e01858d98750b495704379b18013d979c5407593e",
+  "currentIssues": [
+    "BARCODE_UNRESOLVED"
+  ],
+  "originalIssues": [
+    "BARCODE_UNRESOLVED"
+  ]
+}

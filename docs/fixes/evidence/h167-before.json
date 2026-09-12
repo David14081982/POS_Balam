@@ -1,0 +1,452 @@
+{
+  "story": "H-167",
+  "at": "2026-09-12T21:04:44.748Z",
+  "reason": "Línea base exacta main89d2789 antes de H167; mismo DATA snapshot y CONFIG confirmado; sólo apertura100/300",
+  "artifact": {
+    "path": "C:\\Users\\david\\Downloads\\POS-BALAM-ticket-h134\\.h167-baseline\\index.html",
+    "sha256": "6759af519a2cc451d3b203afaf3bde5c46d2ebae53870d1644a8e8caf2894c81"
+  },
+  "environment": {
+    "browser": "Chrome headless",
+    "viewport": "1280x850",
+    "network": "All external requests aborted",
+    "fixture": "V2, barcode contract 3, positive stock 2, size 40",
+    "version": "153.0.8010.37"
+  },
+  "measurements": [
+    {
+      "count": 100,
+      "phase": "open",
+      "completed": true,
+      "completionKind": "PDF-ready",
+      "modalMs": 3146,
+      "completeMs": 19436,
+      "cost": {
+        "sizeResolutions": 300,
+        "certifications": 200,
+        "modelChecks": 40600,
+        "barcodeRenders": 500,
+        "productArrayReads": 401,
+        "publicResolve": 200,
+        "pngImages": 100,
+        "pngRasters": 100,
+        "jpegBlobRasters": 100
+      },
+      "maxLongTaskMs": 1787,
+      "pngUnique": 100,
+      "guarantee": {
+        "productsUnchanged": true,
+        "certifiedAll": true,
+        "wholeBatch": true,
+        "previewCount": true,
+        "previewPrice": true,
+        "outputsEnabled": true
+      }
+    },
+    {
+      "count": 300,
+      "phase": "open",
+      "completed": true,
+      "completionKind": "whole-batch-prepared",
+      "modalMs": 14093,
+      "completeMs": 14132,
+      "cost": {
+        "sizeResolutions": 600,
+        "certifications": 300,
+        "modelChecks": 180900,
+        "barcodeRenders": 900,
+        "productArrayReads": 601,
+        "publicResolve": 300,
+        "pngImages": 300,
+        "pngRasters": 300,
+        "jpegBlobRasters": 6
+      },
+      "maxLongTaskMs": 12687,
+      "pngUnique": 300,
+      "guarantee": {
+        "productsUnchanged": true,
+        "certifiedAll": true,
+        "wholeBatch": true,
+        "previewCount": true,
+        "previewPrice": true,
+        "outputsEnabled": true
+      }
+    }
+  ],
+  "guarantees": [
+    {
+      "invalid": "contract",
+      "pngImages": 0,
+      "previewAbsent": true,
+      "downloadDisabled": true,
+      "printDisabled": true,
+      "productsUnchanged": true
+    },
+    {
+      "invalid": "duplicate",
+      "pngImages": 0,
+      "previewAbsent": true,
+      "downloadDisabled": true,
+      "printDisabled": true,
+      "productsUnchanged": true
+    },
+    {
+      "invalid": "legacy",
+      "pngImages": 0,
+      "previewAbsent": true,
+      "downloadDisabled": true,
+      "printDisabled": true,
+      "productsUnchanged": true
+    }
+  ],
+  "checks": [
+    {
+      "name": "100/open/productsUnchanged",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "100/open/certifiedAll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "100/open/wholeBatch",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "100/open/previewCount",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "100/open/previewPrice",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "100/open/outputsEnabled",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "100/open/bounded-work",
+      "ok": false,
+      "detail": "40600 revisiones de modelo; presupuesto 5000"
+    },
+    {
+      "name": "300/open/productsUnchanged",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "300/open/certifiedAll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "300/open/wholeBatch",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "300/open/previewCount",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "300/open/previewPrice",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "300/open/outputsEnabled",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "300/open/bounded-work",
+      "ok": false,
+      "detail": "180900 revisiones de modelo; presupuesto 15000"
+    },
+    {
+      "name": "300/cancel",
+      "ok": true,
+      "detail": "985 ms"
+    },
+    {
+      "name": "blocked/contract",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "blocked/duplicate",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "blocked/legacy",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "previousRuns": [
+    {
+      "source": "Initial bounded execution output",
+      "note": "Historical run against the older root artifact, preserved from execution output; not the primary same-DATA comparison.",
+      "summary": {
+        "passed": 39,
+        "failed": 1
+      },
+      "interrupted": [
+        {
+          "count": 300,
+          "phase": "open",
+          "completed": false,
+          "error": "300/open/PDF: timeout 45000ms"
+        }
+      ]
+    },
+    {
+      "at": "2026-09-12T20:50:07.201Z",
+      "summary": {
+        "passed": 10,
+        "failed": 1
+      },
+      "interrupted": []
+    },
+    {
+      "at": "2026-09-12T20:52:52.185Z",
+      "artifact": {
+        "path": "C:\\Users\\david\\Downloads\\POS-BALAM-ticket-h134\\index.html",
+        "sha256": "c2ebff3e1a18fa16275e525907b7a0de81e00a6028c570f4519f8567321fff80"
+      },
+      "summary": {
+        "passed": 22,
+        "failed": 2
+      },
+      "measurements": [
+        {
+          "count": 100,
+          "phase": "open",
+          "completed": true,
+          "modalMs": 4771,
+          "completeMs": 26431,
+          "cost": {
+            "sizeResolutions": 300,
+            "certifications": 200,
+            "modelChecks": 40600,
+            "barcodeRenders": 500,
+            "productArrayReads": 401,
+            "publicResolve": 200,
+            "pngImages": 100,
+            "pngRasters": 100
+          },
+          "maxLongTaskMs": 2690,
+          "pngUnique": 100,
+          "guarantee": {
+            "productsUnchanged": true,
+            "certifiedAll": true,
+            "wholeBatch": true,
+            "previewCount": true,
+            "previewPrice": true,
+            "outputsEnabled": true
+          }
+        },
+        {
+          "count": 100,
+          "phase": "stock",
+          "completed": true,
+          "modalMs": 2539,
+          "completeMs": 44581,
+          "cost": {
+            "sizeResolutions": 500,
+            "certifications": 400,
+            "modelChecks": 81200,
+            "barcodeRenders": 800,
+            "productArrayReads": 806,
+            "publicResolve": 400
+          },
+          "maxLongTaskMs": 742,
+          "pngUnique": 0,
+          "guarantee": {
+            "productsUnchanged": true,
+            "certifiedAll": true,
+            "wholeBatch": true,
+            "previewCount": true,
+            "previewPrice": true,
+            "outputsEnabled": true
+          }
+        },
+        {
+          "count": 100,
+          "phase": "price",
+          "completed": true,
+          "modalMs": 4262,
+          "completeMs": 45949,
+          "cost": {
+            "sizeResolutions": 300,
+            "certifications": 300,
+            "modelChecks": 60900,
+            "barcodeRenders": 600,
+            "productArrayReads": 601,
+            "publicResolve": 300
+          },
+          "maxLongTaskMs": 1357,
+          "pngUnique": 0,
+          "guarantee": {
+            "productsUnchanged": true,
+            "certifiedAll": true,
+            "wholeBatch": true,
+            "previewCount": true,
+            "previewPrice": true,
+            "outputsEnabled": true
+          }
+        },
+        {
+          "count": 300,
+          "phase": "open",
+          "completed": true,
+          "completionKind": "whole-batch-prepared",
+          "modalMs": 7010,
+          "completeMs": 7213,
+          "cost": {
+            "sizeResolutions": 600,
+            "certifications": 300,
+            "modelChecks": 180900,
+            "barcodeRenders": 900,
+            "productArrayReads": 601,
+            "publicResolve": 300,
+            "pngImages": 300,
+            "pngRasters": 300,
+            "jpegBlobRasters": 2
+          },
+          "maxLongTaskMs": 5677,
+          "pngUnique": 300,
+          "guarantee": {
+            "productsUnchanged": true,
+            "certifiedAll": true,
+            "wholeBatch": true,
+            "previewCount": true,
+            "previewPrice": true,
+            "outputsEnabled": true
+          }
+        },
+        {
+          "count": 10,
+          "phase": "open",
+          "completed": true,
+          "completionKind": "PDF-ready",
+          "modalMs": 1872,
+          "completeMs": 3161,
+          "cost": {
+            "sizeResolutions": 30,
+            "certifications": 20,
+            "modelChecks": 460,
+            "barcodeRenders": 50,
+            "productArrayReads": 41,
+            "publicResolve": 20,
+            "pngImages": 10,
+            "pngRasters": 10,
+            "jpegBlobRasters": 10
+          },
+          "maxLongTaskMs": 1005,
+          "pngUnique": 10,
+          "guarantee": {
+            "productsUnchanged": true,
+            "certifiedAll": true,
+            "wholeBatch": true,
+            "previewCount": true,
+            "previewPrice": true,
+            "outputsEnabled": true
+          }
+        },
+        {
+          "count": 10,
+          "phase": "stock",
+          "completed": true,
+          "completionKind": "PDF-ready",
+          "modalMs": 851,
+          "completeMs": 3431,
+          "cost": {
+            "sizeResolutions": 30,
+            "certifications": 30,
+            "modelChecks": 690,
+            "barcodeRenders": 60,
+            "productArrayReads": 61,
+            "publicResolve": 30,
+            "jpegBlobRasters": 20
+          },
+          "maxLongTaskMs": 227,
+          "pngUnique": 0,
+          "guarantee": {
+            "productsUnchanged": true,
+            "certifiedAll": true,
+            "wholeBatch": true,
+            "previewCount": true,
+            "previewPrice": true,
+            "outputsEnabled": true
+          }
+        },
+        {
+          "count": 10,
+          "phase": "price",
+          "completed": true,
+          "completionKind": "PDF-ready",
+          "modalMs": 554,
+          "completeMs": 3670,
+          "cost": {
+            "sizeResolutions": 30,
+            "certifications": 30,
+            "modelChecks": 690,
+            "barcodeRenders": 60,
+            "productArrayReads": 61,
+            "publicResolve": 30,
+            "jpegBlobRasters": 20
+          },
+          "maxLongTaskMs": 211,
+          "pngUnique": 0,
+          "guarantee": {
+            "productsUnchanged": true,
+            "certifiedAll": true,
+            "wholeBatch": true,
+            "previewCount": true,
+            "previewPrice": true,
+            "outputsEnabled": true
+          }
+        }
+      ],
+      "guarantees": [
+        {
+          "invalid": "contract",
+          "pngImages": 0,
+          "previewAbsent": true,
+          "downloadDisabled": true,
+          "printDisabled": true,
+          "productsUnchanged": true
+        },
+        {
+          "invalid": "duplicate",
+          "pngImages": 0,
+          "previewAbsent": true,
+          "downloadDisabled": true,
+          "printDisabled": true,
+          "productsUnchanged": true
+        },
+        {
+          "invalid": "legacy",
+          "pngImages": 0,
+          "previewAbsent": true,
+          "downloadDisabled": true,
+          "printDisabled": true,
+          "productsUnchanged": true
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "passed": 16,
+    "failed": 2
+  }
+}

@@ -1,0 +1,20 @@
+node : node:internal/modules/run_main:107
+En línea: 3 Carácter: 1
++ node test-h100-materialized-label-sku.mjs 2>&1 | Tee-Object -FilePath ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (node:internal/modules/run_main:107:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+    triggerUncaughtException(
+    ^
+
+page.evaluate: Error: La talla no pertenece a la familia seleccionada
+    at Object.createReference (blob:http://127.0.0.1:57408/fa1fb1e4-2624-419f-b31b-9d24591ce7b2:336:42)
+    at eval (eval at evaluate (:302:30), <anonymous>:19:51)
+    at Array.map (<anonymous>)
+    at eval (eval at evaluate (:302:30), <anonymous>:19:24)
+    at UtilityScript.evaluate (<anonymous>:304:16)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+    at C:\Users\david\Downloads\POS-BALAM-ticket-h134\.h161-release\test-h100-materialized-label-sku.mjs:42:30
+
+Node.js v24.14.0

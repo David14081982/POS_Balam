@@ -1,0 +1,1071 @@
+{
+  "story": "H-167",
+  "at": "2026-09-12T21:18:06.366Z",
+  "reason": "H167 verificado: índice efímero y preparación cooperativa; certificación y PNG estrictos; PDF completo de 20 y 200 páginas; presupuestos lineales 10N/4N para commits React",
+  "artifact": {
+    "path": "C:\\Users\\david\\Downloads\\POS-BALAM-ticket-h134\\.h161-release\\index.html",
+    "sha256": "e0d1abbd98ca207143a20e5a376b8c550af41967f67feae80de3d3ac751c837c"
+  },
+  "environment": {
+    "browser": "Chrome headless",
+    "viewport": "1280x850",
+    "network": "All external requests aborted",
+    "fixture": "V2, barcode contract 3, positive stock 2, size 40",
+    "version": "153.0.8010.37"
+  },
+  "costPolicy": {
+    "strict": [
+      "certifications",
+      "publicResolve",
+      "productArrayReads",
+      "pngImages",
+      "barcodeRenders",
+      "jpegBlobRasters for completed PDF"
+    ],
+    "bounded": "modelChecks <= 10N and sizeResolutions <= 4N accommodate React commit counts; costly scans/renders remain strict",
+    "observations": "Wall times, long tasks and JPEG work before cancellation at 300 are observations; productArrayReads includes one fixture-snapshot observation per measurement",
+    "pdfTimeoutMs": 120000
+  },
+  "measurements": [
+    {
+      "count": 10,
+      "phase": "open",
+      "completed": true,
+      "completionKind": "PDF-ready",
+      "modalMs": 472,
+      "completeMs": 2512,
+      "cost": {
+        "sizeResolutions": 20,
+        "productArrayReads": 3,
+        "modelChecks": 60,
+        "certifications": 10,
+        "barcodeRenders": 20,
+        "pngImages": 10,
+        "pngRasters": 10,
+        "jpegBlobRasters": 10
+      },
+      "maxLongTaskMs": 207,
+      "pngUnique": 10,
+      "guarantee": {
+        "productsUnchanged": true,
+        "certifiedAll": true,
+        "wholeBatch": true,
+        "previewCount": true,
+        "previewPrice": true,
+        "outputsEnabled": true
+      }
+    },
+    {
+      "count": 10,
+      "phase": "stock",
+      "completed": true,
+      "completionKind": "PDF-ready",
+      "modalMs": 204,
+      "completeMs": 1425,
+      "cost": {
+        "modelChecks": 30,
+        "jpegBlobRasters": 10,
+        "productArrayReads": 1
+      },
+      "maxLongTaskMs": 120,
+      "pngUnique": 0,
+      "guarantee": {
+        "productsUnchanged": true,
+        "certifiedAll": true,
+        "wholeBatch": true,
+        "previewCount": true,
+        "previewPrice": true,
+        "outputsEnabled": true
+      }
+    },
+    {
+      "count": 10,
+      "phase": "price",
+      "completed": true,
+      "completionKind": "PDF-ready",
+      "modalMs": 328,
+      "completeMs": 1355,
+      "cost": {
+        "modelChecks": 30,
+        "jpegBlobRasters": 10,
+        "productArrayReads": 1
+      },
+      "maxLongTaskMs": 159,
+      "pngUnique": 0,
+      "guarantee": {
+        "productsUnchanged": true,
+        "certifiedAll": true,
+        "wholeBatch": true,
+        "previewCount": true,
+        "previewPrice": true,
+        "outputsEnabled": true
+      }
+    },
+    {
+      "count": 100,
+      "phase": "open",
+      "completed": true,
+      "completionKind": "PDF-ready",
+      "modalMs": 252,
+      "completeMs": 23134,
+      "cost": {
+        "sizeResolutions": 200,
+        "productArrayReads": 3,
+        "modelChecks": 600,
+        "certifications": 100,
+        "barcodeRenders": 200,
+        "pngImages": 100,
+        "pngRasters": 100,
+        "jpegBlobRasters": 100
+      },
+      "maxLongTaskMs": 348,
+      "pngUnique": 100,
+      "guarantee": {
+        "productsUnchanged": true,
+        "certifiedAll": true,
+        "wholeBatch": true,
+        "previewCount": true,
+        "previewPrice": true,
+        "outputsEnabled": true
+      }
+    },
+    {
+      "count": 100,
+      "phase": "stock",
+      "completed": true,
+      "completionKind": "PDF-ready",
+      "modalMs": 267,
+      "completeMs": 15285,
+      "cost": {
+        "modelChecks": 300,
+        "jpegBlobRasters": 100,
+        "productArrayReads": 1
+      },
+      "maxLongTaskMs": 189,
+      "pngUnique": 0,
+      "guarantee": {
+        "productsUnchanged": true,
+        "certifiedAll": true,
+        "wholeBatch": true,
+        "previewCount": true,
+        "previewPrice": true,
+        "outputsEnabled": true
+      }
+    },
+    {
+      "count": 100,
+      "phase": "price",
+      "completed": true,
+      "completionKind": "PDF-ready",
+      "modalMs": 462,
+      "completeMs": 14287,
+      "cost": {
+        "modelChecks": 300,
+        "jpegBlobRasters": 100,
+        "productArrayReads": 1
+      },
+      "maxLongTaskMs": 191,
+      "pngUnique": 0,
+      "guarantee": {
+        "productsUnchanged": true,
+        "certifiedAll": true,
+        "wholeBatch": true,
+        "previewCount": true,
+        "previewPrice": true,
+        "outputsEnabled": true
+      }
+    },
+    {
+      "count": 300,
+      "phase": "open",
+      "completed": true,
+      "completionKind": "whole-batch-prepared",
+      "modalMs": 232,
+      "completeMs": 24126,
+      "cost": {
+        "sizeResolutions": 600,
+        "productArrayReads": 3,
+        "modelChecks": 1500,
+        "certifications": 300,
+        "barcodeRenders": 600,
+        "pngImages": 300,
+        "pngRasters": 300
+      },
+      "maxLongTaskMs": 684,
+      "pngUnique": 300,
+      "guarantee": {
+        "productsUnchanged": true,
+        "certifiedAll": true,
+        "wholeBatch": true,
+        "previewCount": true,
+        "previewPrice": true,
+        "outputsEnabled": true
+      }
+    }
+  ],
+  "guarantees": [
+    {
+      "invalid": "contract",
+      "pngImages": 0,
+      "previewAbsent": true,
+      "downloadDisabled": true,
+      "printDisabled": true,
+      "productsUnchanged": true
+    },
+    {
+      "invalid": "duplicate",
+      "pngImages": 0,
+      "previewAbsent": true,
+      "downloadDisabled": true,
+      "printDisabled": true,
+      "productsUnchanged": true
+    },
+    {
+      "invalid": "legacy",
+      "pngImages": 0,
+      "previewAbsent": true,
+      "downloadDisabled": true,
+      "printDisabled": true,
+      "productsUnchanged": true
+    }
+  ],
+  "checks": [
+    {
+      "name": "10/open/productsUnchanged",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "10/open/certifiedAll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "10/open/wholeBatch",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "10/open/previewCount",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "10/open/previewPrice",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "10/open/outputsEnabled",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "10/open/bounded-work",
+      "ok": true,
+      "detail": "60 revisiones de modelo (máximo 100); 20 resoluciones de talla (máximo 40)"
+    },
+    {
+      "name": "10/stock/productsUnchanged",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "10/stock/certifiedAll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "10/stock/wholeBatch",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "10/stock/previewCount",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "10/stock/previewPrice",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "10/stock/outputsEnabled",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "10/stock/bounded-work",
+      "ok": true,
+      "detail": "30 revisiones de modelo (máximo 100); 0 resoluciones de talla (máximo 40)"
+    },
+    {
+      "name": "10/price/productsUnchanged",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "10/price/certifiedAll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "10/price/wholeBatch",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "10/price/previewCount",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "10/price/previewPrice",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "10/price/outputsEnabled",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "10/price/bounded-work",
+      "ok": true,
+      "detail": "30 revisiones de modelo (máximo 100); 0 resoluciones de talla (máximo 40)"
+    },
+    {
+      "name": "10/PDF/whole-batch-and-two-copies-each",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "upload/exact-PNG-codes-IDs-and-business",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "100/open/productsUnchanged",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "100/open/certifiedAll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "100/open/wholeBatch",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "100/open/previewCount",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "100/open/previewPrice",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "100/open/outputsEnabled",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "100/open/bounded-work",
+      "ok": true,
+      "detail": "600 revisiones de modelo (máximo 1000); 200 resoluciones de talla (máximo 400)"
+    },
+    {
+      "name": "100/stock/productsUnchanged",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "100/stock/certifiedAll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "100/stock/wholeBatch",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "100/stock/previewCount",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "100/stock/previewPrice",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "100/stock/outputsEnabled",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "100/stock/bounded-work",
+      "ok": true,
+      "detail": "300 revisiones de modelo (máximo 1000); 0 resoluciones de talla (máximo 400)"
+    },
+    {
+      "name": "100/price/productsUnchanged",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "100/price/certifiedAll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "100/price/wholeBatch",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "100/price/previewCount",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "100/price/previewPrice",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "100/price/outputsEnabled",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "100/price/bounded-work",
+      "ok": true,
+      "detail": "300 revisiones de modelo (máximo 1000); 0 resoluciones de talla (máximo 400)"
+    },
+    {
+      "name": "100/PDF/whole-batch-and-two-copies-each",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "300/open/productsUnchanged",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "300/open/certifiedAll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "300/open/wholeBatch",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "300/open/previewCount",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "300/open/previewPrice",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "300/open/outputsEnabled",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "300/open/bounded-work",
+      "ok": true,
+      "detail": "1500 revisiones de modelo (máximo 3000); 600 resoluciones de talla (máximo 1200)"
+    },
+    {
+      "name": "300/cancel",
+      "ok": true,
+      "detail": "1146 ms"
+    },
+    {
+      "name": "300/PDF-cancel-stops-work",
+      "ok": true,
+      "detail": "6 → 6 raster(s), como máximo uno en vuelo"
+    },
+    {
+      "name": "blocked/contract",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "blocked/duplicate",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "blocked/legacy",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "cancel/preparation-stops-work",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "invalidate/unrelated-data-does-not-restart",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "invalidate/datachange-blocks-stale-output",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "invalidate/configchange-recertifies-and-restores",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/exists",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/10/open/completion",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/10/open/guarantee/productsUnchanged",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/10/open/guarantee/certifiedAll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/10/open/guarantee/wholeBatch",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/10/open/guarantee/previewCount",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/10/open/guarantee/previewPrice",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/10/open/guarantee/outputsEnabled",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/10/open/cost/certifications",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/10/open/cost/publicResolve",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/10/open/cost/productArrayReads",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/10/open/cost/pngImages",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/10/open/cost/barcodeRenders",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/10/open/cost/JPEG",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/10/stock/completion",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/10/stock/guarantee/productsUnchanged",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/10/stock/guarantee/certifiedAll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/10/stock/guarantee/wholeBatch",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/10/stock/guarantee/previewCount",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/10/stock/guarantee/previewPrice",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/10/stock/guarantee/outputsEnabled",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/10/stock/cost/certifications",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/10/stock/cost/publicResolve",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/10/stock/cost/productArrayReads",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/10/stock/cost/pngImages",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/10/stock/cost/barcodeRenders",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/10/stock/cost/JPEG",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/10/price/completion",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/10/price/guarantee/productsUnchanged",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/10/price/guarantee/certifiedAll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/10/price/guarantee/wholeBatch",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/10/price/guarantee/previewCount",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/10/price/guarantee/previewPrice",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/10/price/guarantee/outputsEnabled",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/10/price/cost/certifications",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/10/price/cost/publicResolve",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/10/price/cost/productArrayReads",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/10/price/cost/pngImages",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/10/price/cost/barcodeRenders",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/10/price/cost/JPEG",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/100/open/completion",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/100/open/guarantee/productsUnchanged",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/100/open/guarantee/certifiedAll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/100/open/guarantee/wholeBatch",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/100/open/guarantee/previewCount",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/100/open/guarantee/previewPrice",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/100/open/guarantee/outputsEnabled",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/100/open/cost/certifications",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/100/open/cost/publicResolve",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/100/open/cost/productArrayReads",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/100/open/cost/pngImages",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/100/open/cost/barcodeRenders",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/100/open/cost/JPEG",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/100/stock/completion",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/100/stock/guarantee/productsUnchanged",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/100/stock/guarantee/certifiedAll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/100/stock/guarantee/wholeBatch",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/100/stock/guarantee/previewCount",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/100/stock/guarantee/previewPrice",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/100/stock/guarantee/outputsEnabled",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/100/stock/cost/certifications",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/100/stock/cost/publicResolve",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/100/stock/cost/productArrayReads",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/100/stock/cost/pngImages",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/100/stock/cost/barcodeRenders",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/100/stock/cost/JPEG",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/100/price/completion",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/100/price/guarantee/productsUnchanged",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/100/price/guarantee/certifiedAll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/100/price/guarantee/wholeBatch",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/100/price/guarantee/previewCount",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/100/price/guarantee/previewPrice",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/100/price/guarantee/outputsEnabled",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/100/price/cost/certifications",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/100/price/cost/publicResolve",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/100/price/cost/productArrayReads",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/100/price/cost/pngImages",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/100/price/cost/barcodeRenders",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/100/price/cost/JPEG",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/300/open/completion",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/300/open/guarantee/productsUnchanged",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/300/open/guarantee/certifiedAll",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/300/open/guarantee/wholeBatch",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/300/open/guarantee/previewCount",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/300/open/guarantee/previewPrice",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/300/open/guarantee/outputsEnabled",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/300/open/cost/certifications",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/300/open/cost/publicResolve",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/300/open/cost/productArrayReads",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/300/open/cost/pngImages",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/300/open/cost/barcodeRenders",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/block/contract",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/block/duplicate",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "baseline/block/legacy",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "pdfBatches": [
+    {
+      "count": 10,
+      "pages": 20,
+      "header": true,
+      "exactCopies": true
+    },
+    {
+      "count": 100,
+      "pages": 200,
+      "header": true,
+      "exactCopies": true
+    }
+  ],
+  "pdf": {
+    "count": 10,
+    "pages": 20,
+    "header": true,
+    "exactCopies": true
+  },
+  "upload": {
+    "files": 10,
+    "pngValid": true,
+    "exactNames": true,
+    "exactIds": true,
+    "exactUrls": true,
+    "businessUnchanged": true,
+    "cacheNotMutatedBeforeDurability": true,
+    "transport": "STORE upload/save boundary stubbed; PNG real; external network aborted",
+    "durationMs": 889
+  },
+  "cancelPreparation": {
+    "preparing": true,
+    "certifications": 1,
+    "png": 0,
+    "after": {
+      "certifications": 1,
+      "png": 0
+    }
+  },
+  "invalidation": {
+    "unchanged": {
+      "certifications": 0,
+      "png": 0,
+      "ready": true
+    },
+    "blocked": {
+      "png": 0,
+      "downloads": true,
+      "prints": true,
+      "preview": false
+    },
+    "restored": {
+      "certifications": 2,
+      "png": 2,
+      "blocks": false
+    }
+  },
+  "summary": {
+    "passed": 155,
+    "failed": 0
+  }
+}

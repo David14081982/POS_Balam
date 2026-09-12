@@ -49,26 +49,35 @@
   // Encuentra { p, talla } a partir de un código escaneado, buscando en memoria (sin red).
   // Por COINCIDENCIA: compara el código contra codeOf(p, talla) de cada producto/talla. Así funciona
   // con la talla en cualquier posición del SKU y sigue leyendo etiquetas viejas (talla al final).
-  function resolveExact(s) {
-    const prods = D.products || [];
-    const matches = [];
-    prods.filter(p => p && !p._deletedAt).forEach(p => {
+  // Una sola enumeración gobierna tanto el lector como el índice efímero de
+  // Etiquetas. V2 conserva identidad aun sin stock; V1 sólo ofrece tallas
+  // activas con existencias. Un alias repetido no duplica la misma referencia.
+  function forEachResolvableCode(products, visit) {
+    (products || []).filter(p => p && !p._deletedAt).forEach(p => {
       if (D.isV2Reference && D.isV2Reference(p)) {
-        const aliases = Array.isArray(p.barcodeAliases) ? p.barcodeAliases.map(code => String(code).toUpperCase()) : [];
-        if (String(p.barcodeCode || '').toUpperCase() === s || aliases.includes(s)) {
-          matches.push({ p, talla: p.sizeCode, productId: p.id, alias: aliases.includes(s) });
-        }
+        const aliases = new Set(Array.isArray(p.barcodeAliases) ? p.barcodeAliases.map(code => String(code).toUpperCase()) : []);
+        const codes = new Set([String(p.barcodeCode || '').toUpperCase(), ...aliases]);
+        codes.forEach(code => visit(code, { p, talla: p.sizeCode, productId: p.id, alias: aliases.has(code) }));
         return;
       }
       D.resolveProductSizes(p).sizes.filter(size => size.active && size.stock > 0).forEach(size => {
-        if (codeOf(p, size.value) === s) matches.push({ p, talla: size.value, productId: p.id, legacy: true });
+        visit(codeOf(p, size.value), { p, talla: size.value, productId: p.id, legacy: true });
       });
     });
+  }
+
+  function resolutionOf(matches) {
     if (matches.length === 1) return { ok: true, hit: matches[0], matches };
     return { ok: false, code: matches.length > 1 ? 'BARCODE_AMBIGUOUS' : 'BARCODE_NOT_FOUND', matches };
   }
 
-  function resolve(code) {
+  function resolveExact(s) {
+    const matches = [];
+    forEachResolvableCode(D.products, (code, hit) => { if (code === s) matches.push(hit); });
+    return resolutionOf(matches);
+  }
+
+  function resolveWith(code, exactResolver) {
     const s = String(code || '').trim().toUpperCase();
     if (!s) return { ok: false, code: 'BARCODE_EMPTY', matches: [] };
 
@@ -76,9 +85,13 @@
     // coincide con la configurada en el lector, la tecla física «-» puede llegar
     // como "'". Primero se respeta SIEMPRE el código literal; sólo cuando no existe
     // se intenta el equivalente con guiones. No se modifica ningún SKU ni producto.
-    const exact = resolveExact(s);
+    const exact = exactResolver(s);
     if (exact.code !== 'BARCODE_NOT_FOUND' || !s.includes("'")) return exact;
-    return resolveExact(s.split("'").join('-'));
+    return exactResolver(s.split("'").join('-'));
+  }
+
+  function resolve(code) {
+    return resolveWith(code, resolveExact);
   }
 
   // Un lector HID envía posiciones físicas de teclado. En una distribución
@@ -266,7 +279,7 @@
   // etiqueta. No localiza por SKU, nombre, familia ni posición: exige que el
   // barcode V2 persistido sea el generado y resuelva al products.id+talla
   // exactos dentro del índice local vigente.
-  function certifySellableReference(product, explicitSize) {
+  function certifyReferenceWith(product, explicitSize, resolveCode) {
     const isV2 = !!(D && D.isV2Reference && D.isV2Reference(product));
     const productId = String(product && product.id || '');
     const size = String(explicitSize != null ? explicitSize : (product && product.sizeCode) || '');
@@ -277,7 +290,7 @@
     const generated = String(codeOf(product, size) || '').trim().toUpperCase();
     const labelCode = isV2 ? barcodeCode : generated;
     const physical = inspectLabelCode(labelCode);
-    const resolution = labelCode ? resolve(labelCode) : { ok: false, code: 'BARCODE_EMPTY', matches: [] };
+    const resolution = labelCode ? resolveCode(labelCode) : { ok: false, code: 'BARCODE_EMPTY', matches: [] };
     const issues = [];
     const warnings = [];
     if (!isV2) issues.push('V1_OPERATIONAL');
@@ -321,6 +334,26 @@
     };
   }
 
+  function certifySellableReference(product, explicitSize) {
+    return certifyReferenceWith(product, explicitSize, resolve);
+  }
+
+  // H-167: una generación del modal recorre TODO el catálogo una sola vez,
+  // incluso referencias fuera de la selección que podrían colisionar. El
+  // índice no se publica ni se conserva globalmente. El consumidor descarta
+  // este batch al cambiar DATA/CONFIG y antes de preparar una nueva generación.
+  function createLabelCertificationBatch() {
+    const index = new Map();
+    forEachResolvableCode(D.products, (code, hit) => {
+      if (!index.has(code)) index.set(code, []);
+      index.get(code).push(hit);
+    });
+    const resolveIndexed = code => resolveWith(code, s => resolutionOf(index.get(s) || []));
+    return Object.freeze({
+      certify: (product, explicitSize) => certifyReferenceWith(product, explicitSize, resolveIndexed),
+    });
+  }
+
   function certifySellableInventory(products = D.products || []) {
     const rows = [];
     (products || []).filter(product => product && !product._deletedAt).forEach(product => {
@@ -351,7 +384,7 @@
 
   window.BARCODES = { codeOf, parse, resolve, find, scannerChar, consumeScannerInputKey, removeScannerText,
     draw, Barcode, toPNGDataURL, toPNGBlob,
-    inspectLabelCode, validateLabelCode, certifySellableReference, certifySellableInventory,
+    inspectLabelCode, validateLabelCode, certifySellableReference, certifySellableInventory, createLabelCertificationBatch,
     LABEL_60X40, BASE_OPTS, ready,
     get lastResolution() { return lastResolution; } };
 })();

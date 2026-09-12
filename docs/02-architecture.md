@@ -264,6 +264,14 @@ no certifica: no hay salida parcial. V1 permanece legible mediante sus
 adaptadores históricos, pero no autoriza etiquetas vendibles nuevas; su stock
 debe migrarse explícitamente a V2 sin reinterpretar documentos anteriores.
 
+Etiquetas prepara un índice efímero de todo el catálogo mediante
+`BARCODES.createLabelCertificationBatch()`, que comparte enumeración y
+certificación con el lector directo. El modal presenta avance y cede el hilo
+entre bloques, sin generar PNG hasta certificar el lote completo. Cambiar
+selección o revisión comercial de productos/CONFIG invalida el trabajo previo;
+eventos de otros dominios no reinician el PDF. Cerrar cancela preparación y PDF.
+La misma etiqueta se rasteriza una vez por PDF y conserva una página por copia.
+
 `window.BARCODES` también es la autoridad única de entrada HID. Si una
 distribución de teclado incompatible hace que el navegador reporte la posición
 física `Minus` como apóstrofe o `Slash` como guion, `scannerChar()` entrega `-`

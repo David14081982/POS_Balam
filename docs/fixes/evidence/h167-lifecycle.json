@@ -1,0 +1,209 @@
+{
+  "history": "H-167",
+  "startedAt": "2026-09-12T21:10:23.852Z",
+  "artifactSha256": "e0d1abbd98ca207143a20e5a376b8c550af41967f67feae80de3d3ac751c837c",
+  "scope": "Generated HTML; real certification, Code128, PNG and PDF; valid explicit online snapshots; external network aborted.",
+  "sourceSha256": {
+    "test-h167-label-lifecycle.mjs": "ca61a716fc7ebbcbbe271fe26f1ff6ec0b41aa2c3159a9fd23ac578cc3196b16",
+    "balam/inventory.jsx": "3dfb2ffa81b42a176a95448035ea44f31f5866f0ff531e97ea5242ffcf2710b8",
+    "balam/barcodes.jsx": "2abe0b85cf49ded55aea8814bb3bd849465aecc4fe7c7b3b36f9483135319e23"
+  },
+  "cases": [
+    {
+      "name": "Cerrar durante preparación aborta certificación pendiente y todos los PNG",
+      "ok": true,
+      "elapsedMs": 9063,
+      "details": {
+        "selected": 240,
+        "closed": {
+          "batch": 1,
+          "certified": 159,
+          "png": 0,
+          "jpegStarted": 0,
+          "jpegCompleted": 0
+        },
+        "settled": {
+          "batch": 1,
+          "certified": 159,
+          "png": 0,
+          "jpegStarted": 0,
+          "jpegCompleted": 0
+        }
+      }
+    },
+    {
+      "name": "Cerrar durante PDF detiene nuevos rasterizados JPEG",
+      "ok": true,
+      "elapsedMs": 6162,
+      "details": {
+        "selected": 24,
+        "closed": {
+          "batch": 1,
+          "certified": 24,
+          "png": 24,
+          "jpegStarted": 1,
+          "jpegCompleted": 0
+        },
+        "settled": {
+          "batch": 1,
+          "certified": 24,
+          "png": 24,
+          "jpegStarted": 1,
+          "jpegCompleted": 1
+        }
+      }
+    },
+    {
+      "name": "Colisión fuera de selección durante batch invalida todo antes del primer PNG",
+      "ok": true,
+      "elapsedMs": 4575,
+      "details": {
+        "batch": 2,
+        "certified": 41,
+        "png": 0,
+        "jpegStarted": 0,
+        "jpegCompleted": 0,
+        "trace": [
+          {
+            "event": "collision",
+            "previousRevision": "2:4",
+            "revision": "3:4",
+            "batch": 1,
+            "certified": 1,
+            "png": 0,
+            "jpegStarted": 0,
+            "jpegCompleted": 0
+          }
+        ],
+        "authority": 41,
+        "selected": 40
+      }
+    },
+    {
+      "name": "Cambiar existencias con PDF listo retira el archivo viejo y genera las copias actuales",
+      "ok": true,
+      "elapsedMs": 23023,
+      "details": {
+        "previousPdf": {
+          "pages": 2,
+          "sha256": "7f6156819a4d377d491c1a33934442f25fb3de9855d01eaca531e8fd7bdb678b"
+        },
+        "currentPdf": {
+          "pages": 5,
+          "sha256": "fda6584bdf71fd42a0667b442ae734e57a5d674049ddf142d485aabc91f8c9cc"
+        },
+        "invalidated": true,
+        "counters": {
+          "batch": 2,
+          "certified": 4,
+          "png": 4,
+          "jpegStarted": 6,
+          "jpegCompleted": 6
+        }
+      }
+    },
+    {
+      "name": "Cambiar barcode cuando el PDF está listo bloquea salidas sin reutilizar la certificación anterior",
+      "ok": true,
+      "elapsedMs": 4477,
+      "details": {
+        "before": {
+          "batch": 1,
+          "certified": 2,
+          "png": 2,
+          "jpegStarted": 2,
+          "jpegCompleted": 2
+        },
+        "after": {
+          "batch": 2,
+          "certified": 4,
+          "png": 2,
+          "jpegStarted": 2,
+          "jpegCompleted": 2
+        }
+      }
+    },
+    {
+      "name": "Referencia desaparecida retira el PDF anterior y todas las salidas",
+      "ok": true,
+      "elapsedMs": 4449,
+      "details": {
+        "before": {
+          "batch": 1,
+          "certified": 1,
+          "png": 1,
+          "jpegStarted": 1,
+          "jpegCompleted": 1
+        },
+        "after": {
+          "batch": 2,
+          "certified": 1,
+          "png": 1,
+          "jpegStarted": 1,
+          "jpegCompleted": 1
+        }
+      }
+    },
+    {
+      "name": "CONFIG confirmada distinta vuelve a certificar y preparar etiquetas",
+      "ok": true,
+      "elapsedMs": 5365,
+      "details": {
+        "revision": {
+          "before": "2:4",
+          "after": "2:5",
+          "invalidated": true
+        },
+        "before": {
+          "batch": 1,
+          "certified": 2,
+          "png": 2,
+          "jpegStarted": 2,
+          "jpegCompleted": 2
+        },
+        "after": {
+          "batch": 2,
+          "certified": 4,
+          "png": 4,
+          "jpegStarted": 4,
+          "jpegCompleted": 4
+        }
+      }
+    },
+    {
+      "name": "Cambio de clientes durante PDF conserva el lote y no repite trabajo de etiquetas",
+      "ok": true,
+      "elapsedMs": 16791,
+      "details": {
+        "batch": 1,
+        "certified": 24,
+        "png": 24,
+        "jpegStarted": 24,
+        "jpegCompleted": 24,
+        "trace": [
+          {
+            "event": "clients",
+            "previousRevision": "2:4",
+            "revision": "2:4",
+            "batch": 1,
+            "certified": 24,
+            "png": 24,
+            "jpegStarted": 1,
+            "jpegCompleted": 0
+          }
+        ],
+        "clients": 1,
+        "pdf": {
+          "pages": 24,
+          "sha256": "fe83ce6662916994c3e960d87c079114bf6849c82433ec1788f77afd74fa5f76"
+        }
+      }
+    }
+  ],
+  "errors": [],
+  "externalRequestsAborted": 0,
+  "remoteBusinessWrites": 0,
+  "completedAt": "2026-09-12T21:11:44.309Z",
+  "passed": 8,
+  "failed": 0
+}

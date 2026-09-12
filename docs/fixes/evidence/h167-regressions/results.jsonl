@@ -1,0 +1,6 @@
+﻿{"test":"test-h167-label-resolution.mjs","exit":0,"finished":"2026-09-12T13:55:55.5044715-07:00"}
+{"test":"test-h132-inventory-identity-certification.mjs","exit":1,"finished":"2026-09-12T13:57:03.5846061-07:00"}
+{"test":"test-h127-label-diagnostics.mjs","exit":1,"finished":"2026-09-12T14:01:02.4942997-07:00"}
+{"test":"test-h99-label-pdf.mjs","exit":0,"finished":"2026-09-12T14:03:20.2817581-07:00"}
+{"test":"test-h99-label-visual.mjs","exit":0,"finished":"2026-09-12T14:04:42.4332367-07:00"}
+{"test":"test-h100-materialized-label-sku.mjs","exit":1,"finished":"2026-09-12T14:06:34.3522402-07:00"}

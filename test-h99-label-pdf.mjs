@@ -78,6 +78,7 @@ try {
   await page.waitForFunction(() => window.DATA && window.BARCODES && window.InventoryScreen);
   const fixtures = await page.evaluate(() => {
     const D = window.DATA;
+    window.CONFIG.load(window.CONFIG.prepareMutation('reset', []).state);
     const rows = [
       ['one', 'ADRIÁNO / UNO', '21-ADR-40', 850, 2],
       ['two', 'BÁRBARA', '21-BAR-ML-ALG-AZ-MAO-40', 1250, 1],
@@ -85,13 +86,18 @@ try {
     ].map(([kind, nombre, sku, precio, stock], index) => {
       const id = `99000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`;
       return D.hydrate({
-      id, recordModel: 'v2', barcodeCode: D.barcodeFromId(id), sku, nombre,
+      id, recordModel: 'v2', barcodeCode: D.barcodeFromId(id), barcodeContract: 3, sku, nombre,
       modelo: kind.toUpperCase(), cat: '21', manga: 'ML', tela: 'ALG', color: 'BL', cuello: 'MAO',
       orn: '—', ornColors: [], ornamentColorCodes: [], precio, costo: 400, stockQuantity: stock,
       sizeCode: '40', sizeScale: 'N', sizeCategoryId: 'size_number', attrs: { __sizeCategoryId: 'size_number' },
       stock: [], physicalSignature: `H99PDF|${index}`, physicalIdentityLocked: true,
     }); });
-    D.products.splice(0, D.products.length, ...rows);
+    // DATA expone snapshots: instalar la semilla completa por su frontera vigente.
+    const keys = ['products', 'sellers', 'clients', 'sales', 'movements', 'promotions', 'liquidations', 'returns', 'payments', 'exchanges', 'loans', 'commissionAdjustments'];
+    const snapshot = Object.fromEntries(keys.map(key => [key, []]));
+    snapshot.products = rows;
+    snapshot.commissionContext = { periodStart: '', sellerBases: [] };
+    D.replaceFromOnline(snapshot);
     D.saveProducts = () => true;
     window.AUTH.canAccess = () => true;
     document.body.innerHTML = '<div id="h99-pdf-root"></div>';

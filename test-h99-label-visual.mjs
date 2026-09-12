@@ -35,6 +35,7 @@ try {
   await page.waitForFunction(() => window.DATA && window.BARCODES && window.InventoryScreen);
   const fixtures = await page.evaluate(() => {
     const D = window.DATA;
+    window.CONFIG.load(window.CONFIG.prepareMutation('reset', []).state);
     const rows = [
       ['short', '21-ADR-40'],
       ['typical', '21-ADR-ML-ALG-BL-40'],
@@ -42,14 +43,19 @@ try {
     ].map(([kind, sku], index) => {
       const id = `99000001-0000-4000-8000-${String(index + 1).padStart(12, '0')}`;
       return D.hydrate({
-      id, recordModel: 'v2', barcodeCode: D.barcodeFromId(id), sku,
+      id, recordModel: 'v2', barcodeCode: D.barcodeFromId(id), barcodeContract: 3, sku,
       nombre: 'ADRIANO', modelo: 'ADR', cat: '21', manga: 'ML', tela: 'ALG',
       color: 'BL', cuello: 'MAO', orn: '—', ornColors: [], ornamentColorCodes: [],
       precio: 1150, costo: 400, stockQuantity: 1, sizeCode: '40', sizeScale: 'N',
       sizeCategoryId: 'size_number', attrs: { __sizeCategoryId: 'size_number' }, stock: [],
       physicalSignature: `H99|${index}`, physicalIdentityLocked: true,
     }); });
-    D.products.splice(0, D.products.length, ...rows);
+    // DATA expone snapshots: instalar la semilla completa por su frontera vigente.
+    const keys = ['products', 'sellers', 'clients', 'sales', 'movements', 'promotions', 'liquidations', 'returns', 'payments', 'exchanges', 'loans', 'commissionAdjustments'];
+    const snapshot = Object.fromEntries(keys.map(key => [key, []]));
+    snapshot.products = rows;
+    snapshot.commissionContext = { periodStart: '', sellerBases: [] };
+    D.replaceFromOnline(snapshot);
     D.saveProducts = () => true;
     window.AUTH.canAccess = () => true;
     document.body.innerHTML = '<div id="h99-root"></div>';
@@ -62,6 +68,7 @@ try {
   for (const fixture of fixtures) {
     await page.getByTestId(`inventory-product-family:${fixture.familyId}`).click();
     await page.getByTestId('product-detail-labels').click();
+    await page.getByTestId('labels-copies-one').waitFor();
     const unifiedPreview = page.getByTestId('label-preview-stage').first().locator('.bx-label');
     const legacyPreview = page.getByTestId('label-preview-barcode').first().locator('..');
     const previewLabel = await unifiedPreview.count() ? unifiedPreview : legacyPreview;

@@ -1,0 +1,25 @@
+✅ individual descarga extensión PDF · BALAM_ADRIANO_UNO_ONE_21-ADR-40_T40_REFS-1_452353.pdf
+✅ individual usa MIME application/pdf · application/pdf
+✅ individual tiene encabezado PDF real · %PDF-1.4
+✅ lector estructural valida xref y cierre PDF
+✅ cantidad individual produce tres páginas · 3
+✅ nombre individual sanitiza caracteres incompatibles · BALAM_ADRIANO_UNO_ONE_21-ADR-40_T40_REFS-1_452353.pdf
+✅ Inventario descarga un solo PDF distinguible · BALAM_VARIOS_SKU-VARIADO_T40_REFS-3_452353-452354-452355.pdf
+✅ PDF múltiple usa MIME correcto · application/pdf
+✅ PDF múltiple contiene tres páginas · 3
+✅ cada página mide 60×40 mm · [[170.07874,113.38583],[170.07874,113.38583],[170.07874,113.38583]]
+✅ cada página contiene render gráfico · 3
+✅ los streams gráficos son JPEG válidos
+✅ PDF conserva SKU corto, típico y largo
+✅ PDF conserva precios de cientos, miles y precio grande
+✅ PDF no expone barcode_code ni products.id como texto
+✅ Code128 está gráficamente presente en el PDF · {"black":285,"transitions":98}
+✅ primera página PDF rasteriza exactamente el master del preview
+✅ compartir PDF aparece cuando Web Share acepta archivos
+✅ Compartir entrega PDF, nunca HTML · {"type":"application/pdf","name":"BALAM_VARIOS_SKU-VARIADO_T40_REFS-3_452353-452354-452355.pdf"}
+✅ varios productos y cantidades generan un PDF de cinco páginas · 5
+✅ sin compartir archivos permanece Descargar PDF
+✅ Imprimir mantiene documento 60×40 y mismo master
+✅ vista imprimible no ofrece descarga HTML
+
+H-99 PDF etiquetas: 23 pasaron, 0 fallaron

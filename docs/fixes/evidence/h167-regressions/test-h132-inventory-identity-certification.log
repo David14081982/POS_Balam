@@ -1,0 +1,26 @@
+✅ existe una autoridad única de certificación por referencia vendible
+✅ V1 vendible se censa pero no autoriza una etiqueta nueva
+❌ dos referencias con SKU visible repetido conservan identidad técnica independiente
+❌ la certificación V2 cierra codeOf, etiqueta y resolve al ID+talla exactos
+❌ barcode duplicado bloquea y nunca elige la primera coincidencia
+❌ una selección con V1 bloquea toda salida antes de PNG/PDF
+node : node:internal/modules/run_main:107
+En línea: 3 Carácter: 1
++ node test-h132-inventory-identity-certification.mjs 2>&1 | Tee-Object ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (node:internal/modules/run_main:107:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+    triggerUncaughtException(
+    ^
+
+locator.click: Timeout 30000ms exceeded.
+Call log:
+[2m  - waiting for getByTestId('label-modal-close')[22m
+
+    at 
+C:\Users\david\Downloads\POS-BALAM-ticket-h134\.h161-release\test-h132-inventory-identity-certification.mjs:107:47 {
+  name: 'TimeoutError'
+}
+
+Node.js v24.14.0

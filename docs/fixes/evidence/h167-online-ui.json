@@ -1,0 +1,68 @@
+{
+  "startedAt": "2026-09-12T21:05:58.708Z",
+  "artifactSha256": "e0d1abbd98ca207143a20e5a376b8c550af41967f67feae80de3d3ac751c837c",
+  "sourceSha256": {
+    "test-h164-online-ui.mjs": "87311ade12c6148b0ef7d35b0583a8aac5d2fc514c9bacc8c8f9f1ce665b6c90",
+    "balam/data.jsx": "deb99c4cfe9c68481a9452a00b355037f1f6a0334ccfe0a5db6b064afae342e2",
+    "balam/inventory.jsx": "3dfb2ffa81b42a176a95448035ea44f31f5866f0ff531e97ea5242ffcf2710b8",
+    "balam/clients.jsx": "debf80ac60d43bb1ea84044364d0a47d9371092e511b088fd6b8e1cdfef2674f",
+    "balam/reports.jsx": "543e9d59c72fc2fc72b9ada2abf817f99bff21ae560f4d05c9e71127f91a1bde",
+    "balam/shared.jsx": "a07c5dc3237fc589f7ca04f952e2d4869ec5d24f371e4232ef80e6582dbf2062",
+    "balam/pos-ticket.jsx": "df5f01e2659489779a82d170e24515f7080a90441b6b50fbf2e0dd8ebfcc3c83",
+    "balam/xlsx-io.jsx": "6397ab5ca15eae666c1e941c5359c167412ff306147af6de3ae3decbf76904b2",
+    "balam/app.jsx": "01872e54368b4248f1f571b9c171e0a7bf52355af81ac8bfdfcb07f9c9ed6999"
+  },
+  "selected": "all",
+  "cases": [
+    {
+      "name": "Inventario: cajón cerrado permite actualizar",
+      "ok": true,
+      "elapsedMs": 178
+    },
+    {
+      "name": "V2/barcode V3/etiqueta: identidad, PNG y PDF conservados",
+      "ok": true,
+      "elapsedMs": 23613
+    },
+    {
+      "name": "Excel: vista previa no modifica DATA; export conserva identidad",
+      "ok": true,
+      "elapsedMs": 427
+    },
+    {
+      "name": "Clientes: cajón cerrado permite actualizar",
+      "ok": true,
+      "elapsedMs": 76
+    },
+    {
+      "name": "Reportes: reimpresión conserva documento histórico confirmado",
+      "ok": true,
+      "elapsedMs": 9595,
+      "details": {
+        "folio": "H164-HIST-0001",
+        "printHandoffs": 1,
+        "printedHtmlSha256": "8dbac9b087f2c5af096eb21b0010095a5793cf64e19211c2531e52a75fe0a279",
+        "authoritativeFixtureUnchanged": true,
+        "physicalPrinterTested": false
+      }
+    },
+    {
+      "name": "Conexión: App conserva el formulario oculto e inerte hasta confirmar",
+      "ok": true,
+      "elapsedMs": 3858,
+      "details": {
+        "sameDomNode": true,
+        "draftPreserved": true,
+        "inertWhileBlocked": true,
+        "mountsBefore": [
+          1,
+          0
+        ]
+      }
+    }
+  ],
+  "errors": [],
+  "remoteBusinessWrites": 0,
+  "scope": "Generated browser UI with explicit read-only fixture snapshots; external network blocked; operating-system print endpoint observed without a physical printer.",
+  "completedAt": "2026-09-12T21:06:46.025Z"
+}

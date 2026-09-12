@@ -1,0 +1,19 @@
+node : node:internal/modules/run_main:107
+En línea: 3 Carácter: 1
++ node test-h127-label-diagnostics.mjs 2>&1 | Tee-Object -FilePath "$lo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (node:internal/modules/run_main:107:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+    triggerUncaughtException(
+    ^
+
+locator.click: Timeout 30000ms exceeded.
+Call log:
+[2m  - waiting for getByTestId('labels-copies-stock')[22m
+
+    at C:\Users\david\Downloads\POS-BALAM-ticket-h134\.h161-release\test-h127-label-diagnostics.mjs:83:49 {
+  name: 'TimeoutError'
+}
+
+Node.js v24.14.0

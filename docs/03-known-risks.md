@@ -7631,3 +7631,36 @@ cada 15 s/foco/reconexión, sin snapshot completo cuando no cambió.
 aislado y verificación remota reversible; no se purgó la tienda. Hardware y
 adopción de puestos físicos ausentes no certificados.
 **Documento:** [navegacion-online-h166.md](fixes/navegacion-online-h166.md).
+
+## H-167 — Abrir Etiquetas bloquea el navegador con lotes grandes
+
+**Estado:** PARCIALMENTE RESUELTO — bloqueo corregido y verificado; publicación pendiente.
+**Fecha:** 12/09/2026.
+**Commit:** Pendiente de commit.
+**Origen:** el usuario reporta más de diez minutos sin respuesta al abrir
+Inventario → Etiquetas, antes de poder guardar las imágenes en Supabase.
+**Causa comprobada:** cada render certifica y vuelve a diagnosticar todo el lote,
+consultando y copiando todo el catálogo por etiqueta. La base web `89d2789`,
+con 300 referencias, bloqueó el hilo 12.687 s y abrió el modal en 14.093 s.
+601 lecturas y 180,900 comprobaciones de modelo; reproducción roja por coste.
+**Alcance:** recuperar apertura y controles responsivos con lotes grandes,
+conservando certificación completa, identidad exacta, etiquetas 60×40 y guardado
+explícito. No modificar stock, datos históricos, esquema ni cola.
+**Corrección:** índice efímero con certificación compartida; preparación por
+bloques con progreso y cancelación; reutilización de inspección/PNG; PDF
+cancelable y un raster por etiqueta distinta. Cambios reales de productos/CONFIG
+invalidan el lote; otros eventos no lo reinician. Guardado de main conservado.
+**Pruebas:** guardián final y refijación 155/155; lifecycle 8/8; resolución 16/16;
+UI vigente 6/6 y PWA 2/2 sobre el artefacto final. PDF 23/23 y visual 12/12
+en el preliminar con el mismo generador. H132/H127/H100 históricos no aprobados:
+semillas incompatibles con DATA vigente; comparación H132 original idéntica.
+Con 300, modal 232 ms, tarea máxima 684 ms, 3 lecturas (una del instrumento),
+1,500 comprobaciones, 300 certificaciones y 300 PNG. Preparación completa
+24.126 s bajo carga: no se promete aceleración de todo el PDF. CI protege coste,
+garantías y completitud; logs y baselines enlazados en el documento.
+**Artefacto final:** HTML idénticos, SHA-256
+`e0d1abbd98ca207143a20e5a376b8c550af41967f67feae80de3d3ac751c837c`.
+**Riesgo residual:** upload real, flota A/B/C y hardware NO CERTIFICADO;
+transporte controlado en pruebas, sin escrituras remotas ni migraciones.
+Cada instalación requiere el cliente nuevo. Commit/publicación pendientes.
+**Documento:** `docs/fixes/apertura-etiquetas-sin-bloqueo-h167.md`.

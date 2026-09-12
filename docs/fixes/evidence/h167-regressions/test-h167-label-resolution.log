@@ -1,0 +1,18 @@
+OK existe la preparación efímera sin argumentos ni resultados inyectados
+OK V2 exacto conserva todas las garantías y SKU repetidos independientes
+OK aliases repetidos y alias igual al barcode aportan una sola coincidencia
+OK una colisión fuera de la selección, incluso sin stock, bloquea
+OK un tombstone no colisiona; una referencia V2 agotada sigue resolviendo
+OK dos filas V2 con el mismo barcode nunca eligen la primera
+OK V1 sigue localizable pero bloquea toda etiqueta nueva
+OK V1 inactivo o sin stock no contribuye al índice
+OK dos tallas V1 que materializan el mismo código conservan ambigüedad
+OK apóstrofe literal tiene prioridad sobre la adaptación a guion
+OK adaptación con apóstrofe se usa sólo cuando no hay literal
+OK ambigüedad literal con apóstrofe no se evade por guion
+OK falta de barcode, contrato incorrecto y talla distinta siguen bloqueados
+OK aliases se normalizan a mayúsculas sin recortar espacios históricos
+OK un batch nuevo vuelve a observar las colisiones de la autoridad vigente
+{"products":200,"catalogVisits":200,"certified":200}
+OK el lote recorre una vez el catálogo y completa todas las certificaciones
+H-167 resolución: 16 pasaron, 0 fallaron

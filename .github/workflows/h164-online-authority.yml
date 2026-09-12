@@ -67,6 +67,14 @@ jobs:
       - run: npm run test:h166:pos
       - run: npm run test:h166:brand
       - run: npm run test:h166:navigation
+      - name: Verify label identity and responsive batch preparation
+        run: |
+          node test-h167-label-resolution.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node test-h167-label-performance.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node test-h167-label-lifecycle.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Stage the tested client
         shell: pwsh
         run: |

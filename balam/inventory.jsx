@@ -1772,18 +1772,29 @@
     }
   }
 
-  async function buildLabelPdf(rendered) {
+  const yieldLabelWork = () => new Promise(resolve => setTimeout(resolve, 0));
+
+  async function buildLabelPdf(rendered, cancelled = () => false) {
     if (!rendered.length) throw new Error('No hay etiquetas para generar el PDF');
     // Secuencial para que lotes grandes no mantengan decenas de canvas activos
     // al mismo tiempo en móviles; el PDF sigue siendo un solo archivo.
     const images = [];
-    for (const item of rendered) images.push(await labelJpeg(item));
+    const uniqueImages = new Map();
+    for (const item of rendered) {
+      if (cancelled()) return null;
+      // Las copias de una misma etiqueta comparten el raster durante este PDF.
+      if (!uniqueImages.has(item)) uniqueImages.set(item, await labelJpeg(item));
+      if (cancelled()) return null;
+      images.push(uniqueImages.get(item));
+    }
     const objects = [];
     const pageIds = rendered.map((_, index) => 4 + index * 3);
     objects[1] = asciiBytes('<< /Type /Catalog /Pages 2 0 R >>');
     objects[2] = asciiBytes(`<< /Type /Pages /Count ${rendered.length} /Kids [${pageIds.map(id => `${id} 0 R`).join(' ')}] >>`);
     objects[3] = asciiBytes('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
-    rendered.forEach((item, index) => {
+    for (let index = 0; index < rendered.length; index++) {
+      if (index % 20 === 0) { await yieldLabelWork(); if (cancelled()) return null; }
+      const item = rendered[index];
       const pageId = pageIds[index], imageId = pageId + 1, contentId = pageId + 2;
       const metadata = `${pdfText(item.name)} | ${pdfText(item.sku)}${item.price ? ` | ${pdfText(item.price)}` : ''}`;
       const content = asciiBytes(`q\n${PDF_WIDTH_PT.toFixed(5)} 0 0 ${PDF_HEIGHT_PT.toFixed(5)} 0 0 cm\n/Im0 Do\nQ\nBT /F1 1 Tf 3 Tr 1 0 0 1 0 0 Tm (${metadata}) Tj ET`);
@@ -1793,11 +1804,12 @@
         images[index], asciiBytes('\nendstream'),
       ]);
       objects[contentId] = concatBytes([asciiBytes(`<< /Length ${content.length} >>\nstream\n`), content, asciiBytes('\nendstream')]);
-    });
+    }
     const chunks = [asciiBytes('%PDF-1.4\n%\u00e2\u00e3\u00cf\u00d3\n')];
     const offsets = [0];
     let cursor = chunks[0].length;
     for (let id = 1; id < objects.length; id++) {
+      if (id % 60 === 0) { await yieldLabelWork(); if (cancelled()) return null; }
       offsets[id] = cursor;
       const object = concatBytes([asciiBytes(`${id} 0 obj\n`), objects[id], asciiBytes('\nendobj\n')]);
       chunks.push(object); cursor += object.length;
@@ -1880,19 +1892,81 @@
     const [pdfAsset, setPdfAsset] = useState(null);
     const [pdfError, setPdfError] = useState('');
     const [selectedProductIds, setSelectedProductIds] = useState(() => new Set((products || []).map(product => product.id)));
-    const imageCache = useRef({});
     const pdfGeneration = useRef(0);
-
-    const selectedProducts = (products || []).filter(p => selectedProductIds.has(p.id));
-    const specs = [];
-    selectedProducts.forEach(p => D.resolveProductSizes(p).sizes.forEach(size => {
-      if (size.active && size.stock > 0) {
-        const certification = B.certifySellableReference(p, size.value);
-        specs.push({ p, talla: size.value, stock: size.stock, code: certification.labelCode, certification });
-      }
-    }));
+    const [revision, setRevision] = useState(0);
+    const [prepared, setPrepared] = useState(null);
+    const [progress, setProgress] = useState('Preparando etiquetas…');
+    const [preparationError, setPreparationError] = useState('');
+    const preparationGeneration = useRef(0);
+    useEffect(() => {
+      let sourceRevision = D.commercialProjectionRevision;
+      const invalidate = () => {
+        // Una actualización de clientes o ventas no reinicia un PDF vigente.
+        const nextRevision = D.commercialProjectionRevision;
+        if (nextRevision != null && nextRevision === sourceRevision) return;
+        sourceRevision = nextRevision;
+        preparationGeneration.current++;
+        pdfGeneration.current++;
+        setRevision(value => value + 1);
+      };
+      window.addEventListener('datachange', invalidate);
+      window.addEventListener('configchange', invalidate);
+      return () => {
+        window.removeEventListener('datachange', invalidate);
+        window.removeEventListener('configchange', invalidate);
+      };
+    }, []);
+    const selectedProducts = useMemo(() => {
+      const current = new Map((D.products || []).map(product => [product.id, product]));
+      return (products || []).filter(product => selectedProductIds.has(product.id))
+        .map(product => current.get(product.id)).filter(product => product && !product._deletedAt);
+    }, [products, selectedProductIds, revision]);
+    useEffect(() => {
+      const generation = ++preparationGeneration.current;
+      const cancelled = () => generation !== preparationGeneration.current;
+      setPreparationError(''); setProgress('Validando etiquetas…');
+      (async () => {
+        await yieldLabelWork();
+        if (cancelled()) return;
+        const batch = B.createLabelCertificationBatch();
+        const next = [], images = new Map();
+        let lastYield = performance.now();
+        for (let index = 0; index < selectedProducts.length; index++) {
+          const p = selectedProducts[index];
+          for (const size of D.resolveProductSizes(p).sizes) {
+            if (size.active && size.stock > 0) {
+              const certification = batch.certify(p, size.value);
+              next.push({ p, talla: size.value, stock: size.stock, code: certification.labelCode, certification });
+            }
+          }
+          if (performance.now() - lastYield >= 12) {
+            setProgress(`Validando productos: ${index + 1} de ${selectedProducts.length}`);
+            await yieldLabelWork(); if (cancelled()) return;
+            lastYield = performance.now();
+          }
+        }
+        // Certificar el lote completo antes de producir cualquier PNG.
+        if (next.every(spec => spec.certification.ok)) {
+          for (let index = 0; index < next.length; index++) {
+            const spec = next[index];
+            if (!images.has(spec.code)) images.set(spec.code, B.toPNGDataURL(spec.code, PRINT_OPTS));
+            if (performance.now() - lastYield >= 12) {
+              setProgress(`Preparando imágenes: ${index + 1} de ${next.length}`);
+              await yieldLabelWork(); if (cancelled()) return;
+              lastYield = performance.now();
+            }
+          }
+        }
+        if (!cancelled()) setPrepared({ products: selectedProducts, revision, specs: next, images });
+      })().catch(error => {
+        if (!cancelled()) setPreparationError(error && error.message || 'No se pudieron preparar las etiquetas.');
+      });
+      return () => { if (!cancelled()) preparationGeneration.current++; };
+    }, [selectedProducts, revision]);
+    const preparing = !prepared || prepared.products !== selectedProducts || prepared.revision !== revision;
+    const specs = preparing ? [] : prepared.specs;
     const certificationBlocks = specs.filter(spec => !spec.certification.ok);
-    const labelsCertified = certificationBlocks.length === 0;
+    const labelsCertified = !preparing && certificationBlocks.length === 0;
     const copiesOf = s => copiesMode === 'stock' ? s.stock : Math.max(1, Number(copies) || 1);
     const totalLabels = specs.reduce((a, s) => a + copiesOf(s), 0);
     const uniqueCount = new Set(specs.map(s => s.code)).size;
@@ -1905,22 +1979,38 @@
       }
       const generation = ++pdfGeneration.current;
       setPdfAsset(null); setPdfError('');
-      const rendered = renderItems();
-      buildLabelPdf(rendered).then(blob => {
-        if (generation === pdfGeneration.current) setPdfAsset({ blob, fileName: labelPdfFileName(selectedProducts), rendered });
+      const cancelled = () => generation !== pdfGeneration.current;
+      (async () => {
+        await yieldLabelWork(); if (cancelled()) return null;
+        const rendered = [];
+        for (const spec of specs) {
+          const item = labelItem(spec);
+          for (let copy = 0; copy < copiesOf(spec); copy++) {
+            rendered.push(item);
+            if (rendered.length % 100 === 0) { await yieldLabelWork(); if (cancelled()) return null; }
+          }
+        }
+        const blob = await buildLabelPdf(rendered, cancelled);
+        return blob && { blob, fileName: labelPdfFileName(selectedProducts), rendered };
+      })().then(asset => {
+        if (!cancelled() && asset) setPdfAsset(asset);
       }).catch(error => {
         if (generation === pdfGeneration.current) setPdfError((error && error.message) || 'No se pudo generar el PDF');
       });
       return () => { if (generation === pdfGeneration.current) pdfGeneration.current++; };
-    }, [pdfKey, labelsCertified]);
+    }, [pdfKey, labelsCertified, prepared]);
 
     if (!B || !B.ready()) return h(Modal, { title: 'Etiquetas', onClose }, h('p', { className: 'text-body text-on-surface-variant py-6 text-center' }, 'La librería de códigos de barras no cargó. Revisa tu conexión e inténtalo de nuevo.'));
+    if (preparing) return h(Modal, { title: 'Etiquetas de código de barras', onClose, testId: 'label-modal', large: true },
+      preparationError ? h('div', { role: 'alert', 'data-testid': 'labels-preparation-error' }, [
+        h('p', { key: 'message' }, 'No se pudieron preparar las etiquetas. Vuelve a intentarlo.'),
+        h('button', { key: 'retry', 'data-testid': 'labels-retry', onClick: () => setRevision(value => value + 1) }, 'Reintentar'),
+      ]) : h('p', { role: 'status', 'data-testid': 'labels-preparing', className: 'text-body py-6 text-center' }, progress));
     if (!specs.length) return h(Modal, { title: 'Etiquetas', onClose }, h('p', { className: 'text-body text-on-surface-variant py-6 text-center' }, 'No hay tallas con existencias para etiquetar.'));
 
     function imageFor(s) {
       if (!s.certification.ok || !labelsCertified) return '';
-      if (imageCache.current[s.code] === undefined) imageCache.current[s.code] = B.toPNGDataURL(s.code, PRINT_OPTS);
-      return imageCache.current[s.code];
+      return prepared.images.get(s.code) || '';
     }
     function labelItem(s) {
       return { name: s.p.nombre, image: imageFor(s), barcode: s.code, sku: D.materializedSku(s.p, s.talla), price: withPrice ? fmt(D.listPrice(s.p, s.talla)).replace('.00', '') : '' };
@@ -1946,10 +2036,10 @@
       win.document.close();
     }
     const diagnostics = specs.map(s => {
-      const physical = B.inspectLabelCode(s.code);
+      const physical = s.certification.physical;
       const visibleSku = D.materializedSku(s.p, s.talla);
       const v2 = D.isV2Reference(s.p);
-      const resolution = s.code ? B.resolve(s.code) : { ok: false, code: 'BARCODE_EMPTY', matches: [] };
+      const resolution = { code: s.certification.resolveCode, matches: s.certification.matches };
       const issues = [];
       if (physical.status === 'DENSE') issues.push({ type: 'DENSITY', message: messageText({ code: 'LABEL_DENSITY', message: `X ${physical.moduleMm.toFixed(3)} mm; minimum ${physical.minModuleMm.toFixed(3)} mm; ${physical.modules} modules; bars ${physical.barHeightMm.toFixed(1)} mm` }) });
       else if (physical.status === 'MISSING_BARCODE') issues.push({ type: 'MISSING_BARCODE', message: messageText({ code: 'MISSING_BARCODE', message: v2 ? 'missing barcode_code v2' : 'missing materialized Code128' }) });
@@ -2022,7 +2112,7 @@
       });
     }
     const footer = [
-      h('button', { key: 'sv', disabled: saving || !labelsCertified, onClick: saveToSupabase, className: 'px-5 py-3 border border-outline-variant rounded-xl text-caption font-bold uppercase tracking-widest text-primary hover:bg-surface-container transition disabled:opacity-50 flex items-center gap-2' }, [h(MS, { key: 'i', name: saving ? 'clock' : 'upload', size: 16 }), saving ? 'Guardando…' : `Guardar en la cuenta (${uniqueCount})`]),
+      h('button', { key: 'sv', 'data-testid': 'labels-save-account', disabled: saving || !labelsCertified, onClick: saveToSupabase, className: 'px-5 py-3 border border-outline-variant rounded-xl text-caption font-bold uppercase tracking-widest text-primary hover:bg-surface-container transition disabled:opacity-50 flex items-center gap-2' }, [h(MS, { key: 'i', name: saving ? 'clock' : 'upload', size: 16 }), saving ? 'Guardando…' : `Guardar en la cuenta (${uniqueCount})`]),
       h('button', { key: 'dl', disabled: !labelsCertified || !pdfAsset, onClick: () => downloadLabelPdf(pdfAsset), 'data-testid': 'labels-download', className: 'px-5 py-3 border border-outline-variant rounded-xl text-caption font-bold uppercase tracking-widest text-primary hover:bg-surface-container transition disabled:opacity-50 flex items-center gap-2' }, [h(MS, { key: 'i', name: pdfAsset ? 'download' : 'clock', size: 16 }), !labelsCertified ? 'Identidad no certificada' : pdfAsset ? 'Descargar PDF' : 'Generando PDF…']),
       canSharePdf && h('button', { key: 'sh', onClick: sharePdf, 'data-testid': 'labels-share', className: 'px-5 py-3 border border-outline-variant rounded-xl text-caption font-bold uppercase tracking-widest text-primary hover:bg-surface-container transition flex items-center gap-2' }, [h(MS, { key: 'i', name: 'share', size: 16 }), 'Compartir PDF']),
       h('button', { key: 'pr', disabled: !labelsCertified, onClick: openPrintableView, 'data-testid': 'labels-open-printable', className: 'px-6 py-3 bg-primary text-on-primary rounded-xl text-caption font-bold uppercase tracking-widest hover:opacity-90 transition disabled:opacity-50 flex items-center gap-2' }, [h(MS, { key: 'i', name: 'print', size: 16 }), `Abrir vista imprimible (${totalLabels})`]),
@@ -2048,7 +2138,7 @@
         ]),
         h('label', { key: 'r3', className: 'flex items-center justify-between gap-4 cursor-pointer' }, [
           h('span', { key: 'l', className: 'text-caption font-semibold text-on-surface-variant' }, 'Incluir precio en la etiqueta'),
-          h('input', { key: 'i', type: 'checkbox', checked: withPrice, onChange: e => setWithPrice(e.target.checked), className: 'w-5 h-5 rounded border-outline text-primary focus:ring-primary' }),
+          h('input', { key: 'i', type: 'checkbox', 'data-testid': 'labels-with-price', checked: withPrice, onChange: e => setWithPrice(e.target.checked), className: 'w-5 h-5 rounded border-outline text-primary focus:ring-primary' }),
         ]),
         h('p', { key: 'sum', className: 'text-caption text-on-surface-variant' }, `${specs.length} talla(s) con existencias · ${totalLabels} etiqueta(s) a imprimir`),
         certificationBlocks.length > 0 && h('div', { key: 'certification', role: 'alert', 'data-testid': 'labels-certification-block', className: 'p-3 rounded-lg bg-danger-soft text-danger text-caption' }, [
