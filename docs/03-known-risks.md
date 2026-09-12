@@ -7698,8 +7698,8 @@ el transporte de configuración de la prueba es controlado, sin escrituras reale
 
 ## H-169 — Confirmación pendiente oculta y bloquea toda la aplicación
 
-**Estado:** RESUELTO en interfaz; publicación pendiente.
-**Fecha:** 12/09/2026. **Commit:** Pendiente de commit.
+**Estado:** RESUELTO en interfaz; publicado y verificado.
+**Fecha:** 12/09/2026. **Commit:** `8c037f091ed1b6729a141e10a02873cf44741153`.
 **Problema:** después de una operación, App sustituye la interfaz por un aviso
 fijo; el formulario queda invisible e inerte y la confirmación no ofrece consulta.
 **Alcance:** avisos comerciales no bloqueantes después de cargar la sesión;
@@ -7713,5 +7713,8 @@ transporte 13/13, cuentas 1/1, CONFIG/AUTH/PWA 3/3; arquitectura y build exit 0.
 **Artefacto:** `608541d6d0eb85040c95e780704dddb8d80056beb969447ed66ea8c27025cc41`.
 **Residual:** A/B/C real y terminal física NO CERTIFICADO. La respuesta remota
 puede seguir pendiente; no se fuerza éxito ni se habilitan comandos duplicados.
-Sin cambios a STORE, AUTH, SQL ni datos. Pendientes commit y publicación.
+Sin cambios a STORE, AUTH, SQL ni datos. La pestaña debe adoptar el cliente nuevo.
+**Despliegue:** main 8c037f0; Actions 34725515390 SUCCESS (regresiones y Pages).
+Ambos HTML y SW públicos HTTP 200 e idénticos byte a byte: 3/3.
+Evidencia: `docs/fixes/evidence/h169-publication.json` y `h169-workflow.json`.
 **Documento:** `docs/fixes/confirmacion-sin-bloqueo-h169.md`.

@@ -1,9 +1,9 @@
 # Confirmaciones pendientes sin ocultar la aplicación
 
 **Riesgo:** H-169
-**Estado:** RESUELTO en interfaz; publicación pendiente
+**Estado:** RESUELTO en interfaz; publicado y verificado
 **Fecha:** 12/09/2026
-**Commit:** Pendiente de commit
+**Commit técnico:** `8c037f091ed1b6729a141e10a02873cf44741153`
 
 ## Problema y reproducción
 
@@ -93,11 +93,20 @@ SHA-256 del HTML final:
 
 ## Riesgo residual y pendientes
 
-Pendientes commit, CI, publicación y comparación de bytes públicos. Supabase
-real A/B/C y terminal física **NO CERTIFICADO** para este artefacto. No se
+Supabase real A/B/C y terminal física **NO CERTIFICADO** para este artefacto. No se
 modifican STORE, AUTH, SQL ni permisos; esta corrección no garantiza un plazo
 para que una operación remota desconocida alcance su resultado terminal.
 Las restricciones comerciales siguen activas mientras el resultado sea incierto.
+Una pestaña que conserve el cliente anterior necesita adoptar la actualización.
+
+## Publicación
+
+Commit técnico subido a main. Actions `34725515390`: regresiones y Pages
+**SUCCESS**, incluyendo H-164, navegación H-166, etiquetas H-167 y tickets H-168.
+La certificación live no se ejecutó. Ambos HTML y el service worker públicos
+respondieron HTTP 200 y coincidieron byte a byte con el commit: **3/3**.
+Evidencia: `evidence/h169-workflow.json` y `evidence/h169-publication.json`.
+No se aplicaron migraciones ni se modificaron operaciones comerciales reales.
 
 ## Referencias
 
