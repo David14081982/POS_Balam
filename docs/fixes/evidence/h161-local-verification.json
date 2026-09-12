@@ -93,7 +93,12 @@
   "githubActions": {
     "identityRunId": 34664301580,
     "identityConclusion": "success",
-    "syncRunId": 34664301574
+    "syncRunId": 34664301574,
+    "syncConclusion": "failure",
+    "syncFailureStep": "Require a complete live certificate for this delivery",
+    "syncFailureReason": "tested build differs from delivery",
+    "syncFailureExitCode": 1,
+    "deployConclusion": "skipped"
   },
   "publicArtifactCheck": {
     "checkedAt": "2026-09-12T01:17:37.718Z",

@@ -154,7 +154,11 @@ commit y artefacto; no admite H-161. No se modificaron estos workflows ni se
 creó una excepción de publicación. Commit y push no certifican A/B/C.
 
 GitHub Actions H132 aprobó el commit técnico en la ejecución `34664301580`.
-La ejecución H148 correspondiente es `34664301574`. La lectura HTTP de Pages
+H148 terminó con fallo en la ejecución `34664301574`: la comprobación
+`Require a complete live certificate for this delivery` devolvió
+`tested build differs from delivery`, código 1; el job `deploy` fue omitido.
+Las comprobaciones anteriores a esa puerta aprobaron. Los pasos posteriores
+no se ejecutaron y no se contabilizan como aprobados. La lectura HTTP de Pages
 el 12/09/2026 a las 01:17:37 UTC todavía devolvió el HTML anterior:
 `6678d9d1c2eac11f1b670017e8fec4c716e7f9b763c1f26e631e423aab22fd85`.
 Por tanto, esa comprobación no acredita publicación de H-161.

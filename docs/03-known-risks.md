@@ -7292,7 +7292,9 @@ su certificación a este artefacto. Commit técnico enviado a `origin/main` por
 solicitud expresa del usuario, mediante avance directo desde `eef071d`, y hash
 confirmado con `git ls-remote`. Los workflows H148/H157 permanecen intactos;
 no se creó una excepción de publicación.
-H132 aprobó el commit (`34664301580`); H148: `34664301574`. Pages seguía sirviendo
+H132 aprobó el commit (`34664301580`); H148 (`34664301574`) falló en la puerta de
+certificado con `tested build differs from delivery`, código 1; `deploy`
+omitido. Las comprobaciones anteriores a esa puerta aprobaron. Pages seguía sirviendo
 el SHA anterior `6678d9…` a las 01:17:37 UTC del 12/09/2026.
 **Riesgo residual y pendientes:** matriz real A/B/C no ejecutada; certificar el
 artefacto, publicar y comprobar la terminal del usuario. La compatibilidad de
