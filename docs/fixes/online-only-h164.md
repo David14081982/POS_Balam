@@ -489,6 +489,76 @@ La [lectura final de adopción](evidence/h164-physical-adoption-final.json) de l
 **15:44:18 UTC** confirma el mismo equipo listo, cero residuos reportados,
 13 instalaciones retiradas y ningún segundo o tercer equipo observado.
 
+## Punto Cero: preservar configuración sin confundir existencias
+
+**Fecha:** 12/09/2026. **Commit:** Pendiente de commit.
+
+Después de adoptar el primer equipo, el propietario reportó inventario ausente,
+operaciones QA visibles y el rechazo `purge_changed_configuration` al ejecutar
+Punto Cero. La lectura de autoridad de las 16:12:40 UTC confirmó el rechazo
+transaccional de las 16:03:28 UTC y su rollback. No fue falta de Internet.
+
+El inventario local anterior contenía 973 productos y 3.484 piezas. Sus originales
+siguen archivados íntegros en Supabase; la adopción retiró la proyección local y
+la pantalla mostró el catálogo remoto, que contenía operaciones QA de la
+certificación anterior. No se había comprobado esa diferencia antes de dar el
+equipo por operativo. Archivo técnico no equivale a inventario confirmado ni a
+restauración. Esta corrección no importa ese lote, no lo descarta ni reproduce
+una cola; atiende la decisión posterior del propietario de usar Punto Cero.
+
+La reproducción aislada recorrió preview, respaldo y el gateway online con una
+venta reservada, inventario V2 válido y acumulados de vendedor. Demostró dos
+rechazos sucesivos sobre el mismo caso:
+
+1. `config_fingerprint()` excluía `stock`, pero incluía `stock_quantity`.
+   Al revertir la reserva, el trigger V2 cambiaba esa cantidad y disparaba
+   `purge_changed_configuration`. El intento revirtió completamente.
+2. Corrigiendo sólo esa exclusión, `point_zero_preserved_hash()` incluía
+   `sellers.sync_version`. Reiniciar acumulados incrementaba esa versión
+   técnica y disparaba `point_zero_preserved_data_changed`; también revirtió.
+
+La migración aditiva [218](../../supabase/migrations/20260912021800_pos_h164_point_zero_preservation.sql)
+excluye exactamente esos dos campos operativos/técnicos de sus respectivas
+huellas. Conserva ambas comprobaciones de protección, los precios, la política
+de comisión, permisos, respaldo y recibo transaccional. Genera los cambios desde
+las definiciones vigentes y exige una coincidencia única por reemplazo. Además,
+Punto Cero ya no asigna `must_rebootstrap` cuando está activo el modo online;
+las instalaciones retiradas conservan su estado.
+
+El caso versionado [test-h164-point-zero.mjs](../../test-h164-point-zero.mjs),
+integrado en el runner SQL y en CI, pasó completo a las **16:35:40 UTC**. Usa
+PostgreSQL aislado, una venta sintética y ninguna fila comercial de producción.
+Comprueba respaldo recuperable, éxito y ambos recibos autoritativos, conteos
+finales cero, snapshot y presencia autenticados, folio posterior utilizable y
+13 instalaciones retiradas intactas. Compara por separado configuración,
+catálogos, usuarios, roles/permisos, SKU, métodos de pago, logotipo y tienda,
+sin depender de las huellas corregidas. El contrato de inventario V3 permanece
+activo y se ejecutan las restricciones diferidas antes de revertir el fixture.
+
+La verificación [219](../../supabase/migrations/20260912021900_pos_h164_point_zero_preservation_verification.sql)
+ejercita un único fixture reversible y acotado: existencias y acumulados no
+alteran la configuración protegida; precio y política de comisión sí cambian
+las huellas; barcode y autorización administrativa siguen protegidos. No
+ejecuta un Punto Cero global, no crea usuarios Auth ni modifica perfiles
+existentes. Su rollback exige configuración, runtime, contrato e identidades
+idénticos al inicio y ausencia de las filas sintéticas. La cadena 218/219 y el
+caso completo pasaron localmente; el control de migraciones obtuvo 31 PASS.
+
+218/219 se aplicaron tras un dry-run que incluía exactamente esas dos migraciones.
+La lectura de **16:38:41 UTC** confirmó ambas correcciones y la verificación
+remota con rollback: 35 tablas comerciales, originales archivados, operaciones
+legacy, runtime y estados de equipos idénticos; cero reactivaciones QA. Guardas,
+ACL, 35 cercos comerciales y contrato V3 activos. El [resumen verificable](evidence/h164-point-zero-preservation-verification.json)
+contiene resultados y hashes de fuente; los datos comerciales permanecen privados.
+
+CI y registro de publicación: en preparación. La UI, HTML, PWA y build
+`2026-09-12-h164-online` conservan sus fuentes y bytes. La operación rechazada
+mantiene su recibo original; el usuario debe cerrar el error y abrir de nuevo
+Punto Cero para generar preview, respaldo e identidad de operación nuevos.
+No se ha ejecutado una limpieza global nueva desde el agente en este incidente.
+Falta observar el nuevo intento del propietario; el PASS aislado y la verificación
+remota acotada no se presentan como una purga real ni como certificación física A/B/C.
+
 ## Riesgo residual y pendientes
 
 La lectura remota de **15:27:05 UTC** encontró 14 instalaciones comerciales:

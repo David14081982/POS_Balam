@@ -20,7 +20,10 @@ sesión de chat.
   Activo en Supabase; CI, UI 6/6 y PWA 2/2 PASS. A/B/C técnico histórico: 20/20
   PASS y retiro QA completado. SQL 216/217 corrigió el falso aviso de desconexión;
   un equipo físico adoptado, seis fuentes archivadas y cero residuos locales
-  reportados. Otros dos equipos y un lote aislado siguen pendientes; no rediseña UI.
+  reportados. SQL 218/219 corrige Punto Cero: un caso completo aislado y una
+  verificación remota reversible PASS, configuración preservada; el agente no
+  ejecutó una purga real. Otros dos equipos y un lote aislado siguen pendientes;
+  no rediseña UI.
 
 - [evaluacion-arquitectura-sincronizacion-h164.md](evaluacion-arquitectura-sincronizacion-h164.md)
   — H-164, HISTÓRICO: diagnóstico inicial de flota, reactivación y diálogo

@@ -6,8 +6,10 @@ const runtime=process.env.BALAM_PGLITE_ROOT;
 const nullableOnly=process.argv.includes('--nullable-only');
 const adoptionOnly=process.argv.includes('--adoption-only');
 const legacyScanOnly=process.argv.includes('--legacy-scan-only');
-const focused=nullableOnly||adoptionOnly||legacyScanOnly;
+const pointZeroOnly=process.argv.includes('--point-zero-only');
+const focused=nullableOnly||adoptionOnly||legacyScanOnly||pointZeroOnly;
 const executedVersions=[];
+let pointZero;
 const { PGlite }=await import(runtime?pathToFileURL(runtime+'/dist/index.js').href:'@electric-sql/pglite');
 const { pgcrypto }=await import(runtime?pathToFileURL(runtime+'/dist/contrib/pgcrypto.js').href:'@electric-sql/pglite/contrib/pgcrypto');
 const catalog=JSON.parse(fs.readFileSync('test-fixtures/h164/sql-authority-baseline.json','utf8')).catalog;
@@ -82,19 +84,25 @@ try{
  await migration('20260912021000_pos_h164_legacy_exact_discard.sql','H164 exact discard correction');
  if(!focused)await migration('20260912021100_pos_h164_legacy_exact_discard_verification.sql','H164 exact discard verification');
  await migration('20260912021200_pos_h164_optional_json_null.sql','H164 optional JSON null');
- if(!adoptionOnly&&!legacyScanOnly)await migration('20260912021300_pos_h164_optional_json_null_verification.sql','H164 optional JSON null verification');
+ if(!adoptionOnly&&!legacyScanOnly&&!pointZeroOnly)await migration('20260912021300_pos_h164_optional_json_null_verification.sql','H164 optional JSON null verification');
  if(!nullableOnly){
   await migration('20260912021400_pos_h164_adoption_diagnostics.sql','H164 adoption diagnostics');
-  if(!legacyScanOnly)await migration('20260912021500_pos_h164_adoption_diagnostics_verification.sql','H164 adoption diagnostics verification');
+  if(!legacyScanOnly&&!pointZeroOnly)await migration('20260912021500_pos_h164_adoption_diagnostics_verification.sql','H164 adoption diagnostics verification');
  }
- if(legacyScanOnly||!focused){
+ if(legacyScanOnly||pointZeroOnly||!focused){
   await migration('20260912021600_pos_h164_legacy_container_scan.sql','H164 legacy container scanner');
-  await migration('20260912021700_pos_h164_legacy_container_scan_verification.sql','H164 legacy container scanner verification');
+  if(!pointZeroOnly)await migration('20260912021700_pos_h164_legacy_container_scan_verification.sql','H164 legacy container scanner verification');
+ }
+ if(pointZeroOnly||!focused){
+  await migration('20260912021800_pos_h164_point_zero_preservation.sql','H164 Point Zero preservation');
+  await run('select pos.activate_online_only();','model active production write fence locally');
+  await migration('20260912021900_pos_h164_point_zero_preservation_verification.sql','H164 Point Zero preservation verification');
+  pointZero=await (await import('./test-h164-point-zero.mjs')).verifyPointZero(db);
  }
  const checked=await db.query(`select p.proname from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='pos' and p.proname like '%online%' order by p.proname`);
- const verificationMode=legacyScanOnly?'legacy-scan-only':adoptionOnly?'adoption-only':nullableOnly?'nullable-only':fs.existsSync(verification);
- fs.mkdirSync('.evidence-h164',{recursive:true});fs.writeFileSync('.evidence-h164/'+(legacyScanOnly?'online-legacy-scan-sql-local.json':adoptionOnly?'online-adoption-sql-local.json':nullableOnly?'online-null-sql-local.json':'online-sql-local.json'),JSON.stringify({at:new Date().toISOString(),engine:'PGlite PostgreSQL',source:'live catalog including schema/PUBLIC ACL, no production rows',migrations:executedVersions,verification:verificationMode,functions:checked.rows},null,2)+'\n');
- console.log(JSON.stringify({ok:true,functions:checked.rows.length,verification:verificationMode}));
+ const verificationMode=pointZeroOnly?'point-zero-only':legacyScanOnly?'legacy-scan-only':adoptionOnly?'adoption-only':nullableOnly?'nullable-only':fs.existsSync(verification);
+ fs.mkdirSync('.evidence-h164',{recursive:true});fs.writeFileSync('.evidence-h164/'+(pointZeroOnly?'online-point-zero-sql-local.json':legacyScanOnly?'online-legacy-scan-sql-local.json':adoptionOnly?'online-adoption-sql-local.json':nullableOnly?'online-null-sql-local.json':'online-sql-local.json'),JSON.stringify({at:new Date().toISOString(),engine:'PGlite PostgreSQL',source:'live catalog including schema/PUBLIC ACL, no production rows',migrations:executedVersions,verification:verificationMode,pointZero,functions:checked.rows},null,2)+'\n');
+ console.log(JSON.stringify({ok:true,functions:checked.rows.length,verification:verificationMode,pointZero}));
 } catch(error) {
  console.error(JSON.stringify({ok:false,error:error.message,detail:error.cause?.detail,where:error.cause?.where}));
  process.exitCode=1;

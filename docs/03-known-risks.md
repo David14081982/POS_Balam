@@ -7432,6 +7432,29 @@ escrituras comerciales remotas; adopción en la terminal del usuario pendiente.
 
 ## H-164 — Estados de equipos y recuperación sin salida operativa
 
+**Punto Cero corregido en Supabase, 12/09/2026:** el propietario reportó inventario
+ausente, operaciones de prueba visibles y un intento de Punto Cero rechazado
+con `purge_changed_configuration`. Se conserva el inventario legacy archivado;
+no se restaura ni se descarta automáticamente. La corrección atiende
+el rechazo de Punto Cero mediante su ruta online y conserva configuración,
+catálogos, usuarios, roles/permisos, SKU, métodos de pago, logotipo y tienda.
+Reproducción completa por gateway online: la huella H68 incluía `stock_quantity`
+y rechazaba la restauración V2 con `purge_changed_configuration`; corrigiendo
+esa exclusión, la huella de Punto Cero rechazaba el cambio técnico
+`sellers.sync_version` con `point_zero_preserved_data_changed`. Ambos intentos
+revirtieron íntegramente. El mismo caso completo pasó con las dos exclusiones
+y sin marcar `must_rebootstrap` en modo online. Configuración y permisos se
+compararon también de forma independiente; contrato V3 y restricciones
+diferidas activos. Migraciones 218/219 aplicadas y verificadas a las 16:38:41 UTC;
+un caso completo aislado PASS y una verificación remota acotada con rollback
+PASS. Permanecen idénticas las 35 tablas comerciales, los originales archivados,
+las operaciones legacy y los estados de equipos. Precio, comisión, barcode y
+autorización administrativa siguen protegidos. Control de migraciones: 31 PASS.
+No se ha ejecutado una limpieza global desde el agente en este incidente.
+UI y bytes del cliente sin cambios; falta observar el nuevo intento del usuario.
+Commit: Pendiente de commit. CI y registro de publicación en preparación.
+Evidencia: `docs/fixes/evidence/h164-point-zero-preservation-verification.json`.
+
 **Continuación de adopción física:** el usuario reportó un falso «Sin conexión»
 en la URL publicada. Supabase confirma presencia, permisos y snapshot; la
 reproducción con esas respuestas pasa. Está comprobado que el cliente oculta

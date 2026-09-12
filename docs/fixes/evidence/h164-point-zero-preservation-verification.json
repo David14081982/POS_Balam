@@ -1,0 +1,59 @@
+{
+  "at": "2026-09-12T16:38:41.430049+00:00",
+  "scope": "Additive SQL correction; complete Point Zero scenario executed only in isolated PostgreSQL. No real Point Zero, cleanup, Auth activation or commercial replay executed.",
+  "migrations": [
+    "20260912021800",
+    "20260912021900"
+  ],
+  "local": {
+    "at": "2026-09-12T16:35:40.626Z",
+    "engine": "PGlite PostgreSQL",
+    "verification": "point-zero-only",
+    "completePointZero": true,
+    "configurationPreserved": true,
+    "inventoryContractEnforced": true,
+    "retiredDevicesPreserved": 13,
+    "authenticatedRecovery": true,
+    "folioAfterResetUsable": true,
+    "commercialCases": 1,
+    "remotePointZeroExecuted": false
+  },
+  "remote": {
+    "migrationVerification": "PASS",
+    "rollbackFixture": true,
+    "completePointZeroExecuted": false,
+    "commercialTablesUnchanged": 35,
+    "allCommercialRowsUnchanged": true,
+    "archivedOriginalsUnchanged": true,
+    "legacyOperationsUnchanged": true,
+    "onlineRuntimeUnchanged": true,
+    "deviceIdentityStatusUnchanged": true,
+    "configurationGuardRetained": true,
+    "preservedGuardRetained": true,
+    "directPointZeroRevoked": true,
+    "authenticatedGatewayAvailable": true,
+    "onlineCommercialFences": 35,
+    "inventoryContract": {
+      "enforced": true,
+      "version": 3
+    },
+    "priceMutationDetected": true,
+    "commissionPolicyMutationDetected": true,
+    "barcodeMutationRejected": true,
+    "unauthenticatedPurgeRejected": true,
+    "bothOperationalFingerprintCases": "PASS",
+    "syntheticFixturesRolledBack": true,
+    "activeQa": 0
+  },
+  "sourceSha256": {
+    "supabase/migrations/20260912021800_pos_h164_point_zero_preservation.sql": "2cdb931cda4d04ebb31bbd082572589a95e0e997e44b0617a7323b0e126cf587",
+    "supabase/migrations/20260912021900_pos_h164_point_zero_preservation_verification.sql": "6b76ad0ca779ed70be7171fa9a829dfce971c7ccc72e7e0ce4be8f44813a4b79",
+    "test-h164-online-sql.mjs": "18ee1a200530a891e516d4f711621516ff46f58a57b05d9bfe28476f5a87a44d",
+    "test-h164-point-zero.mjs": "5c9ac597087962b1b72166f9d0ffb17abef5e3debf7985a8d4d0a9dc62f214c2"
+  },
+  "functionSourceMd5": {
+    "config_fingerprint": "35d488814f37f27bc6ed014d786def88",
+    "execute_point_zero": "af6b32d54e1881ad9e3ec459203b5e74",
+    "point_zero_preserved_hash": "ea57a26e053d42848c6ffe0af5aa31a5"
+  }
+}
