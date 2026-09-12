@@ -787,7 +787,7 @@
           (frozenStore.tagline || (!receiptSnapshot && C.get('ticket.tagline'))) && h('p', { key: 'tl', className: 'text-on-surface-variant px-4 mt-3', style: { fontSize: '12px', lineHeight: 1.6 } }, frozenStore.tagline || C.get('ticket.tagline')),
           h('div', { key: 'bc', className: 'mt-9 w-full flex flex-col items-center gap-2' }, [
             h('div', { key: 'b', className: 'flex items-end justify-center gap-[1px] py-2 px-6 w-full', style: { background: 'rgba(19,27,46,0.035)' } }, bars),
-            h('span', { key: 'u', className: 'text-on-surface-variant', style: { fontSize: '9px', letterSpacing: '0.3em' } }, 'BALAMGUAYABERAS.COM'),
+            h(ReceiptWebsite, { key: 'u' }),
           ]),
         ]),
       ]));
@@ -795,6 +795,21 @@
     return (typeof ReactDOM !== 'undefined' && ReactDOM.createPortal && typeof document !== 'undefined')
       ? ReactDOM.createPortal(documento, document.body)
       : documento;
+  }
+
+  // H-168: contacto vigente también en reimpresiones; no altera el documento.
+  function ReceiptWebsite() {
+    const [, refresh] = useState(0);
+    React.useEffect(() => {
+      const onConfig = () => refresh(value => value + 1);
+      window.addEventListener('configchange', onConfig);
+      return () => window.removeEventListener('configchange', onConfig);
+    }, []);
+    const website = String(window.CONFIG.get('ticket.website') || '').trim();
+    return website ? h('div', { 'data-testid': 'receipt-website',
+      className: 'tk-block w-full text-center text-on-surface-variant',
+      style: { fontSize: '9px', letterSpacing: '0.3em', overflowWrap: 'anywhere' },
+    }, website) : null;
   }
 
   // Documento termico propio de una devolucion directa. No reutiliza el
@@ -841,6 +856,7 @@
         h('div', { key: 'tot', className: 'tk-block flex justify-between font-headline text-primary mt-6 pt-4 border-t-2 border-primary', style: { fontSize: '20px' } }, [
           h('span', { key: 'l' }, 'REEMBOLSO'), h('span', { key: 'v' }, fmt(returnDoc.total)),
         ]),
+        h('div', { key: 'web', className: 'mt-6' }, h(ReceiptWebsite)),
       ]));
     return (typeof ReactDOM !== 'undefined' && ReactDOM.createPortal && typeof document !== 'undefined')
       ? ReactDOM.createPortal(documentNode, document.body) : documentNode;

@@ -1,0 +1,192 @@
+{
+  "startedAt": "2026-09-12T22:35:57.716Z",
+  "artifactSha256": "da893c5ead81446ce608c7c824aad79fc49cc3e9e85baa9334a0275399d589d9",
+  "serviceWorkerSha256": "719c1001147a56dab267027e271837f589b7cfa825674f777f13be4b0209645c",
+  "activationWorkerSha256": "719c1001147a56dab267027e271837f589b7cfa825674f777f13be4b0209645c",
+  "activationUsesSource": false,
+  "certifierSha256": "a432ac888f06696cf6e256689371cd238d56d8195b7adbfeae63b740ab38d7e2",
+  "cases": [
+    {
+      "name": "PWA: caché estática; API directa; corte y recuperación de Internet",
+      "ok": true,
+      "apiResponses": [
+        {
+          "ok": true,
+          "data": {
+            "revision": 1,
+            "method": "GET"
+          }
+        },
+        {
+          "ok": true,
+          "data": {
+            "revision": 2,
+            "method": "GET"
+          }
+        },
+        {
+          "ok": true,
+          "data": {
+            "revision": 3,
+            "method": "POST"
+          }
+        },
+        {
+          "ok": true,
+          "data": {
+            "revision": 4,
+            "method": "GET"
+          }
+        },
+        {
+          "ok": true,
+          "data": {
+            "revision": 5,
+            "method": "GET"
+          }
+        }
+      ],
+      "offlineRequestRejected": true,
+      "offlineShellSha256": "da893c5ead81446ce608c7c824aad79fc49cc3e9e85baa9334a0275399d589d9",
+      "offlineNavigationFallback": true,
+      "cache": [
+        {
+          "cache": "balam-shell-da893c5ead81446ce608",
+          "url": "http://127.0.0.1:65434/index.html"
+        },
+        {
+          "cache": "balam-shell-da893c5ead81446ce608",
+          "url": "http://127.0.0.1:65434/manifest.webmanifest"
+        },
+        {
+          "cache": "balam-shell-da893c5ead81446ce608",
+          "url": "http://127.0.0.1:65434/pwa/icon-192.png"
+        },
+        {
+          "cache": "balam-shell-da893c5ead81446ce608",
+          "url": "http://127.0.0.1:65434/pwa/icon-512.png"
+        },
+        {
+          "cache": "balam-shell-da893c5ead81446ce608",
+          "url": "http://127.0.0.1:65434/pwa/icon-maskable-512.png"
+        },
+        {
+          "cache": "balam-shell-da893c5ead81446ce608",
+          "url": "http://127.0.0.1:65434/pwa/apple-touch-icon.png"
+        },
+        {
+          "cache": "balam-shell-da893c5ead81446ce608",
+          "url": "http://127.0.0.1:65434/pwa/favicon-64.png"
+        }
+      ],
+      "networkRequests": [
+        {
+          "path": "/probe.html",
+          "method": "GET"
+        },
+        {
+          "path": "/favicon.ico",
+          "method": "GET"
+        },
+        {
+          "path": "/sw.js",
+          "method": "GET"
+        },
+        {
+          "path": "/index.html",
+          "method": "GET"
+        },
+        {
+          "path": "/manifest.webmanifest",
+          "method": "GET"
+        },
+        {
+          "path": "/pwa/icon-192.png",
+          "method": "GET"
+        },
+        {
+          "path": "/pwa/icon-512.png",
+          "method": "GET"
+        },
+        {
+          "path": "/pwa/icon-maskable-512.png",
+          "method": "GET"
+        },
+        {
+          "path": "/pwa/apple-touch-icon.png",
+          "method": "GET"
+        },
+        {
+          "path": "/pwa/favicon-64.png",
+          "method": "GET"
+        },
+        {
+          "path": "/rest/v1/products",
+          "method": "GET"
+        },
+        {
+          "path": "/rest/v1/products",
+          "method": "GET"
+        },
+        {
+          "path": "/rest/v1/rpc/technical_probe",
+          "method": "POST"
+        },
+        {
+          "path": "/rest/v1/products",
+          "method": "GET"
+        },
+        {
+          "path": "/rest/v1/products",
+          "method": "GET"
+        },
+        {
+          "path": "/probe.html",
+          "method": "GET"
+        },
+        {
+          "path": "/sw-activation.js",
+          "method": "GET"
+        },
+        {
+          "path": "/index.html",
+          "method": "GET"
+        },
+        {
+          "path": "/manifest.webmanifest",
+          "method": "GET"
+        },
+        {
+          "path": "/pwa/icon-192.png",
+          "method": "GET"
+        },
+        {
+          "path": "/pwa/icon-512.png",
+          "method": "GET"
+        },
+        {
+          "path": "/pwa/icon-maskable-512.png",
+          "method": "GET"
+        },
+        {
+          "path": "/pwa/apple-touch-icon.png",
+          "method": "GET"
+        },
+        {
+          "path": "/pwa/favicon-64.png",
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "name": "PWA: activación preserva evidencia comercial antigua y retira sólo recursos estáticos",
+      "ok": true,
+      "retainedEvidenceSha256": "c05223d85727a29177a383b16b29ed146b95c959a472e827a3c21118f529dfb7",
+      "oldStaticCacheRemoved": true,
+      "commercialCacheUntouched": true
+    }
+  ],
+  "remoteBusinessWrites": 0,
+  "scope": "Actual generated service worker in a fresh Chromium context. Same-origin and cross-origin technical API probes, static offline cache, reconnect. No real Supabase operation.",
+  "completedAt": "2026-09-12T22:36:04.732Z"
+}

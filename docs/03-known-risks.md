@@ -7669,3 +7669,26 @@ regresiones y Pages SUCCESS. Ambos HTML y `sw.js` públicos coinciden byte a byt
 con el commit. Evidencia: `docs/fixes/evidence/h167-publication.json` y
 `docs/fixes/evidence/h167-workflow.json`. Sin certificación live en este workflow.
 **Documento:** `docs/fixes/apertura-etiquetas-sin-bloqueo-h167.md`.
+
+## H-168 — Recuperar y publicar la página web configurable en tickets
+
+**Estado:** PARCIALMENTE RESUELTO — integración verificada, pendiente de publicar.
+**Fecha:** 12/09/2026. **Commit técnico:** Pendiente de commit.
+**Origen:** el cambio local identificado como H-157 en la copia rescatada no se
+integró en main. H-157 ya identifica otra historia publicada; esta recuperación
+usa H-168 y conserva la procedencia sin sobrescribir registros anteriores.
+**Evidencia:** main 695e9fe imprime BALAMGUAYABERAS.COM fijo y no contiene
+ticket.website ni la tarjeta Página web. La rama de rescate conserva el cambio
+y su prueba histórica 43/43, que dependía del modelo local-first anterior.
+**Alcance:** dominio inicial BALAMGUAYABERAS.MX; tarjeta debajo de Pie de ticket;
+valor configurable en tickets y reimpresiones, mediante CONFIG online vigente.
+Conservar permisos, documentos económicos, impresión y configuración remota.
+**Solución:** default de presentación sin modificar snapshots confirmados;
+CfgText online vigente; contacto compartido en comprobantes y escapado en Reportes.
+**Pruebas:** previo 6/32, final 41/41; CONFIG/AUTH/PWA 3/3, UI 6/6, PWA 2/2;
+build exit 0, capturas escritorio/móvil y PDF real. No cambia SQL ni permisos.
+**Artefacto:** HTML idénticos, SHA-256
+`da893c5ead81446ce608c7c824aad79fc49cc3e9e85baa9334a0275399d589d9`.
+**Despliegue:** pendiente. **Residual:** A/B/C real y papel NO CERTIFICADO;
+el transporte de configuración de la prueba es controlado, sin escrituras reales.
+**Documento:** `docs/fixes/pagina-web-tickets-h168.md`.

@@ -1,0 +1,220 @@
+{
+  "artifactSha256": "da893c5ead81446ce608c7c824aad79fc49cc3e9e85baa9334a0275399d589d9",
+  "scope": "Final HTML; CONFIG and receipts real, remote confirmation simulated; no live Supabase or physical printer",
+  "results": [
+    {
+      "name": "Configuración → Impresión ofrece el campo de página web",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "snapshot histórico sin clave muestra BALAMGUAYABERAS.MX",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "leer el default no modifica el snapshot confirmado",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "tarjeta Página web aparece debajo de Pie de ticket",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "campo muestra el dominio inicial",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "guardar espera y adopta la confirmación por el gateway vigente",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "una actualización recibida se muestra sin reenviarla al salir",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "otro ajuste conserva el borrador del campo",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "una intención pendiente no cambia CONFIG",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "rechazo no cambia la página confirmada",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "sin conexión no guarda ni crea una cola",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "no almacena configuración comercial en localStorage",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "recarga reconstruye el campo desde el snapshot remoto",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "CONFIG.load respeta valor personalizado y vacío explícito",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "historica-v1: imprime la web vigente una sola vez",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "historica-v1: omite dominio obsoleto y snapshot de contacto",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "venta-v2: imprime la web vigente una sola vez",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "venta-v2: omite dominio obsoleto y snapshot de contacto",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "reimpresion: imprime la web vigente una sola vez",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "reimpresion: omite dominio obsoleto y snapshot de contacto",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "anticipo: imprime la web vigente una sola vez",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "anticipo: omite dominio obsoleto y snapshot de contacto",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "abono: imprime la web vigente una sola vez",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "abono: omite dominio obsoleto y snapshot de contacto",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "liquidacion: imprime la web vigente una sola vez",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "liquidacion: omite dominio obsoleto y snapshot de contacto",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "cambio: imprime la web vigente una sola vez",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "cambio: omite dominio obsoleto y snapshot de contacto",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "devolucion: imprime la web vigente una sola vez",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "devolucion: omite dominio obsoleto y snapshot de contacto",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "ticket ya abierto refleja cambio de configuración",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "valor \"\" oculta la web sin recuperar dominio anterior",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "valor \"   \" oculta la web sin recuperar dominio anterior",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "ticket interpreta el valor como texto literal",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "web larga a 320px se conserva completa sin desbordar ticket",
+      "ok": true,
+      "detail": {
+        "width": 302.359375,
+        "scroll": 302,
+        "text": "landscapeBALAMBalam GuayaberasTransacciónBG-260912-0157Fecha2026-09-12 12:00Atendido porVendedora de pruebaDetalle de compraGUAYABERA DE PRUEBA$500.00SKU: SKU-H157-M · Talla: MCant: 1Importe$431.03IVA (16%)$68.97Total a pagar$500.00paymentsMétodo de pagoEfectivoVenta histórica: desglose fiscal o de descuentos no disponible; se conserva el total registrado.Gracias por su compra.Texto histórico preservado.https://subdominiosubdominiosubdominiosubdominiosubdominiosubdominiosubdominiosubdominiosubdominiosubdominiosubdominiosubdominiosubdominiosubdominiosubdominiosubdominiosubdominiosubdominio.balam.mx/contacto"
+      }
+    },
+    {
+      "name": "web larga a 768px se conserva completa sin desbordar ticket",
+      "ok": true,
+      "detail": {
+        "width": 302.359375,
+        "scroll": 302,
+        "text": "landscapeBALAMBalam GuayaberasTransacciónBG-260912-0157Fecha2026-09-12 12:00Atendido porVendedora de pruebaDetalle de compraGUAYABERA DE PRUEBA$500.00SKU: SKU-H157-M · Talla: MCant: 1Importe$431.03IVA (16%)$68.97Total a pagar$500.00paymentsMétodo de pagoEfectivoVenta histórica: desglose fiscal o de descuentos no disponible; se conserva el total registrado.Gracias por su compra.Texto histórico preservado.https://subdominiosubdominiosubdominiosubdominiosubdominiosubdominiosubdominiosubdominiosubdominiosubdominiosubdominiosubdominiosubdominiosubdominiosubdominiosubdominiosubdominiosubdominio.balam.mx/contacto"
+      }
+    },
+    {
+      "name": "cambiar web e imprimir conserva documentos, snapshot y stock",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "ticket de Reportes imprime página web literal con HTML escapado",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Reportes usa el mismo contrato visible de página web",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "web vacía también se omite en ticket de Reportes",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "sin excepciones de navegador",
+      "ok": true,
+      "detail": []
+    }
+  ],
+  "errors": []
+}

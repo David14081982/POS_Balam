@@ -1237,6 +1237,12 @@ ausencia de ventas ni vendedores por el texto de su nombre.
 
 ## Contratos que no deben romperse
 
+El contacto `ticket.website` es presentación vigente y se aplica también a
+reimpresiones, sin reescribir snapshots económicos. En un snapshot confirmado
+sin esa clave, CONFIG muestra BALAMGUAYABERAS.MX como default específico de lectura;
+no modifica el estado recibido ni persiste el fallback. Un valor explícito vacío
+omite el contacto. La edición usa la misma confirmación online de CONFIG.
+
 - Sin conexión real con Supabase no se crea ni confirma una operación comercial.
 - Una solicitud sólo muestra éxito después del commit y la consulta autoritativa.
 - No se crean colas comerciales ni se persisten colecciones como segunda autoridad.

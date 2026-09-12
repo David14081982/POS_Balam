@@ -58,6 +58,7 @@
   }
 
   function openPaymentMethodTicket(view) {
+    const website = String(window.CONFIG.get('ticket.website') || '').trim();
     const methodBlocks = view.methods.length ? view.methods.map(row => `<section class="method tk-block">
       <h2>${escapeReport(row.methodLabel)}</h2>
       <div class="money"><span>Entradas</span><strong>${escapeReport(fmt(row.entries))}</strong></div>
@@ -82,7 +83,7 @@
       <section class="origins tk-block"><h2>ORIGEN DE OPERACIONES</h2>${origins}<div class="money"><span>Entradas por cambios</span><strong>${escapeReport(fmt(view.exchangeEntries))}</strong></div><p>Importe informativo; ya está incluido en Total entradas.</p></section>
       ${courtesy}${undistributed}
       <section class="reconciliation tk-block ${view.reconciliation.ok ? '' : 'pending'}"><p>CONCILIACIÓN: ${view.reconciliation.ok ? 'CORRECTA' : 'PENDIENTE'}</p><p>Σ métodos ${escapeReport(fmt(view.reconciliation.distributedNet))} + sin distribución ${escapeReport(fmt(view.undistributed))} = neto ${escapeReport(fmt(view.net))}</p>${view.reconciliation.ok ? '' : `<p>Diferencia: ${escapeReport(fmt(view.reconciliation.difference))}</p>`}</section>
-      <footer class="foot tk-block">Reporte ejecutivo · BALAM</footer>
+      <footer class="foot tk-block">Reporte ejecutivo · BALAM${website ? `<div data-testid="receipt-website" style="margin-top:3mm;overflow-wrap:anywhere">${escapeReport(website)}</div>` : ''}</footer>
     </main></body></html>`;
     const win = openPrintableWindow(html, false);
     if (win) {

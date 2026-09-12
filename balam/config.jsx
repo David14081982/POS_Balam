@@ -264,6 +264,7 @@
     'discount.minMarginPct': 45,
     'folio.prefix': 'BG', // H-33: sólo el prefijo; el folio es PREFIJO-YYMMDD-0001
     'ticket.footer': 'Gracias por ser parte de nuestra herencia.',
+    'ticket.website': 'BALAMGUAYABERAS.MX',
     'ticket.tagline': 'Piezas artesanales únicas, cuidando la tradición y el detalle en cada fibra.',
     'pos.askSize': true,
     'pos.allowLayaway': true,
@@ -331,7 +332,12 @@
   function codes(kind) { return list(kind).map(it => it.code); }
   function find(kind, code) { const item = (state.catalogs[kind] || []).find(it => it.code === code) || null; return preparing ? item : deepClone(item); }
 
-  function get(key) { return state.settings[key]; }
+  function get(key) {
+    // H-168: presentación compatible con snapshots anteriores a este ajuste.
+    // Leer el default no modifica ni vuelve a publicar la autoridad recibida.
+    if (key === 'ticket.website' && remoteReady && !Object.prototype.hasOwnProperty.call(state.settings, key)) return SEED_SETTINGS[key];
+    return state.settings[key];
+  }
   function settings() { return deepClone(state.settings); }
 
   // ── Metadatos por catálogo (label / inForm / inSku / orden) ───────────────────

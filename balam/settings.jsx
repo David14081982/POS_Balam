@@ -1655,6 +1655,11 @@
           h('textarea', { key: 'ta', defaultValue: C.get('ticket.tagline'), rows: 2, className: 'block w-full px-3 py-2 bg-surface-container-low border border-outline-variant focus:ring-1 focus:ring-primary text-body rounded-lg resize-none', onBlur: async e => await C.setSetting('ticket.tagline', e.target.value) }),
         ]),
       ]),
+      h(GlassCard, { key: 'web', 'data-testid': 'ticket-website-card', className: 'p-6' }, [
+        h(SerifHeading, { key: 't', className: 'mb-4', children: 'Página web' }),
+        h(CfgText, { key: 'url', k: 'ticket.website', label: 'Dirección de la página web',
+          hint: 'Aparece al final de todos los tickets, incluidas las reimpresiones. Se guarda al salir del campo. Déjalo vacío para ocultarla.' }),
+      ]),
     ],
     usuarios: (ctx) => {
       const roleLabel = (r) => (C.find('user_role', r) || {}).label || r;
