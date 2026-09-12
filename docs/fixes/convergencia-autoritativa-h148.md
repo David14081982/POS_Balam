@@ -5,6 +5,10 @@
 **Fecha:** 08/09/2026
 **Commit:** `acf53bf` (motor, SQL y certificación), `31d5aca` (espera determinista de CI)
 
+> H-162 reemplaza el requisito de certificación para publicar: A/B/C queda
+> opcional. Este documento conserva la implementación y evidencia históricas.
+> Política vigente: `publicacion-sin-certificado-obligatorio-h162.md`.
+
 ## Problema y reproducción
 
 La flota podía mostrar un checkpoint vigente con una proyección incompleta o

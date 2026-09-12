@@ -59,8 +59,10 @@ Estas instrucciones aplican a todo el repositorio y a cualquier agente de IA.
 
 ## Certificación de funciones distribuidas
 
-Una función compartida, sincronizada u offline no se declara resuelta con
-pruebas aisladas. Aplicar `R-SYNC-16` y `R-SYNC-17` de
-`docs/architect/playbooks/synchronization.md`: A/B/C independientes contra
-Supabase real, comparación de autoridad y cero pérdidas/divergencias, con
-evidencia del artefacto final. Sin ejecución completa, declarar NO CERTIFICADO.
+Las certificaciones A/B/C son opcionales y se ejecutan cuando el usuario las
+solicita. No son requisito para commit, push ni publicación en GitHub Pages;
+no bloquear una entrega por certificado ausente, anterior o incompleto.
+Se conservan las pruebas de regresión del workflow y se informa su alcance.
+Para afirmar certificación distribuida, aplicar `R-SYNC-16` y `R-SYNC-17` de
+`docs/architect/playbooks/synchronization.md`. Sin ejecución completa,
+declarar NO CERTIFICADO, sin impedir la publicación. Decisión del usuario: H-162.

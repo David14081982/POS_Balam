@@ -64,16 +64,18 @@ ventana parcial, cursor que no avanza ante aplicación incompleta, mapa de todos
 los efectos pendientes, captura offline preservada, ajustes de comisión
 remotos, periodo derivado del cierre remoto y lectura multi-terminal.
 
-**R-SYNC-16 · BLOCKING · Una función distribuida se certifica contra su
-autoridad real en A/B/C independientes.** Las pruebas unitarias, mocks y
+**R-SYNC-16 · BLOCKING · Afirmar certificación distribuida exige evidencia
+contra la autoridad real en A/B/C independientes.** La certificación es opcional,
+bajo solicitud del usuario; no condiciona commit, push ni publicación en Pages.
+Su ausencia se informa y no detiene la entrega. Las pruebas unitarias, mocks y
 pruebas de una sola terminal no certifican convergencia. El caso completo
 incluye escrituras concurrentes, pérdida de eventos y confirmaciones, cola
 offline con recarga, reapertura, bajas sin resurrección y comparación final
 de documentos y stock contra Supabase. Una omisión se declara NO CERTIFICADO.
-El artefacto probado y el certificador se identifican por hash; la puerta
+El artefacto probado y el certificador se identifican por hash; el validador
 `test-h148-sync-certification.mjs` rechaza cobertura parcial, evidencia vieja,
 pendientes perdidos, divergencias o limpieza incompleta. No usar datos de
-negocio como semillas. Origen: H-148.
+negocio como semillas. Origen: H-148; publicación desacoplada por H-162.
 
 **R-SYNC-17 · BLOCKING · El checkpoint exige persistencia comprobada.** Recibir,
 validar cobertura y versión, aplicar, verificar persistencia y sólo entonces

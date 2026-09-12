@@ -1,4 +1,4 @@
-// Fail-closed delivery gate; --self-test never certifies live convergence.
+// Optional live certificate validator; --self-test never certifies convergence.
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import assert from 'node:assert/strict';

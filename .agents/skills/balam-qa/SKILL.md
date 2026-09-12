@@ -15,7 +15,9 @@ Auditar BALAM como usuario real para encontrar errores en funcionalidades YA EXI
 
 Para funciones compartidas, sincronizadas u offline, aplicar
 `docs/architect/playbooks/synchronization.md`, reglas `R-SYNC-16` y `R-SYNC-17`.
-Exigir A/B/C independientes contra Supabase real y la puerta
+La certificación A/B/C es opcional, bajo solicitud del usuario, y no condiciona
+commit, push ni publicación en Pages (H-162). Para afirmarla, exigir A/B/C
+independientes contra Supabase real y el validador
 `test-h148-sync-certification.mjs` sobre el artefacto final. Un test unitario,
 mock, prueba parcial o una sola terminal no certifica convergencia. Registrar
 NO CERTIFICADO si falta esa evidencia; no convertir omisiones en PASS.

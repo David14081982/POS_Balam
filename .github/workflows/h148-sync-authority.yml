@@ -49,7 +49,7 @@ on:
   workflow_dispatch:
     inputs:
       live:
-        description: Run real A/B/C certification against existing preproduction
+        description: Optional real A/B/C certification only (does not deploy)
         type: boolean
         default: false
 
@@ -107,9 +107,7 @@ jobs:
       - run: node test-h127-label-diagnostics.mjs
       - run: node test-h99-label-pdf.mjs
       - run: node test-h100-materialized-label-sku.mjs
-      - name: Require a complete live certificate for this delivery
-        if: github.event_name != 'workflow_dispatch' || !inputs.live
-        run: node test-h148-sync-certification.mjs docs/fixes/evidence/h148-live-matrix.json
+      # H-162: publication does not require a live certificate.
       - run: node test-h148-sync-certification.mjs --self-test
       - run: node test-h148-reconciliation.mjs
       - run: node test-h149-directed-recovery.mjs

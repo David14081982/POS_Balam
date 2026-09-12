@@ -5,6 +5,10 @@
 **Fecha:** 11/09/2026.
 **Commit técnico y desplegado:** `be333e16627b42a2dee6cfd280244fe2894cc31e`.
 
+> H-162 reemplaza el requisito de certificación para publicar: A/B/C queda
+> opcional. Este documento conserva la implementación y evidencia históricas.
+> Política vigente: `publicacion-sin-certificado-obligatorio-h162.md`.
+
 ## Problema y reproducción
 
 El usuario autoriza corregir quirúrgicamente la sincronización automática y

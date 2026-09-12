@@ -13,6 +13,10 @@ sesión de chat.
 
 ## Correcciones registradas
 
+- `publicacion-sin-certificado-obligatorio-h162.md` — H-162, PARCIALMENTE
+  RESUELTO: publicación independiente del certificado real, regresiones y
+  modo A/B/C opcional conservados; despliegue pendiente.
+
 - `importacion-familias-uuid-v5-h161.md` — H-161, PARCIALMENTE RESUELTO:
   familias UUID v5 compatibles, 98 comprobaciones locales y ambos Excel con
   vista previa; certificación real y publicación pendientes.

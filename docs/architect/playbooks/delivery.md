@@ -23,11 +23,13 @@ y se verifican contra la base real.**
 Nunca al revés. `db push --dry-run` antes, comprobación directa después.
 Origen: H-32, H-34, H-35 · Antipatrón: `AP-08`
 
-**R-DEL-04 · REQUIRED · El commit publica.**
-El hook `post-commit` sube cada commit a GitHub automáticamente, así que un
-commit sin evidencia completa es una publicación sin evidencia. Es un listón de
-calidad, **no una puerta de autorización**: los commits técnicos y documentales
-son parte del ciclo de la historia y no se consultan uno por uno.
+**R-DEL-04 · REQUIRED · La publicación sigue el workflow aprobado.**
+Los commits técnicos y documentales, push y despliegue forman parte del ciclo
+autorizado de la historia y no se consultan uno por uno. Pages publica desde
+`main` después de las regresiones del workflow. Por decisión H-162, la
+certificación A/B/C es opcional y no es requisito de commit, push ni despliegue;
+su ausencia, antigüedad o cobertura parcial no bloquea publicar. No atribuir
+certificación a pruebas que no la demuestran.
 
 **R-DEL-05 · REQUIRED · La reproducción previa falla, y su conteo se registra.**
 «7 pasaron, 31 fallaron» es evidencia; «se verificó» no lo es.

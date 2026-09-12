@@ -28,8 +28,9 @@ mismo papel por (`operation_id`, capacidad, hash)
 **Autoridad:** `STORE.synchronizeNow()` coordina envío, recepción y
 verificación. `STORE.syncStatus()` sólo informa actual cuando la cola y los
 dominios están comprobados y sus checkpoints son durables. La certificación
-de entrega es `test-h148-sync-certification.mjs` con evidencia real A/B/C del
-mismo artefacto; la telemetría de una instalación ausente no la sustituye.
+de convergencia, opcional y separada de la publicación por H-162, se valida con
+`test-h148-sync-certification.mjs` y evidencia real A/B/C del mismo artefacto;
+la telemetría de una instalación ausente no la sustituye.
 **Definición:** `docs/02-architecture.md` § Sincronización · `R-SYNC-16/17`
 **Creada por:** H-148 · **Decisión:** `ADR-014`
 **Consumidores:** cabecera de `balam/app.jsx`, administración de `balam/settings.jsx`

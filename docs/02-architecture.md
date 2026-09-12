@@ -55,6 +55,14 @@ lo que prueban el artefacto distribuido sin Babel ni CDN. Pueden seguir leyendo
 `POS Balam.html` estáticamente para verificar contratos de fuente.
 `test-smoke.mjs` conserva de forma explícita sus dos modos, desarrollo y bundle.
 
+## Publicación en GitHub Pages
+
+El workflow `h148-sync-authority.yml` construye y ejecuta las regresiones antes
+de publicar desde `main`. La publicación no lee ni exige un certificado A/B/C.
+La certificación remota se conserva como ejecución manual opcional con
+`live=true`, separada del despliegue y desactivada por defecto. Su ausencia
+no equivale a certificación aprobada ni bloquea publicar. Decisión H-162.
+
 ## Instalación PWA
 
 La publicación HTTP bajo `/POS_Balam/` registra `sw.js` con ese mismo scope.

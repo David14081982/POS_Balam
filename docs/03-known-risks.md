@@ -7306,3 +7306,41 @@ ejecutó ni se amplió el runner como parte de esta corrección.
 **Certificación:** NO CERTIFICADO.
 **Documento:** `docs/fixes/importacion-familias-uuid-v5-h161.md`.
 **Evidencia:** `docs/fixes/evidence/h161-local-verification.json`.
+
+## H-162 — La publicación exige una certificación real ajena al cambio
+
+**Estado:** PARCIALMENTE RESUELTO — corregido localmente; publicación pendiente.
+**Fecha:** 11/09/2026. **Commit:** Pendiente de commit.
+**Origen:** autorización explícita del usuario para retirar la certificación
+real A/B/C como requisito automático de publicación en GitHub Pages.
+**Reproducción:** H-161 está en `main` y tiene 98 comprobaciones locales verdes;
+la ejecución H148 `34664301574` falla en
+`Require a complete live certificate for this delivery`, con
+`tested build differs from delivery`, y omite el job `deploy`.
+**Causa:** `.github/workflows/h148-sync-authority.yml` exige a cada entrega un
+certificado real vinculado al hash exacto del nuevo HTML, incluso cuando el
+cambio acotado ya superó su regresión. Las reglas vigentes imponen el mismo
+requisito y deben reflejar la nueva decisión del usuario.
+**Alcance:** retirar esa puerta de la publicación automática, conservar las
+regresiones y la certificación real como ejecución opcional bajo petición;
+actualizar las reglas y publicar la corrección H-161 ya autorizada.
+**Invariantes:** controles funcionales, permisos, SQL, cola offline y datos
+comerciales intactos. Publicar sin matriz real no equivale a certificar A/B/C.
+**Corrección:** se retira sólo la exigencia del certificado real de la regresión
+automática. Se conservan las regresiones, su dependencia previa al despliegue y
+el modo A/B/C manual con `live=false` predeterminado. Reglas y contrato de
+publicación actualizados; el validador real sigue siendo estricto.
+**Pruebas:** contrato anterior 5/5; nuevo contrato contra YAML anterior falla
+antes de completar comprobaciones, código 1. Tras la corrección, publicación
+10/10 (contrato y nueve mutaciones) y self-test H148 rechaza 29 certificados
+falsos, código 0. `node --check` y `git diff --check` correctos.
+**Artefactos:** HTML/offline de H-161 intactos, SHA-256
+`ece24479d2ef006c0c6de50f680a7fcb487800ee56c5c048b8f7434ff4185a14`;
+SW `51cdbbb33d1a6fdd07b7a0db8560352d3c5eac368962e80f566dc717c9cf6d1c`.
+Sin diff productivo en `balam/` ni SQL.
+**Despliegue:** commit, push y comprobación de Pages pendientes; no se declara
+publicado H-161 antes de verificar los bytes públicos.
+**Riesgo residual:** la entrega automática dejará de acreditar convergencia
+contra Supabase real; las regresiones permanecen exigibles y la certificación
+se informa separadamente cuando sea solicitada y ejecutada.
+**Documento:** `docs/fixes/publicacion-sin-certificado-obligatorio-h162.md`.
