@@ -1,9 +1,9 @@
 {
   "risk": "H-161",
-  "status": "PARTIALLY_RESOLVED_LOCAL_ONLY",
+  "status": "PARTIALLY_RESOLVED_PUSHED",
   "localDate": "2026-09-11",
   "baseCommit": "eef071d",
-  "commit": "Pendiente de commit",
+  "commit": "e10454f0ed15c1ed65e86ac8e0b89a113a539d2d",
   "scope": "Inventory Excel family UUID v4/v5 compatibility",
   "baseline": {
     "artifactSha256": "6678d9d1c2eac11f1b670017e8fec4c716e7f9b763c1f26e631e423aab22fd85",
@@ -81,7 +81,27 @@
     "runnerModified": false,
     "folioNumbersConsumedOrReverted": false
   },
-  "deployment": "PENDING",
+  "deployment": "PENDING_CERTIFICATION",
+  "delivery": {
+    "remoteRef": "origin/main",
+    "pushConfirmed": true,
+    "fastForwardFrom": "eef071d3ae8bc85337be4b57410893ea6685c61a",
+    "remoteCommitVerifiedWith": "git ls-remote origin refs/heads/main",
+    "publicationWorkflowsModified": false,
+    "publicationExceptionCreated": false
+  },
+  "githubActions": {
+    "identityRunId": 34664301580,
+    "identityConclusion": "success",
+    "syncRunId": 34664301574
+  },
+  "publicArtifactCheck": {
+    "checkedAt": "2026-09-12T01:17:37.718Z",
+    "url": "https://david14081982.github.io/POS_Balam/index.html",
+    "status": 200,
+    "sha256": "6678d9d1c2eac11f1b670017e8fec4c716e7f9b763c1f26e631e423aab22fd85",
+    "h161Published": false
+  },
   "commercialDataWritten": false,
   "inventoryRestorationIncluded": false
 }

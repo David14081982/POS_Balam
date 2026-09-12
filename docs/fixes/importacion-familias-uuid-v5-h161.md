@@ -1,9 +1,9 @@
 # Importación de familias UUID v5 exportadas por BALAM
 
 **Riesgo:** H-161
-**Estado:** PARCIALMENTE RESUELTO — corregido localmente, sin publicación
+**Estado:** PARCIALMENTE RESUELTO — enviado a main, publicación pendiente
 **Fecha:** 11/09/2026
-**Commit:** Pendiente de commit
+**Commit técnico:** `e10454f0ed15c1ed65e86ac8e0b89a113a539d2d`
 
 ## Problema y reproducción
 
@@ -143,9 +143,25 @@ en `folio_counters`, tabla fuera de las 17 huellas de conservación y limpieza
 del runner. No se ejecutó ese ensayo remoto ni se adaptó el certificador dentro
 de la corrección quirúrgica; tampoco se consumió ni revirtió numeración.
 
-Commit y publicación pendientes. No se ejecutó una importación sobre Supabase
-real ni se modificaron productos comerciales. La adopción de la actualización
-por la terminal del usuario tampoco se ha comprobado.
+El usuario solicitó expresamente commit y push para probar la corrección.
+El commit técnico `e10454f` se envió a `origin/main` mediante avance directo
+desde `eef071d`; `git ls-remote` confirmó el hash completo. Sólo se incluyeron
+la corrección, las pruebas, los artefactos y la documentación de H-161.
+
+Publicación pendiente: el workflow H148 exige el certificado del HTML exacto
+antes de desplegar Pages. El workflow manual H157 está limitado a su propio
+commit y artefacto; no admite H-161. No se modificaron estos workflows ni se
+creó una excepción de publicación. Commit y push no certifican A/B/C.
+
+GitHub Actions H132 aprobó el commit técnico en la ejecución `34664301580`.
+La ejecución H148 correspondiente es `34664301574`. La lectura HTTP de Pages
+el 12/09/2026 a las 01:17:37 UTC todavía devolvió el HTML anterior:
+`6678d9d1c2eac11f1b670017e8fec4c716e7f9b763c1f26e631e423aab22fd85`.
+Por tanto, esa comprobación no acredita publicación de H-161.
+
+No se ejecutó una importación sobre Supabase real ni se modificaron productos
+comerciales. La adopción de la actualización por la terminal del usuario
+tampoco se ha comprobado.
 
 El defecto debió quedar cubierto con el export de familias generado por H-133.
 La regresión permanente v4/v5 cierra ese hueco local sin crear otra autoridad,

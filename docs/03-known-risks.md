@@ -7250,8 +7250,8 @@ de una restauración automática H98. No se cambió el HTML publicado.
 
 ## H-161 — Importar rechaza las familias UUID v5 que BALAM exporta
 
-**Estado:** PARCIALMENTE RESUELTO — corregido localmente, sin publicación.
-**Fecha:** 11/09/2026. **Commit:** Pendiente de commit.
+**Estado:** PARCIALMENTE RESUELTO — enviado a main, publicación pendiente.
+**Fecha:** 11/09/2026. **Commit técnico:** `e10454f0ed15c1ed65e86ac8e0b89a113a539d2d`.
 **Origen:** Inventario rechaza los Excel exportados el 09/09 y 11/09/2026
 antes de abrir la vista previa, con el mensaje «El archivo no tiene el formato
 esperado».
@@ -7288,7 +7288,12 @@ en cero. Leer un export anterior no autoriza restaurar sus productos; IDs que
 ya no existan deben conservar el conflicto de identidad del preflight.
 **Despliegue:** pendiente. El filtro H148 rechaza el certificado anterior por
 `tested build differs from delivery`; no se modificó el filtro ni se atribuye
-su certificación a este artefacto. Commit pendiente.
+su certificación a este artefacto. Commit técnico enviado a `origin/main` por
+solicitud expresa del usuario, mediante avance directo desde `eef071d`, y hash
+confirmado con `git ls-remote`. Los workflows H148/H157 permanecen intactos;
+no se creó una excepción de publicación.
+H132 aprobó el commit (`34664301580`); H148: `34664301574`. Pages seguía sirviendo
+el SHA anterior `6678d9…` a las 01:17:37 UTC del 12/09/2026.
 **Riesgo residual y pendientes:** matriz real A/B/C no ejecutada; certificar el
 artefacto, publicar y comprobar la terminal del usuario. La compatibilidad de
 lectura no restaura los IDs retirados por Punto Cero.
