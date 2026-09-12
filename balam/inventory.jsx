@@ -122,6 +122,7 @@
     const [products, setProducts] = useState(() => D.products.slice());
     const [importPreview, setImportPreview] = useState(null);
     const [importResolutions, setImportResolutions] = useState({});
+    const [importFeedback, setImportFeedback] = useState(null);
     const [labelTargets, setLabelTargets] = useState(null); // productos para imprimir etiquetas
     const [deletion, setDeletion] = useState(null);
     window.UI.useSyncActivity(!!(editing || importPreview), ['products', 'config', 'promotions'], { screen: 'inventory' });
@@ -153,14 +154,17 @@
       const file = e.target.files && e.target.files[0];
       e.target.value = '';
       if (!file) return;
+      setImportFeedback(null);
       window.XLSXIO.parseFile(file)
         .then(res => {
           if (!res.products.length) { toast('El archivo no contiene productos para importar', 'var(--danger)'); return; }
           setImportResolutions({}); setImportPreview(res);
         })
-        // Los errores propios del lector (etiquetas duplicadas, archivo sin la hoja
-        // «Catálogos») traen un mensaje que el dueño puede accionar: se muestra tal cual.
-        .catch(err => toast((err && err.balam && err.message) || 'No se pudo leer el archivo Excel', 'var(--danger)'));
+        .catch(err => {
+          const message = { ...err, context: 'inventory_import', message: (err && err.message) || 'No se pudo leer el archivo Excel' };
+          setImportFeedback({ message, error: true });
+          toast(message, 'var(--danger)');
+        });
     }
     // H-86: la vista previa es un plan completo. Ninguna fila toca DATA mientras
     // exista un conflicto y la actualización localiza por el ID técnico exportado.
@@ -170,15 +174,34 @@
         toast(`Importación bloqueada: ${plan.conflicts.length} conflicto(s). No se modificó el inventario.`, 'var(--danger)');
         return;
       }
+      const changedUpdates = plan.changedUpdates == null ? plan.updates : plan.changedUpdates;
+      if (!plan.creates && !changedUpdates) {
+        const message = 'Sin cambios: el archivo coincide con tu inventario. No hay datos que guardar.';
+        setImportPreview(null); setImportResolutions({});
+        setImportFeedback({ message });
+        toast(message, 'var(--accent)');
+        return;
+      }
       const backup = D.products.map(product => JSON.parse(JSON.stringify(product)));
       try {
         const result = window.XLSXIO.applyImportPlan(plan, D.products);
-        D.saveProducts(result.productIds); refresh();
+        const persisted = result.productIds.length ? D.saveProducts(result.productIds) : true;
+        refresh();
         setImportPreview(null); setImportResolutions({});
-        toast(`${result.nuevos} nuevos · ${result.actualizados} actualizados`, 'var(--accent)');
+        if (persisted === false) {
+          const message = { context: 'inventory_import', code: 'INVENTORY_IMPORT_STORAGE_PENDING' };
+          setImportFeedback({ message, error: true });
+          toast(message, 'var(--warning)');
+          return;
+        }
+        const message = `${result.nuevos} nuevos · ${changedUpdates} actualizados${plan.unchangedCount ? ` · ${plan.unchangedCount} sin cambios` : ''}`;
+        setImportFeedback({ message });
+        toast(message, 'var(--accent)');
       } catch (error) {
         D.products.splice(0, D.products.length, ...backup); refresh();
-        toast((error && error.balam && error.message) || 'No se pudo aplicar la importación; no se modificó el inventario', 'var(--danger)');
+        const message = { ...error, context: 'inventory_import', message: (error && error.message) || 'No se pudo aplicar la importación; no se modificó el inventario' };
+        setImportFeedback({ message, error: true });
+        toast(message, 'var(--danger)');
       }
     }
     function saveProduct(draft, mode, options) {
@@ -350,12 +373,13 @@
             h('span', { key: 'l', className: 'text-overline font-bold text-on-surface-variant uppercase tracking-widest flex items-center gap-2' }, [h(MS, { key: 'i', name: 'box', size: 18 }), 'Excel:']),
             h('input', { key: 'f', ref: fileRef, type: 'file', accept: '.xlsx,.xls,.csv', className: 'hidden', onChange: onPickFile }),
             h('div', { key: 'b', className: 'flex flex-wrap gap-2 min-w-0' }, [
-              h('button', { key: 't', className: XLSBTN, onClick: () => window.XLSXIO.exportTemplate() }, [h(MS, { key: 'i', name: 'download', size: 16 }), 'Plantilla']),
-              h('button', { key: 'i', className: XLSBTN, onClick: () => fileRef.current && fileRef.current.click() }, [h(MS, { key: 'i', name: 'upload', size: 16 }), 'Importar']),
-              h('button', { key: 'e', className: XLSBTN, onClick: () => window.XLSXIO.exportInventory(products) }, [h(MS, { key: 'i', name: 'file_export', size: 16 }), 'Exportar']),
+              h('button', { key: 't', 'data-testid': 'inventory-xlsx-template', className: XLSBTN, onClick: () => window.XLSXIO.exportTemplate() }, [h(MS, { key: 'i', name: 'download', size: 16 }), 'Plantilla']),
+              h('button', { key: 'i', 'data-testid': 'inventory-xlsx-import', className: XLSBTN, onClick: () => fileRef.current && fileRef.current.click() }, [h(MS, { key: 'i', name: 'upload', size: 16 }), 'Importar']),
+              h('button', { key: 'e', 'data-testid': 'inventory-xlsx-export', className: XLSBTN, onClick: () => window.XLSXIO.exportInventory(products) }, [h(MS, { key: 'i', name: 'file_export', size: 16 }), 'Exportar']),
               h('button', { key: 'bc', 'data-testid': 'inventory-labels', className: XLSBTN, onClick: () => { if (!rows.length) { toast('No hay productos para etiquetar', 'var(--danger)'); return; } setLabelTargets(rows.flatMap(row => row.isFamilyProjection ? row.references : [row])); }, title: 'Imprimir etiquetas de los productos filtrados' }, [h(MS, { key: 'i', name: 'barcode', size: 16 }), 'Etiquetas']),
             ]),
           ]),
+          importFeedback && h('div', { key: 'import-feedback', 'data-testid': 'inventory-import-feedback', role: importFeedback.error ? 'alert' : 'status', className: 'mt-3 text-caption' }, h(HumanMessage, { message: importFeedback.message })),
         ]),
         // Tabla
         h('div', { key: 'tbl', className: CARD + ' overflow-hidden shadow-e1' }, [
@@ -582,6 +606,11 @@
 
   // ---------- Previsualización de importación ----------
   function ImportModal({ data, plan, onClose, onConfirm, onResolve }) {
+    const changedUpdates = plan.changedUpdates == null ? plan.updates : plan.changedUpdates;
+    const changedCount = plan.creates + changedUpdates;
+    const isSharedSku = warning => /^SKU_DUPLICATE_WARNING(?::|$)/.test(typeof warning === 'string' ? warning : String(warning && warning.code || ''));
+    const sharedSkuWarnings = (plan.warnings || []).filter(isSharedSku);
+    const fileNotices = (plan.warnings || []).filter(warning => !isSharedSku(warning));
     const stockTotal = state => state && Array.isArray(state.stock)
       ? state.stock.reduce((sum, item) => sum + (Number(item.stock) || 0), 0) : 0;
     const priceSummary = state => {
@@ -590,27 +619,35 @@
       return fmt(state.precio).replace('.00', '') + (specials ? ` + ${specials} especial(es)` : '');
     };
     const footer = [
-      h('button', { key: 'c', className: 'px-5 h-11 border border-outline-variant text-on-surface text-caption font-bold uppercase tracking-widest hover:bg-surface-container rounded-lg transition-colors', onClick: onClose }, 'Cancelar'),
-      h('button', { key: 'k', 'data-testid': 'inventory-import-confirm', disabled: !plan.ok, className: 'inline-flex items-center gap-2 px-5 h-11 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-lg hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed', onClick: onConfirm }, [h(MS, { key: 'i', name: plan.ok ? 'check' : 'block', size: 16 }), plan.ok ? `Importar ${plan.rows.length}` : 'Importación bloqueada']),
+      h('button', { key: 'c', 'data-testid': 'inventory-import-cancel', className: 'px-5 h-11 border border-outline-variant text-on-surface text-caption font-bold uppercase tracking-widest hover:bg-surface-container rounded-lg transition-colors', onClick: onClose }, 'Cancelar'),
+      h('button', { key: 'k', 'data-testid': 'inventory-import-confirm', disabled: !plan.ok, className: 'inline-flex items-center gap-2 px-5 h-11 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-lg hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed', onClick: onConfirm }, [h(MS, { key: 'i', name: plan.ok ? 'check' : 'block', size: 16 }), plan.ok ? (changedCount ? `Importar ${changedCount}` : 'Cerrar') : 'Importación bloqueada']),
     ];
     return h(Modal, { title: 'Previsualizar importación', onClose, footer, large: true }, [
       h('div', { key: 'sum', className: 'flex items-center gap-2 mb-4 flex-wrap text-caption' }, [
         plan.creates > 0 && h('span', { key: 'n', 'data-testid': 'inventory-import-creates', className: 'px-2 py-1 bg-success-soft text-success font-bold rounded' }, `${plan.creates} altas`),
-        plan.updates > 0 && h('span', { key: 'u', 'data-testid': 'inventory-import-updates', className: 'px-2 py-1 bg-gold-soft text-gold-text font-bold rounded' }, `${plan.updates} actualizaciones`),
+        changedUpdates > 0 && h('span', { key: 'u', 'data-testid': 'inventory-import-updates', className: 'px-2 py-1 bg-gold-soft text-gold-text font-bold rounded' }, `${changedUpdates} actualizaciones`),
+        plan.unchangedCount > 0 && h('span', { key: 'same', 'data-testid': 'inventory-import-unchanged', className: 'px-2 py-1 bg-surface-container text-on-surface-variant font-bold rounded' }, `${plan.unchangedCount} sin cambios`),
         plan.conflicts.length > 0 && h('span', { key: 'x', 'data-testid': 'inventory-import-conflicts', className: 'px-2 py-1 bg-danger-soft text-danger font-bold rounded' }, `${plan.conflicts.length} conflictos`),
         data.skipped > 0 && h('span', { key: 'b', className: 'px-2 py-1 bg-warning-soft text-warning font-bold rounded' }, `${data.skipped} omitidos`),
         h('span', { key: 'c', className: 'text-on-surface-variant' }, `${data.total} filas leídas · ${data.schema === 'current' ? 'Plantilla actual' : 'Plantilla anterior compatible'}`),
       ]),
-      ...(plan.warnings || []).map((warning, index) => h(HumanMessage, { key: 'w' + index, message: warning, options: { level: 'warning' }, className: 'text-caption mb-2 p-2 rounded bg-warning-soft' })),
+      sharedSkuWarnings.length > 0 && h('details', { key: 'shared-skus', 'data-testid': 'inventory-import-warnings', 'data-message-level': 'neutral', className: 'text-caption mb-3 text-on-surface-variant' }, [
+        h('summary', { key: 'summary', className: 'cursor-pointer' }, 'Hay productos con el mismo SKU. Esto está permitido.'),
+        h(HumanMessage, { key: 'message', message: { context: 'inventory_import', code: 'SKU_DUPLICATE_WARNING', message: sharedSkuWarnings.join('\n') }, className: 'mt-2' }),
+      ]),
+      fileNotices.length > 0 && h('details', { key: 'file-notices', className: 'text-caption mb-3 text-on-surface-variant' }, [
+        h('summary', { key: 'summary', className: 'cursor-pointer' }, 'Información del archivo'),
+        h(HumanMessage, { key: 'message', message: { context: 'inventory_import', code: data.schema === 'current' ? 'INVENTORY_FILE_READ' : 'INVENTORY_COMPATIBLE_FILE', message: fileNotices.join('\n') }, className: 'mt-2' }),
+      ]),
       plan.conflicts.length > 0 && h('p', { key: 'blocked', role: 'alert', className: 'text-caption font-semibold text-danger mb-3' }, 'Todo-o-nada: mientras exista un conflicto no se aplicará ninguna fila.'),
-      h('div', { key: 'tbl', className: 'border border-outline-variant rounded-lg overflow-hidden max-h-80 overflow-y-auto' },
+      h('div', { key: 'tbl', 'data-testid': 'inventory-import-table-scroll', className: 'border border-outline-variant rounded-lg max-h-80 overflow-auto' },
         h('table', { className: 'w-full' }, [
           h('thead', { key: 'h', className: 'sticky top-0 bg-surface' }, h('tr', { className: 'border-b border-outline-variant' },
             ['Acción', 'Producto / SKU', 'Stock antes → después', 'Precios antes → después', 'Campos modificados'].map((c, i) => h('th', { key: i, className: 'px-3 py-2 text-overline font-semibold text-on-surface-variant uppercase tracking-widest text-left' }, c)))),
           h('tbody', { key: 'b', className: 'divide-y divide-outline-variant' }, plan.rows.slice(0, 60).map(row => h('tr', { key: row.rowKey, 'data-testid': 'inventory-import-row-' + row.rowNumber }, [
             h('td', { key: 'a', className: 'px-3 py-2 align-top' }, [
-              h('span', { key: 'badge', className: 'px-2 py-0.5 text-overline font-bold rounded ' + (row.action === 'new' ? 'bg-success-soft text-success' : row.action === 'update' ? 'bg-gold-soft text-gold-text' : 'bg-danger-soft text-danger') }, row.action === 'new' ? 'Alta' : row.action === 'update' ? 'Actualiza' : 'Conflicto'),
-              row.conflict && h(HumanMessage, { key: 'msg', message: row.conflict, className: 'mt-1 text-overline max-w-56' }),
+              h('span', { key: 'badge', className: 'px-2 py-0.5 text-overline font-bold rounded ' + (row.unchanged ? 'bg-surface-container text-on-surface-variant' : row.action === 'new' ? 'bg-success-soft text-success' : row.action === 'update' ? 'bg-gold-soft text-gold-text' : 'bg-danger-soft text-danger') }, row.unchanged ? 'Sin cambios' : row.action === 'new' ? 'Alta' : row.action === 'update' ? 'Actualiza' : 'Conflicto'),
+              row.conflict && h(HumanMessage, { key: 'msg', message: { ...row.conflict, context: 'inventory_import', rowNumber: row.rowNumber }, className: 'mt-1 text-overline max-w-56' }),
               row.conflict && row.conflict.resolvable && h('button', { key: 'resolve', type: 'button', 'data-testid': 'inventory-import-resolve-' + row.rowNumber, onClick: () => onResolve(row.rowKey, row.conflict.candidateId), className: 'mt-2 px-2 min-h-8 border border-danger/40 rounded text-overline font-bold text-danger' }, 'Confirmar producto existente'),
             ]),
             h('td', { key: 'n', className: 'px-3 py-2 align-top' }, [h('div', { key: 'name', className: 'text-body text-primary font-semibold' }, row.incoming.nombre), h('code', { key: 'sku', className: 'text-overline text-on-surface-variant' }, row.incoming.sku)]),

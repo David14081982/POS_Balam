@@ -13,6 +13,11 @@ sesión de chat.
 
 ## Correcciones registradas
 
+- `flujo-excel-inventario-h163.md` — H-163, CORREGIDO Y VERIFICADO
+  LOCALMENTE: plantilla V2, mensajes por causa y reimportación sin escrituras
+  innecesarias; E2E final sintético 37/37 y archivo de 973 referencias 14/14.
+  Publicación pendiente; certificación real opcional no ejecutada.
+
 - `publicacion-sin-certificado-obligatorio-h162.md` — H-162, RESUELTO Y
   PUBLICADO: regresiones conservadas, A/B/C opcional y diez rutas públicas
   verificadas; incluye la publicación de H-161.

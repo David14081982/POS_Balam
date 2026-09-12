@@ -41,7 +41,10 @@ const server = http.createServer((req, res) => {
   createReadStream(file).pipe(res);
 });
 await new Promise(resolve => server.listen(8860, '127.0.0.1', resolve));
-const browser = await chromium.launch({ channel: 'chrome', headless: true });
+const browser = await chromium.launch({
+  ...(process.env.BALAM_CHROME_EXECUTABLE ? { executablePath: process.env.BALAM_CHROME_EXECUTABLE } : { channel: 'chrome' }),
+  headless: true,
+});
 const page = await browser.newPage();
 const pageErrors = [];
 page.on('pageerror', error => pageErrors.push(String(error)));
@@ -335,7 +338,7 @@ const conflictUi = await page.evaluate(() => ({
 }));
 check('la UI muestra los conflictos del caso 239/222', /29 conflictos/.test(conflictUi.text), conflictUi.text);
 check('la UI deshabilita confirmar y conserva cero productos', conflictUi.disabled && conflictUi.products === 0);
-await page.getByRole('button', { name: 'Cancelar', exact: true }).click();
+await page.getByTestId('inventory-import-cancel').click();
 
 await page.evaluate(() => {
   const D = window.DATA;
@@ -350,18 +353,18 @@ await page.evaluate(() => {
 await page.waitForTimeout(300);
 const evidenceDir = path.join(ROOT, '.evidence-h86'); mkdirSync(evidenceDir, { recursive: true });
 const downloadPromise = page.waitForEvent('download');
-await page.getByRole('button', { name: /Exportar/ }).first().click();
+await page.getByTestId('inventory-xlsx-export').click();
 const download = await downloadPromise;
 const downloadedPath = path.join(evidenceDir, download.suggestedFilename());
 await download.saveAs(downloadedPath);
 await page.setInputFiles('input[type=file][accept*=".xlsx"]', downloadedPath);
-await page.waitForSelector('[data-testid="inventory-import-updates"]', { timeout: 15000 });
+await page.waitForSelector('[data-testid="inventory-import-unchanged"]', { timeout: 15000 });
 const realUi = await page.evaluate(() => ({
-  updates: document.querySelector('[data-testid="inventory-import-updates"]')?.textContent || '',
+  unchanged: document.querySelector('[data-testid="inventory-import-unchanged"]')?.textContent || '',
   disabled: !!document.querySelector('[data-testid="inventory-import-confirm"]')?.disabled,
   noChanges: document.body.innerText.includes('Sin cambios'),
 }));
-check('el archivo realmente descargado vuelve como una actualización por ID', /1 actualizaciones/.test(realUi.updates) && !realUi.disabled, realUi.updates);
+check('el archivo realmente descargado reconoce el producto existente sin cambios', /1 sin cambios/.test(realUi.unchanged) && !realUi.disabled, realUi.unchanged);
 check('la vista previa del archivo descargado declara cero cambios', realUi.noChanges);
 check('el archivo real descargado existe y no está vacío', existsSync(downloadedPath) && statSync(downloadedPath).size > 0, downloadedPath);
 

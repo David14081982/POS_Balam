@@ -303,6 +303,81 @@
       explanation: 'BALAM no puede relacionar algunas filas con el inventario de forma segura.',
       action: 'Descarga una plantilla nueva, copia tus datos y vuelve a importarla.', level: 'danger',
     },
+    import_sku_shared: {
+      title: 'Los productos pueden compartir el mismo SKU',
+      explanation: 'Cada producto conserva su identificación y sus propias existencias.',
+      action: 'No necesitas cambiar los SKU compartidos.', level: 'neutral',
+    },
+    import_product_missing: {
+      title: 'Este producto ya no está en el inventario',
+      explanation: 'El archivo corresponde a un producto que no está registrado actualmente.',
+      action: 'Para actualizar, exporta el inventario actual. Para darlo de alta, copia sus datos en una plantilla nueva.', level: 'danger',
+    },
+    import_stale: {
+      title: 'El producto cambió después de exportar el archivo',
+      explanation: 'La información actual del inventario es más reciente que la del Excel.',
+      action: 'Exporta el inventario actual, aplica tus cambios en ese archivo y vuelve a importarlo.', level: 'danger',
+    },
+    import_catalog_value: {
+      title: 'Revisa un dato del catálogo',
+      explanation: 'El archivo usa un valor que no está activo en el catálogo actual.',
+      action: 'Consulta la hoja Catálogos de una plantilla nueva y corrige el código indicado.', level: 'danger',
+    },
+    import_duplicate_product: {
+      title: 'Un producto aparece más de una vez',
+      explanation: 'La fila coincide con otro producto del inventario o con otra fila del archivo.',
+      action: 'Revisa las coincidencias en Inventario y en el archivo antes de volver a importar.', level: 'danger',
+    },
+    import_current_sku_ambiguous: {
+      title: 'Hay varios productos actuales con este SKU',
+      explanation: 'La importación no puede elegir con seguridad cuál de esos productos actualizar.',
+      action: 'Revisa los productos repetidos en Inventario antes de volver a importar.', level: 'danger',
+    },
+    import_storage_pending: {
+      title: 'La importación necesita completar el guardado',
+      explanation: 'Este equipo no pudo actualizar su copia local del inventario.',
+      action: 'Mantén BALAM abierto y revisa el aviso de almacenamiento y el estado de sincronización.', level: 'warning',
+    },
+    import_product_locked: {
+      title: 'Se está confirmando el cobro de un apartado',
+      explanation: 'Las existencias de este producto están pendientes de confirmación.',
+      action: 'Espera a que termine el cobro y exporta el inventario actualizado antes de editarlo.', level: 'danger',
+    },
+    import_physical_change: {
+      title: 'Este cambio requiere reclasificar el producto',
+      explanation: 'Se intentan cambiar las características de un producto que tiene existencias o movimientos.',
+      action: 'Puedes actualizar precios y existencias desde Excel. Para cambiar sus características, usa Reclasificar en Inventario.', level: 'danger',
+    },
+    import_identity_mismatch: {
+      title: 'La fila no coincide con el producto original',
+      explanation: 'La identificación del archivo fue modificada o corresponde a otro producto.',
+      action: 'Exporta el inventario actual y edita únicamente sus datos visibles.', level: 'danger',
+    },
+    import_confirm_product: {
+      title: 'Confirma qué producto quieres actualizar',
+      explanation: 'Este archivo anterior no conserva la identificación necesaria para actualizar automáticamente.',
+      action: 'Revisa el producto indicado y confirma la coincidencia.', level: 'warning',
+    },
+    import_row_invalid: {
+      title: 'Revisa los datos de la fila',
+      explanation: 'Una celda contiene un valor inválido o falta un dato necesario.',
+      action: 'Corrige la celda indicada en Excel y vuelve a importar.', level: 'danger',
+    },
+    import_compatible_file: {
+      title: 'Archivo anterior compatible',
+      explanation: 'Los datos que no contiene el archivo se conservan al actualizar.',
+      action: 'Revisa los cambios de la vista previa antes de confirmar.', level: 'neutral',
+    },
+    import_file_read: {
+      title: 'El archivo se leyó correctamente',
+      explanation: 'Revisa el resultado de cada fila en la vista previa.',
+      action: '', level: 'neutral',
+    },
+    inventory_export_failed: {
+      title: 'No se pudo descargar el archivo',
+      explanation: 'No fue posible generar el Excel con la información actual.',
+      action: 'Revisa el dato indicado y vuelve a intentar la descarga.', level: 'danger',
+    },
     update_safety: {
       title: 'La actualización está en espera',
       explanation: 'Hay trabajo pendiente que debe protegerse antes de actualizar.',
@@ -331,6 +406,23 @@
     const code = String((input && input.code) || '').toLowerCase();
     const category = String((input && input.category) || '').toLowerCase();
     const all = `${code} ${category} ${raw}`.toLowerCase();
+    if (code === 'sku_duplicate_warning' || /^sku_duplicate_warning:/.test(String(raw).toLowerCase())) return 'import_sku_shared';
+    if (input && input.context === 'inventory_import') {
+      if (code === 'id_not_found') return 'import_product_missing';
+      if (['stale_version', 'version_conflict'].includes(code)) return 'import_stale';
+      if (['unknown_catalog_value', 'reference_size_invalid'].includes(code)) return 'import_catalog_value';
+      if (code === 'duplicate_sku_current') return 'import_current_sku_ambiguous';
+      if (['duplicate_id_file', 'duplicate_sku_file', 'barcode_duplicate', 'reference_signature_duplicate'].includes(code)) return 'import_duplicate_product';
+      if (code === 'inventory_import_storage_pending') return 'import_storage_pending';
+      if (code === 'layaway_product_locked') return 'import_product_locked';
+      if (code === 'reference_reclassification_required') return 'import_physical_change';
+      if (['reference_model_mismatch', 'sku_id_mismatch', 'reference_barcode_immutable'].includes(code)) return 'import_identity_mismatch';
+      if (code === 'id_required') return 'import_confirm_product';
+      if (['inventory_row_invalid', 'legacy_missing_new'].includes(code)) return 'import_row_invalid';
+      if (code === 'inventory_compatible_file') return 'import_compatible_file';
+      if (code === 'inventory_file_read') return 'import_file_read';
+    }
+    if (input && ['inventory_template', 'inventory_export'].includes(input.context) && code === 'inventory_export_failed') return 'inventory_export_failed';
     if (input && input.context === 'product_delete') {
       if (['product_queue_pending', 'layaway_active', 'layaway_product_locked',
         'product_open_loan', 'product_returnable_history', 'product_not_found',
@@ -370,10 +462,24 @@
     }
     const key = options.code && MESSAGE_CATALOG[options.code] ? options.code : classifyUserMessage(input);
     const base = MESSAGE_CATALOG[key] || MESSAGE_CATALOG.unknown;
+    const detail = {};
+    if (key === 'inventory_export_failed' && input && input.reason && !TECHNICAL_JARGON.test(String(input.reason))) detail.explanation = String(input.reason);
+    if (input && input.context === 'inventory_import' && ['import_catalog_value', 'import_row_invalid'].includes(key)) {
+      const header = String(input.header || '').replace(/\s+V[123]\b/g, '').trim();
+      if (header && !TECHNICAL_JARGON.test(header) && !header.startsWith('_')) {
+        const row = Number(input.rowNumber);
+        detail.title = `${Number.isInteger(row) && row >= 2 ? `Fila ${row}: ` : ''}Revisa «${header}»`;
+        if (key === 'import_catalog_value' && input.value != null) {
+          detail.explanation = `El código «${String(input.value).slice(0, 120)}» no está activo en el catálogo actual.`;
+        } else if (input.reason && !TECHNICAL_JARGON.test(String(input.reason))) {
+          detail.explanation = String(input.reason);
+        }
+      }
+    }
     return {
       __humanMessage: true,
-      title: options.title || base.title,
-      explanation: options.explanation || base.explanation,
+      title: options.title || detail.title || base.title,
+      explanation: options.explanation || detail.explanation || base.explanation,
       action: options.action || base.action,
       level: options.level || base.level,
       technicalDetails: messageTechnicalText(input),

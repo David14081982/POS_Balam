@@ -17,6 +17,9 @@ on:
       - 'test-h155-*.mjs'
       - 'test-h159-*.mjs'
       - 'test-h160-*.mjs'
+      - 'test-h163-*.mjs'
+      - 'test-h86-inventory-xlsx-contract.mjs'
+      - 'test-xlsx-security.mjs'
       - 'test-store-queue.mjs'
       - 'test-concurrency.mjs'
       - 'test-h142-*.mjs'
@@ -40,6 +43,9 @@ on:
       - 'test-h155-*.mjs'
       - 'test-h159-*.mjs'
       - 'test-h160-*.mjs'
+      - 'test-h163-*.mjs'
+      - 'test-h86-inventory-xlsx-contract.mjs'
+      - 'test-xlsx-security.mjs'
       - 'test-store-queue.mjs'
       - 'test-concurrency.mjs'
       - 'test-h142-*.mjs'
@@ -80,6 +86,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           "BALAM_CHROME_EXECUTABLE=$balamBrowserPath" >> $env:GITHUB_ENV
       - run: node build-offline.mjs
+      - run: node test-h86-inventory-xlsx-contract.mjs
+      - run: node test-xlsx-security.mjs
+      - run: node test-h163-inventory-xlsx.mjs
+      - run: node test-h163-inventory-messages.mjs
+      - run: node test-h163-inventory-excel-e2e.mjs
       - run: node test-auth-permissions.mjs
       - run: node test-h158-auth-refresh-browser.mjs
       - run: node test-h98-punto-cero.mjs

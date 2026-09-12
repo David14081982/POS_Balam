@@ -292,9 +292,11 @@
     rows.push([], ['CUELLO (col. Cuello)']);
     Object.entries(D.CUELLO).forEach(([k, v]) => rows.push([k, v]));
     rows.push([], ['ORNAMENTO (col. Ornamento)']);
-    window.CONFIG.all('ornament').forEach(item => rows.push([item.code, item.label]));
+    window.CONFIG.list('ornament').forEach(item => rows.push([item.code, item.label]));
     rows.push([], ['COLOR TELA (col. Color Tela)']);
     Object.entries(D.COLOR_NAME).forEach(([k, v]) => rows.push([k, v]));
+    rows.push([], ['COLORES DE ORNAMENTO (col. Colores de ornamento V2)']);
+    window.CONFIG.list('ornament_color').forEach(item => rows.push([item.code, item.label]));
     customCols().forEach(c => {
       const exported = exportCols().find(column => column.kind === c.kind);
       rows.push([], [c.label.toUpperCase() + ' (col. ' + (exported ? exported.label : c.label) + ')']);
@@ -302,7 +304,18 @@
     });
     rows.push([], ['CATEGORÍAS POR TALLA (col. Categoría por talla)']);
     window.CONFIG.sizeCategories().forEach(category => rows.push([category.id, category.label]));
+    rows.push([], ['TALLAS ACTIVAS (col. Talla referencia)'], ['Talla referencia', 'Etiqueta', 'Categoría por talla']);
+    window.CONFIG.sizeCategories().forEach(category => {
+      window.CONFIG.list(category.id).forEach(item => rows.push([
+        String(own(item.meta, 'value') ? item.meta.value : item.code), item.label, category.id,
+      ]));
+    });
     rows.push([], ['NOTAS']);
+    rows.push(['• Altas nuevas: captura una referencia por fila, con Categoría por talla, Talla referencia y Existencia referencia (0 si no hay piezas).']);
+    rows.push(['• Talla referencia: elige un código de TALLAS ACTIVAS en la categoría elegida. El mapa técnico final también conserva tallas históricas; no es una lista de opciones para altas.']);
+    rows.push(['• Para altas nuevas usa Talla referencia y Existencia referencia; deja vacías las columnas de existencias por talla heredadas.']);
+    rows.push(['• Colores de ornamento V2: usa códigos del catálogo COLORES DE ORNAMENTO separados por coma; no son códigos de Color Tela.']);
+    rows.push(['• Cada alta de la plantilla es independiente. Compartir SKU o nombre no agrupa familias; al reimportar una exportación se conservan las familias existentes.']);
     rows.push(['• El SKU comercial se arma con las categorías marcadas EN SKU; Material y Color Tela son conceptos distintos.']);
     rows.push(['• Si dejas la columna SKU vacía, el sistema lo arma con las columnas de atributos.']);
     rows.push(['• Colores Orn.: códigos de hilo del bordado separados por coma (ej. OR, VI). Vacío si no lleva.']);
@@ -311,7 +324,7 @@
     rows.push(['• Tallas LETRA: columnas ' + cols.letters.map(i => i.header).join(', ') + '.']);
     rows.push(['• Tallas NÚMERO: columnas ' + cols.numbers.map(i => i.header).join(', ') + ' (la "T" sólo distingue el encabezado).']);
     rows.push(['• Cada columna de talla lleva el NOMBRE de la talla en Configuración; abajo va a qué renglón del catálogo escribe.']);
-    rows.push(['• Captura existencias únicamente en la escala de la categoría elegida. Una fila con ambas escalas se omite por ambigua.']);
+    rows.push(['• En archivos heredados, captura existencias únicamente en la escala elegida. Una fila con ambas escalas bloquea la importación completa.']);
     rows.push(['• Foto (URL): enlace http(s) a la imagen. Al importar se asigna al producto.']);
     rows.push(['   Vacío = se conserva la foto que ya tiene (o se le pone una genérica si es nuevo).']);
     rows.push(['• BALAM reconoce cada producto aunque cambie su nombre o su clave comercial; no edites las columnas de control.']);
@@ -381,6 +394,8 @@
     if (h === 'Ornamento' || h === 'Colores Orn.') return 18;
     if (h === 'Colores Orn. por talla') return 42;
     if (h === 'Precios especiales por talla') return 34;
+    if (h === 'Talla referencia' || h === 'Existencia referencia') return 22;
+    if (h === 'Colores de ornamento V2') return 28;
     if (h.indexOf('_BALAM_') === 0) return 2;
     if (h === 'Cuello' || h === 'Categoría') return 12;
     if (BASE.indexOf(h) >= 0 || sizeHeaders.indexOf(h) >= 0) return 7;
@@ -394,7 +409,9 @@
     const ws = window.XLSX.utils.json_to_sheet(data, { header: headers });
     ws['!cols'] = headers.map(h => ({ wch: colWidth(h, sizeHeaders) }));
     headers.forEach((header, index) => {
-      if (header.indexOf('_BALAM_') === 0) ws['!cols'][index].hidden = true;
+      const legacyCapture = !products.length && (sizeHeaders.includes(header)
+        || header === 'Colores Orn.' || header === 'Colores Orn. por talla');
+      if (header.indexOf('_BALAM_') === 0 || legacyCapture) ws['!cols'][index].hidden = true;
     });
     return ws;
   }
@@ -421,7 +438,10 @@
       window.UI.toast(successMessage, 'var(--accent)');
       return built.wb;
     } catch (err) {
-      window.UI.toast(mensajeError(err, errorMessage), 'var(--danger)');
+      window.UI.toast({ code: 'INVENTORY_EXPORT_FAILED',
+        context: filename === 'Plantilla_Inventario_Balam.xlsx' ? 'inventory_template' : 'inventory_export',
+        message: errorMessage, reason: err && err.balam ? err.message : null,
+        detail: err && err.message ? err.message : errorMessage }, 'var(--danger)');
       return null;
     }
   }
@@ -436,7 +456,11 @@
   }
 
   const own = (object, key) => Object.prototype.hasOwnProperty.call(object || {}, key);
-  function rowError(idx, header, message) { throw balamError(`Fila ${idx + 2} · «${header}»: ${message}`); }
+  function rowError(idx, header, message) {
+    throw Object.assign(balamError(`Fila ${idx + 2} · «${header}»: ${message}`), {
+      code: 'INVENTORY_ROW_INVALID', rowNumber: idx + 2, header, reason: message,
+    });
+  }
   function parseNumber(v, idx, header, options) {
     const raw = String(v == null ? '' : v).trim();
     if (!raw && options && options.emptyZero) return 0;
@@ -457,8 +481,8 @@
     const found = items.find(item => String(item.code) === value)
       || items.find(item => String(item.code).toLowerCase() === value.toLowerCase())
       || items.find(item => String(item.label).toLowerCase() === value.toLowerCase());
-    if (!found || (kind === 'ornament_color' && found.active === false)) {
-      if (unknowns) { unknowns.push({ kind, header, value }); return value; }
+    if (!found || found.active === false) {
+      if (unknowns) { unknowns.push({ kind, header, value, inactive: !!found }); return value; }
       rowError(idx, header, `el valor «${value}» no existe en el catálogo ${kind}.`);
     }
     return found.code;
@@ -582,19 +606,29 @@
     const precio = present('Precio') ? parseNumber(row['Precio'], idx, 'Precio') : 0;
     const costo = present('Costo') ? parseNumber(row['Costo'], idx, 'Costo') : 0;
     const pop = present('Destacado') ? parseBoolean(row['Destacado'], idx, 'Destacado') : false;
-    const recordModel = present('_BALAM_MODELO_REFERENCIA')
-      ? String(row['_BALAM_MODELO_REFERENCIA'] || 'v1').trim().toLowerCase() : 'v1';
+    const declaredModel = present('_BALAM_MODELO_REFERENCIA')
+      ? String(row['_BALAM_MODELO_REFERENCIA'] || '').trim().toLowerCase() : '';
+    // H-163: una fila nueva de la plantilla se captura en columnas visibles.
+    // Los archivos históricos y las filas que declaran V1 conservan su adaptador.
+    const templateReference = canonical && !sourceId && !declaredModel && present('Talla referencia');
+    const recordModel = declaredModel || (templateReference ? 'v2' : 'v1');
     if (!['v1', 'v2'].includes(recordModel)) rowError(idx, '_BALAM_MODELO_REFERENCIA', 'debe ser v1 o v2.');
     const ornColors = recordModel === 'v2' ? []
       : present('Colores Orn.') ? parseOrnColors(row['Colores Orn.'], idx, unknownCatalogValues) : [];
     if (recordModel === 'v2') delete attrs.__ornamentColorsBySize;
     const sizeCode = present('Talla referencia') ? String(row['Talla referencia'] || '').trim() : '';
+    if (templateReference && !String(row['Existencia referencia'] == null ? '' : row['Existencia referencia']).trim()) {
+      rowError(idx, 'Existencia referencia', 'es obligatoria para un alta; usa 0 si no hay piezas.');
+    }
     const stockQuantity = present('Existencia referencia') ? parseInteger(row['Existencia referencia'], idx, 'Existencia referencia', { emptyZero: true }) : 0;
     const ornamentColorCodes = D.canonicalReferenceOrnamentColors(present('Colores de ornamento V2')
       ? String(row['Colores de ornamento V2'] || '').split(',').map(value => value.trim()).filter(Boolean).map(value =>
         catalogValue('ornament_color', value, idx, 'Colores de ornamento V2', false, unknownCatalogValues)) : []);
     if (recordModel === 'v2' && !sizeCode) rowError(idx, 'Talla referencia', 'es obligatoria para V2.');
     if (recordModel === 'v2' && !allowedSizes.has(sizeCode)) rowError(idx, 'Talla referencia', 'no pertenece a la categoría elegida.');
+    if (templateReference && valuesByKind[selectedKind].some(entry => entry.value > 0 && String(entry.item.value) !== sizeCode)) {
+      rowError(idx, 'Talla referencia', 'cada alta admite una sola talla; usa una fila por talla y captura la cantidad en Existencia referencia.');
+    }
     const barcodeCode = present('_BALAM_BARCODE_CODE') ? String(row['_BALAM_BARCODE_CODE'] || '').trim().toUpperCase() : '';
     const physicalSignature = present('_BALAM_FIRMA_FISICA') ? String(row['_BALAM_FIRMA_FISICA'] || '').trim() : '';
     const referenceFamilyId = present('_BALAM_REFERENCE_FAMILY_ID')
@@ -625,13 +659,25 @@
       const definition = window.CONFIG.catalogMeta(error.kind) || {};
       rowError(idx, definition.label || error.kind || 'Atributos', error.message || 'es obligatorio.');
     }
-    const product = recordModel === 'v2' ? D.createReference(rawProduct, [])
-      : D.hydrate(Object.assign(rawProduct, { id: sourceId || 'imp-' + Date.now() + '-' + idx }));
+    const inactiveSize = recordModel === 'v2' && window.CONFIG.all(selectedKind).some(item =>
+      item.active === false && String(own(item.meta, 'value') ? item.meta.value : item.code) === sizeCode);
+    let product;
+    try {
+      product = recordModel === 'v2' ? D.createReference(rawProduct, [])
+        : D.hydrate(Object.assign(rawProduct, { id: sourceId || 'imp-' + Date.now() + '-' + idx }));
+    } catch (error) {
+      // Leer una referencia histórica no es darla de alta. El plan verificará
+      // por ID que conserve exactamente su talla antes de permitir actualizarla.
+      if (sourceId && inactiveSize && error.code === 'REFERENCE_SIZE_INVALID') product = D.hydrate(rawProduct);
+      else if (error.code === 'REFERENCE_SIZE_INVALID') rowError(idx, 'Talla referencia', 'no está activa en la categoría elegida.');
+      else if (error.code === 'ORNAMENT_COLOR_REQUIRED') rowError(idx, 'Colores de ornamento V2', error.message);
+      else throw error;
+    }
     // Un heredado sin la columna H-83 expresa PRESERVAR, no un mapa vacío.
     if (!present('Colores Orn. por talla')) delete product.attrs.__ornamentColorsBySize;
     Object.defineProperty(product, '__xlsx', { value: {
       rowIndex: idx, sourceId, sourceVersion, canonical, missing, presentHeaders: headers.slice(),
-      customValues, imageProvided: !!foto, unknownCatalogValues,
+      customValues, imageProvided: !!foto, unknownCatalogValues, inactiveSize,
       stockPresent: valuesByKind[selectedKind].filter(entry => entry.present).map(entry => String(entry.item.value)),
     }, configurable: true, enumerable: false });
     return product;
@@ -740,7 +786,7 @@
   function validateCurrentWorkbook(wb, ws, cols, meta, mapEntries) {
     if (String(meta.schema_name || '') !== INVENTORY_XLSX_SCHEMA.name) throw balamError(`El archivo declara el esquema «${meta.schema_name || 'sin nombre'}», no un inventario BALAM.`);
     const schemaVersion = Number(meta.schema_version);
-    if (![1, INVENTORY_XLSX_SCHEMA.version].includes(schemaVersion)) throw balamError(`Versión de esquema incompatible: archivo ${meta.schema_version || 'sin versión'}, BALAM ${INVENTORY_XLSX_SCHEMA.version}.`);
+    if (![1, 2, INVENTORY_XLSX_SCHEMA.version].includes(schemaVersion)) throw balamError(`Versión de esquema incompatible: archivo ${meta.schema_version || 'sin versión'}, BALAM ${INVENTORY_XLSX_SCHEMA.version}.`);
     if (!wb.Sheets['Inventario'] || !wb.Sheets['Catálogos']) throw balamError('El archivo canónico debe conservar las hojas «Inventario» y «Catálogos».');
     const headers = headerRowOf(ws);
     const duplicates = duplicateHeaders(headers);
@@ -920,8 +966,10 @@
       if (product.barcodeCode) (byBarcode[product.barcodeCode] || (byBarcode[product.barcodeCode] = [])).push(product);
     });
     const fileSkuCounts = Object.create(null); const fileIdCounts = Object.create(null); const fileBarcodeCounts = Object.create(null);
+    const legacyFileSkus = new Set();
     (parsed.products || []).forEach(product => {
       fileSkuCounts[product.sku] = (fileSkuCounts[product.sku] || 0) + 1;
+      if (product.recordModel !== 'v2') legacyFileSkus.add(product.sku);
       const id = importMeta(product).sourceId;
       if (id) fileIdCounts[id] = (fileIdCounts[id] || 0) + 1;
       if (product.barcodeCode) fileBarcodeCounts[product.barcodeCode] = (fileBarcodeCounts[product.barcodeCode] || 0) + 1;
@@ -958,10 +1006,19 @@
         if (resolutionMap[rowKey] === target.id) action = 'update';
         else conflict = { code: 'ID_REQUIRED', resolvable: true, candidateId: target.id, message: `El SKU ${incoming.sku} ya existe, pero la fila no contiene identidad técnica. Confirma expresamente el producto.` };
       }
+      if (!conflict && meta.inactiveSize && (!target || action !== 'update'
+          || target.sizeCategoryId !== incoming.sizeCategoryId || String(target.sizeCode) !== String(incoming.sizeCode))) {
+        conflict = { code: 'REFERENCE_SIZE_INVALID', header: 'Talla referencia', value: incoming.sizeCode,
+          reason: 'La talla está inactiva; sólo puede conservarse en la misma referencia existente.',
+          message: 'La talla está inactiva; sólo puede conservarse en la misma referencia existente.' };
+        action = null;
+      }
       if (!conflict && action && (meta.unknownCatalogValues || []).length) {
         const changedUnknown = meta.unknownCatalogValues.find(issue => !unknownMatchesTarget(issue, target));
         if (changedUnknown) {
-          conflict = { code: 'UNKNOWN_CATALOG_VALUE', message: `El valor «${changedUnknown.value}» de «${changedUnknown.header}» no existe en el catálogo actual.` };
+          conflict = { code: 'UNKNOWN_CATALOG_VALUE', header: changedUnknown.header, value: changedUnknown.value,
+            inactive: !!changedUnknown.inactive,
+            message: `El valor «${changedUnknown.value}» de «${changedUnknown.header}» ${changedUnknown.inactive ? 'está inactivo' : 'no existe'} en el catálogo actual.` };
           action = null;
         }
       }
@@ -977,7 +1034,14 @@
       }
       if (!conflict && action === 'update') {
         beforeState = canonicalProductState(target); afterState = canonicalProductState(after);
-        fields = changeSummary(beforeState, afterState); nextById[target.id] = after;
+        if (JSON.stringify(beforeState) !== JSON.stringify(afterState)) {
+          try { D.assertLayawayProductsUnlocked([target.id]); }
+          catch (error) {
+            conflict = { code: error.code || 'REFERENCE_UPDATE_BLOCKED', message: error.message || 'El producto no puede modificarse en este momento.' };
+            action = null; after = null; afterState = null;
+          }
+        }
+        if (!conflict) { fields = changeSummary(beforeState, afterState); nextById[target.id] = after; }
       } else if (!conflict && action === 'new') {
         try {
           after = clone(incoming); after._syncVersion = 0;
@@ -988,17 +1052,20 @@
           action = null; after = null;
         }
       }
-      rows.push({ rowKey, rowNumber: meta.rowIndex + 2, incoming, action: conflict ? 'conflict' : action, conflict, targetId: target && target.id, before: beforeState, after: afterState, fields });
+      const unchanged = !conflict && action === 'update' && JSON.stringify(beforeState) === JSON.stringify(afterState);
+      rows.push({ rowKey, rowNumber: meta.rowIndex + 2, incoming, action: conflict ? 'conflict' : action, conflict, targetId: target && target.id, before: beforeState, after: afterState, fields, unchanged });
     });
     const conflicts = rows.filter(row => row.conflict);
     const ok = conflicts.length === 0 && rows.length > 0;
     const warnings = (parsed.warnings || []).slice();
-    Object.keys(fileSkuCounts).filter(sku => fileSkuCounts[sku] > 1).forEach(sku =>
+    Object.keys(fileSkuCounts).filter(sku => fileSkuCounts[sku] > 1 && !legacyFileSkus.has(sku)).forEach(sku =>
       warnings.push(`${SKU_DUPLICATE_WARNING}: ${fileSkuCounts[sku]} referencias comparten el SKU ${sku}; se conservarán separadas por ID y barcode.`));
     return {
       ok, schema: parsed.schema, warnings, rows, conflicts,
       creates: rows.filter(row => row.action === 'new').length,
       updates: rows.filter(row => row.action === 'update').length,
+      unchangedCount: rows.filter(row => row.unchanged).length,
+      changedUpdates: rows.filter(row => row.action === 'update' && !row.unchanged).length,
       baseFingerprint: inventoryStateFingerprint(current),
       nextProducts: ok ? Object.keys(nextById).map(id => nextById[id]) : clone(current),
     };
@@ -1006,12 +1073,14 @@
   function applyImportPlan(plan, products) {
     if (!plan || !plan.ok || (plan.conflicts || []).length) throw balamError('La importación tiene conflictos; no se modificó el inventario.');
     if (inventoryStateFingerprint(products || []) !== plan.baseFingerprint) throw balamError('El inventario cambió mientras revisabas la importación. Vuelve a abrir el archivo.');
-    const clean = plan.nextProducts.map(product => { const copy = clone(product); delete copy.__xlsx; return copy; });
-    products.splice(0, products.length, ...clean);
     const productIds = (plan.rows || [])
-      .filter(row => row.action === 'new' || row.action === 'update')
+      .filter(row => row.action === 'new' || (row.action === 'update' && !row.unchanged))
       .map(row => row.targetId || (row.after && row.after.id))
       .filter(Boolean);
+    // La liquidación puede adquirir un bloqueo después de generar la vista previa.
+    if (productIds.length) D.assertLayawayProductsUnlocked(productIds);
+    const clean = plan.nextProducts.map(product => { const copy = clone(product); delete copy.__xlsx; return copy; });
+    products.splice(0, products.length, ...clean);
     return { nuevos: plan.creates, actualizados: plan.updates, productIds };
   }
 

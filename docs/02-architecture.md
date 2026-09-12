@@ -453,12 +453,23 @@ barcode, firma, una talla y stock escalar, mientras V1 conserva todas las tallas
 publica los códigos y el mapa inequívoco encabezado humano → escala/valor; la
 hoja oculta `_BALAM` identifica versión y huellas del esquema.
 
+La plantilla nueva permite altas V2 rellenando sus campos visibles de referencia
+y talla, sin editar el modelo técnico oculto. La presentación prioriza esos
+campos y conserva las columnas legacy del contrato para leer y exportar V1.
+Un modelo V1 explícito o un archivo heredado conserva su ruta de compatibilidad;
+rellenar una plantilla nueva no convierte productos V1 existentes.
+
 El lector resuelve columnas por encabezado, no por posición. Un libro canónico
 se bloquea si falta o se duplica una columna obligatoria, si la versión es
 incompatible, si una talla no puede resolverse o si un valor tipado/JSON es
 inválido. Los archivos heredados siguen una ruta explícita y sus campos ausentes
 significan **preservar** al actualizar; nunca reciben códigos de catálogo por
 default silencioso.
+
+Los valores históricos de catálogo, incluida una talla inactiva, sólo se
+conservan al actualizar la misma referencia identificada y sin cambiar ese
+valor. No habilitan altas ni cambios hacia valores inactivos. Los códigos
+disponibles para nuevas altas proceden de los catálogos activos de CONFIG.
 
 Los atributos custom se comparan y transportan en su representación de DATA:
 para un catálogo opcional conocido, ausencia, `null`, `""` y espacios significan
@@ -470,10 +481,25 @@ válido actualiza exactamente ese producto y nunca convierte V1↔V2; V2 tambié
 puede localizar por barcode único. Sin identidad, el adaptador V1 exige una
 coincidencia única. SKU duplicado entre referencias V2 sólo advierte; ID,
 barcode, firma o edición física usada bloquean. La vista
-previa expone altas, actualizaciones, conflictos y diferencias de stock/precio.
-`applyImportPlan()` vuelve a comprobar la huella de base y reemplaza el estado en
-una sola operación sólo si el plan entero sigue válido. STORE, Supabase y la
-sincronización permanecen fuera de este contrato local.
+previa distingue altas, actualizaciones, filas sin cambios, conflictos y
+diferencias de stock/precio. El aviso de SKU compartido no se extiende a la
+ambigüedad legacy que bloquea el plan. La autoridad de mensajes recibe el
+contexto de importación y separa problemas de formato, identidad, catálogo,
+versión y bloqueo de negocio.
+
+Las referencias modificadas deben superar
+`DATA.assertLayawayProductsUnlocked()` en el preflight y antes de aplicar.
+`applyImportPlan()` vuelve a comprobar la huella de base y reemplaza el estado
+en una sola operación sólo si el plan entero sigue válido. Su conjunto de IDs
+incluye exclusivamente altas y actualizaciones con cambios canónicos; las filas
+sin cambios no autorizan escritura. Si el archivo entero coincide, la UI cierra
+con el resultado «Sin cambios» sin aplicar ni llamar a `DATA.saveProducts()`.
+
+La confirmación entrega únicamente los IDs modificados a la persistencia vigente.
+Un retorno falso de `saveProducts()` se comunica como guardado pendiente; no
+equivale a éxito ni autoriza revertir ciegamente una intención que pudo quedar
+conservada en la cola. STORE, Supabase y sus contratos de sincronización no se
+reimplementan dentro del adaptador Excel. Contrato precisado por H-163.
 
 ### Resolución del descuento por renglón
 

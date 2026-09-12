@@ -86,12 +86,18 @@ se traduce por adivinación
 columnas visibles y columnas técnicas. `XLSXIO.planImport()` es la única
 autoridad de preflight: localiza actualizaciones por `_BALAM_ID_PRODUCTO`,
 calcula altas/cambios/conflictos y no produce mutaciones. `applyImportPlan()`
-aplica el plan completo únicamente si sigue vigente y no contiene conflictos
+aplica el plan completo únicamente si sigue vigente y no contiene conflictos.
+Ambas fronteras delegan los bloqueos de apartado de las referencias modificadas
+en `DATA.assertLayawayProductsUnlocked()`; una fila canónicamente idéntica no
+autoriza escritura ni añade su ID a la intención de persistencia
 **Definición:** `balam/xlsx-io.jsx` · Plantilla y Exportar delegan en
 `writeInventoryWorkbook()`; Importar consume el libro emitido por ese escritor
 **Creada por:** H-86 · **Decisiones:** SKU es dato comercial, no identidad de
 actualización; un error bloquea todas las filas; el orden físico de columnas no
-forma parte de su identidad
+forma parte de su identidad. **Precisada por:** H-163 — plantilla nueva V2 por
+campos visibles, compatibilidad V1 explícita, valores inactivos sólo al conservar
+la misma referencia histórica, y mensajes contextualizados que distinguen
+advertencias V2, ambigüedad legacy, conflictos y resultado sin cambios
 **Consumidores:** `grep -rn "XLSXIO.schema\|planImport\|applyImportPlan" balam/ test-*.mjs`
 
 ## ¿Qué opciones muestra el filtro global de tallas y en qué orden?

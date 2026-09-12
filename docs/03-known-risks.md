@@ -7350,3 +7350,73 @@ no acredita convergencia contra Supabase real; conserva regresiones y deja la
 certificación opcional bajo petición. No hubo escrituras comerciales remotas.
 **Documento:** `docs/fixes/publicacion-sin-certificado-obligatorio-h162.md`.
 **Evidencia:** `docs/fixes/evidence/h162-pages.json`.
+
+## H-163 — Flujo Excel de inventario: altas y mensajes incoherentes
+
+**Estado:** CORREGIDO Y VERIFICADO LOCALMENTE — publicación pendiente.
+**Fecha:** 11/09/2026. **Commit:** Pendiente de commit.
+**Origen:** solicitud de completar el flujo Plantilla / Importar / Exportar con
+comportamiento fiable y mensajes que describan el resultado real.
+**Reproducción:** la vista `.evidence-h161/new-inventory-preview.png` muestra
+973 altas válidas y confirmación habilitada junto con mensajes de error
+inadecuados para ese resultado. El ensayo aislado
+`.evidence-h161/new-inventory-evidence.json` acredita `planOk: true`, 973 altas,
+cero actualizaciones y cero conflictos; no representa una importación remota.
+La clasificación de `SKU_DUPLICATE_WARNING` como error genérico se comprueba
+en `.evidence-h163/messages-baseline.json`, aunque compartir SKU sólo genera una
+advertencia en `planImport()`. La plantilla usa el mismo escritor de Excel y deja vacío
+el modelo técnico; `buildProduct()` interpretaba ese vacío como V1. La baseline
+`.evidence-h161/full-cycle-baseline.json` reproduce tres altas V1 donde se
+esperaban tres V2 al rellenar sólo los campos visibles. También registra una
+intención de escritura con tres IDs al reimportar sin cambios.
+Una referencia V2 exportada con talla XS posteriormente inactiva también falla
+antes del plan con `REFERENCE_SIZE_INVALID`.
+**Causa comprobada:** `classifyUserMessage()` no distinguía las causas de
+importación: el SKU compartido recibía un error genérico; ID inexistente, catálogo
+desconocido y reclasificación física recibían un error de formato. La sonda
+`STALE_VERSION` también produce un mensaje genérico, pero el importador real
+emite `VERSION_CONFLICT`, ya clasificado como conflicto general. La selección
+implícita de V1 cuando el modelo técnico estaba vacío impedía que las altas de la
+plantilla cumplan el contrato V2, como confirma la baseline automatizada.
+Además, `buildProduct()` llamaba a `DATA.createReference()` antes de resolver el ID
+existente y aplicaba reglas de catálogo activo de un alta a una referencia histórica.
+Toda fila existente se contabilizaba como actualización y devolvía su ID para
+persistencia, aunque la comparación canónica no mostrara cambios.
+La confirmación ignoraba un retorno falso de `saveProducts()`: podía comunicar
+éxito aunque la caché no se confirmara o una guarda restaurara el producto.
+**Alcance:** coherencia completa y conservadora de plantilla, lectura, vista
+previa, confirmación y exportación. Identificar altas válidas sin exigir al
+usuario editar metadatos ocultos; separar advertencias de conflictos reales;
+verificar persistencia y reimportación sin alterar la autoridad del inventario.
+**Invariantes:** conservar IDs, versiones, barcodes, familias, datos comerciales,
+compatibilidad histórica, validación de catálogos y cola offline. Una talla
+inactiva se admite sólo si coincide con la referencia existente por ID; altas
+o cambios a tallas inactivas siguen bloqueados. Un ID ausente
+del inventario no se transforma silenciosamente en un alta. Duplicidades reales
+de identidad, versiones obsoletas y planes caducados siguen bloqueados.
+El aviso de SKU permitido se limita a V2; la ambigüedad legacy conserva su
+bloqueo. Las referencias modificadas pasan la guarda de apartados antes de
+aplicar; una caché no confirmada no se anuncia como éxito ni provoca reversión
+ciega de una intención ya emitida.
+**Corrección implementada:** plantilla visible para altas V2; conservación
+histórica sin habilitar valores inactivos nuevos; cero IDs de escritura para
+filas sin cambios; mensajes por causa; aviso de SKU exclusivamente V2; guardas
+de apartados en preflight/aplicación; feedback de guardado pendiente y vista
+previa desplazable hasta la última columna. Sólo XLSX, mensajes e Inventario;
+sin cambios de DATA, STORE, SQL ni escrituras comerciales remotas.
+**Pruebas finales:** XLSX específico 23/23, contrato H86 49/49, seguridad XLSX
+17/17, mensajes H163 16/16, smoke bundle 17/17 y navegación 15/15, salida 0.
+E2E privado 14/14 con 973 referencias, 251 familias y 3484 piezas; sintético
+37/37 con cuatro anchuras, scroll horizontal real y fallo de cuota de Storage.
+Ambos E2E terminaron con salida 0 contra el BUILD 3 definitivo. Regresiones
+auxiliares durante la implementación: mensajes H134 43/43 y cola simulada
+186/186. No se acumulan ejecuciones repetidas.
+**Artefactos:** HTML/offline SHA-256
+`a68d115f9771c648d5ee3a17a79302ba7e5dd35ca580843debb4e4301b4061e0`;
+SW `fb65ba622af054d2d18308ae579d40b3c2a315088c16a49760f6081aa839448c`.
+**Riesgo residual y pendientes:** commit y publicación pendientes. E2E usa
+persistencia local real y gateway registrador de intención: no acredita cola
+IndexedDB ni convergencia real. Cero solicitudes externas permitidas y cero
+escrituras comerciales remotas; adopción en la terminal del usuario pendiente.
+**Certificación:** NO CERTIFICADO — A/B/C real opcional conforme a H-162.
+**Documento:** `docs/fixes/flujo-excel-inventario-h163.md`.
