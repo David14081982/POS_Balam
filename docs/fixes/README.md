@@ -15,7 +15,7 @@ sesión de chat.
 
 - [pagina-web-tickets-h168.md](pagina-web-tickets-h168.md) — H-168: recuperación
   del sitio configurable en tickets desde la rama rescatada; adaptado a CONFIG
-  online, 41/41 y regresiones UI/PWA. Publicación pendiente.
+  online, 41/41 y regresiones UI/PWA. PUBLICADO; CI y bytes públicos verificados.
 
 - [apertura-etiquetas-sin-bloqueo-h167.md](apertura-etiquetas-sin-bloqueo-h167.md) —
   H-167: corrección del bloqueo PUBLICADA, CI y archivos públicos verificados.

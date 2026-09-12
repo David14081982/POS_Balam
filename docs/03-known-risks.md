@@ -7672,8 +7672,8 @@ con el commit. Evidencia: `docs/fixes/evidence/h167-publication.json` y
 
 ## H-168 — Recuperar y publicar la página web configurable en tickets
 
-**Estado:** PARCIALMENTE RESUELTO — integración verificada, pendiente de publicar.
-**Fecha:** 12/09/2026. **Commit técnico:** Pendiente de commit.
+**Estado:** PARCIALMENTE RESUELTO — función publicada y verificada.
+**Fecha:** 12/09/2026. **Commit técnico:** `c02ad1336051409f6698bfb05b1f209882af9430`.
 **Origen:** el cambio local identificado como H-157 en la copia rescatada no se
 integró en main. H-157 ya identifica otra historia publicada; esta recuperación
 usa H-168 y conserva la procedencia sin sobrescribir registros anteriores.
@@ -7689,6 +7689,9 @@ CfgText online vigente; contacto compartido en comprobantes y escapado en Report
 build exit 0, capturas escritorio/móvil y PDF real. No cambia SQL ni permisos.
 **Artefacto:** HTML idénticos, SHA-256
 `da893c5ead81446ce608c7c824aad79fc49cc3e9e85baa9334a0275399d589d9`.
-**Despliegue:** pendiente. **Residual:** A/B/C real y papel NO CERTIFICADO;
+**Despliegue:** main c02ad13; Actions 34723299369 SUCCESS, regresiones y Pages.
+Ambos HTML y SW públicos HTTP 200 e idénticos byte a byte al commit.
+Evidencia: `docs/fixes/evidence/h168-publication.json` y `h168-workflow.json`.
+**Residual:** A/B/C real y papel NO CERTIFICADO;
 el transporte de configuración de la prueba es controlado, sin escrituras reales.
 **Documento:** `docs/fixes/pagina-web-tickets-h168.md`.

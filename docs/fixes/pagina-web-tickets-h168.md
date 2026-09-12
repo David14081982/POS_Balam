@@ -1,9 +1,9 @@
 # Recuperación de la página web configurable en tickets
 
 **Riesgo:** H-168.
-**Estado:** PARCIALMENTE RESUELTO — integración verificada; publicación pendiente.
+**Estado:** PARCIALMENTE RESUELTO — función publicada y verificada; A/B/C real y papel NO CERTIFICADO.
 **Fecha:** 12/09/2026.
-**Commit técnico:** Pendiente de commit.
+**Commit técnico:** `c02ad1336051409f6698bfb05b1f209882af9430`.
 
 ## Problema y reproducción
 
@@ -84,9 +84,20 @@ Evidencias: `evidence/h168-after/`, `h168-online-ui.json` y
 Service worker:
 `719c1001147a56dab267027e271837f589b7cfa825674f777f13be4b0209645c`.
 
+## Publicación
+
+Commit `c02ad1336051409f6698bfb05b1f209882af9430` enviado a main con autorización
+explícita del usuario. El [workflow 34723299369](https://github.com/David14081982/POS_Balam/actions/runs/34723299369)
+completó regresiones y Pages en SUCCESS, incluida la prueba H-168.
+`index.html`, `POS Balam (offline).html` y `sw.js` descargados desde la web dieron
+HTTP 200 y coincidencia byte a byte con los blobs del commit y los archivos
+locales probados. Hashes arriba. Evidencia con hora UTC y rutas exactas:
+[`h168-publication.json`](evidence/h168-publication.json) y
+[`h168-workflow.json`](evidence/h168-workflow.json).
+
 ## Riesgo residual y pendientes
 
-Publicación y comparación pública pendientes. Sin A/B/C real sobre Supabase ni
+Sin A/B/C real sobre Supabase ni
 papel físico: **NO CERTIFICADO** para ese alcance. Se conserva la cobertura local
 de interfaces y documentos; no se atribuye certificación a pruebas históricas.
 La recuperación afecta una sola historia y conserva H-167 en la misma base.
