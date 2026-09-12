@@ -7353,8 +7353,8 @@ certificación opcional bajo petición. No hubo escrituras comerciales remotas.
 
 ## H-163 — Flujo Excel de inventario: altas y mensajes incoherentes
 
-**Estado:** CORREGIDO Y VERIFICADO LOCALMENTE — publicación pendiente.
-**Fecha:** 11/09/2026. **Commit:** Pendiente de commit.
+**Estado:** RESUELTO Y PUBLICADO.
+**Fecha:** 11/09/2026. **Commit técnico:** `6bba5d84c08a2f182aa9f1dcdf3ccc1eaaba95cd`.
 **Origen:** solicitud de completar el flujo Plantilla / Importar / Exportar con
 comportamiento fiable y mensajes que describan el resultado real.
 **Reproducción:** la vista `.evidence-h161/new-inventory-preview.png` muestra
@@ -7414,7 +7414,16 @@ auxiliares durante la implementación: mensajes H134 43/43 y cola simulada
 **Artefactos:** HTML/offline SHA-256
 `a68d115f9771c648d5ee3a17a79302ba7e5dd35ca580843debb4e4301b4061e0`;
 SW `fb65ba622af054d2d18308ae579d40b3c2a315088c16a49760f6081aa839448c`.
-**Riesgo residual y pendientes:** commit y publicación pendientes. E2E usa
+**Despliegue:** commit técnico en `origin/main`.
+[H148 34671785636](https://github.com/David14081982/POS_Balam/actions/runs/34671785636)
+aprobó regresión y deploy; certificación opcional omitida.
+[H132 34671785637](https://github.com/David14081982/POS_Balam/actions/runs/34671785637)
+aprobó. [Pages](https://david14081982.github.io/POS_Balam/?h163=6bba5d84c08a2f182aa9f1dcdf3ccc1eaaba95cd)
+verificado el 12/09/2026 a las 04:03:56.117 UTC (11/09 en Hermosillo): HTML
+9 075 086 bytes y SW 2 628 bytes, ambos HTTP 200 y SHA-256 exactos del commit.
+Las consultas usaron un parámetro de versión. Evidencia local:
+`.evidence-h163/publication.json`.
+**Riesgo residual y pendientes:** E2E usa
 persistencia local real y gateway registrador de intención: no acredita cola
 IndexedDB ni convergencia real. Cero solicitudes externas permitidas y cero
 escrituras comerciales remotas; adopción en la terminal del usuario pendiente.

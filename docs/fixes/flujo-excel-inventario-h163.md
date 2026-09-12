@@ -1,9 +1,9 @@
 # Flujo Excel de inventario: altas y mensajes incoherentes
 
 **Riesgo:** H-163
-**Estado:** CORREGIDO Y VERIFICADO LOCALMENTE — publicación pendiente
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha:** 11/09/2026
-**Commit:** Pendiente de commit
+**Commit técnico:** `6bba5d84c08a2f182aa9f1dcdf3ccc1eaaba95cd`
 
 ## Problema y reproducción
 
@@ -185,7 +185,20 @@ permitieron cero. Los datos y capturas privados no se versionan.
 
 Etapa 7: expediente, H-163, contrato de arquitectura y registro de autoridad
 actualizados con la implementación y evidencia del artefacto final. Etapa 8:
-commit y despliegue pendientes; la entrega real aún no se declara publicada.
+commit técnico enviado a `origin/main` y publicado.
+[H148 34671785636](https://github.com/David14081982/POS_Balam/actions/runs/34671785636)
+aprobó regresión y despliegue; la certificación real opcional se omitió.
+[H132 34671785637](https://github.com/David14081982/POS_Balam/actions/runs/34671785637)
+también aprobó.
+
+El [sitio publicado](https://david14081982.github.io/POS_Balam/?h163=6bba5d84c08a2f182aa9f1dcdf3ccc1eaaba95cd)
+se verificó el 12/09/2026 a las 04:03:56.117 UTC (11/09 en Hermosillo).
+El HTML devolvió HTTP 200, 9 075 086 bytes y SHA-256 `a68d115f9771c648d5ee3a17a79302ba7e5dd35ca580843debb4e4301b4061e0`;
+el SW devolvió HTTP 200, 2 628 bytes y SHA-256
+`fb65ba622af054d2d18308ae579d40b3c2a315088c16a49760f6081aa839448c`.
+Ambos coinciden exactamente con el commit técnico. Las consultas incluyeron
+un parámetro de versión para evitar caché anterior. Evidencia local:
+`.evidence-h163/publication.json`.
 
 La matriz real A/B/C es opcional conforme a H-162 y no bloquea el despliegue.
 **NO CERTIFICADO:** no se ejecutó la matriz distribuida ni una importación comercial
