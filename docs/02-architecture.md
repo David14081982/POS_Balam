@@ -1184,6 +1184,18 @@ efímera, transporta documentos ya confirmados y no reejecuta negocio.
 Un fallo de archivo o confirmación conserva ese origen. No se vacía el navegador
 ni se descartan preferencias, credenciales o almacenamiento ajeno.
 
+El arranque vuelve a inventariar después del archivo y de consultar autoridad.
+Sólo habilita negocio al recibir el ACK de `online_adoption_report()`. Ese reporte
+es telemetría del cliente, no permiso comercial ni prueba independiente del
+almacenamiento físico. La presencia del equipo no certifica adopción. Los fallos
+conservan etapa y código sin payload; sólo los de transporte se muestran como
+desconexión. Realtime no puede invalidar una lectura HTTP confirmada.
+
+La PWA actualiza recursos con `no-store` y acuerda una recarga segura entre las
+páginas compatibles. Recomprueba actividad y resultados inciertos cuando cambia
+el Service Worker. Una página antigua sin ese protocolo no se recarga por fuerza.
+Las referencias de otro usuario se conservan, pero no bloquean al actor actual.
+
 El servidor clasifica evidencia confirmada, caché histórica y expedientes que
 requieren revisión. Una operación comercial real sin confirmación se conserva
 íntegra para decisión individual; no se reproduce y no es un pendiente nuevo.

@@ -391,13 +391,57 @@ La certificación técnica usa A/B/C Chromium contra Supabase real, con el HTML 
 `df4965b1269239665594eca722c38c9adb86cb68`. Su CI y verificación Pages pasaron;
 el HTML comercial conserva los mismos bytes certificados por la matriz.
 
+## Adopción física: arranque y mensaje de conexión
+
+El siguiente arranque físico reportó «Sin conexión» desde la URL publicada,
+aunque Supabase recibía su presencia y evidencia legacy. La inspección de
+permisos y snapshot del mismo actor pasó; el arranque con esos payloads también
+pasó en Chromium y en la integración de módulos, sin escrituras comerciales.
+Todavía no se atribuye una excepción concreta al navegador físico.
+
+Las reproducciones demostraron cuatro fallos: rechazo SQL presentado como red,
+cuenta inactiva oculta detrás de la barrera comercial, fallo al iniciar Realtime
+que invalidaba autoridad HTTP confirmada y recibo técnico de otro actor que
+provocaba un bloqueo imposible de resolver desde la sesión actual.
+
+El cliente conserva etapa y código del arranque, diferencia transporte de
+rechazos y muestra primero el estado real de autenticación. Archivo por hash,
+retiro del origen exacto y nuevo inventario preceden al snapshot y al ACK final
+de adopción. Una fuente cambiada por otra pestaña no se elimina ni certifica.
+IndexedDB bloqueado o fallido produce un diagnóstico acotado; nunca un aviso
+falso de desconexión. Realtime se inicia sin invalidar la lectura autoritativa.
+Las referencias técnicas ajenas permanecen íntegras y no bloquean al otro actor.
+
+La PWA acuerda una actualización segura entre páginas compatibles, comprueba de
+nuevo al cambiar de controlador y omite caché HTTP en navegación y precarga.
+No fuerza la recarga de un cliente viejo que no responda ni destruye su captura.
+El vendedor ve «BALAM se está actualizando.» y el aviso de finalización sólo
+después de completar permisos, datos y confirmación. Un resultado comercial
+incierto conserva su mensaje y su formulario. No se rediseñaron pantallas.
+
+214/215 fueron aplicadas y verificadas el 12/09/2026 a las 14:55:29 UTC.
+La [evidencia SQL pública](evidence/h164-adoption-sql-verification.json) registra
+35 tablas comerciales sin cambios, 15 originales archivados intactos, identidad
+y retiro conservados. Sólo la marca técnica exacta de recuperación `ready`
+pasó a histórico; un lote no confirmado permanece como expediente individual.
+No se aplicó ni descartó. El heartbeat no equivale al reporte de adopción y
+el reporte tampoco concede permisos comerciales.
+
+Pruebas dirigidas: transporte 13 PASS; adopción STORE 8 casos más los casos
+individuales Realtime y recibo ajeno PASS; App/Auth 5 comportamientos PASS;
+PWA 4 comportamientos PASS; migraciones 31 PASS; SQL local y remoto 215 PASS.
+Sobre el nuevo bundle: reconexión/formulario 1 PASS y PWA 2 PASS. La matriz de
+20 operaciones comerciales no se repite por esta corrección del arranque.
+La CI del artefacto final y el arranque A/B/C dirigido se registrarán antes
+del cierre. Commit de esta continuación: **Pendiente de commit**.
+
 ## Riesgo residual y pendientes
 
-La [lectura de adopción](evidence/h164-device-adoption.json) de las
-**08:32:19.260578 UTC** encontró 14 instalaciones comerciales registradas:
-13 retiradas y una no retirada. **Ninguna había declarado el build online
-nuevo**; las instalaciones QA activas y los archivos legacy recibidos eran cero.
-Estos números describen registros, no identifican los tres puestos físicos.
+La lectura remota de **14:55:29 UTC** encontró 14 instalaciones comerciales:
+13 retiradas y una no retirada; ésta ya declaró el build online. Se recibieron
+15 fuentes legacy. Una fuente contiene un lote de inventario no confirmado;
+su decisión sigue pendiente y su original permanece íntegro. Estos números
+describen registros, no identifican los tres puestos físicos.
 
 El cliente nuevo sólo opera online y el cerco Supabase impide las RPC
 comerciales antiguas. Sin embargo, una copia H163/PWA física todavía abierta
@@ -405,13 +449,12 @@ puede conservar su código y almacenamiento anteriores. Sin adoptarla e
 inventariarla no se puede afirmar que produzca cero colas o cero mensajes de
 éxito locales. El despliegue físico completo sigue pendiente.
 
-1. Comprobar adopción del archivo legacy en navegadores reales. SQL 210/211 ya
-   exige IDs capturados/descartados y revisión explícita de fuentes no
-   interpretables; ese PASS no clasifica las colas físicas aún no inspeccionadas.
-2. Inspeccionar y archivar las colas de los tres equipos reales. Una operación
-   confirmada requiere recibo coincidente; un descarte requiere autorización
-   específica. Si existe operación real no reconciliable, detener sólo esa
-   operación para decisión. No vaciar el navegador indiscriminadamente.
+1. Obtener el reporte de adopción terminada de cada navegador físico. Los
+   permisos y el snapshot observados del primer actor funcionan; falta demostrar
+   qué excepción concreta produjo su pantalla antes de la corrección.
+2. Resolver únicamente la clasificación del lote no confirmado. Es posterior
+   a Punto Cero y no hay autorización exacta de descarte ni recibo coincidente.
+   Se solicitó decisión al propietario; el resto del equipo puede adoptar y operar.
 3. Completar la adopción y comprobación de los puestos físicos A/B/C sobre el
    artefacto publicado y Supabase. La matriz técnica independiente ya pasó sus
    20 escenarios; no demuestra acceso a los navegadores reales ausentes.
@@ -419,7 +462,7 @@ inventariarla no se puede afirmar que produzca cero colas o cero mensajes de
    qué instalaciones antiguas corresponden a esos puestos ni resuelven sus
    datos locales por sí solos. El intento de acceso de sólo lectura al navegador
    físico mediante CDP no encontró un endpoint accesible. No se inventariaron
-   sus almacenamientos ni se acredita la adopción de ninguno de los tres.
+   directamente sus almacenamientos ni se acredita adopción completa de los tres.
    Cargar el build publicado en cada puesto, archivar y conciliar su evidencia
    mediante el procedimiento implementado; no borrar almacenamiento manualmente.
 

@@ -10,6 +10,9 @@
   let registration = null;
   let generation = 0;
   let reloading = false;
+  let activationRequest = null;
+  let reloadPending = false;
+  let autoUpdateTimer = null;
   let state = {
     supported: false,
     ready: false,
@@ -17,6 +20,8 @@
     canInstall: false,
     installKind: null,
     updateAvailable: false,
+    updating: false,
+    updateGeneration: null,
     iconSource: 'fallback',
     iconQuality: 'fallback',
     sourceSize: null,
@@ -223,7 +228,7 @@
   function setWaiting(worker) {
     if (!worker) return;
     publish({ updateAvailable: true });
-    if (window.UI && window.UI.toast) window.UI.toast('Hay una actualización disponible', 'var(--accent)');
+    scheduleAutomaticUpdate();
   }
 
   function observeRegistration(value) {
@@ -242,25 +247,65 @@
     const activity = window.CORE && window.CORE.activityStatus ? window.CORE.activityStatus() : { active: 0 };
     if (activity.active) return { safe: false, reason: 'Termina la venta o el formulario antes de actualizar.' };
     const commercial = window.STORE && window.STORE.syncStatus ? window.STORE.syncStatus() : null;
-    if (commercial && commercial.busy) return { safe: false, reason: 'Estamos confirmando la operación. No la repitas.' };
+    if (commercial && (commercial.busy || commercial.hasUnresolvedRequests || commercial.message === 'Estamos confirmando la operación. No la repitas.'
+      || (commercial.errors || []).some(error => error.code === 'ONLINE_RESULT_UNKNOWN'))) {
+      return { safe: false, reason: 'Estamos confirmando la operación. No la repitas.' };
+    }
+    if (commercial && commercial.reconciling) return { safe: false, reason: 'BALAM se está actualizando.' };
     const openDialog = Array.from(document.querySelectorAll('[role="dialog"][aria-modal="true"]'))
       .some(dialog => !dialog.closest('[hidden],[inert],[aria-hidden="true"],[data-open="false"]'));
     if (openDialog) return { safe: false, reason: 'Cierra el diálogo abierto antes de actualizar.' };
     const active = document.activeElement;
-    if (active && /^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName)) return { safe: false, reason: 'Termina la captura antes de actualizar.' };
+    if (active && (/^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName) || active.isContentEditable)) return { safe: false, reason: 'Termina la captura antes de actualizar.' };
     return { safe: true, reason: '' };
   }
 
   async function activateUpdate() {
+    return requestSafeUpdate(true);
+  }
+
+  async function requestSafeUpdate(manual = false) {
     const safety = reloadSafety();
     if (!safety.safe) {
-      if (window.UI && window.UI.toast) window.UI.toast(safety.reason, 'var(--danger)');
+      if (manual && window.UI && window.UI.toast) window.UI.toast(safety.reason, 'var(--danger)');
       return safety;
     }
+    if (reloadPending) return reloadWhenSafe();
+    if (activationRequest) return activationRequest;
     const worker = registration && registration.waiting;
     if (!worker) return { safe: false, reason: 'La actualización ya no está pendiente.' };
-    worker.postMessage({ type: 'BALAM_SKIP_WAITING' });
+    // El worker exige ACK de todas las páginas del scope. Una página H163 que
+    // no conoce el protocolo permanece intacta; no se fuerza su recarga.
+    activationRequest = new Promise(resolve => {
+      const channel = new MessageChannel();
+      const finish = result => { clearTimeout(timer); channel.port1.close(); resolve(result); };
+      const timer = setTimeout(() => finish({ safe: false, reason: 'UPDATE_COORDINATION_PENDING' }), 4000);
+      channel.port1.onmessage = event => {
+        if (event.data?.type !== 'BALAM_UPDATE_RESULT') return;
+        if (event.data.accepted) publish({ updating: true, updateGeneration: event.data.generation });
+        finish({ safe: event.data.accepted === true, reason: event.data.accepted ? '' : 'UPDATE_COORDINATION_PENDING' });
+      };
+      worker.postMessage({ type: 'BALAM_ACTIVATE_UPDATE', protocol: 1 }, [channel.port2]);
+    }).finally(() => { activationRequest = null; });
+    return activationRequest;
+  }
+
+  function reloadWhenSafe() {
+    const safety = reloadSafety();
+    if (!safety.safe || reloading) return safety;
+    reloading = true;
+    publish({ updating: true });
+    location.reload();
     return { safe: true, reason: '' };
+  }
+
+  function scheduleAutomaticUpdate() {
+    if (autoUpdateTimer || reloading) return;
+    autoUpdateTimer = setTimeout(() => {
+      autoUpdateTimer = null;
+      if (reloadPending) reloadWhenSafe();
+      else if (registration?.waiting) requestSafeUpdate().catch(() => {});
+    }, 0);
   }
 
   async function requestInstall() {
@@ -312,15 +357,29 @@
     publish({ standalone: true, canInstall: false, installKind: null });
   });
   window.addEventListener('configchange', () => { if (state.supported) applyBrand(); });
-  window.addEventListener('online', () => { if (registration) registration.update().catch(() => {}); });
-  window.addEventListener('focus', () => { if (registration) registration.update().catch(() => {}); });
+  window.addEventListener('online', () => { if (registration) registration.update().catch(() => {}); scheduleAutomaticUpdate(); });
+  window.addEventListener('focus', () => { if (registration) registration.update().catch(() => {}); scheduleAutomaticUpdate(); });
+  window.addEventListener('syncstatuschange', scheduleAutomaticUpdate);
+  window.addEventListener('syncactivitychange', scheduleAutomaticUpdate);
+  document.addEventListener('focusout', scheduleAutomaticUpdate);
+  document.addEventListener('visibilitychange', scheduleAutomaticUpdate);
+  setInterval(() => { if (reloadPending || registration?.waiting) scheduleAutomaticUpdate(); }, 3000);
   setInterval(() => {
     if (registration && navigator.onLine && document.visibilityState === 'visible') registration.update().catch(() => {});
   }, 30 * 60 * 1000);
   navigator.serviceWorker && navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (reloading || !state.updateAvailable) return;
-    reloading = true;
-    location.reload();
+    // La captura pudo comenzar después del ACK y antes de controllerchange.
+    reloadPending = true;
+    scheduleAutomaticUpdate();
+  });
+  navigator.serviceWorker && navigator.serviceWorker.addEventListener('message', event => {
+    if (event.data?.type !== 'BALAM_UPDATE_SAFETY' || event.data.protocol !== 1 || !event.ports?.[0]) return;
+    if (!registration || event.source?.scriptURL !== new URL('sw.js', scopeUrl()).href) return;
+    const safety = reloadSafety();
+    publish({ updateAvailable: true, updateGeneration: event.data.generation });
+    event.ports[0].postMessage({ protocol: 1, generation: event.data.generation, safe: safety.safe });
+    event.ports[0].close();
   });
   if (mediaStandalone) {
     const onStandalone = event => publish({ standalone: event.matches, canInstall: event.matches ? false : state.canInstall });

@@ -58,7 +58,7 @@ const retired = new Set(['flushQueue','queueStatus','retryOperation','discardOpe
   'acquireWriter','saveProducts','saveClients','saveSales','savePayments','saveReturns','saveExchanges','saveLoans',
   'applyRemote','mergeRemote']);
 const allowedStorage = new Set(['balam_device_id','balam-page','balam-sidebar','balam_ultima_operacion','balam_pwa_brand_v1']);
-const storeReads = new Set(['online_connectivity','online_snapshot','online_presence','resolve_online_request','online_request_result',
+const storeReads = new Set(['online_connectivity','online_snapshot','online_presence','online_adoption_report','resolve_online_request','online_request_result',
   'archive_online_legacy','execute_online_command','physical_card_available','point_zero_preview','point_zero_receipt',
   'preview_test_data_cleanup','test_data_cleanup_receipt']);
 const permissionReads = new Set(['admin_screen_permission_catalog_snapshot','admin_permission_users','admin_user_permission_editor_snapshot']);

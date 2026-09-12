@@ -42,8 +42,10 @@ Origen: H-21, H-22, H-23, H-24
 
 **R-CLI-06 · REQUIRED · Un cambio en `balam/` exige regenerar los artefactos y
 probar el bundle.**
-`node build-offline.mjs`, más `test-smoke.mjs bundle` y `test-ui-navigation.mjs`,
-que ejecutan `index.html` —el artefacto realmente distribuido—.
+`node build-offline.mjs`, más `test-h164-online-ui.mjs` y
+`test-h164-online-pwa.mjs`, que ejecutan `index.html`, el artefacto distribuido.
+Con ADR-015 sustituyen los arneses históricos `test-smoke.mjs bundle` y
+`test-ui-navigation.mjs`, cuyas semillas y expectativas eran local-first.
 Origen: H-15, H-17, H-27
 
 **R-CLI-07 · RECOMMENDED · Un símbolo sin consumidores internos no es

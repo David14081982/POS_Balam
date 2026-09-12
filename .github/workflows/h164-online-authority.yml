@@ -38,6 +38,8 @@ jobs:
       - run: npm run test:migrations
       - run: npm run test:online:sql
       - run: npm run test:online:transport
+      - run: npm run test:online:adoption
+      - run: npm run test:online:startup
       - run: npm run test:online:data
       - run: npm run test:online:config
       - run: npm run test:online:account
@@ -55,6 +57,9 @@ jobs:
         env:
           BALAM_VERIFIED_HTML: index.html
       - run: npm run test:online:pwa
+        env:
+          BALAM_VERIFIED_HTML: index.html
+      - run: npm run test:online:pwa-adoption
         env:
           BALAM_VERIFIED_HTML: index.html
       - name: Stage the tested client

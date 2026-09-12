@@ -6,6 +6,11 @@
   const { MS } = window.HX;
   const { fmt, HumanMessage, messageAuthority } = window.UI;
   const h = React.createElement;
+  const STARTUP_MESSAGE = 'BALAM se está actualizando.';
+  const STARTUP_FAILED = 'No pudimos completar la actualización. Inténtalo de nuevo.';
+  const ACCESS_FAILED = 'No pudimos confirmar el acceso. Inténtalo de nuevo.';
+  const OFFLINE_MESSAGE = 'Sin conexión. BALAM necesita internet para continuar.';
+  const CONFIRMING_MESSAGE = 'Estamos confirmando la operación. No la repitas.';
 
   function SyncControl() {
     const [status, setStatus] = useState(() => window.STORE?.syncStatus());
@@ -91,6 +96,8 @@
 
   function App() {
     const lastShell = useRef(null);
+    const adoptionObserved = useRef(false);
+    const adoptionNotified = useRef(false);
     const [t] = useTweaks(TWEAK_DEFAULTS);
     const [page, setPage] = useState(() => localStorage.getItem('balam-page') || 'dashboard');
     useEffect(() => { localStorage.setItem('balam-page', page); }, [page]);
@@ -112,8 +119,21 @@
     // Auth real (Supabase) + nube. Solo una sesión autenticada sincroniza pos.* (RLS).
     const [, bumpCfg] = useState(0);
     const [online, setOnline] = useState(()=>window.STORE?.syncStatus());
+    const [startupFailure, setStartupFailure] = useState(null);
+    const [startupBusy, setStartupBusy] = useState(false);
+    function observeStartupFailure() {
+      const status = window.STORE?.syncStatus();
+      setOnline(status);
+      setStartupFailure(status && ['offline', 'error'].includes(status.connection)
+        ? status.message || STARTUP_FAILED : STARTUP_FAILED);
+    }
     useEffect(()=>{
-      const update = ()=>setOnline(window.STORE?.syncStatus());
+      const update = ()=>{
+        const status = window.STORE?.syncStatus();
+        if (status?.adoption?.state === 'working') adoptionObserved.current = true;
+        if (status?.ready || status?.adoption?.state === 'working') setStartupFailure(null);
+        setOnline(status);
+      };
       window.addEventListener('syncstatuschange', update); update();
       return ()=>window.removeEventListener('syncstatuschange', update);
     }, []);
@@ -123,18 +143,23 @@
         bumpCfg(v => v + 1);
         // La identidad efectiva determina la lectura remota y descarta la proyección anterior.
         if (window.STORE && window.STORE.setSession) {
-          window.STORE.setSession(window.AUTH.current()).catch(() => {});
+          window.STORE.setSession(window.AUTH.current()).catch(observeStartupFailure);
         } else if (window.AUTH.hasSession() && window.STORE) {
-          window.STORE.init().catch(() => {});
+          window.STORE.init().catch(observeStartupFailure);
         }
       };
       window.addEventListener('configchange', onCfg);
       window.addEventListener('authchange', onAuth);
-      if (window.AUTH.init) window.AUTH.init(); // carga sesión persistida → dispara authchange
+      if (window.AUTH.init) Promise.resolve(window.AUTH.init()).catch(observeStartupFailure); // sesión persistida → authchange
       return () => { window.removeEventListener('configchange', onCfg); window.removeEventListener('authchange', onAuth); };
     }, []);
 
     const user = window.AUTH.current();
+    const authReady = !window.AUTH.isReady || window.AUTH.isReady();
+    const hasSession = window.AUTH.hasSession();
+    const accessState = window.AUTH.accessState;
+    const confirming = online?.hasUnresolvedRequests === true
+      || (online?.errors || []).some(error => error.code === 'ONLINE_RESULT_UNKNOWN');
     const isAdmin = window.AUTH.isAdmin();
     const canAccess = id => window.AUTH.canAccess(id);
     const navigation = window.SCREENS.navigation();
@@ -144,54 +169,76 @@
     useEffect(() => {
       if (visiblePage && page !== visiblePage) setPage(visiblePage);
     }, [page, visiblePage]);
+    useEffect(() => {
+      if (authReady && user && online?.ready && online?.adoption?.state === 'ready'
+          && adoptionObserved.current && !adoptionNotified.current) {
+        adoptionNotified.current = true;
+        window.UI.toast('Todo listo. Puedes continuar trabajando.', 'var(--accent)');
+      }
+    }, [authReady, user, online?.ready, online?.adoption?.state]);
     function go(id) {
       if (!window.AUTH.requireAccess(id)) return false;
       setPage(id);
       setMobileNavOpen(false);
       return true;
     }
-    const navCollapsed = collapsed && !mobileNavOpen;
-    if (window.AUTH.hasSession() && online && !online.ready) {
+    async function retryStartup() {
+      setStartupBusy(true); setStartupFailure(null);
+      try { await window.STORE.init(); }
+      catch (cause) { observeStartupFailure(cause); }
+      finally { setOnline(window.STORE?.syncStatus()); setStartupBusy(false); }
+    }
+    function startupGate(message, working) {
       const gate = h('main', { key: 'online-gate', 'data-testid': 'online-gate', role: 'status', 'aria-live': 'polite',
         style: { position: 'fixed', inset: 0, zIndex: 10000 },
         className: 'min-h-screen flex items-center justify-center p-6 bg-surface text-on-surface' },
         h('div', { className: 'w-full max-w-md text-center space-y-6' }, [
-          h('p', { key: 'message', className: 'text-lg' }, online.message),
-          online.connection !== 'checking' && h('button', {
+          h('p', { key: 'message', className: 'text-lg' }, message),
+          !working && h('button', {
             key: 'update', className: 'min-h-12 rounded-lg px-6 py-3 bg-primary text-on-primary',
-            onClick: async ()=> {
-              await window.STORE.init().catch(() => {});
-            },
+            'data-testid': 'online-gate-retry', disabled: startupBusy, onClick: retryStartup,
           }, 'Actualizar ahora'),
         ]));
-      // El formulario y su await siguen vivos. La proyección anterior queda oculta e inerte.
+      // También durante la revalidación de acceso, el formulario y su await siguen vivos.
       return h(React.Fragment, null, [lastShell.current && React.cloneElement(lastShell.current,
         { inert: '', 'aria-hidden': true, style: { visibility: 'hidden' } }), gate]);
     }
 
-    // Gate de seguridad SOLO en dominio real: sin sesión no se muestra la app (RLS protege).
+    // La sesión y el acceso preceden a disponibilidad comercial: un rechazo no es falta de Internet.
     if (REQUIRE_AUTH) {
-      if (window.AUTH.isReady && !window.AUTH.isReady()) {
+      if (!authReady) {
+        if (hasSession) return startupGate(confirming ? CONFIRMING_MESSAGE : STARTUP_MESSAGE, true);
         return h('div', { className: 'h-full grid place-items-center', style: { background: '#131B2E' } },
           h('div', { className: 'text-sm', style: { color: '#5D637B' } }, 'Cargando…'));
       }
       // ToastHost vive en la rama autenticada, así que antes de entrar los avisos
       // se emitían contra un host sin montar y se perdían en silencio: la pantalla
       // de Login no podía explicar por qué no dejaba pasar. Va con cada rama previa.
-      if (!window.AUTH.hasSession()) {
+      if (!hasSession) {
         lastShell.current = null;
         return h(React.Fragment, null, [
           h(LoginScreen, { key: 'login' }),
           h(window.UI.ToastHost, { key: 'toast' }),
         ]);
       }
-      if (!user) {
+      if (accessState === 'profile_missing' || accessState === 'user_inactive'
+          || (!user && !['remote_unavailable', 'permissions_unavailable'].includes(accessState))) {
         return h(React.Fragment, null, [
           h(AccessDeniedScreen, { key: 'denied' }),
           h(window.UI.ToastHost, { key: 'toast' }),
         ]);
       }
     }
+    const accessUnavailable = ['remote_unavailable', 'permissions_unavailable'].includes(accessState);
+    if (hasSession && (confirming || accessUnavailable || !online?.ready || startupFailure || startupBusy)) {
+      const working = startupBusy || online?.adoption?.state === 'working' || online?.connection === 'checking';
+      const message = confirming ? CONFIRMING_MESSAGE : working ? STARTUP_MESSAGE
+        : accessState === 'remote_unavailable' ? OFFLINE_MESSAGE
+          : accessUnavailable ? ACCESS_FAILED
+            : startupFailure || online?.message || STARTUP_FAILED;
+      return startupGate(message, working || confirming);
+    }
+    const navCollapsed = collapsed && !mobileNavOpen;
     lastShell.current = h('div', { key: 'shell', className: 'flex h-full min-w-0 bg-background font-body text-on-surface' }, [
       mobileNavOpen && h('button', {
         key: 'nav-backdrop', className: 'fixed inset-0 z-[80] bg-on-surface/45 backdrop-blur-sm md:hidden',

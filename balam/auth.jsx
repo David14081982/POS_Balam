@@ -4,6 +4,7 @@
   let profile = null;
   let access = null;
   let accessState = 'profile_missing';
+  let lastAccessError = null;
   let ready = false;
   let subscribed = false;
   let resolveSeq = 0;
@@ -33,7 +34,13 @@
   function isRemoteUnavailable(error) {
     const code = String((error && error.code) || '').toUpperCase();
     const message = String((error && error.message) || error || '').toLowerCase();
+    // Un rechazo PostgreSQL/PostgREST o HTTP prueba una respuesta remota.
+    if (/^[0-9A-Z]{5}$/.test(code) || code.startsWith('PGRST') || Number(error && error.status) >= 400) return false;
     return code === 'NETWORK'
+      || ['AbortError', 'TimeoutError'].includes(error && error.name)
+      || message.includes('aborterror')
+      || message.includes('timeout')
+      || message.includes('timed out')
       || message.includes('failed to fetch')
       || message.includes('network')
       || message.includes('load failed')
@@ -90,17 +97,22 @@
       },
     };
   }
-  function applyResolved(nextProfile, nextAccess, state) {
+  function rememberAccessError(failure) {
+    const transport = isRemoteUnavailable(failure);
+    lastAccessError = failure ? { code: String(failure.code || (transport ? 'NETWORK' : 'PERMISSIONS_UNAVAILABLE')), transport } : null;
+  }
+  function applyResolved(nextProfile, nextAccess, state, failure = null) {
     profile = nextProfile ? { ...nextProfile, baseRole: nextAccess ? nextAccess.baseRole : null } : null;
     access = nextAccess;
     accessState = state;
+    rememberAccessError(failure);
   }
   async function fetchPermissionSnapshot(c) {
     try {
-      const { data, error } = await c.rpc('current_permission_snapshot', {
+      const { data, error, status } = await c.rpc('current_permission_snapshot', {
         p_screen_keys: requestedScreenKeys(),
       });
-      if (error) return { snapshot: null, error };
+      if (error) return { snapshot: null, error: { ...error, status } };
       const snapshot = normalizeRemoteSnapshot(data);
       return snapshot
         ? { snapshot, error: null }
@@ -129,9 +141,9 @@
       } else if (remote.snapshot && remote.snapshot.profileStatus === 'profile_missing') {
         applyResolved(null, null, 'profile_missing');
       } else if (isRemoteUnavailable(remote.error)) {
-        applyResolved(null, null, 'remote_unavailable');
+        applyResolved(null, null, 'remote_unavailable', remote.error);
       } else {
-        applyResolved(null, null, 'permissions_unavailable');
+        applyResolved(null, null, 'permissions_unavailable', remote.error);
       }
     }
     if (seq !== resolveSeq) return;
@@ -231,10 +243,11 @@
     } else if (remote.snapshot && remote.snapshot.profileStatus === 'profile_missing') {
       applyResolved(null, null, 'profile_missing');
     } else if (isRemoteUnavailable(remote.error)) {
-      applyResolved(null, null, 'remote_unavailable');
+      applyResolved(null, null, 'remote_unavailable', remote.error);
     } else {
       access = null;
       accessState = 'permissions_unavailable';
+      rememberAccessError(remote.error);
     }
     ready = true;
     emit();
@@ -312,11 +325,12 @@
   }
   function hasSession() { return !!session; }
   function isReady() { return ready; }
+  function accessError() { return lastAccessError ? { ...lastAccessError } : null; }
 
   window.AUTH = {
     init, login, logout, current, role, isAdmin,
     canAccess, requireAccess, allowedScreens, defaultScreen,
-    permissionReason, refreshPermissions, hasSession, isReady,
+    permissionReason, refreshPermissions, hasSession, isReady, accessError,
     get accessState() { return accessState; },
   };
 })();

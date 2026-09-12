@@ -1,0 +1,79 @@
+{
+  "ok": true,
+  "verifiedAt": "2026-09-12T14:55:29.594158+00:00",
+  "baselineAt": "2026-09-12T14:51:17.964787+00:00",
+  "scope": "Adoption diagnostics and exact technical history; no commercial replay or new business scenarios",
+  "migrations": [
+    {
+      "file": "20260912021400_pos_h164_adoption_diagnostics.sql",
+      "sha256": "c277637d34759f9f394fb88d4ec71128c238fe7d2c7a64db360d730fd5e82e06"
+    },
+    {
+      "file": "20260912021500_pos_h164_adoption_diagnostics_verification.sql",
+      "sha256": "33bbf69b98da7d3f75dc10080897036010ef6deb749391acb90dcc5cf883ebde"
+    }
+  ],
+  "localVerification": "PASS --adoption-only; earlier business verifications omitted",
+  "remoteVerification": "PASS migration215 rollback fixtures",
+  "preservation": {
+    "commercialTables": 35,
+    "commercialFingerprintsUnchanged": true,
+    "archivedOriginalsUnchanged": true,
+    "archiveCount": 15,
+    "archiveReviewBefore": 2,
+    "archiveReviewAfter": 1,
+    "unconfirmedOperationCount": 1,
+    "unconfirmedOperationsUnchanged": true,
+    "businessInstallations": 14,
+    "retiredBusinessInstallations": 13,
+    "nonRetiredBusinessInstallations": 1,
+    "activeQaInstallations": 0,
+    "deviceIdentityStatusUnchanged": true,
+    "runtimeUnchanged": true
+  },
+  "acl": {
+    "browserWriteTableCount": 0,
+    "commercialFenceCount": 35,
+    "functions": [
+      {
+        "anon": false,
+        "authenticated": true,
+        "definitionHash": "8e073c6d632c55f4ffa1ec72a692b09a",
+        "name": "archive_online_legacy",
+        "owner": "postgres",
+        "public": false,
+        "securityDefiner": true
+      },
+      {
+        "anon": false,
+        "authenticated": true,
+        "definitionHash": "11c335908acc6782548cc2251ccf4c02",
+        "name": "online_adoption_report",
+        "owner": "postgres",
+        "public": false,
+        "securityDefiner": true
+      },
+      {
+        "anon": false,
+        "authenticated": false,
+        "definitionHash": "f85eab49017cc3a2632b51f46639c44d",
+        "name": "online_legacy_technical_kind",
+        "owner": "postgres",
+        "public": false,
+        "securityDefiner": false
+      }
+    ],
+    "invalidOriginalHashes": 0,
+    "serverTime": "2026-09-12T14:55:32.800231+00:00",
+    "technicalHistory": [
+      {
+        "count": 1,
+        "reason": "technical_recovery_ready"
+      }
+    ]
+  },
+  "limitations": [
+    "Adoption reports are client telemetry, not an independent certification of local storage.",
+    "The unconfirmed inventory lot remains isolated for individual review. No replay or discard was authorized or performed."
+  ]
+}

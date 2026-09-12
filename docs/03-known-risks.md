@@ -7432,6 +7432,19 @@ escrituras comerciales remotas; adopción en la terminal del usuario pendiente.
 
 ## H-164 — Estados de equipos y recuperación sin salida operativa
 
+**Continuación de adopción física:** el usuario reportó un falso «Sin conexión»
+en la URL publicada. Supabase confirma presencia, permisos y snapshot; la
+reproducción con esas respuestas pasa. Está comprobado que el cliente oculta
+errores no relacionados con la red bajo ese mensaje. Arranque corregido con
+clasificación de errores, precedencia Auth, archivo exacto y ACK de adopción;
+Realtime y referencias de otro actor ya no bloquean la lectura confirmada.
+PWA coordina recarga segura y omite caché HTTP obsoleta. SQL 214/215 aplicado y
+verificado: 35 tablas comerciales y 15 originales intactos, 13 instalaciones
+retiradas sin cambios. Sólo queda una operación legacy no confirmada aislada
+para decisión. Pruebas dirigidas PASS; publicación del nuevo bundle y adopción
+física pendientes en este corte. Commit: **Pendiente de commit**.
+La excepción concreta del navegador físico aún no está demostrada.
+
 **Estado:** IMPLEMENTADO Y PUBLICADO; CERTIFICACIÓN FÍSICA PENDIENTE.
 Conversión online-only activa, sin rediseñar UI.
 **Certificación técnica A/B/C:** PASS; 20/20 escenarios y retiro QA completos.

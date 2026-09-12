@@ -6,6 +6,8 @@
   const BUILD = '2026-09-12-h164-online';
   const OFFLINE = 'Sin conexión. BALAM necesita internet para continuar.';
   const CONFIRMING = 'Estamos confirmando la operación. No la repitas.';
+  const UPDATING = 'BALAM se está actualizando.';
+  const STARTUP_FAILED = 'No pudimos completar la actualización. Inténtalo de nuevo.';
   const RECEIPT_PREFIX = 'balam_online_request_v1:';
   const RESET_MARK_KEY = '_resetMark';
   const MONEY_WIRE_MARKER = '__BALAM_MONEY_V1__';
@@ -16,6 +18,9 @@
   let refreshPromise = null, refreshAgain = false, lifecycleStarted = false, channel = null;
   let writeInFlight = false, configRemoteVersion = 0, legacyReviewCount = 0;
   let quoteContext = null, serverClock = null, configLookup = [];
+  let adoptionComplete = false;
+  let legacyGeneration = 0;
+  let adoption = { revision: 1, state: 'working', stage: 'presence', remainingLegacy: 0, archivedCount: 0 };
   // Sólo continuaciones de solicitudes ya enviadas: no guardan comandos ni los reenvían.
   const resultWaiters = new Map();
   const newRequestId = () => crypto.randomUUID();
@@ -24,20 +29,62 @@
   function emit() { window.dispatchEvent(new CustomEvent('syncstatuschange', { detail: syncStatus() })); }
   function syncStatus() {
     return { ready, synchronized: ready, connection, lastSuccess, build: BUILD,
-      busy: writeInFlight, reconciling: !!refreshPromise, message: failure?.message || (ready ? 'Todo actualizado' : OFFLINE),
-      legacyReviewCount, errors: failure ? [failure] : [] };
+      busy: writeInFlight, reconciling: !!refreshPromise, hasUnresolvedRequests: hasUnresolvedRequests(),
+      message: failure?.message || (ready ? 'Todo actualizado' : UPDATING),
+      adoption: { ...adoption }, legacyReviewCount, errors: failure ? [failure] : [] };
   }
   function markUnavailable(reason) {
-    ready = false; connection = 'offline'; failure = reason || error('ONLINE_UNAVAILABLE', OFFLINE); emit();
+    const cause = reason || error('ONLINE_UNAVAILABLE', OFFLINE);
+    const offline = isTransportFailure(cause);
+    ready = false; connection = offline ? 'offline' : cause.code === 'ONLINE_RESULT_UNKNOWN' ? 'checking' : 'error';
+    failure = error(offline ? 'ONLINE_UNAVAILABLE' : cause.code || 'ONLINE_STARTUP_FAILED',
+      offline ? OFFLINE : ['ONLINE_RESULT_UNKNOWN','DEVICE_RETIRED','AUTH_REQUIRED'].includes(cause.code) ? cause.message : STARTUP_FAILED);
+    emit();
+  }
+  function isTransportFailure(cause) {
+    if (navigator.onLine === false || cause?.code === 'ONLINE_UNAVAILABLE') return true;
+    if (cause?.remoteResponse) return false;
+    return ['AbortError','TimeoutError'].includes(cause?.name)
+      || /failed to fetch|fetch failed|networkerror|network request failed|load failed/i.test(cause?.message || '');
+  }
+  function diagnosticCode(cause) {
+    const code = String(cause?.code || '').toUpperCase();
+    if (/^[0-9A-Z]{5}$/.test(code)) return 'SQL_' + code;
+    if (/^[A-Z][A-Z0-9_]{0,63}$/.test(code)) return code;
+    return isTransportFailure(cause) ? 'ONLINE_UNAVAILABLE' : 'STARTUP_' + String(cause?.name || 'ERROR').toUpperCase().replace(/[^A-Z0-9_]/g, '').slice(0,50);
+  }
+  function hasUnresolvedRequests() {
+    if (resultWaiters.size > 0) return true;
+    if (!identity) return false;
+    try {
+      return references(identity).length > 0;
+    } catch (_) { return true; }
+  }
+  function adoptionStage(stage) {
+    adoption = { ...adoption, state: 'working', stage }; emit();
+  }
+  async function reportAdoption(state, cause) {
+    const report = { ...adoption, state };
+    if (cause) report.code = diagnosticCode(cause);
+    if (state === 'ready') Object.assign(report, { stage: 'complete', snapshotAt: lastSuccess });
+    // Technical evidence only; never sends a command or a legacy payload for replay.
+    const args = { p_device_id: window.CORE.getDeviceId(), p_report: report };
+    // Failure diagnostics must not replace the original failure when their own connection fails.
+    const response = await readRpc('online_adoption_report', args, { diagnostic: !!cause });
+    if (response?.ok !== true || response.revision !== 1 || response.state !== state) {
+      throw error('ADOPTION_REPORT_UNCONFIRMED', STARTUP_FAILED);
+    }
+    return report;
   }
   function assertBusinessReady() {
-    if (!enabled || !ready || navigator.onLine === false) throw error('ONLINE_UNAVAILABLE', OFFLINE);
+    if (navigator.onLine === false) throw error('ONLINE_UNAVAILABLE', OFFLINE);
+    if (!enabled || !ready) throw failure || error('ONLINE_NOT_READY', UPDATING);
     if (writeInFlight) throw error('ONLINE_RESULT_UNKNOWN', CONFIRMING);
     return true;
   }
   async function ensureClient() {
     if (sb) return sb;
-    if (!window.supabase?.createClient) throw error('ONLINE_UNAVAILABLE', OFFLINE);
+    if (!window.supabase?.createClient) throw error('ONLINE_CLIENT_UNAVAILABLE', STARTUP_FAILED);
     sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
       db: { schema: 'pos' },
       global: { fetch: (input, init = {}) => {
@@ -62,13 +109,13 @@
     if (failure || !data?.session?.user?.id) throw error('AUTH_REQUIRED', 'Inicia sesión para continuar.');
     return data.session.user.id;
   }
-  async function readRpc(name, args = {}) {
-    if (navigator.onLine === false) { markUnavailable(); throw error('ONLINE_UNAVAILABLE', OFFLINE); }
+  async function readRpc(name, args = {}, options = {}) {
+    if (navigator.onLine === false) { if (!options.diagnostic) markUnavailable(); throw error('ONLINE_UNAVAILABLE', OFFLINE); }
     try {
-      const { data, error: failure } = await (await ensureClient()).rpc(name, args);
-      if (failure) throw Object.assign(new Error(failure.message), failure);
+      const { data, error: failure, status } = await (await ensureClient()).rpc(name, args);
+      if (failure) throw Object.assign(new Error(failure.message), failure, { remoteResponse: status > 0 });
       return data;
-    } catch (failure) { markUnavailable(error('ONLINE_UNAVAILABLE', OFFLINE)); throw failure; }
+    } catch (failure) { failure.rpc = name; if (!options.diagnostic) markUnavailable(failure); throw failure; }
   }
   function stable(value) {
     if (Array.isArray(value)) return '[' + value.map(stable).join(',') + ']';
@@ -636,40 +683,51 @@
     return next;
   }
   const LEGACY_LOCAL = /^(?:balam_pos_(?:products_v2|sellers_v1|clients_v1|sales_v1|moves_v1|promos_v1|liq_v1|returns_v1|payments_v1|exchanges_v1|loans_v1|loans_premigracion_v1|commission_adjustments_v1|periodo_v1|folio_v[12]|sale_commit_journal_v1|sale_commit_journal_v2:.*|layaway_product_locks_v1)|balam_sync_.*|balam_auth_access_v2|balam_device_recovery_v1|balam_reset_seen|balam_point_zero_ticket_v1|balam_selective_cleanup_.*|balam_config_v\d+|balam_cfg_v\d+|balam_demo)$/;
-  async function legacyIndexedDB() {
-    if (!window.indexedDB) return [];
+  function legacyDatabase(mode, action) {
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open('balam_sync');
-      request.onupgradeneeded = () => { request.transaction.abort(); resolve([]); };
-      request.onerror = () => { if (request.error?.name === 'AbortError') resolve([]); else reject(request.error); };
+      let db = null, tx = null, settled = false, absent = false;
+      const finish = (cause, value) => {
+        if (settled) return; settled = true; clearTimeout(deadline);
+        if (cause && tx) { try { tx.abort(); } catch (_) {} }
+        db?.close(); cause ? reject(cause) : resolve(value);
+      };
+      const deadline = setTimeout(() => finish(error('LEGACY_STORAGE_TIMEOUT', STARTUP_FAILED)), 10000);
+      let request;
+      try { request = window.indexedDB.open('balam_sync'); }
+      catch (_) { finish(error('LEGACY_STORAGE_UNAVAILABLE', STARTUP_FAILED)); return; }
+      request.onblocked = () => finish(error('LEGACY_STORAGE_BLOCKED', STARTUP_FAILED));
+      request.onupgradeneeded = () => { absent = true; request.transaction.abort(); };
+      request.onerror = () => absent ? finish(null, []) : finish(error('LEGACY_STORAGE_READ_FAILED', STARTUP_FAILED));
       request.onsuccess = () => {
-        const db = request.result;
-        if (!db.objectStoreNames.contains('durable_queue')) { db.close(); resolve([]); return; }
-        const tx = db.transaction('durable_queue', 'readonly'), rows = [];
-        const cursor = tx.objectStore('durable_queue').openCursor();
-        cursor.onsuccess = () => {
-          const row = cursor.result; if (!row) return;
-          rows.push({ sourceKey: 'indexedDB:balam_sync/durable_queue/' + String(row.key),
-            original: JSON.stringify(row.value), idbKey: row.key });
-          row.continue();
-        };
-        tx.oncomplete = () => { db.close(); resolve(rows); };
-        tx.onerror = () => { db.close(); reject(tx.error); };
+        db = request.result;
+        if (settled) { db.close(); return; }
+        if (!db.objectStoreNames.contains('durable_queue')) { finish(null, []); return; }
+        try {
+          tx = db.transaction('durable_queue', mode);
+          const result = action(tx.objectStore('durable_queue'));
+          tx.oncomplete = () => finish(null, result);
+          tx.onerror = tx.onabort = () => finish(error('LEGACY_STORAGE_TRANSACTION_FAILED', STARTUP_FAILED));
+        } catch (_) { finish(error('LEGACY_STORAGE_TRANSACTION_FAILED', STARTUP_FAILED)); }
       };
     });
   }
-  async function removeArchivedIndexedDB(entry) {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open('balam_sync');
-      request.onupgradeneeded = () => { request.transaction.abort(); resolve(); };
-      request.onerror = () => request.error?.name === 'AbortError' ? resolve() : reject(request.error);
-      request.onsuccess = () => {
-        const db = request.result, tx = db.transaction('durable_queue', 'readwrite');
-        const store = tx.objectStore('durable_queue'), current = store.get(entry.idbKey);
-        current.onsuccess = () => { if (JSON.stringify(current.result) === entry.original) store.delete(entry.idbKey); };
-        tx.oncomplete = () => { db.close(); resolve(); };
-        tx.onerror = () => { db.close(); reject(tx.error); };
+  async function legacyIndexedDB() {
+    if (!window.indexedDB) return [];
+    return legacyDatabase('readonly', store => {
+      const rows = [], cursor = store.openCursor();
+      cursor.onsuccess = () => {
+        const row = cursor.result; if (!row) return;
+        rows.push({ sourceKey: 'indexedDB:balam_sync/durable_queue/' + String(row.key),
+          original: JSON.stringify(row.value), idbKey: row.key });
+        row.continue();
       };
+      return rows;
+    });
+  }
+  async function removeArchivedIndexedDB(entry) {
+    return legacyDatabase('readwrite', store => {
+      const current = store.get(entry.idbKey);
+      current.onsuccess = () => { if (JSON.stringify(current.result) === entry.original) store.delete(entry.idbKey); };
     });
   }
   async function legacyCommercialCaches() {
@@ -689,8 +747,7 @@
     }
     return entries;
   }
-  async function archiveLegacy() {
-    // Única lectura del almacenamiento comercial antiguo: traslado de evidencia sin ejecutar intenciones.
+  async function inventoryLegacy() {
     const entries = [];
     for (let index = 0; index < localStorage.length; index++) {
       const key = localStorage.key(index);
@@ -700,6 +757,15 @@
     }
     entries.push(...await legacyIndexedDB());
     entries.push(...await legacyCommercialCaches());
+    return entries;
+  }
+  async function archiveLegacy() {
+    // Única lectura del almacenamiento comercial antiguo: traslado de evidencia sin ejecutar intenciones.
+    const entries = await inventoryLegacy();
+    if (entries.length) {
+      adoptionComplete = false; ready = false; connection = 'checking';
+      adoption = { ...adoption, state: 'working', stage: 'inventory', remainingLegacy: entries.length }; emit();
+    }
     for (const entry of entries) {
       entry.hash = await hash(entry.original);
       const result = await readRpc('archive_online_legacy', {
@@ -716,7 +782,11 @@
         const cache = await caches.open(entry.cacheName), current = await cache.match(entry.cacheRequest);
         if (current && await current.text() === entry.original) await cache.delete(entry.cacheRequest);
       } else await removeArchivedIndexedDB(entry);
+      adoption.archivedCount++;
     }
+    // Una pestaña vieja pudo modificar una fuente durante el archivo. Nunca certificarla ni borrar su nueva versión.
+    adoption.remainingLegacy = (await inventoryLegacy()).length;
+    if (adoption.remainingLegacy) throw error('LEGACY_SOURCE_CHANGED', STARTUP_FAILED);
   }
   async function refresh(options = {}) {
     if (!enabled) throw error('AUTH_REQUIRED', 'Inicia sesión para continuar.');
@@ -743,12 +813,12 @@
         serverClock = { time: Date.parse(raw.serverTime), observed: performance.now() };
         legacyReviewCount = Number(raw.legacyReviewCount) || 0;
         for (const ref of resolved) localStorage.removeItem(ref.key);
-        ready = true; connection = 'online'; lastSuccess = raw.serverTime || new Date().toISOString(); failure = null;
+        ready = adoptionComplete; connection = ready ? 'online' : 'checking'; lastSuccess = raw.serverTime; failure = null;
         emit();
         for (const ref of resolved) deliverResolved(ref);
         return { ok: true, message: 'Todo actualizado', status: syncStatus() };
       } catch (cause) {
-        markUnavailable(cause.code === 'ONLINE_RESULT_UNKNOWN' ? cause : error('ONLINE_UNAVAILABLE', OFFLINE));
+        markUnavailable(cause);
         throw cause;
       }
     })().finally(() => {
@@ -763,7 +833,7 @@
     if (!enabled) return false;
     const result = await readRpc('online_presence', { p_device_id: window.CORE.getDeviceId(), p_client_build: BUILD });
     if (result === false || result?.ok === false) {
-      ready = false; failure = error('DEVICE_RETIRED', 'Este equipo está retirado. Un administrador puede reactivarlo en Equipos.'); emit();
+      ready = false; connection = 'error'; failure = error('DEVICE_RETIRED', 'Este equipo está retirado. Un administrador puede reactivarlo en Equipos.'); emit();
       throw failure;
     }
     if (result !== true && result?.ok !== true) throw error('DEVICE_REPORT_UNCONFIRMED', 'No se pudo confirmar el equipo.');
@@ -777,7 +847,10 @@
     window.addEventListener('focus', reconnect);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) reconnect(); });
     window.addEventListener('storage', event => {
-      if (event.key?.startsWith(RECEIPT_PREFIX) && event.newValue) {
+      if (event.newValue && (LEGACY_LOCAL.test(event.key) || ['balam_purge_seen','balam_purge_ticket'].includes(event.key))) {
+        legacyGeneration++; adoptionComplete = false; ready = false; connection = 'checking'; failure = null;
+        adoptionStage('inventory'); reconnect();
+      } else if (event.key?.startsWith(RECEIPT_PREFIX) && event.newValue) {
         ready = false; failure = error('ONLINE_RESULT_UNKNOWN', CONFIRMING); emit();
       } else if (event.key?.startsWith(RECEIPT_PREFIX)) reconnect();
     });
@@ -788,28 +861,62 @@
   async function init() {
     if (initializing) return initializing;
     initializing = (async () => {
+      const seq = sessionSeq;
       try { window.CORE.getDeviceId(); }
       catch (cause) { markUnavailable(cause); throw cause; }
       if (!(await hasSession())) throw error('AUTH_REQUIRED', 'Inicia sesión para continuar.');
       enabled = true; startLifecycle();
+      const adopting = !adoptionComplete || !ready;
+      if (adopting) {
+        adoptionComplete = false; ready = false; connection = 'checking'; failure = null;
+        adoption = { revision: 1, state: 'working', stage: 'presence', remainingLegacy: 0, archivedCount: adoption.archivedCount };
+        emit();
+      }
       try {
         await heartbeatDevice();
+        if (adopting) await reportAdoption('working');
+        if (!adoptionComplete) adoptionStage('inventory');
         await archiveLegacy();
+        if (!adoptionComplete) adoptionStage('permissions');
         if (window.AUTH?.refreshPermissions && !(await window.AUTH.refreshPermissions())) {
-          throw error('AUTH_REQUIRED', 'No se pudo confirmar el acceso de tu usuario.');
+          const accessError = window.AUTH.accessError?.();
+          const cause = error(accessError?.transport ? 'ONLINE_UNAVAILABLE' : accessError?.code || 'AUTH_REQUIRED',
+            accessError?.transport ? OFFLINE : 'No se pudo confirmar el acceso de tu usuario.');
+          cause.remoteResponse = accessError ? !accessError.transport : false;
+          throw cause;
         }
+        if (!adoptionComplete) adoptionStage('snapshot');
         const result = await refresh();
-        if (!channel) {
-          const c = await ensureClient();
-          channel = c.channel('balam-online-' + window.CORE.getDeviceId())
-            .on('postgres_changes', { event: '*', schema: 'pos' }, () => {
-              if (writeInFlight) { refreshAgain = true; return; }
-              refresh().catch(() => {});
-            }).subscribe();
+        if (seq !== sessionSeq || !enabled) throw error('SESSION_CHANGED', 'La sesión cambió.');
+        if (!adoptionComplete) {
+          adoption.remainingLegacy = (await inventoryLegacy()).length;
+          if (adoption.remainingLegacy) throw error('LEGACY_SOURCE_CHANGED', STARTUP_FAILED);
+          const generation = legacyGeneration;
+          const completed = await reportAdoption('ready');
+          if (seq !== sessionSeq || !enabled) throw error('SESSION_CHANGED', 'La sesión cambió.');
+          if (generation !== legacyGeneration) throw error('LEGACY_SOURCE_CHANGED', STARTUP_FAILED);
+          adoption = completed; adoptionComplete = true;
+          ready = true; connection = 'online'; failure = null; emit();
         }
-        return result;
+        if (!channel) {
+          // Realtime is only an accelerator. Its failure cannot invalidate confirmed HTTP authority.
+          try {
+            channel = sb.channel('balam-online-' + window.CORE.getDeviceId())
+              .on('postgres_changes', { event: '*', schema: 'pos' }, () => {
+                if (writeInFlight) { refreshAgain = true; return; }
+                refresh().catch(() => {});
+              }).subscribe();
+          } catch (_) { channel = null; }
+        }
+        return { ...result, status: syncStatus() };
       } catch (cause) {
-        if (cause.code !== 'DEVICE_RETIRED') markUnavailable(cause.code === 'ONLINE_RESULT_UNKNOWN' ? cause : error('ONLINE_UNAVAILABLE', OFFLINE));
+        if (seq === sessionSeq) {
+          markUnavailable(cause);
+          if (!adoptionComplete) {
+            adoption = { ...adoption, state: 'failed', code: diagnosticCode(cause) }; emit();
+            await reportAdoption('failed', cause).catch(() => {});
+          }
+        }
         throw cause;
       }
     })().finally(() => { initializing = null; });
@@ -826,11 +933,16 @@
     const next = window.AUTH?.hasSession() ? await currentUserId() : null;
     if (next === identity && enabled) return { ok: true, unchanged: true };
     sessionSeq++; identity = next; enabled = false;
+    adoptionComplete = false;
+    adoption = { revision: 1, state: 'working', stage: 'presence', remainingLegacy: 0, archivedCount: 0 };
     for (const waiter of resultWaiters.values()) waiter.reject(error('SESSION_CHANGED', 'La sesión cambió. Consulta la operación con su usuario.'));
     resultWaiters.clear();
     if (channel && sb) { sb.removeChannel(channel); channel = null; }
-    clearMemory(); connection = next ? 'checking' : 'offline'; emit();
+    clearMemory(); failure = null; connection = next ? 'checking' : 'offline'; emit();
     if (!next) return { ok: true, signedOut: true };
+    const seq = sessionSeq;
+    if (initializing) await initializing.catch(() => {});
+    if (seq !== sessionSeq) return { ok: false, sessionChanged: true };
     return init();
   }
   function pushRows(kind, rows) {

@@ -26,6 +26,7 @@ const client = {
   async rpc(name,args) {
     calls.push({ name,args });
     if (name === 'online_presence') return { data: presence ? { ok:true } : false };
+    if (name === 'online_adoption_report') return { data: { ok:true, revision:1, state:args.p_report.state } };
     if (name === 'online_connectivity') { if(connectivityHook) await connectivityHook();return { data: { ok:true } }; }
     if (name === 'online_snapshot') return { data: snapshotHook ? await snapshotHook() : clone(raw) };
     if (name === 'archive_online_legacy') {

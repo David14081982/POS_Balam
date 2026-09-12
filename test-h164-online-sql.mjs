@@ -4,6 +4,9 @@ import fs from 'node:fs';
 import { pathToFileURL } from 'node:url';
 const runtime=process.env.BALAM_PGLITE_ROOT;
 const nullableOnly=process.argv.includes('--nullable-only');
+const adoptionOnly=process.argv.includes('--adoption-only');
+const focused=nullableOnly||adoptionOnly;
+const executedVersions=[];
 const { PGlite }=await import(runtime?pathToFileURL(runtime+'/dist/index.js').href:'@electric-sql/pglite');
 const { pgcrypto }=await import(runtime?pathToFileURL(runtime+'/dist/contrib/pgcrypto.js').href:'@electric-sql/pglite/contrib/pgcrypto');
 const catalog=JSON.parse(fs.readFileSync('test-fixtures/h164/sql-authority-baseline.json','utf8')).catalog;
@@ -11,6 +14,7 @@ const db=new PGlite({extensions:{pgcrypto}});
 const ident=x=>'"'+String(x).replaceAll('"','""')+'"';
 const lit=x=>"'"+String(x).replaceAll("'","''")+"'";
 const run=async(sql,step)=>{try{await db.exec(sql);}catch(e){throw new Error(step+': '+e.message,{cause:e});}};
+const migration=async(file,step)=>{await run(fs.readFileSync('supabase/migrations/'+file,'utf8'),step);executedVersions.push(file.slice(0,14));};
 try{
  await run(`create role anon;create role authenticated;create role service_role bypassrls;
  create schema auth;create schema pos;create schema extensions;
@@ -71,16 +75,21 @@ try{
  create role h164_migrator noinherit;grant postgres to h164_migrator;
  set session authorization h164_migrator;set role postgres;`,'delegated migration identity');
  await run('set check_function_bodies=on;','validate new function bodies');
- await run(fs.readFileSync('supabase/migrations/20260911020800_pos_h164_online_authority.sql','utf8'),'H164 implementation');
+ await migration('20260911020800_pos_h164_online_authority.sql','H164 implementation');
  const verification='supabase/migrations/20260911020900_pos_h164_online_authority_verification.sql';
- if(!nullableOnly&&fs.existsSync(verification))await run(fs.readFileSync(verification,'utf8'),'H164 verification');
- await run(fs.readFileSync('supabase/migrations/20260912021000_pos_h164_legacy_exact_discard.sql','utf8'),'H164 exact discard correction');
- if(!nullableOnly)await run(fs.readFileSync('supabase/migrations/20260912021100_pos_h164_legacy_exact_discard_verification.sql','utf8'),'H164 exact discard verification');
- await run(fs.readFileSync('supabase/migrations/20260912021200_pos_h164_optional_json_null.sql','utf8'),'H164 optional JSON null');
- await run(fs.readFileSync('supabase/migrations/20260912021300_pos_h164_optional_json_null_verification.sql','utf8'),'H164 optional JSON null verification');
+ if(!focused&&fs.existsSync(verification))await migration('20260911020900_pos_h164_online_authority_verification.sql','H164 verification');
+ await migration('20260912021000_pos_h164_legacy_exact_discard.sql','H164 exact discard correction');
+ if(!focused)await migration('20260912021100_pos_h164_legacy_exact_discard_verification.sql','H164 exact discard verification');
+ await migration('20260912021200_pos_h164_optional_json_null.sql','H164 optional JSON null');
+ if(!adoptionOnly)await migration('20260912021300_pos_h164_optional_json_null_verification.sql','H164 optional JSON null verification');
+ if(!nullableOnly){
+  await migration('20260912021400_pos_h164_adoption_diagnostics.sql','H164 adoption diagnostics');
+  await migration('20260912021500_pos_h164_adoption_diagnostics_verification.sql','H164 adoption diagnostics verification');
+ }
  const checked=await db.query(`select p.proname from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='pos' and p.proname like '%online%' order by p.proname`);
- fs.mkdirSync('.evidence-h164',{recursive:true});fs.writeFileSync('.evidence-h164/'+(nullableOnly?'online-null-sql-local.json':'online-sql-local.json'),JSON.stringify({at:new Date().toISOString(),engine:'PGlite PostgreSQL',source:'live catalog including schema/PUBLIC ACL, no production rows',migrations:nullableOnly?['20260911020800','20260912021000','20260912021200','20260912021300']:['20260911020800','20260911020900','20260912021000','20260912021100','20260912021200','20260912021300'],verification:nullableOnly?'nullable-only':fs.existsSync(verification),functions:checked.rows},null,2)+'\n');
- console.log(JSON.stringify({ok:true,functions:checked.rows.length,verification:nullableOnly?'nullable-only':fs.existsSync(verification)}));
+ const verificationMode=adoptionOnly?'adoption-only':nullableOnly?'nullable-only':fs.existsSync(verification);
+ fs.mkdirSync('.evidence-h164',{recursive:true});fs.writeFileSync('.evidence-h164/'+(adoptionOnly?'online-adoption-sql-local.json':nullableOnly?'online-null-sql-local.json':'online-sql-local.json'),JSON.stringify({at:new Date().toISOString(),engine:'PGlite PostgreSQL',source:'live catalog including schema/PUBLIC ACL, no production rows',migrations:executedVersions,verification:verificationMode,functions:checked.rows},null,2)+'\n');
+ console.log(JSON.stringify({ok:true,functions:checked.rows.length,verification:verificationMode}));
 } catch(error) {
  console.error(JSON.stringify({ok:false,error:error.message,detail:error.cause?.detail,where:error.cause?.where}));
  process.exitCode=1;

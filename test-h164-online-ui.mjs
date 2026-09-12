@@ -150,6 +150,7 @@ try {
     await page.evaluate(()=>{
       const user={id:'16400000-0000-4000-8000-000000000002',nombre:'Usuario QA'};
       window.AUTH.current=()=>user;window.AUTH.hasSession=()=>true;window.AUTH.isReady=()=>true;
+      Object.defineProperty(window.AUTH,'accessState',{configurable:true,value:'remote'});
       window.AUTH.init=()=>{};window.AUTH.defaultScreen=()=> 'pos';window.AUTH.canAccess=id=>id==='pos';
       window.STORE.setSession=async()=>({ok:true});window.STORE.init=async()=>({ok:true});
       window.__h164Online={ready:true,connection:'online',message:'Todo actualizado'};
