@@ -1,0 +1,23 @@
+{
+  "scope": "Reported adoption of business installations; no Auth access or business mutation; telemetry does not certify three physical terminals",
+  "observed": {
+    "activeQaInstallations": 0,
+    "adoption": [
+      {
+        "archived_count": "6",
+        "code": null,
+        "installations": 1,
+        "remaining_legacy": "0",
+        "reported_at": "2026-09-12T15:25:26.57923+00:00",
+        "stage": "complete",
+        "state": "ready"
+      }
+    ],
+    "businessInstallations": 14,
+    "currentOnlineBuildNonRetired": 1,
+    "latestBusinessHeartbeat": "2026-09-12T15:44:04.573102+00:00",
+    "nonRetiredBusinessInstallations": 1,
+    "retiredBusinessInstallations": 13,
+    "serverTime": "2026-09-12T15:44:18.826624+00:00"
+  }
+}

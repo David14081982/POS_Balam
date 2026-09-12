@@ -7457,7 +7457,10 @@ nuevos originales con hash válido; una operación no confirmada aislada.
 observada **1/3**; dos puestos y la decisión del lote siguen pendientes.
 La prueba adicional de arranque QA A/B/C no se ejecutó: la revisión automática
 rechazó reactivar cuentas retiradas. Se corrigió y observó el equipo físico
-sin eludir esa restricción. Commit SQL 216/217: **Pendiente de commit**.
+sin eludir esa restricción. Commit SQL 216/217:
+`e49c1d2c30988d1884738578ffa9ec19721f8fc6`.
+CI 34702974413 regresiones/despliegue SUCCESS, SQL hasta 217 PASS; Pages
+verificado el 12/09/2026 a las 15:43:51.767 UTC, sin cambios en HTML ni SW.
 
 **Estado:** IMPLEMENTADO Y PUBLICADO; CERTIFICACIÓN FÍSICA PENDIENTE.
 Conversión online-only activa, sin rediseñar UI.

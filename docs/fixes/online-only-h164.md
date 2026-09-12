@@ -477,7 +477,17 @@ HTML ni limpieza manual. El corte de preservación de **15:27:05 UTC** confirma
 nuevos originales con hash válido y la única operación no confirmada intacta.
 Los detalles y límites constan en la [verificación SQL y física](evidence/h164-legacy-scan-verification.json).
 La entrega SQL conserva los bytes publicados del cliente `67ccb325`.
-Commit de esta corrección SQL: **Pendiente de commit**.
+Commit de esta corrección SQL: `e49c1d2c30988d1884738578ffa9ec19721f8fc6`.
+Su [CI 34702974413](https://github.com/David14081982/POS_Balam/actions/runs/34702974413)
+terminó con regresiones y despliegue SUCCESS, incluida la cadena SQL hasta 217,
+arranque, adopción, UI y PWA. La publicación se verificó byte a byte el
+12/09/2026 a las **15:43:51.767 UTC**: HTML `4057532d8dba1fce2ee1b01e595f0f602d0cc2ebc764863075801fdecef9ce09`
+y SW `b572046849dd2a0c97be2fa147bac6d684df7422e9fd396c374376c34b423a24`
+coinciden con el commit. La [evidencia de entrega](evidence/h164-adoption-delivery.json)
+conserva ambos cortes; el job comercial live no se ejecutó.
+La [lectura final de adopción](evidence/h164-physical-adoption-final.json) de las
+**15:44:18 UTC** confirma el mismo equipo listo, cero residuos reportados,
+13 instalaciones retiradas y ningún segundo o tercer equipo observado.
 
 ## Riesgo residual y pendientes
 
