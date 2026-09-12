@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import { pathToFileURL } from 'node:url';
 const runtime=process.env.BALAM_PGLITE_ROOT;
+const nullableOnly=process.argv.includes('--nullable-only');
 const { PGlite }=await import(runtime?pathToFileURL(runtime+'/dist/index.js').href:'@electric-sql/pglite');
 const { pgcrypto }=await import(runtime?pathToFileURL(runtime+'/dist/contrib/pgcrypto.js').href:'@electric-sql/pglite/contrib/pgcrypto');
 const catalog=JSON.parse(fs.readFileSync('test-fixtures/h164/sql-authority-baseline.json','utf8')).catalog;
@@ -72,12 +73,14 @@ try{
  await run('set check_function_bodies=on;','validate new function bodies');
  await run(fs.readFileSync('supabase/migrations/20260911020800_pos_h164_online_authority.sql','utf8'),'H164 implementation');
  const verification='supabase/migrations/20260911020900_pos_h164_online_authority_verification.sql';
- if(fs.existsSync(verification))await run(fs.readFileSync(verification,'utf8'),'H164 verification');
+ if(!nullableOnly&&fs.existsSync(verification))await run(fs.readFileSync(verification,'utf8'),'H164 verification');
  await run(fs.readFileSync('supabase/migrations/20260912021000_pos_h164_legacy_exact_discard.sql','utf8'),'H164 exact discard correction');
- await run(fs.readFileSync('supabase/migrations/20260912021100_pos_h164_legacy_exact_discard_verification.sql','utf8'),'H164 exact discard verification');
+ if(!nullableOnly)await run(fs.readFileSync('supabase/migrations/20260912021100_pos_h164_legacy_exact_discard_verification.sql','utf8'),'H164 exact discard verification');
+ await run(fs.readFileSync('supabase/migrations/20260912021200_pos_h164_optional_json_null.sql','utf8'),'H164 optional JSON null');
+ await run(fs.readFileSync('supabase/migrations/20260912021300_pos_h164_optional_json_null_verification.sql','utf8'),'H164 optional JSON null verification');
  const checked=await db.query(`select p.proname from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='pos' and p.proname like '%online%' order by p.proname`);
- fs.mkdirSync('.evidence-h164',{recursive:true});fs.writeFileSync('.evidence-h164/online-sql-local.json',JSON.stringify({at:new Date().toISOString(),engine:'PGlite PostgreSQL',source:'live catalog including schema/PUBLIC ACL, no production rows',migrations:['20260911020800','20260911020900','20260912021000','20260912021100'],verification:fs.existsSync(verification),functions:checked.rows},null,2)+'\n');
- console.log(JSON.stringify({ok:true,functions:checked.rows.length,verification:fs.existsSync(verification)}));
+ fs.mkdirSync('.evidence-h164',{recursive:true});fs.writeFileSync('.evidence-h164/'+(nullableOnly?'online-null-sql-local.json':'online-sql-local.json'),JSON.stringify({at:new Date().toISOString(),engine:'PGlite PostgreSQL',source:'live catalog including schema/PUBLIC ACL, no production rows',migrations:nullableOnly?['20260911020800','20260912021000','20260912021200','20260912021300']:['20260911020800','20260911020900','20260912021000','20260912021100','20260912021200','20260912021300'],verification:nullableOnly?'nullable-only':fs.existsSync(verification),functions:checked.rows},null,2)+'\n');
+ console.log(JSON.stringify({ok:true,functions:checked.rows.length,verification:nullableOnly?'nullable-only':fs.existsSync(verification)}));
 } catch(error) {
  console.error(JSON.stringify({ok:false,error:error.message,detail:error.cause?.detail,where:error.cause?.where}));
  process.exitCode=1;

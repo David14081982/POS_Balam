@@ -7,11 +7,14 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { createHash, randomUUID, randomBytes } from 'node:crypto';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
+import { gunzipSync } from 'node:zlib';
 import http from 'node:http';
 import { createClient } from '@supabase/supabase-js';
 import { chromium } from 'playwright-core';
+import { qaRetirementPlan, qaRetirementSql } from './h164-qa-retirement.mjs';
 
-if (process.env.BALAM_ONLINE_LIVE !== '1') {
+const preflightOnly=process.env.BALAM_LIVE_PREFLIGHT_ONLY==='1';
+if (process.env.BALAM_ONLINE_LIVE !== '1' && !preflightOnly) {
   console.error('NOT CERTIFIED: set BALAM_ONLINE_LIVE=1 after remote migration review and final artifact build.');
   process.exit(2);
 }
@@ -21,19 +24,43 @@ const publishable = source.match(/const SUPABASE_KEY = '([^']+)'/)[1];
 const build = source.match(/const BUILD = '([^']+)'/)[1];
 const project = new URL(url).hostname.split('.')[0];
 const resumeDir = process.env.BALAM_LIVE_RESUME_DIR ? resolve(process.env.BALAM_LIVE_RESUME_DIR) : null;
+const REJECTED_PAYMENT_CASE='Layaway / concurrent payment / settlement';
+const retryRejectedCase=process.env.BALAM_LIVE_RETRY_REJECTED_CASE||null;
+if(retryRejectedCase){assert.equal(retryRejectedCase,REJECTED_PAYMENT_CASE,'Only the reviewed failed payment race can be retried');assert.ok(resumeDir,'Rejected-race retry requires its existing resume directory');}
 const priorFixtures = resumeDir ? JSON.parse(readFileSync(join(resumeDir,'fixtures.json'),'utf8')) : null;
 const run = priorFixtures?.run || randomUUID(), prefix = 'qa-h164-' + run;
 const out = resumeDir || process.env.BALAM_TEST_OUTPUT || join(tmpdir(), prefix);
-mkdirSync(out, { recursive: true });
 const artifactPath = resolve(process.env.BALAM_VERIFIED_HTML || 'index.html');
 const html = readFileSync(artifactPath);
-assert.ok(html.toString().includes(build), 'Build artifact must contain current online-only source build');
+function bundledStoreSource(bytes){
+  const text=bytes.toString('utf8');
+  const block=type=>{const open='<script type="__bundler/'+type+'">',start=text.indexOf(open);assert.ok(start>=0,'Artifact '+type+' block is required');const end=text.indexOf('</script>',start+open.length);assert.ok(end>start,'Artifact '+type+' block must close');return JSON.parse(text.slice(start+open.length,end));};
+  const manifest=block('manifest'),template=block('template');
+  assert.equal(typeof template,'string');assert.ok(manifest&&typeof manifest==='object'&&!Array.isArray(manifest));
+  const executable=new Set([...template.matchAll(/<script\b[^>]*\bsrc="([^"]+)"/g)].map(match=>match[1]));
+  const stores=[];
+  for(const[id,asset]of Object.entries(manifest)){
+    if(!executable.has(id)||!/^text\/javascript$/.test(asset.mime))continue;
+    assert.equal(typeof asset.data,'string');assert.match(asset.data,/^[A-Za-z0-9+/]*={0,2}$/,'Manifest asset must be base64');
+    const packed=Buffer.from(asset.data,'base64');
+    const script=(asset.compressed?gunzipSync(packed,{maxOutputLength:32*1024*1024}):packed).toString('utf8');
+    if(/const\s+SUPABASE_URL\s*=/.test(script)&&/window\.STORE\s*=/.test(script))stores.push(script);
+  }
+  assert.equal(stores.length,1,'Artifact must execute exactly one STORE authority module');return stores[0];
+}
+const embeddedStore=bundledStoreSource(html);
+const embeddedBuild=embeddedStore.match(/const\s+BUILD\s*=\s*['"]([^'"]+)['"]/);
+assert.ok(embeddedBuild,'Executable STORE build identity is required');
+assert.equal(embeddedBuild[1],build,'Executable artifact STORE build must match current source');
+assert.ok(embeddedStore.includes(url),'Executable artifact must target the current Supabase project');
 const digest = value => createHash('sha256').update(typeof value === 'string' || Buffer.isBuffer(value) ? value : stable(value)).digest('hex');
 function stable(value) {
   if (Array.isArray(value)) return '[' + value.map(stable).join(',') + ']';
   if (value && typeof value === 'object') return '{' + Object.keys(value).sort().map(key => JSON.stringify(key) + ':' + stable(value[key])).join(',') + '}';
   return JSON.stringify(value);
 }
+if(preflightOnly){console.log(JSON.stringify({preflight:true,build,project,artifactSha256:digest(html),embeddedStoreSha256:digest(embeddedStore),authRequests:0,businessWrites:0}));process.exit(0);}
+mkdirSync(out, { recursive: true });
 const result = resumeDir ? JSON.parse(readFileSync(join(out,'matrix.json'),'utf8')) : { run, project, build, artifactPath, artifactSha256: digest(html), certifierSha256: digest(readFileSync(import.meta.filename)),
   startedAt: new Date().toISOString(), profiles: 3, certified: false, cases: [],
   method: 'Real HTTPS RPC/authority; isolated Chromium A/B/C; failures abort real transport only; no mocked authority or service_role in browser',
@@ -76,8 +103,42 @@ async function rawRows(table) {
 const cleanExisting = row => Object.fromEntries(Object.entries(row).filter(([key]) => !['updated_at','sync_version','sync_base_version','sync_device_id'].includes(key)));
 let baseline, browser, server, userId, address, currentCase=null, currentStep=null;
 const terminals = [];
+function validateRejectedPaymentRetry({caseName,checkpoint,fixtures,actorId,receipts,parent,payments}){
+  assert.equal(caseName,REJECTED_PAYMENT_CASE);assert.equal(actorId,fixtures.userId,'Exact original QA actor required');
+  assert.equal(checkpoint?.complete,true,'Only a completed rejected race checkpoint may be replaced');
+  const requestIds=checkpoint.requestIds;
+  assert.ok(Array.isArray(requestIds)&&requestIds.length===2&&new Set(requestIds).size===2,'Exactly two original race request IDs required');
+  assert.deepEqual([...checkpoint.value.requestIds].sort(),[...requestIds].sort(),'Race and checkpoint identities must agree');
+  for(const id of requestIds)assert.ok(fixtures.requestIds.includes(id),'Receipt belongs to this QA run');
+  assert.equal(receipts.length,2,'Both original receipts must exist under the original actor');
+  for(const id of requestIds){const receipt=receipts.find(row=>row.request_id===id);assert.ok(receipt,'Missing original receipt '+id);assert.equal(receipt.actor_id,actorId);assert.ok(['rejected','cancelled'].includes(receipt.state),'Confirmed or uncertain receipts cannot be retried');assert.equal(receipt.response?.ok,false,'Authoritative terminal rejection required');}
+  const created=fixtures.checkpoints[REJECTED_PAYMENT_CASE+' / Create one layaway'];
+  assert.equal(created?.complete,true);const original=created.value;
+  assert.ok(fixtures.sales.includes(original.folio));assert.ok(fixtures.clients.includes(original.clienteId));
+  assert.equal(parent.folio,original.folio);assert.equal(parent.cliente_id,original.clienteId);assert.equal(parent.operation_id,original._operationId);
+  assert.equal(parent.estado,'Apartado');assert.equal(Number(parent.total),232);assert.equal(Number(parent.anticipo),10);assert.equal(Number(parent.saldo),222);
+  assert.equal(Number(parent.total),Number(original.total));assert.equal(Number(parent.anticipo),Number(original.anticipo));assert.equal(Number(parent.saldo),Number(original.saldo));
+  assert.equal(Number(parent.pago_efectivo),Number(original.pagoEfectivo));assert.equal(Number(parent.pago_otro),Number(original.pagoOtro));
+  assert.equal(payments.length,1,'Only the original advance may exist');assert.equal(payments[0].folio,parent.folio);assert.equal(Number(payments[0].monto),10);
+  return requestIds.slice();
+}
+async function replaceRejectedRaceCheckpoint(key,checkpoint){
+  const original=fixtures.checkpoints[REJECTED_PAYMENT_CASE+' / Create one layaway']?.value;
+  assert.ok(original?.folio&&original.clienteId,'Original layaway identity must be journaled');
+  const receipts=check(await db.from('online_requests').select('*').eq('actor_id',userId).in('request_id',checkpoint.requestIds));
+  const parent=check(await db.from('sales').select('*').eq('folio',original.folio).single());
+  const payments=check(await db.from('sale_payments').select('*').eq('folio',original.folio));
+  const requestIds=validateRejectedPaymentRetry({caseName:currentCase,checkpoint,fixtures,actorId:userId,receipts,parent,payments});
+  fixtures.rejectedAttempts ||= [];
+  const previous=fixtures.rejectedAttempts.find(entry=>entry.checkpointKey===key&&JSON.stringify(entry.requestIds.slice().sort())===JSON.stringify(requestIds.slice().sort()));
+  if(!previous){fixtures.rejectedAttempts.push({caseName:currentCase,checkpointKey:key,archivedAt:new Date().toISOString(),requestIds,checkpoint:structuredClone(checkpoint),receipts:structuredClone(receipts),parent:structuredClone(parent),payments:structuredClone(payments)});save();}
+  // The full original checkpoint and receipts are already durable above. New
+  // attempts receive new IDs; no old request is replayed and no layaway is created.
+  const next={startedAt:new Date().toISOString(),requestIds:[],retryOf:requestIds};fixtures.checkpoints[key]=next;save();return next;
+}
 async function once(label, action, recover) {
-  const key=(currentCase||'bootstrap')+' / '+label,existing=fixtures.checkpoints[key];
+  const key=(currentCase||'bootstrap')+' / '+label;let existing=fixtures.checkpoints[key];
+  if(retryRejectedCase===currentCase&&label==='Concurrent request outcomes'&&existing?.complete)existing=await replaceRejectedRaceCheckpoint(key,existing);
   if(existing?.complete)return existing.value;
   if(existing?.requestIds?.length){
     const receipts=check(await db.from('online_requests').select('request_id,state,response').in('request_id',existing.requestIds));
@@ -240,6 +301,29 @@ async function sell(terminal, id, { qty = 1, layaway = false, operationId = op()
   remember('sales', sale.folio); return sale;
 }
 const stock = async id => Number(check(await db.from('products').select('stock_quantity').eq('id', id).single()).stock_quantity);
+async function retireExactQaAccounts(){
+  const plan=qaRetirementPlan(fixtures,{project,build});
+  assert.equal(readFileSync(resolve('supabase/.temp/project-ref'),'utf8').trim(),project,'Management CLI must target the verified Supabase project');
+  for(const id of [plan.userId,plan.accountId]){
+    const account=check(await admin.auth.admin.getUserById(id)).user;
+    if(id===plan.userId){assert.equal(account.email,plan.email);assert.equal(account.user_metadata?.balam_online_test,plan.run);}
+    else{assert.equal(account.email,plan.prefix+'-account@example.test');assert.equal(account.app_metadata?.balam_account_request_id,plan.accountRequestId);}
+  }
+  const sql=qaRetirementSql(plan),sqlPath=resolve(out,'qa-retirement.sql');writeFileSync(sqlPath,sql);
+  const raw=execFileSync(process.execPath,[resolve('node_modules/supabase/dist/supabase.js'),'db','query','--linked','--file',sqlPath,'--output','json'],{encoding:'utf8',stdio:['ignore','pipe','pipe'],timeout:90000,maxBuffer:8*1024*1024});
+  const payload=JSON.parse(raw),rows=Array.isArray(payload)?payload:payload.rows||payload.data||payload.result;
+  assert.ok(Array.isArray(rows),'Management retirement response must contain result rows');
+  const receipt=rows.find(row=>row.result?.run===run)?.result;assert.equal(receipt?.ok,true,'Owner transaction must confirm exact QA retirement');
+  const ids=plan.profiles.map(row=>row.id),profiles=check(await db.from('sellers').select('id,active').in('id',ids));
+  assert.equal(profiles.length,ids.length);for(const row of profiles)assert.equal(row.active,false);
+  result.qaRetirement={receipt,sqlSha256:digest(sql),authBanned:[]};save();
+  for(const id of [plan.userId,plan.accountId]){
+    check(await admin.auth.admin.updateUserById(id,{ban_duration:'876000h'}));
+    const account=check(await admin.auth.admin.getUserById(id)).user;
+    assert.ok(Date.parse(account.banned_until)>Date.now(),'Exact QA Auth account must be blocked');
+    result.qaRetirement.authBanned.push(id);save();
+  }
+}
 try {
   const manifest = check(await db.from('system_manifest').select('*').eq('singleton', true).single());
   assert.equal(manifest.system_mode, 'preproduction', 'Live fixtures require explicitly configured preproduction');
@@ -252,6 +336,11 @@ try {
     baseline=Object.fromEntries(await Promise.all(tables.map(async table=>[table,new Map((await rawRows(table)).map(row=>[keyFor(table,row),digest(cleanExisting(row))]))])));
     writeFileSync(join(out,'baseline.json'),JSON.stringify({run,project,createdAt:new Date().toISOString(),tables:Object.fromEntries(tables.map(table=>[table,[...baseline[table]]]))},null,2));
   }
+  const caseNames=[...readFileSync(import.meta.filename,'utf8').matchAll(/await verify\('([^']+)'/g)].map(match=>match[1]);
+  if(caseNames.every(name=>result.cases.some(row=>row.name===name&&row.pass))){
+    assert.ok(fixtures.userId,'Completed matrix must retain its original QA actor');userId=fixtures.userId;
+    result.certified=true;throw Object.assign(Error('Completed matrix: finish exact QA account retirement only'),{completedMatrix:true});
+  }
   const email = fixtures.email || prefix + '@example.test', password = randomBytes(32).toString('base64url');
   if(fixtures.userId){
     userId=fixtures.userId;const existing=check(await admin.auth.admin.getUserById(userId)).user;
@@ -263,13 +352,11 @@ try {
   }
   const adminId = remember('sellers', prefix + '-admin');
   const sellerIds = ['A','B','C'].map(name => remember('sellers', prefix + '-seller-' + name));
-  const caseNames=[...readFileSync(import.meta.filename,'utf8').matchAll(/await verify\('([^']+)'/g)].map(match=>match[1]);
-  if(caseNames.every(name=>result.cases.some(row=>row.name===name&&row.pass))){result.certified=true;throw Object.assign(Error('Completed matrix: finish exact QA account retirement only'),{completedMatrix:true});}
   const existingDevices=check(await db.from('sync_devices').select('device_id,status,metadata').in('device_id',fixtures.installations));
   const retiredIds=new Set(existingDevices.filter(row=>row.status==='revoked').map(row=>row.device_id));
   if(retiredIds.size)assert.ok(caseNames.filter(name=>!name.startsWith('Equipment history')).every(name=>result.cases.some(row=>row.name===name&&row.pass)),'A retired QA installation may resume only final equipment verification');
   await once('Provision exact QA sellers',async()=>{
-    const intended=[{id:adminId,nombre:prefix+' Admin',email,role:'admin',active:true,comision_pct:0,sync_base_version:0},...sellerIds.map((id,index)=>({id,nombre:prefix+' '+index,role:'vendedor',active:true,comision_pct:5,commission_override_pct:5,commission_policy_version:1,sync_base_version:0}))];
+    const intended=[{id:adminId,nombre:prefix+' Admin',email,role:'admin',active:true,comision_pct:0,commission_override_pct:null,commission_policy_version:0,sync_base_version:0},...sellerIds.map((id,index)=>({id,nombre:prefix+' '+index,role:'vendedor',active:true,comision_pct:5,commission_override_pct:5,commission_policy_version:1,sync_base_version:0}))];
     const present=check(await db.from('sellers').select('id,nombre').in('id',fixtures.sellers));for(const row of present)assert.ok(row.nombre.startsWith(prefix));
     const missing=intended.filter(row=>!present.some(existing=>existing.id===row.id));if(missing.length)check(await db.from('sellers').insert(missing));return true;
   });
@@ -294,6 +381,7 @@ try {
     await context.addInitScript(({device}) => { if (location.hostname === '127.0.0.1') localStorage.setItem('balam_device_id', device); }, { device: fixtures.installations[index] });
     await page.goto(address, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => window.AUTH?.isReady() && window.STORE);
+    assert.equal(await page.evaluate(()=>window.STORE.syncStatus().build),build,'Loaded STORE build identity before Auth '+name);
     if(retiredIds.has(fixtures.installations[index])){terminal.retired=true;continue;}
     const login = await page.evaluate(({email,password}) => window.AUTH.login(email,password), {email,password});
     assert.equal(login.ok, true, 'independent authenticated login ' + name); await ready(terminal);
@@ -515,8 +603,9 @@ try {
 finally {
   result.fixturePolicy='Business QA history retained; no replay, no Punto Cero, no delete of business rows. Exact identities in fixtures.json.';
   if(baseline&&!result.certified)result.preservation='Incomplete run: retained fixtures and account for exact reconciliation; do not clean by prefix.';
+  if(baseline&&result.certified)result.preservation='All original baseline rows verified unchanged; exact QA history retained.';
   if(result.certified&&userId){
-    try { check(await db.from('sellers').update({active:false}).in('id',fixtures.sellers));for(const id of [userId,...fixtures.createdAccountIds])check(await admin.auth.admin.updateUserById(id,{ban_duration:'876000h'})); result.qaAccount='retained inactive'; }
+    try { await retireExactQaAccounts(); result.qaAccount='retained inactive'; }
     catch(error){result.qaAccount='retained; retirement requires review: '+error.message; result.certified=false; process.exitCode=1;}
   }
   await browser?.close(); await new Promise(resolve=>server?server.close(resolve):resolve()); save();
