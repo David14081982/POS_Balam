@@ -10,7 +10,7 @@
   const STARTUP_FAILED = 'No pudimos completar la actualización. Inténtalo de nuevo.';
   const ACCESS_FAILED = 'No pudimos confirmar el acceso. Inténtalo de nuevo.';
   const OFFLINE_MESSAGE = 'Sin conexión. BALAM necesita internet para continuar.';
-  const CONFIRMING_MESSAGE = 'Estamos confirmando la operación. No la repitas.';
+  const CONFIRMING_MESSAGE = 'Confirmación pendiente. El resultado se actualizará al recibir respuesta.';
 
   function SyncControl() {
     const [status, setStatus] = useState(() => window.STORE?.syncStatus());
@@ -22,8 +22,10 @@
       return () => { clearInterval(timer); ['syncstatuschange','online','offline'].forEach(event => window.removeEventListener(event, refresh)); };
     }, []);
     if (!status) return null;
-    const label = status.ready ? 'Todo actualizado'
-      : busy || status.reconciling ? 'Actualizando' : 'Sin conexión';
+    const label = status.busy ? 'Guardando…'
+      : status.hasUnresolvedRequests ? 'Confirmación pendiente'
+        : busy || status.reconciling ? 'Actualizando'
+          : status.ready ? 'Todo actualizado' : 'Sin conexión';
     const update = async () => {
       setBusy(true);
       try {
@@ -96,6 +98,7 @@
 
   function App() {
     const lastShell = useRef(null);
+    const shellOwner = useRef(null);
     const adoptionObserved = useRef(false);
     const adoptionNotified = useRef(false);
     const [t] = useTweaks(TWEAK_DEFAULTS);
@@ -158,6 +161,11 @@
     const authReady = !window.AUTH.isReady || window.AUTH.isReady();
     const hasSession = window.AUTH.hasSession();
     const accessState = window.AUTH.accessState;
+    // La continuidad de captura sólo pertenece al mismo usuario autenticado.
+    if (!hasSession || (user?.id && shellOwner.current !== user.id)) {
+      lastShell.current = null;
+      shellOwner.current = user?.id || null;
+    }
     const confirming = online?.hasUnresolvedRequests === true
       || (online?.errors || []).some(error => error.code === 'ONLINE_RESULT_UNKNOWN');
     const isAdmin = window.AUTH.isAdmin();
@@ -183,6 +191,7 @@
       return true;
     }
     async function retryStartup() {
+      if (startupBusy || window.STORE?.syncStatus()?.busy) return;
       setStartupBusy(true); setStartupFailure(null);
       try { await window.STORE.init(); }
       catch (cause) { observeStartupFailure(cause); }
@@ -190,18 +199,17 @@
     }
     function startupGate(message, working) {
       const gate = h('main', { key: 'online-gate', 'data-testid': 'online-gate', role: 'status', 'aria-live': 'polite',
-        style: { position: 'fixed', inset: 0, zIndex: 10000 },
         className: 'min-h-screen flex items-center justify-center p-6 bg-surface text-on-surface' },
         h('div', { className: 'w-full max-w-md text-center space-y-6' }, [
           h('p', { key: 'message', className: 'text-lg' }, message),
-          !working && h('button', {
+          (!working || confirming) && h('button', {
             key: 'update', className: 'min-h-12 rounded-lg px-6 py-3 bg-primary text-on-primary',
-            'data-testid': 'online-gate-retry', disabled: startupBusy, onClick: retryStartup,
+            'data-testid': 'online-gate-retry', disabled: startupBusy || online?.busy, onClick: retryStartup,
           }, 'Actualizar ahora'),
         ]));
       // También durante la revalidación de acceso, el formulario y su await siguen vivos.
       return h(React.Fragment, null, [lastShell.current && React.cloneElement(lastShell.current,
-        { inert: '', 'aria-hidden': true, style: { visibility: 'hidden' } }), gate]);
+        { inert: '', 'aria-hidden': true, style: { position: 'absolute', visibility: 'hidden' } }), gate]);
     }
 
     // La sesión y el acceso preceden a disponibilidad comercial: un rechazo no es falta de Internet.
@@ -223,6 +231,7 @@
       }
       if (accessState === 'profile_missing' || accessState === 'user_inactive'
           || (!user && !['remote_unavailable', 'permissions_unavailable'].includes(accessState))) {
+        lastShell.current = null;
         return h(React.Fragment, null, [
           h(AccessDeniedScreen, { key: 'denied' }),
           h(window.UI.ToastHost, { key: 'toast' }),
@@ -230,13 +239,17 @@
       }
     }
     const accessUnavailable = ['remote_unavailable', 'permissions_unavailable'].includes(accessState);
+    let statusMessage = null;
     if (hasSession && (confirming || accessUnavailable || !online?.ready || startupFailure || startupBusy)) {
       const working = startupBusy || online?.adoption?.state === 'working' || online?.connection === 'checking';
       const message = confirming ? CONFIRMING_MESSAGE : working ? STARTUP_MESSAGE
         : accessState === 'remote_unavailable' ? OFFLINE_MESSAGE
           : accessUnavailable ? ACCESS_FAILED
             : startupFailure || online?.message || STARTUP_FAILED;
-      return startupGate(message, working || confirming);
+      // El arranque y la autorización preceden a los datos. Una espera comercial
+      // posterior sólo informa: no oculta, desmonta ni vuelve inerte el formulario.
+      if (accessUnavailable || !lastShell.current) return startupGate(message, working || confirming);
+      statusMessage = online?.busy ? 'Guardando…' : message;
     }
     const navCollapsed = collapsed && !mobileNavOpen;
     lastShell.current = h('div', { key: 'shell', className: 'flex h-full min-w-0 bg-background font-body text-on-surface' }, [
@@ -266,6 +279,7 @@
             const badge = n.liveBadge ? String(D.commercialProducts().length) : n.badge;
             return h('button', {
               key: n.id,
+              'data-testid': 'nav-' + n.id,
               className: 'min-h-11 flex items-center gap-3 py-2.5 rounded-lg transition-colors text-left ' + (navCollapsed ? 'justify-center px-0 ' : 'px-4 ') + (active ? 'font-semibold' : ''),
               style: active ? { background: '#1C2437', color: '#FFE088' } : { color: '#FFFFFF' },
               onMouseEnter: e => { if (!active) e.currentTarget.style.background = '#1C2437'; },
@@ -317,6 +331,15 @@
           h(SyncControl, { key: 'sync' }),
           isAdmin && h(NotificationsBell, { key: 'b', go }),
           h('div', { key: 'date', className: 'hidden xl:flex items-center gap-1.5 text-xs text-on-surface-variant capitalize' }, [h(MS, { key: 'i', name: 'calendar', size: 16 }), new Date().toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })]),
+        ]),
+        statusMessage && h('div', { key: 'online-status', 'data-testid': 'online-status',
+          role: 'status', 'aria-live': 'polite',
+          className: 'shrink-0 flex flex-wrap items-center gap-2 px-3 sm:px-6 py-2 border-b border-outline-variant bg-surface-container text-on-surface-variant text-sm' }, [
+          h('span', { key: 'message', className: 'flex-1' }, statusMessage),
+          h('button', { key: 'retry', 'data-testid': 'online-status-retry',
+            className: 'min-h-11 px-3 rounded-lg border border-outline-variant disabled:opacity-60',
+            disabled: startupBusy || online?.busy, onClick: retryStartup,
+          }, startupBusy ? 'Consultando…' : 'Consultar estado'),
         ]),
         // Pantalla
         (() => {

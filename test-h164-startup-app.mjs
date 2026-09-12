@@ -56,6 +56,7 @@ async function fixture(profileStatus = 'active', permissionFailure = null) {
 const nodes = tree => tree && typeof tree === 'object' ? [tree, ...tree.children.flatMap(nodes)] : [];
 const text = tree => tree && typeof tree === 'object' ? tree.children.map(text).join(' ') : String(tree || '');
 const gate = tree => nodes(tree).find(node => node.props['data-testid'] === 'online-gate');
+const banner = tree => nodes(tree).find(node => node.props['data-testid'] === 'online-status');
 async function scenario(name, callback) {
   if (process.env.BALAM_STARTUP_CASE && !process.env.BALAM_STARTUP_CASE.split(',').some(part => name.includes(part.trim()))) return;
   try { await callback(); evidence.cases.push({ name, ok: true }); console.log('PASS ' + name); }
@@ -107,15 +108,16 @@ try {
     app.setStatus({ ready: false, connection: 'checking', message: 'internal stage', adoption: { revision: 1, state: 'working' } });
     let tree = app.render(); app.flushEffects();
     const retained = nodes(tree).find(node => node.props.key === 'shell');
-    assert.equal(retained.children, original.children, 'The existing shell and its descendants are retained');
-    assert.equal(retained.props.inert, '');
-    assert.equal(retained.props['aria-hidden'], true);
-    assert.equal(text(gate(tree)).trim(), 'BALAM se está actualizando.');
-    assert.equal(nodes(gate(tree)).some(node => node.type === 'button'), false);
+    assert.equal(retained.props.key, original.props.key);
+    assert.equal(retained.props.inert, undefined);
+    assert.equal(retained.props['aria-hidden'], undefined);
+    assert.equal(gate(tree), undefined);
+    assert.match(text(banner(tree)), /BALAM se está actualizando/);
     app.window.AUTH.isReady = () => false;
     app.setStatus({ ready: true, connection: 'online', message: 'Todo actualizado', adoption: { revision: 1, state: 'ready' } });
     tree = app.render(); app.flushEffects();
-    assert.equal(nodes(tree).find(node => node.props.key === 'shell').children, original.children);
+    assert.equal(nodes(tree).find(node => node.props.key === 'shell').children, retained.children);
+    assert.equal(nodes(tree).find(node => node.props.key === 'shell').props.inert, '');
     assert.equal(text(gate(tree)).trim(), 'BALAM se está actualizando.');
     assert.equal(app.toasts.length, 0, 'A snapshot cannot bypass unresolved authentication');
     app.window.AUTH.isReady = () => true;
@@ -133,10 +135,32 @@ try {
     app.setStatus({ ready: false, connection: 'checking', message: 'BALAM se está actualizando.', hasUnresolvedRequests: true,
       errors: [{ code: 'ONLINE_RESULT_UNKNOWN' }], adoption: { revision: 1, state: 'ready' } });
     const tree = app.render();
-    assert.equal(nodes(tree).find(node => node.props.key === 'shell').children, original.children);
-    assert.match(text(gate(tree)), /Estamos confirmando la operación\. No la repitas\./);
-    assert.doesNotMatch(text(gate(tree)), /Sin conexión/);
-    assert.equal(nodes(gate(tree)).some(node => node.type === 'button'), false);
+    assert.equal(nodes(tree).find(node => node.props.key === 'shell').props.key, original.props.key);
+    assert.equal(gate(tree), undefined);
+    assert.match(text(banner(tree)), /Confirmación pendiente/);
+    assert.doesNotMatch(text(banner(tree)), /Sin conexión/);
+    assert.equal(nodes(banner(tree)).some(node => node.type === 'button' && !node.props.disabled), true);
+  });
+  await scenario('Pending confirmation at first load permits a status query without exposing a shell', async () => {
+    const app = await fixture();
+    app.setStatus({ ready: false, hasUnresolvedRequests: true, connection: 'error' });
+    const tree = app.render();
+    assert.ok(gate(tree));
+    assert.equal(nodes(tree).some(node => node.props.key === 'shell'), false);
+    const retry = nodes(tree).find(node => node.props['data-testid'] === 'online-gate-retry');
+    assert.equal(!!retry.props.disabled, false);
+    await retry.props.onClick();
+    assert.equal(app.initCalls, 1);
+  });
+  await scenario('Changing user discards the prior shell while the new snapshot loads', async () => {
+    const app = await fixture();
+    app.setStatus({ ready: true, connection: 'online' });
+    assert.ok(nodes(app.render()).some(node => node.props.key === 'shell')); app.flushEffects();
+    app.window.AUTH.current = () => ({ id: 'different-profile' });
+    app.setStatus({ ready: false, connection: 'checking', hasUnresolvedRequests: true });
+    const tree = app.render();
+    assert.ok(gate(tree));
+    assert.equal(nodes(tree).some(node => node.props.key === 'shell'), false);
   });
 } catch (error) { evidence.failure = error.message; process.exitCode = 1; }
 finally {

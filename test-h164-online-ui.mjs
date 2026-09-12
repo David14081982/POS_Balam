@@ -146,12 +146,13 @@ try {
     await page.getByTestId('sales-reprint-close').click();
     return {folio:fixtureState.folio,printHandoffs:1,printedHtmlSha256:hash(printed.html),authoritativeFixtureUnchanged:true,physicalPrinterTested:false};
   });
-  await scenario('Conexión: App conserva el formulario oculto e inerte hasta confirmar',async()=>{
+  await scenario('Conexión: App conserva el formulario visible e interactivo hasta confirmar H169',async()=>{
     await page.evaluate(()=>{
       const user={id:'16400000-0000-4000-8000-000000000002',nombre:'Usuario QA'};
       window.AUTH.current=()=>user;window.AUTH.hasSession=()=>true;window.AUTH.isReady=()=>true;
       Object.defineProperty(window.AUTH,'accessState',{configurable:true,value:'remote'});
-      window.AUTH.init=()=>{};window.AUTH.defaultScreen=()=> 'pos';window.AUTH.canAccess=id=>id==='pos';
+      window.AUTH.init=()=>{};window.AUTH.defaultScreen=()=> 'pos';window.AUTH.canAccess=id=>['pos','clientes'].includes(id);
+      window.AUTH.requireAccess=window.AUTH.canAccess;
       window.STORE.setSession=async()=>({ok:true});window.STORE.init=async()=>({ok:true});
       window.__h164Online={ready:true,connection:'online',message:'Todo actualizado'};
       window.STORE.syncStatus=()=>window.__h164Online;
@@ -172,18 +173,63 @@ try {
       window.__h164Online={ready:false,connection:'offline',message:'Estamos confirmando la operación. No la repitas.'};
       window.dispatchEvent(new CustomEvent('syncstatuschange'));
     });
-    await page.getByTestId('online-gate').waitFor();
-    assert.equal(await page.getByTestId('retained-draft').isVisible(),false);
-    assert.equal(await page.getByTestId('retained-draft').evaluate(el=>!!el.closest('[inert]')),true);
+    assert.equal(await page.getByTestId('retained-draft').isVisible(),true,'Una confirmación no debe ocultar la captura');
+    await page.getByTestId('online-status').waitFor();
+    assert.equal(await page.getByTestId('online-gate').count(),0);
+    assert.equal(await page.getByTestId('retained-draft').evaluate(el=>!!el.closest('[inert]')),false);
+    await page.getByTestId('retained-draft').fill('Captura conservada durante la espera');
+    // Ordinary in-flight writes, unresolved receipts, recovery errors and manual
+    // rechecks all leave the same DOM/input usable. Only the status action waits.
+    for (const status of [
+      {ready:true,connection:'online',busy:true,hasUnresolvedRequests:true},
+      {ready:false,connection:'checking',hasUnresolvedRequests:true,errors:[{code:'ONLINE_RESULT_UNKNOWN'}]},
+      {ready:false,connection:'error',message:'No pudimos completar la actualización.'},
+    ]) {
+      await page.evaluate(next=>{window.__h164Online=next;window.dispatchEvent(new CustomEvent('syncstatuschange'));},status);
+      await page.waitForFunction(busy=>document.querySelector('[data-testid="online-status-retry"]')?.disabled===busy,!!status.busy);
+      assert.equal(await page.getByTestId('retained-draft').isVisible(),true);
+      assert.equal(await original.evaluate(el=>el.isConnected),true);
+      await page.getByTestId('retained-draft').focus();
+      assert.equal(await page.getByTestId('retained-draft').evaluate(el=>document.activeElement===el),true);
+    }
+    await page.evaluate(()=>{
+      window.__h169Queries=0;
+      window.STORE.init=()=>{window.__h169Queries++;return new Promise((resolve,reject)=>{window.__h169Resolve=resolve;window.__h169Reject=reject;});};
+    });
+    await page.getByTestId('online-status-retry').click();
+    assert.equal(await page.getByTestId('online-status-retry').isDisabled(),true);
+    await page.getByTestId('retained-draft').fill('Captura conservada durante la espera');
+    await page.evaluate(()=>window.__h169Reject(new Error('Connection unavailable')));
+    await page.waitForFunction(()=>document.querySelector('[data-testid="online-status-retry"]')?.disabled===false);
+    assert.equal(await page.getByTestId('retained-draft').isVisible(),true);
+    await page.getByTestId('online-status-retry').click();
     await page.evaluate(()=>{
       window.__h164Online={ready:true,connection:'online',message:'Todo actualizado'};
       window.dispatchEvent(new CustomEvent('syncstatuschange'));
+      window.__h169Resolve({ok:true});
     });
     await page.getByTestId('retained-draft').waitFor({state:'visible'});
-    assert.equal(await page.getByTestId('retained-draft').inputValue(),'Captura sin efectos');
+    assert.equal(await page.getByTestId('retained-draft').inputValue(),'Captura conservada durante la espera');
     assert.equal(await original.evaluate(el=>el.isConnected),true);
     assert.deepEqual(await page.evaluate(()=>[window.__h164Mounts,window.__h164Unmounts]),mountsBefore);
-    return {sameDomNode:true,draftPreserved:true,inertWhileBlocked:true,mountsBefore};
+    await page.getByTestId('online-status').waitFor({state:'detached'});
+    assert.equal(await page.evaluate(()=>window.__h169Queries),2);
+    await page.evaluate(()=>{
+      window.__h164Online={ready:false,connection:'error',hasUnresolvedRequests:true};
+      window.dispatchEvent(new CustomEvent('syncstatuschange'));
+    });
+    await page.getByTestId('online-status').waitFor();
+    await page.screenshot({path:output+'/h169-pending-desktop.png'});
+    await page.getByTestId('nav-clientes').click();
+    await page.getByTestId('clients-kpi-registrados').waitFor({state:'visible'});
+    await page.setViewportSize({width:390,height:844});
+    await page.getByRole('button',{name:'Abrir navegación',exact:true}).click();
+    await page.getByTestId('nav-pos').click();
+    await page.getByTestId('retained-draft').fill('Captura móvil con confirmación pendiente');
+    assert.equal(await page.getByTestId('retained-draft').evaluate(el=>!!el.closest('[inert]')),false);
+    await page.screenshot({path:output+'/h169-pending-mobile.png'});
+    return {sameDomNode:true,draftPreserved:true,interactiveWhilePending:true,mountsBefore,statusTransitions:3,
+      manualQueries:2,rejectedQueryRecoverable:true,desktopAndMobileNavigation:true};
   });
   assert.deepEqual(evidence.errors,[]);
   evidence.completedAt=new Date().toISOString();await save();

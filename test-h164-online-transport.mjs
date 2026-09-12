@@ -106,6 +106,9 @@ const original=S.execute({type:'upsert',operationId:extendedId,rows:[{id:'confir
 while (S.syncStatus().busy) await new Promise(resolve=>setImmediate(resolve));
 assert.equal(S.syncStatus().ready,false);assert.equal(referenceKeys().length,1);
 assert.equal(S.syncStatus().message,'Estamos confirmando la operación. No la repitas.');
+await assert.rejects(()=>S.execute({type:'upsert',rows:[{id:'must-not-send-while-pending'}]}),
+  error=>error.code==='ONLINE_RESULT_UNKNOWN');
+assert.equal(commitCount,beforeExtended+1);
 unavailableResolution=false;await S.refresh();
 assert.equal((await original).ok,true);assert.equal(commitCount,beforeExtended+1);
 assert.equal(referenceKeys().length,0);

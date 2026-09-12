@@ -1,0 +1,72 @@
+{
+  "startedAt": "2026-09-12T23:26:01.729Z",
+  "artifactSha256": "608541d6d0eb85040c95e780704dddb8d80056beb969447ed66ea8c27025cc41",
+  "sourceSha256": {
+    "test-h164-online-ui.mjs": "9aa56bd1ddace0c982b1327207d68aa76330f6beb5ec948de70138d72e6f9dbe",
+    "balam/data.jsx": "deb99c4cfe9c68481a9452a00b355037f1f6a0334ccfe0a5db6b064afae342e2",
+    "balam/inventory.jsx": "3dfb2ffa81b42a176a95448035ea44f31f5866f0ff531e97ea5242ffcf2710b8",
+    "balam/clients.jsx": "debf80ac60d43bb1ea84044364d0a47d9371092e511b088fd6b8e1cdfef2674f",
+    "balam/reports.jsx": "07462e249b30f4d412491f58b0eb8f3e6109ffdf8ce36230d9f81ee60e6f3cc6",
+    "balam/shared.jsx": "a07c5dc3237fc589f7ca04f952e2d4869ec5d24f371e4232ef80e6582dbf2062",
+    "balam/pos-ticket.jsx": "1c4e7495016cec212991df26f0c16733128563b8e8a17f77cdea33ba6c872f62",
+    "balam/xlsx-io.jsx": "6397ab5ca15eae666c1e941c5359c167412ff306147af6de3ae3decbf76904b2",
+    "balam/app.jsx": "5a31d308dd50e508619caa114f031db51888a8a0c1a8dbaf377112ec57714625"
+  },
+  "selected": "all",
+  "cases": [
+    {
+      "name": "Inventario: cajón cerrado permite actualizar",
+      "ok": true,
+      "elapsedMs": 312
+    },
+    {
+      "name": "V2/barcode V3/etiqueta: identidad, PNG y PDF conservados",
+      "ok": true,
+      "elapsedMs": 28196
+    },
+    {
+      "name": "Excel: vista previa no modifica DATA; export conserva identidad",
+      "ok": true,
+      "elapsedMs": 249
+    },
+    {
+      "name": "Clientes: cajón cerrado permite actualizar",
+      "ok": true,
+      "elapsedMs": 454
+    },
+    {
+      "name": "Reportes: reimpresión conserva documento histórico confirmado",
+      "ok": true,
+      "elapsedMs": 5350,
+      "details": {
+        "folio": "H164-HIST-0001",
+        "printHandoffs": 1,
+        "printedHtmlSha256": "005112b5dc784bd969732a4e343095b67619d3180051dc960c11cecd9871a7e0",
+        "authoritativeFixtureUnchanged": true,
+        "physicalPrinterTested": false
+      }
+    },
+    {
+      "name": "Conexión: App conserva el formulario visible e interactivo hasta confirmar H169",
+      "ok": true,
+      "elapsedMs": 2134,
+      "details": {
+        "sameDomNode": true,
+        "draftPreserved": true,
+        "interactiveWhilePending": true,
+        "mountsBefore": [
+          1,
+          0
+        ],
+        "statusTransitions": 3,
+        "manualQueries": 2,
+        "rejectedQueryRecoverable": true,
+        "desktopAndMobileNavigation": true
+      }
+    }
+  ],
+  "errors": [],
+  "remoteBusinessWrites": 0,
+  "scope": "Generated browser UI with explicit read-only fixture snapshots; external network blocked; operating-system print endpoint observed without a physical printer.",
+  "completedAt": "2026-09-12T23:26:53.786Z"
+}

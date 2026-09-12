@@ -688,6 +688,13 @@ curso y `lastSuccess` identifica la última comprobación. `pending` y `blocked`
 son cero; no representan colas ocultas. `legacyReviewCount` cuenta expedientes
 históricos para revisión, fuera de la operación nueva.
 
+Tras cargar una sesión autorizada, App mantiene pantalla y borrador interactivos
+durante confirmaciones y consultas pendientes (H-169). El aviso comercial es
+una franja dentro del contenido, con consulta de estado; no sustituye la interfaz.
+STORE conserva las restricciones de escritura hasta confirmar el resultado y
+la proyección remota. El arranque sin datos y la autorización pendiente/rechazada
+siguen precediendo al acceso; cambiar de usuario descarta la pantalla anterior.
+
 ## Supabase
 
 La autoridad de despliegue es la cadena ordenada de
