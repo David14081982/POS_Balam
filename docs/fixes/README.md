@@ -13,6 +13,9 @@ sesión de chat.
 
 ## Correcciones registradas
 
+- [h171-circulos-ornamento-pos.md](h171-circulos-ornamento-pos.md) — misma H171:
+  recuperación visual de círculos con sombra encima del precio en POS.
+
 - [h171-etiquetas-a-peticion.md](h171-etiquetas-a-peticion.md) — misma H171,
   corrección focal de Etiquetas: reutiliza imágenes de códigos certificados,
   cuatro vistas al abrir y documentos a petición. Focal 18/18; PUBLICADO Y

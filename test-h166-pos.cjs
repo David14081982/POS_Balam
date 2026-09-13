@@ -62,6 +62,38 @@ let browser,server;
  await input.fill('does-not-exist');await nav.waitForFunction(()=>document.querySelectorAll('[data-testid^="pos-product-family:"]').length===0);
  await input.fill('');await nav.waitForFunction(()=>document.querySelectorAll('[data-testid^="pos-product-family:"]').length>0);
  const remote=await nav.evaluate(()=>{const keys=['products','sellers','clients','sales','movements','promotions','liquidations','returns','payments','exchanges','loans','commissionAdjustments'];return {...Object.fromEntries(keys.map(k=>[k,DATA[k==='promotions'?'promos':k]])),commissionContext:DATA.commissionContext};});
+ // H171: ornament swatches belong above the price and reflect available references.
+ const ornamentFixture=await nav.evaluate(snapshot=>{
+  const colors=CONFIG.all('ornament_color').filter(c=>c.meta?.hex).slice(0,3);
+  const ornament=CONFIG.all('ornament').find(o=>DATA.ornamentColorMode(o.code)!=='none');
+  const rows=snapshot.products.slice(0,4),family=rows[0].referenceFamilyId;
+  rows.forEach((p,i)=>{p.nombre=i===3?'Sin ornamento QA':'Ornamento QA';p.modelo=p.nombre;p.orn=i===3?'—':ornament.code;p.ornamentColorCodes=i===3?[]:[colors[i===1?0:i].code];p.ornColors=p.ornamentColorCodes;p.stockQuantity=i===2?0:4;if(i<3)p.referenceFamilyId=family;});
+  rows[1].ornamentColorCodes=[colors[0].code,colors[1].code];rows[1].ornColors=rows[1].ornamentColorCodes;
+  snapshot.products=rows;DATA.replaceFromOnline(snapshot);
+  return {family,plain:rows[3].referenceFamilyId,colors:colors.slice(0,2).map(c=>({code:c.code,hex:c.meta.hex})),source:JSON.stringify(DATA.products)};
+ },remote);
+ const ornamentCard=nav.getByTestId('pos-product-family:'+ornamentFixture.family);
+ await ornamentCard.waitFor();
+ const dots=ornamentCard.locator('[data-ornament-color]');
+ await nav.waitForTimeout(100);
+ assert.equal(await dots.count(),2,'deduplicate available ornament colors; omit sold-out-only color');
+ assert.equal(await nav.getByTestId('pos-product-family:'+ornamentFixture.plain).locator('[data-ornament-color]').count(),0);
+ for(const width of [390,1280]){
+  await nav.setViewportSize({width,height:900});
+  await ornamentCard.scrollIntoViewIfNeeded();
+  const visual=await ornamentCard.evaluate(card=>{
+   const price=card.querySelector('[data-testid="pos-product-price"]'),dots=[...card.querySelectorAll('[data-ornament-color]')];
+   return dots.map(dot=>{const s=getComputedStyle(dot),r=dot.getBoundingClientRect();return {code:dot.dataset.ornamentColor,color:s.backgroundColor,shadow:s.boxShadow,round:s.borderRadius,above:r.bottom<=price.getBoundingClientRect().top,size:r.width};});
+  });
+  assert.ok(visual.every(d=>d.above&&d.shadow!=='none'&&d.round==='50%'&&d.size===16));
+  for(const color of ornamentFixture.colors){const rgb=await nav.evaluate(hex=>{const el=document.createElement('span');el.style.color=hex;document.body.append(el);const rgb=getComputedStyle(el).color;el.remove();return rgb;},color.hex);assert.equal(visual.find(d=>d.code===color.code).color,rgb);}
+  assert.ok(await nav.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+  await ornamentCard.getByTestId('pos-product-price').scrollIntoViewIfNeeded();
+  if(width===390)await nav.screenshot({path:path.join(out,'ornament-card-'+width+'.png')});
+  else await ornamentCard.screenshot({path:path.join(out,'ornament-card-'+width+'.png')});
+ }
+ assert.equal(await nav.evaluate(()=>JSON.stringify(DATA.products)),ornamentFixture.source);
+ evidence.ornaments={availableColors:2,deduplicated:true,soldOutExcluded:true,plainHasNoDots:true,abovePrice:true,shadow:true,catalogHex:true,productsUnchanged:true,responsive:[390,1280]};
  remote.products=[];await nav.evaluate(s=>DATA.replaceFromOnline(s),remote);
  await nav.waitForFunction(()=>document.querySelectorAll('[data-testid^="pos-product-family:"]').length===0);
  assert.deepEqual(evidence.errors,[]);

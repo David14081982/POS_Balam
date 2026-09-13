@@ -7,6 +7,13 @@ y `BLOQUEADO`.
 
 ## Resumen
 
+**H-171 — Círculos de ornamento en POS: RESUELTO LOCALMENTE (13/09/2026).**
+Recuperada la fila de círculos con sombra encima del precio. Reproducción:
+0 frente a 2 esperados; POS final PASS con colores, precio, carrito y lector
+conservados; UI 6/6 y PWA 2/2. Capturas verificadas en 390/1280 px.
+Cambio acotado a ProductCard; DATA/CONFIG conservadas. Publicación pendiente.
+Commit: Pendiente de commit. [Detalle](fixes/h171-circulos-ornamento-pos.md).
+
 **H-171 — Etiquetas: RESUELTO Y PUBLICADO (13/09/2026).**
 Continuación quirúrgica de H167: reutilización de `barcodeUrls` correspondientes
 al código certificado, cuatro vistas al abrir y documentos a petición.

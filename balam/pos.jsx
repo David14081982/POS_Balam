@@ -536,6 +536,17 @@
     const total = p.isFamilyProjection ? p.totalStock : D.totalStock(p);
     const out = total === 0;
     const subtitle = (p.orn && p.orn !== '—') ? p.orn : D.TELA[p.tela];
+    const ornamentColors = new Map();
+    (p.isFamilyProjection ? p.availableReferences : [p]).forEach(reference => {
+      const v2 = D.isV2Reference(reference);
+      const sizes = v2 ? [reference.sizeCode] : D.resolveProductSizes(reference).sizes
+        .filter(size => size.active && size.stock > 0).map(size => size.value);
+      sizes.forEach(size => D.effectiveOrnamentColors(reference, size).forEach(code => {
+        const item = window.CONFIG.find(v2 ? 'ornament_color' : 'color', code);
+        ornamentColors.set(code, { label: (item && item.label) || code,
+          hex: (item && item.meta && item.meta.hex) || D.COLOR_HEX[code] || '#e5e7eb' });
+      }));
+    });
     return h('div', {
       'data-testid': 'pos-product-' + (p.commercialKey || p.id),
       className: 'group flex flex-col bg-surface-container-lowest rounded-xl overflow-hidden transition-all duration-300 shadow-e1 ' +
@@ -552,8 +563,15 @@
           h('h3', { key: 'n', className: 'font-headline text-h2 text-primary leading-tight' }, p.nombre),
           h('p', { key: 's', className: 'text-overline uppercase text-on-surface-variant mt-1 truncate' }, p.isFamilyProjection ? `${p.availableReferences.length} referencias disponibles` : subtitle),
         ]),
+        ornamentColors.size > 0 && h('div', { key: 'ornaments', className: 'flex flex-wrap gap-2 mb-3', 'aria-label': 'Colores de ornamento' },
+          Array.from(ornamentColors, ([code, color]) => h('span', {
+            key: code, 'data-ornament-color': code, role: 'img', 'aria-label': color.label, title: color.label,
+            style: { display: 'inline-block', width: 16, height: 16, flexShrink: 0, borderRadius: '50%',
+              backgroundColor: color.hex, boxShadow: 'inset 0 1px 2px rgba(255,255,255,.75), inset 0 -1px 2px rgba(0,0,0,.15), 0 2px 4px rgba(0,0,0,.25)',
+              border: '1px solid rgba(0,0,0,.16)' },
+          }))),
         h('div', { key: 'm', className: 'mt-auto flex justify-between items-center' }, [
-          h('span', { key: 'p', className: 'font-headline text-h2 text-primary' }, precioCatalogo(p)),
+          h('span', { key: 'p', 'data-testid': 'pos-product-price', className: 'font-headline text-h2 text-primary' }, precioCatalogo(p)),
           out ? null : h('button', {
             key: 'add',
             className: 'w-11 h-11 bg-surface-container-low text-primary rounded-xl flex items-center justify-center hover:bg-primary hover:text-on-primary transition-all',

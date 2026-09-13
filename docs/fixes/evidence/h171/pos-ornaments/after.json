@@ -1,0 +1,44 @@
+{
+  "startedAt": "2026-09-13T21:27:21.512Z",
+  "scope": "Read-only public artifact; private synthetic browser fixtures; no production login or commercial writes",
+  "public": {
+    "artifactSha256": "d516c6961df60216d3ce2ddcb7e42105698af5afb81d9e7fb76bd4f3ea9294be"
+  },
+  "branding": [],
+  "navigation": [],
+  "errors": [],
+  "blockedNetwork": [],
+  "productionWrites": 0,
+  "ornaments": {
+    "availableColors": 2,
+    "deduplicated": true,
+    "soldOutExcluded": true,
+    "plainHasNoDots": true,
+    "abovePrice": true,
+    "shadow": true,
+    "catalogHex": true,
+    "productsUnchanged": true,
+    "responsive": [
+      390,
+      1280
+    ]
+  },
+  "pos": {
+    "initialMounted": 48,
+    "logicalReferences": 1500,
+    "progressiveScroll": true,
+    "searchLast": true,
+    "scannerExactIdentity": true,
+    "globalScanner": true,
+    "sizeFilter": true,
+    "prices": true,
+    "cartAndSizes": true,
+    "remoteEmpty": true,
+    "responsive": [
+      390,
+      768,
+      1280
+    ]
+  },
+  "completedAt": "2026-09-13T21:27:38.358Z"
+}
