@@ -7,12 +7,14 @@ y `BLOQUEADO`.
 
 ## Resumen
 
-**H-171 — Presentación de arranque y actualización: CORREGIDO; publicación EN CURSO (13/09/2026).**
+**H-171 — Presentación de arranque y actualización: RESUELTO Y PUBLICADO (13/09/2026).**
 La reproducción sobre el cliente publicado confirmó B legacy, espera blanca y
 un destello claro al montar React: 3 PASS / 6 FAIL en el arnés focal. El cierre
 operativo anterior no cubrió esas transiciones. Corrección visual verificada:
 9/9 focales, 8/8 guardas de arranque, UI 6/6 y PWA 2/2; fuente del cargador
-explícita, logo de empresa y cobertura hasta React. Commit: Pendiente de commit.
+explícita, logo de empresa y cobertura hasta React. Commit: `690344e781109b5b16a3c2ec636da348065bc42c`.
+CI y deploy 34777097681 SUCCESS; tres archivos públicos idénticos al commit.
+[Verificación](fixes/evidence/h171/startup-brand/production.json).
 Misma H171; [detalle](fixes/h171-arranque-marca.md). No afecta datos comerciales.
 
 ### Corte previo al reporte visual del OWNER
@@ -7806,6 +7808,11 @@ hashes y alcance en `docs/fixes/arranque-con-cuenta-pendiente-h170.md`.
 
 
 ## H-171 — Entrega final de BALAM, Only Online y cero contaminación QA
+
+**Corrección visual posterior, misma H171:** logo y espera continua publicados
+en `690344e781109b5b16a3c2ec636da348065bc42c`, CI 34777097681 SUCCESS y bytes públicos
+verificados. [Detalle](fixes/h171-arranque-marca.md). El cierre operativo
+registrado abajo conserva su propio artefacto y alcance histórico.
 
 **Estado:** RESUELTO, PUBLICADO Y VERIFICADO en el alcance operativo aprobado.
 **Fecha de cierre:** 13/09/2026, Hermosillo.

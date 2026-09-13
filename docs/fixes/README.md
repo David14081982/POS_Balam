@@ -15,7 +15,8 @@ sesión de chat.
 
 - [h171-arranque-marca.md](h171-arranque-marca.md) — misma H171, corrección del
   arranque tras reporte OWNER: logo de empresa, actualización oscura y cobertura
-  continua hasta React; 9/9 focales y guardas conservadas. Publicación EN CURSO.
+  continua hasta React; 9/9 focales y guardas conservadas. PUBLICADO Y VERIFICADO
+  en `690344e`, workflow 34777097681 SUCCESS.
 
 - [balam-final-readiness.md](balam-final-readiness.md) — H-171, RESUELTO en aptitud operativa:
   BALAM Only Online; 4/4 casos priorizados PASS, 192/192 vistas y 8/8 anchos.

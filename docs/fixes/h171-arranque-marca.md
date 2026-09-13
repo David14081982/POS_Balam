@@ -1,9 +1,9 @@
 # H171 — Continuidad visual del arranque y actualización
 
 **Riesgo:** H-171, reapertura por presentación de arranque.
-**Estado:** CORREGIDO Y VERIFICADO LOCALMENTE; publicación EN CURSO.
+**Estado:** RESUELTO, PUBLICADO Y VERIFICADO.
 **Fecha:** 13/09/2026.
-**Commit:** Pendiente de commit.
+**Commit técnico publicado:** `690344e781109b5b16a3c2ec636da348065bc42c`.
 
 ## Problema y reproducción
 
@@ -35,7 +35,8 @@ comercial. La copia no es una segunda configuración administrable.
 
 La lectura READ ONLY de `pos.settings/store.logo` produjo PNG SHA256
 `0b5529a3688b1cdfb82df062be16cdc6ba3652db5bd54448e6171d74041394ae`.
-No cambian AUTH, STORE, permisos, confirmaciones, reintentos ni el worker.
+No cambian AUTH, STORE, permisos, confirmaciones, reintentos ni el protocolo
+del worker; su hash de cliente se regenera con el artefacto.
 La presentación aplica a todos los roles; los accesos denegados permanecen
 denegados. No hay migraciones ni un nuevo contrato distribuido que certificar.
 
@@ -71,14 +72,25 @@ permite usar un logo posterior y CONFIG confirmada tiene prioridad.
 - El workflow exige el nuevo caso de arranque además de regenerar y comparar
   el cliente definitivo. Tras el caso focal local se retiraron únicamente
   espacios de una línea vacía del cargador; CI comprueba el artefacto publicado.
-  Su resultado de publicación se registra al concluir.
+  El workflow final pasó sobre los bytes definitivos, incluido el caso visual.
 
 Todos los fixtures fueron de navegador aislado. **Cero escrituras comerciales,
 Auth o Storage remotas**; la única consulta real leyó el logo de la empresa.
 
+## Despliegue
+
+Commit `690344e781109b5b16a3c2ec636da348065bc42c`, workflow [34777097681](https://github.com/David14081982/POS_Balam/actions/runs/34777097681):
+regresiones y deploy SUCCESS. La nueva comprobación visual forma parte de este
+workflow; la certificación comercial live quedó omitida.
+El 2026-09-13T19:21:35.795Z, ambos HTML y sw.js públicos respondieron HTTP 200 y
+coincidieron byte por byte con Git. SHA256 HTML:
+`47c2b8f1a477c7b183fc63bbe4a515112e67295b1fb717514742b65d57747a34`.
+[Constancia](evidence/h171/startup-brand/production.json).
+El commit documental posterior registra esta publicación sin cambiar el cliente.
+
 ## Riesgo residual y pendientes
 
-Publicación pendiente. La copia de primer arranque corresponde al logo de esta
+Sin pendientes de esta corrección visual. La copia de primer arranque corresponde al logo de esta
 entrega; un cambio posterior de logo prevalece al leer CONFIG y se reutiliza
 desde la caché visual en aperturas posteriores. Un navegador completamente
 nuevo usa la copia publicada hasta conocer CONFIG. No se promete que un equipo
