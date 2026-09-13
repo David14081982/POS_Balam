@@ -1,9 +1,9 @@
 # H171 — Etiquetas reutiliza imágenes y prepara documentos a petición
 
 **Riesgo:** H-171, continuación del coste residual de H-167
-**Estado:** RESUELTO LOCALMENTE; PUBLICACIÓN PENDIENTE
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha:** 13/09/2026
-**Commit:** Pendiente de commit
+**Commit:** `3482f5d5857cf013f6381a73ef2a395bdf40c60b`
 
 ## Problema y reproducción
 
@@ -61,7 +61,7 @@ proyecciones sintéticas y transportes externos bloqueados/simulados.
 - `node test-h167-label-performance.mjs`: 155/155; PDF completo con copias y
   precios, guardado sintético exacto y garantías previas conservadas. Baseline
   ratcheted: apertura sin imágenes guardadas limitada a cuatro PNG. Ejecutado
-  antes del ajuste final de cancelación; CI comprobará el artefacto final.
+  antes del ajuste final de cancelación; CI volvió a comprobar el artefacto final: workflow 34780444756 SUCCESS.
 - `node test-h167-label-lifecycle.mjs`: 7 PASS / 1 FAIL inicialmente; detectó
   que la generación a petición escapaba del cleanup condicionado anterior.
   Cierre síncrono e invalidación incondicional al desmontar: 8 PASS / 0 FAIL.
@@ -80,8 +80,14 @@ un PDF grande sigue teniendo coste, ahora sólo al solicitarlo. La disponibilida
 de Storage puede provocar generación puntual. La procedencia se valida por el
 contrato de escritura y nombre del código; no se decodifican ópticamente los
 PNG de Storage. No se certifica una impresora física con estas pruebas.
-Pendiente: commit, publicación y cotejo público. HTML probado:
+Sin pendientes de esta corrección. HTML publicado y cotejado byte a byte:
 `7c20c7bcfa26ca11bf9fbbacb106c43906ec1fce1aece364e7099b3281a2ccd2`.
+
+## Publicación
+
+Push a main autorizado expresamente por el OWNER. Workflow [34780444756](https://github.com/David14081982/POS_Balam/actions/runs/34780444756) completó regresión y despliegue. Los tres archivos públicos coinciden con el commit probado: HTML principal, HTML alterno y service worker. Comprobación: 2026-09-13T20:26:42.635Z. Cero escrituras comerciales en esta verificación.
+
+[Constancia pública](evidence/h171/label-demand/production.json).
 
 ## Referencias
 

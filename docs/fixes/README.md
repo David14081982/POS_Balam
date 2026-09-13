@@ -15,7 +15,8 @@ sesión de chat.
 
 - [h171-etiquetas-a-peticion.md](h171-etiquetas-a-peticion.md) — misma H171,
   corrección focal de Etiquetas: reutiliza imágenes de códigos certificados,
-  cuatro vistas al abrir y documentos a petición. Focal 18/18; publicación pendiente.
+  cuatro vistas al abrir y documentos a petición. Focal 18/18; PUBLICADO Y
+  VERIFICADO en `3482f5d`, workflow 34780444756 SUCCESS.
 
 - [h171-arranque-marca.md](h171-arranque-marca.md) — misma H171, corrección del
   arranque tras reporte OWNER: logo de empresa, actualización oscura y cobertura

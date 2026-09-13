@@ -7,12 +7,14 @@ y `BLOQUEADO`.
 
 ## Resumen
 
-**H-171 — Etiquetas: RESUELTO LOCALMENTE, PUBLICACIÓN PENDIENTE (13/09/2026).**
+**H-171 — Etiquetas: RESUELTO Y PUBLICADO (13/09/2026).**
 Continuación quirúrgica de H167: reutilización de `barcodeUrls` correspondientes
 al código certificado, cuatro vistas al abrir y documentos a petición.
 Apertura sintética de 973 referencias: 33 396 → 3 595 ms; PNG 973 → 0,
 973/973 identidades conservadas. Focal 18/18, guardián 155/155, ciclo 8/8,
-UI 6/6 y PWA 2/2. Baselines fijadas. Commit: Pendiente de commit.
+UI 6/6 y PWA 2/2. Baselines fijadas. Commit: `3482f5d5857cf013f6381a73ef2a395bdf40c60b`.
+CI y deploy 34780444756 SUCCESS; tres archivos públicos idénticos al commit.
+[Constancia](fixes/evidence/h171/label-demand/production.json).
 Persisten el coste de validación y el de crear documentos grandes al pedirlos.
 [Detalle y evidencia](fixes/h171-etiquetas-a-peticion.md). No cambia datos.
 
