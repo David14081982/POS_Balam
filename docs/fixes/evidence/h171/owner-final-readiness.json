@@ -1,13 +1,13 @@
 {
   "format": "balam-h171-owner-final-readiness-v1",
-  "at": "2026-09-13T13:12:19.340Z",
+  "at": "2026-09-13T13:52:35.760Z",
   "project": "BALAM",
   "projectRef": "telohdbvbvsfmwyriflz",
   "scope": "APPROVED_ONLY_ONLINE_OPERATIONAL_DELIVERY",
   "productionReady": true,
   "operationalDefinitionOfDoneMet": true,
-  "finalCommitPublicationVerified": false,
-  "decision": "Four exact owner-held inactive rows are now removed and verified. Functional acceptance, prior publication of the identical client, and all fixture cleanup remain valid. Final commit publication is in progress.",
+  "finalCommitPublicationVerified": true,
+  "decision": "Owner-authorized four-row retirement, operational acceptance, final commit publication and public client byte verification are complete.",
   "sources": {
     "functionalAcceptance": {
       "path": "docs/fixes/evidence/h171/final-acceptance.json",
@@ -28,6 +28,10 @@
     "previousClientPublication": {
       "path": "docs/fixes/evidence/h171/production-verification.json",
       "sha256": "3c5028b92b65f913a636ae20072b49670130f75a6cf4e42ad01af7b08ac847b7"
+    },
+    "finalPublication": {
+      "path": "docs/fixes/evidence/h171/production-owner-final-verification.json",
+      "sha256": "9e87d3c39b7ce56bd9a88bf498b2a2e788dffcbfefbc2ce76baaed0b720e5ab6"
     }
   },
   "artifactSha256": "f4d73fa350d4187dade1a55c999dc203b405f4c20d95d9138aaf1b2ef0a82646",
@@ -80,14 +84,17 @@
     "newReproducedH171P3Pending": 0
   },
   "publication": {
-    "status": "FINAL_COMMIT_PUBLICATION_IN_PROGRESS",
-    "previousVerifiedCommit": "1dddd60494c7b24beb1574851bf06d040079b0f7",
-    "previousVerification": {
-      "path": "docs/fixes/evidence/h171/production-verification.json",
-      "sha256": "3c5028b92b65f913a636ae20072b49670130f75a6cf4e42ad01af7b08ac847b7"
+    "status": "PUBLISHED_AND_VERIFIED",
+    "commit": "a47e4b62ffa9893f0763fdfe9df76e82f63d7749",
+    "runId": 34760772918,
+    "runUrl": "https://github.com/David14081982/POS_Balam/actions/runs/34760772918",
+    "verification": {
+      "path": "docs/fixes/evidence/h171/production-owner-final-verification.json",
+      "sha256": "9e87d3c39b7ce56bd9a88bf498b2a2e788dffcbfefbc2ce76baaed0b720e5ab6"
     },
     "site": "https://david14081982.github.io/POS_Balam/",
-    "clientBytesUnchanged": true
+    "clientBytesUnchanged": true,
+    "followupDocumentationCommit": "Records this completed deployment; skips CI because client bytes are unchanged."
   },
   "supersedesCurrentConclusionOf": [
     "docs/fixes/evidence/h171/final-acceptance.json",
@@ -98,7 +105,6 @@
     "Four prioritized operational checks are composed from two completed scopes on the same client; no claim of 22 new complete UI journeys.",
     "Zero remaining operating QA and new fixtures refers to the reviewed manifests. Required historical copies and anti-replay controls remain; no claim of zero QA strings throughout historical data.",
     "Physical printing, scanners and every physical terminal are not certified.",
-    "Formal cash opening/closing and offline sales are not flows of the current product.",
-    "Final public commit and deployment verification are recorded separately when complete."
+    "Formal cash opening/closing and offline sales are not flows of the current product."
   ]
 }

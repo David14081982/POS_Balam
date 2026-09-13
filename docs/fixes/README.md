@@ -17,8 +17,8 @@ sesión de chat.
   BALAM Only Online; 4/4 casos priorizados PASS, 192/192 vistas y 8/8 anchos.
   Limpieza histórica y fixtures verificados; cuatro filas inactivas retiradas por
   autorización OWNER, 0 restantes y 0 decisiones pendientes; historia anti-replay intacta.
-  Cliente f4d ya publicado y verificado; publicación del cierre final EN CURSO.
-  Retiro final y cierre documental: Pendiente de commit.
+  Cliente f4d publicado y verificado; cierre final publicado en `a47e4b6`.
+  Constancia del despliegue registrada; ninguna decisión OWNER pendiente.
 
 - [pagina-web-tickets-h168.md](pagina-web-tickets-h168.md) — H-168: recuperación
   del sitio configurable en tickets desde la rama rescatada; adaptado a CONFIG

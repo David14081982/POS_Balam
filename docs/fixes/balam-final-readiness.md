@@ -1,7 +1,7 @@
 # BALAM FINAL READINESS
 
 **Riesgo:** H-171. **Fecha:** 13/09/2026.
-**Estado:** RESUELTO en aptitud operativa; publicación del cierre final EN CURSO.
+**Estado:** RESUELTO, PUBLICADO Y VERIFICADO.
 
 ## 1. Qué se hizo
 
@@ -85,20 +85,21 @@ Las interrupciones de los comprobadores no se reescribieron como PASS ni se atri
 
 ## 4. Despliegue
 
-**PUBLICADO Y VERIFICADO**, commit `1dddd60494c7b24beb1574851bf06d040079b0f7`.
-El [workflow 34746195058](https://github.com/David14081982/POS_Balam/actions/runs/34746195058)
-terminó con regresiones y deploy SUCCESS.
-A las **07:57:34 UTC del 13/09/2026**, ambos HTML y `sw.js` públicos devolvieron
-HTTP 200 y coincidieron byte por byte con Git: [verificación](evidence/h171/production-verification.json).
+**PUBLICADO Y VERIFICADO**, commit `a47e4b62ffa9893f0763fdfe9df76e82f63d7749`.
+El [workflow 34760772918](https://github.com/David14081982/POS_Balam/actions/runs/34760772918) terminó con regresiones y deploy SUCCESS;
+la certificación live quedó omitida: no se repitieron las jornadas reales.
+La verificación pública del **2026-09-13T13:52:35.760Z** confirmó HTTP 200 y coincidencia
+byte por byte de ambos HTML y `sw.js` con ese commit:
+[constancia final](evidence/h171/production-owner-final-verification.json).
 
 SHA-256 de ambos HTML: `f4d73fa350d4187dade1a55c999dc203b405f4c20d95d9138aaf1b2ef0a82646`.
 [Producción BALAM](https://david14081982.github.io/POS_Balam/).
-El cierre posterior modifica comprobadores y documentación; conserva estos mismos bytes de cliente.
+La [verificación anterior](evidence/h171/production-verification.json) permanece
+como evidencia del commit 1dddd604. Los bytes del cliente son idénticos.
 
-OWNER autorizó expresamente publicar los commits y las evidencias revisadas.
-La publicación del cierre final está **EN CURSO**, pendiente del push, CI y la
-verificación pública del commit final. El cliente conserva los mismos bytes f4d;
-la publicación anterior y su evidencia permanecen válidas para aquel commit.
+OWNER autorizó expresamente publicar los commits y las evidencias operativas
+en el repositorio público. El commit documental posterior registra este
+despliegue concluido, sin modificar ni redesplegar el cliente.
 
 ## 5. Riesgos residuales y alcance aprobado
 
@@ -137,4 +138,5 @@ Estos límites no se convierten en defectos P2/P3 no reproducidos.
 - Candidato publicado: `1dddd60494c7b24beb1574851bf06d040079b0f7`.
 - Comprobadores y evidencia final: `369756ab2ce906a485caaa6f13599569eb360ab3`.
 - Registro documental previo: `aa7251c`.
-- Retiro de las cuatro filas y cierre documental H171: **Pendiente de commit**.
+- Retiro de las cuatro filas y cierre operativo H171: `a47e4b62ffa9893f0763fdfe9df76e82f63d7749`.
+- Constancia posterior de publicación: commit documental que contiene este registro.

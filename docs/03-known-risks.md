@@ -8,8 +8,8 @@ y `BLOQUEADO`.
 ## Resumen
 
 **H-171 — Entrega final de BALAM / Only Online: RESUELTO en aptitud operativa (13/09/2026).**
-**Production ready: SÍ, en el alcance operativo aprobado.** Publicación del cierre
-final **EN CURSO**; OWNER autorizó los commits y las evidencias revisadas.
+**Production ready: SÍ, en el alcance operativo aprobado. PUBLICADO Y VERIFICADO.**
+OWNER autorizó la publicación pública de los commits y las evidencias revisadas.
 Autoridades exclusivas: `David14081982/POS_Balam`, Supabase
 `telohdbvbvsfmwyriflz`, esquema `pos`, ADR-015.
 Siete controles inoperantes retirados y dos recortes responsive corregidos.
@@ -28,16 +28,17 @@ OWNER autorizó retirar las cuatro filas inactivas: **4/4 eliminadas, 0 restante
 Inventario **973 productos / 251 familias / 3,483 piezas**, venta `BG-260912-0001`,
 solicitud 7054 e historia protegida intactos; contadores y revisiones sin rebobinar.
 Storage: cero bajas. H148 conserva sus dos recuperaciones anti-replay.
-**PUBLICACIÓN PREVIA VERIFICADA:** commit `1dddd60494c7b24beb1574851bf06d040079b0f7`,
-workflow 34746195058 SUCCESS. Ambos HTML f4d y sw.js coincidieron byte a byte,
-HTTP 200, el 13/09 a las 07:57:34 UTC; [evidencia](fixes/evidence/h171/production-verification.json).
+**PUBLICACIÓN FINAL VERIFICADA:** commit `a47e4b62ffa9893f0763fdfe9df76e82f63d7749`,
+workflow 34760772918 SUCCESS. Ambos HTML f4d y sw.js coincidieron byte a byte,
+HTTP 200, en 2026-09-13T13:52:35.760Z; [evidencia](fixes/evidence/h171/production-owner-final-verification.json).
 [Dictamen final OWNER](fixes/evidence/h171/owner-final-readiness.json). La
 [aceptación previa](fixes/evidence/h171/final-acceptance.json) conserva su estado
 histórico anterior a la decisión OWNER; no se reescribe como un resultado nuevo.
 Hardware físico no certificado; límites detallados en el informe.
 **Commit técnico de producto:** `b6d5edd07d7768a499fd7db7edfb428d8544520a`.
 **Comprobadores y evidencia previa:** `369756ab2ce906a485caaa6f13599569eb360ab3`.
-**Retiro de cuatro filas y cierre documental H171: Pendiente de commit.**
+**Retiro de cuatro filas y cierre operativo H171:** `a47e4b62ffa9893f0763fdfe9df76e82f63d7749`.
+El commit documental posterior registra el despliegue sin cambiar el cliente.
 **Documento:** [BALAM FINAL READINESS](fixes/balam-final-readiness.md).
 
 
@@ -7796,9 +7797,32 @@ hashes y alcance en `docs/fixes/arranque-con-cuenta-pendiente-h170.md`.
 
 ## H-171 — Entrega final de BALAM, Only Online y cero contaminación QA
 
-**Estado:** EN CURSO; NO CERTIFICADO para entrega. **Fecha:** 12/09/2026, Hermosillo.
-**Commit:** Pendiente de commit.
+**Estado:** RESUELTO, PUBLICADO Y VERIFICADO en el alcance operativo aprobado.
+**Fecha de cierre:** 13/09/2026, Hermosillo.
+**Commit publicado:** `a47e4b62ffa9893f0763fdfe9df76e82f63d7749`.
 **Documento:** [BALAM FINAL READINESS](fixes/balam-final-readiness.md).
+
+**Cierre vigente:** 4/4 comprobaciones priorizadas PASS sobre el mismo cliente
+f4d; refresh, relogin, sesiones A/B/C y Only Online verificados. Limpieza
+histórica y cinco runs de fixtures completos. Las cuatro filas inactivas
+restantes se retiraron con autorización expresa OWNER: 4/4 ausentes, 63 tablas
+y filas ajenas íntegras, revisión 894→896. Inventario 973/251/3483, venta
+BG-260912-0001, Auth, contadores e historia protegida conservados.
+P0/P1 conocidos pendientes: 0/0; cero fixtures operativos revisados pendientes
+y cero decisiones OWNER. Las recuperaciones anti-replay e historia necesaria
+permanecen protegidas; hardware físico fuera de la certificación operativa.
+[Dictamen actual](fixes/evidence/h171/owner-final-readiness.json).
+
+**Publicación final:** workflow 34760772918 SUCCESS y tres archivos públicos
+HTTP 200, idénticos byte por byte al commit, el 13/09/2026 a las 13:52:35 UTC.
+[Constancia](fixes/evidence/h171/production-owner-final-verification.json).
+El commit documental posterior registra este cierre sin modificar el cliente.
+
+### Corte histórico anterior al cierre final
+
+El registro siguiente conserva la investigación y sus pendientes de aquel
+corte; no expresa el estado vigente. En ese momento constaba EN CURSO,
+NO CERTIFICADO para entrega y Pendiente de commit.
 
 **Autoridad:** exclusivamente `David14081982/POS_Balam`, Supabase
 `telohdbvbvsfmwyriflz`, esquema `pos`, ADR-015. Base remota

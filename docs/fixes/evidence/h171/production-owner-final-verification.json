@@ -1,0 +1,61 @@
+{
+  "format": "balam-h171-owner-final-production-verification-v1",
+  "at": "2026-09-13T13:52:35.760Z",
+  "project": "BALAM",
+  "projectRef": "telohdbvbvsfmwyriflz",
+  "commit": "a47e4b62ffa9893f0763fdfe9df76e82f63d7749",
+  "run": {
+    "id": 34760772918,
+    "url": "https://github.com/David14081982/POS_Balam/actions/runs/34760772918",
+    "status": "completed",
+    "conclusion": "success",
+    "regression": "success",
+    "deploy": "success",
+    "liveCertification": "skipped"
+  },
+  "scope": "PUBLIC_HTTP_BYTES_AGAINST_EXACT_DEPLOYED_COMMIT_AFTER_OWNER_FOUR_RETIREMENT",
+  "files": [
+    {
+      "file": "index.html",
+      "url": "https://david14081982.github.io/POS_Balam/",
+      "checkedAt": "2026-09-13T13:52:35.152Z",
+      "status": 200,
+      "finalUrl": "https://david14081982.github.io/POS_Balam/?h171=a47e4b62ffa9893f0763fdfe9df76e82f63d7749",
+      "expectedBytes": 8980717,
+      "actualBytes": 8980717,
+      "expectedSha256": "f4d73fa350d4187dade1a55c999dc203b405f4c20d95d9138aaf1b2ef0a82646",
+      "actualSha256": "f4d73fa350d4187dade1a55c999dc203b405f4c20d95d9138aaf1b2ef0a82646",
+      "byteForByteEqual": true,
+      "pass": true
+    },
+    {
+      "file": "POS Balam (offline).html",
+      "url": "https://david14081982.github.io/POS_Balam/POS%20Balam%20(offline).html",
+      "checkedAt": "2026-09-13T13:52:35.683Z",
+      "status": 200,
+      "finalUrl": "https://david14081982.github.io/POS_Balam/POS%20Balam%20(offline).html?h171=a47e4b62ffa9893f0763fdfe9df76e82f63d7749",
+      "expectedBytes": 8980717,
+      "actualBytes": 8980717,
+      "expectedSha256": "f4d73fa350d4187dade1a55c999dc203b405f4c20d95d9138aaf1b2ef0a82646",
+      "actualSha256": "f4d73fa350d4187dade1a55c999dc203b405f4c20d95d9138aaf1b2ef0a82646",
+      "byteForByteEqual": true,
+      "pass": true
+    },
+    {
+      "file": "sw.js",
+      "url": "https://david14081982.github.io/POS_Balam/sw.js",
+      "checkedAt": "2026-09-13T13:52:25.869Z",
+      "status": 200,
+      "finalUrl": "https://david14081982.github.io/POS_Balam/sw.js?h171=a47e4b62ffa9893f0763fdfe9df76e82f63d7749",
+      "expectedBytes": 4477,
+      "actualBytes": 4477,
+      "expectedSha256": "3795e010fc6a4f48be649e2052dc4cb7fe57bc09ab9cfa197ec6d6645e81c154",
+      "actualSha256": "3795e010fc6a4f48be649e2052dc4cb7fe57bc09ab9cfa197ec6d6645e81c154",
+      "byteForByteEqual": true,
+      "pass": true
+    }
+  ],
+  "allFilesMatch": true,
+  "businessWrites": 0,
+  "authRequests": 0
+}
