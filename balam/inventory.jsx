@@ -1891,6 +1891,7 @@
     const [saving, setSaving] = useState(false);
     const [pdfAsset, setPdfAsset] = useState(null);
     const [pdfError, setPdfError] = useState('');
+    const [documentBusy, setDocumentBusy] = useState(false);
     const [selectedProductIds, setSelectedProductIds] = useState(() => new Set((products || []).map(product => product.id)));
     const pdfGeneration = useRef(0);
     const [revision, setRevision] = useState(0);
@@ -1898,6 +1899,11 @@
     const [progress, setProgress] = useState('Preparando etiquetas…');
     const [preparationError, setPreparationError] = useState('');
     const preparationGeneration = useRef(0);
+    const closeLabels = () => {
+      preparationGeneration.current++;
+      pdfGeneration.current++;
+      onClose();
+    };
     useEffect(() => {
       let sourceRevision = D.commercialProjectionRevision;
       const invalidate = () => {
@@ -1945,17 +1951,12 @@
             lastYield = performance.now();
           }
         }
-        // Certificar el lote completo antes de producir cualquier PNG.
+        // Certificar el lote completo; al abrir sólo hacen falta cuatro vistas.
         if (next.every(spec => spec.certification.ok)) {
-          for (let index = 0; index < next.length; index++) {
-            const spec = next[index];
-            if (!images.has(spec.code)) images.set(spec.code, B.toPNGDataURL(spec.code, PRINT_OPTS));
-            if (performance.now() - lastYield >= 12) {
-              setProgress(`Preparando imágenes: ${index + 1} de ${next.length}`);
-              await yieldLabelWork(); if (cancelled()) return;
-              lastYield = performance.now();
-            }
-          }
+          await Promise.all(next.slice(0, 4).map(async spec => {
+            const image = await loadLabelImage(spec, cancelled);
+            if (!cancelled()) images.set(spec.code, image);
+          }));
         }
         if (!cancelled()) setPrepared({ products: selectedProducts, revision, specs: next, images });
       })().catch(error => {
@@ -1973,67 +1974,95 @@
     const pdfKey = [copiesMode, copies, withPrice ? 'price' : 'no-price', specs.map(s => `${s.p.id}:${s.talla}:${s.stock}:${s.code}:${D.listPrice(s.p, s.talla)}`).join('|')].join('::');
 
     useEffect(() => {
-      if (!B || !B.ready || !B.ready() || !specs.length || !labelsCertified) {
-        setPdfAsset(null);
-        return undefined;
-      }
-      const generation = ++pdfGeneration.current;
-      setPdfAsset(null); setPdfError('');
-      const cancelled = () => generation !== pdfGeneration.current;
-      (async () => {
-        await yieldLabelWork(); if (cancelled()) return null;
-        const rendered = [];
-        for (const spec of specs) {
-          const item = labelItem(spec);
-          for (let copy = 0; copy < copiesOf(spec); copy++) {
-            rendered.push(item);
-            if (rendered.length % 100 === 0) { await yieldLabelWork(); if (cancelled()) return null; }
-          }
-        }
-        const blob = await buildLabelPdf(rendered, cancelled);
-        return blob && { blob, fileName: labelPdfFileName(selectedProducts), rendered };
-      })().then(asset => {
-        if (!cancelled() && asset) setPdfAsset(asset);
-      }).catch(error => {
-        if (generation === pdfGeneration.current) setPdfError((error && error.message) || 'No se pudo generar el PDF');
-      });
-      return () => { if (generation === pdfGeneration.current) pdfGeneration.current++; };
+      pdfGeneration.current++;
+      setPdfAsset(null); setPdfError(''); setDocumentBusy(false);
+      return () => { pdfGeneration.current++; };
     }, [pdfKey, labelsCertified, prepared]);
 
-    if (!B || !B.ready()) return h(Modal, { title: 'Etiquetas', onClose }, h('p', { className: 'text-body text-on-surface-variant py-6 text-center' }, 'La librería de códigos de barras no cargó. Revisa tu conexión e inténtalo de nuevo.'));
-    if (preparing) return h(Modal, { title: 'Etiquetas de código de barras', onClose, testId: 'label-modal', large: true },
+    if (!B || !B.ready()) return h(Modal, { title: 'Etiquetas', onClose: closeLabels }, h('p', { className: 'text-body text-on-surface-variant py-6 text-center' }, 'La librería de códigos de barras no cargó. Revisa tu conexión e inténtalo de nuevo.'));
+    if (preparing) return h(Modal, { title: 'Etiquetas de código de barras', onClose: closeLabels, testId: 'label-modal', large: true },
       preparationError ? h('div', { role: 'alert', 'data-testid': 'labels-preparation-error' }, [
         h('p', { key: 'message' }, 'No se pudieron preparar las etiquetas. Vuelve a intentarlo.'),
         h('button', { key: 'retry', 'data-testid': 'labels-retry', onClick: () => setRevision(value => value + 1) }, 'Reintentar'),
       ]) : h('p', { role: 'status', 'data-testid': 'labels-preparing', className: 'text-body py-6 text-center' }, progress));
-    if (!specs.length) return h(Modal, { title: 'Etiquetas', onClose }, h('p', { className: 'text-body text-on-surface-variant py-6 text-center' }, 'No hay tallas con existencias para etiquetar.'));
+    if (!specs.length) return h(Modal, { title: 'Etiquetas', onClose: closeLabels }, h('p', { className: 'text-body text-on-surface-variant py-6 text-center' }, 'No hay tallas con existencias para etiquetar.'));
 
     function imageFor(s) {
       if (!s.certification.ok || !labelsCertified) return '';
       return prepared.images.get(s.code) || '';
     }
+    async function loadLabelImage(spec, cancelled) {
+      if (!spec.certification.ok || cancelled()) return '';
+      // uploadBarcode escribe este nombre exacto. Una URL de otro código,
+      // proyecto o bucket no demuestra correspondencia con la referencia.
+      const saved = spec.p.barcodeUrls && spec.p.barcodeUrls[spec.talla];
+      const expected = `https://telohdbvbvsfmwyriflz.supabase.co/storage/v1/object/public/barcodes/${spec.code}.png`;
+      if (saved === expected) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 1500);
+        try {
+          const response = await fetch(saved, { signal: controller.signal });
+          if (!response.ok) throw new Error('LABEL_IMAGE_UNAVAILABLE');
+          const blob = await response.blob();
+          if (blob.type !== 'image/png') throw new Error('LABEL_IMAGE_NOT_PNG');
+          const bitmap = await createImageBitmap(blob);
+          bitmap.close();
+          const data = await new Promise((resolve, reject) => {
+            const reader = new FileReader(); reader.onload = () => resolve(reader.result);
+            reader.onerror = reject; reader.readAsDataURL(blob);
+          });
+          if (!cancelled()) return data;
+        } catch (_) { /* Imagen ausente/ilegible: generar sólo este código certificado. */ }
+        finally { clearTimeout(timeout); }
+      }
+      if (cancelled()) return '';
+      return B.toPNGDataURL(spec.code, PRINT_OPTS);
+    }
     function labelItem(s) {
       return { name: s.p.nombre, image: imageFor(s), barcode: s.code, sku: D.materializedSku(s.p, s.talla), price: withPrice ? fmt(D.listPrice(s.p, s.talla)).replace('.00', '') : '' };
     }
 
-    function renderItems() {
+    async function renderItems(cancelled) {
       if (!labelsCertified) throw new Error('LABEL_IDENTITY_NOT_CERTIFIED');
       const rendered = [];
-      specs.forEach(s => {
+      for (const s of specs) {
+        if (cancelled()) return null;
+        if (!prepared.images.has(s.code)) {
+          const image = await loadLabelImage(s, cancelled);
+          if (cancelled()) return null;
+          if (!image) throw new Error('No se pudo preparar una imagen de etiqueta.');
+          prepared.images.set(s.code, image);
+        }
         const one = labelItem(s);
         for (let i = 0; i < copiesOf(s); i++) rendered.push(one);
-      });
+        await yieldLabelWork();
+      }
       return rendered;
     }
-    function renderDocument() {
-      return buildLabelDocument(renderItems());
-    }
-    function openPrintableView() {
-      if (!labelsCertified) return;
-      const win = window.open('', '_blank', 'width=520,height=680');
-      if (!win) { toast('El navegador bloqueó la vista imprimible. Usa Descargar.', 'var(--danger)'); return; }
-      win.document.write(renderDocument());
-      win.document.close();
+    async function prepareDocument(printable = false) {
+      if (!labelsCertified || documentBusy) return;
+      if (!printable && pdfAsset) { downloadLabelPdf(pdfAsset); return; }
+      const win = printable ? window.open('', '_blank', 'width=520,height=680') : null;
+      if (printable && !win) { toast('El navegador bloqueó la vista imprimible. Usa Descargar.', 'var(--danger)'); return; }
+      if (win) { win.document.write('<!doctype html><title>Etiquetas BALAM</title><body style="background:#171a17;color:#ffe58a;font:18px Arial;padding:32px">Preparando etiquetas para imprimir…</body>'); win.document.close(); }
+      const generation = ++pdfGeneration.current;
+      const cancelled = () => generation !== pdfGeneration.current || !!(win && win.closed);
+      setDocumentBusy(true); setPdfError('');
+      try {
+        const rendered = await renderItems(cancelled);
+        if (!rendered || cancelled()) { if (win && !win.closed) win.close(); return; }
+        if (win) { win.document.open(); win.document.write(buildLabelDocument(rendered)); win.document.close(); }
+        else {
+          const blob = await buildLabelPdf(rendered, cancelled);
+          if (blob && !cancelled()) {
+            const asset = { blob, fileName: labelPdfFileName(selectedProducts), rendered };
+            setPdfAsset(asset); downloadLabelPdf(asset);
+          }
+        }
+      } catch (error) {
+        if (win && !win.closed) win.close();
+        if (generation === pdfGeneration.current) setPdfError(error.message || 'No se pudo preparar el documento.');
+      } finally { if (generation === pdfGeneration.current) setDocumentBusy(false); }
     }
     const diagnostics = specs.map(s => {
       const physical = s.certification.physical;
@@ -2049,7 +2078,7 @@
       // Un lote bloqueado no debe generar PNG ni, por esa misma guarda,
       // inventar un fallo de generación. La inspección geométrica pura sigue
       // visible para explicar cada referencia antes de migrarla.
-      if (labelsCertified && !image && !issues.some(issue => issue.type === 'MISSING_BARCODE' || issue.type === 'ENCODING_ERROR' || issue.type === 'GENERATION_ERROR')) {
+      if (labelsCertified && prepared.images.has(s.code) && !image && !issues.some(issue => issue.type === 'MISSING_BARCODE' || issue.type === 'ENCODING_ERROR' || issue.type === 'GENERATION_ERROR')) {
         issues.push({ type: 'GENERATION_ERROR', message: messageText({ code: 'GENERATION_ERROR', message: 'PNG generation failed for preview and PDF' }) });
       }
       if (resolution.code === 'BARCODE_AMBIGUOUS') issues.push({ type: 'AMBIGUOUS', message: messageText({ code: 'BARCODE_AMBIGUOUS', message: `${resolution.matches.length} matches` }) });
@@ -2113,12 +2142,12 @@
     }
     const footer = [
       h('button', { key: 'sv', 'data-testid': 'labels-save-account', disabled: saving || !labelsCertified, onClick: saveToSupabase, className: 'px-5 py-3 border border-outline-variant rounded-xl text-caption font-bold uppercase tracking-widest text-primary hover:bg-surface-container transition disabled:opacity-50 flex items-center gap-2' }, [h(MS, { key: 'i', name: saving ? 'clock' : 'upload', size: 16 }), saving ? 'Guardando…' : `Guardar en la cuenta (${uniqueCount})`]),
-      h('button', { key: 'dl', disabled: !labelsCertified || !pdfAsset, onClick: () => downloadLabelPdf(pdfAsset), 'data-testid': 'labels-download', className: 'px-5 py-3 border border-outline-variant rounded-xl text-caption font-bold uppercase tracking-widest text-primary hover:bg-surface-container transition disabled:opacity-50 flex items-center gap-2' }, [h(MS, { key: 'i', name: pdfAsset ? 'download' : 'clock', size: 16 }), !labelsCertified ? 'Identidad no certificada' : pdfAsset ? 'Descargar PDF' : 'Generando PDF…']),
+      h('button', { key: 'dl', disabled: !labelsCertified || documentBusy, onClick: () => prepareDocument(), 'data-testid': 'labels-download', className: 'px-5 py-3 border border-outline-variant rounded-xl text-caption font-bold uppercase tracking-widest text-primary hover:bg-surface-container transition disabled:opacity-50 flex items-center gap-2' }, [h(MS, { key: 'i', name: documentBusy ? 'clock' : 'download', size: 16 }), !labelsCertified ? 'Identidad no certificada' : documentBusy ? 'Preparando documento…' : 'Descargar PDF']),
       canSharePdf && h('button', { key: 'sh', onClick: sharePdf, 'data-testid': 'labels-share', className: 'px-5 py-3 border border-outline-variant rounded-xl text-caption font-bold uppercase tracking-widest text-primary hover:bg-surface-container transition flex items-center gap-2' }, [h(MS, { key: 'i', name: 'share', size: 16 }), 'Compartir PDF']),
-      h('button', { key: 'pr', disabled: !labelsCertified, onClick: openPrintableView, 'data-testid': 'labels-open-printable', className: 'px-6 py-3 bg-primary text-on-primary rounded-xl text-caption font-bold uppercase tracking-widest hover:opacity-90 transition disabled:opacity-50 flex items-center gap-2' }, [h(MS, { key: 'i', name: 'print', size: 16 }), `Abrir vista imprimible (${totalLabels})`]),
+      h('button', { key: 'pr', disabled: !labelsCertified || documentBusy, onClick: () => prepareDocument(true), 'data-testid': 'labels-open-printable', className: 'px-6 py-3 bg-primary text-on-primary rounded-xl text-caption font-bold uppercase tracking-widest hover:opacity-90 transition disabled:opacity-50 flex items-center gap-2' }, [h(MS, { key: 'i', name: 'print', size: 16 }), `Abrir vista imprimible (${totalLabels})`]),
     ].filter(Boolean);
 
-    return h(Modal, { title: 'Etiquetas de código de barras', onClose, footer, testId: 'label-modal', large: true }, [
+    return h(Modal, { title: 'Etiquetas de código de barras', onClose: closeLabels, footer, testId: 'label-modal', large: true }, [
       h('div', { key: 'cfg', className: 'space-y-4 mb-5' }, [
         (products || []).length > 1 && h('fieldset', { key: 'refs', className: 'rounded-xl border border-outline-variant p-3', 'data-testid': 'label-family-references' }, [
           h('legend', { key: 'l', className: 'px-1 text-overline font-bold uppercase text-on-surface-variant' }, 'Referencias a imprimir'),

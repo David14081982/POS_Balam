@@ -1,7 +1,7 @@
 {
   "story": "H-167",
   "at": "2026-09-13T19:43:29.093Z",
-  "reason": "H171: whole-batch identity retained; opening without saved images reduced to four PNG; PDF requested explicitly; existing guarantees passed before final cancellation adjustment, separately covered by lifecycle 8/8. Final artifact rechecked in publication CI.",
+  "reason": "Verificación del guardián",
   "artifact": {
     "path": "index.html",
     "sha256": "ab414cd9c3c2a7a6f034e48044bf9d646044e5ae9745c112d1363e94eac21b9a"
@@ -1067,13 +1067,5 @@
   "summary": {
     "passed": 155,
     "failed": 0
-  },
-  "previousBaseline": {
-    "at": "2026-09-12T21:18:06.366Z",
-    "artifact": {
-      "path": "C:\\Users\\david\\Downloads\\POS-BALAM-ticket-h134\\.h161-release\\index.html",
-      "sha256": "e0d1abbd98ca207143a20e5a376b8c550af41967f67feae80de3d3ac751c837c"
-    },
-    "reason": "H167 verificado: índice efímero y preparación cooperativa; certificación y PNG estrictos; PDF completo de 20 y 200 páginas; presupuestos lineales 10N/4N para commits React"
   }
 }

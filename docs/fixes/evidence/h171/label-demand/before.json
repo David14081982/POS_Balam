@@ -1,0 +1,36 @@
+{
+  "at": "2026-09-13T19:38:06.047Z",
+  "artifact": "47c2b8f1a477c7b183fc63bbe4a515112e67295b1fb717514742b65d57747a34",
+  "cases": [
+    {
+      "name": "opening/{\"count\":973,\"saved\":true}",
+      "ok": false,
+      "details": {
+        "ms": 33396,
+        "requests": 0,
+        "png": 973,
+        "jpeg": 0,
+        "certified": 973,
+        "correct": 973,
+        "unchanged": true,
+        "previews": 4
+      }
+    },
+    {
+      "name": "authority/{\"count\":973,\"saved\":true}",
+      "ok": true
+    }
+  ],
+  "opening": {
+    "ms": 33396,
+    "requests": 0,
+    "png": 973,
+    "jpeg": 0,
+    "certified": 973,
+    "correct": 973,
+    "unchanged": true,
+    "previews": 4
+  },
+  "passed": 1,
+  "failed": 1
+}

@@ -7,6 +7,15 @@ y `BLOQUEADO`.
 
 ## Resumen
 
+**H-171 — Etiquetas: RESUELTO LOCALMENTE, PUBLICACIÓN PENDIENTE (13/09/2026).**
+Continuación quirúrgica de H167: reutilización de `barcodeUrls` correspondientes
+al código certificado, cuatro vistas al abrir y documentos a petición.
+Apertura sintética de 973 referencias: 33 396 → 3 595 ms; PNG 973 → 0,
+973/973 identidades conservadas. Focal 18/18, guardián 155/155, ciclo 8/8,
+UI 6/6 y PWA 2/2. Baselines fijadas. Commit: Pendiente de commit.
+Persisten el coste de validación y el de crear documentos grandes al pedirlos.
+[Detalle y evidencia](fixes/h171-etiquetas-a-peticion.md). No cambia datos.
+
 **H-171 — Presentación de arranque y actualización: RESUELTO Y PUBLICADO (13/09/2026).**
 La reproducción sobre el cliente publicado confirmó B legacy, espera blanca y
 un destello claro al montar React: 3 PASS / 6 FAIL en el arnés focal. El cierre

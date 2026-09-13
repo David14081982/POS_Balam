@@ -166,6 +166,8 @@ async function measure(page, count, phase, action, expectedCopies, withPrice) {
   await page.getByTestId('label-modal').waitFor();
   const modalMs = Date.now() - start;
   if (count < 300) {
+    // H171: preparar un documento ahora requiere la petición explícita.
+    await page.getByTestId('labels-download').click();
     await bounded(page.waitForFunction(() => {
       const button = document.querySelector('[data-testid="labels-download"]');
       return button && !button.disabled && window.__h167.pdfCompleted > window.__h167.pdfStart;

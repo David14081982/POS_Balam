@@ -190,6 +190,7 @@ try {
     // host load cannot make Playwright arrive after the final page was encoded.
     await page.evaluate(() => { window.__h167.arm = { trigger: 'jpeg', mode: 'close' }; });
     await open();
+    await ready(); await page.getByTestId('labels-download').click();
     await page.waitForFunction(() => window.__h167.trace.some(row => row.event === 'close'), null, { timeout: 30000 });
     await page.getByTestId('label-modal').waitFor({ state: 'detached' });
     const closed = await counters();
@@ -233,7 +234,7 @@ try {
   });
 
   await scenario('Cambiar barcode cuando el PDF está listo bloquea salidas sin reutilizar la certificación anterior', async () => {
-    await fixture(2); await open(); await ready(); const before = await counters();
+    await fixture(2); await open(); await pdf(); const before = await counters();
     await page.evaluate(() => {
       window.__h167.snapshot.products[0].barcodeCode = window.__h167.snapshot.products[1].barcodeCode;
       ReactDOM.flushSync(() => DATA.replaceFromOnline(window.__h167.snapshot));
@@ -246,7 +247,7 @@ try {
   });
 
   await scenario('Referencia desaparecida retira el PDF anterior y todas las salidas', async () => {
-    await fixture(1); await open(); await ready(); const before = await counters();
+    await fixture(1); await open(); await pdf(); const before = await counters();
     await page.evaluate(() => {
       window.__h167.snapshot.products = [];
       ReactDOM.flushSync(() => DATA.replaceFromOnline(window.__h167.snapshot));
@@ -269,7 +270,8 @@ try {
     assert.notEqual(revision.after, revision.before); assert.equal(revision.invalidated, true);
     await ready(); const after = await counters();
     assert.equal(after.batch, before.batch + 1); assert.equal(after.certified, before.certified + 2);
-    assert.equal(after.png, before.png + 2); assert.equal(after.jpegStarted, before.jpegStarted + 2);
+    assert.equal(after.png, before.png + 2); assert.equal(after.jpegStarted, before.jpegStarted);
+    const current = await pdf(); assert.equal(current.pages, 2);
     return { revision, before, after };
   });
 

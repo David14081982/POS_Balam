@@ -13,6 +13,10 @@ sesión de chat.
 
 ## Correcciones registradas
 
+- [h171-etiquetas-a-peticion.md](h171-etiquetas-a-peticion.md) — misma H171,
+  corrección focal de Etiquetas: reutiliza imágenes de códigos certificados,
+  cuatro vistas al abrir y documentos a petición. Focal 18/18; publicación pendiente.
+
 - [h171-arranque-marca.md](h171-arranque-marca.md) — misma H171, corrección del
   arranque tras reporte OWNER: logo de empresa, actualización oscura y cobertura
   continua hasta React; 9/9 focales y guardas conservadas. PUBLICADO Y VERIFICADO

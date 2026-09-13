@@ -1,0 +1,155 @@
+{
+  "at": "2026-09-13T19:49:58.007Z",
+  "artifact": "7c20c7bcfa26ca11bf9fbbacb106c43906ec1fce1aece364e7099b3281a2ccd2",
+  "cases": [
+    {
+      "name": "opening/{\"count\":973,\"saved\":true}",
+      "ok": true,
+      "details": {
+        "ms": 3595,
+        "requests": 4,
+        "png": 0,
+        "jpeg": 0,
+        "certified": 973,
+        "correct": 973,
+        "unchanged": true,
+        "previews": 4
+      }
+    },
+    {
+      "name": "authority/{\"count\":973,\"saved\":true}",
+      "ok": true
+    },
+    {
+      "name": "reopen/reuses-saved-and-recertifies",
+      "ok": true,
+      "details": {
+        "png": 0,
+        "jpeg": 0,
+        "certified": 1946
+      }
+    },
+    {
+      "name": "opening/{\"count\":3,\"saved\":true}",
+      "ok": true,
+      "details": {
+        "ms": 1134,
+        "requests": 3,
+        "png": 0,
+        "jpeg": 0,
+        "certified": 3,
+        "correct": 3,
+        "unchanged": true,
+        "previews": 3
+      }
+    },
+    {
+      "name": "authority/{\"count\":3,\"saved\":true}",
+      "ok": true
+    },
+    {
+      "name": "pdf/{\"count\":3,\"saved\":true}",
+      "ok": true
+    },
+    {
+      "name": "print/complete-embedded-images",
+      "ok": true
+    },
+    {
+      "name": "opening/{\"count\":3,\"saved\":false}",
+      "ok": true,
+      "details": {
+        "ms": 870,
+        "requests": 0,
+        "png": 3,
+        "jpeg": 0,
+        "certified": 3,
+        "correct": 3,
+        "unchanged": true,
+        "previews": 3
+      }
+    },
+    {
+      "name": "authority/{\"count\":3,\"saved\":false}",
+      "ok": true
+    },
+    {
+      "name": "pdf/{\"count\":3,\"saved\":false}",
+      "ok": true
+    },
+    {
+      "name": "opening/{\"count\":3,\"saved\":\"wrong-code\"}",
+      "ok": true,
+      "details": {
+        "ms": 834,
+        "requests": 0,
+        "png": 3,
+        "jpeg": 0,
+        "certified": 3,
+        "correct": 3,
+        "unchanged": true,
+        "previews": 3
+      }
+    },
+    {
+      "name": "authority/{\"count\":3,\"saved\":\"wrong-code\"}",
+      "ok": true
+    },
+    {
+      "name": "pdf/{\"count\":3,\"saved\":\"wrong-code\"}",
+      "ok": true
+    },
+    {
+      "name": "opening/{\"count\":3,\"saved\":true,\"broken\":true}",
+      "ok": true,
+      "details": {
+        "ms": 616,
+        "requests": 3,
+        "png": 3,
+        "jpeg": 0,
+        "certified": 3,
+        "correct": 3,
+        "unchanged": true,
+        "previews": 3
+      }
+    },
+    {
+      "name": "authority/{\"count\":3,\"saved\":true,\"broken\":true}",
+      "ok": true
+    },
+    {
+      "name": "pdf/{\"count\":3,\"saved\":true,\"broken\":true}",
+      "ok": true
+    },
+    {
+      "name": "opening/{\"count\":3,\"saved\":true,\"invalid\":true}",
+      "ok": true,
+      "details": {
+        "ms": 646,
+        "requests": 0,
+        "png": 0,
+        "jpeg": 0,
+        "certified": 3,
+        "correct": 2,
+        "unchanged": true,
+        "previews": 0
+      }
+    },
+    {
+      "name": "authority/{\"count\":3,\"saved\":true,\"invalid\":true}",
+      "ok": true
+    }
+  ],
+  "opening": {
+    "ms": 3595,
+    "requests": 4,
+    "png": 0,
+    "jpeg": 0,
+    "certified": 973,
+    "correct": 973,
+    "unchanged": true,
+    "previews": 4
+  },
+  "passed": 18,
+  "failed": 0
+}
