@@ -7698,7 +7698,7 @@ el transporte de configuración de la prueba es controlado, sin escrituras reale
 
 ## H-169 — Confirmación pendiente oculta y bloquea toda la aplicación
 
-**Estado:** RESUELTO en interfaz; publicado y verificado.
+**Estado:** RESUELTO en interfaz; publicado, verificado y certificado A/B/C.
 **Fecha:** 12/09/2026. **Commit:** `8c037f091ed1b6729a141e10a02873cf44741153`.
 **Problema:** después de una operación, App sustituye la interfaz por un aviso
 fijo; el formulario queda invisible e inerte y la confirmación no ofrece consulta.
@@ -7711,7 +7711,7 @@ sesión; cabecera distingue guardado/confirmación. Arranque y permisos conserva
 **Pruebas:** previo 0/1; UI final 6/6, PWA 2/2, arranque/AUTH 7/7,
 transporte 13/13, cuentas 1/1, CONFIG/AUTH/PWA 3/3; arquitectura y build exit 0.
 **Artefacto:** `608541d6d0eb85040c95e780704dddb8d80056beb969447ed66ea8c27025cc41`.
-**Residual:** A/B/C real y terminal física NO CERTIFICADO. La respuesta remota
+**Residual:** terminal física e impresora NO CERTIFICADO. La respuesta remota
 puede seguir pendiente; no se fuerza éxito ni se habilitan comandos duplicados.
 Sin cambios a STORE, AUTH, SQL ni datos. La pestaña debe adoptar el cliente nuevo.
 **Despliegue:** main 8c037f0; Actions 34725515390 SUCCESS (regresiones y Pages).
@@ -7719,6 +7719,12 @@ Ambos HTML y SW públicos HTTP 200 e idénticos byte a byte: 3/3.
 Evidencia: `docs/fixes/evidence/h169-publication.json` y `h169-workflow.json`.
 **Documento:** `docs/fixes/confirmacion-sin-bloqueo-h169.md`.
 
-**Certificación solicitada:** A/B/C real en curso. El certificador conservaba
-una aserción del texto bloqueante anterior; se adapta al contrato H-169 antes
-de ejecutar la matriz, sin cambiar el artefacto ni relajar las garantías remotas.
+**Certificación real:** 21/21, `certified=true`, 12/09/2026, mismo HTML publicado.
+Tres contextos independientes contra Supabase; 1,619 filas previas en 18 tablas
+preservadas, cero pérdidas y proyecciones A/B/C iguales a la autoridad.
+5 perfiles QA desactivados, 2 cuentas Auth bloqueadas y 3 instalaciones retiradas;
+historial QA conservado. Certificador `89a2ead53bfbf20815cbfc2d43de8cfd2306bad7`.
+Matriz: `docs/fixes/evidence/h169-live-matrix.json`; hashes y alcance en el documento.
+CI 34726105287 aprobó regresión pero no inició operaciones live por token ausente;
+se completó localmente con sesión Supabase autorizada. Ese secreto en GitHub
+sigue pendiente para futuras ejecuciones allí; no se cambió el cliente publicado.

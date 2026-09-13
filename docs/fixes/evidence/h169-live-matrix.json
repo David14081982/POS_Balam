@@ -1,0 +1,3935 @@
+{
+  "run": "2607cae4-404d-48bc-bdfc-6381b9c4a173",
+  "project": "telohdbvbvsfmwyriflz",
+  "build": "2026-09-12-h166-online",
+  "artifactPath": "C:\\Users\\david\\Downloads\\POS-BALAM-ticket-h134\\.h161-release\\index.html",
+  "artifactSha256": "608541d6d0eb85040c95e780704dddb8d80056beb969447ed66ea8c27025cc41",
+  "certifierSha256": "cb5f25a36adcd856c76cacbbb2a490416c3e43896ce284ac77b97df763cd1d24",
+  "startedAt": "2026-09-12T23:47:34.101Z",
+  "profiles": 3,
+  "certified": true,
+  "cases": [
+    {
+      "name": "A/B/C bootstrap from authoritative snapshot",
+      "pass": true,
+      "elapsedMs": 36829,
+      "evidence": [
+        {
+          "domain": "products",
+          "fields": [
+            "id",
+            "nombre",
+            "precio",
+            "stockQuantity",
+            "sizeCode",
+            "barcodeCode",
+            "referenceFamilyId",
+            "barcodeAliases"
+          ],
+          "rows": 973,
+          "sha256": "6baa7abc7d363b3d66736f335e40ecd925a7b6866f783d5406cfa359df99aea5",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "clients",
+          "fields": [
+            "id",
+            "nombre",
+            "total",
+            "compras"
+          ],
+          "rows": 1,
+          "sha256": "0399163b7e5c4109d494ec68c4ee03cc873d71ffa87074bdc1bd869348eaf8fd",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "sellers",
+          "fields": [
+            "id",
+            "nombre",
+            "active",
+            "comisionAcum",
+            "ventasMes",
+            "ventasNum"
+          ],
+          "rows": 25,
+          "sha256": "5ef4a7a18b72a2f7f3e9919b6c8b7a0c0e724a1629a699488b2bfc2d9e68bfb9",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "promos",
+          "fields": [
+            "id",
+            "nombre",
+            "valor",
+            "pausado",
+            "scope"
+          ],
+          "rows": 5,
+          "sha256": "a55f6b6a1cd3f8f399a5feaa27643dd0b6fd4726c5b4562a8155aa343f46d9ff",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "sales",
+          "fields": [
+            "folio",
+            "total",
+            "subtotal",
+            "iva",
+            "estado",
+            "saldo",
+            "anticipo",
+            "_operationId",
+            "_stockReserved"
+          ],
+          "rows": 1,
+          "sha256": "98d2b8d79223f9378d6d882c2bcd019d4f080f0f9921c439730e74bbb335e405",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "payments",
+          "fields": [
+            "id",
+            "folio",
+            "monto",
+            "efectivo",
+            "tarjeta",
+            "transferencia",
+            "otro"
+          ],
+          "rows": 1,
+          "sha256": "c06537f9cad33ea30c89ab4622dd1452a616dc418c6c77f7aaad4a56561411fe",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "returns",
+          "fields": [
+            "id",
+            "folio",
+            "total"
+          ],
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "exchanges",
+          "fields": [
+            "id",
+            "folio",
+            "diferencia",
+            "origenFolio",
+            "valorReconocido",
+            "valorEntregado"
+          ],
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "liquidations",
+          "fields": [
+            "id",
+            "monto",
+            "sellerId",
+            "tipo"
+          ],
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "movements",
+          "fields": [
+            "id",
+            "tipo",
+            "cant",
+            "sku",
+            "ref",
+            "productId",
+            "operationId"
+          ],
+          "rows": 1,
+          "sha256": "1b5aabd90e034ff048499f9cda2d385e71cd3f008edd195604230fdd18ec7ea7",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "stock V1/V2",
+          "rows": 973,
+          "sha256": "6bcc3045d20a40afadfd7a9f39cbc2abcdfb0ce66caea257724e74f37d4e7436"
+        },
+        {
+          "domain": "sale_items",
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "domain": "return_items",
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "domain": "exchange_items",
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        }
+      ]
+    },
+    {
+      "name": "Create V2 products with barcode V3",
+      "pass": true,
+      "elapsedMs": 37891,
+      "evidence": [
+        {
+          "domain": "products",
+          "fields": [
+            "id",
+            "nombre",
+            "precio",
+            "stockQuantity",
+            "sizeCode",
+            "barcodeCode",
+            "referenceFamilyId",
+            "barcodeAliases"
+          ],
+          "rows": 980,
+          "sha256": "6f47dafee3f4363be6d332cfcb6ca283e9a126c205b1f4f955fe5c699d16a807",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "clients",
+          "fields": [
+            "id",
+            "nombre",
+            "total",
+            "compras"
+          ],
+          "rows": 1,
+          "sha256": "0399163b7e5c4109d494ec68c4ee03cc873d71ffa87074bdc1bd869348eaf8fd",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "sellers",
+          "fields": [
+            "id",
+            "nombre",
+            "active",
+            "comisionAcum",
+            "ventasMes",
+            "ventasNum"
+          ],
+          "rows": 25,
+          "sha256": "5ef4a7a18b72a2f7f3e9919b6c8b7a0c0e724a1629a699488b2bfc2d9e68bfb9",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "promos",
+          "fields": [
+            "id",
+            "nombre",
+            "valor",
+            "pausado",
+            "scope"
+          ],
+          "rows": 5,
+          "sha256": "a55f6b6a1cd3f8f399a5feaa27643dd0b6fd4726c5b4562a8155aa343f46d9ff",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "sales",
+          "fields": [
+            "folio",
+            "total",
+            "subtotal",
+            "iva",
+            "estado",
+            "saldo",
+            "anticipo",
+            "_operationId",
+            "_stockReserved"
+          ],
+          "rows": 1,
+          "sha256": "98d2b8d79223f9378d6d882c2bcd019d4f080f0f9921c439730e74bbb335e405",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "payments",
+          "fields": [
+            "id",
+            "folio",
+            "monto",
+            "efectivo",
+            "tarjeta",
+            "transferencia",
+            "otro"
+          ],
+          "rows": 1,
+          "sha256": "c06537f9cad33ea30c89ab4622dd1452a616dc418c6c77f7aaad4a56561411fe",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "returns",
+          "fields": [
+            "id",
+            "folio",
+            "total"
+          ],
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "exchanges",
+          "fields": [
+            "id",
+            "folio",
+            "diferencia",
+            "origenFolio",
+            "valorReconocido",
+            "valorEntregado"
+          ],
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "liquidations",
+          "fields": [
+            "id",
+            "monto",
+            "sellerId",
+            "tipo"
+          ],
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "movements",
+          "fields": [
+            "id",
+            "tipo",
+            "cant",
+            "sku",
+            "ref",
+            "productId",
+            "operationId"
+          ],
+          "rows": 1,
+          "sha256": "1b5aabd90e034ff048499f9cda2d385e71cd3f008edd195604230fdd18ec7ea7",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "stock V1/V2",
+          "rows": 980,
+          "sha256": "d1275bd965265537c809056937c7bb5b16727fc6f1c1f38be2a5a179ada34928"
+        },
+        {
+          "domain": "sale_items",
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "domain": "return_items",
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "domain": "exchange_items",
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        }
+      ]
+    },
+    {
+      "name": "H166 conditional reads and real Realtime invalidation",
+      "pass": true,
+      "elapsedMs": 44920,
+      "evidence": {
+        "realtimeSignals": [
+          4,
+          4
+        ],
+        "idleChecks": 3,
+        "idleFullSnapshots": 0,
+        "stale": 0
+      }
+    },
+    {
+      "name": "Client and customer profile",
+      "pass": true,
+      "elapsedMs": 35865,
+      "evidence": [
+        {
+          "domain": "products",
+          "fields": [
+            "id",
+            "nombre",
+            "precio",
+            "stockQuantity",
+            "sizeCode",
+            "barcodeCode",
+            "referenceFamilyId",
+            "barcodeAliases"
+          ],
+          "rows": 980,
+          "sha256": "84342a3a02286bca30dc97abe55ef132cac80bcdd2035e8a23a11b940883ad38",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "clients",
+          "fields": [
+            "id",
+            "nombre",
+            "total",
+            "compras"
+          ],
+          "rows": 2,
+          "sha256": "653718eec20b25cece048619d46c34ebb37b79888f5ca6b8e3bc4f305ac838de",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "sellers",
+          "fields": [
+            "id",
+            "nombre",
+            "active",
+            "comisionAcum",
+            "ventasMes",
+            "ventasNum"
+          ],
+          "rows": 25,
+          "sha256": "5ef4a7a18b72a2f7f3e9919b6c8b7a0c0e724a1629a699488b2bfc2d9e68bfb9",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "promos",
+          "fields": [
+            "id",
+            "nombre",
+            "valor",
+            "pausado",
+            "scope"
+          ],
+          "rows": 5,
+          "sha256": "a55f6b6a1cd3f8f399a5feaa27643dd0b6fd4726c5b4562a8155aa343f46d9ff",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "sales",
+          "fields": [
+            "folio",
+            "total",
+            "subtotal",
+            "iva",
+            "estado",
+            "saldo",
+            "anticipo",
+            "_operationId",
+            "_stockReserved"
+          ],
+          "rows": 1,
+          "sha256": "98d2b8d79223f9378d6d882c2bcd019d4f080f0f9921c439730e74bbb335e405",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "payments",
+          "fields": [
+            "id",
+            "folio",
+            "monto",
+            "efectivo",
+            "tarjeta",
+            "transferencia",
+            "otro"
+          ],
+          "rows": 1,
+          "sha256": "c06537f9cad33ea30c89ab4622dd1452a616dc418c6c77f7aaad4a56561411fe",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "returns",
+          "fields": [
+            "id",
+            "folio",
+            "total"
+          ],
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "exchanges",
+          "fields": [
+            "id",
+            "folio",
+            "diferencia",
+            "origenFolio",
+            "valorReconocido",
+            "valorEntregado"
+          ],
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "liquidations",
+          "fields": [
+            "id",
+            "monto",
+            "sellerId",
+            "tipo"
+          ],
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "movements",
+          "fields": [
+            "id",
+            "tipo",
+            "cant",
+            "sku",
+            "ref",
+            "productId",
+            "operationId"
+          ],
+          "rows": 1,
+          "sha256": "1b5aabd90e034ff048499f9cda2d385e71cd3f008edd195604230fdd18ec7ea7",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "stock V1/V2",
+          "rows": 980,
+          "sha256": "d1275bd965265537c809056937c7bb5b16727fc6f1c1f38be2a5a179ada34928"
+        },
+        {
+          "domain": "sale_items",
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "domain": "return_items",
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "domain": "exchange_items",
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        }
+      ]
+    },
+    {
+      "name": "Concurrent product edit rejects stale version",
+      "pass": true,
+      "elapsedMs": 26335,
+      "evidence": [
+        {
+          "domain": "products",
+          "fields": [
+            "id",
+            "nombre",
+            "precio",
+            "stockQuantity",
+            "sizeCode",
+            "barcodeCode",
+            "referenceFamilyId",
+            "barcodeAliases"
+          ],
+          "rows": 980,
+          "sha256": "37fe535e5bbb3abd29aff54abc59ec510ce1f33f652ac517255f92692390caef",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "clients",
+          "fields": [
+            "id",
+            "nombre",
+            "total",
+            "compras"
+          ],
+          "rows": 2,
+          "sha256": "653718eec20b25cece048619d46c34ebb37b79888f5ca6b8e3bc4f305ac838de",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "sellers",
+          "fields": [
+            "id",
+            "nombre",
+            "active",
+            "comisionAcum",
+            "ventasMes",
+            "ventasNum"
+          ],
+          "rows": 25,
+          "sha256": "5ef4a7a18b72a2f7f3e9919b6c8b7a0c0e724a1629a699488b2bfc2d9e68bfb9",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "promos",
+          "fields": [
+            "id",
+            "nombre",
+            "valor",
+            "pausado",
+            "scope"
+          ],
+          "rows": 5,
+          "sha256": "a55f6b6a1cd3f8f399a5feaa27643dd0b6fd4726c5b4562a8155aa343f46d9ff",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "sales",
+          "fields": [
+            "folio",
+            "total",
+            "subtotal",
+            "iva",
+            "estado",
+            "saldo",
+            "anticipo",
+            "_operationId",
+            "_stockReserved"
+          ],
+          "rows": 1,
+          "sha256": "98d2b8d79223f9378d6d882c2bcd019d4f080f0f9921c439730e74bbb335e405",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "payments",
+          "fields": [
+            "id",
+            "folio",
+            "monto",
+            "efectivo",
+            "tarjeta",
+            "transferencia",
+            "otro"
+          ],
+          "rows": 1,
+          "sha256": "c06537f9cad33ea30c89ab4622dd1452a616dc418c6c77f7aaad4a56561411fe",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "returns",
+          "fields": [
+            "id",
+            "folio",
+            "total"
+          ],
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "exchanges",
+          "fields": [
+            "id",
+            "folio",
+            "diferencia",
+            "origenFolio",
+            "valorReconocido",
+            "valorEntregado"
+          ],
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "liquidations",
+          "fields": [
+            "id",
+            "monto",
+            "sellerId",
+            "tipo"
+          ],
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "movements",
+          "fields": [
+            "id",
+            "tipo",
+            "cant",
+            "sku",
+            "ref",
+            "productId",
+            "operationId"
+          ],
+          "rows": 1,
+          "sha256": "1b5aabd90e034ff048499f9cda2d385e71cd3f008edd195604230fdd18ec7ea7",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "stock V1/V2",
+          "rows": 980,
+          "sha256": "d1275bd965265537c809056937c7bb5b16727fc6f1c1f38be2a5a179ada34928"
+        },
+        {
+          "domain": "sale_items",
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "domain": "return_items",
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "domain": "exchange_items",
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        }
+      ],
+      "concurrency": {
+        "requestIds": [
+          "a5e8144a-89de-47ea-ad08-11b9f5a67df3",
+          "e26bfab5-8ecd-47f0-b9af-6fae1c7cfd3e"
+        ],
+        "rejection": {
+          "code": "40001",
+          "details": "products:07e7f317-807e-4382-abd3-517f2f109484",
+          "message": "ENTITY_VERSION_CONFLICT"
+        }
+      }
+    },
+    {
+      "name": "Delete while another terminal uses product",
+      "pass": true,
+      "elapsedMs": 54393,
+      "evidence": [
+        {
+          "domain": "products",
+          "fields": [
+            "id",
+            "nombre",
+            "precio",
+            "stockQuantity",
+            "sizeCode",
+            "barcodeCode",
+            "referenceFamilyId",
+            "barcodeAliases"
+          ],
+          "rows": 979,
+          "sha256": "50ed77711660d537f44a0319666a36788bdf2ae737f8bd423113769d4fab7b83",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "clients",
+          "fields": [
+            "id",
+            "nombre",
+            "total",
+            "compras"
+          ],
+          "rows": 2,
+          "sha256": "653718eec20b25cece048619d46c34ebb37b79888f5ca6b8e3bc4f305ac838de",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "sellers",
+          "fields": [
+            "id",
+            "nombre",
+            "active",
+            "comisionAcum",
+            "ventasMes",
+            "ventasNum"
+          ],
+          "rows": 25,
+          "sha256": "5ef4a7a18b72a2f7f3e9919b6c8b7a0c0e724a1629a699488b2bfc2d9e68bfb9",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "promos",
+          "fields": [
+            "id",
+            "nombre",
+            "valor",
+            "pausado",
+            "scope"
+          ],
+          "rows": 5,
+          "sha256": "a55f6b6a1cd3f8f399a5feaa27643dd0b6fd4726c5b4562a8155aa343f46d9ff",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "sales",
+          "fields": [
+            "folio",
+            "total",
+            "subtotal",
+            "iva",
+            "estado",
+            "saldo",
+            "anticipo",
+            "_operationId",
+            "_stockReserved"
+          ],
+          "rows": 1,
+          "sha256": "98d2b8d79223f9378d6d882c2bcd019d4f080f0f9921c439730e74bbb335e405",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "payments",
+          "fields": [
+            "id",
+            "folio",
+            "monto",
+            "efectivo",
+            "tarjeta",
+            "transferencia",
+            "otro"
+          ],
+          "rows": 1,
+          "sha256": "c06537f9cad33ea30c89ab4622dd1452a616dc418c6c77f7aaad4a56561411fe",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "returns",
+          "fields": [
+            "id",
+            "folio",
+            "total"
+          ],
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "exchanges",
+          "fields": [
+            "id",
+            "folio",
+            "diferencia",
+            "origenFolio",
+            "valorReconocido",
+            "valorEntregado"
+          ],
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "liquidations",
+          "fields": [
+            "id",
+            "monto",
+            "sellerId",
+            "tipo"
+          ],
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "movements",
+          "fields": [
+            "id",
+            "tipo",
+            "cant",
+            "sku",
+            "ref",
+            "productId",
+            "operationId"
+          ],
+          "rows": 1,
+          "sha256": "1b5aabd90e034ff048499f9cda2d385e71cd3f008edd195604230fdd18ec7ea7",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "stock V1/V2",
+          "rows": 979,
+          "sha256": "d9dc2db1951d291772f886feb31e2430e2e261dd60c0bca12b0efece294831fe"
+        },
+        {
+          "domain": "sale_items",
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "domain": "return_items",
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "domain": "exchange_items",
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        }
+      ],
+      "concurrency": {
+        "requestIds": [
+          "4ae7965e-cc5f-48c8-a350-237a9099a816",
+          "d5bf7771-4944-4837-bdca-2eb6c9eaf4a3"
+        ],
+        "rejection": {
+          "code": "40001",
+          "details": null,
+          "message": "PRODUCT_VERSION_CONFLICT"
+        }
+      }
+    },
+    {
+      "name": "Stock movement / reference reclassification",
+      "pass": true,
+      "elapsedMs": 24134,
+      "evidence": [
+        {
+          "domain": "products",
+          "fields": [
+            "id",
+            "nombre",
+            "precio",
+            "stockQuantity",
+            "sizeCode",
+            "barcodeCode",
+            "referenceFamilyId",
+            "barcodeAliases"
+          ],
+          "rows": 979,
+          "sha256": "2b1a242c288e10796a10770ccd9ee97ad970d2fc19503b6755ec8026ad8b12fb",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "clients",
+          "fields": [
+            "id",
+            "nombre",
+            "total",
+            "compras"
+          ],
+          "rows": 2,
+          "sha256": "653718eec20b25cece048619d46c34ebb37b79888f5ca6b8e3bc4f305ac838de",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "sellers",
+          "fields": [
+            "id",
+            "nombre",
+            "active",
+            "comisionAcum",
+            "ventasMes",
+            "ventasNum"
+          ],
+          "rows": 25,
+          "sha256": "5ef4a7a18b72a2f7f3e9919b6c8b7a0c0e724a1629a699488b2bfc2d9e68bfb9",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "promos",
+          "fields": [
+            "id",
+            "nombre",
+            "valor",
+            "pausado",
+            "scope"
+          ],
+          "rows": 5,
+          "sha256": "a55f6b6a1cd3f8f399a5feaa27643dd0b6fd4726c5b4562a8155aa343f46d9ff",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "sales",
+          "fields": [
+            "folio",
+            "total",
+            "subtotal",
+            "iva",
+            "estado",
+            "saldo",
+            "anticipo",
+            "_operationId",
+            "_stockReserved"
+          ],
+          "rows": 1,
+          "sha256": "98d2b8d79223f9378d6d882c2bcd019d4f080f0f9921c439730e74bbb335e405",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "payments",
+          "fields": [
+            "id",
+            "folio",
+            "monto",
+            "efectivo",
+            "tarjeta",
+            "transferencia",
+            "otro"
+          ],
+          "rows": 1,
+          "sha256": "c06537f9cad33ea30c89ab4622dd1452a616dc418c6c77f7aaad4a56561411fe",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "returns",
+          "fields": [
+            "id",
+            "folio",
+            "total"
+          ],
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "exchanges",
+          "fields": [
+            "id",
+            "folio",
+            "diferencia",
+            "origenFolio",
+            "valorReconocido",
+            "valorEntregado"
+          ],
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "liquidations",
+          "fields": [
+            "id",
+            "monto",
+            "sellerId",
+            "tipo"
+          ],
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "movements",
+          "fields": [
+            "id",
+            "tipo",
+            "cant",
+            "sku",
+            "ref",
+            "productId",
+            "operationId"
+          ],
+          "rows": 3,
+          "sha256": "6233c37d6a79b6528f8c3f9de656ff6f940b183ce742362ddd184565dfaf996c",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "stock V1/V2",
+          "rows": 979,
+          "sha256": "2f1e0fd449b0ba940716e382a7f8bcf915e52b9ecb0ad0be891f3d05038ff401"
+        },
+        {
+          "domain": "sale_items",
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "domain": "return_items",
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "domain": "exchange_items",
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        }
+      ]
+    },
+    {
+      "name": "Promotion and isolated commercial configuration",
+      "pass": true,
+      "elapsedMs": 50666,
+      "evidence": {
+        "configurationKey": "qa.h164.2607cae4-404d-48bc-bdfc-6381b9c4a173",
+        "domains": [
+          {
+            "domain": "products",
+            "fields": [
+              "id",
+              "nombre",
+              "precio",
+              "stockQuantity",
+              "sizeCode",
+              "barcodeCode",
+              "referenceFamilyId",
+              "barcodeAliases"
+            ],
+            "rows": 979,
+            "sha256": "2b1a242c288e10796a10770ccd9ee97ad970d2fc19503b6755ec8026ad8b12fb",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "clients",
+            "fields": [
+              "id",
+              "nombre",
+              "total",
+              "compras"
+            ],
+            "rows": 2,
+            "sha256": "653718eec20b25cece048619d46c34ebb37b79888f5ca6b8e3bc4f305ac838de",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "sellers",
+            "fields": [
+              "id",
+              "nombre",
+              "active",
+              "comisionAcum",
+              "ventasMes",
+              "ventasNum"
+            ],
+            "rows": 25,
+            "sha256": "5ef4a7a18b72a2f7f3e9919b6c8b7a0c0e724a1629a699488b2bfc2d9e68bfb9",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "promos",
+            "fields": [
+              "id",
+              "nombre",
+              "valor",
+              "pausado",
+              "scope"
+            ],
+            "rows": 6,
+            "sha256": "7496319652e8c6b250fe055ac5e34a2ecc3811a35ce155635c72a7aaebfdf820",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "sales",
+            "fields": [
+              "folio",
+              "total",
+              "subtotal",
+              "iva",
+              "estado",
+              "saldo",
+              "anticipo",
+              "_operationId",
+              "_stockReserved"
+            ],
+            "rows": 1,
+            "sha256": "98d2b8d79223f9378d6d882c2bcd019d4f080f0f9921c439730e74bbb335e405",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "payments",
+            "fields": [
+              "id",
+              "folio",
+              "monto",
+              "efectivo",
+              "tarjeta",
+              "transferencia",
+              "otro"
+            ],
+            "rows": 1,
+            "sha256": "c06537f9cad33ea30c89ab4622dd1452a616dc418c6c77f7aaad4a56561411fe",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "returns",
+            "fields": [
+              "id",
+              "folio",
+              "total"
+            ],
+            "rows": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "exchanges",
+            "fields": [
+              "id",
+              "folio",
+              "diferencia",
+              "origenFolio",
+              "valorReconocido",
+              "valorEntregado"
+            ],
+            "rows": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "liquidations",
+            "fields": [
+              "id",
+              "monto",
+              "sellerId",
+              "tipo"
+            ],
+            "rows": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "movements",
+            "fields": [
+              "id",
+              "tipo",
+              "cant",
+              "sku",
+              "ref",
+              "productId",
+              "operationId"
+            ],
+            "rows": 3,
+            "sha256": "6233c37d6a79b6528f8c3f9de656ff6f940b183ce742362ddd184565dfaf996c",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "stock V1/V2",
+            "rows": 979,
+            "sha256": "2f1e0fd449b0ba940716e382a7f8bcf915e52b9ecb0ad0be891f3d05038ff401"
+          },
+          {
+            "domain": "sale_items",
+            "rows": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          },
+          {
+            "domain": "return_items",
+            "rows": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          },
+          {
+            "domain": "exchange_items",
+            "rows": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Auth account gateway creates one exact QA account and profile",
+      "pass": true,
+      "elapsedMs": 25166,
+      "evidence": {
+        "requestId": "2e5f432d-17ec-4b5a-a536-d2eb93cc188d",
+        "authUserId": "0c854997-d4cb-4f5a-bf19-6640498c8219",
+        "receiptState": "completed",
+        "emailsSent": 0,
+        "domains": [
+          {
+            "domain": "products",
+            "fields": [
+              "id",
+              "nombre",
+              "precio",
+              "stockQuantity",
+              "sizeCode",
+              "barcodeCode",
+              "referenceFamilyId",
+              "barcodeAliases"
+            ],
+            "rows": 979,
+            "sha256": "2b1a242c288e10796a10770ccd9ee97ad970d2fc19503b6755ec8026ad8b12fb",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "clients",
+            "fields": [
+              "id",
+              "nombre",
+              "total",
+              "compras"
+            ],
+            "rows": 2,
+            "sha256": "653718eec20b25cece048619d46c34ebb37b79888f5ca6b8e3bc4f305ac838de",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "sellers",
+            "fields": [
+              "id",
+              "nombre",
+              "active",
+              "comisionAcum",
+              "ventasMes",
+              "ventasNum"
+            ],
+            "rows": 26,
+            "sha256": "ad420274c0801bfad88862f1ff15990311efc9fdd55839b797be7dcc674321e5",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "promos",
+            "fields": [
+              "id",
+              "nombre",
+              "valor",
+              "pausado",
+              "scope"
+            ],
+            "rows": 6,
+            "sha256": "7496319652e8c6b250fe055ac5e34a2ecc3811a35ce155635c72a7aaebfdf820",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "sales",
+            "fields": [
+              "folio",
+              "total",
+              "subtotal",
+              "iva",
+              "estado",
+              "saldo",
+              "anticipo",
+              "_operationId",
+              "_stockReserved"
+            ],
+            "rows": 1,
+            "sha256": "98d2b8d79223f9378d6d882c2bcd019d4f080f0f9921c439730e74bbb335e405",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "payments",
+            "fields": [
+              "id",
+              "folio",
+              "monto",
+              "efectivo",
+              "tarjeta",
+              "transferencia",
+              "otro"
+            ],
+            "rows": 1,
+            "sha256": "c06537f9cad33ea30c89ab4622dd1452a616dc418c6c77f7aaad4a56561411fe",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "returns",
+            "fields": [
+              "id",
+              "folio",
+              "total"
+            ],
+            "rows": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "exchanges",
+            "fields": [
+              "id",
+              "folio",
+              "diferencia",
+              "origenFolio",
+              "valorReconocido",
+              "valorEntregado"
+            ],
+            "rows": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "liquidations",
+            "fields": [
+              "id",
+              "monto",
+              "sellerId",
+              "tipo"
+            ],
+            "rows": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "movements",
+            "fields": [
+              "id",
+              "tipo",
+              "cant",
+              "sku",
+              "ref",
+              "productId",
+              "operationId"
+            ],
+            "rows": 3,
+            "sha256": "6233c37d6a79b6528f8c3f9de656ff6f940b183ce742362ddd184565dfaf996c",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "stock V1/V2",
+            "rows": 979,
+            "sha256": "2f1e0fd449b0ba940716e382a7f8bcf915e52b9ecb0ad0be891f3d05038ff401"
+          },
+          {
+            "domain": "sale_items",
+            "rows": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          },
+          {
+            "domain": "return_items",
+            "rows": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          },
+          {
+            "domain": "exchange_items",
+            "rows": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Permission mutation affects only the exact QA account",
+      "pass": true,
+      "elapsedMs": 19222,
+      "evidence": {
+        "targetUserId": "0c854997-d4cb-4f5a-bf19-6640498c8219",
+        "screen": "reportes",
+        "permissionVersion": "bb5858d8ca3123d8db58e8dd97fd1584",
+        "domains": [
+          {
+            "domain": "products",
+            "fields": [
+              "id",
+              "nombre",
+              "precio",
+              "stockQuantity",
+              "sizeCode",
+              "barcodeCode",
+              "referenceFamilyId",
+              "barcodeAliases"
+            ],
+            "rows": 979,
+            "sha256": "2b1a242c288e10796a10770ccd9ee97ad970d2fc19503b6755ec8026ad8b12fb",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "clients",
+            "fields": [
+              "id",
+              "nombre",
+              "total",
+              "compras"
+            ],
+            "rows": 2,
+            "sha256": "653718eec20b25cece048619d46c34ebb37b79888f5ca6b8e3bc4f305ac838de",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "sellers",
+            "fields": [
+              "id",
+              "nombre",
+              "active",
+              "comisionAcum",
+              "ventasMes",
+              "ventasNum"
+            ],
+            "rows": 26,
+            "sha256": "ad420274c0801bfad88862f1ff15990311efc9fdd55839b797be7dcc674321e5",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "promos",
+            "fields": [
+              "id",
+              "nombre",
+              "valor",
+              "pausado",
+              "scope"
+            ],
+            "rows": 6,
+            "sha256": "7496319652e8c6b250fe055ac5e34a2ecc3811a35ce155635c72a7aaebfdf820",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "sales",
+            "fields": [
+              "folio",
+              "total",
+              "subtotal",
+              "iva",
+              "estado",
+              "saldo",
+              "anticipo",
+              "_operationId",
+              "_stockReserved"
+            ],
+            "rows": 1,
+            "sha256": "98d2b8d79223f9378d6d882c2bcd019d4f080f0f9921c439730e74bbb335e405",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "payments",
+            "fields": [
+              "id",
+              "folio",
+              "monto",
+              "efectivo",
+              "tarjeta",
+              "transferencia",
+              "otro"
+            ],
+            "rows": 1,
+            "sha256": "c06537f9cad33ea30c89ab4622dd1452a616dc418c6c77f7aaad4a56561411fe",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "returns",
+            "fields": [
+              "id",
+              "folio",
+              "total"
+            ],
+            "rows": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "exchanges",
+            "fields": [
+              "id",
+              "folio",
+              "diferencia",
+              "origenFolio",
+              "valorReconocido",
+              "valorEntregado"
+            ],
+            "rows": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "liquidations",
+            "fields": [
+              "id",
+              "monto",
+              "sellerId",
+              "tipo"
+            ],
+            "rows": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "movements",
+            "fields": [
+              "id",
+              "tipo",
+              "cant",
+              "sku",
+              "ref",
+              "productId",
+              "operationId"
+            ],
+            "rows": 3,
+            "sha256": "6233c37d6a79b6528f8c3f9de656ff6f940b183ce742362ddd184565dfaf996c",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "stock V1/V2",
+            "rows": 979,
+            "sha256": "2f1e0fd449b0ba940716e382a7f8bcf915e52b9ecb0ad0be891f3d05038ff401"
+          },
+          {
+            "domain": "sale_items",
+            "rows": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          },
+          {
+            "domain": "return_items",
+            "rows": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          },
+          {
+            "domain": "exchange_items",
+            "rows": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Sale / payment / commission / lost response after COMMIT",
+      "pass": true,
+      "elapsedMs": 27902,
+      "evidence": {
+        "commercialRequests": 1,
+        "resolverCalls": 1,
+        "stockDelta": -3,
+        "domains": [
+          {
+            "domain": "products",
+            "fields": [
+              "id",
+              "nombre",
+              "precio",
+              "stockQuantity",
+              "sizeCode",
+              "barcodeCode",
+              "referenceFamilyId",
+              "barcodeAliases"
+            ],
+            "rows": 979,
+            "sha256": "d4564b674b8c0d374278aa19624a34a1d8436480477e520bf5b4fb0626d48eab",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "clients",
+            "fields": [
+              "id",
+              "nombre",
+              "total",
+              "compras"
+            ],
+            "rows": 2,
+            "sha256": "821b8249c96400341d44fef00234888d88ac9d0d38072078c317e5c19fb6dd66",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "sellers",
+            "fields": [
+              "id",
+              "nombre",
+              "active",
+              "comisionAcum",
+              "ventasMes",
+              "ventasNum"
+            ],
+            "rows": 26,
+            "sha256": "6e8d5813b123c64c107dcffe1d52d3a0c41e8e3fcce584ed04a5440a19604a89",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "promos",
+            "fields": [
+              "id",
+              "nombre",
+              "valor",
+              "pausado",
+              "scope"
+            ],
+            "rows": 6,
+            "sha256": "7496319652e8c6b250fe055ac5e34a2ecc3811a35ce155635c72a7aaebfdf820",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "sales",
+            "fields": [
+              "folio",
+              "total",
+              "subtotal",
+              "iva",
+              "estado",
+              "saldo",
+              "anticipo",
+              "_operationId",
+              "_stockReserved"
+            ],
+            "rows": 2,
+            "sha256": "08c66716fd84e200c560abfab3e0ba2aad7e2aa1c3da37439e18a1399bc9bf63",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "payments",
+            "fields": [
+              "id",
+              "folio",
+              "monto",
+              "efectivo",
+              "tarjeta",
+              "transferencia",
+              "otro"
+            ],
+            "rows": 2,
+            "sha256": "cac553ec42d81b1aa4fa2c92d94d1766b8b296d0b2d29742b4d1753f19b36045",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "returns",
+            "fields": [
+              "id",
+              "folio",
+              "total"
+            ],
+            "rows": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "exchanges",
+            "fields": [
+              "id",
+              "folio",
+              "diferencia",
+              "origenFolio",
+              "valorReconocido",
+              "valorEntregado"
+            ],
+            "rows": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "liquidations",
+            "fields": [
+              "id",
+              "monto",
+              "sellerId",
+              "tipo"
+            ],
+            "rows": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "movements",
+            "fields": [
+              "id",
+              "tipo",
+              "cant",
+              "sku",
+              "ref",
+              "productId",
+              "operationId"
+            ],
+            "rows": 4,
+            "sha256": "4482b962a7e79a1addbccb770e63c4af1faee3728e440897aadf65b7313dc7c4",
+            "terminals": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          {
+            "domain": "stock V1/V2",
+            "rows": 979,
+            "sha256": "4a0740aefb8dd2b8d2523f3af6d6ed00941cb1539e9691e8181414b8f8cac55a"
+          },
+          {
+            "domain": "sale_items",
+            "rows": 1,
+            "sha256": "9e38bfeb2517aeac04df0901f61bc8af39b48b0b6260faeefe9857d76f3aed36"
+          },
+          {
+            "domain": "return_items",
+            "rows": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          },
+          {
+            "domain": "exchange_items",
+            "rows": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Two terminals sell the last unit",
+      "pass": true,
+      "elapsedMs": 28505,
+      "evidence": [
+        {
+          "domain": "products",
+          "fields": [
+            "id",
+            "nombre",
+            "precio",
+            "stockQuantity",
+            "sizeCode",
+            "barcodeCode",
+            "referenceFamilyId",
+            "barcodeAliases"
+          ],
+          "rows": 979,
+          "sha256": "dc4b6b5f9568ab9ec05de602ea3a88cacfde073dd243011290eee1c1debf7304",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "clients",
+          "fields": [
+            "id",
+            "nombre",
+            "total",
+            "compras"
+          ],
+          "rows": 2,
+          "sha256": "6a412a531c6e49a151b790f8e97ae08af32df4687c8e03288736785add774499",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "sellers",
+          "fields": [
+            "id",
+            "nombre",
+            "active",
+            "comisionAcum",
+            "ventasMes",
+            "ventasNum"
+          ],
+          "rows": 26,
+          "sha256": "2de7cb122fd5a154e4238825a26d9010c5bdb926a3baee50b7c8472ebcb3fe67",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "promos",
+          "fields": [
+            "id",
+            "nombre",
+            "valor",
+            "pausado",
+            "scope"
+          ],
+          "rows": 6,
+          "sha256": "7496319652e8c6b250fe055ac5e34a2ecc3811a35ce155635c72a7aaebfdf820",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "sales",
+          "fields": [
+            "folio",
+            "total",
+            "subtotal",
+            "iva",
+            "estado",
+            "saldo",
+            "anticipo",
+            "_operationId",
+            "_stockReserved"
+          ],
+          "rows": 3,
+          "sha256": "d907e7076ebcb8305bbac20ecac18d6755903151fd0e13ae4ebcdb19cf89d520",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "payments",
+          "fields": [
+            "id",
+            "folio",
+            "monto",
+            "efectivo",
+            "tarjeta",
+            "transferencia",
+            "otro"
+          ],
+          "rows": 3,
+          "sha256": "52e5b3558ff41b11643da8c6ea9c961d3f0665c528593529921216c47001bcca",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "returns",
+          "fields": [
+            "id",
+            "folio",
+            "total"
+          ],
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "exchanges",
+          "fields": [
+            "id",
+            "folio",
+            "diferencia",
+            "origenFolio",
+            "valorReconocido",
+            "valorEntregado"
+          ],
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "liquidations",
+          "fields": [
+            "id",
+            "monto",
+            "sellerId",
+            "tipo"
+          ],
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "movements",
+          "fields": [
+            "id",
+            "tipo",
+            "cant",
+            "sku",
+            "ref",
+            "productId",
+            "operationId"
+          ],
+          "rows": 5,
+          "sha256": "8b7fb357733e05ecbea2386fb707cde11fddfb5cc62a1cafa681b1bd59981106",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "stock V1/V2",
+          "rows": 979,
+          "sha256": "daea9611d638ac0ad107ca4eb5898d11aa706929e42355ab6f8f8dc7f8010601"
+        },
+        {
+          "domain": "sale_items",
+          "rows": 2,
+          "sha256": "034c42af3f59b3cbbf9975f18f23b42ff381391dcf438fe0b037c70eed24d337"
+        },
+        {
+          "domain": "return_items",
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "domain": "exchange_items",
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        }
+      ],
+      "concurrency": {
+        "requestIds": [
+          "bc088419-d9c5-45c7-b7de-063b70e230bd",
+          "264a5317-4a12-49c0-bd6f-39b61163b518"
+        ],
+        "rejection": {
+          "code": "40001",
+          "details": null,
+          "message": "COMMERCIAL_QUOTE_CHANGED"
+        }
+      }
+    },
+    {
+      "name": "Concurrent return consumes a sale line once",
+      "pass": true,
+      "elapsedMs": 23968,
+      "evidence": [
+        {
+          "domain": "products",
+          "fields": [
+            "id",
+            "nombre",
+            "precio",
+            "stockQuantity",
+            "sizeCode",
+            "barcodeCode",
+            "referenceFamilyId",
+            "barcodeAliases"
+          ],
+          "rows": 979,
+          "sha256": "1487cb4b7f8397a61deb89bdfffe771b6f389443412cefc52befbbcf4934f140",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "clients",
+          "fields": [
+            "id",
+            "nombre",
+            "total",
+            "compras"
+          ],
+          "rows": 2,
+          "sha256": "430e18e6d42a3f810857e4bd805eaacdd4ccc65911a129624e3bd109d305d79e",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "sellers",
+          "fields": [
+            "id",
+            "nombre",
+            "active",
+            "comisionAcum",
+            "ventasMes",
+            "ventasNum"
+          ],
+          "rows": 26,
+          "sha256": "66bf9dbc587377ea24fb60105ea52e9d2d0fd56bb065ae1459e5fa4eb81d7b3f",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "promos",
+          "fields": [
+            "id",
+            "nombre",
+            "valor",
+            "pausado",
+            "scope"
+          ],
+          "rows": 6,
+          "sha256": "7496319652e8c6b250fe055ac5e34a2ecc3811a35ce155635c72a7aaebfdf820",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "sales",
+          "fields": [
+            "folio",
+            "total",
+            "subtotal",
+            "iva",
+            "estado",
+            "saldo",
+            "anticipo",
+            "_operationId",
+            "_stockReserved"
+          ],
+          "rows": 3,
+          "sha256": "adfb0752aae096ee7c37fff9956ed862be78618fc6e3bb94654e1adaf6c1c4cf",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "payments",
+          "fields": [
+            "id",
+            "folio",
+            "monto",
+            "efectivo",
+            "tarjeta",
+            "transferencia",
+            "otro"
+          ],
+          "rows": 3,
+          "sha256": "52e5b3558ff41b11643da8c6ea9c961d3f0665c528593529921216c47001bcca",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "returns",
+          "fields": [
+            "id",
+            "folio",
+            "total"
+          ],
+          "rows": 1,
+          "sha256": "9ae34e45298e21119ed613fac571d86c011e04fadab0521021099ce44e1389a1",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "exchanges",
+          "fields": [
+            "id",
+            "folio",
+            "diferencia",
+            "origenFolio",
+            "valorReconocido",
+            "valorEntregado"
+          ],
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "liquidations",
+          "fields": [
+            "id",
+            "monto",
+            "sellerId",
+            "tipo"
+          ],
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "movements",
+          "fields": [
+            "id",
+            "tipo",
+            "cant",
+            "sku",
+            "ref",
+            "productId",
+            "operationId"
+          ],
+          "rows": 6,
+          "sha256": "7c46917ec9e38cf84de1c5c62ccd5826072901912d26037581dc57a1ac306f20",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "stock V1/V2",
+          "rows": 979,
+          "sha256": "dd5e8e816c06dc46ea89f54f0e57f173c4e475b5a3b3d884cf5bf5e0e0fd0afd"
+        },
+        {
+          "domain": "sale_items",
+          "rows": 2,
+          "sha256": "034c42af3f59b3cbbf9975f18f23b42ff381391dcf438fe0b037c70eed24d337"
+        },
+        {
+          "domain": "return_items",
+          "rows": 1,
+          "sha256": "9ea48276c79e99ee2c3e666ef7596bcbb082d8273720ccc888ecb66a1aa7d310"
+        },
+        {
+          "domain": "exchange_items",
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        }
+      ],
+      "concurrency": {
+        "requestIds": [
+          "b41e6094-19df-43fe-9f83-0aadc2687638",
+          "5e92d8f7-1cc5-4bbb-b4d3-404c4d833bab"
+        ],
+        "rejection": {
+          "code": "P0001",
+          "details": "{\"ok\": false, \"error\": \"invalid_return_quantity\", \"items\": [{\"sku\": \"1-qa-h164-2607cae4-404d-48bc-bdfc-6381b9c4a173-0-MC-ALG-MAO-BC-XS\", \"talla\": \"XS\", \"available\": 1, \"requested\": 2}]}",
+          "message": "invalid_return_quantity"
+        }
+      }
+    },
+    {
+      "name": "Concurrent exchange consumes remaining line once",
+      "pass": true,
+      "elapsedMs": 31461,
+      "evidence": [
+        {
+          "domain": "products",
+          "fields": [
+            "id",
+            "nombre",
+            "precio",
+            "stockQuantity",
+            "sizeCode",
+            "barcodeCode",
+            "referenceFamilyId",
+            "barcodeAliases"
+          ],
+          "rows": 979,
+          "sha256": "45da38536e6f4439a726c5cbdac3f95db2f8a810273fea228e0d51d8dc5203b2",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "clients",
+          "fields": [
+            "id",
+            "nombre",
+            "total",
+            "compras"
+          ],
+          "rows": 2,
+          "sha256": "430e18e6d42a3f810857e4bd805eaacdd4ccc65911a129624e3bd109d305d79e",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "sellers",
+          "fields": [
+            "id",
+            "nombre",
+            "active",
+            "comisionAcum",
+            "ventasMes",
+            "ventasNum"
+          ],
+          "rows": 26,
+          "sha256": "9550513bba61968d79eb0223a4488cab54f7cf07809f3d8ffeb3329c397094bb",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "promos",
+          "fields": [
+            "id",
+            "nombre",
+            "valor",
+            "pausado",
+            "scope"
+          ],
+          "rows": 6,
+          "sha256": "7496319652e8c6b250fe055ac5e34a2ecc3811a35ce155635c72a7aaebfdf820",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "sales",
+          "fields": [
+            "folio",
+            "total",
+            "subtotal",
+            "iva",
+            "estado",
+            "saldo",
+            "anticipo",
+            "_operationId",
+            "_stockReserved"
+          ],
+          "rows": 3,
+          "sha256": "adfb0752aae096ee7c37fff9956ed862be78618fc6e3bb94654e1adaf6c1c4cf",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "payments",
+          "fields": [
+            "id",
+            "folio",
+            "monto",
+            "efectivo",
+            "tarjeta",
+            "transferencia",
+            "otro"
+          ],
+          "rows": 4,
+          "sha256": "93200f832584ddda95cba0c525583b24bea72e02e296b3ad559396c5012203a4",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "returns",
+          "fields": [
+            "id",
+            "folio",
+            "total"
+          ],
+          "rows": 1,
+          "sha256": "9ae34e45298e21119ed613fac571d86c011e04fadab0521021099ce44e1389a1",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "exchanges",
+          "fields": [
+            "id",
+            "folio",
+            "diferencia",
+            "origenFolio",
+            "valorReconocido",
+            "valorEntregado"
+          ],
+          "rows": 1,
+          "sha256": "4cd7a7b7b086aa51424cdc410ee2480290121c525b20957ebbc64509f1b6c559",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "liquidations",
+          "fields": [
+            "id",
+            "monto",
+            "sellerId",
+            "tipo"
+          ],
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "movements",
+          "fields": [
+            "id",
+            "tipo",
+            "cant",
+            "sku",
+            "ref",
+            "productId",
+            "operationId"
+          ],
+          "rows": 8,
+          "sha256": "f0b46db17b4c3e1a3811086d39f55e3c1fbdfe0fee566b8e0204d5fffc0738f6",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "stock V1/V2",
+          "rows": 979,
+          "sha256": "277ee9972ad5e19cdfa8b42c01547be5e5c03226ac37cc3d0d497351d7dddb90"
+        },
+        {
+          "domain": "sale_items",
+          "rows": 2,
+          "sha256": "034c42af3f59b3cbbf9975f18f23b42ff381391dcf438fe0b037c70eed24d337"
+        },
+        {
+          "domain": "return_items",
+          "rows": 1,
+          "sha256": "9ea48276c79e99ee2c3e666ef7596bcbb082d8273720ccc888ecb66a1aa7d310"
+        },
+        {
+          "domain": "exchange_items",
+          "rows": 2,
+          "sha256": "7ec2a7239efe9e6172260dace55aab9c62b669ed9dbf6a65517ef5a43d992e03"
+        }
+      ],
+      "concurrency": {
+        "requestIds": [
+          "3ba2082f-8e49-45de-8110-7d0f628dff05",
+          "9afed25f-366c-402e-a325-613e5ff57c4d"
+        ],
+        "rejection": {
+          "code": "40001",
+          "details": null,
+          "message": "COMMERCIAL_QUOTE_CHANGED"
+        }
+      }
+    },
+    {
+      "name": "Loan / concurrent return preserves document version",
+      "pass": true,
+      "elapsedMs": 40267,
+      "evidence": [
+        {
+          "domain": "products",
+          "fields": [
+            "id",
+            "nombre",
+            "precio",
+            "stockQuantity",
+            "sizeCode",
+            "barcodeCode",
+            "referenceFamilyId",
+            "barcodeAliases"
+          ],
+          "rows": 979,
+          "sha256": "45da38536e6f4439a726c5cbdac3f95db2f8a810273fea228e0d51d8dc5203b2",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "clients",
+          "fields": [
+            "id",
+            "nombre",
+            "total",
+            "compras"
+          ],
+          "rows": 2,
+          "sha256": "430e18e6d42a3f810857e4bd805eaacdd4ccc65911a129624e3bd109d305d79e",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "sellers",
+          "fields": [
+            "id",
+            "nombre",
+            "active",
+            "comisionAcum",
+            "ventasMes",
+            "ventasNum"
+          ],
+          "rows": 26,
+          "sha256": "9550513bba61968d79eb0223a4488cab54f7cf07809f3d8ffeb3329c397094bb",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "promos",
+          "fields": [
+            "id",
+            "nombre",
+            "valor",
+            "pausado",
+            "scope"
+          ],
+          "rows": 6,
+          "sha256": "7496319652e8c6b250fe055ac5e34a2ecc3811a35ce155635c72a7aaebfdf820",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "sales",
+          "fields": [
+            "folio",
+            "total",
+            "subtotal",
+            "iva",
+            "estado",
+            "saldo",
+            "anticipo",
+            "_operationId",
+            "_stockReserved"
+          ],
+          "rows": 3,
+          "sha256": "adfb0752aae096ee7c37fff9956ed862be78618fc6e3bb94654e1adaf6c1c4cf",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "payments",
+          "fields": [
+            "id",
+            "folio",
+            "monto",
+            "efectivo",
+            "tarjeta",
+            "transferencia",
+            "otro"
+          ],
+          "rows": 4,
+          "sha256": "93200f832584ddda95cba0c525583b24bea72e02e296b3ad559396c5012203a4",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "returns",
+          "fields": [
+            "id",
+            "folio",
+            "total"
+          ],
+          "rows": 1,
+          "sha256": "9ae34e45298e21119ed613fac571d86c011e04fadab0521021099ce44e1389a1",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "exchanges",
+          "fields": [
+            "id",
+            "folio",
+            "diferencia",
+            "origenFolio",
+            "valorReconocido",
+            "valorEntregado"
+          ],
+          "rows": 1,
+          "sha256": "4cd7a7b7b086aa51424cdc410ee2480290121c525b20957ebbc64509f1b6c559",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "liquidations",
+          "fields": [
+            "id",
+            "monto",
+            "sellerId",
+            "tipo"
+          ],
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "movements",
+          "fields": [
+            "id",
+            "tipo",
+            "cant",
+            "sku",
+            "ref",
+            "productId",
+            "operationId"
+          ],
+          "rows": 8,
+          "sha256": "f0b46db17b4c3e1a3811086d39f55e3c1fbdfe0fee566b8e0204d5fffc0738f6",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "stock V1/V2",
+          "rows": 979,
+          "sha256": "277ee9972ad5e19cdfa8b42c01547be5e5c03226ac37cc3d0d497351d7dddb90"
+        },
+        {
+          "domain": "sale_items",
+          "rows": 2,
+          "sha256": "034c42af3f59b3cbbf9975f18f23b42ff381391dcf438fe0b037c70eed24d337"
+        },
+        {
+          "domain": "return_items",
+          "rows": 1,
+          "sha256": "9ea48276c79e99ee2c3e666ef7596bcbb082d8273720ccc888ecb66a1aa7d310"
+        },
+        {
+          "domain": "exchange_items",
+          "rows": 2,
+          "sha256": "7ec2a7239efe9e6172260dace55aab9c62b669ed9dbf6a65517ef5a43d992e03"
+        }
+      ],
+      "concurrency": {
+        "requestIds": [
+          "98da83b4-9ad0-42f7-8977-eccde9370140",
+          "5f217e19-be57-41c3-ac03-0ebda4659411"
+        ],
+        "rejection": {
+          "code": "40001",
+          "details": null,
+          "message": "LOAN_VERSION_CONFLICT"
+        }
+      }
+    },
+    {
+      "name": "Layaway / concurrent payment / settlement",
+      "pass": true,
+      "elapsedMs": 76823,
+      "evidence": [
+        {
+          "domain": "products",
+          "fields": [
+            "id",
+            "nombre",
+            "precio",
+            "stockQuantity",
+            "sizeCode",
+            "barcodeCode",
+            "referenceFamilyId",
+            "barcodeAliases"
+          ],
+          "rows": 979,
+          "sha256": "f121ff6e805c9304481ed052d0915c480688d767d8c903ac057a5c292dd39a99",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "clients",
+          "fields": [
+            "id",
+            "nombre",
+            "total",
+            "compras"
+          ],
+          "rows": 2,
+          "sha256": "e79b962469646042ec8ae012aae01064cf45c325967e8ae013951756c8f8effb",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "sellers",
+          "fields": [
+            "id",
+            "nombre",
+            "active",
+            "comisionAcum",
+            "ventasMes",
+            "ventasNum"
+          ],
+          "rows": 26,
+          "sha256": "a51a8dcbaa8a3f45c83ab490c649706f5d361e3e04c01c0cd1fdfedd5f7403b3",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "promos",
+          "fields": [
+            "id",
+            "nombre",
+            "valor",
+            "pausado",
+            "scope"
+          ],
+          "rows": 6,
+          "sha256": "7496319652e8c6b250fe055ac5e34a2ecc3811a35ce155635c72a7aaebfdf820",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "sales",
+          "fields": [
+            "folio",
+            "total",
+            "subtotal",
+            "iva",
+            "estado",
+            "saldo",
+            "anticipo",
+            "_operationId",
+            "_stockReserved"
+          ],
+          "rows": 4,
+          "sha256": "ac15749dfa4669ab975666760232e278cb7b8f61d6ae3a30e711e3e199ed489a",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "payments",
+          "fields": [
+            "id",
+            "folio",
+            "monto",
+            "efectivo",
+            "tarjeta",
+            "transferencia",
+            "otro"
+          ],
+          "rows": 7,
+          "sha256": "b29eb73cae17a273ebe6c3d9f3a49ce65061ed35e1a766d0809f84e137942c6b",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "returns",
+          "fields": [
+            "id",
+            "folio",
+            "total"
+          ],
+          "rows": 1,
+          "sha256": "9ae34e45298e21119ed613fac571d86c011e04fadab0521021099ce44e1389a1",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "exchanges",
+          "fields": [
+            "id",
+            "folio",
+            "diferencia",
+            "origenFolio",
+            "valorReconocido",
+            "valorEntregado"
+          ],
+          "rows": 1,
+          "sha256": "4cd7a7b7b086aa51424cdc410ee2480290121c525b20957ebbc64509f1b6c559",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "liquidations",
+          "fields": [
+            "id",
+            "monto",
+            "sellerId",
+            "tipo"
+          ],
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "movements",
+          "fields": [
+            "id",
+            "tipo",
+            "cant",
+            "sku",
+            "ref",
+            "productId",
+            "operationId"
+          ],
+          "rows": 9,
+          "sha256": "df6c481b20a87062750e9c7830fafe6effeacf3c7cb0f82695d155a1a7080e09",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "stock V1/V2",
+          "rows": 979,
+          "sha256": "f81926f5853b981506002c543fefc7ff4db35f48af0cb612e74367abba5ad924"
+        },
+        {
+          "domain": "sale_items",
+          "rows": 3,
+          "sha256": "f5995778d4a5680a81b8cb4f4a8031ed1360334d317e4f85811744458156685e"
+        },
+        {
+          "domain": "return_items",
+          "rows": 1,
+          "sha256": "9ea48276c79e99ee2c3e666ef7596bcbb082d8273720ccc888ecb66a1aa7d310"
+        },
+        {
+          "domain": "exchange_items",
+          "rows": 2,
+          "sha256": "7ec2a7239efe9e6172260dace55aab9c62b669ed9dbf6a65517ef5a43d992e03"
+        }
+      ],
+      "concurrency": {
+        "requestIds": [
+          "2f16bfba-e336-4c45-8ffd-a886f00b202c",
+          "4a2acd8c-8ef4-46e5-ae64-ce526026c295"
+        ],
+        "rejection": {
+          "code": "40001",
+          "details": null,
+          "message": "SALE_VERSION_CONFLICT"
+        }
+      }
+    },
+    {
+      "name": "Commission settlement for the isolated seller",
+      "pass": true,
+      "elapsedMs": 18683,
+      "evidence": [
+        {
+          "domain": "products",
+          "fields": [
+            "id",
+            "nombre",
+            "precio",
+            "stockQuantity",
+            "sizeCode",
+            "barcodeCode",
+            "referenceFamilyId",
+            "barcodeAliases"
+          ],
+          "rows": 979,
+          "sha256": "f121ff6e805c9304481ed052d0915c480688d767d8c903ac057a5c292dd39a99",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "clients",
+          "fields": [
+            "id",
+            "nombre",
+            "total",
+            "compras"
+          ],
+          "rows": 2,
+          "sha256": "e79b962469646042ec8ae012aae01064cf45c325967e8ae013951756c8f8effb",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "sellers",
+          "fields": [
+            "id",
+            "nombre",
+            "active",
+            "comisionAcum",
+            "ventasMes",
+            "ventasNum"
+          ],
+          "rows": 26,
+          "sha256": "5d09876ace108034541eef069b4cafd9f8c93678b7a546e88dbbf770294d155e",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "promos",
+          "fields": [
+            "id",
+            "nombre",
+            "valor",
+            "pausado",
+            "scope"
+          ],
+          "rows": 6,
+          "sha256": "7496319652e8c6b250fe055ac5e34a2ecc3811a35ce155635c72a7aaebfdf820",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "sales",
+          "fields": [
+            "folio",
+            "total",
+            "subtotal",
+            "iva",
+            "estado",
+            "saldo",
+            "anticipo",
+            "_operationId",
+            "_stockReserved"
+          ],
+          "rows": 4,
+          "sha256": "ac15749dfa4669ab975666760232e278cb7b8f61d6ae3a30e711e3e199ed489a",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "payments",
+          "fields": [
+            "id",
+            "folio",
+            "monto",
+            "efectivo",
+            "tarjeta",
+            "transferencia",
+            "otro"
+          ],
+          "rows": 7,
+          "sha256": "b29eb73cae17a273ebe6c3d9f3a49ce65061ed35e1a766d0809f84e137942c6b",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "returns",
+          "fields": [
+            "id",
+            "folio",
+            "total"
+          ],
+          "rows": 1,
+          "sha256": "9ae34e45298e21119ed613fac571d86c011e04fadab0521021099ce44e1389a1",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "exchanges",
+          "fields": [
+            "id",
+            "folio",
+            "diferencia",
+            "origenFolio",
+            "valorReconocido",
+            "valorEntregado"
+          ],
+          "rows": 1,
+          "sha256": "4cd7a7b7b086aa51424cdc410ee2480290121c525b20957ebbc64509f1b6c559",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "liquidations",
+          "fields": [
+            "id",
+            "monto",
+            "sellerId",
+            "tipo"
+          ],
+          "rows": 1,
+          "sha256": "2470c71f072533cba9d35d7d684a9b4360d602a9c3ddaa8a3dbb2531dc226c9a",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "movements",
+          "fields": [
+            "id",
+            "tipo",
+            "cant",
+            "sku",
+            "ref",
+            "productId",
+            "operationId"
+          ],
+          "rows": 9,
+          "sha256": "df6c481b20a87062750e9c7830fafe6effeacf3c7cb0f82695d155a1a7080e09",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "stock V1/V2",
+          "rows": 979,
+          "sha256": "f81926f5853b981506002c543fefc7ff4db35f48af0cb612e74367abba5ad924"
+        },
+        {
+          "domain": "sale_items",
+          "rows": 3,
+          "sha256": "f5995778d4a5680a81b8cb4f4a8031ed1360334d317e4f85811744458156685e"
+        },
+        {
+          "domain": "return_items",
+          "rows": 1,
+          "sha256": "9ea48276c79e99ee2c3e666ef7596bcbb082d8273720ccc888ecb66a1aa7d310"
+        },
+        {
+          "domain": "exchange_items",
+          "rows": 2,
+          "sha256": "7ec2a7239efe9e6172260dace55aab9c62b669ed9dbf6a65517ef5a43d992e03"
+        }
+      ]
+    },
+    {
+      "name": "No Internet blocks operation, stock, success, pending; reconnect reads authority",
+      "pass": true,
+      "elapsedMs": 15536,
+      "evidence": [
+        {
+          "domain": "products",
+          "fields": [
+            "id",
+            "nombre",
+            "precio",
+            "stockQuantity",
+            "sizeCode",
+            "barcodeCode",
+            "referenceFamilyId",
+            "barcodeAliases"
+          ],
+          "rows": 979,
+          "sha256": "f121ff6e805c9304481ed052d0915c480688d767d8c903ac057a5c292dd39a99",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "clients",
+          "fields": [
+            "id",
+            "nombre",
+            "total",
+            "compras"
+          ],
+          "rows": 2,
+          "sha256": "e79b962469646042ec8ae012aae01064cf45c325967e8ae013951756c8f8effb",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "sellers",
+          "fields": [
+            "id",
+            "nombre",
+            "active",
+            "comisionAcum",
+            "ventasMes",
+            "ventasNum"
+          ],
+          "rows": 26,
+          "sha256": "5d09876ace108034541eef069b4cafd9f8c93678b7a546e88dbbf770294d155e",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "promos",
+          "fields": [
+            "id",
+            "nombre",
+            "valor",
+            "pausado",
+            "scope"
+          ],
+          "rows": 6,
+          "sha256": "7496319652e8c6b250fe055ac5e34a2ecc3811a35ce155635c72a7aaebfdf820",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "sales",
+          "fields": [
+            "folio",
+            "total",
+            "subtotal",
+            "iva",
+            "estado",
+            "saldo",
+            "anticipo",
+            "_operationId",
+            "_stockReserved"
+          ],
+          "rows": 4,
+          "sha256": "ac15749dfa4669ab975666760232e278cb7b8f61d6ae3a30e711e3e199ed489a",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "payments",
+          "fields": [
+            "id",
+            "folio",
+            "monto",
+            "efectivo",
+            "tarjeta",
+            "transferencia",
+            "otro"
+          ],
+          "rows": 7,
+          "sha256": "b29eb73cae17a273ebe6c3d9f3a49ce65061ed35e1a766d0809f84e137942c6b",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "returns",
+          "fields": [
+            "id",
+            "folio",
+            "total"
+          ],
+          "rows": 1,
+          "sha256": "9ae34e45298e21119ed613fac571d86c011e04fadab0521021099ce44e1389a1",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "exchanges",
+          "fields": [
+            "id",
+            "folio",
+            "diferencia",
+            "origenFolio",
+            "valorReconocido",
+            "valorEntregado"
+          ],
+          "rows": 1,
+          "sha256": "4cd7a7b7b086aa51424cdc410ee2480290121c525b20957ebbc64509f1b6c559",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "liquidations",
+          "fields": [
+            "id",
+            "monto",
+            "sellerId",
+            "tipo"
+          ],
+          "rows": 1,
+          "sha256": "2470c71f072533cba9d35d7d684a9b4360d602a9c3ddaa8a3dbb2531dc226c9a",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "movements",
+          "fields": [
+            "id",
+            "tipo",
+            "cant",
+            "sku",
+            "ref",
+            "productId",
+            "operationId"
+          ],
+          "rows": 9,
+          "sha256": "df6c481b20a87062750e9c7830fafe6effeacf3c7cb0f82695d155a1a7080e09",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "stock V1/V2",
+          "rows": 979,
+          "sha256": "f81926f5853b981506002c543fefc7ff4db35f48af0cb612e74367abba5ad924"
+        },
+        {
+          "domain": "sale_items",
+          "rows": 3,
+          "sha256": "f5995778d4a5680a81b8cb4f4a8031ed1360334d317e4f85811744458156685e"
+        },
+        {
+          "domain": "return_items",
+          "rows": 1,
+          "sha256": "9ea48276c79e99ee2c3e666ef7596bcbb082d8273720ccc888ecb66a1aa7d310"
+        },
+        {
+          "domain": "exchange_items",
+          "rows": 2,
+          "sha256": "7ec2a7239efe9e6172260dace55aab9c62b669ed9dbf6a65517ef5a43d992e03"
+        }
+      ]
+    },
+    {
+      "name": "Reload and close/reopen rebuild only from Supabase",
+      "pass": true,
+      "elapsedMs": 27053,
+      "evidence": [
+        {
+          "domain": "products",
+          "fields": [
+            "id",
+            "nombre",
+            "precio",
+            "stockQuantity",
+            "sizeCode",
+            "barcodeCode",
+            "referenceFamilyId",
+            "barcodeAliases"
+          ],
+          "rows": 979,
+          "sha256": "f121ff6e805c9304481ed052d0915c480688d767d8c903ac057a5c292dd39a99",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "clients",
+          "fields": [
+            "id",
+            "nombre",
+            "total",
+            "compras"
+          ],
+          "rows": 2,
+          "sha256": "e79b962469646042ec8ae012aae01064cf45c325967e8ae013951756c8f8effb",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "sellers",
+          "fields": [
+            "id",
+            "nombre",
+            "active",
+            "comisionAcum",
+            "ventasMes",
+            "ventasNum"
+          ],
+          "rows": 26,
+          "sha256": "5d09876ace108034541eef069b4cafd9f8c93678b7a546e88dbbf770294d155e",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "promos",
+          "fields": [
+            "id",
+            "nombre",
+            "valor",
+            "pausado",
+            "scope"
+          ],
+          "rows": 6,
+          "sha256": "7496319652e8c6b250fe055ac5e34a2ecc3811a35ce155635c72a7aaebfdf820",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "sales",
+          "fields": [
+            "folio",
+            "total",
+            "subtotal",
+            "iva",
+            "estado",
+            "saldo",
+            "anticipo",
+            "_operationId",
+            "_stockReserved"
+          ],
+          "rows": 4,
+          "sha256": "ac15749dfa4669ab975666760232e278cb7b8f61d6ae3a30e711e3e199ed489a",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "payments",
+          "fields": [
+            "id",
+            "folio",
+            "monto",
+            "efectivo",
+            "tarjeta",
+            "transferencia",
+            "otro"
+          ],
+          "rows": 7,
+          "sha256": "b29eb73cae17a273ebe6c3d9f3a49ce65061ed35e1a766d0809f84e137942c6b",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "returns",
+          "fields": [
+            "id",
+            "folio",
+            "total"
+          ],
+          "rows": 1,
+          "sha256": "9ae34e45298e21119ed613fac571d86c011e04fadab0521021099ce44e1389a1",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "exchanges",
+          "fields": [
+            "id",
+            "folio",
+            "diferencia",
+            "origenFolio",
+            "valorReconocido",
+            "valorEntregado"
+          ],
+          "rows": 1,
+          "sha256": "4cd7a7b7b086aa51424cdc410ee2480290121c525b20957ebbc64509f1b6c559",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "liquidations",
+          "fields": [
+            "id",
+            "monto",
+            "sellerId",
+            "tipo"
+          ],
+          "rows": 1,
+          "sha256": "2470c71f072533cba9d35d7d684a9b4360d602a9c3ddaa8a3dbb2531dc226c9a",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "movements",
+          "fields": [
+            "id",
+            "tipo",
+            "cant",
+            "sku",
+            "ref",
+            "productId",
+            "operationId"
+          ],
+          "rows": 9,
+          "sha256": "df6c481b20a87062750e9c7830fafe6effeacf3c7cb0f82695d155a1a7080e09",
+          "terminals": [
+            "A",
+            "B",
+            "C"
+          ]
+        },
+        {
+          "domain": "stock V1/V2",
+          "rows": 979,
+          "sha256": "f81926f5853b981506002c543fefc7ff4db35f48af0cb612e74367abba5ad924"
+        },
+        {
+          "domain": "sale_items",
+          "rows": 3,
+          "sha256": "f5995778d4a5680a81b8cb4f4a8031ed1360334d317e4f85811744458156685e"
+        },
+        {
+          "domain": "return_items",
+          "rows": 1,
+          "sha256": "9ea48276c79e99ee2c3e666ef7596bcbb082d8273720ccc888ecb66a1aa7d310"
+        },
+        {
+          "domain": "exchange_items",
+          "rows": 2,
+          "sha256": "7ec2a7239efe9e6172260dace55aab9c62b669ed9dbf6a65517ef5a43d992e03"
+        }
+      ]
+    },
+    {
+      "name": "Existing commercial history preserved",
+      "pass": true,
+      "elapsedMs": 5735,
+      "evidence": {
+        "unchangedExistingRows": {
+          "products": 973,
+          "clients": 17,
+          "sellers": 22,
+          "promotions": 6,
+          "sales": 1,
+          "sale_items": 1,
+          "returns": 0,
+          "return_items": 0,
+          "exchanges": 0,
+          "exchange_items": 0,
+          "sale_payments": 1,
+          "loan_documents": 0,
+          "liquidations": 0,
+          "commission_adjustments": 0,
+          "movements": 1,
+          "lookup": 552,
+          "settings": 44,
+          "stock_reservations": 1
+        },
+        "lost": 0
+      }
+    },
+    {
+      "name": "Equipment history separates exact retired QA installations",
+      "pass": true,
+      "elapsedMs": 12519,
+      "evidence": {
+        "retiredOwnInstallations": [
+          "qa-h164-2607cae4-404d-48bc-bdfc-6381b9c4a173-A",
+          "qa-h164-2607cae4-404d-48bc-bdfc-6381b9c4a173-B",
+          "qa-h164-2607cae4-404d-48bc-bdfc-6381b9c4a173-C"
+        ],
+        "existingInstallationsChanged": 0
+      }
+    }
+  ],
+  "method": "Real HTTPS RPC/authority; isolated Chromium A/B/C; failures abort real transport only; no mocked authority or service_role in browser",
+  "scope": "Domain APIs on the final browser artifact plus rendered offline/recovery screen. Visual workflows have separate UI regression evidence.",
+  "sessions": [
+    {
+      "startedAt": "2026-09-12T23:47:34.117Z",
+      "resume": false,
+      "artifactSha256": "608541d6d0eb85040c95e780704dddb8d80056beb969447ed66ea8c27025cc41",
+      "certifierSha256": "cb5f25a36adcd856c76cacbbb2a490416c3e43896ce284ac77b97df763cd1d24"
+    }
+  ],
+  "manifest": {
+    "singleton": true,
+    "schema_version": 20260830017500,
+    "sync_protocol_min": 3,
+    "sync_protocol_current": 3,
+    "minimum_client_build": null,
+    "data_epoch": 12,
+    "domain_modes": {
+      "loans": "active",
+      "sales": "active",
+      "config": "active",
+      "purges": "active",
+      "clients": "active",
+      "devices": "active",
+      "returns": "active",
+      "sellers": "active",
+      "payments": "active",
+      "products": "active",
+      "exchanges": "active",
+      "movements": "active",
+      "promotions": "active",
+      "permissions": "active",
+      "liquidations": "active"
+    },
+    "updated_at": "2026-09-12T20:25:36.547971+00:00",
+    "system_mode": "preproduction"
+  },
+  "finishedAt": "2026-09-12T23:59:25.984Z",
+  "fixturePolicy": "Business QA history retained; no replay, no Punto Cero, no delete of business rows. Exact identities in fixtures.json.",
+  "preservation": "All original baseline rows verified unchanged; exact QA history retained.",
+  "qaRetirement": {
+    "receipt": {
+      "changedProfiles": 5,
+      "devicesUnchanged": true,
+      "financialHistoryUnchanged": true,
+      "ok": true,
+      "otherProfilesUnchanged": true,
+      "retiredProfileIds": [
+        "0c854997-d4cb-4f5a-bf19-6640498c8219",
+        "qa-h164-2607cae4-404d-48bc-bdfc-6381b9c4a173-admin",
+        "qa-h164-2607cae4-404d-48bc-bdfc-6381b9c4a173-seller-A",
+        "qa-h164-2607cae4-404d-48bc-bdfc-6381b9c4a173-seller-B",
+        "qa-h164-2607cae4-404d-48bc-bdfc-6381b9c4a173-seller-C"
+      ],
+      "run": "2607cae4-404d-48bc-bdfc-6381b9c4a173"
+    },
+    "sqlSha256": "8560a141cbb3c9b3fee5d4c6c0bc904778fa9ba37857c7e4fccaffee756b2414",
+    "authBanned": [
+      "eb46cc84-1fe2-4da0-84b6-8332a7ff3bad",
+      "0c854997-d4cb-4f5a-bf19-6640498c8219"
+    ]
+  },
+  "qaAccount": "retained inactive"
+}
