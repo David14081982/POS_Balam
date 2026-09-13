@@ -1,0 +1,36 @@
+{
+  "scope": "Local cost benchmark with two real BALAM historical payload exports, reconstructed row metadata and synthetic omitted token; not exact restoration evidence.",
+  "sources": [
+    {
+      "file": "RESPALDO-PUNTO-CERO-COMPLETO-20260911.json",
+      "backupId": "72a5453d-98b2-439a-8239-26d707711d9e",
+      "payloadCompactBytes": 6102328
+    },
+    {
+      "file": "RESPALDO-PUNTO-CERO-20260911.json",
+      "backupId": "e418e8da-bd95-4565-8114-d2b58d00090a",
+      "payloadCompactBytes": 5825901
+    }
+  ],
+  "measurements": [
+    {
+      "rows": 2,
+      "audit": "H171 original point_zero hash benchmark",
+      "algorithm": "md5-of-projected-row-md5-sorted-by-json-v1",
+      "read_only": "on",
+      "elapsed_ms": 1671,
+      "projected_rows_md5": "fc985ac6f6eecb0ea305c1dbed5a93fe"
+    },
+    {
+      "rows": 2,
+      "audit": "H171 candidate point_zero hash benchmark",
+      "algorithm": "md5-of-sorted-projected-row-md5-v1",
+      "read_only": "on",
+      "elapsed_ms": 1001,
+      "projected_rows_md5": "56c1cba68b58d4c4dccedb464f868258"
+    }
+  ],
+  "remoteWrites": 0,
+  "changedPayloadDetected": true,
+  "ok": true
+}

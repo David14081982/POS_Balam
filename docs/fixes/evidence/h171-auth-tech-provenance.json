@@ -1,0 +1,39 @@
+{
+  "projectRef": "telohdbvbvsfmwyriflz",
+  "exactAuthIds": [
+    "0c854997-d4cb-4f5a-bf19-6640498c8219",
+    "272aed8a-fab0-48e0-b2ba-e65d3f0884b9",
+    "54633260-578a-4228-b7d1-4e36e6c49144",
+    "5d4ea7ba-d175-4b3a-8170-e84f0a8448d4",
+    "6dd83591-9e6b-482f-95e0-78470766cbce",
+    "720db98c-e653-4d86-8d5e-eab00a315959",
+    "7e869e19-be08-40fb-96e0-7e444795e8fa",
+    "85fd870d-1d81-484b-84d3-de60cd2576ec",
+    "895b586d-15b7-40ae-8ce1-926492c2a229",
+    "eb46cc84-1fe2-4da0-84b6-8332a7ff3bad",
+    "fb16c0b5-d9eb-4444-997c-c8e0c49f234b"
+  ],
+  "exactRuns": [
+    "2607cae4-404d-48bc-bdfc-6381b9c4a173",
+    "69237da3-b20c-4a37-93fb-831fd846d867",
+    "6d340d65-7e61-486e-9a2f-f189a57bf7ec",
+    "8a89fd93-552a-489d-ae6b-e0afabf899e7",
+    "b766e373-5279-4e4a-818e-0934a4f8757c",
+    "ca80e903-4239-4fde-9a98-a93d163a5190"
+  ],
+  "commercialBackupSha256": "6a6c9b084af4432c22f313a5bb908ab54a9e1104c47ba6ea09b597252d92d825",
+  "commercialManifestMd5": "dab9b6aec5240e1d00501207313bd6e2",
+  "h148CertificateSha256": "b4c86b1bc8a63464f44d3d45a203bc46d8f9b937b541fd3220c58a99faa3ee38",
+  "omittedCredentialColumns": [
+    "physical_card_redemptions.claim_token",
+    "point_zero_backups.preview_token",
+    "point_zero_operations.preview_token",
+    "sellers.password_hash",
+    "sync_device_recoveries.write_token"
+  ],
+  "classificationIsDeletionAuthorization": false,
+  "generatedAt": "2026-09-13T03:00:39.586Z",
+  "expectedPosTables": 64,
+  "inventorySqlSha256": "1421b2ece12df2c03900fb2fcedecbb6dabb6acdfc96a8fcb2afb9a51f5a89c4",
+  "privateSqlSha256": "9d7d11224a436379c9fd7f4faa0d56718fa622356a761c5b8558b5f6f9372796"
+}

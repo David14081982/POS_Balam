@@ -1,0 +1,481 @@
+{
+  "startedAt": "2026-09-13T02:07:32.985Z",
+  "artifactSha256": "ae53f13541729ecb3fff768d4a974a44fd5fe790f7d7961d6fde1dd28801665d",
+  "artifactRole": "baseline published H170; before H171 source changes",
+  "scope": "Navigation, rendered populated/empty fixture states, browser errors, network cage and horizontal overflow. No financial workflow, real Auth/RLS, persisted save, physical hardware, or A/B/C certification.",
+  "browser": "Chromium headless",
+  "viewports": [
+    320,
+    360,
+    390,
+    430,
+    768,
+    1024,
+    1280,
+    1440
+  ],
+  "rows": [
+    {
+      "viewport": 320,
+      "height": 844,
+      "id": "login",
+      "kind": "unauthenticated-entry",
+      "rendered": true,
+      "jsErrors": [],
+      "title": null,
+      "bodyChars": 103,
+      "headings": [
+        "BALAM"
+      ],
+      "visibleControls": 3,
+      "unlabeledFields": 2,
+      "documentWidth": 320,
+      "bodyWidth": 320,
+      "mainWidth": 320,
+      "mainScrollWidth": 320,
+      "uncontainedOverflow": [],
+      "commercialStorageKeys": [],
+      "screenshot": "320-login.png",
+      "elapsedMs": 286,
+      "rootOverflow": false,
+      "status": "RENDERED"
+    },
+    {
+      "viewport": 320,
+      "height": 844,
+      "id": "dashboard",
+      "kind": "screen",
+      "rendered": true,
+      "jsErrors": [],
+      "title": "Panel de control",
+      "bodyChars": 1154,
+      "headings": [
+        "Panel de control",
+        "Buenas noches, Administrador",
+        "Actividad de ventas",
+        "Ventas recientes"
+      ],
+      "visibleControls": 17,
+      "unlabeledFields": 0,
+      "documentWidth": 320,
+      "bodyWidth": 320,
+      "mainWidth": 320,
+      "mainScrollWidth": 320,
+      "uncontainedOverflow": [],
+      "commercialStorageKeys": [],
+      "screenshot": "320-dashboard.png",
+      "elapsedMs": 954,
+      "rootOverflow": false,
+      "status": "RENDERED"
+    },
+    {
+      "viewport": 320,
+      "height": 844,
+      "id": "pos",
+      "kind": "screen",
+      "rendered": true,
+      "jsErrors": [],
+      "title": "Punto de venta",
+      "bodyChars": 533,
+      "headings": [
+        "Punto de venta",
+        "Guayabera QA de lectura"
+      ],
+      "visibleControls": 14,
+      "unlabeledFields": 3,
+      "documentWidth": 320,
+      "bodyWidth": 320,
+      "mainWidth": 320,
+      "mainScrollWidth": 320,
+      "uncontainedOverflow": [],
+      "commercialStorageKeys": [],
+      "screenshot": "320-pos.png",
+      "elapsedMs": 792,
+      "rootOverflow": false,
+      "status": "RENDERED"
+    },
+    {
+      "viewport": 320,
+      "height": 844,
+      "id": "inventario",
+      "kind": "screen",
+      "rendered": true,
+      "jsErrors": [],
+      "title": "Inventario",
+      "bodyChars": 695,
+      "headings": [
+        "Inventario"
+      ],
+      "visibleControls": 18,
+      "unlabeledFields": 5,
+      "documentWidth": 320,
+      "bodyWidth": 320,
+      "mainWidth": 320,
+      "mainScrollWidth": 320,
+      "uncontainedOverflow": [],
+      "commercialStorageKeys": [],
+      "screenshot": "320-inventario.png",
+      "elapsedMs": 684,
+      "rootOverflow": false,
+      "status": "RENDERED"
+    },
+    {
+      "viewport": 320,
+      "height": 844,
+      "id": "clientes",
+      "kind": "screen",
+      "rendered": true,
+      "jsErrors": [],
+      "title": "Clientes",
+      "bodyChars": 279,
+      "headings": [
+        "Clientes"
+      ],
+      "visibleControls": 10,
+      "unlabeledFields": 1,
+      "documentWidth": 320,
+      "bodyWidth": 320,
+      "mainWidth": 320,
+      "mainScrollWidth": 320,
+      "uncontainedOverflow": [],
+      "commercialStorageKeys": [],
+      "screenshot": "320-clientes.png",
+      "elapsedMs": 538,
+      "rootOverflow": false,
+      "status": "RENDERED"
+    },
+    {
+      "viewport": 320,
+      "height": 844,
+      "id": "apartados",
+      "kind": "screen",
+      "rendered": true,
+      "jsErrors": [],
+      "title": "Apartados",
+      "bodyChars": 823,
+      "headings": [
+        "Apartados",
+        "Apartados"
+      ],
+      "visibleControls": 14,
+      "unlabeledFields": 1,
+      "documentWidth": 320,
+      "bodyWidth": 320,
+      "mainWidth": 320,
+      "mainScrollWidth": 320,
+      "uncontainedOverflow": [],
+      "commercialStorageKeys": [],
+      "screenshot": "320-apartados.png",
+      "elapsedMs": 572,
+      "rootOverflow": false,
+      "status": "RENDERED"
+    },
+    {
+      "viewport": 320,
+      "height": 844,
+      "id": "prestamos",
+      "kind": "screen",
+      "rendered": true,
+      "jsErrors": [],
+      "title": "Préstamos",
+      "bodyChars": 653,
+      "headings": [
+        "Préstamos",
+        "Préstamos"
+      ],
+      "visibleControls": 13,
+      "unlabeledFields": 1,
+      "documentWidth": 320,
+      "bodyWidth": 320,
+      "mainWidth": 320,
+      "mainScrollWidth": 320,
+      "uncontainedOverflow": [],
+      "commercialStorageKeys": [],
+      "screenshot": "320-prestamos.png",
+      "elapsedMs": 542,
+      "rootOverflow": false,
+      "status": "RENDERED"
+    },
+    {
+      "viewport": 320,
+      "height": 844,
+      "id": "devoluciones",
+      "kind": "screen",
+      "rendered": true,
+      "jsErrors": [],
+      "title": "Devoluciones",
+      "bodyChars": 413,
+      "headings": [
+        "Devoluciones",
+        "Selecciona la venta a devolver",
+        "Devoluciones recientes"
+      ],
+      "visibleControls": 12,
+      "unlabeledFields": 1,
+      "documentWidth": 320,
+      "bodyWidth": 320,
+      "mainWidth": 320,
+      "mainScrollWidth": 320,
+      "uncontainedOverflow": [],
+      "commercialStorageKeys": [],
+      "screenshot": "320-devoluciones.png",
+      "elapsedMs": 558,
+      "rootOverflow": false,
+      "status": "RENDERED"
+    },
+    {
+      "viewport": 320,
+      "height": 844,
+      "id": "descuentos",
+      "kind": "screen",
+      "rendered": true,
+      "jsErrors": [],
+      "title": "Promociones y descuentos",
+      "bodyChars": 305,
+      "headings": [
+        "Promociones y descuentos",
+        "Promociones y Descuentos"
+      ],
+      "visibleControls": 5,
+      "unlabeledFields": 0,
+      "documentWidth": 320,
+      "bodyWidth": 320,
+      "mainWidth": 320,
+      "mainScrollWidth": 320,
+      "uncontainedOverflow": [],
+      "commercialStorageKeys": [],
+      "screenshot": "320-descuentos.png",
+      "elapsedMs": 542,
+      "rootOverflow": false,
+      "status": "RENDERED"
+    },
+    {
+      "viewport": 320,
+      "height": 844,
+      "id": "vendedores",
+      "kind": "screen",
+      "rendered": true,
+      "jsErrors": [],
+      "title": "Vendedores y comisiones",
+      "bodyChars": 710,
+      "headings": [
+        "Vendedores y comisiones",
+        "Vendedores y comisiones",
+        "$232",
+        "$0",
+        "1",
+        "Rendimiento individual"
+      ],
+      "visibleControls": 11,
+      "unlabeledFields": 0,
+      "documentWidth": 320,
+      "bodyWidth": 320,
+      "mainWidth": 320,
+      "mainScrollWidth": 320,
+      "uncontainedOverflow": [],
+      "commercialStorageKeys": [],
+      "screenshot": "320-vendedores.png",
+      "elapsedMs": 629,
+      "rootOverflow": false,
+      "status": "RENDERED"
+    },
+    {
+      "viewport": 320,
+      "height": 844,
+      "id": "reportes",
+      "kind": "screen",
+      "rendered": true,
+      "jsErrors": [],
+      "title": "Reportes",
+      "bodyChars": 1257,
+      "headings": [
+        "Reportes"
+      ],
+      "visibleControls": 14,
+      "unlabeledFields": 0,
+      "documentWidth": 320,
+      "bodyWidth": 320,
+      "mainWidth": 320,
+      "mainScrollWidth": 320,
+      "uncontainedOverflow": [],
+      "commercialStorageKeys": [],
+      "screenshot": "320-reportes.png",
+      "elapsedMs": 608,
+      "rootOverflow": false,
+      "status": "RENDERED"
+    },
+    {
+      "viewport": 320,
+      "id": "config",
+      "kind": "screen",
+      "status": "HARNESS_OR_RENDER_FAILURE",
+      "error": "page.waitForFunction: Timeout 10000ms exceeded."
+    },
+    {
+      "viewport": 320,
+      "id": "config.negocio",
+      "kind": "settings-section",
+      "status": "HARNESS_OR_RENDER_FAILURE",
+      "error": "locator.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('settings-section-negocio')\u001b[22m\n"
+    },
+    {
+      "viewport": 320,
+      "id": "config.producto",
+      "kind": "settings-section",
+      "status": "HARNESS_OR_RENDER_FAILURE",
+      "error": "locator.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('settings-section-producto')\u001b[22m\n"
+    },
+    {
+      "viewport": 320,
+      "id": "config.ventas",
+      "kind": "settings-section",
+      "status": "HARNESS_OR_RENDER_FAILURE",
+      "error": "locator.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('settings-section-ventas')\u001b[22m\n"
+    },
+    {
+      "viewport": 320,
+      "id": "config.beneficios",
+      "kind": "settings-section",
+      "status": "HARNESS_OR_RENDER_FAILURE",
+      "error": "locator.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('settings-section-beneficios')\u001b[22m\n"
+    }
+  ],
+  "errors": [
+    {
+      "viewport": 320,
+      "message": "Sin conexión. BALAM necesita internet para continuar."
+    }
+  ],
+  "consoleErrors": [
+    {
+      "viewport": 320,
+      "message": "Error: Sin conexión. BALAM necesita internet para continuar.\n    at now (blob:http://127.0.0.1:62152/9e301734-e900-4607-af44-b49d41ffdcde:1840:64)\n    at businessDate (blob:http://127.0.0.1:62152/9e301734-e900-4607-af44-b49d41ffdcde:1865:54)\n    at Object.folioPreview (blob:http://127.0.0.1:62152/9e301734-e900-4607-af44-b49d41ffdcde:1888:65)\n    at FolioPrefixField (blob:http://127.0.0.1:62152/a5b1483c-20b5-4202-9fef-2067aeaece5e:1537:38)\n    at mf (blob:http://127.0.0.1:62152/96f01d85-53cb-4b23"
+    }
+  ],
+  "blockedRequests": [],
+  "failedRequests": [],
+  "dialogs": [],
+  "remoteBusinessWrites": 0,
+  "fixture": {
+    "products": 1,
+    "clients": 1,
+    "sellers": 2,
+    "sales": 2,
+    "payments": 1,
+    "empty": [
+      "loans",
+      "returns",
+      "exchanges",
+      "promotions",
+      "liquidations"
+    ],
+    "screens": [
+      {
+        "id": "dashboard",
+        "title": "Panel de control"
+      },
+      {
+        "id": "pos",
+        "title": "Punto de venta"
+      },
+      {
+        "id": "inventario",
+        "title": "Inventario"
+      },
+      {
+        "id": "clientes",
+        "title": "Clientes"
+      },
+      {
+        "id": "apartados",
+        "title": "Apartados"
+      },
+      {
+        "id": "prestamos",
+        "title": "Préstamos"
+      },
+      {
+        "id": "devoluciones",
+        "title": "Devoluciones"
+      },
+      {
+        "id": "descuentos",
+        "title": "Promociones y descuentos"
+      },
+      {
+        "id": "vendedores",
+        "title": "Vendedores y comisiones"
+      },
+      {
+        "id": "reportes",
+        "title": "Reportes"
+      },
+      {
+        "id": "config",
+        "title": "Configuración"
+      }
+    ],
+    "sections": [
+      {
+        "id": "config.negocio",
+        "section": "negocio",
+        "title": "Negocio"
+      },
+      {
+        "id": "config.producto",
+        "section": "producto",
+        "title": "Catálogos de producto"
+      },
+      {
+        "id": "config.ventas",
+        "section": "ventas",
+        "title": "Ventas y POS"
+      },
+      {
+        "id": "config.beneficios",
+        "section": "beneficios",
+        "title": "Descuentos adicionales y beneficios"
+      },
+      {
+        "id": "config.devoluciones",
+        "section": "devoluciones",
+        "title": "Devoluciones"
+      },
+      {
+        "id": "config.vendedores",
+        "section": "vendedores",
+        "title": "Vendedores"
+      },
+      {
+        "id": "config.clientes",
+        "section": "clientes",
+        "title": "Clientes"
+      },
+      {
+        "id": "config.inventario",
+        "section": "inventario",
+        "title": "Inventario"
+      },
+      {
+        "id": "config.impresion",
+        "section": "impresion",
+        "title": "Impresión"
+      },
+      {
+        "id": "config.usuarios",
+        "section": "usuarios",
+        "title": "Usuarios"
+      },
+      {
+        "id": "config.permisos",
+        "section": "permisos",
+        "title": "Permisos de visualización"
+      },
+      {
+        "id": "config.demo",
+        "section": "demo",
+        "title": "Administración / Datos"
+      }
+    ]
+  }
+}

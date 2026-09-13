@@ -31,3 +31,6 @@ supabase/.temp/
 
 # H-155: evidence may contain private operational identifiers.
 .evidence-h155-live/
+
+# H-171: private pre-cleanup backups may contain business data; never publish.
+.evidence-h171-private/

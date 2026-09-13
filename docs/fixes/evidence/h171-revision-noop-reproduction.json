@@ -1,0 +1,18 @@
+{
+  "scope": "Isolated local mechanism reproduction only; does not identify remote caller",
+  "liveFunctionDefinitionMd5": "d5a52190abeafe3651416410e174a3e7",
+  "statementTrigger": "CREATE TRIGGER h166_snapshot_changed AFTER INSERT OR DELETE OR UPDATE OR TRUNCATE ON pos.products FOR EACH STATEMENT EXECUTE FUNCTION pos.h166_advance_snapshot_revision()",
+  "statements": 7,
+  "before": {
+    "revision": 647,
+    "rowhash": "fc4cc7dfa8f278429bd53d3a26a459de"
+  },
+  "after": {
+    "revision": 654,
+    "rowhash": "fc4cc7dfa8f278429bd53d3a26a459de"
+  },
+  "allRowsUnchanged": true,
+  "revisionDelta": 7,
+  "remoteWrites": 0,
+  "ok": true
+}

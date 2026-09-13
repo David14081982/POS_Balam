@@ -1,0 +1,281 @@
+{
+  "artifactSha256": "cf32a52c56c5cacadc536bc151993f2efc5bcebbd2608089cee0a0bc92139437",
+  "startedAt": "2026-09-13T03:37:59.263Z",
+  "scope": "Real App/AUTH/STORE/DATA UI, HTTP transport intercepted with coherent in-memory fixture. No remote Auth/RLS/SQL or financial certification.",
+  "steps": [
+    {
+      "name": "login",
+      "ok": true,
+      "contract": "email/password types + Enter; actual AUTH and startup gates"
+    },
+    {
+      "name": "search-size-variant-cart",
+      "ok": true,
+      "productId": "17110000-0000-4000-8000-000000000001",
+      "sku": "21-J171-ML-ALG-BL-NOR-—-40",
+      "size": "40",
+      "lines": 1
+    },
+    {
+      "name": "cash-validation",
+      "ok": true,
+      "emptyBlocked": true,
+      "insufficientBlocked": true,
+      "exactAmountEnabled": true,
+      "total": 116
+    },
+    {
+      "name": "confirmed-sale-ticket",
+      "ok": true,
+      "folio": "H171-LOCAL-0001",
+      "total": 116,
+      "productId": "17110000-0000-4000-8000-000000000001",
+      "ticketTextSha256": "3e05c8722edc1fbb074d7b443478e366b9ec735440c559a4a7af4096413379c1",
+      "hardware": "NOT_TESTED"
+    },
+    {
+      "name": "stock-after-sale",
+      "ok": true,
+      "productId": "17110000-0000-4000-8000-000000000001",
+      "stock": 2,
+      "familyStock": 4,
+      "visibleVariantsSha256": "9fec5740890c2345800c6de2fdd387134b5f59dbe4fa0a245b17a8823dc60208"
+    },
+    {
+      "name": "sale-query",
+      "ok": true,
+      "folio": "H171-LOCAL-0001",
+      "reportRowTextSha256": "b9e4d48645603a23b93b2f57ddcf4113752cfde1a40d4b5d424810e154b2a1ad"
+    },
+    {
+      "name": "refresh-sale-query",
+      "ok": true,
+      "folio": "H171-LOCAL-0001",
+      "reportRowUnchanged": true
+    },
+    {
+      "name": "refresh-stock",
+      "ok": true,
+      "productId": "17110000-0000-4000-8000-000000000001",
+      "stock": 2,
+      "familyStock": 4,
+      "visibleVariantsSha256": "9fec5740890c2345800c6de2fdd387134b5f59dbe4fa0a245b17a8823dc60208"
+    }
+  ],
+  "requests": [
+    {
+      "name": "auth-password-login",
+      "transport": "INTERCEPTED"
+    },
+    {
+      "name": "current_permission_snapshot",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "current_permission_snapshot",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_presence",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_adoption_report",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "current_permission_snapshot",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_snapshot_if_changed",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_adoption_report",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_connectivity",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_request_result",
+      "transport": "INTERCEPTED",
+      "requestId": "575a4489-7caf-5353-8662-37aa811811a6"
+    },
+    {
+      "name": "execute_online_command",
+      "transport": "INTERCEPTED",
+      "requestId": "575a4489-7caf-5353-8662-37aa811811a6"
+    },
+    {
+      "name": "online_snapshot_if_changed",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_connectivity",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_request_result",
+      "transport": "INTERCEPTED",
+      "requestId": "f07f1734-3307-4190-9811-7c2cbe57b28e"
+    },
+    {
+      "name": "execute_online_command",
+      "transport": "INTERCEPTED",
+      "requestId": "f07f1734-3307-4190-9811-7c2cbe57b28e"
+    },
+    {
+      "name": "online_snapshot_if_changed",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_presence",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "current_permission_snapshot",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_snapshot_if_changed",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "current_permission_snapshot",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "current_permission_snapshot",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_presence",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_adoption_report",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "current_permission_snapshot",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_snapshot_if_changed",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_adoption_report",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    }
+  ],
+  "unexpectedRequests": [],
+  "blockedWebSockets": [
+    "wss://telohdbvbvsfmwyriflz.supabase.co/realtime/v1/websocket",
+    "wss://telohdbvbvsfmwyriflz.supabase.co/realtime/v1/websocket",
+    "wss://telohdbvbvsfmwyriflz.supabase.co/realtime/v1/websocket",
+    "wss://telohdbvbvsfmwyriflz.supabase.co/realtime/v1/websocket",
+    "wss://telohdbvbvsfmwyriflz.supabase.co/realtime/v1/websocket"
+  ],
+  "pageErrors": [],
+  "consoleErrors": [
+    "Blocked script execution in 'about:blank' because the document's frame is sandboxed and the 'allow-scripts' permission is not set."
+  ],
+  "failedRequests": [],
+  "printHandoffs": [
+    {
+      "documentId": "H171-LOCAL-0001",
+      "htmlSha256": "c00db4f07c795cfd303b8f8e4c9ac1a3e209aae161866a010259a4adf0be5d99",
+      "textSha256": "3e05c8722edc1fbb074d7b443478e366b9ec735440c559a4a7af4096413379c1",
+      "physicalPrinterTested": false
+    }
+  ],
+  "externalRequestsAllowed": 0,
+  "remoteWrites": 0,
+  "sourceSha256": "86948eb0c861961e1afe00bab72cc4809e444b6b4cd6c4454689dc2063275892",
+  "fixture": {
+    "products": 2,
+    "families": 1,
+    "variantsSameSize": 2,
+    "initialPieces": 5,
+    "sellerEligible": true,
+    "initialSales": 0,
+    "login": "synthetic credentials; not exported"
+  },
+  "fixtureCommit": {
+    "operationId": "f07f1734-3307-4190-9811-7c2cbe57b28e",
+    "productId": "17110000-0000-4000-8000-000000000001",
+    "quantity": 1,
+    "total": 116,
+    "subtotal": 100,
+    "iva": 16,
+    "payments": 1,
+    "stockBefore": 3,
+    "stockAfter": 2,
+    "commandSha256": "6248a8394adf935f009f67429e79eec3abb2a36c89d99b410c97561bd4571af5"
+  },
+  "storage": {
+    "keys": [
+      "balam-sidebar",
+      "balam_device_id",
+      "balam-page",
+      "balam_auth"
+    ],
+    "businessKeys": []
+  },
+  "result": {
+    "ok": false,
+    "error": "Expected values to be strictly deep-equal:\n+ actual - expected\n\n+ [\n+   \"Blocked script execution in 'about:blank' because the document's frame is sandboxed and the 'allow-scripts' permission is not set.\"\n+ ]\n- []\n"
+  },
+  "failureVisibleText": "Balam\nGUAYABERAS\nchevron_left\ndashboard\nPanel de control\npoint_of_sale\nPunto de venta\ninventory_2\nInventario\n1\ngroups\nClientes\nschedule\nApartados\nassignment_return\nPréstamos\nundo\nDevoluciones\nsell\nDescuentos\nbadge\nVendedores\nmonitoring\nReportes\nsettings\nConfiguración\nadd\nNUEVA VENTA\nUS\nAdministrador fixture H171\nADMINISTRADOR\nlogout\nInventario\npoint_of_sale\nNUEVA VENTA\nTodo actualizado\nnotifications\ncalendar_today\nSáb, 12 De Sep De 2026\n\nPRODUCTOS / FAMILIAS\n\n1\n\nUNIDADES EN STOCK\n\n4\n\nSTOCK BAJO\n\n1\n\nVALOR INVENTARIO\n\n$464\nMXN\nsearch\nTODO\nBAJO\nAGOTADOS\nMATERIAL\nTodas\nAlgodón\nPoliéster\nMantequilla\nAjuar Especial\nCOLOR TELA\nTodas\nBlanco\nBeige\nAzul Cielo\nNegro\nVino\nHueso\nAzul Acero\nAzul Marino\nArena\nGris\nCafé\nRosa\nMelón\nKaky\nMezclilla Azul\nOro\nPlata\nRojo\nVerde\nCOLOR DE ORNAMENTO\nTodas\nDorado\nAzul\nCafé\nPlateado\nBlanco\nNegro\nCARACTERÍSTICAS\nTodas\nadd\nNUEVO PRODUCTO\ninventory_2\nEXCEL:\ndownload\nPLANTILLA\nupload\nIMPORTAR\nfile_export\nEXPORTAR\nbarcode_scanner\nETIQUETAS\nPRODUCTO\tSKU\tATRIBUTOS\tCOLOR / ORN.\tPRECIO\tSTOCK\t\n\nGuayabera Jornada H171\n\t21-J171-ML-ALG-[VAR]-NOR-—-40\t\nM. LARGA\n—\nNORMAL / CLÁSICO\n\t\n\t$116\t4 BAJO\tchevron_right\n1 PRODUCTO\n\nTodo listo. Puedes continuar trabajando.",
+  "observedToasts": [],
+  "diagnostics": {
+    "status": {
+      "ready": true,
+      "synchronized": true,
+      "connection": "online",
+      "lastSuccess": "2026-09-13T03:38:13.952Z",
+      "build": "2026-09-12-h166-online",
+      "busy": false,
+      "reconciling": false,
+      "hasUnresolvedRequests": false,
+      "pendingRequests": [],
+      "message": "Todo actualizado",
+      "adoption": {
+        "revision": 1,
+        "state": "ready",
+        "stage": "complete",
+        "remainingLegacy": 0,
+        "archivedCount": 0,
+        "snapshotAt": "2026-09-13T03:38:13.952Z"
+      },
+      "legacyReviewCount": 0,
+      "errors": []
+    }
+  },
+  "completedAt": "2026-09-13T03:38:16.246Z"
+}

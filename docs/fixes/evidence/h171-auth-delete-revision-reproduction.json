@@ -1,0 +1,12 @@
+{
+  "scope": "Local exact Auth target deletion after simulated149, using actual pos-source FKs and all live statement triggers; does not identify the remote process that completed request7054.",
+  "target": "6dd83591-9e6b-482f-95e0-78470766cbce",
+  "removedAuth": 1,
+  "revisionBefore": 1022,
+  "revisionAfter": 1029,
+  "revisionDelta": 7,
+  "commercialTablesUnchanged": 35,
+  "commercialPostVerified": true,
+  "remoteWrites": 0,
+  "ok": true
+}

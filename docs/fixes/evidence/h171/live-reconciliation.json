@@ -1,0 +1,105 @@
+{
+  "scope": "Local PGlite canonicalization; actual durable journal; controlled exact SELECT and Auth-read clients",
+  "moduleSha256": "f12be162202e00c3315436450e77f5b94a7c1bb0573121cd81487aaceb616058",
+  "accountEdgeSourceSha256": "c4b7c474a6a743431bed64d05320764f90832e65afcbf652de1e56a1c1d7161c",
+  "testSha256": "c3b8ef1eb572b3a3a193bfbc308bf4c11f81ec5b0018a2c6893a6b03a7a6d973",
+  "certified": false,
+  "realSupabaseWrites": 0,
+  "tests": 23,
+  "passed": 23,
+  "failed": 0,
+  "results": [
+    {
+      "name": "Command canonicalization matches local PostgreSQL jsonb text for actual wire shapes and numeric edge cases",
+      "pass": true
+    },
+    {
+      "name": "Lost client ACK reconciles from exact confirmed sale receipt and exports server child IDs",
+      "pass": true
+    },
+    {
+      "name": "absent receipt remains uncertain with no replay or resolver RPC",
+      "pass": true
+    },
+    {
+      "name": "executing receipt remains uncertain with no replay or resolver RPC",
+      "pass": true
+    },
+    {
+      "name": "another actor receipt remains uncertain with no replay or resolver RPC",
+      "pass": true
+    },
+    {
+      "name": "different command under the same request remains uncertain with no replay or resolver RPC",
+      "pass": true
+    },
+    {
+      "name": "inconsistent response identity remains uncertain with no replay or resolver RPC",
+      "pass": true
+    },
+    {
+      "name": "Rejected and authoritative cancellation receipts are terminal without inventing successful writes",
+      "pass": true
+    },
+    {
+      "name": "Run, journal chain and fixture identity mismatch reject before any read",
+      "pass": true
+    },
+    {
+      "name": "A different configured project or schema is refused before any SDK operation",
+      "pass": true
+    },
+    {
+      "name": "A real/protected Auth identity cannot be promoted to QA by its email alone",
+      "pass": true
+    },
+    {
+      "name": "Lost account ACK discovers exact Auth target and the server-generated profile request without listUsers",
+      "pass": true
+    },
+    {
+      "name": "Account needs_review, foreign target marker or protected target remains blocked",
+      "pass": true
+    },
+    {
+      "name": "Node profiles, roles and retirement verify final state while a password rotation stays unverifiable",
+      "pass": true
+    },
+    {
+      "name": "Exact devices reconcile final adoption state and reject an actor change",
+      "pass": true
+    },
+    {
+      "name": "Unknown intent/command and a confirmed resolver without original command never reconcile",
+      "pass": true
+    },
+    {
+      "name": "Direct abandoned account preparation reconciles only its exact hash and terminal advance",
+      "pass": true
+    },
+    {
+      "name": "Permission receipt exports exact composite override PKs only for a verified created QA account",
+      "pass": true
+    },
+    {
+      "name": "Batch responses export child entity IDs and rejected batches do not admit unknown child commands",
+      "pass": true
+    },
+    {
+      "name": "A changed exact row observed twice is detected instead of silently replacing its first hash",
+      "pass": true
+    },
+    {
+      "name": "A full PostgREST page is uncertain rather than silently accepting truncated children",
+      "pass": true
+    },
+    {
+      "name": "Exact fixture-plan is metadata only and never creates a receipt or commercial ownership claim",
+      "pass": true
+    },
+    {
+      "name": "Foreign or mutable fixture-plan metadata is rejected before any authority read",
+      "pass": true
+    }
+  ]
+}

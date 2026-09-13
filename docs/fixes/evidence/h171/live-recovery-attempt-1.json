@@ -1,0 +1,15 @@
+{
+  "project": "BALAM",
+  "run": "9482e643-232b-4d32-9ffd-0f07ac156ae6",
+  "status": "STOPPED_BEFORE_DELETE",
+  "cause": "LOCAL_DISK_FULL_DURING_READ_ONLY_CAPTURE_PERSISTENCE",
+  "journalEntries": 88,
+  "cleanupSqlAttempts": 0,
+  "partialResponse": true,
+  "partialResponseBytes": 48758784,
+  "partialResponseSha256": "38d076b0568fd7fb43fc3a11b26ed7a7eea31c0d14de9a803750a8243c7c55a0",
+  "originalCanonicalBaselinePreserved": true,
+  "canonicalBaselineSha256": "71cec459c85920fdc8cbcd4c344ecc43fbcf573bc831824c29dab888693cd3b4",
+  "cleanupVerified": false,
+  "certified": false
+}

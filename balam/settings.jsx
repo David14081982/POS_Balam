@@ -1503,9 +1503,8 @@
         ]),
       ]),
       h(GlassCard, { key: 'm', className: 'p-6' }, [
-        h(SerifHeading, { key: 't', className: 'mb-4', children: 'Moneda, impuestos y folios' }),
+        h(SerifHeading, { key: 't', className: 'mb-4', children: 'Impuestos y folios' }),
         h('div', { key: 'g', className: 'grid grid-cols-1 md:grid-cols-2 gap-x-6' }, [
-          h(CfgText, { key: 'c', k: 'currency', label: 'Moneda' }),
           h(FolioPrefixField, { key: 'f' }),
         ]),
         h('div', { key: 'iva', className: 'mt-4 p-4 rounded-xl bg-surface-container-low border border-outline-variant' }, [
@@ -1541,11 +1540,7 @@
       h(CatalogEditor, { key: 'ss', kind: 'sale_status', title: 'Estatus de venta', codePlaceholder: 'Pagado', labelPlaceholder: 'Pagado', metaFields: [{ key: 'tone', label: 'Tono', type: 'select', options: TONE_OPTS, def: 'neutral' }] }),
       h(GlassCard, { key: 'beh', className: 'p-6' }, [
         h(SerifHeading, { key: 't', className: 'mb-2', children: 'Comportamiento del POS' }),
-        h(CfgToggle, { key: 'sz', k: 'pos.askSize', title: 'Pedir talla al escanear', desc: 'Muestra selector de talla cuando aplica a varias' }),
-        h(CfgToggle, { key: 'lay', k: 'pos.allowLayaway', title: 'Permitir apartados', desc: 'Habilita ventas con anticipo y saldo pendiente' }),
-        h(CfgToggle, { key: 'cm', k: 'commission.auto', title: 'Cálculo automático de comisión', desc: 'Reparte la comisión entre los vendedores asignados' }),
         h(CfgToggle, { key: 'st', k: 'pos.validateStock', title: 'Validar existencias al vender', desc: 'Impide agregar más piezas que el stock disponible' }),
-        h(CfgToggle, { key: 'so', k: 'pos.sound', title: 'Sonido al agregar al ticket', desc: 'Beep de confirmación al escanear o tocar' }),
       ]),
       h(GlassCard, { key: 'umb', className: 'p-6' }, [
         h(SerifHeading, { key: 't', className: 'mb-4', children: 'Umbrales' }),
@@ -1642,7 +1637,6 @@
       h(GlassCard, { key: 'tk', className: 'p-6' }, [
         h(SerifHeading, { key: 't', className: 'mb-2', children: 'Tickets e impresión' }),
         h(CfgToggle, { key: 'au', k: 'print.auto', title: 'Imprimir ticket automáticamente', desc: 'Envía a la impresora al confirmar el cobro' }),
-        h(CfgToggle, { key: 'ls', k: 'print.lowStockAlert', title: 'Alerta de stock bajo', desc: 'Notifica cuando un producto baja del umbral' }),
       ]),
       h(GlassCard, { key: 'pie', className: 'p-6' }, [
         h(SerifHeading, { key: 't', className: 'mb-4', children: 'Pie de ticket' }),
@@ -1665,13 +1659,13 @@
       const roleLabel = (r) => (C.find('user_role', r) || {}).label || r;
       return [
         h(GlassCard, { key: 'c', className: 'overflow-hidden' }, [
-          h('div', { key: 'h', className: 'flex items-center justify-between px-5 py-4 border-b border-outline-variant' }, [
+          h('div', { key: 'h', className: 'flex flex-wrap gap-3 items-center justify-between px-5 py-4 border-b border-outline-variant' }, [
             h(SerifHeading, { key: 't', children: 'Usuarios del sistema' }),
-            h('button', { key: 'a', className: 'inline-flex items-center gap-2 px-4 h-10 bg-primary text-on-primary font-label-sm uppercase tracking-widest text-caption rounded-lg hover:opacity-90 transition', onClick: () => ctx.setAddingUser(true) }, [h(MS, { key: 'i', name: 'plus', size: 16 }), 'Agregar']),
+            h('button', { key: 'a', 'data-testid': 'settings-user-add', className: 'inline-flex items-center gap-2 px-4 h-10 bg-primary text-on-primary font-label-sm uppercase tracking-widest text-caption rounded-lg hover:opacity-90 transition', onClick: () => ctx.setAddingUser(true) }, [h(MS, { key: 'i', name: 'plus', size: 16 }), 'Agregar']),
           ]),
-          h('table', { key: 'tbl', className: 'w-full' }, [
+          h('div', { key: 'scroll', className: 'overflow-x-auto', 'data-horizontal-scroll': 'settings-users-table', tabIndex: 0, role: 'region', 'aria-label': 'Tabla completa de usuarios' }, h('table', { key: 'tbl', className: 'w-full' }, [
             h('thead', { key: 'h' }, h('tr', { className: 'text-left border-b border-outline-variant' }, ['Usuario', 'Rol', 'Estado', ''].map((x, i) => h('th', { key: i, className: 'px-5 py-3 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest' }, x)))),
-            h('tbody', { key: 'b', className: 'divide-y divide-outline-variant/40' }, D.sellers.map(s => h('tr', { key: s.id, className: s.active === false ? 'opacity-50' : '' }, [
+            h('tbody', { key: 'b', className: 'divide-y divide-outline-variant/40' }, D.sellers.map(s => h('tr', { key: s.id, 'data-testid': 'settings-user-' + s.id, className: s.active === false ? 'opacity-50' : '' }, [
               h('td', { key: 'n', className: 'px-5 py-3' }, h('div', { className: 'flex items-center gap-3' }, [
                 s.avatar
                   ? h('img', { key: 'a', src: s.avatar, className: 'w-8 h-8 rounded-full object-cover shrink-0' })
@@ -1679,13 +1673,13 @@
                 h('div', { key: 'd' }, [h('div', { key: 'nm', className: 'font-medium text-primary' }, s.nombre), s.email && h('div', { key: 'em', className: 'text-overline text-on-surface-variant' }, s.email)]),
               ])),
               h('td', { key: 'r', className: 'px-5 py-3' }, h('span', { className: 'px-2 py-1 text-overline font-bold rounded ' + (s.role === 'admin' ? 'bg-primary-container text-on-primary-container' : 'bg-surface-container text-on-surface-variant') }, roleLabel(s.role))),
-              h('td', { key: 's', className: 'px-5 py-3' }, h('span', { className: 'px-2 py-1 text-overline font-bold rounded ' + (s.active === false ? 'bg-surface-container text-on-surface-variant' : 'bg-success-soft text-success') }, s.active === false ? 'Inactivo' : 'Activo')),
+              h('td', { key: 's', className: 'px-5 py-3' }, h('span', { 'data-testid': 'settings-user-status-' + s.id, className: 'px-2 py-1 text-overline font-bold rounded ' + (s.active === false ? 'bg-surface-container text-on-surface-variant' : 'bg-success-soft text-success') }, s.active === false ? 'Inactivo' : 'Activo')),
               h('td', { key: 'x', className: 'px-5 py-3 text-right' }, h('div', { className: 'flex items-center justify-end gap-4' }, [
-                h('button', { key: 'e', className: 'text-overline uppercase font-bold text-on-surface-variant hover:text-primary', onClick: () => ctx.setAddingUser(s) }, 'Editar'),
-                h('button', { key: 'a', className: 'text-overline uppercase font-bold text-on-surface-variant hover:text-primary', onClick: async () => { await D.updateUser(s.id, { active: s.active === false }); ctx.refresh(); } }, s.active === false ? 'Activar' : 'Desactivar'),
+                h('button', { key: 'e', 'data-testid': 'settings-user-edit-' + s.id, className: 'text-overline uppercase font-bold text-on-surface-variant hover:text-primary', onClick: () => ctx.setAddingUser(s) }, 'Editar'),
+                h('button', { key: 'a', 'data-testid': 'settings-user-toggle-' + s.id, className: 'text-overline uppercase font-bold text-on-surface-variant hover:text-primary', onClick: async () => { await D.updateUser(s.id, { active: s.active === false }); ctx.refresh(); } }, s.active === false ? 'Activar' : 'Desactivar'),
               ])),
             ]))),
-          ]),
+          ])),
           h('p', { key: 'n', className: 'px-5 py-3 text-caption text-on-surface-variant' }, 'El administrador inicia sesión con correo y contraseña; los vendedores se eligen al cobrar y no necesitan iniciar sesión.'),
         ]),
       ];
@@ -2729,10 +2723,10 @@
     const under = 'w-full border-0 border-b border-outline-variant bg-transparent py-3 text-body focus:border-primary focus:ring-0 px-0 transition-all';
     const lbl = 'block text-overline uppercase font-bold text-on-surface-variant tracking-widest mb-1';
 
-    return h('div', { className: 'flex-1 overflow-y-auto bg-background font-body text-on-surface' },
+    return h('div', { 'data-testid': 'settings-user-form', 'data-user-id': editing ? user.id : 'new', className: 'flex-1 overflow-y-auto bg-background font-body text-on-surface' },
       h('div', { className: 'max-w-4xl mx-auto py-10 px-8' }, [
         h('div', { key: 'bc', className: 'flex items-center gap-2 mb-6 text-on-surface-variant' }, [
-          h('button', { key: 'b', className: 'text-overline uppercase tracking-widest font-semibold hover:text-primary', onClick: onCancel }, 'Usuarios'),
+          h('button', { key: 'b', 'data-testid': 'settings-user-back', className: 'text-overline uppercase tracking-widest font-semibold hover:text-primary', onClick: onCancel }, 'Usuarios'),
           h(MS, { key: 'c', name: 'chevRight', size: 14 }),
           h('span', { key: 's', className: 'text-overline uppercase tracking-widest font-semibold text-primary' }, editing ? 'Editar usuario' : 'Nuevo usuario'),
         ]),

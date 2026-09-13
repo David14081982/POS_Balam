@@ -1,0 +1,277 @@
+{
+  "artifactSha256": "cf32a52c56c5cacadc536bc151993f2efc5bcebbd2608089cee0a0bc92139437",
+  "startedAt": "2026-09-13T03:43:14.686Z",
+  "scope": "Real App/AUTH/STORE/DATA UI, HTTP transport intercepted with coherent in-memory fixture. No remote Auth/RLS/SQL or financial certification.",
+  "steps": [
+    {
+      "name": "login",
+      "ok": true,
+      "contract": "email/password types + Enter; actual AUTH and startup gates"
+    },
+    {
+      "name": "search-size-variant-cart",
+      "ok": true,
+      "productId": "17110000-0000-4000-8000-000000000001",
+      "sku": "21-J171-ML-ALG-BL-NOR-—-40",
+      "size": "40",
+      "lines": 1
+    },
+    {
+      "name": "cash-validation",
+      "ok": true,
+      "emptyBlocked": true,
+      "insufficientBlocked": true,
+      "exactAmountEnabled": true,
+      "total": 116
+    },
+    {
+      "name": "confirmed-sale-ticket",
+      "ok": true,
+      "folio": "H171-LOCAL-0001",
+      "total": 116,
+      "productId": "17110000-0000-4000-8000-000000000001",
+      "ticketTextSha256": "e4b6c0308acfd461be460cea8ff0432e0160de44520fe617354c3b182847ed48",
+      "hardware": "NOT_TESTED"
+    },
+    {
+      "name": "stock-after-sale",
+      "ok": true,
+      "productId": "17110000-0000-4000-8000-000000000001",
+      "stock": 2,
+      "familyStock": 4,
+      "visibleVariantsSha256": "a5932515fea6f2a74debfec056a8908918a4233d2ae589b684f0b7b0ea46bcbd"
+    },
+    {
+      "name": "sale-query",
+      "ok": true,
+      "folio": "H171-LOCAL-0001",
+      "reportRowTextSha256": "b9e4d48645603a23b93b2f57ddcf4113752cfde1a40d4b5d424810e154b2a1ad"
+    },
+    {
+      "name": "refresh-sale-query",
+      "ok": true,
+      "folio": "H171-LOCAL-0001",
+      "reportRowUnchanged": true
+    },
+    {
+      "name": "refresh-stock",
+      "ok": true,
+      "productId": "17110000-0000-4000-8000-000000000001",
+      "stock": 2,
+      "familyStock": 4,
+      "visibleVariantsSha256": "a5932515fea6f2a74debfec056a8908918a4233d2ae589b684f0b7b0ea46bcbd"
+    }
+  ],
+  "requests": [
+    {
+      "name": "auth-password-login",
+      "transport": "INTERCEPTED"
+    },
+    {
+      "name": "current_permission_snapshot",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "current_permission_snapshot",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_presence",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_adoption_report",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "current_permission_snapshot",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_snapshot_if_changed",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_adoption_report",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_connectivity",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_request_result",
+      "transport": "INTERCEPTED",
+      "requestId": "a0499bd9-433b-5220-8ec8-188cde808161"
+    },
+    {
+      "name": "execute_online_command",
+      "transport": "INTERCEPTED",
+      "requestId": "a0499bd9-433b-5220-8ec8-188cde808161"
+    },
+    {
+      "name": "online_snapshot_if_changed",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_connectivity",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_request_result",
+      "transport": "INTERCEPTED",
+      "requestId": "43ca9291-782e-41d4-88f2-ddf98e5ab844"
+    },
+    {
+      "name": "execute_online_command",
+      "transport": "INTERCEPTED",
+      "requestId": "43ca9291-782e-41d4-88f2-ddf98e5ab844"
+    },
+    {
+      "name": "online_snapshot_if_changed",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_presence",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "current_permission_snapshot",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_snapshot_if_changed",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_presence",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "current_permission_snapshot",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_snapshot_if_changed",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "current_permission_snapshot",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "current_permission_snapshot",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_presence",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_adoption_report",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "current_permission_snapshot",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_snapshot_if_changed",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_adoption_report",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    }
+  ],
+  "unexpectedRequests": [],
+  "blockedWebSockets": [
+    "wss://telohdbvbvsfmwyriflz.supabase.co/realtime/v1/websocket",
+    "wss://telohdbvbvsfmwyriflz.supabase.co/realtime/v1/websocket",
+    "wss://telohdbvbvsfmwyriflz.supabase.co/realtime/v1/websocket",
+    "wss://telohdbvbvsfmwyriflz.supabase.co/realtime/v1/websocket",
+    "wss://telohdbvbvsfmwyriflz.supabase.co/realtime/v1/websocket",
+    "wss://telohdbvbvsfmwyriflz.supabase.co/realtime/v1/websocket",
+    "wss://telohdbvbvsfmwyriflz.supabase.co/realtime/v1/websocket",
+    "wss://telohdbvbvsfmwyriflz.supabase.co/realtime/v1/websocket"
+  ],
+  "pageErrors": [],
+  "consoleErrors": [],
+  "failedRequests": [],
+  "printHandoffs": [
+    {
+      "documentId": "H171-LOCAL-0001",
+      "htmlSha256": "c90ba62d23256cf2004b176769b6db41162c45380bad4a62fe7e4f27bd6b5c0d",
+      "textSha256": "e4b6c0308acfd461be460cea8ff0432e0160de44520fe617354c3b182847ed48",
+      "physicalPrinterTested": false
+    }
+  ],
+  "externalRequestsAllowed": 0,
+  "remoteWrites": 0,
+  "sourceSha256": "123f972f7a5984d39d9ac2cd9258eff34327938e0e88d513fbfdf29bbbc6c4f5",
+  "fixture": {
+    "products": 2,
+    "families": 1,
+    "variantsSameSize": 2,
+    "initialPieces": 5,
+    "sellerEligible": true,
+    "initialSales": 0,
+    "login": "synthetic credentials; not exported"
+  },
+  "fixtureCommit": {
+    "operationId": "43ca9291-782e-41d4-88f2-ddf98e5ab844",
+    "productId": "17110000-0000-4000-8000-000000000001",
+    "quantity": 1,
+    "total": 116,
+    "subtotal": 100,
+    "iva": 16,
+    "payments": 1,
+    "stockBefore": 3,
+    "stockAfter": 2,
+    "commandSha256": "47db18da00979b11003c4859d7f859d6f2e4bb85a45864afceb9ff0dc9ea4546"
+  },
+  "storage": {
+    "keys": [
+      "balam-sidebar",
+      "balam_device_id",
+      "balam-page",
+      "balam_auth"
+    ],
+    "businessKeys": []
+  },
+  "result": {
+    "ok": true,
+    "steps": 8,
+    "folio": "H171-LOCAL-0001",
+    "loginCount": 1,
+    "fixtureSales": 1,
+    "fixtureReceipts": 2,
+    "refreshReconstructed": true,
+    "realSupabaseCertified": false
+  },
+  "completedAt": "2026-09-13T03:43:59.776Z"
+}

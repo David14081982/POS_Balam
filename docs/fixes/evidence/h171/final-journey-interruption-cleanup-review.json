@@ -1,0 +1,44 @@
+{
+  "scope": "EXACT_STOPPED_RUN_CLEANUP_REVIEW_ONLY",
+  "run": "d4b616be-2bed-4512-9053-6f0ee6a7c372",
+  "project": "telohdbvbvsfmwyriflz",
+  "artifactSha256": "f4d73fa350d4187dade1a55c999dc203b405f4c20d95d9138aaf1b2ef0a82646",
+  "readyForReview": true,
+  "blockers": [],
+  "exactRows": 20,
+  "counts": {
+    "online_requests": 3,
+    "sellers": 4,
+    "user_permission_role_assignments": 1,
+    "capability_operation_audit": 1,
+    "products": 2,
+    "sales": 1,
+    "sale_items": 1,
+    "sale_payments": 1,
+    "stock_reservations": 1,
+    "sale_commits": 1,
+    "movements": 1,
+    "sync_devices": 3
+  },
+  "authTargets": [
+    "759b9f62-8018-4e62-bde3-794ec58e92fc"
+  ],
+  "restoration": {
+    "verified": true,
+    "restoredRows": 20,
+    "expectedRows": 20
+  },
+  "counterPreserved": [
+    {
+      "table": "folio_counters",
+      "pk": "{\"prefix\": \"BG\", \"business_date\": \"2026-09-13\"}",
+      "fullRowMd5": "1bc23a686a66308dafa284b9ff4436e5"
+    }
+  ],
+  "reviewSha256": "90c79dad9aada466533d98f1641358c0dd7cee49b2052fa0beac5a9fd6f678c8",
+  "sqlSha256": "be84bff627e76744e2d385f08ab75cdc08bc4b8cfc4ebf23e6ac4e9d46a4b621",
+  "planSha256": "f66d2f6dd2b29b62372ff8525c9262b3dad65acaded2365a9c5b928640aea983",
+  "guardSourceSha256": "7496548da81e212b17e51fbf8f9ed33bbfb0f70f3513b347121cdac7288cd850",
+  "cleanupVerified": false,
+  "certified": false
+}

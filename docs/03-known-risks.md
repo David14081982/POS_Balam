@@ -7,6 +7,38 @@ y `BLOQUEADO`.
 
 ## Resumen
 
+**H-171 — Entrega final de BALAM / Only Online: EN CURSO (13/09/2026).**
+Autoridades exclusivas: `David14081982/POS_Balam`, Supabase
+`telohdbvbvsfmwyriflz`, esquema `pos`, ADR-015; base vigente `c148a8c`.
+Se corrigieron siete controles inoperantes y los recortes de Usuarios/Panel.
+Limpieza histórica autorizada comprobada: **149 comerciales + 317 técnicas**
+eliminadas y **11/11 Auth ausentes**. Inventario protegido: **973 productos /
+251 familias / 3483 piezas**; venta `BG-260912-0001` identificada por operación,
+solicitud real `70549527-4867-4342-94d2-38e770b0f2a9` e historia preservadas.
+**Storage: cero objetos eliminados.** Cuatro filas ambiguas siguen retenidas por
+OWNER, identificadas individualmente en el informe; dos recuperaciones H148
+conservan listas anti-replay y tokens omitidos del respaldo.
+Candidato actual SHA-256:
+`f4d73fa350d4187dade1a55c999dc203b405f4c20d95d9138aaf1b2ef0a82646`.
+Sobre esos bytes: **9/9 UI escritorio + 9/9 móvil**, **192/192 superficies +
+8/8 anchos**, con transporte aislado; no certifican persistencia Supabase.
+El intento real `9482e643-232b-4d32-9ffd-0f07ac156ae6` se interrumpió por el
+journal al clasificar el booleano `lookup.meta.requiresAuthorization`; CONFIG
+no se envió. Defecto del certificador, no defecto nuevo del producto demostrado.
+Su recuperación está **COMPLETA: 35/35 filas POS eliminadas y 1/1 Auth ausente**;
+63 tablas protegidas exactas y revisión con avance legítimo, inventario
+973/251/3483, venta protegida y 7054 intactos; [resultado](fixes/evidence/h171/recovery-completion.json).
+Jornada `d4b616be-2bed-4512-9053-6f0ee6a7c372` interrumpida: el comprobador exigía
+exactamente una impresión con `print.auto=true`; contador real no guardado.
+[Fallo del comprobador y límite](fixes/evidence/h171/live-print-observation-interruption.json), sin defecto de producto demostrado.
+Limpieza **20 POS + 1 Auth EN CURSO**, plan listo/restaurado **20/20**; marcador
+`sale:<UUID>` de producto/vendedor identificado por actor, recibo y estado exactos.
+**P0 de producto conocidos pendientes: 0. P1 de producto conocidos pendientes: 0.**
+Cuatro casos pendientes de reintento; no se anticipa la limpieza en curso.
+**Publicación f4d EN CURSO; DoD pendiente** de jornada, limpieza y bytes publicados.
+**Commit:** Pendiente de commit.
+**Documento:** [Informe ejecutivo H171](fixes/balam-final-readiness.md).
+
 | ID | Riesgo | Estado | Área |
 |---|---|---|---|
 | H-01 | Inventario concurrente | RESUELTO | Inventario / sincronización |
@@ -7758,3 +7790,90 @@ el job live de esta ejecución en GitHub quedó omitido.
 certificados. Los timeouts de lectura observados no se declaran corregidos.
 **Evidencia:** `docs/fixes/evidence/h170-live-matrix.json`; detalle de reanudaciones,
 hashes y alcance en `docs/fixes/arranque-con-cuenta-pendiente-h170.md`.
+
+
+## H-171 — Entrega final de BALAM, Only Online y cero contaminación QA
+
+**Estado:** EN CURSO; NO CERTIFICADO para entrega. **Fecha:** 12/09/2026, Hermosillo.
+**Commit:** Pendiente de commit.
+**Documento:** [BALAM FINAL READINESS](fixes/balam-final-readiness.md).
+
+**Autoridad:** exclusivamente `David14081982/POS_Balam`, Supabase
+`telohdbvbvsfmwyriflz`, esquema `pos`, ADR-015. Base remota
+`c148a8c0935ea533035387a391965df9b0748082`; worktree
+`.work/balam-final-readiness`. La copia raíz local-first no representa el
+producto vigente. Only Online ya estaba activo.
+
+**Causa:** el certificador conserva historia comercial QA. El censo prueba
+14 productos QA, 12 activos, 113 piezas, 12 familias activas y siete ventas.
+Además se reprodujeron seis editores CONFIG sin consumidor, un botón sin
+handler y recortes de acciones en Usuarios y del selector mensual del Panel.
+
+**Correcciones:** siete controles inoperantes retirados, valores históricos
+conservados; tabla Usuarios accesible y cabeceras adaptables. Mismos callbacks,
+permisos y cálculos. PHILOSOPHY alineado con ADR-015. El runner que retenía QA
+se bloquea antes de credenciales y escrituras; no limpia los residuos existentes.
+
+**Pruebas:** migraciones 31/31, arquitectura y SQL PGlite con Punto Cero aislado;
+62 casos de transporte/adopción/DATA/identidad/CONFIG, más regresiones de
+arranque, cuentas, mensajes, Settings, callbacks, proyecciones y recuperación.
+Final: 192/192 superficies y 8/8 anchos, cero JS/consola/recortes observados;
+once comandos de regresión de navegador y etiquetas terminaron con exit 0.
+Jornada UI aislada: 8/8 etapas en escritorio y 8/8 en móvil, con AUTH/STORE/DATA
+originales y HTTP simulado. Journal previo a HTTP 15/15 e integración real del
+runner extraída por VM 10/10; se corrigió cierre de lock ante error final.
+UUID Auth preasignado; cancelaciones del resolver registradas como escrituras;
+escenarios aprobados no se confunden con certificación sin limpieza.
+Fixtures aislados: jornada real y A/B/C actual siguen NO CERTIFICADOS.
+
+**Artefacto final:**
+`cf32a52c56c5cacadc536bc151993f2efc5bcebbd2608089cee0a0bc92139437`.
+Base pública verificada antes; candidato H171 sin commit ni publicación.
+
+**Datos:** respaldo privado de 1,940 filas/35 tablas, SHA-256
+`6a6c9b084af4432c22f313a5bb908ab54a9e1104c47ba6ea09b597252d92d825`.
+Dry-run real v2: 149/149 PK+hash, cero padres/referencias ajenas y guardas
+verdaderas. Transacción preparada: 4/4 ensayos locales, incluidos tres rollbacks
+protectores. OWNER aprobó el SQL exacto; primer intento rechazado por
+`DEVICE_RETIRED` al borrar productos. Rollback remoto verificado: 149/149
+PK/huellas presentes y 35/35 tablas comerciales, 1,940 filas, idénticas.
+Ese intento no confirmó bajas. OWNER aprobó después la copia con contexto de
+mantenimiento `c2ef25b…`: ejecución exit0 y postcheck remoto de 149/149 ausentes,
+35/35 tablas protegidas íntegras, 973 productos, 251 familias y 3483 piezas.
+SQL original intacto; ningún fence desactivado ni dispositivo reactivado.
+Restauración comercial: 149/149 filas seleccionadas y 35/35 tablas, 1,940 filas,
+reproducen las huellas originales remotas con tipos reales y UTC/ISO.
+Preserva 973 productos, 251 familias, 3,483 piezas y venta `BG-260912-0001`,
+operación `35e2c61a-7561-41b9-9535-e39e671a55d3`.
+
+**Residual:** dos recuperaciones retenidas e historia técnica protegida;
+cuatro filas H148 ambiguas excluidas expresamente por OWNER hasta
+presentación individual al final.
+Censo técnico 64/64 tablas; 327 filas identificadas tras revisar seis recibos
+por identidad, ocho solapadas con el plan comercial: 319 adicionales. El respaldo
+canónico SHA-256 `b37b3f4cf8518d5ab87754a48e60c62fab9418a23d396157cbe80530ba86b326`
+conserva 327/327 hashes. Restauración local 325/325; dos recuperaciones quedan
+en espera por columna sensible omitida y no nula. El primer intento317-v2
+terminó con timeout durante comparación final de `point_zero_backups`; rollback
+remoto comprobado: 317/317 PK/hash presentes, 21 filas protegidas íntegras y cero
+bajas técnicas confirmadas en ese intento. V3 optimizó el cálculo manteniendo
+timeout90 y todas las guardas: COMMIT317 y postcheck317 ausentes/63 hashes
+protegidos íntegros. Auth después:10DELETE y1yaausente,11/11GET404; SQL verifica
+198 dependencias en cero y actor real habilitado. Revisión final725; inventario
+973/251/3483, venta0001 y7054 completada conservan sus hashes.
+El XPath de FKs inicial fue inválido y se reemplazó por conteos directos;
+no se atribuye retrospectivamente la causa del error Auth original.
+La solicitud real7054 completó su delete de6dd8 después del COMMIT149:
+actor/target/resultadoOK y ausencia exactos comprobados, MD5 protegido actualizado
+a `8fdc987d8fe491f467f968da4c5306e0`. La baja Auth reproduce +7 revisiones mediante
+las FK vigentes sin modificar filas comerciales. No se repite ese delete.
+Legacy `eef0157e-287a-417d-aa14-c7c3983fc3d7` conserva original/hash y
+`needs_review`. Los 2,520 objetos Storage se preservan: ausencia de referencia
+literal no prueba que sean huérfanos QA. P0 abierto: 1, contaminación.
+P1 nuevo reproducido pendiente: 0; los flujos BLOCKED siguen sin certificación.
+Jornada completa, A/B/C final, hardware y publicación pendientes.
+
+**Continuación:** mantener excluidas las recuperaciones e historia protegidas,
+presentar individualmente las cuatro filas
+excluidas, certificar flujos finales sin residuos y cerrar
+esta misma H171.

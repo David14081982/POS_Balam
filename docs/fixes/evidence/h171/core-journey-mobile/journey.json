@@ -1,0 +1,115 @@
+{
+  "artifactSha256": "cf32a52c56c5cacadc536bc151993f2efc5bcebbd2608089cee0a0bc92139437",
+  "startedAt": "2026-09-13T03:41:36.051Z",
+  "scope": "Real App/AUTH/STORE/DATA UI, HTTP transport intercepted with coherent in-memory fixture. No remote Auth/RLS/SQL or financial certification.",
+  "steps": [],
+  "requests": [
+    {
+      "name": "auth-password-login",
+      "transport": "INTERCEPTED"
+    },
+    {
+      "name": "current_permission_snapshot",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "current_permission_snapshot",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_presence",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_adoption_report",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "current_permission_snapshot",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_snapshot_if_changed",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_adoption_report",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_presence",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "current_permission_snapshot",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_snapshot_if_changed",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    }
+  ],
+  "unexpectedRequests": [],
+  "blockedWebSockets": [
+    "wss://telohdbvbvsfmwyriflz.supabase.co/realtime/v1/websocket",
+    "wss://telohdbvbvsfmwyriflz.supabase.co/realtime/v1/websocket",
+    "wss://telohdbvbvsfmwyriflz.supabase.co/realtime/v1/websocket",
+    "wss://telohdbvbvsfmwyriflz.supabase.co/realtime/v1/websocket"
+  ],
+  "pageErrors": [],
+  "consoleErrors": [],
+  "failedRequests": [],
+  "printHandoffs": [],
+  "externalRequestsAllowed": 0,
+  "remoteWrites": 0,
+  "sourceSha256": "b1dcaa9bd2bd89112f51557edf538f072e2912906d9861d648536dd7155fbb58",
+  "fixture": {
+    "products": 2,
+    "families": 1,
+    "variantsSameSize": 2,
+    "initialPieces": 5,
+    "sellerEligible": true,
+    "initialSales": 0,
+    "login": "synthetic credentials; not exported"
+  },
+  "result": {
+    "ok": false,
+    "error": "locator.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('nav-pos')\u001b[22m\n\u001b[2m    - locator resolved to <button data-testid=\"nav-pos\" title=\"Punto de venta\" class=\"min-h-11 flex items-center gap-3 py-2.5 rounded-lg transition-colors text-left px-4 \">…</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - element is outside of the viewport\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - element is outside of the viewport\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    27 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - element is outside of the viewport\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n"
+  },
+  "failureVisibleText": "Balam\nGUAYABERAS\nchevron_left\ndashboard\nPanel de control\npoint_of_sale\nPunto de venta\ninventory_2\nInventario\n1\ngroups\nClientes\nschedule\nApartados\nassignment_return\nPréstamos\nundo\nDevoluciones\nsell\nDescuentos\nbadge\nVendedores\nmonitoring\nReportes\nsettings\nConfiguración\nadd\nNUEVA VENTA\nUS\nAdministrador fixture H171\nADMINISTRADOR\nlogout\nmenu\nPanel de control\npoint_of_sale\nTodo actualizado\nnotifications\nBuenas noches, Administrador\n\nHoy tienes 0 apartado(s) y 0 modelo(s) con stock crítico.\n\nRevisar pendientes\nVer catálogo\n\nVENTAS HOY\n\n$0\n—\nSin ventas ayer para comparar\n\nTICKETS\n\n0\nHOY\nPromedio: $0 / ticket\n\nFAVORITO\n\nGuayabera Jornada H171\nDESTACADO\n0 vendidas este periodo\n\nINVENTARIO\n\n100%\nOK\n0 alertas de stock bajo\nActividad de ventas\n\nRendimiento semanal del showroom\n\nSemanal\nMensual\nDOM\nLUN\nMAR\nMIE\nJUE\nVIE\nSAB\ncake\nCumpleaños\n\nSin cumpleaños próximos.\n\nwarning\nStock crítico\n\n0 modelo(s) están por debajo del mínimo de seguridad.\n\nVer inventario\nVentas recientes\nCliente\tVendedor\tMétodo\tEstado\tTotal\t\nadd\n\nNueva venta\n\nCheckout rápido\n\nperson\n\nRegistrar cliente\n\nCRM Balam\n\nbadge\n\nPedidos a medida\n\n12 citas programadas para esta semana en el taller.\n\nGestionar taller",
+  "diagnostics": {
+    "status": {
+      "ready": true,
+      "synchronized": true,
+      "connection": "online",
+      "lastSuccess": "2026-09-13T03:41:55.761Z",
+      "build": "2026-09-12-h166-online",
+      "busy": false,
+      "reconciling": false,
+      "hasUnresolvedRequests": false,
+      "pendingRequests": [],
+      "message": "Todo actualizado",
+      "adoption": {
+        "revision": 1,
+        "state": "ready",
+        "stage": "complete",
+        "remainingLegacy": 0,
+        "archivedCount": 0,
+        "snapshotAt": "2026-09-13T03:41:40.813Z"
+      },
+      "legacyReviewCount": 0,
+      "errors": []
+    }
+  },
+  "completedAt": "2026-09-13T03:41:56.287Z"
+}

@@ -1,0 +1,20 @@
+{
+  "scope": "LOCAL_EXISTING_COMMIT_AND_PRIVATE_BACKUP_VALIDATION",
+  "run": "9482e643-232b-4d32-9ffd-0f07ac156ae6",
+  "projectRef": "telohdbvbvsfmwyriflz",
+  "operator": "h171-resume-auth-cleanup.mjs",
+  "operatorSha256": "32e797191c40b16ab438031642035ad43719c4b68d0388b1765febfc76c4b9f0",
+  "passed": true,
+  "priorSqlCommitVerified": true,
+  "exactRowsPreviouslyDeleted": 35,
+  "authTargets": ["938611a6-59ff-4ce8-a76c-2f4f2cdb39dc"],
+  "journalEntries": 89,
+  "reviewSha256": "3bbb417ae9e8cedc3b4efbb3bae8868bc16ea754903b72050371005e62194a57",
+  "verifiedInputs": ["original baseline and Auth baseline file hashes", "artifact and journal prefix", "canonical gzip snapshots before and after SQL", "exact SQL receipt and identical executed/reviewed SQL hashes", "restoration validation bound to plan", "original foreign Auth preflight retained as fresh-read comparison baseline"],
+  "remoteCalls": 0,
+  "remoteWrites": 0,
+  "sqlRepeated": false,
+  "cleanupVerified": false,
+  "certified": false,
+  "remaining": "Owner execution of exact Auth retirement with fresh six-column Storage counts, durable attempts, absence verification and final canonical gzip integrity check."
+}

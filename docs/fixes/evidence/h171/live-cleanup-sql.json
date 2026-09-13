@@ -1,0 +1,88 @@
+{
+  "at": "2026-09-13T05:41:32.153Z",
+  "mode": "LOCAL_SYNTHETIC_PGLITE",
+  "project": "telohdbvbvsfmwyriflz",
+  "passed": 18,
+  "checks": [
+    {
+      "name": "real64 catalog and FK order clean six new fixtures; all63 outside tables and advanced folio survive",
+      "status": "PASS"
+    },
+    {
+      "name": "zero POS scope after one proven Auth creation executes real COMMIT with all64 guards and no revision advance",
+      "status": "PASS"
+    },
+    {
+      "name": "wrong backup, unreconciled run, preexisting identity and fake prefix proof fail before SQL generation",
+      "status": "PASS"
+    },
+    {
+      "name": "canonical target hash changed after capture aborts before DELETE",
+      "status": "PASS"
+    },
+    {
+      "name": "unselected real row changed after snapshot is detected under locks",
+      "status": "PASS"
+    },
+    {
+      "name": "selected sale referencing a real commercial parent is rejected without deleting it",
+      "status": "PASS"
+    },
+    {
+      "name": "a surviving CASCADE child cannot be removed implicitly with its selected parent",
+      "status": "PASS"
+    },
+    {
+      "name": "logical product links without physical FK block a partial cleanup",
+      "status": "PASS"
+    },
+    {
+      "name": "BALAM vendedores arrays of seller IDs reject an unselected commercial seller",
+      "status": "PASS"
+    },
+    {
+      "name": "H152 exchange payment and movement links require the exact exchange and complete child scope",
+      "status": "PASS"
+    },
+    {
+      "name": "global executing command blocks cleanup, even when the other actor is outside scope",
+      "status": "PASS"
+    },
+    {
+      "name": "nonterminal account preparation blocks cleanup without replay or resolution",
+      "status": "PASS"
+    },
+    {
+      "name": "catalog or function drift aborts before any fixture deletion",
+      "status": "PASS"
+    },
+    {
+      "name": "a reviewed trigger changing a foreign counter is detected after DELETE and rolls back everything",
+      "status": "PASS"
+    },
+    {
+      "name": "deferred trigger effects are checked before commit and cannot hide behind final constraints",
+      "status": "PASS"
+    },
+    {
+      "name": "incorrect snapshot advance rolls back, and never rewinds the revision",
+      "status": "PASS"
+    },
+    {
+      "name": "nonNULL omitted secrets require an explicit hold and can never become targets",
+      "status": "PASS"
+    },
+    {
+      "name": "full canonical hash aggregation matches PostgreSQL numeric scale and timestamp, independent of row order",
+      "status": "PASS"
+    }
+  ],
+  "moduleSha256": "f84b625f70a768a1bbc147170335d961a44671577afefff8daa374096ec100f7",
+  "testSha256": "ccdf4e4fe93e4533eb42a6a92ed3463f9659d3612bf181ff1fb6c5d6d81c2137",
+  "snapshotModuleSha256": "5cdd3082adba4455768ea3107eb281ba1a2676a6254afa74c95add52da27d0a8",
+  "liveNetworkCalls": 0,
+  "liveDeletes": 0,
+  "certified": false,
+  "cleanupVerified": false,
+  "liveGateOpened": false
+}

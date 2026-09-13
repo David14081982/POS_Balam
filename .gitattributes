@@ -4,4 +4,7 @@ balam/vendor/**/*.min.js whitespace=-trailing-space
 index.html -text whitespace=cr-at-eol,-blank-at-eol
 "POS Balam (offline).html" -text whitespace=cr-at-eol,-blank-at-eol
 sw.js -text whitespace=cr-at-eol,-blank-at-eol
+# H171 audit evidence binds exact file bytes, including approved SQL and JSON.
+docs/fixes/evidence/h171* -text whitespace=cr-at-eol,-trailing-space,-blank-at-eol
+docs/fixes/evidence/h171*/** -text whitespace=cr-at-eol,-trailing-space,-blank-at-eol
 test-h148-live-convergence.mjs text eol=lf

@@ -1,0 +1,68 @@
+{
+  "project": "BALAM",
+  "story": "H171",
+  "run": "9482e643-232b-4d32-9ffd-0f07ac156ae6",
+  "artifactSha256": "f4d73fa350d4187dade1a55c999dc203b405f4c20d95d9138aaf1b2ef0a82646",
+  "runnerSha256": "9f654c24c5d0e9594a39841001063f5078eee481856f57eb32f8dc048bd8b4c6",
+  "status": "SCENARIO_ABORTED_BEFORE_CONFIG_DISPATCH",
+  "certified": false,
+  "productionReady": false,
+  "cases": [
+    {
+      "name": "A/B/C bootstrap from authoritative snapshot",
+      "pass": true,
+      "elapsedMs": 13596
+    },
+    {
+      "name": "H170 cold startup with an unresolved account remains usable",
+      "pass": true,
+      "elapsedMs": 38939
+    },
+    {
+      "name": "Create V2 products with barcode V3",
+      "pass": true,
+      "elapsedMs": 26507
+    },
+    {
+      "name": "H166 conditional reads and real Realtime invalidation",
+      "pass": true,
+      "elapsedMs": 35984
+    },
+    {
+      "name": "Client and customer profile",
+      "pass": true,
+      "elapsedMs": 31218
+    },
+    {
+      "name": "Concurrent product edit rejects stale version",
+      "pass": true,
+      "elapsedMs": 31994
+    },
+    {
+      "name": "Delete while another terminal uses product",
+      "pass": true,
+      "elapsedMs": 44045
+    },
+    {
+      "name": "Stock movement / reference reclassification",
+      "pass": true,
+      "elapsedMs": 22089
+    },
+    {
+      "name": "Promotion and isolated commercial configuration",
+      "pass": false,
+      "elapsedMs": 1717065
+    }
+  ],
+  "journalEntries": 88,
+  "journalFileSha256": "9bb0ebff882c3b5bc988cd3393985b40bb0e9661521592d05efc4c477c66f1f0",
+  "journalFailure": "JOURNAL_SECRET_FIELD_FORBIDDEN",
+  "cause": {
+    "field": "lookup.meta.requiresAuthorization",
+    "type": "boolean",
+    "evidence": "Exact journal safeJson regex matches Authorization in a commercial metadata key; isolated reproduction rejects the synthetic boolean before dispatch. Real journal contains no config intent."
+  },
+  "configRequestIds": [],
+  "recovery": "Reuse original canonical before-fixtures baseline and reconcile existing receipts; no scenario replay. Exact cleanup outcome recorded separately.",
+  "nextScope": "Only two UI sales, A/B/C comparison, reload/relogin, fresh browser context and Only Online gate per OWNER steering; previous tests not repeated."
+}

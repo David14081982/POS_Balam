@@ -1,0 +1,31 @@
+{
+  "observedAt": "2026-09-13T02:06:03.765Z",
+  "repository": "David14081982/POS_Balam",
+  "commit": "c148a8c0935ea533035387a391965df9b0748082",
+  "results": [
+    {
+      "path": "index.html",
+      "status": 200,
+      "bytes": 8980854,
+      "sha256": "ae53f13541729ecb3fff768d4a974a44fd5fe790f7d7961d6fde1dd28801665d",
+      "localSha256": "ae53f13541729ecb3fff768d4a974a44fd5fe790f7d7961d6fde1dd28801665d",
+      "equal": true
+    },
+    {
+      "path": "POS Balam (offline).html",
+      "status": 200,
+      "bytes": 8980854,
+      "sha256": "ae53f13541729ecb3fff768d4a974a44fd5fe790f7d7961d6fde1dd28801665d",
+      "localSha256": "ae53f13541729ecb3fff768d4a974a44fd5fe790f7d7961d6fde1dd28801665d",
+      "equal": true
+    },
+    {
+      "path": "sw.js",
+      "status": 200,
+      "bytes": 4477,
+      "sha256": "0dd83e5e4ecfed61e72297c2bbbd890df707ce07e8d0cb3bf470133f39c4f0a3",
+      "localSha256": "0dd83e5e4ecfed61e72297c2bbbd890df707ce07e8d0cb3bf470133f39c4f0a3",
+      "equal": true
+    }
+  ]
+}

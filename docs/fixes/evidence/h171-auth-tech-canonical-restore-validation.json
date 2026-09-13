@@ -1,0 +1,42 @@
+{
+  "scope": "Local PostgreSQL original types and UTC; canonical text directly to jsonb_populate_record; no remote restore/constraint certification",
+  "backup_sha256": "b37b3f4cf8518d5ab87754a48e60c62fab9418a23d396157cbe80530ba86b326",
+  "snapshot_rows": 327,
+  "checked_rows": 327,
+  "restored_rows": 325,
+  "additional_restored_rows": 317,
+  "commercial_overlap_restored_rows": 8,
+  "held_recoveries": [
+    {
+      "table": "sync_device_recoveries",
+      "pk": {
+        "device_id": "qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c-B"
+      },
+      "reason": "write_token is non-null and deliberately absent from backup"
+    },
+    {
+      "table": "sync_device_recoveries",
+      "pk": {
+        "device_id": "qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c-C"
+      },
+      "reason": "write_token is non-null and deliberately absent from backup"
+    }
+  ],
+  "table_counts": {
+    "capability_operation_audit": 52,
+    "config_commits": 6,
+    "online_account_requests": 6,
+    "online_requests": 199,
+    "permission_change_audit": 5,
+    "sync_activity": 30,
+    "sync_devices": 15,
+    "sync_quarantine_cases": 1,
+    "user_permission_role_assignments": 6,
+    "user_screen_permission_overrides": 5
+  },
+  "mismatches": [],
+  "parsed_json_numeric_representation_differences": 114,
+  "parsed_json_semantic_differences": 0,
+  "remote_writes": 0,
+  "ok": true
+}

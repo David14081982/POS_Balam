@@ -1,0 +1,346 @@
+{
+  "at": "2026-09-13T05:39:02.347Z",
+  "mode": "LOCAL_SYNTHETIC_PGLITE",
+  "actualCommit": true,
+  "report": {
+    "run": "11111111-1111-4111-8111-111111111111",
+    "holds": [],
+    "format": "balam-new-fixture-cleanup-result-v1",
+    "certified": false,
+    "plan_sha256": "d20cef0188dac8f67904cbfd0b76ebe1401281e396b571c5ae2f6b8664f4348b",
+    "project_ref": "telohdbvbvsfmwyriflz",
+    "removed_rows": 0,
+    "cleanup_verified": false,
+    "removed_manifest": [],
+    "auth_sql_unchanged": true,
+    "outside_full_hashes": [
+      {
+        "row_count": 0,
+        "table_name": "barcode_aliases",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "capability_operation_audit",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 1,
+        "table_name": "clients",
+        "full_rows_md5": "a71ec81ab43ddaf858f8499d1c0ecb7d"
+      },
+      {
+        "row_count": 0,
+        "table_name": "commission_adjustments",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "config_commits",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "config_sync_state",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "exchange_commits",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "exchange_items",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "exchanges",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 1,
+        "table_name": "folio_counters",
+        "full_rows_md5": "b2b93c46a7f25a5963c49631d9bc1771"
+      },
+      {
+        "row_count": 0,
+        "table_name": "inventory_contract_state",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "inventory_sync_baselines",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "inventory_v1_v2_map",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "inventory_v3_backups",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "inventory_v3_operations",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "layaway_liquidation_commits",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "liquidations",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "loan_documents",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "lookup",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "movements",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "online_account_requests",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "online_legacy_archives",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "online_legacy_operations",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "online_requests",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 1,
+        "table_name": "online_runtime",
+        "full_rows_md5": "26fbe67672f9b797b7a137b4accec7d3"
+      },
+      {
+        "row_count": 0,
+        "table_name": "operational_capabilities",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "permission_change_audit",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "permission_roles",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "physical_card_redemptions",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "point_zero_backups",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "point_zero_operations",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 1,
+        "table_name": "products",
+        "full_rows_md5": "0744a4c437a0fa796aba1bcfc6ac0561"
+      },
+      {
+        "row_count": 0,
+        "table_name": "promotions",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "purged_documents",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "reference_reclassifications",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "return_commits",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "return_items",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "returns",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "role_capability_permissions",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "role_screen_permissions",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "sale_commits",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "sale_items",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "sale_payments",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 1,
+        "table_name": "sales",
+        "full_rows_md5": "102fd749a33c30cc9a93198fabbad786"
+      },
+      {
+        "row_count": 0,
+        "table_name": "screen_permission_catalog",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "screen_permission_catalog_state",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "selective_cleanup_events",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "sellers",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "settings",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "stock_reservations",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "sync_activity",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "sync_conflicts",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "sync_device_recoveries",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "sync_devices",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "sync_domain_versions",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "sync_quarantine_cases",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 1,
+        "table_name": "system_manifest",
+        "full_rows_md5": "75365cc5c3b5116d68216d459013fc66"
+      },
+      {
+        "row_count": 0,
+        "table_name": "test_data_cleanup_backups",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "test_data_cleanup_operations",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "test_data_purges",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "user_capability_overrides",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "user_permission_role_assignments",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "row_count": 0,
+        "table_name": "user_screen_permission_overrides",
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      }
+    ],
+    "auth_cleanup_verified": false,
+    "outside_tables_checked": 63,
+    "snapshot_revision_delta": 0,
+    "storage_cleanup_verified": false
+  },
+  "expectedRows": 0,
+  "expectedRevisionDelta": 0,
+  "posTablesCompared": 64,
+  "authBefore": 2,
+  "authAfter": 2,
+  "liveNetworkCalls": 0,
+  "liveDeletes": 0,
+  "certified": false
+}

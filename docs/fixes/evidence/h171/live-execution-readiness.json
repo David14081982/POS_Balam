@@ -1,0 +1,33 @@
+{
+  "project": "BALAM",
+  "projectRef": "telohdbvbvsfmwyriflz",
+  "story": "H171",
+  "authorization": "OWNER requested final real journey, A/B/C, refresh/relogin and exact self-cleaning fixtures within this same story.",
+  "artifactSha256": "f4d73fa350d4187dade1a55c999dc203b405f4c20d95d9138aaf1b2ef0a82646",
+  "runnerSha256": "9f654c24c5d0e9594a39841001063f5078eee481856f57eb32f8dc048bd8b4c6",
+  "controllerSha256": "dcacbbd9302808b6d9266aa2a9f84bb11ffe2eb46d3f385aab448451b91dde56",
+  "sqlGeneratorSha256": "f84b625f70a768a1bbc147170335d961a44671577afefff8daa374096ec100f7",
+  "checks": {
+    "snapshot": 12,
+    "realReadOnlySnapshotTables": 64,
+    "realReadOnlySnapshotRows": 4332,
+    "reconciliation": 23,
+    "cleanupPlan": 33,
+    "cleanupSql": 18,
+    "authReader": 10,
+    "authAdapter": 27,
+    "completeLocalLifecycle": 2,
+    "runnerJournalIntegration": 13,
+    "runnerCoreIntegration": 10,
+    "entryGate": 5,
+    "recovery": 10,
+    "isolatedUiJourneyDesktop": 9,
+    "isolatedUiJourneyMobile": 9,
+    "finalSurfaceSmoke": 192,
+    "finalResponsiveWidths": 8
+  },
+  "policy": "Fresh run only. Canonical baseline and Auth ID census before provisioning; journal before every mutation; stop emitters; read-only reconciliation; restore exact new rows locally; guarded SQL transaction; independent postcheck; separate exact GoTrue retirement; final baseline comparison. No counter rewind or Storage writes.",
+  "protected": "Existing data, BG-260912-0001, four ambiguous commercial rows and H148 anti-replay recoveries/history remain outside new-fixture cleanup.",
+  "certified": false,
+  "productionReady": false
+}

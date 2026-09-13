@@ -1,0 +1,72 @@
+{
+  "at": "2026-09-13T04:25:05.173Z",
+  "scope": "LOCAL_PGLITE_NO_NETWORK_NO_REMOTE_MUTATIONS",
+  "checksPassed": 9,
+  "expectedChecks": 12,
+  "checks": [
+    {
+      "name": "recorded BALAM catalog requires all64 tables, real PKs and exactly5 omitted columns",
+      "status": "PASS"
+    },
+    {
+      "name": "all64 empty tables remain represented inside one canonical read-only snapshot",
+      "status": "PASS"
+    },
+    {
+      "name": "new removed and changed rows require exact PK plus both full hashes; prefixes authorize nothing",
+      "status": "PASS"
+    },
+    {
+      "name": "NULL-password QA seller delta can be reviewed without an automatic HELD classification",
+      "status": "PASS"
+    },
+    {
+      "name": "revision beyond JS safe integer advances exactly and any rewind blocks even with QA proof",
+      "status": "PASS"
+    },
+    {
+      "name": "folio and config clocks cannot rewind; new counters require review without resetting authority",
+      "status": "PASS"
+    },
+    {
+      "name": "missing PK and extra column/table cause SQL failure before row snapshot output",
+      "status": "PASS"
+    },
+    {
+      "name": "foreign project, missing BALAM anchor and non-postgres session fail closed",
+      "status": "PASS"
+    },
+    {
+      "name": "tampered row text, duplicate PK, incomplete coverage and unsafe full body are rejected",
+      "status": "PASS"
+    }
+  ],
+  "tables": 64,
+  "columns": 658,
+  "omissions": {
+    "physical_card_redemptions": [
+      "claim_token"
+    ],
+    "point_zero_backups": [
+      "preview_token"
+    ],
+    "point_zero_operations": [
+      "preview_token"
+    ],
+    "sellers": [
+      "password_hash"
+    ],
+    "sync_device_recoveries": [
+      "write_token"
+    ]
+  },
+  "moduleSha256": "f145d9c22f1b69ce2e6e7e9ae4a75d90cf154879b849237a532e7947cfc5b7d6",
+  "testSha256": "5b14591296cde1a7a0ef730217e17e12806b7801e795da9d14cee9fa7da4e567",
+  "sqlSha256": "89e4971bc044ef4669c66bb31c7fd5824a79a84dece3e6dbce7277af8d9ee05f",
+  "limits": [
+    "Transport binding must be independently verified by the remote executor.",
+    "NonNULL omitted values cannot be restored from this snapshot.",
+    "No fixture attribution by prefix; exact PK/full hashes require separate provenance.",
+    "No remote snapshot, cleanup or distributed certification was executed by this test."
+  ]
+}

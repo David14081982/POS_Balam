@@ -1,0 +1,713 @@
+{
+  "scope": "Exact candidate references outside technical327 and commercial149; preserve, never implicitly cascade",
+  "project_ref": "telohdbvbvsfmwyriflz",
+  "outsideReceiptReferences": [
+    {
+      "identity": "6ddc052d-4d4d-487f-a840-bb555552f2ca",
+      "receipt_type": "capability_operation_audit",
+      "source_pk": {
+        "cleanup_id": "0f42539b-a435-4d1e-ad55-3d226aeefb87"
+      },
+      "source_table": "selective_cleanup_events"
+    },
+    {
+      "identity": "6ddc052d-4d4d-487f-a840-bb555552f2ca",
+      "receipt_type": "capability_operation_audit",
+      "source_pk": {
+        "backup_id": "355d4fc6-760b-49f1-8a2a-47e1f2f4326b"
+      },
+      "source_table": "test_data_cleanup_backups"
+    },
+    {
+      "identity": "6ddc052d-4d4d-487f-a840-bb555552f2ca",
+      "receipt_type": "capability_operation_audit",
+      "source_pk": {
+        "cleanup_id": "0f42539b-a435-4d1e-ad55-3d226aeefb87"
+      },
+      "source_table": "test_data_cleanup_operations"
+    },
+    {
+      "identity": "0435350a-36e4-455d-a178-04372fe072b1",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+        "request_id": "182b8afc-d976-4f4b-bb51-1a022485bc21"
+      },
+      "source_table": "online_requests"
+    },
+    {
+      "identity": "0435350a-36e4-455d-a178-04372fe072b1",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+        "request_id": "944378e7-0996-464b-b7ea-ef3d263f97f4"
+      },
+      "source_table": "online_requests"
+    },
+    {
+      "identity": "0435350a-36e4-455d-a178-04372fe072b1",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "backup_id": "54efc5dc-23aa-4d1e-8741-7a94533561b2"
+      },
+      "source_table": "point_zero_backups"
+    },
+    {
+      "identity": "0435350a-36e4-455d-a178-04372fe072b1",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "backup_id": "baa182f5-3b34-43fc-9077-76010458dc18"
+      },
+      "source_table": "point_zero_backups"
+    },
+    {
+      "identity": "0435350a-36e4-455d-a178-04372fe072b1",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "identity": "0435350a-36e4-455d-a178-04372fe072b1",
+        "kind": "sale"
+      },
+      "source_table": "purged_documents"
+    },
+    {
+      "identity": "0e85adbd-05f3-4962-affe-03d11a928f65",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+        "request_id": "5369c943-35c3-4c0a-855d-44e108bff199"
+      },
+      "source_table": "online_requests"
+    },
+    {
+      "identity": "0e85adbd-05f3-4962-affe-03d11a928f65",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "backup_id": "45c5b1da-efb6-411e-bc2d-f25fff65175d"
+      },
+      "source_table": "point_zero_backups"
+    },
+    {
+      "identity": "17855cbf-5bdd-4bac-8b9d-6324d14410d8",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+        "request_id": "182b8afc-d976-4f4b-bb51-1a022485bc21"
+      },
+      "source_table": "online_requests"
+    },
+    {
+      "identity": "17855cbf-5bdd-4bac-8b9d-6324d14410d8",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+        "request_id": "944378e7-0996-464b-b7ea-ef3d263f97f4"
+      },
+      "source_table": "online_requests"
+    },
+    {
+      "identity": "17855cbf-5bdd-4bac-8b9d-6324d14410d8",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "backup_id": "54efc5dc-23aa-4d1e-8741-7a94533561b2"
+      },
+      "source_table": "point_zero_backups"
+    },
+    {
+      "identity": "17855cbf-5bdd-4bac-8b9d-6324d14410d8",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "backup_id": "baa182f5-3b34-43fc-9077-76010458dc18"
+      },
+      "source_table": "point_zero_backups"
+    },
+    {
+      "identity": "38bb7974-a453-48b0-b794-0ed57e82e1a0",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+        "request_id": "5369c943-35c3-4c0a-855d-44e108bff199"
+      },
+      "source_table": "online_requests"
+    },
+    {
+      "identity": "38bb7974-a453-48b0-b794-0ed57e82e1a0",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "backup_id": "45c5b1da-efb6-411e-bc2d-f25fff65175d"
+      },
+      "source_table": "point_zero_backups"
+    },
+    {
+      "identity": "38bb7974-a453-48b0-b794-0ed57e82e1a0",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "identity": "38bb7974-a453-48b0-b794-0ed57e82e1a0",
+        "kind": "sale"
+      },
+      "source_table": "purged_documents"
+    },
+    {
+      "identity": "4aaf5501-8356-445d-9159-ab97b34d2a8d",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+        "request_id": "5369c943-35c3-4c0a-855d-44e108bff199"
+      },
+      "source_table": "online_requests"
+    },
+    {
+      "identity": "4aaf5501-8356-445d-9159-ab97b34d2a8d",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "backup_id": "45c5b1da-efb6-411e-bc2d-f25fff65175d"
+      },
+      "source_table": "point_zero_backups"
+    },
+    {
+      "identity": "782a772a-fcaa-45ef-ad83-33fd4f627b4f",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+        "request_id": "5369c943-35c3-4c0a-855d-44e108bff199"
+      },
+      "source_table": "online_requests"
+    },
+    {
+      "identity": "782a772a-fcaa-45ef-ad83-33fd4f627b4f",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "backup_id": "45c5b1da-efb6-411e-bc2d-f25fff65175d"
+      },
+      "source_table": "point_zero_backups"
+    },
+    {
+      "identity": "7c13bab3-0afb-47de-8edc-72dd5a1e1bed",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+        "request_id": "5369c943-35c3-4c0a-855d-44e108bff199"
+      },
+      "source_table": "online_requests"
+    },
+    {
+      "identity": "7c13bab3-0afb-47de-8edc-72dd5a1e1bed",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "backup_id": "45c5b1da-efb6-411e-bc2d-f25fff65175d"
+      },
+      "source_table": "point_zero_backups"
+    },
+    {
+      "identity": "7c13bab3-0afb-47de-8edc-72dd5a1e1bed",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "identity": "7c13bab3-0afb-47de-8edc-72dd5a1e1bed",
+        "kind": "sale"
+      },
+      "source_table": "purged_documents"
+    },
+    {
+      "identity": "8dc67cd2-284d-4466-8c0a-3bd0b672d7a0",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+        "request_id": "5369c943-35c3-4c0a-855d-44e108bff199"
+      },
+      "source_table": "online_requests"
+    },
+    {
+      "identity": "8dc67cd2-284d-4466-8c0a-3bd0b672d7a0",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "backup_id": "45c5b1da-efb6-411e-bc2d-f25fff65175d"
+      },
+      "source_table": "point_zero_backups"
+    },
+    {
+      "identity": "99e38258-921a-42eb-aa28-b4911fe62d81",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+        "request_id": "5369c943-35c3-4c0a-855d-44e108bff199"
+      },
+      "source_table": "online_requests"
+    },
+    {
+      "identity": "99e38258-921a-42eb-aa28-b4911fe62d81",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "backup_id": "45c5b1da-efb6-411e-bc2d-f25fff65175d"
+      },
+      "source_table": "point_zero_backups"
+    },
+    {
+      "identity": "a0293bc4-59df-49f6-9c88-49bc27aee2b8",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+        "request_id": "182b8afc-d976-4f4b-bb51-1a022485bc21"
+      },
+      "source_table": "online_requests"
+    },
+    {
+      "identity": "a0293bc4-59df-49f6-9c88-49bc27aee2b8",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+        "request_id": "944378e7-0996-464b-b7ea-ef3d263f97f4"
+      },
+      "source_table": "online_requests"
+    },
+    {
+      "identity": "a0293bc4-59df-49f6-9c88-49bc27aee2b8",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "backup_id": "54efc5dc-23aa-4d1e-8741-7a94533561b2"
+      },
+      "source_table": "point_zero_backups"
+    },
+    {
+      "identity": "a0293bc4-59df-49f6-9c88-49bc27aee2b8",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "backup_id": "baa182f5-3b34-43fc-9077-76010458dc18"
+      },
+      "source_table": "point_zero_backups"
+    },
+    {
+      "identity": "a1f3d32f-7299-4902-9ad7-135b1deee8d3",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+        "request_id": "182b8afc-d976-4f4b-bb51-1a022485bc21"
+      },
+      "source_table": "online_requests"
+    },
+    {
+      "identity": "a1f3d32f-7299-4902-9ad7-135b1deee8d3",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+        "request_id": "944378e7-0996-464b-b7ea-ef3d263f97f4"
+      },
+      "source_table": "online_requests"
+    },
+    {
+      "identity": "a1f3d32f-7299-4902-9ad7-135b1deee8d3",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "backup_id": "54efc5dc-23aa-4d1e-8741-7a94533561b2"
+      },
+      "source_table": "point_zero_backups"
+    },
+    {
+      "identity": "a1f3d32f-7299-4902-9ad7-135b1deee8d3",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "backup_id": "baa182f5-3b34-43fc-9077-76010458dc18"
+      },
+      "source_table": "point_zero_backups"
+    },
+    {
+      "identity": "a46371a1-0c28-40a0-85c6-07d9552e6f19",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+        "request_id": "5369c943-35c3-4c0a-855d-44e108bff199"
+      },
+      "source_table": "online_requests"
+    },
+    {
+      "identity": "a46371a1-0c28-40a0-85c6-07d9552e6f19",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "backup_id": "45c5b1da-efb6-411e-bc2d-f25fff65175d"
+      },
+      "source_table": "point_zero_backups"
+    },
+    {
+      "identity": "a46371a1-0c28-40a0-85c6-07d9552e6f19",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "identity": "a46371a1-0c28-40a0-85c6-07d9552e6f19",
+        "kind": "sale"
+      },
+      "source_table": "purged_documents"
+    },
+    {
+      "identity": "c7b6b62d-197f-4fb3-8ce5-d21fb69360ed",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+        "request_id": "182b8afc-d976-4f4b-bb51-1a022485bc21"
+      },
+      "source_table": "online_requests"
+    },
+    {
+      "identity": "c7b6b62d-197f-4fb3-8ce5-d21fb69360ed",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+        "request_id": "944378e7-0996-464b-b7ea-ef3d263f97f4"
+      },
+      "source_table": "online_requests"
+    },
+    {
+      "identity": "c7b6b62d-197f-4fb3-8ce5-d21fb69360ed",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "backup_id": "54efc5dc-23aa-4d1e-8741-7a94533561b2"
+      },
+      "source_table": "point_zero_backups"
+    },
+    {
+      "identity": "c7b6b62d-197f-4fb3-8ce5-d21fb69360ed",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "backup_id": "baa182f5-3b34-43fc-9077-76010458dc18"
+      },
+      "source_table": "point_zero_backups"
+    },
+    {
+      "identity": "c7b6b62d-197f-4fb3-8ce5-d21fb69360ed",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "identity": "c7b6b62d-197f-4fb3-8ce5-d21fb69360ed",
+        "kind": "sale"
+      },
+      "source_table": "purged_documents"
+    },
+    {
+      "identity": "c9d92f90-3b96-4c37-b78b-1d5f093fe2df",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+        "request_id": "5369c943-35c3-4c0a-855d-44e108bff199"
+      },
+      "source_table": "online_requests"
+    },
+    {
+      "identity": "c9d92f90-3b96-4c37-b78b-1d5f093fe2df",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "backup_id": "45c5b1da-efb6-411e-bc2d-f25fff65175d"
+      },
+      "source_table": "point_zero_backups"
+    },
+    {
+      "identity": "ca4ea184-75a9-465e-85a8-58c28f0603a8",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+        "request_id": "5369c943-35c3-4c0a-855d-44e108bff199"
+      },
+      "source_table": "online_requests"
+    },
+    {
+      "identity": "ca4ea184-75a9-465e-85a8-58c28f0603a8",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "backup_id": "45c5b1da-efb6-411e-bc2d-f25fff65175d"
+      },
+      "source_table": "point_zero_backups"
+    },
+    {
+      "identity": "d0016d61-0389-47ac-a7e6-b8251f3ff175",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+        "request_id": "5369c943-35c3-4c0a-855d-44e108bff199"
+      },
+      "source_table": "online_requests"
+    },
+    {
+      "identity": "d0016d61-0389-47ac-a7e6-b8251f3ff175",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "backup_id": "45c5b1da-efb6-411e-bc2d-f25fff65175d"
+      },
+      "source_table": "point_zero_backups"
+    },
+    {
+      "identity": "d0016d61-0389-47ac-a7e6-b8251f3ff175",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "identity": "d0016d61-0389-47ac-a7e6-b8251f3ff175",
+        "kind": "sale"
+      },
+      "source_table": "purged_documents"
+    },
+    {
+      "identity": "d34c9708-97d5-427d-9178-c13cfea30b60",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+        "request_id": "5369c943-35c3-4c0a-855d-44e108bff199"
+      },
+      "source_table": "online_requests"
+    },
+    {
+      "identity": "d34c9708-97d5-427d-9178-c13cfea30b60",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "backup_id": "45c5b1da-efb6-411e-bc2d-f25fff65175d"
+      },
+      "source_table": "point_zero_backups"
+    },
+    {
+      "identity": "d802d040-2f20-46f7-a750-5ec220a61a12",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+        "request_id": "182b8afc-d976-4f4b-bb51-1a022485bc21"
+      },
+      "source_table": "online_requests"
+    },
+    {
+      "identity": "d802d040-2f20-46f7-a750-5ec220a61a12",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+        "request_id": "944378e7-0996-464b-b7ea-ef3d263f97f4"
+      },
+      "source_table": "online_requests"
+    },
+    {
+      "identity": "d802d040-2f20-46f7-a750-5ec220a61a12",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "backup_id": "54efc5dc-23aa-4d1e-8741-7a94533561b2"
+      },
+      "source_table": "point_zero_backups"
+    },
+    {
+      "identity": "d802d040-2f20-46f7-a750-5ec220a61a12",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "backup_id": "baa182f5-3b34-43fc-9077-76010458dc18"
+      },
+      "source_table": "point_zero_backups"
+    },
+    {
+      "identity": "db340d37-7770-4d40-87a5-86b6f72c089c",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+        "request_id": "5369c943-35c3-4c0a-855d-44e108bff199"
+      },
+      "source_table": "online_requests"
+    },
+    {
+      "identity": "db340d37-7770-4d40-87a5-86b6f72c089c",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "backup_id": "45c5b1da-efb6-411e-bc2d-f25fff65175d"
+      },
+      "source_table": "point_zero_backups"
+    },
+    {
+      "identity": "e46347ae-f8e7-4273-81a6-2eb4beee1cde",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+        "request_id": "5369c943-35c3-4c0a-855d-44e108bff199"
+      },
+      "source_table": "online_requests"
+    },
+    {
+      "identity": "e46347ae-f8e7-4273-81a6-2eb4beee1cde",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "backup_id": "45c5b1da-efb6-411e-bc2d-f25fff65175d"
+      },
+      "source_table": "point_zero_backups"
+    },
+    {
+      "identity": "e46347ae-f8e7-4273-81a6-2eb4beee1cde",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "identity": "e46347ae-f8e7-4273-81a6-2eb4beee1cde",
+        "kind": "sale"
+      },
+      "source_table": "purged_documents"
+    },
+    {
+      "identity": "e509bd10-6de2-4dce-9ad5-584b861c4a9b",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+        "request_id": "182b8afc-d976-4f4b-bb51-1a022485bc21"
+      },
+      "source_table": "online_requests"
+    },
+    {
+      "identity": "e509bd10-6de2-4dce-9ad5-584b861c4a9b",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+        "request_id": "944378e7-0996-464b-b7ea-ef3d263f97f4"
+      },
+      "source_table": "online_requests"
+    },
+    {
+      "identity": "e509bd10-6de2-4dce-9ad5-584b861c4a9b",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "backup_id": "54efc5dc-23aa-4d1e-8741-7a94533561b2"
+      },
+      "source_table": "point_zero_backups"
+    },
+    {
+      "identity": "e509bd10-6de2-4dce-9ad5-584b861c4a9b",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "backup_id": "baa182f5-3b34-43fc-9077-76010458dc18"
+      },
+      "source_table": "point_zero_backups"
+    },
+    {
+      "identity": "e509bd10-6de2-4dce-9ad5-584b861c4a9b",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "identity": "e509bd10-6de2-4dce-9ad5-584b861c4a9b",
+        "kind": "sale"
+      },
+      "source_table": "purged_documents"
+    },
+    {
+      "identity": "e57290b7-fdc8-4204-83da-979cec40046c",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+        "request_id": "5369c943-35c3-4c0a-855d-44e108bff199"
+      },
+      "source_table": "online_requests"
+    },
+    {
+      "identity": "e57290b7-fdc8-4204-83da-979cec40046c",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "backup_id": "45c5b1da-efb6-411e-bc2d-f25fff65175d"
+      },
+      "source_table": "point_zero_backups"
+    },
+    {
+      "identity": "e57290b7-fdc8-4204-83da-979cec40046c",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "identity": "e57290b7-fdc8-4204-83da-979cec40046c",
+        "kind": "sale"
+      },
+      "source_table": "purged_documents"
+    },
+    {
+      "identity": "f08f0360-74e8-4115-8c5f-3cf7aa9addbf",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+        "request_id": "182b8afc-d976-4f4b-bb51-1a022485bc21"
+      },
+      "source_table": "online_requests"
+    },
+    {
+      "identity": "f08f0360-74e8-4115-8c5f-3cf7aa9addbf",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+        "request_id": "944378e7-0996-464b-b7ea-ef3d263f97f4"
+      },
+      "source_table": "online_requests"
+    },
+    {
+      "identity": "f08f0360-74e8-4115-8c5f-3cf7aa9addbf",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "backup_id": "54efc5dc-23aa-4d1e-8741-7a94533561b2"
+      },
+      "source_table": "point_zero_backups"
+    },
+    {
+      "identity": "f08f0360-74e8-4115-8c5f-3cf7aa9addbf",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "backup_id": "baa182f5-3b34-43fc-9077-76010458dc18"
+      },
+      "source_table": "point_zero_backups"
+    },
+    {
+      "identity": "fbfae147-4614-43bb-8ff9-ac163bd1b925",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+        "request_id": "5369c943-35c3-4c0a-855d-44e108bff199"
+      },
+      "source_table": "online_requests"
+    },
+    {
+      "identity": "fbfae147-4614-43bb-8ff9-ac163bd1b925",
+      "receipt_type": "online_or_account_request",
+      "source_pk": {
+        "backup_id": "45c5b1da-efb6-411e-bc2d-f25fff65175d"
+      },
+      "source_table": "point_zero_backups"
+    }
+  ],
+  "outsideDeviceReferences": [
+    {
+      "table": "online_requests",
+      "pk": {
+        "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+        "request_id": "182b8afc-d976-4f4b-bb51-1a022485bc21"
+      },
+      "projected_row_md5": "7894572e079108d04b120b1a94674fa4",
+      "classification": "BUSINESS_HISTORY_TO_PRESERVE"
+    },
+    {
+      "table": "online_requests",
+      "pk": {
+        "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+        "request_id": "5369c943-35c3-4c0a-855d-44e108bff199"
+      },
+      "projected_row_md5": "5ac669f575353e5dfc2dd999d80f9442",
+      "classification": "BUSINESS_HISTORY_TO_PRESERVE"
+    },
+    {
+      "table": "online_requests",
+      "pk": {
+        "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+        "request_id": "944378e7-0996-464b-b7ea-ef3d263f97f4"
+      },
+      "projected_row_md5": "5d34d44c5f09cc739bbfa75fb3c3bf95",
+      "classification": "BUSINESS_HISTORY_TO_PRESERVE"
+    },
+    {
+      "table": "point_zero_backups",
+      "pk": {
+        "backup_id": "45c5b1da-efb6-411e-bc2d-f25fff65175d"
+      },
+      "projected_row_md5": "10988c7c56e2e472049094dbe4ade1dd",
+      "classification": "BUSINESS_HISTORY_TO_PRESERVE"
+    },
+    {
+      "table": "point_zero_backups",
+      "pk": {
+        "backup_id": "54efc5dc-23aa-4d1e-8741-7a94533561b2"
+      },
+      "projected_row_md5": "25399c71d77501ff64a53f7976e68bd2",
+      "classification": "BUSINESS_HISTORY_TO_PRESERVE"
+    },
+    {
+      "table": "point_zero_backups",
+      "pk": {
+        "backup_id": "baa182f5-3b34-43fc-9077-76010458dc18"
+      },
+      "projected_row_md5": "e61eeeb0e45209467206126d1786f2a7",
+      "classification": "BUSINESS_HISTORY_TO_PRESERVE"
+    }
+  ],
+  "limits": [
+    "These are value links, not inferred foreign keys.",
+    "Linked history stays intact; QA receipts require a durable exact audit archive before any approved retirement.",
+    "No additional rows become removal candidates through this review."
+  ]
+}

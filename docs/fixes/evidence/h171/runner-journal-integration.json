@@ -1,0 +1,65 @@
+{
+  "scope": "Actual runner helpers extracted through VM, real local journal, fake routes; no live entrypoint",
+  "runnerSha256": "3dd53f0ca1f7063d734bb84196bf3afa08bc4267b3aad83e9d4a75f7d5f102d4",
+  "journalSha256": "a4d1a8c47839fc72dd5567d92879954a9bc655c0845e4e3068e52a03cbc003e0",
+  "testSha256": "061053ff00fc96d3682bea71ab890992edd0cd57c4eb29aef7c8ff30c0d64fbe",
+  "certified": false,
+  "realSupabaseWrites": 0,
+  "tests": 13,
+  "passed": 13,
+  "failed": 0,
+  "results": [
+    {
+      "name": "Actual runner guard persists before the legacy fixture index and terminal continue",
+      "pass": true
+    },
+    {
+      "name": "Actual fixture save failure at write 1 aborts before terminal HTTP",
+      "pass": true
+    },
+    {
+      "name": "Actual fixture save failure at write 3 aborts before terminal HTTP",
+      "pass": true
+    },
+    {
+      "name": "Provisioning key in apikey is blocked by the actual runner before journal inspection",
+      "pass": true
+    },
+    {
+      "name": "Provisioning key in Authorization Bearer is blocked by the actual runner before journal inspection",
+      "pass": true
+    },
+    {
+      "name": "Actual runner permits local asset reads and rejects writes or a different local origin",
+      "pass": true
+    },
+    {
+      "name": "Actual runner late interceptor enters durable guard before route.fetch",
+      "pass": true
+    },
+    {
+      "name": "Actual Node helper persists null-request-id Auth intent before its API callback",
+      "pass": true
+    },
+    {
+      "name": "Actual finalization releases the journal despite browser close failure and never certifies retained fixtures",
+      "pass": true
+    },
+    {
+      "name": "Actual finalization releases the journal if reading the certifier hash fails",
+      "pass": true
+    },
+    {
+      "name": "Certification requires cleanup after all browser emitters close and before the durable journal closes",
+      "pass": true
+    },
+    {
+      "name": "Cleanup failure retains explicit blockers and releases the journal without certification",
+      "pass": true
+    },
+    {
+      "name": "A failed scenario still cleans its proven fixtures but cannot certify the matrix",
+      "pass": true
+    }
+  ]
+}

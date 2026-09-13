@@ -1,0 +1,56 @@
+{
+  "scope": "Actual runner helpers extracted through VM, real local journal, fake routes; no live entrypoint",
+  "runnerSha256": "d902a730989024a2e639668fcd71b9b617bbf45a3190cd6ae8dbc19c95e2f99d",
+  "journalSha256": "a4d1a8c47839fc72dd5567d92879954a9bc655c0845e4e3068e52a03cbc003e0",
+  "testSha256": "030210f0916f1c4bc1d9d8f1bd2f4d26d454a763b79616de35782410032c6809",
+  "certified": false,
+  "realSupabaseWrites": 0,
+  "tests": 10,
+  "passed": 9,
+  "failed": 1,
+  "results": [
+    {
+      "name": "Actual runner guard persists before the legacy fixture index and terminal continue",
+      "pass": true
+    },
+    {
+      "name": "Actual fixture save failure at write 1 aborts before terminal HTTP",
+      "pass": true
+    },
+    {
+      "name": "Actual fixture save failure at write 3 aborts before terminal HTTP",
+      "pass": true
+    },
+    {
+      "name": "Provisioning key in apikey is blocked by the actual runner before journal inspection",
+      "pass": true
+    },
+    {
+      "name": "Provisioning key in Authorization Bearer is blocked by the actual runner before journal inspection",
+      "pass": true
+    },
+    {
+      "name": "Actual runner permits local asset reads and rejects writes or a different local origin",
+      "pass": true
+    },
+    {
+      "name": "Actual runner late interceptor enters durable guard before route.fetch",
+      "pass": true
+    },
+    {
+      "name": "Actual Node helper persists null-request-id Auth intent before its API callback",
+      "pass": true
+    },
+    {
+      "name": "Actual finalization releases the journal despite browser close failure and never certifies retained fixtures",
+      "pass": true
+    },
+    {
+      "name": "Actual finalization releases the journal if reading the certifier hash fails",
+      "pass": false,
+      "error": "Metadata failure must not leave the journal owner lock\n\ntrue !== false\n",
+      "stack": "AssertionError [ERR_ASSERTION]: Metadata failure must not leave the journal owner lock\n\ntrue !== false\n\n    at file:///C:/Users/david/Downloads/POS-BALAM-ticket-h134/.work/balam-final-readiness/test-h171-runner-journal-integration.mjs:193:12\n    at async checkCase (file:///C:/Users/david/Downloads/POS-BALAM-ticket-h134/.work/balam-final-readiness/test-h171-runner-journal-integration.mjs:72:9)\n    at async file:///C:/Users/david/Downloads/POS-BALAM-ticket-h134/.work/balam-final-readiness/test-h171-runner-journal-integration.mjs:187:1"
+    }
+  ],
+  "preservedFailureDirectory": "C:\\Users\\david\\Downloads\\POS-BALAM-ticket-h134\\.work\\balam-final-readiness\\.h171-runner-journal-test-X27T5W"
+}

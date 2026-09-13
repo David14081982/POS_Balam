@@ -1,0 +1,449 @@
+{
+  "format": "balam-live-journal-v1",
+  "run": "05e82c8d-212a-41ed-9d95-160c33a06033",
+  "projectRef": "telohdbvbvsfmwyriflz",
+  "artifactSha256": "cf32a52c56c5cacadc536bc151993f2efc5bcebbd2608089cee0a0bc92139437",
+  "entries": [
+    {
+      "kind": "auth-retire-attempt",
+      "checkpoint": "H171 exact QA Auth retirement",
+      "requestId": "0c854997-d4cb-4f5a-bf19-6640498c8219",
+      "identities": {
+        "userId": "0c854997-d4cb-4f5a-bf19-6640498c8219"
+      },
+      "command": {
+        "action": "GoTrueAdmin.deleteUser",
+        "userId": "0c854997-d4cb-4f5a-bf19-6640498c8219",
+        "shouldSoftDelete": false,
+        "identitySha256": "5232b41eab911d4b0c9671a69f7fd7adc3fbebe6c725c1df7cf846c5da098408",
+        "evidenceSha256": "873e4c66c0c5caf36b77b23c67cd1cca60f260d9c37dc989f62c46e5b4023ffe",
+        "preflightSha256": "5fd2c2888b0213b05ac7e2c35eb8c51d6ea11713e7dcf21327577a16dd9a5495",
+        "scopeSha256": "476edcffad4114a194a0add09ff082a25996fd76b5734f1613e89ec75a5e18b6"
+      },
+      "commandHash": "5b5499ec7c96ab0526724da615a74d1208f9325ee08f205ee21bf9847311b22e",
+      "sequence": 1,
+      "preparedAt": "2026-09-13T04:43:26.149Z",
+      "previousHash": null,
+      "entryHash": "c22ba351707ace24ea2c6ac14d139e566c09cf59c1500b333b30d41bb12ed347"
+    },
+    {
+      "kind": "auth-retire-observation",
+      "checkpoint": "H171 Auth absence observation",
+      "identities": {
+        "userId": "0c854997-d4cb-4f5a-bf19-6640498c8219"
+      },
+      "command": {
+        "id": "0c854997-d4cb-4f5a-bf19-6640498c8219",
+        "state": "ABSENT_VERIFIED",
+        "status": 404,
+        "reconciled": true,
+        "preflightSha256": "0f9f8abe4af39c212908f79ac5ad169926962df7e4ac458720f5b644c198a25c"
+      },
+      "requestId": "92cba028-f727-4d8e-9811-50f995db4f94",
+      "commandHash": "4d42d3f1aa4bdcfbc37868f72b0c4eceb304e2797ecec4e91de1fc096c9cfafc",
+      "sequence": 2,
+      "preparedAt": "2026-09-13T04:43:32.999Z",
+      "previousHash": "c22ba351707ace24ea2c6ac14d139e566c09cf59c1500b333b30d41bb12ed347",
+      "entryHash": "1a6806986cf6365f6b61d19ff428b0e618bec8a0227fe08b93486cc1e454ee56"
+    },
+    {
+      "kind": "auth-retire-attempt",
+      "checkpoint": "H171 exact QA Auth retirement",
+      "requestId": "272aed8a-fab0-48e0-b2ba-e65d3f0884b9",
+      "identities": {
+        "userId": "272aed8a-fab0-48e0-b2ba-e65d3f0884b9"
+      },
+      "command": {
+        "action": "GoTrueAdmin.deleteUser",
+        "userId": "272aed8a-fab0-48e0-b2ba-e65d3f0884b9",
+        "shouldSoftDelete": false,
+        "identitySha256": "f49b1aceb232871ca53da1c27841f93a4f59117de50795d3d33b8e51e606f437",
+        "evidenceSha256": "873e4c66c0c5caf36b77b23c67cd1cca60f260d9c37dc989f62c46e5b4023ffe",
+        "preflightSha256": "1b69164e448a858519f66532df13e3ea24f8a2dd7faa1ad35bd3108d4c22ffd7",
+        "scopeSha256": "476edcffad4114a194a0add09ff082a25996fd76b5734f1613e89ec75a5e18b6"
+      },
+      "commandHash": "d30b1c8a1a0383b78f5e2b5003f71b67f056d8bdaf22a88df6bd1cef6f6926e9",
+      "sequence": 3,
+      "preparedAt": "2026-09-13T04:43:47.182Z",
+      "previousHash": "1a6806986cf6365f6b61d19ff428b0e618bec8a0227fe08b93486cc1e454ee56",
+      "entryHash": "e5222c86ae41b570177c69d3f1bb7c4f4cbad5822a1d4486578c5b78cdc0c9ab"
+    },
+    {
+      "kind": "auth-retire-observation",
+      "checkpoint": "H171 Auth absence observation",
+      "identities": {
+        "userId": "272aed8a-fab0-48e0-b2ba-e65d3f0884b9"
+      },
+      "command": {
+        "id": "272aed8a-fab0-48e0-b2ba-e65d3f0884b9",
+        "state": "ABSENT_VERIFIED",
+        "status": 404,
+        "reconciled": true,
+        "preflightSha256": "6c1aeb0fd35dcd1d4f66dad265360ede33940574237528d92fcc73ff10c477a3"
+      },
+      "requestId": "d964178b-990f-418c-9adc-28ca402bf187",
+      "commandHash": "eab9182be787aac3a6921da0fbff88b92f7501bfc877128f2c686276a640d200",
+      "sequence": 4,
+      "preparedAt": "2026-09-13T04:43:56.090Z",
+      "previousHash": "e5222c86ae41b570177c69d3f1bb7c4f4cbad5822a1d4486578c5b78cdc0c9ab",
+      "entryHash": "fd0ee21940e8ee61ca7369b7f6dd611e488620fea90e5bce66c5093539e91877"
+    },
+    {
+      "kind": "auth-retire-attempt",
+      "checkpoint": "H171 exact QA Auth retirement",
+      "requestId": "54633260-578a-4228-b7d1-4e36e6c49144",
+      "identities": {
+        "userId": "54633260-578a-4228-b7d1-4e36e6c49144"
+      },
+      "command": {
+        "action": "GoTrueAdmin.deleteUser",
+        "userId": "54633260-578a-4228-b7d1-4e36e6c49144",
+        "shouldSoftDelete": false,
+        "identitySha256": "c2dec2032a996f4d329f6e48c3fb420a705720e078e82003b6342efb4d18a098",
+        "evidenceSha256": "873e4c66c0c5caf36b77b23c67cd1cca60f260d9c37dc989f62c46e5b4023ffe",
+        "preflightSha256": "288fbc5246021d564af3b929481efa18a91979f425d562af281a45a06d8e01ce",
+        "scopeSha256": "476edcffad4114a194a0add09ff082a25996fd76b5734f1613e89ec75a5e18b6"
+      },
+      "commandHash": "1881873c89336259845510e481cf91d6c5fd336b7d2916efe3f1830e569cc2aa",
+      "sequence": 5,
+      "preparedAt": "2026-09-13T04:44:12.790Z",
+      "previousHash": "fd0ee21940e8ee61ca7369b7f6dd611e488620fea90e5bce66c5093539e91877",
+      "entryHash": "7a393cf71a757fa01e74721f9f4564e489099e2c66b8de354d5588ce7d49d453"
+    },
+    {
+      "kind": "auth-retire-observation",
+      "checkpoint": "H171 Auth absence observation",
+      "identities": {
+        "userId": "54633260-578a-4228-b7d1-4e36e6c49144"
+      },
+      "command": {
+        "id": "54633260-578a-4228-b7d1-4e36e6c49144",
+        "state": "ABSENT_VERIFIED",
+        "status": 404,
+        "reconciled": true,
+        "preflightSha256": "0d0ec346e5905d8a3754513e1bec8de70951f9e493fbe96b7305fea710757db3"
+      },
+      "requestId": "ed4db386-4394-4f75-9f6c-90916d058f6c",
+      "commandHash": "412c6fd5d3d892b88825709e1b84631f499d6f0e91ef1ee933434e4484f76324",
+      "sequence": 6,
+      "preparedAt": "2026-09-13T04:44:19.998Z",
+      "previousHash": "7a393cf71a757fa01e74721f9f4564e489099e2c66b8de354d5588ce7d49d453",
+      "entryHash": "9fe5a7681170dd0219ea5bfbecc4a7c7cfa20b292bc9e55467a731fc83240857"
+    },
+    {
+      "kind": "auth-retire-attempt",
+      "checkpoint": "H171 exact QA Auth retirement",
+      "requestId": "5d4ea7ba-d175-4b3a-8170-e84f0a8448d4",
+      "identities": {
+        "userId": "5d4ea7ba-d175-4b3a-8170-e84f0a8448d4"
+      },
+      "command": {
+        "action": "GoTrueAdmin.deleteUser",
+        "userId": "5d4ea7ba-d175-4b3a-8170-e84f0a8448d4",
+        "shouldSoftDelete": false,
+        "identitySha256": "27760a1a482eee3ccfba2bc75e0016298f7b365f295c468e178d331cf5ee58f2",
+        "evidenceSha256": "873e4c66c0c5caf36b77b23c67cd1cca60f260d9c37dc989f62c46e5b4023ffe",
+        "preflightSha256": "727b6e3d187a851b59c25a99137876bac792cb23afcf200fb6844bdd138e8975",
+        "scopeSha256": "476edcffad4114a194a0add09ff082a25996fd76b5734f1613e89ec75a5e18b6"
+      },
+      "commandHash": "8ef698c1abc700b30b61c9399ba7d8697000d7ee9b42ce3da9446feb53c35b64",
+      "sequence": 7,
+      "preparedAt": "2026-09-13T04:44:33.550Z",
+      "previousHash": "9fe5a7681170dd0219ea5bfbecc4a7c7cfa20b292bc9e55467a731fc83240857",
+      "entryHash": "bd5edd0f0d92a0af969d0bf473f3f978e9bb727dfcbf0833054d4b6ea20759c1"
+    },
+    {
+      "kind": "auth-retire-observation",
+      "checkpoint": "H171 Auth absence observation",
+      "identities": {
+        "userId": "5d4ea7ba-d175-4b3a-8170-e84f0a8448d4"
+      },
+      "command": {
+        "id": "5d4ea7ba-d175-4b3a-8170-e84f0a8448d4",
+        "state": "ABSENT_VERIFIED",
+        "status": 404,
+        "reconciled": true,
+        "preflightSha256": "ee4ca3baf5f49ac2b88c249913408e92d3d89a24745e32ff5ec6c047b9cc9412"
+      },
+      "requestId": "66bc77a5-a112-4929-a8fc-3f3d849327b0",
+      "commandHash": "e9c774d2cf866000c0b9a715876e459fc230a26035ff8cfb49e35d2a817e5ceb",
+      "sequence": 8,
+      "preparedAt": "2026-09-13T04:44:42.957Z",
+      "previousHash": "bd5edd0f0d92a0af969d0bf473f3f978e9bb727dfcbf0833054d4b6ea20759c1",
+      "entryHash": "14f64e7e44e9c3dcd4495f996282046bdac8fc51c1b8cc1f1f1706f9105b5720"
+    },
+    {
+      "kind": "auth-retire-observation",
+      "checkpoint": "H171 Auth absence observation",
+      "identities": {
+        "userId": "6dd83591-9e6b-482f-95e0-78470766cbce"
+      },
+      "command": {
+        "id": "6dd83591-9e6b-482f-95e0-78470766cbce",
+        "state": "ABSENT_VERIFIED",
+        "status": 404,
+        "alreadyAbsent": true,
+        "preflightSha256": "91f19e36a96f89155e48759d9ecd3127b77224bfde23a172327dd9f1c93563e4"
+      },
+      "requestId": "efc27ad7-cc8b-44b2-86df-a1b232efc8a2",
+      "commandHash": "b10616fb50b6d2005a89e2b82bae121b4b81bd48aeb15051c87629f5e4c3ce0e",
+      "sequence": 9,
+      "preparedAt": "2026-09-13T04:45:03.361Z",
+      "previousHash": "14f64e7e44e9c3dcd4495f996282046bdac8fc51c1b8cc1f1f1706f9105b5720",
+      "entryHash": "6afb2c44a24685c7157fccd8fea55926fbe3c48e43c502e5cfc7dcc5475efcbe"
+    },
+    {
+      "kind": "auth-retire-attempt",
+      "checkpoint": "H171 exact QA Auth retirement",
+      "requestId": "720db98c-e653-4d86-8d5e-eab00a315959",
+      "identities": {
+        "userId": "720db98c-e653-4d86-8d5e-eab00a315959"
+      },
+      "command": {
+        "action": "GoTrueAdmin.deleteUser",
+        "userId": "720db98c-e653-4d86-8d5e-eab00a315959",
+        "shouldSoftDelete": false,
+        "identitySha256": "694322d32b5f860f8548805d4040915f7533e958e45a95ef72a7f2590f1207cd",
+        "evidenceSha256": "873e4c66c0c5caf36b77b23c67cd1cca60f260d9c37dc989f62c46e5b4023ffe",
+        "preflightSha256": "17edcaba4c711d2ba345373741f1ae39731be028d468377445a2ac0da6130e86",
+        "scopeSha256": "476edcffad4114a194a0add09ff082a25996fd76b5734f1613e89ec75a5e18b6"
+      },
+      "commandHash": "ebaa4b4a3f9c0b83a52c64ea563c7de7ea5c1f7dcb932afeb73193e4204e27be",
+      "sequence": 10,
+      "preparedAt": "2026-09-13T04:45:15.584Z",
+      "previousHash": "6afb2c44a24685c7157fccd8fea55926fbe3c48e43c502e5cfc7dcc5475efcbe",
+      "entryHash": "db4c4eb75b568f1633eb08de7dc692ba9d7fae98f89e2c466077cb49b6037179"
+    },
+    {
+      "kind": "auth-retire-observation",
+      "checkpoint": "H171 Auth absence observation",
+      "identities": {
+        "userId": "720db98c-e653-4d86-8d5e-eab00a315959"
+      },
+      "command": {
+        "id": "720db98c-e653-4d86-8d5e-eab00a315959",
+        "state": "ABSENT_VERIFIED",
+        "status": 404,
+        "reconciled": true,
+        "preflightSha256": "f013bbd2d3f89e261e6251892f9019e6e755ab4f2ebc518300bcac6d19e59ef5"
+      },
+      "requestId": "b7122936-25f1-47b7-9652-9dc6f018f1df",
+      "commandHash": "6e02e93c6813da8435077a5d70b6e65492c509fe1c5da83a858989344fb0e1bf",
+      "sequence": 11,
+      "preparedAt": "2026-09-13T04:45:29.653Z",
+      "previousHash": "db4c4eb75b568f1633eb08de7dc692ba9d7fae98f89e2c466077cb49b6037179",
+      "entryHash": "785c2557fa4a132f9f5439741d550ac42bab3ffcfac088ee6f5c417d675391ef"
+    },
+    {
+      "kind": "auth-retire-attempt",
+      "checkpoint": "H171 exact QA Auth retirement",
+      "requestId": "7e869e19-be08-40fb-96e0-7e444795e8fa",
+      "identities": {
+        "userId": "7e869e19-be08-40fb-96e0-7e444795e8fa"
+      },
+      "command": {
+        "action": "GoTrueAdmin.deleteUser",
+        "userId": "7e869e19-be08-40fb-96e0-7e444795e8fa",
+        "shouldSoftDelete": false,
+        "identitySha256": "8d44f7583dd15fdc56aaf56e88d2608c14161bbd19cda2963f202e2688cc19e9",
+        "evidenceSha256": "873e4c66c0c5caf36b77b23c67cd1cca60f260d9c37dc989f62c46e5b4023ffe",
+        "preflightSha256": "1dad994ddba20083c4f250ddab432eee4f6f9c346322f0cf6c67b3b57d7af703",
+        "scopeSha256": "476edcffad4114a194a0add09ff082a25996fd76b5734f1613e89ec75a5e18b6"
+      },
+      "commandHash": "080439ccbccdd8ddc24e29dfa522b31bc43c0f523d6ac10fec0873cf4cab26e1",
+      "sequence": 12,
+      "preparedAt": "2026-09-13T04:45:44.059Z",
+      "previousHash": "785c2557fa4a132f9f5439741d550ac42bab3ffcfac088ee6f5c417d675391ef",
+      "entryHash": "68d95de1ddbedf428b8c58172b4eceaa4e9a5b0a8154df9c09325b5729015db0"
+    },
+    {
+      "kind": "auth-retire-observation",
+      "checkpoint": "H171 Auth absence observation",
+      "identities": {
+        "userId": "7e869e19-be08-40fb-96e0-7e444795e8fa"
+      },
+      "command": {
+        "id": "7e869e19-be08-40fb-96e0-7e444795e8fa",
+        "state": "ABSENT_VERIFIED",
+        "status": 404,
+        "reconciled": true,
+        "preflightSha256": "c02106c3c72c3211adb477c08e671f3db206f13ac1a0dd430fc7266d7cf797d1"
+      },
+      "requestId": "ee6a697e-46b6-419b-92ff-a4eceb1e0532",
+      "commandHash": "d7db206f1ac2737206e3b05e8bd3e51f5af8185810b121c4454eb5000abc022c",
+      "sequence": 13,
+      "preparedAt": "2026-09-13T04:45:51.222Z",
+      "previousHash": "68d95de1ddbedf428b8c58172b4eceaa4e9a5b0a8154df9c09325b5729015db0",
+      "entryHash": "323c027d0c0213f7a56811668c5a9511e0dc3e9885763347e424e8e26649eed1"
+    },
+    {
+      "kind": "auth-retire-attempt",
+      "checkpoint": "H171 exact QA Auth retirement",
+      "requestId": "85fd870d-1d81-484b-84d3-de60cd2576ec",
+      "identities": {
+        "userId": "85fd870d-1d81-484b-84d3-de60cd2576ec"
+      },
+      "command": {
+        "action": "GoTrueAdmin.deleteUser",
+        "userId": "85fd870d-1d81-484b-84d3-de60cd2576ec",
+        "shouldSoftDelete": false,
+        "identitySha256": "7fe9f18b5944cd0f84df85d9b297ce26670e864f9f5ceeeab3d54c6cbc3d36eb",
+        "evidenceSha256": "873e4c66c0c5caf36b77b23c67cd1cca60f260d9c37dc989f62c46e5b4023ffe",
+        "preflightSha256": "24d6341550c5b2e809f52d12bc47ab513f14384bd3ef483a44cda289468c087c",
+        "scopeSha256": "476edcffad4114a194a0add09ff082a25996fd76b5734f1613e89ec75a5e18b6"
+      },
+      "commandHash": "093342bce55886643cf060fd4e81c06803144edb21683d15844d6e8a6ac332f9",
+      "sequence": 14,
+      "preparedAt": "2026-09-13T04:46:01.908Z",
+      "previousHash": "323c027d0c0213f7a56811668c5a9511e0dc3e9885763347e424e8e26649eed1",
+      "entryHash": "20608528361987883ecd4a0b248409eb9cc031756b9b0b9ddf8872747a71d6a6"
+    },
+    {
+      "kind": "auth-retire-observation",
+      "checkpoint": "H171 Auth absence observation",
+      "identities": {
+        "userId": "85fd870d-1d81-484b-84d3-de60cd2576ec"
+      },
+      "command": {
+        "id": "85fd870d-1d81-484b-84d3-de60cd2576ec",
+        "state": "ABSENT_VERIFIED",
+        "status": 404,
+        "reconciled": true,
+        "preflightSha256": "81664eaed8e22054202cae064e0a50d94f5639675a6e49d01c3830362f3eac5e"
+      },
+      "requestId": "641eac31-7f29-4892-88ce-683ccd273895",
+      "commandHash": "5e1ba147af3b5513e370d6f80ecfa6bd3e66feb1f463d7c8e11e22c98b99f4e4",
+      "sequence": 15,
+      "preparedAt": "2026-09-13T04:46:06.535Z",
+      "previousHash": "20608528361987883ecd4a0b248409eb9cc031756b9b0b9ddf8872747a71d6a6",
+      "entryHash": "1c9152a811f107bcf282f3016224c2cabf2541317b1644c9e508d8bce28d708c"
+    },
+    {
+      "kind": "auth-retire-attempt",
+      "checkpoint": "H171 exact QA Auth retirement",
+      "requestId": "895b586d-15b7-40ae-8ce1-926492c2a229",
+      "identities": {
+        "userId": "895b586d-15b7-40ae-8ce1-926492c2a229"
+      },
+      "command": {
+        "action": "GoTrueAdmin.deleteUser",
+        "userId": "895b586d-15b7-40ae-8ce1-926492c2a229",
+        "shouldSoftDelete": false,
+        "identitySha256": "87c984aef59ea28d945d591b597796ea524e1277bc897ac50156159e5520a573",
+        "evidenceSha256": "873e4c66c0c5caf36b77b23c67cd1cca60f260d9c37dc989f62c46e5b4023ffe",
+        "preflightSha256": "0a5810e72c6cb7314e645de41f53e98ab0d5279679a1532ad33693bc997867b8",
+        "scopeSha256": "476edcffad4114a194a0add09ff082a25996fd76b5734f1613e89ec75a5e18b6"
+      },
+      "commandHash": "b939d56331b2ab5adc4fcec233e018ee4a59628ae5485c6d6c3b54ee7d13f3ac",
+      "sequence": 16,
+      "preparedAt": "2026-09-13T04:46:14.793Z",
+      "previousHash": "1c9152a811f107bcf282f3016224c2cabf2541317b1644c9e508d8bce28d708c",
+      "entryHash": "ad26087fd38bbd95766286438be56ec13ec025fc80c615137ac6e9c67b8442cd"
+    },
+    {
+      "kind": "auth-retire-observation",
+      "checkpoint": "H171 Auth absence observation",
+      "identities": {
+        "userId": "895b586d-15b7-40ae-8ce1-926492c2a229"
+      },
+      "command": {
+        "id": "895b586d-15b7-40ae-8ce1-926492c2a229",
+        "state": "ABSENT_VERIFIED",
+        "status": 404,
+        "reconciled": true,
+        "preflightSha256": "a59f59fb2a80a81e968bae3622a7e2c2c5460af046a5ff37f0b0c11015c0e241"
+      },
+      "requestId": "16ec0b4c-7741-447d-817a-e6f945bb29d8",
+      "commandHash": "d0d5586995363aff9437c86dd2abc51a30aea7f8e515dd723faf983daa3a43db",
+      "sequence": 17,
+      "preparedAt": "2026-09-13T04:46:19.611Z",
+      "previousHash": "ad26087fd38bbd95766286438be56ec13ec025fc80c615137ac6e9c67b8442cd",
+      "entryHash": "3992b579ed7a5dce0ab15372f0f55b19b4c030f4df348dcc4dd6778e98fbc969"
+    },
+    {
+      "kind": "auth-retire-attempt",
+      "checkpoint": "H171 exact QA Auth retirement",
+      "requestId": "eb46cc84-1fe2-4da0-84b6-8332a7ff3bad",
+      "identities": {
+        "userId": "eb46cc84-1fe2-4da0-84b6-8332a7ff3bad"
+      },
+      "command": {
+        "action": "GoTrueAdmin.deleteUser",
+        "userId": "eb46cc84-1fe2-4da0-84b6-8332a7ff3bad",
+        "shouldSoftDelete": false,
+        "identitySha256": "cc68904c37e274ba22eecdacca8af6d4a27bb1a47f966d330bdd5c665eb83d72",
+        "evidenceSha256": "873e4c66c0c5caf36b77b23c67cd1cca60f260d9c37dc989f62c46e5b4023ffe",
+        "preflightSha256": "71e6e3433b57a32490eb7602154b1c5c87d9e88e874dda6687e9888711da585c",
+        "scopeSha256": "476edcffad4114a194a0add09ff082a25996fd76b5734f1613e89ec75a5e18b6"
+      },
+      "commandHash": "97bf19a806a3d9ade376ca71eaeecbfece0df640488d4ac7a9c18ff2262efb88",
+      "sequence": 18,
+      "preparedAt": "2026-09-13T04:46:28.593Z",
+      "previousHash": "3992b579ed7a5dce0ab15372f0f55b19b4c030f4df348dcc4dd6778e98fbc969",
+      "entryHash": "2442e53cbc808bed903947cda56ceb7516ba2f7cbf03f4583d8e30fc8d8ce554"
+    },
+    {
+      "kind": "auth-retire-observation",
+      "checkpoint": "H171 Auth absence observation",
+      "identities": {
+        "userId": "eb46cc84-1fe2-4da0-84b6-8332a7ff3bad"
+      },
+      "command": {
+        "id": "eb46cc84-1fe2-4da0-84b6-8332a7ff3bad",
+        "state": "ABSENT_VERIFIED",
+        "status": 404,
+        "reconciled": true,
+        "preflightSha256": "30e83ade29e9f9d1c9c52b680a881af2825e677ae57726573b3673eb83234a7d"
+      },
+      "requestId": "0cd1fb51-63c8-427d-acd8-e5aebbb83c4b",
+      "commandHash": "1aae922c4749ec480d37984c258423fca2ece45823698f0bfbfd03e11c5896c7",
+      "sequence": 19,
+      "preparedAt": "2026-09-13T04:46:34.120Z",
+      "previousHash": "2442e53cbc808bed903947cda56ceb7516ba2f7cbf03f4583d8e30fc8d8ce554",
+      "entryHash": "231ab79f526f6136db8ab84612b745f6e5e7f27b2633a51a5767b4827c0fd8fa"
+    },
+    {
+      "kind": "auth-retire-attempt",
+      "checkpoint": "H171 exact QA Auth retirement",
+      "requestId": "fb16c0b5-d9eb-4444-997c-c8e0c49f234b",
+      "identities": {
+        "userId": "fb16c0b5-d9eb-4444-997c-c8e0c49f234b"
+      },
+      "command": {
+        "action": "GoTrueAdmin.deleteUser",
+        "userId": "fb16c0b5-d9eb-4444-997c-c8e0c49f234b",
+        "shouldSoftDelete": false,
+        "identitySha256": "8626b094909f6acbe9af5ac9a622e586b12ac5ca8de2c780c69e49f10bb243b0",
+        "evidenceSha256": "873e4c66c0c5caf36b77b23c67cd1cca60f260d9c37dc989f62c46e5b4023ffe",
+        "preflightSha256": "a495266ac0fd9d8a2e1dd6bcc6c2e515d532ea64a4a0f72f55356772d03812eb",
+        "scopeSha256": "476edcffad4114a194a0add09ff082a25996fd76b5734f1613e89ec75a5e18b6"
+      },
+      "commandHash": "a1418659c01232e8a08d9101235d2751ce10f136b7e8b6d0d35e5fc6bbc5ae35",
+      "sequence": 20,
+      "preparedAt": "2026-09-13T04:46:55.825Z",
+      "previousHash": "231ab79f526f6136db8ab84612b745f6e5e7f27b2633a51a5767b4827c0fd8fa",
+      "entryHash": "6e985edd97ed2b7f858788a4fe74e0658f1adaba1126a9aadb3ded3f52259943"
+    },
+    {
+      "kind": "auth-retire-observation",
+      "checkpoint": "H171 Auth absence observation",
+      "identities": {
+        "userId": "fb16c0b5-d9eb-4444-997c-c8e0c49f234b"
+      },
+      "command": {
+        "id": "fb16c0b5-d9eb-4444-997c-c8e0c49f234b",
+        "state": "ABSENT_VERIFIED",
+        "status": 404,
+        "reconciled": true,
+        "preflightSha256": "2f016cffffddda2c849f6a937c45b6188c5058cefbf70ca3a0b80ffe975da63b"
+      },
+      "requestId": "f76179f4-1b2d-4cf9-96ce-2bf5d37dce15",
+      "commandHash": "60a9ac2075af55086e9eeee2a8742c53c8f8e7b9b324fb1b7edb8d89c8d9decf",
+      "sequence": 21,
+      "preparedAt": "2026-09-13T04:47:03.438Z",
+      "previousHash": "6e985edd97ed2b7f858788a4fe74e0658f1adaba1126a9aadb3ded3f52259943",
+      "entryHash": "e86eee763746deccdcde6ab52de761c62681d697c41e37abc4e138694fc674fb"
+    }
+  ],
+  "checksum": "0beaa1ca762839da06216819aad0c12df755903b0be5b4c3ff9615876d4b87f0"
+}

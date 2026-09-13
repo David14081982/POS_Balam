@@ -1,0 +1,70 @@
+{
+  "startedAt": "2026-09-13T02:22:25.386Z",
+  "scope": "Local isolated required workflow regressions; no real Supabase certification",
+  "tests": [
+    {
+      "test": "test-h164-startup-app.mjs",
+      "status": 0,
+      "elapsedMs": 406,
+      "stdout": "PASS Inactive account is not hidden by the commercial offline gate\nPASS Permission rejection blocks stale readiness and its retry is observed\nPASS Actual network failure has the requested offline message\nPASS Adoption and permission refresh preserve the shell; completion is announced once\nPASS Uncertain operation keeps its existing form and confirmation message\nPASS Pending confirmation at first load permits a status query without exposing a shell\nPASS Confirmed snapshot opens the first shell despite pending account receipt H170\nPASS Changing user discards the prior shell while the new snapshot loads\n8 PASS / 0 FAIL\n",
+      "stderr": ""
+    },
+    {
+      "test": "test-h164-online-account.mjs",
+      "status": 0,
+      "elapsedMs": 1245,
+      "stdout": "PASS H164 account: pérdida de respuesta tras COMMIT consultada con identidad estable, Auth/perfil una escritura cada uno; contraseña no persistida\n",
+      "stderr": ""
+    },
+    {
+      "test": "test-h164-online-messages.mjs",
+      "status": 0,
+      "elapsedMs": 162,
+      "stdout": "PASS H164 mensajes: desconexión exacta y resultado incierto prioritario, sin promesa de envío posterior ni invitación a repetir\n",
+      "stderr": ""
+    },
+    {
+      "test": "test-h164-online-settings.mjs",
+      "status": 0,
+      "elapsedMs": 165,
+      "stdout": "PASS settings keyboard: one request, one visible rejection, draft preserved, no success\nPASS settings logo: authoritative error preserved, exact confirmation message, no success\nPASS settings fleet: real revoked status, active reactivation history, one confirmed reactivation with retired=false\n",
+      "stderr": ""
+    },
+    {
+      "test": "test-h164-ui-callbacks.mjs",
+      "status": 0,
+      "elapsedMs": 156,
+      "stdout": "PASS client create/edit callbacks return authoritative Promise\n1 PASS / 0 FAIL\n",
+      "stderr": ""
+    },
+    {
+      "test": "test-h166-projections.mjs",
+      "status": 0,
+      "elapsedMs": 182,
+      "stdout": "PASS initial confirmed family\nPASS unchanged CONFIG and products\nPASS unrelated client snapshot\nPASS product created\nPASS product edited\nPASS product deleted\nPASS remote stock changed\nPASS CONFIG changed\nPASS logo revision invalidates derived projection\nPASS Point Zero confirmed stock\nPASS remote empty catalogue\nPASS remote new catalogue\n{\"suite\":\"H166 revision contract\",\"passed\":12,\"stale\":0,\"storageCalls\":0}\n",
+      "stderr": ""
+    },
+    {
+      "test": "test-h166-online-revisions.mjs",
+      "status": 0,
+      "elapsedMs": 177,
+      "stdout": "PASS 15 second safety checks: zero full snapshots, DATA replacements or CONFIG reloads\nPASS Realtime invalidates, authoritative read confirms exactly one changed snapshot\nPASS missed Realtime: safety check replaces remote empty catalogue\nPASS unchanged response for another revision is rejected without data adoption\nPASS authoritative recovery after an invalid revision response\n{\"suite\":\"H166 conditional transport\",\"passed\":5,\"fullReads\":2,\"lightReads\":4,\"commercialPersistence\":0}\n",
+      "stderr": ""
+    },
+    {
+      "test": "test-h170-certifier-recovery.mjs",
+      "status": 0,
+      "elapsedMs": 118,
+      "stdout": "PASS exact confirmed QA sale retained; fresh attempt has no reused request IDs\nPASS blocks foreign actor before changing checkpoints\nPASS blocks unresolved receipt before changing checkpoints\nPASS blocks missing receipt before changing checkpoints\nPASS blocks unexpected command before changing checkpoints\nPASS blocks untracked sale before changing checkpoints\nPASS blocks other client before changing checkpoints\nPASS blocks different quantity before changing checkpoints\nPASS blocks inconsistent payment before changing checkpoints\nPASS blocks second fresh attempt before changing checkpoints\n10 PASS / 0 FAIL\n",
+      "stderr": ""
+    },
+    {
+      "test": "test-h171-live-fixture-gate.mjs",
+      "status": 0,
+      "elapsedMs": 3457,
+      "stdout": "PASS new live run: blocked before any source/resume read or side effect\nPASS resume with unreadable journal: blocked before any source/resume read or side effect\nPASS retry with unreviewed case: blocked before any source/resume read or side effect\nPASS environment cannot authorize retained fixtures: blocked before any source/resume read or side effect\nPASS local artifact preflight remains read-only and explicitly not certified\n5 PASS / 0 FAIL\n",
+      "stderr": ""
+    }
+  ],
+  "completedAt": "2026-09-13T02:22:31.466Z"
+}

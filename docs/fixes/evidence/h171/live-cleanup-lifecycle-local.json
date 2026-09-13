@@ -1,0 +1,46 @@
+{
+  "scope": "LOCAL_PGLITE_FULL_LIFECYCLE",
+  "tests": 2,
+  "passed": 2,
+  "failed": 0,
+  "results": [
+    {
+      "case": "complete controller SQL + GoTrue adapter + real FK H166 actions",
+      "pass": true,
+      "sqlRows": 60,
+      "sqlTables": 31,
+      "posTablesPreserved": 63,
+      "authDeletes": 2,
+      "authDeltaPerDelete": [
+        7,
+        7
+      ],
+      "remainingAuth": 1,
+      "nativeAuthChildrenRemaining": 0,
+      "foreignActorPreserved": true,
+      "protectedRequestPreserved": true,
+      "baselinePreserved": true,
+      "readOnlyPreflights": 7,
+      "cleanupVerified": true,
+      "certified": false,
+      "remoteCalls": 0
+    },
+    {
+      "case": "foreign hash changed immediately before SQL",
+      "pass": true,
+      "sqlAttempts": 1,
+      "authDeletes": 0,
+      "rollbackVerified": true,
+      "remoteCalls": 0
+    }
+  ],
+  "controllerSha256": "dcacbbd9302808b6d9266aa2a9f84bb11ffe2eb46d3f385aab448451b91dde56",
+  "testSha256": "f28a31ac4a288aae4c3c3aa39f88785633f049f44c2e30ba09c8d57e3a436fd4",
+  "snapshotSha256": "5cdd3082adba4455768ea3107eb281ba1a2676a6254afa74c95add52da27d0a8",
+  "assemblerSha256": "028199456fa06ba38fe67bcdff9ab2d2e595a4ad5845afa6c18f408adae80773",
+  "authReaderSha256": "e6c88289d993be9603d125282436ab25a8ed0ee8954debfd353f84d3a1a72b5c",
+  "authAdapterSha256": "eb63e72d8b511a73c2117ef3919a1b47376bdcc4bb9956fb8ab3300059002c27",
+  "remoteCalls": 0,
+  "certified": false,
+  "scopeLimit": "Local cleanup machinery with real recorded FK and H166 function; browser A/B/C business scenarios and deployed environment require their separate live evidence."
+}

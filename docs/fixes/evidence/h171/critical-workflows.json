@@ -1,0 +1,266 @@
+{
+  "project": "BALAM",
+  "authority": "Supabase telohdbvbvsfmwyriflz / pos / ADR-015",
+  "artifactSha256": "cf32a52c56c5cacadc536bc151993f2efc5bcebbd2608089cee0a0bc92139437",
+  "countingRule": "22 grupos de flujos existentes seleccionados para esta entrega. No son los 22 escenarios API de la matriz histórica H170 ni las 192 vistas del smoke.",
+  "sharedFinalStatus": "BLOCKED",
+  "sharedReason": "Aún no se ha ejecutado la jornada UI y certificación final contra autoridad real con limpieza exacta de sus fixtures. La evidencia aislada o histórica no se eleva a PASS final.",
+  "passedFinal": 0,
+  "requiredGroups": 22,
+  "workflows": [
+    {
+      "id": 1,
+      "name": "Login y sesión",
+      "entry": "Login",
+      "actions": "Ingresar, expirar y cerrar sesión",
+      "backend": "Supabase Auth + bootstrap STORE",
+      "persistence": "Identidad y permisos remotos",
+      "expected": "Acceso sólo con sesión válida y snapshot confirmado",
+      "status": "BLOCKED",
+      "finalAuthorityEvidence": "NOT_EXECUTED_ON_FINAL_ARTIFACT"
+    },
+    {
+      "id": 2,
+      "name": "Usuarios, roles y permisos",
+      "entry": "Configuración / Usuarios y Permisos",
+      "actions": "Alta, edición, activación, baja y cambio de acceso",
+      "backend": "admin-users + autoridad de permisos",
+      "persistence": "Auth, sellers, permisos y online_account_requests",
+      "expected": "Acceso coherente en sesiones independientes; resultado terminal de cuenta",
+      "status": "BLOCKED",
+      "finalAuthorityEvidence": "NOT_EXECUTED_ON_FINAL_ARTIFACT"
+    },
+    {
+      "id": 3,
+      "name": "Productos y familias",
+      "entry": "Inventario",
+      "actions": "Alta, edición y baja de referencia o familia",
+      "backend": "DATA / STORE.execute",
+      "persistence": "products y reference_family_id",
+      "expected": "Identidad estable, sin familias fantasma ni duplicados",
+      "status": "BLOCKED",
+      "finalAuthorityEvidence": "NOT_EXECUTED_ON_FINAL_ARTIFACT"
+    },
+    {
+      "id": 4,
+      "name": "Categorías y catálogos",
+      "entry": "Configuración / Catálogos",
+      "actions": "Mantener atributos utilizados por el inventario",
+      "backend": "CONFIG / gateway online",
+      "persistence": "lookup y settings",
+      "expected": "Valores confirmados y compatibles con productos históricos",
+      "status": "BLOCKED",
+      "finalAuthorityEvidence": "NOT_EXECUTED_ON_FINAL_ARTIFACT"
+    },
+    {
+      "id": 5,
+      "name": "Variantes, tallas e identidad",
+      "entry": "Inventario y selector POS",
+      "actions": "Elegir talla y variante exactas",
+      "backend": "DATA + contrato V2/V3",
+      "persistence": "products",
+      "expected": "SKU, barcode y product_id identifican la misma referencia vendible",
+      "status": "BLOCKED",
+      "finalAuthorityEvidence": "NOT_EXECUTED_ON_FINAL_ARTIFACT"
+    },
+    {
+      "id": 6,
+      "name": "Inventario y stock",
+      "entry": "Inventario",
+      "actions": "Ajuste y reclasificación",
+      "backend": "Autoridad SQL de inventario",
+      "persistence": "products, movements y reference_reclassifications",
+      "expected": "Stock íntegro y rechazo de bases obsoletas",
+      "status": "BLOCKED",
+      "finalAuthorityEvidence": "NOT_EXECUTED_ON_FINAL_ARTIFACT"
+    },
+    {
+      "id": 7,
+      "name": "Búsqueda y carrito",
+      "entry": "POS",
+      "actions": "Buscar, escanear, agregar, cambiar cantidad y retirar",
+      "backend": "Proyección DATA confirmada",
+      "persistence": "Carrito transitorio; catálogo remoto",
+      "expected": "Referencia exacta y límites de stock conservados",
+      "status": "BLOCKED",
+      "finalAuthorityEvidence": "NOT_EXECUTED_ON_FINAL_ARTIFACT"
+    },
+    {
+      "id": 8,
+      "name": "Venta",
+      "entry": "Carrito POS",
+      "actions": "Confirmar venta y vendedor",
+      "backend": "DATA.recordSale / SQL online",
+      "persistence": "sales, sale_items, recibos y reservas",
+      "expected": "Una venta confirmada, sin duplicar por reintento o respuesta perdida",
+      "status": "BLOCKED",
+      "finalAuthorityEvidence": "NOT_EXECUTED_ON_FINAL_ARTIFACT"
+    },
+    {
+      "id": 9,
+      "name": "Cobro",
+      "entry": "Cobrar",
+      "actions": "Seleccionar método, capturar importe y confirmar",
+      "backend": "Cotización y autoridad SQL de venta",
+      "persistence": "sales y sale_payments",
+      "expected": "Importes y cambio correctos; rechazo de efectivo insuficiente",
+      "status": "BLOCKED",
+      "finalAuthorityEvidence": "NOT_EXECUTED_ON_FINAL_ARTIFACT"
+    },
+    {
+      "id": 10,
+      "name": "Ticket e impresión",
+      "entry": "Venta confirmada / Reportes",
+      "actions": "Mostrar, imprimir y reimprimir",
+      "backend": "UI / print manager sobre documento confirmado",
+      "persistence": "receipt_snapshot y documento histórico",
+      "expected": "Importes e identidad conservados; impresión comprobada en el alcance disponible",
+      "status": "BLOCKED",
+      "finalAuthorityEvidence": "NOT_EXECUTED_ON_FINAL_ARTIFACT"
+    },
+    {
+      "id": 11,
+      "name": "Devoluciones y cambios",
+      "entry": "Devoluciones / Cambios",
+      "actions": "Localizar folio, elegir líneas y confirmar devolución o cambio",
+      "backend": "Autoridades SQL de saldos y documentos",
+      "persistence": "returns, exchanges, líneas, pagos y stock",
+      "expected": "Sin exceso de saldo ni alteración de precio histórico",
+      "status": "BLOCKED",
+      "finalAuthorityEvidence": "NOT_EXECUTED_ON_FINAL_ARTIFACT"
+    },
+    {
+      "id": 12,
+      "name": "Apartados",
+      "entry": "POS / Apartados",
+      "actions": "Anticipo, abono y liquidación",
+      "backend": "Autoridad SQL de apartados",
+      "persistence": "sales, sale_payments y liquidación",
+      "expected": "Saldo, comisión y stock coherentes con abonos concurrentes",
+      "status": "BLOCKED",
+      "finalAuthorityEvidence": "NOT_EXECUTED_ON_FINAL_ARTIFACT"
+    },
+    {
+      "id": 13,
+      "name": "Préstamos",
+      "entry": "Préstamos",
+      "actions": "Entrega y devolución parcial o total",
+      "backend": "STORE.execute / command loanOperation / SQL",
+      "persistence": "loan_documents",
+      "expected": "Documento completo y existencias coherentes",
+      "status": "BLOCKED",
+      "finalAuthorityEvidence": "NOT_EXECUTED_ON_FINAL_ARTIFACT"
+    },
+    {
+      "id": 14,
+      "name": "Promociones y descuentos",
+      "entry": "Descuentos / POS",
+      "actions": "Crear, pausar, editar y aplicar beneficio",
+      "backend": "PROMOS, cotización y gateway online",
+      "persistence": "promotions, settings y snapshot de descuento",
+      "expected": "Reglas vigentes aplicadas sin recalcular historia",
+      "status": "BLOCKED",
+      "finalAuthorityEvidence": "NOT_EXECUTED_ON_FINAL_ARTIFACT"
+    },
+    {
+      "id": 15,
+      "name": "Vendedores y comisiones",
+      "entry": "Vendedores",
+      "actions": "Consultar y liquidar comisión",
+      "backend": "DATA y ledger SQL",
+      "persistence": "liquidations, ajustes y documentos",
+      "expected": "Saldo y liquidación coherentes entre sesiones",
+      "status": "BLOCKED",
+      "finalAuthorityEvidence": "NOT_EXECUTED_ON_FINAL_ARTIFACT"
+    },
+    {
+      "id": 16,
+      "name": "Clientes",
+      "entry": "Clientes / POS",
+      "actions": "Alta, edición, baja y consulta de historial",
+      "backend": "DATA / gateway online",
+      "persistence": "clients",
+      "expected": "Cambios confirmados y conflictos obsoletos rechazados",
+      "status": "BLOCKED",
+      "finalAuthorityEvidence": "NOT_EXECUTED_ON_FINAL_ARTIFACT"
+    },
+    {
+      "id": 17,
+      "name": "Movimientos y reportes",
+      "entry": "Inventario / Reportes",
+      "actions": "Consultar movimientos, ventas, pagos y resultados; exportar",
+      "backend": "Proyecciones de snapshot confirmado",
+      "persistence": "Lectura de documentos y movements",
+      "expected": "Conciliación con autoridad y exportaciones correctas",
+      "status": "BLOCKED",
+      "finalAuthorityEvidence": "NOT_EXECUTED_ON_FINAL_ARTIFACT"
+    },
+    {
+      "id": 18,
+      "name": "Configuración necesaria",
+      "entry": "Configuración",
+      "actions": "Guardar negocio, ventas, beneficios, clientes e impresión",
+      "backend": "CONFIG / STORE.execute",
+      "persistence": "settings y lookup",
+      "expected": "Sólo éxito tras confirmación; controles productivos efectivos",
+      "status": "BLOCKED",
+      "finalAuthorityEvidence": "NOT_EXECUTED_ON_FINAL_ARTIFACT"
+    },
+    {
+      "id": 19,
+      "name": "Excel, etiquetas y fotos",
+      "entry": "Inventario",
+      "actions": "Exportar, previsualizar importación, confirmar lote y preparar etiquetas/fotos",
+      "backend": "XLSXIO, BARCODES, STORE y Storage",
+      "persistence": "products y objetos Storage cuando corresponda",
+      "expected": "Identidad y stock conservados, sin lotes parciales ni assets QA residuales",
+      "status": "BLOCKED",
+      "finalAuthorityEvidence": "NOT_EXECUTED_ON_FINAL_ARTIFACT"
+    },
+    {
+      "id": 20,
+      "name": "Administración y Punto Cero",
+      "entry": "Configuración / Administración",
+      "actions": "Diagnóstico, preview, respaldo y operación autorizada",
+      "backend": "point_zero_preview / autoridad SQL",
+      "persistence": "Manifest, respaldo y recibo",
+      "expected": "Bloqueos correctos y protección de configuración/identidades; jamás purgar datos reales como fixture",
+      "status": "BLOCKED",
+      "finalAuthorityEvidence": "NOT_EXECUTED_ON_FINAL_ARTIFACT"
+    },
+    {
+      "id": 21,
+      "name": "Refresh, relogin y navegador nuevo",
+      "entry": "Jornada concluida",
+      "actions": "Recargar, salir, ingresar y abrir contexto limpio",
+      "backend": "Auth y snapshot online",
+      "persistence": "Autoridad remota, sin cola comercial local",
+      "expected": "Mismos datos confirmados y cero resurrección QA",
+      "status": "BLOCKED",
+      "finalAuthorityEvidence": "NOT_EXECUTED_ON_FINAL_ARTIFACT"
+    },
+    {
+      "id": 22,
+      "name": "Una, dos y tres sesiones",
+      "entry": "Contextos independientes A/B/C",
+      "actions": "Ventas, última pieza, abonos, cambios y recuperación concurrentes",
+      "backend": "Supabase real",
+      "persistence": "Documentos, pagos, stock y recibos de autoridad",
+      "expected": "Cero pérdidas, duplicados y divergencias en el artefacto final",
+      "status": "BLOCKED",
+      "finalAuthorityEvidence": "NOT_EXECUTED_ON_FINAL_ARTIFACT"
+    }
+  ],
+  "notApplicable": [
+    {
+      "name": "Apertura/cierre formal de caja",
+      "status": "NOT APPLICABLE",
+      "reason": "No se inventa un módulo que BALAM no tiene. Cobros, movimientos y resultados se comprueban en sus flujos existentes."
+    },
+    {
+      "name": "Venta comercial offline",
+      "status": "NOT APPLICABLE",
+      "reason": "Only Online: sin red se detiene la operación. La recuperación de respuestas inciertas conserva identidad, sin replay comercial."
+    }
+  ]
+}

@@ -114,19 +114,19 @@
         // Gráfica + alertas
         h('div', { key: 'ch', className: 'grid grid-cols-12 gap-8' }, [
           h('div', { key: 'g', className: CARD + ' col-span-12 lg:col-span-8 p-8' }, [
-            h('div', { key: 'h', className: 'flex justify-between items-center mb-10' }, [
+            h('div', { key: 'h', className: 'flex flex-wrap gap-3 justify-between items-center mb-10' }, [
               h('div', { key: 't' }, [
                 h('h3', { key: 'a', className: 'text-h2 text-primary' }, 'Actividad de ventas'),
-                h('p', { key: 'b', className: 'text-caption text-on-surface-variant' }, chartView === 'mes' ? 'Rendimiento mensual del showroom' : 'Rendimiento semanal del showroom'),
+                h('p', { key: 'b', 'data-testid': 'dashboard-chart-summary', className: 'text-caption text-on-surface-variant' }, chartView === 'mes' ? 'Rendimiento mensual del showroom' : 'Rendimiento semanal del showroom'),
               ]),
-              h('div', { key: 'sw', className: 'flex border border-outline-variant rounded-md overflow-hidden' },
+              h('div', { key: 'sw', className: 'flex shrink-0 border border-outline-variant rounded-md overflow-hidden' },
                 [['sem', 'Semanal'], ['mes', 'Mensual']].map(([id, label], i) => h('button', {
-                  key: id, onClick: () => setChartView(id),
+                  key: id, 'data-testid': 'dashboard-chart-view-' + id, 'aria-pressed': chartView === id, onClick: () => setChartView(id),
                   className: 'px-4 py-1.5 text-caption transition-colors ' + (i === 0 ? 'border-r border-outline-variant ' : '') +
                     (chartView === id ? 'bg-surface-container-low font-semibold text-primary' : 'bg-surface font-medium text-on-surface-variant hover:bg-surface-container-low'),
                 }, label))),
             ]),
-            h('div', { key: 'bars', className: 'h-64 w-full flex items-end gap-6 px-2' },
+            h('div', { key: 'bars', 'data-testid': 'dashboard-chart-bars', 'data-view': chartView, className: 'h-64 w-full flex items-end gap-6 px-2' },
               SEMANA.map(x => {
                 const peak = x.pct === maxPct;
                 return h('div', { key: x.d, className: 'flex-1 h-full flex flex-col justify-end items-center gap-4' }, [
@@ -136,13 +136,12 @@
               })),
           ]),
           h('div', { key: 'al', className: 'col-span-12 lg:col-span-4 space-y-6' }, [
-            h('div', { key: 'cup', className: CARD + ' p-6 border-l-4 border-l-gold' }, [
+            h('div', { key: 'cup', 'data-testid': 'dashboard-birthdays', className: CARD + ' p-6 border-l-4 border-l-gold' }, [
               h('div', { key: 'h', className: 'flex items-center gap-2 mb-4' }, [
                 h(MS, { key: 'i', name: 'cake', size: 20, fill: true, className: 'text-gold-text' }),
                 h('h4', { key: 't', className: 'text-overline text-primary' }, 'Cumpleaños'),
               ]),
               h('div', { key: 'l', className: 'space-y-4' }, cumples.length ? cumples.map(u => cumple(u.nombre, cuandoLbl(u.dias), u.dias === 0)) : [h('p', { key: 'e', className: 'text-caption text-muted' }, 'Sin cumpleaños próximos.')]),
-              h('button', { key: 'b', className: 'mt-6 w-full py-2 text-overline rounded bg-gold-soft text-gold-text hover:opacity-80 transition-opacity' }, 'Enviar felicitación'),
             ]),
             h('div', { key: 'stk', className: CARD + ' p-6 border-l-4 border-l-danger' }, [
               h('div', { key: 'h', className: 'flex items-center gap-2 mb-3' }, [

@@ -1,0 +1,14 @@
+{
+  "at": "2026-09-13T03:01:29.057242+00:00",
+  "projectRef": "telohdbvbvsfmwyriflz",
+  "privateBackup": ".evidence-h171-private/auth-tech-backup.json",
+  "sha256": "509f00cc926de97433c37c43052b71e8d195b906aa5cc315120e3ca9b400556f",
+  "bytes": 1945458,
+  "exactTechnicalRows": 321,
+  "overlapCommercialRows": 8,
+  "additionalTechnicalRows": 313,
+  "authMetadataOnly": 11,
+  "protectedRowHashes": 2519,
+  "allCandidateHashesMatchPublicCensus": true,
+  "restoreLimit": "Never a full Auth/credential/session backup. Omitted columns are listed. Protected technical records remain protected even when archived."
+}

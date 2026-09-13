@@ -1,0 +1,61 @@
+{
+  "at": "2026-09-13T05:34:52.456Z",
+  "scope": "FINAL_ARTIFACT_LOCAL_UI_FIXTURE_ONLY",
+  "artifactSha256": "f4d73fa350d4187dade1a55c999dc203b405f4c20d95d9138aaf1b2ef0a82646",
+  "sourceMode": false,
+  "smoke": {
+    "rows": 192,
+    "rendered": 192,
+    "layoutReview": 0,
+    "clippedControls": 0,
+    "failures": 0,
+    "pageErrors": 0,
+    "consoleErrors": 0,
+    "externalRequestsAllowed": 0,
+    "writeAttempts": 0
+  },
+  "responsive": {
+    "viewports": [
+      320,
+      360,
+      390,
+      430,
+      768,
+      1024,
+      1280,
+      1440
+    ],
+    "passed": 8,
+    "jsErrors": 0,
+    "dataUnchanged": true,
+    "realSupabaseWrites": 0
+  },
+  "screenshots": {
+    "smoke": 192,
+    "responsive": 16
+  },
+  "transport": {
+    "externalRequestsAllowed": 0,
+    "smokeBlockedRequests": 0,
+    "smokeFailedRequests": 0
+  },
+  "matrixSha256": {
+    "smoke": "d68a9adb508646fd28be2b3424d197084ee01f014e4f7fa7683e17d88e2b98a4",
+    "responsive": "765bc9faf5b2d59f7020c3b0c0d5be624c5767ca6417d7b55674cf59d0ff59d1"
+  },
+  "scriptSha256": {
+    "smoke": "a48a3339434e196383e40141d40166e3962bbe61909b5cd6c4c9f863b9a19cd6",
+    "responsive": "11d67bc67e8868c7d027f58460fe225d021bfe62823ac307c605cac29cd71cae"
+  },
+  "visualInspection": [
+    "docs/fixes/evidence/h171-users-responsive-final-f4d/320-users-actions.png",
+    "docs/fixes/evidence/h171-users-responsive-final-f4d/430-dashboard-monthly.png"
+  ],
+  "sourcesModified": false,
+  "buildRun": false,
+  "certified": false,
+  "limits": [
+    "Fixture navigation and intercepted callbacks do not certify real Supabase, Auth/RLS or distributed A/B/C authority.",
+    "No financial end-to-end workflow or physical printing is certified by this smoke."
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "scope": "Local synthetic PostgreSQL execution only; no remote schema/rows/auth certification",
+  "tests": [
+    "64 tables covered including empty",
+    "QA/protected/unknown classes",
+    "protected actor/request retained",
+    "incoming receipt identities",
+    "unselected business link overrides QA origin",
+    "public output omits PII and credential sentinel",
+    "private SELECT archives only QA bodies and retains protected identities/hashes",
+    "six-receipt identity SELECT executes on synthetic schema; remote identities not certified",
+    "exact canonical snapshot and two-recovery nullity SELECT execute on synthetic schema"
+  ],
+  "ok": true
+}

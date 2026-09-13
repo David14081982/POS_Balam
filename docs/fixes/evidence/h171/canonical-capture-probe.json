@@ -1,0 +1,26 @@
+{
+  "at": "2026-09-13T05:22:32.023381+00:00",
+  "scope": "BALAM_READ_ONLY_CANONICAL_CAPTURE_NO_NEW_FIXTURES",
+  "projectRef": "telohdbvbvsfmwyriflz",
+  "tables": 64,
+  "rows": 4332,
+  "authIdCount": 4,
+  "inventory": {
+    "products": 973,
+    "families": 251,
+    "pieces": 3483
+  },
+  "protectedSale": {
+    "folio": "BG-260912-0001",
+    "operationId": "35e2c61a-7561-41b9-9535-e39e671a55d3",
+    "fullRowMd5": "4d4eccadf33a73be1303d957036886d6"
+  },
+  "bytes": 118393289,
+  "privateFileSha256": "db6cd6ea98eeb479c8c9ca116c12f3f24fa097ffc65d15edff85f4d572d309be",
+  "snapshotModuleSha256": "5cdd3082adba4455768ea3107eb281ba1a2676a6254afa74c95add52da27d0a8",
+  "earlierFailure": "READ_ONLY_STATEMENT_TIMEOUT_120_SECONDS",
+  "correction": "Single grouped scan replaces128 repeated materialized scans; all64 tables and all canonical row fields retained.",
+  "statementTimeoutSeconds": 120,
+  "verified": true,
+  "certified": false
+}

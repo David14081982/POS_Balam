@@ -1,0 +1,18 @@
+{
+  "projectRef": "telohdbvbvsfmwyriflz",
+  "sql": "../h171-auth-tech-cleanup-reviewed-v2.sql",
+  "sqlSha256": "dc37650694cda4885a5aa41d2ab3f7a3ca0a1be477fa5d296b365007b1dc2f0b",
+  "cliExitCode": 1,
+  "httpStatus": 400,
+  "sqlState": "57014",
+  "error": "canceling statement due to statement timeout",
+  "statementTimeoutSeconds": 90,
+  "failedStage": "POST_DELETE_PROTECTED_TABLE_COMPARISON",
+  "failedTable": "pos.point_zero_backups",
+  "transactionResult": "ROLLED_BACK",
+  "committedDeletes": 0,
+  "exactScopeStillPresentWithOriginalHashes": 317,
+  "protectedRowsUnchanged": 21,
+  "qaAuthRemaining": 10,
+  "rollbackEvidence": "technical-cleanup-rollback-check.json"
+}

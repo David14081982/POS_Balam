@@ -1,0 +1,59 @@
+{
+  "scope": "CERTIFIER_PRINT_OBSERVATION_FAILURE_AND_NARROW_CORRECTION",
+  "run": "d4b616be-2bed-4512-9053-6f0ee6a7c372",
+  "artifactSha256": "f4d73fa350d4187dade1a55c999dc203b405f4c20d95d9138aaf1b2ef0a82646",
+  "observed": {
+    "checkpoint": "confirmed-sale-ticket",
+    "folio": "BG-260913-0001",
+    "failure": "page.waitForFunction timed out after60000ms while requiring __h171LivePrints.length===1",
+    "baselinePrintAuto": true,
+    "actualHandoffCount": null,
+    "actualHandoffCountPersisted": false,
+    "screenshotSha256": "255a0b726fc458015453895108df3739542d3a0ca3dc77157238ef5ee6c2e0af"
+  },
+  "executableEvidence": [
+    {
+      "file": "balam/shared.jsx",
+      "lines": [
+        798,
+        805
+      ],
+      "fact": "useReceiptAutoPrint calls printReceipt({automatic:true}) when print.auto is enabled."
+    },
+    {
+      "file": "qa-h171-core-journey.mjs",
+      "lines": [
+        77,
+        87
+      ],
+      "fact": "The helper then clicks receipt-print before invoking confirmed-sale-ticket."
+    },
+    {
+      "file": "balam/print-manager.jsx",
+      "lines": [
+        146,
+        152,
+        164,
+        182
+      ],
+      "fact": "Browser jobs send automatically after preparation. A manual action can create another copy after an automatic job completed; a pending equivalent job is reused."
+    }
+  ],
+  "causeBoundary": "Exact cardinality1 is invalid for this supported auto-plus-manual path. The saved timeout and screenshot do not determine whether this individual attempt observed0 or2 handoffs; neither count is asserted.",
+  "correction": {
+    "file": "test-h164-live-online.mjs",
+    "runnerSha256": "363eae248a03f0fa1e8d3841e955fd867b3e1c877dbc084c22724136d1a54ad7",
+    "behavior": "Accept at least one handoff after every print job for this folio settles; require every such job COMPLETED and every observed handoff to have the expected documentId and SKU. Persist count, documentIds and job stages on success or timeout.",
+    "businessWritesAdded": 0,
+    "appChanged": false,
+    "artifactChanged": false,
+    "physicalPrinterTested": false
+  },
+  "validation": {
+    "nodeCheck": "PASS",
+    "newTests": 0,
+    "remoteCallsByReviewer": 0
+  },
+  "cleanupStatus": "Managed separately by the active runner; this evidence does not assert its final outcome.",
+  "certified": false
+}

@@ -1,0 +1,327 @@
+{
+  "artifactSha256": "f4d73fa350d4187dade1a55c999dc203b405f4c20d95d9138aaf1b2ef0a82646",
+  "startedAt": "2026-09-13T04:59:26.141Z",
+  "scope": "Real App/AUTH/STORE/DATA UI, HTTP transport intercepted with coherent in-memory fixture. No remote Auth/RLS/SQL or financial certification.",
+  "steps": [
+    {
+      "name": "logout",
+      "ok": true,
+      "contract": "auth-logout UI; terminal-local Auth signout"
+    },
+    {
+      "name": "login",
+      "ok": true,
+      "contract": "email/password types + Enter; actual AUTH and startup gates"
+    },
+    {
+      "name": "search-size-variant-cart",
+      "ok": true,
+      "productId": "17110000-0000-4000-8000-000000000001",
+      "sku": "21-J171-ML-ALG-BL-NOR-—-40",
+      "size": "40",
+      "lines": 1
+    },
+    {
+      "name": "cash-validation",
+      "ok": true,
+      "emptyBlocked": true,
+      "insufficientBlocked": true,
+      "exactAmountEnabled": true,
+      "total": 116
+    },
+    {
+      "name": "confirmed-sale-ticket",
+      "ok": true,
+      "folio": "H171-LOCAL-0001",
+      "total": 116,
+      "productId": "17110000-0000-4000-8000-000000000001",
+      "ticketTextSha256": "573092e98b75335887bec90c8fa7fe64382b40dd08fcddd3a28d53f5ae8b5fc8",
+      "hardware": "NOT_TESTED"
+    },
+    {
+      "name": "stock-after-sale",
+      "ok": true,
+      "productId": "17110000-0000-4000-8000-000000000001",
+      "stock": 2,
+      "familyStock": 4,
+      "visibleVariantsSha256": "a5932515fea6f2a74debfec056a8908918a4233d2ae589b684f0b7b0ea46bcbd"
+    },
+    {
+      "name": "sale-query",
+      "ok": true,
+      "folio": "H171-LOCAL-0001",
+      "reportRowTextSha256": "b9e4d48645603a23b93b2f57ddcf4113752cfde1a40d4b5d424810e154b2a1ad"
+    },
+    {
+      "name": "refresh-sale-query",
+      "ok": true,
+      "folio": "H171-LOCAL-0001",
+      "reportRowUnchanged": true
+    },
+    {
+      "name": "refresh-stock",
+      "ok": true,
+      "productId": "17110000-0000-4000-8000-000000000001",
+      "stock": 2,
+      "familyStock": 4,
+      "visibleVariantsSha256": "a5932515fea6f2a74debfec056a8908918a4233d2ae589b684f0b7b0ea46bcbd"
+    }
+  ],
+  "requests": [
+    {
+      "name": "auth-password-login",
+      "transport": "INTERCEPTED"
+    },
+    {
+      "name": "current_permission_snapshot",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "current_permission_snapshot",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_presence",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_adoption_report",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "current_permission_snapshot",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_snapshot_if_changed",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_adoption_report",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "auth-local-logout",
+      "transport": "INTERCEPTED"
+    },
+    {
+      "name": "auth-password-login",
+      "transport": "INTERCEPTED"
+    },
+    {
+      "name": "current_permission_snapshot",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "current_permission_snapshot",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_presence",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_adoption_report",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "current_permission_snapshot",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_snapshot_if_changed",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_adoption_report",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_presence",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "current_permission_snapshot",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_snapshot_if_changed",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_connectivity",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_request_result",
+      "transport": "INTERCEPTED",
+      "requestId": "199baf13-5ea9-5f94-82a8-b837aed72d65"
+    },
+    {
+      "name": "execute_online_command",
+      "transport": "INTERCEPTED",
+      "requestId": "199baf13-5ea9-5f94-82a8-b837aed72d65"
+    },
+    {
+      "name": "online_snapshot_if_changed",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_connectivity",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_request_result",
+      "transport": "INTERCEPTED",
+      "requestId": "4574a1d6-3e79-4180-a962-9752494aea5c"
+    },
+    {
+      "name": "execute_online_command",
+      "transport": "INTERCEPTED",
+      "requestId": "4574a1d6-3e79-4180-a962-9752494aea5c"
+    },
+    {
+      "name": "online_snapshot_if_changed",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_presence",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "current_permission_snapshot",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_snapshot_if_changed",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "current_permission_snapshot",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "current_permission_snapshot",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_presence",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_adoption_report",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "current_permission_snapshot",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_snapshot_if_changed",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_adoption_report",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    }
+  ],
+  "unexpectedRequests": [],
+  "blockedWebSockets": [
+    "wss://telohdbvbvsfmwyriflz.supabase.co/realtime/v1/websocket",
+    "wss://telohdbvbvsfmwyriflz.supabase.co/realtime/v1/websocket",
+    "wss://telohdbvbvsfmwyriflz.supabase.co/realtime/v1/websocket",
+    "wss://telohdbvbvsfmwyriflz.supabase.co/realtime/v1/websocket",
+    "wss://telohdbvbvsfmwyriflz.supabase.co/realtime/v1/websocket",
+    "wss://telohdbvbvsfmwyriflz.supabase.co/realtime/v1/websocket",
+    "wss://telohdbvbvsfmwyriflz.supabase.co/realtime/v1/websocket",
+    "wss://telohdbvbvsfmwyriflz.supabase.co/realtime/v1/websocket"
+  ],
+  "pageErrors": [],
+  "consoleErrors": [],
+  "failedRequests": [],
+  "printHandoffs": [
+    {
+      "documentId": "H171-LOCAL-0001",
+      "htmlSha256": "b97455832a5b8a6c7dafce7313754b369dc6f8826f03787f3a672436b39e10f6",
+      "textSha256": "573092e98b75335887bec90c8fa7fe64382b40dd08fcddd3a28d53f5ae8b5fc8",
+      "physicalPrinterTested": false
+    }
+  ],
+  "externalRequestsAllowed": 0,
+  "remoteWrites": 0,
+  "sourceSha256": "32673bf043fd08eb92fd647efe339cc69d30be2309c350ebe50877fde50d96f6",
+  "fixture": {
+    "products": 2,
+    "families": 1,
+    "variantsSameSize": 2,
+    "initialPieces": 5,
+    "sellerEligible": true,
+    "initialSales": 0,
+    "login": "synthetic credentials; not exported"
+  },
+  "fixtureCommit": {
+    "operationId": "4574a1d6-3e79-4180-a962-9752494aea5c",
+    "productId": "17110000-0000-4000-8000-000000000001",
+    "quantity": 1,
+    "total": 116,
+    "subtotal": 100,
+    "iva": 16,
+    "payments": 1,
+    "stockBefore": 3,
+    "stockAfter": 2,
+    "commandSha256": "d88bf4e3938530b9e4331e3d3d752fb7f02e1512c78de24b42920138f2e3d686"
+  },
+  "storage": {
+    "keys": [
+      "balam-sidebar",
+      "balam_device_id",
+      "balam-page",
+      "balam_auth"
+    ],
+    "businessKeys": []
+  },
+  "result": {
+    "ok": true,
+    "steps": 9,
+    "folio": "H171-LOCAL-0001",
+    "loginCount": 2,
+    "logoutCount": 1,
+    "relogin": true,
+    "fixtureSales": 1,
+    "fixtureReceipts": 2,
+    "refreshReconstructed": true,
+    "realSupabaseCertified": false
+  },
+  "completedAt": "2026-09-13T05:00:14.210Z"
+}

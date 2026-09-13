@@ -1,0 +1,22 @@
+{
+  "projectRef": "telohdbvbvsfmwyriflz",
+  "history": "H171",
+  "ownerInstruction": "Después CONTINÚA DENTRO DE LA MISMA H171. Siguiente objetivo: retirar únicamente QA técnico/Auth cuya identidad esté demostrada; preservar cualquier historia comercial necesaria; mantener fuera las 4 filas ambiguas hasta decisión del OWNER. Continúa autónomamente salvo nueva operación destructiva que exceda exactamente los alcances ya respaldados y demostrados.",
+  "technicalRows": 317,
+  "technicalSql": "../h171-auth-tech-cleanup-reviewed-v3.sql",
+  "technicalSqlSha256": "791cc2cd7f399c847843293a6d4c54469313f40f42f7f0d564cd2c78491a41f4",
+  "canonicalBackupSha256": "b37b3f4cf8518d5ab87754a48e60c62fab9418a23d396157cbe80530ba86b326",
+  "authScope": "The same eleven exact proven UUIDs in h171-auth-tech-provenance.json; ten are currently present. Already absent6dd8 is reconciled without a repeated DELETE.",
+  "protectedRequest": "70549527-4867-4342-94d2-38e770b0f2a9",
+  "protectedRequestState": "completed",
+  "protectedRequestMd5": "8fdc987d8fe491f467f968da4c5306e0",
+  "protectedRequestCompletionEvidence": "request7054-completion-inspection.json",
+  "heldRecoveries": 2,
+  "ambiguousCommercialRowsPreserved": 4,
+  "storageDeletes": 0,
+  "counterOrRevisionRewind": false,
+  "authPasswordsOrSessionsRestorableFromMetadataBackup": false,
+  "priorTechnicalSql": "../h171-auth-tech-cleanup-reviewed-v2.sql",
+  "priorTechnicalSqlSha256": "dc37650694cda4885a5aa41d2ab3f7a3ca0a1be477fa5d296b365007b1dc2f0b",
+  "performanceCorrection": "Same317 PK/hash, guards and timeout90s; aggregate row digests materialized and sorted once. Priorv2 rolled back; v3 committed and postverified."
+}

@@ -1,0 +1,29 @@
+{
+  "projectRef": "telohdbvbvsfmwyriflz",
+  "ownerApprovalSha256": "9c38f5405d8bcc25d4574a4e66b112fa770712f3b1736ece2c708deec4f423b1",
+  "identityEvidence": {
+    "baselineSha256": "d2a0c2a5dc85d70625628ad06120c0424011099a91d69896086354c7e7f50eb9",
+    "auditSha256": "9b8455af296739611505a6a69fd17a2f7023615826da5e9bb06336424fac5f74",
+    "inventorySha256": "6dacce4e4f8d5cc12496bc7dcca8719c465bfe9fedda884183fbd1e630193652"
+  },
+  "commercial": {
+    "status": "COMMITTED_AND_VERIFIED",
+    "removedRows": 149,
+    "remainingExactRows": 0,
+    "evidenceSha256": "8d8e1a39c84efb997b8bb0e6cbbeb63520795f5d1f8045ea71fd48a324c69fbb",
+    "postcheckSha256": "10f2ad0e8f87bb3ead9760d60cca3063fb4b2dc6299e4fb3becaa70120ff3652",
+    "backupSha256": "6a6c9b084af4432c22f313a5bb908ab54a9e1104c47ba6ea09b597252d92d825",
+    "manifestMd5": "dab9b6aec5240e1d00501207313bd6e2"
+  },
+  "technical": {
+    "status": "COMMITTED_AND_VERIFIED",
+    "removedRows": 317,
+    "remainingExactRows": 0,
+    "evidenceSha256": "1a92632a2296c77aa4ceb7beea6c16207919e7a80fa99f90622f328a444a534a",
+    "postcheckSha256": "1bb2670fb63c015ba8dd03d25d516e96bb15efb28f89ba5dd38e7ff53ad25643",
+    "canonicalBackupSha256": "b37b3f4cf8518d5ab87754a48e60c62fab9418a23d396157cbe80530ba86b326",
+    "heldRecoveries": 2,
+    "protectedHistoryRows": 18,
+    "implicitCascadeRows": 0
+  }
+}

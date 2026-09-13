@@ -1,9 +1,9 @@
 // H164: real Supabase, final built artifact, three independent browser contexts.
-// Opt-in only. One scenario per distinct behavior; no queue replay or business cleanup.
-// QA history is retained with exact fixture IDs. Provisioning credentials stay in Node.
+// H171 runs the historical domain scenarios plus real UI journeys, then removes
+// only this run's proven, canonically backed fixtures before certification.
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { createHash, randomUUID, randomBytes } from 'node:crypto';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -11,18 +11,42 @@ import { gunzipSync } from 'node:zlib';
 import http from 'node:http';
 import { createClient } from '@supabase/supabase-js';
 import { chromium } from 'playwright-core';
-import { qaRetirementPlan, qaRetirementSql } from './h164-qa-retirement.mjs';
+import { openLiveJournal } from './h171-live-journal.mjs';
+import { runCoreJourney } from './qa-h171-core-journey.mjs';
+import { recordedSnapshotCatalog } from './h171-live-snapshot.mjs';
+import { createLiveAuthorityIO } from './h171-live-authority-io.mjs';
+import { createLiveCleanupLifecycle } from './h171-live-cleanup-lifecycle.mjs';
+import { reopenFreshTerminal } from './qa-h171-session-delivery.mjs';
+
+const liveScope=process.env.BALAM_LIVE_SCOPE||'final-journey';
+assert.ok(['historical-matrix','final-journey'].includes(liveScope),'UNKNOWN_LIVE_SCOPE');
+const finalJourneyCases=new Set([
+  'A/B/C bootstrap from authoritative snapshot',
+  'Core UI journey on C then B/A compare authoritative state',
+  'No Internet blocks operation, stock, success, pending; reconnect reads authority',
+  'Reload and clean browser context rebuild only from Supabase',
+]);
 
 const preflightOnly=process.env.BALAM_LIVE_PREFLIGHT_ONLY==='1';
 if (process.env.BALAM_ONLINE_LIVE !== '1' && !preflightOnly) {
-  console.error('NOT CERTIFIED: set BALAM_ONLINE_LIVE=1 after remote migration review and final artifact build.');
+  console.error('NOT CERTIFIED: an explicit BALAM_ONLINE_LIVE=1 invocation is required. BALAM_LIVE_PREFLIGHT_ONLY=1 performs local artifact verification only.');
   process.exit(2);
+}
+// No environment option can reinstate retained fixtures or replay an old run.
+// A failed run is reconciled from its exact ledger, outside scenario execution.
+if (!preflightOnly) {
+  let code=null;
+  if(process.env.BALAM_LIVE_RESUME_DIR||process.env.BALAM_LIVE_RETRY_REJECTED_CASE)code='QA_RESUME_REQUIRES_EXACT_RECONCILIATION';
+  else if(process.env.BALAM_QA_ALLOW_RETAINED_HISTORY)code='QA_RETAINED_HISTORY_FORBIDDEN';
+  else if(!existsSync('balam/store.jsx')||!existsSync('index.html'))code='QA_VERIFIED_WORKSPACE_REQUIRED';
+  if(code){console.error(JSON.stringify({certified:false,deliveryCertified:false,code}));process.exit(2);}
 }
 const source = readFileSync('balam/store.jsx', 'utf8');
 const url = source.match(/const SUPABASE_URL = '([^']+)'/)[1];
 const publishable = source.match(/const SUPABASE_KEY = '([^']+)'/)[1];
 const build = source.match(/const BUILD = '([^']+)'/)[1];
 const project = new URL(url).hostname.split('.')[0];
+assert.equal(project,'telohdbvbvsfmwyriflz','Only the BALAM authority is allowed before credentials or effects');
 const resumeDir = process.env.BALAM_LIVE_RESUME_DIR ? resolve(process.env.BALAM_LIVE_RESUME_DIR) : null;
 const REJECTED_PAYMENT_CASE='Layaway / concurrent payment / settlement';
 const retryRejectedCase=process.env.BALAM_LIVE_RETRY_REJECTED_CASE||null;
@@ -59,21 +83,26 @@ function stable(value) {
   if (value && typeof value === 'object') return '{' + Object.keys(value).sort().map(key => JSON.stringify(key) + ':' + stable(value[key])).join(',') + '}';
   return JSON.stringify(value);
 }
-if(preflightOnly){console.log(JSON.stringify({preflight:true,build,project,artifactSha256:digest(html),embeddedStoreSha256:digest(embeddedStore),authRequests:0,businessWrites:0}));process.exit(0);}
+if(preflightOnly){console.log(JSON.stringify({preflight:true,certified:false,deliveryCertified:false,liveExecutionBlocked:false,code:'EXACT_SELF_CLEANUP_IMPLEMENTED',build,project,artifactSha256:digest(html),embeddedStoreSha256:digest(embeddedStore),authRequests:0,businessWrites:0}));process.exit(0);}
 mkdirSync(out, { recursive: true });
 if(!resumeDir) writeFileSync(join(out,'verified-artifact.html'),html);
 const result = resumeDir ? JSON.parse(readFileSync(join(out,'matrix.json'),'utf8')) : { run, project, build, artifactPath, artifactSha256: digest(html), certifierSha256: digest(readFileSync(import.meta.filename)),
-  startedAt: new Date().toISOString(), profiles: 3, certified: false, cases: [],
+  startedAt: new Date().toISOString(), profiles: 3, certified: false, deliveryCertified: false, scenariosPassed: false, cases: [],
   method: 'Real HTTPS RPC/authority; isolated Chromium A/B/C; failures abort real transport only; no mocked authority or service_role in browser',
   scope: 'Domain APIs on the final browser artifact plus rendered offline/recovery screen. Visual workflows have separate UI regression evidence.' };
 assert.equal(result.run,run);assert.equal(result.project,project);assert.equal(priorFixtures?.prefix||prefix,prefix);
 if(resumeDir){assert.equal(result.certified,false,'A completed matrix must not execute again');assert.equal(result.artifactSha256,digest(html),'Resume requires the same final artifact; review changed cases before authorizing a new artifact matrix');}
+result.productionReady=false;
+result.certificationMeaning='Only the explicitly selected executed scenarios and their exact fixture cleanup; delivery DoD is assessed separately.';
 result.sessions ||= [];result.sessions.push({startedAt:new Date().toISOString(),resume:!!resumeDir,artifactSha256:digest(html),certifierSha256:digest(readFileSync(import.meta.filename))});delete result.failure;
 const fixtures = priorFixtures || { run, prefix, products: Array.from({ length: 7 }, () => randomUUID()), sellers: [], sales: [], returns: [], exchanges: [],
   loans: [], clients: [], promotions: [], operationIds: [], requestIds: [], installations: ['A','B','C'].map(name => prefix + '-' + name), configKeys: [] };
 fixtures.checkpoints ||= {};
 fixtures.createdAccountIds ||= [];
+fixtures.plannedActorId ||= fixtures.userId || randomUUID();
+planCoreJourneyFixtures(fixtures);
 const save = () => { writeFileSync(join(out, 'matrix.json'), JSON.stringify(result, null, 2)); writeFileSync(join(out, 'fixtures.json'), JSON.stringify(fixtures, null, 2)); };
+let mutationJournal;
 function remember(kind, value) { if (!fixtures[kind].includes(value)) fixtures[kind].push(value); save(); return value; }
 const op = () => remember('operationIds', randomUUID());
 function observeCommand(command) {
@@ -86,10 +115,59 @@ function observeCommand(command) {
   const collection = {clients:'clients',promotions:'promotions'}[command.kind];
   if (collection) for (const row of command.rows || []) if (row.id) remember(collection,row.id);
 }
+function planCoreJourneyFixtures(target) {
+  assert.ok(Array.isArray(target.products));
+  if(!target.coreJourney){
+    assert.equal(target.products.length,7,'An unplanned manifest must contain the seven historical references');
+    const productIds=[randomUUID(),randomUUID()];
+    target.coreJourney={schema:'h171-core-ui-v1',productIds,referenceFamilyId:productIds[0],initialStocks:[3,2],unitPrice:116};
+    target.products.push(...productIds);
+  }
+  const plan=target.coreJourney;
+  assert.equal(plan.schema,'h171-core-ui-v1');assert.equal(target.products.length,9);
+  assert.equal(new Set(target.products).size,9);
+  for(const id of target.products)assert.match(id,/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+  assert.deepEqual(plan.productIds,target.products.slice(7));assert.equal(plan.referenceFamilyId,plan.productIds[0]);
+  assert.deepEqual(plan.initialStocks,[3,2]);assert.equal(plan.unitPrice,116);
+  return plan;
+}
+async function seedCoreJourneyReferences(page,plan,prefix) {
+  return page.evaluate(async({plan,prefix})=>{
+    const D=window.DATA,C=window.CONFIG,meta=C.allCatalogMeta(),modelKind=C.modeloKind();
+    if(plan.productIds.some(id=>D.products.some(row=>row.id===id)))throw Error('CORE_UI_SEED_ID_ALREADY_EXISTS');
+    const first=kind=>{const item=C.list(kind)[0];if(!item)throw Error('Active remote catalog required: '+kind);return item.code;};
+    const category=C.sizeCategories().find(item=>item.id==='size_number'&&C.list(item.id).some(row=>row.code==='40'))
+      ||C.sizeCategories().find(item=>item.scale&&C.list(item.id).length);
+    if(!category)throw Error('CORE_UI_ACTIVE_SIZE_REQUIRED');
+    const colors=[...new Set(C.list('color').map(row=>row.code))].slice(0,2);
+    if(colors.length!==2)throw Error('CORE_UI_TWO_ACTIVE_COLORS_REQUIRED');
+    const sizeCode=C.list(category.id).some(row=>row.code==='40')?'40':first(category.id);
+    const model=prefix+'-J171',name=prefix+' UI Journey';
+    const base={cat:first('category'),manga:first('sleeve'),tela:first('fabric'),color:colors[0],cuello:first('neck'),orn:first('ornament'),
+      sizeCategoryId:category.id,sizeScale:category.scale,sizeCode,attrs:{__sizeCategoryId:category.id},ornamentColorCodes:[]};
+    for(const[kind,definition]of Object.entries(meta))if(definition.custom&&definition.required&&kind!==modelKind)base.attrs[kind]=first(kind);
+    if(D.ornamentColorMode(base)==='required')base.ornamentColorCodes=[first('ornament_color')];
+    const prepared=[];
+    for(const[index,id]of plan.productIds.entries())prepared.push(D.createReference({...base,id,referenceFamilyId:plan.referenceFamilyId,
+      modelo:model,nombre:name,color:colors[index],precio:plan.unitPrice,costo:40,stockQuantity:plan.initialStocks[index],
+      imagen:null,barcodeAliases:[],physicalIdentityLocked:false,_syncVersion:0,_deletedAt:null},D.products.concat(prepared)));
+    // Seed only. The context route guard durably records the exact upsert before HTTP.
+    await D.saveProductRows(prepared);
+    return {search:model,productName:name,commercialKey:'family:'+plan.referenceFamilyId,
+      sizeGroupKey:category.id+'::'+category.scale+'::'+sizeCode,sizeCode,productId:plan.productIds[0],otherProductId:plan.productIds[1],
+      sku:prepared[0].sku,unitPrice:plan.unitPrice,stockBefore:3,stockAfter:2,familyStockAfter:4};
+  },{plan,prefix});
+}
 save();
-const keys = JSON.parse(execFileSync(process.execPath, [resolve('node_modules/supabase/dist/supabase.js'), 'projects', 'api-keys', '--project-ref', project, '--output', 'json'], { encoding: 'utf8', stdio: ['ignore','pipe','pipe'] }));
-const serviceKey = (Array.isArray(keys) ? keys : keys.rows).find(row => row.name === 'service_role')?.api_key;
-assert.ok(serviceKey, 'Authenticated server provisioning key required');
+function provisioningKey() {
+  try {
+    const raw=execFileSync(process.execPath,[resolve('node_modules/supabase/dist/supabase.js'),'projects','api-keys',
+      '--project-ref',project,'--output','json'],{encoding:'utf8',stdio:['ignore','pipe','pipe'],timeout:30000,windowsHide:true});
+    const keys=JSON.parse(raw),key=(Array.isArray(keys)?keys:keys.rows).find(row=>row.name==='service_role')?.api_key;
+    assert.ok(key);return key;
+  } catch { throw Error('BALAM_SERVER_PROVISIONING_CREDENTIAL_UNAVAILABLE'); }
+}
+const serviceKey=provisioningKey();
 const boundedFetch = (input, options = {}) => fetch(input, { ...options, signal: options.signal
   ? AbortSignal.any([options.signal, AbortSignal.timeout(30000)]) : AbortSignal.timeout(30000) });
 const options = { auth: { persistSession: false, autoRefreshToken: false }, global: { fetch: boundedFetch } };
@@ -102,8 +180,43 @@ async function rawRows(table) {
   for (let start = 0; ; start += 1000) { const page = check(await db.from(table).select('*').order(order).range(start, start + 999)); rows.push(...page); if (page.length < 1000) return rows; }
 }
 const cleanExisting = row => Object.fromEntries(Object.entries(row).filter(([key]) => !['updated_at','sync_version','sync_base_version','sync_device_id'].includes(key)));
-let baseline, browser, server, userId, address, currentCase=null, currentStep=null;
+let baseline, browser, server, userId, address, cleanupLifecycle, currentCase=null, currentStep=null;
 const terminals = [];
+const readRpcs = ['online_connectivity','online_snapshot_if_changed','online_request_result',
+  'current_permission_snapshot','admin_user_permission_editor_snapshot','physical_card_available',
+  'point_zero_preview','point_zero_receipt','preview_test_data_cleanup','test_data_cleanup_receipt'];
+const journalMutation = (kind, identities, command, action, requestId = null) => mutationJournal.beforeMutation({
+  checkpoint: currentStep || currentCase || 'bootstrap', kind, requestId, actorId: userId || null, identities, command,
+}, action);
+function guardedBrowserRoute(terminal, handler) {
+  const guarded = mutationJournal.wrapRoute(async route => {
+    const request = route.request();
+    // Keep the historical fixture/checkpoint index, backed by the durable journal.
+    if (new URL(request.url()).pathname === '/rest/v1/rpc/execute_online_command') {
+      const body = request.postDataJSON();
+      if (body?.p_request_id) {
+        remember('requestIds', body.p_request_id);
+        if (currentStep) {
+          const step = fixtures.checkpoints[currentStep];
+          if (!step.requestIds.includes(body.p_request_id)) step.requestIds.push(body.p_request_id);
+          save();
+        }
+      }
+      observeCommand(body?.p_command);
+    }
+    return handler(route);
+  }, { origin: url, readOrigins: [new URL(address).origin], readRpcs, contextName: terminal.name,
+    checkpoint: () => currentStep || currentCase || 'bootstrap', actorId: () => userId });
+  return async route => {
+    const headers = route.request().headers();
+    if (headers.apikey === serviceKey || String(headers.authorization || '').replace(/^Bearer\s+/i, '') === serviceKey) {
+      terminal.errors.push('Provisioning key crossed the browser boundary');
+      await route.abort('failed');
+      return;
+    }
+    return guarded(route);
+  };
+}
 function validateRejectedPaymentRetry({caseName,checkpoint,fixtures,actorId,receipts,parent,payments}){
   assert.equal(caseName,REJECTED_PAYMENT_CASE);assert.equal(actorId,fixtures.userId,'Exact original QA actor required');
   assert.equal(checkpoint?.complete,true,'Only a completed rejected race checkpoint may be replaced');
@@ -187,12 +300,20 @@ async function once(label, action, recover) {
   finally{currentStep=previous;}
 }
 async function verify(name, action) {
+  if(liveScope==='final-journey'&&!finalJourneyCases.has(name)){
+    result.excludedCases ||= [];result.excludedCases.push(name);return;
+  }
   if(result.cases.some(row=>row.name===name&&row.pass)){console.log('SKIP prior PASS '+name);return;}
   currentCase=name;
   console.log('START ' + name); const started = Date.now(); delete result.lastRace; save();
-  try { const evidence = await action(); result.cases.push({ name, pass: true, elapsedMs: Date.now() - started, evidence, ...(result.lastRace ? {concurrency:result.lastRace} : {}) }); console.log('PASS ' + name); }
+  let watchdog;
+  const bounded=new Promise((_,reject)=>{watchdog=setInterval(()=>{
+    try{mutationJournal.assertHealthy();if(Date.now()-started>360000)throw Error('SCENARIO_DEADLINE_EXCEEDED');}
+    catch(error){reject(error);}
+  },1000);});
+  try { const evidence = await Promise.race([action(),bounded]); result.cases.push({ name, pass: true, elapsedMs: Date.now() - started, evidence, ...(result.lastRace ? {concurrency:result.lastRace} : {}) }); console.log('PASS ' + name); }
   catch (error) { result.cases.push({ name, pass: false, elapsedMs: Date.now() - started, error: error.message }); console.log('FAIL ' + name + ': ' + error.message); throw error; }
-  finally { currentCase=null;save(); }
+  finally { clearInterval(watchdog);currentCase=null;save(); }
 }
 async function ready(terminal) { await terminal.page.waitForFunction(() => window.STORE?.syncStatus().ready === true, null, { timeout: 60000 }); }
 async function storageState(terminal) {
@@ -324,12 +445,13 @@ async function performRace(first, second, actionFirst, actionSecond, predicate) 
     requestIds.push(route.request().postDataJSON().p_request_id);
     arrived++; if (arrived === 2) release(); await gate; return route.continue();
   };
-  await first.context.route(pattern, intercept); await second.context.route(pattern, intercept);
+  const firstIntercept = guardedBrowserRoute(first, intercept), secondIntercept = guardedBrowserRoute(second, intercept);
+  await first.context.route(pattern, firstIntercept); await second.context.route(pattern, secondIntercept);
   try {
     const outcomes=await Promise.allSettled([actionFirst(),actionSecond()]);
     return {arrived,requestIds,outcomes:outcomes.map(row=>row.status==='rejected'?{status:'rejected',reason:{message:row.reason?.message,code:row.reason?.code}}:row)};
   }
-  finally { clearTimeout(timeout); release(); await first.context.unroute(pattern, intercept); await second.context.unroute(pattern, intercept); }
+  finally { clearTimeout(timeout); release(); await first.context.unroute(pattern, firstIntercept); await second.context.unroute(pattern, secondIntercept); }
 }
 function oneWinner(outcomes) {
   const success = outcomes.filter(outcome => outcome.status === 'fulfilled' && outcome.value?.ok !== false);
@@ -347,34 +469,32 @@ async function sell(terminal, id, { qty = 1, layaway = false, operationId = op()
   remember('sales', sale.folio); return sale;
 }
 const stock = async id => Number(check(await db.from('products').select('stock_quantity').eq('id', id).single()).stock_quantity);
-async function retireExactQaAccounts(){
-  const plan=qaRetirementPlan(fixtures,{project,build});
-  assert.equal(readFileSync(resolve('supabase/.temp/project-ref'),'utf8').trim(),project,'Management CLI must target the verified Supabase project');
-  for(const id of [plan.userId,plan.accountId]){
-    const account=check(await admin.auth.admin.getUserById(id)).user;
-    if(id===plan.userId){assert.equal(account.email,plan.email);assert.equal(account.user_metadata?.balam_online_test,plan.run);}
-    else{assert.equal(account.email,plan.prefix+'-account@example.test');assert.equal(account.app_metadata?.balam_account_request_id,plan.accountRequestId);}
-  }
-  const sql=qaRetirementSql(plan),sqlPath=resolve(out,'qa-retirement.sql');writeFileSync(sqlPath,sql);
-  const raw=execFileSync(process.execPath,[resolve('node_modules/supabase/dist/supabase.js'),'db','query','--linked','--file',sqlPath,'--output','json'],{encoding:'utf8',stdio:['ignore','pipe','pipe'],timeout:90000,maxBuffer:8*1024*1024});
-  const payload=JSON.parse(raw),rows=Array.isArray(payload)?payload:payload.rows||payload.data||payload.result;
-  assert.ok(Array.isArray(rows),'Management retirement response must contain result rows');
-  const receipt=rows.find(row=>row.result?.run===run)?.result;assert.equal(receipt?.ok,true,'Owner transaction must confirm exact QA retirement');
-  const ids=plan.profiles.map(row=>row.id),profiles=check(await db.from('sellers').select('id,active').in('id',ids));
-  assert.equal(profiles.length,ids.length);for(const row of profiles)assert.equal(row.active,false);
-  result.qaRetirement={receipt,sqlSha256:digest(sql),authBanned:[]};save();
-  for(const id of [plan.userId,plan.accountId]){
-    check(await admin.auth.admin.updateUserById(id,{ban_duration:'876000h'}));
-    const account=check(await admin.auth.admin.getUserById(id)).user;
-    assert.ok(Date.parse(account.banned_until)>Date.now(),'Exact QA Auth account must be blocked');
-    result.qaRetirement.authBanned.push(id);save();
-  }
-}
 try {
+  mutationJournal = await openLiveJournal({ file: join(out, 'mutation-journal.json'), run, projectRef: project, artifactSha256: digest(html) });
+  await mutationJournal.prepare({kind:'fixture-plan',checkpoint:'bootstrap / exact product identities before provisioning',requestId:run,
+    identities:{productIds:fixtures.products,coreJourneyProductIds:fixtures.coreJourney.productIds},command:{run,coreJourney:{
+      schema:fixtures.coreJourney.schema,productIds:fixtures.coreJourney.productIds,referenceFamilyId:fixtures.coreJourney.referenceFamilyId,
+      initialStocks:fixtures.coreJourney.initialStocks,unitPrice:fixtures.coreJourney.unitPrice}}});
   const manifest = check(await db.from('system_manifest').select('*').eq('singleton', true).single());
   assert.equal(manifest.system_mode, 'preproduction', 'Live fixtures require explicitly configured preproduction');
   result.manifest = manifest;
   check(await db.from('online_requests').select('request_id').limit(1)); // Additive gateway migrations must already exist.
+  assert.equal(resumeDir,null,'Existing run requires read-only reconciliation, never another scenario execution');
+  const readEvidence=file=>JSON.parse(readFileSync(file,'utf8').replace(/^\uFEFF/,''));
+  const catalog=recordedSnapshotCatalog({authorityAudit:readEvidence('docs/fixes/evidence/h171/authority-audit-before.json'),
+    cleanupCatalog:readEvidence('docs/fixes/evidence/h171/cleanup-catalog-before.json')});
+  const cleanupIO=await createLiveAuthorityIO({catalog,sourceUrl:url+'/',
+    cliPath:resolve('node_modules/supabase/dist/supabase.js'),
+    linkedDirectory:resolve(process.env.BALAM_LINKED_DIRECTORY||'.'),
+    privateDirectory:resolve('.evidence-h171-private/live-runs',run)});
+  const {buildAuthCleanupPreflightSql,validateAuthCleanupPreflight}=await import('./h171-live-cleanup-auth-preflight.mjs');
+  const readAuthPreflight=async({plan,label})=>{
+    const response=await cleanupIO.query(buildAuthCleanupPreflightSql({plan,catalog,sourceUrl:url+'/'}),label);
+    const checked=validateAuthCleanupPreflight({input:response.payload,plan,catalog,sourceUrl:url+'/'});
+    assert.equal(checked.ready,true,'AUTH_PREFLIGHT_INCOMPLETE:'+checked.blockers.join(','));return checked.preflight;
+  };
+  cleanupLifecycle=await createLiveCleanupLifecycle({io:cleanupIO,db,admin,journal:mutationJournal,fixtures,
+    artifactSha256:digest(html),clientBuild:build,readAuthPreflight});
   if(resumeDir){
     const stored=JSON.parse(readFileSync(join(out,'baseline.json'),'utf8'));assert.equal(stored.run,run);assert.equal(stored.project,project);
     baseline=Object.fromEntries(tables.map(table=>[table,new Map(stored.tables[table])]));
@@ -382,19 +502,23 @@ try {
     baseline=Object.fromEntries(await Promise.all(tables.map(async table=>[table,new Map((await rawRows(table)).map(row=>[keyFor(table,row),digest(cleanExisting(row))]))])));
     writeFileSync(join(out,'baseline.json'),JSON.stringify({run,project,createdAt:new Date().toISOString(),tables:Object.fromEntries(tables.map(table=>[table,[...baseline[table]]]))},null,2));
   }
-  const caseNames=[...readFileSync(import.meta.filename,'utf8').matchAll(/await verify\('([^']+)'/g)].map(match=>match[1]);
+  const caseNames=[...readFileSync(import.meta.filename,'utf8').matchAll(/await verify\('([^']+)'/g)].map(match=>match[1]).filter(name=>liveScope!=='final-journey'||finalJourneyCases.has(name));
+  result.scope=liveScope;result.requiredCases=caseNames;
   if(caseNames.every(name=>result.cases.some(row=>row.name===name&&row.pass))){
     assert.ok(fixtures.userId,'Completed matrix must retain its original QA actor');userId=fixtures.userId;
-    result.certified=true;throw Object.assign(Error('Completed matrix: finish exact QA account retirement only'),{completedMatrix:true});
+    result.scenariosPassed=true;throw Object.assign(Error('Scenario matrix completed: exact cleanup is still required for certification'),{completedMatrix:true});
   }
   const email = fixtures.email || prefix + '@example.test', password = randomBytes(32).toString('base64url');
   if(fixtures.userId){
     userId=fixtures.userId;const existing=check(await admin.auth.admin.getUserById(userId)).user;
     assert.equal(existing.email,email);assert.equal(existing.user_metadata?.balam_online_test,run,'Only the exact retained QA account may rotate its password');
-    check(await admin.auth.admin.updateUserById(userId,{password,ban_duration:'none'}));
+    await journalMutation('auth-login-rotation',{userId},{credentialRotation:true,ban_duration:'none'},async()=>check(await admin.auth.admin.updateUserById(userId,{password,ban_duration:'none'})));
   }else{
-    userId = check(await admin.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { balam_online_test: run } })).user.id;
-    fixtures.userId = userId; fixtures.email = email; save();
+    // A lost Auth ACK can no longer leave an account whose identity was never saved.
+    userId = fixtures.plannedActorId; fixtures.userId = userId; fixtures.email = email; save();
+    const created = await journalMutation('auth-create',{userId},{emailSha256:digest(email),email_confirm:true,qaRun:run},
+      async()=>check(await admin.auth.admin.createUser({ id:userId,email,password,email_confirm:true,user_metadata:{balam_online_test:run} })).user);
+    assert.equal(created.id,userId,'Auth must use the UUID journaled before provisioning');
   }
   const adminId = remember('sellers', prefix + '-admin');
   const sellerIds = ['A','B','C'].map(name => remember('sellers', prefix + '-seller-' + name));
@@ -404,17 +528,21 @@ try {
   await once('Provision exact QA sellers',async()=>{
     const intended=[{id:adminId,nombre:prefix+' Admin',email,role:'admin',active:true,comision_pct:0,commission_override_pct:null,commission_policy_version:0,sync_base_version:0},...sellerIds.map((id,index)=>({id,nombre:prefix+' '+index,role:'vendedor',active:true,comision_pct:5,commission_override_pct:5,commission_policy_version:1,sync_base_version:0}))];
     const present=check(await db.from('sellers').select('id,nombre').in('id',fixtures.sellers));for(const row of present)assert.ok(row.nombre.startsWith(prefix));
-    const missing=intended.filter(row=>!present.some(existing=>existing.id===row.id));if(missing.length)check(await db.from('sellers').insert(missing));return true;
+    const missing=intended.filter(row=>!present.some(existing=>existing.id===row.id));
+    if(missing.length)await journalMutation('profile-provisioning',{profileIds:missing.map(row=>row.id)},{rows:missing},async()=>check(await db.from('sellers').insert(missing)));
+    return true;
   });
   await once('Provision exact QA role',async()=>{
     const present=check(await db.from('user_permission_role_assignments').select('*').eq('user_id',userId).eq('role_code','admin'));
-    if(!present.length)check(await db.from('user_permission_role_assignments').insert({user_id:userId,role_code:'admin',active:true}));return true;
+    if(!present.length)await journalMutation('role-provisioning',{userId},{role_code:'admin',active:true},
+      async()=>check(await db.from('user_permission_role_assignments').insert({user_id:userId,role_code:'admin',active:true})));
+    return true;
   });
   server = http.createServer((request,response) => { response.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-store' }); response.end(html); });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve)); address = 'http://127.0.0.1:' + server.address().port + '/';
   browser = await chromium.launch({ ...(process.env.BALAM_CHROME_EXECUTABLE ? { executablePath: process.env.BALAM_CHROME_EXECUTABLE } : { channel: 'chrome' }), headless: true });
   for (const [index,name] of ['A','B','C'].entries()) {
-    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: 'block' });
     const page = await context.newPage(), errors = [];
     const terminal = { name, context, page, errors, sellerId: sellerIds[index], revisionSignals: 0 }; terminals.push(terminal);
     page.on('websocket', socket => socket.on('framereceived', frame => {
@@ -423,12 +551,7 @@ try {
       } catch (_) { /* non-JSON transport frame */ }
     }));
     page.setDefaultTimeout(60000); page.on('pageerror', error => errors.push(error.message));
-    page.on('request', request => {
-      if (request.headers().apikey === serviceKey) errors.push('Provisioning key crossed the browser boundary');
-      if (!request.url().includes('/rpc/execute_online_command')) return;
-      const body = request.postDataJSON(); if (body?.p_request_id){remember('requestIds',body.p_request_id);if(currentStep){const step=fixtures.checkpoints[currentStep];if(!step.requestIds.includes(body.p_request_id))step.requestIds.push(body.p_request_id);save();}}
-      observeCommand(body?.p_command);
-    });
+    await context.route('**/*', guardedBrowserRoute(terminal, route => route.continue()));
     await context.addInitScript(({device}) => { if (location.hostname === '127.0.0.1') localStorage.setItem('balam_device_id', device); }, { device: fixtures.installations[index] });
     await page.goto(address, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => window.AUTH?.isReady() && window.STORE);
@@ -448,9 +571,9 @@ try {
     const payload={action:'create',email:prefix+'-startup@example.test',nombre:prefix+' Startup',role:'vendedor'};
     // Exact QA fixture: a real server preparation abandoned before any Auth write.
     // Resolution must remain uncertain; neither the browser nor this test replays it.
-    await once('Prepare abandoned QA account',()=>db.rpc('prepare_online_account',{
+    await once('Prepare abandoned QA account',()=>journalMutation('account-prepare',{requestId,userId},payload,()=>db.rpc('prepare_online_account',{
       p_request_id:requestId,p_actor_id:userId,p_payload:payload,p_payload_hash:digest(payload),
-    }).then(check));
+    }).then(check),requestId));
     const reference={requestId,userId,kind:'account',fingerprint:digest(payload)};
     const key='balam_online_request_v1:'+requestId;
     await once('Three independent cold starts retain the pending reference',async()=>{
@@ -469,10 +592,10 @@ try {
       }
       return {terminals:['A','B','C'],referencePreserved:true,interactive:true};
     });
-    await once('Retire the unexecuted preparation without deleting history',()=>db.rpc('advance_online_account',{
+    await once('Retire the unexecuted preparation without deleting history',()=>journalMutation('account-advance',{requestId,userId},{state:'rejected',targetUserId:null},()=>db.rpc('advance_online_account',{
       p_request_id:requestId,p_actor_id:userId,p_state:'rejected',p_target_user_id:null,
       p_result:{ok:false,error:'QA preparation abandoned before any Auth write'},
-    }).then(check));
+    }).then(check),requestId));
     const domains=await converge();
     for(const terminal of terminals)assert.equal(await terminal.page.evaluate(key=>localStorage.getItem(key),key),null);
     const receipt=check(await db.from('online_account_requests').select('state,target_user_id').eq('request_id',requestId).single());
@@ -495,7 +618,7 @@ try {
         prepared.push(candidate);
       }
       await D.saveProductRows(prepared);
-    }, { ids: fixtures.products, prefix }));
+    }, { ids: fixtures.products.slice(0,7), prefix }));
     return converge();
   });
   await verify('H166 conditional reads and real Realtime invalidation', async () => {
@@ -597,8 +720,8 @@ try {
     const transport=await once('One sale with response loss',async()=>{
     const operationId = op(), pattern = url + '/rest/v1/rpc/execute_online_command', resolvePattern = url + '/rest/v1/rpc/resolve_online_request';
     const before = await stock(sourceId); let committed = 0, resolverCalls = 0;
-    const lose = async route => { if (route.request().postDataJSON()?.p_command?.type !== 'sale') return route.continue(); committed++; await route.fetch(); await route.abort('failed'); };
-    const holdResolve = async route => { resolverCalls++; await route.abort('failed'); };
+    const lose = guardedBrowserRoute(A, async route => { if (route.request().postDataJSON()?.p_command?.type !== 'sale') return route.continue(); committed++; await route.fetch(); await route.abort('failed'); });
+    const holdResolve = guardedBrowserRoute(A, async route => { resolverCalls++; await route.abort('failed'); });
     await A.context.route(pattern,lose); await A.context.route(resolvePattern,holdResolve);
     let finished=false;
     const purchase=sell(A,sourceId,{qty:3,operationId,discount:true}).then(value=>{finished=true;return {value};},error=>{finished=true;return {error};});
@@ -679,32 +802,114 @@ try {
     const value=await once('Settle exact QA seller commission',()=>A.page.evaluate(id=>window.DATA.liquidarComision(id),A.sellerId));
     assert.ok(Number(value)>=0); return converge();
   });
-  await verify('No Internet blocks operation, stock, success, pending; reconnect reads authority', async () => {
-    const before=await stock(targetId),requests=[];
-    const observer=request=>{if(request.url().includes('/rpc/execute_online_command'))requests.push(request.url());};
-    A.page.on('request',observer); await A.context.setOffline(true);
-    try {
-      await A.page.waitForFunction(()=>!window.STORE.syncStatus().ready);
-      const denied=await A.page.evaluate(async id=>{try{await window.DATA.saveProductRows([window.DATA.updateReference({id,precio:999})]);return {success:true};}catch(error){return {success:false,message:error.message,stock:window.DATA.products.find(row=>row.id===id).stockQuantity};}},targetId);
-      assert.equal(denied.success,false); assert.match(denied.message,/Sin conexión\. BALAM necesita internet para continuar\./);
-      assert.equal(denied.stock,before); assert.equal(requests.length,0);const storage=await storageState(A);assert.deepEqual(storage.queueKeys,[]);assert.equal(storage.legacyPendingApi,'undefined');assert.equal(storage.databases.filter(row=>row.store==='durable_queue').reduce((sum,row)=>sum+row.rows,0),0);
-      await A.page.getByText('Sin conexión. BALAM necesita internet para continuar.',{exact:true}).waitFor();
-      assert.equal(await A.page.getByTestId('receipt-print').count(),0); await A.page.screenshot({path:join(out,'offline.png'),fullPage:true});
-    } finally { await A.context.setOffline(false); A.page.off('request',observer); }
-    await ready(A); assert.equal(await stock(targetId),before); return converge();
-  });
-  await verify('Reload and close/reopen rebuild only from Supabase', async () => {
-    await B.page.reload({waitUntil:'domcontentloaded'}); await ready(B); await B.page.evaluate(async()=>(await window.STORE.ensureClient()).removeAllChannels());
-    await C.page.close(); C.page=await C.context.newPage(); C.page.on('pageerror',error=>C.errors.push(error.message));
-    await C.page.goto(address,{waitUntil:'domcontentloaded'}); await ready(C); await C.page.evaluate(async()=>(await window.STORE.ensureClient()).removeAllChannels());
-    return converge();
-  });
   await verify('Existing commercial history preserved', async () => {
     const counts={};
     for(const table of tables){const now=new Map((await rawRows(table)).map(row=>[keyFor(table,row),digest(cleanExisting(row))]));
       for(const [key,hash] of baseline[table])assert.equal(now.get(key),hash,'Existing row changed or lost: '+table+'/'+key);
       counts[table]=baseline[table].size;}
     return {unchangedExistingRows:counts,lost:0};
+  });
+  await verify('Core UI journey on C then B/A compare authoritative state', async () => {
+    const confirmedPrints=async(page,row,expected,observationKey)=>{
+      const observe=()=>page.evaluate(()=>({count:window.__h171LivePrints?.length||0,
+        documentIds:(window.__h171LivePrints||[]).map(p=>p.documentId),
+        jobs:(window.PrintManager?.history()||[]).map(j=>({ticketId:j.ticketId,stage:j.stage,result:j.result,transport:j.transport}))}));
+      try {
+        // print.auto may finish before the explicit UI print action. Both
+        // handoffs are legitimate copies of one confirmed commercial receipt.
+        await page.waitForFunction(folio=>{
+          const jobs=(window.PrintManager?.history()||[]).filter(j=>j.ticketId===folio);
+          return window.__h171LivePrints?.length>=1&&jobs.length>=1&&
+            jobs.every(j=>['COMPLETED','FAILED','CANCELLED'].includes(j.stage));
+        },row.folio);
+      } catch(error) {
+        fixtures.coreJourney[observationKey]=await observe().catch(()=>({unavailable:true}));save();throw error;
+      }
+      const observation=await observe();fixtures.coreJourney[observationKey]=observation;save();
+      assert.ok(observation.jobs.filter(j=>j.ticketId===row.folio).every(j=>j.stage==='COMPLETED'));
+      const printed=await page.evaluate(()=>window.__h171LivePrints);
+      assert.ok(printed.length>=1);
+      for(const handoff of printed){assert.equal(handoff.documentId,row.folio);assert.ok(handoff.text.includes(expected.sku));}
+      return printed;
+    };
+    const expected=await once('Seed two planned UI references',()=>seedCoreJourneyReferences(A.page,fixtures.coreJourney,prefix));
+    await converge();
+    const priorJourney=fixtures.checkpoints[currentCase+' / C logout login and actual UI sale'];
+    if(!priorJourney?.complete&&!priorJourney?.requestIds?.length){assert.equal(await stock(expected.productId),3);assert.equal(await stock(expected.otherProductId),2);}
+    const journey=await once('C logout login and actual UI sale',async()=>{
+      await C.page.evaluate(()=>{
+        window.__h171LivePrints=[];const original=window.UI.receiptFrame;
+        window.UI.receiptFrame=async(...args)=>{const frame=await original(...args);
+          frame.contentWindow.print=()=>{window.__h171LivePrints.push({documentId:frame.contentDocument.querySelector('[data-document-id]')?.dataset.documentId,
+            text:frame.contentDocument.body.textContent,html:frame.contentDocument.documentElement.outerHTML});frame.contentWindow.dispatchEvent(new Event('afterprint'));};return frame;};
+      });
+      return runCoreJourney(C.page,{...expected,sellerId:C.sellerId,login:{email,password}},{relogin:true,onStep:async(row,page)=>{
+        fixtures.coreJourney.steps ||= [];fixtures.coreJourney.steps.push(row);save();
+        await page.screenshot({path:join(out,'core-ui-'+row.name+'.png'),fullPage:true});
+        if(row.name==='confirmed-sale-ticket'){
+          const printed=await confirmedPrints(page,row,expected,'printObservation');
+          writeFileSync(join(out,'core-ui-ticket.html'),printed[0].html);
+          fixtures.coreJourney.print={folio:row.folio,textSha256:digest(printed[0].text),htmlSha256:digest(printed[0].html),hardware:'NOT_TESTED'};save();
+        }
+      }});
+    });
+    assert.equal(journey.steps.length,9);remember('sales',journey.folio);
+    const domains=await converge([B,A,C]);
+    assert.equal(await stock(expected.productId),2);assert.equal(await stock(expected.otherProductId),2);
+    const sale=check(await db.from('sales').select('*').eq('folio',journey.folio).single());
+    const lines=check(await db.from('sale_items').select('*').eq('folio',journey.folio));
+    const payments=check(await db.from('sale_payments').select('*').eq('folio',journey.folio));
+    assert.equal(Number(sale.total),116);assert.equal(sale.cliente_id,null,'Generic UI sale does not mutate a real client');
+    assert.equal(lines.length,1);assert.equal(lines[0].product_id,expected.productId);assert.equal(Number(lines[0].qty),1);
+    assert.equal(payments.length,1);assert.equal(Number(payments[0].monto),116);
+    const followingJourney=await once('Following UI sale on independent A',async()=>{
+      await A.page.evaluate(()=>{
+        window.__h171LivePrints=[];const original=window.UI.receiptFrame.bind(window.UI);
+        window.UI.receiptFrame=async(...args)=>{const frame=await original(...args);
+          frame.contentWindow.print=()=>{window.__h171LivePrints.push({documentId:frame.contentDocument.querySelector('[data-document-id]')?.dataset.documentId,
+            text:frame.contentDocument.body.textContent,html:frame.contentDocument.documentElement.outerHTML});frame.contentWindow.dispatchEvent(new Event('afterprint'));};return frame;};
+      });
+      return runCoreJourney(A.page,{...expected,stockBefore:2,stockAfter:1,familyStockAfter:3,sellerId:A.sellerId,login:{email,password}},
+        {relogin:true,onStep:async(row,page)=>{
+          fixtures.coreJourney.followingSteps ||= [];fixtures.coreJourney.followingSteps.push(row);save();
+          await page.screenshot({path:join(out,'core-ui-following-'+row.name+'.png'),fullPage:true});
+          if(row.name==='confirmed-sale-ticket'){
+            const printed=await confirmedPrints(page,row,expected,'followingPrintObservation');
+            writeFileSync(join(out,'core-ui-following-ticket.html'),printed[0].html);
+          }
+        }});
+    });
+    assert.equal(followingJourney.steps.length,9);assert.notEqual(followingJourney.folio,journey.folio);remember('sales',followingJourney.folio);
+    const followingDomains=await converge([C,B,A]);
+    assert.equal(await stock(expected.productId),1);assert.equal(await stock(expected.otherProductId),2);
+    const followingSale=check(await db.from('sales').select('total,cliente_id').eq('folio',followingJourney.folio).single());
+    assert.equal(Number(followingSale.total),116);assert.equal(followingSale.cliente_id,null);
+    for(const table of tables){const current=new Map((await rawRows(table)).map(row=>[keyFor(table,row),digest(cleanExisting(row))]));
+      for(const[key,hash]of baseline[table])assert.equal(current.get(key),hash,'UI journey changed existing history: '+table+'/'+key);}
+    return {terminal:'C',journey,followingTerminal:'A',followingJourney,products:fixtures.coreJourney.productIds,
+      authorityTerminals:['B','A','C'],domains,followingDomains,hardware:'NOT_TESTED'};
+  });
+  await verify('No Internet blocks operation, stock, success, pending; reconnect reads authority', async () => {
+    const onlineProductId=liveScope==='final-journey'?fixtures.coreJourney.productIds[0]:targetId;
+    const before=await stock(onlineProductId),requests=[];
+    const observer=request=>{if(request.url().includes('/rpc/execute_online_command'))requests.push(request.url());};
+    A.page.on('request',observer); await A.context.setOffline(true);
+    try {
+      await A.page.waitForFunction(()=>!window.STORE.syncStatus().ready);
+      const denied=await A.page.evaluate(async id=>{try{await window.DATA.saveProductRows([window.DATA.updateReference({id,precio:999})]);return {success:true};}catch(error){return {success:false,message:error.message,stock:window.DATA.products.find(row=>row.id===id).stockQuantity};}},onlineProductId);
+      assert.equal(denied.success,false); assert.match(denied.message,/Sin conexión\. BALAM necesita internet para continuar\./);
+      assert.equal(denied.stock,before); assert.equal(requests.length,0);const storage=await storageState(A);assert.deepEqual(storage.queueKeys,[]);assert.equal(storage.legacyPendingApi,'undefined');assert.equal(storage.databases.filter(row=>row.store==='durable_queue').reduce((sum,row)=>sum+row.rows,0),0);
+      await A.page.getByText('Sin conexión. BALAM necesita internet para continuar.',{exact:true}).waitFor();
+      assert.equal(await A.page.getByTestId('receipt-print').count(),0); await A.page.screenshot({path:join(out,'offline.png'),fullPage:true});
+    } finally { await A.context.setOffline(false); A.page.off('request',observer); }
+    await ready(A); assert.equal(await stock(onlineProductId),before); return converge();
+  });
+  await verify('Reload and clean browser context rebuild only from Supabase', async () => {
+    await B.page.reload({waitUntil:'domcontentloaded'});await ready(B);
+    const fresh=await reopenFreshTerminal({browser,terminal:C,peers:[A,B],address,fixtures,
+      credentials:{email,password},guardedBrowserRoute,waitReady:ready,readOnlyConverge:converge});
+    assert.equal(await stock(fixtures.coreJourney.productIds[0]),1);
+    return {reloadTerminal:'B',...fresh.evidence};
   });
   await verify('Equipment history separates exact retired QA installations', async () => {
     const recoverRetirement=async id=>{const row=check(await db.from('sync_devices').select('device_id,status,metadata').eq('device_id',id).single());assert.equal(row.status,'revoked');return {ok:true,deviceId:id};};
@@ -717,17 +922,42 @@ try {
     return {retiredOwnInstallations:fixtures.installations,existingInstallationsChanged:0};
   });
   for(const terminal of terminals)assert.deepEqual(terminal.errors,[],'Browser exceptions '+terminal.name);
-  result.certified=true; result.finishedAt=new Date().toISOString();
+  await mutationJournal.flush(); mutationJournal.assertHealthy();
+  for(const name of caseNames)assert.ok(result.cases.some(row=>row.name===name&&row.pass),'REQUIRED_CASE_NOT_PASSED:'+name);
+  result.scenariosPassed=true; result.scenariosFinishedAt=new Date().toISOString();
 } catch(error) { if(!error.completedMatrix){result.failure=error.message; process.exitCode=1;} }
 finally {
-  result.finalCertifierSha256=digest(readFileSync(import.meta.filename));
-  result.fixturePolicy='Business QA history retained; no replay, no Punto Cero, no delete of business rows. Exact identities in fixtures.json.';
-  if(baseline&&!result.certified)result.preservation='Incomplete run: retained fixtures and account for exact reconciliation; do not clean by prefix.';
-  if(baseline&&result.certified)result.preservation='All original baseline rows verified unchanged; exact QA history retained.';
-  if(result.certified&&userId){
-    try { await retireExactQaAccounts(); result.qaAccount='retained inactive'; }
-    catch(error){result.qaAccount='retained; retirement requires review: '+error.message; result.certified=false; process.exitCode=1;}
+  try {
+    result.finalCertifierSha256=digest(readFileSync(import.meta.filename));
+    result.fixturePolicy='Exact backed cleanup of proven NEW fixtures; baseline history and monotonic authority preserved.';
   }
-  await browser?.close(); await new Promise(resolve=>server?server.close(resolve):resolve()); save();
-  console.log(JSON.stringify({certified:result.certified,cases:result.cases.length,artifactSha256:result.artifactSha256,evidence:out}));
+  catch(error) { result.finalizationFailure=error.message; process.exitCode=1; }
+  finally {
+    try { await browser?.close(); }
+    catch(error) { result.browserCloseFailure=error.message; process.exitCode=1; }
+    try { await new Promise(resolve=>server?server.close(resolve):resolve()); }
+    catch(error) { result.serverCloseFailure=error.message; process.exitCode=1; }
+    try { await mutationJournal?.flush(); mutationJournal?.assertHealthy(); }
+    catch(error) { result.journalFailure=error.message; process.exitCode=1; }
+    try {
+      if(cleanupLifecycle&&userId&&!result.browserCloseFailure&&!result.serverCloseFailure&&!result.journalFailure){
+        result.cleanup=await cleanupLifecycle.finalize();
+        result.cleanupVerified=result.cleanup.cleanupVerified===true;
+        result.qaAccount=result.cleanupVerified?'exact new identities absent':'requires reconciliation';
+      }
+    } catch(error) { result.cleanupFailure=error.code||error.message;process.exitCode=1; }
+    finally {
+      try { await mutationJournal?.close(); }
+      catch(error) { result.journalCloseFailure=error.message; process.exitCode=1; }
+    }
+  }
+  // A complete matrix and independent zero-new-residue postchecks are both mandatory.
+  result.cleanupVerified=result.cleanupVerified===true;
+  result.certified=result.scenariosPassed===true&&result.cleanupVerified&&!result.failure&&!result.finalizationFailure&&
+    !result.browserCloseFailure&&!result.serverCloseFailure&&!result.journalFailure&&!result.journalCloseFailure;
+  result.deliveryCertified=result.certified;
+  result.certificationBlockers=result.certified?[]:[result.cleanupFailure||'SCENARIOS_OR_EXACT_CLEANUP_INCOMPLETE'];
+  if(!result.certified)process.exitCode=1;
+  save();
+  console.log(JSON.stringify({certified:result.certified,deliveryCertified:result.deliveryCertified,scenariosPassed:!!result.scenariosPassed,cases:result.cases.length,artifactSha256:result.artifactSha256,evidence:out}));
 }

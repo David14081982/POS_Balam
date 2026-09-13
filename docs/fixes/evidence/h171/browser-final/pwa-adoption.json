@@ -1,0 +1,99 @@
+{
+  "sourceSha256": {
+    "client": "37889be21d2135f96ac4d3543b613f4337f191a9fccb52246c68b1f2841c9560",
+    "worker": "2e7d057c0f9ef1500e9b2992192c2c4b8fe348ef3b1bdd275f0b9afdc0f4a048"
+  },
+  "cases": [
+    {
+      "name": "PWA HTTP freshness: precache and navigation bypass stale cache at the same URL",
+      "ok": true
+    },
+    {
+      "name": "PWA guards: remote reconstruction and uncertain receipt prevent reload",
+      "ok": true
+    },
+    {
+      "name": "PWA automatic adoption: two pages agree; an unknown historical page is never forced",
+      "ok": true,
+      "generation": "h164-adoption-after",
+      "peerReloads": 1
+    },
+    {
+      "name": "PWA controller change: a newly started confirmation postpones reload; identity and legacy evidence survive",
+      "ok": true,
+      "reloads": 1
+    }
+  ],
+  "remoteBusinessWrites": 0,
+  "physical": false,
+  "coordinationDiagnostic": {
+    "blocked": {
+      "safe": false,
+      "reason": "UPDATE_COORDINATION_PENDING"
+    },
+    "workers": [
+      {
+        "generation": "h164-adoption-before",
+        "clients": [
+          {
+            "url": "http://127.0.0.1:56540/POS_Balam/legacy.html",
+            "type": "window"
+          },
+          {
+            "url": "http://127.0.0.1:56540/POS_Balam/index.html",
+            "type": "window"
+          },
+          {
+            "url": "http://127.0.0.1:56540/POS_Balam/index.html",
+            "type": "window"
+          }
+        ]
+      },
+      {
+        "generation": "h164-adoption-after",
+        "clients": [
+          {
+            "url": "http://127.0.0.1:56540/POS_Balam/legacy.html",
+            "type": "window"
+          },
+          {
+            "url": "http://127.0.0.1:56540/POS_Balam/index.html",
+            "type": "window"
+          },
+          {
+            "url": "http://127.0.0.1:56540/POS_Balam/index.html",
+            "type": "window"
+          }
+        ]
+      }
+    ],
+    "pageState": {
+      "state": {
+        "supported": true,
+        "ready": true,
+        "standalone": true,
+        "canInstall": false,
+        "installKind": null,
+        "updateAvailable": true,
+        "updating": false,
+        "updateGeneration": "h164-adoption-after",
+        "iconSource": "fallback",
+        "iconQuality": "fallback",
+        "sourceSize": null,
+        "manifestUrl": "http://127.0.0.1:56540/POS_Balam/manifest.webmanifest",
+        "lastInstallOutcome": null,
+        "error": ""
+      },
+      "fixture": {
+        "activity": 0,
+        "busy": false,
+        "reconciling": false,
+        "message": "",
+        "errors": [],
+        "hasUnresolvedRequests": false
+      },
+      "active": "activated",
+      "waiting": "installed"
+    }
+  }
+}

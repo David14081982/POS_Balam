@@ -1,0 +1,73 @@
+{
+  "stage": "before",
+  "date": "2026-09-13T02:06:16.809Z",
+  "baseArtifactSha256": "ae53f13541729ecb3fff768d4a974a44fd5fe790f7d7961d6fde1dd28801665d",
+  "settingsSourceSha256": "8b01e878d9135c7173d8b4ae335262de7341003c3fefb571670d218e2d420b88",
+  "sourceMode": false,
+  "scope": "Chromium isolated UI; controlled CONFIG confirmation; all external requests blocked",
+  "realSupabaseWrites": 0,
+  "visibleObsoleteControls": 6,
+  "controls": [
+    {
+      "key": "currency",
+      "section": "negocio",
+      "label": "Moneda",
+      "value": "USD",
+      "visible": true
+    },
+    {
+      "key": "pos.askSize",
+      "section": "ventas",
+      "label": "Pedir talla al escanear",
+      "value": false,
+      "visible": true
+    },
+    {
+      "key": "pos.allowLayaway",
+      "section": "ventas",
+      "label": "Permitir apartados",
+      "value": false,
+      "visible": true
+    },
+    {
+      "key": "commission.auto",
+      "section": "ventas",
+      "label": "Cálculo automático de comisión",
+      "value": false,
+      "visible": true
+    },
+    {
+      "key": "pos.sound",
+      "section": "ventas",
+      "label": "Sonido al agregar al ticket",
+      "value": false,
+      "visible": true
+    },
+    {
+      "key": "print.lowStockAlert",
+      "section": "impresion",
+      "label": "Alerta de stock bajo",
+      "value": false,
+      "visible": true
+    }
+  ],
+  "errors": [],
+  "result": {
+    "formatted": "$1,234.50",
+    "layawayAvailable": true,
+    "legacy": {
+      "currency": "USD",
+      "pos.askSize": false,
+      "pos.allowLayaway": false,
+      "commission.auto": false,
+      "pos.sound": false,
+      "print.lowStockAlert": false
+    },
+    "writes": 6,
+    "historicalKeysPreserved": 6,
+    "informativeBonusPreserved": true,
+    "workingPrintControlConfirmed": true,
+    "removedControls": 0
+  },
+  "ok": true
+}

@@ -1,0 +1,245 @@
+{
+  "artifactSha256": "cf32a52c56c5cacadc536bc151993f2efc5bcebbd2608089cee0a0bc92139437",
+  "startedAt": "2026-09-13T03:34:33.850Z",
+  "scope": "Real App/AUTH/STORE/DATA UI, HTTP transport intercepted with coherent in-memory fixture. No remote Auth/RLS/SQL or financial certification.",
+  "steps": [
+    {
+      "name": "login",
+      "ok": true,
+      "contract": "email/password types + Enter; actual AUTH and startup gates"
+    },
+    {
+      "name": "search-size-variant-cart",
+      "ok": true,
+      "productId": "17110000-0000-4000-8000-000000000001",
+      "sku": "21-J171-ML-ALG-BL-NOR-—-40",
+      "size": "40",
+      "lines": 1
+    },
+    {
+      "name": "cash-validation",
+      "ok": true,
+      "emptyBlocked": true,
+      "insufficientBlocked": true,
+      "exactAmountEnabled": true,
+      "total": 116
+    }
+  ],
+  "requests": [
+    {
+      "name": "auth-password-login",
+      "transport": "INTERCEPTED"
+    },
+    {
+      "name": "current_permission_snapshot",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "current_permission_snapshot",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_presence",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_adoption_report",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "current_permission_snapshot",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_snapshot_if_changed",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_adoption_report",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_connectivity",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_request_result",
+      "transport": "INTERCEPTED",
+      "requestId": "f29d067b-244a-542e-8288-d3ef80bd448d"
+    },
+    {
+      "name": "execute_online_command",
+      "transport": "INTERCEPTED",
+      "requestId": "f29d067b-244a-542e-8288-d3ef80bd448d"
+    },
+    {
+      "name": "online_snapshot_if_changed",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_presence",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "current_permission_snapshot",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_snapshot_if_changed",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_presence",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "current_permission_snapshot",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    },
+    {
+      "name": "online_snapshot_if_changed",
+      "transport": "INTERCEPTED",
+      "requestId": null
+    }
+  ],
+  "unexpectedRequests": [],
+  "blockedWebSockets": [
+    "wss://telohdbvbvsfmwyriflz.supabase.co/realtime/v1/websocket",
+    "wss://telohdbvbvsfmwyriflz.supabase.co/realtime/v1/websocket",
+    "wss://telohdbvbvsfmwyriflz.supabase.co/realtime/v1/websocket",
+    "wss://telohdbvbvsfmwyriflz.supabase.co/realtime/v1/websocket",
+    "wss://telohdbvbvsfmwyriflz.supabase.co/realtime/v1/websocket",
+    "wss://telohdbvbvsfmwyriflz.supabase.co/realtime/v1/websocket"
+  ],
+  "pageErrors": [],
+  "consoleErrors": [],
+  "failedRequests": [],
+  "printHandoffs": [],
+  "externalRequestsAllowed": 0,
+  "remoteWrites": 0,
+  "sourceSha256": "19a361df8dabdc40e925168375697f8f0ed255442d0591bd014b02701de4ac77",
+  "fixture": {
+    "products": 2,
+    "families": 1,
+    "variantsSameSize": 2,
+    "initialPieces": 5,
+    "sellerEligible": true,
+    "initialSales": 0,
+    "login": "synthetic credentials; not exported"
+  },
+  "result": {
+    "ok": false,
+    "error": "locator.waitFor: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('receipt-print') to be visible\u001b[22m\n"
+  },
+  "failureVisibleText": "Balam\nGUAYABERAS\nchevron_left\ndashboard\nPanel de control\npoint_of_sale\nPunto de venta\ninventory_2\nInventario\n1\ngroups\nClientes\nschedule\nApartados\nassignment_return\nPréstamos\nundo\nDevoluciones\nsell\nDescuentos\nbadge\nVendedores\nmonitoring\nReportes\nsettings\nConfiguración\nadd\nNUEVA VENTA\nUS\nAdministrador fixture H171\nADMINISTRADOR\nlogout\nPunto de venta\nTodo actualizado\nnotifications\ncalendar_today\nSáb, 12 De Sep De 2026\nbarcode_scanner\nstar\nPOPULARES\nTodas las tallas\nXS\nS\nM\nL\nXL\n2XL\n3XL\n4XL\n5XL\n6XL\n34\n36\n38\n40\n42\n44\n46\n48\n50\n52\nexpand_more\nTodos los colores\nBlanco\nBeige\nAzul Cielo\nNegro\nVino\nHueso\nAzul Acero\nAzul Marino\nArena\nGris\nCafé\nRosa\nMelón\nKaky\nMezclilla Azul\nOro\nPlata\nRojo\nVerde\nexpand_more\nTODOS\nGUAYABERA BLANCA\nGUAYABERA COLOR\nCAMISA\nPANTALÓN\n1 productos\nSTOCK: 5\nGuayabera Jornada H171\n\n2 REFERENCIAS DISPONIBLES\n\n$116.00\nadd\nRESUMEN DE VENTA\nGuayabera Jornada H171\ndelete\n\nTALLA 40 • BLANCO\n\nSKU: 21-J171-ML-ALG-BL-NOR-—-40\n\nremove\n1\nadd\n$116.00\nImporte\n$100.00\nIVA (16%)\n$16.00\nTOTAL A PAGAR\n$116.00\nAPLICAR DESCUENTO ADICIONAL\nsave\nDIFERIR\nshopping_cart_checkout\nCOMPLETAR VENTA\n¿Quién realizó esta venta?\nclose\nVF\nVendedor F.\nCONFIRMAR VENDEDOR",
+  "observedToasts": [],
+  "diagnostics": {
+    "calls": [
+      {
+        "method": "getClient",
+        "state": "resolved"
+      },
+      {
+        "method": "getClient",
+        "state": "resolved"
+      },
+      {
+        "method": "getQuoteContext",
+        "state": "resolved"
+      },
+      {
+        "method": "getQuoteContext",
+        "state": "resolved"
+      },
+      {
+        "method": "getQuoteContext",
+        "state": "resolved"
+      },
+      {
+        "method": "getQuoteContext",
+        "state": "resolved"
+      },
+      {
+        "method": "serverNow",
+        "state": "resolved"
+      },
+      {
+        "method": "assertBusinessReady",
+        "state": "resolved"
+      },
+      {
+        "method": "allocateFolio",
+        "state": "resolved"
+      },
+      {
+        "method": "getQuoteContext",
+        "state": "resolved"
+      },
+      {
+        "method": "getQuoteContext",
+        "state": "resolved"
+      },
+      {
+        "method": "getClient",
+        "state": "resolved"
+      },
+      {
+        "method": "getQuoteContext",
+        "state": "resolved"
+      },
+      {
+        "method": "getQuoteContext",
+        "state": "resolved"
+      },
+      {
+        "method": "getClient",
+        "state": "resolved"
+      },
+      {
+        "method": "getQuoteContext",
+        "state": "resolved"
+      },
+      {
+        "method": "getQuoteContext",
+        "state": "resolved"
+      }
+    ],
+    "status": {
+      "ready": true,
+      "synchronized": true,
+      "connection": "online",
+      "lastSuccess": "2026-09-13T03:35:09.886Z",
+      "build": "2026-09-12-h166-online",
+      "busy": false,
+      "reconciling": false,
+      "hasUnresolvedRequests": false,
+      "pendingRequests": [],
+      "message": "Todo actualizado",
+      "adoption": {
+        "revision": 1,
+        "state": "ready",
+        "stage": "complete",
+        "remainingLegacy": 0,
+        "archivedCount": 0,
+        "snapshotAt": "2026-09-13T03:34:39.535Z"
+      },
+      "legacyReviewCount": 0,
+      "errors": []
+    }
+  },
+  "completedAt": "2026-09-13T03:35:15.218Z"
+}

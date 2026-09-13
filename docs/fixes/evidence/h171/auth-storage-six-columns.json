@@ -1,0 +1,29 @@
+{
+  "scope": "LOCAL_FOCAL_STORAGE_SIX_COLUMN_COUNTS",
+  "passed": 1,
+  "failed": 0,
+  "run": "9482e643-232b-4d32-9ffd-0f07ac156ae6",
+  "targetIds": [
+    "938611a6-59ff-4ce8-a76c-2f4f2cdb39dc"
+  ],
+  "blockedReason": "STORAGE_CATALOG_DRIFT",
+  "previousExpectedColumns": 4,
+  "actualExpectedColumns": 6,
+  "addedColumns": [
+    {
+      "relation": "storage.s3_multipart_uploads",
+      "column": "owner_id",
+      "type": "text"
+    },
+    {
+      "relation": "storage.s3_multipart_uploads_parts",
+      "column": "owner_id",
+      "type": "text"
+    }
+  ],
+  "freshRemoteCountsRequired": true,
+  "localZeroPass": true,
+  "localOwnedMultipartBlocked": true,
+  "remoteCalls": 0,
+  "certified": false
+}

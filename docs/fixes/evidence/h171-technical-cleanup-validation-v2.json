@@ -1,0 +1,73 @@
+{
+  "scope": "Local execution of technical317 after simulated commercial149, no remote writes.",
+  "sqlSha256": "dc37650694cda4885a5aa41d2ab3f7a3ca0a1be477fa5d296b365007b1dc2f0b",
+  "tests": [
+    {
+      "name": "changed selected row hash aborts",
+      "pass": true,
+      "error": {
+        "message": "H171T_PREFLIGHT_FAILED",
+        "code": "P0001"
+      }
+    },
+    {
+      "name": "outside device child aborts before any cascade",
+      "pass": true,
+      "error": {
+        "message": "H171T_PREFLIGHT_FAILED",
+        "code": "P0001"
+      }
+    },
+    {
+      "name": "nonterminal command aborts",
+      "pass": true,
+      "error": {
+        "message": "H171T_COMMAND_IN_PROGRESS",
+        "code": "P0001"
+      }
+    },
+    {
+      "name": "unselected pending request mutation after DELETE rolls back all 317",
+      "pass": true,
+      "error": {
+        "message": "H171T_UNSELECTED_ROW_CHANGED: online_account_requests",
+        "code": "P0001"
+      }
+    },
+    {
+      "name": "exact317 pass after149, 63 protected table hashes and Auth unchanged, 2 holds and request7054 retained",
+      "pass": true,
+      "removed": 317,
+      "changedTables": [
+        "capability_operation_audit",
+        "config_commits",
+        "online_account_requests",
+        "online_requests",
+        "online_snapshot_revision",
+        "permission_change_audit",
+        "sync_activity",
+        "sync_devices",
+        "sync_quarantine_cases",
+        "user_permission_role_assignments"
+      ],
+      "protectedTables": 63,
+      "remainingProducts": 973,
+      "remainingHistoricalDevices": 3,
+      "heldRecoveries": 2,
+      "snapshotRevisionBefore": 1029,
+      "snapshotRevisionAfter": 1030
+    }
+  ],
+  "limits": [
+    "317 selected row hashes remain the original remote hashes and bodies use canonical text directly.",
+    "19 protected historical/request bodies unavailable in the technical backup are synthetic local fixtures with real PKs; only their expected hashes are rebaselined in the in-memory test string. The other two protected recovery projected hashes remain original.",
+    "Auth identities and three H148 parent devices use the local owner-fence harness stubs. Real remote preflight validates all 21 original protected hashes separately."
+  ],
+  "fixtureSetup": {
+    "selectedOriginalRows": 317,
+    "protectedSyntheticHashes": 19,
+    "protectedOriginalRecoveryHashes": 2,
+    "fullyValidatedRelevantFKs": 9
+  },
+  "ok": true
+}

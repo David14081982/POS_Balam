@@ -1,0 +1,22 @@
+{
+  "at": "2026-09-13T03:15:20.972346+00:00",
+  "projectRef": "telohdbvbvsfmwyriflz",
+  "privateBackup": ".evidence-h171-private/auth-tech-canonical-backup.json",
+  "sha256": "b37b3f4cf8518d5ab87754a48e60c62fab9418a23d396157cbe80530ba86b326",
+  "bytes": 840566,
+  "exactRows": 327,
+  "hashesVerified": 327,
+  "localRestoredRows": 325,
+  "commercialOverlap": 8,
+  "additionalIdentified": 319,
+  "additionalRestored": 317,
+  "heldRecoveries": 2,
+  "heldReason": "Non-null write_token deliberately omitted; no full restoration proof for those rows.",
+  "remoteWrites": 0,
+  "limits": [
+    "Provenance and backup do not authorize retirement.",
+    "Canonical row_json_text must pass directly to PostgreSQL; do not parse and reserialize the nested JSON.",
+    "Local restore checks original types and hashes only, not production FK/triggers/Auth restoration."
+  ],
+  "validation": "../h171-auth-tech-canonical-restore-validation.json"
+}

@@ -1,0 +1,319 @@
+{
+  "date": "2026-09-13T02:30:55.313Z",
+  "sourceMode": true,
+  "artifactSha256": "c2404a7b60cfa05bfe7f4c2c740f5d65cd566bb348ecdad0a58103471dd014fc",
+  "settingsSha256": "1df21b2a50412f559de59dafa19885964fb4a4d87e3fb25b50a988323447cc9b",
+  "dashboardSha256": "5136cabe64b1e60961243ddbc75b2ceaf3c4db24454630e7e0d264c5983683c8",
+  "scope": "Actual Settings component; local read fixture; updateUser callback intercepted without mutation. No real Auth or remote write certification.",
+  "viewports": [
+    320,
+    360,
+    390,
+    430,
+    768,
+    1024,
+    1280,
+    1440
+  ],
+  "rows": [
+    {
+      "width": 320,
+      "keyboardBefore": {
+        "width": 288,
+        "total": 643,
+        "left": 0
+      },
+      "keyboardAfter": {
+        "width": 288,
+        "total": 643,
+        "left": 355
+      },
+      "calls": [
+        {
+          "id": "h171-active",
+          "patch": {
+            "active": false
+          }
+        },
+        {
+          "id": "h171-inactive",
+          "patch": {
+            "active": true
+          }
+        }
+      ],
+      "dataUnchanged": true,
+      "documentWidth": 320,
+      "viewport": 320,
+      "editFormsOpened": 2,
+      "addFormOpened": true,
+      "statusesRead": 2,
+      "monthlyAndWeeklyChanged": true,
+      "birthdayListPreserved": true,
+      "noGreetingAction": true,
+      "ok": true
+    },
+    {
+      "width": 360,
+      "keyboardBefore": {
+        "width": 328,
+        "total": 643,
+        "left": 0
+      },
+      "keyboardAfter": {
+        "width": 328,
+        "total": 643,
+        "left": 315
+      },
+      "calls": [
+        {
+          "id": "h171-active",
+          "patch": {
+            "active": false
+          }
+        },
+        {
+          "id": "h171-inactive",
+          "patch": {
+            "active": true
+          }
+        }
+      ],
+      "dataUnchanged": true,
+      "documentWidth": 360,
+      "viewport": 360,
+      "editFormsOpened": 2,
+      "addFormOpened": true,
+      "statusesRead": 2,
+      "monthlyAndWeeklyChanged": true,
+      "birthdayListPreserved": true,
+      "noGreetingAction": true,
+      "ok": true
+    },
+    {
+      "width": 390,
+      "keyboardBefore": {
+        "width": 358,
+        "total": 643,
+        "left": 0
+      },
+      "keyboardAfter": {
+        "width": 358,
+        "total": 643,
+        "left": 285
+      },
+      "calls": [
+        {
+          "id": "h171-active",
+          "patch": {
+            "active": false
+          }
+        },
+        {
+          "id": "h171-inactive",
+          "patch": {
+            "active": true
+          }
+        }
+      ],
+      "dataUnchanged": true,
+      "documentWidth": 390,
+      "viewport": 390,
+      "editFormsOpened": 2,
+      "addFormOpened": true,
+      "statusesRead": 2,
+      "monthlyAndWeeklyChanged": true,
+      "birthdayListPreserved": true,
+      "noGreetingAction": true,
+      "ok": true
+    },
+    {
+      "width": 430,
+      "keyboardBefore": {
+        "width": 398,
+        "total": 643,
+        "left": 0
+      },
+      "keyboardAfter": {
+        "width": 398,
+        "total": 643,
+        "left": 245
+      },
+      "calls": [
+        {
+          "id": "h171-active",
+          "patch": {
+            "active": false
+          }
+        },
+        {
+          "id": "h171-inactive",
+          "patch": {
+            "active": true
+          }
+        }
+      ],
+      "dataUnchanged": true,
+      "documentWidth": 430,
+      "viewport": 430,
+      "editFormsOpened": 2,
+      "addFormOpened": true,
+      "statusesRead": 2,
+      "monthlyAndWeeklyChanged": true,
+      "birthdayListPreserved": true,
+      "noGreetingAction": true,
+      "ok": true
+    },
+    {
+      "width": 768,
+      "keyboardBefore": {
+        "width": 220,
+        "total": 643,
+        "left": 0
+      },
+      "keyboardAfter": {
+        "width": 220,
+        "total": 643,
+        "left": 423
+      },
+      "calls": [
+        {
+          "id": "h171-active",
+          "patch": {
+            "active": false
+          }
+        },
+        {
+          "id": "h171-inactive",
+          "patch": {
+            "active": true
+          }
+        }
+      ],
+      "dataUnchanged": true,
+      "documentWidth": 768,
+      "viewport": 768,
+      "editFormsOpened": 2,
+      "addFormOpened": true,
+      "statusesRead": 2,
+      "monthlyAndWeeklyChanged": true,
+      "birthdayListPreserved": true,
+      "noGreetingAction": true,
+      "ok": true
+    },
+    {
+      "width": 1024,
+      "keyboardBefore": {
+        "width": 476,
+        "total": 643,
+        "left": 0
+      },
+      "keyboardAfter": {
+        "width": 476,
+        "total": 643,
+        "left": 167
+      },
+      "calls": [
+        {
+          "id": "h171-active",
+          "patch": {
+            "active": false
+          }
+        },
+        {
+          "id": "h171-inactive",
+          "patch": {
+            "active": true
+          }
+        }
+      ],
+      "dataUnchanged": true,
+      "documentWidth": 1024,
+      "viewport": 1024,
+      "editFormsOpened": 2,
+      "addFormOpened": true,
+      "statusesRead": 2,
+      "monthlyAndWeeklyChanged": true,
+      "birthdayListPreserved": true,
+      "noGreetingAction": true,
+      "ok": true
+    },
+    {
+      "width": 1280,
+      "keyboardBefore": {
+        "width": 732,
+        "total": 732,
+        "left": 0
+      },
+      "keyboardAfter": {
+        "width": 732,
+        "total": 732,
+        "left": 0
+      },
+      "calls": [
+        {
+          "id": "h171-active",
+          "patch": {
+            "active": false
+          }
+        },
+        {
+          "id": "h171-inactive",
+          "patch": {
+            "active": true
+          }
+        }
+      ],
+      "dataUnchanged": true,
+      "documentWidth": 1280,
+      "viewport": 1280,
+      "editFormsOpened": 2,
+      "addFormOpened": true,
+      "statusesRead": 2,
+      "monthlyAndWeeklyChanged": true,
+      "birthdayListPreserved": true,
+      "noGreetingAction": true,
+      "ok": true
+    },
+    {
+      "width": 1440,
+      "keyboardBefore": {
+        "width": 780,
+        "total": 780,
+        "left": 0
+      },
+      "keyboardAfter": {
+        "width": 780,
+        "total": 780,
+        "left": 0
+      },
+      "calls": [
+        {
+          "id": "h171-active",
+          "patch": {
+            "active": false
+          }
+        },
+        {
+          "id": "h171-inactive",
+          "patch": {
+            "active": true
+          }
+        }
+      ],
+      "dataUnchanged": true,
+      "documentWidth": 1440,
+      "viewport": 1440,
+      "editFormsOpened": 2,
+      "addFormOpened": true,
+      "statusesRead": 2,
+      "monthlyAndWeeklyChanged": true,
+      "birthdayListPreserved": true,
+      "noGreetingAction": true,
+      "ok": true
+    }
+  ],
+  "errors": [],
+  "externalRequestsAllowed": 0,
+  "ok": true
+}

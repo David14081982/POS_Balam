@@ -1,0 +1,34 @@
+{
+  "scope": "LOCAL_PGLITE_ONLY",
+  "passed": 4,
+  "checks": [
+    "complete 1..last_seq proof retains one new day; counter never selected for DELETE",
+    "foreign actor receipt cannot authorize a counter creation",
+    "missing allocation leaves unexplained sequence held",
+    "subsequent full-row hash change blocks final preservation proof"
+  ],
+  "remoteWrites": 0,
+  "certified": false,
+  "preservedCounterCreation": {
+    "table": "folio_counters",
+    "pk_json_text": "{\"prefix\": \"BG\", \"business_date\": \"2026-09-13\"}",
+    "after_full_md5": "739eb51a467a50dcec8c99f77a2cc822",
+    "provenanceSha256": "40ad8b4ff50ece3abd69614f208d91f2ea8d52273fa731e8b4845ffeceb2baf9",
+    "actorId": "bfd29aae-8b25-4bda-b568-04a703564567",
+    "run": "9f83157e-09a9-414f-9007-f9df329aad0b",
+    "allocations": [
+      {
+        "requestId": "f61d4f37-bb92-4aa8-a055-9c1eda4e0b07",
+        "sequence": 1,
+        "intentSha256": "f8983dffc9c1d06ff7d55e9292cba86972f420edd154d6225db3b88396d8a489",
+        "receiptFullRowMd5": "51da2818c453e02020283ef250732ef4"
+      },
+      {
+        "requestId": "ab4f10cf-0507-4986-af29-e09f079ccb9c",
+        "sequence": 2,
+        "intentSha256": "c28b21d80d9543b333e1d50fb5389325cfb9a0b9b0893f1f54b3fd8bb6efb801",
+        "receiptFullRowMd5": "7cf1e513080d241baeae297c3553bc93"
+      }
+    ]
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "scope": "Local durable preparation and fully intercepted Chromium; no live Supabase",
+  "command": "node test-h171-live-journal.mjs",
+  "exitCode": 0,
+  "certified": false,
+  "realSupabaseWrites": 0,
+  "journalSha256": "a4d1a8c47839fc72dd5567d92879954a9bc655c0845e4e3068e52a03cbc003e0",
+  "testSha256": "8579f834307034cbbbd95b07ba8d1bdaccd9e00830ee51a57b21934c78fb7d54",
+  "tests": 15,
+  "passed": 15,
+  "failed": 0,
+  "coverage": [
+    "Callback reads its persisted command and identity after pending fsync, atomic rename and installed-file fsync",
+    "24 simultaneous intents retain every entry while all HTTP callbacks may remain in flight together",
+    "Exclusive journal ownership, reopen with original identity and chained history",
+    "Request-object deduplication and fail-closed receipt reuse with changed command",
+    "Pending-file fsync failure blocks queued and subsequent dispatch and preserves pending recovery evidence",
+    "Atomic rename failure blocks queued and subsequent dispatch and preserves pending recovery evidence",
+    "Installed-file fsync failure blocks dispatch while retaining the installed intent for reconciliation",
+    "Payload and hash-chain tampering reject reopen",
+    "Preallocated Auth principal UUID persists without email or credentials",
+    "Actual admin-users Edge route saves identity metadata and email hash without credential or arbitrary payload fields",
+    "Credential keys and Bearer values block generic command persistence",
+    "Presence, adoption and resolve_online_request are recorded writes; read allowlist and Auth-session bodies are excluded",
+    "Unknown RPC, Storage, REST, legacy archive and foreign writes abort before dispatch",
+    "Wrapped late handlers persist before fetch and distinguish errors before versus after dispatch",
+    "Chromium context protects independent pages A/B/C, reopened C and a newer context interceptor using controlled responses only"
+  ],
+  "limits": [
+    "Records prepared intent, not server ACK, cleanup or certification",
+    "Existing pending file or stale owner lock requires explicit recovery review",
+    "Windows tests file fsync and rename; no power-loss simulation or directory fsync",
+    "Full command content belongs in the private run journal; account command hash covers disclosed metadata only"
+  ]
+}

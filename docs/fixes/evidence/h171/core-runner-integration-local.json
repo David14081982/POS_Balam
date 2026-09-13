@@ -1,0 +1,52 @@
+{
+  "scope": "Actual helper bodies via VM and fake DATA; no network. Finalization behavior has separate executable journal integration tests.",
+  "tests": 10,
+  "passed": 10,
+  "failed": 0,
+  "results": [
+    {
+      "name": "two exact UUIDs extend seven historical products once and preserve their positions",
+      "pass": true
+    },
+    {
+      "name": "missing historical identities, duplicate IDs and altered stock plan fail closed",
+      "pass": true
+    },
+    {
+      "name": "durable fixture plan excludes later UI observations and remains stable on resume",
+      "pass": true
+    },
+    {
+      "name": "actual seeding helper calls createReference twice then one exact save using active catalog and planned stocks",
+      "pass": true
+    },
+    {
+      "name": "existing identity is rejected before any seed creation or save",
+      "pass": true
+    },
+    {
+      "name": "two distinct active colors are mandatory before seeding",
+      "pass": true
+    },
+    {
+      "name": "confirmed UI request checkpoint stops resume instead of repeating any UI sale",
+      "pass": true
+    },
+    {
+      "name": "completed UI checkpoint is read without repeating actions",
+      "pass": true
+    },
+    {
+      "name": "logout uses stable UI contract and login failure never exposes Playwright credential call logs",
+      "pass": true
+    },
+    {
+      "name": "source has the inert logout contract and preserves historical fixture positions before the equipment test",
+      "pass": true
+    }
+  ],
+  "runnerSha256": "9f654c24c5d0e9594a39841001063f5078eee481856f57eb32f8dc048bd8b4c6",
+  "helperSha256": "32673bf043fd08eb92fd647efe339cc69d30be2309c350ebe50877fde50d96f6",
+  "certified": false,
+  "remoteWrites": 0
+}

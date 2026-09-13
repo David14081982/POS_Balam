@@ -1,0 +1,17 @@
+{
+  "at": "2026-09-13T02:48:27.356Z",
+  "files": {
+    "index.html": {
+      "bytes": 8980705,
+      "sha256": "cf32a52c56c5cacadc536bc151993f2efc5bcebbd2608089cee0a0bc92139437"
+    },
+    "POS Balam (offline).html": {
+      "bytes": 8980705,
+      "sha256": "cf32a52c56c5cacadc536bc151993f2efc5bcebbd2608089cee0a0bc92139437"
+    },
+    "sw.js": {
+      "bytes": 4477,
+      "sha256": "765cf5530ecb0168101c5aa6d888f03ccde32413f1b52ea1a75ad180f423fe9f"
+    }
+  }
+}

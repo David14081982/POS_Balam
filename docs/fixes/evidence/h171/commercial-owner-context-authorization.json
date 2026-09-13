@@ -1,0 +1,15 @@
+{
+  "projectRef": "telohdbvbvsfmwyriflz",
+  "history": "H171",
+  "ownerAnswer": "si",
+  "authorization": "Explicit approval to execute h171-cleanup-owner-context-reviewed.sql with the SHA256 stated in the question. All original 149-row conditions remain applicable.",
+  "file": "../h171-cleanup-owner-context-reviewed.sql",
+  "sha256": "c2ef25b409b2abe56e793e4e152bd9c2e89b29efa4933c49fd5134cd1721e440",
+  "exactRows": 149,
+  "originalFilePreserved": true,
+  "keepAmbiguousRows": 4,
+  "storageDeletes": 0,
+  "counterOrRevisionRewind": false,
+  "protectedInventory": { "products": 973, "families": 251, "pieces": 3483 },
+  "protectedSale": "BG-260912-0001"
+}

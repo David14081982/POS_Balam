@@ -1,0 +1,422 @@
+{
+  "scope": "Local PostgreSQL/PGlite, original commercial rows and canonical QA technical rows; real live functions, all 112 triggers and pos-source FKs. No remote writes.",
+  "originalSha256": "b2e9f41489667861a3713aa2dcef0066ab3d483f027ec5e8af3d98f6c33fa4f6",
+  "reviewCopySha256": "c2ef25b409b2abe56e793e4e152bd9c2e89b29efa4933c49fd5134cd1721e440",
+  "tests": [
+    {
+      "name": "original149 reproduces DEVICE_RETIRED and rolls back",
+      "pass": true,
+      "error": {
+        "message": "Este equipo fue retirado. Un administrador debe reactivarlo.",
+        "detail": "DEVICE_RETIRED",
+        "code": "P0001"
+      }
+    },
+    {
+      "name": "owner context still rejects held candidate operation",
+      "pass": true,
+      "error": {
+        "message": "BALAM necesita actualizarse antes de continuar.",
+        "detail": "TEST_PENDING_DISCARDED",
+        "code": "P0001"
+      }
+    },
+    {
+      "name": "owner flags still reject an explicitly supplied retired device",
+      "pass": true,
+      "error": {
+        "message": "Este equipo fue retirado. Un administrador debe reactivarlo.",
+        "detail": "DEVICE_RETIRED",
+        "code": "P0001"
+      }
+    },
+    {
+      "name": "review copy rejects production mode",
+      "pass": true,
+      "error": {
+        "message": "H171_QA_PREPRODUCTION_REQUIRED",
+        "code": "P0001"
+      }
+    },
+    {
+      "name": "review copy rejects nonnull Auth actor",
+      "pass": true,
+      "error": {
+        "message": "H171_QA_OWNER_CONTEXT_REQUIRED",
+        "code": "P0001"
+      }
+    },
+    {
+      "name": "copy deletes exact 149 with every live trigger enabled; real catalogue and sale retained; devices and recovery holds unchanged",
+      "pass": true,
+      "deletedRows": 149,
+      "protectedTables": 35,
+      "before": {
+        "products": {
+          "rows": 987,
+          "families": 265,
+          "pieces": 3596,
+          "hash": "10612b016b1555c8ad67225abb1f8d33"
+        },
+        "devices": {
+          "rows": 18,
+          "revoked": 18,
+          "hash": "33e19abcab525b97aabfcc94fa675f13"
+        },
+        "recoveries": {
+          "rows": 2,
+          "hash": "e514da59ccc71796a2bc47a649f86be4"
+        },
+        "sale": {
+          "hash": "4d4eccadf33a73be1303d957036886d6"
+        }
+      },
+      "after": {
+        "products": {
+          "rows": 973,
+          "families": 251,
+          "pieces": 3483,
+          "hash": "f9e21666ec904d536d7e7273b581cf09"
+        },
+        "devices": {
+          "rows": 18,
+          "revoked": 18,
+          "hash": "33e19abcab525b97aabfcc94fa675f13"
+        },
+        "recoveries": {
+          "rows": 2,
+          "hash": "e514da59ccc71796a2bc47a649f86be4"
+        },
+        "sale": {
+          "hash": "4d4eccadf33a73be1303d957036886d6"
+        }
+      },
+      "snapshotRevisionBefore": 1000,
+      "snapshotRevisionAfter": 1022
+    },
+    {
+      "name": "independent commercial post-delete read-only SELECT passes after exact149",
+      "pass": true
+    }
+  ],
+  "limits": [
+    "Auth identities and three preserved H148 device parents are local stubs. H148 held recovery tokens are synthetic local nonsecret UUIDs; original projected recovery bodies remain exact.",
+    "FK and check constraints are installed NOT VALID because unrelated historical parent bodies are absent; PostgreSQL still enforces them on all new writes and deletes. No trigger is disabled or replaced.",
+    "Only constraints present in the recorded catalog are installed; local execution is not remote certification."
+  ],
+  "setup": {
+    "posTables": 64,
+    "liveFunctionsExactHash": 29,
+    "triggers": 112,
+    "posForeignKeys": 36,
+    "checks": 16
+  },
+  "independentPostcheck": {
+    "readOnly": true,
+    "realSale": {
+      "folio": "BG-260912-0001",
+      "row_md5": "4d4eccadf33a73be1303d957036886d6",
+      "operation_id": "35e2c61a-7561-41b9-9535-e39e671a55d3"
+    },
+    "verified": true,
+    "checkedAt": "2026-09-13T04:34:55.914+00:00",
+    "inventory": {
+      "pieces": 3483,
+      "families": 251,
+      "products": 973,
+      "rows_md5": "f9e21666ec904d536d7e7273b581cf09",
+      "active_products": 973
+    },
+    "remaining": [],
+    "projectRef": "telohdbvbvsfmwyriflz",
+    "protectedChecks": [
+      {
+        "unchanged": true,
+        "actual_md5": "c069682b2bcb3aec098182a257ddd5e5",
+        "table_name": "clients",
+        "actual_count": 14,
+        "expected_md5": "c069682b2bcb3aec098182a257ddd5e5",
+        "expected_count": 14
+      },
+      {
+        "unchanged": true,
+        "actual_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "table_name": "commission_adjustments",
+        "actual_count": 0,
+        "expected_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "expected_count": 0
+      },
+      {
+        "unchanged": true,
+        "actual_md5": "e9d2ca4e16623e0c8a8d1319dd5d9cbc",
+        "table_name": "config_commits",
+        "actual_count": 66,
+        "expected_md5": "e9d2ca4e16623e0c8a8d1319dd5d9cbc",
+        "expected_count": 66
+      },
+      {
+        "unchanged": true,
+        "actual_md5": "e0ad5eb807237196efb419368dad86fc",
+        "table_name": "config_sync_state",
+        "actual_count": 1,
+        "expected_md5": "e0ad5eb807237196efb419368dad86fc",
+        "expected_count": 1
+      },
+      {
+        "unchanged": true,
+        "actual_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "table_name": "exchange_commits",
+        "actual_count": 0,
+        "expected_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "expected_count": 0
+      },
+      {
+        "unchanged": true,
+        "actual_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "table_name": "exchange_items",
+        "actual_count": 0,
+        "expected_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "expected_count": 0
+      },
+      {
+        "unchanged": true,
+        "actual_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "table_name": "exchanges",
+        "actual_count": 0,
+        "expected_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "expected_count": 0
+      },
+      {
+        "unchanged": true,
+        "actual_md5": "f067f7145a50d097358071becb44b205",
+        "table_name": "folio_counters",
+        "actual_count": 3,
+        "expected_md5": "f067f7145a50d097358071becb44b205",
+        "expected_count": 3
+      },
+      {
+        "unchanged": true,
+        "actual_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "table_name": "layaway_liquidation_commits",
+        "actual_count": 0,
+        "expected_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "expected_count": 0
+      },
+      {
+        "unchanged": true,
+        "actual_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "table_name": "liquidations",
+        "actual_count": 0,
+        "expected_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "expected_count": 0
+      },
+      {
+        "unchanged": true,
+        "actual_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "table_name": "loan_documents",
+        "actual_count": 0,
+        "expected_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "expected_count": 0
+      },
+      {
+        "unchanged": true,
+        "actual_md5": "7215d48183284e5858f73a8b4467b588",
+        "table_name": "lookup",
+        "actual_count": 552,
+        "expected_md5": "7215d48183284e5858f73a8b4467b588",
+        "expected_count": 552
+      },
+      {
+        "unchanged": true,
+        "actual_md5": "596d6df443e89c2d73f54cf064e7e041",
+        "table_name": "movements",
+        "actual_count": 1,
+        "expected_md5": "596d6df443e89c2d73f54cf064e7e041",
+        "expected_count": 1
+      },
+      {
+        "unchanged": true,
+        "actual_md5": "839b7ebb616d253e6f3f06129c694759",
+        "table_name": "permission_roles",
+        "actual_count": 2,
+        "expected_md5": "839b7ebb616d253e6f3f06129c694759",
+        "expected_count": 2
+      },
+      {
+        "unchanged": true,
+        "actual_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "table_name": "physical_card_redemptions",
+        "actual_count": 0,
+        "expected_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "expected_count": 0
+      },
+      {
+        "unchanged": true,
+        "actual_md5": "f9e21666ec904d536d7e7273b581cf09",
+        "table_name": "products",
+        "actual_count": 973,
+        "expected_md5": "f9e21666ec904d536d7e7273b581cf09",
+        "expected_count": 973
+      },
+      {
+        "unchanged": true,
+        "actual_md5": "bfc86c9401100118f03a0d8172cbe636",
+        "table_name": "promotions",
+        "actual_count": 3,
+        "expected_md5": "bfc86c9401100118f03a0d8172cbe636",
+        "expected_count": 3
+      },
+      {
+        "unchanged": true,
+        "actual_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "table_name": "reference_reclassifications",
+        "actual_count": 0,
+        "expected_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "expected_count": 0
+      },
+      {
+        "unchanged": true,
+        "actual_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "table_name": "return_commits",
+        "actual_count": 0,
+        "expected_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "expected_count": 0
+      },
+      {
+        "unchanged": true,
+        "actual_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "table_name": "return_items",
+        "actual_count": 0,
+        "expected_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "expected_count": 0
+      },
+      {
+        "unchanged": true,
+        "actual_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "table_name": "returns",
+        "actual_count": 0,
+        "expected_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "expected_count": 0
+      },
+      {
+        "unchanged": true,
+        "actual_md5": "d2785ca9baf79ab35f87acc0412801e6",
+        "table_name": "role_capability_permissions",
+        "actual_count": 31,
+        "expected_md5": "d2785ca9baf79ab35f87acc0412801e6",
+        "expected_count": 31
+      },
+      {
+        "unchanged": true,
+        "actual_md5": "97cc48c4cb3d25633ae4dc4dc3837f65",
+        "table_name": "role_screen_permissions",
+        "actual_count": 44,
+        "expected_md5": "97cc48c4cb3d25633ae4dc4dc3837f65",
+        "expected_count": 44
+      },
+      {
+        "unchanged": true,
+        "actual_md5": "59e3b73ce795ba86b2d568a487e171f3",
+        "table_name": "sale_commits",
+        "actual_count": 1,
+        "expected_md5": "59e3b73ce795ba86b2d568a487e171f3",
+        "expected_count": 1
+      },
+      {
+        "unchanged": true,
+        "actual_md5": "133a771c7dae014240ab445aac48bc87",
+        "table_name": "sale_items",
+        "actual_count": 1,
+        "expected_md5": "133a771c7dae014240ab445aac48bc87",
+        "expected_count": 1
+      },
+      {
+        "unchanged": true,
+        "actual_md5": "e4bfc6eb0c84646b90c058d2a7b381b3",
+        "table_name": "sale_payments",
+        "actual_count": 1,
+        "expected_md5": "e4bfc6eb0c84646b90c058d2a7b381b3",
+        "expected_count": 1
+      },
+      {
+        "unchanged": true,
+        "actual_md5": "f762a7928c8662653d8e9042fb38ae04",
+        "table_name": "sales",
+        "actual_count": 1,
+        "expected_md5": "f762a7928c8662653d8e9042fb38ae04",
+        "expected_count": 1
+      },
+      {
+        "unchanged": true,
+        "actual_md5": "7752ddd6b3920078d2d2decb9d9ced96",
+        "table_name": "screen_permission_catalog",
+        "actual_count": 22,
+        "expected_md5": "7752ddd6b3920078d2d2decb9d9ced96",
+        "expected_count": 22
+      },
+      {
+        "unchanged": true,
+        "actual_md5": "08625ca802d4e29bf98d35d1cd3eeda5",
+        "table_name": "screen_permission_catalog_state",
+        "actual_count": 1,
+        "expected_md5": "08625ca802d4e29bf98d35d1cd3eeda5",
+        "expected_count": 1
+      },
+      {
+        "unchanged": true,
+        "actual_md5": "10e64f50d5d9983c4f4eeecdacba44e4",
+        "table_name": "sellers",
+        "actual_count": 5,
+        "expected_md5": "10e64f50d5d9983c4f4eeecdacba44e4",
+        "expected_count": 5
+      },
+      {
+        "unchanged": true,
+        "actual_md5": "b72370b83eebe452e67508ba0c6cd29a",
+        "table_name": "settings",
+        "actual_count": 40,
+        "expected_md5": "b72370b83eebe452e67508ba0c6cd29a",
+        "expected_count": 40
+      },
+      {
+        "unchanged": true,
+        "actual_md5": "16fca801eb27fbb8caa1d35f908d3c41",
+        "table_name": "stock_reservations",
+        "actual_count": 1,
+        "expected_md5": "16fca801eb27fbb8caa1d35f908d3c41",
+        "expected_count": 1
+      },
+      {
+        "unchanged": true,
+        "actual_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "table_name": "user_capability_overrides",
+        "actual_count": 0,
+        "expected_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "expected_count": 0
+      },
+      {
+        "unchanged": true,
+        "actual_md5": "2fb2a874565aa6455e8103bfc1c0938f",
+        "table_name": "user_permission_role_assignments",
+        "actual_count": 6,
+        "expected_md5": "2fb2a874565aa6455e8103bfc1c0938f",
+        "expected_count": 6
+      },
+      {
+        "unchanged": true,
+        "actual_md5": "04e76a9f1862a23df890cafd02493c24",
+        "table_name": "user_screen_permission_overrides",
+        "actual_count": 22,
+        "expected_md5": "04e76a9f1862a23df890cafd02493c24",
+        "expected_count": 22
+      }
+    ],
+    "snapshotRevision": 1022,
+    "absentManifestRows": 149,
+    "expectedDeletedRows": 149,
+    "protectedTableCount": 35,
+    "remainingManifestRows": 0,
+    "unchangedProtectedTables": 35
+  },
+  "ok": true
+}

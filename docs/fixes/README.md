@@ -13,6 +13,13 @@ sesión de chat.
 
 ## Correcciones registradas
 
+- [balam-final-readiness.md](balam-final-readiness.md) — H-171, EN CURSO:
+  entrega final exclusivamente BALAM, Only Online confirmado; siete controles
+  inoperantes retirados, Usuarios/Panel responsive corregidos, artefacto final
+  con 192/192 vistas y 8/8 anchos. Limpieza de 149 filas QA respaldada y validada,
+  pendiente de aprobación destructiva; Auth/auditoría y jornada final pendientes.
+  NO CERTIFICADO ni publicado como entrega final.
+
 - [pagina-web-tickets-h168.md](pagina-web-tickets-h168.md) — H-168: recuperación
   del sitio configurable en tickets desde la rama rescatada; adaptado a CONFIG
   online, 41/41 y regresiones UI/PWA. PUBLICADO; CI y bytes públicos verificados.

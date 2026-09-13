@@ -1,0 +1,1157 @@
+{
+  "format": "balam-h171-remaining-held-decisions-v1",
+  "generatedAt": "2026-09-13T05:45:11.468Z",
+  "projectRef": "telohdbvbvsfmwyriflz",
+  "readOnlyLocalReview": true,
+  "remoteQueries": 0,
+  "remoteWrites": 0,
+  "snapshot": {
+    "path": ".evidence-h171-private/canonical-capture-probe/canonical-probe-grouped.json",
+    "sha256": "db6cd6ea98eeb479c8c9ca116c12f3f24fa097ffc65d15edff85f4d572d309be",
+    "at": "2026-09-13T05:22:32.023381+00:00",
+    "sourceUrl": "https://telohdbvbvsfmwyriflz.supabase.co/",
+    "tablesCovered": 64,
+    "scope": "Only the four requested commercial rows and two exact H148 recoveries; references expose PK/hash/paths only."
+  },
+  "evidenceFiles": [
+    {
+      "path": "docs/fixes/evidence/h171/provenance-followup-before.json",
+      "sha256": "c4e138b5aef5ef9699a56a514086072f68bf4f2990e116cd456328bb777c13cf"
+    },
+    {
+      "path": "docs/fixes/evidence/h171/auth-tech-before.json",
+      "sha256": "6dacce4e4f8d5cc12496bc7dcca8719c465bfe9fedda884183fbd1e630193652"
+    },
+    {
+      "path": "docs/fixes/evidence/h171-auth-tech-provenance.json",
+      "sha256": "d1c9c82141b9e069fe48b8b0b447498ff636e70c43d112a4ff3e821cfa790e40"
+    },
+    {
+      "path": "docs/fixes/evidence/h171/auth-tech-recovery-nullity-before.json",
+      "sha256": "52a97f587b31ca7d4eb494bd142e7d6a154672bc559a064c08af75e3dc69011d"
+    },
+    {
+      "path": "docs/fixes/evidence/h171-auth-tech-plan.md",
+      "sha256": "2f14556de16612a2ffd63e505e600da86b0fb34f53c33c6cdee89a7a5ecc3ed9"
+    },
+    {
+      "path": "docs/fixes/evidence/h171-h148-legacy-provenance.md",
+      "sha256": "12886214f3cecede8a3d6aa00a1b5925b250f776ce948cfda31a471f80fb2467"
+    }
+  ],
+  "ambiguousRows": [
+    {
+      "table": "clients",
+      "pk": {
+        "id": "cli-1789079431176-jyxi"
+      },
+      "exactName": "QA editado",
+      "softDeleted": true,
+      "deletedAt": "2026-09-10T22:31:28.330818+00:00",
+      "updatedAt": "2026-09-10T22:31:28.330818+00:00",
+      "createdAt": null,
+      "createdAtBasis": "No created_at field exists in this client row; ID timestamp is not treated as creation evidence",
+      "sync": {
+        "deviceId": "qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c-C",
+        "version": 3,
+        "baseVersion": null
+      },
+      "fullRowMd5": "bf6c133205988d9829d322a6995d7eb3",
+      "unchangedSinceProvenanceFollowup": true,
+      "privateCanonicalBodyComplete": true,
+      "classification": "UNKNOWN_OWNER_CLASSIFICATION_REQUIRED",
+      "provenance": {
+        "previousClassification": "UNKNOWN_UNTIL_RECEIPT_AND_SCOPE_REVIEW",
+        "qaRunMarker": null,
+        "exactCreationReceiptsObserved": 0,
+        "knownQaDevice": true,
+        "modifiedByRealDevice": false,
+        "limitation": "Known QA device/name is supporting context, but the historical runner did not persist dynamic IDs or immutable creation receipts."
+      },
+      "references": {
+        "count": 8,
+        "rows": [
+          {
+            "table": "online_requests",
+            "pk": {
+              "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+              "request_id": "182b8afc-d976-4f4b-bb51-1a022485bc21"
+            },
+            "projectedRowMd5": "7894572e079108d04b120b1a94674fa4",
+            "paths": [
+              "$.response.result.document.payload.clients.12.id"
+            ],
+            "kind": "PRESERVED_REAL_ACTOR_BACKUP_RECEIPT",
+            "commandKind": "pointZeroBackup",
+            "state": "confirmed"
+          },
+          {
+            "table": "online_requests",
+            "pk": {
+              "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+              "request_id": "5369c943-35c3-4c0a-855d-44e108bff199"
+            },
+            "projectedRowMd5": "5ac669f575353e5dfc2dd999d80f9442",
+            "paths": [
+              "$.response.result.document.payload.clients.12.id"
+            ],
+            "kind": "PRESERVED_REAL_ACTOR_BACKUP_RECEIPT",
+            "commandKind": "pointZeroBackup",
+            "state": "confirmed"
+          },
+          {
+            "table": "online_requests",
+            "pk": {
+              "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+              "request_id": "944378e7-0996-464b-b7ea-ef3d263f97f4"
+            },
+            "projectedRowMd5": "5d34d44c5f09cc739bbfa75fb3c3bf95",
+            "paths": [
+              "$.response.result.document.payload.clients.12.id"
+            ],
+            "kind": "PRESERVED_REAL_ACTOR_BACKUP_RECEIPT",
+            "commandKind": "pointZeroBackup",
+            "state": "confirmed"
+          },
+          {
+            "table": "point_zero_backups",
+            "pk": {
+              "backup_id": "45c5b1da-efb6-411e-bc2d-f25fff65175d"
+            },
+            "projectedRowMd5": "10988c7c56e2e472049094dbe4ade1dd",
+            "paths": [
+              "$.payload.clients.12.id"
+            ],
+            "kind": "PRESERVED_POINT_ZERO_BACKUP_COPY"
+          },
+          {
+            "table": "point_zero_backups",
+            "pk": {
+              "backup_id": "54efc5dc-23aa-4d1e-8741-7a94533561b2"
+            },
+            "projectedRowMd5": "25399c71d77501ff64a53f7976e68bd2",
+            "paths": [
+              "$.payload.clients.12.id"
+            ],
+            "kind": "PRESERVED_POINT_ZERO_BACKUP_COPY"
+          },
+          {
+            "table": "point_zero_backups",
+            "pk": {
+              "backup_id": "72a5453d-98b2-439a-8239-26d707711d9e"
+            },
+            "projectedRowMd5": "820825bb541e9c90f74c9ae443f9a175",
+            "paths": [
+              "$.payload.clients.12.id"
+            ],
+            "kind": "PRESERVED_POINT_ZERO_BACKUP_COPY"
+          },
+          {
+            "table": "point_zero_backups",
+            "pk": {
+              "backup_id": "baa182f5-3b34-43fc-9077-76010458dc18"
+            },
+            "projectedRowMd5": "e61eeeb0e45209467206126d1786f2a7",
+            "paths": [
+              "$.payload.clients.12.id"
+            ],
+            "kind": "PRESERVED_POINT_ZERO_BACKUP_COPY"
+          },
+          {
+            "table": "point_zero_backups",
+            "pk": {
+              "backup_id": "e418e8da-bd95-4565-8114-d2b58d00090a"
+            },
+            "projectedRowMd5": "bdd4650f0d828384c135d7e6c4271c1f",
+            "paths": [
+              "$.payload.clients.12.id"
+            ],
+            "kind": "PRESERVED_POINT_ZERO_BACKUP_COPY"
+          }
+        ],
+        "commercialDocumentReferencesObserved": 0,
+        "interpretation": "These are preserved snapshot copies/real backup receipts, not evidence of a sale or an immutable QA creation receipt."
+      },
+      "pendingDecision": {
+        "status": "PENDING_OWNER",
+        "subject": "Classify this exact ID as QA eligible for a separately reviewed disposition, or preserve as history.",
+        "authorizedAction": null
+      }
+    },
+    {
+      "table": "clients",
+      "pk": {
+        "id": "cli-1789078624431-0fz3"
+      },
+      "exactName": "qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c recovered",
+      "softDeleted": true,
+      "deletedAt": "2026-09-11T16:53:54.643594+00:00",
+      "updatedAt": "2026-09-11T16:53:54.643594+00:00",
+      "createdAt": null,
+      "createdAtBasis": "No created_at field exists in this client row; ID timestamp is not treated as creation evidence",
+      "sync": {
+        "deviceId": "dev-mtx72mib-oua9kgz8",
+        "version": 2,
+        "baseVersion": null
+      },
+      "fullRowMd5": "637e3a14e34965b2120defb11c6b6b19",
+      "unchangedSinceProvenanceFollowup": true,
+      "privateCanonicalBodyComplete": true,
+      "classification": "UNKNOWN_OWNER_CLASSIFICATION_REQUIRED",
+      "provenance": {
+        "previousClassification": "UNKNOWN_UNTIL_RECEIPT_AND_SCOPE_REVIEW",
+        "qaRunMarker": "b766e373-5279-4e4a-818e-0934a4f8757c",
+        "exactCreationReceiptsObserved": 0,
+        "knownQaDevice": false,
+        "modifiedByRealDevice": true,
+        "limitation": "Known QA-like name, but later real-device writes and no immutable creation receipt; do not infer OWNER intent."
+      },
+      "references": {
+        "count": 8,
+        "rows": [
+          {
+            "table": "online_requests",
+            "pk": {
+              "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+              "request_id": "182b8afc-d976-4f4b-bb51-1a022485bc21"
+            },
+            "projectedRowMd5": "7894572e079108d04b120b1a94674fa4",
+            "paths": [
+              "$.response.result.document.payload.clients.10.id"
+            ],
+            "kind": "PRESERVED_REAL_ACTOR_BACKUP_RECEIPT",
+            "commandKind": "pointZeroBackup",
+            "state": "confirmed"
+          },
+          {
+            "table": "online_requests",
+            "pk": {
+              "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+              "request_id": "5369c943-35c3-4c0a-855d-44e108bff199"
+            },
+            "projectedRowMd5": "5ac669f575353e5dfc2dd999d80f9442",
+            "paths": [
+              "$.response.result.document.payload.clients.10.id"
+            ],
+            "kind": "PRESERVED_REAL_ACTOR_BACKUP_RECEIPT",
+            "commandKind": "pointZeroBackup",
+            "state": "confirmed"
+          },
+          {
+            "table": "online_requests",
+            "pk": {
+              "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+              "request_id": "944378e7-0996-464b-b7ea-ef3d263f97f4"
+            },
+            "projectedRowMd5": "5d34d44c5f09cc739bbfa75fb3c3bf95",
+            "paths": [
+              "$.response.result.document.payload.clients.10.id"
+            ],
+            "kind": "PRESERVED_REAL_ACTOR_BACKUP_RECEIPT",
+            "commandKind": "pointZeroBackup",
+            "state": "confirmed"
+          },
+          {
+            "table": "point_zero_backups",
+            "pk": {
+              "backup_id": "45c5b1da-efb6-411e-bc2d-f25fff65175d"
+            },
+            "projectedRowMd5": "10988c7c56e2e472049094dbe4ade1dd",
+            "paths": [
+              "$.payload.clients.10.id"
+            ],
+            "kind": "PRESERVED_POINT_ZERO_BACKUP_COPY"
+          },
+          {
+            "table": "point_zero_backups",
+            "pk": {
+              "backup_id": "54efc5dc-23aa-4d1e-8741-7a94533561b2"
+            },
+            "projectedRowMd5": "25399c71d77501ff64a53f7976e68bd2",
+            "paths": [
+              "$.payload.clients.10.id"
+            ],
+            "kind": "PRESERVED_POINT_ZERO_BACKUP_COPY"
+          },
+          {
+            "table": "point_zero_backups",
+            "pk": {
+              "backup_id": "72a5453d-98b2-439a-8239-26d707711d9e"
+            },
+            "projectedRowMd5": "820825bb541e9c90f74c9ae443f9a175",
+            "paths": [
+              "$.payload.clients.10.id"
+            ],
+            "kind": "PRESERVED_POINT_ZERO_BACKUP_COPY"
+          },
+          {
+            "table": "point_zero_backups",
+            "pk": {
+              "backup_id": "baa182f5-3b34-43fc-9077-76010458dc18"
+            },
+            "projectedRowMd5": "e61eeeb0e45209467206126d1786f2a7",
+            "paths": [
+              "$.payload.clients.10.id"
+            ],
+            "kind": "PRESERVED_POINT_ZERO_BACKUP_COPY"
+          },
+          {
+            "table": "point_zero_backups",
+            "pk": {
+              "backup_id": "e418e8da-bd95-4565-8114-d2b58d00090a"
+            },
+            "projectedRowMd5": "bdd4650f0d828384c135d7e6c4271c1f",
+            "paths": [
+              "$.payload.clients.10.id"
+            ],
+            "kind": "PRESERVED_POINT_ZERO_BACKUP_COPY"
+          }
+        ],
+        "commercialDocumentReferencesObserved": 0,
+        "interpretation": "These are preserved snapshot copies/real backup receipts, not evidence of a sale or an immutable QA creation receipt."
+      },
+      "pendingDecision": {
+        "status": "PENDING_OWNER",
+        "subject": "Classify this exact ID as QA eligible for a separately reviewed disposition, or preserve as history.",
+        "authorizedAction": null
+      }
+    },
+    {
+      "table": "clients",
+      "pk": {
+        "id": "cli-1789078938103-ams0"
+      },
+      "exactName": "qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c reactivated",
+      "softDeleted": true,
+      "deletedAt": "2026-09-11T16:53:59.212884+00:00",
+      "updatedAt": "2026-09-11T16:53:59.212884+00:00",
+      "createdAt": null,
+      "createdAtBasis": "No created_at field exists in this client row; ID timestamp is not treated as creation evidence",
+      "sync": {
+        "deviceId": "dev-mtx72mib-oua9kgz8",
+        "version": 2,
+        "baseVersion": null
+      },
+      "fullRowMd5": "48cf67c3064e7f31b5b5497ff0082bfd",
+      "unchangedSinceProvenanceFollowup": true,
+      "privateCanonicalBodyComplete": true,
+      "classification": "UNKNOWN_OWNER_CLASSIFICATION_REQUIRED",
+      "provenance": {
+        "previousClassification": "UNKNOWN_UNTIL_RECEIPT_AND_SCOPE_REVIEW",
+        "qaRunMarker": "b766e373-5279-4e4a-818e-0934a4f8757c",
+        "exactCreationReceiptsObserved": 0,
+        "knownQaDevice": false,
+        "modifiedByRealDevice": true,
+        "limitation": "Known QA-like name, but later real-device writes and no immutable creation receipt; do not infer OWNER intent."
+      },
+      "references": {
+        "count": 8,
+        "rows": [
+          {
+            "table": "online_requests",
+            "pk": {
+              "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+              "request_id": "182b8afc-d976-4f4b-bb51-1a022485bc21"
+            },
+            "projectedRowMd5": "7894572e079108d04b120b1a94674fa4",
+            "paths": [
+              "$.response.result.document.payload.clients.11.id"
+            ],
+            "kind": "PRESERVED_REAL_ACTOR_BACKUP_RECEIPT",
+            "commandKind": "pointZeroBackup",
+            "state": "confirmed"
+          },
+          {
+            "table": "online_requests",
+            "pk": {
+              "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+              "request_id": "5369c943-35c3-4c0a-855d-44e108bff199"
+            },
+            "projectedRowMd5": "5ac669f575353e5dfc2dd999d80f9442",
+            "paths": [
+              "$.response.result.document.payload.clients.11.id"
+            ],
+            "kind": "PRESERVED_REAL_ACTOR_BACKUP_RECEIPT",
+            "commandKind": "pointZeroBackup",
+            "state": "confirmed"
+          },
+          {
+            "table": "online_requests",
+            "pk": {
+              "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+              "request_id": "944378e7-0996-464b-b7ea-ef3d263f97f4"
+            },
+            "projectedRowMd5": "5d34d44c5f09cc739bbfa75fb3c3bf95",
+            "paths": [
+              "$.response.result.document.payload.clients.11.id"
+            ],
+            "kind": "PRESERVED_REAL_ACTOR_BACKUP_RECEIPT",
+            "commandKind": "pointZeroBackup",
+            "state": "confirmed"
+          },
+          {
+            "table": "point_zero_backups",
+            "pk": {
+              "backup_id": "45c5b1da-efb6-411e-bc2d-f25fff65175d"
+            },
+            "projectedRowMd5": "10988c7c56e2e472049094dbe4ade1dd",
+            "paths": [
+              "$.payload.clients.11.id"
+            ],
+            "kind": "PRESERVED_POINT_ZERO_BACKUP_COPY"
+          },
+          {
+            "table": "point_zero_backups",
+            "pk": {
+              "backup_id": "54efc5dc-23aa-4d1e-8741-7a94533561b2"
+            },
+            "projectedRowMd5": "25399c71d77501ff64a53f7976e68bd2",
+            "paths": [
+              "$.payload.clients.11.id"
+            ],
+            "kind": "PRESERVED_POINT_ZERO_BACKUP_COPY"
+          },
+          {
+            "table": "point_zero_backups",
+            "pk": {
+              "backup_id": "72a5453d-98b2-439a-8239-26d707711d9e"
+            },
+            "projectedRowMd5": "820825bb541e9c90f74c9ae443f9a175",
+            "paths": [
+              "$.payload.clients.11.id"
+            ],
+            "kind": "PRESERVED_POINT_ZERO_BACKUP_COPY"
+          },
+          {
+            "table": "point_zero_backups",
+            "pk": {
+              "backup_id": "baa182f5-3b34-43fc-9077-76010458dc18"
+            },
+            "projectedRowMd5": "e61eeeb0e45209467206126d1786f2a7",
+            "paths": [
+              "$.payload.clients.11.id"
+            ],
+            "kind": "PRESERVED_POINT_ZERO_BACKUP_COPY"
+          },
+          {
+            "table": "point_zero_backups",
+            "pk": {
+              "backup_id": "e418e8da-bd95-4565-8114-d2b58d00090a"
+            },
+            "projectedRowMd5": "bdd4650f0d828384c135d7e6c4271c1f",
+            "paths": [
+              "$.payload.clients.11.id"
+            ],
+            "kind": "PRESERVED_POINT_ZERO_BACKUP_COPY"
+          }
+        ],
+        "commercialDocumentReferencesObserved": 0,
+        "interpretation": "These are preserved snapshot copies/real backup receipts, not evidence of a sale or an immutable QA creation receipt."
+      },
+      "pendingDecision": {
+        "status": "PENDING_OWNER",
+        "subject": "Classify this exact ID as QA eligible for a separately reviewed disposition, or preserve as history.",
+        "authorizedAction": null
+      }
+    },
+    {
+      "table": "promotions",
+      "pk": {
+        "id": "promo-1789079431430"
+      },
+      "exactName": "qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c",
+      "softDeleted": true,
+      "deletedAt": "2026-09-10T22:31:29.582278+00:00",
+      "updatedAt": "2026-09-10T22:31:29.582278+00:00",
+      "createdAt": "2026-09-10T22:30:31.430Z",
+      "createdAtBasis": "Stored creado epoch milliseconds",
+      "paused": true,
+      "startsAt": null,
+      "endsAt": null,
+      "sync": {
+        "deviceId": "qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c-C",
+        "version": 3,
+        "baseVersion": null
+      },
+      "fullRowMd5": "acec5f446ea07ea168f126f7d2baebf2",
+      "unchangedSinceProvenanceFollowup": true,
+      "privateCanonicalBodyComplete": true,
+      "classification": "UNKNOWN_OWNER_CLASSIFICATION_REQUIRED",
+      "provenance": {
+        "previousClassification": "UNKNOWN_UNTIL_RECEIPT_AND_SCOPE_REVIEW",
+        "qaRunMarker": "b766e373-5279-4e4a-818e-0934a4f8757c",
+        "exactCreationReceiptsObserved": 0,
+        "knownQaDevice": true,
+        "modifiedByRealDevice": false,
+        "limitation": "Known QA device/name is supporting context, but the historical runner did not persist dynamic IDs or immutable creation receipts."
+      },
+      "references": {
+        "count": 0,
+        "rows": [],
+        "commercialDocumentReferencesObserved": 0,
+        "interpretation": "No exact scalar ID reference outside this row was observed in the 64 projected tables; this is not an authorization to delete."
+      },
+      "pendingDecision": {
+        "status": "PENDING_OWNER",
+        "subject": "Classify this exact ID as QA eligible for a separately reviewed disposition, or preserve as history.",
+        "authorizedAction": null
+      }
+    }
+  ],
+  "heldRecoveries": [
+    {
+      "table": "sync_device_recoveries",
+      "pk": {
+        "device_id": "qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c-B"
+      },
+      "recoveryId": "c2e16d05-cd08-44a2-8279-43804a7d23a9",
+      "classification": "KNOWN_QA_TECHNICAL_HELD_WITH_DISCARD_HISTORY",
+      "state": "completed",
+      "createdAt": "2026-09-10T22:15:48.496431+00:00",
+      "completedAt": "2026-09-10T22:16:30.525827+00:00",
+      "ownerId": "54633260-578a-4228-b7d1-4e36e6c49144",
+      "ownerAuthPresentInSnapshot": false,
+      "createdBy": null,
+      "deviceState": "revoked",
+      "deviceProjectedRowMd5": "4bf3c217eb4c02b1c23cebdd857caa3b",
+      "projectedRowMd5": "cfc3464693648bd0a194387a4baa61a8",
+      "unchangedSinceInitialTechnicalInventory": true,
+      "omittedColumnNullity": {
+        "write_token": false
+      },
+      "fullRestoreBacked": false,
+      "credentialValueReadOrExported": false,
+      "expiry": {
+        "expiresAt": null,
+        "expiryColumnExists": false,
+        "expired": null,
+        "interpretation": "No expiry is recorded. Completed records continue to supply exact discarded IDs to the recovery/legacy guards; age alone does not expire them."
+      },
+      "recoveryReceipt": {
+        "epoch": 8,
+        "protocol": 3,
+        "pending": 0
+      },
+      "evidence": {
+        "build": "2026-09-10-h154",
+        "epoch": 8,
+        "protocol": 3,
+        "operationTypes": [
+          "upsert",
+          "sale",
+          "config"
+        ]
+      },
+      "protectedHistory": {
+        "expectedCount": 10,
+        "discardedCount": 10,
+        "candidatesEqualDiscarded": true,
+        "discardedOperationIds": [
+          "1855678e-62ce-4493-bd93-c2c317d4c4a4",
+          "5b816c99-bc7d-402e-b203-8e9e26b8152c",
+          "605435a1-1ff3-4df0-961f-bf0a1714fd60",
+          "8326ae07-71ea-4def-912c-73719e64dc01",
+          "87db8f9c-f3df-415c-8bb4-8dddcbafd020",
+          "8c576537-2a9d-46b4-84e4-302a11c6a4a7",
+          "8e118400-483f-48e7-b742-2e050a054f4e",
+          "94d34952-c19b-41fb-adfd-51df227377f8",
+          "afffd735-5d92-4e6a-9ad4-0787d4eb1ace",
+          "f945997e-72bb-4893-a88a-85b2965d62ce"
+        ],
+        "remainingActivities": [
+          {
+            "pk": {
+              "device_id": "qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c-B",
+              "operation_id": "1855678e-62ce-4493-bd93-c2c317d4c4a4"
+            },
+            "projectedRowMd5": "432f022b277d2b58e45b71e05d3e468a",
+            "status": "pending",
+            "requiresAction": false,
+            "completedAt": null
+          },
+          {
+            "pk": {
+              "device_id": "qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c-B",
+              "operation_id": "5b816c99-bc7d-402e-b203-8e9e26b8152c"
+            },
+            "projectedRowMd5": "d8aae6e5307a972a501e52125b7c2540",
+            "status": "pending",
+            "requiresAction": false,
+            "completedAt": null
+          },
+          {
+            "pk": {
+              "device_id": "qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c-B",
+              "operation_id": "605435a1-1ff3-4df0-961f-bf0a1714fd60"
+            },
+            "projectedRowMd5": "a83718609dd208305266ef8a9e974c4f",
+            "status": "pending",
+            "requiresAction": false,
+            "completedAt": null
+          },
+          {
+            "pk": {
+              "device_id": "qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c-B",
+              "operation_id": "8326ae07-71ea-4def-912c-73719e64dc01"
+            },
+            "projectedRowMd5": "9ad930a34c2bbe5828816cf1295e0d6b",
+            "status": "pending",
+            "requiresAction": false,
+            "completedAt": null
+          },
+          {
+            "pk": {
+              "device_id": "qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c-B",
+              "operation_id": "87db8f9c-f3df-415c-8bb4-8dddcbafd020"
+            },
+            "projectedRowMd5": "198b267e921ee7f4d8b523635718c841",
+            "status": "pending",
+            "requiresAction": false,
+            "completedAt": null
+          },
+          {
+            "pk": {
+              "device_id": "qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c-B",
+              "operation_id": "8c576537-2a9d-46b4-84e4-302a11c6a4a7"
+            },
+            "projectedRowMd5": "8682b1284dd0b0b63375938fb3581ac8",
+            "status": "pending",
+            "requiresAction": false,
+            "completedAt": null
+          },
+          {
+            "pk": {
+              "device_id": "qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c-B",
+              "operation_id": "8e118400-483f-48e7-b742-2e050a054f4e"
+            },
+            "projectedRowMd5": "34dad270ae6205e68ce810bda10a7b01",
+            "status": "pending",
+            "requiresAction": false,
+            "completedAt": null
+          },
+          {
+            "pk": {
+              "device_id": "qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c-B",
+              "operation_id": "94d34952-c19b-41fb-adfd-51df227377f8"
+            },
+            "projectedRowMd5": "cd5cd76813e1a6cbc464bea2a4c4ca93",
+            "status": "pending",
+            "requiresAction": false,
+            "completedAt": null
+          },
+          {
+            "pk": {
+              "device_id": "qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c-B",
+              "operation_id": "afffd735-5d92-4e6a-9ad4-0787d4eb1ace"
+            },
+            "projectedRowMd5": "2c22de1e1713ee9a3039793c31fa9ffd",
+            "status": "pending",
+            "requiresAction": false,
+            "completedAt": null
+          },
+          {
+            "pk": {
+              "device_id": "qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c-B",
+              "operation_id": "f945997e-72bb-4893-a88a-85b2965d62ce"
+            },
+            "projectedRowMd5": "29de62ced856b0d5c3a01701145b606b",
+            "status": "pending",
+            "requiresAction": false,
+            "completedAt": null
+          }
+        ],
+        "meaning": "Exact captured discard evidence for old QA operations. The historical activity rows still say pending; this does not authorize replay. The current Only Online guard consults captured/completed discarded_ids to reject re-execution.",
+        "exactRecoveryIdIncomingReferences": [],
+        "relatedPreservedReferences": [
+          {
+            "table": "test_data_cleanup_backups",
+            "pk": {
+              "backup_id": "355d4fc6-760b-49f1-8a2a-47e1f2f4326b"
+            },
+            "projectedRowMd5": "016e9082f05febf9050c7b8f3864c15b",
+            "paths": [
+              "$.payload.plan.fleet.devices.12.device_id",
+              "$.payload.plan.fleet.devices.12.historical_incidents.0.operation_id",
+              "$.payload.plan.fleet.devices.12.historical_incidents.1.operation_id",
+              "$.payload.plan.fleet.devices.12.historical_incidents.2.operation_id",
+              "$.payload.plan.fleet.devices.12.historical_incidents.3.operation_id",
+              "$.payload.plan.fleet.devices.12.historical_incidents.4.operation_id"
+            ],
+            "kind": "PRESERVED_CLEANUP_BACKUP_COPY"
+          }
+        ]
+      },
+      "qaProvenance": {
+        "run": "b766e373-5279-4e4a-818e-0934a4f8757c",
+        "ownerId": "54633260-578a-4228-b7d1-4e36e6c49144",
+        "initialClassification": "KNOWN_QA_TECHNICAL",
+        "combinedEvidence": "Exact H148 certificate + exact runner hash + historical backup with 58 activity rows and three A/B/C devices; not a prefix-only inference.",
+        "certificateSha256": "b4c86b1bc8a63464f44d3d45a203bc46d8f9b937b541fd3220c58a99faa3ee38"
+      },
+      "pendingDisposition": {
+        "status": "HELD_NO_DELETION_PLAN",
+        "reasons": [
+          "Non-null omitted credential prevents a complete restorable backup claim.",
+          "Discard evidence currently protects 10/17 exact old operations and related retained history."
+        ],
+        "authorizedAction": null
+      }
+    },
+    {
+      "table": "sync_device_recoveries",
+      "pk": {
+        "device_id": "qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c-C"
+      },
+      "recoveryId": "07134617-ac05-4c2e-afad-5def238bd3c5",
+      "classification": "KNOWN_QA_TECHNICAL_HELD_WITH_DISCARD_HISTORY",
+      "state": "completed",
+      "createdAt": "2026-09-10T22:17:28.901933+00:00",
+      "completedAt": "2026-09-10T22:17:57.973642+00:00",
+      "ownerId": "54633260-578a-4228-b7d1-4e36e6c49144",
+      "ownerAuthPresentInSnapshot": false,
+      "createdBy": null,
+      "deviceState": "revoked",
+      "deviceProjectedRowMd5": "c74127545ba8493aae395f25703d14d7",
+      "projectedRowMd5": "1851779c6fce77af48be7e2eea197efa",
+      "unchangedSinceInitialTechnicalInventory": true,
+      "omittedColumnNullity": {
+        "write_token": false
+      },
+      "fullRestoreBacked": false,
+      "credentialValueReadOrExported": false,
+      "expiry": {
+        "expiresAt": null,
+        "expiryColumnExists": false,
+        "expired": null,
+        "interpretation": "No expiry is recorded. Completed records continue to supply exact discarded IDs to the recovery/legacy guards; age alone does not expire them."
+      },
+      "recoveryReceipt": {
+        "epoch": 8,
+        "protocol": 3,
+        "pending": 0
+      },
+      "evidence": {
+        "build": "2026-09-10-h154",
+        "epoch": 8,
+        "protocol": 3,
+        "operationTypes": [
+          "sale"
+        ]
+      },
+      "protectedHistory": {
+        "expectedCount": 17,
+        "discardedCount": 17,
+        "candidatesEqualDiscarded": true,
+        "discardedOperationIds": [
+          "0b966abe-b43d-4660-a041-8d86299e942e",
+          "0d4d6880-c8d5-42ab-933d-a58fb125d7ce",
+          "18e6212a-d6b6-4994-9a94-e2580dfb67d1",
+          "27de92f9-0d53-43d6-9b07-0810cb643c17",
+          "35ed87cf-aff9-4b9d-90f3-6f1ab10b194d",
+          "4f73f185-076e-42e3-a452-165b7c836a17",
+          "707ba599-1720-4f60-94b7-452983fe5e23",
+          "85cf950b-f5ea-4819-818d-83a394b45e9a",
+          "a972e0c3-3199-41c3-ad10-1e227aa60a75",
+          "b5c7edcc-44af-43ed-a6d0-67c5ec38b1fc",
+          "bc17338c-add3-46d6-a1f7-8a58c1737b70",
+          "bf7df396-6787-4a90-a71f-d9cf4bfcb768",
+          "d15c1a91-6961-4cbd-8ddf-46b91f6edeb4",
+          "d1b47389-63fa-4f29-8150-21364c7aed98",
+          "d66e9e7f-e876-421c-ba1e-fd2e64baae78",
+          "e00e62d3-07b4-4ac5-97df-9ba2b979fa9a",
+          "ece80b8b-e302-404c-b458-d53df92e1b94"
+        ],
+        "remainingActivities": [
+          {
+            "pk": {
+              "device_id": "qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c-C",
+              "operation_id": "0b966abe-b43d-4660-a041-8d86299e942e"
+            },
+            "projectedRowMd5": "1aeefd6a43c7eea1c79234073cb06be8",
+            "status": "pending",
+            "requiresAction": false,
+            "completedAt": null
+          },
+          {
+            "pk": {
+              "device_id": "qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c-C",
+              "operation_id": "0d4d6880-c8d5-42ab-933d-a58fb125d7ce"
+            },
+            "projectedRowMd5": "10379d9c368c8f66cda65b58bc6a6106",
+            "status": "pending",
+            "requiresAction": false,
+            "completedAt": null
+          },
+          {
+            "pk": {
+              "device_id": "qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c-C",
+              "operation_id": "18e6212a-d6b6-4994-9a94-e2580dfb67d1"
+            },
+            "projectedRowMd5": "58630660418511ca056ef5728ec6c5a9",
+            "status": "pending",
+            "requiresAction": false,
+            "completedAt": null
+          },
+          {
+            "pk": {
+              "device_id": "qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c-C",
+              "operation_id": "27de92f9-0d53-43d6-9b07-0810cb643c17"
+            },
+            "projectedRowMd5": "ee63132745174e4d410a1cfec883a367",
+            "status": "pending",
+            "requiresAction": false,
+            "completedAt": null
+          },
+          {
+            "pk": {
+              "device_id": "qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c-C",
+              "operation_id": "35ed87cf-aff9-4b9d-90f3-6f1ab10b194d"
+            },
+            "projectedRowMd5": "7840726304bf98e800940eaaf0d58e4c",
+            "status": "pending",
+            "requiresAction": false,
+            "completedAt": null
+          },
+          {
+            "pk": {
+              "device_id": "qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c-C",
+              "operation_id": "4f73f185-076e-42e3-a452-165b7c836a17"
+            },
+            "projectedRowMd5": "38dc9f47b7ebe9b5e5636deaf7216f41",
+            "status": "pending",
+            "requiresAction": false,
+            "completedAt": null
+          },
+          {
+            "pk": {
+              "device_id": "qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c-C",
+              "operation_id": "707ba599-1720-4f60-94b7-452983fe5e23"
+            },
+            "projectedRowMd5": "ee7b5f3487f7a9968739246e8d1d32e2",
+            "status": "pending",
+            "requiresAction": false,
+            "completedAt": null
+          },
+          {
+            "pk": {
+              "device_id": "qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c-C",
+              "operation_id": "85cf950b-f5ea-4819-818d-83a394b45e9a"
+            },
+            "projectedRowMd5": "384910bbec96e3268a6da5f427324a07",
+            "status": "pending",
+            "requiresAction": false,
+            "completedAt": null
+          },
+          {
+            "pk": {
+              "device_id": "qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c-C",
+              "operation_id": "a972e0c3-3199-41c3-ad10-1e227aa60a75"
+            },
+            "projectedRowMd5": "5df3069d413429046bfbf1aab8d0e8b6",
+            "status": "pending",
+            "requiresAction": false,
+            "completedAt": null
+          },
+          {
+            "pk": {
+              "device_id": "qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c-C",
+              "operation_id": "b5c7edcc-44af-43ed-a6d0-67c5ec38b1fc"
+            },
+            "projectedRowMd5": "63ad42be04d3458496466b8313f4d3e7",
+            "status": "pending",
+            "requiresAction": false,
+            "completedAt": null
+          },
+          {
+            "pk": {
+              "device_id": "qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c-C",
+              "operation_id": "bc17338c-add3-46d6-a1f7-8a58c1737b70"
+            },
+            "projectedRowMd5": "efba4cf38f769e71ffe647a1699e6538",
+            "status": "pending",
+            "requiresAction": false,
+            "completedAt": null
+          },
+          {
+            "pk": {
+              "device_id": "qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c-C",
+              "operation_id": "bf7df396-6787-4a90-a71f-d9cf4bfcb768"
+            },
+            "projectedRowMd5": "d608f291b7d465467a1bcce138aec0e2",
+            "status": "pending",
+            "requiresAction": false,
+            "completedAt": null
+          },
+          {
+            "pk": {
+              "device_id": "qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c-C",
+              "operation_id": "d15c1a91-6961-4cbd-8ddf-46b91f6edeb4"
+            },
+            "projectedRowMd5": "49804ff33ba1123550162bffa66eecc0",
+            "status": "pending",
+            "requiresAction": false,
+            "completedAt": null
+          },
+          {
+            "pk": {
+              "device_id": "qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c-C",
+              "operation_id": "d1b47389-63fa-4f29-8150-21364c7aed98"
+            },
+            "projectedRowMd5": "846ee7d74beeebc884bab01848a2aeba",
+            "status": "pending",
+            "requiresAction": false,
+            "completedAt": null
+          },
+          {
+            "pk": {
+              "device_id": "qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c-C",
+              "operation_id": "d66e9e7f-e876-421c-ba1e-fd2e64baae78"
+            },
+            "projectedRowMd5": "2a844f6997874c29733531fbb4637551",
+            "status": "pending",
+            "requiresAction": false,
+            "completedAt": null
+          },
+          {
+            "pk": {
+              "device_id": "qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c-C",
+              "operation_id": "e00e62d3-07b4-4ac5-97df-9ba2b979fa9a"
+            },
+            "projectedRowMd5": "13c9d16ca7ea1afa9363ad05d13e7b86",
+            "status": "pending",
+            "requiresAction": false,
+            "completedAt": null
+          },
+          {
+            "pk": {
+              "device_id": "qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c-C",
+              "operation_id": "ece80b8b-e302-404c-b458-d53df92e1b94"
+            },
+            "projectedRowMd5": "511bd32a98b7df32879cb35d25513c15",
+            "status": "pending",
+            "requiresAction": false,
+            "completedAt": null
+          }
+        ],
+        "meaning": "Exact captured discard evidence for old QA operations. The historical activity rows still say pending; this does not authorize replay. The current Only Online guard consults captured/completed discarded_ids to reject re-execution.",
+        "exactRecoveryIdIncomingReferences": [],
+        "relatedPreservedReferences": [
+          {
+            "table": "clients",
+            "pk": {
+              "id": "cli-1789079431176-jyxi"
+            },
+            "projectedRowMd5": "bf6c133205988d9829d322a6995d7eb3",
+            "paths": [
+              "$.sync_device_id"
+            ],
+            "kind": "EXACT_SCALAR_REFERENCE"
+          },
+          {
+            "table": "online_requests",
+            "pk": {
+              "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+              "request_id": "182b8afc-d976-4f4b-bb51-1a022485bc21"
+            },
+            "projectedRowMd5": "7894572e079108d04b120b1a94674fa4",
+            "paths": [
+              "$.response.result.document.payload.clients.12.sync_device_id"
+            ],
+            "kind": "PRESERVED_REAL_ACTOR_BACKUP_RECEIPT",
+            "commandKind": "pointZeroBackup",
+            "state": "confirmed"
+          },
+          {
+            "table": "online_requests",
+            "pk": {
+              "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+              "request_id": "5369c943-35c3-4c0a-855d-44e108bff199"
+            },
+            "projectedRowMd5": "5ac669f575353e5dfc2dd999d80f9442",
+            "paths": [
+              "$.response.result.document.payload.clients.12.sync_device_id"
+            ],
+            "kind": "PRESERVED_REAL_ACTOR_BACKUP_RECEIPT",
+            "commandKind": "pointZeroBackup",
+            "state": "confirmed"
+          },
+          {
+            "table": "online_requests",
+            "pk": {
+              "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+              "request_id": "944378e7-0996-464b-b7ea-ef3d263f97f4"
+            },
+            "projectedRowMd5": "5d34d44c5f09cc739bbfa75fb3c3bf95",
+            "paths": [
+              "$.response.result.document.payload.clients.12.sync_device_id"
+            ],
+            "kind": "PRESERVED_REAL_ACTOR_BACKUP_RECEIPT",
+            "commandKind": "pointZeroBackup",
+            "state": "confirmed"
+          },
+          {
+            "table": "point_zero_backups",
+            "pk": {
+              "backup_id": "45c5b1da-efb6-411e-bc2d-f25fff65175d"
+            },
+            "projectedRowMd5": "10988c7c56e2e472049094dbe4ade1dd",
+            "paths": [
+              "$.payload.clients.12.sync_device_id"
+            ],
+            "kind": "PRESERVED_POINT_ZERO_BACKUP_COPY"
+          },
+          {
+            "table": "point_zero_backups",
+            "pk": {
+              "backup_id": "54efc5dc-23aa-4d1e-8741-7a94533561b2"
+            },
+            "projectedRowMd5": "25399c71d77501ff64a53f7976e68bd2",
+            "paths": [
+              "$.payload.clients.12.sync_device_id"
+            ],
+            "kind": "PRESERVED_POINT_ZERO_BACKUP_COPY"
+          },
+          {
+            "table": "point_zero_backups",
+            "pk": {
+              "backup_id": "72a5453d-98b2-439a-8239-26d707711d9e"
+            },
+            "projectedRowMd5": "820825bb541e9c90f74c9ae443f9a175",
+            "paths": [
+              "$.payload.clients.12.sync_device_id"
+            ],
+            "kind": "PRESERVED_POINT_ZERO_BACKUP_COPY"
+          },
+          {
+            "table": "point_zero_backups",
+            "pk": {
+              "backup_id": "baa182f5-3b34-43fc-9077-76010458dc18"
+            },
+            "projectedRowMd5": "e61eeeb0e45209467206126d1786f2a7",
+            "paths": [
+              "$.payload.clients.12.sync_device_id"
+            ],
+            "kind": "PRESERVED_POINT_ZERO_BACKUP_COPY"
+          },
+          {
+            "table": "point_zero_backups",
+            "pk": {
+              "backup_id": "e418e8da-bd95-4565-8114-d2b58d00090a"
+            },
+            "projectedRowMd5": "bdd4650f0d828384c135d7e6c4271c1f",
+            "paths": [
+              "$.payload.clients.12.sync_device_id"
+            ],
+            "kind": "PRESERVED_POINT_ZERO_BACKUP_COPY"
+          },
+          {
+            "table": "promotions",
+            "pk": {
+              "id": "promo-1789079431430"
+            },
+            "projectedRowMd5": "acec5f446ea07ea168f126f7d2baebf2",
+            "paths": [
+              "$.sync_device_id"
+            ],
+            "kind": "EXACT_SCALAR_REFERENCE"
+          },
+          {
+            "table": "test_data_cleanup_backups",
+            "pk": {
+              "backup_id": "355d4fc6-760b-49f1-8a2a-47e1f2f4326b"
+            },
+            "projectedRowMd5": "016e9082f05febf9050c7b8f3864c15b",
+            "paths": [
+              "$.payload.plan.fleet.devices.13.device_id",
+              "$.payload.plan.fleet.devices.13.historical_incidents.0.operation_id",
+              "$.payload.plan.fleet.devices.13.historical_incidents.1.operation_id",
+              "$.payload.plan.fleet.devices.13.historical_incidents.2.operation_id",
+              "$.payload.plan.fleet.devices.13.historical_incidents.3.operation_id",
+              "$.payload.plan.fleet.devices.13.historical_incidents.4.operation_id",
+              "$.payload.plan.fleet.devices.13.historical_incidents.5.operation_id",
+              "$.payload.plan.fleet.devices.13.historical_incidents.6.operation_id",
+              "$.payload.plan.fleet.devices.13.historical_incidents.7.operation_id",
+              "$.payload.plan.fleet.devices.13.historical_incidents.8.operation_id",
+              "$.payload.plan.fleet.devices.13.historical_incidents.9.operation_id",
+              "$.payload.plan.fleet.devices.13.historical_incidents.10.operation_id",
+              "$.payload.plan.fleet.devices.13.historical_incidents.11.operation_id",
+              "$.payload.plan.fleet.devices.13.historical_incidents.12.operation_id",
+              "$.payload.plan.fleet.devices.13.historical_incidents.13.operation_id",
+              "$.payload.plan.fleet.devices.13.historical_incidents.14.operation_id",
+              "$.payload.plan.fleet.devices.13.historical_incidents.15.operation_id",
+              "$.payload.plan.fleet.devices.13.historical_incidents.16.operation_id"
+            ],
+            "kind": "PRESERVED_CLEANUP_BACKUP_COPY"
+          }
+        ]
+      },
+      "qaProvenance": {
+        "run": "b766e373-5279-4e4a-818e-0934a4f8757c",
+        "ownerId": "54633260-578a-4228-b7d1-4e36e6c49144",
+        "initialClassification": "KNOWN_QA_TECHNICAL",
+        "combinedEvidence": "Exact H148 certificate + exact runner hash + historical backup with 58 activity rows and three A/B/C devices; not a prefix-only inference.",
+        "certificateSha256": "b4c86b1bc8a63464f44d3d45a203bc46d8f9b937b541fd3220c58a99faa3ee38"
+      },
+      "pendingDisposition": {
+        "status": "HELD_NO_DELETION_PLAN",
+        "reasons": [
+          "Non-null omitted credential prevents a complete restorable backup claim.",
+          "Discard evidence currently protects 10/17 exact old operations and related retained history."
+        ],
+        "authorizedAction": null
+      }
+    }
+  ],
+  "authority": {
+    "sources": [
+      {
+        "path": "supabase/migrations/20260908018400_pos_h149_directed_recovery.sql",
+        "lines": "3-24",
+        "claim": "Recovery columns/states and no expiry field"
+      },
+      {
+        "path": "supabase/migrations/20260911020800_pos_h164_online_authority.sql",
+        "lines": "126-144",
+        "claim": "Only Online recovery fence branch"
+      },
+      {
+        "path": "supabase/migrations/20260912021000_pos_h164_legacy_exact_discard.sql",
+        "lines": "7-25",
+        "claim": "Fence/classification/archive use captured/completed discarded_ids, not candidate inventory"
+      }
+    ],
+    "capturedFunctionHashes": [
+      {
+        "signature": "pos.archive_online_legacy(text,jsonb)",
+        "definitionMd5": "2c7cbf75f189e554ed92d99fea26ccf0"
+      },
+      {
+        "signature": "pos.assert_device_recovery_write(text,text[])",
+        "definitionMd5": "8b64cf1e253f0efee0ef39e9db487a08"
+      },
+      {
+        "signature": "pos.classify_online_legacy(text,jsonb)",
+        "definitionMd5": "aeb9e6b7a32ea1747a47e50cf833b919"
+      }
+    ]
+  },
+  "referenceScan": {
+    "method": "Exact scalar values in canonical projected PostgreSQL JSON rows across all 64 POS tables; string prefilter followed by recursive exact-value comparison.",
+    "unmatchedSubstringRows": [],
+    "limits": "No fresh remote observation. Omitted credential values, Storage bytes and unparsed opaque strings are outside reference coverage. Copies in backups and real backup receipts are preserved history, not creation provenance."
+  },
+  "summary": {
+    "ambiguousRows": 4,
+    "softDeletedAmbiguousRows": 4,
+    "modifiedByRealDevice": 2,
+    "knownQaRecoveries": 2,
+    "completedRecoveries": 2,
+    "revokedQaDevices": 2,
+    "absentQaOwnerAuth": true,
+    "historicalDiscardedOperations": 27,
+    "matchingHistoricalPendingActivityRows": 27,
+    "nonNullOmittedCredentials": 2,
+    "action": "NO_DML_NO_OWNER_QUESTION_NO_AUTOMATIC_CLASSIFICATION",
+    "certified": false
+  }
+}

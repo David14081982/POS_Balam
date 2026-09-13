@@ -1,0 +1,109 @@
+{
+  "at": "2026-09-13T04:20:12.243Z",
+  "scope": "LOCAL_ONLY_NO_NETWORK_NO_AUTH_MUTATIONS",
+  "moduleSha256": "c613d6a5cedff0e121dddc49baba5e694fad34e31d519869b28462c189ad958a",
+  "testSha256": "c4f6bb71a1d54d5aabe05f821656f5cd1874f3ea9fe5c06a512baed94251081c",
+  "preflightSqlSha256": "181ccee2caedaed4d3a8f11c97e6507e9cafb898f9d8b1d12b1d1ddd8ba68da7",
+  "reviewedIdentityEvidence": {
+    "baselineSha256": "d2a0c2a5dc85d70625628ad06120c0424011099a91d69896086354c7e7f50eb9",
+    "auditSha256": "9b8455af296739611505a6a69fd17a2f7023615826da5e9bb06336424fac5f74",
+    "inventorySha256": "6dacce4e4f8d5cc12496bc7dcca8719c465bfe9fedda884183fbd1e630193652"
+  },
+  "checksPassed": 22,
+  "expectedChecks": 22,
+  "checks": [
+    {
+      "name": "exact eleven scope and real actor exclusion fail before any API call",
+      "status": "PASS"
+    },
+    {
+      "name": "requires BALAM GoTrue admin and artifact-bound durable journal",
+      "status": "PASS"
+    },
+    {
+      "name": "149 and 317 commit plus verification evidence are mandatory",
+      "status": "PASS"
+    },
+    {
+      "name": "eleven exact hard deletions persist intent first, verify404, and survive reopen without retry",
+      "status": "PASS"
+    },
+    {
+      "name": "already absent explicit404 is recorded without delete",
+      "status": "PASS"
+    },
+    {
+      "name": "completed real request7054 is preserved and its already absent QA target is never deleted again",
+      "status": "PASS"
+    },
+    {
+      "name": "committed delete with lost response reconciles absence and never repeats",
+      "status": "PASS"
+    },
+    {
+      "name": "uncertain GET after deletion remains UNKNOWN and reconciliation performs reads only",
+      "status": "PASS"
+    },
+    {
+      "name": "uncertain delete which leaves user present stops bulk and cannot retry",
+      "status": "PASS"
+    },
+    {
+      "name": "null user200, GET500 and thrown404 are not verified absence",
+      "status": "PASS"
+    },
+    {
+      "name": "identity drift in email, QA marker or creation date prevents delete",
+      "status": "PASS"
+    },
+    {
+      "name": "all pos FK effects including SET NULL and CASCADE block when rows remain",
+      "status": "PASS"
+    },
+    {
+      "name": "catalog additions, omissions, invalid constraints, missing counts and stale evidence fail closed",
+      "status": "PASS"
+    },
+    {
+      "name": "real actor and original7054 pending history are checked before and after delete",
+      "status": "PASS"
+    },
+    {
+      "name": "durable write failure occurs before dispatch and remains latched",
+      "status": "PASS"
+    },
+    {
+      "name": "crash after durable intent before dispatch resumes by GET only",
+      "status": "PASS"
+    },
+    {
+      "name": "failure to persist observation leaves durable attempt available for read-only reconciliation",
+      "status": "PASS"
+    },
+    {
+      "name": "concurrent calls reject and never dispatch the same target twice",
+      "status": "PASS"
+    },
+    {
+      "name": "two factories sharing one journal still dispatch at most once",
+      "status": "PASS"
+    },
+    {
+      "name": "recorded intent is not dispatched after preflight expires during persistence",
+      "status": "PASS"
+    },
+    {
+      "name": "reviewed identity projection covers eleven IDs and six QA runs with no raw email",
+      "status": "PASS"
+    },
+    {
+      "name": "preflight SQL executes read-only against local PostgreSQL and inventories FK drift",
+      "status": "PASS"
+    }
+  ],
+  "limits": [
+    "Injected GoTrue and fake readiness do not certify remote retirement.",
+    "PGlite validates SELECT behavior on synthetic schema; live dependencies still require fresh remote evidence.",
+    "SQL preflight and GoTrue deletion are separate transactions; no atomic cross-service lock is claimed."
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "scope": "H171 final regression artifacts relocated before preserving original H167/H168 historical evidence",
+  "files": [
+    {
+      "originalTestOutput": "docs/fixes/evidence/h167-after.json",
+      "preservedAt": "docs/fixes/evidence/h171/repeated-regressions/h167-after.json",
+      "sha256": "20ef9f58d7843986a5a29e266618de5623e01a84c49a0373ce231babbc7c8265"
+    },
+    {
+      "originalTestOutput": "docs/fixes/evidence/h167-lifecycle.json",
+      "preservedAt": "docs/fixes/evidence/h171/repeated-regressions/h167-lifecycle.json",
+      "sha256": "5aec241d5b089668995d0a392306ec94605b7168c3b1694a289d6b12f1fa678c"
+    },
+    {
+      "originalTestOutput": "docs/fixes/evidence/h167-loading.png",
+      "preservedAt": "docs/fixes/evidence/h171/repeated-regressions/h167-loading.png",
+      "sha256": "dd8a4172c8bf2d9a67aced91b083e34e0a05dd66154104811f3c243e17c6c2a3"
+    },
+    {
+      "originalTestOutput": "docs/fixes/evidence/h168-after/configuracion-impresion-escritorio.png",
+      "preservedAt": "docs/fixes/evidence/h171/repeated-regressions/h168-after/configuracion-impresion-escritorio.png",
+      "sha256": "85dc598562a211d9aa6df9425e64a4b5842cc7bc9bf8b372efa61ee86e0a3bc1"
+    },
+    {
+      "originalTestOutput": "docs/fixes/evidence/h168-after/configuracion-impresion-movil.png",
+      "preservedAt": "docs/fixes/evidence/h171/repeated-regressions/h168-after/configuracion-impresion-movil.png",
+      "sha256": "0498c3a5de691130188b44a33aacb984b89201391ba815afbd42ddbac76e2bb4"
+    },
+    {
+      "originalTestOutput": "docs/fixes/evidence/h168-after/results.json",
+      "preservedAt": "docs/fixes/evidence/h171/repeated-regressions/h168-after/results.json",
+      "sha256": "49a7fe8343e0f39b7a2b37439376444643508658f52f78399ac113e00a461f76"
+    },
+    {
+      "originalTestOutput": "docs/fixes/evidence/h168-after/ticket-web-larga.pdf",
+      "preservedAt": "docs/fixes/evidence/h171/repeated-regressions/h168-after/ticket-web-larga.pdf",
+      "sha256": "3614884a8fcfebc3914c3ae0b3380e3ccd27200c9482f6dd35d77a9a24e498fc"
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "scope": "LOCAL_PGLITE_READ_ONLY_PREFLIGHT",
+  "tests": 10,
+  "passed": 10,
+  "failed": 0,
+  "results": [
+    {
+      "name": "READ ONLY preflight emits all64 full fingerprints,18FKx2,6Storagecolsx2 and the actual seven-trigger revision contract",
+      "pass": true
+    },
+    {
+      "name": "SQL remains READ ONLY even if a caller appends DML inside its transaction",
+      "pass": true
+    },
+    {
+      "name": "Foreign project,run binding,real Auth target and tampered SHA reject before dispatch or readiness",
+      "pass": true
+    },
+    {
+      "name": "Missing FK/count/Storage coverage is never interpreted as zero",
+      "pass": true
+    },
+    {
+      "name": "A real Storage ownership in buckets or objects blocks Auth cleanup",
+      "pass": true
+    },
+    {
+      "name": "An added Storage owner column/table is reported and blocks the incomplete known-count contract",
+      "pass": true
+    },
+    {
+      "name": "Logical POS actor references without Auth FKs block cleanup and exact remaining scope is counted",
+      "pass": true
+    },
+    {
+      "name": "Foreign Auth content,POS content and protected7054 changes are detected against the post-SQL baseline",
+      "pass": true
+    },
+    {
+      "name": "Native Auth children are counted; local deletion produces exact+7 while63POS hashes andforeignAuth remain stable",
+      "pass": true
+    },
+    {
+      "name": "Early failed run can preflight only its one proven principal; no second identity is invented",
+      "pass": true
+    }
+  ],
+  "moduleSha256": "ea45be7467ab45a21c5ec50c64468378c5ca62051b080ffbd01e21de32682920",
+  "testSha256": "8a304dd717075448b2985ef5838b65d24eda92f8775e41eba0eff97c169abbde",
+  "remoteCalls": 0,
+  "remoteWrites": 0,
+  "certified": false
+}

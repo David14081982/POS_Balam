@@ -1,0 +1,12 @@
+{
+  "projectRef": "telohdbvbvsfmwyriflz",
+  "status": "COMMITTED_AND_VERIFIED",
+  "cliExitCode": 0,
+  "sql": "../h171-auth-tech-cleanup-reviewed-v3.sql",
+  "sqlSha256": "791cc2cd7f399c847843293a6d4c54469313f40f42f7f0d564cd2c78491a41f4",
+  "removedRows": 317,
+  "remainingExactRows": 0,
+  "protectedTables": 63,
+  "evidenceSha256": "1a92632a2296c77aa4ceb7beea6c16207919e7a80fa99f90622f328a444a534a",
+  "postcheckSha256": "1bb2670fb63c015ba8dd03d25d516e96bb15efb28f89ba5dd38e7ff53ad25643"
+}

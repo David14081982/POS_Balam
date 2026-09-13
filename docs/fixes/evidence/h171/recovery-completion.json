@@ -1,0 +1,884 @@
+{
+  "format": "balam-h171-stopped-run-recovery-completion-public-v1",
+  "scope": "EXACT_RECOVERY_OF_INTERRUPTED_RUN_ONLY",
+  "at": "2026-09-13T07:17:24.716Z",
+  "projectRef": "telohdbvbvsfmwyriflz",
+  "run": "9482e643-232b-4d32-9ffd-0f07ac156ae6",
+  "artifactSha256": "f4d73fa350d4187dade1a55c999dc203b405f4c20d95d9138aaf1b2ef0a82646",
+  "reviewSha256": "3bbb417ae9e8cedc3b4efbb3bae8868bc16ea754903b72050371005e62194a57",
+  "cleanupVerified": true,
+  "certified": false,
+  "sql": {
+    "previousCommitVerified": true,
+    "scope": 35,
+    "removed": 35,
+    "repeatedDuringAuthResume": false,
+    "manifestSha256": "de0fe4ba5026ac38936f6def1157d6089c1d1cd5211a3b332a362ae7ea71de1a",
+    "executionFileSha256": "915b6dd949a0258842b62146f74aa0d93fbae0b6aec06a8eb54d808b19795402",
+    "responseFileSha256": "a17b9a374245313e262bb51b42838c9298add0832f63e3d63094b3c11addeed4"
+  },
+  "auth": {
+    "scope": 1,
+    "absent": 1,
+    "targetIds": [
+      "938611a6-59ff-4ce8-a76c-2f4f2cdb39dc"
+    ],
+    "status": 404,
+    "attemptRecorded": true,
+    "absenceVerified": true,
+    "baselineAuthIdCount": 4,
+    "finalAuthIdCount": 4,
+    "foreignAuthUnchanged": true,
+    "foreignAuthFingerprint": {
+      "full_rows_md5": "a641f1034463ba5e397e5884ce42d59f",
+      "row_count": 4
+    }
+  },
+  "residue": {
+    "newPos": 0,
+    "newAuth": 0
+  },
+  "inventory": {
+    "before": {
+      "products": 973,
+      "families": 251,
+      "pieces": 3483,
+      "row_count": 973,
+      "full_rows_md5": "4732c0c8b6a13ef05e922eaa58edb158"
+    },
+    "after": {
+      "products": 973,
+      "families": 251,
+      "pieces": 3483,
+      "row_count": 973,
+      "full_rows_md5": "4732c0c8b6a13ef05e922eaa58edb158"
+    },
+    "unchanged": true
+  },
+  "protectedSale": {
+    "folio": "BG-260912-0001",
+    "operationId": "35e2c61a-7561-41b9-9535-e39e671a55d3",
+    "beforeFullRowMd5": "4d4eccadf33a73be1303d957036886d6",
+    "afterFullRowMd5": "4d4eccadf33a73be1303d957036886d6",
+    "unchanged": true
+  },
+  "protectedRequest": {
+    "fullRowMd5": "8fdc987d8fe491f467f968da4c5306e0",
+    "id": "70549527-4867-4342-94d2-38e770b0f2a9"
+  },
+  "protection": {
+    "tablesChecked": 64,
+    "exactUnchangedTables": 63,
+    "monotonicRevisionTables": 1,
+    "catalogUnchanged": true,
+    "catalogSha256": "d06bc6ef14928bfe9cf91e93bb3e5b86aa017096cdf01956163c2c0d1921ad25",
+    "allOutsideRowsPreserved": true,
+    "tableFingerprints": [
+      {
+        "table": "barcode_aliases",
+        "before": {
+          "row_count": 0,
+          "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "after": {
+          "row_count": 0,
+          "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "capability_operation_audit",
+        "before": {
+          "row_count": 1557,
+          "full_rows_md5": "7abe2a56fafc349d2fc25527212364c2"
+        },
+        "after": {
+          "row_count": 1557,
+          "full_rows_md5": "7abe2a56fafc349d2fc25527212364c2"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "clients",
+        "before": {
+          "row_count": 14,
+          "full_rows_md5": "4ab651740e4621bc712f3edce199245c"
+        },
+        "after": {
+          "row_count": 14,
+          "full_rows_md5": "4ab651740e4621bc712f3edce199245c"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "commission_adjustments",
+        "before": {
+          "row_count": 0,
+          "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "after": {
+          "row_count": 0,
+          "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "config_commits",
+        "before": {
+          "row_count": 60,
+          "full_rows_md5": "583355e62f558347d669047415a9f478"
+        },
+        "after": {
+          "row_count": 60,
+          "full_rows_md5": "583355e62f558347d669047415a9f478"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "config_sync_state",
+        "before": {
+          "row_count": 1,
+          "full_rows_md5": "e0ad5eb807237196efb419368dad86fc"
+        },
+        "after": {
+          "row_count": 1,
+          "full_rows_md5": "e0ad5eb807237196efb419368dad86fc"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "exchange_commits",
+        "before": {
+          "row_count": 0,
+          "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "after": {
+          "row_count": 0,
+          "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "exchange_items",
+        "before": {
+          "row_count": 0,
+          "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "after": {
+          "row_count": 0,
+          "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "exchanges",
+        "before": {
+          "row_count": 0,
+          "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "after": {
+          "row_count": 0,
+          "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "folio_counters",
+        "before": {
+          "row_count": 3,
+          "full_rows_md5": "b4639e121d23f951d9db30eb9642fe32"
+        },
+        "after": {
+          "row_count": 3,
+          "full_rows_md5": "b4639e121d23f951d9db30eb9642fe32"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "inventory_contract_state",
+        "before": {
+          "row_count": 1,
+          "full_rows_md5": "ba5128ae28f10e34b71bc467c12617f6"
+        },
+        "after": {
+          "row_count": 1,
+          "full_rows_md5": "ba5128ae28f10e34b71bc467c12617f6"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "inventory_sync_baselines",
+        "before": {
+          "row_count": 1,
+          "full_rows_md5": "4c79212ea9c85266d5a33609b7a185c1"
+        },
+        "after": {
+          "row_count": 1,
+          "full_rows_md5": "4c79212ea9c85266d5a33609b7a185c1"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "inventory_v1_v2_map",
+        "before": {
+          "row_count": 0,
+          "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "after": {
+          "row_count": 0,
+          "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "inventory_v3_backups",
+        "before": {
+          "row_count": 1,
+          "full_rows_md5": "75f9537e4ebe9975b85d1a98d051ddab"
+        },
+        "after": {
+          "row_count": 1,
+          "full_rows_md5": "75f9537e4ebe9975b85d1a98d051ddab"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "inventory_v3_operations",
+        "before": {
+          "row_count": 1,
+          "full_rows_md5": "cb40c486b178471d2d99aea0c237877b"
+        },
+        "after": {
+          "row_count": 1,
+          "full_rows_md5": "cb40c486b178471d2d99aea0c237877b"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "layaway_liquidation_commits",
+        "before": {
+          "row_count": 0,
+          "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "after": {
+          "row_count": 0,
+          "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "liquidations",
+        "before": {
+          "row_count": 0,
+          "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "after": {
+          "row_count": 0,
+          "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "loan_documents",
+        "before": {
+          "row_count": 0,
+          "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "after": {
+          "row_count": 0,
+          "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "lookup",
+        "before": {
+          "row_count": 552,
+          "full_rows_md5": "cd57be24c198f56cf83c35617b3db299"
+        },
+        "after": {
+          "row_count": 552,
+          "full_rows_md5": "cd57be24c198f56cf83c35617b3db299"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "movements",
+        "before": {
+          "row_count": 1,
+          "full_rows_md5": "596d6df443e89c2d73f54cf064e7e041"
+        },
+        "after": {
+          "row_count": 1,
+          "full_rows_md5": "596d6df443e89c2d73f54cf064e7e041"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "online_account_requests",
+        "before": {
+          "row_count": 1,
+          "full_rows_md5": "0d2051d77c9ee5dadce0677cb29f07eb"
+        },
+        "after": {
+          "row_count": 1,
+          "full_rows_md5": "0d2051d77c9ee5dadce0677cb29f07eb"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "online_legacy_archives",
+        "before": {
+          "row_count": 21,
+          "full_rows_md5": "5bc2cc64d0754985de15ae79d088369b"
+        },
+        "after": {
+          "row_count": 21,
+          "full_rows_md5": "5bc2cc64d0754985de15ae79d088369b"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "online_legacy_operations",
+        "before": {
+          "row_count": 1,
+          "full_rows_md5": "bb4affef37fa9d9e8a56b93d076b063e"
+        },
+        "after": {
+          "row_count": 1,
+          "full_rows_md5": "bb4affef37fa9d9e8a56b93d076b063e"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "online_requests",
+        "before": {
+          "row_count": 17,
+          "full_rows_md5": "fd896d180815fa3f2522971e3855f3c4"
+        },
+        "after": {
+          "row_count": 17,
+          "full_rows_md5": "fd896d180815fa3f2522971e3855f3c4"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "online_runtime",
+        "before": {
+          "row_count": 1,
+          "full_rows_md5": "61652a964bda20771b1c6b260e9a736a"
+        },
+        "after": {
+          "row_count": 1,
+          "full_rows_md5": "61652a964bda20771b1c6b260e9a736a"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "online_snapshot_revision",
+        "before": {
+          "row_count": 1,
+          "full_rows_md5": "f065f71e454608788184cccca9cf40ee"
+        },
+        "after": {
+          "row_count": 1,
+          "full_rows_md5": "882b4e97b8f3e9195d20bcc5725e71c2"
+        },
+        "unchanged": false
+      },
+      {
+        "table": "operational_capabilities",
+        "before": {
+          "row_count": 25,
+          "full_rows_md5": "41ffd3fc9140416bbdee7a3195ab1920"
+        },
+        "after": {
+          "row_count": 25,
+          "full_rows_md5": "41ffd3fc9140416bbdee7a3195ab1920"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "permission_change_audit",
+        "before": {
+          "row_count": 22,
+          "full_rows_md5": "a3144965f7cb6838bcb5c4617df6ae3e"
+        },
+        "after": {
+          "row_count": 22,
+          "full_rows_md5": "a3144965f7cb6838bcb5c4617df6ae3e"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "permission_roles",
+        "before": {
+          "row_count": 2,
+          "full_rows_md5": "839b7ebb616d253e6f3f06129c694759"
+        },
+        "after": {
+          "row_count": 2,
+          "full_rows_md5": "839b7ebb616d253e6f3f06129c694759"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "physical_card_redemptions",
+        "before": {
+          "row_count": 0,
+          "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "after": {
+          "row_count": 0,
+          "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "point_zero_backups",
+        "before": {
+          "row_count": 5,
+          "full_rows_md5": "78a27191d30626f7b5d5d8da08227d0c"
+        },
+        "after": {
+          "row_count": 5,
+          "full_rows_md5": "78a27191d30626f7b5d5d8da08227d0c"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "point_zero_operations",
+        "before": {
+          "row_count": 4,
+          "full_rows_md5": "010412b1dbc76f0d9cbc1d2a45fc7ac4"
+        },
+        "after": {
+          "row_count": 4,
+          "full_rows_md5": "010412b1dbc76f0d9cbc1d2a45fc7ac4"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "products",
+        "before": {
+          "row_count": 973,
+          "full_rows_md5": "4732c0c8b6a13ef05e922eaa58edb158"
+        },
+        "after": {
+          "row_count": 973,
+          "full_rows_md5": "4732c0c8b6a13ef05e922eaa58edb158"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "promotions",
+        "before": {
+          "row_count": 3,
+          "full_rows_md5": "bfc86c9401100118f03a0d8172cbe636"
+        },
+        "after": {
+          "row_count": 3,
+          "full_rows_md5": "bfc86c9401100118f03a0d8172cbe636"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "purged_documents",
+        "before": {
+          "row_count": 63,
+          "full_rows_md5": "237731e15c1fb059fcf78db9dc3988d7"
+        },
+        "after": {
+          "row_count": 63,
+          "full_rows_md5": "237731e15c1fb059fcf78db9dc3988d7"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "reference_reclassifications",
+        "before": {
+          "row_count": 0,
+          "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "after": {
+          "row_count": 0,
+          "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "return_commits",
+        "before": {
+          "row_count": 0,
+          "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "after": {
+          "row_count": 0,
+          "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "return_items",
+        "before": {
+          "row_count": 0,
+          "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "after": {
+          "row_count": 0,
+          "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "returns",
+        "before": {
+          "row_count": 0,
+          "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "after": {
+          "row_count": 0,
+          "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "role_capability_permissions",
+        "before": {
+          "row_count": 31,
+          "full_rows_md5": "f4e0c82e264ad5513068c9c69c532aff"
+        },
+        "after": {
+          "row_count": 31,
+          "full_rows_md5": "f4e0c82e264ad5513068c9c69c532aff"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "role_screen_permissions",
+        "before": {
+          "row_count": 44,
+          "full_rows_md5": "4e4e18a9a74a2e8ec41631a40b475ed1"
+        },
+        "after": {
+          "row_count": 44,
+          "full_rows_md5": "4e4e18a9a74a2e8ec41631a40b475ed1"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "sale_commits",
+        "before": {
+          "row_count": 1,
+          "full_rows_md5": "59e3b73ce795ba86b2d568a487e171f3"
+        },
+        "after": {
+          "row_count": 1,
+          "full_rows_md5": "59e3b73ce795ba86b2d568a487e171f3"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "sale_items",
+        "before": {
+          "row_count": 1,
+          "full_rows_md5": "133a771c7dae014240ab445aac48bc87"
+        },
+        "after": {
+          "row_count": 1,
+          "full_rows_md5": "133a771c7dae014240ab445aac48bc87"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "sale_payments",
+        "before": {
+          "row_count": 1,
+          "full_rows_md5": "e4bfc6eb0c84646b90c058d2a7b381b3"
+        },
+        "after": {
+          "row_count": 1,
+          "full_rows_md5": "e4bfc6eb0c84646b90c058d2a7b381b3"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "sales",
+        "before": {
+          "row_count": 1,
+          "full_rows_md5": "f762a7928c8662653d8e9042fb38ae04"
+        },
+        "after": {
+          "row_count": 1,
+          "full_rows_md5": "f762a7928c8662653d8e9042fb38ae04"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "screen_permission_catalog",
+        "before": {
+          "row_count": 22,
+          "full_rows_md5": "738869ef1e1002dcad7e9e05089b0b3d"
+        },
+        "after": {
+          "row_count": 22,
+          "full_rows_md5": "738869ef1e1002dcad7e9e05089b0b3d"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "screen_permission_catalog_state",
+        "before": {
+          "row_count": 1,
+          "full_rows_md5": "08625ca802d4e29bf98d35d1cd3eeda5"
+        },
+        "after": {
+          "row_count": 1,
+          "full_rows_md5": "08625ca802d4e29bf98d35d1cd3eeda5"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "selective_cleanup_events",
+        "before": {
+          "row_count": 5,
+          "full_rows_md5": "caadef0651b51030ec66fcedb6c76c71"
+        },
+        "after": {
+          "row_count": 5,
+          "full_rows_md5": "caadef0651b51030ec66fcedb6c76c71"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "sellers",
+        "before": {
+          "row_count": 5,
+          "full_rows_md5": "deda4f11ce74a3c132bffc9939f5a83c"
+        },
+        "after": {
+          "row_count": 5,
+          "full_rows_md5": "deda4f11ce74a3c132bffc9939f5a83c"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "settings",
+        "before": {
+          "row_count": 40,
+          "full_rows_md5": "d903ffca7b4735269f9f23189da10363"
+        },
+        "after": {
+          "row_count": 40,
+          "full_rows_md5": "d903ffca7b4735269f9f23189da10363"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "stock_reservations",
+        "before": {
+          "row_count": 1,
+          "full_rows_md5": "16fca801eb27fbb8caa1d35f908d3c41"
+        },
+        "after": {
+          "row_count": 1,
+          "full_rows_md5": "16fca801eb27fbb8caa1d35f908d3c41"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "sync_activity",
+        "before": {
+          "row_count": 657,
+          "full_rows_md5": "767388cb79007c8359000b8a26623356"
+        },
+        "after": {
+          "row_count": 657,
+          "full_rows_md5": "767388cb79007c8359000b8a26623356"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "sync_conflicts",
+        "before": {
+          "row_count": 41,
+          "full_rows_md5": "531fa647b00fdd8333560278f8dd0e80"
+        },
+        "after": {
+          "row_count": 41,
+          "full_rows_md5": "531fa647b00fdd8333560278f8dd0e80"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "sync_device_recoveries",
+        "before": {
+          "row_count": 4,
+          "full_rows_md5": "87da9f973ff47c9e23b9c37356d503f5"
+        },
+        "after": {
+          "row_count": 4,
+          "full_rows_md5": "87da9f973ff47c9e23b9c37356d503f5"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "sync_devices",
+        "before": {
+          "row_count": 15,
+          "full_rows_md5": "748a49a50f941fd06982506316b91d9f"
+        },
+        "after": {
+          "row_count": 15,
+          "full_rows_md5": "748a49a50f941fd06982506316b91d9f"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "sync_domain_versions",
+        "before": {
+          "row_count": 15,
+          "full_rows_md5": "7a42e28ef2b0f4012510278a2a87e9d0"
+        },
+        "after": {
+          "row_count": 15,
+          "full_rows_md5": "7a42e28ef2b0f4012510278a2a87e9d0"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "sync_quarantine_cases",
+        "before": {
+          "row_count": 67,
+          "full_rows_md5": "9fcc670f4b91cd08f7334b04879bf86c"
+        },
+        "after": {
+          "row_count": 67,
+          "full_rows_md5": "9fcc670f4b91cd08f7334b04879bf86c"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "system_manifest",
+        "before": {
+          "row_count": 1,
+          "full_rows_md5": "66fba718f678cfa6d7721ab05b91e547"
+        },
+        "after": {
+          "row_count": 1,
+          "full_rows_md5": "66fba718f678cfa6d7721ab05b91e547"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "test_data_cleanup_backups",
+        "before": {
+          "row_count": 7,
+          "full_rows_md5": "81249ce6a6802921684a1ec25c68a935"
+        },
+        "after": {
+          "row_count": 7,
+          "full_rows_md5": "81249ce6a6802921684a1ec25c68a935"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "test_data_cleanup_operations",
+        "before": {
+          "row_count": 5,
+          "full_rows_md5": "63f0c66dc3ef279e9592c97f67fa8230"
+        },
+        "after": {
+          "row_count": 5,
+          "full_rows_md5": "63f0c66dc3ef279e9592c97f67fa8230"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "test_data_purges",
+        "before": {
+          "row_count": 12,
+          "full_rows_md5": "fdd46ccad88c047d12f8fa129cad674c"
+        },
+        "after": {
+          "row_count": 12,
+          "full_rows_md5": "fdd46ccad88c047d12f8fa129cad674c"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "user_capability_overrides",
+        "before": {
+          "row_count": 0,
+          "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "after": {
+          "row_count": 0,
+          "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "user_permission_role_assignments",
+        "before": {
+          "row_count": 3,
+          "full_rows_md5": "468ae6b257958084cc401c327ab1e7f8"
+        },
+        "after": {
+          "row_count": 3,
+          "full_rows_md5": "468ae6b257958084cc401c327ab1e7f8"
+        },
+        "unchanged": true
+      },
+      {
+        "table": "user_screen_permission_overrides",
+        "before": {
+          "row_count": 22,
+          "full_rows_md5": "0b2361bd7c0fbdb7b56bda37e06cfcd3"
+        },
+        "after": {
+          "row_count": 22,
+          "full_rows_md5": "0b2361bd7c0fbdb7b56bda37e06cfcd3"
+        },
+        "unchanged": true
+      }
+    ]
+  },
+  "revisions": {
+    "baseline": "725",
+    "afterSql": "748",
+    "final": "755",
+    "sqlCleanupDelta": 7,
+    "authCleanupDelta": 7,
+    "fullRowMd5Before": "5a73054cc0e83fa15f505ef491204b36",
+    "fullRowMd5After": "7e3c32dea4946cd0ac848e4e6c132747",
+    "otherFieldsUnchanged": true,
+    "policy": "Monotonic advances preserved; no rewind."
+  },
+  "storage": {
+    "columnsChecked": 6,
+    "exactTargetOwnerReferences": 0,
+    "objectsDeleted": 0
+  },
+  "privateEvidence": {
+    "baselineFileSha256": "71cec459c85920fdc8cbcd4c344ecc43fbcf573bc831824c29dab888693cd3b4",
+    "finalFileSha256": "bea601f1112f9d2a8fccb185e05198f280294bcd41260f675baa90f40e8dc659",
+    "finalCompression": "gzip",
+    "completionFileSha256": "4ceab18d6d211f617c70a7df0ddebbb7bb43e1df4587af2ffd655964816bfc67",
+    "authResultFileSha256": "24c5d3a120e0f3fee1ae5a1d27f0e11fdc5316bc32b9b9b59874946d4f759bf4"
+  },
+  "observedLocalSourceSha256": {
+    "h171-resume-auth-cleanup.mjs": "32e797191c40b16ab438031642035ad43719c4b68d0388b1765febfc76c4b9f0",
+    "h171-live-cleanup-auth-preflight.mjs": "ea45be7467ab45a21c5ec50c64468378c5ca62051b080ffbd01e21de32682920",
+    "h171-live-cleanup-auth.mjs": "eb63e72d8b511a73c2117ef3919a1b47376bdcc4bb9956fb8ab3300059002c27",
+    "h171-live-cleanup-validation.mjs": "25073f1d5921bcd616ef90c6e24e966b5a1ef1650021a114e44832e588938062",
+    "h171-live-snapshot.mjs": "0530d7ac9a72a06056103c2da3eac1d14519f34ee2ca87795c9acf76d401f906",
+    "h171-live-authority-io.mjs": "574819f045333b588eb1b30d12521e06eb924b7ddd9073f98642eeef870731a0",
+    "h171-live-journal.mjs": "a4d1a8c47839fc72dd5567d92879954a9bc655c0845e4e3068e52a03cbc003e0"
+  },
+  "limitations": [
+    "This proves cleanup of run9482 only; it does not certify the final delivery journey.",
+    "SQL cleanup and Auth retirement are separate verified transactions.",
+    "Private canonical row bodies and Auth identities are not published."
+  ]
+}

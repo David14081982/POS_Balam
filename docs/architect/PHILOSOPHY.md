@@ -41,9 +41,10 @@ terminada: trasladó el trabajo, no lo hizo.
 Vale para migraciones, para folios impresos, para ventas confirmadas y para
 este propio sistema.
 
-**7. Funciona sin red y sobrevive a un reintento.**
-Si una acción no puede completarse offline y dejar una operación recuperable e
-idempotente, todavía no está diseñada.
+**7. La operación depende de la autoridad online y conserva su identidad.**
+Supabase confirma el negocio antes de mostrar éxito. Sin conexión se detiene la
+operación; una respuesta incierta se consulta por su identidad estable, sin
+reenviar el negocio ni crear efectos locales. El contrato vigente es `ADR-015`.
 
 **8. La evidencia manda sobre la intención.**
 Verde en local no demuestra una defensa remota. Dar por desplegada una

@@ -1,0 +1,92 @@
+{
+  "at": "2026-09-13T05:14:42.815Z",
+  "scope": "LOCAL_ONLY_INJECTED_GOTRUE_DURABLE_JOURNAL_NO_NETWORK",
+  "moduleSha256": "fb7491214b666d34697308507fbf9e11f4bc61cc6b6740190a9c1a5b7e31081f",
+  "testSha256": "21fdedbf611f4dbfbf79e42359e2d3a442f4fddc461dc7bfba3e33180f2461c6",
+  "checksPassed": 19,
+  "expectedChecks": 20,
+  "checks": [
+    {
+      "name": "pure identity projection contains no raw email or metadata and binds two exact markers",
+      "status": "PASS"
+    },
+    {
+      "name": "foreign project, real actor, preexisting UUID and incomplete plan fail before API",
+      "status": "PASS"
+    },
+    {
+      "name": "admin endpoint, run, artifact and exact journal prefix are mandatory",
+      "status": "PASS"
+    },
+    {
+      "name": "SQL commit, independent postcheck, full scope and canonical hashes are required",
+      "status": "PASS"
+    },
+    {
+      "name": "durable prior PRESENT identity is required even when Auth is already absent",
+      "status": "PASS"
+    },
+    {
+      "name": "two ordered hard deletions have durable intent before dispatch, explicit404 and no certification",
+      "status": "PASS"
+    },
+    {
+      "name": "a lost DELETE response performs GET reconciliation, without automatic resend",
+      "status": "PASS"
+    },
+    {
+      "name": "recorded intent before a crash permits only GET even if no DELETE was sent",
+      "status": "PASS"
+    },
+    {
+      "name": "uncertain deletion with account present stops bulk and cannot retry",
+      "status": "PASS"
+    },
+    {
+      "name": "null user200, GET500 and thrown404 never mean verified absence",
+      "status": "PASS"
+    },
+    {
+      "name": "GET failure after DELETE stays UNKNOWN and later reconciliation is read only",
+      "status": "PASS"
+    },
+    {
+      "name": "email, createdAt, exact marker or any metadata drift blocks DELETE",
+      "status": "PASS"
+    },
+    {
+      "name": "all ten POS FK effects including CASCADE and SET NULL require zero rows",
+      "status": "PASS"
+    },
+    {
+      "name": "unknown Auth families, changed FK catalog and incomplete counts require review",
+      "status": "PASS"
+    },
+    {
+      "name": "fresh PostgreSQL owner context, correct source and complete foreign protections are required",
+      "status": "PASS"
+    },
+    {
+      "name": "protection drift after a successful DELETE records review and preserves observed absence",
+      "status": "PASS"
+    },
+    {
+      "name": "disk persistence failure before durable intent prevents any dispatch",
+      "status": "PASS"
+    },
+    {
+      "name": "endpoint drift immediately before dispatch leaves durable intent and never resends",
+      "status": "PASS"
+    },
+    {
+      "name": "concurrent invocations cannot dispatch a second deletion",
+      "status": "PASS"
+    }
+  ],
+  "certified": false,
+  "limitations": [
+    "This does not certify a remote SQL commit or GoTrue deletion.",
+    "The caller must validate and durably preserve original commit, postcheck and identity artifacts.",
+    "Fresh SELECT and GoTrue DELETE are separate transactions; concurrent changes can require review."
+  ]
+}

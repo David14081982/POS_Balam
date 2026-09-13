@@ -1,0 +1,22 @@
+{
+  "date": "2026-09-13T02:22:55.347Z",
+  "sourceMode": true,
+  "artifactSha256": "1c2f9866e009924f5bba8f2edd38edaa617c3b8ca413018eaceaa168d93cae5a",
+  "settingsSha256": "63d669c30675545df5b3a7f987f43b6844c80f4f2c308e18c1e958380acfea31",
+  "scope": "Actual Settings component; local read fixture; updateUser callback intercepted without mutation. No real Auth or remote write certification.",
+  "viewports": [
+    320,
+    360,
+    390,
+    430,
+    768,
+    1024,
+    1280,
+    1440
+  ],
+  "rows": [],
+  "errors": [],
+  "externalRequestsAllowed": 0,
+  "ok": false,
+  "failure": "page.evaluate: Error: No se pudo confirmar el contexto de comisiones.\n    at validateOnlineSnapshot (blob:http://127.0.0.1:55768/fc0fb21d-709a-4d41-9964-e1c642595caf:1777:27)\n    at Object.replaceFromOnline (blob:http://127.0.0.1:55768/fc0fb21d-709a-4d41-9964-e1c642595caf:1784:5)\n    at eval (eval at evaluate (:302:30), <anonymous>:7:12)\n    at UtilityScript.evaluate (<anonymous>:304:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)"
+}

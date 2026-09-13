@@ -307,6 +307,7 @@
             onMouseEnter: e => { e.currentTarget.style.background = '#1C2437'; },
             onMouseLeave: e => { e.currentTarget.style.background = 'transparent'; },
             onClick: () => { if (user) window.AUTH.logout(); },
+            'data-testid': 'auth-logout',
             title: 'Cerrar sesión',
           }, [
             h('div', { key: 'a', className: 'w-9 h-9 rounded-full grid place-items-center text-xs font-bold shrink-0', style: { background: user ? '#FFE088' : '#1C2437', color: user ? '#131B2E' : '#5D637B' } },
