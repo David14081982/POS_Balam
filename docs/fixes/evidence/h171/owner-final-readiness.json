@@ -1,0 +1,104 @@
+{
+  "format": "balam-h171-owner-final-readiness-v1",
+  "at": "2026-09-13T13:12:19.340Z",
+  "project": "BALAM",
+  "projectRef": "telohdbvbvsfmwyriflz",
+  "scope": "APPROVED_ONLY_ONLINE_OPERATIONAL_DELIVERY",
+  "productionReady": true,
+  "operationalDefinitionOfDoneMet": true,
+  "finalCommitPublicationVerified": false,
+  "decision": "Four exact owner-held inactive rows are now removed and verified. Functional acceptance, prior publication of the identical client, and all fixture cleanup remain valid. Final commit publication is in progress.",
+  "sources": {
+    "functionalAcceptance": {
+      "path": "docs/fixes/evidence/h171/final-acceptance.json",
+      "sha256": "e4244314e88e9cb15301e08c09426affe708ace8f02296219fcd8bc664b73e30"
+    },
+    "ownerFourPostDelete": {
+      "path": "docs/fixes/evidence/h171/owner-four-post-delete.json",
+      "sha256": "c20095434e100dd3f2df4a5a01e8a31314ea865f9e4827ccf16d65b65fbb3849"
+    },
+    "ownerAuthorization": {
+      "path": "docs/fixes/evidence/h171/owner-final-authorization.json",
+      "sha256": "fcdc72a85cd3d6c8f8c42585e89ac4d4b0ded2d6bd0e4e0bc33a00b7519be685"
+    },
+    "independentSqlReview": {
+      "path": "docs/fixes/evidence/h171/owner-four-independent-review.json",
+      "sha256": "c5e4293ec7f75efddced94656d972db47cea826cbcd85159c047a9ca8ee43272"
+    },
+    "previousClientPublication": {
+      "path": "docs/fixes/evidence/h171/production-verification.json",
+      "sha256": "3c5028b92b65f913a636ae20072b49670130f75a6cf4e42ad01af7b08ac847b7"
+    }
+  },
+  "artifactSha256": "f4d73fa350d4187dade1a55c999dc203b405f4c20d95d9138aaf1b2ef0a82646",
+  "criticalWorkflows": {
+    "passed": 4,
+    "required": 4,
+    "scope": "FOUR_DISTINCT_PRIORITIZED_DELIVERY_CHECKS_FROM_TWO_RUNS_WITH_EXACT_CLEANUP",
+    "sameClientArtifact": true,
+    "additionalJourneyRuns": 0
+  },
+  "cleanup": {
+    "historicalCommercialRemoved": 149,
+    "historicalTechnicalAdditionalRemoved": 317,
+    "historicalAuthAbsent": 11,
+    "deliveryRunsVerified": 5,
+    "newOperationalFixtureResidue": 0,
+    "ownerAuthorizedInactiveRowsRemoved": 4,
+    "ownerHeldRowsRemaining": 0,
+    "ownerDecisionsPending": 0,
+    "historicalCopiesAndAntiReplayControlsPreserved": true,
+    "storageObjectsDeleted": 0,
+    "countersRewound": false
+  },
+  "inventory": {
+    "products": 973,
+    "families": 251,
+    "pieces": 3483,
+    "fullRowsMd5": "4732c0c8b6a13ef05e922eaa58edb158",
+    "unchanged": true
+  },
+  "protectedSale": {
+    "folio": "BG-260912-0001",
+    "operationId": "35e2c61a-7561-41b9-9535-e39e671a55d3",
+    "fullRowMd5": "4d4eccadf33a73be1303d957036886d6",
+    "unchanged": true
+  },
+  "integrity": {
+    "protectedTables": 64,
+    "outsideTablesExactPkFullHashPreserved": 63,
+    "catalogUnchanged": true,
+    "authUnchanged": true,
+    "revisionBefore": 894,
+    "revisionAfter": 896,
+    "revisionDelta": 2
+  },
+  "defects": {
+    "knownProductP0Open": 0,
+    "knownProductP1Open": 0,
+    "newReproducedH171P2Pending": 0,
+    "newReproducedH171P3Pending": 0
+  },
+  "publication": {
+    "status": "FINAL_COMMIT_PUBLICATION_IN_PROGRESS",
+    "previousVerifiedCommit": "1dddd60494c7b24beb1574851bf06d040079b0f7",
+    "previousVerification": {
+      "path": "docs/fixes/evidence/h171/production-verification.json",
+      "sha256": "3c5028b92b65f913a636ae20072b49670130f75a6cf4e42ad01af7b08ac847b7"
+    },
+    "site": "https://david14081982.github.io/POS_Balam/",
+    "clientBytesUnchanged": true
+  },
+  "supersedesCurrentConclusionOf": [
+    "docs/fixes/evidence/h171/final-acceptance.json",
+    "docs/fixes/evidence/h171/remaining-held-decisions.json"
+  ],
+  "historicalEvidenceRewritten": false,
+  "limits": [
+    "Four prioritized operational checks are composed from two completed scopes on the same client; no claim of 22 new complete UI journeys.",
+    "Zero remaining operating QA and new fixtures refers to the reviewed manifests. Required historical copies and anti-replay controls remain; no claim of zero QA strings throughout historical data.",
+    "Physical printing, scanners and every physical terminal are not certified.",
+    "Formal cash opening/closing and offline sales are not flows of the current product.",
+    "Final public commit and deployment verification are recorded separately when complete."
+  ]
+}

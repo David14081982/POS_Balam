@@ -1,0 +1,208 @@
+{
+  "format": "balam-h171-owner-four-post-delete-public-v1",
+  "at": "2026-09-13T13:04:36.586Z",
+  "projectRef": "telohdbvbvsfmwyriflz",
+  "classification": "OWNER_RETIREMENT",
+  "ownerDecisionResolved": true,
+  "authorization": {
+    "instruction": "Elimina las cuatro filas preservadas, todas inactivas.",
+    "privateFileSha256": "b97246a46d1041a1f6cd65d26d5bffa31e6ae22f8937b0a48d6ad1daa7c3d22b",
+    "basis": "Explicit owner decision for these four pre-existing IDs; no retrospective claim of immutable QA creation evidence."
+  },
+  "sql": {
+    "sqlSha256": "0d3d18812664bb0fa596412a4110f906d282296cedf34e0aaa669cb2bd2b1381",
+    "manifestSha256": "aca86356c16337357e4918712f0ae171eb4a0df6bc2bf2aaf21662db0bf6afdf",
+    "responseFileSha256": "a815afdc614d36fae6fcbe2d3fe12f104caf53d1f42dc0e9c4cd04fd69034001",
+    "expectedRows": 4,
+    "removedRows": 4,
+    "remainingRows": 0,
+    "commitVerified": true,
+    "postcheckVerified": true
+  },
+  "removedRows": [
+    {
+      "table": "clients",
+      "id": "cli-1789079431176-jyxi",
+      "fullRowMd5Before": "bf6c133205988d9829d322a6995d7eb3",
+      "inactiveBefore": true,
+      "absentAfter": true,
+      "decision": "OWNER_AUTHORIZED_REMOVAL"
+    },
+    {
+      "table": "clients",
+      "id": "cli-1789078624431-0fz3",
+      "fullRowMd5Before": "637e3a14e34965b2120defb11c6b6b19",
+      "inactiveBefore": true,
+      "absentAfter": true,
+      "decision": "OWNER_AUTHORIZED_REMOVAL"
+    },
+    {
+      "table": "clients",
+      "id": "cli-1789078938103-ams0",
+      "fullRowMd5Before": "48cf67c3064e7f31b5b5497ff0082bfd",
+      "inactiveBefore": true,
+      "absentAfter": true,
+      "decision": "OWNER_AUTHORIZED_REMOVAL"
+    },
+    {
+      "table": "promotions",
+      "id": "promo-1789079431430",
+      "fullRowMd5Before": "acec5f446ea07ea168f126f7d2baebf2",
+      "inactiveBefore": true,
+      "absentAfter": true,
+      "decision": "OWNER_AUTHORIZED_REMOVAL"
+    }
+  ],
+  "inventory": {
+    "products": 973,
+    "families": 251,
+    "pieces": 3483,
+    "fullRowsMd5": "4732c0c8b6a13ef05e922eaa58edb158",
+    "unchanged": true
+  },
+  "protectedSale": {
+    "folio": "BG-260912-0001",
+    "operationId": "35e2c61a-7561-41b9-9535-e39e671a55d3",
+    "fullRowMd5": "4d4eccadf33a73be1303d957036886d6",
+    "unchanged": true
+  },
+  "protectedRequest": {
+    "id": "70549527-4867-4342-94d2-38e770b0f2a9",
+    "state": "completed",
+    "fullRowMd5": "8fdc987d8fe491f467f968da4c5306e0",
+    "unchanged": true
+  },
+  "protection": {
+    "tablesChecked": 64,
+    "outsideTablesExactPkFullHashPreserved": 63,
+    "catalogUnchanged": true,
+    "authIdsUnchanged": true,
+    "authSqlFullHashUnchanged": true,
+    "historicalReferencedRows": [
+      {
+        "table": "online_requests",
+        "pk": {
+          "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+          "request_id": "182b8afc-d976-4f4b-bb51-1a022485bc21"
+        },
+        "fullRowMd5": "7894572e079108d04b120b1a94674fa4",
+        "unchanged": true
+      },
+      {
+        "table": "online_requests",
+        "pk": {
+          "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+          "request_id": "5369c943-35c3-4c0a-855d-44e108bff199"
+        },
+        "fullRowMd5": "5ac669f575353e5dfc2dd999d80f9442",
+        "unchanged": true
+      },
+      {
+        "table": "online_requests",
+        "pk": {
+          "actor_id": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+          "request_id": "944378e7-0996-464b-b7ea-ef3d263f97f4"
+        },
+        "fullRowMd5": "5d34d44c5f09cc739bbfa75fb3c3bf95",
+        "unchanged": true
+      },
+      {
+        "table": "point_zero_backups",
+        "pk": {
+          "backup_id": "45c5b1da-efb6-411e-bc2d-f25fff65175d"
+        },
+        "fullRowMd5": "2accc4312077a71866cdbcf69445215d",
+        "unchanged": true
+      },
+      {
+        "table": "point_zero_backups",
+        "pk": {
+          "backup_id": "54efc5dc-23aa-4d1e-8741-7a94533561b2"
+        },
+        "fullRowMd5": "16067f7c8e785be44a7f2b8193ee32a8",
+        "unchanged": true
+      },
+      {
+        "table": "point_zero_backups",
+        "pk": {
+          "backup_id": "72a5453d-98b2-439a-8239-26d707711d9e"
+        },
+        "fullRowMd5": "caf550974b6137a6d8f899ab7bebb12a",
+        "unchanged": true
+      },
+      {
+        "table": "point_zero_backups",
+        "pk": {
+          "backup_id": "baa182f5-3b34-43fc-9077-76010458dc18"
+        },
+        "fullRowMd5": "afc6fd2e8c0b3042b67c93211b7dc283",
+        "unchanged": true
+      },
+      {
+        "table": "point_zero_backups",
+        "pk": {
+          "backup_id": "e418e8da-bd95-4565-8114-d2b58d00090a"
+        },
+        "fullRowMd5": "d8397937b59b957ee197cc857d4e7b2c",
+        "unchanged": true
+      }
+    ],
+    "h148Recoveries": [
+      {
+        "table": "sync_device_recoveries",
+        "pk": {
+          "device_id": "qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c-B"
+        },
+        "fullRowMd5": "a6aac74cb08198886a520a85365bcf28",
+        "unchanged": true,
+        "disposition": "PRESERVED_ANTI_REPLAY_CONTROL"
+      },
+      {
+        "table": "sync_device_recoveries",
+        "pk": {
+          "device_id": "qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c-C"
+        },
+        "fullRowMd5": "1a1755311d1becc5e77bda61552dc608",
+        "unchanged": true,
+        "disposition": "PRESERVED_ANTI_REPLAY_CONTROL"
+      }
+    ]
+  },
+  "folioCounters": {
+    "rows": 4,
+    "row_count": 4,
+    "full_rows_md5": "6f937144c8fcf602b793b7ac36b7cf3b",
+    "unchanged": true,
+    "rewound": false
+  },
+  "revisions": {
+    "before": 894,
+    "after": 896,
+    "delta": 2,
+    "source": "Two existing H166 statement triggers; no manual revision change."
+  },
+  "auth": {
+    "mutations": 0,
+    "baselineIdentities": 4,
+    "finalIdentities": 4,
+    "unchanged": true
+  },
+  "storage": {
+    "dmlStatements": 0,
+    "scope": "No Storage targets or calls in this owner retirement; no new global asset census claimed."
+  },
+  "privateEvidence": {
+    "beforeFileSha256": "e3e28c7ce658e07f5f0762ad92062a144b2e91ba03f0e16c427a1ff95e1978bc",
+    "afterFileSha256": "e2243a18a64d1a8aea8f44d1bf7f398329b08a04a540258327b2fb85921fe357",
+    "afterCompression": "gzip",
+    "verifiedFileSha256": "dc046680cec971f1f8196fd565f8d8b8987c4b449e48d848b26b650e934a7404",
+    "reviewFileSha256": "2e01bbbe4328d794c062b0a81d592670638e0d59937b4553dc6149a6033b2482"
+  },
+  "remainingOwnerHeldAmbiguousCommercialRows": 0,
+  "cleanupVerified": true,
+  "certified": false,
+  "limits": [
+    "This disposition resolves only the four exact owner-authorized commercial rows; historical copies and two anti-replay recovery controls remain intact.",
+    "Functional acceptance and publication are evidenced separately."
+  ]
+}

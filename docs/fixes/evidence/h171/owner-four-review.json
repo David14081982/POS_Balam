@@ -1,0 +1,66 @@
+{
+  "format": "balam-h171-owner-four-review-v1",
+  "at": "2026-09-13T12:55:19.272Z",
+  "projectRef": "telohdbvbvsfmwyriflz",
+  "classification": "OWNER_RETIREMENT",
+  "ownerAuthorizationSha256": "b97246a46d1041a1f6cd65d26d5bffa31e6ae22f8937b0a48d6ad1daa7c3d22b",
+  "backupFileSha256": "e3e28c7ce658e07f5f0762ad92062a144b2e91ba03f0e16c427a1ff95e1978bc",
+  "manifestSha256": "aca86356c16337357e4918712f0ae171eb4a0df6bc2bf2aaf21662db0bf6afdf",
+  "sqlSha256": "0d3d18812664bb0fa596412a4110f906d282296cedf34e0aaa669cb2bd2b1381",
+  "targets": [
+    {
+      "table_name": "clients",
+      "pk_json_text": "{\"id\": \"cli-1789079431176-jyxi\"}",
+      "row_md5": "bf6c133205988d9829d322a6995d7eb3"
+    },
+    {
+      "table_name": "clients",
+      "pk_json_text": "{\"id\": \"cli-1789078624431-0fz3\"}",
+      "row_md5": "637e3a14e34965b2120defb11c6b6b19"
+    },
+    {
+      "table_name": "clients",
+      "pk_json_text": "{\"id\": \"cli-1789078938103-ams0\"}",
+      "row_md5": "48cf67c3064e7f31b5b5497ff0082bfd"
+    },
+    {
+      "table_name": "promotions",
+      "pk_json_text": "{\"id\": \"promo-1789079431430\"}",
+      "row_md5": "acec5f446ea07ea168f126f7d2baebf2"
+    }
+  ],
+  "expectedRows": 4,
+  "expectedRevisionDelta": 2,
+  "revisionBefore": 894,
+  "revisionAfterExpected": 896,
+  "outsideTables": 63,
+  "historicalReferencedRowsPreserved": 8,
+  "restoredRows": 4,
+  "localChecks": [
+    {
+      "check": "wrong_hash_aborts_before_deletion",
+      "pass": true
+    },
+    {
+      "check": "exact_four_removed_other_clients_promotions_unchanged_real_fk_and_h166_preserved",
+      "pass": true,
+      "revisionDelta": 2
+    }
+  ],
+  "remoteExecuted": false,
+  "certified": false,
+  "preserved": {
+    "auth": true,
+    "storage": true,
+    "allOtherPosRows": true,
+    "historicalJson": true,
+    "h148Recoveries": true,
+    "counters": true,
+    "products": 973,
+    "families": 251,
+    "pieces": 3483,
+    "sale": "BG-260912-0001",
+    "request": "70549527-4867-4342-94d2-38e770b0f2a9"
+  },
+  "limitation": "Local exact typed restore and two-table deletion/hash rollback with recorded FK/H166; complete live 64-table catalog/fences/outside comparison is enforced by the generated transaction, not claimed executed here."
+}

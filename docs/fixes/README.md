@@ -13,12 +13,12 @@ sesión de chat.
 
 ## Correcciones registradas
 
-- [balam-final-readiness.md](balam-final-readiness.md) — H-171, EN CURSO:
-  entrega final exclusivamente BALAM, Only Online confirmado; siete controles
-  inoperantes retirados, Usuarios/Panel responsive corregidos, artefacto final
-  con 192/192 vistas y 8/8 anchos. Limpieza de 149 filas QA respaldada y validada,
-  pendiente de aprobación destructiva; Auth/auditoría y jornada final pendientes.
-  NO CERTIFICADO ni publicado como entrega final.
+- [balam-final-readiness.md](balam-final-readiness.md) — H-171, RESUELTO en aptitud operativa:
+  BALAM Only Online; 4/4 casos priorizados PASS, 192/192 vistas y 8/8 anchos.
+  Limpieza histórica y fixtures verificados; cuatro filas inactivas retiradas por
+  autorización OWNER, 0 restantes y 0 decisiones pendientes; historia anti-replay intacta.
+  Cliente f4d ya publicado y verificado; publicación del cierre final EN CURSO.
+  Retiro final y cierre documental: Pendiente de commit.
 
 - [pagina-web-tickets-h168.md](pagina-web-tickets-h168.md) — H-168: recuperación
   del sitio configurable en tickets desde la rama rescatada; adaptado a CONFIG

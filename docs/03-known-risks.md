@@ -7,36 +7,37 @@ y `BLOQUEADO`.
 
 ## Resumen
 
-**H-171 — Entrega final de BALAM / Only Online: PARCIALMENTE RESUELTO (13/09/2026).**
-Trabajo autorizado y publicación completos. **Production ready: NO** bajo la DoD
-estricta por una causa pendiente de OWNER: **cuatro filas históricas UNKNOWN**.
-No quedan nuevas pruebas programadas para este cierre.
+**H-171 — Entrega final de BALAM / Only Online: RESUELTO en aptitud operativa (13/09/2026).**
+**Production ready: SÍ, en el alcance operativo aprobado.** Publicación del cierre
+final **EN CURSO**; OWNER autorizó los commits y las evidencias revisadas.
 Autoridades exclusivas: `David14081982/POS_Balam`, Supabase
 `telohdbvbvsfmwyriflz`, esquema `pos`, ADR-015.
 Siete controles inoperantes retirados y dos recortes responsive corregidos.
 **P0/P1 conocidos pendientes: 0/0; P2/P3 nuevos de H171 pendientes: 0/0.**
-Aceptación priorizada **4/4 casos distintos PASS**, compuestos de 3 casos de57a5
-y sesión nueva de04beb sobre el mismo f4d: dos ventas UI de9/9+9/9, refresh/relogin,
-contexto vacío, A/B/C y Only Online. La matriz H170 de22 escenarios API conserva su
-alcance anterior; 22 grupos de superficies no equivalen a22 jornadas UI certificadas.
-Limpieza histórica completa: **149 comerciales +317 técnicas,11/11 Auth ausentes**.
-Los cinco runs de entrega retiraron **35,20,20,28 y8 filas POS**, y sus cinco
-identidades Auth están ausentes. **Cero residuos nuevos de los manifiestos verificados**;
-cero QA global NO acreditado mientras las cuatro filas sigan sin clasificar.
-Inventario **973 productos/251 familias/3483 piezas**, venta `BG-260912-0001`,
-solicitud7054 e historia protegida intactos; contadores y revisiones sin rebobinar.
-Storage: cero bajas. H148 conserva historia necesaria para impedir replay.
-**PUBLICADO Y VERIFICADO:** commit `1dddd60494c7b24beb1574851bf06d040079b0f7`,
-workflow34746195058 SUCCESS. Ambos HTML f4d y sw.js públicos coincidieron byte a byte,
-HTTP200, el13/09 a07:57:34UTC; [producción](fixes/evidence/h171/production-verification.json).
-[Resultado final](fixes/evidence/h171/final-acceptance.json) y
-[última limpieza](fixes/evidence/h171/final-session-cleanup.json).
-Hardware físico no certificado; cuatro decisiones individuales detalladas en el informe.
+Aceptación priorizada **4/4 casos distintos PASS**, compuestos de tres casos de 57a5
+y la sesión nueva de 04beb sobre el mismo f4d: dos ventas UI de 9/9 + 9/9, refresh,
+relogin, contexto vacío, A/B/C y Only Online. H170 conserva 22 escenarios API PASS
+en 26 intentos; ni esa matriz ni los 22 grupos de superficies son 22 jornadas UI nuevas.
+Limpieza histórica: **149 comerciales + 317 técnicas, 11/11 Auth ausentes**.
+Los cinco runs de entrega retiraron **35, 20, 20, 28 y 8 filas POS**, y sus cinco
+identidades Auth están ausentes. **0 QA operativo activo y 0 fixtures pendientes**
+en el alcance revisado; se conserva la historia necesaria para impedir replay.
+OWNER autorizó retirar las cuatro filas inactivas: **4/4 eliminadas, 0 restantes**;
+**0 decisiones OWNER pendientes**. [Postcheck](fixes/evidence/h171/owner-four-post-delete.json):
+63 tablas y filas ajenas con hashes iguales; catálogo y Auth IDs iguales; revisión 894→896.
+Inventario **973 productos / 251 familias / 3,483 piezas**, venta `BG-260912-0001`,
+solicitud 7054 e historia protegida intactos; contadores y revisiones sin rebobinar.
+Storage: cero bajas. H148 conserva sus dos recuperaciones anti-replay.
+**PUBLICACIÓN PREVIA VERIFICADA:** commit `1dddd60494c7b24beb1574851bf06d040079b0f7`,
+workflow 34746195058 SUCCESS. Ambos HTML f4d y sw.js coincidieron byte a byte,
+HTTP 200, el 13/09 a las 07:57:34 UTC; [evidencia](fixes/evidence/h171/production-verification.json).
+[Dictamen final OWNER](fixes/evidence/h171/owner-final-readiness.json). La
+[aceptación previa](fixes/evidence/h171/final-acceptance.json) conserva su estado
+histórico anterior a la decisión OWNER; no se reescribe como un resultado nuevo.
+Hardware físico no certificado; límites detallados en el informe.
 **Commit técnico de producto:** `b6d5edd07d7768a499fd7db7edfb428d8544520a`.
-**Comprobadores y evidencia final:** `369756ab2ce906a485caaa6f13599569eb360ab3`.
-Los commits finales quedan locales: la revisión automática rechazó el push de
-evidencia operativa al repositorio público por falta de autorización explícita
-para ese contenido. El candidato publicado conserva su verificación.
+**Comprobadores y evidencia previa:** `369756ab2ce906a485caaa6f13599569eb360ab3`.
+**Retiro de cuatro filas y cierre documental H171: Pendiente de commit.**
 **Documento:** [BALAM FINAL READINESS](fixes/balam-final-readiness.md).
 
 

@@ -1,0 +1,20 @@
+{
+  "format": "balam-h171-owner-final-authorization-v1",
+  "at": "2026-09-13T12:48:45.377Z",
+  "projectRef": "telohdbvbvsfmwyriflz",
+  "ownerInstruction": "Elimina las cuatro filas preservadas, todas inactivas. Posteriormente publica los commits haz push y publica",
+  "targets": [
+    "cli-1789079431176-jyxi",
+    "cli-1789078624431-0fz3",
+    "cli-1789078938103-ams0",
+    "promo-1789079431430"
+  ],
+  "retirementScope": "EXACT_THREE_CLIENTS_AND_ONE_PROMOTION_WITH_HISTORICAL_REFERENCES_PRESERVED",
+  "retirementExecutedAndVerified": true,
+  "publishAuthorized": true,
+  "publicDestination": "https://github.com/David14081982/POS_Balam",
+  "branch": "main",
+  "publicationScope": "Previously reviewed final commits and operational evidence, followed by the evidence of the expressly requested four-row retirement and final publication",
+  "privateAuthorizationSha256": "b97246a46d1041a1f6cd65d26d5bffa31e6ae22f8937b0a48d6ad1daa7c3d22b",
+  "sqlSha256": "0d3d18812664bb0fa596412a4110f906d282296cedf34e0aaa669cb2bd2b1381"
+}

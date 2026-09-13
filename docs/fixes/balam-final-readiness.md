@@ -1,11 +1,11 @@
 # BALAM FINAL READINESS
 
 **Riesgo:** H-171. **Fecha:** 13/09/2026.
-**Estado:** PARCIALMENTE RESUELTO: trabajo autorizado y publicación completos; DoD pendiente de decisión OWNER.
+**Estado:** RESUELTO en aptitud operativa; publicación del cierre final EN CURSO.
 
 ## 1. Qué se hizo
 
-**Production ready: NO.** BALAM NO puede entregarse todavía bajo la DoD estricta por **una causa**: cuatro filas históricas siguen sin clasificación OWNER. Las comprobaciones operativas priorizadas terminaron; no quedan nuevas pruebas programadas para este cierre.
+**Production ready: SÍ, en el alcance operativo aprobado.** OWNER autorizó el retiro exacto de las cuatro filas inactivas y su verificación posterior confirma **4/4 eliminadas, 0 restantes**. No quedan decisiones OWNER ni nuevas pruebas programadas para este cierre. [Dictamen final](evidence/h171/owner-final-readiness.json).
 
 | Indicador | Resultado |
 |---|---|
@@ -16,7 +16,7 @@
 | Supabase authority / stock / sales persistence | **PASS** en las ejecuciones y contratos identificados abajo |
 | Permissions | **PASS**, evidencia real reutilizada de contrato sin cambios |
 | Refresh / relogin / A/B/C | **PASS**, incluido contexto nuevo vacío |
-| QA contamination | **0 residuos nuevos de los manifiestos verificados; 4 filas UNKNOWN retenidas. Cero global NO acreditado** |
+| QA contamination | **0 QA operativo activo y 0 fixtures pendientes** en los manifiestos revisados; historia necesaria anti-replay conservada |
 | Critical JS errors / dead blocking warnings | **0 errores JS observados; ningún aviso muerto bloqueante demostrado** en el alcance revisado |
 | Dead/inoperative functions removed | **7** |
 
@@ -70,7 +70,7 @@ El comprobador registra intenciones, respalda y retira sólo sus fixtures demost
 | Permisos | [Evidencia real reutilizada](evidence/h171/permission-evidence-reuse.json): AUTH, permisos, STORE, DATA, SCREENS, Edge y migraciones sin cambios; no se atribuye cobertura nueva de todos los roles. |
 | Jornada real `57a5…` | Tres casos PASS: A/B/C, dos ventas UI de **9/9 + 9/9 pasos** y bloqueo/reconexión Only Online; [casos completados](evidence/h171/final-journey-completed-cases.json). |
 | Sesión nueva `04beb…` | Bootstrap y contexto C vacío **2/2 PASS**, refresh B y comparación A/B/C, con limpieza completa. |
-| Aceptación del cierre | **4 nombres distintos PASS: 3 + 1**, sin duplicar bootstrap; [aceptación](evidence/h171/final-acceptance.json). |
+| Aceptación funcional del cierre | **4 nombres distintos PASS: 3 + 1**, sin duplicar bootstrap; [corte histórico previo a la decisión OWNER](evidence/h171/final-acceptance.json). |
 
 Las dos ventas se completaron primero en C y después en A: login, variante,
 carrito, cobro validado, vendedor, ticket, stock, consulta y refresh.
@@ -95,27 +95,29 @@ SHA-256 de ambos HTML: `f4d73fa350d4187dade1a55c999dc203b405f4c20d95d9138aaf1b2e
 [Producción BALAM](https://david14081982.github.io/POS_Balam/).
 El cierre posterior modifica comprobadores y documentación; conserva estos mismos bytes de cliente.
 
-Los dos commits finales permanecen locales. La revisión automática rechazó su
-push al repositorio público por incluir evidencia operativa cuya exposición no
-considera expresamente autorizada. Publicar esa evidencia requiere autorización
-OWNER; el candidato ya desplegado y su verificación no cambiaron.
+OWNER autorizó expresamente publicar los commits y las evidencias revisadas.
+La publicación del cierre final está **EN CURSO**, pendiente del push, CI y la
+verificación pública del commit final. El cliente conserva los mismos bytes f4d;
+la publicación anterior y su evidencia permanecen válidas para aquel commit.
 
-## 5. Riesgos residuales y decisión OWNER
+## 5. Riesgos residuales y alcance aprobado
 
-Estas cuatro filas conservan su baja lógica y su hash. Sus nombres o dispositivos
-sugieren QA, pero no demuestran por sí solos su identidad. **No fueron borradas.**
+OWNER resolvió las cuatro decisiones y autorizó retirar únicamente estas filas
+inactivas. La transacción y su postcheck confirman **4/4 retiradas y 0 restantes**.
 
-| Fila | Nombre | Decisión pendiente |
+| Fila | Nombre | Resultado |
 |---|---|---|
-| Cliente `cli-1789079431176-jyxi` | QA editado | Clasificar como historia a conservar o autorizar retiro exacto. |
-| Cliente `cli-1789078624431-0fz3` | qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c recovered | Clasificar como historia a conservar o autorizar retiro exacto. |
-| Cliente `cli-1789078938103-ams0` | qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c reactivated | Clasificar como historia a conservar o autorizar retiro exacto. |
-| Promoción `promo-1789079431430` | qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c | Clasificar como historia a conservar o autorizar retiro exacto. |
+| Cliente `cli-1789079431176-jyxi` | QA editado | Retirada por autorización OWNER; ausencia verificada. |
+| Cliente `cli-1789078624431-0fz3` | qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c recovered | Retirada por autorización OWNER; ausencia verificada. |
+| Cliente `cli-1789078938103-ams0` | qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c reactivated | Retirada por autorización OWNER; ausencia verificada. |
+| Promoción `promo-1789079431430` | qa-h148-b766e373-5279-4e4a-818e-0934a4f8757c | Retirada por autorización OWNER; ausencia verificada. |
 
-Los clientes aparecen en respaldos y recibos históricos protegidos. El
-[detalle individual](evidence/h171/remaining-held-decisions.json) conserva las referencias
-y la falta de prueba inmutable de creación. Mantener una fila por autorización
-no demuestra que sea ajena a QA; por eso la DoD global permanece pendiente.
+[Retiro exacto y postcheck](evidence/h171/owner-four-post-delete.json): 63 tablas y
+las filas ajenas conservaron sus hashes; catálogo y Auth IDs permanecieron iguales.
+La revisión avanzó legítimamente de **894 a 896**, sin rebobinar. Decisiones OWNER pendientes: **0**.
+El [detalle previo](evidence/h171/remaining-held-decisions.json) y la aceptación
+anterior con `productionReady: false` permanecen como cortes históricos. Los
+respaldos, recibos y referencias históricas protegidos no se eliminaron.
 
 Se conservan las recuperaciones H148 B `c2e16d05-cd08-44a2-8279-43804a7d23a9`
 y C `07134617-ac05-4c2e-afad-5def238bd3c5`: sus listas de 10 y 17 descartes
@@ -134,4 +136,5 @@ Estos límites no se convierten en defectos P2/P3 no reproducidos.
 - Registro inicial: `8b692acc6e584c081491668cacb542fa1ab3b0b0`.
 - Candidato publicado: `1dddd60494c7b24beb1574851bf06d040079b0f7`.
 - Comprobadores y evidencia final: `369756ab2ce906a485caaa6f13599569eb360ab3`.
-- El registro documental posterior incorpora el hash técnico; no publica otro cliente.
+- Registro documental previo: `aa7251c`.
+- Retiro de las cuatro filas y cierre documental H171: **Pendiente de commit**.
