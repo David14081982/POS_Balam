@@ -15,6 +15,7 @@ sesión de chat.
 
 - [h171-circulos-ornamento-pos.md](h171-circulos-ornamento-pos.md) — misma H171:
   recuperación visual de círculos con sombra encima del precio en POS.
+  PUBLICADO Y VERIFICADO: `f38f50d`, workflow 34784122632 SUCCESS.
 
 - [h171-etiquetas-a-peticion.md](h171-etiquetas-a-peticion.md) — misma H171,
   corrección focal de Etiquetas: reutiliza imágenes de códigos certificados,

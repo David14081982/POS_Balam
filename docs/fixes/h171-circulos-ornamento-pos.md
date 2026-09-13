@@ -1,9 +1,9 @@
 # H171 — Círculos de ornamento sobre el precio en POS
 
 **Riesgo:** H-171, presentación de las tarjetas de Punto de venta.
-**Estado:** RESUELTO LOCALMENTE; PUBLICACIÓN PENDIENTE
+**Estado:** RESUELTO Y PUBLICADO
 **Fecha:** 13/09/2026
-**Commit:** Pendiente de commit
+**Commit:** `f38f50d98e8701560c76a956e556832201fad864`
 
 ## Problema y reproducción
 
@@ -54,8 +54,15 @@ Fixtures exclusivamente sintéticos en navegador aislado, red comercial bloquead
 ## Riesgo residual y pendientes
 
 No se modifican asignaciones de color del inventario; se representa su dato
-vigente. Sin riesgo funcional nuevo conocido; pendiente commit y publicación
-verificable. No se declara certificación comercial remota por una prueba visual.
+vigente. Sin riesgo funcional nuevo conocido ni pendientes de publicación. No se declara certificación comercial remota por una prueba visual.
+
+## Publicación
+
+OWNER autorizó expresamente el commit, capturas sintéticas y constancia.
+Workflow [34784122632](https://github.com/David14081982/POS_Balam/actions/runs/34784122632) SUCCESS: regresión y deploy.
+Los tres archivos públicos coinciden byte a byte con el commit probado.
+Verificación: 2026-09-13T21:38:50.148Z. HTML SHA256: `d516c6961df60216d3ce2ddcb7e42105698af5afb81d9e7fb76bd4f3ea9294be`.
+[Constancia](evidence/h171/pos-ornaments/production.json). Sin escrituras comerciales.
 
 ## Referencias
 
