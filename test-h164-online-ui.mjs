@@ -122,7 +122,9 @@ try {
   });
   await scenario('Reportes: reimpresión conserva documento histórico confirmado',async()=>{
     const fixtureState=await page.evaluate(()=>{
-      const D=window.DATA,p=D.products[0],folio='H164-HIST-0001',fecha=new Date().toISOString().slice(0,10)+' 12:00';
+      const D=window.DATA,p=D.products[0],folio='H164-HIST-0001',today=new Date();
+      // Match the report's local calendar day, including the hours after UTC midnight.
+      const fecha=[today.getFullYear(),String(today.getMonth()+1).padStart(2,'0'),String(today.getDate()).padStart(2,'0')].join('-')+' 12:00';
       const line={lineId:'16400000-0000-4000-8000-000000000088',productId:p.id,sku:p.sku,nombre:'Nombre histórico confirmado',talla:p.sizeCode,qty:1,precio:232,precioOrig:232,precioBase:232,promos:[]};
       const sale={folio,fecha,cliente:'Cliente histórico',vendedor:'Vendedor histórico',vendedores:[],estado:'Pagado',metodo:'Efectivo',items:1,subtotal:200,iva:32,ivaPct:16,ivaIncluded:true,total:232,anticipo:232,saldo:0,pagoEfectivo:232,pagoOtro:0,descuento:0,descuentoAdicional:0,comisiones:[],lineas:[line],_operationId:'16400000-0000-4000-8000-000000000077',_stockReserved:true,
         receiptSnapshot:{version:1,store:{name:'Tienda histórica QA',footer:'Conservar documento original'},sellerName:'Vendedor histórico',lines:[{lineId:line.lineId,productId:p.id,sku:p.sku,name:line.nombre,sizeCode:p.sizeCode,sizeLabel:'Talla histórica 40',colorLabel:'Color histórico',ornamentColors:[],attributes:[]}]}};
@@ -154,7 +156,8 @@ try {
       window.AUTH.init=()=>{};window.AUTH.defaultScreen=()=> 'pos';window.AUTH.canAccess=id=>['pos','clientes'].includes(id);
       window.AUTH.requireAccess=window.AUTH.canAccess;
       window.STORE.setSession=async()=>({ok:true});window.STORE.init=async()=>({ok:true});
-      window.__h164Online={ready:true,connection:'online',message:'Todo actualizado'};
+      window.__h164Online={ready:true,connection:'online',hasUnresolvedRequests:true,
+        pendingRequests:[{requestId:'17000000-0000-4000-8000-000000000001',kind:'account'}]};
       window.STORE.syncStatus=()=>window.__h164Online;
       window.__h164Mounts=0;window.__h164Unmounts=0;
       window.POSScreen=function Draft(){
@@ -166,6 +169,8 @@ try {
       window.__h164Root.render(React.createElement(window.App));
     });
     await page.getByTestId('retained-draft').fill('Captura sin efectos');
+    assert.match(await page.getByTestId('online-status').textContent(),/Gestión de usuarios/);
+    assert.equal(await page.getByTestId('online-gate').count(),0,'A pending account does not block startup with a confirmed snapshot');
     const original=await page.getByTestId('retained-draft').elementHandle();
     const mountsBefore=await page.evaluate(()=>[window.__h164Mounts,window.__h164Unmounts]);
     assert.deepEqual(mountsBefore,[1,0]);

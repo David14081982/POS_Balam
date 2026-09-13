@@ -152,6 +152,15 @@ try {
     await retry.props.onClick();
     assert.equal(app.initCalls, 1);
   });
+  await scenario('Confirmed snapshot opens the first shell despite pending account receipt H170', async () => {
+    const app = await fixture();
+    app.setStatus({ ready: true, connection: 'online', hasUnresolvedRequests: true,
+      pendingRequests: [{requestId:'17000000-0000-4000-8000-000000000001',kind:'account'}] });
+    const tree = app.render();
+    assert.equal(gate(tree), undefined, 'A confirmed snapshot must not be hidden by an unresolved account');
+    assert.ok(nodes(tree).some(node => node.props.key === 'shell'));
+    assert.match(text(banner(tree)), /Gestión de usuarios/);
+  });
   await scenario('Changing user discards the prior shell while the new snapshot loads', async () => {
     const app = await fixture();
     app.setStatus({ ready: true, connection: 'online' });

@@ -168,6 +168,9 @@
     }
     const confirming = online?.hasUnresolvedRequests === true
       || (online?.errors || []).some(error => error.code === 'ONLINE_RESULT_UNKNOWN');
+    const pendingRequests = online?.pendingRequests || [];
+    const confirmationMessage = pendingRequests.length && pendingRequests.every(ref => ref.kind === 'account')
+      ? 'Gestión de usuarios pendiente de confirmación.' : CONFIRMING_MESSAGE;
     const isAdmin = window.AUTH.isAdmin();
     const canAccess = id => window.AUTH.canAccess(id);
     const navigation = window.SCREENS.navigation();
@@ -215,7 +218,7 @@
     // La sesión y el acceso preceden a disponibilidad comercial: un rechazo no es falta de Internet.
     if (REQUIRE_AUTH) {
       if (!authReady) {
-        if (hasSession) return startupGate(confirming ? CONFIRMING_MESSAGE : STARTUP_MESSAGE, true);
+        if (hasSession) return startupGate(confirming ? confirmationMessage : STARTUP_MESSAGE, true);
         return h('div', { className: 'h-full grid place-items-center', style: { background: '#131B2E' } },
           h('div', { className: 'text-sm', style: { color: '#5D637B' } }, 'Cargando…'));
       }
@@ -242,13 +245,13 @@
     let statusMessage = null;
     if (hasSession && (confirming || accessUnavailable || !online?.ready || startupFailure || startupBusy)) {
       const working = startupBusy || online?.adoption?.state === 'working' || online?.connection === 'checking';
-      const message = confirming ? CONFIRMING_MESSAGE : working ? STARTUP_MESSAGE
+      const message = confirming ? confirmationMessage : working ? STARTUP_MESSAGE
         : accessState === 'remote_unavailable' ? OFFLINE_MESSAGE
           : accessUnavailable ? ACCESS_FAILED
             : startupFailure || online?.message || STARTUP_FAILED;
       // El arranque y la autorización preceden a los datos. Una espera comercial
       // posterior sólo informa: no oculta, desmonta ni vuelve inerte el formulario.
-      if (accessUnavailable || !lastShell.current) return startupGate(message, working || confirming);
+      if (accessUnavailable || (!lastShell.current && !online?.ready)) return startupGate(message, working || confirming);
       statusMessage = online?.busy ? 'Guardando…' : message;
     }
     const navCollapsed = collapsed && !mobileNavOpen;

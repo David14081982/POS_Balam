@@ -31,6 +31,7 @@
   function syncStatus() {
     return { ready, synchronized: ready, connection, lastSuccess, build: BUILD,
       busy: writeInFlight, reconciling: !!refreshPromise, hasUnresolvedRequests: hasUnresolvedRequests(),
+      pendingRequests: pendingRequestSummaries(),
       message: failure?.message || (ready ? 'Todo actualizado' : UPDATING),
       adoption: { ...adoption }, legacyReviewCount, errors: failure ? [failure] : [] };
   }
@@ -60,6 +61,11 @@
     try {
       return references(identity).length > 0;
     } catch (_) { return true; }
+  }
+  function pendingRequestSummaries() {
+    if (!identity) return [];
+    try { return references(identity).map(({ requestId, kind }) => ({ requestId, kind })); }
+    catch (_) { return []; } // La bandera de incertidumbre sigue cerrada ante referencias ilegibles.
   }
   function adoptionStage(stage) {
     adoption = { ...adoption, state: 'working', stage }; emit();

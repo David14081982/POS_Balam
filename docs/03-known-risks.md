@@ -7728,3 +7728,30 @@ Matriz: `docs/fixes/evidence/h169-live-matrix.json`; hashes y alcance en el docu
 CI 34726105287 aprobó regresión pero no inició operaciones live por token ausente;
 se completó localmente con sesión Supabase autorizada. Ese secreto en GitHub
 sigue pendiente para futuras ejecuciones allí; no se cambió el cliente publicado.
+
+## H-170 — Arranque bloqueado por una gestión de usuarios pendiente
+
+**Estado:** RESUELTO y certificado A/B/C; publicación pendiente.
+**Fecha:** 12/09/2026. **Commit:** Pendiente de commit.
+**Problema:** H-169 conserva la pantalla de arranque cuando hay una referencia
+pendiente aunque STORE ya confirmó permisos, adopción y snapshot (`ready=true`).
+**Evidencia remota:** solicitud de eliminación `70549527-4867-4342-94d2-38e770b0f2a9`,
+estado `profile_confirmed`: perfil QA antiguo inactivo, Auth aún existente.
+Ninguna solicitud comercial en estado executing. Consulta sólo lectura.
+**Alcance:** permitir montar la aplicación con snapshot confirmado y mostrar
+el tipo de gestión pendiente; conservar recibos, permisos y barreras de escritura.
+No forzar el borrado Auth ni dar por resuelta una solicitud aún no terminal.
+**Criterio:** primer arranque con snapshot válido y referencia de cuenta incierta
+entra al shell; sin snapshot o autorización sigue protegido.
+**Solución:** primera montura permitida con `ready=true`; aviso específico de
+gestión de usuarios. STORE sólo añade un resumen de referencias del actor actual.
+**Pruebas:** previo 0/1; arranque 8/8, adopción 11/11, transporte 13/13,
+cuentas 1/1, UI 6/6, PWA 2/2, guardas del certificador 10/10; build/arquitectura OK.
+**A/B/C real:** 22 escenarios distintos aprobados; 4 intentos interrumpidos
+conservados y reanudados, 5 sesiones. 1,664 filas anteriores en 18 tablas
+preservadas. 5 perfiles QA inactivos, 2 Auth bloqueados y 3 instalaciones retiradas.
+**Artefacto:** `ae53f13541729ecb3fff768d4a974a44fd5fe790f7d7961d6fde1dd28801665d`.
+**Residual:** eliminación Auth original aún pendiente; hardware/impresora no
+certificados. Los timeouts de lectura observados no se declaran corregidos.
+**Evidencia:** `docs/fixes/evidence/h170-live-matrix.json`; detalle de reanudaciones,
+hashes y alcance en `docs/fixes/arranque-con-cuenta-pendiente-h170.md`.

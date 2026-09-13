@@ -139,6 +139,25 @@ async function replaceRejectedRaceCheckpoint(key,checkpoint){
 }
 async function once(label, action, recover) {
   const key=(currentCase||'bootstrap')+' / '+label;let existing=fixtures.checkpoints[key];
+  if(currentCase==='Sale / payment / commission / lost response after COMMIT'
+      &&label==='One sale with response loss'&&existing&&!existing.complete&&existing.requestIds?.length){
+    // A prior read timeout may interrupt the harness after a real sale committed.
+    // Reconcile and retain it. At most one NEW QA attempt is allowed; never replay its ID.
+    assert.equal((fixtures.confirmedTransportInterruptions||[]).length,0,'Only one reconciled fresh QA attempt is allowed');
+    const receipts=check(await db.from('online_requests').select('*').in('request_id',existing.requestIds));
+    assert.equal(receipts.length,existing.requestIds.length);
+    for(const row of receipts){assert.equal(row.actor_id,userId);assert.equal(row.state,'confirmed');assert.equal(row.response.ok,true);assert.ok(['folio','sale'].includes(row.command_kind));}
+    const sales=receipts.filter(row=>row.command_kind==='sale');assert.equal(sales.length,1);
+    const sale=check(await db.from('sales').select('*').eq('operation_id',sales[0].request_id).single());
+    assert.ok(fixtures.sales.includes(sale.folio));assert.equal(sale.cliente_id,fixtures.clients[0]);assert.equal(sale.estado,'Pagado');
+    const lines=check(await db.from('sale_items').select('*').eq('folio',sale.folio));
+    assert.equal(lines.length,1);assert.equal(lines[0].product_id,fixtures.products[0]);assert.equal(Number(lines[0].qty),3);
+    const payments=check(await db.from('sale_payments').select('*').eq('folio',sale.folio));
+    assert.equal(payments.length,1);assert.equal(Number(payments[0].monto),Number(sale.total));
+    fixtures.confirmedTransportInterruptions=[{key,checkpoint:structuredClone(existing),receipts,sale,lines,payments,verifiedAt:new Date().toISOString(),replayed:false}];save();
+    existing={startedAt:new Date().toISOString(),requestIds:[],freshQaAttemptAfter:receipts.map(row=>row.request_id)};
+    fixtures.checkpoints[key]=existing;save();
+  }
   if(retryRejectedCase===currentCase&&label==='Concurrent request outcomes'&&existing?.complete)existing=await replaceRejectedRaceCheckpoint(key,existing);
   // Resume this sale preflight only after verifying its folio-only receipts.
   // Existing reservations remain immutable; no sale/payment is replayed.
@@ -418,10 +437,48 @@ try {
     const login = await page.evaluate(({email,password}) => window.AUTH.login(email,password), {email,password});
     assert.equal(login.ok, true, 'independent authenticated login ' + name); await ready(terminal);
     // Realtime remains disabled for the entire matrix: refresh must recover every domain.
-    if(!build.includes('h166')) await page.evaluate(async () => (await window.STORE.ensureClient()).removeAllChannels());
+    if(!build.includes('h166') || result.cases.some(row=>row.name==='H166 conditional reads and real Realtime invalidation'&&row.pass))
+      await page.evaluate(async () => (await window.STORE.ensureClient()).removeAllChannels());
   }
   const [A,B,C] = terminals, [sourceId,targetId,lastId,deleteId,editId,reclassId,reclassTargetId] = fixtures.products;
   await verify('A/B/C bootstrap from authoritative snapshot', () => converge());
+  await verify('H170 cold startup with an unresolved account remains usable', async () => {
+    fixtures.startupAccountRequestId ||= op();save();
+    const requestId=fixtures.startupAccountRequestId;
+    const payload={action:'create',email:prefix+'-startup@example.test',nombre:prefix+' Startup',role:'vendedor'};
+    // Exact QA fixture: a real server preparation abandoned before any Auth write.
+    // Resolution must remain uncertain; neither the browser nor this test replays it.
+    await once('Prepare abandoned QA account',()=>db.rpc('prepare_online_account',{
+      p_request_id:requestId,p_actor_id:userId,p_payload:payload,p_payload_hash:digest(payload),
+    }).then(check));
+    const reference={requestId,userId,kind:'account',fingerprint:digest(payload)};
+    const key='balam_online_request_v1:'+requestId;
+    await once('Three independent cold starts retain the pending reference',async()=>{
+      for(const terminal of terminals){
+        await terminal.page.evaluate(({key,reference})=>localStorage.setItem(key,JSON.stringify(reference)),{key,reference});
+        await terminal.page.reload({waitUntil:'domcontentloaded'});await ready(terminal);
+        const pending=await terminal.page.evaluate(()=>window.STORE.syncStatus());
+        assert.equal(pending.hasUnresolvedRequests,true);
+        assert.ok(pending.pendingRequests.some(ref=>ref.requestId===requestId&&ref.kind==='account'));
+        await terminal.page.getByTestId('online-status').waitFor({state:'visible'});
+        assert.equal(await terminal.page.getByTestId('online-gate').count(),0);
+        assert.match(await terminal.page.getByTestId('online-status').textContent(),/Gestión de usuarios/);
+        await terminal.page.getByTestId('nav-pos').click();
+        assert.equal(await terminal.page.evaluate(key=>localStorage.getItem(key),key),JSON.stringify(reference));
+        assert.equal(check(await db.from('online_account_requests').select('state,target_user_id').eq('request_id',requestId).single()).state,'prepared');
+      }
+      return {terminals:['A','B','C'],referencePreserved:true,interactive:true};
+    });
+    await once('Retire the unexecuted preparation without deleting history',()=>db.rpc('advance_online_account',{
+      p_request_id:requestId,p_actor_id:userId,p_state:'rejected',p_target_user_id:null,
+      p_result:{ok:false,error:'QA preparation abandoned before any Auth write'},
+    }).then(check));
+    const domains=await converge();
+    for(const terminal of terminals)assert.equal(await terminal.page.evaluate(key=>localStorage.getItem(key),key),null);
+    const receipt=check(await db.from('online_account_requests').select('state,target_user_id').eq('request_id',requestId).single());
+    assert.equal(receipt.state,'rejected');assert.equal(receipt.target_user_id,null);
+    return {requestId,terminals:['A','B','C'],coldStarts:3,authWrites:0,terminalState:receipt.state,domains};
+  });
   await verify('Create V2 products with barcode V3', async () => {
     await once('Create seven exact references',()=>A.page.evaluate(async ({ids,prefix}) => {
       const D=window.DATA,C=window.CONFIG,meta=C.allCatalogMeta(),modelKind=C.modeloKind();
@@ -554,7 +611,7 @@ try {
       assert.equal(await A.page.getByTestId('online-status-retry').isEnabled(),true,'Status query remains available');
     }
     finally { await A.context.unroute(pattern,lose); await A.context.unroute(resolvePattern,holdResolve); }
-    await A.page.evaluate(() => window.STORE.refresh()); await ready(A);
+    await converge([A]); await ready(A); // Existing bounded read retries; no command retry.
     const answer=await purchase;
     if(answer.value?.folio){fixtures.primarySaleFolio=answer.value.folio;save();}
     return {operationId,before,committed,resolverCalls,answer:{value:answer.value,error:answer.error?.message}};
@@ -663,6 +720,7 @@ try {
   result.certified=true; result.finishedAt=new Date().toISOString();
 } catch(error) { if(!error.completedMatrix){result.failure=error.message; process.exitCode=1;} }
 finally {
+  result.finalCertifierSha256=digest(readFileSync(import.meta.filename));
   result.fixturePolicy='Business QA history retained; no replay, no Punto Cero, no delete of business rows. Exact identities in fixtures.json.';
   if(baseline&&!result.certified)result.preservation='Incomplete run: retained fixtures and account for exact reconciliation; do not clean by prefix.';
   if(baseline&&result.certified)result.preservation='All original baseline rows verified unchanged; exact QA history retained.';

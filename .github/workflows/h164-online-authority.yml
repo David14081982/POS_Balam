@@ -40,6 +40,7 @@ jobs:
       - run: npm run test:online:transport
       - run: npm run test:online:adoption
       - run: npm run test:online:startup
+      - run: node test-h170-certifier-recovery.mjs
       - run: npm run test:online:data
       - run: npm run test:h166:projections
       - run: npm run test:h166:transport

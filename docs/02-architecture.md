@@ -694,6 +694,9 @@ una franja dentro del contenido, con consulta de estado; no sustituye la interfa
 STORE conserva las restricciones de escritura hasta confirmar el resultado y
 la proyección remota. El arranque sin datos y la autorización pendiente/rechazada
 siguen precediendo al acceso; cambiar de usuario descarta la pantalla anterior.
+H-170 permite la primera montura con `ready=true` aunque subsista una referencia
+de cuenta incierta. `pendingRequests` resume únicamente tipo e identidad del
+actor actual; el aviso de usuarios no confirma ni reenvía la operación pendiente.
 
 ## Supabase
 

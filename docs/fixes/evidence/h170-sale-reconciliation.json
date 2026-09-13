@@ -1,0 +1,19 @@
+﻿{
+    "run":  "8a89fd93-552a-489d-ae6b-e0afabf899e7",
+    "verifiedAt":  "2026-09-13T00:29:36.970Z",
+    "originalRequestIds":  [
+                               "a3a52802-5daf-53e2-89a8-25eda1d2924f",
+                               "3cb959ec-ca9f-4e52-b83e-6d829171634e"
+                           ],
+    "originalOperationId":  "3cb959ec-ca9f-4e52-b83e-6d829171634e",
+    "originalFolio":  "BG-260912-0008",
+    "originalPaymentCount":  1,
+    "originalTotal":  347,
+    "originalQuantity":  3,
+    "replayed":  false,
+    "freshQaRequestIds":  [
+                              "3ec9543d-e353-526e-8dc7-31f1285c9bcf",
+                              "c652df23-8a36-45da-9287-91af1647c94b"
+                          ],
+    "freshQaCompleted":  true
+}

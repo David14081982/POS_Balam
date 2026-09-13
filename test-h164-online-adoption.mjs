@@ -38,7 +38,7 @@ function fixture(options = {}) {
   };
   const navigator = {onLine:true};
   vm.runInNewContext(source,{window,navigator,localStorage,indexedDB:options.indexedDB,crypto:webcrypto,Headers,Request,
-    TextEncoder,URL,Blob,fetch,performance,AbortSignal,queueMicrotask,console,setInterval(){},setTimeout,clearTimeout,
+    TextEncoder,URL,Blob,fetch:options.fetch || fetch,performance,AbortSignal,queueMicrotask,console,setInterval(){},setTimeout,clearTimeout,
     document:{hidden:false,addEventListener(){}},CustomEvent:class{constructor(type,init){this.type=type;this.detail=init?.detail;}}});
   return {S:window.STORE,storage,calls,states,handlers,navigator,get projected(){return projected;}};
 }
@@ -50,8 +50,33 @@ const cases = {
     await f.S.setSession({});
     assert.equal(f.S.syncStatus().ready,true);
     assert.equal(f.S.syncStatus().hasUnresolvedRequests,false,'Only this actor owns the live confirmation gate');
+    assert.deepEqual(JSON.parse(JSON.stringify(f.S.syncStatus().pendingRequests)),[],'Do not expose another actor receipt');
     assert.equal(f.storage.get(key),original,'Preserve the other actor receipt without resolving or deleting it');
     assert.equal(f.calls.some(c=>c.name==='resolve_online_request'||/execute|commit/.test(c.name)),false);
+  },
+  async pending_account_startup_h170() {
+    const requestId='17000000-0000-4000-8000-000000000001',key='balam_online_request_v1:'+requestId;
+    const original=JSON.stringify({requestId,userId:'actor',kind:'account',fingerprint:'technical-only'});
+    let complete=false,queries=0;
+    const f=fixture({storage:{[key]:original},fetch:async(url,options)=>{
+      assert.match(url,/\/functions\/v1\/admin-users$/);
+      assert.deepEqual(JSON.parse(options.body),{action:'resolve',requestId,expectedActorId:'actor'});
+      queries++;
+      return new Response(JSON.stringify(complete?{ok:true,result:{id:'account'}}:
+        {ok:false,uncertain:true,state:'profile_confirmed'}),{status:complete?200:202});
+    }});
+    await f.S.setSession({});
+    assert.equal(f.S.syncStatus().ready,true,'Pending account does not invalidate a confirmed snapshot');
+    assert.equal(f.S.syncStatus().hasUnresolvedRequests,true);
+    assert.deepEqual(JSON.parse(JSON.stringify(f.S.syncStatus().pendingRequests)),[{requestId,kind:'account'}]);
+    assert.equal(f.storage.get(key),original,'Preserve the unresolved receipt exactly');
+    await f.S.init();
+    assert.equal(f.S.syncStatus().ready,true);assert.equal(f.storage.get(key),original);
+    complete=true;await f.S.refresh();
+    assert.equal(f.S.syncStatus().hasUnresolvedRequests,false);assert.equal(f.storage.has(key),false);
+    assert.deepEqual(JSON.parse(JSON.stringify(f.S.syncStatus().pendingRequests)),[]);
+    assert.equal(queries,3);
+    assert.equal(f.calls.some(c=>/execute|commit/.test(c.name)),false,'Startup only resolves, never resends a command');
   },
   async realtime() {
     const f=fixture({realtimeFailure:true});await f.S.setSession({});

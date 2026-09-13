@@ -1,0 +1,17 @@
+{
+  "scope": "Actual AUTH/App startup gates; isolated memory only",
+  "sourceSha256": {
+    "auth": "42ad32b44bec5201f68e8b6358641e3c2486d8a58218f457b2baaa17d9a9b8c2",
+    "app": "5a31d308dd50e508619caa114f031db51888a8a0c1a8dbaf377112ec57714625"
+  },
+  "cases": [
+    {
+      "name": "Confirmed snapshot opens the first shell despite pending account receipt H170",
+      "ok": false,
+      "error": "A confirmed snapshot must not be hidden by an unresolved account\n+ actual - expected\n\n+ {\n+   children: [\n+     {\n+       children: [\n+         {\n+           children: [\n+             'Confirmación pendiente. El resultado se actualizará al recibir respuesta.'\n+           ],\n+           props: {\n+             className: 'text-lg',\n+             key: 'message'\n+           },\n+           type: 'p'\n+         },\n+         {\n+           children: [\n+             'Actualizar ahora'\n+           ],\n+           props: {\n+             'data-testid': 'online-gate-retry',\n+             className: 'min-h-12 rounded-lg px-6 py-3 bg-primary text-on-primary',\n+             disabled: undefined,\n+             key: 'update',\n+             onClick: [AsyncFunction: retryStartup]\n+           },\n+           type: 'button'\n+         }\n+       ],\n+       props: {\n+         className: 'w-full max-w-md text-center space-y-6'\n+       },\n+       type: 'div'\n+     }\n+   ],\n+   props: {\n+     'aria-live': 'polite',\n+     'data-testid': 'online-gate',\n+     className: 'min-h-screen flex items-center justify-center p-6 bg-surface text-on-surface',\n+     key: 'online-gate',\n+     role: 'status'\n+   },\n+   type: 'main'\n+ }\n- undefined\n"
+    }
+  ],
+  "networkRequests": 0,
+  "commercialWrites": 0,
+  "failure": "A confirmed snapshot must not be hidden by an unresolved account\n+ actual - expected\n\n+ {\n+   children: [\n+     {\n+       children: [\n+         {\n+           children: [\n+             'Confirmación pendiente. El resultado se actualizará al recibir respuesta.'\n+           ],\n+           props: {\n+             className: 'text-lg',\n+             key: 'message'\n+           },\n+           type: 'p'\n+         },\n+         {\n+           children: [\n+             'Actualizar ahora'\n+           ],\n+           props: {\n+             'data-testid': 'online-gate-retry',\n+             className: 'min-h-12 rounded-lg px-6 py-3 bg-primary text-on-primary',\n+             disabled: undefined,\n+             key: 'update',\n+             onClick: [AsyncFunction: retryStartup]\n+           },\n+           type: 'button'\n+         }\n+       ],\n+       props: {\n+         className: 'w-full max-w-md text-center space-y-6'\n+       },\n+       type: 'div'\n+     }\n+   ],\n+   props: {\n+     'aria-live': 'polite',\n+     'data-testid': 'online-gate',\n+     className: 'min-h-screen flex items-center justify-center p-6 bg-surface text-on-surface',\n+     key: 'online-gate',\n+     role: 'status'\n+   },\n+   type: 'main'\n+ }\n- undefined\n"
+}

@@ -1,0 +1,43 @@
+{
+  "scope": "Actual AUTH/App startup gates; isolated memory only",
+  "sourceSha256": {
+    "auth": "42ad32b44bec5201f68e8b6358641e3c2486d8a58218f457b2baaa17d9a9b8c2",
+    "app": "0756da812de68d65727504edd0b536d8c5173de0e6165818659a12bc3a6cbd7c"
+  },
+  "cases": [
+    {
+      "name": "Inactive account is not hidden by the commercial offline gate",
+      "ok": true
+    },
+    {
+      "name": "Permission rejection blocks stale readiness and its retry is observed",
+      "ok": true
+    },
+    {
+      "name": "Actual network failure has the requested offline message",
+      "ok": true
+    },
+    {
+      "name": "Adoption and permission refresh preserve the shell; completion is announced once",
+      "ok": true
+    },
+    {
+      "name": "Uncertain operation keeps its existing form and confirmation message",
+      "ok": true
+    },
+    {
+      "name": "Pending confirmation at first load permits a status query without exposing a shell",
+      "ok": true
+    },
+    {
+      "name": "Confirmed snapshot opens the first shell despite pending account receipt H170",
+      "ok": true
+    },
+    {
+      "name": "Changing user discards the prior shell while the new snapshot loads",
+      "ok": true
+    }
+  ],
+  "networkRequests": 0,
+  "commercialWrites": 0
+}
