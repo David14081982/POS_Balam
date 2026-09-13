@@ -19,13 +19,19 @@ import { createLiveCleanupLifecycle } from './h171-live-cleanup-lifecycle.mjs';
 import { reopenFreshTerminal } from './qa-h171-session-delivery.mjs';
 
 const liveScope=process.env.BALAM_LIVE_SCOPE||'final-journey';
-assert.ok(['historical-matrix','final-journey'].includes(liveScope),'UNKNOWN_LIVE_SCOPE');
+assert.ok(['historical-matrix','final-journey','session-delivery'].includes(liveScope),'UNKNOWN_LIVE_SCOPE');
 const finalJourneyCases=new Set([
   'A/B/C bootstrap from authoritative snapshot',
   'Core UI journey on C then B/A compare authoritative state',
   'No Internet blocks operation, stock, success, pending; reconnect reads authority',
   'Reload and clean browser context rebuild only from Supabase',
 ]);
+const sessionDeliveryCases=new Set([
+  'A/B/C bootstrap from authoritative snapshot',
+  'Reload and clean browser context rebuild only from Supabase',
+]);
+const selectedCases=liveScope==='historical-matrix'?null:
+  liveScope==='session-delivery'?sessionDeliveryCases:finalJourneyCases;
 
 const preflightOnly=process.env.BALAM_LIVE_PREFLIGHT_ONLY==='1';
 if (process.env.BALAM_ONLINE_LIVE !== '1' && !preflightOnly) {
@@ -300,7 +306,7 @@ async function once(label, action, recover) {
   finally{currentStep=previous;}
 }
 async function verify(name, action) {
-  if(liveScope==='final-journey'&&!finalJourneyCases.has(name)){
+  if(selectedCases&&!selectedCases.has(name)){
     result.excludedCases ||= [];result.excludedCases.push(name);return;
   }
   if(result.cases.some(row=>row.name===name&&row.pass)){console.log('SKIP prior PASS '+name);return;}
@@ -502,7 +508,7 @@ try {
     baseline=Object.fromEntries(await Promise.all(tables.map(async table=>[table,new Map((await rawRows(table)).map(row=>[keyFor(table,row),digest(cleanExisting(row))]))])));
     writeFileSync(join(out,'baseline.json'),JSON.stringify({run,project,createdAt:new Date().toISOString(),tables:Object.fromEntries(tables.map(table=>[table,[...baseline[table]]]))},null,2));
   }
-  const caseNames=[...readFileSync(import.meta.filename,'utf8').matchAll(/await verify\('([^']+)'/g)].map(match=>match[1]).filter(name=>liveScope!=='final-journey'||finalJourneyCases.has(name));
+  const caseNames=[...readFileSync(import.meta.filename,'utf8').matchAll(/await verify\('([^']+)'/g)].map(match=>match[1]).filter(name=>!selectedCases||selectedCases.has(name));
   result.scope=liveScope;result.requiredCases=caseNames;
   if(caseNames.every(name=>result.cases.some(row=>row.name===name&&row.pass))){
     assert.ok(fixtures.userId,'Completed matrix must retain its original QA actor');userId=fixtures.userId;
@@ -908,7 +914,7 @@ try {
     await B.page.reload({waitUntil:'domcontentloaded'});await ready(B);
     const fresh=await reopenFreshTerminal({browser,terminal:C,peers:[A,B],address,fixtures,
       credentials:{email,password},guardedBrowserRoute,waitReady:ready,readOnlyConverge:converge});
-    assert.equal(await stock(fixtures.coreJourney.productIds[0]),1);
+    if(liveScope!=='session-delivery')assert.equal(await stock(fixtures.coreJourney.productIds[0]),1);
     return {reloadTerminal:'B',...fresh.evidence};
   });
   await verify('Equipment history separates exact retired QA installations', async () => {

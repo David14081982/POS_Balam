@@ -1,0 +1,264 @@
+{
+  "format": "balam-h171-unconfirmed-cleanup-reconciliation-v1",
+  "projectRef": "telohdbvbvsfmwyriflz",
+  "run": "57a5e11f-7a4b-4926-9993-f9f712d12063",
+  "at": "2026-09-13T08:03:41.509149+00:00",
+  "readOnly": true,
+  "remoteWrites": 0,
+  "authOperations": 0,
+  "classification": "ALL_PRESENT_UNCHANGED",
+  "rollbackProven": true,
+  "commitPossible": false,
+  "expectedRows": 28,
+  "presentUnchanged": 28,
+  "absent": 0,
+  "divergent": 0,
+  "protectedTables": 63,
+  "outsideTablesUnchanged": 63,
+  "outsideChangedTables": [],
+  "catalogUnchanged": true,
+  "authUnchanged": true,
+  "authCountBefore": 5,
+  "authCountAfter": 5,
+  "revisionBefore": "867",
+  "revisionAfter": "867",
+  "revisionDelta": "0",
+  "expectedCommitRevisionDelta": 10,
+  "revisionOtherUnchanged": true,
+  "targetStates": [
+    {
+      "table": "online_requests",
+      "pk_json_text": "{\"actor_id\": \"c004d53b-3468-4fe4-8e0a-21a5730d0a33\", \"request_id\": \"680300f3-6298-445a-8e2c-c07ea8ed1079\"}",
+      "expectedMd5": "e4940d945ccc29b4ec021697c3034079",
+      "count": 1,
+      "actualMd5": "e4940d945ccc29b4ec021697c3034079",
+      "status": "PRESENT_UNCHANGED"
+    },
+    {
+      "table": "online_requests",
+      "pk_json_text": "{\"actor_id\": \"c004d53b-3468-4fe4-8e0a-21a5730d0a33\", \"request_id\": \"a7ae387d-9fe5-569c-8d3a-b668a26f6af3\"}",
+      "expectedMd5": "aa61e8734ffc9a43d3b0547b3e5d2ba5",
+      "count": 1,
+      "actualMd5": "aa61e8734ffc9a43d3b0547b3e5d2ba5",
+      "status": "PRESENT_UNCHANGED"
+    },
+    {
+      "table": "online_requests",
+      "pk_json_text": "{\"actor_id\": \"c004d53b-3468-4fe4-8e0a-21a5730d0a33\", \"request_id\": \"398e4e53-3411-47a7-926a-cf04494278b3\"}",
+      "expectedMd5": "2f32df700164d091b1124be7678e22a9",
+      "count": 1,
+      "actualMd5": "2f32df700164d091b1124be7678e22a9",
+      "status": "PRESENT_UNCHANGED"
+    },
+    {
+      "table": "online_requests",
+      "pk_json_text": "{\"actor_id\": \"c004d53b-3468-4fe4-8e0a-21a5730d0a33\", \"request_id\": \"e56825e4-04f8-5ff2-86c5-e86e628e5c0b\"}",
+      "expectedMd5": "965649093e81dc49b18f0b04995f3972",
+      "count": 1,
+      "actualMd5": "965649093e81dc49b18f0b04995f3972",
+      "status": "PRESENT_UNCHANGED"
+    },
+    {
+      "table": "online_requests",
+      "pk_json_text": "{\"actor_id\": \"c004d53b-3468-4fe4-8e0a-21a5730d0a33\", \"request_id\": \"db2333b0-9ec1-48bf-b289-d5164181f541\"}",
+      "expectedMd5": "aec07b852af3ba8d65c7cf2619be3755",
+      "count": 1,
+      "actualMd5": "aec07b852af3ba8d65c7cf2619be3755",
+      "status": "PRESENT_UNCHANGED"
+    },
+    {
+      "table": "sellers",
+      "pk_json_text": "{\"id\": \"qa-h164-57a5e11f-7a4b-4926-9993-f9f712d12063-admin\"}",
+      "expectedMd5": "fb0dcc3cd1350796889aed1bc0bcf23e",
+      "count": 1,
+      "actualMd5": "fb0dcc3cd1350796889aed1bc0bcf23e",
+      "status": "PRESENT_UNCHANGED"
+    },
+    {
+      "table": "sellers",
+      "pk_json_text": "{\"id\": \"qa-h164-57a5e11f-7a4b-4926-9993-f9f712d12063-seller-A\"}",
+      "expectedMd5": "257ef41d3bf57fba048b9a7b88353b05",
+      "count": 1,
+      "actualMd5": "257ef41d3bf57fba048b9a7b88353b05",
+      "status": "PRESENT_UNCHANGED"
+    },
+    {
+      "table": "sellers",
+      "pk_json_text": "{\"id\": \"qa-h164-57a5e11f-7a4b-4926-9993-f9f712d12063-seller-B\"}",
+      "expectedMd5": "c96e562d611825d3fd606031288775d5",
+      "count": 1,
+      "actualMd5": "c96e562d611825d3fd606031288775d5",
+      "status": "PRESENT_UNCHANGED"
+    },
+    {
+      "table": "sellers",
+      "pk_json_text": "{\"id\": \"qa-h164-57a5e11f-7a4b-4926-9993-f9f712d12063-seller-C\"}",
+      "expectedMd5": "32d6c20ffdfef3c4aeb4ba452ca6fbd8",
+      "count": 1,
+      "actualMd5": "32d6c20ffdfef3c4aeb4ba452ca6fbd8",
+      "status": "PRESENT_UNCHANGED"
+    },
+    {
+      "table": "user_permission_role_assignments",
+      "pk_json_text": "{\"user_id\": \"c004d53b-3468-4fe4-8e0a-21a5730d0a33\"}",
+      "expectedMd5": "4a9ff180495da9ad8c3403aa74e0789b",
+      "count": 1,
+      "actualMd5": "4a9ff180495da9ad8c3403aa74e0789b",
+      "status": "PRESENT_UNCHANGED"
+    },
+    {
+      "table": "capability_operation_audit",
+      "pk_json_text": "{\"operation_id\": \"680300f3-6298-445a-8e2c-c07ea8ed1079\"}",
+      "expectedMd5": "2b009f81c7d1c2076309952987d676b5",
+      "count": 1,
+      "actualMd5": "2b009f81c7d1c2076309952987d676b5",
+      "status": "PRESENT_UNCHANGED"
+    },
+    {
+      "table": "products",
+      "pk_json_text": "{\"id\": \"ad2de884-e44f-45af-aa5b-436c27be88e3\"}",
+      "expectedMd5": "c3e933af4681aab760af94e0f51b9472",
+      "count": 1,
+      "actualMd5": "c3e933af4681aab760af94e0f51b9472",
+      "status": "PRESENT_UNCHANGED"
+    },
+    {
+      "table": "products",
+      "pk_json_text": "{\"id\": \"0da2e084-909f-4660-bba3-1513fe73eb62\"}",
+      "expectedMd5": "fc63ee0d7d7dc88f7bba40bc7137ef04",
+      "count": 1,
+      "actualMd5": "fc63ee0d7d7dc88f7bba40bc7137ef04",
+      "status": "PRESENT_UNCHANGED"
+    },
+    {
+      "table": "sales",
+      "pk_json_text": "{\"folio\": \"BG-260913-0003\"}",
+      "expectedMd5": "b522e3338be3e081aa8134c02efc2cc4",
+      "count": 1,
+      "actualMd5": "b522e3338be3e081aa8134c02efc2cc4",
+      "status": "PRESENT_UNCHANGED"
+    },
+    {
+      "table": "sale_items",
+      "pk_json_text": "{\"id\": 305}",
+      "expectedMd5": "2a24f59a1357036faba4b1cd7901d167",
+      "count": 1,
+      "actualMd5": "2a24f59a1357036faba4b1cd7901d167",
+      "status": "PRESENT_UNCHANGED"
+    },
+    {
+      "table": "sale_payments",
+      "pk_json_text": "{\"id\": \"pay-c0473008-4059-448d-a536-2256a666e207\"}",
+      "expectedMd5": "75d596e012872292ad9e7d9609c41ec9",
+      "count": 1,
+      "actualMd5": "75d596e012872292ad9e7d9609c41ec9",
+      "status": "PRESENT_UNCHANGED"
+    },
+    {
+      "table": "stock_reservations",
+      "pk_json_text": "{\"operation_id\": \"398e4e53-3411-47a7-926a-cf04494278b3\"}",
+      "expectedMd5": "cf397b8bca48a54d5997f79ea91f4a5b",
+      "count": 1,
+      "actualMd5": "cf397b8bca48a54d5997f79ea91f4a5b",
+      "status": "PRESENT_UNCHANGED"
+    },
+    {
+      "table": "sale_commits",
+      "pk_json_text": "{\"commit_id\": \"398e4e53-3411-47a7-926a-cf04494278b3\"}",
+      "expectedMd5": "d9bbd74e018810c7886167cd3b08ed7f",
+      "count": 1,
+      "actualMd5": "d9bbd74e018810c7886167cd3b08ed7f",
+      "status": "PRESENT_UNCHANGED"
+    },
+    {
+      "table": "movements",
+      "pk_json_text": "{\"id\": 460}",
+      "expectedMd5": "c601260ade4a9e0d493e81f003a383e0",
+      "count": 1,
+      "actualMd5": "c601260ade4a9e0d493e81f003a383e0",
+      "status": "PRESENT_UNCHANGED"
+    },
+    {
+      "table": "sales",
+      "pk_json_text": "{\"folio\": \"BG-260913-0004\"}",
+      "expectedMd5": "534c5bc1738c0f9db3936caac94a8092",
+      "count": 1,
+      "actualMd5": "534c5bc1738c0f9db3936caac94a8092",
+      "status": "PRESENT_UNCHANGED"
+    },
+    {
+      "table": "sale_items",
+      "pk_json_text": "{\"id\": 306}",
+      "expectedMd5": "6fb441e11ed564502ed91f3930deac91",
+      "count": 1,
+      "actualMd5": "6fb441e11ed564502ed91f3930deac91",
+      "status": "PRESENT_UNCHANGED"
+    },
+    {
+      "table": "sale_payments",
+      "pk_json_text": "{\"id\": \"pay-73428b5c-3e33-44ba-98b7-efec5a6d3836\"}",
+      "expectedMd5": "6eff30e04c2ebd35657a03e0e3fc0e5d",
+      "count": 1,
+      "actualMd5": "6eff30e04c2ebd35657a03e0e3fc0e5d",
+      "status": "PRESENT_UNCHANGED"
+    },
+    {
+      "table": "stock_reservations",
+      "pk_json_text": "{\"operation_id\": \"db2333b0-9ec1-48bf-b289-d5164181f541\"}",
+      "expectedMd5": "12318f3ea4a2466ae01b2766a4c220e3",
+      "count": 1,
+      "actualMd5": "12318f3ea4a2466ae01b2766a4c220e3",
+      "status": "PRESENT_UNCHANGED"
+    },
+    {
+      "table": "sale_commits",
+      "pk_json_text": "{\"commit_id\": \"db2333b0-9ec1-48bf-b289-d5164181f541\"}",
+      "expectedMd5": "3e5abc5423b4fe0f899c1bdf0ed75c5c",
+      "count": 1,
+      "actualMd5": "3e5abc5423b4fe0f899c1bdf0ed75c5c",
+      "status": "PRESENT_UNCHANGED"
+    },
+    {
+      "table": "movements",
+      "pk_json_text": "{\"id\": 461}",
+      "expectedMd5": "628043254808fb30615b7caff56d11a4",
+      "count": 1,
+      "actualMd5": "628043254808fb30615b7caff56d11a4",
+      "status": "PRESENT_UNCHANGED"
+    },
+    {
+      "table": "sync_devices",
+      "pk_json_text": "{\"device_id\": \"qa-h164-57a5e11f-7a4b-4926-9993-f9f712d12063-A\"}",
+      "expectedMd5": "495037f14b173c8736222dfffe6374ae",
+      "count": 1,
+      "actualMd5": "495037f14b173c8736222dfffe6374ae",
+      "status": "PRESENT_UNCHANGED"
+    },
+    {
+      "table": "sync_devices",
+      "pk_json_text": "{\"device_id\": \"qa-h164-57a5e11f-7a4b-4926-9993-f9f712d12063-B\"}",
+      "expectedMd5": "bc20547d6bc28f061c88be60e703a58e",
+      "count": 1,
+      "actualMd5": "bc20547d6bc28f061c88be60e703a58e",
+      "status": "PRESENT_UNCHANGED"
+    },
+    {
+      "table": "sync_devices",
+      "pk_json_text": "{\"device_id\": \"qa-h164-57a5e11f-7a4b-4926-9993-f9f712d12063-C\"}",
+      "expectedMd5": "8cd9da8e4f9842af2cd22b34d6fbe37c",
+      "count": 1,
+      "actualMd5": "8cd9da8e4f9842af2cd22b34d6fbe37c",
+      "status": "PRESENT_UNCHANGED"
+    }
+  ],
+  "originalBaselineFileSha256": "ea19da16e8d6af4c8834f19d428d28ffccbd02e1b9d6bdda98214e3c24299331",
+  "beforeAttemptFileSha256": "609b86c9f33ae6abd8ab9754c2f1180a857f3c28cdc3d7b2a21e7685fda96ade",
+  "currentCapture": {
+    "path": ".evidence-h171-private/live-recovery/57a5-reconciliation/after-unconfirmed.json.gz",
+    "sha256": "bcc548cf9a6709478811b4ee03e85acc0fda8f7b0f778771fb14e15bb22446bd"
+  },
+  "noRetryPerformed": true,
+  "cleanupVerified": false,
+  "certified": false,
+  "interpretation": "Every exact row and complete protected state match the pre-attempt snapshot; no cleanup effects observed."
+}

@@ -1,0 +1,65 @@
+{
+  "format": "balam-h171-production-verification-v1",
+  "at": "2026-09-13T07:57:34.329Z",
+  "project": "BALAM",
+  "projectRef": "telohdbvbvsfmwyriflz",
+  "commit": "1dddd60494c7b24beb1574851bf06d040079b0f7",
+  "run": {
+    "id": 34746195058,
+    "url": "https://github.com/David14081982/POS_Balam/actions/runs/34746195058",
+    "status": "completed",
+    "conclusion": "success",
+    "regression": "success",
+    "deploy": "success",
+    "liveCertification": "skipped"
+  },
+  "scope": "READ_ONLY_PUBLIC_HTTP_BYTES_AGAINST_EXACT_DEPLOYED_GIT_COMMIT",
+  "files": [
+    {
+      "file": "index.html",
+      "url": "https://david14081982.github.io/POS_Balam/",
+      "checkedAt": "2026-09-13T07:57:32.523Z",
+      "status": 200,
+      "finalUrl": "https://david14081982.github.io/POS_Balam/",
+      "expectedBytes": 8980717,
+      "actualBytes": 8980717,
+      "expectedSha256": "f4d73fa350d4187dade1a55c999dc203b405f4c20d95d9138aaf1b2ef0a82646",
+      "actualSha256": "f4d73fa350d4187dade1a55c999dc203b405f4c20d95d9138aaf1b2ef0a82646",
+      "byteForByteEqual": true,
+      "pass": true
+    },
+    {
+      "file": "POS Balam (offline).html",
+      "url": "https://david14081982.github.io/POS_Balam/POS%20Balam%20(offline).html",
+      "checkedAt": "2026-09-13T07:57:34.263Z",
+      "status": 200,
+      "finalUrl": "https://david14081982.github.io/POS_Balam/POS%20Balam%20(offline).html",
+      "expectedBytes": 8980717,
+      "actualBytes": 8980717,
+      "expectedSha256": "f4d73fa350d4187dade1a55c999dc203b405f4c20d95d9138aaf1b2ef0a82646",
+      "actualSha256": "f4d73fa350d4187dade1a55c999dc203b405f4c20d95d9138aaf1b2ef0a82646",
+      "byteForByteEqual": true,
+      "pass": true
+    },
+    {
+      "file": "sw.js",
+      "url": "https://david14081982.github.io/POS_Balam/sw.js",
+      "checkedAt": "2026-09-13T07:57:30.560Z",
+      "status": 200,
+      "finalUrl": "https://david14081982.github.io/POS_Balam/sw.js",
+      "expectedBytes": 4477,
+      "actualBytes": 4477,
+      "expectedSha256": "3795e010fc6a4f48be649e2052dc4cb7fe57bc09ab9cfa197ec6d6645e81c154",
+      "actualSha256": "3795e010fc6a4f48be649e2052dc4cb7fe57bc09ab9cfa197ec6d6645e81c154",
+      "byteForByteEqual": true,
+      "pass": true
+    }
+  ],
+  "allFilesMatch": true,
+  "businessWrites": 0,
+  "authRequests": 0,
+  "deliveryCertified": false,
+  "limits": [
+    "Proves deployed file identity only; final business journey and exact fixture cleanup have separate evidence."
+  ]
+}

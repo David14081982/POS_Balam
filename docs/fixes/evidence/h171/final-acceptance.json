@@ -1,0 +1,281 @@
+{
+  "format": "balam-h171-final-acceptance-v1",
+  "at": "2026-09-13T08:42:31.674Z",
+  "project": "BALAM",
+  "projectRef": "telohdbvbvsfmwyriflz",
+  "artifactSha256": "f4d73fa350d4187dade1a55c999dc203b405f4c20d95d9138aaf1b2ef0a82646",
+  "scope": "FOUR_DISTINCT_PRIORITIZED_DELIVERY_CHECKS_FROM_TWO_RUNS_WITH_EXACT_CLEANUP",
+  "acceptanceOfFour": true,
+  "criticalWorkflows": {
+    "passed": 4,
+    "required": 4,
+    "distinctNames": 4,
+    "countingRule": "First3PASS from57a5 plus only the fresh-context PASS from04beb; second bootstrap is not counted again. These4checks are not the22functional groups or the22historical H170 API scenarios."
+  },
+  "checks": [
+    {
+      "name": "A/B/C bootstrap from authoritative snapshot",
+      "pass": true,
+      "run": "57a5e11f-7a4b-4926-9993-f9f712d12063",
+      "sourcePath": "docs/fixes/evidence/h171/final-journey-completed-cases.json",
+      "sourceSha256": "8dad1f3f9ffc96302f72a5de31ef1897f6d122ffa26caf74b2732fadfe0c037e",
+      "sourceCaseIndex": 0,
+      "elapsedMs": 12040
+    },
+    {
+      "name": "Core UI journey on C then B/A compare authoritative state",
+      "pass": true,
+      "run": "57a5e11f-7a4b-4926-9993-f9f712d12063",
+      "sourcePath": "docs/fixes/evidence/h171/final-journey-completed-cases.json",
+      "sourceSha256": "8dad1f3f9ffc96302f72a5de31ef1897f6d122ffa26caf74b2732fadfe0c037e",
+      "sourceCaseIndex": 1,
+      "elapsedMs": 132335,
+      "journeys": [
+        {
+          "terminal": "C",
+          "folio": "BG-260913-0003",
+          "passedSteps": 9,
+          "totalSteps": 9
+        },
+        {
+          "terminal": "A",
+          "folio": "BG-260913-0004",
+          "passedSteps": 9,
+          "totalSteps": 9
+        }
+      ],
+      "authorityTerminals": [
+        "B",
+        "A",
+        "C"
+      ]
+    },
+    {
+      "name": "No Internet blocks operation, stock, success, pending; reconnect reads authority",
+      "pass": true,
+      "run": "57a5e11f-7a4b-4926-9993-f9f712d12063",
+      "sourcePath": "docs/fixes/evidence/h171/final-journey-completed-cases.json",
+      "sourceSha256": "8dad1f3f9ffc96302f72a5de31ef1897f6d122ffa26caf74b2732fadfe0c037e",
+      "sourceCaseIndex": 2,
+      "elapsedMs": 12362
+    },
+    {
+      "name": "Reload and clean browser context rebuild only from Supabase",
+      "pass": true,
+      "run": "04beb00f-dc36-400a-8e24-b80efbb447d8",
+      "sourcePath": ".evidence-h171-private/live-final-session-delivery/matrix.json",
+      "sourceSha256": "5c8ba6ab653f69f58f1081837221980eb18739896e03150ed9e0c1e06bf792ee",
+      "elapsedMs": 25524,
+      "evidence": {
+        "reloadTerminal": "B",
+        "kind": "fresh-browser-session",
+        "oldContextClosed": true,
+        "oldPagesClosed": 1,
+        "freshContext": true,
+        "cookiesBeforeLoad": 0,
+        "originsBeforeLoad": 0,
+        "localStorageBeforeInstallationBinding": 0,
+        "sessionStorageBeforeInstallationBinding": 0,
+        "serviceWorkersBlocked": true,
+        "websocketsBlocked": true,
+        "guardedTransportInstalled": true,
+        "loginViaUI": true,
+        "actorMatched": true,
+        "profileMatched": true,
+        "comparedTerminals": [
+          "A",
+          "B",
+          "C"
+        ],
+        "comparisonSha256": "323c8320c8b9ccf8228cdc4e25beb97439cd65ca2f29e4b9fe3d25908aae6221"
+      }
+    }
+  ],
+  "composition": {
+    "runCount": 2,
+    "firstRun": "57a5e11f-7a4b-4926-9993-f9f712d12063",
+    "firstRunOriginalMatrix": {
+      "path": ".evidence-h171-private/live-final-journey-paginated/matrix.json",
+      "sha256": "d460950b5ec6c7dfc5fc4642d81dba976ba210d5004c30b31c0e1827fee023f4",
+      "startedAt": "2026-09-13T07:49:13.233Z",
+      "certifierSha256": "363eae248a03f0fa1e8d3841e955fd867b3e1c877dbc084c22724136d1a54ad7"
+    },
+    "firstRunPublicCases": {
+      "path": "docs/fixes/evidence/h171/final-journey-completed-cases.json",
+      "sha256": "8dad1f3f9ffc96302f72a5de31ef1897f6d122ffa26caf74b2732fadfe0c037e"
+    },
+    "finalRun": "04beb00f-dc36-400a-8e24-b80efbb447d8",
+    "finalMatrix": {
+      "path": ".evidence-h171-private/live-final-session-delivery/matrix.json",
+      "sha256": "5c8ba6ab653f69f58f1081837221980eb18739896e03150ed9e0c1e06bf792ee",
+      "scope": "session-delivery",
+      "certifiedInItsOwnScope": true,
+      "cleanupVerified": true
+    },
+    "finalCleanup": {
+      "path": "docs/fixes/evidence/h171/final-session-cleanup.json",
+      "sha256": "d73f4adaee00c1841747a023832122fe222ba385cced9339a9c1374d61c84a1f"
+    },
+    "sameArtifact": true,
+    "secondBootstrapCounted": false,
+    "finalSessionCreatedSales": 0
+  },
+  "historicalFailure": {
+    "run": "57a5e11f-7a4b-4926-9993-f9f712d12063",
+    "name": "Reload and clean browser context rebuild only from Supabase",
+    "pass": false,
+    "elapsedMs": 22607,
+    "error": "SESSION_DELIVERY_FAILED:ui-login",
+    "classification": "CERTIFIER_IDENTITY_ASSERTION",
+    "checkerEvidence": {
+      "path": "docs/fixes/evidence/h171/fresh-session-identity-local.json",
+      "sha256": "41462302879ae7d27fc4bc4019d4980f4508fb41e591f8f82b2fa1eeb19dc0a6",
+      "scope": "LOCAL_FOCAL_ACTUAL_HELPER_AND_AUTH_NORMALIZER_NO_NETWORK"
+    },
+    "reclassifiedAsPass": false,
+    "source": "docs/fixes/evidence/h171/final-journey-completed-cases.json",
+    "sourceSha256": "8dad1f3f9ffc96302f72a5de31ef1897f6d122ffa26caf74b2732fadfe0c037e",
+    "preservedUnchanged": true
+  },
+  "cleanup": {
+    "deliveryRuns": [
+      {
+        "run": "9482e643-232b-4d32-9ffd-0f07ac156ae6",
+        "evidence": "docs/fixes/evidence/h171/recovery-completion.json",
+        "sha256": "a5af78b29355dfbb3c2da19a831e4598876e9bfb3b795c1c885cb0ff9bd42ad4",
+        "cleanupVerified": true,
+        "removedPos": 35,
+        "absentAuth": 1,
+        "newPosResidue": 0,
+        "newAuthResidue": 0
+      },
+      {
+        "run": "d4b616be-2bed-4512-9053-6f0ee6a7c372",
+        "evidence": "docs/fixes/evidence/h171/recovery-completion-d4b.json",
+        "sha256": "251d627c86cf42fd2154ee88f28fdedbf310a53103b61e0613d5a9996210b969",
+        "cleanupVerified": true,
+        "removedPos": 20,
+        "absentAuth": 1,
+        "newPosResidue": 0,
+        "newAuthResidue": 0
+      },
+      {
+        "run": "6826dbe9-eb18-4e14-8513-cb2b5e71c502",
+        "evidence": "docs/fixes/evidence/h171/recovery-completion-6826.json",
+        "sha256": "97846ac29f8969e8be1712bd9397c27e83457ed94fbf93d675b7a3741f5a7911",
+        "cleanupVerified": true,
+        "removedPos": 20,
+        "absentAuth": 1,
+        "newPosResidue": 0,
+        "newAuthResidue": 0
+      },
+      {
+        "run": "57a5e11f-7a4b-4926-9993-f9f712d12063",
+        "evidence": "docs/fixes/evidence/h171/recovery-completion-57a5.json",
+        "sha256": "609baf602cc18c19f1372110a4d7d1ae4c4220c738e64dcb890d53a77ff57352",
+        "cleanupVerified": true,
+        "removedPos": 28,
+        "absentAuth": 1,
+        "newPosResidue": 0,
+        "newAuthResidue": 0
+      },
+      {
+        "run": "04beb00f-dc36-400a-8e24-b80efbb447d8",
+        "evidence": "docs/fixes/evidence/h171/final-session-cleanup.json",
+        "sha256": "d73f4adaee00c1841747a023832122fe222ba385cced9339a9c1374d61c84a1f",
+        "cleanupVerified": true,
+        "removedPos": 8,
+        "absentAuth": 1,
+        "newPosResidue": 0,
+        "newAuthResidue": 0
+      }
+    ],
+    "allVerified": true,
+    "knownProvenNewFixtureResidue": 0,
+    "allOutsideRowsPreserved": true,
+    "monotonicAdvancesPreserved": true,
+    "historicalCleanupEvidence": [
+      "docs/fixes/evidence/h171/commercial-post-delete.json",
+      "docs/fixes/evidence/h171/technical-cleanup-outcome.json",
+      "docs/fixes/evidence/h171/auth-retirement-result.json"
+    ],
+    "separateSqlAndAuthTransactions": true
+  },
+  "publication": {
+    "commit": "1dddd60494c7b24beb1574851bf06d040079b0f7",
+    "runUrl": "https://github.com/David14081982/POS_Balam/actions/runs/34746195058",
+    "evidence": "docs/fixes/evidence/h171/production-verification.json",
+    "sha256": "3c5028b92b65f913a636ae20072b49670130f75a6cf4e42ad01af7b08ac847b7",
+    "allFilesMatch": true
+  },
+  "authority": {
+    "inventory": {
+      "products": 973,
+      "families": 251,
+      "pieces": 3483,
+      "fullRowsMd5": "4732c0c8b6a13ef05e922eaa58edb158",
+      "unchangedFromOriginalBaseline": true
+    },
+    "protectedSale": {
+      "folio": "BG-260912-0001",
+      "operationId": "35e2c61a-7561-41b9-9535-e39e671a55d3",
+      "fullRowMd5": "4d4eccadf33a73be1303d957036886d6",
+      "unchanged": true
+    },
+    "protectedRequest": {
+      "id": "70549527-4867-4342-94d2-38e770b0f2a9",
+      "fullRowMd5": "8fdc987d8fe491f467f968da4c5306e0"
+    },
+    "protectedTablesChecked": 64,
+    "unchangedOutsideTables": 63,
+    "storageWritesInFinalSession": 0,
+    "storageDeletedObjects": 0
+  },
+  "qaContamination": {
+    "knownProvenOperationalFixtureResidue": 0,
+    "scope": "Exact reviewed cleanup manifests; excludes protected historical audit/anti-replay records and OWNER-held unknown rows.",
+    "globalZeroEstablished": false,
+    "ownerHeldUnknownRows": [
+      {
+        "table": "clients",
+        "id": "cli-1789079431176-jyxi",
+        "fullRowMd5": "bf6c133205988d9829d322a6995d7eb3",
+        "unchanged": true,
+        "classification": "UNKNOWN_OWNER_HELD"
+      },
+      {
+        "table": "clients",
+        "id": "cli-1789078624431-0fz3",
+        "fullRowMd5": "637e3a14e34965b2120defb11c6b6b19",
+        "unchanged": true,
+        "classification": "UNKNOWN_OWNER_HELD"
+      },
+      {
+        "table": "clients",
+        "id": "cli-1789078938103-ams0",
+        "fullRowMd5": "48cf67c3064e7f31b5b5497ff0082bfd",
+        "unchanged": true,
+        "classification": "UNKNOWN_OWNER_HELD"
+      },
+      {
+        "table": "promotions",
+        "id": "promo-1789079431430",
+        "fullRowMd5": "acec5f446ea07ea168f126f7d2baebf2",
+        "unchanged": true,
+        "classification": "UNKNOWN_OWNER_HELD"
+      }
+    ],
+    "protectedH148Recoveries": 2,
+    "retainedHistoryEvidence": "docs/fixes/evidence/h171/remaining-held-decisions.json"
+  },
+  "productionReady": false,
+  "globalDeliveryDoDMet": false,
+  "reason": "FOUR_OWNER_PRESERVED_UNKNOWN_HISTORICAL_ROWS_PREVENT_A_GLOBAL_QA_ZERO_CLAIM",
+  "hardwareCertified": false,
+  "limits": [
+    "The original fourth FAIL from57a5 is preserved. A separate completed run supplies the fresh-session evidence.",
+    "Four prioritized operational checks passed; this does not certify every state of all22functional groups.",
+    "Physical printing, scanners and every physical terminal were not certified.",
+    "No credentials, session contents, HTTP headers or raw artifact/row bodies are included."
+  ]
+}

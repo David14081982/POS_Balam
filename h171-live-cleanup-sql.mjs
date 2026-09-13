@@ -135,12 +135,13 @@ export function buildLiveCleanupSql({ plan, catalog, baselineSnapshot, currentSn
   need(revisionTriggers.every(t => t.enabled === 'O' && t.function_signature === 'pos.h166_advance_snapshot_revision()' &&
     t.definition_md5 === md5(`CREATE TRIGGER h166_snapshot_changed AFTER INSERT OR DELETE OR UPDATE OR TRUNCATE ON pos.${t.table} FOR EACH STATEMENT EXECUTE FUNCTION pos.h166_advance_snapshot_revision()`)), 'CLEANUP_SNAPSHOT_TRIGGER_CONTRACT_UNSUPPORTED');
   let expectedRevisionDelta = revisionTriggers.filter(t => selectedTables.includes(t.table)).length;
-  // FK action triggers execute child statements even when all children were already
-  // explicitly removed. H166 statement invalidation also fires for those zero rows.
+  // FK actions still invalidate an empty child relation after its explicit cleanup.
+  // PostgreSQL groups that child's AFTER STATEMENT event within the single parent
+  // DELETE, including when it deletes two parents (H171 local recorded-FK proof).
   for (const fk of current.catalog.foreign_keys) if (/ON DELETE (CASCADE|SET NULL|SET DEFAULT)/.test(fk.definition) &&
     selectedTables.includes(fk.target.replace(/^pos\./,'')) && revisionTriggers.some(t => 'pos.'+t.table === fk.source)) {
     need(fk.source !== fk.target, 'CLEANUP_SELF_CASCADE_UNSUPPORTED');
-    expectedRevisionDelta += scope.filter(row => 'pos.'+row.table_name === fk.target).length;
+    expectedRevisionDelta += 1;
   }
   const outside = current.tables.filter(t => t.table !== 'online_snapshot_revision').map(t => ({ table_name: t.table,
     ...cleanupRowsFingerprint(t.rows.filter(row => !targetKeys.has(key(t.table, row.pk_json_text)))) }));

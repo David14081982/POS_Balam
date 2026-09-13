@@ -7,37 +7,35 @@ y `BLOQUEADO`.
 
 ## Resumen
 
-**H-171 — Entrega final de BALAM / Only Online: EN CURSO (13/09/2026).**
+**H-171 — Entrega final de BALAM / Only Online: PARCIALMENTE RESUELTO (13/09/2026).**
+Trabajo autorizado y publicación completos. **Production ready: NO** bajo la DoD
+estricta por una causa pendiente de OWNER: **cuatro filas históricas UNKNOWN**.
+No quedan nuevas pruebas programadas para este cierre.
 Autoridades exclusivas: `David14081982/POS_Balam`, Supabase
-`telohdbvbvsfmwyriflz`, esquema `pos`, ADR-015; base vigente `c148a8c`.
-Se corrigieron siete controles inoperantes y los recortes de Usuarios/Panel.
-Limpieza histórica autorizada comprobada: **149 comerciales + 317 técnicas**
-eliminadas y **11/11 Auth ausentes**. Inventario protegido: **973 productos /
-251 familias / 3483 piezas**; venta `BG-260912-0001` identificada por operación,
-solicitud real `70549527-4867-4342-94d2-38e770b0f2a9` e historia preservadas.
-**Storage: cero objetos eliminados.** Cuatro filas ambiguas siguen retenidas por
-OWNER, identificadas individualmente en el informe; dos recuperaciones H148
-conservan listas anti-replay y tokens omitidos del respaldo.
-Candidato actual SHA-256:
-`f4d73fa350d4187dade1a55c999dc203b405f4c20d95d9138aaf1b2ef0a82646`.
-Sobre esos bytes: **9/9 UI escritorio + 9/9 móvil**, **192/192 superficies +
-8/8 anchos**, con transporte aislado; no certifican persistencia Supabase.
-El intento real `9482e643-232b-4d32-9ffd-0f07ac156ae6` se interrumpió por el
-journal al clasificar el booleano `lookup.meta.requiresAuthorization`; CONFIG
-no se envió. Defecto del certificador, no defecto nuevo del producto demostrado.
-Su recuperación está **COMPLETA: 35/35 filas POS eliminadas y 1/1 Auth ausente**;
-63 tablas protegidas exactas y revisión con avance legítimo, inventario
-973/251/3483, venta protegida y 7054 intactos; [resultado](fixes/evidence/h171/recovery-completion.json).
-Jornada `d4b616be-2bed-4512-9053-6f0ee6a7c372` interrumpida: el comprobador exigía
-exactamente una impresión con `print.auto=true`; contador real no guardado.
-[Fallo del comprobador y límite](fixes/evidence/h171/live-print-observation-interruption.json), sin defecto de producto demostrado.
-Limpieza **20 POS + 1 Auth EN CURSO**, plan listo/restaurado **20/20**; marcador
-`sale:<UUID>` de producto/vendedor identificado por actor, recibo y estado exactos.
-**P0 de producto conocidos pendientes: 0. P1 de producto conocidos pendientes: 0.**
-Cuatro casos pendientes de reintento; no se anticipa la limpieza en curso.
-**Publicación f4d EN CURSO; DoD pendiente** de jornada, limpieza y bytes publicados.
-**Commit técnico:** `b6d5edd07d7768a499fd7db7edfb428d8544520a`.
-**Documento:** [Informe ejecutivo H171](fixes/balam-final-readiness.md).
+`telohdbvbvsfmwyriflz`, esquema `pos`, ADR-015.
+Siete controles inoperantes retirados y dos recortes responsive corregidos.
+**P0/P1 conocidos pendientes: 0/0; P2/P3 nuevos de H171 pendientes: 0/0.**
+Aceptación priorizada **4/4 casos distintos PASS**, compuestos de 3 casos de57a5
+y sesión nueva de04beb sobre el mismo f4d: dos ventas UI de9/9+9/9, refresh/relogin,
+contexto vacío, A/B/C y Only Online. La matriz H170 de22 escenarios API conserva su
+alcance anterior; 22 grupos de superficies no equivalen a22 jornadas UI certificadas.
+Limpieza histórica completa: **149 comerciales +317 técnicas,11/11 Auth ausentes**.
+Los cinco runs de entrega retiraron **35,20,20,28 y8 filas POS**, y sus cinco
+identidades Auth están ausentes. **Cero residuos nuevos de los manifiestos verificados**;
+cero QA global NO acreditado mientras las cuatro filas sigan sin clasificar.
+Inventario **973 productos/251 familias/3483 piezas**, venta `BG-260912-0001`,
+solicitud7054 e historia protegida intactos; contadores y revisiones sin rebobinar.
+Storage: cero bajas. H148 conserva historia necesaria para impedir replay.
+**PUBLICADO Y VERIFICADO:** commit `1dddd60494c7b24beb1574851bf06d040079b0f7`,
+workflow34746195058 SUCCESS. Ambos HTML f4d y sw.js públicos coincidieron byte a byte,
+HTTP200, el13/09 a07:57:34UTC; [producción](fixes/evidence/h171/production-verification.json).
+[Resultado final](fixes/evidence/h171/final-acceptance.json) y
+[última limpieza](fixes/evidence/h171/final-session-cleanup.json).
+Hardware físico no certificado; cuatro decisiones individuales detalladas en el informe.
+**Commit técnico de producto:** `b6d5edd07d7768a499fd7db7edfb428d8544520a`.
+**Comprobadores y evidencia final:** Pendiente de commit.
+**Documento:** [BALAM FINAL READINESS](fixes/balam-final-readiness.md).
+
 
 | ID | Riesgo | Estado | Área |
 |---|---|---|---|

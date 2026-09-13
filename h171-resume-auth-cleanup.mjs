@@ -22,7 +22,7 @@ const privatePath=value=>{const path=resolve(value),inside=relative(resolve('.ev
   assert.ok(inside&&!inside.startsWith('..')&&!inside.includes(':'),'AUTH_RESUME_PRIVATE_PATH_REQUIRED');return path;};
 const read=async file=>{const bytes=await fs.readFile(file);return {value:JSON.parse(bytes.toString('utf8').replace(/^\uFEFF/,'')),sha256:hash(bytes)};};
 export function authResumeArguments(argv){
-  const options={execute:false},allowed=new Set(['execution-dir','output','linked-directory','approved-review-sha256']);
+  const options={execute:false},allowed=new Set(['execution-dir','output','linked-directory','approved-review-sha256','revision-amendment']);
   for(let i=0;i<argv.length;i++){
     if(argv[i]==='--execute'){assert.equal(options.execute,false);options.execute=true;continue;}
     const key=argv[i].slice(2);assert.ok(argv[i].startsWith('--')&&allowed.has(key)&&argv[i+1]&&!argv[i+1].startsWith('--'));
@@ -33,15 +33,82 @@ export function authResumeArguments(argv){
   return options;
 }
 
+// One bounded correction: the demonstrated two-sale FK statement delta10->9.
+// This validates evidence and SQL bytes; it never executes the SQL.
+export async function readAuthResumeRevisionAmendment({file,directory,plan,journalSnapshot,attempt}){
+  const amendmentFile=await read(privatePath(file)),a=amendmentFile.value;
+  assert.equal(a.format,'balam-live-cleanup-revision-amendment-v1');
+  assert.equal(a.run,plan.run);assert.equal(a.projectRef,plan.projectRef);
+  assert.equal(plan.run,'57a5e11f-7a4b-4926-9993-f9f712d12063','AUTH_RESUME_AMENDMENT_EXACT_RUN_REQUIRED');
+  assert.equal(plan.targets.length,28);assert.equal(a.original.expectedRevisionDelta,10);assert.equal(a.amended.expectedRevisionDelta,9);
+  const files={original:{manifest:'cleanup-manifest.json',review:'cleanup-review.json',sql:'cleanup-reviewed.sql'},
+    amended:{manifest:'cleanup-manifest-revision-v2.json',review:'cleanup-review-revision-v2.json',sql:'cleanup-reviewed-revision-v2.sql'}};
+  const states={};
+  for(const kind of ['original','amended']){
+    const descriptor=a[kind],state={};
+    for(const type of ['manifest','review','sql']){
+      const path=privatePath(descriptor[type+'File']);assert.equal(path,resolve(directory,files[kind][type]),'AUTH_RESUME_AMENDMENT_FILE_SCOPE');
+      const bytes=await fs.readFile(path);assert.equal(hash(bytes),descriptor[type==='sql'?'sqlSha256':type+'FileSha256']);
+      state[type]=type==='sql'?bytes.toString('utf8'):JSON.parse(bytes.toString('utf8'));
+    }
+    assert.equal(journalHash(state.manifest),descriptor.manifestSha256);
+    assert.equal(journalHash(state.review.binding),descriptor.reviewSha256);assert.equal(state.review.reviewSha256,descriptor.reviewSha256);
+    assert.equal(state.review.sqlSha256,descriptor.sqlSha256);states[kind]=state;
+  }
+  assert.equal(states.original.manifest.expectedRevisionDelta,10);assert.equal(states.original.review.binding.expectedRevisionDelta,10);
+  assert.deepEqual(states.amended.manifest,{...states.original.manifest,expectedRevisionDelta:9},'AUTH_RESUME_AMENDMENT_MANIFEST_SCOPE_CHANGED');
+  assert.deepEqual(states.amended.review.binding,{...states.original.review.binding,expectedRevisionDelta:9},'AUTH_RESUME_AMENDMENT_REVIEW_SCOPE_CHANGED');
+  assert.deepEqual(states.amended.review,{...states.original.review,binding:states.amended.review.binding,
+    reviewSha256:a.amended.reviewSha256,sqlSha256:a.amended.sqlSha256,sqlFile:states.amended.review.sqlFile},'AUTH_RESUME_AMENDMENT_REVIEW_METADATA_CHANGED');
+  assert.equal(privatePath(states.amended.review.sqlFile),resolve(directory,files.amended.sql));
+  const oldSql=states.original.sql,oldHash=a.original.manifestSha256;
+  assert.equal(oldSql.split(oldHash).length-1,3);assert.equal(oldSql.split('r.revision=b.revision+10').length-1,1);
+  assert.equal(oldSql.split("'snapshot_revision_delta',10,").length-1,1);
+  const expectedSql=oldSql.replaceAll(oldHash,a.amended.manifestSha256).replace('r.revision=b.revision+10','r.revision=b.revision+9')
+    .replace("'snapshot_revision_delta',10,","'snapshot_revision_delta',9,");
+  assert.equal(states.amended.sql,expectedSql,'AUTH_RESUME_AMENDMENT_SQL_CHANGED_OUTSIDE_REVISION_CONSTANTS');
+  const proofs={};
+  for(const key of ['localFk','rollback']){
+    assert.equal(resolve(a.proofs[key].path),resolve('docs/fixes/evidence/h171/'+
+      (key==='localFk'?'final-cleanup-fk-statement-local.json':'final-cleanup-unconfirmed-reconciliation.json')),'AUTH_RESUME_AMENDMENT_PROOF_SCOPE');
+    const proof=await read(resolve(a.proofs[key].path));assert.equal(proof.sha256,a.proofs[key].sha256);proofs[key]=proof.value;
+  }
+  const local=proofs.localFk,rollback=proofs.rollback;
+  assert.equal(local.run,plan.run);assert.equal(local.exactFixtureRows,28);assert.equal(local.observedRevisionDelta,9);
+  assert.equal(local.previousIncorrectExpectation,10);assert.equal(local.correctedExpectation,9);assert.equal(local.revisionGuardStillExact,true);
+  assert.equal(rollback.run,plan.run);assert.equal(rollback.projectRef,plan.projectRef);assert.equal(rollback.readOnly,true);
+  assert.equal(rollback.classification,'ALL_PRESENT_UNCHANGED');assert.equal(rollback.rollbackProven,true);assert.equal(rollback.commitPossible,false);
+  assert.equal(rollback.presentUnchanged,28);assert.equal(rollback.absent,0);assert.equal(rollback.divergent,0);
+  assert.equal(rollback.outsideTablesUnchanged,63);assert.equal(rollback.catalogUnchanged,true);assert.equal(rollback.authUnchanged,true);
+  assert.equal(String(rollback.revisionDelta),'0');assert.equal(rollback.revisionOtherUnchanged,true);
+  assert.equal(rollback.originalBaselineFileSha256,plan.backup.baselineFileSha256);assert.equal(rollback.beforeAttemptFileSha256,plan.backup.currentFileSha256);
+  const entry=journalSnapshot.entries.at(-1);
+  assert.equal(journalSnapshot.entries.length,attempt.sequence+1,'AUTH_RESUME_AMENDMENT_JOURNAL_TAIL_REQUIRED');
+  assert.equal(entry.sequence,attempt.sequence+1);assert.equal(entry.previousHash,attempt.entryHash);
+  const {entryHash,...entryBody}=entry;assert.equal(entryHash,journalHash(entryBody));
+  assert.equal(entry.kind,'live-cleanup-sql-revision-amendment');assert.equal(entry.actorId,plan.actorId);assert.equal(entry.requestId,plan.run);
+  assert.equal(entry.checkpoint,'Exact cleanup after proven rollback and FK statement correction');
+  assert.equal(entry.commandHash,journalHash(entry.command));
+  assert.deepEqual(entry.identities,{run:plan.run});
+  assert.deepEqual(entry.command,{parentIntentSha256:attempt.entryHash,amendmentFileSha256:amendmentFile.sha256,
+    oldSqlSha256:a.original.sqlSha256,newSqlSha256:a.amended.sqlSha256,oldReviewSha256:a.original.reviewSha256,newReviewSha256:a.amended.reviewSha256,
+    oldManifestSha256:a.original.manifestSha256,newManifestSha256:a.amended.manifestSha256,
+    localProofSha256:a.proofs.localFk.sha256,rollbackProofSha256:a.proofs.rollback.sha256,expectedRows:28,expectedRevisionDelta:9});
+  assert.equal(attempt.command.sqlSha256,a.original.sqlSha256);
+  return {...states.amended,amendmentFileSha256:amendmentFile.sha256,originalSqlSha256:a.original.sqlSha256,
+    journalEntrySha256:entry.entryHash};
+}
+
 export async function resumeCommittedAuthCleanup(options){
   const directory=privatePath(options['execution-dir']),input=(await read(join(directory,'recovery-input.json'))).value;
   assert.equal(input.projectRef,SNAPSHOT_PROJECT);assert.equal(input.execute,true);
   const runDirectory=privatePath(input.runDirectory),baselineDirectory=privatePath(input.baselineDirectory);
   const planFile=await read(join(directory,'cleanup-plan.json')),plan=planFile.value;
-  const review=(await read(join(directory,'cleanup-review.json'))).value;
-  const manifest=(await read(join(directory,'cleanup-manifest.json'))).value;
+  let review=(await read(join(directory,'cleanup-review.json'))).value;
+  let manifest=(await read(join(directory,'cleanup-manifest.json'))).value;
   const identityFile=await read(join(directory,'auth-identity-before-cleanup.json'));
-  const resultFile=await read(join(directory,'cleanup-execution-response.json'));
+  const executionName=options['revision-amendment']?'cleanup-execution-revision-v2':'cleanup-execution';
+  const resultFile=await read(join(directory,executionName+'-response.json'));
   const historicalAuthFile=await read(join(directory,'auth-after-sql-response.json'));
   const historicalAuth=historicalAuthFile.value.rows?.[0]?.report||historicalAuthFile.value;
   const restoration=(await read(join(directory,'backup-restore-validation.json'))).value;
@@ -58,17 +125,23 @@ export async function resumeCommittedAuthCleanup(options){
   assert.equal(review.binding.run,plan.run);assert.equal(review.binding.actorId,plan.actorId);
   assert.equal(review.binding.artifactSha256,plan.artifactSha256);assert.equal(review.binding.journalSha256,plan.journalSha256);
   assert.deepEqual(review.binding.outside,manifest.outside);
-  if(options.execute)assert.equal(options['approved-review-sha256'],review.reviewSha256,'AUTH_RESUME_REVIEW_CHANGED');
   const attempts=journalSnapshot.entries.filter(e=>e.kind==='live-cleanup-sql-attempt');
   assert.equal(attempts.length,1,'AUTH_RESUME_ONE_COMMITTED_SQL_ATTEMPT_REQUIRED');
   const attempt=attempts[0],prefix={...journalSnapshot,entries:journalSnapshot.entries.slice(0,attempt.sequence-1)};
   assert.equal(journalHash(prefix),plan.journalSha256,'AUTH_RESUME_JOURNAL_PREFIX_CHANGED');
-  assert.equal(attempt.sequence,journalSnapshot.entries.length,'AUTH_RESUME_PRIOR_AUTH_ATTEMPT_REQUIRES_SEPARATE_RECONCILIATION');
   assert.equal(attempt.command.planSha256,journalHash(plan));assert.equal(attempt.command.planFileSha256,planFile.sha256);
   assert.equal(attempt.command.expectedRows,plan.targets.length);
-  const sqlSha256=hash(await fs.readFile(join(directory,'cleanup-execution.sql')));
-  assert.equal(sqlSha256,review.sqlSha256);assert.equal(sqlSha256,attempt.command.sqlSha256);
-  assert.equal(sqlSha256,hash(await fs.readFile(join(directory,'cleanup-reviewed.sql'))));
+  const originalSqlSha256=hash(await fs.readFile(join(directory,'cleanup-execution.sql')));
+  assert.equal(originalSqlSha256,review.sqlSha256);assert.equal(originalSqlSha256,attempt.command.sqlSha256);
+  assert.equal(originalSqlSha256,hash(await fs.readFile(join(directory,'cleanup-reviewed.sql'))));
+  let amendment;
+  if(options['revision-amendment']){
+    amendment=await readAuthResumeRevisionAmendment({file:options['revision-amendment'],directory,plan,journalSnapshot,attempt});
+    review=amendment.review;manifest=amendment.manifest;
+  }else assert.equal(attempt.sequence,journalSnapshot.entries.length,'AUTH_RESUME_PRIOR_AUTH_ATTEMPT_REQUIRES_SEPARATE_RECONCILIATION');
+  if(options.execute)assert.equal(options['approved-review-sha256'],review.reviewSha256,'AUTH_RESUME_REVIEW_CHANGED');
+  const sqlSha256=hash(await fs.readFile(join(directory,executionName+'.sql')));
+  assert.equal(sqlSha256,review.sqlSha256);
   const catalog=recordedSnapshotCatalog({authorityAudit:(await read('docs/fixes/evidence/h171/authority-audit-before.json')).value,
     cleanupCatalog:(await read('docs/fixes/evidence/h171/cleanup-catalog-before.json')).value});
   const sourceUrl=`https://${SNAPSHOT_PROJECT}.supabase.co/`;
@@ -91,6 +164,8 @@ export async function resumeCommittedAuthCleanup(options){
   const summary={projectRef:SNAPSHOT_PROJECT,run:plan.run,priorSqlCommitVerified:true,sqlRepeated:false,
     exactRowsPreviouslyDeleted:plan.targets.length,authTargets:plan.authTargets.map(t=>t.id),reviewSha256:review.reviewSha256,
     cleanupVerified:false,certified:false};
+  if(amendment)summary.revisionAmendment={fileSha256:amendment.amendmentFileSha256,journalEntrySha256:amendment.journalEntrySha256,
+    originalSqlSha256:amendment.originalSqlSha256,amendedSqlSha256:sqlSha256,expectedRevisionDelta:9,scopeUnchanged:true};
   if(options.execute!==true)return summary;
   const output=privatePath(options.output||join('.evidence-h171-private','live-recovery','auth-resume-'+randomUUID()));
   const io=await createLiveAuthorityIO({catalog,sourceUrl,cliPath:resolve('node_modules/supabase/dist/supabase.js'),

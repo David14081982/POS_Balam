@@ -2,7 +2,11 @@
 // The caller supplies its existing fixture, guarded transport and authority comparison.
 import { journalHash } from './h171-live-journal.mjs';
 
-const requireValue = (ok, code) => { if (!ok) throw new Error('SESSION_DELIVERY_' + code); };
+const ownError=Symbol('session-delivery-owned-error');
+const requireValue = (ok, code) => { if (!ok) {
+  const name='SESSION_DELIVERY_'+code;
+  throw Object.assign(new Error(name),{code:name,[ownError]:true});
+} };
 const REAL_ACTOR = '3f24222e-fd74-4ed2-b56f-f298af574b1e';
 
 /** Closes all pages in the old C context and replaces context/page on the SAME
@@ -27,6 +31,8 @@ export async function runFreshSessionDelivery({ browser, terminal, peers, addres
   requireValue(new URL(address).hostname === '127.0.0.1', 'LOCAL_ARTIFACT_ADDRESS_REQUIRED');
   const installationId = fixtures.installations[2], oldContext = terminal.context, oldPages = oldContext.pages();
   let phase = 'close-old-context', pageErrors = 0;
+  let diagnostics={pageHasNav:false,authReady:null,storeReady:null,sessionReadOk:null,
+    sessionPresent:null,actorMatched:null,profilePresent:null,profileMatched:null};
   try {
     await oldContext.close();
     requireValue(oldPages.every(p => p.isClosed()), 'OLD_PAGES_NOT_CLOSED');
@@ -54,17 +60,33 @@ export async function runFreshSessionDelivery({ browser, terminal, peers, addres
     await page.waitForFunction(() => window.AUTH?.isReady() && window.STORE);
     const initial = await page.evaluate(() => window.__h171FreshSessionStorage);
     requireValue(initial?.localStorageCount === 0 && initial.sessionStorageCount === 0, 'ORIGIN_STORAGE_NOT_EMPTY_BEFORE_BINDING');
-    phase = 'ui-login';
+    phase = 'email-input';
     await page.locator('input[type="email"]').fill(credentials.email);
+    phase = 'password-input';
     await page.locator('input[type="password"]').fill(credentials.password);
+    phase = 'login-submit';
     await page.locator('input[type="password"]').press('Enter');
+    phase = 'navigation-after-login';
     await page.getByTestId('nav-pos').waitFor({ state: 'attached' });
+    diagnostics.pageHasNav=true;
+    phase = 'store-ready';
     await waitReady(terminal);
-    requireValue(await page.evaluate(async ({ authId, profileId }) => {
+    phase = 'session-identity';
+    diagnostics=await page.evaluate(async ({ authId }) => {
       const { data, error } = await (await window.STORE.ensureClient()).auth.getSession();
-      return !error && data?.session?.user?.id === authId && typeof profileId === 'string'
-        && window.AUTH.current()?.id === profileId;
-    }, { authId: fixtures.userId, profileId: fixtures.sellers?.[0] }), 'AUTH_OR_PROFILE_IDENTITY_MISMATCH');
+      const profile=window.AUTH.current();
+      // current_permission_snapshot returns profile.id=auth.users.id and a
+      // separate seller_id. AUTH.normalizeProfile deliberately prefers id.
+      return {pageHasNav:!!document.querySelector('[data-testid="nav-pos"]'),
+        authReady:window.AUTH.isReady()===true,storeReady:window.STORE.syncStatus().ready===true,
+        sessionReadOk:!error,sessionPresent:!!data?.session?.user,
+        actorMatched:data?.session?.user?.id===authId,profilePresent:!!profile,
+        profileMatched:profile?.id===authId};
+    }, { authId: fixtures.userId });
+    requireValue(diagnostics.sessionReadOk,'SESSION_READ_FAILED');
+    requireValue(diagnostics.actorMatched,'AUTH_IDENTITY_MISMATCH');
+    phase = 'profile-identity';
+    requireValue(diagnostics.profileMatched,'PROFILE_IDENTITY_MISMATCH');
     phase = 'authority-comparison';
     const comparison = await readOnlyConverge([...peers, terminal]);
     requireValue(pageErrors === 0, 'PAGE_ERROR');
@@ -72,12 +94,14 @@ export async function runFreshSessionDelivery({ browser, terminal, peers, addres
       oldPagesClosed: oldPages.length, freshContext: true, cookiesBeforeLoad: 0, originsBeforeLoad: 0,
       localStorageBeforeInstallationBinding: 0, sessionStorageBeforeInstallationBinding: 0,
       serviceWorkersBlocked: true, websocketsBlocked: true, guardedTransportInstalled: true,
-      loginViaUI: true, actorMatched: true, profileMatched: true, comparedTerminals: ['A','B','C'],
+      loginViaUI: true, actorMatched: true, profileMatched: true, identityDiagnostics:diagnostics, comparedTerminals: ['A','B','C'],
       comparisonSha256: journalHash(comparison ?? null), pointZeroExercised: false, certified: false };
     return { terminal, evidence };
-  } catch {
-    // Playwright fill errors can include input values; do not propagate the original error/cause.
-    throw new Error('SESSION_DELIVERY_FAILED:' + phase);
+  } catch(error) {
+    // Only helper-owned codes and booleans cross this boundary. Playwright
+    // errors can contain filled credentials; never propagate their text/cause.
+    const code=error?.[ownError]===true?error.code:'SESSION_DELIVERY_FAILED';
+    throw Object.assign(new Error(code+':'+phase+' '+JSON.stringify(diagnostics)),{code,phase,diagnostics});
   }
 }
 

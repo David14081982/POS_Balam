@@ -1,0 +1,162 @@
+{
+  "format": "balam-h171-final-session-cleanup-public-v1",
+  "scope": "EXACT_CLEANUP_OF_LAST_READ_ONLY_DELIVERY_SESSION",
+  "at": "2026-09-13T08:37:34.956Z",
+  "projectRef": "telohdbvbvsfmwyriflz",
+  "run": "04beb00f-dc36-400a-8e24-b80efbb447d8",
+  "artifactSha256": "f4d73fa350d4187dade1a55c999dc203b405f4c20d95d9138aaf1b2ef0a82646",
+  "cleanupVerified": true,
+  "certified": false,
+  "sql": {
+    "scope": 8,
+    "removed": 8,
+    "commitVerified": true,
+    "manifestSha256": "76384fec364f592c371a8642db8cfbe0e6bb8e993a33a7a1053104f81e24aa94",
+    "responseFileSha256": "0f80402b796dad86f529006f97b3fdd9959bf7d0ce6cfdbe035d11ca1710d489"
+  },
+  "auth": {
+    "scope": 1,
+    "absent": 1,
+    "targetIds": [
+      "16b227dc-e4a9-4397-be14-31b3bbb38c09"
+    ],
+    "status": 404,
+    "attemptRecorded": true,
+    "absenceVerified": true,
+    "foreignAuthUnchanged": true
+  },
+  "residue": {
+    "newPos": 0,
+    "newAuth": 0
+  },
+  "inventory": {
+    "products": 973,
+    "families": 251,
+    "pieces": 3483,
+    "fullRowsMd5": "4732c0c8b6a13ef05e922eaa58edb158",
+    "unchangedFromOriginalBaseline": true
+  },
+  "protectedSale": {
+    "folio": "BG-260912-0001",
+    "operationId": "35e2c61a-7561-41b9-9535-e39e671a55d3",
+    "fullRowMd5": "4d4eccadf33a73be1303d957036886d6",
+    "unchanged": true
+  },
+  "protectedRequest": {
+    "id": "70549527-4867-4342-94d2-38e770b0f2a9",
+    "fullRowMd5": "8fdc987d8fe491f467f968da4c5306e0"
+  },
+  "heldAmbiguousRows": [
+    {
+      "table": "clients",
+      "id": "cli-1789079431176-jyxi",
+      "fullRowMd5": "bf6c133205988d9829d322a6995d7eb3",
+      "unchanged": true,
+      "classification": "UNKNOWN_OWNER_HELD"
+    },
+    {
+      "table": "clients",
+      "id": "cli-1789078624431-0fz3",
+      "fullRowMd5": "637e3a14e34965b2120defb11c6b6b19",
+      "unchanged": true,
+      "classification": "UNKNOWN_OWNER_HELD"
+    },
+    {
+      "table": "clients",
+      "id": "cli-1789078938103-ams0",
+      "fullRowMd5": "48cf67c3064e7f31b5b5497ff0082bfd",
+      "unchanged": true,
+      "classification": "UNKNOWN_OWNER_HELD"
+    },
+    {
+      "table": "promotions",
+      "id": "promo-1789079431430",
+      "fullRowMd5": "acec5f446ea07ea168f126f7d2baebf2",
+      "unchanged": true,
+      "classification": "UNKNOWN_OWNER_HELD"
+    }
+  ],
+  "protection": {
+    "tablesChecked": 64,
+    "outsideTablesUnchangedFromBeforeSql": 63,
+    "outsideTablesUnchangedFromOriginalBaseline": 63,
+    "outsideFullFingerprintsSha256": "a791ae98b0b410b54a61632652d5a17441c45095a95eac633a6df07d9e72c524",
+    "catalogUnchanged": true
+  },
+  "commercialOperations": {
+    "newSales": 0,
+    "salesUnchanged": true,
+    "folioCountersUnchanged": true
+  },
+  "storage": {
+    "writesInThisRun": 0,
+    "newTestAssetsFromThisRun": 0,
+    "evidence": "Guarded journal permits Storage reads only; canonical plan has no Storage targets; separate final Auth ownership preflight retained.",
+    "ownershipCounts": [
+      {
+        "column": "owner",
+        "id": "16b227dc-e4a9-4397-be14-31b3bbb38c09",
+        "relation": "storage.buckets",
+        "rows": 0,
+        "type": "uuid"
+      },
+      {
+        "column": "owner_id",
+        "id": "16b227dc-e4a9-4397-be14-31b3bbb38c09",
+        "relation": "storage.buckets",
+        "rows": 0,
+        "type": "text"
+      },
+      {
+        "column": "owner",
+        "id": "16b227dc-e4a9-4397-be14-31b3bbb38c09",
+        "relation": "storage.objects",
+        "rows": 0,
+        "type": "uuid"
+      },
+      {
+        "column": "owner_id",
+        "id": "16b227dc-e4a9-4397-be14-31b3bbb38c09",
+        "relation": "storage.objects",
+        "rows": 0,
+        "type": "text"
+      },
+      {
+        "column": "owner_id",
+        "id": "16b227dc-e4a9-4397-be14-31b3bbb38c09",
+        "relation": "storage.s3_multipart_uploads",
+        "rows": 0,
+        "type": "text"
+      },
+      {
+        "column": "owner_id",
+        "id": "16b227dc-e4a9-4397-be14-31b3bbb38c09",
+        "relation": "storage.s3_multipart_uploads_parts",
+        "rows": 0,
+        "type": "text"
+      }
+    ]
+  },
+  "revisions": {
+    "baseline": "883",
+    "beforeSql": "885",
+    "afterSql": "887",
+    "final": "894",
+    "sqlCleanupDelta": 2,
+    "authCleanupDelta": 7
+  },
+  "privateEvidence": {
+    "baselineOriginalFileSha256": "9af8effcddb5b854d5ef506979ee842e62aa3e058f5669197a68b0a995ead41f",
+    "beforeSqlFileSha256": "6bfc3e6112ed84d57d2148261b4e3b963de5ed49456c12d4f7dcbcd9f28dfdff",
+    "finalFileSha256": "8e3372f67109c774294f34ef0cfc7393dcaae7564b266339408603883fe89c01",
+    "finalCompression": "gzip",
+    "completionFileSha256": "f6cad894f38ab51f69163617739e0306bd1deb183f1994f69aa991f1508c3619",
+    "authResultFileSha256": "f166a8ec413844e5fb36f6a30b46d9dad08def767eb7f4db5e56f6506a8851f5",
+    "journalFileSha256": "184c25b70943222ed1585ae145e7e47d16048d5e7ef51ae581315680146f4b1c"
+  },
+  "limitations": [
+    "This proof covers cleanup and preservation of the last delivery session; functional journey and publication evidence are separate.",
+    "Zero new QA residue does not erase OWNER-held ambiguous history or anti-replay safeguards.",
+    "Storage statement concerns this guarded run; it does not reclassify historical commercial assets as test data."
+  ]
+}

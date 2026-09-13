@@ -1,0 +1,34 @@
+{
+  "scope": "LOCAL_FOCAL_ACTUAL_HELPER_AND_AUTH_NORMALIZER_NO_NETWORK",
+  "passed": 3,
+  "failed": 0,
+  "results": [
+    {
+      "name": "Actual AUTH normalizer prefers AuthUUID; helper accepts correct Auth/profile despite distinct sellerId",
+      "pass": true
+    },
+    {
+      "name": "Owned profile mismatch retains exact code and boolean diagnosis without identities",
+      "pass": true
+    },
+    {
+      "name": "External credential-bearing error text and forged code are discarded; phase remains safe",
+      "pass": true
+    }
+  ],
+  "cause": {
+    "failedRun": "57a5e11f-7a4b-4926-9993-f9f712d12063",
+    "oldComparison": "AUTH.current().id===fixtures.sellers[0]",
+    "sqlContract": "current_permission_snapshot profile.id=auth.users.id; profile.seller_id=sellers.id",
+    "normalizer": "data.id || data.seller_id",
+    "correction": "Both session.user.id and AUTH.current().id must equal fixtures.userId; distinct seller identity is not substituted."
+  },
+  "helperSha256": "dafe554df072cc136d62e806bbcfa145caf185bd373cb231742f35abe305d87a",
+  "authSourceSha256": "42ad32b44bec5201f68e8b6358641e3c2486d8a58218f457b2baaa17d9a9b8c2",
+  "migrationSourceSha256": "9b8ba6fa050d5101dd8fcb7bfaa64b2ad1d24ecd8e10c7ba77aa832fa79fd1b5",
+  "nodeCheck": "PASS",
+  "remoteCalls": 0,
+  "remoteWrites": 0,
+  "appChanged": false,
+  "certified": false
+}

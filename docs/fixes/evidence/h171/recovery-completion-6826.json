@@ -1,0 +1,85 @@
+{
+  "format": "balam-h171-stopped-run-recovery-completion-public-v1",
+  "scope": "EXACT_CLEANUP_OF_INTERRUPTED_RUN_ONLY",
+  "at": "2026-09-13T07:47:30.327Z",
+  "projectRef": "telohdbvbvsfmwyriflz",
+  "run": "6826dbe9-eb18-4e14-8513-cb2b5e71c502",
+  "artifactSha256": "f4d73fa350d4187dade1a55c999dc203b405f4c20d95d9138aaf1b2ef0a82646",
+  "cleanupVerified": true,
+  "certified": false,
+  "sql": {
+    "scope": 20,
+    "removed": 20,
+    "commitVerified": true,
+    "manifestSha256": "5d6fd5747420b38d05eac25da79f5f88e3fb928de57e02f3ff4112c34e7254c7",
+    "responseFileSha256": "0eeabe98f0ece0db00f6ed1abb3e5e684d7651f9906bf40f7321b1f8e16d1c24"
+  },
+  "auth": {
+    "scope": 1,
+    "absent": 1,
+    "targetIds": [
+      "7af8eb32-c8d3-47b9-a754-8ca4e231d124"
+    ],
+    "status": 404,
+    "attemptRecorded": true,
+    "absenceVerified": true,
+    "foreignAuthUnchanged": true
+  },
+  "residue": {
+    "newPos": 0,
+    "newAuth": 0
+  },
+  "inventory": {
+    "products": 973,
+    "families": 251,
+    "pieces": 3483,
+    "fullRowsMd5": "4732c0c8b6a13ef05e922eaa58edb158",
+    "unchangedFromOriginalBaseline": true
+  },
+  "protectedSale": {
+    "folio": "BG-260912-0001",
+    "operationId": "35e2c61a-7561-41b9-9535-e39e671a55d3",
+    "fullRowMd5": "4d4eccadf33a73be1303d957036886d6",
+    "unchanged": true
+  },
+  "protectedRequest": {
+    "fullRowMd5": "8fdc987d8fe491f467f968da4c5306e0",
+    "id": "70549527-4867-4342-94d2-38e770b0f2a9"
+  },
+  "protection": {
+    "tablesChecked": 64,
+    "outsideTablesUnchangedFromBeforeSql": 63,
+    "outsideFullFingerprintsSha256": "b0fce8e3755df746391b22ab109e52bc8ffd9fe01561d8d6807f1017ba631e84",
+    "catalogUnchanged": true
+  },
+  "preservedCounter": {
+    "prefix": "BG",
+    "businessDate": "2026-09-13",
+    "beforeSequence": 1,
+    "finalSequence": 2,
+    "fullRowMd5": "750e299990e5e55397672e82fbfa6087",
+    "otherFieldsUnchanged": true,
+    "deleted": false,
+    "rewound": false
+  },
+  "revisions": {
+    "baseline": "792",
+    "afterSql": "822",
+    "final": "829",
+    "sqlCleanupDelta": 9,
+    "authCleanupDelta": 7
+  },
+  "privateEvidence": {
+    "baselineOriginalFileSha256": "73cf8962c18cf4eb8edc5cff3eacaf82ac3e7fa0de1adb6955901d0fed5a058f",
+    "baselineArchiveFileSha256": "f9ee07189a8719a306542afe7a46d6b53a1033689837abe5f1087d88732298d4",
+    "archiveIndexFileSha256": "844859f5fd29890dbae86a51e0f5a58abb1d10e498e7aad30347e2d591ca25b8",
+    "baselineArchiveRoundtripVerified": true,
+    "finalFileSha256": "c99dde3c8bedd114d8edd600afe61af51a36884c97274d776b06b82e79a0e962",
+    "finalCompression": "gzip",
+    "completionFileSha256": "340cfcdab61ae79429d584a73cb3c26044bc5db41a2cb3e9d23c5107887a14b8"
+  },
+  "limitations": [
+    "This proof covers only cleanup of run6826, not the subsequent delivery journey.",
+    "SQL and Auth are separate verified transactions. Legitimate monotonic counters are preserved."
+  ]
+}

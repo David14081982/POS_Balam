@@ -1,0 +1,96 @@
+{
+  "format": "balam-h171-fk-statement-revision-local-v1",
+  "at": "2026-09-13T08:12:00.313Z",
+  "localOnly": true,
+  "remoteWrites": 0,
+  "run": "57a5e11f-7a4b-4926-9993-f9f712d12063",
+  "functionDefinitionMd5": "d5a52190abeafe3651416410e174a3e7",
+  "fk": "FOREIGN KEY (folio) REFERENCES pos.sales(folio) ON DELETE CASCADE",
+  "checks": [
+    {
+      "parents": 1,
+      "children": 0,
+      "deleteStatements": 1,
+      "revisionDelta": 2,
+      "interpretation": "one sales statement plus one grouped empty sale_items statement"
+    },
+    {
+      "parents": 2,
+      "children": 0,
+      "deleteStatements": 1,
+      "revisionDelta": 2,
+      "interpretation": "one sales statement plus one grouped empty sale_items statement"
+    }
+  ],
+  "exactFixtureRows": 28,
+  "directInvalidatingStatements": 8,
+  "observedRevisionDelta": 9,
+  "previousIncorrectExpectation": 10,
+  "correctedExpectation": 9,
+  "deltas": [
+    {
+      "table": "sale_payments",
+      "rows": 2,
+      "revisionDelta": 1
+    },
+    {
+      "table": "sale_commits",
+      "rows": 2,
+      "revisionDelta": 0
+    },
+    {
+      "table": "stock_reservations",
+      "rows": 2,
+      "revisionDelta": 1
+    },
+    {
+      "table": "movements",
+      "rows": 2,
+      "revisionDelta": 1
+    },
+    {
+      "table": "sale_items",
+      "rows": 2,
+      "revisionDelta": 1
+    },
+    {
+      "table": "sales",
+      "rows": 2,
+      "revisionDelta": 2
+    },
+    {
+      "table": "products",
+      "rows": 2,
+      "revisionDelta": 1
+    },
+    {
+      "table": "user_permission_role_assignments",
+      "rows": 1,
+      "revisionDelta": 1
+    },
+    {
+      "table": "sellers",
+      "rows": 4,
+      "revisionDelta": 1
+    },
+    {
+      "table": "online_requests",
+      "rows": 5,
+      "revisionDelta": 0
+    },
+    {
+      "table": "capability_operation_audit",
+      "rows": 1,
+      "revisionDelta": 0
+    },
+    {
+      "table": "sync_devices",
+      "rows": 3,
+      "revisionDelta": 0
+    }
+  ],
+  "scope": "Actual recorded column types, H166 definitions and sale_items FK; all28 backed rows. Other business guards are outside this narrow trigger-count reproduction.",
+  "revisionGuardStillExact": true,
+  "noRevisionRewind": true,
+  "certified": false
+}

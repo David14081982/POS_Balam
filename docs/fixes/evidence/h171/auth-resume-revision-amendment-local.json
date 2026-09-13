@@ -1,0 +1,20 @@
+{
+  "scope": "LOCAL_PRIVATE_AMENDMENT_VALIDATION_NO_SQL_OR_AUTH",
+  "run": "57a5e11f-7a4b-4926-9993-f9f712d12063",
+  "passed": 3,
+  "failed": 0,
+  "checks": [
+    "Original and amended files/hashes/proofs accepted; exact delta10->9 and five literal substitutions across three constants verified",
+    "A different parent intent is rejected even with recomputed entry hashes",
+    "Scope expansion beyond28 targets is rejected"
+  ],
+  "journalEntryMode": "Synthetic in-memory entry76; no journal file mutation",
+  "amendmentFileSha256": "e4e934b5e0b958f03c7e079d7d8f6149a8abab45ac30b2bc4bb821c097cf9bd0",
+  "amendedSqlSha256": "28d8d4a23669ea8b7df87076c99bca0108c5f85dab06014e3efecd6e08bbe865",
+  "amendedReviewSha256": "df8d55c384311c722e6510bde19e75094eeb681cb37b7241bcd53627e631135b",
+  "moduleSha256": "4d07899e9f2d451bddd01c1ef3b8d0fdc84e1f11f3e6cefa17123662bdd53c7d",
+  "remoteCalls": 0,
+  "sqlExecuted": false,
+  "authOperations": 0,
+  "certified": false
+}
