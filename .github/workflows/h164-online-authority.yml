@@ -72,6 +72,8 @@ jobs:
         env:
           BALAM_VERIFIED_HTML: index.html
       - run: node test-h171-settings-controls.mjs
+      - name: Verify company logo and uninterrupted startup presentation
+        run: node test-h171-startup-brand.mjs
       - run: node test-h171-users-responsive.mjs
       - run: npm run test:online:pwa
         env:

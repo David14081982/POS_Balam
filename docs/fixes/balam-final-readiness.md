@@ -1,7 +1,12 @@
 # BALAM FINAL READINESS
 
 **Riesgo:** H-171. **Fecha:** 13/09/2026.
-**Estado:** RESUELTO, PUBLICADO Y VERIFICADO.
+**Estado:** Corrección del arranque verificada; publicación del ajuste EN CURSO.
+
+El OWNER reportó B legacy y espera blanca tras el cierre. La reproducción
+confirmó ambos defectos y una transición clara antes de React. Ya se corrigieron
+con 9/9 comprobaciones focales. El resultado operativo que sigue es el corte
+previo; [corrección actual y límites](h171-arranque-marca.md).
 
 ## 1. Qué se hizo
 

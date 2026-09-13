@@ -7,6 +7,16 @@ y `BLOQUEADO`.
 
 ## Resumen
 
+**H-171 — Presentación de arranque y actualización: CORREGIDO; publicación EN CURSO (13/09/2026).**
+La reproducción sobre el cliente publicado confirmó B legacy, espera blanca y
+un destello claro al montar React: 3 PASS / 6 FAIL en el arnés focal. El cierre
+operativo anterior no cubrió esas transiciones. Corrección visual verificada:
+9/9 focales, 8/8 guardas de arranque, UI 6/6 y PWA 2/2; fuente del cargador
+explícita, logo de empresa y cobertura hasta React. Commit: Pendiente de commit.
+Misma H171; [detalle](fixes/h171-arranque-marca.md). No afecta datos comerciales.
+
+### Corte previo al reporte visual del OWNER
+
 **H-171 — Entrega final de BALAM / Only Online: RESUELTO en aptitud operativa (13/09/2026).**
 **Production ready: SÍ, en el alcance operativo aprobado. PUBLICADO Y VERIFICADO.**
 OWNER autorizó la publicación pública de los commits y las evidencias revisadas.

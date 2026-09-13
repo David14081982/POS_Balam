@@ -1,7 +1,7 @@
 // build-offline.mjs — Regenera "POS Balam (offline).html" desde el source modular.
 // Embebe módulos balam/* (JSX PRECOMPILADO en build: el bundle no carga Babel ni compila
 // en el navegador), libs CDN (react production/xlsx/tailwind) y fuentes woff2 → 100% offline.
-// Reusa el loader/skeleton del bundle existente (solo reemplaza manifest + template).
+// El cargador tiene fuente explícita en balam/bundle-shell.html.
 // Uso: node build-offline.mjs
 import fs from 'fs';
 import zlib from 'zlib';
@@ -20,8 +20,10 @@ if (fs.existsSync(SRC)) {
   console.warn('POS Balam.html no existe; restaurando desde', SAFE);
   try { fs.copyFileSync(SAFE, SRC); } catch (e) { SRC = SAFE; }
 }
-// Wrapper = loader/skeleton. Uso el BACKUP si existe, si no el OUT actual (que ya tiene el loader).
-const WRAPPER = fs.existsSync('POS Balam (offline).BACKUP.html') ? 'POS Balam (offline).BACKUP.html' : OUT;
+const WRAPPER = 'balam/bundle-shell.html';
+const startupLogo = 'data:image/png;base64,' + fs.readFileSync('balam/startup-logo.png').toString('base64');
+const startupSource = fs.readFileSync('balam/startup-brand.js', 'utf8')
+  .replace("'balam/startup-logo.png'", JSON.stringify(startupLogo));
 
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36';
 const MIME = { js: 'text/javascript', jsx: 'text/jsx', css: 'text/css', woff2: 'font/woff2' };
@@ -151,6 +153,7 @@ const localPaths = [...new Set([...template.matchAll(/(?:src|href)="(balam\/[^"]
 for (const p of localPaths) {
   const ext = p.split('.').pop();
   let buf = fs.readFileSync(p), mime = MIME[ext] || 'application/octet-stream';
+  if (p === 'balam/startup-brand.js') buf = Buffer.from(startupSource, 'utf8');
   if (transpile && ext === 'jsx') { buf = Buffer.from(transpile(buf.toString('utf8'), p), 'utf8'); mime = 'text/javascript'; }
   const uuid = addBytes(buf, mime, true);
   template = template.split('"' + p + '"').join('"' + uuid + '"');
@@ -249,6 +252,7 @@ function setBlock(html, type, content) {
   return html.slice(0, s) + content + html.slice(e);
 }
 const esc = (s) => s.split('</').join('<\\/'); // no cerrar el <script> contenedor
+wrapper = wrapper.replace('/*__BALAM_STARTUP__*/', startupSource);
 wrapper = setBlock(wrapper, 'manifest', esc(JSON.stringify(manifest)));
 wrapper = setBlock(wrapper, 'ext_resources', '[]');
 wrapper = setBlock(wrapper, 'template', esc(JSON.stringify(template)));

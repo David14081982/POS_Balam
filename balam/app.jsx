@@ -97,6 +97,8 @@
   }/*EDITMODE-END*/;
 
   function App() {
+    // Release the loader only after React committed the next visible surface.
+    useEffect(() => { window.BALAM_STARTUP?.dismiss(); });
     const lastShell = useRef(null);
     const shellOwner = useRef(null);
     const adoptionObserved = useRef(false);
@@ -152,9 +154,10 @@
         }
       };
       window.addEventListener('configchange', onCfg);
+      window.addEventListener('balamstartupbrandchange', onCfg);
       window.addEventListener('authchange', onAuth);
       if (window.AUTH.init) Promise.resolve(window.AUTH.init()).catch(observeStartupFailure); // sesión persistida → authchange
-      return () => { window.removeEventListener('configchange', onCfg); window.removeEventListener('authchange', onAuth); };
+      return () => { window.removeEventListener('configchange', onCfg); window.removeEventListener('balamstartupbrandchange', onCfg); window.removeEventListener('authchange', onAuth); };
     }, []);
 
     const user = window.AUTH.current();
@@ -201,10 +204,14 @@
       finally { setOnline(window.STORE?.syncStatus()); setStartupBusy(false); }
     }
     function startupGate(message, working) {
+      const brand = window.BALAM_STARTUP;
+      const logo = window.CONFIG.ready ? window.CONFIG.get('store.logo') : brand?.logo();
       const gate = h('main', { key: 'online-gate', 'data-testid': 'online-gate', role: 'status', 'aria-live': 'polite',
-        className: 'min-h-screen flex items-center justify-center p-6 bg-surface text-on-surface' },
-        h('div', { className: 'w-full max-w-md text-center space-y-6' }, [
-          h('p', { key: 'message', className: 'text-lg' }, message),
+        className: 'min-h-screen flex items-center justify-center p-6', style: brand?.styles.frame },
+        h('div', { style: brand?.styles.card }, [
+          logo && h('img', { key: 'logo', src: logo, alt: 'Logotipo de la empresa', style: brand?.styles.image }),
+          h('p', { key: 'message', style: brand?.styles.message }, message),
+          working && h('div', { key: 'progress', 'aria-hidden': true, style: brand?.styles.progress }),
           (!working || confirming) && h('button', {
             key: 'update', className: 'min-h-12 rounded-lg px-6 py-3 bg-primary text-on-primary',
             'data-testid': 'online-gate-retry', disabled: startupBusy || online?.busy, onClick: retryStartup,
@@ -219,8 +226,7 @@
     if (REQUIRE_AUTH) {
       if (!authReady) {
         if (hasSession) return startupGate(confirming ? confirmationMessage : STARTUP_MESSAGE, true);
-        return h('div', { className: 'h-full grid place-items-center', style: { background: '#131B2E' } },
-          h('div', { className: 'text-sm', style: { color: '#5D637B' } }, 'Cargando…'));
+        return startupGate('Cargando BALAM…', true);
       }
       // ToastHost vive en la rama autenticada, así que antes de entrar los avisos
       // se emitían contra un host sin montar y se perdían en silencio: la pantalla

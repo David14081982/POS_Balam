@@ -1,0 +1,56 @@
+{
+  "at": "2026-09-13T19:06:27.491Z",
+  "artifactSha256": "0b452536f67701d991839625291771644006685ee04fffd7aafc8b28b51c44da",
+  "scope": "GENERATED_LOADER_AND_REACT_STARTUP_PRESENTATION",
+  "cases": [
+    {
+      "name": "cold loader shows company logo without legacy B",
+      "pass": true,
+      "logoVisible": true,
+      "oldB": false
+    },
+    {
+      "name": "cold loader handoff has no white frame",
+      "pass": true,
+      "whiteFrames": 0
+    },
+    {
+      "name": "cold updating gate retains logo and dark company surface",
+      "pass": true,
+      "background": "rgb(19, 27, 46)",
+      "logo": true
+    },
+    {
+      "name": "cold failure still blocks operation and exposes retry",
+      "pass": true
+    },
+    {
+      "name": "cached loader shows company logo without legacy B",
+      "pass": true,
+      "logoVisible": true,
+      "oldB": false
+    },
+    {
+      "name": "Cached presentation is reused without reading commercial legacy config",
+      "pass": true,
+      "legacyRead": false
+    },
+    {
+      "name": "cached loader handoff has no white frame",
+      "pass": true,
+      "whiteFrames": 0
+    },
+    {
+      "name": "cached updating gate retains logo and dark company surface",
+      "pass": true,
+      "background": "rgb(19, 27, 46)",
+      "logo": true
+    },
+    {
+      "name": "cached failure still blocks operation and exposes retry",
+      "pass": true
+    }
+  ],
+  "errors": [],
+  "remoteWrites": 0
+}

@@ -31,6 +31,15 @@ en `docs/fixes/evaluacion-arquitectura-sincronizacion-h164.md`.
 
 ## Build offline
 
+El cargador inicial tiene fuente explícita en `balam/bundle-shell.html`; el
+build no hereda HTML de un artefacto ni de un backup anterior.
+`balam/startup-brand.js` comparte la presentación entre cargador y espera React:
+conserva la cobertura hasta que el siguiente estado esté montado.
+`balam/startup-logo.png` es una copia de presentación del logo confirmado para
+el primer arranque, no otra configuración administrable. El último recurso
+visual materializado de PWA puede reemplazarla; `CONFIG.get('store.logo')`
+prevalece al confirmarse. No se lee `balam_config_v1` ni se guarda negocio local.
+
 `build-offline.mjs` precompila JSX, genera Tailwind estático e incorpora
 scripts, fuentes e imágenes en un manifiesto. Cada asset se identifica mediante
 SHA-256 de su MIME, modo de compresión y bytes originales, conservando formato
