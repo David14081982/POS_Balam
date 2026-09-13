@@ -1,0 +1,502 @@
+{
+  "format": "balam-h171-stopped-run-recovery-completion-public-v1",
+  "scope": "EXACT_RECOVERY_OF_INTERRUPTED_RUN_ONLY",
+  "at": "2026-09-13T07:36:54.153Z",
+  "projectRef": "telohdbvbvsfmwyriflz",
+  "run": "d4b616be-2bed-4512-9053-6f0ee6a7c372",
+  "artifactSha256": "f4d73fa350d4187dade1a55c999dc203b405f4c20d95d9138aaf1b2ef0a82646",
+  "cleanupVerified": true,
+  "certified": false,
+  "sql": {
+    "scope": 20,
+    "removed": 20,
+    "commitVerified": true,
+    "manifestSha256": "3a4f259a5ee16cdc6468d730d46d8b3df66fbefd8f4eb691ce01609fabe321f0",
+    "executionFileSha256": "1af43c9e54418d1256418c5c986c3e25347e528e72e0f9af5cde2f7dcbd9e729",
+    "responseFileSha256": "eacfff7d536baa92dd5c4497f89103899de9843da25d80d845e594a5ea2b8536"
+  },
+  "auth": {
+    "scope": 1,
+    "absent": 1,
+    "targetIds": [
+      "759b9f62-8018-4e62-bde3-794ec58e92fc"
+    ],
+    "status": 404,
+    "attemptRecorded": true,
+    "absenceVerified": true,
+    "baselineAuthIdCount": 4,
+    "finalAuthIdCount": 4,
+    "foreignAuthUnchanged": true,
+    "foreignAuthFingerprint": {
+      "full_rows_md5": "a641f1034463ba5e397e5884ce42d59f",
+      "row_count": 4
+    }
+  },
+  "residue": {
+    "newPos": 0,
+    "newAuth": 0
+  },
+  "inventory": {
+    "before": {
+      "products": 973,
+      "families": 251,
+      "pieces": 3483,
+      "row_count": 973,
+      "full_rows_md5": "4732c0c8b6a13ef05e922eaa58edb158"
+    },
+    "after": {
+      "products": 973,
+      "families": 251,
+      "pieces": 3483,
+      "row_count": 973,
+      "full_rows_md5": "4732c0c8b6a13ef05e922eaa58edb158"
+    },
+    "unchanged": true
+  },
+  "protectedSale": {
+    "folio": "BG-260912-0001",
+    "operationId": "35e2c61a-7561-41b9-9535-e39e671a55d3",
+    "beforeFullRowMd5": "4d4eccadf33a73be1303d957036886d6",
+    "afterFullRowMd5": "4d4eccadf33a73be1303d957036886d6",
+    "unchanged": true
+  },
+  "protectedRequest": {
+    "fullRowMd5": "8fdc987d8fe491f467f968da4c5306e0",
+    "id": "70549527-4867-4342-94d2-38e770b0f2a9"
+  },
+  "protection": {
+    "tablesChecked": 64,
+    "outsideTablesUnchangedFromBeforeSql": 63,
+    "originalBaselineRowsPreservedExcludingRevision": 4332,
+    "catalogUnchanged": true,
+    "catalogSha256": "d06bc6ef14928bfe9cf91e93bb3e5b86aa017096cdf01956163c2c0d1921ad25",
+    "outsideFullFingerprints": [
+      {
+        "table": "barcode_aliases",
+        "row_count": 0,
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "capability_operation_audit",
+        "row_count": 1557,
+        "full_rows_md5": "7abe2a56fafc349d2fc25527212364c2",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "clients",
+        "row_count": 14,
+        "full_rows_md5": "4ab651740e4621bc712f3edce199245c",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "commission_adjustments",
+        "row_count": 0,
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "config_commits",
+        "row_count": 60,
+        "full_rows_md5": "583355e62f558347d669047415a9f478",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "config_sync_state",
+        "row_count": 1,
+        "full_rows_md5": "e0ad5eb807237196efb419368dad86fc",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "exchange_commits",
+        "row_count": 0,
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "exchange_items",
+        "row_count": 0,
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "exchanges",
+        "row_count": 0,
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "folio_counters",
+        "row_count": 4,
+        "full_rows_md5": "8c855ba65c9a5f8328ab7782c6865023",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "inventory_contract_state",
+        "row_count": 1,
+        "full_rows_md5": "ba5128ae28f10e34b71bc467c12617f6",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "inventory_sync_baselines",
+        "row_count": 1,
+        "full_rows_md5": "4c79212ea9c85266d5a33609b7a185c1",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "inventory_v1_v2_map",
+        "row_count": 0,
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "inventory_v3_backups",
+        "row_count": 1,
+        "full_rows_md5": "75f9537e4ebe9975b85d1a98d051ddab",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "inventory_v3_operations",
+        "row_count": 1,
+        "full_rows_md5": "cb40c486b178471d2d99aea0c237877b",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "layaway_liquidation_commits",
+        "row_count": 0,
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "liquidations",
+        "row_count": 0,
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "loan_documents",
+        "row_count": 0,
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "lookup",
+        "row_count": 552,
+        "full_rows_md5": "cd57be24c198f56cf83c35617b3db299",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "movements",
+        "row_count": 1,
+        "full_rows_md5": "596d6df443e89c2d73f54cf064e7e041",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "online_account_requests",
+        "row_count": 1,
+        "full_rows_md5": "0d2051d77c9ee5dadce0677cb29f07eb",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "online_legacy_archives",
+        "row_count": 21,
+        "full_rows_md5": "5bc2cc64d0754985de15ae79d088369b",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "online_legacy_operations",
+        "row_count": 1,
+        "full_rows_md5": "bb4affef37fa9d9e8a56b93d076b063e",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "online_requests",
+        "row_count": 17,
+        "full_rows_md5": "fd896d180815fa3f2522971e3855f3c4",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "online_runtime",
+        "row_count": 1,
+        "full_rows_md5": "61652a964bda20771b1c6b260e9a736a",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "operational_capabilities",
+        "row_count": 25,
+        "full_rows_md5": "41ffd3fc9140416bbdee7a3195ab1920",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "permission_change_audit",
+        "row_count": 22,
+        "full_rows_md5": "a3144965f7cb6838bcb5c4617df6ae3e",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "permission_roles",
+        "row_count": 2,
+        "full_rows_md5": "839b7ebb616d253e6f3f06129c694759",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "physical_card_redemptions",
+        "row_count": 0,
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "point_zero_backups",
+        "row_count": 5,
+        "full_rows_md5": "78a27191d30626f7b5d5d8da08227d0c",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "point_zero_operations",
+        "row_count": 4,
+        "full_rows_md5": "010412b1dbc76f0d9cbc1d2a45fc7ac4",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "products",
+        "row_count": 973,
+        "full_rows_md5": "4732c0c8b6a13ef05e922eaa58edb158",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "promotions",
+        "row_count": 3,
+        "full_rows_md5": "bfc86c9401100118f03a0d8172cbe636",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "purged_documents",
+        "row_count": 63,
+        "full_rows_md5": "237731e15c1fb059fcf78db9dc3988d7",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "reference_reclassifications",
+        "row_count": 0,
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "return_commits",
+        "row_count": 0,
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "return_items",
+        "row_count": 0,
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "returns",
+        "row_count": 0,
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "role_capability_permissions",
+        "row_count": 31,
+        "full_rows_md5": "f4e0c82e264ad5513068c9c69c532aff",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "role_screen_permissions",
+        "row_count": 44,
+        "full_rows_md5": "4e4e18a9a74a2e8ec41631a40b475ed1",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "sale_commits",
+        "row_count": 1,
+        "full_rows_md5": "59e3b73ce795ba86b2d568a487e171f3",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "sale_items",
+        "row_count": 1,
+        "full_rows_md5": "133a771c7dae014240ab445aac48bc87",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "sale_payments",
+        "row_count": 1,
+        "full_rows_md5": "e4bfc6eb0c84646b90c058d2a7b381b3",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "sales",
+        "row_count": 1,
+        "full_rows_md5": "f762a7928c8662653d8e9042fb38ae04",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "screen_permission_catalog",
+        "row_count": 22,
+        "full_rows_md5": "738869ef1e1002dcad7e9e05089b0b3d",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "screen_permission_catalog_state",
+        "row_count": 1,
+        "full_rows_md5": "08625ca802d4e29bf98d35d1cd3eeda5",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "selective_cleanup_events",
+        "row_count": 5,
+        "full_rows_md5": "caadef0651b51030ec66fcedb6c76c71",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "sellers",
+        "row_count": 5,
+        "full_rows_md5": "deda4f11ce74a3c132bffc9939f5a83c",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "settings",
+        "row_count": 40,
+        "full_rows_md5": "d903ffca7b4735269f9f23189da10363",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "stock_reservations",
+        "row_count": 1,
+        "full_rows_md5": "16fca801eb27fbb8caa1d35f908d3c41",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "sync_activity",
+        "row_count": 657,
+        "full_rows_md5": "767388cb79007c8359000b8a26623356",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "sync_conflicts",
+        "row_count": 41,
+        "full_rows_md5": "531fa647b00fdd8333560278f8dd0e80",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "sync_device_recoveries",
+        "row_count": 4,
+        "full_rows_md5": "87da9f973ff47c9e23b9c37356d503f5",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "sync_devices",
+        "row_count": 15,
+        "full_rows_md5": "748a49a50f941fd06982506316b91d9f",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "sync_domain_versions",
+        "row_count": 15,
+        "full_rows_md5": "7a42e28ef2b0f4012510278a2a87e9d0",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "sync_quarantine_cases",
+        "row_count": 67,
+        "full_rows_md5": "9fcc670f4b91cd08f7334b04879bf86c",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "system_manifest",
+        "row_count": 1,
+        "full_rows_md5": "66fba718f678cfa6d7721ab05b91e547",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "test_data_cleanup_backups",
+        "row_count": 7,
+        "full_rows_md5": "81249ce6a6802921684a1ec25c68a935",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "test_data_cleanup_operations",
+        "row_count": 5,
+        "full_rows_md5": "63f0c66dc3ef279e9592c97f67fa8230",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "test_data_purges",
+        "row_count": 12,
+        "full_rows_md5": "fdd46ccad88c047d12f8fa129cad674c",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "user_capability_overrides",
+        "row_count": 0,
+        "full_rows_md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "user_permission_role_assignments",
+        "row_count": 3,
+        "full_rows_md5": "468ae6b257958084cc401c327ab1e7f8",
+        "unchangedFromBeforeSql": true
+      },
+      {
+        "table": "user_screen_permission_overrides",
+        "row_count": 22,
+        "full_rows_md5": "0b2361bd7c0fbdb7b56bda37e06cfcd3",
+        "unchangedFromBeforeSql": true
+      }
+    ]
+  },
+  "preservedCounter": {
+    "table": "folio_counters",
+    "prefix": "BG",
+    "businessDate": "2026-09-13",
+    "lastSequence": 1,
+    "absentInOriginalBaseline": true,
+    "fullRowMd5": "1bc23a686a66308dafa284b9ff4436e5",
+    "provenanceSha256": "6b5b9cffd365a86a7ce1c5d143e50467122f940108db2433e86d0c038f1e6c2f",
+    "deleted": false,
+    "rewound": false
+  },
+  "revisions": {
+    "baseline": "755",
+    "afterSql": "785",
+    "final": "792",
+    "sqlCleanupDelta": 9,
+    "authCleanupDelta": 7,
+    "otherFieldsUnchanged": true
+  },
+  "storage": {
+    "columnsChecked": 6,
+    "exactTargetOwnerReferences": 0,
+    "objectsDeleted": 0
+  },
+  "privateEvidence": {
+    "baselineOriginalFileSha256": "ded0d6d31c66ef30e700922d7a308a9bd75ce459737a724ab4f106749161763e",
+    "baselineArchiveFileSha256": "8f645ece0418c2cc59e150dbd8c3358a118f1b136d3178a3b931ded2287c28d5",
+    "archiveIndexFileSha256": "0147795deab48d461b2bf17f444b8d56d3cf5b6ee51e2691f6379bebd07b2fb4",
+    "baselineArchiveRoundtripVerified": true,
+    "finalFileSha256": "8dc6194272577a026cea8661698b91f7af8b3eb37abd6cbe3fea0907dd8f08af",
+    "finalCompression": "gzip",
+    "completionFileSha256": "e371c451f5d7e5b2d297e8c7c9d26d21029180e25998fb027bf927d53ebc0e1f",
+    "authResultFileSha256": "7b68846d3f23b0c252e8d4612ed32abb91cd167ce9f0baa220234ee64905d181"
+  },
+  "observedLocalSourceSha256": {
+    "h171-live-cleanup-lifecycle.mjs": "370dfaee2748d93231e13f30c90e0f7120997eb47e07a23b80b03625d9bed8d8",
+    "h171-live-cleanup-plan.mjs": "7496548da81e212b17e51fbf8f9ed33bbfb0f70f3513b347121cdac7288cd850",
+    "h171-live-cleanup-validation.mjs": "25073f1d5921bcd616ef90c6e24e966b5a1ef1650021a114e44832e588938062",
+    "h171-live-cleanup-sql.mjs": "f84b625f70a768a1bbc147170335d961a44671577afefff8daa374096ec100f7",
+    "h171-live-cleanup-auth.mjs": "eb63e72d8b511a73c2117ef3919a1b47376bdcc4bb9956fb8ab3300059002c27",
+    "h171-live-cleanup-auth-preflight.mjs": "ea45be7467ab45a21c5ec50c64468378c5ca62051b080ffbd01e21de32682920",
+    "h171-live-snapshot.mjs": "0530d7ac9a72a06056103c2da3eac1d14519f34ee2ca87795c9acf76d401f906"
+  },
+  "limitations": [
+    "This proves recovery of rund4b only; it does not certify the subsequent delivery journey.",
+    "All63 outside fingerprints are equal to their pre-SQL guarded values; compared with the original baseline, the exact new monotonic BG counter is additionally retained.",
+    "SQL and Auth are separate verified transactions. No private canonical bodies or credentials are published."
+  ]
+}

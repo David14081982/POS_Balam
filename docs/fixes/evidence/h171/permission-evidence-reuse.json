@@ -1,0 +1,87 @@
+{
+  "format": "balam-h171-permission-evidence-reuse-v1",
+  "projectRef": "telohdbvbvsfmwyriflz",
+  "reviewedAt": "2026-09-13T07:43:48.086Z",
+  "status": "PASS_REUSED_UNCHANGED_CONTRACT",
+  "remoteReads": 0,
+  "remoteWrites": 0,
+  "newTestsExecuted": 0,
+  "comparison": {
+    "baseCommit": "c148a8c0935ea533035387a391965df9b0748082",
+    "candidateCommit": "b6d5edd07d7768a499fd7db7edfb428d8544520a",
+    "documentedCommit": "8b692acc6e584c081491668cacb542fa1ab3b0b0",
+    "identity": [
+      {
+        "path": "balam/auth.jsx",
+        "unchanged": true,
+        "gitObject": "56525e566ac7ab5aee99e6158aab27ebd50f550a"
+      },
+      {
+        "path": "balam/permissions.jsx",
+        "unchanged": true,
+        "gitObject": "7780a6e221c4712a61b1969135dd0c8ca6b2a74c"
+      },
+      {
+        "path": "balam/store.jsx",
+        "unchanged": true,
+        "gitObject": "7a826e2dcb81d4a9001aa82f3b83f91f7327a24d"
+      },
+      {
+        "path": "balam/data.jsx",
+        "unchanged": true,
+        "gitObject": "9965ce93ab37df8d096ff970af795d2a7fde588a"
+      },
+      {
+        "path": "balam/screens.jsx",
+        "unchanged": true,
+        "gitObject": "11855e8f9f1a07fd4ea3421112cb4bc39fe7812d"
+      },
+      {
+        "path": "supabase/functions",
+        "unchanged": true,
+        "gitObject": "6f23c381ba0de7f357c6cc88a561a82907112b2e"
+      },
+      {
+        "path": "supabase/migrations",
+        "unchanged": true,
+        "gitObject": "0139b6d64f39fc8f61effa89d8123b48f5d12a5a"
+      }
+    ],
+    "otherProductChanges": [
+      "balam/app.jsx: inert logout selector",
+      "balam/dashboard.jsx: responsive layout, selectors and removal of inactive birthday action",
+      "balam/settings.jsx: six inactive editors removed; responsive user table and inert selectors; permission/account callbacks unchanged"
+    ]
+  },
+  "evidence": {
+    "path": "docs/fixes/evidence/h170-live-matrix.json",
+    "sha256": "1ed134915cb7a309b8596548a4488ac94e9e0b100e533ecfbacee326ebfe3e52",
+    "run": "8a89fd93-552a-489d-ae6b-e0afabf899e7",
+    "artifactSha256": "ae53f13541729ecb3fff768d4a974a44fd5fe790f7d7961d6fde1dd28801665d",
+    "finishedAt": "2026-09-13T00:40:38.417Z",
+    "scenariosPassed": 1,
+    "scenariosReused": 1,
+    "name": "Permission mutation affects only the exact QA account",
+    "screen": "reportes",
+    "override": "deny",
+    "targetUserId": "85fd870d-1d81-484b-84d3-de60cd2576ec",
+    "permissionVersion": "95cf283a335c9e0630b8b14895d33107",
+    "assertions": [
+      "Checked permissions command returned ok for the exact QA target",
+      "Authoritative editor snapshot read back deny and a changed permission_version",
+      "Existing domain projections converged across independent A/B/C sessions"
+    ],
+    "scenarioSource": {
+      "path": "test-h164-live-online.mjs",
+      "commit": "c148a8c0935ea533035387a391965df9b0748082",
+      "startLine": 580,
+      "sha256OfGitScenarioText": "fb5f9dd9bfd1a322fe757ccb38b65632e0b87f200109a5e8b017d4e186ba9950"
+    }
+  },
+  "limits": [
+    "Historical real execution on ae53; no permission mutation or complete role matrix was rerun on f4d",
+    "A/B/C convergence covers domain projections; it is not a restricted-user login/deny UI test",
+    "This reuses one exact checked mutation and authoritative read, not all roles, screens, RLS combinations or account lifecycle actions",
+    "No new security/product failure or comprehensive delivery certification is inferred from this documentary review"
+  ]
+}

@@ -1,0 +1,232 @@
+{
+  "format": "balam-h171-ci-responsive-hit-transition-v1",
+  "at": "2026-09-13T07:48:53.672Z",
+  "projectRef": "telohdbvbvsfmwyriflz",
+  "scope": "LOCAL_360PX_ONLY_ON_FROZEN_F4D_ARTIFACT",
+  "ci": {
+    "runId": 34745687904,
+    "url": "https://github.com/David14081982/POS_Balam/actions/runs/34745687904",
+    "headSha": "8b692acc6e584c081491668cacb542fa1ab3b0b0",
+    "firstFailure": "The user can hit the visible control",
+    "target": "dashboard-chart-view-mes",
+    "assertionLineBefore": 29,
+    "callerLineBefore": 109,
+    "previousViewport320Passed": true
+  },
+  "artifact": {
+    "sha256": "f4d73fa350d4187dade1a55c999dc203b405f4c20d95d9138aaf1b2ef0a82646",
+    "expectedSha256": "f4d73fa350d4187dade1a55c999dc203b405f4c20d95d9138aaf1b2ef0a82646",
+    "appSourcesChanged": false,
+    "buildRun": false
+  },
+  "reproduction": {
+    "normal360Runs": [
+      true,
+      true
+    ],
+    "method": "Same actual mobile navigation click and nearest scroll to Monthly, sampled in browser animation frames to expose the transition without cross-process observation delay; no application/style/animation changes.",
+    "samples": 24,
+    "blockedSamples": [
+      {
+        "at": 45.10000002384186,
+        "target": "dashboard-chart-view-mes",
+        "box": {
+          "x": 131.96875,
+          "y": 871.296875,
+          "width": 80.75,
+          "height": 28.796875
+        },
+        "reachable": false,
+        "hit": {
+          "tag": "ASIDE",
+          "id": "balam-navigation",
+          "insideNavigation": true
+        },
+        "navRight": 280,
+        "navAnimations": [
+          {
+            "playState": "running",
+            "currentTime": 0,
+            "duration": 200
+          }
+        ]
+      },
+      {
+        "at": 49.20000001788139,
+        "target": "dashboard-chart-view-mes",
+        "box": {
+          "x": 131.96875,
+          "y": 871.296875,
+          "width": 80.75,
+          "height": 28.796875
+        },
+        "reachable": false,
+        "hit": {
+          "tag": "ASIDE",
+          "id": "balam-navigation",
+          "insideNavigation": true
+        },
+        "navRight": 280,
+        "navAnimations": [
+          {
+            "playState": "running",
+            "currentTime": 0,
+            "duration": 200
+          }
+        ]
+      },
+      {
+        "at": 55.30000001192093,
+        "target": "dashboard-chart-view-mes",
+        "box": {
+          "x": 131.96875,
+          "y": 871.296875,
+          "width": 80.75,
+          "height": 28.796875
+        },
+        "reachable": false,
+        "hit": {
+          "tag": "ASIDE",
+          "id": "balam-navigation",
+          "insideNavigation": true
+        },
+        "navRight": 275.13453674316406,
+        "navAnimations": [
+          {
+            "playState": "running",
+            "currentTime": 16.71399998785894,
+            "duration": 200
+          }
+        ]
+      },
+      {
+        "at": 87.30000001192093,
+        "target": "dashboard-chart-view-mes",
+        "box": {
+          "x": 131.96875,
+          "y": 871.296875,
+          "width": 80.75,
+          "height": 28.796875
+        },
+        "reachable": false,
+        "hit": {
+          "tag": "ASIDE",
+          "id": "balam-navigation",
+          "insideNavigation": true
+        },
+        "navRight": 256.20421600341797,
+        "navAnimations": [
+          {
+            "playState": "running",
+            "currentTime": 33.31399998785933,
+            "duration": 200
+          }
+        ]
+      },
+      {
+        "at": 91,
+        "target": "dashboard-chart-view-mes",
+        "box": {
+          "x": 131.96875,
+          "y": 871.296875,
+          "width": 80.75,
+          "height": 28.796875
+        },
+        "reachable": false,
+        "hit": {
+          "tag": "ASIDE",
+          "id": "balam-navigation",
+          "insideNavigation": true
+        },
+        "navRight": 213.37283325195312,
+        "navAnimations": [
+          {
+            "playState": "running",
+            "currentTime": 50.11399998785926,
+            "duration": 200
+          }
+        ]
+      }
+    ],
+    "firstReachable": {
+      "at": 106,
+      "target": "dashboard-chart-view-mes",
+      "box": {
+        "x": 131.96875,
+        "y": 871.296875,
+        "width": 80.75,
+        "height": 28.796875
+      },
+      "reachable": true,
+      "hit": {
+        "tag": "BUTTON",
+        "id": "",
+        "testid": "dashboard-chart-view-mes",
+        "insideNavigation": false
+      },
+      "navRight": 151.79563903808594,
+      "navAnimations": [
+        {
+          "playState": "running",
+          "currentTime": 66.71399998785965,
+          "duration": 200
+        }
+      ]
+    },
+    "settled": {
+      "at": 403.5,
+      "target": "dashboard-chart-view-mes",
+      "box": {
+        "x": 131.34375,
+        "y": 871.296875,
+        "width": 81.484375,
+        "height": 28.796875
+      },
+      "reachable": true,
+      "hit": {
+        "tag": "BUTTON",
+        "id": "",
+        "testid": "dashboard-chart-view-mes",
+        "insideNavigation": false
+      },
+      "navRight": 0,
+      "navAnimations": []
+    },
+    "source": "balam/app.jsx:265; navigation aside transition-all duration-200",
+    "limit": "The original CI saved an assertion failure without hit diagnostics. Local normal runs passed; frame measurements independently reproduce the real transient obstruction at the same control."
+  },
+  "correction": {
+    "file": "test-h171-users-responsive.mjs",
+    "beforeSha256": "11d67bc67e8868c7d027f58460fe225d021bfe62823ac307c605cac29cd71cae",
+    "afterSha256": "c1ae3db4f615f2ef0ddf4ca0d972cf4a733330b2d23d7b77c31970de0a3be8ee",
+    "behavior": "Wait up to1000ms in requestAnimationFrame for the unchanged viewport bounds and elementFromPoint target/descendant condition, then retain the exact final assertion.",
+    "wholeControlContainerCheckPreserved": true,
+    "keyboardScrollAndActualActionsPreserved": true,
+    "noFixedSleepAdded": true,
+    "noForcedClick": true,
+    "noAnimationDisabled": true
+  },
+  "validation": {
+    "viewports": [
+      360
+    ],
+    "passed": true,
+    "jsErrors": 0,
+    "externalRequestsAllowed": 0,
+    "dataUnchanged": true,
+    "actualUserActionsAndMonthlyWeeklyPassed": true,
+    "persistentObstruction": {
+      "rejected": true,
+      "elapsedMs": 1100,
+      "message": "The user can hit the visible control\n\nfalse !== true\n"
+    },
+    "unobstructedControlAcceptedAfterRemoval": true
+  },
+  "certified": false,
+  "remoteSupabaseWrites": 0,
+  "physicalHardwareTested": false,
+  "limitations": [
+    "One viewport was executed for this correction; prior8-width evidence remains tied to the unchanged f4d bytes.",
+    "Only the measurement race is corrected. Production client and accessibility requirements remain unchanged."
+  ]
+}

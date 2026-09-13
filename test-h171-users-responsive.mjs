@@ -26,9 +26,16 @@ async function assertReachable(locator,region){
   const box=await locator.boundingBox(),clip=await region.boundingBox();
   assert.ok(box&&clip,'Rendered target and scroll region');
   assert.ok(box.x>=clip.x-1&&box.x+box.width<=clip.x+clip.width+1,'Whole control visible inside its container');
-  assert.equal(await locator.evaluate(e=>{
-    const r=e.getBoundingClientRect(),hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
-    return r.left>=-1&&r.right<=innerWidth+1&&(hit===e||e.contains(hit));
+  assert.equal(await locator.evaluate(async e=>{
+    const reachable=()=>{
+      const r=e.getBoundingClientRect(),hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
+      return r.left>=-1&&r.right<=innerWidth+1&&(hit===e||e.contains(hit));
+    };
+    // The mobile navigation closes over 200ms after the dashboard has rendered.
+    // Await the same hit condition; a persistent obstruction must still fail.
+    const deadline=performance.now()+1000;
+    while(!reachable()&&performance.now()<deadline)await new Promise(requestAnimationFrame);
+    return reachable();
   }),true,'The user can hit the visible control');
 }
 try{

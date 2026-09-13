@@ -91,6 +91,11 @@ export async function runCoreJourney(page, expected, {onStep=async()=>{},relogin
 
   const inspectStock=async(stage)=>{
     await nav('inventario');
+    // Inventory renders ten commercial rows per page. Use its actual search
+    // control to reach this run's physical SKU regardless of existing stock.
+    const inventorySearch=page.getByTestId('inventory-new-product').locator('xpath=..').locator('input');
+    await inventorySearch.waitFor({state:'visible'});
+    await inventorySearch.fill(expected.sku);
     await page.getByTestId('inventory-product-'+expected.commercialKey).filter({visible:true}).click();
     const chip=page.getByTestId('product-detail-size-chip').filter({has:page.locator('[data-testid="product-detail-size-variants"]')});
     await chip.scrollIntoViewIfNeeded();
@@ -104,9 +109,17 @@ export async function runCoreJourney(page, expected, {onStep=async()=>{},relogin
     await mark(stage,{productId:expected.productId,stock:expected.stockAfter,familyStock:expected.familyStockAfter,visibleVariantsSha256:sha(variants)});
     await page.getByTestId('product-detail-close').click();
   };
+  const openSalesReport=async()=>{
+    await nav('reportes');
+    await page.getByTestId('reports-tab-sales').click();
+    // The report paginates twelve rows. Its seller option has the exact
+    // isolated identity and changing it resets the report to page one.
+    const sellerFilter=page.locator('select').filter({has:page.locator('option[value="'+expected.sellerId+'"]')});
+    await sellerFilter.waitFor({state:'visible'});
+    await sellerFilter.selectOption(expected.sellerId);
+  };
   await inspectStock('stock-after-sale');
-  await nav('reportes');
-  await page.getByTestId('reports-tab-sales').click();
+  await openSalesReport();
   const reportControl=page.getByTestId('sales-reprint-'+folio);
   await reportControl.waitFor();
   const reportText=await reportControl.locator('xpath=ancestor::tr').textContent();
@@ -114,8 +127,7 @@ export async function runCoreJourney(page, expected, {onStep=async()=>{},relogin
   await mark('sale-query',{folio,reportRowTextSha256:sha(reportText)});
   await page.reload({waitUntil:'load'});
   await page.getByTestId('nav-reportes').waitFor({state:'attached'});
-  await nav('reportes');
-  await page.getByTestId('reports-tab-sales').click();
+  await openSalesReport();
   await page.getByTestId('sales-reprint-'+folio).waitFor();
   const refreshed=await page.getByTestId('sales-reprint-'+folio).locator('xpath=ancestor::tr').textContent();
   assert.equal(refreshed,reportText);

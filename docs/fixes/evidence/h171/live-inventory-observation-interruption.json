@@ -1,0 +1,48 @@
+{
+  "scope": "CERTIFIER_PAGINATION_ASSUMPTION_AND_NARROW_CORRECTION",
+  "run": "6826dbe9-eb18-4e14-8513-cb2b5e71c502",
+  "artifactSha256": "f4d73fa350d4187dade1a55c999dc203b405f4c20d95d9138aaf1b2ef0a82646",
+  "observed": {
+    "checkpoint": "stock-after-sale",
+    "failure": "Direct inventory family locator click timed out after60000ms without searching or changing pages.",
+    "familyId": "79d4a556-fec0-4ae1-8a63-a5d692462fde",
+    "baselineProducts": 973,
+    "isolatedFixtureReferences": 2,
+    "priorTicketObservation": "Two handoffs validated COMPLETED for the same confirmed sale by the active runner."
+  },
+  "executableEvidence": [
+    {
+      "file": "balam/inventory.jsx",
+      "lines": [273, 286, 290, 291, 354],
+      "fact": "Inventory searches the family projection, renders ten rows per page, and resets page1 when the search input changes."
+    },
+    {
+      "file": "balam/data.jsx",
+      "lines": [406, 407],
+      "fact": "Family searchText contains the physical SKU of every reference. Searching one SKU retains the complete family projection."
+    },
+    {
+      "file": "balam/reports.jsx",
+      "lines": [791, 793, 832, 841, 844, 908, 909],
+      "fact": "The following sales report paginates twelve rows. Selecting the isolated seller by option value restricts rows and resets page1."
+    }
+  ],
+  "correction": {
+    "file": "qa-h171-core-journey.mjs",
+    "helperSha256": "c2f2681e693cf789b21a9b690a2a9b4cf93533c648837af1e15f5899d6208553",
+    "inventory": "Fill the real search input with expected.sku before opening the expected family, including the inspection after reload.",
+    "followingSalesQueries": "Select the exact isolated seller through the existing option value before both report observations, including after reload.",
+    "selectors": "Existing testid anchor and functional DOM structure or option value; no copy-based action selectors.",
+    "businessApiCallsAdded": 0,
+    "appChanged": false,
+    "artifactChanged": false
+  },
+  "validation": {
+    "nodeCheck": "PASS",
+    "additionalTests": 0,
+    "remoteCallsByReviewer": 0,
+    "reviewScope": "Only the remaining steps of this existing nine-step helper; no new audit."
+  },
+  "cleanupStatus": "Owned by the active runner; no cleanup outcome is asserted here.",
+  "certified": false
+}
