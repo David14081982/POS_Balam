@@ -36,7 +36,7 @@ Limpieza **20 POS + 1 Auth EN CURSO**, plan listo/restaurado **20/20**; marcador
 **P0 de producto conocidos pendientes: 0. P1 de producto conocidos pendientes: 0.**
 Cuatro casos pendientes de reintento; no se anticipa la limpieza en curso.
 **Publicación f4d EN CURSO; DoD pendiente** de jornada, limpieza y bytes publicados.
-**Commit:** Pendiente de commit.
+**Commit técnico:** `b6d5edd07d7768a499fd7db7edfb428d8544520a`.
 **Documento:** [Informe ejecutivo H171](fixes/balam-final-readiness.md).
 
 | ID | Riesgo | Estado | Área |

@@ -1,7 +1,7 @@
 # BALAM FINAL READINESS
 
 **Riesgo:** H-171. **Estado:** EN CURSO; aptitud final de entrega NO CERTIFICADA.
-**Fecha:** 13/09/2026, Hermosillo. **Commit:** Pendiente de commit.
+**Fecha:** 13/09/2026, Hermosillo. **Commit técnico:** `b6d5edd07d7768a499fd7db7edfb428d8544520a`.
 **Corte:** recuperación `9482…` COMPLETA; `d4b616be…` interrumpido, su limpieza EN CURSO; publicación de f4d EN CURSO.
 
 ## 1. Qué se hizo
@@ -144,6 +144,7 @@ los puestos físicos no están certificados; el ticket HTML no prueba impresión
 
 ## 6. Commits
 
-**Pendiente de commit** técnico y documental. Este informe y el resumen H171 de
+**Técnico:** `b6d5edd07d7768a499fd7db7edfb428d8544520a`. El registro documental se
+incorpora en el commit siguiente. Este informe y el resumen H171 de
 [riesgos conocidos](../03-known-risks.md) son el cierre ejecutivo único de esta H;
 los datos extensos y resultados históricos permanecen en la evidencia enlazada.
