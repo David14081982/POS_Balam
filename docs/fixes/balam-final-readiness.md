@@ -95,6 +95,11 @@ SHA-256 de ambos HTML: `f4d73fa350d4187dade1a55c999dc203b405f4c20d95d9138aaf1b2e
 [Producción BALAM](https://david14081982.github.io/POS_Balam/).
 El cierre posterior modifica comprobadores y documentación; conserva estos mismos bytes de cliente.
 
+Los dos commits finales permanecen locales. La revisión automática rechazó su
+push al repositorio público por incluir evidencia operativa cuya exposición no
+considera expresamente autorizada. Publicar esa evidencia requiere autorización
+OWNER; el candidato ya desplegado y su verificación no cambiaron.
+
 ## 5. Riesgos residuales y decisión OWNER
 
 Estas cuatro filas conservan su baja lógica y su hash. Sus nombres o dispositivos
@@ -128,5 +133,5 @@ Estos límites no se convierten en defectos P2/P3 no reproducidos.
 - Producto H171: `b6d5edd07d7768a499fd7db7edfb428d8544520a`.
 - Registro inicial: `8b692acc6e584c081491668cacb542fa1ab3b0b0`.
 - Candidato publicado: `1dddd60494c7b24beb1574851bf06d040079b0f7`.
-- Comprobadores y evidencia final: **Pendiente de commit**.
+- Comprobadores y evidencia final: `369756ab2ce906a485caaa6f13599569eb360ab3`.
 - El registro documental posterior incorpora el hash técnico; no publica otro cliente.

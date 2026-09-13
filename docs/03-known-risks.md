@@ -33,7 +33,10 @@ HTTP200, el13/09 a07:57:34UTC; [producción](fixes/evidence/h171/production-veri
 [última limpieza](fixes/evidence/h171/final-session-cleanup.json).
 Hardware físico no certificado; cuatro decisiones individuales detalladas en el informe.
 **Commit técnico de producto:** `b6d5edd07d7768a499fd7db7edfb428d8544520a`.
-**Comprobadores y evidencia final:** Pendiente de commit.
+**Comprobadores y evidencia final:** `369756ab2ce906a485caaa6f13599569eb360ab3`.
+Los commits finales quedan locales: la revisión automática rechazó el push de
+evidencia operativa al repositorio público por falta de autorización explícita
+para ese contenido. El candidato publicado conserva su verificación.
 **Documento:** [BALAM FINAL READINESS](fixes/balam-final-readiness.md).
 
 
