@@ -1,9 +1,9 @@
 # Arranque con una gestión de usuarios pendiente
 
 **Riesgo:** H-170
-**Estado:** RESUELTO y certificado A/B/C; publicación pendiente
+**Estado:** RESUELTO, certificado A/B/C y publicado
 **Fecha:** 12/09/2026
-**Commit:** Pendiente de commit
+**Commit:** `6bbce30eb08348cef40b073a3cfc3aac4c489bd0`
 
 ## Problema y reproducción
 
@@ -143,7 +143,16 @@ hash final y que todas las sesiones ejecutaron el mismo artefacto.
 
 ## Riesgo residual y pendientes
 
-Commit y publicación pendientes. Hardware e impresora no probados. Los timeouts
+Publicado en GitHub Pages desde `6bbce30eb08348cef40b073a3cfc3aac4c489bd0`.
+Actions `34728754511`: regresión y deploy aprobados; el job live no se ejecutó
+en GitHub. La certificación real descrita arriba se ejecutó localmente.
+Verificación pública HTTP 200 y bytes idénticos en los tres archivos:
+`index.html`, `POS Balam (offline).html` y `sw.js`.
+Evidencia: `evidence/h170-workflow.json` y `evidence/h170-publication.json`.
+Para adoptar la corrección, recargar el navegador (Ctrl+F5); «Actualizar ahora»
+consulta el resultado pendiente, pero no reemplaza por sí solo el código cargado.
+
+Hardware e impresora no probados. Los timeouts
 SQL observados no se presentan como resueltos por esta corrección de interfaz.
 La eliminación real de la cuenta QA antigua sigue
 pendiente; esta corrección evita que impida entrar cuando los datos están listos.

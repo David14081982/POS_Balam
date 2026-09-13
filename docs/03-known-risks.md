@@ -7731,8 +7731,8 @@ sigue pendiente para futuras ejecuciones allí; no se cambió el cliente publica
 
 ## H-170 — Arranque bloqueado por una gestión de usuarios pendiente
 
-**Estado:** RESUELTO y certificado A/B/C; publicación pendiente.
-**Fecha:** 12/09/2026. **Commit:** Pendiente de commit.
+**Estado:** RESUELTO, certificado A/B/C y publicado.
+**Fecha:** 12/09/2026. **Commit:** `6bbce30eb08348cef40b073a3cfc3aac4c489bd0`.
 **Problema:** H-169 conserva la pantalla de arranque cuando hay una referencia
 pendiente aunque STORE ya confirmó permisos, adopción y snapshot (`ready=true`).
 **Evidencia remota:** solicitud de eliminación `70549527-4867-4342-94d2-38e770b0f2a9`,
@@ -7751,6 +7751,9 @@ cuentas 1/1, UI 6/6, PWA 2/2, guardas del certificador 10/10; build/arquitectura
 conservados y reanudados, 5 sesiones. 1,664 filas anteriores en 18 tablas
 preservadas. 5 perfiles QA inactivos, 2 Auth bloqueados y 3 instalaciones retiradas.
 **Artefacto:** `ae53f13541729ecb3fff768d4a974a44fd5fe790f7d7961d6fde1dd28801665d`.
+**Publicación:** Actions `34728754511`, regresión y Pages aprobados; tres archivos
+públicos HTTP 200 con bytes idénticos al commit. Certificación A/B/C local;
+el job live de esta ejecución en GitHub quedó omitido.
 **Residual:** eliminación Auth original aún pendiente; hardware/impresora no
 certificados. Los timeouts de lectura observados no se declaran corregidos.
 **Evidencia:** `docs/fixes/evidence/h170-live-matrix.json`; detalle de reanudaciones,
