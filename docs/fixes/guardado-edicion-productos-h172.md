@@ -1,9 +1,9 @@
 # Edición de productos: resultado confirmado y error contextual
 
 **Riesgo:** H-172
-**Estado:** PARCIALMENTE RESUELTO — integración verificada; publicación pendiente
+**Estado:** PARCIALMENTE RESUELTO — integrado, publicado y verificado; A/B/C real NO CERTIFICADO.
 **Fecha:** 16/09/2026
-**Commit:** Pendiente de commit
+**Commit:** `30bd52a8257716cf13e6b69cb0e13e77f5e8105f`
 
 ## Problema y reproducción
 
@@ -66,12 +66,20 @@ catálogos, creación de productos ni el formato/exportador Excel.
 - `node test-h172-product-edit.mjs`: **7/7**, salida 0; errores, conjuntos
   devueltos, doble clic, confirmación, edición V1/V2, recarga y XLSX.
 - Evidencia: `docs/fixes/evidence/h172-{baseline,verification,ui,pwa}.json`.
-  Despliegue pendiente; ninguna prueba verde local se repitió después de cerrar
-  esta verificación. El workflow vuelve a verificar el commit antes de Pages.
+  El workflow aprobó la regresión y el despliegue del commit.
+  No se repitieron pruebas locales tras cerrar la verificación.
 - Build: 74 recursos, 9.36 MB; ambos HTML idénticos, SHA-256
   `7020d3e565b1721febc8746a73c69c7c32f44677dda4b3cd25b02e34dd87e531`.
 - SW SHA-256:
   `5b5bc9f71ac1c6c69cfc64a78d9daeff37c97466ab414eae0097af7acde9f07e`.
+
+## Publicación
+
+Commit enviado a `main`; [workflow 35132940589](https://github.com/David14081982/POS_Balam/actions/runs/35132940589) aprobado.
+Publicado en https://david14081982.github.io/POS_Balam/.
+Verificación HTTP 200 y coincidencia byte a byte de ambos HTML y `sw.js`
+con el commit técnico. Evidencia: `docs/fixes/evidence/h172-publication.json`.
+La certificación remota opcional no se ejecutó.
 
 ## Riesgo residual y pendientes
 

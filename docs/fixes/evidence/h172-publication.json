@@ -1,0 +1,49 @@
+{
+  "story": "H-172",
+  "verifiedAt": "2026-09-16T18:20:22.739037+00:00",
+  "technicalCommit": "30bd52a8257716cf13e6b69cb0e13e77f5e8105f",
+  "workflow": {
+    "id": 35132940589,
+    "url": "https://github.com/David14081982/POS_Balam/actions/runs/35132940589",
+    "conclusion": "success"
+  },
+  "site": "https://david14081982.github.io/POS_Balam/",
+  "files": [
+    {
+      "file": "index.html",
+      "url": "https://david14081982.github.io/POS_Balam/index.html?verify=h172-30bd52a82577",
+      "status": 200,
+      "expectedBytes": 9364775,
+      "publishedBytes": 9364775,
+      "committedSha256": "7020d3e565b1721febc8746a73c69c7c32f44677dda4b3cd25b02e34dd87e531",
+      "publishedSha256": "7020d3e565b1721febc8746a73c69c7c32f44677dda4b3cd25b02e34dd87e531",
+      "match": true
+    },
+    {
+      "file": "POS Balam (offline).html",
+      "url": "https://david14081982.github.io/POS_Balam/POS%20Balam%20%28offline%29.html?verify=h172-30bd52a82577",
+      "status": 200,
+      "expectedBytes": 9364775,
+      "publishedBytes": 9364775,
+      "committedSha256": "7020d3e565b1721febc8746a73c69c7c32f44677dda4b3cd25b02e34dd87e531",
+      "publishedSha256": "7020d3e565b1721febc8746a73c69c7c32f44677dda4b3cd25b02e34dd87e531",
+      "match": true
+    },
+    {
+      "file": "sw.js",
+      "url": "https://david14081982.github.io/POS_Balam/sw.js?verify=h172-30bd52a82577",
+      "status": 200,
+      "expectedBytes": 4477,
+      "publishedBytes": 4477,
+      "committedSha256": "5b5bc9f71ac1c6c69cfc64a78d9daeff37c97466ab414eae0097af7acde9f07e",
+      "publishedSha256": "5b5bc9f71ac1c6c69cfc64a78d9daeff37c97466ab414eae0097af7acde9f07e",
+      "match": true
+    }
+  ],
+  "scope": {
+    "publishedArtifact": true,
+    "realSupabaseWrites": false,
+    "independentABC": false
+  },
+  "exactPublishedBytes": true
+}

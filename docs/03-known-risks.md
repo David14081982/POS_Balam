@@ -7,8 +7,8 @@ y `BLOQUEADO`.
 
 ## H-172 — El guardado de edición pierde el contexto del error
 
-**Estado:** PARCIALMENTE RESUELTO — integrado y verificado, publicación pendiente.
-**Fecha:** 16/09/2026. **Commit:** Pendiente de commit.
+**Estado:** PARCIALMENTE RESUELTO — integrado, publicado y verificado; A/B/C real NO CERTIFICADO.
+**Fecha:** 16/09/2026. **Commit:** `30bd52a8257716cf13e6b69cb0e13e77f5e8105f`.
 **Problema:** los catch de edición conservan sólo el mensaje; UUID/JSON y
 `reference_` se clasifican como importación. Falta comprobar el conjunto devuelto
 y bloquear el doble envío mientras se espera la confirmación.
@@ -21,7 +21,9 @@ y controles de edición bloqueados sólo mientras espera la solicitud actual.
 **Pruebas:** base 0/4, final 7/7; UI 6/6 y PWA 2/2, transporte controlado.
 Build correcto; HTML idénticos, SHA-256
 `7020d3e565b1721febc8746a73c69c7c32f44677dda4b3cd25b02e34dd87e531`.
-A/B/C real NO CERTIFICADO. Commit/publicación pendientes.
+A/B/C real NO CERTIFICADO. CI y deploy 35132940589 SUCCESS; tres archivos
+públicos HTTP 200 e idénticos al commit.
+**Publicación:** `docs/fixes/evidence/h172-publication.json`.
 **Documento:** `docs/fixes/guardado-edicion-productos-h172.md`.
 
 ## Resumen
