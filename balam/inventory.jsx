@@ -119,6 +119,8 @@
     const [stockFilter, setStockFilter] = useState('all');
     const [detail, setDetail] = useState(null);
     const [editing, setEditing] = useState(null);
+    const editSavePending = useRef(false);
+    const [savingEdit, setSavingEdit] = useState(false);
     const [products, setProducts] = useState(() => D.products.slice());
     const [importPreview, setImportPreview] = useState(null);
     const [importResolutions, setImportResolutions] = useState({});
@@ -197,20 +199,37 @@
       }
     }
     async function saveProduct(draft, mode, options) {
+      const editingSave = mode === 'edit' || mode === 'family-edit';
+      if (editingSave && editSavePending.current) return;
+      if (editingSave) { editSavePending.current = true; setSavingEdit(true); }
+      const reportError = (error, fallback) => toast(editingSave
+        ? { ...error, context: 'product_edit', code: error?.code || 'PRODUCT_EDIT_UNKNOWN', message: error?.message || fallback }
+        : error?.message || fallback, 'var(--danger)');
+      const confirmRows = (result, expected) => {
+        if (!editingSave) return;
+        if (!Array.isArray(result) || result.length !== expected.length
+            || new Set(result.map(row => row?.id)).size !== expected.length
+            || expected.some(row => !result.some(saved => saved?.id === row.id))) {
+          throw Object.assign(new Error('No se pudo confirmar el resultado de la edición.'), { code: 'PRODUCT_EDIT_UNCONFIRMED' });
+        }
+      };
+      try {
       if (Array.isArray(draft)) {
         let saved;
         try {
-          const proposed = D.products;
+          const proposed = D.products.slice();
           const rows = draft.map(rawCandidate => {
             const candidate = { ...rawCandidate };
             delete candidate.rowKey; delete candidate.selectedForCreation;
             const current = proposed.find(row => row.id === candidate.id);
             if (current) return D.updateReference(candidate);
+            if (editingSave && candidate.id) throw Object.assign(new Error('El producto que intentas editar ya no existe.'), { code: 'REFERENCE_NOT_FOUND' });
             const created = D.createReference(candidate, proposed); proposed.push(created); return created;
           });
           saved = await D.saveProductFamily(rows);
+          confirmRows(saved, rows);
         } catch (error) {
-          toast((error && error.message) || 'No se pudo guardar la familia; no se aplicaron cambios', 'var(--danger)');
+          reportError(error, 'No se pudo guardar la familia; no se aplicaron cambios');
           return;
         }
         refresh(); setEditing(null); setDetail(null);
@@ -220,15 +239,18 @@
       }
       let saved = draft;
       try {
+        if (editingSave && !D.products.some(row => row.id === draft.id)) throw Object.assign(new Error('El producto que intentas editar ya no existe.'), { code: 'REFERENCE_NOT_FOUND' });
         if (mode === 'edit') saved = D.updateReference && D.isV2Reference(draft)
           ? D.updateReference(draft)
           : D.hydrate({ ...draft });
         else {
           saved = D.createReference(draft, D.products);
         }
-        [saved] = await D.saveProductRows([saved]);
+        const result = await D.saveProductRows([saved]);
+        confirmRows(result, [saved]);
+        [saved] = result;
       } catch (error) {
-        toast((error && error.message) || 'No se pudo guardar la referencia', 'var(--danger)'); return;
+        reportError(error, 'No se pudo guardar la referencia'); return;
       }
       refresh();
       setEditing(null); setDetail(null);
@@ -237,6 +259,9 @@
         toast('Advertencia: referencias físicas distintas comparten el mismo SKU visible.', 'var(--warning)');
       }
       if (options && options.openLabels) setLabelTargets([saved]);
+      } finally {
+        if (editingSave) { editSavePending.current = false; setSavingEdit(false); }
+      }
     }
     function confirmDeletion(product, scope, targets) {
       const guard = D.productDeletionGuard(targets.map(row => row.id));
@@ -430,7 +455,7 @@
           onConfirm: applyDeletion,
         }),
         labelTargets && h(LabelModal, { key: 'lbl', products: labelTargets, onClose: () => setLabelTargets(null) }),
-        editing && h(ProductForm, { key: 'f-' + editing.mode + '-' + (editing.product.id || 'new'), mode: editing.mode, product: editing.product, onClose: () => setEditing(null), onSave: saveProduct }),
+        editing && h(ProductForm, { key: 'f-' + editing.mode + '-' + (editing.product.id || 'new'), mode: editing.mode, product: editing.product, saving: savingEdit, onClose: () => { if (!editSavePending.current) setEditing(null); }, onSave: saveProduct }),
         importPreview && h(ImportModal, {
           key: 'imp', data: importPreview,
           plan: window.XLSXIO.planImport(importPreview, D.products, importResolutions),
@@ -731,7 +756,7 @@
   }
 
   // ---------- Formulario de alta / edición ----------
-  function ProductForm({ mode, product, onClose, onSave }) {
+  function ProductForm({ mode, product, onClose, onSave, saving = false }) {
     const initialFamily = D.isV2Reference(product) && mode === 'edit'
       ? D.referenceFamily(product) : [];
     const initialPrimary = [];
@@ -1141,6 +1166,7 @@
     const isDirty = productDraftSignature(d) !== initialSignature.current
       || referenceDraftSignature(referenceRows) !== initialReferenceSignature.current;
     const requestClose = () => {
+      if (saving) return;
       if (isDirty && !window.confirm('Hay cambios sin guardar. ¿Deseas cerrar el formulario y descartarlos?')) return;
       onClose();
     };
@@ -1473,6 +1499,7 @@
     ]);
 
     function submit(afterSave) {
+      if (saving) return;
       setAttemptedSubmit(true);
       if (errors.length) { focusError(errors[0]); toast(errors[0].message, 'var(--danger)'); return; }
       const preciosTalla = d.recordModel === 'v2' ? {} : expandirPrecios(d.precioRows.filter(r => (r.tallas || []).length));
@@ -1556,12 +1583,12 @@
         h('div', { key: 'sum', className: 'text-overline text-on-surface-variant mt-0.5' }, `${total} piezas · ${stockedSizes} tallas con existencia · ${d.precioRows.filter(row => row.tallas.length).length} precio(s) especial(es) · ${d.ornamentColorRows.filter(row => row.tallas.length).length} grupo(s) de colores`),
         h('button', { key: 'status', type: 'button', 'data-testid': 'product-validation-summary', onClick: () => errors.length && focusError(errors[0]), className: 'mt-1 text-caption font-semibold ' + (errors.length ? 'text-danger' : 'text-accent') }, errors.length ? `${errors.length} pendiente${errors.length === 1 ? '' : 's'} por corregir` : 'Sin errores'),
       ]),
-      h('button', { key: 'c', 'data-testid': 'product-cancel', className: 'px-4 sm:px-5 h-11 border border-outline-variant text-on-surface text-caption font-bold uppercase tracking-widest hover:bg-surface-container rounded-lg transition-colors', onClick: requestClose }, 'Cancelar'),
-      mode === 'edit' && h('button', { key: 'sl', type: 'button', 'data-testid': 'product-save-labels', className: 'inline-flex items-center gap-2 px-4 h-11 border border-primary text-primary text-caption font-bold uppercase tracking-widest rounded-lg hover:bg-surface-container', onClick: () => submit('labels') }, [h(MS, { key: 'i', name: 'barcode', size: 16 }), 'Guardar y abrir etiquetas']),
-      h('button', { key: 's', 'data-testid': 'product-save', className: 'inline-flex items-center gap-2 px-5 h-11 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-lg hover:opacity-90 transition', onClick: () => submit() }, [h(MS, { key: 'i', name: 'check', size: 16 }), mode === 'edit' ? 'Guardar cambios' : 'Agregar producto']),
+      h('button', { key: 'c', 'data-testid': 'product-cancel', disabled: saving, className: 'px-4 sm:px-5 h-11 border border-outline-variant text-on-surface text-caption font-bold uppercase tracking-widest hover:bg-surface-container rounded-lg transition-colors', onClick: requestClose }, 'Cancelar'),
+      mode === 'edit' && h('button', { key: 'sl', type: 'button', 'data-testid': 'product-save-labels', disabled: saving, className: 'inline-flex items-center gap-2 px-4 h-11 border border-primary text-primary text-caption font-bold uppercase tracking-widest rounded-lg hover:bg-surface-container', onClick: () => submit('labels') }, [h(MS, { key: 'i', name: 'barcode', size: 16 }), 'Guardar y abrir etiquetas']),
+      h('button', { key: 's', 'data-testid': 'product-save', disabled: saving, className: 'inline-flex items-center gap-2 px-5 h-11 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-lg hover:opacity-90 transition', onClick: () => submit() }, [h(MS, { key: 'i', name: 'check', size: 16 }), saving ? 'Guardando...' : mode === 'edit' ? 'Guardar cambios' : 'Agregar producto']),
     ];
 
-    return h(Modal, { title: mode === 'edit' ? 'Editar producto' : 'Nuevo producto', onClose: requestClose, footer, large: true, testId: 'product-form', productForm: true }, [
+    return h(Modal, { title: mode === 'edit' ? 'Editar producto' : 'Nuevo producto', onClose: requestClose, footer, large: true, testId: 'product-form', productForm: true }, h('fieldset', { disabled: saving, style: { display: 'contents' }, 'aria-busy': saving }, [
       attemptedSubmit && errors.length ? h('div', { key: 'errors', role: 'alert', className: 'mb-4 p-3 rounded-xl border border-danger/30 bg-danger-soft', 'data-testid': 'product-form-errors' }, [
         h('p', { key: 't', className: 'text-caption font-bold text-danger mb-1' }, `Corrige ${errors.length} pendiente${errors.length === 1 ? '' : 's'} antes de guardar:`),
         ...errors.map(error => h('button', { key: error.code, type: 'button', onClick: () => focusError(error), className: 'block w-full text-left text-caption text-danger hover:underline py-0.5' }, error.message)),
@@ -1670,7 +1697,7 @@
         ]),
       ]),
       d.recordModel === 'v2' ? renderFamilySummary() : renderSizeSummary(),
-    ]);
+    ]));
   }
 
   function sel(value, map, onChange, useKeyAsValue, testId) {

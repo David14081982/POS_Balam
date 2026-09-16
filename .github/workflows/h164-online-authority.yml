@@ -96,6 +96,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Verify configurable website on receipts
         run: node test-h168-ticket-website.mjs
+      - name: Verify product editing and Excel export
+        run: node test-h172-product-edit.mjs
       - name: Stage the tested client
         shell: pwsh
         run: |

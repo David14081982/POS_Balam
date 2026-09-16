@@ -5,6 +5,8 @@ sesión de chat.
 
 ## Cómo usar este directorio
 
+Corrección de edición: [H172 · Guardado y mensajes](guardado-edicion-productos-h172.md).
+
 - Antes de modificar un módulo, leer las correcciones relacionadas.
 - Crear el documento desde `_template.md` durante la etapa de documentación.
 - Usar nombres estables en minúsculas y con guiones.

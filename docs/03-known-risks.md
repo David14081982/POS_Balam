@@ -5,6 +5,25 @@ un riesgo se debe leer su evidencia y las correcciones relacionadas. Los
 estados válidos son: `ABIERTO`, `EN CURSO`, `PARCIALMENTE RESUELTO`, `RESUELTO`
 y `BLOQUEADO`.
 
+## H-172 — El guardado de edición pierde el contexto del error
+
+**Estado:** PARCIALMENTE RESUELTO — integrado y verificado, publicación pendiente.
+**Fecha:** 16/09/2026. **Commit:** Pendiente de commit.
+**Problema:** los catch de edición conservan sólo el mensaje; UUID/JSON y
+`reference_` se clasifican como importación. Falta comprobar el conjunto devuelto
+y bloquear el doble envío mientras se espera la confirmación.
+**Alcance:** editor de productos V1/V2 y mensajes contextuales. Conservar la
+autoridad online de H164, DATA/STORE, identidades, barcodes, SKU, SQL y Excel.
+**Procedencia:** integra la corrección de la copia local antigua, llamada H168
+allí; ese ID pertenece en main a tickets y no se sobrescribe.
+**Solución:** contexto/código del error, comprobación del conjunto confirmado
+y controles de edición bloqueados sólo mientras espera la solicitud actual.
+**Pruebas:** base 0/4, final 7/7; UI 6/6 y PWA 2/2, transporte controlado.
+Build correcto; HTML idénticos, SHA-256
+`7020d3e565b1721febc8746a73c69c7c32f44677dda4b3cd25b02e34dd87e531`.
+A/B/C real NO CERTIFICADO. Commit/publicación pendientes.
+**Documento:** `docs/fixes/guardado-edicion-productos-h172.md`.
+
 ## Resumen
 
 **H-171 — Círculos de ornamento en POS: RESUELTO Y PUBLICADO (13/09/2026).**

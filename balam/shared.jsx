@@ -291,6 +291,42 @@
       explanation: 'BALAM detuvo este archivo para no entregar una etiqueta incompleta.',
       action: 'Vuelve a generar la etiqueta; si continúa, pide ayuda a soporte.', level: 'danger',
     },
+    product_edit_unknown: {
+      title: 'No se pudo confirmar el guardado',
+      explanation: 'BALAM no pudo determinar el motivo. La edición sigue abierta.',
+      action: 'Conserva esta pestaña abierta y solicita una revisión si el problema continúa.', level: 'danger',
+    },
+    product_edit_identity: {
+      title: 'Este cambio modifica la identidad del producto',
+      explanation: 'La referencia tiene existencias o historial que requieren conservar sus características físicas.',
+      action: 'Conserva esas características para guardar los cambios comerciales.', level: 'warning',
+    },
+    product_edit_duplicate: {
+      title: 'La edición coincide con otra referencia',
+      explanation: 'La combinación o identificación ya pertenece a otro producto.',
+      action: 'Revisa las variantes antes de guardar; la edición sigue abierta.', level: 'warning',
+    },
+    product_edit_size: {
+      title: 'La talla no pertenece a la familia seleccionada',
+      explanation: 'La edición contiene una talla incompatible con su familia.',
+      action: 'Revisa la talla de la referencia antes de guardar.', level: 'warning',
+    },
+    product_edit_missing: {
+      title: 'El producto ya no está disponible para editar',
+      explanation: 'No se encontró alguno de los productos incluidos en esta edición.',
+      action: 'Conserva tus cambios y vuelve a buscar el producto en Inventario.', level: 'warning',
+    },
+    product_edit_locked: {
+      title: 'El guardado está temporalmente bloqueado',
+      explanation: 'El equipo o el producto tiene una operación pendiente de terminar.',
+      action: 'Espera a que termine y vuelve a guardar. La edición sigue abierta.', level: 'warning',
+    },
+
+    product_edit_immutable: {
+      title: 'La identificación del producto debe conservarse',
+      explanation: 'La edición intenta sustituir una identificación que no admite cambios.',
+      action: 'Conserva la identificación original para guardar los demás cambios.', level: 'warning',
+    },
     file_format: {
       title: 'El archivo no tiene el formato esperado',
       explanation: 'BALAM no puede relacionar algunas filas con el inventario de forma segura.',
@@ -398,6 +434,20 @@
     if (/online_unavailable|failed to fetch|network|load failed|fetch failed|sin conexi[oó]n|offline/.test(all) || category === 'network') return 'network';
     if (code === 'online_receipt_unavailable') return 'storage';
     if (code === 'sku_duplicate_warning' || /^sku_duplicate_warning:/.test(String(raw).toLowerCase())) return 'import_sku_shared';
+    if (input && input.context === 'product_edit') {
+      const editCodes = {
+        reference_reclassification_required: 'product_edit_identity',
+        reference_id_duplicate: 'product_edit_duplicate', reference_signature_duplicate: 'product_edit_duplicate', barcode_duplicate: 'product_edit_duplicate',
+        reference_size_invalid: 'product_edit_size',
+        reference_not_found: 'product_edit_missing', product_sync_target_missing: 'product_edit_missing',
+        reference_model_immutable: 'product_edit_immutable', barcode_immutable: 'product_edit_immutable',
+        product_edit_locked: 'product_edit_locked', product_edit_writer_required: 'product_edit_locked', device_recovery_required: 'product_edit_locked',
+        custom_attribute_required: 'data', ornament_color_required: 'data',
+        '42501': 'permission', '403': 'permission', '401': 'auth',
+        product_version_conflict: 'conflict', sync_protocol_outdated: 'compatibility', rebootstrap_required: 'compatibility',
+      };
+      return editCodes[code] || 'product_edit_unknown';
+    }
     if (input && input.context === 'inventory_import') {
       if (code === 'id_not_found') return 'import_product_missing';
       if (['stale_version', 'version_conflict'].includes(code)) return 'import_stale';

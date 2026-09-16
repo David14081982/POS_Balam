@@ -1,0 +1,38 @@
+{
+  "results": [
+    {
+      "name": "Errores de edición conservan código y contexto",
+      "ok": true
+    },
+    {
+      "name": "Resultado vacío o de otro ID nunca anuncia éxito",
+      "ok": true
+    },
+    {
+      "name": "Un envío por clic doble; cierre sólo tras confirmación",
+      "ok": true
+    },
+    {
+      "name": "Clasificación de edición no inventa importación y conserva estados online",
+      "ok": true
+    },
+    {
+      "name": "V1: editar, confirmar, recargar y conservar identidad",
+      "ok": true
+    },
+    {
+      "name": "V2: editar, confirmar, recargar y conservar identidad",
+      "ok": true
+    },
+    {
+      "name": "Excel serializado incluye precios editados e identidad V1/V2",
+      "ok": true
+    }
+  ],
+  "artifactSha256": "7020d3e565b1721febc8746a73c69c7c32f44677dda4b3cd25b02e34dd87e531",
+  "sourceSha256": {
+    "inventory": "636050e471cad20a6469e20119f127ec639a9eb9a7a50d0612b0c63fefb09c17",
+    "shared": "9b84e4835df208dafb38ff01b49507f9c992f80a0dd712c8355a87f6f0c69f0c"
+  },
+  "remoteBusinessWrites": 0
+}

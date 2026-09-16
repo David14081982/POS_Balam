@@ -1,0 +1,30 @@
+{
+  "results": [
+    {
+      "name": "Errores de edición conservan código y contexto",
+      "ok": false,
+      "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ undefined\n- '22P02'\n"
+    },
+    {
+      "name": "Resultado vacío o de otro ID nunca anuncia éxito",
+      "ok": false,
+      "error": "Cannot read properties of undefined (reading 'referenceWarnings')"
+    },
+    {
+      "name": "Un envío por clic doble; cierre sólo tras confirmación",
+      "ok": false,
+      "error": "Expected values to be strictly equal:\n\n2 !== 1\n"
+    },
+    {
+      "name": "Clasificación de edición no inventa importación y conserva estados online",
+      "ok": false,
+      "error": "The input was expected to not match the regular expression /archivo|plantilla|importa/i. Input:\n\n'El archivo no tiene el formato esperado BALAM no puede relacionar algunas filas con el inventario de forma segura. Descarga una plantilla nueva, copia tus datos y vuelve a importarla.'\n"
+    }
+  ],
+  "artifactSha256": "d516c6961df60216d3ce2ddcb7e42105698af5afb81d9e7fb76bd4f3ea9294be",
+  "sourceSha256": {
+    "inventory": "d5c525ae36295c094e096cd26c30658f4f799e46734e0e6fb82897d3c109e753",
+    "shared": "a07c5dc3237fc589f7ca04f952e2d4869ec5d24f371e4232ef80e6582dbf2062"
+  },
+  "remoteBusinessWrites": 0
+}
