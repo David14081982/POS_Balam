@@ -255,6 +255,11 @@ rechaza explícitamente, incluso si el valor es NULL. Las ediciones conservan
 los códigos y aliases históricos; estos metadatos no se reparan mediante una
 regeneración de SKU o de códigos de barras.
 
+H-174: la guarda SQL compara columnas físicas y la edición cliente compara la
+firma. Con catálogo Modelo, `modelo` no entra en la firma, porque sólo es la
+proyección del atributo. `DATA.updateReference()` conserva el `modelo`
+persistido de una referencia con existencias, bloqueo u operaciones.
+
 En POS, una lectura de formato logístico V3 sin coincidencia termina con un
 aviso humano tanto en el campo de búsqueda como en la captura global. No pasa
 a coincidencias comerciales por nombre o SKU. Los avisos sobre fondo oscuro

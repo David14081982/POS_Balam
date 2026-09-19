@@ -15,6 +15,10 @@ Corrección de edición: [H172 · Guardado y mensajes](guardado-edicion-producto
 
 ## Correcciones registradas
 
+- [edicion-modelo-proyeccion-h174.md](edicion-modelo-proyeccion-h174.md) — H-174:
+  la edición protegida conserva el `modelo` persistido (0TB frente a TB);
+  34 referencias en 8 familias. 4/6 → 6/6.
+
 - [ticket-termico-negro-ancho-h173.md](ticket-termico-negro-ancho-h173.md) — H-173:
   tablet en sitio de escritorio vuelve a RawBT; impresión del sistema de 80 mm
   en tinta negra sólida. 15/28 → 28/28; papel NOT_TESTED.

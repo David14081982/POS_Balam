@@ -1083,11 +1083,15 @@
       throw Object.assign(new Error('La talla no pertenece a la familia seleccionada'), { code: 'REFERENCE_SIZE_INVALID' });
     }
     next.physicalSignature = physicalSignature(next);
-    if (next.physicalSignature !== current.physicalSignature
-        && (current.physicalIdentityLocked || (Number(current.stockQuantity) || 0) !== 0 || referenceHasOperations(current.id))) {
+    const identityGuarded = current.physicalIdentityLocked || (Number(current.stockQuantity) || 0) !== 0 || referenceHasOperations(current.id);
+    if (next.physicalSignature !== current.physicalSignature && identityGuarded) {
       throw Object.assign(new Error('No se puede cambiar la identidad física de esta referencia porque tiene o tuvo existencias u operaciones. Puedes editar datos comerciales; para cambiar atributos físicos se requiere un flujo de reclasificación.'),
         { code: 'REFERENCE_RECLASSIFICATION_REQUIRED' });
     }
+    // H-174: con catálogo Modelo, `modelo` es sólo su proyección y no entra en
+    // la firma. Filas históricas (0TB frente a TB) la reenviaban distinta y la
+    // guarda SQL, que sí protege la columna, rechazaba la edición comercial.
+    if (identityGuarded) next.modelo = current.modelo;
     const diag = referenceDiagnostics(next, products, current.id);
     if (!diag.ok) throw Object.assign(new Error('La edición colisiona con otra referencia'), { code: diag.code, conflict: diag.conflict });
     next.physicalIdentityLocked = !!current.physicalIdentityLocked || (Number(next.stockQuantity) || 0) > 0;

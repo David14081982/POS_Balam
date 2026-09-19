@@ -5,6 +5,25 @@ un riesgo se debe leer su evidencia y las correcciones relacionadas. Los
 estados válidos son: `ABIERTO`, `EN CURSO`, `PARCIALMENTE RESUELTO`, `RESUELTO`
 y `BLOQUEADO`.
 
+## H-174 — La edición de TIRA BORDADA se rechaza por el modelo histórico
+
+**Estado:** RESUELTO EN CÓDIGO.
+**Fecha:** 19/09/2026. **Commit:** Pendiente de commit.
+**Problema:** «No se pudo confirmar el guardado»
+`P0001 / REFERENCE_RECLASSIFICATION_REQUIRED` al editar
+`24-TB-MC-MNT-MAO-AMAR`.
+**Causa:** el formulario deriva `modelo = TB` del catálogo Modelo, pero la
+columna guarda `0TB`. La firma cliente no cambia y la guarda SQL rechaza la
+columna protegida.
+**Alcance medido:** SELECT autorizado. De 927 referencias protegidas, 34 en 8
+familias TIRA BORDADA; las demás fuentes normalizadas suman 0.
+**Solución:** `updateReference()` conserva el `modelo` persistido en una
+referencia protegida. La guarda SQL y el bloqueo de cambios físicos no cambian.
+**Pruebas:** H-174 4/6 → 6/6; H-172 7/7; H-173 28/28; UI 6/6; PWA 2/2.
+Las familias H-101/102/103/104, H-94 y H-163 fallan igual sobre `HEAD`.
+**Residual:** los datos `0TB` se conservan, sin normalización masiva.
+**Documento:** `docs/fixes/edicion-modelo-proyeccion-h174.md`.
+
 ## H-173 — Tickets pequeños, recortados y grises
 
 **Estado:** RESUELTO EN CÓDIGO — papel físico NOT_TESTED.

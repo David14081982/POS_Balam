@@ -100,6 +100,8 @@ jobs:
         run: node test-h172-product-edit.mjs
       - name: Verify thermal receipt output
         run: node test-h173-ticket-thermal-output.mjs
+      - name: Verify protected edits keep the persisted model
+        run: node test-h174-edit-model-projection.mjs
       - name: Stage the tested client
         shell: pwsh
         run: |
