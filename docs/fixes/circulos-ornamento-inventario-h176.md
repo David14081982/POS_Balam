@@ -3,7 +3,7 @@
 **Riesgo:** H-176
 **Estado:** RESUELTO
 **Fecha:** 19/09/2026
-**Commit:** Pendiente de commit
+**Commit:** `7584cb2e520bcd4d8d6094537c098fd875336374`
 
 ## Problema y reproducción
 
@@ -57,6 +57,11 @@ celular usa tarjetas sin columna de color y queda fuera del alcance.
 - Regresiones: H-175 10/10, H-174 6/6, H-172 7/7, `test-h166-pos.cjs` PASS
   (círculos del POS), UI 6/6 y PWA 2/2.
 - Captura a 1280 px inspeccionada: tres círculos bajo «Blanco».
+
+## Publicación
+
+Actions 35456905064 SUCCESS; `index.html` y `sw.js` públicos idénticos al
+commit; `node test-h176-inventory-ornament-colors.mjs <Pages>` 10/10.
 
 ## Riesgo residual y pendientes
 

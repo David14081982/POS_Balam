@@ -8,7 +8,8 @@ y `BLOQUEADO`.
 ## H-176 — Inventario no muestra los colores de ornamento
 
 **Estado:** RESUELTO.
-**Fecha:** 19/09/2026. **Commit:** Pendiente de commit.
+**Fecha:** 19/09/2026. **Commit:** `7584cb2`.
+**Publicación:** Actions 35456905064 SUCCESS; HTML/SW públicos idénticos; Pages 10/10.
 **Problema:** la columna «Color / Orn.» leía `p.ornColors`, que viene vacío
 en familias V2 y en V1 por talla, así que no mostraba círculos.
 **Solución:** `OrnamentSwatches` reúne `effectiveOrnamentColors` de todas las
