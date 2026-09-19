@@ -106,6 +106,8 @@ jobs:
         run: node test-h175-model-projection.mjs
       - name: Verify inventory ornament color swatches
         run: node test-h176-inventory-ornament-colors.mjs
+      - name: Verify thermal ticket ink budget
+        run: node test-h177-thermal-ink.mjs
       - name: Stage the tested client
         shell: pwsh
         run: |

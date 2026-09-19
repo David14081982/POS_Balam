@@ -638,6 +638,7 @@
     return /\bLinux\b/i.test(agent) && !/CrOS/i.test(agent) && (navigator.maxTouchPoints || 0) > 0;
   };
   const receiptBluetoothHelp = 'Para papel de 80 mm: abre los ajustes de tu impresora en RawBT y selecciona 576 puntos en el ancho de impresión.';
+  const RECEIPT_BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
   const receiptGraphics = new WeakMap();
   const receiptResourceData = new Map();
   async function receiptLocalData(url) {
@@ -761,6 +762,21 @@
       const usable = box.width - left - right;
       const width = 576, height = Math.ceil(Math.max(box.height, rendered.body.scrollHeight) * width / usable);
       if (!Number.isFinite(height) || height <= 0 || usable <= 0 || height > 24000) throw new Error('El comprobante es demasiado largo para Bluetooth. Reimprime el comprobante desde una computadora.');
+      // H-177: la impresora Bluetooth se detenía a mitad del ticket por energía
+      // (papel: se corta antes con batería, llega más lejos con cargador). Las
+      // superficies sólidas —imágenes y fondos oscuros como logo y barras— se
+      // traman al 50 % y el texto usa umbral medio: menos tinta, mismo diseño.
+      const scale = width / usable;
+      const fillMask = new Uint8Array(width * height);
+      rendered.body.querySelectorAll('*').forEach(node => {
+        const bg = (/rgba?\(([^)]+)\)/.exec(rendered.defaultView.getComputedStyle(node).backgroundColor) || [])[1];
+        const [r, g, b, a = 1] = bg ? bg.split(/[\s,/]+/).filter(Boolean).map(Number) : [255, 255, 255, 0];
+        if (node.tagName !== 'IMG' && !(a > 0.5 && r * 0.2126 + g * 0.7152 + b * 0.0722 < 100)) return;
+        const rect = node.getBoundingClientRect();
+        const x0 = Math.max(0, Math.floor((rect.left - left) * scale)), x1 = Math.min(width, Math.ceil((rect.right - left) * scale));
+        const y0 = Math.max(0, Math.floor(rect.top * scale)), y1 = Math.min(height, Math.ceil(rect.bottom * scale));
+        for (let y = y0; y < y1; y++) fillMask.fill(1, y * width + x0, y * width + Math.max(x0, x1));
+      });
       const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="${left} 0 ${usable} ${height * usable / width}"><foreignObject width="${box.width}" height="100%">${new XMLSerializer().serializeToString(rendered.documentElement)}</foreignObject></svg>`;
       const image = new Image();
       image.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
@@ -776,7 +792,11 @@
         let previous = 0;
         for (let x = 0; x < width; x++) {
           const i = (y * width + x) * 4;
-          const gray = pixels[i] * 0.2126 + pixels[i + 1] * 0.7152 + pixels[i + 2] * 0.0722 < 200 ? 0 : 255;
+          const luminance = pixels[i] * 0.2126 + pixels[i + 1] * 0.7152 + pixels[i + 2] * 0.0722;
+          // Superficie: Bayer 4×4 sobre la luminancia aclarada (máximo 50 % de tinta).
+          const gray = fillMask[y * width + x]
+            ? (128 + luminance / 2 < (RECEIPT_BAYER[(y & 3) * 4 + (x & 3)] + 0.5) * 16 ? 0 : 255)
+            : (luminance < 128 ? 0 : 255);
           rows[y * (width + 1) + x + 1] = (gray - previous) & 255;
           previous = gray;
         }

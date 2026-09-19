@@ -583,7 +583,7 @@
     });
     const frozenOrnament = (line, display) => {
       const colors = (display.ornamentColors || []).map(item => item.label || item.code).filter(Boolean).join(' + ');
-      return [display.ornamentLabel || line.ornamento, colors].filter(Boolean).join(' Â· ');
+      return [display.ornamentLabel || line.ornamento, colors].filter(Boolean).join(' · ');
     };
     const pagos = D.paymentsForSale ? D.paymentsForSale(sale.folio) : [];
     const snapshotCompleto = D.hasFinancialSnapshot ? D.hasFinancialSnapshot(sale) : hasSnapshot;

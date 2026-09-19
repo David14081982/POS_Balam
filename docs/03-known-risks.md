@@ -5,6 +5,22 @@ un riesgo se debe leer su evidencia y las correcciones relacionadas. Los
 estados válidos son: `ABIERTO`, `EN CURSO`, `PARCIALMENTE RESUELTO`, `RESUELTO`
 y `BLOQUEADO`.
 
+## H-177 — La impresora Bluetooth corta el ticket de venta a mitad
+
+**Estado:** RESUELTO EN CÓDIGO — confirmación en papel pendiente.
+**Fecha:** 19/09/2026. **Commit:** Pendiente de commit.
+**Evidencia:** en RawBT sale a 80 mm y en negro, pero se detiene tras
+«Detalle de compra». Con cargador llega a «Total». El reporte sale completo.
+El PNG está completo e igual al del 05/09. Tinta: venta 107,608 y peor franja
+14,464, contra 70,101 y 9,667 del reporte.
+**Solución:** en el PNG RawBT, el texto usa umbral 128 y las superficies se
+traman al 50 %. Separador de ornamento `Â·` → `·`.
+**Pruebas:** H-177 3/8 → 8/8 (venta 67,537 < 70,101); H-173 28/28;
+H-153 80/80, 12/12 y 3/3; H-168 41/41; UI 6/6; PWA 2/2.
+**Residual:** margen del 5 % frente al corte con cargador; la batería y la
+densidad de la impresora siguen influyendo.
+**Documento:** `docs/fixes/ticket-bluetooth-energia-h177.md`.
+
 ## H-176 — Inventario no muestra los colores de ornamento
 
 **Estado:** RESUELTO.

@@ -15,6 +15,10 @@ Corrección de edición: [H172 · Guardado y mensajes](guardado-edicion-producto
 
 ## Correcciones registradas
 
+- [ticket-bluetooth-energia-h177.md](ticket-bluetooth-energia-h177.md) — H-177:
+  ticket RawBT con menos tinta (texto umbral 128, superficies tramadas) y
+  separador de ornamento corregido. 3/8 → 8/8; papel pendiente.
+
 - [circulos-ornamento-inventario-h176.md](circulos-ornamento-inventario-h176.md) — H-176:
   círculos flotantes de color de ornamento bajo el color en Inventario. 6/10 → 10/10.
 

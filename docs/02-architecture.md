@@ -632,8 +632,10 @@ gesto directo. `prepareReceipt()` captura el HTML y CSS de impresión, incluidas
 sin consultar el catálogo ni modificar documentos. Para el rollo de 80 mm, el PNG
 de 576 puntos aprovecha el cabezal de 72 mm: excluye el padding horizontal
 exterior salvo 1 px de resguardo por lado y escala la composición proporcionalmente.
-La copia térmica usa bordes negros y binarización de luminancia a umbral 200
-(sólo 0/255), evitando texto gris tramado por el controlador. H-173: un agente
+La copia térmica usa bordes negros y sólo valores 0/255. H-177: el texto usa
+umbral de luminancia 128. Las superficies sólidas (imágenes y fondos oscuros
+como logo o barras) se traman con Bayer 4×4 al 50 % como máximo, porque la
+impresora Bluetooth se detenía a mitad del ticket por energía. H-173: un agente
 `Linux` táctil no `CrOS` también es Android (sitio de escritorio de tablets). La
 impresión del sistema de 80 mm aplica el mismo umbral como tinta sólida; A4 no. Su compresión sin pérdida
 usa las APIs del navegador y no agrega dependencias ni red. La preparación se
