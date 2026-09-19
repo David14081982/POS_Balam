@@ -1,7 +1,7 @@
 # El modelo siempre sigue al catálogo Modelo
 
 **Riesgo:** H-175
-**Estado:** EN CURSO — cliente listo; migración de datos pendiente de autorización
+**Estado:** RESUELTO — cliente publicado y migración aplicada y verificada
 **Fecha:** 19/09/2026
 **Commit:** Pendiente de commit
 
@@ -54,11 +54,17 @@ La migración `20260919022400_pos_h175_tira_bordada_model.sql` corrige los datos
 - `balam/data.jsx`: `projectedModel`, `referenceIdentityGuarded` y
   `referenceModel`, más su uso en `createReference` y `updateReference`.
 - `balam/xlsx-io.jsx`: `updateFromImport` usa `D.referenceModel`.
-- Migración de datos, pendiente de aplicar.
+- Migración de datos aplicada el 19/09/2026 con autorización explícita del dueño.
+  El primer intento abortó sin efectos por `ONLINE_COMMAND_REQUIRED`: la guarda
+  H-164 exige su canal online. El segundo, con `service_role`, abortó por
+  permisos de `h133_internal_enabled`. La versión final aplica el patrón de las
+  verificaciones H-164: suspende `online_runtime` dentro de la transacción y lo
+  restaura byte a byte, con aserción.
 
 ## Pruebas
 
-- Reproducción: 3/9 → **9/9**.
+- Reproducción: 3/9 → **10/10**. Incluye la exportación e importación del
+  inventario completo sin cambios ni conflictos.
 - `db push --dry-run`: sólo `20260919022400` pendiente.
 - Regresiones verdes, iguales a `HEAD`: `test-h174-edit-model-projection` 6/6,
   `test-h172-product-edit` 7/7, `test-h164-online-ui` 6/6 y
@@ -72,8 +78,13 @@ La migración `20260919022400_pos_h175_tira_bordada_model.sql` corrige los datos
 
 ## Riesgo residual y pendientes
 
-- Migración de datos sin aplicar hasta la autorización explícita del dueño. El
-  ensayo con rollback en producción fue bloqueado por permisos.
+- La verificación posterior es independiente, de solo lectura, contra la lista
+  capturada antes del cambio:
+  - Las 35 dicen `TB`, con el mismo `barcode_code`, SKU y existencias.
+  - Las 59 TIRA BORDADA activas dicen `TB`.
+  - No queda ningún `modelo` distinto del catálogo.
+  - `online_runtime.enabled` sigue en true.
+  - `migration list` registra 20260919022400 en local y en remoto.
 - Las referencias V1 están fuera del alcance: no hay V1 operativas.
 
 ## Referencias

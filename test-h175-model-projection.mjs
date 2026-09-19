@@ -96,6 +96,17 @@ try {
       const plan = IO.planImport(await IO.parseFile(book([row])), products, {});
       assert(plan.ok && plan.rows[0].after.modelo === 'TB', JSON.stringify(plan.rows[0].after && plan.rows[0].after.modelo));
     });
+    await check('Exportar e importar el inventario completo no genera cambios ni conflictos', async () => {
+      // Estado posterior a la migración: todas las referencias ya dicen TB.
+      load(current().map(p => ({ ...p, modelo: 'TB' })));
+      const products = current(), wb = IO.__test.inventoryWorkbook(products).wb;
+      const exported = X.utils.sheet_to_json(wb.Sheets.Inventario, { defval: '' });
+      assert(exported.length === products.length && exported.every(row => row['No. Modelo'] === 'TB'), JSON.stringify(exported.map(row => row['No. Modelo'])));
+      const file = new File([X.write(wb, { bookType: 'xlsx', type: 'array' })], 'h175-roundtrip.xlsx');
+      const plan = IO.planImport(await IO.parseFile(file), products, {});
+      assert(plan.ok && plan.creates === 0 && plan.unchangedCount === products.length,
+        JSON.stringify({ conflicts: plan.conflicts.map(c => c.conflict), unchanged: plan.unchangedCount, total: products.length }));
+    });
     await check('Un cambio físico real por Excel sigue bloqueado en una protegida', async () => {
       const products = current(), target = products.find(p => p.id === guarded.id);
       const row = rowOf(target, r => { r['Color Tela'] = C.all('color').find(item => item.code !== target.color).code; });
