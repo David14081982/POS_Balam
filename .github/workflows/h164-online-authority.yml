@@ -102,6 +102,8 @@ jobs:
         run: node test-h173-ticket-thermal-output.mjs
       - name: Verify protected edits keep the persisted model
         run: node test-h174-edit-model-projection.mjs
+      - name: Verify model follows the Modelo catalog
+        run: node test-h175-model-projection.mjs
       - name: Stage the tested client
         shell: pwsh
         run: |

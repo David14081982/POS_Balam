@@ -940,7 +940,12 @@
     after.id = target.id;
     after.sku = target.sku;
     after._syncVersion = target._syncVersion;
-    if (after.recordModel === 'v2') after.physicalSignature = D.physicalSignature(after);
+    if (after.recordModel === 'v2') {
+      after.physicalSignature = D.physicalSignature(after);
+      // H-175: «No. Modelo» no puede divergir del catálogo Modelo ni cambiar
+      // una referencia protegida; lo resuelve la misma autoridad que Inventario.
+      after.modelo = D.referenceModel(after, target);
+    }
     return D.hydrate(after);
   }
   function changeSummary(before, after) {

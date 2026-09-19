@@ -118,6 +118,24 @@
     });
     return out;
   }
+  // H-175: con catálogo Modelo, `modelo` es la proyección de su código y no
+  // un dato independiente. Excel permitía «No. Modelo» 0TB con Modelo TB.
+  function projectedModel(product) {
+    const kind = C && C.modeloKind ? C.modeloKind() : null;
+    const value = kind && product && product.attrs ? product.attrs[kind] : null;
+    return value != null && String(value).trim() !== '' ? String(value).trim() : null;
+  }
+  function referenceIdentityGuarded(product) {
+    return !!product && (!!product.physicalIdentityLocked || (Number(product.stockQuantity) || 0) !== 0
+      || referenceHasOperations(product.id));
+  }
+  // Autoridad del `modelo` de una edición V2. La guarda SQL protege la columna
+  // en una referencia con existencias, bloqueo u operaciones: se conserva.
+  function referenceModel(next, current) {
+    if (current && referenceIdentityGuarded(current)) return current.modelo;
+    const model = projectedModel(next);
+    return model == null ? next.modelo : model;
+  }
   function referenceValue(product, part) {
     if (part.effectiveSize) {
       const size = effectiveSize(product);
@@ -286,6 +304,7 @@
     p.attrs = canonicalProductAttrs(Object.assign({}, p.attrs || {}, { __sizeCategoryId: p.sizeCategoryId }), {
       validateRequired: true, product: p,
     });
+    p.modelo = referenceModel(p, null);
     const size = effectiveSize(p);
     if (!size.valid) throw Object.assign(new Error('La talla no pertenece a la familia seleccionada'), { code: 'REFERENCE_SIZE_INVALID' });
     p.stock = [{ talla: p.sizeCode, escala: p.sizeScale, stock: p.stockQuantity }];
@@ -1083,15 +1102,14 @@
       throw Object.assign(new Error('La talla no pertenece a la familia seleccionada'), { code: 'REFERENCE_SIZE_INVALID' });
     }
     next.physicalSignature = physicalSignature(next);
-    const identityGuarded = current.physicalIdentityLocked || (Number(current.stockQuantity) || 0) !== 0 || referenceHasOperations(current.id);
-    if (next.physicalSignature !== current.physicalSignature && identityGuarded) {
+    if (next.physicalSignature !== current.physicalSignature && referenceIdentityGuarded(current)) {
       throw Object.assign(new Error('No se puede cambiar la identidad física de esta referencia porque tiene o tuvo existencias u operaciones. Puedes editar datos comerciales; para cambiar atributos físicos se requiere un flujo de reclasificación.'),
         { code: 'REFERENCE_RECLASSIFICATION_REQUIRED' });
     }
     // H-174: con catálogo Modelo, `modelo` es sólo su proyección y no entra en
     // la firma. Filas históricas (0TB frente a TB) la reenviaban distinta y la
     // guarda SQL, que sí protege la columna, rechazaba la edición comercial.
-    if (identityGuarded) next.modelo = current.modelo;
+    next.modelo = referenceModel(next, current);
     const diag = referenceDiagnostics(next, products, current.id);
     if (!diag.ok) throw Object.assign(new Error('La edición colisiona con otra referencia'), { code: diag.code, conflict: diag.conflict });
     next.physicalIdentityLocked = !!current.physicalIdentityLocked || (Number(next.stockQuantity) || 0) > 0;
@@ -4289,7 +4307,7 @@
     saveProductRows, saveProductFamily, validateOnlineSnapshot, replaceFromOnline,
     products, sellers, clients, sales, movements, promos, liquidations, returns, payments, exchanges, loans,
     sku, materializedSku, familyVisualSku, regenerateSkus, totalStock, hydrate, mkStock, emptyStock, SIZE_MARK,
-    isV2Reference, createReference, updateReference, referenceFamily, referenceFamilyProjection, commercialProducts, materializeReferenceFamily, physicalSignature, skuPreview,
+    isV2Reference, createReference, updateReference, referenceModel, referenceFamily, referenceFamilyProjection, commercialProducts, materializeReferenceFamily, physicalSignature, skuPreview,
     effectiveSize, ornamentColorMode, referenceDimensionStats, skuConfigurationImpact,
     canonicalReferenceOrnamentColors, canonicalProductAttrs, referenceDiagnostics, referenceDifferences,
     physicalSnapshot, barcodeFromId, referenceHasOperations, reclassifyReference,

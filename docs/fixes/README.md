@@ -15,6 +15,10 @@ Corrección de edición: [H172 · Guardado y mensajes](guardado-edicion-producto
 
 ## Correcciones registradas
 
+- [modelo-catalogo-unico-h175.md](modelo-catalogo-unico-h175.md) — H-175:
+  autoridad única del `modelo` V2 (alta, Inventario y Excel) y normalización de
+  35 TIRA BORDADA 0TB → TB. 3/9 → 9/9.
+
 - [edicion-modelo-proyeccion-h174.md](edicion-modelo-proyeccion-h174.md) — H-174:
   la edición protegida conserva el `modelo` persistido (0TB frente a TB);
   34 referencias en 8 familias. 4/6 → 6/6.

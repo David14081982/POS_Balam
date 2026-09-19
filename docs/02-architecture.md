@@ -259,6 +259,9 @@ H-174: la guarda SQL compara columnas físicas y la edición cliente compara la
 firma. Con catálogo Modelo, `modelo` no entra en la firma, porque sólo es la
 proyección del atributo. `DATA.updateReference()` conserva el `modelo`
 persistido de una referencia con existencias, bloqueo u operaciones.
+H-175: `DATA.referenceModel()` es la autoridad única del `modelo` V2 en alta,
+Inventario y Excel. Una referencia protegida conserva su valor persistido; las
+demás toman el código del catálogo Modelo. «No. Modelo» nunca lo contradice.
 
 En POS, una lectura de formato logístico V3 sin coincidencia termina con un
 aviso humano tanto en el campo de búsqueda como en la captura global. No pasa

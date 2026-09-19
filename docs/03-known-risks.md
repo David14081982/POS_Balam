@@ -5,6 +5,21 @@ un riesgo se debe leer su evidencia y las correcciones relacionadas. Los
 estados válidos son: `ABIERTO`, `EN CURSO`, `PARCIALMENTE RESUELTO`, `RESUELTO`
 y `BLOQUEADO`.
 
+## H-175 — El modelo puede divergir del catálogo Modelo
+
+**Estado:** EN CURSO — cliente listo; migración de datos pendiente de autorización.
+**Fecha:** 19/09/2026. **Commit:** Pendiente de commit.
+**Problema:** Excel «No. Modelo» crea modelos distintos del catálogo (`0TB`
+frente a `TB`). Sus actualizaciones repetían el P0001 de H-174.
+**Solución:** `DATA.referenceModel()` es la autoridad única para alta,
+Inventario y Excel. Las referencias protegidas conservan su valor; las demás
+proyectan el catálogo. La migración 20260919022400 normaliza las 35 TIRA
+BORDADA con hashes de preservación.
+**Pruebas:** H-175 3/9 → 9/9; H-174 6/6; H-172 7/7; UI 6/6; PWA 2/2; dry-run
+sólo 20260919022400. H-163 xlsx, H-86, xlsx-security 16/17 y export-modelo 8/14
+fallan con huella idéntica sobre `HEAD`.
+**Documento:** `docs/fixes/modelo-catalogo-unico-h175.md`.
+
 ## H-174 — La edición de TIRA BORDADA se rechaza por el modelo histórico
 
 **Estado:** RESUELTO EN CÓDIGO.
