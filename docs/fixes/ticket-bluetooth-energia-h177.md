@@ -3,7 +3,7 @@
 **Riesgo:** H-177
 **Estado:** RESUELTO EN CÓDIGO — confirmación en papel pendiente
 **Fecha:** 19/09/2026
-**Commit:** Pendiente de commit
+**Commit:** `ab083bed14da1142850b4bea90365053b6505cde`
 
 ## Problema y reproducción
 
@@ -73,6 +73,11 @@ sistema (H-173) no cambian. El separador de ornamento pasa a `' · '`.
   PWA 2/2.
 - Inspección visual del PNG simulado: texto negro legible, logo y barras
   tramados.
+
+## Publicación
+
+Actions 35460161544 SUCCESS; `index.html` y `sw.js` públicos idénticos al
+commit; `node test-h177-thermal-ink.mjs <Pages>` 8/8.
 
 ## Riesgo residual y pendientes
 

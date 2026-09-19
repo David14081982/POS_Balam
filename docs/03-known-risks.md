@@ -8,7 +8,8 @@ y `BLOQUEADO`.
 ## H-177 — La impresora Bluetooth corta el ticket de venta a mitad
 
 **Estado:** RESUELTO EN CÓDIGO — confirmación en papel pendiente.
-**Fecha:** 19/09/2026. **Commit:** Pendiente de commit.
+**Fecha:** 19/09/2026. **Commit:** `ab083be`.
+**Publicación:** Actions 35460161544 SUCCESS; HTML/SW públicos idénticos; Pages 8/8.
 **Evidencia:** en RawBT sale a 80 mm y en negro, pero se detiene tras
 «Detalle de compra». Con cargador llega a «Total». El reporte sale completo.
 El PNG está completo e igual al del 05/09. Tinta: venta 107,608 y peor franja
