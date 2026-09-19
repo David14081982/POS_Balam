@@ -8,7 +8,8 @@ y `BLOQUEADO`.
 ## H-173 — Tickets pequeños, recortados y grises
 
 **Estado:** RESUELTO EN CÓDIGO — papel físico NOT_TESTED.
-**Fecha:** 19/09/2026. **Commit:** Pendiente de commit.
+**Fecha:** 19/09/2026. **Commit:** `4609a548776a45c75c399b4cc08fe9d25217eaa3`.
+**Publicación:** Actions 35449953351 SUCCESS; HTML/SW públicos idénticos; Pages 28/28.
 **Problema:** la venta, la reimpresión, el abono, el cambio y la devolución
 salen en unos 4–6 cm, en gris y a veces sin pie. El ticket por método sale bien.
 **Causa:** Chrome en tablets abre el sitio de escritorio sin `Android` en el

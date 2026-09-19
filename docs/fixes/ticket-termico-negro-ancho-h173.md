@@ -3,7 +3,7 @@
 **Riesgo:** H-173
 **Estado:** RESUELTO EN CÓDIGO — papel físico NOT_TESTED
 **Fecha:** 19/09/2026
-**Commit:** Pendiente de commit
+**Commit:** `4609a548776a45c75c399b4cc08fe9d25217eaa3`
 
 ## Problema y reproducción
 
@@ -92,6 +92,14 @@ PNG RawBT ni los documentos A4.
     quedan fuera del alcance quirúrgico.
 - Self-review: el diff productivo se limita a `shared.jsx`. El PNG RawBT
   (`thermal`) y A4 (`continuous:false`) no entran en `receiptSolidInk()`.
+
+## Publicación
+
+- CI y despliegue: workflow `35449953351` SUCCESS (regression y deploy).
+- `index.html` y `sw.js` públicos: HTTP 200 e idénticos byte a byte al commit.
+  SHA-256 de `index.html`:
+  `9f59f0a405faba0f001a22aefdd682babed8dbe13c06c7a431ba28a7adba5b1c`.
+- `node test-h173-ticket-thermal-output.mjs <Pages>`: 28/28.
 
 ## Riesgo residual y pendientes
 
