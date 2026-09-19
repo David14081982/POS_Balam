@@ -3,7 +3,7 @@
 **Riesgo:** H-175
 **Estado:** RESUELTO — cliente publicado y migración aplicada y verificada
 **Fecha:** 19/09/2026
-**Commit:** Pendiente de commit
+**Commit:** `cc431ba` (cliente), `a6b13b6` (migración y prueba ida y vuelta)
 
 ## Problema y reproducción
 

@@ -8,7 +8,8 @@ y `BLOQUEADO`.
 ## H-175 — El modelo puede divergir del catálogo Modelo
 
 **Estado:** RESUELTO — migración 20260919022400 aplicada y verificada.
-**Fecha:** 19/09/2026. **Commit:** `cc431ba` (cliente); migración en commit posterior.
+**Fecha:** 19/09/2026. **Commits:** `cc431ba` (cliente), `a6b13b6` (migración).
+**Publicación:** Actions 35454899733 y 35455418521 SUCCESS; HTML/SW públicos idénticos.
 **Problema:** Excel «No. Modelo» crea modelos distintos del catálogo (`0TB`
 frente a `TB`). Sus actualizaciones repetían el P0001 de H-174.
 **Solución:** `DATA.referenceModel()` es la autoridad única para alta,
