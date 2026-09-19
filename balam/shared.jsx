@@ -629,7 +629,14 @@
 
   // H-143/H-144: salida RawBT del comprobante histórico montado. El PNG
   // conserva el diseño existente; nunca se reconstruye desde el catálogo.
-  const usesBluetoothReceipt = () => /Android/i.test(navigator.userAgent || '');
+  // H-173: Chrome para tablets Android abre por omisión el «sitio de escritorio»
+  // y su agente dice «X11; Linux». Linux táctil sin CrOS también es Android;
+  // si no, el ticket cae en window.print(), que lo encoge y lo imprime gris.
+  const usesBluetoothReceipt = () => {
+    const agent = navigator.userAgent || '';
+    if (/Android/i.test(agent)) return true;
+    return /\bLinux\b/i.test(agent) && !/CrOS/i.test(agent) && (navigator.maxTouchPoints || 0) > 0;
+  };
   const receiptBluetoothHelp = 'Para papel de 80 mm: abre los ajustes de tu impresora en RawBT y selecciona 576 puntos en el ancho de impresión.';
   const receiptGraphics = new WeakMap();
   const receiptResourceData = new Map();
@@ -666,6 +673,22 @@
       for (const attr of Array.from(node.attributes)) if (/^on/i.test(attr.name)) node.removeAttribute(attr.name);
     }
     return { html: copy.outerHTML, css: rules.join('\n'), text: receiptPrintText(element) };
+  }
+  function receiptSolidInk(rendered) {
+    const view = rendered.defaultView;
+    const luminance = value => {
+      const match = /rgba?\(([^)]+)\)/.exec(value || '');
+      if (!match) return 255;
+      const [r, g, b, a = 1] = match[1].split(/[\s,/]+/).filter(Boolean).map(Number);
+      return 255 - a * (255 - (r * 0.2126 + g * 0.7152 + b * 0.0722));
+    };
+    for (const node of rendered.body.querySelectorAll('*')) {
+      const style = view.getComputedStyle(node);
+      // El texto claro sobre fondo oscuro (icono del logo por omisión) se conserva.
+      if (luminance(style.color) < 200) node.style.setProperty('color', '#000', 'important');
+      node.style.setProperty('border-color', '#000', 'important');
+      if (style.backgroundImage === 'none' && luminance(style.backgroundColor) >= 200) node.style.setProperty('background-color', 'transparent', 'important');
+    }
   }
   async function receiptFrame(snapshot, { thermal = false, continuous = true, audit = () => {}, signal } = {}) {
     const doc = document;
@@ -706,6 +729,9 @@
         if (signal && signal.aborted) abort();
       });
       audit('ASSETS_READY');
+      // H-173: el rollo térmico del sistema traza los grises con puntos. Mismo
+      // umbral 200 que el PNG RawBT: tinta oscura a negro, tintes claros a blanco.
+      if (continuous && !thermal) receiptSolidInk(rendered);
       if (continuous) {
         const root = rendered.body.firstElementChild;
         const height = Math.ceil(Math.max(root.scrollHeight, root.getBoundingClientRect().height) * 25.4 / 96) + 1;

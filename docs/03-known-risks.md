@@ -5,6 +5,26 @@ un riesgo se debe leer su evidencia y las correcciones relacionadas. Los
 estados válidos son: `ABIERTO`, `EN CURSO`, `PARCIALMENTE RESUELTO`, `RESUELTO`
 y `BLOQUEADO`.
 
+## H-173 — Tickets pequeños, recortados y grises
+
+**Estado:** RESUELTO EN CÓDIGO — papel físico NOT_TESTED.
+**Fecha:** 19/09/2026. **Commit:** Pendiente de commit.
+**Problema:** la venta, la reimpresión, el abono, el cambio y la devolución
+salen en unos 4–6 cm, en gris y a veces sin pie. El ticket por método sale bien.
+**Causa:** Chrome en tablets abre el sitio de escritorio sin `Android` en el
+agente, así que el ticket cae en `window.print()`. El servicio encaja la página
+continua (238–318 mm frente a 217 mm del reporte) en su medio y la encoge.
+Además, la impresión del sistema conservaba los grises de pantalla.
+**Solución:** `usesBluetoothReceipt()` reconoce Linux táctil no CrOS. La
+impresión del sistema de 80 mm usa tinta sólida con el umbral 200 del PNG.
+A4, PNG RawBT y alturas no cambian.
+**Pruebas:** H-173 15/28 → 28/28; H-153 80/80, 12/12, 3/3; H-168 41/41;
+UI 6/6; PWA 2/2. H-135/H-143/H-144/H-85/H-90 y test-ticket-print fallan igual
+sobre el bundle anterior, porque son arneses local-first retirados en H-164.
+**Residual:** papel NOT_TESTED. Un controlador de PC con largo máximo fijo
+sigue encajando la página, ya en negro.
+**Documento:** `docs/fixes/ticket-termico-negro-ancho-h173.md`.
+
 ## H-172 — El guardado de edición pierde el contexto del error
 
 **Estado:** PARCIALMENTE RESUELTO — integrado, publicado y verificado; A/B/C real NO CERTIFICADO.

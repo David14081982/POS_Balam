@@ -625,7 +625,9 @@ sin consultar el catálogo ni modificar documentos. Para el rollo de 80 mm, el P
 de 576 puntos aprovecha el cabezal de 72 mm: excluye el padding horizontal
 exterior salvo 1 px de resguardo por lado y escala la composición proporcionalmente.
 La copia térmica usa bordes negros y binarización de luminancia a umbral 200
-(sólo 0/255), evitando texto gris tramado por el controlador. Su compresión sin pérdida
+(sólo 0/255), evitando texto gris tramado por el controlador. H-173: un agente
+`Linux` táctil no `CrOS` también es Android (sitio de escritorio de tablets). La
+impresión del sistema de 80 mm aplica el mismo umbral como tinta sólida; A4 no. Su compresión sin pérdida
 usa las APIs del navegador y no agrega dependencias ni red. La preparación se
 anticipa al clic; si aún no termina, se informa y se requiere otro clic, nunca
 se abre RawBT desde una continuación asíncrona. La imagen se conserva sólo en

@@ -15,6 +15,10 @@ Corrección de edición: [H172 · Guardado y mensajes](guardado-edicion-producto
 
 ## Correcciones registradas
 
+- [ticket-termico-negro-ancho-h173.md](ticket-termico-negro-ancho-h173.md) — H-173:
+  tablet en sitio de escritorio vuelve a RawBT; impresión del sistema de 80 mm
+  en tinta negra sólida. 15/28 → 28/28; papel NOT_TESTED.
+
 - [h171-circulos-ornamento-pos.md](h171-circulos-ornamento-pos.md) — misma H171:
   recuperación visual de círculos con sombra encima del precio en POS.
   PUBLICADO Y VERIFICADO: `f38f50d`, workflow 34784122632 SUCCESS.
