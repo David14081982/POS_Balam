@@ -15,6 +15,9 @@ Corrección de edición: [H172 · Guardado y mensajes](guardado-edicion-producto
 
 ## Correcciones registradas
 
+- [circulos-ornamento-inventario-h176.md](circulos-ornamento-inventario-h176.md) — H-176:
+  círculos flotantes de color de ornamento bajo el color en Inventario. 6/10 → 10/10.
+
 - [modelo-catalogo-unico-h175.md](modelo-catalogo-unico-h175.md) — H-175:
   autoridad única del `modelo` V2 (alta, Inventario y Excel) y normalización de
   35 TIRA BORDADA 0TB → TB. 3/9 → 9/9.

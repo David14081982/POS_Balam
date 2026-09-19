@@ -59,6 +59,30 @@
   // Sin contorno duro: el drop-shadow de 0 desenfoque dibuja un filo sutil siguiendo la punta,
   // así los colores claros (blanco, hueso) no se pierden contra el fondo blanco.
   // La <tr> lleva la clase 'group'.
+  // H-176: colores de ornamento de la fila, bajo el nombre del color de tela.
+  // Una familia reúne los de todas sus referencias (Inventario muestra también
+  // las agotadas); mismo círculo flotante de 16 px que las tarjetas del POS.
+  function OrnamentSwatches({ p }) {
+    const colors = new Map();
+    (p.isFamilyProjection ? p.references : [p]).forEach(reference => {
+      const v2 = D.isV2Reference(reference);
+      const sizes = v2 ? [reference.sizeCode] : D.resolveProductSizes(reference).sizes.map(size => size.value);
+      sizes.forEach(size => D.effectiveOrnamentColors(reference, size).forEach(code => {
+        const item = window.CONFIG.find(v2 ? 'ornament_color' : 'color', code);
+        colors.set(code, { label: (item && item.label) || D.COLOR_NAME[code] || code,
+          hex: (item && item.meta && item.meta.hex) || D.COLOR_HEX[code] || '#e5e7eb' });
+      }));
+    });
+    if (!colors.size) return null;
+    return h('div', { className: 'flex items-center gap-2', style: { marginLeft: 30 },
+      'data-testid': 'inventory-ornament-colors', 'aria-label': 'Colores de ornamento' },
+      Array.from(colors, ([code, color]) => h('span', {
+        key: code, 'data-ornament-color': code, role: 'img', 'aria-label': color.label, title: color.label,
+        style: { display: 'inline-block', width: 16, height: 16, flexShrink: 0, borderRadius: '50%',
+          backgroundColor: color.hex, boxShadow: 'inset 0 1px 2px rgba(255,255,255,.75), inset 0 -1px 2px rgba(0,0,0,.15), 0 2px 4px rgba(0,0,0,.25)',
+          border: '1px solid rgba(0,0,0,.16)' },
+      })));
+  }
   const ColorDot = ({ hex, size = 18, title, tela }) => {
     // Luminosidad del color (0 oscuro → 1 claro): los CLAROS (blanco, hueso, plata) necesitan
     // más definición contra el fondo blanco — viñeteado de bordes, trama y filo más marcados.
@@ -425,13 +449,12 @@
                 h('td', { key: 's', className: 'px-4 py-4' }, h('span', { 'data-testid': 'inventory-sku-desktop', className: 'text-overline font-mono text-on-surface-variant' }, p.isFamilyProjection ? D.familyVisualSku(p) : p.sku)),
                 h('td', { key: 'a', className: 'px-4 py-4' }, h('div', { className: 'flex flex-wrap gap-1.5' },
                   [(D.MANGA[p.manga] || p.manga || '—').replace('Manga ', 'M. '), p.orn, D.CUELLO[p.cuello] || p.cuello].map((t, i) => h('span', { key: i, className: 'px-2 py-0.5 bg-surface-container-high rounded text-overline font-bold uppercase text-on-surface-variant' }, t)))),
-                h('td', { key: 'c', className: 'px-4 py-4' }, h('div', { className: 'flex flex-col gap-1.5' }, [
+                h('td', { key: 'c', className: 'px-4 py-4' }, h('div', { className: 'flex flex-col gap-1' }, [
                   h('div', { key: 'm', className: 'flex items-center gap-2.5' }, [
                     h(ColorDot, { key: 'sw', hex: p.colorHex, size: 20, title: p.colorName, tela: true }),
                     h('span', { key: 'n', className: 'text-overline font-medium text-on-surface-variant' }, p.colorName),
                   ]),
-                  p.ornColors && p.ornColors.length ? h('div', { key: 'o', className: 'flex items-center gap-1.5', style: { marginLeft: 30 } },
-                    p.ornColors.map(c => { const item = window.CONFIG.find(D.isV2Reference(p) ? 'ornament_color' : 'color', c); return h(ColorDot, { key: c, hex: (item && item.meta && item.meta.hex) || D.COLOR_HEX[c], size: 10, title: (item && item.label) || D.COLOR_NAME[c] || c }); })) : null,
+                  h(OrnamentSwatches, { key: 'o', p }),
                 ])),
                 h('td', { key: 'p', className: 'px-4 py-4' }, h('span', { className: 'font-headline text-base text-primary' }, precioTexto(p))),
                 h('td', { key: 'st', className: 'px-4 py-4' }, h(StockPill, { n: total })),

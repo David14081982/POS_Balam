@@ -104,6 +104,8 @@ jobs:
         run: node test-h174-edit-model-projection.mjs
       - name: Verify model follows the Modelo catalog
         run: node test-h175-model-projection.mjs
+      - name: Verify inventory ornament color swatches
+        run: node test-h176-inventory-ornament-colors.mjs
       - name: Stage the tested client
         shell: pwsh
         run: |

@@ -5,6 +5,19 @@ un riesgo se debe leer su evidencia y las correcciones relacionadas. Los
 estados válidos son: `ABIERTO`, `EN CURSO`, `PARCIALMENTE RESUELTO`, `RESUELTO`
 y `BLOQUEADO`.
 
+## H-176 — Inventario no muestra los colores de ornamento
+
+**Estado:** RESUELTO.
+**Fecha:** 19/09/2026. **Commit:** Pendiente de commit.
+**Problema:** la columna «Color / Orn.» leía `p.ornColors`, que viene vacío
+en familias V2 y en V1 por talla, así que no mostraba círculos.
+**Solución:** `OrnamentSwatches` reúne `effectiveOrnamentColors` de todas las
+referencias y usa el círculo flotante de 16 px del POS, justo bajo el nombre
+del color.
+**Pruebas:** H-176 6/10 → 10/10; H-175 10/10; H-174 6/6; H-172 7/7; POS PASS;
+UI 6/6; PWA 2/2.
+**Documento:** `docs/fixes/circulos-ornamento-inventario-h176.md`.
+
 ## H-175 — El modelo puede divergir del catálogo Modelo
 
 **Estado:** RESUELTO — migración 20260919022400 aplicada y verificada.
