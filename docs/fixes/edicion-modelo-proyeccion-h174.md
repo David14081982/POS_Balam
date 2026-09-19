@@ -3,7 +3,7 @@
 **Riesgo:** H-174
 **Estado:** RESUELTO EN CÓDIGO
 **Fecha:** 19/09/2026
-**Commit:** Pendiente de commit
+**Commit:** `569699c015e42849892c7924278a3be9fcdc3220`
 
 ## Problema y reproducción
 
@@ -86,6 +86,13 @@ protegidas:
 - Otras fuentes de reenvío normalizado, todas en cero: cuello u ornamento
   vacíos, colores de ornamento fuera de catálogo o duplicados, atributos vacíos
   o con espacios, y categoría o escala de talla inconsistentes.
+
+## Publicación
+
+- Workflow `35453322879` SUCCESS (regression y deploy).
+- `index.html` y `sw.js` públicos idénticos byte a byte al commit. SHA-256 de
+  `index.html`: `c040aea3582784df39086e1c693ab4b91ede0d6e8152c3848a66f2598e915b7e`.
+- `node test-h174-edit-model-projection.mjs <Pages>`: 6/6.
 
 ## Riesgo residual y pendientes
 

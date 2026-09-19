@@ -8,7 +8,8 @@ y `BLOQUEADO`.
 ## H-174 — La edición de TIRA BORDADA se rechaza por el modelo histórico
 
 **Estado:** RESUELTO EN CÓDIGO.
-**Fecha:** 19/09/2026. **Commit:** Pendiente de commit.
+**Fecha:** 19/09/2026. **Commit:** `569699c015e42849892c7924278a3be9fcdc3220`.
+**Publicación:** Actions 35453322879 SUCCESS; HTML/SW públicos idénticos; Pages 6/6.
 **Problema:** «No se pudo confirmar el guardado»
 `P0001 / REFERENCE_RECLASSIFICATION_REQUIRED` al editar
 `24-TB-MC-MNT-MAO-AMAR`.
