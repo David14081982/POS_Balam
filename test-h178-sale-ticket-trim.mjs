@@ -1,5 +1,6 @@
-// H-178: el ticket de una venta normal no imprime «Método de pago», «Historial
-// de pagos» ni el código de barras decorativo. Apartados, abonos, liquidaciones,
+// H-178: el ticket de una venta normal no imprime «Historial de pagos» ni el
+// código de barras decorativo; sí conserva «Método de pago» con su icono
+// (corrección del dueño del 25/09/2026). Apartados, abonos, liquidaciones,
 // cambios y cortesías conservan su documento completo. Monta el mismo
 // BalamTicket del artefacto distribuido y lee lo que llega al papel.
 import assert from 'node:assert/strict';
@@ -70,7 +71,10 @@ try {
       for (let i = 0; i < 100 && !document.querySelector(`#balam-ticket[data-document-id="${props.exchange ? props.exchange.folio : props.sale.folio}"]`); i++) await new Promise(r => setTimeout(r, 20));
       await document.fonts.ready;
       const ticket = document.getElementById('balam-ticket');
-      out[name] = { text: ticket.innerText, bars: ticket.querySelectorAll('div[style*="height: 40px"]').length, height: ticket.getBoundingClientRect().height };
+      const method = [...ticket.querySelectorAll('p')].find(p => p.textContent.trim() === 'Método de pago');
+      const methodBlock = method && method.parentElement && method.parentElement.parentElement;
+      out[name] = { text: ticket.innerText, bars: ticket.querySelectorAll('div[style*="height: 40px"]').length, height: ticket.getBoundingClientRect().height,
+        method: methodBlock ? { text: methodBlock.textContent, icon: !!methodBlock.querySelector('.material-symbols-outlined') } : null };
       if (name === 'contado' || name === 'reimpresionApartado') {
         const png = await UI.receiptGraphic(UI.captureReceipt(ticket));
         const img = new Image(); img.src = png; await img.decode();
@@ -81,8 +85,11 @@ try {
     return out;
   });
 
-  const trimmed = doc => {
-    assert.ok(!/Método de pago/i.test(doc.text), 'imprime «Método de pago»');
+  // Corrección del dueño (25/09/2026): el método de pago con su icono sí va.
+  const trimmed = (doc, metodo) => {
+    assert.ok(doc.method, 'no imprime «Método de pago»');
+    assert.ok(doc.method.icon, 'el método de pago no lleva icono');
+    assert.ok(doc.method.text.includes(metodo), 'no dice ' + metodo);
     assert.ok(!/Historial de pagos/i.test(doc.text), 'imprime «Historial de pagos»');
     assert.ok(!/Total pagado/i.test(doc.text), 'imprime «Total pagado»');
     assert.equal(doc.bars, 0, 'imprime el código de barras decorativo');
@@ -91,15 +98,15 @@ try {
     assert.ok(/Historial de pagos/i.test(doc.text) && /Total pagado/i.test(doc.text), 'perdió el historial de pagos');
     assert.equal(doc.bars, 44, 'perdió el código de barras decorativo');
   };
-  await test('Venta normal: sin método de pago, historial ni código de barras', () => trimmed(docs.contado));
+  await test('Venta normal: método de pago con icono, sin historial ni código de barras', () => trimmed(docs.contado, 'Tarjeta'));
   await test('Venta normal: conserva encabezado, detalle, totales, pie y página web', () => {
     for (const text of ['BALAM', 'BG-260922-0003', 'PRUEBA', 'Detalle de compra', 'TIRA BORDADA', '3-TB-MC-MNT-MAO-BL-N:M',
       'Ornamento: APLICACION · MULTICOLORES', 'Importe', '$301.72', 'IVA (16%)', '$48.28', 'Total a pagar', '$350.00',
       '¡Gracias por su compra!', 'Piezas artesanales únicas.', 'BALAMGUAYABERAS.MX'])
       assert.ok(docs.contado.text.toLowerCase().includes(text.toLowerCase()), text);
   });
-  await test('Venta con pago mixto: mismo ticket corto', () => trimmed(docs.mixto));
-  await test('Reimpresión de venta con un cambio posterior: mismo ticket corto', () => trimmed(docs.reimpresionConCambio));
+  await test('Venta con pago mixto: mismo ticket corto', () => trimmed(docs.mixto, 'Mixto'));
+  await test('Reimpresión de venta con un cambio posterior: mismo ticket corto', () => trimmed(docs.reimpresionConCambio, 'Tarjeta'));
   await test('Anticipo de apartado: conserva historial y código de barras', () => complete(docs.anticipo));
   await test('Abono de apartado: conserva historial y código de barras', () => complete(docs.abono));
   await test('Liquidación de apartado: conserva historial y código de barras', () => complete(docs.liquidacion));
@@ -114,7 +121,7 @@ try {
   });
   await test('El PNG RawBT de la venta normal es más corto que el documento completo', () => {
     assert.equal(docs.contado.png.width, 576);
-    // Antes de H-178 la diferencia era 151 px (una fila de historial); ahora ~795 px.
+    // Antes de H-178 la diferencia era 151 px (una fila de historial); ahora ~600 px.
     assert.ok(docs.reimpresionApartado.png.height - docs.contado.png.height > 500, JSON.stringify({ venta: docs.contado.png, completo: docs.reimpresionApartado.png }));
     console.log('     alto PNG venta normal ' + docs.contado.png.height + ' px · documento completo ' + docs.reimpresionApartado.png.height + ' px');
   });

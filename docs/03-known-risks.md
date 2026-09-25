@@ -15,13 +15,14 @@ pago», el «Historial de pagos» y el código de barras decorativo. El dueño l
 considera innecesarios y alargan el rollo (fotos BG-260922-0002 y -0003).
 **Decisión del dueño:** quitarlos sólo en la venta normal y su reimpresión.
 Apartados, abonos, liquidaciones y cambios quedan como hoy.
-**Solución:** `ventaNormal` en `BalamTicket` omite los tres bloques. Apartado
+**Corrección del dueño:** el método de pago con su icono sí se imprime; sólo
+salen historial y barras. Commit de la corrección: Pendiente de commit.
+**Solución:** `ventaNormal` en `BalamTicket` omite historial y barras. Apartado
 (también liquidado), cambio y cortesía conservan el documento completo; los
 datos y Reportes no cambian.
-**Pruebas:** H-178 9/12 → 12/12 (PNG RawBT de la venta 2537 → 1893 px);
+**Pruebas:** corrección 9/12 → 12/12 (PNG RawBT de la venta 2537 → 2088 px);
 H-177 8/8; H-173 28/28; H-168 41/41; H-153 80/80, 12/12 y 3/3; UI 6/6; PWA 2/2.
-**Residual:** papel NOT_TESTED. El ticket de venta ya no dice cómo se pagó;
-se consulta en Reportes.
+**Residual:** papel NOT_TESTED.
 **Documento:** `docs/fixes/ticket-venta-corto-h178.md`.
 
 ## H-177 — La impresora Bluetooth corta el ticket de venta a mitad

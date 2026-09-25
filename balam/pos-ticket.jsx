@@ -610,8 +610,8 @@
     const conCobranza = esApartado || esCobranzaApartado;
     const concepto = payment ? (CONCEPTO[payment.tipo] || 'Pago recibido') : '';
     // H-178: decisión del dueño para acortar el rollo. La venta normal —y su
-    // reimpresión— no imprime método de pago, historial de pagos ni barras
-    // decorativas. Apartado (incluso ya liquidado), cambio y cortesía conservan
+    // reimpresión— no imprime historial de pagos ni barras decorativas; sí su
+    // método de pago. Apartado (incluso ya liquidado), cambio y cortesía conservan
     // su documento completo. El dato sigue guardado; sólo cambia lo impreso.
     const ventaNormal = !payment && !exchange && !esApartado && !cortesia
       && !pagos.some(p => COBRANZA_APARTADO.indexOf(p.tipo) >= 0);
@@ -754,8 +754,8 @@
         // del día ya declaró su forma arriba y el «método» de la venta es el propio
         // apartado. H-73: un acuse de cambio sí lo conserva, porque ahí el método de
         // la venta y el de la diferencia son dos hechos distintos. H-178: la venta
-        // normal tampoco lo imprime.
-        (esCobranzaApartado || ventaNormal) ? null : h('div', { key: 'mp', className: 'tk-block w-full mt-5 bg-surface-container-low rounded-xl p-4 text-left flex items-center gap-3' }, [
+        // normal sí lo conserva (corrección del dueño).
+        esCobranzaApartado ? null : h('div', { key: 'mp', className: 'tk-block w-full mt-5 bg-surface-container-low rounded-xl p-4 text-left flex items-center gap-3' }, [
           h(MS, { key: 'i', name: ((C.find('payment_method', sale.metodo) || {}).meta || {}).icon || 'cash', size: 22, className: 'text-gold-text' }),
           h('div', { key: 't' }, [
             h('p', { key: 'a', className: 'uppercase text-on-surface-variant', style: { fontSize: '10px', letterSpacing: '0.08em' } }, 'Método de pago'),

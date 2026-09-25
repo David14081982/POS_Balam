@@ -3,7 +3,17 @@
 **Riesgo:** H-178
 **Estado:** RESUELTO EN CÓDIGO — confirmación en papel pendiente
 **Fecha:** 25/09/2026
-**Commit:** `e9b4dfbaea87e2e19725a5fc9822aaffb1491e07`
+**Commit:** `e9b4dfbaea87e2e19725a5fc9822aaffb1491e07`; corrección: Pendiente de commit
+
+## Corrección del dueño (25/09/2026)
+
+Tras ver la primera versión publicada, el dueño pidió **conservar el recuadro
+«Método de pago» con su icono** en la venta normal. Siguen fuera sólo el
+historial de pagos y las barras decorativas. La prueba se actualizó primero:
+sobre `4827953` dio **9/12** (faltaba el método en contado, mixta y
+reimpresión) y con la corrección **12/12**. PNG RawBT de la venta:
+2537 → **2088 px** (−449 px, unos 5.6 cm). El icono es el configurado en
+`payment_method.meta.icon`; no cambió.
 
 ## Problema y reproducción
 
@@ -49,7 +59,8 @@ transporte (RawBT y diálogo del sistema) y el pie con la página web no cambian
 
 ## Solución
 
-- `balam/pos-ticket.jsx`: `ventaNormal` omite los tres bloques.
+- `balam/pos-ticket.jsx`: `ventaNormal` omite historial y barras (tras la
+  corrección, el método de pago se conserva).
 - `test-h178-sale-ticket-trim.mjs`, añadida al workflow.
 
 ## Pruebas
@@ -75,8 +86,9 @@ SHA-256 `index.html`: `EA3D9AEC6C1DB974EB7054906653C29D44E73D81D48BAB0A37D16D2F8
 ## Riesgo residual y pendientes
 
 - Papel NOT_TESTED: falta imprimir una venta real en la impresora Bluetooth.
-- El ticket de venta ya no dice cómo se pagó. Si un cliente lo pide, se
-  consulta en Reportes.
+- El ticket de venta ya no lista los movimientos de pago; el método sí se
+  imprime y el detalle está en Reportes.
+- Pendiente de decisión aparte: imprimir dos copias (tienda y cliente).
 
 ## Referencias
 
