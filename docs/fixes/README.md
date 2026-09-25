@@ -15,6 +15,10 @@ Corrección de edición: [H172 · Guardado y mensajes](guardado-edicion-producto
 
 ## Correcciones registradas
 
+- [copias-cliente-tienda-h179.md](copias-cliente-tienda-h179.md) — H-179:
+  ajuste «Imprimir dos copias»; cada comprobante sale COPIA CLIENTE y COPIA
+  TIENDA; reportes una vez. 5/13 → 13/13; papel pendiente.
+
 - [ticket-venta-corto-h178.md](ticket-venta-corto-h178.md) — H-178: la venta
   normal no imprime historial ni barras (método de pago conservado por
   corrección del dueño); apartados, cambios y cortesías sin cambios. 12/12;

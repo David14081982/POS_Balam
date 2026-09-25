@@ -110,6 +110,8 @@ jobs:
         run: node test-h177-thermal-ink.mjs
       - name: Verify short sale ticket
         run: node test-h178-sale-ticket-trim.mjs
+      - name: Verify customer and store receipt copies
+        run: node test-h179-receipt-copies.mjs
       - name: Stage the tested client
         shell: pwsh
         run: |

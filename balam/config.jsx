@@ -277,6 +277,7 @@
     'returns.limitEnabled': false,
     'returns.limitDays': 15,
     'print.auto': false,
+    'print.twoCopies': false, // H-179: COPIA CLIENTE + COPIA TIENDA en cada comprobante
     'print.lowStockAlert': true,
     'benefits.manualOptionsV1': true,
   };

@@ -662,6 +662,11 @@ del mismo documento. Ningún temporizador constituye la garantía del ciclo.
 Reportes A4, listados de Apartados y Préstamos comparten la cola conservando sus
 plantillas. Etiquetas mantiene su generador y ventana independientes.
 
+H-179: con `print.twoCopies`, `UI.printReceipt()` pide dos copias de
+`#balam-ticket`/`#balam-return-receipt`, marcadas COPIA CLIENTE y COPIA TIENDA
+sólo en la copia congelada. Cada copia es un trabajo con documento, hashes y
+PNG propios; RawBT exige un gesto por copia. Reportes y listados salen una vez.
+
 El historial de sesión en Configuración → Impresión distingue entrega, regreso
 y error; nunca acredita salida en papel. No persiste contenido comercial ni
 se mezcla con la persistencia comercial de Supabase. Recargar no repite impresiones.

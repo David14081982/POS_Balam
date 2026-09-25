@@ -151,7 +151,7 @@
       changed();
     } catch (error) { failed(job, error); }
   }
-  function enqueue({ element, host = window, automatic = false, system = false, copies = 1, source, documentType, continuous = true } = {}) {
+  function enqueue({ element, host = window, automatic = false, system = false, copies = 1, copyLabels = null, source, documentType, continuous = true } = {}) {
     element = element || host.document.querySelector('#balam-ticket, #balam-return-receipt');
     if (!element) { UI.toast('El comprobante todavía no está disponible. Cierra y vuelve a abrirlo.'); return null; }
     const transport = UI.usesBluetoothReceipt() && !system ? 'rawbt' : 'browser';
@@ -161,12 +161,21 @@
     const existing = jobs.find(job => job.element === element && job.key === key && job.audit.transport === transport && (!terminal(job) || automatic));
     if (existing) { if (!automatic) send(existing); return existing.handle; }
     if (jobs.filter(job => !terminal(job)).length + copies > 50) { UI.toast('Hay varios tickets esperando. Termina o cancela los pendientes antes de agregar más.'); return null; }
-    let snapshot, prepared, initialError;
-    try {
-      prepared = transport === 'rawbt' ? UI.prepareReceipt(element) : null;
-      snapshot = prepared ? prepared.snapshot : UI.captureReceipt(element);
-      if (!snapshot) throw prepared.error;
-    } catch (error) { initialError = error; snapshot = { html: key, css: '', text: '' }; }
+    // H-179: una copia marcada (COPIA CLIENTE / COPIA TIENDA) es un documento
+    // congelado propio; las copias sin marca comparten el mismo.
+    const variants = new Map();
+    const variantFor = copyLabel => {
+      if (variants.has(copyLabel)) return variants.get(copyLabel);
+      let snapshot, prepared, initialError;
+      try {
+        prepared = transport === 'rawbt' ? UI.prepareReceipt(element, copyLabel) : null;
+        snapshot = prepared ? prepared.snapshot : UI.captureReceipt(element, copyLabel);
+        if (!snapshot) throw prepared.error;
+      } catch (error) { initialError = error; snapshot = { html: key, css: '', text: '' }; }
+      const variant = { snapshot, prepared, initialError };
+      variants.set(copyLabel, variant);
+      return variant;
+    };
     if (host !== window && !notices.has(host)) {
       const node = host.document.createElement('div'); node.dataset.printControls = 'true';
       node.style.cssText = 'position:fixed;bottom:12px;left:12px;right:12px;z-index:10;max-height:45vh;overflow:auto';
@@ -179,12 +188,14 @@
     const batch = [];
     for (let copyNumber = 1; copyNumber <= copies; copyNumber++) {
       const printJobId = `print-${Date.now().toString(36)}-${++sequence}`;
-      const job = { element, key, host, continuous, automatic: transport === 'browser', snapshot: { ...snapshot }, prepared,
+      const copyLabel = copyLabels ? copyLabels[copyNumber - 1] || null : null;
+      const { snapshot, prepared, initialError } = variantFor(copyLabel);
+      const job = { element, key, host, continuous, automatic: transport === 'browser', snapshot: { ...snapshot }, prepared, initialError,
         stage: 'CREATED', ready: false, frame: null, cleanup: null, events: [], payload: null,
         audit: { ...Object.fromEntries(Object.values(times).map(name => [name, null])), payloadLength: null, pixelWidth: null, pixelHeight: null, pageWidth: null, pageHeight: null,
           printJobId, source: source || element.dataset.printSource || 'receipt', ticketId: element.dataset.documentId || null,
           documentType: documentType || element.dataset.documentType || (element.id === 'balam-return-receipt' ? 'return' : 'receipt'),
-          copyNumber, totalCopies: copies, transport, printerTarget: transport === 'rawbt' ? 'ru.a402d.rawbtprinter' : 'system-dialog',
+          copyNumber, totalCopies: copies, copyLabel, transport, printerTarget: transport === 'rawbt' ? 'ru.a402d.rawbtprinter' : 'system-dialog',
           result: null, errorCode: null, errorStack: null, physicalPrintConfirmed: false } };
       job.promise = new Promise(resolve => { job.resolve = resolve; });
       job.handle = Object.freeze({ printJobId, done: job.promise });
@@ -197,7 +208,8 @@
       jobs.splice(index, 1);
     }
     pump(); batch.forEach(job => {
-      if (initialError) failed(job, initialError);
+      const prepared = job.prepared;
+      if (job.initialError) failed(job, job.initialError);
       else if (prepared && prepared.png && prepared.hashes) {
         job.payload = prepared.png;
         const bytes = Uint8Array.from(atob(job.payload.split(',')[1].slice(0, 44)), c => c.charCodeAt(0));
@@ -235,9 +247,11 @@
     const job = active || [...jobs].reverse().find(j => j.stage === 'FAILED' && !j.dismissed);
     if (!job) return null;
     const sending = job.stage === 'SEND_STARTED', android = job.audit.transport === 'rawbt';
-    const message = job.stage === 'FAILED' ? job.message : sending
+    // H-179: con dos copias el operador ve cuál sigue (p. ej. «COPIA TIENDA · 2 de 2»).
+    const copy = job.audit.totalCopies > 1 ? ` ${job.audit.copyLabel || 'Copia'} · ${job.audit.copyNumber} de ${job.audit.totalCopies}.` : '';
+    const message = (job.stage === 'FAILED' ? job.message : sending
       ? (android ? 'Solicitud enviada. Regresa a BALAM al terminar en la aplicación de impresión.' : 'Cierra el diálogo de impresión para continuar.')
-      : job.ready ? 'Ticket listo para imprimir.' : 'Preparando ticket…';
+      : job.ready ? 'Ticket listo para imprimir.' : 'Preparando ticket…') + copy;
     const button = (id, label, action) => React.createElement('button', { key: id, type: 'button', 'data-testid': id,
       onClick: event => { if (event.detail <= 1) action(); }, style: { minHeight: 44, padding: '8px 12px', border: '1px solid #abb2c0', borderRadius: 8, background: 'white', color: '#131b2e', fontWeight: 600 }, className: 'min-h-[44px] px-3 py-2 border rounded-lg font-semibold' }, label);
     return React.createElement('section', { 'data-testid': 'print-status', className: 'bg-white text-primary p-3 rounded-xl shadow-e3 max-w-full sm:max-w-sm', style: { position: 'fixed', top: 12, right: 12, width: 'min(360px, calc(100vw - 24px))', zIndex: 200, pointerEvents: 'auto', padding: 12, background: 'white', color: '#131b2e', borderRadius: 12, maxHeight: '45vh', overflow: 'auto' } }, [

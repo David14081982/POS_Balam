@@ -653,7 +653,13 @@
     }
     return receiptResourceData.get(url);
   }
-  function captureReceipt(element) {
+  // H-179: con «Imprimir dos copias» cada comprobante sale como COPIA CLIENTE y
+  // después COPIA TIENDA. Sólo aplica a #balam-ticket / #balam-return-receipt;
+  // reportes A4 y ticket por método siguen saliendo una vez.
+  const RECEIPT_COPY_LABELS = ['COPIA CLIENTE', 'COPIA TIENDA'];
+  const isReceiptDocument = element => !!(element && element.matches && element.matches('#balam-ticket, #balam-return-receipt'));
+  const receiptCopyLabels = () => (window.CONFIG && window.CONFIG.get('print.twoCopies')) ? RECEIPT_COPY_LABELS.slice() : null;
+  function captureReceipt(element, copyLabel = null) {
     if (!element) throw new Error('El comprobante todavía no está disponible. Cierra y vuelve a abrirlo.');
     const doc = element.ownerDocument;
     // Aplicar las mismas reglas de impresión, incluidas fuentes y Tailwind.
@@ -672,6 +678,13 @@
     copy.querySelectorAll('script,iframe,object,embed,button').forEach(node => node.remove());
     for (const node of [copy, ...copy.querySelectorAll('*')]) {
       for (const attr of Array.from(node.attributes)) if (/^on/i.test(attr.name)) node.removeAttribute(attr.name);
+    }
+    // La marca vive sólo en la copia congelada: el documento en pantalla no cambia.
+    if (copyLabel && isReceiptDocument(element)) {
+      const mark = doc.createElement('div');
+      mark.className = 'tk-block'; mark.dataset.receiptCopy = copyLabel; mark.textContent = copyLabel;
+      mark.style.cssText = 'width:100%;box-sizing:border-box;margin:0 0 16px;padding:6px 0;border:2px solid #000;color:#000;text-align:center;font:700 13px/1.2 Arial,sans-serif;letter-spacing:0.2em';
+      (copy.firstElementChild || copy).prepend(mark);
     }
     return { html: copy.outerHTML, css: rules.join('\n'), text: receiptPrintText(element) };
   }
@@ -824,17 +837,20 @@
       return png;
     } finally { frame.remove(); }
   }
-  function prepareReceipt(element = document.querySelector('#balam-ticket, #balam-return-receipt')) {
+  function prepareReceipt(element = document.querySelector('#balam-ticket, #balam-return-receipt'), copyLabel = null) {
     if (!element) return null;
     const key = element.outerHTML;
-    const previous = receiptGraphics.get(element);
+    // H-179: cada copia marcada es un PNG propio del mismo documento.
+    if (!receiptGraphics.has(element)) receiptGraphics.set(element, new Map());
+    const variants = receiptGraphics.get(element);
+    const previous = variants.get(copyLabel || '');
     if (previous && previous.key === key && !previous.error) return previous;
     const state = { key, png: null, error: null, promise: null, snapshot: null, controller: new AbortController() };
-    receiptGraphics.set(element, state);
+    variants.set(copyLabel || '', state);
     // Freeze DOM and styles now, before the first promise or resource read.
     try {
       if (element.textContent.length > 500000) throw new Error('El comprobante es demasiado largo para Bluetooth. Reimprime el comprobante desde una computadora.');
-      state.snapshot = captureReceipt(element);
+      state.snapshot = captureReceipt(element, copyLabel);
     } catch (error) { state.error = error; }
     state.promise = Promise.resolve().then(() => {
       // Mantener las guardas de documento vacío y tamaño antes de rasterizar.
@@ -868,7 +884,9 @@
   }
   function printReceipt(options = {}) {
     if (window.event && window.event.type === 'click' && window.event.detail > 1) return false;
-    return window.PrintManager.enqueue(options);
+    const element = options.element || document.querySelector('#balam-ticket, #balam-return-receipt');
+    const copyLabels = isReceiptDocument(element) ? receiptCopyLabels() : null;
+    return window.PrintManager.enqueue(copyLabels ? { ...options, copies: copyLabels.length, copyLabels } : options);
   }
   async function receiptHash(value) {
     const bytes = new TextEncoder().encode(value);
@@ -880,7 +898,8 @@
     React.useEffect(() => {
       if (!usesBluetoothReceipt()) return undefined;
       let active = true;
-      const graphic = prepareReceipt();
+      // Anticipa la primera copia que saldrá: el toque debe encontrarla lista.
+      const graphic = prepareReceipt(undefined, (receiptCopyLabels() || [null])[0]);
       if (graphic) graphic.promise.then(() => { if (active) setStatus(graphic.error ? graphic.error.message : 'Impresión Bluetooth con el diseño del ticket.'); });
       return () => { active = false; };
     }, []);

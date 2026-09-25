@@ -5,6 +5,23 @@ un riesgo se debe leer su evidencia y las correcciones relacionadas. Los
 estados válidos son: `ABIERTO`, `EN CURSO`, `PARCIALMENTE RESUELTO`, `RESUELTO`
 y `BLOQUEADO`.
 
+## H-179 — No se puede imprimir copia para la tienda y para el cliente
+
+**Estado:** RESUELTO EN CÓDIGO — confirmación en papel pendiente.
+**Fecha:** 25/09/2026. **Commit:** Pendiente de commit.
+**Problema:** cada comprobante sale una sola vez. El dueño quiere dos: una
+para el cliente y otra para la tienda.
+**Decisión del dueño:** ajuste en Configuración → Impresión, marcado «COPIA
+CLIENTE» / «COPIA TIENDA», en todos los comprobantes: venta, apartado, abono,
+liquidación, cambio, devolución y sus reimpresiones.
+**Solución:** `print.twoCopies` (apagado por omisión). `UI.printReceipt()` pide
+dos copias sólo para `#balam-ticket`/`#balam-return-receipt`; cada copia es un
+documento congelado con su marca. En Android cada copia exige un toque.
+**Pruebas:** H-179 5/13 → 13/13; H-178 12/12; H-177 8/8; H-173 28/28; H-168
+41/41; H-153 80/80, 12/12 y 3/3; controles y ajustes PASS; UI 6/6; PWA 2/2.
+**Residual:** papel NOT_TESTED; segunda copia con otro toque en la tablet.
+**Documento:** `docs/fixes/copias-cliente-tienda-h179.md`.
+
 ## H-178 — El ticket de venta gasta papel en partes que no necesita
 
 **Estado:** RESUELTO EN CÓDIGO — confirmación en papel pendiente.
