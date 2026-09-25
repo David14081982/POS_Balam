@@ -3,7 +3,7 @@
 **Riesgo:** H-179
 **Estado:** RESUELTO EN CÓDIGO — confirmación en papel pendiente
 **Fecha:** 25/09/2026
-**Commit:** Pendiente de commit
+**Commit:** `60f9d39f627f4b5164decb994fb1b995382fbfec`
 
 ## Problema y reproducción
 
@@ -70,6 +70,12 @@ congelado, así que no podían marcarse de forma distinta.
 - `test-h90-payment-method-ticket.mjs` da 6/17 igual sobre `HEAD`: arnés fuera
   del workflow y no relacionado.
 - Inspección visual del PNG RawBT de COPIA TIENDA.
+
+## Publicación
+
+Actions 36175057527 SUCCESS; `index.html` y `sw.js` públicos idénticos al commit.
+SHA-256 `index.html`: `03228791A73127E4EE85AF444957E79B490C1DB5DB28A38E12A9EDA088DC87D8`.
+Contra Pages: H-179 13/13 y H-178 12/12.
 
 ## Riesgo residual y pendientes
 

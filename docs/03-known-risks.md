@@ -8,7 +8,8 @@ y `BLOQUEADO`.
 ## H-179 — No se puede imprimir copia para la tienda y para el cliente
 
 **Estado:** RESUELTO EN CÓDIGO — confirmación en papel pendiente.
-**Fecha:** 25/09/2026. **Commit:** Pendiente de commit.
+**Fecha:** 25/09/2026. **Commit:** `60f9d39`.
+**Publicación:** Actions 36175057527 SUCCESS; HTML/SW públicos idénticos; Pages 13/13.
 **Problema:** cada comprobante sale una sola vez. El dueño quiere dos: una
 para el cliente y otra para la tienda.
 **Decisión del dueño:** ajuste en Configuración → Impresión, marcado «COPIA
