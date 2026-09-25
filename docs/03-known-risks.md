@@ -8,7 +8,8 @@ y `BLOQUEADO`.
 ## H-178 — El ticket de venta gasta papel en partes que no necesita
 
 **Estado:** RESUELTO EN CÓDIGO — confirmación en papel pendiente.
-**Fecha:** 25/09/2026. **Commit:** Pendiente de commit.
+**Fecha:** 25/09/2026. **Commit:** `e9b4dfb`.
+**Publicación:** Actions 36169219922 SUCCESS; HTML/SW públicos idénticos; Pages 12/12.
 **Problema:** el ticket de una venta normal imprime el recuadro «Método de
 pago», el «Historial de pagos» y el código de barras decorativo. El dueño los
 considera innecesarios y alargan el rollo (fotos BG-260922-0002 y -0003).

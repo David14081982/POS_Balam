@@ -3,7 +3,7 @@
 **Riesgo:** H-178
 **Estado:** RESUELTO EN CÓDIGO — confirmación en papel pendiente
 **Fecha:** 25/09/2026
-**Commit:** Pendiente de commit
+**Commit:** `e9b4dfbaea87e2e19725a5fc9822aaffb1491e07`
 
 ## Problema y reproducción
 
@@ -65,6 +65,12 @@ transporte (RawBT y diálogo del sistema) y el pie con la página web no cambian
 - `test-h73-comprobante-del-cambio.mjs` y `test-ticket-print.mjs` afirmaban
   «Método de pago» en la venta; no se ejecutan desde H-164 (fallan igual
   sobre `HEAD` al preparar datos local-first) y no se modificaron.
+
+## Publicación
+
+Actions 36169219922 SUCCESS; `index.html` y `sw.js` públicos idénticos al commit.
+SHA-256 `index.html`: `EA3D9AEC6C1DB974EB7054906653C29D44E73D81D48BAB0A37D16D2F8FBF0DEB`;
+`node test-h178-sale-ticket-trim.mjs <Pages>` 12/12.
 
 ## Riesgo residual y pendientes
 
