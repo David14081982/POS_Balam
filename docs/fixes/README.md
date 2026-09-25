@@ -15,6 +15,10 @@ Corrección de edición: [H172 · Guardado y mensajes](guardado-edicion-producto
 
 ## Correcciones registradas
 
+- [ticket-venta-corto-h178.md](ticket-venta-corto-h178.md) — H-178: la venta
+  normal no imprime método de pago, historial ni barras; apartados, cambios y
+  cortesías sin cambios. 9/12 → 12/12; papel pendiente.
+
 - [ticket-bluetooth-energia-h177.md](ticket-bluetooth-energia-h177.md) — H-177:
   ticket RawBT con menos tinta (texto umbral 128, superficies tramadas) y
   separador de ornamento corregido. 3/8 → 8/8; papel pendiente.

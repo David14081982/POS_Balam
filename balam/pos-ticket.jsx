@@ -609,6 +609,12 @@
     // Un abono liquidado deja la venta en 'Pagado': el acuse sigue siendo de apartado.
     const conCobranza = esApartado || esCobranzaApartado;
     const concepto = payment ? (CONCEPTO[payment.tipo] || 'Pago recibido') : '';
+    // H-178: decisión del dueño para acortar el rollo. La venta normal —y su
+    // reimpresión— no imprime método de pago, historial de pagos ni barras
+    // decorativas. Apartado (incluso ya liquidado), cambio y cortesía conservan
+    // su documento completo. El dato sigue guardado; sólo cambia lo impreso.
+    const ventaNormal = !payment && !exchange && !esApartado && !cortesia
+      && !pagos.some(p => COBRANZA_APARTADO.indexOf(p.tipo) >= 0);
 
     const row = (l, v, cls) => h('div', { key: l, className: 'flex justify-between items-center ' + (cls || '') }, [
       h('span', { key: 'l' }, l), h('span', { key: 'v' }, v),
@@ -747,8 +753,9 @@
         // Método de pago. En un acuse de COBRANZA DE APARTADO no se repite: el pago
         // del día ya declaró su forma arriba y el «método» de la venta es el propio
         // apartado. H-73: un acuse de cambio sí lo conserva, porque ahí el método de
-        // la venta y el de la diferencia son dos hechos distintos.
-        esCobranzaApartado ? null : h('div', { key: 'mp', className: 'tk-block w-full mt-5 bg-surface-container-low rounded-xl p-4 text-left flex items-center gap-3' }, [
+        // la venta y el de la diferencia son dos hechos distintos. H-178: la venta
+        // normal tampoco lo imprime.
+        (esCobranzaApartado || ventaNormal) ? null : h('div', { key: 'mp', className: 'tk-block w-full mt-5 bg-surface-container-low rounded-xl p-4 text-left flex items-center gap-3' }, [
           h(MS, { key: 'i', name: ((C.find('payment_method', sale.metodo) || {}).meta || {}).icon || 'cash', size: 22, className: 'text-gold-text' }),
           h('div', { key: 't' }, [
             h('p', { key: 'a', className: 'uppercase text-on-surface-variant', style: { fontSize: '10px', letterSpacing: '0.08em' } }, 'Método de pago'),
@@ -757,7 +764,7 @@
         ]),
         // Historial de pagos al pie: cada movimiento con su fecha, concepto e importe.
         // El pago que se acaba de recibir queda marcado para que el cliente lo ubique.
-        pagos.length ? h('div', { key: 'ph', className: 'tk-block w-full mt-4 text-left border border-outline-variant rounded-xl p-4' }, [
+        (pagos.length && !ventaNormal) ? h('div', { key: 'ph', className: 'tk-block w-full mt-4 text-left border border-outline-variant rounded-xl p-4' }, [
           h('p', { key: 't', className: 'uppercase text-on-surface-variant mb-2.5', style: { fontSize: '10px', letterSpacing: '0.08em' } }, 'Historial de pagos'),
           ...pagos.map((p, i) => {
             const esteEs = payment && p.id === payment.id;
@@ -786,7 +793,7 @@
           h('p', { key: 'm', className: 'font-headline italic text-primary px-2 mb-1', style: { fontSize: '20px', lineHeight: 1.35 } }, frozenStore.footer || (!receiptSnapshot && C.get('ticket.footer')) || 'Gracias por ser parte de nuestra herencia.'),
           (frozenStore.tagline || (!receiptSnapshot && C.get('ticket.tagline'))) && h('p', { key: 'tl', className: 'text-on-surface-variant px-4 mt-3', style: { fontSize: '12px', lineHeight: 1.6 } }, frozenStore.tagline || C.get('ticket.tagline')),
           h('div', { key: 'bc', className: 'mt-9 w-full flex flex-col items-center gap-2' }, [
-            h('div', { key: 'b', className: 'flex items-end justify-center gap-[1px] py-2 px-6 w-full', style: { background: 'rgba(19,27,46,0.035)' } }, bars),
+            ventaNormal ? null : h('div', { key: 'b', className: 'flex items-end justify-center gap-[1px] py-2 px-6 w-full', style: { background: 'rgba(19,27,46,0.035)' } }, bars),
             h(ReceiptWebsite, { key: 'u' }),
           ]),
         ]),

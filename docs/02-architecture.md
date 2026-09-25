@@ -597,6 +597,9 @@ la tienda y vendedor, y por cada renglón: nombre, SKU comercial, talla
 código/etiqueta, color, ornamento, colores de ornamento y atributos visibles.
 `BalamTicket` es una proyección de esa evidencia y de los importes ya guardados;
 no consulta `DATA.products` por SKU durante una impresión o reimpresión.
+H-178: la venta normal y su reimpresión omiten método de pago, historial de
+pagos y barras decorativas. Apartado (también liquidado), cambio y cortesía
+conservan el documento completo; los datos no cambian.
 
 La compatibilidad con ventas anteriores es conservadora: se imprimen nombre,
 SKU, talla, precio y ornamento que ya vivan en el renglón; un dato ausente se
