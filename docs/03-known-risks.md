@@ -16,7 +16,8 @@ considera innecesarios y alargan el rollo (fotos BG-260922-0002 y -0003).
 **Decisión del dueño:** quitarlos sólo en la venta normal y su reimpresión.
 Apartados, abonos, liquidaciones y cambios quedan como hoy.
 **Corrección del dueño:** el método de pago con su icono sí se imprime; sólo
-salen historial y barras. Commit de la corrección: Pendiente de commit.
+salen historial y barras. Commit `20c6719`; Actions 36172033017 SUCCESS (reintento
+tras fallo intermitente de H-167); HTML/SW públicos idénticos; Pages 12/12.
 **Solución:** `ventaNormal` en `BalamTicket` omite historial y barras. Apartado
 (también liquidado), cambio y cortesía conservan el documento completo; los
 datos y Reportes no cambian.

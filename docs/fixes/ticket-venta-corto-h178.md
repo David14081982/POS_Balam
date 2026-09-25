@@ -3,7 +3,7 @@
 **Riesgo:** H-178
 **Estado:** RESUELTO EN CÓDIGO — confirmación en papel pendiente
 **Fecha:** 25/09/2026
-**Commit:** `e9b4dfbaea87e2e19725a5fc9822aaffb1491e07`; corrección: Pendiente de commit
+**Commit:** `e9b4dfbaea87e2e19725a5fc9822aaffb1491e07`; corrección: `20c6719761b763e83a1add8d87bbacf375b62bd7`
 
 ## Corrección del dueño (25/09/2026)
 
@@ -82,6 +82,12 @@ transporte (RawBT y diálogo del sistema) y el pie con la página web no cambian
 Actions 36169219922 SUCCESS; `index.html` y `sw.js` públicos idénticos al commit.
 SHA-256 `index.html`: `EA3D9AEC6C1DB974EB7054906653C29D44E73D81D48BAB0A37D16D2F8FBF0DEB`;
 `node test-h178-sale-ticket-trim.mjs <Pages>` 12/12.
+
+Corrección: Actions 36172033017 SUCCESS tras reintentar el job; el primer intento
+falló en `test-h167-label-performance.mjs` 154/155 (PDF de 10 etiquetas), prueba
+ajena al ticket que dio 155/155 local y en el reintento. HTML/SW públicos
+idénticos; SHA-256 `index.html`: `C20527CDF6D2CC52C239B7F1DFB26BB8756DE57E5E40A15CBCD89CCB0212CE83`;
+Pages 12/12.
 
 ## Riesgo residual y pendientes
 
