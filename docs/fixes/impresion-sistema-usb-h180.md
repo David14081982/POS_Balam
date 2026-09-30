@@ -3,7 +3,7 @@
 **Riesgo:** H-180
 **Estado:** RESUELTO EN CÓDIGO — confirmación en papel pendiente
 **Fecha:** 30/09/2026
-**Commit:** Pendiente de commit
+**Commit:** `b8c9bf3`
 
 ## Problema y reproducción
 
@@ -62,7 +62,7 @@ Evidencia: `evidence/h180-system-print.json`.
   PyMuPDF: 10/10. Todas las líneas DOM aparecen en el PDF, cajas dentro de la
   página y una sola página continua de 80 mm (redondeo medido 80.095 mm).
   Los hashes entregados coinciden entre perfiles cuando el documento es igual.
-  Inspección visual del ticket corto: contenido, totales y pie completos.
+  Inspección visual de tickets corto y largo: contenido, totales y pie completos.
 - H-179 copias: 13/13; H-173 geometría: 28/28; H-168 web: 41/41;
   H-177 tinta PNG: 8/8; H-178 contenido: 12/12; UI: 6/6; PWA: 2/2.
 - Build PASS. SHA-256 local de `index.html`:
@@ -74,7 +74,18 @@ no se ejecuta Android ni THERMER reales. Sin certificación distribuida A/B/C.
 
 ## Despliegue
 
-Pendiente de commit, workflow y comprobación del HTML/SW públicos contra el commit.
+Commit técnico `b8c9bf3c6a4cbf97d5b4fd03f1f25db338792c66`, publicado por
+Actions [36762939272](https://github.com/David14081982/POS_Balam/actions/runs/36762939272):
+regresión y despliegue SUCCESS. No requiere migraciones.
+
+HTML público idéntico byte por byte al commit (9,367,303 bytes), SHA-256
+`b960b26ca1af6b208826f8ce425e07a80a5b56cdc7e6deace3f412adbc74721f`.
+SW público idéntico (4,477 bytes), SHA-256
+`e497a04071ea101291b37f49202d0c60c15b96881223cd5ad1e45a6b24a0d80d`.
+El registro de commit y publicación se conserva en un commit documental aparte.
+
+H-180 ejecutado sobre GitHub Pages: 18/18. Mismos perfiles simulados, fixtures
+locales y frontera interceptada; no se enviaron datos ni impresiones reales.
 
 ## Riesgo residual y pendientes
 

@@ -8,7 +8,9 @@ y `BLOQUEADO`.
 ## H-180 — Android fuerza RawBT e ignora la impresora USB del sistema
 
 **Estado:** RESUELTO EN CÓDIGO — confirmación en papel pendiente.
-**Fecha:** 30/09/2026. **Commit:** Pendiente de commit.
+**Fecha:** 30/09/2026. **Commit:** `b8c9bf3`.
+**Publicación:** Actions 36762939272 SUCCESS; HTML/SW públicos idénticos al commit;
+H-180 sobre Pages 18/18.
 **Problema:** una tablet con END-80TEUX por USB y THERMER funcional sigue
 abriendo RawBT o su descarga. El dueño confirma impresión desde THERMER y su
 disponibilidad como servicio; pide conservar tamaños y diseño del ticket.

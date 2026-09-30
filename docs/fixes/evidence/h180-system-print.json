@@ -713,5 +713,103 @@
     "onlineUI": "6/6",
     "pwa": "2/2"
   },
-  "deployment": "pending"
+  "deployment": {
+    "commit": "b8c9bf3c6a4cbf97d5b4fd03f1f25db338792c66",
+    "actionsRun": 36762939272,
+    "status": "success",
+    "checks": [
+      {
+        "file": "index.html",
+        "match": true,
+        "sha256": "b960b26ca1af6b208826f8ce425e07a80a5b56cdc7e6deace3f412adbc74721f",
+        "expectedSHA256": "b960b26ca1af6b208826f8ce425e07a80a5b56cdc7e6deace3f412adbc74721f",
+        "bytes": 9367303
+      },
+      {
+        "file": "sw.js",
+        "match": true,
+        "sha256": "e497a04071ea101291b37f49202d0c60c15b96881223cd5ad1e45a6b24a0d80d",
+        "expectedSHA256": "e497a04071ea101291b37f49202d0c60c15b96881223cd5ad1e45a6b24a0d80d",
+        "bytes": 4477
+      }
+    ],
+    "pages": {
+      "artifactSHA256": null,
+      "results": [
+        {
+          "name": "windows: manual usa sistema sin abrir aplicaciones",
+          "ok": true
+        },
+        {
+          "name": "windows: documento íntegro, misma geometría y hash entregado",
+          "ok": true
+        },
+        {
+          "name": "windows: foco no libera el diálogo ni confirma papel",
+          "ok": true
+        },
+        {
+          "name": "windows: print.auto abre el diálogo al montar el comprobante confirmado",
+          "ok": true
+        },
+        {
+          "name": "windows: print.auto apagado espera el botón y el doble clic no duplica",
+          "ok": true
+        },
+        {
+          "name": "windows: sin RawBT, mutaciones comerciales ni errores",
+          "ok": true
+        },
+        {
+          "name": "android: manual usa sistema sin abrir aplicaciones",
+          "ok": true
+        },
+        {
+          "name": "android: documento íntegro, misma geometría y hash entregado",
+          "ok": true
+        },
+        {
+          "name": "android: foco no libera el diálogo ni confirma papel",
+          "ok": true
+        },
+        {
+          "name": "android: print.auto abre el diálogo al montar el comprobante confirmado",
+          "ok": true
+        },
+        {
+          "name": "android: print.auto apagado espera el botón y el doble clic no duplica",
+          "ok": true
+        },
+        {
+          "name": "android: sin RawBT, mutaciones comerciales ni errores",
+          "ok": true
+        },
+        {
+          "name": "android-desktop: manual usa sistema sin abrir aplicaciones",
+          "ok": true
+        },
+        {
+          "name": "android-desktop: documento íntegro, misma geometría y hash entregado",
+          "ok": true
+        },
+        {
+          "name": "android-desktop: foco no libera el diálogo ni confirma papel",
+          "ok": true
+        },
+        {
+          "name": "android-desktop: print.auto abre el diálogo al montar el comprobante confirmado",
+          "ok": true
+        },
+        {
+          "name": "android-desktop: print.auto apagado espera el botón y el doble clic no duplica",
+          "ok": true
+        },
+        {
+          "name": "android-desktop: sin RawBT, mutaciones comerciales ni errores",
+          "ok": true
+        }
+      ],
+      "hardware": "NOT_TESTED"
+    }
+  }
 }
