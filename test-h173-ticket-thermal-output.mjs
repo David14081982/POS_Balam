@@ -1,5 +1,5 @@
 // H-173: tickets pequeños/grises. Dos fronteras, sin impresora real ni Supabase:
-// 1) una tablet Android en «sitio de escritorio» debe usar el PNG RawBT;
+// 1) H-180: cualquier dispositivo usa la impresión del sistema;
 // 2) la impresión del sistema de 80 mm debe salir en tinta negra sólida.
 import { chromium } from 'playwright-core';
 import { createServer } from 'node:http';
@@ -26,9 +26,9 @@ const browser = await chromium.launch({ ...(process.env.BALAM_CHROME_EXECUTABLE 
 const DESKTOP_LINUX_UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36';
 const devices = [
   // Chrome para tablets Android abre por omisión el «sitio de escritorio».
-  { name: 'tablet Android en sitio de escritorio', ua: DESKTOP_LINUX_UA, platform: 'Linux aarch64', touch: 5, expected: true },
-  { name: 'tablet Android con plataforma de escritorio', ua: DESKTOP_LINUX_UA, platform: 'Linux x86_64', touch: 5, expected: true },
-  { name: 'Android móvil', ua: 'Mozilla/5.0 (Linux; Android 14; Tablet) AppleWebKit/537.36 Chrome/140.0.0.0 Safari/537.36', platform: 'Linux armv8l', touch: 5, expected: true },
+  { name: 'tablet Android en sitio de escritorio', ua: DESKTOP_LINUX_UA, platform: 'Linux aarch64', touch: 5, expected: false },
+  { name: 'tablet Android con plataforma de escritorio', ua: DESKTOP_LINUX_UA, platform: 'Linux x86_64', touch: 5, expected: false },
+  { name: 'Android móvil', ua: 'Mozilla/5.0 (Linux; Android 14; Tablet) AppleWebKit/537.36 Chrome/140.0.0.0 Safari/537.36', platform: 'Linux armv8l', touch: 5, expected: false },
   { name: 'PC Windows con pantalla táctil', ua: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/140.0.0.0 Safari/537.36', platform: 'Win32', touch: 10, expected: false },
   { name: 'PC Linux sin pantalla táctil', ua: DESKTOP_LINUX_UA, platform: 'Linux x86_64', touch: 0, expected: false },
   { name: 'Chromebook táctil', ua: 'Mozilla/5.0 (X11; CrOS x86_64 14541.0.0) AppleWebKit/537.36 Chrome/140.0.0.0 Safari/537.36', platform: 'Linux x86_64', touch: 10, expected: false },

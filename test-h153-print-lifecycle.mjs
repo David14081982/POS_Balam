@@ -10,7 +10,7 @@ const evidence = process.env.BALAM_PRINT_EVIDENCE || fs.mkdtempSync(path.join(os
 fs.mkdirSync(evidence, { recursive: true });
 const server = remote ? null : createServer((req, res) => { res.setHeader('Content-Type', 'text/html'); res.end(fs.readFileSync('index.html')); });
 if (server) await new Promise(r => server.listen(0, '127.0.0.1', r));
-const browser = await chromium.launch({ channel: 'chrome', headless: true });
+const browser = await chromium.launch({ headless: true, ...(process.env.BALAM_CHROME_EXECUTABLE ? { executablePath: process.env.BALAM_CHROME_EXECUTABLE } : { channel: 'chrome' }) });
 const results = [], artifacts = [];
 const pdfHashes = new Map();
 const check = (name, ok, detail = '') => { results.push({ name, ok: !!ok, detail }); console.log(`${ok ? 'PASS' : 'FAIL'} ${name} ${JSON.stringify(detail)}`); };
@@ -51,38 +51,28 @@ try {
           React.createElement(PrintManager.PrintStatus)));
       };
     });
-    const prefix = android ? 'RawBT' : 'Browser';
+    const prefix = android ? 'Android-system' : 'Browser';
     async function render(id, count, kind = 'sale') {
       await page.evaluate(args => __render(...args), [id, count, kind]);
       await page.waitForFunction(id => document.querySelector('#balam-ticket, #balam-return-receipt')?.textContent.includes(id), id);
-      if (android) await page.evaluate(async () => { const s = UI.prepareReceipt(); await s.promise; if (s.error) throw s.error; });
     }
     async function complete() {
-      await page.evaluate(android => {
-        if (android) {
-          Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' }); document.dispatchEvent(new Event('visibilitychange'));
-          Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' }); document.dispatchEvent(new Event('visibilitychange'));
-        } else document.querySelector('iframe[data-print-job-id]').contentWindow.dispatchEvent(new Event('afterprint'));
-      }, android);
+      await page.evaluate(() => document.querySelector('iframe[data-print-job-id]').contentWindow.dispatchEvent(new Event('afterprint')));
     }
     async function capture(name) {
-      const item = await page.evaluate(android => {
+      const item = await page.evaluate(() => {
         const job = PrintManager.history().find(j => j.stage === 'SEND_STARTED');
-        return { job, payload: android ? __intents.at(-1).href.slice(7).split('#Intent;')[0] : __printArtifacts.at(-1).html,
-          active: android ? __intents.at(-1).active : true };
-      }, android);
-      check(`${prefix} ${name}: payload at transport equals prepared SHA-256`, hash(item.payload) === item.job.payloadHash && item.active);
-      const file = path.join(evidence, `${android ? 'android' : 'desktop'}-${name}`);
-      if (android) fs.writeFileSync(file + '.png', Buffer.from(item.payload.split(',')[1], 'base64'));
-      else {
-        if (pdfHashes.has(item.job.payloadHash)) return item;
-        const proof = await context.newPage(); await proof.setContent(item.payload);
-        await proof.evaluate(async () => { document.body.getBoundingClientRect(); await document.fonts.ready; await Promise.all([...document.images].map(i => i.decode())); });
-        await proof.pdf({ path: file + '.pdf', preferCSSPageSize: true, printBackground: true });
-        artifacts.push({ name, file: file + '.pdf', ticketId: item.job.ticketId });
-        pdfHashes.set(item.job.payloadHash, file + '.pdf');
-        await proof.close();
-      }
+        return { job, payload: __printArtifacts.at(-1).html, text: __printArtifacts.at(-1).text, intents: __intents.length };
+      });
+      check(`${prefix} ${name}: payload at transport equals prepared SHA-256`, hash(item.payload) === item.job.payloadHash && item.intents === 0 && item.job.transport === 'browser');
+      if (pdfHashes.has(item.job.payloadHash)) return item;
+      const file = path.join(evidence, `${android ? 'android' : 'desktop'}-${name}.pdf`);
+      const proof = await context.newPage(); await proof.setContent(item.payload);
+      await proof.evaluate(async () => { document.body.getBoundingClientRect(); await document.fonts.ready; await Promise.all([...document.images].map(i => i.decode())); });
+      await proof.pdf({ path: file, preferCSSPageSize: true, printBackground: true });
+      artifacts.push({ name, file, ticketId: item.job.ticketId, expectedText: item.text });
+      pdfHashes.set(item.job.payloadHash, file);
+      await proof.close();
       return item;
     }
     for (const count of [3, 5]) {
@@ -91,7 +81,6 @@ try {
       await page.evaluate(count => PrintManager.enqueue({ copies: count, source: 'copy-test' }), count);
       for (let i = 1; i <= count; i++) {
         await page.waitForFunction(() => PrintManager.history().some(j => j.stage === 'WAITING_TURN' || j.stage === 'SEND_STARTED'));
-        if (android && !await page.evaluate(() => PrintManager.history().some(j => j.stage === 'SEND_STARTED'))) await page.getByTestId('print-next').last().click();
         await page.waitForFunction(() => PrintManager.history().some(j => j.stage === 'SEND_STARTED'));
         const active = await capture(`${count}-copies-${i}`);
         check(`${prefix} copy ${i}/${count}: one active, correct copy metadata`, active.job.copyNumber === i && active.job.totalCopies === count && await page.evaluate(() => PrintManager.history().filter(j => j.stage === 'SEND_STARTED').length === 1));
@@ -107,10 +96,9 @@ try {
     }
     await page.evaluate(() => { __root.render(React.createElement(PrintManager.PrintStatus)); });
     for (const id of ['LARGO-A', 'CORTO-B', 'LARGO-C']) {
-      if (android && id !== 'LARGO-A') { await page.waitForFunction(() => PrintManager.history().find(j => !['COMPLETED', 'FAILED', 'CANCELLED'].includes(j.stage))?.stage === 'WAITING_TURN'); await page.getByTestId('print-next').last().click(); }
       await page.waitForFunction(() => PrintManager.history().some(j => j.stage === 'SEND_STARTED'));
       const item = await capture(id);
-      check(`${prefix} ${id}: retained after modal and screen removal`, item.job.ticketId === id && (android || item.payload.includes(`ARTICULO ${id}`)));
+      check(`${prefix} ${id}: retained after modal and screen removal`, item.job.ticketId === id && item.payload.includes(`ARTICULO ${id}`));
       await complete();
     }
     for (const kind of ['layaway', 'payment', 'exchange', 'return']) {

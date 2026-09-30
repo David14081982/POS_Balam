@@ -1,0 +1,717 @@
+{
+  "story": "H-180",
+  "date": "2026-09-30",
+  "hardware": "NOT_TESTED",
+  "baseline": {
+    "artifactSHA256": "03228791a73127e4ee85af444957e79b490c1db5db28a38e12a9eda088dc87d8",
+    "results": [
+      {
+        "name": "windows: manual usa sistema sin abrir aplicaciones",
+        "ok": true
+      },
+      {
+        "name": "windows: documento íntegro, misma geometría y hash entregado",
+        "ok": true
+      },
+      {
+        "name": "windows: foco no libera el diálogo ni confirma papel",
+        "ok": true
+      },
+      {
+        "name": "windows: print.auto abre el diálogo al montar el comprobante confirmado",
+        "ok": true
+      },
+      {
+        "name": "windows: print.auto apagado espera el botón y el doble clic no duplica",
+        "ok": true
+      },
+      {
+        "name": "windows: sin RawBT, mutaciones comerciales ni errores",
+        "ok": true
+      },
+      {
+        "name": "android: manual usa sistema sin abrir aplicaciones",
+        "ok": false,
+        "error": "Expected values to be strictly equal:\n\n'rawbt' !== 'browser'\n"
+      },
+      {
+        "name": "android-desktop: manual usa sistema sin abrir aplicaciones",
+        "ok": false,
+        "error": "Expected values to be strictly equal:\n\n'rawbt' !== 'browser'\n"
+      }
+    ],
+    "hardware": "NOT_TESTED"
+  },
+  "system": {
+    "artifactSHA256": "b960b26ca1af6b208826f8ce425e07a80a5b56cdc7e6deace3f412adbc74721f",
+    "results": [
+      {
+        "name": "windows: manual usa sistema sin abrir aplicaciones",
+        "ok": true
+      },
+      {
+        "name": "windows: documento íntegro, misma geometría y hash entregado",
+        "ok": true
+      },
+      {
+        "name": "windows: foco no libera el diálogo ni confirma papel",
+        "ok": true
+      },
+      {
+        "name": "windows: print.auto abre el diálogo al montar el comprobante confirmado",
+        "ok": true
+      },
+      {
+        "name": "windows: print.auto apagado espera el botón y el doble clic no duplica",
+        "ok": true
+      },
+      {
+        "name": "windows: sin RawBT, mutaciones comerciales ni errores",
+        "ok": true
+      },
+      {
+        "name": "android: manual usa sistema sin abrir aplicaciones",
+        "ok": true
+      },
+      {
+        "name": "android: documento íntegro, misma geometría y hash entregado",
+        "ok": true
+      },
+      {
+        "name": "android: foco no libera el diálogo ni confirma papel",
+        "ok": true
+      },
+      {
+        "name": "android: print.auto abre el diálogo al montar el comprobante confirmado",
+        "ok": true
+      },
+      {
+        "name": "android: print.auto apagado espera el botón y el doble clic no duplica",
+        "ok": true
+      },
+      {
+        "name": "android: sin RawBT, mutaciones comerciales ni errores",
+        "ok": true
+      },
+      {
+        "name": "android-desktop: manual usa sistema sin abrir aplicaciones",
+        "ok": true
+      },
+      {
+        "name": "android-desktop: documento íntegro, misma geometría y hash entregado",
+        "ok": true
+      },
+      {
+        "name": "android-desktop: foco no libera el diálogo ni confirma papel",
+        "ok": true
+      },
+      {
+        "name": "android-desktop: print.auto abre el diálogo al montar el comprobante confirmado",
+        "ok": true
+      },
+      {
+        "name": "android-desktop: print.auto apagado espera el botón y el doble clic no duplica",
+        "ok": true
+      },
+      {
+        "name": "android-desktop: sin RawBT, mutaciones comerciales ni errores",
+        "ok": true
+      }
+    ],
+    "hardware": "NOT_TESTED"
+  },
+  "lifecycle": {
+    "artifactSHA256": "b960b26ca1af6b208826f8ce425e07a80a5b56cdc7e6deace3f412adbc74721f",
+    "results": [
+      {
+        "name": "Browser 3-copies-1: payload at transport equals prepared SHA-256",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Browser copy 1/3: one active, correct copy metadata",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Browser 3-copies-2: payload at transport equals prepared SHA-256",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Browser copy 2/3: one active, correct copy metadata",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Browser 3-copies-3: payload at transport equals prepared SHA-256",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Browser copy 3/3: one active, correct copy metadata",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Browser 3 copies: identical content, all handoffs ended",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Browser 5-copies-1: payload at transport equals prepared SHA-256",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Browser copy 1/5: one active, correct copy metadata",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Browser 5-copies-2: payload at transport equals prepared SHA-256",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Browser copy 2/5: one active, correct copy metadata",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Browser 5-copies-3: payload at transport equals prepared SHA-256",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Browser copy 3/5: one active, correct copy metadata",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Browser 5-copies-4: payload at transport equals prepared SHA-256",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Browser copy 4/5: one active, correct copy metadata",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Browser 5-copies-5: payload at transport equals prepared SHA-256",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Browser copy 5/5: one active, correct copy metadata",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Browser 5 copies: identical content, all handoffs ended",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Browser LARGO-A: payload at transport equals prepared SHA-256",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Browser LARGO-A: retained after modal and screen removal",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Browser CORTO-B: payload at transport equals prepared SHA-256",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Browser CORTO-B: retained after modal and screen removal",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Browser LARGO-C: payload at transport equals prepared SHA-256",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Browser LARGO-C: retained after modal and screen removal",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Browser layaway: payload at transport equals prepared SHA-256",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Browser layaway: original document type preserved",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Browser payment: payload at transport equals prepared SHA-256",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Browser payment: original document type preserved",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Browser exchange: payload at transport equals prepared SHA-256",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Browser exchange: original document type preserved",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Browser return: payload at transport equals prepared SHA-256",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Browser return: original document type preserved",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Browser: double click creates one job",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Browser: waiting job can be cancelled",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Browser: cancelled job never sent",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Browser offline: payload at transport equals prepared SHA-256",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Browser: business unchanged",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Browser: resources released",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Browser: no exceptions",
+        "ok": true,
+        "detail": []
+      },
+      {
+        "name": "Browser: reload never replays handed off jobs",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Android-system 3-copies-1: payload at transport equals prepared SHA-256",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Android-system copy 1/3: one active, correct copy metadata",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Android-system 3-copies-2: payload at transport equals prepared SHA-256",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Android-system copy 2/3: one active, correct copy metadata",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Android-system 3-copies-3: payload at transport equals prepared SHA-256",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Android-system copy 3/3: one active, correct copy metadata",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Android-system 3 copies: identical content, all handoffs ended",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Android-system 5-copies-1: payload at transport equals prepared SHA-256",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Android-system copy 1/5: one active, correct copy metadata",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Android-system 5-copies-2: payload at transport equals prepared SHA-256",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Android-system copy 2/5: one active, correct copy metadata",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Android-system 5-copies-3: payload at transport equals prepared SHA-256",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Android-system copy 3/5: one active, correct copy metadata",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Android-system 5-copies-4: payload at transport equals prepared SHA-256",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Android-system copy 4/5: one active, correct copy metadata",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Android-system 5-copies-5: payload at transport equals prepared SHA-256",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Android-system copy 5/5: one active, correct copy metadata",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Android-system 5 copies: identical content, all handoffs ended",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Android-system LARGO-A: payload at transport equals prepared SHA-256",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Android-system LARGO-A: retained after modal and screen removal",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Android-system CORTO-B: payload at transport equals prepared SHA-256",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Android-system CORTO-B: retained after modal and screen removal",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Android-system LARGO-C: payload at transport equals prepared SHA-256",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Android-system LARGO-C: retained after modal and screen removal",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Android-system layaway: payload at transport equals prepared SHA-256",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Android-system layaway: original document type preserved",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Android-system payment: payload at transport equals prepared SHA-256",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Android-system payment: original document type preserved",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Android-system exchange: payload at transport equals prepared SHA-256",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Android-system exchange: original document type preserved",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Android-system return: payload at transport equals prepared SHA-256",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Android-system return: original document type preserved",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Android-system: double click creates one job",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Android-system: waiting job can be cancelled",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Android-system: cancelled job never sent",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Android-system offline: payload at transport equals prepared SHA-256",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Android-system: business unchanged",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Android-system: resources released",
+        "ok": true,
+        "detail": ""
+      },
+      {
+        "name": "Android-system: no exceptions",
+        "ok": true,
+        "detail": []
+      },
+      {
+        "name": "Android-system: reload never replays handed off jobs",
+        "ok": true,
+        "detail": ""
+      }
+    ],
+    "artifacts": [
+      {
+        "name": "3-copies-1",
+        "file": "C:\\Users\\david\\AppData\\Local\\Temp\\balam-h153-qUoD6v\\desktop-3-copies-1.pdf",
+        "ticketId": "COPIAS-3",
+        "expectedText": "landscape\nBALAM\n\nBalam Guayaberas\n\nTRANSACCIÓN\nCOPIAS-3\nFECHA\n2026-09-09 12:00\nATENDIDO POR\n—\nDETALLE DE COMPRA\nARTICULO COPIAS-3 1\n$500.00\nSKU: SKU-COPIAS-3-0 · Talla: M\nCant: 1\nARTICULO COPIAS-3 2\n$500.00\nSKU: SKU-COPIAS-3-1 · Talla: M\nCant: 1\nARTICULO COPIAS-3 3\n$500.00\nSKU: SKU-COPIAS-3-2 · Talla: M\nCant: 1\nImporte\n$1,293.10\nIVA (16%)\n$206.90\nTOTAL A PAGAR\n$1,500.00\npayments\n\nMÉTODO DE PAGO\n\nEfectivo\n\nVenta histórica: desglose fiscal o de descuentos no disponible; se conserva el total registrado.\n\nGracias por ser parte de nuestra herencia."
+      },
+      {
+        "name": "5-copies-1",
+        "file": "C:\\Users\\david\\AppData\\Local\\Temp\\balam-h153-qUoD6v\\desktop-5-copies-1.pdf",
+        "ticketId": "COPIAS-5",
+        "expectedText": "landscape\nBALAM\n\nBalam Guayaberas\n\nTRANSACCIÓN\nCOPIAS-5\nFECHA\n2026-09-09 12:00\nATENDIDO POR\n—\nDETALLE DE COMPRA\nARTICULO COPIAS-5 1\n$500.00\nSKU: SKU-COPIAS-5-0 · Talla: M\nCant: 1\nARTICULO COPIAS-5 2\n$500.00\nSKU: SKU-COPIAS-5-1 · Talla: M\nCant: 1\nARTICULO COPIAS-5 3\n$500.00\nSKU: SKU-COPIAS-5-2 · Talla: M\nCant: 1\nImporte\n$1,293.10\nIVA (16%)\n$206.90\nTOTAL A PAGAR\n$1,500.00\npayments\n\nMÉTODO DE PAGO\n\nEfectivo\n\nVenta histórica: desglose fiscal o de descuentos no disponible; se conserva el total registrado.\n\nGracias por ser parte de nuestra herencia."
+      },
+      {
+        "name": "LARGO-A",
+        "file": "C:\\Users\\david\\AppData\\Local\\Temp\\balam-h153-qUoD6v\\desktop-LARGO-A.pdf",
+        "ticketId": "LARGO-A",
+        "expectedText": "landscape\nBALAM\n\nBalam Guayaberas\n\nTRANSACCIÓN\nLARGO-A\nFECHA\n2026-09-09 12:00\nATENDIDO POR\n—\nDETALLE DE COMPRA\nARTICULO LARGO-A 1\n$500.00\nSKU: SKU-LARGO-A-0 · Talla: M\nCant: 1\nARTICULO LARGO-A 2\n$500.00\nSKU: SKU-LARGO-A-1 · Talla: M\nCant: 1\nARTICULO LARGO-A 3\n$500.00\nSKU: SKU-LARGO-A-2 · Talla: M\nCant: 1\nARTICULO LARGO-A 4\n$500.00\nSKU: SKU-LARGO-A-3 · Talla: M\nCant: 1\nARTICULO LARGO-A 5\n$500.00\nSKU: SKU-LARGO-A-4 · Talla: M\nCant: 1\nARTICULO LARGO-A 6\n$500.00\nSKU: SKU-LARGO-A-5 · Talla: M\nCant: 1\nARTICULO LARGO-A 7\n$500.00\nSKU: SKU-LARGO-A-6 · Talla: M\nCant: 1\nARTICULO LARGO-A 8\n$500.00\nSKU: SKU-LARGO-A-7 · Talla: M\nCant: 1\nARTICULO LARGO-A 9\n$500.00\nSKU: SKU-LARGO-A-8 · Talla: M\nCant: 1\nARTICULO LARGO-A 10\n$500.00\nSKU: SKU-LARGO-A-9 · Talla: M\nCant: 1\nARTICULO LARGO-A 11\n$500.00\nSKU: SKU-LARGO-A-10 · Talla: M\nCant: 1\nARTICULO LARGO-A 12\n$500.00\nSKU: SKU-LARGO-A-11 · Talla: M\nCant: 1\nARTICULO LARGO-A 13\n$500.00\nSKU: SKU-LARGO-A-12 · Talla: M\nCant: 1\nARTICULO LARGO-A 14\n$500.00\nSKU: SKU-LARGO-A-13 · Talla: M\nCant: 1\nARTICULO LARGO-A 15\n$500.00\nSKU: SKU-LARGO-A-14 · Talla: M\nCant: 1\nARTICULO LARGO-A 16\n$500.00\nSKU: SKU-LARGO-A-15 · Talla: M\nCant: 1\nARTICULO LARGO-A 17\n$500.00\nSKU: SKU-LARGO-A-16 · Talla: M\nCant: 1\nARTICULO LARGO-A 18\n$500.00\nSKU: SKU-LARGO-A-17 · Talla: M\nCant: 1\nARTICULO LARGO-A 19\n$500.00\nSKU: SKU-LARGO-A-18 · Talla: M\nCant: 1\nARTICULO LARGO-A 20\n$500.00\nSKU: SKU-LARGO-A-19 · Talla: M\nCant: 1\nARTICULO LARGO-A 21\n$500.00\nSKU: SKU-LARGO-A-20 · Talla: M\nCant: 1\nARTICULO LARGO-A 22\n$500.00\nSKU: SKU-LARGO-A-21 · Talla: M\nCant: 1\nARTICULO LARGO-A 23\n$500.00\nSKU: SKU-LARGO-A-22 · Talla: M\nCant: 1\nARTICULO LARGO-A 24\n$500.00\nSKU: SKU-LARGO-A-23 · Talla: M\nCant: 1\nImporte\n$10,344.83\nIVA (16%)\n$1,655.17\nTOTAL A PAGAR\n$12,000.00\npayments\n\nMÉTODO DE PAGO\n\nEfectivo\n\nVenta histórica: desglose fiscal o de descuentos no disponible; se conserva el total registrado.\n\nGracias por ser parte de nuestra herencia."
+      },
+      {
+        "name": "CORTO-B",
+        "file": "C:\\Users\\david\\AppData\\Local\\Temp\\balam-h153-qUoD6v\\desktop-CORTO-B.pdf",
+        "ticketId": "CORTO-B",
+        "expectedText": "landscape\nBALAM\n\nBalam Guayaberas\n\nTRANSACCIÓN\nCORTO-B\nFECHA\n2026-09-09 12:00\nATENDIDO POR\n—\nDETALLE DE COMPRA\nARTICULO CORTO-B 1\n$500.00\nSKU: SKU-CORTO-B-0 · Talla: M\nCant: 1\nImporte\n$431.03\nIVA (16%)\n$68.97\nTOTAL A PAGAR\n$500.00\npayments\n\nMÉTODO DE PAGO\n\nEfectivo\n\nVenta histórica: desglose fiscal o de descuentos no disponible; se conserva el total registrado.\n\nGracias por ser parte de nuestra herencia."
+      },
+      {
+        "name": "LARGO-C",
+        "file": "C:\\Users\\david\\AppData\\Local\\Temp\\balam-h153-qUoD6v\\desktop-LARGO-C.pdf",
+        "ticketId": "LARGO-C",
+        "expectedText": "landscape\nBALAM\n\nBalam Guayaberas\n\nTRANSACCIÓN\nLARGO-C\nFECHA\n2026-09-09 12:00\nATENDIDO POR\n—\nDETALLE DE COMPRA\nARTICULO LARGO-C 1\n$500.00\nSKU: SKU-LARGO-C-0 · Talla: M\nCant: 1\nARTICULO LARGO-C 2\n$500.00\nSKU: SKU-LARGO-C-1 · Talla: M\nCant: 1\nARTICULO LARGO-C 3\n$500.00\nSKU: SKU-LARGO-C-2 · Talla: M\nCant: 1\nARTICULO LARGO-C 4\n$500.00\nSKU: SKU-LARGO-C-3 · Talla: M\nCant: 1\nARTICULO LARGO-C 5\n$500.00\nSKU: SKU-LARGO-C-4 · Talla: M\nCant: 1\nARTICULO LARGO-C 6\n$500.00\nSKU: SKU-LARGO-C-5 · Talla: M\nCant: 1\nARTICULO LARGO-C 7\n$500.00\nSKU: SKU-LARGO-C-6 · Talla: M\nCant: 1\nARTICULO LARGO-C 8\n$500.00\nSKU: SKU-LARGO-C-7 · Talla: M\nCant: 1\nARTICULO LARGO-C 9\n$500.00\nSKU: SKU-LARGO-C-8 · Talla: M\nCant: 1\nARTICULO LARGO-C 10\n$500.00\nSKU: SKU-LARGO-C-9 · Talla: M\nCant: 1\nARTICULO LARGO-C 11\n$500.00\nSKU: SKU-LARGO-C-10 · Talla: M\nCant: 1\nARTICULO LARGO-C 12\n$500.00\nSKU: SKU-LARGO-C-11 · Talla: M\nCant: 1\nARTICULO LARGO-C 13\n$500.00\nSKU: SKU-LARGO-C-12 · Talla: M\nCant: 1\nARTICULO LARGO-C 14\n$500.00\nSKU: SKU-LARGO-C-13 · Talla: M\nCant: 1\nARTICULO LARGO-C 15\n$500.00\nSKU: SKU-LARGO-C-14 · Talla: M\nCant: 1\nARTICULO LARGO-C 16\n$500.00\nSKU: SKU-LARGO-C-15 · Talla: M\nCant: 1\nARTICULO LARGO-C 17\n$500.00\nSKU: SKU-LARGO-C-16 · Talla: M\nCant: 1\nARTICULO LARGO-C 18\n$500.00\nSKU: SKU-LARGO-C-17 · Talla: M\nCant: 1\nARTICULO LARGO-C 19\n$500.00\nSKU: SKU-LARGO-C-18 · Talla: M\nCant: 1\nARTICULO LARGO-C 20\n$500.00\nSKU: SKU-LARGO-C-19 · Talla: M\nCant: 1\nARTICULO LARGO-C 21\n$500.00\nSKU: SKU-LARGO-C-20 · Talla: M\nCant: 1\nARTICULO LARGO-C 22\n$500.00\nSKU: SKU-LARGO-C-21 · Talla: M\nCant: 1\nARTICULO LARGO-C 23\n$500.00\nSKU: SKU-LARGO-C-22 · Talla: M\nCant: 1\nARTICULO LARGO-C 24\n$500.00\nSKU: SKU-LARGO-C-23 · Talla: M\nCant: 1\nImporte\n$10,344.83\nIVA (16%)\n$1,655.17\nTOTAL A PAGAR\n$12,000.00\npayments\n\nMÉTODO DE PAGO\n\nEfectivo\n\nVenta histórica: desglose fiscal o de descuentos no disponible; se conserva el total registrado.\n\nGracias por ser parte de nuestra herencia."
+      },
+      {
+        "name": "layaway",
+        "file": "C:\\Users\\david\\AppData\\Local\\Temp\\balam-h153-qUoD6v\\desktop-layaway.pdf",
+        "ticketId": "DOC-layaway",
+        "expectedText": "landscape\nBALAM\n\nBalam Guayaberas\n\nAPARTADO\nDOC-layaway\nFECHA\n2026-09-09 12:00\nATENDIDO POR\n—\nESTADO\nApartado\nMERCANCÍA APARTADA\nARTICULO DOC-layaway 1\n$500.00\nSKU: SKU-DOC-layaway-0 · Talla: M\nCant: 1\nARTICULO DOC-layaway 2\n$500.00\nSKU: SKU-DOC-layaway-1 · Talla: M\nCant: 1\nARTICULO DOC-layaway 3\n$500.00\nSKU: SKU-DOC-layaway-2 · Talla: M\nCant: 1\nImporte\n$1,293.10\nIVA (16%)\n$206.90\nTOTAL A PAGAR\n$1,500.00\nPagado a la fecha\n$0.00\nSaldo pendiente\n$1,500.00\npayments\n\nMÉTODO DE PAGO\n\nEfectivo\n\nVenta histórica: desglose fiscal o de descuentos no disponible; se conserva el total registrado.\nConserva este comprobante. La mercancía se entrega al liquidar el saldo.\n\nGracias por ser parte de nuestra herencia."
+      },
+      {
+        "name": "payment",
+        "file": "C:\\Users\\david\\AppData\\Local\\Temp\\balam-h153-qUoD6v\\desktop-payment.pdf",
+        "ticketId": "DOC-payment",
+        "expectedText": "landscape\nBALAM\n\nBalam Guayaberas\n\nABONO A APARTADO\n$100.00\nRecibido en Efectivo · 2026-09-09 12:00\nAPARTADO\nDOC-payment\nFECHA\n2026-09-09 12:00\nATENDIDO POR\n—\nCLIENTE\nPúblico en general\nESTADO\nApartado\nMERCANCÍA APARTADA\nARTICULO DOC-payment 1\n$500.00\nSKU: SKU-DOC-payment-0 · Talla: M\nCant: 1\nARTICULO DOC-payment 2\n$500.00\nSKU: SKU-DOC-payment-1 · Talla: M\nCant: 1\nARTICULO DOC-payment 3\n$500.00\nSKU: SKU-DOC-payment-2 · Talla: M\nCant: 1\nImporte\n$1,293.10\nIVA (16%)\n$206.90\nTOTAL A PAGAR\n$1,500.00\nPagado a la fecha\n$0.00\nSaldo pendiente\n$1,500.00\nVenta histórica: desglose fiscal o de descuentos no disponible; se conserva el total registrado.\nConserva este comprobante. La mercancía se entrega al liquidar el saldo.\n\nGracias por ser parte de nuestra herencia."
+      },
+      {
+        "name": "exchange",
+        "file": "C:\\Users\\david\\AppData\\Local\\Temp\\balam-h153-qUoD6v\\desktop-exchange.pdf",
+        "ticketId": "CMB-DOC-exchange",
+        "expectedText": "landscape\nBALAM\n\nBalam Guayaberas\n\nCAMBIO DE MERCANCIA\nCMB-DOC-exchange\nSobre la venta DOC-exchange\nENTREGA\n1 × ARTICULO DOC-exchange 1 · talla M · $500.00\nRECIBE\n1 × ARTICULO DOC-exchange 1 · talla M · $500.00\nTRANSACCIÓN\nDOC-exchange\nFECHA\n2026-09-09 12:00\nATENDIDO POR\n—\nDETALLE DE COMPRA\nARTICULO DOC-exchange 1\n$500.00\nSKU: SKU-DOC-exchange-0 · Talla: M\nCant: 1\nARTICULO DOC-exchange 2\n$500.00\nSKU: SKU-DOC-exchange-1 · Talla: M\nCant: 1\nARTICULO DOC-exchange 3\n$500.00\nSKU: SKU-DOC-exchange-2 · Talla: M\nCant: 1\nImporte\n$1,293.10\nIVA (16%)\n$206.90\nTOTAL A PAGAR\n$1,500.00\npayments\n\nMÉTODO DE PAGO\n\nEfectivo\n\nVenta histórica: desglose fiscal o de descuentos no disponible; se conserva el total registrado.\n\nGracias por ser parte de nuestra herencia."
+      },
+      {
+        "name": "return",
+        "file": "C:\\Users\\david\\AppData\\Local\\Temp\\balam-h153-qUoD6v\\desktop-return.pdf",
+        "ticketId": "DEV-DOC-return",
+        "expectedText": "BALAM\nBalam Guayaberas\nCOMPROBANTE DE DEVOLUCIÓN\nFolio de devolución: DEV-DOC-return\nVenta original: DOC-return\nFecha: 2026-09-09 12:00\nVendedor: —\nCliente: Público en general\nMétodo de devolución: Efectivo\nReferencia de operación: DEV-DOC-return\nARTICULO DOC-return 1\nSKU: SKU-DOC-return-0 · Talla: M\nCantidad: 1 · Importe: $500.00\nARTICULO DOC-return 2\nSKU: SKU-DOC-return-1 · Talla: M\nCantidad: 1 · Importe: $500.00\nARTICULO DOC-return 3\nSKU: SKU-DOC-return-2 · Talla: M\nCantidad: 1 · Importe: $500.00\nREEMBOLSO\n$1,500.00"
+      },
+      {
+        "name": "offline",
+        "file": "C:\\Users\\david\\AppData\\Local\\Temp\\balam-h153-qUoD6v\\desktop-offline.pdf",
+        "ticketId": "OFFLINE",
+        "expectedText": "landscape\nBALAM\n\nBalam Guayaberas\n\nTRANSACCIÓN\nOFFLINE\nFECHA\n2026-09-09 12:00\nATENDIDO POR\n—\nDETALLE DE COMPRA\nARTICULO OFFLINE 1\n$500.00\nSKU: SKU-OFFLINE-0 · Talla: M\nCant: 1\nImporte\n$431.03\nIVA (16%)\n$68.97\nTOTAL A PAGAR\n$500.00\npayments\n\nMÉTODO DE PAGO\n\nEfectivo\n\nVenta histórica: desglose fiscal o de descuentos no disponible; se conserva el total registrado.\n\nGracias por ser parte de nuestra herencia."
+      }
+    ]
+  },
+  "independentPDFs": [
+    {
+      "file": "desktop-3-copies-1.pdf",
+      "ok": true,
+      "pages": 1,
+      "widthMm": 80.09466429816352,
+      "heightMm": 297.01066063774954,
+      "lines": 32,
+      "sha256": "6330c16d532d7765d1f0234a1f6020ef1cd7f906620145ed0dcc5c5b392f6e4c"
+    },
+    {
+      "file": "desktop-5-copies-1.pdf",
+      "ok": true,
+      "pages": 1,
+      "widthMm": 80.09466429816352,
+      "heightMm": 289.98333333333335,
+      "lines": 32,
+      "sha256": "0586a7346287ab2f17e92121dd01c0d184f90bde51c35211896bebd64fd8ac39"
+    },
+    {
+      "file": "desktop-LARGO-A.pdf",
+      "ok": true,
+      "pages": 1,
+      "widthMm": 80.09466429816352,
+      "heightMm": 752.8559414333766,
+      "lines": 116,
+      "sha256": "6dbdb5d271f4b1f6b8bea9253830d4f01211988f6cde3abc11b6eebfa9049581"
+    },
+    {
+      "file": "desktop-CORTO-B.pdf",
+      "ok": true,
+      "pages": 1,
+      "widthMm": 80.09466429816352,
+      "heightMm": 252.98399827745223,
+      "lines": 24,
+      "sha256": "f76234300b2592449933f931aa4537619489de0be35c139fcd99125b9a27af4c"
+    },
+    {
+      "file": "desktop-LARGO-C.pdf",
+      "ok": true,
+      "pages": 1,
+      "widthMm": 80.09466429816352,
+      "heightMm": 765.217288547092,
+      "lines": 116,
+      "sha256": "50ef754a16782f41245aa2acdf04db093693597c9d46fc425aaada60d9857bec"
+    },
+    {
+      "file": "desktop-layaway.pdf",
+      "ok": true,
+      "pages": 1,
+      "widthMm": 80.09466429816352,
+      "heightMm": 355.93865288628473,
+      "lines": 39,
+      "sha256": "ccb56d0df6241135a990afa38888cb178f97191d89c1ccf3a632c7814e6fa298"
+    },
+    {
+      "file": "desktop-payment.pdf",
+      "ok": true,
+      "pages": 1,
+      "widthMm": 80.09466429816352,
+      "heightMm": 366.86063910590275,
+      "lines": 41,
+      "sha256": "480bbbeb3b8a2ae201c14367f2fc39bbb355e054d00aae7a604e9c791b778b34"
+    },
+    {
+      "file": "desktop-exchange.pdf",
+      "ok": true,
+      "pages": 1,
+      "widthMm": 80.09466429816352,
+      "heightMm": 371.0939724392361,
+      "lines": 39,
+      "sha256": "ef669f7f50a03b45b4b4592ce33ece22af83026d53db7020ae7898bbe53bd138"
+    },
+    {
+      "file": "desktop-return.pdf",
+      "ok": true,
+      "pages": 1,
+      "widthMm": 80.09466429816352,
+      "heightMm": 197.95066494411893,
+      "lines": 21,
+      "sha256": "b809e33cff4899ef4c03f87ddfcdba563d5d10a2450505dca369dafbd39f8191"
+    },
+    {
+      "file": "desktop-offline.pdf",
+      "ok": true,
+      "pages": 1,
+      "widthMm": 80.09466429816352,
+      "heightMm": 246.97265116373697,
+      "lines": 24,
+      "sha256": "7d5ef804750d44cd9fe5b4f813786bbea493dbe4c6d266d4bb131da2c5c1c924"
+    }
+  ],
+  "races": [
+    {
+      "name": "A is frozen before any asynchronous preparation",
+      "ok": true,
+      "detail": {
+        "different": true,
+        "aReady": true,
+        "bReady": true
+      }
+    },
+    {
+      "name": "Repeated Android activation uses one system dialog without intents",
+      "ok": true
+    },
+    {
+      "name": "Native transport waits for dialog lifecycle",
+      "ok": true,
+      "detail": {
+        "count": 1,
+        "text": "DOCUMENTO COMPLETO",
+        "retained": true
+      }
+    }
+  ],
+  "regressions": {
+    "errors": "18/18",
+    "copies": "13/13",
+    "thermal": "28/28",
+    "website": "41/41",
+    "ink": "8/8",
+    "ticket": "12/12",
+    "onlineUI": "6/6",
+    "pwa": "2/2"
+  },
+  "deployment": "pending"
+}

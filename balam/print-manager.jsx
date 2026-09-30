@@ -37,9 +37,6 @@
   }
   function release(job) {
     if (job.controller) job.controller.abort();
-    // Copies may share immutable preview preparation. Cancel it only after the
-    // last interested job ends; never interrupt another copy's renderer.
-    if (job.prepared && !job.prepared.png && !jobs.some(other => other !== job && !terminal(other) && other.prepared === job.prepared)) job.prepared.controller.abort();
     if (job.cleanup) job.cleanup();
     job.cleanup = null;
     if (job.frame) job.frame.remove();
@@ -52,7 +49,7 @@
     stage(job, 'COMPLETED', { physicalPrintConfirmed: false });
     release(job);
     job.resolve(publicJob(job));
-    job.snapshot = null; job.payload = null; job.prepared = null;
+    job.snapshot = null; job.payload = null;
     pump();
   }
   function failed(job, error) {
@@ -75,40 +72,17 @@
   }
   function send(job) {
     if (!job || job !== active || !job.ready || job.stage === 'SEND_STARTED' || terminal(job)) return false;
-    const android = job.audit.transport === 'rawbt';
-    let deliveryHost = job.host && !job.host.closed ? job.host : window;
-    if (android && deliveryHost.navigator.userActivation && !deliveryHost.navigator.userActivation.isActive) {
-      // A report button belongs to its child window; the global queue controls
-      // belong to the main window. Launch only from the window with the gesture.
-      if (navigator.userActivation && !navigator.userActivation.isActive) return false;
-      deliveryHost = window;
-    }
-    // Native windows and immutable PNG strings belong exclusively to this job.
+    // H-180: the OS and its installed print services select the printer.
+    // The browser owns this dialog; no app package or USB device is assumed.
     stage(job, 'SEND_STARTED', { result: 'HANDOFF_REQUESTED' });
     try {
-      if (android) {
-        let away = false;
-        const host = deliveryHost;
-        const observe = () => {
-          if (host.document.visibilityState === 'hidden') away = true;
-          else if (away) finish(job, 'EXTERNAL_APP_RETURNED');
-        };
-        host.document.addEventListener('visibilitychange', observe);
-        job.cleanup = () => host.document.removeEventListener('visibilitychange', observe);
-        const link = host.document.createElement('a');
-        link.href = 'intent:' + job.payload + '#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;';
-        host.document.body.appendChild(link);
-        try { link.click(); } finally { link.remove(); }
-        // Returning from click is not acknowledgment from RawBT. Keep exclusion.
-      } else {
-        const host = job.frame.contentWindow;
-        let returned = false, after = false;
-        const ended = () => { after = true; if (returned) finish(job, 'BROWSER_DIALOG_FINISHED'); };
-        host.addEventListener('afterprint', ended);
-        job.cleanup = () => host.removeEventListener('afterprint', ended);
-        host.focus(); host.print(); returned = true;
-        if (after) finish(job, 'BROWSER_DIALOG_FINISHED');
-      }
+      const host = job.frame.contentWindow;
+      let returned = false, after = false;
+      const ended = () => { after = true; if (returned) finish(job, 'BROWSER_DIALOG_FINISHED'); };
+      host.addEventListener('afterprint', ended);
+      job.cleanup = () => host.removeEventListener('afterprint', ended);
+      host.focus(); host.print(); returned = true;
+      if (after) finish(job, 'BROWSER_DIALOG_FINISHED');
       return true;
     } catch (error) { failed(job, error); return false; }
   }
@@ -116,26 +90,11 @@
     try {
       job.controller = new AbortController();
       if (!job.snapshot.text.trim()) throw new Error('El comprobante está vacío. Cierra y vuelve a abrirlo.');
-      if (job.audit.transport === 'rawbt' && job.snapshot.text.length > 500000) throw new Error('El comprobante es demasiado largo para Bluetooth. Reimprime el comprobante desde una computadora.');
       stage(job, 'RENDER_STARTED');
-      if (job.audit.transport === 'rawbt') {
-        if (job.prepared) {
-          stage(job, 'ASSETS_WAITING');
-          await job.prepared.promise;
-          if (terminal(job)) { release(job); return; }
-          if (job.prepared.error) throw job.prepared.error;
-          stage(job, 'ASSETS_READY');
-          job.payload = job.prepared.png;
-          const bytes = Uint8Array.from(atob(job.payload.split(',')[1].slice(0, 44)), c => c.charCodeAt(0));
-          const view = new DataView(bytes.buffer);
-          stage(job, 'RENDER_FINISHED', { ...job.prepared.metrics, pixelWidth: view.getUint32(16), pixelHeight: view.getUint32(20), pageWidth: 80 });
-        } else job.payload = await UI.receiptGraphic(job.snapshot, (value, details) => stage(job, value, details), job.controller.signal);
-      } else {
-        job.frame = await UI.receiptFrame(job.snapshot, { continuous: job.continuous, audit: (value, details) => stage(job, value, details), signal: job.controller.signal });
-        job.frame.dataset.printJobId = job.audit.printJobId;
-        job.payload = job.frame.contentDocument.documentElement.outerHTML;
-        stage(job, 'RENDER_FINISHED', { pageWidth: job.continuous ? 80 : null, pageHeight: Number(job.frame.dataset.pageHeight) || null });
-      }
+      job.frame = await UI.receiptFrame(job.snapshot, { continuous: job.continuous, audit: (value, details) => stage(job, value, details), signal: job.controller.signal });
+      job.frame.dataset.printJobId = job.audit.printJobId;
+      job.payload = job.frame.contentDocument.documentElement.outerHTML;
+      stage(job, 'RENDER_FINISHED', { pageWidth: job.continuous ? 80 : null, pageHeight: Number(job.frame.dataset.pageHeight) || null });
       if (terminal(job)) { release(job); return; }
       const [documentHash, renderHash, payloadHash] = await Promise.all([
         UI.receiptHash(job.snapshot.html), job.audit.renderHash || UI.receiptHash(job.payload), UI.receiptHash(job.payload),
@@ -151,11 +110,10 @@
       changed();
     } catch (error) { failed(job, error); }
   }
-  function enqueue({ element, host = window, automatic = false, system = false, copies = 1, copyLabels = null, source, documentType, continuous = true } = {}) {
+  function enqueue({ element, host = window, automatic = false, copies = 1, copyLabels = null, source, documentType, continuous = true } = {}) {
     element = element || host.document.querySelector('#balam-ticket, #balam-return-receipt');
     if (!element) { UI.toast('El comprobante todavía no está disponible. Cierra y vuelve a abrirlo.'); return null; }
-    const transport = UI.usesBluetoothReceipt() && !system ? 'rawbt' : 'browser';
-    if (automatic && transport === 'rawbt') return null;
+    const transport = 'browser';
     if (!Number.isInteger(copies) || copies < 1 || copies > 50) { UI.toast('Selecciona entre 1 y 50 copias.'); return null; }
     const key = element.outerHTML;
     const existing = jobs.find(job => job.element === element && job.key === key && job.audit.transport === transport && (!terminal(job) || automatic));
@@ -166,13 +124,11 @@
     const variants = new Map();
     const variantFor = copyLabel => {
       if (variants.has(copyLabel)) return variants.get(copyLabel);
-      let snapshot, prepared, initialError;
+      let snapshot, initialError;
       try {
-        prepared = transport === 'rawbt' ? UI.prepareReceipt(element, copyLabel) : null;
-        snapshot = prepared ? prepared.snapshot : UI.captureReceipt(element, copyLabel);
-        if (!snapshot) throw prepared.error;
+        snapshot = UI.captureReceipt(element, copyLabel);
       } catch (error) { initialError = error; snapshot = { html: key, css: '', text: '' }; }
-      const variant = { snapshot, prepared, initialError };
+      const variant = { snapshot, initialError };
       variants.set(copyLabel, variant);
       return variant;
     };
@@ -189,13 +145,13 @@
     for (let copyNumber = 1; copyNumber <= copies; copyNumber++) {
       const printJobId = `print-${Date.now().toString(36)}-${++sequence}`;
       const copyLabel = copyLabels ? copyLabels[copyNumber - 1] || null : null;
-      const { snapshot, prepared, initialError } = variantFor(copyLabel);
-      const job = { element, key, host, continuous, automatic: transport === 'browser', snapshot: { ...snapshot }, prepared, initialError,
+      const { snapshot, initialError } = variantFor(copyLabel);
+      const job = { element, key, host, continuous, automatic: true, snapshot: { ...snapshot }, initialError,
         stage: 'CREATED', ready: false, frame: null, cleanup: null, events: [], payload: null,
         audit: { ...Object.fromEntries(Object.values(times).map(name => [name, null])), payloadLength: null, pixelWidth: null, pixelHeight: null, pageWidth: null, pageHeight: null,
           printJobId, source: source || element.dataset.printSource || 'receipt', ticketId: element.dataset.documentId || null,
           documentType: documentType || element.dataset.documentType || (element.id === 'balam-return-receipt' ? 'return' : 'receipt'),
-          copyNumber, totalCopies: copies, copyLabel, transport, printerTarget: transport === 'rawbt' ? 'ru.a402d.rawbtprinter' : 'system-dialog',
+          copyNumber, totalCopies: copies, copyLabel, transport, printerTarget: 'system-dialog',
           result: null, errorCode: null, errorStack: null, physicalPrintConfirmed: false } };
       job.promise = new Promise(resolve => { job.resolve = resolve; });
       job.handle = Object.freeze({ printJobId, done: job.promise });
@@ -208,24 +164,14 @@
       jobs.splice(index, 1);
     }
     pump(); batch.forEach(job => {
-      const prepared = job.prepared;
       if (job.initialError) failed(job, job.initialError);
-      else if (prepared && prepared.png && prepared.hashes) {
-        job.payload = prepared.png;
-        const bytes = Uint8Array.from(atob(job.payload.split(',')[1].slice(0, 44)), c => c.charCodeAt(0));
-        const size = new DataView(bytes.buffer);
-        stage(job, 'RENDER_STARTED'); stage(job, 'ASSETS_READY');
-        stage(job, 'RENDER_FINISHED', { ...prepared.metrics, pixelWidth: size.getUint32(16), pixelHeight: size.getUint32(20), pageWidth: 80 });
-        stage(job, 'PAYLOAD_READY', { ...prepared.hashes, payloadLength: job.payload.length });
-        job.ready = true; stage(job, 'WAITING_TURN');
-      } else prepare(job);
+      else prepare(job);
     });
-    if (transport === 'rawbt') send(batch[0]);
     return batch[0].handle;
   }
   function cancel(id) {
     const job = jobs.find(j => j.audit.printJobId === id);
-    // Cannot retract an already delivered intent or native print job.
+    // Cannot retract an already delivered native print job.
     if (!job || terminal(job) || job.stage === 'SEND_STARTED') return false;
     stage(job, 'CANCELLED', { result: 'CANCELLED_BEFORE_SEND' });
     release(job); job.resolve(publicJob(job)); pump(); return true;
@@ -233,12 +179,11 @@
   function retry(id) {
     const job = jobs.find(j => j.audit.printJobId === id);
     if (!job || job.stage !== 'FAILED') return false;
-    if (job.audit.transport === 'browser') job.ready = false;
+    job.ready = false;
     job.promise = new Promise(resolve => { job.resolve = resolve; });
     job.audit.errorCode = null; job.audit.errorStack = null;
     stage(job, 'QUEUED', { result: 'EXPLICIT_RETRY' });
-    if (job.ready) { pump(); send(job); }
-    else { job.prepared = null; pump(); prepare(job); }
+    pump(); prepare(job);
     return true;
   }
   function PrintStatus() {
@@ -246,11 +191,11 @@
     React.useEffect(() => { listeners.add(refresh); return () => listeners.delete(refresh); }, []);
     const job = active || [...jobs].reverse().find(j => j.stage === 'FAILED' && !j.dismissed);
     if (!job) return null;
-    const sending = job.stage === 'SEND_STARTED', android = job.audit.transport === 'rawbt';
+    const sending = job.stage === 'SEND_STARTED';
     // H-179: con dos copias el operador ve cuál sigue (p. ej. «COPIA TIENDA · 2 de 2»).
     const copy = job.audit.totalCopies > 1 ? ` ${job.audit.copyLabel || 'Copia'} · ${job.audit.copyNumber} de ${job.audit.totalCopies}.` : '';
     const message = (job.stage === 'FAILED' ? job.message : sending
-      ? (android ? 'Solicitud enviada. Regresa a BALAM al terminar en la aplicación de impresión.' : 'Cierra el diálogo de impresión para continuar.')
+      ? 'Cierra el diálogo de impresión para continuar.'
       : job.ready ? 'Ticket listo para imprimir.' : 'Preparando ticket…') + copy;
     const button = (id, label, action) => React.createElement('button', { key: id, type: 'button', 'data-testid': id,
       onClick: event => { if (event.detail <= 1) action(); }, style: { minHeight: 44, padding: '8px 12px', border: '1px solid #abb2c0', borderRadius: 8, background: 'white', color: '#131b2e', fontWeight: 600 }, className: 'min-h-[44px] px-3 py-2 border rounded-lg font-semibold' }, label);
@@ -259,8 +204,7 @@
       React.createElement('div', { key: 'buttons', style: { display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }, className: 'flex flex-wrap gap-2 mt-2' }, [
         job.ready && !sending && !terminal(job) && button('print-next', 'Imprimir ticket', () => send(job)),
         !sending && !terminal(job) && button('print-cancel', 'Cancelar', () => cancel(job.audit.printJobId)),
-        sending && button('print-returned', android ? 'Ya regresé de impresión' : 'Ya cerré el diálogo', () => finish(job, 'USER_CONFIRMED_RETURN')),
-        sending && android && button('print-not-opened', 'No se abrió', () => failed(job, new Error('No se pudo enviar el ticket. Intenta nuevamente.'))),
+        sending && button('print-returned', 'Ya cerré el diálogo', () => finish(job, 'USER_CONFIRMED_RETURN')),
         job.stage === 'FAILED' && button('print-retry', 'Reintentar', () => retry(job.audit.printJobId)),
         job.stage === 'FAILED' && button('print-dismiss', 'Cerrar aviso', () => { job.dismissed = true; changed(); }),
       ]),
@@ -279,7 +223,7 @@
       React.createElement('summary', { key: 'title' }, 'Historial reciente de impresión'),
       React.createElement('p', { key: 'limit', className: 'text-sm my-2' }, 'Sólo esta sesión. La entrega al sistema no confirma la salida en papel.'),
       React.createElement('ul', { key: 'rows', style: { maxHeight: 320, overflow: 'auto' } }, jobs.slice(-30).reverse().map(job => React.createElement('li', { key: job.audit.printJobId, style: { padding: '8px 0', borderBottom: '1px solid #d9dde5', overflowWrap: 'anywhere' } },
-        `${new Date(job.audit.createdAt).toLocaleTimeString()} · ${job.audit.ticketId || 'Reporte'} · copia ${job.audit.copyNumber}/${job.audit.totalCopies} · ${job.audit.transport === 'rawbt' ? 'Bluetooth' : 'Sistema'} · ${job.stage === 'FAILED' ? 'No enviado' : job.stage === 'CANCELLED' ? 'Cancelado' : job.stage === 'COMPLETED' ? 'Interacción finalizada' : 'Pendiente'}`))),
+        `${new Date(job.audit.createdAt).toLocaleTimeString()} · ${job.audit.ticketId || 'Reporte'} · copia ${job.audit.copyNumber}/${job.audit.totalCopies} · Sistema · ${job.stage === 'FAILED' ? 'No enviado' : job.stage === 'CANCELLED' ? 'Cancelado' : job.stage === 'COMPLETED' ? 'Interacción finalizada' : 'Pendiente'}`))),
       React.createElement('details', { key: 'technical' }, [
         React.createElement('summary', { key: 'title' }, 'Ver detalles técnicos'),
         React.createElement('pre', { key: 'data', style: { whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', maxHeight: 400, overflow: 'auto' } }, JSON.stringify(jobs.slice(-30).map(publicJob), null, 2)),

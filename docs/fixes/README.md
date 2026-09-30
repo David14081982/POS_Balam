@@ -15,6 +15,10 @@ Corrección de edición: [H172 · Guardado y mensajes](guardado-edicion-producto
 
 ## Correcciones registradas
 
+- [impresion-sistema-usb-h180.md](impresion-sistema-usb-h180.md) — H-180:
+  salida del sistema en PC/tablet, sin RawBT forzado; autoimpresión solicita
+  diálogo; tamaños y documentos conservados. 18/18 y PDF 10/10; papel pendiente.
+
 - [copias-cliente-tienda-h179.md](copias-cliente-tienda-h179.md) — H-179:
   ajuste «Imprimir dos copias»; cada comprobante sale COPIA CLIENTE y COPIA
   TIENDA; reportes una vez. 5/13 → 13/13; papel pendiente.

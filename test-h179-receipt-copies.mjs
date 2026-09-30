@@ -1,7 +1,7 @@
 // H-179: con «Imprimir dos copias» activo, cada comprobante sale dos veces:
 // «COPIA CLIENTE» y después «COPIA TIENDA». Apagado, sale una vez y sin marca.
 // Los reportes (A4 y ticket por método) siempre salen una vez. Se mide en la
-// frontera de transporte: documento enviado a print() y PNG enviado a RawBT.
+// frontera de transporte: documento enviado al sistema en PC y Android (H-180).
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import http from 'node:http';
@@ -129,48 +129,43 @@ try {
   await test('Computadora: sin errores de página', () => assert.deepEqual(pc.errors, []));
   await pc.context.close();
 
-  // ── Tablet Android: RawBT, un toque por copia ─────────────────────────────
+  // ── Tablet Android: sistema, un diálogo por copia ─────────────────────────
   const tab = await open(true);
-  const returnFromRawbt = () => tab.page.evaluate(() => {
-    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' }); document.dispatchEvent(new Event('visibilitychange'));
-    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' }); document.dispatchEvent(new Event('visibilitychange'));
-  });
-  const ready = () => tab.page.waitForFunction(() => document.querySelector('[data-testid="receipt-design-status"]')?.textContent.includes('Impresión Bluetooth'), null, { timeout: 30000 });
-  await test('Tablet, ajuste apagado: un solo envío a RawBT y nada pendiente', async () => {
-    await tab.render('H179-TAB-OFF'); await ready();
+  const closeDialog = () => tab.page.evaluate(() => document.querySelector('iframe[data-print-job-id]').contentWindow.dispatchEvent(new Event('afterprint')));
+  await tab.page.evaluate(() => { __holdPrint = true; });
+  await test('Tablet, ajuste apagado: un solo envío al sistema y nada pendiente al cerrar', async () => {
+    await tab.render('H179-TAB-OFF');
     await tab.page.getByTestId('test-send').click();
-    await tab.page.waitForFunction(() => __intents.length === 1);
-    await returnFromRawbt(); await tab.page.waitForTimeout(500);
+    await tab.page.waitForFunction(() => __printed === 1);
+    await closeDialog();
     assert.equal(await tab.pending(), 0);
     const job = (await tab.page.evaluate(() => PrintManager.history())).at(-1);
     assert.equal(job.totalCopies, 1); assert.ok(!job.copyLabel);
   });
-  await test('Tablet, dos copias: el primer toque envía COPIA CLIENTE y la segunda espera otro toque', async () => {
-    await tab.page.evaluate(() => { __copies(true); __intents.length = 0; });
-    await tab.render('H179-TAB-ON'); await ready();
+  await test('Tablet, dos copias: COPIA CLIENTE primero y la segunda espera el cierre', async () => {
+    await tab.page.evaluate(() => { __copies(true); __printArtifacts.length = 0; __printed = 0; });
+    await tab.render('H179-TAB-ON');
     await tab.page.getByTestId('test-send').click();
-    await tab.page.waitForFunction(() => __intents.length === 1);
+    await tab.page.waitForFunction(() => __printed === 1);
     await tab.page.waitForTimeout(300);
-    assert.equal(await tab.page.evaluate(() => __intents.length), 1, 'la segunda copia salió sin gesto');
+    assert.equal(await tab.page.evaluate(() => __printed), 1, 'la segunda copia salió antes del cierre');
     const jobs = (await tab.page.evaluate(() => PrintManager.history())).filter(j => j.ticketId === 'H179-TAB-ON');
     assert.equal(jobs.length, 2); assert.equal(jobs[0].copyLabel, 'COPIA CLIENTE'); assert.equal(jobs[1].copyLabel, 'COPIA TIENDA');
-    assert.equal(sha(await tab.page.evaluate(() => __intents[0])), jobs[0].payloadHash, 'el PNG enviado no es el preparado para COPIA CLIENTE');
+    const first = await tab.page.evaluate(() => __printArtifacts[0]);
+    assert.equal(sha(first.html), jobs[0].payloadHash);
+    assert.ok(first.text.includes('COPIA CLIENTE') && !first.text.includes('COPIA TIENDA'));
   });
-  await test('Tablet, dos copias: al regresar, «Imprimir ticket» envía COPIA TIENDA', async () => {
-    await returnFromRawbt();
-    await tab.page.getByTestId('print-next').waitFor({ timeout: 30000 });
-    assert.ok(/COPIA TIENDA/.test(await tab.page.getByTestId('print-status').textContent()), 'el aviso no dice qué copia sigue');
-    await tab.page.getByTestId('print-next').click();
-    await tab.page.waitForFunction(() => __intents.length === 2);
+  await test('Tablet, dos copias: cerrar el primer diálogo solicita COPIA TIENDA sin RawBT', async () => {
+    await closeDialog();
+    await tab.page.waitForFunction(() => __printed === 2);
     const jobs = (await tab.page.evaluate(() => PrintManager.history())).filter(j => j.ticketId === 'H179-TAB-ON');
-    const intents = await tab.page.evaluate(() => __intents.slice());
-    assert.equal(sha(intents[1]), jobs[1].payloadHash, 'el PNG enviado no es el preparado para COPIA TIENDA');
-    assert.notEqual(intents[0], intents[1], 'las dos copias enviaron el mismo PNG');
-    for (const png of intents) {
-      const size = await tab.page.evaluate(async src => { const i = new Image(); i.src = src; await i.decode(); return i.width; }, png);
-      assert.equal(size, 576);
-    }
-    await returnFromRawbt(); await tab.page.waitForTimeout(500);
+    const artifacts = await tab.page.evaluate(() => __printArtifacts.slice());
+    assert.equal(sha(artifacts[1].html), jobs[1].payloadHash);
+    assert.ok(artifacts[1].text.includes('COPIA TIENDA') && !artifacts[1].text.includes('COPIA CLIENTE'));
+    assert.equal(artifacts[0].text.replace('COPIA CLIENTE', ''), artifacts[1].text.replace('COPIA TIENDA', ''));
+    assert.ok(jobs.every(j => j.pageWidth === 80 && !j.physicalPrintConfirmed));
+    assert.equal(await tab.page.evaluate(() => __intents.length), 0);
+    await closeDialog();
     assert.equal(await tab.pending(), 0);
   });
   await test('Tablet: sin errores de página', () => assert.deepEqual(tab.errors, []));

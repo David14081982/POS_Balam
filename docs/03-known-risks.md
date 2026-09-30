@@ -5,6 +5,29 @@ un riesgo se debe leer su evidencia y las correcciones relacionadas. Los
 estados válidos son: `ABIERTO`, `EN CURSO`, `PARCIALMENTE RESUELTO`, `RESUELTO`
 y `BLOQUEADO`.
 
+## H-180 — Android fuerza RawBT e ignora la impresora USB del sistema
+
+**Estado:** RESUELTO EN CÓDIGO — confirmación en papel pendiente.
+**Fecha:** 30/09/2026. **Commit:** Pendiente de commit.
+**Problema:** una tablet con END-80TEUX por USB y THERMER funcional sigue
+abriendo RawBT o su descarga. El dueño confirma impresión desde THERMER y su
+disponibilidad como servicio; pide conservar tamaños y diseño del ticket.
+**Evidencia:** `usesBluetoothReceipt()` decide por agente Android/Linux táctil;
+`PrintManager` fija `ru.a402d.rawbtprinter` y descarta autoimpresión Android.
+**Contrato:** diálogo de impresión del sistema en todas las plataformas,
+sin aplicación fijada ni descubrimiento USB simulado. `print.auto` solicita
+el diálogo tras confirmar el cobro. El servicio instalado descubre la impresora;
+la confirmación del diálogo y el papel físico siguen siendo distintos.
+**Solución:** adaptador del sistema único; se retiran el intent RawBT y el
+bloqueo automático Android. Snapshot, tamaños, copias y exclusión conservados.
+**Pruebas:** H-180 6/8 antes (rutas Android inválidas) → 18/18; H-153 ciclo
+80/80, errores 18/18 y carreras 3/3; diez PDF completos de 80 mm verificados
+independientemente 10/10; H-179 13/13; H-173 28/28; H-168 41/41; H-177 8/8;
+H-178 12/12; UI 6/6; PWA 2/2. Android simulado; build PASS.
+**Residual:** HARDWARE NOT_TESTED en el entorno de desarrollo; la reducción
+física no se atribuye ni se declara corregida sin imprimir desde la tablet.
+**Documento:** `docs/fixes/impresion-sistema-usb-h180.md`.
+
 ## H-179 — No se puede imprimir copia para la tienda y para el cliente
 
 **Estado:** RESUELTO EN CÓDIGO — confirmación en papel pendiente.

@@ -620,58 +620,54 @@ exclusivo antes de enviarla; el ticket por método también recibe página conti
 Reportes A4 y etiquetas conservan su formato propio. Una configuración física de papel que lo fuerce puede
 requerir ajuste del controlador; el corte real se valida en la impresora.
 
-### Transporte de comprobantes en Android
-
-La exclusión de impresión es técnica y efímera. No existe un escritor comercial
-local ni rebase durable al volver de una aplicación externa. La aplicación
-reconsulta Supabase al recuperar foco o conectividad. Un comprobante comercial
-nuevo sólo llega al transporte después de confirmarse su operación.
+### Transporte de comprobantes por el sistema (H-180)
 
 `UI.printReceipt()` crea un trabajo en `window.PrintManager`, cargado después de
 `shared.jsx`. Congela documento y estilos antes de cualquier espera; cada trabajo
 conserva ID, origen, tipo, copia, hashes y recursos propios. La cola entrega sólo
-un trabajo por vez. Android recibe un PNG mediante intent con paquete fijo y
-gesto directo. `prepareReceipt()` captura el HTML y CSS de impresión, incluidas fuentes, logo e iconos locales,
-sin consultar el catálogo ni modificar documentos. Para el rollo de 80 mm, el PNG
-de 576 puntos aprovecha el cabezal de 72 mm: excluye el padding horizontal
-exterior salvo 1 px de resguardo por lado y escala la composición proporcionalmente.
-La copia térmica usa bordes negros y sólo valores 0/255. H-177: el texto usa
-umbral de luminancia 128. Las superficies sólidas (imágenes y fondos oscuros
-como logo o barras) se traman con Bayer 4×4 al 50 % como máximo, porque la
-impresora Bluetooth se detenía a mitad del ticket por energía. H-173: un agente
-`Linux` táctil no `CrOS` también es Android (sitio de escritorio de tablets). La
-impresión del sistema de 80 mm aplica el mismo umbral como tinta sólida; A4 no. Su compresión sin pérdida
-usa las APIs del navegador y no agrega dependencias ni red. La preparación se
-anticipa al clic; si aún no termina, se informa y se requiere otro clic, nunca
-se abre RawBT desde una continuación asíncrona. La imagen se conserva sólo en
-memoria por elemento y contenido; cambiar de documento invalida la anterior.
-POS, reimpresión de ventas, ticket por método, abonos,
-cambios y devoluciones comparten el transporte. Un documento vacío o excesivo
-se rechaza completo con mensaje, igual que un recurso no disponible localmente.
-Android ofrece sólo el botón principal hacia RawBT; la ayuda indica 576 puntos
-para rollos de 80 mm. No expone `window.print()` como alternativa Bluetooth,
-pues invocarlo no acredita un diálogo nativo ni salida física. Para errores
-de recursos o longitud indica reimprimir desde computadora. La autoimpresión
-no abre aplicaciones externas.
+un trabajo por vez, con un iframe independiente cuyo contenido completo se
+entrega al diálogo del sistema mediante `print()`.
 
-El transporte nativo conserva su iframe hasta `afterprint` y el retorno de
-`print()`. RawBT conserva exclusión hasta ocultamiento seguido de regreso visible
-o confirmación explícita del operador. El siguiente intent exige otro gesto;
-foco por sí solo no libera la cola. Hay cancelación antes del envío y reintento
-del mismo documento. Ningún temporizador constituye la garantía del ciclo.
-Reportes A4, listados de Apartados y Préstamos comparten la cola conservando sus
-plantillas. Etiquetas mantiene su generador y ventana independientes.
+PC y Android usan la misma frontera. No se decide el transporte por agente,
+pantalla táctil, Bluetooth o USB; no hay intents ni paquetes de aplicaciones
+fijados. El sistema y el servicio de impresión instalado descubren y atienden
+la impresora. BALAM no enumera dispositivos USB, no selecciona silenciosamente
+una impresora ni confirma papel. El usuario confirmó END-80TEUX por USB y
+THERMER funcional como servicio antes del cambio; el nuevo recorrido físico
+sigue requiriendo aceptación en esa tablet.
 
-H-179: con `print.twoCopies`, `UI.printReceipt()` pide dos copias de
-`#balam-ticket`/`#balam-return-receipt`, marcadas COPIA CLIENTE y COPIA TIENDA
-sólo en la copia congelada. Cada copia es un trabajo con documento, hashes y
-PNG propios; RawBT exige un gesto por copia. Reportes y listados salen una vez.
+`print.auto` conserva su valor administrado: cuando está activo, el comprobante
+de una operación confirmada solicita el diálogo. Apagado, permanece disponible
+el botón de impresión. Reimpresiones que ya solicitaban salida al abrir mantienen
+ese comportamiento. No hay impresión comercial antes de confirmar Supabase.
+
+El iframe conserva geometría, fuentes, imágenes, contenido y reglas de tinta
+existentes: página continua de 80 mm con altura medida; documentos A4 con su
+formato anterior. H-180 no cambia `BalamTicket`, `BalamReturnReceipt`,
+`receiptFrame()` ni `receiptGraphic()`. Las utilidades gráficas de 576 puntos
+se conservan por compatibilidad y regresión, pero no preparan ni transportan
+el ticket automáticamente. `usesBluetoothReceipt()` es un export de
+compatibilidad que devuelve `false`; no detecta impresoras ni Android.
+
+El transporte conserva el iframe hasta `afterprint` y el retorno de `print()`.
+Si el navegador no notifica cierre, el operador puede indicar «Ya cerré el
+diálogo». Foco o visibilidad por sí solos no liberan el trabajo. Hay cancelación
+antes de enviar y reintento del mismo documento congelado. Reportes en ventanas
+hijas conservan el snapshot aunque se cierre su ventana. Ningún resultado de
+este ciclo equivale a confirmación física, incluido cancelar en el diálogo.
+
+Con `print.twoCopies`, los comprobantes `#balam-ticket`/`#balam-return-receipt`
+salen como COPIA CLIENTE y COPIA TIENDA. Cada copia tiene su documento, hashes
+y recursos. Al cerrar el primer diálogo se solicita la siguiente, también en
+Android. Reportes A4, listados y ticket por método conservan una sola salida;
+etiquetas mantienen su generador y ventana independientes.
 
 El historial de sesión en Configuración → Impresión distingue entrega, regreso
 y error; nunca acredita salida en papel. No persiste contenido comercial ni
-se mezcla con la persistencia comercial de Supabase. Recargar no repite impresiones.
-La exclusión corresponde a la instancia de BALAM y sus ventanas hijas; no
-coordina impresoras compartidas entre equipos. Véase H-153.
+se mezcla con la persistencia comercial de Supabase. Recargar no repite
+impresiones. La exclusión cubre esta instancia y sus ventanas hijas, no otras
+terminales que compartan impresora. H-153 conserva aislamiento y ciclo;
+H-180 reemplaza exclusivamente su adaptador RawBT por el sistema.
 
 ## AUTH
 

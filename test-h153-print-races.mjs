@@ -10,6 +10,7 @@ const results = [];
 const check = (name, ok, detail) => { results.push({ name, ok, detail }); console.log(`${ok ? 'PASS' : 'FAIL'} ${name} ${JSON.stringify(detail ?? '')}`); };
 try {
   const page = await browser.newPage({ userAgent: 'Mozilla/5.0 (Linux; Android 14) Chrome/140.0.0.0' });
+  await page.addInitScript(installPrintTransport, { counter: '__nativeCount', hold: true });
   await page.route(/supabase\.co/, r => r.abort());
   await page.goto(`http://127.0.0.1:${server.address().port}/`);
   await page.waitForFunction(() => window.UI && window.DATA);
@@ -32,7 +33,8 @@ try {
     UI.printReceipt({ element }); UI.printReceipt({ element }); UI.printReceipt({ element });
     return __sends.length;
   });
-  check('Repeated activation does not overlap RawBT handoffs', overlap <= 1, { sendsWithoutReturn: overlap });
+  await page.waitForFunction(() => __nativeCount > 0);
+  check('Repeated Android activation uses one system dialog without intents', overlap === 0 && await page.evaluate(() => __nativeCount === 1 && PrintManager.history().length === 1));
   await page.close();
   const desktop = await browser.newPage();
   await desktop.addInitScript(installPrintTransport, { counter: '__nativeCount', hold: true });

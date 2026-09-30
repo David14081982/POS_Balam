@@ -629,15 +629,10 @@
 
   // H-143/H-144: salida RawBT del comprobante histórico montado. El PNG
   // conserva el diseño existente; nunca se reconstruye desde el catálogo.
-  // H-173: Chrome para tablets Android abre por omisión el «sitio de escritorio»
-  // y su agente dice «X11; Linux». Linux táctil sin CrOS también es Android;
-  // si no, el ticket cae en window.print(), que lo encoge y lo imprime gris.
-  const usesBluetoothReceipt = () => {
-    const agent = navigator.userAgent || '';
-    if (/Android/i.test(agent)) return true;
-    return /\bLinux\b/i.test(agent) && !/CrOS/i.test(agent) && (navigator.maxTouchPoints || 0) > 0;
-  };
-  const receiptBluetoothHelp = 'Para papel de 80 mm: abre los ajustes de tu impresora en RawBT y selecciona 576 puntos en el ancho de impresión.';
+  // H-180: compatibilidad con consumidores anteriores. El dispositivo no
+  // determina una aplicación ni una conexión; todos usan el diálogo del sistema.
+  const usesBluetoothReceipt = () => false;
+  const receiptBluetoothHelp = 'Selecciona tu impresora en el diálogo de impresión del sistema.';
   const RECEIPT_BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
   const receiptGraphics = new WeakMap();
   const receiptResourceData = new Map();
@@ -894,20 +889,7 @@
     return Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
   }
   function ReceiptPrintHelp() {
-    const [status, setStatus] = React.useState('Preparando el diseño del ticket…');
-    React.useEffect(() => {
-      if (!usesBluetoothReceipt()) return undefined;
-      let active = true;
-      // Anticipa la primera copia que saldrá: el toque debe encontrarla lista.
-      const graphic = prepareReceipt(undefined, (receiptCopyLabels() || [null])[0]);
-      if (graphic) graphic.promise.then(() => { if (active) setStatus(graphic.error ? graphic.error.message : 'Impresión Bluetooth con el diseño del ticket.'); });
-      return () => { active = false; };
-    }, []);
-    if (!usesBluetoothReceipt()) return null;
-    return React.createElement('p', { className: 'text-caption text-on-surface-variant mt-3', 'data-testid': 'receipt-design-status' }, [
-      status + ' ',
-      React.createElement('span', { key: 'width', className: 'block mt-2' }, receiptBluetoothHelp),
-    ]);
+    return React.createElement('p', { className: 'text-caption text-on-surface-variant mt-3', 'data-testid': 'receipt-design-status' }, receiptBluetoothHelp);
   }
 
   // Autoridad unica de impresion automatica para comprobantes.
