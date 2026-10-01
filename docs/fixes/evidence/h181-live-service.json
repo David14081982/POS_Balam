@@ -1,0 +1,37 @@
+{
+  "project": "telohdbvbvsfmwyriflz",
+  "results": [
+    {
+      "name": "bucket private",
+      "ok": true
+    },
+    {
+      "name": "public download denied",
+      "ok": true
+    },
+    {
+      "name": "anonymous creation denied",
+      "ok": true
+    },
+    {
+      "name": "anon-key creation denied",
+      "ok": true
+    },
+    {
+      "name": "server-key creation denied",
+      "ok": true
+    },
+    {
+      "name": "tampered signed URL denied",
+      "ok": true
+    },
+    {
+      "name": "exact JSON protocol and both complete images",
+      "ok": true
+    }
+  ],
+  "fixtureSHA256": "2055f3671c3f7fc93966a2d93511446192b36f0d0de70d8068c5670dde0462b3",
+  "cleanup": true,
+  "hardware": "NOT_TESTED",
+  "activeUserPost": "NOT_TESTED: role matrix executed in isolated handler"
+}

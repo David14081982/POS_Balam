@@ -15,6 +15,11 @@ Corrección de edición: [H172 · Guardado y mensajes](guardado-edicion-producto
 
 ## Correcciones registradas
 
+- [thermer-un-toque-h181.md](thermer-un-toque-h181.md) — H-181:
+  opción Android para preparar cliente y tienda y enviarlas juntas a THERMER
+  con un toque; imágenes originales, descarga firmada privada, sin diálogo.
+  Confirmación física pendiente.
+
 - [impresion-sistema-usb-h180.md](impresion-sistema-usb-h180.md) — H-180:
   salida del sistema en PC/tablet, sin RawBT forzado; autoimpresión solicita
   diálogo; tamaños y documentos conservados. 18/18 y PDF 10/10; papel pendiente.

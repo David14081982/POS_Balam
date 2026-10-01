@@ -36,6 +36,7 @@
     changed();
   }
   function release(job) {
+    if (job.refreshTimer) clearTimeout(job.refreshTimer);
     if (job.controller) job.controller.abort();
     if (job.cleanup) job.cleanup();
     job.cleanup = null;
@@ -50,6 +51,7 @@
     release(job);
     job.resolve(publicJob(job));
     job.snapshot = null; job.payload = null;
+    job.snapshots = null; job.images = null; job.deliveryUrl = null;
     pump();
   }
   function failed(job, error) {
@@ -72,6 +74,26 @@
   }
   function send(job) {
     if (!job || job !== active || !job.ready || job.stage === 'SEND_STARTED' || terminal(job)) return false;
+    if (job.audit.transport === 'thermer') {
+      if (job.expiresAt <= Date.now() + 15000) {
+        job.ready = false; prepare(job); return false;
+      }
+      if (navigator.userActivation && !navigator.userActivation.isActive) return false;
+      const link = document.createElement('a');
+      link.href = 'my.bluetoothprint.scheme://' + job.deliveryUrl;
+      let away = false;
+      const returned = () => {
+        if (document.visibilityState === 'hidden') away = true;
+        else if (away) finish(job, 'EXTERNAL_APP_RETURNED');
+      };
+      document.addEventListener('visibilitychange', returned);
+      job.cleanup = () => document.removeEventListener('visibilitychange', returned);
+      stage(job, 'SEND_STARTED', { result: 'HANDOFF_REQUESTED' });
+      document.body.appendChild(link);
+      try { link.click(); } catch (error) { failed(job, error); }
+      finally { link.remove(); }
+      return true;
+    }
     // H-180: the OS and its installed print services select the printer.
     // The browser owns this dialog; no app package or USB device is assumed.
     stage(job, 'SEND_STARTED', { result: 'HANDOFF_REQUESTED' });
@@ -91,6 +113,35 @@
       job.controller = new AbortController();
       if (!job.snapshot.text.trim()) throw new Error('El comprobante está vacío. Cierra y vuelve a abrirlo.');
       stage(job, 'RENDER_STARTED');
+      if (job.audit.transport === 'thermer') {
+        // Freeze both originals in enqueue; refresh a URL without re-rendering.
+        if (!job.images) {
+          const images = [], copies = [];
+          for (let i = 0; i < job.snapshots.length; i++) {
+            const snapshot = job.snapshots[i];
+            let metrics = {};
+            const png = await UI.receiptGraphic(snapshot, (value, details) => {
+              if (details) metrics = { ...metrics, ...details };
+            }, job.controller.signal);
+            if (terminal(job)) return;
+            images.push(png);
+            copies.push({ copyLabel: ['COPIA CLIENTE', 'COPIA TIENDA'][i],
+              documentHash: await UI.receiptHash(snapshot.html), payloadHash: await UI.receiptHash(png),
+              pixelWidth: metrics.pixelWidth, pixelHeight: metrics.pixelHeight });
+          }
+          job.images = images; job.audit.copies = copies;
+        }
+        stage(job, 'RENDER_FINISHED', { pageWidth: 80, payloadHash: await UI.receiptHash(JSON.stringify(job.images)) });
+        const packet = await window.CORE.invokeSync('prepareThermerPrint', { images: job.images });
+        if (terminal(job)) return;
+        job.deliveryUrl = packet.url; job.expiresAt = packet.expiresAt;
+        if (job.refreshTimer) clearTimeout(job.refreshTimer);
+        job.refreshTimer = setTimeout(() => {
+          if (!terminal(job) && job.stage !== 'SEND_STARTED') { job.ready = false; prepare(job); }
+        }, Math.max(1000, packet.expiresAt - Date.now() - 60000));
+        stage(job, 'PAYLOAD_READY', { payloadLength: JSON.stringify(job.images).length });
+        job.ready = true; stage(job, 'WAITING_TURN'); changed(); return;
+      }
       job.frame = await UI.receiptFrame(job.snapshot, { continuous: job.continuous, audit: (value, details) => stage(job, value, details), signal: job.controller.signal });
       job.frame.dataset.printJobId = job.audit.printJobId;
       job.payload = job.frame.contentDocument.documentElement.outerHTML;
@@ -113,7 +164,8 @@
   function enqueue({ element, host = window, automatic = false, copies = 1, copyLabels = null, source, documentType, continuous = true } = {}) {
     element = element || host.document.querySelector('#balam-ticket, #balam-return-receipt');
     if (!element) { UI.toast('El comprobante todavía no está disponible. Cierra y vuelve a abrirlo.'); return null; }
-    const transport = 'browser';
+    const transport = UI.usesThermerReceipt() && element.matches('#balam-ticket, #balam-return-receipt') ? 'thermer' : 'browser';
+    if (transport === 'thermer') { copies = 1; copyLabels = null; }
     if (!Number.isInteger(copies) || copies < 1 || copies > 50) { UI.toast('Selecciona entre 1 y 50 copias.'); return null; }
     const key = element.outerHTML;
     const existing = jobs.find(job => job.element === element && job.key === key && job.audit.transport === transport && (!terminal(job) || automatic));
@@ -146,13 +198,18 @@
       const printJobId = `print-${Date.now().toString(36)}-${++sequence}`;
       const copyLabel = copyLabels ? copyLabels[copyNumber - 1] || null : null;
       const { snapshot, initialError } = variantFor(copyLabel);
-      const job = { element, key, host, continuous, automatic: true, snapshot: { ...snapshot }, initialError,
+      const job = { element, key, host, continuous, automatic: transport === 'browser', snapshot: { ...snapshot }, initialError,
         stage: 'CREATED', ready: false, frame: null, cleanup: null, events: [], payload: null,
         audit: { ...Object.fromEntries(Object.values(times).map(name => [name, null])), payloadLength: null, pixelWidth: null, pixelHeight: null, pageWidth: null, pageHeight: null,
           printJobId, source: source || element.dataset.printSource || 'receipt', ticketId: element.dataset.documentId || null,
           documentType: documentType || element.dataset.documentType || (element.id === 'balam-return-receipt' ? 'return' : 'receipt'),
           copyNumber, totalCopies: copies, copyLabel, transport, printerTarget: 'system-dialog',
           result: null, errorCode: null, errorStack: null, physicalPrintConfirmed: false } };
+      if (transport === 'thermer') {
+        try { job.snapshots = ['COPIA CLIENTE', 'COPIA TIENDA'].map(label => UI.captureReceipt(element, label)); }
+        catch (error) { job.initialError = error; }
+        job.audit.totalCopies = 2; job.audit.copyLabel = 'CLIENTE + TIENDA'; job.audit.printerTarget = 'thermer';
+      }
       job.promise = new Promise(resolve => { job.resolve = resolve; });
       job.handle = Object.freeze({ printJobId, done: job.promise });
       jobs.push(job); batch.push(job);
@@ -174,6 +231,7 @@
     // Cannot retract an already delivered native print job.
     if (!job || terminal(job) || job.stage === 'SEND_STARTED') return false;
     stage(job, 'CANCELLED', { result: 'CANCELLED_BEFORE_SEND' });
+    if (job.audit.transport === 'thermer') { job.snapshots = null; job.images = null; job.deliveryUrl = null; }
     release(job); job.resolve(publicJob(job)); pump(); return true;
   }
   function retry(id) {
@@ -191,11 +249,11 @@
     React.useEffect(() => { listeners.add(refresh); return () => listeners.delete(refresh); }, []);
     const job = active || [...jobs].reverse().find(j => j.stage === 'FAILED' && !j.dismissed);
     if (!job) return null;
-    const sending = job.stage === 'SEND_STARTED';
+    const sending = job.stage === 'SEND_STARTED', thermer = job.audit.transport === 'thermer';
     // H-179: con dos copias el operador ve cuál sigue (p. ej. «COPIA TIENDA · 2 de 2»).
-    const copy = job.audit.totalCopies > 1 ? ` ${job.audit.copyLabel || 'Copia'} · ${job.audit.copyNumber} de ${job.audit.totalCopies}.` : '';
+    const copy = thermer ? ' COPIA CLIENTE + COPIA TIENDA.' : job.audit.totalCopies > 1 ? ` ${job.audit.copyLabel || 'Copia'} · ${job.audit.copyNumber} de ${job.audit.totalCopies}.` : '';
     const message = (job.stage === 'FAILED' ? job.message : sending
-      ? 'Cierra el diálogo de impresión para continuar.'
+      ? (thermer ? 'Solicitud enviada a THERMER. Regresa a BALAM al terminar.' : 'Cierra el diálogo de impresión para continuar.')
       : job.ready ? 'Ticket listo para imprimir.' : 'Preparando ticket…') + copy;
     const button = (id, label, action) => React.createElement('button', { key: id, type: 'button', 'data-testid': id,
       onClick: event => { if (event.detail <= 1) action(); }, style: { minHeight: 44, padding: '8px 12px', border: '1px solid #abb2c0', borderRadius: 8, background: 'white', color: '#131b2e', fontWeight: 600 }, className: 'min-h-[44px] px-3 py-2 border rounded-lg font-semibold' }, label);
@@ -204,7 +262,7 @@
       React.createElement('div', { key: 'buttons', style: { display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }, className: 'flex flex-wrap gap-2 mt-2' }, [
         job.ready && !sending && !terminal(job) && button('print-next', 'Imprimir ticket', () => send(job)),
         !sending && !terminal(job) && button('print-cancel', 'Cancelar', () => cancel(job.audit.printJobId)),
-        sending && button('print-returned', 'Ya cerré el diálogo', () => finish(job, 'USER_CONFIRMED_RETURN')),
+        sending && button('print-returned', thermer ? 'Ya regresé de THERMER' : 'Ya cerré el diálogo', () => finish(job, 'USER_CONFIRMED_RETURN')),
         job.stage === 'FAILED' && button('print-retry', 'Reintentar', () => retry(job.audit.printJobId)),
         job.stage === 'FAILED' && button('print-dismiss', 'Cerrar aviso', () => { job.dismissed = true; changed(); }),
       ]),
@@ -223,7 +281,7 @@
       React.createElement('summary', { key: 'title' }, 'Historial reciente de impresión'),
       React.createElement('p', { key: 'limit', className: 'text-sm my-2' }, 'Sólo esta sesión. La entrega al sistema no confirma la salida en papel.'),
       React.createElement('ul', { key: 'rows', style: { maxHeight: 320, overflow: 'auto' } }, jobs.slice(-30).reverse().map(job => React.createElement('li', { key: job.audit.printJobId, style: { padding: '8px 0', borderBottom: '1px solid #d9dde5', overflowWrap: 'anywhere' } },
-        `${new Date(job.audit.createdAt).toLocaleTimeString()} · ${job.audit.ticketId || 'Reporte'} · copia ${job.audit.copyNumber}/${job.audit.totalCopies} · Sistema · ${job.stage === 'FAILED' ? 'No enviado' : job.stage === 'CANCELLED' ? 'Cancelado' : job.stage === 'COMPLETED' ? 'Interacción finalizada' : 'Pendiente'}`))),
+        `${new Date(job.audit.createdAt).toLocaleTimeString()} · ${job.audit.ticketId || 'Reporte'} · ${job.audit.transport === 'thermer' ? 'cliente + tienda · THERMER' : `copia ${job.audit.copyNumber}/${job.audit.totalCopies} · Sistema`} · ${job.stage === 'FAILED' ? 'No enviado' : job.stage === 'CANCELLED' ? 'Cancelado' : job.stage === 'COMPLETED' ? 'Interacción finalizada' : 'Pendiente'}`))),
       React.createElement('details', { key: 'technical' }, [
         React.createElement('summary', { key: 'title' }, 'Ver detalles técnicos'),
         React.createElement('pre', { key: 'data', style: { whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', maxHeight: 400, overflow: 'auto' } }, JSON.stringify(jobs.slice(-30).map(publicJob), null, 2)),

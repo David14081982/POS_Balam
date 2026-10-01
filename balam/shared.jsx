@@ -630,8 +630,10 @@
   // H-143/H-144: salida RawBT del comprobante histórico montado. El PNG
   // conserva el diseño existente; nunca se reconstruye desde el catálogo.
   // H-180: compatibilidad con consumidores anteriores. El dispositivo no
-  // determina una aplicación ni una conexión; todos usan el diálogo del sistema.
+  // determina RawBT ni una conexión. THERMER exige el ajuste explícito H-181.
   const usesBluetoothReceipt = () => false;
+  const usesThermerReceipt = () => !!(window.CONFIG && window.CONFIG.get('print.thermer') &&
+    (/Android/i.test(navigator.userAgent) || (/\bLinux\b/i.test(navigator.userAgent) && !/CrOS/i.test(navigator.userAgent) && navigator.maxTouchPoints > 0)));
   const receiptBluetoothHelp = 'Selecciona tu impresora en el diálogo de impresión del sistema.';
   const RECEIPT_BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
   const receiptGraphics = new WeakMap();
@@ -889,6 +891,11 @@
     return Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
   }
   function ReceiptPrintHelp() {
+    React.useEffect(() => {
+      if (usesThermerReceipt()) printReceipt({ automatic: true });
+    }, []);
+    if (usesThermerReceipt()) return React.createElement('p', { className: 'text-caption text-on-surface-variant mt-3', 'data-testid': 'receipt-design-status' },
+      'Se preparan las copias de cliente y tienda. Cuando estén listas, toca Imprimir para enviarlas juntas a THERMER.');
     return React.createElement('p', { className: 'text-caption text-on-surface-variant mt-3', 'data-testid': 'receipt-design-status' }, receiptBluetoothHelp);
   }
 
@@ -1029,5 +1036,5 @@
     ]);
   }
 
-  window.UI = { fmt, fechaCorta, fechaHora, Badge, StatusBadge, StockBadge, ProductThumb, ToastHost, toast, HumanMessage, messageAuthority, messageText, technicalMessageViewer, Page, Toolbar, ActionGroup, KPI, Drawer, Modal, BADGE_TONE, MESSAGE_LEVEL, Pager, Segment, resizeImageFile, imageFileDimensions, useSyncActivity, useSyncFocusActivity, useReceiptAutoPrint, usesBluetoothReceipt, receiptBluetoothHelp, receiptPrintText, captureReceipt, receiptFrame, receiptGraphic, receiptHash, prepareReceipt, printReceipt, ReceiptPrintHelp };
+  window.UI = { fmt, fechaCorta, fechaHora, Badge, StatusBadge, StockBadge, ProductThumb, ToastHost, toast, HumanMessage, messageAuthority, messageText, technicalMessageViewer, Page, Toolbar, ActionGroup, KPI, Drawer, Modal, BADGE_TONE, MESSAGE_LEVEL, Pager, Segment, resizeImageFile, imageFileDimensions, useSyncActivity, useSyncFocusActivity, useReceiptAutoPrint, usesThermerReceipt, usesBluetoothReceipt, receiptBluetoothHelp, receiptPrintText, captureReceipt, receiptFrame, receiptGraphic, receiptHash, prepareReceipt, printReceipt, ReceiptPrintHelp };
 })();

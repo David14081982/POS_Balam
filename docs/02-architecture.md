@@ -620,7 +620,7 @@ exclusivo antes de enviarla; el ticket por método también recibe página conti
 Reportes A4 y etiquetas conservan su formato propio. Una configuración física de papel que lo fuerce puede
 requerir ajuste del controlador; el corte real se valida en la impresora.
 
-### Transporte de comprobantes por el sistema (H-180)
+### Transporte de comprobantes por el sistema (H-180) y THERMER (H-181)
 
 `UI.printReceipt()` crea un trabajo en `window.PrintManager`, cargado después de
 `shared.jsx`. Congela documento y estilos antes de cualquier espera; cada trabajo
@@ -628,7 +628,7 @@ conserva ID, origen, tipo, copia, hashes y recursos propios. La cola entrega só
 un trabajo por vez, con un iframe independiente cuyo contenido completo se
 entrega al diálogo del sistema mediante `print()`.
 
-PC y Android usan la misma frontera. No se decide el transporte por agente,
+Por omisión PC y Android usan la misma frontera. No se decide el transporte por agente,
 pantalla táctil, Bluetooth o USB; no hay intents ni paquetes de aplicaciones
 fijados. El sistema y el servicio de impresión instalado descubren y atienden
 la impresora. BALAM no enumera dispositivos USB, no selecciona silenciosamente
@@ -668,6 +668,35 @@ se mezcla con la persistencia comercial de Supabase. Recargar no repite
 impresiones. La exclusión cubre esta instancia y sus ventanas hijas, no otras
 terminales que compartan impresora. H-153 conserva aislamiento y ciclo;
 H-180 reemplaza exclusivamente su adaptador RawBT por el sistema.
+
+H-181 añade `print.thermer` (apagado por omisión) en Configuración → Impresión.
+Con el ajuste activo, Android y Android en modo escritorio Linux táctil usan
+THERMER para `#balam-ticket` y `#balam-return-receipt`; Windows, otros reportes
+y etiquetas conservan su transporte. No se detecta hardware desde el navegador.
+`ReceiptPrintHelp` prepara al montar, independientemente de `print.auto` y
+`print.twoCopies`. PrintManager congela dos snapshots marcados COPIA CLIENTE y
+COPIA TIENDA; `receiptGraphic()` genera los PNG originales de 576 puntos sin
+alterar tamaños ni plantillas. Un trabajo agrupa ambas copias y conserva hashes
+por copia. Un solo toque abre `my.bluetoothprint.scheme://` seguido de la URL
+de un objeto JSON indexado: imagen, línea vacía, imagen. No invoca `print()`.
+
+`STORE.prepareThermerPrint` exige sesión vigente y pasa por el gateway CORE.
+La función POST `thermer-print` mantiene verificación JWT en el gateway, valida
+usuario, perfil admin/vendedor activo y `online_connectivity` con dispositivo.
+Sólo escribe artefactos en el bucket privado `balam-thermer-private`, sin RLS de
+acceso cliente ni cambios de tablas comerciales. Storage firma el manifiesto
+y las dos imágenes durante diez minutos; THERMER puede descargarlos sin la
+sesión del navegador. Las URLs son capacidades temporales y no se registran en
+el historial. No se deshabilita JWT ni se incluye el token de sesión en el enlace.
+Limpieza acotada de hasta 100 objetos vencidos por preparación; la última tanda
+puede permanecer privada hasta el siguiente trabajo. Requiere Internet.
+
+El paquete se renueva antes de vencer, reutilizando imágenes congeladas. Error
+de preparación exige reintento; cancelación impide envío aunque termine una
+petición pendiente. La cola no abre THERMER automáticamente ni repite al volver.
+Pasar a segundo plano y regresar, o confirmar manualmente el regreso, finaliza
+la interacción; sólo foco no basta. No existe confirmación física ni comando de
+corte documentado por el protocolo. THERMER selecciona la impresora USB.
 
 ## AUTH
 

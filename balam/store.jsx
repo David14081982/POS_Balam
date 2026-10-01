@@ -1107,6 +1107,23 @@
   }
   const uploadBarcode = (path, blob) => uploadImage('barcodes', path, blob, 'image/png');
   const uploadProductPhoto = (path, blob) => uploadImage('product-photos', path, blob, 'image/jpeg');
+  async function prepareThermerPrint(payload) {
+    assertBusinessReady();
+    const seq = sessionSeq, c = await ensureClient(), { data } = await c.auth.getSession();
+    if (!data.session) throw error('PRINT_SESSION_REQUIRED', 'Inicia sesión para preparar la impresión.');
+    const response = await fetch(SUPABASE_URL + '/functions/v1/thermer-print', {
+      method: 'POST', cache: 'no-store', signal: AbortSignal.timeout(30000),
+      headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY,
+        Authorization: 'Bearer ' + data.session.access_token, 'x-balam-device-id': window.CORE.getDeviceId() },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) throw error('PRINT_PREPARATION_FAILED', 'No se pudo preparar THERMER. Reintenta la impresión.');
+    const result = await response.json();
+    if (seq !== sessionSeq) throw error('PRINT_SESSION_CHANGED', 'La sesión cambió. Vuelve a abrir el comprobante.');
+    if (!result.url?.startsWith(SUPABASE_URL + '/storage/v1/object/sign/balam-thermer-private/') || !Number.isFinite(result.expiresAt))
+      throw error('PRINT_RESPONSE_INVALID', 'No se pudo confirmar el paquete de impresión.');
+    return result;
+  }
   async function accountRequest(payload) {
     const c = await ensureClient(), { data } = await c.auth.getSession();
     const response = await fetch(SUPABASE_URL + '/functions/v1/admin-users', {
@@ -1136,7 +1153,7 @@
     fetchSaleByFolio, physicalCardAvailable, claimPhysicalCard, syncStatus, syncFleetStatus, updateSyncDevice, setSyncDeviceRetired,
     pointZeroPreview, createPointZeroBackup, executePointZero, pointZeroReceipt, downloadPointZeroDocument: downloadDocument,
     previewTestDataCleanup, createTestDataCleanupBackup, executeTestDataCleanup, testDataCleanupReceipt, downloadTestDataCleanupDocument: downloadDocument,
-    heartbeatDevice, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto,
+    heartbeatDevice, ensureClient, getClient: ensureClient, hasSession, callFunction, uploadBarcode, uploadProductPhoto, prepareThermerPrint,
     get enabled() { return enabled; } };
   window.CORE.registerSyncGateway(window.STORE);
 })();

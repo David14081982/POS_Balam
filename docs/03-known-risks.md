@@ -5,6 +5,28 @@ un riesgo se debe leer su evidencia y las correcciones relacionadas. Los
 estados válidos son: `ABIERTO`, `EN CURSO`, `PARCIALMENTE RESUELTO`, `RESUELTO`
 y `BLOQUEADO`.
 
+## H-181 — THERMER con dos copias y una sola activación
+
+**Estado:** PARCIALMENTE RESUELTO — implementación verificada; papel pendiente.
+**Fecha:** 01/10/2026. **Commit:** Pendiente de commit.
+**Decisión:** el usuario acepta un toque para THERMER 6.4.8.42, USB END-80TEUX,
+sin diálogo del sistema, conservando tamaño y diseño.
+**Evidencia:** el adaptador H-180 sólo invoca `print()`; el manual entregado
+por el usuario requiere `my.bluetoothprint.scheme://` seguido de una URL
+que devuelve un objeto JSON indexado. Imágenes: `type:1`, `path`, `align:0`.
+**Contrato:** preparación anticipada, dos imágenes marcadas en una respuesta,
+descarga temporal privada, apertura síncrona con gesto, sin confirmar papel.
+PC mantiene sistema; THERMER se habilita en Configuración para Android.
+**Solución:** PNG existentes, POST autenticado con JWT habilitado, bucket privado
+y URLs firmadas nativas de diez minutos; renovación/reintento conserva originales.
+**Pruebas:** línea base 0/2 → cliente 16/16; handler aislado PASS; remoto 7/7 y
+limpieza exacta; sistema 18/18, copias 13/13, UI 6/6, PWA 2/2, arquitectura PASS,
+configuración 3/3 y settings 3/3. Servicio desplegado; cliente pendiente workflow.
+**Residual:** Android/THERMER/USB físicos NOT_TESTED; POST remoto con usuario
+activo y expiración real NOT_TESTED (matriz local). Sin confirmación física ni
+corte documentado. Últimos artefactos permanecen privados hasta próxima limpieza.
+**Documento:** `docs/fixes/thermer-un-toque-h181.md`.
+
 ## H-180 — Android fuerza RawBT e ignora la impresora USB del sistema
 
 **Estado:** RESUELTO EN CÓDIGO — confirmación en papel pendiente.
