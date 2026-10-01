@@ -1,0 +1,22 @@
+{
+  "verifiedAt": "2026-10-01T19:04:04.408Z",
+  "commit": "8eadc90a6a99ea93a51cc56d3b000251806c5626",
+  "run": "https://github.com/David14081982/POS_Balam/actions/runs/36910485462",
+  "status": "success",
+  "url": "https://david14081982.github.io/POS_Balam/",
+  "artifacts": [
+    {
+      "name": "index.html",
+      "bytes": 9369339,
+      "sha256": "52f0959eba96030d6c0b7f5020fe604d7ed99ba348c6bd3f9fa1fd76820dbab0",
+      "matchesCommit": true
+    },
+    {
+      "name": "sw.js",
+      "bytes": 4477,
+      "sha256": "2bcf1918d534fd478ec4aa822b4a66c3ee743adf4a0bfb1bc1fb0ac41ac20068",
+      "matchesCommit": true
+    }
+  ],
+  "hardware": "NOT_TESTED"
+}

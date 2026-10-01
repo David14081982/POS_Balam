@@ -3,7 +3,7 @@
 **Riesgo:** H-181
 **Estado:** PARCIALMENTE RESUELTO — implementación verificada; aceptación física pendiente
 **Fecha:** 01/10/2026
-**Commit:** `12a7a8c` (implementación)
+**Commit:** `12a7a8c` (implementación); `8eadc90` (registro inicial, cliente publicado)
 
 ## Problema y reproducción
 
@@ -93,12 +93,20 @@ Servicio desplegado con JWT habilitado y bucket privado provisionado antes del
 cliente. La revisión automática rechazó el primer intento de despliegue que
 deshabilitaba JWT; se reemplazó por POST autenticado y firmas nativas de Storage,
 sin el flag rechazado. El diseño final fue aprobado y desplegado.
-Publicación del cliente pendiente: la revisión automática rechazó el push a
-`main` por requerir autorización explícita para modificar la rama principal y
-disparar CI/publicación. Se solicitó esa autorización; no se eludió el rechazo.
-Comparación remota pendiente. SHA-256 del HTML probado:
+El usuario autorizó explícitamente el push y la publicación el 01/10/2026
+(«si hazlo»), después del rechazo automático inicial. Se enviaron ambos commits
+a `main` y se ejecutó el workflow manual con `live=false` porque el commit
+documental contiene `[skip ci]`.
+
+Actions [36910485462](https://github.com/David14081982/POS_Balam/actions/runs/36910485462):
+regresión y despliegue SUCCESS. Incluye servicio H-181 y cliente 16/16; A/B/C
+no solicitado, omitido. GitHub Pages sirve el HTML y el SW idénticos byte por
+byte a `8eadc90a6a99ea93a51cc56d3b000251806c5626`, comprobado a las
+19:04:04 UTC del 01/10/2026. Evidencia: `evidence/h181-deploy.json`.
+
+HTML público: 9,369,339 bytes. SHA-256:
 `52f0959eba96030d6c0b7f5020fe604d7ed99ba348c6bd3f9fa1fd76820dbab0`.
-SHA-256 del SW:
+SW público: 4,477 bytes. SHA-256:
 `2bcf1918d534fd478ec4aa822b4a66c3ee743adf4a0bfb1bc1fb0ac41ac20068`.
 
 ## Riesgo residual y pendientes
