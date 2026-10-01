@@ -3,7 +3,7 @@
 **Riesgo:** H-181
 **Estado:** PARCIALMENTE RESUELTO — implementación verificada; aceptación física pendiente
 **Fecha:** 01/10/2026
-**Commit:** Pendiente de commit
+**Commit:** `12a7a8c` (implementación)
 
 ## Problema y reproducción
 
@@ -93,7 +93,13 @@ Servicio desplegado con JWT habilitado y bucket privado provisionado antes del
 cliente. La revisión automática rechazó el primer intento de despliegue que
 deshabilitaba JWT; se reemplazó por POST autenticado y firmas nativas de Storage,
 sin el flag rechazado. El diseño final fue aprobado y desplegado.
-Publicación del cliente y comparación SHA-256: pendientes del workflow.
+Publicación del cliente pendiente: la revisión automática rechazó el push a
+`main` por requerir autorización explícita para modificar la rama principal y
+disparar CI/publicación. Se solicitó esa autorización; no se eludió el rechazo.
+Comparación remota pendiente. SHA-256 del HTML probado:
+`52f0959eba96030d6c0b7f5020fe604d7ed99ba348c6bd3f9fa1fd76820dbab0`.
+SHA-256 del SW:
+`2bcf1918d534fd478ec4aa822b4a66c3ee743adf4a0bfb1bc1fb0ac41ac20068`.
 
 ## Riesgo residual y pendientes
 

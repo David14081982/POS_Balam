@@ -8,7 +8,7 @@ y `BLOQUEADO`.
 ## H-181 — THERMER con dos copias y una sola activación
 
 **Estado:** PARCIALMENTE RESUELTO — implementación verificada; papel pendiente.
-**Fecha:** 01/10/2026. **Commit:** Pendiente de commit.
+**Fecha:** 01/10/2026. **Commit:** `12a7a8c`.
 **Decisión:** el usuario acepta un toque para THERMER 6.4.8.42, USB END-80TEUX,
 sin diálogo del sistema, conservando tamaño y diseño.
 **Evidencia:** el adaptador H-180 sólo invoca `print()`; el manual entregado
@@ -21,7 +21,8 @@ PC mantiene sistema; THERMER se habilita en Configuración para Android.
 y URLs firmadas nativas de diez minutos; renovación/reintento conserva originales.
 **Pruebas:** línea base 0/2 → cliente 16/16; handler aislado PASS; remoto 7/7 y
 limpieza exacta; sistema 18/18, copias 13/13, UI 6/6, PWA 2/2, arquitectura PASS,
-configuración 3/3 y settings 3/3. Servicio desplegado; cliente pendiente workflow.
+configuración 3/3 y settings 3/3. Servicio desplegado; cliente pendiente: revisión
+automática rechazó push a main y se solicitó autorización explícita.
 **Residual:** Android/THERMER/USB físicos NOT_TESTED; POST remoto con usuario
 activo y expiración real NOT_TESTED (matriz local). Sin confirmación física ni
 corte documentado. Últimos artefactos permanecen privados hasta próxima limpieza.
