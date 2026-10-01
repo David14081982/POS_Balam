@@ -1,0 +1,40 @@
+{
+  "commit": "b2db3eda1439582cb82269d757417dd89dd39327",
+  "workflow": "https://github.com/David14081982/POS_Balam/actions/runs/36920521984",
+  "verifiedAt": "2026-10-01T20:26:18.590Z",
+  "regression": "SUCCESS",
+  "deploy": "SUCCESS",
+  "hardware": "NOT_TESTED",
+  "files": [
+    {
+      "file": "index.html",
+      "bytes": 9369511,
+      "sha256": "02934821e81814536127175cc4b2f7c70470a9a6795d52139cd98e22eb6ec2a6",
+      "identical": true
+    },
+    {
+      "file": "POS Balam (offline).html",
+      "bytes": 9369511,
+      "sha256": "02934821e81814536127175cc4b2f7c70470a9a6795d52139cd98e22eb6ec2a6",
+      "identical": true
+    },
+    {
+      "file": "sw.js",
+      "bytes": 4477,
+      "sha256": "0ddd1eec0cf124b69ccaf6448b82c759f526e9992daf70ccec79371809ca8fee",
+      "identical": true
+    },
+    {
+      "file": "pwa/thermer-check.html",
+      "bytes": 5981,
+      "sha256": "abcde00c442a4340e2d5e9e616fe63ac781dbf0c389635db9eacecad35dda2cf",
+      "identical": true
+    },
+    {
+      "file": "pwa/thermer-control.json",
+      "bytes": 150,
+      "sha256": "a07b36f4a852774a768a378632520dd99b51c231d720a0bc7d0c4c4f0b25c86c",
+      "identical": true
+    }
+  ]
+}

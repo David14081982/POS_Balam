@@ -4,7 +4,7 @@
 **Estado:** EN CURSO — URI corregida; aceptación física pendiente
 **Fecha:** 01/10/2026
 **Commit:** `12a7a8c` (implementación); `8eadc90` (registro inicial, cliente publicado)
-**Corrección de URI y diagnóstico:** Pendiente de commit.
+**Corrección de URI y diagnóstico:** `b2db3ed`.
 
 ## Problema y reproducción
 
@@ -99,7 +99,7 @@ automáticamente la configuración comercial remota del establecimiento.
   PWA H-164 2/2. Los cinco procesos locales completaron sus aserciones pero
   quedaron esperando `browser.close()` en el entorno Windows; se cerraron sólo
   sus Chrome headless identificados por PID/padre y todos terminaron con código 0.
-  El workflow vuelve a verificar el ciclo sin ese cierre manual antes de publicar.
+  El workflow verificó después el ciclo completo sin ese cierre manual: SUCCESS.
 
 Pruebas de la implementación inicial (anteriores a esta corrección):
 
@@ -126,6 +126,23 @@ Pruebas de la implementación inicial (anteriores a esta corrección):
 - Evidencia: `evidence/h181-local.json`, `evidence/h181-live-service.json`.
 
 ## Despliegue
+
+### Corrección de URI publicada
+
+Commit `b2db3ed`, Actions
+[36920521984](https://github.com/David14081982/POS_Balam/actions/runs/36920521984):
+regresión y despliegue SUCCESS; certificación A/B/C omitida, no solicitada.
+Comprobación a las 20:26:18 UTC del 01/10/2026: `index.html`, HTML offline,
+`sw.js`, página de diagnóstico y control JSON públicos idénticos byte por byte
+al commit probado. Evidencia completa: `evidence/h181-uri-deploy.json`.
+HTML 9,369,511 bytes, SHA-256
+`02934821e81814536127175cc4b2f7c70470a9a6795d52139cd98e22eb6ec2a6`.
+No se volvió a desplegar servicio ni se modificaron datos o permisos de Supabase.
+No se emitió un paquete sintético remoto: tras reproducir el defecto del enlace,
+la siguiente aceptación es reimprimir un comprobante con el cliente actualizado.
+El diagnóstico adicional permanece disponible si la falla física persiste.
+
+### Publicación inicial
 
 Servicio desplegado con JWT habilitado y bucket privado provisionado antes del
 cliente. La revisión automática rechazó el primer intento de despliegue que

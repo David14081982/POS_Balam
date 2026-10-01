@@ -9,7 +9,7 @@ y `BLOQUEADO`.
 
 **Estado:** EN CURSO — URI corregida; aceptación física pendiente.
 **Fecha:** 01/10/2026. **Commit:** `12a7a8c`.
-**Corrección de URI y diagnóstico:** Pendiente de commit.
+**Corrección de URI y diagnóstico:** `b2db3ed`.
 **Decisión:** el usuario acepta un toque para THERMER 6.4.8.42, USB END-80TEUX,
 sin diálogo del sistema, conservando tamaño y diseño.
 **Evidencia:** el adaptador H-180 sólo invoca `print()`; el manual entregado
@@ -39,7 +39,10 @@ opaco `intent:my.bluetoothprint.scheme://<URL>#Intent;package=mate.bluetoothprin
 sin `scheme=`. AOSP conserva así el URI original. No cambia imágenes ni tamaños.
 Diagnóstico sintético por Browser Print disponible sin ventas; URI local 2/2.
 Artefacto corregido H-181 16/16, diagnóstico 5/5 + 7/7, H-180 18/18, UI 6/6,
-PWA 2/2. Cierre manual de navegadores locales documentado; CI pendiente.
+PWA 2/2. Cierre manual de navegadores locales documentado; CI posterior SUCCESS
+sin intervención. Corrección publicada por Actions 36920521984 desde `b2db3ed`;
+cinco archivos públicos idénticos al commit a las 20:26:18 UTC. Evidencia:
+`docs/fixes/evidence/h181-uri-deploy.json`. Sin cambios de servicio/permisos/datos.
 Queda pendiente aceptación física; no afirmar causa única del fallo del equipo.
 **Residual:** HARDWARE_LOCAL NOT_TESTED; USER_ACCEPTANCE FAILED para BALAM;
 POST remoto con usuario
