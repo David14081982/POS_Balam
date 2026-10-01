@@ -1,0 +1,71 @@
+{
+  "baseline": false,
+  "artifactSHA256": "02934821e81814536127175cc4b2f7c70470a9a6795d52139cd98e22eb6ec2a6",
+  "results": [
+    {
+      "name": "Android: prepares both copies automatically without system dialog",
+      "ok": true
+    },
+    {
+      "name": "Android: full original images and hashes survive JSON/HTTP boundary",
+      "ok": true
+    },
+    {
+      "name": "Android: one touch delivers two copies; duplicate touch is ignored",
+      "ok": true
+    },
+    {
+      "name": "Android: consecutive long document is isolated and delivered intact",
+      "ok": true
+    },
+    {
+      "name": "Android: failed preparation retries the frozen document without sending",
+      "ok": true
+    },
+    {
+      "name": "Android: expired packet refreshes before allowing delivery",
+      "ok": true
+    },
+    {
+      "name": "Android: cancellation during upload cannot revive the job; render resources released",
+      "ok": true
+    },
+    {
+      "name": "Android: enabling THERMER preserves Windows printing route",
+      "ok": true
+    },
+    {
+      "name": "X11; Linux x86_64: prepares both copies automatically without system dialog",
+      "ok": true
+    },
+    {
+      "name": "X11; Linux x86_64: full original images and hashes survive JSON/HTTP boundary",
+      "ok": true
+    },
+    {
+      "name": "X11; Linux x86_64: one touch delivers two copies; duplicate touch is ignored",
+      "ok": true
+    },
+    {
+      "name": "X11; Linux x86_64: consecutive long document is isolated and delivered intact",
+      "ok": true
+    },
+    {
+      "name": "X11; Linux x86_64: failed preparation retries the frozen document without sending",
+      "ok": true
+    },
+    {
+      "name": "X11; Linux x86_64: expired packet refreshes before allowing delivery",
+      "ok": true
+    },
+    {
+      "name": "X11; Linux x86_64: cancellation during upload cannot revive the job; render resources released",
+      "ok": true
+    },
+    {
+      "name": "X11; Linux x86_64: enabling THERMER preserves Windows printing route",
+      "ok": true
+    }
+  ],
+  "hardware": "NOT_TESTED"
+}

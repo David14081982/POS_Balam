@@ -104,9 +104,15 @@ jobs:
         run: node test-h180-system-print.mjs
       - name: Verify THERMER packets and one-touch printing
         run: |
+          node test-h181-browser-uri.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node test-h181-thermer-service.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node test-h181-thermer.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node test-h181-diagnostic-payload.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node test-h181-diagnostic-page.mjs
       - name: Verify protected edits keep the persisted model
         run: node test-h174-edit-model-projection.mjs
       - name: Verify model follows the Modelo catalog

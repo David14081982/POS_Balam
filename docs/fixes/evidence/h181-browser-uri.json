@@ -1,0 +1,35 @@
+{
+  "synthetic": true,
+  "browser": "153.0.8010.53",
+  "platform": "win32",
+  "responseUrl": "https://telohdbvbvsfmwyriflz.supabase.co/storage/v1/object/sign/balam-thermer-private/1790888888-12345678-1234-4234-8234-123456789abc.json?token=synthetic.payload.signature&probe=alpha%2Fbeta%3D",
+  "androidParserExecution": "NOT_TESTED",
+  "physicalPrinting": "NOT_TESTED",
+  "sources": [
+    "https://developer.chrome.com/docs/android/intents",
+    "https://raw.githubusercontent.com/aosp-mirror/platform_frameworks_base/master/core/java/android/content/Intent.java",
+    "https://raw.githubusercontent.com/aosp-mirror/platform_frameworks_base/master/core/java/android/net/Uri.java",
+    "https://raw.githubusercontent.com/chromium/chromium/main/components/external_intents/android/java/src/org/chromium/components/external_intents/ExternalNavigationHandler.java"
+  ],
+  "legacy": {
+    "input": "my.bluetoothprint.scheme://https://telohdbvbvsfmwyriflz.supabase.co/storage/v1/object/sign/balam-thermer-private/1790888888-12345678-1234-4234-8234-123456789abc.json?token=synthetic.payload.signature&probe=alpha%2Fbeta%3D",
+    "attribute": "my.bluetoothprint.scheme://https://telohdbvbvsfmwyriflz.supabase.co/storage/v1/object/sign/balam-thermer-private/1790888888-12345678-1234-4234-8234-123456789abc.json?token=synthetic.payload.signature&probe=alpha%2Fbeta%3D",
+    "href": "my.bluetoothprint.scheme://https//telohdbvbvsfmwyriflz.supabase.co/storage/v1/object/sign/balam-thermer-private/1790888888-12345678-1234-4234-8234-123456789abc.json?token=synthetic.payload.signature&probe=alpha%2Fbeta%3D",
+    "navigation": {
+      "url": "my.bluetoothprint.scheme://https//telohdbvbvsfmwyriflz.supabase.co/storage/v1/object/sign/balam-thermer-private/1790888888-12345678-1234-4234-8234-123456789abc.json?token=synthetic.payload.signature&probe=alpha%2Fbeta%3D",
+      "reason": "anchorClick",
+      "disposition": "currentTab"
+    }
+  },
+  "fixed": {
+    "input": "intent:my.bluetoothprint.scheme://https://telohdbvbvsfmwyriflz.supabase.co/storage/v1/object/sign/balam-thermer-private/1790888888-12345678-1234-4234-8234-123456789abc.json?token=synthetic.payload.signature&probe=alpha%2Fbeta%3D#Intent;package=mate.bluetoothprint;end",
+    "attribute": "intent:my.bluetoothprint.scheme://https://telohdbvbvsfmwyriflz.supabase.co/storage/v1/object/sign/balam-thermer-private/1790888888-12345678-1234-4234-8234-123456789abc.json?token=synthetic.payload.signature&probe=alpha%2Fbeta%3D#Intent;package=mate.bluetoothprint;end",
+    "href": "intent:my.bluetoothprint.scheme://https://telohdbvbvsfmwyriflz.supabase.co/storage/v1/object/sign/balam-thermer-private/1790888888-12345678-1234-4234-8234-123456789abc.json?token=synthetic.payload.signature&probe=alpha%2Fbeta%3D#Intent;package=mate.bluetoothprint;end",
+    "navigation": {
+      "url": "intent:my.bluetoothprint.scheme://https://telohdbvbvsfmwyriflz.supabase.co/storage/v1/object/sign/balam-thermer-private/1790888888-12345678-1234-4234-8234-123456789abc.json?token=synthetic.payload.signature&probe=alpha%2Fbeta%3D#Intent;package=mate.bluetoothprint;end",
+      "reason": "anchorClick",
+      "disposition": "currentTab"
+    }
+  },
+  "result": "PASS 2/2"
+}

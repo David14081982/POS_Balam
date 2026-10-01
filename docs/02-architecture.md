@@ -677,8 +677,11 @@ y etiquetas conservan su transporte. No se detecta hardware desde el navegador.
 `print.twoCopies`. PrintManager congela dos snapshots marcados COPIA CLIENTE y
 COPIA TIENDA; `receiptGraphic()` genera los PNG originales de 576 puntos sin
 alterar tamaños ni plantillas. Un trabajo agrupa ambas copias y conserva hashes
-por copia. Un solo toque abre `my.bluetoothprint.scheme://` seguido de la URL
-de un objeto JSON indexado: imagen, línea vacía, imagen. No invoca `print()`.
+por copia. Un solo toque entrega `my.bluetoothprint.scheme://` seguido de la URL
+de un objeto JSON indexado: imagen, línea vacía, imagen. Se envuelve en
+`intent:<URI>#Intent;package=mate.bluetoothprint;end`, sin `scheme=`, para evitar
+que la normalización de Chrome elimine los dos puntos del HTTPS anidado.
+Android extrae la URI original. No invoca `print()`.
 
 `STORE.prepareThermerPrint` exige sesión vigente y pasa por el gateway CORE.
 La función POST `thermer-print` mantiene verificación JWT en el gateway, valida
@@ -697,6 +700,17 @@ petición pendiente. La cola no abre THERMER automáticamente ni repite al volve
 Pasar a segundo plano y regresar, o confirmar manualmente el regreso, finaliza
 la interacción; sólo foco no basta. No existe confirmación física ni comando de
 corte documentado por el protocolo. THERMER selecciona la impresora USB.
+
+Para el diagnóstico físico de H-181, `pwa/thermer-check.html` es una página
+independiente del POS. Precomprueba el JSON y la decodificación de dos PNG
+sintéticos de ancho576, y sólo abre THERMER bajo gesto explícito. La capacidad
+temporal se recibe en el fragmento y se limita al origen/ruta del bucket
+privado; nunca incorpora credenciales de operador. `h181-thermer-diagnostic.mjs`
+prepara únicamente tres objetos ficticios firmados diez minutos y conserva el
+registro de limpieza fuera del repositorio. El manifiesto marca INICIO, imagen
+pequeña, IMAGEN LARGA, imagen larga y FIN. El control público
+`pwa/thermer-control.json` contiene sólo texto ficticio para contrastar Browser
+Print sin firmas. Ninguno registra ventas ni modifica la configuración.
 
 ## AUTH
 

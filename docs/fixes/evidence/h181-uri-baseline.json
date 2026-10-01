@@ -1,0 +1,73 @@
+{
+  "baseline": true,
+  "artifactSHA256": "52f0959eba96030d6c0b7f5020fe604d7ed99ba348c6bd3f9fa1fd76820dbab0",
+  "results": [
+    {
+      "name": "Android: prepares both copies automatically without system dialog",
+      "ok": true
+    },
+    {
+      "name": "Android: full original images and hashes survive JSON/HTTP boundary",
+      "ok": true
+    },
+    {
+      "name": "Android: one touch delivers two copies; duplicate touch is ignored",
+      "ok": false,
+      "error": "The complete response URL must survive the browser handoff\n+ actual - expected\n\n  [\n+   'my.bluetoothprint.scheme://https//print.example/storage/v1/object/sign/balam-thermer-private/1790885350-19c8bb22-532d-488b-bd16-c0a910886b1f.json?token=5510d5eb-9ba4-41f8-992b-02486315ee98'\n-   'my.bluetoothprint.scheme://https://print.example/storage/v1/object/sign/balam-thermer-private/1790885350-19c8bb22-532d-488b-bd16-c0a910886b1f.json?token=5510d5eb-9ba4-41f8-992b-02486315ee98'\n  ]\n"
+    },
+    {
+      "name": "Android: long next document is isolated and cancellation never opens app",
+      "ok": true
+    },
+    {
+      "name": "Android: failed preparation retries the frozen document without sending",
+      "ok": true
+    },
+    {
+      "name": "Android: expired packet refreshes before allowing delivery",
+      "ok": true
+    },
+    {
+      "name": "Android: cancellation during upload cannot revive the job; render resources released",
+      "ok": true
+    },
+    {
+      "name": "Android: enabling THERMER preserves Windows printing route",
+      "ok": true
+    },
+    {
+      "name": "X11; Linux x86_64: prepares both copies automatically without system dialog",
+      "ok": true
+    },
+    {
+      "name": "X11; Linux x86_64: full original images and hashes survive JSON/HTTP boundary",
+      "ok": true
+    },
+    {
+      "name": "X11; Linux x86_64: one touch delivers two copies; duplicate touch is ignored",
+      "ok": false,
+      "error": "The complete response URL must survive the browser handoff\n+ actual - expected\n\n  [\n+   'my.bluetoothprint.scheme://https//print.example/storage/v1/object/sign/balam-thermer-private/1790885378-47d5680f-2f4a-433c-b59c-bb5122c3da57.json?token=efdf7366-ce72-468e-9436-d0f9da460253'\n-   'my.bluetoothprint.scheme://https://print.example/storage/v1/object/sign/balam-thermer-private/1790885378-47d5680f-2f4a-433c-b59c-bb5122c3da57.json?token=efdf7366-ce72-468e-9436-d0f9da460253'\n  ]\n"
+    },
+    {
+      "name": "X11; Linux x86_64: long next document is isolated and cancellation never opens app",
+      "ok": true
+    },
+    {
+      "name": "X11; Linux x86_64: failed preparation retries the frozen document without sending",
+      "ok": true
+    },
+    {
+      "name": "X11; Linux x86_64: expired packet refreshes before allowing delivery",
+      "ok": true
+    },
+    {
+      "name": "X11; Linux x86_64: cancellation during upload cannot revive the job; render resources released",
+      "ok": true
+    },
+    {
+      "name": "X11; Linux x86_64: enabling THERMER preserves Windows printing route",
+      "ok": true
+    }
+  ],
+  "hardware": "NOT_TESTED"
+}

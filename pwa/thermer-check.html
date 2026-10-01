@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="es">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src https://telohdbvbvsfmwyriflz.supabase.co; img-src blob: data:; base-uri 'none'; form-action 'none'">
+<title>BALAM · Prueba de THERMER</title>
+<style>
+body{margin:0;background:#f5f3ee;color:#17232e;font:18px/1.5 system-ui,sans-serif}main{max-width:560px;margin:32px auto;padding:24px}h1{font-size:28px;line-height:1.2}button{display:block;width:100%;min-height:56px;margin:24px 0;padding:14px;border:0;border-radius:10px;background:#17232e;color:white;font:700 18px system-ui;cursor:pointer}button:disabled{opacity:.55;cursor:default}.card{background:white;border-radius:12px;padding:18px;margin-top:20px}li{margin:8px 0}small{display:block;font-size:15px}
+</style>
+<main>
+  <small>BALAM · Comprobación de impresión</small>
+  <h1>Prueba de THERMER en la tablet</h1>
+  <p>Esta prueba no registra una venta. Imprime texto y dos dibujos por la misma vía web que utiliza el ticket.</p>
+  <p id="status" role="status" data-testid="diagnostic-status">Comprobando el paquete…</p>
+  <button id="print" type="button" data-testid="diagnostic-print" disabled>Imprimir prueba en THERMER</button>
+  <p id="control" hidden>Si no salió papel o no se preparó la prueba: <a data-testid="diagnostic-control" href="intent:my.bluetoothprint.scheme://https://david14081982.github.io/POS_Balam/pwa/thermer-control.json#Intent;package=mate.bluetoothprint;end">imprimir prueba básica de texto</a>.</p>
+  <div class="card">
+    <strong>En el papel deben aparecer, en este orden:</strong>
+    <ol><li>INICIO BALAM</li><li>Un dibujo pequeño</li><li>IMAGEN LARGA</li><li>Un dibujo largo</li><li>FIN BALAM</li></ol>
+    <p>Después, indica qué partes salieron. Si sólo aparece publicidad, regresa e indica que no salió papel.</p>
+    <small>La prueba usa aproximadamente 32 cm de papel. Conserva la impresora USB y los ajustes que ya utilizaste.</small>
+  </div>
+</main>
+<script>
+(() => {
+  const status = document.getElementById('status'), button = document.getElementById('print');
+  const origin = 'https://telohdbvbvsfmwyriflz.supabase.co';
+  const prefix = '/storage/v1/object/sign/balam-thermer-private/';
+  let sent = false, target = null, expiry = 0, expiryTimer;
+  function signed(value, image) {
+    const url = new URL(value);
+    const name = url.pathname.slice(prefix.length);
+    const pattern = image ? /^\d{10}-[a-f0-9-]{36}-[01]\.png$/ : /^\d{10}-[a-f0-9-]{36}\.json$/;
+    if (url.origin !== origin || url.username || url.password || url.hash || !url.pathname.startsWith(prefix) || !pattern.test(name) ||
+        !url.searchParams.get('token') || [...url.searchParams.keys()].join(',') !== 'token') throw Error('INVALID_LINK');
+    return url.href;
+  }
+  const expire = () => { button.disabled = true; document.getElementById('control').hidden = false; status.textContent = 'El enlace venció. Solicita un enlace nuevo para esta prueba.'; };
+  async function prepare() {
+    const controller = new AbortController();
+    const deadline = setTimeout(() => controller.abort(), 30000);
+    try {
+      const params = new URLSearchParams(location.hash.slice(1));
+      target = signed(params.get('url'), false); expiry = Number(params.get('expires'));
+      if (!Number.isFinite(expiry) || expiry <= Date.now() + 15000) { expire(); return; }
+      const response = await fetch(target, { cache: 'no-store', referrerPolicy: 'no-referrer', signal: controller.signal });
+      if (!response.ok) throw Error('DOWNLOAD_FAILED');
+      const data = await response.json();
+      if (!data || Array.isArray(data) || JSON.stringify(Object.keys(data)) !== JSON.stringify(['0','1','2','3','4']) ||
+          JSON.stringify(Object.values(data).map(item => item.type)) !== JSON.stringify([0,1,0,1,0]) ||
+          data[0].content !== 'INICIO BALAM' || data[2].content !== 'IMAGEN LARGA' || data[4].content !== 'FIN BALAM') throw Error('INVALID_PACKET');
+      for (const [index, height] of [[1, 96], [3, 2438]]) {
+        const url = signed(data[index].path, true);
+        const imageResponse = await fetch(url, { cache: 'no-store', referrerPolicy: 'no-referrer', signal: controller.signal });
+        if (!imageResponse.ok) throw Error('IMAGE_FAILED');
+        const blob = await imageResponse.blob(), local = URL.createObjectURL(blob);
+        try {
+          const image = new Image(); image.src = local; await image.decode();
+          if (image.naturalWidth !== 576 || image.naturalHeight !== height) throw Error('IMAGE_SIZE');
+        } finally { URL.revokeObjectURL(local); }
+      }
+      if (expiry <= Date.now() + 15000) { expire(); return; }
+      status.textContent = 'El navegador descargó el paquete y las dos imágenes. Toca el botón una sola vez.';
+      button.disabled = false;
+      expiryTimer = setTimeout(() => { if (!sent) expire(); }, expiry - Date.now() - 15000);
+    } catch (_) {
+      button.disabled = true;
+      document.getElementById('control').hidden = false;
+      status.textContent = 'No se pudo preparar la prueba. Comprueba Internet y solicita un enlace nuevo.';
+    } finally { clearTimeout(deadline); }
+  }
+  button.addEventListener('click', () => {
+    if (sent || button.disabled) return;
+    if (expiry <= Date.now() + 15000) { expire(); return; }
+    sent = true; button.disabled = true; clearTimeout(expiryTimer);
+    document.getElementById('control').hidden = false;
+    const link = document.createElement('a');
+    link.href = 'intent:my.bluetoothprint.scheme://' + target + '#Intent;package=mate.bluetoothprint;end';
+    document.body.appendChild(link); link.click(); link.remove();
+    status.textContent = 'Se solicitó abrir THERMER. La salida en papel se confirma mirando la impresora.';
+  });
+  prepare();
+})();
+</script>
+</html>

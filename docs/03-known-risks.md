@@ -7,8 +7,9 @@ y `BLOQUEADO`.
 
 ## H-181 — THERMER con dos copias y una sola activación
 
-**Estado:** EN CURSO — aceptación física fallida; diagnóstico de compatibilidad.
+**Estado:** EN CURSO — URI corregida; aceptación física pendiente.
 **Fecha:** 01/10/2026. **Commit:** `12a7a8c`.
+**Corrección de URI y diagnóstico:** Pendiente de commit.
 **Decisión:** el usuario acepta un toque para THERMER 6.4.8.42, USB END-80TEUX,
 sin diálogo del sistema, conservando tamaño y diseño.
 **Evidencia:** el adaptador H-180 sólo invoca `print()`; el manual entregado
@@ -26,11 +27,20 @@ configuración 3/3 y settings 3/3. Servicio desplegado con JWT habilitado.
 SUCCESS (regresión y Pages), cliente `8eadc90`. HTML/SW públicos idénticos al
 commit; hashes en `docs/fixes/evidence/h181-deploy.json`.
 **Evidencia posterior:** usuario reporta publicidad y azul parpadeante, sin papel
-desde BALAM; texto directo de THERMER por USB sí imprime. Causa aún no probada.
+desde BALAM; texto directo de THERMER por USB sí imprime.
 Tras autorización explícita se leyeron los tres paquetes reales recientes:
 seis PNG 576×2438, íntegros y no vacíos, JSON con dos imágenes en orden. Firmas
 de diez minutos vencidas al revisar; sin evidencia de caducidad al imprimir.
-Pendiente prueba de imagen directa y recepción/procesamiento real en THERMER.
+Imagen de galería directa también imprime (confirmado por el usuario).
+**Defecto reproducido:** Chromium mutila `https://` a `https//` dentro del
+enlace directo. CDP confirma navegación real corrupta. Baseline publicado:
+14/16, fallan las dos comprobaciones de URL completa. Corrección: envoltorio
+opaco `intent:my.bluetoothprint.scheme://<URL>#Intent;package=mate.bluetoothprint;end`,
+sin `scheme=`. AOSP conserva así el URI original. No cambia imágenes ni tamaños.
+Diagnóstico sintético por Browser Print disponible sin ventas; URI local 2/2.
+Artefacto corregido H-181 16/16, diagnóstico 5/5 + 7/7, H-180 18/18, UI 6/6,
+PWA 2/2. Cierre manual de navegadores locales documentado; CI pendiente.
+Queda pendiente aceptación física; no afirmar causa única del fallo del equipo.
 **Residual:** HARDWARE_LOCAL NOT_TESTED; USER_ACCEPTANCE FAILED para BALAM;
 POST remoto con usuario
 activo y expiración real NOT_TESTED (matriz local). Sin confirmación física ni

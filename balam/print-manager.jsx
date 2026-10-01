@@ -80,7 +80,10 @@
       }
       if (navigator.userActivation && !navigator.userActivation.isActive) return false;
       const link = document.createElement('a');
-      link.href = 'my.bluetoothprint.scheme://' + job.deliveryUrl;
+      // H-181: a direct nested scheme loses the ':' in https during browser
+      // URL normalization. The opaque intent preserves the documented URI;
+      // Android removes only 'intent:' (deliberately no scheme= override).
+      link.href = 'intent:my.bluetoothprint.scheme://' + job.deliveryUrl + '#Intent;package=mate.bluetoothprint;end';
       let away = false;
       const returned = () => {
         if (document.visibilityState === 'hidden') away = true;

@@ -22,7 +22,7 @@ try {
   const context=await browser.newContext({userAgent:'Mozilla/5.0 ('+profile+') AppleWebKit/537.36 Chrome/140 Safari/537.36',hasTouch:true,serviceWorkers:'block'});
   await context.route('**/*',r=>r.request().url().startsWith('http://127.0.0.1:')?r.continue():r.abort());
   await context.addInitScript(installPrintTransport,{counter:'__native',hold:true});
-  await context.addInitScript(()=>{window.__links=[];document.addEventListener('click',e=>{if(e.target.matches('a[href^="my.bluetoothprint.scheme:"]')){e.preventDefault();__links.push(e.target.href);}},true);});
+  await context.addInitScript(()=>{window.__links=[];document.addEventListener('click',e=>{if(e.target.matches('a[href^="my.bluetoothprint.scheme:"],a[href^="intent:my.bluetoothprint.scheme:"]')){e.preventDefault();__links.push(e.target.href);}},true);});
   const page=await context.newPage();await page.exposeFunction('__prepare',async payload=>{
     attempts++;
     if(mode==='fail') throw Error('TEST_OFFLINE');
@@ -65,13 +65,17 @@ try {
     await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
     assert.equal(await page.evaluate(()=>PrintManager.history().at(-1).stage),'SEND_STARTED');
     await page.locator('#h181-fixture').getByTestId('print-returned').click();assert.equal(await page.evaluate(()=>PrintManager.history().at(-1).physicalPrintConfirmed),false);
+    assert.deepEqual(await page.evaluate(()=>__links),['intent:my.bluetoothprint.scheme://'+packets[0].data.url+'#Intent;package=mate.bluetoothprint;end'], 'The complete response URL must survive the browser handoff');
   });
-  await test(profile+': long next document is isolated and cancellation never opens app',async()=>{
+  await test(profile+': consecutive long document is isolated and delivered intact',async()=>{
     await page.evaluate(()=>__render('H181-LONG',24));
     await page.waitForFunction(()=>PrintManager.history().at(-1).ticketId==='H181-LONG'&&PrintManager.history().at(-1).stage==='WAITING_TURN');
     assert.equal(packets.length,2);assert.notEqual(packets[0].data.url,packets[1].data.url);
     assert.ok(Buffer.from(packets[1].payload.images[0].slice(22),'base64').readUInt32BE(20)>Buffer.from(packets[0].payload.images[0].slice(22),'base64').readUInt32BE(20));
-    await page.locator('#h181-fixture').getByTestId('print-cancel').click();assert.equal(await page.evaluate(()=>__links.length),1);
+    await page.locator('#h181-fixture').getByTestId('print-next').click();
+    assert.deepEqual(await page.evaluate(()=>__links), packets.map(packet=>'intent:my.bluetoothprint.scheme://'+packet.data.url+'#Intent;package=mate.bluetoothprint;end'));
+    await page.locator('#h181-fixture').getByTestId('print-returned').click();
+    assert.equal(await page.evaluate(()=>PrintManager.history().filter(j=>j.stage==='COMPLETED').length),2);
   });
   await test(profile+': failed preparation retries the frozen document without sending',async()=>{
     mode='fail';await page.evaluate(()=>__render('H181-RETRY'));
@@ -81,7 +85,7 @@ try {
     mode='ok';await page.locator('#h181-fixture').getByTestId('print-retry').click();
     await page.waitForFunction(()=>PrintManager.history().at(-1).stage==='WAITING_TURN');
     assert.equal(await page.evaluate(()=>PrintManager.history().at(-1).payloadHash),frozen);
-    assert.equal(await page.evaluate(()=>__links.length),1);
+    assert.equal(await page.evaluate(()=>__links.length),2);
   });
   await test(profile+': expired packet refreshes before allowing delivery',async()=>{
     const previous=packets.at(-1), before=attempts;
@@ -89,7 +93,7 @@ try {
     await page.locator('#h181-fixture').getByTestId('print-next').click();
     await page.evaluate(()=>{Date.now=__realNow;});
     await page.waitForFunction(()=>PrintManager.history().at(-1).stage==='WAITING_TURN');
-    assert.equal(attempts,before+1);assert.equal(await page.evaluate(()=>__links.length),1);
+    assert.equal(attempts,before+1);assert.equal(await page.evaluate(()=>__links.length),2);
     assert.deepEqual(packets.at(-1).payload.images,previous.payload.images);
     assert.notEqual(packets.at(-1).data.url,previous.data.url);
     await page.locator('#h181-fixture').getByTestId('print-cancel').click();
@@ -104,7 +108,7 @@ try {
     await page.waitForFunction(()=>PrintManager.history().at(-1).stage==='CANCELLED');
     await page.evaluate(()=>new Promise(r=>setTimeout(r,100)));
     assert.equal(await page.evaluate(()=>PrintManager.history().at(-1).stage),'CANCELLED');
-    assert.equal(await page.evaluate(()=>__links.length),1);
+    assert.equal(await page.evaluate(()=>__links.length),2);
     assert.equal(await page.locator('iframe[data-print-job-id]').count(),0);
   });
   await test(profile+': enabling THERMER preserves Windows printing route',async()=>{

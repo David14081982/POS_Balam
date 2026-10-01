@@ -1,9 +1,10 @@
 # THERMER: cliente y tienda con un toque
 
 **Riesgo:** H-181
-**Estado:** EN CURSO — aceptación física fallida; diagnóstico de compatibilidad
+**Estado:** EN CURSO — URI corregida; aceptación física pendiente
 **Fecha:** 01/10/2026
 **Commit:** `12a7a8c` (implementación); `8eadc90` (registro inicial, cliente publicado)
+**Corrección de URI y diagnóstico:** Pendiente de commit.
 
 ## Problema y reproducción
 
@@ -17,6 +18,19 @@ El alcance es salida de comprobantes, no cobro ni detección USB desde JavaScrip
 
 Contrato de transporte ausente. Una página GitHub Pages no ejecuta el ejemplo
 PHP del proveedor. El enlace externo exige gesto y no certifica recepción.
+
+La aceptación fallida posterior permitió reproducir un defecto adicional:
+Chromium normaliza `my.bluetoothprint.scheme://https://...` como
+`my.bluetoothprint.scheme://https//...`, eliminando los dos puntos del HTTPS
+anidado. Ocurre tanto al leer `anchor.href` como en la navegación real observada
+por CDP `Page.frameRequestedNavigation`. El atributo original sí los conserva;
+comprobar sólo que se creó/clicó el enlace no detectaba la corrupción. Es un
+defecto de transporte confirmado, sin atribuirle aún toda la falla física.
+
+La reproducción añadida al artefacto publicado `8a52ec9` dio 14/16: fallaron
+las dos comprobaciones de URL completa (Android y modo escritorio táctil).
+La prueba independiente de navegación demuestra la diferencia antes/después.
+Evidencia: `evidence/h181-browser-uri.json` y `evidence/h181-uri-baseline.json`.
 
 ## Diseño
 
@@ -42,6 +56,14 @@ Cierre por regreso del operador, nunca confirmación física. Reintento de
 preparación explícito; enlace vencido se renueva antes de permitir otro toque.
 Reportes y PC mantienen H-180. El ajuste THERMER está apagado por omisión.
 
+El enlace se envuelve ahora como
+`intent:my.bluetoothprint.scheme://<URL>#Intent;package=mate.bluetoothprint;end`.
+No lleva `scheme=`: según `Intent.parseUriInternal` de AOSP, Android elimina
+sólo el prefijo `intent:` y conserva la URI que documenta THERMER. La forma
+opaca impide que Chrome normalice el HTTPS anidado. No se altera JSON, PNG,
+firmas, tamaño, plantilla, número de copias ni servicio. La ejecución de ese
+parser en Android y su recepción física por THERMER siguen NOT_TESTED localmente.
+
 ## Solución
 
 - `balam/config.jsx`, `settings.jsx`: ajuste optativo `print.thermer`.
@@ -64,6 +86,22 @@ Reversión: apagar `print.thermer` recupera la ruta del sistema. No se modifica
 automáticamente la configuración comercial remota del establecimiento.
 
 ## Pruebas
+
+- Corrección de URI del 01/10: `node test-h181-browser-uri.mjs` 2/2; CDP
+  reproduce enlace directo corrupto y navegación opaca exacta.
+- `node test-h181-thermer.mjs` 16/16 después de corregir la URI: comparación
+  completa del enlace firmado, dos trabajos consecutivos entregados, originales
+  intactos y cierre/cancelación/reintento conservados en ambos perfiles Android.
+  Evidencia final: `evidence/h181-uri-final.json`.
+- Diagnóstico: `node test-h181-diagnostic-payload.mjs` 5/5;
+  `node test-h181-diagnostic-page.mjs` 7/7 (incluye descarga retenida abortada).
+- Regresión ejecutada sobre artefacto reconstruido: H-180 18/18, UI H-164 6/6,
+  PWA H-164 2/2. Los cinco procesos locales completaron sus aserciones pero
+  quedaron esperando `browser.close()` en el entorno Windows; se cerraron sólo
+  sus Chrome headless identificados por PID/padre y todos terminaron con código 0.
+  El workflow vuelve a verificar el ciclo sin ese cierre manual antes de publicar.
+
+Pruebas de la implementación inicial (anteriores a esta corrección):
 
 - `node test-h181-thermer.mjs --baseline`: 0/2 sobre b28ea2b.
 - `node test-h181-thermer.mjs`: 16/16 sobre artefacto final. Dos agentes Android;
@@ -117,7 +155,7 @@ Al abrir THERMER desde BALAM aparece publicidad, no sale papel y parpadea un
 indicador azul. El usuario luego confirma que un texto de prueba creado e
 impreso directamente desde THERMER sí sale por USB. Esto prueba impresión
 básica por esa conexión, pero no recepción/impresión de las imágenes de BALAM.
-No se ha identificado todavía la causa raíz del fallo físico.
+En ese momento aún no se había reproducido el defecto de la URI descrito arriba.
 
 Los dos PNG ficticios del arnés H-181 se volvieron a inspeccionar sin enviarlos:
 576×2295, gris de 8 bits, CRC de todos los chunks válidos, datos zlib/filtros y
@@ -140,14 +178,31 @@ vencidas; no se conoce el instante de descarga de THERMER y no se atribuye el
 fallo a caducidad sin esa evidencia. La lectura administrativa confirma los
 archivos almacenados, no que THERMER recibiera/procesara las imágenes.
 
-Pendiente: resultado de una imagen pequeña impresa directamente en THERMER;
-si funciona, aislar descarga por Browser Print frente a procesamiento del
-ticket completo. No se cambió código ni tamaños a partir de esta observación.
+El usuario confirmó después que una imagen de su galería también imprime en
+THERMER por USB. PC imprime los tickets correctamente. Queda aislado para
+diagnóstico el recorrido Browser Print/descarga externa/procesamiento del
+paquete. La reproducción posterior identificó la corrupción de URI en Chrome;
+su efecto final sobre el papel aún requiere la prueba de la tablet.
+
+Se incorpora una página diagnóstica separada en `pwa/thermer-check.html`, sin
+sesión comercial. Un botón abre la misma clase de URL
+firmada en THERMER. Paquete sintético: texto INICIO, PNG gris8 576×96, texto
+IMAGEN LARGA, PNG gris8 576×2438 y texto FIN. Permite distinguir manifiesto,
+descarga de imagen y longitud sin usar datos reales. La URL temporal se recibe
+en el fragmento, se limita al origen/ruta de Storage de BALAM y no se registra.
+El paquete se emite bajo demanda con `node h181-thermer-diagnostic.mjs --prepare`
+para conservar sus diez minutos; se limpia únicamente con el registro devuelto
+mediante `--cleanup <record.json>`. No se crean objetos remotos al ejecutar
+pruebas locales. La página aborta descargas tras 30 segundos y ofrece un control
+público de texto independiente. Ésta es instrumentación, no aceptación física.
+
+Pendiente confirmar las dos copias en la tablet tras publicar la URI corregida.
+No se cambiaron tamaños ni imágenes comerciales a partir de esta observación.
 Las pruebas anteriores siguen siendo de transporte y no equivalen a aceptación
 física exitosa.
 
 HARDWARE_LOCAL NOT_TESTED; USER_ACCEPTANCE FAILED para tickets de BALAM y PASS
-para texto directo de THERMER. Abrir el enlace no prueba impresión física ni corte entre
+para texto e imagen de galería directos de THERMER. Abrir el enlace no prueba impresión física ni corte entre
 copias; el protocolo del proveedor no documenta confirmación ni comando de corte.
 El navegador/Android puede mostrar confirmación para abrir la aplicación.
 No se promete operación invisible ni selección USB desde BALAM. Requiere Internet.
@@ -168,3 +223,5 @@ de montar el éxito y el ticket. Configuración usa el CfgToggle existente.
 - Manual Browser Print entregado por el usuario el 01/10/2026.
 - H-153, H-179, H-180; `docs/02-architecture.md`.
 - https://developer.chrome.com/docs/android/intents
+- https://raw.githubusercontent.com/aosp-mirror/platform_frameworks_base/master/core/java/android/content/Intent.java
+- https://raw.githubusercontent.com/aosp-mirror/platform_frameworks_base/master/core/java/android/net/Uri.java
