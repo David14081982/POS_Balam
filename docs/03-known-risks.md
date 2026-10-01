@@ -7,7 +7,7 @@ y `BLOQUEADO`.
 
 ## H-181 — THERMER con dos copias y una sola activación
 
-**Estado:** PARCIALMENTE RESUELTO — implementación verificada; papel pendiente.
+**Estado:** EN CURSO — aceptación física fallida; diagnóstico de compatibilidad.
 **Fecha:** 01/10/2026. **Commit:** `12a7a8c`.
 **Decisión:** el usuario acepta un toque para THERMER 6.4.8.42, USB END-80TEUX,
 sin diálogo del sistema, conservando tamaño y diseño.
@@ -25,7 +25,14 @@ configuración 3/3 y settings 3/3. Servicio desplegado con JWT habilitado.
 **Publicación:** autorizada explícitamente por el usuario; Actions 36910485462
 SUCCESS (regresión y Pages), cliente `8eadc90`. HTML/SW públicos idénticos al
 commit; hashes en `docs/fixes/evidence/h181-deploy.json`.
-**Residual:** Android/THERMER/USB físicos NOT_TESTED; POST remoto con usuario
+**Evidencia posterior:** usuario reporta publicidad y azul parpadeante, sin papel
+desde BALAM; texto directo de THERMER por USB sí imprime. Causa aún no probada.
+Tras autorización explícita se leyeron los tres paquetes reales recientes:
+seis PNG 576×2438, íntegros y no vacíos, JSON con dos imágenes en orden. Firmas
+de diez minutos vencidas al revisar; sin evidencia de caducidad al imprimir.
+Pendiente prueba de imagen directa y recepción/procesamiento real en THERMER.
+**Residual:** HARDWARE_LOCAL NOT_TESTED; USER_ACCEPTANCE FAILED para BALAM;
+POST remoto con usuario
 activo y expiración real NOT_TESTED (matriz local). Sin confirmación física ni
 corte documentado. Últimos artefactos permanecen privados hasta próxima limpieza.
 **Documento:** `docs/fixes/thermer-un-toque-h181.md`.

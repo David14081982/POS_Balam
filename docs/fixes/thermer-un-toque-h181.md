@@ -1,7 +1,7 @@
 # THERMER: cliente y tienda con un toque
 
 **Riesgo:** H-181
-**Estado:** PARCIALMENTE RESUELTO — implementación verificada; aceptación física pendiente
+**Estado:** EN CURSO — aceptación física fallida; diagnóstico de compatibilidad
 **Fecha:** 01/10/2026
 **Commit:** `12a7a8c` (implementación); `8eadc90` (registro inicial, cliente publicado)
 
@@ -111,7 +111,43 @@ SW público: 4,477 bytes. SHA-256:
 
 ## Riesgo residual y pendientes
 
-HARDWARE NOT_TESTED. Abrir el enlace no prueba impresión física ni corte entre
+### Evidencia del usuario posterior a la publicación (01/10/2026)
+
+Al abrir THERMER desde BALAM aparece publicidad, no sale papel y parpadea un
+indicador azul. El usuario luego confirma que un texto de prueba creado e
+impreso directamente desde THERMER sí sale por USB. Esto prueba impresión
+básica por esa conexión, pero no recepción/impresión de las imágenes de BALAM.
+No se ha identificado todavía la causa raíz del fallo físico.
+
+Los dos PNG ficticios del arnés H-181 se volvieron a inspeccionar sin enviarlos:
+576×2295, gris de 8 bits, CRC de todos los chunks válidos, datos zlib/filtros y
+longitud válidos, 59,353/59,265 píxeles negros respectivamente. Esta comprobación
+descarta un PNG vacío o corrupto en esos fixtures, no certifica el ticket real
+del usuario ni el decodificador de THERMER.
+
+La revisión automática bloqueó inicialmente leer los tres últimos paquetes
+privados mediante acceso administrativo. El usuario autorizó explícitamente esa
+lectura («si hazlo»). Se inspeccionaron, sin modificar archivos remotos, los
+paquetes de las 19:19:40, 19:23:35 y 19:29:48 UTC. Los tres contienen entradas
+`[imagen, línea vacía, imagen]`; sus seis PNG son 576×2438, gris de 8 bits,
+CRC/zlib/filtros correctos y contenido no vacío (57,511–57,825 píxeles negros).
+Las imágenes pesan entre 25,616 y 25,686 bytes. No se publicó contenido, URLs
+firmadas, credenciales ni datos identificativos del comprobante.
+
+Las firmas de imagen vencían aproximadamente diez minutos después de crear
+cada paquete: 19:29:39–40, 19:33:35 y 19:39:47–48 UTC. A las 19:49:19 UTC estaban
+vencidas; no se conoce el instante de descarga de THERMER y no se atribuye el
+fallo a caducidad sin esa evidencia. La lectura administrativa confirma los
+archivos almacenados, no que THERMER recibiera/procesara las imágenes.
+
+Pendiente: resultado de una imagen pequeña impresa directamente en THERMER;
+si funciona, aislar descarga por Browser Print frente a procesamiento del
+ticket completo. No se cambió código ni tamaños a partir de esta observación.
+Las pruebas anteriores siguen siendo de transporte y no equivalen a aceptación
+física exitosa.
+
+HARDWARE_LOCAL NOT_TESTED; USER_ACCEPTANCE FAILED para tickets de BALAM y PASS
+para texto directo de THERMER. Abrir el enlace no prueba impresión física ni corte entre
 copias; el protocolo del proveedor no documenta confirmación ni comando de corte.
 El navegador/Android puede mostrar confirmación para abrir la aplicación.
 No se promete operación invisible ni selección USB desde BALAM. Requiere Internet.
