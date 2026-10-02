@@ -39,6 +39,24 @@ const descriptor = ({ configurationValue = 1, interfaceNumber = 0, alternateSett
 };
 function fixture(options = {}) {
   const calls = [], transfers = [], timers = new Map();
+  const storage = options.storage || new Map(), storageCalls = [];
+  const localStorage = {
+    getItem(key) {
+      storageCalls.push(['getItem', key]);
+      if (options.storageDenied === true || options.storageDenied === 'getItem') throw new Error('Synthetic storage denial');
+      return storage.has(key) ? storage.get(key) : null;
+    },
+    setItem(key, value) {
+      storageCalls.push(['setItem', key, value]);
+      if (options.storageDenied === true || options.storageDenied === 'setItem') throw new Error('Synthetic storage denial');
+      if (!options.silentStorage) storage.set(key, String(value));
+    },
+    removeItem(key) {
+      storageCalls.push(['removeItem', key]);
+      if (options.storageDenied === true || options.storageDenied === 'removeItem') throw new Error('Synthetic storage denial');
+      if (!options.silentStorage) storage.delete(key);
+    },
+  };
   let timerSequence = 0, activeTransfers = 0, maxActiveTransfers = 0;
   const listeners = new Map();
   const emit = (name, event) => (listeners.get(name) || []).forEach(fn => fn(event));
@@ -108,15 +126,27 @@ function fixture(options = {}) {
     addEventListener(name, fn) { if (!listeners.has(name)) listeners.set(name, []); listeners.get(name).push(fn); },
     removeEventListener(name, fn) { listeners.set(name, (listeners.get(name) || []).filter(value => value !== fn)); },
   };
-  const forbid = () => { throw Error('USB diagnostics must not use network or persistence'); };
+  const forbid = () => { throw Error('USB printing must not use network'); };
+  class SyntheticImage {
+    set src(value) {
+      this.image = options.images?.[value];
+      this.naturalWidth = this.image?.width || 0; this.naturalHeight = this.image?.height || 0;
+    }
+    async decode() { assert.ok(this.image, 'Synthetic image must exist'); }
+  }
+  const document = { createElement(tag) {
+    assert.equal(tag, 'canvas');
+    return { width: 0, height: 0, getContext: () => ({ fillRect() {}, drawImage() {},
+      getImageData: (_, __, width, height) => ({ data: new Uint8ClampedArray(width * height * 4).fill(255) }) }) };
+  } };
   const context = vm.createContext({ window, navigator, isSecureContext: true,
     console, TextEncoder, TextDecoder, Uint8Array, ArrayBuffer, DataView, Blob, URL, AbortController,
-    performance, Date, DOMException, fetch: forbid, localStorage: { getItem: forbid, setItem: forbid },
+    performance, Date, DOMException, fetch: forbid, localStorage, Image: SyntheticImage, document,
     setTimeout(fn, milliseconds) { const id = ++timerSequence; timers.set(id, { fn, milliseconds }); return id; },
     clearTimeout(id) { timers.delete(id); },
   });
   vm.runInContext(source, context, { filename: 'usb-receipt.js' });
-  return { api: window.USBReceipt, calls, transfers, device, timers, navigator, emit,
+  return { api: window.USBReceipt, calls, transfers, device, timers, navigator, emit, storage, storageCalls,
     expireOperation() {
       const pending = [...timers.values()].filter(timer => timer.milliseconds >= 30000);
       assert.ok(pending.length, 'Operation must have a bounded timeout');
@@ -149,18 +179,81 @@ async function uncertain(f, action) {
 await test('USBReceipt module is available', async () => {
   assert.ok(source, 'balam/usb-receipt.js is absent: the direct USB transport is unavailable');
   const { api } = fixture();
-  for (const method of ['connect', 'disconnect', 'printText', 'printImages', 'snapshot', 'subscribe', 'acknowledgeReset']) assert.equal(typeof api?.[method], 'function', method);
+  for (const method of ['connect', 'disconnect', 'printText', 'printImages', 'snapshot', 'setEnabled', 'subscribe', 'acknowledgeReset']) assert.equal(typeof api?.[method], 'function', method);
 });
 if (source) {
-  await test('Import and observation never request USB, network or stored permissions', async () => {
+  await test('Import reads local mode without USB permission, output or stored ticket content', async () => {
     const f = fixture(); let updates = 0;
     const unsubscribe = f.api.subscribe(() => { updates++; });
     assert.equal(typeof unsubscribe, 'function'); unsubscribe();
     const state = f.api.snapshot();
     assert.equal(state.supported, true); assert.equal(state.connected, false); assert.equal(state.busy, false);
     assert.equal(f.calls.length, 0);
+    assert.equal(state.enabled, false);
+    assert.ok(f.storageCalls.every(call => call[0] === 'getItem' && ['balam.print.usb', 'balam.print.usb.uncertain'].includes(call[1])));
     await assert.rejects(() => f.api.printText());
     assert.equal(f.calls.length, 0); assert.equal(f.transfers.length, 0);
+  });
+  await test('Local USB mode requires explicit enablement, persists separately and never reconnects on reload', async () => {
+    const f = fixture();
+    assert.throws(() => f.api.setEnabled(true), code('USB_NOT_CONNECTED'));
+    await f.api.connect(); assert.equal(f.api.snapshot().enabled, false);
+    f.api.setEnabled(true);
+    assert.equal(f.api.snapshot().enabled, true); assert.equal(f.storage.get('balam.print.usb'), '1');
+    await f.api.disconnect(); assert.equal(f.api.snapshot().enabled, true);
+    const reloaded = fixture({ storage: f.storage });
+    assert.equal(reloaded.api.snapshot().enabled, true); assert.equal(reloaded.api.snapshot().connected, false);
+    assert.equal(reloaded.calls.length, 0); assert.equal(reloaded.transfers.length, 0);
+    reloaded.api.setEnabled(false);
+    assert.equal(reloaded.api.snapshot().enabled, false); assert.equal(f.storage.has('balam.print.usb'), false);
+  });
+  await test('Mode and sending fail safely when local persistence is denied or silently drops writes', async () => {
+    for (const options of [{ storageDenied: true }, { storageDenied: 'setItem' }, { silentStorage: true }]) {
+      const f = fixture(options);
+      if (options.storageDenied === true) {
+        await assert.rejects(() => f.api.connect(), code('USB_STORAGE'));
+        assert.equal(f.calls.length, 0); assert.equal(f.transfers.length, 0);
+        continue;
+      }
+      await f.api.connect();
+      assert.throws(() => f.api.setEnabled(true), code('USB_STORAGE'));
+      assert.equal(f.api.snapshot().enabled, false);
+      await assert.rejects(() => f.api.printText(), code('USB_STORAGE'));
+      assert.equal(f.transfers.length, 0); assert.equal(f.api.snapshot().lastJob.result, 'NOT_SENT');
+      assert.equal(f.api.snapshot().resetRequired, false); closed(f);
+    }
+  });
+  await test('Uncertain output survives reload and only explicit physical-reset acknowledgement clears it', async () => {
+    const f = fixture({ transfer: async () => ({ status: 'stall', bytesWritten: 0 }) });
+    await f.api.connect(); f.api.setEnabled(true);
+    await uncertain(f, () => f.api.printText());
+    assert.equal(f.storage.get('balam.print.usb.uncertain'), '1');
+    const reloaded = fixture({ storage: f.storage });
+    assert.equal(reloaded.api.snapshot().resetRequired, true); assert.equal(reloaded.api.snapshot().phase, 'RESET_REQUIRED');
+    await assert.rejects(() => reloaded.api.connect(), code('USB_RESET_REQUIRED'));
+    await assert.rejects(() => reloaded.api.printText(), code('USB_RESET_REQUIRED'));
+    assert.equal(reloaded.calls.length, 0); assert.equal(reloaded.transfers.length, 0);
+    reloaded.api.setEnabled(false); assert.equal(reloaded.api.snapshot().resetRequired, true);
+    reloaded.api.acknowledgeReset(); assert.equal(f.storage.has('balam.print.usb.uncertain'), false);
+    await reloaded.api.connect(); await reloaded.api.printText(); await reloaded.api.disconnect();
+  });
+  await test('The durable uncertain marker exists before the first byte and is cleared after complete transfer', async () => {
+    const storage = new Map();
+    const f = fixture({ storage, transfer: async ({ bytes }) => {
+      assert.equal(storage.get('balam.print.usb.uncertain'), '1');
+      return { status: 'ok', bytesWritten: bytes.length };
+    } });
+    await f.api.connect(); await f.api.printText();
+    assert.equal(storage.has('balam.print.usb.uncertain'), false);
+    assert.equal(f.api.snapshot().lastJob.result, 'TRANSFERRED'); await f.api.disconnect();
+  });
+  await test('A failure clearing the durable marker keeps output uncertain and cannot silently acknowledge reset', async () => {
+    const f = fixture({ storageDenied: 'removeItem' });
+    await f.api.connect(); await uncertain(f, () => f.api.printText());
+    assert.equal(f.api.snapshot().lastJob.copiesSent, 1);
+    assert.equal(f.storage.get('balam.print.usb.uncertain'), '1');
+    assert.throws(() => f.api.acknowledgeReset(), code('USB_STORAGE'));
+    assert.equal(f.api.snapshot().resetRequired, true);
   });
   await test('Unsupported browser and missing activation cannot open a chooser', async () => {
     for (const options of [{ unsupported: true }, { gesture: false }]) {
@@ -291,6 +384,7 @@ if (source) {
     await settle(()=>f.transfers.length===1);
     await assert.rejects(()=>f.api.printText(),code('USB_BUSY'));
     assert.throws(()=>f.api.acknowledgeReset());
+    assert.throws(()=>f.api.setEnabled(false),code('USB_BUSY'));
     assert.equal(f.transfers.length,1); gate.resolve(); await first;
     assert.equal(f.maxActiveTransfers,1); await f.api.disconnect();
   });
@@ -338,9 +432,32 @@ if (source) {
     assert.equal(f.api.snapshot().lastJob.result,'TRANSFERRED'); await f.api.disconnect();
   });
   await test('Invalid copy count is rejected before any USB bytes and needs no printer reset',async()=>{
-    const f=fixture(); await f.api.connect(); await assert.rejects(()=>f.api.printImages(['synthetic single copy']));
-    assert.equal(f.transfers.length,0); assert.equal(f.api.snapshot().lastJob.result,'NOT_SENT');
-    assert.equal(f.api.snapshot().resetRequired,false); closed(f);
+    for (const images of [[], ['one','two','three']]) {
+      const f=fixture(); await f.api.connect(); await assert.rejects(()=>f.api.printImages(images),code('USB_COPIES'));
+      assert.equal(f.transfers.length,0); assert.equal(f.api.snapshot().lastJob.result,'NOT_SENT');
+      assert.equal(f.api.snapshot().resetRequired,false); closed(f);
+    }
+  });
+  await test('One or two complete 576px copies use the same raster framing', async () => {
+    const png = 'data:image/png;base64,synthetic';
+    for (const count of [1,2]) {
+      const f = fixture({ images: { [png]: { width: 576, height: 2 } } });
+      await f.api.connect(); await f.api.printImages(Array(count).fill(png));
+      assert.equal(f.api.snapshot().lastJob.copiesSent, count);
+      assert.equal(f.transfers.length, 1 + count * 2);
+      for (let i = 0; i < count; i++) {
+        assert.deepEqual(f.transfers[1 + i*2], Buffer.concat([Buffer.from([0x1d,0x76,0x30,0,72,0,2,0]), Buffer.alloc(144)]));
+        assert.deepEqual(f.transfers[2 + i*2], Buffer.from([0x1b,0x64,3,0x1d,0x56,0x42,0]));
+      }
+      assert.equal(f.api.snapshot().lastJob.result, 'TRANSFERRED'); await f.api.disconnect();
+    }
+  });
+  await test('The second image is validated before any bytes from the first image are sent', async () => {
+    const first = 'data:image/png;base64,first', second = 'data:image/png;base64,second';
+    const f = fixture({ images: { [first]: { width: 576, height: 2 }, [second]: { width: 575, height: 2 } } });
+    await f.api.connect(); await assert.rejects(() => f.api.printImages([first, second]), code('USB_IMAGE_SIZE'));
+    assert.equal(f.transfers.length, 0); assert.equal(f.api.snapshot().lastJob.result, 'NOT_SENT');
+    assert.equal(f.storage.has('balam.print.usb.uncertain'), false); closed(f);
   });
   await test('Page lifecycle release closes the session without replay or a false uncertain job',async()=>{
     const f=fixture(); await f.api.connect(); await f.api.printText();

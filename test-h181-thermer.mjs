@@ -89,9 +89,12 @@ try {
   });
   await test(profile+': expired packet refreshes before allowing delivery',async()=>{
     const previous=packets.at(-1), before=attempts;
+    // Advance the simulated server too. Otherwise its renewed URL is already
+    // expired for the browser and legitimately schedules another refresh in 1s.
+    backend.advance(600001);
     await page.evaluate(expiry=>{window.__realNow=Date.now;Date.now=()=>expiry+1;},previous.data.expiresAt);
-    await page.locator('#h181-fixture').getByTestId('print-next').click();
-    await page.evaluate(()=>{Date.now=__realNow;});
+    try { await page.locator('#h181-fixture').getByTestId('print-next').click(); }
+    finally { await page.evaluate(()=>{Date.now=__realNow;}); }
     await page.waitForFunction(()=>PrintManager.history().at(-1).stage==='WAITING_TURN');
     assert.equal(attempts,before+1);assert.equal(await page.evaluate(()=>__links.length),2);
     assert.deepEqual(packets.at(-1).payload.images,previous.payload.images);

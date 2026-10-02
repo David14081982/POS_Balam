@@ -1,12 +1,28 @@
-// H-182: opt-in diagnostic transport. No commercial writes or automatic replay.
+// H-182/H-183: opt-in USB transport. No commercial writes or automatic replay.
 (function () {
   const usb = navigator.usb;
   const supported = !!(window.isSecureContext && usb && typeof usb.requestDevice === 'function');
+  const MODE_KEY = 'balam.print.usb', UNCERTAIN_KEY = 'balam.print.usb.uncertain';
+  const storedFlag = key => { try { return localStorage.getItem(key) === '1'; } catch (_) { return false; } };
   const listeners = new Set(), pending = new Set(), closingTokens = new Set();
   let connection = null, operation = null, blockedCleanup = null, lastDevice = null, closing = 0, sequence = 0;
-  const state = { phase: 'DISCONNECTED', message: 'Conecta la impresora USB para comenzar la prueba.', resetRequired: false, cleanupRequired: false, lastJob: null };
+  const state = { phase: 'DISCONNECTED', message: 'Conecta la impresora USB para imprimir.', enabled: storedFlag(MODE_KEY),
+    resetRequired: storedFlag(UNCERTAIN_KEY), cleanupRequired: false, lastJob: null };
+  if (state.resetRequired) {
+    state.phase = 'RESET_REQUIRED';
+    state.message = 'Un envío anterior pudo quedar incompleto. Apaga y enciende la impresora antes de volver a conectarla.';
+  }
   const error = (code, message) => Object.assign(new Error(message), { code });
-  const cancelled = () => error('USB_CANCELLED', 'Se canceló la prueba USB.');
+  const cancelled = () => error('USB_CANCELLED', 'Se canceló la operación USB.');
+  function storeFlag(key, value) {
+    try {
+      if (value) localStorage.setItem(key, '1');
+      else localStorage.removeItem(key);
+      if (localStorage.getItem(key) !== (value ? '1' : null)) throw new Error('USB_STORAGE_VERIFY');
+    } catch (_) {
+      throw error('USB_STORAGE', 'Permite el almacenamiento de BALAM para guardar la conexión y proteger los envíos USB. No vuelvas a imprimir hasta resolverlo.');
+    }
+  }
   const changed = () => listeners.forEach(fn => fn());
   const busy = () => !!operation || !!blockedCleanup || closing > 0 || pending.size > 0;
   const snapshot = () => ({ ...state, supported, connected: !!connection, busy: busy(),
@@ -15,8 +31,22 @@
   function update(phase, message) { state.phase = phase; state.message = message; changed(); }
   function check(token) { if (operation !== token || token.cancelled) throw cancelled(); }
   function idle() {
-    if (busy()) throw error('USB_BUSY', 'Espera a que termine la prueba o se libere la conexión USB.');
+    if (busy()) throw error('USB_BUSY', 'Espera a que termine el envío o se libere la conexión USB.');
+    try { state.resetRequired = state.resetRequired || localStorage.getItem(UNCERTAIN_KEY) === '1'; }
+    catch (_) { throw error('USB_STORAGE', 'No se pudo comprobar si hay un envío USB pendiente. Permite el almacenamiento de BALAM antes de volver a imprimir.'); }
     if (state.resetRequired) throw error('USB_RESET_REQUIRED', 'Apaga y enciende la impresora antes de volver a conectarla.');
+  }
+  function setEnabled(value) {
+    if (typeof value !== 'boolean') throw error('USB_MODE', 'Selecciona si quieres usar USB para los tickets de este dispositivo.');
+    if (busy()) throw error('USB_BUSY', 'Espera a que termine el envío antes de cambiar la conexión.');
+    if (value) {
+      idle();
+      if (!supported || !connection) throw error('USB_NOT_CONNECTED', 'Conecta la impresora USB antes de activarla para los tickets.');
+    }
+    try { storeFlag(MODE_KEY, value); }
+    catch (cause) { update(state.phase, cause.message); throw cause; }
+    state.enabled = value; changed();
+    return snapshot();
   }
   async function closeDevice(token) {
     if (!token?.device) return;
@@ -78,7 +108,7 @@
   }
   async function connect() {
     idle();
-    if (!supported) throw error('USB_UNAVAILABLE', 'Esta prueba requiere BALAM por HTTPS y un navegador con WebUSB, como Chrome en Android.');
+    if (!supported) throw error('USB_UNAVAILABLE', 'La conexión USB requiere BALAM por HTTPS y un navegador con WebUSB, como Chrome en Android.');
     if (connection) return snapshot();
     if (navigator.userActivation && !navigator.userActivation.isActive) throw error('USB_GESTURE', 'Pulsa Conectar impresora USB para autorizarla.');
     const token = { kind: 'connect', device: null, cancelled: false, issued: false };
@@ -101,7 +131,7 @@
         await nativeCall(token, () => device.selectAlternateInterface(selected.interfaceNumber, selected.alternateSetting)); check(token);
       }
       connection = { device, ...selected };
-      update('CONNECTED', 'Impresora conectada. Ya puedes enviar la prueba.');
+      update('CONNECTED', 'Impresora USB conectada.');
       return snapshot();
     } catch (cause) {
       token.cancelled = true; await closeDevice(token);
@@ -122,14 +152,16 @@
       }
     }
     update(state.resetRequired ? 'RESET_REQUIRED' : 'DISCONNECTED', state.resetRequired
-      ? 'El envío pudo quedar incompleto. Apaga y enciende la impresora antes de otra prueba.' : 'Impresora desconectada.');
+      ? 'El envío pudo quedar incompleto. Apaga y enciende la impresora antes de volver a imprimir.' : 'Impresora desconectada.');
     await closeDevice(token);
     return snapshot();
   }
   function acknowledgeReset() {
     if (busy() || connection) throw error('USB_BUSY', 'Espera a que se libere la conexión USB.');
+    try { storeFlag(UNCERTAIN_KEY, false); }
+    catch (cause) { update(state.phase, cause.message); throw cause; }
     state.resetRequired = false;
-    update('DISCONNECTED', 'Vuelve a conectar la impresora USB para realizar otra prueba.');
+    update('DISCONNECTED', 'Vuelve a conectar la impresora USB para imprimir.');
   }
   async function bitmap(png, token) {
     if (typeof png !== 'string' || !png.startsWith('data:image/png;base64,') || png.length > 500000) {
@@ -163,9 +195,13 @@
     operation = token;
     const job = { id: 'usb-' + (++sequence), kind, result: 'NOT_SENT', physicalPrintConfirmed: false,
       bytesSent: 0, copiesSent: 0, copies: [], createdAt: new Date().toISOString() };
-    state.lastJob = job; update('PREPARING', 'Preparando la prueba USB…');
+    state.lastJob = job; update('PREPARING', 'Preparando la impresión USB…');
     async function write(bytes) {
-      check(token); token.issued = true;
+      check(token);
+      // A reload or process interruption must not erase uncertainty. Persist
+      // this before the first irreversible byte; never store ticket content.
+      if (!token.issued) storeFlag(UNCERTAIN_KEY, true);
+      token.issued = true;
       const result = await nativeCall(token, () => token.device.transferOut(token.endpoint, bytes));
       if (result && Number.isInteger(result.bytesWritten)) job.bytesSent += Math.max(0, Math.min(bytes.length, result.bytesWritten));
       check(token);
@@ -193,8 +229,9 @@
         await write(new Uint8Array([0x1b,0x64,3, 0x1d,0x56,0x42,0]));
         job.copiesSent++; changed();
       }
+      storeFlag(UNCERTAIN_KEY, false);
       job.result = 'TRANSFERRED'; job.finishedAt = new Date().toISOString();
-      update('DELIVERED', 'Datos enviados por USB. Comprueba que la prueba salió completa en papel.');
+      update('DELIVERED', 'Datos enviados por USB. Comprueba que el ticket salió completo en papel.');
       return snapshot();
     } catch (cause) {
       token.cancelled = true; connection = null;
@@ -202,16 +239,16 @@
       state.resetRequired = state.resetRequired || token.issued;
       job.errorCode = cause.code || 'USB_TRANSFER'; job.finishedAt = new Date().toISOString();
       update(state.resetRequired ? 'RESET_REQUIRED' : 'ERROR', state.resetRequired
-        ? 'El envío pudo quedar incompleto. Apaga y enciende la impresora antes de otra prueba.'
-        : 'La prueba no se envió. Vuelve a conectar la impresora e inténtalo de nuevo.');
+        ? 'El envío pudo quedar incompleto. Apaga y enciende la impresora antes de volver a imprimir.'
+        : cause.code === 'USB_STORAGE' ? cause.message : 'No se enviaron datos. Vuelve a conectar la impresora e inténtalo de nuevo.');
       await closeDevice(token);
       throw cause.code ? cause : error('USB_TRANSFER', state.message);
     } finally { if (operation === token) operation = null; changed(); }
   }
   const printText = () => run('text', async () => [{ text: 'PRUEBA USB BALAM\nSIN VALOR COMERCIAL\nFIN DE PRUEBA\n' }]);
   const printImages = images => run('ticket', async token => {
-    if (!Array.isArray(images) || images.length !== 2) throw error('USB_COPIES', 'La prueba necesita las copias de cliente y tienda.');
-    // Decode both before sending anything. No resizing or partial second copy.
+    if (!Array.isArray(images) || images.length < 1 || images.length > 2) throw error('USB_COPIES', 'El envío USB admite uno o dos tickets.');
+    // Decode every copy before sending anything. No resizing or partial second copy.
     const copies = [];
     for (const png of images.slice()) copies.push(await bitmap(png, token));
     return copies;
@@ -227,6 +264,6 @@
     }
   });
   window.addEventListener('pagehide', () => { void disconnect(); });
-  window.USBReceipt = { connect, disconnect, printText, printImages, snapshot, acknowledgeReset,
+  window.USBReceipt = { connect, disconnect, printText, printImages, snapshot, setEnabled, acknowledgeReset,
     subscribe: fn => { listeners.add(fn); return () => listeners.delete(fn); } };
 })();

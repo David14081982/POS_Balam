@@ -1,14 +1,16 @@
-// H-182. Optional USB diagnostic; uses the real receipt without creating a sale.
+// H-182/H-183. Local USB preference and diagnostics without creating a sale.
 (function () {
   const h = React.createElement;
   const { useEffect, useRef, useState } = React;
   const COPY_LABELS = ['COPIA CLIENTE', 'COPIA TIENDA'];
+  const ticketsPending = () => !!window.PrintManager?.history().some(job => !['COMPLETED', 'CANCELLED', 'FAILED'].includes(job.stage));
   function USBPrintCheck() {
     const usb = window.USBReceipt;
     const [state, setState] = useState(() => usb.snapshot());
     const [working, setWorking] = useState(false);
     const [preparing, setPreparing] = useState(false);
     const [note, setNote] = useState('');
+    const [managerBusy, setManagerBusy] = useState(ticketsPending);
     const session = useRef({ mounted: true, generation: 0, active: false, controller: null, releaseDemo: null });
     window.UI.useSyncActivity(working || state.busy, ['config'], { screen: 'usb-print-check' });
 
@@ -16,20 +18,24 @@
       const current = session.current;
       current.mounted = true;
       const unsubscribe = usb.subscribe(() => { if (current.mounted) setState(usb.snapshot()); });
+      const unsubscribeManager = window.PrintManager?.subscribe?.(() => { if (current.mounted) setManagerBusy(ticketsPending()); });
       setState(usb.snapshot());
+      setManagerBusy(ticketsPending());
       return () => {
+        const releaseConnection = current.active || !usb.snapshot().enabled;
         current.mounted = false; current.generation++;
         current.controller?.abort(); current.releaseDemo?.();
-        unsubscribe();
+        unsubscribe(); unsubscribeManager?.();
         // A pending native chooser cannot be dismissed by JavaScript. Its late
-        // answer is invalidated by the transport and must not reopen USB.
-        Promise.resolve(usb.disconnect()).catch(() => {});
+        // answer is invalidated. An idle, enabled commercial connection belongs
+        // to the session, so navigating back to POS must leave it available.
+        if (releaseConnection) Promise.resolve(usb.disconnect()).catch(() => {});
       };
     }, [usb]);
 
-    function run(action) {
+    function run(action, recovery = false) {
       const current = session.current;
-      if (!current.mounted || current.active || usb.snapshot().busy) return;
+      if (!current.mounted || current.active || usb.snapshot().busy || (!recovery && ticketsPending())) return;
       current.active = true;
       const generation = ++current.generation;
       current.controller = new AbortController();
@@ -40,9 +46,10 @@
         // In particular connect() reaches requestDevice in this user gesture.
         result = action({ current, valid, signal: current.controller.signal });
       } catch (error) { result = Promise.reject(error); }
-      Promise.resolve(result).catch(() => {
+      Promise.resolve(result).catch(error => {
         if (valid()) setNote(current.rendering ? 'No se pudo preparar el ticket de prueba. Vuelve a intentarlo; no se enviaron datos a la impresora.'
-          : usb.snapshot().message || 'No se pudo completar la prueba. Revisa la conexión USB y vuelve a conectar.');
+          : String(error?.code || '').startsWith('USB_') ? error.message
+            : usb.snapshot().message || 'No se pudo completar la prueba. Revisa la conexión USB y vuelve a conectar.');
       }).finally(() => {
         if (!valid()) return;
         current.releaseDemo?.(); current.controller = null; current.active = false;
@@ -52,7 +59,7 @@
 
     function disconnect() {
       const current = session.current;
-      if (!current.mounted) return;
+      if (!current.mounted || ticketsPending()) return;
       const generation = ++current.generation;
       current.controller?.abort(); current.releaseDemo?.(); current.controller = null;
       current.active = true; setWorking(true); setPreparing(false); setNote('');
@@ -106,7 +113,15 @@
       })();
     }
 
-    const busy = working || state.busy;
+    function setEnabled(value) {
+      if (working || usb.snapshot().busy || ticketsPending()) return;
+      setNote('');
+      try { usb.setEnabled(value); }
+      catch (error) { setNote(error.message || 'No se pudo guardar la conexión de este dispositivo.'); }
+    }
+
+    const connectionBusy = working || state.busy;
+    const busy = connectionBusy || managerBusy;
     const canPrint = state.supported && state.connected && !busy && !state.resetRequired;
     const status = note || (preparing ? 'Preparando las copias de prueba…' : state.message)
       || (state.connected ? 'Impresora USB conectada.' : 'Conecta la impresora USB para comenzar.');
@@ -115,7 +130,7 @@
       className: 'min-h-11 px-4 py-2 border border-outline-variant rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed',
     }, label);
     const diagnostics = {
-      supported: state.supported, connected: state.connected, busy: !!busy,
+      supported: state.supported, enabled: !!state.enabled, connected: state.connected, busy: !!busy,
       phase: state.phase, resetRequired: !!state.resetRequired,
       device: state.device ? {
         name: state.device.name, vendorId: state.device.vendorId, productId: state.device.productId,
@@ -129,7 +144,16 @@
       } : null,
     };
     return h(window.HX.GlassCard, { className: 'p-6', 'data-testid': 'usb-print-check' }, [
-      h(window.HX.SerifHeading, { key: 'title', className: 'mb-2', children: 'Prueba de impresión por USB' }),
+      h(window.HX.SerifHeading, { key: 'title', className: 'mb-2', children: 'Impresión por USB en este dispositivo' }),
+      h('label', { key: 'mode', className: 'flex items-center gap-3 min-h-11 mb-2' }, [
+        h('input', { key: 'toggle', type: 'checkbox', 'data-testid': 'usb-use-for-tickets', checked: !!state.enabled,
+          disabled: busy || (!state.enabled && (!state.supported || !state.connected || state.resetRequired)),
+          onChange: event => setEnabled(event.target.checked), className: 'w-5 h-5 shrink-0 accent-primary' }),
+        h('span', { key: 'label', className: 'text-body font-semibold' }, 'Usar USB para los tickets de este dispositivo'),
+      ]),
+      h('p', { key: 'mode-description', className: 'text-caption text-on-surface-variant mb-3' }, state.enabled
+        ? 'Los tickets de este dispositivo se envían por USB, sin abrir THERMER ni Guardar como PDF. La conexión se conserva al volver a Ventas. Al reabrir BALAM, vuelve a conectar la impresora.'
+        : 'Conecta y prueba la impresora; después activa esta opción para imprimir los tickets habituales por USB. Este ajuste no cambia la impresión de las otras computadoras.'),
       h('p', { key: 'description', className: 'text-caption text-on-surface-variant' },
         'Imprime una prueba sin registrar una venta. El ticket conserva el diseño y tamaño de 80 mm, con una copia para cliente y otra para tienda.'),
       !state.supported && h('p', { key: 'unsupported', className: 'mt-3 text-caption' },
@@ -138,15 +162,17 @@
       h('p', { key: 'instructions', className: 'mt-3 text-caption text-on-surface-variant' },
         'Mantén BALAM abierto durante la prueba. Android puede pedir permiso al conectar o reconectar la impresora.'),
       state.resetRequired && h('p', { key: 'reset', role: 'alert', className: 'mt-3 text-caption text-danger' },
-        'El envío se interrumpió y pudo quedar incompleto. Desconecta la conexión, apaga y enciende físicamente la impresora; después confirma abajo antes de volver a conectar. La prueba no se repite automáticamente.'),
+        'El envío se interrumpió y pudo quedar incompleto. Desconecta la conexión, apaga y enciende físicamente la impresora; después confirma abajo antes de volver a conectar. El ticket no se repite automáticamente.'),
+      managerBusy && h('p', { key: 'pending-tickets', role: 'status', className: 'mt-3 text-caption' },
+        'Hay tickets pendientes. Puedes recuperar la conexión; termina o cancela esos trabajos antes de usar las pruebas o cambiar el modo de impresión.'),
       h('p', { key: 'status', 'data-testid': 'usb-status', role: 'status', className: 'mt-3 text-body' }, status),
       state.device && h('p', { key: 'device', className: 'mt-1 text-caption text-on-surface-variant' }, state.device.name || 'Dispositivo USB seleccionado'),
       h('div', { key: 'actions', className: 'mt-4 flex flex-wrap gap-2' }, [
-        button('usb-connect', 'Conectar impresora USB', () => run(() => usb.connect()), !state.supported || busy || state.connected || state.resetRequired),
-        button('usb-disconnect', busy ? 'Cancelar y desconectar' : 'Desconectar', disconnect, !busy && !state.connected),
+        button('usb-connect', 'Conectar impresora USB', () => run(() => usb.connect(), true), !state.supported || connectionBusy || state.connected || state.resetRequired),
+        button('usb-disconnect', busy ? 'Cancelar y desconectar' : 'Desconectar', disconnect, managerBusy || (!busy && !state.connected)),
         button('usb-test-text', 'Imprimir texto de prueba', () => run(() => usb.printText()), !canPrint),
         button('usb-test-ticket', 'Imprimir dos tickets de prueba', () => run(printTicket), !canPrint),
-        state.resetRequired && button('usb-reset-ack', 'Ya apagué y encendí la impresora', () => run(() => usb.acknowledgeReset()), busy || state.connected),
+        state.resetRequired && button('usb-reset-ack', 'Ya apagué y encendí la impresora', () => run(() => usb.acknowledgeReset(), true), connectionBusy || state.connected),
       ]),
       h('details', { key: 'diagnostics', className: 'mt-4 text-caption', 'data-testid': 'usb-diagnostics' }, [
         h('summary', { key: 'summary' }, 'Ver detalles de la conexión'),

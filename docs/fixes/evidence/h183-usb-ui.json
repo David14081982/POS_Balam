@@ -1,0 +1,72 @@
+{
+  "baseline": false,
+  "artifactSHA256": "807f92ab9173084076d0c65a919f4ca319f275fa51609ac15cb2dafba2a10a1e",
+  "results": [
+    {
+      "name": "real Settings opens without chooser or print; responsive at 360 and 1024 px",
+      "ok": true
+    },
+    {
+      "name": "cancelled device selection stays disconnected; subsequent gesture connects exact USB interface",
+      "ok": true
+    },
+    {
+      "name": "text is sent once with correct framing and no app/system dialog",
+      "ok": true
+    },
+    {
+      "name": "both real ticket copies survive pixel-for-pixel; double tap does not interleave",
+      "ok": true,
+      "folio": "PRUEBA-USB-ef6a67f3-ffd8-4427-bae1-23fadc9e36ff",
+      "heights": [
+        2477,
+        2477
+      ],
+      "bytes": 357963
+    },
+    {
+      "name": "consecutive long ticket has a new frozen folio and two independent intact copies",
+      "ok": true,
+      "folio": "PRUEBA-USB-65c02c1c-272e-4b50-a061-3ec3b7d9a5f4",
+      "heights": [
+        5752,
+        5752
+      ],
+      "bytes": 831195
+    },
+    {
+      "name": "renderer failure is explicit, sends nothing and releases the demo",
+      "ok": true
+    },
+    {
+      "name": "partial second copy stops without another cut; reset is required in UI",
+      "ok": true
+    },
+    {
+      "name": "disconnect cancels preparation without late output and resources can be reused",
+      "ok": true
+    },
+    {
+      "name": "leaving the print settings closes USB; no commercial mutation or alternate print transport",
+      "ok": true
+    },
+    {
+      "name": "enabled USB connection survives navigation; local mode never changes shared business configuration",
+      "ok": true
+    },
+    {
+      "name": "leaving Settings cancels an owned late chooser even with persistent USB mode enabled",
+      "ok": true
+    },
+    {
+      "name": "leaving Settings during its own diagnostic stops transfers and retains durable uncertainty",
+      "ok": true
+    },
+    {
+      "name": "unsupported browser explains USB compatibility and never requests permission",
+      "ok": true
+    }
+  ],
+  "hardware": "NOT_TESTED",
+  "remoteBusinessWrites": 0
+}

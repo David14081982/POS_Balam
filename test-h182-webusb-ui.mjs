@@ -198,6 +198,8 @@ try {
     await test('real Settings opens without chooser or print; responsive at 360 and 1024 px', async () => {
       assert.deepEqual(await page.evaluate(() => [__usbTest.requests, __usbTest.records.length, __usbTest.nativePrint, __usbTest.externalLaunch]), [0,0,0,0]);
       assert.equal(await page.getByTestId('usb-test-ticket').isDisabled(), true);
+      assert.equal(await page.getByTestId('usb-use-for-tickets').isChecked(), false);
+      assert.equal(await page.getByTestId('usb-use-for-tickets').isDisabled(), true);
       for (const width of [360, 1024]) {
         await page.setViewportSize({ width, height: 900 });
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
@@ -214,6 +216,8 @@ try {
       assert.deepEqual(detail.gestures, [true, true]);
       assert.equal(detail.device.configuration, 5); assert.equal(detail.device.interfaceNumber, 4); assert.equal(detail.device.endpoint, 9);
       assert.ok(detail.calls.some(call => call[0] === 'claim' && call[1] === 4));
+      assert.equal(await page.getByTestId('usb-use-for-tickets').isChecked(), false, 'Connecting must not change the commercial transport');
+      assert.equal(await page.getByTestId('usb-use-for-tickets').isDisabled(), false);
       const diagnostics = await page.getByTestId('usb-diagnostics').locator('pre').textContent();
       assert.equal(diagnostics.includes('PRIVATE-TEST-SERIAL'), false);
     });
@@ -229,6 +233,7 @@ try {
       await resetCapture(page, 'hold'); await page.getByTestId('usb-test-ticket').click();
       await page.waitForFunction(() => !!__usbTest.releaseTransfer);
       assert.equal(await page.getByTestId('usb-test-ticket').isDisabled(), true);
+      assert.equal(await page.getByTestId('usb-use-for-tickets').isDisabled(), true);
       await page.evaluate(() => document.querySelector('[data-testid="usb-test-ticket"]').click());
       await page.evaluate(() => { __usbTest.mode = 'ok'; __usbTest.releaseTransfer(); }); await completed(page);
       first = await verifyTicket(page, 'first'); return first;
@@ -258,11 +263,13 @@ try {
       const result = await page.evaluate(() => ({ records: __usbTest.records, state: USBReceipt.snapshot() }));
       assert.equal(result.state.lastJob.result, 'UNCERTAIN'); assert.equal(result.state.lastJob.errorCode, 'USB_PARTIAL');
       assert.equal(result.state.lastJob.copiesSent, 1);
+      assert.equal(await page.evaluate(() => localStorage.getItem('balam.print.usb.uncertain')), '1');
       assert.equal(result.records.filter(record => Buffer.from(record.data, 'base64').equals(TRAILER)).length, 1);
       const last = result.records.at(-1); assert.equal(last.accepted, Buffer.from(last.data, 'base64').length - 1);
       assert.equal(await page.getByTestId('usb-connect').isDisabled(), true); assert.equal(await page.getByTestId('usb-test-ticket').isDisabled(), true);
       assert.match(await page.getByTestId('usb-print-check').textContent(), /apaga y enciende/i);
       await page.getByTestId('usb-reset-ack').click(); await settled(page); await noResources(page);
+      assert.equal(await page.evaluate(() => localStorage.getItem('balam.print.usb.uncertain')), null);
     });
     await test('disconnect cancels preparation without late output and resources can be reused', async () => {
       await resetCapture(page); await page.getByTestId('usb-connect').click(); await connected(page);
@@ -281,6 +288,54 @@ try {
         nativePrint: __usbTest.nativePrint, externalLaunch: __usbTest.externalLaunch, opened: __usbTest.device.opened }));
       assert.equal(result.after, result.before); assert.equal(result.nativePrint, 0); assert.equal(result.externalLaunch, 0); assert.equal(result.opened, false);
       await noResources(page); assert.deepEqual(errors, []);
+    });
+    await test('enabled USB connection survives navigation; local mode never changes shared business configuration', async () => {
+      await page.getByTestId('settings-section-impresion').click();
+      await page.getByTestId('usb-connect').click(); await connected(page);
+      await page.getByTestId('usb-use-for-tickets').check();
+      const before = await page.evaluate(() => ({ calls: __usbTest.calls.length, records: __usbTest.records.length }));
+      assert.equal(await page.evaluate(() => localStorage.getItem('balam.print.usb')), '1');
+      await page.getByTestId('settings-section-negocio').click();
+      assert.deepEqual(await page.evaluate(() => ({ enabled: USBReceipt.snapshot().enabled, connected: USBReceipt.snapshot().connected,
+        opened: __usbTest.device.opened, calls: __usbTest.calls.length, records: __usbTest.records.length })),
+      { enabled: true, connected: true, opened: true, ...before });
+      await page.getByTestId('settings-section-impresion').click(); await connected(page);
+      assert.equal(await page.getByTestId('usb-use-for-tickets').isChecked(), true);
+      await page.getByTestId('usb-print-check').screenshot({ path: path.join(output, 'usb-enabled.png') });
+      await resetCapture(page); await page.getByTestId('usb-test-text').click(); await completed(page);
+      assert.equal(await page.evaluate(() => JSON.stringify([CONFIG.snapshot(), DATA.sales, DATA.products, DATA.payments, DATA.movements]) === __usbTest.business), true);
+    });
+    await test('leaving Settings cancels an owned late chooser even with persistent USB mode enabled', async () => {
+      await page.getByTestId('usb-disconnect').click(); await settled(page);
+      await resetCapture(page, 'chooser-hold'); await page.getByTestId('usb-connect').click();
+      await page.waitForFunction(() => !!__usbTest.releaseChooser);
+      const opens = await page.evaluate(() => __usbTest.calls.filter(call => call[0] === 'open').length);
+      await page.getByTestId('settings-section-negocio').click();
+      await page.evaluate(() => { __usbTest.mode = 'ok'; __usbTest.releaseChooser(); });
+      await page.waitForFunction(() => !USBReceipt.snapshot().busy);
+      assert.equal(await page.evaluate(() => USBReceipt.snapshot().connected), false);
+      assert.equal(await page.evaluate(() => __usbTest.calls.filter(call => call[0] === 'open').length), opens);
+      assert.equal(await page.evaluate(() => __usbTest.records.length), 0);
+      await page.getByTestId('settings-section-impresion').click();
+      assert.equal(await page.getByTestId('usb-use-for-tickets').isChecked(), true);
+      assert.equal(await page.getByTestId('usb-use-for-tickets').isDisabled(), false);
+      await page.getByTestId('usb-connect').click(); await connected(page);
+    });
+    await test('leaving Settings during its own diagnostic stops transfers and retains durable uncertainty', async () => {
+      await resetCapture(page, 'hold'); await page.getByTestId('usb-test-text').click();
+      await page.waitForFunction(() => !!__usbTest.releaseTransfer);
+      await page.getByTestId('settings-section-negocio').click();
+      await page.evaluate(() => { __usbTest.mode = 'ok'; __usbTest.releaseTransfer(); });
+      await page.waitForFunction(() => !USBReceipt.snapshot().busy);
+      assert.equal(await page.evaluate(() => __usbTest.records.length), 1);
+      assert.equal(await page.evaluate(() => USBReceipt.snapshot().lastJob.result), 'UNCERTAIN');
+      assert.equal(await page.evaluate(() => localStorage.getItem('balam.print.usb.uncertain')), '1');
+      await page.getByTestId('settings-section-impresion').click();
+      await page.getByTestId('usb-reset-ack').click(); await settled(page);
+      await page.getByTestId('usb-use-for-tickets').uncheck();
+      assert.equal(await page.evaluate(() => localStorage.getItem('balam.print.usb')), null);
+      assert.equal(await page.evaluate(() => USBReceipt.snapshot().enabled), false);
+      assert.deepEqual(errors, []);
     });
     await context.close();
     const unsupported = await openSettings(false);

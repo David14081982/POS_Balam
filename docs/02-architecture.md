@@ -736,11 +736,50 @@ El timeout no se interpreta como cancelación del controlador: los recursos
 nativos pendientes siguen impidiendo reutilizar la sesión.
 
 El diagnóstico no utiliza `PrintManager`, THERMER, `window.print` ni descargas
-de Storage, y no activa impresión automática comercial. No modifica DATA,
+de Storage. La versión H-182 no activaba impresión automática comercial; H-183
+añade la elección local descrita abajo. No modifica DATA,
 CONFIG, permisos, documentos históricos ni el requisito online de la venta.
 Su estado efímero sólo conserva metadatos de conexión y progreso, sin serial,
 contenido del ticket ni credenciales. `TRANSFERRED` significa bytes aceptados;
 `physicalPrintConfirmed` sigue siendo falso. La PWA debe permanecer abierta.
+
+### USB directo en comprobantes comerciales (H-183)
+
+El propietario confirmó físicamente texto y las dos copias gráficas del
+diagnóstico H-182 en tablet/END-80TEUX. Configuración → Impresión ofrece la
+elección explícita «Usar USB para los tickets de este dispositivo» después de
+conectar. `USBReceipt.setEnabled` guarda sólo `balam.print.usb` en localStorage,
+sin CONFIG compartida ni datos comerciales. El transporte elegido sobrevive a
+una desconexión: `UI.usesUSBReceipt` precede a THERMER para `balam-ticket` y
+`balam-return-receipt`; no degrada a PDF o aplicaciones externas al faltar USB.
+PC sin esa elección conserva su comportamiento. Los documentos A4, listados,
+préstamos y etiquetas mantienen su salida anterior.
+
+`PrintManager` agrupa una o dos copias según `print.twoCopies`, captura ambas
+antes de esperar y usa `receiptGraphic` sin cambiar plantillas ni geometría.
+USBReceipt decodifica todas antes del primer byte; el raster completo mantiene
+las bandas/avance/corte del diagnóstico. Un solo turno abarca ambas copias hasta
+resolver la última transferencia. El botón habitual envía al terminar de
+preparar; `print.auto` solicita el mismo flujo desde el comprobante confirmado,
+sin alterar cobro/RPC ni el requisito online. Sin conexión el trabajo espera un
+gesto «Conectar e imprimir»; no aparece el selector espontáneamente.
+
+Salir de Configuración conserva la conexión de sesión habilitada e inactiva.
+Salir durante un selector o una prueba cancela esa actividad; pagehide cierra
+USB. La tarjeta bloquea diagnóstico/cambio de modo durante trabajos comerciales;
+permite conectar/reconocer reinicio para recuperar una cola detenida, sin enviar.
+PrintManager conserva una actividad CORE desde preparación hasta fin/cancelación
+para impedir una actualización PWA durante el trabajo.
+
+Antes del primer byte se escribe y verifica `balam.print.usb.uncertain`; sólo se
+limpia después de la transferencia completa o del reconocimiento de reinicio
+físico. Si el almacenamiento falla, no se inicia el envío. Una recarga con esa
+bandera exige recuperación, sin recrear ni reenviar tickets. Salida parcial se
+registra UNCERTAIN con bytes/copias, detiene la progresión automática y no ofrece
+reintento ciego. Reconectar sólo actualiza controles; un gesto explícito permite
+continuar los pendientes. La confirmación de cierre de un diálogo no finaliza
+un trabajo USB. Datos enviados no certifican papel: physicalPrintConfirmed es
+false. La aceptación física de la integración comercial sigue pendiente.
 
 ## AUTH
 

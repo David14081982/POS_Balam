@@ -1,0 +1,27 @@
+{
+  "date": "2026-10-02",
+  "artifactSHA256": "807f92ab9173084076d0c65a919f4ca319f275fa51609ac15cb2dafba2a10a1e",
+  "serviceWorkerSHA256": "c4d67846a7792571ecfedd92638468d73468ca551367e4fdd522700acb54f75a",
+  "results": [
+    { "command": "node test-h183-usb-receipts.mjs", "passed": 16, "failed": 0, "exitCode": 0 },
+    { "command": "node test-h182-webusb.mjs", "passed": 32, "failed": 0, "exitCode": 0 },
+    { "command": "node test-h182-webusb-ui.mjs", "passed": 13, "failed": 0, "exitCode": 0 },
+    { "command": "node test-h180-system-print.mjs", "passed": 18, "failed": 0, "exitCode": 0 },
+    { "command": "node test-h181-thermer.mjs", "passed": 16, "failed": 0, "exitCode": 0 },
+    { "command": "node test-h164-online-ui.mjs", "passed": 6, "failed": 0, "exitCode": 0 },
+    { "command": "node test-h164-online-pwa.mjs", "passed": 2, "failed": 0, "exitCode": 0 },
+    { "command": "node test-h164-online-settings.mjs", "passed": 3, "failed": 0, "exitCode": 0 },
+    { "command": "node test-h164-online-architecture.mjs", "result": "PASS", "exitCode": 0 }
+  ],
+  "priorThermerRun": {
+    "passed": 14, "failed": 2,
+    "cause": "Fixture advanced browser clock only. Reproduced identically on HEAD and working sources: renewed server URL already expired, scheduling another request at 1000ms.",
+    "correction": "Advance backend fixture 600001ms too, restore Date.now with finally, preserve all original assertions. No production timer changes."
+  },
+  "physicalAcceptance": {
+    "h182Diagnostic": "USER_CONFIRMED_TEXT_AND_TWO_CORRECT_DESIGNS",
+    "h183Commercial": "NOT_TESTED"
+  },
+  "remoteBusinessWrites": 0,
+  "distributedCertification": "NOT_REQUESTED"
+}

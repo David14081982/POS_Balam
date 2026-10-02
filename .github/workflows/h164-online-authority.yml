@@ -107,6 +107,8 @@ jobs:
           node test-h182-webusb.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node test-h182-webusb-ui.mjs
+      - name: Verify direct USB commercial receipts and automatic copies
+        run: node test-h183-usb-receipts.mjs
       - name: Verify THERMER packets and one-touch printing
         run: |
           node test-h181-browser-uri.mjs

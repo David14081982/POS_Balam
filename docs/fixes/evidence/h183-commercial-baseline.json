@@ -1,0 +1,228 @@
+{
+  "baseline": true,
+  "artifactSHA256": "db52796b32ba70bc146dc3d174a5c4ccee851a0a424a866e585527c021dde696",
+  "results": [
+    {
+      "name": "connected USB automatic commercial receipt avoids system dialogs without losing guarantees",
+      "ok": false,
+      "error": "Commercial receipt still opens system dialogs instead of USB\n\n2 !== 0\n"
+    }
+  ],
+  "hardware": "NOT_TESTED",
+  "remoteBusinessWrites": 0,
+  "route": {
+    "jobs": [
+      {
+        "createdAt": "2026-10-02T18:57:12.404Z",
+        "dataReadyAt": "2026-10-02T18:57:12.406Z",
+        "renderStartedAt": "2026-10-02T18:57:12.422Z",
+        "assetsReadyAt": "2026-10-02T18:57:14.098Z",
+        "renderFinishedAt": "2026-10-02T18:57:14.135Z",
+        "payloadReadyAt": "2026-10-02T18:57:14.412Z",
+        "queuedAt": "2026-10-02T18:57:12.406Z",
+        "sendStartedAt": "2026-10-02T18:57:14.417Z",
+        "handoffFinishedAt": "2026-10-02T18:57:14.441Z",
+        "completedAt": "2026-10-02T18:57:14.441Z",
+        "failedAt": null,
+        "payloadLength": 8517649,
+        "pixelWidth": null,
+        "pixelHeight": null,
+        "pageWidth": 80,
+        "pageHeight": 300,
+        "printJobId": "print-murbrn38-1",
+        "source": "receipt",
+        "ticketId": "H183-AUTO",
+        "documentType": "sale",
+        "copyNumber": 1,
+        "totalCopies": 2,
+        "copyLabel": "COPIA CLIENTE",
+        "transport": "browser",
+        "printerTarget": "system-dialog",
+        "result": "BROWSER_DIALOG_FINISHED",
+        "errorCode": null,
+        "errorStack": null,
+        "physicalPrintConfirmed": false,
+        "documentHash": "d385a3a58559fcc500fbb9cc19c8a1a15341356ef784860642c86f3e82030ec6",
+        "renderHash": "71502917fd8f4bdea60411204a09dcfe094173149a60a2ddb6ea8afafdbd100b",
+        "payloadHash": "71502917fd8f4bdea60411204a09dcfe094173149a60a2ddb6ea8afafdbd100b",
+        "stage": "COMPLETED",
+        "events": [
+          {
+            "stage": "CREATED",
+            "timestamp": "2026-10-02T18:57:12.404Z"
+          },
+          {
+            "stage": "DATA_READY",
+            "timestamp": "2026-10-02T18:57:12.406Z"
+          },
+          {
+            "stage": "QUEUED",
+            "timestamp": "2026-10-02T18:57:12.406Z"
+          },
+          {
+            "stage": "RENDER_STARTED",
+            "timestamp": "2026-10-02T18:57:12.422Z"
+          },
+          {
+            "stage": "ASSETS_WAITING",
+            "timestamp": "2026-10-02T18:57:12.838Z"
+          },
+          {
+            "stage": "ASSETS_READY",
+            "timestamp": "2026-10-02T18:57:14.098Z"
+          },
+          {
+            "stage": "RENDER_FINISHED",
+            "timestamp": "2026-10-02T18:57:14.135Z",
+            "pageWidth": 80,
+            "pageHeight": 300
+          },
+          {
+            "stage": "PAYLOAD_READY",
+            "timestamp": "2026-10-02T18:57:14.412Z",
+            "documentHash": "d385a3a58559fcc500fbb9cc19c8a1a15341356ef784860642c86f3e82030ec6",
+            "renderHash": "71502917fd8f4bdea60411204a09dcfe094173149a60a2ddb6ea8afafdbd100b",
+            "payloadHash": "71502917fd8f4bdea60411204a09dcfe094173149a60a2ddb6ea8afafdbd100b",
+            "payloadLength": 8517649
+          },
+          {
+            "stage": "WAITING_TURN",
+            "timestamp": "2026-10-02T18:57:14.416Z"
+          },
+          {
+            "stage": "SEND_STARTED",
+            "timestamp": "2026-10-02T18:57:14.417Z",
+            "result": "HANDOFF_REQUESTED"
+          },
+          {
+            "stage": "HANDOFF_FINISHED",
+            "timestamp": "2026-10-02T18:57:14.441Z",
+            "result": "BROWSER_DIALOG_FINISHED"
+          },
+          {
+            "stage": "COMPLETED",
+            "timestamp": "2026-10-02T18:57:14.441Z",
+            "physicalPrintConfirmed": false
+          }
+        ]
+      },
+      {
+        "createdAt": "2026-10-02T18:57:12.420Z",
+        "dataReadyAt": "2026-10-02T18:57:12.421Z",
+        "renderStartedAt": "2026-10-02T18:57:12.427Z",
+        "assetsReadyAt": "2026-10-02T18:57:14.445Z",
+        "renderFinishedAt": "2026-10-02T18:57:14.474Z",
+        "payloadReadyAt": "2026-10-02T18:57:14.673Z",
+        "queuedAt": "2026-10-02T18:57:12.421Z",
+        "sendStartedAt": "2026-10-02T18:57:14.674Z",
+        "handoffFinishedAt": "2026-10-02T18:57:14.705Z",
+        "completedAt": "2026-10-02T18:57:14.705Z",
+        "failedAt": null,
+        "payloadLength": 8517647,
+        "pixelWidth": null,
+        "pixelHeight": null,
+        "pageWidth": 80,
+        "pageHeight": 300,
+        "printJobId": "print-murbrn4n-2",
+        "source": "receipt",
+        "ticketId": "H183-AUTO",
+        "documentType": "sale",
+        "copyNumber": 2,
+        "totalCopies": 2,
+        "copyLabel": "COPIA TIENDA",
+        "transport": "browser",
+        "printerTarget": "system-dialog",
+        "result": "BROWSER_DIALOG_FINISHED",
+        "errorCode": null,
+        "errorStack": null,
+        "physicalPrintConfirmed": false,
+        "documentHash": "af6cb965db2b19bc99c1adbc8ede42cccd319dd40904bad76b393e22e05bd5ad",
+        "renderHash": "2cd4732a3fec5540117f894ce24abcb47b7a6698c0297da4237aa439ede9f255",
+        "payloadHash": "2cd4732a3fec5540117f894ce24abcb47b7a6698c0297da4237aa439ede9f255",
+        "stage": "COMPLETED",
+        "events": [
+          {
+            "stage": "CREATED",
+            "timestamp": "2026-10-02T18:57:12.420Z"
+          },
+          {
+            "stage": "DATA_READY",
+            "timestamp": "2026-10-02T18:57:12.421Z"
+          },
+          {
+            "stage": "QUEUED",
+            "timestamp": "2026-10-02T18:57:12.421Z"
+          },
+          {
+            "stage": "RENDER_STARTED",
+            "timestamp": "2026-10-02T18:57:12.427Z"
+          },
+          {
+            "stage": "ASSETS_WAITING",
+            "timestamp": "2026-10-02T18:57:13.185Z"
+          },
+          {
+            "stage": "ASSETS_READY",
+            "timestamp": "2026-10-02T18:57:14.445Z"
+          },
+          {
+            "stage": "RENDER_FINISHED",
+            "timestamp": "2026-10-02T18:57:14.474Z",
+            "pageWidth": 80,
+            "pageHeight": 300
+          },
+          {
+            "stage": "PAYLOAD_READY",
+            "timestamp": "2026-10-02T18:57:14.673Z",
+            "documentHash": "af6cb965db2b19bc99c1adbc8ede42cccd319dd40904bad76b393e22e05bd5ad",
+            "renderHash": "2cd4732a3fec5540117f894ce24abcb47b7a6698c0297da4237aa439ede9f255",
+            "payloadHash": "2cd4732a3fec5540117f894ce24abcb47b7a6698c0297da4237aa439ede9f255",
+            "payloadLength": 8517647
+          },
+          {
+            "stage": "WAITING_TURN",
+            "timestamp": "2026-10-02T18:57:14.674Z"
+          },
+          {
+            "stage": "SEND_STARTED",
+            "timestamp": "2026-10-02T18:57:14.674Z",
+            "result": "HANDOFF_REQUESTED"
+          },
+          {
+            "stage": "HANDOFF_FINISHED",
+            "timestamp": "2026-10-02T18:57:14.705Z",
+            "result": "BROWSER_DIALOG_FINISHED"
+          },
+          {
+            "stage": "COMPLETED",
+            "timestamp": "2026-10-02T18:57:14.705Z",
+            "physicalPrintConfirmed": false
+          }
+        ]
+      }
+    ],
+    "nativeDialogs": 2,
+    "usbTransfers": 0,
+    "postReceiptClicks": 0,
+    "configAndBusinessPreserved": true,
+    "artifacts": [
+      {
+        "text": "COPIA CLIENTE\nlandscape\nBALAM\n\nBalam Guayaberas\n\nRFC: XAXX010101000\n\nCalle 60 #412, Centro, Mérida, Yuc.\n\n999 924 0011\n\nTRANSACCIÓN\nH183-AUTO\nFECHA\n2026-10-02 12:00\nATENDIDO POR\nPRUEBA\nDETALLE DE COMPRA\nPRENDA H183 1\n$116.00\nSKU: H183-0 · Talla: M\nCant: 1\nPRENDA H183 2\n$116.00\nSKU: H183-1 · Talla: M\nCant: 1\nPRENDA H183 3\n$116.00\nSKU: H183-2 · Talla: M\nCant: 1\nImporte\n$300.00\nIVA (16%)\n$48.00\nTOTAL A PAGAR\n$348.00\ncredit_card\n\nMÉTODO DE PAGO\n\nTarjeta\n\nGracias por ser parte de nuestra herencia.\n\nPiezas artesanales únicas, cuidando la tradición y el detalle en cada fibra.\n\nBALAMGUAYABERAS.MX",
+        "hash": "71502917fd8f4bdea60411204a09dcfe094173149a60a2ddb6ea8afafdbd100b"
+      },
+      {
+        "text": "COPIA TIENDA\nlandscape\nBALAM\n\nBalam Guayaberas\n\nRFC: XAXX010101000\n\nCalle 60 #412, Centro, Mérida, Yuc.\n\n999 924 0011\n\nTRANSACCIÓN\nH183-AUTO\nFECHA\n2026-10-02 12:00\nATENDIDO POR\nPRUEBA\nDETALLE DE COMPRA\nPRENDA H183 1\n$116.00\nSKU: H183-0 · Talla: M\nCant: 1\nPRENDA H183 2\n$116.00\nSKU: H183-1 · Talla: M\nCant: 1\nPRENDA H183 3\n$116.00\nSKU: H183-2 · Talla: M\nCant: 1\nImporte\n$300.00\nIVA (16%)\n$48.00\nTOTAL A PAGAR\n$348.00\ncredit_card\n\nMÉTODO DE PAGO\n\nTarjeta\n\nGracias por ser parte de nuestra herencia.\n\nPiezas artesanales únicas, cuidando la tradición y el detalle en cada fibra.\n\nBALAMGUAYABERAS.MX",
+        "hash": "2cd4732a3fec5540117f894ce24abcb47b7a6698c0297da4237aa439ede9f255"
+      }
+    ]
+  },
+  "guarantees": {
+    "completeCopies": 2,
+    "stableBusiness": true,
+    "honestPhysicalStatus": true
+  },
+  "cost": {
+    "nativeDialogs": 2,
+    "postReceiptClicks": 0
+  }
+}

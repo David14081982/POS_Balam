@@ -1,8 +1,8 @@
 # Prueba de impresión USB directa desde BALAM PWA
 
 **Riesgo:** H-182
-**Estado:** PARCIALMENTE RESUELTO — diagnóstico publicado y verificado; hardware NOT_TESTED
-**Fecha:** 01/10/2026
+**Estado:** RESUELTO EN SU ALCANCE — diagnóstico publicado; texto y diseño aceptados por el usuario
+**Fecha:** 02/10/2026
 **Commit:** `6f509a7e46872be11e7cd451c4334537b330e48b`
 
 ## Problema y reproducción
@@ -122,9 +122,15 @@ falta activar THERMER para esta tarjeta. Salir de la sección libera USB.
 
 ## Riesgo residual y pendientes
 
-Seleccionar y abrir USB en la tablet, texto, ticket completo con ambas copias,
-corte, trabajos consecutivos y reconexión. Los resultados de transferOut no
-demuestran papel. No se activa esta salida automáticamente en ventas. La prueba
+El 02/10/2026 el propietario conectó la tablet/END-80TEUX con el selector USB
+de BALAM, entregó una foto de las tres líneas de texto completas y confirmó
+«sí salieron con el diseño correcto» después de pulsar dos tickets de prueba.
+Esta es aceptación física aportada por el usuario, no una prueba local del agente.
+La integración en venta y cobro automático continúa en H-183.
+
+Corte, trabajos consecutivos y reconexión físicos quedan pendientes de evidencia.
+Los resultados de transferOut no demuestran papel. La versión original H-182 no
+activaba esta salida automáticamente en ventas; H-183 amplía ese alcance. La prueba
 puede requerir cerrar otras apps que tengan ocupada la interfaz; Windows puede
 tener un controlador que impida el acceso que Android permita. Una prueba en
 laptop no certifica la tablet. No se promete ejecución con la PWA cerrada, un

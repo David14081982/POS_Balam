@@ -1,0 +1,138 @@
+{
+  "baseline": false,
+  "source": "balam/usb-receipt.js",
+  "sourceSHA256": "e37cdac27849d360f46abd120e2c07cf93f25c4edf07c100723a07d77da8d8d3",
+  "synthetic": true,
+  "hardware": "NOT_TESTED",
+  "networkRequests": 0,
+  "results": [
+    {
+      "name": "USBReceipt module is available",
+      "ok": true
+    },
+    {
+      "name": "Import reads local mode without USB permission, output or stored ticket content",
+      "ok": true
+    },
+    {
+      "name": "Local USB mode requires explicit enablement, persists separately and never reconnects on reload",
+      "ok": true
+    },
+    {
+      "name": "Mode and sending fail safely when local persistence is denied or silently drops writes",
+      "ok": true
+    },
+    {
+      "name": "Uncertain output survives reload and only explicit physical-reset acknowledgement clears it",
+      "ok": true
+    },
+    {
+      "name": "The durable uncertain marker exists before the first byte and is cleared after complete transfer",
+      "ok": true
+    },
+    {
+      "name": "A failure clearing the durable marker keeps output uncertain and cannot silently acknowledge reset",
+      "ok": true
+    },
+    {
+      "name": "Unsupported browser and missing activation cannot open a chooser",
+      "ok": true
+    },
+    {
+      "name": "Chooser uses printer/vendor classes and acquires without printing",
+      "ok": true
+    },
+    {
+      "name": "Configuration, interface, alternate and endpoint come from descriptors",
+      "ok": true
+    },
+    {
+      "name": "Ambiguous bulk OUT and unrelated interface classes fail without output",
+      "ok": true
+    },
+    {
+      "name": "Claim denial closes the opened device and permits a fresh selection",
+      "ok": true
+    },
+    {
+      "name": "Rejected close retains exclusive ownership until a later disconnect succeeds",
+      "ok": true
+    },
+    {
+      "name": "Physical detach clears a quarantined failed close without reusing the handle",
+      "ok": true
+    },
+    {
+      "name": "Physical detach during a pending close cannot restore quarantine on late rejection",
+      "ok": true
+    },
+    {
+      "name": "Timed-out open remains excluded and a late opened handle is closed again",
+      "ok": true
+    },
+    {
+      "name": "Cancelled chooser sends nothing and does not retain a busy state",
+      "ok": true
+    },
+    {
+      "name": "Repeated connect is excluded and disconnect invalidates a late chooser result",
+      "ok": true
+    },
+    {
+      "name": "Consecutive text jobs deliver complete identical bytes and preserve the USB session",
+      "ok": true
+    },
+    {
+      "name": "Double print and reset acknowledgement cannot interleave a busy job",
+      "ok": true
+    },
+    {
+      "name": "First transfer short halts output and requires explicit physical reset",
+      "ok": true
+    },
+    {
+      "name": "First transfer stall halts output and requires explicit physical reset",
+      "ok": true
+    },
+    {
+      "name": "First transfer reject halts output and requires explicit physical reset",
+      "ok": true
+    },
+    {
+      "name": "Failure after an accepted prefix records exact progress and never sends the trailing cut",
+      "ok": true
+    },
+    {
+      "name": "Timeout closes the endpoint and late completion cannot resume output",
+      "ok": true
+    },
+    {
+      "name": "USB disconnect during transfer cannot send trailing bytes",
+      "ok": true
+    },
+    {
+      "name": "Disconnect of an unrelated USB device leaves the selected printer usable",
+      "ok": true
+    },
+    {
+      "name": "Invalid copy count is rejected before any USB bytes and needs no printer reset",
+      "ok": true
+    },
+    {
+      "name": "One or two complete 576px copies use the same raster framing",
+      "ok": true
+    },
+    {
+      "name": "The second image is validated before any bytes from the first image are sent",
+      "ok": true
+    },
+    {
+      "name": "Page lifecycle release closes the session without replay or a false uncertain job",
+      "ok": true
+    },
+    {
+      "name": "Subscriber removal stops notifications and disconnected reset is explicit",
+      "ok": true
+    }
+  ]
+}

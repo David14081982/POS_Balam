@@ -1637,10 +1637,10 @@
       h(window.USBPrintCheck, { key: 'usb-check' }),
       h(GlassCard, { key: 'tk', className: 'p-6' }, [
         h(SerifHeading, { key: 't', className: 'mb-2', children: 'Tickets e impresión' }),
-        h(CfgToggle, { key: 'th', k: 'print.thermer', title: 'Usar THERMER en tablets Android', desc: 'Prepara COPIA CLIENTE y COPIA TIENDA. Un toque envía ambas a THERMER, sin el diálogo del sistema. Activa Browser Print en THERMER. En PC se conserva la impresión del sistema.' }),
-        h(CfgToggle, { key: 'au', k: 'print.auto', title: 'Imprimir ticket automáticamente', desc: 'Abre el diálogo de impresión del sistema al confirmar el cobro' }),
+        h(CfgToggle, { key: 'th', k: 'print.thermer', title: 'Usar THERMER en tablets Android', desc: 'Se utiliza sólo cuando USB directo no está activo en este dispositivo. Prepara COPIA CLIENTE y COPIA TIENDA para enviarlas juntas a THERMER. Requiere Browser Print. En PC se conserva la impresión del sistema.' }),
+        h(CfgToggle, { key: 'au', k: 'print.auto', title: 'Imprimir ticket automáticamente', desc: 'Envía el ticket al confirmar el cobro. Con USB directo activo y conectado imprime sin diálogo; en PC conserva la impresión del sistema.' }),
         h(CfgToggle, { key: 'cp', k: 'print.twoCopies', title: 'Imprimir dos copias (cliente y tienda)',
-          desc: 'Cada comprobante sale dos veces, marcado «COPIA CLIENTE» y «COPIA TIENDA». Al cerrar el primer diálogo se solicita la segunda copia.' }),
+          desc: 'Cada comprobante sale dos veces, marcado «COPIA CLIENTE» y «COPIA TIENDA». Por USB directo se envían ambas seguidas; con impresión del sistema se solicita un diálogo por copia.' }),
       ]),
       h(GlassCard, { key: 'pie', className: 'p-6' }, [
         h(SerifHeading, { key: 't', className: 'mb-4', children: 'Pie de ticket' }),

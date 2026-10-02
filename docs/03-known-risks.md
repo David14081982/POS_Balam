@@ -5,10 +5,39 @@ un riesgo se debe leer su evidencia y las correcciones relacionadas. Los
 estados válidos son: `ABIERTO`, `EN CURSO`, `PARCIALMENTE RESUELTO`, `RESUELTO`
 y `BLOQUEADO`.
 
+## H-183 — Integrar USB directo en los comprobantes y el cobro automático
+
+**Estado:** RESUELTO EN CÓDIGO — publicación y aceptación comercial física pendientes.
+**Fecha:** 02/10/2026. **Commit:** Pendiente de commit.
+**Problema:** la prueba USB imprime, pero el botón comercial sigue enviando al
+diálogo Android/PDF cuando THERMER está apagado. No existe ruta USB comercial.
+**Evidencia:** `PrintManager.enqueue` sólo selecciona browser/thermer; browser
+invoca `host.print()`. El usuario confirmó haber pulsado ese botón y mostró
+Guardar como PDF/Carta. Después imprimió el texto WebUSB completo (foto) y
+confirmó las dos copias de prueba con el diseño correcto en END-80TEUX.
+**Alcance autorizado:** completar la impresión PWA solicitada: conservar diseño,
+tamaños, cliente/tienda, botón habitual y salida tras cobro confirmado. Preferencia
+USB local al dispositivo, sin afectar PC ni alterar ventas o configuración remota.
+**Invariantes:** snapshots congelados, imágenes completas, exclusión entre trabajos
+y diagnóstico, conexión de sesión, permiso explícito cuando corresponda, no
+fallback a PDF/THERMER ni reenvío automático tras una entrega incierta.
+**Solución:** USB local optativo precede a THERMER, conserva conexión al navegar,
+agrupa copias congeladas, envía tras comprobante confirmado y conserva incertidumbre
+en almacenamiento antes del primer byte. Sin selector/reenvío automático al reconectar.
+**Pruebas:** baseline comercial 0/1 (dos diálogos, USB cero); H-183 16/16,
+transporte 32/32, UI USB 13/13. Imágenes completas píxel por píxel, consecutivos,
+errores, cola detenida y CORE liberado. UI 6/6, PWA 2/2, THERMER 16/16 y
+arquitectura PASS; sistema 18/18 y settings 3/3. Coste de dos diálogos a cero,
+mismas dos copias y negocio intacto.
+SHA HTML probado `807f92ab9173084076d0c65a919f4ca319f275fa51609ac15cb2dafba2a10a1e`.
+**Residual:** el propietario confirmó el diagnóstico físico; la integración
+comercial nueva seguirá HARDWARE NOT_TESTED hasta su aceptación.
+**Documento:** `docs/fixes/impresion-usb-comercial-h183.md`.
+
 ## H-182 — Prueba de impresión USB directa desde la PWA
 
-**Estado:** PARCIALMENTE RESUELTO — diagnóstico optativo publicado y verificado; hardware NOT_TESTED.
-**Fecha:** 01/10/2026. **Commit:** `6f509a7`.
+**Estado:** RESUELTO EN SU ALCANCE — diagnóstico publicado; texto y diseño aceptados por el usuario.
+**Fecha:** 02/10/2026. **Commit:** `6f509a7`.
 **Decisión:** el usuario autoriza preparar una prueba WebUSB dentro de BALAM,
 sin aplicación Android adicional y conservando diseño, tamaños y dos copias.
 **Evidencia previa:** PrintManager sólo dispone de sistema/THERMER; no existe
@@ -29,10 +58,15 @@ THERMER 16/16, settings 3/3, arquitectura y build PASS. Evidencias h182 en fixes
 **Publicación:** Actions 36965972877 SUCCESS; HTML, offline y SW públicos
 idénticos byte por byte al commit. Evidencia `h182-deploy.json`, 02/10/2026
 04:56 UTC (01/10 local). Sin cambios remotos de negocio.
-**Residual:** probar selección, comandos, ambas copias, corte y reconexión en
-tablet/END-80TEUX. Permisos pueden reaparecer; PWA abierta. Bytes aceptados no
-confirman papel. No integración automática comercial ni certificación A/B/C.
+**Residual:** corte, reconexión y trabajos consecutivos físicos sin evidencia.
+Permisos pueden reaparecer; PWA abierta. Bytes aceptados no confirman papel.
+Integración automática comercial continúa en H-183. Sin certificación A/B/C.
 **Documento:** `docs/fixes/prueba-usb-pwa-h182.md`.
+
+**Aceptación física 02/10/2026:** el usuario entregó foto con las tres líneas de
+texto completas y confirmó «sí salieron con el diseño correcto» al imprimir las
+dos copias del diagnóstico en la tablet/END-80TEUX. Se habilita la continuación
+comercial H-183. Corte, reconexión y trabajos consecutivos físicos no acreditados.
 
 ## H-181 — THERMER con dos copias y una sola activación
 

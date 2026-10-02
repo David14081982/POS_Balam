@@ -1,0 +1,237 @@
+{
+  "baseline": false,
+  "artifactSHA256": "807f92ab9173084076d0c65a919f4ca319f275fa51609ac15cb2dafba2a10a1e",
+  "results": [
+    {
+      "name": "connected USB automatic commercial receipt avoids system dialogs without losing guarantees",
+      "ok": true
+    },
+    {
+      "name": "consecutive long receipt preserves all pixels and USB has priority over configured THERMER",
+      "ok": true,
+      "heights": [
+        4849,
+        4849
+      ],
+      "bytes": 700715,
+      "copies": 2,
+      "payloadHash": "673b861b148878aa56a4a462c8c3be96fbe00641387174739ab2c87c250b1a29"
+    },
+    {
+      "name": "automatic disabled waits for one manual action; duplicate activation never interleaves or resends",
+      "ok": true,
+      "heights": [
+        2538,
+        2538
+      ],
+      "bytes": 366779,
+      "copies": 2,
+      "payloadHash": "4af3d2a8d0f675aec54cdcbd9a42a532b26572737682d70a3eba7f89824dc785"
+    },
+    {
+      "name": "one-copy setting delivers exactly one original document",
+      "ok": true,
+      "heights": [
+        2432
+      ],
+      "bytes": 175732,
+      "copies": 1,
+      "payloadHash": "956f570593e6ced6831917e9f1f7d5d50a5d97adafb958f5a467aa61ec081d90"
+    },
+    {
+      "name": "disconnected USB blocks PDF and THERMER; reconnect alone never resends a waiting receipt",
+      "ok": true,
+      "heights": [
+        2538,
+        2538
+      ],
+      "bytes": 366779,
+      "copies": 2,
+      "payloadHash": "96c454a414abddadc707f7485a9d37590829dee291acfd8b8c4ebe30225e9ccc"
+    },
+    {
+      "name": "receipt connect-and-print keeps device selection in a user gesture and sends the frozen job",
+      "ok": true,
+      "heights": [
+        2538,
+        2538
+      ],
+      "bytes": 366779,
+      "copies": 2,
+      "payloadHash": "6aec91505ec8a87b556730d6b162d5b7ff0bb8c8c93a571f5c6d185c2f74c2a5"
+    },
+    {
+      "name": "cancelling while permission is pending prevents late connection from sending",
+      "ok": true
+    },
+    {
+      "name": "cancel during rendering releases resources and cannot send a late raster",
+      "ok": true
+    },
+    {
+      "name": "original snapshots remain intact when the source receipt unmounts during rendering",
+      "ok": true,
+      "heights": [
+        2538,
+        2538
+      ],
+      "bytes": 366779,
+      "copies": 2,
+      "payloadHash": "9a54ba5737c2a6fe5e0b973a9be2b1e5ce8c8f19f346cf6379bc27b60f495622"
+    },
+    {
+      "name": "partial second copy is uncertain, cannot be acknowledged/retried and stops before another cut",
+      "ok": true
+    },
+    {
+      "name": "reset and reconnection after partial output do not replay the uncertain document",
+      "ok": true
+    },
+    {
+      "name": "uncertain job holds a queued successor across reset/reconnect until an explicit print action",
+      "ok": true,
+      "heights": [
+        2810,
+        2810
+      ],
+      "bytes": 406075,
+      "copies": 2,
+      "payloadHash": "a14a4f4ce01d3281e3799356be2b3ce64d3bf0585e1b992c9f66dc157068c286"
+    },
+    {
+      "name": "USB is explicit and local: connection does not enable it; enabling keeps connection after Settings",
+      "ok": true
+    },
+    {
+      "name": "reload retains only local USB preference without requesting permission or printing",
+      "ok": true
+    },
+    {
+      "name": "PC default keeps the system renderer and has no USB activation",
+      "ok": true
+    },
+    {
+      "name": "legacy THERMER remains opt-in when local USB is disabled",
+      "ok": true
+    }
+  ],
+  "hardware": "NOT_TESTED",
+  "remoteBusinessWrites": 0,
+  "route": {
+    "jobs": [
+      {
+        "createdAt": "2026-10-02T18:59:02.922Z",
+        "dataReadyAt": "2026-10-02T18:59:02.925Z",
+        "renderStartedAt": "2026-10-02T18:59:02.927Z",
+        "assetsReadyAt": null,
+        "renderFinishedAt": "2026-10-02T18:59:10.567Z",
+        "payloadReadyAt": "2026-10-02T18:59:10.568Z",
+        "queuedAt": "2026-10-02T18:59:02.926Z",
+        "sendStartedAt": "2026-10-02T18:59:10.575Z",
+        "handoffFinishedAt": "2026-10-02T18:59:10.851Z",
+        "completedAt": "2026-10-02T18:59:10.852Z",
+        "failedAt": null,
+        "payloadLength": 70943,
+        "pixelWidth": null,
+        "pixelHeight": null,
+        "pageWidth": 80,
+        "pageHeight": null,
+        "printJobId": "print-murbu0cw-1",
+        "source": "receipt",
+        "ticketId": "H183-AUTO",
+        "documentType": "sale",
+        "copyNumber": 1,
+        "totalCopies": 2,
+        "copyLabel": "COPIA CLIENTE + COPIA TIENDA",
+        "transport": "usb",
+        "printerTarget": "usb",
+        "result": "USB_TRANSFERRED",
+        "errorCode": null,
+        "errorStack": null,
+        "physicalPrintConfirmed": false,
+        "copies": [
+          {
+            "copyLabel": "COPIA CLIENTE",
+            "documentHash": "d385a3a58559fcc500fbb9cc19c8a1a15341356ef784860642c86f3e82030ec6",
+            "payloadHash": "ae70f8fbf3e912c0af65137d8fe642033ef938be222ab6b822a5a84ca87730fd",
+            "pixelWidth": 576,
+            "pixelHeight": 2538
+          },
+          {
+            "copyLabel": "COPIA TIENDA",
+            "documentHash": "af6cb965db2b19bc99c1adbc8ede42cccd319dd40904bad76b393e22e05bd5ad",
+            "payloadHash": "21580a921e67a7fa349c39db22d36bc8ecd0f5c81792c86261425370b47c63ba",
+            "pixelWidth": 576,
+            "pixelHeight": 2538
+          }
+        ],
+        "payloadHash": "82e721274d74a5a1c010746e01bd7b05bac610608303aaf9cf9b72d34b56defa",
+        "bytesSent": 366779,
+        "copiesSent": 2,
+        "stage": "COMPLETED",
+        "events": [
+          {
+            "stage": "CREATED",
+            "timestamp": "2026-10-02T18:59:02.922Z"
+          },
+          {
+            "stage": "DATA_READY",
+            "timestamp": "2026-10-02T18:59:02.925Z"
+          },
+          {
+            "stage": "QUEUED",
+            "timestamp": "2026-10-02T18:59:02.926Z"
+          },
+          {
+            "stage": "RENDER_STARTED",
+            "timestamp": "2026-10-02T18:59:02.927Z"
+          },
+          {
+            "stage": "RENDER_FINISHED",
+            "timestamp": "2026-10-02T18:59:10.567Z",
+            "pageWidth": 80,
+            "payloadHash": "82e721274d74a5a1c010746e01bd7b05bac610608303aaf9cf9b72d34b56defa"
+          },
+          {
+            "stage": "PAYLOAD_READY",
+            "timestamp": "2026-10-02T18:59:10.568Z",
+            "payloadLength": 70943
+          },
+          {
+            "stage": "WAITING_TURN",
+            "timestamp": "2026-10-02T18:59:10.574Z"
+          },
+          {
+            "stage": "SEND_STARTED",
+            "timestamp": "2026-10-02T18:59:10.575Z",
+            "result": "USB_SENDING"
+          },
+          {
+            "stage": "HANDOFF_FINISHED",
+            "timestamp": "2026-10-02T18:59:10.851Z",
+            "result": "USB_TRANSFERRED"
+          },
+          {
+            "stage": "COMPLETED",
+            "timestamp": "2026-10-02T18:59:10.852Z",
+            "physicalPrintConfirmed": false
+          }
+        ]
+      }
+    ],
+    "nativeDialogs": 0,
+    "usbTransfers": 163,
+    "postReceiptClicks": 0,
+    "configAndBusinessPreserved": true,
+    "artifacts": []
+  },
+  "guarantees": {
+    "completeCopies": 2,
+    "stableBusiness": true,
+    "honestPhysicalStatus": true
+  },
+  "cost": {
+    "nativeDialogs": 0,
+    "postReceiptClicks": 0
+  }
+}

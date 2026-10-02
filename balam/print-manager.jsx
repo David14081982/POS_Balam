@@ -3,7 +3,12 @@
   const UI = window.UI;
   const jobs = [], listeners = new Set();
   const terminal = job => ['COMPLETED', 'CANCELLED', 'FAILED'].includes(job.stage);
-  let active = null, sequence = 0;
+  let active = null, sequence = 0, usbHeld = false;
+  const usbState = () => window.USBReceipt?.snapshot() || {};
+  const usbReady = () => {
+    const state = usbState();
+    return state.enabled && state.connected && !state.busy && !state.resetRequired;
+  };
   const notices = new WeakMap();
   function notice(host, message) {
     if (host === window || host.closed) { UI.toast(message); return; }
@@ -36,6 +41,9 @@
     changed();
   }
   function release(job) {
+    if (job.usbConnecting) { job.usbConnecting = false; void window.USBReceipt.disconnect(); }
+    if (job.activity) window.CORE?.endActivity(job.activity);
+    job.activity = null;
     if (job.refreshTimer) clearTimeout(job.refreshTimer);
     if (job.controller) job.controller.abort();
     if (job.cleanup) job.cleanup();
@@ -58,8 +66,14 @@
     if (terminal(job)) return;
     // Error stacks may contain data URIs / URLs; retain only engine frames.
     const errorStack = String(error.stack || '').split('\n').filter(line => /^\s+at /.test(line)).slice(0, 6).map(line => line.replace(/(?:https?:|blob:|data:)[^\s)]+/g, '[resource]')).join('\n');
-    job.message = /^El (comprobante|diseño)/.test(error.message || '') ? error.message : 'No se pudo enviar el ticket. Intenta nuevamente.';
-    stage(job, 'FAILED', { result: 'NOT_HANDED_OFF', errorCode: error.code || 'PRINT_PREPARATION_OR_TRANSPORT', errorStack });
+    const usb = job.audit.transport === 'usb', uncertain = usb && job.audit.result === 'UNCERTAIN';
+    if (usb) usbHeld = true;
+    job.message = uncertain
+      ? 'El ticket pudo salir incompleto. Revisa las copias en papel. En Configuración → Impresión, reinicia y vuelve a conectar la impresora antes de solicitar una reimpresión. No se repetirá automáticamente.'
+      : usb ? 'No se envió el ticket por USB. Revisa la conexión en Configuración → Impresión y vuelve a intentarlo.'
+      : /^El (comprobante|diseño)/.test(error.message || '') ? error.message : 'No se pudo enviar el ticket. Intenta nuevamente.';
+    stage(job, 'FAILED', { result: uncertain ? 'UNCERTAIN' : usb ? 'NOT_SENT' : 'NOT_HANDED_OFF', errorCode: error.code || 'PRINT_PREPARATION_OR_TRANSPORT', errorStack });
+    if (uncertain) { job.snapshots = null; job.images = null; job.snapshot = null; }
     release(job); job.resolve(publicJob(job)); pump();
   }
   function pump() {
@@ -68,12 +82,32 @@
     if (!active) { changed(); return; }
     if (active.ready) {
       stage(active, 'WAITING_TURN');
-      if (active.audit.transport === 'browser' && active.automatic) send(active);
+      if (active.automatic) send(active, false);
     }
     changed();
   }
-  function send(job) {
+  function send(job, explicit = true) {
     if (!job || job !== active || !job.ready || job.stage === 'SEND_STARTED' || terminal(job)) return false;
+    if (job.audit.transport === 'usb') {
+      if (!usbReady() || (!explicit && usbHeld)) { changed(); return false; }
+      if (explicit) usbHeld = false;
+      const previousJob = usbState().lastJob?.id;
+      stage(job, 'SEND_STARTED', { result: 'USB_SENDING' });
+      // Hold the queue until every transfer completes. UI acknowledgement cannot
+      // release an in-flight USB job or claim that paper physically printed.
+      window.USBReceipt.printImages(job.images).then(state => {
+        if (terminal(job)) return;
+        Object.assign(job.audit, { bytesSent: state.lastJob.bytesSent, copiesSent: state.lastJob.copiesSent });
+        finish(job, 'USB_TRANSFERRED');
+      }).catch(error => {
+        const last = usbState().lastJob;
+        if (last && last.id !== previousJob) Object.assign(job.audit, {
+          result: last.result, bytesSent: last.bytesSent, copiesSent: last.copiesSent,
+        });
+        failed(job, error);
+      });
+      return true;
+    }
     if (job.audit.transport === 'thermer') {
       if (job.expiresAt <= Date.now() + 15000) {
         job.ready = false; prepare(job); return false;
@@ -114,9 +148,10 @@
   async function prepare(job) {
     try {
       job.controller = new AbortController();
+      if (job.audit.transport === 'usb' && !job.activity) job.activity = window.CORE?.beginActivity(['config'], { screen: 'receipt-usb' });
       if (!job.snapshot.text.trim()) throw new Error('El comprobante está vacío. Cierra y vuelve a abrirlo.');
       stage(job, 'RENDER_STARTED');
-      if (job.audit.transport === 'thermer') {
+      if (['thermer', 'usb'].includes(job.audit.transport)) {
         // Freeze both originals in enqueue; refresh a URL without re-rendering.
         if (!job.images) {
           const images = [], copies = [];
@@ -128,13 +163,21 @@
             }, job.controller.signal);
             if (terminal(job)) return;
             images.push(png);
-            copies.push({ copyLabel: ['COPIA CLIENTE', 'COPIA TIENDA'][i],
+            copies.push({ copyLabel: job.labels[i],
               documentHash: await UI.receiptHash(snapshot.html), payloadHash: await UI.receiptHash(png),
               pixelWidth: metrics.pixelWidth, pixelHeight: metrics.pixelHeight });
+            if (terminal(job)) return;
           }
           job.images = images; job.audit.copies = copies;
         }
         stage(job, 'RENDER_FINISHED', { pageWidth: 80, payloadHash: await UI.receiptHash(JSON.stringify(job.images)) });
+        if (terminal(job)) return;
+        if (job.audit.transport === 'usb') {
+          stage(job, 'PAYLOAD_READY', { payloadLength: JSON.stringify(job.images).length });
+          job.ready = true;
+          if (job === active) { stage(job, 'WAITING_TURN'); send(job, false); }
+          changed(); return;
+        }
         const packet = await window.CORE.invokeSync('prepareThermerPrint', { images: job.images });
         if (terminal(job)) return;
         job.deliveryUrl = packet.url; job.expiresAt = packet.expiresAt;
@@ -159,7 +202,7 @@
       job.ready = true;
       if (job === active) {
         stage(job, 'WAITING_TURN');
-        if (job.audit.transport === 'browser' && job.automatic) send(job);
+        if (job.automatic) send(job, false);
       }
       changed();
     } catch (error) { failed(job, error); }
@@ -167,7 +210,11 @@
   function enqueue({ element, host = window, automatic = false, copies = 1, copyLabels = null, source, documentType, continuous = true } = {}) {
     element = element || host.document.querySelector('#balam-ticket, #balam-return-receipt');
     if (!element) { UI.toast('El comprobante todavía no está disponible. Cierra y vuelve a abrirlo.'); return null; }
-    const transport = UI.usesThermerReceipt() && element.matches('#balam-ticket, #balam-return-receipt') ? 'thermer' : 'browser';
+    const receipt = element.matches('#balam-ticket, #balam-return-receipt');
+    const transport = receipt && UI.usesUSBReceipt() ? 'usb' : UI.usesThermerReceipt() && receipt ? 'thermer' : 'browser';
+    if (transport === 'usb' && ![1, 2].includes(copies)) { UI.toast('Selecciona una o dos copias para la impresora USB.'); return null; }
+    const usbLabels = transport === 'usb' ? Array.from({ length: copies }, (_, index) => copyLabels?.[index] || null) : null;
+    if (transport === 'usb') copies = 1;
     if (transport === 'thermer') { copies = 1; copyLabels = null; }
     if (!Number.isInteger(copies) || copies < 1 || copies > 50) { UI.toast('Selecciona entre 1 y 50 copias.'); return null; }
     const key = element.outerHTML;
@@ -201,17 +248,18 @@
       const printJobId = `print-${Date.now().toString(36)}-${++sequence}`;
       const copyLabel = copyLabels ? copyLabels[copyNumber - 1] || null : null;
       const { snapshot, initialError } = variantFor(copyLabel);
-      const job = { element, key, host, continuous, automatic: transport === 'browser', snapshot: { ...snapshot }, initialError,
+      const job = { element, key, host, continuous, automatic: transport !== 'thermer', snapshot: { ...snapshot }, initialError,
         stage: 'CREATED', ready: false, frame: null, cleanup: null, events: [], payload: null,
         audit: { ...Object.fromEntries(Object.values(times).map(name => [name, null])), payloadLength: null, pixelWidth: null, pixelHeight: null, pageWidth: null, pageHeight: null,
           printJobId, source: source || element.dataset.printSource || 'receipt', ticketId: element.dataset.documentId || null,
           documentType: documentType || element.dataset.documentType || (element.id === 'balam-return-receipt' ? 'return' : 'receipt'),
           copyNumber, totalCopies: copies, copyLabel, transport, printerTarget: 'system-dialog',
           result: null, errorCode: null, errorStack: null, physicalPrintConfirmed: false } };
-      if (transport === 'thermer') {
-        try { job.snapshots = ['COPIA CLIENTE', 'COPIA TIENDA'].map(label => UI.captureReceipt(element, label)); }
+      if (transport === 'thermer' || transport === 'usb') {
+        job.labels = transport === 'usb' ? usbLabels : ['COPIA CLIENTE', 'COPIA TIENDA'];
+        try { job.snapshots = job.labels.map(label => UI.captureReceipt(element, label)); }
         catch (error) { job.initialError = error; }
-        job.audit.totalCopies = 2; job.audit.copyLabel = 'CLIENTE + TIENDA'; job.audit.printerTarget = 'thermer';
+        job.audit.totalCopies = job.labels.length; job.audit.copyLabel = job.labels.filter(Boolean).join(' + ') || null; job.audit.printerTarget = transport;
       }
       job.promise = new Promise(resolve => { job.resolve = resolve; });
       job.handle = Object.freeze({ printJobId, done: job.promise });
@@ -234,12 +282,14 @@
     // Cannot retract an already delivered native print job.
     if (!job || terminal(job) || job.stage === 'SEND_STARTED') return false;
     stage(job, 'CANCELLED', { result: 'CANCELLED_BEFORE_SEND' });
-    if (job.audit.transport === 'thermer') { job.snapshots = null; job.images = null; job.deliveryUrl = null; }
+    if (job.audit.transport !== 'browser') { job.snapshots = null; job.images = null; job.deliveryUrl = null; }
     release(job); job.resolve(publicJob(job)); pump(); return true;
   }
   function retry(id) {
     const job = jobs.find(j => j.audit.printJobId === id);
     if (!job || job.stage !== 'FAILED') return false;
+    if (job.audit.transport === 'usb' && job.audit.result === 'UNCERTAIN') return false;
+    if (job.audit.transport === 'usb') usbHeld = false;
     job.ready = false;
     job.promise = new Promise(resolve => { job.resolve = resolve; });
     job.audit.errorCode = null; job.audit.errorStack = null;
@@ -249,24 +299,37 @@
   }
   function PrintStatus() {
     const [, refresh] = React.useReducer(n => n + 1, 0);
-    React.useEffect(() => { listeners.add(refresh); return () => listeners.delete(refresh); }, []);
+    React.useEffect(() => {
+      listeners.add(refresh);
+      const unsubscribe = window.USBReceipt?.subscribe(refresh);
+      return () => { listeners.delete(refresh); unsubscribe?.(); };
+    }, []);
     const job = active || [...jobs].reverse().find(j => j.stage === 'FAILED' && !j.dismissed);
     if (!job) return null;
-    const sending = job.stage === 'SEND_STARTED', thermer = job.audit.transport === 'thermer';
+    const sending = job.stage === 'SEND_STARTED', thermer = job.audit.transport === 'thermer', usb = job.audit.transport === 'usb';
+    const state = usbState(), connectable = usb && state.enabled && state.supported && !state.connected && !state.busy && !state.resetRequired;
     // H-179: con dos copias el operador ve cuál sigue (p. ej. «COPIA TIENDA · 2 de 2»).
-    const copy = thermer ? ' COPIA CLIENTE + COPIA TIENDA.' : job.audit.totalCopies > 1 ? ` ${job.audit.copyLabel || 'Copia'} · ${job.audit.copyNumber} de ${job.audit.totalCopies}.` : '';
+    const copy = (thermer || usb) && job.audit.totalCopies === 2 ? ' COPIA CLIENTE + COPIA TIENDA.' : job.audit.totalCopies > 1 ? ` ${job.audit.copyLabel || 'Copia'} · ${job.audit.copyNumber} de ${job.audit.totalCopies}.` : '';
     const message = (job.stage === 'FAILED' ? job.message : sending
-      ? (thermer ? 'Solicitud enviada a THERMER. Regresa a BALAM al terminar.' : 'Cierra el diálogo de impresión para continuar.')
+      ? (usb ? 'Enviando a la impresora USB. Mantén BALAM abierto.' : thermer ? 'Solicitud enviada a THERMER. Regresa a BALAM al terminar.' : 'Cierra el diálogo de impresión para continuar.')
+      : usb && job.ready && !usbReady() ? (state.resetRequired ? 'Revisa el papel y reinicia la impresora desde Configuración → Impresión antes de continuar.' : job.connectionMessage || state.message || 'Conecta la impresora USB para imprimir este ticket.')
       : job.ready ? 'Ticket listo para imprimir.' : 'Preparando ticket…') + copy;
     const button = (id, label, action) => React.createElement('button', { key: id, type: 'button', 'data-testid': id,
       onClick: event => { if (event.detail <= 1) action(); }, style: { minHeight: 44, padding: '8px 12px', border: '1px solid #abb2c0', borderRadius: 8, background: 'white', color: '#131b2e', fontWeight: 600 }, className: 'min-h-[44px] px-3 py-2 border rounded-lg font-semibold' }, label);
     return React.createElement('section', { 'data-testid': 'print-status', className: 'bg-white text-primary p-3 rounded-xl shadow-e3 max-w-full sm:max-w-sm', style: { position: 'fixed', top: 12, right: 12, width: 'min(360px, calc(100vw - 24px))', zIndex: 200, pointerEvents: 'auto', padding: 12, background: 'white', color: '#131b2e', borderRadius: 12, maxHeight: '45vh', overflow: 'auto' } }, [
       React.createElement('p', { key: 'status', role: 'status', className: 'text-sm' }, message),
       React.createElement('div', { key: 'buttons', style: { display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }, className: 'flex flex-wrap gap-2 mt-2' }, [
-        job.ready && !sending && !terminal(job) && button('print-next', 'Imprimir ticket', () => send(job)),
+        job.ready && !sending && !terminal(job) && (!usb || usbReady()) && button('print-next', 'Imprimir ticket', () => send(job)),
+        job.ready && !sending && !terminal(job) && connectable && button('print-usb-connect', 'Conectar e imprimir', () => {
+          job.usbConnecting = true;
+          const connection = window.USBReceipt.connect();
+          job.connectionMessage = null;
+          connection.then(() => { job.usbConnecting = false; if (job === active && !terminal(job)) send(job); })
+            .catch(error => { job.usbConnecting = false; job.connectionMessage = error.message; changed(); });
+        }),
         !sending && !terminal(job) && button('print-cancel', 'Cancelar', () => cancel(job.audit.printJobId)),
-        sending && button('print-returned', thermer ? 'Ya regresé de THERMER' : 'Ya cerré el diálogo', () => finish(job, 'USER_CONFIRMED_RETURN')),
-        job.stage === 'FAILED' && button('print-retry', 'Reintentar', () => retry(job.audit.printJobId)),
+        sending && !usb && button('print-returned', thermer ? 'Ya regresé de THERMER' : 'Ya cerré el diálogo', () => finish(job, 'USER_CONFIRMED_RETURN')),
+        job.stage === 'FAILED' && job.audit.result !== 'UNCERTAIN' && button('print-retry', 'Reintentar', () => retry(job.audit.printJobId)),
         job.stage === 'FAILED' && button('print-dismiss', 'Cerrar aviso', () => { job.dismissed = true; changed(); }),
       ]),
       jobs.filter(j => !terminal(j)).length > 1 && React.createElement('p', { key: 'pending', className: 'text-sm mt-2' }, 'Hay otro ticket esperando.'),
@@ -284,7 +347,7 @@
       React.createElement('summary', { key: 'title' }, 'Historial reciente de impresión'),
       React.createElement('p', { key: 'limit', className: 'text-sm my-2' }, 'Sólo esta sesión. La entrega al sistema no confirma la salida en papel.'),
       React.createElement('ul', { key: 'rows', style: { maxHeight: 320, overflow: 'auto' } }, jobs.slice(-30).reverse().map(job => React.createElement('li', { key: job.audit.printJobId, style: { padding: '8px 0', borderBottom: '1px solid #d9dde5', overflowWrap: 'anywhere' } },
-        `${new Date(job.audit.createdAt).toLocaleTimeString()} · ${job.audit.ticketId || 'Reporte'} · ${job.audit.transport === 'thermer' ? 'cliente + tienda · THERMER' : `copia ${job.audit.copyNumber}/${job.audit.totalCopies} · Sistema`} · ${job.stage === 'FAILED' ? 'No enviado' : job.stage === 'CANCELLED' ? 'Cancelado' : job.stage === 'COMPLETED' ? 'Interacción finalizada' : 'Pendiente'}`))),
+        `${new Date(job.audit.createdAt).toLocaleTimeString()} · ${job.audit.ticketId || 'Reporte'} · ${job.audit.transport === 'usb' ? `${job.audit.totalCopies} copia(s) · USB` : job.audit.transport === 'thermer' ? 'cliente + tienda · THERMER' : `copia ${job.audit.copyNumber}/${job.audit.totalCopies} · Sistema`} · ${job.audit.result === 'UNCERTAIN' ? 'Salida incompleta o incierta' : job.stage === 'FAILED' ? 'No enviado' : job.stage === 'CANCELLED' ? 'Cancelado' : job.stage === 'COMPLETED' ? (job.audit.transport === 'usb' ? 'Datos enviados' : 'Interacción finalizada') : 'Pendiente'}`))),
       React.createElement('details', { key: 'technical' }, [
         React.createElement('summary', { key: 'title' }, 'Ver detalles técnicos'),
         React.createElement('pre', { key: 'data', style: { whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', maxHeight: 400, overflow: 'auto' } }, JSON.stringify(jobs.slice(-30).map(publicJob), null, 2)),
@@ -292,6 +355,7 @@
     ]);
   }
   window.PrintManager = { enqueue, cancel, retry, sendNext: () => send(active),
-    acknowledgeReturn: () => active && active.stage === 'SEND_STARTED' ? finish(active, 'USER_CONFIRMED_RETURN') : false,
+    acknowledgeReturn: () => active && active.audit.transport !== 'usb' && active.stage === 'SEND_STARTED' ? finish(active, 'USER_CONFIRMED_RETURN') : false,
+    subscribe: fn => { listeners.add(fn); return () => listeners.delete(fn); },
     history: () => jobs.map(publicJob), PrintStatus, PrintHistory };
 })();
