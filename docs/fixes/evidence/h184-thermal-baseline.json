@@ -1,0 +1,262 @@
+{
+  "baseline": true,
+  "baselineRef": "ef97003",
+  "artifactSHA256": "807f92ab9173084076d0c65a919f4ca319f275fa51609ac15cb2dafba2a10a1e",
+  "results": [
+    {
+      "name": "real payment-method thermal ticket uses USB and retains its one unlabelled copy",
+      "ok": false,
+      "error": "The real 80 mm report still uses the system transport despite USB being selected\n\n'browser' !== 'usb'\n",
+      "errorStack": "AssertionError [ERR_ASSERTION]: The real 80 mm report still uses the system transport despite USB being selected\n\n'browser' !== 'usb'\n\n    at file:///C:/Users/david/Downloads/POS-BALAM/test-h184-all-thermal.mjs:351:12\n    at async test (file:///C:/Users/david/Downloads/POS-BALAM/test-h184-all-thermal.mjs:25:25)\n    at async file:///C:/Users/david/Downloads/POS-BALAM/test-h184-all-thermal.mjs:333:3",
+      "state": {
+        "jobs": [
+          {
+            "createdAt": "2026-10-02T20:11:46.941Z",
+            "dataReadyAt": "2026-10-02T20:11:46.946Z",
+            "renderStartedAt": "2026-10-02T20:11:46.949Z",
+            "assetsReadyAt": "2026-10-02T20:11:47.016Z",
+            "renderFinishedAt": "2026-10-02T20:11:47.038Z",
+            "payloadReadyAt": "2026-10-02T20:11:47.040Z",
+            "queuedAt": "2026-10-02T20:11:46.946Z",
+            "sendStartedAt": "2026-10-02T20:11:47.043Z",
+            "handoffFinishedAt": "2026-10-02T20:11:47.046Z",
+            "completedAt": "2026-10-02T20:11:47.051Z",
+            "failedAt": null,
+            "payloadLength": 12685,
+            "pixelWidth": null,
+            "pixelHeight": null,
+            "pageWidth": 80,
+            "pageHeight": 224,
+            "printJobId": "print-murefjp1-1",
+            "source": "reportes-metodos",
+            "ticketId": null,
+            "documentType": "payment-method-report",
+            "copyNumber": 1,
+            "totalCopies": 1,
+            "copyLabel": null,
+            "transport": "browser",
+            "printerTarget": "system-dialog",
+            "result": "BROWSER_DIALOG_FINISHED",
+            "errorCode": null,
+            "errorStack": null,
+            "physicalPrintConfirmed": false,
+            "documentHash": "4946dd72628ef2996a88c963bdf218716e6ac18d59c2bce75fecc482c20e6d51",
+            "renderHash": "a6e649954a8070791d369f40748bf683a7c21e981d32db610109dbb779f5fa44",
+            "payloadHash": "a6e649954a8070791d369f40748bf683a7c21e981d32db610109dbb779f5fa44",
+            "stage": "COMPLETED",
+            "events": [
+              {
+                "stage": "CREATED",
+                "timestamp": "2026-10-02T20:11:46.941Z"
+              },
+              {
+                "stage": "DATA_READY",
+                "timestamp": "2026-10-02T20:11:46.946Z"
+              },
+              {
+                "stage": "QUEUED",
+                "timestamp": "2026-10-02T20:11:46.946Z"
+              },
+              {
+                "stage": "RENDER_STARTED",
+                "timestamp": "2026-10-02T20:11:46.949Z"
+              },
+              {
+                "stage": "ASSETS_WAITING",
+                "timestamp": "2026-10-02T20:11:46.973Z"
+              },
+              {
+                "stage": "ASSETS_READY",
+                "timestamp": "2026-10-02T20:11:47.016Z"
+              },
+              {
+                "stage": "RENDER_FINISHED",
+                "timestamp": "2026-10-02T20:11:47.038Z",
+                "pageWidth": 80,
+                "pageHeight": 224
+              },
+              {
+                "stage": "PAYLOAD_READY",
+                "timestamp": "2026-10-02T20:11:47.040Z",
+                "documentHash": "4946dd72628ef2996a88c963bdf218716e6ac18d59c2bce75fecc482c20e6d51",
+                "renderHash": "a6e649954a8070791d369f40748bf683a7c21e981d32db610109dbb779f5fa44",
+                "payloadHash": "a6e649954a8070791d369f40748bf683a7c21e981d32db610109dbb779f5fa44",
+                "payloadLength": 12685
+              },
+              {
+                "stage": "WAITING_TURN",
+                "timestamp": "2026-10-02T20:11:47.042Z"
+              },
+              {
+                "stage": "SEND_STARTED",
+                "timestamp": "2026-10-02T20:11:47.043Z",
+                "result": "HANDOFF_REQUESTED"
+              },
+              {
+                "stage": "HANDOFF_FINISHED",
+                "timestamp": "2026-10-02T20:11:47.046Z",
+                "result": "BROWSER_DIALOG_FINISHED"
+              },
+              {
+                "stage": "COMPLETED",
+                "timestamp": "2026-10-02T20:11:47.051Z",
+                "physicalPrintConfirmed": false
+              }
+            ]
+          }
+        ],
+        "usb": {
+          "phase": "CONNECTED",
+          "message": "Impresora USB conectada.",
+          "enabled": true,
+          "resetRequired": false,
+          "cleanupRequired": false,
+          "lastJob": null,
+          "supported": true,
+          "connected": true,
+          "busy": false,
+          "device": {
+            "name": "END-80TEUX SYNTHETIC",
+            "vendorId": 4660,
+            "productId": 22136,
+            "configuration": 5,
+            "interfaceNumber": 4,
+            "alternateSetting": 0,
+            "endpoint": 9,
+            "interfaceClass": 7
+          }
+        },
+        "activity": {
+          "active": 0,
+          "domains": {}
+        },
+        "activityTokens": {},
+        "focus": "<body><div id=\"h184-root\"><div class=\"flex-1 overflow-y-auto bg-background font-body text-on-surface\"><div class=\"w-full min-w-0 px-4 py-6 sm:px-6 lg:p-10 max-w-container-max mx-auto\"><div class=\"flex items-center gap-2 p-1.5 mb-8 bg-surface-container-low rounded-xl border border-outline-variant ove",
+        "fixture": {
+          "mode": "ok",
+          "records": 0,
+          "trailers": 0,
+          "heldTransfer": false,
+          "renders": []
+        }
+      }
+    }
+  ],
+  "hardware": "NOT_TESTED",
+  "remoteBusinessWrites": 0,
+  "browserVersion": "148.0.7778.96",
+  "report": {
+    "job": {
+      "createdAt": "2026-10-02T20:11:46.941Z",
+      "dataReadyAt": "2026-10-02T20:11:46.946Z",
+      "renderStartedAt": "2026-10-02T20:11:46.949Z",
+      "assetsReadyAt": "2026-10-02T20:11:47.016Z",
+      "renderFinishedAt": "2026-10-02T20:11:47.038Z",
+      "payloadReadyAt": "2026-10-02T20:11:47.040Z",
+      "queuedAt": "2026-10-02T20:11:46.946Z",
+      "sendStartedAt": "2026-10-02T20:11:47.043Z",
+      "handoffFinishedAt": "2026-10-02T20:11:47.046Z",
+      "completedAt": "2026-10-02T20:11:47.051Z",
+      "failedAt": null,
+      "payloadLength": 12685,
+      "pixelWidth": null,
+      "pixelHeight": null,
+      "pageWidth": 80,
+      "pageHeight": 224,
+      "printJobId": "print-murefjp1-1",
+      "source": "reportes-metodos",
+      "ticketId": null,
+      "documentType": "payment-method-report",
+      "copyNumber": 1,
+      "totalCopies": 1,
+      "copyLabel": null,
+      "transport": "browser",
+      "printerTarget": "system-dialog",
+      "result": "BROWSER_DIALOG_FINISHED",
+      "errorCode": null,
+      "errorStack": null,
+      "physicalPrintConfirmed": false,
+      "documentHash": "4946dd72628ef2996a88c963bdf218716e6ac18d59c2bce75fecc482c20e6d51",
+      "renderHash": "a6e649954a8070791d369f40748bf683a7c21e981d32db610109dbb779f5fa44",
+      "payloadHash": "a6e649954a8070791d369f40748bf683a7c21e981d32db610109dbb779f5fa44",
+      "stage": "COMPLETED",
+      "events": [
+        {
+          "stage": "CREATED",
+          "timestamp": "2026-10-02T20:11:46.941Z"
+        },
+        {
+          "stage": "DATA_READY",
+          "timestamp": "2026-10-02T20:11:46.946Z"
+        },
+        {
+          "stage": "QUEUED",
+          "timestamp": "2026-10-02T20:11:46.946Z"
+        },
+        {
+          "stage": "RENDER_STARTED",
+          "timestamp": "2026-10-02T20:11:46.949Z"
+        },
+        {
+          "stage": "ASSETS_WAITING",
+          "timestamp": "2026-10-02T20:11:46.973Z"
+        },
+        {
+          "stage": "ASSETS_READY",
+          "timestamp": "2026-10-02T20:11:47.016Z"
+        },
+        {
+          "stage": "RENDER_FINISHED",
+          "timestamp": "2026-10-02T20:11:47.038Z",
+          "pageWidth": 80,
+          "pageHeight": 224
+        },
+        {
+          "stage": "PAYLOAD_READY",
+          "timestamp": "2026-10-02T20:11:47.040Z",
+          "documentHash": "4946dd72628ef2996a88c963bdf218716e6ac18d59c2bce75fecc482c20e6d51",
+          "renderHash": "a6e649954a8070791d369f40748bf683a7c21e981d32db610109dbb779f5fa44",
+          "payloadHash": "a6e649954a8070791d369f40748bf683a7c21e981d32db610109dbb779f5fa44",
+          "payloadLength": 12685
+        },
+        {
+          "stage": "WAITING_TURN",
+          "timestamp": "2026-10-02T20:11:47.042Z"
+        },
+        {
+          "stage": "SEND_STARTED",
+          "timestamp": "2026-10-02T20:11:47.043Z",
+          "result": "HANDOFF_REQUESTED"
+        },
+        {
+          "stage": "HANDOFF_FINISHED",
+          "timestamp": "2026-10-02T20:11:47.046Z",
+          "result": "BROWSER_DIALOG_FINISHED"
+        },
+        {
+          "stage": "COMPLETED",
+          "timestamp": "2026-10-02T20:11:47.051Z",
+          "physicalPrintConfirmed": false
+        }
+      ]
+    },
+    "nativeDialogs": 1,
+    "usbTransfers": 0,
+    "nativeArtifacts": [
+      {
+        "text": "BALAM\nREPORTE POR MÉTODO DE PAGO\n\nPeriodo:\n2026-10-02\n\nGenerado:\n2/10/2026, 1:11:46 p.m.\n\nTarjeta\nEntradas\n$348.00\nDevoluciones\n$0.00\nNeto\n$348.00\nTOTAL ENTRADAS\n$348.00\nDEVOLUCIONES\n$0.00\nNETO\n$348.00\n\nOperaciones: 1\n\nMétodo principal:\nTarjeta · $348.00\n\nORIGEN DE OPERACIONES\nVentas\n1\nMovimientos de apartados\n0\nCambios cobrados\n0\nDevoluciones\n0\nEntradas por cambios\n$0.00\n\nImporte informativo; ya está incluido en Total entradas.\n\nCONCILIACIÓN: CORRECTA\n\nΣ métodos $348.00 + sin distribución $0.00 = neto $348.00\n\nReporte ejecutivo · BALAM\nBALAMGUAYABERAS.MX",
+        "hash": "a6e649954a8070791d369f40748bf683a7c21e981d32db610109dbb779f5fa44"
+      }
+    ],
+    "businessPreserved": true
+  },
+  "cost": {
+    "nativeDialogs": 1,
+    "buttonActions": 1
+  },
+  "guarantees": {
+    "oneCopy": true,
+    "businessPreserved": true,
+    "honestPhysicalStatus": true
+  }
+}

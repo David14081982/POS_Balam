@@ -779,7 +779,20 @@ registra UNCERTAIN con bytes/copias, detiene la progresión automática y no ofr
 reintento ciego. Reconectar sólo actualiza controles; un gesto explícito permite
 continuar los pendientes. La confirmación de cierre de un diálogo no finaliza
 un trabajo USB. Datos enviados no certifican papel: physicalPrintConfirmed es
-false. La aceptación física de la integración comercial sigue pendiente.
+false. El propietario aceptó físicamente el ticket de venta en H-183; las
+variantes restantes se verifican separadamente en H-184.
+
+H-184 añade `main[data-payment-method-ticket="true"]` al conjunto elegible para
+USB en PrintManager. La regla de dos copias conserva exclusivamente los IDs de
+comprobantes comerciales: el reporte de métodos sigue siendo una copia sin
+rótulos cliente/tienda. Conserva vista previa, botón manual, datos, CSS y tamaño;
+utiliza el mismo snapshot gráfico y transporte que los tickets de venta.
+
+El contexto dueño de WebUSB sigue siendo la ventana principal. El aviso de un
+reporte en ventana separada, si falta conexión, ofrece volver a BALAM para
+conectar mediante un gesto allí; no ofrece autorizar USB con un gesto de otra
+ventana. Cerrar esa vista conserva el trabajo congelado y sus controles en
+BALAM. Reportes A4, listados, préstamos en hoja y etiquetas no adoptan USB.
 
 ## AUTH
 

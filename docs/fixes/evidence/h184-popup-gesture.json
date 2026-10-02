@@ -1,0 +1,30 @@
+{
+  "history": "H-184",
+  "kind": "independent-browser-gesture-reproduction",
+  "observedAt": "2026-10-02T20:02:46.732Z",
+  "browser": {
+    "channel": "chrome",
+    "version": "153.0.8010.53",
+    "headless": true,
+    "hostPlatform": "Windows"
+  },
+  "result": "REPRODUCED",
+  "assertionsPassed": 3,
+  "steps": [
+    "A main-page button opens a same-origin blank popup using window.open('', '_blank').",
+    "The main page sets popup.opener = null, matching reports.jsx openPrintableWindow.",
+    "The main page adds a click listener to a popup button; its closure reads both windows' navigator.userActivation.isActive.",
+    "Wait 6000 milliseconds to expire the transient activation from opening the popup.",
+    "Click the popup button using Playwright's data-testid locator."
+  ],
+  "observed": {
+    "parentActive": false,
+    "popupActive": true,
+    "openerNull": true
+  },
+  "codeImplication": "USBReceipt.connect executes in the main window and explicitly rejects inactive main-window user activation with USB_GESTURE. A later click in this popup cannot satisfy that guard.",
+  "fixUnderReview": "External PrintStatus receives its host window, offers print-usb-return instead of print-usb-connect, and returns to the main window while preserving the prepared job. The main window retains the Conectar e imprimir action.",
+  "scope": "This independent reproduction exercises real Chrome user activation, not the BALAM bundle or USB transfers. The H-184 integration harness verifies the final popup recovery path separately.",
+  "usbMock": "Not used; no WebUSB device request or transfer was made.",
+  "hardware": "NOT_TESTED"
+}

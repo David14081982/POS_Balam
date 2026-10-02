@@ -5,9 +5,36 @@ un riesgo se debe leer su evidencia y las correcciones relacionadas. Los
 estados válidos son: `ABIERTO`, `EN CURSO`, `PARCIALMENTE RESUELTO`, `RESUELTO`
 y `BLOQUEADO`.
 
+## H-184 — Completar USB directo en los demás tickets térmicos
+
+**Estado:** PARCIALMENTE RESUELTO — código verificado; publicación y papel pendientes.
+**Fecha:** 02/10/2026. **Commit:** Pendiente de commit.
+**Solicitud:** el propietario confirmó «ya imprimió perfecto» en la venta USB y
+pidió aplicar el mismo transporte a los demás tickets, conservando los diseños.
+**Evidencia:** apartados, abonos, liquidaciones, cambios, devoluciones y
+reimpresiones montan `balam-ticket`/`balam-return-receipt`, ya elegibles para USB.
+El reporte térmico por método monta `main[data-payment-method-ticket="true"]`;
+`PrintManager.enqueue` lo clasifica como browser aunque USB esté habilitado.
+**Alcance:** habilitar ese documento de 80 mm en el transporte USB existente y
+verificar los demás comprobantes completos. Reporte por método una copia;
+comprobantes cliente/tienda según `print.twoCopies`. Mantener plantillas,
+dimensiones, disparos automáticos existentes, aislamiento y recuperación.
+**No alcance:** A4, etiquetas, cálculos, registros comerciales, configuración
+compartida, Supabase, autoimpresión al abrir reportes ni cambio de geometría.
+**Pruebas:** baseline 0/1 → matriz térmica 15/15, comparación íntegra de PNG/raster
+USB y copias. Reporte de un diálogo a cero, un clic real en ambos casos, una
+copia y negocio intacto. Regresión USB 16/16, sistema 18/18, UI 6/6 y PWA 2/2.
+Gesto de popup independiente 3/3: reconectar debe autorizarse
+en la ventana principal propietaria de USB. Plantillas y renderer sin cambios.
+**Artefacto probado:** SHA-256
+`857f07700fb0a793986cb472a1da24f26a1a5dddb61dbc1068ed036b5530218a`.
+**Residual:** nuevos tipos de ticket HARDWARE NOT_TESTED; la aceptación del
+usuario corresponde a venta y al diagnóstico de H-182/H-183.
+**Documento:** `docs/fixes/otros-tickets-usb-h184.md`.
+
 ## H-183 — Integrar USB directo en los comprobantes y el cobro automático
 
-**Estado:** PARCIALMENTE RESUELTO — publicado y verificado; aceptación comercial física pendiente.
+**Estado:** RESUELTO — publicado/verificado; ticket de venta aceptado físicamente.
 **Fecha:** 02/10/2026. **Commits:** `9cd5191` (código), `283d3d6` (instrumento/publicación).
 **Problema:** la prueba USB imprime, pero el botón comercial sigue enviando al
 diálogo Android/PDF cuando THERMER está apagado. No existe ruta USB comercial.
@@ -37,8 +64,10 @@ con CORE real y actividad ajena preservada; mismo código y HTML.
 **Despliegue:** workflow `37053773784` SUCCESS. El 02/10/2026 a las 19:32:08 UTC,
 HTML principal/offline y SW públicos devolvieron HTTP 200 y coincidieron byte
 por byte con `283d3d6`; evidencia `docs/fixes/evidence/h183-deploy.json`.
-**Residual:** el propietario confirmó el diagnóstico físico; la integración
-comercial nueva seguirá HARDWARE NOT_TESTED hasta su aceptación.
+**Aceptación:** el 02/10/2026 el propietario confirmó «ya imprimió perfecto»
+después de conectar y activar USB para las ventas. Los comprobantes restantes
+continúan en H-184. La prueba física no detalla reconexiones, fallos ni el
+disparo automático al cobrar; esos casos tienen cobertura simulada, no física.
 **Documento:** `docs/fixes/impresion-usb-comercial-h183.md`.
 
 ## H-182 — Prueba de impresión USB directa desde la PWA

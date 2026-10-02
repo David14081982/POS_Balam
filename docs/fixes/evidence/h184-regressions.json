@@ -1,0 +1,119 @@
+{
+  "date": "2026-10-02",
+  "artifactSHA256": "857f07700fb0a793986cb472a1da24f26a1a5dddb61dbc1068ed036b5530218a",
+  "serviceWorkerSHA256": "d07f12108267bdd783eebd6d9d64d60944f65a15f09a6935a4cdde1b6e54d6f0",
+  "results": [
+    {
+      "command": "node test-h183-usb-receipts.mjs",
+      "passed": 16,
+      "failed": 0,
+      "exitCode": 0,
+      "evidence": "h184-usb-regression.json"
+    },
+    {
+      "command": "node test-h180-system-print.mjs",
+      "passed": 18,
+      "failed": 0,
+      "exitCode": 0,
+      "cases": [
+        {
+          "name": "windows: manual usa sistema sin abrir aplicaciones",
+          "ok": true
+        },
+        {
+          "name": "windows: documento íntegro, misma geometría y hash entregado",
+          "ok": true
+        },
+        {
+          "name": "windows: foco no libera el diálogo ni confirma papel",
+          "ok": true
+        },
+        {
+          "name": "windows: print.auto abre el diálogo al montar el comprobante confirmado",
+          "ok": true
+        },
+        {
+          "name": "windows: print.auto apagado espera el botón y el doble clic no duplica",
+          "ok": true
+        },
+        {
+          "name": "windows: sin RawBT, mutaciones comerciales ni errores",
+          "ok": true
+        },
+        {
+          "name": "android: manual usa sistema sin abrir aplicaciones",
+          "ok": true
+        },
+        {
+          "name": "android: documento íntegro, misma geometría y hash entregado",
+          "ok": true
+        },
+        {
+          "name": "android: foco no libera el diálogo ni confirma papel",
+          "ok": true
+        },
+        {
+          "name": "android: print.auto abre el diálogo al montar el comprobante confirmado",
+          "ok": true
+        },
+        {
+          "name": "android: print.auto apagado espera el botón y el doble clic no duplica",
+          "ok": true
+        },
+        {
+          "name": "android: sin RawBT, mutaciones comerciales ni errores",
+          "ok": true
+        },
+        {
+          "name": "android-desktop: manual usa sistema sin abrir aplicaciones",
+          "ok": true
+        },
+        {
+          "name": "android-desktop: documento íntegro, misma geometría y hash entregado",
+          "ok": true
+        },
+        {
+          "name": "android-desktop: foco no libera el diálogo ni confirma papel",
+          "ok": true
+        },
+        {
+          "name": "android-desktop: print.auto abre el diálogo al montar el comprobante confirmado",
+          "ok": true
+        },
+        {
+          "name": "android-desktop: print.auto apagado espera el botón y el doble clic no duplica",
+          "ok": true
+        },
+        {
+          "name": "android-desktop: sin RawBT, mutaciones comerciales ni errores",
+          "ok": true
+        }
+      ]
+    },
+    {
+      "command": "node test-h164-online-ui.mjs",
+      "passed": 6,
+      "failed": 0,
+      "exitCode": 0
+    },
+    {
+      "command": "node test-h164-online-pwa.mjs",
+      "passed": 2,
+      "failed": 0,
+      "exitCode": 0
+    }
+  ],
+  "interruption": {
+    "test": "H180",
+    "passed": 15,
+    "failed": 3,
+    "reason": "ENOSPC while saving two HTML artifacts; follow-on timeout. Test host disk had zero free bytes.",
+    "recovery": "Compressed and verified temporary H180 HTML evidence, removed only byte-identical redundant test archives with equivalence index. Preserved results JSON. Full retry passed without product changes."
+  },
+  "physicalAcceptance": {
+    "sale": "USER_CONFIRMED_H183",
+    "remainingThermalDocuments": "NOT_TESTED"
+  },
+  "remoteBusinessWrites": 0,
+  "distributedCertification": "NOT_REQUESTED"
+}

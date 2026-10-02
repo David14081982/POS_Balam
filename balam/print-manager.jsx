@@ -211,7 +211,9 @@
     element = element || host.document.querySelector('#balam-ticket, #balam-return-receipt');
     if (!element) { UI.toast('El comprobante todavía no está disponible. Cierra y vuelve a abrirlo.'); return null; }
     const receipt = element.matches('#balam-ticket, #balam-return-receipt');
-    const transport = receipt && UI.usesUSBReceipt() ? 'usb' : UI.usesThermerReceipt() && receipt ? 'thermer' : 'browser';
+    // H-184: thermal reports share USB, but keep their own one-copy contract.
+    const usbDocument = receipt || element.matches('main[data-payment-method-ticket="true"]');
+    const transport = usbDocument && UI.usesUSBReceipt() ? 'usb' : UI.usesThermerReceipt() && receipt ? 'thermer' : 'browser';
     if (transport === 'usb' && ![1, 2].includes(copies)) { UI.toast('Selecciona una o dos copias para la impresora USB.'); return null; }
     const usbLabels = transport === 'usb' ? Array.from({ length: copies }, (_, index) => copyLabels?.[index] || null) : null;
     if (transport === 'usb') copies = 1;
@@ -238,7 +240,7 @@
       const node = host.document.createElement('div'); node.dataset.printControls = 'true';
       node.style.cssText = 'position:fixed;bottom:12px;left:12px;right:12px;z-index:10;max-height:45vh;overflow:auto';
       host.document.body.append(node);
-      const root = ReactDOM.createRoot(node); root.render(React.createElement(PrintStatus));
+      const root = ReactDOM.createRoot(node); root.render(React.createElement(PrintStatus, { host }));
       notices.set(host, root);
       host.addEventListener('pagehide', () => { root.unmount(); notices.delete(host); }, { once: true });
       const css = host.document.createElement('style'); css.textContent = '@media print{[data-print-controls]{display:none!important}}'; host.document.head.append(css);
@@ -297,7 +299,7 @@
     pump(); prepare(job);
     return true;
   }
-  function PrintStatus() {
+  function PrintStatus({ host = window } = {}) {
     const [, refresh] = React.useReducer(n => n + 1, 0);
     React.useEffect(() => {
       listeners.add(refresh);
@@ -308,11 +310,12 @@
     if (!job) return null;
     const sending = job.stage === 'SEND_STARTED', thermer = job.audit.transport === 'thermer', usb = job.audit.transport === 'usb';
     const state = usbState(), connectable = usb && state.enabled && state.supported && !state.connected && !state.busy && !state.resetRequired;
+    const connectInMain = connectable && host !== window;
     // H-179: con dos copias el operador ve cuál sigue (p. ej. «COPIA TIENDA · 2 de 2»).
     const copy = (thermer || usb) && job.audit.totalCopies === 2 ? ' COPIA CLIENTE + COPIA TIENDA.' : job.audit.totalCopies > 1 ? ` ${job.audit.copyLabel || 'Copia'} · ${job.audit.copyNumber} de ${job.audit.totalCopies}.` : '';
     const message = (job.stage === 'FAILED' ? job.message : sending
       ? (usb ? 'Enviando a la impresora USB. Mantén BALAM abierto.' : thermer ? 'Solicitud enviada a THERMER. Regresa a BALAM al terminar.' : 'Cierra el diálogo de impresión para continuar.')
-      : usb && job.ready && !usbReady() ? (state.resetRequired ? 'Revisa el papel y reinicia la impresora desde Configuración → Impresión antes de continuar.' : job.connectionMessage || state.message || 'Conecta la impresora USB para imprimir este ticket.')
+      : usb && job.ready && !usbReady() ? (state.resetRequired ? 'Revisa el papel y reinicia la impresora desde Configuración → Impresión antes de continuar.' : connectInMain ? 'Vuelve a BALAM y pulsa Conectar e imprimir. El ticket preparado se conserva.' : job.connectionMessage || state.message || 'Conecta la impresora USB para imprimir este ticket.')
       : job.ready ? 'Ticket listo para imprimir.' : 'Preparando ticket…') + copy;
     const button = (id, label, action) => React.createElement('button', { key: id, type: 'button', 'data-testid': id,
       onClick: event => { if (event.detail <= 1) action(); }, style: { minHeight: 44, padding: '8px 12px', border: '1px solid #abb2c0', borderRadius: 8, background: 'white', color: '#131b2e', fontWeight: 600 }, className: 'min-h-[44px] px-3 py-2 border rounded-lg font-semibold' }, label);
@@ -320,7 +323,11 @@
       React.createElement('p', { key: 'status', role: 'status', className: 'text-sm' }, message),
       React.createElement('div', { key: 'buttons', style: { display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }, className: 'flex flex-wrap gap-2 mt-2' }, [
         job.ready && !sending && !terminal(job) && (!usb || usbReady()) && button('print-next', 'Imprimir ticket', () => send(job)),
-        job.ready && !sending && !terminal(job) && connectable && button('print-usb-connect', 'Conectar e imprimir', () => {
+        job.ready && !sending && !terminal(job) && connectInMain && button('print-usb-return', 'Volver a BALAM para conectar', () => {
+          // USB belongs to the main window. A popup gesture cannot authorize it.
+          window.focus(); host.close();
+        }),
+        job.ready && !sending && !terminal(job) && connectable && !connectInMain && button('print-usb-connect', 'Conectar e imprimir', () => {
           job.usbConnecting = true;
           const connection = window.USBReceipt.connect();
           job.connectionMessage = null;

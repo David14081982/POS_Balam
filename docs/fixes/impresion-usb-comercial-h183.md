@@ -1,7 +1,7 @@
 # Impresión USB directa de los comprobantes comerciales
 
 **Riesgo:** H-183
-**Estado:** PARCIALMENTE RESUELTO — publicado y verificado; aceptación comercial física pendiente
+**Estado:** RESUELTO — publicado/verificado; ticket de venta aceptado físicamente
 **Fecha:** 02/10/2026
 **Commit:** `9cd5191368a457eb7ea2720f815dc953630ec835`
 **Ajuste del instrumento y versión publicada:** `283d3d6fe48130d3ef4810c82f059de1d27c1c9b`
@@ -159,9 +159,13 @@ dos copias sin otro toque y el botón habitual usa el mismo transporte.
 
 ## Riesgo residual y pendientes
 
-Diagnóstico H-182 aceptado físicamente por el usuario. Integración comercial nueva
-HARDWARE NOT_TESTED; pruebas locales usan USBDevice simulado. No certificación
-distribuida A/B/C, no solicitada. Permisos nativos pueden reaparecer al reconectar.
+El 02/10/2026 el usuario confirmó «ya imprimió perfecto» tras conectar y activar
+USB para el ticket de venta. Antes había mostrado la casilla apagada y el estado
+desconectado. La confirmación acredita la salida física de venta, sin detallar
+reconexiones, fallos ni disparo automático al cobrar. Esos casos conservan sólo
+cobertura con USBDevice simulado. Los demás tickets se verifican en H-184.
+No certificación distribuida A/B/C, no solicitada. Permisos nativos pueden
+reaparecer al reconectar.
 
 ## Referencias
 

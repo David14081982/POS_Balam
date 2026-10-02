@@ -15,10 +15,15 @@ Corrección de edición: [H172 · Guardado y mensajes](guardado-edicion-producto
 
 ## Correcciones registradas
 
+- [otros-tickets-usb-h184.md](otros-tickets-usb-h184.md) — H-184:
+  integración del reporte térmico por método y verificación de los demás
+  comprobantes por USB; 15/15, diseños y tamaños conservados. Publicación y
+  aceptación física de las variantes pendientes.
+
 - [impresion-usb-comercial-h183.md](impresion-usb-comercial-h183.md) — H-183:
   integración comercial USB local; conserva copias y diseño, sin diálogo Android.
   USB 16/16, transporte 32/32 y UI 13/13. PUBLICADO Y VERIFICADO en `283d3d6`;
-  aceptación física comercial pendiente.
+  ticket de venta aceptado físicamente por el usuario el 02/10/2026.
 
 - [prueba-usb-pwa-h182.md](prueba-usb-pwa-h182.md) — H-182:
   diagnóstico optativo WebUSB con texto y dos copias del diseño actual;
