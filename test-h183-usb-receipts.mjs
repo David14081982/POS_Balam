@@ -12,16 +12,24 @@ import { chromium } from 'playwright-core';
 import { installPrintTransport } from './test-print-transport.mjs';
 
 const baseline = process.argv.includes('--baseline');
+const queueOnly = process.argv.includes('--queue-only');
 const html = baseline ? execFileSync('git', ['show', 'HEAD:index.html'], { maxBuffer: 20000000 }) : fs.readFileSync('index.html');
 const output = fs.mkdtempSync(path.join(os.tmpdir(), 'balam-h183-usb-commercial-'));
 const sha = value => createHash('sha256').update(value).digest('hex');
-const evidence = { baseline, artifactSHA256: sha(html), results: [], hardware: 'NOT_TESTED', remoteBusinessWrites: 0 };
+const evidence = { baseline, queueOnly, artifactSHA256: sha(html), results: [], hardware: 'NOT_TESTED', remoteBusinessWrites: 0 };
 const server = createServer((_req, res) => { res.setHeader('Content-Type', 'text/html'); res.end(html); });
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const base = 'http://127.0.0.1:' + server.address().port;
+let diagnosticPage;
 const test = async (name, work) => {
   try { const details = await work(); evidence.results.push({ name, ok: true, ...details }); console.log('PASS ' + name); }
-  catch (error) { evidence.results.push({ name, ok: false, error: error.message }); console.log('FAIL ' + name + ': ' + error.message); throw error; }
+  catch (error) {
+    const state = await diagnosticPage?.evaluate(() => ({ jobs: window.PrintManager?.history(), usb: window.USBReceipt?.snapshot(),
+      activity: window.CORE?.activityStatus(), activityTokens: window.__usbTest?.activityTokens, focus: document.activeElement?.outerHTML?.slice(0, 300), fixture: window.__usbTest && { mode: __usbTest.mode, records: __usbTest.records.length,
+        trailers: __usbTest.trailers, heldTransfer: !!__usbTest.releaseTransfer, renders: __usbTest.renders.map(r => ({ ready: !!r.png, folio: /data-document-id="([^"]+)"/.exec(r.html)?.[1] })) } })).catch(() => null);
+    evidence.results.push({ name, ok: false, error: error.message, errorStack: error.stack, state });
+    console.log('FAIL ' + name + ': ' + error.stack); console.log('FAIL_STATE ' + JSON.stringify(state)); throw error;
+  }
 };
 let browser;
 
@@ -86,6 +94,7 @@ async function openPage({ enabled = false, desktop = false, supported = true } =
   await context.addInitScript(installPrintTransport, { counter: '__native', hold: false });
   await context.addInitScript(installFixture, { enabled, desktop, supported });
   const page = await context.newPage(); page.setDefaultTimeout(30000);
+  diagnosticPage = page;
   await page.goto(base);
   await page.waitForFunction(() => window.SettingsScreen && window.BalamTicket && window.AUTH?.isReady());
   await page.evaluate(() => {
@@ -101,6 +110,14 @@ async function openPage({ enabled = false, desktop = false, supported = true } =
     STORE.execute = () => { throw Error('Printing must not execute business'); };
     document.body.innerHTML = '<div id="h183-root"></div>';
     window.__business = JSON.stringify([CONFIG.snapshot(), DATA.sales, DATA.products, DATA.payments, DATA.movements]);
+    __usbTest.activityTokens = {};
+    const begin = CORE.beginActivity, end = CORE.endActivity;
+    CORE.beginActivity = (domains, detail) => {
+      const token = begin(domains, detail); __usbTest.activityTokens[token] = { domains, detail }; return token;
+    };
+    CORE.endActivity = token => {
+      const result = end(token); if (result) delete __usbTest.activityTokens[token]; return result;
+    };
     window.__root = ReactDOM.createRoot(document.getElementById('h183-root'));
     const renderer = UI.receiptGraphic;
     UI.receiptGraphic = async (snapshot, audit, signal) => {
@@ -213,7 +230,12 @@ async function verifyTicket(page, name, folio, expected = 2) {
     fs.writeFileSync(path.join(output, name + '-' + i + '.png'), original.png);
   }
   assert.equal(await page.locator('iframe').count(), 0, 'Rendering frames must be released');
-  await page.waitForFunction(() => CORE.activityStatus().active === 0);
+  // Settings has its own focus/edit activity. Certify ownership of the printer
+  // resources without requiring unrelated screens to release their protection.
+  await page.waitForFunction(() => !Object.values(__usbTest.activityTokens)
+    .some(activity => ['receipt-usb', 'usb-print-check'].includes(activity.detail?.screen)));
+  const activities = await page.evaluate(() => ({ real: CORE.activityStatus(), tokens: __usbTest.activityTokens }));
+  assert.equal(activities.real.active, Object.keys(activities.tokens).length, 'Observed ownership must match real CORE activities');
   return { heights: copies.map(copy => copy.height), bytes: data.state.lastJob.bytesSent, copies: expected, payloadHash: job.payloadHash };
 }
 
@@ -244,6 +266,8 @@ async function measureAutomatic(page) {
 
 try {
   browser = await chromium.launch({ headless: true, ...(process.env.BALAM_CHROME_EXECUTABLE ? { executablePath: process.env.BALAM_CHROME_EXECUTABLE } : { channel: 'chrome' }) });
+  evidence.browserVersion = browser.version();
+  if (!queueOnly) {
   const { context, page } = await openPage({ enabled: true });
   await test('connected USB automatic commercial receipt avoids system dialogs without losing guarantees', () => measureAutomatic(page));
   if (!baseline) {
@@ -350,6 +374,7 @@ try {
     });
   }
   await context.close();
+  }
   if (!baseline) {
     const queued = await openPage({ enabled: true });
     await test('uncertain job holds a queued successor across reset/reconnect until an explicit print action', async () => {
@@ -377,14 +402,21 @@ try {
       await page.evaluate(() => {
         __usbTest.mode = 'ok'; __usbTest.records = []; __usbTest.trailers = 0; __usbTest.maxActive = 0;
         __usbTest.renders = __usbTest.renders.filter(entry => entry.html.includes('data-document-id="H183-QUEUE-B"'));
+        __usbTest.unrelatedActivity = CORE.beginActivity(['config'], { screen: 'h183-unrelated-edit' });
       });
       await page.getByTestId('print-next').click(); await done(page, 'H183-QUEUE-B');
       const result = await verifyTicket(page, 'queued-successor', 'H183-QUEUE-B');
+      const ownership = await page.evaluate(() => ({ preserved: !!__usbTest.activityTokens[__usbTest.unrelatedActivity],
+        blocked: CORE.domainBusy('config'), screens: Object.values(__usbTest.activityTokens).map(activity => activity.detail?.screen) }));
+      assert.equal(ownership.preserved, true, 'Printer cleanup must preserve unrelated edit protection');
+      assert.equal(ownership.blocked, true);
+      assert.equal(await page.evaluate(() => CORE.endActivity(__usbTest.unrelatedActivity)), true);
       assert.deepEqual(await page.evaluate(() => [__native, __usbTest.externalLaunch]), [0,0]);
       assert.equal(await page.evaluate(() => PrintManager.history().find(j => j.ticketId === 'H183-QUEUE-A').result), 'UNCERTAIN');
-      return result;
+      return { ...result, activityOwnership: ownership };
     });
     await queued.context.close();
+    if (!queueOnly) {
     const settings = await openPage();
     await test('USB is explicit and local: connection does not enable it; enabling keeps connection after Settings', async () => {
       const page = settings.page;
@@ -435,6 +467,7 @@ try {
       assert.equal(await thermer.page.evaluate(() => PrintManager.history().at(-1).physicalPrintConfirmed), false);
     });
     await thermer.context.close();
+    }
   }
 } catch (error) {
   if (!evidence.results.some(result => !result.ok)) evidence.results.push({ name: 'setup', ok: false, error: error.message });
@@ -442,6 +475,6 @@ try {
 } finally {
   await browser?.close(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve));
   fs.writeFileSync(path.join(output, 'results.json'), JSON.stringify(evidence, null, 2));
-  fs.writeFileSync('docs/fixes/evidence/h183-commercial-' + (baseline ? 'baseline' : 'final') + '.json', JSON.stringify(evidence, null, 2));
+  if (!queueOnly) fs.writeFileSync('docs/fixes/evidence/h183-commercial-' + (baseline ? 'baseline' : 'final') + '.json', JSON.stringify(evidence, null, 2));
   console.log(evidence.results.filter(result => result.ok).length + '/' + evidence.results.length + ' ' + output);
 }

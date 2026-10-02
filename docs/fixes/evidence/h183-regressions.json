@@ -18,6 +18,13 @@
     "cause": "Fixture advanced browser clock only. Reproduced identically on HEAD and working sources: renewed server URL already expired, scheduling another request at 1000ms.",
     "correction": "Advance backend fixture 600001ms too, restore Date.now with finally, preserve all original assertions. No production timer changes."
   },
+  "firstPublicationRun": {
+    "id": 37051880683,
+    "result": "FAILED_BEFORE_DEPLOY",
+    "failedCheck": "H183 queued successor: global CORE activity zero",
+    "reproduction": "Chromium1223: USB successor complete, 2 copies, 406075 bytes; only remaining activity owner=settings. No printer activity remains.",
+    "correction": "Observe actual CORE token ownership, require printer tokens released and unrelated activity preserved. No product changes."
+  },
   "physicalAcceptance": {
     "h182Diagnostic": "USER_CONFIRMED_TEXT_AND_TWO_CORRECT_DESIGNS",
     "h183Commercial": "NOT_TESTED"

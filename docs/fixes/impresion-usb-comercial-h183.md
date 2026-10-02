@@ -3,7 +3,7 @@
 **Riesgo:** H-183
 **Estado:** RESUELTO EN CÓDIGO — publicación y aceptación comercial física pendientes
 **Fecha:** 02/10/2026
-**Commit:** Pendiente de commit
+**Commit:** `9cd5191368a457eb7ea2720f815dc953630ec835`
 
 ## Problema y reproducción
 
@@ -106,6 +106,18 @@ que la abrió; ambas defensas quedan automatizadas.
   intentos frente a dos esperados. Se coordina `backend.advance(600001)` y se
   restaura Date.now con finally: dos intentos, aserciones originales conservadas.
   No se modifica el manejo de relojes del producto ni el servicio THERMER.
+- La primera publicación `37051880683` se detuvo en H-183: 11/12 antes de un
+  timeout al exigir actividad CORE global cero. Reproducido en el Chromium 1223
+  de CI: ambos tickets del sucesor llegaron íntegros (406075 bytes) y su trabajo
+  terminó; el único token restante pertenecía a `screen: settings`, no a la
+  impresión. Evidencia `h183-ci-reproduction.json`. El arnés observa ahora la
+  propiedad de cada token delegando a CORE real: exige liberar receipt-usb y
+  usb-print-check, coteja el conteo real y conserva una actividad ajena testigo.
+  No se modifica el producto ni se debilitan las comparaciones de imágenes.
+  La gestión del foco propio de Configuración queda fuera de esta corrección.
+  Repetición completa con Chromium 1223 (148.0.7778.96), igual que CI: 16/16
+  con salida normal y el mismo SHA del HTML. El caso fallido antes dio 0/1;
+  ahora también conserva una actividad ajena testigo después de liberar USB.
 - `node test-h164-online-ui.mjs`: 6/6; `node test-h164-online-pwa.mjs`: 2/2;
   arquitectura online: PASS; `node test-h164-online-settings.mjs`: 3/3;
   `node test-h180-system-print.mjs`: 18/18. Todos sobre fuentes/bundle finales.
@@ -119,7 +131,10 @@ SHA-256 del HTML final probado:
 
 ## Despliegue
 
-Pendiente de commit y workflow Pages. No requiere migración ni cambios remotos.
+Commit técnico enviado a `main`; primer workflow `37051880683` detenido por el
+oráculo de actividad descrito arriba, sin publicar. La corrección del arnés
+conserva exactamente el mismo HTML probado. No requiere migración ni cambios
+remotos. La verificación pública se registra al terminar el nuevo despliegue.
 
 ## Riesgo residual y pendientes
 

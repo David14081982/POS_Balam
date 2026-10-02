@@ -1,5 +1,6 @@
 {
   "baseline": false,
+  "queueOnly": false,
   "artifactSHA256": "807f92ab9173084076d0c65a919f4ca319f275fa51609ac15cb2dafba2a10a1e",
   "results": [
     {
@@ -96,7 +97,15 @@
       ],
       "bytes": 406075,
       "copies": 2,
-      "payloadHash": "a14a4f4ce01d3281e3799356be2b3ce64d3bf0585e1b992c9f66dc157068c286"
+      "payloadHash": "a14a4f4ce01d3281e3799356be2b3ce64d3bf0585e1b992c9f66dc157068c286",
+      "activityOwnership": {
+        "preserved": true,
+        "blocked": true,
+        "screens": [
+          "settings",
+          "h183-unrelated-edit"
+        ]
+      }
     },
     {
       "name": "USB is explicit and local: connection does not enable it; enabling keeps connection after Settings",
@@ -117,26 +126,27 @@
   ],
   "hardware": "NOT_TESTED",
   "remoteBusinessWrites": 0,
+  "browserVersion": "148.0.7778.96",
   "route": {
     "jobs": [
       {
-        "createdAt": "2026-10-02T18:59:02.922Z",
-        "dataReadyAt": "2026-10-02T18:59:02.925Z",
-        "renderStartedAt": "2026-10-02T18:59:02.927Z",
+        "createdAt": "2026-10-02T19:20:27.892Z",
+        "dataReadyAt": "2026-10-02T19:20:27.894Z",
+        "renderStartedAt": "2026-10-02T19:20:27.895Z",
         "assetsReadyAt": null,
-        "renderFinishedAt": "2026-10-02T18:59:10.567Z",
-        "payloadReadyAt": "2026-10-02T18:59:10.568Z",
-        "queuedAt": "2026-10-02T18:59:02.926Z",
-        "sendStartedAt": "2026-10-02T18:59:10.575Z",
-        "handoffFinishedAt": "2026-10-02T18:59:10.851Z",
-        "completedAt": "2026-10-02T18:59:10.852Z",
+        "renderFinishedAt": "2026-10-02T19:20:31.922Z",
+        "payloadReadyAt": "2026-10-02T19:20:31.922Z",
+        "queuedAt": "2026-10-02T19:20:27.894Z",
+        "sendStartedAt": "2026-10-02T19:20:31.933Z",
+        "handoffFinishedAt": "2026-10-02T19:20:32.107Z",
+        "completedAt": "2026-10-02T19:20:32.107Z",
         "failedAt": null,
         "payloadLength": 70943,
         "pixelWidth": null,
         "pixelHeight": null,
         "pageWidth": 80,
         "pageHeight": null,
-        "printJobId": "print-murbu0cw-1",
+        "printJobId": "print-murcljvf-1",
         "source": "receipt",
         "ticketId": "H183-AUTO",
         "documentType": "sale",
@@ -172,48 +182,48 @@
         "events": [
           {
             "stage": "CREATED",
-            "timestamp": "2026-10-02T18:59:02.922Z"
+            "timestamp": "2026-10-02T19:20:27.892Z"
           },
           {
             "stage": "DATA_READY",
-            "timestamp": "2026-10-02T18:59:02.925Z"
+            "timestamp": "2026-10-02T19:20:27.894Z"
           },
           {
             "stage": "QUEUED",
-            "timestamp": "2026-10-02T18:59:02.926Z"
+            "timestamp": "2026-10-02T19:20:27.894Z"
           },
           {
             "stage": "RENDER_STARTED",
-            "timestamp": "2026-10-02T18:59:02.927Z"
+            "timestamp": "2026-10-02T19:20:27.895Z"
           },
           {
             "stage": "RENDER_FINISHED",
-            "timestamp": "2026-10-02T18:59:10.567Z",
+            "timestamp": "2026-10-02T19:20:31.922Z",
             "pageWidth": 80,
             "payloadHash": "82e721274d74a5a1c010746e01bd7b05bac610608303aaf9cf9b72d34b56defa"
           },
           {
             "stage": "PAYLOAD_READY",
-            "timestamp": "2026-10-02T18:59:10.568Z",
+            "timestamp": "2026-10-02T19:20:31.922Z",
             "payloadLength": 70943
           },
           {
             "stage": "WAITING_TURN",
-            "timestamp": "2026-10-02T18:59:10.574Z"
+            "timestamp": "2026-10-02T19:20:31.932Z"
           },
           {
             "stage": "SEND_STARTED",
-            "timestamp": "2026-10-02T18:59:10.575Z",
+            "timestamp": "2026-10-02T19:20:31.933Z",
             "result": "USB_SENDING"
           },
           {
             "stage": "HANDOFF_FINISHED",
-            "timestamp": "2026-10-02T18:59:10.851Z",
+            "timestamp": "2026-10-02T19:20:32.107Z",
             "result": "USB_TRANSFERRED"
           },
           {
             "stage": "COMPLETED",
-            "timestamp": "2026-10-02T18:59:10.852Z",
+            "timestamp": "2026-10-02T19:20:32.107Z",
             "physicalPrintConfirmed": false
           }
         ]

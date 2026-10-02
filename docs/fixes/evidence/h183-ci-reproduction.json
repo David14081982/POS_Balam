@@ -1,0 +1,286 @@
+{
+  "baseline": false,
+  "artifactSHA256": "807f92ab9173084076d0c65a919f4ca319f275fa51609ac15cb2dafba2a10a1e",
+  "results": [
+    {
+      "name": "uncertain job holds a queued successor across reset/reconnect until an explicit print action",
+      "ok": false,
+      "error": "page.waitForFunction: Timeout 30000ms exceeded.",
+      "errorStack": "page.waitForFunction: Timeout 30000ms exceeded.\n    at verifyTicket (C:\\Users\\david\\Downloads\\POS-BALAM\\test-h183-usb-receipts.mjs:233:14)\n    at async file:///C:/Users/david/Downloads/POS-BALAM/test-h183-usb-receipts.mjs:401:22\n    at async test (C:\\Users\\david\\Downloads\\POS-BALAM\\test-h183-usb-receipts.mjs:25:25)\n    at async file:///C:/Users/david/Downloads/POS-BALAM/test-h183-usb-receipts.mjs:374:5",
+      "state": {
+        "jobs": [
+          {
+            "createdAt": "2026-10-02T19:18:10.591Z",
+            "dataReadyAt": "2026-10-02T19:18:10.593Z",
+            "renderStartedAt": "2026-10-02T19:18:10.595Z",
+            "assetsReadyAt": null,
+            "renderFinishedAt": "2026-10-02T19:18:13.869Z",
+            "payloadReadyAt": "2026-10-02T19:18:13.870Z",
+            "queuedAt": "2026-10-02T19:18:10.594Z",
+            "sendStartedAt": "2026-10-02T19:18:13.877Z",
+            "handoffFinishedAt": null,
+            "completedAt": null,
+            "failedAt": "2026-10-02T19:18:17.361Z",
+            "payloadLength": 71151,
+            "pixelWidth": null,
+            "pixelHeight": null,
+            "pageWidth": 80,
+            "pageHeight": null,
+            "printJobId": "print-murcilx2-1",
+            "source": "receipt",
+            "ticketId": "H183-QUEUE-A",
+            "documentType": "sale",
+            "copyNumber": 1,
+            "totalCopies": 2,
+            "copyLabel": "COPIA CLIENTE + COPIA TIENDA",
+            "transport": "usb",
+            "printerTarget": "usb",
+            "result": "UNCERTAIN",
+            "errorCode": "USB_PARTIAL",
+            "errorStack": "    at error ([resource])\n    at write ([resource])\n    at async run ([resource])",
+            "physicalPrintConfirmed": false,
+            "copies": [
+              {
+                "copyLabel": "COPIA CLIENTE",
+                "documentHash": "99bcd64efb0686c377e32bd6320adddbc610600a0a4c82f976192d3866caa4be",
+                "payloadHash": "9f8b8cd5bb0252620e6656d84ac7aedf26f1acb9ed2a3d4ff3fffa13547850bc",
+                "pixelWidth": 576,
+                "pixelHeight": 2538
+              },
+              {
+                "copyLabel": "COPIA TIENDA",
+                "documentHash": "c6d59271c751176e80f33381a68494c66a27a83e23d5dce8b5a8358bf61406d9",
+                "payloadHash": "7dce637976170a30c59d5ba9b7292949023c52b4ac21b35b157ef0dac67a2a50",
+                "pixelWidth": 576,
+                "pixelHeight": 2538
+              }
+            ],
+            "payloadHash": "ba8fcc8b5dda0a34f56b3167e944e2b8b8b50761dc342cf598ed008fa6cbda1a",
+            "bytesSent": 185707,
+            "copiesSent": 1,
+            "stage": "FAILED",
+            "events": [
+              {
+                "stage": "CREATED",
+                "timestamp": "2026-10-02T19:18:10.591Z"
+              },
+              {
+                "stage": "DATA_READY",
+                "timestamp": "2026-10-02T19:18:10.593Z"
+              },
+              {
+                "stage": "QUEUED",
+                "timestamp": "2026-10-02T19:18:10.594Z"
+              },
+              {
+                "stage": "RENDER_STARTED",
+                "timestamp": "2026-10-02T19:18:10.595Z"
+              },
+              {
+                "stage": "RENDER_FINISHED",
+                "timestamp": "2026-10-02T19:18:13.869Z",
+                "pageWidth": 80,
+                "payloadHash": "ba8fcc8b5dda0a34f56b3167e944e2b8b8b50761dc342cf598ed008fa6cbda1a"
+              },
+              {
+                "stage": "PAYLOAD_READY",
+                "timestamp": "2026-10-02T19:18:13.870Z",
+                "payloadLength": 71151
+              },
+              {
+                "stage": "WAITING_TURN",
+                "timestamp": "2026-10-02T19:18:13.876Z"
+              },
+              {
+                "stage": "SEND_STARTED",
+                "timestamp": "2026-10-02T19:18:13.877Z",
+                "result": "USB_SENDING"
+              },
+              {
+                "stage": "FAILED",
+                "timestamp": "2026-10-02T19:18:17.361Z",
+                "result": "UNCERTAIN",
+                "errorCode": "USB_PARTIAL",
+                "errorStack": "    at error ([resource])\n    at write ([resource])\n    at async run ([resource])"
+              }
+            ]
+          },
+          {
+            "createdAt": "2026-10-02T19:18:14.029Z",
+            "dataReadyAt": "2026-10-02T19:18:14.029Z",
+            "renderStartedAt": "2026-10-02T19:18:14.030Z",
+            "assetsReadyAt": null,
+            "renderFinishedAt": "2026-10-02T19:18:17.201Z",
+            "payloadReadyAt": "2026-10-02T19:18:17.267Z",
+            "queuedAt": "2026-10-02T19:18:14.029Z",
+            "sendStartedAt": "2026-10-02T19:18:18.031Z",
+            "handoffFinishedAt": "2026-10-02T19:18:18.173Z",
+            "completedAt": "2026-10-02T19:18:18.173Z",
+            "failedAt": null,
+            "payloadLength": 81631,
+            "pixelWidth": null,
+            "pixelHeight": null,
+            "pageWidth": 80,
+            "pageHeight": null,
+            "printJobId": "print-murciokv-2",
+            "source": "receipt",
+            "ticketId": "H183-QUEUE-B",
+            "documentType": "sale",
+            "copyNumber": 1,
+            "totalCopies": 2,
+            "copyLabel": "COPIA CLIENTE + COPIA TIENDA",
+            "transport": "usb",
+            "printerTarget": "usb",
+            "result": "USB_TRANSFERRED",
+            "errorCode": null,
+            "errorStack": null,
+            "physicalPrintConfirmed": false,
+            "copies": [
+              {
+                "copyLabel": "COPIA CLIENTE",
+                "documentHash": "270515dd40ff7331f37542b7e297449759d0f20426c51df447ef65ed1c1ad72c",
+                "payloadHash": "7eeb50cf7b80c65c46459a4ab0187e85a9b3d8ce5d50928a225dd13f1fd0d541",
+                "pixelWidth": 576,
+                "pixelHeight": 2810
+              },
+              {
+                "copyLabel": "COPIA TIENDA",
+                "documentHash": "bada57e61b9e50ce697550e29116637c67b37cb011fdd607465bd2746b691020",
+                "payloadHash": "1754b4ceab5d481748b7f47832c7cf27b85b245fc0ad41e100356d84e81d9ada",
+                "pixelWidth": 576,
+                "pixelHeight": 2810
+              }
+            ],
+            "payloadHash": "a14a4f4ce01d3281e3799356be2b3ce64d3bf0585e1b992c9f66dc157068c286",
+            "bytesSent": 406075,
+            "copiesSent": 2,
+            "stage": "COMPLETED",
+            "events": [
+              {
+                "stage": "CREATED",
+                "timestamp": "2026-10-02T19:18:14.029Z"
+              },
+              {
+                "stage": "DATA_READY",
+                "timestamp": "2026-10-02T19:18:14.029Z"
+              },
+              {
+                "stage": "QUEUED",
+                "timestamp": "2026-10-02T19:18:14.029Z"
+              },
+              {
+                "stage": "RENDER_STARTED",
+                "timestamp": "2026-10-02T19:18:14.030Z"
+              },
+              {
+                "stage": "RENDER_FINISHED",
+                "timestamp": "2026-10-02T19:18:17.201Z",
+                "pageWidth": 80,
+                "payloadHash": "a14a4f4ce01d3281e3799356be2b3ce64d3bf0585e1b992c9f66dc157068c286"
+              },
+              {
+                "stage": "PAYLOAD_READY",
+                "timestamp": "2026-10-02T19:18:17.267Z",
+                "payloadLength": 81631
+              },
+              {
+                "stage": "WAITING_TURN",
+                "timestamp": "2026-10-02T19:18:17.368Z"
+              },
+              {
+                "stage": "SEND_STARTED",
+                "timestamp": "2026-10-02T19:18:18.031Z",
+                "result": "USB_SENDING"
+              },
+              {
+                "stage": "HANDOFF_FINISHED",
+                "timestamp": "2026-10-02T19:18:18.173Z",
+                "result": "USB_TRANSFERRED"
+              },
+              {
+                "stage": "COMPLETED",
+                "timestamp": "2026-10-02T19:18:18.173Z",
+                "physicalPrintConfirmed": false
+              }
+            ]
+          }
+        ],
+        "usb": {
+          "phase": "DELIVERED",
+          "message": "Datos enviados por USB. Comprueba que el ticket salió completo en papel.",
+          "enabled": true,
+          "resetRequired": false,
+          "cleanupRequired": false,
+          "lastJob": {
+            "id": "usb-2",
+            "kind": "ticket",
+            "result": "TRANSFERRED",
+            "physicalPrintConfirmed": false,
+            "bytesSent": 406075,
+            "copiesSent": 2,
+            "copies": [
+              {
+                "width": 576,
+                "height": 2810
+              },
+              {
+                "width": 576,
+                "height": 2810
+              }
+            ],
+            "createdAt": "2026-10-02T19:18:18.033Z",
+            "finishedAt": "2026-10-02T19:18:18.173Z"
+          },
+          "supported": true,
+          "connected": true,
+          "busy": false,
+          "device": {
+            "name": "END-80TEUX SYNTHETIC",
+            "vendorId": 4660,
+            "productId": 22136,
+            "configuration": 5,
+            "interfaceNumber": 4,
+            "alternateSetting": 0,
+            "endpoint": 9,
+            "interfaceClass": 7
+          }
+        },
+        "activity": {
+          "active": 1,
+          "domains": {
+            "config": 1
+          }
+        },
+        "activityTokens": {
+          "sync-activity-5": {
+            "domains": [
+              "config"
+            ],
+            "detail": {
+              "screen": "settings"
+            }
+          }
+        },
+        "focus": "<body><div id=\"h183-root\"><div class=\"flex-1 min-w-0 overflow-y-auto bg-background font-body text-on-surface px-4 py-6 sm:p-6\"><div class=\"grid grid-cols-1 md:grid-cols-[220px_minmax(0,1fr)] gap-4 md:gap-6 max-w-5xl min-w-0\"><div class=\"bg-surface-container-lowest rounded-lg shadow-e1 p-2 h-fit md:s",
+        "fixture": {
+          "mode": "ok",
+          "records": 179,
+          "trailers": 2,
+          "heldTransfer": true,
+          "renders": [
+            {
+              "ready": true,
+              "folio": "H183-QUEUE-B"
+            },
+            {
+              "ready": true,
+              "folio": "H183-QUEUE-B"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "hardware": "NOT_TESTED",
+  "remoteBusinessWrites": 0
+}

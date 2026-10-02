@@ -8,7 +8,7 @@ y `BLOQUEADO`.
 ## H-183 — Integrar USB directo en los comprobantes y el cobro automático
 
 **Estado:** RESUELTO EN CÓDIGO — publicación y aceptación comercial física pendientes.
-**Fecha:** 02/10/2026. **Commit:** Pendiente de commit.
+**Fecha:** 02/10/2026. **Commit:** `9cd5191`.
 **Problema:** la prueba USB imprime, pero el botón comercial sigue enviando al
 diálogo Android/PDF cuando THERMER está apagado. No existe ruta USB comercial.
 **Evidencia:** `PrintManager.enqueue` sólo selecciona browser/thermer; browser
@@ -30,6 +30,10 @@ errores, cola detenida y CORE liberado. UI 6/6, PWA 2/2, THERMER 16/16 y
 arquitectura PASS; sistema 18/18 y settings 3/3. Coste de dos diálogos a cero,
 mismas dos copias y negocio intacto.
 SHA HTML probado `807f92ab9173084076d0c65a919f4ca319f275fa51609ac15cb2dafba2a10a1e`.
+**Primer CI:** `37051880683` detenido sin publicar por una aserción de actividad
+global. Reproducido en Chromium 1223: el sucesor USB completó sus dos copias,
+pero quedaba un token de Configuración. Se precisa el oráculo por propietario,
+con CORE real y actividad ajena preservada; mismo código y HTML.
 **Residual:** el propietario confirmó el diagnóstico físico; la integración
 comercial nueva seguirá HARDWARE NOT_TESTED hasta su aceptación.
 **Documento:** `docs/fixes/impresion-usb-comercial-h183.md`.
