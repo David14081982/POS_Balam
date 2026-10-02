@@ -17,8 +17,8 @@ Corrección de edición: [H172 · Guardado y mensajes](guardado-edicion-producto
 
 - [otros-tickets-usb-h184.md](otros-tickets-usb-h184.md) — H-184:
   integración del reporte térmico por método y verificación de los demás
-  comprobantes por USB; 15/15, diseños y tamaños conservados. Publicación y
-  aceptación física de las variantes pendientes.
+  comprobantes por USB; 15/15, diseños y tamaños conservados. PUBLICADO Y
+  VERIFICADO en `0ced031`; aceptación física de las variantes pendiente.
 
 - [impresion-usb-comercial-h183.md](impresion-usb-comercial-h183.md) — H-183:
   integración comercial USB local; conserva copias y diseño, sin diálogo Android.

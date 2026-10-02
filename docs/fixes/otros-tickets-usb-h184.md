@@ -1,9 +1,9 @@
 # USB directo en los demás tickets térmicos
 
 **Riesgo:** H-184
-**Estado:** PARCIALMENTE RESUELTO — código verificado; publicación y aceptación física pendientes
+**Estado:** PARCIALMENTE RESUELTO — publicado/verificado; aceptación física de las variantes pendiente
 **Fecha:** 02/10/2026
-**Commit:** Pendiente de commit
+**Commit:** `0ced0316792e29c4847557c81d30509a00747e25`
 
 ## Problema y reproducción
 
@@ -128,7 +128,22 @@ Evidencia en `docs/fixes/evidence/h184-*.json`.
 
 ## Despliegue
 
-Pendiente de commit y workflow. Sin migraciones ni escrituras de negocio.
+Commit técnico `0ced0316792e29c4847557c81d30509a00747e25` enviado a `main`.
+Workflow `37059732907` SUCCESS: regresión y despliegue aprobados. Certificación
+distribuida no solicitada, omitida sin bloquear la publicación. Sin migraciones
+ni escrituras de negocio.
+
+El 02/10/2026 a las 20:27:44 UTC, la verificación pública devolvió HTTP 200
+y coincidencia byte por byte con el commit técnico para los tres artefactos:
+
+| Artefacto | Bytes | SHA-256 |
+|---|---:|---|
+| `index.html` | 9384785 | `857f07700fb0a793986cb472a1da24f26a1a5dddb61dbc1068ed036b5530218a` |
+| `POS Balam (offline).html` | 9384785 | `857f07700fb0a793986cb472a1da24f26a1a5dddb61dbc1068ed036b5530218a` |
+| `sw.js` | 4477 | `d07f12108267bdd783eebd6d9d64d60944f65a15f09a6935a4cdde1b6e54d6f0` |
+
+Evidencia: `docs/fixes/evidence/h184-deploy.json`.
+La tablet debe cargar la actualización y conservar USB seleccionado/conectado.
 
 ## Riesgo residual y pendientes
 

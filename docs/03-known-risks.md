@@ -7,8 +7,8 @@ y `BLOQUEADO`.
 
 ## H-184 — Completar USB directo en los demás tickets térmicos
 
-**Estado:** PARCIALMENTE RESUELTO — código verificado; publicación y papel pendientes.
-**Fecha:** 02/10/2026. **Commit:** Pendiente de commit.
+**Estado:** PARCIALMENTE RESUELTO — publicado/verificado; aceptación física de las variantes pendiente.
+**Fecha:** 02/10/2026. **Commit:** `0ced031`.
 **Solicitud:** el propietario confirmó «ya imprimió perfecto» en la venta USB y
 pidió aplicar el mismo transporte a los demás tickets, conservando los diseños.
 **Evidencia:** apartados, abonos, liquidaciones, cambios, devoluciones y
@@ -28,6 +28,9 @@ Gesto de popup independiente 3/3: reconectar debe autorizarse
 en la ventana principal propietaria de USB. Plantillas y renderer sin cambios.
 **Artefacto probado:** SHA-256
 `857f07700fb0a793986cb472a1da24f26a1a5dddb61dbc1068ed036b5530218a`.
+**Despliegue:** workflow `37059732907` SUCCESS. El 02/10/2026 a las 20:27:44 UTC,
+HTML principal/offline y SW públicos devolvieron HTTP 200 y coincidieron byte
+por byte con `0ced031`; evidencia `docs/fixes/evidence/h184-deploy.json`.
 **Residual:** nuevos tipos de ticket HARDWARE NOT_TESTED; la aceptación del
 usuario corresponde a venta y al diagnóstico de H-182/H-183.
 **Documento:** `docs/fixes/otros-tickets-usb-h184.md`.

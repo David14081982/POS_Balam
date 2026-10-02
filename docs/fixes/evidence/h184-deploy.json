@@ -1,0 +1,34 @@
+{
+  "commit": "0ced0316792e29c4847557c81d30509a00747e25",
+  "run": 37059732907,
+  "runUrl": "https://github.com/David14081982/POS_Balam/actions/runs/37059732907",
+  "workflowConclusion": "success",
+  "observedAt": "2026-10-02T20:27:44.925Z",
+  "physicalOtherTickets": "NOT_TESTED",
+  "files": [
+    {
+      "file": "index.html",
+      "url": "https://david14081982.github.io/POS_Balam/index.html",
+      "status": 200,
+      "bytes": 9384785,
+      "sha256": "857f07700fb0a793986cb472a1da24f26a1a5dddb61dbc1068ed036b5530218a",
+      "exactMatch": true
+    },
+    {
+      "file": "POS Balam (offline).html",
+      "url": "https://david14081982.github.io/POS_Balam/POS%20Balam%20(offline).html",
+      "status": 200,
+      "bytes": 9384785,
+      "sha256": "857f07700fb0a793986cb472a1da24f26a1a5dddb61dbc1068ed036b5530218a",
+      "exactMatch": true
+    },
+    {
+      "file": "sw.js",
+      "url": "https://david14081982.github.io/POS_Balam/sw.js",
+      "status": 200,
+      "bytes": 4477,
+      "sha256": "d07f12108267bdd783eebd6d9d64d60944f65a15f09a6935a4cdde1b6e54d6f0",
+      "exactMatch": true
+    }
+  ]
+}
