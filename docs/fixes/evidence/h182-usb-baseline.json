@@ -1,0 +1,15 @@
+{
+  "baseline": true,
+  "source": "balam/usb-receipt.js",
+  "sourceSHA256": null,
+  "synthetic": true,
+  "hardware": "NOT_TESTED",
+  "networkRequests": 0,
+  "results": [
+    {
+      "name": "USBReceipt module is available",
+      "ok": false,
+      "error": "balam/usb-receipt.js is absent: the direct USB transport is unavailable"
+    }
+  ]
+}

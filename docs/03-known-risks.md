@@ -5,6 +5,33 @@ un riesgo se debe leer su evidencia y las correcciones relacionadas. Los
 estados válidos son: `ABIERTO`, `EN CURSO`, `PARCIALMENTE RESUELTO`, `RESUELTO`
 y `BLOQUEADO`.
 
+## H-182 — Prueba de impresión USB directa desde la PWA
+
+**Estado:** PARCIALMENTE RESUELTO — diagnóstico optativo implementado; hardware NOT_TESTED.
+**Fecha:** 01/10/2026. **Commit:** Pendiente de commit.
+**Decisión:** el usuario autoriza preparar una prueba WebUSB dentro de BALAM,
+sin aplicación Android adicional y conservando diseño, tamaños y dos copias.
+**Evidencia previa:** PrintManager sólo dispone de sistema/THERMER; no existe
+adaptador USB ni selección del dispositivo. La impresión de texto e imagen
+directamente en THERMER funciona según el usuario; Browser Print falla. Esto
+no demuestra compatibilidad WebUSB ni causa única del fallo de THERMER.
+**Alcance:** Configuración → Impresión: conectar, texto ficticio y ticket
+ficticio con el renderer vigente. No activar USB en ventas antes de verificar
+la tablet. No modificar plantillas, datos, permisos ni configuración comercial.
+**Invariantes:** permiso explícito; una transferencia secuencial; dos imágenes
+íntegras; parar ante salida parcial sin repetir; cerrar recursos; distinguir
+bytes aceptados de papel. Android puede pedir permiso al reconectar.
+**Pruebas:** baselines fuente/artefacto 0/1; transporte 25/25; Configuración real
+10/10. Comparación de todos los píxeles en dos trabajos consecutivos, cada uno
+con cliente/tienda (576×2477 y 576×5752); parcial, cancelación, doble toque y
+cierre rechazado con exclusión hasta liberación. UI 6/6, PWA 2/2, sistema 18/18,
+THERMER 16/16, settings 3/3, arquitectura y build PASS. Evidencias h182 en fixes.
+**Publicación:** pendiente commit/workflow. Sin cambios remotos de negocio.
+**Residual:** probar selección, comandos, ambas copias, corte y reconexión en
+tablet/END-80TEUX. Permisos pueden reaparecer; PWA abierta. Bytes aceptados no
+confirman papel. No integración automática comercial ni certificación A/B/C.
+**Documento:** `docs/fixes/prueba-usb-pwa-h182.md`.
+
 ## H-181 — THERMER con dos copias y una sola activación
 
 **Estado:** EN CURSO — usuario vuelve a reportar fallo físico tras publicación de URI.

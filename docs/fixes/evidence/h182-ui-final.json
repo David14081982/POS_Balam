@@ -1,0 +1,60 @@
+{
+  "baseline": false,
+  "artifactSHA256": "db52796b32ba70bc146dc3d174a5c4ccee851a0a424a866e585527c021dde696",
+  "results": [
+    {
+      "name": "real Settings opens without chooser or print; responsive at 360 and 1024 px",
+      "ok": true
+    },
+    {
+      "name": "cancelled device selection stays disconnected; subsequent gesture connects exact USB interface",
+      "ok": true
+    },
+    {
+      "name": "text is sent once with correct framing and no app/system dialog",
+      "ok": true
+    },
+    {
+      "name": "both real ticket copies survive pixel-for-pixel; double tap does not interleave",
+      "ok": true,
+      "folio": "PRUEBA-USB-9f3707c8-87f6-4282-a5f3-ead630b21db4",
+      "heights": [
+        2477,
+        2477
+      ],
+      "bytes": 357963
+    },
+    {
+      "name": "consecutive long ticket has a new frozen folio and two independent intact copies",
+      "ok": true,
+      "folio": "PRUEBA-USB-725fc754-d59c-486d-a375-def24898c5ee",
+      "heights": [
+        5752,
+        5752
+      ],
+      "bytes": 831195
+    },
+    {
+      "name": "renderer failure is explicit, sends nothing and releases the demo",
+      "ok": true
+    },
+    {
+      "name": "partial second copy stops without another cut; reset is required in UI",
+      "ok": true
+    },
+    {
+      "name": "disconnect cancels preparation without late output and resources can be reused",
+      "ok": true
+    },
+    {
+      "name": "leaving the print settings closes USB; no commercial mutation or alternate print transport",
+      "ok": true
+    },
+    {
+      "name": "unsupported browser explains USB compatibility and never requests permission",
+      "ok": true
+    }
+  ],
+  "hardware": "NOT_TESTED",
+  "remoteBusinessWrites": 0
+}

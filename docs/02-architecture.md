@@ -631,7 +631,7 @@ entrega al diálogo del sistema mediante `print()`.
 Por omisión PC y Android usan la misma frontera. No se decide el transporte por agente,
 pantalla táctil, Bluetooth o USB; no hay intents ni paquetes de aplicaciones
 fijados. El sistema y el servicio de impresión instalado descubren y atienden
-la impresora. BALAM no enumera dispositivos USB, no selecciona silenciosamente
+la impresora. En esta ruta BALAM no enumera dispositivos USB, no selecciona silenciosamente
 una impresora ni confirma papel. El usuario confirmó END-80TEUX por USB y
 THERMER funcional como servicio antes del cambio; el nuevo recorrido físico
 sigue requiriendo aceptación en esa tablet.
@@ -711,6 +711,36 @@ registro de limpieza fuera del repositorio. El manifiesto marca INICIO, imagen
 pequeña, IMAGEN LARGA, imagen larga y FIN. El control público
 `pwa/thermer-control.json` contiene sólo texto ficticio para contrastar Browser
 Print sin firmas. Ninguno registra ventas ni modifica la configuración.
+
+### Diagnóstico USB directo en la PWA (H-182)
+
+Configuración → Impresión ofrece `USBPrintCheck`, una prueba optativa sin venta
+ni ajuste persistido. `USBReceipt` pide seleccionar un dispositivo WebUSB bajo
+gesto y permiso de Android; identifica configuración, interfaz y endpoint bulk
+OUT por sus descriptores. No presupone VID/PID ni disponibilidad de END-80TEUX.
+Chrome Android y HTTPS son el entorno objetivo; el permiso puede reaparecer.
+
+La prueba textual es fija. La gráfica monta temporalmente `BalamTicket` con
+datos ficticios y congela cliente/tienda mediante `captureReceipt`. Desmonta el
+portal y usa `receiptGraphic` sin cambiar estilos ni tamaños. Los PNG originales
+de 576 puntos se convierten a raster ESC/POS 1:1, en bandas consecutivas de 32
+filas sin avance entre ellas. Se solicita avance/corte al terminar cada copia.
+Disponibilidad de comandos, búfer y corte físicos requieren prueba en hardware.
+
+Sólo hay un trabajo activo por sesión. Cada transferencia exige status `ok` y
+bytes completos; no se repite ni continúa tras salida incierta. Un error después
+de empezar obliga a reiniciar físicamente la impresora y reconocerlo antes de
+otra selección. Desconectar/salir invalida respuestas tardías y cierra USB;
+un cierre rechazado mantiene la exclusión hasta liberación o retirada física.
+El timeout no se interpreta como cancelación del controlador: los recursos
+nativos pendientes siguen impidiendo reutilizar la sesión.
+
+El diagnóstico no utiliza `PrintManager`, THERMER, `window.print` ni descargas
+de Storage, y no activa impresión automática comercial. No modifica DATA,
+CONFIG, permisos, documentos históricos ni el requisito online de la venta.
+Su estado efímero sólo conserva metadatos de conexión y progreso, sin serial,
+contenido del ticket ni credenciales. `TRANSFERRED` significa bytes aceptados;
+`physicalPrintConfirmed` sigue siendo falso. La PWA debe permanecer abierta.
 
 ## AUTH
 

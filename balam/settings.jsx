@@ -1634,6 +1634,7 @@
     ],
     impresion: () => [
       h(window.PrintManager.PrintHistory, { key: 'history' }),
+      h(window.USBPrintCheck, { key: 'usb-check' }),
       h(GlassCard, { key: 'tk', className: 'p-6' }, [
         h(SerifHeading, { key: 't', className: 'mb-2', children: 'Tickets e impresión' }),
         h(CfgToggle, { key: 'th', k: 'print.thermer', title: 'Usar THERMER en tablets Android', desc: 'Prepara COPIA CLIENTE y COPIA TIENDA. Un toque envía ambas a THERMER, sin el diálogo del sistema. Activa Browser Print en THERMER. En PC se conserva la impresión del sistema.' }),

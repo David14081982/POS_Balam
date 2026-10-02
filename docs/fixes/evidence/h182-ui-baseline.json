@@ -1,0 +1,13 @@
+{
+  "baseline": true,
+  "artifactSHA256": "02934821e81814536127175cc4b2f7c70470a9a6795d52139cd98e22eb6ec2a6",
+  "results": [
+    {
+      "name": "Settings exposes optional WebUSB diagnostic",
+      "ok": false,
+      "error": "No WebUSB diagnostic in the baseline artifact"
+    }
+  ],
+  "hardware": "NOT_TESTED",
+  "remoteBusinessWrites": 0
+}
