@@ -1,7 +1,7 @@
 # THERMER: cliente y tienda con un toque
 
 **Riesgo:** H-181
-**Estado:** EN CURSO — URI corregida; aceptación física pendiente
+**Estado:** EN CURSO — usuario vuelve a reportar fallo físico tras publicación de URI
 **Fecha:** 01/10/2026
 **Commit:** `12a7a8c` (implementación); `8eadc90` (registro inicial, cliente publicado)
 **Corrección de URI y diagnóstico:** `b2db3ed`.
@@ -213,7 +213,26 @@ mediante `--cleanup <record.json>`. No se crean objetos remotos al ejecutar
 pruebas locales. La página aborta descargas tras 30 segundos y ofrece un control
 público de texto independiente. Ésta es instrumentación, no aceptación física.
 
-Pendiente confirmar las dos copias en la tablet tras publicar la URI corregida.
+### Nuevo intento informado tras publicar la URI corregida
+
+El usuario reporta que THERMER continúa mostrando publicidad sin imprimir. Una
+segunda captura muestra «Ticket listo para imprimir», ambas copias y
+`renderFinishedAt`/`payloadReadyAt` completos. No se ve en ella la versión del
+cliente ni `sendStartedAt`/resultado, por lo que no demuestra qué URI recibió
+Android. `assetsReadyAt:null` no es evidencia de fallo: la rama THERMER recoge
+métricas del generador pero no registra esa etapa en el historial.
+
+Se verificaron de nuevo por HTTP `index.html`, `pwa/thermer-check.html` y
+`pwa/thermer-control.json`: 200 y bytes idénticos a `b2db3ed`; JSON público con
+dos entradas tipo0 según el manual. No se encontró un nuevo defecto reproducido.
+Se pidió al usuario abrir en Chrome el control básico de texto de esa página.
+Sin fragmento, el botón de imágenes queda deshabilitado y el control básico se
+muestra en la salida de error; se indicó expresamente usar ese enlace. El
+resultado físico está pendiente. Si imprime, continuar con paquete sintético de
+imágenes; si no, investigar recepción/descarga Browser Print antes de tocar PNG.
+No se cambió código ni se emitieron nuevos paquetes remotos en esta revisión.
+
+Pendiente resultado del control web de texto y confirmar ambas copias en tablet.
 No se cambiaron tamaños ni imágenes comerciales a partir de esta observación.
 Las pruebas anteriores siguen siendo de transporte y no equivalen a aceptación
 física exitosa.

@@ -7,7 +7,7 @@ y `BLOQUEADO`.
 
 ## H-181 — THERMER con dos copias y una sola activación
 
-**Estado:** EN CURSO — URI corregida; aceptación física pendiente.
+**Estado:** EN CURSO — usuario vuelve a reportar fallo físico tras publicación de URI.
 **Fecha:** 01/10/2026. **Commit:** `12a7a8c`.
 **Corrección de URI y diagnóstico:** `b2db3ed`.
 **Decisión:** el usuario acepta un toque para THERMER 6.4.8.42, USB END-80TEUX,
@@ -43,7 +43,12 @@ PWA 2/2. Cierre manual de navegadores locales documentado; CI posterior SUCCESS
 sin intervención. Corrección publicada por Actions 36920521984 desde `b2db3ed`;
 cinco archivos públicos idénticos al commit a las 20:26:18 UTC. Evidencia:
 `docs/fixes/evidence/h181-uri-deploy.json`. Sin cambios de servicio/permisos/datos.
-Queda pendiente aceptación física; no afirmar causa única del fallo del equipo.
+**Nuevo intento:** usuario vuelve a reportar publicidad sin papel después de
+entregar la actualización. Captura de «Ticket listo» acredita preparación, no
+versión ni URI entregada. `assetsReadyAt:null` es etapa no instrumentada en esa
+ruta, no fallo demostrado. HTML y control público HTTP200 idénticos a `b2db3ed`.
+Se solicitó control web sólo texto desde Chrome; resultado pendiente. No se
+cambió código sin nueva reproducción. No afirmar causa única del fallo físico.
 **Residual:** HARDWARE_LOCAL NOT_TESTED; USER_ACCEPTANCE FAILED para BALAM;
 POST remoto con usuario
 activo y expiración real NOT_TESTED (matriz local). Sin confirmación física ni
