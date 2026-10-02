@@ -1,9 +1,9 @@
 # Prueba de impresión USB directa desde BALAM PWA
 
 **Riesgo:** H-182
-**Estado:** PARCIALMENTE RESUELTO — diagnóstico implementado; hardware NOT_TESTED
+**Estado:** PARCIALMENTE RESUELTO — diagnóstico publicado y verificado; hardware NOT_TESTED
 **Fecha:** 01/10/2026
-**Commit:** Pendiente de commit
+**Commit:** `6f509a7e46872be11e7cd451c4334537b330e48b`
 
 ## Problema y reproducción
 
@@ -106,8 +106,14 @@ HARDWARE NOT_TESTED. No certificación A/B/C solicitada.
 
 ## Despliegue
 
-Pendiente commit/publicación mediante workflow autorizado. No requiere SQL,
-Edge Function, cambios de permisos ni configuración remota.
+Publicado por Actions
+[36965972877](https://github.com/David14081982/POS_Balam/actions/runs/36965972877):
+regresión y despliegue SUCCESS; A/B/C omitida, no solicitada. Verificación HTTP
+a las 04:56:14 UTC del 02/10/2026 (01/10 en Hermosillo): `index.html`, HTML
+offline y `sw.js` coinciden byte por byte con el commit probado. HTML 9,380,841
+bytes, SHA-256 `db52796b32ba70bc146dc3d174a5c4ccee851a0a424a866e585527c021dde696`.
+Evidencia: `docs/fixes/evidence/h182-deploy.json`. No se aplicó SQL, Edge Function,
+cambio de permisos ni configuración remota.
 
 Uso previsto: actualizar BALAM en Chrome de la tablet y abrir Configuración →
 Impresión → Prueba de impresión por USB. Conectar END-80TEUX y aceptar permisos;

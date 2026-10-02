@@ -1,0 +1,30 @@
+{
+    "checkedAt":  "2026-10-02T04:56:14.1725478Z",
+    "commit":  "6f509a7e46872be11e7cd451c4334537b330e48b",
+    "workflow":  "36965972877",
+    "workflowConclusion":  "success",
+    "hardware":  "NOT_TESTED",
+    "files":  [
+                  {
+                      "file":  "index.html",
+                      "bytes":  9380841,
+                      "sha256":  "db52796b32ba70bc146dc3d174a5c4ccee851a0a424a866e585527c021dde696",
+                      "expectedSHA256":  "db52796b32ba70bc146dc3d174a5c4ccee851a0a424a866e585527c021dde696",
+                      "matches":  true
+                  },
+                  {
+                      "file":  "POS Balam (offline).html",
+                      "bytes":  9380841,
+                      "sha256":  "db52796b32ba70bc146dc3d174a5c4ccee851a0a424a866e585527c021dde696",
+                      "expectedSHA256":  "db52796b32ba70bc146dc3d174a5c4ccee851a0a424a866e585527c021dde696",
+                      "matches":  true
+                  },
+                  {
+                      "file":  "sw.js",
+                      "bytes":  4477,
+                      "sha256":  "02ccb75500f3708b2c47b352948ea0a47211e4c78a0c760c71e68bbd313ad2a4",
+                      "expectedSHA256":  "02ccb75500f3708b2c47b352948ea0a47211e4c78a0c760c71e68bbd313ad2a4",
+                      "matches":  true
+                  }
+              ]
+}

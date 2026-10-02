@@ -7,8 +7,8 @@ y `BLOQUEADO`.
 
 ## H-182 — Prueba de impresión USB directa desde la PWA
 
-**Estado:** PARCIALMENTE RESUELTO — diagnóstico optativo implementado; hardware NOT_TESTED.
-**Fecha:** 01/10/2026. **Commit:** Pendiente de commit.
+**Estado:** PARCIALMENTE RESUELTO — diagnóstico optativo publicado y verificado; hardware NOT_TESTED.
+**Fecha:** 01/10/2026. **Commit:** `6f509a7`.
 **Decisión:** el usuario autoriza preparar una prueba WebUSB dentro de BALAM,
 sin aplicación Android adicional y conservando diseño, tamaños y dos copias.
 **Evidencia previa:** PrintManager sólo dispone de sistema/THERMER; no existe
@@ -26,7 +26,9 @@ bytes aceptados de papel. Android puede pedir permiso al reconectar.
 con cliente/tienda (576×2477 y 576×5752); parcial, cancelación, doble toque y
 cierre rechazado con exclusión hasta liberación. UI 6/6, PWA 2/2, sistema 18/18,
 THERMER 16/16, settings 3/3, arquitectura y build PASS. Evidencias h182 en fixes.
-**Publicación:** pendiente commit/workflow. Sin cambios remotos de negocio.
+**Publicación:** Actions 36965972877 SUCCESS; HTML, offline y SW públicos
+idénticos byte por byte al commit. Evidencia `h182-deploy.json`, 02/10/2026
+04:56 UTC (01/10 local). Sin cambios remotos de negocio.
 **Residual:** probar selección, comandos, ambas copias, corte y reconexión en
 tablet/END-80TEUX. Permisos pueden reaparecer; PWA abierta. Bytes aceptados no
 confirman papel. No integración automática comercial ni certificación A/B/C.

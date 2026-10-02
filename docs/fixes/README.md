@@ -17,7 +17,8 @@ Corrección de edición: [H172 · Guardado y mensajes](guardado-edicion-producto
 
 - [prueba-usb-pwa-h182.md](prueba-usb-pwa-h182.md) — H-182:
   diagnóstico optativo WebUSB con texto y dos copias del diseño actual;
-  transporte e integridad verificables, hardware pendiente.
+  transporte 25/25 e integridad/UI 10/10. PUBLICADO Y VERIFICADO en `6f509a7`;
+  hardware pendiente.
 
 - [thermer-un-toque-h181.md](thermer-un-toque-h181.md) — H-181:
   opción Android para preparar cliente y tienda y enviarlas juntas a THERMER
