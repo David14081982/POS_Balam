@@ -1,9 +1,10 @@
 # Impresión USB directa de los comprobantes comerciales
 
 **Riesgo:** H-183
-**Estado:** RESUELTO EN CÓDIGO — publicación y aceptación comercial física pendientes
+**Estado:** PARCIALMENTE RESUELTO — publicado y verificado; aceptación comercial física pendiente
 **Fecha:** 02/10/2026
 **Commit:** `9cd5191368a457eb7ea2720f815dc953630ec835`
+**Ajuste del instrumento y versión publicada:** `283d3d6fe48130d3ef4810c82f059de1d27c1c9b`
 
 ## Problema y reproducción
 
@@ -13,7 +14,7 @@ La prueba independiente H-182 sí imprimió físicamente el texto completo y,
 posteriormente, las dos copias con el diseño correcto según el propietario.
 El contrato pendiente es utilizar ese mismo transporte en comprobantes reales.
 
-Recorrido vigente: confirmar venta en Supabase → SuccessModal →
+Recorrido previo: confirmar venta en Supabase → SuccessModal →
 useReceiptAutoPrint (si print.auto) o botón receipt-print → UI.printReceipt →
 PrintManager.enqueue → browser/thermer. Configuración → Impresión monta
 USBPrintCheck independiente; abandonar esa tarjeta cierra el dispositivo.
@@ -121,20 +122,40 @@ que la abrió; ambas defensas quedan automatizadas.
 - `node test-h164-online-ui.mjs`: 6/6; `node test-h164-online-pwa.mjs`: 2/2;
   arquitectura online: PASS; `node test-h164-online-settings.mjs`: 3/3;
   `node test-h180-system-print.mjs`: 18/18. Todos sobre fuentes/bundle finales.
-  CI se ejecutará antes de Pages. Comando inicial `test-settings.mjs` inexistente
+  CI terminó correctamente antes de Pages. Comando inicial `test-settings.mjs` inexistente
   sustituido por el arnés vigente, sin cambios de producto por ese error de ruta.
 
-Evidencia versionada: `evidence/h183-commercial-baseline.json`,
-`h183-commercial-final.json`, `h183-usb-transport.json`, `h183-usb-ui.json`.
+Evidencia versionada en `evidence/`: `h183-commercial-baseline.json`,
+`h183-commercial-final.json`, `h183-usb-transport.json`, `h183-usb-ui.json`,
+`h183-ci-reproduction.json`, `h183-regressions.json` y `h183-deploy.json`.
 SHA-256 del HTML final probado:
 `807f92ab9173084076d0c65a919f4ca319f275fa51609ac15cb2dafba2a10a1e`.
 
 ## Despliegue
 
-Commit técnico enviado a `main`; primer workflow `37051880683` detenido por el
-oráculo de actividad descrito arriba, sin publicar. La corrección del arnés
-conserva exactamente el mismo HTML probado. No requiere migración ni cambios
-remotos. La verificación pública se registra al terminar el nuevo despliegue.
+Commit técnico `9cd5191` y ajuste del arnés `283d3d6` enviados a `main`.
+El primer workflow `37051880683` se detuvo por el oráculo de actividad descrito
+arriba, sin publicar. La corrección del arnés conserva el mismo HTML probado.
+El workflow [37053773784](https://github.com/David14081982/POS_Balam/actions/runs/37053773784)
+terminó SUCCESS, con regresión y despliegue correctos. La certificación
+distribuida opcional se omitió porque no fue solicitada.
+
+El 02/10/2026 a las 19:32:08 UTC se descargaron los tres archivos públicos:
+`index.html` y `POS Balam (offline).html` devolvieron HTTP 200, 9384481 bytes
+cada uno y el SHA del HTML indicado arriba; `sw.js` devolvió HTTP 200,
+4477 bytes, SHA-256
+`c4d67846a7792571ecfedd92638468d73468ca551367e4fdd522700acb54f75a`.
+Todos coinciden byte por byte con el commit publicado `283d3d6`.
+No requiere migración ni cambios remotos de negocio.
+
+Activación en la tablet: abrir la versión actualizada, Configuración → Impresión,
+conectar la impresora y activar «Usar USB para los tickets de este dispositivo».
+Mantener activados «Imprimir ticket automáticamente» e «Imprimir dos copias
+(cliente y tienda)». Conectar por sí solo no selecciona USB para las ventas.
+La selección es local y tiene prioridad sobre THERMER. Al recargar o reabrir
+la aplicación hay que reconectar; un comprobante pendiente ofrece
+«Conectar e imprimir». Con conexión activa, el cobro confirmado solicita las
+dos copias sin otro toque y el botón habitual usa el mismo transporte.
 
 ## Riesgo residual y pendientes
 

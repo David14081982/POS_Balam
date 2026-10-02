@@ -17,7 +17,8 @@ Corrección de edición: [H172 · Guardado y mensajes](guardado-edicion-producto
 
 - [impresion-usb-comercial-h183.md](impresion-usb-comercial-h183.md) — H-183:
   integración comercial USB local; conserva copias y diseño, sin diálogo Android.
-  USB 16/16, transporte 32/32 y UI 13/13; aceptación física comercial pendiente.
+  USB 16/16, transporte 32/32 y UI 13/13. PUBLICADO Y VERIFICADO en `283d3d6`;
+  aceptación física comercial pendiente.
 
 - [prueba-usb-pwa-h182.md](prueba-usb-pwa-h182.md) — H-182:
   diagnóstico optativo WebUSB con texto y dos copias del diseño actual;

@@ -25,6 +25,14 @@
     "reproduction": "Chromium1223: USB successor complete, 2 copies, 406075 bytes; only remaining activity owner=settings. No printer activity remains.",
     "correction": "Observe actual CORE token ownership, require printer tokens released and unrelated activity preserved. No product changes."
   },
+  "finalPublicationRun": {
+    "id": 37053773784,
+    "commit": "283d3d6fe48130d3ef4810c82f059de1d27c1c9b",
+    "regression": "SUCCESS",
+    "deploy": "SUCCESS",
+    "publicArtifacts": "HTTP_200_AND_BYTE_EXACT_TO_COMMIT",
+    "evidence": "h183-deploy.json"
+  },
   "physicalAcceptance": {
     "h182Diagnostic": "USER_CONFIRMED_TEXT_AND_TWO_CORRECT_DESIGNS",
     "h183Commercial": "NOT_TESTED"
