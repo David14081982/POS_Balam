@@ -7,8 +7,8 @@ y `BLOQUEADO`.
 
 ## H-185 — Simplificar detalle y espacio del ticket de venta
 
-**Estado:** RESUELTO EN CÓDIGO — publicación y confirmación física pendientes.
-**Fecha:** 05/10/2026. **Commit:** Pendiente de commit.
+**Estado:** RESUELTO — publicado/verificado; confirmación física pendiente.
+**Fecha:** 05/10/2026. **Commit:** `b4a279f`.
 **Solicitud:** retirar de la impresión de venta toda la cadena SKU y toda la
 información de ornamento, conservando nombre, importe, talla, color de prenda y
 cantidad; reducir el vacío entre método de pago y agradecimiento sin saturar.
@@ -28,7 +28,10 @@ comprobantes 15/15, sistema 18/18, geometría 28/28, tinta 8/8, contenido 12/12,
 copias 13/13, web 41/41, UI 6/6, PWA 2/2; arquitectura PASS. Total 189.
 **Artefacto probado:** SHA-256
 `7b590607dcedd76e3bc788893b2a8f81cc63d87376250659292f8f97faf80346`.
-**Despliegue:** pendiente; sin migraciones.
+**Despliegue:** workflow `37338399766` SUCCESS. El 05/10/2026 a las 16:17:21 UTC,
+HTML principal/offline y SW públicos HTTP 200 e idénticos byte por byte al commit
+y al artefacto local probado. Evidencia `docs/fixes/evidence/h185-deploy.json`;
+sin migraciones. Guardián de longitud refijado después de regresión verde.
 **Residual:** nueva presentación en papel HARDWARE NOT_TESTED.
 **Corrección:** `docs/fixes/ticket-venta-detalle-espaciado-h185.md`.
 

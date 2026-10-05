@@ -1,9 +1,9 @@
 # Detalle y espaciado del ticket de venta
 
 **Riesgo:** H-185
-**Estado:** RESUELTO EN CÓDIGO — publicación y confirmación física pendientes
+**Estado:** RESUELTO — publicado/verificado; confirmación física pendiente
 **Fecha:** 05/10/2026
-**Commit:** Pendiente de commit
+**Commit:** `b4a279f9f05ee05fd59ca0c05018272aacaca8aa`
 
 ## Problema y reproducción
 
@@ -109,7 +109,28 @@ y demostrar que los demás conservan su artefacto, no sólo contar llamadas.
 
 ## Despliegue
 
-Pendiente del workflow aprobado; sin migraciones ni escrituras comerciales.
+Commit técnico enviado a `main`; workflow
+[37338399766](https://github.com/David14081982/POS_Balam/actions/runs/37338399766)
+terminó **SUCCESS**: regresión y despliegue aprobados. La certificación
+distribuida opcional se omitió porque no fue solicitada.
+Sin migraciones ni escrituras comerciales. El primer intento de push fue
+rechazado por revisión automática de autorización; después de verificar
+AGENTS.md y R-DEL-04 y comprobar el diff acotado, la reevaluación autorizó
+el mismo push normal. No se usó una ruta alternativa de publicación.
+
+El 05/10/2026 a las **16:17:21 UTC** los tres artefactos públicos devolvieron
+HTTP 200 y coincidieron byte por byte tanto con el commit técnico como con los
+archivos locales probados:
+
+| Archivo | Bytes | SHA-256 |
+|---|---:|---|
+| `index.html` | 9384909 | `7b590607dcedd76e3bc788893b2a8f81cc63d87376250659292f8f97faf80346` |
+| `POS Balam (offline).html` | 9384909 | `7b590607dcedd76e3bc788893b2a8f81cc63d87376250659292f8f97faf80346` |
+| `sw.js` | 4477 | `b62f0dc608bf4d505ac94cae1b3816f76177dae18ea971c8d154e81bb66a43d2` |
+
+Evidencia: `docs/fixes/evidence/h185-deploy.json`. La terminal debe cargar la
+actualización de BALAM para usar la nueva presentación. Registro documental
+del hash y despliegue en commit aparte; no cambia el cliente probado.
 
 ## Riesgo residual y pendientes
 

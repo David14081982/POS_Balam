@@ -1,0 +1,50 @@
+{
+  "date": "2026-10-05T16:17:21.034Z",
+  "commit": "b4a279f9f05ee05fd59ca0c05018272aacaca8aa",
+  "workflow": {
+    "id": 37338399766,
+    "url": "https://github.com/David14081982/POS_Balam/actions/runs/37338399766",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "name": "regression",
+        "conclusion": "success"
+      },
+      {
+        "name": "deploy",
+        "conclusion": "success"
+      },
+      {
+        "name": "live-certification",
+        "conclusion": "skipped"
+      }
+    ]
+  },
+  "files": [
+    {
+      "name": "index.html",
+      "status": 200,
+      "bytes": 9384909,
+      "sha256": "7b590607dcedd76e3bc788893b2a8f81cc63d87376250659292f8f97faf80346",
+      "equalsCommit": true,
+      "equalsLocal": true
+    },
+    {
+      "name": "POS Balam (offline).html",
+      "status": 200,
+      "bytes": 9384909,
+      "sha256": "7b590607dcedd76e3bc788893b2a8f81cc63d87376250659292f8f97faf80346",
+      "equalsCommit": true,
+      "equalsLocal": true
+    },
+    {
+      "name": "sw.js",
+      "status": 200,
+      "bytes": 4477,
+      "sha256": "b62f0dc608bf4d505ac94cae1b3816f76177dae18ea971c8d154e81bb66a43d2",
+      "equalsCommit": true,
+      "equalsLocal": true
+    }
+  ],
+  "hardware": "NOT_TESTED"
+}
