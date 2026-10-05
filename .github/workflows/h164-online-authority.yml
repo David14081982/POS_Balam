@@ -132,6 +132,8 @@ jobs:
         run: node test-h177-thermal-ink.mjs
       - name: Verify short sale ticket
         run: node test-h178-sale-ticket-trim.mjs
+      - name: Verify sale detail, spacing and unchanged receipt variants
+        run: node test-h185-sale-ticket-layout.mjs
       - name: Verify customer and store receipt copies
         run: node test-h179-receipt-copies.mjs
       - name: Stage the tested client

@@ -100,10 +100,13 @@ try {
   };
   await test('Venta normal: método de pago con icono, sin historial ni código de barras', () => trimmed(docs.contado, 'Tarjeta'));
   await test('Venta normal: conserva encabezado, detalle, totales, pie y página web', () => {
-    for (const text of ['BALAM', 'BG-260922-0003', 'PRUEBA', 'Detalle de compra', 'TIRA BORDADA', '3-TB-MC-MNT-MAO-BL-N:M',
-      'Ornamento: APLICACION · MULTICOLORES', 'Importe', '$301.72', 'IVA (16%)', '$48.28', 'Total a pagar', '$350.00',
+    // H-185: detalle de venta sin SKU ni ornamento; talla y cantidad conservadas.
+    for (const text of ['BALAM', 'BG-260922-0003', 'PRUEBA', 'Detalle de compra', 'TIRA BORDADA', 'Talla: M', 'Cant: 1',
+      'Importe', '$301.72', 'IVA (16%)', '$48.28', 'Total a pagar', '$350.00',
       '¡Gracias por su compra!', 'Piezas artesanales únicas.', 'BALAMGUAYABERAS.MX'])
       assert.ok(docs.contado.text.toLowerCase().includes(text.toLowerCase()), text);
+    for (const text of ['SKU:', '3-TB-MC-MNT-MAO-BL-N:M', 'Ornamento:', 'APLICACION', 'MULTICOLORES'])
+      assert.ok(!docs.contado.text.includes(text), 'sigue imprimiendo ' + text);
   });
   await test('Venta con pago mixto: mismo ticket corto', () => trimmed(docs.mixto, 'Mixto'));
   await test('Reimpresión de venta con un cambio posterior: mismo ticket corto', () => trimmed(docs.reimpresionConCambio, 'Tarjeta'));

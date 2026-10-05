@@ -1,0 +1,97 @@
+{
+  "risk": "H-185",
+  "recordedAtUtc": "2026-10-05T16:03:08.0286811Z",
+  "artifact": "index.html",
+  "artifactSHA256": "7b590607dcedd76e3bc788893b2a8f81cc63d87376250659292f8f97faf80346",
+  "browser": "C:\\Users\\david\\AppData\\Local\\ms-playwright\\chromium-1223\\chrome-win64\\chrome.exe",
+  "results": [
+    {
+      "script": "test-h180-system-print.mjs",
+      "exit": 0,
+      "passed": 18,
+      "total": 18,
+      "sha256": "7b590607dcedd76e3bc788893b2a8f81cc63d87376250659292f8f97faf80346",
+      "evidence": "C:/Users/david/AppData/Local/Temp/balam-h180-195JSz/results.json",
+      "hardware": "NOT_TESTED"
+    },
+    {
+      "script": "test-h173-ticket-thermal-output.mjs",
+      "exit": 0,
+      "passed": 28,
+      "total": 28,
+      "sha256": "7b590607dcedd76e3bc788893b2a8f81cc63d87376250659292f8f97faf80346",
+      "summary": "H-173: 28/28",
+      "hardware": "NOT_TESTED"
+    },
+    {
+      "script": "test-h177-thermal-ink.mjs",
+      "exit": 0,
+      "passed": 8,
+      "total": 8,
+      "sha256": "7b590607dcedd76e3bc788893b2a8f81cc63d87376250659292f8f97faf80346",
+      "stdout": "PASS PNG RawBT de 576 puntos, sólo blanco y negro\nPASS El ticket de venta pide menos tinta total que el reporte que salió completo\nPASS Ninguna franja de 8 mm es más oscura que la del reporte que salió completo\nPASS El reporte por método también baja su tinta\nPASS El logo se imprime tramado, no como bloque negro sólido\nPASS El contenido llega completo hasta el pie\nPASS Venta sin SKU ni ornamento, con talla/cantidad y sin caracteres extraños (H-185)\nPASS Sin errores de página\n\nH-177: 8/8"
+    },
+    {
+      "script": "test-h178-sale-ticket-trim.mjs",
+      "exit": 0,
+      "passed": 12,
+      "total": 12,
+      "sha256": "7b590607dcedd76e3bc788893b2a8f81cc63d87376250659292f8f97faf80346",
+      "stdout": "PASS Venta normal: método de pago con icono, sin historial ni código de barras\nPASS Venta normal: conserva encabezado, detalle, totales, pie y página web\nPASS Venta con pago mixto: mismo ticket corto\nPASS Reimpresión de venta con un cambio posterior: mismo ticket corto\nPASS Anticipo de apartado: conserva historial y código de barras\nPASS Abono de apartado: conserva historial y código de barras\nPASS Liquidación de apartado: conserva historial y código de barras\nPASS Reimpresión de apartado liquidado: conserva método, historial y código de barras\nPASS Cambio: conserva método de pago, historial y código de barras\nPASS Cortesía: conserva «Cortesía» y el código de barras\n     alto PNG venta normal 1940 px · documento completo 2688 px\nPASS El PNG RawBT de la venta normal es más corto que el documento completo\nPASS Sin errores de página\n\nH-178: 12/12"
+    },
+    {
+      "script": "test-h179-receipt-copies.mjs",
+      "exit": 0,
+      "passed": 13,
+      "total": 13,
+      "sha256": "7b590607dcedd76e3bc788893b2a8f81cc63d87376250659292f8f97faf80346",
+      "stdout": "PASS Computadora, ajuste apagado: una sola impresión y sin marca de copia\nPASS Computadora, dos copias: sale sale como COPIA CLIENTE y luego COPIA TIENDA\nPASS Computadora, dos copias: layaway sale como COPIA CLIENTE y luego COPIA TIENDA\nPASS Computadora, dos copias: payment sale como COPIA CLIENTE y luego COPIA TIENDA\nPASS Computadora, dos copias: exchange sale como COPIA CLIENTE y luego COPIA TIENDA\nPASS Computadora, dos copias: return sale como COPIA CLIENTE y luego COPIA TIENDA\nPASS Computadora, dos copias: la impresión automática también saca las dos\nPASS Computadora, dos copias: reportes A4 y ticket por método salen una vez, sin marca\nPASS Computadora: sin errores de página\nPASS Tablet, ajuste apagado: un solo envío al sistema y nada pendiente al cerrar\nPASS Tablet, dos copias: COPIA CLIENTE primero y la segunda espera el cierre\nPASS Tablet, dos copias: cerrar el primer diálogo solicita COPIA TIENDA sin RawBT\nPASS Tablet: sin errores de página\n\nH-179: 13/13"
+    },
+    {
+      "script": "test-h168-ticket-website.mjs",
+      "exit": 0,
+      "passed": 41,
+      "total": 41,
+      "sha256": "7b590607dcedd76e3bc788893b2a8f81cc63d87376250659292f8f97faf80346",
+      "stdout": "PASS Configuración → Impresión ofrece el campo de página web\nPASS snapshot histórico sin clave muestra BALAMGUAYABERAS.MX\nPASS leer el default no modifica el snapshot confirmado\nPASS tarjeta Página web aparece debajo de Pie de ticket\nPASS campo muestra el dominio inicial\nPASS guardar espera y adopta la confirmación por el gateway vigente\nPASS una actualización recibida se muestra sin reenviarla al salir\nPASS otro ajuste conserva el borrador del campo\nPASS una intención pendiente no cambia CONFIG\nPASS rechazo no cambia la página confirmada\nPASS sin conexión no guarda ni crea una cola\nPASS no almacena configuración comercial en localStorage\nPASS recarga reconstruye el campo desde el snapshot remoto\nPASS CONFIG.load respeta valor personalizado y vacío explícito\nPASS historica-v1: imprime la web vigente una sola vez\nPASS historica-v1: omite dominio obsoleto y snapshot de contacto\nPASS venta-v2: imprime la web vigente una sola vez\nPASS venta-v2: omite dominio obsoleto y snapshot de contacto\nPASS reimpresion: imprime la web vigente una sola vez\nPASS reimpresion: omite dominio obsoleto y snapshot de contacto\nPASS anticipo: imprime la web vigente una sola vez\nPASS anticipo: omite dominio obsoleto y snapshot de contacto\nPASS abono: imprime la web vigente una sola vez\nPASS abono: omite dominio obsoleto y snapshot de contacto\nPASS liquidacion: imprime la web vigente una sola vez\nPASS liquidacion: omite dominio obsoleto y snapshot de contacto\nPASS cambio: imprime la web vigente una sola vez\nPASS cambio: omite dominio obsoleto y snapshot de contacto\nPASS devolucion: imprime la web vigente una sola vez\nPASS devolucion: omite dominio obsoleto y snapshot de contacto\nPASS ticket ya abierto refleja cambio de configuración\nPASS valor \"\" oculta la web sin recuperar dominio anterior\nPASS valor \"   \" oculta la web sin recuperar dominio anterior\nPASS ticket interpreta el valor como texto literal\nPASS web larga a 320px se conserva completa sin desbordar ticket\nPASS web larga a 768px se conserva completa sin desbordar ticket\nPASS cambiar web e imprimir conserva documentos, snapshot y stock\nPASS ticket de Reportes imprime página web literal con HTML escapado\nPASS Reportes usa el mismo contrato visible de página web\nPASS web vacía también se omite en ticket de Reportes\nPASS sin excepciones de navegador\n41/41 verificaciones · docs/fixes/evidence/h168-after",
+      "evidence": "docs/fixes/evidence/h185-website/results.json",
+      "evidenceNote": "Generated website evidence moved to H185; historical files restored, prior deleted PDF remains absent."
+    },
+    {
+      "script": "test-h164-online-ui.mjs",
+      "exit": 0,
+      "passed": 6,
+      "total": 6,
+      "sha256": "7b590607dcedd76e3bc788893b2a8f81cc63d87376250659292f8f97faf80346",
+      "stdout": "PASS Inventario: cajón cerrado permite actualizar\nPASS V2/barcode V3/etiqueta: identidad, PNG y PDF conservados\nPASS Excel: vista previa no modifica DATA; export conserva identidad\nPASS Clientes: cajón cerrado permite actualizar\nPASS Reportes: reimpresión conserva documento histórico confirmado\nPASS Conexión: App conserva el formulario visible e interactivo hasta confirmar H169\n6 PASS / 0 FAIL"
+    },
+    {
+      "script": "test-h164-online-pwa.mjs",
+      "exit": 0,
+      "passed": 2,
+      "total": 2,
+      "sha256": "7b590607dcedd76e3bc788893b2a8f81cc63d87376250659292f8f97faf80346",
+      "stdout": "PASS PWA: caché estática; API directa; corte y recuperación de Internet\nPASS PWA: activación preserva evidencia comercial antigua y retira sólo recursos estáticos\n2 PASS / 0 FAIL"
+    },
+    {
+      "script": "test-h164-online-architecture.mjs",
+      "exit": 0,
+      "passed": null,
+      "total": null,
+      "sha256": "7b590607dcedd76e3bc788893b2a8f81cc63d87376250659292f8f97faf80346",
+      "stdout": "{\"ok\":true,\"modules\":29,\"dataExports\":172,\"storeExports\":55,\"checked\":[\"no raw table mutation\",\"RPC boundary\",\"retired commercial APIs\",\"public consumers\",\"storage ownership\",\"technical receipt shape\",\"PWA scope\"],\"limitation\":\"Static guard does not certify runtime SQL, physical installations or unresolved legacy data.\"}",
+      "ok": true,
+      "checked": [
+        "no raw table mutation",
+        "RPC boundary",
+        "retired commercial APIs",
+        "public consumers",
+        "storage ownership",
+        "technical receipt shape",
+        "PWA scope"
+      ]
+    }
+  ],
+  "hardware": "NOT_TESTED",
+  "distributedCertification": "NOT_TESTED"
+}

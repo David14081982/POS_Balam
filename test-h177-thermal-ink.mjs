@@ -92,9 +92,11 @@ try {
     for (const text of ['BG-260917-0002', 'TIRA BORDADA', 'JAVIER', 'INDIANA CRUDO', '2,120.00']) assert.ok(result.text.includes(text), text);
     assert.ok(result.tail > 0, 'el pie no tiene tinta');
   });
-  await test('La línea de ornamento no muestra caracteres extraños', () => {
+  await test('Venta sin SKU ni ornamento, con talla/cantidad y sin caracteres extraños (H-185)', () => {
     assert.ok(!result.text.includes('Â'), 'contiene Â');
-    assert.ok(result.text.includes('Ornamento: APLICACION · MC'), result.text.match(/Ornamento:[^$]{0,40}/)?.[0]);
+    for (const text of ['SKU:', '3-TB-MC-MNT-MAO-BL-N:M', 'Ornamento:', 'APLICACION'])
+      assert.ok(!result.text.includes(text), 'sigue imprimiendo ' + text);
+    assert.ok(result.text.includes('Talla: M') && result.text.includes('Cant: 1'));
   });
   await test('Sin errores de página', () => assert.deepEqual(errors, []));
 } finally {

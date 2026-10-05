@@ -600,10 +600,17 @@ no consulta `DATA.products` por SKU durante una impresión o reimpresión.
 H-178: la venta normal y su reimpresión conservan el método de pago y omiten
 historial de pagos y barras decorativas. Apartado (también liquidado), cambio y cortesía
 conservan el documento completo; los datos no cambian.
+H-185: esa misma venta normal omite SKU y ornamento del detalle impreso;
+conserva nombre, importe, talla, color de prenda disponible y cantidad. Reduce
+sólo el margen anterior al pie y el espacio del divisor, con tipografía y
+separación entre productos intactas. Ambas copias usan esta misma presentación;
+los demás tipos de comprobante conservan su diseño y contenido.
 
-La compatibilidad con ventas anteriores es conservadora: se imprimen nombre,
-SKU, talla, precio y ornamento que ya vivan en el renglón; un dato ausente se
-omite o conserva como código crudo. Nunca se completa desde el producto actual.
+La compatibilidad con ventas anteriores es conservadora: la presentación usa
+exclusivamente los datos que ya vivan en el documento, con las omisiones de
+venta normal indicadas arriba; un dato ausente se omite o conserva como código
+crudo. Nunca se completa desde el producto actual. SKU y ornamento siguen
+congelados en los datos históricos aunque no se impriman en la venta normal.
 La reimpresión sólo monta ese documento: no registra pagos, movimientos ni otro
 documento. Reportes imprime en una ventana A4 autocontenida, separada del modo
 térmico de 80 mm.

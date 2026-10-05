@@ -703,10 +703,11 @@
               h('span', { key: 'p', className: 'font-semibold text-primary shrink-0', style: { fontSize: '14px' } }, fmt((l.precioOrig != null ? l.precioOrig : l.precio) * l.qty)),
             ]),
             h('div', { key: 'b', className: 'flex justify-between items-start gap-3 mt-1 text-on-surface-variant', style: { fontSize: '10px', lineHeight: 1.4 } }, [
-              h('span', { key: 's', className: 'flex-1 min-w-0' }, `SKU: ${shown.sku || l.sku} · Talla: ${shown.sizeLabel || l.talla}${shown.colorLabel ? ' · ' + shown.colorLabel : ''}`),
+              // H-185: la venta omite SKU sólo en papel; conserva talla/color congelados.
+              h('span', { key: 's', className: 'flex-1 min-w-0' }, `${ventaNormal ? '' : 'SKU: ' + (shown.sku || l.sku) + ' · '}Talla: ${shown.sizeLabel || l.talla}${shown.colorLabel ? ' · ' + shown.colorLabel : ''}`),
               h('span', { key: 'q', className: 'shrink-0' }, `Cant: ${l.qty}`),
             ]),
-            frozenOrnament(l, shown) ? h('div', {
+            !ventaNormal && frozenOrnament(l, shown) ? h('div', {
               key: 'oc', className: 'mt-1 text-on-surface-variant', style: { fontSize: '10px', lineHeight: 1.4 },
               'data-testid': 'ticket-ornament-evidence',
             }, 'Ornamento: ' + frozenOrnament(l, shown)) : null,
@@ -788,8 +789,8 @@
         (conCobranza && saldoPend > 0) ? h('div', { key: 'nt', className: 'w-full mt-4 p-3 border border-outline-variant rounded-lg text-on-surface-variant text-left', style: { fontSize: '10px', lineHeight: 1.5 } },
           'Conserva este comprobante. La mercancía se entrega al liquidar el saldo.') : null,
         // Pie
-        h('div', { key: 'f', className: 'tk-block w-full mt-12 mb-1 flex flex-col items-center' }, [
-          h('div', { key: 'd', className: 'w-12 h-px bg-outline-variant mb-6' }),
+        h('div', { key: 'f', className: 'tk-block w-full ' + (ventaNormal ? 'mt-4' : 'mt-12') + ' mb-1 flex flex-col items-center' }, [
+          h('div', { key: 'd', className: 'w-12 h-px bg-outline-variant ' + (ventaNormal ? 'mb-2' : 'mb-6') }),
           h('p', { key: 'm', className: 'font-headline italic text-primary px-2 mb-1', style: { fontSize: '20px', lineHeight: 1.35 } }, frozenStore.footer || (!receiptSnapshot && C.get('ticket.footer')) || 'Gracias por ser parte de nuestra herencia.'),
           (frozenStore.tagline || (!receiptSnapshot && C.get('ticket.tagline'))) && h('p', { key: 'tl', className: 'text-on-surface-variant px-4 mt-3', style: { fontSize: '12px', lineHeight: 1.6 } }, frozenStore.tagline || C.get('ticket.tagline')),
           h('div', { key: 'bc', className: 'mt-9 w-full flex flex-col items-center gap-2' }, [

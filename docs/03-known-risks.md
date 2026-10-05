@@ -5,6 +5,33 @@ un riesgo se debe leer su evidencia y las correcciones relacionadas. Los
 estados válidos son: `ABIERTO`, `EN CURSO`, `PARCIALMENTE RESUELTO`, `RESUELTO`
 y `BLOQUEADO`.
 
+## H-185 — Simplificar detalle y espacio del ticket de venta
+
+**Estado:** RESUELTO EN CÓDIGO — publicación y confirmación física pendientes.
+**Fecha:** 05/10/2026. **Commit:** Pendiente de commit.
+**Solicitud:** retirar de la impresión de venta toda la cadena SKU y toda la
+información de ornamento, conservando nombre, importe, talla, color de prenda y
+cantidad; reducir el vacío entre método de pago y agradecimiento sin saturar.
+**Evidencia previa:** fotos del propietario y render de `BalamTicket`: SKU
+comparte línea con talla/color y puede envolver; ornamento añade otra línea.
+El caso de venta medido tiene 89 px entre texto del método y agradecimiento
+(padding 16 + margen 48 + divisor 1 + separación 24). H-178 vigente: 12/12.
+**Alcance aprobado:** sólo venta normal y reimpresión, ambas copias; margen del
+pie 48→16 px y separación del divisor 24→8 px. Mantener tipografía, separación
+entre productos, método/icono, mensaje completo, totales y snapshots.
+**No alcance:** apartados, abonos, liquidaciones, cambios, cortesías,
+devoluciones, etiquetas, datos comerciales, cálculos y transporte de impresión.
+**Pruebas:** H-185 13/18 antes → 30/30 después, Chrome154 y Chromium1223.
+Pausa 89→41 px; PNG largo (12 renglones) 5811→4463 px. Se conservan datos,
+fuentes, separación y siete variantes no-venta idénticas. USB 16/16, demás
+comprobantes 15/15, sistema 18/18, geometría 28/28, tinta 8/8, contenido 12/12,
+copias 13/13, web 41/41, UI 6/6, PWA 2/2; arquitectura PASS. Total 189.
+**Artefacto probado:** SHA-256
+`7b590607dcedd76e3bc788893b2a8f81cc63d87376250659292f8f97faf80346`.
+**Despliegue:** pendiente; sin migraciones.
+**Residual:** nueva presentación en papel HARDWARE NOT_TESTED.
+**Corrección:** `docs/fixes/ticket-venta-detalle-espaciado-h185.md`.
+
 ## H-184 — Completar USB directo en los demás tickets térmicos
 
 **Estado:** PARCIALMENTE RESUELTO — publicado/verificado; aceptación física de las variantes pendiente.

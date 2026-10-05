@@ -15,6 +15,11 @@ Corrección de edición: [H172 · Guardado y mensajes](guardado-edicion-producto
 
 ## Correcciones registradas
 
+- [ticket-venta-detalle-espaciado-h185.md](ticket-venta-detalle-espaciado-h185.md)
+  — H-185: venta y reimpresión sin SKU/ornamento impresos; conserva talla,
+  color y cantidad y reduce el espacio previo al agradecimiento. 30/30 focales,
+  189 comprobaciones totales; publicación y confirmación física pendientes.
+
 - [otros-tickets-usb-h184.md](otros-tickets-usb-h184.md) — H-184:
   integración del reporte térmico por método y verificación de los demás
   comprobantes por USB; 15/15, diseños y tamaños conservados. PUBLICADO Y

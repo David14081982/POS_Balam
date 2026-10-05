@@ -1,0 +1,868 @@
+{
+  "baseline": true,
+  "date": "2026-10-05T15:53:26.431Z",
+  "artifactSHA256": "857f07700fb0a793986cb472a1da24f26a1a5dddb61dbc1068ed036b5530218a",
+  "hardware": "NOT_TESTED",
+  "results": [
+    {
+      "name": "corta: complete document and copies preserve the commercial details",
+      "ok": true
+    },
+    {
+      "name": "corta: sale omits complete SKU and ornament and leaves a 41 px pause",
+      "ok": false,
+      "error": "The input was expected to not match the regular expression /SKU:|SKU-H185|Ornamento:|APLICACION-H185|MULTICOLORES-H185/. Input:\n\n'landscapeBALAMTIENDA HISTORICA H185TransacciónH185-CORTAFecha2026-10-05 12:00Atendido porVENDEDOR CONGELADO H185Detalle de compraPRENDA HISTORICA H185 1$900.00SKU: SKU-H185-CADENA-COMPLETA-0 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 2Ornamento: APLICACION-H185 · MULTICOLORES-H185Importe$775.86IVA (16%)$124.14Total a pagar$900.00paymentsMétodo de pagoTarjeta¡Gracias por su compra! Máximo 7 días para cambios.Piezas artesanales únicas.BALAMGUAYABERAS.MX'\n"
+    },
+    {
+      "name": "larga: complete document and copies preserve the commercial details",
+      "ok": true
+    },
+    {
+      "name": "larga: sale omits complete SKU and ornament and leaves a 41 px pause",
+      "ok": false,
+      "error": "The input was expected to not match the regular expression /SKU:|SKU-H185|Ornamento:|APLICACION-H185|MULTICOLORES-H185/. Input:\n\n'landscapeBALAMTIENDA HISTORICA H185TransacciónH185-LARGAFecha2026-10-05 12:00Atendido porVENDEDOR CONGELADO H185Detalle de compraPRENDA HISTORICA H185 1$900.00SKU: SKU-H185-CADENA-COMPLETA-0 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 2Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 2$450.00SKU: SKU-H185-CADENA-COMPLETA-1 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 3$450.00SKU: SKU-H185-CADENA-COMPLETA-2 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 4$450.00SKU: SKU-H185-CADENA-COMPLETA-3 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 5$450.00SKU: SKU-H185-CADENA-COMPLETA-4 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 6$450.00SKU: SKU-H185-CADENA-COMPLETA-5 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 7$450.00SKU: SKU-H185-CADENA-COMPLETA-6 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 8$450.00SKU: SKU-H185-CADENA-COMPLETA-7 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 9$450.00SKU: SKU-H185-CADENA-COMPLETA-8 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 10$450.00SKU: SKU-H185-CADENA-COMPLETA-9 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 11$450.00SKU: SKU-H185-CADENA-COMPLETA-10 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 12$450.00SKU: SKU-H185-CADENA-COMPLETA-11 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185Importe$5,043.10IVA (16%)$806.90Total a pagar$5,850.00paymentsMétodo de pagoTarjeta¡Gracias por su compra! Máximo 7 días para cambios.Piezas artesanales únicas.BALAMGUAYABERAS.MX'\n"
+    },
+    {
+      "name": "legacy: complete document and copies preserve the commercial details",
+      "ok": true
+    },
+    {
+      "name": "legacy: sale omits complete SKU and ornament and leaves a 41 px pause",
+      "ok": false,
+      "error": "The input was expected to not match the regular expression /SKU:|SKU-H185|Ornamento:|APLICACION-H185|MULTICOLORES-H185/. Input:\n\n'landscapeBALAMBalam GuayaberasTransacciónH185-LEGACYFecha2026-10-05 12:00Atendido porVENDEDOR H185Detalle de compraPRENDA LEGACY H185 1$900.00SKU: SKU-H185-CADENA-COMPLETA-0 · Talla: 3XGCant: 2Ornamento: APLICACION-H185 · MULTICOLORES-H185Importe$775.86IVA (16%)$124.14Total a pagar$900.00paymentsMétodo de pagoTarjeta¡Gracias por su compra! Máximo 7 días para cambios.Piezas artesanales únicas.BALAMGUAYABERAS.MX'\n"
+    },
+    {
+      "name": "mixto: complete document and copies preserve the commercial details",
+      "ok": true
+    },
+    {
+      "name": "mixto: sale omits complete SKU and ornament and leaves a 41 px pause",
+      "ok": false,
+      "error": "The input was expected to not match the regular expression /SKU:|SKU-H185|Ornamento:|APLICACION-H185|MULTICOLORES-H185/. Input:\n\n'landscapeBALAMTIENDA HISTORICA H185TransacciónH185-MIXTOFecha2026-10-05 12:00Atendido porVENDEDOR CONGELADO H185Detalle de compraPRENDA HISTORICA H185 1$900.00SKU: SKU-H185-CADENA-COMPLETA-0 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 2Ornamento: APLICACION-H185 · MULTICOLORES-H185Importe$775.86IVA (16%)$124.14Total a pagar$900.00paymentsMétodo de pagoMixto¡Gracias por su compra! Máximo 7 días para cambios.Piezas artesanales únicas.BALAMGUAYABERAS.MX'\n"
+    },
+    {
+      "name": "reimpresion: complete document and copies preserve the commercial details",
+      "ok": true
+    },
+    {
+      "name": "reimpresion: sale omits complete SKU and ornament and leaves a 41 px pause",
+      "ok": false,
+      "error": "The input was expected to not match the regular expression /SKU:|SKU-H185|Ornamento:|APLICACION-H185|MULTICOLORES-H185/. Input:\n\n'landscapeBALAMTIENDA HISTORICA H185TransacciónH185-REIMPRESIONFecha2026-10-05 12:00Atendido porVENDEDOR CONGELADO H185Detalle de compraPRENDA HISTORICA H185 1$900.00SKU: SKU-H185-CADENA-COMPLETA-0 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 2Ornamento: APLICACION-H185 · MULTICOLORES-H185Importe$775.86IVA (16%)$124.14Total a pagar$900.00paymentsMétodo de pagoTarjeta¡Gracias por su compra! Máximo 7 días para cambios.Piezas artesanales únicas.BALAMGUAYABERAS.MX'\n"
+    },
+    {
+      "name": "apartado: complete document and copies preserve the commercial details",
+      "ok": true
+    },
+    {
+      "name": "anticipo: complete document and copies preserve the commercial details",
+      "ok": true
+    },
+    {
+      "name": "abono: complete document and copies preserve the commercial details",
+      "ok": true
+    },
+    {
+      "name": "liquidacion: complete document and copies preserve the commercial details",
+      "ok": true
+    },
+    {
+      "name": "apartadoLiquidado: complete document and copies preserve the commercial details",
+      "ok": true
+    },
+    {
+      "name": "cambio: complete document and copies preserve the commercial details",
+      "ok": true
+    },
+    {
+      "name": "cortesia: complete document and copies preserve the commercial details",
+      "ok": true
+    },
+    {
+      "name": "read-only receipt rendering completes and releases resources",
+      "ok": true
+    }
+  ],
+  "cases": {
+    "corta": {
+      "normal": true,
+      "text": "landscape\nBALAM\n\nTIENDA HISTORICA H185\n\nTRANSACCIÓN\nH185-CORTA\nFECHA\n2026-10-05 12:00\nATENDIDO POR\nVENDEDOR CONGELADO H185\nDETALLE DE COMPRA\nPRENDA HISTORICA H185 1\n$900.00\nSKU: SKU-H185-CADENA-COMPLETA-0 · Talla: 3XG HISTORICA · BLANCO HISTORICO\nCant: 2\nOrnamento: APLICACION-H185 · MULTICOLORES-H185\nImporte\n$775.86\nIVA (16%)\n$124.14\nTOTAL A PAGAR\n$900.00\npayments\n\nMÉTODO DE PAGO\n\nTarjeta\n\n¡Gracias por su compra! Máximo 7 días para cambios.\n\nPiezas artesanales únicas.\n\nBALAMGUAYABERAS.MX",
+      "height": 1012.6875,
+      "gap": 89,
+      "itemGap": null,
+      "fonts": {
+        "name": {
+          "fontSize": "18px",
+          "fontFamily": "\"Playfair Display\", serif",
+          "lineHeight": "22.5px"
+        },
+        "price": {
+          "fontSize": "14px",
+          "fontFamily": "Inter, system-ui, sans-serif",
+          "lineHeight": "21px"
+        },
+        "detail": {
+          "fontSize": "10px",
+          "fontFamily": "Inter, system-ui, sans-serif",
+          "lineHeight": "14px"
+        },
+        "thanks": {
+          "fontSize": "20px",
+          "fontFamily": "\"Playfair Display\", serif",
+          "lineHeight": "27px"
+        }
+      },
+      "guarantees": {
+        "items": 1,
+        "expectedItems": 1,
+        "names": true,
+        "sizes": true,
+        "quantities": true,
+        "total": true,
+        "footer": true,
+        "website": true,
+        "paymentIcon": true
+      },
+      "copies": [
+        {
+          "label": null,
+          "width": 576,
+          "height": 2277,
+          "tail": true,
+          "text": "landscapeBALAMTIENDA HISTORICA H185TransacciónH185-CORTAFecha2026-10-05 12:00Atendido porVENDEDOR CONGELADO H185Detalle de compraPRENDA HISTORICA H185 1$900.00SKU: SKU-H185-CADENA-COMPLETA-0 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 2Ornamento: APLICACION-H185 · MULTICOLORES-H185Importe$775.86IVA (16%)$124.14Total a pagar$900.00paymentsMétodo de pagoTarjeta¡Gracias por su compra! Máximo 7 días para cambios.Piezas artesanales únicas.BALAMGUAYABERAS.MX",
+          "mark": null,
+          "pngSHA256": "92f872c9129aea3394be1ffdc96bcb26c904d02e0d8a51dd29a53a0270b0edf5",
+          "htmlSHA256": "7f516066d69b2a9353c8ef7ee2e8e392d81cda16bf35e7d4a8b04885b9b1d236"
+        },
+        {
+          "label": "COPIA CLIENTE",
+          "width": 576,
+          "height": 2383,
+          "tail": true,
+          "text": "COPIA CLIENTElandscapeBALAMTIENDA HISTORICA H185TransacciónH185-CORTAFecha2026-10-05 12:00Atendido porVENDEDOR CONGELADO H185Detalle de compraPRENDA HISTORICA H185 1$900.00SKU: SKU-H185-CADENA-COMPLETA-0 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 2Ornamento: APLICACION-H185 · MULTICOLORES-H185Importe$775.86IVA (16%)$124.14Total a pagar$900.00paymentsMétodo de pagoTarjeta¡Gracias por su compra! Máximo 7 días para cambios.Piezas artesanales únicas.BALAMGUAYABERAS.MX",
+          "mark": "COPIA CLIENTE",
+          "pngSHA256": "163e8175793fd62cb1545b8e815937f62b60748e5cb6c67c8acfc96fe97bfdab",
+          "htmlSHA256": "46cd439098fe906f47e3ffea8045db71ca0a45ecb32fd697327efe26349f2cf0"
+        },
+        {
+          "label": "COPIA TIENDA",
+          "width": 576,
+          "height": 2383,
+          "tail": true,
+          "text": "COPIA TIENDAlandscapeBALAMTIENDA HISTORICA H185TransacciónH185-CORTAFecha2026-10-05 12:00Atendido porVENDEDOR CONGELADO H185Detalle de compraPRENDA HISTORICA H185 1$900.00SKU: SKU-H185-CADENA-COMPLETA-0 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 2Ornamento: APLICACION-H185 · MULTICOLORES-H185Importe$775.86IVA (16%)$124.14Total a pagar$900.00paymentsMétodo de pagoTarjeta¡Gracias por su compra! Máximo 7 días para cambios.Piezas artesanales únicas.BALAMGUAYABERAS.MX",
+          "mark": "COPIA TIENDA",
+          "pngSHA256": "93344843911b3f9331db828a0fdb2e076c251f51b218e02acbba83956ace91f6",
+          "htmlSHA256": "db72ffb6b29a758f44518f6ba3cf8afc596794a21a750924319d7517ae7bb106"
+        }
+      ]
+    },
+    "larga": {
+      "normal": true,
+      "text": "landscape\nBALAM\n\nTIENDA HISTORICA H185\n\nTRANSACCIÓN\nH185-LARGA\nFECHA\n2026-10-05 12:00\nATENDIDO POR\nVENDEDOR CONGELADO H185\nDETALLE DE COMPRA\nPRENDA HISTORICA H185 1\n$900.00\nSKU: SKU-H185-CADENA-COMPLETA-0 · Talla: 3XG HISTORICA · BLANCO HISTORICO\nCant: 2\nOrnamento: APLICACION-H185 · MULTICOLORES-H185\nPRENDA HISTORICA H185 2\n$450.00\nSKU: SKU-H185-CADENA-COMPLETA-1 · Talla: 3XG HISTORICA · BLANCO HISTORICO\nCant: 1\nOrnamento: APLICACION-H185 · MULTICOLORES-H185\nPRENDA HISTORICA H185 3\n$450.00\nSKU: SKU-H185-CADENA-COMPLETA-2 · Talla: 3XG HISTORICA · BLANCO HISTORICO\nCant: 1\nOrnamento: APLICACION-H185 · MULTICOLORES-H185\nPRENDA HISTORICA H185 4\n$450.00\nSKU: SKU-H185-CADENA-COMPLETA-3 · Talla: 3XG HISTORICA · BLANCO HISTORICO\nCant: 1\nOrnamento: APLICACION-H185 · MULTICOLORES-H185\nPRENDA HISTORICA H185 5\n$450.00\nSKU: SKU-H185-CADENA-COMPLETA-4 · Talla: 3XG HISTORICA · BLANCO HISTORICO\nCant: 1\nOrnamento: APLICACION-H185 · MULTICOLORES-H185\nPRENDA HISTORICA H185 6\n$450.00\nSKU: SKU-H185-CADENA-COMPLETA-5 · Talla: 3XG HISTORICA · BLANCO HISTORICO\nCant: 1\nOrnamento: APLICACION-H185 · MULTICOLORES-H185\nPRENDA HISTORICA H185 7\n$450.00\nSKU: SKU-H185-CADENA-COMPLETA-6 · Talla: 3XG HISTORICA · BLANCO HISTORICO\nCant: 1\nOrnamento: APLICACION-H185 · MULTICOLORES-H185\nPRENDA HISTORICA H185 8\n$450.00\nSKU: SKU-H185-CADENA-COMPLETA-7 · Talla: 3XG HISTORICA · BLANCO HISTORICO\nCant: 1\nOrnamento: APLICACION-H185 · MULTICOLORES-H185\nPRENDA HISTORICA H185 9\n$450.00\nSKU: SKU-H185-CADENA-COMPLETA-8 · Talla: 3XG HISTORICA · BLANCO HISTORICO\nCant: 1\nOrnamento: APLICACION-H185 · MULTICOLORES-H185\nPRENDA HISTORICA H185 10\n$450.00\nSKU: SKU-H185-CADENA-COMPLETA-9 · Talla: 3XG HISTORICA · BLANCO HISTORICO\nCant: 1\nOrnamento: APLICACION-H185 · MULTICOLORES-H185\nPRENDA HISTORICA H185 11\n$450.00\nSKU: SKU-H185-CADENA-COMPLETA-10 · Talla: 3XG HISTORICA · BLANCO HISTORICO\nCant: 1\nOrnamento: APLICACION-H185 · MULTICOLORES-H185\nPRENDA HISTORICA H185 12\n$450.00\nSKU: SKU-H185-CADENA-COMPLETA-11 · Talla: 3XG HISTORICA · BLANCO HISTORICO\nCant: 1\nOrnamento: APLICACION-H185 · MULTICOLORES-H185\nImporte\n$5,043.10\nIVA (16%)\n$806.90\nTOTAL A PAGAR\n$5,850.00\npayments\n\nMÉTODO DE PAGO\n\nTarjeta\n\n¡Gracias por su compra! Máximo 7 días para cambios.\n\nPiezas artesanales únicas.\n\nBALAMGUAYABERAS.MX",
+      "height": 2585.6875,
+      "gap": 89,
+      "itemGap": 20,
+      "fonts": {
+        "name": {
+          "fontSize": "18px",
+          "fontFamily": "\"Playfair Display\", serif",
+          "lineHeight": "22.5px"
+        },
+        "price": {
+          "fontSize": "14px",
+          "fontFamily": "Inter, system-ui, sans-serif",
+          "lineHeight": "21px"
+        },
+        "detail": {
+          "fontSize": "10px",
+          "fontFamily": "Inter, system-ui, sans-serif",
+          "lineHeight": "14px"
+        },
+        "thanks": {
+          "fontSize": "20px",
+          "fontFamily": "\"Playfair Display\", serif",
+          "lineHeight": "27px"
+        }
+      },
+      "guarantees": {
+        "items": 12,
+        "expectedItems": 12,
+        "names": true,
+        "sizes": true,
+        "quantities": true,
+        "total": true,
+        "footer": true,
+        "website": true,
+        "paymentIcon": true
+      },
+      "copies": [
+        {
+          "label": null,
+          "width": 576,
+          "height": 5811,
+          "tail": true,
+          "text": "landscapeBALAMTIENDA HISTORICA H185TransacciónH185-LARGAFecha2026-10-05 12:00Atendido porVENDEDOR CONGELADO H185Detalle de compraPRENDA HISTORICA H185 1$900.00SKU: SKU-H185-CADENA-COMPLETA-0 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 2Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 2$450.00SKU: SKU-H185-CADENA-COMPLETA-1 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 3$450.00SKU: SKU-H185-CADENA-COMPLETA-2 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 4$450.00SKU: SKU-H185-CADENA-COMPLETA-3 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 5$450.00SKU: SKU-H185-CADENA-COMPLETA-4 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 6$450.00SKU: SKU-H185-CADENA-COMPLETA-5 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 7$450.00SKU: SKU-H185-CADENA-COMPLETA-6 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 8$450.00SKU: SKU-H185-CADENA-COMPLETA-7 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 9$450.00SKU: SKU-H185-CADENA-COMPLETA-8 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 10$450.00SKU: SKU-H185-CADENA-COMPLETA-9 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 11$450.00SKU: SKU-H185-CADENA-COMPLETA-10 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 12$450.00SKU: SKU-H185-CADENA-COMPLETA-11 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185Importe$5,043.10IVA (16%)$806.90Total a pagar$5,850.00paymentsMétodo de pagoTarjeta¡Gracias por su compra! Máximo 7 días para cambios.Piezas artesanales únicas.BALAMGUAYABERAS.MX",
+          "mark": null,
+          "pngSHA256": "e4f450e2ed966bffabc4e1b3c319ab23d5ca09fe5cb570eccb4b7442a42e7eb9",
+          "htmlSHA256": "a914d5779afb2a7e583367dee3bc59aef4f3e239fe52f0a462efbcb588950f93"
+        },
+        {
+          "label": "COPIA CLIENTE",
+          "width": 576,
+          "height": 5917,
+          "tail": true,
+          "text": "COPIA CLIENTElandscapeBALAMTIENDA HISTORICA H185TransacciónH185-LARGAFecha2026-10-05 12:00Atendido porVENDEDOR CONGELADO H185Detalle de compraPRENDA HISTORICA H185 1$900.00SKU: SKU-H185-CADENA-COMPLETA-0 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 2Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 2$450.00SKU: SKU-H185-CADENA-COMPLETA-1 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 3$450.00SKU: SKU-H185-CADENA-COMPLETA-2 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 4$450.00SKU: SKU-H185-CADENA-COMPLETA-3 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 5$450.00SKU: SKU-H185-CADENA-COMPLETA-4 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 6$450.00SKU: SKU-H185-CADENA-COMPLETA-5 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 7$450.00SKU: SKU-H185-CADENA-COMPLETA-6 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 8$450.00SKU: SKU-H185-CADENA-COMPLETA-7 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 9$450.00SKU: SKU-H185-CADENA-COMPLETA-8 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 10$450.00SKU: SKU-H185-CADENA-COMPLETA-9 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 11$450.00SKU: SKU-H185-CADENA-COMPLETA-10 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 12$450.00SKU: SKU-H185-CADENA-COMPLETA-11 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185Importe$5,043.10IVA (16%)$806.90Total a pagar$5,850.00paymentsMétodo de pagoTarjeta¡Gracias por su compra! Máximo 7 días para cambios.Piezas artesanales únicas.BALAMGUAYABERAS.MX",
+          "mark": "COPIA CLIENTE",
+          "pngSHA256": "3620146b16d2161ab1fa773b0d45b586c3610d02e3464262170417f18726b6e1",
+          "htmlSHA256": "1034d6bfe2dbee78b1a8673c3e9b65901083adbd97544e03323043045d6975c5"
+        },
+        {
+          "label": "COPIA TIENDA",
+          "width": 576,
+          "height": 5917,
+          "tail": true,
+          "text": "COPIA TIENDAlandscapeBALAMTIENDA HISTORICA H185TransacciónH185-LARGAFecha2026-10-05 12:00Atendido porVENDEDOR CONGELADO H185Detalle de compraPRENDA HISTORICA H185 1$900.00SKU: SKU-H185-CADENA-COMPLETA-0 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 2Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 2$450.00SKU: SKU-H185-CADENA-COMPLETA-1 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 3$450.00SKU: SKU-H185-CADENA-COMPLETA-2 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 4$450.00SKU: SKU-H185-CADENA-COMPLETA-3 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 5$450.00SKU: SKU-H185-CADENA-COMPLETA-4 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 6$450.00SKU: SKU-H185-CADENA-COMPLETA-5 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 7$450.00SKU: SKU-H185-CADENA-COMPLETA-6 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 8$450.00SKU: SKU-H185-CADENA-COMPLETA-7 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 9$450.00SKU: SKU-H185-CADENA-COMPLETA-8 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 10$450.00SKU: SKU-H185-CADENA-COMPLETA-9 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 11$450.00SKU: SKU-H185-CADENA-COMPLETA-10 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185PRENDA HISTORICA H185 12$450.00SKU: SKU-H185-CADENA-COMPLETA-11 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 1Ornamento: APLICACION-H185 · MULTICOLORES-H185Importe$5,043.10IVA (16%)$806.90Total a pagar$5,850.00paymentsMétodo de pagoTarjeta¡Gracias por su compra! Máximo 7 días para cambios.Piezas artesanales únicas.BALAMGUAYABERAS.MX",
+          "mark": "COPIA TIENDA",
+          "pngSHA256": "ee82407c6513c2dbf8eff910525f6112d16cddd4066a089466e7e4f937a32a7d",
+          "htmlSHA256": "c2bb92da697f3bb8df2593f8e2c3202a5c447a345732884436c189ea0347beb5"
+        }
+      ]
+    },
+    "legacy": {
+      "normal": true,
+      "text": "landscape\nBALAM\n\nBalam Guayaberas\n\nTRANSACCIÓN\nH185-LEGACY\nFECHA\n2026-10-05 12:00\nATENDIDO POR\nVENDEDOR H185\nDETALLE DE COMPRA\nPRENDA LEGACY H185 1\n$900.00\nSKU: SKU-H185-CADENA-COMPLETA-0 · Talla: 3XG\nCant: 2\nOrnamento: APLICACION-H185 · MULTICOLORES-H185\nImporte\n$775.86\nIVA (16%)\n$124.14\nTOTAL A PAGAR\n$900.00\npayments\n\nMÉTODO DE PAGO\n\nTarjeta\n\n¡Gracias por su compra! Máximo 7 días para cambios.\n\nPiezas artesanales únicas.\n\nBALAMGUAYABERAS.MX",
+      "height": 979.1875,
+      "gap": 89,
+      "itemGap": null,
+      "fonts": {
+        "name": {
+          "fontSize": "18px",
+          "fontFamily": "\"Playfair Display\", serif",
+          "lineHeight": "22.5px"
+        },
+        "price": {
+          "fontSize": "14px",
+          "fontFamily": "Inter, system-ui, sans-serif",
+          "lineHeight": "21px"
+        },
+        "detail": {
+          "fontSize": "10px",
+          "fontFamily": "Inter, system-ui, sans-serif",
+          "lineHeight": "14px"
+        },
+        "thanks": {
+          "fontSize": "20px",
+          "fontFamily": "\"Playfair Display\", serif",
+          "lineHeight": "27px"
+        }
+      },
+      "guarantees": {
+        "items": 1,
+        "expectedItems": 1,
+        "names": true,
+        "sizes": true,
+        "quantities": true,
+        "total": true,
+        "footer": true,
+        "website": true,
+        "paymentIcon": true
+      },
+      "copies": [
+        {
+          "label": null,
+          "width": 576,
+          "height": 2201,
+          "tail": true,
+          "text": "landscapeBALAMBalam GuayaberasTransacciónH185-LEGACYFecha2026-10-05 12:00Atendido porVENDEDOR H185Detalle de compraPRENDA LEGACY H185 1$900.00SKU: SKU-H185-CADENA-COMPLETA-0 · Talla: 3XGCant: 2Ornamento: APLICACION-H185 · MULTICOLORES-H185Importe$775.86IVA (16%)$124.14Total a pagar$900.00paymentsMétodo de pagoTarjeta¡Gracias por su compra! Máximo 7 días para cambios.Piezas artesanales únicas.BALAMGUAYABERAS.MX",
+          "mark": null,
+          "pngSHA256": "d11cc67c1ef402a2a85f6a5988547982847d1123a2f26f3304880bfb53655822",
+          "htmlSHA256": "03d28f8e485c8315dee5244cd40e6f4a178b076218dde1bcc069ae4430220819"
+        },
+        {
+          "label": "COPIA CLIENTE",
+          "width": 576,
+          "height": 2308,
+          "tail": true,
+          "text": "COPIA CLIENTElandscapeBALAMBalam GuayaberasTransacciónH185-LEGACYFecha2026-10-05 12:00Atendido porVENDEDOR H185Detalle de compraPRENDA LEGACY H185 1$900.00SKU: SKU-H185-CADENA-COMPLETA-0 · Talla: 3XGCant: 2Ornamento: APLICACION-H185 · MULTICOLORES-H185Importe$775.86IVA (16%)$124.14Total a pagar$900.00paymentsMétodo de pagoTarjeta¡Gracias por su compra! Máximo 7 días para cambios.Piezas artesanales únicas.BALAMGUAYABERAS.MX",
+          "mark": "COPIA CLIENTE",
+          "pngSHA256": "24520f16208ff1ed0dec78320a2bca197d0d852123ce23f0e4f7993ee589cb6c",
+          "htmlSHA256": "5230599451c0e0958ffb4169cff31f19c3cec3f3373236c275c7019a1c5de4bd"
+        },
+        {
+          "label": "COPIA TIENDA",
+          "width": 576,
+          "height": 2308,
+          "tail": true,
+          "text": "COPIA TIENDAlandscapeBALAMBalam GuayaberasTransacciónH185-LEGACYFecha2026-10-05 12:00Atendido porVENDEDOR H185Detalle de compraPRENDA LEGACY H185 1$900.00SKU: SKU-H185-CADENA-COMPLETA-0 · Talla: 3XGCant: 2Ornamento: APLICACION-H185 · MULTICOLORES-H185Importe$775.86IVA (16%)$124.14Total a pagar$900.00paymentsMétodo de pagoTarjeta¡Gracias por su compra! Máximo 7 días para cambios.Piezas artesanales únicas.BALAMGUAYABERAS.MX",
+          "mark": "COPIA TIENDA",
+          "pngSHA256": "ac233f8ae6716739d91e34719a74f70ef0e60b45641f68fa2d69569364e7d695",
+          "htmlSHA256": "0b3e0560a880979fd0d2d5f3f73b148c440ca2fd74a591797c848a35315c524d"
+        }
+      ]
+    },
+    "mixto": {
+      "normal": true,
+      "text": "landscape\nBALAM\n\nTIENDA HISTORICA H185\n\nTRANSACCIÓN\nH185-MIXTO\nFECHA\n2026-10-05 12:00\nATENDIDO POR\nVENDEDOR CONGELADO H185\nDETALLE DE COMPRA\nPRENDA HISTORICA H185 1\n$900.00\nSKU: SKU-H185-CADENA-COMPLETA-0 · Talla: 3XG HISTORICA · BLANCO HISTORICO\nCant: 2\nOrnamento: APLICACION-H185 · MULTICOLORES-H185\nImporte\n$775.86\nIVA (16%)\n$124.14\nTOTAL A PAGAR\n$900.00\npayments\n\nMÉTODO DE PAGO\n\nMixto\n\n¡Gracias por su compra! Máximo 7 días para cambios.\n\nPiezas artesanales únicas.\n\nBALAMGUAYABERAS.MX",
+      "height": 1012.6875,
+      "gap": 89,
+      "itemGap": null,
+      "fonts": {
+        "name": {
+          "fontSize": "18px",
+          "fontFamily": "\"Playfair Display\", serif",
+          "lineHeight": "22.5px"
+        },
+        "price": {
+          "fontSize": "14px",
+          "fontFamily": "Inter, system-ui, sans-serif",
+          "lineHeight": "21px"
+        },
+        "detail": {
+          "fontSize": "10px",
+          "fontFamily": "Inter, system-ui, sans-serif",
+          "lineHeight": "14px"
+        },
+        "thanks": {
+          "fontSize": "20px",
+          "fontFamily": "\"Playfair Display\", serif",
+          "lineHeight": "27px"
+        }
+      },
+      "guarantees": {
+        "items": 1,
+        "expectedItems": 1,
+        "names": true,
+        "sizes": true,
+        "quantities": true,
+        "total": true,
+        "footer": true,
+        "website": true,
+        "paymentIcon": true
+      },
+      "copies": [
+        {
+          "label": null,
+          "width": 576,
+          "height": 2277,
+          "tail": true,
+          "text": "landscapeBALAMTIENDA HISTORICA H185TransacciónH185-MIXTOFecha2026-10-05 12:00Atendido porVENDEDOR CONGELADO H185Detalle de compraPRENDA HISTORICA H185 1$900.00SKU: SKU-H185-CADENA-COMPLETA-0 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 2Ornamento: APLICACION-H185 · MULTICOLORES-H185Importe$775.86IVA (16%)$124.14Total a pagar$900.00paymentsMétodo de pagoMixto¡Gracias por su compra! Máximo 7 días para cambios.Piezas artesanales únicas.BALAMGUAYABERAS.MX",
+          "mark": null,
+          "pngSHA256": "11cb871f180c75e359c43b6a7663b266a8a7ce78db35fa6d7635aa4d79d956c4",
+          "htmlSHA256": "346fcf801ed4aba6acfcbc11791867ffba25a9c08af98cbdd6e04657ffa50a17"
+        },
+        {
+          "label": "COPIA CLIENTE",
+          "width": 576,
+          "height": 2383,
+          "tail": true,
+          "text": "COPIA CLIENTElandscapeBALAMTIENDA HISTORICA H185TransacciónH185-MIXTOFecha2026-10-05 12:00Atendido porVENDEDOR CONGELADO H185Detalle de compraPRENDA HISTORICA H185 1$900.00SKU: SKU-H185-CADENA-COMPLETA-0 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 2Ornamento: APLICACION-H185 · MULTICOLORES-H185Importe$775.86IVA (16%)$124.14Total a pagar$900.00paymentsMétodo de pagoMixto¡Gracias por su compra! Máximo 7 días para cambios.Piezas artesanales únicas.BALAMGUAYABERAS.MX",
+          "mark": "COPIA CLIENTE",
+          "pngSHA256": "5c8dac6a7e6e24242dff6eaa09b7fab429a3ce54f571728187eae91f23e1653e",
+          "htmlSHA256": "ffb95273f130f83054f67e74aa9fc636cdfa3c3021950a5cfcdab7362eb59f2b"
+        },
+        {
+          "label": "COPIA TIENDA",
+          "width": 576,
+          "height": 2383,
+          "tail": true,
+          "text": "COPIA TIENDAlandscapeBALAMTIENDA HISTORICA H185TransacciónH185-MIXTOFecha2026-10-05 12:00Atendido porVENDEDOR CONGELADO H185Detalle de compraPRENDA HISTORICA H185 1$900.00SKU: SKU-H185-CADENA-COMPLETA-0 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 2Ornamento: APLICACION-H185 · MULTICOLORES-H185Importe$775.86IVA (16%)$124.14Total a pagar$900.00paymentsMétodo de pagoMixto¡Gracias por su compra! Máximo 7 días para cambios.Piezas artesanales únicas.BALAMGUAYABERAS.MX",
+          "mark": "COPIA TIENDA",
+          "pngSHA256": "c0d97f2534eb0f80af8614440f23404723f35eb127c077d0ff7375034e07594c",
+          "htmlSHA256": "8a0427e08458323c89db0785082ef03266ef797b0c8eca2c72adc9587a68809d"
+        }
+      ]
+    },
+    "reimpresion": {
+      "normal": true,
+      "text": "landscape\nBALAM\n\nTIENDA HISTORICA H185\n\nTRANSACCIÓN\nH185-REIMPRESION\nFECHA\n2026-10-05 12:00\nATENDIDO POR\nVENDEDOR CONGELADO H185\nDETALLE DE COMPRA\nPRENDA HISTORICA H185 1\n$900.00\nSKU: SKU-H185-CADENA-COMPLETA-0 · Talla: 3XG HISTORICA · BLANCO HISTORICO\nCant: 2\nOrnamento: APLICACION-H185 · MULTICOLORES-H185\nImporte\n$775.86\nIVA (16%)\n$124.14\nTOTAL A PAGAR\n$900.00\npayments\n\nMÉTODO DE PAGO\n\nTarjeta\n\n¡Gracias por su compra! Máximo 7 días para cambios.\n\nPiezas artesanales únicas.\n\nBALAMGUAYABERAS.MX",
+      "height": 1012.6875,
+      "gap": 89,
+      "itemGap": null,
+      "fonts": {
+        "name": {
+          "fontSize": "18px",
+          "fontFamily": "\"Playfair Display\", serif",
+          "lineHeight": "22.5px"
+        },
+        "price": {
+          "fontSize": "14px",
+          "fontFamily": "Inter, system-ui, sans-serif",
+          "lineHeight": "21px"
+        },
+        "detail": {
+          "fontSize": "10px",
+          "fontFamily": "Inter, system-ui, sans-serif",
+          "lineHeight": "14px"
+        },
+        "thanks": {
+          "fontSize": "20px",
+          "fontFamily": "\"Playfair Display\", serif",
+          "lineHeight": "27px"
+        }
+      },
+      "guarantees": {
+        "items": 1,
+        "expectedItems": 1,
+        "names": true,
+        "sizes": true,
+        "quantities": true,
+        "total": true,
+        "footer": true,
+        "website": true,
+        "paymentIcon": true
+      },
+      "copies": [
+        {
+          "label": null,
+          "width": 576,
+          "height": 2277,
+          "tail": true,
+          "text": "landscapeBALAMTIENDA HISTORICA H185TransacciónH185-REIMPRESIONFecha2026-10-05 12:00Atendido porVENDEDOR CONGELADO H185Detalle de compraPRENDA HISTORICA H185 1$900.00SKU: SKU-H185-CADENA-COMPLETA-0 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 2Ornamento: APLICACION-H185 · MULTICOLORES-H185Importe$775.86IVA (16%)$124.14Total a pagar$900.00paymentsMétodo de pagoTarjeta¡Gracias por su compra! Máximo 7 días para cambios.Piezas artesanales únicas.BALAMGUAYABERAS.MX",
+          "mark": null,
+          "pngSHA256": "d1879c5c7d459c0eacd6bfa9d4d92f8eb0ce12706bf824d5287acfa5351d7eb3",
+          "htmlSHA256": "3c83b2d410cc3202d1f86d86ec462435763dc55c251572ca533e95a9803566b4"
+        },
+        {
+          "label": "COPIA CLIENTE",
+          "width": 576,
+          "height": 2383,
+          "tail": true,
+          "text": "COPIA CLIENTElandscapeBALAMTIENDA HISTORICA H185TransacciónH185-REIMPRESIONFecha2026-10-05 12:00Atendido porVENDEDOR CONGELADO H185Detalle de compraPRENDA HISTORICA H185 1$900.00SKU: SKU-H185-CADENA-COMPLETA-0 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 2Ornamento: APLICACION-H185 · MULTICOLORES-H185Importe$775.86IVA (16%)$124.14Total a pagar$900.00paymentsMétodo de pagoTarjeta¡Gracias por su compra! Máximo 7 días para cambios.Piezas artesanales únicas.BALAMGUAYABERAS.MX",
+          "mark": "COPIA CLIENTE",
+          "pngSHA256": "ce169a854da60c5c508d480828c23209521688703d922835492089d12b11f970",
+          "htmlSHA256": "fe1a9af38e372a0b3a441a77d0ceb3ca36bdfbf55c66b60a886a9f5fe4290248"
+        },
+        {
+          "label": "COPIA TIENDA",
+          "width": 576,
+          "height": 2383,
+          "tail": true,
+          "text": "COPIA TIENDAlandscapeBALAMTIENDA HISTORICA H185TransacciónH185-REIMPRESIONFecha2026-10-05 12:00Atendido porVENDEDOR CONGELADO H185Detalle de compraPRENDA HISTORICA H185 1$900.00SKU: SKU-H185-CADENA-COMPLETA-0 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 2Ornamento: APLICACION-H185 · MULTICOLORES-H185Importe$775.86IVA (16%)$124.14Total a pagar$900.00paymentsMétodo de pagoTarjeta¡Gracias por su compra! Máximo 7 días para cambios.Piezas artesanales únicas.BALAMGUAYABERAS.MX",
+          "mark": "COPIA TIENDA",
+          "pngSHA256": "d7bc4487870ff8aba54bd00d10e834a3ab3b3fac7c26ad37e112c6ed78b07ae1",
+          "htmlSHA256": "1dc61396ba911bebb008b437892fcd548e2e2f3f15efc45a979f2e7522645f8c"
+        }
+      ]
+    },
+    "apartado": {
+      "normal": false,
+      "text": "landscape\nBALAM\n\nTIENDA HISTORICA H185\n\nAPARTADO\nH185-APARTADO\nFECHA\n2026-10-05 12:00\nATENDIDO POR\nVENDEDOR CONGELADO H185\nESTADO\nApartado\nMERCANCÍA APARTADA\nPRENDA HISTORICA H185 1\n$900.00\nSKU: SKU-H185-CADENA-COMPLETA-0 · Talla: 3XG HISTORICA · BLANCO HISTORICO\nCant: 2\nOrnamento: APLICACION-H185 · MULTICOLORES-H185\nImporte\n$775.86\nIVA (16%)\n$124.14\nTOTAL A PAGAR\n$900.00\nPagado a la fecha\n$450.00\nSaldo pendiente\n$450.00\npayments\n\nMÉTODO DE PAGO\n\nApartado\n\nHISTORIAL DE PAGOS\n\n2026-10-05 · Anticipo · Efectivo\n$450.00\nTotal pagado (1 movimiento)\n$450.00\nConserva este comprobante. La mercancía se entrega al liquidar el saldo.\n\n¡Gracias por su compra! Máximo 7 días para cambios.\n\nPiezas artesanales únicas.\n\nBALAMGUAYABERAS.MX",
+      "height": 1394.875,
+      "gap": 308.6875,
+      "itemGap": null,
+      "fonts": {
+        "name": {
+          "fontSize": "18px",
+          "fontFamily": "\"Playfair Display\", serif",
+          "lineHeight": "22.5px"
+        },
+        "price": {
+          "fontSize": "14px",
+          "fontFamily": "Inter, system-ui, sans-serif",
+          "lineHeight": "21px"
+        },
+        "detail": {
+          "fontSize": "10px",
+          "fontFamily": "Inter, system-ui, sans-serif",
+          "lineHeight": "14px"
+        },
+        "thanks": {
+          "fontSize": "20px",
+          "fontFamily": "\"Playfair Display\", serif",
+          "lineHeight": "27px"
+        }
+      },
+      "guarantees": {
+        "items": 1,
+        "expectedItems": 1,
+        "names": true,
+        "sizes": true,
+        "quantities": true,
+        "total": true,
+        "footer": true,
+        "website": true,
+        "paymentIcon": true
+      },
+      "copies": [
+        {
+          "label": null,
+          "width": 576,
+          "height": 3135,
+          "tail": true,
+          "text": "landscapeBALAMTIENDA HISTORICA H185ApartadoH185-APARTADOFecha2026-10-05 12:00Atendido porVENDEDOR CONGELADO H185EstadoApartadoMercancía apartadaPRENDA HISTORICA H185 1$900.00SKU: SKU-H185-CADENA-COMPLETA-0 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 2Ornamento: APLICACION-H185 · MULTICOLORES-H185Importe$775.86IVA (16%)$124.14Total a pagar$900.00Pagado a la fecha$450.00Saldo pendiente$450.00paymentsMétodo de pagoApartadoHistorial de pagos2026-10-05 · Anticipo · Efectivo$450.00Total pagado (1 movimiento)$450.00Conserva este comprobante. La mercancía se entrega al liquidar el saldo.¡Gracias por su compra! Máximo 7 días para cambios.Piezas artesanales únicas.BALAMGUAYABERAS.MX",
+          "mark": null,
+          "pngSHA256": "649defb2d9adb2d770d26cab9c970957ea04596cfa7ed9f28d1dd6ac5de20022",
+          "htmlSHA256": "88eb8c44ac1f6f3572f207ceed2ae1fb66aca4217597f5aab03e51c4d0ab6666"
+        }
+      ]
+    },
+    "anticipo": {
+      "normal": false,
+      "text": "landscape\nBALAM\n\nTIENDA HISTORICA H185\n\nANTICIPO DE APARTADO\n$450.00\nRecibido en Efectivo · 2026-10-05 12:00\nAPARTADO\nH185-ANTICIPO\nFECHA\n2026-10-05 12:00\nATENDIDO POR\nVENDEDOR CONGELADO H185\nCLIENTE\nPúblico en general\nESTADO\nApartado\nMERCANCÍA APARTADA\nPRENDA HISTORICA H185 1\n$900.00\nSKU: SKU-H185-CADENA-COMPLETA-0 · Talla: 3XG HISTORICA · BLANCO HISTORICO\nCant: 2\nOrnamento: APLICACION-H185 · MULTICOLORES-H185\nImporte\n$775.86\nIVA (16%)\n$124.14\nTOTAL A PAGAR\n$900.00\nPagado a la fecha\n$450.00\nSaldo pendiente\n$450.00\n\nHISTORIAL DE PAGOS\n\n2026-10-05 · Anticipo · Efectivo (este pago)\n$450.00\nTotal pagado (1 movimiento)\n$450.00\nConserva este comprobante. La mercancía se entrega al liquidar el saldo.\n\n¡Gracias por su compra! Máximo 7 días para cambios.\n\nPiezas artesanales únicas.\n\nBALAMGUAYABERAS.MX",
+      "height": 1433.375,
+      "gap": null,
+      "itemGap": null,
+      "fonts": {
+        "name": {
+          "fontSize": "18px",
+          "fontFamily": "\"Playfair Display\", serif",
+          "lineHeight": "22.5px"
+        },
+        "price": {
+          "fontSize": "14px",
+          "fontFamily": "Inter, system-ui, sans-serif",
+          "lineHeight": "21px"
+        },
+        "detail": {
+          "fontSize": "10px",
+          "fontFamily": "Inter, system-ui, sans-serif",
+          "lineHeight": "14px"
+        },
+        "thanks": {
+          "fontSize": "20px",
+          "fontFamily": "\"Playfair Display\", serif",
+          "lineHeight": "27px"
+        }
+      },
+      "guarantees": {
+        "items": 1,
+        "expectedItems": 1,
+        "names": true,
+        "sizes": true,
+        "quantities": true,
+        "total": true,
+        "footer": true,
+        "website": true,
+        "paymentIcon": true
+      },
+      "copies": [
+        {
+          "label": null,
+          "width": 576,
+          "height": 3221,
+          "tail": true,
+          "text": "landscapeBALAMTIENDA HISTORICA H185Anticipo de apartado$450.00Recibido en Efectivo · 2026-10-05 12:00ApartadoH185-ANTICIPOFecha2026-10-05 12:00Atendido porVENDEDOR CONGELADO H185ClientePúblico en generalEstadoApartadoMercancía apartadaPRENDA HISTORICA H185 1$900.00SKU: SKU-H185-CADENA-COMPLETA-0 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 2Ornamento: APLICACION-H185 · MULTICOLORES-H185Importe$775.86IVA (16%)$124.14Total a pagar$900.00Pagado a la fecha$450.00Saldo pendiente$450.00Historial de pagos2026-10-05 · Anticipo · Efectivo (este pago)$450.00Total pagado (1 movimiento)$450.00Conserva este comprobante. La mercancía se entrega al liquidar el saldo.¡Gracias por su compra! Máximo 7 días para cambios.Piezas artesanales únicas.BALAMGUAYABERAS.MX",
+          "mark": null,
+          "pngSHA256": "c4712405b58325c010d6aede5061eca927d039a8b82af93a2005439bbaa99303",
+          "htmlSHA256": "616294ad65cfcd19c051571116f2de4f9a6be4e28795353edd8c4391fa5a803c"
+        }
+      ]
+    },
+    "abono": {
+      "normal": false,
+      "text": "landscape\nBALAM\n\nTIENDA HISTORICA H185\n\nABONO A APARTADO\n$100.00\nRecibido en Efectivo · 2026-10-05 12:00\nAPARTADO\nH185-ABONO\nFECHA\n2026-10-05 12:00\nATENDIDO POR\nVENDEDOR CONGELADO H185\nCLIENTE\nPúblico en general\nESTADO\nApartado\nMERCANCÍA APARTADA\nPRENDA HISTORICA H185 1\n$900.00\nSKU: SKU-H185-CADENA-COMPLETA-0 · Talla: 3XG HISTORICA · BLANCO HISTORICO\nCant: 2\nOrnamento: APLICACION-H185 · MULTICOLORES-H185\nImporte\n$775.86\nIVA (16%)\n$124.14\nTOTAL A PAGAR\n$900.00\nPagado a la fecha\n$550.00\nSaldo pendiente\n$350.00\n\nHISTORIAL DE PAGOS\n\n2026-10-05 · Anticipo · Efectivo\n$450.00\n2026-10-05 · Abono · Efectivo (este pago)\n$100.00\nTotal pagado (2 movimientos)\n$550.00\nConserva este comprobante. La mercancía se entrega al liquidar el saldo.\n\n¡Gracias por su compra! Máximo 7 días para cambios.\n\nPiezas artesanales únicas.\n\nBALAMGUAYABERAS.MX",
+      "height": 1489.0625,
+      "gap": null,
+      "itemGap": null,
+      "fonts": {
+        "name": {
+          "fontSize": "18px",
+          "fontFamily": "\"Playfair Display\", serif",
+          "lineHeight": "22.5px"
+        },
+        "price": {
+          "fontSize": "14px",
+          "fontFamily": "Inter, system-ui, sans-serif",
+          "lineHeight": "21px"
+        },
+        "detail": {
+          "fontSize": "10px",
+          "fontFamily": "Inter, system-ui, sans-serif",
+          "lineHeight": "14px"
+        },
+        "thanks": {
+          "fontSize": "20px",
+          "fontFamily": "\"Playfair Display\", serif",
+          "lineHeight": "27px"
+        }
+      },
+      "guarantees": {
+        "items": 1,
+        "expectedItems": 1,
+        "names": true,
+        "sizes": true,
+        "quantities": true,
+        "total": true,
+        "footer": true,
+        "website": true,
+        "paymentIcon": true
+      },
+      "copies": [
+        {
+          "label": null,
+          "width": 576,
+          "height": 3346,
+          "tail": true,
+          "text": "landscapeBALAMTIENDA HISTORICA H185Abono a apartado$100.00Recibido en Efectivo · 2026-10-05 12:00ApartadoH185-ABONOFecha2026-10-05 12:00Atendido porVENDEDOR CONGELADO H185ClientePúblico en generalEstadoApartadoMercancía apartadaPRENDA HISTORICA H185 1$900.00SKU: SKU-H185-CADENA-COMPLETA-0 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 2Ornamento: APLICACION-H185 · MULTICOLORES-H185Importe$775.86IVA (16%)$124.14Total a pagar$900.00Pagado a la fecha$550.00Saldo pendiente$350.00Historial de pagos2026-10-05 · Anticipo · Efectivo$450.002026-10-05 · Abono · Efectivo (este pago)$100.00Total pagado (2 movimientos)$550.00Conserva este comprobante. La mercancía se entrega al liquidar el saldo.¡Gracias por su compra! Máximo 7 días para cambios.Piezas artesanales únicas.BALAMGUAYABERAS.MX",
+          "mark": null,
+          "pngSHA256": "ef6f74b13357960be0d2e1f6c5790e2f550af8b7e17a08ed7894f75562ecb8e8",
+          "htmlSHA256": "a5167c1919d789f1b06d17d4175adce4ea25b8fe2fdcdaff3613cdca81fb3965"
+        }
+      ]
+    },
+    "liquidacion": {
+      "normal": false,
+      "text": "landscape\nBALAM\n\nTIENDA HISTORICA H185\n\nLIQUIDACIÓN DE APARTADO\n$450.00\nRecibido en Efectivo · 2026-10-05 12:00\nAPARTADO\nH185-LIQUIDACION\nFECHA\n2026-10-05 12:00\nATENDIDO POR\nVENDEDOR CONGELADO H185\nCLIENTE\nPúblico en general\nMERCANCÍA ENTREGADA\nPRENDA HISTORICA H185 1\n$900.00\nSKU: SKU-H185-CADENA-COMPLETA-0 · Talla: 3XG HISTORICA · BLANCO HISTORICO\nCant: 2\nOrnamento: APLICACION-H185 · MULTICOLORES-H185\nImporte\n$775.86\nIVA (16%)\n$124.14\nTOTAL A PAGAR\n$900.00\nPagado a la fecha\n$900.00\nSaldo pendiente\nLIQUIDADO\n\nHISTORIAL DE PAGOS\n\n2026-10-05 · Anticipo · Efectivo\n$450.00\n2026-10-05 · Liquidación · Efectivo (este pago)\n$450.00\nTotal pagado (2 movimientos)\n$900.00\n\n¡Gracias por su compra! Máximo 7 días para cambios.\n\nPiezas artesanales únicas.\n\nBALAMGUAYABERAS.MX",
+      "height": 1391.5625,
+      "gap": null,
+      "itemGap": null,
+      "fonts": {
+        "name": {
+          "fontSize": "18px",
+          "fontFamily": "\"Playfair Display\", serif",
+          "lineHeight": "22.5px"
+        },
+        "price": {
+          "fontSize": "14px",
+          "fontFamily": "Inter, system-ui, sans-serif",
+          "lineHeight": "21px"
+        },
+        "detail": {
+          "fontSize": "10px",
+          "fontFamily": "Inter, system-ui, sans-serif",
+          "lineHeight": "14px"
+        },
+        "thanks": {
+          "fontSize": "20px",
+          "fontFamily": "\"Playfair Display\", serif",
+          "lineHeight": "27px"
+        }
+      },
+      "guarantees": {
+        "items": 1,
+        "expectedItems": 1,
+        "names": true,
+        "sizes": true,
+        "quantities": true,
+        "total": true,
+        "footer": true,
+        "website": true,
+        "paymentIcon": true
+      },
+      "copies": [
+        {
+          "label": null,
+          "width": 576,
+          "height": 3128,
+          "tail": true,
+          "text": "landscapeBALAMTIENDA HISTORICA H185Liquidación de apartado$450.00Recibido en Efectivo · 2026-10-05 12:00ApartadoH185-LIQUIDACIONFecha2026-10-05 12:00Atendido porVENDEDOR CONGELADO H185ClientePúblico en generalMercancía entregadaPRENDA HISTORICA H185 1$900.00SKU: SKU-H185-CADENA-COMPLETA-0 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 2Ornamento: APLICACION-H185 · MULTICOLORES-H185Importe$775.86IVA (16%)$124.14Total a pagar$900.00Pagado a la fecha$900.00Saldo pendienteLIQUIDADOHistorial de pagos2026-10-05 · Anticipo · Efectivo$450.002026-10-05 · Liquidación · Efectivo (este pago)$450.00Total pagado (2 movimientos)$900.00¡Gracias por su compra! Máximo 7 días para cambios.Piezas artesanales únicas.BALAMGUAYABERAS.MX",
+          "mark": null,
+          "pngSHA256": "5d60f4d7c7e6accffed0b5c313bfbfc0c5b035b48e4f130004306ab37da9cadd",
+          "htmlSHA256": "b9587ecf2b6b3b67a1e19fc6356ce0bb3ac8228806ee27d05cdb9e677d29a215"
+        }
+      ]
+    },
+    "apartadoLiquidado": {
+      "normal": false,
+      "text": "landscape\nBALAM\n\nTIENDA HISTORICA H185\n\nTRANSACCIÓN\nH185-APARTADOLIQUIDADO\nFECHA\n2026-10-05 12:00\nATENDIDO POR\nVENDEDOR CONGELADO H185\nDETALLE DE COMPRA\nPRENDA HISTORICA H185 1\n$900.00\nSKU: SKU-H185-CADENA-COMPLETA-0 · Talla: 3XG HISTORICA · BLANCO HISTORICO\nCant: 2\nOrnamento: APLICACION-H185 · MULTICOLORES-H185\nImporte\n$775.86\nIVA (16%)\n$124.14\nTOTAL A PAGAR\n$900.00\npayments\n\nMÉTODO DE PAGO\n\nApartado\n\nHISTORIAL DE PAGOS\n\n2026-10-05 · Anticipo · Efectivo\n$450.00\n2026-10-05 · Liquidación · Efectivo\n$450.00\nTotal pagado (2 movimientos)\n$900.00\n\n¡Gracias por su compra! Máximo 7 días para cambios.\n\nPiezas artesanales únicas.\n\nBALAMGUAYABERAS.MX",
+      "height": 1299.5625,
+      "gap": 292.375,
+      "itemGap": null,
+      "fonts": {
+        "name": {
+          "fontSize": "18px",
+          "fontFamily": "\"Playfair Display\", serif",
+          "lineHeight": "22.5px"
+        },
+        "price": {
+          "fontSize": "14px",
+          "fontFamily": "Inter, system-ui, sans-serif",
+          "lineHeight": "21px"
+        },
+        "detail": {
+          "fontSize": "10px",
+          "fontFamily": "Inter, system-ui, sans-serif",
+          "lineHeight": "14px"
+        },
+        "thanks": {
+          "fontSize": "20px",
+          "fontFamily": "\"Playfair Display\", serif",
+          "lineHeight": "27px"
+        }
+      },
+      "guarantees": {
+        "items": 1,
+        "expectedItems": 1,
+        "names": true,
+        "sizes": true,
+        "quantities": true,
+        "total": true,
+        "footer": true,
+        "website": true,
+        "paymentIcon": true
+      },
+      "copies": [
+        {
+          "label": null,
+          "width": 576,
+          "height": 2921,
+          "tail": true,
+          "text": "landscapeBALAMTIENDA HISTORICA H185TransacciónH185-APARTADOLIQUIDADOFecha2026-10-05 12:00Atendido porVENDEDOR CONGELADO H185Detalle de compraPRENDA HISTORICA H185 1$900.00SKU: SKU-H185-CADENA-COMPLETA-0 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 2Ornamento: APLICACION-H185 · MULTICOLORES-H185Importe$775.86IVA (16%)$124.14Total a pagar$900.00paymentsMétodo de pagoApartadoHistorial de pagos2026-10-05 · Anticipo · Efectivo$450.002026-10-05 · Liquidación · Efectivo$450.00Total pagado (2 movimientos)$900.00¡Gracias por su compra! Máximo 7 días para cambios.Piezas artesanales únicas.BALAMGUAYABERAS.MX",
+          "mark": null,
+          "pngSHA256": "590714601f07b8956ac9a879f0042160b43a98783a1a4001041b84f196c702b8",
+          "htmlSHA256": "bc1178cafa4334957c2a69f87fe22f5f8389a807bbd9820943f806adab2583d9"
+        }
+      ]
+    },
+    "cambio": {
+      "normal": false,
+      "text": "landscape\nBALAM\n\nTIENDA HISTORICA H185\n\nCAMBIO DE MERCANCIA\nCMB-H185\nSobre la venta H185-CAMBIO\nENTREGA\n2 × PRENDA LEGACY H185 1 · talla 3XG · APLICACION-H185 · MULTICOLORES-H185 · $450.00\nRECIBE\n2 × PRENDA LEGACY H185 1 · talla 3XG · APLICACION-H185 · MULTICOLORES-H185 · $450.00\nTRANSACCIÓN\nH185-CAMBIO\nFECHA\n2026-10-05 12:00\nATENDIDO POR\nVENDEDOR CONGELADO H185\nDETALLE DE COMPRA\nPRENDA HISTORICA H185 1\n$900.00\nSKU: SKU-H185-CADENA-COMPLETA-0 · Talla: 3XG HISTORICA · BLANCO HISTORICO\nCant: 2\nOrnamento: APLICACION-H185 · MULTICOLORES-H185\nImporte\n$775.86\nIVA (16%)\n$124.14\nTOTAL A PAGAR\n$900.00\npayments\n\nMÉTODO DE PAGO\n\nTarjeta\n\nHISTORIAL DE PAGOS\n\n2026-10-05 · venta · Tarjeta\n$900.00\nTotal pagado (1 movimiento)\n$900.00\n\n¡Gracias por su compra! Máximo 7 días para cambios.\n\nPiezas artesanales únicas.\n\nBALAMGUAYABERAS.MX",
+      "height": 1476.6875,
+      "gap": 225,
+      "itemGap": null,
+      "fonts": {
+        "name": {
+          "fontSize": "18px",
+          "fontFamily": "\"Playfair Display\", serif",
+          "lineHeight": "22.5px"
+        },
+        "price": {
+          "fontSize": "14px",
+          "fontFamily": "Inter, system-ui, sans-serif",
+          "lineHeight": "21px"
+        },
+        "detail": {
+          "fontSize": "10px",
+          "fontFamily": "Inter, system-ui, sans-serif",
+          "lineHeight": "14px"
+        },
+        "thanks": {
+          "fontSize": "20px",
+          "fontFamily": "\"Playfair Display\", serif",
+          "lineHeight": "27px"
+        }
+      },
+      "guarantees": {
+        "items": 1,
+        "expectedItems": 1,
+        "names": true,
+        "sizes": true,
+        "quantities": true,
+        "total": true,
+        "footer": true,
+        "website": true,
+        "paymentIcon": true
+      },
+      "copies": [
+        {
+          "label": null,
+          "width": 576,
+          "height": 3319,
+          "tail": true,
+          "text": "landscapeBALAMTIENDA HISTORICA H185Cambio de mercanciaCMB-H185Sobre la venta H185-CAMBIOEntrega2 × PRENDA LEGACY H185 1 · talla 3XG · APLICACION-H185 · MULTICOLORES-H185 · $450.00Recibe2 × PRENDA LEGACY H185 1 · talla 3XG · APLICACION-H185 · MULTICOLORES-H185 · $450.00TransacciónH185-CAMBIOFecha2026-10-05 12:00Atendido porVENDEDOR CONGELADO H185Detalle de compraPRENDA HISTORICA H185 1$900.00SKU: SKU-H185-CADENA-COMPLETA-0 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 2Ornamento: APLICACION-H185 · MULTICOLORES-H185Importe$775.86IVA (16%)$124.14Total a pagar$900.00paymentsMétodo de pagoTarjetaHistorial de pagos2026-10-05 · venta · Tarjeta$900.00Total pagado (1 movimiento)$900.00¡Gracias por su compra! Máximo 7 días para cambios.Piezas artesanales únicas.BALAMGUAYABERAS.MX",
+          "mark": null,
+          "pngSHA256": "588c387327907e54950ece7d59923e73ea29e53f52e28c24503722b5cac45efc",
+          "htmlSHA256": "4bc9fedf402a68e72ec1dc09dd641948e346cfbefd6d962844efa68d21952e5b"
+        }
+      ]
+    },
+    "cortesia": {
+      "normal": false,
+      "text": "landscape\nBALAM\n\nTIENDA HISTORICA H185\n\nTRANSACCIÓN\nH185-CORTESIA\nFECHA\n2026-10-05 12:00\nATENDIDO POR\nVENDEDOR CONGELADO H185\nDETALLE DE COMPRA\nPRENDA HISTORICA H185 1\n$900.00\nSKU: SKU-H185-CADENA-COMPLETA-0 · Talla: 3XG HISTORICA · BLANCO HISTORICO\nCant: 2\nOrnamento: APLICACION-H185 · MULTICOLORES-H185\nImporte\n$775.86\nIVA (16%)\n$124.14\nTOTAL A PAGAR\n$0.00\npayments\n\nMÉTODO DE PAGO\n\nCortesía\n\n¡Gracias por su compra! Máximo 7 días para cambios.\n\nPiezas artesanales únicas.\n\nBALAMGUAYABERAS.MX",
+      "height": 1076.6875,
+      "gap": 89,
+      "itemGap": null,
+      "fonts": {
+        "name": {
+          "fontSize": "18px",
+          "fontFamily": "\"Playfair Display\", serif",
+          "lineHeight": "22.5px"
+        },
+        "price": {
+          "fontSize": "14px",
+          "fontFamily": "Inter, system-ui, sans-serif",
+          "lineHeight": "21px"
+        },
+        "detail": {
+          "fontSize": "10px",
+          "fontFamily": "Inter, system-ui, sans-serif",
+          "lineHeight": "14px"
+        },
+        "thanks": {
+          "fontSize": "20px",
+          "fontFamily": "\"Playfair Display\", serif",
+          "lineHeight": "27px"
+        }
+      },
+      "guarantees": {
+        "items": 1,
+        "expectedItems": 1,
+        "names": true,
+        "sizes": true,
+        "quantities": true,
+        "total": true,
+        "footer": true,
+        "website": true,
+        "paymentIcon": true
+      },
+      "copies": [
+        {
+          "label": null,
+          "width": 576,
+          "height": 2420,
+          "tail": true,
+          "text": "landscapeBALAMTIENDA HISTORICA H185TransacciónH185-CORTESIAFecha2026-10-05 12:00Atendido porVENDEDOR CONGELADO H185Detalle de compraPRENDA HISTORICA H185 1$900.00SKU: SKU-H185-CADENA-COMPLETA-0 · Talla: 3XG HISTORICA · BLANCO HISTORICOCant: 2Ornamento: APLICACION-H185 · MULTICOLORES-H185Importe$775.86IVA (16%)$124.14Total a pagar$0.00paymentsMétodo de pagoCortesía¡Gracias por su compra! Máximo 7 días para cambios.Piezas artesanales únicas.BALAMGUAYABERAS.MX",
+          "mark": null,
+          "pngSHA256": "5b8d5572b6cba5299669933e82a2797b9c34f6afdee230577011553bcf8007d4",
+          "htmlSHA256": "a62bef8be7066a67ff327d7dc1a2254386b089b4e79f4b2963f4b58ecb333a72"
+        }
+      ]
+    }
+  },
+  "renderer": {
+    "browser": "154.0.8037.93",
+    "platform": "win32"
+  },
+  "guarantees": {
+    "businessUnchanged": true,
+    "resourcesReleased": true,
+    "noPageErrors": true
+  },
+  "cost": {
+    "corta": {
+      "cssHeight": 1012.6875,
+      "gap": 89,
+      "pngHeights": [
+        2277,
+        2383,
+        2383
+      ]
+    },
+    "larga": {
+      "cssHeight": 2585.6875,
+      "gap": 89,
+      "pngHeights": [
+        5811,
+        5917,
+        5917
+      ]
+    },
+    "legacy": {
+      "cssHeight": 979.1875,
+      "gap": 89,
+      "pngHeights": [
+        2201,
+        2308,
+        2308
+      ]
+    },
+    "mixto": {
+      "cssHeight": 1012.6875,
+      "gap": 89,
+      "pngHeights": [
+        2277,
+        2383,
+        2383
+      ]
+    },
+    "reimpresion": {
+      "cssHeight": 1012.6875,
+      "gap": 89,
+      "pngHeights": [
+        2277,
+        2383,
+        2383
+      ]
+    }
+  },
+  "completeness": true
+}
