@@ -1,0 +1,155 @@
+{
+  "schema": "h186-approved-deployment-v1",
+  "status": "DEPLOYMENT_VERIFIED",
+  "at": "2026-10-11T05:00:02.519Z",
+  "commit": "390073d8333bf96d7e8fa0740275f759483652c2",
+  "ownerApprovedReuse": true,
+  "fullSuitesRepeated": false,
+  "finalSingleSale": "PASS",
+  "ci": {
+    "workflow": "H186 approved closure",
+    "runId": 38113281346,
+    "url": "https://github.com/David14081982/POS_Balam/actions/runs/38113281346",
+    "status": "success",
+    "jobs": [
+      {
+        "name": "verify-evidence",
+        "conclusion": "success"
+      },
+      {
+        "name": "deploy",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "pages": {
+    "url": "https://david14081982.github.io/POS_Balam/",
+    "verified": true,
+    "routes": 10,
+    "completedAt": "2026-10-11T04:59:35.414Z",
+    "artifacts": [
+      {
+        "file": "index.html",
+        "sha256": "dcab70eff4fcd8ce5ec75346777b2c6db2e6b0d3c7d1779136443376cba68f3e",
+        "bytes": 9388889
+      },
+      {
+        "file": "index.html",
+        "sha256": "dcab70eff4fcd8ce5ec75346777b2c6db2e6b0d3c7d1779136443376cba68f3e",
+        "bytes": 9388889
+      },
+      {
+        "file": "POS Balam (offline).html",
+        "sha256": "dcab70eff4fcd8ce5ec75346777b2c6db2e6b0d3c7d1779136443376cba68f3e",
+        "bytes": 9388889
+      },
+      {
+        "file": "sw.js",
+        "sha256": "bb1c7dd43f762cba659b99932454c6fd65aba6f72b782798d866a15a8b99ea12",
+        "bytes": 4477
+      },
+      {
+        "file": "manifest.webmanifest",
+        "sha256": "43417f79b56bf52969b2d04d1c70ee0a6ae67673b2acd8f673b0fbebf6986afd",
+        "bytes": 515
+      },
+      {
+        "file": "pwa/icon-192.png",
+        "sha256": "72184e55164ce1c4e67a1013724a3b83947503356a487e055f0d022d01dcb64e",
+        "bytes": 937
+      },
+      {
+        "file": "pwa/icon-512.png",
+        "sha256": "c42b6fa17510f7bb91358bbe9e04f714cb15e816fd26875f86d0bbcc5bc08319",
+        "bytes": 3692
+      },
+      {
+        "file": "pwa/icon-maskable-512.png",
+        "sha256": "f0d29a6e593ba7d79286f755179b4c984d0a6634a4b97954cc8f4daa2c693e47",
+        "bytes": 3334
+      },
+      {
+        "file": "pwa/apple-touch-icon.png",
+        "sha256": "137651bbb5489c1fadbc75e1c1375d163d3be59a2c26f79161d46351a9991608",
+        "bytes": 854
+      },
+      {
+        "file": "pwa/favicon-64.png",
+        "sha256": "12437629c6e64b955db23fa773b2a4ceba407f9cf7510d268b2f11a0606f1ad0",
+        "bytes": 278
+      }
+    ]
+  },
+  "financialRuntime": {
+    "minFinancialVersion": 2,
+    "oldUnversionedSaleRejected": true,
+    "sqlstate": "22023",
+    "probeCommercialWrites": 0
+  },
+  "cleanup": {
+    "singleSale": {
+      "verified": true,
+      "protectedTables": 64,
+      "nonQaPreserved": true,
+      "newPosResidue": 0,
+      "newAuthResidue": 0,
+      "exactRowsDeleted": 17,
+      "authIdentitiesRemoved": 1,
+      "completedAt": "2026-10-11T04:57:16.528Z",
+      "completionSHA256": "8ebfa65f95954ecfcd4cc1793e8bf81958939d1477c3871febbd333965606d54",
+      "baselineSHA256": "f084c1c2dfc9737a35266d89938b9f45bd4604f324a5e3e304c9de585ee99616",
+      "finalSHA256": "cf1580f526f391c0c1df9fe50161f2f60af1944f849f453fe7c4a246b9b25858"
+    },
+    "stoppedRun": {
+      "verified": true,
+      "protectedTables": 64,
+      "nonQaPreserved": true,
+      "newPosResidue": 0,
+      "newAuthResidue": 0,
+      "exactRowsDeleted": 59,
+      "authIdentitiesRemoved": 1,
+      "completedAt": "2026-10-11T04:35:56.852Z",
+      "completionSHA256": "b5dd34ed88591bb3c2360983b77d944b764c824af02ca83dbd9d3db69ecb4f04",
+      "baselineSHA256": "52ff0656c5688fae644ae7f3549324586bf45e05b4e78f5d777613ae3f0f1608",
+      "finalSHA256": "e5f482f32391bd5975f5122f9e601e2fcf262003c63325805c9851edd8ae6248"
+    },
+    "failedSameCase": {
+      "verified": true,
+      "protectedTables": 64,
+      "nonQaPreserved": true,
+      "newPosResidue": 0,
+      "newAuthResidue": 0,
+      "exactRowsDeleted": 17,
+      "authIdentitiesRemoved": 1,
+      "completedAt": "2026-10-11T04:49:34.094Z",
+      "completionSHA256": "1553c71e8255ff879f916aa4b5ce9bd08af72d361721a36e16ba844a735eae97",
+      "baselineSHA256": "33240873f192cc77befd2392c299f77fc7def5cce6481ccc3ea033f1726d23e0",
+      "finalSHA256": "23c2c21b82737e9a3a50fdfd1a18f9137d6b37c67cc6ccf0f13f374b1d7763df"
+    }
+  },
+  "priorApprovedResults": {
+    "sql": 135,
+    "migrations": 31,
+    "uiAndTickets": 77,
+    "remoteAudit": 366,
+    "repeated": false,
+    "catalog": {
+      "references": 967,
+      "promotions": 1,
+      "quotes": 2901,
+      "mismatches": 0,
+      "repeatedForFinalClosure": false
+    }
+  },
+  "evidence": {
+    "singleSaleSHA256": "8f21e0b0fc3a150795bf23751b912bb3acc55f1deb6f29d4056fc966ec5fedd8",
+    "ciSHA256": "b3f6897dbfba12a030bcd5219dd58c913b40b93fbf8562669663e8aef3461cda",
+    "pagesSHA256": "7bc8849229011d4ebad3fbcec33663bef6e02893b30381677cb3015b8411acc5",
+    "probeSHA256": "233bb7355506afc3a34f516541526601d0d18c0b574f6447a6f41e08c6eb7c00"
+  },
+  "limits": {
+    "distributedCertification": "NOT_CLAIMED",
+    "physicalPrint": "NOT_TESTED",
+    "economicCostOrigin": "NOT_DEMONSTRATED"
+  }
+}

@@ -18,7 +18,7 @@ Corrección de edición: [H172 · Guardado y mensajes](guardado-edicion-producto
 - [descuentos-autoridad-financiera-h186.md](descuentos-autoridad-financiera-h186.md)
   — H-186: retiro del piso por costo, auditoría del costo JOEL y contrato
   financiero versionado validado por Supabase. Prueba integral única PASS,
-  datos QA retirados; publicación pendiente.
+  datos QA retirados; PUBLICADO Y VERIFICADO en `390073d`, contrato V2 activo.
 
 - [ticket-venta-detalle-espaciado-h185.md](ticket-venta-detalle-espaciado-h185.md)
   — H-185: venta y reimpresión sin SKU/ornamento impresos; conserva talla,

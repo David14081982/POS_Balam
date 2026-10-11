@@ -7,8 +7,8 @@ y `BLOQUEADO`.
 
 ## H-186 — Descuentos exactos y autoridad financiera de ventas nuevas
 
-**Estado:** PARCIALMENTE RESUELTO — corrección y prueba integral PASS; publicación pendiente.
-**Fecha:** 11/10/2026 UTC. **Commit:** Pendiente de commit.
+**Estado:** RESUELTO — prueba integral PASS, limpieza, publicación y activación V2 verificadas.
+**Fecha:** 11/10/2026 UTC. **Commit:** `390073d8333bf96d7e8fa0740275f759483652c2`.
 **Decisión:** eliminar el piso por costo/margen sin modificar costos ni históricos.
 El propietario ordenó cerrar con una única prueba integral y conservar las
 suites aprobadas sin repetirlas. No se exige ni atribuye certificación A/B/C.
@@ -34,9 +34,13 @@ coherentes. Evidencia: [final-single-e2e.json](fixes/evidence/h186/final-single-
 17 filas/1 Auth. Ambas verifican 64 tablas, datos ajenos preservados
 y cero residuos nuevos POS/Auth. Contadores QA monotónicos preservados.
 **Datos comerciales afectados indebidamente:** 0.
-**Pendiente:** commit, publicación verificada por bytes y activación final V2.
-Workflow manual de cierre con evidencia y fuentes congeladas; sin repetir
-suites y sin cambiar el workflow ordinario para las demás historias.
+**Despliegue:** commit enviado a main; workflow H186 approved closure
+38113281346 SUCCESS; GitHub Pages 10/10 rutas con bytes iguales al commit.
+Contrato mínimo V2 activo; alta sin versión rechazada con 22023, cero
+escrituras comerciales y ROLLBACK. Sin pendientes críticos financieros
+detectados en el alcance ejecutado. Workflow manual con evidencia y fuentes
+congeladas, sin repetir suites; workflow ordinario conservado.
+Evidencia: [deployment-final.json](fixes/evidence/h186/deployment-final.json).
 **Residual:** causa de timeouts concurrentes de snapshot no demostrada;
 origen económico del costo no demostrado; impresión física NOT_TESTED.
 Los intentos previos fallidos y la matriz detenida no se declaran certificados.

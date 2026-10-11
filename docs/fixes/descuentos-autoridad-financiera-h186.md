@@ -1,9 +1,9 @@
 # Descuentos exactos y autoridad financiera de ventas nuevas
 
 **Riesgo:** H-186
-**Estado:** PARCIALMENTE RESUELTO — corrección y prueba integral PASS; publicación y activación final pendientes
+**Estado:** RESUELTO — prueba integral PASS, limpieza verificada, publicado y contrato V2 activo
 **Fecha:** 11/10/2026 UTC
-**Commit:** Pendiente de commit
+**Commit:** `390073d8333bf96d7e8fa0740275f759483652c2`
 
 ## Problema y reproducción
 
@@ -140,21 +140,26 @@ con 112 filas y un actor retirados, 64 tablas preservadas y cero residuos.
 
 ## Despliegue
 
-Pendiente de commit, push y verificación Pages. Por orden del propietario,
-el workflow manual H186 approved closure reutiliza los resultados aprobados,
-exige la prueba única y sus limpiezas y verifica las fuentes sin cambios.
-La normalización LF de Git se declara sólo para texto fuente; HTML/SW y
-archivos servidos se comparan byte a byte. El commit técnico incluye [skip ci]
-para no relanzar las baterías; el workflow ordinario sigue vigente para otros
-cambios. La publicación manual queda ligada al SHA exacto de main.
+Commit técnico `390073d8333bf96d7e8fa0740275f759483652c2`, enviado a main.
+El [workflow H186 approved closure](https://github.com/David14081982/POS_Balam/actions/runs/38113281346)
+terminó SUCCESS: verify-evidence y deploy aprobados, sin repetir suites.
+Por orden del propietario reutilizó las pruebas aprobadas, exigió la prueba
+única y sus limpiezas y verificó 32 archivos fuente/artefactos sin cambios.
+La normalización LF se declara sólo para texto fuente; HTML/SW conservan
+comparación byte a byte. El commit lleva [skip ci] para no relanzar baterías;
+el workflow ordinario sigue vigente para los demás cambios.
 
-Después de verificar Pages se activa min_financial_version=2 con la operación
-acotada e idempotente y se comprueba el rechazo de una alta sin versión, con
-cero escrituras comerciales y ROLLBACK. Hasta entonces el mínimo sigue en 1.
+[GitHub Pages](https://david14081982.github.io/POS_Balam/) quedó verificado
+en 10/10 rutas: bytes locales = bytes del commit = bytes servidos. Después
+se activó min_financial_version=2. La comprobación rechazó una alta sin
+contrato V2 con SQLSTATE 22023, cero escrituras comerciales y ROLLBACK.
+Evidencia: [deployment-final.json](evidence/h186/deployment-final.json).
 
 ## Riesgo residual y pendientes
 
-- Publicación y activación final pendientes en este corte.
+- Sin pendientes críticos financieros detectados en el alcance ejecutado.
+  Publicación y activación final completadas. No se atribuye una certificación
+  distribuida general al caso único de cierre.
 - No se identificó la causa de tres timeouts de snapshot en recorridos
   anteriores concurrentes. Una lectura aislada terminó en 1,539.643 ms.
   No se declara reparado ese rendimiento ni se atribuye certificación A/B/C.
