@@ -1,0 +1,171 @@
+{
+  "schemaVersion": 1,
+  "risk": "H186",
+  "status": "VERIFIED_LOCAL_READ_COUNT_REGRESSION",
+  "recordedAt": "2026-10-11T01:29:14.786Z",
+  "metric": {
+    "name": "DATA.products getter accesses",
+    "fixtureReferences": 976,
+    "meaning": "Counts complete defensive catalog reads; no real-world runtime or latency claim is made."
+  },
+  "reproduction": {
+    "status": "EXPECTED_FAIL",
+    "startedAt": "2026-10-11T01:22:36.839Z",
+    "finishedAt": "2026-10-11T01:22:40.022Z",
+    "sourceSha256": "47008af512432cceaa0989e1d5f46abe35c02ab9fb86522f90d3b9894e774790",
+    "passed": 3,
+    "failed": 11,
+    "measured": {
+      "cost": {
+        "productGetterReads": 1953
+      },
+      "guarantee": {
+        "references": 976,
+        "visited": 976,
+        "correct": 976,
+        "affected": 1
+      },
+      "completeness": {
+        "completed": true
+      }
+    },
+    "evidence": {
+      "path": ".evidence-h186-model-universe/permanent-red.json",
+      "sha256": "1e4015730265cc62cb862146500499010d80b399a68f63360d6796a0d1b7ee85"
+    }
+  },
+  "correction": {
+    "status": "PASS",
+    "startedAt": "2026-10-11T01:26:31.767Z",
+    "finishedAt": "2026-10-11T01:26:31.888Z",
+    "sourceSha256": "42fd09e25ddaee186b7c976caf2d06c9e27361e6f37aee4843af8972cfd5774d",
+    "passed": 14,
+    "failed": 0,
+    "measured": {
+      "cost": {
+        "productGetterReads": 2
+      },
+      "guarantee": {
+        "references": 976,
+        "visited": 976,
+        "correct": 976,
+        "affected": 1
+      },
+      "completeness": {
+        "completed": true
+      }
+    },
+    "evidence": {
+      "path": ".evidence-h186-model-universe/permanent-green.json",
+      "sha256": "d2882dfff8ad73e9a32ff4a2f59e43dd70e0c5d9f9a2c79852e772658fe592d7"
+    }
+  },
+  "guard": {
+    "command": "node test-h186-model-universe.mjs",
+    "failureBehavior": "Nonzero exit if cost regresses, any scope decision or full coverage fails, or an invalidation regression fails.",
+    "ciWorkflow": ".github/workflows/h164-online-authority.yml",
+    "baseline": {
+      "path": "docs/fixes/evidence/h186/model-universe-baseline.json",
+      "sha256": "a98e71c55de26fa95f048c0122cd493d0b6cce790d5ae2822ce81d7e9d011038"
+    },
+    "refixedAt": "2026-10-11T01:26:52.854Z",
+    "refixedOnlyAfterPassingRegressions": true,
+    "previousCost": 1953,
+    "currentCost": 2
+  },
+  "coverage": [
+    {
+      "name": "Read-count guardian preserves all 976 correct decisions and completes the catalog",
+      "status": "PASS"
+    },
+    {
+      "name": "Empty scopes are lazy and read no product catalog",
+      "status": "PASS"
+    },
+    {
+      "name": "Partial, complete and typed model selections preserve their meaning",
+      "status": "PASS"
+    },
+    {
+      "name": "Adding and deleting confirmed models invalidates select-all semantics",
+      "status": "PASS"
+    },
+    {
+      "name": "Editing a model without changing array length invalidates the universe",
+      "status": "PASS"
+    },
+    {
+      "name": "Config version invalidates the projection without changing product revision",
+      "status": "PASS"
+    },
+    {
+      "name": "Warm config preparation bypasses the memo and rolls back to the confirmed universe",
+      "status": "PASS"
+    },
+    {
+      "name": "Cold config preparation cannot seed a memo with unconfirmed draft models",
+      "status": "PASS"
+    },
+    {
+      "name": "Replacing the DATA object invalidates a numerically identical revision",
+      "status": "PASS"
+    },
+    {
+      "name": "Legacy numeric revision fallback tracks both data and config changes",
+      "status": "PASS"
+    },
+    {
+      "name": "Missing or invalid revision contracts never permit a persistent memo",
+      "status": "PASS"
+    },
+    {
+      "name": "Unrelated data changes do not recopy the confirmed commercial projection",
+      "status": "PASS"
+    },
+    {
+      "name": "Model and size scoped discounts preserve 30, 60, 100 percent and stacked totals",
+      "status": "PASS"
+    },
+    {
+      "name": "An empty confirmed model universe preserves membership without repeated copies",
+      "status": "PASS"
+    }
+  ],
+  "relatedRegressionSuites": [
+    {
+      "command": "node test-h186-promotions.mjs",
+      "passed": 10,
+      "failed": 0,
+      "executionTimestamp": null,
+      "timestampNote": "Plain stdout logs do not embed execution timestamps; no execution time is inferred from file modification time.",
+      "evidence": {
+        "path": ".evidence-h186-model-universe/promotions-green.log",
+        "sha256": "d2ecc3be16d52d5fe67dbbe2389120b702af4e75270c2240885a7b2fc6e4b208"
+      }
+    },
+    {
+      "command": "node test-discounts.mjs",
+      "passed": 38,
+      "failed": 0,
+      "executionTimestamp": null,
+      "timestampNote": "Plain stdout logs do not embed execution timestamps; no execution time is inferred from file modification time.",
+      "evidence": {
+        "path": ".evidence-h186-model-universe/discounts-green.log",
+        "sha256": "8d78408be36ef5fd161a6fcff2ea045f41b924a890f66e3e92f192318531d562"
+      }
+    }
+  ],
+  "sourceHashesAtRegressionFreeze": {
+    "balam/discounts.jsx": "42fd09e25ddaee186b7c976caf2d06c9e27361e6f37aee4843af8972cfd5774d",
+    "test-h186-model-universe.mjs": "11643d2a71eba04baccfcc91dc95cf2e480d87609763746697f3b2c6621ab1bc",
+    "test-h186-promotions.mjs": "befc7ae9457c226f09bb36a4e90f8b4fb8b89a0d428a994421b2cff9ef447785",
+    ".github/workflows/h164-online-authority.yml": "e3ecafd6c3e122bca6f058823d27ec8bd57c615b69a7baf34f7bfc216a6aa872",
+    "docs/fixes/evidence/h186/model-universe-baseline.json": "a98e71c55de26fa95f048c0122cd493d0b6cce790d5ae2822ce81d7e9d011038"
+  },
+  "limits": [
+    "Local VM executes the production promotion engine with synthetic references and instrumented defensive getters.",
+    "No network, business data mutation, browser journey or hardware certification is provided by this evidence.",
+    "The guard preserves model scope, select-all meaning, draft rollback and exact discount outcomes; it does not extend the LIVE deadline or weaken fixture isolation.",
+    "Subsequent artifact rebuild and full financial LIVE certification are reported separately."
+  ]
+}

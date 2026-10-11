@@ -1,0 +1,36 @@
+{
+  "schema": "h186-live-readiness-regression-v1",
+  "risk": "H-186",
+  "generatedAtUtc": "2026-10-11T01:55:28.399Z",
+  "status": "PASS_LOCAL_ONLY",
+  "passed": 16,
+  "failed": 0,
+  "network": false,
+  "commercialRemoteWrites": 0,
+  "reproduction": "Real STORE adoption state ready=false rejects the next DATA.addPromo before commercial transport; resuming admission permits a distinct next command once.",
+  "correction": "Harness waits before each mutating boundary. Application guards remain active. No retry or replay after readiness failure or action failure.",
+  "scenariosAdded": 6,
+  "previousChecksPreserved": 10,
+  "evidence": {
+    "journey": {
+      "file": "qa-h186-financial-journey.mjs",
+      "sha256": "a180906450a6df80663c41dd79071f1888764697189092650371c7bac76ee899",
+      "bytes": 40853
+    },
+    "test": {
+      "file": "test-h186-live-negatives.mjs",
+      "sha256": "576b661f7109a9c152436c69f44902955452966944fedb72cea649865db9af9d",
+      "bytes": 12958
+    },
+    "log": {
+      "file": ".evidence-h186-deploy/live-readiness-green-final.log",
+      "sha256": "4171fef460a376bb7e2092639e81e98cb32929a757616d61fbcb2c35833c7e0a",
+      "bytes": 1326
+    }
+  },
+  "limits": {
+    "remoteTrigger": "Not established by the local readiness reproduction",
+    "financialRun": "NOT_CERTIFIED_BY_THIS_REPORT",
+    "applicationArtifactUnchanged": "6e649e380af0223ffc3122da2b08e7e1d40c5339630783deaa8553d00d2afb54"
+  }
+}

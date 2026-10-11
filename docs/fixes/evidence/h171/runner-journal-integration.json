@@ -1,14 +1,35 @@
 {
-  "scope": "Actual runner helpers extracted through VM, real local journal, fake routes; no live entrypoint",
-  "runnerSha256": "3dd53f0ca1f7063d734bb84196bf3afa08bc4267b3aad83e9d4a75f7d5f102d4",
-  "journalSha256": "a4d1a8c47839fc72dd5567d92879954a9bc655c0845e4e3068e52a03cbc003e0",
-  "testSha256": "061053ff00fc96d3682bea71ab890992edd0cd57c4eb29aef7c8ff30c0d64fbe",
+  "startedAt": "2026-10-11T03:59:25.827Z",
+  "completedAt": "2026-10-11T03:59:34.526Z",
+  "scope": "Actual runner helpers extracted through VM, real local journal, fake routes and real Chromium with localhost HTTP; no live entrypoint",
+  "runnerSha256": "31bad0ec4fa301886bffe93c189de5536b4d5d0a1badbee622cdbd5cb45069a1",
+  "journalSha256": "045af1faba9976235cd48f8c467170d4434bea73bc14cb725a1b5739904fcffd",
+  "testSha256": "1a22a587dfae5ad30eaae2b903f9cbc9455c48b5d96875dce86d9981239ca431",
   "certified": false,
   "realSupabaseWrites": 0,
-  "tests": 13,
-  "passed": 13,
+  "tests": 19,
+  "passed": 19,
   "failed": 0,
+  "browserEvidence": [
+    {
+      "browserVersion": "154.0.8037.98",
+      "transport": "HTTP localhost only",
+      "received": 1,
+      "durableIntents": 1,
+      "unjournaledReceived": 0,
+      "quiescence": {
+        "contexts": 1,
+        "offlineConfirmed": 1,
+        "closedConfirmed": 1
+      },
+      "routeErrors": 0
+    }
+  ],
   "results": [
+    {
+      "name": "Actual runner forwards the H186 quote RPC without preparing a mutation or altering fixtures",
+      "pass": true
+    },
     {
       "name": "Actual runner guard persists before the legacy fixture index and terminal continue",
       "pass": true
@@ -59,6 +80,26 @@
     },
     {
       "name": "A failed scenario still cleans its proven fixtures but cannot certify the matrix",
+      "pass": true
+    },
+    {
+      "name": "All contexts acknowledge offline and close before browser shutdown and cleanup",
+      "pass": true
+    },
+    {
+      "name": "Finalization waits for the slowest offline acknowledgement before closing any context",
+      "pass": true
+    },
+    {
+      "name": "A offline failure closes remaining contexts but blocks cleanup and certification",
+      "pass": true
+    },
+    {
+      "name": "A context-close failure closes remaining contexts but blocks cleanup and certification",
+      "pass": true
+    },
+    {
+      "name": "Real Chromium cannot dispatch an unjournaled follow-up POST while actual runner finalization closes it",
       "pass": true
     }
   ]

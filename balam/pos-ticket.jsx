@@ -116,9 +116,13 @@
   }
 
   function TicketPanel({ ticket, client, subtotal, subtotalOrig, discount, itemCount, grandTotal, quote, additionalDiscounts, onPickClient, onResetClient, onQty, onRemove, onCobrar, onAdditionalDiscount, onRemoveAdditionalDiscount, onClear, bottom, flashKey, surface }) {
-    const desc = discount || 0;
-    const totalPagar = grandTotal != null ? grandTotal : subtotal;
-    const dg = desglose(totalPagar, desc, 16);
+    const financial = quote && Number(quote.financialVersion) >= 2;
+    const desc = financial ? quote.configuredDiscountTotal : discount || 0;
+    const totalPagar = financial ? quote.finalTotal : grandTotal != null ? grandTotal : subtotal;
+    // H-186: la cotización ya contiene el desglose fiscal definitivo. La UI
+    // sólo lo proyecta; H-32 permanece para documentos sin el contrato nuevo.
+    const dg = financial ? { precioOriginal: quote.originalTotal, importe: quote.subtotal, iva: quote.iva, ivaPct: quote.ivaPct }
+      : desglose(totalPagar, desc, 16);
     // La evidencia viaja en la línea (l.res), resuelta una sola vez por el POS.
     const pctEvidencia = desc > 0
       ? pctDeEvidencia(ticket.map(l => {
@@ -205,7 +209,7 @@
       h('div', { key: 'foot', className: 'px-6 py-4 bg-primary text-on-primary' }, [
         h('div', { key: 'rows', className: 'space-y-1.5 mb-2' }, [
           // Orden fijado por Finanzas: precio original → importe → IVA → descuento → total.
-          desc > 0 ? h('div', { key: 'po', className: 'flex justify-between items-center text-caption opacity-70' }, [
+          (desc > 0 || (financial && quote.additionalDiscountTotal > 0)) ? h('div', { key: 'po', className: 'flex justify-between items-center text-caption opacity-70' }, [
             h('span', { key: 'l' }, `Precio original (${itemCount} artículo${itemCount === 1 ? '' : 's'})`), h('span', { key: 'v', className: 'font-medium' }, fmt(dg.precioOriginal)),
           ]) : null,
           h('div', { key: 'im', className: 'flex justify-between items-center text-caption opacity-70' }, [
@@ -374,7 +378,12 @@
 
   function CheckoutModal({ total, itemCount, client, quote, onClose, onConfirm }) {
     const METODOS = metodos();
-    const [metodo, setMetodo] = useState(() => (metodos()[0] || { id: 'Efectivo' }).id);
+    const sinCobro = Number(total) === 0;
+    const financial = quote && Number(quote.financialVersion) >= 2;
+    const [metodo, setMetodo] = useState(() => {
+      const ordinary = METODOS.filter(method => !['Mixto', 'Apartado', 'Cortesía'].includes(method.id));
+      return ((sinCobro ? ordinary.find(method => method.id === 'Efectivo') || ordinary[0] : METODOS[0]) || { id: '' }).id;
+    });
     const [recibido, setRecibido] = useState('');
     const [anticipo, setAnticipo] = useState('');
     const [anticipoMetodo, setAnticipoMetodo] = useState('Efectivo');
@@ -390,7 +399,7 @@
     const lbl = 'text-overline uppercase text-on-surface-variant mb-2';
 
     const metodoValido = METODOS.some(m => m.id === metodo);
-    const efectivoValido = metodo !== 'Efectivo' || (recibido.trim() !== '' && Number.isFinite(recv) && recv >= total);
+    const efectivoValido = sinCobro || metodo !== 'Efectivo' || (recibido.trim() !== '' && Number.isFinite(recv) && recv >= total);
     const mixtoValido = metodo !== 'Mixto' || componentsValid(mixParts, total);
     const apartadoValido = metodo !== 'Apartado' || (anticipo.trim() !== '' && Number.isFinite(ant) && ant >= 0 && ant <= total && !client.generic
       && (anticipoMetodo !== 'Mixto' || ant === 0 || componentsValid(advanceParts, ant)));
@@ -400,14 +409,14 @@
         toast('Revisa los importes: el pago debe ser numérico, completo y no exceder el total.', 'var(--danger)');
         return;
       }
-      const detail = metodo === 'Mixto' ? componentPayload(mixParts)
-        : metodo === 'Apartado' ? (anticipoMetodo === 'Mixto' ? componentPayload(advanceParts)
+      const detail = sinCobro ? [] : metodo === 'Mixto' ? componentPayload(mixParts)
+        : metodo === 'Apartado' ? (ant === 0 ? [] : anticipoMetodo === 'Mixto' ? componentPayload(advanceParts)
           : ant > 0 ? componentPayload([{ methodCode: anticipoMetodo, amount: ant }]) : [])
         : esCortesia ? [] : componentPayload([{ methodCode: metodo, amount: total }]);
       const cash = detail.filter(part => part.methodCode === 'Efectivo').reduce((sum, part) => sum + part.amount, 0);
       onConfirm({
         metodo,
-        anticipo: metodo === 'Apartado' ? ant : total,
+        anticipo: esCortesia ? 0 : metodo === 'Apartado' ? ant : total,
         pagoEfectivo: money2(cash),
         pagoOtro: esCortesia ? 0 : money2((metodo === 'Apartado' ? ant : total) - cash),
         metodoPago: metodo === 'Apartado' ? anticipoMetodo : metodo,
@@ -424,7 +433,7 @@
         className: 'px-6 h-11 flex items-center gap-2 bg-primary text-on-primary text-caption font-bold uppercase tracking-widest rounded-lg hover:bg-primary-container transition disabled:opacity-40 disabled:cursor-not-allowed',
         onClick: confirmar,
         disabled: !metodoValido || !efectivoValido || !mixtoValido || !apartadoValido || !cortesiaValida,
-      }, [h(MS, { key: 'i', name: 'check', size: 18 }), metodo === 'Apartado' ? 'Registrar apartado' : esCortesia ? 'Registrar cortesía' : 'Confirmar cobro']),
+      }, [h(MS, { key: 'i', name: 'check', size: 18 }), sinCobro ? 'Confirmar venta' : metodo === 'Apartado' ? 'Registrar apartado' : esCortesia ? 'Registrar cortesía' : 'Confirmar cobro']),
     ];
 
     return h(Modal, { title: 'Cobrar venta', onClose, footer }, [
@@ -435,13 +444,21 @@
         ]),
         h('div', { key: 'v', className: 'font-headline text-h1 leading-none' }, fmt(esCortesia ? 0 : total)),
       ]),
+      financial && h('div', { key: 'financial', className: 'mb-5 space-y-1.5 text-caption text-on-surface-variant' }, [
+        h('div', { key: 'original', className: 'flex justify-between gap-3' }, [h('span', { key: 'l' }, 'Precio original'), h('span', { key: 'v' }, fmt(quote.originalTotal))]),
+        quote.configuredDiscountTotal > 0 && h('div', { key: 'configured', className: 'flex justify-between gap-3' }, [h('span', { key: 'l' }, 'Descuento de promociones'), h('span', { key: 'v' }, '− ' + fmt(quote.configuredDiscountTotal))]),
+        quote.additionalDiscountTotal > 0 && h('div', { key: 'additional', className: 'flex justify-between gap-3' }, [h('span', { key: 'l' }, 'Descuento adicional'), h('span', { key: 'v' }, '− ' + fmt(quote.additionalDiscountTotal))]),
+        h('div', { key: 'subtotal', className: 'flex justify-between gap-3' }, [h('span', { key: 'l' }, 'Importe'), h('span', { key: 'v' }, fmt(esCortesia ? 0 : quote.subtotal))]),
+        h('div', { key: 'iva', className: 'flex justify-between gap-3' }, [h('span', { key: 'l' }, `IVA (${quote.ivaPct}%)`), h('span', { key: 'v' }, fmt(esCortesia ? 0 : quote.iva))]),
+      ]),
       quote && quote.additionalDiscountTotal > 0 && h('div', { key: 'discounts', className: 'mb-5 p-3 rounded-lg bg-gold-soft text-gold-text text-caption' },
         (quote.applications || []).map(a => h('div', { key: a.id, className: 'flex justify-between gap-3' }, [
           h('span', { key: 'l' }, `${a.benefitName || 'Descuento adicional'} · ${a.origin || ''}`),
           h('span', { key: 'v', className: 'font-bold' }, '− ' + fmt(a.discountAmount)),
         ]))),
-      h('div', { key: 'ml', className: lbl }, 'Método de pago'),
-      h('div', { key: 'm', className: 'grid grid-cols-3 gap-2 mb-4' },
+      sinCobro && h('div', { key: 'zero', role: 'status', className: 'p-3 bg-surface-container-low text-on-surface-variant text-caption rounded-lg' }, 'Descuento total aplicado. No se recibe ningún pago.'),
+      !sinCobro && h('div', { key: 'ml', className: lbl }, 'Método de pago'),
+      !sinCobro && h('div', { key: 'm', className: 'grid grid-cols-3 gap-2 mb-4' },
         METODOS.map(m => h('button', {
           key: m.id,
           'data-testid': `checkout-method-${m.id}`,
@@ -452,7 +469,7 @@
           h(MS, { key: 'i', name: m.icon, size: 22, fill: metodo === m.id }),
           h('span', { key: 't', className: 'text-[9px] leading-tight tracking-tight uppercase w-full text-center whitespace-normal', title: m.id }, m.id),
         ]))),
-      metodo === 'Efectivo' && h('div', { key: 'efe' }, [
+      !sinCobro && metodo === 'Efectivo' && h('div', { key: 'efe' }, [
         h('div', { key: 'l', className: lbl }, 'Efectivo recibido'),
         h('input', { key: 'in', 'data-testid': 'checkout-recibido', className: inputCls, type: 'number', placeholder: '0.00', value: recibido, onChange: e => setRecibido(e.target.value), autoFocus: true }),
         h('div', { key: 'q', className: 'flex gap-2 mt-2' },
@@ -485,7 +502,7 @@
           h(MS, { key: 'i', name: 'alert', size: 16 }), 'Un apartado requiere cliente registrado. Asígnalo antes de confirmar.',
         ]),
       ]),
-      (!['Efectivo', 'Mixto', 'Apartado', 'Cortesía'].includes(metodo)) && h('div', { key: 'simple', className: 'flex items-start gap-2 p-3 bg-surface-container-low text-on-surface-variant text-caption rounded-lg' }, [
+      (!sinCobro && !['Efectivo', 'Mixto', 'Apartado', 'Cortesía'].includes(metodo)) && h('div', { key: 'simple', className: 'flex items-start gap-2 p-3 bg-surface-container-low text-on-surface-variant text-caption rounded-lg' }, [
         h(MS, { key: 'i', name: (METODOS.find(m => m.id === metodo) || {}).icon || 'cash', size: 16 }),
         'Confirma el cobro por ' + metodo + ' antes de cerrar.',
       ]),
@@ -551,19 +568,22 @@
     const hasSnapshot = sale.subtotal != null || sale.iva != null;
     const ivaPct = sale.ivaPct != null ? Number(sale.ivaPct) : 16;
     const incl = sale.ivaIncluded != null ? !!sale.ivaIncluded : true;
-    // H-32: el resumen del carrito y el ticket usan EXACTAMENTE el mismo desglose, calculado
-    // sobre el PRECIO ORIGINAL. Se lee sólo lo persistido: nunca se consulta el motor ni las
-    // promociones vigentes para reconstruir una venta antigua.
+    // H-186 proyecta el snapshot fiscal confirmado. Los documentos anteriores
+    // conservan la presentación H-32 sobre el precio original; ninguna rama
+    // consulta promociones vigentes para reconstruir una venta antigua.
     const granTotal = Number(sale.total) || 0;
     const desc = Number(sale.descuento) || 0;
     const descAdicional = Number(sale.descuentoAdicional) || 0;
     const appsAdicionales = Array.isArray(sale.descuentosAdicionales) ? sale.descuentosAdicionales : [];
-    // Cortesía: se conserva intacto el comportamiento previo (el desglose describe el valor
-    // regalado y el total cobrado es cero). Queda expresamente fuera del alcance de H-32.
+    // Una cortesía histórica conserva su desglose anterior. La nueva congela
+    // base e IVA cero y el valor regalado separado, como el documento servidor.
     const cortesia = Number(sale.valorRegalado) > 0;
-    const dg = desglose(granTotal, desc + descAdicional, ivaPct);
-    const subtotal = cortesia ? (hasSnapshot ? Number(sale.subtotal) || 0 : granTotal / 1.16) : dg.importe;
-    const iva = cortesia ? (hasSnapshot ? Number(sale.iva) || 0 : granTotal - subtotal) : dg.iva;
+    const financial = Number(sale.financialVersion) >= 2;
+    const dg = financial ? { precioOriginal: sale.originalTotal, importe: sale.subtotal, iva: sale.iva, ivaPct }
+      : desglose(granTotal, desc + descAdicional, ivaPct);
+    const subtotal = financial ? sale.subtotal : cortesia ? (hasSnapshot ? Number(sale.subtotal) || 0 : granTotal / 1.16) : dg.importe;
+    const iva = financial ? sale.iva : cortesia ? (hasSnapshot ? Number(sale.iva) || 0 : granTotal - subtotal) : dg.iva;
+    const sinCobro = financial && granTotal === 0 && !cortesia;
     const pctEvidencia = desc > 0
       ? pctDeEvidencia((sale.lineas || []).map(l => ({ orig: Number(l.precioOrig), base: Number(l.precioBase), promos: l.promos })))
       : null;
@@ -717,7 +737,7 @@
         h('div', { key: 'tt', className: 'tk-block w-full border-t-2 border-primary pt-4 mt-8' }, [
           h('div', { key: 'r', className: 'space-y-1.5 text-on-surface-variant' }, [
             // Orden fijado por Finanzas: precio original → importe → IVA → descuento → total.
-            desc > 0 ? h('div', { key: 'po', className: 'flex justify-between', style: { fontSize: '13px' } }, [h('span', { key: 'l' }, 'Precio original'), h('span', { key: 'v' }, fmt(dg.precioOriginal))]) : null,
+            (desc > 0 || (financial && (descAdicional > 0 || cortesia))) ? h('div', { key: 'po', className: 'flex justify-between', style: { fontSize: '13px' } }, [h('span', { key: 'l' }, 'Precio original'), h('span', { key: 'v' }, fmt(dg.precioOriginal))]) : null,
             h('div', { key: 'st', className: 'flex justify-between', style: { fontSize: '13px' } }, [h('span', { key: 'l' }, 'Importe'), h('span', { key: 'v' }, fmt(subtotal))]),
             h('div', { key: 'iva', className: 'flex justify-between', style: { fontSize: '13px' } }, [h('span', { key: 'l' }, `IVA (${dg.ivaPct}%)`), h('span', { key: 'v' }, fmt(iva))]),
             desc > 0 ? h('div', { key: 'ds', className: 'flex justify-between gap-2', style: { fontSize: '13px', color: '#9a7b16' } }, [h('span', { key: 'l', className: 'min-w-0' }, etiquetaDescuento(pctEvidencia)), h('span', { key: 'v', className: 'font-semibold shrink-0' }, '− ' + fmt(desc))]) : null,
@@ -760,7 +780,7 @@
           h(MS, { key: 'i', name: ((C.find('payment_method', sale.metodo) || {}).meta || {}).icon || 'cash', size: 22, className: 'text-gold-text' }),
           h('div', { key: 't' }, [
             h('p', { key: 'a', className: 'uppercase text-on-surface-variant', style: { fontSize: '10px', letterSpacing: '0.08em' } }, 'Método de pago'),
-            h('p', { key: 'b', className: 'font-medium text-primary', style: { fontSize: '13px' } }, sale.metodo),
+            h('p', { key: 'b', className: 'font-medium text-primary', style: { fontSize: '13px' } }, sinCobro ? 'Sin cobro' : sale.metodo),
           ]),
         ]),
         // Historial de pagos al pie: cada movimiento con su fecha, concepto e importe.

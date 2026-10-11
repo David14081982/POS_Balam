@@ -1,5 +1,5 @@
 {
-  "at": "2026-09-13T05:21:29.416Z",
+  "at": "2026-10-10T23:41:22.499Z",
   "scope": "LOCAL_PGLITE_NO_NETWORK_NO_REMOTE_MUTATIONS",
   "checksPassed": 12,
   "expectedChecks": 12,
@@ -72,9 +72,9 @@
       "write_token"
     ]
   },
-  "moduleSha256": "5cdd3082adba4455768ea3107eb281ba1a2676a6254afa74c95add52da27d0a8",
+  "moduleSha256": "1012fe7817aa7eae00c348d0b5f156c9dac4ae6547eecbd2d25c50e7201e31e8",
   "testSha256": "7916c2b0651ea84d0f2323ba80c9fbc6fa5774ded805b80a4a14d679b4045144",
-  "sqlSha256": "8a077a61e7d42579f1fb01ae9bcd1578506ec14c8f5dabb5098c106418fc8c67",
+  "sqlSha256": "08b729c0127e4c6c04d54033afcff38e7b5ff0b11de39c27019737e124720e1d",
   "limits": [
     "Transport binding must be independently verified by the remote executor.",
     "NonNULL omitted values cannot be restored from this snapshot.",

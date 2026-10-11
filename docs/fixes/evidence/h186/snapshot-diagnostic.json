@@ -1,0 +1,89 @@
+{
+  "schema": "h186-snapshot-diagnostic-v1",
+  "reviewedAt": "2026-10-11T03:00:51.633Z",
+  "status": "DIAGNOSTIC_COMPLETED_NO_CAUSE_PROVEN",
+  "rootCauseProven": false,
+  "financialCertification": "NOT_ASSERTED",
+  "lookupProbe": {
+    "status": "completed",
+    "databaseRole": "authenticated",
+    "rows": 553,
+    "serializedBytes": 117448,
+    "elapsedMs": 551.13,
+    "temporarySellerDmlRows": 1,
+    "committedSellerRows": 0,
+    "authAccountsCreated": 0,
+    "devicesCreated": 0,
+    "salesCreated": 0,
+    "rollbackVerifiedByIndependentPostcheck": true,
+    "statementBudgetMs": 1000,
+    "lockBudgetMs": 500,
+    "transactionBudgetMs": 3000,
+    "activeAdmin": true,
+    "settingsManageCapability": false,
+    "fullLiveAuthorizationParity": false,
+    "limitation": "The QA profile had no Auth account or role assignment. This measurement does not exclude slower behavior with the full LIVE capability context."
+  },
+  "integrity": {
+    "fingerprintsMatched": 3,
+    "qaProfileAbsent": true,
+    "qaAuthAbsent": true,
+    "qaDeviceAbsent": true,
+    "fingerprints": {
+      "sellers": {
+        "md5": "74a1d27b2fc5b42a3bf5a1e9eeb23d46",
+        "rows": 6
+      },
+      "syncDomains": {
+        "md5": "f77bf0a6dd832ed509b8def6c70cd893",
+        "rows": 15
+      },
+      "revision": {
+        "md5": "a81d9d396efc89b8c7564de03f746854",
+        "rows": 1
+      }
+    }
+  },
+  "snapshotStatistics": {
+    "readOnly": true,
+    "databaseRole": "authenticated",
+    "category": "online_snapshot_if_changed",
+    "calls": 334,
+    "rows": 334,
+    "minExecMs": 2.211148,
+    "maxExecMs": 7036.024206,
+    "meanExecMs": 849.720695787425,
+    "statementBudgetMs": 5000,
+    "transactionBudgetMs": 3000,
+    "jit": "off",
+    "track": "top",
+    "planningTracked": false,
+    "historical": true,
+    "cancelledStatementsMayBeMissing": true,
+    "nestedStatementsMayBeAbsent": true,
+    "postgresQueriesAttributedToRuntime": false,
+    "fullVsUnchangedSnapshotsSeparated": false,
+    "selectPolicyCollections": 17,
+    "selectPoliciesObserved": 32
+  },
+  "privacy": {
+    "sqlBodiesIncluded": false,
+    "accountIdentitiesIncluded": false,
+    "commercialRowBodiesIncluded": false
+  },
+  "evidenceSha256": {
+    "lookup-rls-probe-pre.json": "39489f1b8383499a735ecd477e95c87b0ae53f32e68a25a49f43dca2a0c549f0",
+    "lookup-rls-probe.json": "15cbeed71c750c651938808eb56b28800038fc729f00b7204adf289ff156f49a",
+    "lookup-rls-probe-post.json": "9a009a0cb22b774e8a93dabfbb1fdae96d3800cbe450b03d407bd91a2de17ff6",
+    "snapshot-pgstat-readonly.json": "c44737461078bae4ccb0e743421816a24b9fee4db2cb571a46e62ce18fe10c25"
+  },
+  "sourceSha256": {
+    "lookup-rls-probe-pre.sql": "d1601e1a088a918fda0d3dcecd5001da63bca8f04901c51d2a6d92e236d0cf0f",
+    "lookup-rls-probe.sql": "f607a5c2ed32a6b62352c2988f56f1644d52fe773f005d1d3e9730c004ac5816",
+    "lookup-rls-probe-post.sql": "d1601e1a088a918fda0d3dcecd5001da63bca8f04901c51d2a6d92e236d0cf0f",
+    "snapshot-pgstat-readonly.sql": "433f5463745f66a47660978ef6ac45b80917cd4f0acb5aae4040f6cba4dbc083",
+    "test-lookup-rls-probe.mjs": "7ad5df24e17d089dcd14df7d5dc1fa173e0240d19203a9f1d03c2b144393a961"
+  },
+  "builderSha256": "916ab52f75e2ce098b1cf5a5fab3794c1e0ad49adf563550e459514bcdd2e451",
+  "networkRequestsByBuilder": 0
+}

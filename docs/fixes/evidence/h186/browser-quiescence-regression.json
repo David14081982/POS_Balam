@@ -1,0 +1,91 @@
+{
+  "schema": "h186-browser-quiescence-regression-v1",
+  "generatedAt": "2026-10-11T02:05:18.391Z",
+  "status": "PASS_LOCAL_SHUTDOWN_BOUNDARY",
+  "remoteCalls": 0,
+  "realBusinessWrites": 0,
+  "scope": "Actual Chromium and localhost HTTP with durable journal. This is not financial LIVE certification.",
+  "unchangedApplicationArtifactSha256": "6e649e380af0223ffc3122da2b08e7e1d40c5339630783deaa8553d00d2afb54",
+  "finding": "Browser shutdown can dispatch a follow-up POST without entering the installed route guard. Offline acknowledgement alone did not prevent it.",
+  "correction": "Await offline for every context, then await every context close while routes remain installed, before closing the browser. Bound each context operation at 10000 ms. Any failed acknowledgement blocks cleanup and certification.",
+  "probes": [
+    {
+      "mode": "release-and-close",
+      "startedAt": "2026-10-11T01:54:07.630Z",
+      "completedAt": "2026-10-11T01:54:35.629Z",
+      "browserVersion": "154.0.8037.98",
+      "receivedPostCount": 2,
+      "durableIntentCount": 1,
+      "unjournaledReceivedCount": 1,
+      "journalSha256": "9481507658e62055aa27a5087066937c27c732d5526da314b6da94bc3a556651",
+      "privateEvidenceRelativePath": ".evidence-h186-deploy/browser-close-journal-20261011015407625/result.json",
+      "privateEvidenceSha256": "a5bfac5c3cb359dffbb6440fc14fb78dee82609135110092705797da2d277814"
+    },
+    {
+      "mode": "offline-before-release-and-close",
+      "startedAt": "2026-10-11T01:56:03.251Z",
+      "completedAt": "2026-10-11T01:56:30.825Z",
+      "browserVersion": "154.0.8037.98",
+      "receivedPostCount": 2,
+      "durableIntentCount": 1,
+      "unjournaledReceivedCount": 1,
+      "journalSha256": "9481507658e62055aa27a5087066937c27c732d5526da314b6da94bc3a556651",
+      "privateEvidenceRelativePath": ".evidence-h186-deploy/browser-close-journal-20261011015602782/result.json",
+      "privateEvidenceSha256": "a3dc84de764e81cc82e84ab19848cb14bd4eb4b4b2f2d66b368ad4f541704ae2"
+    },
+    {
+      "mode": "offline-close-context-before-browser",
+      "startedAt": "2026-10-11T01:57:46.063Z",
+      "completedAt": "2026-10-11T01:58:41.511Z",
+      "browserVersion": "154.0.8037.98",
+      "receivedPostCount": 1,
+      "durableIntentCount": 1,
+      "unjournaledReceivedCount": 0,
+      "journalSha256": "9481507658e62055aa27a5087066937c27c732d5526da314b6da94bc3a556651",
+      "privateEvidenceRelativePath": ".evidence-h186-deploy/browser-close-journal-20261011015746051/result.json",
+      "privateEvidenceSha256": "1e856967ea0308d37444414031debc9e16c55ed542f751868b2e94dbda772eb9"
+    }
+  ],
+  "regression": {
+    "before": {
+      "passed": 14,
+      "failed": 4,
+      "runnerSha256": "c0caccd103a3d01b336eff667212025f25a6b16bcb4b6f0baa684578bff19a3f",
+      "executedAt": null,
+      "timestampNote": "The RED report did not record an execution timestamp.",
+      "reportSha256": "5dab3e2ec29fb37cbd1f8fac7e914711c8ea334dece252e39c03d6b8de9dc3ac",
+      "logSha256": "5dab3e2ec29fb37cbd1f8fac7e914711c8ea334dece252e39c03d6b8de9dc3ac"
+    },
+    "after": {
+      "startedAt": "2026-10-11T02:03:30.290Z",
+      "completedAt": "2026-10-11T02:04:25.407Z",
+      "passed": 19,
+      "failed": 0,
+      "runnerSha256": "31bad0ec4fa301886bffe93c189de5536b4d5d0a1badbee622cdbd5cb45069a1",
+      "testSha256": "1a22a587dfae5ad30eaae2b903f9cbc9455c48b5d96875dce86d9981239ca431",
+      "journalSha256": "045af1faba9976235cd48f8c467170d4434bea73bc14cb725a1b5739904fcffd",
+      "reportSha256": "6217807e043669db8eb70238d71ee1252649bc530c246f0fd170887afa214dbf",
+      "logSha256": "6217807e043669db8eb70238d71ee1252649bc530c246f0fd170887afa214dbf",
+      "realBrowser": [
+        {
+          "browserVersion": "154.0.8037.98",
+          "transport": "HTTP localhost only",
+          "received": 1,
+          "durableIntents": 1,
+          "unjournaledReceived": 0,
+          "quiescence": {
+            "contexts": 1,
+            "offlineConfirmed": 1,
+            "closedConfirmed": 1
+          },
+          "routeErrors": 0
+        }
+      ]
+    }
+  },
+  "limitations": [
+    "The exact remote adoption POST from the failed run has no durable intent; this local reproduction does not invent an acknowledgement for it.",
+    "The failed LIVE run remains uncertified and requires separately reviewed exact cleanup.",
+    "Physical printer hardware: NOT_TESTED."
+  ]
+}

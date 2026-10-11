@@ -7,6 +7,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { journalHash } from './h171-live-journal.mjs';
 import { SNAPSHOT_PROJECT,SNAPSHOT_ACTOR,recordedSnapshotCatalog } from './h171-live-snapshot.mjs';
 import { AUTH_INCOMING_FKS } from './h171-auth-retirement.mjs';
+import { LIVE_AUTH_INCOMING_FKS, LIVE_AUTH_QA_EMPTY_RELATIONS } from './h171-live-auth-dependencies.mjs';
 import { installAuthPreflightTestSchema } from './h171-auth-preflight-test-schema.mjs';
 import { buildAuthCleanupPreflightSql,validateAuthCleanupPreflight } from './h171-live-cleanup-auth-preflight.mjs';
 
@@ -57,15 +58,53 @@ try {
  await insert('online_runtime',{enabled:'true'});await insert('system_manifest',{system_mode:"'preproduction'"});
  await insert('online_account_requests',{actor_id:q(SNAPSHOT_ACTOR),request_id:q(protectedId),state:"'completed'"});
  let initial;
- await check('READ ONLY preflight emits all64 full fingerprints,18FKx2,6Storagecolsx2 and the actual seven-trigger revision contract',async()=>{
+ await check('READ ONLY preflight emits all64 full fingerprints,20FKx2,6Storagecolsx2 and the actual seven-trigger revision contract',async()=>{
   initial=await readPreflight();const checked=validate(initial);assert.equal(checked.ready,true,checked.blockers.join(','));
-  assert.equal(initial.pos_fingerprints.length,64);assert.equal(initial.fk_catalog.length,18);assert.equal(initial.fk_counts.length,36);
+  assert.equal(initial.pos_fingerprints.length,64);assert.equal(initial.fk_catalog.length,20);assert.equal(initial.fk_counts.length,40);
   assert.equal(initial.storage_owner_catalog.length,6);assert.equal(initial.storage_owner_counts.length,12);
   assert.equal(checked.preflight.snapshot_revision.delta_per_delete,7);assert.equal(checked.preflight.snapshot_revision.trigger_sources.length,7);
   assert.equal(checked.preflight.snapshot_revision.trigger_sources.filter(s=>s.effect==='n').length,5);
   assert.equal(checked.preflight.snapshot_revision.trigger_sources.filter(s=>s.effect==='c').length,2);
   assert.deepEqual(initial.non_target_auth_ids,[SNAPSHOT_ACTOR]);assert.equal(initial.exact_rows_checked,1);assert.equal(initial.remaining_exact_rows,0);
   assert.ok(!JSON.stringify(initial).includes('CREDENTIAL_NEVER_EXPORT'));assert.ok(!JSON.stringify(initial).includes('real@example.test'));
+ });
+ await check('The historical18-FK contract is unchanged; LIVE adds only the two reviewed Auth dependencies',async()=>{
+  assert.equal(AUTH_INCOMING_FKS.length,18);assert.deepEqual(LIVE_AUTH_INCOMING_FKS.slice(0,18),AUTH_INCOMING_FKS);
+  assert.deepEqual(LIVE_AUTH_INCOMING_FKS.slice(18),[
+   {relation:'auth.mfa_recovery_code_sets',column:'user_id',effect:'c'},
+   {relation:'auth.scim_users',column:'user_id',effect:'n'},
+  ]);
+  assert.deepEqual(LIVE_AUTH_QA_EMPTY_RELATIONS,['auth.mfa_recovery_code_sets','auth.scim_users']);
+ });
+ await check('Both newly reviewed Auth families must have actual zero rows; no unexpected cascade or SET NULL is permitted',async()=>{
+  for(const relation of LIVE_AUTH_QA_EMPTY_RELATIONS){
+   await pg.exec(`INSERT INTO ${relation} VALUES('${requestId}','${actorId}');`);
+   const response=await readPreflight();
+   assert.equal(response.fk_counts.find(c=>c.id===actorId&&c.relation===relation).rows,1);
+   assert.ok(validate(response).blockers.includes('UNEXPECTED_QA_AUTH_DEPENDENCIES'));
+   assert.equal((await pg.query(`SELECT count(*)::int n FROM ${relation} WHERE user_id='${actorId}'`)).rows[0].n,1);
+   await pg.exec(`DELETE FROM ${relation} WHERE id='${requestId}';`);
+  }
+  assert.equal(validate(await readPreflight()).ready,true);
+ });
+ await check('New family counts cannot be missing or duplicated and the exact20-FK catalog rejects altered effects, columns and validation',async()=>{
+  for(const relation of LIVE_AUTH_QA_EMPTY_RELATIONS){
+   const missing=structuredClone(initial);missing.fk_counts=missing.fk_counts.filter(c=>!(c.id===actorId&&c.relation===relation));
+   assert.throws(()=>validate(missing),/FK_COUNT_COVERAGE/);
+   const duplicate=structuredClone(initial),index=duplicate.fk_counts.findIndex(c=>c.id===actorId&&c.relation===relation);
+   duplicate.fk_counts[index]=structuredClone(duplicate.fk_counts.find(c=>c.id===actorId&&c.relation==='auth.identities'));
+   assert.throws(()=>validate(duplicate),/FK_COUNT_COVERAGE/);
+   for(const change of [f=>f.effect=f.effect==='c'?'n':'c',f=>f.columns=['another_id'],f=>f.referenced_columns=['another_id'],f=>f.validated=false]){
+    const changed=structuredClone(initial);change(changed.fk_catalog.find(f=>f.relation===relation));
+    assert.ok(validate(changed).blockers.includes('AUTH_FK_CATALOG_DRIFT'));
+   }
+  }
+ });
+ await check('A real unreviewed21st Auth FK still blocks the current SQL preflight',async()=>{
+  await pg.exec('CREATE TABLE auth.unreviewed_family(id uuid PRIMARY KEY,user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE);');
+  const response=await readPreflight();assert.equal(response.fk_catalog.length,21);
+  assert.ok(validate(response).blockers.includes('AUTH_FK_CATALOG_DRIFT'));
+  await pg.exec('DROP TABLE auth.unreviewed_family;');
  });
  await check('SQL remains READ ONLY even if a caller appends DML inside its transaction',async()=>{
   const bad=buildAuthCleanupPreflightSql(options).replace(/COMMIT;\s*$/,`DELETE FROM auth.users WHERE id='${actorId}';COMMIT;`);
@@ -133,7 +172,7 @@ try {
   const single=structuredClone(plan);single.authTargets=single.authTargets.filter(t=>t.id===actorId);
   const config={...options,plan:single},response=await readPreflight(config);
   const checked=validateAuthCleanupPreflight({...config,input:response});assert.equal(checked.ready,true,checked.blockers.join(','));
-  assert.equal(response.targets.length,1);assert.equal(response.fk_counts.length,18);assert.equal(response.storage_owner_counts.length,6);
+  assert.equal(response.targets.length,1);assert.equal(response.fk_counts.length,20);assert.equal(response.storage_owner_counts.length,6);
  });
 } finally {await pg.close();}
 const hashFile=async p=>createHash('sha256').update(await fs.readFile(p)).digest('hex');

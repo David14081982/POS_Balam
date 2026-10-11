@@ -1,0 +1,57 @@
+{
+  "schema": "h186-snapshot-timeout-failed-run-v1",
+  "status": "FAILED_RUN_EXACT_CLEANUP_VERIFIED",
+  "failedRunRemainsFailed": true,
+  "financialCertified": false,
+  "deliveryCertified": false,
+  "artifactSha256": "6e649e380af0223ffc3122da2b08e7e1d40c5339630783deaa8553d00d2afb54",
+  "startedAt": "2026-10-11T02:18:42.303Z",
+  "cleanupCompletedAt": "2026-10-11T02:32:27.556Z",
+  "scenarioFailure": "RECEIPT_SCREEN_WAIT_TIMEOUT",
+  "browserQuiescence": {
+    "contexts": 3,
+    "offlineConfirmed": 3,
+    "closedConfirmed": 3
+  },
+  "reconciliationConfirmed": true,
+  "readonlyCatalog": {
+    "referencesAudited": 967,
+    "referencesTotal": 967,
+    "promotionsAudited": 1,
+    "promotionsTotal": 1,
+    "scenariosAudited": 2901,
+    "scenariosTotal": 2901,
+    "mismatches": 0,
+    "sales": 0,
+    "stockMutations": 0
+  },
+  "fixtureCounts": {
+    "products": 9,
+    "promotions": 10,
+    "sales": 2,
+    "returns": 0,
+    "exchanges": 0
+  },
+  "cleanup": {
+    "verified": true,
+    "protectedTables": 64,
+    "nonQaPreserved": true,
+    "exactRowsDeleted": 58,
+    "ownActorsAbsent": 1,
+    "newPosResidue": 0,
+    "newAuthResidue": 0,
+    "preservedNewQaFolioCounters": 1,
+    "baselineFileSha256": "b7cebacbd129ec720acea213cdba4ed88eabad32e5f1ec97c5d4568cd4dde5f8",
+    "finalFileSha256": "33f4a12464f804fd66fd20aee15301eee214a3ac5dfbf9082700d7247ff59cdf"
+  },
+  "evidenceHashes": {
+    "matrix": "683307efd4e0d66bfa3c4496e3cdcd31fcdb657f0e9bf6b11f3d8a53b2c4a96c",
+    "fixtures": "26a758de1fd4bca0281a7589ba45f785e56c71c996290308a7cab81f3158e4e3",
+    "completion": "e939ec5b01901ed8048feb5333db7c4de08090be2c8db94a698ac385ea5bb451",
+    "sqlPostcheck": "ef44e421c30d308343ae2fe4abbcefe35b8374ca668bcf428cf7975f9d5949f6",
+    "authCleanup": "0e514eea5a4206911bbd2708e225fc992d5b60f396aeec59f895338c91b7fcc8",
+    "reconciliation": "00f946a43eeb1e588d09d502225a90cfddcfce1ef56f5167ac62fd6a08a78ccb",
+    "catalog": "05ba74da582de8d4eecde44a5807ffafb95dbdbcce2ae80ef066d1694e889069"
+  },
+  "hardware": "NOT_TESTED"
+}

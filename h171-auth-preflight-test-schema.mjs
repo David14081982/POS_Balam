@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { PGlite } from '@electric-sql/pglite';
-import { AUTH_INCOMING_FKS } from './h171-auth-retirement.mjs';
+import { LIVE_AUTH_INCOMING_FKS } from './h171-live-auth-dependencies.mjs';
 
 export async function installAuthPreflightTestSchema({pg,cleanupCatalog}) {
   assert.ok(pg instanceof PGlite,'Only an in-process PGlite fixture is supported');
@@ -21,7 +21,7 @@ export async function installAuthPreflightTestSchema({pg,cleanupCatalog}) {
  CREATE TABLE IF NOT EXISTS storage.buckets(id text PRIMARY KEY,owner uuid,owner_id text);
  CREATE TABLE IF NOT EXISTS storage.s3_multipart_uploads(id text PRIMARY KEY,owner_id text);
  CREATE TABLE IF NOT EXISTS storage.s3_multipart_uploads_parts(id text PRIMARY KEY,owner_id text);`);
-  for(const f of AUTH_INCOMING_FKS) {
+  for(const f of LIVE_AUTH_INCOMING_FKS) {
     const [schema,table]=f.relation.split('.');
     if(schema==='auth')await pg.exec(`CREATE TABLE IF NOT EXISTS auth.${table}(id uuid PRIMARY KEY,user_id uuid);`);
     const existing=await pg.query(`SELECT c.confdeltype::text effect FROM pg_constraint c
@@ -33,12 +33,12 @@ export async function installAuthPreflightTestSchema({pg,cleanupCatalog}) {
     else await pg.exec(`ALTER TABLE ${f.relation} ADD CONSTRAINT ${table}_${f.column}_fkey FOREIGN KEY(${f.column}) REFERENCES auth.users(id)${f.effect==='c'?' ON DELETE CASCADE':f.effect==='n'?' ON DELETE SET NULL':''};`);
   }
   await pg.exec(fn.definition+';');
-  const tables=new Set(AUTH_INCOMING_FKS.filter(f=>f.relation.startsWith('pos.')).map(f=>f.relation));
+  const tables=new Set(LIVE_AUTH_INCOMING_FKS.filter(f=>f.relation.startsWith('pos.')).map(f=>f.relation));
   const triggers=known.triggers.filter(t=>t.name==='h166_snapshot_changed'&&tables.has(t.table));
   assert.equal(triggers.length,5);
   for(const t of triggers) {
     const existing=await pg.query("SELECT 1 FROM pg_trigger WHERE tgrelid=$1::regclass AND tgname='h166_snapshot_changed'",[t.table]);
     if(!existing.rows.length)await pg.exec(t.definition+';');
   }
-  return {local:true,authIncomingFks:18,nativeAuthTables:8,storageOwnerColumns:6,h166SourceTables:5,expectedRevisionDelta:7,functionMd5:fn.definition_md5};
+  return {local:true,authIncomingFks:20,nativeAuthTables:10,storageOwnerColumns:6,h166SourceTables:5,expectedRevisionDelta:7,functionMd5:fn.definition_md5};
 }

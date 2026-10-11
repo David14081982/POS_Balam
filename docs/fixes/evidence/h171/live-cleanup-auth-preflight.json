@@ -1,11 +1,27 @@
 {
   "scope": "LOCAL_PGLITE_READ_ONLY_PREFLIGHT",
-  "tests": 10,
-  "passed": 10,
+  "tests": 14,
+  "passed": 14,
   "failed": 0,
   "results": [
     {
-      "name": "READ ONLY preflight emits all64 full fingerprints,18FKx2,6Storagecolsx2 and the actual seven-trigger revision contract",
+      "name": "READ ONLY preflight emits all64 full fingerprints,20FKx2,6Storagecolsx2 and the actual seven-trigger revision contract",
+      "pass": true
+    },
+    {
+      "name": "The historical18-FK contract is unchanged; LIVE adds only the two reviewed Auth dependencies",
+      "pass": true
+    },
+    {
+      "name": "Both newly reviewed Auth families must have actual zero rows; no unexpected cascade or SET NULL is permitted",
+      "pass": true
+    },
+    {
+      "name": "New family counts cannot be missing or duplicated and the exact20-FK catalog rejects altered effects, columns and validation",
+      "pass": true
+    },
+    {
+      "name": "A real unreviewed21st Auth FK still blocks the current SQL preflight",
       "pass": true
     },
     {
@@ -45,8 +61,8 @@
       "pass": true
     }
   ],
-  "moduleSha256": "ea45be7467ab45a21c5ec50c64468378c5ca62051b080ffbd01e21de32682920",
-  "testSha256": "8a304dd717075448b2985ef5838b65d24eda92f8775e41eba0eff97c169abbde",
+  "moduleSha256": "d4dd4fec27aa9c15a0965b7dea647807210a062bf916091c202ea08e414598af",
+  "testSha256": "b90670a62ad7e84c6021472360a6b5b2b2c869c37d33dd647892e3a38330d8bf",
   "remoteCalls": 0,
   "remoteWrites": 0,
   "certified": false

@@ -1635,6 +1635,32 @@
   // Registra una venta: descuenta stock, mueve inventario, actualiza cliente y vendedores.
   // ticket: [{ p, talla, qty }], sellerIds: [id], client: obj, metodo, estado, total, itemCount.
   const money = n => Math.round(Number(n) * 100) / 100;
+  // H-186: decimal HALF UP, identical to PostgreSQL numeric round. The legacy
+  // money helper remains unchanged for documents written under earlier rules.
+  function decimalFraction(value) {
+    if (value == null || String(value).trim() === '' || !Number.isFinite(Number(value))) throw new Error('Importe numérico inválido');
+    const match = String(value).match(/^([+-]?)(\d+)(?:\.(\d*))?(?:e([+-]?\d+))?$/i);
+    if (!match) throw new Error('Importe numérico inválido');
+    const exponent = Number(match[4] || 0) - (match[3] || '').length;
+    if (Math.abs(exponent) > 400) throw new Error('Importe fuera de rango');
+    let numerator = BigInt(match[2] + (match[3] || '')) * (match[1] === '-' ? -1n : 1n);
+    let denominator = 1n;
+    if (exponent >= 0) numerator *= 10n ** BigInt(exponent);
+    else denominator = 10n ** BigInt(-exponent);
+    return [numerator, denominator];
+  }
+  function moneyRatio(amount, numerator, denominator) {
+    const [a, ad] = decimalFraction(amount), [b, bd] = decimalFraction(numerator), [c, cd] = decimalFraction(denominator);
+    if (c === 0n) throw new Error('Divisor financiero inválido');
+    let n = a * b * cd * 100n, d = ad * bd * c;
+    const negative = (n < 0n) !== (d < 0n);
+    if (n < 0n) n = -n;
+    if (d < 0n) d = -d;
+    const cents = (n / d + ((n % d) * 2n >= d ? 1n : 0n)) * (negative ? -1n : 1n);
+    if (cents > BigInt(Number.MAX_SAFE_INTEGER) || cents < BigInt(Number.MIN_SAFE_INTEGER)) throw new Error('Importe fuera de rango');
+    return Number(cents) / 100;
+  }
+  const moneyRound = value => moneyRatio(value, 1, 1);
   const NON_MONEY_METHODS = ['Mixto', 'Apartado', 'Cortesía'];
   function methodSnapshot(code, suppliedLabel) {
     const id = String(code == null ? '' : code).trim();
@@ -1812,6 +1838,7 @@
   // manuales. No consulta configuración: el resultado es una cotización
   // congelable que consumen POS, cobro, documento, ticket y posventa.
   function saleQuote(ticket, applications) {
+    const money = moneyRound;
     if (!Array.isArray(ticket) || !ticket.length) throw new Error('La cotización requiere artículos');
     const apps = Array.isArray(applications) ? applications : [];
     if (apps.length > 1 && apps.some(a => !a || a.combinable !== true)) {
@@ -1822,16 +1849,17 @@
       const res = line.res || {};
       const orig = money(res.orig);
       const unit = money(res.unit);
-      if (!Number.isInteger(qty) || qty <= 0 || orig < 0 || unit < 0 || unit > orig) {
+      if (!Number.isSafeInteger(qty) || qty <= 0 || orig < 0 || unit < 0 || unit > orig) {
         throw new Error('El renglón de la cotización es inválido');
       }
       return {
         key: line.key == null ? String(index) : String(line.key), qty,
         res: { orig, unit, promos: Array.isArray(res.promos) ? JSON.parse(JSON.stringify(res.promos)) : [] },
-        originalTotal: money(orig * qty), configuredTotal: money(unit * qty),
-        remaining: money(unit * qty), additionalDiscount: 0,
+        originalTotal: moneyRatio(orig, qty, 1), configuredTotal: moneyRatio(unit, qty, 1),
+        remaining: moneyRatio(unit, qty, 1), additionalDiscount: 0,
       };
     });
+    if (new Set(lines.map(line => line.key)).size !== lines.length) throw new Error('La cotización contiene renglones duplicados');
     const originalTotal = money(lines.reduce((sum, line) => sum + line.originalTotal, 0));
     const beforeAdditionalTotal = money(lines.reduce((sum, line) => sum + line.configuredTotal, 0));
     const configuredDiscountTotal = money(originalTotal - beforeAdditionalTotal);
@@ -1853,6 +1881,9 @@
       if ((type === 'percentage' || type === 'fixed') && (!Number.isFinite(value) || value <= 0)) {
         throw new Error('El descuento adicional debe ser mayor que cero');
       }
+      if (type === 'fixed' && value !== money(value)) {
+        throw new Error('El importe del descuento adicional debe tener máximo dos decimales');
+      }
       if (type === 'percentage' && value > 100) throw new Error('El porcentaje no puede exceder 100');
       if (type === 'percentage' && Number(app.maxPercent) > 0 && value > Number(app.maxPercent)) {
         throw new Error('El porcentaje excede el máximo permitido');
@@ -1865,12 +1896,12 @@
       if (!eligible.length) throw new Error('No existe importe elegible para el descuento');
       const amountBefore = money(eligible.reduce((sum, line) => sum + line.remaining, 0));
       let requested = 0;
-      if (type === 'percentage') requested = money(amountBefore * value / 100);
+      if (type === 'percentage') requested = moneyRatio(amountBefore, value, 100);
       else if (type === 'fixed') requested = money(value);
       else if (type === 'courtesy_total') requested = amountBefore;
       else {
         if (scope !== 'item' || eligible.length !== 1) throw new Error('La cortesía de pieza requiere un artículo');
-        requested = money(Math.min(eligible[0].remaining, eligible[0].remaining / eligible[0].qty));
+        requested = Math.min(eligible[0].remaining, moneyRatio(eligible[0].remaining, 1, eligible[0].qty));
       }
       const discountAmount = money(Math.min(amountBefore, requested));
       if (discountAmount <= 0) throw new Error('El descuento adicional no produce ningún beneficio');
@@ -1881,12 +1912,22 @@
       eligible.forEach((line, index) => {
         const share = index === eligible.length - 1
           ? money(discountAmount - assigned)
-          : money(discountAmount * line.remaining / amountBefore);
-        const safe = money(Math.min(line.remaining, Math.max(0, share)));
+          : moneyRatio(discountAmount, line.remaining, amountBefore);
+        const safe = money(Math.min(line.remaining, money(discountAmount - assigned), Math.max(0, share)));
         line.remaining = money(line.remaining - safe);
         line.additionalDiscount = money(line.additionalDiscount + safe);
         assigned = money(assigned + safe);
       });
+      // If the final line cannot hold the accumulated rounding residue, carry
+      // it backwards. The approved benefit must be applied in full, even when
+      // several one-cent lines rounded their proportional share down to zero.
+      for (let i = eligible.length - 1; i >= 0 && assigned < discountAmount; i--) {
+        const line = eligible[i];
+        const remainder = money(Math.min(line.remaining, money(discountAmount - assigned)));
+        line.remaining = money(line.remaining - remainder);
+        line.additionalDiscount = money(line.additionalDiscount + remainder);
+        assigned = money(assigned + remainder);
+      }
       frozen.push(Object.assign({}, JSON.parse(JSON.stringify(app)), {
         id: app.id || `additional-${appIndex + 1}`, scope,
         amountBefore, discountAmount: assigned,
@@ -1895,17 +1936,27 @@
     });
 
     const finalTotal = money(lines.reduce((sum, line) => sum + line.remaining, 0));
-    const subtotal = money(finalTotal / 1.16);
+    const subtotal = moneyRatio(finalTotal, 100, 116);
     const iva = money(finalTotal - subtotal);
     return {
+      financialVersion: 2,
       quoteContext: clone(window.CORE.invokeSync('getQuoteContext')),
       originalTotal, configuredDiscountTotal, beforeAdditionalTotal,
       additionalDiscountTotal: money(beforeAdditionalTotal - finalTotal),
       subtotal, iva, ivaPct: 16, ivaIncluded: true, finalTotal,
       applications: frozen,
-      lines: lines.map(line => Object.assign({}, line, {
-        finalUnit: money(line.remaining / line.qty),
-      })),
+      lines: lines.map(line => {
+        const cents = Math.round(line.remaining * 100);
+        const low = Math.floor(cents / line.qty), extra = cents % line.qty;
+        const parts = [];
+        const add = (qty, unitCents) => {
+          if (qty) parts.push({ qty, unit: unitCents / 100,
+            additionalDiscount: moneyRatio(money(line.res.unit - unitCents / 100), qty, 1) });
+        };
+        add(extra, low + 1);
+        add(line.qty - extra, low);
+        return Object.assign({}, line, { finalUnit: moneyRatio(line.remaining, 1, line.qty), parts });
+      }),
     };
   }
   function assertSaleAmounts({ ticket, metodo, estado, subtotal, iva, total, anticipo, pagoEfectivo, pagoOtro, ivaIncluded }) {
@@ -1923,7 +1974,18 @@
   }
   async function recordSale({ ticket, additionalDiscounts, quote: quoteIn, sellerIds, client, metodo, estado, subtotal: subtotalIn, iva: ivaIn, total: totalIn, anticipo: anticipoIn, pagoEfectivo: pagoEfectivoIn, pagoOtro: pagoOtroIn, pagoDetalle, metodoPago, ivaPct: ivaPctIn, ivaIncluded: ivaIncludedIn, itemCount, fecha: fechaIn, operationId: requestedOperationId }) {
     const quoteTicket = (ticket || []).map(l => l.res ? l : Object.assign({}, l, { res: resolveLineDiscount(l.p, l.talla) }));
-    const quote = quoteIn || saleQuote(quoteTicket, additionalDiscounts || []);
+    const normalQuote = quoteIn || saleQuote(quoteTicket, additionalDiscounts || []);
+    const cortesia = metodo === 'Cortesía';
+    if (cortesia && (!client || client.generic || !client.id)) throw new Error('La cortesía requiere un cliente registrado');
+    if (normalQuote.financialVersion !== 2) throw new Error('Actualiza la cotización antes de confirmar');
+    const quote = cortesia ? Object.assign({}, normalQuote, {
+      finalTotal: 0, subtotal: 0, iva: 0, configuredDiscountTotal: 0,
+      beforeAdditionalTotal: 0, additionalDiscountTotal: 0, applications: [],
+      lines: normalQuote.lines.map(line => Object.assign({}, line, {
+        remaining: 0, configuredTotal: 0, additionalDiscount: 0, finalUnit: 0,
+        res: Object.assign({}, line.res, { unit: 0 }), parts: [{ qty: line.qty, unit: 0, additionalDiscount: 0 }],
+      })),
+    }) : normalQuote;
     const quoteContext = clone(quote.quoteContext);
     if (!quoteContext) throw Object.assign(new Error('La cotización ya no está vigente. Revisa el importe antes de confirmar.'), { code: 'ONLINE_QUOTE_CONTEXT_REQUIRED' });
     const total = money(quote.finalTotal);
@@ -1948,8 +2010,7 @@
       ? null : addDays(dayOf(fecha), returnLimitDays);
     // Cortesía (regalo/giveaway): no se cobra (total $0) y NO genera comisión, pero SÍ descuenta
     // inventario. Se guarda 'valorRegalado' (lo que se habría cobrado) para reportes de cuánto se regaló.
-    const cortesia = metodo === 'Cortesía';
-    const valorRegalado = cortesia ? (Number(total) || 0) : 0;
+    const valorRegalado = cortesia ? moneyRound(normalQuote.finalTotal) : 0;
     const totalCobrado = cortesia ? 0 : total;
     let clientEffect = null;
     const sellerEffects = [];
@@ -2002,30 +2063,33 @@
     const primary = ids.map(id => (sellers.find(x => x.id === id) || {}).nombre).filter(Boolean);
     // H-32: se usa la resolución que el POS ya calculó (l.res). Si el llamador no la trae, se
     // resuelve aquí UNA vez y se reutiliza; en ningún caso se evalúa el motor dos veces por línea.
-    const resList = ticket.map(l => l.res || resolveLineDiscount(l.p, l.talla));
-    const quotedLines = quote.lines || [];
-    const unitAt = i => quotedLines[i] ? quotedLines[i].finalUnit : resList[i].unit;
-    // H-36: el precio de lista sale de la resolución del renglón, no del artículo.
-    // Con precios por talla, `l.p.precio` y `unitAt(i)` dejan de hablar del mismo
-    // precio y el descuento quedaría mal calculado en ambas direcciones.
-    const subtotalOrig = ticket.reduce((a, l, i) => a + resList[i].orig * l.qty, 0);
-    const totalConDescuento = ticket.reduce((a, l, i) => a + resList[i].unit * l.qty, 0);
+    // Every persisted unit has an exact cent price. Residue units keep their own
+    // immutable identity for partial returns and exchanges.
+    if (quote.lines.length !== quoteTicket.length) throw new Error('La cotización no corresponde a los artículos');
+    const expanded = quoteTicket.flatMap((line, index) => {
+      const quoted = quote.lines[index];
+      if (quoted.qty !== Number(line.qty) || !Array.isArray(quoted.parts)) throw new Error('La cotización no corresponde a las cantidades');
+      return quoted.parts.map((part, partIndex) => Object.assign({}, line, {
+        qty: part.qty, lineId: newUuid(), res: quoted.res, quotedPart: part,
+        financial: { version: 2, key: quoted.key, part: partIndex },
+      }));
+    });
     const catalogLabel = (kind, code, fallback) => {
       const item = C && typeof C.find === 'function' ? C.find(kind, String(code == null ? '' : code)) : null;
       return String((item && item.label) || fallback || code || '');
     };
-    const saleLines = ticket.map((l, i) => ({
+    const saleLines = expanded.map(l => ({
       lineId: l.lineId || newUuid(), productId: l.p.id,
       barcodeCode: isV2Reference(l.p) ? l.p.barcodeCode : null,
       sku: l.p.sku, nombre: l.p.nombre, talla: l.talla, qty: l.qty,
       ornamento: l.p.orn || '', ornColors: effectiveOrnamentColors(l.p, l.talla),
       physicalAttrs: physicalSnapshot(l.p, l.talla),
-      listPrice: money(resList[i].orig), effectivePrice: cortesia ? 0 : money(unitAt(i)),
-      discountSnapshot: { promotions: (resList[i].promos || []).slice(), additional: cortesia ? 0 : money(((typeof quotedLines !== 'undefined' && quotedLines[i]) || {}).additionalDiscount) },
-      precio: cortesia ? 0 : money(unitAt(i)),
-      precioBase: cortesia ? 0 : resList[i].unit, precioOrig: resList[i].orig,
-      descuentoAdicional: cortesia ? 0 : money(((typeof quotedLines !== 'undefined' && quotedLines[i]) || {}).additionalDiscount),
-      promos: resList[i].promos,
+      listPrice: l.res.orig, effectivePrice: l.quotedPart.unit,
+      discountSnapshot: { promotions: l.res.promos.slice(), additional: l.quotedPart.additionalDiscount, financial: l.financial },
+      precio: l.quotedPart.unit,
+      precioBase: l.res.unit, precioOrig: l.res.orig,
+      descuentoAdicional: l.quotedPart.additionalDiscount,
+      promos: l.res.promos,
     }));
     // Evidencia visual cerrada. El comprobante historico no vuelve al catalogo.
     const receiptSnapshot = {
@@ -2037,7 +2101,7 @@
         tagline: C.get('ticket.tagline') || '',
       },
       sellerName: primary[0] || 'â€”',
-      lines: ticket.map((l, i) => {
+      lines: expanded.map((l, i) => {
         const size = resolveProductSizes(l.p).sizes.find(item => String(item.value) === String(l.talla));
         const colors = saleLines[i].ornColors || [];
         return {
@@ -2055,9 +2119,15 @@
       }),
     };
     const sale = {
+      financialVersion: 2, originalTotal: quote.originalTotal,
+      financialRequest: {
+        inputs: quoteTicket.map((line, index) => ({ key: quote.lines[index].key,
+          productId: String(line.p.id), talla: String(line.talla), qty: Number(line.qty) })),
+        applications: clone(additionalDiscounts || normalQuote.applications || []), courtesy: cortesia,
+      },
       folio, fecha, clienteId: client && !client.generic ? client.id : undefined, cliente: client ? client.nombre : 'Público en general',
       vendedor: primary[0] || '—', vendedores: ids.slice(),
-      items: itemCount, subtotal, iva, total: totalCobrado, ivaPct, ivaIncluded,
+      items: quoteTicket.reduce((sum, line) => sum + Number(line.qty), 0), subtotal, iva, total: totalCobrado, ivaPct, ivaIncluded,
       anticipo: cortesia ? 0 : anticipo, saldo: cortesia ? 0 : money(total - anticipo),
       pagoEfectivo: cortesia ? 0 : pagoEfectivo, pagoOtro: cortesia ? 0 : pagoOtro,
       metodo, estado,
@@ -2447,7 +2517,8 @@
     let valor = 0, encontrado = false;
     ((sale && sale.lineas) || []).forEach(l => {
       if (lineId ? l.lineId !== lineId : (l.sku !== sku || l.talla !== talla)) return;
-      const v = l.precioBase != null ? l.precioBase : (l.precioOrig != null ? l.precioOrig : l.precio);
+      const v = sale.financialVersion === 2 ? l.precio
+        : (l.precioBase != null ? l.precioBase : (l.precioOrig != null ? l.precioOrig : l.precio));
       valor = Number(v) || 0; encontrado = true;
     });
     // Un cambio posterior reasigna el valor de la pieza: el ultimo manda.
@@ -3411,9 +3482,11 @@
       return soldLine ? Number(soldLine.precio) || 0 : 0;
     };
     let refund = money(items.reduce((a, l) => a + linePrice(l) * (Number(l.qty) || 0), 0));
-    if (allReturned) refund = money((Number(sale.total) || 0) - returnsForFolio(folio).reduce((a, r) => a + (Number(r.total) || 0), 0));
+    if (allReturned && sale.financialVersion !== 2) refund = money((Number(sale.total) || 0) - returnsForFolio(folio).reduce((a, r) => a + (Number(r.total) || 0), 0));
     let components, refundMethod = metodo || sale.metodo, componentInput = refundComponents;
-    if (!componentInput && !metodo) {
+    if (sale.financialVersion === 2 && refund === 0) {
+      componentInput = []; refundMethod = sale.metodo === 'Mixto' ? 'Efectivo' : sale.metodo;
+    } else if (!componentInput && !metodo) {
       componentInput = sameMethodRefundComponents(sale, refund);
       if (!componentInput || !componentInput.length) return { ok: false, error: 'El historial no permite demostrar cómo salió el reembolso' };
       refundMethod = componentInput.length > 1 ? 'Mixto' : componentInput[0].methodCode;
@@ -3442,14 +3515,22 @@
       const totalVenta = Number(sale.total) || 0;
       const proporcion = totalVenta > 0 ? Math.min(1, refund / totalVenta) : 0;
       const yaRevertido = returnedCommissionBySeller(folio);
+      // H186: agotar piezas originales también cuenta los cambios, cuya comisión
+      // se conserva. V2 sólo cierra el residuo al devolver todo el dinero cobrado.
+      const closesCommission = sale.financialVersion === 2
+        ? money(refund + returnsForFolio(folio).reduce((sum, ret) => sum + (Number(ret.total) || 0), 0)) === money(totalVenta)
+        : allReturned;
+      const proportionalReversal = value => sale.financialVersion === 2
+        ? moneyRatio(Number(value) || 0, refund, totalVenta)
+        : money((Number(value) || 0) * proporcion);
       congeladas.forEach(entry => {
         const s = clone(sellers.find(x => x.id === entry.sellerId));
         if (!s) return;
         const previo = yaRevertido[entry.sellerId] || { base: 0, monto: 0 };
         const topeMonto = Math.max(0, money((Number(entry.monto) || 0) - previo.monto));
         const topeBase = Math.max(0, money((Number(entry.base) || 0) - previo.base));
-        const montoRev = allReturned ? topeMonto : Math.min(topeMonto, money((Number(entry.monto) || 0) * proporcion));
-        const baseRev = allReturned ? topeBase : Math.min(topeBase, money((Number(entry.base) || 0) * proporcion));
+        const montoRev = closesCommission ? topeMonto : Math.min(topeMonto, proportionalReversal(entry.monto));
+        const baseRev = closesCommission ? topeBase : Math.min(topeBase, proportionalReversal(entry.base));
         const baseVersion = Number(s._syncVersion) || 0;
         const beforeVentas = Number(s.ventasMes) || 0;
         const beforeComision = Number(s.comisionAcum) || 0;
@@ -3617,6 +3698,7 @@
   // ---- Promociones / Descuentos ----
   async function addPromo(p) {
     const np = Object.assign({ id: 'promo-' + newOperationId(), creado: Date.now(), pausado: false, scope: {} }, p);
+    if (window.PROMOS) np.valor = window.PROMOS.validate(np);
     await confirmCommand('pushRows', 'promotions', [np]);
     return confirmed(promos, np.id);
   }
@@ -3624,6 +3706,7 @@
     const p = clone(promos.find(x => x.id === id));
     if (!p) throw Object.assign(new Error('La promoción ya no existe'), { code: 'PROMOTION_NOT_FOUND' });
     Object.assign(p, patch);
+    if (window.PROMOS) p.valor = window.PROMOS.validate(p);
     await confirmCommand('pushRows', 'promotions', [p]);
     return confirmed(promos, p.id);
   }
@@ -4317,7 +4400,7 @@
     recordSale, newOperationId, nextFolio, normalizeFolioPrefix, businessDate, folioFromParts, parseFolio, folioPreview,
     findSaleByFolio, saleFolioAliases, folioAliasHit, stockOf, isAutoImg, liquidarComision,
     completarApartado, registrarPagoApartado, paymentsForSale, hasFinancialSnapshot, resolveLineDiscount, saleQuote, cerrarMes, getPeriodoInicio,
-    listPrice, priceRange, sanitizePreciosTalla, resolveProductSizes,
+    listPrice, priceRange, sanitizePreciosTalla, resolveProductSizes, moneyRound, moneyRatio,
     ornamentSupportsColors, sanitizeOrnamentColorsBySize, effectiveOrnamentColors,
     resolveSizeFilterGroups, resolveSizeFilterOptions, sizeFilterMatch, inferSizeCategory,
     recordReturn, returnedQty, returnsForFolio, returnLifecycle, isReturnable, returnDeadline, saleLineBalance,

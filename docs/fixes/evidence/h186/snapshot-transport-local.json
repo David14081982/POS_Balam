@@ -1,0 +1,97 @@
+{
+  "risk": "H-186",
+  "status": "PASS_LOCAL",
+  "remoteStatus": "PASS_READ_ONLY_CAPTURE",
+  "at": "2026-10-10T23:43:54.207Z",
+  "scope": "Local snapshot transport validation plus controlled remote read-only capture; financial LIVE remains pending",
+  "realDatabaseWrites": 0,
+  "finalValidation": {
+    "exitCode": 0,
+    "durationMs": 227528.7902,
+    "nodeTestRunner": {
+      "tests": 21,
+      "passed": 21,
+      "failed": 0
+    },
+    "suites": [
+      {
+        "file": "test-h186-snapshot-transport.mjs",
+        "passed": 7,
+        "failed": 0
+      },
+      {
+        "file": "test-h171-live-snapshot.mjs",
+        "passed": 12,
+        "failed": 0
+      },
+      {
+        "file": "test-h171-core-runner-integration.mjs",
+        "passed": 10,
+        "failed": 0
+      },
+      {
+        "file": "test-h171-runner-journal-integration.mjs",
+        "passed": 13,
+        "failed": 0
+      }
+    ],
+    "countExplanation": "Node reports21 tests:7 transport +12 snapshot +2 integration files; those integration files assert10 and13 internal checks.",
+    "log": {
+      "file": ".evidence-h186-deploy/final-snapshot-tests.log",
+      "sha256": "e89e4c5e81c6f2ec1a37a4e5f139299a11c25dc6e093c5ae39c4fccfa6070cab"
+    },
+    "sourceSha256": {
+      "h171-live-snapshot.mjs": "1012fe7817aa7eae00c348d0b5f156c9dac4ae6547eecbd2d25c50e7201e31e8",
+      "h171-live-authority-io.mjs": "4db64cd12eba99d80c29f2d68449b192163d78b29205a14b8375ad4052328ea9",
+      "h171-live-snapshot-transport.mjs": "bb5df6207c51dc867b3382f3cef81d359b26caefa76b047074a907f37da954a4",
+      "test-h186-snapshot-transport.mjs": "69b5cf39d1c9e89f5bbc5f3962efbfb6eb4f34591535e802e09da7fbdd8728a3",
+      "test-h164-live-online.mjs": "c0caccd103a3d01b336eff667212025f25a6b16bcb4b6f0baa684578bff19a3f"
+    }
+  },
+  "separateLocalPrototype": {
+    "status": "PASS_LOCAL",
+    "includedInFinalCaseCounts": false,
+    "engine": "ephemeral PGlite pgcrypto; no network or persisted database",
+    "plaintextBytes": 136314880,
+    "plaintextMiB": 130,
+    "decryptionMilliseconds": 10795,
+    "exactUtf8Length": true,
+    "exactMd5": true,
+    "exactSha256": true,
+    "exactJsonRoundtrip": true,
+    "plaintextPublishedBytes": 0
+  },
+  "coverage": [
+    "All64 tables and complete snapshot deep equality after normalizing only at and snapshot identifiers",
+    "Canonical row strings, decimal scale, Unicode, row order, projected/full hashes and sensitive-field omissions",
+    "Exact baseline reuse preserves NULL bodies and restores them through the existing canonical checks",
+    "Wrong passphrase, truncated ciphertext, malformed envelopes/base64, invalid sizes, hash substitution, foreign source and table reordering reject",
+    "Operator I/O retains private SQL/response artifacts and decodes before canonical persistence"
+  ],
+  "transport": {
+    "activation": "financial-h186 scope only; existing plain default retained",
+    "compressionThresholdBytes": 65536,
+    "maxDecodedBodyBytes": 536870912,
+    "canonicalValidatorRetained": true,
+    "remoteCertification": "FINANCIAL_LIVE_PENDING"
+  },
+  "localValidationRemoteQueries": 0,
+  "financialLiveStatus": "PENDING",
+  "remoteCapture": {
+    "status": "PASS",
+    "readOnly": true,
+    "tableCount": 64,
+    "rowCount": 5316,
+    "elapsedMs": 108657,
+    "snapshotFileSha256": "192feb97350da126f6e29fff7eb48b53bac6ba7e0a05ee04783ac446ebdf033f",
+    "transport": {
+      "format": "balam-pgp-row-bodies-v1",
+      "encryptedBodies": 208,
+      "decodedBodyBytes": 133154034,
+      "verified": true
+    },
+    "fixtureMutations": 0,
+    "sourceResultSha256": "c863189a6c237f64767a99fbeb14dde4426733ef375a1d88027b979abdc599a7",
+    "certifiesFinancialLive": false
+  }
+}

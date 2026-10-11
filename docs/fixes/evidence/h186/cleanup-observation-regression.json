@@ -1,0 +1,139 @@
+{
+  "risk": "H-186",
+  "status": "PASS_LOCAL_REGRESSION",
+  "at": "2026-10-11T02:22:24.367Z",
+  "scope": "Explicit cleanup-only recovery of one newly created, owned device with unmatched final adoption telemetry; local PostgreSQL fixtures and controlled read clients only.",
+  "networkRequests": 0,
+  "remoteWrites": 0,
+  "certified": false,
+  "certificationEligible": false,
+  "remoteCleanupStatus": "NOT_ASSESSED_BY_THIS_LOCAL_EVIDENCE",
+  "red": {
+    "suite": "test-h186-cleanup-observation.mjs",
+    "tests": 18,
+    "passed": 13,
+    "failed": 5,
+    "scope": "Initial regression cases ran before the cleanup observation implementation. Five additional cases were added during validation; the final suite has 23 cases.",
+    "log": {
+      "file": ".evidence-h186-deploy/cleanup-observation-red.log",
+      "sha256": "56699815c31a1d348549d17c3f8a0713326d6d8341ee76574cafa7ead5b4b062",
+      "lastModifiedUtc": "2026-10-11T01:55:52.361Z"
+    }
+  },
+  "green": {
+    "suites": [
+      {
+        "file": "test-h186-cleanup-observation.mjs",
+        "tests": 23,
+        "passed": 23,
+        "failed": 0,
+        "exitCode": 0,
+        "log": {
+          "file": ".evidence-h186-deploy/cleanup-observation-green.log",
+          "sha256": "2bdf4d6bd794cab5090170f7a0746ed97ad0c26e4df69f6137641201413bba26",
+          "lastModifiedUtc": "2026-10-11T02:04:32.875Z"
+        }
+      },
+      {
+        "file": "test-h171-live-reconciliation.mjs",
+        "tests": 23,
+        "passed": 23,
+        "failed": 0,
+        "exitCode": 0,
+        "log": {
+          "file": ".evidence-h186-deploy/cleanup-reconciliation-regression.log",
+          "sha256": "753440386d832ed02e93584357cc8f31af7f61972d2a747c5cc2a3759f3100bc",
+          "lastModifiedUtc": "2026-10-11T02:05:21.331Z"
+        }
+      },
+      {
+        "file": "test-h171-live-cleanup-plan.mjs",
+        "tests": 33,
+        "passed": 33,
+        "failed": 0,
+        "exitCode": 0,
+        "log": {
+          "file": ".evidence-h186-deploy/cleanup-plan-regression.log",
+          "sha256": "d3809e7b2abe005f97609dfbaf070ee968f3028363d7a16e3d726cb687bf79c2",
+          "lastModifiedUtc": "2026-10-11T02:05:55.024Z"
+        }
+      },
+      {
+        "file": "test-h171-live-cleanup-lifecycle.mjs",
+        "tests": 2,
+        "passed": 2,
+        "failed": 0,
+        "exitCode": 0,
+        "log": {
+          "file": ".evidence-h186-deploy/cleanup-lifecycle-regression.log",
+          "sha256": "fa4e3ca4595224ad68e5912cfa76017eb49ff879369e7842e0c5b1ec1f96f3cf",
+          "lastModifiedUtc": "2026-10-11T02:06:33.681Z"
+        }
+      }
+    ],
+    "countExplanation": "Suite counts remain separate because the integration fixtures and guarantees overlap."
+  },
+  "ciPortability": {
+    "status": "PASS_LOCAL_ISOLATED_CWD",
+    "finding": "A clean CI checkout has no ignored private evidence parent. The lifecycle review test previously called mkdtemp before creating that parent.",
+    "change": "Only the test creates its private parent recursively before mkdtemp; runtime sources remain frozen.",
+    "startedAt": "2026-10-11T02:21:55.786Z",
+    "finishedAt": "2026-10-11T02:22:24.367Z",
+    "parentAbsentBefore": true,
+    "parentCreatedAfter": true,
+    "originalWorkspacePrivateParentUntouched": true,
+    "tests": 23,
+    "passed": 23,
+    "failed": 0,
+    "exitCode": 0,
+    "networkRequests": 0,
+    "remoteWrites": 0,
+    "previousTestSha256": "3ac117a436ba0853fe3a2c75af1073e83648b5bbe2e29d66a2866da692a88ce3",
+    "testedTestSha256": "e76d0a3ea744494bf5251f2f7ba4c259bbcc3ea679e5c2208c611e62eb9c271f",
+    "log": {
+      "file": ".evidence-h186-deploy/cleanup-observation-portability-green.log",
+      "sha256": "1f87a1cbd96571096df65147180a98e2e8701ad4e3a69a0b691790b8e496bdf7"
+    },
+    "proof": {
+      "file": ".evidence-h186-deploy/cleanup-observation-portability.json",
+      "sha256": "733c0250abedbc3ba931a6f5a7c17e8e16a6384ed3a68855d819725289a92431"
+    }
+  },
+  "contract": {
+    "defaultRunnerOptsIn": false,
+    "originalBaselineRequired": true,
+    "originalJournalRewritten": false,
+    "originalReconciliationPreserved": true,
+    "originalBlockersPreserved": true,
+    "reportUnattributed": true,
+    "acknowledgementClaimed": false,
+    "certificationEligible": false,
+    "reviewBindsExactObservation": true,
+    "canonicalTablesChecked": 64,
+    "completionPreservesRecoveryLimits": true,
+    "scopeLimit": "Observation establishes the exact current owned row for cleanup. It does not explain the unmatched report, prove dispatch or ACK, replay a scenario, or certify financial LIVE behavior."
+  },
+  "protectionsVerified": [
+    "Default reconciliation still rejects unmatched adoption telemetry.",
+    "Recovery requires the original baseline, exact run, project, artifact, journal, actor, device and full row hash.",
+    "A device or actor already present in the original baseline is ineligible.",
+    "Unknown proof fields, unknown telemetry fields, an unreviewed function hash and inconsistent timestamps are rejected.",
+    "All commercial entries must already reconcile; an executing request remains a blocker.",
+    "Original mismatch evidence cannot be altered or detached from its recovery proof.",
+    "A changed current device or an unrelated commercial mutation still blocks the canonical cleanup plan.",
+    "Changing the observation changes the real lifecycle review hash; the earlier approval cannot dispatch cleanup SQL.",
+    "Existing lifecycle integration verifies local transactional rollback on foreign drift, exact SQL cleanup and separate Auth cleanup."
+  ],
+  "provenance": {
+    "independentReadOnlyReview": "PASS_NO_MATERIAL_FINDINGS",
+    "currentFileSha256": {
+      "h171-live-reconciliation.mjs": "319306422effb92807a7138e6d36e1b2fc1548d5e313d5917037eaac8a2f578a",
+      "h171-live-cleanup-plan.mjs": "a676f86030c005f590155aeffd94ba0158aba94677509c8be96b83e822abd439",
+      "h171-live-cleanup-lifecycle.mjs": "1e71e1f99d951f723f367df884f381bf79dec86905deeac09e50a00a0b5088d6",
+      "test-h186-cleanup-observation.mjs": "e76d0a3ea744494bf5251f2f7ba4c259bbcc3ea679e5c2208c611e62eb9c271f",
+      "test-h171-live-reconciliation.mjs": "c3b8ef1eb572b3a3a193bfbc308bf4c11f81ec5b0018a2c6893a6b03a7a6d973",
+      "test-h171-live-cleanup-plan.mjs": "9398d58201f23fdfac0ce4dfcdfdfe8fb07cff713ef769a903aa32c9c29fb24d",
+      "test-h171-live-cleanup-lifecycle.mjs": "718c1626824971cdf393b9c946e676fe428ee887fc5804c5c136531d7553441c"
+    }
+  }
+}

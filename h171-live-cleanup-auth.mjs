@@ -2,7 +2,7 @@
 // Import/CLI performs no I/O. This adapter neither opens the live gate nor grants authorization.
 import { journalHash } from './h171-live-journal.mjs';
 import { createHash } from 'node:crypto';
-import { AUTH_INCOMING_FKS } from './h171-auth-retirement.mjs';
+import { LIVE_AUTH_INCOMING_FKS, LIVE_AUTH_QA_EMPTY_RELATIONS } from './h171-live-auth-dependencies.mjs';
 import { SNAPSHOT_PROJECT, SNAPSHOT_ACTOR, SNAPSHOT_TABLES_SHA256 } from './h171-live-snapshot.mjs';
 
 export const LIVE_AUTH_CLEANUP = Object.freeze({ projectRef: SNAPSHOT_PROJECT, realActorId: SNAPSHOT_ACTOR,
@@ -16,7 +16,7 @@ const same = (a, b) => journalHash(a) === journalHash(b);
 const md5 = value => createHash('md5').update(value).digest('hex');
 const reportOf = value => value?.rows?.[0]?.report || value;
 const fkKey = row => `${row.relation}|${row.column}|${row.effect}`;
-const fkKeys = AUTH_INCOMING_FKS.map(fkKey).sort();
+const fkKeys = LIVE_AUTH_INCOMING_FKS.map(fkKey).sort();
 const ownerKey = row => `${row.relation}|${row.column}|${row.type}`;
 const sourceUrl = `https://${SNAPSHOT_PROJECT}.supabase.co/`;
 const posHashes = rows => [...rows].sort((a,b) => a.table.localeCompare(b.table));
@@ -201,6 +201,7 @@ export function createLiveCleanupAuth({ admin, journal, plan: inputPlan, identit
     need(counts?.length === fkKeys.length && same(counts.map(fkKey).sort(), fkKeys) &&
       counts.every(c => Number.isSafeInteger(c.rows) && c.rows >= 0), 'FK_COUNTS_INCOMPLETE');
     need(counts.every(c => c.relation.startsWith('auth.') || c.rows === 0), 'POS_DEPENDENCIES_REMAIN');
+    need(counts.every(c => !LIVE_AUTH_QA_EMPTY_RELATIONS.includes(c.relation) || c.rows === 0), 'UNEXPECTED_QA_AUTH_DEPENDENCIES');
     need(response.storage_owner_catalog_complete === true && Array.isArray(response.storage_owner_catalog) &&
       same(response.storage_owner_catalog.map(ownerKey).sort(), ownerCatalog.map(ownerKey).sort()), 'STORAGE_CATALOG_CHANGED');
     const owners = response.storage_owner_counts?.filter(c => c.id === id);

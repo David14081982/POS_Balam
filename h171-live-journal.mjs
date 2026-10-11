@@ -10,6 +10,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 const SECRET = /password|authorization|api[_-]?key|access[_-]?token|refresh[_-]?token|id[_-]?token|cookie|secret|jwt/i;
 const WRITES = new Set(['execute_online_command', 'online_presence', 'online_adoption_report', 'resolve_online_request']);
 export const LIVE_READ_RPCS = Object.freeze(['online_connectivity', 'online_snapshot_if_changed',
+  'quote_sale', // H186: STABLE price calculation; never commits a sale or card claim.
   'online_request_result', 'current_permission_snapshot',
   'admin_user_permission_editor_snapshot', 'physical_card_available', 'point_zero_preview',
   'point_zero_receipt', 'preview_test_data_cleanup', 'test_data_cleanup_receipt']);

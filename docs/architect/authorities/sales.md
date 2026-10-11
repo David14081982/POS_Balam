@@ -1,7 +1,7 @@
 ---
 capa: conocimiento
 applies_to: [domain]
-related_histories: [H-02, H-03, H-29, H-31, H-32, H-33, H-34, H-35, H-85]
+related_histories: [H-02, H-03, H-29, H-31, H-32, H-33, H-34, H-35, H-85, H-186]
 severity_max: required
 no_alcance: "No define ninguna autoridad ni transcribe firmas. Sólo dice qué pregunta responde cada una y dónde vive."
 ---
@@ -94,10 +94,21 @@ propio (`docs/04-contrato-del-cambio.md` § 3)
 **Consumidores:** `grep -rn "resolveLineDiscount" balam/`
 
 ## ¿Cuánto debe pagar esta venta después de todos sus descuentos?
-**Autoridad:** `DATA.saleQuote(ticket, applications)`
-**Definición:** `balam/data.jsx` · snapshot en
+**Autoridad:** `pos.quote_sale(inputs, applications, courtesy)` para ventas
+`financial_version=2`; `DATA.saleQuote(ticket, applications)` es el espejo de
+vista previa. El gateway valida contra la cotización SQL antes de confirmar.
+La RPC conserva `STABLE` y valida capacidad y dispositivo en sólo lectura con
+el helper privado `pos.h186_assert_quote_device()`. La confirmación mantiene
+el guard de escritura `pos.assert_online_device()` y su bloqueo de fila.
+**Compatibilidad:** las solicitudes V2 siempre reciben esta validación;
+`pos.online_runtime.min_financial_version=1` admite temporalmente el cliente
+anterior. La operación separada `supabase/operations/h186-activate-financial-contract.sql`
+exige V2 para las altas nuevas al activar 2 después de publicar y verificar
+el cliente. No transforma históricos ni recotiza sus abonos o posventa.
+**Definición:** `balam/data.jsx` y migraciones `20261010022500` y
+`20261011022600` · snapshot en
 `pos.sales.descuentos_adicionales` y `pos.sale_items.descuento_adicional`
-**Creada por:** H-52 · **Decisiones:** `ADR-002`, `ADR-003`
+**Creada por:** H-52 · **Ampliada por:** H-186 · **Decisiones:** `ADR-002`, `ADR-003`
 **Consumidores:** `grep -rn "saleQuote" balam/ test-*.mjs`
 
 ## ¿Cuánto se cobró realmente por esta venta?

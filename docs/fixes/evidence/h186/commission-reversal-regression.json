@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "risk": "H186",
+  "status": "VERIFIED_LOCAL_COMMISSION_REGRESSION",
+  "recordedAt": "2026-10-11T01:36:22.279Z",
+  "contract": {
+    "source": "docs/04-contrato-del-cambio.md, section 7",
+    "exchange": "The original sale commission is preserved; only a positive exchange difference earns a new commission.",
+    "financialVersion2": "Close the remaining frozen commission only when cumulative actual refunds equal the amount originally charged. Round proportional amounts and bases using exact decimal HALF UP.",
+    "historical": "The legacy physical-completion and binary proportional rounding branches remain unchanged."
+  },
+  "originalReproduction": {
+    "status": "CONFIRMED_BEFORE_CORRECTION",
+    "method": "Execute actual DATA return logic in isolated local VMs against a frozen exchange fixture; compare the working V2 implementation and the legacy HEAD implementation captured by the probe.",
+    "saleTotal": 2624,
+    "frozenCommission": 226.21,
+    "sequence": [
+      { "operation": "return", "refund": 874.67, "commissionReversed": 75.4 },
+      { "operation": "exchange", "originalPaidValue": 874.66 },
+      { "operation": "return", "refund": 874.67, "incorrectCommissionReversed": 150.81, "expectedCommissionReversed": 75.4 }
+    ],
+    "incorrectRemainingCommission": 0,
+    "expectedRemainingCommission": 75.41,
+    "legacyComparison": {
+      "lastRefund": 1749.33,
+      "lastCommissionReversed": 150.81,
+      "totalRefund": 2624,
+      "meaning": "Documents the historical behavior retained by the legacy branch; it is not the expected V2 refund."
+    },
+    "evidence": {
+      "path": ".evidence-h186-deploy/commission-after-exchange-probe.json",
+      "sha256": "c5f72a4f62a55dc7e098644a0b2abea96d8dda7fcb98dfd82840c50ba29ccdad",
+      "driverSha256": "ce5b16cf7eb7276d80f1ebf2ccb59fed11c23a1d86e7fd74e40c7074a7a84f5a"
+    }
+  },
+  "halfCentReproduction": {
+    "saleTotal": 20.1,
+    "frozenCommission": 2.01,
+    "frozenBase": 17.33,
+    "refund": 10.05,
+    "incorrectCommissionReversed": 1,
+    "expectedCommissionReversed": 1.01,
+    "expectedBaseReversed": 8.67,
+    "finalRemainingCommissionReversed": 1,
+    "finalRemainingBaseReversed": 8.66
+  },
+  "regressions": [
+    {
+      "status": "EXPECTED_FAIL",
+      "command": "node .evidence-h186-deploy/commission-data-before-fix.cjs",
+      "method": "Run the final 20-case suite with only the two pre-correction commission branches restored in memory. No application source is rewritten.",
+      "exitCode": 1,
+      "passed": 16,
+      "failed": 4,
+      "evidence": {
+        "path": ".evidence-h186-deploy/commission-data-red-confirmed.log",
+        "sha256": "d711d952290c653c4e7ea8bfc1e4ee8a4aa5f2f6c1de566ef45682979c4e453a",
+        "driverSha256": "8efe52a2e9ef28bc29abffc76678bc1594258719ea48f5287d3b8235711d3605"
+      }
+    },
+    {
+      "status": "PASS",
+      "command": "node test-h186-financial-data.mjs",
+      "method": "Actual DATA recordReturn and recordExchange with isolated confirmed projections and captured gateway commands.",
+      "exitCode": 0,
+      "passed": 20,
+      "failed": 0,
+      "evidence": {
+        "path": ".evidence-h186-deploy/commission-data-final.log",
+        "sha256": "da4c2ac40a8f63983c97f5c39f34f02e773a9d940e3f87c184912f17abc8f0a1"
+      }
+    },
+    {
+      "status": "PASS",
+      "command": "node test-h186-live-negatives.mjs",
+      "method": "Real DATA capture and STORE wire plus independent integer commission oracles and document/seller-balance rejection guards.",
+      "exitCode": 0,
+      "passed": 10,
+      "failed": 0,
+      "evidence": {
+        "path": ".evidence-h186-deploy/commission-live-guards.log",
+        "sha256": "07573ebc8611151dcb6934fac7026f6303a63f47044de098069c408f632f0986"
+      }
+    }
+  ],
+  "executionTimestamp": null,
+  "timestampNote": "Plain stdout logs do not embed execution timestamps; no execution time is inferred from file modification time.",
+  "coverage": [
+    "Split-price return, actual exchange and final return preserve the commission associated with the exchanged value.",
+    "One-cent commission remains when only part of the charged value is refunded.",
+    "Full refund without an exchange closes the exact frozen commission and base.",
+    "Monetary completion closes the residual cent before a remaining zero-priced piece; returning that piece produces no commission reversal or refund component.",
+    "Exact half-cent proportional reversal and final residual closure.",
+    "Legacy exchange, refund and half-cent behavior remain unchanged.",
+    "Independent LIVE guards reject excessive amounts, duplicate reversal rows, altered bases and incorrect original-seller balance changes."
+  ],
+  "liveAssertionsPrepared": {
+    "remoteStatus": "PENDING_SEPARATE_CERTIFICATION",
+    "commissionPolicy": "Use the existing isolated QA seller override of 5 percent; no provisioning or commercial setting changes.",
+    "checks": [
+      "Read and require the current reversal setting before creating financial fixtures.",
+      "Compare each expected refund reversal with the returned document, persisted SQL return and DATA projections on terminals A, B and C.",
+      "Compare exact original and exchange seller balance deltas in SQL and all three DATA projections.",
+      "Keep the original seller balance unchanged during exchange and verify only the positive difference earns the exchange seller commission.",
+      "Verify the retained original commission is positive after return/exchange/return."
+    ]
+  },
+  "sourceHashesAtFreeze": {
+    "balam/data.jsx": "ce0ba988f240ff030c0bfb32c39b223fdbd1ed9511c042b214ba510cc1b2d408",
+    "test-h186-financial-data.mjs": "876e44cf19e1739f78e7637489f1a23959512f7ec79b3a5e29fe9e9ba0b37f1c",
+    "qa-h186-financial-journey.mjs": "69c7d8996ed4e41a50967d6ab2fb87be85eae2351eb72cb966441dba2cb96d82",
+    "test-h186-live-negatives.mjs": "cb31e5fd3f1823da9bf7ca2afa01749f9f5df8dc47bf5ea3ec7ded1461119b62"
+  },
+  "limits": [
+    "These regression runs perform no network access and no remote writes.",
+    "The four confirmed red cases use the final corrected test fixtures. Earlier preliminary runs with fixture setup errors are not counted as economic regressions.",
+    "No migration, commercial policy, historical record or generated application artifact is changed by this evidence.",
+    "Local PASS does not certify the distributed financial journey, publication or physical printing; those outcomes are recorded separately."
+  ]
+}

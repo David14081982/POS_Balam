@@ -1,0 +1,258 @@
+{
+  "schema": "h186-commission-snapshot-regression-v1",
+  "generatedAt": "2026-10-11T04:07:01.402Z",
+  "scope": "Local PostgreSQL authority regression for migration 227; synthetic isolated fixtures only",
+  "status": "LOCAL_PASS",
+  "engine": "isolated PGlite",
+  "network": false,
+  "productionWrites": 0,
+  "remote": "NOT_RUN_BY_THIS_EVIDENCE",
+  "distributedCertification": "NOT_ASSERTED",
+  "publication": "NOT_ASSERTED",
+  "before": {
+    "defect": "The additional-discount delegate persisted scalar commission and seller effects but omitted the frozen per-seller commission rows, including an empty additional-discount array.",
+    "sales": [
+      {
+        "case": "v2-real-additional",
+        "ok": true,
+        "total": 2624,
+        "commissionSent": 131.2,
+        "commissionStored": 131.2,
+        "commissionRowsSent": 1,
+        "commissionRowsStored": null,
+        "sellerCommissionDelta": 131.2,
+        "snapshotPreserved": false
+      },
+      {
+        "case": "v2-empty-additional-array",
+        "ok": true,
+        "total": 875,
+        "commissionSent": 43.75,
+        "commissionStored": 43.75,
+        "commissionRowsSent": 1,
+        "commissionRowsStored": null,
+        "sellerCommissionDelta": 43.75,
+        "snapshotPreserved": false
+      },
+      {
+        "case": "legacy-no-array-control",
+        "ok": true,
+        "total": 875,
+        "commissionSent": 43.75,
+        "commissionStored": 43.75,
+        "commissionRowsSent": 1,
+        "commissionRowsStored": 1,
+        "sellerCommissionDelta": 43.75,
+        "snapshotPreserved": true
+      }
+    ],
+    "liquidationIntegrity": [
+      {
+        "variant": "rows",
+        "accepted": true,
+        "stored": {
+          "scalar": 43.7,
+          "rowAmount": 43.69
+        },
+        "sellerDelta": 43.7
+      },
+      {
+        "variant": "effect",
+        "accepted": true,
+        "stored": {
+          "scalar": 43.7,
+          "rowAmount": 43.7
+        },
+        "sellerDelta": 43.69
+      }
+    ],
+    "liquidationReplay": {
+      "accepted": true,
+      "originalPct": 5,
+      "storedPct": 4.99,
+      "amountUnchanged": 43.7
+    },
+    "installationGuard": {
+      "error": {
+        "code": "42501",
+        "message": "ONLINE_COMMAND_REQUIRED"
+      },
+      "context": {
+        "onlineEnabled": true,
+        "authAbsent": true,
+        "onlineCommandContext": false,
+        "nonBypassMigrationSession": true
+      },
+      "rollbackPreservesFunctionsAndCommercialRows": true
+    }
+  },
+  "after": {
+    "financialSql": {
+      "passed": 135,
+      "failed": 0,
+      "financialCases": 132,
+      "installationParityCases": 3
+    },
+    "migrationChecks": {
+      "passed": 31,
+      "failed": 0
+    },
+    "responseEqualsFinalSaleAndItems": true,
+    "durableReceiptEqualsResponse": true,
+    "replayPreservesFrozenReceipt": true,
+    "coveredCases": [
+      "nonempty and empty additional-discount arrays",
+      "zero-price ordinary promotion and courtesy",
+      "two sellers: total 2624.01, frozen bases 1312.01 and 1312.00, existing sales effects 1312.005 retained",
+      "repeated-seller grouped commission amounts",
+      "inconsistent commission scalar or seller effects rejected",
+      "partial payments preserve frozen commission and reject extra commission effects",
+      "H69 liquidation retains policy snapshot and rejects inconsistent rows/effects before stock, seller or payment changes",
+      "same request and new request liquidation replays preserve evidence and repeat no economic effect",
+      "new request cannot alter liquidated amount, base, row amount or policy even with unchanged commission total",
+      "original split-sale commission 131.20 remains frozen; returns 43.73 + 43.73 + 43.74 sum to 131.20",
+      "historical gateway/payment compatibility remains covered"
+    ],
+    "historicalBackfill": false,
+    "commissionPolicyRecalculated": false,
+    "earlierMigrationsUnchanged": true,
+    "verificationCommercialDml": false,
+    "verificationPureChecks": true,
+    "verificationRowsUnchanged": true,
+    "verificationSequenceAdvanced": false,
+    "onlineWriteFencePreserved": true,
+    "functions": [
+      {
+        "proname": "dispatch_online_command",
+        "pronargs": 3,
+        "identity": "pos.dispatch_online_command(uuid,jsonb,integer)",
+        "body_md5": "0ea42d684c2052291696250d9526bfb8",
+        "definition_md5": "34bf63837dbf48d856e98ba430415bab",
+        "proconfig": [
+          "search_path=pg_catalog, pos, auth"
+        ],
+        "prosecdef": true,
+        "provolatile": "v",
+        "public_execute": false,
+        "anon_execute": false,
+        "authenticated_execute": false,
+        "service_role_execute": false
+      },
+      {
+        "proname": "h186_assert_commission_snapshot",
+        "pronargs": 2,
+        "identity": "pos.h186_assert_commission_snapshot(jsonb,jsonb)",
+        "body_md5": "da7e0e4c9e258585561b42f9ececb505",
+        "definition_md5": "97ebcac75c40ccebb560ce3eca0699b3",
+        "proconfig": [
+          "search_path=pg_catalog, pos"
+        ],
+        "prosecdef": false,
+        "provolatile": "i",
+        "public_execute": false,
+        "anon_execute": false,
+        "authenticated_execute": false,
+        "service_role_execute": false
+      },
+      {
+        "proname": "h186_assert_sale",
+        "pronargs": 1,
+        "identity": "pos.h186_assert_sale(jsonb)",
+        "body_md5": "4bd0b8497f2d5eb0f8398fe6989fcdc9",
+        "definition_md5": "a4fa2b4c7ae16c223fa7e64c698567d4",
+        "proconfig": [
+          "search_path=pg_catalog, pos, auth"
+        ],
+        "prosecdef": true,
+        "provolatile": "v",
+        "public_execute": false,
+        "anon_execute": false,
+        "authenticated_execute": false,
+        "service_role_execute": false
+      },
+      {
+        "proname": "h186_persist_sale",
+        "pronargs": 1,
+        "identity": "pos.h186_persist_sale(jsonb)",
+        "body_md5": "73e1dbbbce12b056c9bb83ec7a378755",
+        "definition_md5": "923060882c984921bb02550186a168a5",
+        "proconfig": [
+          "search_path=pg_catalog, pos"
+        ],
+        "prosecdef": false,
+        "provolatile": "v",
+        "public_execute": false,
+        "anon_execute": false,
+        "authenticated_execute": false,
+        "service_role_execute": false
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "file": "supabase/migrations/20261010022500_pos_h186_financial_authority.sql",
+      "sha256": "b4bd0bc1acb97ea6e26c9c5ad8e14729bde73ebfdf635d076ce12ec57b1100a6"
+    },
+    {
+      "file": "supabase/migrations/20261011022600_pos_h186_quote_readonly_device.sql",
+      "sha256": "0b2d14c5cc051be320b182323ed1c6eb4ec9ec1b6c9e247a3d6332c589d1cda1"
+    },
+    {
+      "file": "supabase/migrations/20261011022700_pos_h186_commission_snapshot.sql",
+      "sha256": "45f8bd943bc18462fe695280f0e51be77af8e377924133f115be979e0f21114c"
+    },
+    {
+      "file": "test-h186-financial-sql.mjs",
+      "sha256": "c623d877ec751b2e1be5d72ecb6814ac61545ec6f246774ed12b32d8b5b01542"
+    },
+    {
+      "file": "test-fixtures/h164/sql-authority-baseline.json",
+      "sha256": "820c64f817f6c8420917cd858a657e436175ae4bb7df3693e0166a5a46aee94c"
+    },
+    {
+      "file": "financial-sql-after227-replay-final.log",
+      "sha256": "06eee816857b5868d290179990eb6c5df1128f1391a29b50ec2d789345560e30"
+    },
+    {
+      "file": "migrations-after227-replay-final.log",
+      "sha256": "03ef27c17cb0d73f3336cc19d8384fc397fb14b289729a1700de3696873e5c57"
+    },
+    {
+      "file": "financial-sql-after227-online-parity-green.log",
+      "sha256": "8e1d2ef44c7092b3be4028db7e7cb58daafa07ae9d51114b67eaa85c69dbd106"
+    },
+    {
+      "file": "migrations-after227-online-parity.log",
+      "sha256": "ac82ac5cbff12c3f2cd38fb74142a1b6f2375131c84c54a51d3871bb2e32cada"
+    },
+    {
+      "file": "227-online-guard-red.json",
+      "sha256": "3f19476e432847a1cec1ce8ceb81e078960546f23540d71708b0c06040e9efca"
+    },
+    {
+      "file": "227-rejected-online-guard.sql",
+      "sha256": "357fd7f90ee7b5f98158f1246e918c9869b27e66b7123a4d08973c78de5a981a"
+    },
+    {
+      "file": "after227-function-metadata.json",
+      "sha256": "ef27ce9428e4955380398b7d2e261f4604a50df37e60a2313e8dac34049dd3f8"
+    },
+    {
+      "file": "live7-commission-snapshot-red-final.json",
+      "sha256": "b67d1f522c42822dd175675073ca88e8c4dfda2c3d4cdb6a884b5ac54176dc23"
+    },
+    {
+      "file": "live7-commission-red-program.mjs",
+      "sha256": "923fe6e33b2344b3d1bb0f061b8c7f71b67d663640f384b179fb1192c1a4d1be"
+    },
+    {
+      "file": "liquidation-commission-integrity-red.log",
+      "sha256": "9210d29ea30dcee645eb1a5f3d3365a548835ef60c44d310c43017ce5b4c6db3"
+    },
+    {
+      "file": "liquidation-commission-replay-red.log",
+      "sha256": "c3bb408384d1a11d3c4f74185818147f27669769e61b31d4d232fd84a5c6bce3"
+    }
+  ],
+  "builderSha256": "396d74d7599031c27a783be055d98d50e20c90e693a548cd7dea86452f96f7ad"
+}

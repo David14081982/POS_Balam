@@ -1,0 +1,155 @@
+{
+  "schema": "h186-226-deployment-v1",
+  "risk": "H-186",
+  "generatedAtUtc": "2026-10-11T00:58:11.382Z",
+  "status": "APPLIED_AND_REMOTE_INTEGRITY_VERIFIED",
+  "verifiedAtUtc": "2026-10-11T00:55:53.508Z",
+  "migration": {
+    "file": "supabase/migrations/20261011022600_pos_h186_quote_readonly_device.sql",
+    "sha256": "0b2d14c5cc051be320b182323ed1c6eb4ec9ec1b6c9e247a3d6332c589d1cda1",
+    "onlyMigrationListedInDryRun": true,
+    "appliedMigrations": 1,
+    "cliCompletionRecorded": true,
+    "migration225Unchanged": true
+  },
+  "change": {
+    "quoteIdentity": "pos.quote_sale(jsonb,jsonb,boolean)",
+    "quoteVolatility": "STABLE",
+    "singleAdmissionCallReplaced": true,
+    "quoteBodyMd5": "834715acd4bf25b2b136e72af99fcd49",
+    "quoteDefinitionMd5": "af6536d9370071e487a43773e6289e9d",
+    "helperIdentity": "pos.h186_assert_quote_device()",
+    "helperVolatility": "STABLE",
+    "helperSecurityDefiner": true,
+    "helperDirectExecution": {
+      "public": false,
+      "anon": false,
+      "authenticated": false,
+      "serviceRole": false
+    },
+    "writeDeviceGuardUnchanged": true,
+    "writeDeviceGuardDefinitionMd5": "723fcdf0960929c2826df56446f8f91f",
+    "writeDeviceRowLockPreserved": true
+  },
+  "integrity": {
+    "status": "PASS",
+    "checks": {
+      "total": 352,
+      "passed": 352,
+      "failed": 0
+    },
+    "commercialTables": 22,
+    "allCommercialFingerprintsUnchanged": true,
+    "productCostRows": 978,
+    "productCostsUnchanged": true,
+    "historicalSnapshotsUnchanged": true,
+    "historicalSales": 21,
+    "v2Sales": 0,
+    "folioCountersUnchanged": true,
+    "newQaCounters": 0,
+    "exactFinancialFunctionBodies": 15,
+    "exactFunctionMetadataRows": 23,
+    "patchedAuthorities": 6,
+    "schemaColumns": 4,
+    "onlineEnabled": true,
+    "minFinancialVersion": 1
+  },
+  "comparatorValidation": {
+    "passed": 40,
+    "failed": 0,
+    "networkRequests": 0,
+    "post226SelfTestExamples": "SYNTHETIC; actual remote audit is the separate 352-check comparison",
+    "default225ContractPreserved": true,
+    "explicitAfter226FlagRequired": true,
+    "migrationShaPinned": true
+  },
+  "encodingProvenance": {
+    "sourceEncoding": "UTF-16LE BOM",
+    "derivedEncoding": "UTF-8",
+    "sourceSha256": "cd2a57db996017c762c406fa6eb29253658cd964fcb975b8c2e022c9addf1cc5",
+    "derivedSha256": "46cef569019dec3763c350276e5fe1d5ed615cde2aeed30619e6c741e19cc1d2",
+    "semanticEquality": true
+  },
+  "evidence": [
+    {
+      "file": "supabase/migrations/20261011022600_pos_h186_quote_readonly_device.sql",
+      "sha256": "0b2d14c5cc051be320b182323ed1c6eb4ec9ec1b6c9e247a3d6332c589d1cda1",
+      "bytes": 5210
+    },
+    {
+      "file": ".evidence-h186-deploy/226-dry-run.log",
+      "sha256": "b87ee54c3bdccf8dbbee41d5828a169be8afdc154d07d81d8b73b80b5b30ebf1",
+      "bytes": 1602
+    },
+    {
+      "file": ".evidence-h186-deploy/226-apply.log",
+      "sha256": "3711492cd0fcc8c579c82bb57d5717e84ccdf70784d618b4240376ce98b4a9b1",
+      "bytes": 1718
+    },
+    {
+      "file": ".evidence-h186-deploy/before226-comparison.json",
+      "sha256": "fec57976775b07019134c3597ad46708ab4a9fe280aaa10179cbf9c1bc1652b7",
+      "bytes": 663
+    },
+    {
+      "file": ".evidence-h186-deploy/before226-remote.json",
+      "sha256": "8d6b529394ab980105a0db97ef2a3deb32a729279e05b8eb6079d071aad8c006",
+      "bytes": 27171
+    },
+    {
+      "file": ".evidence-h186-deploy/after226-comparison.json",
+      "sha256": "c533e0eb9f5b575f472f53efa9a3395dd29baab0f010d27f8eb0107b77ade6ea",
+      "bytes": 836
+    },
+    {
+      "file": ".evidence-h186-deploy/after226-remote.raw.json",
+      "sha256": "cd2a57db996017c762c406fa6eb29253658cd964fcb975b8c2e022c9addf1cc5",
+      "bytes": 57562
+    },
+    {
+      "file": ".evidence-h186-deploy/after226-remote.json",
+      "sha256": "46cef569019dec3763c350276e5fe1d5ed615cde2aeed30619e6c741e19cc1d2",
+      "bytes": 28780
+    },
+    {
+      "file": ".evidence-h186-deploy/after226-remote.json.encoding.json",
+      "sha256": "b3934dfe0cb3545226cfce3605eb98e51524406167373accf61339a9ec525562",
+      "bytes": 330
+    },
+    {
+      "file": ".evidence-h186-deploy/after226-readonly.sql",
+      "sha256": "16a072796871a3eab387fea3ca78eee493744f31c0314b5cce8b05dd867349c2",
+      "bytes": 12108
+    },
+    {
+      "file": ".evidence-h186-deploy/expected-after226-functions.json",
+      "sha256": "80000259fbff161b2c392089f28774bdc88af31864070f69b080315bdd710ff2",
+      "bytes": 2662
+    },
+    {
+      "file": ".evidence-h186-deploy/after226-function-metadata.json",
+      "sha256": "39849e75bbf5294613241254f78bffb7885538ee57d5e15b12909ec11f4cdacd",
+      "bytes": 1771
+    },
+    {
+      "file": ".evidence-h186-deploy/audit-comparator-after226-self-test.json",
+      "sha256": "20092eff559ffec4c52ad2461a3d4437f09e9b4cbb55654d21fd2ad666f115a3",
+      "bytes": 3810
+    },
+    {
+      "file": ".evidence-h186-deploy/compare-audits.mjs",
+      "sha256": "b07bf6adbd503a7cdabeaec6801b69bea243449a95e24d57c42887e1375af810",
+      "bytes": 24813
+    }
+  ],
+  "limits": {
+    "financialLiveCertification": "NOT_ASSERTED",
+    "distributedABC": "NO_CERTIFICADO",
+    "publicPagesDeployment": "NOT_ASSERTED",
+    "financialContractActivation": "NOT_ASSERTED",
+    "remoteQuoteBehavior": "NOT_ESTABLISHED_BY_THIS_METADATA_AND_INTEGRITY_REPORT",
+    "reportGenerationNetworkRequests": 0,
+    "reportGenerationRemoteWrites": 0,
+    "publicData": "Only deployment state, aggregate counts, function identities and hashes. No SQL bodies, credentials, customer identities or commercial rows."
+  }
+}

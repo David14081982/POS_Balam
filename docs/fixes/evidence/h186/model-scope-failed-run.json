@@ -1,0 +1,153 @@
+{
+  "schema": "h186-model-scope-failed-run-v1",
+  "risk": "H-186",
+  "generatedAtUtc": "2026-10-11T01:26:24.335Z",
+  "status": "FAILED_RUN_CLEANUP_VERIFIED",
+  "run": "191962b6-57d3-45c0-9587-d188d8988aa4",
+  "financialRun": {
+    "startedAtUtc": "2026-10-11T00:57:07.926Z",
+    "artifactSha256": "0e7b324ce2165cbdb8d8cb3a2f652acfbdd44439b2bad59b74f338daefc373d5",
+    "certifierSha256": "c0caccd103a3d01b336eff667212025f25a6b16bcb4b6f0baa684578bff19a3f",
+    "bootstrapPassed": true,
+    "scenarioPassed": false,
+    "scenarioElapsedMs": 900619,
+    "observedFailure": "SCENARIO_DEADLINE_EXCEEDED",
+    "certified": false,
+    "deliveryCertified": false,
+    "rootCauseStatus": "NOT_ASSERTED_BY_THIS_RUN"
+  },
+  "catalogReadOnly": {
+    "referencesAudited": 967,
+    "referencesTotal": 967,
+    "promotionsAudited": 1,
+    "promotionsTotal": 1,
+    "activePromotions": 1,
+    "stockZeroReferences": 68,
+    "quantities": [
+      1,
+      2,
+      3
+    ],
+    "scenariosAudited": 2901,
+    "scenariosTotal": 2901,
+    "mismatches": 0,
+    "sales": 0,
+    "stockMutations": 0,
+    "reservations": 0,
+    "settingsMutations": 0,
+    "method": "Current DATA/PROMOS plus real SQL quote_sale, read-only chunks of 100"
+  },
+  "fixtureRegistry": {
+    "meaning": "Counts from the failed-run fixture registry; planned identifiers alone do not prove remote persistence.",
+    "products": 9,
+    "sellers": 4,
+    "promotions": 7,
+    "sales": 0,
+    "returns": 0,
+    "exchanges": 0,
+    "loans": 0,
+    "clients": 0,
+    "requestIds": 8,
+    "installations": 3,
+    "configKeys": 0,
+    "completedCheckpoints": 11,
+    "incompleteCheckpoints": [
+      {
+        "name": "H186 financial authority across A/B/C and exact fixture isolation / H186 owned promotion 5 pct30",
+        "complete": false,
+        "startedAtUtc": "2026-10-11T01:15:15.285Z",
+        "requestCount": 0
+      }
+    ]
+  },
+  "cleanup": {
+    "status": "PASS",
+    "passed": true,
+    "completedAtUtc": "2026-10-11T01:25:04.449Z",
+    "exactRowsDeleted": 33,
+    "protectedTables": 64,
+    "nonQaPreserved": true,
+    "newPosResidue": 0,
+    "newAuthResidue": 0,
+    "authAbsent": 1,
+    "newQaCounters": 0,
+    "monotonicTablesPreserved": [
+      "online_snapshot_revision"
+    ],
+    "baselineSha256": "2bbacba3ed035c31acd6329b95d6b8725ecfb98d5bd59550374557548f14d130",
+    "finalCanonicalCaptureSha256": "abcd0e6798f8fb995253e712f8db891330449031b4329e5cdcb8997642a983d8",
+    "separateSqlAndAuthTransactions": true,
+    "sqlPostcheck": {
+      "exactRowsChecked": 33,
+      "remainingExactRows": 0,
+      "baselinePreserved": true
+    },
+    "auth": {
+      "absenceVerified": true,
+      "attemptsRecorded": 1,
+      "results": [
+        {
+          "state": "ABSENT_VERIFIED",
+          "status": 404,
+          "deletionAttributed": false,
+          "reconciled": true,
+          "attemptRecorded": true
+        }
+      ]
+    }
+  },
+  "evidence": [
+    {
+      "file": ".evidence-h186-live-22e92fe3-8513-4c78-a9e2-e96c6ff9aa42/matrix.json",
+      "sha256": "5371e035e767e2f299c42757993bb219db1f87ba5453d75b028c7708d37de68a",
+      "bytes": 8924
+    },
+    {
+      "file": ".evidence-h186-live-22e92fe3-8513-4c78-a9e2-e96c6ff9aa42/fixtures.json",
+      "sha256": "8d1236424402a2c6c277c21341ca1c2e436b6c5d3b5f31ac0e9f2c64d2c1dd7d",
+      "bytes": 17675
+    },
+    {
+      "file": ".evidence-h186-live-22e92fe3-8513-4c78-a9e2-e96c6ff9aa42/h186-catalog-readonly-audit.json",
+      "sha256": "05ba74da582de8d4eecde44a5807ffafb95dbdbcce2ae80ef066d1694e889069",
+      "bytes": 4499
+    },
+    {
+      "file": ".evidence-h186-live-22e92fe3-8513-4c78-a9e2-e96c6ff9aa42/mutation-journal.json",
+      "sha256": "203fac4ce49685af74a5f489ac0dd2317c2745b6fc778f16c9ded6f8e03f00ce",
+      "bytes": 181962
+    },
+    {
+      "file": ".evidence-h171-private/live-runs/191962b6-57d3-45c0-9587-d188d8988aa4/cleanup-completion.json",
+      "sha256": "cdd32d898755d1eeedb0099ef84d92be27041f5a7f226d79fd927dc4bf4c282c",
+      "bytes": 1214
+    },
+    {
+      "file": ".evidence-h171-private/live-runs/191962b6-57d3-45c0-9587-d188d8988aa4/auth-cleanup-result.json",
+      "sha256": "9592f5abcb991481d41d7a051235618134f9955cfdd7867a3138303974e085b6",
+      "bytes": 435
+    },
+    {
+      "file": ".evidence-h171-private/live-runs/191962b6-57d3-45c0-9587-d188d8988aa4/sql-postcheck.json",
+      "sha256": "b77f9b5730a90339fd9ca148f6bdf01a8b21513cc1aad2a74a3aa4e8f4bad524",
+      "bytes": 12816
+    },
+    {
+      "file": ".evidence-h171-private/live-runs/191962b6-57d3-45c0-9587-d188d8988aa4/after-all-cleanup.json.gz",
+      "sha256": "abcd0e6798f8fb995253e712f8db891330449031b4329e5cdcb8997642a983d8",
+      "bytes": 27947886
+    }
+  ],
+  "limits": {
+    "financialLiveCertification": "NOT_ASSERTED",
+    "distributedABC": "NO_CERTIFICADO",
+    "publicPagesDeployment": "NOT_ASSERTED",
+    "financialContractActivation": "NOT_ASSERTED",
+    "failedRunRemainsFailed": true,
+    "reportGenerationNetworkRequests": 0,
+    "reportGenerationRemoteWrites": 0,
+    "publicData": "Only QA run identity, aggregate counts, timestamps and evidence hashes. No credentials, row bodies, personal identities or SQL text.",
+    "originalEvidencePreserved": true,
+    "cleanupDoesNotCertifyFinancialRun": true
+  }
+}

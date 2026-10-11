@@ -5,7 +5,7 @@ import * as fs from 'node:fs/promises';
 import { resolve, join, relative } from 'node:path';
 import { randomUUID, createHash } from 'node:crypto';
 import { openLiveJournal, journalHash } from './h171-live-journal.mjs';
-import { AUTH_INCOMING_FKS } from './h171-auth-retirement.mjs';
+import { LIVE_AUTH_INCOMING_FKS, LIVE_AUTH_QA_EMPTY_RELATIONS } from './h171-live-auth-dependencies.mjs';
 import { recordedSnapshotCatalog } from './h171-live-snapshot.mjs';
 import { LIVE_AUTH_CLEANUP as C, buildLiveAuthIdentityEvidence, createLiveCleanupAuth } from './h171-live-cleanup-auth.mjs';
 
@@ -87,8 +87,8 @@ async function fixture(options = {}) {
     auth_dependency_catalog_sha256: postcheck.authDependencyCatalogSha256, pos_fingerprints: postcheck.posFingerprints,
     snapshot_revision: postcheck.snapshotRevision,
     foreign_auth_fingerprint: postcheck.foreignAuthFingerprint, non_target_auth_ids: postcheck.nonTargetAuthIds,
-    fk_catalog: AUTH_INCOMING_FKS.map(f => ({ relation: f.relation, columns: [f.column], effect: f.effect, referenced_columns: ['id'], validated: true })),
-    fk_counts: [actorId, accountId].flatMap(id => AUTH_INCOMING_FKS.map(f => ({ ...f, id, rows: f.relation.startsWith('auth.') ? 1 : 0 }))),
+    fk_catalog: LIVE_AUTH_INCOMING_FKS.map(f => ({ relation: f.relation, columns: [f.column], effect: f.effect, referenced_columns: ['id'], validated: true })),
+    fk_counts: [actorId, accountId].flatMap(id => LIVE_AUTH_INCOMING_FKS.map(f => ({ ...f, id, rows: f.relation.startsWith('auth.') && !LIVE_AUTH_QA_EMPTY_RELATIONS.includes(f.relation) ? 1 : 0 }))),
     storage_owner_catalog_complete: true, storage_owner_catalog: postcheck.storageOwnerCatalog,
     storage_owner_counts: [actorId, accountId].flatMap(id => postcheck.storageOwnerCatalog.map(c => ({ ...c, id, rows: 0 }))) });
   const state = { plan, proof, identityEvidence, identityEvidenceFileSha256, map, preflight: structuredClone(fresh()), now: time };
@@ -212,9 +212,31 @@ checked('email, createdAt, exact marker or any metadata drift blocks DELETE', as
   });
 });
 checked('all ten POS FK effects including CASCADE and SET NULL require zero rows', async () => {
-  for (const fk of AUTH_INCOMING_FKS.filter(f => f.relation.startsWith('pos.'))) await withFixture({}, async f => {
+  for (const fk of LIVE_AUTH_INCOMING_FKS.filter(f => f.relation.startsWith('pos.'))) await withFixture({}, async f => {
     f.state.preflight.fk_counts.find(c => c.id === f.accountId && c.relation === fk.relation && c.column === fk.column).rows = 1;
     await assert.rejects(f.make().retireOne(f.accountId), /POS_DEPENDENCIES_REMAIN/); assert.deepEqual(f.calls.deletes, []);
+  });
+});
+checked('The two newly reviewed Auth families require zero rows before any durable DELETE intent', async () => {
+  for (const relation of LIVE_AUTH_QA_EMPTY_RELATIONS) await withFixture({}, async f => {
+    f.state.preflight.fk_counts.find(c => c.id === f.accountId && c.relation === relation).rows = 1;
+    await assert.rejects(f.make().retireOne(f.accountId), /UNEXPECTED_QA_AUTH_DEPENDENCIES/);
+    assert.deepEqual(f.calls.deletes, []);
+    assert.equal(f.journal.snapshot().entries.some(e => e.kind === C.attemptKind), false);
+  });
+});
+checked('Missing, duplicate or changed new-family dependency evidence never reaches GoTrue DELETE', async () => {
+  for (const relation of LIVE_AUTH_QA_EMPTY_RELATIONS) for (const change of [
+    (p, id) => { p.fk_counts = p.fk_counts.filter(c => !(c.id === id && c.relation === relation)); },
+    (p, id) => { const i = p.fk_counts.findIndex(c => c.id === id && c.relation === relation); p.fk_counts[i] = structuredClone(p.fk_counts.find(c => c.id === id && c.relation === 'auth.identities')); },
+    p => { const row = p.fk_catalog.find(c => c.relation === relation); row.effect = row.effect === 'c' ? 'n' : 'c'; },
+    p => { p.fk_catalog.find(c => c.relation === relation).columns = ['another_id']; },
+    p => { p.fk_catalog.find(c => c.relation === relation).validated = false; },
+  ]) await withFixture({}, async f => {
+    change(f.state.preflight, f.accountId);
+    await assert.rejects(f.make().retireOne(f.accountId), /FK_COUNTS_INCOMPLETE|FK_CATALOG_CHANGED/);
+    assert.deepEqual(f.calls.deletes, []);
+    assert.equal(f.journal.snapshot().entries.some(e => e.kind === C.attemptKind), false);
   });
 });
 checked('unknown Auth families, changed FK catalog and incomplete counts require review', async () => {
@@ -338,7 +360,7 @@ after(async () => {
     at: new Date().toISOString(), scope: 'LOCAL_ONLY_INJECTED_GOTRUE_DURABLE_JOURNAL_NO_NETWORK',
     moduleSha256: sha(await fs.readFile('h171-live-cleanup-auth.mjs', 'utf8')),
     testSha256: sha(await fs.readFile('test-h171-live-cleanup-auth.mjs', 'utf8')),
-    checksPassed: checks.length, expectedChecks: 27, checks, certified: false,
+    checksPassed: checks.length, expectedChecks: 29, checks, certified: false,
     limitations: ['This does not certify a remote SQL commit or GoTrue deletion.',
       'The caller must validate and durably preserve original commit, postcheck and identity artifacts.',
       'Fresh SELECT and GoTrue DELETE are separate transactions; concurrent changes can require review.'],

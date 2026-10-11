@@ -1547,7 +1547,6 @@
         h('div', { key: 'g', className: 'grid grid-cols-1 md:grid-cols-2 gap-x-6' }, [
           h(CfgText, { key: 'lo', k: 'stock.lowThreshold', label: 'Stock bajo (≤ piezas)', type: 'number' }),
           h(CfgText, { key: 'rc', k: 'client.recurrentThreshold', label: 'Cliente recurrente (≥ compras)', type: 'number' }),
-          h(CfgText, { key: 'mm', k: 'discount.minMarginPct', label: 'Margen mínimo en promociones (%)', type: 'number', min: 0, max: 100, hint: 'Limita descuentos nuevos usando el costo registrado del producto.' }),
         ]),
       ]),
     ],

@@ -1,6 +1,6 @@
 {
   "scope": "Local PGlite canonicalization; actual durable journal; controlled exact SELECT and Auth-read clients",
-  "moduleSha256": "f12be162202e00c3315436450e77f5b94a7c1bb0573121cd81487aaceb616058",
+  "moduleSha256": "319306422effb92807a7138e6d36e1b2fc1548d5e313d5917037eaac8a2f578a",
   "accountEdgeSourceSha256": "c4b7c474a6a743431bed64d05320764f90832e65afcbf652de1e56a1c1d7161c",
   "testSha256": "c3b8ef1eb572b3a3a193bfbc308bf4c11f81ec5b0018a2c6893a6b03a7a6d973",
   "certified": false,

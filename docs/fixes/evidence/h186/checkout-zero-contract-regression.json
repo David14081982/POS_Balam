@@ -1,0 +1,223 @@
+{
+  "schema": "h186-checkout-zero-contract-regression-v1",
+  "generatedAt": "2026-10-11T02:37:43.476Z",
+  "status": "LOCAL_SOURCE_PASS",
+  "scope": "Actual CheckoutModal and POS seller confirmation through real DATA.recordSale to intercepted CORE.pushSale; only synthetic local browser fixtures.",
+  "change": {
+    "courtesy": "Normalize explicit courtesy advance to zero before DATA validation.",
+    "zeroAdvanceLayaway": "Send no payment components when the advance is zero; preserve the nonzero mixed-payment editor state."
+  },
+  "red": {
+    "startedAt": "2026-10-11T02:30:16.832Z",
+    "completedAt": "2026-10-11T02:30:42.637Z",
+    "passed": 3,
+    "failed": 2,
+    "courtesyRegressionIntroducedByH186": true,
+    "zeroMixedAdvanceFailurePredatesH186": true,
+    "artifactSha256": "6e649e380af0223ffc3122da2b08e7e1d40c5339630783deaa8553d00d2afb54",
+    "sourceHashes": {
+      "balam/data.jsx": "ce0ba988f240ff030c0bfb32c39b223fdbd1ed9511c042b214ba510cc1b2d408",
+      "balam/discounts.jsx": "42fd09e25ddaee186b7c976caf2d06c9e27361e6f37aee4843af8972cfd5774d",
+      "balam/pos-ticket.jsx": "d1f7696952b7d45413f0899e6c61985487914b3e4c3b65507f3ce240ecaa84ce",
+      "balam/pos.jsx": "b72558a580e2a62e3a10204bcb3725a779fa639de8c8a6cbeb5d6a060fa43b7d"
+    },
+    "evidence": {
+      "resultSha256": "fb6e3b14db387da2d24316ce69543b5a46643b6df441eb47669e08464df2b7a8",
+      "logSha256": "8fe27405fe8a8a43ca3555bcffa57c4ec6552988ee86e905ba995ec736d62ea2"
+    }
+  },
+  "green": {
+    "startedAt": "2026-10-11T02:35:54.545Z",
+    "completedAt": "2026-10-11T02:36:41.608Z",
+    "passed": 5,
+    "failed": 0,
+    "currentCases": 3,
+    "historicalComparisons": 2,
+    "sourceUnchanged": true,
+    "artifactUnchanged": true,
+    "browserVersion": "154.0.8037.98",
+    "sourceMode": true,
+    "artifactSha256": "6e649e380af0223ffc3122da2b08e7e1d40c5339630783deaa8553d00d2afb54",
+    "sourceHashes": {
+      "balam/data.jsx": "ce0ba988f240ff030c0bfb32c39b223fdbd1ed9511c042b214ba510cc1b2d408",
+      "balam/discounts.jsx": "42fd09e25ddaee186b7c976caf2d06c9e27361e6f37aee4843af8972cfd5774d",
+      "balam/pos-ticket.jsx": "52cb6d58f8ce317a15aed12d9e3a4b0e958f1ac8933ac307f20646d0f90eaceb",
+      "balam/pos.jsx": "b72558a580e2a62e3a10204bcb3725a779fa639de8c8a6cbeb5d6a060fa43b7d"
+    },
+    "results": [
+      {
+        "case": "current",
+        "passed": true,
+        "historicalFailureReproduced": false,
+        "quoteTotal": 875,
+        "checkout": {
+          "method": "Cortesía",
+          "advance": 0,
+          "cash": 0,
+          "other": 0,
+          "componentCount": 0
+        },
+        "gatewayCalls": 1,
+        "gateway": {
+          "financialVersion": 2,
+          "originalTotal": 1250,
+          "total": 0,
+          "subtotal": 0,
+          "iva": 0,
+          "advance": 0,
+          "balance": 0,
+          "cash": 0,
+          "other": 0,
+          "giftValue": 875,
+          "paymentLedgerRows": 0,
+          "paymentAmounts": [],
+          "paymentComponents": []
+        },
+        "inconsistentPositiveCourtesyAdvance": {
+          "rejected": true,
+          "gatewayUnchanged": true
+        }
+      },
+      {
+        "case": "before-h186",
+        "passed": true,
+        "historicalFailureReproduced": false,
+        "quoteTotal": 875,
+        "checkout": {
+          "method": "Cortesía",
+          "advance": 875,
+          "cash": 0,
+          "other": 0,
+          "componentCount": 0
+        },
+        "gatewayCalls": 1,
+        "gateway": {
+          "financialVersion": null,
+          "originalTotal": null,
+          "total": 0,
+          "subtotal": 754.31,
+          "iva": 120.69,
+          "advance": 0,
+          "balance": 0,
+          "cash": 0,
+          "other": 0,
+          "giftValue": 875,
+          "paymentLedgerRows": 0,
+          "paymentAmounts": [],
+          "paymentComponents": []
+        }
+      },
+      {
+        "case": "current-layaway-zero",
+        "passed": true,
+        "historicalFailureReproduced": false,
+        "quoteTotal": 875,
+        "checkout": {
+          "method": "Apartado",
+          "advance": 0,
+          "cash": 0,
+          "other": 0,
+          "componentCount": 0
+        },
+        "gatewayCalls": 1,
+        "gateway": {
+          "financialVersion": 2,
+          "originalTotal": 1250,
+          "total": 875,
+          "subtotal": 754.31,
+          "iva": 120.69,
+          "advance": 0,
+          "balance": 875,
+          "cash": 0,
+          "other": 0,
+          "giftValue": 0,
+          "paymentLedgerRows": 0,
+          "paymentAmounts": [],
+          "paymentComponents": []
+        }
+      },
+      {
+        "case": "before-h186-layaway-zero",
+        "passed": true,
+        "historicalFailureReproduced": true,
+        "quoteTotal": 875,
+        "checkout": {
+          "method": "Apartado",
+          "advance": 0,
+          "cash": 50,
+          "other": -50,
+          "componentCount": 2
+        },
+        "gatewayCalls": 0
+      },
+      {
+        "case": "current-layaway-restored",
+        "passed": true,
+        "historicalFailureReproduced": false,
+        "quoteTotal": 875,
+        "checkout": {
+          "method": "Apartado",
+          "advance": 100,
+          "cash": 50,
+          "other": 50,
+          "componentCount": 2
+        },
+        "gatewayCalls": 1,
+        "gateway": {
+          "financialVersion": 2,
+          "originalTotal": 1250,
+          "total": 875,
+          "subtotal": 754.31,
+          "iva": 120.69,
+          "advance": 100,
+          "balance": 775,
+          "cash": 50,
+          "other": 50,
+          "giftValue": 0,
+          "paymentLedgerRows": 1,
+          "paymentAmounts": [
+            100
+          ],
+          "paymentComponents": [
+            {
+              "methodCode": "Efectivo",
+              "amount": 50
+            },
+            {
+              "methodCode": "Tarjeta",
+              "amount": 50
+            }
+          ]
+        }
+      }
+    ],
+    "evidence": {
+      "resultSha256": "45df16f16b5f3e62145eade81d7ca3276263fb6d57d5cc967a4a2f02154092e2",
+      "logSha256": "10887019dcaa2216901f92d30145e14d2658a429cb97461e388a8c6e61aacc58"
+    }
+  },
+  "historicalComparison": {
+    "commit": "938620a552255d21fc3f1f27d6af7735960ea1a5",
+    "sourceHashes": {
+      "balam/data.jsx": "1930993b5a932fdd81d4701e00b527d2e52f40ee58eb1896eafd46ea99482d9a",
+      "balam/discounts.jsx": "8a6948c122a70502c37ee8f04bce8ba408af6fa950d1edf1e9e4283b369a95ba",
+      "balam/pos-ticket.jsx": "2a4b0839dc40f6f30cd79e5b2fe6ecd145113508cfc74ed31da68ec8e915e5b2",
+      "balam/pos.jsx": "b72558a580e2a62e3a10204bcb3725a779fa639de8c8a6cbeb5d6a060fa43b7d"
+    },
+    "normalCiRequiresHistoricalGitObjects": false
+  },
+  "regression": {
+    "file": "test-h186-courtesy-checkout.mjs",
+    "sha256": "f5b032cd97052a08a398ee6a501f776be5dbb0fac7ac45097a5caa3ef0f0c180",
+    "ciCommand": "node test-h186-courtesy-checkout.mjs",
+    "localCommand": "node test-h186-courtesy-checkout.mjs --source --legacy-commit=938620a552255d21fc3f1f27d6af7735960ea1a5"
+  },
+  "limits": {
+    "remoteBusinessWrites": 0,
+    "remoteFinancialCertification": "PENDING",
+    "newGeneratedArtifact": "PENDING_ROOT_BUILD",
+    "deployment": "PENDING",
+    "hardware": "NOT_TESTED",
+    "gateway": "Captured before persistence; SQL and remote adoption are outside this local regression."
+  }
+}

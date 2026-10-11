@@ -407,6 +407,8 @@ table_catalog AS (
   SELECT t.tgfoid FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid JOIN pg_namespace s ON s.oid=c.relnamespace WHERE s.nspname='pos'))
 )
 SELECT jsonb_build_object('format','balam-canonical-snapshot-v1','at',clock_timestamp(),
+ 
+ 
  'expected_project_ref','telohdbvbvsfmwyriflz','source_url','https://api.supabase.com/v1/projects/telohdbvbvsfmwyriflz/database/query',
  'binding','external executor URL plus real actor anchor; PostgreSQL does not attest Supabase project ref',
  'database',current_database(),'session_user',session_user,'current_user',current_user,

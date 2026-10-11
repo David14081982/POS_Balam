@@ -1,0 +1,585 @@
+{
+  "schema": "h186-local-financial-regressions-v3",
+  "risk": "H-186",
+  "generatedAtUtc": "2026-10-11T02:43:16.176Z",
+  "status": "VERIFIED_LOCAL_EVIDENCE",
+  "artifacts": [
+    {
+      "file": "index.html",
+      "sha256": "dcab70eff4fcd8ce5ec75346777b2c6db2e6b0d3c7d1779136443376cba68f3e",
+      "bytes": 9388889,
+      "fileModifiedAtUtc": "2026-10-11T02:37:52.059Z"
+    },
+    {
+      "file": "POS Balam (offline).html",
+      "sha256": "dcab70eff4fcd8ce5ec75346777b2c6db2e6b0d3c7d1779136443376cba68f3e",
+      "bytes": 9388889,
+      "fileModifiedAtUtc": "2026-10-11T02:37:51.830Z"
+    },
+    {
+      "file": "sw.js",
+      "sha256": "bb1c7dd43f762cba659b99932454c6fd65aba6f72b782798d866a15a8b99ea12",
+      "bytes": 4477,
+      "fileModifiedAtUtc": "2026-10-11T02:37:52.323Z"
+    }
+  ],
+  "methodology": {
+    "selection": "Only completed suites with durable logs or JSON are included; no suite is rerun to create this report.",
+    "counts": "Independent assertion counts are not added into a unique-coverage total.",
+    "timestamps": "Serial runner timestamps record each child start and completion. JSON dates retain their original meaning. File modification times are never substituted for execution times.",
+    "hashes": "The serial runner binds source and artifact hashes before and after execution and records test hashes. Other current manifests are captured at report creation; plain logs are not execution-time source attestations.",
+    "publicData": "Whitelisted statuses, counts, paths and hashes only; no private rows, identities, credentials or raw snapshots."
+  },
+  "serialRun": {
+    "evidence": {
+      "file": ".evidence-h186-final-model-20261011023822707/summary.json",
+      "sha256": "820036c202ef93e48aafdcc1ca9f0a2de631f193fd186bc460c89f229090dd80",
+      "bytes": 3202,
+      "fileModifiedAtUtc": "2026-10-11T02:42:48.138Z"
+    },
+    "startedAtUtc": "2026-10-11T02:38:22.711Z",
+    "completedAtUtc": "2026-10-11T02:42:48.135Z",
+    "execution": "serial",
+    "ok": true,
+    "sourceUnchanged": true,
+    "allChildProcessesClosed": true,
+    "driver": {
+      "file": ".evidence-h186-deploy/run-final-model-regressions.mjs",
+      "sha256": "add5d8e38e404737f9cf73753a03d5a7519bb041328a54d5dd8696c9b28b223b",
+      "bytes": 3394,
+      "fileModifiedAtUtc": "2026-10-11T02:35:48.411Z"
+    }
+  },
+  "suites": [
+    {
+      "id": "h186-financial-ui",
+      "command": "node test-h186-financial-ui.mjs",
+      "passed": 26,
+      "failed": 0,
+      "exitCode": 0,
+      "artifactSHA256": "dcab70eff4fcd8ce5ec75346777b2c6db2e6b0d3c7d1779136443376cba68f3e",
+      "startedAtUtc": "2026-10-11T02:38:22.814Z",
+      "completedAtUtc": "2026-10-11T02:38:47.835Z",
+      "executionTimestampSource": "Serial runner child start and close events",
+      "recordedAtUtc": "2026-10-11T02:38:25.187Z",
+      "evidence": {
+        "file": ".evidence-h186-final-model-20261011023822707/financial-ui/result.json",
+        "sha256": "7964288c995b131c65ea9d703233f36c3759e278c4e7379b4307caa2d2f6ddf9",
+        "bytes": 3740,
+        "fileModifiedAtUtc": "2026-10-11T02:38:47.714Z"
+      },
+      "log": {
+        "file": ".evidence-h186-final-model-20261011023822707/financial-ui/run.log",
+        "sha256": "39e056ea48f57c39ee46dfba6a73a214b455d262fd5750c244c3cfa251aa3e87",
+        "bytes": 1913,
+        "fileModifiedAtUtc": "2026-10-11T02:38:47.715Z"
+      },
+      "testSHA256RecordedByRunner": "71e40521ed370df00abb965d973cb99db77b39f4b0570fc239bd0644caf18b00",
+      "scope": "Final bundle: original price, discounted subtotal and IVA, 30/50/60/100 percent, fixed and additional benefits, cent residue, historical receipt, zero checkout, frozen reprints, consecutive native print artifacts, Reports and mobile.",
+      "ticketSourceSHA256RecordedByTest": "52cb6d58f8ce317a15aed12d9e3a4b0e958f1ac8933ac307f20646d0f90eaceb",
+      "externalNetwork": "blocked by browser routing",
+      "remoteBusinessWrites": 0,
+      "hardware": "NOT_TESTED"
+    },
+    {
+      "id": "h186-checkout-zero",
+      "command": "node test-h186-courtesy-checkout.mjs",
+      "passed": 3,
+      "failed": 0,
+      "exitCode": 0,
+      "artifactSHA256": "dcab70eff4fcd8ce5ec75346777b2c6db2e6b0d3c7d1779136443376cba68f3e",
+      "startedAtUtc": "2026-10-11T02:38:47.841Z",
+      "completedAtUtc": "2026-10-11T02:39:39.099Z",
+      "executionTimestampSource": "Serial runner child start and close events",
+      "recordedAtUtc": "2026-10-11T02:39:38.757Z",
+      "evidence": {
+        "file": ".evidence-h186-final-model-20261011023822707/checkout-zero/result.json",
+        "sha256": "b02dd89acdd04a8c86672318160dae88e5a24ebb124789d97d64717b6072f3c9",
+        "bytes": 37510,
+        "fileModifiedAtUtc": "2026-10-11T02:39:38.996Z"
+      },
+      "log": {
+        "file": ".evidence-h186-final-model-20261011023822707/checkout-zero/run.log",
+        "sha256": "3327dac93056f2c2a8d11ee5eba0234a7522d1f07cf5eb95e6f9b3295dd50670",
+        "bytes": 222,
+        "fileModifiedAtUtc": "2026-10-11T02:39:28.477Z"
+      },
+      "testSHA256RecordedByRunner": "f5b032cd97052a08a398ee6a501f776be5dbb0fac7ac45097a5caa3ef0f0c180",
+      "scope": "Final bundle: real CheckoutModal, POS seller confirmation and DATA through the captured gateway for explicit courtesy, mixed advance changed to zero, and nonzero mixed advance restored. No source overlays or historical substitutions.",
+      "externalNetwork": "blocked by browser routing",
+      "remoteBusinessWrites": 0,
+      "hardware": "NOT_TESTED"
+    },
+    {
+      "id": "h186-return-ui",
+      "command": "node test-h186-return-ui.mjs",
+      "passed": 3,
+      "failed": 0,
+      "exitCode": 0,
+      "artifactSHA256": "dcab70eff4fcd8ce5ec75346777b2c6db2e6b0d3c7d1779136443376cba68f3e",
+      "startedAtUtc": "2026-10-11T02:39:39.104Z",
+      "completedAtUtc": "2026-10-11T02:39:57.703Z",
+      "executionTimestampSource": "Serial runner child start and close events",
+      "recordedAtUtc": null,
+      "evidence": {
+        "file": ".evidence-h186-final-model-20261011023822707/return-ui/run.log",
+        "sha256": "df90dc96a9ad39a496d1864a155ad35d8c879003bae3682a2a6ad23acc705a64",
+        "bytes": 294,
+        "fileModifiedAtUtc": "2026-10-11T02:39:50.814Z"
+      },
+      "log": {
+        "file": ".evidence-h186-final-model-20261011023822707/return-ui/run.log",
+        "sha256": "df90dc96a9ad39a496d1864a155ad35d8c879003bae3682a2a6ad23acc705a64",
+        "bytes": 294,
+        "fileModifiedAtUtc": "2026-10-11T02:39:50.814Z"
+      },
+      "testSHA256RecordedByRunner": "25c8ce8a0b490ce44a14463c552ee58f794773bd3527c853c686d8526d678c0d",
+      "scope": "Real isolated ReturnDetail component: V2 zero refund with no invented payment, historical evidence requirement, and paid refund components. Loads the final bundle and overlays the frozen config/data/returns sources to expose the private component.",
+      "sourceOverlays": [
+        "balam/config.jsx",
+        "balam/data.jsx",
+        "balam/returns.jsx"
+      ],
+      "externalNetwork": "blocked by browser routing",
+      "remoteBusinessWrites": 0,
+      "hardware": "NOT_TESTED"
+    },
+    {
+      "id": "h185-ticket-layout",
+      "command": "node test-h185-sale-ticket-layout.mjs",
+      "passed": 30,
+      "failed": 0,
+      "exitCode": 0,
+      "artifactSHA256": "dcab70eff4fcd8ce5ec75346777b2c6db2e6b0d3c7d1779136443376cba68f3e",
+      "startedAtUtc": "2026-10-11T02:39:57.709Z",
+      "completedAtUtc": "2026-10-11T02:41:16.262Z",
+      "executionTimestampSource": "Serial runner child start and close events",
+      "recordedAtUtc": "2026-10-11T02:39:58.914Z",
+      "evidence": {
+        "file": ".evidence-h186-final-model-20261011023822707/h185/result.json",
+        "sha256": "9a963d4ab6dea50c740fe9d16c48b6b478f24bfb3e4bb84710b087975428e529",
+        "bytes": 46760,
+        "fileModifiedAtUtc": "2026-10-11T02:41:16.166Z"
+      },
+      "log": {
+        "file": ".evidence-h186-final-model-20261011023822707/h185/run.log",
+        "sha256": "f664e7ce851d2de5863f093c505b72442c8300f9013cb73ad0954f8122652e03",
+        "bytes": 2397,
+        "fileModifiedAtUtc": "2026-10-11T02:41:16.167Z"
+      },
+      "testSHA256RecordedByRunner": "ebc2b2a4321f43c030a5478278178e68671d20c5c8b45bc30463ca8880d37e29",
+      "scope": "Final bundle: complete short/long/legacy/mixed/reprinted sale receipts, spacing and established layaway, payment, exchange and courtesy variants.",
+      "externalNetwork": "blocked by browser routing",
+      "remoteBusinessWrites": 0,
+      "hardware": "NOT_TESTED"
+    },
+    {
+      "id": "h184-thermal",
+      "command": "node test-h184-all-thermal.mjs",
+      "passed": 15,
+      "failed": 0,
+      "exitCode": 0,
+      "artifactSHA256": "dcab70eff4fcd8ce5ec75346777b2c6db2e6b0d3c7d1779136443376cba68f3e",
+      "startedAtUtc": "2026-10-11T02:41:16.275Z",
+      "completedAtUtc": "2026-10-11T02:42:47.890Z",
+      "executionTimestampSource": "Serial runner child start and close events",
+      "recordedAtUtc": null,
+      "evidence": {
+        "file": ".evidence-h186-final-model-20261011023822707/h184/result.json",
+        "sha256": "dc3606a7dc1bd1c559e74a8ad74e35f87cad92e02ec8816b4d5b50950068291c",
+        "bytes": 8045,
+        "fileModifiedAtUtc": "2026-10-11T02:42:47.768Z"
+      },
+      "log": {
+        "file": ".evidence-h186-final-model-20261011023822707/h184/run.log",
+        "sha256": "faac090594b403c0549fd75d00bebe57606c37ee33d74d411314a6c9e5b14dc1",
+        "bytes": 1509,
+        "fileModifiedAtUtc": "2026-10-11T02:42:47.770Z"
+      },
+      "testSHA256RecordedByRunner": "c2440755fdac7eb0dcae045645af785621f55821f0ef549ef774da0e54013f98",
+      "scope": "Final bundle: complete commercial USB artifacts, ordinary payment, Reports, popup lifecycle, copies, layaway/advance/installment/liquidation, exchanges and returns; simulated transport.",
+      "externalNetwork": "blocked by browser routing",
+      "remoteBusinessWrites": 0,
+      "hardware": "NOT_TESTED"
+    }
+  ],
+  "sourceSuites": [
+    {
+      "id": "h186-model-universe",
+      "command": "node test-h186-model-universe.mjs",
+      "passed": 14,
+      "failed": 0,
+      "startedAtUtc": "2026-10-11T01:26:52.784Z",
+      "completedAtUtc": "2026-10-11T01:26:52.854Z",
+      "sourceSHA256RecordedByTest": "42fd09e25ddaee186b7c976caf2d06c9e27361e6f37aee4843af8972cfd5774d",
+      "measured": {
+        "cost": {
+          "productGetterReads": 2
+        },
+        "guarantee": {
+          "references": 976,
+          "visited": 976,
+          "correct": 976,
+          "affected": 1
+        },
+        "completeness": {
+          "completed": true
+        }
+      },
+      "artifactBinding": "Production-source VM",
+      "remoteBusinessWrites": 0,
+      "evidence": {
+        "file": ".evidence-h186-model-universe/permanent-refixed.json",
+        "sha256": "565e26651a1d4ba77d1adfb36a81fcec0724b9384b99d72a38cf79d6c2cb223a",
+        "bytes": 5415,
+        "fileModifiedAtUtc": "2026-10-11T01:26:52.853Z"
+      },
+      "publicEvidence": "docs/fixes/evidence/h186/model-universe-regression.json"
+    },
+    {
+      "id": "h186-promotions",
+      "command": "node test-h186-promotions.mjs",
+      "passed": 10,
+      "failed": 0,
+      "evidence": {
+        "file": ".evidence-h186-model-universe/promotions-green.log",
+        "sha256": "d2ecc3be16d52d5fe67dbbe2389120b702af4e75270c2240885a7b2fc6e4b208",
+        "bytes": 861,
+        "fileModifiedAtUtc": "2026-10-11T01:26:36.662Z"
+      },
+      "scope": "Promotion rules with live fixture projection revisions",
+      "artifactBinding": "Production-source VM; this is not a browser artifact run",
+      "executionTimestampUtc": null,
+      "timestampNote": "Log contains no execution timestamp. File modification time is metadata only.",
+      "remoteBusinessWrites": 0
+    },
+    {
+      "id": "discounts",
+      "command": "node test-discounts.mjs",
+      "passed": 38,
+      "failed": 0,
+      "evidence": {
+        "file": ".evidence-h186-model-universe/discounts-green.log",
+        "sha256": "8d78408be36ef5fd161a6fcff2ea045f41b924a890f66e3e92f192318531d562",
+        "bytes": 3055,
+        "fileModifiedAtUtc": "2026-10-11T01:26:39.916Z"
+      },
+      "scope": "Percentage, fixed, stacked discounts and included IVA",
+      "artifactBinding": "Production-source VM; this is not a browser artifact run",
+      "executionTimestampUtc": null,
+      "timestampNote": "Log contains no execution timestamp. File modification time is metadata only.",
+      "remoteBusinessWrites": 0
+    },
+    {
+      "id": "h186-financial-data",
+      "command": "node test-h186-financial-data.mjs",
+      "passed": 20,
+      "failed": 0,
+      "evidence": {
+        "file": ".evidence-h186-deploy/commission-data-final.log",
+        "sha256": "da4c2ac40a8f63983c97f5c39f34f02e773a9d940e3f87c184912f17abc8f0a1",
+        "bytes": 1417,
+        "fileModifiedAtUtc": "2026-10-11T01:30:05.357Z"
+      },
+      "scope": "Exact financial snapshots, zero payments, split returns and commission after exchange",
+      "artifactBinding": "Production-source VM; this is not a browser artifact run",
+      "executionTimestampUtc": null,
+      "timestampNote": "Log contains no execution timestamp. File modification time is metadata only.",
+      "remoteBusinessWrites": 0
+    },
+    {
+      "id": "h166-projections",
+      "command": "node test-h166-projections.mjs",
+      "passed": 12,
+      "failed": 0,
+      "evidence": {
+        "file": ".evidence-h186-deploy/final-h166-projections.log",
+        "sha256": "5d205ba38290e38971f1c7ccaef4039e26d524eaab56b6eccd3446d747c35ff0",
+        "bytes": 856,
+        "fileModifiedAtUtc": "2026-10-11T01:30:40.856Z"
+      },
+      "scope": "Confirmed product and CONFIG revision invalidation",
+      "artifactBinding": "Production-source VM; this is not a browser artifact run",
+      "executionTimestampUtc": null,
+      "timestampNote": "Log contains no execution timestamp. File modification time is metadata only.",
+      "remoteBusinessWrites": 0
+    },
+    {
+      "id": "h164-data",
+      "command": "node test-h164-data-online.mjs",
+      "passed": 34,
+      "failed": 0,
+      "evidence": {
+        "file": ".evidence-h186-deploy/final-h164-data.log",
+        "sha256": "7ce9e2a716a9cae4709596b2df558a6a10dfb5714a572725541df0c03ce971e5",
+        "bytes": 2548,
+        "fileModifiedAtUtc": "2026-10-11T01:30:59.591Z"
+      },
+      "scope": "Online DATA authority and legacy domain regressions",
+      "artifactBinding": "Production-source VM; this is not a browser artifact run",
+      "executionTimestampUtc": null,
+      "timestampNote": "Log contains no execution timestamp. File modification time is metadata only.",
+      "remoteBusinessWrites": 0
+    }
+  ],
+  "staticArchitectureGuard": {
+    "command": "node test-h164-online-architecture.mjs",
+    "status": "PASS",
+    "modules": 29,
+    "checked": [
+      "no raw table mutation",
+      "RPC boundary",
+      "retired commercial APIs",
+      "public consumers",
+      "storage ownership",
+      "technical receipt shape",
+      "PWA scope"
+    ],
+    "limitation": "Static guard does not certify runtime SQL, physical installations or unresolved legacy data.",
+    "evidence": {
+      "file": ".evidence-h186-deploy/final-architecture.log",
+      "sha256": "4ff3f109e9ed57d511c6d6807b5516c0c2ff2738669ff1c35795b6bd8bd10fbf",
+      "bytes": 650,
+      "fileModifiedAtUtc": "2026-10-11T01:31:09.053Z"
+    }
+  },
+  "sourceManifestCapturedAtUtc": "2026-10-11T02:43:16.176Z",
+  "sourceManifest": [
+    {
+      "file": "balam/config.jsx",
+      "sha256": "d9fac613902460ea57b812825bcf8311e1ccd1a57ab28356c09dd74b1ab6e88a",
+      "bytes": 47768,
+      "fileModifiedAtUtc": "2026-10-10T22:01:06.115Z"
+    },
+    {
+      "file": "balam/data.jsx",
+      "sha256": "ce0ba988f240ff030c0bfb32c39b223fdbd1ed9511c042b214ba510cc1b2d408",
+      "bytes": 251168,
+      "fileModifiedAtUtc": "2026-10-11T01:29:57.912Z"
+    },
+    {
+      "file": "balam/discounts.jsx",
+      "sha256": "42fd09e25ddaee186b7c976caf2d06c9e27361e6f37aee4843af8972cfd5774d",
+      "bytes": 34889,
+      "fileModifiedAtUtc": "2026-10-11T01:26:17.627Z"
+    },
+    {
+      "file": "balam/pos-ticket.jsx",
+      "sha256": "52cb6d58f8ce317a15aed12d9e3a4b0e958f1ac8933ac307f20646d0f90eaceb",
+      "bytes": 69577,
+      "fileModifiedAtUtc": "2026-10-11T02:35:34.884Z"
+    },
+    {
+      "file": "balam/returns.jsx",
+      "sha256": "8f36d371d34f56f176870f86e8b39d8f00206dcf59aab58a4eaccd2630423c67",
+      "bytes": 72193,
+      "fileModifiedAtUtc": "2026-10-10T22:12:07.008Z"
+    },
+    {
+      "file": "balam/settings.jsx",
+      "sha256": "0c897da2e232d7c202ca728746ced232e45a69e2436b261a575489b9d7d9e6b9",
+      "bytes": 220550,
+      "fileModifiedAtUtc": "2026-10-10T22:01:30.078Z"
+    },
+    {
+      "file": "balam/store.jsx",
+      "sha256": "c9035c3d07e673bddce9c9d5c229952294bd659dc811e6d0e837de77b59b0e1e",
+      "bytes": 79482,
+      "fileModifiedAtUtc": "2026-10-10T22:00:23.541Z"
+    },
+    {
+      "file": "supabase/migrations/20261010022500_pos_h186_financial_authority.sql",
+      "sha256": "b4bd0bc1acb97ea6e26c9c5ad8e14729bde73ebfdf635d076ce12ec57b1100a6",
+      "bytes": 37521,
+      "fileModifiedAtUtc": "2026-10-10T22:42:33.889Z"
+    },
+    {
+      "file": "supabase/migrations/20261011022600_pos_h186_quote_readonly_device.sql",
+      "sha256": "0b2d14c5cc051be320b182323ed1c6eb4ec9ec1b6c9e247a3d6332c589d1cda1",
+      "bytes": 5210,
+      "fileModifiedAtUtc": "2026-10-11T00:50:13.580Z"
+    }
+  ],
+  "testManifest": [
+    {
+      "file": "test-h186-financial-ui.mjs",
+      "sha256": "71e40521ed370df00abb965d973cb99db77b39f4b0570fc239bd0644caf18b00",
+      "bytes": 18499,
+      "fileModifiedAtUtc": "2026-10-10T22:01:06.019Z"
+    },
+    {
+      "file": "test-h186-courtesy-checkout.mjs",
+      "sha256": "f5b032cd97052a08a398ee6a501f776be5dbb0fac7ac45097a5caa3ef0f0c180",
+      "bytes": 13586,
+      "fileModifiedAtUtc": "2026-10-11T02:31:45.670Z"
+    },
+    {
+      "file": "test-h186-return-ui.mjs",
+      "sha256": "25c8ce8a0b490ce44a14463c552ee58f794773bd3527c853c686d8526d678c0d",
+      "bytes": 5820,
+      "fileModifiedAtUtc": "2026-10-10T22:11:13.522Z"
+    },
+    {
+      "file": "test-h185-sale-ticket-layout.mjs",
+      "sha256": "ebc2b2a4321f43c030a5478278178e68671d20c5c8b45bc30463ca8880d37e29",
+      "bytes": 14534,
+      "fileModifiedAtUtc": "2026-10-05T15:53:19.708Z"
+    },
+    {
+      "file": "test-h184-all-thermal.mjs",
+      "sha256": "c2440755fdac7eb0dcae045645af785621f55821f0ef549ef774da0e54013f98",
+      "bytes": 37201,
+      "fileModifiedAtUtc": "2026-10-02T20:15:13.132Z"
+    },
+    {
+      "file": "test-h186-model-universe.mjs",
+      "sha256": "11643d2a71eba04baccfcc91dc95cf2e480d87609763746697f3b2c6621ab1bc",
+      "bytes": 12047,
+      "fileModifiedAtUtc": "2026-10-11T01:22:06.212Z"
+    },
+    {
+      "file": "test-h186-promotions.mjs",
+      "sha256": "befc7ae9457c226f09bb36a4e90f8b4fb8b89a0d428a994421b2cff9ef447785",
+      "bytes": 7204,
+      "fileModifiedAtUtc": "2026-10-11T01:22:28.965Z"
+    },
+    {
+      "file": "test-discounts.mjs",
+      "sha256": "818ba384d2ff936735f028f205f0eff66de7ebbdb2666997ef10089118b9a534",
+      "bytes": 10651,
+      "fileModifiedAtUtc": "2026-10-10T22:03:49.048Z"
+    },
+    {
+      "file": "test-h186-financial-data.mjs",
+      "sha256": "876e44cf19e1739f78e7637489f1a23959512f7ec79b3a5e29fe9e9ba0b37f1c",
+      "bytes": 16387,
+      "fileModifiedAtUtc": "2026-10-11T01:30:03.386Z"
+    },
+    {
+      "file": "test-h166-projections.mjs",
+      "sha256": "d856bad457059135eb59b083b5aa348d3b1cf85d12b47ff90a5920298a19fa2b",
+      "bytes": 5887,
+      "fileModifiedAtUtc": "2026-09-19T12:22:56.078Z"
+    },
+    {
+      "file": "test-h164-data-online.mjs",
+      "sha256": "85f9543870876187b33571f82cb747bb795aedc44d73b38a4e6e757d7b580d6c",
+      "bytes": 16132,
+      "fileModifiedAtUtc": "2026-09-19T12:22:56.040Z"
+    },
+    {
+      "file": "test-h164-online-architecture.mjs",
+      "sha256": "658155dd724312eb41fdc603e9b45f39b93f97f8dd8215fce63cfabc475b8cfb",
+      "bytes": 11409,
+      "fileModifiedAtUtc": "2026-09-19T12:22:56.040Z"
+    },
+    {
+      "file": "qa-h186-financial-journey.mjs",
+      "sha256": "a180906450a6df80663c41dd79071f1888764697189092650371c7bac76ee899",
+      "bytes": 40853,
+      "fileModifiedAtUtc": "2026-10-11T01:47:38.084Z"
+    }
+  ],
+  "previousArtifactEvidence": {
+    "artifactSHA256": "0e7b324ce2165cbdb8d8cb3a2f652acfbdd44439b2bad59b74f338daefc373d5",
+    "preservedReport": {
+      "file": ".evidence-h186-deploy/local-financial-regressions-0e7-preserved.json",
+      "sha256": "c88e21a39736173521bde2808563f9fa98706c253db0e2cd167d245b058ba61d",
+      "bytes": 12475,
+      "fileModifiedAtUtc": "2026-10-11T01:33:00.258Z"
+    },
+    "originalGeneratedAtUtc": "2026-10-10T23:34:55.531Z",
+    "localReceiptIdentityChecks": {
+      "id": "h186-live-ticket-identity-local",
+      "command": "node .evidence-h186-live-receipt-review.mjs",
+      "passed": 9,
+      "failed": 0,
+      "exitCode": 0,
+      "artifactSHA256": "0e7b324ce2165cbdb8d8cb3a2f652acfbdd44439b2bad59b74f338daefc373d5",
+      "recordedAtUtc": "2026-10-10T23:28:13.072Z",
+      "recordedAtSource": "evidence.date",
+      "evidence": {
+        "file": ".evidence-h186-live-receipt-review/result.json",
+        "sha256": "304ff630f4f58ffdb3eec2a0fd23d36aba14a57c5b50185d8127de370a1f57cf",
+        "bytes": 2100,
+        "fileModifiedAtUtc": "2026-10-10T23:28:30.213Z"
+      },
+      "scope": "Local final-bundle probe of the LIVE receipt assertion: three reproductions of the obsolete visible-SKU assertion, three positive frozen-identity checks at 30/60/100 percent, and three rejections of altered lineId, price or size.",
+      "externalNetwork": "blocked by browser routing",
+      "remoteBusinessWrites": 0,
+      "hardware": "NOT_TESTED",
+      "ticketSourceSHA256RecordedByTest": "d1f7696952b7d45413f0899e6c61985487914b3e4c3b65507f3ce240ecaa84ce",
+      "testComposition": {
+        "obsoleteAssertionReproductions": 3,
+        "correctedPositiveChecks": 3,
+        "mutationRejections": 3
+      }
+    },
+    "limitation": "These 9 receipt-identity checks were run against 0e7 and are not attributed to the new dcab70 artifact."
+  },
+  "previousGeneratedArtifactEvidence": {
+    "artifactSHA256": "6e649e380af0223ffc3122da2b08e7e1d40c5339630783deaa8553d00d2afb54",
+    "preservedReport": {
+      "file": ".evidence-h186-deploy/local-financial-regressions-6e649-preserved.json",
+      "sha256": "930223c303f46dafac31ab71a3d4a4c3d9e3b973183d5cbe50d06d4ea453391a",
+      "bytes": 20851,
+      "fileModifiedAtUtc": "2026-10-11T02:39:55.748Z"
+    },
+    "originalGeneratedAtUtc": "2026-10-11T01:35:27.491Z",
+    "originalSerialCompletedAtUtc": "2026-10-11T01:34:58.368Z",
+    "suites": [
+      {
+        "id": "h186-financial-ui",
+        "passed": 26,
+        "failed": 0,
+        "artifactSHA256": "6e649e380af0223ffc3122da2b08e7e1d40c5339630783deaa8553d00d2afb54"
+      },
+      {
+        "id": "h186-return-ui",
+        "passed": 3,
+        "failed": 0,
+        "artifactSHA256": "6e649e380af0223ffc3122da2b08e7e1d40c5339630783deaa8553d00d2afb54"
+      },
+      {
+        "id": "h185-ticket-layout",
+        "passed": 30,
+        "failed": 0,
+        "artifactSHA256": "6e649e380af0223ffc3122da2b08e7e1d40c5339630783deaa8553d00d2afb54"
+      },
+      {
+        "id": "h184-thermal",
+        "passed": 15,
+        "failed": 0,
+        "artifactSHA256": "6e649e380af0223ffc3122da2b08e7e1d40c5339630783deaa8553d00d2afb54"
+      }
+    ],
+    "limitation": "The four 26/3/30/15 suites (74 recorded assertions) belong to 6e649. They are retained as provenance and are not counted as new dcab70 executions."
+  },
+  "priorSourceCheckoutComparison": {
+    "publicEvidence": {
+      "file": "docs/fixes/evidence/h186/checkout-zero-contract-regression.json",
+      "sha256": "20a536a2975158c53ed3d1a71c9c3804bc194fb909daf6b36fdfd8775d08cafc",
+      "bytes": 7337,
+      "fileModifiedAtUtc": "2026-10-11T02:37:43.500Z"
+    },
+    "artifactSHA256": "6e649e380af0223ffc3122da2b08e7e1d40c5339630783deaa8553d00d2afb54",
+    "sourceMode": true,
+    "startedAtUtc": "2026-10-11T02:35:54.545Z",
+    "completedAtUtc": "2026-10-11T02:36:41.608Z",
+    "passed": 5,
+    "failed": 0,
+    "currentCases": 3,
+    "historicalComparisons": 2,
+    "historicalCommit": "938620a552255d21fc3f1f27d6af7735960ea1a5",
+    "limitation": "Source overlay on the older 6e649 artifact. These five cases are separate from the three current checkout cases executed on the new dcab70 bundle."
+  },
+  "limits": {
+    "remoteBusinessWrites": 0,
+    "hardware": "NOT_TESTED",
+    "physicalPrinting": "Complete artifacts and simulated delivery do not confirm physical paper output.",
+    "financialLiveCertification": "PENDING_OUTSIDE_THIS_REPORT",
+    "distributedABC": "NO_CERTIFICADO",
+    "publicPagesVerification": "PENDING_OUTSIDE_THIS_REPORT",
+    "sqlDeployment": "Not asserted by this local regression report."
+  }
+}

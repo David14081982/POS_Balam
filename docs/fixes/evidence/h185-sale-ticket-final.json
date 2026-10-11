@@ -1,7 +1,7 @@
 {
   "baseline": false,
-  "date": "2026-10-05T16:03:47.988Z",
-  "artifactSHA256": "7b590607dcedd76e3bc788893b2a8f81cc63d87376250659292f8f97faf80346",
+  "date": "2026-10-11T02:39:58.914Z",
+  "artifactSHA256": "dcab70eff4fcd8ce5ec75346777b2c6db2e6b0d3c7d1779136443376cba68f3e",
   "hardware": "NOT_TESTED",
   "results": [
     {
@@ -852,7 +852,7 @@
     }
   },
   "renderer": {
-    "browser": "148.0.7778.96",
+    "browser": "154.0.8037.98",
     "platform": "win32"
   },
   "guarantees": {

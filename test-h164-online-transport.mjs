@@ -190,6 +190,43 @@ assert.deepEqual(sentConfig.lookup.find(row=>row.kind==='color'),originalLookup.
 pass('configuration: preserve historical order on settings; reorder only the requested catalogue');
 }
 
+if(!process.env.BALAM_TRANSPORT_CASE || process.env.BALAM_TRANSPORT_CASE === 'financial') {
+// H186: transport and authoritative projection preserve the same versioned money.
+const id=randomUUID(),lineId=randomUUID(),operationId=randomUUID();
+const request={inputs:[{key:'a',productId:id,talla:'M',qty:1}],applications:[],courtesy:false};
+const draft={folio:'H186-261010-0001',fecha:'2026-10-10 12:00',_operationId:operationId,
+  cliente:'Fixture',vendedores:[],metodo:'Efectivo',estado:'Pagado',items:1,
+  financialVersion:2,financialRequest:request,originalTotal:1250,subtotal:754.31,iva:120.69,total:875,
+  ivaPct:16,ivaIncluded:true,anticipo:875,saldo:0,pagoEfectivo:875,pagoOtro:0,descuento:375,
+  descuentoAdicional:0,totalAntesDescuentoAdicional:875,descuentosAdicionales:[],
+  lineas:[{lineId,productId:id,sku:'fixture',nombre:'Fixture',talla:'M',qty:1,precio:875,
+    precioBase:875,precioOrig:1250,listPrice:1250,effectivePrice:875,promos:[],descuentoAdicional:0,
+    discountSnapshot:{promotions:[],additional:0,financial:{version:2,key:'a',part:0}}}]};
+let sentSale;
+executeHook=async args=>{
+  sentSale=clone(args.p_command);
+  raw.sales=[clone(sentSale.header),{folio:'legacy',fecha:'2026-01-01T12:00:00',total:1126,estado:'Pagado',metodo:'Efectivo'}];
+  raw.saleItems=clone(sentSale.items);
+  const receipt={ok:true,result:{folio:draft.folio}};receipts.set(args.p_request_id,receipt);return {data:receipt};
+};
+await S.refresh();
+const payment={id:'pay-'+operationId,folio:draft.folio,fecha:draft.fecha,tipo:'venta',metodo:'Efectivo',
+  monto:875,efectivo:875,tarjeta:0,transferencia:0,otro:0,
+  components:[{methodCode:'Efectivo',methodLabel:'Efectivo',amount:875}]};
+await S.pushSale(draft,{quoteContext:clone(raw.commercialQuote),payments:[payment]});
+assert.equal(sentSale.header.financial_version,2);assert.deepEqual(sentSale.header.financial_request,request);
+assert.equal(sentSale.header.original_total,1250);assert.equal(sentSale.header.subtotal,754.31);assert.equal(sentSale.header.iva,120.69);
+assert.deepEqual(sentSale.items[0].discount_snapshot,draft.lineas[0].discountSnapshot);
+assert.equal(sentSale.payments[0].monto,875);
+assert.ok(sentSale.payments[0].metodo.startsWith('__BALAM_MONEY_V1__'),'the real H90 wire reaches the financial SQL guard');
+assert.equal(sentSale.payments[0].components,undefined,'components use the established transport envelope');
+const current=projected.sales.find(s=>s.folio===draft.folio),legacy=projected.sales.find(s=>s.folio==='legacy');
+assert.equal(current.financialVersion,2);assert.deepEqual(current.financialRequest,request);assert.equal(current.originalTotal,1250);
+assert.equal(current.lineas[0].lineId,lineId);assert.equal(current.lineas[0].precio,875);
+assert.equal(legacy.financialVersion,undefined);assert.equal(legacy.originalTotal,undefined);assert.equal(legacy.total,1126);
+pass('H186 financial wire and confirmed projection preserve version, original, IVA, request and exact line identity; legacy stays unversioned');
+}
+
 if(!process.env.BALAM_TRANSPORT_CASE || process.env.BALAM_TRANSPORT_CASE === 'session') {
 // A different authenticated user arriving during the probe cannot receive the original draft.
 const beforeSession=commitCount;

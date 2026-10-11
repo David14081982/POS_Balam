@@ -4,6 +4,7 @@ import { resolve, relative, sep, dirname } from 'node:path';
 import { createHash } from 'node:crypto';
 import { gzipSync, gunzipSync } from 'node:zlib';
 import { journalHash } from './h171-live-journal.mjs';
+import { ROW_BODY_TRANSPORT } from './h171-live-snapshot-transport.mjs';
 
 export const SNAPSHOT_PROJECT = 'telohdbvbvsfmwyriflz';
 export const SNAPSHOT_ACTOR = '3f24222e-fd74-4ed2-b56f-f298af574b1e';
@@ -127,10 +128,19 @@ export function buildLiveSnapshotCatalogSql() {
   return `WITH ${CATALOG_CTES} SELECT ${CATALOG_VALUE} AS catalog;\n`;
 }
 
-export function buildLiveSnapshotSql({ catalog, sourceUrl, projectRef = SNAPSHOT_PROJECT, reusePointZeroBodies = false, reuseBaselineKeys = null }) {
+export function buildLiveSnapshotSql({ catalog, sourceUrl, projectRef = SNAPSHOT_PROJECT, reusePointZeroBodies = false, reuseBaselineKeys = null, bodyTransport = null }) {
   const connection = snapshotConnection(sourceUrl, projectRef);
   requireValue(typeof reusePointZeroBodies === 'boolean', 'SNAPSHOT_POINT_ZERO_REUSE_OPTION_INVALID');
   validateCatalog(catalog);
+  requireValue(bodyTransport===null||(bodyTransport&&Object.keys(bodyTransport).length===1&&
+    typeof bodyTransport.passphrase==='string'&&/^[A-Za-z0-9_-]{43}$/.test(bodyTransport.passphrase)),
+  'SNAPSHOT_BODY_TRANSPORT_OPTION_INVALID');
+  const aggregate=bodyTransport?'json':'jsonb';
+  const encodedBody=(expression,hash)=>bodyTransport?`CASE WHEN ${expression} IS NULL OR octet_length(${expression})<=${ROW_BODY_TRANSPORT.threshold_bytes}
+    THEN to_jsonb(${expression}) ELSE jsonb_build_object('utf8Bytes',octet_length(${expression}),'md5',${hash},
+      'sha256',encode(extensions.digest(${expression},'sha256'),'hex'),
+      'ciphertextBase64',encode(extensions.pgp_sym_encrypt(${expression},${q(bodyTransport.passphrase)},
+        'compress-algo=1,compress-level=6,cipher-algo=aes256'),'base64')) END`:expression;
   const ordered = [...catalog].sort((a, b) => a.table.localeCompare(b.table));
   const expectedTables = ordered.map(t => t.table);
   const expectedColumns = columnsForGuard(ordered);
@@ -194,16 +204,16 @@ END $h171_snapshot_guard$;
 WITH expected_tables(name) AS (VALUES ${expectedTables.map(t => '(' + q(t) + ')').join(',')}),
 all_rows AS NOT MATERIALIZED (${allRows}),
 row_groups AS (
- SELECT r."table",count(*) row_count,jsonb_agg(jsonb_build_object(
-  'pk_json_text',r.pk_json_text,'row_json_text',r.row_json_text,
+ SELECT r."table",count(*) row_count,${aggregate}_agg(${aggregate}_build_object(
+  'pk_json_text',r.pk_json_text,'row_json_text',${encodedBody('r.row_json_text','r.projected_row_md5')},
   'projected_row_md5',r.projected_row_md5,'full_row_md5',r.full_row_md5,
   'omitted_column_nullity',r.omitted_column_nullity,
-  'restorable_row_json_text',r.restorable_row_json_text,'monotonic',r.monotonic)
+  'restorable_row_json_text',${encodedBody('r.restorable_row_json_text','r.full_row_md5')},'monotonic',r.monotonic)
   ORDER BY r.pk_json_text) rows FROM all_rows r GROUP BY r."table"
 ),
 ${CATALOG_CTES}
-SELECT jsonb_build_object('format','balam-canonical-snapshot-v1','at',clock_timestamp(),
- ${reusePointZeroBodies ? "'point_zero_body_reuse','exact-baseline-hashes-v1'," : ''}
+SELECT ${aggregate}_build_object('format','balam-canonical-snapshot-v1','at',clock_timestamp(),
+ ${bodyTransport?`'row_body_transport',${q(JSON.stringify(ROW_BODY_TRANSPORT))}::jsonb,\n `:''}${reusePointZeroBodies ? "'point_zero_body_reuse','exact-baseline-hashes-v1'," : ''}
  ${reuseBaselineKeys ? `'baseline_body_reuse',${q(JSON.stringify({mode:'exact-baseline-pks-v1',tables:LARGE_BASELINE_BODY_TABLES,pk_set_sha256:journalHash(reuseBaselineKeys)}))}::jsonb,` : ''}
  'expected_project_ref',${q(SNAPSHOT_PROJECT)},'source_url',${q(connection.sourceUrl)},
  'binding','external executor URL plus real actor anchor; PostgreSQL does not attest Supabase project ref',
@@ -214,8 +224,8 @@ SELECT jsonb_build_object('format','balam-canonical-snapshot-v1','at',clock_time
  'auth_user_ids',(SELECT coalesce(jsonb_agg(id::text ORDER BY id),'[]'::jsonb) FROM auth.users),
  'omissions',${q(JSON.stringify(SNAPSHOT_OMISSIONS))}::jsonb,
  'catalog',${CATALOG_VALUE},
- 'tables',(SELECT jsonb_agg(jsonb_build_object('table',e.name,'row_count',coalesce(g.row_count,0),
-   'rows',coalesce(g.rows,'[]'::jsonb)) ORDER BY e.name)
+ 'tables',(SELECT ${aggregate}_agg(${aggregate}_build_object('table',e.name,'row_count',coalesce(g.row_count,0),
+   'rows',coalesce(g.rows,'[]'::${aggregate})) ORDER BY e.name)
    FROM expected_tables e LEFT JOIN row_groups g ON g."table"=e.name)) report;
 COMMIT;
 `;

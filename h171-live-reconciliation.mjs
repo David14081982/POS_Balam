@@ -28,6 +28,47 @@ export function postgresJsonbText(value) {
   return '{' + keys.map(key => JSON.stringify(key) + ': ' + postgresJsonbText(value[key])).join(', ') + '}';
 }
 export const postgresJsonbHash = value => createHash('sha256').update(postgresJsonbText(value)).digest('hex');
+// Reviewed H166 telemetry writer: authenticates the exact device owner and
+// changes only that device's metadata. Its hash is not evidence of an RPC ACK.
+export const CLEANUP_ADOPTION_FUNCTION_SHA256 = 'c056734ed233905ea5a74c2d03914eac74576412d7434b686129fc1864f7f2a8';
+export function validateCleanupDeviceObservation(observation, { snapshot, fixtures, originalBaseline }) {
+  requireValue(originalBaseline?.snapshot && /^[a-f0-9]{64}$/.test(originalBaseline.fileSha256 || ''), 'RECOVERY_ORIGINAL_BASELINE_REQUIRED');
+  const fields = ['format','projectRef','run','actorId','artifactSha256','journalSha256','baselineFileSha256',
+    'deviceId','observedAtUtc','deviceRowJsonText','deviceFullRowMd5','adoptionFunctionSha256','mismatchSequences'];
+  requireValue(observation && same(Object.keys(observation).sort(), fields.sort()), 'RECOVERY_OBSERVATION_FIELDS');
+  requireValue(observation.format === 'balam-cleanup-device-observation-v1' && observation.projectRef === snapshot.projectRef &&
+    observation.run === snapshot.run && observation.actorId === fixtures.userId && fixtures.plannedActorId === fixtures.userId &&
+    observation.artifactSha256 === snapshot.artifactSha256 && observation.journalSha256 === journalHash(snapshot) &&
+    observation.baselineFileSha256 === originalBaseline.fileSha256, 'RECOVERY_OBSERVATION_BINDING');
+  requireValue(observation.adoptionFunctionSha256 === CLEANUP_ADOPTION_FUNCTION_SHA256, 'RECOVERY_UNREVIEWED_TELEMETRY_FUNCTION');
+  requireValue(fixtures.installations?.includes(observation.deviceId), 'RECOVERY_FOREIGN_DEVICE');
+  const baseline = originalBaseline.snapshot;
+  requireValue(Array.isArray(baseline.auth_user_ids) && !baseline.auth_user_ids.includes(fixtures.userId), 'RECOVERY_BASELINE_AUTH_PRESENT');
+  const deviceRows = baseline.tables?.find(table => table.table === 'sync_devices')?.rows;
+  requireValue(Array.isArray(deviceRows) && !deviceRows.some(row => JSON.parse(row.pk_json_text).device_id === observation.deviceId),
+    'RECOVERY_BASELINE_DEVICE_PRESENT');
+  requireValue(typeof observation.deviceRowJsonText === 'string' && /^[a-f0-9]{32}$/.test(observation.deviceFullRowMd5 || '') &&
+    createHash('md5').update(observation.deviceRowJsonText).digest('hex') === observation.deviceFullRowMd5, 'RECOVERY_DEVICE_ROW_HASH');
+  let row; try { row = JSON.parse(observation.deviceRowJsonText); } catch { fail('RECOVERY_DEVICE_ROW_JSON'); }
+  const presence = snapshot.entries.filter(entry => entry.kind === 'rpc:online_presence' && entry.actorId === fixtures.userId &&
+    entry.identities?.deviceId === observation.deviceId && entry.command?.p_device_id === observation.deviceId).at(-1);
+  requireValue(presence && row.device_id === observation.deviceId && row.user_id === fixtures.userId && row.status === 'online' &&
+    row.metadata?.online_only === true && row.client_build === presence.command.p_client_build, 'RECOVERY_DEVICE_ROW_IDENTITY');
+  const report = row.metadata.online_adoption;
+  requireValue(report && same(Object.keys(report).sort(), ['revision','state','stage','remainingLegacy','archivedCount','snapshotAt','serverTime'].sort()) &&
+    report.revision === 1 && report.state === 'ready' && report.stage === 'complete' && report.remainingLegacy === 0 && report.archivedCount === 0,
+    'RECOVERY_TELEMETRY_SHAPE');
+  const observedAt = Date.parse(observation.observedAtUtc), serverAt = Date.parse(report.serverTime), snapshotAt = Date.parse(report.snapshotAt);
+  const lastIntent = snapshot.entries.filter(entry => entry.identities?.deviceId === observation.deviceId).at(-1);
+  requireValue([observedAt,serverAt,snapshotAt].every(Number.isFinite) && snapshotAt <= serverAt && serverAt <= observedAt &&
+    lastIntent && serverAt >= Date.parse(lastIntent.preparedAt) && snapshotAt >= Date.parse(baseline.at), 'RECOVERY_TELEMETRY_TIME');
+  requireValue(Array.isArray(observation.mismatchSequences) && observation.mismatchSequences.length > 0 &&
+    same(observation.mismatchSequences, [...new Set(observation.mismatchSequences)].sort((a,b) => a-b)) &&
+    observation.mismatchSequences.every(sequence => Number.isSafeInteger(sequence) && snapshot.entries.some(entry =>
+      entry.sequence === sequence && entry.kind === 'rpc:online_adoption_report' && entry.actorId === fixtures.userId &&
+      entry.identities?.deviceId === observation.deviceId && entry.command?.p_device_id === observation.deviceId)), 'RECOVERY_MISMATCH_SCOPE');
+  return row;
+}
 const tablePk = { sales: 'folio', stock_reservations: 'operation_id', config_commits: 'operation_id', reference_reclassifications: 'operation_id',
   commission_adjustments: 'operation_id', capability_operation_audit: 'operation_id', sale_commits: 'commit_id', return_commits: 'commit_id',
   exchange_commits: 'commit_id', layaway_liquidation_commits: 'commit_id', settings: 'key', user_permission_role_assignments: 'user_id', sync_devices: 'device_id' };
@@ -69,7 +110,7 @@ export function createLiveReconciler({ db, admin, expectedProjectRef, expectedAc
   requireValue(db.schemaName === 'pos', 'CLIENT_SCHEMA_MISMATCH');
   const protectedIds = new Set(protectedAuthIds);
 
-  async function reconcile({ snapshot, fixtures }) {
+  async function reconcile({ snapshot, fixtures, recoveryDeviceObservation, originalBaseline }) {
     const result = { format: 'balam-live-reconciliation-v1', readOnly: true, reconciled: false, certified: false, cleanupVerified: false, cleanupManifestComplete: false,
       run: snapshot?.run ?? null, projectRef: expectedProjectRef, actorId: expectedActorId, artifactSha256: snapshot?.artifactSha256 ?? null,
       entries: [], blockers: [], identities: { rows: [], authUsers: [], devices: [], requests: [], folios: [] },
@@ -335,6 +376,31 @@ export function createLiveReconciler({ db, admin, expectedProjectRef, expectedAc
     }
     result.identities.rows = [...rowIndex.values()];
     result.reconciled = result.blockers.length === 0 && result.entries.length === entries.length;
+    if (recoveryDeviceObservation !== undefined) {
+      try {
+        const row = validateCleanupDeviceObservation(recoveryDeviceObservation, { snapshot, fixtures, originalBaseline });
+        const sequences = recoveryDeviceObservation.mismatchSequences;
+        requireValue(result.entries.length === entries.length && result.blockers.length === sequences.length &&
+          result.blockers.every(blocker => blocker.code === 'DEVICE_ADOPTION_MISMATCH' && sequences.includes(blocker.sequence)) &&
+          result.entries.filter(entry => entry.state === 'UNCERTAIN').every(entry => sequences.includes(entry.sequence)), 'RECOVERY_OTHER_UNCERTAINTY');
+        const principal = entries.find(entry => entry.kind === 'auth-create' && entry.identities?.userId === fixtures.userId &&
+          entry.command?.qaRun === snapshot.run && entry.command?.emailSha256 === journalHash(fixtures.email));
+        requireValue(principal && result.entries.find(entry => entry.sequence === principal.sequence)?.state === 'OBSERVED_FINAL_STATE' &&
+          result.identities.authUsers.some(user => user.id === fixtures.userId && user.emailSha256 === journalHash(fixtures.email)), 'RECOVERY_AUTH_CREATION_UNPROVEN');
+        const observed = result.identities.rows.find(entry => entry.table === 'sync_devices' && entry.pk.device_id === recoveryDeviceObservation.deviceId);
+        requireValue(observed?.observedContentSha256 === postgresJsonbHash(clean(row)), 'RECOVERY_OBSERVED_ROW_CHANGED');
+        const original = structuredClone(result);
+        result.originalReconciliation = original;
+        result.cleanupRecovery = { format: 'balam-cleanup-device-recovery-v1', observation: structuredClone(recoveryDeviceObservation),
+          observationSha256: journalHash(recoveryDeviceObservation), originalReconciliationSha256: journalHash(original),
+          originalBlockers: structuredClone(original.blockers), reportUnattributed: true, acknowledgementClaimed: false, certificationEligible: false };
+        for (const entry of result.entries.filter(entry => sequences.includes(entry.sequence))) {
+          entry.originalBlocker = entry.blocker; delete entry.blocker;
+          entry.state = 'OBSERVED_FINAL_STATE'; entry.recoveryObservationSha256 = result.cleanupRecovery.observationSha256;
+        }
+        result.blockers = []; result.reconciled = true; result.certificationEligible = false;
+      } catch (cause) { block(cause.code || 'RECOVERY_OBSERVATION_INVALID'); result.reconciled = false; }
+    }
     return result;
   }
   return { reconcile };

@@ -52,7 +52,31 @@
     if (uni.length && uni.every(c => arr.indexOf(c) >= 0)) return true;
     return arr.indexOf(val) >= 0;
   }
-  function modelUniverse() { const D = window.DATA; return (D && D.products) ? [...new Set(D.products.map(p => String(p.modelo)))] : []; }
+  // DATA.products returns a defensive copy of the complete catalog. Reuse only
+  // the derived model names while the confirmed commercial projection is current.
+  let modelUniverseMemo = null;
+  function modelUniverse() {
+    const data = window.DATA;
+    if (!data) return [];
+    let revision = null;
+    if (!C.preparing) {
+      const projection = data.commercialProjectionRevision;
+      if (typeof projection === 'string' && projection.length) revision = 'projection:' + projection;
+      else {
+        const dataRevision = data.revision, configRevision = C.version;
+        if (Number.isSafeInteger(dataRevision) && dataRevision >= 0
+          && Number.isSafeInteger(configRevision) && configRevision >= 0) {
+          revision = 'fallback:' + dataRevision + ':' + configRevision;
+        }
+      }
+    }
+    if (revision !== null && modelUniverseMemo && modelUniverseMemo.data === data
+      && modelUniverseMemo.revision === revision) return modelUniverseMemo.models;
+    const rows = data.products || [];
+    const models = [...new Set(rows.map(p => String(p.modelo)))];
+    if (revision !== null) modelUniverseMemo = { data, revision, models };
+    return models;
+  }
   function dimsMatch(s, p) {
     if (!dimPass(s.cats, p.cat, () => C.codes('category'))) return false;
     if (!dimPass(s.telas, p.tela, () => C.codes('fabric'))) return false;
@@ -72,7 +96,8 @@
       && !s.tallas.some(value => String(value) === String(talla))) return false;
     return true;
   }
-  // Para vista previa / conteo (sin talla concreta): exige stock en alguna talla del alcance.
+  // Vista previa/conteo por referencia: alguna talla activa debe pertenecer al alcance.
+  // Las existencias no cambian el alcance comercial de la promoción.
   function productMatch(promo, p) {
     const s = promo.scope || {};
     if (!dimsMatch(s, p)) return false;
@@ -80,27 +105,34 @@
       size.active && s.tallas.some(value => String(value) === String(size.value)));
     return true;
   }
-  // Aplica promos acumulables sin permitir que el descuento reduzca el margen
-  // configurado. El piso nunca sube el precio de lista: si el producto ya está
-  // debajo del margen, simplemente no admite un descuento adicional.
-  function applyStack(orig, list, product) {
-    let pct = 0, fijo = 0;
-    list.forEach(pr => { if (pr.tipo === 'fijo') fijo += Number(pr.valor) || 0; else pct += Number(pr.valor) || 0; });
-    pct = Math.min(pct, 100);
-    let unit = orig * (1 - pct / 100) - fijo;
-    if (unit < 0) unit = 0;
-    unit = Math.round(unit * 100) / 100;
-    const cost = Number(product && product.costo);
-    const configured = Number(C.get('discount.minMarginPct'));
-    const margin = Number.isFinite(configured) ? Math.max(0, Math.min(100, configured)) : 0;
-    let floor = 0;
-    if (Number.isFinite(cost) && cost > 0 && margin > 0) {
-      const required = margin >= 100 ? orig : cost / (1 - margin / 100);
-      floor = Math.round(Math.min(orig, required) * 100) / 100;
+  function validate(promo) {
+    if (!promo || !['pct', 'fijo'].includes(promo.tipo)) {
+      throw Object.assign(new Error('Tipo de descuento inválido'), { code: 'PROMO_TYPE_INVALID' });
     }
-    const capped = unit < floor;
-    if (capped) unit = floor;
-    return { unit, pct, fijo, floor, capped };
+    const raw = promo.valor;
+    const value = Number(raw);
+    if (!['number', 'string'].includes(typeof raw) || String(raw).trim() === ''
+      || !Number.isFinite(value) || value < 0 || (promo.tipo === 'pct' && value > 100)
+      || !Number.isSafeInteger(Math.round(value * 100)) || D.moneyRound(value) !== value) {
+      throw Object.assign(new Error(promo.tipo === 'pct'
+        ? 'El porcentaje debe estar entre 0 y 100, con máximo dos decimales'
+        : 'El monto debe ser mayor o igual a 0, con máximo dos decimales'), { code: 'PROMO_VALUE_INVALID' });
+    }
+    return value;
+  }
+  // H-186: suma de porcentajes (máximo 100), seguida de montos por pieza.
+  // El costo y la antigua configuración de margen no intervienen. Se acumulan
+  // centésimas enteras y DATA redondea como PostgreSQL numeric, sin error binario.
+  function applyStack(orig, list) {
+    let pctCents = 0, fixedCents = 0;
+    list.forEach(pr => {
+      const cents = Math.round(validate(pr) * 100);
+      if (pr.tipo === 'fijo') fixedCents += cents;
+      else pctCents = Math.min(10000, pctCents + cents);
+    });
+    const pct = pctCents / 100, fijo = fixedCents / 100;
+    const unit = Math.max(0, D.moneyRound(D.moneyRatio(orig, 10000 - pctCents, 10000) - fijo));
+    return { unit, pct, fijo };
   }
   // Precio unitario efectivo de una línea del ticket (con todas las promos activas).
   // H-36: el precio de lista de una talla ya no lo decide el motor. Precedencia:
@@ -115,21 +147,32 @@
       : (D && typeof D.listPrice === 'function' ? D.listPrice(p, talla) : Number(p.precio) || 0);
     const list = active().filter(pr => match(pr, p, talla));
     if (!list.length) return { unit: orig, orig, off: 0, promos: [] };
-    const r = applyStack(orig, list, p);
-    return { unit: r.unit, orig, off: Math.max(0, orig - r.unit), promos: list, capped: r.capped };
+    const r = applyStack(orig, list);
+    return { unit: r.unit, orig, off: Math.max(0, D.moneyRound(orig - r.unit)), promos: list };
   }
   // Vista previa del efecto de UNA promo (en edición) sobre el catálogo.
   function previewDraft(draft) {
     const affected = D.products.filter(p => productMatch(draft, p));
-    const examples = affected.slice(0, 4).map(p => {
-      const orig = Number(p.precio) || 0;
-      const r = applyStack(orig, [draft], p);
-      return { p, orig, unit: r.unit, off: Math.max(0, orig - r.unit), capped: r.capped };
-    });
+    try { validate(draft); }
+    catch (error) { return { count: affected.length, examples: [], error: error.message }; }
+    const examples = [];
+    for (const p of affected) {
+      const sizes = D.resolveProductSizes(p).sizes.filter(size => size.active && match(draft, p, size.value));
+      // Un registro histórico sin categoría de tallas conserva su precio general.
+      const tallas = sizes.length ? sizes.map(size => size.value)
+        : (draft.scope && draft.scope.tallas && draft.scope.tallas.length ? [] : [null]);
+      for (const talla of tallas) {
+        const orig = D.listPrice(p, talla);
+        const r = applyStack(orig, [draft]);
+        examples.push({ p, talla, orig, unit: r.unit, off: Math.max(0, D.moneyRound(orig - r.unit)) });
+        if (examples.length === 4) break;
+      }
+      if (examples.length === 4) break;
+    }
     return { count: affected.length, examples };
   }
 
-  window.PROMOS = { estado, active, match, productMatch, lineUnit, previewDraft, applyStack };
+  window.PROMOS = { estado, active, match, productMatch, validate, lineUnit, previewDraft, applyStack };
 
   // ── Helpers de UI ─────────────────────────────────────────────────────────────
   const STATUS_STYLE = {
@@ -295,16 +338,16 @@
       setD(prev => { const sc = Object.assign({}, prev.scope); const attrs = Object.assign({}, sc.attrs); const a = attrs[kind] || []; const full = codes.length > 0 && codes.every(c => a.indexOf(c) >= 0); attrs[kind] = full ? [] : codes.slice(); sc.attrs = attrs; return Object.assign({}, prev, { scope: sc }); });
     }
 
-    const draftForPreview = Object.assign({}, d, { valor: Number(d.valor) || 0 });
+    const draftForPreview = Object.assign({}, d);
     const preview = useMemo(() => window.PROMOS.previewDraft(draftForPreview), [JSON.stringify(d), D.revision]);
 
     async function submit() {
       return onlineAction('submit', async () => {
       if (!d.nombre.trim()) { toast('Escribe el nombre de la promoción', 'var(--danger)'); return; }
-      if (!(Number(d.valor) > 0)) { toast('El valor del descuento debe ser mayor a 0', 'var(--danger)'); return; }
+      const value = validate(d);
       if (d.inicio && d.fin && d.fin < d.inicio) { toast('La fecha fin no puede ser anterior al inicio', 'var(--danger)'); return; }
       const payload = {
-        nombre: d.nombre.trim(), tipo: d.tipo, valor: Number(d.valor) || 0,
+        nombre: d.nombre.trim(), tipo: d.tipo, valor: value,
         inicio: d.inicio || '', fin: d.fin || '', horaInicio: d.horaInicio || '', horaFin: d.horaFin || '',
         pausado: !!d.pausado, scope: d.scope,
       };
@@ -370,7 +413,7 @@
                   ]),
                   h('div', { key: 'v', className: 'space-y-1.5' }, [
                     h('label', { key: 'l', className: lblCls }, d.tipo === 'fijo' ? 'Monto por pieza ($)' : 'Valor (%)'),
-                    h('input', { key: 'c', className: underline, type: 'number', min: 0, placeholder: d.tipo === 'fijo' ? '100' : '20', value: d.valor, onChange: e => set('valor', e.target.value) }),
+                    h('input', { key: 'c', className: underline, type: 'number', min: 0, max: d.tipo === 'pct' ? 100 : undefined, step: '0.01', placeholder: d.tipo === 'fijo' ? '100' : '20', value: d.valor, onChange: e => set('valor', e.target.value) }),
                   ]),
                 ]),
               ]),
@@ -426,12 +469,15 @@
                   h('span', { key: 'b', className: 'font-headline text-headline-md text-primary' }, preview.count + ' SKUs'),
                 ]),
                 h('p', { key: 'l', className: 'text-overline uppercase tracking-widest text-on-surface-variant mb-3' }, 'Ejemplos de cálculo'),
-                preview.examples.length === 0
+                preview.error && d.valor !== ''
+                  ? h('p', { key: 'ex', className: 'text-caption text-danger', role: 'alert' }, preview.error)
+                  : preview.examples.length === 0
                   ? h('p', { key: 'ex', className: 'text-caption text-on-surface-variant italic' }, 'Ninguna prenda coincide con el alcance actual.')
-                  : h('div', { key: 'ex', className: 'space-y-3' }, preview.examples.map(ex => h('div', { key: ex.p.id, className: 'flex items-center justify-between gap-3 bg-surface-container-lowest p-3 rounded-lg border border-outline-variant/40' }, [
+                  : h('div', { key: 'ex', className: 'space-y-3' }, preview.examples.map(ex => h('div', { key: ex.p.id + ':' + ex.talla, className: 'flex items-center justify-between gap-3 bg-surface-container-lowest p-3 rounded-lg border border-outline-variant/40' }, [
                       h('div', { key: 'n', className: 'min-w-0' }, [
                         h('p', { key: 'a', className: 'font-body-md font-semibold text-sm text-primary truncate' }, ex.p.nombre),
                         h('p', { key: 'b', className: 'text-overline uppercase text-on-surface-variant' }, ex.p.sku),
+                        ex.talla != null ? h('p', { key: 't', className: 'text-caption text-on-surface-variant' }, 'Talla ' + ex.talla) : null,
                       ]),
                       h('div', { key: 'p', className: 'text-right shrink-0' }, [
                         ex.off > 0 ? h('span', { key: 'o', className: 'line-through text-on-surface-variant/50 text-xs mr-1.5' }, fmt(ex.orig)) : null,

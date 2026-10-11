@@ -1,0 +1,143 @@
+{
+  "schema": "h186-quote-readonly-smoke-evidence-v1",
+  "risk": "H-186",
+  "generatedAtUtc": "2026-10-11T00:58:39.106Z",
+  "status": "VERIFIED_LOCAL_AND_REMOTE_READONLY",
+  "purpose": "Verify the exact post-226 quote RPC under the authenticated role in a repeatable-read, read-only transaction before another financial LIVE journey.",
+  "local": {
+    "completedAtUtc": "2026-10-11T00:55:50.453Z",
+    "tests": 5,
+    "passed": 5,
+    "failed": 0,
+    "networkRequests": 0,
+    "sqlSha256": "7337b55f3c26cb3d920a46bd428d3b28dd95c205266523fd1a812c69b280ffd4",
+    "driverSha256": "4dd58cea9a1d35ca926887bf6684fa81ed190ba898ac7390b5fd25b841b22794",
+    "migrationUnchangedDuringExecution": true,
+    "migrationSha256": "0b2d14c5cc051be320b182323ed1c6eb4ec9ec1b6c9e247a3d6332c589d1cda1",
+    "cases": [
+      {
+        "name": "Current JOEL1250 with percent30 succeeds under authenticated READ ONLY",
+        "status": "PASS",
+        "protectedTableFingerprintsUnchanged": 10
+      },
+      {
+        "name": "Zero-stock reference remains eligible for read-only quote",
+        "status": "PASS",
+        "protectedTableFingerprintsUnchanged": 10
+      },
+      {
+        "name": "No active admin with an owned online device aborts before quote",
+        "status": "PASS",
+        "protectedTableFingerprintsUnchanged": 10,
+        "blockedWith": "H186_SMOKE_ACTIVE_ADMIN_WITH_OWN_ONLINE_DEVICE_REQUIRED"
+      },
+      {
+        "name": "No own online device aborts before quote",
+        "status": "PASS",
+        "protectedTableFingerprintsUnchanged": 10,
+        "blockedWith": "H186_SMOKE_ACTIVE_ADMIN_WITH_OWN_ONLINE_DEVICE_REQUIRED"
+      },
+      {
+        "name": "Changed current promotion aborts without reporting old expected money",
+        "status": "PASS",
+        "protectedTableFingerprintsUnchanged": 10,
+        "blockedWith": "H186_SMOKE_CURRENT_SINGLE_PERCENT30_PROMOTION_CHANGED"
+      }
+    ]
+  },
+  "remote": {
+    "at": "2026-10-11T00:56:24.159971+00:00",
+    "status": "PASS",
+    "readOnly": true,
+    "isolation": "repeatable read",
+    "databaseRole": "authenticated",
+    "activeAdminWithOwnOnlineDevice": true,
+    "salesCreateCapability": true,
+    "originalWriteDeviceLockPreserved": true,
+    "quoteVolatility": "STABLE",
+    "reference": "JOEL",
+    "quantity": 1,
+    "currentAppliedPromotions": 1,
+    "currentPromotionPercent": 30,
+    "financialVersion": 2,
+    "originalTotal": 1250,
+    "configuredDiscount": 375,
+    "subtotal": 754.31,
+    "iva": 120.69,
+    "total": 875,
+    "exactParts": true,
+    "dmlStatements": 0,
+    "salesCreated": 0,
+    "stockMutations": 0,
+    "accountsChanged": 0,
+    "devicesChanged": 0
+  },
+  "evidence": [
+    {
+      "file": ".evidence-h186-deploy/h186-post226-readonly-smoke.sql",
+      "sha256": "7337b55f3c26cb3d920a46bd428d3b28dd95c205266523fd1a812c69b280ffd4",
+      "bytes": 8358
+    },
+    {
+      "file": ".evidence-h186-deploy/test-post226-readonly-smoke.mjs",
+      "sha256": "4dd58cea9a1d35ca926887bf6684fa81ed190ba898ac7390b5fd25b841b22794",
+      "bytes": 6036
+    },
+    {
+      "file": "supabase/migrations/20261011022600_pos_h186_quote_readonly_device.sql",
+      "sha256": "0b2d14c5cc051be320b182323ed1c6eb4ec9ec1b6c9e247a3d6332c589d1cda1",
+      "bytes": 5210
+    },
+    {
+      "file": ".evidence-h186-deploy/post226-readonly-smoke-local.json",
+      "sha256": "1c56f559cc97a5d6289d820dd24841a92fcbca7fa8d90f0c877de932674ec525",
+      "bytes": 3194
+    },
+    {
+      "file": ".evidence-h186-deploy/post226-readonly-smoke-local-final2.log",
+      "sha256": "3db250b18a265d6b6b23e79b3bc8b8cffbce540e3c943236bb44bf4998dd431d",
+      "bytes": 6586
+    },
+    {
+      "file": ".evidence-h186-deploy/post226-readonly-smoke-migration-guard-final2.json",
+      "sha256": "bf34a9714c881fcdef7bec2abd67948a4467fbbeea3d0b54e2c19c8ed1fd37ed",
+      "bytes": 369
+    },
+    {
+      "file": ".evidence-h186-deploy/post226-readonly-smoke-remote.json",
+      "sha256": "873bff90b5a6d9b4c169e9537042a0c33ee6ada2c64e2f66f31cf53405757571",
+      "bytes": 1228
+    },
+    {
+      "file": ".evidence-h186-deploy/post226-readonly-smoke-remote.raw.json",
+      "sha256": "34ef4447f1e176b22d1d489178c7780ef17187b9a051325d14c1cef77e5b49b2",
+      "bytes": 2458
+    },
+    {
+      "file": ".evidence-h186-deploy/post226-readonly-smoke-remote.json.encoding.json",
+      "sha256": "53acc02c7aea4eea64fcd5d348404bad9594ab61334d0c976390bee559fc93b4",
+      "bytes": 358
+    }
+  ],
+  "encoding": {
+    "sourceEncoding": "UTF-16LE BOM",
+    "semanticEquality": true,
+    "sourceSha256": "34ef4447f1e176b22d1d489178c7780ef17187b9a051325d14c1cef77e5b49b2",
+    "normalizedSha256": "873bff90b5a6d9b4c169e9537042a0c33ee6ada2c64e2f66f31cf53405757571"
+  },
+  "methodology": {
+    "timestamps": "Copied from completed execution reports; generatedAtUtc is summary creation time.",
+    "selection": "Existing active admin with sales.create and an online device owned by the same account. QA-marked accounts are excluded. Identity and request context are transaction-local and not exported.",
+    "runtime": "The smoke requires an enabled runtime with minimum financial version 1 or 2; it does not activate or modify that flag.",
+    "privacy": "Only whitelisted booleans, amounts, test names, timestamps, file sizes and hashes are published. No account, device, product or promotion identifiers; no emails, credentials, raw claims or raw quote."
+  },
+  "limits": {
+    "realSaleCreated": false,
+    "paymentRecorded": false,
+    "ticketPrinted": false,
+    "hardware": "NOT_TESTED",
+    "distributedABC": "Not asserted by this quote-only report.",
+    "financialLiveCertification": "Separate financial LIVE matrix and exact cleanup evidence required.",
+    "publicPagesVerification": "Not asserted by this report."
+  }
+}

@@ -1,10 +1,10 @@
 {
-  "at": "2026-09-13T05:28:13.100Z",
+  "at": "2026-10-11T00:30:56.215Z",
   "scope": "LOCAL_ONLY_INJECTED_GOTRUE_DURABLE_JOURNAL_NO_NETWORK",
-  "moduleSha256": "eb63e72d8b511a73c2117ef3919a1b47376bdcc4bb9956fb8ab3300059002c27",
-  "testSha256": "8be616abebce13094b58ef89061360f11498284344e3e53618d75c39fb942e27",
-  "checksPassed": 27,
-  "expectedChecks": 27,
+  "moduleSha256": "d069a0c74540f0b5c888ced949d2a94676526b63f6b929263de09a00178c5f7e",
+  "testSha256": "0e95df5fcff0f6bde2923f03f1fbdfd5f621244afccd328285fa2b8b3f763a4f",
+  "checksPassed": 29,
+  "expectedChecks": 29,
   "checks": [
     {
       "name": "pure identity projection contains no raw email or metadata and binds two exact markers",
@@ -56,6 +56,14 @@
     },
     {
       "name": "all ten POS FK effects including CASCADE and SET NULL require zero rows",
+      "status": "PASS"
+    },
+    {
+      "name": "The two newly reviewed Auth families require zero rows before any durable DELETE intent",
+      "status": "PASS"
+    },
+    {
+      "name": "Missing, duplicate or changed new-family dependency evidence never reaches GoTrue DELETE",
       "status": "PASS"
     },
     {

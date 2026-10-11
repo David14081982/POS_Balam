@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "risk": "H186",
+  "status": "OPTIMIZATION_GUARD_GREEN",
+  "recordedAt": "2026-10-11T01:26:52.854Z",
+  "recordedAtMeaning": "Production-source guard and regressions completed successfully before this baseline was refixed.",
+  "reason": "H186: 1953 a 2 lecturas, 976 decisiones correctas y regresiones de promociones y descuentos aprobadas",
+  "sourceSha256": "42fd09e25ddaee186b7c976caf2d06c9e27361e6f37aee4843af8972cfd5774d",
+  "instrument": "test-h186-model-universe.mjs",
+  "metric": "DATA.products getter accesses, independent of machine timing",
+  "fixture": "976 flat synthetic product references with distinct model names; scope selects M975 only",
+  "cost": {
+    "productGetterReads": 2
+  },
+  "guarantee": {
+    "references": 976,
+    "visited": 976,
+    "correct": 976,
+    "affected": 1
+  },
+  "completeness": {
+    "completed": true
+  },
+  "refixtureRule": "Only after the production-source guardian and regressions pass; --fijar requires a reason and preserves the prior baseline.",
+  "previous": {
+    "recordedAt": "2026-10-11T01:20:27Z",
+    "reason": "R-DEL-15: preserve all model-scope decisions and completion while reducing repeated defensive copies of the product catalog.",
+    "sourceSha256": "47008af512432cceaa0989e1d5f46abe35c02ab9fb86522f90d3b9894e774790",
+    "cost": {
+      "productGetterReads": 1953
+    },
+    "guarantee": {
+      "references": 976,
+      "visited": 976,
+      "correct": 976,
+      "affected": 1
+    },
+    "completeness": {
+      "completed": true
+    }
+  }
+}

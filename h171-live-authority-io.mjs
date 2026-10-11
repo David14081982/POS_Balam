@@ -5,10 +5,11 @@ import * as fs from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { resolve, join, relative, sep } from 'node:path';
 import { promisify } from 'node:util';
-import { createHash } from 'node:crypto';
+import { createHash,randomBytes } from 'node:crypto';
 import { journalHash } from './h171-live-journal.mjs';
 import { SNAPSHOT_PROJECT, SNAPSHOT_ACTOR, snapshotConnection, buildLiveSnapshotSql,
   validateLiveSnapshot, writePrivateLiveSnapshot, rehydrateLivePointZeroSnapshot, LARGE_BASELINE_BODY_TABLES } from './h171-live-snapshot.mjs';
+import {decodePrivateSnapshotBodies} from './h171-live-snapshot-transport.mjs';
 
 const execute = promisify(execFile);
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -20,8 +21,9 @@ export async function durableJson(file, value) {
   assert.ok((await fs.readFile(file)).equals(bytes),'DURABLE_FILE_READBACK_MISMATCH');
   return {file:resolve(file),sha256:sha(bytes),bytes:bytes.length};
 }
-export async function createLiveAuthorityIO({cliPath,linkedDirectory,privateDirectory,catalog,sourceUrl}) {
+export async function createLiveAuthorityIO({cliPath,linkedDirectory,privateDirectory,catalog,sourceUrl,privateSnapshotTransport='plain'}) {
   snapshotConnection(sourceUrl);
+  assert.ok(['plain','pgcrypto-row-v1'].includes(privateSnapshotTransport),'PRIVATE_SNAPSHOT_TRANSPORT_INVALID');
   const privateRoot=resolve('.evidence-h171-private'),directory=resolve(privateDirectory);
   const inside=relative(privateRoot,directory);
   assert.ok(inside&&!inside.startsWith('..')&&!inside.includes(':'),'PRIVATE_RUN_DIRECTORY_REQUIRED');
@@ -59,15 +61,19 @@ export async function createLiveAuthorityIO({cliPath,linkedDirectory,privateDire
     if(reusePointZeroFrom)validateLiveSnapshot(reusePointZeroFrom,{catalog,sourceUrl});
     const reuseBaselineKeys=reusePointZeroFrom?Object.fromEntries(LARGE_BASELINE_BODY_TABLES.map(name=>[name,
       reusePointZeroFrom.tables.find(t=>t.table===name).rows.map(row=>row.pk_json_text).sort()])):null;
-    const result=await query(buildLiveSnapshotSql({catalog,sourceUrl,reusePointZeroBodies:!!reusePointZeroFrom,reuseBaselineKeys}),label);
+    const passphrase=privateSnapshotTransport==='pgcrypto-row-v1'?randomBytes(32).toString('base64url'):null;
+    const result=await query(buildLiveSnapshotSql({catalog,sourceUrl,reusePointZeroBodies:!!reusePointZeroFrom,reuseBaselineKeys,
+      bodyTransport:passphrase?{passphrase}:null}),label);
     const reports=result.rows.filter(row=>row.report?.format==='balam-canonical-snapshot-v1');
     assert.equal(reports.length,1,'ONE_CANONICAL_REPORT_REQUIRED');
+    const decoded=passphrase?await decodePrivateSnapshotBodies({input:reports[0].report,passphrase,catalog,
+      sourceUrl:snapshotConnection(sourceUrl).sourceUrl,projectRef:SNAPSHOT_PROJECT}):{snapshot:reports[0].report};
     const snapshot=reusePointZeroFrom
-      ? rehydrateLivePointZeroSnapshot({input:reports[0].report,baseline:reusePointZeroFrom,catalog,sourceUrl})
-      : validateLiveSnapshot(reports[0].report,{catalog,sourceUrl}).snapshot;
+      ? rehydrateLivePointZeroSnapshot({input:decoded.snapshot,baseline:reusePointZeroFrom,catalog,sourceUrl})
+      : validateLiveSnapshot(decoded.snapshot,{catalog,sourceUrl}).snapshot;
     const evidence=await writePrivateLiveSnapshot({input:snapshot,catalog,sourceUrl,
       file:join(directory,label+(reusePointZeroFrom?'.json.gz':'.json')),privateRoot,compressGzip:!!reusePointZeroFrom});
-    return {snapshot,evidence,queryEvidence:result.evidence};
+    return {snapshot,evidence,queryEvidence:result.evidence,...(decoded.evidence?{transportEvidence:decoded.evidence}:{})};
   }
   async function authBaseline({baseline,run,actorId,artifactSha256}) {
     assert.notEqual(actorId,SNAPSHOT_ACTOR);assert.ok(!baseline.snapshot.auth_user_ids.includes(actorId),'PLANNED_AUTH_ID_ALREADY_EXISTS');

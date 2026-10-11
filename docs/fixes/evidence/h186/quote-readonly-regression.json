@@ -1,0 +1,142 @@
+{
+  "format": "balam-h186-quote-readonly-regression-v1",
+  "generatedAt": "2026-10-11T00:56:27.715Z",
+  "status": "PASS_LOCAL",
+  "networkRequests": 0,
+  "remoteForwardMigrationStatus": "RECORDED_SEPARATELY",
+  "remoteForwardMigrationEvidence": "226-deployment.json",
+  "financialLiveStatus": "FAIL_NOT_CERTIFIED",
+  "applicationArtifactChanged": false,
+  "rootCause": {
+    "sqlState": "25006",
+    "error": "cannot execute SELECT FOR SHARE in a read-only transaction",
+    "path": [
+      "pos.quote_sale(jsonb,jsonb,boolean)",
+      "pos.assert_online_device()",
+      "SELECT sync_devices FOR SHARE"
+    ],
+    "postgrestAccessMode": "STABLE POST RPC uses READ ONLY",
+    "officialReference": "https://docs.postgrest.org/en/v12/references/transactions.html#access-mode-on-functions"
+  },
+  "reproduction": {
+    "authenticatedScopeVerified": true,
+    "postgrestEquivalentReadOnlyTransaction": true,
+    "readWriteQuoteTotal": 875,
+    "protectedTableFingerprintsUnchanged": true,
+    "transactionClosed": true,
+    "evidence": {
+      "sha256": "ffdabdb880854a0296aa0d56c4d2b3ec86b7fd283c38fa52aa39fc62a754204a",
+      "modifiedAt": "2026-10-11T00:43:25.832Z"
+    }
+  },
+  "finalTests": [
+    {
+      "command": "node test-h186-financial-sql.mjs",
+      "passed": 85,
+      "failed": 0,
+      "engine": "isolated PGlite",
+      "evidence": {
+        "sha256": "171e930dad23b1cc14e48d03419aea51bcdf113db35021d6bd7ba96316371196",
+        "modifiedAt": "2026-10-11T00:53:33.119Z"
+      }
+    },
+    {
+      "command": "node test-migrations.mjs",
+      "passed": 31,
+      "failed": 0,
+      "evidence": {
+        "sha256": "03ef27c17cb0d73f3336cc19d8384fc397fb14b289729a1700de3696873e5c57",
+        "modifiedAt": "2026-10-11T00:54:23.868Z"
+      }
+    }
+  ],
+  "coverage": [
+    "Actual guard and authenticated READ ONLY before/after migration",
+    "Quote remains STABLE with unchanged owner, search_path and ACL",
+    "Write admission retains exact FOR SHARE function definition",
+    "No POS row changes during migration self-check and successful quote",
+    "Equivalent missing/unknown identity, inactive profile, missing/unregistered/revoked device admission",
+    "Private helper has no PUBLIC, anon, authenticated or service_role execution",
+    "JOEL quote total875,subtotal754.31,IVA120.69",
+    "Financial sales, payments, card claims and postsale regressions"
+  ],
+  "functions": [
+    {
+      "proname": "assert_online_device",
+      "pronargs": 0,
+      "identity": "pos.assert_online_device()",
+      "body_md5": "0397e9df342afcd81d518a064587994e",
+      "definition_md5": "723fcdf0960929c2826df56446f8f91f",
+      "proconfig": [
+        "search_path=pg_catalog, pos, auth"
+      ],
+      "prosecdef": true,
+      "provolatile": "v",
+      "public_execute": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_role_execute": false
+    },
+    {
+      "proname": "h186_assert_quote_device",
+      "pronargs": 0,
+      "identity": "pos.h186_assert_quote_device()",
+      "body_md5": "8ebc16a834b6c05eb60409a5e56002dc",
+      "definition_md5": "49d14c215b36d33b2e7513228891fb6d",
+      "proconfig": [
+        "search_path=pg_catalog, pos, auth"
+      ],
+      "prosecdef": true,
+      "provolatile": "s",
+      "public_execute": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_role_execute": false
+    },
+    {
+      "proname": "quote_sale",
+      "pronargs": 3,
+      "identity": "pos.quote_sale(jsonb,jsonb,boolean)",
+      "body_md5": "834715acd4bf25b2b136e72af99fcd49",
+      "definition_md5": "af6536d9370071e487a43773e6289e9d",
+      "proconfig": [
+        "search_path=pg_catalog, pos, auth"
+      ],
+      "prosecdef": true,
+      "provolatile": "s",
+      "public_execute": false,
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "service_role_execute": true
+    }
+  ],
+  "functionMetadataScope": "Isolated PGlite fixture; prior write guard service_role ACL may differ from deployment defaults and is preserved, not rewritten.",
+  "sources": {
+    "supabase/migrations/20261011022600_pos_h186_quote_readonly_device.sql": {
+      "sha256": "0b2d14c5cc051be320b182323ed1c6eb4ec9ec1b6c9e247a3d6332c589d1cda1",
+      "modifiedAt": "2026-10-11T00:50:13.580Z"
+    },
+    "test-h186-financial-sql.mjs": {
+      "sha256": "41e726953a93771b776a9c66e9ce3833022c894d942829d2231070d22ed18250",
+      "modifiedAt": "2026-10-11T00:53:18.387Z"
+    },
+    "supabase/migrations/20261010022500_pos_h186_financial_authority.sql": {
+      "sha256": "b4bd0bc1acb97ea6e26c9c5ad8e14729bde73ebfdf635d076ce12ec57b1100a6",
+      "modifiedAt": "2026-10-10T22:42:33.889Z"
+    }
+  },
+  "failedLiveCleanup": {
+    "status": "PASS_CLEANUP_ONLY",
+    "at": "2026-10-11T00:47:23.449Z",
+    "exactRowsDeleted": 8,
+    "authIdentitiesAbsent": 1,
+    "newPosResidue": 0,
+    "newAuthResidue": 0,
+    "protectedTables": 64,
+    "nonQaPreserved": true,
+    "newQaCounters": 0,
+    "finalSnapshotSha256": "505ab912000262ec1399b45fe107da5664847452c65503104c38de6cc9e0b5d4",
+    "receiptSha256": "27df6086794e0bbf4f28b80ee3496aed930d8acaa9283c730f801e82517122dc",
+    "financialCertified": false
+  }
+}

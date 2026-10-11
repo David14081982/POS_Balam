@@ -102,7 +102,7 @@ async function scenario({injectForeignChange=false}) {
       }
     }});
   try {
-    assert.equal(setup.expectedRevisionDelta,7);assert.equal(setup.authIncomingFks,18);
+    assert.equal(setup.expectedRevisionDelta,7);assert.equal(setup.authIncomingFks,20);
     if(injectForeignChange) {
       await assert.rejects(lifecycle.finalize(),/CLEANUP_LOCKED_BASELINE_DRIFT:products/);
       assert.equal(authDeletes.length,0);assert.equal(sqlCalls.filter(s=>s==='cleanup-execution').length,1);
@@ -121,7 +121,7 @@ async function scenario({injectForeignChange=false}) {
     const diff=diffLiveSnapshots({baseline:baselineSnapshot,final:finalSnapshot,catalog:f.catalog,sourceUrl});
     assert.equal(diff.nonQaPreservedWithMonotonicAdvances,true);assert.equal(diff.new.length,0);assert.equal(diff.removed.length,0);
     assert.deepEqual(preflights.at(-1).pos_fingerprints.filter(t=>t.table!=='online_snapshot_revision'),preflights[0].pos_fingerprints.filter(t=>t.table!=='online_snapshot_revision'));
-    assert.equal(preflights[0].pos_fingerprints.length,64);assert.equal(preflights[0].fk_catalog.length,18);
+    assert.equal(preflights[0].pos_fingerprints.length,64);assert.equal(preflights[0].fk_catalog.length,20);
     assert.ok(preflights.every(p=>p.storage_owner_counts.every(c=>c.rows===0)));
     const currentRevision=s=>s.tables.find(t=>t.table==='online_snapshot_revision').rows[0].monotonic.counter;
     assert.equal(BigInt(currentRevision(finalSnapshot))-BigInt(currentRevision(postSqlSnapshot)),14n);

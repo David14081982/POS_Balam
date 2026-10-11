@@ -2,7 +2,7 @@
 // Canonical bodies belong in private artifacts; hashes below never reserialize them.
 import { createHash } from 'node:crypto';
 import { journalHash } from './h171-live-journal.mjs';
-import { postgresJsonbHash } from './h171-live-reconciliation.mjs';
+import { postgresJsonbHash, validateCleanupDeviceObservation } from './h171-live-reconciliation.mjs';
 import { SNAPSHOT_PROJECT, SNAPSHOT_ACTOR, validateLiveSnapshot, diffLiveSnapshots } from './h171-live-snapshot.mjs';
 import { LIVE_CLEANUP_ORDER } from './h171-live-cleanup-sql.mjs';
 
@@ -94,6 +94,71 @@ export function proveConfirmedSaleWrite({row,context,device,presence,observation
     intentSha256:e.entryHash,receiptFullRowMd5:x.r.full_row_md5,presenceIntentSha256:presence.entryHash};
 }
 
+// Return/exchange SQL stamps its commit UUID, not the caller installation (H35
+// and H150). A prefix never proves ownership: require the exact confirmed echo,
+// new command document/commit, and the version increments SQL actually applies.
+export function proveConfirmedPostSaleWrite({row,context,contexts=[],device,presence,observation,actorId,run,
+  document,commit,newDocument=false,newCommit=false,newRow=false,newDevice=false,principalProven=false}) {
+  const x=context,c=x?.c,b=x?.r?.body,e=x?.e,id=x?.id,d=device?.body,kind=c?.type;
+  if(!['return','exchange'].includes(kind)||!newRow||!newDevice||!newDocument||!newCommit||!principalProven||
+    !['products','sellers'].includes(row.table)||!UUID.test(id||'')||row.body.sync_device_id!==kind+':'+id||
+    e?.kind!=='rpc:execute_online_command'||e.actorId!==actorId||e.requestId!==id||!SHA.test(e.entryHash||'')||
+    c.expectedActorId!==actorId||c.operationId!==id||b?.actor_id!==actorId||b.request_id!==id||
+    b.state!=='confirmed'||b.command_kind!==kind||b.command_hash!==postgresJsonbHash(c)||
+    b.response?.ok!==true||b.response?.requestId!==id||!['A','B','C'].some(label=>b.device_id===`qa-h164-${run}-${label}`)||
+    d?.device_id!==b.device_id||d.user_id!==actorId||!['online','revoked'].includes(d.status)||d.metadata?.online_only!==true||
+    presence?.kind!=='rpc:online_presence'||presence.actorId!==actorId||presence.identities?.deviceId!==d.device_id||
+    presence.command?.p_device_id!==d.device_id||presence.command?.p_client_build!==d.client_build||!SHA.test(presence.entryHash||'')||
+    !observation?.sequences?.includes(presence.sequence)||observation.observedContentSha256!==postgresJsonbHash(clean(d))||
+    !Number.isSafeInteger(row.body.sync_version)||row.body.sync_version<2||!c.header?.id||!c.header?.folio||
+    c.id!==c.header.id||c.folio!==c.header.folio||document?.body.id!==c.header.id||document.body.folio!==c.header.folio||
+    commit?.body.commit_id!==id||commit.body[kind+'_id']!==c.header.id||commit.body.folio!==c.header.folio)return null;
+  const response=b.response.result,echo=response?.[row.table]?.find(value=>value.id===row.body.id);
+  if(response?.ok!==true||!echo||postgresJsonbHash(clean(echo))!==postgresJsonbHash(clean(row.body))||
+    (kind==='return'&&c.legacy!==false)||(kind==='exchange'&&
+      (response.exchange?.id!==c.header.id||response.exchange?.folio!==c.header.folio)))return null;
+  let priorProof=null;
+  if(row.table==='sellers'){
+    const effects=((kind==='exchange'?c.seller_effects:c.sellerEffects)||[]).filter(value=>value.id===row.body.id),version=effects[0]?.base_version;
+    if(!effects.length||!Number.isSafeInteger(version)||version<1||effects.some(value=>value.base_version!==version)||
+      row.body.sync_version!==version+effects.length||
+      (kind==='return'?!c.header.vendedores?.includes(row.body.id):c.header.vendedor_id!==row.body.id))return null;
+  }else{
+    const lines=(kind==='return'?c.stockLines:c.items)||[],deltas=new Map(),items=new Map();
+    for(const value of lines.filter(value=>value.product_id===row.body.id)){
+      if(typeof value.talla!=='string'||!value.talla||!Number.isSafeInteger(value.qty)||value.qty<1||
+        (kind==='exchange'&&!['devuelto','entregado'].includes(value.lado)))return null;
+      deltas.set(value.talla,(deltas.get(value.talla)||0)+value.qty*(kind==='exchange'&&value.lado==='entregado'?-1:1));
+    }
+    if(kind==='return'){
+      for(const value of (c.items||[]).filter(value=>value.product_id===row.body.id)){
+        if(typeof value.talla!=='string'||!value.talla||!Number.isSafeInteger(value.qty)||value.qty<1)return null;
+        items.set(value.talla,(items.get(value.talla)||0)+value.qty);
+      }
+      if(!same([...deltas].sort(),[...items].sort()))return null;
+    }
+    const increments=[...deltas.values()].filter(value=>value!==0).length;
+    if(!increments)return null;
+    // The return wire has no expectedProducts version. Bind its previous version
+    // to the last earlier confirmed full product echo from this same journal.
+    const prior=contexts.filter(p=>p.e?.sequence<e.sequence).map(p=>{
+      const result=p.r?.body.response?.result,values=p.c?.type==='upsert'&&p.c.kind==='products'?result:result?.products;
+      return {p,echo:Array.isArray(values)?values.find(value=>value.id===row.body.id):null};
+    }).filter(p=>p.echo).sort((a,b)=>b.p.e.sequence-a.p.e.sequence)[0];
+    const p=prior?.p,pb=p?.r?.body,pe=p?.e,pc=p?.c,version=prior?.echo.sync_version;
+    if(!p||!['upsert','sale','return','exchange'].includes(pc.type)||pe.kind!=='rpc:execute_online_command'||
+      pe.actorId!==actorId||pe.requestId!==p.id||!UUID.test(p.id||'')||!SHA.test(pe.entryHash||'')||
+      pc.expectedActorId!==actorId||pb.actor_id!==actorId||pb.request_id!==p.id||pb.state!=='confirmed'||
+      pb.command_kind!==pc.type||pb.command_hash!==postgresJsonbHash(pc)||pb.response?.ok!==true||pb.response.requestId!==p.id||
+      !['A','B','C'].some(label=>pb.device_id===`qa-h164-${run}-${label}`)||
+      !Number.isSafeInteger(version)||version<1||row.body.sync_version!==version+increments)return null;
+    priorProof={requestId:p.id,intentSha256:pe.entryHash,receiptFullRowMd5:p.r.full_row_md5,version,increments};
+  }
+  return {kind:`CONFIRMED_${kind.toUpperCase()}_WRITE_MARKER`,requestId:id,deviceId:d.device_id,
+    intentSha256:e.entryHash,receiptFullRowMd5:x.r.full_row_md5,presenceIntentSha256:presence.entryHash,
+    ...(priorProof?{priorProductWrite:priorProof}:{})};
+}
+
 /** All inputs are already durable, private local evidence. This is not a verifier
  * of filesystem durability or a substitute for a fresh locked SQL preflight.
  * authBaseline is a complete, separately backed Auth ID census taken before the
@@ -125,6 +190,28 @@ export function buildLiveCleanupPlan({journalSnapshot,fixtures,reconciliation,ba
   need(reconciliation.entries?.length===entries.length && reconciliation.entries.every((r,i)=>r.sequence===entries[i].sequence &&
     r.kind===entries[i].kind && r.requestId===entries[i].requestId && (['TERMINAL_RECEIPT','OBSERVED_FINAL_STATE'].includes(r.state)||
       r.kind==='fixture-plan'&&r.state==='METADATA_ONLY'&&r.observedMutations===false&&r.identityAttribution==='NONE') && !r.blocker),'PLAN_RECONCILIATION_ENTRIES');
+  const recovery=reconciliation.cleanupRecovery;
+  if(recovery){
+    const observation=recovery.observation,original=reconciliation.originalReconciliation;
+    validateCleanupDeviceObservation(observation,{snapshot:journalSnapshot,fixtures,
+      originalBaseline:{snapshot:baseline,fileSha256:backup.baselineFileSha256}});
+    need(recovery.format==='balam-cleanup-device-recovery-v1'&&recovery.observationSha256===journalHash(observation)&&
+      recovery.reportUnattributed===true&&recovery.acknowledgementClaimed===false&&recovery.certificationEligible===false&&
+      reconciliation.certificationEligible===false&&original?.reconciled===false&&original.certified===false&&
+      recovery.originalReconciliationSha256===journalHash(original)&&same(recovery.originalBlockers,original.blockers)&&
+      same(original.blockers,observation.mismatchSequences.map(sequence=>({code:'DEVICE_ADOPTION_MISMATCH',sequence}))),
+    'PLAN_RECOVERY_PROOF_BINDING');
+    const restored=structuredClone(reconciliation);delete restored.cleanupRecovery;delete restored.originalReconciliation;delete restored.certificationEligible;
+    restored.reconciled=false;restored.blockers=structuredClone(original.blockers);
+    for(const entry of restored.entries.filter(row=>observation.mismatchSequences.includes(row.sequence))){
+      need(entry.originalBlocker==='DEVICE_ADOPTION_MISMATCH'&&entry.acknowledgementClaimed===false&&
+        entry.recoveryObservationSha256===recovery.observationSha256,'PLAN_RECOVERY_ENTRY_BINDING');
+      entry.state='UNCERTAIN';entry.blocker=entry.originalBlocker;delete entry.originalBlocker;delete entry.recoveryObservationSha256;
+    }
+    need(same(restored,original),'PLAN_RECOVERY_ORIGINAL_CHANGED');
+    const currentDevice=current.tables.find(table=>table.table==='sync_devices').rows.find(row=>JSON.parse(row.pk_json_text).device_id===observation.deviceId);
+    need(currentDevice?.full_row_md5===observation.deviceFullRowMd5,'PLAN_RECOVERY_CANONICAL_ROW_CHANGED');
+  }else need(!reconciliation.entries.some(row=>row.originalBlocker||row.recoveryObservationSha256)&&!reconciliation.originalReconciliation,'PLAN_RECOVERY_PROOF_REQUIRED');
   const schema=new Map(catalog.map(t=>[t.table,t])), rows=new Map(), before=new Map(), byTable=new Map();
   const flatten = snapshot => snapshot.tables.flatMap(t=>t.rows.map(r=>({table:t.table,...r})));
   for(const [snapshot,index] of [[baseline,before],[current,rows]]) for(const r of flatten(snapshot)) {
@@ -150,12 +237,18 @@ export function buildLiveCleanupPlan({journalSnapshot,fixtures,reconciliation,ba
     if(Object.values(r.omitted_column_nullity).some(v=>!v)||hasSecret(r.body)){hold(r,'NONRESTORABLE_SECRET');return;}
     let writeProof=null;
     if(r.body.sync_device_id && !fixtures.installations.includes(r.body.sync_device_id)){
-      const id=r.body.sync_device_id.startsWith('sale:')?r.body.sync_device_id.slice(5):null;
-      const context=contexts.find(x=>x.id===id&&x.c.type==='sale'),device=context?one('sync_devices',{device_id:context.r.body.device_id}):null;
+      const marker=/^(sale|return|exchange):([a-f0-9-]+)$/.exec(r.body.sync_device_id),kind=marker?.[1],id=marker?.[2];
+      const context=contexts.find(x=>x.id===id&&x.c.type===kind),device=context?one('sync_devices',{device_id:context.r.body.device_id}):null;
       const presence=entries.filter(e=>e.kind==='rpc:online_presence'&&e.actorId===actorId&&
         e.identities?.deviceId===device?.body.device_id&&e.command?.p_device_id===device?.body.device_id).at(-1);
-      writeProof=proveConfirmedSaleWrite({row:r,context,device,presence,observation:observed.get(device?.id),actorId,run,
-        newRow:!before.has(r.id),newDevice:!!device&&!before.has(device.id),principalProven:ownedAuth.has(actorId)});
+      const args={row:r,context,device,presence,observation:observed.get(device?.id),actorId,run,
+        newRow:!before.has(r.id),newDevice:!!device&&!before.has(device.id),principalProven:ownedAuth.has(actorId)};
+      if(kind==='sale')writeProof=proveConfirmedSaleWrite(args);
+      else if(context&&['return','exchange'].includes(kind)){
+        const document=one(kind==='return'?'returns':'exchanges',{id:context.c.header?.id}),commit=one(kind+'_commits',{commit_id:id});
+        writeProof=proveConfirmedPostSaleWrite({...args,contexts,document,commit,
+          newDocument:!!document&&!before.has(document.id),newCommit:!!commit&&!before.has(commit.id)});
+      }
       if(!writeProof){hold(r,'FOREIGN_WRITE_DEVICE');return;}
     }
     const actorColumn={online_requests:'actor_id',online_account_requests:'actor_id',capability_operation_audit:'actor_user_id',
@@ -404,5 +497,6 @@ export function buildLiveCleanupPlan({journalSnapshot,fixtures,reconciliation,ba
     cleanupManifestComplete:blockers.length===0,readyForReview:blockers.length===0&&authComplete,
     external:{auth:'HELD_SEPARATE_GOTRUE',storage:'HELD_SEPARATE_STORAGE'},
     liveGateOpened:false,certified:false,cleanupVerified:false,executionAuthorized:false,
-    privateArtifact:true,observationProofScope:'OBSERVED_NODE_INTENT_NOT_SERVER_RECEIPT binds durable provisioning intent to the reconciled final row; it does not claim a fiscal ACK.'};
+    privateArtifact:true,observationProofScope:'OBSERVED_NODE_INTENT_NOT_SERVER_RECEIPT binds durable provisioning intent to the reconciled final row; it does not claim a fiscal ACK.',
+    ...(recovery?{cleanupRecovery:structuredClone(recovery),certificationEligible:false}: {})};
 }

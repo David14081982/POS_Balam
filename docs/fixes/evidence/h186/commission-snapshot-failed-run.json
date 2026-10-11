@@ -1,0 +1,68 @@
+{
+  "schema": "h186-commission-snapshot-failed-run-v1",
+  "status": "FAILED_RUN_EXACT_RECOVERY_VERIFIED",
+  "failedRunRemainsFailed": true,
+  "financialCertified": false,
+  "deliveryCertified": false,
+  "artifactSha256": "dcab70eff4fcd8ce5ec75346777b2c6db2e6b0d3c7d1779136443376cba68f3e",
+  "startedAt": "2026-10-11T03:02:00.166Z",
+  "cleanupCompletedAt": "2026-10-11T03:54:56.178Z",
+  "scenarioFailure": "H186_RETURN_COMMISSION_SNAPSHOT_MISMATCH",
+  "cause": "The additional-discount SQL delegate persisted the commission total but omitted per-seller commission rows.",
+  "isolatedSqlReproduction": {
+    "network": false,
+    "productionWrites": 0,
+    "additionalDiscountSnapshotLost": true,
+    "emptyArraySnapshotLost": true,
+    "legacyControlPreserved": true
+  },
+  "browserQuiescence": {
+    "contexts": 3,
+    "offlineConfirmed": 3,
+    "closedConfirmed": 3
+  },
+  "reconciliationConfirmed": true,
+  "readonlyCatalog": {
+    "referencesAudited": 967,
+    "referencesTotal": 967,
+    "promotionsAudited": 1,
+    "promotionsTotal": 1,
+    "scenariosAudited": 2901,
+    "scenariosTotal": 2901,
+    "mismatches": 0,
+    "sales": 0,
+    "stockMutations": 0
+  },
+  "fixtureCounts": {
+    "products": 9,
+    "promotions": 10,
+    "sales": 8,
+    "returns": 1,
+    "exchanges": 0
+  },
+  "cleanup": {
+    "verified": true,
+    "originalFailedMatrixUnchanged": true,
+    "protectedTables": 64,
+    "nonQaPreserved": true,
+    "exactRowsDeleted": 112,
+    "ownActorsAbsent": 1,
+    "newPosResidue": 0,
+    "newAuthResidue": 0,
+    "preservedNewQaFolioCounters": 1,
+    "baselineFileSha256": "31b5054ae48ac2e414dc4a350c913c8a3ef9a3a8089e15957e038e9bb447aad8",
+    "finalFileSha256": "6696519932f7969effb500b6f642a056b71b7e2833bc327d9b9691e680db3aa8"
+  },
+  "evidenceHashes": {
+    "failedMatrix": "98a22952fbef09dd5da8e0e99201263e4510f94713e46c2552d047229a86f71c",
+    "fixtures": "add07d14b4d70ea14fc0f5ea5f64b792f596c7775d5168d3107b16ee3efa21ab",
+    "completion": "48dd3e3f2f16d8f729437e64077ef62b21db186f2b6389643f31cb86bc9626e5",
+    "sqlPostcheck": "b16dfc98ac2c573cad53b11c69ffd349b7ed16a7457d13d64922a3cfc41bd457",
+    "authCleanup": "1f2d03b634d73f25b9e461a7378fb8fb093f28a7a06827d6d38ac681901f1de5",
+    "recovery": "b18cbfbabb29bd3246e706fd6d88be6aee69819fef7b031920eeca353924579e",
+    "reconciliation": "db9287b36934198f7bd18bdf7a14f62118f1c90530d7f008d55b6ccd5e532331",
+    "catalog": "05ba74da582de8d4eecde44a5807ffafb95dbdbcce2ae80ef066d1694e889069",
+    "sqlRed": "b67d1f522c42822dd175675073ca88e8c4dfda2c3d4cdb6a884b5ac54176dc23"
+  },
+  "hardware": "NOT_TESTED"
+}

@@ -1,0 +1,295 @@
+{
+  "schema": "h186-approved-closure-v1",
+  "status": "PASS",
+  "scope": "single-discounted-sale",
+  "at": "2026-10-11T04:57:24.053Z",
+  "ownerDecision": "Stop repeated certification; execute one final discounted sale and reuse unchanged passing results.",
+  "terminals": 1,
+  "confirmedSales": 1,
+  "amounts": {
+    "original": 1250,
+    "discount": 375,
+    "subtotal": 754.31,
+    "iva": 120.69,
+    "total": 875,
+    "payment": 875
+  },
+  "supabaseConfirmed": true,
+  "ticketCorrect": true,
+  "reportCorrect": true,
+  "commissionCorrect": true,
+  "commission": 43.75,
+  "commissionBase": "bruto",
+  "stockDecrease": 1,
+  "settingsMutations": 0,
+  "existingCommercialClientsUsed": 0,
+  "financialVersion": 2,
+  "cleanup": {
+    "verified": true,
+    "protectedTables": 64,
+    "nonQaPreserved": true,
+    "newPosResidue": 0,
+    "newAuthResidue": 0,
+    "exactRowsDeleted": 17,
+    "authIdentitiesRemoved": 1,
+    "completedAt": "2026-10-11T04:57:16.528Z",
+    "completionSHA256": "8ebfa65f95954ecfcd4cc1793e8bf81958939d1477c3871febbd333965606d54",
+    "baselineSHA256": "f084c1c2dfc9737a35266d89938b9f45bd4604f324a5e3e304c9de585ee99616",
+    "finalSHA256": "cf1580f526f391c0c1df9fe50161f2f60af1944f849f453fe7c4a246b9b25858"
+  },
+  "stoppedRunCleanup": {
+    "verified": true,
+    "protectedTables": 64,
+    "nonQaPreserved": true,
+    "newPosResidue": 0,
+    "newAuthResidue": 0,
+    "exactRowsDeleted": 59,
+    "authIdentitiesRemoved": 1,
+    "completedAt": "2026-10-11T04:35:56.852Z",
+    "completionSHA256": "b5dd34ed88591bb3c2360983b77d944b764c824af02ca83dbd9d3db69ecb4f04",
+    "baselineSHA256": "52ff0656c5688fae644ae7f3549324586bf45e05b4e78f5d777613ae3f0f1608",
+    "finalSHA256": "e5f482f32391bd5975f5122f9e601e2fcf262003c63325805c9851edd8ae6248"
+  },
+  "failedAttemptCleanup": {
+    "verified": true,
+    "protectedTables": 64,
+    "nonQaPreserved": true,
+    "newPosResidue": 0,
+    "newAuthResidue": 0,
+    "exactRowsDeleted": 17,
+    "authIdentitiesRemoved": 1,
+    "completedAt": "2026-10-11T04:49:34.094Z",
+    "completionSHA256": "1553c71e8255ff879f916aa4b5ce9bd08af72d361721a36e16ba844a735eae97",
+    "baselineSHA256": "33240873f192cc77befd2392c299f77fc7def5cce6481ccc3ea033f1726d23e0",
+    "finalSHA256": "23c2c21b82737e9a3a50fdfd1a18f9137d6b37c67cc6ccf0f13f374b1d7763df"
+  },
+  "attempts": {
+    "count": 2,
+    "sameCase": true,
+    "firstRemainsFailed": true,
+    "reason": "Private one-terminal harness read response.sale instead of response.result.sale; cleanup requires the canonical A/B/C planned manifest although only A is instantiated.",
+    "correction": "Read the documented response envelope and retain planned installation names; no application or SQL changes; repeat only this case."
+  },
+  "previousResults": {
+    "sql": 135,
+    "migrations": 31,
+    "uiAndTickets": 77,
+    "remoteAudit": 366,
+    "repeated": false,
+    "catalog": {
+      "references": 967,
+      "promotions": 1,
+      "quotes": 2901,
+      "mismatches": 0,
+      "repeatedForFinalClosure": false
+    }
+  },
+  "evidence": {
+    "matrixSHA256": "456ee4611a28f542e35ba0b65793b69f8126ed53882a0af418ecb7e56c85318f",
+    "runnerSHA256": "b9db07fd8a543941c97a1a679a722d11e8f7ba1c71939f2d07ff02309f2ec24f",
+    "receiptSHA256": "32a323c5eaf9a3835043454e2198d8435c79551a7f332543175b8891e0511131",
+    "reportRowSHA256": "176b4967f6529d42dac6ec362719855440450fac0d8ec69723cf0987d01f6fd4",
+    "reprintSHA256": "32a323c5eaf9a3835043454e2198d8435c79551a7f332543175b8891e0511131",
+    "remoteAuditSHA256": "95eff1e71b506faf4dd299ddce0060328007d904af38728eb7b0d8f38a3abc6e"
+  },
+  "sourceManifest": [
+    {
+      "file": "index.html",
+      "sha256": "dcab70eff4fcd8ce5ec75346777b2c6db2e6b0d3c7d1779136443376cba68f3e",
+      "testedBytesSHA256": "dcab70eff4fcd8ce5ec75346777b2c6db2e6b0d3c7d1779136443376cba68f3e",
+      "comparison": "exact-bytes"
+    },
+    {
+      "file": "POS Balam (offline).html",
+      "sha256": "dcab70eff4fcd8ce5ec75346777b2c6db2e6b0d3c7d1779136443376cba68f3e",
+      "testedBytesSHA256": "dcab70eff4fcd8ce5ec75346777b2c6db2e6b0d3c7d1779136443376cba68f3e",
+      "comparison": "exact-bytes"
+    },
+    {
+      "file": "sw.js",
+      "sha256": "bb1c7dd43f762cba659b99932454c6fd65aba6f72b782798d866a15a8b99ea12",
+      "testedBytesSHA256": "bb1c7dd43f762cba659b99932454c6fd65aba6f72b782798d866a15a8b99ea12",
+      "comparison": "exact-bytes"
+    },
+    {
+      "file": "balam/config.jsx",
+      "sha256": "d9fac613902460ea57b812825bcf8311e1ccd1a57ab28356c09dd74b1ab6e88a",
+      "testedBytesSHA256": "d9fac613902460ea57b812825bcf8311e1ccd1a57ab28356c09dd74b1ab6e88a",
+      "comparison": "git-text-lf"
+    },
+    {
+      "file": "balam/data.jsx",
+      "sha256": "ce0ba988f240ff030c0bfb32c39b223fdbd1ed9511c042b214ba510cc1b2d408",
+      "testedBytesSHA256": "ce0ba988f240ff030c0bfb32c39b223fdbd1ed9511c042b214ba510cc1b2d408",
+      "comparison": "git-text-lf"
+    },
+    {
+      "file": "balam/discounts.jsx",
+      "sha256": "42fd09e25ddaee186b7c976caf2d06c9e27361e6f37aee4843af8972cfd5774d",
+      "testedBytesSHA256": "42fd09e25ddaee186b7c976caf2d06c9e27361e6f37aee4843af8972cfd5774d",
+      "comparison": "git-text-lf"
+    },
+    {
+      "file": "balam/pos-ticket.jsx",
+      "sha256": "52cb6d58f8ce317a15aed12d9e3a4b0e958f1ac8933ac307f20646d0f90eaceb",
+      "testedBytesSHA256": "52cb6d58f8ce317a15aed12d9e3a4b0e958f1ac8933ac307f20646d0f90eaceb",
+      "comparison": "git-text-lf"
+    },
+    {
+      "file": "balam/returns.jsx",
+      "sha256": "8f36d371d34f56f176870f86e8b39d8f00206dcf59aab58a4eaccd2630423c67",
+      "testedBytesSHA256": "8f36d371d34f56f176870f86e8b39d8f00206dcf59aab58a4eaccd2630423c67",
+      "comparison": "git-text-lf"
+    },
+    {
+      "file": "balam/settings.jsx",
+      "sha256": "0c897da2e232d7c202ca728746ced232e45a69e2436b261a575489b9d7d9e6b9",
+      "testedBytesSHA256": "0c897da2e232d7c202ca728746ced232e45a69e2436b261a575489b9d7d9e6b9",
+      "comparison": "git-text-lf"
+    },
+    {
+      "file": "balam/store.jsx",
+      "sha256": "a1e12fec11ab0ec8fa8e0f2aaac64e9ebadebebafd1bc7c35a85f57355d91d48",
+      "testedBytesSHA256": "c9035c3d07e673bddce9c9d5c229952294bd659dc811e6d0e837de77b59b0e1e",
+      "comparison": "git-text-lf"
+    },
+    {
+      "file": "supabase/migrations/20261010022500_pos_h186_financial_authority.sql",
+      "sha256": "b4bd0bc1acb97ea6e26c9c5ad8e14729bde73ebfdf635d076ce12ec57b1100a6",
+      "testedBytesSHA256": "b4bd0bc1acb97ea6e26c9c5ad8e14729bde73ebfdf635d076ce12ec57b1100a6",
+      "comparison": "git-text-lf"
+    },
+    {
+      "file": "supabase/migrations/20261011022600_pos_h186_quote_readonly_device.sql",
+      "sha256": "0b2d14c5cc051be320b182323ed1c6eb4ec9ec1b6c9e247a3d6332c589d1cda1",
+      "testedBytesSHA256": "0b2d14c5cc051be320b182323ed1c6eb4ec9ec1b6c9e247a3d6332c589d1cda1",
+      "comparison": "git-text-lf"
+    },
+    {
+      "file": "qa-h186-financial-journey.mjs",
+      "sha256": "753bac76221dd427ba750ab3d4027951f76cce2eb01f3732ce72451efef47c4b",
+      "testedBytesSHA256": "753bac76221dd427ba750ab3d4027951f76cce2eb01f3732ce72451efef47c4b",
+      "comparison": "git-text-lf"
+    },
+    {
+      "file": "test-h164-live-online.mjs",
+      "sha256": "31bad0ec4fa301886bffe93c189de5536b4d5d0a1badbee622cdbd5cb45069a1",
+      "testedBytesSHA256": "31bad0ec4fa301886bffe93c189de5536b4d5d0a1badbee622cdbd5cb45069a1",
+      "comparison": "git-text-lf"
+    },
+    {
+      "file": "h171-live-auth-dependencies.mjs",
+      "sha256": "e500a9b173d3357af35bd6987fdd40b5f6a4e0e1688dede00baac64b9d63db1c",
+      "testedBytesSHA256": "e500a9b173d3357af35bd6987fdd40b5f6a4e0e1688dede00baac64b9d63db1c",
+      "comparison": "git-text-lf"
+    },
+    {
+      "file": "h171-live-cleanup-auth-preflight.mjs",
+      "sha256": "d4dd4fec27aa9c15a0965b7dea647807210a062bf916091c202ea08e414598af",
+      "testedBytesSHA256": "d4dd4fec27aa9c15a0965b7dea647807210a062bf916091c202ea08e414598af",
+      "comparison": "git-text-lf"
+    },
+    {
+      "file": "h171-live-cleanup-auth.mjs",
+      "sha256": "d069a0c74540f0b5c888ced949d2a94676526b63f6b929263de09a00178c5f7e",
+      "testedBytesSHA256": "d069a0c74540f0b5c888ced949d2a94676526b63f6b929263de09a00178c5f7e",
+      "comparison": "git-text-lf"
+    },
+    {
+      "file": "h171-live-journal.mjs",
+      "sha256": "045af1faba9976235cd48f8c467170d4434bea73bc14cb725a1b5739904fcffd",
+      "testedBytesSHA256": "045af1faba9976235cd48f8c467170d4434bea73bc14cb725a1b5739904fcffd",
+      "comparison": "git-text-lf"
+    },
+    {
+      "file": "h171-live-snapshot.mjs",
+      "sha256": "1012fe7817aa7eae00c348d0b5f156c9dac4ae6547eecbd2d25c50e7201e31e8",
+      "testedBytesSHA256": "1012fe7817aa7eae00c348d0b5f156c9dac4ae6547eecbd2d25c50e7201e31e8",
+      "comparison": "git-text-lf"
+    },
+    {
+      "file": "h171-live-authority-io.mjs",
+      "sha256": "4db64cd12eba99d80c29f2d68449b192163d78b29205a14b8375ad4052328ea9",
+      "testedBytesSHA256": "4db64cd12eba99d80c29f2d68449b192163d78b29205a14b8375ad4052328ea9",
+      "comparison": "git-text-lf"
+    },
+    {
+      "file": "h171-live-snapshot-transport.mjs",
+      "sha256": "bb5df6207c51dc867b3382f3cef81d359b26caefa76b047074a907f37da954a4",
+      "testedBytesSHA256": "bb5df6207c51dc867b3382f3cef81d359b26caefa76b047074a907f37da954a4",
+      "comparison": "git-text-lf"
+    },
+    {
+      "file": "h171-live-reconciliation.mjs",
+      "sha256": "319306422effb92807a7138e6d36e1b2fc1548d5e313d5917037eaac8a2f578a",
+      "testedBytesSHA256": "319306422effb92807a7138e6d36e1b2fc1548d5e313d5917037eaac8a2f578a",
+      "comparison": "git-text-lf"
+    },
+    {
+      "file": "h171-live-cleanup-plan.mjs",
+      "sha256": "d11264ead58acbdb7cade232bafb0e7ecd1960c9a21376572301785e62d9b8af",
+      "testedBytesSHA256": "d11264ead58acbdb7cade232bafb0e7ecd1960c9a21376572301785e62d9b8af",
+      "comparison": "git-text-lf"
+    },
+    {
+      "file": "h171-live-cleanup-lifecycle.mjs",
+      "sha256": "1e71e1f99d951f723f367df884f381bf79dec86905deeac09e50a00a0b5088d6",
+      "testedBytesSHA256": "1e71e1f99d951f723f367df884f381bf79dec86905deeac09e50a00a0b5088d6",
+      "comparison": "git-text-lf"
+    },
+    {
+      "file": "h171-live-cleanup-sql.mjs",
+      "sha256": "032ca65019502174b61701ec53bc9bf16aa9f86f142c1a11bc896e5b35b90fc4",
+      "testedBytesSHA256": "032ca65019502174b61701ec53bc9bf16aa9f86f142c1a11bc896e5b35b90fc4",
+      "comparison": "git-text-lf"
+    },
+    {
+      "file": "h171-live-cleanup-validation.mjs",
+      "sha256": "25073f1d5921bcd616ef90c6e24e966b5a1ef1650021a114e44832e588938062",
+      "testedBytesSHA256": "25073f1d5921bcd616ef90c6e24e966b5a1ef1650021a114e44832e588938062",
+      "comparison": "git-text-lf"
+    },
+    {
+      "file": "qa-h171-core-journey.mjs",
+      "sha256": "c2f2681e693cf789b21a9b690a2a9b4cf93533c648837af1e15f5899d6208553",
+      "testedBytesSHA256": "c2f2681e693cf789b21a9b690a2a9b4cf93533c648837af1e15f5899d6208553",
+      "comparison": "git-text-lf"
+    },
+    {
+      "file": "qa-h171-session-delivery.mjs",
+      "sha256": "dafe554df072cc136d62e806bbcfa145caf185bd373cb231742f35abe305d87a",
+      "testedBytesSHA256": "dafe554df072cc136d62e806bbcfa145caf185bd373cb231742f35abe305d87a",
+      "comparison": "git-text-lf"
+    },
+    {
+      "file": "test-print-transport.mjs",
+      "sha256": "d4b2d6314573195923f4d41f30267ede53e481715289d633019edd4c00f1770b",
+      "testedBytesSHA256": "d4b2d6314573195923f4d41f30267ede53e481715289d633019edd4c00f1770b",
+      "comparison": "git-text-lf"
+    },
+    {
+      "file": "supabase/migrations/20261011022700_pos_h186_commission_snapshot.sql",
+      "sha256": "45f8bd943bc18462fe695280f0e51be77af8e377924133f115be979e0f21114c",
+      "testedBytesSHA256": "45f8bd943bc18462fe695280f0e51be77af8e377924133f115be979e0f21114c",
+      "comparison": "git-text-lf"
+    },
+    {
+      "file": ".github/workflows/h186-approved-closure.yml",
+      "sha256": "84e10d7d866b42282075e8467f7354160848ca191b33ac85f3773d64ca1be94f",
+      "testedBytesSHA256": "84e10d7d866b42282075e8467f7354160848ca191b33ac85f3773d64ca1be94f",
+      "comparison": "git-text-lf"
+    },
+    {
+      "file": "supabase/operations/h186-activate-financial-contract.sql",
+      "sha256": "d5f152e22d979c9bf37e9e8bd287ea199d362f6fc1cd82bb6365b476e23b2170",
+      "testedBytesSHA256": "d5f152e22d979c9bf37e9e8bd287ea199d362f6fc1cd82bb6365b476e23b2170",
+      "comparison": "git-text-lf"
+    }
+  ],
+  "limits": {
+    "physicalPrint": "NOT_TESTED",
+    "distributedCertification": "NOT_CLAIMED",
+    "publication": "NOT_ASSERTED_BY_THIS_REPORT",
+    "intermittentSnapshotTimeout": "Observed during earlier three-terminal runs; root cause not demonstrated. Not hidden or claimed repaired."
+  }
+}

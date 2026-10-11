@@ -5,6 +5,43 @@ un riesgo se debe leer su evidencia y las correcciones relacionadas. Los
 estados válidos son: `ABIERTO`, `EN CURSO`, `PARCIALMENTE RESUELTO`, `RESUELTO`
 y `BLOQUEADO`.
 
+## H-186 — Descuentos exactos y autoridad financiera de ventas nuevas
+
+**Estado:** PARCIALMENTE RESUELTO — corrección y prueba integral PASS; publicación pendiente.
+**Fecha:** 11/10/2026 UTC. **Commit:** Pendiente de commit.
+**Decisión:** eliminar el piso por costo/margen sin modificar costos ni históricos.
+El propietario ordenó cerrar con una única prueba integral y conservar las
+suites aprobadas sin repetirlas. No se exige ni atribuye certificación A/B/C.
+**Causa:** $563 / (1−50%) = $1,126; JOEL $1,250 recibía sólo $124 de descuento.
+IVA, original y residuos de centavos usaban cálculos inconsistentes; SQL no
+validaba completamente el contrato. No se encontró una venta real que permita
+afirmar un cobro histórico específico JOEL/aniversario.
+**Corrección:** descuentos 0–100% exactos; regla de acumulación vigente;
+contrato V2 autoritativo de original/descuentos/base/IVA/total/pago/documento;
+redondeo decimal y segmentos; cero sin pagos ficticios; comisiones persistidas,
+liquidación y replay congelados; históricos sin recálculo.
+**Costo:** pos.products.costo. Alta técnica del 12/09/2026 y antecedente V1
+del 30/08/2026 identificados; captura económica y validez comercial no demostradas.
+Se preservó el costo. No se creó un módulo de costos.
+**Pruebas conservadas:** SQL 135/135, migraciones 31/31, UI/tickets 77/77;
+967/967 referencias y 1/1 promociones, 2,901 cotizaciones sin discrepancias.
+Migraciones 225–227 aplicadas; auditoría remota posterior 366/366, costos,
+21 ventas históricas, funciones y permisos preservados.
+**Prueba única final:** PASS. UI de venta con 30%, SQL confirmado, $875 de
+pago y total, base $754.31, IVA $120.69, comisión, ticket, reporte y reimpresión
+coherentes. Evidencia: [final-single-e2e.json](fixes/evidence/h186/final-single-e2e.json).
+**Limpieza:** recorrido detenido 59 filas/1 Auth; prueba final
+17 filas/1 Auth. Ambas verifican 64 tablas, datos ajenos preservados
+y cero residuos nuevos POS/Auth. Contadores QA monotónicos preservados.
+**Datos comerciales afectados indebidamente:** 0.
+**Pendiente:** commit, publicación verificada por bytes y activación final V2.
+Workflow manual de cierre con evidencia y fuentes congeladas; sin repetir
+suites y sin cambiar el workflow ordinario para las demás historias.
+**Residual:** causa de timeouts concurrentes de snapshot no demostrada;
+origen económico del costo no demostrado; impresión física NOT_TESTED.
+Los intentos previos fallidos y la matriz detenida no se declaran certificados.
+**Corrección:** docs/fixes/descuentos-autoridad-financiera-h186.md.
+
 ## H-185 — Simplificar detalle y espacio del ticket de venta
 
 **Estado:** RESUELTO — publicado/verificado; confirmación física pendiente.
@@ -819,6 +856,10 @@ columnas, nulabilidad, restricciones funcionales, índices, funciones y RLS.
 
 ## H-11 — Margen mínimo configurado pero no aplicado
 
+**Vigencia:** decisión comercial sustituida por H-186 el 10/10/2026. Se retira
+el piso por costo/margen para operaciones nuevas y se conserva esta evidencia
+histórica, junto con los costos y las ventas previamente registradas.
+
 **Estado:** RESUELTO
 **Fecha de registro:** 25/07/2026
 **Commit:** `56b3d37`
@@ -1541,6 +1582,10 @@ cierres.
 **Corrección documentada:** `docs/fixes/autoridad-comision-efectiva.md`.
 
 ## H-32 — Trazabilidad del descuento y presentación del ticket
+
+**Compatibilidad:** H-186 conserva esta presentación para documentos anteriores;
+las ventas nuevas versionadas desglosan IVA sobre el total descontado y guardan
+el precio original completo. Ningún importe histórico se recalcula.
 
 **Estado:** RESUELTO
 **Fecha de registro:** 27/07/2026

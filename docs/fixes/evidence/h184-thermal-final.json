@@ -1,6 +1,6 @@
 {
   "baseline": false,
-  "artifactSHA256": "857f07700fb0a793986cb472a1da24f26a1a5dddb61dbc1068ed036b5530218a",
+  "artifactSHA256": "dcab70eff4fcd8ce5ec75346777b2c6db2e6b0d3c7d1779136443376cba68f3e",
   "results": [
     {
       "name": "real payment-method thermal ticket uses USB and retains its one unlabelled copy",
@@ -10,7 +10,7 @@
       ],
       "bytes": 129276,
       "copies": 1,
-      "payloadHash": "bafdb66c69036d563a026ea47e52555b33d99ef70a3e1ec3ad25e7c9b3923780"
+      "payloadHash": "a3e45b47f243ef8279648382aa5ed7577ef23f0c99df1288e72053746b8bd9bd"
     },
     {
       "name": "report reprint sends the same frozen complete image with one copy and no business changes",
@@ -20,7 +20,7 @@
       ],
       "bytes": 129276,
       "copies": 1,
-      "payloadHash": "bafdb66c69036d563a026ea47e52555b33d99ef70a3e1ec3ad25e7c9b3923780"
+      "payloadHash": "a3e45b47f243ef8279648382aa5ed7577ef23f0c99df1288e72053746b8bd9bd"
     },
     {
       "name": "report popup can close after capture without losing any raster rows",
@@ -30,7 +30,7 @@
       ],
       "bytes": 129276,
       "copies": 1,
-      "payloadHash": "bafdb66c69036d563a026ea47e52555b33d99ef70a3e1ec3ad25e7c9b3923780"
+      "payloadHash": "a3e45b47f243ef8279648382aa5ed7577ef23f0c99df1288e72053746b8bd9bd"
     },
     {
       "name": "disconnected report returns to BALAM and connects with a valid main-window gesture after popup activation expires",
@@ -40,7 +40,7 @@
       ],
       "bytes": 129276,
       "copies": 1,
-      "payloadHash": "bafdb66c69036d563a026ea47e52555b33d99ef70a3e1ec3ad25e7c9b3923780",
+      "payloadHash": "a3e45b47f243ef8279648382aa5ed7577ef23f0c99df1288e72053746b8bd9bd",
       "mainWindowChooserGesture": true,
       "systemDialogs": 0
     },
@@ -52,12 +52,12 @@
       "name": "apartado: confirmed original emits two full USB copies with its own financial meaning",
       "ok": true,
       "heights": [
-        3036,
-        3036
+        3009,
+        3009
       ],
-      "bytes": 438731,
+      "bytes": 434843,
       "copies": 2,
-      "payloadHash": "ab33b3758e527bb6a93665436ff0408f9463e7beb98ef54d87612c091f774acf"
+      "payloadHash": "8cfacd2dddc0db57c79a71f68159d04d8f658019ec578954dec1d5b31cf83731"
     },
     {
       "name": "anticipo: confirmed original emits two full USB copies with its own financial meaning",
@@ -68,29 +68,29 @@
       ],
       "bytes": 451163,
       "copies": 2,
-      "payloadHash": "28b27add198a4d00d207b1ef0ad6db7343c1086c7029b515e94299540288be70"
+      "payloadHash": "5401c887416d330c2fbf3bb33d7668cedfc5c497d1425e1e239e8566736eca19"
     },
     {
       "name": "abono: confirmed original emits two full USB copies with its own financial meaning",
       "ok": true,
       "heights": [
-        3247,
-        3247
+        3221,
+        3221
       ],
-      "bytes": 469227,
+      "bytes": 465467,
       "copies": 2,
-      "payloadHash": "2adf85b66fe32b6552ae35f8b017019602ccb15c7ea984babc7e03530721a0f4"
+      "payloadHash": "11fba55b1688706214ade167bbc31eddca5583f2621b6de25bc588069bf80954"
     },
     {
       "name": "liquidacion: confirmed original emits two full USB copies with its own financial meaning",
       "ok": true,
       "heights": [
-        3028,
-        3028
+        3002,
+        3002
       ],
-      "bytes": 437579,
+      "bytes": 433819,
       "copies": 2,
-      "payloadHash": "b4d944e8a7a611a646c2e0e2f5d7ed0139e3c0684cf7a19e29e73fe8c1a915b5"
+      "payloadHash": "4b4d751105280ea0c2c37de28a9e9ab3f271c6f3121ef482cdda883a7495248d"
     },
     {
       "name": "cambio-cobrado: confirmed original emits two full USB copies with its own financial meaning",
@@ -101,7 +101,7 @@
       ],
       "bytes": 514459,
       "copies": 2,
-      "payloadHash": "2364ee9bc08d2a551c528e298f2e38ae84446b3e252f7d8af40f83de5c813ec5"
+      "payloadHash": "00bd95d7f3f824d54da1917889b53f8e0a7e579623c16dcc0bf458db66dbbf35"
     },
     {
       "name": "cambio-sobrante: confirmed original emits two full USB copies with its own financial meaning",
@@ -112,7 +112,7 @@
       ],
       "bytes": 480059,
       "copies": 2,
-      "payloadHash": "a37d7de717eeaf86129475e8c3da02bbe037bc144bda1537b6030f848e4d6193"
+      "payloadHash": "97607fd1954b6ce6b39cb91c3313b6d9a9a8838862ec34cf797a88c3e1e68f18"
     },
     {
       "name": "cambio-igual: confirmed original emits two full USB copies with its own financial meaning",
@@ -123,7 +123,7 @@
       ],
       "bytes": 465035,
       "copies": 2,
-      "payloadHash": "c53f6eb6086b2e563849eb65f376674287c37f147ed31541020b878bf81c325a"
+      "payloadHash": "7720767240c91686609108bc9578fa610f1fc78165c620bf85d88a1a81512368"
     },
     {
       "name": "devolucion: confirmed original emits two full USB copies with its own financial meaning",
@@ -134,53 +134,53 @@
       ],
       "bytes": 213179,
       "copies": 2,
-      "payloadHash": "f0f566e90cda6e45c5644ed4ac1f736d7740d1f3ed437abd153d6063e2489180"
+      "payloadHash": "4b13c7e0c0ab9a5396251e44e6e5465168adfc624f4e1cfe3cb9d3393204e0cf"
     },
     {
       "name": "real layaway reprint survives immediate source unmount and prints its last payment",
       "ok": true,
       "heights": [
-        3247,
-        3247
+        3221,
+        3221
       ],
-      "bytes": 469227,
+      "bytes": 465467,
       "copies": 2,
-      "payloadHash": "2adf85b66fe32b6552ae35f8b017019602ccb15c7ea984babc7e03530721a0f4"
+      "payloadHash": "11fba55b1688706214ade167bbc31eddca5583f2621b6de25bc588069bf80954"
     },
     {
       "name": "real Reports reprint preserves historical identity and business state over USB",
       "ok": true,
       "heights": [
-        2088,
-        2088
+        1980,
+        1980
       ],
-      "bytes": 301755,
+      "bytes": 286139,
       "copies": 2,
-      "payloadHash": "b329eb2c5a7df8d921c6600618f48ae3dcf3e4a09e76eb4bbbb67e604fe93c24"
+      "payloadHash": "9c858ed0793fd4ecac57cf69e587cf6fa48711486a6e652e40f83855208741de"
     }
   ],
   "hardware": "NOT_TESTED",
   "remoteBusinessWrites": 0,
-  "browserVersion": "148.0.7778.96",
+  "browserVersion": "154.0.8037.98",
   "report": {
     "job": {
-      "createdAt": "2026-10-02T20:15:37.853Z",
-      "dataReadyAt": "2026-10-02T20:15:37.855Z",
-      "renderStartedAt": "2026-10-02T20:15:37.856Z",
+      "createdAt": "2026-10-11T02:41:29.554Z",
+      "dataReadyAt": "2026-10-11T02:41:29.556Z",
+      "renderStartedAt": "2026-10-11T02:41:29.558Z",
       "assetsReadyAt": null,
-      "renderFinishedAt": "2026-10-02T20:15:38.076Z",
-      "payloadReadyAt": "2026-10-02T20:15:38.077Z",
-      "queuedAt": "2026-10-02T20:15:37.855Z",
-      "sendStartedAt": "2026-10-02T20:15:38.078Z",
-      "handoffFinishedAt": "2026-10-02T20:15:38.164Z",
-      "completedAt": "2026-10-02T20:15:38.164Z",
+      "renderFinishedAt": "2026-10-11T02:41:29.995Z",
+      "payloadReadyAt": "2026-10-11T02:41:29.995Z",
+      "queuedAt": "2026-10-11T02:41:29.557Z",
+      "sendStartedAt": "2026-10-11T02:41:29.997Z",
+      "handoffFinishedAt": "2026-10-11T02:41:30.184Z",
+      "completedAt": "2026-10-11T02:41:30.185Z",
       "failedAt": null,
-      "payloadLength": 27582,
+      "payloadLength": 27578,
       "pixelWidth": null,
       "pixelHeight": null,
       "pageWidth": 80,
       "pageHeight": null,
-      "printJobId": "print-murekhv7-1",
+      "printJobId": "print-mv37vj5u-1",
       "source": "reportes-metodos",
       "ticketId": null,
       "documentType": "payment-method-report",
@@ -196,61 +196,61 @@
       "copies": [
         {
           "copyLabel": null,
-          "documentHash": "7ba65d4b1659ad80cea073035305d067474d3b79766de85746e56c9d2903a479",
-          "payloadHash": "83f9dcaef65d2ba7a11886d4c8eb14c3f9df892c2ae2fc1654788c7d633078ed",
+          "documentHash": "9154a80e3d67be5a3c235023f2a63e976d60d3a02aa5b1afd23704b2991ffa61",
+          "payloadHash": "d83256a61c21bc651f131daf57eb45b8cc8829f668f7e69d66717253b4ee4220",
           "pixelWidth": 576,
           "pixelHeight": 1789
         }
       ],
-      "payloadHash": "bafdb66c69036d563a026ea47e52555b33d99ef70a3e1ec3ad25e7c9b3923780",
+      "payloadHash": "a3e45b47f243ef8279648382aa5ed7577ef23f0c99df1288e72053746b8bd9bd",
       "bytesSent": 129276,
       "copiesSent": 1,
       "stage": "COMPLETED",
       "events": [
         {
           "stage": "CREATED",
-          "timestamp": "2026-10-02T20:15:37.853Z"
+          "timestamp": "2026-10-11T02:41:29.554Z"
         },
         {
           "stage": "DATA_READY",
-          "timestamp": "2026-10-02T20:15:37.855Z"
+          "timestamp": "2026-10-11T02:41:29.556Z"
         },
         {
           "stage": "QUEUED",
-          "timestamp": "2026-10-02T20:15:37.855Z"
+          "timestamp": "2026-10-11T02:41:29.557Z"
         },
         {
           "stage": "RENDER_STARTED",
-          "timestamp": "2026-10-02T20:15:37.856Z"
+          "timestamp": "2026-10-11T02:41:29.558Z"
         },
         {
           "stage": "RENDER_FINISHED",
-          "timestamp": "2026-10-02T20:15:38.076Z",
+          "timestamp": "2026-10-11T02:41:29.995Z",
           "pageWidth": 80,
-          "payloadHash": "bafdb66c69036d563a026ea47e52555b33d99ef70a3e1ec3ad25e7c9b3923780"
+          "payloadHash": "a3e45b47f243ef8279648382aa5ed7577ef23f0c99df1288e72053746b8bd9bd"
         },
         {
           "stage": "PAYLOAD_READY",
-          "timestamp": "2026-10-02T20:15:38.077Z",
-          "payloadLength": 27582
+          "timestamp": "2026-10-11T02:41:29.995Z",
+          "payloadLength": 27578
         },
         {
           "stage": "WAITING_TURN",
-          "timestamp": "2026-10-02T20:15:38.077Z"
+          "timestamp": "2026-10-11T02:41:29.996Z"
         },
         {
           "stage": "SEND_STARTED",
-          "timestamp": "2026-10-02T20:15:38.078Z",
+          "timestamp": "2026-10-11T02:41:29.997Z",
           "result": "USB_SENDING"
         },
         {
           "stage": "HANDOFF_FINISHED",
-          "timestamp": "2026-10-02T20:15:38.164Z",
+          "timestamp": "2026-10-11T02:41:30.184Z",
           "result": "USB_TRANSFERRED"
         },
         {
           "stage": "COMPLETED",
-          "timestamp": "2026-10-02T20:15:38.164Z",
+          "timestamp": "2026-10-11T02:41:30.185Z",
           "physicalPrintConfirmed": false
         }
       ]

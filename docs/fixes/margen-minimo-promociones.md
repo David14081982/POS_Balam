@@ -5,6 +5,11 @@
 **Fecha:** 25/07/2026
 **Commit:** `56b3d37`
 
+**Vigencia comercial:** sustituida el 10/10/2026 por decisión expresa del
+propietario en [H-186](descuentos-autoridad-financiera-h186.md). Este documento
+conserva la evidencia histórica de H-11; las operaciones nuevas ya no usan un
+piso por costo/margen. No se modifican costos ni ventas anteriores.
+
 ## Problema y reproducción
 
 Con `discount.minMarginPct=45`, precio $1,000, costo $450 y descuento 40%, el

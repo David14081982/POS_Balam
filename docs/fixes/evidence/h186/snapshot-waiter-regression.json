@@ -1,0 +1,61 @@
+{
+  "schema": "h186-snapshot-waiter-regression-v1",
+  "status": "LOCAL_REGRESSION_PASS",
+  "startedAt": "2026-10-11T02:38:01.459Z",
+  "finishedAt": "2026-10-11T02:38:01.765Z",
+  "networkCalls": 0,
+  "scope": {
+    "storeTransport": "ACTUAL_SOURCE",
+    "posConfirmationCallback": "ACTUAL_SOURCE",
+    "dataRecordSale": "CONTROLLED_ADAPTER",
+    "sqlResponse": "CONTROLLED_ADAPTER",
+    "domRendering": "NOT_TESTED"
+  },
+  "blocked": {
+    "commits": 1,
+    "successfulReceipt": true,
+    "snapshotCode": "57014",
+    "originalUiAwaitSettled": false,
+    "successModalRequests": 0,
+    "unresolvedReferenceCount": 1
+  },
+  "recovered": {
+    "commits": 1,
+    "originalUiAwaitSettled": true,
+    "successModalRequests": 1,
+    "total": 875,
+    "unresolvedReferenceCount": 0,
+    "resolverQueries": 2
+  },
+  "guarantees": {
+    "originalAwaitResumed": true,
+    "commercialReplay": false,
+    "sourceChanges": false
+  },
+  "remoteObservations": {
+    "snapshotReportCode": "SQL_57014",
+    "authenticatedStatementTimeoutSeconds": 8,
+    "configurationObservedAt": "2026-10-11T02:37:26.695708+00:00",
+    "cancellationCauseProven": false,
+    "exactAuthenticatedSnapshotPerformanceMeasured": false
+  },
+  "limitations": [
+    "Controlled DATA adapter and SQL response; no browser DOM rendering was exercised.",
+    "SQL_57014 and the separately observed eight-second role setting do not establish the remote cancellation cause.",
+    "The failed LIVE remains failed; this local recovery regression does not certify its receipt or financial journey."
+  ],
+  "sourceSha256": {
+    "balam/store.jsx": "c9035c3d07e673bddce9c9d5c229952294bd659dc811e6d0e837de77b59b0e1e",
+    "balam/pos.jsx": "b72558a580e2a62e3a10204bcb3725a779fa639de8c8a6cbeb5d6a060fa43b7d",
+    "test-h164-online-transport.mjs": "acb3cc415f04b6a43148098be5b812ab36d80b202440bb79e5ca3bf8c25cfa14"
+  },
+  "evidenceHashes": {
+    "executable": "bca0881fd3d2edf2dcd1e9eb4f761ce03877d5e2bca118ca9d2aba92ebfbe814",
+    "localProof": "a08683f73cc7bf0c728e13a85c2ed56889d267c45ed8644d8a9a66dd03a3d160",
+    "readonlyConfiguration": "d33c18d1daa93064d597d22a78dd6fccd8210336334520b01417b41036420a8f",
+    "failedRunSummary": "bdf9c4a78b7e3811555122a7101fa9d36e4b4ae8195f21e300910151e07d9bcc"
+  },
+  "financialCertified": false,
+  "deliveryCertified": false,
+  "hardware": "NOT_TESTED"
+}

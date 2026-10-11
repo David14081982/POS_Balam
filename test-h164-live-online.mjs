@@ -17,9 +17,10 @@ import { recordedSnapshotCatalog } from './h171-live-snapshot.mjs';
 import { createLiveAuthorityIO } from './h171-live-authority-io.mjs';
 import { createLiveCleanupLifecycle } from './h171-live-cleanup-lifecycle.mjs';
 import { reopenFreshTerminal } from './qa-h171-session-delivery.mjs';
+import { runFinancialJourney, financialSnapshotCatalog } from './qa-h186-financial-journey.mjs';
 
 const liveScope=process.env.BALAM_LIVE_SCOPE||'final-journey';
-assert.ok(['historical-matrix','final-journey','session-delivery'].includes(liveScope),'UNKNOWN_LIVE_SCOPE');
+assert.ok(['historical-matrix','final-journey','session-delivery','financial-h186'].includes(liveScope),'UNKNOWN_LIVE_SCOPE');
 const finalJourneyCases=new Set([
   'A/B/C bootstrap from authoritative snapshot',
   'Core UI journey on C then B/A compare authoritative state',
@@ -31,6 +32,8 @@ const sessionDeliveryCases=new Set([
   'Reload and clean browser context rebuild only from Supabase',
 ]);
 const selectedCases=liveScope==='historical-matrix'?null:
+  liveScope==='financial-h186'?new Set(['A/B/C bootstrap from authoritative snapshot',
+    'H186 financial authority across A/B/C and exact fixture isolation']):
   liveScope==='session-delivery'?sessionDeliveryCases:finalJourneyCases;
 
 const preflightOnly=process.env.BALAM_LIVE_PREFLIGHT_ONLY==='1';
@@ -59,7 +62,7 @@ const retryRejectedCase=process.env.BALAM_LIVE_RETRY_REJECTED_CASE||null;
 if(retryRejectedCase){assert.equal(retryRejectedCase,REJECTED_PAYMENT_CASE,'Only the reviewed failed payment race can be retried');assert.ok(resumeDir,'Rejected-race retry requires its existing resume directory');}
 const priorFixtures = resumeDir ? JSON.parse(readFileSync(join(resumeDir,'fixtures.json'),'utf8')) : null;
 const run = priorFixtures?.run || randomUUID(), prefix = 'qa-h164-' + run;
-const out = resumeDir || process.env.BALAM_TEST_OUTPUT || join(tmpdir(), prefix);
+const out = resumeDir || process.env.BALAM_TEST_OUTPUT || (liveScope==='financial-h186'?resolve('.evidence-h186-live',run):join(tmpdir(), prefix));
 const artifactPath = resolve(process.env.BALAM_VERIFIED_HTML || 'index.html');
 const html = readFileSync(artifactPath);
 function bundledStoreSource(bytes){
@@ -189,6 +192,7 @@ const cleanExisting = row => Object.fromEntries(Object.entries(row).filter(([key
 let baseline, browser, server, userId, address, cleanupLifecycle, currentCase=null, currentStep=null;
 const terminals = [];
 const readRpcs = ['online_connectivity','online_snapshot_if_changed','online_request_result',
+  'quote_sale',
   'current_permission_snapshot','admin_user_permission_editor_snapshot','physical_card_available',
   'point_zero_preview','point_zero_receipt','preview_test_data_cleanup','test_data_cleanup_receipt'];
 const journalMutation = (kind, identities, command, action, requestId = null) => mutationJournal.beforeMutation({
@@ -200,6 +204,8 @@ function guardedBrowserRoute(terminal, handler) {
     // Keep the historical fixture/checkpoint index, backed by the durable journal.
     if (new URL(request.url()).pathname === '/rest/v1/rpc/execute_online_command') {
       const body = request.postDataJSON();
+      if(fixtures.financialFolioPrefix&&body?.p_command?.type==='folio')
+        assert.equal(body.p_command.prefix,fixtures.financialFolioPrefix,'H186_EXISTING_FOLIO_PREFIX_FORBIDDEN');
       if (body?.p_request_id) {
         remember('requestIds', body.p_request_id);
         if (currentStep) {
@@ -306,7 +312,7 @@ async function once(label, action, recover) {
   finally{currentStep=previous;}
 }
 async function verify(name, action) {
-  if(selectedCases&&!selectedCases.has(name)){
+  if((selectedCases&&!selectedCases.has(name))||(name.startsWith('H186 ')&&liveScope!=='financial-h186')){
     result.excludedCases ||= [];result.excludedCases.push(name);return;
   }
   if(result.cases.some(row=>row.name===name&&row.pass)){console.log('SKIP prior PASS '+name);return;}
@@ -314,7 +320,7 @@ async function verify(name, action) {
   console.log('START ' + name); const started = Date.now(); delete result.lastRace; save();
   let watchdog;
   const bounded=new Promise((_,reject)=>{watchdog=setInterval(()=>{
-    try{mutationJournal.assertHealthy();if(Date.now()-started>360000)throw Error('SCENARIO_DEADLINE_EXCEEDED');}
+    try{mutationJournal.assertHealthy();if(Date.now()-started>(liveScope==='financial-h186'?900000:360000))throw Error('SCENARIO_DEADLINE_EXCEEDED');}
     catch(error){reject(error);}
   },1000);});
   try { const evidence = await Promise.race([action(),bounded]); result.cases.push({ name, pass: true, elapsedMs: Date.now() - started, evidence, ...(result.lastRace ? {concurrency:result.lastRace} : {}) }); console.log('PASS ' + name); }
@@ -487,9 +493,11 @@ try {
   check(await db.from('online_requests').select('request_id').limit(1)); // Additive gateway migrations must already exist.
   assert.equal(resumeDir,null,'Existing run requires read-only reconciliation, never another scenario execution');
   const readEvidence=file=>JSON.parse(readFileSync(file,'utf8').replace(/^\uFEFF/,''));
-  const catalog=recordedSnapshotCatalog({authorityAudit:readEvidence('docs/fixes/evidence/h171/authority-audit-before.json'),
+  const historicalCatalog=recordedSnapshotCatalog({authorityAudit:readEvidence('docs/fixes/evidence/h171/authority-audit-before.json'),
     cleanupCatalog:readEvidence('docs/fixes/evidence/h171/cleanup-catalog-before.json')});
+  const catalog=financialSnapshotCatalog(historicalCatalog);
   const cleanupIO=await createLiveAuthorityIO({catalog,sourceUrl:url+'/',
+    privateSnapshotTransport:liveScope==='financial-h186'?'pgcrypto-row-v1':'plain',
     cliPath:resolve('node_modules/supabase/dist/supabase.js'),
     linkedDirectory:resolve(process.env.BALAM_LINKED_DIRECTORY||'.'),
     privateDirectory:resolve('.evidence-h171-private/live-runs',run)});
@@ -508,7 +516,8 @@ try {
     baseline=Object.fromEntries(await Promise.all(tables.map(async table=>[table,new Map((await rawRows(table)).map(row=>[keyFor(table,row),digest(cleanExisting(row))]))])));
     writeFileSync(join(out,'baseline.json'),JSON.stringify({run,project,createdAt:new Date().toISOString(),tables:Object.fromEntries(tables.map(table=>[table,[...baseline[table]]]))},null,2));
   }
-  const caseNames=[...readFileSync(import.meta.filename,'utf8').matchAll(/await verify\('([^']+)'/g)].map(match=>match[1]).filter(name=>!selectedCases||selectedCases.has(name));
+  const caseNames=[...readFileSync(import.meta.filename,'utf8').matchAll(/await verify\('([^']+)'/g)].map(match=>match[1])
+    .filter(name=>(!selectedCases||selectedCases.has(name))&&(!name.startsWith('H186 ')||liveScope==='financial-h186'));
   result.scope=liveScope;result.requiredCases=caseNames;
   if(caseNames.every(name=>result.cases.some(row=>row.name===name&&row.pass))){
     assert.ok(fixtures.userId,'Completed matrix must retain its original QA actor');userId=fixtures.userId;
@@ -571,6 +580,12 @@ try {
   }
   const [A,B,C] = terminals, [sourceId,targetId,lastId,deleteId,editId,reclassId,reclassTargetId] = fixtures.products;
   await verify('A/B/C bootstrap from authoritative snapshot', () => converge());
+  await verify('H186 financial authority across A/B/C and exact fixture isolation', async () => {
+    const evidence=await runFinancialJourney({terminals,fixtures,prefix,out,db,check,once,op,remember,converge,race,oneWinner,stock,ready});
+    for(const table of tables){const current=new Map((await rawRows(table)).map(row=>[keyFor(table,row),digest(cleanExisting(row))]));
+      for(const[key,hash]of baseline[table])assert.equal(current.get(key),hash,'H186 changed existing commercial row: '+table+'/'+key);}
+    return evidence;
+  });
   await verify('H170 cold startup with an unresolved account remains usable', async () => {
     fixtures.startupAccountRequestId ||= op();save();
     const requestId=fixtures.startupAccountRequestId;
@@ -939,6 +954,23 @@ finally {
   }
   catch(error) { result.finalizationFailure=error.message; process.exitCode=1; }
   finally {
+    try {
+      // Chromium can release intercepted requests while closing the browser.
+      // Destroy every emitting context while its routes are still installed;
+      // offline alone is insufficient when browser shutdown detaches DevTools.
+      const contexts=browser?browser.contexts():[];
+      const bounded=async action=>{
+        let timeout;
+        try{return await Promise.race([Promise.resolve().then(action),new Promise((_,reject)=>{
+          timeout=setTimeout(()=>reject(Error('BROWSER_QUIESCENCE_TIMEOUT')),10000);
+        })]);}finally{clearTimeout(timeout);}
+      };
+      const offline=await Promise.allSettled(contexts.map(context=>bounded(()=>context.setOffline(true))));
+      const closed=await Promise.allSettled(contexts.map(context=>bounded(()=>context.close())));
+      result.browserQuiescence={contexts:contexts.length,offlineConfirmed:offline.filter(row=>row.status==='fulfilled').length,
+        closedConfirmed:closed.filter(row=>row.status==='fulfilled').length};
+      if(offline.some(row=>row.status==='rejected')||closed.some(row=>row.status==='rejected'))throw Error('BROWSER_QUIESCENCE_FAILED');
+    }catch(error){result.quiescenceFailure='BROWSER_QUIESCENCE_FAILED';process.exitCode=1;}
     try { await browser?.close(); }
     catch(error) { result.browserCloseFailure=error.message; process.exitCode=1; }
     try { await new Promise(resolve=>server?server.close(resolve):resolve()); }
@@ -946,7 +978,7 @@ finally {
     try { await mutationJournal?.flush(); mutationJournal?.assertHealthy(); }
     catch(error) { result.journalFailure=error.message; process.exitCode=1; }
     try {
-      if(cleanupLifecycle&&userId&&!result.browserCloseFailure&&!result.serverCloseFailure&&!result.journalFailure){
+      if(cleanupLifecycle&&userId&&!result.quiescenceFailure&&!result.browserCloseFailure&&!result.serverCloseFailure&&!result.journalFailure){
         result.cleanup=await cleanupLifecycle.finalize();
         result.cleanupVerified=result.cleanup.cleanupVerified===true;
         result.qaAccount=result.cleanupVerified?'exact new identities absent':'requires reconciliation';
@@ -960,9 +992,9 @@ finally {
   // A complete matrix and independent zero-new-residue postchecks are both mandatory.
   result.cleanupVerified=result.cleanupVerified===true;
   result.certified=result.scenariosPassed===true&&result.cleanupVerified&&!result.failure&&!result.finalizationFailure&&
-    !result.browserCloseFailure&&!result.serverCloseFailure&&!result.journalFailure&&!result.journalCloseFailure;
+    !result.quiescenceFailure&&!result.browserCloseFailure&&!result.serverCloseFailure&&!result.journalFailure&&!result.journalCloseFailure;
   result.deliveryCertified=result.certified;
-  result.certificationBlockers=result.certified?[]:[result.cleanupFailure||'SCENARIOS_OR_EXACT_CLEANUP_INCOMPLETE'];
+  result.certificationBlockers=result.certified?[]:[result.quiescenceFailure||result.cleanupFailure||'SCENARIOS_OR_EXACT_CLEANUP_INCOMPLETE'];
   if(!result.certified)process.exitCode=1;
   save();
   console.log(JSON.stringify({certified:result.certified,deliveryCertified:result.deliveryCertified,scenariosPassed:!!result.scenariosPassed,cases:result.cases.length,artifactSha256:result.artifactSha256,evidence:out}));

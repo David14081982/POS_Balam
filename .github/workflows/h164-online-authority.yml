@@ -45,8 +45,11 @@ jobs:
       - run: node test-h171-live-journal.mjs
       - run: node test-h171-runner-journal-integration.mjs
       - run: node test-h171-live-reconciliation.mjs
+      - run: node test-h186-cleanup-observation.mjs
+      - run: node --test test-h186-cleanup-postsale.mjs
       - run: node test-h171-auth-retirement.mjs
       - run: node test-h171-live-snapshot.mjs
+      - run: node --test test-h186-snapshot-transport.mjs
       - run: node test-h171-live-cleanup-sql.mjs
       - run: node --test test-h171-live-cleanup-plan.mjs
       - run: node test-h171-live-cleanup-auth.mjs
@@ -54,6 +57,20 @@ jobs:
       - run: node test-h171-core-runner-integration.mjs
       - run: node test-h171-live-cleanup-lifecycle.mjs
       - run: npm run test:online:data
+      - name: Guard H186 promotion model scope cost and completeness
+        run: node test-h186-model-universe.mjs
+      - name: Verify H186 exact discounts and financial authority
+        run: |
+          node test-h186-promotions.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node test-discounts.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node test-h186-financial-data.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node test-h186-financial-sql.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node test-h186-live-negatives.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - run: npm run test:h166:projections
       - run: npm run test:h166:transport
       - run: npm run test:online:config
@@ -72,6 +89,12 @@ jobs:
         env:
           BALAM_VERIFIED_HTML: index.html
       - run: node test-h171-settings-controls.mjs
+      - name: Verify H186 checkout, IVA and complete frozen receipts
+        run: node test-h186-financial-ui.mjs
+      - name: Verify H186 courtesy and zero-advance checkout contracts
+        run: node test-h186-courtesy-checkout.mjs
+      - name: Verify H186 zero-value return interface
+        run: node test-h186-return-ui.mjs
       - name: Verify company logo and uninterrupted startup presentation
         run: node test-h171-startup-brand.mjs
       - run: node test-h171-users-responsive.mjs

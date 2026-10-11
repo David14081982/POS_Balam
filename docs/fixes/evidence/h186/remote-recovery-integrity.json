@@ -1,0 +1,248 @@
+{
+  "schema": "h186-remote-recovery-integrity-v1",
+  "risk": "H-186",
+  "generatedAtUtc": "2026-10-10T23:53:58.833Z",
+  "status": "RECOVERED_AND_REMOTE_INTEGRITY_VERIFIED",
+  "scope": "Infrastructure recovery and read-only integrity comparison. No commercial rows are published.",
+  "healthBeforeRestart": {
+    "checkedAtUtc": "2026-10-10T23:40:34.118Z",
+    "finishedAtUtc": null,
+    "httpStatus": 200,
+    "elapsedMs": 11217,
+    "services": [
+      {
+        "name": "db",
+        "healthy": false,
+        "status": "UNHEALTHY"
+      },
+      {
+        "name": "rest",
+        "healthy": false,
+        "status": "UNHEALTHY"
+      },
+      {
+        "name": "auth",
+        "healthy": false,
+        "status": "UNHEALTHY"
+      }
+    ]
+  },
+  "restart": {
+    "operation": "single-project-restart",
+    "dispatchStartedAtUtc": "2026-10-10T23:43:53.867Z",
+    "apiAcceptedAtUtc": "2026-10-10T23:43:55.168Z",
+    "httpStatus": 200,
+    "elapsedMs": 1360,
+    "attempts": 1,
+    "retries": 0,
+    "acceptanceAloneDoesNotEstablishRecovery": true
+  },
+  "healthAfterRestart": [
+    {
+      "checkedAtUtc": "2026-10-10T23:45:05.956Z",
+      "finishedAtUtc": "2026-10-10T23:45:18.307Z",
+      "httpStatus": 200,
+      "elapsedMs": 11095,
+      "services": [
+        {
+          "name": "db",
+          "healthy": false,
+          "status": "UNHEALTHY"
+        },
+        {
+          "name": "rest",
+          "healthy": false,
+          "status": "UNHEALTHY"
+        },
+        {
+          "name": "auth",
+          "healthy": false,
+          "status": "UNHEALTHY"
+        }
+      ]
+    },
+    {
+      "checkedAtUtc": "2026-10-10T23:46:31.490Z",
+      "finishedAtUtc": "2026-10-10T23:46:43.287Z",
+      "httpStatus": 200,
+      "elapsedMs": 11188,
+      "services": [
+        {
+          "name": "db",
+          "healthy": false,
+          "status": "UNHEALTHY"
+        },
+        {
+          "name": "rest",
+          "healthy": false,
+          "status": "UNHEALTHY"
+        },
+        {
+          "name": "auth",
+          "healthy": false,
+          "status": "UNHEALTHY"
+        }
+      ]
+    },
+    {
+      "checkedAtUtc": "2026-10-10T23:47:56.076Z",
+      "finishedAtUtc": "2026-10-10T23:48:07.780Z",
+      "httpStatus": 200,
+      "elapsedMs": 11179,
+      "services": [
+        {
+          "name": "db",
+          "healthy": false,
+          "status": "UNHEALTHY"
+        },
+        {
+          "name": "rest",
+          "healthy": false,
+          "status": "UNHEALTHY"
+        },
+        {
+          "name": "auth",
+          "healthy": false,
+          "status": "UNHEALTHY"
+        }
+      ]
+    },
+    {
+      "checkedAtUtc": "2026-10-10T23:49:18.157Z",
+      "finishedAtUtc": "2026-10-10T23:49:19.774Z",
+      "httpStatus": 200,
+      "elapsedMs": 1097,
+      "services": [
+        {
+          "name": "db",
+          "healthy": true,
+          "status": "ACTIVE_HEALTHY"
+        },
+        {
+          "name": "rest",
+          "healthy": true,
+          "status": "ACTIVE_HEALTHY"
+        },
+        {
+          "name": "auth",
+          "healthy": true,
+          "status": "ACTIVE_HEALTHY"
+        }
+      ]
+    }
+  ],
+  "recovery": {
+    "firstVerifiedHealthyAtUtc": "2026-10-10T23:49:19.774Z",
+    "allThreeServicesHealthy": true,
+    "services": [
+      "db",
+      "rest",
+      "auth"
+    ],
+    "exactCause": "NOT_ESTABLISHED",
+    "causeLimitation": "Neither OOM nor a specific query is established as the cause by this evidence."
+  },
+  "integrity": {
+    "checkedAtUtc": "2026-10-10T23:52:06.529Z",
+    "status": "PASS",
+    "checks": {
+      "total": 310,
+      "passed": 310,
+      "failed": 0
+    },
+    "commercialTablesCompared": 22,
+    "commercialTableFingerprintsUnchanged": true,
+    "productCostsUnchanged": true,
+    "frozenHistoricalSnapshotsUnchanged": true,
+    "historicalSales": 21,
+    "financialV2Sales": 0,
+    "folioCountersUnchanged": true,
+    "allowedNewQaCounters": 0,
+    "observedNewQaCounters": 0,
+    "exactFunctionBodiesMatchingExpected": 14,
+    "patchedAuthoritiesVerified": 6,
+    "schemaColumnsVerified": 4,
+    "minFinancialVersion": 1,
+    "comparatorSha256": "90a90eb299c52697a7e20a699e7c656a274f487ff591a13c7cf03a282bd91902"
+  },
+  "encodingProvenance": {
+    "sourceEncoding": "UTF-16LE BOM",
+    "derivedEncoding": "UTF-8",
+    "semanticEquality": true,
+    "sourceSha256": "3693d1864402ca83eb59154c224cec9895eb571a6d5c9684619732254e74cbee",
+    "derivedSha256": "a97783bcfec0d1a3fcfbb78038044252126d423d8380f498c62d014b8f5bf42d"
+  },
+  "evidence": [
+    {
+      "file": ".evidence-h186-deploy/availability-services-health-corrected-summary.json",
+      "sha256": "82067b4d3241347e5d7d9d71f32a4bb3484cd6ce954986ab49242b16e4a829e8",
+      "bytes": 1233
+    },
+    {
+      "file": ".evidence-h186-deploy/project-restart-once.attempt.json",
+      "sha256": "cf7cf9f7e2fbf4757d48f05d28d3fcf20534ffa19b854e3b87346efa830764d6",
+      "bytes": 753
+    },
+    {
+      "file": ".evidence-h186-deploy/project-restart-once.receipt.json",
+      "sha256": "08f3e4e9ffc0f2cf416f66f6c9fc573da95c3fdb034cc50e2638a5cb9fd7faa9",
+      "bytes": 640
+    },
+    {
+      "file": ".evidence-h186-deploy/availability-after-restart-health-summary.json",
+      "sha256": "e0ba1473c3d84a75c7f534f9dcc0e26457aea5e68d8f534df6efc3cc3f3ca379",
+      "bytes": 1686
+    },
+    {
+      "file": ".evidence-h186-deploy/availability-after-restart-health-check2-summary.json",
+      "sha256": "55a2049ffa0a2d3bf2f9cef18c27e90628a5a95752abf439274f5bded2bd0164",
+      "bytes": 1686
+    },
+    {
+      "file": ".evidence-h186-deploy/availability-after-restart-health-check3-summary.json",
+      "sha256": "795bf70351a8799ace7e1cf23899e940eb96cf7e3cb1e41a3218418dc6cf27d3",
+      "bytes": 1686
+    },
+    {
+      "file": ".evidence-h186-deploy/availability-after-restart-health-check4-summary.json",
+      "sha256": "904a8bab501066faf01828c253f36774f3f28f806c6ad0939ace040fe525c46c",
+      "bytes": 1702
+    },
+    {
+      "file": ".evidence-h186-deploy/after-restart-comparison.json",
+      "sha256": "e56ac4c1076450820da8163a49987cfd3afcfc7b4d38e73059e683a0da58accc",
+      "bytes": 672
+    },
+    {
+      "file": ".evidence-h186-deploy/before225-remote.json",
+      "sha256": "4c461922a193b02c3b728c8c1a9cfcf79a1dd4180e6dc348ec1100fa1f19b6d9",
+      "bytes": 16853
+    },
+    {
+      "file": ".evidence-h186-deploy/after-restart-remote.json",
+      "sha256": "3693d1864402ca83eb59154c224cec9895eb571a6d5c9684619732254e74cbee",
+      "bytes": 54344
+    },
+    {
+      "file": ".evidence-h186-deploy/after-restart-remote.utf8.json",
+      "sha256": "a97783bcfec0d1a3fcfbb78038044252126d423d8380f498c62d014b8f5bf42d",
+      "bytes": 27171
+    },
+    {
+      "file": ".evidence-h186-deploy/after-restart-remote.utf8.json.encoding.json",
+      "sha256": "c90732a49821c0cbb624a53d291aed351b00fe55394bb4582860103e8d9fcf83",
+      "bytes": 341
+    }
+  ],
+  "limits": {
+    "financialLiveCertification": "NOT_ASSERTED",
+    "distributedABC": "NO_CERTIFICADO",
+    "publicPagesDeployment": "NOT_ASSERTED",
+    "financialContractActivation": "NOT_ASSERTED",
+    "commercialWriteTests": "NOT_ASSERTED",
+    "exactIncidentCause": "NOT_ESTABLISHED",
+    "reportGenerationNetworkRequests": 0,
+    "reportGenerationRemoteWrites": 0,
+    "publicData": "Only service states, timestamps, aggregate verification counts and evidence SHA-256 hashes. No credentials, SQL text, commercial rows or customer identities."
+  }
+}

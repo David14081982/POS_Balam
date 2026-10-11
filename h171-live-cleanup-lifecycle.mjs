@@ -44,7 +44,8 @@ export async function loadOriginalLiveBaseline({baselineFile,authBaselineFile,ba
   return {baseline:{snapshot,evidence:original.evidence},authBaseline:{...value,fileSha256:auth.evidence.sha256}};
 }
 
-export async function createLiveCleanupLifecycle({io,db,admin,journal,fixtures,artifactSha256,clientBuild,readAuthPreflight,originalBaseline}) {
+export async function createLiveCleanupLifecycle({io,db,admin,journal,fixtures,artifactSha256,clientBuild,readAuthPreflight,originalBaseline,recoveryDeviceObservation}) {
+  if(recoveryDeviceObservation!==undefined)assert.ok(originalBaseline,'RECOVERY_ORIGINAL_BASELINE_REQUIRED');
   assert.equal(typeof readAuthPreflight,'function');
   assert.equal(journal.snapshot().projectRef,SNAPSHOT_PROJECT);
   const {catalog,sourceUrl}=io;
@@ -65,7 +66,9 @@ export async function createLiveCleanupLifecycle({io,db,admin,journal,fixtures,a
     assert.equal(snapshot.entries.some(e=>e.kind==='live-cleanup-sql-attempt'),false,'PRIOR_SQL_ATTEMPT_REQUIRES_READ_ONLY_RECOVERY');
     const reconciler=createLiveReconciler({db,admin,expectedProjectRef:SNAPSHOT_PROJECT,
       expectedActorId:plannedActorId,protectedAuthIds:authBaseline.ids});
-    const reconciliation=await reconciler.reconcile({snapshot,fixtures});
+    const reconciliation=await reconciler.reconcile({snapshot,fixtures,...(recoveryDeviceObservation===undefined?{}:{recoveryDeviceObservation,
+      originalBaseline:{snapshot:baseline.snapshot,fileSha256:baseline.evidence.sha256}})});
+    if(reconciliation.originalReconciliation)await persist('reconciliation-original',reconciliation.originalReconciliation);
     await persist('reconciliation',reconciliation);
     assert.equal(reconciliation.reconciled,true,'READ_ONLY_RECONCILIATION_INCOMPLETE');
     const current=await io.capture('after-scenarios',{reusePointZeroFrom:baseline.snapshot});
@@ -94,14 +97,16 @@ export async function createLiveCleanupLifecycle({io,db,admin,journal,fixtures,a
       holds:plan.holds,authTargets:plan.authTargets,authIdentities:identityEvidence.identities,
       outside:generated.manifest.outside,catalogSha256:generated.manifest.catalogSha256,
       revisionFullRowMd5:current.snapshot.tables.find(t=>t.table==='online_snapshot_revision').rows[0].full_row_md5,
-      expectedRevisionDelta:generated.expectedRevisionDelta};
+      expectedRevisionDelta:generated.expectedRevisionDelta,
+      ...(plan.cleanupRecovery?{cleanupRecovery:plan.cleanupRecovery}: {})};
     const reviewSha256=journalHash(binding),sqlFile=join(io.directory,'cleanup-reviewed.sql');
     const sqlHandle=await fs.open(sqlFile,'wx',0o600);
     try{await sqlHandle.writeFile(generated.sql,'utf8');await sqlHandle.sync();}finally{await sqlHandle.close();}
     assert.equal(fileHash(await fs.readFile(sqlFile)),journalHash(generated.sql));
     const review={format:'balam-live-cleanup-review-v1',reviewSha256,binding,sqlFile,sqlSha256:journalHash(generated.sql),
       exactRows:plan.targets.length,authTargets:plan.authTargets.map(t=>t.id),restorationVerified:true,
-      originalBaselineReused:!!recovered,executed:false,cleanupVerified:false,certified:false};
+       originalBaselineReused:!!recovered,executed:false,cleanupVerified:false,certified:false,
+       ...(plan.cleanupRecovery?{certificationEligible:false,recoveredUnattributedTelemetry:true}: {})};
     await persist('cleanup-review',review);
     if(execute===false)return review;
     assert.equal(execute,true,'CLEANUP_EXPLICIT_EXECUTION_REQUIRED');
@@ -160,7 +165,11 @@ export async function createLiveCleanupLifecycle({io,db,admin,journal,fixtures,a
       monotonicAdvances:[...finalDiff.changed,...finalDiff.new.filter(r=>r.classification==='MONOTONIC_CREATION_TO_PRESERVE')],
       preservedCounterCreations:plan.preservedCounterCreations||[],
       baselineFileSha256:baseline.evidence.sha256,finalFileSha256:final.evidence.sha256,
-      separateTransactions:true,certified:false};
+      separateTransactions:true,certified:false,
+      ...(plan.cleanupRecovery?{certificationEligible:false,reportUnattributed:true,acknowledgementClaimed:false,
+        cleanupRecovery:{observationSha256:plan.cleanupRecovery.observationSha256,
+          originalReconciliationSha256:plan.cleanupRecovery.originalReconciliationSha256,
+          originalBlockers:structuredClone(plan.cleanupRecovery.originalBlockers)},reviewSha256}: {})};
     await persist('cleanup-completion',report);return report;
   }
   return {baseline:baseline.snapshot,authBaseline,finalize};

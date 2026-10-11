@@ -1,0 +1,99 @@
+{
+  "schema": "h186-readiness-failed-run-v1",
+  "status": "FAILED_RUN_EXACT_CLEANUP_VERIFIED",
+  "failedRunRemainsFailed": true,
+  "financialCertified": false,
+  "deliveryCertified": false,
+  "scenariosPassed": false,
+  "certificationEligible": false,
+  "artifactSha256": "6e649e380af0223ffc3122da2b08e7e1d40c5339630783deaa8553d00d2afb54",
+  "startedAt": "2026-10-11T01:36:26.138Z",
+  "cleanupCompletedAt": "2026-10-11T02:16:21.175Z",
+  "failure": {
+    "code": "CLIENT_UPDATING_BEFORE_DISPATCH",
+    "originalCleanupCode": "ERR_ASSERTION",
+    "originalReconciliationMismatch": true,
+    "mismatchCount": 3,
+    "reportUnattributed": true,
+    "acknowledgementClaimed": false
+  },
+  "originalMatrix": {
+    "passedCases": 1,
+    "failedCases": 1,
+    "financialJourneyPassed": false,
+    "originalCleanupVerified": false
+  },
+  "readonlyCatalog": {
+    "referencesAudited": 967,
+    "referencesTotal": 967,
+    "promotionsAudited": 1,
+    "promotionsTotal": 1,
+    "activePromotions": 1,
+    "scenariosAudited": 2901,
+    "scenariosTotal": 2901,
+    "batches": 30,
+    "quantities": [
+      1,
+      2,
+      3
+    ],
+    "mismatches": 0,
+    "sales": 0,
+    "stockMutations": 0,
+    "reservations": 0,
+    "settingsMutations": 0
+  },
+  "fixtureCounts": {
+    "products": 9,
+    "promotions": 4,
+    "installations": 3,
+    "requestIds": 5,
+    "sales": 0,
+    "returns": 0,
+    "exchanges": 0,
+    "operationIds": 0
+  },
+  "cleanup": {
+    "verified": true,
+    "protectedTables": 64,
+    "nonQaPreserved": true,
+    "exactRowsDeleted": 27,
+    "ownActorsAbsent": 1,
+    "newPosResidue": 0,
+    "newAuthResidue": 0,
+    "preservedNewQaFolioCounters": 0,
+    "baselineFileSha256": "80178928da4da9e2a321dbdb252ee554ade908c397656d5fa29e700de96493ee",
+    "finalFileSha256": "a1e80b2e1ebd5f474e894a4d3e2f228d56d69f0827a8f8201b99c9b5b9f2c4c9",
+    "approvedReviewSha256": "56fe8a076ce744b533ab4afaeb63ac63849f5ea993d8d654f53a15f127714a76",
+    "originalBaselineReused": true,
+    "originalJournalPrefixPreserved": true,
+    "recoveryObservationSha256": "0f9db3265781278eb66f889d599f83e0d7831703cd1817466eeac4fd3eab6f6c",
+    "originalDerivedReconciliationSha256": "0fe8c0c992aacfb9aed788d047e80724ad26c23596bbe3426412910ce094167a"
+  },
+  "evidenceHashes": {
+    "fixtures": "3e379308583d1f6c8de92b809302ccc22e34a67493ca3adb7e0201b56ee1b367",
+    "failedMatrix": "811284be22809d84aa03da9b7382328530fd42d90bf7a0635bead3c50c72c733",
+    "originalFailedReconciliation": "751b5ac5b41895b4c2b3f31b92a3026f568b76e4806435e41d9d4dba538be8f6",
+    "originalJournal": "18cef3cefeda22d09b6a0e1ca6535fbfcf46f1c7eb8fa8736e9bbc74fbaa7b7f",
+    "preservedFailedMatrix": "811284be22809d84aa03da9b7382328530fd42d90bf7a0635bead3c50c72c733",
+    "cleanup-completion": "a72651d5712147ba1389e86f8974718f173da333e2047c00ea69bb382883d9f3",
+    "recovery-summary": "6965c34441284db180ba169c8b0c0f77925c05d543a3783503641474df3bba6c",
+    "recovery-input": "cfda8e98ff262853e9a2a9784c0feb67ad1fc64fdba9540f158f2bd662834a02",
+    "sql-commit-outcome": "e2a9ac6f4846eafdc87ccfae35f8c499c5a837284ec5d3b3a151f6fb95566ce4",
+    "sql-postcheck": "9f78a484acb2c4309fd9e76f6d9a1c441e0079956cd164c22d8245262cde9b3c",
+    "auth-cleanup-result": "8393363d606325cbec6a2c0806df5aa62c19362aa4e0059a95e129ca011e600a",
+    "cleanup-plan": "c59dc8803a9cd35a15f6d939f9ce216d491c8e8452b1ed7f844033470cad475c",
+    "cleanup-review": "eccaa4e98a1ac1f9f3013e339bd8e21180d9d64098bb2feeeb08956d3a508c77",
+    "cleanup-manifest": "1b0fc06d0b680eb68d12dd6a5fae54015969f9173c3fcad4193eb85879a75ea4",
+    "backup-restore-validation": "ba2fb53011c54ab49c286f86773f6cfc059c76ee86e400c633f234be9b1b62c5",
+    "reconciliation": "9e2ea455bb8b045100e2fcb1e23e651edf382d2764da548ba042b12039688dde",
+    "reconciliation-original": "751b5ac5b41895b4c2b3f31b92a3026f568b76e4806435e41d9d4dba538be8f6",
+    "recovery-device-observation": "abffe629d871d6b7c05e9dd2d17232eb2c8d1cde1bd0b38417451f71ff2801b6",
+    "finalJournal": "ac25ac6237a4873c5514766bd2ec6561e45b261b44ea342f1f5cb2bba8259d66",
+    "catalogAudit": "05ba74da582de8d4eecde44a5807ffafb95dbdbcce2ae80ef066d1694e889069"
+  },
+  "relatedEvidence": [
+    "browser-quiescence-regression.json"
+  ],
+  "hardware": "NOT_TESTED"
+}

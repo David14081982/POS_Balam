@@ -428,24 +428,19 @@ imprimirse después de la confirmación autoritativa.
 La exportación a `.xlsx`, el listado impreso y el vale firmado se conservan como
 herramientas operativas y de auditoría; ya no son el único respaldo.
 
-### Promociones y margen mínimo
+### Promociones exactas sin restricción por costo
 
 `window.PROMOS` calcula el precio unitario que usa el Punto de Venta y la vista
 previa administrativa. Los descuentos porcentuales acumulados se aplican
 primero y después los montos fijos.
 
-Cuando el producto tiene costo positivo y
-`discount.minMarginPct > 0`, el precio promocional no puede bajar de:
-
-```text
-costo / (1 - margen_mínimo / 100)
-```
-
-El piso se limita al precio de lista: una promoción nunca aumenta el precio.
-Si el precio de lista ya incumple el margen, se bloquea el descuento adicional.
-Costo cero/ausente o margen 0 conservan el cálculo histórico. El margen se
-administra en Configuración → Ventas y POS, entre 0% y 100%, y afecta sólo
-cálculos nuevos; las ventas guardadas conservan sus snapshots monetarios.
+H-186 retira el piso por costo/margen por decisión del propietario. Cada
+porcentaje configurado debe estar entre 0% y 100%; la suma de porcentajes se
+limita a 100% antes de restar los importes fijos, sin producir precios negativos.
+El costo se conserva y el antiguo ajuste `discount.minMarginPct` queda inerte:
+no limita promociones ni aparece como control administrativo. La vista previa
+considera el precio de cada talla y conserva el conteo por referencia.
+Los documentos históricos mantienen los importes que registraron.
 
 ### Categorías y existencias por talla
 
@@ -552,18 +547,49 @@ elimine. Un arreglo vacío significa «sin promoción»; su ausencia significa
 
 ### Cotización de venta y descuento adicional
 
-`DATA.saleQuote(ticket, applications)` es la autoridad única del total después
-de promociones configuradas y descuentos adicionales. Recibe renglones cuya
+`pos.quote_sale(inputs, applications, courtesy)` es la autoridad financiera de
+las ventas nuevas H-186. Consulta precios y promociones vigentes y las reglas
+del beneficio adicional; el gateway rechaza importes, IVA, líneas y pagos que
+no coincidan. `DATA.saleQuote(ticket, applications)` es su espejo de vista
+previa en el cliente. Recibe renglones cuya
 promoción ya fue resuelta por `DATA.resolveLineDiscount()` y aplica después las
 aplicaciones manuales en orden. Resumen, vista previa, Cobrar venta,
 `recordSale()`, ticket y posventa consumen el mismo resultado.
+
+La RPC permanece `STABLE` y puede ejecutarse en la transacción de sólo lectura
+de PostgREST. La migración 226 conserva la capacidad `sales.create` y usa
+`pos.h186_assert_quote_device()` para comprobar perfil activo, encabezado,
+registro y estado del dispositivo sin tomar un bloqueo de fila. El helper es
+privado y no cambia datos. La confirmación de una operación mantiene
+`pos.assert_online_device()` y su `FOR SHARE`; la admisión de una cotización no
+sustituye esa validación de escritura.
 
 Cada aplicación congela origen, beneficio, mecánica, alcance, motivo, usuario,
 folio físico cuando aplica e importes anterior/descontado/final. El campo
 histórico `sales.descuento` conserva exclusivamente el descuento configurado;
 `descuento_adicional` y `descuentos_adicionales` son evidencia separada. El
 importe adicional de ticket se prorratea sobre el valor posterior a promociones
-y el último renglón elegible absorbe el residuo de centavos.
+y el último renglón elegible absorbe el residuo de centavos. El reparto nunca
+rebasa el presupuesto; si el último no puede absorberlo, el residuo se propaga
+hacia los anteriores hasta aplicar exactamente el importe autorizado.
+
+`sales.financial_version = 2`, `financial_request` y `original_total` identifican
+el contrato nuevo, sin backfill de históricos. Se usa decimal HALF UP. Una línea
+con un total indivisible entre sus unidades se persiste en hasta dos segmentos,
+cada uno con precio exacto en centavos y `line_id` propio. La suma de segmentos
+es el importe cobrado; posventa conserva esa identidad y ese precio pagado.
+Un descuento del 100% admite total cero sin inventar filas ni componentes de
+pago. La cortesía explícita mantiene su política y valor regalado por separado.
+
+La expansión 225 incorpora `pos.online_runtime.min_financial_version` con
+valor inicial 1: las solicitudes V2 siempre se validan y, durante la transición
+de despliegue, todavía se admiten altas del cliente anterior. Tras publicar y
+verificar el artefacto nuevo se activa explícitamente el valor 2 mediante
+`supabase/operations/h186-activate-financial-contract.sql`. Esa operación
+separada exige runtime habilitado y comprueba la postcondición; ni la expansión
+225 ni la corrección de lectura 226 la ejecutan. En 2 se rechazan altas nuevas
+sin V2 con un error de actualización de cliente. Los abonos y la posventa de
+documentos históricos conservan su contrato congelado.
 
 El precio final congelado por renglón es el valor que reconocen Cambios y
 Devoluciones. La comisión se calcula sobre el total final realmente pagado. Un
@@ -576,11 +602,14 @@ que delega la venta a `pos.commit_sale()`.
 
 ### Presentación financiera del ticket
 
-El resumen del Punto de Venta y el ticket impreso muestran, en este orden:
-precio original, importe, IVA, descuento y total a pagar. El precio original se
-deriva como `total + descuento`, e importe e IVA se calculan **sobre el precio
-original**, por lo que `importe + IVA = precio original` y no coincide con el
-total cuando hay descuento. Es el formato aprobado por Finanzas.
+Para el contrato H-186, resumen, caja y ticket muestran el original completo,
+descuentos e importes fiscales del total descontado: subtotal = redondeo(total /
+1.16), IVA = total − subtotal. El ticket proyecta los campos congelados de la
+venta, incluido `originalTotal`; no recotiza con el catálogo actual.
+
+Los documentos sin `financialVersion:2` conservan exactamente la presentación
+H-32: original = total + descuento, importe e IVA desglosados del original.
+Esta compatibilidad no recalcula ni modifica registros históricos.
 
 El porcentaje sólo se imprime cuando todos los renglones con descuento traen
 evidencia, cada uno con exactamente una promoción, todas porcentuales y todas

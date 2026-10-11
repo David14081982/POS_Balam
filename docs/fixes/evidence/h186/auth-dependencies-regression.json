@@ -1,0 +1,92 @@
+{
+  "risk": "H-186",
+  "status": "PASS_LOCAL_REGRESSION",
+  "at": "2026-10-11T00:31:20.855Z",
+  "scope": "Reviewed LIVE Auth dependency coverage and exact QA cleanup guards; local PGlite and injected GoTrue only",
+  "remoteQueries": 0,
+  "remoteWrites": 0,
+  "certified": false,
+  "remoteCleanupCertifiedByThisEvidence": false,
+  "observedCause": {
+    "code": "AUTH_FK_CATALOG_DRIFT",
+    "capturedIncomingForeignKeys": 20,
+    "capturedCountRows": 18,
+    "readyBeforeFix": false,
+    "description": "The reviewed LIVE guard expected 18 dependencies while the saved catalog contained 20. Its old SELECT omitted counts for the two new families."
+  },
+  "contract": {
+    "historicalIncomingForeignKeys": 18,
+    "historicalModuleUnchanged": true,
+    "liveIncomingForeignKeys": 20,
+    "additions": [
+      {
+        "relation": "auth.mfa_recovery_code_sets",
+        "column": "user_id",
+        "referencedRelation": "auth.users",
+        "referencedColumn": "id",
+        "effect": "CASCADE",
+        "requiredRows": 0
+      },
+      {
+        "relation": "auth.scim_users",
+        "column": "user_id",
+        "referencedRelation": "auth.users",
+        "referencedColumn": "id",
+        "effect": "SET NULL",
+        "requiredRows": 0
+      }
+    ],
+    "reasonForZero": "The QA journeys provision neither MFA recovery sets nor SCIM identities; their presence authorizes neither cascade nor SET NULL.",
+    "posSnapshotRevisionDeltaPerDelete": 7
+  },
+  "suites": [
+    {
+      "file": "test-h171-live-cleanup-auth-preflight.mjs",
+      "passed": 14,
+      "failed": 0
+    },
+    {
+      "file": "test-h171-live-cleanup-auth.mjs",
+      "passed": 29,
+      "failed": 0
+    },
+    {
+      "file": "test-h171-live-cleanup-lifecycle.mjs",
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "file": "test-h171-auth-retirement.mjs",
+      "passed": 22,
+      "failed": 0
+    }
+  ],
+  "protectionsVerified": [
+    "Both newly reviewed families with rows > 0 block readiness and GoTrue deletion before a durable DELETE intent",
+    "Missing or duplicate new-family counts are rejected instead of treated as zero",
+    "Changed FK action, columns, referenced column or validation state cannot match the exact catalog",
+    "An actual unreviewed 21st incoming Auth FK still blocks the SQL preflight",
+    "Complete local lifecycle preserves 63 outside POS tables, exact +7 revision advances and original foreign Auth",
+    "Changed foreign row hash before cleanup forces rollback and prevents Auth deletion",
+    "Pinned historical 18-FK retirement remains unchanged and its 22 regressions pass"
+  ],
+  "sourceSha256": {
+    "h171-live-auth-dependencies.mjs": "e500a9b173d3357af35bd6987fdd40b5f6a4e0e1688dede00baac64b9d63db1c",
+    "h171-live-cleanup-auth-preflight.mjs": "d4dd4fec27aa9c15a0965b7dea647807210a062bf916091c202ea08e414598af",
+    "h171-live-cleanup-auth.mjs": "d069a0c74540f0b5c888ced949d2a94676526b63f6b929263de09a00178c5f7e",
+    "h171-auth-preflight-test-schema.mjs": "434a161b3c13dde4aa9218c15ee98d74bd393833e12617bbdbf636c43894f31e",
+    "test-h171-live-cleanup-auth-preflight.mjs": "b90670a62ad7e84c6021472360a6b5b2b2c869c37d33dd647892e3a38330d8bf",
+    "test-h171-live-cleanup-auth.mjs": "0e95df5fcff0f6bde2923f03f1fbdfd5f621244afccd328285fa2b8b3f763a4f",
+    "test-h171-live-cleanup-lifecycle.mjs": "718c1626824971cdf393b9c946e676fe428ee887fc5804c5c136531d7553441c",
+    "h171-auth-retirement.mjs": "c613d6a5cedff0e121dddc49baba5e694fad34e31d519869b28462c189ad958a"
+  },
+  "logs": {
+    ".evidence-h186-deploy/auth-fk-red.log": "4f602eae89c739bc6d5a70312430fed5f485d5ee65cfb276ab7038b2a16c1c36",
+    ".evidence-h186-deploy/auth-fk-green.log": "6f1cc528576cb86fa9ea2a2ed5f05e5839da489805a7dd90a48d5c82d27e0a71",
+    ".evidence-h186-deploy/auth-fk-final-affected.log": "e65986e5edc10d02c7a8b493918e7cdc79769826ccf6fc7c8f904549d1506109",
+    ".evidence-h186-deploy/auth-fk-final-adapter.log": "a87d2cc47001efcae017436c62e3621026c492193a98a7aba396d32f10c4f265"
+  },
+  "independentReadOnlyReview": "PASS",
+  "validationNotes": "Initial run passed preflight and historical Auth. Only fixture accountId scope and stale expected 18 in lifecycle failed; corrected and affected suites passed. Final adapter run updates expectedChecks metadata to29.",
+  "frozenRecordSha256": "ad4710c19bb1970dce13baaa0d8c45950ac5ed762fc0057f76300ab7284ded59"
+}

@@ -273,6 +273,7 @@
     const chosen = rows.filter(r => sel[r.k] && sel[r.k].on && r.max > 0);
     const count = chosen.reduce((a, r) => a + (sel[r.k].qty || 1), 0);
     const refund = chosen.reduce((a, r) => a + r.precio * (sel[r.k].qty || 1), 0);
+    const sinReembolso = sale.financialVersion === 2 && refund === 0;
     const snapshotParts = parts => (parts || []).map(part => {
       const item = C.find('payment_method', part.methodCode);
       return { methodCode: part.methodCode, methodLabel: (item && item.label) || part.methodLabel || part.methodCode, amount: Math.round((Number(part.amount) || 0) * 100) / 100 };
@@ -290,7 +291,9 @@
         sku: r.sku, nombre: r.nombre, talla: r.talla, qty: sel[r.k].qty || 1,
         motivo: sel[r.k].motivo, precio: r.precio }));
       let components;
-      if (metodo === 'Mismo método') {
+      if (sinReembolso) {
+        components = [];
+      } else if (metodo === 'Mismo método') {
         components = sameParts;
         if (!components || !components.length) { toast('El historial no permite demostrar la distribución del reembolso. Elige cómo saldrá el dinero.', 'var(--danger)'); return; }
       } else if (metodo === 'Mixto') {
@@ -300,7 +303,8 @@
           toast('La distribución del reembolso debe usar al menos dos métodos y cuadrar con el total.', 'var(--danger)'); return;
         }
       } else components = snapshotParts([{ methodCode: metodo, amount: refund }]);
-      const nominal = metodo === 'Mismo método' ? (components.length > 1 ? 'Mixto' : components[0].methodCode) : metodo;
+      const nominal = sinReembolso ? (sale.metodo === 'Mixto' ? 'Efectivo' : sale.metodo)
+        : metodo === 'Mismo método' ? (components.length > 1 ? 'Mixto' : components[0].methodCode) : metodo;
       if (!returnOperationRef.current) returnOperationRef.current = D.newOperationId();
       const res = await D.recordReturn({ operationId: returnOperationRef.current, folio: sale.folio, lineas, metodo: nominal, refundComponents: components, notas });
       if (!res.ok) { returnOperationRef.current = null; toast(res.error, 'var(--danger)'); return; }
@@ -436,7 +440,9 @@
                   h('div', { key: 'l', className: 'text-overline uppercase mb-1' }, 'Total a reembolsar'),
                   h('div', { key: 'v', className: 'font-headline', style: { color: '#FFE088', fontSize: '34px', lineHeight: 1.1 } }, fmt(refund)),
                 ]),
-                h('div', { key: 'mt', className: 'pt-2' }, [
+                sinReembolso ? h('p', { key: 'mt', role: 'status', className: 'pt-2 text-caption opacity-80' },
+                  'No hay dinero que reembolsar. Se registrará la devolución de la prenda.')
+                  : h('div', { key: 'mt', className: 'pt-2' }, [
                   h('label', { key: 'l', className: 'block text-overline uppercase opacity-70 mb-1.5' }, 'Método de reembolso'),
                   h('select', { key: 's', value: metodo, onChange: e => setMetodo(e.target.value), className: 'w-full h-10 px-3 rounded-lg text-body bg-white/10 border border-white/20 text-on-primary focus:ring-1 focus:ring-secondary-fixed' },
                     methods.map(m => h('option', { key: m, value: m, style: { color: '#131B2E' } }, m))),

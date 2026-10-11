@@ -1,0 +1,83 @@
+name: H186 approved closure
+
+# One explicitly requested closure, reusing pinned passing evidence.
+# Regular pushes and pull requests retain the normal regression workflow.
+on:
+  workflow_dispatch:
+    inputs:
+      expected_commit:
+        description: Exact main commit containing the approved H186 closure evidence
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  verify-evidence:
+    if: github.ref == 'refs/heads/main' && inputs.expected_commit == github.sha
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Require the executed single sale and exact tested source bytes
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          import {createHash} from 'node:crypto';
+          const e=JSON.parse(fs.readFileSync('docs/fixes/evidence/h186/final-single-e2e.json','utf8'));
+          assert.equal(e.status,'PASS');
+          assert.equal(e.scope,'single-discounted-sale');
+          assert.equal(e.terminals,1);assert.equal(e.confirmedSales,1);
+          assert.deepEqual(e.amounts,{original:1250,discount:375,subtotal:754.31,iva:120.69,total:875,payment:875});
+          for(const key of ['supabaseConfirmed','ticketCorrect','reportCorrect','commissionCorrect'])assert.equal(e[key],true);
+          assert.equal(e.cleanup.verified,true);assert.equal(e.cleanup.protectedTables,64);
+          assert.equal(e.cleanup.newPosResidue,0);assert.equal(e.cleanup.newAuthResidue,0);
+          assert.equal(e.cleanup.nonQaPreserved,true);assert.equal(e.stoppedRunCleanup.verified,true);
+          assert.equal(e.stoppedRunCleanup.newPosResidue,0);assert.equal(e.stoppedRunCleanup.newAuthResidue,0);
+          assert.equal(e.stoppedRunCleanup.nonQaPreserved,true);
+          assert.equal(e.failedAttemptCleanup.verified,true);assert.equal(e.failedAttemptCleanup.newPosResidue,0);
+          assert.equal(e.failedAttemptCleanup.newAuthResidue,0);assert.equal(e.failedAttemptCleanup.nonQaPreserved,true);
+          assert.equal(e.previousResults.sql,135);assert.equal(e.previousResults.migrations,31);
+          assert.equal(e.previousResults.uiAndTickets,77);assert.equal(e.previousResults.remoteAudit,366);
+          assert.ok(e.sourceManifest.length>=30);
+          const paths=new Set();
+          for(const row of e.sourceManifest){
+            assert.ok(!row.file.includes('..')&&!row.file.startsWith('/')&&!row.file.includes(':'));
+            assert.ok(!paths.has(row.file));paths.add(row.file);
+            const bytes=fs.readFileSync(row.file);
+            assert.ok(['exact-bytes','git-text-lf'].includes(row.comparison));
+            const comparable=row.comparison==='git-text-lf'?bytes.toString('utf8').replace(/\r\n/g,'\n'):bytes;
+            assert.equal(createHash('sha256').update(comparable).digest('hex'),row.sha256,row.file);
+          }
+          for(const file of ['index.html','POS Balam (offline).html','sw.js','balam/data.jsx','balam/discounts.jsx','balam/pos-ticket.jsx','supabase/migrations/20261011022700_pos_h186_commission_snapshot.sql'])assert.ok(paths.has(file));
+          console.log('Executed H186 evidence and unchanged source bytes verified; no suites repeated.');
+          NODE
+      - name: Stage the verified client
+        run: |
+          mkdir _site
+          cp index.html 'POS Balam (offline).html' sw.js manifest.webmanifest _site/
+          cp -R pwa _site/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: verify-evidence
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: balam-pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deployment

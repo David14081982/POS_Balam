@@ -5,6 +5,11 @@
 **Fecha:** 27/07/2026
 **Commit:** 9170011
 
+**Compatibilidad H-186 (10/10/2026):** esta presentación se conserva para
+documentos históricos sin `financialVersion:2`. Las ventas nuevas proyectan
+el original, subtotal e IVA congelados del importe descontado conforme a
+[H-186](descuentos-autoridad-financiera-h186.md); nunca se recotizan históricos.
+
 ## Problema y reproducción
 
 Finanzas pidió un orden fijo en el resumen de venta y en el ticket impreso:

@@ -34,3 +34,6 @@ supabase/.temp/
 
 # H-171: private pre-cleanup backups may contain business data; never publish.
 .evidence-h171-private/
+
+# H-186: raw audit data, browser artifacts and private fixture journals.
+.evidence-h186*

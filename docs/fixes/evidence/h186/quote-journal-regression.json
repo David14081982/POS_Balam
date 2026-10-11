@@ -1,0 +1,97 @@
+{
+  "risk": "H-186",
+  "status": "PASS_LOCAL_REGRESSION",
+  "at": "2026-10-11T00:12:14.080Z",
+  "remoteQueriesForThisValidation": 0,
+  "cause": {
+    "observedLiveError": "JOURNAL_UNKNOWN_RPC_FORBIDDEN",
+    "catalogBatchOffset": 0,
+    "browserError": "H186_CATALOG_RPC_ERROR: TypeError: Failed to fetch",
+    "reason": "The runner allowed quote_sale, but the global LIVE_READ_RPCS intersection omitted that exact RPC and aborted before HTTP.",
+    "rpc": "pos.quote_sale(jsonb,jsonb,boolean)",
+    "sqlClassification": "STABLE, capability/device guards, read-only financial calculation",
+    "change": "Added only quote_sale to the global read allowlist; WRITES and journal preparation order unchanged."
+  },
+  "red": {
+    "suite": "test-h171-runner-journal-integration.mjs",
+    "tests": 14,
+    "passed": 13,
+    "failed": 1,
+    "failingCase": "Actual runner forwards the H186 quote RPC without preparing a mutation or altering fixtures",
+    "observedDispatch": "abort",
+    "expectedDispatch": "continue",
+    "log": {
+      "file": ".evidence-h186-deploy/quote-allowlist-red.log",
+      "sha256": "c4063f178354aee1afc9fbb4a86a5fe1f1ff8865f054fdd5665808c8605cc69f"
+    }
+  },
+  "green": {
+    "exitCode": 0,
+    "nodeTestRunner": {
+      "tests": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    "suites": [
+      {
+        "file": "test-h171-live-journal.mjs",
+        "tests": 17,
+        "passed": 17,
+        "failed": 0
+      },
+      {
+        "file": "test-h171-runner-journal-integration.mjs",
+        "tests": 14,
+        "passed": 14,
+        "failed": 0
+      },
+      {
+        "file": "test-h171-core-runner-integration.mjs",
+        "tests": 10,
+        "passed": 10,
+        "failed": 0
+      }
+    ],
+    "countExplanation": "Node counts three passing files; each file reports the internal checks above.",
+    "log": {
+      "file": ".evidence-h186-deploy/quote-allowlist-green.log",
+      "sha256": "5607422b74f3555d604d75924fd70da29dfd8ae8fccede71ff0036bfc51df882"
+    }
+  },
+  "protectionsVerified": [
+    "Exact quote RPC proceeds without a mutation intent or fixture changes",
+    "A narrower caller read list still blocks quote_sale",
+    "PATCH remains forbidden",
+    "Unknown lookalike quote_sale_commit and commit_sale remain blocked even if the caller lists them as reads",
+    "execute_online_command remains a write and is durably recorded before dispatch even if included in a caller read list"
+  ],
+  "provenance": {
+    "sourceSha256": {
+      "h171-live-journal.mjs": "045af1faba9976235cd48f8c467170d4434bea73bc14cb725a1b5739904fcffd",
+      "test-h171-live-journal.mjs": "3252d6a668e11d13d9bc8b84fb63daaca4898c33285c1f914e6a21a720063f27",
+      "test-h171-runner-journal-integration.mjs": "14aaae435560fb6eae6f84e9abfca20969292fd72f895e6ccc1201b255fa412b",
+      "test-h171-core-runner-integration.mjs": "72eece61e9fe6a8af7bce60157599fbf629907a3ebc4436dbefffa8100f6987e",
+      "test-h164-live-online.mjs": "c0caccd103a3d01b336eff667212025f25a6b16bcb4b6f0baa684578bff19a3f"
+    },
+    "independentReadOnlyReview": "PASS",
+    "reviewedGuardSha256": "045af1faba9976235cd48f8c467170d4434bea73bc14cb725a1b5739904fcffd",
+    "applicationArtifact": {
+      "file": "index.html",
+      "sha256": "0e7b324ce2165cbdb8d8cb3a2f652acfbdd44439b2bad59b74f338daefc373d5",
+      "unchangedFromFailedLive": true,
+      "rebuiltForThisFix": false
+    },
+    "liveHarnessUnchanged": true
+  },
+  "failedLive": {
+    "certified": false,
+    "deliveryCertified": false,
+    "cleanupStatus": "PASS",
+    "scope": "The local journal correction passes. Cleanup of the failed run is separately verified; the financial LIVE itself remains failed and uncertified.",
+    "cleanupCompletedAtUtc": "2026-10-11T00:35:56.874Z",
+    "cleanupEvidence": {
+      "file": "docs/fixes/evidence/h186/failed-run-cleanup.json",
+      "sha256": "0e1f2444b9d8c892d78c5fb4c7a5856eaf4add3300fd14b15554756b0045d8bf"
+    }
+  }
+}

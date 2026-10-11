@@ -18,10 +18,23 @@ const HX = { MS: noop };
 const sandbox = {
   React, window: {}, console,
 };
+sandbox.window.addEventListener = noop;
+sandbox.window.dispatchEvent = noop;
+sandbox.window.CORE = { invokeSync: name => name === 'serverNow' ? new Date() : null,
+  registerCatalogProducts: noop, registerCatalogPromotions: noop, registerMonetaryDocuments: noop };
 sandbox.window.UI = UI; sandbox.window.HX = HX; sandbox.window.DATA = DATA;
 sandbox.window.CONFIG = CONFIG; sandbox.window.PROMOS = null;
 sandbox.React = React;
 vm.createContext(sandbox);
+
+// H-186: usar autoridades reales de moneda y precio; el catálogo del arnés
+// sigue siendo explícito para sus pruebas de alcance.
+for (const name of ['config', 'data']) {
+  vm.runInContext(readFileSync(new URL(`./balam/${name}.jsx`, import.meta.url), 'utf8'), sandbox);
+}
+Object.assign(DATA, sandbox.window.DATA, { products: [], promos: [] });
+sandbox.window.DATA = DATA;
+sandbox.window.CONFIG = CONFIG;
 
 const code = readFileSync(new URL('./balam/discounts.jsx', import.meta.url), 'utf8');
 vm.runInContext(code, sandbox);
@@ -39,7 +52,7 @@ function check(name, got, exp) {
 const prod = (precio, costo) => ({ precio, costo, cat: 'guayabera', tela: 'lino', manga: 'larga', cuello: 'mao', color: 'blanco', orn: '—', modelo: '100', stock: [{ talla: 'M', stock: 5, escala: 'L' }] });
 const promo = (tipo, valor, scope = {}) => ({ id: 'p' + Math.random(), nombre: 't', tipo, valor, inicio: '', fin: '', horaInicio: '', horaFin: '', pausado: false, scope });
 
-// Desactivar el piso de margen salvo cuando se prueba explícitamente.
+// La clave histórica se conserva, pero H-186 ya no la usa para fijar precios.
 CONFIG_VALUES['discount.minMarginPct'] = 0;
 
 console.log('\n── A) Descuento PORCENTUAL ──────────────────────────────');
@@ -61,27 +74,23 @@ check('10% + 20% (suma a 30%) sobre $1000', PROMOS.applyStack(1000, [promo('pct'
 check('60% + 60% (cap 100%) sobre $1000', PROMOS.applyStack(1000, [promo('pct', 60), promo('pct', 60)], prod(1000)).unit, 0);
 check('$100 + $50 fijos sobre $1000', PROMOS.applyStack(1000, [promo('fijo', 100), promo('fijo', 50)], prod(1000)).unit, 850);
 
-console.log('\n── D) PISO DE MARGEN (discount.minMarginPct=45) ─────────');
+console.log('\n── D) COSTO Y MARGEN HISTÓRICOS NO LIMITAN PROMOCIONES ───');
 CONFIG_VALUES['discount.minMarginPct'] = 45;
-// floor = costo/(1-0.45) = costo/0.55. costo=450 → floor=818.18
-const r1 = PROMOS.applyStack(1000, [promo('pct', 40)], prod(1000, 450)); // 600 < 818.18 → topado
-check('40% sobre $1000 costo $450 → topa en piso', r1.unit, 818.18);
-console.log(`   capped=${r1.capped} (esperado true)`); r1.capped ? pass++ : fail++;
-const r2 = PROMOS.applyStack(1000, [promo('pct', 10)], prod(1000, 450)); // 900 > 818.18 → no topa
-check('10% sobre $1000 costo $450 → no topa', r2.unit, 900);
-console.log(`   capped=${r2.capped} (esperado false)`); !r2.capped ? pass++ : fail++;
+const r1 = PROMOS.applyStack(1000, [promo('pct', 40)], prod(1000, 450));
+check('40% sobre $1000 costo $450', r1.unit, 600);
+const r2 = PROMOS.applyStack(1000, [promo('pct', 10)], prod(1000, 450));
+check('10% sobre $1000 costo $450', r2.unit, 900);
 const r3 = PROMOS.applyStack(1000, [promo('fijo', 300)], prod(1000, 450));
-check('$300 fijo también respeta el piso', r3.unit, 818.18);
+check('$300 fijo se aplica completo', r3.unit, 700);
 const r4 = PROMOS.applyStack(1000, [promo('pct', 40)], prod(1000, 0));
 check('costo cero conserva el descuento histórico', r4.unit, 600);
-console.log(`   capped=${r4.capped} (esperado false)`); !r4.capped ? pass++ : fail++;
 check('costo inválido conserva el descuento histórico',
   PROMOS.applyStack(1000, [promo('pct', 40)], prod(1000, 'sin-costo')).unit, 600);
 const r5 = PROMOS.applyStack(1000, [promo('pct', 40)], prod(1000, 1000));
-check('costo igual al precio bloquea descuento sin subir lista', r5.unit, 1000);
+check('costo igual al precio permite descuento autorizado', r5.unit, 600);
 CONFIG_VALUES['discount.minMarginPct'] = 100;
 const r6 = PROMOS.applyStack(1000, [promo('pct', 10)], prod(1000, 450));
-check('margen 100% no produce infinito y bloquea descuento', r6.unit, 1000);
+check('margen histórico100% no cambia descuento', r6.unit, 900);
 CONFIG_VALUES['discount.minMarginPct'] = 45;
 const marginProduct = Object.assign(prod(1000, 450), { id: 'margin-product', sku: 'MARGIN' });
 const marginPromo = promo('pct', 40);
@@ -89,14 +98,12 @@ DATA.products = [marginProduct];
 DATA.promos = [marginPromo];
 const marginLine = PROMOS.lineUnit(marginProduct, 'M');
 const marginPreview = PROMOS.previewDraft(marginPromo).examples[0];
-check('POS lineUnit usa el mismo piso', marginLine.unit, 818.18);
-console.log(`   capped=${marginLine.capped} (esperado true)`); marginLine.capped ? pass++ : fail++;
-check('vista previa usa el mismo piso', marginPreview.unit, 818.18);
-console.log(`   capped=${marginPreview.capped} (esperado true)`); marginPreview.capped ? pass++ : fail++;
+check('POS lineUnit aplica descuento autorizado', marginLine.unit, 600);
+check('vista previa coincide con POS', marginPreview.unit, 600);
 CONFIG_VALUES['discount.minMarginPct'] = 0;
 
 console.log('\n── E) lineUnit con promos ACTIVAS por fecha/alcance ─────');
-// Fechas LOCALES (no UTC) — el motor parsea new Date('YYYY-MM-DDThh:mm') en hora local.
+// El motor usa la fecha del servidor y la zona comercial de Hermosillo.
 const localDay = (ms) => { const d = new Date(ms); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const hoy = new Date();
 const ayer = localDay(hoy.getTime() - 86400000);
@@ -155,11 +162,9 @@ check('total descontado no vuelve a sumar IVA', desglose.total, 1150);
 check('desglose fiscal conserva total', desglose.importe + desglose.iva, totalFin);
 
 console.log('\n── J) CONFIGURACIÓN ADMINISTRABLE ──────────────────────');
-const marginSettingVisible = settingsCode.includes("k: 'discount.minMarginPct'")
-  && settingsCode.includes("label: 'Margen mínimo en promociones (%)'")
-  && settingsCode.includes('min: 0, max: 100');
-console.log(`${marginSettingVisible ? '✅' : '❌'} margen mínimo visible y limitado 0–100 en Configuración`);
-marginSettingVisible ? pass++ : fail++;
+const marginSettingRemoved = !settingsCode.includes("k: 'discount.minMarginPct'");
+console.log(`${marginSettingRemoved ? '✅' : '❌'} control de margen mínimo retirado de Configuración`);
+marginSettingRemoved ? pass++ : fail++;
 
 console.log(`\n════════ RESULTADO: ${pass} pasaron, ${fail} fallaron ════════`);
 process.exit(fail ? 1 : 0);

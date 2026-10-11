@@ -1,0 +1,167 @@
+{
+  "schema": "h186-failed-run-cleanup-v1",
+  "risk": "H-186",
+  "generatedAtUtc": "2026-10-11T00:37:22.878Z",
+  "status": "FAILED_RUN_CLEANUP_VERIFIED",
+  "run": "1308c0e4-36b3-4fb7-a9f0-9e8886722dc1",
+  "projectRef": "telohdbvbvsfmwyriflz",
+  "financialRun": {
+    "status": "FAILED_BEFORE_FINANCIAL_SCENARIOS",
+    "startedAtUtc": "2026-10-10T23:56:13.037Z",
+    "artifactSha256": "0e7b324ce2165cbdb8d8cb3a2f652acfbdd44439b2bad59b74f338daefc373d5",
+    "cause": "JOURNAL_UNKNOWN_RPC_FORBIDDEN",
+    "blockedRpc": "pos.quote_sale(jsonb,jsonb,boolean)",
+    "blockedBeforeHttp": true,
+    "commercialRequestIntents": 0,
+    "plannedProductReferences": 9,
+    "productReferencesCreated": 0,
+    "certified": false,
+    "deliveryCertified": false,
+    "originalFailedMatrixPreserved": true
+  },
+  "cleanup": {
+    "completedAtUtc": "2026-10-11T00:35:56.874Z",
+    "originalBaselineReused": true,
+    "sql": {
+      "attempts": 1,
+      "attemptRecordedAtUtc": "2026-10-11T00:16:38.357Z",
+      "exactRowsDeleted": 8,
+      "rowsByTable": {
+        "sellers": 4,
+        "user_permission_role_assignments": 1,
+        "sync_devices": 3
+      },
+      "canonicalRowsRestoredLocally": 8,
+      "outsideTablesVerified": 63,
+      "existingNonrestorableRowsHeld": 13,
+      "authUnchangedBySql": true,
+      "revisionDelta": 2,
+      "repeatedDuringAuthResume": false
+    },
+    "auth": {
+      "exactNewTargets": 1,
+      "attempts": 1,
+      "attemptRecordedAtUtc": "2026-10-11T00:34:10.915Z",
+      "absenceObservedAtUtc": "2026-10-11T00:34:23.107Z",
+      "absenceVerified": true,
+      "observedStatus": 404,
+      "deletionAttributed": false,
+      "reviewedForeignKeys": 20,
+      "newRelationsRequiredEmpty": [
+        {
+          "relation": "auth.mfa_recovery_code_sets",
+          "rows": 0
+        },
+        {
+          "relation": "auth.scim_users",
+          "rows": 0
+        }
+      ],
+      "protectedNonTargetAuthCount": 5,
+      "revisionDeltaPerDelete": 7
+    },
+    "finalIntegrity": {
+      "protectedTables": 64,
+      "nonQaPreserved": true,
+      "newPosResidue": 0,
+      "newAuthResidue": 0,
+      "newQaCounters": 0,
+      "monotonicTablesPreserved": [
+        "online_snapshot_revision"
+      ],
+      "baselineSha256": "af5df35111246aed92de2b819f567f98c17bf96427a08ed2fc9cc529e767bd39",
+      "finalCanonicalCaptureSha256": "ae110c716cc9d70c7783cc52526837f88ac44f759e458604b9c7028d7a5899f8"
+    },
+    "journal": {
+      "originalFailedEntries": 28,
+      "finalEntries": 31,
+      "originalPrefixPreserved": true,
+      "originalFailedJournalSha256": "aac639844f208282631881122fb6b80411fb1d9396a08f43ed4e481c68ce81d8",
+      "finalJournalSha256": "9b3b94ab57a76b26a8758c6dddcbad4d35f53bb5aef6dcedad00b20ba72fac48"
+    },
+    "separateSqlAndAuthTransactions": true,
+    "reviewSha256": "47990bfa21ea29e023b0853ff833c688276834862ba7eb7b2dfe377032267593"
+  },
+  "evidence": [
+    {
+      "file": ".evidence-h186-live-295f4980-98a2-4bbe-b9a9-cb9bd21dbc66/matrix.json",
+      "sha256": "07ff8b15f6b09640927cccd97882b62494d2be32c6412367d3f80fdd1b626046",
+      "bytes": 8098
+    },
+    {
+      "file": ".evidence-h186-live-295f4980-98a2-4bbe-b9a9-cb9bd21dbc66/mutation-journal.json",
+      "sha256": "9b3b94ab57a76b26a8758c6dddcbad4d35f53bb5aef6dcedad00b20ba72fac48",
+      "bytes": 33914
+    },
+    {
+      "file": ".evidence-h171-private/live-runs/1308c0e4-36b3-4fb7-a9f0-9e8886722dc1/before-fixtures.json",
+      "sha256": "af5df35111246aed92de2b819f567f98c17bf96427a08ed2fc9cc529e767bd39",
+      "bytes": 157116288
+    },
+    {
+      "file": ".evidence-h171-private/live-runs/1308c0e4-36b3-4fb7-a9f0-9e8886722dc1/auth-baseline.json",
+      "sha256": "e32f94760c88404b6b83bd7e35a193bfefe3406c71d885ba81955af779534c15",
+      "bytes": 619
+    },
+    {
+      "file": ".evidence-h171-private/live-recovery/1308c0e4-36b3-4fb7-a9f0-9e8886722dc1/940cfdde-41d1-4407-bd4b-b7fbfe76a769/original-mutation-journal.json",
+      "sha256": "aac639844f208282631881122fb6b80411fb1d9396a08f43ed4e481c68ce81d8",
+      "bytes": 30377
+    },
+    {
+      "file": ".evidence-h171-private/live-recovery/1308c0e4-36b3-4fb7-a9f0-9e8886722dc1/940cfdde-41d1-4407-bd4b-b7fbfe76a769/cleanup-review.json",
+      "sha256": "6b7bf21f823aa4409468d77f18e65623895f0db63f6f8cbbfe243a9f6d919698",
+      "bytes": 21084
+    },
+    {
+      "file": ".evidence-h171-private/live-recovery/1308c0e4-36b3-4fb7-a9f0-9e8886722dc1/940cfdde-41d1-4407-bd4b-b7fbfe76a769/backup-restore-validation.json",
+      "sha256": "0edf09d3e331a98bfea0dc58501bbcda62eee95ff581223bff9e2f9b9324c875",
+      "bytes": 1947
+    },
+    {
+      "file": ".evidence-h171-private/live-recovery/1308c0e4-36b3-4fb7-a9f0-9e8886722dc1/940cfdde-41d1-4407-bd4b-b7fbfe76a769/cleanup-execution-response.json",
+      "sha256": "588a434c9ab6b126782f39430bc3911ab69cf874f800dfd7ed02c730fbb8bab6",
+      "bytes": 15940
+    },
+    {
+      "file": ".evidence-h171-private/live-recovery/1308c0e4-36b3-4fb7-a9f0-9e8886722dc1/auth-resume-a7e46c37-f209-4de4-a00d-0eeb7622f88c/auth-after-sql-response.json",
+      "sha256": "07a631d38cece0ae7d7d1ea6bdb8de0fb767d306fa3630668023d18d6d0d9cbb",
+      "bytes": 628516
+    },
+    {
+      "file": ".evidence-h171-private/live-recovery/1308c0e4-36b3-4fb7-a9f0-9e8886722dc1/auth-resume-a7e46c37-f209-4de4-a00d-0eeb7622f88c/sql-postcheck.json",
+      "sha256": "56ae0f411fae9cef4acfb3b1ff710b8d722cb2a17613a5f08e463ab5baa95035",
+      "bytes": 12815
+    },
+    {
+      "file": ".evidence-h171-private/live-recovery/1308c0e4-36b3-4fb7-a9f0-9e8886722dc1/auth-resume-a7e46c37-f209-4de4-a00d-0eeb7622f88c/sql-commit-outcome.json",
+      "sha256": "0072ec265c7204e5850743083860ee73da46ba0d099106f2e58675826c28f8be",
+      "bytes": 28449
+    },
+    {
+      "file": ".evidence-h171-private/live-recovery/1308c0e4-36b3-4fb7-a9f0-9e8886722dc1/auth-resume-a7e46c37-f209-4de4-a00d-0eeb7622f88c/auth-cleanup-result.json",
+      "sha256": "8fa9ed3eb9e0aa3261c630820acf12f87988002c4976a87000da7eb3dac01f30",
+      "bytes": 435
+    },
+    {
+      "file": ".evidence-h171-private/live-recovery/1308c0e4-36b3-4fb7-a9f0-9e8886722dc1/auth-resume-a7e46c37-f209-4de4-a00d-0eeb7622f88c/cleanup-completion.json",
+      "sha256": "0ba41ecc071d9a795647130bd1a0e2fd9fa008d8bc2d377f6a2786ec5d029cdc",
+      "bytes": 1583
+    },
+    {
+      "file": ".evidence-h171-private/live-recovery/1308c0e4-36b3-4fb7-a9f0-9e8886722dc1/auth-resume-a7e46c37-f209-4de4-a00d-0eeb7622f88c/after-all-cleanup.json.gz",
+      "sha256": "ae110c716cc9d70c7783cc52526837f88ac44f759e458604b9c7028d7a5899f8",
+      "bytes": 27947862
+    }
+  ],
+  "limits": {
+    "financialLiveCertification": "NOT_ASSERTED",
+    "distributedABC": "NO_CERTIFICADO",
+    "publicPagesDeployment": "NOT_ASSERTED",
+    "financialContractActivation": "NOT_ASSERTED",
+    "failedRunRemainsFailed": true,
+    "reportGenerationNetworkRequests": 0,
+    "reportGenerationRemoteWrites": 0,
+    "publicData": "Only QA run identity, aggregate counts, timestamps, table names and evidence hashes. No credentials, row bodies, personal identities or SQL text."
+  }
+}

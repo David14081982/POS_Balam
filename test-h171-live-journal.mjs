@@ -268,6 +268,41 @@ await checkCase('Presence, adoption and request resolution are journaled mutatio
   } finally { await journal.close(); }
 });
 
+await checkCase('Quote allowlist remains exact and respects a narrower caller list and read methods', async () => {
+  for (const [name, method, readRpcs, expected] of [
+    ['quote_sale', 'POST', ['quote_sale'], null],
+    ['quote_sale', 'POST', [], 'JOURNAL_UNKNOWN_RPC_FORBIDDEN'],
+    ['quote_sale', 'PATCH', ['quote_sale'], 'JOURNAL_READ_METHOD_INVALID'],
+    ['quote_sale_commit', 'POST', ['quote_sale_commit'], 'JOURNAL_UNKNOWN_RPC_FORBIDDEN'],
+    ['commit_sale', 'POST', ['commit_sale'], 'JOURNAL_UNKNOWN_RPC_FORBIDDEN'],
+  ]) {
+    const { journal, file } = await newJournal();
+    try {
+      const req = request('/rest/v1/rpc/' + name, { p_inputs: [], p_applications: [], p_courtesy: false }, method);
+      const route = fakeRoute(req);
+      await journal.wrapRoute(r => r.continue(), { ...meta, readRpcs })(route);
+      assert.deepEqual(route.events, expected ? ['abort'] : ['continue']);
+      assert.equal(journal.failure, expected); assert.equal((await disk(file)).entries.length, 0);
+    } finally { await journal.close(); }
+  }
+});
+
+await checkCase('Caller read lists cannot classify a sale command as a quote or skip durable preparation', async () => {
+  const { journal, file } = await newJournal();
+  try {
+    const req = commandRequest(randomUUID(), { type: 'sale', header: { folio: 'QA-SYNTHETIC-ONLY' } });
+    const route = fakeRoute(req);
+    await journal.wrapRoute(async guarded => {
+      const entries = (await disk(file)).entries;
+      assert.equal(entries.length, 1); assert.equal(entries[0].kind, 'rpc:execute_online_command');
+      assert.deepEqual(entries[0].command, req.postDataJSON().p_command);
+      return guarded.continue();
+    }, { ...meta, readRpcs: ['quote_sale', 'execute_online_command'] })(route);
+    assert.deepEqual(route.events, ['continue']); assert.equal(journal.failure, null);
+    assert.equal((await disk(file)).entries.length, 1);
+  } finally { await journal.close(); }
+});
+
 await checkCase('Unknown RPC, Storage, REST, legacy archive and foreign writes all fail closed', async () => {
   const rejected = [
     request('/rest/v1/rpc/unknown_writer', { any: 'data' }),

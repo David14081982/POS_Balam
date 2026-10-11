@@ -2,7 +2,7 @@
 import { createHash } from 'node:crypto';
 import { journalHash } from './h171-live-journal.mjs';
 import { postgresJsonbHash } from './h171-live-reconciliation.mjs';
-import { AUTH_INCOMING_FKS } from './h171-auth-retirement.mjs';
+import { LIVE_AUTH_INCOMING_FKS, LIVE_AUTH_QA_EMPTY_RELATIONS } from './h171-live-auth-dependencies.mjs';
 import { SNAPSHOT_PROJECT, SNAPSHOT_ACTOR, SNAPSHOT_TABLES_SHA256, snapshotConnection,
   buildLiveSnapshotCatalogSql } from './h171-live-snapshot.mjs';
 
@@ -111,7 +111,7 @@ expected_tables("table") AS(VALUES ${catalog.map(t=>'('+q(t.table)+')').join(','
 fingerprints AS(SELECT e."table",count(r.row_md5) row_count,md5(coalesce(string_agg(r.row_md5,'' ORDER BY r.row_md5),'')) full_rows_md5
  FROM expected_tables e LEFT JOIN row_hashes r ON r."table"=e."table" GROUP BY e."table"),
 foreign_auth_rows AS MATERIALIZED(SELECT u.id,md5(to_jsonb(u)::text) row_md5 FROM auth.users u WHERE NOT EXISTS(SELECT 1 FROM targets t WHERE t.id=u.id)),
-fk_counts AS(${AUTH_INCOMING_FKS.map(f=>countQuery(f.relation,f.column,q(f.effect)+'::text effect')).join('\nUNION ALL\n')}),
+fk_counts AS(${LIVE_AUTH_INCOMING_FKS.map(f=>countQuery(f.relation,f.column,q(f.effect)+'::text effect')).join('\nUNION ALL\n')}),
 logical_counts AS(${logical.map(c=>countQuery(c.relation,c.column,"'logical'::text effect")).join('\nUNION ALL\n')}),
 storage_counts AS(${storageOwnerColumns.map(c=>countQuery(c.relation,c.column,q(c.type)+'::text type')).join('\nUNION ALL\n')}),
 fk_catalog AS(
@@ -172,11 +172,12 @@ export function validateAuthCleanupPreflight({input,plan,catalog,sourceUrl,stora
   fail(Array.isArray(r.pos_fingerprints)&&r.pos_fingerprints.length===64&&
     same(r.pos_fingerprints.map(t=>t.table).sort(),catalog.map(t=>t.table).sort())&&r.pos_fingerprints.every(t=>Number.isSafeInteger(t.row_count)&&t.row_count>=0&&MD5.test(t.full_rows_md5)),'FINGERPRINT_COVERAGE');
   block(same(r.pos_catalog.columns,catalog.flatMap(t=>t.columns.map(c=>({table:t.table,...c}))).sort((a,b)=>a.table.localeCompare(b.table)||a.name.localeCompare(b.name))),'POS_COLUMN_CATALOG_DRIFT');
-  const ids=targets.map(t=>t.id).sort(),keys=AUTH_INCOMING_FKS.map(fkKey).sort();
-  block(Array.isArray(r.fk_catalog)&&r.fk_catalog.length===18&&r.fk_catalog.every(f=>f.validated===true&&same(f.referenced_columns,['id'])&&f.columns?.length===1)&&same(r.fk_catalog.map(fkKey).sort(),keys),'AUTH_FK_CATALOG_DRIFT');
-  fail(Array.isArray(r.fk_counts)&&r.fk_counts.length===ids.length*18&&r.fk_counts.every(c=>ids.includes(c.id)&&Number.isSafeInteger(c.rows)&&c.rows>=0)&&
+  const ids=targets.map(t=>t.id).sort(),keys=LIVE_AUTH_INCOMING_FKS.map(fkKey).sort();
+  block(Array.isArray(r.fk_catalog)&&r.fk_catalog.length===keys.length&&r.fk_catalog.every(f=>f.validated===true&&same(f.referenced_columns,['id'])&&f.columns?.length===1)&&same(r.fk_catalog.map(fkKey).sort(),keys),'AUTH_FK_CATALOG_DRIFT');
+  fail(Array.isArray(r.fk_counts)&&r.fk_counts.length===ids.length*keys.length&&r.fk_counts.every(c=>ids.includes(c.id)&&Number.isSafeInteger(c.rows)&&c.rows>=0)&&
     ids.every(id=>same(r.fk_counts.filter(c=>c.id===id).map(fkKey).sort(),keys)),'FK_COUNT_COVERAGE');
   block(r.fk_counts.every(c=>c.relation.startsWith('auth.')||c.rows===0),'POS_FK_DEPENDENCIES_REMAIN');
+  block(r.fk_counts.every(c=>!LIVE_AUTH_QA_EMPTY_RELATIONS.includes(c.relation)||c.rows===0),'UNEXPECTED_QA_AUTH_DEPENDENCIES');
   const logical=catalog.flatMap(t=>t.columns.filter(c=>c.type==='uuid'||/^(actor_id|actor_user_id|target_user_id|user_id|created_by|updated_by|seller_id)$/.test(c.name)||
     (t.table==='sellers'&&c.name==='id')).map(c=>'pos.'+t.table+'|'+c.name)).sort();
   fail(Array.isArray(r.logical_pos_reference_counts)&&r.logical_pos_reference_counts.length===ids.length*logical.length&&
@@ -199,7 +200,7 @@ export function validateAuthCleanupPreflight({input,plan,catalog,sourceUrl,stora
   fail(Array.isArray(r.non_target_auth_ids)&&same([...r.non_target_auth_ids].sort(),[...plan.authBaseline.ids].sort())&&
     r.foreign_auth_fingerprint?.row_count===r.non_target_auth_ids.length&&MD5.test(r.foreign_auth_fingerprint.full_rows_md5),'FOREIGN_AUTH_CENSUS_CHANGED');
   const fn=r.pos_catalog.functions?.find(f=>f.signature==='pos.h166_advance_snapshot_revision()');
-  const sources=AUTH_INCOMING_FKS.filter(f=>f.relation.startsWith('pos.')&&['c','n','d'].includes(f.effect)).flatMap(f=>{
+  const sources=LIVE_AUTH_INCOMING_FKS.filter(f=>f.relation.startsWith('pos.')&&['c','n','d'].includes(f.effect)).flatMap(f=>{
     const t=r.pos_catalog.triggers.find(t=>'pos.'+t.table===f.relation&&t.name==='h166_snapshot_changed');
     if(!t)return [];
     block(t.enabled==='O'&&t.internal===false&&t.function_signature===fn?.signature&&
