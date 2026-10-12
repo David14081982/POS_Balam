@@ -1,0 +1,28 @@
+{
+  "date": "2026-10-12T04:20:33.909Z",
+  "failedWorkflow": 38203015461,
+  "scope": "Test fixture only; client bytes unchanged",
+  "artifactSHA256": "c8a10ea17f9f3fc58e2ea5e56bb0781d1b207d53fed409ed86f99a852ac30af4",
+  "runs": [
+    {
+      "kind": "baseline-UTC",
+      "passed": 34,
+      "failed": 4
+    },
+    {
+      "kind": "final-UTC",
+      "passed": 38,
+      "failed": 0
+    },
+    {
+      "kind": "final-America/Hermosillo",
+      "passed": 38,
+      "failed": 0
+    },
+    {
+      "kind": "final-Asia/Tokyo",
+      "passed": 38,
+      "failed": 0
+    }
+  ]
+}

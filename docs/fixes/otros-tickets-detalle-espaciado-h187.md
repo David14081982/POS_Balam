@@ -3,7 +3,7 @@
 **Riesgo:** H-187
 **Estado:** RESUELTO en código — pruebas locales aprobadas; publicación pendiente
 **Fecha:** 11/10/2026
-**Commit:** Pendiente de commit
+**Commit:** `759ddf4aac26ab92c7c170ebca09282ae92897c7`
 
 ## Problema y reproducción
 
@@ -132,8 +132,16 @@ la omisión del detalle general no cubre Entrega/Recibe.
 
 ## Despliegue
 
-Regresión local aprobada. Pendiente de commit, push, workflow y comparación
-pública byte a byte. Sin migraciones ni escrituras comerciales remotas.
+Commit técnico enviado a main. Regresión local aprobada; workflow ordinario
+`38203015461` falló antes del despliegue en `test-discounts.mjs` (34/38).
+Reproducción local con `TZ=UTC`: mismo resultado. El fixture usaba el calendario
+del equipo, diferente del comercial -07:00 a las 04:18Z. Prueba y motor son
+idénticos al padre H-186, no es una regresión del ticket.
+Se fija exclusivamente el instante del servidor y sus fechas comerciales en
+la prueba: **38/38** en UTC, America/Hermosillo y Asia/Tokyo, con las mismas
+aserciones y un instante en el que UTC/Hermosillo tienen fechas diferentes.
+No cambia el producto ni los bytes del bundle. Publicación pendiente.
+Sin migraciones ni escrituras comerciales remotas.
 
 ## Riesgo residual y pendientes
 

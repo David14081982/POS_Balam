@@ -1,0 +1,24 @@
+{
+  "date": "2026-10-12T04:20:15.546Z",
+  "artifactSHA256": "c8a10ea17f9f3fc58e2ea5e56bb0781d1b207d53fed409ed86f99a852ac30af4",
+  "results": [
+    {
+      "name": "test-h186-financial-data.mjs",
+      "exitCode": 0,
+      "output": "PASS JOEL amounts and included IVA\nPASS decimal HALF UP agrees with numeric instead of floating point\nPASS additional allocation cannot spend more than its budget\nPASS multiple units retain every cent in persisted segments\nPASS additional residue is fully applied when final line has only one cent\nPASS 100 percent produces no invented payments\nPASS explicit courtesy keeps gift evidence and coherent zero tax\nPASS new exchange recognized value is paid price; legacy unchanged\nPASS malformed inputs cannot become valid monetary quote\nPASS fixed additional discounts reject fractional cents before checkout, matching SQL\nPASS partial returns refund exact segment price and consume exact identity\nPASS zero-priced return restores quantity without refund components\nPASS return after exchanging another piece never refunds that piece twice\nPASS V2 split return/exchange/return preserves commission on the exchanged value\nPASS V2 one-cent commission survives two tiny refunds and an exchange\nPASS V2 total refund without an exchange closes the frozen commission exactly\nPASS V2 monetary completion closes a cent before a remaining zero-priced piece\nPASS legacy return/exchange/return retains its historical refund and commission rule\nPASS V2 proportional commission rounds half cents exactly and closes the remainder\nPASS legacy proportional half-cent rounding remains unchanged\n{\"passed\":20,\"failed\":0,\"remoteWrites\":0}\n",
+      "error": ""
+    },
+    {
+      "name": "test-h186-financial-sql.mjs",
+      "exitCode": 0,
+      "output": "{\"ok\":true,\"passed\":135,\"engine\":\"isolated PGlite\",\"network\":false}\n",
+      "error": ""
+    },
+    {
+      "name": "test-h186-live-negatives.mjs",
+      "exitCode": 0,
+      "output": "PASS real DATA capture reserves only QA folio and preserves local data/gateway\nPASS failed capture cannot replace the gateway or dispatch a sale\nPASS actual STORE wire iva with a distinct receipt identity\nPASS actual STORE wire total with a distinct receipt identity\nPASS actual STORE wire payment with a distinct receipt identity\nPASS actual STORE wire correct with a distinct receipt identity\nPASS LIVE integer oracle separates exchanged value from full monetary refund\nPASS LIVE oracle checks half cents and zero refunds independently of DATA\nPASS LIVE guard rejects excessive, duplicated and altered persisted reversals\nPASS LIVE seller guard preserves original commission during exchange and exact refund delta\nPASS real DATA/STORE rejects unready next promotion before commercial transport\nPASS readiness wait sends the next real promotion exactly once after admission\nPASS every new command waits for its own intervening readiness transition\nPASS failed readiness sends zero commands and is not retried\nPASS a dispatched action rejection propagates once without retry or replay\nPASS a later readiness loss still reaches the unchanged application guard without retry\n{\"passed\":16,\"network\":false,\"scope\":\"Real DATA/STORE transport, commission guards and readiness admission; SQL rejection authority covered separately\"}\n",
+      "error": ""
+    }
+  ]
+}

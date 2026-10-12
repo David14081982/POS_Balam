@@ -8,7 +8,7 @@ y `BLOQUEADO`.
 ## H-187 — Extender detalle limpio y pie compacto a los demás comprobantes
 
 **Estado:** RESUELTO en código; publicación pendiente.
-**Fecha:** 11/10/2026. **Commit:** Pendiente de commit.
+**Fecha:** 11/10/2026. **Commit:** `759ddf4aac26ab92c7c170ebca09282ae92897c7`.
 **Solicitud:** extender H-185 a cortesías, apartados/anticipos, abonos,
 liquidaciones y cambios; quitar SKU de devoluciones. Publicar al terminar.
 **Evidencia:** BalamTicket condiciona omisiones y márgenes a ventaNormal;
@@ -25,6 +25,12 @@ USB/sistema, consecutivos, aislamiento, ciclo y reimpresiones cubiertos.
 Techo de altura refijado tras regresión. Sin migraciones ni cambios financieros.
 **Artefacto:** HTML SHA-256
 `c8a10ea17f9f3fc58e2ea5e56bb0781d1b207d53fed409ed86f99a852ac30af4`.
+**Incidencia de entrega:** workflow 38203015461 detuvo la publicación en
+`test-discounts.mjs`: 34/38 en UTC a las 04:18Z. El fixture construye fechas
+con la zona del equipo y las compara con vigencia comercial -07:00; la promo
+supuestamente vencida aún está vigente en Hermosillo. Código/prueba iguales
+al padre H-186. Se corrige sólo el reloj y las fechas de la prueba para
+desbloquear esta entrega, conservando las 38 aserciones y el producto probado.
 **Residual:** impresión física NOT_TESTED; no implica certificación A/B/C.
 **Corrección:** `docs/fixes/otros-tickets-detalle-espaciado-h187.md`.
 

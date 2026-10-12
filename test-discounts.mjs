@@ -20,7 +20,8 @@ const sandbox = {
 };
 sandbox.window.addEventListener = noop;
 sandbox.window.dispatchEvent = noop;
-sandbox.window.CORE = { invokeSync: name => name === 'serverNow' ? new Date() : null,
+// H-187: fixed server instant crosses the UTC day; independent of runner timezone.
+sandbox.window.CORE = { invokeSync: name => name === 'serverNow' ? new Date('2026-10-11T21:00:00-07:00') : null,
   registerCatalogProducts: noop, registerCatalogPromotions: noop, registerMonetaryDocuments: noop };
 sandbox.window.UI = UI; sandbox.window.HX = HX; sandbox.window.DATA = DATA;
 sandbox.window.CONFIG = CONFIG; sandbox.window.PROMOS = null;
@@ -103,12 +104,11 @@ check('vista previa coincide con POS', marginPreview.unit, 600);
 CONFIG_VALUES['discount.minMarginPct'] = 0;
 
 console.log('\n── E) lineUnit con promos ACTIVAS por fecha/alcance ─────');
-// El motor usa la fecha del servidor y la zona comercial de Hermosillo.
-const localDay = (ms) => { const d = new Date(ms); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
-const hoy = new Date();
-const ayer = localDay(hoy.getTime() - 86400000);
-const manana = localDay(hoy.getTime() + 86400000);
-const pYer = localDay(hoy.getTime() - 2 * 86400000);
+// Fechas comerciales relativas al instante fijo del servidor (11/10 en Hermosillo,
+// 12/10 en UTC). No derivarlas del calendario local del runner.
+const ayer = '2026-10-10';
+const manana = '2026-10-12';
+const pYer = '2026-10-09';
 DATA.promos = [
   Object.assign(promo('pct', 20, { cats: ['guayabera'] }), { inicio: ayer, fin: manana }),   // Activa
   Object.assign(promo('pct', 50, {}), { inicio: manana, fin: '' }),                            // Programada (futuro)
