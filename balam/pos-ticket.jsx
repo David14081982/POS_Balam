@@ -35,11 +35,6 @@
     return t;
   };
   const money2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
-  const ornamentEvidence = line => {
-    if (!line || (!line.ornamento && !Array.isArray(line.ornColors))) return '';
-    const colors = Array.isArray(line.ornColors) ? line.ornColors.join(' + ') : '';
-    return [line.ornamento, colors].filter(Boolean).join(' · ');
-  };
 
   // ── H-32: presentación financiera solicitada por Finanzas ────────────────────
   // Importe e IVA describen el PRECIO ORIGINAL (antes del descuento), no el total cobrado.
@@ -601,10 +596,6 @@
       };
       return frozen;
     });
-    const frozenOrnament = (line, display) => {
-      const colors = (display.ornamentColors || []).map(item => item.label || item.code).filter(Boolean).join(' + ');
-      return [display.ornamentLabel || line.ornamento, colors].filter(Boolean).join(' · ');
-    };
     const pagos = D.paymentsForSale ? D.paymentsForSale(sale.folio) : [];
     const snapshotCompleto = D.hasFinancialSnapshot ? D.hasFinancialSnapshot(sale) : hasSnapshot;
     // Estado de cobranza: lo pagado y lo que falta. Se lee de la venta —nunca se
@@ -687,10 +678,10 @@
           h('div', { key: 'd', className: 'mt-3 text-left', style: { fontSize: '12px', lineHeight: 1.6 } }, [
             h('div', { key: 'h1', className: 'uppercase text-on-surface-variant', style: { letterSpacing: '0.12em' } }, 'Entrega'),
             ...(exchange.lineas || []).filter(l => l.lado === 'devuelto').map((l, i) =>
-              h('div', { key: 'e' + i }, l.qty + ' × ' + l.nombre + ' · talla ' + l.talla + (ornamentEvidence(l) ? ' · ' + ornamentEvidence(l) : '') + ' · ' + fmt(l.precio))),
+              h('div', { key: 'e' + i }, l.qty + ' × ' + l.nombre + ' · talla ' + l.talla + ' · ' + fmt(l.precio))),
             h('div', { key: 'h2', className: 'uppercase text-on-surface-variant mt-2', style: { letterSpacing: '0.12em' } }, 'Recibe'),
             ...(exchange.lineas || []).filter(l => l.lado === 'entregado').map((l, i) =>
-              h('div', { key: 'r' + i }, l.qty + ' × ' + l.nombre + ' · talla ' + l.talla + (ornamentEvidence(l) ? ' · ' + ornamentEvidence(l) : '') + ' · ' + fmt(l.precio))),
+              h('div', { key: 'r' + i }, l.qty + ' × ' + l.nombre + ' · talla ' + l.talla + ' · ' + fmt(l.precio))),
             Number(exchange.diferencia) > 0
               ? h('div', { key: 'df', className: 'font-semibold text-primary mt-2' }, 'Diferencia pagada · ' + fmt(exchange.diferencia))
               : null,
@@ -723,14 +714,10 @@
               h('span', { key: 'p', className: 'font-semibold text-primary shrink-0', style: { fontSize: '14px' } }, fmt((l.precioOrig != null ? l.precioOrig : l.precio) * l.qty)),
             ]),
             h('div', { key: 'b', className: 'flex justify-between items-start gap-3 mt-1 text-on-surface-variant', style: { fontSize: '10px', lineHeight: 1.4 } }, [
-              // H-185: la venta omite SKU sólo en papel; conserva talla/color congelados.
-              h('span', { key: 's', className: 'flex-1 min-w-0' }, `${ventaNormal ? '' : 'SKU: ' + (shown.sku || l.sku) + ' · '}Talla: ${shown.sizeLabel || l.talla}${shown.colorLabel ? ' · ' + shown.colorLabel : ''}`),
+              // H-185/H-187: todos los comprobantes omiten SKU/ornamento sólo al imprimir.
+              h('span', { key: 's', className: 'flex-1 min-w-0' }, `Talla: ${shown.sizeLabel || l.talla}${shown.colorLabel ? ' · ' + shown.colorLabel : ''}`),
               h('span', { key: 'q', className: 'shrink-0' }, `Cant: ${l.qty}`),
             ]),
-            !ventaNormal && frozenOrnament(l, shown) ? h('div', {
-              key: 'oc', className: 'mt-1 text-on-surface-variant', style: { fontSize: '10px', lineHeight: 1.4 },
-              'data-testid': 'ticket-ornament-evidence',
-            }, 'Ornamento: ' + frozenOrnament(l, shown)) : null,
           ]); })),
         ]),
         // Totales
@@ -809,8 +796,8 @@
         (conCobranza && saldoPend > 0) ? h('div', { key: 'nt', className: 'w-full mt-4 p-3 border border-outline-variant rounded-lg text-on-surface-variant text-left', style: { fontSize: '10px', lineHeight: 1.5 } },
           'Conserva este comprobante. La mercancía se entrega al liquidar el saldo.') : null,
         // Pie
-        h('div', { key: 'f', className: 'tk-block w-full ' + (ventaNormal ? 'mt-4' : 'mt-12') + ' mb-1 flex flex-col items-center' }, [
-          h('div', { key: 'd', className: 'w-12 h-px bg-outline-variant ' + (ventaNormal ? 'mb-2' : 'mb-6') }),
+        h('div', { key: 'f', className: 'tk-block w-full mt-4 mb-1 flex flex-col items-center' }, [
+          h('div', { key: 'd', className: 'w-12 h-px bg-outline-variant mb-2' }),
           h('p', { key: 'm', className: 'font-headline italic text-primary px-2 mb-1', style: { fontSize: '20px', lineHeight: 1.35 } }, frozenStore.footer || (!receiptSnapshot && C.get('ticket.footer')) || 'Gracias por ser parte de nuestra herencia.'),
           (frozenStore.tagline || (!receiptSnapshot && C.get('ticket.tagline'))) && h('p', { key: 'tl', className: 'text-on-surface-variant px-4 mt-3', style: { fontSize: '12px', lineHeight: 1.6 } }, frozenStore.tagline || C.get('ticket.tagline')),
           h('div', { key: 'bc', className: 'mt-9 w-full flex flex-col items-center gap-2' }, [
@@ -877,7 +864,7 @@
           const shown = displayFor(line, index);
           return h('div', { key: index, className: 'tk-block border-b border-outline-variant pb-3', style: { fontSize: '12px' } }, [
             h('div', { key: 'n', className: 'font-semibold' }, shown.name || line.nombre),
-            h('div', { key: 'a' }, `SKU: ${shown.sku || line.sku} · Talla: ${shown.sizeLabel || line.talla}`),
+            h('div', { key: 'a' }, `Talla: ${shown.sizeLabel || line.talla}`),
             h('div', { key: 'q' }, `Cantidad: ${line.qty} · Importe: ${fmt((Number(line.precio) || 0) * (Number(line.qty) || 0))}`),
           ]);
         })),

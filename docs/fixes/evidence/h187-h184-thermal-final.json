@@ -1,0 +1,272 @@
+{
+  "baseline": false,
+  "artifactSHA256": "c8a10ea17f9f3fc58e2ea5e56bb0781d1b207d53fed409ed86f99a852ac30af4",
+  "results": [
+    {
+      "name": "real payment-method thermal ticket uses USB and retains its one unlabelled copy",
+      "ok": true,
+      "heights": [
+        1789
+      ],
+      "bytes": 129276,
+      "copies": 1,
+      "payloadHash": "c809aa12ad1da36414f6fed3d152e22f633774a046dafecc1bea69cc3ab957ec"
+    },
+    {
+      "name": "report reprint sends the same frozen complete image with one copy and no business changes",
+      "ok": true,
+      "heights": [
+        1789
+      ],
+      "bytes": 129276,
+      "copies": 1,
+      "payloadHash": "c809aa12ad1da36414f6fed3d152e22f633774a046dafecc1bea69cc3ab957ec"
+    },
+    {
+      "name": "report popup can close after capture without losing any raster rows",
+      "ok": true,
+      "heights": [
+        1789
+      ],
+      "bytes": 129276,
+      "copies": 1,
+      "payloadHash": "c809aa12ad1da36414f6fed3d152e22f633774a046dafecc1bea69cc3ab957ec"
+    },
+    {
+      "name": "disconnected report returns to BALAM and connects with a valid main-window gesture after popup activation expires",
+      "ok": true,
+      "heights": [
+        1789
+      ],
+      "bytes": 129276,
+      "copies": 1,
+      "payloadHash": "c809aa12ad1da36414f6fed3d152e22f633774a046dafecc1bea69cc3ab957ec",
+      "mainWindowChooserGesture": true,
+      "systemDialogs": 0
+    },
+    {
+      "name": "A4 report retains its system destination, one copy and full report with USB selected",
+      "ok": true
+    },
+    {
+      "name": "apartado: confirmed original emits two full USB copies with its own financial meaning",
+      "ok": true,
+      "heights": [
+        2829,
+        2829
+      ],
+      "bytes": 408827,
+      "copies": 2,
+      "payloadHash": "d7e3c7ea83cf0c34c8e81e7c942553139f6898e83abb10b40eacc0bc1ff06cac"
+    },
+    {
+      "name": "anticipo: confirmed original emits two full USB copies with its own financial meaning",
+      "ok": true,
+      "heights": [
+        2942,
+        2942
+      ],
+      "bytes": 425147,
+      "copies": 2,
+      "payloadHash": "a72a70cace826245732fc9fedbd41b9081879c0fde008559f2a1c7d6767a47d4"
+    },
+    {
+      "name": "abono: confirmed original emits two full USB copies with its own financial meaning",
+      "ok": true,
+      "heights": [
+        3041,
+        3041
+      ],
+      "bytes": 439467,
+      "copies": 2,
+      "payloadHash": "ba6f1036413b2851c9718ee82f36847ae3b3bc62412d14fcabe228eed9c1f383"
+    },
+    {
+      "name": "liquidacion: confirmed original emits two full USB copies with its own financial meaning",
+      "ok": true,
+      "heights": [
+        2823,
+        2823
+      ],
+      "bytes": 407963,
+      "copies": 2,
+      "payloadHash": "0bf54559c61bdbe828b454797611463701efa7ce72517d841b59c3f710e6dc66"
+    },
+    {
+      "name": "cambio-cobrado: confirmed original emits two full USB copies with its own financial meaning",
+      "ok": true,
+      "heights": [
+        3380,
+        3380
+      ],
+      "bytes": 488443,
+      "copies": 2,
+      "payloadHash": "000205a7afd7f701d4a8311b7ac3bc5172efb42335b743ea237a23a26807c697"
+    },
+    {
+      "name": "cambio-sobrante: confirmed original emits two full USB copies with its own financial meaning",
+      "ok": true,
+      "heights": [
+        3142,
+        3142
+      ],
+      "bytes": 454059,
+      "copies": 2,
+      "payloadHash": "a94db50775c55f3ab0729a6645278350eb478b856adadb0e73f5b225821beb74"
+    },
+    {
+      "name": "cambio-igual: confirmed original emits two full USB copies with its own financial meaning",
+      "ok": true,
+      "heights": [
+        3038,
+        3038
+      ],
+      "bytes": 439019,
+      "copies": 2,
+      "payloadHash": "19daa943b71900466de779d4f741e88416d640b600a7f3e04b47dd84117accb4"
+    },
+    {
+      "name": "devolucion: confirmed original emits two full USB copies with its own financial meaning",
+      "ok": true,
+      "heights": [
+        1434,
+        1434
+      ],
+      "bytes": 207243,
+      "copies": 2,
+      "payloadHash": "4187021673cf7160c61136049ba28e513cb71805d4cf3d1db65888af23e0b7c0"
+    },
+    {
+      "name": "real layaway reprint survives immediate source unmount and prints its last payment",
+      "ok": true,
+      "heights": [
+        3041,
+        3041
+      ],
+      "bytes": 439467,
+      "copies": 2,
+      "payloadHash": "ba6f1036413b2851c9718ee82f36847ae3b3bc62412d14fcabe228eed9c1f383"
+    },
+    {
+      "name": "real Reports reprint preserves historical identity and business state over USB",
+      "ok": true,
+      "heights": [
+        1980,
+        1980
+      ],
+      "bytes": 286139,
+      "copies": 2,
+      "payloadHash": "630a1fc31930e4ee60dad4dfbd2f0e0c74164b9a84444f62db171cf0b2b613f6"
+    }
+  ],
+  "hardware": "NOT_TESTED",
+  "remoteBusinessWrites": 0,
+  "browserVersion": "148.0.7778.96",
+  "report": {
+    "job": {
+      "createdAt": "2026-10-12T04:06:14.057Z",
+      "dataReadyAt": "2026-10-12T04:06:14.066Z",
+      "renderStartedAt": "2026-10-12T04:06:14.071Z",
+      "assetsReadyAt": null,
+      "renderFinishedAt": "2026-10-12T04:06:15.056Z",
+      "payloadReadyAt": "2026-10-12T04:06:15.057Z",
+      "queuedAt": "2026-10-12T04:06:14.067Z",
+      "sendStartedAt": "2026-10-12T04:06:15.061Z",
+      "handoffFinishedAt": "2026-10-12T04:06:15.410Z",
+      "completedAt": "2026-10-12T04:06:15.416Z",
+      "failedAt": null,
+      "payloadLength": 27522,
+      "pixelWidth": null,
+      "pixelHeight": null,
+      "pageWidth": 80,
+      "pageHeight": null,
+      "printJobId": "print-mv4qcd1l-1",
+      "source": "reportes-metodos",
+      "ticketId": null,
+      "documentType": "payment-method-report",
+      "copyNumber": 1,
+      "totalCopies": 1,
+      "copyLabel": null,
+      "transport": "usb",
+      "printerTarget": "usb",
+      "result": "USB_TRANSFERRED",
+      "errorCode": null,
+      "errorStack": null,
+      "physicalPrintConfirmed": false,
+      "copies": [
+        {
+          "copyLabel": null,
+          "documentHash": "063b84f3959743a7c04244cfab9f575bda004fe00173efc652145ac76ca0ebf4",
+          "payloadHash": "7cc0e06a0d5a15c978471cc2739a0233ace5d0dce62213f0117c6340162ec7ea",
+          "pixelWidth": 576,
+          "pixelHeight": 1789
+        }
+      ],
+      "payloadHash": "c809aa12ad1da36414f6fed3d152e22f633774a046dafecc1bea69cc3ab957ec",
+      "bytesSent": 129276,
+      "copiesSent": 1,
+      "stage": "COMPLETED",
+      "events": [
+        {
+          "stage": "CREATED",
+          "timestamp": "2026-10-12T04:06:14.057Z"
+        },
+        {
+          "stage": "DATA_READY",
+          "timestamp": "2026-10-12T04:06:14.066Z"
+        },
+        {
+          "stage": "QUEUED",
+          "timestamp": "2026-10-12T04:06:14.067Z"
+        },
+        {
+          "stage": "RENDER_STARTED",
+          "timestamp": "2026-10-12T04:06:14.071Z"
+        },
+        {
+          "stage": "RENDER_FINISHED",
+          "timestamp": "2026-10-12T04:06:15.056Z",
+          "pageWidth": 80,
+          "payloadHash": "c809aa12ad1da36414f6fed3d152e22f633774a046dafecc1bea69cc3ab957ec"
+        },
+        {
+          "stage": "PAYLOAD_READY",
+          "timestamp": "2026-10-12T04:06:15.057Z",
+          "payloadLength": 27522
+        },
+        {
+          "stage": "WAITING_TURN",
+          "timestamp": "2026-10-12T04:06:15.058Z"
+        },
+        {
+          "stage": "SEND_STARTED",
+          "timestamp": "2026-10-12T04:06:15.061Z",
+          "result": "USB_SENDING"
+        },
+        {
+          "stage": "HANDOFF_FINISHED",
+          "timestamp": "2026-10-12T04:06:15.410Z",
+          "result": "USB_TRANSFERRED"
+        },
+        {
+          "stage": "COMPLETED",
+          "timestamp": "2026-10-12T04:06:15.416Z",
+          "physicalPrintConfirmed": false
+        }
+      ]
+    },
+    "nativeDialogs": 0,
+    "usbTransfers": 58,
+    "nativeArtifacts": [],
+    "businessPreserved": true
+  },
+  "cost": {
+    "nativeDialogs": 0,
+    "buttonActions": 1
+  },
+  "guarantees": {
+    "oneCopy": true,
+    "businessPreserved": true,
+    "honestPhysicalStatus": true
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "date": "2026-10-12T04:09:43.673Z",
+  "artifactSHA256": "c8a10ea17f9f3fc58e2ea5e56bb0781d1b207d53fed409ed86f99a852ac30af4",
+  "results": [
+    {
+      "test": "test-h183-usb-receipts.mjs",
+      "exitCode": 0,
+      "summary": [
+        "PASS connected USB automatic commercial receipt avoids system dialogs without losing guarantees",
+        "PASS consecutive long receipt preserves all pixels and USB has priority over configured THERMER",
+        "PASS automatic disabled waits for one manual action; duplicate activation never interleaves or resends",
+        "PASS one-copy setting delivers exactly one original document",
+        "PASS disconnected USB blocks PDF and THERMER; reconnect alone never resends a waiting receipt",
+        "PASS receipt connect-and-print keeps device selection in a user gesture and sends the frozen job",
+        "PASS cancelling while permission is pending prevents late connection from sending",
+        "PASS cancel during rendering releases resources and cannot send a late raster",
+        "PASS original snapshots remain intact when the source receipt unmounts during rendering",
+        "PASS partial second copy is uncertain, cannot be acknowledged/retried and stops before another cut",
+        "PASS reset and reconnection after partial output do not replay the uncertain document",
+        "PASS uncertain job holds a queued successor across reset/reconnect until an explicit print action",
+        "PASS USB is explicit and local: connection does not enable it; enabling keeps connection after Settings",
+        "PASS reload retains only local USB preference without requesting permission or printing",
+        "PASS PC default keeps the system renderer and has no USB activation",
+        "PASS legacy THERMER remains opt-in when local USB is disabled",
+        "16/16 C:\\Users\\david\\AppData\\Local\\Temp\\balam-h183-usb-commercial-xUMdeC"
+      ]
+    },
+    {
+      "test": "test-h184-all-thermal.mjs",
+      "exitCode": 0,
+      "summary": [
+        "PASS real payment-method thermal ticket uses USB and retains its one unlabelled copy",
+        "PASS report reprint sends the same frozen complete image with one copy and no business changes",
+        "PASS report popup can close after capture without losing any raster rows",
+        "PASS disconnected report returns to BALAM and connects with a valid main-window gesture after popup activation expires",
+        "PASS A4 report retains its system destination, one copy and full report with USB selected",
+        "PASS apartado: confirmed original emits two full USB copies with its own financial meaning",
+        "PASS anticipo: confirmed original emits two full USB copies with its own financial meaning",
+        "PASS abono: confirmed original emits two full USB copies with its own financial meaning",
+        "PASS liquidacion: confirmed original emits two full USB copies with its own financial meaning",
+        "PASS cambio-cobrado: confirmed original emits two full USB copies with its own financial meaning",
+        "PASS cambio-sobrante: confirmed original emits two full USB copies with its own financial meaning",
+        "PASS cambio-igual: confirmed original emits two full USB copies with its own financial meaning",
+        "PASS devolucion: confirmed original emits two full USB copies with its own financial meaning",
+        "PASS real layaway reprint survives immediate source unmount and prints its last payment",
+        "PASS real Reports reprint preserves historical identity and business state over USB",
+        "15/15 C:\\Users\\david\\AppData\\Local\\Temp\\balam-h184-usb-commercial-FtIC3j"
+      ]
+    },
+    {
+      "test": "test-h180-system-print.mjs",
+      "exitCode": 0,
+      "summary": [
+        "PASS windows: manual usa sistema sin abrir aplicaciones",
+        "PASS windows: documento íntegro, misma geometría y hash entregado",
+        "PASS windows: foco no libera el diálogo ni confirma papel",
+        "PASS windows: print.auto abre el diálogo al montar el comprobante confirmado",
+        "PASS windows: print.auto apagado espera el botón y el doble clic no duplica",
+        "PASS windows: sin RawBT, mutaciones comerciales ni errores",
+        "PASS android: manual usa sistema sin abrir aplicaciones",
+        "PASS android: documento íntegro, misma geometría y hash entregado",
+        "PASS android: foco no libera el diálogo ni confirma papel",
+        "PASS android: print.auto abre el diálogo al montar el comprobante confirmado",
+        "PASS android: print.auto apagado espera el botón y el doble clic no duplica",
+        "PASS android: sin RawBT, mutaciones comerciales ni errores",
+        "PASS android-desktop: manual usa sistema sin abrir aplicaciones",
+        "PASS android-desktop: documento íntegro, misma geometría y hash entregado",
+        "PASS android-desktop: foco no libera el diálogo ni confirma papel",
+        "PASS android-desktop: print.auto abre el diálogo al montar el comprobante confirmado",
+        "PASS android-desktop: print.auto apagado espera el botón y el doble clic no duplica",
+        "PASS android-desktop: sin RawBT, mutaciones comerciales ni errores",
+        "18/18; evidence: .work/h187/test-h180-system-print"
+      ]
+    }
+  ]
+}

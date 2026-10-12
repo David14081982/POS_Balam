@@ -1,0 +1,132 @@
+{
+  "date": "2026-10-12T04:01:35.773Z",
+  "artifactSHA256": "c8a10ea17f9f3fc58e2ea5e56bb0781d1b207d53fed409ed86f99a852ac30af4",
+  "sourceMode": false,
+  "ticketSourceSHA256": "b5ddc30d1c579ff2889a3e6e27e26841cd5625b5d490e1563f7ab8fbfd1262e6",
+  "results": [
+    {
+      "name": "pct30: resumen preserva original y usa IVA del importe cobrado",
+      "ok": true
+    },
+    {
+      "name": "pct30: ticket proyecta snapshot financiero íntegro",
+      "ok": true
+    },
+    {
+      "name": "pct50: resumen preserva original y usa IVA del importe cobrado",
+      "ok": true
+    },
+    {
+      "name": "pct50: ticket proyecta snapshot financiero íntegro",
+      "ok": true
+    },
+    {
+      "name": "pct60: resumen preserva original y usa IVA del importe cobrado",
+      "ok": true
+    },
+    {
+      "name": "pct60: ticket proyecta snapshot financiero íntegro",
+      "ok": true
+    },
+    {
+      "name": "pct100: resumen preserva original y usa IVA del importe cobrado",
+      "ok": true
+    },
+    {
+      "name": "pct100: ticket proyecta snapshot financiero íntegro",
+      "ok": true
+    },
+    {
+      "name": "additional: resumen preserva original y usa IVA del importe cobrado",
+      "ok": true
+    },
+    {
+      "name": "additional: ticket proyecta snapshot financiero íntegro",
+      "ok": true
+    },
+    {
+      "name": "additionalOnly: resumen preserva original y usa IVA del importe cobrado",
+      "ok": true
+    },
+    {
+      "name": "additionalOnly: ticket proyecta snapshot financiero íntegro",
+      "ok": true
+    },
+    {
+      "name": "fixed: resumen preserva original y usa IVA del importe cobrado",
+      "ok": true
+    },
+    {
+      "name": "fixed: ticket proyecta snapshot financiero íntegro",
+      "ok": true
+    },
+    {
+      "name": "split: resumen preserva original y usa IVA del importe cobrado",
+      "ok": true
+    },
+    {
+      "name": "split: ticket proyecta snapshot financiero íntegro",
+      "ok": true
+    },
+    {
+      "name": "histórico: H-32 conserva importes impresos previos",
+      "ok": true
+    },
+    {
+      "name": "cortesía explícita nueva: snapshot fiscal cero, original y valor regalado conservados",
+      "ok": true
+    },
+    {
+      "name": "caja: importes fiscales y total iguales a la cotización",
+      "ok": true
+    },
+    {
+      "name": "pago positivo: bloqueado sin efectivo y permitido con el importe exacto",
+      "ok": true
+    },
+    {
+      "name": "100%: caja confirma sin captura, efectivo ni componente de pago inventado",
+      "ok": true
+    },
+    {
+      "name": "reimpresión: promociones y productos actuales no reinterpretan evidencia",
+      "ok": true
+    },
+    {
+      "name": "dos tickets consecutivos: HTML completo, copia, identidad, hash y recursos en frontera nativa",
+      "ok": true,
+      "detail": [
+        {
+          "name": "split",
+          "hash": "cdffbf5ed1484f85a708d7fb1af22dc2499a89f5288c22e4b1c50c505dd9d806",
+          "transport": "browser",
+          "stage": "COMPLETED"
+        },
+        {
+          "name": "additional",
+          "hash": "6d39f0c49c61aaba4f16cfa4342a2ea428cd5e89a7796cead1ed55bb387fb8fd",
+          "transport": "browser",
+          "stage": "COMPLETED"
+        }
+      ]
+    },
+    {
+      "name": "Reportes: mismo total confirmado y reimpresión con IVA congelado",
+      "ok": true
+    },
+    {
+      "name": "móvil: resumen y caja mantienen importes, sin desbordamiento",
+      "ok": true
+    },
+    {
+      "name": "sin errores de ejecución del navegador",
+      "ok": true
+    }
+  ],
+  "errors": [],
+  "remoteBusinessWrites": 0,
+  "hardware": "NOT_TESTED",
+  "scope": "Real browser components, explicit financial fixtures, external network blocked.",
+  "passed": 26,
+  "failed": 0
+}

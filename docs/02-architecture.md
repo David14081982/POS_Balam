@@ -633,13 +633,17 @@ H-185: esa misma venta normal omite SKU y ornamento del detalle impreso;
 conserva nombre, importe, talla, color de prenda disponible y cantidad. Reduce
 sólo el margen anterior al pie y el espacio del divisor, con tipografía y
 separación entre productos intactas. Ambas copias usan esta misma presentación;
-los demás tipos de comprobante conservan su diseño y contenido.
+H-187 extiende estas omisiones y márgenes a cortesías, apartados/anticipos,
+abonos, liquidaciones y cambios, incluido el ornamento de Entrega/Recibe.
+Se conservan los historiales, saldos, notas y barras que corresponden a cada
+operación. La devolución directa omite sólo el SKU y mantiene sus márgenes
+propios; no tenía ornamento ni agradecimiento. Reportes y etiquetas no cambian.
 
 La compatibilidad con ventas anteriores es conservadora: la presentación usa
 exclusivamente los datos que ya vivan en el documento, con las omisiones de
-venta normal indicadas arriba; un dato ausente se omite o conserva como código
+presentación indicadas arriba; un dato ausente se omite o conserva como código
 crudo. Nunca se completa desde el producto actual. SKU y ornamento siguen
-congelados en los datos históricos aunque no se impriman en la venta normal.
+congelados en los datos históricos aunque no se impriman en los comprobantes.
 La reimpresión sólo monta ese documento: no registra pagos, movimientos ni otro
 documento. Reportes imprime en una ventana A4 autocontenida, separada del modo
 térmico de 80 mm.

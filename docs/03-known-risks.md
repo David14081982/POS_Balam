@@ -5,6 +5,29 @@ un riesgo se debe leer su evidencia y las correcciones relacionadas. Los
 estados válidos son: `ABIERTO`, `EN CURSO`, `PARCIALMENTE RESUELTO`, `RESUELTO`
 y `BLOQUEADO`.
 
+## H-187 — Extender detalle limpio y pie compacto a los demás comprobantes
+
+**Estado:** RESUELTO en código; publicación pendiente.
+**Fecha:** 11/10/2026. **Commit:** Pendiente de commit.
+**Solicitud:** extender H-185 a cortesías, apartados/anticipos, abonos,
+liquidaciones y cambios; quitar SKU de devoluciones. Publicar al terminar.
+**Evidencia:** BalamTicket condiciona omisiones y márgenes a ventaNormal;
+Cambios añade ornamento en Entrega/Recibe; BalamReturnReceipt imprime SKU.
+**Alcance:** presentación, ambas copias y reimpresiones existentes. Conservar
+talla/cantidad, color disponible, nombre/importes, historial, saldo, folios,
+desglose fiscal, snapshots y transportes. Devolución mantiene sus márgenes
+propios; reporte térmico, A4 y etiquetas no requieren este ajuste.
+**Pruebas:** previo 24/37 → final 55/55; 18 documentos, 54 PNG completos y
+ambas copias. Espacio anterior al agradecimiento 73→25 px; ejemplo de apartado
+largo COPIA CLIENTE 6776→5428 px. Mismo contenido restante, fuentes, separación,
+datos e integridad. Regresiones 138/138 más arquitectura PASS; total 193/193.
+USB/sistema, consecutivos, aislamiento, ciclo y reimpresiones cubiertos.
+Techo de altura refijado tras regresión. Sin migraciones ni cambios financieros.
+**Artefacto:** HTML SHA-256
+`c8a10ea17f9f3fc58e2ea5e56bb0781d1b207d53fed409ed86f99a852ac30af4`.
+**Residual:** impresión física NOT_TESTED; no implica certificación A/B/C.
+**Corrección:** `docs/fixes/otros-tickets-detalle-espaciado-h187.md`.
+
 ## H-186 — Descuentos exactos y autoridad financiera de ventas nuevas
 
 **Estado:** RESUELTO — prueba integral PASS, limpieza, publicación y activación V2 verificadas.

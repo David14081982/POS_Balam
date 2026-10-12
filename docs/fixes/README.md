@@ -15,6 +15,10 @@ Corrección de edición: [H172 · Guardado y mensajes](guardado-edicion-producto
 
 ## Correcciones registradas
 
+- [otros-tickets-detalle-espaciado-h187.md](otros-tickets-detalle-espaciado-h187.md)
+  — H-187: extender detalle sin SKU/ornamento y pie compacto a los demás
+  comprobantes comerciales; devolución sin SKU, datos económicos conservados.
+
 - [descuentos-autoridad-financiera-h186.md](descuentos-autoridad-financiera-h186.md)
   — H-186: retiro del piso por costo, auditoría del costo JOEL y contrato
   financiero versionado validado por Supabase. Prueba integral única PASS,

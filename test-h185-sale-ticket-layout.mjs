@@ -138,9 +138,15 @@ try {
         if (ceiling) { assert.ok(current.height <= ceiling.cases[name].height + .1); assert.ok(current.gap <= ceiling.cases[name].gap + .1);
           current.copies.forEach((copy, i) => assert.ok(copy.height <= ceiling.cases[name].copies[i].height)); }
       } else {
-        assert.equal(current.text, before.text); assert.equal(current.height, before.height); assert.equal(current.gap, before.gap);
-        current.copies.forEach((copy, i) => { assert.equal(copy.htmlSHA256, before.copies[i].htmlSHA256); assert.equal(copy.height, before.copies[i].height);
-          if (JSON.stringify(original.renderer) === JSON.stringify(evidence.renderer)) assert.equal(copy.pngSHA256, before.copies[i].pngSHA256); });
+        // H-187 extends the approved omission/spacing to these variants.
+        // The dedicated H-187 baseline protects exact remaining text and length.
+        const clean = text => text.replace(/SKU: SKU-H185-CADENA-COMPLETA-\d+ · /g, '')
+          .replace(/Ornamento: APLICACION-H185 · MULTICOLORES-H185/g, '')
+          .replace(/ · APLICACION-H185 · MULTICOLORES-H185/g, '').replace(/\s+/g, ' ').trim();
+        assert.equal(clean(current.text), clean(before.text));
+        assert.doesNotMatch(current.text, /SKU:|SKU-H185|Ornamento:|APLICACION-H185|MULTICOLORES-H185/);
+        assert.ok(current.height < before.height);
+        current.copies.forEach((copy, i) => assert.ok(copy.height < before.copies[i].height));
       }
     });
   }

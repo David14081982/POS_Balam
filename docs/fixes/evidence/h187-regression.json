@@ -1,0 +1,66 @@
+{
+  "date": "2026-10-12T04:09:10.101Z",
+  "artifactSHA256": "c8a10ea17f9f3fc58e2ea5e56bb0781d1b207d53fed409ed86f99a852ac30af4",
+  "results": [
+    {
+      "test": "test-h186-financial-ui.mjs",
+      "exitCode": 0,
+      "summary": [
+        "PASS pct30: resumen preserva original y usa IVA del importe cobrado",
+        "PASS pct30: ticket proyecta snapshot financiero íntegro",
+        "PASS pct50: resumen preserva original y usa IVA del importe cobrado",
+        "PASS pct50: ticket proyecta snapshot financiero íntegro",
+        "PASS pct60: resumen preserva original y usa IVA del importe cobrado",
+        "PASS pct60: ticket proyecta snapshot financiero íntegro",
+        "PASS pct100: resumen preserva original y usa IVA del importe cobrado",
+        "PASS pct100: ticket proyecta snapshot financiero íntegro",
+        "PASS additional: resumen preserva original y usa IVA del importe cobrado",
+        "PASS additional: ticket proyecta snapshot financiero íntegro",
+        "PASS additionalOnly: resumen preserva original y usa IVA del importe cobrado",
+        "PASS additionalOnly: ticket proyecta snapshot financiero íntegro",
+        "PASS fixed: resumen preserva original y usa IVA del importe cobrado",
+        "PASS fixed: ticket proyecta snapshot financiero íntegro",
+        "PASS split: resumen preserva original y usa IVA del importe cobrado",
+        "PASS split: ticket proyecta snapshot financiero íntegro",
+        "PASS histórico: H-32 conserva importes impresos previos",
+        "PASS cortesía explícita nueva: snapshot fiscal cero, original y valor regalado conservados",
+        "PASS caja: importes fiscales y total iguales a la cotización",
+        "PASS pago positivo: bloqueado sin efectivo y permitido con el importe exacto",
+        "PASS 100%: caja confirma sin captura, efectivo ni componente de pago inventado",
+        "PASS reimpresión: promociones y productos actuales no reinterpretan evidencia",
+        "PASS dos tickets consecutivos: HTML completo, copia, identidad, hash y recursos en frontera nativa",
+        "PASS Reportes: mismo total confirmado y reimpresión con IVA congelado",
+        "PASS móvil: resumen y caja mantienen importes, sin desbordamiento",
+        "PASS sin errores de ejecución del navegador",
+        "{\"passed\":26,\"failed\":0,\"sourceMode\":false,\"output\":\".work/h187/test-h186-financial-ui\"}"
+      ]
+    },
+    {
+      "test": "test-h164-online-ui.mjs",
+      "exitCode": 0,
+      "summary": [
+        "PASS Inventario: cajón cerrado permite actualizar",
+        "PASS V2/barcode V3/etiqueta: identidad, PNG y PDF conservados",
+        "PASS Excel: vista previa no modifica DATA; export conserva identidad",
+        "PASS Clientes: cajón cerrado permite actualizar",
+        "PASS Reportes: reimpresión conserva documento histórico confirmado",
+        "PASS Conexión: App conserva el formulario visible e interactivo hasta confirmar H169",
+        "6 PASS / 0 FAIL"
+      ]
+    },
+    {
+      "test": "test-h164-online-pwa.mjs",
+      "exitCode": 0,
+      "summary": [
+        "PASS PWA: caché estática; API directa; corte y recuperación de Internet",
+        "PASS PWA: activación preserva evidencia comercial antigua y retira sólo recursos estáticos",
+        "2 PASS / 0 FAIL"
+      ]
+    },
+    {
+      "test": "test-h164-online-architecture.mjs",
+      "exitCode": 0,
+      "summary": []
+    }
+  ]
+}

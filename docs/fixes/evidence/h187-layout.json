@@ -1,0 +1,82 @@
+{
+  "date": "2026-10-12T04:10:30.800Z",
+  "artifactSHA256": "c8a10ea17f9f3fc58e2ea5e56bb0781d1b207d53fed409ed86f99a852ac30af4",
+  "results": [
+    {
+      "test": "test-h185-sale-ticket-layout.mjs",
+      "exitCode": 0,
+      "summary": [
+        "PASS corta: complete document and copies preserve the commercial details",
+        "PASS corta: sale omits complete SKU and ornament and leaves a 41 px pause",
+        "PASS corta: measured guarantees and separation retained against baseline",
+        "PASS larga: complete document and copies preserve the commercial details",
+        "PASS larga: sale omits complete SKU and ornament and leaves a 41 px pause",
+        "PASS larga: measured guarantees and separation retained against baseline",
+        "PASS legacy: complete document and copies preserve the commercial details",
+        "PASS legacy: sale omits complete SKU and ornament and leaves a 41 px pause",
+        "PASS legacy: measured guarantees and separation retained against baseline",
+        "PASS mixto: complete document and copies preserve the commercial details",
+        "PASS mixto: sale omits complete SKU and ornament and leaves a 41 px pause",
+        "PASS mixto: measured guarantees and separation retained against baseline",
+        "PASS reimpresion: complete document and copies preserve the commercial details",
+        "PASS reimpresion: sale omits complete SKU and ornament and leaves a 41 px pause",
+        "PASS reimpresion: measured guarantees and separation retained against baseline",
+        "PASS apartado: complete document and copies preserve the commercial details",
+        "PASS apartado: measured guarantees and separation retained against baseline",
+        "PASS anticipo: complete document and copies preserve the commercial details",
+        "PASS anticipo: measured guarantees and separation retained against baseline",
+        "PASS abono: complete document and copies preserve the commercial details",
+        "PASS abono: measured guarantees and separation retained against baseline",
+        "PASS liquidacion: complete document and copies preserve the commercial details",
+        "PASS liquidacion: measured guarantees and separation retained against baseline",
+        "PASS apartadoLiquidado: complete document and copies preserve the commercial details",
+        "PASS apartadoLiquidado: measured guarantees and separation retained against baseline",
+        "PASS cambio: complete document and copies preserve the commercial details",
+        "PASS cambio: measured guarantees and separation retained against baseline",
+        "PASS cortesia: complete document and copies preserve the commercial details",
+        "PASS cortesia: measured guarantees and separation retained against baseline",
+        "PASS read-only receipt rendering completes and releases resources",
+        "H-185: 30/30; artifacts: C:\\Users\\david\\AppData\\Local\\Temp\\balam-h185-ApIPO2"
+      ]
+    },
+    {
+      "test": "test-h178-sale-ticket-trim.mjs",
+      "exitCode": 0,
+      "summary": [
+        "PASS Venta normal: método de pago con icono, sin historial ni código de barras",
+        "PASS Venta normal: conserva encabezado, detalle, totales, pie y página web",
+        "PASS Venta con pago mixto: mismo ticket corto",
+        "PASS Reimpresión de venta con un cambio posterior: mismo ticket corto",
+        "PASS Anticipo de apartado: conserva historial y código de barras",
+        "PASS Abono de apartado: conserva historial y código de barras",
+        "PASS Liquidación de apartado: conserva historial y código de barras",
+        "PASS Reimpresión de apartado liquidado: conserva método, historial y código de barras",
+        "PASS Cambio: conserva método de pago, historial y código de barras",
+        "PASS Cortesía: conserva «Cortesía» y el código de barras",
+        "PASS El PNG RawBT de la venta normal es más corto que el documento completo",
+        "PASS Sin errores de página",
+        "H-178: 12/12"
+      ]
+    },
+    {
+      "test": "test-h179-receipt-copies.mjs",
+      "exitCode": 0,
+      "summary": [
+        "PASS Computadora, ajuste apagado: una sola impresión y sin marca de copia",
+        "PASS Computadora, dos copias: sale sale como COPIA CLIENTE y luego COPIA TIENDA",
+        "PASS Computadora, dos copias: layaway sale como COPIA CLIENTE y luego COPIA TIENDA",
+        "PASS Computadora, dos copias: payment sale como COPIA CLIENTE y luego COPIA TIENDA",
+        "PASS Computadora, dos copias: exchange sale como COPIA CLIENTE y luego COPIA TIENDA",
+        "PASS Computadora, dos copias: return sale como COPIA CLIENTE y luego COPIA TIENDA",
+        "PASS Computadora, dos copias: la impresión automática también saca las dos",
+        "PASS Computadora, dos copias: reportes A4 y ticket por método salen una vez, sin marca",
+        "PASS Computadora: sin errores de página",
+        "PASS Tablet, ajuste apagado: un solo envío al sistema y nada pendiente al cerrar",
+        "PASS Tablet, dos copias: COPIA CLIENTE primero y la segunda espera el cierre",
+        "PASS Tablet, dos copias: cerrar el primer diálogo solicita COPIA TIENDA sin RawBT",
+        "PASS Tablet: sin errores de página",
+        "H-179: 13/13"
+      ]
+    }
+  ]
+}
