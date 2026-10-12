@@ -141,6 +141,19 @@ Se fija exclusivamente el instante del servidor y sus fechas comerciales en
 la prueba: **38/38** en UTC, America/Hermosillo y Asia/Tokyo, con las mismas
 aserciones y un instante en el que UTC/Hermosillo tienen fechas diferentes.
 No cambia el producto ni los bytes del bundle. Publicación pendiente.
+La segunda ejecución `38203402576` aprobó 38/38 y los 20 casos de DATA, pero
+el fixture SQL reprodujo la misma mezcla de calendarios en `current_date-1`:
+110 aprobadas antes de «expired promotion is not applied». Se reprodujo con
+`TZ=UTC` y se cambian sólo las dos fechas de inicio/fin del fixture a la fecha
+comercial explícita `now() at time zone 'America/Hermosillo'`.
+No se modifica ninguna autoridad SQL ni migración. Evidencia de las zonas:
+`evidence/h187-ci-sql-timezone.json`. Los resultados financieros locales
+adicionales están en `h187-ci-financial.json`: DATA 20/20, SQL 135/135 y
+contratos negativos 16/16, todos sin red ni escrituras de producción.
+SQL final: **135/135 en UTC, America/Hermosillo y Asia/Tokyo**. Los dos
+recorridos UI H-186 restantes también pasan en UTC: cortesía/anticipo cero
+3/3 y devolución 3/3 (`h187-ci-ui-utc.json`). Los tres artefactos del cliente
+siguen siendo idénticos byte por byte a `759ddf4`.
 Sin migraciones ni escrituras comerciales remotas.
 
 ## Riesgo residual y pendientes

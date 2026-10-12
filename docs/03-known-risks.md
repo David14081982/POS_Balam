@@ -31,6 +31,10 @@ con la zona del equipo y las compara con vigencia comercial -07:00; la promo
 supuestamente vencida aún está vigente en Hermosillo. Código/prueba iguales
 al padre H-186. Se corrige sólo el reloj y las fechas de la prueba para
 desbloquear esta entrega, conservando las 38 aserciones y el producto probado.
+El siguiente workflow 38203402576 superó ese control y reprodujo la misma
+mezcla de calendarios en el fixture SQL (110 aprobadas antes del fallo).
+Sus fechas inicio/fin se calculan explícitamente en America/Hermosillo,
+sin alterar el motor SQL, migraciones ni el cliente.
 **Residual:** impresión física NOT_TESTED; no implica certificación A/B/C.
 **Corrección:** `docs/fixes/otros-tickets-detalle-espaciado-h187.md`.
 

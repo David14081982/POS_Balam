@@ -1,0 +1,29 @@
+{
+  "date": "2026-10-12T04:24:48.093Z",
+  "failedWorkflow": 38203402576,
+  "baseline": {
+    "zone": "UTC",
+    "passed": 110,
+    "error": "expired promotion is not applied"
+  },
+  "results": [
+    {
+      "zone": "UTC",
+      "exitCode": 0,
+      "output": "{\"ok\":true,\"passed\":135,\"engine\":\"isolated PGlite\",\"network\":false}\n",
+      "error": ""
+    },
+    {
+      "zone": "America/Hermosillo",
+      "exitCode": 0,
+      "output": "{\"ok\":true,\"passed\":135,\"engine\":\"isolated PGlite\",\"network\":false}\n",
+      "error": ""
+    },
+    {
+      "zone": "Asia/Tokyo",
+      "exitCode": 0,
+      "output": "{\"ok\":true,\"passed\":135,\"engine\":\"isolated PGlite\",\"network\":false}\n",
+      "error": ""
+    }
+  ]
+}

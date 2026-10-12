@@ -432,9 +432,10 @@ try {
  const sizeQuote=await quote();check(sizeQuote.originalTotal===1499.99&&sizeQuote.finalTotal===1049.99,'authoritative size price and cents');
  await edit("update pos.promotions set scope='{\"tallas\":[\"L\"]}',sync_base_version=sync_version,sync_device_id='h186' where id='h186-promo'");
  check((await quote()).finalTotal===1499.99,'promotion size filter respected');
- await edit("update pos.promotions set scope='{}',inicio=current_date+1,sync_base_version=sync_version,sync_device_id='h186' where id='h186-promo'");
+ // H-187: promotion fixture dates use the business day, independently of SQL/OS timezone.
+ await edit("update pos.promotions set scope='{}',inicio=(now() at time zone 'America/Hermosillo')::date+1,sync_base_version=sync_version,sync_device_id='h186' where id='h186-promo'");
  check((await quote()).finalTotal===1499.99,'future promotion is not applied');
- await edit("update pos.promotions set inicio=null,fin=current_date-1,sync_base_version=sync_version,sync_device_id='h186' where id='h186-promo'");
+ await edit("update pos.promotions set inicio=null,fin=(now() at time zone 'America/Hermosillo')::date-1,sync_base_version=sync_version,sync_device_id='h186' where id='h186-promo'");
  check((await quote()).finalTotal===1499.99,'expired promotion is not applied');
  await edit(`update pos.promotions set fin=null,sync_base_version=sync_version,sync_device_id='h186' where id='h186-promo';update pos.products set precios_talla='{}',sync_base_version=sync_version,sync_device_id='h186' where id=${lit(productId)};insert into pos.promotions(id,nombre,tipo,valor,scope) values('h186-fixed','Fixed','fijo',100,'{}')`);
  check((await quote()).finalTotal===775,'existing percentage then fixed stacking order preserved');

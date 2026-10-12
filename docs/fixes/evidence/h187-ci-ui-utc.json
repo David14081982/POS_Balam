@@ -1,0 +1,17 @@
+{
+  "date": "2026-10-12T04:25:17.109Z",
+  "results": [
+    {
+      "name": "test-h186-courtesy-checkout.mjs",
+      "exitCode": 0,
+      "output": "PASS current: actual checkout contract reaches captured gateway\nPASS current-layaway-zero: actual checkout contract reaches captured gateway\nPASS current-layaway-restored: actual checkout contract reaches captured gateway\n",
+      "error": ""
+    },
+    {
+      "name": "test-h186-return-ui.mjs",
+      "exitCode": 0,
+      "output": "PASS V2 zero refund keeps default method and confirms with no payment components\nPASS Legacy zero refund keeps its historical evidence requirement\nPASS V2 paid refund keeps the confirmed original monetary components\n{\"passed\":3,\"failed\":0,\"remoteBusinessWrites\":0,\"externalRequests\":\"blocked\"}\n",
+      "error": ""
+    }
+  ]
+}
