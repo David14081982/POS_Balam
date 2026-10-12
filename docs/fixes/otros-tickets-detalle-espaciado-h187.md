@@ -1,9 +1,11 @@
 # Detalle limpio y pie compacto en los demás comprobantes
 
 **Riesgo:** H-187
-**Estado:** RESUELTO en código — pruebas locales aprobadas; publicación pendiente
+**Estado:** RESUELTO — publicado y verificado; confirmación física pendiente
 **Fecha:** 11/10/2026
 **Commit:** `759ddf4aac26ab92c7c170ebca09282ae92897c7`
+**Commits de pruebas CI:** `9088820bdf4cd5c90fdec8ebed28ceeae0b86dce`,
+`d2d6c2320fca9b0d4ff2b708310cfe5a751856d2`.
 
 ## Problema y reproducción
 
@@ -132,15 +134,32 @@ la omisión del detalle general no cubre Entrega/Recibe.
 
 ## Despliegue
 
-Commit técnico enviado a main. Regresión local aprobada; workflow ordinario
-`38203015461` falló antes del despliegue en `test-discounts.mjs` (34/38).
+Publicado desde main `d2d6c23`. Workflow ordinario
+[38203753040](https://github.com/David14081982/POS_Balam/actions/runs/38203753040)
+**SUCCESS**: regresión completa y despliegue aprobados. Certificación live
+opcional omitida, no solicitada. El 12/10/2026 UTC (11/10 en Hermosillo) los
+tres archivos públicos devolvieron HTTP 200 e identidad byte a byte con el
+commit desplegado y con el artefacto probado:
+
+| Archivo | Bytes | SHA-256 |
+|---|---:|---|
+| `index.html` | 9388470 | `c8a10ea17f9f3fc58e2ea5e56bb0781d1b207d53fed409ed86f99a852ac30af4` |
+| `POS Balam (offline).html` | 9388470 | `c8a10ea17f9f3fc58e2ea5e56bb0781d1b207d53fed409ed86f99a852ac30af4` |
+| `sw.js` | 4477 | `1ba9cce67945de2ccaf0cc515ada4b44b3164bc7fa1f62ffe0c29a81353e1627` |
+
+Evidencia: `evidence/h187-deploy.json` y `h187-workflow.json`. Cada terminal
+debe adoptar la actualización para imprimir con el nuevo diseño. El cierre
+documental se registra aparte y no modifica estos bytes.
+
+Durante la entrega, el workflow `38203015461` falló antes del despliegue en
+`test-discounts.mjs` (34/38).
 Reproducción local con `TZ=UTC`: mismo resultado. El fixture usaba el calendario
 del equipo, diferente del comercial -07:00 a las 04:18Z. Prueba y motor son
 idénticos al padre H-186, no es una regresión del ticket.
 Se fija exclusivamente el instante del servidor y sus fechas comerciales en
 la prueba: **38/38** en UTC, America/Hermosillo y Asia/Tokyo, con las mismas
 aserciones y un instante en el que UTC/Hermosillo tienen fechas diferentes.
-No cambia el producto ni los bytes del bundle. Publicación pendiente.
+No cambió el producto ni los bytes del bundle.
 La segunda ejecución `38203402576` aprobó 38/38 y los 20 casos de DATA, pero
 el fixture SQL reprodujo la misma mezcla de calendarios en `current_date-1`:
 110 aprobadas antes de «expired promotion is not applied». Se reprodujo con

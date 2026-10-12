@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-12T04:37:53.572Z",
+  "commit": "d2d6c2320fca9b0d4ff2b708310cfe5a751856d2",
+  "files": [
+    {
+      "file": "index.html",
+      "status": 200,
+      "bytes": 9388470,
+      "sha256": "c8a10ea17f9f3fc58e2ea5e56bb0781d1b207d53fed409ed86f99a852ac30af4",
+      "expectedSHA256": "c8a10ea17f9f3fc58e2ea5e56bb0781d1b207d53fed409ed86f99a852ac30af4",
+      "identical": true
+    },
+    {
+      "file": "POS Balam (offline).html",
+      "status": 200,
+      "bytes": 9388470,
+      "sha256": "c8a10ea17f9f3fc58e2ea5e56bb0781d1b207d53fed409ed86f99a852ac30af4",
+      "expectedSHA256": "c8a10ea17f9f3fc58e2ea5e56bb0781d1b207d53fed409ed86f99a852ac30af4",
+      "identical": true
+    },
+    {
+      "file": "sw.js",
+      "status": 200,
+      "bytes": 4477,
+      "sha256": "1ba9cce67945de2ccaf0cc515ada4b44b3164bc7fa1f62ffe0c29a81353e1627",
+      "expectedSHA256": "1ba9cce67945de2ccaf0cc515ada4b44b3164bc7fa1f62ffe0c29a81353e1627",
+      "identical": true
+    }
+  ],
+  "hardware": "NOT_TESTED"
+}

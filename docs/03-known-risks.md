@@ -7,7 +7,7 @@ y `BLOQUEADO`.
 
 ## H-187 — Extender detalle limpio y pie compacto a los demás comprobantes
 
-**Estado:** RESUELTO en código; publicación pendiente.
+**Estado:** RESUELTO — publicado/verificado; confirmación física pendiente.
 **Fecha:** 11/10/2026. **Commit:** `759ddf4aac26ab92c7c170ebca09282ae92897c7`.
 **Solicitud:** extender H-185 a cortesías, apartados/anticipos, abonos,
 liquidaciones y cambios; quitar SKU de devoluciones. Publicar al terminar.
@@ -35,6 +35,11 @@ El siguiente workflow 38203402576 superó ese control y reprodujo la misma
 mezcla de calendarios en el fixture SQL (110 aprobadas antes del fallo).
 Sus fechas inicio/fin se calculan explícitamente en America/Hermosillo,
 sin alterar el motor SQL, migraciones ni el cliente.
+**Despliegue:** pruebas CI corregidas en `9088820`/`d2d6c23`; workflow
+`38203753040` SUCCESS. HTML principal/offline y SW públicos HTTP 200 e idénticos
+byte por byte al commit desplegado y al artefacto local probado. Evidencia:
+`docs/fixes/evidence/h187-deploy.json` y `h187-workflow.json`. Fixtures finales
+38/38 y SQL 135/135 en UTC, Hermosillo y Tokio; UI adicional 6/6 en UTC.
 **Residual:** impresión física NOT_TESTED; no implica certificación A/B/C.
 **Corrección:** `docs/fixes/otros-tickets-detalle-espaciado-h187.md`.
 
