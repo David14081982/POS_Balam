@@ -1,9 +1,9 @@
 # Mostrar u ocultar precio en todas las etiquetas
 
 **Riesgo:** H-188
-**Estado:** RESUELTO EN CÓDIGO — entrega pendiente
+**Estado:** RESUELTO — commit local; publicación pendiente de autorización
 **Fecha:** 04/11/2026
-**Commit:** Pendiente de commit
+**Commit:** `9aac6637a5e76c954c00e0441ce771dc5d18ee92`
 
 ## Problema y reproducción
 
@@ -98,6 +98,14 @@ Service worker:
 Impresión física NOT_TESTED. Persistencia/recarga se comprueba con confirmación
 remota simulada; certificación distribuida A/B/C NO CERTIFICADO, no solicitada.
 El cambio no requiere modificar datos remotos durante la entrega.
+
+## Entrega
+
+Commit local y artefactos regenerados. La revisión automática rechazó
+`git push origin main`: requiere autorización explícita para modificar la
+rama compartida y activar su publicación. No hubo push ni despliegue; por
+tanto no se atribuye verificación pública ni ejecución CI a este cambio.
+Se conserva la entrega local solicitada y la evidencia de pruebas anterior.
 
 ## Referencias
 

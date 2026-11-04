@@ -7,8 +7,8 @@ y `BLOQUEADO`.
 
 ## H-188 — Preferencia global de precio en etiquetas
 
-**Estado:** RESUELTO EN CÓDIGO — entrega pendiente.
-**Fecha:** 04/11/2026. **Commit:** Pendiente de commit.
+**Estado:** RESUELTO — commit local; publicación pendiente de autorización.
+**Fecha:** 04/11/2026. **Commit:** `9aac6637a5e76c954c00e0441ce771dc5d18ee92`.
 **Solicitud:** un único switch «Mostrar precio en etiquetas» en Configuración →
 Impresión, activado por defecto y persistido mediante CONFIG existente.
 **Evidencia:** LabelModal usa withPrice local iniciado en true y una casilla
@@ -26,6 +26,8 @@ SVG idéntico salvo precio y recarga real con confirmación simulada aprobada.
 Build oficial correcto, ambos HTML idénticos. SHA-256:
 `0c3e748d666a873db4d6da0686e1fe12d51c96975629691aec7db3993355721e`.
 **Residual:** impresión física NOT_TESTED; A/B/C NO CERTIFICADO, no solicitado.
+**Entrega:** push a origin/main rechazado por revisión automática por falta
+de autorización explícita para la rama compartida/publicación. No desplegado.
 **Corrección:** `docs/fixes/precio-global-etiquetas-h188.md`.
 
 ## H-187 — Extender detalle limpio y pie compacto a los demás comprobantes
