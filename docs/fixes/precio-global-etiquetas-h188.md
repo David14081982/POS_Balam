@@ -1,7 +1,7 @@
 # Mostrar u ocultar precio en todas las etiquetas
 
 **Riesgo:** H-188
-**Estado:** RESUELTO — commit local; publicación pendiente de autorización
+**Estado:** RESUELTO — PUBLICADO Y VERIFICADO
 **Fecha:** 04/11/2026
 **Commit:** `9aac6637a5e76c954c00e0441ce771dc5d18ee92`
 
@@ -101,11 +101,18 @@ El cambio no requiere modificar datos remotos durante la entrega.
 
 ## Entrega
 
-Commit local y artefactos regenerados. La revisión automática rechazó
-`git push origin main`: requiere autorización explícita para modificar la
-rama compartida y activar su publicación. No hubo push ni despliegue; por
-tanto no se atribuye verificación pública ni ejecución CI a este cambio.
-Se conserva la entrega local solicitada y la evidencia de pruebas anterior.
+El propietario autorizó explícitamente el push a origin/main. Código
+`9aac663` y cierre `3da2f36` publicados mediante el workflow
+[41804326815](https://github.com/David14081982/POS_Balam/actions/runs/41804326815):
+regresiones y despliegue SUCCESS. H167 volvió a ejecutarse completo en CI;
+la certificación live opcional quedó omitida.
+
+Verificación pública el 04/11/2026 a las 09:13:01 UTC: `index.html`,
+`POS Balam (offline).html` y `sw.js` devolvieron HTTP 200 y coincidieron
+byte a byte con los blobs del commit desplegado
+`3da2f365a2625e21fdc602c4bfe7e294be5c5901`. Cada HTML tiene 9,388,470 bytes;
+el service worker, 4,477 bytes. SHA-256 registrados arriba.
+El commit documental posterior conserva este resultado sin cambiar el cliente.
 
 ## Referencias
 

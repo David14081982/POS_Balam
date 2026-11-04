@@ -7,7 +7,7 @@ y `BLOQUEADO`.
 
 ## H-188 — Preferencia global de precio en etiquetas
 
-**Estado:** RESUELTO — commit local; publicación pendiente de autorización.
+**Estado:** RESUELTO — PUBLICADO Y VERIFICADO.
 **Fecha:** 04/11/2026. **Commit:** `9aac6637a5e76c954c00e0441ce771dc5d18ee92`.
 **Solicitud:** un único switch «Mostrar precio en etiquetas» en Configuración →
 Impresión, activado por defecto y persistido mediante CONFIG existente.
@@ -26,8 +26,11 @@ SVG idéntico salvo precio y recarga real con confirmación simulada aprobada.
 Build oficial correcto, ambos HTML idénticos. SHA-256:
 `0c3e748d666a873db4d6da0686e1fe12d51c96975629691aec7db3993355721e`.
 **Residual:** impresión física NOT_TESTED; A/B/C NO CERTIFICADO, no solicitado.
-**Entrega:** push a origin/main rechazado por revisión automática por falta
-de autorización explícita para la rama compartida/publicación. No desplegado.
+**Entrega:** push a origin/main autorizado explícitamente por el propietario;
+workflow `41804326815` SUCCESS, regresiones y Pages. El 04/11/2026 a las
+09:13:01 UTC ambos HTML y SW públicos dieron HTTP 200 y coincidencia byte a
+byte con el commit desplegado `3da2f36`. H167 completo aprobado en CI;
+certificación live opcional omitida.
 **Corrección:** `docs/fixes/precio-global-etiquetas-h188.md`.
 
 ## H-187 — Extender detalle limpio y pie compacto a los demás comprobantes
