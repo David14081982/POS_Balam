@@ -5,6 +5,29 @@ un riesgo se debe leer su evidencia y las correcciones relacionadas. Los
 estados válidos son: `ABIERTO`, `EN CURSO`, `PARCIALMENTE RESUELTO`, `RESUELTO`
 y `BLOQUEADO`.
 
+## H-188 — Preferencia global de precio en etiquetas
+
+**Estado:** RESUELTO EN CÓDIGO — entrega pendiente.
+**Fecha:** 04/11/2026. **Commit:** Pendiente de commit.
+**Solicitud:** un único switch «Mostrar precio en etiquetas» en Configuración →
+Impresión, activado por defecto y persistido mediante CONFIG existente.
+**Evidencia:** LabelModal usa withPrice local iniciado en true y una casilla
+temporal; no existe preferencia global. Reproducción previa: 0/2 requisitos
+(default y switch); PDF vigente 23/23.
+**Alcance:** sustituir esa casilla por la preferencia global; labelItem entrega
+precio o vacío a preview, PDF y vista imprimible. Mantener íntegros SVG, CSS,
+60×40 mm, barras, SKU y espacio reservado, sin cambiar productos ni tickets.
+**Criterio:** ON con precio, OFF sin precio ni recomposición, lote de 881
+etiquetas de tallas/precios distintos y persistencia tras recarga.
+**Pruebas:** previo 0/2; final PDF/etiquetas 28/28, UI 6/6 y PWA 2/2;
+H167 61/61 escenarios y 94/94 comparaciones de sus mediciones finales.
+881/881 páginas HTML/PDF sin precio, incluidos gráfico y texto invisible;
+SVG idéntico salvo precio y recarga real con confirmación simulada aprobada.
+Build oficial correcto, ambos HTML idénticos. SHA-256:
+`0c3e748d666a873db4d6da0686e1fe12d51c96975629691aec7db3993355721e`.
+**Residual:** impresión física NOT_TESTED; A/B/C NO CERTIFICADO, no solicitado.
+**Corrección:** `docs/fixes/precio-global-etiquetas-h188.md`.
+
 ## H-187 — Extender detalle limpio y pie compacto a los demás comprobantes
 
 **Estado:** RESUELTO — publicado/verificado; confirmación física pendiente.

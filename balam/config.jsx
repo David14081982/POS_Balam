@@ -278,6 +278,7 @@
     'print.auto': false,
     'print.thermer': false, // H-181: Android, dos copias con un toque
     'print.twoCopies': false, // H-179: COPIA CLIENTE + COPIA TIENDA en cada comprobante
+    'print.labelsShowPrice': true,
     'print.lowStockAlert': true,
     'benefits.manualOptionsV1': true,
   };
@@ -336,7 +337,7 @@
   function get(key) {
     // H-168: presentación compatible con snapshots anteriores a este ajuste.
     // Leer el default no modifica ni vuelve a publicar la autoridad recibida.
-    if (key === 'ticket.website' && remoteReady && !Object.prototype.hasOwnProperty.call(state.settings, key)) return SEED_SETTINGS[key];
+    if ((key === 'ticket.website' || key === 'print.labelsShowPrice') && remoteReady && !Object.prototype.hasOwnProperty.call(state.settings, key)) return SEED_SETTINGS[key];
     return state.settings[key];
   }
   function settings() { return deepClone(state.settings); }

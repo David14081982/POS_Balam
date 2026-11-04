@@ -246,8 +246,13 @@ y Color de ornamento es un catálogo independiente y multiselección canónica.
 
 El escaneo moderno sólo sigue `Code128 → barcode_code → products.id`. Nunca
 atraviesa SKU ni elige la primera coincidencia. La etiqueta muestra nombre,
-barras, SKU y precio; el texto técnico de `barcode_code` no se imprime. El SKU
+barras, SKU y precio según `print.labelsShowPrice`; el texto técnico de `barcode_code` no se imprime. El SKU
 queda como representación humana configurable y no cambia al editar precio.
+
+Configuración → Impresión administra el único switch de precio en etiquetas.
+El ajuste usa CONFIG y su confirmación online habitual; una cuenta sin la clave
+conserva el precio visible. Desactivado, `labelItem()` entrega precio vacío a
+preview, PDF y vista imprimible, sin modificar el SVG 60×40 ni ocupar su espacio.
 
 Las autoridades SQL de alta individual y familiar conservan `barcode_contract`
 y la familia enviada en la creación. Una referencia activa sin contrato 3 se

@@ -1937,7 +1937,7 @@
     const B = window.BARCODES;
     const [copiesMode, setCopiesMode] = useState('one'); // 'one' | 'stock'
     const [copies, setCopies] = useState(1);
-    const [withPrice, setWithPrice] = useState(true);
+    const withPrice = window.CONFIG.get('print.labelsShowPrice') !== false;
     const [saving, setSaving] = useState(false);
     const [pdfAsset, setPdfAsset] = useState(null);
     const [pdfError, setPdfError] = useState('');
@@ -2214,10 +2214,6 @@
         copiesMode === 'one' && h('div', { key: 'r2', className: 'flex items-center justify-between gap-4' }, [
           h('span', { key: 'l', className: 'text-caption font-semibold text-on-surface-variant' }, 'Copias por talla'),
           h('input', { key: 'i', type: 'number', min: 1, value: copies, onChange: e => setCopies(e.target.value), 'data-testid': 'labels-copies-input', className: 'w-24 bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-body text-right focus:ring-1 focus:ring-primary' }),
-        ]),
-        h('label', { key: 'r3', className: 'flex items-center justify-between gap-4 cursor-pointer' }, [
-          h('span', { key: 'l', className: 'text-caption font-semibold text-on-surface-variant' }, 'Incluir precio en la etiqueta'),
-          h('input', { key: 'i', type: 'checkbox', 'data-testid': 'labels-with-price', checked: withPrice, onChange: e => setWithPrice(e.target.checked), className: 'w-5 h-5 rounded border-outline text-primary focus:ring-primary' }),
         ]),
         h('p', { key: 'sum', className: 'text-caption text-on-surface-variant' }, `${specs.length} talla(s) con existencias · ${totalLabels} etiqueta(s) a imprimir`),
         certificationBlocks.length > 0 && h('div', { key: 'certification', role: 'alert', 'data-testid': 'labels-certification-block', className: 'p-3 rounded-lg bg-danger-soft text-danger text-caption' }, [

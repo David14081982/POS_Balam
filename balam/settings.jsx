@@ -981,7 +981,7 @@
         desc && h('div', { key: 'b', className: 'text-caption text-on-surface-variant mt-0.5' }, desc),
       ]),
       h('button', {
-        key: 'sw', className: 'relative w-11 h-6 rounded-full transition-colors shrink-0 ' + (on ? '' : 'bg-surface-container-highest'),
+        key: 'sw', 'data-testid': 'config-toggle-' + k, className: 'relative w-11 h-6 rounded-full transition-colors shrink-0 ' + (on ? '' : 'bg-surface-container-highest'),
         style: on ? { background: '#D4AF38' } : null, onClick: async () => await C.setSetting(k, !on),
       }, h('span', { className: 'absolute top-0.5 w-5 h-5 bg-surface rounded-full shadow transition-all ' + (on ? 'left-[22px]' : 'left-0.5') })),
     ]);
@@ -1640,6 +1640,7 @@
         h(CfgToggle, { key: 'au', k: 'print.auto', title: 'Imprimir ticket automáticamente', desc: 'Envía el ticket al confirmar el cobro. Con USB directo activo y conectado imprime sin diálogo; en PC conserva la impresión del sistema.' }),
         h(CfgToggle, { key: 'cp', k: 'print.twoCopies', title: 'Imprimir dos copias (cliente y tienda)',
           desc: 'Cada comprobante sale dos veces, marcado «COPIA CLIENTE» y «COPIA TIENDA». Por USB directo se envían ambas seguidas; con impresión del sistema se solicita un diálogo por copia.' }),
+        h(CfgToggle, { key: 'lp', k: 'print.labelsShowPrice', title: 'Mostrar precio en etiquetas' }),
       ]),
       h(GlassCard, { key: 'pie', className: 'p-6' }, [
         h(SerifHeading, { key: 't', className: 'mb-4', children: 'Pie de ticket' }),

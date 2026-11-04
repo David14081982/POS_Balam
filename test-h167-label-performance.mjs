@@ -227,10 +227,12 @@ try {
       if (!phases.includes('stock')) continue;
       activePhase = 'stock';
       await measure(page, count, 'stock', () => page.getByTestId('labels-copies-stock').click(), 2, true);
-      // Functional structure: only checkbox outside the reference-selection fieldset.
       if (!phases.includes('price')) continue;
       activePhase = 'price';
-      await measure(page, count, 'price', () => page.getByTestId('label-modal').locator('input[type="checkbox"]:not([data-testid^="label-reference-select-"])').uncheck(), 2, false);
+      // H-188: recibir la preferencia global usa la invalidación CONFIG existente.
+      await measure(page, count, 'price', () => page.evaluate(() => {
+        CONFIG.load(CONFIG.prepareMutation('setSetting', ['print.labelsShowPrice', false]).state);
+      }), 2, false);
       if (!beforeReason) {
         const downloadPromise = page.waitForEvent('download');
         await page.getByTestId('labels-download').click();
@@ -381,8 +383,14 @@ try {
       check(`baseline/${previous.count}/${previous.phase}/completion`, current?.completed === true);
       if (!current || !previous.completed) continue;
       for (const [name, value] of Object.entries(previous.guarantee)) if (value) check(`baseline/${previous.count}/${previous.phase}/guarantee/${name}`, current.guarantee[name]);
+      // Una actualización global vuelve a certificar: conserva el techo de apertura,
+      // no el de la antigua casilla local que sólo cambiaba la presentación.
+      const costBaseline = previous.phase === 'price'
+        ? baseline.measurements.find(row => row.count === previous.count && row.phase === 'open') : previous;
       for (const name of ['certifications', 'publicResolve', 'productArrayReads', 'pngImages', 'barcodeRenders']) {
-        check(`baseline/${previous.count}/${previous.phase}/cost/${name}`, (current.cost[name] || 0) <= (previous.cost[name] || 0));
+        // InventoryScreen.onCfg refresca su snapshot con una lectura adicional.
+        const configRead = previous.phase === 'price' && name === 'productArrayReads' ? 1 : 0;
+        check(`baseline/${previous.count}/${previous.phase}/cost/${name}`, (current.cost[name] || 0) <= (costBaseline.cost[name] || 0) + configRead);
       }
       if (previous.count < 300 && previous.cost.jpegBlobRasters !== undefined) check(`baseline/${previous.count}/${previous.phase}/cost/JPEG`, (current.cost.jpegBlobRasters || 0) <= previous.cost.jpegBlobRasters);
     }
