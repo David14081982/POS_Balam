@@ -3,7 +3,7 @@
 **Riesgo:** H-189
 **Estado:** RESUELTO — asignaciones desplegadas y verificadas en Supabase
 **Fecha:** 11/11/2026
-**Commit:** Pendiente de commit
+**Commit:** `a54334bd091336825111d0130fc8ba48b0a8fbc1`
 
 ## Problema y reproducción
 

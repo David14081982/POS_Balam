@@ -9,7 +9,7 @@ y `BLOQUEADO`.
 
 **Estado:** RESUELTO — asignaciones desplegadas y verificadas en Supabase;
 inicio de sesión en terminal real pendiente.
-**Fecha:** 11/11/2026. **Commit:** Pendiente de commit.
+**Fecha:** 11/11/2026. **Commit:** `a54334bd091336825111d0130fc8ba48b0a8fbc1`.
 Se restauraron las tres asignaciones activas del rol vendedor de LUIS, PRUEBA
 y VENDEDORES mediante la autoridad de permisos existente. Se conservaron
 los permisos individuales, las credenciales, la UI y los datos comerciales.
