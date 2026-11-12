@@ -5,6 +5,29 @@ un riesgo se debe leer su evidencia y las correcciones relacionadas. Los
 estados válidos son: `ABIERTO`, `EN CURSO`, `PARCIALMENTE RESUELTO`, `RESUELTO`
 y `BLOQUEADO`.
 
+## H-189 — Permisos operativos de vendedores
+
+**Estado:** RESUELTO — asignaciones desplegadas y verificadas en Supabase;
+inicio de sesión en terminal real pendiente.
+**Fecha:** 11/11/2026. **Commit:** Pendiente de commit.
+Se restauraron las tres asignaciones activas del rol vendedor de LUIS, PRUEBA
+y VENDEDORES mediante la autoridad de permisos existente. Se conservaron
+los permisos individuales, las credenciales, la UI y los datos comerciales.
+**Pruebas:** se conserva la verificación previa de cinco comprobaciones de
+H-189, todas aprobadas; esta publicación no ejecuta pruebas adicionales.
+El postflight confirmó tres asignaciones y tres recibos, sin privilegios
+administrativos ni cambios en las 60 tablas protegidas.
+**Entrega:** publicación limitada por instrucción del usuario a restauración
+de permisos, manifiesto, reversión específica y documentación con evidencia.
+Las migraciones de stock V2 228/229, aplicadas previamente en Supabase,
+permanecen fuera de esta publicación y conservadas en los commits locales
+`c23fedf5a876c891bc7fe8ac87f3e86ca6a9cb30` y
+`3ba51a093971e40caa7dcb7b2ab786d079454b12`.
+**Residual:** autenticación real de cada vendedor NOT_TESTED; A/B/C
+NO CERTIFICADO. Se conserva la selección manual del vendedor para atribuir
+ventas y comisiones. Esta entrega no cambia el mecanismo de inicio de sesión.
+[Expediente](fixes/permisos-vendedores-h189.md).
+
 ## H-188 — Preferencia global de precio en etiquetas
 
 **Estado:** RESUELTO — PUBLICADO Y VERIFICADO.

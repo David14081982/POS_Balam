@@ -1,0 +1,74 @@
+-- H189 REPAIR three verified missing assignments.
+-- PREPARED ONLY: separate deployment approval required. Run with an existing
+-- active permission-admin Auth context and its registered device headers.
+-- Uses the existing online gateway and checked permission authority. No direct DML.
+begin;
+set local lock_timeout='5s';
+set local timezone='UTC';
+set local statement_timeout='60s';
+do $h189_roles$
+declare
+ targets constant jsonb := '[{"user_id":"16cc8681-4769-4c72-8f2c-3d897c8fc521","seller_id":"16cc8681-4769-4c72-8f2c-3d897c8fc521","request_id":"f3c31611-3327-4185-9d3c-6af819c3856a","rollback_request_id":"ca47c028-4c10-4ba2-8d88-61c966028be7","screen_overrides":[],"capability_overrides":[]},{"user_id":"8946790c-8cbc-45b0-ad50-0cb74a0b0126","seller_id":"8946790c-8cbc-45b0-ad50-0cb74a0b0126","request_id":"a3c44575-de9f-4b31-bc1b-59cdf47f8d75","rollback_request_id":"c1fbed1a-6375-445f-b076-66eb229e6444","screen_overrides":[{"effect":"allow","screen_key":"apartados","updated_at":"2026-08-03T07:51:04.874602+00:00","updated_by":"3f24222e-fd74-4ed2-b56f-f298af574b1e","user_id":"8946790c-8cbc-45b0-ad50-0cb74a0b0126"},{"effect":"allow","screen_key":"clientes","updated_at":"2026-08-03T07:51:04.874602+00:00","updated_by":"3f24222e-fd74-4ed2-b56f-f298af574b1e","user_id":"8946790c-8cbc-45b0-ad50-0cb74a0b0126"},{"effect":"allow","screen_key":"config.beneficios","updated_at":"2026-08-03T07:51:04.874602+00:00","updated_by":"3f24222e-fd74-4ed2-b56f-f298af574b1e","user_id":"8946790c-8cbc-45b0-ad50-0cb74a0b0126"},{"effect":"allow","screen_key":"config.clientes","updated_at":"2026-08-03T07:51:04.874602+00:00","updated_by":"3f24222e-fd74-4ed2-b56f-f298af574b1e","user_id":"8946790c-8cbc-45b0-ad50-0cb74a0b0126"},{"effect":"allow","screen_key":"config.demo","updated_at":"2026-08-03T07:51:04.874602+00:00","updated_by":"3f24222e-fd74-4ed2-b56f-f298af574b1e","user_id":"8946790c-8cbc-45b0-ad50-0cb74a0b0126"},{"effect":"allow","screen_key":"config.devoluciones","updated_at":"2026-08-03T07:51:04.874602+00:00","updated_by":"3f24222e-fd74-4ed2-b56f-f298af574b1e","user_id":"8946790c-8cbc-45b0-ad50-0cb74a0b0126"},{"effect":"allow","screen_key":"config.impresion","updated_at":"2026-08-03T07:51:04.874602+00:00","updated_by":"3f24222e-fd74-4ed2-b56f-f298af574b1e","user_id":"8946790c-8cbc-45b0-ad50-0cb74a0b0126"},{"effect":"allow","screen_key":"config.inventario","updated_at":"2026-08-03T07:51:04.874602+00:00","updated_by":"3f24222e-fd74-4ed2-b56f-f298af574b1e","user_id":"8946790c-8cbc-45b0-ad50-0cb74a0b0126"},{"effect":"allow","screen_key":"config.negocio","updated_at":"2026-08-03T07:51:04.874602+00:00","updated_by":"3f24222e-fd74-4ed2-b56f-f298af574b1e","user_id":"8946790c-8cbc-45b0-ad50-0cb74a0b0126"},{"effect":"allow","screen_key":"config.permisos","updated_at":"2026-08-03T07:51:04.874602+00:00","updated_by":"3f24222e-fd74-4ed2-b56f-f298af574b1e","user_id":"8946790c-8cbc-45b0-ad50-0cb74a0b0126"},{"effect":"allow","screen_key":"config.producto","updated_at":"2026-08-03T07:51:04.874602+00:00","updated_by":"3f24222e-fd74-4ed2-b56f-f298af574b1e","user_id":"8946790c-8cbc-45b0-ad50-0cb74a0b0126"},{"effect":"allow","screen_key":"config.usuarios","updated_at":"2026-08-03T07:51:04.874602+00:00","updated_by":"3f24222e-fd74-4ed2-b56f-f298af574b1e","user_id":"8946790c-8cbc-45b0-ad50-0cb74a0b0126"},{"effect":"allow","screen_key":"config.vendedores","updated_at":"2026-08-03T07:51:04.874602+00:00","updated_by":"3f24222e-fd74-4ed2-b56f-f298af574b1e","user_id":"8946790c-8cbc-45b0-ad50-0cb74a0b0126"},{"effect":"allow","screen_key":"config.ventas","updated_at":"2026-08-03T07:51:04.874602+00:00","updated_by":"3f24222e-fd74-4ed2-b56f-f298af574b1e","user_id":"8946790c-8cbc-45b0-ad50-0cb74a0b0126"},{"effect":"allow","screen_key":"dashboard","updated_at":"2026-08-03T07:51:04.874602+00:00","updated_by":"3f24222e-fd74-4ed2-b56f-f298af574b1e","user_id":"8946790c-8cbc-45b0-ad50-0cb74a0b0126"},{"effect":"allow","screen_key":"descuentos","updated_at":"2026-08-03T07:51:04.874602+00:00","updated_by":"3f24222e-fd74-4ed2-b56f-f298af574b1e","user_id":"8946790c-8cbc-45b0-ad50-0cb74a0b0126"},{"effect":"allow","screen_key":"devoluciones","updated_at":"2026-08-03T07:51:04.874602+00:00","updated_by":"3f24222e-fd74-4ed2-b56f-f298af574b1e","user_id":"8946790c-8cbc-45b0-ad50-0cb74a0b0126"},{"effect":"allow","screen_key":"inventario","updated_at":"2026-08-03T07:51:04.874602+00:00","updated_by":"3f24222e-fd74-4ed2-b56f-f298af574b1e","user_id":"8946790c-8cbc-45b0-ad50-0cb74a0b0126"},{"effect":"allow","screen_key":"pos","updated_at":"2026-08-03T07:51:04.874602+00:00","updated_by":"3f24222e-fd74-4ed2-b56f-f298af574b1e","user_id":"8946790c-8cbc-45b0-ad50-0cb74a0b0126"},{"effect":"allow","screen_key":"prestamos","updated_at":"2026-08-03T07:51:04.874602+00:00","updated_by":"3f24222e-fd74-4ed2-b56f-f298af574b1e","user_id":"8946790c-8cbc-45b0-ad50-0cb74a0b0126"},{"effect":"allow","screen_key":"reportes","updated_at":"2026-08-03T07:51:04.874602+00:00","updated_by":"3f24222e-fd74-4ed2-b56f-f298af574b1e","user_id":"8946790c-8cbc-45b0-ad50-0cb74a0b0126"},{"effect":"allow","screen_key":"vendedores","updated_at":"2026-08-03T07:51:04.874602+00:00","updated_by":"3f24222e-fd74-4ed2-b56f-f298af574b1e","user_id":"8946790c-8cbc-45b0-ad50-0cb74a0b0126"}],"capability_overrides":[]},{"user_id":"b89cced8-0358-44ea-84ae-01b75b25c6e4","seller_id":"b89cced8-0358-44ea-84ae-01b75b25c6e4","request_id":"7a19cce8-b9e8-4301-af1f-c46c7cec586b","rollback_request_id":"e754be23-d7eb-4924-93f3-47c64bd66a7b","screen_overrides":[{"effect":"allow","screen_key":"apartados","updated_at":"2026-10-03T20:00:56.860039+00:00","updated_by":"3f24222e-fd74-4ed2-b56f-f298af574b1e","user_id":"b89cced8-0358-44ea-84ae-01b75b25c6e4"},{"effect":"allow","screen_key":"clientes","updated_at":"2026-10-03T20:00:56.860039+00:00","updated_by":"3f24222e-fd74-4ed2-b56f-f298af574b1e","user_id":"b89cced8-0358-44ea-84ae-01b75b25c6e4"},{"effect":"allow","screen_key":"config.beneficios","updated_at":"2026-11-07T17:32:16.502117+00:00","updated_by":"3f24222e-fd74-4ed2-b56f-f298af574b1e","user_id":"b89cced8-0358-44ea-84ae-01b75b25c6e4"},{"effect":"allow","screen_key":"config.clientes","updated_at":"2026-11-07T17:32:16.502117+00:00","updated_by":"3f24222e-fd74-4ed2-b56f-f298af574b1e","user_id":"b89cced8-0358-44ea-84ae-01b75b25c6e4"},{"effect":"allow","screen_key":"config.devoluciones","updated_at":"2026-11-07T17:32:16.502117+00:00","updated_by":"3f24222e-fd74-4ed2-b56f-f298af574b1e","user_id":"b89cced8-0358-44ea-84ae-01b75b25c6e4"},{"effect":"allow","screen_key":"config.impresion","updated_at":"2026-11-07T17:32:16.502117+00:00","updated_by":"3f24222e-fd74-4ed2-b56f-f298af574b1e","user_id":"b89cced8-0358-44ea-84ae-01b75b25c6e4"},{"effect":"allow","screen_key":"config.ventas","updated_at":"2026-11-07T17:32:16.502117+00:00","updated_by":"3f24222e-fd74-4ed2-b56f-f298af574b1e","user_id":"b89cced8-0358-44ea-84ae-01b75b25c6e4"},{"effect":"deny","screen_key":"dashboard","updated_at":"2026-10-03T20:00:56.860039+00:00","updated_by":"3f24222e-fd74-4ed2-b56f-f298af574b1e","user_id":"b89cced8-0358-44ea-84ae-01b75b25c6e4"},{"effect":"allow","screen_key":"devoluciones","updated_at":"2026-10-03T20:00:56.860039+00:00","updated_by":"3f24222e-fd74-4ed2-b56f-f298af574b1e","user_id":"b89cced8-0358-44ea-84ae-01b75b25c6e4"},{"effect":"deny","screen_key":"inventario","updated_at":"2026-10-03T20:00:56.860039+00:00","updated_by":"3f24222e-fd74-4ed2-b56f-f298af574b1e","user_id":"b89cced8-0358-44ea-84ae-01b75b25c6e4"},{"effect":"allow","screen_key":"pos","updated_at":"2026-10-03T20:00:56.860039+00:00","updated_by":"3f24222e-fd74-4ed2-b56f-f298af574b1e","user_id":"b89cced8-0358-44ea-84ae-01b75b25c6e4"},{"effect":"allow","screen_key":"prestamos","updated_at":"2026-10-03T20:00:56.860039+00:00","updated_by":"3f24222e-fd74-4ed2-b56f-f298af574b1e","user_id":"b89cced8-0358-44ea-84ae-01b75b25c6e4"},{"effect":"allow","screen_key":"reportes","updated_at":"2026-10-03T20:00:56.860039+00:00","updated_by":"3f24222e-fd74-4ed2-b56f-f298af574b1e","user_id":"b89cced8-0358-44ea-84ae-01b75b25c6e4"}],"capability_overrides":[]}]'::jsonb;
+ expected_rules constant jsonb := '[{"allowed":true,"capability_key":"customers.create","role_code":"vendedor","updated_at":"2026-07-30T19:31:17.457865+00:00"},{"allowed":true,"capability_key":"customers.update","role_code":"vendedor","updated_at":"2026-07-30T19:31:17.457865+00:00"},{"allowed":true,"capability_key":"sales.collect","role_code":"vendedor","updated_at":"2026-07-30T19:31:17.457865+00:00"},{"allowed":true,"capability_key":"sales.create","role_code":"vendedor","updated_at":"2026-07-30T19:31:17.457865+00:00"},{"allowed":true,"capability_key":"sales.exchange","role_code":"vendedor","updated_at":"2026-07-30T19:31:17.457865+00:00"},{"allowed":true,"capability_key":"sales.refund","role_code":"vendedor","updated_at":"2026-07-30T19:31:17.457865+00:00"}]'::jsonb;
+ target jsonb; profile pos.sellers%rowtype; assignment pos.user_permission_role_assignments%rowtype;
+ actor uuid:=auth.uid(); response jsonb; command jsonb; snapshots jsonb:='{}'; observed text;
+ relation record; request_id uuid; changed integer:=0; original pos.online_requests%rowtype;
+begin
+ if actor is null or not pos.is_active_admin() or not pos.can_manage_screen_permissions(actor)
+ then raise exception 'H189_PERMISSION_ADMIN_CONTEXT_REQUIRED' using errcode='42501'; end if;
+ if jsonb_array_length(targets)<>3 then raise exception 'H189_TARGET_COUNT'; end if;
+ if not exists(select 1 from pos.permission_roles where code='vendedor' and active) then raise exception 'H189_ROLE_INACTIVE'; end if;
+ -- Same transaction lock as the existing gateway; prevents concurrent business
+ -- writes from invalidating preservation evidence. No new locking authority.
+ perform pg_advisory_xact_lock(hashtextextended('pos.online.commercial',164));
+ lock table pos.user_permission_role_assignments in share row exclusive mode;
+ if (select jsonb_agg(to_jsonb(r) order by r.capability_key) from pos.role_capability_permissions r where r.role_code='vendedor') is distinct from expected_rules
+ then raise exception 'H189_ROLE_RULES_CHANGED'; end if;
+ -- All tables except these four expected authorization/receipt metadata outputs
+ -- must remain byte-equivalent as JSON. Includes all business and legacy queues.
+ for relation in select tablename from pg_tables where schemaname='pos'
+   and tablename not in('user_permission_role_assignments','permission_change_audit','online_requests','online_snapshot_revision') order by tablename loop
+   execute format('select md5(coalesce(string_agg(md5(to_jsonb(t)::text),'''' order by md5(to_jsonb(t)::text)),'''')) from pos.%I t',relation.tablename) into observed;
+   snapshots:=snapshots||jsonb_build_object(relation.tablename,observed);
+ end loop;
+ select md5(coalesce(jsonb_agg(to_jsonb(a) order by a.user_id)::text,'')) into observed
+ from pos.user_permission_role_assignments a where not exists(select 1 from jsonb_array_elements(targets) t where t->>'user_id'=a.user_id::text);
+ snapshots:=snapshots||jsonb_build_object('_other_assignments',observed);
+ for target in select value from jsonb_array_elements(targets) order by value->>'user_id' loop
+   perform pg_advisory_xact_lock(hashtextextended(target->>'user_id',56));
+   select s.* into profile from pos.sellers s join auth.users u on u.id=(target->>'user_id')::uuid and lower(u.email)=lower(s.email)
+     where s.id=target->>'seller_id' and s.active and s.deleted_at is null and s.role='vendedor' for share of s;
+   if not found then raise exception 'H189_TARGET_NOT_ACTIVE'; end if;
+   if (select coalesce(jsonb_agg(to_jsonb(o) order by o.screen_key),'[]') from pos.user_screen_permission_overrides o where o.user_id=(target->>'user_id')::uuid) is distinct from target->'screen_overrides'
+     or (select coalesce(jsonb_agg(to_jsonb(o) order by o.capability_key),'[]') from pos.user_capability_overrides o where o.user_id=(target->>'user_id')::uuid) is distinct from target->'capability_overrides'
+   then raise exception 'H189_OVERRIDE_CHANGED'; end if;
+   select * into assignment from pos.user_permission_role_assignments where user_id=(target->>'user_id')::uuid;
+   if found then
+     if assignment.role_code='vendedor' and assignment.active then continue; end if;
+     raise exception 'H189_EXISTING_ASSIGNMENT_CONFLICT';
+   end if;
+   request_id:=(target->>'request_id')::uuid;
+   if exists(select 1 from pos.online_requests r where r.actor_id=actor and r.request_id=(target->>'request_id')::uuid) then raise exception 'H189_REQUEST_ALREADY_USED'; end if;
+   command:=jsonb_build_object('type','permissions','expectedActorId',actor,'rpc','admin_apply_user_screen_permissions_checked',
+     'args',jsonb_build_object('p_target_user_id',target->>'user_id','p_role_code','vendedor',
+       'p_overrides','{}'::jsonb,'p_expected_version',pos.user_screen_permissions_version((target->>'user_id')::uuid),'p_screen_keys','[]'::jsonb));
+   response:=pos.execute_online_command(request_id,command);
+   if response->>'ok' is distinct from 'true' then raise exception 'H189_PERMISSION_OPERATION_REJECTED: %',response->'error'; end if;
+   if not (select allowed from pos.resolve_operational_capability((target->>'user_id')::uuid,'sales.create'))
+      or not (select allowed from pos.resolve_operational_capability((target->>'user_id')::uuid,'sales.collect'))
+      or exists(select 1 from pos.operational_capabilities c cross join lateral pos.resolve_operational_capability((target->>'user_id')::uuid,c.capability_key) r
+        where r.allowed and not exists(select 1 from pos.role_capability_permissions rp where rp.role_code='vendedor' and rp.capability_key=c.capability_key and rp.allowed))
+   then raise exception 'H189_EFFECTIVE_CAPABILITY_DRIFT'; end if;
+   changed:=changed+1;
+ end loop;
+ set constraints all immediate;
+ for relation in select key as tablename,value from jsonb_each(snapshots) where key<>'_other_assignments' loop
+   execute format('select md5(coalesce(string_agg(md5(to_jsonb(t)::text),'''' order by md5(to_jsonb(t)::text)),'''')) from pos.%I t',relation.tablename) into observed;
+   if to_jsonb(observed) is distinct from relation.value then raise exception 'H189_PROTECTED_TABLE_CHANGED: %',relation.tablename; end if;
+ end loop;
+ select md5(coalesce(jsonb_agg(to_jsonb(a) order by a.user_id)::text,'')) into observed
+ from pos.user_permission_role_assignments a where not exists(select 1 from jsonb_array_elements(targets) t where t->>'user_id'=a.user_id::text);
+ if observed is distinct from snapshots->>'_other_assignments' then raise exception 'H189_OTHER_ASSIGNMENTS_CHANGED'; end if;
+ raise notice 'H189_REPAIR_OK changed=% commercial_tables_preserved=true',changed;
+end $h189_roles$;
+commit;

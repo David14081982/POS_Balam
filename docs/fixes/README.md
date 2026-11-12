@@ -15,6 +15,10 @@ Corrección de edición: [H172 · Guardado y mensajes](guardado-edicion-producto
 
 ## Correcciones registradas
 
+- [permisos-vendedores-h189.md](permisos-vendedores-h189.md)
+  — H-189: publicación limitada a las tres asignaciones del rol vendedor.
+  Desplegadas y verificadas en Supabase; inicio de sesión real pendiente.
+
 - [otros-tickets-detalle-espaciado-h187.md](otros-tickets-detalle-espaciado-h187.md)
   — H-187: extender detalle sin SKU/ornamento y pie compacto a los demás
   comprobantes comerciales; devolución sin SKU, datos económicos conservados.

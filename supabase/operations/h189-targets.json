@@ -1,0 +1,314 @@
+{
+  "project": "telohdbvbvsfmwyriflz",
+  "targets": [
+    {
+      "user_id": "16cc8681-4769-4c72-8f2c-3d897c8fc521",
+      "seller_id": "16cc8681-4769-4c72-8f2c-3d897c8fc521",
+      "request_id": "f3c31611-3327-4185-9d3c-6af819c3856a",
+      "rollback_request_id": "ca47c028-4c10-4ba2-8d88-61c966028be7",
+      "screen_overrides": [],
+      "capability_overrides": []
+    },
+    {
+      "user_id": "8946790c-8cbc-45b0-ad50-0cb74a0b0126",
+      "seller_id": "8946790c-8cbc-45b0-ad50-0cb74a0b0126",
+      "request_id": "a3c44575-de9f-4b31-bc1b-59cdf47f8d75",
+      "rollback_request_id": "c1fbed1a-6375-445f-b076-66eb229e6444",
+      "screen_overrides": [
+        {
+          "effect": "allow",
+          "screen_key": "apartados",
+          "updated_at": "2026-08-03T07:51:04.874602+00:00",
+          "updated_by": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+          "user_id": "8946790c-8cbc-45b0-ad50-0cb74a0b0126"
+        },
+        {
+          "effect": "allow",
+          "screen_key": "clientes",
+          "updated_at": "2026-08-03T07:51:04.874602+00:00",
+          "updated_by": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+          "user_id": "8946790c-8cbc-45b0-ad50-0cb74a0b0126"
+        },
+        {
+          "effect": "allow",
+          "screen_key": "config.beneficios",
+          "updated_at": "2026-08-03T07:51:04.874602+00:00",
+          "updated_by": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+          "user_id": "8946790c-8cbc-45b0-ad50-0cb74a0b0126"
+        },
+        {
+          "effect": "allow",
+          "screen_key": "config.clientes",
+          "updated_at": "2026-08-03T07:51:04.874602+00:00",
+          "updated_by": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+          "user_id": "8946790c-8cbc-45b0-ad50-0cb74a0b0126"
+        },
+        {
+          "effect": "allow",
+          "screen_key": "config.demo",
+          "updated_at": "2026-08-03T07:51:04.874602+00:00",
+          "updated_by": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+          "user_id": "8946790c-8cbc-45b0-ad50-0cb74a0b0126"
+        },
+        {
+          "effect": "allow",
+          "screen_key": "config.devoluciones",
+          "updated_at": "2026-08-03T07:51:04.874602+00:00",
+          "updated_by": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+          "user_id": "8946790c-8cbc-45b0-ad50-0cb74a0b0126"
+        },
+        {
+          "effect": "allow",
+          "screen_key": "config.impresion",
+          "updated_at": "2026-08-03T07:51:04.874602+00:00",
+          "updated_by": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+          "user_id": "8946790c-8cbc-45b0-ad50-0cb74a0b0126"
+        },
+        {
+          "effect": "allow",
+          "screen_key": "config.inventario",
+          "updated_at": "2026-08-03T07:51:04.874602+00:00",
+          "updated_by": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+          "user_id": "8946790c-8cbc-45b0-ad50-0cb74a0b0126"
+        },
+        {
+          "effect": "allow",
+          "screen_key": "config.negocio",
+          "updated_at": "2026-08-03T07:51:04.874602+00:00",
+          "updated_by": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+          "user_id": "8946790c-8cbc-45b0-ad50-0cb74a0b0126"
+        },
+        {
+          "effect": "allow",
+          "screen_key": "config.permisos",
+          "updated_at": "2026-08-03T07:51:04.874602+00:00",
+          "updated_by": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+          "user_id": "8946790c-8cbc-45b0-ad50-0cb74a0b0126"
+        },
+        {
+          "effect": "allow",
+          "screen_key": "config.producto",
+          "updated_at": "2026-08-03T07:51:04.874602+00:00",
+          "updated_by": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+          "user_id": "8946790c-8cbc-45b0-ad50-0cb74a0b0126"
+        },
+        {
+          "effect": "allow",
+          "screen_key": "config.usuarios",
+          "updated_at": "2026-08-03T07:51:04.874602+00:00",
+          "updated_by": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+          "user_id": "8946790c-8cbc-45b0-ad50-0cb74a0b0126"
+        },
+        {
+          "effect": "allow",
+          "screen_key": "config.vendedores",
+          "updated_at": "2026-08-03T07:51:04.874602+00:00",
+          "updated_by": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+          "user_id": "8946790c-8cbc-45b0-ad50-0cb74a0b0126"
+        },
+        {
+          "effect": "allow",
+          "screen_key": "config.ventas",
+          "updated_at": "2026-08-03T07:51:04.874602+00:00",
+          "updated_by": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+          "user_id": "8946790c-8cbc-45b0-ad50-0cb74a0b0126"
+        },
+        {
+          "effect": "allow",
+          "screen_key": "dashboard",
+          "updated_at": "2026-08-03T07:51:04.874602+00:00",
+          "updated_by": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+          "user_id": "8946790c-8cbc-45b0-ad50-0cb74a0b0126"
+        },
+        {
+          "effect": "allow",
+          "screen_key": "descuentos",
+          "updated_at": "2026-08-03T07:51:04.874602+00:00",
+          "updated_by": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+          "user_id": "8946790c-8cbc-45b0-ad50-0cb74a0b0126"
+        },
+        {
+          "effect": "allow",
+          "screen_key": "devoluciones",
+          "updated_at": "2026-08-03T07:51:04.874602+00:00",
+          "updated_by": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+          "user_id": "8946790c-8cbc-45b0-ad50-0cb74a0b0126"
+        },
+        {
+          "effect": "allow",
+          "screen_key": "inventario",
+          "updated_at": "2026-08-03T07:51:04.874602+00:00",
+          "updated_by": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+          "user_id": "8946790c-8cbc-45b0-ad50-0cb74a0b0126"
+        },
+        {
+          "effect": "allow",
+          "screen_key": "pos",
+          "updated_at": "2026-08-03T07:51:04.874602+00:00",
+          "updated_by": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+          "user_id": "8946790c-8cbc-45b0-ad50-0cb74a0b0126"
+        },
+        {
+          "effect": "allow",
+          "screen_key": "prestamos",
+          "updated_at": "2026-08-03T07:51:04.874602+00:00",
+          "updated_by": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+          "user_id": "8946790c-8cbc-45b0-ad50-0cb74a0b0126"
+        },
+        {
+          "effect": "allow",
+          "screen_key": "reportes",
+          "updated_at": "2026-08-03T07:51:04.874602+00:00",
+          "updated_by": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+          "user_id": "8946790c-8cbc-45b0-ad50-0cb74a0b0126"
+        },
+        {
+          "effect": "allow",
+          "screen_key": "vendedores",
+          "updated_at": "2026-08-03T07:51:04.874602+00:00",
+          "updated_by": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+          "user_id": "8946790c-8cbc-45b0-ad50-0cb74a0b0126"
+        }
+      ],
+      "capability_overrides": []
+    },
+    {
+      "user_id": "b89cced8-0358-44ea-84ae-01b75b25c6e4",
+      "seller_id": "b89cced8-0358-44ea-84ae-01b75b25c6e4",
+      "request_id": "7a19cce8-b9e8-4301-af1f-c46c7cec586b",
+      "rollback_request_id": "e754be23-d7eb-4924-93f3-47c64bd66a7b",
+      "screen_overrides": [
+        {
+          "effect": "allow",
+          "screen_key": "apartados",
+          "updated_at": "2026-10-03T20:00:56.860039+00:00",
+          "updated_by": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+          "user_id": "b89cced8-0358-44ea-84ae-01b75b25c6e4"
+        },
+        {
+          "effect": "allow",
+          "screen_key": "clientes",
+          "updated_at": "2026-10-03T20:00:56.860039+00:00",
+          "updated_by": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+          "user_id": "b89cced8-0358-44ea-84ae-01b75b25c6e4"
+        },
+        {
+          "effect": "allow",
+          "screen_key": "config.beneficios",
+          "updated_at": "2026-11-07T17:32:16.502117+00:00",
+          "updated_by": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+          "user_id": "b89cced8-0358-44ea-84ae-01b75b25c6e4"
+        },
+        {
+          "effect": "allow",
+          "screen_key": "config.clientes",
+          "updated_at": "2026-11-07T17:32:16.502117+00:00",
+          "updated_by": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+          "user_id": "b89cced8-0358-44ea-84ae-01b75b25c6e4"
+        },
+        {
+          "effect": "allow",
+          "screen_key": "config.devoluciones",
+          "updated_at": "2026-11-07T17:32:16.502117+00:00",
+          "updated_by": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+          "user_id": "b89cced8-0358-44ea-84ae-01b75b25c6e4"
+        },
+        {
+          "effect": "allow",
+          "screen_key": "config.impresion",
+          "updated_at": "2026-11-07T17:32:16.502117+00:00",
+          "updated_by": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+          "user_id": "b89cced8-0358-44ea-84ae-01b75b25c6e4"
+        },
+        {
+          "effect": "allow",
+          "screen_key": "config.ventas",
+          "updated_at": "2026-11-07T17:32:16.502117+00:00",
+          "updated_by": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+          "user_id": "b89cced8-0358-44ea-84ae-01b75b25c6e4"
+        },
+        {
+          "effect": "deny",
+          "screen_key": "dashboard",
+          "updated_at": "2026-10-03T20:00:56.860039+00:00",
+          "updated_by": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+          "user_id": "b89cced8-0358-44ea-84ae-01b75b25c6e4"
+        },
+        {
+          "effect": "allow",
+          "screen_key": "devoluciones",
+          "updated_at": "2026-10-03T20:00:56.860039+00:00",
+          "updated_by": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+          "user_id": "b89cced8-0358-44ea-84ae-01b75b25c6e4"
+        },
+        {
+          "effect": "deny",
+          "screen_key": "inventario",
+          "updated_at": "2026-10-03T20:00:56.860039+00:00",
+          "updated_by": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+          "user_id": "b89cced8-0358-44ea-84ae-01b75b25c6e4"
+        },
+        {
+          "effect": "allow",
+          "screen_key": "pos",
+          "updated_at": "2026-10-03T20:00:56.860039+00:00",
+          "updated_by": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+          "user_id": "b89cced8-0358-44ea-84ae-01b75b25c6e4"
+        },
+        {
+          "effect": "allow",
+          "screen_key": "prestamos",
+          "updated_at": "2026-10-03T20:00:56.860039+00:00",
+          "updated_by": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+          "user_id": "b89cced8-0358-44ea-84ae-01b75b25c6e4"
+        },
+        {
+          "effect": "allow",
+          "screen_key": "reportes",
+          "updated_at": "2026-10-03T20:00:56.860039+00:00",
+          "updated_by": "3f24222e-fd74-4ed2-b56f-f298af574b1e",
+          "user_id": "b89cced8-0358-44ea-84ae-01b75b25c6e4"
+        }
+      ],
+      "capability_overrides": []
+    }
+  ],
+  "role_capabilities": [
+    {
+      "allowed": true,
+      "capability_key": "customers.create",
+      "role_code": "vendedor",
+      "updated_at": "2026-07-30T19:31:17.457865+00:00"
+    },
+    {
+      "allowed": true,
+      "capability_key": "customers.update",
+      "role_code": "vendedor",
+      "updated_at": "2026-07-30T19:31:17.457865+00:00"
+    },
+    {
+      "allowed": true,
+      "capability_key": "sales.collect",
+      "role_code": "vendedor",
+      "updated_at": "2026-07-30T19:31:17.457865+00:00"
+    },
+    {
+      "allowed": true,
+      "capability_key": "sales.create",
+      "role_code": "vendedor",
+      "updated_at": "2026-07-30T19:31:17.457865+00:00"
+    },
+    {
+      "allowed": true,
+      "capability_key": "sales.exchange",
+      "role_code": "vendedor",
+      "updated_at": "2026-07-30T19:31:17.457865+00:00"
+    },
+    {
+      "allowed": true,
+      "capability_key": "sales.refund",
+      "role_code": "vendedor",
+      "updated_at": "2026-07-30T19:31:17.457865+00:00"
+    }
+  ]
+}
