@@ -1,0 +1,78 @@
+# .github/workflows/ci.yml
+# CI obligatorio para POS BALAM (H-62).
+# Ejecuta las pruebas reales del repositorio en cada Pull Request hacia main.
+# No despliega ni modifica producción: solo lee el código y corre pruebas.
+
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+
+# Sin permisos de escritura: este workflow no puede desplegar ni tocar producción.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Pruebas del repositorio
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        # actions/checkout v4.4.0 fijado por SHA completo (supply-chain).
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Configurar Node.js
+        # actions/setup-node v4.4.0 fijado por SHA completo (supply-chain).
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 20
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Verificar que Google Chrome esté disponible (pruebas E2E con playwright-core)
+        run: |
+          google-chrome --version || (echo "Google Chrome no está disponible en el runner" && exit 1)
+
+      - name: Ejecutar todas las pruebas test-*.mjs
+        run: |
+          set -uo pipefail
+          # Descubrimiento recursivo y seguro: encuentra todos los test-*.mjs,
+          # incluyendo subdirectorios, con nombres delimitados por NUL (soporta espacios/saltos).
+          mapfile -d '' -t tests < <(find . -type f -name 'test-*.mjs' -not -path '*/node_modules/*' -print0 | sort -z)
+          if [ ${#tests[@]} -eq 0 ]; then
+            echo "No se encontraron archivos test-*.mjs" >&2
+            exit 1
+          fi
+          echo "Se ejecutarán ${#tests[@]} archivos de prueba."
+          passed=0
+          failed=0
+          failed_list=()
+          for t in "${tests[@]}"; do
+            echo "──────────────────────────────────────────────"
+            echo "▶ node $t"
+            if node "$t"; then
+              passed=$((passed+1))
+            else
+              code=$?
+              echo "❌ FALLÓ: $t (exit $code)"
+              failed=$((failed+1))
+              failed_list+=( "$t" )
+            fi
+          done
+          echo "══════════════════════════════════════════════"
+          echo "Resumen: $passed archivos pasaron, $failed fallaron."
+          if [ $failed -ne 0 ]; then
+            echo "Archivos con fallos:"
+            for f in "${failed_list[@]}"; do echo "  - $f"; done
+            exit 1
+          fi
