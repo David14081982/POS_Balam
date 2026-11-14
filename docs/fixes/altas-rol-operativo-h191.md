@@ -1,9 +1,9 @@
 # Rol operativo en altas de cuentas
 
 **Riesgo:** H-191
-**Estado:** PARCIALMENTE RESUELTO — SQL desplegado; publicación de cliente autorizada y en curso.
+**Estado:** RESUELTO — SQL y cliente publicados; aceptación en terminal pendiente.
 **Fecha:** 14/11/2026
-**Commit:** `8023ae8` (release preparado); `17bfedd` (local)
+**Commit:** `8023ae8` (técnico publicado); `db7dbd2` (commit desplegado en Pages).
 
 ## Problema y reproducción
 
@@ -63,6 +63,13 @@ funciones exactas; las 172 funciones, asignaciones, excepciones, RLS, ACL,
 policies y triggers coinciden con el postflight aplicado. Evidencia en
 `evidence/h191/prepublication.json`. No se reaplicaron migraciones.
 H-192 permanece pendiente y no forma parte de esta entrega.
+
+Publicación completada el 14/11/2026: main actualizado y workflow manual
+`43603724427` con verificación de evidencia y despliegue correctos. Los once
+archivos estáticos servidos por Pages coinciden byte a byte con `db7dbd2`.
+SHA-256 del cliente: `9bb0ec013dccacfe0f943baa4598ee2aca070dca6c60a85e6192a8c3e87a7c58`.
+Evidencia: `evidence/h191/pages-verification.json`. No se añadieron ni repitieron
+casos funcionales; se verificó la entrega de los archivos previamente probados.
 
 Alta real mediante Auth remoto y aceptación en terminal: NOT_TESTED. No se
 modificó ni desplegó la Edge Function. Certificación A/B/C NO CERTIFICADO.

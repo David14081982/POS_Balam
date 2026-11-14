@@ -7,13 +7,16 @@ y `BLOQUEADO`.
 
 ## H-191 — Altas de cuentas sin rol operativo
 
-**Estado:** PARCIALMENTE RESUELTO — SQL desplegado; publicación del cliente autorizada y en curso.
-**Fecha:** 14/11/2026. **Commit:** `8023ae8` (preparado), `17bfedd` (local).
+**Estado:** RESUELTO — SQL y cliente publicados; aceptación en terminal pendiente.
+**Fecha:** 14/11/2026. **Commit:** `8023ae8` (técnico), `db7dbd2` (Pages).
 El alta confirmada asigna el rol del perfil sin reemplazar asignaciones ni
 excepciones. El editor usa el rol del perfil si base_role está vacío.
 232/233 aplicadas y verificadas; cuatro casos dirigidos PASS, dos errores
 de preparación del fixture corregidos. Sin backfill, cambios en Auth ni datos
 comerciales. Alta real y terminal NOT_TESTED; A/B/C NO CERTIFICADO.
+Publicación autorizada expresamente: preflight de sólo lectura conserva 232/233,
+funciones, permisos y esquema. Workflow `43603724427` correcto; archivos de Pages
+idénticos al commit desplegado. H-192 no forma parte de main ni de esta entrega.
 [Expediente](fixes/altas-rol-operativo-h191.md).
 
 ## H-190 — Devoluciones y cambios V2 rechazados para vendedores
