@@ -1,0 +1,21 @@
+{
+  "at": "2026-11-14T12:21:16.416Z",
+  "passed": 1,
+  "case": "9: seller read-only settings and administrator controls",
+  "sections": [
+    "negocio",
+    "producto",
+    "ventas",
+    "beneficios",
+    "devoluciones",
+    "vendedores",
+    "clientes",
+    "inventario",
+    "impresion",
+    "usuarios",
+    "permisos",
+    "demo"
+  ],
+  "remoteWrites": 0,
+  "artifactSha256": "57c1bed8f19a342d9f967acd0661cedcd6403165421ca51c9989a03a205a577e"
+}

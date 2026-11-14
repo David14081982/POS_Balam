@@ -1,0 +1,11 @@
+{
+  "at": "2026-11-14T13:51:40.308Z",
+  "passed": 4,
+  "cases": [
+    "5: POS client creation and paid sale without profile editing; atomic screen revocation and admin boundary",
+    "6: seller loan delivery/return, snapshot, replay and revocation; stock unchanged",
+    "7: report read without refund or settlement writes; Sellers grants/revokes commissions; identity boundaries",
+    "8: inventory gateway edit; seller with inventory.delete cannot clear inventory (42501), rows unchanged; direct/forged updates and revoked screen denied"
+  ],
+  "network": false
+}

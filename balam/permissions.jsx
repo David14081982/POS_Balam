@@ -310,8 +310,8 @@
     return h('div', { className: 'min-w-0' }, [
       h('div', { key: 'head', className: 'mb-5 flex flex-wrap items-end justify-between gap-3' }, [
         h('div', { key: 'copy' }, [
-          h(SerifHeading, { key: 'title', children: 'Permisos de visualización' }),
-          h('p', { key: 'hint', className: 'mt-1 text-caption text-on-surface-variant' }, 'Las áreas se organizan por pantallas. Cada cambio se guarda por usuario.'),
+          h(SerifHeading, { key: 'title', children: 'Permisos de pantallas y operaciones' }),
+          h('p', { key: 'hint', className: 'mt-1 text-caption text-on-surface-variant' }, 'Permitir una pantalla autoriza sus operaciones. Configuración es de consulta para vendedores. Cada cambio se guarda por usuario.'),
         ]),
         dirty && h('span', { key: 'dirty', className: 'px-3 py-1.5 rounded-full bg-gold-soft text-gold-text text-overline font-bold uppercase' }, `${Object.keys(draft).length} cambios pendientes`),
       ]),

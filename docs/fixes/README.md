@@ -15,6 +15,14 @@ Corrección de edición: [H172 · Guardado y mensajes](guardado-edicion-producto
 
 ## Correcciones registradas
 
+- [verificacion-cruzada-evidencia-h192.md](verificacion-cruzada-evidencia-h192.md)
+  — H-192: regla permanente R-EVI-01 y retrospectiva limitada H-191/H-192;
+  actualización documental y seguimiento del vaciado reservado a administrador.
+
+- [pantallas-operaciones-h192.md](pantallas-operaciones-h192.md)
+  — H-192: pantallas y capacidades atómicas; pruebas dirigidas existentes,
+  vaciado protegido y probado localmente; aprobación productiva pendiente.
+
 - [altas-rol-operativo-h191.md](altas-rol-operativo-h191.md)
   - H-191: initial account role and editor fallback.
 

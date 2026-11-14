@@ -27,3 +27,9 @@ Reglas de mantenimiento en `../README.md` § Registro de autoridades.
 **Definición:** migración `20260730008000` y las fronteras RPC/RLS que la consumen
 **Creada por:** H-56 Fase 5 · **Decisión:** `ADR-005`
 **Consumidores:** `grep -rn "require_current_capability" supabase/migrations/`
+
+## ¿Qué operaciones concede una pantalla?
+**Autoridad:** `pos.screen_operational_capabilities()`
+**Definición:** migración H-192; contrato en `docs/05-operational-capabilities.md`
+**Estado:** preparado; activación sujeta a aprobación de la tabla por cuenta.
+**Consumidores:** `rg -n "screen_operational_capabilities" supabase/`

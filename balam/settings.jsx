@@ -10,10 +10,15 @@
   // Conserva el DOM y captura errores asíncronos de acciones y campos existentes.
   function h(type, props, ...children) {
     const next = props ? { ...props } : props;
+    const readOnly = !window.AUTH.isAdmin();
+    const sectionLink = typeof next?.['data-testid'] === 'string' && next['data-testid'].startsWith('settings-section-');
+    if (readOnly && type === 'button' && !sectionLink) return null;
+    if (readOnly && next && ['input', 'textarea', 'select'].includes(type)) next.disabled = true;
     if (next) Object.keys(next).forEach(key => {
       if (!/^on[A-Z]/.test(key) || typeof next[key] !== 'function') return;
       const action = next[key];
       next[key] = (...args) => {
+        if (!window.AUTH.isAdmin() && !sectionLink) return;
         try {
           const result = action(...args);
           if (result && typeof result.catch === 'function') return result.catch(error => toast(error, 'var(--danger)'));
@@ -52,7 +57,7 @@
       }
     }, [sec, sections.map(s => s.id).join('|')]);
 
-    if (addingUser) return h(NewUserForm, { user: addingUser === true ? null : addingUser, onCancel: () => setAddingUser(false), onSaved: () => { setAddingUser(false); bump(v => v + 1); } });
+    if (addingUser && window.AUTH.isAdmin()) return h(NewUserForm, { user: addingUser === true ? null : addingUser, onCancel: () => setAddingUser(false), onSaved: () => { setAddingUser(false); bump(v => v + 1); } });
 
     const ctx = { setAddingUser, refresh: () => bump(v => v + 1) };
     return h('div', Object.assign({ className: 'flex-1 min-w-0 overflow-y-auto bg-background font-body text-on-surface px-4 py-6 sm:p-6' }, syncFocus),
@@ -67,6 +72,7 @@
           }, [h(MS, { key: 'i', name: s.icon, size: 18 }), h('span', { key: 'l', className: 'text-body' }, s.title)])),
         ),
         h('div', { key: 'panel', className: 'flex flex-col gap-4 min-w-0' },
+          !window.AUTH.isAdmin() && h('p', { 'data-testid': 'settings-readonly', className: 'text-caption text-on-surface-variant' }, 'Consulta de configuración. Los ajustes los modifica un administrador.'),
           sec && PANELS[sec] ? PANELS[sec](ctx) : [
             h(GlassCard, { key: 'restricted', className: 'p-8 text-on-surface-variant' }, 'No hay secciones de Configuración autorizadas.'),
           ]),
@@ -980,7 +986,7 @@
         h('div', { key: 'a', className: 'text-body font-medium text-primary' }, title),
         desc && h('div', { key: 'b', className: 'text-caption text-on-surface-variant mt-0.5' }, desc),
       ]),
-      h('button', {
+      !window.AUTH.isAdmin() ? h('span', { key: 'value', 'data-testid': 'config-readonly-' + k, className: 'text-caption font-medium' }, on ? 'Activado' : 'Desactivado') : h('button', {
         key: 'sw', 'data-testid': 'config-toggle-' + k, className: 'relative w-11 h-6 rounded-full transition-colors shrink-0 ' + (on ? '' : 'bg-surface-container-highest'),
         style: on ? { background: '#D4AF38' } : null, onClick: async () => await C.setSetting(k, !on),
       }, h('span', { className: 'absolute top-0.5 w-5 h-5 bg-surface rounded-full shadow transition-all ' + (on ? 'left-[22px]' : 'left-0.5') })),
@@ -992,7 +998,7 @@
     return h('div', { key: k, className: 'py-3 border-t border-outline-variant/40 first:border-t-0' }, [
       h('div', { key: 't', className: 'text-body font-medium text-primary' }, title),
       desc && h('div', { key: 'd', className: 'text-caption text-on-surface-variant mt-0.5 mb-2.5' }, desc),
-      h('div', { key: 's', className: 'inline-flex p-1 bg-surface-container-highest rounded-lg gap-1' },
+      !window.AUTH.isAdmin() ? h('p', { key: 'value', 'data-testid': 'config-readonly-' + k, className: 'text-caption' }, (options.find(o => o.value === cur) || {}).label || String(cur)) : h('div', { key: 's', className: 'inline-flex p-1 bg-surface-container-highest rounded-lg gap-1' },
         options.map(o => h('button', {
           key: o.value,
           className: 'px-4 py-1.5 rounded-md text-caption font-semibold uppercase tracking-wider transition-colors ' +
@@ -1633,7 +1639,7 @@
     ],
     impresion: () => [
       h(window.PrintManager.PrintHistory, { key: 'history' }),
-      h(window.USBPrintCheck, { key: 'usb-check' }),
+      window.AUTH.isAdmin() && h(window.USBPrintCheck, { key: 'usb-check' }),
       h(GlassCard, { key: 'tk', className: 'p-6' }, [
         h(SerifHeading, { key: 't', className: 'mb-2', children: 'Tickets e impresión' }),
         h(CfgToggle, { key: 'th', k: 'print.thermer', title: 'Usar THERMER en tablets Android', desc: 'Se utiliza sólo cuando USB directo no está activo en este dispositivo. Prepara COPIA CLIENTE y COPIA TIENDA para enviarlas juntas a THERMER. Requiere Browser Print. En PC se conserva la impresión del sistema.' }),
@@ -1688,8 +1694,12 @@
         ]),
       ];
     },
-    permisos: () => [h(window.PermissionAdminScreen, { key: 'permissions' })],
-    demo: () => [h(AdminDataPanel, { key: 'admin-data' })],
+    permisos: () => window.AUTH.isAdmin()
+      ? [h(window.PermissionAdminScreen, { key: 'permissions' })]
+      : [h(GlassCard, { key: 'permissions-readonly', className: 'p-5' }, 'La administración de permisos está reservada a administradores.')],
+    demo: () => window.AUTH.isAdmin()
+      ? [h(AdminDataPanel, { key: 'admin-data' })]
+      : [h(GlassCard, { key: 'data-readonly', className: 'p-5' }, 'La administración de datos está reservada a administradores.')],
   };
 
   // H-98 · Wizard administrativo permanente de Punto Cero. Los conteos y las

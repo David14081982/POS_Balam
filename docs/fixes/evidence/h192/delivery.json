@@ -1,0 +1,76 @@
+{
+  "at": "2026-11-14T13:55:12.842Z",
+  "status": "PENDING_OWNER_APPROVAL",
+  "databaseVerified": false,
+  "passed": 6,
+  "sources": [
+    {
+      "path": "balam/settings.jsx",
+      "sha256": "c00337594f3653abd92145cc9ad37b0bf3a9e81cb66a99e529b407469a10d0f5"
+    },
+    {
+      "path": "balam/permissions.jsx",
+      "sha256": "c22b4b8de9ba49219a3bc82cea4ea1e4486dceb6a726c3f865b6c7af0a145fc7"
+    },
+    {
+      "path": "index.html",
+      "sha256": "57c1bed8f19a342d9f967acd0661cedcd6403165421ca51c9989a03a205a577e"
+    },
+    {
+      "path": "POS Balam (offline).html",
+      "sha256": "57c1bed8f19a342d9f967acd0661cedcd6403165421ca51c9989a03a205a577e"
+    },
+    {
+      "path": "sw.js",
+      "sha256": "10673c2450fdbd83c77568c7ab0fca6d4e4450bb903019068390f0ed40a969c3"
+    },
+    {
+      "path": "test-h192-screen-operations.mjs",
+      "sha256": "bc4f8c8788e54997dfe7dc0fa2b7dac06e0b95fd9d2ccbcb6557ebe48fbb9387"
+    },
+    {
+      "path": "test-h192-settings-readonly.mjs",
+      "sha256": "759bc842a66afdb1254226132f66a8bcc9df89df06d1eff012bab2f9ba1c8daf"
+    },
+    {
+      "path": "supabase/operations/h192-preview-readonly.sql",
+      "sha256": "3ef2dffe8102ad7bab9b4ebcde7721e6426f44dfdf0cb72aaee02ac7c1ce56fc"
+    },
+    {
+      "path": "supabase/operations/h192-screen-capabilities.sql",
+      "sha256": "0a82195827d9cd82fa5e4793b371381a8fe70f01dfe65be90520436e5d487e60"
+    },
+    {
+      "path": "supabase/migrations/20261114023400_pos_h192_screen_operations.sql",
+      "sha256": "03b881d7fcbf9582a8788bc9c65e464f56aff634a45e4f970e4b7fdd0ea50a0e"
+    },
+    {
+      "path": "supabase/migrations/20261114023500_pos_h192_screen_operations_verification.sql",
+      "sha256": "7c65eba44ec0266e91d298d7bb5a0fd521de72bf61681a407c3adc8c2ba5c524"
+    },
+    {
+      "path": "supabase/operations/h192-backup-overrides-readonly.sql",
+      "sha256": "d784d875138c17bf3174b8d7d50517c0e7ad4ecdee6f5c08d0a4fd99f43450ee"
+    }
+  ],
+  "clearInventory": {
+    "verification": "LOCAL_ONLY",
+    "case": 8,
+    "sqlRunAt": "2026-11-14T13:51:40.308Z",
+    "baseline": {
+      "passed": 3,
+      "failed": 1,
+      "expectedCode": "42501",
+      "actualCode": "23514",
+      "actualMessage": "PRODUCT_RETURNABLE_HISTORY"
+    },
+    "after": {
+      "passed": 4,
+      "failed": 0,
+      "sellerCode": "42501",
+      "sellerMessage": "ACTIVE_ADMIN_REQUIRED",
+      "inventoryUnchanged": true
+    },
+    "adminSuccessfulClear": "NOT_TESTED"
+  }
+}

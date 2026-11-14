@@ -1,0 +1,141 @@
+{
+  "at": "2026-11-14T14:10:28.194Z",
+  "scope": "New H191/H192 content relative to public origin/main; existing public history preserved",
+  "status": "PASS",
+  "branch": "review/h191-h192-permissions",
+  "basePublicCommit": "0eea69f0699125967ee8f517f9efc5201548bd1b",
+  "preparedFiles": 29,
+  "accountNamesFound": 0,
+  "accountIdentifiersFound": 0,
+  "privateEvidenceFilesIncluded": 0,
+  "privateKeysOrServiceTokensFound": 0,
+  "previousH191CommitsChecked": [
+    "8023ae8",
+    "4470455"
+  ],
+  "excluded": [
+    "private account approval table",
+    "raw database census and backups",
+    "private H189 commits",
+    "unrelated deleted PDF files",
+    "local CLI state"
+  ],
+  "sources": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "7387f0da2e8108f885d1fedc4496531011d72b9f6baf1cc36f028c8afd7f1fba"
+    },
+    {
+      "path": "docs/architect/THINKING.md",
+      "sha256": "d74062b030a6ce2a0715cff6d2b2bd954b3535a3ef2cb10e344d4c442256f87a"
+    },
+    {
+      "path": "docs/fixes/verificacion-cruzada-evidencia-h192.md",
+      "sha256": "92624185374abda2ab55e7e735521ea683787c60375c1ba3aed60bed6f218c33"
+    },
+    {
+      "path": "docs/fixes/evidence/h192/regla-evidencia.diff",
+      "sha256": "9d4e62fa4b76e1c866a3f06e5b7dde544d0f65a27bce3421dd93272b811801ac"
+    },
+    {
+      "path": "docs/fixes/evidence/h192/regla-evidencia-verificacion.json",
+      "sha256": "6c6e68d669332a3393813b0cd6ce737fd3167b28148cfb5ccbdc4bc7575eb69a"
+    },
+    {
+      "path": "balam/permissions.jsx",
+      "sha256": "c22b4b8de9ba49219a3bc82cea4ea1e4486dceb6a726c3f865b6c7af0a145fc7"
+    },
+    {
+      "path": "balam/settings.jsx",
+      "sha256": "c00337594f3653abd92145cc9ad37b0bf3a9e81cb66a99e529b407469a10d0f5"
+    },
+    {
+      "path": "index.html",
+      "sha256": "57c1bed8f19a342d9f967acd0661cedcd6403165421ca51c9989a03a205a577e"
+    },
+    {
+      "path": "POS Balam (offline).html",
+      "sha256": "57c1bed8f19a342d9f967acd0661cedcd6403165421ca51c9989a03a205a577e"
+    },
+    {
+      "path": "sw.js",
+      "sha256": "10673c2450fdbd83c77568c7ab0fca6d4e4450bb903019068390f0ed40a969c3"
+    },
+    {
+      "path": "docs/02-architecture.md",
+      "sha256": "e7b841b66d95c62e8e9d4ae2a12ed7aef9e580c8c06d061701032d0aa9b0f731"
+    },
+    {
+      "path": "docs/03-known-risks.md",
+      "sha256": "1dde0c50ecce9d6f09c1e024783f637a575b79ef5b45f755ecad464f6ede7356"
+    },
+    {
+      "path": "docs/05-operational-capabilities.md",
+      "sha256": "d3b16ec3a4289017b901af6e5f0b048a2100000911dca1a50caa5cd547977829"
+    },
+    {
+      "path": "docs/architect/authorities/security.md",
+      "sha256": "a4bdf18d1fc34cfce2dc2b1c1d0c8bed70345c07112fccb1a5963196eefa8e04"
+    },
+    {
+      "path": "docs/fixes/README.md",
+      "sha256": "faf73b5e9cd1ba51c5f4ffea8f6adada9f8761bbabd92e18bc60f3a091718807"
+    },
+    {
+      "path": "docs/fixes/altas-rol-operativo-h191.md",
+      "sha256": "d5dfe9d291a5981a4cc22b477ff3b71b3bebd45e3648070c1ecf9722702728cd"
+    },
+    {
+      "path": "docs/fixes/pantallas-operaciones-h192.md",
+      "sha256": "2bab50db37f3df3ba3a20717111246e84eb27013e34eae80155e1368a8132d1f"
+    },
+    {
+      "path": "supabase/migrations/20261114023400_pos_h192_screen_operations.sql",
+      "sha256": "03b881d7fcbf9582a8788bc9c65e464f56aff634a45e4f970e4b7fdd0ea50a0e"
+    },
+    {
+      "path": "supabase/migrations/20261114023500_pos_h192_screen_operations_verification.sql",
+      "sha256": "7c65eba44ec0266e91d298d7bb5a0fd521de72bf61681a407c3adc8c2ba5c524"
+    },
+    {
+      "path": "supabase/operations/h192-backup-overrides-readonly.sql",
+      "sha256": "d784d875138c17bf3174b8d7d50517c0e7ad4ecdee6f5c08d0a4fd99f43450ee"
+    },
+    {
+      "path": "supabase/operations/h192-preview-readonly.sql",
+      "sha256": "3ef2dffe8102ad7bab9b4ebcde7721e6426f44dfdf0cb72aaee02ac7c1ce56fc"
+    },
+    {
+      "path": "supabase/operations/h192-screen-capabilities.sql",
+      "sha256": "0a82195827d9cd82fa5e4793b371381a8fe70f01dfe65be90520436e5d487e60"
+    },
+    {
+      "path": "test-h192-screen-operations.mjs",
+      "sha256": "bc4f8c8788e54997dfe7dc0fa2b7dac06e0b95fd9d2ccbcb6557ebe48fbb9387"
+    },
+    {
+      "path": "test-h192-settings-readonly.mjs",
+      "sha256": "759bc842a66afdb1254226132f66a8bcc9df89df06d1eff012bab2f9ba1c8daf"
+    },
+    {
+      "path": "docs/fixes/evidence/h192/delivery.json",
+      "sha256": "f8205656f180e80b54b4e476b1d7af7c9d2b2488ade20c251945a06d1b3360da"
+    },
+    {
+      "path": "docs/fixes/evidence/h192/isolated.json",
+      "sha256": "6ee73aba54d1105b54959a7258c411c46ed9dc807ff0202175bc36c99b1807ae"
+    },
+    {
+      "path": "docs/fixes/evidence/h192/settings-ui.json",
+      "sha256": "c3272a3218a7a6eae6df190a727207ae59f63a49be9d22052c2ad6ad516aed8d"
+    },
+    {
+      "path": "docs/fixes/evidence/h192/pwa.json",
+      "sha256": "207935f0269e40cc6eb9caf4a21c559809507e1c863dee2202d56c46302ec2a2"
+    },
+    {
+      "path": "docs/fixes/evidence/h191/prepublication.json",
+      "sha256": "bf6ae4cdfbe9adb9a1113be58be5802b8f6c1dd5fbfcf65558b13942ac7c4873"
+    }
+  ]
+}

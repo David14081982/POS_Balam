@@ -1,0 +1,15 @@
+{
+  "at": "2026-11-14T12:21:17.598Z",
+  "artifactSha256": "57c1bed8f19a342d9f967acd0661cedcd6403165421ca51c9989a03a205a577e",
+  "serviceWorkerSha256": "10673c2450fdbd83c77568c7ab0fca6d4e4450bb903019068390f0ed40a969c3",
+  "cases": [
+    {
+      "name": "PWA: activación preserva evidencia comercial antigua y retira sólo recursos estáticos",
+      "ok": true,
+      "retainedEvidenceSha256": "c05223d85727a29177a383b16b29ed146b95c959a472e827a3c21118f529dfb7",
+      "oldStaticCacheRemoved": true,
+      "commercialCacheUntouched": true
+    }
+  ],
+  "remoteBusinessWrites": 0
+}

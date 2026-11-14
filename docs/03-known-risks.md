@@ -1,5 +1,44 @@
 # Registro de riesgos conocidos
 
+## H-192 — Pantallas y operaciones con permisos divergentes
+
+**Estado:** PARCIALMENTE RESUELTO — guarda de vaciado corregida localmente; aprobación y verificación productiva pendientes.
+**Fecha:** 14/11/2026. **Commit:** Pendiente de commit.
+Contrato aprobado: pantallas gobiernan operaciones; Configuración sólo consulta
+para vendedores; la cuenta de pruebas conserva su estado activo. El editor actual sólo guarda
+pantallas; capacidades y SELECT de préstamos/reportes pueden contradecirlas.
+Alcance: correspondencia SQL única, overrides atómicos, lectura mínima y cliente
+de consulta. Sin rol admin, cambios en can_manage_screen_permissions ni datos
+comerciales. Producción requiere tabla por cuenta y visto bueno explícito.
+Historia 2 SQL completada; publicación autorizada por el propietario.
+**Pruebas:** seis casos dirigidos PASS (cuatro SQL, consulta UI y activación PWA),
+diez en conjunto con H-191. Tabla completa antes/después entregada al dueño;
+234/235 no aplicadas. Sin cambios productivos de esta historia. A/B/C NO CERTIFICADO.
+Corrección de la propuesta tras consulta del dueño: Reportes sólo concede lectura;
+liquidación/cierre corresponden a Vendedores. La cuenta de pruebas permanece
+activa. Se actualizó la tabla privada y el caso dirigido de Reportes.
+Revisión del diseño reabierta por el dueño: detectada también la concesión de
+edición de clientes desde POS sin consumidor en esa pantalla. Corregida en el
+borrador: caso 5 falla antes y pasa después con alta, venta pagada y agregados
+sin edición de ficha; 4/4 SQL PASS, mismos diez casos en conjunto. La proyección
+por cuenta permanece privada. Mapa restante contrastado con código; se explicitó
+que `commissions.settle` también permite Ajuste histórico. Sin cambios productivos.
+Aprendizaje permanente solicitado: R-EVI-01 en `docs/architect/THINKING.md`,
+entrada obligatoria en `AGENTS.md`. Actualización exclusivamente documental;
+revisión retrospectiva delimitada a H-191/H-192 en
+[verificación cruzada](fixes/verificacion-cruzada-evidencia-h192.md).
+Hallazgo de esa retrospectiva: `inventory.delete` también protegía el comando
+`clearInventory` de Configuración sin guarda administrativa. Decisión posterior
+del dueño: exigir administrador activo además de la capacidad. Incorporada en
+234/235 locales; caso 8 rechaza al vendedor con Inventario mediante 42501 y
+comprueba filas idénticas. La negativa falló antes con 23514 (protección comercial)
+y pasa después; 4/4 casos SQL existentes PASS. Tabla por cuenta actualizada,
+la cuenta de pruebas activa sin autorización de vaciado. El PASS documental anterior sólo
+prueba coherencia documental; H-192 sigue sin aplicar en producción. El dueño
+autorizó el respaldo en `review/h191-h192-permissions`, con excepción de commit
+limitada a esa rama y sin autorizar despliegue ni incorporación a main.
+[Expediente](fixes/pantallas-operaciones-h192.md).
+
 Este archivo evita reinvestigar problemas ya identificados. Antes de trabajar
 un riesgo se debe leer su evidencia y las correcciones relacionadas. Los
 estados válidos son: `ABIERTO`, `EN CURSO`, `PARCIALMENTE RESUELTO`, `RESUELTO`
@@ -14,6 +53,9 @@ excepciones. El editor usa el rol del perfil si base_role está vacío.
 232/233 aplicadas y verificadas; cuatro casos dirigidos PASS, dos errores
 de preparación del fixture corregidos. Sin backfill, cambios en Auth ni datos
 comerciales. Alta real y terminal NOT_TESTED; A/B/C NO CERTIFICADO.
+Retrospectiva R-EVI-01: sin otra asociación incorrecta encontrada en alta/fallback;
+integración de alta con el sincronizador 234 aún no ejercitada por los casos
+existentes. Revisión documental, sin nuevos cambios funcionales ni productivos.
 [Expediente](fixes/altas-rol-operativo-h191.md).
 
 ## H-190 — Devoluciones y cambios V2 rechazados para vendedores

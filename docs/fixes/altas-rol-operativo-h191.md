@@ -57,6 +57,13 @@ Evidencia sanitizada en `evidence/h191/`; metadatos íntegros sólo locales.
 
 ## Riesgo residual y pendientes
 
+Retrospectiva R-EVI-01: no se encontró otra asociación incorrecta en las rutas
+de alta y fallback revisadas. Los PASS de este expediente no cubren el alta
+combinada con el sincronizador H-192, que se incorpora en 234; tampoco Auth
+remoto ni el flujo completo del navegador. Trazabilidad y alcance en
+[verificación cruzada](verificacion-cruzada-evidencia-h192.md). Esa revisión
+fue documental: no alteró 232/233, código, datos ni permisos desplegados.
+
 La revisión automática rechazó el push a `David14081982/POS_Balam` y el
 despliegue en Pages por falta de autorización explícita para ese destino.
 Se solicitó esa autorización al propietario; no se intentó otra vía de publicación.

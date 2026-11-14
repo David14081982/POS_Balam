@@ -980,6 +980,16 @@ todas las capacidades y vendedor conserva sólo las operaciones históricamente
 autorizadas. El primer grupo protege liquidación y cierre de comisiones con RPC
 atómicas, auditoría e idempotencia, sin escritura directa desde el cliente.
 
+H-192 está preparado, pendiente de aprobación y despliegue: sustituye esa
+separación para vendedores por la correspondencia SQL única de
+`docs/05-operational-capabilities.md`. El editor actualiza pantallas y overrides
+operativos en una transacción; la creación H-191 inicializa ambos. Configuración
+es de consulta para vendedores, incluso si tienen todas sus secciones. El rol
+admin y `can_manage_screen_permissions` no cambian. La revisión administrativa
+incluye cambios en overrides operativos; el token del editor también los incluye.
+El vaciado de Configuración (`clearInventory`) exige administrador activo además
+de `inventory.delete`; autorizar Inventario a un vendedor no autoriza ese comando.
+
 El modelo de Fase 2 persiste identidades `auth.users.id`, nunca vendedores
 comerciales sin cuenta. `user_screen_permission_overrides` precede a
 `role_screen_permissions`; la ausencia de ambos deniega. Las funciones
