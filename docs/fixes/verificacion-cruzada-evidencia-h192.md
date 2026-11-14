@@ -3,7 +3,7 @@
 **Riesgo:** H-192 — falla metodológica y alcance de permisos
 **Estado:** PARCIALMENTE RESUELTO — regla incorporada; hallazgo corregido localmente tras decisión posterior del dueño; producción pendiente
 **Fecha:** 14/11/2026
-**Commit:** Pendiente de commit
+**Commit:** `ee593ce` (aprendizaje respaldado en rama de revisión).
 
 ## Problema y reproducción
 
@@ -193,11 +193,14 @@ las once preguntas y su límite de 120 líneas; las puertas de WORKFLOW no cambi
 El sistema arquitectónico ya excedía su presupuesto global antes de esta tarea;
 no se reestructuró el sistema completo para resolver esa deuda ajena al alcance.
 
-H-191 conserva SQL desplegado y cliente pendiente; H-192 conserva migraciones
-sin aplicar. El hallazgo de vaciado quedó corregido y probado localmente en el
+H-191 quedó publicada por autorización posterior del propietario; H-192 conserva
+migraciones sin aplicar. El hallazgo de vaciado quedó corregido y probado localmente en el
 seguimiento autorizado, sin presumir aprobación ni verificación productiva.
 La fotografía de permisos debe revalidarse en el ciclo productivo autorizado;
-no se actualizó desde Supabase. No hubo nuevos commits ni publicación.
+no se actualizó desde Supabase. El propietario autorizó después el respaldo en
+`review/h191-h192-permissions`, con excepción de commit limitada a esa rama:
+`ee593ce` conserva este aprendizaje y `7aaa960` el borrador funcional. No autoriza
+aplicar H-192 ni publicar su cliente. La tabla y el censo privados no se subieron.
 
 ## Referencias
 

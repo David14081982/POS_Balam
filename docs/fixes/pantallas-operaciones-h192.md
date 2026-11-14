@@ -3,7 +3,7 @@
 **Riesgo:** H-192
 **Estado:** PARCIALMENTE RESUELTO — guarda de vaciado corregida y probada localmente; aprobación y verificación productiva pendientes
 **Fecha:** 14/11/2026
-**Commit:** Pendiente de commit
+**Commit:** `7aaa960` (borrador respaldado; sólo rama de revisión).
 
 ## Problema y reproducción
 
@@ -181,8 +181,8 @@ conserva los bytes previamente probados. No se repitieron build ni UI/PWA.
 **No desplegado.** El propietario exigió entregar capacidades antes/después por
 cuenta y esperar su visto bueno antes de aplicar en producción. La tabla completa
 permanece local en `.evidence-h192-private/aprobacion-capacidades.md`, sin publicar
-identidades. Se necesita aprobación de esa tabla y autorización de publicación
-en GitHub/Pages, cuyo revisor automático bloqueó la entrega de H-191.
+identidades. Se necesita aprobación de esa tabla antes de aplicar H-192.
+H-191 fue autorizada después y publicada por separado, sin incluir este borrador.
 El propietario autorizó después el respaldo en `review/h191-h192-permissions`,
 con excepción de la puerta de commit limitada a esa rama. Es un borrador:
 no autoriza aplicar H-192, incorporarla a main ni publicar su cliente.

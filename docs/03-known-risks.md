@@ -3,14 +3,14 @@
 ## H-192 — Pantallas y operaciones con permisos divergentes
 
 **Estado:** PARCIALMENTE RESUELTO — guarda de vaciado corregida localmente; aprobación y verificación productiva pendientes.
-**Fecha:** 14/11/2026. **Commit:** Pendiente de commit.
+**Fecha:** 14/11/2026. **Commit:** `7aaa960` (respaldo en rama de revisión; no desplegado).
 Contrato aprobado: pantallas gobiernan operaciones; Configuración sólo consulta
 para vendedores; la cuenta de pruebas conserva su estado activo. El editor actual sólo guarda
 pantallas; capacidades y SELECT de préstamos/reportes pueden contradecirlas.
 Alcance: correspondencia SQL única, overrides atómicos, lectura mínima y cliente
 de consulta. Sin rol admin, cambios en can_manage_screen_permissions ni datos
 comerciales. Producción requiere tabla por cuenta y visto bueno explícito.
-Historia 2 SQL completada; publicación autorizada por el propietario.
+Historia 2 publicada por separado en main y Pages por autorización del propietario.
 **Pruebas:** seis casos dirigidos PASS (cuatro SQL, consulta UI y activación PWA),
 diez en conjunto con H-191. Tabla completa antes/después entregada al dueño;
 234/235 no aplicadas. Sin cambios productivos de esta historia. A/B/C NO CERTIFICADO.
@@ -46,16 +46,16 @@ y `BLOQUEADO`.
 
 ## H-191 — Altas de cuentas sin rol operativo
 
-**Estado:** PARCIALMENTE RESUELTO — SQL desplegado; publicación bloqueada por revisión automática.
-**Fecha:** 14/11/2026. **Commit:** `8023ae8` (preparado), `17bfedd` (local).
+**Estado:** RESUELTO — SQL y cliente publicados; aceptación en terminal pendiente.
+**Fecha:** 14/11/2026. **Commit:** `8023ae8` (técnico), `db7dbd2` (Pages).
 El alta confirmada asigna el rol del perfil sin reemplazar asignaciones ni
 excepciones. El editor usa el rol del perfil si base_role está vacío.
 232/233 aplicadas y verificadas; cuatro casos dirigidos PASS, dos errores
 de preparación del fixture corregidos. Sin backfill, cambios en Auth ni datos
 comerciales. Alta real y terminal NOT_TESTED; A/B/C NO CERTIFICADO.
-Retrospectiva R-EVI-01: sin otra asociación incorrecta encontrada en alta/fallback;
-integración de alta con el sincronizador 234 aún no ejercitada por los casos
-existentes. Revisión documental, sin nuevos cambios funcionales ni productivos.
+Publicación autorizada expresamente: preflight de sólo lectura conserva 232/233,
+funciones, permisos y esquema. Workflow `43603724427` correcto; archivos de Pages
+idénticos al commit desplegado. H-192 no forma parte de main ni de esta entrega.
 [Expediente](fixes/altas-rol-operativo-h191.md).
 
 ## H-190 — Devoluciones y cambios V2 rechazados para vendedores

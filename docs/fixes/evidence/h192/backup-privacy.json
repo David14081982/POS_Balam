@@ -1,10 +1,10 @@
 {
-  "at": "2026-11-14T14:10:28.194Z",
-  "scope": "New H191/H192 content relative to public origin/main; existing public history preserved",
+  "at": "2026-11-14T14:18:29.475Z",
+  "scope": "All new backup content relative to the original public base; existing public history preserved",
   "status": "PASS",
   "branch": "review/h191-h192-permissions",
   "basePublicCommit": "0eea69f0699125967ee8f517f9efc5201548bd1b",
-  "preparedFiles": 29,
+  "preparedFiles": 30,
   "accountNamesFound": 0,
   "accountIdentifiersFound": 0,
   "privateEvidenceFilesIncluded": 0,
@@ -31,7 +31,7 @@
     },
     {
       "path": "docs/fixes/verificacion-cruzada-evidencia-h192.md",
-      "sha256": "92624185374abda2ab55e7e735521ea683787c60375c1ba3aed60bed6f218c33"
+      "sha256": "e14397fcaaeaa609958f4c5cd1c809f8c4eea894483ce473d19820f7a69fc837"
     },
     {
       "path": "docs/fixes/evidence/h192/regla-evidencia.diff",
@@ -67,7 +67,7 @@
     },
     {
       "path": "docs/03-known-risks.md",
-      "sha256": "1dde0c50ecce9d6f09c1e024783f637a575b79ef5b45f755ecad464f6ede7356"
+      "sha256": "557d63daff5ac9fefc58bbcb4a4d9a67c6fbf22d102695cfa8cd7cb71e213dc0"
     },
     {
       "path": "docs/05-operational-capabilities.md",
@@ -83,11 +83,11 @@
     },
     {
       "path": "docs/fixes/altas-rol-operativo-h191.md",
-      "sha256": "d5dfe9d291a5981a4cc22b477ff3b71b3bebd45e3648070c1ecf9722702728cd"
+      "sha256": "c2dbdcc2aa1dabdd3c20da5cd69666285805baaaa390a3b6d620f016ba3d02bf"
     },
     {
       "path": "docs/fixes/pantallas-operaciones-h192.md",
-      "sha256": "2bab50db37f3df3ba3a20717111246e84eb27013e34eae80155e1368a8132d1f"
+      "sha256": "aa02f84e554c118ec2c23464b609f80a3c17eba7cf370d35a9f1b0b032a7f1c1"
     },
     {
       "path": "supabase/migrations/20261114023400_pos_h192_screen_operations.sql",
@@ -136,6 +136,12 @@
     {
       "path": "docs/fixes/evidence/h191/prepublication.json",
       "sha256": "bf6ae4cdfbe9adb9a1113be58be5802b8f6c1dd5fbfcf65558b13942ac7c4873"
+    },
+    {
+      "path": "docs/fixes/evidence/h191/pages-verification.json",
+      "sha256": "7e56c8a91a4e1f3cdf676da4d1bab0fab6b26bf2f4a89e51074d7ac9818ce1a2"
     }
-  ]
+  ],
+  "publishedH191Commit": "f0f125083d5b85c104a3c0e40610e4da4688b50b",
+  "h192ProductionApplied": false
 }

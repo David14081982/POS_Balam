@@ -1,0 +1,77 @@
+{
+  "at": "2026-11-14T14:14:29.582Z",
+  "status": "PASS",
+  "commit": "db7dbd2e47ec00d8d1c6238dfcf069826ed10a95",
+  "runId": 43603724427,
+  "url": "https://david14081982.github.io/POS_Balam/",
+  "scope": "Published static assets match commit bytes; no commercial operation or terminal acceptance performed",
+  "h192Published": false,
+  "assets": [
+    {
+      "path": "index.html",
+      "bytes": 9388478,
+      "sha256": "9bb0ec013dccacfe0f943baa4598ee2aca070dca6c60a85e6192a8c3e87a7c58",
+      "matchesCommit": true
+    },
+    {
+      "path": "POS Balam (offline).html",
+      "bytes": 9388478,
+      "sha256": "9bb0ec013dccacfe0f943baa4598ee2aca070dca6c60a85e6192a8c3e87a7c58",
+      "matchesCommit": true
+    },
+    {
+      "path": "sw.js",
+      "bytes": 4477,
+      "sha256": "489b6aa01d9848dea644703615e3275d9d612bc180b3fce93e1edd3d7d6c76fb",
+      "matchesCommit": true
+    },
+    {
+      "path": "manifest.webmanifest",
+      "bytes": 515,
+      "sha256": "43417f79b56bf52969b2d04d1c70ee0a6ae67673b2acd8f673b0fbebf6986afd",
+      "matchesCommit": true
+    },
+    {
+      "path": "pwa/apple-touch-icon.png",
+      "bytes": 854,
+      "sha256": "137651bbb5489c1fadbc75e1c1375d163d3be59a2c26f79161d46351a9991608",
+      "matchesCommit": true
+    },
+    {
+      "path": "pwa/favicon-64.png",
+      "bytes": 278,
+      "sha256": "12437629c6e64b955db23fa773b2a4ceba407f9cf7510d268b2f11a0606f1ad0",
+      "matchesCommit": true
+    },
+    {
+      "path": "pwa/icon-192.png",
+      "bytes": 937,
+      "sha256": "72184e55164ce1c4e67a1013724a3b83947503356a487e055f0d022d01dcb64e",
+      "matchesCommit": true
+    },
+    {
+      "path": "pwa/icon-512.png",
+      "bytes": 3692,
+      "sha256": "c42b6fa17510f7bb91358bbe9e04f714cb15e816fd26875f86d0bbcc5bc08319",
+      "matchesCommit": true
+    },
+    {
+      "path": "pwa/icon-maskable-512.png",
+      "bytes": 3334,
+      "sha256": "f0d29a6e593ba7d79286f755179b4c984d0a6634a4b97954cc8f4daa2c693e47",
+      "matchesCommit": true
+    },
+    {
+      "path": "pwa/thermer-check.html",
+      "bytes": 5981,
+      "sha256": "abcde00c442a4340e2d5e9e616fe63ac781dbf0c389635db9eacecad35dda2cf",
+      "matchesCommit": true
+    },
+    {
+      "path": "pwa/thermer-control.json",
+      "bytes": 150,
+      "sha256": "a07b36f4a852774a768a378632520dd99b51c231d720a0bc7d0c4c4f0b25c86c",
+      "matchesCommit": true
+    }
+  ]
+}
