@@ -3,7 +3,7 @@
 **Riesgo:** H-190
 **Estado:** RESUELTO — DESPLEGADO Y VERIFICADO EN SUPABASE; caja pendiente
 **Fecha:** 13/11/2026 (Hermosillo)
-**Commit:** `95b1d3c` (entrega p?blica); `d7ee1f8` (implementaci?n local).
+**Commit:** `95b1d3c` (entrega pública); `d7ee1f8` (implementación local).
 
 ## Problema y reproducción
 
@@ -110,7 +110,11 @@ operaciones comerciales en producción. No se afirma comparación exhaustiva de
 filas comerciales productivas: la preservación de todas las filas se midió en
 la fixture; en remoto se verificaron metadatos y los tres rechazos.
 
-Publicación de código pendiente de registrar. No se genera ni despliega cliente.
+Código publicado en `origin/main` con `95b1d3c`, mediante entrega selectiva desde
+`f91d307`. Incluye 228/229 idénticas a las locales y la fixture requerida por
+H-190; no exporta el expediente privado histórico. Los commits usan `[skip ci]`
+para no disparar suites adicionales. No se genera ni despliega cliente.
+El merge local posterior conserva ambos historiales sin reset ni force push.
 
 ## Riesgo residual y pendientes
 

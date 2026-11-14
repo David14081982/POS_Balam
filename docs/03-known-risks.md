@@ -17,7 +17,7 @@ return/exchange y se agregan dos policies SELECT por `sales.refund` efectivo.
 **Preservación remota:** otras 171 funciones, ACL/RLS de 64 tablas, 112 triggers,
 73 policies existentes y tres recibos rechazados idénticos. 228/229 conservadas,
 no reaplicadas; fuentes recuperadas en origin/main. Sin DML comercial, cambio
-de rol, cliente ni HTML. Publicaci?n selectiva sin expediente privado H-189.
+de rol, cliente ni HTML. Publicación selectiva sin expediente privado H-189.
 **Pruebas:** siete casos locales y tres comprobaciones de despliegue aprobados;
 se corrigieron errores de preparación del arnés antes de sus resultados finales.
 Sin suites amplias por el límite solicitado. No se declara primera pasada verde.
