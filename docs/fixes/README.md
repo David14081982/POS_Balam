@@ -15,6 +15,9 @@ Corrección de edición: [H172 · Guardado y mensajes](guardado-edicion-producto
 
 ## Correcciones registradas
 
+- [altas-rol-operativo-h191.md](altas-rol-operativo-h191.md)
+  ? H-191: rol inicial y respaldo del editor.
+
 - [devoluciones-vendedores-h190.md](devoluciones-vendedores-h190.md)
   ? H-190: guarda V2 de devoluci?n/cambio y lectura del documento por capacidad.
   Desplegado y verificado en Supabase; operaci?n en caja e impresi?n pendientes.

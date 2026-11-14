@@ -268,7 +268,7 @@
       try {
         await rpc('admin_apply_user_screen_permissions_checked', {
           p_target_user_id: snapshot.user.id,
-          p_role_code: snapshot.base_role,
+          p_role_code: snapshot.base_role || snapshot.user.role,
           p_overrides: draft,
           p_expected_version: snapshot.permission_version,
           p_screen_keys: model.leaves,

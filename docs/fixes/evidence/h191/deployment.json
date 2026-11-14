@@ -1,0 +1,30 @@
+{
+  "at": "2026-11-14T12:03:53.227336+00:00",
+  "versions": [
+    "20261107022800",
+    "20261107022900",
+    "20261113023000",
+    "20261113023100",
+    "20261114023200",
+    "20261114023300"
+  ],
+  "preserved": {
+    "assignments": 6,
+    "otherFunctions": 170,
+    "policies": 75,
+    "tables": 64,
+    "triggers": 112,
+    "screenOverrides": true,
+    "capabilityOverrides": true
+  },
+  "changedFunctions": [
+    {
+      "identity": "pos.admin_user_permission_snapshot(uuid,text[])",
+      "hash": "db1c6a6b48aee7ae1ca217d5d0ef4531"
+    },
+    {
+      "identity": "pos.online_save_entities(text,jsonb)",
+      "hash": "e012af5b9daf0648b178e853f2fd29df"
+    }
+  ]
+}

@@ -1006,6 +1006,12 @@ respuesta se perdió. El perfil comercial se confirma por el gateway con el
 JWT original y una identidad derivada estable. Una baja retira primero el
 perfil operativo y después la cuenta Auth. No hay éxito hasta confirmar ambos.
 
+H-191: al insertar el perfil de un alta Auth confirmada, `online_save_entities`
+asigna transaccionalmente el rol operativo de `sellers.role` sólo si no existe
+asignación. Conserva asignaciones y excepciones anteriores. El snapshot del
+editor incluye el rol del perfil; éste se usa como respaldo si `base_role` está
+vacío. No se realiza una siembra retroactiva ni se modifica Auth.
+
 `action: resolve` consulta o completa pasos demostrados; no repite una contraseña
 incierta ni adopta cuentas ajenas por coincidencia de correo. Un rechazo
 definitivo devuelve un recibo terminal; una operación que necesita decisión

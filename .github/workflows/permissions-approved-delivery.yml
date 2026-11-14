@@ -1,0 +1,70 @@
+name: Approved permissions delivery
+on:
+  workflow_dispatch:
+    inputs:
+      expected_commit:
+        description: Exact main commit with executed focused evidence
+        required: true
+        type: string
+      history:
+        description: Approved permission story
+        type: choice
+        options: [h191, h192]
+        required: true
+permissions:
+  contents: read
+jobs:
+  evidence:
+    if: github.ref == 'refs/heads/main' && inputs.expected_commit == github.sha
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Verify executed evidence and exact source manifest
+        env:
+          HISTORY: ${{ inputs.history }}
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          import {createHash} from 'node:crypto';
+          assert.ok(['h191','h192'].includes(process.env.HISTORY));
+          const e=JSON.parse(fs.readFileSync(`docs/fixes/evidence/${process.env.HISTORY}/delivery.json`,'utf8'));
+          assert.equal(e.status,'PASS');assert.equal(e.databaseVerified,true);
+          assert.ok(e.passed>0 && e.passed<=10);
+          const paths=new Set();
+          for(const f of e.sources){
+            assert.ok(!f.path.includes('..')&&!f.path.startsWith('/')&&!f.path.includes(':'));
+            assert.ok(!paths.has(f.path));paths.add(f.path);
+            const text=fs.readFileSync(f.path,'utf8').replace(/\r\n/g,'\n');
+            assert.equal(createHash('sha256').update(text).digest('hex'),f.sha256,f.path);
+          }
+          for(const path of ['index.html','POS Balam (offline).html','sw.js','balam/permissions.jsx'])assert.ok(paths.has(path));
+          assert.equal(fs.readFileSync('index.html','utf8'),fs.readFileSync('POS Balam (offline).html','utf8'));
+          console.log('Executed focused evidence verified; no broad suites repeated.');
+          NODE
+      - name: Stage verified client
+        run: |
+          mkdir _site
+          cp index.html 'POS Balam (offline).html' sw.js manifest.webmanifest _site/
+          cp -R pwa _site/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+  deploy:
+    needs: evidence
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: balam-pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deployment

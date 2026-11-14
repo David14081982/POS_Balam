@@ -41,3 +41,5 @@ supabase/.temp/
 # H-190: local deployment metadata and isolated publication worktree.
 .evidence-h190-private/
 .worktrees/h190-release/
+.evidence-h191-private/
+.evidence-h192-private/

@@ -1,0 +1,11 @@
+{
+  "at": "2026-11-14T12:02:49.982Z",
+  "passed": 2,
+  "network": false,
+  "auth": "simulated Auth confirmation; actual account RPCs and gateway",
+  "baselineMissingRole": true,
+  "creationEffectiveSalesCreate": true,
+  "replayPreserved": true,
+  "existingPermissionsPreserved": true,
+  "editorFallback": true
+}

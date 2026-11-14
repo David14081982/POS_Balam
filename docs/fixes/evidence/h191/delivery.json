@@ -1,0 +1,44 @@
+{
+  "at": "2026-11-14T12:05:35.541Z",
+  "status": "PASS",
+  "databaseVerified": true,
+  "passed": 4,
+  "sources": [
+    {
+      "path": ".github/workflows/permissions-approved-delivery.yml",
+      "sha256": "873c3c87b2eb507dc9f248e052af523306199f58b453625e2ea38c2dfbe67040"
+    },
+    {
+      "path": "balam/permissions.jsx",
+      "sha256": "721f2459ac08230dea12e841dc90af7a6a6208b1a3640758404b2693278a3172"
+    },
+    {
+      "path": "index.html",
+      "sha256": "9bb0ec013dccacfe0f943baa4598ee2aca070dca6c60a85e6192a8c3e87a7c58"
+    },
+    {
+      "path": "POS Balam (offline).html",
+      "sha256": "9bb0ec013dccacfe0f943baa4598ee2aca070dca6c60a85e6192a8c3e87a7c58"
+    },
+    {
+      "path": "sw.js",
+      "sha256": "489b6aa01d9848dea644703615e3275d9d612bc180b3fce93e1edd3d7d6c76fb"
+    },
+    {
+      "path": "supabase/operations/h191-readonly.sql",
+      "sha256": "2837ba6dc70f000ba8da2e13ccafc73f1ed89f833215b1fed07aae60480dea20"
+    },
+    {
+      "path": "supabase/migrations/20261114023200_pos_h191_account_role.sql",
+      "sha256": "ab59f1ee6ded1713fede0bb738a748535c53aa5c4aae955ceb8f34dbcb41ac26"
+    },
+    {
+      "path": "supabase/migrations/20261114023300_pos_h191_account_role_verification.sql",
+      "sha256": "b1fc9b82d1db188985c95e699b1cc14eb0f66037682b1f1a7f00059a6a2270cb"
+    },
+    {
+      "path": "test-h191-account-role.mjs",
+      "sha256": "f6aa09845da9be4382d365b23a0b2b90f9fa562f28ab8a8745c3cb1924f88a5b"
+    }
+  ]
+}
