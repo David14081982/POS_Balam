@@ -3,7 +3,7 @@
 **Riesgo:** H-190
 **Estado:** RESUELTO — DESPLEGADO Y VERIFICADO EN SUPABASE; caja pendiente
 **Fecha:** 13/11/2026 (Hermosillo)
-**Commit:** Pendiente de commit
+**Commit:** `95b1d3c` (entrega p?blica); `d7ee1f8` (implementaci?n local).
 
 ## Problema y reproducción
 

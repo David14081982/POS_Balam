@@ -8,7 +8,7 @@ y `BLOQUEADO`.
 ## H-190 — Devoluciones y cambios V2 rechazados para vendedores
 
 **Estado:** RESUELTO — DESPLEGADO Y VERIFICADO EN SUPABASE; caja pendiente.
-**Fecha:** 13/11/2026. **Commit:** Pendiente de commit.
+**Fecha:** 13/11/2026. **Commit:** `95b1d3c` (publicado).
 Reproducción aislada: vendedor con capacidad recibe 42501 en devolución y
 cambio V2; una devolución confirmada por administrador queda invisible para él.
 Migraciones 230/231 aplicadas juntas el 14/11/2026 06:07 UTC (13/11 Hermosillo).
@@ -16,7 +16,8 @@ Se amplía sólo `restrict_seller_product_update()` para los comandos privados
 return/exchange y se agregan dos policies SELECT por `sales.refund` efectivo.
 **Preservación remota:** otras 171 funciones, ACL/RLS de 64 tablas, 112 triggers,
 73 policies existentes y tres recibos rechazados idénticos. 228/229 conservadas,
-no reaplicadas. Sin DML comercial, cambio de rol, cliente ni HTML.
+no reaplicadas; fuentes recuperadas en origin/main. Sin DML comercial, cambio
+de rol, cliente ni HTML. Publicaci?n selectiva sin expediente privado H-189.
 **Pruebas:** siete casos locales y tres comprobaciones de despliegue aprobados;
 se corrigieron errores de preparación del arnés antes de sus resultados finales.
 Sin suites amplias por el límite solicitado. No se declara primera pasada verde.
