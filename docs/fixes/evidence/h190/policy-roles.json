@@ -1,0 +1,7 @@
+{
+  "id": 7,
+  "status": "PASS",
+  "name": "inactive admin cannot read or execute; refund predicate honors explicit capability denial",
+  "network": false,
+  "sourceHash": "ce34a4ebb57ae629a45a8beabc94e14c46d26c5703a8981d610f2d4d8be2e290"
+}

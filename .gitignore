@@ -37,3 +37,7 @@ supabase/.temp/
 
 # H-186: raw audit data, browser artifacts and private fixture journals.
 .evidence-h186*
+
+# H-190: local deployment metadata and isolated publication worktree.
+.evidence-h190-private/
+.worktrees/h190-release/

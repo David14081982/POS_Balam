@@ -1,0 +1,45 @@
+{
+  "at": "2026-11-14T06:07:37.133284+00:00",
+  "status": "PASS",
+  "preflightAt": "2026-11-14T05:58:14.119748+00:00",
+  "appliedVersions": [
+    "20261113023000",
+    "20261113023100"
+  ],
+  "previousVersionsPreserved": true,
+  "oldGuardHash": "605bf2f7add6117c0cd17436e3945c32",
+  "newGuardHash": "d250cdd879860bf1cb3014b5b38b1310",
+  "guardOwnerAclSecurityAndSearchPathPreserved": true,
+  "otherFunctionsPreserved": 171,
+  "tableAclAndRlsPreserved": 64,
+  "triggersPreserved": 112,
+  "existingPoliciesPreserved": 73,
+  "newPolicies": [
+    {
+      "table": "return_items",
+      "command": "SELECT",
+      "predicate": "pos.current_has_capability('sales.refund'::text)"
+    },
+    {
+      "table": "returns",
+      "command": "SELECT",
+      "predicate": "pos.current_has_capability('sales.refund'::text)"
+    }
+  ],
+  "boundary": {
+    "direct_item_insert": false,
+    "direct_product_update": false,
+    "direct_request_update": false,
+    "direct_return_insert": false,
+    "gateway_execute": true,
+    "private_context_execute": false
+  },
+  "rejectedReturnReceiptsPreserved": 3,
+  "rejectedReceiptHashPreserved": true,
+  "commercialDml": false,
+  "productionFunctionalOperations": 0,
+  "sourceHashes": {
+    "supabase/migrations/20261113023000_pos_h190_seller_postsale.sql": "60a0490fad610ae8ea2012510bb6c4767950d83e061df19b284c357f625f3c2e",
+    "supabase/migrations/20261113023100_pos_h190_seller_postsale_verification.sql": "189ccb91cea1b355ffa688361c49abbd2b43d0b97a39232bed2c5d004661d6de"
+  }
+}

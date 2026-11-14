@@ -15,6 +15,10 @@ Corrección de edición: [H172 · Guardado y mensajes](guardado-edicion-producto
 
 ## Correcciones registradas
 
+- [devoluciones-vendedores-h190.md](devoluciones-vendedores-h190.md)
+  ? H-190: guarda V2 de devoluci?n/cambio y lectura del documento por capacidad.
+  Desplegado y verificado en Supabase; operaci?n en caja e impresi?n pendientes.
+
 - [permisos-vendedores-h189.md](permisos-vendedores-h189.md)
   — H-189: publicación limitada a las tres asignaciones del rol vendedor.
   Desplegadas y verificadas en Supabase; inicio de sesión real pendiente.

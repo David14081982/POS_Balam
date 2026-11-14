@@ -1,0 +1,38 @@
+{
+  "at": "2026-11-14T06:03:46.608Z",
+  "network": false,
+  "cases": [
+    {
+      "id": 2,
+      "name": "migration and verification preserve all POS rows, other functions, ACL, RLS and triggers",
+      "status": "PASS"
+    },
+    {
+      "id": 3,
+      "name": "seller sale and first partial return: stock, refund, commission and readable document",
+      "status": "PASS"
+    },
+    {
+      "id": 4,
+      "name": "second partial return remains readable; replay has no effects and excessive quantity is rejected",
+      "status": "PASS"
+    },
+    {
+      "id": 5,
+      "name": "exchange restores source, deducts target, collects exact difference and preserves original finances",
+      "status": "PASS"
+    },
+    {
+      "id": 6,
+      "name": "direct and forged writes denied; inactive/orphan/anon denied; admin and service reads preserved",
+      "status": "PASS"
+    }
+  ],
+  "passed": 5,
+  "sourceHashes": {
+    "test-h190-seller-postsale.mjs": "f44074d83ab21cc3b005df9420d1cd8a8f5432a7d518f9744be8c17c02d53eef",
+    "test-fixtures/h189/sql-fixture.mjs": "6904f119de196ede2862616bfbcb96ceb8d52b1bb454eed1f8f7a3b5e744866d",
+    "supabase/migrations/20261113023000_pos_h190_seller_postsale.sql": "60a0490fad610ae8ea2012510bb6c4767950d83e061df19b284c357f625f3c2e",
+    "supabase/migrations/20261113023100_pos_h190_seller_postsale_verification.sql": "189ccb91cea1b355ffa688361c49abbd2b43d0b97a39232bed2c5d004661d6de"
+  }
+}

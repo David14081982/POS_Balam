@@ -1,0 +1,16 @@
+{
+  "at": "2026-11-14T06:02:10.280Z",
+  "network": false,
+  "cases": [
+    {
+      "id": 1,
+      "name": "baseline: seller return/exchange rejected without business effects; admin return invisible to seller",
+      "status": "PASS"
+    }
+  ],
+  "passed": 1,
+  "sourceHashes": {
+    "test-h190-seller-postsale.mjs": "f44074d83ab21cc3b005df9420d1cd8a8f5432a7d518f9744be8c17c02d53eef",
+    "test-fixtures/h189/sql-fixture.mjs": "6904f119de196ede2862616bfbcb96ceb8d52b1bb454eed1f8f7a3b5e744866d"
+  }
+}

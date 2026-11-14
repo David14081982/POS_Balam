@@ -1340,6 +1340,13 @@ sin plazo no borra el ya registrado.
 
 ### Commit transaccional de devolución
 
+H-190 permite el espejo V2 de existencias únicamente dentro de devoluciones y
+cambios autorizados por el coordinador online, conservando las guardas de
+atributos y las transacciones existentes. La lectura de `returns` y
+`return_items` se permite también a quien tenga `sales.refund` efectivo, para
+que la confirmación del vendedor incluya el documento. No concede escritura
+directa ni cambia roles; las policies administrativas permanecen intactas.
+
 Las migraciones `20260725002100_pos_transactional_return.sql` y
 `20260725002200_pos_transactional_return_verification.sql` completan H-04:
 
