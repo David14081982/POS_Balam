@@ -16,7 +16,7 @@ Corrección de edición: [H172 · Guardado y mensajes](guardado-edicion-producto
 ## Correcciones registradas
 
 - [altas-rol-operativo-h191.md](altas-rol-operativo-h191.md)
-  ? H-191: rol inicial y respaldo del editor.
+  - H-191: initial account role and editor fallback.
 
 - [devoluciones-vendedores-h190.md](devoluciones-vendedores-h190.md)
   ? H-190: guarda V2 de devoluci?n/cambio y lectura del documento por capacidad.

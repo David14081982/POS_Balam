@@ -5,14 +5,14 @@ un riesgo se debe leer su evidencia y las correcciones relacionadas. Los
 estados válidos son: `ABIERTO`, `EN CURSO`, `PARCIALMENTE RESUELTO`, `RESUELTO`
 y `BLOQUEADO`.
 
-## H-191 ? Altas de cuentas sin rol operativo
+## H-191 — Altas de cuentas sin rol operativo
 
-**Estado:** RESUELTO ? SQL desplegado y verificado; cliente en publicaci?n.
-**Fecha:** 14/11/2026. **Commit:** Pendiente de commit.
+**Estado:** PARCIALMENTE RESUELTO — SQL desplegado; publicación bloqueada por revisión automática.
+**Fecha:** 14/11/2026. **Commit:** `8023ae8` (preparado), `17bfedd` (local).
 El alta confirmada asigna el rol del perfil sin reemplazar asignaciones ni
-excepciones. El editor usa el rol del perfil si base_role est? vac?o.
+excepciones. El editor usa el rol del perfil si base_role está vacío.
 232/233 aplicadas y verificadas; cuatro casos dirigidos PASS, dos errores
-de preparaci?n del fixture corregidos. Sin backfill, cambios en Auth ni datos
+de preparación del fixture corregidos. Sin backfill, cambios en Auth ni datos
 comerciales. Alta real y terminal NOT_TESTED; A/B/C NO CERTIFICADO.
 [Expediente](fixes/altas-rol-operativo-h191.md).
 
