@@ -31,5 +31,5 @@ Reglas de mantenimiento en `../README.md` § Registro de autoridades.
 ## ¿Qué operaciones concede una pantalla?
 **Autoridad:** `pos.screen_operational_capabilities()`
 **Definición:** migración H-192; contrato en `docs/05-operational-capabilities.md`
-**Estado:** preparado; activación sujeta a aprobación de la tabla por cuenta.
+**Estado:** aprobado y aplicado; capacidades por cuenta verificadas por lectura.
 **Consumidores:** `rg -n "screen_operational_capabilities" supabase/`

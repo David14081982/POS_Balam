@@ -1,7 +1,7 @@
 {
-  "at": "2026-11-14T13:55:12.842Z",
-  "status": "PENDING_OWNER_APPROVAL",
-  "databaseVerified": false,
+  "at": "2026-11-14T14:49:33.387Z",
+  "status": "PASS",
+  "databaseVerified": true,
   "passed": 6,
   "sources": [
     {
@@ -51,6 +51,14 @@
     {
       "path": "supabase/operations/h192-backup-overrides-readonly.sql",
       "sha256": "d784d875138c17bf3174b8d7d50517c0e7ad4ecdee6f5c08d0a4fd99f43450ee"
+    },
+    {
+      "path": "supabase/operations/h192-deployment-readonly.sql",
+      "sha256": "cf326d61b291fbf0420ad8b56d532c8a0b821bb08c728a2feb1acd47e64ec590"
+    },
+    {
+      "path": "docs/fixes/evidence/h192/deployment.json",
+      "sha256": "7f0a1a45ad3fc6825c4a3c5d3b7c7fffd9840b49f0868e07b42d2890852328d6"
     }
   ],
   "clearInventory": {
@@ -72,5 +80,7 @@
       "inventoryUnchanged": true
     },
     "adminSuccessfulClear": "NOT_TESTED"
-  }
+  },
+  "productionVerification": "docs/fixes/evidence/h192/deployment.json",
+  "productionBusinessOperations": "NOT_TESTED"
 }

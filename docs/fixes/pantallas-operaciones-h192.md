@@ -1,9 +1,9 @@
 # Pantallas como autoridad operativa
 
 **Riesgo:** H-192
-**Estado:** PARCIALMENTE RESUELTO — guarda de vaciado corregida y probada localmente; aprobación y verificación productiva pendientes
+**Estado:** PARCIALMENTE RESUELTO — base aplicada y verificada; publicación del cliente en curso
 **Fecha:** 14/11/2026
-**Commit:** `7aaa960` (borrador respaldado; sólo rama de revisión).
+**Commit:** `7aaa960` (implementación), `ee593ce` (aprendizaje); entrega: Pendiente de commit.
 
 ## Problema y reproducción
 
@@ -26,7 +26,8 @@ Decisión posterior del propietario, 14/11/2026: el vaciado completo pertenece
 a Configuración y exige administrador activo además de `inventory.delete`.
 La pantalla Inventario conserva sus operaciones ordinarias; no autoriza
 `clearInventory` a un vendedor. Se incorpora la negativa al caso 8 existente.
-La aplicación productiva continúa pendiente de aprobación de la tabla por cuenta.
+El propietario aprobó la tabla por cuenta del 14/11/2026 y autorizó aplicar con
+la tienda cerrada. Se revalidó el censo antes de aplicar: seis cuentas idénticas.
 
 Una función SQL contiene la correspondencia documentada en `docs/05`. La unión
 de pantallas autoriza las capacidades necesarias; las demás reciben `deny` en
@@ -121,7 +122,56 @@ sus semillas sintéticas; ejecuta el resto de la migración sin cambios.
 Durante la revisión final se corrigió una concatenación del generador SQL que
 interpretaba `$'` dentro de una definición como sustitución JavaScript; el parser
 aislado rechazó ese borrador. Se reconstruyó desde los seis archivos de definición
-y la ejecución final volvió a pasar 4/4. Nada de H-192 se ejecutó en producción.
+y la ejecución final volvió a pasar 4/4. Esas pruebas fueron exclusivamente locales.
+
+## Despliegue y verificación productiva del 14/11/2026
+
+H-192 parte de `f0f1250`, main publicado de H-191. Se preservaron el historial
+local anterior y los cambios ajenos, sin reset destructivo ni force push.
+La autorización posterior del propietario permite aplicar 234/235 y publicar
+el cliente sólo después de verificar la base. El censo y las capacidades
+anteriores coincidieron exactamente con la tabla aprobada para las seis cuentas.
+Antes de aplicar se guardó un respaldo privado de nueve tablas de permisos,
+definiciones, policies y triggers, junto con huellas de las 64 tablas de `pos`.
+La evidencia privada no forma parte de GitHub.
+
+El primer `db push` fue rechazado en la alineación por la guarda existente
+`42501 / ONLINE_COMMAND_REQUIRED`: el canal de migraciones no cumplía la
+identidad de mantenimiento admitida por `guard_online_commercial_write`.
+La lectura posterior confirmó reversión completa: 64 tablas y 6,508 filas,
+permisos, 172 funciones y ledger idénticos. No hubo aplicación parcial.
+El fixture aislado ejecuta como postgres y no reprodujo esa diferencia del canal.
+
+Se verificó por lectura que el canal administrativo Management API ejecuta con
+`session_user = postgres`, sin actor Auth, condición ya admitida por la guarda.
+Por esa vía se aplicaron las mismas sentencias aprobadas y el registro de ambas
+migraciones dentro de una sola transacción. No se alteraron guardas, RLS ni
+privilegios para permitir el despliegue. El parser del registro se contrastó con
+las sentencias ya registradas de 232/233 antes de construir el lote.
+
+La lectura posterior de las 14:46:23 UTC comprobó:
+
+- 234/235 registradas, con hashes SHA-256 de sus sentencias idénticos al SQL
+  aprobado; las seis migraciones anteriores permanecen idénticas.
+- Ocho hashes de funciones esperados; otras 166 funciones idénticas. Propietario,
+  ACL, search_path y modo de seguridad previos preservados.
+- Capacidades efectivas de las seis cuentas idénticas a la columna aprobada
+  después. Perfiles, estado activo, roles y pantallas sin cambios.
+- Las 64 ACL/RLS de tablas y las policies/triggers anteriores permanecen;
+  sólo se agregaron las cuatro policies SELECT y el trigger de invalidación
+  previstos. Los dos helpers nuevos no se exponen a public/anon/authenticated.
+- 62 tablas y 6,507 filas completas idénticas por conteo y SHA-256 de JSONB
+  canónico, incluidas ventas, inventario e históricos. Sólo cambian 125 overrides
+  operativos y la revisión de invalidación. No se crearon operaciones de prueba.
+- `clearInventory` conserva la exigencia de administrador activo además de
+  `inventory.delete`, comprobada por definición y hash. Su rechazo 42501 al
+  vendedor se ejercitó en local; no se ejecutó el comando en producción.
+
+Evidencia pública sin identidades: [deployment.json](evidence/h192/deployment.json).
+Consulta reproducible: `supabase/operations/h192-deployment-readonly.sql`;
+su salida contiene respaldo privado y nunca debe publicarse. La verificación
+posterior utilizó exclusivamente SELECT en transacción READ ONLY.
+Cliente y Pages: pendientes de publicación y comparación contra el commit.
 
 ## Riesgo residual y pendientes
 
@@ -173,20 +223,17 @@ a ejecutar todos los flujos ni a certificación productiva:
 
 H-191 conserva su evidencia específica de alta y fallback; Auth remoto y
 aceptación en terminal siguen NOT_TESTED. Esta revisión no autoriza afirmar
-que toda la aplicación esté libre de defectos ni sustituye la aprobación
-productiva de H-192. En el seguimiento de `clearInventory` sólo cambian el
+que toda la aplicación esté libre de defectos ni sustituye una operación real.
+En el seguimiento de `clearInventory` sólo cambiaron el
 borrador SQL, su verificador, el caso 8 y evidencia/documentación; el cliente
 conserva los bytes previamente probados. No se repitieron build ni UI/PWA.
 
-**No desplegado.** El propietario exigió entregar capacidades antes/después por
-cuenta y esperar su visto bueno antes de aplicar en producción. La tabla completa
-permanece local en `.evidence-h192-private/aprobacion-capacidades.md`, sin publicar
-identidades. Se necesita aprobación de esa tabla antes de aplicar H-192.
-H-191 fue autorizada después y publicada por separado, sin incluir este borrador.
-El propietario autorizó después el respaldo en `review/h191-h192-permissions`,
-con excepción de la puerta de commit limitada a esa rama. Es un borrador:
-no autoriza aplicar H-192, incorporarla a main ni publicar su cliente.
-La documentación pública omite nombres, identificadores y proyecciones por cuenta.
+La tabla completa aprobada permanece local en
+`.evidence-h192-private/aprobacion-capacidades.md`, sin publicar identidades.
+H-191 se publicó por separado. El respaldo inicial en
+`review/h191-h192-permissions` no autorizaba producción; la autorización posterior
+del propietario sí permite este despliegue y su publicación. La documentación
+pública omite nombres, identificadores y proyecciones por cuenta.
 
 La prueba de alta H-191 simula Auth; no hay aceptación en terminal ni certificación
 distribuida A/B/C. No se modifica la validación histórica de cantidades de préstamos,
@@ -194,6 +241,14 @@ pendiente conocida en `docs/05`; la prueba usa cantidades válidas. Las capacida
 compartidas se mantienen si otra pantalla las necesita. La edición de permisos
 por rol no forma parte del editor autorizado; el gateway sólo admite el editor
 individual. Una futura UI de roles debe usar el mismo sincronizador.
+
+**NO PROBADO:** operaciones comerciales reales después de H-192; alta nueva
+integrada H-191/H-192 con Auth real; aceptación en terminal e impresión física;
+vaciado exitoso de administrador; liquidaciones/cierres/ajustes exitosos, todos
+los modos de préstamo y totales de Reportes con documentos reales. La lectura
+productiva demuestra estado, permisos y conservación, no esos recorridos.
+Se mantienen los seis casos locales de H-192, diez junto con H-191; no se añadieron
+casos funcionales ni se repitieron suites generales.
 
 Rollback: nueva migración con las seis definiciones previas, retiro de las cuatro
 policies nuevas y del trigger nuevo; restaurar exactamente los overrides anteriores

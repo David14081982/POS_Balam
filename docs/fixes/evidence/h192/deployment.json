@@ -1,0 +1,501 @@
+{
+  "at": "2026-11-14T14:46:23.38873+00:00",
+  "status": "PASS",
+  "scope": "Production SELECT only after authorized migration; no business command or fixture",
+  "approvedCensusUnchangedBeforeApply": true,
+  "accountCapabilitiesMatchApproved": {
+    "matched": 6,
+    "total": 6
+  },
+  "maintenance": {
+    "firstAttempt": "42501 ONLINE_COMMAND_REQUIRED; full transaction rollback verified across all 64 tables, permissions, functions and migration ledger",
+    "appliedVia": "Management API, session_user postgres with null Auth actor; approved SQL and migration history recorded atomically; no guard/RLS changes"
+  },
+  "backup": {
+    "savedBeforeApply": true,
+    "private": true,
+    "files": [
+      {
+        "path": "permissions-before-deploy.json",
+        "sha256": "a18cfa4c49739bfab446f973b00b3614a6109f23c5bab835d002fca5392b4118"
+      },
+      {
+        "path": "deployment-before.json",
+        "sha256": "742825bef4ea978c2541acf12730974f5aea63f1c0b01f3db8613e4ad849be19"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "version": "20261114023400",
+      "path": "supabase/migrations/20261114023400_pos_h192_screen_operations.sql",
+      "name": "pos_h192_screen_operations",
+      "sourceSha256": "03b881d7fcbf9582a8788bc9c65e464f56aff634a45e4f970e4b7fdd0ea50a0e",
+      "statementsSha256": "409a0f6410806f2d8478c8734ac188a78403c8b25ee5961113e707b3ff7eb92c",
+      "statementCount": 21
+    },
+    {
+      "version": "20261114023500",
+      "path": "supabase/migrations/20261114023500_pos_h192_screen_operations_verification.sql",
+      "name": "pos_h192_screen_operations_verification",
+      "sourceSha256": "7c65eba44ec0266e91d298d7bb5a0fd521de72bf61681a407c3adc8c2ba5c524",
+      "statementsSha256": "f140c4ab8bb09787e38178f75799048d161d59b0992a6295a6d3beeed71e3508",
+      "statementCount": 3
+    }
+  ],
+  "functions": {
+    "verified": [
+      {
+        "identity": "pos.admin_apply_user_screen_permissions(uuid,text,jsonb)",
+        "hash": "06ac1e239bfb34ed7363cbfbb86573f0"
+      },
+      {
+        "identity": "pos.dispatch_online_command(uuid,jsonb,integer)",
+        "hash": "485107508f6a3c9df8cccdc0869405ad"
+      },
+      {
+        "identity": "pos.online_save_entities(text,jsonb)",
+        "hash": "4a1523342e9d0479e6596978274dd5a2"
+      },
+      {
+        "identity": "pos.resolve_operational_capability(uuid,text)",
+        "hash": "29e62e54f05bc239a4ddf3b84d8aa369"
+      },
+      {
+        "identity": "pos.restrict_seller_product_update()",
+        "hash": "6c53af55f86f09ed49d733d6ba570669"
+      },
+      {
+        "identity": "pos.user_screen_permissions_version(uuid)",
+        "hash": "86a9a51367b6056c4d915657ecfa4cba"
+      },
+      {
+        "identity": "pos.screen_operational_capabilities()",
+        "hash": "e08afa4b7c873d5e59ef2b3d2b11430b"
+      },
+      {
+        "identity": "pos.sync_user_screen_capabilities(uuid)",
+        "hash": "ee7d2aee0c0494a2beeeaabb62b86c14"
+      }
+    ],
+    "unchanged": 166,
+    "previousOwnerAclSearchPathAndSecurityModePreserved": true
+  },
+  "security": {
+    "existingTableAclRlsPreserved": 64,
+    "existingPoliciesPreserved": 75,
+    "newSelectPolicies": [
+      {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "policyname": "h192_report_read",
+        "qual": "(COALESCE(( SELECT current_screen_permission.allowed\n   FROM pos.current_screen_permission('reportes'::text) current_screen_permission(screen_key, allowed, source, role_code, effect)), false) OR COALESCE(( SELECT current_screen_permission.allowed\n   FROM pos.current_screen_permission('vendedores'::text) current_screen_permission(screen_key, allowed, source, role_code, effect)), false))",
+        "roles": [
+          "authenticated"
+        ],
+        "schemaname": "pos",
+        "tablename": "liquidations",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "policyname": "h192_loan_read",
+        "qual": "COALESCE(( SELECT current_screen_permission.allowed\n   FROM pos.current_screen_permission('prestamos'::text) current_screen_permission(screen_key, allowed, source, role_code, effect)), false)",
+        "roles": [
+          "authenticated"
+        ],
+        "schemaname": "pos",
+        "tablename": "loan_documents",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "policyname": "h192_report_read",
+        "qual": "(COALESCE(( SELECT current_screen_permission.allowed\n   FROM pos.current_screen_permission('reportes'::text) current_screen_permission(screen_key, allowed, source, role_code, effect)), false) OR COALESCE(( SELECT current_screen_permission.allowed\n   FROM pos.current_screen_permission('vendedores'::text) current_screen_permission(screen_key, allowed, source, role_code, effect)), false))",
+        "roles": [
+          "authenticated"
+        ],
+        "schemaname": "pos",
+        "tablename": "return_items",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "policyname": "h192_report_read",
+        "qual": "(COALESCE(( SELECT current_screen_permission.allowed\n   FROM pos.current_screen_permission('reportes'::text) current_screen_permission(screen_key, allowed, source, role_code, effect)), false) OR COALESCE(( SELECT current_screen_permission.allowed\n   FROM pos.current_screen_permission('vendedores'::text) current_screen_permission(screen_key, allowed, source, role_code, effect)), false))",
+        "roles": [
+          "authenticated"
+        ],
+        "schemaname": "pos",
+        "tablename": "returns",
+        "with_check": null
+      }
+    ],
+    "existingTriggersPreserved": 112,
+    "newTriggers": [
+      "CREATE TRIGGER h166_snapshot_changed AFTER INSERT OR DELETE OR UPDATE OR TRUNCATE ON pos.user_capability_overrides FOR EACH STATEMENT EXECUTE FUNCTION pos.h166_advance_snapshot_revision()"
+    ],
+    "privateHelpersNotGrantedToPublicAnonOrAuthenticated": true,
+    "adminRoleAndPermissionManagementGuardUnchanged": true,
+    "clearInventory": "Active administrator and inventory.delete required; definition hash verified, seller 42501 exercised locally only"
+  },
+  "preservation": {
+    "before": "2026-11-14T14:40:34.188083+00:00",
+    "after": "2026-11-14T14:46:23.38873+00:00",
+    "hashAlgorithm": "SHA-256 of sorted per-row SHA-256 of complete canonical JSONB; row counts also compared",
+    "tablesCompared": 64,
+    "identicalTables": 62,
+    "identicalRows": 6507,
+    "unchanged": [
+      {
+        "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "name": "barcode_aliases",
+        "row_count": 0
+      },
+      {
+        "hash": "b1bb2b792edb565e6cea0e03608c96abe0de2a2c7698ed948feee1315957fa5d",
+        "name": "capability_operation_audit",
+        "row_count": 1759
+      },
+      {
+        "hash": "ff7c5cfcdb7764a6ec397d0b0843205f344fb1aeddff04900b2761f7e8965b03",
+        "name": "clients",
+        "row_count": 23
+      },
+      {
+        "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "name": "commission_adjustments",
+        "row_count": 0
+      },
+      {
+        "hash": "8626f9d5e804d6b74f9ea1ae06084451c18a4107fdb6be963bbd2cff66439820",
+        "name": "config_commits",
+        "row_count": 69
+      },
+      {
+        "hash": "6a5ce3301b602d140d60b7e78515d0b021ef11b74bfeb6d8aebab6809faa6f85",
+        "name": "config_sync_state",
+        "row_count": 1
+      },
+      {
+        "hash": "b9ec51f84bc13645e33502d8b39cd0ff455bc98250da06a87085f9a48ac43b36",
+        "name": "exchange_commits",
+        "row_count": 3
+      },
+      {
+        "hash": "683db784aa50755e1447a3bdc9ed0dd8ce3709f132914e3f9c86cc9d067684c8",
+        "name": "exchange_items",
+        "row_count": 7
+      },
+      {
+        "hash": "84d12f55a66d3e978758e4065519d6a2760c3dbf6591b49be8243c93f03a44e3",
+        "name": "exchanges",
+        "row_count": 3
+      },
+      {
+        "hash": "b8c6c7660cf2424c8fabd4116b2ee3d8f69f692fc3a0d42c1480d0e26432341f",
+        "name": "folio_counters",
+        "row_count": 65
+      },
+      {
+        "hash": "e53d41d3db65c2668e47979b1eb4732d7a0794229d3f6b558617ecaa64563a9e",
+        "name": "inventory_contract_state",
+        "row_count": 1
+      },
+      {
+        "hash": "3ac87960f9949ba78cefaee38584c0d164df979045113723d7d4d49dc80c0d9d",
+        "name": "inventory_sync_baselines",
+        "row_count": 1
+      },
+      {
+        "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "name": "inventory_v1_v2_map",
+        "row_count": 0
+      },
+      {
+        "hash": "d1287212854f7499d7fa200ec23e4223ea1aa2c8735eb54b3a884f076e4c59d0",
+        "name": "inventory_v3_backups",
+        "row_count": 1
+      },
+      {
+        "hash": "e1b208f73e58fc2f6f1bfdaa7362fa4e16dea48e7430edc0b1453d982ca1078c",
+        "name": "inventory_v3_operations",
+        "row_count": 1
+      },
+      {
+        "hash": "c8ef131f565ca25ea51d404cfbdf9256fc9c2fff6f08b019cf28c62c061a799f",
+        "name": "layaway_liquidation_commits",
+        "row_count": 2
+      },
+      {
+        "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "name": "liquidations",
+        "row_count": 0
+      },
+      {
+        "hash": "7e19537d7d3de5b2d2fdd18be680fe6f89ac11c6a95f530b4a3ebb6b4300556a",
+        "name": "loan_documents",
+        "row_count": 14
+      },
+      {
+        "hash": "639fd12a057b6560135e74cdff7b8375df39b67a03a946d72a91fe77d1775b23",
+        "name": "lookup",
+        "row_count": 553
+      },
+      {
+        "hash": "208e6b0efe77df8c77e8c62f939f973a9212fb7ac21c3cb9176f43f49a2c1e44",
+        "name": "movements",
+        "row_count": 176
+      },
+      {
+        "hash": "2c2e8e97c48b0ddc3e82f8cf3b9a3fc09963054dfbe8a92668ac28da37c70650",
+        "name": "online_account_requests",
+        "row_count": 3
+      },
+      {
+        "hash": "1971c6c94be8989f3f492569683f4a44890830435589935a6d619934ea6ed443",
+        "name": "online_legacy_archives",
+        "row_count": 110
+      },
+      {
+        "hash": "192de41340880d4cdc05282a47f2967f8e7af666ceac6780059c2a3051059fd1",
+        "name": "online_legacy_operations",
+        "row_count": 95
+      },
+      {
+        "hash": "68d2ef93cd28919f1e78ddcae71fbdec4775bfa90398f2b4959e06263aba1149",
+        "name": "online_requests",
+        "row_count": 737
+      },
+      {
+        "hash": "fe4f7cebb41c836f3c5b681273c91f5e0f2b9a345a1a228053dd9db0ec38da43",
+        "name": "online_runtime",
+        "row_count": 1
+      },
+      {
+        "hash": "3088d6a32761185ceed9396950d234124821ced26614b039f921a35c1bd3a7b6",
+        "name": "operational_capabilities",
+        "row_count": 25
+      },
+      {
+        "hash": "0edf76952eeec6d6c1c7b95eeac1614018e64708e7efd55e360079de459091b7",
+        "name": "permission_change_audit",
+        "row_count": 38
+      },
+      {
+        "hash": "7c0aa873b09427009043cbf5ec98002e451e439fdb189834018a0c8aa4ea95eb",
+        "name": "permission_roles",
+        "row_count": 2
+      },
+      {
+        "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "name": "physical_card_redemptions",
+        "row_count": 0
+      },
+      {
+        "hash": "548999635376cedd2afcdf54755d3abc74ad8bd2ad793406ff3e164115b4f7e6",
+        "name": "point_zero_backups",
+        "row_count": 5
+      },
+      {
+        "hash": "9002400852599441f2700de8dd15ec3d301da3a47c599e32fc060197402f72d0",
+        "name": "point_zero_operations",
+        "row_count": 4
+      },
+      {
+        "hash": "263989501d0957dc03163307590e069d73574b8203d39b5672f35893261e0568",
+        "name": "products",
+        "row_count": 980
+      },
+      {
+        "hash": "b20d812073c7b27991e2c9a3ca2449920b0133d77f2c6f37b91658108e78a8f5",
+        "name": "promotions",
+        "row_count": 4
+      },
+      {
+        "hash": "5b506207b722bb2c8ddff8f8a6c8465ba38f6479a377b95eba15573093cb620a",
+        "name": "purged_documents",
+        "row_count": 114
+      },
+      {
+        "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "name": "reference_reclassifications",
+        "row_count": 0
+      },
+      {
+        "hash": "94068c53307c1552df858558d3fab26555fb5109522c79ebc59ba174c10439bd",
+        "name": "return_commits",
+        "row_count": 3
+      },
+      {
+        "hash": "b3e06882524d347a46ca846aefd2604938b0a75add7b7774b0960d85ec78a52b",
+        "name": "return_items",
+        "row_count": 3
+      },
+      {
+        "hash": "5cf656b6aa2ff40ec05cc726e77c28e08cbc3edd647791dd66eefd6de553834e",
+        "name": "returns",
+        "row_count": 3
+      },
+      {
+        "hash": "f7514b04d163480c9218b9a7441a471bac6384a73ed8db731a6d37550affb542",
+        "name": "role_capability_permissions",
+        "row_count": 31
+      },
+      {
+        "hash": "eaf6c2c179ddc8067b4cc60e7097012853dc4880c042ed5dca632eb9d94a3e6d",
+        "name": "role_screen_permissions",
+        "row_count": 44
+      },
+      {
+        "hash": "823dd879c7b2f89604af5ea79c6511900bb826b649ce2333bf09acb001401f46",
+        "name": "sale_commits",
+        "row_count": 126
+      },
+      {
+        "hash": "d8cbdd1b589ef8abd78f569e82082c5120054fdfc3fc776502f064b9b49e7d14",
+        "name": "sale_items",
+        "row_count": 166
+      },
+      {
+        "hash": "625b077b360eb022398dcde7914c215872bf87098dd06e245c2b2e0d1cf53e2b",
+        "name": "sale_payments",
+        "row_count": 124
+      },
+      {
+        "hash": "f541dac632787c59828b132ed4216e06a76a2bf04bcf590c81fee044d17926c8",
+        "name": "sales",
+        "row_count": 124
+      },
+      {
+        "hash": "96fe09244c21ac1b324aa1e5c4b5a32fd6e9daf301a1d9bd4b97a3d47c591e04",
+        "name": "screen_permission_catalog",
+        "row_count": 22
+      },
+      {
+        "hash": "bea257c39ed1326bc3e07ef820a37fe673134b08c51162e3109e07848e575271",
+        "name": "screen_permission_catalog_state",
+        "row_count": 1
+      },
+      {
+        "hash": "7411f935d9accf9a54298ec7a7a549ef4f7e679286fce7a6203a3e7d9391f1dc",
+        "name": "selective_cleanup_events",
+        "row_count": 10
+      },
+      {
+        "hash": "484684dbfeb196be1c3743a3b3e4e0acf9230c044e61d5043a5b16ef07c58f13",
+        "name": "sellers",
+        "row_count": 7
+      },
+      {
+        "hash": "dc3fb84f4831874c11be5804642bbf193ae300c26e9e49691b6b238d78bdaaae",
+        "name": "settings",
+        "row_count": 43
+      },
+      {
+        "hash": "0eaee642e0798692c2fdb07a3b5d7b56e75ca1cf8b5e4ab846834b47413d800b",
+        "name": "stock_reservations",
+        "row_count": 124
+      },
+      {
+        "hash": "c1e1de20f46ebe72ae0ee7c6df6bd4716333f8b955929d6eefbd840dd3139210",
+        "name": "sync_activity",
+        "row_count": 657
+      },
+      {
+        "hash": "cb0ff1e1143d3572110ced30d22be705b81c597ceb699141fc2dac6f44d3517c",
+        "name": "sync_conflicts",
+        "row_count": 41
+      },
+      {
+        "hash": "4c2a3ac8ac155818c77dd7b1fa04ed0cbf8a9a8f3db9015f4814085e0ff3a863",
+        "name": "sync_device_recoveries",
+        "row_count": 4
+      },
+      {
+        "hash": "c5320c8b0223447a83cd37e46e1239a6afb26483659ba83d801a17942f160977",
+        "name": "sync_devices",
+        "row_count": 19
+      },
+      {
+        "hash": "581cc744ce65f7c8cc70a0ba6c1aff6778b45d934e2a52306ae90cd0e9c588a8",
+        "name": "sync_domain_versions",
+        "row_count": 15
+      },
+      {
+        "hash": "b74281b3b09b3493f679876c96e0e69eff6e5455dd1c3117e49c38f3f435a0da",
+        "name": "sync_quarantine_cases",
+        "row_count": 67
+      },
+      {
+        "hash": "324b82f66edd96e58e260331b4d8b14fa2c3bbe195d1d34c7078bc573eb6ad58",
+        "name": "system_manifest",
+        "row_count": 1
+      },
+      {
+        "hash": "e1d2f865a3915ca7041d28c6c4fb0a9c9317f98cdddf2199bce829b823760527",
+        "name": "test_data_cleanup_backups",
+        "row_count": 12
+      },
+      {
+        "hash": "c148375210219e139e54e8ed02b2eb634ea96bc4057eee1ef419b88943a11b65",
+        "name": "test_data_cleanup_operations",
+        "row_count": 10
+      },
+      {
+        "hash": "f48c533ed4e4c408c5628b1a4c9fb191728265a9948ef183695e1d998335dcbf",
+        "name": "test_data_purges",
+        "row_count": 12
+      },
+      {
+        "hash": "1ffa00c4cad4e82d76502d1b6626a743b67529904dda731b90cf225209741a92",
+        "name": "user_permission_role_assignments",
+        "row_count": 6
+      },
+      {
+        "hash": "0b014cba886844e7213953cc0f9a42e6ab6736fb88fff1a878936e1b2e494b15",
+        "name": "user_screen_permission_overrides",
+        "row_count": 35
+      }
+    ],
+    "expectedChanges": [
+      {
+        "name": "online_snapshot_revision",
+        "before": {
+          "hash": "a3fd21a24b57112f4a3d23e9efd531a3abb976c0901d76591ae1074e71cd259f",
+          "name": "online_snapshot_revision",
+          "row_count": 1
+        },
+        "after": {
+          "hash": "e97c67ad862dce47ce3be571e45e7b0fcfa0133d5ad6f1b4e8e1831e554d39c1",
+          "name": "online_snapshot_revision",
+          "row_count": 1
+        }
+      },
+      {
+        "name": "user_capability_overrides",
+        "before": {
+          "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "name": "user_capability_overrides",
+          "row_count": 0
+        },
+        "after": {
+          "hash": "876efaf88edc574440f0cbe3e1aca45431d477ac1a8bdb6f4f203f6f8e1c902d",
+          "name": "user_capability_overrides",
+          "row_count": 125
+        }
+      }
+    ]
+  },
+  "functionalEvidence": {
+    "localCases": 6,
+    "newProductionBusinessCommands": 0,
+    "realProductionOperations": "NOT_TESTED",
+    "combinedNewAuthAccountH191H192": "NOT_TESTED",
+    "terminalAcceptanceAndPhysicalPrinting": "NOT_TESTED",
+    "distributedCertification": "NO CERTIFICADO"
+  }
+}

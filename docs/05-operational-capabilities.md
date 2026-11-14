@@ -1,11 +1,11 @@
 # Mapa de capacidades operativas
 
-H-192, preparado y pendiente de aprobación productiva: las pantallas autorizan
+H-192, aprobado y aplicado en producción el 14/11/2026: las pantallas autorizan
 sus operaciones mediante la correspondencia única
 `pos.screen_operational_capabilities()`. El editor sincroniza
 `user_capability_overrides` en la misma transacción. La autoridad de ejecución
 sigue siendo `pos.require_current_capability(text)`, además de las guardas de
-contexto del gateway. Hasta aplicar 234/235 sigue vigente la separación H-56.
+contexto del gateway. Las migraciones 234/235 reemplazan la separación H-56.
 
 | Pantalla | Acción | Capacidad | Frontera | Protección |
 |---|---|---|---|---|

@@ -980,7 +980,7 @@ todas las capacidades y vendedor conserva sólo las operaciones históricamente
 autorizadas. El primer grupo protege liquidación y cierre de comisiones con RPC
 atómicas, auditoría e idempotencia, sin escritura directa desde el cliente.
 
-H-192 está preparado, pendiente de aprobación y despliegue: sustituye esa
+H-192 fue aprobado y aplicado en producción el 14/11/2026: sustituye esa
 separación para vendedores por la correspondencia SQL única de
 `docs/05-operational-capabilities.md`. El editor actualiza pantallas y overrides
 operativos en una transacción; la creación H-191 inicializa ambos. Configuración

@@ -1,0 +1,12 @@
+{
+  "at": "2026-11-14T14:52:03.487Z",
+  "status": "PASS",
+  "scope": "Added source and evidence relative to published f0f1250; generated client matches already verified source manifest; previous public history preserved",
+  "base": "f0f125083d5b85c104a3c0e40610e4da4688b50b",
+  "privateAccountNamesFound": 0,
+  "accountIdentifiersFound": 0,
+  "privateTokensFound": 0,
+  "privateEvidenceIncluded": false,
+  "genericAdministrativeRoleLabelsManuallyReviewed": 2,
+  "backupPrivacyRecord": "backup-privacy.json is a historical check of the earlier review backup, not current file hashes"
+}

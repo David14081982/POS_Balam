@@ -2,41 +2,33 @@
 
 ## H-192 — Pantallas y operaciones con permisos divergentes
 
-**Estado:** PARCIALMENTE RESUELTO — guarda de vaciado corregida localmente; aprobación y verificación productiva pendientes.
-**Fecha:** 14/11/2026. **Commit:** `7aaa960` (respaldo en rama de revisión; no desplegado).
+**Estado:** PARCIALMENTE RESUELTO — base aplicada y verificada; publicación del cliente en curso.
+**Fecha:** 14/11/2026. **Commit:** `7aaa960` (implementación), `ee593ce` (aprendizaje); entrega: Pendiente de commit.
 Contrato aprobado: pantallas gobiernan operaciones; Configuración sólo consulta
-para vendedores; la cuenta de pruebas conserva su estado activo. El editor actual sólo guarda
-pantallas; capacidades y SELECT de préstamos/reportes pueden contradecirlas.
-Alcance: correspondencia SQL única, overrides atómicos, lectura mínima y cliente
-de consulta. Sin rol admin, cambios en can_manage_screen_permissions ni datos
-comerciales. Producción requiere tabla por cuenta y visto bueno explícito.
-Historia 2 publicada por separado en main y Pages por autorización del propietario.
-**Pruebas:** seis casos dirigidos PASS (cuatro SQL, consulta UI y activación PWA),
-diez en conjunto con H-191. Tabla completa antes/después entregada al dueño;
-234/235 no aplicadas. Sin cambios productivos de esta historia. A/B/C NO CERTIFICADO.
-Corrección de la propuesta tras consulta del dueño: Reportes sólo concede lectura;
-liquidación/cierre corresponden a Vendedores. La cuenta de pruebas permanece
-activa. Se actualizó la tabla privada y el caso dirigido de Reportes.
-Revisión del diseño reabierta por el dueño: detectada también la concesión de
-edición de clientes desde POS sin consumidor en esa pantalla. Corregida en el
-borrador: caso 5 falla antes y pasa después con alta, venta pagada y agregados
-sin edición de ficha; 4/4 SQL PASS, mismos diez casos en conjunto. La proyección
-por cuenta permanece privada. Mapa restante contrastado con código; se explicitó
-que `commissions.settle` también permite Ajuste histórico. Sin cambios productivos.
-Aprendizaje permanente solicitado: R-EVI-01 en `docs/architect/THINKING.md`,
-entrada obligatoria en `AGENTS.md`. Actualización exclusivamente documental;
-revisión retrospectiva delimitada a H-191/H-192 en
-[verificación cruzada](fixes/verificacion-cruzada-evidencia-h192.md).
-Hallazgo de esa retrospectiva: `inventory.delete` también protegía el comando
-`clearInventory` de Configuración sin guarda administrativa. Decisión posterior
-del dueño: exigir administrador activo además de la capacidad. Incorporada en
-234/235 locales; caso 8 rechaza al vendedor con Inventario mediante 42501 y
-comprueba filas idénticas. La negativa falló antes con 23514 (protección comercial)
-y pasa después; 4/4 casos SQL existentes PASS. Tabla por cuenta actualizada,
-la cuenta de pruebas activa sin autorización de vaciado. El PASS documental anterior sólo
-prueba coherencia documental; H-192 sigue sin aplicar en producción. El dueño
-autorizó el respaldo en `review/h191-h192-permissions`, con excepción de commit
-limitada a esa rama y sin autorizar despliegue ni incorporación a main.
+para vendedores; la cuenta de pruebas conserva su estado activo. `clearInventory`
+exige administrador activo además de `inventory.delete`. Reportes sólo consulta;
+Vendedores concede liquidación/cierre y POS no concede edición de ficha de cliente.
+Correspondencia SQL única y editor atómico, sin alterar rol admin ni
+`can_manage_screen_permissions`. R-EVI-01 y la retrospectiva documentan los errores
+de la propuesta y sus correcciones; el PASS documental sólo acredita coherencia.
+
+El dueño aprobó la tabla del 14/11 y autorizó producción. Censo previo idéntico:
+6/6 cuentas. Respaldo privado de permisos y definiciones antes de aplicar.
+234/235 aplicadas por canal administrativo postgres con ledger en la misma
+transacción; el primer db push fue rechazado por la guarda de contexto y revirtió
+íntegro (64 tablas, 6,508 filas, permisos y esquema verificados sin cambios).
+Postflight READ ONLY de 14:46:23 UTC: sentencias de ambas migraciones y ocho hashes
+de funciones esperados; otras 166 funciones idénticas. Capacidades efectivas 6/6
+iguales a la tabla aprobada. RLS/ACL de 64 tablas y policies/triggers anteriores
+preservados; sólo cuatro SELECT y un trigger nuevos. 62 tablas con 6,507 filas
+idénticas, incluidas ventas, inventario e históricos. Sólo cambiaron overrides
+operativos y revisión de invalidación. No hubo operaciones comerciales de prueba.
+
+**Pruebas y límites:** seis casos locales PASS; diez con H-191, sin ampliar suites.
+Negativa de vaciado por vendedor: 42501 local. **NO PROBADO** en producción:
+operaciones reales, alta integrada H-191/H-192 con Auth, aceptación en terminal,
+impresión física y vaciado exitoso de administrador. A/B/C NO CERTIFICADO.
+Cliente pendiente de publicación y comparación de bytes con el commit.
 [Expediente](fixes/pantallas-operaciones-h192.md).
 
 Este archivo evita reinvestigar problemas ya identificados. Antes de trabajar
