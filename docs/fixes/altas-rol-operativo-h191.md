@@ -1,7 +1,7 @@
 # Rol operativo en altas de cuentas
 
 **Riesgo:** H-191
-**Estado:** PARCIALMENTE RESUELTO — SQL desplegado; publicación pendiente de autorización.
+**Estado:** PARCIALMENTE RESUELTO — SQL desplegado; publicación de cliente autorizada y en curso.
 **Fecha:** 14/11/2026
 **Commit:** `8023ae8` (release preparado); `17bfedd` (local)
 
@@ -57,9 +57,12 @@ Evidencia sanitizada en `evidence/h191/`; metadatos íntegros sólo locales.
 
 ## Riesgo residual y pendientes
 
-La revisión automática rechazó el push a `David14081982/POS_Balam` y el
-despliegue en Pages por falta de autorización explícita para ese destino.
-Se solicitó esa autorización al propietario; no se intentó otra vía de publicación.
+El propietario autorizó expresamente publicar H-191 en main y Pages el
+14/11/2026. La comprobación previa de sólo lectura confirmó 232/233 y sus
+funciones exactas; las 172 funciones, asignaciones, excepciones, RLS, ACL,
+policies y triggers coinciden con el postflight aplicado. Evidencia en
+`evidence/h191/prepublication.json`. No se reaplicaron migraciones.
+H-192 permanece pendiente y no forma parte de esta entrega.
 
 Alta real mediante Auth remoto y aceptación en terminal: NOT_TESTED. No se
 modificó ni desplegó la Edge Function. Certificación A/B/C NO CERTIFICADO.

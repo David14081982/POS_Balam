@@ -1,0 +1,19 @@
+{
+  "at": "2026-11-14T14:07:21.048289+00:00",
+  "status": "PASS",
+  "scope": "Read-only prepublication verification of H191; no migration or commercial operation executed",
+  "versions": [
+    "20261107022800",
+    "20261107022900",
+    "20261113023000",
+    "20261113023100",
+    "20261114023200",
+    "20261114023300"
+  ],
+  "comparedToAppliedEvidence": true,
+  "functionsMatched": 172,
+  "assignmentsMatched": true,
+  "overridesMatched": true,
+  "rlsAclPoliciesTriggersMatched": true,
+  "h192Applied": false
+}

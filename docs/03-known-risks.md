@@ -7,7 +7,7 @@ y `BLOQUEADO`.
 
 ## H-191 — Altas de cuentas sin rol operativo
 
-**Estado:** PARCIALMENTE RESUELTO — SQL desplegado; publicación bloqueada por revisión automática.
+**Estado:** PARCIALMENTE RESUELTO — SQL desplegado; publicación del cliente autorizada y en curso.
 **Fecha:** 14/11/2026. **Commit:** `8023ae8` (preparado), `17bfedd` (local).
 El alta confirmada asigna el rol del perfil sin reemplazar asignaciones ni
 excepciones. El editor usa el rol del perfil si base_role está vacío.
