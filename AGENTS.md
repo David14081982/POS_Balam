@@ -10,8 +10,10 @@ Estas instrucciones aplican a todo el repositorio y a cualquier agente de IA.
    - `docs/02-architecture.md`
    - `docs/03-known-risks.md`
 2. Leer `docs/fixes/README.md` y las correcciones relacionadas con el módulo.
-3. Revisar el código y las pruebas vigentes; la documentación orienta, pero el
-   código ejecutable es la evidencia final.
+3. Antes de proponer, implementar o validar cambios, aplicar obligatoriamente
+   [R-EVI-01: Verificación cruzada de evidencia](docs/architect/THINKING.md#r-evi-01).
+   Revisar código y pruebas vigentes: la documentación orienta, pero no demuestra
+   la implementación ni justifica por sí sola decisiones de negocio o permisos.
 4. Identificar el riesgo que se atenderá. Si no existe, registrarlo antes de
    implementar con el siguiente identificador disponible.
 5. Trabajar un solo problema hasta cerrarlo. No comenzar el siguiente.

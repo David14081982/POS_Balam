@@ -1,0 +1,59 @@
+{
+  "at": "2026-11-14T13:39:14.108Z",
+  "status": "PASS",
+  "scope": "Documentary verification only; no functional or remote tests run",
+  "baselineFiles": 1864,
+  "changedDocumentation": [
+    "docs/fixes/pantallas-operaciones-h192.md",
+    "AGENTS.md",
+    "docs/03-known-risks.md",
+    "docs/architect/THINKING.md",
+    "docs/fixes/README.md",
+    "docs/fixes/altas-rol-operativo-h191.md"
+  ],
+  "addedDocumentation": [
+    "docs/fixes/evidence/h192/regla-evidencia.diff",
+    "docs/fixes/verificacion-cruzada-evidencia-h192.md",
+    "docs/fixes/evidence/h192/regla-evidencia-verificacion.json"
+  ],
+  "nonDocumentaryChanges": [],
+  "checks": {
+    "requiredEntryAndSingleRule": true,
+    "eightTracePoints": true,
+    "elevenQuestionsPreserved": true,
+    "crossReferences": true,
+    "diffCheck": true,
+    "thinkingLines": 117,
+    "localLinks": 103
+  },
+  "sources": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "7387f0da2e8108f885d1fedc4496531011d72b9f6baf1cc36f028c8afd7f1fba"
+    },
+    {
+      "path": "docs/architect/THINKING.md",
+      "sha256": "d74062b030a6ce2a0715cff6d2b2bd954b3535a3ef2cb10e344d4c442256f87a"
+    },
+    {
+      "path": "docs/03-known-risks.md",
+      "sha256": "754ef365cb3485c657b7d55b2d7481d6263e6cd99a2c938cf13375903c0b8cfb"
+    },
+    {
+      "path": "docs/fixes/README.md",
+      "sha256": "49097e3cd7e55358ed1f8e6fba593c9242342ff0b4ae3353d8e7d1692baba95d"
+    },
+    {
+      "path": "docs/fixes/altas-rol-operativo-h191.md",
+      "sha256": "d5dfe9d291a5981a4cc22b477ff3b71b3bebd45e3648070c1ecf9722702728cd"
+    },
+    {
+      "path": "docs/fixes/pantallas-operaciones-h192.md",
+      "sha256": "ddb7be2bae05290054cbb90b3d992b820bc06a7043761767f28f86ed679dfc45"
+    },
+    {
+      "path": "docs/fixes/verificacion-cruzada-evidencia-h192.md",
+      "sha256": "3305e4c542394947240424b7db59a1a6e2ad4af6ed2aadce84fa5bd311a36b5b"
+    }
+  ]
+}

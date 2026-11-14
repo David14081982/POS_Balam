@@ -2,7 +2,7 @@
 capa: razonamiento
 applies_to: [todo]
 severity_max: blocking
-no_alcance: "No prescribe pasos ni evidencia de cierre. Eso vive en WORKFLOW.md."
+no_alcance: "Define comprobaciones de razonamiento; las etapas y puertas de cierre viven en WORKFLOW.md."
 ---
 
 # Las once preguntas
@@ -17,6 +17,35 @@ Reglas de uso, BLOCKING las tres:
   una respuesta.
 - Una pregunta que no aplica se descarta **por escrito**, en una línea, con el
   motivo. Descartar es una decisión visible, no un silencio.
+
+---
+
+## R-EVI-01
+
+**BLOCKING · VERIFICACIÓN CRUZADA DE EVIDENCIA ANTES DE PROPONER, IMPLEMENTAR O VALIDAR CAMBIOS.**
+
+Antes de presentar una propuesta, modificar o concluir, contrasta la documentación con código ejecutable, funciones reales, contratos de datos y restricciones efectivas del servidor. La documentación describe lo esperado; no demuestra lo implementado. Distingue hechos observados, contrato autorizado, supuestos y decisiones pendientes: una ambigüedad del negocio no autoriza inventar permisos ni decisiones del propietario.
+
+Para cambios en operaciones, permisos, datos, inventario, ventas, comisiones o seguridad, registra en el expediente de la historia, con referencias concretas al código y alcance proporcional al riesgo:
+
+1. La operación que realiza el usuario.
+2. La pantalla o componente donde se origina.
+3. La función que ejecuta el cliente.
+4. La función, gateway o procedimiento que la recibe.
+5. Los permisos y restricciones efectivos del servidor.
+6. Los datos que consulta o modifica.
+7. Otras operaciones que comparten capacidades o funciones.
+8. El comportamiento que debe permanecer intacto.
+
+Desarrolla así FF-05 (consumidores), FF-10 (defensa real) y FF-11 (flujo completo). Examina consecuencias directas e indirectas dentro del alcance: capacidades compartidas, callbacks, acciones automáticas y operaciones administrativas que puedan habilitarse indirectamente.
+
+En cambios de capacidades, contrasta permisos antes/después con operaciones efectivamente habilitadas y retiradas, acciones financieras, administrativas o destructivas y efectos sobre cuentas activas, incluidas las de prueba. Cada concesión requiere una operación real y autorización del negocio; compartir categoría o documentación con otra pantalla nunca basta.
+
+Deriva las expectativas del contrato funcional y evidencia independiente de la implementación propuesta. Comprueba que lo autorizado funciona y lo no autorizado sigue bloqueado; en permisos, que una pantalla no conceda accidentalmente operaciones de otra. Está prohibido considerar suficiente una prueba que sólo reproduzca un mapa o supuesto del autor sin verificar su correspondencia con el sistema real. Una prueba aprobada con expectativas incorrectas no valida el diseño.
+
+Antes de declarar una propuesta técnicamente verificada o una historia resuelta, respalda el contraste documental, consumidores y restricciones del servidor, premisas y búsqueda de concesiones indebidas y efectos secundarios. Declara lo no verificado, los supuestos y decisiones pendientes; si falta una comprobación relevante, limita la conclusión y completa sólo esa comprobación. No sustituye las etapas de `WORKFLOW.md`, ni exige una auditoría general o suites adicionales: selecciona la evidencia que mejor detecte errores de concepto y privilegios dentro del alcance autorizado.
+
+Antecedente y evidencia: [H-192](../fixes/verificacion-cruzada-evidencia-h192.md). Complementa `R-SEC-06/07` y `R-DEL-11`; no duplica sus matrices ni crea autorizaciones de cambios funcionales o despliegue.
 
 ---
 
