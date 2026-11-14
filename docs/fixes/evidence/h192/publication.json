@@ -1,0 +1,19 @@
+{
+  "at": "2026-11-14T14:53:56.035Z",
+  "runId": 43607155019,
+  "url": "https://github.com/David14081982/POS_Balam/actions/runs/43607155019",
+  "commit": "74a7ad3959df039ebdd7246be0eb228c7d3e2dc9",
+  "jobs": [
+    {
+      "name": "evidence",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "deploy",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "scope": "Approved delivery checks stored focused evidence and source hashes, then deploys Pages; no broad suites or real production operations"
+}

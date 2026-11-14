@@ -21,7 +21,7 @@ Corrección de edición: [H172 · Guardado y mensajes](guardado-edicion-producto
 
 - [pantallas-operaciones-h192.md](pantallas-operaciones-h192.md)
   — H-192: pantallas y capacidades atómicas; pruebas dirigidas existentes,
-  vaciado exclusivo de administrador; base aplicada y verificada, cliente en publicación.
+  vaciado exclusivo de administrador; base y cliente publicados, operación real NO PROBADA.
 
 - [altas-rol-operativo-h191.md](altas-rol-operativo-h191.md)
   - H-191: initial account role and editor fallback.

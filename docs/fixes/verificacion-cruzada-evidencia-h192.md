@@ -1,7 +1,7 @@
 # Verificación cruzada de evidencia y retrospectiva H-191/H-192
 
 **Riesgo:** H-192 — falla metodológica y alcance de permisos
-**Estado:** regla incorporada; hallazgo corregido y base aplicada por autorización posterior; límites funcionales conservados
+**Estado:** regla incorporada; hallazgo corregido, base y cliente publicados por autorización posterior; límites funcionales conservados
 **Fecha:** 14/11/2026
 **Commit:** `ee593ce` (aprendizaje respaldado en rama de revisión).
 

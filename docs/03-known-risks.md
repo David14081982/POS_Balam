@@ -2,8 +2,8 @@
 
 ## H-192 — Pantallas y operaciones con permisos divergentes
 
-**Estado:** PARCIALMENTE RESUELTO — base aplicada y verificada; publicación del cliente en curso.
-**Fecha:** 14/11/2026. **Commit:** `7aaa960` (implementación), `ee593ce` (aprendizaje); entrega: Pendiente de commit.
+**Estado:** RESUELTO — base y cliente publicados; operación real en producción NO PROBADA.
+**Fecha:** 14/11/2026. **Commit:** `7aaa960` (implementación), `ee593ce` (aprendizaje), `74a7ad3` (entrega publicada).
 Contrato aprobado: pantallas gobiernan operaciones; Configuración sólo consulta
 para vendedores; la cuenta de pruebas conserva su estado activo. `clearInventory`
 exige administrador activo además de `inventory.delete`. Reportes sólo consulta;
@@ -28,7 +28,9 @@ operativos y revisión de invalidación. No hubo operaciones comerciales de prue
 Negativa de vaciado por vendedor: 42501 local. **NO PROBADO** en producción:
 operaciones reales, alta integrada H-191/H-192 con Auth, aceptación en terminal,
 impresión física y vaciado exitoso de administrador. A/B/C NO CERTIFICADO.
-Cliente pendiente de publicación y comparación de bytes con el commit.
+Cliente publicado en main y Pages; workflow `43607155019` correcto. Once archivos
+servidos idénticos al commit `74a7ad3`; SHA-256 del index
+`57c1bed8f19a342d9f967acd0661cedcd6403165421ca51c9989a03a205a577e`.
 [Expediente](fixes/pantallas-operaciones-h192.md).
 
 Este archivo evita reinvestigar problemas ya identificados. Antes de trabajar

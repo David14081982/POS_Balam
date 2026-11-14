@@ -1,9 +1,9 @@
 # Pantallas como autoridad operativa
 
 **Riesgo:** H-192
-**Estado:** PARCIALMENTE RESUELTO — base aplicada y verificada; publicación del cliente en curso
+**Estado:** RESUELTO — base y cliente publicados; verificación productiva de sólo lectura, operación real NO PROBADA
 **Fecha:** 14/11/2026
-**Commit:** `7aaa960` (implementación), `ee593ce` (aprendizaje); entrega: Pendiente de commit.
+**Commit:** `7aaa960` (implementación), `ee593ce` (aprendizaje), `74a7ad3` (entrega publicada).
 
 ## Problema y reproducción
 
@@ -171,7 +171,17 @@ Evidencia pública sin identidades: [deployment.json](evidence/h192/deployment.j
 Consulta reproducible: `supabase/operations/h192-deployment-readonly.sql`;
 su salida contiene respaldo privado y nunca debe publicarse. La verificación
 posterior utilizó exclusivamente SELECT en transacción READ ONLY.
-Cliente y Pages: pendientes de publicación y comparación contra el commit.
+Cliente publicado en main y Pages desde `74a7ad3959df039ebdd7246be0eb228c7d3e2dc9`.
+Workflow [43607155019](https://github.com/David14081982/POS_Balam/actions/runs/43607155019):
+verificación de evidencia y despliegue correctos. Los once archivos estáticos
+servidos coinciden byte por byte con ese commit. SHA-256 del index y offline:
+`57c1bed8f19a342d9f967acd0661cedcd6403165421ca51c9989a03a205a577e`.
+[Constancia del workflow](evidence/h192/publication.json) y
+[comparación de Pages](evidence/h192/pages-verification.json).
+El cierre documental posterior conserva esos mismos bytes. H-192 queda también
+respaldada en `review/h191-h192-permissions`; main se reconcilió por avance directo
+desde `f0f1250`. Los cinco PDF borrados y el estado local del CLI siguen ajenos a
+los commits; el historial y stash anteriores se conservan sólo como respaldo local.
 
 ## Riesgo residual y pendientes
 
